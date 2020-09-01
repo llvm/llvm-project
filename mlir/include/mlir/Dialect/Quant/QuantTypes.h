@@ -31,15 +31,6 @@ struct UniformQuantizedPerAxisTypeStorage;
 
 } // namespace detail
 
-namespace QuantizationTypes {
-enum Kind {
-  Any = Type::FIRST_QUANTIZATION_TYPE,
-  UniformQuantized,
-  UniformQuantizedPerAxis,
-  LAST_USED_QUANTIZATION_TYPE = UniformQuantizedPerAxis,
-};
-} // namespace QuantizationTypes
-
 /// Enumeration of bit-mapped flags related to quantized types.
 namespace QuantizationFlags {
 enum FlagValue {

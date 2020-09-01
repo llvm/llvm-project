@@ -212,7 +212,7 @@ Preprocessor::Preprocessor(AllSources &allSources) : allSources_{allSources} {
 }
 
 void Preprocessor::Define(std::string macro, std::string value) {
-  definitions_.emplace(macro, Definition{value, allSources_});
+  definitions_.emplace(SaveTokenAsName(macro), Definition{value, allSources_});
 }
 
 void Preprocessor::Undefine(std::string macro) { definitions_.erase(macro); }

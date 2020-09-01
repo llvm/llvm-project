@@ -7,6 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define noundef i32 @NormalRet() nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @NormalRet(
+; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    ret i32 123
 ;
   ret i32 123
@@ -14,6 +15,7 @@ define noundef i32 @NormalRet() nounwind uwtable sanitize_memory {
 
 define i32 @PartialRet() nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @PartialRet(
+; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
 ; CHECK-NEXT:    store i32 0, i32* @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    ret i32 123
@@ -23,6 +25,7 @@ define i32 @PartialRet() nounwind uwtable sanitize_memory {
 
 define noundef i32 @LoadedRet() nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @LoadedRet(
+; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 0 to i32*
 ; CHECK-NEXT:    [[O:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i32* [[P]] to i64
@@ -35,7 +38,7 @@ define noundef i32 @LoadedRet() nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[_MSLD]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof !0
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP6]]) #1
+; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP6]]) [[ATTR2:#.*]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    ret i32 [[O]]
@@ -48,6 +51,7 @@ define noundef i32 @LoadedRet() nounwind uwtable sanitize_memory {
 
 define void @NormalArg(i32 noundef %a) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @NormalArg(
+; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 0 to i32*
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i32* [[P]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
@@ -67,6 +71,7 @@ define void @PartialArg(i32 %a) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @PartialArg(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* bitcast ([100 x i64]* @__msan_param_tls to i32*), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4
+; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 0 to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint i32* [[P]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
@@ -90,8 +95,9 @@ define void @PartialArg(i32 %a) nounwind uwtable sanitize_memory {
 
 define void @CallNormal() nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @CallNormal(
-; CHECK-NEXT:    [[R:%.*]] = call i32 @NormalRet() #0
-; CHECK-NEXT:    call void @NormalArg(i32 [[R]]) #0
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[R:%.*]] = call i32 @NormalRet() [[ATTR0:#.*]]
+; CHECK-NEXT:    call void @NormalArg(i32 [[R]]) [[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
   %r = call i32 @NormalRet() nounwind uwtable sanitize_memory
@@ -101,6 +107,7 @@ define void @CallNormal() nounwind uwtable sanitize_memory {
 
 define void @CallWithLoaded() nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @CallWithLoaded(
+; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 0 to i32*
 ; CHECK-NEXT:    [[O:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i32* [[P]] to i64
@@ -113,10 +120,10 @@ define void @CallWithLoaded() nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[_MSLD]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof !0
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP6]]) #1
+; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP6]]) [[ATTR2]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
-; CHECK-NEXT:    call void @NormalArg(i32 [[O]]) #0
+; CHECK-NEXT:    call void @NormalArg(i32 [[O]]) [[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
   %p = inttoptr i64 0 to i32 *
@@ -127,13 +134,14 @@ define void @CallWithLoaded() nounwind uwtable sanitize_memory {
 
 define void @CallPartial() nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @CallPartial(
+; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
-; CHECK-NEXT:    [[R:%.*]] = call i32 @PartialRet() #0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @PartialRet() [[ATTR0]]
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    store i32 [[_MSRET]], i32* bitcast ([100 x i64]* @__msan_param_tls to i32*), align 8
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4
-; CHECK-NEXT:    call void @PartialArg(i32 [[R]]) #0
+; CHECK-NEXT:    call void @PartialArg(i32 [[R]]) [[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
   %r = call i32 @PartialRet() nounwind uwtable sanitize_memory

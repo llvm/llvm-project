@@ -116,6 +116,10 @@ struct TestBufferPlacementPreparationPass
     patterns->insert<GenericOpConverter>(context, placer, converter);
   }
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<linalg::LinalgDialect>();
+  }
+
   void runOnOperation() override {
     MLIRContext &context = this->getContext();
     ConversionTarget target(context);

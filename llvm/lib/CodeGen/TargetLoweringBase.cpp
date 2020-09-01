@@ -866,7 +866,7 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
   if (NumElts == 1)
     return LegalizeKind(TypeScalarizeVector, EltVT);
 
-  if (VT.getVectorElementCount() == ElementCount(1, true))
+  if (VT.getVectorElementCount() == ElementCount::getScalable(1))
     report_fatal_error("Cannot legalize this vector");
 
   // Try to widen vector elements until the element type is a power of two and
@@ -964,23 +964,24 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
 
   // Scalable vectors cannot be scalarized, so splitting or widening is
   // required.
-  if (VT.isScalableVector() && !isPowerOf2_32(EC.Min))
+  if (VT.isScalableVector() && !isPowerOf2_32(EC.getKnownMinValue()))
     llvm_unreachable(
         "Splitting or widening of non-power-of-2 MVTs is not implemented.");
 
   // FIXME: We don't support non-power-of-2-sized vectors for now.
   // Ideally we could break down into LHS/RHS like LegalizeDAG does.
-  if (!isPowerOf2_32(EC.Min)) {
+  if (!isPowerOf2_32(EC.getKnownMinValue())) {
     // Split EC to unit size (scalable property is preserved).
-    NumVectorRegs = EC.Min;
-    EC = EC / NumVectorRegs;
+    NumVectorRegs = EC.getKnownMinValue();
+    EC = ElementCount::getFixed(1);
   }
 
   // Divide the input until we get to a supported size. This will
   // always end up with an EC that represent a scalar or a scalable
   // scalar.
-  while (EC.Min > 1 && !TLI->isTypeLegal(MVT::getVectorVT(EltTy, EC))) {
-    EC.Min >>= 1;
+  while (EC.getKnownMinValue() > 1 &&
+         !TLI->isTypeLegal(MVT::getVectorVT(EltTy, EC))) {
+    EC /= 2;
     NumVectorRegs <<= 1;
   }
 
@@ -1315,13 +1316,15 @@ void TargetLoweringBase::computeRegisterProperties(
     }
 
     case TypeWidenVector:
-      if (isPowerOf2_32(EC.Min)) {
+      if (isPowerOf2_32(EC.getKnownMinValue())) {
         // Try to widen the vector.
         for (unsigned nVT = i + 1; nVT <= MVT::LAST_VECTOR_VALUETYPE; ++nVT) {
           MVT SVT = (MVT::SimpleValueType) nVT;
           if (SVT.getVectorElementType() == EltVT &&
               SVT.isScalableVector() == IsScalable &&
-              SVT.getVectorElementCount().Min > EC.Min && isTypeLegal(SVT)) {
+              SVT.getVectorElementCount().getKnownMinValue() >
+                  EC.getKnownMinValue() &&
+              isTypeLegal(SVT)) {
             TransformToType[i] = SVT;
             RegisterTypeForVT[i] = SVT;
             NumRegistersForVT[i] = 1;
@@ -1365,10 +1368,10 @@ void TargetLoweringBase::computeRegisterProperties(
           ValueTypeActions.setTypeAction(VT, TypeScalarizeVector);
         else if (PreferredAction == TypeSplitVector)
           ValueTypeActions.setTypeAction(VT, TypeSplitVector);
-        else if (EC.Min > 1)
+        else if (EC.getKnownMinValue() > 1)
           ValueTypeActions.setTypeAction(VT, TypeSplitVector);
         else
-          ValueTypeActions.setTypeAction(VT, EC.Scalable
+          ValueTypeActions.setTypeAction(VT, EC.isScalable()
                                                  ? TypeScalarizeScalableVector
                                                  : TypeScalarizeVector);
       } else {
@@ -1426,7 +1429,8 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context, EVT VT
   // This handles things like <2 x float> -> <4 x float> and
   // <4 x i1> -> <4 x i32>.
   LegalizeTypeAction TA = getTypeAction(Context, VT);
-  if (EltCnt.Min != 1 && (TA == TypeWidenVector || TA == TypePromoteInteger)) {
+  if (EltCnt.getKnownMinValue() != 1 &&
+      (TA == TypeWidenVector || TA == TypePromoteInteger)) {
     EVT RegisterEVT = getTypeToTransformTo(Context, VT);
     if (isTypeLegal(RegisterEVT)) {
       IntermediateVT = RegisterEVT;
@@ -1443,7 +1447,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context, EVT VT
 
   // Scalable vectors cannot be scalarized, so handle the legalisation of the
   // types like done elsewhere in SelectionDAG.
-  if (VT.isScalableVector() && !isPowerOf2_32(EltCnt.Min)) {
+  if (VT.isScalableVector() && !isPowerOf2_32(EltCnt.getKnownMinValue())) {
     LegalizeKind LK;
     EVT PartVT = VT;
     do {
@@ -1452,15 +1456,15 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context, EVT VT
       PartVT = LK.second;
     } while (LK.first != TypeLegal);
 
-    NumIntermediates =
-        VT.getVectorElementCount().Min / PartVT.getVectorElementCount().Min;
+    NumIntermediates = VT.getVectorElementCount().getKnownMinValue() /
+                       PartVT.getVectorElementCount().getKnownMinValue();
 
     // FIXME: This code needs to be extended to handle more complex vector
     // breakdowns, like nxv7i64 -> nxv8i64 -> 4 x nxv2i64. Currently the only
     // supported cases are vectors that are broken down into equal parts
     // such as nxv6i64 -> 3 x nxv2i64.
-    assert(NumIntermediates * PartVT.getVectorElementCount().Min ==
-               VT.getVectorElementCount().Min &&
+    assert((PartVT.getVectorElementCount() * NumIntermediates) ==
+               VT.getVectorElementCount() &&
            "Expected an integer multiple of PartVT");
     IntermediateVT = PartVT;
     RegisterVT = getRegisterType(Context, IntermediateVT);
@@ -1469,16 +1473,16 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context, EVT VT
 
   // FIXME: We don't support non-power-of-2-sized vectors for now.  Ideally
   // we could break down into LHS/RHS like LegalizeDAG does.
-  if (!isPowerOf2_32(EltCnt.Min)) {
-    NumVectorRegs = EltCnt.Min;
-    EltCnt.Min = 1;
+  if (!isPowerOf2_32(EltCnt.getKnownMinValue())) {
+    NumVectorRegs = EltCnt.getKnownMinValue();
+    EltCnt = ElementCount::getFixed(1);
   }
 
   // Divide the input until we get to a supported size.  This will always
   // end with a scalar if the target doesn't support vectors.
-  while (EltCnt.Min > 1 &&
+  while (EltCnt.getKnownMinValue() > 1 &&
          !isTypeLegal(EVT::getVectorVT(Context, EltTy, EltCnt))) {
-    EltCnt.Min >>= 1;
+    EltCnt /= 2;
     NumVectorRegs <<= 1;
   }
 
@@ -1844,7 +1848,10 @@ Value *TargetLoweringBase::getIRStackGuard(IRBuilder<> &IRB) const {
   if (getTargetMachine().getTargetTriple().isOSOpenBSD()) {
     Module &M = *IRB.GetInsertBlock()->getParent()->getParent();
     PointerType *PtrTy = Type::getInt8PtrTy(M.getContext());
-    return M.getOrInsertGlobal("__guard_local", PtrTy);
+    Constant *C = M.getOrInsertGlobal("__guard_local", PtrTy);
+    if (GlobalVariable *G = dyn_cast_or_null<GlobalVariable>(C))
+      G->setVisibility(GlobalValue::HiddenVisibility);
+    return C;
   }
   return nullptr;
 }

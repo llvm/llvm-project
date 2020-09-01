@@ -3689,68 +3689,66 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; AVX512-NEXT:    pushq %r13
 ; AVX512-NEXT:    pushq %r12
 ; AVX512-NEXT:    pushq %rbx
-; AVX512-NEXT:    movq %r9, %r10
-; AVX512-NEXT:    movq %rcx, %r9
-; AVX512-NEXT:    movq %rdx, %r11
-; AVX512-NEXT:    movq %rsi, %rax
-; AVX512-NEXT:    movq %rdi, %rsi
+; AVX512-NEXT:    movq %rcx, %rax
+; AVX512-NEXT:    movq %rdx, %r12
+; AVX512-NEXT:    movq %rdi, %r11
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r14
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r12
+; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX512-NEXT:    testq %r10, %r10
 ; AVX512-NEXT:    setne %dl
-; AVX512-NEXT:    testq %rax, %rax
-; AVX512-NEXT:    setne %bl
-; AVX512-NEXT:    andb %dl, %bl
-; AVX512-NEXT:    mulq %r8
-; AVX512-NEXT:    movq %rax, %r13
+; AVX512-NEXT:    testq %rcx, %rcx
+; AVX512-NEXT:    setne %r13b
+; AVX512-NEXT:    andb %dl, %r13b
+; AVX512-NEXT:    mulq %r15
+; AVX512-NEXT:    movq %rax, %rdi
 ; AVX512-NEXT:    seto %bpl
 ; AVX512-NEXT:    movq %r10, %rax
-; AVX512-NEXT:    mulq %rdi
-; AVX512-NEXT:    movq %rax, %rdi
-; AVX512-NEXT:    seto %cl
-; AVX512-NEXT:    orb %bpl, %cl
-; AVX512-NEXT:    addq %r13, %rdi
-; AVX512-NEXT:    movq %rsi, %rax
-; AVX512-NEXT:    mulq %r8
-; AVX512-NEXT:    movq %rax, %r8
-; AVX512-NEXT:    movq %rdx, %r10
-; AVX512-NEXT:    addq %rdi, %r10
-; AVX512-NEXT:    setb %sil
-; AVX512-NEXT:    orb %cl, %sil
-; AVX512-NEXT:    orb %bl, %sil
-; AVX512-NEXT:    testq %r12, %r12
-; AVX512-NEXT:    setne %al
-; AVX512-NEXT:    testq %r9, %r9
-; AVX512-NEXT:    setne %bpl
-; AVX512-NEXT:    andb %al, %bpl
-; AVX512-NEXT:    movq %r9, %rax
-; AVX512-NEXT:    mulq %r15
-; AVX512-NEXT:    movq %rax, %rdi
-; AVX512-NEXT:    seto %r9b
-; AVX512-NEXT:    movq %r12, %rax
-; AVX512-NEXT:    mulq %r11
+; AVX512-NEXT:    mulq %r12
 ; AVX512-NEXT:    movq %rax, %rbx
 ; AVX512-NEXT:    seto %cl
-; AVX512-NEXT:    orb %r9b, %cl
+; AVX512-NEXT:    orb %bpl, %cl
 ; AVX512-NEXT:    addq %rdi, %rbx
-; AVX512-NEXT:    movq %r11, %rax
+; AVX512-NEXT:    movq %r12, %rax
 ; AVX512-NEXT:    mulq %r15
-; AVX512-NEXT:    addq %rbx, %rdx
-; AVX512-NEXT:    setb %dil
-; AVX512-NEXT:    orb %cl, %dil
-; AVX512-NEXT:    orb %bpl, %dil
-; AVX512-NEXT:    kmovd %edi, %k0
-; AVX512-NEXT:    kshiftlw $1, %k0, %k0
+; AVX512-NEXT:    movq %rax, %r10
+; AVX512-NEXT:    movq %rdx, %r15
+; AVX512-NEXT:    addq %rbx, %r15
+; AVX512-NEXT:    setb %al
+; AVX512-NEXT:    orb %cl, %al
+; AVX512-NEXT:    orb %r13b, %al
+; AVX512-NEXT:    kmovd %eax, %k0
+; AVX512-NEXT:    testq %r9, %r9
+; AVX512-NEXT:    setne %al
+; AVX512-NEXT:    testq %rsi, %rsi
+; AVX512-NEXT:    setne %cl
+; AVX512-NEXT:    andb %al, %cl
+; AVX512-NEXT:    movq %rsi, %rax
+; AVX512-NEXT:    mulq %r8
+; AVX512-NEXT:    movq %rax, %rsi
+; AVX512-NEXT:    seto %bpl
+; AVX512-NEXT:    movq %r9, %rax
+; AVX512-NEXT:    mulq %r11
+; AVX512-NEXT:    movq %rax, %rdi
+; AVX512-NEXT:    seto %bl
+; AVX512-NEXT:    orb %bpl, %bl
+; AVX512-NEXT:    addq %rsi, %rdi
+; AVX512-NEXT:    movq %r11, %rax
+; AVX512-NEXT:    mulq %r8
+; AVX512-NEXT:    addq %rdi, %rdx
+; AVX512-NEXT:    setb %sil
+; AVX512-NEXT:    orb %bl, %sil
+; AVX512-NEXT:    orb %cl, %sil
 ; AVX512-NEXT:    andl $1, %esi
 ; AVX512-NEXT:    kmovw %esi, %k1
+; AVX512-NEXT:    kshiftlw $1, %k0, %k0
 ; AVX512-NEXT:    korw %k0, %k1, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    movq %rax, 16(%r14)
-; AVX512-NEXT:    movq %r8, (%r14)
-; AVX512-NEXT:    movq %rdx, 24(%r14)
-; AVX512-NEXT:    movq %r10, 8(%r14)
+; AVX512-NEXT:    movq %r10, 16(%r14)
+; AVX512-NEXT:    movq %rax, (%r14)
+; AVX512-NEXT:    movq %r15, 24(%r14)
+; AVX512-NEXT:    movq %rdx, 8(%r14)
 ; AVX512-NEXT:    popq %rbx
 ; AVX512-NEXT:    popq %r12
 ; AVX512-NEXT:    popq %r13

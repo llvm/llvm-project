@@ -22,4 +22,3 @@ An export target:
     prim           Copy primitive (connectivity) data.
     null           Copy nothing.
     ============== ===================================
-

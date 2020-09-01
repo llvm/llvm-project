@@ -98,6 +98,9 @@ typedef int (*FixIndentationCallbackType)(Editline *editline,
                                           const StringList &lines,
                                           int cursor_position, void *baton);
 
+typedef llvm::Optional<std::string> (*SuggestionCallbackType)(
+    llvm::StringRef line, void *baton);
+
 typedef void (*CompleteCallbackType)(CompletionRequest &request, void *baton);
 
 /// Status used to decide when and how to start editing another line in
@@ -183,6 +186,9 @@ public:
 
   /// Cancel this edit and oblitarate all trace of it
   bool Cancel();
+
+  /// Register a callback for autosuggestion.
+  void SetSuggestionCallback(SuggestionCallbackType callback, void *baton);
 
   /// Register a callback for the tab key
   void SetAutoCompleteCallback(CompleteCallbackType callback, void *baton);
@@ -312,6 +318,12 @@ private:
   /// tab key is typed.
   unsigned char TabCommand(int ch);
 
+  /// Apply autosuggestion part in gray as editline.
+  unsigned char ApplyAutosuggestCommand(int ch);
+
+  /// Command used when a character is typed.
+  unsigned char TypedCharacter(int ch);
+
   /// Respond to normal character insertion by fixing line indentation
   unsigned char FixIndentationCommand(int ch);
 
@@ -360,7 +372,9 @@ private:
   const char *m_fix_indentation_callback_chars = nullptr;
   CompleteCallbackType m_completion_callback = nullptr;
   void *m_completion_callback_baton = nullptr;
-
+  SuggestionCallbackType m_suggestion_callback = nullptr;
+  void *m_suggestion_callback_baton = nullptr;
+  std::size_t m_previous_autosuggestion_size = 0;
   std::mutex m_output_mutex;
 };
 }

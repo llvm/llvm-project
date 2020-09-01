@@ -106,6 +106,12 @@ typedef int (*TargetDataFuncPtrTy)(DeviceTy &, int32_t, void **, void **,
     abort();                                                                   \
   } while (0)
 
+#define FAILURE_MESSAGE(...)                                                   \
+  do {                                                                         \
+    fprintf(stderr, "Libomptarget error: ");                                   \
+    fprintf(stderr, __VA_ARGS__);                                              \
+  } while (0)
+
 // Implemented in libomp, they are called from within __tgt_* functions.
 #ifdef __cplusplus
 extern "C" {
@@ -119,6 +125,7 @@ int __kmpc_get_target_offload(void) __attribute__((weak));
 }
 #endif
 
+extern int InfoLevel;
 #ifdef OMPTARGET_DEBUG
 extern int DebugLevel;
 
@@ -131,5 +138,19 @@ extern int DebugLevel;
 #else // OMPTARGET_DEBUG
 #define DP(...) {}
 #endif // OMPTARGET_DEBUG
+
+// Report debug messages that result in offload failure always
+#ifdef OMPTARGET_DEBUG
+#define REPORT(...)                                                            \
+  do {                                                                         \
+    if (DebugLevel > 0) {                                                      \
+      DP(__VA_ARGS__);                                                         \
+    } else {                                                                   \
+      FAILURE_MESSAGE(__VA_ARGS__);                                            \
+    }                                                                          \
+  } while (false)
+#else
+#define REPORT(...) FAILURE_MESSAGE(__VA_ARGS__);
+#endif
 
 #endif

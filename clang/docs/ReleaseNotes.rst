@@ -56,7 +56,17 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-- ...
+- The builtin intrinsics ``__builtin_bitreverse8``, ``__builtin_bitreverse16``,
+  ``__builtin_bitreverse32`` and ``__builtin_bitreverse64`` may now be used
+  within constant expressions.
+
+- The builtin intrinsics ``__builtin_rotateleft8``, ``__builtin_rotateleft16``,
+  ``__builtin_rotateleft32`` and ``__builtin_rotateleft64`` may now be used
+  within constant expressions.
+
+- The builtin intrinsics ``__builtin_rotateright8``, ``__builtin_rotateright16``,
+  ``__builtin_rotateright32`` and ``__builtin_rotateright64`` may now be used
+  within constant expressions.
 
 New Compiler Flags
 ------------------
@@ -152,6 +162,38 @@ CUDA Support in Clang
 ---------------------
 
 - ...
+
+X86 Support in Clang
+--------------------
+
+- The x86 intrinsics ``_mm_popcnt_u32``, ``_mm_popcnt_u64``, ``_popcnt32``,
+  ``_popcnt64``, ``__popcntd`` and ``__popcntq``  may now be used within
+  constant expressions.
+
+- The x86 intrinsics ``_bit_scan_forward``, ``__bsfd`` and ``__bsfq`` may now
+  be used within constant expressions.
+
+- The x86 intrinsics ``_bit_scan_reverse``, ``__bsrd`` and ``__bsrq`` may now
+  be used within constant expressions.
+
+- The x86 intrinsics ``__bswap``, ``__bswapd``, ``__bswap64`` and ``__bswapq``
+  may now be used within constant expressions.
+
+- The x86 intrinsics ``_castf32_u32``, ``_castf64_u64``, ``_castu32_f32`` and
+  ``_castu64_f64`` may now be used within constant expressions.
+
+- The x86 intrinsics ``__rolb``, ``__rolw``, ``__rold``, ``__rolq`, ``_rotl``,
+  ``_rotwl`` and ``_lrotl`` may now be used within constant expressions.
+
+- The x86 intrinsics ``__rorb``, ``__rorw``, ``__rord``, ``__rorq`, ``_rotr``,
+  ``_rotwr`` and ``_lrotr`` may now be used within constant expressions.
+
+- Support for -march=sapphirerapids was added.
+
+- The -mtune command line option is no longer ignored for X86. This can be used
+  to request microarchitectural optimizations independent on -march. -march=<cpu>
+  implies -mtune=<cpu>. -mtune=generic is the default with no -march or -mtune
+  specified.
 
 Internal API Changes
 --------------------

@@ -20,10 +20,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name: .note.foo
     Type: SHT_NOTE
@@ -52,10 +51,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
 ## Content is less than 12 bytes in size.
 ## (12 is the size of n_namesz, n_descsz and n_type 4-bytes fields that must always present).
@@ -85,10 +83,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2MSB
-  Type:    ET_DYN
-  Machine: EM_MIPS
+  Class: ELFCLASS64
+  Data:  ELFDATA2MSB
+  Type:  ET_DYN
 Sections:
   - Name:  .note.tag
     Type:  SHT_NOTE

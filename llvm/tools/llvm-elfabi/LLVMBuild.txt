@@ -18,4 +18,4 @@
 type = Tool
 name = llvm-elfabi
 parent = Tools
-required_libraries = Object Support TextAPI
+required_libraries = InterfaceStub Object Support TextAPI

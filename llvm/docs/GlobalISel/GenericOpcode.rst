@@ -153,7 +153,7 @@ G_BITCAST
 ^^^^^^^^^
 
 Reinterpret a value as a new type. This is usually done without
-changing any bits but this is not always the case due a sublety in the
+changing any bits but this is not always the case due a subtlety in the
 definition of the :ref:`LLVM-IR Bitcast Instruction <i_bitcast>`. It
 is allowed to bitcast between pointers with the same size, but
 different address spaces.
@@ -308,6 +308,16 @@ Take the minimum/maximum of two values.
 .. code-block:: none
 
   %5:_(s32) = G_SMIN %6, %2
+
+G_ABS
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Take the absolute value of a signed integer. The absolute value of the minimum
+negative value (e.g. the 8-bit value `0x80`) is defined to be itself.
+
+.. code-block:: none
+
+  %1:_(s32) = G_ABS %0
 
 G_UADDO, G_SADDO, G_USUBO, G_SSUBO, G_SMULO, G_UMULO
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

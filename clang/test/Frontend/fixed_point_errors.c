@@ -286,3 +286,8 @@ short _Accum shl_sat = (_Sat short _Accum)200.0hk << 5;
 
 // Division by zero
 short _Accum div_zero = 4.5k / 0.0lr;  // expected-error {{initializer element is not a compile-time constant}}
+
+void foo(void) {
+  _Accum x = 0.5k;
+  if (x == 0.5) {} // expected-error{{invalid operands to binary expression ('_Accum' and 'double')}}
+}

@@ -34,6 +34,14 @@ if(CMAKE_LIBTOOL)
     set(CMAKE_${lang}_CREATE_STATIC_LIBRARY
       "\"${CMAKE_LIBTOOL}\" -static ${LIBTOOL_NO_WARNING_FLAG} -o <TARGET> <LINK_FLAGS> <OBJECTS>")
   endforeach()
+
+  # By default, CMake invokes ranlib on a static library after installing it.
+  # libtool will have produced the table of contents for us already, and ranlib
+  # does not understanding universal binaries, so skip this step. It's important
+  # to set it to empty instead of unsetting it to shadow the cache variable, and
+  # we don't want to unset the cache variable to not affect anything outside
+  # this scope.
+  set(CMAKE_RANLIB "")
 endif()
 
 # If DYLD_LIBRARY_PATH is set we need to set it on archiver commands

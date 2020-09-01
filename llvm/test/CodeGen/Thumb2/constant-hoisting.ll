@@ -37,25 +37,26 @@ define i32 @test_values(i32 %a, i32 %b) minsize optsize {
 ; CHECK-V7M:         mov r2, r0
 ; CHECK-V7M-NEXT:    ldr r0, .LCPI0_0
 ; CHECK-V7M-NEXT:    cmp r2, #50
-; CHECK-V7M-NEXT:    beq .LBB0_3
+; CHECK-V7M-NEXT:    beq .LBB0_5
 ; CHECK-V7M-NEXT:    cmp r2, #1
-; CHECK-V7M-NEXT:    ittt eq
-; CHECK-V7M-NEXT:    addeq r0, r1
-; CHECK-V7M-NEXT:    addeq r0, #1
-; CHECK-V7M-NEXT:    bxeq lr
+; CHECK-V7M-NEXT:    beq .LBB0_7
 ; CHECK-V7M-NEXT:    cmp r2, #30
-; CHECK-V7M-NEXT:    ittt eq
-; CHECK-V7M-NEXT:    addeq r0, r1
-; CHECK-V7M-NEXT:    addeq r0, #2
-; CHECK-V7M-NEXT:    bxeq lr
-; CHECK-V7M-NEXT:    cbnz r2, .LBB0_4
-; CHECK-V7M-NEXT:  .LBB0_2:
+; CHECK-V7M-NEXT:    beq .LBB0_8
+; CHECK-V7M-NEXT:    cbnz r2, .LBB0_6
 ; CHECK-V7M-NEXT:    add r0, r1
 ; CHECK-V7M-NEXT:    bx lr
-; CHECK-V7M-NEXT:  .LBB0_3:
+; CHECK-V7M-NEXT:  .LBB0_5:
 ; CHECK-V7M-NEXT:    add r0, r1
 ; CHECK-V7M-NEXT:    adds r0, #4
-; CHECK-V7M-NEXT:  .LBB0_4:
+; CHECK-V7M-NEXT:  .LBB0_6:
+; CHECK-V7M-NEXT:    bx lr
+; CHECK-V7M-NEXT:  .LBB0_7:
+; CHECK-V7M-NEXT:    add r0, r1
+; CHECK-V7M-NEXT:    adds r0, #1
+; CHECK-V7M-NEXT:    bx lr
+; CHECK-V7M-NEXT:  .LBB0_8:
+; CHECK-V7M-NEXT:    add r0, r1
+; CHECK-V7M-NEXT:    adds r0, #2
 ; CHECK-V7M-NEXT:    bx lr
 ; CHECK-V7M-NEXT:    .p2align 2
 ; CHECK-V7M-NEXT:  .LCPI0_0:
@@ -121,28 +122,29 @@ define i32 @test_addr(i32 %a, i8* nocapture readonly %b) {
 ; CHECK-V7M:         mov r2, r0
 ; CHECK-V7M-NEXT:    movs r0, #0
 ; CHECK-V7M-NEXT:    cmp r2, #29
-; CHECK-V7M-NEXT:    bgt .LBB1_3
-; CHECK-V7M-NEXT:    cbz r2, .LBB1_6
+; CHECK-V7M-NEXT:    bgt .LBB1_4
+; CHECK-V7M-NEXT:    cbz r2, .LBB1_7
 ; CHECK-V7M-NEXT:    cmp r2, #1
 ; CHECK-V7M-NEXT:    it ne
 ; CHECK-V7M-NEXT:    bxne lr
-; CHECK-V7M-NEXT:    movw r0, #305
-; CHECK-V7M-NEXT:    b .LBB1_8
 ; CHECK-V7M-NEXT:  .LBB1_3:
+; CHECK-V7M-NEXT:    movw r0, #305
+; CHECK-V7M-NEXT:    b .LBB1_9
+; CHECK-V7M-NEXT:  .LBB1_4:
 ; CHECK-V7M-NEXT:    cmp r2, #30
-; CHECK-V7M-NEXT:    beq .LBB1_7
+; CHECK-V7M-NEXT:    beq .LBB1_8
 ; CHECK-V7M-NEXT:    cmp r2, #50
-; CHECK-V7M-NEXT:    bne .LBB1_9
+; CHECK-V7M-NEXT:    bne .LBB1_10
 ; CHECK-V7M-NEXT:    movw r0, #307
-; CHECK-V7M-NEXT:    b .LBB1_8
-; CHECK-V7M-NEXT:  .LBB1_6:
-; CHECK-V7M-NEXT:    mov.w r0, #304
-; CHECK-V7M-NEXT:    b .LBB1_8
+; CHECK-V7M-NEXT:    b .LBB1_9
 ; CHECK-V7M-NEXT:  .LBB1_7:
-; CHECK-V7M-NEXT:    mov.w r0, #306
+; CHECK-V7M-NEXT:    mov.w r0, #304
+; CHECK-V7M-NEXT:    b .LBB1_9
 ; CHECK-V7M-NEXT:  .LBB1_8:
-; CHECK-V7M-NEXT:    ldrb r0, [r1, r0]
+; CHECK-V7M-NEXT:    mov.w r0, #306
 ; CHECK-V7M-NEXT:  .LBB1_9:
+; CHECK-V7M-NEXT:    ldrb r0, [r1, r0]
+; CHECK-V7M-NEXT:  .LBB1_10:
 ; CHECK-V7M-NEXT:    bx lr
 entry:
   switch i32 %a, label %return [

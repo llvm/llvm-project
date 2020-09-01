@@ -28,3 +28,9 @@ module header_attr {
   header "quux.h" { size 1 mtime 2 }
   header "no_attrs.h" {}
 }
+
+// CHECK: diagnostics.modulemap:[[@LINE+1]]:8: error: no module named 'unknown' found, parent module must be defined before the submodule
+module unknown.submodule {}
+module known_top_level {}
+// CHECK: diagnostics.modulemap:[[@LINE+1]]:24: error: no module named 'unknown' in 'known_top_level', parent module must be defined before the submodule
+module known_top_level.unknown.submodule {}

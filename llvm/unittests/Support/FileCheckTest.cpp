@@ -86,7 +86,9 @@ constexpr uint64_t AbsoluteMinInt64 =
 constexpr uint64_t AbsoluteMaxInt64 = static_cast<uint64_t>(MaxInt64);
 
 struct ExpressionFormatParameterisedFixture
-    : public ::testing::TestWithParam<ExpressionFormat::Kind> {
+    : public ::testing::TestWithParam<
+          std::pair<ExpressionFormat::Kind, unsigned>> {
+  unsigned Precision;
   bool Signed;
   bool AllowHex;
   bool AllowUpperHex;
@@ -105,12 +107,13 @@ struct ExpressionFormatParameterisedFixture
   SourceMgr SM;
 
   void SetUp() override {
-    ExpressionFormat::Kind Kind = GetParam();
+    ExpressionFormat::Kind Kind;
+    std::tie(Kind, Precision) = GetParam();
     AllowHex = Kind == ExpressionFormat::Kind::HexLower ||
                Kind == ExpressionFormat::Kind::HexUpper;
     AllowUpperHex = Kind == ExpressionFormat::Kind::HexUpper;
     Signed = Kind == ExpressionFormat::Kind::Signed;
-    Format = ExpressionFormat(Kind);
+    Format = ExpressionFormat(Kind, Precision);
 
     if (!AllowHex) {
       MaxUint64Str = std::to_string(MaxUint64);
@@ -133,15 +136,40 @@ struct ExpressionFormatParameterisedFixture
     FirstInvalidCharDigits = "gG";
   }
 
-  void checkWildcardRegexMatch(StringRef Input) {
+  void checkWildcardRegexMatch(StringRef Input,
+                               unsigned TrailExtendTo = 0) const {
     SmallVector<StringRef, 4> Matches;
-    ASSERT_TRUE(WildcardRegex.match(Input, &Matches))
-        << "Wildcard regex does not match " << Input;
-    EXPECT_EQ(Matches[0], Input);
+    std::string ExtendedInput = Input.str();
+    if (TrailExtendTo > Input.size()) {
+      ExtendedInput.append(TrailExtendTo - Input.size(), Input[0]);
+    }
+    ASSERT_TRUE(WildcardRegex.match(ExtendedInput, &Matches))
+        << "Wildcard regex does not match " << ExtendedInput;
+    EXPECT_EQ(Matches[0], ExtendedInput);
   }
 
-  void checkWildcardRegexMatchFailure(StringRef Input) {
+  void checkWildcardRegexMatchFailure(StringRef Input) const {
     EXPECT_FALSE(WildcardRegex.match(Input));
+  }
+
+  void checkWildcardRegexCharMatchFailure(StringRef Chars) const {
+    for (auto C : Chars)
+      EXPECT_FALSE(WildcardRegex.match(StringRef(&C, 1)));
+  }
+
+  std::string padWithLeadingZeros(StringRef NumStr) const {
+    bool Negative = NumStr.startswith("-");
+    if (NumStr.size() - unsigned(Negative) >= Precision)
+      return NumStr.str();
+
+    std::string PaddedStr;
+    if (Negative) {
+      PaddedStr = "-";
+      NumStr = NumStr.drop_front();
+    }
+    PaddedStr.append(Precision - NumStr.size(), '0');
+    PaddedStr.append(NumStr.str());
+    return PaddedStr;
   }
 
   template <class T> void checkMatchingString(T Val, StringRef ExpectedStr) {
@@ -188,49 +216,62 @@ struct ExpressionFormatParameterisedFixture
 
 TEST_P(ExpressionFormatParameterisedFixture, FormatGetWildcardRegex) {
   // Wildcard regex is valid.
-  Expected<StringRef> WildcardPattern = Format.getWildcardRegex();
+  Expected<std::string> WildcardPattern = Format.getWildcardRegex();
   ASSERT_THAT_EXPECTED(WildcardPattern, Succeeded());
-  WildcardRegex = Regex((Twine("^") + *WildcardPattern).str());
+  WildcardRegex = Regex((Twine("^") + *WildcardPattern + "$").str());
   ASSERT_TRUE(WildcardRegex.isValid());
 
   // Does not match empty string.
   checkWildcardRegexMatchFailure("");
 
   // Matches all decimal digits and matches several of them.
-  checkWildcardRegexMatch("0123456789");
+  StringRef LongNumber = "12345678901234567890";
+  checkWildcardRegexMatch(LongNumber);
 
   // Matches negative digits.
+  LongNumber = "-12345678901234567890";
   if (Signed)
-    checkWildcardRegexMatch("-42");
+    checkWildcardRegexMatch(LongNumber);
   else
-    checkWildcardRegexMatchFailure("-42");
+    checkWildcardRegexMatchFailure(LongNumber);
 
   // Check non digits or digits with wrong casing are not matched.
   if (AllowHex) {
-    checkWildcardRegexMatch(AcceptedHexOnlyDigits);
-    checkWildcardRegexMatchFailure(RefusedHexOnlyDigits);
+    checkWildcardRegexMatch(AcceptedHexOnlyDigits, 16);
+    checkWildcardRegexCharMatchFailure(RefusedHexOnlyDigits);
   }
-  checkWildcardRegexMatchFailure(FirstInvalidCharDigits);
+  checkWildcardRegexCharMatchFailure(FirstInvalidCharDigits);
+
+  // Check leading zeros are only accepted if number of digits is less than the
+  // precision.
+  LongNumber = "01234567890123456789";
+  if (Precision) {
+    checkWildcardRegexMatch(LongNumber.take_front(Precision));
+    checkWildcardRegexMatchFailure(LongNumber.take_front(Precision - 1));
+    if (Precision < LongNumber.size())
+      checkWildcardRegexMatchFailure(LongNumber.take_front(Precision + 1));
+  } else
+    checkWildcardRegexMatch(LongNumber);
 }
 
 TEST_P(ExpressionFormatParameterisedFixture, FormatGetMatchingString) {
-  checkMatchingString(0, "0");
-  checkMatchingString(9, "9");
+  checkMatchingString(0, padWithLeadingZeros("0"));
+  checkMatchingString(9, padWithLeadingZeros("9"));
 
   if (Signed) {
-    checkMatchingString(-5, "-5");
+    checkMatchingString(-5, padWithLeadingZeros("-5"));
     checkMatchingStringFailure(MaxUint64);
-    checkMatchingString(MaxInt64, MaxInt64Str);
-    checkMatchingString(MinInt64, MinInt64Str);
+    checkMatchingString(MaxInt64, padWithLeadingZeros(MaxInt64Str));
+    checkMatchingString(MinInt64, padWithLeadingZeros(MinInt64Str));
   } else {
     checkMatchingStringFailure(-5);
-    checkMatchingString(MaxUint64, MaxUint64Str);
-    checkMatchingString(MaxInt64, MaxInt64Str);
+    checkMatchingString(MaxUint64, padWithLeadingZeros(MaxUint64Str));
+    checkMatchingString(MaxInt64, padWithLeadingZeros(MaxInt64Str));
     checkMatchingStringFailure(MinInt64);
   }
 
-  checkMatchingString(10, TenStr);
-  checkMatchingString(15, FifteenStr);
+  checkMatchingString(10, padWithLeadingZeros(TenStr));
+  checkMatchingString(15, padWithLeadingZeros(FifteenStr));
 }
 
 TEST_P(ExpressionFormatParameterisedFixture, FormatValueFromStringRepr) {
@@ -257,12 +298,25 @@ TEST_P(ExpressionFormatParameterisedFixture, FormatBoolOperator) {
   EXPECT_TRUE(bool(Format));
 }
 
-INSTANTIATE_TEST_CASE_P(AllowedExplicitExpressionFormat,
-                        ExpressionFormatParameterisedFixture,
-                        ::testing::Values(ExpressionFormat::Kind::Unsigned,
-                                          ExpressionFormat::Kind::Signed,
-                                          ExpressionFormat::Kind::HexLower,
-                                          ExpressionFormat::Kind::HexUpper), );
+INSTANTIATE_TEST_CASE_P(
+    AllowedExplicitExpressionFormat, ExpressionFormatParameterisedFixture,
+    ::testing::Values(std::make_pair(ExpressionFormat::Kind::Unsigned, 0),
+                      std::make_pair(ExpressionFormat::Kind::Signed, 0),
+                      std::make_pair(ExpressionFormat::Kind::HexLower, 0),
+                      std::make_pair(ExpressionFormat::Kind::HexUpper, 0),
+
+                      std::make_pair(ExpressionFormat::Kind::Unsigned, 1),
+                      std::make_pair(ExpressionFormat::Kind::Signed, 1),
+                      std::make_pair(ExpressionFormat::Kind::HexLower, 1),
+                      std::make_pair(ExpressionFormat::Kind::HexUpper, 1),
+
+                      std::make_pair(ExpressionFormat::Kind::Unsigned, 16),
+                      std::make_pair(ExpressionFormat::Kind::Signed, 16),
+                      std::make_pair(ExpressionFormat::Kind::HexLower, 16),
+                      std::make_pair(ExpressionFormat::Kind::HexUpper, 16),
+
+                      std::make_pair(ExpressionFormat::Kind::Unsigned, 20),
+                      std::make_pair(ExpressionFormat::Kind::Signed, 20)), );
 
 TEST_F(FileCheckTest, NoFormatProperties) {
   ExpressionFormat NoFormat(ExpressionFormat::Kind::NoFormat);
@@ -985,6 +1039,10 @@ TEST_F(FileCheckTest, ParseNumericSubstitutionBlock) {
   EXPECT_FALSE(Tester.parsePattern("[[#%x, VAR_LOWER_HEX:]]"));
   EXPECT_THAT_EXPECTED(Tester.parseSubst("%X, VAR_UPPER_HEX:"), Succeeded());
 
+  // Acceptable variable definition with precision specifier.
+  EXPECT_FALSE(Tester.parsePattern("[[#%.8X, PADDED_ADDR:]]"));
+  EXPECT_FALSE(Tester.parsePattern("[[#%.8, PADDED_NUM:]]"));
+
   // Acceptable variable definition from a numeric expression.
   EXPECT_THAT_EXPECTED(Tester.parseSubst("FOOBAR: FOO+1"), Succeeded());
 
@@ -1093,6 +1151,10 @@ TEST_F(FileCheckTest, ParseNumericSubstitutionBlock) {
   EXPECT_THAT_EXPECTED(Tester.parseSubst("%d, FOO"), Succeeded());
   EXPECT_THAT_EXPECTED(Tester.parseSubst("%x, FOO"), Succeeded());
   EXPECT_THAT_EXPECTED(Tester.parseSubst("%X, FOO"), Succeeded());
+
+  // Valid expression with precision specifier.
+  EXPECT_THAT_EXPECTED(Tester.parseSubst("%.8u, FOO"), Succeeded());
+  EXPECT_THAT_EXPECTED(Tester.parseSubst("%.8, FOO"), Succeeded());
 
   // Valid legacy @LINE expression.
   EXPECT_THAT_EXPECTED(Tester.parseSubst("@LINE+2", /*IsLegacyNumExpr=*/true),

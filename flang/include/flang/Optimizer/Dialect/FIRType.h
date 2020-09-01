@@ -54,29 +54,6 @@ struct SequenceTypeStorage;
 struct TypeDescTypeStorage;
 } // namespace detail
 
-/// Integral identifier for all the types comprising the FIR type system
-enum TypeKind {
-  // The enum starts at the range reserved for this dialect.
-  FIR_TYPE = mlir::Type::FIRST_FIR_TYPE,
-  FIR_BOX,       // (static) descriptor
-  FIR_BOXCHAR,   // CHARACTER pointer and length
-  FIR_BOXPROC,   // procedure with host association
-  FIR_CHARACTER, // intrinsic type
-  FIR_COMPLEX,   // intrinsic type
-  FIR_DERIVED,   // derived
-  FIR_DIMS,
-  FIR_FIELD,
-  FIR_HEAP,
-  FIR_INT, // intrinsic type
-  FIR_LEN,
-  FIR_LOGICAL, // intrinsic type
-  FIR_POINTER, // POINTER attr
-  FIR_REAL,    // intrinsic type
-  FIR_REFERENCE,
-  FIR_SEQUENCE, // DIMENSION attr
-  FIR_TYPEDESC,
-};
-
 // These isa_ routines follow the precedent of llvm::isa_or_null<>
 
 /// Is `t` any of the FIR dialect types?
@@ -111,12 +88,6 @@ bool isa_aggregate(mlir::Type t);
 /// not a memory reference type, then returns a null `Type`.
 mlir::Type dyn_cast_ptrEleTy(mlir::Type t);
 
-/// Boilerplate mixin template
-template <typename A, unsigned Id>
-struct IntrinsicTypeMixin {
-  static constexpr unsigned getId() { return Id; }
-};
-
 // Intrinsic types
 
 /// Model of the Fortran CHARACTER intrinsic type, including the KIND type
@@ -124,8 +95,7 @@ struct IntrinsicTypeMixin {
 /// is thus the type of a single character value.
 class CharacterType
     : public mlir::Type::TypeBase<CharacterType, mlir::Type,
-                                  detail::CharacterTypeStorage>,
-      public IntrinsicTypeMixin<CharacterType, TypeKind::FIR_CHARACTER> {
+                                  detail::CharacterTypeStorage> {
 public:
   using Base::Base;
   static CharacterType get(mlir::MLIRContext *ctxt, KindTy kind);
@@ -136,8 +106,7 @@ public:
 /// parameter. COMPLEX is a floating point type with a real and imaginary
 /// member.
 class CplxType : public mlir::Type::TypeBase<CplxType, mlir::Type,
-                                             detail::CplxTypeStorage>,
-                 public IntrinsicTypeMixin<CplxType, TypeKind::FIR_COMPLEX> {
+                                             detail::CplxTypeStorage> {
 public:
   using Base::Base;
   static CplxType get(mlir::MLIRContext *ctxt, KindTy kind);
@@ -151,8 +120,7 @@ public:
 /// Model of a Fortran INTEGER intrinsic type, including the KIND type
 /// parameter.
 class IntType
-    : public mlir::Type::TypeBase<IntType, mlir::Type, detail::IntTypeStorage>,
-      public IntrinsicTypeMixin<IntType, TypeKind::FIR_INT> {
+    : public mlir::Type::TypeBase<IntType, mlir::Type, detail::IntTypeStorage> {
 public:
   using Base::Base;
   static IntType get(mlir::MLIRContext *ctxt, KindTy kind);
@@ -163,8 +131,7 @@ public:
 /// parameter.
 class LogicalType
     : public mlir::Type::TypeBase<LogicalType, mlir::Type,
-                                  detail::LogicalTypeStorage>,
-      public IntrinsicTypeMixin<LogicalType, TypeKind::FIR_LOGICAL> {
+                                  detail::LogicalTypeStorage> {
 public:
   using Base::Base;
   static LogicalType get(mlir::MLIRContext *ctxt, KindTy kind);
@@ -174,8 +141,7 @@ public:
 /// Model of a Fortran REAL (and DOUBLE PRECISION) intrinsic type, including the
 /// KIND type parameter.
 class RealType : public mlir::Type::TypeBase<RealType, mlir::Type,
-                                             detail::RealTypeStorage>,
-                 public IntrinsicTypeMixin<RealType, TypeKind::FIR_REAL> {
+                                             detail::RealTypeStorage> {
 public:
   using Base::Base;
   static RealType get(mlir::MLIRContext *ctxt, KindTy kind);
@@ -400,7 +366,6 @@ public:
   static RecordType get(mlir::MLIRContext *ctxt, llvm::StringRef name);
   void finalize(llvm::ArrayRef<TypePair> lenPList,
                 llvm::ArrayRef<TypePair> typeList);
-  static constexpr unsigned getId() { return TypeKind::FIR_DERIVED; }
 
   detail::RecordTypeStorage const *uniqueKey() const;
 

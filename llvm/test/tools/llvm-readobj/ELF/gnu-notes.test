@@ -86,7 +86,6 @@ FileHeader:
   Class:      ELFCLASS64
   Data:       ELFDATA2LSB
   Type:       ET_EXEC
-  Machine:    EM_X86_64
   EPhEntSize: [[PHENTSIZE=<none>]]
   EShNum:     [[SHNUM=<none>]]
 Sections:
@@ -121,10 +120,9 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:     .note
     Type:     SHT_NOTE
@@ -142,10 +140,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:   .note
     Type:   SHT_NOTE
@@ -163,10 +160,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_CORE
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_CORE
 ProgramHeaders:
   - Type:   PT_NOTE
     Offset: 0xffff0000
@@ -182,10 +178,9 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_CORE
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_CORE
 Sections:
   - Name:  .note
     Type:  SHT_NOTE

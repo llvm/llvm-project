@@ -1,5 +1,5 @@
-# RUN: yaml2obj --docnum=1 %s > %t.dmp
-# RUN: yaml2obj --docnum=2 %s > %T/unwind-via-stack-win-no-memory-info.exe
+# RUN: yaml2obj --docnum=1 %s -o %t.dmp
+# RUN: yaml2obj --docnum=2 %s -o %T/unwind-via-stack-win-no-memory-info.exe
 # RUN: %lldb -c %t.dmp %T/unwind-via-stack-win-no-memory-info.exe \
 # RUN:   -o "target symbols add %S/Inputs/unwind-via-raSearch.syms" \
 # RUN:   -o "thread backtrace" -b | FileCheck %s

@@ -31,7 +31,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; Don't use SVE for 64-bit vectors.
 define <4 x half> @fadd_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
-; CHECK-LABEL: @fadd_v4f16
+; CHECK-LABEL: fadd_v4f16:
 ; CHECK: fadd v0.4h, v0.4h, v1.4h
 ; CHECK: ret
   %res = fadd <4 x half> %op1, %op2
@@ -40,7 +40,7 @@ define <4 x half> @fadd_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
 
 ; Don't use SVE for 128-bit vectors.
 define <8 x half> @fadd_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
-; CHECK-LABEL: @fadd_v8f16
+; CHECK-LABEL: fadd_v8f16:
 ; CHECK: fadd v0.8h, v0.8h, v1.8h
 ; CHECK: ret
   %res = fadd <8 x half> %op1, %op2
@@ -48,7 +48,7 @@ define <8 x half> @fadd_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
 }
 
 define void @fadd_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
-; CHECK-LABEL: @fadd_v16f16
+; CHECK-LABEL: fadd_v16f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),16)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -63,7 +63,7 @@ define void @fadd_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
 }
 
 define void @fadd_v32f16(<32 x half>* %a, <32 x half>* %b) #0 {
-; CHECK-LABEL: @fadd_v32f16
+; CHECK-LABEL: fadd_v32f16:
 ; CHECK-DAG: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),32)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -84,7 +84,7 @@ define void @fadd_v32f16(<32 x half>* %a, <32 x half>* %b) #0 {
 }
 
 define void @fadd_v64f16(<64 x half>* %a, <64 x half>* %b) #0 {
-; CHECK-LABEL: @fadd_v64f16
+; CHECK-LABEL: fadd_v64f16:
 ; CHECK-DAG: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),64)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -119,7 +119,7 @@ define void @fadd_v64f16(<64 x half>* %a, <64 x half>* %b) #0 {
 ; NOTE: Check lines only cover the first VBYTES because the fadd_v#f16 tests
 ; already cover the general legalisation cases.
 define void @fadd_v128f16(<128 x half>* %a, <128 x half>* %b) #0 {
-; CHECK-LABEL: @fadd_v128f16
+; CHECK-LABEL: fadd_v128f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),128)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -135,7 +135,7 @@ define void @fadd_v128f16(<128 x half>* %a, <128 x half>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors.
 define <2 x float> @fadd_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
-; CHECK-LABEL: @fadd_v2f32
+; CHECK-LABEL: fadd_v2f32:
 ; CHECK: fadd v0.2s, v0.2s, v1.2s
 ; CHECK: ret
   %res = fadd <2 x float> %op1, %op2
@@ -144,7 +144,7 @@ define <2 x float> @fadd_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
 
 ; Don't use SVE for 128-bit vectors.
 define <4 x float> @fadd_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
-; CHECK-LABEL: @fadd_v4f32
+; CHECK-LABEL: fadd_v4f32:
 ; CHECK: fadd v0.4s, v0.4s, v1.4s
 ; CHECK: ret
   %res = fadd <4 x float> %op1, %op2
@@ -152,7 +152,7 @@ define <4 x float> @fadd_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
 }
 
 define void @fadd_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
-; CHECK-LABEL: @fadd_v8f32
+; CHECK-LABEL: fadd_v8f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -169,7 +169,7 @@ define void @fadd_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
 ; NOTE: Check lines only cover the first VBYTES because the fadd_v#f16 tests
 ; already cover the general legalisation cases.
 define void @fadd_v16f32(<16 x float>* %a, <16 x float>* %b) #0 {
-; CHECK-LABEL: @fadd_v16f32
+; CHECK-LABEL: fadd_v16f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),16)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -186,7 +186,7 @@ define void @fadd_v16f32(<16 x float>* %a, <16 x float>* %b) #0 {
 ; NOTE: Check lines only cover the first VBYTES because the fadd_v#f16 tests
 ; already cover the general legalisation cases.
 define void @fadd_v32f32(<32 x float>* %a, <32 x float>* %b) #0 {
-; CHECK-LABEL: @fadd_v32f32
+; CHECK-LABEL: fadd_v32f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),32)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -203,7 +203,7 @@ define void @fadd_v32f32(<32 x float>* %a, <32 x float>* %b) #0 {
 ; NOTE: Check lines only cover the first VBYTES because the fadd_v#f16 tests
 ; already cover the general legalisation cases.
 define void @fadd_v64f32(<64 x float>* %a, <64 x float>* %b) #0 {
-; CHECK-LABEL: @fadd_v64f32
+; CHECK-LABEL: fadd_v64f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),64)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -219,7 +219,7 @@ define void @fadd_v64f32(<64 x float>* %a, <64 x float>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors.
 define <1 x double> @fadd_v1f64(<1 x double> %op1, <1 x double> %op2) #0 {
-; CHECK-LABEL: @fadd_v1f64
+; CHECK-LABEL: fadd_v1f64:
 ; CHECK: fadd d0, d0, d1
 ; CHECK: ret
   %res = fadd <1 x double> %op1, %op2
@@ -228,7 +228,7 @@ define <1 x double> @fadd_v1f64(<1 x double> %op1, <1 x double> %op2) #0 {
 
 ; Don't use SVE for 128-bit vectors.
 define <2 x double> @fadd_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
-; CHECK-LABEL: @fadd_v2f64
+; CHECK-LABEL: fadd_v2f64:
 ; CHECK: fadd v0.2d, v0.2d, v1.2d
 ; CHECK: ret
   %res = fadd <2 x double> %op1, %op2
@@ -236,7 +236,7 @@ define <2 x double> @fadd_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
 }
 
 define void @fadd_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
-; CHECK-LABEL: @fadd_v4f64
+; CHECK-LABEL: fadd_v4f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),4)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -253,7 +253,7 @@ define void @fadd_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
 ; NOTE: Check lines only cover the first VBYTES because the fadd_v#f16 tests
 ; already cover the general legalisation cases.
 define void @fadd_v8f64(<8 x double>* %a, <8 x double>* %b) #0 {
-; CHECK-LABEL: @fadd_v8f64
+; CHECK-LABEL: fadd_v8f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),8)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -270,7 +270,7 @@ define void @fadd_v8f64(<8 x double>* %a, <8 x double>* %b) #0 {
 ; NOTE: Check lines only cover the first VBYTES because the fadd_v#f16 tests
 ; already cover the general legalisation cases.
 define void @fadd_v16f64(<16 x double>* %a, <16 x double>* %b) #0 {
-; CHECK-LABEL: @fadd_v16f64
+; CHECK-LABEL: fadd_v16f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),16)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -287,7 +287,7 @@ define void @fadd_v16f64(<16 x double>* %a, <16 x double>* %b) #0 {
 ; NOTE: Check lines only cover the first VBYTES because the fadd_v#f16 tests
 ; already cover the general legalisation cases.
 define void @fadd_v32f64(<32 x double>* %a, <32 x double>* %b) #0 {
-; CHECK-LABEL: @fadd_v32f64
+; CHECK-LABEL: fadd_v32f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),32)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -312,7 +312,7 @@ define void @fadd_v32f64(<32 x double>* %a, <32 x double>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors.
 define <4 x half> @fdiv_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
-; CHECK-LABEL: @fdiv_v4f16
+; CHECK-LABEL: fdiv_v4f16:
 ; CHECK: fdiv v0.4h, v0.4h, v1.4h
 ; CHECK: ret
   %res = fdiv <4 x half> %op1, %op2
@@ -321,7 +321,7 @@ define <4 x half> @fdiv_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
 
 ; Don't use SVE for 128-bit vectors.
 define <8 x half> @fdiv_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
-; CHECK-LABEL: @fdiv_v8f16
+; CHECK-LABEL: fdiv_v8f16:
 ; CHECK: fdiv v0.8h, v0.8h, v1.8h
 ; CHECK: ret
   %res = fdiv <8 x half> %op1, %op2
@@ -329,7 +329,7 @@ define <8 x half> @fdiv_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
 }
 
 define void @fdiv_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
-; CHECK-LABEL: @fdiv_v16f16
+; CHECK-LABEL: fdiv_v16f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),16)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -344,7 +344,7 @@ define void @fdiv_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
 }
 
 define void @fdiv_v32f16(<32 x half>* %a, <32 x half>* %b) #0 {
-; CHECK-LABEL: @fdiv_v32f16
+; CHECK-LABEL: fdiv_v32f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),32)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -359,7 +359,7 @@ define void @fdiv_v32f16(<32 x half>* %a, <32 x half>* %b) #0 {
 }
 
 define void @fdiv_v64f16(<64 x half>* %a, <64 x half>* %b) #0 {
-; CHECK-LABEL: @fdiv_v64f16
+; CHECK-LABEL: fdiv_v64f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),64)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -374,7 +374,7 @@ define void @fdiv_v64f16(<64 x half>* %a, <64 x half>* %b) #0 {
 }
 
 define void @fdiv_v128f16(<128 x half>* %a, <128 x half>* %b) #0 {
-; CHECK-LABEL: @fdiv_v128f16
+; CHECK-LABEL: fdiv_v128f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),128)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -390,7 +390,7 @@ define void @fdiv_v128f16(<128 x half>* %a, <128 x half>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors.
 define <2 x float> @fdiv_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
-; CHECK-LABEL: @fdiv_v2f32
+; CHECK-LABEL: fdiv_v2f32:
 ; CHECK: fdiv v0.2s, v0.2s, v1.2s
 ; CHECK: ret
   %res = fdiv <2 x float> %op1, %op2
@@ -399,7 +399,7 @@ define <2 x float> @fdiv_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
 
 ; Don't use SVE for 128-bit vectors.
 define <4 x float> @fdiv_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
-; CHECK-LABEL: @fdiv_v4f32
+; CHECK-LABEL: fdiv_v4f32:
 ; CHECK: fdiv v0.4s, v0.4s, v1.4s
 ; CHECK: ret
   %res = fdiv <4 x float> %op1, %op2
@@ -407,7 +407,7 @@ define <4 x float> @fdiv_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
 }
 
 define void @fdiv_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
-; CHECK-LABEL: @fdiv_v8f32
+; CHECK-LABEL: fdiv_v8f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -422,7 +422,7 @@ define void @fdiv_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
 }
 
 define void @fdiv_v16f32(<16 x float>* %a, <16 x float>* %b) #0 {
-; CHECK-LABEL: @fdiv_v16f32
+; CHECK-LABEL: fdiv_v16f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),16)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -437,7 +437,7 @@ define void @fdiv_v16f32(<16 x float>* %a, <16 x float>* %b) #0 {
 }
 
 define void @fdiv_v32f32(<32 x float>* %a, <32 x float>* %b) #0 {
-; CHECK-LABEL: @fdiv_v32f32
+; CHECK-LABEL: fdiv_v32f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),32)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -452,7 +452,7 @@ define void @fdiv_v32f32(<32 x float>* %a, <32 x float>* %b) #0 {
 }
 
 define void @fdiv_v64f32(<64 x float>* %a, <64 x float>* %b) #0 {
-; CHECK-LABEL: @fdiv_v64f32
+; CHECK-LABEL: fdiv_v64f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),64)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -468,7 +468,7 @@ define void @fdiv_v64f32(<64 x float>* %a, <64 x float>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors.
 define <1 x double> @fdiv_v1f64(<1 x double> %op1, <1 x double> %op2) #0 {
-; CHECK-LABEL: @fdiv_v1f64
+; CHECK-LABEL: fdiv_v1f64:
 ; CHECK: fdiv d0, d0, d1
 ; CHECK: ret
   %res = fdiv <1 x double> %op1, %op2
@@ -477,7 +477,7 @@ define <1 x double> @fdiv_v1f64(<1 x double> %op1, <1 x double> %op2) #0 {
 
 ; Don't use SVE for 128-bit vectors.
 define <2 x double> @fdiv_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
-; CHECK-LABEL: @fdiv_v2f64
+; CHECK-LABEL: fdiv_v2f64:
 ; CHECK: fdiv v0.2d, v0.2d, v1.2d
 ; CHECK: ret
   %res = fdiv <2 x double> %op1, %op2
@@ -485,7 +485,7 @@ define <2 x double> @fdiv_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
 }
 
 define void @fdiv_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
-; CHECK-LABEL: @fdiv_v4f64
+; CHECK-LABEL: fdiv_v4f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),4)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -500,7 +500,7 @@ define void @fdiv_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
 }
 
 define void @fdiv_v8f64(<8 x double>* %a, <8 x double>* %b) #0 {
-; CHECK-LABEL: @fdiv_v8f64
+; CHECK-LABEL: fdiv_v8f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),8)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -515,7 +515,7 @@ define void @fdiv_v8f64(<8 x double>* %a, <8 x double>* %b) #0 {
 }
 
 define void @fdiv_v16f64(<16 x double>* %a, <16 x double>* %b) #0 {
-; CHECK-LABEL: @fdiv_v16f64
+; CHECK-LABEL: fdiv_v16f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),16)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -530,7 +530,7 @@ define void @fdiv_v16f64(<16 x double>* %a, <16 x double>* %b) #0 {
 }
 
 define void @fdiv_v32f64(<32 x double>* %a, <32 x double>* %b) #0 {
-; CHECK-LABEL: @fdiv_v32f64
+; CHECK-LABEL: fdiv_v32f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),32)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -550,7 +550,7 @@ define void @fdiv_v32f64(<32 x double>* %a, <32 x double>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors.
 define <4 x half> @fma_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x half> %op3) #0 {
-; CHECK-LABEL: @fma_v4f16
+; CHECK-LABEL: fma_v4f16:
 ; CHECK: fmla v2.4h, v1.4h, v0.4h
 ; CHECK: ret
   %res = call <4 x half> @llvm.fma.v4f16(<4 x half> %op1, <4 x half> %op2, <4 x half> %op3)
@@ -559,7 +559,7 @@ define <4 x half> @fma_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x half> %op3) 
 
 ; Don't use SVE for 128-bit vectors.
 define <8 x half> @fma_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x half> %op3) #0 {
-; CHECK-LABEL: @fma_v8f16
+; CHECK-LABEL: fma_v8f16:
 ; CHECK: fmla v2.8h, v1.8h, v0.8h
 ; CHECK: ret
   %res = call <8 x half> @llvm.fma.v8f16(<8 x half> %op1, <8 x half> %op2, <8 x half> %op3)
@@ -567,7 +567,7 @@ define <8 x half> @fma_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x half> %op3) 
 }
 
 define void @fma_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x half>* %c) #0 {
-; CHECK-LABEL: @fma_v16f16
+; CHECK-LABEL: fma_v16f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),16)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -584,7 +584,7 @@ define void @fma_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x half>* %c) #0 {
 }
 
 define void @fma_v32f16(<32 x half>* %a, <32 x half>* %b, <32 x half>* %c) #0 {
-; CHECK-LABEL: @fma_v32f16
+; CHECK-LABEL: fma_v32f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),32)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -601,7 +601,7 @@ define void @fma_v32f16(<32 x half>* %a, <32 x half>* %b, <32 x half>* %c) #0 {
 }
 
 define void @fma_v64f16(<64 x half>* %a, <64 x half>* %b, <64 x half>* %c) #0 {
-; CHECK-LABEL: @fma_v64f16
+; CHECK-LABEL: fma_v64f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),64)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -618,7 +618,7 @@ define void @fma_v64f16(<64 x half>* %a, <64 x half>* %b, <64 x half>* %c) #0 {
 }
 
 define void @fma_v128f16(<128 x half>* %a, <128 x half>* %b, <128 x half>* %c) #0 {
-; CHECK-LABEL: @fma_v128f16
+; CHECK-LABEL: fma_v128f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),128)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -636,7 +636,7 @@ define void @fma_v128f16(<128 x half>* %a, <128 x half>* %b, <128 x half>* %c) #
 
 ; Don't use SVE for 64-bit vectors.
 define <2 x float> @fma_v2f32(<2 x float> %op1, <2 x float> %op2, <2 x float> %op3) #0 {
-; CHECK-LABEL: @fma_v2f32
+; CHECK-LABEL: fma_v2f32:
 ; CHECK: fmla v2.2s, v1.2s, v0.2s
 ; CHECK: ret
   %res = call <2 x float> @llvm.fma.v2f32(<2 x float> %op1, <2 x float> %op2, <2 x float> %op3)
@@ -645,7 +645,7 @@ define <2 x float> @fma_v2f32(<2 x float> %op1, <2 x float> %op2, <2 x float> %o
 
 ; Don't use SVE for 128-bit vectors.
 define <4 x float> @fma_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x float> %op3) #0 {
-; CHECK-LABEL: @fma_v4f32
+; CHECK-LABEL: fma_v4f32:
 ; CHECK: fmla v2.4s, v1.4s, v0.4s
 ; CHECK: ret
   %res = call <4 x float> @llvm.fma.v4f32(<4 x float> %op1, <4 x float> %op2, <4 x float> %op3)
@@ -653,7 +653,7 @@ define <4 x float> @fma_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x float> %o
 }
 
 define void @fma_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) #0 {
-; CHECK-LABEL: @fma_v8f32
+; CHECK-LABEL: fma_v8f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -670,7 +670,7 @@ define void @fma_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) #0 {
 }
 
 define void @fma_v16f32(<16 x float>* %a, <16 x float>* %b, <16 x float>* %c) #0 {
-; CHECK-LABEL: @fma_v16f32
+; CHECK-LABEL: fma_v16f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),16)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -687,7 +687,7 @@ define void @fma_v16f32(<16 x float>* %a, <16 x float>* %b, <16 x float>* %c) #0
 }
 
 define void @fma_v32f32(<32 x float>* %a, <32 x float>* %b, <32 x float>* %c) #0 {
-; CHECK-LABEL: @fma_v32f32
+; CHECK-LABEL: fma_v32f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),32)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -704,7 +704,7 @@ define void @fma_v32f32(<32 x float>* %a, <32 x float>* %b, <32 x float>* %c) #0
 }
 
 define void @fma_v64f32(<64 x float>* %a, <64 x float>* %b, <64 x float>* %c) #0 {
-; CHECK-LABEL: @fma_v64f32
+; CHECK-LABEL: fma_v64f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),64)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -722,7 +722,7 @@ define void @fma_v64f32(<64 x float>* %a, <64 x float>* %b, <64 x float>* %c) #0
 
 ; Don't use SVE for 64-bit vectors.
 define <1 x double> @fma_v1f64(<1 x double> %op1, <1 x double> %op2, <1 x double> %op3) #0 {
-; CHECK-LABEL: @fma_v1f64
+; CHECK-LABEL: fma_v1f64:
 ; CHECK: fmadd d0, d0, d1, d2
 ; CHECK: ret
   %res = call <1 x double> @llvm.fma.v1f64(<1 x double> %op1, <1 x double> %op2, <1 x double> %op3)
@@ -731,7 +731,7 @@ define <1 x double> @fma_v1f64(<1 x double> %op1, <1 x double> %op2, <1 x double
 
 ; Don't use SVE for 128-bit vectors.
 define <2 x double> @fma_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x double> %op3) #0 {
-; CHECK-LABEL: @fma_v2f64
+; CHECK-LABEL: fma_v2f64:
 ; CHECK: fmla v2.2d, v1.2d, v0.2d
 ; CHECK: ret
   %res = call <2 x double> @llvm.fma.v2f64(<2 x double> %op1, <2 x double> %op2, <2 x double> %op3)
@@ -739,7 +739,7 @@ define <2 x double> @fma_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x double
 }
 
 define void @fma_v4f64(<4 x double>* %a, <4 x double>* %b, <4 x double>* %c) #0 {
-; CHECK-LABEL: @fma_v4f64
+; CHECK-LABEL: fma_v4f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),4)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -756,7 +756,7 @@ define void @fma_v4f64(<4 x double>* %a, <4 x double>* %b, <4 x double>* %c) #0 
 }
 
 define void @fma_v8f64(<8 x double>* %a, <8 x double>* %b, <8 x double>* %c) #0 {
-; CHECK-LABEL: @fma_v8f64
+; CHECK-LABEL: fma_v8f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),8)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -773,7 +773,7 @@ define void @fma_v8f64(<8 x double>* %a, <8 x double>* %b, <8 x double>* %c) #0 
 }
 
 define void @fma_v16f64(<16 x double>* %a, <16 x double>* %b, <16 x double>* %c) #0 {
-; CHECK-LABEL: @fma_v16f64
+; CHECK-LABEL: fma_v16f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),16)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -790,7 +790,7 @@ define void @fma_v16f64(<16 x double>* %a, <16 x double>* %b, <16 x double>* %c)
 }
 
 define void @fma_v32f64(<32 x double>* %a, <32 x double>* %b, <32 x double>* %c) #0 {
-; CHECK-LABEL: @fma_v32f64
+; CHECK-LABEL: fma_v32f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),32)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -812,7 +812,7 @@ define void @fma_v32f64(<32 x double>* %a, <32 x double>* %b, <32 x double>* %c)
 
 ; Don't use SVE for 64-bit vectors.
 define <4 x half> @fmul_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
-; CHECK-LABEL: @fmul_v4f16
+; CHECK-LABEL: fmul_v4f16:
 ; CHECK: fmul v0.4h, v0.4h, v1.4h
 ; CHECK: ret
   %res = fmul <4 x half> %op1, %op2
@@ -821,7 +821,7 @@ define <4 x half> @fmul_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
 
 ; Don't use SVE for 128-bit vectors.
 define <8 x half> @fmul_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
-; CHECK-LABEL: @fmul_v8f16
+; CHECK-LABEL: fmul_v8f16:
 ; CHECK: fmul v0.8h, v0.8h, v1.8h
 ; CHECK: ret
   %res = fmul <8 x half> %op1, %op2
@@ -829,7 +829,7 @@ define <8 x half> @fmul_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
 }
 
 define void @fmul_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
-; CHECK-LABEL: @fmul_v16f16
+; CHECK-LABEL: fmul_v16f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),16)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -844,7 +844,7 @@ define void @fmul_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
 }
 
 define void @fmul_v32f16(<32 x half>* %a, <32 x half>* %b) #0 {
-; CHECK-LABEL: @fmul_v32f16
+; CHECK-LABEL: fmul_v32f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),32)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -859,7 +859,7 @@ define void @fmul_v32f16(<32 x half>* %a, <32 x half>* %b) #0 {
 }
 
 define void @fmul_v64f16(<64 x half>* %a, <64 x half>* %b) #0 {
-; CHECK-LABEL: @fmul_v64f16
+; CHECK-LABEL: fmul_v64f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),64)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -874,7 +874,7 @@ define void @fmul_v64f16(<64 x half>* %a, <64 x half>* %b) #0 {
 }
 
 define void @fmul_v128f16(<128 x half>* %a, <128 x half>* %b) #0 {
-; CHECK-LABEL: @fmul_v128f16
+; CHECK-LABEL: fmul_v128f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),128)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -890,7 +890,7 @@ define void @fmul_v128f16(<128 x half>* %a, <128 x half>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors.
 define <2 x float> @fmul_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
-; CHECK-LABEL: @fmul_v2f32
+; CHECK-LABEL: fmul_v2f32:
 ; CHECK: fmul v0.2s, v0.2s, v1.2s
 ; CHECK: ret
   %res = fmul <2 x float> %op1, %op2
@@ -899,7 +899,7 @@ define <2 x float> @fmul_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
 
 ; Don't use SVE for 128-bit vectors.
 define <4 x float> @fmul_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
-; CHECK-LABEL: @fmul_v4f32
+; CHECK-LABEL: fmul_v4f32:
 ; CHECK: fmul v0.4s, v0.4s, v1.4s
 ; CHECK: ret
   %res = fmul <4 x float> %op1, %op2
@@ -907,7 +907,7 @@ define <4 x float> @fmul_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
 }
 
 define void @fmul_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
-; CHECK-LABEL: @fmul_v8f32
+; CHECK-LABEL: fmul_v8f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -922,7 +922,7 @@ define void @fmul_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
 }
 
 define void @fmul_v16f32(<16 x float>* %a, <16 x float>* %b) #0 {
-; CHECK-LABEL: @fmul_v16f32
+; CHECK-LABEL: fmul_v16f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),16)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -937,7 +937,7 @@ define void @fmul_v16f32(<16 x float>* %a, <16 x float>* %b) #0 {
 }
 
 define void @fmul_v32f32(<32 x float>* %a, <32 x float>* %b) #0 {
-; CHECK-LABEL: @fmul_v32f32
+; CHECK-LABEL: fmul_v32f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),32)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -952,7 +952,7 @@ define void @fmul_v32f32(<32 x float>* %a, <32 x float>* %b) #0 {
 }
 
 define void @fmul_v64f32(<64 x float>* %a, <64 x float>* %b) #0 {
-; CHECK-LABEL: @fmul_v64f32
+; CHECK-LABEL: fmul_v64f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),64)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -968,7 +968,7 @@ define void @fmul_v64f32(<64 x float>* %a, <64 x float>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors.
 define <1 x double> @fmul_v1f64(<1 x double> %op1, <1 x double> %op2) #0 {
-; CHECK-LABEL: @fmul_v1f64
+; CHECK-LABEL: fmul_v1f64:
 ; CHECK: fmul d0, d0, d1
 ; CHECK: ret
   %res = fmul <1 x double> %op1, %op2
@@ -977,7 +977,7 @@ define <1 x double> @fmul_v1f64(<1 x double> %op1, <1 x double> %op2) #0 {
 
 ; Don't use SVE for 128-bit vectors.
 define <2 x double> @fmul_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
-; CHECK-LABEL: @fmul_v2f64
+; CHECK-LABEL: fmul_v2f64:
 ; CHECK: fmul v0.2d, v0.2d, v1.2d
 ; CHECK: ret
   %res = fmul <2 x double> %op1, %op2
@@ -985,7 +985,7 @@ define <2 x double> @fmul_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
 }
 
 define void @fmul_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
-; CHECK-LABEL: @fmul_v4f64
+; CHECK-LABEL: fmul_v4f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),4)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -1000,7 +1000,7 @@ define void @fmul_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
 }
 
 define void @fmul_v8f64(<8 x double>* %a, <8 x double>* %b) #0 {
-; CHECK-LABEL: @fmul_v8f64
+; CHECK-LABEL: fmul_v8f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),8)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -1015,7 +1015,7 @@ define void @fmul_v8f64(<8 x double>* %a, <8 x double>* %b) #0 {
 }
 
 define void @fmul_v16f64(<16 x double>* %a, <16 x double>* %b) #0 {
-; CHECK-LABEL: @fmul_v16f64
+; CHECK-LABEL: fmul_v16f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),16)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -1030,7 +1030,7 @@ define void @fmul_v16f64(<16 x double>* %a, <16 x double>* %b) #0 {
 }
 
 define void @fmul_v32f64(<32 x double>* %a, <32 x double>* %b) #0 {
-; CHECK-LABEL: @fmul_v32f64
+; CHECK-LABEL: fmul_v32f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),32)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -1050,7 +1050,7 @@ define void @fmul_v32f64(<32 x double>* %a, <32 x double>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors.
 define <4 x half> @fsub_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
-; CHECK-LABEL: @fsub_v4f16
+; CHECK-LABEL: fsub_v4f16:
 ; CHECK: fsub v0.4h, v0.4h, v1.4h
 ; CHECK: ret
   %res = fsub <4 x half> %op1, %op2
@@ -1059,7 +1059,7 @@ define <4 x half> @fsub_v4f16(<4 x half> %op1, <4 x half> %op2) #0 {
 
 ; Don't use SVE for 128-bit vectors.
 define <8 x half> @fsub_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
-; CHECK-LABEL: @fsub_v8f16
+; CHECK-LABEL: fsub_v8f16:
 ; CHECK: fsub v0.8h, v0.8h, v1.8h
 ; CHECK: ret
   %res = fsub <8 x half> %op1, %op2
@@ -1067,7 +1067,7 @@ define <8 x half> @fsub_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
 }
 
 define void @fsub_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
-; CHECK-LABEL: @fsub_v16f16
+; CHECK-LABEL: fsub_v16f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),16)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -1082,7 +1082,7 @@ define void @fsub_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
 }
 
 define void @fsub_v32f16(<32 x half>* %a, <32 x half>* %b) #0 {
-; CHECK-LABEL: @fsub_v32f16
+; CHECK-LABEL: fsub_v32f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),32)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -1097,7 +1097,7 @@ define void @fsub_v32f16(<32 x half>* %a, <32 x half>* %b) #0 {
 }
 
 define void @fsub_v64f16(<64 x half>* %a, <64 x half>* %b) #0 {
-; CHECK-LABEL: @fsub_v64f16
+; CHECK-LABEL: fsub_v64f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),64)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -1112,7 +1112,7 @@ define void @fsub_v64f16(<64 x half>* %a, <64 x half>* %b) #0 {
 }
 
 define void @fsub_v128f16(<128 x half>* %a, <128 x half>* %b) #0 {
-; CHECK-LABEL: @fsub_v128f16
+; CHECK-LABEL: fsub_v128f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),128)]]
 ; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
@@ -1128,7 +1128,7 @@ define void @fsub_v128f16(<128 x half>* %a, <128 x half>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors.
 define <2 x float> @fsub_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
-; CHECK-LABEL: @fsub_v2f32
+; CHECK-LABEL: fsub_v2f32:
 ; CHECK: fsub v0.2s, v0.2s, v1.2s
 ; CHECK: ret
   %res = fsub <2 x float> %op1, %op2
@@ -1137,7 +1137,7 @@ define <2 x float> @fsub_v2f32(<2 x float> %op1, <2 x float> %op2) #0 {
 
 ; Don't use SVE for 128-bit vectors.
 define <4 x float> @fsub_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
-; CHECK-LABEL: @fsub_v4f32
+; CHECK-LABEL: fsub_v4f32:
 ; CHECK: fsub v0.4s, v0.4s, v1.4s
 ; CHECK: ret
   %res = fsub <4 x float> %op1, %op2
@@ -1145,7 +1145,7 @@ define <4 x float> @fsub_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
 }
 
 define void @fsub_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
-; CHECK-LABEL: @fsub_v8f32
+; CHECK-LABEL: fsub_v8f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -1160,7 +1160,7 @@ define void @fsub_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
 }
 
 define void @fsub_v16f32(<16 x float>* %a, <16 x float>* %b) #0 {
-; CHECK-LABEL: @fsub_v16f32
+; CHECK-LABEL: fsub_v16f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),16)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -1175,7 +1175,7 @@ define void @fsub_v16f32(<16 x float>* %a, <16 x float>* %b) #0 {
 }
 
 define void @fsub_v32f32(<32 x float>* %a, <32 x float>* %b) #0 {
-; CHECK-LABEL: @fsub_v32f32
+; CHECK-LABEL: fsub_v32f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),32)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -1190,7 +1190,7 @@ define void @fsub_v32f32(<32 x float>* %a, <32 x float>* %b) #0 {
 }
 
 define void @fsub_v64f32(<64 x float>* %a, <64 x float>* %b) #0 {
-; CHECK-LABEL: @fsub_v64f32
+; CHECK-LABEL: fsub_v64f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),64)]]
 ; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
@@ -1206,7 +1206,7 @@ define void @fsub_v64f32(<64 x float>* %a, <64 x float>* %b) #0 {
 
 ; Don't use SVE for 64-bit vectors.
 define <1 x double> @fsub_v1f64(<1 x double> %op1, <1 x double> %op2) #0 {
-; CHECK-LABEL: @fsub_v1f64
+; CHECK-LABEL: fsub_v1f64:
 ; CHECK: fsub d0, d0, d1
 ; CHECK: ret
   %res = fsub <1 x double> %op1, %op2
@@ -1215,7 +1215,7 @@ define <1 x double> @fsub_v1f64(<1 x double> %op1, <1 x double> %op2) #0 {
 
 ; Don't use SVE for 128-bit vectors.
 define <2 x double> @fsub_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
-; CHECK-LABEL: @fsub_v2f64
+; CHECK-LABEL: fsub_v2f64:
 ; CHECK: fsub v0.2d, v0.2d, v1.2d
 ; CHECK: ret
   %res = fsub <2 x double> %op1, %op2
@@ -1223,7 +1223,7 @@ define <2 x double> @fsub_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
 }
 
 define void @fsub_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
-; CHECK-LABEL: @fsub_v4f64
+; CHECK-LABEL: fsub_v4f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),4)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -1238,7 +1238,7 @@ define void @fsub_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
 }
 
 define void @fsub_v8f64(<8 x double>* %a, <8 x double>* %b) #0 {
-; CHECK-LABEL: @fsub_v8f64
+; CHECK-LABEL: fsub_v8f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),8)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -1253,7 +1253,7 @@ define void @fsub_v8f64(<8 x double>* %a, <8 x double>* %b) #0 {
 }
 
 define void @fsub_v16f64(<16 x double>* %a, <16 x double>* %b) #0 {
-; CHECK-LABEL: @fsub_v16f64
+; CHECK-LABEL: fsub_v16f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),16)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
@@ -1268,7 +1268,7 @@ define void @fsub_v16f64(<16 x double>* %a, <16 x double>* %b) #0 {
 }
 
 define void @fsub_v32f64(<32 x double>* %a, <32 x double>* %b) #0 {
-; CHECK-LABEL: @fsub_v32f64
+; CHECK-LABEL: fsub_v32f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),32)]]
 ; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]

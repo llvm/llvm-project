@@ -57,7 +57,7 @@ T tmain(T argc, S **argv) {
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
 // expected-note@+2 {{read of non-const variable 'j' is not allowed in a constant expression}}
-// expected-error@+1 {{expression is not an integral constant expression}}
+// expected-error@+1 {{integral constant expression}}
 #pragma omp target parallel for simd ordered(j = 2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
@@ -97,13 +97,13 @@ int main(int argc, char **argv) {
 #if __cplusplus >= 201103L
   // expected-note@+2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
 #endif
-#pragma omp target parallel for simd ordered(foobool(1) > 0 ? 1 : 2) // expected-error {{expression is not an integral constant expression}}
+#pragma omp target parallel for simd ordered(foobool(1) > 0 ? 1 : 2) // expected-error {{integral constant expression}}
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i - 4];
 #if __cplusplus >= 201103L
   // expected-note@+5 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
 #endif
-// expected-error@+3 {{expression is not an integral constant expression}}
+// expected-error@+3 {{integral constant expression}}
 // expected-error@+2 2 {{directive '#pragma omp target parallel for simd' cannot contain more than one 'ordered' clause}}
 // expected-error@+1 {{argument to 'ordered' clause must be a strictly positive integer value}}
 #pragma omp target parallel for simd ordered(foobool(argc)), ordered(true), ordered(-5)
@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i - 4];
 // expected-note@+2 {{read of non-const variable 'j' is not allowed in a constant expression}}
-// expected-error@+1 {{expression is not an integral constant expression}}
+// expected-error@+1 {{integral constant expression}}
 #pragma omp target parallel for simd ordered(j = 2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i - 4];

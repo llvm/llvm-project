@@ -21,10 +21,12 @@ static_library("MachO2") {
   sources = [
     "Arch/X86_64.cpp",
     "Driver.cpp",
+    "DriverUtils.cpp",
     "ExportTrie.cpp",
     "InputFiles.cpp",
     "InputSection.cpp",
     "MergedOutputSection.cpp",
+    "ObjC.cpp",
     "OutputSection.cpp",
     "OutputSegment.cpp",
     "SymbolTable.cpp",

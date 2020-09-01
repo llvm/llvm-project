@@ -287,7 +287,7 @@ public:
     for (UnderlyingVector::size_type I = 1; I != Symbols.size(); ++I)
       if (Symbols[I].first == Symbols[I - 1].first)
         return true;
-    return true;
+    return false;
   }
 #endif
 
@@ -920,6 +920,26 @@ public:
   /// manually failed.
   Expected<SymbolNameSet>
   legacyLookup(std::shared_ptr<AsynchronousSymbolQuery> Q, SymbolNameSet Names);
+
+  /// Returns the given JITDylibs and all of their transitive dependencies in
+  /// DFS order (based on linkage relationships). Each JITDylib will appear
+  /// only once.
+  static std::vector<std::shared_ptr<JITDylib>>
+  getDFSLinkOrder(ArrayRef<std::shared_ptr<JITDylib>> JDs);
+
+  /// Returns the given JITDylibs and all of their transitive dependensies in
+  /// reverse DFS order (based on linkage relationships). Each JITDylib will
+  /// appear only once.
+  static std::vector<std::shared_ptr<JITDylib>>
+  getReverseDFSLinkOrder(ArrayRef<std::shared_ptr<JITDylib>> JDs);
+
+  /// Return this JITDylib and its transitive dependencies in DFS order
+  /// based on linkage relationships.
+  std::vector<std::shared_ptr<JITDylib>> getDFSLinkOrder();
+
+  /// Rteurn this JITDylib and its transitive dependencies in reverse DFS order
+  /// based on linkage relationships.
+  std::vector<std::shared_ptr<JITDylib>> getReverseDFSLinkOrder();
 
 private:
   using AsynchronousSymbolQueryList =

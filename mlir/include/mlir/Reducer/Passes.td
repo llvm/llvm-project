@@ -17,7 +17,10 @@ include "mlir/Pass/PassBase.td"
 
 def ReductionTree : Pass<"reduction-tree", "ModuleOp"> {
   let summary = "A general reduction tree pass for the MLIR Reduce Tool";
-  let constructor = "mlir::createReductionTreePass()";
 }
 
-#endif // MLIR_REDUCE_PASSES
+def OptReduction : Pass<"opt-reduction-pass", "ModuleOp"> {
+  let summary = "A reduction pass wrapper for optimization passes";
+}
+
+#endif // MLIR_REDUCER_PASSES

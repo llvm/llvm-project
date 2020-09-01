@@ -148,7 +148,8 @@ def main():
       for filename in changed_lines:
         print('    %s' % filename)
   if not changed_lines:
-    print('no modified files to format')
+    if opts.verbose >= 0:
+      print('no modified files to format')
     return
   # The computed diff outputs absolute paths, so we must cd before accessing
   # those files.

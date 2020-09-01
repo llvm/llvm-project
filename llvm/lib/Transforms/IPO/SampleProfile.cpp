@@ -43,6 +43,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ReplayInlineAdvisor.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
@@ -169,6 +170,13 @@ static cl::opt<bool> ProfileSizeInline(
 static cl::opt<int> SampleColdCallSiteThreshold(
     "sample-profile-cold-inline-threshold", cl::Hidden, cl::init(45),
     cl::desc("Threshold for inlining cold callsites"));
+
+static cl::opt<std::string> ProfileInlineReplayFile(
+    "sample-profile-inline-replay", cl::init(""), cl::value_desc("filename"),
+    cl::desc(
+        "Optimization remarks file containing inline remarks to be replayed "
+        "by inlining from sample profile loader."),
+    cl::Hidden);
 
 namespace {
 
@@ -319,7 +327,7 @@ public:
         RemappingFilename(std::string(RemapName)),
         IsThinLTOPreLink(IsThinLTOPreLink) {}
 
-  bool doInitialization(Module &M);
+  bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
                    ProfileSummaryInfo *_PSI, CallGraph *CG);
 
@@ -473,6 +481,9 @@ protected:
   // overriden by -profile-sample-accurate or profile-sample-accurate
   // attribute.
   bool ProfAccForSymsInList;
+
+  // External inline advisor used to replay inline decision from remarks.
+  std::unique_ptr<ReplayInlineAdvisor> ExternalInlineAdvisor;
 };
 
 class SampleProfileLoaderLegacyPass : public ModulePass {
@@ -820,9 +831,8 @@ SampleProfileLoader::findCalleeFunctionSamples(const CallBase &Inst) const {
   }
 
   StringRef CalleeName;
-  if (const CallInst *CI = dyn_cast<CallInst>(&Inst))
-    if (Function *Callee = CI->getCalledFunction())
-      CalleeName = Callee->getName();
+  if (Function *Callee = Inst.getCalledFunction())
+    CalleeName = Callee->getName();
 
   const FunctionSamples *FS = findFunctionSamples(Inst);
   if (FS == nullptr)
@@ -830,7 +840,7 @@ SampleProfileLoader::findCalleeFunctionSamples(const CallBase &Inst) const {
 
   return FS->findFunctionSamplesAt(LineLocation(FunctionSamples::getOffset(DIL),
                                                 DIL->getBaseDiscriminator()),
-                                   CalleeName);
+                                   CalleeName, Reader->getRemapper());
 }
 
 /// Returns a vector of FunctionSamples that are the indirect call targets
@@ -893,11 +903,21 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 
   auto it = DILocation2SampleMap.try_emplace(DIL,nullptr);
   if (it.second)
-    it.first->second = Samples->findFunctionSamples(DIL);
+    it.first->second = Samples->findFunctionSamples(DIL, Reader->getRemapper());
   return it.first->second;
 }
 
 bool SampleProfileLoader::inlineCallInstruction(CallBase &CB) {
+  if (ExternalInlineAdvisor) {
+    auto Advice = ExternalInlineAdvisor->getAdvice(CB);
+    if (!Advice->isInliningRecommended()) {
+      Advice->recordUnattemptedInlining();
+      return false;
+    }
+    // Dummy record, we don't use it for replay.
+    Advice->recordInlining();
+  }
+
   Function *CalledFunction = CB.getCalledFunction();
   assert(CalledFunction);
   DebugLoc DLoc = CB.getDebugLoc();
@@ -1007,7 +1027,7 @@ bool SampleProfileLoader::inlineHotFunctions(
           }
         }
       }
-      if (Hot) {
+      if (Hot || ExternalInlineAdvisor) {
         CIS.insert(CIS.begin(), AllCandidates.begin(), AllCandidates.end());
         emitOptimizationRemarksForInlineCandidates(AllCandidates, F, true);
       } else {
@@ -1030,24 +1050,23 @@ bool SampleProfileLoader::inlineHotFunctions(
                                      PSI->getOrCompHotCountThreshold());
             continue;
           }
-          auto CalleeFunctionName = FS->getFuncName();
+          if (!callsiteIsHot(FS, PSI))
+            continue;
+
+          const char *Reason = "Callee function not available";
+          // R->getValue() != &F is to prevent promoting a recursive call.
           // If it is a recursive call, we do not inline it as it could bloat
           // the code exponentially. There is way to better handle this, e.g.
           // clone the caller first, and inline the cloned caller if it is
           // recursive. As llvm does not inline recursive calls, we will
           // simply ignore it instead of handling it explicitly.
-          if (CalleeFunctionName == F.getName())
-            continue;
-
-          if (!callsiteIsHot(FS, PSI))
-            continue;
-
-          const char *Reason = "Callee function not available";
+          auto CalleeFunctionName = FS->getFuncName();
           auto R = SymbolMap.find(CalleeFunctionName);
           if (R != SymbolMap.end() && R->getValue() &&
               !R->getValue()->isDeclaration() &&
               R->getValue()->getSubprogram() &&
               R->getValue()->hasFnAttribute("use-sample-profile") &&
+              R->getValue() != &F &&
               isLegalToPromote(*I, R->getValue(), &Reason)) {
             uint64_t C = FS->getEntrySamples();
             auto &DI =
@@ -1830,10 +1849,10 @@ SampleProfileLoader::buildFunctionOrder(Module &M, CallGraph *CG) {
   return FunctionOrderList;
 }
 
-bool SampleProfileLoader::doInitialization(Module &M) {
+bool SampleProfileLoader::doInitialization(Module &M,
+                                           FunctionAnalysisManager *FAM) {
   auto &Ctx = M.getContext();
 
-  std::unique_ptr<SampleProfileReaderItaniumRemapper> RemapReader;
   auto ReaderOrErr =
       SampleProfileReader::create(Filename, Ctx, RemappingFilename);
   if (std::error_code EC = ReaderOrErr.getError()) {
@@ -1853,6 +1872,13 @@ bool SampleProfileLoader::doInitialization(Module &M) {
     NamesInProfile.clear();
     if (auto NameTable = Reader->getNameTable())
       NamesInProfile.insert(NameTable->begin(), NameTable->end());
+  }
+
+  if (FAM && !ProfileInlineReplayFile.empty()) {
+    ExternalInlineAdvisor = std::make_unique<ReplayInlineAdvisor>(
+        *FAM, Ctx, ProfileInlineReplayFile);
+    if (!ExternalInlineAdvisor->areReplayRemarksLoaded())
+      ExternalInlineAdvisor.reset();
   }
 
   return true;
@@ -1882,6 +1908,7 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   for (const auto &I : Reader->getProfiles())
     TotalCollectedSamples += I.second.getTotalSamples();
 
+  auto Remapper = Reader->getRemapper();
   // Populate the symbol map.
   for (const auto &N_F : M.getValueSymbolTable()) {
     StringRef OrigName = N_F.getKey();
@@ -1899,6 +1926,15 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
       // to nullptr to avoid confusion.
       if (!r.second)
         r.first->second = nullptr;
+      OrigName = NewName;
+    }
+    // Insert the remapped names into SymbolMap.
+    if (Remapper) {
+      if (auto MapName = Remapper->lookUpNameInProfile(OrigName)) {
+        if (*MapName == OrigName)
+          continue;
+        SymbolMap.insert(std::make_pair(*MapName, F));
+      }
     }
   }
 
@@ -2007,7 +2043,7 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
                                        : ProfileRemappingFileName,
       IsThinLTOPreLink, GetAssumptionCache, GetTTI, GetTLI);
 
-  if (!SampleLoader.doInitialization(M))
+  if (!SampleLoader.doInitialization(M, &FAM))
     return PreservedAnalyses::all();
 
   ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);

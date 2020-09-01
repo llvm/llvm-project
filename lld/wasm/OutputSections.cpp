@@ -152,6 +152,7 @@ void DataSection::finalizeContents() {
         initExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
         initExpr.Value.Global = WasmSym::memoryBase->getGlobalIndex();
       } else {
+        // FIXME(wvo): I64?
         initExpr.Opcode = WASM_OPCODE_I32_CONST;
         initExpr.Value.Int32 = segment->startVA;
       }

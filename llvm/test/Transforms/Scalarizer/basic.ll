@@ -542,8 +542,8 @@ define <2 x float> @f22(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; See https://reviews.llvm.org/D83101#2133062
 define <2 x i32> @f23_crash(<2 x i32> %srcvec, i32 %v1) {
 ; CHECK-LABEL: @f23_crash(
-; CHECK: %1 = extractelement <2 x i32> %srcvec, i32 0
-; CHECK: %t1.upto0 = insertelement <2 x i32> undef, i32 %1, i32 0
+; CHECK: %v0 = extractelement <2 x i32> %srcvec, i32 0
+; CHECK: %t1.upto0 = insertelement <2 x i32> undef, i32 %v0, i32 0
 ; CHECK: %t1 = insertelement <2 x i32> %t1.upto0, i32 %v1, i32 1
 ; CHECK: ret <2 x i32> %t1
   %v0 = extractelement <2 x i32> %srcvec, i32 0

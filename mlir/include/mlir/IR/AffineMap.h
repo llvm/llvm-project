@@ -196,6 +196,14 @@ public:
 
   friend ::llvm::hash_code hash_value(AffineMap arg);
 
+  /// Methods supporting C API.
+  const void *getAsOpaquePointer() const {
+    return static_cast<const void *>(map);
+  }
+  static AffineMap getFromOpaquePointer(const void *pointer) {
+    return AffineMap(reinterpret_cast<ImplType *>(const_cast<void *>(pointer)));
+  }
+
 private:
   ImplType *map;
 

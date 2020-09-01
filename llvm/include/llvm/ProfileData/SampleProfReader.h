@@ -208,6 +208,7 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 #define LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -275,15 +276,18 @@ public:
     return Remappings->lookup(FunctionName);
   }
 
-  /// Return the samples collected for function \p F if remapper knows
-  /// it is present in SampleMap.
-  FunctionSamples *getSamplesFor(StringRef FunctionName);
+  /// Return the equivalent name in the profile for \p FunctionName if
+  /// it exists.
+  Optional<StringRef> lookUpNameInProfile(StringRef FunctionName);
 
 private:
   // The buffer holding the content read from remapping file.
   std::unique_ptr<MemoryBuffer> Buffer;
   std::unique_ptr<SymbolRemappingReader> Remappings;
-  DenseMap<SymbolRemappingReader::Key, FunctionSamples *> SampleMap;
+  // Map remapping key to the name in the profile. By looking up the
+  // key in the remapper, a given new name can be mapped to the
+  // cannonical name using the NameMap.
+  DenseMap<SymbolRemappingReader::Key, StringRef> NameMap;
   // The Reader the remapper is servicing.
   SampleProfileReader &Reader;
   // Indicate whether remapping has been applied to the profile read
@@ -370,15 +374,19 @@ public:
 
   /// Return the samples collected for function \p F.
   virtual FunctionSamples *getSamplesFor(StringRef Fname) {
-    if (Remapper) {
-      if (auto FS = Remapper->getSamplesFor(Fname))
-        return FS;
-    }
     std::string FGUID;
     Fname = getRepInFormat(Fname, useMD5(), FGUID);
     auto It = Profiles.find(Fname);
     if (It != Profiles.end())
       return &It->second;
+
+    if (Remapper) {
+      if (auto NameInProfile = Remapper->lookUpNameInProfile(Fname)) {
+        auto It = Profiles.find(*NameInProfile);
+        if (It != Profiles.end())
+          return &It->second;
+      }
+    }
     return nullptr;
   }
 
@@ -422,6 +430,8 @@ public:
 
   /// Return whether names in the profile are all MD5 numbers.
   virtual bool useMD5() { return false; }
+
+  SampleProfileReaderItaniumRemapper *getRemapper() { return Remapper.get(); }
 
 protected:
   /// Map every function to its associated profile.

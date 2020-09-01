@@ -4,7 +4,7 @@
 
 define i32 @common_sub_operand(i32 %X, i32 %Y) {
 ; CHECK-LABEL: define {{[^@]+}}@common_sub_operand
-; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %Z = sub i32 %X, %Y
@@ -14,7 +14,7 @@ define i32 @common_sub_operand(i32 %X, i32 %Y) {
 
 define i32 @negated_operand(i32 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@negated_operand
-; CHECK-SAME: (i32 [[X:%.*]])
+; CHECK-SAME: (i32 [[X:%.*]]) {
 ; CHECK-NEXT:    ret i32 0
 ;
   %negx = sub i32 0, %x
@@ -24,7 +24,7 @@ define i32 @negated_operand(i32 %x) {
 
 define <2 x i32> @negated_operand_commute_vec(<2 x i32> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@negated_operand_commute_vec
-; CHECK-SAME: (<2 x i32> [[X:%.*]])
+; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
 ; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   %negx = sub <2 x i32> zeroinitializer, %x
@@ -34,7 +34,7 @@ define <2 x i32> @negated_operand_commute_vec(<2 x i32> %x) {
 
 define i8 @knownnegation(i8 %x, i8 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@knownnegation
-; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    ret i8 0
 ;
   %xy = sub i8 %x, %y
@@ -45,7 +45,7 @@ define i8 @knownnegation(i8 %x, i8 %y) {
 
 define <2 x i8> @knownnegation_commute_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: define {{[^@]+}}@knownnegation_commute_vec
-; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]])
+; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %xy = sub <2 x i8> %x, %y
@@ -56,7 +56,7 @@ define <2 x i8> @knownnegation_commute_vec(<2 x i8> %x, <2 x i8> %y) {
 
 define i32 @nameless_value(i32 %X) {
 ; CHECK-LABEL: define {{[^@]+}}@nameless_value
-; CHECK-SAME: (i32 [[X:%.*]])
+; CHECK-SAME: (i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 42, [[X]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;

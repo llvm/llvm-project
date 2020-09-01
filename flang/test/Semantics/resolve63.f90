@@ -104,6 +104,7 @@ end
 
 ! Invalid operand types when user-defined operator is not available
 module m2
+  intrinsic :: sin
   type :: t
   end type
   type(t) :: x, y
@@ -113,6 +114,10 @@ contains
   subroutine test_relational()
     !ERROR: Operands of .EQ. must have comparable types; have TYPE(t) and REAL(4)
     l = x == r
+    !ERROR: Subroutine name is not allowed here
+    l = r == test_numeric
+    !ERROR: Function call must have argument list
+    l = r == sin
   end
   subroutine test_numeric()
     !ERROR: Operands of + must be numeric; have REAL(4) and TYPE(t)

@@ -1,0 +1,160 @@
+# RUN: llvm-readobj --file-header %p/Inputs/basic.o | \
+# RUN: FileCheck --check-prefix=FILEHEADER %s
+#
+# RUN: llvm-readobj --file-header %p/Inputs/basic64.o | \
+# RUN: FileCheck --check-prefix=FILEHEADER64 %s
+
+# RUN: llvm-readobj --file-header %p/Inputs/basic-neg-time.o | \
+# RUN: FileCheck --check-prefix=NEGTIME %s
+
+# RUN: llvm-readobj --file-header %p/Inputs/basic-neg-sym-count.o | \
+# RUN: FileCheck --check-prefix=NEGSYMCOUNT %s
+
+# RUN: llvm-readobj --relocs --expand-relocs %p/Inputs/basic.o | \
+# RUN: FileCheck --check-prefix=RELOCSEXP %s
+
+# FILEHEADER:     File: {{.*}}basic.o
+# FILEHEADER-NEXT: Format: aixcoff-rs6000
+# FILEHEADER-NEXT: Arch: powerpc
+# FILEHEADER-NEXT: AddressSize: 32bit
+# FILEHEADER-NEXT: FileHeader {
+# FILEHEADER-NEXT:   Magic: 0x1DF
+# FILEHEADER-NEXT:   NumberOfSections: 6
+# FILEHEADER-NEXT:   TimeStamp: 2019-03-12T14:04:43Z (0x5C87BC7B)
+# FILEHEADER-NEXT:   SymbolTableOffset: 0x52E
+# FILEHEADER-NEXT:   SymbolTableEntries: 120
+# FILEHEADER-NEXT:   OptionalHeaderSize: 0x1C
+# FILEHEADER-NEXT:   Flags: 0x0
+# FILEHEADER-NEXT: }
+
+# FILEHEADER64:     File: {{.*}}basic64.o
+# FILEHEADER64-NEXT:  Format: aix5coff64-rs6000
+# FILEHEADER64-NEXT:  Arch: powerpc64
+# FILEHEADER64-NEXT:  AddressSize: 64bit
+# FILEHEADER64-NEXT:  FileHeader {
+# FILEHEADER64-NEXT:    Magic: 0x1F7
+# FILEHEADER64-NEXT:    NumberOfSections: 5
+# FILEHEADER64-NEXT:    TimeStamp: 2019-03-18T20:03:47Z (0x5C8FF9A3)
+# FILEHEADER64-NEXT:    SymbolTableOffset: 0x54C
+# FILEHEADER64-NEXT:    SymbolTableEntries: 58
+# FILEHEADER64-NEXT:    OptionalHeaderSize: 0x0
+# FILEHEADER64-NEXT:    Flags: 0x0
+# FILEHEADER64-NEXT:  }
+
+# NEGTIME:     File: {{.*}}basic-neg-time.o
+# NEGTIME-NEXT:  Format: aixcoff-rs6000
+# NEGTIME-NEXT:  Arch: powerpc
+# NEGTIME-NEXT:  AddressSize: 32bit
+# NEGTIME-NEXT:  FileHeader {
+# NEGTIME-NEXT:    Magic: 0x1DF
+# NEGTIME-NEXT:    NumberOfSections: 6
+# NEGTIME-NEXT:    TimeStamp: Reserved Value (0xDC87BC7B)
+# NEGTIME-NEXT:    SymbolTableOffset: 0x52E
+# NEGTIME-NEXT:    SymbolTableEntries: 120
+# NEGTIME-NEXT:    OptionalHeaderSize: 0x1C
+# NEGTIME-NEXT:    Flags: 0x0
+# NEGTIME-NEXT:  }
+
+# NEGSYMCOUNT:     File: {{.*}}basic-neg-sym-count.o
+# NEGSYMCOUNT-NEXT:  Format: aixcoff-rs6000
+# NEGSYMCOUNT-NEXT:  Arch: powerpc
+# NEGSYMCOUNT-NEXT:  AddressSize: 32bit
+# NEGSYMCOUNT-NEXT:  FileHeader {
+# NEGSYMCOUNT-NEXT:    Magic: 0x1DF
+# NEGSYMCOUNT-NEXT:    NumberOfSections: 5
+# NEGSYMCOUNT-NEXT:    TimeStamp: 2019-03-12T14:04:43Z (0x5C87BC7B)
+# NEGSYMCOUNT-NEXT:    SymbolTableOffset: 0x0
+# NEGSYMCOUNT-NEXT:    SymbolTableEntries: Reserved Value (0x80000000)
+# NEGSYMCOUNT-NEXT:    OptionalHeaderSize: 0x1C
+# NEGSYMCOUNT-NEXT:    Flags: 0xD
+# NEGSYMCOUNT-NEXT:  }
+
+# xcoff-basic.o was compiled with `xlc -qtls -O3 -g -c xcoff-basic.c`
+# from the following source:
+# int a = 55;
+# int b;
+# __thread int j = 55;
+# __thread double d;
+# int A() { return a; }
+# int B() { return b; }
+# int J() { return j; }
+# double D() { return d; }
+#
+# xcoff-basic-neg-time.o was manually edited to include a negative time stamp.
+# xcoff-basic-neg-sym-count.o was stripped using the 'strip' utility, and
+# manually edited to have a negative symbol table entry count.
+
+# RELOCSEXP: File: {{.*}}basic.o
+# RELOCSEXP-NEXT: Format: aixcoff-rs6000
+# RELOCSEXP-NEXT: Arch: powerpc
+# RELOCSEXP-NEXT: AddressSize: 32bit
+# RELOCSEXP-NEXT: Relocations [
+# RELOCSEXP-NEXT:  Section (index: 1) .text {
+# RELOCSEXP-NEXT:    Relocation {
+# RELOCSEXP-NEXT:      Virtual Address: 0x2
+# RELOCSEXP-NEXT:      Symbol: a (85)
+# RELOCSEXP-NEXT:      IsSigned: Yes
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 16
+# RELOCSEXP-NEXT:      Type: R_TOC (0x3)
+# RELOCSEXP-NEXT:    }
+
+# RELOCSEXP:           Virtual Address: 0x90
+# RELOCSEXP-NEXT:      Symbol: .__tls_get_addr (118)
+# RELOCSEXP-NEXT:      IsSigned: Yes
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 26
+# RELOCSEXP-NEXT:      Type: R_RBA (0x18)
+# RELOCSEXP-NEXT:    }
+# RELOCSEXP-NEXT:  }
+# RELOCSEXP-NEXT:  Section (index: 2) .data {
+# RELOCSEXP-NEXT:    Relocation {
+# RELOCSEXP-NEXT:      Virtual Address: 0x100
+# RELOCSEXP-NEXT:      Symbol: A (78)
+# RELOCSEXP-NEXT:      IsSigned: No
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 32
+# RELOCSEXP-NEXT:      Type: R_POS (0x0)
+# RELOCSEXP-NEXT:    }
+
+# RELOCSEXP:           Virtual Address: 0x110
+# RELOCSEXP-NEXT:      Symbol: J (96)
+# RELOCSEXP-NEXT:      IsSigned: No
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 32
+# RELOCSEXP-NEXT:      Type: R_POS (0x0)
+# RELOCSEXP-NEXT:    }
+
+# RELOCSEXP:          Virtual Address: 0x114
+# RELOCSEXP-NEXT:     Symbol: j (100)
+# RELOCSEXP-NEXT:     IsSigned: No
+# RELOCSEXP-NEXT:     FixupBitValue: 0
+# RELOCSEXP-NEXT:     Length: 32
+# RELOCSEXP-NEXT:     Type: R_TLS (0x20)
+# RELOCSEXP-NEXT:    }
+
+# RELOCSEXP:          Virtual Address: 0x124
+# RELOCSEXP-NEXT:     Symbol: d (111)
+# RELOCSEXP-NEXT:     IsSigned: No
+# RELOCSEXP-NEXT:     FixupBitValue: 0
+# RELOCSEXP-NEXT:     Length: 32
+# RELOCSEXP-NEXT:     Type: R_TLSM (0x24)
+# RELOCSEXP-NEXT:    }
+
+# RELOCSEXP:           Virtual Address: 0x128
+# RELOCSEXP-NEXT:      Symbol: (76)
+# RELOCSEXP-NEXT:      IsSigned: No
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 32
+# RELOCSEXP-NEXT:      Type: R_POS (0x0)
+# RELOCSEXP-NEXT:    }
+
+# RELOCSEXP:           Virtual Address: 0x154
+# RELOCSEXP-NEXT:      Symbol: TOC (72)
+# RELOCSEXP-NEXT:      IsSigned: No
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 32
+# RELOCSEXP-NEXT:      Type: R_POS (0x0)
+# RELOCSEXP-NEXT:    }
+# RELOCSEXP-NEXT:  }
+# RELOCSEXP-NEXT:]

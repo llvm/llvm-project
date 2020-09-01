@@ -134,8 +134,10 @@ class MachineFunctionPassManager
 
 public:
   MachineFunctionPassManager(bool DebugLogging = false,
-                             bool RequireCodeGenSCCOrder = false)
-      : Base(DebugLogging), RequireCodeGenSCCOrder(RequireCodeGenSCCOrder) {}
+                             bool RequireCodeGenSCCOrder = false,
+                             bool VerifyMachineFunction = false)
+      : Base(DebugLogging), RequireCodeGenSCCOrder(RequireCodeGenSCCOrder),
+        VerifyMachineFunction(VerifyMachineFunction) {}
   MachineFunctionPassManager(MachineFunctionPassManager &&) = default;
   MachineFunctionPassManager &
   operator=(MachineFunctionPassManager &&) = default;
@@ -245,6 +247,8 @@ private:
 
   // Run codegen in the SCC order.
   bool RequireCodeGenSCCOrder;
+
+  bool VerifyMachineFunction;
 };
 
 } // end namespace llvm

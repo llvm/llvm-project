@@ -22,10 +22,16 @@
 # ARCHIVE-FIRST: T _boo
 # ARCHIVE-FIRST: T _main
 
-
 # RUN: llvm-nm %t/test.out | FileCheck %s --check-prefix VISIBLE
 # VISIBLE-NOT: T _undefined
 # VISIBLE-NOT: T _unused
+
+# RUN: lld -flavor darwinnew %t/test.a %t/main.o -o %t/all-load -all_load
+# RUN: llvm-nm %t/all-load | FileCheck %s --check-prefix ALL-LOAD
+# ALL-LOAD: T _bar
+# ALL-LOAD: T _boo
+# ALL-LOAD: T _main
+# ALL-LOAD: T _unused
 
 .global _main
 _main:

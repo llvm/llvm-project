@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #ifdef _WIN32
+#define NOMINMAX
 #include <io.h>
 #include <windows.h>
 #else

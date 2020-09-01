@@ -45,7 +45,6 @@ void test_alnum_symbolic(int x) {
   // bugpath-note{{TRUE}} \
   // bugpath-note{{Left side of '&&' is true}} \
   // bugpath-note{{'x' is <= 255}}
-
 }
 
 void test_alnum_symbolic2(int x) {
@@ -54,6 +53,114 @@ void test_alnum_symbolic2(int x) {
     // bugpath-note{{Taking true branch}}
 
     int ret = isalnum(x); // \
+    // report-warning{{Function argument constraint is not satisfied}} \
+    // bugpath-warning{{Function argument constraint is not satisfied}} \
+    // bugpath-note{{Function argument constraint is not satisfied}}
+
+    (void)ret;
+  }
+}
+
+int toupper(int);
+
+void test_toupper_concrete(int v) {
+  int ret = toupper(256); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
+  (void)ret;
+}
+
+void test_toupper_symbolic(int x) {
+  int ret = toupper(x);
+  (void)ret;
+
+  clang_analyzer_eval(EOF <= x && x <= 255); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}} \
+  // bugpath-note{{Left side of '&&' is true}} \
+  // bugpath-note{{'x' is <= 255}}
+}
+
+void test_toupper_symbolic2(int x) {
+  if (x > 255) { // \
+    // bugpath-note{{Assuming 'x' is > 255}} \
+    // bugpath-note{{Taking true branch}}
+
+    int ret = toupper(x); // \
+    // report-warning{{Function argument constraint is not satisfied}} \
+    // bugpath-warning{{Function argument constraint is not satisfied}} \
+    // bugpath-note{{Function argument constraint is not satisfied}}
+
+    (void)ret;
+  }
+}
+
+int tolower(int);
+
+void test_tolower_concrete(int v) {
+  int ret = tolower(256); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
+  (void)ret;
+}
+
+void test_tolower_symbolic(int x) {
+  int ret = tolower(x);
+  (void)ret;
+
+  clang_analyzer_eval(EOF <= x && x <= 255); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}} \
+  // bugpath-note{{Left side of '&&' is true}} \
+  // bugpath-note{{'x' is <= 255}}
+}
+
+void test_tolower_symbolic2(int x) {
+  if (x > 255) { // \
+    // bugpath-note{{Assuming 'x' is > 255}} \
+    // bugpath-note{{Taking true branch}}
+
+    int ret = tolower(x); // \
+    // report-warning{{Function argument constraint is not satisfied}} \
+    // bugpath-warning{{Function argument constraint is not satisfied}} \
+    // bugpath-note{{Function argument constraint is not satisfied}}
+
+    (void)ret;
+  }
+}
+
+int toascii(int);
+
+void test_toascii_concrete(int v) {
+  int ret = toascii(256); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
+  (void)ret;
+}
+
+void test_toascii_symbolic(int x) {
+  int ret = toascii(x);
+  (void)ret;
+
+  clang_analyzer_eval(EOF <= x && x <= 255); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}} \
+  // bugpath-note{{Left side of '&&' is true}} \
+  // bugpath-note{{'x' is <= 255}}
+}
+
+void test_toascii_symbolic2(int x) {
+  if (x > 255) { // \
+    // bugpath-note{{Assuming 'x' is > 255}} \
+    // bugpath-note{{Taking true branch}}
+
+    int ret = toascii(x); // \
     // report-warning{{Function argument constraint is not satisfied}} \
     // bugpath-warning{{Function argument constraint is not satisfied}} \
     // bugpath-note{{Function argument constraint is not satisfied}}
@@ -80,7 +187,7 @@ void test_notnull_symbolic(FILE *fp, int *buf) {
   // bugpath-note{{'buf' is not equal to null}}
 }
 void test_notnull_symbolic2(FILE *fp, int *buf) {
-  if (!buf) // bugpath-note{{Assuming 'buf' is null}} \
+  if (!buf)                          // bugpath-note{{Assuming 'buf' is null}} \
             // bugpath-note{{Taking true branch}}
     fread(buf, sizeof(int), 10, fp); // \
     // report-warning{{Function argument constraint is not satisfied}} \
@@ -151,7 +258,7 @@ void test_buf_size_symbolic_and_offset(int s) {
 }
 int __buf_size_arg_constraint_mul(const void *, size_t, size_t);
 void test_buf_size_concrete_with_multiplication() {
-  short buf[3];         // bugpath-note{{'buf' initialized here}}
+  short buf[3];                                         // bugpath-note{{'buf' initialized here}}
   __buf_size_arg_constraint_mul(buf, 4, sizeof(short)); // \
   // report-warning{{Function argument constraint is not satisfied}} \
   // bugpath-warning{{Function argument constraint is not satisfied}} \

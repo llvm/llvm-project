@@ -99,7 +99,7 @@
 
 # INT-PHDRS:      ProgramHeaders [
 # INT-PHDRS:        ProgramHeader {
-# INT-PHDRS:           Type:  (0x11223344)
+# INT-PHDRS:           Type: Unknown (0x11223344)
 # INT-PHDRS-NEXT:      Offset: 0xB0
 # INT-PHDRS-NEXT:      VirtualAddress: 0xB0
 # INT-PHDRS-NEXT:      PhysicalAddress: 0xB0

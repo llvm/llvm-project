@@ -156,9 +156,17 @@ void AccStructureChecker::Leave(
 }
 
 void AccStructureChecker::Enter(const parser::OpenACCCombinedConstruct &x) {
-  const auto &beginBlockDir{std::get<parser::AccBeginCombinedDirective>(x.t)};
+  const auto &beginCombinedDir{
+      std::get<parser::AccBeginCombinedDirective>(x.t)};
   const auto &combinedDir{
-      std::get<parser::AccCombinedDirective>(beginBlockDir.t)};
+      std::get<parser::AccCombinedDirective>(beginCombinedDir.t)};
+
+  // check matching, End directive is optional
+  if (const auto &endCombinedDir{
+          std::get<std::optional<parser::AccEndCombinedDirective>>(x.t)}) {
+    CheckMatching<parser::AccCombinedDirective>(combinedDir, endCombinedDir->v);
+  }
+
   PushContextAndClauseSets(combinedDir.source, combinedDir.v);
 }
 
@@ -263,11 +271,11 @@ CHECK_SIMPLE_CLAUSE(Delete, ACCC_delete)
 CHECK_SIMPLE_CLAUSE(Detach, ACCC_detach)
 CHECK_SIMPLE_CLAUSE(Device, ACCC_device)
 CHECK_SIMPLE_CLAUSE(DeviceNum, ACCC_device_num)
-CHECK_SIMPLE_CLAUSE(DevicePtr, ACCC_deviceptr)
+CHECK_SIMPLE_CLAUSE(Deviceptr, ACCC_deviceptr)
 CHECK_SIMPLE_CLAUSE(DeviceResident, ACCC_device_resident)
 CHECK_SIMPLE_CLAUSE(DeviceType, ACCC_device_type)
 CHECK_SIMPLE_CLAUSE(Finalize, ACCC_finalize)
-CHECK_SIMPLE_CLAUSE(FirstPrivate, ACCC_firstprivate)
+CHECK_SIMPLE_CLAUSE(Firstprivate, ACCC_firstprivate)
 CHECK_SIMPLE_CLAUSE(Gang, ACCC_gang)
 CHECK_SIMPLE_CLAUSE(Host, ACCC_host)
 CHECK_SIMPLE_CLAUSE(If, ACCC_if)
@@ -275,7 +283,7 @@ CHECK_SIMPLE_CLAUSE(IfPresent, ACCC_if_present)
 CHECK_SIMPLE_CLAUSE(Independent, ACCC_independent)
 CHECK_SIMPLE_CLAUSE(Link, ACCC_link)
 CHECK_SIMPLE_CLAUSE(NoCreate, ACCC_no_create)
-CHECK_SIMPLE_CLAUSE(NoHost, ACCC_nohost)
+CHECK_SIMPLE_CLAUSE(Nohost, ACCC_nohost)
 CHECK_SIMPLE_CLAUSE(NumGangs, ACCC_num_gangs)
 CHECK_SIMPLE_CLAUSE(NumWorkers, ACCC_num_workers)
 CHECK_SIMPLE_CLAUSE(Present, ACCC_present)

@@ -2407,21 +2407,13 @@ lldb::addr_t Target::GetPersistentSymbol(ConstString name) {
 
 llvm::Expected<lldb_private::Address> Target::GetEntryPointAddress() {
   Module *exe_module = GetExecutableModulePointer();
-  llvm::Error error = llvm::Error::success();
-  assert(!error); // Check the success value when assertions are enabled.
 
-  if (!exe_module || !exe_module->GetObjectFile()) {
-    error = llvm::make_error<llvm::StringError>("No primary executable found",
-                                                llvm::inconvertibleErrorCode());
-  } else {
+  // Try to find the entry point address in the primary executable.
+  const bool has_primary_executable = exe_module && exe_module->GetObjectFile();
+  if (has_primary_executable) {
     Address entry_addr = exe_module->GetObjectFile()->GetEntryPointAddress();
     if (entry_addr.IsValid())
       return entry_addr;
-
-    error = llvm::make_error<llvm::StringError>(
-        "Could not find entry point address for executable module \"" +
-            exe_module->GetFileSpec().GetFilename().GetStringRef() + "\"",
-        llvm::inconvertibleErrorCode());
   }
 
   const ModuleList &modules = GetImages();
@@ -2432,14 +2424,21 @@ llvm::Expected<lldb_private::Address> Target::GetEntryPointAddress() {
       continue;
 
     Address entry_addr = module_sp->GetObjectFile()->GetEntryPointAddress();
-    if (entry_addr.IsValid()) {
-      // Discard the error.
-      llvm::consumeError(std::move(error));
+    if (entry_addr.IsValid())
       return entry_addr;
-    }
   }
 
-  return std::move(error);
+  // We haven't found the entry point address. Return an appropriate error.
+  if (!has_primary_executable)
+    return llvm::make_error<llvm::StringError>(
+        "No primary executable found and could not find entry point address in "
+        "any executable module",
+        llvm::inconvertibleErrorCode());
+
+  return llvm::make_error<llvm::StringError>(
+      "Could not find entry point address for primary executable module \"" +
+          exe_module->GetFileSpec().GetFilename().GetStringRef() + "\"",
+      llvm::inconvertibleErrorCode());
 }
 
 lldb::addr_t Target::GetCallableLoadAddress(lldb::addr_t load_addr,
@@ -2896,76 +2895,71 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
       error = m_process_sp->Launch(launch_info);
   }
 
-  if (!m_process_sp) {
-    if (error.Success())
-      error.SetErrorString("failed to launch or debug process");
+  if (!m_process_sp && error.Success())
+    error.SetErrorString("failed to launch or debug process");
+
+  if (!error.Success())
     return error;
+
+  auto at_exit =
+      llvm::make_scope_exit([&]() { m_process_sp->RestoreProcessEvents(); });
+
+  if (!synchronous_execution &&
+      launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
+    return error;
+
+  ListenerSP hijack_listener_sp(launch_info.GetHijackListener());
+  if (!hijack_listener_sp) {
+    hijack_listener_sp = Listener::MakeListener("lldb.Target.Launch.hijack");
+    launch_info.SetHijackListener(hijack_listener_sp);
+    m_process_sp->HijackProcessEvents(hijack_listener_sp);
   }
 
-  if (error.Success()) {
-    if (synchronous_execution ||
-        !launch_info.GetFlags().Test(eLaunchFlagStopAtEntry)) {
-      ListenerSP hijack_listener_sp(launch_info.GetHijackListener());
-      if (!hijack_listener_sp) {
-        hijack_listener_sp =
-            Listener::MakeListener("lldb.Target.Launch.hijack");
-        launch_info.SetHijackListener(hijack_listener_sp);
-        m_process_sp->HijackProcessEvents(hijack_listener_sp);
-      }
-
-      StateType state = m_process_sp->WaitForProcessToStop(
-          llvm::None, nullptr, false, hijack_listener_sp, nullptr);
-
-      if (state == eStateStopped) {
-        if (!launch_info.GetFlags().Test(eLaunchFlagStopAtEntry)) {
-          if (synchronous_execution) {
-            // Now we have handled the stop-from-attach, and we are just
-            // switching to a synchronous resume.  So we should switch to the
-            // SyncResume hijacker.
-            m_process_sp->RestoreProcessEvents();
-            m_process_sp->ResumeSynchronous(stream);
-          } else {
-            m_process_sp->RestoreProcessEvents();
-            error = m_process_sp->PrivateResume();
-          }
-          if (!error.Success()) {
-            Status error2;
-            error2.SetErrorStringWithFormat(
-                "process resume at entry point failed: %s", error.AsCString());
-            error = error2;
-          }
-        }
-      } else if (state == eStateExited) {
-        bool with_shell = !!launch_info.GetShell();
-        const int exit_status = m_process_sp->GetExitStatus();
-        const char *exit_desc = m_process_sp->GetExitDescription();
-#define LAUNCH_SHELL_MESSAGE                                                   \
-  "\n'r' and 'run' are aliases that default to launching through a "           \
-  "shell.\nTry launching without going through a shell by using 'process "     \
-  "launch'."
-        if (exit_desc && exit_desc[0]) {
-          if (with_shell)
-            error.SetErrorStringWithFormat(
-                "process exited with status %i (%s)" LAUNCH_SHELL_MESSAGE,
-                exit_status, exit_desc);
-          else
-            error.SetErrorStringWithFormat("process exited with status %i (%s)",
-                                           exit_status, exit_desc);
-        } else {
-          if (with_shell)
-            error.SetErrorStringWithFormat(
-                "process exited with status %i" LAUNCH_SHELL_MESSAGE,
-                exit_status);
-          else
-            error.SetErrorStringWithFormat("process exited with status %i",
-                                           exit_status);
-        }
-      } else {
-        error.SetErrorStringWithFormat(
-            "initial process state wasn't stopped: %s", StateAsCString(state));
-      }
+  switch (m_process_sp->WaitForProcessToStop(llvm::None, nullptr, false,
+                                             hijack_listener_sp, nullptr)) {
+  case eStateStopped: {
+    if (launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
+      break;
+    if (synchronous_execution) {
+      // Now we have handled the stop-from-attach, and we are just
+      // switching to a synchronous resume.  So we should switch to the
+      // SyncResume hijacker.
+      m_process_sp->RestoreProcessEvents();
+      m_process_sp->ResumeSynchronous(stream);
+    } else {
+      m_process_sp->RestoreProcessEvents();
+      error = m_process_sp->PrivateResume();
     }
-    m_process_sp->RestoreProcessEvents();
+    if (!error.Success()) {
+      Status error2;
+      error2.SetErrorStringWithFormat(
+          "process resume at entry point failed: %s", error.AsCString());
+      error = error2;
+    }
+  } break;
+  case eStateExited: {
+    bool with_shell = !!launch_info.GetShell();
+    const int exit_status = m_process_sp->GetExitStatus();
+    const char *exit_desc = m_process_sp->GetExitDescription();
+    std::string desc;
+    if (exit_desc && exit_desc[0])
+      desc = " (" + std::string(exit_desc) + ')';
+    if (with_shell)
+      error.SetErrorStringWithFormat(
+          "process exited with status %i%s\n"
+          "'r' and 'run' are aliases that default to launching through a "
+          "shell.\n"
+          "Try launching without going through a shell by using "
+          "'process launch'.",
+          exit_status, desc.c_str());
+    else
+      error.SetErrorStringWithFormat("process exited with status %i%s",
+                                     exit_status, desc.c_str());
+  } break;
+  default:
+    error.SetErrorStringWithFormat("initial process state wasn't stopped: %s",
+                                   StateAsCString(state));
+    break;
   }
   return error;
 }

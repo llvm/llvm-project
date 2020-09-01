@@ -984,6 +984,14 @@ def LLVM_MatrixTransposeOp
 // LLVM masked operations.
 //
 
+/// Create a llvm.get.active.lane.mask to set a mask up to a given position.
+def LLVM_GetActiveLaneMaskOp
+    : LLVM_OneResultIntrOp<"get.active.lane.mask", [0], [0], [NoSideEffect]>,
+      Arguments<(ins LLVM_Type:$base, LLVM_Type:$n)> {
+  let assemblyFormat = "$base `,` $n attr-dict `:` "
+    "type($base) `,` type($n) `to` type($res)";
+}
+
 /// Create a call to Masked Load intrinsic.
 def LLVM_MaskedLoadOp
     : LLVM_OneResultOp<"intr.masked.load">,

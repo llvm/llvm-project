@@ -1,8 +1,8 @@
-; RUN: opt -O1                          -debug-pass=Structure  < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=OLDPM_O1
-; RUN: opt -O2                          -debug-pass=Structure  < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=OLDPM_O2
-; RUN: opt -O2 -extra-vectorizer-passes -debug-pass=Structure  < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=OLDPM_O2_EXTRA
-; RUN: opt -O1 -vectorize-loops=0       -debug-pass=Structure  < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=OLDPM_O1_FORCE_OFF
-; RUN: opt -O2 -vectorize-loops=0       -debug-pass=Structure  < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=OLDPM_O2_FORCE_OFF
+; RUN: opt -enable-new-pm=0 -O1                          -debug-pass=Structure  < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=OLDPM_O1
+; RUN: opt -enable-new-pm=0 -O2                          -debug-pass=Structure  < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=OLDPM_O2
+; RUN: opt -enable-new-pm=0 -O2 -extra-vectorizer-passes -debug-pass=Structure  < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=OLDPM_O2_EXTRA
+; RUN: opt -enable-new-pm=0 -O1 -vectorize-loops=0       -debug-pass=Structure  < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=OLDPM_O1_FORCE_OFF
+; RUN: opt -enable-new-pm=0 -O2 -vectorize-loops=0       -debug-pass=Structure  < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=OLDPM_O2_FORCE_OFF
 ; RUN: opt -disable-verify -debug-pass-manager -passes='default<O1>' -S %s 2>&1 | FileCheck %s --check-prefixes=NEWPM_O1
 ; RUN: opt -disable-verify -debug-pass-manager -passes='default<O2>' -S %s 2>&1 | FileCheck %s --check-prefixes=NEWPM_O2
 

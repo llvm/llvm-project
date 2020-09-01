@@ -14,6 +14,7 @@
 #include "mlir/IR/Function.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Interfaces/DecodeAttributesInterfaces.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Endian.h"
@@ -56,7 +57,7 @@ Dialect &Attribute::getDialect() const {
 //===----------------------------------------------------------------------===//
 
 AffineMapAttr AffineMapAttr::get(AffineMap value) {
-  return Base::get(value.getContext(), StandardAttributes::AffineMap, value);
+  return Base::get(value.getContext(), value);
 }
 
 AffineMap AffineMapAttr::getValue() const { return getImpl()->value; }
@@ -66,7 +67,7 @@ AffineMap AffineMapAttr::getValue() const { return getImpl()->value; }
 //===----------------------------------------------------------------------===//
 
 ArrayAttr ArrayAttr::get(ArrayRef<Attribute> value, MLIRContext *context) {
-  return Base::get(context, StandardAttributes::Array, value);
+  return Base::get(context, value);
 }
 
 ArrayRef<Attribute> ArrayAttr::getValue() const { return getImpl()->value; }
@@ -155,7 +156,7 @@ DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
   if (dictionaryAttrSort</*inPlace=*/false>(value, storage))
     value = storage;
 
-  return Base::get(context, StandardAttributes::Dictionary, value);
+  return Base::get(context, value);
 }
 /// Construct a dictionary with an array of values that is known to already be
 /// sorted by name and uniqued.
@@ -174,7 +175,7 @@ DictionaryAttr DictionaryAttr::getWithSorted(ArrayRef<NamedAttribute> value,
                               return l.first == r.first;
                             }) == value.end() &&
          "DictionaryAttr element names must be unique");
-  return Base::get(context, StandardAttributes::Dictionary, value);
+  return Base::get(context, value);
 }
 
 ArrayRef<NamedAttribute> DictionaryAttr::getValue() const {
@@ -218,19 +219,19 @@ size_t DictionaryAttr::size() const { return getValue().size(); }
 //===----------------------------------------------------------------------===//
 
 FloatAttr FloatAttr::get(Type type, double value) {
-  return Base::get(type.getContext(), StandardAttributes::Float, type, value);
+  return Base::get(type.getContext(), type, value);
 }
 
 FloatAttr FloatAttr::getChecked(Type type, double value, Location loc) {
-  return Base::getChecked(loc, StandardAttributes::Float, type, value);
+  return Base::getChecked(loc, type, value);
 }
 
 FloatAttr FloatAttr::get(Type type, const APFloat &value) {
-  return Base::get(type.getContext(), StandardAttributes::Float, type, value);
+  return Base::get(type.getContext(), type, value);
 }
 
 FloatAttr FloatAttr::getChecked(Type type, const APFloat &value, Location loc) {
-  return Base::getChecked(loc, StandardAttributes::Float, type, value);
+  return Base::getChecked(loc, type, value);
 }
 
 APFloat FloatAttr::getValue() const { return getImpl()->getValue(); }
@@ -278,14 +279,13 @@ LogicalResult FloatAttr::verifyConstructionInvariants(Location loc, Type type,
 //===----------------------------------------------------------------------===//
 
 FlatSymbolRefAttr SymbolRefAttr::get(StringRef value, MLIRContext *ctx) {
-  return Base::get(ctx, StandardAttributes::SymbolRef, value, llvm::None)
-      .cast<FlatSymbolRefAttr>();
+  return Base::get(ctx, value, llvm::None).cast<FlatSymbolRefAttr>();
 }
 
 SymbolRefAttr SymbolRefAttr::get(StringRef value,
                                  ArrayRef<FlatSymbolRefAttr> nestedReferences,
                                  MLIRContext *ctx) {
-  return Base::get(ctx, StandardAttributes::SymbolRef, value, nestedReferences);
+  return Base::get(ctx, value, nestedReferences);
 }
 
 StringRef SymbolRefAttr::getRootReference() const { return getImpl()->value; }
@@ -306,7 +306,7 @@ ArrayRef<FlatSymbolRefAttr> SymbolRefAttr::getNestedReferences() const {
 IntegerAttr IntegerAttr::get(Type type, const APInt &value) {
   if (type.isSignlessInteger(1))
     return BoolAttr::get(value.getBoolValue(), type.getContext());
-  return Base::get(type.getContext(), StandardAttributes::Integer, type, value);
+  return Base::get(type.getContext(), type, value);
 }
 
 IntegerAttr IntegerAttr::get(Type type, int64_t value) {
@@ -379,8 +379,7 @@ bool BoolAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 IntegerSetAttr IntegerSetAttr::get(IntegerSet value) {
-  return Base::get(value.getConstraint(0).getContext(),
-                   StandardAttributes::IntegerSet, value);
+  return Base::get(value.getConstraint(0).getContext(), value);
 }
 
 IntegerSet IntegerSetAttr::getValue() const { return getImpl()->value; }
@@ -391,14 +390,12 @@ IntegerSet IntegerSetAttr::getValue() const { return getImpl()->value; }
 
 OpaqueAttr OpaqueAttr::get(Identifier dialect, StringRef attrData, Type type,
                            MLIRContext *context) {
-  return Base::get(context, StandardAttributes::Opaque, dialect, attrData,
-                   type);
+  return Base::get(context, dialect, attrData, type);
 }
 
 OpaqueAttr OpaqueAttr::getChecked(Identifier dialect, StringRef attrData,
                                   Type type, Location location) {
-  return Base::getChecked(location, StandardAttributes::Opaque, dialect,
-                          attrData, type);
+  return Base::getChecked(location, dialect, attrData, type);
 }
 
 /// Returns the dialect namespace of the opaque attribute.
@@ -429,7 +426,7 @@ StringAttr StringAttr::get(StringRef bytes, MLIRContext *context) {
 
 /// Get an instance of a StringAttr with the given string and Type.
 StringAttr StringAttr::get(StringRef bytes, Type type) {
-  return Base::get(type.getContext(), StandardAttributes::String, bytes, type);
+  return Base::get(type.getContext(), bytes, type);
 }
 
 StringRef StringAttr::getValue() const { return getImpl()->value; }
@@ -439,7 +436,7 @@ StringRef StringAttr::getValue() const { return getImpl()->value; }
 //===----------------------------------------------------------------------===//
 
 TypeAttr TypeAttr::get(Type value) {
-  return Base::get(value.getContext(), StandardAttributes::Type, value);
+  return Base::get(value.getContext(), value);
 }
 
 Type TypeAttr::getValue() const { return getImpl()->value; }
@@ -600,8 +597,8 @@ static APInt readBits(const char *rawData, size_t bitPos, size_t bitWidth) {
   return result;
 }
 
-/// Returns if 'values' corresponds to a splat, i.e. one element, or has the
-/// same element count as 'type'.
+/// Returns true if 'values' corresponds to a splat, i.e. one element, or has
+/// the same element count as 'type'.
 template <typename Values>
 static bool hasSameElementsOrSplat(ShapedType type, const Values &values) {
   return (values.size() == 1) ||
@@ -747,21 +744,13 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   for (unsigned i = 0, e = values.size(); i < e; ++i) {
     assert(eltType == values[i].getType() &&
            "expected attribute value to have element type");
-
-    switch (eltType.getKind()) {
-    case StandardTypes::BF16:
-    case StandardTypes::F16:
-    case StandardTypes::F32:
-    case StandardTypes::F64:
+    if (eltType.isa<FloatType>())
       intVal = values[i].cast<FloatAttr>().getValue().bitcastToAPInt();
-      break;
-    case StandardTypes::Integer:
-    case StandardTypes::Index:
+    else if (eltType.isa<IntegerType>())
       intVal = values[i].cast<IntegerAttr>().getValue();
-      break;
-    default:
+    else
       llvm_unreachable("unexpected element type");
-    }
+
     assert(intVal.getBitWidth() == bitWidth &&
            "expected value to have same bitwidth as element type");
     writeBits(data.data(), i * storageBitWidth, intVal);
@@ -924,7 +913,7 @@ bool DenseElementsAttr::isValidComplex(int64_t dataEltSize, bool isInt,
       dataEltSize / 2, isInt, isSigned);
 }
 
-/// Returns if this attribute corresponds to a splat, i.e. if all element
+/// Returns true if this attribute corresponds to a splat, i.e. if all element
 /// values are the same.
 bool DenseElementsAttr::isSplat() const {
   return static_cast<DenseElementsAttributeStorage *>(impl)->isSplat;
@@ -1043,8 +1032,7 @@ DenseElementsAttr DenseElementsAttr::mapValues(
 
 DenseStringElementsAttr
 DenseStringElementsAttr::get(ShapedType type, ArrayRef<StringRef> values) {
-  return Base::get(type.getContext(), StandardAttributes::DenseStringElements,
-                   type, values, (values.size() == 1));
+  return Base::get(type.getContext(), type, values, (values.size() == 1));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1095,8 +1083,7 @@ DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
   assert((type.isa<RankedTensorType, VectorType>()) &&
          "type must be ranked tensor or vector");
   assert(type.hasStaticShape() && "type must have static shape");
-  return Base::get(type.getContext(), StandardAttributes::DenseIntOrFPElements,
-                   type, data, isSplat);
+  return Base::get(type.getContext(), type, data, isSplat);
 }
 
 /// Overload of the raw 'get' method that asserts that the given type is of
@@ -1217,8 +1204,7 @@ OpaqueElementsAttr OpaqueElementsAttr::get(Dialect *dialect, ShapedType type,
                                            StringRef bytes) {
   assert(TensorType::isValidElementType(type.getElementType()) &&
          "Input element type should be a valid tensor element type");
-  return Base::get(type.getContext(), StandardAttributes::OpaqueElements, type,
-                   dialect, bytes);
+  return Base::get(type.getContext(), type, dialect, bytes);
 }
 
 StringRef OpaqueElementsAttr::getValue() const { return getImpl()->bytes; }
@@ -1227,17 +1213,20 @@ StringRef OpaqueElementsAttr::getValue() const { return getImpl()->bytes; }
 /// element, then a null attribute is returned.
 Attribute OpaqueElementsAttr::getValue(ArrayRef<uint64_t> index) const {
   assert(isValidIndex(index) && "expected valid multi-dimensional index");
-  if (Dialect *dialect = getDialect())
-    return dialect->extractElementHook(*this, index);
   return Attribute();
 }
 
 Dialect *OpaqueElementsAttr::getDialect() const { return getImpl()->dialect; }
 
 bool OpaqueElementsAttr::decode(ElementsAttr &result) {
-  if (auto *d = getDialect())
-    return d->decodeHook(*this, result);
-  return true;
+  auto *d = getDialect();
+  if (!d)
+    return true;
+  auto *interface =
+      d->getRegisteredInterface<DialectDecodeAttributesInterface>();
+  if (!interface)
+    return true;
+  return failed(interface->decode(*this, result));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1252,7 +1241,7 @@ SparseElementsAttr SparseElementsAttr::get(ShapedType type,
   assert((type.isa<RankedTensorType, VectorType>()) &&
          "type must be ranked tensor or vector");
   assert(type.hasStaticShape() && "type must have static shape");
-  return Base::get(type.getContext(), StandardAttributes::SparseElements, type,
+  return Base::get(type.getContext(), type,
                    indices.cast<DenseIntElementsAttr>(), values);
 }
 

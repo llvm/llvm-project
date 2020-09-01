@@ -454,10 +454,6 @@ typedef __char32_t char32_t;
 #  endif
 #endif
 
-#if !(__has_feature(cxx_rvalue_references))
-#define _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#endif
-
 #if !(__has_feature(cxx_auto_type))
 #define _LIBCPP_HAS_NO_AUTO_TYPE
 #endif
@@ -1086,12 +1082,6 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_INLINE_VAR inline
 #else
 #  define _LIBCPP_INLINE_VAR
-#endif
-
-#ifdef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#  define _LIBCPP_EXPLICIT_MOVE(x) _VSTD::move(x)
-#else
-#  define _LIBCPP_EXPLICIT_MOVE(x) (x)
 #endif
 
 #ifndef _LIBCPP_CONSTEXPR_IF_NODEBUG

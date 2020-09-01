@@ -858,10 +858,10 @@ private:
   SourceLocation PointersToMembersPragmaLocation;
 
   /// The pragma float_control state.
-  Optional<FPOptionsOverride::storage_type> FpPragmaCurrentValue;
+  Optional<FPOptionsOverride> FpPragmaCurrentValue;
   SourceLocation FpPragmaCurrentLocation;
   struct FpPragmaStackEntry {
-    FPOptionsOverride::storage_type Value;
+    FPOptionsOverride Value;
     SourceLocation Location;
     SourceLocation PushLocation;
     StringRef SlotLabel;

@@ -35,6 +35,9 @@ public:
   /// If given, the name of the target CPU to generate code for.
   std::string CPU;
 
+  /// If given, the name of the target CPU to tune code for.
+  std::string TuneCPU;
+
   /// If given, the unit to use for floating point math.
   std::string FPMath;
 
@@ -53,6 +56,10 @@ public:
   /// The list of target specific features to enable or disable -- this should
   /// be a list of strings starting with by '+' or '-'.
   std::vector<std::string> Features;
+
+  /// The map of which features have been enabled disabled based on the command
+  /// line.
+  llvm::StringMap<bool> FeatureMap;
 
   /// Supported OpenCL extensions and optional core features.
   OpenCLOptions SupportedOpenCLOptions;

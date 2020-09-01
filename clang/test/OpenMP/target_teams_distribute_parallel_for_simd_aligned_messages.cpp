@@ -167,7 +167,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
 
   int v = 0;
 
-#pragma omp target teams distribute parallel for simd aligned(f:j) // expected-note {{initializer of 'j' is not a constant expression}} expected-error {{expression is not an integral constant expression}}
+#pragma omp target teams distribute parallel for simd aligned(f:j) // expected-note {{initializer of 'j' is not a constant expression}} expected-error {{integral constant expression}}
 
   for (I k = 0; k < argc; ++k) { ++k; v += j; }
 

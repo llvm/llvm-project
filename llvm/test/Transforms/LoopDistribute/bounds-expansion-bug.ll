@@ -69,12 +69,10 @@ join:
   br label %for.body
 
 ; CHECK: join
-; CHECK: {{%[0-9a-z]+}} = bitcast i32* %c to i8*
 ; CHECK: {{%[0-9a-z]+}} = bitcast i32* %a to i8*
-; CHECK: [[OLD_C:%[0-9a-z]+]] = bitcast i32* %c to i8*
-; CHECK: [[OLD_A:%[0-9a-z]+]] = bitcast i32* %a to i8*
-; CHECK-NOT: [[OLD_C]]
-; CHECK-NOT: [[OLD_A]]
+; CHECK: {{%[0-9a-z]+}} = bitcast i32* %c to i8*
+; CHECK-NOT: bitcast i32* %c to i8*
+; CHECK-NOT: bitcast i32* %a to i8*
 
 for.body:                                         ; preds = %for.body, %entry
   %ind = phi i64 [ 0, %join ], [ %add, %for.body ]

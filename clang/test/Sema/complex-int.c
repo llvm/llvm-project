@@ -22,8 +22,8 @@ switch (arr) { // expected-error{{statement requires expression of integer type 
   case xx: ;
 }
 switch (ii) {
-  case brr: ; // expected-error{{expression is not an integer constant expression}}
-  case xx: ; // expected-error{{expression is not an integer constant expression}}
+  case brr: ; // expected-error{{integer constant expression must have integer type}}
+  case xx: ; // expected-error{{integer constant expression must have integer type}}
 }
 }
 

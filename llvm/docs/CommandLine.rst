@@ -475,7 +475,7 @@ Parsing a list of options
 Now that we have the standard run-of-the-mill argument types out of the way,
 lets get a little wild and crazy.  Lets say that we want our optimizer to accept
 a **list** of optimizations to perform, allowing duplicates.  For example, we
-might want to run: "``compiler -dce -constprop -inline -dce -strip``".  In this
+might want to run: "``compiler -dce -instsimplify -inline -dce -strip``".  In this
 case, the order of the arguments and the number of appearances is very
 important.  This is what the "``cl::list``" template is for.  First, start by
 defining an enum of the optimizations that you would like to perform:
@@ -484,7 +484,7 @@ defining an enum of the optimizations that you would like to perform:
 
   enum Opts {
     // 'inline' is a C++ keyword, so name it 'inlining'
-    dce, constprop, inlining, strip
+    dce, instsimplify, inlining, strip
   };
 
 Then define your "``cl::list``" variable:
@@ -494,7 +494,7 @@ Then define your "``cl::list``" variable:
   cl::list<Opts> OptimizationList(cl::desc("Available Optimizations:"),
     cl::values(
       clEnumVal(dce               , "Dead Code Elimination"),
-      clEnumVal(constprop         , "Constant Propagation"),
+      clEnumVal(instsimplify      , "Instruction Simplification"),
      clEnumValN(inlining, "inline", "Procedure Integration"),
       clEnumVal(strip             , "Strip Symbols")));
 
@@ -553,16 +553,16 @@ Reworking the above list example, we could replace `cl::list`_ with `cl::bits`_:
   cl::bits<Opts> OptimizationBits(cl::desc("Available Optimizations:"),
     cl::values(
       clEnumVal(dce               , "Dead Code Elimination"),
-      clEnumVal(constprop         , "Constant Propagation"),
+      clEnumVal(instsimplify      , "Instruction Simplification"),
      clEnumValN(inlining, "inline", "Procedure Integration"),
       clEnumVal(strip             , "Strip Symbols")));
 
-To test to see if ``constprop`` was specified, we can use the ``cl:bits::isSet``
+To test to see if ``instsimplify`` was specified, we can use the ``cl:bits::isSet``
 function:
 
 .. code-block:: c++
 
-  if (OptimizationBits.isSet(constprop)) {
+  if (OptimizationBits.isSet(instsimplify)) {
     ...
   }
 

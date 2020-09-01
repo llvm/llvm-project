@@ -190,9 +190,8 @@ static void symbolizeInput(const opt::InputArgList &Args, uint64_t AdjustVMA,
     outs() << "\n";
 }
 
-static void printHelp(bool IsAddr2Line, const SymbolizerOptTable &Tbl,
+static void printHelp(StringRef ToolName, const SymbolizerOptTable &Tbl,
                       raw_ostream &OS) {
-  StringRef ToolName = IsAddr2Line ? "llvm-addr2line" : "llvm-symbolizer";
   const char HelpText[] = " [options] addresses...";
   Tbl.PrintHelp(OS, (ToolName + HelpText).str().c_str(),
                 ToolName.str().c_str());
@@ -203,6 +202,7 @@ static void printHelp(bool IsAddr2Line, const SymbolizerOptTable &Tbl,
 static opt::InputArgList parseOptions(int Argc, char *Argv[], bool IsAddr2Line,
                                       StringSaver &Saver,
                                       SymbolizerOptTable &Tbl) {
+  StringRef ToolName = IsAddr2Line ? "llvm-addr2line" : "llvm-symbolizer";
   Tbl.setGroupedShortOptions(true);
   // The environment variable specifies initial options which can be overridden
   // by commnad line options.
@@ -217,7 +217,12 @@ static opt::InputArgList parseOptions(int Argc, char *Argv[], bool IsAddr2Line,
   if (HasError)
     exit(1);
   if (Args.hasArg(OPT_help)) {
-    printHelp(IsAddr2Line, Tbl, outs());
+    printHelp(ToolName, Tbl, outs());
+    exit(0);
+  }
+  if (Args.hasArg(OPT_version)) {
+    outs() << ToolName << '\n';
+    cl::PrintVersionMessage();
     exit(0);
   }
 

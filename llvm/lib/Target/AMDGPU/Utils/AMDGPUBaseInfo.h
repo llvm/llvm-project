@@ -368,8 +368,8 @@ struct Waitcnt {
   Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt, unsigned VsCnt)
       : VmCnt(VmCnt), ExpCnt(ExpCnt), LgkmCnt(LgkmCnt), VsCnt(VsCnt) {}
 
-  static Waitcnt allZero(const IsaVersion &Version) {
-    return Waitcnt(0, 0, 0, Version.Major >= 10 ? 0 : ~0u);
+  static Waitcnt allZero(bool HasVscnt) {
+    return Waitcnt(0, 0, 0, HasVscnt ? 0 : ~0u);
   }
   static Waitcnt allZeroExceptVsCnt() { return Waitcnt(0, 0, 0, ~0u); }
 

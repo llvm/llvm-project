@@ -27,8 +27,6 @@ class VEMiscReg<bits<6> enc, string n>: Register<n> {
 }
 
 let Namespace = "VE" in {
-  def sub_i8      : SubRegIndex<8, 56>;         // Low 8 bit (56..63)
-  def sub_i16     : SubRegIndex<16, 48>;        // Low 16 bit (48..63)
   def sub_i32     : SubRegIndex<32, 32>;        // Low 32 bit (32..63)
   def sub_f32     : SubRegIndex<32>;            // High 32 bit (0..31)
   def sub_even    : SubRegIndex<64>;            // High 64 bit (0..63)
@@ -66,26 +64,14 @@ def MISC : RegisterClass<"VE", [i64], 64,
 def IC : VEMiscReg<62, "ic">;
 
 //-----------------------------------------------------------------------------
-// Gneric Registers
+// Generic Registers
 //-----------------------------------------------------------------------------
 
 let RegAltNameIndices = [AsmName] in {
 
-// Generic integer registers - 8 bits wide
-foreach I = 0-63 in
-  def SB#I : VEReg<I, "sb"#I, [], ["s"#I]>, DwarfRegNum<[I]>;
-
-// Generic integer registers - 16 bits wide
-let SubRegIndices = [sub_i8] in
-foreach I = 0-63 in
-  def SH#I : VEReg<I, "sh"#I, [!cast<VEReg>("SB"#I)], ["s"#I]>,
-                   DwarfRegNum<[I]>;
-
 // Generic integer registers - 32 bits wide
-let SubRegIndices = [sub_i16] in
 foreach I = 0-63 in
-  def SW#I : VEReg<I, "sw"#I, [!cast<VEReg>("SH"#I)], ["s"#I]>,
-                   DwarfRegNum<[I]>;
+  def SW#I : VEReg<I, "sw"#I, [], ["s"#I]>, DwarfRegNum<[I]>;
 
 // Generic floating point registers - 32 bits wide
 //   NOTE: Mark SF#I as alias of SW#I temporary to avoid register allocation
@@ -118,14 +104,6 @@ foreach I = 0-31 in
 //
 // The register order is defined in terms of the preferred
 // allocation order.
-def I8  : RegisterClass<"VE", [i8], 8,
-                        (add (sequence "SB%u", 0, 7),
-                             (sequence "SB%u", 34, 63),
-                             (sequence "SB%u", 8, 33))>;
-def I16 : RegisterClass<"VE", [i16], 16,
-                        (add (sequence "SH%u", 0, 7),
-                             (sequence "SH%u", 34, 63),
-                             (sequence "SH%u", 8, 33))>;
 def I32 : RegisterClass<"VE", [i32], 32,
                         (add (sequence "SW%u", 0, 7),
                              (sequence "SW%u", 34, 63),

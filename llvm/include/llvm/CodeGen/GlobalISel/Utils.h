@@ -151,9 +151,8 @@ const ConstantFP* getConstantFPVRegVal(Register VReg,
 MachineInstr *getOpcodeDef(unsigned Opcode, Register Reg,
                            const MachineRegisterInfo &MRI);
 
-/// Find the def instruction for \p Reg, folding away any trivial copies. Note
-/// it may still return a COPY, if it changes the type. May return nullptr if \p
-/// Reg is not a generic virtual register.
+/// Find the def instruction for \p Reg, folding away any trivial copies. May
+/// return nullptr if \p Reg is not a generic virtual register.
 MachineInstr *getDefIgnoringCopies(Register Reg,
                                    const MachineRegisterInfo &MRI);
 
@@ -227,6 +226,16 @@ LLT getGCDType(LLT OrigTy, LLT TargetTy);
 /// \returns The splat index of a G_SHUFFLE_VECTOR \p MI when \p MI is a splat.
 /// If \p MI is not a splat, returns None.
 Optional<int> getSplatIndex(MachineInstr &MI);
+
+/// Return true if the specified instruction is a G_BUILD_VECTOR or
+/// G_BUILD_VECTOR_TRUNC where all of the elements are 0 or undef.
+bool isBuildVectorAllZeros(const MachineInstr &MI,
+                           const MachineRegisterInfo &MRI);
+
+/// Return true if the specified instruction is a G_BUILD_VECTOR or
+/// G_BUILD_VECTOR_TRUNC where all of the elements are ~0 or undef.
+bool isBuildVectorAllOnes(const MachineInstr &MI,
+                          const MachineRegisterInfo &MRI);
 
 } // End namespace llvm.
 #endif

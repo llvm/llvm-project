@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/ReproducerProvider.h"
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -70,6 +71,10 @@ llvm::Error Reproducer::Initialize(ReproducerMode mode,
   };
 
   return Error::success();
+}
+
+void Reproducer::Initialize() {
+  llvm::cantFail(Initialize(repro::ReproducerMode::Off, llvm::None));
 }
 
 bool Reproducer::Initialized() { return InstanceImpl().operator bool(); }
@@ -166,6 +171,7 @@ static FileSpec MakeAbsolute(const FileSpec &file_spec) {
 
 Generator::Generator(FileSpec root) : m_root(MakeAbsolute(std::move(root))) {
   GetOrCreate<repro::WorkingDirectoryProvider>();
+  GetOrCreate<repro::HomeDirectoryProvider>();
 }
 
 Generator::~Generator() {
@@ -263,63 +269,93 @@ bool Loader::HasFile(StringRef file) {
   return (it != m_files.end()) && (*it == file);
 }
 
-llvm::Expected<std::unique_ptr<DataRecorder>>
-DataRecorder::Create(const FileSpec &filename) {
-  std::error_code ec;
-  auto recorder = std::make_unique<DataRecorder>(std::move(filename), ec);
-  if (ec)
-    return llvm::errorCodeToError(ec);
-  return std::move(recorder);
-}
-
-llvm::Expected<std::unique_ptr<YamlRecorder>>
-YamlRecorder::Create(const FileSpec &filename) {
-  std::error_code ec;
-  auto recorder = std::make_unique<YamlRecorder>(std::move(filename), ec);
-  if (ec)
-    return llvm::errorCodeToError(ec);
-  return std::move(recorder);
-}
-
-void VersionProvider::Keep() {
-  FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
-  std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
-  if (ec)
+void Verifier::Verify(
+    llvm::function_ref<void(llvm::StringRef)> error_callback,
+    llvm::function_ref<void(llvm::StringRef)> warning_callback,
+    llvm::function_ref<void(llvm::StringRef)> note_callack) const {
+  if (!m_loader) {
+    error_callback("invalid loader");
     return;
-  os << m_version << "\n";
-}
+  }
 
-void WorkingDirectoryProvider::Keep() {
-  FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
-  std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
-  if (ec)
+  FileSpec vfs_mapping = m_loader->GetFile<FileProvider::Info>();
+  ErrorOr<std::unique_ptr<MemoryBuffer>> buffer =
+      vfs::getRealFileSystem()->getBufferForFile(vfs_mapping.GetPath());
+  if (!buffer) {
+    error_callback("unable to read files: " + buffer.getError().message());
     return;
-  os << m_cwd << "\n";
-}
+  }
 
-void FileProvider::RecordInterestingDirectory(const llvm::Twine &dir) {
-  if (m_collector)
-    m_collector->addFile(dir);
-}
+  IntrusiveRefCntPtr<vfs::FileSystem> vfs = vfs::getVFSFromYAML(
+      std::move(buffer.get()), nullptr, vfs_mapping.GetPath());
+  if (!vfs) {
+    error_callback("unable to initialize the virtual file system");
+    return;
+  }
 
-void FileProvider::RecordInterestingDirectoryRecursive(const llvm::Twine &dir) {
-  if (m_collector)
-    m_collector->addDirectory(dir);
-}
+  auto &redirecting_vfs = static_cast<vfs::RedirectingFileSystem &>(*vfs);
+  redirecting_vfs.setFallthrough(false);
 
-void ProviderBase::anchor() {}
-char CommandProvider::ID = 0;
-char FileProvider::ID = 0;
-char ProviderBase::ID = 0;
-char VersionProvider::ID = 0;
-char WorkingDirectoryProvider::ID = 0;
-const char *CommandProvider::Info::file = "command-interpreter.yaml";
-const char *CommandProvider::Info::name = "command-interpreter";
-const char *FileProvider::Info::file = "files.yaml";
-const char *FileProvider::Info::name = "files";
-const char *VersionProvider::Info::file = "version.txt";
-const char *VersionProvider::Info::name = "version";
-const char *WorkingDirectoryProvider::Info::file = "cwd.txt";
-const char *WorkingDirectoryProvider::Info::name = "cwd";
+  {
+    llvm::Expected<std::string> working_dir =
+        GetDirectoryFrom<WorkingDirectoryProvider>(m_loader);
+    if (working_dir) {
+      if (!vfs->exists(*working_dir))
+        warning_callback("working directory '" + *working_dir + "' not in VFS");
+      vfs->setCurrentWorkingDirectory(*working_dir);
+    } else {
+      warning_callback("no working directory in reproducer: " +
+                       toString(working_dir.takeError()));
+    }
+  }
+
+  {
+    llvm::Expected<std::string> home_dir =
+        GetDirectoryFrom<HomeDirectoryProvider>(m_loader);
+    if (home_dir) {
+      if (!vfs->exists(*home_dir))
+        warning_callback("home directory '" + *home_dir + "' not in VFS");
+    } else {
+      warning_callback("no home directory in reproducer: " +
+                       toString(home_dir.takeError()));
+    }
+  }
+
+  {
+    Expected<std::string> symbol_files =
+        m_loader->LoadBuffer<SymbolFileProvider>();
+    if (symbol_files) {
+      std::vector<SymbolFileProvider::Entry> entries;
+      llvm::yaml::Input yin(*symbol_files);
+      yin >> entries;
+      for (const auto &entry : entries) {
+        if (!entry.module_path.empty() && !vfs->exists(entry.module_path)) {
+          warning_callback("'" + entry.module_path + "': module path for " +
+                           entry.uuid + " not in VFS");
+        }
+        if (!entry.symbol_path.empty() && !vfs->exists(entry.symbol_path)) {
+          warning_callback("'" + entry.symbol_path + "': symbol path for " +
+                           entry.uuid + " not in VFS");
+        }
+      }
+    } else {
+      llvm::consumeError(symbol_files.takeError());
+    }
+  }
+
+  // Missing files in the VFS are notes rather than warnings. Because the VFS
+  // is a snapshot, temporary files could have been removed between when they
+  // were recorded and when the reproducer was generated.
+  std::vector<llvm::StringRef> roots = redirecting_vfs.getRoots();
+  for (llvm::StringRef root : roots) {
+    std::error_code ec;
+    vfs::recursive_directory_iterator iter(*vfs, root, ec);
+    vfs::recursive_directory_iterator end;
+    for (; iter != end && !ec; iter.increment(ec)) {
+      ErrorOr<vfs::Status> status = vfs->status(iter->path());
+      if (!status)
+        note_callack("'" + iter->path().str() +
+                     "': " + status.getError().message());
+    }
+  }
+}

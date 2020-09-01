@@ -310,7 +310,9 @@ def: SysReg<"mhpmcounter31h", 0xB9F>;
 //===--------------------------
 // Machine Counter Setup
 //===--------------------------
+let AltName = "mucounteren" in // Privileged spec v1.9.1 Name
 def : SysReg<"mcountinhibit", 0x320>;
+
 def : SysReg<"mhpmevent3", 0x323>;
 def : SysReg<"mhpmevent4", 0x324>;
 def : SysReg<"mhpmevent5", 0x325>;

@@ -74,6 +74,10 @@ public:
   ArrayRef<Value> getOperands() const;
   AffineMap getAffineMap() const;
 
+  /// Attempts to canonicalize the map and operands. Return success if the map
+  /// and/or operands have been modified.
+  LogicalResult canonicalize();
+
 private:
   // A mutable affine map.
   MutableAffineMap map;

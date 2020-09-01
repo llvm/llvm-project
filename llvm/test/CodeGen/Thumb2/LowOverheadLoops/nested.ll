@@ -24,13 +24,12 @@ define void @mat_vec_sext_i16(i16** nocapture readonly %A, i16* nocapture readon
 ; CHECK-NEXT:    [[ARRAYIDX8_PROMOTED_US:%.*]] = load i32, i32* [[ARRAYIDX8_US]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> <i32 undef, i32 0, i32 0, i32 0>, i32 [[ARRAYIDX8_PROMOTED_US]], i32 0
 ; CHECK-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[TMP2]])
-; CHECK-NEXT:    [[NUM_ELEMENTS:%.*]] = add i32 [[TRIP_COUNT_MINUS_1]], 1
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ [[TMP4]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP2]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[NUM_ELEMENTS]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[N]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
@@ -95,7 +94,7 @@ vector.body:                                      ; preds = %vector.body, %for.c
   %tmp6 = getelementptr inbounds i16, i16* %tmp3, i32 %index
 
   ; %tmp7 = icmp ule <4 x i32> %induction, %broadcast.splat29
-  %tmp7 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %tmp7 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
 
   %tmp8 = bitcast i16* %tmp6 to <4 x i16>*
   %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %tmp8, i32 2, <4 x i1> %tmp7, <4 x i16> undef)
@@ -146,13 +145,12 @@ define void @mat_vec_i32(i32** nocapture readonly %A, i32* nocapture readonly %B
 ; CHECK-NEXT:    [[ARRAYIDX7_PROMOTED_US:%.*]] = load i32, i32* [[ARRAYIDX7_US]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> <i32 undef, i32 0, i32 0, i32 0>, i32 [[ARRAYIDX7_PROMOTED_US]], i32 0
 ; CHECK-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[TMP2]])
-; CHECK-NEXT:    [[NUM_ELEMENTS:%.*]] = add i32 [[TRIP_COUNT_MINUS_1]], 1
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ [[TMP4]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP2]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[NUM_ELEMENTS]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[N]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
@@ -215,7 +213,7 @@ vector.body:                                      ; preds = %vector.body, %for.c
   %tmp6 = getelementptr inbounds i32, i32* %tmp3, i32 %index
 
   ; %tmp7 = icmp ule <4 x i32> %induction, %broadcast.splat28
-  %tmp7 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %tmp7 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
 
   %tmp8 = bitcast i32* %tmp6 to <4 x i32>*
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %tmp8, i32 4, <4 x i1> %tmp7, <4 x i32> undef)

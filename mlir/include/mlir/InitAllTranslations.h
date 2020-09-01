@@ -28,7 +28,7 @@ void registerAVX512ToLLVMIRTranslation();
 // expects all the possible translations to be made available to the context
 // automatically.
 inline void registerAllTranslations() {
-  static bool init_once = []() {
+  static bool initOnce = []() {
     registerFromLLVMIRTranslation();
     registerFromSPIRVTranslation();
     registerToLLVMIRTranslation();
@@ -38,7 +38,7 @@ inline void registerAllTranslations() {
     registerAVX512ToLLVMIRTranslation();
     return true;
   }();
-  (void)init_once;
+  (void)initOnce;
 }
 } // namespace mlir
 

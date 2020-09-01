@@ -309,9 +309,7 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   kernelPm.addPass(createConvertGPUKernelToBlobPass(
       compileModuleToROCDLIR, compileISAToHsaco, tripleName, targetChip,
       features, gpuBinaryAnnotation));
-  pm.addPass(createLowerToLLVMPass());
-  pm.addPass(
-      createConvertGpuLaunchFuncToGpuRuntimeCallsPass(gpuBinaryAnnotation));
+  pm.addPass(createGpuToLLVMConversionPass(gpuBinaryAnnotation));
 
   return pm.run(m);
 }

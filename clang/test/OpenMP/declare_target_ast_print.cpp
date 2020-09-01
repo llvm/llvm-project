@@ -2,9 +2,9 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -I %S/Inputs -verify %s -ast-print | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -verify -fopenmp -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -I %S/Inputs -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
@@ -241,6 +241,28 @@ int baz() { return 1; }
 // CHECK: void cba();
 // CHECK: #pragma omp end declare target
 
+#pragma omp declare target
+int abc1() { return 1; }
+#pragma omp declare target to(abc1) device_type(nohost)
+#pragma omp end declare target
+
+// CHECK-NEXT: #pragma omp declare target
+// CHECK-NEXT: #pragma omp declare target device_type(nohost)
+// CHECK-NEXT: int abc1() {
+// CHECK-NEXT: return 1;
+// CHECK-NEXT: }
+// CHECK-NEXT: #pragma omp end declare target
+
+#pragma omp declare target
+int inner_link;
+#pragma omp declare target link(inner_link)
+#pragma omp end declare target
+
+// CHECK-NEXT: #pragma omp declare target
+// CHECK-NEXT: #pragma omp declare target link
+// CHECK-NEXT: int inner_link;
+// CHECK-NEXT: #pragma omp end declare target
+
 int main (int argc, char **argv) {
   foo();
   foo_c();
@@ -254,4 +276,5 @@ int main (int argc, char **argv) {
 // CHECK: #pragma omp declare target
 // CHECK-NEXT: int ts = 1;
 // CHECK-NEXT: #pragma omp end declare target
+
 #endif

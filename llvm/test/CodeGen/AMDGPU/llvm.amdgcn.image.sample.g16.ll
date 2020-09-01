@@ -93,11 +93,11 @@ define amdgpu_ps <4 x float> @sample_d_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    v_mov_b32_e32 v7, 0xffff
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    v_and_b32_e32 v0, v7, v0
 ; GFX10-NEXT:    v_and_b32_e32 v2, v7, v2
-; GFX10-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX10-NEXT:    v_lshl_or_b32 v3, v3, 16, v2
-; GFX10-NEXT:    image_sample_d_cl_g16 v[0:3], [v0, v3, v4, v5, v6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-NEXT:    v_and_b32_e32 v0, v7, v0
+; GFX10-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
+; GFX10-NEXT:    v_lshl_or_b32 v3, v1, 16, v0
+; GFX10-NEXT:    image_sample_d_cl_g16 v[0:3], [v3, v2, v4, v5, v6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
@@ -209,11 +209,11 @@ define amdgpu_ps <4 x float> @sample_cd_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    v_mov_b32_e32 v7, 0xffff
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    v_and_b32_e32 v0, v7, v0
 ; GFX10-NEXT:    v_and_b32_e32 v2, v7, v2
-; GFX10-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX10-NEXT:    v_lshl_or_b32 v3, v3, 16, v2
-; GFX10-NEXT:    image_sample_cd_cl_g16 v[0:3], [v0, v3, v4, v5, v6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-NEXT:    v_and_b32_e32 v0, v7, v0
+; GFX10-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
+; GFX10-NEXT:    v_lshl_or_b32 v3, v1, 16, v0
+; GFX10-NEXT:    image_sample_cd_cl_g16 v[0:3], [v3, v2, v4, v5, v6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:

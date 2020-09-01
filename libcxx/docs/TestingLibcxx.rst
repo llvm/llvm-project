@@ -74,14 +74,15 @@ Using a custom site configuration
 
 By default, the libc++ test suite will use a site configuration that matches
 the current CMake configuration. It does so by generating a ``lit.site.cfg``
-file in the build directory from the ``libcxx/test/lit.site.cfg.in`` template,
-and pointing ``llvm-lit`` (which is a wrapper around ``llvm/utils/lit/lit.py``)
-to that file. So when you're running ``<build>/bin/llvm-lit``, the generated
-``lit.site.cfg`` file is always loaded instead of ``libcxx/test/lit.cfg.py``.
-If you want to use a custom site configuration, simply point the CMake build
-to it using ``-DLIBCXX_TEST_CONFIG=<path-to-site-config>``, and that site
-configuration will be used instead. That file can use CMake variables inside
-itself to make configuration easier.
+file in the build directory from one of the configuration file templates in
+``libcxx/test/configs/``, and pointing ``llvm-lit`` (which is a wrapper around
+``llvm/utils/lit/lit.py``) to that file. So when you're running
+``<build>/bin/llvm-lit``, the generated ``lit.site.cfg`` file is always loaded
+instead of ``libcxx/test/lit.cfg.py``. If you want to use a custom site
+configuration, simply point the CMake build to it using
+``-DLIBCXX_TEST_CONFIG=<path-to-site-config>``, and that site configuration
+will be used instead. That file can use CMake variables inside it to make
+configuration easier.
 
    .. code-block:: bash
 

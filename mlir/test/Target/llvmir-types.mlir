@@ -163,7 +163,7 @@ llvm.func @return_s_opaque() -> !llvm.struct<"opaque", opaque>
 // CHECK: declare %long
 llvm.func @return_s_long() -> !llvm.struct<"long", (i32, struct<(i32, i1)>, float, ptr<func<void ()>>)>
 // CHECK: declare %self-recursive
-llvm.func @return_s_self_recurisve() -> !llvm.struct<"self-recursive", (ptr<struct<"self-recursive">>)>
+llvm.func @return_s_self_recursive() -> !llvm.struct<"self-recursive", (ptr<struct<"self-recursive">>)>
 // CHECK: declare %unpacked
 llvm.func @return_s_unpacked() -> !llvm.struct<"unpacked", (i32)>
 // CHECK: declare %packed

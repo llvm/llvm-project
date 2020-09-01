@@ -62,9 +62,14 @@ def main():
     # exit code and return that for tests that expect a non-zero exit code.
     exit_code_path = os.path.join(reproducer_path, 'exit_code.txt')
     if sys.argv[1] == "replay":
+        replay_exit_code = exit_code
         with open(exit_code_path, 'r') as f:
-            assert exit_code == 0
             exit_code = int(f.read())
+        if replay_exit_code != 0:
+            print("error: replay failed with exit code {}".format(replay_exit_code))
+            print("invocation: " + " ".join(new_args))
+            # Return 1 if the expected exit code is 0 or vice versa.
+            return 1 if (exit_code == 0) else 0
         shutil.rmtree(reproducer_path, True)
     elif sys.argv[1] == "capture":
         with open(exit_code_path, 'w') as f:

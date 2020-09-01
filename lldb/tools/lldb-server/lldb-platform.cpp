@@ -104,11 +104,12 @@ static Status save_socket_id_to_file(const std::string &socket_id,
 
   llvm::SmallString<64> temp_file_path;
   temp_file_spec.AppendPathComponent("port-file.%%%%%%");
+  temp_file_path = temp_file_spec.GetPath();
 
   Status status;
   if (auto Err =
           handleErrors(llvm::writeFileAtomically(
-                           temp_file_path, temp_file_spec.GetPath(), socket_id),
+                           temp_file_path, file_spec.GetPath(), socket_id),
                        [&status, &file_spec](const AtomicFileWriteError &E) {
                          std::string ErrorMsgBuffer;
                          llvm::raw_string_ostream S(ErrorMsgBuffer);

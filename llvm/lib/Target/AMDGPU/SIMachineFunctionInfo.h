@@ -277,6 +277,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   uint64_t ExplicitKernArgSize = 0;
   unsigned MaxKernArgAlign = 0;
   unsigned LDSSize = 0;
+  Align DynLDSAlign;
   bool IsEntryFunction = false;
   bool NoSignedZerosFPMath = false;
   bool MemoryBound = false;
@@ -306,6 +307,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
                        UINT64_C(0));
     YamlIO.mapOptional("maxKernArgAlign", MFI.MaxKernArgAlign, 0u);
     YamlIO.mapOptional("ldsSize", MFI.LDSSize, 0u);
+    YamlIO.mapOptional("dynLDSAlign", MFI.DynLDSAlign, Align());
     YamlIO.mapOptional("isEntryFunction", MFI.IsEntryFunction, false);
     YamlIO.mapOptional("noSignedZerosFPMath", MFI.NoSignedZerosFPMath, false);
     YamlIO.mapOptional("memoryBound", MFI.MemoryBound, false);

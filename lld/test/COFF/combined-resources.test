@@ -8,15 +8,15 @@
 // > x86_64-w64-mingw32-windres combined-resources.res combined-resources.o
 // > cvtres -machine:x64 -out:combined-resources-2.o combined-resources.res
 
-# RUN: yaml2obj < %p/Inputs/ret42.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
 # RUN: lld-link /out:%t.exe /entry:main %t.obj %p/Inputs/resource.res \
 # RUN:   %p/Inputs/combined-resources.res %p/Inputs/combined-resources-2.res
 
 # RUN: llvm-readobj --coff-resources --file-headers --section-data %t.exe | \
 # RUN:   FileCheck %s
 
-# RUN: yaml2obj < %p/Inputs/combined-resources.yaml > %t-combined-resources.o
-# RUN: yaml2obj < %p/Inputs/combined-resources-2.yaml > %t-combined-resources-2.o
+# RUN: yaml2obj %p/Inputs/combined-resources.yaml -o %t-combined-resources.o
+# RUN: yaml2obj %p/Inputs/combined-resources-2.yaml -o %t-combined-resources-2.o
 
 # RUN: lld-link /lldmingw /out:%t-resobj.exe /entry:main %t.obj %p/Inputs/resource.res \
 # RUN:   %t-combined-resources.o %t-combined-resources-2.o

@@ -1,6 +1,6 @@
 # Test whether NetBSD executables are recognized correctly.
 
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: lldb-test object-file %t | FileCheck %s
 # CHECK: Architecture: x86_64--netbsd8.99.30
 # CHECK: Type: executable

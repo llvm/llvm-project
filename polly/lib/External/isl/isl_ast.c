@@ -2527,13 +2527,28 @@ error:
 }
 
 /* Print "node" to "p".
+ *
+ * "node" is assumed to be either the outermost node in an AST or
+ * a node that is known not to be a block.
+ * If "node" is a block (and is therefore outermost) and
+ * if the ast_print_outermost_block options is not set,
+ * then act as if the printing occurs inside a block, such
+ * that no "extra" block will get printed.
  */
 __isl_give isl_printer *isl_ast_node_print(__isl_keep isl_ast_node *node,
 	__isl_take isl_printer *p, __isl_take isl_ast_print_options *options)
 {
+	int in_block = 0;
+
 	if (!options || !node)
 		goto error;
-	p = print_ast_node_c(p, node, options, 0, 0);
+	if (node->type == isl_ast_node_block) {
+		isl_ctx *ctx;
+
+		ctx = isl_ast_node_get_ctx(node);
+		in_block = !isl_options_get_ast_print_outermost_block(ctx);
+	}
+	p = print_ast_node_c(p, node, options, in_block, 0);
 	isl_ast_print_options_free(options);
 	return p;
 error:

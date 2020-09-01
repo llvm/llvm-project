@@ -288,7 +288,7 @@ func @simplify_zero_dim_map(%in : memref<f32>) -> f32 {
 // CHECK-DAG: #[[$map0:.*]] = affine_map<()[s0, s1] -> (-(s1 floordiv s0) + 2)>
 // CHECK-DAG: #[[$map1:.*]] = affine_map<()[s0, s1] -> (-(s1 floordiv s0) + 42)>
 
-// Tests the simplification of a semi-affine expression with a modulo operartion on a floordiv and multiplication.
+// Tests the simplification of a semi-affine expression with a modulo operation on a floordiv and multiplication.
 // CHECK-LABEL: func @semiaffine_mod
 func @semiaffine_mod(%arg0: index, %arg1: index) -> index {
   %a = affine.apply affine_map<(d0)[s0] ->((-((d0 floordiv s0) * s0) + s0 * s0) mod s0)> (%arg0)[%arg1]

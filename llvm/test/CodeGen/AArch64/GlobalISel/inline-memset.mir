@@ -67,14 +67,14 @@ body:             |
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
-    ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memset), [[COPY]](p0), [[TRUNC]](s8), [[ZEXT]](s64), 1 :: (store 1 into %ir.dst)
+    ; CHECK: G_MEMSET [[COPY]](p0), [[TRUNC]](s8), [[ZEXT]](s64), 1 :: (store 1 into %ir.dst)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
     %2:_(s32) = COPY $w2
     %3:_(s8) = G_TRUNC %1(s32)
     %4:_(s64) = G_ZEXT %2(s32)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memset), %0(p0), %3(s8), %4(s64), 1 :: (store 1 into %ir.dst)
+    G_MEMSET %0(p0), %3(s8), %4(s64), 1 :: (store 1 into %ir.dst)
     RET_ReallyLR
 
 ...
@@ -103,7 +103,7 @@ body:             |
     %1:_(s32) = COPY $w1
     %3:_(s64) = G_CONSTANT i64 16
     %2:_(s8) = G_TRUNC %1(s32)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memset), %0(p0), %2(s8), %3(s64), 1 :: (store 1 into %ir.dst)
+    G_MEMSET %0(p0), %2(s8), %3(s64), 1 :: (store 1 into %ir.dst)
     RET_ReallyLR
 
 ...
@@ -135,7 +135,7 @@ body:             |
     %1:_(s32) = G_CONSTANT i32 0
     %3:_(s64) = G_CONSTANT i64 64
     %2:_(s8) = G_TRUNC %1(s32)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memset), %0(p0), %2(s8), %3(s64), 1 :: (store 1 into %ir.dst)
+    G_MEMSET %0(p0), %2(s8), %3(s64), 1 :: (store 1 into %ir.dst)
     RET_ReallyLR
 
 ...
@@ -160,7 +160,7 @@ body:             |
     %0:_(p0) = COPY $x0
     %1:_(s8) = G_CONSTANT i8 64
     %2:_(s64) = G_CONSTANT i64 16
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memset), %0(p0), %1(s8), %2(s64), 1 :: (store 1 into %ir.dst)
+    G_MEMSET %0(p0), %1(s8), %2(s64), 1 :: (store 1 into %ir.dst)
     RET_ReallyLR
 
 ...
@@ -196,7 +196,7 @@ body:             |
     %1:_(s32) = COPY $w1
     %3:_(s64) = G_CONSTANT i64 60
     %2:_(s8) = G_TRUNC %1(s32)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memset), %0(p0), %2(s8), %3(s64), 1 :: (store 1 into %ir.dst)
+    G_MEMSET %0(p0), %2(s8), %3(s64), 1 :: (store 1 into %ir.dst)
     RET_ReallyLR
 
 ...
@@ -224,7 +224,7 @@ body:             |
     %0:_(p0) = COPY $x0
     %1:_(s8) = G_CONSTANT i8 64
     %2:_(s64) = G_CONSTANT i64 18
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memset), %0(p0), %1(s8), %2(s64), 1 :: (store 1 into %ir.dst)
+    G_MEMSET %0(p0), %1(s8), %2(s64), 1 :: (store 1 into %ir.dst)
     RET_ReallyLR
 
 ...

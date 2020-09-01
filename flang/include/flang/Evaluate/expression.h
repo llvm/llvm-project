@@ -516,15 +516,18 @@ private:
       Power<Result>, Extremum<Result>>;
   using Indices = std::conditional_t<KIND == ImpliedDoIndex::Result::kind,
       std::tuple<ImpliedDoIndex>, std::tuple<>>;
+  using TypeParamInquiries =
+      std::conditional_t<KIND == TypeParamInquiry::Result::kind,
+          std::tuple<TypeParamInquiry>, std::tuple<>>;
   using DescriptorInquiries =
       std::conditional_t<KIND == DescriptorInquiry::Result::kind,
           std::tuple<DescriptorInquiry>, std::tuple<>>;
   using Others = std::tuple<Constant<Result>, ArrayConstructor<Result>,
-      TypeParamInquiry<KIND>, Designator<Result>, FunctionRef<Result>>;
+      Designator<Result>, FunctionRef<Result>>;
 
 public:
   common::TupleToVariant<common::CombineTuples<Operations, Conversions, Indices,
-      DescriptorInquiries, Others>>
+      TypeParamInquiries, DescriptorInquiries, Others>>
       u;
 };
 
@@ -745,7 +748,7 @@ public:
   using Result = SomeKind<CAT>;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
   int GetKind() const;
-  common::MapTemplate<Expr, CategoryTypes<CAT>> u;
+  common::MapTemplate<evaluate::Expr, CategoryTypes<CAT>> u;
 };
 
 template <> class Expr<SomeCharacter> : public ExpressionBase<SomeCharacter> {

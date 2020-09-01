@@ -27,3 +27,12 @@ void test_builtin_ppc_setrnd() {
   // CHECK: call double @llvm.ppc.setrnd(i32 %2)
   res = __builtin_setrnd(x);
 }
+
+void test_builtin_ppc_flm() {
+  volatile double res;
+  // CHECK: call double @llvm.ppc.readflm()
+  res = __builtin_readflm();
+
+  // CHECK: call double @llvm.ppc.setflm(double %1)
+  res = __builtin_setflm(res);
+}

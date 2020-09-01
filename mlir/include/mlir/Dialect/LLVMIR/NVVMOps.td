@@ -23,6 +23,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def NVVM_Dialect : Dialect {
   let name = "nvvm";
   let cppNamespace = "NVVM";
+  let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
 //===----------------------------------------------------------------------===//

@@ -424,7 +424,7 @@ public:
     return materialized_users();
   }
 
-  /// Return true if there is exactly one user of this value.
+  /// Return true if there is exactly one use of this value.
   ///
   /// This is specialized because it is a common request and does not require
   /// traversing the whole use list.
@@ -434,15 +434,25 @@ public:
     return ++I == E;
   }
 
-  /// Return true if this Value has exactly N users.
+  /// Return true if this Value has exactly N uses.
   bool hasNUses(unsigned N) const;
 
-  /// Return true if this value has N users or more.
+  /// Return true if this value has N uses or more.
   ///
   /// This is logically equivalent to getNumUses() >= N.
   bool hasNUsesOrMore(unsigned N) const;
 
-  /// Return true if there is exactly one user of this value that cannot be
+  /// Return true if there is exactly one user of this value.
+  ///
+  /// Note that this is not the same as "has one use". If a value has one use,
+  /// then there certainly is a single user. But if value has several uses,
+  /// it is possible that all uses are in a single user, or not.
+  ///
+  /// This check is potentially costly, since it requires traversing,
+  /// in the worst case, the whole use list of a value.
+  bool hasOneUser() const;
+
+  /// Return true if there is exactly one use of this value that cannot be
   /// dropped.
   ///
   /// This is specialized because it is a common request and does not require
@@ -455,7 +465,7 @@ public:
   /// traversing the whole use list.
   bool hasNUndroppableUses(unsigned N) const;
 
-  /// Return true if this value has N users or more.
+  /// Return true if this value has N uses or more.
   ///
   /// This is logically equivalent to getNumUses() >= N.
   bool hasNUndroppableUsesOrMore(unsigned N) const;
@@ -474,7 +484,7 @@ public:
   void dropDroppableUsesIn(User &Usr);
 
   /// Remove the droppable use \p U.
-  void dropDroppableUse(Use &U);
+  static void dropDroppableUse(Use &U);
 
   /// Check if this value is used in the specified basic block.
   bool isUsedInBasicBlock(const BasicBlock *BB) const;

@@ -114,7 +114,11 @@ bool getEnableAddrsig();
 
 bool getEmitCallSiteInfo();
 
+bool getEnableMachineFunctionSplitter();
+
 bool getEnableDebugEntryValues();
+
+bool getValueTrackingVariableLocations();
 
 bool getForceDwarfFrameSection();
 

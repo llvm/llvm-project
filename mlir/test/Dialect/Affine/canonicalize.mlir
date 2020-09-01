@@ -604,3 +604,26 @@ func @drop_duplicate_bounds(%N : index) {
   }
   return
 }
+
+// -----
+
+// Ensure affine.parallel bounds expressions are canonicalized.
+
+#map3 = affine_map<(d0) -> (d0 * 5)>
+
+// CHECK-LABEL: func @affine_parallel_const_bounds
+func @affine_parallel_const_bounds() {
+  %cst = constant 1.0 : f32
+  %c0 = constant 0 : index
+  %c4 = constant 4 : index
+  %0 = alloc() : memref<4xf32>
+  // CHECK: affine.parallel (%{{.*}}) = (0) to (4)
+  affine.parallel (%i) = (%c0) to (%c0 + %c4) {
+    %1 = affine.apply #map3(%i)
+    // CHECK: affine.parallel (%{{.*}}) = (0) to (%{{.*}} * 5)
+    affine.parallel (%j) = (%c0) to (%1) {
+      affine.store %cst, %0[%j] : memref<4xf32>
+    }
+  }
+  return
+}

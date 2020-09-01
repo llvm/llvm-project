@@ -722,7 +722,10 @@ struct InformationCache {
             [&](const Function &F) {
               return AG.getAnalysis<PostDominatorTreeAnalysis>(F);
             }),
-        AG(AG), CGSCC(CGSCC) {}
+        AG(AG), CGSCC(CGSCC) {
+    if (CGSCC)
+      initializeModuleSlice(*CGSCC);
+  }
 
   ~InformationCache() {
     // The FunctionInfo objects are allocated via a BumpPtrAllocator, we call
@@ -730,6 +733,68 @@ struct InformationCache {
     for (auto &It : FuncInfoMap)
       It.getSecond()->~FunctionInfo();
   }
+
+  /// Apply \p CB to all uses of \p F. If \p LookThroughConstantExprUses is
+  /// true, constant expression users are not given to \p CB but their uses are
+  /// traversed transitively.
+  template <typename CBTy>
+  static void foreachUse(Function &F, CBTy CB,
+                         bool LookThroughConstantExprUses = true) {
+    SmallVector<Use *, 8> Worklist(make_pointer_range(F.uses()));
+
+    for (unsigned Idx = 0; Idx < Worklist.size(); ++Idx) {
+      Use &U = *Worklist[Idx];
+
+      // Allow use in constant bitcasts and simply look through them.
+      if (LookThroughConstantExprUses && isa<ConstantExpr>(U.getUser())) {
+        for (Use &CEU : cast<ConstantExpr>(U.getUser())->uses())
+          Worklist.push_back(&CEU);
+        continue;
+      }
+
+      CB(U);
+    }
+  }
+
+  /// Initialize the ModuleSlice member based on \p SCC. ModuleSlices contains
+  /// (a subset of) all functions that we can look at during this SCC traversal.
+  /// This includes functions (transitively) called from the SCC and the
+  /// (transitive) callers of SCC functions. We also can look at a function if
+  /// there is a "reference edge", i.a., if the function somehow uses (!=calls)
+  /// a function in the SCC or a caller of a function in the SCC.
+  void initializeModuleSlice(SetVector<Function *> &SCC) {
+    ModuleSlice.insert(SCC.begin(), SCC.end());
+
+    SmallPtrSet<Function *, 16> Seen;
+    SmallVector<Function *, 16> Worklist(SCC.begin(), SCC.end());
+    while (!Worklist.empty()) {
+      Function *F = Worklist.pop_back_val();
+      ModuleSlice.insert(F);
+
+      for (Instruction &I : instructions(*F))
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          if (Function *Callee = CB->getCalledFunction())
+            if (Seen.insert(Callee).second)
+              Worklist.push_back(Callee);
+    }
+
+    Seen.clear();
+    Worklist.append(SCC.begin(), SCC.end());
+    while (!Worklist.empty()) {
+      Function *F = Worklist.pop_back_val();
+      ModuleSlice.insert(F);
+
+      // Traverse all transitive uses.
+      foreachUse(*F, [&](Use &U) {
+        if (auto *UsrI = dyn_cast<Instruction>(U.getUser()))
+          if (Seen.insert(UsrI->getFunction()).second)
+            Worklist.push_back(UsrI->getFunction());
+      });
+    }
+  }
+
+  /// The slice of the module we are allowed to look at.
+  SmallPtrSet<Function *, 8> ModuleSlice;
 
   /// A vector type to hold instructions.
   using InstructionVectorTy = SmallVector<Instruction *, 8>;
@@ -802,6 +867,11 @@ struct InformationCache {
         AG.getAnalysis<LoopAnalysis>(F));
     PotentiallyReachableMap.insert(std::make_pair(KeyPair, Result));
     return Result;
+  }
+
+  /// Check whether \p F is part of module slice.
+  bool isInModuleSlice(const Function &F) {
+    return ModuleSlice.count(const_cast<Function *>(&F));
   }
 
 private:
@@ -969,6 +1039,7 @@ struct Attributor {
   /// attribute. Using this after Attributor started running is restricted to
   /// only the Attributor itself. Initial seeding of AAs can be done via this
   /// function.
+  /// NOTE: ForceUpdate is ignored in any stage other than the update stage.
   template <typename AAType>
   const AAType &getOrCreateAAFor(const IRPosition &IRP,
                                  const AbstractAttribute *QueryingAA = nullptr,
@@ -976,7 +1047,7 @@ struct Attributor {
                                  DepClassTy DepClass = DepClassTy::OPTIONAL,
                                  bool ForceUpdate = false) {
     if (AAType *AAPtr = lookupAAFor<AAType>(IRP, QueryingAA, TrackDependence)) {
-      if (ForceUpdate)
+      if (ForceUpdate && Phase == AttributorPhase::UPDATE)
         updateAA(*AAPtr);
       return *AAPtr;
     }
@@ -986,7 +1057,7 @@ struct Attributor {
     auto &AA = AAType::createForPosition(IRP, *this);
 
     // If we are currenty seeding attributes, enforce seeding rules.
-    if (SeedingPeriod && !shouldSeedAttribute(AA)) {
+    if (Phase == AttributorPhase::SEEDING && !shouldSeedAttribute(AA)) {
       AA.getState().indicatePessimisticFixpoint();
       return AA;
     }
@@ -1012,22 +1083,33 @@ struct Attributor {
       TimeTraceScope TimeScope(AA.getName() + "::initialize");
       AA.initialize(*this);
     }
-    // We can initialize (=look at) code outside the current function set but
-    // not call update because that would again spawn new abstract attributes in
-    // potentially unconnected code regions (=SCCs).
+
+    // Initialize and update is allowed for code outside of the current function
+    // set, but only if it is part of module slice we are allowed to look at.
+    // Only exception is AAIsDeadFunction whose initialization is prevented
+    // directly, since we don't to compute it twice.
     if (FnScope && !Functions.count(const_cast<Function *>(FnScope))) {
+      if (!getInfoCache().isInModuleSlice(*FnScope)) {
+        AA.getState().indicatePessimisticFixpoint();
+        return AA;
+      }
+    }
+
+    // If this is queried in the manifest stage, we force the AA to indicate
+    // pessimistic fixpoint immediately.
+    if (Phase == AttributorPhase::MANIFEST) {
       AA.getState().indicatePessimisticFixpoint();
       return AA;
     }
 
     // Allow seeded attributes to declare dependencies.
     // Remember the seeding state.
-    bool OldSeedingPeriod = SeedingPeriod;
-    SeedingPeriod = false;
+    AttributorPhase OldPhase = Phase;
+    Phase = AttributorPhase::UPDATE;
 
     updateAA(AA);
 
-    SeedingPeriod = OldSeedingPeriod;
+    Phase = OldPhase;
 
     if (TrackDependence && AA.getState().isValidState())
       recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA),
@@ -1096,8 +1178,10 @@ struct Attributor {
     assert(!AAPtr && "Attribute already in map!");
     AAPtr = &AA;
 
-    DG.SyntheticRoot.Deps.push_back(
-        AADepGraphNode::DepTy(&AA, unsigned(DepClassTy::REQUIRED)));
+    // Register AA with the synthetic root only before the manifest stage.
+    if (Phase == AttributorPhase::SEEDING || Phase == AttributorPhase::UPDATE)
+      DG.SyntheticRoot.Deps.push_back(
+          AADepGraphNode::DepTy(&AA, unsigned(DepClassTy::REQUIRED)));
 
     return AA;
   }
@@ -1522,9 +1606,14 @@ private:
   /// Invoke instructions with at least a single dead successor block.
   SmallVector<WeakVH, 16> InvokeWithDeadSuccessor;
 
-  /// Wheather attributes are being `seeded`, always false after ::run function
-  /// gets called \see getOrCreateAAFor.
-  bool SeedingPeriod = true;
+  /// A flag that indicates which stage of the process we are in. Initially, the
+  /// phase is SEEDING. Phase is changed in `Attributor::run()`
+  enum class AttributorPhase {
+    SEEDING,
+    UPDATE,
+    MANIFEST,
+    CLEANUP,
+  } Phase = AttributorPhase::SEEDING;
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///
@@ -2013,7 +2102,7 @@ struct StateWrapper : public BaseType, public StateTy {
   StateType &getState() override { return *this; }
 
   /// See AbstractAttribute::getState(...).
-  const AbstractState &getState() const override { return *this; }
+  const StateType &getState() const override { return *this; }
 };
 
 /// Helper class that provides common functionality to manifest IR attributes.
@@ -2644,6 +2733,12 @@ public:
   /// Determine if \p F might catch asynchronous exceptions.
   static bool mayCatchAsynchronousExceptions(const Function &F) {
     return F.hasPersonalityFn() && !canSimplifyInvokeNoUnwind(&F);
+  }
+
+  /// Return if the edge from \p From BB to \p To BB is assumed dead.
+  /// This is specifically useful in AAReachability.
+  virtual bool isEdgeDead(const BasicBlock *From, const BasicBlock *To) const {
+    return false;
   }
 
   /// See AbstractAttribute::getName()
@@ -3302,7 +3397,7 @@ struct AAValueConstantRange
 
   /// See AbstractAttribute::getState(...).
   IntegerRangeState &getState() override { return *this; }
-  const AbstractState &getState() const override { return *this; }
+  const IntegerRangeState &getState() const override { return *this; }
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAValueConstantRange &createForPosition(const IRPosition &IRP,
@@ -3359,12 +3454,33 @@ struct AAValueConstantRange
 /// force it. As for the conditions under which we force it, see
 /// AAPotentialValues.
 template <typename MemberTy, typename KeyInfo = DenseMapInfo<MemberTy>>
-struct PotentialValuesState : BooleanState {
+struct PotentialValuesState : AbstractState {
   using SetTy = DenseSet<MemberTy, KeyInfo>;
 
-  PotentialValuesState() : BooleanState(true) {}
+  PotentialValuesState() : IsValidState(true), UndefIsContained(false) {}
 
-  PotentialValuesState(bool IsValid) : BooleanState(IsValid) {}
+  PotentialValuesState(bool IsValid)
+      : IsValidState(IsValid), UndefIsContained(false) {}
+
+  /// See AbstractState::isValidState(...)
+  bool isValidState() const override { return IsValidState.isValidState(); }
+
+  /// See AbstractState::isAtFixpoint(...)
+  bool isAtFixpoint() const override { return IsValidState.isAtFixpoint(); }
+
+  /// See AbstractState::indicatePessimisticFixpoint(...)
+  ChangeStatus indicatePessimisticFixpoint() override {
+    return IsValidState.indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractState::indicateOptimisticFixpoint(...)
+  ChangeStatus indicateOptimisticFixpoint() override {
+    return IsValidState.indicateOptimisticFixpoint();
+  }
+
+  /// Return the assumed state
+  PotentialValuesState &getAssumed() { return *this; }
+  const PotentialValuesState &getAssumed() const { return *this; }
 
   /// Return this set. We should check whether this set is valid or not by
   /// isValidState() before calling this function.
@@ -3373,11 +3489,19 @@ struct PotentialValuesState : BooleanState {
     return Set;
   }
 
+  /// Returns whether this state contains an undef value or not.
+  bool undefIsContained() const {
+    assert(isValidState() && "This flag shoud not be used when it is invalid!");
+    return UndefIsContained;
+  }
+
   bool operator==(const PotentialValuesState &RHS) const {
     if (isValidState() != RHS.isValidState())
       return false;
     if (!isValidState() && !RHS.isValidState())
       return true;
+    if (undefIsContained() != RHS.undefIsContained())
+      return false;
     return Set == RHS.getAssumedSet();
   }
 
@@ -3405,13 +3529,18 @@ struct PotentialValuesState : BooleanState {
   /// Union assumed set with assumed set of the passed state \p PVS.
   void unionAssumed(const PotentialValuesState &PVS) { unionWith(PVS); }
 
+  /// Union assumed set with an undef value.
+  void unionAssumedWithUndef() { unionWithUndef(); }
+
   /// "Clamp" this state with \p PVS.
   PotentialValuesState operator^=(const PotentialValuesState &PVS) {
+    IsValidState ^= PVS.IsValidState;
     unionAssumed(PVS);
     return *this;
   }
 
   PotentialValuesState operator&=(const PotentialValuesState &PVS) {
+    IsValidState &= PVS.IsValidState;
     unionAssumed(PVS);
     return *this;
   }
@@ -3423,6 +3552,10 @@ private:
     if (Set.size() >= MaxPotentialValues)
       indicatePessimisticFixpoint();
   }
+
+  /// If this state contains both undef and not undef, we can reduce
+  /// undef to the not undef value.
+  void reduceUndefValue() { UndefIsContained = UndefIsContained & Set.empty(); }
 
   /// Insert an element into this set.
   void insert(const MemberTy &C) {
@@ -3444,7 +3577,15 @@ private:
     }
     for (const MemberTy &C : R.Set)
       Set.insert(C);
+    UndefIsContained |= R.undefIsContained();
+    reduceUndefValue();
     checkAndInvalidate();
+  }
+
+  /// Take union with an undef value.
+  void unionWithUndef() {
+    UndefIsContained = true;
+    reduceUndefValue();
   }
 
   /// Take intersection with R.
@@ -3463,10 +3604,18 @@ private:
         IntersectSet.insert(C);
     }
     Set = IntersectSet;
+    UndefIsContained &= R.undefIsContained();
+    reduceUndefValue();
   }
+
+  /// A helper state which indicate whether this state is valid or not.
+  BooleanState IsValidState;
 
   /// Container for potential values
   SetTy Set;
+
+  /// Flag for undef value
+  bool UndefIsContained;
 };
 
 using PotentialConstantIntValuesState = PotentialValuesState<APInt>;
@@ -3513,8 +3662,12 @@ struct AAPotentialValues
     if (getAssumedSet().size() == 1)
       return cast<ConstantInt>(ConstantInt::get(getAssociatedValue().getType(),
                                                 *(getAssumedSet().begin())));
-    if (getAssumedSet().size() == 0)
+    if (getAssumedSet().size() == 0) {
+      if (undefIsContained())
+        return cast<ConstantInt>(
+            ConstantInt::get(getAssociatedValue().getType(), 0));
       return llvm::None;
+    }
 
     return nullptr;
   }
@@ -3527,6 +3680,36 @@ struct AAPotentialValues
 
   /// This function should return true if the type of the \p AA is
   /// AAPotentialValues
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract interface for all noundef attributes.
+struct AANoUndef
+    : public IRAttribute<Attribute::NoUndef,
+                         StateWrapper<BooleanState, AbstractAttribute>> {
+  AANoUndef(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// Return true if we assume that the underlying value is noundef.
+  bool isAssumedNoUndef() const { return getAssumed(); }
+
+  /// Return true if we know that underlying value is noundef.
+  bool isKnownNoUndef() const { return getKnown(); }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoUndef &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoUndef"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is AANoUndef
   static bool classof(const AbstractAttribute *AA) {
     return (AA->getIdAddr() == &ID);
   }

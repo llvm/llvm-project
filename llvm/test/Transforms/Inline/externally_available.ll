@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -constprop -S | FileCheck %s
+; RUN: opt < %s -inline -S | FileCheck %s
 
 define available_externally i32 @test_function() {
 ; CHECK-NOT: @test_function
@@ -16,7 +16,8 @@ entry:
 
   %B = add i32 %A, 1
   ret i32 %B
-; CHECK: ret i32 5
+; CHECK: add i32
+; CHECK-NEXT: ret i32
 }
 
 ; CHECK-NOT: @test_function

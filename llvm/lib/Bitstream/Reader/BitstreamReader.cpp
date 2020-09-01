@@ -156,8 +156,9 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
         report_fatal_error("Array element type can't be an Array or a Blob");
       case BitCodeAbbrevOp::Fixed:
         assert((unsigned)EltEnc.getEncodingData() <= MaxChunkSize);
-        if (Error Err = JumpToBit(GetCurrentBitNo() +
-                                  NumElts * EltEnc.getEncodingData()))
+        if (Error Err =
+                JumpToBit(GetCurrentBitNo() + static_cast<uint64_t>(NumElts) *
+                                                  EltEnc.getEncodingData()))
           return std::move(Err);
         break;
       case BitCodeAbbrevOp::VBR:
@@ -186,7 +187,8 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
     SkipToFourByteBoundary();  // 32-bit alignment
 
     // Figure out where the end of this blob will be including tail padding.
-    size_t NewEnd = GetCurrentBitNo()+((NumElts+3)&~3)*8;
+    const size_t NewEnd =
+        GetCurrentBitNo() + ((static_cast<uint64_t>(NumElts) + 3) & ~3) * 8;
 
     // If this would read off the end of the bitcode file, just set the
     // record to empty and return.
@@ -314,7 +316,8 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
 
     // Figure out where the end of this blob will be including tail padding.
     size_t CurBitPos = GetCurrentBitNo();
-    size_t NewEnd = CurBitPos+((NumElts+3)&~3)*8;
+    const size_t NewEnd =
+        CurBitPos + ((static_cast<uint64_t>(NumElts) + 3) & ~3) * 8;
 
     // If this would read off the end of the bitcode file, just set the
     // record to empty and return.

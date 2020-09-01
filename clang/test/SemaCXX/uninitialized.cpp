@@ -1303,6 +1303,20 @@ namespace init_list {
       d3{ d3.b, num } // expected-warning{{uninitialized}}
     {}
   };
+  
+  struct E {
+    E();
+    E foo();
+    E* operator->();
+  };
+
+  struct F { F(E); };
+
+  struct EFComposed {
+    F f;
+    E e;
+    EFComposed() : f{ e->foo() }, e() {} // expected-warning{{uninitialized}}
+  };
 }
 
 namespace template_class {

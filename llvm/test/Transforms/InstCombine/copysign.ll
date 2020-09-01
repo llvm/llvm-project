@@ -89,3 +89,23 @@ define float @copysign_sign_arg(float %x, float %y, float %z) {
   %r = call ninf float @llvm.copysign.f32(float %x, float %s)
   ret float %r
 }
+
+define float @fneg_mag(float %x, float %y) {
+; CHECK-LABEL: @fneg_mag(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %n = fneg float %x
+  %r = call float @llvm.copysign.f32(float %n, float %y)
+  ret float %r
+}
+
+define float @fabs_mag(float %x, float %y) {
+; CHECK-LABEL: @fabs_mag(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = call float @llvm.fabs.f32(float %x)
+  %r = call float @llvm.copysign.f32(float %a, float %y)
+  ret float %r
+}

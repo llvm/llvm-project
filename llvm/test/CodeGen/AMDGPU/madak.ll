@@ -1,8 +1,8 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX6,GFX6_8_9,MAD %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8,GFX6_8_9,GFX8_9,GFX8_9_10,MAD %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs  -amdgpu-enable-global-sgpr-addr < %s | FileCheck -check-prefixes=GCN,GFX9,GFX6_8_9,GFX8_9,GFX8_9_10,MAD %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -amdgpu-enable-global-sgpr-addr < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_9_10,GFX10-MAD %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -fp-contract=fast -amdgpu-enable-global-sgpr-addr < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_9_10,FMA %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX6_8_9,GFX8_9,GFX8_9_10,MAD %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_9_10,GFX10-MAD %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_9_10,FMA %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare float @llvm.fabs.f32(float) nounwind readnone
@@ -44,9 +44,9 @@ define amdgpu_kernel void @madak_f32(float addrspace(1)* noalias %out, float add
 ; GFX6-DAG:     buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; GFX6-DAG:     buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GFX6-DAG:     buffer_load_dword [[VC:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8
-; GFX8_9_10:    {{flat|global}}_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}
-; GFX8_9_10:    {{flat|global}}_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}
-; GFX8_9_10:    {{flat|global}}_load_dword [[VC:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}
+; GFX8_9_10:    {{flat|global}}_load_dword [[VA:v[0-9]+]],
+; GFX8_9_10:    {{flat|global}}_load_dword [[VB:v[0-9]+]],
+; GFX8_9_10:    {{flat|global}}_load_dword [[VC:v[0-9]+]],
 ; GFX6-DAG:     v_mov_b32_e32 [[VK:v[0-9]+]], 0x41200000
 ; GFX8-DAG:     v_mov_b32_e32 [[VK:v[0-9]+]], 0x41200000
 ; GFX6_8_9-DAG: v_madak_f32 {{v[0-9]+}}, [[VA]], [[VB]], 0x41200000

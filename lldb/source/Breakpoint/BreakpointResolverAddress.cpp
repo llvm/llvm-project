@@ -87,7 +87,6 @@ BreakpointResolverAddress::SerializeToStructuredData() {
   }
 
   return WrapOptionsDict(options_dict_sp);
-  return StructuredData::ObjectSP();
 }
 
 void BreakpointResolverAddress::ResolveBreakpoint(SearchFilter &filter) {

@@ -20,7 +20,7 @@ func @merge_blocks(%arg0: i32, %arg1 : i32) -> () {
 // The op in this function is rewritten to itself (and thus remains
 // illegal) by a pattern that merges the second block with the first
 // after adding an operation into it.  Check that we can undo block
-// removal succesfully.
+// removal successfully.
 // CHECK-LABEL: @undo_blocks_merge
 func @undo_blocks_merge(%arg0: i32) {
   "test.undo_blocks_merge"() ({

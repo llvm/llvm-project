@@ -123,7 +123,7 @@ static bool isFPR64(unsigned Reg, unsigned SubReg,
 }
 
 // getSrcFromCopy - Get the original source register for a GPR64 <--> FPR64
-// copy instruction. Return zero_reg if the instruction is not a copy.
+// copy instruction. Return nullptr if the instruction is not a copy.
 static MachineOperand *getSrcFromCopy(MachineInstr *MI,
                                       const MachineRegisterInfo *MRI,
                                       unsigned &SubReg) {

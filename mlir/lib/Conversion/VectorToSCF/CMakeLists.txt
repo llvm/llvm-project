@@ -10,6 +10,7 @@ add_mlir_conversion_library(MLIRVectorToSCF
   LINK_LIBS PUBLIC
   MLIREDSC
   MLIRAffineEDSC
+  MLIRLinalgUtils
   MLIRLLVMIR
   MLIRTransforms
   )

@@ -136,14 +136,18 @@ PDB-DEFAULT-NOT: -pdb:{{.*}}
 RUN: ld.lld -### -m i386pep foo.o --large-address-aware | FileCheck -check-prefix LARGE-ADDRESS-AWARE %s
 LARGE-ADDRESS-AWARE: -largeaddressaware
 
-RUN: ld.lld -### -m i386pe foo.o | FileCheck -check-prefix DEFAULT-DISABLE-FLAGS %s
-RUN: ld.lld -### -m i386pep foo.o | FileCheck -check-prefix DEFAULT-DISABLE-FLAGS %s
-DEFAULT-DISABLE-FLAGS: -dynamicbase:no
-RUN: ld.lld -### -m i386pe --dynamicbase foo.o | FileCheck -check-prefix NO-DEFAULT-DISABLE-FLAGS %s
-RUN: ld.lld -### -m i386pep -dynamicbase foo.o | FileCheck -check-prefix NO-DEFAULT-DISABLE-FLAGS %s
-RUN: ld.lld -### -m thumb2pe foo.o | FileCheck -check-prefix NO-DEFAULT-DISABLE-FLAGS %s
-RUN: ld.lld -### -m arm64pe foo.o | FileCheck -check-prefix NO-DEFAULT-DISABLE-FLAGS %s
-NO-DEFAULT-DISABLE-FLAGS-NOT: -dynamicbase:no
+RUN: ld.lld -### -m i386pe foo.o --no-dynamicbase | FileCheck -check-prefix DISABLE-DYNAMICBASE %s
+DISABLE-DYNAMICBASE: -dynamicbase:no
+RUN: ld.lld -### -m i386pe --dynamicbase foo.o | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
+RUN: ld.lld -### -m i386pep -dynamicbase foo.o | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
+RUN: ld.lld -### -m i386pe foo.o | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
+RUN: ld.lld -### -m i386pep foo.o | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
+RUN: ld.lld -### -m thumb2pe foo.o | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
+RUN: ld.lld -### -m arm64pe foo.o | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
+# On arm, dynamicbase can't be disabled, so --no-dynamicbase is ignored
+RUN: ld.lld -### -m thumb2pe foo.o --no-dynamicbase | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
+RUN: ld.lld -### -m arm64pe foo.o --no-dynamicbase | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
+NO-DISABLE-DYNAMICBASE-NOT: -dynamicbase:no
 
 RUN: ld.lld -### -m i386pep foo.o --image-base 0x1230000 | FileCheck -check-prefix IMAGE-BASE %s
 RUN: ld.lld -### -m i386pep foo.o -image-base 0x1230000 | FileCheck -check-prefix IMAGE-BASE %s
@@ -260,3 +264,11 @@ ALIGN: -align:0x2000
 RUN: ld.lld -### -m i386pe foo.o -no-seh | FileCheck -check-prefix NOSEH %s
 RUN: ld.lld -### -m i386pe foo.o --no-seh | FileCheck -check-prefix NOSEH %s
 NOSEH: -noseh
+
+RUN: ld.lld -### -m i386pep foo.o --no-allow-multiple-definition --allow-multiple-definition | FileCheck -check-prefix ALLOW_MULTIPLE_DEFINITION %s
+RUN: ld.lld -### -m i386pep foo.o -no-allow-multiple-definition -allow-multiple-definition | FileCheck -check-prefix ALLOW_MULTIPLE_DEFINITION %s
+ALLOW_MULTIPLE_DEFINITION: -force:multiple
+
+RUN: ld.lld -### -m i386pep foo.o --allow-multiple-definition --no-allow-multiple-definition | FileCheck -check-prefix NO_ALLOW_MULTIPLE_DEFINITION %s
+RUN: ld.lld -### -m i386pep foo.o -allow-multiple-definition -no-allow-multiple-definition | FileCheck -check-prefix NO_ALLOW_MULTIPLE_DEFINITION %s
+NO_ALLOW_MULTIPLE_DEFINITION-NOT: -force:multiple

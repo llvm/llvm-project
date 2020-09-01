@@ -16,6 +16,7 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
@@ -141,28 +142,14 @@ Type ShapeDialect::parseType(DialectAsmParser &parser) const {
 
 /// Print a type registered to this dialect.
 void ShapeDialect::printType(Type type, DialectAsmPrinter &os) const {
-  switch (type.getKind()) {
-  case ShapeTypes::Component:
-    os << "component";
-    return;
-  case ShapeTypes::Element:
-    os << "element";
-    return;
-  case ShapeTypes::Size:
-    os << "size";
-    return;
-  case ShapeTypes::Shape:
-    os << "shape";
-    return;
-  case ShapeTypes::ValueShape:
-    os << "value_shape";
-    return;
-  case ShapeTypes::Witness:
-    os << "witness";
-    return;
-  default:
-    llvm_unreachable("unexpected 'shape' type kind");
-  }
+  TypeSwitch<Type>(type)
+      .Case<ComponentType>([&](Type) { os << "component"; })
+      .Case<ElementType>([&](Type) { os << "element"; })
+      .Case<ShapeType>([&](Type) { os << "shape"; })
+      .Case<SizeType>([&](Type) { os << "size"; })
+      .Case<ValueShapeType>([&](Type) { os << "value_shape"; })
+      .Case<WitnessType>([&](Type) { os << "witness"; })
+      .Default([](Type) { llvm_unreachable("unexpected 'shape' type kind"); });
 }
 
 //===----------------------------------------------------------------------===//

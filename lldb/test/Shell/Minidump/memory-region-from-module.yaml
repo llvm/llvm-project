@@ -1,9 +1,9 @@
 # Check that memory region parsing works correctly, with a particular emphasis
 # on the boundary conditions.
 
-# RUN: yaml2obj --docnum=1 %s > %t1.dmp
-# RUN: yaml2obj --docnum=2 %s > %t2.dmp
-# RUN: yaml2obj %S/Inputs/basic-elf.yaml >%T/memory-region-from-module.exe
+# RUN: yaml2obj --docnum=1 %s -o %t1.dmp
+# RUN: yaml2obj --docnum=2 %s -o %t2.dmp
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %T/memory-region-from-module.exe
 
 # RUN: %lldb -b -c %t1.dmp %T/memory-region-from-module.exe \
 # RUN:   -o "memory region 0" -o "memory region 0x4000" \

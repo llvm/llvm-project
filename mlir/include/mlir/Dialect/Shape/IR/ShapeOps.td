@@ -581,6 +581,8 @@ def Shape_AnyOp : Shape_Op<"any", [Commutative,
   let arguments = (ins Variadic<Shape_ShapeOrExtentTensorType>:$inputs);
   let results = (outs Shape_ShapeOrExtentTensorType:$result);
 
+  let assemblyFormat = "$inputs attr-dict `:` type($inputs) `->` type($result)";
+
   let hasFolder = 1;
 }
 

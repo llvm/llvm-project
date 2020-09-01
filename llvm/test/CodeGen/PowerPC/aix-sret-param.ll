@@ -39,13 +39,13 @@ declare void @bar(%struct.T* sret)
 ; MIR32:      bb.0.entry:
 ; MIR32-NEXT:   ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
 ; MIR32-NEXT:   renamable $r3 = ADDI %stack.0.s, 0
-; MIR32-NEXT:   BL_NOP <mcsymbol .foo>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r2, implicit-def $r1
+; MIR32-NEXT:   BL_NOP <mcsymbol .foo[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r2, implicit-def $r1
 ; MIR32-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
 ; MIR64:      bb.0.entry:
 ; MIR64-NEXT:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; MIR64-NEXT:   renamable $x3 = ADDI8 %stack.0.s, 0
-; MIR64-NEXT:   BL8_NOP <mcsymbol .foo>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
+; MIR64-NEXT:   BL8_NOP <mcsymbol .foo[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
 ; MIR64-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 
@@ -53,13 +53,13 @@ declare void @bar(%struct.T* sret)
 
 ; ASM32:       stwu 1, -64(1)
 ; ASM32-NEXT:  addi 3, 1, 56
-; ASM32-NEXT:  bl .foo
+; ASM32-NEXT:  bl .foo[PR]
 ; ASM32-NEXT:  nop
 ; ASM32-NEXT:  addi 1, 1, 64
 
 ; ASM64:       stdu 1, -128(1)
 ; ASM64-NEXT:  addi 3, 1, 120
-; ASM64-NEXT:  bl .foo
+; ASM64-NEXT:  bl .foo[PR]
 ; ASM64-NEXT:  nop
 ; ASM64-NEXT:  addi 1, 1, 128
 
@@ -72,13 +72,13 @@ declare void @bar(%struct.T* sret)
 ; MIR32:       bb.0.entry:
 ; MIR32-NEXT:    ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
 ; MIR32-NEXT:    renamable $r3 = ADDI %stack.0.t, 0
-; MIR32-NEXT:    BL_NOP <mcsymbol .bar>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r2, implicit-def $r1
+; MIR32-NEXT:    BL_NOP <mcsymbol .bar[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r2, implicit-def $r1
 ; MIR32-NEXT:    ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
 ; MIR64:      bb.0.entry:
 ; MIR64-NEXT:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; MIR64-NEXT:   renamable $x3 = ADDI8 %stack.0.t, 0
-; MIR64-NEXT:   BL8_NOP <mcsymbol .bar>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
+; MIR64-NEXT:   BL8_NOP <mcsymbol .bar[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
 ; MIR64-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 
@@ -86,13 +86,13 @@ declare void @bar(%struct.T* sret)
 
 ; ASM32:        stwu 1, -80(1)
 ; ASM32-NEXT:   addi 3, 1, 56
-; ASM32-NEXT:   bl .bar
+; ASM32-NEXT:   bl .bar[PR]
 ; ASM32-NEXT:   nop
 ; ASM32-NEXT:   addi 1, 1, 80
 
 
 ; ASM64:        stdu 1, -144(1)
 ; ASM64-NEXT:   addi 3, 1, 120
-; ASM64-NEXT:   bl .bar
+; ASM64-NEXT:   bl .bar[PR]
 ; ASM64-NEXT:   nop
 ; ASM64-NEXT:   addi 1, 1, 144

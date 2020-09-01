@@ -1,7 +1,5 @@
-// RUN: %clang_tsan %s -o %t -mmacosx-version-min=10.12
+// RUN: %clang_tsan %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not='ThreadSanitizer'
-
-// UNSUPPORTED: ios
 
 #include <os/lock.h>
 #include <pthread.h>

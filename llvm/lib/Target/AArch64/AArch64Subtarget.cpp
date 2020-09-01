@@ -67,7 +67,7 @@ AArch64Subtarget::initializeSubtargetDependencies(StringRef FS,
   if (CPUString.empty())
     CPUString = "generic";
 
-  ParseSubtargetFeatures(CPUString, FS);
+  ParseSubtargetFeatures(CPUString, /*TuneCPU*/ CPUString, FS);
   initializeProperties();
 
   return *this;
@@ -200,7 +200,7 @@ void AArch64Subtarget::initializeProperties() {
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
                                    const std::string &FS,
                                    const TargetMachine &TM, bool LittleEndian)
-    : AArch64GenSubtargetInfo(TT, CPU, FS),
+    : AArch64GenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian),

@@ -1,0 +1,106 @@
+# RUN: yaml2obj %s -o %t -DCPU=GFX600
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX600 -DFLAGS=0x20
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX601
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX601 -DFLAGS=0x21
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX700
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX700 -DFLAGS=0x22
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX701
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX701 -DFLAGS=0x23
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX702
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX702 -DFLAGS=0x24
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX703
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX703 -DFLAGS=0x25
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX704
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX704 -DFLAGS=0x26
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX801
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX801 -DFLAGS=0x28
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX802
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX802 -DFLAGS=0x29
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX803
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX803 -DFLAGS=0x2A
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX810
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX810 -DFLAGS=0x2B
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX900
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX900 -DFLAGS=0x2C
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX902
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX902 -DFLAGS=0x2D
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX904
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX904 -DFLAGS=0x2E
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX906
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX906 -DFLAGS=0x2F
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX908
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX908 -DFLAGS=0x30
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX909
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX909 -DFLAGS=0x31
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX1010
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX1010 -DFLAGS=0x33
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX1011
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX1011 -DFLAGS=0x34
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX1012
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX1012 -DFLAGS=0x35
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX1030
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX1030 -DFLAGS=0x36
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX1031
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX1031 -DFLAGS=0x37
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_AMDGPU_HSA
+  Type:            ET_REL
+  Machine:         EM_AMDGPU
+  Flags:           [ EF_AMDGPU_MACH_AMDGCN_[[CPU]] ]
+
+# CHECK:      File: [[FILE]]
+# CHECK-NEXT: Format: elf64-amdgpu
+# CHECK-NEXT: Arch: amdgcn
+# CHECK-NEXT: AddressSize: 64bit
+# CHECK-NEXT: LoadName: <Not found>
+# CHECK-NEXT: ElfHeader {
+# CHECK-NEXT:   Ident {
+# CHECK-NEXT:     Magic: (7F 45 4C 46)
+# CHECK-NEXT:     Class: 64-bit (0x2)
+# CHECK-NEXT:     DataEncoding: LittleEndian (0x1)
+# CHECK-NEXT:     FileVersion: 1
+# CHECK-NEXT:     OS/ABI: AMDGPU_HSA (0x40)
+# CHECK-NEXT:     ABIVersion: 0
+# CHECK-NEXT:     Unused: (00 00 00 00 00 00 00)
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Type: Relocatable (0x1)
+# CHECK-NEXT:   Machine: EM_AMDGPU (0xE0)
+# CHECK-NEXT:   Version: 1
+# CHECK-NEXT:   Entry: 0x0
+# CHECK-NEXT:   ProgramHeaderOffset: 0x0
+# CHECK-NEXT:   SectionHeaderOffset: 0x58
+# CHECK-NEXT:     Flags [ ([[FLAGS]])
+# CHECK-NEXT:     EF_AMDGPU_MACH_AMDGCN_[[CPU]] ([[FLAGS]])
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   HeaderSize: 64
+# CHECK-NEXT:   ProgramHeaderEntrySize: 0
+# CHECK-NEXT:   ProgramHeaderCount: 0
+# CHECK-NEXT:   SectionHeaderEntrySize: 64
+# CHECK-NEXT:   SectionHeaderCount: 3
+# CHECK-NEXT:   StringTableSectionIndex: 2
+# CHECK-NEXT: }

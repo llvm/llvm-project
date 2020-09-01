@@ -37,7 +37,7 @@ define void @b_copy_ctor() personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[LSR_IV]] to %struct.L*
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq %struct.L* [[UGLYGEP1]], [[TMP]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq %struct.L* [[UGLYGEP1]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]

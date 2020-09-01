@@ -15,16 +15,16 @@
 ; RUN: --check-prefix=64LARGE-MIR %s
 
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -code-model=small < %s | FileCheck \
-; RUN: --check-prefixes=32SMALL-ASM,CHECK %s
+; RUN: --check-prefixes=32SMALL-ASM,SMALL-ASM %s
 
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -code-model=large < %s | FileCheck \
-; RUN: --check-prefixes=32LARGE-ASM,CHECK %s
+; RUN: --check-prefixes=32LARGE-ASM,LARGE-ASM %s
 
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -code-model=small < %s | FileCheck \
-; RUN: --check-prefixes=64SMALL-ASM,CHECK %s
+; RUN: --check-prefixes=64SMALL-ASM,SMALL-ASM %s
 
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -code-model=large < %s | FileCheck \
-; RUN: --check-prefixes=64LARGE-ASM,CHECK %s
+; RUN: --check-prefixes=64LARGE-ASM,LARGE-ASM %s
 
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -function-sections < %s | FileCheck \
 ; RUN: --check-prefixes=FUNC-ASM,CHECK %s
@@ -206,5 +206,8 @@
 ; FUNC-ASM:         .vbyte  4, L..BB0_4-L..JTI0_0
 ; FUNC-ASM:         .vbyte  4, L..BB0_5-L..JTI0_0
 
-; CHECK: .toc
-; CHECK: .tc L..JTI0_0[TC],L..JTI0_0
+; SMALL-ASM: .toc
+; SMALL-ASM: .tc L..JTI0_0[TC],L..JTI0_0
+
+; LARGE-ASM: .toc
+; LARGE-ASM: .tc L..JTI0_0[TE],L..JTI0_0

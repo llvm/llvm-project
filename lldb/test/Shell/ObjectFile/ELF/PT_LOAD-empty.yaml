@@ -1,7 +1,7 @@
 # Test behavior on unusual (and probably corrupt) files. Test that we drop an
 # empty PT_LOAD segment.
 
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: lldb-test object-file %t | FileCheck %s
 #
 # CHECK-NOT: container

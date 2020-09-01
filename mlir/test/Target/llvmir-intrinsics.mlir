@@ -237,6 +237,13 @@ llvm.func @matrix_intrinsics(%A: !llvm.vec<64 x float>, %B: !llvm.vec<48 x float
   llvm.return
 }
 
+// CHECK-LABEL: @get_active_lane_mask
+llvm.func @get_active_lane_mask(%base: !llvm.i64, %n: !llvm.i64) -> (!llvm.vec<7 x i1>) {
+  // CHECK: call <7 x i1> @llvm.get.active.lane.mask.v7i1.i64(i64 %0, i64 %1)
+  %0 = llvm.intr.get.active.lane.mask %base, %n : !llvm.i64, !llvm.i64 to !llvm.vec<7 x i1>
+  llvm.return %0 : !llvm.vec<7 x i1>
+}
+
 // CHECK-LABEL: @masked_load_store_intrinsics
 llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr<vec<7 x float>>, %mask: !llvm.vec<7 x i1>) {
   // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0v7f32(<7 x float>* %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> undef)
@@ -314,7 +321,12 @@ llvm.func @memcpy_test(%arg0: !llvm.i32, %arg1: !llvm.i1, %arg2: !llvm.ptr<i8>, 
 // CHECK-DAG: declare <48 x float> @llvm.matrix.transpose.v48f32(<48 x float>, i32 immarg, i32 immarg)
 // CHECK-DAG: declare <48 x float> @llvm.matrix.column.major.load.v48f32(float* nocapture, i64, i1 immarg, i32 immarg, i32 immarg)
 // CHECK-DAG: declare void @llvm.matrix.column.major.store.v48f32(<48 x float>, float* nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg)
+// CHECK-DAG: declare <7 x i1> @llvm.get.active.lane.mask.v7i1.i64(i64, i64)
 // CHECK-DAG: declare <7 x float> @llvm.masked.load.v7f32.p0v7f32(<7 x float>*, i32 immarg, <7 x i1>, <7 x float>)
 // CHECK-DAG: declare void @llvm.masked.store.v7f32.p0v7f32(<7 x float>, <7 x float>*, i32 immarg, <7 x i1>)
+// CHECK-DAG: declare <7 x float> @llvm.masked.gather.v7f32.v7p0f32(<7 x float*>, i32 immarg, <7 x i1>, <7 x float>)
+// CHECK-DAG: declare void @llvm.masked.scatter.v7f32.v7p0f32(<7 x float>, <7 x float*>, i32 immarg, <7 x i1>)
+// CHECK-DAG: declare <7 x float> @llvm.masked.expandload.v7f32(float*, <7 x i1>, <7 x float>)
+// CHECK-DAG: declare void @llvm.masked.compressstore.v7f32(<7 x float>, float*, <7 x i1>)
 // CHECK-DAG: declare void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i32, i1 immarg)
 // CHECK-DAG: declare void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64 immarg, i1 immarg)

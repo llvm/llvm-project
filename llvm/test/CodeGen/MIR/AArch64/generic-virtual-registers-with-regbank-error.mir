@@ -1,6 +1,5 @@
 # RUN: not llc -mtriple=aarch64-apple-ios -run-pass none -o - %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=ERR
-# REQUIRES: global-isel
 # This test ensures that the MIR parser errors out when
 # generic virtual register definitions are not correct.
 # In that case, it is defined by a register bank.

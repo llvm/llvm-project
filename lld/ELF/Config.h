@@ -206,6 +206,7 @@ struct Configuration {
   bool thinLTOIndexOnly;
   bool timeTraceEnabled;
   bool tocOptimize;
+  bool pcRelOptimize;
   bool undefinedVersion;
   bool unique;
   bool useAndroidRelrTags = false;

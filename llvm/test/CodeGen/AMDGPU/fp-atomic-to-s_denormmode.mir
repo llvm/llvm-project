@@ -346,7 +346,7 @@ body:            |
 name:            global_atomic_fcmpswap_saddr_to_s_denorm_mode
 body:            |
   bb.0:
-    GLOBAL_ATOMIC_FCMPSWAP_SADDR undef %0:vreg_64, undef %1:vgpr_32, undef %3:sgpr_64, 0, 0, implicit $exec :: (volatile load store seq_cst seq_cst 4 on `float addrspace(1)* undef`)
+    GLOBAL_ATOMIC_FCMPSWAP_SADDR undef %0:vgpr_32, undef %1:vgpr_32, undef %3:sgpr_64, 0, 0, implicit $exec :: (volatile load store seq_cst seq_cst 4 on `float addrspace(1)* undef`)
     S_DENORM_MODE 0, implicit-def $mode, implicit $mode
 ...
 
@@ -360,7 +360,7 @@ body:            |
 name:            global_atomic_fcmpswap_x2_saddr_rtn_to_s_denorm_mode
 body:            |
   bb.0:
-    %2:vreg_64 = GLOBAL_ATOMIC_FCMPSWAP_X2_SADDR_RTN undef %0:vreg_64, undef %1:vreg_64, undef %3:sgpr_64, 0, 0, implicit $exec :: (volatile load store seq_cst seq_cst 4 on `float addrspace(1)* undef`)
+    %2:vreg_64 = GLOBAL_ATOMIC_FCMPSWAP_X2_SADDR_RTN undef %0:vgpr_32, undef %1:vreg_64, undef %3:sgpr_64, 0, 0, implicit $exec :: (volatile load store seq_cst seq_cst 4 on `float addrspace(1)* undef`)
     S_DENORM_MODE 0, implicit-def $mode, implicit $mode
 ...
 
@@ -374,7 +374,7 @@ body:            |
 name:            global_atomic_fmax_saddr_rtn_to_s_denorm_mode
 body:            |
   bb.0:
-    %2:vgpr_32 = GLOBAL_ATOMIC_FMAX_SADDR_RTN undef %0:vreg_64, undef %1:vgpr_32, undef %3:sgpr_64, 0, 0, implicit $exec :: (volatile load store seq_cst seq_cst 4 on `float addrspace(1)* undef`)
+    %2:vgpr_32 = GLOBAL_ATOMIC_FMAX_SADDR_RTN undef %0:vgpr_32, undef %1:vgpr_32, undef %3:sgpr_64, 0, 0, implicit $exec :: (volatile load store seq_cst seq_cst 4 on `float addrspace(1)* undef`)
     S_DENORM_MODE 0, implicit-def $mode, implicit $mode
 ...
 
@@ -388,7 +388,7 @@ body:            |
 name:            global_atomic_fmax_x2_saddr_rtn_to_s_denorm_mode
 body:            |
   bb.0:
-    %2:vreg_64 = GLOBAL_ATOMIC_FMAX_X2_SADDR_RTN undef %0:vreg_64, undef %1:vreg_64, undef %3:sgpr_64, 0, 0, implicit $exec :: (volatile load store seq_cst seq_cst 4 on `float addrspace(1)* undef`)
+    %2:vreg_64 = GLOBAL_ATOMIC_FMAX_X2_SADDR_RTN undef %0:vgpr_32, undef %1:vreg_64, undef %3:sgpr_64, 0, 0, implicit $exec :: (volatile load store seq_cst seq_cst 4 on `float addrspace(1)* undef`)
     S_DENORM_MODE 0, implicit-def $mode, implicit $mode
 ...
 
@@ -402,7 +402,7 @@ body:            |
 name:            global_atomic_fmin_saddr_rtn_to_s_denorm_mode
 body:            |
   bb.0:
-    %2:vgpr_32 = GLOBAL_ATOMIC_FMIN_SADDR_RTN undef %0:vreg_64, undef %1:vgpr_32, undef %3:sgpr_64, 0, 0, implicit $exec :: (volatile load store seq_cst seq_cst 4 on `float addrspace(1)* undef`)
+    %2:vgpr_32 = GLOBAL_ATOMIC_FMIN_SADDR_RTN undef %0:vgpr_32, undef %1:vgpr_32, undef %3:sgpr_64, 0, 0, implicit $exec :: (volatile load store seq_cst seq_cst 4 on `float addrspace(1)* undef`)
     S_DENORM_MODE 0, implicit-def $mode, implicit $mode
 ...
 
@@ -416,7 +416,7 @@ body:            |
 name:            global_atomic_fmin_x2_saddr_rtn_to_s_denorm_mode
 body:            |
   bb.0:
-    %2:vreg_64 = GLOBAL_ATOMIC_FMIN_X2_SADDR_RTN undef %0:vreg_64, undef %1:vreg_64, undef %3:sgpr_64, 0, 0, implicit $exec :: (volatile load store seq_cst seq_cst 4 on `float addrspace(1)* undef`)
+    %2:vreg_64 = GLOBAL_ATOMIC_FMIN_X2_SADDR_RTN undef %0:vgpr_32, undef %1:vreg_64, undef %3:sgpr_64, 0, 0, implicit $exec :: (volatile load store seq_cst seq_cst 4 on `float addrspace(1)* undef`)
     S_DENORM_MODE 0, implicit-def $mode, implicit $mode
 ...
 

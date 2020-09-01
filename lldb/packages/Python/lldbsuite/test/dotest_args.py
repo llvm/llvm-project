@@ -244,16 +244,6 @@ def create_parser():
         help='(Windows only) When LLDB crashes, display the Windows crash dialog.')
     group.set_defaults(disable_crash_dialog=True)
 
-    # Re-run related arguments
-    group = parser.add_argument_group('Test Re-run Options')
-    group.add_argument(
-        '--rerun-all-issues',
-        action='store_true',
-        help=('Re-run all issues that occurred during the test run '
-              'irrespective of the test method\'s marking as flakey. '
-              'Default behavior is to apply re-runs only to flakey '
-              'tests that generate issues.'))
-
     # Remove the reference to our helper function
     del X
 

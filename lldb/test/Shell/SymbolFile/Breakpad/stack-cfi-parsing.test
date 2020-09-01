@@ -1,4 +1,4 @@
-# RUN: yaml2obj %S/Inputs/stack-cfi-parsing.yaml > %t
+# RUN: yaml2obj %S/Inputs/stack-cfi-parsing.yaml -o %t
 # RUN: %lldb -c %t -o "target symbols add %S/Inputs/stack-cfi-parsing.syms" \
 # RUN:   -s %s -b | FileCheck %s
 
@@ -10,6 +10,7 @@ image show-unwind -n func0
 # CHECK-NEXT: This UnwindPlan originally sourced from breakpad STACK CFI
 # CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.
 # CHECK-NEXT: This UnwindPlan is valid at all instruction locations: no.
+# CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
 # CHECK-NEXT: Address range of this UnwindPlan: [stack-cfi-parsing.out..module_image + 0-0x0000000000000002)
 # CHECK-NEXT: row[0]:    0: CFA=DW_OP_breg7 +0 => rbp=DW_OP_breg7 +0 rip=DW_OP_pick 0x0
 # CHECK-NEXT: row[1]:    1: CFA=DW_OP_breg7 +0 => rbx=DW_OP_breg2 +0 rbp=DW_OP_breg0 +0 rip=DW_OP_pick 0x0

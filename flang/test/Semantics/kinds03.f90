@@ -5,7 +5,7 @@
   !REF: /MainProgram1/ipdt/k
   integer, kind :: k
   !REF: /MainProgram1/ipdt/k
-  !DEF: /MainProgram1/ipdt/x ObjectEntity INTEGER(int(k,kind=8))
+  !DEF: /MainProgram1/ipdt/x ObjectEntity INTEGER(int(int(k,kind=4),kind=8))
   integer(kind=k) :: x
  end type ipdt
  !DEF: /MainProgram1/rpdt DerivedType
@@ -14,7 +14,7 @@
   !REF: /MainProgram1/rpdt/k
   integer, kind :: k
   !REF: /MainProgram1/rpdt/k
-  !DEF: /MainProgram1/rpdt/x ObjectEntity REAL(int(k,kind=8))
+  !DEF: /MainProgram1/rpdt/x ObjectEntity REAL(int(int(k,kind=4),kind=8))
   real(kind=k) :: x
  end type rpdt
  !DEF: /MainProgram1/zpdt DerivedType
@@ -23,7 +23,7 @@
   !REF: /MainProgram1/zpdt/k
   integer, kind :: k
   !REF: /MainProgram1/zpdt/k
-  !DEF: /MainProgram1/zpdt/x ObjectEntity COMPLEX(int(k,kind=8))
+  !DEF: /MainProgram1/zpdt/x ObjectEntity COMPLEX(int(int(k,kind=4),kind=8))
   complex(kind=k) :: x
  end type zpdt
  !DEF: /MainProgram1/lpdt DerivedType
@@ -32,7 +32,7 @@
   !REF: /MainProgram1/lpdt/k
   integer, kind :: k
   !REF: /MainProgram1/lpdt/k
-  !DEF: /MainProgram1/lpdt/x ObjectEntity LOGICAL(int(k,kind=8))
+  !DEF: /MainProgram1/lpdt/x ObjectEntity LOGICAL(int(int(k,kind=4),kind=8))
   logical(kind=k) :: x
  end type lpdt
  !REF: /MainProgram1/ipdt

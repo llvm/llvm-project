@@ -18,8 +18,18 @@
 #include <isl_space_private.h>
 #include <isl_mat_private.h>
 
+/* Return the isl_ctx to which "f" belongs.
+ */
+isl_ctx *isl_factorizer_get_ctx(__isl_keep isl_factorizer *f)
+{
+	if (!f)
+		return NULL;
+	return isl_basic_set_get_ctx(f->bset);
+}
+
 static __isl_give isl_factorizer *isl_factorizer_alloc(
-	__isl_take isl_morph *morph, int n_group)
+	__isl_keep isl_basic_set *bset, __isl_take isl_morph *morph,
+	int n_group)
 {
 	isl_factorizer *f = NULL;
 	int *len = NULL;
@@ -37,6 +47,7 @@ static __isl_give isl_factorizer *isl_factorizer_alloc(
 	if (!f)
 		goto error;
 
+	f->bset = isl_basic_set_copy(bset);
 	f->morph = morph;
 	f->n_group = n_group;
 	f->len = len;
@@ -48,14 +59,16 @@ error:
 	return NULL;
 }
 
-void isl_factorizer_free(__isl_take isl_factorizer *f)
+__isl_null isl_factorizer *isl_factorizer_free(__isl_take isl_factorizer *f)
 {
 	if (!f)
-		return;
+		return NULL;
 
+	isl_basic_set_free(f->bset);
 	isl_morph_free(f->morph);
 	free(f->len);
 	free(f);
+	return NULL;
 }
 
 void isl_factorizer_dump(__isl_take isl_factorizer *f)
@@ -77,7 +90,7 @@ void isl_factorizer_dump(__isl_take isl_factorizer *f)
 
 __isl_give isl_factorizer *isl_factorizer_identity(__isl_keep isl_basic_set *bset)
 {
-	return isl_factorizer_alloc(isl_morph_identity(bset), 0);
+	return isl_factorizer_alloc(bset, isl_morph_identity(bset), 0);
 }
 
 __isl_give isl_factorizer *isl_factorizer_groups(__isl_keep isl_basic_set *bset,
@@ -108,7 +121,7 @@ __isl_give isl_factorizer *isl_factorizer_groups(__isl_keep isl_basic_set *bset,
 	space = isl_space_add_dims(space, isl_dim_set, nvar);
 	ran = isl_basic_set_universe(space);
 	morph = isl_morph_alloc(dom, ran, Q, U);
-	f = isl_factorizer_alloc(morph, n);
+	f = isl_factorizer_alloc(bset, morph, n);
 	if (!f)
 		return NULL;
 	for (i = 0; i < n; ++i)
@@ -325,4 +338,52 @@ error:
 	isl_mat_free(Q);
 	clear_groups(&g);
 	return NULL;
+}
+
+/* Given the factorizer "f" of a basic set,
+ * call "test" on each resulting factor as long as each call succeeds.
+ */
+__isl_give isl_bool isl_factorizer_every_factor_basic_set(
+	__isl_keep isl_factorizer *f,
+	isl_bool (*test)(__isl_keep isl_basic_set *bset, void *user),
+	void *user)
+{
+	int i, n;
+	isl_bool every = isl_bool_true;
+	isl_size nparam, nvar;
+	isl_basic_set *bset;
+
+	if (!f)
+		return isl_bool_error;
+	nparam = isl_basic_set_dim(f->bset, isl_dim_param);
+	nvar = isl_basic_set_dim(f->bset, isl_dim_set);
+	if (nparam < 0 || nvar < 0)
+		return isl_bool_error;
+
+	bset = isl_basic_set_copy(f->bset);
+	bset = isl_morph_basic_set(isl_morph_copy(f->morph), bset);
+
+	for (i = 0, n = 0; i < f->n_group; ++i) {
+		isl_basic_set *factor;
+
+		factor = isl_basic_set_copy(bset);
+		factor = isl_basic_set_drop_constraints_involving(factor,
+			    nparam + n + f->len[i], nvar - n - f->len[i]);
+		factor = isl_basic_set_drop_constraints_involving(factor,
+			    nparam, n);
+		factor = isl_basic_set_drop(factor, isl_dim_set,
+			    n + f->len[i], nvar - n - f->len[i]);
+		factor = isl_basic_set_drop(factor, isl_dim_set, 0, n);
+		every = test(factor, user);
+		isl_basic_set_free(factor);
+
+		if (every < 0 || !every)
+			break;
+
+		n += f->len[i];
+	}
+
+	isl_basic_set_free(bset);
+
+	return every;
 }

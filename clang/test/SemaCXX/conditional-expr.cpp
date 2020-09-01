@@ -409,3 +409,20 @@ namespace lifetime_extension {
     D d = b ? D{B()} : D{C()};
   }
 }
+
+namespace PR46484 {
+// expected-error@+4{{expected ':'}}
+// expected-note@+3{{to match this '?'}}
+// expected-warning@+2{{variable 'b' is uninitialized}}
+// expected-error@+1 2 {{expected ';' after top level declarator}}
+int a long b = a = b ? throw 0 1
+
+void g() {
+  extern int a;
+  extern long b;
+  long c = a = b ? throw 0 : 1;
+  long d = a = b ? 1 : throw 0;
+  // expected-error@+1 {{assigning to 'int' from incompatible type 'void'}}
+  long e = a = b ? throw 0 : throw 1;
+}
+} // namespace PR46484

@@ -388,6 +388,13 @@ static double GetApproxValue(const llvm::APFloat &F) {
 
 void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,
                           QualType Ty) const {
+  // There are no objects of type 'void', but values of this type can be
+  // returned from functions.
+  if (Ty->isVoidType()) {
+    Out << "void()";
+    return;
+  }
+
   switch (getKind()) {
   case APValue::None:
     Out << "<out of lifetime>";

@@ -99,6 +99,38 @@ define double @rsqrt_squared(double %x) {
   ret double %squared
 }
 
+define double @rsqrt_x_reassociate_extra_use(double %x, double * %p) {
+; CHECK-LABEL: @rsqrt_x_reassociate_extra_use(
+; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv fast double 1.000000e+00, [[SQRT]]
+; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc double [[RSQRT]], [[X:%.*]]
+; CHECK-NEXT:    store double [[RSQRT]], double* %p
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %sqrt = call fast double @llvm.sqrt.f64(double %x)
+  %rsqrt = fdiv fast double 1.0, %sqrt
+  %res = fmul reassoc double %rsqrt, %x
+  store double %rsqrt, double* %p
+  ret double %res
+}
+
+define double @x_add_y_rsqrt_reassociate_extra_use(double %x, double %y,  double * %p) {
+; CHECK-LABEL: @x_add_y_rsqrt_reassociate_extra_use(
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast double %x, %y
+; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[ADD]])
+; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv fast double 1.000000e+00, [[SQRT]]
+; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc double [[ADD]], [[RSQRT]]
+; CHECK-NEXT:    store double [[RSQRT]], double* %p
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %add = fadd fast double %x, %y ; thwart complexity-based canonicalization
+  %sqrt = call fast double @llvm.sqrt.f64(double %add)
+  %rsqrt = fdiv fast double 1.0, %sqrt
+  %res = fmul reassoc double %add, %rsqrt
+  store double %rsqrt, double* %p
+  ret double %res
+}
+
 define double @sqrt_divisor_squared(double %x, double %y) {
 ; CHECK-LABEL: @sqrt_divisor_squared(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nnan nsz double [[Y:%.*]], [[Y]]

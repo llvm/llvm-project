@@ -71,10 +71,18 @@ protected:
     SBTypeEnumMember (const lldb::TypeEnumMemberImplSP &);
 };
 
-%feature(
-    "docstring",
-    "Represents a list of SBTypeEnumMembers."
-) SBTypeEnumMemberList;
+%feature("docstring",
+"Represents a list of SBTypeEnumMembers.
+SBTypeEnumMemberList supports SBTypeEnumMember iteration.
+It also supports [] access either by index, or by enum
+element name by doing:
+
+  myType = target.FindFirstType('MyEnumWithElementA')
+  members = myType.GetEnumMembers()
+  first_elem = members[0]
+  elem_A = members['A']
+
+") SBTypeEnumMemberList;
 
 class SBTypeEnumMemberList
 {
@@ -99,6 +107,29 @@ public:
     uint32_t
     GetSize();
 
+#ifdef SWIGPYTHON
+    %pythoncode %{
+        def __iter__(self):
+            '''Iterate over all members in a lldb.SBTypeEnumMemberList object.'''
+            return lldb_iter(self, 'GetSize', 'GetTypeEnumMemberAtIndex')
+
+        def __len__(self):
+            '''Return the number of members in a lldb.SBTypeEnumMemberList object.'''
+            return self.GetSize()
+    
+        def __getitem__(self, key):
+          num_elements = self.GetSize()
+          if type(key) is int:
+              if key < num_elements:
+                  return self.GetTypeEnumMemberAtIndex(key)
+          elif type(key) is str:
+              for idx in range(num_elements):
+                  item = self.GetTypeEnumMemberAtIndex(idx)
+                  if item.name == key:
+                      return item
+          return None
+    %} 
+#endif
 
 private:
     std::unique_ptr<lldb_private::TypeEnumMemberListImpl> m_opaque_ap;

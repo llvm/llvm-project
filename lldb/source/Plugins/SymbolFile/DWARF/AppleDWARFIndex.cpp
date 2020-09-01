@@ -42,8 +42,8 @@ std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
   if (!apple_objc_table_up->IsValid())
     apple_objc_table_up.reset();
 
-  if (apple_names_table_up || apple_names_table_up || apple_types_table_up ||
-      apple_objc_table_up)
+  if (apple_names_table_up || apple_namespaces_table_up ||
+      apple_types_table_up || apple_objc_table_up)
     return std::make_unique<AppleDWARFIndex>(
         module, std::move(apple_names_table_up),
         std::move(apple_namespaces_table_up), std::move(apple_types_table_up),

@@ -32,6 +32,7 @@ class LegalizerInfo;
 class Legalizer;
 class MachineRegisterInfo;
 class GISelChangeObserver;
+class TargetLowering;
 
 class LegalizerHelper {
 public:
@@ -45,6 +46,7 @@ public:
 private:
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
+  const TargetLowering &TLI;
 
 public:
   enum LegalizeResult {
@@ -62,6 +64,7 @@ public:
 
   /// Expose LegalizerInfo so the clients can re-use.
   const LegalizerInfo &getLegalizerInfo() const { return LI; }
+  const TargetLowering &getTargetLowering() const { return TLI; }
 
   LegalizerHelper(MachineFunction &MF, GISelChangeObserver &Observer,
                   MachineIRBuilder &B);
@@ -195,10 +198,18 @@ private:
                    LLT PartTy, ArrayRef<Register> PartRegs,
                    LLT LeftoverTy = LLT(), ArrayRef<Register> LeftoverRegs = {});
 
-  /// Unmerge \p SrcReg into \p Parts with the greatest common divisor type with
-  /// \p DstTy and \p NarrowTy. Returns the GCD type.
+  /// Unmerge \p SrcReg into smaller sized values, and append them to \p
+  /// Parts. The elements of \p Parts will be the greatest common divisor type
+  /// of \p DstTy, \p NarrowTy and the type of \p SrcReg. This will compute and
+  /// return the GCD type.
   LLT extractGCDType(SmallVectorImpl<Register> &Parts, LLT DstTy,
                      LLT NarrowTy, Register SrcReg);
+
+  /// Unmerge \p SrcReg into \p GCDTy typed registers. This will append all of
+  /// the unpacked registers to \p Parts. This version is if the common unmerge
+  /// type is already known.
+  void extractGCDType(SmallVectorImpl<Register> &Parts, LLT GCDTy,
+                      Register SrcReg);
 
   /// Produce a merge of values in \p VRegs to define \p DstReg. Perform a merge
   /// from the least common multiple type, and convert as appropriate to \p
@@ -276,12 +287,11 @@ public:
   LegalizeResult fewerElementsVectorUnmergeValues(MachineInstr &MI,
                                                   unsigned TypeIdx,
                                                   LLT NarrowTy);
-  LegalizeResult fewerElementsVectorBuildVector(MachineInstr &MI,
-                                                unsigned TypeIdx,
-                                                LLT NarrowTy);
-  LegalizeResult fewerElementsVectorExtractVectorElt(MachineInstr &MI,
-                                                     unsigned TypeIdx,
-                                                     LLT NarrowTy);
+  LegalizeResult fewerElementsVectorMerge(MachineInstr &MI, unsigned TypeIdx,
+                                          LLT NarrowTy);
+  LegalizeResult fewerElementsVectorExtractInsertVectorElt(MachineInstr &MI,
+                                                           unsigned TypeIdx,
+                                                           LLT NarrowTy);
 
   LegalizeResult
   reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
@@ -318,23 +328,27 @@ public:
   LegalizeResult bitcastExtractVectorElt(MachineInstr &MI, unsigned TypeIdx,
                                          LLT CastTy);
 
+  /// Perform Bitcast legalize action on G_INSERT_VECTOR_ELT.
+  LegalizeResult bitcastInsertVectorElt(MachineInstr &MI, unsigned TypeIdx,
+                                        LLT CastTy);
+
   LegalizeResult lowerBitcast(MachineInstr &MI);
   LegalizeResult lowerLoad(MachineInstr &MI);
   LegalizeResult lowerStore(MachineInstr &MI);
-  LegalizeResult lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult lowerBitCount(MachineInstr &MI);
 
   LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
-  LegalizeResult lowerUITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
-  LegalizeResult lowerSITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
-  LegalizeResult lowerFPTOUI(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult lowerUITOFP(MachineInstr &MI);
+  LegalizeResult lowerSITOFP(MachineInstr &MI);
+  LegalizeResult lowerFPTOUI(MachineInstr &MI);
   LegalizeResult lowerFPTOSI(MachineInstr &MI);
 
   LegalizeResult lowerFPTRUNC_F64_TO_F16(MachineInstr &MI);
-  LegalizeResult lowerFPTRUNC(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult lowerFPTRUNC(MachineInstr &MI);
   LegalizeResult lowerFPOWI(MachineInstr &MI);
 
-  LegalizeResult lowerMinMax(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
-  LegalizeResult lowerFCopySign(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult lowerMinMax(MachineInstr &MI);
+  LegalizeResult lowerFCopySign(MachineInstr &MI);
   LegalizeResult lowerFMinNumMaxNum(MachineInstr &MI);
   LegalizeResult lowerFMad(MachineInstr &MI);
   LegalizeResult lowerIntrinsicRound(MachineInstr &MI);

@@ -16,6 +16,7 @@
 #include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private;
+using llvm::APFloat;
 using llvm::APInt;
 using llvm::Failed;
 using llvm::Succeeded;
@@ -289,42 +290,28 @@ TEST(ScalarTest, Division) {
 }
 
 TEST(ScalarTest, Promotion) {
-  static Scalar::Type int_types[] = {
-      Scalar::e_sint,    Scalar::e_uint,      Scalar::e_slong,
-      Scalar::e_ulong,   Scalar::e_slonglong, Scalar::e_ulonglong,
-      Scalar::e_sint128, Scalar::e_uint128,   Scalar::e_sint256,
-      Scalar::e_uint256,
-      Scalar::e_void // sentinel
-  };
+  Scalar a(47);
+  EXPECT_TRUE(a.IntegralPromote(64, true));
+  EXPECT_TRUE(a.IsSigned());
+  EXPECT_EQ(APInt(64, 47), a.UInt128(APInt()));
 
-  static Scalar::Type float_types[] = {
-      Scalar::e_float, Scalar::e_double, Scalar::e_long_double,
-      Scalar::e_void // sentinel
-  };
+  EXPECT_FALSE(a.IntegralPromote(32, true));
+  EXPECT_FALSE(a.IntegralPromote(32, false));
+  EXPECT_TRUE(a.IsSigned());
 
-  for (int i = 0; int_types[i] != Scalar::e_void; ++i) {
-    for (int j = 0; float_types[j] != Scalar::e_void; ++j) {
-      Scalar lhs(2);
-      EXPECT_TRUE(lhs.Promote(int_types[i])) << "int promotion #" << i;
-      Scalar rhs(0.5f);
-      EXPECT_TRUE(rhs.Promote(float_types[j])) << "float promotion #" << j;
-      Scalar x(2.5f);
-      EXPECT_TRUE(x.Promote(float_types[j]));
-      EXPECT_EQ(lhs + rhs, x);
-    }
-  }
+  EXPECT_TRUE(a.IntegralPromote(64, false));
+  EXPECT_FALSE(a.IsSigned());
+  EXPECT_EQ(APInt(64, 47), a.UInt128(APInt()));
 
-  for (int i = 0; float_types[i] != Scalar::e_void; ++i) {
-    for (int j = 0; float_types[j] != Scalar::e_void; ++j) {
-      Scalar lhs(2);
-      EXPECT_TRUE(lhs.Promote(float_types[i])) << "float promotion #" << i;
-      Scalar rhs(0.5f);
-      EXPECT_TRUE(rhs.Promote(float_types[j])) << "float promotion #" << j;
-      Scalar x(2.5f);
-      EXPECT_TRUE(x.Promote(float_types[j]));
-      EXPECT_EQ(lhs + rhs, x);
-    }
-  }
+  EXPECT_FALSE(a.IntegralPromote(64, true));
+
+  EXPECT_TRUE(a.FloatPromote(APFloat::IEEEdouble()));
+  EXPECT_EQ(Scalar::e_float, a.GetType());
+  EXPECT_EQ(47.0, a.Double());
+
+  EXPECT_FALSE(a.FloatPromote(APFloat::IEEEsingle()));
+  EXPECT_TRUE(a.FloatPromote(APFloat::x87DoubleExtended()));
+  EXPECT_EQ(47.0L, a.LongDouble());
 }
 
 TEST(ScalarTest, SetValueFromCString) {
@@ -373,20 +360,12 @@ TEST(ScalarTest, SetValueFromCString) {
 }
 
 TEST(ScalarTest, APIntConstructor) {
-  auto width_array = {8, 16, 32};
-  for (auto &w : width_array) {
-    Scalar A(APInt(w, 24));
-    EXPECT_EQ(A.GetType(), Scalar::e_sint);
+  for (auto &width : {8, 16, 32}) {
+    Scalar A(APInt(width, 24));
+    EXPECT_TRUE(A.IsSigned());
+    EXPECT_EQ(A.GetType(), Scalar::e_int);
+    EXPECT_EQ(APInt(width, 24), A.UInt128(APInt()));
   }
-
-  Scalar B(APInt(64, 42));
-  EXPECT_EQ(B.GetType(), Scalar::GetBestTypeForBitSize(64, true));
-  Scalar C(APInt(128, 96));
-  EXPECT_EQ(C.GetType(), Scalar::e_sint128);
-  Scalar D(APInt(256, 156));
-  EXPECT_EQ(D.GetType(), Scalar::e_sint256);
-  Scalar E(APInt(512, 456));
-  EXPECT_EQ(E.GetType(), Scalar::e_sint512);
 }
 
 TEST(ScalarTest, Scalar_512) {
@@ -396,17 +375,17 @@ TEST(ScalarTest, Scalar_512) {
   ASSERT_TRUE(Z.IsZero());
 
   Scalar S(APInt(512, 2000));
-  ASSERT_STREQ(S.GetTypeAsCString(), "int512_t");
-  ASSERT_STREQ(S.GetValueTypeAsCString(Scalar::e_sint512), "int512_t");
+  ASSERT_STREQ(S.GetTypeAsCString(), "int");
 
   ASSERT_TRUE(S.MakeUnsigned());
-  EXPECT_EQ(S.GetType(), Scalar::e_uint512);
-  ASSERT_STREQ(S.GetTypeAsCString(), "uint512_t");
-  ASSERT_STREQ(S.GetValueTypeAsCString(Scalar::e_uint512), "uint512_t");
+  EXPECT_EQ(S.GetType(), Scalar::e_int);
+  EXPECT_FALSE(S.IsSigned());
+  ASSERT_STREQ(S.GetTypeAsCString(), "int");
   EXPECT_EQ(S.GetByteSize(), 64U);
 
   ASSERT_TRUE(S.MakeSigned());
-  EXPECT_EQ(S.GetType(), Scalar::e_sint512);
+  EXPECT_EQ(S.GetType(), Scalar::e_int);
+  EXPECT_TRUE(S.IsSigned());
   EXPECT_EQ(S.GetByteSize(), 64U);
 }
 

@@ -1122,7 +1122,7 @@ template<>
 void cpp_generator::print_method<cpp_generator::impl>(ostream &os,
 	const isl_class &clazz, FunctionDecl *method, function_kind kind)
 {
-	string methodname = method->getName();
+	string methodname = method->getName().str();
 	int num_params = method->getNumParams();
 
 	osprintf(os, "\n");
@@ -1459,7 +1459,7 @@ void cpp_generator::print_methods_impl(ostream &os, const isl_class &clazz)
 void cpp_generator::print_set_enum_impl(ostream &os, const isl_class &clazz,
 	FunctionDecl *fd, const string &enum_name, const string &method_name)
 {
-	string c_name = fd->getName();
+	string c_name = fd->getName().str();
 	int n = fd->getNumParams();
 	function_kind kind = function_kind_member_method;
 
@@ -1848,7 +1848,7 @@ void cpp_generator::print_set_persistent_callback(ostream &os,
 	const isl_class &clazz, FunctionDecl *method,
 	function_kind kind)
 {
-	string fullname = method->getName();
+	string fullname = method->getName().str();
 	ParmVarDecl *param = persistent_callback_arg(method);
 	string classname = type2cpp(clazz);
 	string pname;

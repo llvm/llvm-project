@@ -357,6 +357,10 @@ module DebugObjCImport {
   }
 }
 
+module DebugDwoId {
+  header "DebugDwoId.h"
+}
+
 module ImportNameInDir {
   header "ImportNameInDir.h"
   export *

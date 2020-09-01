@@ -840,11 +840,19 @@ class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
   Intrinsic Intr = I;
   MIMGBaseOpcode BaseOpcode = !cast<MIMGBaseOpcode>(!strconcat("IMAGE_", I.P.OpMod));
   AMDGPUDimProps Dim = I.P.Dim;
+  AMDGPUImageDimIntrinsicEval DimEval = AMDGPUImageDimIntrinsicEval<I.P>;
+
+  bits<8> GradientStart = DimEval.GradientArgIndex;
+  bits<8> CoordStart = DimEval.CoordArgIndex;
+  bits<8> VAddrEnd = !add(DimEval.VAddrArgIndex, DimEval.NumVAddrArgs);
+  bits<8> GradientTyArg = !add(I.P.NumRetAndDataAnyTypes,
+    !foldl(0, I.P.ExtraAddrArgs, cnt, arg, !add(cnt, arg.Type.isAny)));
+  bits<8> CoordTyArg = !add(GradientTyArg, !if(I.P.Gradients, 1, 0));
 }
 
 def ImageDimIntrinsicTable : GenericTable {
   let FilterClass = "ImageDimIntrinsicInfo";
-  let Fields = ["Intr", "BaseOpcode", "Dim"];
+  let Fields = ["Intr", "BaseOpcode", "Dim", "GradientStart", "CoordStart", "VAddrEnd", "GradientTyArg", "CoordTyArg"];
   GenericEnum TypeOf_BaseOpcode = MIMGBaseOpcode;
   GenericEnum TypeOf_Dim = MIMGDim;
 

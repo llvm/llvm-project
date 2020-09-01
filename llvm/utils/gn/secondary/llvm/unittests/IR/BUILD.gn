@@ -21,6 +21,7 @@ unittest("IRTests") {
     "DataLayoutTest.cpp",
     "DebugInfoTest.cpp",
     "DebugTypeODRUniquingTest.cpp",
+    "DemandedBitsTest.cpp",
     "DominatorTreeBatchUpdatesTest.cpp",
     "DominatorTreeTest.cpp",
     "FunctionTest.cpp",

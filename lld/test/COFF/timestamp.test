@@ -1,5 +1,5 @@
 rm %t.*.exe
-RUN: yaml2obj %p/Inputs/generic.yaml > %t.obj
+RUN: yaml2obj %p/Inputs/generic.yaml -o %t.obj
 RUN: lld-link %t.obj /debug /Brepro /entry:main /nodefaultlib /out:%t.1.exe
 RUN: lld-link %t.obj /debug /Brepro /entry:main /nodefaultlib /out:%t.2.exe
 RUN: lld-link %t.obj /debug /timestamp:0 /entry:main /nodefaultlib /out:%t.3.exe

@@ -468,6 +468,8 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
                      /* Init=*/nullptr,
                      /* Var=*/nullptr,
                      /* Cond=*/FlagCheck,
+                     /* LPL=*/SourceLocation(),
+                     /* RPL=*/SourceLocation(),
                      /* Then=*/M.makeCompound({CallbackCall, FlagAssignment}));
 
   return Out;
@@ -552,6 +554,8 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
                             /* Init=*/nullptr,
                             /* Var=*/nullptr,
                             /* Cond=*/GuardCondition,
+                            /* LPL=*/SourceLocation(),
+                            /* RPL=*/SourceLocation(),
                             /* Then=*/CS);
   return If;
 }
@@ -655,11 +659,13 @@ static Stmt *create_OSAtomicCompareAndSwap(ASTContext &C, const FunctionDecl *D)
   Stmt *Else = M.makeReturn(RetVal);
 
   /// Construct the If.
-  auto *If = IfStmt::Create(C, SourceLocation(),
-                            /* IsConstexpr=*/false,
-                            /* Init=*/nullptr,
-                            /* Var=*/nullptr, Comparison, Body,
-                            SourceLocation(), Else);
+  auto *If =
+      IfStmt::Create(C, SourceLocation(),
+                     /* IsConstexpr=*/false,
+                     /* Init=*/nullptr,
+                     /* Var=*/nullptr, Comparison,
+                     /* LPL=*/SourceLocation(),
+                     /* RPL=*/SourceLocation(), Body, SourceLocation(), Else);
 
   return If;
 }

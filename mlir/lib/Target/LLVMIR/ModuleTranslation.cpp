@@ -141,7 +141,7 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
       return nullptr;
     if (llvmType->isVectorTy())
       return llvm::ConstantVector::getSplat(
-          llvm::ElementCount(numElements, /*Scalable=*/false), child);
+          llvm::ElementCount::get(numElements, /*Scalable=*/false), child);
     if (llvmType->isArrayTy()) {
       auto *arrayType = llvm::ArrayType::get(elementType, numElements);
       SmallVector<llvm::Constant *, 8> constants(numElements, child);
@@ -302,8 +302,7 @@ ModuleTranslation::ModuleTranslation(Operation *module,
     : mlirModule(module), llvmModule(std::move(llvmModule)),
       debugTranslation(
           std::make_unique<DebugTranslation>(module, *this->llvmModule)),
-      ompDialect(
-          module->getContext()->getRegisteredDialect<omp::OpenMPDialect>()),
+      ompDialect(module->getContext()->getOrLoadDialect<omp::OpenMPDialect>()),
       typeTranslator(this->llvmModule->getContext()) {
   assert(satisfiesLLVMModule(mlirModule) &&
          "mlirModule should honor LLVM's module semantics.");
@@ -408,32 +407,31 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
       blockMapping[&bb] = llvmBB;
     }
 
-      // Then, convert blocks one by one in topological order to ensure
-      // defs are converted before uses.
-      llvm::SetVector<Block *> blocks = topologicalSort(region);
-      for (auto indexedBB : llvm::enumerate(blocks)) {
-        Block *bb = indexedBB.value();
-        llvm::BasicBlock *curLLVMBB = blockMapping[bb];
-        if (bb->isEntryBlock())
-          codeGenIPBBTI->setSuccessor(0, curLLVMBB);
+    // Then, convert blocks one by one in topological order to ensure
+    // defs are converted before uses.
+    llvm::SetVector<Block *> blocks = topologicalSort(region);
+    for (auto indexedBB : llvm::enumerate(blocks)) {
+      Block *bb = indexedBB.value();
+      llvm::BasicBlock *curLLVMBB = blockMapping[bb];
+      if (bb->isEntryBlock())
+        codeGenIPBBTI->setSuccessor(0, curLLVMBB);
 
-        // TODO: Error not returned up the hierarchy
-        if (failed(
-                convertBlock(*bb, /*ignoreArguments=*/indexedBB.index() == 0)))
-          return;
+      // TODO: Error not returned up the hierarchy
+      if (failed(convertBlock(*bb, /*ignoreArguments=*/indexedBB.index() == 0)))
+        return;
 
-        // If this block has the terminator then add a jump to
-        // continuation bb
-        for (auto &op : *bb) {
-          if (isa<omp::TerminatorOp>(op)) {
-            builder.SetInsertPoint(curLLVMBB);
-            builder.CreateBr(&continuationIP);
-          }
+      // If this block has the terminator then add a jump to
+      // continuation bb
+      for (auto &op : *bb) {
+        if (isa<omp::TerminatorOp>(op)) {
+          builder.SetInsertPoint(curLLVMBB);
+          builder.CreateBr(&continuationIP);
         }
       }
-      // Finally, after all blocks have been traversed and values mapped,
-      // connect the PHI nodes to the results of preceding blocks.
-      connectPHINodes(region, valueMapping, blockMapping);
+    }
+    // Finally, after all blocks have been traversed and values mapped,
+    // connect the PHI nodes to the results of preceding blocks.
+    connectPHINodes(region, valueMapping, blockMapping);
   };
 
   // TODO: Perform appropriate actions according to the data-sharing
@@ -451,23 +449,24 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
   // called for variables which have destructors/finalizers.
   auto finiCB = [&](InsertPointTy codeGenIP) {};
 
-  // TODO: The various operands of parallel operation are not handled.
-  // Parallel operation is created with some default options for now.
   llvm::Value *ifCond = nullptr;
   if (auto ifExprVar = cast<omp::ParallelOp>(opInst).if_expr_var())
     ifCond = valueMapping.lookup(ifExprVar);
   llvm::Value *numThreads = nullptr;
   if (auto numThreadsVar = cast<omp::ParallelOp>(opInst).num_threads_var())
     numThreads = valueMapping.lookup(numThreadsVar);
+  llvm::omp::ProcBindKind pbKind = llvm::omp::OMP_PROC_BIND_default;
+  if (auto bind = cast<omp::ParallelOp>(opInst).proc_bind_val())
+    pbKind = llvm::omp::getProcBindKind(bind.getValue());
   // TODO: Is the Parallel construct cancellable?
   bool isCancellable = false;
   // TODO: Determine the actual alloca insertion point, e.g., the function
   // entry or the alloca insertion point as provided by the body callback
   // above.
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP(builder.saveIP());
-  builder.restoreIP(ompBuilder->CreateParallel(
-      builder, allocaIP, bodyGenCB, privCB, finiCB, ifCond, numThreads,
-      llvm::omp::OMP_PROC_BIND_default, isCancellable));
+  builder.restoreIP(
+      ompBuilder->CreateParallel(builder, allocaIP, bodyGenCB, privCB, finiCB,
+                                 ifCond, numThreads, pbKind, isCancellable));
   return success();
 }
 
@@ -944,11 +943,11 @@ ModuleTranslation::lookupValues(ValueRange values) {
 
 std::unique_ptr<llvm::Module> ModuleTranslation::prepareLLVMModule(
     Operation *m, llvm::LLVMContext &llvmContext, StringRef name) {
-  auto *dialect = m->getContext()->getRegisteredDialect<LLVM::LLVMDialect>();
-  assert(dialect && "LLVM dialect must be registered");
-
+  m->getContext()->getOrLoadDialect<LLVM::LLVMDialect>();
   auto llvmModule = std::make_unique<llvm::Module>(name, llvmContext);
-  llvmModule->setDataLayout(dialect->getDataLayout());
+  if (auto dataLayoutAttr =
+          m->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()))
+    llvmModule->setDataLayout(dataLayoutAttr.cast<StringAttr>().getValue());
 
   // Inject declarations for `malloc` and `free` functions that can be used in
   // memref allocation/deallocation coming from standard ops lowering.

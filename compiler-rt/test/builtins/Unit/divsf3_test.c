@@ -24,11 +24,72 @@ int test__divsf3(float a, float b, uint32_t expected)
 
 int main()
 {
+    // Returned NaNs are assumed to be qNaN by default
+
+    // qNaN / any = qNaN
+    if (test__divsf3(makeQNaN32(), 3.F, UINT32_C(0x7fc00000)))
+      return 1;
+    // NaN / any = NaN
+    if (test__divsf3(makeNaN32(UINT32_C(0x123)), 3.F, UINT32_C(0x7fc00000)))
+      return 1;
+    // any / qNaN = qNaN
+    if (test__divsf3(3.F, makeQNaN32(), UINT32_C(0x7fc00000)))
+      return 1;
+    // any / NaN = NaN
+    if (test__divsf3(3.F, makeNaN32(UINT32_C(0x123)), UINT32_C(0x7fc00000)))
+      return 1;
+
+    // +Inf / positive = +Inf
+    if (test__divsf3(makeInf32(), 3.F, UINT32_C(0x7f800000)))
+      return 1;
+    // +Inf / negative = -Inf
+    if (test__divsf3(makeInf32(), -3.F, UINT32_C(0xff800000)))
+      return 1;
+    // -Inf / positive = -Inf
+    if (test__divsf3(makeNegativeInf32(), 3.F, UINT32_C(0xff800000)))
+      return 1;
+    // -Inf / negative = +Inf
+    if (test__divsf3(makeNegativeInf32(), -3.F, UINT32_C(0x7f800000)))
+      return 1;
+
+    // Inf / Inf = NaN
+    if (test__divsf3(makeInf32(), makeInf32(), UINT32_C(0x7fc00000)))
+      return 1;
+    // 0.0 / 0.0 = NaN
+    if (test__divsf3(+0x0.0p+0F, +0x0.0p+0F, UINT32_C(0x7fc00000)))
+      return 1;
+    // +0.0 / +Inf = +0.0
+    if (test__divsf3(+0x0.0p+0F, makeInf32(), UINT32_C(0x0)))
+      return 1;
+    // +Inf / +0.0 = +Inf
+    if (test__divsf3(makeInf32(), +0x0.0p+0F, UINT32_C(0x7f800000)))
+      return 1;
+
+    // positive / +0.0 = +Inf
+    if (test__divsf3(+1.F, +0x0.0p+0F, UINT32_C(0x7f800000)))
+      return 1;
+    // positive / -0.0 = -Inf
+    if (test__divsf3(+1.F, -0x0.0p+0F, UINT32_C(0xff800000)))
+      return 1;
+    // negative / +0.0 = -Inf
+    if (test__divsf3(-1.F, +0x0.0p+0F, UINT32_C(0xff800000)))
+      return 1;
+    // negative / -0.0 = +Inf
+    if (test__divsf3(-1.F, -0x0.0p+0F, UINT32_C(0x7f800000)))
+      return 1;
+
     // 1/3
-    if (test__divsf3(1.f, 3.f, 0x3EAAAAABU))
+    if (test__divsf3(1.F, 3.F, UINT32_C(0x3eaaaaab)))
       return 1;
     // smallest normal result
-    if (test__divsf3(2.3509887e-38, 2., 0x00800000U))
+    if (test__divsf3(0x1.0p-125F, 2.F, UINT32_C(0x00800000)))
+      return 1;
+
+    // divisor is exactly 1.0
+    if (test__divsf3(0x1.0p+0F, 0x1.0p+0F, UINT32_C(0x3f800000)))
+      return 1;
+    // divisor is truncated to exactly 1.0 in UQ1.15
+    if (test__divsf3(0x1.0p+0F, 0x1.0001p+0F, UINT32_C(0x3f7fff00)))
       return 1;
 
     return 0;

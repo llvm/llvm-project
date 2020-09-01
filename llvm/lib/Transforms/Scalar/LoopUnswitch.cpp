@@ -661,7 +661,7 @@ bool LoopUnswitch::processCurrentLoop() {
   // FIXME: Use Function::hasOptSize().
   if (OptimizeForSize ||
       LoopHeader->getParent()->hasFnAttribute(Attribute::OptimizeForSize))
-    return false;
+    return Changed;
 
   // Run through the instructions in the loop, keeping track of three things:
   //
@@ -685,10 +685,10 @@ bool LoopUnswitch::processCurrentLoop() {
       if (!CB)
         continue;
       if (CB->isConvergent())
-        return false;
+        return Changed;
       if (auto *II = dyn_cast<InvokeInst>(&I))
         if (!II->getUnwindDest()->canSplitPredecessors())
-          return false;
+          return Changed;
       if (auto *II = dyn_cast<IntrinsicInst>(&I))
         if (II->getIntrinsicID() == Intrinsic::experimental_guard)
           Guards.push_back(II);

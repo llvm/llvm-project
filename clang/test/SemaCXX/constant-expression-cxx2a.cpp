@@ -950,6 +950,20 @@ namespace dynamic_alloc {
     p = new ((std::align_val_t)n) char[n];
     p = new char(n);
   }
+
+  namespace PR47143 {
+    constexpr char *f(int n) {
+      return new char[n]();
+    }
+    const char *p = f(3);
+    constexpr bool test() {
+      char *p = f(3);
+      bool result = !p[0] && !p[1] && !p[2];
+      delete [] p;
+      return result;
+    }
+    static_assert(test());
+  }
 }
 
 struct placement_new_arg {};

@@ -6,5 +6,5 @@ struct Foo {
 int main() {
   Foo f;
   // Try to construct foo in our expression.
-  return 0; //%self.expect("expr Foo()", substrs=["(Foo) $0 = {}"])
+  return 0; //%self.expect_expr("Foo()", result_type="Foo", result_children=[])
 }

@@ -44,12 +44,6 @@
 #define MAP_NORESERVE 0
 #endif
 
-#if SANITIZER_SOLARIS
-// Illumos' declaration of madvie cannot be made visible if _XOPEN_SOURCE
-// is defined as g++ does on Solaris.
-extern "C" int madvise(void *, size_t, int);
-#endif
-
 typedef void (*sa_sigaction_t)(int, siginfo_t *, void *);
 
 namespace __sanitizer {
@@ -67,27 +61,24 @@ void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
   uptr beg_aligned = RoundUpTo(beg, page_size);
   uptr end_aligned = RoundDownTo(end, page_size);
   if (beg_aligned < end_aligned)
-    // In the default Solaris compilation environment, madvise() is declared
-    // to take a caddr_t arg; casting it to void * results in an invalid
-    // conversion error, so use char * instead.
-    madvise((char *)beg_aligned, end_aligned - beg_aligned,
-            SANITIZER_MADVISE_DONTNEED);
+    internal_madvise(beg_aligned, end_aligned - beg_aligned,
+                     SANITIZER_MADVISE_DONTNEED);
 }
 
 void SetShadowRegionHugePageMode(uptr addr, uptr size) {
 #ifdef MADV_NOHUGEPAGE  // May not be defined on old systems.
   if (common_flags()->no_huge_pages_for_shadow)
-    madvise((char *)addr, size, MADV_NOHUGEPAGE);
+    internal_madvise(addr, size, MADV_NOHUGEPAGE);
   else
-    madvise((char *)addr, size, MADV_HUGEPAGE);
+    internal_madvise(addr, size, MADV_HUGEPAGE);
 #endif  // MADV_NOHUGEPAGE
 }
 
 bool DontDumpShadowMemory(uptr addr, uptr length) {
 #if defined(MADV_DONTDUMP)
-  return madvise((char *)addr, length, MADV_DONTDUMP) == 0;
+  return internal_madvise(addr, length, MADV_DONTDUMP) == 0;
 #elif defined(MADV_NOCORE)
-  return madvise((char *)addr, length, MADV_NOCORE) == 0;
+  return internal_madvise(addr, length, MADV_NOCORE) == 0;
 #else
   return true;
 #endif  // MADV_DONTDUMP

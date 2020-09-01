@@ -798,7 +798,7 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
   for (GlobalValue *GV : Mod.Keep) {
     if (LivenessFromIndex && !ThinLTO.CombinedIndex.isGUIDLive(GV->getGUID())) {
       if (Function *F = dyn_cast<Function>(GV)) {
-        OptimizationRemarkEmitter ORE(F);
+        OptimizationRemarkEmitter ORE(F, nullptr);
         ORE.emit(OptimizationRemark(DEBUG_TYPE, "deadfunction", F)
                  << ore::NV("Function", F)
                  << " not added to the combined module ");

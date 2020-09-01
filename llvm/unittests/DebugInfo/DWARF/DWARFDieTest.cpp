@@ -21,22 +21,22 @@ namespace {
 TEST(DWARFDie, getLocations) {
   const char *yamldata = R"(
     debug_abbrev:
-      - Code:            0x00000001
-        Tag:             DW_TAG_compile_unit
-        Children:        DW_CHILDREN_no
-        Attributes:
-          - Attribute:       DW_AT_location
-            Form:            DW_FORM_sec_offset
-          - Attribute:       DW_AT_data_member_location
-            Form:            DW_FORM_exprloc
-          - Attribute:       DW_AT_vtable_elem_location
-            Form:            DW_FORM_sec_offset
-          - Attribute:       DW_AT_call_data_location
-            Form:            DW_FORM_sec_offset
+      - Table:
+          - Code:            0x00000001
+            Tag:             DW_TAG_compile_unit
+            Children:        DW_CHILDREN_no
+            Attributes:
+              - Attribute:       DW_AT_location
+                Form:            DW_FORM_sec_offset
+              - Attribute:       DW_AT_data_member_location
+                Form:            DW_FORM_exprloc
+              - Attribute:       DW_AT_vtable_elem_location
+                Form:            DW_FORM_sec_offset
+              - Attribute:       DW_AT_call_data_location
+                Form:            DW_FORM_sec_offset
     debug_info:
       - Version:         5
         UnitType:        DW_UT_compile
-        AbbrOffset:      0
         AddrSize:        4
         Entries:
           - AbbrCode:        0x00000001

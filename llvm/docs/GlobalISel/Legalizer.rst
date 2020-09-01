@@ -176,10 +176,12 @@ few actions in common:
   elements in one of the types to a specific type would make it more legal.
   This action supports vectors.
 
-* ``lowerIf()``, ``lowerFor()``, etc. declare an instruction to be illegal if the
-  predicate is satisfied and indicates that replacing it with equivalent
-  instruction(s) would make it more legal. Support for this action differs for
-  each opcode.
+* ``lowerIf()``, ``lowerFor()``, etc. declare an instruction to be
+  illegal if the predicate is satisfied and indicates that replacing
+  it with equivalent instruction(s) would make it more legal. Support
+  for this action differs for each opcode. These may provide an
+  optional LegalizeMutation containing a type to attempt to perform
+  the expansion in a different type.
 
 * ``libcallIf()``, ``libcallFor()``, etc. declare an instruction to be illegal if the
   predicate is satisfied and indicates that replacing it with a libcall would

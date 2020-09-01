@@ -138,8 +138,9 @@ public:
   constexpr const semantics::ParamValue *charLength() const {
     return charLength_;
   }
-  std::optional<common::ConstantSubscript> GetCharLength() const;
-  std::optional<std::size_t> MeasureSizeInBytes() const;
+  std::optional<Expr<SubscriptInteger>> GetCharLength() const;
+  std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
+      FoldingContext * = nullptr) const;
 
   std::string AsFortran() const;
   std::string AsFortran(std::string &&charLenExpr) const;

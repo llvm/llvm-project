@@ -3,6 +3,10 @@
 // RUN: %clang_cc1 -std=c++11 -fopenmp-simd -fopenmp-version=45 -triple x86_64-apple-darwin13.4.0 -emit-llvm -o - %s | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
+// RUN: %clang_cc1 -std=c++11 -fopenmp -triple x86_64-apple-darwin13.4.0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -fopenmp-simd -triple x86_64-apple-darwin13.4.0 -emit-llvm -o - %s | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+
 //CHECK: call i32 @__kmpc_cancel
 //CHECK: br {{.*}}label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 //CHECK: [[EXIT]]:

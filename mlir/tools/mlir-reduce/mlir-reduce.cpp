@@ -19,6 +19,8 @@
 #include "mlir/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Reducer/OptReductionPass.h"
+#include "mlir/Reducer/Passes/OpReducer.h"
 #include "mlir/Reducer/ReductionNode.h"
 #include "mlir/Reducer/ReductionTreePass.h"
 #include "mlir/Reducer/Tester.h"
@@ -29,6 +31,10 @@
 #include "llvm/Support/ToolOutputFile.h"
 
 using namespace mlir;
+
+namespace mlir {
+void registerTestDialect(DialectRegistry &);
+}
 
 static llvm::cl::opt<std::string> inputFilename(llvm::cl::Positional,
                                                 llvm::cl::Required,
@@ -45,6 +51,11 @@ static llvm::cl::opt<std::string>
     outputFilename("o",
                    llvm::cl::desc("Output filename for the reduced test case"),
                    llvm::cl::init("-"));
+
+// TODO: Use PassPipelineCLParser to define pass pieplines in the command line.
+static llvm::cl::opt<std::string>
+    passTestSpecifier("pass-test",
+                      llvm::cl::desc("Indicate a specific pass to be tested"));
 
 // Parse and verify the input MLIR file.
 static LogicalResult loadModule(MLIRContext &context, OwningModuleRef &module,
@@ -78,9 +89,12 @@ int main(int argc, char **argv) {
     llvm::report_fatal_error(errorMessage);
 
   mlir::MLIRContext context;
-  mlir::OwningModuleRef moduleRef;
-  context.allowUnregisteredDialects(true);
+  registerAllDialects(context.getDialectRegistry());
+#ifdef MLIR_INCLUDE_TESTS
+  mlir::registerTestDialect(context.getDialectRegistry());
+#endif
 
+  mlir::OwningModuleRef moduleRef;
   if (failed(loadModule(context, moduleRef, inputFilename)))
     llvm::report_fatal_error("Input test case can't be parsed");
 
@@ -94,10 +108,20 @@ int main(int argc, char **argv) {
   // Reduction pass pipeline.
   PassManager pm(&context);
 
-  // Reduction tree pass with OpReducer variant generation and single path
-  // traversal.
-  pm.addPass(
-      std::make_unique<ReductionTreePass<FunctionReducer, SinglePath>>(&test));
+  if (passTestSpecifier == "DCE") {
+
+    // Opt Reduction Pass with SymbolDCEPass as opt pass.
+    pm.addPass(std::make_unique<OptReductionPass>(test, &context,
+                                                  createSymbolDCEPass()));
+
+  } else if (passTestSpecifier == "function-reducer") {
+
+    // Reduction tree pass with OpReducer variant generation and single path
+    // traversal.
+    pm.addPass(
+        std::make_unique<ReductionTreePass<OpReducer<FuncOp>, SinglePath>>(
+            test));
+  }
 
   ModuleOp m = moduleRef.get().clone();
 

@@ -1212,6 +1212,20 @@ struct NoRegionArguments : public TraitBase<ConcrentType, NoRegionArguments> {
   }
 };
 
+/// This trait is used to flag operations that can accommodate MemRefs with
+/// non-identity memory-layout specifications. This trait indicates that the
+/// normalization of memory layout can be performed for such operations.
+/// MemRefs normalization consists of replacing an original memory reference
+/// with layout specifications to an equivalent memory reference where the
+/// specified memory layout is applied by rewritting accesses and types
+/// associated with that memory reference.
+// TODO: Right now, the operands of an operation are either all normalizable,
+// or not. In the future, we may want to allow some of the operands to be
+// normalizable.
+template <typename ConcrentType>
+struct MemRefsNormalizable
+    : public TraitBase<ConcrentType, MemRefsNormalizable> {};
+
 } // end namespace OpTrait
 
 //===----------------------------------------------------------------------===//
@@ -1257,9 +1271,12 @@ public:
   static bool classof(Operation *op) {
     if (auto *abstractOp = op->getAbstractOperation())
       return TypeID::get<ConcreteType>() == abstractOp->typeID;
-    assert(op->getContext()->isOperationRegistered(
-               ConcreteType::getOperationName()) &&
-           "Casting attempt to an unregistered operation");
+#ifndef NDEBUG
+    if (op->getName().getStringRef() == ConcreteType::getOperationName())
+      llvm::report_fatal_error(
+          "classof on '" + ConcreteType::getOperationName() +
+          "' failed due to the operation not being registered");
+#endif
     return false;
   }
 

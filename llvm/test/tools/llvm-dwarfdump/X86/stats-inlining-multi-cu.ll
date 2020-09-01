@@ -3,11 +3,11 @@
 
 ; Test that abstract origins in multiple CUs are uniqued.
 
-; CHECK:      "#functions":4,
-; CHECK-SAME: "#inlined functions":2,
-; CHECK-SAME: "#unique source variables":4
-; CHECK-SAME: "#source variables":6
-; CHECK-SAME: "#source variables with location":6
+; CHECK:      "#functions": 4,
+; CHECK:      "#inlined functions": 2,
+; CHECK:      "#unique source variables": 4,
+; CHECK-NEXT: "#source variables": 6,
+; CHECK-NEXT: "#source variables with location": 6,
 
 ;header.h:
 ;extern "C" int getchar();

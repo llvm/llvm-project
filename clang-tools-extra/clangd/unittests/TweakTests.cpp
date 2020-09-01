@@ -605,6 +605,9 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   EXPECT_THAT(apply(" if(true) [[{ return; }]] "), HasSubstr("extracted"));
   // Don't extract uncertain return
   EXPECT_THAT(apply(" if(true) [[if (false) return;]] "), StartsWith("fail"));
+
+  FileName = "a.c";
+  EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("unavailable"));
 }
 
 TEST_F(ExtractFunctionTest, FileTest) {
@@ -2719,6 +2722,63 @@ using one::two::ff;
 namespace foo { void fun(); }
 
 void foo::fun() {
+  ff();
+})cpp"},
+            // If all other using are fully qualified, add ::
+            {R"cpp(
+#include "test.hpp"
+
+using ::one::two::cc;
+using ::one::two::ee;
+
+void fun() {
+  one::two::f^f();
+})cpp",
+             R"cpp(
+#include "test.hpp"
+
+using ::one::two::cc;
+using ::one::two::ff;using ::one::two::ee;
+
+void fun() {
+  ff();
+})cpp"},
+            // Make sure we don't add :: if it's already there
+            {R"cpp(
+#include "test.hpp"
+
+using ::one::two::cc;
+using ::one::two::ee;
+
+void fun() {
+  ::one::two::f^f();
+})cpp",
+             R"cpp(
+#include "test.hpp"
+
+using ::one::two::cc;
+using ::one::two::ff;using ::one::two::ee;
+
+void fun() {
+  ff();
+})cpp"},
+            // If even one using doesn't start with ::, do not add it
+            {R"cpp(
+#include "test.hpp"
+
+using ::one::two::cc;
+using one::two::ee;
+
+void fun() {
+  one::two::f^f();
+})cpp",
+             R"cpp(
+#include "test.hpp"
+
+using ::one::two::cc;
+using one::two::ff;using one::two::ee;
+
+void fun() {
   ff();
 })cpp"}};
   llvm::StringMap<std::string> EditedFiles;

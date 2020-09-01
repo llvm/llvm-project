@@ -1,8 +1,8 @@
 # RUN: rm -rf %t1 %t2
 # RUN: mkdir %t1 %t2
-# RUN: yaml2obj < %p/Inputs/pdb1.yaml > %t1/foo.obj
+# RUN: yaml2obj %p/Inputs/pdb1.yaml -o %t1/foo.obj
 # RUN: llvm-ar cru %t1/foo.lib %t1/foo.obj
-# RUN: yaml2obj < %p/Inputs/pdb2.yaml > %t2/foo.obj
+# RUN: yaml2obj %p/Inputs/pdb2.yaml -o %t2/foo.obj
 # RUN: llvm-ar cru %t2/foo.lib %t2/foo.obj
 
 # RUN: rm -f %t.dll %t.pdb

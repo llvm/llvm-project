@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -verify=expected,omp50 %s -Wuninitialized
 
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -verify=expected,omp45 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify=expected,omp50 %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
@@ -194,13 +194,13 @@ void test_safelen() {
     ;
 #pragma omp target
 #pragma omp teams
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp distribute simd safelen(2.5)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp target
 #pragma omp teams
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp distribute simd safelen(foo())
   for (i = 0; i < 16; ++i)
     ;
@@ -317,13 +317,13 @@ void test_simdlen() {
     ;
 #pragma omp target
 #pragma omp teams
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp distribute simd simdlen(2.5)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp target
 #pragma omp teams
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp distribute simd simdlen(foo())
   for (i = 0; i < 16; ++i)
     ;
@@ -461,13 +461,13 @@ void test_collapse() {
     ; // expected-error {{expected 4 for loops after '#pragma omp distribute simd', but found only 1}}
 #pragma omp target
 #pragma omp teams
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp distribute simd collapse(2.5)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp target
 #pragma omp teams
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp distribute simd collapse(foo())
   for (i = 0; i < 16; ++i)
     ;

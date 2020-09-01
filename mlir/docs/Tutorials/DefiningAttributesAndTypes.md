@@ -1,9 +1,9 @@
 # Defining Dialect Attributes and Types
 
 This document is a quickstart to defining dialect specific extensions to the
-[attribute](LangRef.md#attributes) and [type system](LangRef.md#type-system).
-The main part of the tutorial focuses on defining types, but the instructions
-are nearly identical for defining attributes.
+[attribute](LangRef.md#attributes) and [type](LangRef.md#type-system) systems in
+MLIR. The main part of this tutorial focuses on defining types, but the
+instructions are nearly identical for defining attributes.
 
 See [MLIR specification](LangRef.md) for more information about MLIR, the
 structure of the IR, operations, etc.
@@ -11,100 +11,61 @@ structure of the IR, operations, etc.
 ## Types
 
 Types in MLIR (like attributes, locations, and many other things) are
-value-typed. This means that instances of `Type` should be passed around
-by-value, as opposed to by-pointer or by-reference. The `Type` class in itself
-acts as a wrapper around an internal storage object that is uniqued within an
-instance of an `MLIRContext`.
-
-### Reserving a range of type kinds
-
-Types in MLIR rely on having a unique `kind` value to ensure that casting checks
-remain extremely
-efficient ([rationale](../Rationale/Rationale.md#reserving-dialect-type-kinds)). For a dialect
-author, this means that a range of type `kind` values must be explicitly, and
-statically, reserved. A dialect can reserve a range of values by adding a new
-entry to the
-[DialectSymbolRegistry](https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/DialectSymbolRegistry.def).
-To support out-of-tree and experimental dialects, the registry predefines a set
-of privates ranges, `PRIVATE_EXPERIMENTAL_[0-9]`, that are free for immediate
-use.
-
-```c++
-DEFINE_SYM_KIND_RANGE(LINALG) // Linear Algebra Dialect
-DEFINE_SYM_KIND_RANGE(TOY)    // Toy language (tutorial) Dialect
-
-// The following ranges are reserved for experimenting with MLIR dialects in a
-// private context without having to register them here.
-DEFINE_SYM_KIND_RANGE(PRIVATE_EXPERIMENTAL_0)
-```
-
-For the sake of this tutorial, we will use the predefined
-`PRIVATE_EXPERIMENTAL_0` range. These definitions will provide a range in the
-Type::Kind enum to use when defining the derived types.
-
-```c++
-namespace MyTypes {
-enum Kinds {
-  // These kinds will be used in the examples below.
-  Simple = Type::Kind::FIRST_PRIVATE_EXPERIMENTAL_0_TYPE,
-  Complex,
-  Recursive
-};
-}
-```
+value-typed. This means that instances of `Type` are passed around by-value, as
+opposed to by-pointer or by-reference. The `Type` class in itself acts as a
+wrapper around an internal storage object that is uniqued within an instance of
+an `MLIRContext`.
 
 ### Defining the type class
 
 As described above, `Type` objects in MLIR are value-typed and rely on having an
-implicitly internal storage object that holds the actual data for the type. When
+implicit internal storage object that holds the actual data for the type. When
 defining a new `Type` it isn't always necessary to define a new storage class.
 So before defining the derived `Type`, it's important to know which of the two
-classes of `Type` we are defining. Some types are _primitives_ meaning they do
-not have any parameters and are singletons uniqued by kind, like the
-[`index` type](LangRef.md#index-type). Parametric types on the other hand, have
-additional information that differentiates different instances of the same
-`Type` kind. For example the [`integer` type](LangRef.md#integer-type) has a
-bitwidth, making `i8` and `i16` be different instances of
-[`integer` type](LangRef.md#integer-type). Types can also have a mutable
-component, which can be used, for example, to construct self-referring recursive
-types. The mutable component _cannot_ be used to differentiate types within the
-same kind, so usually such types are also parametric where the parameters serve
-to identify them.
+classes of `Type` we are defining:
 
-#### Simple non-parametric types
+Some types are _singleton_ in nature, meaning they have no parameters and only
+ever have one instance, like the [`index` type](LangRef.md#index-type).
 
-For simple parameterless types, we can jump straight into defining the derived
-type class. Given that these types are uniqued solely on `kind`, we don't need
-to provide our own storage class.
+Other types are _parametric_, and contain additional information that
+differentiates different instances of the same `Type`. For example the
+[`integer` type](LangRef.md#integer-type) contains a bitwidth, with `i8` and
+`i16` representing different instances of
+[`integer` type](LangRef.md#integer-type). _Parametric_ may also contain a
+mutable component, which can be used, for example, to construct self-referring
+recursive types. The mutable component _cannot_ be used to differentiate
+instances of a type class, so usually such types contain other parametric
+components that serve to identify them.
+
+#### Singleton types
+
+For singleton types, we can jump straight into defining the derived type class.
+Given that only one instance of such types may exist, there is no need to
+provide our own storage class.
 
 ```c++
-/// This class defines a simple parameterless type. All derived types must
-/// inherit from the CRTP class 'Type::TypeBase'. It takes as template
+/// This class defines a simple parameterless singleton type. All derived types
+/// must inherit from the CRTP class 'Type::TypeBase'. It takes as template
 /// parameters the concrete type (SimpleType), the base class to use (Type),
-/// using the default storage class (TypeStorage) as the storage type.
-/// 'Type::TypeBase' also provides several utility methods to simplify type
-/// construction.
+/// the internal storage class (the default TypeStorage here), and an optional
+/// set of type traits and interfaces(detailed below).
 class SimpleType : public Type::TypeBase<SimpleType, Type, TypeStorage> {
 public:
   /// Inherit some necessary constructors from 'TypeBase'.
   using Base::Base;
 
-  /// This method is used to get an instance of the 'SimpleType'. Given that
-  /// this is a parameterless type, it just needs to take the context for
-  /// uniquing purposes.
-  static SimpleType get(MLIRContext *context) {
-    // Call into a helper 'get' method in 'TypeBase' to get a uniqued instance
-    // of this type.
-    return Base::get(context, MyTypes::Simple);
-  }
+  /// The `TypeBase` class provides the following utility methods for
+  /// constructing instances of this type:
+  /// static SimpleType get(MLIRContext *ctx);
 };
 ```
 
 #### Parametric types
 
-Parametric types are those that have additional construction or uniquing
-constraints outside of the type `kind`. As such, these types require defining a
-type storage class.
+Parametric types are those with additional construction or uniquing constraints,
+that allow for representing multiple different instances of a single class. As
+such, these types require defining a type storage class to contain the
+parametric data.
 
 ##### Defining a type storage
 
@@ -113,10 +74,10 @@ parametric type instance. The storage classes must obey the following:
 
 *   Inherit from the base type storage class `TypeStorage`.
 *   Define a type alias, `KeyTy`, that maps to a type that uniquely identifies
-    an instance of the parent type.
+    an instance of the derived type.
 *   Provide a construction method that is used to allocate a new instance of the
     storage class.
-    -   `Storage *construct(TypeStorageAllocator &, const KeyTy &key)`
+    -   `static Storage *construct(TypeStorageAllocator &, const KeyTy &key)`
 *   Provide a comparison method between the storage and `KeyTy`.
     -   `bool operator==(const KeyTy &) const`
 *   Provide a method to generate the `KeyTy` from a list of arguments passed to
@@ -165,6 +126,7 @@ struct ComplexTypeStorage : public TypeStorage {
         ComplexTypeStorage(key.first, key.second);
   }
 
+  /// The parametric data held by the storage class.
   unsigned nonZeroParam;
   Type integerType;
 };
@@ -173,16 +135,16 @@ struct ComplexTypeStorage : public TypeStorage {
 ##### Type class definition
 
 Now that the storage class has been created, the derived type class can be
-defined. This structure is similar to the
-[simple type](#simple-non-parametric-types), except for a bit more of the
-functionality of `Type::TypeBase` is put to use.
+defined. This structure is similar to [singleton types](#singleton-types),
+except that a bit more of the functionality provided by `Type::TypeBase` is put
+to use.
 
 ```c++
 /// This class defines a parametric type. All derived types must inherit from
 /// the CRTP class 'Type::TypeBase'. It takes as template parameters the
-/// concrete type (ComplexType), the base class to use (Type), and the storage
-/// class (ComplexTypeStorage). 'Type::TypeBase' also provides several utility
-/// methods to simplify type construction and verification.
+/// concrete type (ComplexType), the base class to use (Type), the storage
+/// class (ComplexTypeStorage), and an optional set of traits and
+/// interfaces(detailed below).
 class ComplexType : public Type::TypeBase<ComplexType, Type,
                                           ComplexTypeStorage> {
 public:
@@ -195,8 +157,8 @@ public:
   static ComplexType get(unsigned param, Type type) {
     // Call into a helper 'get' method in 'TypeBase' to get a uniqued instance
     // of this type. All parameters to the storage class are passed after the
-    // type kind.
-    return Base::get(type.getContext(), MyTypes::Complex, param, type);
+    // context.
+    return Base::get(type.getContext(), param, type);
   }
 
   /// This method is used to get an instance of the 'ComplexType', defined at
@@ -206,8 +168,8 @@ public:
   static ComplexType getChecked(unsigned param, Type type, Location location) {
     // Call into a helper 'getChecked' method in 'TypeBase' to get a uniqued
     // instance of this type. All parameters to the storage class are passed
-    // after the type kind.
-    return Base::getChecked(location, MyTypes::Complex, param, type);
+    // after the location.
+    return Base::getChecked(location, param, type);
   }
 
   /// This method is used to verify the construction invariants passed into the
@@ -237,12 +199,10 @@ public:
 };
 ```
 
-#### Types with a mutable component
+#### Mutable types
 
-Types with a mutable component require defining a type storage class regardless
-of being parametric. The storage contains both the parameters and the mutable
-component and is accessed in a thread-safe way by the type support
-infrastructure.
+Types with a mutable component are special instances of parametric types that
+allow for mutating certain parameters after construction.
 
 ##### Defining a type storage
 
@@ -250,15 +210,15 @@ In addition to the requirements for the type storage class for parametric types,
 the storage class for types with a mutable component must additionally obey the
 following.
 
-*   The mutable component must not participate in the storage key.
+*   The mutable component must not participate in the storage `KeyTy`.
 *   Provide a mutation method that is used to modify an existing instance of the
     storage. This method modifies the mutable component based on arguments,
-    using `allocator` for any new dynamically-allocated storage, and indicates
+    using `allocator` for any newly dynamically-allocated storage, and indicates
     whether the modification was successful.
     -   `LogicalResult mutate(StorageAllocator &allocator, Args ...&& args)`
 
 Let's define a simple storage for recursive types, where a type is identified by
-its name and can contain another type including itself.
+its name and may contain another type including itself.
 
 ```c++
 /// Here we define a storage class for a RecursiveType that is identified by its
@@ -307,10 +267,9 @@ struct RecursiveTypeStorage : public TypeStorage {
 
 ##### Type class definition
 
-Having defined the storage class, we can define the type class itself. This is
-similar to parametric types. `Type::TypeBase` provides a `mutate` method that
-forwards its arguments to the `mutate` method of the storage and ensures the
-modification happens under lock.
+Having defined the storage class, we can define the type class itself.
+`Type::TypeBase` provides a `mutate` method that forwards its arguments to the
+`mutate` method of the storage and ensures the mutation happens safely.
 
 ```c++
 class RecursiveType : public Type::TypeBase<RecursiveType, Type,
@@ -323,8 +282,8 @@ public:
   /// and returns the type with uninitialized body.
   static RecursiveType get(MLIRContext *ctx, StringRef name) {
     // Call into the base to get a uniqued instance of this type. The parameter
-    // (name) is passed after the kind.
-    return Base::get(ctx, MyTypes::Recursive, name);
+    // (name) is passed after the context.
+    return Base::get(ctx, name);
   }
 
   /// Now we can change the mutable component of the type. This is an instance
@@ -332,10 +291,12 @@ public:
   void setBody(Type body) {
     // Call into the base to mutate the type.
     LogicalResult result = Base::mutate(body);
-    // Most types expect mutation to always succeed, but types can implement
+
+    // Most types expect the mutation to always succeed, but types can implement
     // custom logic for handling mutation failures.
     assert(succeeded(result) &&
            "attempting to change the body of an already-initialized type");
+
     // Avoid unused-variable warning when building without assertions.
     (void) result;
   }
@@ -356,14 +317,14 @@ public:
 ### Registering types with a Dialect
 
 Once the dialect types have been defined, they must then be registered with a
-`Dialect`. This is done via similar mechanism to
-[operations](LangRef.md#operations), `addTypes`.
+`Dialect`. This is done via a similar mechanism to
+[operations](LangRef.md#operations), with the `addTypes` method.
 
 ```c++
 struct MyDialect : public Dialect {
   MyDialect(MLIRContext *context) : Dialect(/*name=*/"mydialect", context) {
-    /// Add these types to the dialect.
-    addTypes<SimpleType, ComplexType>();
+    /// Add these defined types to the dialect.
+    addTypes<SimpleType, ComplexType, RecursiveType>();
   }
 };
 ```
@@ -371,8 +332,40 @@ struct MyDialect : public Dialect {
 ### Parsing and Printing
 
 As a final step after registration, a dialect must override the `printType` and
-`parseType` hooks. These enable native support for roundtripping the type in the
-textual IR.
+`parseType` hooks. These enable native support for round-tripping the type in
+the textual `.mlir`.
+
+```c++
+class MyDialect : public Dialect {
+public:
+  /// Parse an instance of a type registered to the dialect.
+  Type parseType(DialectAsmParser &parser) const override;
+
+  /// Print an instance of a type registered to the dialect.
+  void printType(Type type, DialectAsmPrinter &printer) const override;
+};
+```
+
+These methods take an instance of a high-level parser or printer that allows for
+easily implementing the necessary functionality. As described in the
+[MLIR language reference](../../LangRef.md#dialect-types), dialect types are
+generally represented as: `! dialect-namespace < type-data >`, with a pretty
+form available under certain circumstances. The responsibility of our parser and
+printer is to provide the `type-data` bits.
+
+### Traits
+
+Similarly to operations, `Type` classes may attach `Traits` that provide
+additional mixin methods and other data. `Trait` classes may be specified via
+the trailing template argument of the `Type::TypeBase` class. See the main
+[`Trait`](../Traits.md) documentation for more information on defining and using
+traits.
+
+### Interfaces
+
+Similarly to operations, `Type` classes may attach `Interfaces` to provide an
+abstract interface into the type. See the main [`Interface`](../Interfaces.md)
+documentation for more information on defining and using interfaces.
 
 ## Attributes
 

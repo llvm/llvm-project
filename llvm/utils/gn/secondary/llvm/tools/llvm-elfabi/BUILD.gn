@@ -1,11 +1,11 @@
 executable("llvm-elfabi") {
   deps = [
+    "//llvm/lib/InterfaceStub",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/TextAPI",
   ]
   sources = [
-    "ELFObjHandler.cpp",
     "ErrorCollector.cpp",
     "llvm-elfabi.cpp",
   ]

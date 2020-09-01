@@ -592,7 +592,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"codeActionProvider", std::move(CodeActionProvider)},
             {"completionProvider",
              llvm::json::Object{
-                 {"allCommitCharacters", " \t()[]{}<>:;,+-/*%^&#?.=\"'|"},
+                 {"allCommitCharacters",
+                  {" ", "\t", "(", ")", "[", "]", "{",  "}", "<",
+                   ">", ":",  ";", ",", "+", "-", "/",  "*", "%",
+                   "^", "&",  "#", "?", ".", "=", "\"", "'", "|"}},
                  {"resolveProvider", false},
                  // We do extra checks, e.g. that > is part of ->.
                  {"triggerCharacters", {".", "<", ">", ":", "\"", "/"}},

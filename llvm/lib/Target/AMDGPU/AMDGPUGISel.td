@@ -68,19 +68,15 @@ def gi_smrd_sgpr :
     GIComplexOperandMatcher<s64, "selectSmrdSgpr">,
     GIComplexPatternEquiv<SMRDSgpr>;
 
-// FIXME: Why are the atomic versions separated?
 def gi_flat_offset :
     GIComplexOperandMatcher<s64, "selectFlatOffset">,
     GIComplexPatternEquiv<FLATOffset>;
 def gi_flat_offset_signed :
     GIComplexOperandMatcher<s64, "selectFlatOffsetSigned">,
     GIComplexPatternEquiv<FLATOffsetSigned>;
-def gi_flat_atomic :
-    GIComplexOperandMatcher<s64, "selectFlatOffset">,
-    GIComplexPatternEquiv<FLATAtomic>;
-def gi_flat_signed_atomic :
-    GIComplexOperandMatcher<s64, "selectFlatOffsetSigned">,
-    GIComplexPatternEquiv<FLATSignedAtomic>;
+def gi_global_saddr :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddr">,
+    GIComplexPatternEquiv<GlobalSAddr>;
 
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,
@@ -96,6 +92,10 @@ def gi_ds_1addr_1offset :
 def gi_ds_64bit_4byte_aligned :
     GIComplexOperandMatcher<s64, "selectDS64Bit4ByteAligned">,
     GIComplexPatternEquiv<DS64Bit4ByteAligned>;
+
+def gi_ds_128bit_8byte_aligned :
+    GIComplexOperandMatcher<s64, "selectDS128Bit8ByteAligned">,
+    GIComplexPatternEquiv<DS128Bit8ByteAligned>;
 
 def gi_mubuf_addr64 :
     GIComplexOperandMatcher<s64, "selectMUBUFAddr64">,
@@ -138,6 +138,9 @@ def : GINodeEquiv<G_LOAD, AMDGPUatomic_ld_glue> {
   bit CheckMMOIsAtomic = 1;
 }
 
+def : GINodeEquiv<G_STORE, AMDGPUatomic_st_glue> {
+  bit CheckMMOIsAtomic = 1;
+}
 
 
 def : GINodeEquiv<G_ATOMIC_CMPXCHG, atomic_cmp_swap_glue>;

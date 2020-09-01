@@ -43,6 +43,11 @@ void vectorizeAffineLoops(
     llvm::DenseSet<Operation *, DenseMapInfo<Operation *>> &loops,
     ArrayRef<int64_t> vectorSizes, ArrayRef<int64_t> fastestVaryingPattern);
 
+/// Normalize a affine.parallel op so that lower bounds are 0 and steps are 1.
+/// As currently implemented, this transformation cannot fail and will return
+/// early if the op is already in a normalized form.
+void normalizeAffineParallel(AffineParallelOp op);
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_UTILS_H

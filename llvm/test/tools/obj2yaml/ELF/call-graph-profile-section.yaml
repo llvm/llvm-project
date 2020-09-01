@@ -27,10 +27,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS[[BITS]]
-  Data:    ELFDATA2[[ENCODE]]
-  Type:    ET_DYN
-  Machine: EM_NONE
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2[[ENCODE]]
+  Type:  ET_DYN
 Sections:
   - Name: .llvm.call-graph-profile
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
@@ -55,7 +54,7 @@ Symbols:
 # INVALID-NEXT:   Class:   ELFCLASS32
 # INVALID-NEXT:   Data:    ELFDATA2MSB
 # INVALID-NEXT:   Type:    ET_DYN
-# INVALID-NEXT:   Machine: EM_386
+# INVALID-NEXT:   Machine: EM_NONE
 # INVALID-NEXT: Sections:
 # INVALID-NEXT:   - Name:    .empty
 # INVALID-NEXT:     Type:    SHT_LLVM_CALL_GRAPH_PROFILE
@@ -127,10 +126,9 @@ Symbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2MSB
-  Type:    ET_DYN
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2MSB
+  Type:  ET_DYN
 Sections:
 ## Case 1: Content is empty.
   - Name: .empty

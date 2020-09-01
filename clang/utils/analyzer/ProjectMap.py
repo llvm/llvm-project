@@ -1,7 +1,7 @@
 import json
 import os
 
-from enum import Enum
+from enum import auto, Enum
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 
 
@@ -17,6 +17,64 @@ class DownloadType(str, Enum):
     SCRIPT = "script"
 
 
+class Size(int, Enum):
+    """
+    Size of the project.
+
+    Sizes do not directly correspond to the number of lines or files in the
+    project.  The key factor that is important for the developers of the
+    analyzer is the time it takes to analyze the project.  Here is how
+    the following sizes map to times:
+
+    TINY:  <1min
+    SMALL: 1min-10min
+    BIG:   10min-1h
+    HUGE:  >1h
+
+    The borders are a bit of a blur, especially because analysis time varies
+    from one machine to another.  However, the relative times will stay pretty
+    similar, and these groupings will still be helpful.
+
+    UNSPECIFIED is a very special case, which is intentionally last in the list
+    of possible sizes.  If the user wants to filter projects by one of the
+    possible sizes, we want projects with UNSPECIFIED size to be filtered out
+    for any given size.
+    """
+    TINY = auto()
+    SMALL = auto()
+    BIG = auto()
+    HUGE = auto()
+    UNSPECIFIED = auto()
+
+    @staticmethod
+    def from_str(raw_size: Optional[str]) -> "Size":
+        """
+        Construct a Size object from an optional string.
+
+        :param raw_size: optional string representation of the desired Size
+                         object.  None will produce UNSPECIFIED size.
+
+        This method is case-insensitive, so raw sizes 'tiny', 'TINY', and
+        'TiNy' will produce the same result.
+        """
+        if raw_size is None:
+            return Size.UNSPECIFIED
+
+        raw_size_upper = raw_size.upper()
+        # The implementation is decoupled from the actual values of the enum,
+        # so we can easily add or modify it without bothering about this
+        # function.
+        for possible_size in Size:
+            if possible_size.name == raw_size_upper:
+                return possible_size
+
+        possible_sizes = [size.name.lower() for size in Size
+                          # no need in showing our users this size
+                          if size != Size.UNSPECIFIED]
+        raise ValueError(f"Incorrect project size '{raw_size}'. "
+                         f"Available sizes are {possible_sizes}")
+
+
 class ProjectInfo(NamedTuple):
     """
     Information about a project to analyze.
@@ -27,6 +85,7 @@ class ProjectInfo(NamedTuple):
     origin: str = ""
     commit: str = ""
     enabled: bool = True
+    size: Size = Size.UNSPECIFIED
 
     def with_fields(self, **kwargs) -> "ProjectInfo":
         """
@@ -98,6 +157,7 @@ class ProjectMap:
             build_mode: int = raw_project["mode"]
             enabled: bool = raw_project.get("enabled", True)
             source: DownloadType = raw_project.get("source", "zip")
+            size = Size.from_str(raw_project.get("size", None))
 
             if source == DownloadType.GIT:
                 origin, commit = ProjectMap._get_git_params(raw_project)
@@ -105,7 +165,7 @@ class ProjectMap:
                 origin, commit = "", ""
 
             return ProjectInfo(name, build_mode, source, origin, commit,
-                               enabled)
+                               enabled, size)
 
         except KeyError as e:
             raise ValueError(

@@ -3,7 +3,7 @@
 $comdat_func = comdat any
 
 ; CHECK-LABEL: func2:
-; CHECK-NEXT: .Lfunc2$local
+; CHECK-NOT: .Lfunc2$local
 
 declare void @func()
 

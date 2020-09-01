@@ -251,7 +251,8 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
     for (auto libPath : sharedLibPaths) {
       auto mb = llvm::MemoryBuffer::getFile(libPath);
       if (!mb) {
-        errs() << "Fail to create MemoryBuffer for: " << libPath << "\n";
+        errs() << "Failed to create MemoryBuffer for: " << libPath
+               << "\nError: " << mb.getError().message() << "\n";
         continue;
       }
       auto &JD = session.createBareJITDylib(std::string(libPath));

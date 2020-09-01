@@ -190,9 +190,9 @@ public:
     return SelectSVELogicalImm(N, VT, Imm);
   }
 
-  template <unsigned Low, unsigned High>
-  bool SelectSVEShiftImm64(SDValue N, SDValue &Imm) {
-    return SelectSVEShiftImm64(N, Low, High, Imm);
+  template <unsigned Low, unsigned High, bool AllowSaturation = false>
+  bool SelectSVEShiftImm(SDValue N, SDValue &Imm) {
+    return SelectSVEShiftImm(N, Low, High, AllowSaturation, Imm);
   }
 
   // Returns a suitable CNT/INC/DEC/RDVL multiplier to calculate VSCALE*N.
@@ -323,8 +323,8 @@ private:
   bool SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm);
 
   bool SelectSVESignedArithImm(SDValue N, SDValue &Imm);
-  bool SelectSVEShiftImm64(SDValue N, uint64_t Low, uint64_t High,
-                           SDValue &Imm);
+  bool SelectSVEShiftImm(SDValue N, uint64_t Low, uint64_t High,
+                         bool AllowSaturation, SDValue &Imm);
 
   bool SelectSVEArithImm(SDValue N, SDValue &Imm);
   bool SelectSVERegRegAddrMode(SDValue N, unsigned Scale, SDValue &Base,
@@ -3177,19 +3177,30 @@ bool AArch64DAGToDAGISel::SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm) {
   return false;
 }
 
-// This method is only needed to "cast" i64s into i32s when the value
-// is a valid shift which has been splatted into a vector with i64 elements.
-// Every other type is fine in tablegen.
-bool AArch64DAGToDAGISel::SelectSVEShiftImm64(SDValue N, uint64_t Low,
-                                              uint64_t High, SDValue &Imm) {
+// SVE shift intrinsics allow shift amounts larger than the element's bitwidth.
+// Rather than attempt to normalise everything we can sometimes saturate the
+// shift amount during selection. This function also allows for consistent
+// isel patterns by ensuring the resulting "Imm" node is of the i32 type
+// required by the instructions.
+bool AArch64DAGToDAGISel::SelectSVEShiftImm(SDValue N, uint64_t Low,
+                                            uint64_t High, bool AllowSaturation,
+                                            SDValue &Imm) {
   if (auto *CN = dyn_cast<ConstantSDNode>(N)) {
     uint64_t ImmVal = CN->getZExtValue();
-    SDLoc DL(N);
 
-    if (ImmVal >= Low && ImmVal <= High) {
-      Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
-      return true;
+    // Reject shift amounts that are too small.
+    if (ImmVal < Low)
+      return false;
+
+    // Reject or saturate shift amounts that are too big.
+    if (ImmVal > High) {
+      if (!AllowSaturation)
+        return false;
+      ImmVal = High;
     }
+
+    Imm = CurDAG->getTargetConstant(ImmVal, SDLoc(N), MVT::i32);
+    return true;
   }
 
   return false;
@@ -4816,7 +4827,8 @@ static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT,
     return EVT();
 
   ElementCount EC = PredVT.getVectorElementCount();
-  EVT ScalarVT = EVT::getIntegerVT(Ctx, AArch64::SVEBitsPerBlock / EC.Min);
+  EVT ScalarVT =
+      EVT::getIntegerVT(Ctx, AArch64::SVEBitsPerBlock / EC.getKnownMinValue());
   EVT MemVT = EVT::getVectorVT(Ctx, ScalarVT, EC * NumVec);
 
   return MemVT;

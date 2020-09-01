@@ -9,7 +9,7 @@ define amdgpu_ps void @test_sendmsg(i32 inreg %m0) {
   ; CHECK:   liveins: $sgpr0
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
   ; CHECK:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sendmsg), 12, [[COPY]](s32)
-  ; CHECK:   S_ENDPGM
+  ; CHECK:   S_ENDPGM 0
   call void @llvm.amdgcn.s.sendmsg(i32 12, i32 %m0)
   ret void
 }

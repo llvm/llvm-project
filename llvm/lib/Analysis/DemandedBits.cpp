@@ -173,7 +173,21 @@ void DemandedBits::determineLiveOperandBits(
       }
     break;
   case Instruction::Add:
+    if (AOut.isMask()) {
+      AB = AOut;
+    } else {
+      ComputeKnownBits(BitWidth, UserI->getOperand(0), UserI->getOperand(1));
+      AB = determineLiveOperandBitsAdd(OperandNo, AOut, Known, Known2);
+    }
+    break;
   case Instruction::Sub:
+    if (AOut.isMask()) {
+      AB = AOut;
+    } else {
+      ComputeKnownBits(BitWidth, UserI->getOperand(0), UserI->getOperand(1));
+      AB = determineLiveOperandBitsSub(OperandNo, AOut, Known, Known2);
+    }
+    break;
   case Instruction::Mul:
     // Find the highest live output bit. We don't need any more input
     // bits than that (adds, and thus subtracts, ripple only to the
@@ -467,6 +481,86 @@ void DemandedBits::print(raw_ostream &OS) {
     OS << "DemandedBits: 0x" << Twine::utohexstr(KV.second.getLimitedValue())
        << " for " << *KV.first << '\n';
   }
+}
+
+static APInt determineLiveOperandBitsAddCarry(unsigned OperandNo,
+                                              const APInt &AOut,
+                                              const KnownBits &LHS,
+                                              const KnownBits &RHS,
+                                              bool CarryZero, bool CarryOne) {
+  assert(!(CarryZero && CarryOne) &&
+         "Carry can't be zero and one at the same time");
+
+  // The following check should be done by the caller, as it also indicates
+  // that LHS and RHS don't need to be computed.
+  //
+  // if (AOut.isMask())
+  //   return AOut;
+
+  // Boundary bits' carry out is unaffected by their carry in.
+  APInt Bound = (LHS.Zero & RHS.Zero) | (LHS.One & RHS.One);
+
+  // First, the alive carry bits are determined from the alive output bits:
+  // Let demand ripple to the right but only up to any set bit in Bound.
+  //   AOut         = -1----
+  //   Bound        = ----1-
+  //   ACarry&~AOut = --111-
+  APInt RBound = Bound.reverseBits();
+  APInt RAOut = AOut.reverseBits();
+  APInt RProp = RAOut + (RAOut | ~RBound);
+  APInt RACarry = RProp ^ ~RBound;
+  APInt ACarry = RACarry.reverseBits();
+
+  // Then, the alive input bits are determined from the alive carry bits:
+  APInt NeededToMaintainCarryZero;
+  APInt NeededToMaintainCarryOne;
+  if (OperandNo == 0) {
+    NeededToMaintainCarryZero = LHS.Zero | ~RHS.Zero;
+    NeededToMaintainCarryOne = LHS.One | ~RHS.One;
+  } else {
+    NeededToMaintainCarryZero = RHS.Zero | ~LHS.Zero;
+    NeededToMaintainCarryOne = RHS.One | ~LHS.One;
+  }
+
+  // As in computeForAddCarry
+  APInt PossibleSumZero = ~LHS.Zero + ~RHS.Zero + !CarryZero;
+  APInt PossibleSumOne = LHS.One + RHS.One + CarryOne;
+
+  // The below is simplified from
+  //
+  // APInt CarryKnownZero = ~(PossibleSumZero ^ LHS.Zero ^ RHS.Zero);
+  // APInt CarryKnownOne = PossibleSumOne ^ LHS.One ^ RHS.One;
+  // APInt CarryUnknown = ~(CarryKnownZero | CarryKnownOne);
+  //
+  // APInt NeededToMaintainCarry =
+  //   (CarryKnownZero & NeededToMaintainCarryZero) |
+  //   (CarryKnownOne  & NeededToMaintainCarryOne) |
+  //   CarryUnknown;
+
+  APInt NeededToMaintainCarry = (~PossibleSumZero | NeededToMaintainCarryZero) &
+                                (PossibleSumOne | NeededToMaintainCarryOne);
+
+  APInt AB = AOut | (ACarry & NeededToMaintainCarry);
+  return AB;
+}
+
+APInt DemandedBits::determineLiveOperandBitsAdd(unsigned OperandNo,
+                                                const APInt &AOut,
+                                                const KnownBits &LHS,
+                                                const KnownBits &RHS) {
+  return determineLiveOperandBitsAddCarry(OperandNo, AOut, LHS, RHS, true,
+                                          false);
+}
+
+APInt DemandedBits::determineLiveOperandBitsSub(unsigned OperandNo,
+                                                const APInt &AOut,
+                                                const KnownBits &LHS,
+                                                const KnownBits &RHS) {
+  KnownBits NRHS;
+  NRHS.Zero = RHS.One;
+  NRHS.One = RHS.Zero;
+  return determineLiveOperandBitsAddCarry(OperandNo, AOut, LHS, NRHS, false,
+                                          true);
 }
 
 FunctionPass *llvm::createDemandedBitsWrapperPass() {

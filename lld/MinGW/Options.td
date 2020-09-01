@@ -16,15 +16,23 @@ multiclass EqLong<string name, string help> {
     HelpText<help>;
 }
 
+multiclass B<string name, string help1, string help2> {
+  def NAME: Flag<["--", "-"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--", "-"], "no-" # name>, HelpText<help2>;
+}
+
 def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   HelpText<"Add a directory to the library search path">;
+defm allow_multiple_definition: B<"allow-multiple-definition",
+    "Allow multiple definitions",
+    "Do not allow multiple definitions (default)">;
 def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
 def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
 def disable_auto_import: F<"disable-auto-import">,
     HelpText<"Don't automatically import data symbols from other DLLs without dllimport">;
 def disable_runtime_pseudo_reloc: F<"disable-runtime-pseudo-reloc">,
     HelpText<"Don't do automatic imports that require runtime fixups">;
-def dynamicbase: F<"dynamicbase">, HelpText<"Enable ASLR">;
+defm dynamicbase: B<"dynamicbase", "Enable ASLR", "Disable ASLR">;
 def enable_auto_import: F<"enable-auto-import">,
     HelpText<"Automatically import data symbols from other DLLs where needed">;
 def enable_runtime_pseudo_reloc: F<"enable-runtime-pseudo-reloc">,
@@ -35,12 +43,15 @@ def exclude_all_symbols: F<"exclude-all-symbols">,
 def export_all_symbols: F<"export-all-symbols">,
     HelpText<"Export all symbols even if a def file or dllexport attributes are used">;
 defm file_alignment: Eq<"file-alignment", "Set file alignment">;
-def gc_sections: F<"gc-sections">, HelpText<"Remove unused sections">;
+defm gc_sections: B<"gc-sections",
+    "Remove unused sections",
+    "Don't remove unused sections">;
 def help: F<"help">, HelpText<"Print option help">;
 def icf: J<"icf=">, HelpText<"Identical code folding">;
 def image_base: S<"image-base">, HelpText<"Base address of the program">;
-def insert_timestamp: F<"insert-timestamp">,
-    HelpText<"Include PE header timestamp">;
+defm insert_timestamp: B<"insert-timestamp",
+    "Include PE header timestamp",
+    "Don't include PE header timestamp">;
 def kill_at: F<"kill-at">, HelpText<"Remove @n from exported symbols">;
 def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
   HelpText<"Root name of library to use">;
@@ -54,14 +65,9 @@ defm minor_os_version: EqLong<"minor-os-version",
      "Set the OS and subsystem minor version">;
 defm minor_subsystem_version: EqLong<"minor-subsystem-version",
      "Set the OS and subsystem minor version">;
-def no_insert_timestamp: F<"no-insert-timestamp">,
-    HelpText<"Don't include PE header timestamp">;
 def no_seh: F<"no-seh">, HelpText<"Set the 'no SEH' flag in the executable">;
-def no_whole_archive: F<"no-whole-archive">,
-    HelpText<"No longer include all object files for following archives">;
 def large_address_aware: Flag<["--"], "large-address-aware">,
     HelpText<"Enable large addresses">;
-def no_gc_sections: F<"no-gc-sections">, HelpText<"Don't remove unused sections">;
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 defm out_implib: Eq<"out-implib", "Import library name">;
@@ -76,8 +82,9 @@ def strip_debug: F<"strip-debug">,
     HelpText<"Omit all debug information, but keep symbol information">;
 defm reproduce: Eq<"reproduce", "Write a tar file containing input files and command line options to reproduce link">;
 defm undefined: Eq<"undefined", "Include symbol in the link, if available">;
-def whole_archive: F<"whole-archive">,
-    HelpText<"Include all object files for following archives">;
+defm whole_archive: B<"whole-archive",
+    "Include all object files for following archives",
+    "No longer include all object files for following archives">;
 def v: Flag<["-"], "v">, HelpText<"Display the version number">;
 def verbose: F<"verbose">, HelpText<"Verbose mode">;
 def version: F<"version">, HelpText<"Display the version number and exit">;

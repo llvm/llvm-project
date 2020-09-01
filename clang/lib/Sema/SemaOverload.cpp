@@ -137,6 +137,7 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
     ICR_Conversion,
     ICR_Conversion,
     ICR_Conversion,
+    ICR_Conversion,
     ICR_OCL_Scalar_Widening,
     ICR_Complex_Real_Conversion,
     ICR_Conversion,
@@ -174,6 +175,7 @@ static const char* GetImplicitConversionName(ImplicitConversionKind Kind) {
     "Compatible-types conversion",
     "Derived-to-base conversion",
     "Vector conversion",
+    "SVE Vector conversion",
     "Vector splat",
     "Complex-real conversion",
     "Block Pointer conversion",
@@ -1648,6 +1650,12 @@ static bool IsVectorConversion(Sema &S, QualType FromType,
       ICK = ICK_Vector_Splat;
       return true;
     }
+  }
+
+  if ((ToType->isSizelessBuiltinType() || FromType->isSizelessBuiltinType()) &&
+      S.Context.areCompatibleSveTypes(FromType, ToType)) {
+    ICK = ICK_SVE_Vector_Conversion;
+    return true;
   }
 
   // We can perform the conversion between vector types in the following cases:
@@ -4104,6 +4112,20 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
                  : ImplicitConversionSequence::Worse;
   }
 
+  if (SCS1.Second == ICK_SVE_Vector_Conversion &&
+      SCS2.Second == ICK_SVE_Vector_Conversion) {
+    bool SCS1IsCompatibleSVEVectorConversion =
+        S.Context.areCompatibleSveTypes(SCS1.getFromType(), SCS1.getToType(2));
+    bool SCS2IsCompatibleSVEVectorConversion =
+        S.Context.areCompatibleSveTypes(SCS2.getFromType(), SCS2.getToType(2));
+
+    if (SCS1IsCompatibleSVEVectorConversion !=
+        SCS2IsCompatibleSVEVectorConversion)
+      return SCS1IsCompatibleSVEVectorConversion
+                 ? ImplicitConversionSequence::Better
+                 : ImplicitConversionSequence::Worse;
+  }
+
   return ImplicitConversionSequence::Indistinguishable;
 }
 
@@ -5493,7 +5515,6 @@ static bool CheckConvertedConstantConversions(Sema &S,
   // conversions are fine.
   switch (SCS.Second) {
   case ICK_Identity:
-  case ICK_Function_Conversion:
   case ICK_Integral_Promotion:
   case ICK_Integral_Conversion: // Narrowing conversions are checked elsewhere.
   case ICK_Zero_Queue_Conversion:
@@ -5524,6 +5545,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Compatible_Conversion:
   case ICK_Derived_To_Base:
   case ICK_Vector_Conversion:
+  case ICK_SVE_Vector_Conversion:
   case ICK_Vector_Splat:
   case ICK_Complex_Real:
   case ICK_Block_Pointer_Conversion:
@@ -5539,6 +5561,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Function_To_Pointer:
     llvm_unreachable("found a first conversion kind in Second");
 
+  case ICK_Function_Conversion:
   case ICK_Qualification:
     llvm_unreachable("found a third conversion kind in Second");
 
@@ -5628,6 +5651,7 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
     return Result;
 
   // Check for a narrowing implicit conversion.
+  bool ReturnPreNarrowingValue = false;
   APValue PreNarrowingValue;
   QualType PreNarrowingType;
   switch (SCS->getNarrowingKind(S.Context, Result.get(), PreNarrowingValue,
@@ -5642,12 +5666,22 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
     break;
 
   case NK_Constant_Narrowing:
+    if (CCE == Sema::CCEK_ArrayBound &&
+        PreNarrowingType->isIntegralOrEnumerationType() &&
+        PreNarrowingValue.isInt()) {
+      // Don't diagnose array bound narrowing here; we produce more precise
+      // errors by allowing the un-narrowed value through.
+      ReturnPreNarrowingValue = true;
+      break;
+    }
     S.Diag(From->getBeginLoc(), diag::ext_cce_narrowing)
         << CCE << /*Constant*/ 1
         << PreNarrowingValue.getAsString(S.Context, PreNarrowingType) << T;
     break;
 
   case NK_Type_Narrowing:
+    // FIXME: It would be better to diagnose that the expression is not a
+    // constant expression.
     S.Diag(From->getBeginLoc(), diag::ext_cce_narrowing)
         << CCE << /*Constant*/ 0 << From->getType() << T;
     break;
@@ -5676,7 +5710,10 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
 
     if (Notes.empty()) {
       // It's a constant expression.
-      return ConstantExpr::Create(S.Context, Result.get(), Value);
+      Expr *E = ConstantExpr::Create(S.Context, Result.get(), Value);
+      if (ReturnPreNarrowingValue)
+        Value = std::move(PreNarrowingValue);
+      return E;
     }
   }
 
@@ -12820,6 +12857,8 @@ static QualType chooseRecoveryType(OverloadCandidateSet &CS,
   // Adjust Type after seeing a candidate.
   auto ConsiderCandidate = [&](const OverloadCandidate &Candidate) {
     if (!Candidate.Function)
+      return;
+    if (Candidate.Function->isInvalidDecl())
       return;
     QualType T = Candidate.Function->getReturnType();
     if (T.isNull())

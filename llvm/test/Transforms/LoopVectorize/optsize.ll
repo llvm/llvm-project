@@ -284,6 +284,34 @@ for.end:
   ret void
 }
 
+; Vectorize with versioning for unit stride for PGSO and enabled vectorization.
+;
+define void @stride1_pgso(i16* noalias %B, i32 %BStride) !prof !14 {
+; CHECK-LABEL: @stride1_pgso(
+; CHECK: vector.body
+;
+; PGSO-LABEL: @stride1_pgso(
+; PGSO: vector.body
+;
+; NPGSO-LABEL: @stride1_pgso(
+; NPGSO: vector.body
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
+  %mulB = mul nsw i32 %iv, %BStride
+  %gepOfB = getelementptr inbounds i16, i16* %B, i32 %mulB
+  store i16 42, i16* %gepOfB, align 4
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, 1025
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !15
+
+for.end:
+  ret void
+}
+
 ; PR46652: Check that the need for stride==1 check prevents vectorizing a loop
 ; having tiny trip count, when compiling w/o -Os/-Oz.
 ; CHECK-LABEL: @pr46652

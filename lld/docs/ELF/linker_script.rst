@@ -17,6 +17,25 @@ possible. We reserve the right to make different implementation choices where
 it is appropriate for LLD. Intentional deviations will be documented in this
 file.
 
+Symbol assignment
+~~~~~~~~~~~~~~~~~
+
+A symbol assignment looks like:
+
+::
+
+  symbol = expression;
+  symbol += expression;
+
+The first form defines ``symbol``. If ``symbol`` is already defined, it will be
+overridden. The other form requires ``symbol`` to be already defined.
+
+For a simple assignment like ``alias = aliasee;``, the ``st_type`` field is
+copied from the original symbol. Any arithmetic operation (e.g. ``+ 0`` will
+reset ``st_type`` to ``STT_NOTYPE``.
+
+The ``st_size`` field is set to 0.
+
 Output section description
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -65,7 +65,6 @@ attributes #1 = { nounwind readnone }
 ; CHECK-MSAN: load {{.*}} @__msan_param_tls
 ; CHECK-MSAN: [[ORIGIN:%[0-9a-z]+]] = load {{.*}} @__msan_param_origin_tls
 
-; CHECK-KMSAN-LABEL: entry.split:
 ; CHECK-KMSAN: %param_shadow
 ; CHECK-KMSAN: load i32, i32*
 ; CHECK-KMSAN: %param_origin

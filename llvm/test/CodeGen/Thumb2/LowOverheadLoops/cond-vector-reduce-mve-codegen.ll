@@ -8,6 +8,7 @@ define dso_local i32 @vpsel_mul_reduce_add(i32* noalias nocapture readonly %a, i
 ; CHECK-NEXT:    itt eq
 ; CHECK-NEXT:    moveq r0, #0
 ; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB0_1: @ %vector.ph
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    add.w r12, r3, #3
@@ -18,7 +19,7 @@ define dso_local i32 @vpsel_mul_reduce_add(i32* noalias nocapture readonly %a, i
 ; CHECK-NEXT:    add.w lr, lr, r12, lsr #2
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:  .LBB0_1: @ %vector.body
+; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r3
 ; CHECK-NEXT:    and r4, r12, #15
@@ -37,8 +38,8 @@ define dso_local i32 @vpsel_mul_reduce_add(i32* noalias nocapture readonly %a, i
 ; CHECK-NEXT:    vmul.i32 q1, q1, q2
 ; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    le lr, .LBB0_1
-; CHECK-NEXT:  @ %bb.2: @ %middle.block
+; CHECK-NEXT:    le lr, .LBB0_2
+; CHECK-NEXT:  @ %bb.3: @ %middle.block
 ; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    vaddv.u32 r0, q0
 ; CHECK-NEXT:    add sp, #4
@@ -64,7 +65,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %tmp = getelementptr inbounds i32, i32* %a, i32 %index
 
 ;  %tmp1 = icmp ule <4 x i32> %induction, %broadcast.splat12
-  %tmp1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %tmp1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
 
   %tmp2 = bitcast i32* %tmp to <4 x i32>*
   %wide.masked.load.a = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %tmp2, i32 4, <4 x i1> %tmp1, <4 x i32> undef)
@@ -166,7 +167,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %tmp = getelementptr inbounds i32, i32* %a, i32 %index
 
 ;  %tmp1 = icmp ule <4 x i32> %induction, %broadcast.splat12
-  %tmp1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %tmp1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
 
   %tmp2 = bitcast i32* %tmp to <4 x i32>*
   %wide.masked.load.a = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %tmp2, i32 4, <4 x i1> %tmp1, <4 x i32> undef)
@@ -268,7 +269,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %tmp = getelementptr inbounds i32, i32* %a, i32 %index
 
 ;  %tmp1 = icmp ule <4 x i32> %induction, %broadcast.splat12
-  %tmp1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %tmp1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
 
   %tmp2 = bitcast i32* %tmp to <4 x i32>*
   %wide.masked.load.a = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %tmp2, i32 4, <4 x i1> %tmp1, <4 x i32> undef)
@@ -367,7 +368,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %tmp = getelementptr inbounds i32, i32* %a, i32 %index
 
 ;  %tmp1 = icmp ule <4 x i32> %induction, %broadcast.splat12
-  %tmp1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %tmp1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
 
   %tmp2 = bitcast i32* %tmp to <4 x i32>*
   %wide.masked.load.a = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %tmp2, i32 4, <4 x i1> %tmp1, <4 x i32> undef)
@@ -406,9 +407,10 @@ define dso_local void @continue_on_zero(i32* noalias nocapture %arg, i32* noalia
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:  .LBB4_1: @ %bb3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    dlstp.32 lr, r2
-; CHECK-NEXT:  .LBB4_1: @ %bb9
+; CHECK-NEXT:  .LBB4_2: @ %bb9
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r3, #4
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
@@ -418,8 +420,8 @@ define dso_local void @continue_on_zero(i32* noalias nocapture %arg, i32* noalia
 ; CHECK-NEXT:    vmul.i32 q0, q1, q0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrwt.32 q0, [r0], #16
-; CHECK-NEXT:    letp lr, .LBB4_1
-; CHECK-NEXT:  @ %bb.2: @ %bb27
+; CHECK-NEXT:    letp lr, .LBB4_2
+; CHECK-NEXT:  @ %bb.3: @ %bb27
 ; CHECK-NEXT:    pop {r7, pc}
 bb:
   %tmp = icmp eq i32 %arg2, 0
@@ -441,7 +443,7 @@ bb9:                                              ; preds = %bb9, %bb3
   %tmp14 = getelementptr inbounds i32, i32* %arg1, i32 %tmp10
 
   ; %tmp15 = icmp ule <4 x i32> %tmp13, %tmp8
-  %tmp15 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %tmp10, i32 %tmp6)
+  %tmp15 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %tmp10, i32 %arg2)
 
   %tmp16 = bitcast i32* %tmp14 to <4 x i32>*
   %tmp17 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %tmp16, i32 4, <4 x i1> %tmp15, <4 x i32> undef)
@@ -468,9 +470,10 @@ define dso_local arm_aapcs_vfpcc void @range_test(i32* noalias nocapture %arg, i
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:  .LBB5_1: @ %bb4
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB5_1: @ %bb12
+; CHECK-NEXT:  .LBB5_2: @ %bb12
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vptt.i32 ne, q0, zr
@@ -480,8 +483,8 @@ define dso_local arm_aapcs_vfpcc void @range_test(i32* noalias nocapture %arg, i
 ; CHECK-NEXT:    vmul.i32 q0, q1, q0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrwt.32 q0, [r0], #16
-; CHECK-NEXT:    letp lr, .LBB5_1
-; CHECK-NEXT:  @ %bb.2: @ %bb32
+; CHECK-NEXT:    letp lr, .LBB5_2
+; CHECK-NEXT:  @ %bb.3: @ %bb32
 ; CHECK-NEXT:    pop {r7, pc}
 bb:
   %tmp = icmp eq i32 %arg3, 0
@@ -505,7 +508,7 @@ bb12:                                             ; preds = %bb12, %bb4
   %tmp17 = getelementptr inbounds i32, i32* %arg, i32 %tmp13
 
   ; %tmp18 = icmp ule <4 x i32> %tmp16, %tmp9
-  %tmp18= call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %tmp13, i32 %tmp7)
+  %tmp18= call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %tmp13, i32 %arg3)
 
   %tmp19 = bitcast i32* %tmp17 to <4 x i32>*
   %tmp20 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %tmp19, i32 4, <4 x i1> %tmp18, <4 x i32> undef)

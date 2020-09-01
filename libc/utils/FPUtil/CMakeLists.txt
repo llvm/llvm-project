@@ -17,6 +17,7 @@ add_header_library(
     BasicOperations.h
     ManipulationFunctions.h
     NearestIntegerOperations.h
+    NormalFloat.h
   DEPENDS
     libc.utils.CPP.standalone_cpp
 )

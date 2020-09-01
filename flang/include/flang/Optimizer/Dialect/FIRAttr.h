@@ -25,17 +25,6 @@ struct RealAttributeStorage;
 struct TypeAttributeStorage;
 } // namespace detail
 
-enum AttributeKind {
-  FIR_ATTR = mlir::Attribute::FIRST_FIR_ATTR,
-  FIR_EXACTTYPE, // instance_of, precise type relation
-  FIR_SUBCLASS,  // subsumed_by, is-a (subclass) relation
-  FIR_POINT,
-  FIR_CLOSEDCLOSED_INTERVAL,
-  FIR_OPENCLOSED_INTERVAL,
-  FIR_CLOSEDOPEN_INTERVAL,
-  FIR_REAL_ATTR,
-};
-
 class ExactTypeAttr
     : public mlir::Attribute::AttrBase<ExactTypeAttr, mlir::Attribute,
                                        detail::TypeAttributeStorage> {
@@ -47,8 +36,6 @@ public:
   static ExactTypeAttr get(mlir::Type value);
 
   mlir::Type getType() const;
-
-  static constexpr unsigned getId() { return AttributeKind::FIR_EXACTTYPE; }
 };
 
 class SubclassAttr
@@ -62,8 +49,6 @@ public:
   static SubclassAttr get(mlir::Type value);
 
   mlir::Type getType() const;
-
-  static constexpr unsigned getId() { return AttributeKind::FIR_SUBCLASS; }
 };
 
 // Attributes for building SELECT CASE multiway branches
@@ -80,9 +65,6 @@ public:
 
   static constexpr llvm::StringRef getAttrName() { return "interval"; }
   static ClosedIntervalAttr get(mlir::MLIRContext *ctxt);
-  static constexpr unsigned getId() {
-    return AttributeKind::FIR_CLOSEDCLOSED_INTERVAL;
-  }
 };
 
 /// An upper bound is an open interval (including the bound value) as given as
@@ -97,9 +79,6 @@ public:
 
   static constexpr llvm::StringRef getAttrName() { return "upper"; }
   static UpperBoundAttr get(mlir::MLIRContext *ctxt);
-  static constexpr unsigned getId() {
-    return AttributeKind::FIR_OPENCLOSED_INTERVAL;
-  }
 };
 
 /// A lower bound is an open interval (including the bound value) as given as
@@ -114,9 +93,6 @@ public:
 
   static constexpr llvm::StringRef getAttrName() { return "lower"; }
   static LowerBoundAttr get(mlir::MLIRContext *ctxt);
-  static constexpr unsigned getId() {
-    return AttributeKind::FIR_CLOSEDOPEN_INTERVAL;
-  }
 };
 
 /// A pointer interval is a closed interval as given as an ssa-value. The
@@ -131,7 +107,6 @@ public:
 
   static constexpr llvm::StringRef getAttrName() { return "point"; }
   static PointIntervalAttr get(mlir::MLIRContext *ctxt);
-  static constexpr unsigned getId() { return AttributeKind::FIR_POINT; }
 };
 
 /// A real attribute is used to workaround MLIR's default parsing of a real
@@ -150,8 +125,6 @@ public:
 
   int getFKind() const;
   llvm::APFloat getValue() const;
-
-  static constexpr unsigned getId() { return AttributeKind::FIR_REAL_ATTR; }
 };
 
 mlir::Attribute parseFirAttribute(FIROpsDialect *dialect,

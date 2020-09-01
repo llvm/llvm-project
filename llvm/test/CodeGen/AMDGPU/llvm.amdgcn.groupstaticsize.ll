@@ -2,6 +2,10 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,HSA %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,HSA %s
 
+; RUN: llc -global-isel -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,NOHSA %s
+; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,HSA %s
+; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,HSA %s
+
 @lds0 = addrspace(3) global [512 x float] undef, align 4
 @lds1 = addrspace(3) global [256 x float] undef, align 4
 

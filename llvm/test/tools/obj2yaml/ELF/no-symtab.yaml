@@ -9,15 +9,14 @@
 # NOSYMTAB-NEXT:    Class:           ELFCLASS64
 # NOSYMTAB-NEXT:    Data:            ELFDATA2LSB
 # NOSYMTAB-NEXT:    Type:            ET_DYN
-# NOSYMTAB-NEXT:    Machine:         EM_X86_64
+# NOSYMTAB-NEXT:    Machine:         EM_NONE
 # NOSYMTAB-NEXT: ...
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 
 ## Check that obj2yaml creates a "Symbols" tag for the objects
 ## that have a symbol table.
@@ -30,14 +29,13 @@ FileHeader:
 # SYMTAB-NEXT:   Class:   ELFCLASS64
 # SYMTAB-NEXT:   Data:    ELFDATA2LSB
 # SYMTAB-NEXT:   Type:    ET_DYN
-# SYMTAB-NEXT:   Machine: EM_X86_64
+# SYMTAB-NEXT:   Machine: EM_NONE
 # SYMTAB-NEXT:  Symbols: []
 # SYMTAB-NEXT: ...
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Symbols: []

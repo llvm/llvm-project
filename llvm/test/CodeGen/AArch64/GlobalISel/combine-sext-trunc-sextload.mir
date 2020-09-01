@@ -12,8 +12,7 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load 2)
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[SEXTLOAD]](s64)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[TRUNC]](s32)
-    ; CHECK: $w0 = COPY [[COPY1]](s32)
+    ; CHECK: $w0 = COPY [[TRUNC]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s64) = G_SEXTLOAD %0:_(p0) :: (load 2)
     %2:_(s32) = G_TRUNC %1:_(s64)
@@ -31,9 +30,7 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load 2)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SEXTLOAD]](s32)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-    ; CHECK: $w0 = COPY [[COPY2]](s32)
+    ; CHECK: $w0 = COPY [[SEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_SEXTLOAD %0:_(p0) :: (load 2)
     %2:_(s32) = COPY %1:_(s32)
@@ -52,8 +49,7 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load 2)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SEXTLOAD]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 24
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[SEXTLOAD]], 24
     ; CHECK: $w0 = COPY [[SEXT_INREG]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_SEXTLOAD %0:_(p0) :: (load 2)

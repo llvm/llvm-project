@@ -90,7 +90,7 @@ struct GCNRegPressure {
 private:
   unsigned Value[TOTAL_KINDS];
 
-  static unsigned getRegKind(unsigned Reg, const MachineRegisterInfo &MRI);
+  static unsigned getRegKind(Register Reg, const MachineRegisterInfo &MRI);
 
   friend GCNRegPressure max(const GCNRegPressure &P1,
                             const GCNRegPressure &P2);

@@ -38,7 +38,8 @@ using ::testing::StrEq;
 /// diagnostic checking utilities.
 class DeserializationTest : public ::testing::Test {
 protected:
-  DeserializationTest() {
+  DeserializationTest() : context(/*loadAllDialects=*/false) {
+    context.getOrLoadDialect<mlir::spirv::SPIRVDialect>();
     // Register a diagnostic handler to capture the diagnostic so that we can
     // check it later.
     context.getDiagEngine().registerHandler([&](Diagnostic &diag) {

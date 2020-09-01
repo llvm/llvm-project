@@ -67,6 +67,7 @@ from . import lldbutil
 from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
+from lldbsuite.test.builders import get_builder
 
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
 # LLDB_COMMAND_TRACE is set from '-t' option.
@@ -189,11 +190,11 @@ def COMPLETION_MSG(str_before, str_after, completions):
 
 
 def EXP_MSG(str, actual, exe):
-    '''A generic "'%s' returns expected result" message generator if exe.
-    Otherwise, it generates "'%s' matches expected result" message.'''
+    '''A generic "'%s' returned unexpected result" message generator if exe.
+    Otherwise, it generates "'%s' does not match expected result" message.'''
 
-    return "'%s' %s expected result, got '%s'" % (
-        str, 'returns' if exe else 'matches', actual.strip())
+    return "'%s' %s result, got '%s'" % (
+        str, 'returned unexpected' if exe else 'does not match expected', actual.strip())
 
 
 def SETTING_MSG(setting):
@@ -242,6 +243,77 @@ def which(program):
                 return exe_file
     return None
 
+class ValueCheck:
+    def __init__(self, name=None, value=None, type=None, summary=None,
+                 children=None):
+        """
+        :param name: The name that the SBValue should have. None if the summary
+                     should not be checked.
+        :param summary: The summary that the SBValue should have. None if the
+                        summary should not be checked.
+        :param value: The value that the SBValue should have. None if the value
+                      should not be checked.
+        :param type: The type that the SBValue result should have. None if the
+                     type should not be checked.
+        :param children: A list of ValueChecks that need to match the children
+                         of this SBValue. None if children shouldn't be checked.
+                         The order of checks is the order of the checks in the
+                         list. The number of checks has to match the number of
+                         children.
+        """
+        self.expect_name = name
+        self.expect_value = value
+        self.expect_type = type
+        self.expect_summary = summary
+        self.children = children
+
+    def check_value(self, test_base, val, error_msg=None):
+        """
+        Checks that the given value matches the currently set properties
+        of this ValueCheck. If a match failed, the given TestBase will
+        be used to emit an error. A custom error message can be specified
+        that will be used to describe failed check for this SBValue (but
+        not errors in the child values).
+        """
+
+        this_error_msg = error_msg if error_msg else ""
+        this_error_msg += "\nChecking SBValue: " + str(val)
+
+        test_base.assertSuccess(val.GetError())
+
+        if self.expect_name:
+            test_base.assertEqual(self.expect_name, val.GetName(),
+                                  this_error_msg)
+        if self.expect_value:
+            test_base.assertEqual(self.expect_value, val.GetValue(),
+                                  this_error_msg)
+        if self.expect_type:
+            test_base.assertEqual(self.expect_type, val.GetDisplayTypeName(),
+                                  this_error_msg)
+        if self.expect_summary:
+            test_base.assertEqual(self.expect_summary, val.GetSummary(),
+                                  this_error_msg)
+        if self.children is not None:
+            self.check_value_children(test_base, val, error_msg)
+
+    def check_value_children(self, test_base, val, error_msg=None):
+        """
+        Checks that the children of a SBValue match a certain structure and
+        have certain properties.
+
+        :param test_base: The current test's TestBase object.
+        :param val: The SBValue to check.
+        """
+
+        this_error_msg = error_msg if error_msg else ""
+        this_error_msg += "\nChecking SBValue: " + str(val)
+
+        test_base.assertEqual(len(self.children), val.GetNumChildren(), this_error_msg)
+
+        for i in range(0, val.GetNumChildren()):
+            expected_child = self.children[i]
+            actual_child = val.GetChildAtIndex(i)
+            expected_child.check_value(test_base, actual_child, error_msg)
 
 class recording(SixStringIO):
     """
@@ -461,17 +533,7 @@ def getsource_if_available(obj):
 
 
 def builder_module():
-    if sys.platform.startswith("freebsd"):
-        return __import__("builder_freebsd")
-    if sys.platform.startswith("openbsd"):
-        return __import__("builder_openbsd")
-    if sys.platform.startswith("netbsd"):
-        return __import__("builder_netbsd")
-    if sys.platform.startswith("linux"):
-        # sys.platform with Python-3.x returns 'linux', but with
-        # Python-2.x it returns 'linux2'.
-        return __import__("builder_linux")
-    return __import__("builder_" + sys.platform)
+    return get_builder(sys.platform)
 
 
 class Base(unittest2.TestCase):
@@ -854,28 +916,18 @@ class Base(unittest2.TestCase):
         self.setPlatformWorkingDir()
         self.enableLogChannelsForCurrentTest()
 
-        lib_dir = os.environ["LLDB_LIB_DIR"]
-        self.dsym = None
+        self.lib_lldb = None
         self.framework_dir = None
-        self.darwinWithFramework = self.platformIsDarwin()
-        if sys.platform.startswith("darwin"):
-            # Handle the framework environment variable if it is set
-            if hasattr(lldbtest_config, 'lldb_framework_path'):
-                framework_path = lldbtest_config.lldb_framework_path
-                # Framework dir should be the directory containing the framework
-                self.framework_dir = framework_path[:framework_path.rfind('LLDB.framework')]
-            # If a framework dir was not specified assume the Xcode build
-            # directory layout where the framework is in LLDB_LIB_DIR.
-            else:
-                self.framework_dir = lib_dir
-            self.dsym = os.path.join(self.framework_dir, 'LLDB.framework', 'LLDB')
-            # If the framework binary doesn't exist, assume we didn't actually
-            # build a framework, and fallback to standard *nix behavior by
-            # setting framework_dir and dsym to None.
-            if not os.path.exists(self.dsym):
-                self.framework_dir = None
-                self.dsym = None
-                self.darwinWithFramework = False
+        self.darwinWithFramework = False
+
+        if sys.platform.startswith("darwin") and configuration.lldb_framework_path:
+            framework = configuration.lldb_framework_path
+            lib = os.path.join(framework, 'LLDB')
+            if os.path.exists(lib):
+                self.framework_dir = os.path.dirname(framework)
+                self.lib_lldb = lib
+                self.darwinWithFramework = self.platformIsDarwin()
+
         self.makeBuildDir()
 
     def setAsync(self, value):
@@ -1022,6 +1074,17 @@ class Base(unittest2.TestCase):
         # lines might depend on this still being active.
         lldb.SBDebugger.Destroy(self.dbg)
         del self.dbg
+
+        # All modules should be orphaned now so that they can be cleared from
+        # the shared module cache.
+        lldb.SBModule.GarbageCollectAllocatedModules()
+
+        # Modules are not orphaned during reproducer replay because they're
+        # leaked on purpose.
+        if not configuration.is_reproducer():
+            # Assert that the global module cache is empty.
+            self.assertEqual(lldb.SBModule.GetNumberAllocatedModules(), 0)
+
 
     # =========================================================
     # Various callbacks to allow introspection of test progress
@@ -1426,7 +1489,7 @@ class Base(unittest2.TestCase):
                  'EXE': exe_name,
                  'CFLAGS_EXTRAS': "%s %s" % (stdflag, stdlibflag),
                  'FRAMEWORK_INCLUDES': "-F%s" % self.framework_dir,
-                 'LD_EXTRAS': "%s -Wl,-rpath,%s" % (self.dsym, self.framework_dir),
+                 'LD_EXTRAS': "%s -Wl,-rpath,%s" % (self.lib_lldb, self.framework_dir),
                  }
         elif sys.platform.startswith('win'):
             d = {
@@ -1437,7 +1500,7 @@ class Base(unittest2.TestCase):
                                                  os.path.join(
                                                      os.environ["LLDB_SRC"],
                                                      "include")),
-                'LD_EXTRAS': "-L%s -lliblldb" % os.environ["LLDB_IMPLIB_DIR"]}
+                'LD_EXTRAS': "-L%s -lliblldb" % lib_dir}
         else:
             d = {
                 'CXX_SOURCES': sources,
@@ -1466,7 +1529,7 @@ class Base(unittest2.TestCase):
                  'DYLIB_NAME': lib_name,
                  'CFLAGS_EXTRAS': "%s -stdlib=libc++" % stdflag,
                  'FRAMEWORK_INCLUDES': "-F%s" % self.framework_dir,
-                 'LD_EXTRAS': "%s -Wl,-rpath,%s -dynamiclib" % (self.dsym, self.framework_dir),
+                 'LD_EXTRAS': "%s -Wl,-rpath,%s -dynamiclib" % (self.lib_lldb, self.framework_dir),
                  }
         elif self.getPlatform() == 'windows':
             d = {
@@ -1476,7 +1539,7 @@ class Base(unittest2.TestCase):
                                                os.path.join(
                                                    os.environ["LLDB_SRC"],
                                                    "include")),
-                'LD_EXTRAS': "-shared -l%s\liblldb.lib" % self.os.environ["LLDB_IMPLIB_DIR"]}
+                'LD_EXTRAS': "-shared -l%s\liblldb.lib" % lib_dir}
         else:
             d = {
                 'DYLIB_CXX_SOURCES': sources,
@@ -1686,13 +1749,11 @@ class Base(unittest2.TestCase):
         """
         existing_library_path = os.environ[
             self.dylibPath] if self.dylibPath in os.environ else None
-        lib_dir = os.environ["LLDB_LIB_DIR"]
         if existing_library_path:
-            return "%s:%s" % (existing_library_path, lib_dir)
-        elif sys.platform.startswith("darwin"):
-            return os.path.join(lib_dir, 'LLDB.framework')
-        else:
-            return lib_dir
+            return "%s:%s" % (existing_library_path, configuration.lldb_libs_dir)
+        if sys.platform.startswith("darwin") and configuration.lldb_framework_path:
+            return configuration.lldb_framework_path
+        return configuration.lldb_libs_dir
 
     def getLibcPlusPlusLibs(self):
         if self.getPlatform() in ('freebsd', 'linux', 'netbsd', 'openbsd'):
@@ -1809,7 +1870,7 @@ class TestBase(Base):
         - The build methods buildDefault, buildDsym, and buildDwarf are used to
           build the binaries used during a particular test scenario.  A plugin
           should be provided for the sys.platform running the test suite.  The
-          Mac OS X implementation is located in plugins/darwin.py.
+          Mac OS X implementation is located in builders/darwin.py.
     """
 
     # Subclasses can set this to true (if they don't depend on debug info) to avoid running the
@@ -1997,13 +2058,9 @@ class TestBase(Base):
         for target in targets:
             self.dbg.DeleteTarget(target)
 
-        # Modules are not orphaned during reproducer replay because they're
-        # leaked on purpose.
         if not configuration.is_reproducer():
             # Assert that all targets are deleted.
-            assert self.dbg.GetNumTargets() == 0
-            # Assert that the global module cache is empty.
-            assert lldb.SBModule.GetNumberAllocatedModules() == 0
+            self.assertEqual(self.dbg.GetNumTargets(), 0)
 
         # Do this last, to make sure it's in reverse order from how we setup.
         Base.tearDown(self)
@@ -2239,6 +2296,17 @@ class TestBase(Base):
         self.assertItemsEqual(completions, list(match_strings)[1:],
                               "List of returned completion is wrong")
 
+    def completions_contain(self, command, completions):
+        """Checks that the completions for the given command contain the given
+        list of completions."""
+        interp = self.dbg.GetCommandInterpreter()
+        match_strings = lldb.SBStringList()
+        interp.HandleCompletion(command, len(command), 0, -1, match_strings)
+        for completion in completions:
+            # match_strings is a 1-indexed list, so we have to slice...
+            self.assertIn(completion, list(match_strings)[1:],
+                          "Couldn't find expected completion")
+
     def filecheck(
             self,
             command,
@@ -2424,6 +2492,7 @@ FileCheck output:
             result_summary=None,
             result_value=None,
             result_type=None,
+            result_children=None
             ):
         """
         Evaluates the given expression and verifies the result.
@@ -2431,6 +2500,8 @@ FileCheck output:
         :param result_summary: The summary that the expression should have. None if the summary should not be checked.
         :param result_value: The value that the expression should have. None if the value should not be checked.
         :param result_type: The type that the expression result should have. None if the type should not be checked.
+        :param result_children: The expected children of the expression result
+                                as a list of ValueChecks. None if the children shouldn't be checked.
         """
         self.assertTrue(expr.strip() == expr, "Expression contains trailing/leading whitespace: '" + expr + "'")
 
@@ -2454,16 +2525,10 @@ FileCheck output:
                 target = self.dbg.GetDummyTarget()
             eval_result = target.EvaluateExpression(expr, options)
 
-        self.assertSuccess(eval_result.GetError())
-
-        if result_type:
-            self.assertEqual(result_type, eval_result.GetDisplayTypeName())
-
-        if result_value:
-            self.assertEqual(result_value, eval_result.GetValue())
-
-        if result_summary:
-            self.assertEqual(result_summary, eval_result.GetSummary())
+        value_check = ValueCheck(type=result_type, value=result_value,
+                                 summary=result_summary, children=result_children)
+        value_check.check_value(self, eval_result, str(eval_result))
+        return eval_result
 
     def invoke(self, obj, name, trace=False):
         """Use reflection to call a method dynamically with no argument."""

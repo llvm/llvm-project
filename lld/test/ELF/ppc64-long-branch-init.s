@@ -14,6 +14,8 @@
 # CHECK-EMPTY:
 # CHECK-LABEL: <_init>:
 # CHECK:         blr
+# CHECK-NEXT:    trap
+# CHECK-NEXT:    trap
 # CHECK-EMPTY:
 # CHECK-LABEL: <__long_branch_foo>:
 

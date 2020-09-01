@@ -1014,9 +1014,6 @@ bool DeclSpec::setFunctionSpecExplicit(SourceLocation Loc,
                                        const char *&PrevSpec, unsigned &DiagID,
                                        ExplicitSpecifier ExplicitSpec,
                                        SourceLocation CloseParenLoc) {
-  assert((ExplicitSpec.getKind() == ExplicitSpecKind::ResolvedTrue ||
-          ExplicitSpec.getExpr()) &&
-         "invalid ExplicitSpecifier");
   // 'explicit explicit' is ok, but warn as this is likely not what the user
   // intended.
   if (hasExplicitSpecifier()) {

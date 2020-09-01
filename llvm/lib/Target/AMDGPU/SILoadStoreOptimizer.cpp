@@ -171,7 +171,7 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
           return false;
 
         // TODO: We should be able to merge physical reg addreses.
-        if (Register::isPhysicalRegister(AddrOp->getReg()))
+        if (AddrOp->getReg().isPhysical())
           return false;
 
         // If an address has only one use then there will be on other
@@ -604,7 +604,7 @@ static void addDefsUsesToList(const MachineInstr &MI,
     if (Op.isReg()) {
       if (Op.isDef())
         RegDefs.insert(Op.getReg());
-      else if (Op.readsReg() && Register::isPhysicalRegister(Op.getReg()))
+      else if (Op.readsReg() && Op.getReg().isPhysical())
         PhysRegUses.insert(Op.getReg());
     }
   }
@@ -633,11 +633,10 @@ static bool addToListsIfDependent(MachineInstr &MI, DenseSet<Register> &RegDefs,
     // be moved for merging, then we need to move the def-instruction as well.
     // This can only happen for physical registers such as M0; virtual
     // registers are in SSA form.
-    if (Use.isReg() &&
-        ((Use.readsReg() && RegDefs.count(Use.getReg())) ||
-         (Use.isDef() && RegDefs.count(Use.getReg())) ||
-         (Use.isDef() && Register::isPhysicalRegister(Use.getReg()) &&
-          PhysRegUses.count(Use.getReg())))) {
+    if (Use.isReg() && ((Use.readsReg() && RegDefs.count(Use.getReg())) ||
+                        (Use.isDef() && RegDefs.count(Use.getReg())) ||
+                        (Use.isDef() && Use.getReg().isPhysical() &&
+                         PhysRegUses.count(Use.getReg())))) {
       Insts.push_back(&MI);
       addDefsUsesToList(MI, RegDefs, PhysRegUses);
       return true;

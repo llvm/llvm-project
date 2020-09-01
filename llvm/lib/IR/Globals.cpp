@@ -104,7 +104,8 @@ bool GlobalValue::isInterposable() const {
 
 bool GlobalValue::canBenefitFromLocalAlias() const {
   // See AsmPrinter::getSymbolPreferLocal().
-  return GlobalObject::isExternalLinkage(getLinkage()) && !isDeclaration() &&
+  return hasDefaultVisibility() &&
+         GlobalObject::isExternalLinkage(getLinkage()) && !isDeclaration() &&
          !isa<GlobalIFunc>(this) && !hasComdat();
 }
 

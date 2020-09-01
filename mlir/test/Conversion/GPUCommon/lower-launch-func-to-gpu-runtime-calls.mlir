@@ -1,5 +1,5 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s --launch-func-to-gpu-runtime="gpu-binary-annotation=nvvm.cubin" | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s --launch-func-to-gpu-runtime="gpu-binary-annotation=rocdl.hsaco" | FileCheck %s --check-prefix=ROCDL
+// RUN: mlir-opt -allow-unregistered-dialect %s --gpu-to-llvm="gpu-binary-annotation=nvvm.cubin" | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s --gpu-to-llvm="gpu-binary-annotation=rocdl.hsaco" | FileCheck %s --check-prefix=ROCDL
 
 module attributes {gpu.container_module} {
 

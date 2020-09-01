@@ -266,16 +266,24 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::iterator MBBE = MBB.getFirstTerminator();
-    if (MBBE != MBB.end()) {
-      MachineInstr &MI = *MBBE;
+    MachineBasicBlock::iterator TermI = MBBE;
+    // Check first terminator for VCC branches to optimize
+    if (TermI != MBB.end()) {
+      MachineInstr &MI = *TermI;
       switch (MI.getOpcode()) {
       case AMDGPU::S_CBRANCH_VCCZ:
       case AMDGPU::S_CBRANCH_VCCNZ:
         Changed |= optimizeVccBranch(MI);
         continue;
-      case AMDGPU::SI_RETURN_TO_EPILOG:
-        // FIXME: This is not an optimization and should be
-        // moved somewhere else.
+      default:
+        break;
+      }
+    }
+    // Check all terminators for SI_RETURN_TO_EPILOG
+    // FIXME: This is not an optimization and should be moved somewhere else.
+    while (TermI != MBB.end()) {
+      MachineInstr &MI = *TermI;
+      if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG) {
         assert(!MF.getInfo<SIMachineFunctionInfo>()->returnsVoid());
 
         // Graphics shaders returning non-void shouldn't contain S_ENDPGM,
@@ -293,11 +301,11 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
               .addMBB(EmptyMBBAtEnd);
           MI.eraseFromParent();
           MBBE = MBB.getFirstTerminator();
+          TermI = MBBE;
+          continue;
         }
-        break;
-      default:
-        break;
       }
+      TermI++;
     }
 
     if (!ST.hasVGPRIndexMode())

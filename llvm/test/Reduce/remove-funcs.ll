@@ -20,6 +20,7 @@ entry:
 
 ; CHECK-FINAL-NEXT: entry:
 ; CHECK-FINAL-NEXT:   %call2 = call i32 @interesting()
+; CHECK-FINAL-NEXT:   ret i32 5
 ; CHECK-FINAL-NEXT: }
 
 define i32 @uninteresting2() {

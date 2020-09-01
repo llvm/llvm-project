@@ -546,6 +546,13 @@ public:
   /// removeTrivialRedundancy.
   void removeRedundantInequalities();
 
+  /// Removes redundant constraints using Simplex. Although the algorithm can
+  /// theoretically take exponential time in the worst case (rare), it is known
+  /// to perform much better in the average case. If V is the number of vertices
+  /// in the polytope and C is the number of constraints, the algorithm takes
+  /// O(VC) time.
+  void removeRedundantConstraints();
+
   // Removes all equalities and inequalities.
   void clearConstraints();
 

@@ -23,11 +23,13 @@
 
 // List of all plugins that can support offloading.
 static const char *RTLNames[] = {
+    /* PowerPC target       */ "libomptarget.rtl.ppc64.so",
+    /* x86_64 target        */ "libomptarget.rtl.x86_64.so",
+    /* CUDA target          */ "libomptarget.rtl.cuda.so",
+    /* AArch64 target       */ "libomptarget.rtl.aarch64.so",
     /* SX-Aurora VE target  */ "libomptarget.rtl.ve.so",
-    /* PowerPC target */ "libomptarget.rtl.ppc64.so",
-    /* x86_64 target  */ "libomptarget.rtl.x86_64.so",
-    /* CUDA target    */ "libomptarget.rtl.cuda.so",
-    /* AArch64 target */ "libomptarget.rtl.aarch64.so"};
+    /* AMDGPU target        */ "libomptarget.rtl.amdgpu.so",
+};
 
 RTLsTy *RTLs;
 std::mutex *RTLsMtx;
@@ -59,6 +61,10 @@ __attribute__((destructor(101))) void deinit() {
 }
 
 void RTLsTy::LoadRTLs() {
+
+  if (char *envStr = getenv("LIBOMPTARGET_INFO")) {
+    InfoLevel = std::stoi(envStr);
+  }
 #ifdef OMPTARGET_DEBUG
   if (char *envStr = getenv("LIBOMPTARGET_DEBUG")) {
     DebugLevel = std::stoi(envStr);

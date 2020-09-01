@@ -1,10 +1,9 @@
-// RUN: %clang_cc1 -triple i686-linux-gnu -target-cpu i686 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i686-linux-gnu -target-cpu i686 -tune-cpu i686 -emit-llvm %s -o - | FileCheck %s
 
 int baz(int a) { return 4; }
 
 int __attribute__((target("avx,sse4.2,arch=ivybridge"))) foo(int a) { return 4; }
 
-int __attribute__((target("tune=sandybridge"))) walrus(int a) { return 4; }
 int __attribute__((target("fpmath=387"))) koala(int a) { return 4; }
 
 int __attribute__((target("no-sse2"))) echidna(int a) { return 4; }
@@ -31,12 +30,11 @@ int __attribute__((target("arch=lakemont,mmx"))) use_before_def(void) {
   return 5;
 }
 
+int __attribute__((target("tune=sandybridge"))) walrus(int a) { return 4; }
 
 // Check that we emit the additional subtarget and cpu features for foo and not for baz or bar.
 // CHECK: baz{{.*}} #0
 // CHECK: foo{{.*}} #1
-// We ignore the tune attribute so walrus should be identical to baz and bar.
-// CHECK: walrus{{.*}} #0
 // We're currently ignoring the fpmath attribute so koala should be identical to baz and bar.
 // CHECK: koala{{.*}} #0
 // CHECK: echidna{{.*}} #2
@@ -48,11 +46,16 @@ int __attribute__((target("arch=lakemont,mmx"))) use_before_def(void) {
 // CHECK: qq{{.*}} #6
 // CHECK: lake{{.*}} #7
 // CHECK: use_before_def{{.*}} #7
-// CHECK: #0 = {{.*}}"target-cpu"="i686" "target-features"="+cx8,+x87"
+// CHECK: walrus{{.*}} #8
+// CHECK: #0 = {{.*}}"target-cpu"="i686" "target-features"="+cx8,+x87" "tune-cpu"="i686"
 // CHECK: #1 = {{.*}}"target-cpu"="ivybridge" "target-features"="+avx,+cx16,+cx8,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"
-// CHECK: #2 = {{.*}}"target-cpu"="i686" "target-features"="+cx8,+x87,-aes,-avx,-avx2,-avx512bf16,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512er,-avx512f,-avx512ifma,-avx512pf,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vp2intersect,-avx512vpopcntdq,-f16c,-fma,-fma4,-gfni,-pclmul,-sha,-sse2,-sse3,-sse4.1,-sse4.2,-sse4a,-ssse3,-vaes,-vpclmulqdq,-xop"
-// CHECK: #3 = {{.*}}"target-cpu"="i686" "target-features"="+cx8,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87"
-// CHECK: #4 = {{.*}}"target-cpu"="i686" "target-features"="+cx8,+x87,-avx,-avx2,-avx512bf16,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512er,-avx512f,-avx512ifma,-avx512pf,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vp2intersect,-avx512vpopcntdq,-f16c,-fma,-fma4,-sse4.1,-sse4.2,-vaes,-vpclmulqdq,-xop"
+// CHECK-NOT: tune-cpu
+// CHECK: #2 = {{.*}}"target-cpu"="i686" "target-features"="+cx8,+x87,-aes,-avx,-avx2,-avx512bf16,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512er,-avx512f,-avx512ifma,-avx512pf,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vp2intersect,-avx512vpopcntdq,-f16c,-fma,-fma4,-gfni,-pclmul,-sha,-sse2,-sse3,-sse4.1,-sse4.2,-sse4a,-ssse3,-vaes,-vpclmulqdq,-xop" "tune-cpu"="i686"
+// CHECK: #3 = {{.*}}"target-cpu"="i686" "target-features"="+cx8,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87" "tune-cpu"="i686"
+// CHECK: #4 = {{.*}}"target-cpu"="i686" "target-features"="+cx8,+x87,-avx,-avx2,-avx512bf16,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512er,-avx512f,-avx512ifma,-avx512pf,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vp2intersect,-avx512vpopcntdq,-f16c,-fma,-fma4,-sse4.1,-sse4.2,-vaes,-vpclmulqdq,-xop" "tune-cpu"="i686"
 // CHECK: #5 = {{.*}}"target-cpu"="ivybridge" "target-features"="+avx,+cx16,+cx8,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt,-aes,-vaes"
+// CHECK-NOT: tune-cpu
 // CHECK: #6 = {{.*}}"target-cpu"="i686" "target-features"="+cx8,+x87,-3dnow,-3dnowa,-mmx"
 // CHECK: #7 = {{.*}}"target-cpu"="lakemont" "target-features"="+cx8,+mmx"
+// CHECK-NOT: tune-cpu
+// CHECK: #8 = {{.*}}"target-cpu"="i686" "target-features"="+cx8,+x87" "tune-cpu"="sandybridge"

@@ -14,12 +14,9 @@
 
 // Returns: a / b
 
-COMPILER_RT_ABI di_int __divdi3(di_int a, di_int b) {
-  const int bits_in_dword_m1 = (int)(sizeof(di_int) * CHAR_BIT) - 1;
-  di_int s_a = a >> bits_in_dword_m1;                   // s_a = a < 0 ? -1 : 0
-  di_int s_b = b >> bits_in_dword_m1;                   // s_b = b < 0 ? -1 : 0
-  a = (a ^ s_a) - s_a;                                  // negate if s_a == -1
-  b = (b ^ s_b) - s_b;                                  // negate if s_b == -1
-  s_a ^= s_b;                                           // sign of quotient
-  return (__udivmoddi4(a, b, (du_int *)0) ^ s_a) - s_a; // negate if s_a == -1
-}
+#define fixint_t di_int
+#define fixuint_t du_int
+#define COMPUTE_UDIV(a, b) __udivmoddi4((a), (b), (du_int *)0)
+#include "int_div_impl.inc"
+
+COMPILER_RT_ABI di_int __divdi3(di_int a, di_int b) { return __divXi3(a, b); }

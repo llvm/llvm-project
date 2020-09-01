@@ -7246,21 +7246,21 @@ MachineBasicBlock *SystemZTargetLowering::emitCondStore(MachineInstr &MI,
 
   StoreOpcode = TII->getOpcodeForOffset(StoreOpcode, Disp);
 
+  // ISel pattern matching also adds a load memory operand of the same
+  // address, so take special care to find the storing memory operand.
+  MachineMemOperand *MMO = nullptr;
+  for (auto *I : MI.memoperands())
+    if (I->isStore()) {
+      MMO = I;
+      break;
+    }
+
   // Use STOCOpcode if possible.  We could use different store patterns in
   // order to avoid matching the index register, but the performance trade-offs
   // might be more complicated in that case.
   if (STOCOpcode && !IndexReg && Subtarget.hasLoadStoreOnCond()) {
     if (Invert)
       CCMask ^= CCValid;
-
-    // ISel pattern matching also adds a load memory operand of the same
-    // address, so take special care to find the storing memory operand.
-    MachineMemOperand *MMO = nullptr;
-    for (auto *I : MI.memoperands())
-      if (I->isStore()) {
-          MMO = I;
-          break;
-        }
 
     BuildMI(*MBB, MI, DL, TII->get(STOCOpcode))
       .addReg(SrcReg)
@@ -7306,7 +7306,8 @@ MachineBasicBlock *SystemZTargetLowering::emitCondStore(MachineInstr &MI,
       .addReg(SrcReg)
       .add(Base)
       .addImm(Disp)
-      .addReg(IndexReg);
+      .addReg(IndexReg)
+      .addMemOperand(MMO);
   MBB->addSuccessor(JoinMBB);
 
   MI.eraseFromParent();

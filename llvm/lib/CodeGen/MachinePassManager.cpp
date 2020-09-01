@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/PassManagerImpl.h"
 
@@ -31,6 +32,22 @@ Error MachineFunctionPassManager::run(Module &M,
 
   (void)RequireCodeGenSCCOrder;
   assert(!RequireCodeGenSCCOrder && "not implemented");
+
+  // Add a PIC to verify machine functions.
+  if (VerifyMachineFunction) {
+    PassInstrumentation PI = MFAM.getResult<PassInstrumentationAnalysis>(M);
+
+    // No need to pop this callback later since MIR pipeline is flat which means
+    // current pipeline is the top-level pipeline. Callbacks are not used after
+    // current pipeline.
+    PI.pushBeforeNonSkippedPassCallback([&MFAM](StringRef PassID, Any IR) {
+      assert(any_isa<const MachineFunction *>(IR));
+      const MachineFunction *MF = any_cast<const MachineFunction *>(IR);
+      assert(MF && "Machine function should be valid for printing");
+      std::string Banner = std::string("After ") + std::string(PassID);
+      verifyMachineFunction(&MFAM, Banner, *MF);
+    });
+  }
 
   if (DebugLogging) {
     dbgs() << "Starting " << getTypeName<MachineFunction>()
@@ -82,7 +99,7 @@ Error MachineFunctionPassManager::run(Module &M,
 
         // TODO: EmitSizeRemarks
         PreservedAnalyses PassPA = P->run(MF, MFAM);
-        PI.runAfterPass(*P, MF);
+        PI.runAfterPass(*P, MF, PassPA);
         MFAM.invalidate(MF, PassPA);
       }
     }

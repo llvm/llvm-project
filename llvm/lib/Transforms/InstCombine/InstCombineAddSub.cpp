@@ -1425,6 +1425,14 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *SatAdd = foldToUnsignedSaturatedAdd(I))
     return SatAdd;
 
+  // usub.sat(A, B) + B => umax(A, B)
+  if (match(&I, m_c_BinOp(
+          m_OneUse(m_Intrinsic<Intrinsic::usub_sat>(m_Value(A), m_Value(B))),
+          m_Deferred(B)))) {
+    return replaceInstUsesWith(I,
+        Builder.CreateIntrinsic(Intrinsic::umax, {I.getType()}, {A, B}));
+  }
+
   return Changed ? &I : nullptr;
 }
 

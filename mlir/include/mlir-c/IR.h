@@ -18,6 +18,8 @@
 #ifndef MLIR_C_IR_H
 #define MLIR_C_IR_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,11 +56,9 @@ DEFINE_C_API_STRUCT(MlirType, const void);
 DEFINE_C_API_STRUCT(MlirLocation, const void);
 DEFINE_C_API_STRUCT(MlirModule, const void);
 
-#undef DEFINE_C_API_STRUCT
-
 /** Named MLIR attribute.
  *
- * A named attribute is essentially a (name, attrbute) pair where the name is
+ * A named attribute is essentially a (name, attribute) pair where the name is
  * a string.
  */
 struct MlirNamedAttribute {
@@ -67,12 +67,26 @@ struct MlirNamedAttribute {
 };
 typedef struct MlirNamedAttribute MlirNamedAttribute;
 
+/** A callback for returning string referenes.
+ *
+ * This function is called back by the functions that need to return a reference
+ * to the portion of the string with the following arguments:
+ *   - a pointer to the beginning of a string;
+ *   - the length of the string (the pointer may point to a larger buffer, not
+ *     necessarily null-terminated);
+ *   - a pointer to user data forwarded from the printing call.
+ */
+typedef void (*MlirStringCallback)(const char *, intptr_t, void *);
+
 /*============================================================================*/
 /* Context API.                                                               */
 /*============================================================================*/
 
 /** Creates an MLIR context and transfers its ownership to the caller. */
 MlirContext mlirContextCreate();
+
+/** Checks if two contexts are equal. */
+int mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
 
 /** Takes an MLIR context owned by the caller and destroys it. */
 void mlirContextDestroy(MlirContext context);
@@ -89,6 +103,12 @@ MlirLocation mlirLocationFileLineColGet(MlirContext context,
 /** Creates a location with unknown position owned by the given context. */
 MlirLocation mlirLocationUnknownGet(MlirContext context);
 
+/** Prints a location by sending chunks of the string representation and
+ * forwarding `userData to `callback`. Note that the callback may be called
+ * several times with consecutive chunks of the string. */
+void mlirLocationPrint(MlirLocation location, MlirStringCallback callback,
+                       void *userData);
+
 /*============================================================================*/
 /* Module API.                                                                */
 /*============================================================================*/
@@ -98,6 +118,9 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location);
 
 /** Parses a module from the string and transfers ownership to the caller. */
 MlirModule mlirModuleCreateParse(MlirContext context, const char *module);
+
+/** Checks whether a module is null. */
+inline int mlirModuleIsNull(MlirModule module) { return !module.ptr; }
 
 /** Takes a module owned by the caller and deletes it. */
 void mlirModuleDestroy(MlirModule module);
@@ -122,15 +145,15 @@ MlirOperation mlirModuleGetOperation(MlirModule module);
 struct MlirOperationState {
   const char *name;
   MlirLocation location;
-  unsigned nResults;
+  intptr_t nResults;
   MlirType *results;
-  unsigned nOperands;
+  intptr_t nOperands;
   MlirValue *operands;
-  unsigned nRegions;
+  intptr_t nRegions;
   MlirRegion *regions;
-  unsigned nSuccessors;
+  intptr_t nSuccessors;
   MlirBlock *successors;
-  unsigned nAttributes;
+  intptr_t nAttributes;
   MlirNamedAttribute *attributes;
 };
 typedef struct MlirOperationState MlirOperationState;
@@ -139,15 +162,15 @@ typedef struct MlirOperationState MlirOperationState;
 MlirOperationState mlirOperationStateGet(const char *name, MlirLocation loc);
 
 /** Adds a list of components to the operation state. */
-void mlirOperationStateAddResults(MlirOperationState *state, unsigned n,
+void mlirOperationStateAddResults(MlirOperationState *state, intptr_t n,
                                   MlirType *results);
-void mlirOperationStateAddOperands(MlirOperationState *state, unsigned n,
+void mlirOperationStateAddOperands(MlirOperationState *state, intptr_t n,
                                    MlirValue *operands);
-void mlirOperationStateAddOwnedRegions(MlirOperationState *state, unsigned n,
+void mlirOperationStateAddOwnedRegions(MlirOperationState *state, intptr_t n,
                                        MlirRegion *regions);
-void mlirOperationStateAddSuccessors(MlirOperationState *state, unsigned n,
+void mlirOperationStateAddSuccessors(MlirOperationState *state, intptr_t n,
                                      MlirBlock *successors);
-void mlirOperationStateAddAttributes(MlirOperationState *state, unsigned n,
+void mlirOperationStateAddAttributes(MlirOperationState *state, intptr_t n,
                                      MlirNamedAttribute *attributes);
 
 /*============================================================================*/
@@ -164,42 +187,50 @@ void mlirOperationDestroy(MlirOperation op);
 int mlirOperationIsNull(MlirOperation op);
 
 /** Returns the number of regions attached to the given operation. */
-unsigned mlirOperationGetNumRegions(MlirOperation op);
+intptr_t mlirOperationGetNumRegions(MlirOperation op);
 
 /** Returns `pos`-th region attached to the operation. */
-MlirRegion mlirOperationGetRegion(MlirOperation op, unsigned pos);
+MlirRegion mlirOperationGetRegion(MlirOperation op, intptr_t pos);
 
 /** Returns an operation immediately following the given operation it its
  * enclosing block. */
 MlirOperation mlirOperationGetNextInBlock(MlirOperation op);
 
 /** Returns the number of operands of the operation. */
-unsigned mlirOperationGetNumOperands(MlirOperation op);
+intptr_t mlirOperationGetNumOperands(MlirOperation op);
 
 /** Returns `pos`-th operand of the operation. */
-MlirValue mlirOperationGetOperand(MlirOperation op, unsigned pos);
+MlirValue mlirOperationGetOperand(MlirOperation op, intptr_t pos);
 
 /** Returns the number of results of the operation. */
-unsigned mlirOperationGetNumResults(MlirOperation op);
+intptr_t mlirOperationGetNumResults(MlirOperation op);
 
 /** Returns `pos`-th result of the operation. */
-MlirValue mlirOperationGetResult(MlirOperation op, unsigned pos);
+MlirValue mlirOperationGetResult(MlirOperation op, intptr_t pos);
 
 /** Returns the number of successor blocks of the operation. */
-unsigned mlirOperationGetNumSuccessors(MlirOperation op);
+intptr_t mlirOperationGetNumSuccessors(MlirOperation op);
 
 /** Returns `pos`-th successor of the operation. */
-MlirBlock mlirOperationGetSuccessor(MlirOperation op, unsigned pos);
+MlirBlock mlirOperationGetSuccessor(MlirOperation op, intptr_t pos);
 
 /** Returns the number of attributes attached to the operation. */
-unsigned mlirOperationGetNumAttributes(MlirOperation op);
+intptr_t mlirOperationGetNumAttributes(MlirOperation op);
 
 /** Return `pos`-th attribute of the operation. */
-MlirNamedAttribute mlirOperationGetAttribute(MlirOperation op, unsigned pos);
+MlirNamedAttribute mlirOperationGetAttribute(MlirOperation op, intptr_t pos);
 
 /** Returns an attrbute attached to the operation given its name. */
 MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
                                               const char *name);
+
+/** Prints an operation by sending chunks of the string representation and
+ * forwarding `userData to `callback`. Note that the callback may be called
+ * several times with consecutive chunks of the string. */
+void mlirOperationPrint(MlirOperation op, MlirStringCallback callback,
+                        void *userData);
+
+/** Prints an operation to stderr. */
 void mlirOperationDump(MlirOperation op);
 
 /*============================================================================*/
@@ -223,7 +254,7 @@ void mlirRegionAppendOwnedBlock(MlirRegion region, MlirBlock block);
 
 /** Takes a block owned by the caller and inserts it at `pos` to the given
  * region. */
-void mlirRegionInsertOwnedBlock(MlirRegion region, unsigned pos,
+void mlirRegionInsertOwnedBlock(MlirRegion region, intptr_t pos,
                                 MlirBlock block);
 
 /*============================================================================*/
@@ -232,7 +263,7 @@ void mlirRegionInsertOwnedBlock(MlirRegion region, unsigned pos,
 
 /** Creates a new empty block with the given argument types and transfers
  * ownership to the caller. */
-MlirBlock mlirBlockCreate(unsigned nArgs, MlirType *args);
+MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType *args);
 
 /** Takes a block owned by the caller and destroys it. */
 void mlirBlockDestroy(MlirBlock block);
@@ -252,14 +283,20 @@ void mlirBlockAppendOwnedOperation(MlirBlock block, MlirOperation operation);
 
 /** Takes an operation owned by the caller and inserts it as `pos` to the block.
  */
-void mlirBlockInsertOwnedOperation(MlirBlock block, unsigned pos,
+void mlirBlockInsertOwnedOperation(MlirBlock block, intptr_t pos,
                                    MlirOperation operation);
 
 /** Returns the number of arguments of the block. */
-unsigned mlirBlockGetNumArguments(MlirBlock block);
+intptr_t mlirBlockGetNumArguments(MlirBlock block);
 
 /** Returns `pos`-th argument of the block. */
-MlirValue mlirBlockGetArgument(MlirBlock block, unsigned pos);
+MlirValue mlirBlockGetArgument(MlirBlock block, intptr_t pos);
+
+/** Prints a block by sending chunks of the string representation and
+ * forwarding `userData to `callback`. Note that the callback may be called
+ * several times with consecutive chunks of the string. */
+void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
+                    void *userData);
 
 /*============================================================================*/
 /* Value API.                                                                 */
@@ -268,12 +305,32 @@ MlirValue mlirBlockGetArgument(MlirBlock block, unsigned pos);
 /** Returns the type of the value. */
 MlirType mlirValueGetType(MlirValue value);
 
+/** Prints a value by sending chunks of the string representation and
+ * forwarding `userData to `callback`. Note that the callback may be called
+ * several times with consecutive chunks of the string. */
+void mlirValuePrint(MlirValue value, MlirStringCallback callback,
+                    void *userData);
+
 /*============================================================================*/
 /* Type API.                                                                  */
 /*============================================================================*/
 
 /** Parses a type. The type is owned by the context. */
 MlirType mlirTypeParseGet(MlirContext context, const char *type);
+
+/** Gets the context that a type was created with. */
+MlirContext mlirTypeGetContext(MlirType type);
+
+/** Checks whether a type is null. */
+inline int mlirTypeIsNull(MlirType type) { return !type.ptr; }
+
+/** Checks if two types are equal. */
+int mlirTypeEqual(MlirType t1, MlirType t2);
+
+/** Prints a location by sending chunks of the string representation and
+ * forwarding `userData to `callback`. Note that the callback may be called
+ * several times with consecutive chunks of the string. */
+void mlirTypePrint(MlirType type, MlirStringCallback callback, void *userData);
 
 /** Prints the type to the standard error stream. */
 void mlirTypeDump(MlirType type);
@@ -284,6 +341,18 @@ void mlirTypeDump(MlirType type);
 
 /** Parses an attribute. The attribute is owned by the context. */
 MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr);
+
+/** Checks whether an attribute is null. */
+inline int mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }
+
+/** Checks if two attributes are equal. */
+int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2);
+
+/** Prints an attribute by sending chunks of the string representation and
+ * forwarding `userData to `callback`. Note that the callback may be called
+ * several times with consecutive chunks of the string. */
+void mlirAttributePrint(MlirAttribute attr, MlirStringCallback callback,
+                        void *userData);
 
 /** Prints the attrbute to the standard error stream. */
 void mlirAttributeDump(MlirAttribute attr);

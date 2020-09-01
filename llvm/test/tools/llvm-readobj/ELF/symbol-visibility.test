@@ -32,10 +32,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Symbols:
   - Name: default
     Other: [ STV_DEFAULT ]
@@ -70,10 +69,9 @@ Symbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Symbols:
   - Name: default
     Other: [ STV_DEFAULT ]

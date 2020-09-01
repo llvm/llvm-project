@@ -2879,8 +2879,7 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     const Value *RHS = II->getArgOperand(1);
 
     // Canonicalize immediate to the RHS.
-    if (isa<ConstantInt>(LHS) && !isa<ConstantInt>(RHS) &&
-        isCommutativeIntrinsic(II))
+    if (isa<ConstantInt>(LHS) && !isa<ConstantInt>(RHS) && II->isCommutative())
       std::swap(LHS, RHS);
 
     unsigned BaseOpc, CondCode;
@@ -3793,7 +3792,7 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
       .addConstantPoolIndex(CPI, 0, OpFlag);
     MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                                       TII.get(Opc), ResultReg);
-    addDirectMem(MIB, AddrReg);
+    addRegReg(MIB, AddrReg, false, PICBase, false);
     MachineMemOperand *MMO = FuncInfo.MF->getMachineMemOperand(
         MachinePointerInfo::getConstantPool(*FuncInfo.MF),
         MachineMemOperand::MOLoad, DL.getPointerSize(), Alignment);

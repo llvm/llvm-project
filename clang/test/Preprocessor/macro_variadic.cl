@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify %s -cl-std=CL1.2
 // RUN: %clang_cc1 -verify %s -pedantic -DPEDANTIC -cl-std=CL1.2
+// RUN: %clang_cc1 -verify %s -cl-std=CLC++
+// RUN: %clang_cc1 -verify %s -pedantic -cl-std=CLC++
 
 
 #define NO_VAR_FUNC(...)  5
@@ -15,6 +17,11 @@ int printf(__constant const char *st, ...);
 
 void foo() {
   NO_VAR_FUNC(1, 2, 3);
-  VAR_FUNC(1, 2, 3); //expected-error{{implicit declaration of function 'func' is invalid in OpenCL}}
+  VAR_FUNC(1, 2, 3);
+#if !__OPENCL_CPP_VERSION__
+// expected-error@-2{{implicit declaration of function 'func' is invalid in OpenCL}}
+#else
+// expected-error@-4{{use of undeclared identifier 'func'}}
+#endif
   VAR_PRINTF("%i", 1);
 }

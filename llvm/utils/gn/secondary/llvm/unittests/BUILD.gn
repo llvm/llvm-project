@@ -23,6 +23,7 @@ group("unittests") {
     "Frontend:LLVMFrontendTests",
     "FuzzMutate:FuzzMutateTests",
     "IR:IRTests",
+    "InterfaceStub:InterfaceStubTests",
     "LineEditor:LineEditorTests",
     "Linker:LinkerTests",
     "MC:MCTests",

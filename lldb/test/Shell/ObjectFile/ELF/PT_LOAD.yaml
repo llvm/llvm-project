@@ -1,6 +1,6 @@
 # Test that sections are made child-sections of the PT_LOAD segments/sections.
 
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: lldb-test object-file %t | FileCheck %s
 
 # CHECK:      Index: 0

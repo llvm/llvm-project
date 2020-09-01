@@ -52,6 +52,10 @@ int internal_mprotect(void *addr, uptr length, int prot) {
   return mprotect(addr, length, prot);
 }
 
+int internal_madvise(uptr addr, uptr length, int advice) {
+  return madvise((void *)addr, length, advice);
+}
+
 int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
                           const void *newp, uptr newlen) {
   Printf("internal_sysctlbyname not implemented for OpenBSD");

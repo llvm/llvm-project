@@ -458,6 +458,15 @@ static isl_stat FN(UNION,free_u_entry)(void **entry, void *user)
 	return isl_stat_ok;
 }
 
+/* Does "u" have an obviously empty definition domain?
+ */
+isl_bool FN(UNION,plain_is_empty)(__isl_take UNION *u)
+{
+	if (!u)
+		return isl_bool_error;
+	return isl_bool_ok(u->table.n == 0);
+}
+
 /* Set "single" to true if this group of expressions
  * contains an expression living in exactly one space.
  */

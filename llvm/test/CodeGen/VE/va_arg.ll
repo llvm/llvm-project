@@ -10,19 +10,26 @@
 @.str.7 = private unnamed_addr constant [6 x i8] c"h=%p\0A\00", align 1
 @.str.8 = private unnamed_addr constant [7 x i8] c"i=%ld\0A\00", align 1
 @.str.9 = private unnamed_addr constant [7 x i8] c"j=%lf\0A\00", align 1
+@.str.10 = private unnamed_addr constant [7 x i8] c"j=%Lf\0A\00", align 1
 
 define i32 @func_vainout(i32, ...) {
 ; CHECK-LABEL: func_vainout:
 ; CHECK:         ldl.sx %s1, 184(, %s9)
-; CHECK:         ld2b.sx %s18, 192(, %s9)
-; CHECK:         ld1b.sx %s19, 200(, %s9)
-; CHECK:         ldl.sx %s20, 208(, %s9)
-; CHECK:         ld2b.zx %s21, 216(, %s9)
-; CHECK:         ld1b.zx %s22, 224(, %s9)
-; CHECK:         ldu %s23, 236(, %s9)
-; CHECK:         ld %s24, 240(, %s9)
-; CHECK:         ld %s25, 248(, %s9)
-; CHECK:         ld %s26, 256(, %s9)
+; CHECK:         ld2b.sx %s19, 192(, %s9)
+; CHECK:         ld1b.sx %s22, 200(, %s9)
+; CHECK:         ldl.sx %s23, 208(, %s9)
+; CHECK:         ld2b.zx %s24, 216(, %s9)
+; CHECK:         ld1b.zx %s25, 224(, %s9)
+; CHECK:         ldu %s26, 236(, %s9)
+; CHECK:         ld %s27, 240(, %s9)
+; CHECK:         ld %s28, 248(, %s9)
+; CHECK:         ld %s29, 256(, %s9)
+; CHECK:         lea %s0, 279(, %s9)
+; CHECK:         and %s0, -16, %s0
+; CHECK:         lea %s2, 16(, %s0)
+; CHECK:         ld %s20, 8(, %s0)
+; CHECK:         ld %s21, (, %s0)
+; CHECK:         ld %s18, 16(, %s0)
 
   %a = alloca i8*, align 8
   %a8 = bitcast i8** %a to i8*
@@ -38,6 +45,8 @@ define i32 @func_vainout(i32, ...) {
   %p7 = va_arg i8** %a, i8*
   %p8 = va_arg i8** %a, i64
   %p9 = va_arg i8** %a, double
+  %p10 = va_arg i8** %a, fp128
+  %p11 = va_arg i8** %a, double
   call void @llvm.va_end(i8* nonnull %a8)
   call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %a8)
   %pf0 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0), i32 %p0)
@@ -54,6 +63,8 @@ define i32 @func_vainout(i32, ...) {
   %pf7 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.7, i64 0, i64 0), i8* %p7)
   %pf8 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.8, i64 0, i64 0), i64 %p8)
   %pf9 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.9, i64 0, i64 0), double %p9)
+  %pf10 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.10, i64 0, i64 0), fp128 %p10)
+  %pf11 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.9, i64 0, i64 0), double %p11)
   ret i32 0
 }
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)

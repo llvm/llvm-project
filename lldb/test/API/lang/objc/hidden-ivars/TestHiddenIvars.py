@@ -66,7 +66,7 @@ class HiddenIvarsTestCase(TestBase):
             self.build()
             self.frame_var(False)
 
-    @unittest2.expectedFailure("rdar://18683637")
+    @expectedFailure("rdar://18683637")
     @skipUnlessDarwin
     def test_frame_variable_across_modules(self):
         if self.getArchitecture() == 'i386':

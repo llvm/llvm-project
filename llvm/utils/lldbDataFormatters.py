@@ -111,7 +111,7 @@ def OptionalSummaryProvider(valobj, internal_dict):
         return 'None'
 
     underlying_type = storage.GetType().GetTemplateArgumentType(0)
-    storage = storage.GetChildMemberWithName('storage')
+    storage = storage.GetChildMemberWithName('value')
     return str(storage.Cast(underlying_type))
 
 def SmallStringSummaryProvider(valobj, internal_dict):

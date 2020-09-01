@@ -81,11 +81,6 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   equivalenceBlock_.clear();
 }
 
-static bool InCommonBlock(const Symbol &symbol) {
-  const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  return details && details->commonBlock();
-}
-
 void ComputeOffsetsHelper::DoScope(Scope &scope) {
   if (scope.symbol() && scope.IsParameterizedDerivedType()) {
     return; // only process instantiations of parameterized derived types
@@ -300,9 +295,8 @@ std::size_t ComputeOffsetsHelper::ComputeOffset(
 }
 
 void ComputeOffsetsHelper::DoSymbol(Symbol &symbol) {
-  if (symbol.has<TypeParamDetails>() || symbol.has<SubprogramDetails>() ||
-      symbol.has<UseDetails>() || symbol.has<ProcBindingDetails>()) {
-    return; // these have type but no size
+  if (!symbol.has<ObjectEntityDetails>() && !symbol.has<ProcEntityDetails>()) {
+    return;
   }
   SizeAndAlignment s{GetSizeAndAlignment(symbol)};
   if (s.size == 0) {
@@ -329,7 +323,7 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(const Symbol &symbol)
 auto ComputeOffsetsHelper::GetElementSize(const Symbol &symbol)
     -> SizeAndAlignment {
   const DeclTypeSpec *type{symbol.GetType()};
-  if (!type) {
+  if (!evaluate::DynamicType::From(type).has_value()) {
     return {};
   }
   // TODO: The size of procedure pointers is not yet known
@@ -396,13 +390,14 @@ auto ComputeOffsetsHelper::GetIntrinsicSizeAndAlignment(
   if (category == TypeCategory::Character) {
     return {static_cast<std::size_t>(kind)};
   }
-  std::optional<std::size_t> size{
-      evaluate::DynamicType{category, kind}.MeasureSizeInBytes()};
-  CHECK(size.has_value());
+  auto bytes{evaluate::ToInt64(
+      evaluate::DynamicType{category, kind}.MeasureSizeInBytes())};
+  CHECK(bytes && *bytes > 0);
+  std::size_t size{static_cast<std::size_t>(*bytes)};
   if (category == TypeCategory::Complex) {
-    return {*size, *size >> 1};
+    return {size, size >> 1};
   } else {
-    return {*size};
+    return {size};
   }
 }
 

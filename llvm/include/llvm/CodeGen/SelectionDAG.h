@@ -870,7 +870,7 @@ public:
 
   /// Returns sum of the base pointer and offset.
   /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap by default.
-  SDValue getMemBasePlusOffset(SDValue Base, int64_t Offset, const SDLoc &DL,
+  SDValue getMemBasePlusOffset(SDValue Base, TypeSize Offset, const SDLoc &DL,
                                const SDNodeFlags Flags = SDNodeFlags());
   SDValue getMemBasePlusOffset(SDValue Base, SDValue Offset, const SDLoc &DL,
                                const SDNodeFlags Flags = SDNodeFlags());
@@ -878,7 +878,7 @@ public:
   /// Create an add instruction with appropriate flags when used for
   /// addressing some offset of an object. i.e. if a load is split into multiple
   /// components, create an add nuw from the base pointer to the offset.
-  SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, int64_t Offset) {
+  SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, TypeSize Offset) {
     SDNodeFlags Flags;
     Flags.setNoUnsignedWrap(true);
     return getMemBasePlusOffset(Ptr, Offset, SL, Flags);

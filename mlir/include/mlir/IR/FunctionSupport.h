@@ -428,7 +428,7 @@ LogicalResult FunctionLike<ConcreteType>::verifyTrait(Operation *op) {
       if (!attr.first.strref().contains('.'))
         return funcOp.emitOpError("arguments may only have dialect attributes");
       auto dialectNamePair = attr.first.strref().split('.');
-      if (auto *dialect = ctx->getRegisteredDialect(dialectNamePair.first)) {
+      if (auto *dialect = ctx->getLoadedDialect(dialectNamePair.first)) {
         if (failed(dialect->verifyRegionArgAttribute(op, /*regionIndex=*/0,
                                                      /*argIndex=*/i, attr)))
           return failure();
@@ -444,7 +444,7 @@ LogicalResult FunctionLike<ConcreteType>::verifyTrait(Operation *op) {
       if (!attr.first.strref().contains('.'))
         return funcOp.emitOpError("results may only have dialect attributes");
       auto dialectNamePair = attr.first.strref().split('.');
-      if (auto *dialect = ctx->getRegisteredDialect(dialectNamePair.first)) {
+      if (auto *dialect = ctx->getLoadedDialect(dialectNamePair.first)) {
         if (failed(dialect->verifyRegionResultAttribute(op, /*regionIndex=*/0,
                                                         /*resultIndex=*/i,
                                                         attr)))

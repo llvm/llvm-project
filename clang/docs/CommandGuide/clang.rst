@@ -433,6 +433,12 @@ Code Generation Options
   never emit type information for types that are not referenced at all by the
   program.
 
+.. option:: -feliminate-unused-debug-types
+
+  By default, Clang does not emit type information for types that are defined
+  but not used in a program. To retain the debug info for these unused types,
+  the negation **-fno-eliminate-unused-debug-types** can be used.
+
 .. option:: -fexceptions
 
   Enable generation of unwind information. This allows exceptions to be thrown

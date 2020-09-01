@@ -298,6 +298,25 @@ BUILTIN(__builtin_altivec_vrldmi, "V2ULLiV2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vrlwnm, "V4UiV4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vrldnm, "V2ULLiV2ULLiV2ULLi", "")
 
+// P10 Vector Extract with Mask built-ins.
+BUILTIN(__builtin_altivec_vextractbm, "UiV16Uc", "")
+BUILTIN(__builtin_altivec_vextracthm, "UiV8Us", "")
+BUILTIN(__builtin_altivec_vextractwm, "UiV4Ui", "")
+BUILTIN(__builtin_altivec_vextractdm, "UiV2ULLi", "")
+BUILTIN(__builtin_altivec_vextractqm, "UiV1ULLLi", "")
+
+// P10 Vector Divide Extended built-ins.
+BUILTIN(__builtin_altivec_vdivesw, "V4SiV4SiV4Si", "")
+BUILTIN(__builtin_altivec_vdiveuw, "V4UiV4UiV4Ui", "")
+BUILTIN(__builtin_altivec_vdivesd, "V2LLiV2LLiV2LLi", "")
+BUILTIN(__builtin_altivec_vdiveud, "V2ULLiV2ULLiV2ULLi", "")
+
+// P10 Vector Multiply High built-ins.
+BUILTIN(__builtin_altivec_vmulhsw, "V4SiV4SiV4Si", "")
+BUILTIN(__builtin_altivec_vmulhuw, "V4UiV4UiV4Ui", "")
+BUILTIN(__builtin_altivec_vmulhsd, "V2LLiV2LLiV2LLi", "")
+BUILTIN(__builtin_altivec_vmulhud, "V2ULLiV2ULLiV2ULLi", "")
+
 // P10 Vector Parallel Bits built-ins.
 BUILTIN(__builtin_altivec_vpdepd, "V2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vpextd, "V2ULLiV2ULLiV2ULLi", "")
@@ -548,6 +567,12 @@ BUILTIN(__builtin_pack_vector_int128, "V1LLLiULLiULLi", "")
 
 // Set the floating point rounding mode
 BUILTIN(__builtin_setrnd, "di", "")
+
+// Get content from current FPSCR
+BUILTIN(__builtin_readflm, "d", "")
+
+// Set content of FPSCR, and return its content before update
+BUILTIN(__builtin_setflm, "dd", "")
 
 // Cache built-ins
 BUILTIN(__builtin_dcbf, "vvC*", "")

@@ -1,4 +1,4 @@
-# RUN: yaml2obj %p/Inputs/debug_rnglist_offset_pair.yaml > %ttest
+# RUN: yaml2obj %p/Inputs/debug_rnglist_offset_pair.yaml -o %ttest
 # RUN: lldb-test breakpoints %ttest %s | FileCheck %s
 
 # The following code and invocation were used to produce asm file,

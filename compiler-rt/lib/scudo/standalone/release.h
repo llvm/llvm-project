@@ -156,6 +156,11 @@ public:
     CurrentPage++;
   }
 
+  void skipPages(uptr N) {
+    closeOpenedRange();
+    CurrentPage += N;
+  }
+
   void finish() { closeOpenedRange(); }
 
 private:
@@ -174,11 +179,11 @@ private:
   uptr CurrentRangeStatePage = 0;
 };
 
-template <class TransferBatchT, class ReleaseRecorderT>
+template <class TransferBatchT, class ReleaseRecorderT, typename SkipRegionT>
 NOINLINE void
 releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
                       uptr RegionSize, uptr NumberOfRegions, uptr BlockSize,
-                      ReleaseRecorderT *Recorder) {
+                      ReleaseRecorderT *Recorder, SkipRegionT SkipRegion) {
   const uptr PageSize = getPageSizeCached();
 
   // Figure out the number of chunks per page and whether we can take a fast
@@ -283,10 +288,15 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
   FreePagesRangeTracker<ReleaseRecorderT> RangeTracker(Recorder);
   if (SameBlockCountPerPage) {
     // Fast path, every page has the same number of chunks affecting it.
-    for (uptr I = 0; I < NumberOfRegions; I++)
+    for (uptr I = 0; I < NumberOfRegions; I++) {
+      if (SkipRegion(I)) {
+        RangeTracker.skipPages(PagesCount);
+        continue;
+      }
       for (uptr J = 0; J < PagesCount; J++)
         RangeTracker.processNextPage(Counters.get(I, J) ==
                                      FullPagesBlockCountMax);
+    }
   } else {
     // Slow path, go through the pages keeping count how many chunks affect
     // each page.
@@ -298,6 +308,10 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
     // up the number of chunks on the current page and checking on every step
     // whether the page boundary was crossed.
     for (uptr I = 0; I < NumberOfRegions; I++) {
+      if (SkipRegion(I)) {
+        RangeTracker.skipPages(PagesCount);
+        continue;
+      }
       uptr PrevPageBoundary = 0;
       uptr CurrentBoundary = 0;
       for (uptr J = 0; J < PagesCount; J++) {

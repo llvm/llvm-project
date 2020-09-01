@@ -5,7 +5,7 @@ MISSING: 'nosuchfile.obj': {{[Nn]}}o such file or directory
 # RUN: lld-link --version | FileCheck -check-prefix=VERSION %s
 VERSION: {{LLD [0-9]+\.[0-9]+}}
 
-# RUN: yaml2obj < %p/Inputs/export.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/export.yaml -o %t.obj
 # RUN: lld-link /out:%t.dll /dll %t.obj
 # RUN: not lld-link /out:%t.exe %t.dll 2>&1 | FileCheck -check-prefix=BADFILE %s
 BADFILE: bad file type. Did you specify a DLL instead of an import library?
@@ -16,7 +16,7 @@ LIBHELP: OVERVIEW: LLVM Lib
 # RUN: not lld-link /WX /lib 2>&1 | FileCheck -check-prefix=LIBBAD %s
 LIBBAD: ignoring /lib since it's not the first argument
 
-# RUN: yaml2obj < %p/Inputs/hello32.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
 # RUN: not lld-link /out:/ %t.obj 2>&1 | FileCheck -check-prefix=DIR %s
 DIR: cannot open output file
 

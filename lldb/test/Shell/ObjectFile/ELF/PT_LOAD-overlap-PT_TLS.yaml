@@ -1,6 +1,6 @@
 # Overlapping PT_LOAD and PT_TLS segments should be able to exist side by side.
 
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: lldb-test object-file %t | FileCheck %s
 # RUN: %lldb %t -o "image lookup -a 0x1000" -b | FileCheck --check-prefix=LOOKUP %s
 

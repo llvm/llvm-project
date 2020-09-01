@@ -6,7 +6,7 @@
 // The frame header cache should work fine for other architectures,
 // but the #ifdefs end up being even more complicated than this.
 
-#ifdef __x86_64__
+#if defined(__x86_64__) && defined(_LIBUNWIND_USE_FRAME_HEADER_CACHE)
 
 // This #if chain is ugly, but see the comments in AddressSpace.hpp for
 // the reasoning.

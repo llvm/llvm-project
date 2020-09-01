@@ -371,9 +371,35 @@ llvm::shouldInline(CallBase &CB,
   return IC;
 }
 
+std::string llvm::getCallSiteLocation(DebugLoc DLoc) {
+  std::ostringstream CallSiteLoc;
+  bool First = true;
+  for (DILocation *DIL = DLoc.get(); DIL; DIL = DIL->getInlinedAt()) {
+    if (!First)
+      CallSiteLoc << " @ ";
+    // Note that negative line offset is actually possible, but we use
+    // unsigned int to match line offset representation in remarks so
+    // it's directly consumable by relay advisor.
+    uint32_t Offset =
+        DIL->getLine() - DIL->getScope()->getSubprogram()->getLine();
+    uint32_t Discriminator = DIL->getBaseDiscriminator();
+    StringRef Name = DIL->getScope()->getSubprogram()->getLinkageName();
+    if (Name.empty())
+      Name = DIL->getScope()->getSubprogram()->getName();
+    CallSiteLoc << Name.str() << ":" << llvm::utostr(Offset);
+    if (Discriminator) {
+      CallSiteLoc << "." << llvm::utostr(Discriminator);
+    }
+    First = false;
+  }
+
+  return CallSiteLoc.str();
+}
+
 void llvm::addLocationToRemarks(OptimizationRemark &Remark, DebugLoc DLoc) {
-  if (!DLoc.get())
+  if (!DLoc.get()) {
     return;
+  }
 
   bool First = true;
   Remark << " at callsite ";

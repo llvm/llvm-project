@@ -74,6 +74,20 @@ DECLARE__REAL_AND_INTERNAL(int, mprotect, void *addr, uptr length, int prot) {
   return _REAL(mprotect)(addr, length, prot);
 }
 
+// Illumos' declaration of madvise cannot be made visible if _XOPEN_SOURCE
+// is defined as g++ does on Solaris.
+//
+// This declaration is consistent with Solaris 11.4. Both Illumos and Solaris
+// versions older than 11.4 declared madvise with a caddr_t as the first
+// argument, but we don't currently support Solaris versions older than 11.4,
+// and as mentioned above the declaration is not visible on Illumos so we can
+// use any declaration we like on Illumos.
+extern "C" int madvise(void *, size_t, int);
+
+int internal_madvise(uptr addr, uptr length, int advice) {
+  return madvise((void *)addr, length, advice);
+}
+
 DECLARE__REAL_AND_INTERNAL(uptr, close, fd_t fd) {
   return _REAL(close)(fd);
 }

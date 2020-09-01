@@ -279,7 +279,7 @@ namespace pr12658 {
       virtual void f() = 0; // expected-note {{unimplemented pure virtual method 'f' in 'C'}}
   };
 
-  void foo( C& c ) {}
+  void foo(const C& c ) {}
 
   void bar( void ) {
     foo(C(99)); // expected-error {{allocating an object of abstract class type 'pr12658::C'}}

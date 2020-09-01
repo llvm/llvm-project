@@ -17,10 +17,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Name: .section (1)
     Type: SHT_PROGBITS
@@ -88,10 +87,9 @@ SectionHeaderTable:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
@@ -109,10 +107,9 @@ SectionHeaderTable:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
@@ -144,10 +141,9 @@ SectionHeaderTable:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
@@ -162,10 +158,9 @@ SectionHeaderTable:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
@@ -190,7 +185,6 @@ FileHeader:
   Class:     ELFCLASS64
   Data:      ELFDATA2LSB
   Type:      ET_REL
-  Machine:   EM_X86_64
   EShOff:    0x2
   EShNum:    0x3
   EShStrNdx: 0x4
@@ -228,10 +222,9 @@ SectionHeaderTable:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS

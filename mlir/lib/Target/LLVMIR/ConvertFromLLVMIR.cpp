@@ -183,14 +183,14 @@ Type Importer::getStdTypeForAttr(LLVMType type) {
   // LLVM vectors can only contain scalars.
   if (type.isVectorTy()) {
     auto numElements = type.getVectorElementCount();
-    if (numElements.Scalable) {
+    if (numElements.isScalable()) {
       emitError(unknownLoc) << "scalable vectors not supported";
       return nullptr;
     }
     Type elementType = getStdTypeForAttr(type.getVectorElementType());
     if (!elementType)
       return nullptr;
-    return VectorType::get(numElements.Min, elementType);
+    return VectorType::get(numElements.getKnownMinValue(), elementType);
   }
 
   // LLVM arrays can contain other arrays or vectors.
@@ -208,11 +208,11 @@ Type Importer::getStdTypeForAttr(LLVMType type) {
     if (type.getArrayElementType().isVectorTy()) {
       LLVMType vectorType = type.getArrayElementType();
       auto numElements = vectorType.getVectorElementCount();
-      if (numElements.Scalable) {
+      if (numElements.isScalable()) {
         emitError(unknownLoc) << "scalable vectors not supported";
         return nullptr;
       }
-      shape.push_back(numElements.Min);
+      shape.push_back(numElements.getKnownMinValue());
 
       Type elementType = getStdTypeForAttr(vectorType.getVectorElementType());
       if (!elementType)
@@ -836,6 +836,7 @@ LogicalResult Importer::processBasicBlock(llvm::BasicBlock *bb, Block *block) {
 OwningModuleRef
 mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                               MLIRContext *context) {
+  context->loadDialect<LLVMDialect>();
   OwningModuleRef module(ModuleOp::create(
       FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
 

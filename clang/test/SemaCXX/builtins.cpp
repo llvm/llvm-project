@@ -113,7 +113,7 @@ static_assert(&const_int == const_ptr, "");
 static_assert(const_ptr != test_constexpr_launder(&const_int2), "");
 
 void test_non_constexpr() {
-  constexpr int i = 42;                            // expected-note {{declared here}}
+  constexpr int i = 42;                            // expected-note {{address of non-static constexpr variable 'i' may differ on each invocation}}
   constexpr const int *ip = __builtin_launder(&i); // expected-error {{constexpr variable 'ip' must be initialized by a constant expression}}
   // expected-note@-1 {{pointer to 'i' is not a constant expression}}
 }

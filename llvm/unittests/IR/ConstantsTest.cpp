@@ -646,8 +646,8 @@ TEST(ConstantsTest, GetSplatValueRoundTrip) {
   Type *Int8Ty = Type::getInt8Ty(Context);
 
   for (unsigned Min : {1, 2, 8}) {
-    ElementCount ScalableEC = {Min, true};
-    ElementCount FixedEC = {Min, false};
+    auto ScalableEC = ElementCount::getScalable(Min);
+    auto FixedEC = ElementCount::getFixed(Min);
 
     for (auto EC : {ScalableEC, FixedEC}) {
       for (auto *Ty : {FloatTy, Int32Ty, Int8Ty}) {

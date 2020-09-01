@@ -360,6 +360,22 @@ bool FileSystem::ResolveExecutableLocation(FileSpec &file_spec) {
   return true;
 }
 
+bool FileSystem::GetHomeDirectory(SmallVectorImpl<char> &path) const {
+  if (!m_home_directory.empty()) {
+    path.assign(m_home_directory.begin(), m_home_directory.end());
+    return true;
+  }
+  return llvm::sys::path::home_directory(path);
+}
+
+bool FileSystem::GetHomeDirectory(FileSpec &file_spec) const {
+  SmallString<128> home_dir;
+  if (!GetHomeDirectory(home_dir))
+    return false;
+  file_spec.SetPath(home_dir);
+  return true;
+}
+
 static int OpenWithFS(const FileSystem &fs, const char *path, int flags,
                       int mode) {
   return const_cast<FileSystem &>(fs).Open(path, flags, mode);
@@ -494,4 +510,8 @@ void FileSystem::Collect(const llvm::Twine &file) {
     m_collector->addDirectory(file);
   else
     m_collector->addFile(file);
+}
+
+void FileSystem::SetHomeDirectory(std::string home_directory) {
+  m_home_directory = std::move(home_directory);
 }

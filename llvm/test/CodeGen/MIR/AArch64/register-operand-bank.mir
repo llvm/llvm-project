@@ -1,5 +1,4 @@
 # RUN: llc -o - %s -mtriple=aarch64-- -run-pass=none | FileCheck %s
-# REQUIRES: global-isel
 # Test various aspects of register bank specification on machine operands.
 --- |
   define void @func() { ret void }

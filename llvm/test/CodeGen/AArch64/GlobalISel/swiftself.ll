@@ -60,3 +60,14 @@ entry:
   store i8* %3, i8** %0, align 8
   ret void
 }
+
+; Check that x20 is used to pass a swiftself argument when the parameter is
+; only in the declaration's arguments.
+; CHECK-LABEL: _swiftself_not_on_call_params:
+; CHECK: mov x20, x0
+; CHECK: bl {{_?}}swiftself_param
+; CHECK: ret
+define i8 *@swiftself_not_on_call_params(i8* %arg) {
+  %res = call i8 *@swiftself_param(i8* %arg)
+  ret i8 *%res
+}

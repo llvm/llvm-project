@@ -4637,6 +4637,27 @@ bool LLParser::ParseDIBasicType(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+/// ParseDIStringType:
+///   ::= !DIStringType(name: "character(4)", size: 32, align: 32)
+bool LLParser::ParseDIStringType(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_string_type));                   \
+  OPTIONAL(name, MDStringField, );                                             \
+  OPTIONAL(stringLength, MDField, );                                           \
+  OPTIONAL(stringLengthExpression, MDField, );                                 \
+  OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
+  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
+  OPTIONAL(encoding, DwarfAttEncodingField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = GET_OR_DISTINCT(DIStringType,
+                           (Context, tag.Val, name.Val, stringLength.Val,
+                            stringLengthExpression.Val, size.Val, align.Val,
+                            encoding.Val));
+  return false;
+}
+
 /// ParseDIDerivedType:
 ///   ::= !DIDerivedType(tag: DW_TAG_pointer_type, name: "int", file: !0,
 ///                      line: 7, scope: !1, baseType: !2, size: 32,
@@ -7395,7 +7416,7 @@ int LLParser::ParseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   // All vector parameters should have the same vector width.
   ElementCount GEPWidth = BaseType->isVectorTy()
                               ? cast<VectorType>(BaseType)->getElementCount()
-                              : ElementCount(0, false);
+                              : ElementCount::getFixed(0);
 
   while (EatIfPresent(lltok::comma)) {
     if (Lex.getKind() == lltok::MetadataVar) {
@@ -7408,7 +7429,7 @@ int LLParser::ParseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
 
     if (auto *ValVTy = dyn_cast<VectorType>(Val->getType())) {
       ElementCount ValNumEl = ValVTy->getElementCount();
-      if (GEPWidth != ElementCount(0, false) && GEPWidth != ValNumEl)
+      if (GEPWidth != ElementCount::getFixed(0) && GEPWidth != ValNumEl)
         return Error(EltLoc,
           "getelementptr vector index has a wrong number of elements");
       GEPWidth = ValNumEl;
@@ -8722,7 +8743,8 @@ bool LLParser::ParseParamAccessOffset(ConstantRange &Range) {
 
 /// ParamAccessCall
 ///   := '(' 'callee' ':' GVReference ',' ParamNo ',' ParamAccessOffset ')'
-bool LLParser::ParseParamAccessCall(FunctionSummary::ParamAccess::Call &Call) {
+bool LLParser::ParseParamAccessCall(FunctionSummary::ParamAccess::Call &Call,
+                                    IdLocListType &IdLocList) {
   if (ParseToken(lltok::lparen, "expected '(' here") ||
       ParseToken(lltok::kw_callee, "expected 'callee' here") ||
       ParseToken(lltok::colon, "expected ':' here"))
@@ -8730,10 +8752,12 @@ bool LLParser::ParseParamAccessCall(FunctionSummary::ParamAccess::Call &Call) {
 
   unsigned GVId;
   ValueInfo VI;
+  LocTy Loc = Lex.getLoc();
   if (ParseGVReference(VI, GVId))
     return true;
 
-  Call.Callee = VI.getGUID();
+  Call.Callee = VI;
+  IdLocList.emplace_back(GVId, Loc);
 
   if (ParseToken(lltok::comma, "expected ',' here") ||
       ParseParamNo(Call.ParamNo) ||
@@ -8750,7 +8774,8 @@ bool LLParser::ParseParamAccessCall(FunctionSummary::ParamAccess::Call &Call) {
 /// ParamAccess
 ///   := '(' ParamNo ',' ParamAccessOffset [',' OptionalParamAccessCalls]? ')'
 /// OptionalParamAccessCalls := '(' Call [',' Call]* ')'
-bool LLParser::ParseParamAccess(FunctionSummary::ParamAccess &Param) {
+bool LLParser::ParseParamAccess(FunctionSummary::ParamAccess &Param,
+                                IdLocListType &IdLocList) {
   if (ParseToken(lltok::lparen, "expected '(' here") ||
       ParseParamNo(Param.ParamNo) ||
       ParseToken(lltok::comma, "expected ',' here") ||
@@ -8764,7 +8789,7 @@ bool LLParser::ParseParamAccess(FunctionSummary::ParamAccess &Param) {
       return true;
     do {
       FunctionSummary::ParamAccess::Call Call;
-      if (ParseParamAccessCall(Call))
+      if (ParseParamAccessCall(Call, IdLocList))
         return true;
       Param.Calls.push_back(Call);
     } while (EatIfPresent(lltok::comma));
@@ -8790,15 +8815,32 @@ bool LLParser::ParseOptionalParamAccesses(
       ParseToken(lltok::lparen, "expected '(' here"))
     return true;
 
+  IdLocListType VContexts;
+  size_t CallsNum = 0;
   do {
     FunctionSummary::ParamAccess ParamAccess;
-    if (ParseParamAccess(ParamAccess))
+    if (ParseParamAccess(ParamAccess, VContexts))
       return true;
-    Params.push_back(ParamAccess);
+    CallsNum += ParamAccess.Calls.size();
+    assert(VContexts.size() == CallsNum);
+    Params.emplace_back(std::move(ParamAccess));
   } while (EatIfPresent(lltok::comma));
 
   if (ParseToken(lltok::rparen, "expected ')' here"))
     return true;
+
+  // Now that the Params is finalized, it is safe to save the locations
+  // of any forward GV references that need updating later.
+  IdLocListType::const_iterator ItContext = VContexts.begin();
+  for (auto &PA : Params) {
+    for (auto &C : PA.Calls) {
+      if (C.Callee.getRef() == FwdVIRef)
+        ForwardRefValueInfos[ItContext->first].emplace_back(&C.Callee,
+                                                            ItContext->second);
+      ++ItContext;
+    }
+  }
+  assert(ItContext == VContexts.end());
 
   return false;
 }

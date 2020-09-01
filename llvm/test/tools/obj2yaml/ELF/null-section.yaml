@@ -9,7 +9,7 @@
 # FIRST-SEC-NEXT:   Class:   ELFCLASS64
 # FIRST-SEC-NEXT:   Data:    ELFDATA2LSB
 # FIRST-SEC-NEXT:   Type:    ET_REL
-# FIRST-SEC-NEXT:   Machine: EM_X86_64
+# FIRST-SEC-NEXT:   Machine: EM_NONE
 # FIRST-SEC-NEXT: Sections:
 # FIRST-SEC-NEXT:   - Type:         SHT_NULL
 # FIRST-SEC-NEXT:     Flags:        [ SHF_ALLOC ]
@@ -25,10 +25,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Type:         SHT_NULL
     Name:         ''
@@ -52,7 +51,7 @@ Sections:
 # SECOND-SEC-NEXT:   Class:   ELFCLASS64
 # SECOND-SEC-NEXT:   Data:    ELFDATA2LSB
 # SECOND-SEC-NEXT:   Type:    ET_REL
-# SECOND-SEC-NEXT:   Machine: EM_X86_64
+# SECOND-SEC-NEXT:   Machine: EM_NONE
 # SECOND-SEC-NEXT: Sections:
 # SECOND-SEC-NEXT:   - Name:         .foo
 # SECOND-SEC-NEXT:     Type:         SHT_PROGBITS
@@ -68,10 +67,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Type: SHT_PROGBITS
     Name: .foo
@@ -96,7 +94,7 @@ Sections:
 # NULL-SEC-NEXT:   Class:   ELFCLASS64
 # NULL-SEC-NEXT:   Data:    ELFDATA2LSB
 # NULL-SEC-NEXT:   Type:    ET_REL
-# NULL-SEC-NEXT:   Machine: EM_X86_64
+# NULL-SEC-NEXT:   Machine: EM_NONE
 # NULL-SEC-NEXT: Sections:
 # NULL-SEC-NEXT:   - Name: .foo
 # NULL-SEC-NEXT:     Type: SHT_PROGBITS
@@ -104,10 +102,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Type: SHT_NULL
   - Type: SHT_PROGBITS
@@ -124,7 +121,7 @@ Sections:
 # NULL-SEC-MIDDLE-NEXT:   Class:   ELFCLASS64
 # NULL-SEC-MIDDLE-NEXT:   Data:    ELFDATA2LSB
 # NULL-SEC-MIDDLE-NEXT:   Type:    ET_REL
-# NULL-SEC-MIDDLE-NEXT:   Machine: EM_X86_64
+# NULL-SEC-MIDDLE-NEXT:   Machine: EM_NONE
 # NULL-SEC-MIDDLE-NEXT: Sections:
 # NULL-SEC-MIDDLE-NEXT:   - Name: .foo
 # NULL-SEC-MIDDLE-NEXT:     Type: SHT_PROGBITS
@@ -133,10 +130,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Type: SHT_PROGBITS
     Name: .foo

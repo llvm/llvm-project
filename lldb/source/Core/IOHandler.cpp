@@ -18,6 +18,7 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
 #include "lldb/Utility/Predicate.h"
+#include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
@@ -195,6 +196,14 @@ void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
   }
 }
 
+llvm::Optional<std::string>
+IOHandlerDelegate::IOHandlerSuggestion(IOHandler &io_handler,
+                                       llvm::StringRef line) {
+  return io_handler.GetDebugger()
+      .GetCommandInterpreter()
+      .GetAutoSuggestionForCommand(line);
+}
+
 void IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
                                           CompletionRequest &request) {
   switch (m_completion) {
@@ -258,6 +267,8 @@ IOHandlerEditline::IOHandlerEditline(
                                                m_color_prompts);
     m_editline_up->SetIsInputCompleteCallback(IsInputCompleteCallback, this);
     m_editline_up->SetAutoCompleteCallback(AutoCompleteCallback, this);
+    if (debugger.GetUseAutosuggestion() && debugger.GetUseColor())
+      m_editline_up->SetSuggestionCallback(SuggestionCallback, this);
     // See if the delegate supports fixing indentation
     const char *indent_chars = delegate.IOHandlerGetFixIndentationCharacters();
     if (indent_chars) {
@@ -428,6 +439,16 @@ int IOHandlerEditline::FixIndentationCallback(Editline *editline,
   IOHandlerEditline *editline_reader = (IOHandlerEditline *)baton;
   return editline_reader->m_delegate.IOHandlerFixIndentation(
       *editline_reader, lines, cursor_position);
+}
+
+llvm::Optional<std::string>
+IOHandlerEditline::SuggestionCallback(llvm::StringRef line, void *baton) {
+  IOHandlerEditline *editline_reader = static_cast<IOHandlerEditline *>(baton);
+  if (editline_reader)
+    return editline_reader->m_delegate.IOHandlerSuggestion(*editline_reader,
+                                                           line);
+
+  return llvm::None;
 }
 
 void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request,

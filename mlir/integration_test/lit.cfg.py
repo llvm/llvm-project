@@ -36,7 +36,7 @@ llvm_config.with_system_environment(['HOME', 'INCLUDE', 'LIB', 'TMP', 'TEMP'])
 
 llvm_config.use_default_substitutions()
 
-# excludes: A list of directories to exclude from the integraiton testsuite.
+# excludes: A list of directories to exclude from the integration testsuite.
 config.excludes = ['CMakeLists.txt', 'README.txt', 'LICENSE.txt']
 
 # Tweak the PATH to include the tools dir.

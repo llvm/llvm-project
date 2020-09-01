@@ -81,7 +81,7 @@ In this case, the ``basic-aa`` pass will disambiguate the stores to ``C[0]`` and
 ``C[1]`` because they are accesses to two distinct locations one byte apart, and
 the accesses are each one byte.  In this case, the Loop Invariant Code Motion
 (LICM) pass can use store motion to remove the stores from the loop.  In
-constrast, the following code:
+contrast, the following code:
 
 .. code-block:: c++
 

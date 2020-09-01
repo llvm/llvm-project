@@ -78,9 +78,9 @@ The size of data is specified by size suffices:
     xyz               b96                 3
     xyzw              b128                4
     d16_x             b16                 1
-    d16_xy            b16x2               2 for GFX8.0, 1 for GFX8.1 and GFX9
-    d16_xyz           b16x3               3 for GFX8.0, 2 for GFX8.1 and GFX9
-    d16_xyzw          b16x4               4 for GFX8.0, 2 for GFX8.1 and GFX9
+    d16_xy            b16x2               2 for GFX8.0, 1 for GFX8.1 and GFX9+
+    d16_xyz           b16x3               3 for GFX8.0, 2 for GFX8.1 and GFX9+
+    d16_xyzw          b16x4               4 for GFX8.0, 2 for GFX8.1 and GFX9+
     ================= =================== =====================================
 
 .. WARNING::

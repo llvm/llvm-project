@@ -42,8 +42,10 @@ public:
     if (offset < 0 || offset + bytes > data_.size()) {
       return OutOfRange;
     } else {
-      auto elementBytes{x.GetType().MeasureSizeInBytes()};
-      if (!elementBytes || bytes != x.values().size() * *elementBytes) {
+      auto elementBytes{ToInt64(x.GetType().MeasureSizeInBytes())};
+      if (!elementBytes ||
+          bytes !=
+              x.values().size() * static_cast<std::size_t>(*elementBytes)) {
         return SizeMismatch;
       } else {
         std::memcpy(&data_.at(offset), &x.values().at(0), bytes);

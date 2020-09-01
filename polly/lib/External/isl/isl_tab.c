@@ -292,7 +292,7 @@ struct isl_tab *isl_tab_dup(struct isl_tab *tab)
 	dup->need_undo = 0;
 	dup->in_undo = 0;
 	dup->M = tab->M;
-	tab->cone = tab->cone;
+	dup->cone = tab->cone;
 	dup->bottom.type = isl_tab_undo_bottom;
 	dup->bottom.next = NULL;
 	dup->top = &dup->bottom;
@@ -320,8 +320,8 @@ error:
  * The order of the rows and columns in the result is as explained
  * in isl_tab_product.
  */
-static struct isl_mat *tab_mat_product(struct isl_mat *mat1,
-	struct isl_mat *mat2, unsigned row1, unsigned row2,
+static __isl_give isl_mat *tab_mat_product(__isl_keep isl_mat *mat1,
+	__isl_keep isl_mat *mat2, unsigned row1, unsigned row2,
 	unsigned col1, unsigned col2,
 	unsigned off, unsigned r1, unsigned r2, unsigned d1, unsigned d2)
 {
@@ -2573,7 +2573,7 @@ static struct isl_vec *extract_integer_sample(struct isl_tab *tab)
 	return vec;
 }
 
-struct isl_vec *isl_tab_get_sample_value(struct isl_tab *tab)
+__isl_give isl_vec *isl_tab_get_sample_value(struct isl_tab *tab)
 {
 	int i;
 	struct isl_vec *vec;
@@ -2632,8 +2632,8 @@ static void get_rounded_sample_value(struct isl_tab *tab,
  * The tableau is assumed to have been created from "bmap" using
  * isl_tab_from_basic_map.
  */
-struct isl_basic_map *isl_basic_map_update_from_tab(struct isl_basic_map *bmap,
-	struct isl_tab *tab)
+__isl_give isl_basic_map *isl_basic_map_update_from_tab(
+	__isl_take isl_basic_map *bmap, struct isl_tab *tab)
 {
 	int i;
 	unsigned n_eq;
@@ -2661,8 +2661,8 @@ struct isl_basic_map *isl_basic_map_update_from_tab(struct isl_basic_map *bmap,
 	return bmap;
 }
 
-struct isl_basic_set *isl_basic_set_update_from_tab(struct isl_basic_set *bset,
-	struct isl_tab *tab)
+__isl_give isl_basic_set *isl_basic_set_update_from_tab(
+	__isl_take isl_basic_set *bset, struct isl_tab *tab)
 {
 	return bset_from_bmap(isl_basic_map_update_from_tab(bset_to_bmap(bset),
 								tab));

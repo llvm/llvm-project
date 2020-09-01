@@ -15,6 +15,7 @@
 #include "llvm/Analysis/RegionPass.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
+#include "llvm/IR/StructuralHash.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -90,15 +91,29 @@ bool RGPassManager::runOnFunction(Function &F) {
 
       initializeAnalysisImpl(P);
 
+      bool LocalChanged = false;
       {
         PassManagerPrettyStackEntry X(P, *CurrentRegion->getEntry());
 
         TimeRegion PassTimer(getPassTimer(P));
-        Changed |= P->runOnRegion(CurrentRegion, *this);
+#ifdef EXPENSIVE_CHECKS
+        uint64_t RefHash = StructuralHash(F);
+#endif
+        LocalChanged = P->runOnRegion(CurrentRegion, *this);
+
+#ifdef EXPENSIVE_CHECKS
+        if (!LocalChanged && (RefHash != StructuralHash(F))) {
+          llvm::errs() << "Pass modifies its input and doesn't report it: "
+                       << P->getPassName() << "\n";
+          llvm_unreachable("Pass modifies its input and doesn't report it");
+        }
+#endif
+
+        Changed |= LocalChanged;
       }
 
       if (isPassDebuggingExecutionsOrMore()) {
-        if (Changed)
+        if (LocalChanged)
           dumpPassInfo(P, MODIFICATION_MSG, ON_REGION_MSG,
                        skipThisRegion ? "<deleted>" :
                                       CurrentRegion->getNameStr());
@@ -120,7 +135,8 @@ bool RGPassManager::runOnFunction(Function &F) {
         verifyPreservedAnalysis(P);
       }
 
-      removeNotPreservedAnalysis(P);
+      if (LocalChanged)
+        removeNotPreservedAnalysis(P);
       recordAvailableAnalysis(P);
       removeDeadPasses(P,
                        (!isPassDebuggingExecutionsOrMore() || skipThisRegion) ?

@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: yaml2obj < %p/Inputs/hello32.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
 #
 # RUN: lld-link -safeseh:no %t.obj /fixed %p/Inputs/std32.lib /subsystem:console \
 # RUN:   /entry:main@0 /debug /out:%t.fixed.exe
@@ -10,7 +10,7 @@
 # RUN:   /entry:main@0 /debug /out:%t.exe
 # RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=EXEREL %s
 #
-# RUN: yaml2obj < %p/Inputs/export.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/export.yaml -o %t.obj
 #
 # RUN: lld-link -safeseh:no %t.obj /dll /fixed /debug /out:%t.fixed.dll
 # RUN: llvm-readobj --file-headers %t.fixed.dll | FileCheck -check-prefix=DLLFIXED %s

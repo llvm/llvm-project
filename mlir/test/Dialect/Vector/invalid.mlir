@@ -343,28 +343,18 @@ func @test_vector.transfer_read(%arg0: memref<?x?xvector<4x3xf32>>) {
   %c3 = constant 3 : index
   %f0 = constant 0.0 : f32
   %vf0 = splat %f0 : vector<4x3xf32>
-  // expected-error@+1 {{requires memref and vector types of the same elemental type}}
-  %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<4x3xf32>>, vector<1x1x4x3xi32>
-}
-
-// -----
-
-func @test_vector.transfer_read(%arg0: memref<?x?xvector<4x3xf32>>) {
-  %c3 = constant 3 : index
-  %f0 = constant 0.0 : f32
-  %vf0 = splat %f0 : vector<4x3xf32>
   // expected-error@+1 {{requires memref vector element and vector result ranks to match}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<4x3xf32>>, vector<3xf32>
 }
 
 // -----
 
-func @test_vector.transfer_read(%arg0: memref<?x?xvector<4x3xf32>>) {
+func @test_vector.transfer_read(%arg0: memref<?x?xvector<6xf32>>) {
   %c3 = constant 3 : index
   %f0 = constant 0.0 : f32
-  %vf0 = splat %f0 : vector<4x3xf32>
-  // expected-error@+1 {{ requires memref vector element shape to match suffix of vector result shape}}
-  %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<4x3xf32>>, vector<1x1x2x3xf32>
+  %vf0 = splat %f0 : vector<6xf32>
+  // expected-error@+1 {{requires the bitwidth of the minor 1-D vector to be an integral multiple of the bitwidth of the minor 1-D vector of the memref}}
+  %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 : memref<?x?xvector<6xf32>>, vector<3xf32>
 }
 
 // -----
@@ -1071,6 +1061,34 @@ func @shape_cast_different_tuple_sizes(
   // expected-error@+1 {{op source/result tuples must be the same size}}
   %1 = vector.shape_cast %arg1 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
                                  tuple<vector<20x2xf32>>
+}
+
+// -----
+
+func @bitcast_not_vector(%arg0 : vector<5x1x3x2xf32>) {
+  // expected-error@+1 {{must be vector of any type values}}
+  %0 = vector.bitcast %arg0 : vector<5x1x3x2xf32> to f32
+}
+
+// -----
+
+func @bitcast_rank_mismatch(%arg0 : vector<5x1x3x2xf32>) {
+  // expected-error@+1 {{op failed to verify that all of {source, result} have same rank}}
+  %0 = vector.bitcast %arg0 : vector<5x1x3x2xf32> to vector<5x3x2xf32>
+}
+
+// -----
+
+func @bitcast_shape_mismatch(%arg0 : vector<5x1x3x2xf32>) {
+  // expected-error@+1 {{op dimension size mismatch}}
+  %0 = vector.bitcast %arg0 : vector<5x1x3x2xf32> to vector<5x2x3x2xf32>
+}
+
+// -----
+
+func @bitcast_sizemismatch(%arg0 : vector<5x1x3x2xf32>) {
+  // expected-error@+1 {{op source/result bitwidth of the minor 1-D vectors must be equal}}
+  %0 = vector.bitcast %arg0 : vector<5x1x3x2xf32> to vector<5x1x3x3xf16>
 }
 
 // -----

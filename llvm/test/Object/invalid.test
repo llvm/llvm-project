@@ -249,10 +249,10 @@ Symbols: []
 
 # RUN: yaml2obj %s --docnum=12 -o %t12
 # RUN: yaml2obj %s --docnum=13 -o %t13
-# RUN: not llvm-readobj -r %t12 2>&1 | FileCheck -DFILE=%t12 --check-prefix=INVALID-RELOC-SH-OFFSET %s
-# RUN: not llvm-readobj -r %t13 2>&1 | FileCheck -DFILE=%t13 --check-prefix=INVALID-RELOC-SH-OFFSET %s
+# RUN: llvm-readobj -r %t12 2>&1 | FileCheck -DFILE=%t12 --check-prefix=INVALID-RELOC-SH-OFFSET -DTYPE=SHT_REL %s
+# RUN: llvm-readobj -r %t13 2>&1 | FileCheck -DFILE=%t13 --check-prefix=INVALID-RELOC-SH-OFFSET -DTYPE=SHT_RELA %s
 
-# INVALID-RELOC-SH-OFFSET: error: '[[FILE]]': section [index 1] has a sh_offset (0x10000) + sh_size (0x0) that is greater than the file size (0x160)
+# INVALID-RELOC-SH-OFFSET: warning: '[[FILE]]': unable to read relocations from [[TYPE]] section with index 1: section [index 1] has a sh_offset (0x10000) + sh_size (0x0) that is greater than the file size (0x160)
 
 --- !ELF
 FileHeader:
@@ -489,7 +489,7 @@ Sections:
 # RUN: yaml2obj %s --docnum=22 -o %t22
 # RUN: llvm-readobj --dyn-relocations %t22 2>&1 | FileCheck -DFILE=%t22 --check-prefix=DYN-TABLE-PHDR %s
 
-# DYN-TABLE-PHDR: warning: '[[FILE]]': PT_DYNAMIC segment offset + size exceeds the size of the file
+# DYN-TABLE-PHDR: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffff0000) + file size (0x0) exceeds the size of the file (0x150)
 
 --- !ELF
 FileHeader:
@@ -506,7 +506,9 @@ ProgramHeaders:
 
 # RUN: yaml2obj %s --docnum=23 -o %t23
 # RUN: llvm-readobj --dyn-relocations %t23 2>&1 \
-# RUN:  | FileCheck -DFILE=%t23 --check-prefix=DYN-TABLE-PHDR %s
+# RUN:  | FileCheck -DFILE=%t23 --check-prefix=DYN-TABLE-PHDR2 %s
+
+# DYN-TABLE-PHDR2: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x78) + file size (0xffff0000) exceeds the size of the file (0x1a8)
 
 --- !ELF
 FileHeader:

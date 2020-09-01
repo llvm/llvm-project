@@ -184,10 +184,11 @@ static syntax::NodeKind getOperatorNodeKind(const CXXOperatorCallExpr &E) {
   case OO_Array_New:
   case OO_Array_Delete:
   case OO_Coawait:
-  case OO_Call:
   case OO_Subscript:
   case OO_Arrow:
     return syntax::NodeKind::UnknownExpression;
+  case OO_Call:
+    return syntax::NodeKind::CallExpression;
   case OO_Conditional: // not overloadable
   case NUM_OVERLOADED_OPERATORS:
   case OO_None:
@@ -196,18 +197,58 @@ static syntax::NodeKind getOperatorNodeKind(const CXXOperatorCallExpr &E) {
   llvm_unreachable("Unknown OverloadedOperatorKind enum");
 }
 
+/// Get the start of the qualified name. In the examples below it gives the
+/// location of the `^`:
+///     `int ^a;`
+///     `int *^a;`
+///     `int ^a::S::f(){}`
+static SourceLocation getQualifiedNameStart(NamedDecl *D) {
+  assert((isa<DeclaratorDecl, TypedefNameDecl>(D)) &&
+         "only DeclaratorDecl and TypedefNameDecl are supported.");
+
+  auto DN = D->getDeclName();
+  bool IsAnonymous = DN.isIdentifier() && !DN.getAsIdentifierInfo();
+  if (IsAnonymous)
+    return SourceLocation();
+
+  if (const auto *DD = dyn_cast<DeclaratorDecl>(D)) {
+    if (DD->getQualifierLoc()) {
+      return DD->getQualifierLoc().getBeginLoc();
+    }
+  }
+
+  return D->getLocation();
+}
+
+/// Gets the range of the initializer inside an init-declarator C++ [dcl.decl].
+///     `int a;` -> range of ``,
+///     `int *a = nullptr` -> range of `= nullptr`.
+///     `int a{}` -> range of `{}`.
+///     `int a()` -> range of `()`.
+static SourceRange getInitializerRange(Decl *D) {
+  if (auto *V = dyn_cast<VarDecl>(D)) {
+    auto *I = V->getInit();
+    // Initializers in range-based-for are not part of the declarator
+    if (I && !V->isCXXForRangeDecl())
+      return I->getSourceRange();
+  }
+
+  return SourceRange();
+}
+
 /// Gets the range of declarator as defined by the C++ grammar. E.g.
 ///     `int a;` -> range of `a`,
 ///     `int *a;` -> range of `*a`,
 ///     `int a[10];` -> range of `a[10]`,
 ///     `int a[1][2][3];` -> range of `a[1][2][3]`,
 ///     `int *a = nullptr` -> range of `*a = nullptr`.
-/// FIMXE: \p Name must be a source range, e.g. for `operator+`.
+///     `int S::f(){}` -> range of `S::f()`.
+/// FIXME: \p Name must be a source range.
 static SourceRange getDeclaratorRange(const SourceManager &SM, TypeLoc T,
                                       SourceLocation Name,
                                       SourceRange Initializer) {
   SourceLocation Start = GetStartLoc().Visit(T);
-  SourceLocation End = T.getSourceRange().getEnd();
+  SourceLocation End = T.getEndLoc();
   assert(End.isValid());
   if (Name.isValid()) {
     if (Start.isInvalid())
@@ -241,10 +282,24 @@ public:
     assert(Added && "mapping added twice");
   }
 
+  void add(NestedNameSpecifierLoc From, syntax::Tree *To) {
+    assert(To != nullptr);
+    assert(From.hasQualifier());
+
+    bool Added = NNSNodes.insert({From, To}).second;
+    (void)Added;
+    assert(Added && "mapping added twice");
+  }
+
   syntax::Tree *find(ASTPtr P) const { return Nodes.lookup(P); }
+
+  syntax::Tree *find(NestedNameSpecifierLoc P) const {
+    return NNSNodes.lookup(P);
+  }
 
 private:
   llvm::DenseMap<ASTPtr, syntax::Tree *> Nodes;
+  llvm::DenseMap<NestedNameSpecifierLoc, syntax::Tree *> NNSNodes;
 };
 } // namespace
 
@@ -281,16 +336,20 @@ public:
     if (From)
       Mapping.add(From, New);
   }
+
   void foldNode(ArrayRef<syntax::Token> Range, syntax::Tree *New, TypeLoc L) {
     // FIXME: add mapping for TypeLocs
     foldNode(Range, New, nullptr);
   }
 
-  void foldNode(ArrayRef<syntax::Token> Range, syntax::Tree *New,
-                NestedNameSpecifierLoc L) {
-    // FIXME: add mapping for NestedNameSpecifierLoc
-    foldNode(Range, New, nullptr);
+  void foldNode(llvm::ArrayRef<syntax::Token> Range, syntax::Tree *New,
+                NestedNameSpecifierLoc From) {
+    assert(New);
+    Pending.foldChildren(Arena, Range, New);
+    if (From)
+      Mapping.add(From, New);
   }
+
   /// Notifies that we should not consume trailing semicolon when computing
   /// token range of \p D.
   void noticeDeclWithoutSemicolon(Decl *D);
@@ -312,6 +371,8 @@ public:
   void markChild(syntax::Node *N, NodeRole R);
   /// Set role for the syntax node matching \p N.
   void markChild(ASTPtr N, NodeRole R);
+  /// Set role for the syntax node matching \p N.
+  void markChild(NestedNameSpecifierLoc N, NodeRole R);
 
   /// Finish building the tree and consume the root node.
   syntax::TranslationUnit *finalize() && {
@@ -357,11 +418,9 @@ public:
 
   /// Returns true if \p D is the last declarator in a chain and is thus
   /// reponsible for creating SimpleDeclaration for the whole chain.
-  template <class T>
-  bool isResponsibleForCreatingDeclaration(const T *D) const {
-    static_assert((std::is_base_of<DeclaratorDecl, T>::value ||
-                   std::is_base_of<TypedefNameDecl, T>::value),
-                  "only DeclaratorDecl and TypedefNameDecl are supported.");
+  bool isResponsibleForCreatingDeclaration(const Decl *D) const {
+    assert((isa<DeclaratorDecl, TypedefNameDecl>(D)) &&
+           "only DeclaratorDecl and TypedefNameDecl are supported.");
 
     const Decl *Next = D->getNextDeclInContext();
 
@@ -369,15 +428,14 @@ public:
     if (Next == nullptr) {
       return true;
     }
-    const auto *NextT = dyn_cast<T>(Next);
 
     // Next sibling is not the same type, this one is responsible.
-    if (NextT == nullptr) {
+    if (D->getKind() != Next->getKind()) {
       return true;
     }
     // Next sibling doesn't begin at the same loc, it must be a different
     // declaration, so this declarator is responsible.
-    if (NextT->getBeginLoc() != D->getBeginLoc()) {
+    if (Next->getBeginLoc() != D->getBeginLoc()) {
       return true;
     }
 
@@ -526,7 +584,7 @@ private:
         R += std::string(
             formatv("- '{0}' covers '{1}'+{2} tokens\n", It->second->kind(),
                     It->first->text(A.sourceManager()), CoveredTokens));
-        R += It->second->dump(A);
+        R += It->second->dump(A.sourceManager());
       }
       return R;
     }
@@ -641,7 +699,7 @@ public:
 
     Builder.markChildToken(S->getLBracLoc(), NodeRole::OpenParen);
     for (auto *Child : S->body())
-      Builder.markStmtChild(Child, NodeRole::CompoundStatement_statement);
+      Builder.markStmtChild(Child, NodeRole::Statement);
     Builder.markChildToken(S->getRBracLoc(), NodeRole::CloseParen);
 
     Builder.foldNode(Builder.getStmtRange(S),
@@ -744,45 +802,18 @@ public:
     return true;
   }
 
-  syntax::NameSpecifier *BuildNameSpecifier(const NestedNameSpecifier &NNS) {
-    switch (NNS.getKind()) {
-    case NestedNameSpecifier::Global:
-      return new (allocator()) syntax::GlobalNameSpecifier;
-    case NestedNameSpecifier::Namespace:
-    case NestedNameSpecifier::NamespaceAlias:
-    case NestedNameSpecifier::Identifier:
-      return new (allocator()) syntax::IdentifierNameSpecifier;
-    case NestedNameSpecifier::TypeSpecWithTemplate:
-      return new (allocator()) syntax::SimpleTemplateNameSpecifier;
-    case NestedNameSpecifier::TypeSpec: {
-      const auto *NNSType = NNS.getAsType();
-      assert(NNSType);
-      if (isa<DecltypeType>(NNSType))
-        return new (allocator()) syntax::DecltypeNameSpecifier;
-      if (isa<TemplateSpecializationType, DependentTemplateSpecializationType>(
-              NNSType))
-        return new (allocator()) syntax::SimpleTemplateNameSpecifier;
-      return new (allocator()) syntax::IdentifierNameSpecifier;
-    }
-    case NestedNameSpecifier::Super:
-      // FIXME: Support Microsoft's __super
-      llvm::report_fatal_error("We don't yet support the __super specifier",
-                               true);
-    }
-    llvm_unreachable("Unhandled NestedNameSpecifier::SpecifierKind enum");
-  }
-
   // FIXME: Fix `NestedNameSpecifierLoc::getLocalSourceRange` for the
   // `DependentTemplateSpecializationType` case.
-  /// Given a nested-name-specifier return the range for the last name specifier
+  /// Given a nested-name-specifier return the range for the last name
+  /// specifier.
   ///
   /// e.g. `std::T::template X<U>::` => `template X<U>::`
   SourceRange getLocalSourceRange(const NestedNameSpecifierLoc &NNSLoc) {
     auto SR = NNSLoc.getLocalSourceRange();
 
-    // The method `NestedNameSpecifierLoc::getLocalSourceRange` *should* return
-    // the desired `SourceRange`, but there is a corner
-    // case. For a `DependentTemplateSpecializationType` this method returns its
+    // The method `NestedNameSpecifierLoc::getLocalSourceRange` *should*
+    // return the desired `SourceRange`, but there is a corner case. For a
+    // `DependentTemplateSpecializationType` this method returns its
     // qualifiers as well, in other words in the example above this method
     // returns `T::template X<U>::` instead of only `template X<U>::`
     if (auto TL = NNSLoc.getTypeLoc()) {
@@ -798,76 +829,175 @@ public:
     return SR;
   }
 
-  syntax::NestedNameSpecifier *
-  BuildNestedNameSpecifier(const NestedNameSpecifierLoc &QualifierLoc) {
-    if (!QualifierLoc)
-      return nullptr;
-    for (auto it = QualifierLoc; it; it = it.getPrefix()) {
-      assert(it.hasQualifier());
-      auto *NS = BuildNameSpecifier(*it.getNestedNameSpecifier());
-      assert(NS);
-      if (!isa<syntax::GlobalNameSpecifier>(NS))
-        Builder.foldNode(Builder.getRange(getLocalSourceRange(it)).drop_back(),
-                         NS, it);
-      Builder.markChild(NS, syntax::NodeRole::NestedNameSpecifier_specifier);
-      Builder.markChildToken(it.getEndLoc(),
-                             syntax::NodeRole::NestedNameSpecifier_delimiter);
+  syntax::NodeKind getNameSpecifierKind(const NestedNameSpecifier &NNS) {
+    switch (NNS.getKind()) {
+    case NestedNameSpecifier::Global:
+      return syntax::NodeKind::GlobalNameSpecifier;
+    case NestedNameSpecifier::Namespace:
+    case NestedNameSpecifier::NamespaceAlias:
+    case NestedNameSpecifier::Identifier:
+      return syntax::NodeKind::IdentifierNameSpecifier;
+    case NestedNameSpecifier::TypeSpecWithTemplate:
+      return syntax::NodeKind::SimpleTemplateNameSpecifier;
+    case NestedNameSpecifier::TypeSpec: {
+      const auto *NNSType = NNS.getAsType();
+      assert(NNSType);
+      if (isa<DecltypeType>(NNSType))
+        return syntax::NodeKind::DecltypeNameSpecifier;
+      if (isa<TemplateSpecializationType, DependentTemplateSpecializationType>(
+              NNSType))
+        return syntax::NodeKind::SimpleTemplateNameSpecifier;
+      return syntax::NodeKind::IdentifierNameSpecifier;
     }
-    auto *NNS = new (allocator()) syntax::NestedNameSpecifier;
-    Builder.foldNode(Builder.getRange(QualifierLoc.getSourceRange()), NNS,
+    default:
+      // FIXME: Support Microsoft's __super
+      llvm::report_fatal_error("We don't yet support the __super specifier",
+                               true);
+    }
+  }
+
+  syntax::NameSpecifier *
+  buildNameSpecifier(const NestedNameSpecifierLoc &NNSLoc) {
+    assert(NNSLoc.hasQualifier());
+    auto NameSpecifierTokens =
+        Builder.getRange(getLocalSourceRange(NNSLoc)).drop_back();
+    switch (getNameSpecifierKind(*NNSLoc.getNestedNameSpecifier())) {
+    case syntax::NodeKind::GlobalNameSpecifier:
+      return new (allocator()) syntax::GlobalNameSpecifier;
+    case syntax::NodeKind::IdentifierNameSpecifier: {
+      assert(NameSpecifierTokens.size() == 1);
+      Builder.markChildToken(NameSpecifierTokens.begin(),
+                             syntax::NodeRole::Unknown);
+      auto *NS = new (allocator()) syntax::IdentifierNameSpecifier;
+      Builder.foldNode(NameSpecifierTokens, NS, nullptr);
+      return NS;
+    }
+    case syntax::NodeKind::SimpleTemplateNameSpecifier: {
+      // TODO: Build `SimpleTemplateNameSpecifier` children and implement
+      // accessors to them.
+      // Be aware, we cannot do that simply by calling `TraverseTypeLoc`,
+      // some `TypeLoc`s have inside them the previous name specifier and
+      // we want to treat them independently.
+      auto *NS = new (allocator()) syntax::SimpleTemplateNameSpecifier;
+      Builder.foldNode(NameSpecifierTokens, NS, nullptr);
+      return NS;
+    }
+    case syntax::NodeKind::DecltypeNameSpecifier: {
+      const auto TL = NNSLoc.getTypeLoc().castAs<DecltypeTypeLoc>();
+      if (!RecursiveASTVisitor::TraverseDecltypeTypeLoc(TL))
+        return nullptr;
+      auto *NS = new (allocator()) syntax::DecltypeNameSpecifier;
+      // TODO: Implement accessor to `DecltypeNameSpecifier` inner
+      // `DecltypeTypeLoc`.
+      // For that add mapping from `TypeLoc` to `syntax::Node*` then:
+      // Builder.markChild(TypeLoc, syntax::NodeRole);
+      Builder.foldNode(NameSpecifierTokens, NS, nullptr);
+      return NS;
+    }
+    default:
+      llvm_unreachable("getChildKind() does not return this value");
+    }
+  }
+
+  // To build syntax tree nodes for NestedNameSpecifierLoc we override
+  // Traverse instead of WalkUpFrom because we want to traverse the children
+  // ourselves and build a list instead of a nested tree of name specifier
+  // prefixes.
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc QualifierLoc) {
+    if (!QualifierLoc)
+      return true;
+    for (auto it = QualifierLoc; it; it = it.getPrefix()) {
+      auto *NS = buildNameSpecifier(it);
+      if (!NS)
+        return false;
+      Builder.markChild(NS, syntax::NodeRole::ListElement);
+      Builder.markChildToken(it.getEndLoc(), syntax::NodeRole::ListDelimiter);
+    }
+    Builder.foldNode(Builder.getRange(QualifierLoc.getSourceRange()),
+                     new (allocator()) syntax::NestedNameSpecifier,
                      QualifierLoc);
-    return NNS;
+    return true;
+  }
+
+  syntax::IdExpression *buildIdExpression(NestedNameSpecifierLoc QualifierLoc,
+                                          SourceLocation TemplateKeywordLoc,
+                                          SourceRange UnqualifiedIdLoc,
+                                          ASTPtr From) {
+    if (QualifierLoc) {
+      Builder.markChild(QualifierLoc, syntax::NodeRole::Qualifier);
+      if (TemplateKeywordLoc.isValid())
+        Builder.markChildToken(TemplateKeywordLoc,
+                               syntax::NodeRole::TemplateKeyword);
+    }
+
+    auto *TheUnqualifiedId = new (allocator()) syntax::UnqualifiedId;
+    Builder.foldNode(Builder.getRange(UnqualifiedIdLoc), TheUnqualifiedId,
+                     nullptr);
+    Builder.markChild(TheUnqualifiedId, syntax::NodeRole::UnqualifiedId);
+
+    auto IdExpressionBeginLoc =
+        QualifierLoc ? QualifierLoc.getBeginLoc() : UnqualifiedIdLoc.getBegin();
+
+    auto *TheIdExpression = new (allocator()) syntax::IdExpression;
+    Builder.foldNode(
+        Builder.getRange(IdExpressionBeginLoc, UnqualifiedIdLoc.getEnd()),
+        TheIdExpression, From);
+
+    return TheIdExpression;
+  }
+
+  bool WalkUpFromMemberExpr(MemberExpr *S) {
+    // For `MemberExpr` with implicit `this->` we generate a simple
+    // `id-expression` syntax node, beacuse an implicit `member-expression` is
+    // syntactically undistinguishable from an `id-expression`
+    if (S->isImplicitAccess()) {
+      buildIdExpression(S->getQualifierLoc(), S->getTemplateKeywordLoc(),
+                        SourceRange(S->getMemberLoc(), S->getEndLoc()), S);
+      return true;
+    }
+
+    auto *TheIdExpression = buildIdExpression(
+        S->getQualifierLoc(), S->getTemplateKeywordLoc(),
+        SourceRange(S->getMemberLoc(), S->getEndLoc()), nullptr);
+
+    Builder.markChild(TheIdExpression, syntax::NodeRole::Member);
+
+    Builder.markExprChild(S->getBase(), syntax::NodeRole::Object);
+    Builder.markChildToken(S->getOperatorLoc(), syntax::NodeRole::AccessToken);
+
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::MemberExpression, S);
+    return true;
   }
 
   bool WalkUpFromDeclRefExpr(DeclRefExpr *S) {
-    auto *Qualifier = BuildNestedNameSpecifier(S->getQualifierLoc());
-    if (Qualifier)
-      Builder.markChild(Qualifier, syntax::NodeRole::IdExpression_qualifier);
+    buildIdExpression(S->getQualifierLoc(), S->getTemplateKeywordLoc(),
+                      SourceRange(S->getLocation(), S->getEndLoc()), S);
 
-    auto TemplateKeywordLoc = S->getTemplateKeywordLoc();
-    if (TemplateKeywordLoc.isValid())
-      Builder.markChildToken(TemplateKeywordLoc,
-                             syntax::NodeRole::TemplateKeyword);
-
-    auto *unqualifiedId = new (allocator()) syntax::UnqualifiedId;
-
-    Builder.foldNode(Builder.getRange(S->getLocation(), S->getEndLoc()),
-                     unqualifiedId, nullptr);
-
-    Builder.markChild(unqualifiedId, syntax::NodeRole::IdExpression_id);
-
-    Builder.foldNode(Builder.getExprRange(S),
-                     new (allocator()) syntax::IdExpression, S);
     return true;
   }
 
   // Same logic as DeclRefExpr.
   bool WalkUpFromDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *S) {
-    auto *Qualifier = BuildNestedNameSpecifier(S->getQualifierLoc());
-    if (Qualifier)
-      Builder.markChild(Qualifier, syntax::NodeRole::IdExpression_qualifier);
+    buildIdExpression(S->getQualifierLoc(), S->getTemplateKeywordLoc(),
+                      SourceRange(S->getLocation(), S->getEndLoc()), S);
 
-    auto TemplateKeywordLoc = S->getTemplateKeywordLoc();
-    if (TemplateKeywordLoc.isValid())
-      Builder.markChildToken(TemplateKeywordLoc,
-                             syntax::NodeRole::TemplateKeyword);
+    return true;
+  }
 
-    auto *unqualifiedId = new (allocator()) syntax::UnqualifiedId;
-
-    Builder.foldNode(Builder.getRange(S->getLocation(), S->getEndLoc()),
-                     unqualifiedId, nullptr);
-
-    Builder.markChild(unqualifiedId, syntax::NodeRole::IdExpression_id);
-
-    Builder.foldNode(Builder.getExprRange(S),
-                     new (allocator()) syntax::IdExpression, S);
+  bool WalkUpFromCXXThisExpr(CXXThisExpr *S) {
+    if (!S->isImplicit()) {
+      Builder.markChildToken(S->getLocation(),
+                             syntax::NodeRole::IntroducerKeyword);
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::ThisExpression, S);
+    }
     return true;
   }
 
   bool WalkUpFromParenExpr(ParenExpr *S) {
     Builder.markChildToken(S->getLParen(), syntax::NodeRole::OpenParen);
-    Builder.markExprChild(S->getSubExpr(),
-                          syntax::NodeRole::ParenExpression_subExpression);
+    Builder.markExprChild(S->getSubExpr(), syntax::NodeRole::SubExpression);
     Builder.markChildToken(S->getRParen(), syntax::NodeRole::CloseParen);
     Builder.foldNode(Builder.getExprRange(S),
                      new (allocator()) syntax::ParenExpression, S);
@@ -918,9 +1048,8 @@ public:
 
   bool WalkUpFromUnaryOperator(UnaryOperator *S) {
     Builder.markChildToken(S->getOperatorLoc(),
-                           syntax::NodeRole::OperatorExpression_operatorToken);
-    Builder.markExprChild(S->getSubExpr(),
-                          syntax::NodeRole::UnaryOperatorExpression_operand);
+                           syntax::NodeRole::OperatorToken);
+    Builder.markExprChild(S->getSubExpr(), syntax::NodeRole::Operand);
 
     if (S->isPostfix())
       Builder.foldNode(Builder.getExprRange(S),
@@ -935,74 +1064,124 @@ public:
   }
 
   bool WalkUpFromBinaryOperator(BinaryOperator *S) {
-    Builder.markExprChild(
-        S->getLHS(), syntax::NodeRole::BinaryOperatorExpression_leftHandSide);
+    Builder.markExprChild(S->getLHS(), syntax::NodeRole::LeftHandSide);
     Builder.markChildToken(S->getOperatorLoc(),
-                           syntax::NodeRole::OperatorExpression_operatorToken);
-    Builder.markExprChild(
-        S->getRHS(), syntax::NodeRole::BinaryOperatorExpression_rightHandSide);
+                           syntax::NodeRole::OperatorToken);
+    Builder.markExprChild(S->getRHS(), syntax::NodeRole::RightHandSide);
     Builder.foldNode(Builder.getExprRange(S),
                      new (allocator()) syntax::BinaryOperatorExpression, S);
     return true;
   }
 
+  syntax::CallArguments *buildCallArguments(CallExpr::arg_range Args) {
+    for (const auto &Arg : Args) {
+      Builder.markExprChild(Arg, syntax::NodeRole::ListElement);
+      const auto *DelimiterToken =
+          std::next(Builder.findToken(Arg->getEndLoc()));
+      if (DelimiterToken->kind() == clang::tok::TokenKind::comma)
+        Builder.markChildToken(DelimiterToken, syntax::NodeRole::ListDelimiter);
+    }
+
+    auto *Arguments = new (allocator()) syntax::CallArguments;
+    if (!Args.empty())
+      Builder.foldNode(Builder.getRange((*Args.begin())->getBeginLoc(),
+                                        (*(Args.end() - 1))->getEndLoc()),
+                       Arguments, nullptr);
+
+    return Arguments;
+  }
+
+  bool WalkUpFromCallExpr(CallExpr *S) {
+    Builder.markExprChild(S->getCallee(), syntax::NodeRole::Callee);
+
+    const auto *LParenToken =
+        std::next(Builder.findToken(S->getCallee()->getEndLoc()));
+    // FIXME: Assert that `LParenToken` is indeed a `l_paren` once we have fixed
+    // the test on decltype desctructors.
+    if (LParenToken->kind() == clang::tok::l_paren)
+      Builder.markChildToken(LParenToken, syntax::NodeRole::OpenParen);
+
+    Builder.markChild(buildCallArguments(S->arguments()),
+                      syntax::NodeRole::Arguments);
+
+    Builder.markChildToken(S->getRParenLoc(), syntax::NodeRole::CloseParen);
+
+    Builder.foldNode(Builder.getRange(S->getSourceRange()),
+                     new (allocator()) syntax::CallExpression, S);
+    return true;
+  }
+
   bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
-    if (getOperatorNodeKind(*S) ==
-        syntax::NodeKind::PostfixUnaryOperatorExpression) {
+    // To construct a syntax tree of the same shape for calls to built-in and
+    // user-defined operators, ignore the `DeclRefExpr` that refers to the
+    // operator and treat it as a simple token. Do that by traversing
+    // arguments instead of children.
+    for (auto *child : S->arguments()) {
       // A postfix unary operator is declared as taking two operands. The
       // second operand is used to distinguish from its prefix counterpart. In
       // the semantic AST this "phantom" operand is represented as a
       // `IntegerLiteral` with invalid `SourceLocation`. We skip visiting this
       // operand because it does not correspond to anything written in source
-      // code
-      for (auto *child : S->children()) {
-        if (child->getSourceRange().isInvalid())
-          continue;
-        if (!TraverseStmt(child))
-          return false;
+      // code.
+      if (child->getSourceRange().isInvalid()) {
+        assert(getOperatorNodeKind(*S) ==
+               syntax::NodeKind::PostfixUnaryOperatorExpression);
+        continue;
       }
-      return WalkUpFromCXXOperatorCallExpr(S);
-    } else
-      return RecursiveASTVisitor::TraverseCXXOperatorCallExpr(S);
+      if (!TraverseStmt(child))
+        return false;
+    }
+    return WalkUpFromCXXOperatorCallExpr(S);
   }
 
   bool WalkUpFromCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
     switch (getOperatorNodeKind(*S)) {
     case syntax::NodeKind::BinaryOperatorExpression:
-      Builder.markExprChild(
-          S->getArg(0),
-          syntax::NodeRole::BinaryOperatorExpression_leftHandSide);
-      Builder.markChildToken(
-          S->getOperatorLoc(),
-          syntax::NodeRole::OperatorExpression_operatorToken);
-      Builder.markExprChild(
-          S->getArg(1),
-          syntax::NodeRole::BinaryOperatorExpression_rightHandSide);
+      Builder.markExprChild(S->getArg(0), syntax::NodeRole::LeftHandSide);
+      Builder.markChildToken(S->getOperatorLoc(),
+                             syntax::NodeRole::OperatorToken);
+      Builder.markExprChild(S->getArg(1), syntax::NodeRole::RightHandSide);
       Builder.foldNode(Builder.getExprRange(S),
                        new (allocator()) syntax::BinaryOperatorExpression, S);
       return true;
     case syntax::NodeKind::PrefixUnaryOperatorExpression:
-      Builder.markChildToken(
-          S->getOperatorLoc(),
-          syntax::NodeRole::OperatorExpression_operatorToken);
-      Builder.markExprChild(S->getArg(0),
-                            syntax::NodeRole::UnaryOperatorExpression_operand);
+      Builder.markChildToken(S->getOperatorLoc(),
+                             syntax::NodeRole::OperatorToken);
+      Builder.markExprChild(S->getArg(0), syntax::NodeRole::Operand);
       Builder.foldNode(Builder.getExprRange(S),
                        new (allocator()) syntax::PrefixUnaryOperatorExpression,
                        S);
       return true;
     case syntax::NodeKind::PostfixUnaryOperatorExpression:
-      Builder.markChildToken(
-          S->getOperatorLoc(),
-          syntax::NodeRole::OperatorExpression_operatorToken);
-      Builder.markExprChild(S->getArg(0),
-                            syntax::NodeRole::UnaryOperatorExpression_operand);
+      Builder.markChildToken(S->getOperatorLoc(),
+                             syntax::NodeRole::OperatorToken);
+      Builder.markExprChild(S->getArg(0), syntax::NodeRole::Operand);
       Builder.foldNode(Builder.getExprRange(S),
                        new (allocator()) syntax::PostfixUnaryOperatorExpression,
                        S);
       return true;
+    case syntax::NodeKind::CallExpression: {
+      Builder.markExprChild(S->getArg(0), syntax::NodeRole::Callee);
+
+      const auto *LParenToken =
+          std::next(Builder.findToken(S->getArg(0)->getEndLoc()));
+      // FIXME: Assert that `LParenToken` is indeed a `l_paren` once we have
+      // fixed the test on decltype desctructors.
+      if (LParenToken->kind() == clang::tok::l_paren)
+        Builder.markChildToken(LParenToken, syntax::NodeRole::OpenParen);
+
+      Builder.markChild(buildCallArguments(CallExpr::arg_range(
+                            S->arg_begin() + 1, S->arg_end())),
+                        syntax::NodeRole::Arguments);
+
+      Builder.markChildToken(S->getRParenLoc(), syntax::NodeRole::CloseParen);
+
+      Builder.foldNode(Builder.getRange(S->getSourceRange()),
+                       new (allocator()) syntax::CallExpression, S);
+      return true;
+    }
     case syntax::NodeKind::UnknownExpression:
-      return RecursiveASTVisitor::WalkUpFromCXXOperatorCallExpr(S);
+      return WalkUpFromExpr(S);
     default:
       llvm_unreachable("getOperatorNodeKind() does not return this value");
     }
@@ -1040,19 +1219,35 @@ public:
   // Declarator chunks, they are produced by type locs and some clang::Decls.
   bool WalkUpFromArrayTypeLoc(ArrayTypeLoc L) {
     Builder.markChildToken(L.getLBracketLoc(), syntax::NodeRole::OpenParen);
-    Builder.markExprChild(L.getSizeExpr(),
-                          syntax::NodeRole::ArraySubscript_sizeExpression);
+    Builder.markExprChild(L.getSizeExpr(), syntax::NodeRole::Size);
     Builder.markChildToken(L.getRBracketLoc(), syntax::NodeRole::CloseParen);
     Builder.foldNode(Builder.getRange(L.getLBracketLoc(), L.getRBracketLoc()),
                      new (allocator()) syntax::ArraySubscript, L);
     return true;
   }
 
+  syntax::ParameterDeclarationList *
+  buildParameterDeclarationList(ArrayRef<ParmVarDecl *> Params) {
+    for (auto *P : Params) {
+      Builder.markChild(P, syntax::NodeRole::ListElement);
+      const auto *DelimiterToken = std::next(Builder.findToken(P->getEndLoc()));
+      if (DelimiterToken->kind() == clang::tok::TokenKind::comma)
+        Builder.markChildToken(DelimiterToken, syntax::NodeRole::ListDelimiter);
+    }
+    auto *Parameters = new (allocator()) syntax::ParameterDeclarationList;
+    if (!Params.empty())
+      Builder.foldNode(Builder.getRange(Params.front()->getBeginLoc(),
+                                        Params.back()->getEndLoc()),
+                       Parameters, nullptr);
+    return Parameters;
+  }
+
   bool WalkUpFromFunctionTypeLoc(FunctionTypeLoc L) {
     Builder.markChildToken(L.getLParenLoc(), syntax::NodeRole::OpenParen);
-    for (auto *P : L.getParams()) {
-      Builder.markChild(P, syntax::NodeRole::ParametersAndQualifiers_parameter);
-    }
+
+    Builder.markChild(buildParameterDeclarationList(L.getParams()),
+                      syntax::NodeRole::Parameters);
+
     Builder.markChildToken(L.getRParenLoc(), syntax::NodeRole::CloseParen);
     Builder.foldNode(Builder.getRange(L.getLParenLoc(), L.getEndLoc()),
                      new (allocator()) syntax::ParametersAndQualifiers, L);
@@ -1063,10 +1258,9 @@ public:
     if (!L.getTypePtr()->hasTrailingReturn())
       return WalkUpFromFunctionTypeLoc(L);
 
-    auto *TrailingReturnTokens = BuildTrailingReturn(L);
+    auto *TrailingReturnTokens = buildTrailingReturn(L);
     // Finish building the node for parameters.
-    Builder.markChild(TrailingReturnTokens,
-                      syntax::NodeRole::ParametersAndQualifiers_trailingReturn);
+    Builder.markChild(TrailingReturnTokens, syntax::NodeRole::TrailingReturn);
     return WalkUpFromFunctionTypeLoc(L);
   }
 
@@ -1114,7 +1308,7 @@ public:
   bool WalkUpFromCaseStmt(CaseStmt *S) {
     Builder.markChildToken(S->getKeywordLoc(),
                            syntax::NodeRole::IntroducerKeyword);
-    Builder.markExprChild(S->getLHS(), syntax::NodeRole::CaseStatement_value);
+    Builder.markExprChild(S->getLHS(), syntax::NodeRole::CaseValue);
     Builder.markStmtChild(S->getSubStmt(), syntax::NodeRole::BodyStatement);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::CaseStatement, S);
@@ -1132,12 +1326,9 @@ public:
 
   bool WalkUpFromIfStmt(IfStmt *S) {
     Builder.markChildToken(S->getIfLoc(), syntax::NodeRole::IntroducerKeyword);
-    Builder.markStmtChild(S->getThen(),
-                          syntax::NodeRole::IfStatement_thenStatement);
-    Builder.markChildToken(S->getElseLoc(),
-                           syntax::NodeRole::IfStatement_elseKeyword);
-    Builder.markStmtChild(S->getElse(),
-                          syntax::NodeRole::IfStatement_elseStatement);
+    Builder.markStmtChild(S->getThen(), syntax::NodeRole::ThenStatement);
+    Builder.markChildToken(S->getElseLoc(), syntax::NodeRole::ElseKeyword);
+    Builder.markStmtChild(S->getElse(), syntax::NodeRole::ElseStatement);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::IfStatement, S);
     return true;
@@ -1179,8 +1370,7 @@ public:
   bool WalkUpFromReturnStmt(ReturnStmt *S) {
     Builder.markChildToken(S->getReturnLoc(),
                            syntax::NodeRole::IntroducerKeyword);
-    Builder.markExprChild(S->getRetValue(),
-                          syntax::NodeRole::ReturnStatement_value);
+    Builder.markExprChild(S->getRetValue(), syntax::NodeRole::ReturnValue);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::ReturnStatement, S);
     return true;
@@ -1201,10 +1391,8 @@ public:
   }
 
   bool WalkUpFromStaticAssertDecl(StaticAssertDecl *S) {
-    Builder.markExprChild(S->getAssertExpr(),
-                          syntax::NodeRole::StaticAssertDeclaration_condition);
-    Builder.markExprChild(S->getMessage(),
-                          syntax::NodeRole::StaticAssertDeclaration_message);
+    Builder.markExprChild(S->getAssertExpr(), syntax::NodeRole::Condition);
+    Builder.markExprChild(S->getMessage(), syntax::NodeRole::Message);
     Builder.foldNode(Builder.getDeclarationRange(S),
                      new (allocator()) syntax::StaticAssertDeclaration, S);
     return true;
@@ -1254,50 +1442,19 @@ public:
   }
 
 private:
-  template <class T> SourceLocation getQualifiedNameStart(T *D) {
-    static_assert((std::is_base_of<DeclaratorDecl, T>::value ||
-                   std::is_base_of<TypedefNameDecl, T>::value),
-                  "only DeclaratorDecl and TypedefNameDecl are supported.");
-
-    auto DN = D->getDeclName();
-    bool IsAnonymous = DN.isIdentifier() && !DN.getAsIdentifierInfo();
-    if (IsAnonymous)
-      return SourceLocation();
-
-    if (const auto *DD = dyn_cast<DeclaratorDecl>(D)) {
-      if (DD->getQualifierLoc()) {
-        return DD->getQualifierLoc().getBeginLoc();
-      }
-    }
-
-    return D->getLocation();
-  }
-
-  SourceRange getInitializerRange(Decl *D) {
-    if (auto *V = dyn_cast<VarDecl>(D)) {
-      auto *I = V->getInit();
-      // Initializers in range-based-for are not part of the declarator
-      if (I && !V->isCXXForRangeDecl())
-        return I->getSourceRange();
-    }
-
-    return SourceRange();
-  }
-
   /// Folds SimpleDeclarator node (if present) and in case this is the last
   /// declarator in the chain it also folds SimpleDeclaration node.
   template <class T> bool processDeclaratorAndDeclaration(T *D) {
-    SourceRange Initializer = getInitializerRange(D);
-    auto Range = getDeclaratorRange(Builder.sourceManager(),
-                                    D->getTypeSourceInfo()->getTypeLoc(),
-                                    getQualifiedNameStart(D), Initializer);
+    auto Range = getDeclaratorRange(
+        Builder.sourceManager(), D->getTypeSourceInfo()->getTypeLoc(),
+        getQualifiedNameStart(D), getInitializerRange(D));
 
     // There doesn't have to be a declarator (e.g. `void foo(int)` only has
     // declaration, but no declarator).
     if (Range.getBegin().isValid()) {
       auto *N = new (allocator()) syntax::SimpleDeclarator;
       Builder.foldNode(Builder.getRange(Range), N, nullptr);
-      Builder.markChild(N, syntax::NodeRole::SimpleDeclaration_declarator);
+      Builder.markChild(N, syntax::NodeRole::Declarator);
     }
 
     if (Builder.isResponsibleForCreatingDeclaration(D)) {
@@ -1308,15 +1465,13 @@ private:
   }
 
   /// Returns the range of the built node.
-  syntax::TrailingReturnType *BuildTrailingReturn(FunctionProtoTypeLoc L) {
+  syntax::TrailingReturnType *buildTrailingReturn(FunctionProtoTypeLoc L) {
     assert(L.getTypePtr()->hasTrailingReturn());
 
     auto ReturnedType = L.getReturnLoc();
     // Build node for the declarator, if any.
-    auto ReturnDeclaratorRange =
-        getDeclaratorRange(this->Builder.sourceManager(), ReturnedType,
-                           /*Name=*/SourceLocation(),
-                           /*Initializer=*/SourceLocation());
+    auto ReturnDeclaratorRange = SourceRange(GetStartLoc().Visit(ReturnedType),
+                                             ReturnedType.getEndLoc());
     syntax::SimpleDeclarator *ReturnDeclarator = nullptr;
     if (ReturnDeclaratorRange.isValid()) {
       ReturnDeclarator = new (allocator()) syntax::SimpleDeclarator;
@@ -1331,8 +1486,7 @@ private:
     auto Tokens = llvm::makeArrayRef(Arrow, Return.end());
     Builder.markChildToken(Arrow, syntax::NodeRole::ArrowToken);
     if (ReturnDeclarator)
-      Builder.markChild(ReturnDeclarator,
-                        syntax::NodeRole::TrailingReturnType_declarator);
+      Builder.markChild(ReturnDeclarator, syntax::NodeRole::Declarator);
     auto *R = new (allocator()) syntax::TrailingReturnType;
     Builder.foldNode(Tokens, R, L);
     return R;
@@ -1346,9 +1500,7 @@ private:
     assert(TemplateKW && TemplateKW->kind() == tok::kw_template);
     Builder.markChildToken(ExternKW, syntax::NodeRole::ExternKeyword);
     Builder.markChildToken(TemplateKW, syntax::NodeRole::IntroducerKeyword);
-    Builder.markChild(
-        InnerDeclaration,
-        syntax::NodeRole::ExplicitTemplateInstantiation_declaration);
+    Builder.markChild(InnerDeclaration, syntax::NodeRole::Declaration);
     Builder.foldNode(
         Range, new (allocator()) syntax::ExplicitTemplateInstantiation, From);
   }
@@ -1361,7 +1513,7 @@ private:
 
     auto *N = new (allocator()) syntax::TemplateDeclaration;
     Builder.foldNode(Range, N, From);
-    Builder.markChild(N, syntax::NodeRole::TemplateDeclaration_declaration);
+    Builder.markChild(N, syntax::NodeRole::Declaration);
     return N;
   }
 
@@ -1399,6 +1551,11 @@ void syntax::TreeBuilder::markChild(ASTPtr N, NodeRole R) {
   assert(SN != nullptr);
   setRole(SN, R);
 }
+void syntax::TreeBuilder::markChild(NestedNameSpecifierLoc NNSLoc, NodeRole R) {
+  auto *SN = Mapping.find(NNSLoc);
+  assert(SN != nullptr);
+  setRole(SN, R);
+}
 
 void syntax::TreeBuilder::markStmtChild(Stmt *Child, NodeRole Role) {
   if (!Child)
@@ -1408,7 +1565,7 @@ void syntax::TreeBuilder::markStmtChild(Stmt *Child, NodeRole Role) {
   if (Expr *ChildExpr = dyn_cast<Expr>(Child)) {
     // This is an expression in a statement position, consume the trailing
     // semicolon and form an 'ExpressionStatement' node.
-    markExprChild(ChildExpr, NodeRole::ExpressionStatement_expression);
+    markExprChild(ChildExpr, NodeRole::Expression);
     ChildNode = new (allocator()) syntax::ExpressionStatement;
     // (!) 'getStmtRange()' ensures this covers a trailing semicolon.
     Pending.foldChildren(Arena, getStmtRange(Child), ChildNode);

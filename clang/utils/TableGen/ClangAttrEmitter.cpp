@@ -329,6 +329,8 @@ namespace {
         // empty string but are then recorded as a nullptr.
         OS << "\" << (get" << getUpperName() << "() ? get" << getUpperName()
            << "()->getName() : \"\") << \"";
+      else if (type == "VarDecl *")
+        OS << "\" << get" << getUpperName() << "()->getName() << \"";
       else if (type == "TypeSourceInfo *")
         OS << "\" << get" << getUpperName() << "().getAsString() << \"";
       else if (type == "ParamIdx")
@@ -3064,18 +3066,22 @@ static void GenerateHasAttrSpellingStringSwitch(
     // attribute version information should be taken from the SD-6 standing
     // document, which can be found at:
     // https://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations
+    //
+    // C2x-style attributes have the same kind of version information
+    // associated with them. The unscoped attribute version information should
+    // be taken from the specification of the attribute in the C Standard.
     int Version = 1;
 
-    if (Variety == "CXX11") {
-        std::vector<Record *> Spellings = Attr->getValueAsListOfDefs("Spellings");
-        for (const auto &Spelling : Spellings) {
-          if (Spelling->getValueAsString("Variety") == "CXX11") {
-            Version = static_cast<int>(Spelling->getValueAsInt("Version"));
-            if (Scope.empty() && Version == 1)
-              PrintError(Spelling->getLoc(), "C++ standard attributes must "
-              "have valid version information.");
-            break;
-          }
+    if (Variety == "CXX11" || Variety == "C2x") {
+      std::vector<Record *> Spellings = Attr->getValueAsListOfDefs("Spellings");
+      for (const auto &Spelling : Spellings) {
+        if (Spelling->getValueAsString("Variety") == Variety) {
+          Version = static_cast<int>(Spelling->getValueAsInt("Version"));
+          if (Scope.empty() && Version == 1)
+            PrintError(Spelling->getLoc(), "Standard attributes must have "
+                                           "valid version information.");
+          break;
+        }
       }
     }
 

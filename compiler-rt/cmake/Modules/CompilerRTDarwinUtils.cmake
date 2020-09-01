@@ -399,7 +399,8 @@ macro(darwin_add_builtin_libraries)
                       ../profile/InstrProfilingBuffer
                       ../profile/InstrProfilingPlatformDarwin
                       ../profile/InstrProfilingWriter
-                      ../profile/InstrProfilingInternal)
+                      ../profile/InstrProfilingInternal
+                      ../profile/InstrProfilingVersionVar)
   foreach (os ${ARGN})
     list_intersect(DARWIN_BUILTIN_ARCHS DARWIN_${os}_BUILTIN_ARCHS BUILTIN_SUPPORTED_ARCH)
     foreach (arch ${DARWIN_BUILTIN_ARCHS})

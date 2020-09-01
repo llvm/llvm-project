@@ -1,5 +1,5 @@
-# RUN: yaml2obj < %s > %t1.obj
-# RUN: yaml2obj < %s > %t2.obj
+# RUN: yaml2obj %s -o %t1.obj
+# RUN: yaml2obj %s -o %t2.obj
 
 # RUN: not lld-link /out:%t.exe /entry:main %t1.obj %t2.obj >& %t.log
 # RUN: FileCheck -check-prefix=ERROR %s < %t.log

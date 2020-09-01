@@ -46,6 +46,24 @@ class DirectiveLanguage {
 
   // EnumSet class name used for clauses to generated the allowed clauses map.
   string clauseEnumSetClass = "";
+
+  // Class holding the clauses in the flang parse-tree.
+  string flangClauseBaseClass = "";
+}
+
+// Information about values accepted by enum-like clauses
+class ClauseVal<string n, int v, bit uv> {
+  // Name of the clause value.
+  string name = n;
+
+  // Integer value of the clause.
+  int value = v;
+
+  // Can user specify this value?
+  bit isUserValue = uv;
+
+  // Set clause value used by default when unknown.
+  bit isDefault = 0;
 }
 
 // Information about a specific clause.
@@ -57,16 +75,37 @@ class Clause<string c> {
   string alternativeName = "";
 
   // Optional class holding value of the clause in clang AST.
-  string clangClass = ?;
+  string clangClass = "";
+
+  // Optional class holding the clause in flang AST. If left blank, the class
+  // is assumed to be the name of the clause with capitalized word and
+  // underscores removed.
+  // ex: async -> Async
+  //     num_threads -> NumThreads
+  string flangClass = "";
 
   // Optional class holding value of the clause in flang AST.
-  string flangClass = ?;
+  string flangClassValue = "";
+
+  // If set to 1, value is optional. Not optional by default.
+  bit isValueOptional = 0;
+
+  // Name of enum when there is a list of allowed clause values.
+  string enumClauseValue = "";
+
+  // List of allowed clause values
+  list<ClauseVal> allowedClauseValues = [];
+  // If set to 1, value class is part of a list. Single class by default.
+  bit isValueList = 0;
+
+  // Define a default value such as "*".
+  string defaultValue = "";
 
   // Is clause implicit? If clause is set as implicit, the default kind will
   // be return in get<LanguageName>ClauseKind instead of their own kind.
   bit isImplicit = 0;
 
-  // Set directive used by default when unknown. Function returning the kind
+  // Set clause used by default when unknown. Function returning the kind
   // of enumeration will use this clause as the default.
   bit isDefault = 0;
 }

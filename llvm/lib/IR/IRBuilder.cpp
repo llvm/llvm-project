@@ -42,13 +42,14 @@ using namespace llvm;
 /// created.
 GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
                                                   const Twine &Name,
-                                                  unsigned AddressSpace) {
+                                                  unsigned AddressSpace,
+                                                  Module *M) {
   Constant *StrConstant = ConstantDataArray::getString(Context, Str);
-  Module &M = *BB->getParent()->getParent();
-  auto *GV = new GlobalVariable(M, StrConstant->getType(), true,
-                                GlobalValue::PrivateLinkage, StrConstant, Name,
-                                nullptr, GlobalVariable::NotThreadLocal,
-                                AddressSpace);
+  if (!M)
+    M = BB->getParent()->getParent();
+  auto *GV = new GlobalVariable(
+      *M, StrConstant->getType(), true, GlobalValue::PrivateLinkage,
+      StrConstant, Name, nullptr, GlobalVariable::NotThreadLocal, AddressSpace);
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   GV->setAlignment(Align(1));
   return GV;
@@ -522,8 +523,8 @@ CallInst *IRBuilderBase::CreateMaskedIntrinsic(Intrinsic::ID Id,
 CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, Align Alignment,
                                             Value *Mask, Value *PassThru,
                                             const Twine &Name) {
-  auto PtrsTy = cast<VectorType>(Ptrs->getType());
-  auto PtrTy = cast<PointerType>(PtrsTy->getElementType());
+  auto *PtrsTy = cast<FixedVectorType>(Ptrs->getType());
+  auto *PtrTy = cast<PointerType>(PtrsTy->getElementType());
   unsigned NumElts = PtrsTy->getNumElements();
   auto *DataTy = FixedVectorType::get(PtrTy->getElementType(), NumElts);
 
@@ -552,8 +553,8 @@ CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, Align Alignment,
 ///            be accessed in memory
 CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
                                              Align Alignment, Value *Mask) {
-  auto PtrsTy = cast<VectorType>(Ptrs->getType());
-  auto DataTy = cast<VectorType>(Data->getType());
+  auto *PtrsTy = cast<FixedVectorType>(Ptrs->getType());
+  auto *DataTy = cast<FixedVectorType>(Data->getType());
   unsigned NumElts = PtrsTy->getNumElements();
 
 #ifndef NDEBUG
@@ -996,13 +997,13 @@ Value *IRBuilderBase::CreateStripInvariantGroup(Value *Ptr) {
 
 Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,
                                         const Twine &Name) {
-  ElementCount EC(NumElts, false);
+  auto EC = ElementCount::getFixed(NumElts);
   return CreateVectorSplat(EC, V, Name);
 }
 
 Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
                                         const Twine &Name) {
-  assert(EC.Min > 0 && "Cannot splat to an empty vector!");
+  assert(EC.isNonZero() && "Cannot splat to an empty vector!");
 
   // First insert it into an undef vector so we can shuffle it.
   Type *I32Ty = getInt32Ty();

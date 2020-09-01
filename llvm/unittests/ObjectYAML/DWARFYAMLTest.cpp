@@ -68,8 +68,7 @@ Blah:    unexpected
 TEST(DebugPubSection, TestDebugPubSection) {
   StringRef Yaml = R"(
 debug_pubnames:
-  Length:
-    TotalLength: 0x1234
+  Length:        0x1234
   Version:       2
   UnitOffset:    0x4321
   UnitSize:      0x00
@@ -79,8 +78,7 @@ debug_pubnames:
     - DieOffset:  0x4321
       Name:       def
 debug_pubtypes:
-  Length:
-    TotalLength: 0x1234
+  Length:        0x1234
   Version:       2
   UnitOffset:    0x4321
   UnitSize:      0x00
@@ -115,8 +113,7 @@ debug_pubtypes:
 TEST(DebugPubSection, TestUnexpectedDescriptor) {
   StringRef Yaml = R"(
 debug_pubnames:
-  Length:
-    TotalLength: 0x1234
+  Length:        0x1234
   Version:       2
   UnitOffset:    0x4321
   UnitSize:      0x00
@@ -133,8 +130,7 @@ debug_pubnames:
 TEST(DebugGNUPubSection, TestDebugGNUPubSections) {
   StringRef Yaml = R"(
 debug_gnu_pubnames:
-  Length:
-    TotalLength: 0x1234
+  Length:        0x1234
   Version:       2
   UnitOffset:    0x4321
   UnitSize:      0x00
@@ -146,8 +142,7 @@ debug_gnu_pubnames:
       Descriptor: 0x34
       Name:       def
 debug_gnu_pubtypes:
-  Length:
-    TotalLength: 0x1234
+  Length:        0x1234
   Version:       2
   UnitOffset:    0x4321
   UnitSize:      0x00
@@ -188,8 +183,7 @@ debug_gnu_pubtypes:
 TEST(DebugGNUPubSection, TestMissingDescriptor) {
   StringRef Yaml = R"(
 debug_gnu_pubnames:
-  Length:
-    TotalLength: 0x1234
+  Length:        0x1234
   Version:       2
   UnitOffset:    0x4321
   UnitSize:      0x00

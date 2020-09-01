@@ -1,7 +1,7 @@
 # RUN: rm -rf %t
 # RUN: mkdir -p %t
 # RUN: cd %t
-# RUN: yaml2obj < %p/Inputs/ret42.yaml > in.obj
+# RUN: yaml2obj %p/Inputs/ret42.yaml -o in.obj
 
 # RUN: lld-link /entry:main in.obj
 # RUN: lld-link /entry:main /dll in.obj

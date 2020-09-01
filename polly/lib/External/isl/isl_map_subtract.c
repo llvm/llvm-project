@@ -585,7 +585,8 @@ error:
 	return NULL;
 }
 
-struct isl_set *isl_set_subtract(struct isl_set *set1, struct isl_set *set2)
+__isl_give isl_set *isl_set_subtract(__isl_take isl_set *set1,
+	__isl_take isl_set *set2)
 {
 	return set_from_map(isl_map_subtract(set_to_map(set1),
 					    set_to_map(set2)));

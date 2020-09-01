@@ -162,6 +162,11 @@ MachineInstrBuilder MachineIRBuilder::buildJumpTable(const LLT PtrTy,
       .addJumpTableIndex(JTI);
 }
 
+void MachineIRBuilder::validateUnaryOp(const LLT Res, const LLT Op0) {
+  assert((Res.isScalar() || Res.isVector()) && "invalid operand type");
+  assert((Res == Op0) && "type mismatch");
+}
+
 void MachineIRBuilder::validateBinaryOp(const LLT Res, const LLT Op0,
                                         const LLT Op1) {
   assert((Res.isScalar() || Res.isVector()) && "invalid operand type");
@@ -312,11 +317,14 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
   return buildFConstant(Res, *CFP);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildBrCond(Register Tst,
+MachineInstrBuilder MachineIRBuilder::buildBrCond(const SrcOp &Tst,
                                                   MachineBasicBlock &Dest) {
-  assert(getMRI()->getType(Tst).isScalar() && "invalid operand type");
+  assert(Tst.getLLTTy(*getMRI()).isScalar() && "invalid operand type");
 
-  return buildInstr(TargetOpcode::G_BRCOND).addUse(Tst).addMBB(&Dest);
+  auto MIB = buildInstr(TargetOpcode::G_BRCOND);
+  Tst.addSrcToMIB(MIB);
+  MIB.addMBB(&Dest);
+  return MIB;
 }
 
 MachineInstrBuilder
@@ -949,6 +957,14 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
         SrcOps[1].getLLTTy(*getMRI()), SrcOps[2].getLLTTy(*getMRI()));
     break;
   }
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_ABS:
+    // All these are unary ops.
+    assert(DstOps.size() == 1 && "Invalid Dst");
+    assert(SrcOps.size() == 1 && "Invalid Srcs");
+    validateUnaryOp(DstOps[0].getLLTTy(*getMRI()),
+                    SrcOps[0].getLLTTy(*getMRI()));
+    break;
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_AND:
   case TargetOpcode::G_MUL:

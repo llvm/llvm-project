@@ -180,7 +180,7 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
   // write expressions like this: `alignment = 16; . = ALIGN(., alignment)`.
   uint64_t symValue = value.sec ? 0 : value.getValue();
 
-  Defined newSym(nullptr, cmd->name, STB_GLOBAL, visibility, STT_NOTYPE,
+  Defined newSym(nullptr, cmd->name, STB_GLOBAL, visibility, value.type,
                  symValue, 0, sec);
 
   Symbol *sym = symtab->insert(cmd->name);
@@ -317,6 +317,7 @@ void LinkerScript::assignSymbol(SymbolAssignment *cmd, bool inSec) {
     cmd->sym->section = v.sec;
     cmd->sym->value = v.getSectionOffset();
   }
+  cmd->sym->type = v.type;
 }
 
 static std::string getFilename(InputFile *file) {
@@ -586,8 +587,6 @@ static OutputSection *findByName(ArrayRef<BaseCommand *> vec,
 static OutputSection *createSection(InputSectionBase *isec,
                                     StringRef outsecName) {
   OutputSection *sec = script->createOutputSection(outsecName, "<internal>");
-  if (!(isec->flags & SHF_ALLOC))
-    sec->addrExpr = [] { return 0; };
   sec->recordSection(isec);
   return sec;
 }
@@ -852,21 +851,27 @@ static OutputSection *findFirstSection(PhdrEntry *load) {
 void LinkerScript::assignOffsets(OutputSection *sec) {
   const bool sameMemRegion = ctx->memRegion == sec->memRegion;
   const bool prevLMARegionIsDefault = ctx->lmaRegion == nullptr;
+  const uint64_t savedDot = dot;
   ctx->memRegion = sec->memRegion;
   ctx->lmaRegion = sec->lmaRegion;
-  if (ctx->memRegion)
-    dot = ctx->memRegion->curPos;
 
-  if (sec->addrExpr)
-    setDot(sec->addrExpr, sec->location, false);
+  if (sec->flags & SHF_ALLOC) {
+    if (ctx->memRegion)
+      dot = ctx->memRegion->curPos;
+    if (sec->addrExpr)
+      setDot(sec->addrExpr, sec->location, false);
 
-  // If the address of the section has been moved forward by an explicit
-  // expression so that it now starts past the current curPos of the enclosing
-  // region, we need to expand the current region to account for the space
-  // between the previous section, if any, and the start of this section.
-  if (ctx->memRegion && ctx->memRegion->curPos < dot)
-    expandMemoryRegion(ctx->memRegion, dot - ctx->memRegion->curPos,
-                       ctx->memRegion->name, sec->name);
+    // If the address of the section has been moved forward by an explicit
+    // expression so that it now starts past the current curPos of the enclosing
+    // region, we need to expand the current region to account for the space
+    // between the previous section, if any, and the start of this section.
+    if (ctx->memRegion && ctx->memRegion->curPos < dot)
+      expandMemoryRegion(ctx->memRegion, dot - ctx->memRegion->curPos,
+                         ctx->memRegion->name, sec->name);
+  } else {
+    // Non-SHF_ALLOC sections have zero addresses.
+    dot = 0;
+  }
 
   switchTo(sec);
 
@@ -918,6 +923,11 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
     for (InputSection *sec : cast<InputSectionDescription>(base)->sections)
       output(sec);
   }
+
+  // Non-SHF_ALLOC sections do not affect the addresses of other OutputSections
+  // as they are not part of the process image.
+  if (!(sec->flags & SHF_ALLOC))
+    dot = savedDot;
 }
 
 static bool isDiscardable(OutputSection &sec) {
@@ -1214,8 +1224,14 @@ ExprValue LinkerScript::getSymbolValue(StringRef name, const Twine &loc) {
   }
 
   if (Symbol *sym = symtab->find(name)) {
-    if (auto *ds = dyn_cast<Defined>(sym))
-      return {ds->section, false, ds->value, loc};
+    if (auto *ds = dyn_cast<Defined>(sym)) {
+      ExprValue v{ds->section, false, ds->value, loc};
+      // Retain the original st_type, so that the alias will get the same
+      // behavior in relocation processing. Any operation will reset st_type to
+      // STT_NOTYPE.
+      v.type = ds->type;
+      return v;
+    }
     if (isa<SharedSymbol>(sym))
       if (!errorOnMissingSection)
         return {nullptr, false, 0, loc};

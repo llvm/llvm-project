@@ -684,7 +684,57 @@ TEST(LocateSymbol, All) {
           enum class E { [[A]], B };
           E e = E::A^;
         };
-      )cpp"};
+      )cpp",
+
+      R"objc(
+        @protocol Dog;
+        @protocol $decl[[Dog]]
+        - (void)bark;
+        @end
+        id<Do^g> getDoggo() {
+          return 0;
+        }
+      )objc",
+
+      R"objc(
+        @interface Cat
+        @end
+        @implementation Cat
+        @end
+        @interface $decl[[Cat]] (Exte^nsion)
+        - (void)meow;
+        @end
+        @implementation $def[[Cat]] (Extension)
+        - (void)meow {}
+        @end
+      )objc",
+
+      R"objc(
+        @class $decl[[Foo]];
+        Fo^o * getFoo() {
+          return 0;
+        }
+      )objc",
+
+      R"objc(// Prefer interface definition over forward declaration
+        @class Foo;
+        @interface $decl[[Foo]]
+        @end
+        Fo^o * getFoo() {
+          return 0;
+        }
+      )objc",
+
+      R"objc(
+        @class Foo;
+        @interface $decl[[Foo]]
+        @end
+        @implementation $def[[Foo]]
+        @end
+        Fo^o * getFoo() {
+          return 0;
+        }
+      )objc"};
   for (const char *Test : Tests) {
     Annotations T(Test);
     llvm::Optional<Range> WantDecl;
@@ -702,6 +752,7 @@ TEST(LocateSymbol, All) {
     // FIXME: Auto-completion in a template requires disabling delayed template
     // parsing.
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+    TU.ExtraArgs.push_back("-xobjective-c++");
 
     auto AST = TU.build();
     auto Results = locateSymbolAt(AST, T.point());
@@ -715,6 +766,90 @@ TEST(LocateSymbol, All) {
       if (Results[0].Definition)
         GotDef = Results[0].Definition->range;
       EXPECT_EQ(WantDef, GotDef) << Test;
+    }
+  }
+}
+
+TEST(LocateSymbol, AllMulti) {
+  // Ranges in tests:
+  //   $declN is the declaration location
+  //   $defN is the definition location (if absent, symbol has no definition)
+  //
+  // NOTE:
+  //   N starts at 0.
+  struct ExpectedRanges {
+    Range WantDecl;
+    llvm::Optional<Range> WantDef;
+  };
+  const char *Tests[] = {
+      R"objc(
+        @interface $decl0[[Cat]]
+        @end
+        @implementation $def0[[Cat]]
+        @end
+        @interface $decl1[[Ca^t]] (Extension)
+        - (void)meow;
+        @end
+        @implementation $def1[[Cat]] (Extension)
+        - (void)meow {}
+        @end
+      )objc",
+
+      R"objc(
+        @interface $decl0[[Cat]]
+        @end
+        @implementation $def0[[Cat]]
+        @end
+        @interface $decl1[[Cat]] (Extension)
+        - (void)meow;
+        @end
+        @implementation $def1[[Ca^t]] (Extension)
+        - (void)meow {}
+        @end
+      )objc",
+
+      R"objc(
+        @interface $decl0[[Cat]]
+        @end
+        @interface $decl1[[Ca^t]] ()
+        - (void)meow;
+        @end
+        @implementation $def0[[$def1[[Cat]]]]
+        - (void)meow {}
+        @end
+      )objc",
+  };
+  for (const char *Test : Tests) {
+    Annotations T(Test);
+    std::vector<ExpectedRanges> Ranges;
+    for (int Idx = 0; true; Idx++) {
+      bool HasDecl = !T.ranges("decl" + std::to_string(Idx)).empty();
+      bool HasDef = !T.ranges("def" + std::to_string(Idx)).empty();
+      if (!HasDecl && !HasDef)
+        break;
+      ExpectedRanges Range;
+      if (HasDecl)
+        Range.WantDecl = T.range("decl" + std::to_string(Idx));
+      if (HasDef)
+        Range.WantDef = T.range("def" + std::to_string(Idx));
+      Ranges.push_back(Range);
+    }
+
+    TestTU TU;
+    TU.Code = std::string(T.code());
+    TU.ExtraArgs.push_back("-xobjective-c++");
+
+    auto AST = TU.build();
+    auto Results = locateSymbolAt(AST, T.point());
+
+    ASSERT_THAT(Results, ::testing::SizeIs(Ranges.size())) << Test;
+    for (size_t Idx = 0; Idx < Ranges.size(); Idx++) {
+      EXPECT_EQ(Results[Idx].PreferredDeclaration.range, Ranges[Idx].WantDecl)
+          << "($decl" << Idx << ")" << Test;
+      llvm::Optional<Range> GotDef;
+      if (Results[Idx].Definition)
+        GotDef = Results[Idx].Definition->range;
+      EXPECT_EQ(GotDef, Ranges[Idx].WantDef) << "($def" << Idx << ")" << Test;
     }
   }
 }
@@ -952,65 +1087,77 @@ TEST(LocateSymbol, TextualDependent) {
 
 TEST(LocateSymbol, Alias) {
   const char *Tests[] = {
-    R"cpp(
+      R"cpp(
       template <class T> struct function {};
       template <class T> using [[callback]] = function<T()>;
 
       c^allback<int> foo;
     )cpp",
 
-    // triggered on non-definition of a renaming alias: should not give any
-    // underlying decls.
-    R"cpp(
+      // triggered on non-definition of a renaming alias: should not give any
+      // underlying decls.
+      R"cpp(
       class Foo {};
       typedef Foo [[Bar]];
 
       B^ar b;
     )cpp",
-    R"cpp(
+      R"cpp(
       class Foo {};
       using [[Bar]] = Foo; // definition
       Ba^r b;
     )cpp",
 
-    // triggered on the underlying decl of a renaming alias.
-    R"cpp(
+      // triggered on the underlying decl of a renaming alias.
+      R"cpp(
       class [[Foo]];
       using Bar = Fo^o;
     )cpp",
 
-    // triggered on definition of a non-renaming alias: should give underlying
-    // decls.
-    R"cpp(
+      // triggered on definition of a non-renaming alias: should give underlying
+      // decls.
+      R"cpp(
       namespace ns { class [[Foo]] {}; }
       using ns::F^oo;
     )cpp",
 
-    R"cpp(
+      R"cpp(
       namespace ns { int [[x]](char); int [[x]](double); }
       using ns::^x;
     )cpp",
 
-    R"cpp(
+      R"cpp(
       namespace ns { int [[x]](char); int x(double); }
       using ns::x;
       int y = ^x('a');
     )cpp",
 
-    R"cpp(
+      R"cpp(
       namespace ns { class [[Foo]] {}; }
       using ns::Foo;
       F^oo f;
     )cpp",
 
-    // other cases that don't matter much.
-    R"cpp(
+      // other cases that don't matter much.
+      R"cpp(
       class Foo {};
       typedef Foo [[Ba^r]];
     )cpp",
-    R"cpp(
+      R"cpp(
       class Foo {};
       using [[B^ar]] = Foo;
+    )cpp",
+
+      // Member of dependent base
+      R"cpp(
+      template <typename T>
+      struct Base {
+        void [[waldo]]() {}
+      };
+      template <typename T>
+      struct Derived : Base<T> {
+        using Base<T>::w^aldo;
+      };
     )cpp",
   };
 

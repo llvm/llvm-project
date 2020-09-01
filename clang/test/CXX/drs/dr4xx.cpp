@@ -644,8 +644,8 @@ namespace dr450 { // dr450: yes
 
 namespace dr451 { // dr451: yes
   const int a = 1 / 0; // expected-warning {{undefined}}
-  const int b = 1 / 0; // expected-warning {{undefined}}
-  int arr[b]; // expected-error +{{variable length arr}}
+  const int b = 1 / 0; // expected-warning {{undefined}} expected-note {{here}} expected-note 0-1{{division by zero}}
+  int arr[b]; // expected-error +{{variable length arr}} expected-note {{initializer of 'b' is not a constant}}
 }
 
 namespace dr452 { // dr452: yes
@@ -682,7 +682,7 @@ namespace dr457 { // dr457: yes
   const int a = 1;
   const volatile int b = 1;
   int ax[a];
-  int bx[b]; // expected-error +{{variable length array}}
+  int bx[b]; // expected-error +{{variable length array}} expected-note {{read of volatile}}
 
   enum E {
     ea = a,
@@ -1088,8 +1088,8 @@ namespace dr486 { // dr486: yes
 
 namespace dr487 { // dr487: yes
   enum E { e };
-  int operator+(int, E);
-  int i[4 + e]; // expected-error 2{{variable length array}}
+  int operator+(int, E); // expected-note 0-1{{here}}
+  int i[4 + e]; // expected-error 2{{variable length array}} expected-note 0-1{{non-constexpr}}
 }
 
 namespace dr488 { // dr488: yes c++11

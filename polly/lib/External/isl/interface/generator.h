@@ -35,7 +35,7 @@ struct set_enum {
  * on the corresponding function names.
  */
 struct function_name_less {
-	bool operator()(FunctionDecl *x, FunctionDecl *y) {
+	bool operator()(FunctionDecl *x, FunctionDecl *y) const {
 		return x->getName() < y->getName();
 	}
 };

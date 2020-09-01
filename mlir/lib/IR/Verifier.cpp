@@ -50,7 +50,7 @@ public:
   Dialect *getDialectForAttribute(const NamedAttribute &attr) {
     assert(attr.first.strref().contains('.') && "expected dialect attribute");
     auto dialectNamePair = attr.first.strref().split('.');
-    return ctx->getRegisteredDialect(dialectNamePair.first);
+    return ctx->getLoadedDialect(dialectNamePair.first);
   }
 
 private:
@@ -218,7 +218,7 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
   auto it = dialectAllowsUnknownOps.find(dialectPrefix);
   if (it == dialectAllowsUnknownOps.end()) {
     // If the operation dialect is registered, query it directly.
-    if (auto *dialect = ctx->getRegisteredDialect(dialectPrefix))
+    if (auto *dialect = ctx->getLoadedDialect(dialectPrefix))
       it = dialectAllowsUnknownOps
                .try_emplace(dialectPrefix, dialect->allowsUnknownOperations())
                .first;

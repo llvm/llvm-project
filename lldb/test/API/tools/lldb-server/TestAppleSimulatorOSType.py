@@ -8,13 +8,18 @@ from lldbsuite.test import lldbutil
 
 import json
 
+@skipIfReproducer
 class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    # Number of stderr lines to read from the simctl output.
+    READ_LINES = 10
+
     def check_simulator_ostype(self, sdk, platform, arch='x86_64'):
-        sim_devices_str = subprocess.check_output(['xcrun', 'simctl', 'list',
-                                                   '-j', 'devices']).decode("utf-8")
+        cmd = ['xcrun', 'simctl', 'list', '-j', 'devices']
+        self.trace(' '.join(cmd))
+        sim_devices_str = subprocess.check_output(cmd).decode("utf-8")
         sim_devices = json.loads(sim_devices_str)['devices']
         # Find an available simulator for the requested platform
         deviceUDID = None
@@ -43,24 +48,31 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         # Launch the process using simctl
         self.assertIsNotNone(deviceUDID)
         exe_name = 'test_simulator_platform_{}'.format(platform)
-        sdkroot = subprocess.check_output(['xcrun', '--show-sdk-path', '--sdk',
-                                           sdk]).decode("utf-8")
+        sdkroot = lldbutil.get_xcode_sdk_root(sdk)
         self.build(dictionary={ 'EXE': exe_name, 'SDKROOT': sdkroot.strip(),
                                 'ARCH': arch })
         exe_path = self.getBuildArtifact(exe_name)
-        sim_launcher = subprocess.Popen(['xcrun', 'simctl', 'spawn', '-s',
-                                         deviceUDID, exe_path,
-                                         'print-pid', 'sleep:10'],
-                                        stderr=subprocess.PIPE)
+        cmd = [
+            'xcrun', 'simctl', 'spawn', '-s', deviceUDID, exe_path,
+            'print-pid', 'sleep:10'
+        ]
+        self.trace(' '.join(cmd))
+        sim_launcher = subprocess.Popen(cmd, stderr=subprocess.PIPE)
         # Get the PID from the process output
         pid = None
-        while not pid:
+
+        # Read the first READ_LINES to try to find the PID.
+        for _ in range(0, self.READ_LINES):
             stderr = sim_launcher.stderr.readline().decode("utf-8")
-            if stderr == '':
+            if not stderr:
                 continue
-            m = re.match(r"PID: (.*)", stderr)
-            self.assertIsNotNone(m)
-            pid = int(m.group(1))
+            match = re.match(r"PID: (.*)", stderr)
+            if match:
+                pid = int(match.group(1))
+                break
+
+        # Make sure we found the PID.
+        self.assertIsNotNone(pid)
 
         # Launch debug monitor attaching to the simulated process
         self.init_debugserver_test()

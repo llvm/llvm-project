@@ -60,36 +60,6 @@ representation.
 
 ### Defining the Type Class
 
-#### Reserving a Range of Type Kinds
-
-Types in MLIR rely on having a unique `kind` value to ensure that casting checks
-remain extremely efficient
-([rationale](../../Rationale/Rationale.md#reserving-dialect-type-kinds)). For `toy`, this
-means we need to explicitly reserve a static range of type `kind` values in the
-symbol registry file
-[DialectSymbolRegistry](https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/DialectSymbolRegistry.def).
-
-```c++
-DEFINE_SYM_KIND_RANGE(LINALG) // Linear Algebra Dialect
-DEFINE_SYM_KIND_RANGE(TOY)    // Toy language (tutorial) Dialect
-
-// The following ranges are reserved for experimenting with MLIR dialects in a
-// private context.
-DEFINE_SYM_KIND_RANGE(PRIVATE_EXPERIMENTAL_0)
-```
-
-These definitions will provide a range in the Type::Kind enum to use when
-defining the derived types.
-
-```c++
-/// Create a local enumeration with all of the types that are defined by Toy.
-namespace ToyTypes {
-enum Types {
-  Struct = mlir::Type::FIRST_TOY_TYPE,
-};
-} // end namespace ToyTypes
-```
-
 #### Defining the Type Class
 
 As mentioned in [chapter 2](Ch-2.md), [`Type`](../../LangRef.md#type-system)
@@ -99,11 +69,11 @@ simple wrapper around an internal `TypeStorage` object that is uniqued within an
 instance of an `MLIRContext`. When constructing a `Type`, we are internally just
 constructing and uniquing an instance of a storage class.
 
-When defining a new `Type` that requires additional information beyond just the
-`kind` (e.g. the `struct` type, which requires additional information to hold
-the element types), we will need to provide a derived storage class. The
-`primitive` types that don't have any additional data (e.g. the
-[`index` type](../../LangRef.md#index-type)) don't require a storage class.
+When defining a new `Type` that contains parametric data (e.g. the `struct`
+type, which requires additional information to hold the element types), we will
+need to provide a derived storage class. The `singleton` types that don't have
+any additional data (e.g. the [`index` type](../../LangRef.md#index-type)) don't
+require a storage class and use the default `TypeStorage`.
 
 ##### Defining the Storage Class
 
@@ -190,11 +160,10 @@ public:
     assert(!elementTypes.empty() && "expected at least 1 element type");
 
     // Call into a helper 'get' method in 'TypeBase' to get a uniqued instance
-    // of this type. The first two parameters are the context to unique in and
-    // the kind of the type. The parameters after the type kind are forwarded to
-    // the storage instance.
+    // of this type. The first parameter is the context to unique in. The
+    // parameters after are forwarded to the storage instance.
     mlir::MLIRContext *ctx = elementTypes.front().getContext();
-    return Base::get(ctx, ToyTypes::Struct, elementTypes);
+    return Base::get(ctx, elementTypes);
   }
 
   /// Returns the element types of this struct type.

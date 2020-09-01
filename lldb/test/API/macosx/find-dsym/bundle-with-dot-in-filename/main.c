@@ -1,10 +1,11 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 int setup_is_complete = 0;
 
-int main()
+int main(int argc, const char** argv)
 {
 
     void *handle = dlopen ("com.apple.sbd.xpc/com.apple.sbd", RTLD_NOW);
@@ -13,6 +14,9 @@ int main()
         if (dlsym(handle, "foo"))
         {
             system ("/bin/rm -rf com.apple.sbd.xpc com.apple.sbd.xpc.dSYM");
+
+            FILE *fp = fopen (argv[1], "w");
+            fclose (fp);
             setup_is_complete = 1;
 
             // At this point we want lldb to attach to the process.  If lldb attaches

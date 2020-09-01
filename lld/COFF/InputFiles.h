@@ -255,9 +255,10 @@ private:
   // match the existing symbol and its selection. If either old or new
   // symbol have selection IMAGE_COMDAT_SELECT_LARGEST, Sym might replace
   // the existing leader. In that case, Prevailing is set to true.
-  void handleComdatSelection(COFFSymbolRef sym,
-                             llvm::COFF::COMDATType &selection,
-                             bool &prevailing, DefinedRegular *leader);
+  void
+  handleComdatSelection(COFFSymbolRef sym, llvm::COFF::COMDATType &selection,
+                        bool &prevailing, DefinedRegular *leader,
+                        const llvm::object::coff_aux_section_definition *def);
 
   llvm::Optional<Symbol *>
   createDefined(COFFSymbolRef sym,

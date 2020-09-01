@@ -202,6 +202,10 @@ inline OpAsmPrinter &operator<<(OpAsmPrinter &p,
   llvm::interleaveComma(types, p);
   return p;
 }
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p, const TypeRange &types) {
+  llvm::interleaveComma(types, p);
+  return p;
+}
 inline OpAsmPrinter &operator<<(OpAsmPrinter &p, ArrayRef<Type> types) {
   llvm::interleaveComma(types, p);
   return p;
@@ -289,6 +293,18 @@ public:
   /// Parse a '->' token if present
   virtual ParseResult parseOptionalArrow() = 0;
 
+  /// Parse a `{` token.
+  virtual ParseResult parseLBrace() = 0;
+
+  /// Parse a `{` token if present.
+  virtual ParseResult parseOptionalLBrace() = 0;
+
+  /// Parse a `}` token.
+  virtual ParseResult parseRBrace() = 0;
+
+  /// Parse a `}` token if present.
+  virtual ParseResult parseOptionalRBrace() = 0;
+
   /// Parse a `:` token.
   virtual ParseResult parseColon() = 0;
 
@@ -303,6 +319,9 @@ public:
 
   /// Parse a `=` token.
   virtual ParseResult parseEqual() = 0;
+
+  /// Parse a `=` token if present.
+  virtual ParseResult parseOptionalEqual() = 0;
 
   /// Parse a '<' token.
   virtual ParseResult parseLess() = 0;
@@ -344,6 +363,9 @@ public:
   /// Parse a `)` token if present.
   virtual ParseResult parseOptionalRParen() = 0;
 
+  /// Parses a '?' if present.
+  virtual ParseResult parseOptionalQuestion() = 0;
+
   /// Parse a `[` token.
   virtual ParseResult parseLSquare() = 0;
 
@@ -363,6 +385,26 @@ public:
   // Attribute Parsing
   //===--------------------------------------------------------------------===//
 
+  /// Parse an arbitrary attribute of a given type and return it in result.
+  virtual ParseResult parseAttribute(Attribute &result, Type type = {}) = 0;
+
+  /// Parse an attribute of a specific kind and type.
+  template <typename AttrType>
+  ParseResult parseAttribute(AttrType &result, Type type = {}) {
+    llvm::SMLoc loc = getCurrentLocation();
+
+    // Parse any kind of attribute.
+    Attribute attr;
+    if (parseAttribute(attr))
+      return failure();
+
+    // Check for the right kind of attribute.
+    if (!(result = attr.dyn_cast<AttrType>()))
+      return emitError(loc, "invalid kind of attribute specified");
+
+    return success();
+  }
+
   /// Parse an arbitrary attribute and return it in result.  This also adds the
   /// attribute to the specified attribute list with the specified name.
   ParseResult parseAttribute(Attribute &result, StringRef attrName,
@@ -377,25 +419,27 @@ public:
     return parseAttribute(result, Type(), attrName, attrs);
   }
 
-  /// Parse an arbitrary attribute of a given type and return it in result. This
-  /// also adds the attribute to the specified attribute list with the specified
-  /// name.
-  virtual ParseResult parseAttribute(Attribute &result, Type type,
-                                     StringRef attrName,
-                                     NamedAttrList &attrs) = 0;
-
   /// Parse an optional attribute.
   virtual OptionalParseResult parseOptionalAttribute(Attribute &result,
                                                      Type type,
                                                      StringRef attrName,
                                                      NamedAttrList &attrs) = 0;
-  OptionalParseResult parseOptionalAttribute(Attribute &result,
-                                             StringRef attrName,
+  template <typename AttrT>
+  OptionalParseResult parseOptionalAttribute(AttrT &result, StringRef attrName,
                                              NamedAttrList &attrs) {
     return parseOptionalAttribute(result, Type(), attrName, attrs);
   }
 
-  /// Parse an attribute of a specific kind and type.
+  /// Specialized variants of `parseOptionalAttribute` that remove potential
+  /// ambiguities in syntax.
+  virtual OptionalParseResult parseOptionalAttribute(ArrayAttr &result,
+                                                     Type type,
+                                                     StringRef attrName,
+                                                     NamedAttrList &attrs) = 0;
+
+  /// Parse an arbitrary attribute of a given type and return it in result. This
+  /// also adds the attribute to the specified attribute list with the specified
+  /// name.
   template <typename AttrType>
   ParseResult parseAttribute(AttrType &result, Type type, StringRef attrName,
                              NamedAttrList &attrs) {
@@ -403,7 +447,7 @@ public:
 
     // Parse any kind of attribute.
     Attribute attr;
-    if (parseAttribute(attr, type, attrName, attrs))
+    if (parseAttribute(attr, type))
       return failure();
 
     // Check for the right kind of attribute.
@@ -411,6 +455,7 @@ public:
     if (!result)
       return emitError(loc, "invalid kind of attribute specified");
 
+    attrs.append(attrName, result);
     return success();
   }
 
@@ -577,15 +622,22 @@ public:
   /// can only be set to true for regions attached to operations that are
   /// "IsolatedFromAbove".
   virtual ParseResult parseRegion(Region &region,
-                                  ArrayRef<OperandType> arguments,
-                                  ArrayRef<Type> argTypes,
+                                  ArrayRef<OperandType> arguments = {},
+                                  ArrayRef<Type> argTypes = {},
                                   bool enableNameShadowing = false) = 0;
 
   /// Parses a region if present.
   virtual ParseResult parseOptionalRegion(Region &region,
-                                          ArrayRef<OperandType> arguments,
-                                          ArrayRef<Type> argTypes,
+                                          ArrayRef<OperandType> arguments = {},
+                                          ArrayRef<Type> argTypes = {},
                                           bool enableNameShadowing = false) = 0;
+
+  /// Parses a region if present. If the region is present, a new region is
+  /// allocated and placed in `region`. If no region is present or on failure,
+  /// `region` remains untouched.
+  virtual OptionalParseResult parseOptionalRegion(
+      std::unique_ptr<Region> &region, ArrayRef<OperandType> arguments = {},
+      ArrayRef<Type> argTypes = {}, bool enableNameShadowing = false) = 0;
 
   /// Parse a region argument, this argument is resolved when calling
   /// 'parseRegion'.
@@ -756,7 +808,7 @@ public:
   /// all attributes of the given kind in the form : <alias>[0-9]+. These
   /// aliases must not contain `.`.
   virtual void getAttributeKindAliases(
-      SmallVectorImpl<std::pair<unsigned, StringRef>> &aliases) const {}
+      SmallVectorImpl<std::pair<TypeID, StringRef>> &aliases) const {}
   /// Hook for defining Attribute aliases. These aliases must not contain `.` or
   /// end with a numeric digit([0-9]+).
   virtual void getAttributeAliases(

@@ -254,7 +254,7 @@ and the API is easier to work with from an ergonomics perspective.
 ### Unified Graph Rewriting Infrastructure
 
 This is still a work in progress, but we have sightlines towards a
-[general rewriting infrastructure](GenericDAGRewriter.md) for transforming DAG
+[general rewriting infrastructure](RationaleGenericDAGRewriter.md) for transforming DAG
 tiles into other DAG tiles, using a declarative pattern format. DAG to DAG
 rewriting is a generalized solution for many common compiler optimizations,
 lowerings, and other rewrites and having an IR enables us to invest in building

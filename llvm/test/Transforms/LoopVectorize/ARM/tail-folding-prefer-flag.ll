@@ -1,8 +1,9 @@
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -loop-vectorize -tail-predication=enabled -S < %s | \
 ; RUN:  FileCheck %s -check-prefix=CHECK
 
-; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -loop-vectorize -tail-predication=enabled -prefer-predicate-over-epilog -S < %s | \
-; RUN:   FileCheck -check-prefix=PREDFLAG %s
+; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -loop-vectorize -tail-predication=enabled \
+; RUN:     -prefer-predicate-over-epilogue=predicate-dont-vectorize -S < %s | \
+; RUN:     FileCheck -check-prefix=PREDFLAG %s
 
 ; This test has a loop hint "predicate.predicate" set to false, so shouldn't
 ; get tail-folded, except with -prefer-predicate-over-epilog which then
@@ -19,7 +20,7 @@ define dso_local void @flag_overrules_hint(i32* noalias nocapture %A, i32* noali
 ; PREDFLAG:  vector.body:
 ; PREDFLAG:  %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; PREDFLAG:  %[[ELEM0:.*]] = add i64 %index, 0
-; PREDFLAG:  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %[[ELEM0]], i64 429)
+; PREDFLAG:  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %[[ELEM0]], i64 430)
 ; PREDFLAG:  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %active.lane.mask
 ; PREDFLAG:  %wide.masked.load1 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %active.lane.mask
 ; PREDFLAG:  %{{.*}} = add nsw <4 x i32> %wide.masked.load1, %wide.masked.load
@@ -53,11 +54,10 @@ define dso_local void @interleave4(i32* noalias nocapture %A, i32* noalias nocap
 ; PREDFLAG:  %[[ADD2:.*]] = add i32 %index, 4
 ; PREDFLAG:  %[[ADD3:.*]] = add i32 %index, 8
 ; PREDFLAG:  %[[ADD4:.*]] = add i32 %index, 12
-; PREDFLAG:  %[[BTC:.*]] = extractelement <4 x i32> %broadcast.splat, i32 0
-; PREDFLAG:  %[[ALM1:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD1]], i32 %[[BTC]])
-; PREDFLAG:  %[[ALM2:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD2]], i32 %[[BTC]])
-; PREDFLAG:  %[[ALM3:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD3]], i32 %[[BTC]])
-; PREDFLAG:  %[[ALM4:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD4]], i32 %[[BTC]])
+; PREDFLAG:  %[[ALM1:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD1]], i32 %N)
+; PREDFLAG:  %[[ALM2:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD2]], i32 %N)
+; PREDFLAG:  %[[ALM3:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD3]], i32 %N)
+; PREDFLAG:  %[[ALM4:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD4]], i32 %N)
 ;
 ; PREDFLAG:  call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM1]],{{.*}}
 ; PREDFLAG:  call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM2]],{{.*}}

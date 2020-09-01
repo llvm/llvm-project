@@ -40,8 +40,10 @@
 // MEMBER_OF_1=0x1000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x1000000001003
 
 // CK31B-LABEL: @.__omp_offloading_{{.*}}test_present_members{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK31B: [[MTYPE00:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x1020]],
-// CK31B-SAME: {{^}} i64 [[#0x1000000000003]], i64 [[#0x1000000001003]]]
+// CK31B-USE: [[MTYPE00:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x1020]],
+// CK31B-NOUSE: [[MTYPE00:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x1000]],
+// CK31B-USE-SAME: {{^}} i64 [[#0x1000000000003]], i64 [[#0x1000000001003]]]
+// CK31B-NOUSE-SAME: {{^}} i64 [[#0x1000000000003]], i64 [[#0x1000000001003]]]
 
 struct ST {
   int i;

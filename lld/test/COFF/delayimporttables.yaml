@@ -1,6 +1,6 @@
-# RUN: yaml2obj %p/Inputs/delayimporttables-dll1.yaml > %t1.obj
-# RUN: yaml2obj %p/Inputs/delayimporttables-dll2.yaml > %t2.obj
-# RUN: yaml2obj %s > %t.obj
+# RUN: yaml2obj %p/Inputs/delayimporttables-dll1.yaml -o %t1.obj
+# RUN: yaml2obj %p/Inputs/delayimporttables-dll2.yaml -o %t2.obj
+# RUN: yaml2obj %s -o %t.obj
 # RUN: lld-link /nodefaultlib /entry:DllMain /out:%T/delayimporttables-dll1.dll /dll /implib:%t-dll1.lib %t1.obj
 # RUN: lld-link /nodefaultlib /entry:DllMain /out:%T/delayimporttables-dll2.dll /dll /implib:%t-dll2.lib %t2.obj
 # RUN: lld-link /nodefaultlib /entry:main /out:%t.exe /delayload:delayimporttables-dll1.dll /delayload:delayimporttables-dll2.dll %t.obj %t-dll1.lib %t-dll2.lib

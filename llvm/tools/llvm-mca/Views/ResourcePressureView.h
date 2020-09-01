@@ -69,10 +69,7 @@ namespace mca {
 
 /// This class collects resource pressure statistics and it is able to print
 /// out all the collected information as a table to an output stream.
-class ResourcePressureView : public View {
-  const llvm::MCSubtargetInfo &STI;
-  llvm::MCInstPrinter &MCIP;
-  llvm::ArrayRef<llvm::MCInst> Source;
+class ResourcePressureView : public InstructionView {
   unsigned LastInstructionIdx;
 
   // Map to quickly obtain the ResourceUsage column index from a processor

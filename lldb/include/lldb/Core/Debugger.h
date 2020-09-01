@@ -273,6 +273,8 @@ public:
 
   bool SetUseColor(bool use_color);
 
+  bool GetUseAutosuggestion() const;
+
   bool GetUseSourceCache() const;
 
   bool SetUseSourceCache(bool use_source_cache);

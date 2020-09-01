@@ -44,7 +44,8 @@ CoverageMappingModuleGen::setUpCoverageCallbacks(Preprocessor &PP) {
   PP.setTokenWatcher([CoverageInfo](clang::Token Tok) {
     // Update previous token location.
     CoverageInfo->PrevTokLoc = Tok.getLocation();
-    CoverageInfo->updateNextTokLoc(Tok.getLocation());
+    if (Tok.getKind() != clang::tok::eod)
+      CoverageInfo->updateNextTokLoc(Tok.getLocation());
   });
   return CoverageInfo;
 }
@@ -305,20 +306,24 @@ public:
   /// non-comment token. If shrinking the skipped range would make it empty,
   /// this returns None.
   Optional<SpellingRegion> adjustSkippedRange(SourceManager &SM,
-                                              SpellingRegion SR,
+                                              SourceLocation LocStart,
+                                              SourceLocation LocEnd,
                                               SourceLocation PrevTokLoc,
                                               SourceLocation NextTokLoc) {
+    SpellingRegion SR{SM, LocStart, LocEnd};
     // If Range begin location is invalid, it's not a comment region.
     if (PrevTokLoc.isInvalid())
       return SR;
     unsigned PrevTokLine = SM.getSpellingLineNumber(PrevTokLoc);
     unsigned NextTokLine = SM.getSpellingLineNumber(NextTokLoc);
     SpellingRegion newSR(SR);
-    if (SR.LineStart == PrevTokLine) {
+    if (SM.isWrittenInSameFile(LocStart, PrevTokLoc) &&
+        SR.LineStart == PrevTokLine) {
       newSR.LineStart = SR.LineStart + 1;
       newSR.ColumnStart = 1;
     }
-    if (SR.LineEnd == NextTokLine) {
+    if (SM.isWrittenInSameFile(LocEnd, NextTokLoc) &&
+        SR.LineEnd == NextTokLine) {
       newSR.LineEnd = SR.LineEnd - 1;
       newSR.ColumnEnd = SR.ColumnStart + 1;
     }
@@ -354,14 +359,13 @@ public:
       auto CovFileID = getCoverageFileID(LocStart);
       if (!CovFileID)
         continue;
-      SpellingRegion SR{SM, LocStart, LocEnd};
-      if (Optional<SpellingRegion> res =
-              adjustSkippedRange(SM, SR, I.PrevTokLoc, I.NextTokLoc))
-        SR = res.getValue();
-      else
+      Optional<SpellingRegion> SR =
+          adjustSkippedRange(SM, LocStart, LocEnd, I.PrevTokLoc, I.NextTokLoc);
+      if (!SR.hasValue())
         continue;
       auto Region = CounterMappingRegion::makeSkipped(
-          *CovFileID, SR.LineStart, SR.ColumnStart, SR.LineEnd, SR.ColumnEnd);
+          *CovFileID, SR->LineStart, SR->ColumnStart, SR->LineEnd,
+          SR->ColumnEnd);
       // Make sure that we only collect the regions that are inside
       // the source code of this function.
       if (Region.LineStart >= FileLineRanges[*CovFileID].first &&

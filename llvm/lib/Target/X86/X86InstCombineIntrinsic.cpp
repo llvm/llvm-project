@@ -1150,39 +1150,6 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
   }
-  case Intrinsic::x86_avx512_cmp_pd_128:
-  case Intrinsic::x86_avx512_cmp_pd_256:
-  case Intrinsic::x86_avx512_cmp_pd_512:
-  case Intrinsic::x86_avx512_cmp_ps_128:
-  case Intrinsic::x86_avx512_cmp_ps_256:
-  case Intrinsic::x86_avx512_cmp_ps_512: {
-    // Folding cmp(sub(a,b),0) -> cmp(a,b) and cmp(0,sub(a,b)) -> cmp(b,a)
-    Value *Arg0 = II.getArgOperand(0);
-    Value *Arg1 = II.getArgOperand(1);
-    bool Arg0IsZero = match(Arg0, PatternMatch::m_PosZeroFP());
-    if (Arg0IsZero)
-      std::swap(Arg0, Arg1);
-    Value *A, *B;
-    // This fold requires only the NINF(not +/- inf) since inf minus
-    // inf is nan.
-    // NSZ(No Signed Zeros) is not needed because zeros of any sign are
-    // equal for both compares.
-    // NNAN is not needed because nans compare the same for both compares.
-    // The compare intrinsic uses the above assumptions and therefore
-    // doesn't require additional flags.
-    if ((match(Arg0,
-               PatternMatch::m_OneUse(PatternMatch::m_FSub(
-                   PatternMatch::m_Value(A), PatternMatch::m_Value(B)))) &&
-         match(Arg1, PatternMatch::m_PosZeroFP()) && isa<Instruction>(Arg0) &&
-         cast<Instruction>(Arg0)->getFastMathFlags().noInfs())) {
-      if (Arg0IsZero)
-        std::swap(A, B);
-      IC.replaceOperand(II, 0, A);
-      IC.replaceOperand(II, 1, B);
-      return &II;
-    }
-    break;
-  }
 
   case Intrinsic::x86_avx512_add_ps_512:
   case Intrinsic::x86_avx512_div_ps_512:

@@ -20,16 +20,16 @@
 #ifndef HEADER
 #define HEADER
 
-// HOST: @[[MAPTYPES_PRIVATE:.offload_maptypes[0-9.]*]] = private {{.*}}constant [2 x i64] [i64 35, i64 35]
+// HOST: @[[MAPTYPES_PRIVATE:.offload_maptypes[0-9.]*]] = private {{.*}}constant [2 x i64] [i64 3, i64 3]
 // HOST: @[[MAPTYPES_FIRSTPRIVATE:.offload_maptypes[0-9.]*]] = private {{.*}}constant [2 x i64] [i64 35, i64 35]
 // HOST: @[[MAPTYPES_REDUCTION:.offload_maptypes[0-9.]*]] = private {{.*}}constant [2 x i64] [i64 35, i64 35]
 // HOST: @[[MAPTYPES_FROM:.offload_maptypes[0-9.]*]] = private {{.*}}constant [1 x i64] [i64 34]
 // HOST: @[[MAPTYPES_TO:.offload_maptypes[0-9.]*]] = private {{.*}}constant [1 x i64] [i64 33]
 // HOST: @[[MAPTYPES_ALLOC:.offload_maptypes[0-9.]*]] = private {{.*}}constant [1 x i64] [i64 32]
-// HOST: @[[MAPTYPES_ARRAY_R0:.offload_maptypes[0-9.]*]] = private {{.*}}constant [3 x i64] [i64 35, i64 35, i64 35]
-// HOST: @[[MAPTYPES_ARRAY_R1:.offload_maptypes[0-9.]*]] = private {{.*}}constant [3 x i64] [i64 33, i64 33, i64 33]
-// HOST-INT128: @[[MAPTYPES_INT128_R0:.offload_maptypes[0-9.]*]] = private {{.*}}constant [3 x i64] [i64 35, i64 35, i64 35]
-// HOST-INT128: @[[MAPTYPES_INT128_R1:.offload_maptypes[0-9.]*]] = private {{.*}}constant [3 x i64] [i64 34, i64 34, i64 34]
+// HOST: @[[MAPTYPES_ARRAY_R0:.offload_maptypes[0-9.]*]] = private {{.*}}constant [3 x i64] [i64 35, i64 35, i64 3]
+// HOST: @[[MAPTYPES_ARRAY_R1:.offload_maptypes[0-9.]*]] = private {{.*}}constant [3 x i64] [i64 33, i64 33, i64 1]
+// HOST-INT128: @[[MAPTYPES_INT128_R0:.offload_maptypes[0-9.]*]] = private {{.*}}constant [3 x i64] [i64 35, i64 35, i64 3]
+// HOST-INT128: @[[MAPTYPES_INT128_R1:.offload_maptypes[0-9.]*]] = private {{.*}}constant [3 x i64] [i64 34, i64 34, i64 2]
 //
 // CHECK: @.omp_offloading.entry_name{{[0-9.]*}} = {{.*}} c"[[OFFLOAD_PRIVATE:__omp_offloading_[^"\\]*mapWithPrivate[^"\\]*]]\00"
 // CHECK: @.omp_offloading.entry_name{{[0-9.]*}} = {{.*}} c"[[OFFLOAD_FIRSTPRIVATE:__omp_offloading_[^"\\]*mapWithFirstprivate[^"\\]*]]\00"

@@ -58,7 +58,6 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-SMALL-LABEL: lower_blockaddress_displ:
 ; RV32I-SMALL:       # %bb.0: # %entry
 ; RV32I-SMALL-NEXT:    addi sp, sp, -16
-; RV32I-SMALL-NEXT:    sw ra, 12(sp)
 ; RV32I-SMALL-NEXT:    lui a1, %hi(.Ltmp0)
 ; RV32I-SMALL-NEXT:    addi a1, a1, %lo(.Ltmp0)
 ; RV32I-SMALL-NEXT:    addi a2, zero, 101
@@ -70,22 +69,20 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-SMALL-NEXT:  .Ltmp0: # Block address taken
 ; RV32I-SMALL-NEXT:  .LBB2_2: # %return
 ; RV32I-SMALL-NEXT:    addi a0, zero, 4
-; RV32I-SMALL-NEXT:    j .LBB2_4
+; RV32I-SMALL-NEXT:    addi sp, sp, 16
+; RV32I-SMALL-NEXT:    ret
 ; RV32I-SMALL-NEXT:  .LBB2_3: # %return.clone
 ; RV32I-SMALL-NEXT:    addi a0, zero, 3
-; RV32I-SMALL-NEXT:  .LBB2_4: # %.split
-; RV32I-SMALL-NEXT:    lw ra, 12(sp)
 ; RV32I-SMALL-NEXT:    addi sp, sp, 16
 ; RV32I-SMALL-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: lower_blockaddress_displ:
 ; RV32I-MEDIUM:       # %bb.0: # %entry
 ; RV32I-MEDIUM-NEXT:    addi sp, sp, -16
-; RV32I-MEDIUM-NEXT:    sw ra, 12(sp)
-; RV32I-MEDIUM-NEXT:  .LBB2_5: # %entry
+; RV32I-MEDIUM-NEXT:  .LBB2_4: # %entry
 ; RV32I-MEDIUM-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.Ltmp0)
-; RV32I-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.LBB2_5)
+; RV32I-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.LBB2_4)
 ; RV32I-MEDIUM-NEXT:    addi a2, zero, 101
 ; RV32I-MEDIUM-NEXT:    sw a1, 8(sp)
 ; RV32I-MEDIUM-NEXT:    blt a0, a2, .LBB2_3
@@ -95,11 +92,10 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-MEDIUM-NEXT:  .Ltmp0: # Block address taken
 ; RV32I-MEDIUM-NEXT:  .LBB2_2: # %return
 ; RV32I-MEDIUM-NEXT:    addi a0, zero, 4
-; RV32I-MEDIUM-NEXT:    j .LBB2_4
+; RV32I-MEDIUM-NEXT:    addi sp, sp, 16
+; RV32I-MEDIUM-NEXT:    ret
 ; RV32I-MEDIUM-NEXT:  .LBB2_3: # %return.clone
 ; RV32I-MEDIUM-NEXT:    addi a0, zero, 3
-; RV32I-MEDIUM-NEXT:  .LBB2_4: # %.split
-; RV32I-MEDIUM-NEXT:    lw ra, 12(sp)
 ; RV32I-MEDIUM-NEXT:    addi sp, sp, 16
 ; RV32I-MEDIUM-NEXT:    ret
 entry:

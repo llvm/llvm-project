@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx902 -verify-machineinstrs -amdgpu-enable-global-sgpr-addr -stop-after=si-form-memory-clauses < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx902 -verify-machineinstrs -stop-after=si-form-memory-clauses < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}name:{{[ 	]*}}vector_clause
 ; GCN:      BUNDLE

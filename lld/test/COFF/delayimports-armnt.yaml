@@ -1,5 +1,5 @@
 # REQUIRES: arm
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 # RUN: lld-link %t.obj %p/Inputs/library.lib /subsystem:console \
 # RUN:   /entry:mainCRTStartup /alternatename:__delayLoadHelper2=mainCRTStartup \
 # RUN:   /delayload:library.dll /out:%t.exe

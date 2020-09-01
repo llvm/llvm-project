@@ -59,11 +59,14 @@ struct Edge {
 
 struct ExportInfo {
   uint64_t address;
-  uint8_t flags;
-  explicit ExportInfo(const Symbol &sym)
-      : address(sym.getVA()),
-        flags(sym.isWeakDef() ? EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION : 0) {}
-  // TODO: Add proper support for re-exports & stub-and-resolver flags.
+  uint8_t flags = 0;
+  explicit ExportInfo(const Symbol &sym) : address(sym.getVA()) {
+    if (sym.isWeakDef())
+      flags |= EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION;
+    if (sym.isTlv())
+      flags |= EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL;
+    // TODO: Add proper support for re-exports & stub-and-resolver flags.
+  }
 };
 
 } // namespace

@@ -25,8 +25,8 @@ define i32 @const_costs() {
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_244 = icmp ne i32 undef, 244
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_256 = icmp uge i32 undef, 256
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_1024 = icmp ult i32 undef, 1024
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %select_1_0 = select i1 undef, i32 1, i32 0
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %select_7_255 = select i1 undef, i32 7, i32 255
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %select_1_0 = select i1 undef, i32 1, i32 0
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %select_7_255 = select i1 undef, i32 7, i32 255
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 1
 ;
 ; CHECK-T2-SIZE-LABEL: 'const_costs'
@@ -47,8 +47,8 @@ define i32 @const_costs() {
 ; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_244 = icmp ne i32 undef, 244
 ; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_256 = icmp uge i32 undef, 256
 ; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_1024 = icmp ult i32 undef, 1024
-; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %select_1_0 = select i1 undef, i32 1, i32 0
-; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %select_7_255 = select i1 undef, i32 7, i32 255
+; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %select_1_0 = select i1 undef, i32 1, i32 0
+; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %select_7_255 = select i1 undef, i32 7, i32 255
 ; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 1
 ;
 ; CHECK-T1-LATENCY-LABEL: 'const_costs'

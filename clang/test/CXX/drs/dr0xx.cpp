@@ -915,7 +915,7 @@ namespace dr75 { // dr75: yes
 
 namespace dr76 { // dr76: yes
   const volatile int n = 1;
-  int arr[n]; // expected-error +{{variable length array}}
+  int arr[n]; // expected-error +{{variable length array}} expected-note {{read of volatile}}
 }
 
 namespace dr77 { // dr77: yes

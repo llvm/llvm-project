@@ -78,6 +78,9 @@ class PassBase<string passArg, string base> {
   // A C++ constructor call to create an instance of this pass.
   code constructor = [{}];
 
+  // A list of dialects this pass may produce entities in.
+  list<string> dependentDialects = [];
+
   // A set of options provided by this pass.
   list<Option> options = [];
 

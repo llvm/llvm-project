@@ -26,15 +26,20 @@ namespace llvm {
 template <typename T> struct DenseMapInfo;
 
 class ElementCount {
-public:
+private:
   unsigned Min;  // Minimum number of vector elements.
   bool Scalable; // If true, NumElements is a multiple of 'Min' determined
                  // at runtime rather than compile time.
 
-  ElementCount() = default;
+  /// Prevent code from using initializer-list contructors like
+  /// ElementCount EC = {<unsigned>, <bool>}. The static `get*`
+  /// methods below are preferred, as users should always make a
+  /// conscious choice on the type of `ElementCount` they are
+  /// requesting.
+  ElementCount(unsigned Min, bool Scalable) : Min(Min), Scalable(Scalable) {}
 
-  ElementCount(unsigned Min, bool Scalable)
-  : Min(Min), Scalable(Scalable) {}
+public:
+  ElementCount() = default;
 
   ElementCount operator*(unsigned RHS) {
     return { Min * RHS, Scalable };
@@ -53,10 +58,61 @@ public:
   bool operator==(unsigned RHS) const { return Min == RHS && !Scalable; }
   bool operator!=(unsigned RHS) const { return !(*this == RHS); }
 
-  ElementCount NextPowerOf2() const {
-    return ElementCount(llvm::NextPowerOf2(Min), Scalable);
+  ElementCount &operator*=(unsigned RHS) {
+    Min *= RHS;
+    return *this;
   }
+
+  ElementCount &operator/=(unsigned RHS) {
+    Min /= RHS;
+    return *this;
+  }
+
+  ElementCount NextPowerOf2() const {
+    return {(unsigned)llvm::NextPowerOf2(Min), Scalable};
+  }
+
+  static ElementCount getFixed(unsigned Min) { return {Min, false}; }
+  static ElementCount getScalable(unsigned Min) { return {Min, true}; }
+  static ElementCount get(unsigned Min, bool Scalable) {
+    return {Min, Scalable};
+  }
+
+  /// Printing function.
+  void print(raw_ostream &OS) const {
+    if (Scalable)
+      OS << "vscale x ";
+    OS << Min;
+  }
+  /// Counting predicates.
+  ///
+  /// Notice that Min = 1 and Scalable = true is considered more than
+  /// one element.
+  ///
+  ///@{ No elements..
+  bool isZero() const { return Min == 0; }
+  /// At least one element.
+  bool isNonZero() const { return Min != 0; }
+  /// A return value of true indicates we know at compile time that the number
+  /// of elements (vscale * Min) is definitely even. However, returning false
+  /// does not guarantee that the total number of elements is odd.
+  bool isKnownEven() const { return (Min & 0x1) == 0; }
+  /// Exactly one element.
+  bool isScalar() const { return !Scalable && Min == 1; }
+  /// One or more elements.
+  bool isVector() const { return (Scalable && Min != 0) || Min > 1; }
+  ///@}
+
+  unsigned getKnownMinValue() const { return Min; }
+
+  bool isScalable() const { return Scalable; }
 };
+
+/// Stream operator function for `ElementCount`.
+inline raw_ostream &operator<<(raw_ostream &OS, const ElementCount &EC) {
+  EC.print(OS);
+  return OS;
+}
 
 // This class is used to represent the size of types. If the type is of fixed
 // size, it will represent the exact size. If the type is a scalable vector,
@@ -129,6 +185,38 @@ public:
 
   TypeSize operator/(unsigned RHS) const {
     return { MinSize / RHS, IsScalable };
+  }
+
+  TypeSize &operator-=(TypeSize RHS) {
+    assert(IsScalable == RHS.IsScalable &&
+           "Subtraction using mixed scalable and fixed types");
+    MinSize -= RHS.MinSize;
+    return *this;
+  }
+
+  TypeSize &operator+=(TypeSize RHS) {
+    assert(IsScalable == RHS.IsScalable &&
+           "Addition using mixed scalable and fixed types");
+    MinSize += RHS.MinSize;
+    return *this;
+  }
+
+  friend TypeSize operator-(const TypeSize &LHS, const TypeSize &RHS) {
+    assert(LHS.IsScalable == RHS.IsScalable &&
+           "Arithmetic using mixed scalable and fixed types");
+    return {LHS.MinSize - RHS.MinSize, LHS.IsScalable};
+  }
+
+  friend TypeSize operator/(const TypeSize &LHS, const TypeSize &RHS) {
+    assert(LHS.IsScalable == RHS.IsScalable &&
+           "Arithmetic using mixed scalable and fixed types");
+    return {LHS.MinSize / RHS.MinSize, LHS.IsScalable};
+  }
+
+  friend TypeSize operator%(const TypeSize &LHS, const TypeSize &RHS) {
+    assert(LHS.IsScalable == RHS.IsScalable &&
+           "Arithmetic using mixed scalable and fixed types");
+    return {LHS.MinSize % RHS.MinSize, LHS.IsScalable};
   }
 
   // Return the minimum size with the assumption that the size is exact.
@@ -247,13 +335,18 @@ inline TypeSize alignTo(TypeSize Size, uint64_t Align) {
 }
 
 template <> struct DenseMapInfo<ElementCount> {
-  static inline ElementCount getEmptyKey() { return {~0U, true}; }
-  static inline ElementCount getTombstoneKey() { return {~0U - 1, false}; }
+  static inline ElementCount getEmptyKey() {
+    return ElementCount::getScalable(~0U);
+  }
+  static inline ElementCount getTombstoneKey() {
+    return ElementCount::getFixed(~0U - 1);
+  }
   static unsigned getHashValue(const ElementCount& EltCnt) {
-    if (EltCnt.Scalable)
-      return (EltCnt.Min * 37U) - 1U;
+    unsigned HashVal = EltCnt.getKnownMinValue() * 37U;
+    if (EltCnt.isScalable())
+      return (HashVal - 1U);
 
-    return EltCnt.Min * 37U;
+    return HashVal;
   }
 
   static bool isEqual(const ElementCount& LHS, const ElementCount& RHS) {

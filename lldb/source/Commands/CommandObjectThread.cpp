@@ -549,6 +549,17 @@ public:
 
   ~CommandObjectThreadStepWithTypeAndScope() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex())
+      return;
+
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eThreadIndexCompletion,
+        request, nullptr);
+  }
+
   Options *GetOptions() override { return &m_all_options; }
 
 protected:
@@ -814,6 +825,14 @@ public:
   }
 
   ~CommandObjectThreadContinue() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eThreadIndexCompletion,
+        request, nullptr);
+  }
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
@@ -1307,6 +1326,17 @@ public:
 
   ~CommandObjectThreadSelect() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex())
+      return;
+
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eThreadIndexCompletion,
+        request, nullptr);
+  }
+
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Process *process = m_exe_ctx.GetProcessPtr();
@@ -1438,6 +1468,14 @@ public:
 
   ~CommandObjectThreadInfo() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eThreadIndexCompletion,
+        request, nullptr);
+  }
+
   Options *GetOptions() override { return &m_options; }
 
   bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
@@ -1481,6 +1519,14 @@ public:
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {}
 
   ~CommandObjectThreadException() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eThreadIndexCompletion,
+        request, nullptr);
+  }
 
   bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
     ThreadSP thread_sp =
@@ -1936,8 +1982,7 @@ public:
 protected:
   bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
     // If we have already handled this from a -t option, skip it here.
-    if (std::find(m_options.m_tids.begin(), m_options.m_tids.end(), tid) !=
-        m_options.m_tids.end())
+    if (llvm::is_contained(m_options.m_tids, tid))
       return true;
 
     Process *process = m_exe_ctx.GetProcessPtr();
@@ -1984,6 +2029,15 @@ public:
   }
 
   ~CommandObjectThreadPlanDiscard() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasThreadScope() || request.GetCursorIndex())
+      return;
+
+    m_exe_ctx.GetThreadPtr()->AutoCompleteThreadPlans(request);
+  }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     Thread *thread = m_exe_ctx.GetThreadPtr();

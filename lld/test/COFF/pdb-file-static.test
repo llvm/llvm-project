@@ -1,5 +1,5 @@
-# RUN: yaml2obj %S/Inputs/pdb-file-statics-a.yaml > %t.a.obj
-# RUN: yaml2obj %S/Inputs/pdb-file-statics-b.yaml > %t.b.obj
+# RUN: yaml2obj %S/Inputs/pdb-file-statics-a.yaml -o %t.a.obj
+# RUN: yaml2obj %S/Inputs/pdb-file-statics-b.yaml -o %t.b.obj
 # RUN: lld-link %t.a.obj %t.b.obj /nodefaultlib /entry:main /debug /pdb:%t.pdb
 # RUN: llvm-pdbutil dump -symbols %t.pdb | FileCheck %s
 

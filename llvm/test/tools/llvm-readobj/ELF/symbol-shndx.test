@@ -46,10 +46,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Name: .text
     Type: SHT_PROGBITS
@@ -127,10 +126,9 @@ Symbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Name: .symtab_shndx
     Type: SHT_SYMTAB_SHNDX
@@ -176,10 +174,9 @@ Symbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Symbols:
   - Name:  no_shndx
     Index: SHN_XINDEX

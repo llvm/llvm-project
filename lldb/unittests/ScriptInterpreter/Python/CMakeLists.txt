@@ -10,6 +10,6 @@ add_lldb_unittest(ScriptInterpreterPythonTests
     Support
   )
 
-if(PYTHON_RPATH)
-  set_property(TARGET ScriptInterpreterPythonTests APPEND PROPERTY BUILD_RPATH "${PYTHON_RPATH}")
+if(Python3_RPATH)
+  set_property(TARGET ScriptInterpreterPythonTests APPEND PROPERTY BUILD_RPATH "${Python3_RPATH}")
 endif()

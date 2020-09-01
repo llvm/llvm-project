@@ -14,6 +14,7 @@ extern "C" {
 
 ISL_DECLARE_MULTI(val)
 ISL_DECLARE_MULTI_ARITH(val)
+ISL_DECLARE_MULTI_MIN_MAX(val)
 ISL_DECLARE_MULTI_ZERO(val)
 ISL_DECLARE_MULTI_NAN(val)
 ISL_DECLARE_MULTI_DIMS(val)
@@ -135,6 +136,7 @@ __isl_export
 isl_bool isl_val_ge(__isl_keep isl_val *v1, __isl_keep isl_val *v2);
 __isl_export
 isl_bool isl_val_eq(__isl_keep isl_val *v1, __isl_keep isl_val *v2);
+isl_bool isl_val_eq_si(__isl_keep isl_val *v, long i);
 __isl_export
 isl_bool isl_val_ne(__isl_keep isl_val *v1, __isl_keep isl_val *v2);
 __isl_export

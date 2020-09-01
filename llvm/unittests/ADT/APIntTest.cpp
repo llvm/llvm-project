@@ -1783,8 +1783,9 @@ TEST(APIntTest, isShiftedMask) {
   }
 }
 
-// Test that self-move works, but only when we're using MSVC.
-#if defined(_MSC_VER)
+// Test that self-move works with EXPENSIVE_CHECKS. It calls std::shuffle which
+// does self-move on some platforms.
+#ifdef EXPENSIVE_CHECKS
 #if defined(__clang__)
 // Disable the pragma warning from versions of Clang without -Wself-move
 #pragma clang diagnostic push
@@ -1813,7 +1814,7 @@ TEST(APIntTest, SelfMoveAssignment) {
 #pragma clang diagnostic pop
 #pragma clang diagnostic pop
 #endif
-#endif // _MSC_VER
+#endif // EXPENSIVE_CHECKS
 
 TEST(APIntTest, byteSwap) {
   EXPECT_EQ(0x00000000, APInt(16, 0x0000).byteSwap());

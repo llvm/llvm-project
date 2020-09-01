@@ -13,7 +13,7 @@ define <4 x i32> @v4i32(i32 %index, i32 %BTC, <4 x i32> %V1, <4 x i32> %V2) {
 ; CHECK-NEXT:    vdup.32 q1, r1
 ; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vcmpt.u32 cs, q1, q0
+; CHECK-NEXT:    vcmpt.u32 hi, q1, q0
 ; CHECK-NEXT:    vmov d0, r2, r3
 ; CHECK-NEXT:    vldr d1, [sp]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
@@ -33,17 +33,94 @@ define <4 x i32> @v4i32(i32 %index, i32 %BTC, <4 x i32> %V1, <4 x i32> %V2) {
   ret <4 x i32> %select
 }
 
+define <7 x i32> @v7i32(i32 %index, i32 %BTC, <7 x i32> %V1, <7 x i32> %V2) {
+; CHECK-LABEL: v7i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    adr r3, .LCPI1_0
+; CHECK-NEXT:    vdup.32 q1, r1
+; CHECK-NEXT:    vldrw.u32 q0, [r3]
+; CHECK-NEXT:    vadd.i32 q2, q0, r1
+; CHECK-NEXT:    vdup.32 q0, r2
+; CHECK-NEXT:    vcmp.u32 hi, q1, q2
+; CHECK-NEXT:    ldr r2, [sp, #32]
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vcmpt.u32 hi, q0, q2
+; CHECK-NEXT:    vmov.32 q2[0], r2
+; CHECK-NEXT:    ldr r2, [sp, #36]
+; CHECK-NEXT:    vmov.32 q2[1], r2
+; CHECK-NEXT:    ldr r2, [sp, #40]
+; CHECK-NEXT:    vmov.32 q2[2], r2
+; CHECK-NEXT:    ldr r2, [sp, #44]
+; CHECK-NEXT:    vmov.32 q2[3], r2
+; CHECK-NEXT:    ldr r2, [sp]
+; CHECK-NEXT:    vmov.32 q3[0], r2
+; CHECK-NEXT:    ldr r2, [sp, #4]
+; CHECK-NEXT:    vmov.32 q3[1], r2
+; CHECK-NEXT:    ldr r2, [sp, #8]
+; CHECK-NEXT:    vmov.32 q3[2], r2
+; CHECK-NEXT:    ldr r2, [sp, #12]
+; CHECK-NEXT:    vmov.32 q3[3], r2
+; CHECK-NEXT:    adr r2, .LCPI1_1
+; CHECK-NEXT:    vpsel q2, q3, q2
+; CHECK-NEXT:    vstrw.32 q2, [r0]
+; CHECK-NEXT:    vldrw.u32 q2, [r2]
+; CHECK-NEXT:    movw r2, #4095
+; CHECK-NEXT:    vadd.i32 q2, q2, r1
+; CHECK-NEXT:    vcmp.u32 hi, q1, q2
+; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    eors r1, r2
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    ldr r1, [sp, #48]
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vcmpt.u32 hi, q0, q2
+; CHECK-NEXT:    vmov.32 q0[0], r1
+; CHECK-NEXT:    ldr r1, [sp, #52]
+; CHECK-NEXT:    vmov.32 q0[1], r1
+; CHECK-NEXT:    ldr r1, [sp, #56]
+; CHECK-NEXT:    vmov.32 q0[2], r1
+; CHECK-NEXT:    ldr r1, [sp, #16]
+; CHECK-NEXT:    vmov.32 q1[0], r1
+; CHECK-NEXT:    ldr r1, [sp, #20]
+; CHECK-NEXT:    vmov.32 q1[1], r1
+; CHECK-NEXT:    ldr r1, [sp, #24]
+; CHECK-NEXT:    vmov.32 q1[2], r1
+; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov.f32 s2, s1
+; CHECK-NEXT:    vmov r3, s0
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    strd r3, r2, [r0, #16]
+; CHECK-NEXT:    str r1, [r0, #24]
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI1_0:
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    .long 1 @ 0x1
+; CHECK-NEXT:    .long 2 @ 0x2
+; CHECK-NEXT:    .long 3 @ 0x3
+; CHECK-NEXT:  .LCPI1_1:
+; CHECK-NEXT:    .long 4 @ 0x4
+; CHECK-NEXT:    .long 5 @ 0x5
+; CHECK-NEXT:    .long 6 @ 0x6
+; CHECK-NEXT:    .zero 4
+  %active.lane.mask = call <7 x i1> @llvm.get.active.lane.mask.v7i1.i32(i32 %index, i32 %BTC)
+  %select = select <7 x i1> %active.lane.mask, <7 x i32> %V1, <7 x i32> %V2
+  ret <7 x i32> %select
+}
+
 define <8 x i16> @v8i16(i32 %index, i32 %BTC, <8 x i16> %V1, <8 x i16> %V2) {
 ; CHECK-LABEL: v8i16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    adr.w r12, .LCPI1_0
+; CHECK-NEXT:    adr.w r12, .LCPI2_0
 ; CHECK-NEXT:    vdup.32 q5, r1
 ; CHECK-NEXT:    vldrw.u32 q0, [r12]
 ; CHECK-NEXT:    vmov.i8 q1, #0x0
 ; CHECK-NEXT:    vmov.i8 q2, #0xff
 ; CHECK-NEXT:    vadd.i32 q3, q0, r0
-; CHECK-NEXT:    vcmp.u32 cs, q5, q3
+; CHECK-NEXT:    vcmp.u32 hi, q5, q3
 ; CHECK-NEXT:    vpsel q4, q2, q1
 ; CHECK-NEXT:    vmov r1, s16
 ; CHECK-NEXT:    vmov.16 q0[0], r1
@@ -53,10 +130,10 @@ define <8 x i16> @v8i16(i32 %index, i32 %BTC, <8 x i16> %V1, <8 x i16> %V2) {
 ; CHECK-NEXT:    vmov.16 q0[2], r1
 ; CHECK-NEXT:    vmov r1, s19
 ; CHECK-NEXT:    vmov.16 q0[3], r1
-; CHECK-NEXT:    adr r1, .LCPI1_1
+; CHECK-NEXT:    adr r1, .LCPI2_1
 ; CHECK-NEXT:    vldrw.u32 q4, [r1]
 ; CHECK-NEXT:    vadd.i32 q4, q4, r0
-; CHECK-NEXT:    vcmp.u32 cs, q5, q4
+; CHECK-NEXT:    vcmp.u32 hi, q5, q4
 ; CHECK-NEXT:    vpsel q5, q2, q1
 ; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    vmov.16 q0[4], r1
@@ -102,12 +179,12 @@ define <8 x i16> @v8i16(i32 %index, i32 %BTC, <8 x i16> %V1, <8 x i16> %V2) {
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI1_0:
+; CHECK-NEXT:  .LCPI2_0:
 ; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 1 @ 0x1
 ; CHECK-NEXT:    .long 2 @ 0x2
 ; CHECK-NEXT:    .long 3 @ 0x3
-; CHECK-NEXT:  .LCPI1_1:
+; CHECK-NEXT:  .LCPI2_1:
 ; CHECK-NEXT:    .long 4 @ 0x4
 ; CHECK-NEXT:    .long 5 @ 0x5
 ; CHECK-NEXT:    .long 6 @ 0x6
@@ -122,13 +199,13 @@ define <16 x i8> @v16i8(i32 %index, i32 %BTC, <16 x i8> %V1, <16 x i8> %V2) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    sub sp, #16
-; CHECK-NEXT:    adr.w r12, .LCPI2_0
+; CHECK-NEXT:    adr.w r12, .LCPI3_0
 ; CHECK-NEXT:    vdup.32 q7, r1
 ; CHECK-NEXT:    vldrw.u32 q0, [r12]
 ; CHECK-NEXT:    vmov.i8 q5, #0x0
 ; CHECK-NEXT:    vmov.i8 q4, #0xff
 ; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vcmp.u32 cs, q7, q1
+; CHECK-NEXT:    vcmp.u32 hi, q7, q1
 ; CHECK-NEXT:    vpsel q0, q4, q5
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vmov.16 q2[0], r1
@@ -138,10 +215,10 @@ define <16 x i8> @v16i8(i32 %index, i32 %BTC, <16 x i8> %V1, <16 x i8> %V2) {
 ; CHECK-NEXT:    vmov.16 q2[2], r1
 ; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    vmov.16 q2[3], r1
-; CHECK-NEXT:    adr r1, .LCPI2_1
+; CHECK-NEXT:    adr r1, .LCPI3_1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vadd.i32 q3, q0, r0
-; CHECK-NEXT:    vcmp.u32 cs, q7, q3
+; CHECK-NEXT:    vcmp.u32 hi, q7, q3
 ; CHECK-NEXT:    vpsel q0, q4, q5
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vmov.16 q2[4], r1
@@ -169,10 +246,10 @@ define <16 x i8> @v16i8(i32 %index, i32 %BTC, <16 x i8> %V1, <16 x i8> %V2) {
 ; CHECK-NEXT:    vmov.8 q2[6], r1
 ; CHECK-NEXT:    vmov.u16 r1, q0[7]
 ; CHECK-NEXT:    vmov.8 q2[7], r1
-; CHECK-NEXT:    adr r1, .LCPI2_2
+; CHECK-NEXT:    adr r1, .LCPI3_2
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vadd.i32 q0, q0, r0
-; CHECK-NEXT:    vcmp.u32 cs, q7, q0
+; CHECK-NEXT:    vcmp.u32 hi, q7, q0
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    vpsel q6, q4, q5
 ; CHECK-NEXT:    vmov r1, s24
@@ -183,10 +260,10 @@ define <16 x i8> @v16i8(i32 %index, i32 %BTC, <16 x i8> %V1, <16 x i8> %V2) {
 ; CHECK-NEXT:    vmov.16 q0[2], r1
 ; CHECK-NEXT:    vmov r1, s27
 ; CHECK-NEXT:    vmov.16 q0[3], r1
-; CHECK-NEXT:    adr r1, .LCPI2_3
+; CHECK-NEXT:    adr r1, .LCPI3_3
 ; CHECK-NEXT:    vldrw.u32 q6, [r1]
 ; CHECK-NEXT:    vadd.i32 q6, q6, r0
-; CHECK-NEXT:    vcmp.u32 cs, q7, q6
+; CHECK-NEXT:    vcmp.u32 hi, q7, q6
 ; CHECK-NEXT:    vpsel q7, q4, q5
 ; CHECK-NEXT:    vmov r1, s28
 ; CHECK-NEXT:    vmov.16 q0[4], r1
@@ -308,22 +385,22 @@ define <16 x i8> @v16i8(i32 %index, i32 %BTC, <16 x i8> %V1, <16 x i8> %V2) {
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI2_0:
+; CHECK-NEXT:  .LCPI3_0:
 ; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 1 @ 0x1
 ; CHECK-NEXT:    .long 2 @ 0x2
 ; CHECK-NEXT:    .long 3 @ 0x3
-; CHECK-NEXT:  .LCPI2_1:
+; CHECK-NEXT:  .LCPI3_1:
 ; CHECK-NEXT:    .long 4 @ 0x4
 ; CHECK-NEXT:    .long 5 @ 0x5
 ; CHECK-NEXT:    .long 6 @ 0x6
 ; CHECK-NEXT:    .long 7 @ 0x7
-; CHECK-NEXT:  .LCPI2_2:
+; CHECK-NEXT:  .LCPI3_2:
 ; CHECK-NEXT:    .long 8 @ 0x8
 ; CHECK-NEXT:    .long 9 @ 0x9
 ; CHECK-NEXT:    .long 10 @ 0xa
 ; CHECK-NEXT:    .long 11 @ 0xb
-; CHECK-NEXT:  .LCPI2_3:
+; CHECK-NEXT:  .LCPI3_3:
 ; CHECK-NEXT:    .long 12 @ 0xc
 ; CHECK-NEXT:    .long 13 @ 0xd
 ; CHECK-NEXT:    .long 14 @ 0xe
@@ -334,5 +411,6 @@ define <16 x i8> @v16i8(i32 %index, i32 %BTC, <16 x i8> %V1, <16 x i8> %V2) {
 }
 
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
+declare <7 x i1> @llvm.get.active.lane.mask.v7i1.i32(i32, i32)
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)
 declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32, i32)

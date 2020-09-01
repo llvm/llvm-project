@@ -1329,16 +1329,16 @@ define <2 x i32> @usubo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; AVX512-LABEL: usubo_v2i128:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512-NEXT:    subq %r8, %rdi
-; AVX512-NEXT:    sbbq %r9, %rsi
-; AVX512-NEXT:    setb %r8b
 ; AVX512-NEXT:    subq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-NEXT:    sbbq {{[0-9]+}}(%rsp), %rcx
 ; AVX512-NEXT:    setb %al
 ; AVX512-NEXT:    kmovd %eax, %k0
+; AVX512-NEXT:    subq %r8, %rdi
+; AVX512-NEXT:    sbbq %r9, %rsi
+; AVX512-NEXT:    setb %al
+; AVX512-NEXT:    andl $1, %eax
+; AVX512-NEXT:    kmovw %eax, %k1
 ; AVX512-NEXT:    kshiftlw $1, %k0, %k0
-; AVX512-NEXT:    andl $1, %r8d
-; AVX512-NEXT:    kmovw %r8d, %k1
 ; AVX512-NEXT:    korw %k0, %k1, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}

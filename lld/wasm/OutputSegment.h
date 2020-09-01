@@ -37,7 +37,7 @@ public:
   uint32_t initFlags = 0;
   uint32_t sectionOffset = 0;
   uint32_t alignment = 0;
-  uint32_t startVA = 0;
+  uint64_t startVA = 0;
   std::vector<InputSegment *> inputSegments;
 
   // Sum of the size of the all the input segments

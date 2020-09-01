@@ -1,5 +1,5 @@
 # RUN: not --crash llc -march=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
-# REQUIRES: global-isel, aarch64-registered-target
+# REQUIRES: aarch64-registered-target
 
 ---
 name:            test_jump_table

@@ -485,17 +485,16 @@ defm atomic_load_xor : ret_noret_binary_atomic_op<atomic_load_xor>;
 defm atomic_load_fadd : ret_noret_binary_atomic_op<atomic_load_fadd, 0>;
 defm AMDGPUatomic_cmp_swap : ret_noret_binary_atomic_op<AMDGPUatomic_cmp_swap>;
 
-
-def load_align8_local : PatFrag <(ops node:$ptr), (load_local node:$ptr)> {
+def load_align8_local : PatFrag<(ops node:$ptr), (load_local node:$ptr)>,
+                        Aligned<8> {
   let IsLoad = 1;
   let IsNonExtLoad = 1;
-  let MinAlignment = 8;
 }
 
-def load_align16_local : PatFrag <(ops node:$ptr), (load_local node:$ptr)> {
+def load_align16_local : PatFrag<(ops node:$ptr), (load_local node:$ptr)>,
+                        Aligned<16> {
   let IsLoad = 1;
   let IsNonExtLoad = 1;
-  let MinAlignment = 16;
 }
 
 def store_align8_local: PatFrag<(ops node:$val, node:$ptr),

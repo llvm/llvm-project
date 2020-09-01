@@ -1949,18 +1949,6 @@ private:
   void addScopStmt(Region *R, StringRef Name, Loop *SurroundingLoop,
                    std::vector<Instruction *> EntryBlockInstructions);
 
-  /// Remove statements from the list of scop statements.
-  ///
-  /// @param ShouldDelete  A function that returns true if the statement passed
-  ///                      to it should be deleted.
-  /// @param AfterHoisting If true, also remove from data access lists.
-  ///                      These lists are filled during
-  ///                      ScopBuilder::buildAccessRelations. Therefore, if this
-  ///                      method is called before buildAccessRelations, false
-  ///                      must be passed.
-  void removeStmts(std::function<bool(ScopStmt &)> ShouldDelete,
-                   bool AfterHoisting = true);
-
   /// Removes @p Stmt from the StmtMap.
   void removeFromStmtMap(ScopStmt &Stmt);
 
@@ -2321,6 +2309,19 @@ public:
     MinMaxAliasGroups.back().first = MinMaxAccessesReadWrite;
     MinMaxAliasGroups.back().second = MinMaxAccessesReadOnly;
   }
+
+  /// Remove statements from the list of scop statements.
+  ///
+  /// @param ShouldDelete  A function that returns true if the statement passed
+  ///                      to it should be deleted.
+  /// @param AfterHoisting If true, also remove from data access lists.
+  ///                      These lists are filled during
+  ///                      ScopBuilder::buildAccessRelations. Therefore, if this
+  ///                      method is called before buildAccessRelations, false
+  ///                      must be passed.
+  void removeStmts(function_ref<bool(ScopStmt &)> ShouldDelete,
+                   bool AfterHoisting = true);
+
   /// Get an isl string representing the context.
   std::string getContextStr() const;
 

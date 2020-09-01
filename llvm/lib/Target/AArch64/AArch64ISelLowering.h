@@ -77,6 +77,8 @@ enum NodeType : unsigned {
   FADD_PRED,
   FDIV_PRED,
   FMA_PRED,
+  FMAXNM_PRED,
+  FMINNM_PRED,
   FMUL_PRED,
   FSUB_PRED,
   MUL_PRED,
@@ -86,9 +88,17 @@ enum NodeType : unsigned {
   SMIN_PRED,
   SRA_PRED,
   SRL_PRED,
+  SUB_PRED,
   UDIV_PRED,
   UMAX_PRED,
   UMIN_PRED,
+
+  // Predicated instructions with the result of inactive lanes provided by the
+  // last operand.
+  FCEIL_MERGE_PASSTHRU,
+  FNEG_MERGE_PASSTHRU,
+  SIGN_EXTEND_INREG_MERGE_PASSTHRU,
+  ZERO_EXTEND_INREG_MERGE_PASSTHRU,
 
   SETCC_MERGE_ZERO,
 
@@ -896,7 +906,12 @@ private:
   SDValue LowerSVEStructLoad(unsigned Intrinsic, ArrayRef<SDValue> LoadOps,
                              EVT VT, SelectionDAG &DAG, const SDLoc &DL) const;
 
+  SDValue LowerFixedLengthVectorIntDivideToSVE(SDValue Op,
+                                               SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthVectorIntExtendToSVE(SDValue Op,
+                                               SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorLoadToSVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthVectorSetccToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorStoreToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorTruncateToSVE(SDValue Op,
                                               SelectionDAG &DAG) const;

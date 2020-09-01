@@ -376,13 +376,7 @@ static
   va_start(ap, argc);
 
   rc = __kmp_fork_call(loc, gtid, fork_context_gnu, argc, wrapper,
-                       __kmp_invoke_task_func,
-#if (KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64) && KMP_OS_LINUX
-                       &ap
-#else
-                       ap
-#endif
-                       );
+                       __kmp_invoke_task_func, kmp_va_addr_of(ap));
 
   va_end(ap);
 

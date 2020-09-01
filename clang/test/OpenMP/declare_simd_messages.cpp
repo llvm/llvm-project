@@ -56,7 +56,7 @@ void h(int *hp, int *hp2, int *hq, int *lin) {
 #pragma omp declare simd inbranch inbranch notinbranch // expected-error {{unexpected 'notinbranch' clause, 'inbranch' is specified already}}
 #pragma omp declare simd notinbranch notinbranch inbranch // expected-error {{unexpected 'inbranch' clause, 'notinbranch' is specified already}}
 // expected-note@+2 {{read of non-const variable 'b' is not allowed in a constant expression}}
-// expected-error@+1 {{expression is not an integral constant expression}}
+// expected-error@+1 {{integral constant expression}}
 #pragma omp declare simd simdlen(b)
 // expected-error@+1 {{directive '#pragma omp declare simd' cannot contain more than one 'simdlen' clause}}
 #pragma omp declare simd simdlen(32) simdlen(c)

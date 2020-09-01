@@ -3,9 +3,9 @@
 
 ; Test that statistics distinguish functions with the same name.
 
-; CHECK:      "#functions":4,
-; CHECK-SAME: "#unique source variables":2
-; CHECK-SAME: "#source variables":2
+; CHECK:      "#functions": 4,
+; CHECK:      "#unique source variables": 2,
+; CHECK-NEXT: "#source variables": 2,
 
 ; $ cat test1.cpp
 ; static int foo(int a) {

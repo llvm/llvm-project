@@ -19,9 +19,9 @@ int main(int argc, char **argv) {
   }
 }
 
-// CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.+}}, i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i8***)* [[OUTLINED:@.+]] to void (i32*, i32*, ...)*), i32* %{{.+}}, i8*** %{{.+}})
+// CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.+}}, i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i8**)* [[OUTLINED:@.+]] to void (i32*, i32*, ...)*), i32* %{{.+}}, i8** %{{.+}})
 
-// CHECK: define internal void [[OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* {{.+}}, i8*** {{.+}})
+// CHECK: define internal void [[OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* {{.+}}, i8** {{.+}})
 // CHECK: alloca i32,
 // CHECK: [[ARGC_FP_ADDR:%.+]] = alloca i32,
 // CHECK: [[TR:%.+]] = alloca [2 x %struct.kmp_taskred_input_t],
@@ -123,7 +123,6 @@ int main(int argc, char **argv) {
 // CHECK_DAG: [[TG]] = load i8*, i8** [[TG_ADDR]],
 // CHECK-DAG: [[ARGV_REF]] = load i8*, i8** [[ARGV_ADDR:%.+]],
 // CHECK-DAG: [[ARGV_ADDR]] = load i8**, i8*** [[ARGV_ADDR_REF:%.+]],
-// CHECK-DAG: [[ARGV_ADDR_REF:%.+]] = load i8***, i8**** [[ARGV:%.+]],
-// CHECK-DAG: [[ARGV]] = getelementptr inbounds [[CAPS_TY]], [[CAPS_TY]]* [[CAP]], i32 0, i32 2
+// CHECK-DAG: [[ARGV_ADDR_REF]] = getelementptr inbounds [[CAPS_TY]], [[CAPS_TY]]* [[CAP]], i32 0, i32 2
 
 #endif

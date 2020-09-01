@@ -88,9 +88,10 @@ public:
     using Scalar = typename Const::Element;
     std::size_t elements{TotalElementCount(extents_)};
     std::vector<Scalar> typedValue(elements);
-    auto stride{type_.MeasureSizeInBytes()};
-    CHECK(stride > 0);
-    CHECK(offset_ + elements * *stride <= image_.data_.size());
+    auto elemBytes{ToInt64(type_.MeasureSizeInBytes(&context_))};
+    CHECK(elemBytes && *elemBytes >= 0);
+    std::size_t stride{static_cast<std::size_t>(*elemBytes)};
+    CHECK(offset_ + elements * stride <= image_.data_.size());
     if constexpr (T::category == TypeCategory::Derived) {
       const semantics::DerivedTypeSpec &derived{type_.GetDerivedTypeSpec()};
       for (auto iter : DEREF(derived.scope())) {
@@ -102,7 +103,7 @@ public:
           CHECK(componentType);
           auto at{offset_ + component.offset()};
           if (isPointer) {
-            for (std::size_t j{0}; j < elements; ++j, at += *stride) {
+            for (std::size_t j{0}; j < elements; ++j, at += stride) {
               Result value{image_.AsConstantDataPointer(*componentType, at)};
               CHECK(value);
               typedValue[j].emplace(component, std::move(*value));
@@ -110,7 +111,7 @@ public:
           } else {
             auto componentExtents{GetConstantExtents(context_, component)};
             CHECK(componentExtents);
-            for (std::size_t j{0}; j < elements; ++j, at += *stride) {
+            for (std::size_t j{0}; j < elements; ++j, at += stride) {
               Result value{image_.AsConstant(
                   context_, *componentType, *componentExtents, at)};
               CHECK(value);
@@ -122,20 +123,20 @@ public:
       return AsGenericExpr(
           Const{derived, std::move(typedValue), std::move(extents_)});
     } else if constexpr (T::category == TypeCategory::Character) {
-      auto length{static_cast<ConstantSubscript>(*stride) / T::kind};
+      auto length{static_cast<ConstantSubscript>(stride) / T::kind};
       for (std::size_t j{0}; j < elements; ++j) {
         using Char = typename Scalar::value_type;
         const Char *data{reinterpret_cast<const Char *>(
-            &image_.data_[offset_ + j * *stride])};
+            &image_.data_[offset_ + j * stride])};
         typedValue[j].assign(data, length);
       }
       return AsGenericExpr(
           Const{length, std::move(typedValue), std::move(extents_)});
     } else {
       // Lengthless intrinsic type
-      CHECK(sizeof(Scalar) <= *stride);
+      CHECK(sizeof(Scalar) <= stride);
       for (std::size_t j{0}; j < elements; ++j) {
-        std::memcpy(&typedValue[j], &image_.data_[offset_ + j * *stride],
+        std::memcpy(&typedValue[j], &image_.data_[offset_ + j * stride],
             sizeof(Scalar));
       }
       return AsGenericExpr(Const{std::move(typedValue), std::move(extents_)});

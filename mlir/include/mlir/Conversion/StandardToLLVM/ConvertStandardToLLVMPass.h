@@ -9,6 +9,8 @@
 #ifndef MLIR_CONVERSION_STANDARDTOLLVM_CONVERTSTANDARDTOLLVMPASS_H_
 #define MLIR_CONVERSION_STANDARDTOLLVM_CONVERTSTANDARDTOLLVMPASS_H_
 
+#include "llvm/IR/DataLayout.h"
+
 #include <memory>
 
 namespace mlir {
@@ -30,6 +32,11 @@ struct LowerToLLVMOptions {
   unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout;
   /// Use aligned_alloc for heap allocations.
   bool useAlignedAlloc = false;
+
+  /// The data layout of the module to produce. This must be consistent with the
+  /// data layout used in the upper levels of the lowering pipeline.
+  // TODO: this should be replaced by MLIR data layout when one exists.
+  llvm::DataLayout dataLayout = llvm::DataLayout("");
 
   /// Get a statically allocated copy of the default LowerToLLVMOptions.
   static const LowerToLLVMOptions &getDefaultOptions() {

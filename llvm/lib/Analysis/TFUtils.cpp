@@ -122,8 +122,8 @@ Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
   if (!Mapper.map<std::vector<int64_t>>("shape", TensorShape))
     return EmitError("'shape' property not present or not an int array");
 
-#define PARSE_TYPE(T, S, E)                                                    \
-  if (TensorType == #S)                                                        \
+#define PARSE_TYPE(T, E)                                                       \
+  if (TensorType == #T)                                                        \
     return TensorSpec::createSpec<T>(TensorName, TensorShape, TensorPort);
   TFUTILS_SUPPORTED_TYPES(PARSE_TYPE)
 #undef PARSE_TYPE
@@ -307,8 +307,8 @@ TFModelEvaluator::EvaluationResult::getUntypedTensorValue(size_t Index) const {
   return TF_TensorData(Impl->getOutput()[Index]);
 }
 
-#define TFUTILS_GETDATATYPE_IMPL(T, S, E)                                      \
-  template <> int TensorSpec::getDataType<T>() { return TF_##E; }
+#define TFUTILS_GETDATATYPE_IMPL(T, E)                                         \
+  template <> int TensorSpec::getDataType<T>() { return E; }
 
 TFUTILS_SUPPORTED_TYPES(TFUTILS_GETDATATYPE_IMPL)
 

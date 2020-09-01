@@ -31,6 +31,7 @@ static void assert_impl(bool condition, const char *file, int line,
 }
 
 #define die(msg) die_impl(__FILE__, __LINE__, msg)
+#undef assert
 #define assert(exp) assert_impl(exp, __FILE__, __LINE__, #exp)
 
 #include "isl_test_cpp-generic.cc"

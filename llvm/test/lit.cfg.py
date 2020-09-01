@@ -168,7 +168,8 @@ tools.extend([
     ToolSubst('Kaleidoscope-Ch5', unresolved='ignore'),
     ToolSubst('Kaleidoscope-Ch6', unresolved='ignore'),
     ToolSubst('Kaleidoscope-Ch7', unresolved='ignore'),
-    ToolSubst('Kaleidoscope-Ch8', unresolved='ignore')])
+    ToolSubst('Kaleidoscope-Ch8', unresolved='ignore'),
+    ToolSubst('LLJITWithThinLTOSummaries', unresolved='ignore')])
 
 llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
 
@@ -327,10 +328,9 @@ def have_ld64_plugin_support():
 if have_ld64_plugin_support():
     config.available_features.add('ld64_plugin')
 
-# Ask llvm-config about asserts and global-isel.
+# Ask llvm-config about asserts
 llvm_config.feature_config(
-    [('--assertion-mode', {'ON': 'asserts'}),
-     ('--has-global-isel', {'ON': 'global-isel'})])
+    [('--assertion-mode', {'ON': 'asserts'})])
 
 if 'darwin' == sys.platform:
     cmd = ['sysctl', 'hw.optional.fma']

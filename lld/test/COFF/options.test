@@ -1,4 +1,4 @@
-# RUN: yaml2obj < %p/Inputs/ret42.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
 
 # RUN: lld-link /out:%t.exe /entry:main %t.obj
 # RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=BIND %s

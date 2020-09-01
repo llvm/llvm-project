@@ -63,6 +63,7 @@ declare <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> %a, <8 x i16> %b) nounwind
 ; CHECK-ORIGINS: load i32, i32* {{.*}} @__msan_param_origin_tls
 ; CHECK-NEXT: load <8 x i16>, <8 x i16>* {{.*}} @__msan_param_tls
 ; CHECK-ORIGINS: load i32, i32* {{.*}} @__msan_param_origin_tls
+; CHECK-NEXT: call void @llvm.donothing
 ; CHECK-NEXT: = or <8 x i16>
 ; CHECK-ORIGINS: = bitcast <8 x i16> {{.*}} to i128
 ; CHECK-ORIGINS-NEXT: = icmp ne i128 {{.*}}, 0

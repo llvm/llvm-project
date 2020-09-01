@@ -21,10 +21,11 @@ define arm_aapcscc void @g() {
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    popne {r11, lr}
 ; CHECK-NEXT:    movne pc, lr
+; CHECK-NEXT:  .LBB0_1: @ %if.then5
 ; CHECK-NEXT:    ldr r1, [r1, #4]
 ; CHECK-NEXT:    bl k
 ; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:  .LCPI0_0:
 ; CHECK-NEXT:    .long f
 ; CHECK-NEXT:  .LCPI0_1:

@@ -2,7 +2,7 @@
 
 int main (int argc, const char * argv[])
 {
-    
+
     NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
 
 
@@ -19,6 +19,7 @@ int main (int argc, const char * argv[])
 	NSString *aString = @"a string";
 
 	NSArray *other_arr = [NSArray arrayWithObjects:aDate, aValue, aString, arr, nil];
+	NSArray *empty_arr = @[];
 
     [pool drain];// Set break point at this line.
     return 0;

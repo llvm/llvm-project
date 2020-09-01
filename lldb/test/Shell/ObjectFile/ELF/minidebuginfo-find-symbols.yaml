@@ -1,6 +1,6 @@
 # REQUIRES: lzma
 
-# RUN: yaml2obj %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 
 # RUN: %lldb -b -o 'image dump symtab' %t.obj | FileCheck %s
 

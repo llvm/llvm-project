@@ -53,7 +53,7 @@ __isl_give isl_id *isl_space_get_tuple_id(__isl_keep isl_space *space,
 	enum isl_dim_type type);
 __isl_give isl_space *isl_space_reset_user(__isl_take isl_space *space);
 
-__isl_give isl_space *isl_space_set_dim_id(__isl_take isl_space *dim,
+__isl_give isl_space *isl_space_set_dim_id(__isl_take isl_space *space,
 	enum isl_dim_type type, unsigned pos, __isl_take isl_id *id);
 isl_bool isl_space_has_dim_id(__isl_keep isl_space *space,
 	enum isl_dim_type type, unsigned pos);
@@ -74,7 +74,7 @@ __isl_keep const char *isl_space_get_dim_name(__isl_keep isl_space *space,
 				 enum isl_dim_type type, unsigned pos);
 
 ISL_DEPRECATED
-__isl_give isl_space *isl_space_extend(__isl_take isl_space *dim,
+__isl_give isl_space *isl_space_extend(__isl_take isl_space *space,
 			unsigned nparam, unsigned n_in, unsigned n_out);
 __isl_give isl_space *isl_space_add_dims(__isl_take isl_space *space,
 	enum isl_dim_type type, unsigned n);
@@ -110,10 +110,10 @@ __isl_give isl_space *isl_space_range_reverse(__isl_take isl_space *space);
 __isl_give isl_space *isl_space_drop_dims(__isl_take isl_space *space,
 	enum isl_dim_type type, unsigned first, unsigned num);
 ISL_DEPRECATED
-__isl_give isl_space *isl_space_drop_inputs(__isl_take isl_space *dim,
+__isl_give isl_space *isl_space_drop_inputs(__isl_take isl_space *space,
 		unsigned first, unsigned n);
 ISL_DEPRECATED
-__isl_give isl_space *isl_space_drop_outputs(__isl_take isl_space *dim,
+__isl_give isl_space *isl_space_drop_outputs(__isl_take isl_space *space,
 		unsigned first, unsigned n);
 __isl_give isl_space *isl_space_drop_all_params(__isl_take isl_space *space);
 __isl_export
@@ -134,8 +134,8 @@ __isl_give isl_space *isl_space_add_named_tuple_id_ui(
 	__isl_take isl_space *space, __isl_take isl_id *tuple_id, unsigned dim);
 __isl_give isl_space *isl_space_set_from_params(__isl_take isl_space *space);
 
-__isl_give isl_space *isl_space_align_params(__isl_take isl_space *dim1,
-	__isl_take isl_space *dim2);
+__isl_give isl_space *isl_space_align_params(__isl_take isl_space *space1,
+	__isl_take isl_space *space2);
 
 __isl_export
 isl_bool isl_space_is_wrapping(__isl_keep isl_space *space);

@@ -257,6 +257,7 @@ declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture w
 
 define void @atomic_memcpy(i8* nocapture %x, i8* nocapture %y) nounwind {
   ; CHECK-LABEL: atomic_memcpy
+  ; CHECK-NEXT: call void @llvm.donothing
   ; CHECK-NEXT: call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
   ; CHECK-NEXT: ret void
   call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
@@ -265,6 +266,7 @@ define void @atomic_memcpy(i8* nocapture %x, i8* nocapture %y) nounwind {
 
 define void @atomic_memmove(i8* nocapture %x, i8* nocapture %y) nounwind {
   ; CHECK-LABEL: atomic_memmove
+  ; CHECK-NEXT: call void @llvm.donothing
   ; CHECK-NEXT: call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
   ; CHECK-NEXT: ret void
   call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
@@ -273,6 +275,7 @@ define void @atomic_memmove(i8* nocapture %x, i8* nocapture %y) nounwind {
 
 define void @atomic_memset(i8* nocapture %x) nounwind {
   ; CHECK-LABEL: atomic_memset
+  ; CHECK-NEXT: call void @llvm.donothing
   ; CHECK-NEXT: call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %x, i8 88, i64 16, i32 1)
   ; CHECK-NEXT: ret void
   call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %x, i8 88, i64 16, i32 1)
@@ -389,6 +392,7 @@ entry:
 ; CHECK-LABEL: @IntToPtr
 ; CHECK: load i64, i64*{{.*}}__msan_param_tls
 ; CHECK-ORIGINS-NEXT: load i32, i32*{{.*}}__msan_param_origin_tls
+; CHECK-NEXT: call void @llvm.donothing
 ; CHECK-NEXT: inttoptr
 ; CHECK-NEXT: store i64{{.*}}__msan_retval_tls
 ; CHECK: ret i8*
@@ -436,7 +440,7 @@ entry:
 ; CHECK-LABEL: @FDiv
 ; CHECK: %[[SA:.*]] = load i32,{{.*}}@__msan_param_tls
 ; CHECK: %[[SB:.*]] = load i32,{{.*}}@__msan_param_tls
-; CHECK: %[[SC:.*]] = or i32 %[[SB]], %[[SA]]
+; CHECK: %[[SC:.*]] = or i32 %[[SA]], %[[SB]]
 ; CHECK: = fdiv float
 ; CHECK: store i32 %[[SC]], i32* {{.*}}@__msan_retval_tls
 ; CHECK: ret float

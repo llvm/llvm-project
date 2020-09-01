@@ -506,10 +506,6 @@ public:
     return m_object_mod_time;
   }
 
-  void SetObjectModificationTime(const llvm::sys::TimePoint<> &mod_time) {
-    m_mod_time = mod_time;
-  }
-
   /// This callback will be called by SymbolFile implementations when
   /// parsing a compile unit that contains SDK information.
   /// \param sysroot will be added to the path remapping dictionary.

@@ -1138,7 +1138,7 @@ define void @test_memcpy(i8* %dst, i8* %src, i64 %size) {
 ; CHECK: [[DST:%[0-9]+]]:_(p0) = COPY $x0
 ; CHECK: [[SRC:%[0-9]+]]:_(p0) = COPY $x1
 ; CHECK: [[SIZE:%[0-9]+]]:_(s64) = COPY $x2
-; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[DST]](p0), [[SRC]](p0), [[SIZE]](s64), 0 :: (store 1 into %ir.dst), (load 1 from %ir.src)
+; CHECK: G_MEMCPY [[DST]](p0), [[SRC]](p0), [[SIZE]](s64), 0 :: (store 1 into %ir.dst), (load 1 from %ir.src)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %size, i1 0)
   ret void
 }
@@ -1148,7 +1148,7 @@ define void @test_memcpy_tail(i8* %dst, i8* %src, i64 %size) {
 ; CHECK: [[DST:%[0-9]+]]:_(p0) = COPY $x0
 ; CHECK: [[SRC:%[0-9]+]]:_(p0) = COPY $x1
 ; CHECK: [[SIZE:%[0-9]+]]:_(s64) = COPY $x2
-; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[DST]](p0), [[SRC]](p0), [[SIZE]](s64), 1 :: (store 1 into %ir.dst), (load 1 from %ir.src)
+; CHECK: G_MEMCPY [[DST]](p0), [[SRC]](p0), [[SIZE]](s64), 1 :: (store 1 into %ir.dst), (load 1 from %ir.src)
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %size, i1 0)
   ret void
 }
@@ -1159,7 +1159,7 @@ define void @test_memcpy_nonzero_as(i8 addrspace(1)* %dst, i8 addrspace(1) * %sr
 ; CHECK: [[DST:%[0-9]+]]:_(p1) = COPY $x0
 ; CHECK: [[SRC:%[0-9]+]]:_(p1) = COPY $x1
 ; CHECK: [[SIZE:%[0-9]+]]:_(s64) = COPY $x2
-; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[DST]](p1), [[SRC]](p1), [[SIZE]](s64), 0 :: (store 1 into %ir.dst, addrspace 1), (load 1 from %ir.src, addrspace 1)
+; CHECK: G_MEMCPY [[DST]](p1), [[SRC]](p1), [[SIZE]](s64), 0 :: (store 1 into %ir.dst, addrspace 1), (load 1 from %ir.src, addrspace 1)
   call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 %size, i1 0)
   ret void
 }
@@ -1170,7 +1170,7 @@ define void @test_memmove(i8* %dst, i8* %src, i64 %size) {
 ; CHECK: [[DST:%[0-9]+]]:_(p0) = COPY $x0
 ; CHECK: [[SRC:%[0-9]+]]:_(p0) = COPY $x1
 ; CHECK: [[SIZE:%[0-9]+]]:_(s64) = COPY $x2
-; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memmove), [[DST]](p0), [[SRC]](p0), [[SIZE]](s64), 0 :: (store 1 into %ir.dst), (load 1 from %ir.src)
+; CHECK: G_MEMMOVE [[DST]](p0), [[SRC]](p0), [[SIZE]](s64), 0 :: (store 1 into %ir.dst), (load 1 from %ir.src)
   call void @llvm.memmove.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %size, i1 0)
   ret void
 }
@@ -1182,7 +1182,7 @@ define void @test_memset(i8* %dst, i8 %val, i64 %size) {
 ; CHECK: [[SRC_C:%[0-9]+]]:_(s32) = COPY $w1
 ; CHECK: [[SRC:%[0-9]+]]:_(s8) = G_TRUNC [[SRC_C]]
 ; CHECK: [[SIZE:%[0-9]+]]:_(s64) = COPY $x2
-; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memset), [[DST]](p0), [[SRC]](s8), [[SIZE]](s64), 0 :: (store 1 into %ir.dst)
+; CHECK: G_MEMSET [[DST]](p0), [[SRC]](s8), [[SIZE]](s64), 0 :: (store 1 into %ir.dst)
   call void @llvm.memset.p0i8.i64(i8* %dst, i8 %val, i64 %size, i1 0)
   ret void
 }

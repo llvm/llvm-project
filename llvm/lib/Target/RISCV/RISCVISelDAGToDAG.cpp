@@ -124,22 +124,34 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::SRL: {
     if (!Subtarget->is64Bit())
       break;
-    SDValue Op0 = Node->getOperand(0);
-    SDValue Op1 = Node->getOperand(1);
+    SDNode *Op0 = Node->getOperand(0).getNode();
     uint64_t Mask;
     // Match (srl (and val, mask), imm) where the result would be a
     // zero-extended 32-bit integer. i.e. the mask is 0xffffffff or the result
     // is equivalent to this (SimplifyDemandedBits may have removed lower bits
     // from the mask that aren't necessary due to the right-shifting).
-    if (Op1.getOpcode() == ISD::Constant &&
-        isConstantMask(Op0.getNode(), Mask)) {
-      uint64_t ShAmt = cast<ConstantSDNode>(Op1.getNode())->getZExtValue();
+    if (isa<ConstantSDNode>(Node->getOperand(1)) && isConstantMask(Op0, Mask)) {
+      uint64_t ShAmt = Node->getConstantOperandVal(1);
 
       if ((Mask | maskTrailingOnes<uint64_t>(ShAmt)) == 0xffffffff) {
         SDValue ShAmtVal =
             CurDAG->getTargetConstant(ShAmt, SDLoc(Node), XLenVT);
-        CurDAG->SelectNodeTo(Node, RISCV::SRLIW, XLenVT, Op0.getOperand(0),
+        CurDAG->SelectNodeTo(Node, RISCV::SRLIW, XLenVT, Op0->getOperand(0),
                              ShAmtVal);
+        return;
+      }
+    }
+    // Match (srl (shl val, 32), imm).
+    if (Op0->getOpcode() == ISD::SHL &&
+        isa<ConstantSDNode>(Op0->getOperand(1)) &&
+        isa<ConstantSDNode>(Node->getOperand(1))) {
+      uint64_t ShlAmt = Op0->getConstantOperandVal(1);
+      uint64_t SrlAmt = Node->getConstantOperandVal(1);
+      if (ShlAmt == 32 && SrlAmt > 32) {
+        SDValue SrlAmtSub32Val =
+            CurDAG->getTargetConstant(SrlAmt - 32, SDLoc(Node), XLenVT);
+        CurDAG->SelectNodeTo(Node, RISCV::SRLIW, XLenVT, Op0->getOperand(0),
+                             SrlAmtSub32Val);
         return;
       }
     }
@@ -447,55 +459,6 @@ bool RISCVDAGToDAGISel::SelectRORIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
             if (VC2 == (32 - VC1) &&
                 VC3 == maskLeadingOnes<uint32_t>(VC2)) {
               RS1 = Shl.getOperand(0);
-              Shamt = CurDAG->getTargetConstant(VC1, SDLoc(N),
-                                              Srl.getOperand(1).getValueType());
-              return true;
-            }
-          }
-        }
-      }
-    }
-  }
-  return false;
-}
-
-// Check that it is a FSRIW (i32 Funnel Shift Right Immediate on RV64).
-// We first check that it is the right node tree:
-//
-//  (SIGN_EXTEND_INREG (OR (SHL (AsserSext RS1, i32), VC2),
-//                         (SRL (AND (AssertSext RS2, i32), VC3), VC1)))
-//
-// Then we check that the constant operands respect these constraints:
-//
-// VC2 == 32 - VC1
-// VC3 == maskLeadingOnes<uint32_t>(VC2)
-//
-// being VC1 the Shamt we need, VC2 the complementary of Shamt over 32
-// and VC3 a 32 bit mask of (32 - VC1) leading ones.
-
-bool RISCVDAGToDAGISel::SelectFSRIW(SDValue N, SDValue &RS1, SDValue &RS2,
-                                    SDValue &Shamt) {
-  if (N.getOpcode() == ISD::SIGN_EXTEND_INREG &&
-      Subtarget->getXLenVT() == MVT::i64 &&
-      cast<VTSDNode>(N.getOperand(1))->getVT() == MVT::i32) {
-    if (N.getOperand(0).getOpcode() == ISD::OR) {
-      SDValue Or = N.getOperand(0);
-      if (Or.getOperand(0).getOpcode() == ISD::SHL &&
-          Or.getOperand(1).getOpcode() == ISD::SRL) {
-        SDValue Shl = Or.getOperand(0);
-        SDValue Srl = Or.getOperand(1);
-        if (Srl.getOperand(0).getOpcode() == ISD::AND) {
-          SDValue And = Srl.getOperand(0);
-          if (isa<ConstantSDNode>(Srl.getOperand(1)) &&
-              isa<ConstantSDNode>(Shl.getOperand(1)) &&
-              isa<ConstantSDNode>(And.getOperand(1))) {
-            uint32_t VC1 = Srl.getConstantOperandVal(1);
-            uint32_t VC2 = Shl.getConstantOperandVal(1);
-            uint32_t VC3 = And.getConstantOperandVal(1);
-            if (VC2 == (32 - VC1) &&
-                VC3 == maskLeadingOnes<uint32_t>(VC2)) {
-              RS1 = Shl.getOperand(0);
-              RS2 = And.getOperand(0);
               Shamt = CurDAG->getTargetConstant(VC1, SDLoc(N),
                                               Srl.getOperand(1).getValueType());
               return true;

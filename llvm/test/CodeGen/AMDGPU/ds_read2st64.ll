@@ -13,7 +13,7 @@
 ; GCN: s_waitcnt lgkmcnt(0)
 ; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
 ; CI: buffer_store_dword [[RESULT]]
-; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX9: global_store_dword v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @simple_read2st64_f32_0_1(float addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
@@ -35,7 +35,7 @@ define amdgpu_kernel void @simple_read2st64_f32_0_1(float addrspace(1)* %out) #0
 ; GCN: s_waitcnt lgkmcnt(0)
 ; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
 ; CI: buffer_store_dword [[RESULT]]
-; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX9: global_store_dword v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @simple_read2st64_f32_1_2(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %add.x.0 = add nsw i32 %x.i, 64
@@ -58,7 +58,7 @@ define amdgpu_kernel void @simple_read2st64_f32_1_2(float addrspace(1)* %out, fl
 ; GCN: s_waitcnt lgkmcnt(0)
 ; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
 ; CI: buffer_store_dword [[RESULT]]
-; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX9: global_store_dword v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @simple_read2st64_f32_max_offset(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %add.x.0 = add nsw i32 %x.i, 64
@@ -143,7 +143,7 @@ define amdgpu_kernel void @odd_invalid_read2st64_f32_1(float addrspace(1)* %out)
 ; GCN: s_waitcnt lgkmcnt(0)
 ; GCN: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO_VREG]]:{{[0-9]+\]}}, v{{\[[0-9]+}}:[[HI_VREG]]{{\]}}
 ; CI: buffer_store_dwordx2 [[RESULT]]
-; GFX9: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX9: global_store_dwordx2 v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @simple_read2st64_f64_0_1(double addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %x.i
@@ -166,7 +166,7 @@ define amdgpu_kernel void @simple_read2st64_f64_0_1(double addrspace(1)* %out) #
 ; GCN: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO_VREG]]:{{[0-9]+\]}}, v{{\[[0-9]+}}:[[HI_VREG]]{{\]}}
 
 ; CI: buffer_store_dwordx2 [[RESULT]]
-; GFX9: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX9: global_store_dwordx2 v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @simple_read2st64_f64_1_2(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %add.x.0 = add nsw i32 %x.i, 64
@@ -213,7 +213,7 @@ define amdgpu_kernel void @misaligned_read2st64_f64(double addrspace(1)* %out, d
 ; GCN: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO_VREG]]:{{[0-9]+\]}}, v{{\[[0-9]+}}:[[HI_VREG]]{{\]}}
 
 ; CI: buffer_store_dwordx2 [[RESULT]]
-; GFX9: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX9: global_store_dwordx2 v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @simple_read2st64_f64_max_offset(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %add.x.0 = add nsw i32 %x.i, 256

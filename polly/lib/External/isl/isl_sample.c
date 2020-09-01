@@ -375,7 +375,7 @@ static int greedy_search(isl_ctx *ctx, struct isl_tab *tab,
  * reduction computation to return early.  That is, as soon as it
  * finds a reasonable first direction.
  */ 
-struct isl_vec *isl_tab_sample(struct isl_tab *tab)
+__isl_give isl_vec *isl_tab_sample(struct isl_tab *tab)
 {
 	unsigned dim;
 	unsigned gbr;
@@ -531,72 +531,86 @@ error:
 
 static __isl_give isl_vec *sample_bounded(__isl_take isl_basic_set *bset);
 
+/* Internal data for factored_sample.
+ * "sample" collects the sample and may get reset to a zero-length vector
+ * signaling the absence of a sample vector.
+ * "pos" is the position of the contribution of the next factor.
+ */
+struct isl_factored_sample_data {
+	isl_vec *sample;
+	int pos;
+};
+
+/* isl_factorizer_every_factor_basic_set callback that extends
+ * the sample in data->sample with the contribution
+ * of the factor "bset".
+ * If "bset" turns out to be empty, then the product is empty too and
+ * no further factors need to be considered.
+ */
+static isl_bool factor_sample(__isl_keep isl_basic_set *bset, void *user)
+{
+	struct isl_factored_sample_data *data = user;
+	isl_vec *sample;
+	isl_size n;
+
+	n = isl_basic_set_dim(bset, isl_dim_set);
+	if (n < 0)
+		return isl_bool_error;
+
+	sample = sample_bounded(isl_basic_set_copy(bset));
+	if (!sample)
+		return isl_bool_error;
+	if (sample->size == 0) {
+		isl_vec_free(data->sample);
+		data->sample = sample;
+		return isl_bool_false;
+	}
+	isl_seq_cpy(data->sample->el + data->pos, sample->el + 1, n);
+	isl_vec_free(sample);
+	data->pos += n;
+
+	return isl_bool_true;
+}
+
 /* Compute a sample point of the given basic set, based on the given,
  * non-trivial factorization.
  */
 static __isl_give isl_vec *factored_sample(__isl_take isl_basic_set *bset,
 	__isl_take isl_factorizer *f)
 {
-	int i, n;
-	isl_vec *sample = NULL;
+	struct isl_factored_sample_data data = { NULL };
 	isl_ctx *ctx;
-	isl_size nparam;
-	isl_size nvar;
 	isl_size total;
+	isl_bool every;
 
 	ctx = isl_basic_set_get_ctx(bset);
-	nparam = isl_basic_set_dim(bset, isl_dim_param);
-	nvar = isl_basic_set_dim(bset, isl_dim_set);
 	total = isl_basic_set_dim(bset, isl_dim_all);
-	if (!ctx || nparam < 0 || nvar < 0 || total < 0)
+	if (!ctx || total < 0)
 		goto error;
 
-	sample = isl_vec_alloc(ctx, 1 + total);
-	if (!sample)
+	data.sample = isl_vec_alloc(ctx, 1 + total);
+	if (!data.sample)
 		goto error;
-	isl_int_set_si(sample->el[0], 1);
+	isl_int_set_si(data.sample->el[0], 1);
+	data.pos = 1;
 
-	bset = isl_morph_basic_set(isl_morph_copy(f->morph), bset);
+	every = isl_factorizer_every_factor_basic_set(f, &factor_sample, &data);
+	if (every < 0) {
+		data.sample = isl_vec_free(data.sample);
+	} else if (every) {
+		isl_morph *morph;
 
-	for (i = 0, n = 0; i < f->n_group; ++i) {
-		isl_basic_set *bset_i;
-		isl_vec *sample_i;
-
-		bset_i = isl_basic_set_copy(bset);
-		bset_i = isl_basic_set_drop_constraints_involving(bset_i,
-			    nparam + n + f->len[i], nvar - n - f->len[i]);
-		bset_i = isl_basic_set_drop_constraints_involving(bset_i,
-			    nparam, n);
-		bset_i = isl_basic_set_drop(bset_i, isl_dim_set,
-			    n + f->len[i], nvar - n - f->len[i]);
-		bset_i = isl_basic_set_drop(bset_i, isl_dim_set, 0, n);
-
-		sample_i = sample_bounded(bset_i);
-		if (!sample_i)
-			goto error;
-		if (sample_i->size == 0) {
-			isl_basic_set_free(bset);
-			isl_factorizer_free(f);
-			isl_vec_free(sample);
-			return sample_i;
-		}
-		isl_seq_cpy(sample->el + 1 + nparam + n,
-			    sample_i->el + 1, f->len[i]);
-		isl_vec_free(sample_i);
-
-		n += f->len[i];
+		morph = isl_morph_inverse(isl_morph_copy(f->morph));
+		data.sample = isl_morph_vec(morph, data.sample);
 	}
-
-	f->morph = isl_morph_inverse(f->morph);
-	sample = isl_morph_vec(isl_morph_copy(f->morph), sample);
 
 	isl_basic_set_free(bset);
 	isl_factorizer_free(f);
-	return sample;
+	return data.sample;
 error:
 	isl_basic_set_free(bset);
 	isl_factorizer_free(f);
-	isl_vec_free(sample);
+	isl_vec_free(data.sample);
 	return NULL;
 }
 
@@ -976,7 +990,7 @@ error:
 	return NULL;
 }
 
-static void vec_sum_of_neg(struct isl_vec *v, isl_int *s)
+static void vec_sum_of_neg(__isl_keep isl_vec *v, isl_int *s)
 {
 	int i;
 

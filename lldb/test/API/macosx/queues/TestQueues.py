@@ -192,7 +192,6 @@ class TestQueues(TestBase):
         user_initiated_thread = lldb.SBThread()
         user_interactive_thread = lldb.SBThread()
         utility_thread = lldb.SBThread()
-        unspecified_thread = lldb.SBThread()
         background_thread = lldb.SBThread()
         for th in process.threads:
             if th.GetName() == "user initiated QoS":
@@ -201,8 +200,6 @@ class TestQueues(TestBase):
                 user_interactive_thread = th
             if th.GetName() == "utility QoS":
                 utility_thread = th
-            if th.GetName() == "unspecified QoS":
-                unspecified_thread = th
             if th.GetName() == "background QoS":
                 background_thread = th
 
@@ -214,9 +211,6 @@ class TestQueues(TestBase):
             "Found user interactive QoS thread")
         self.assertTrue(utility_thread.IsValid(), "Found utility QoS thread")
         self.assertTrue(
-            unspecified_thread.IsValid(),
-            "Found unspecified QoS thread")
-        self.assertTrue(
             background_thread.IsValid(),
             "Found background QoS thread")
 
@@ -226,8 +220,8 @@ class TestQueues(TestBase):
                 "requested_qos.printable_name",
                 stream),
             "Get QoS printable string for user initiated QoS thread")
-        self.assertTrue(
-            stream.GetData() == "User Initiated",
+        self.assertEqual(
+            stream.GetData(), "User Initiated",
             "user initiated QoS thread name is valid")
         stream.Clear()
         self.assertTrue(
@@ -235,8 +229,8 @@ class TestQueues(TestBase):
                 "requested_qos.printable_name",
                 stream),
             "Get QoS printable string for user interactive QoS thread")
-        self.assertTrue(
-            stream.GetData() == "User Interactive",
+        self.assertEqual(
+            stream.GetData(), "User Interactive",
             "user interactive QoS thread name is valid")
         stream.Clear()
         self.assertTrue(
@@ -244,27 +238,17 @@ class TestQueues(TestBase):
                 "requested_qos.printable_name",
                 stream),
             "Get QoS printable string for utility QoS thread")
-        self.assertTrue(
-            stream.GetData() == "Utility",
+        self.assertEqual(
+            stream.GetData(), "Utility",
             "utility QoS thread name is valid")
-        stream.Clear()
-        self.assertTrue(
-            unspecified_thread.GetInfoItemByPathAsString(
-                "requested_qos.printable_name",
-                stream),
-            "Get QoS printable string for unspecified QoS thread")
-        qosName = stream.GetData()
-        self.assertTrue(
-            qosName == "User Initiated" or qosName == "Default",
-            "unspecified QoS thread name is valid")
         stream.Clear()
         self.assertTrue(
             background_thread.GetInfoItemByPathAsString(
                 "requested_qos.printable_name",
                 stream),
             "Get QoS printable string for background QoS thread")
-        self.assertTrue(
-            stream.GetData() == "Background",
+        self.assertEqual(
+            stream.GetData(), "Background",
             "background QoS thread name is valid")
 
     @skipIfDarwin # rdar://50379398

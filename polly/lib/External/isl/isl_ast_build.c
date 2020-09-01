@@ -1467,44 +1467,27 @@ error:
 	return NULL;
 }
 
-struct isl_ast_build_involves_data {
-	int depth;
-	int involves;
-};
-
-/* Check if "map" involves the input dimension data->depth.
+/* Does "map" not involve the input dimension data->depth?
  */
-static isl_stat involves_depth(__isl_take isl_map *map, void *user)
+static isl_bool free_of_depth(__isl_keep isl_map *map, void *user)
 {
-	struct isl_ast_build_involves_data *data = user;
+	int *depth = user;
 
-	data->involves = isl_map_involves_dims(map, isl_dim_in, data->depth, 1);
-	isl_map_free(map);
-
-	if (data->involves < 0 || data->involves)
-		return isl_stat_error;
-	return isl_stat_ok;
+	return isl_bool_not(isl_map_involves_dims(map, isl_dim_in, *depth, 1));
 }
 
 /* Do any options depend on the value of the dimension at the current depth?
  */
 int isl_ast_build_options_involve_depth(__isl_keep isl_ast_build *build)
 {
-	struct isl_ast_build_involves_data data;
+	isl_bool free;
 
 	if (!build)
 		return -1;
 
-	data.depth = build->depth;
-	data.involves = 0;
-
-	if (isl_union_map_foreach_map(build->options,
-					&involves_depth, &data) < 0) {
-		if (data.involves < 0 || !data.involves)
-			return -1;
-	}
-
-	return data.involves;
+	free = isl_union_map_every_map(build->options, &free_of_depth,
+					&build->depth);
+	return isl_bool_not(free);
 }
 
 /* Construct the map

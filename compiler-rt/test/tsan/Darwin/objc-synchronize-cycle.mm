@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan %s -o %t -framework Foundation -fobjc-arc %darwin_min_target_with_full_runtime_arc_support
+// RUN: %clangxx_tsan %s -o %t -framework Foundation -fobjc-arc
 // RUN:                                   not %run %t 2>&1 | FileCheck %s
 // RUN: %env_tsan_opts=detect_deadlocks=1 not %run %t 2>&1 | FileCheck %s
 // RUN: %env_tsan_opts=detect_deadlocks=0     %run %t 2>&1 | FileCheck %s --check-prefix=DISABLED

@@ -238,6 +238,9 @@ public:
     CODLayer->setPartitionFunction(std::move(Partition));
   }
 
+  /// Returns a reference to the on-demand layer.
+  CompileOnDemandLayer &getCompileOnDemandLayer() { return *CODLayer; }
+
   /// Add a module to be lazily compiled to JITDylib JD.
   Error addLazyIRModule(JITDylib &JD, ThreadSafeModule M);
 

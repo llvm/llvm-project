@@ -134,8 +134,16 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
     return nullptr;
   }
 
-  // if the file doesn't exist, is not a pdb, or doesn't have a matching guid,
-  // fail.
+  // If the file doesn't exist, perhaps the path specified at build time
+  // doesn't match the PDB's current location, so check the location of the
+  // executable.
+  if (!FileSystem::Instance().Exists(pdb_file)) {
+    const auto exe_dir = FileSpec(exe_path).CopyByRemovingLastPathComponent();
+    const auto pdb_name = FileSpec(pdb_file).GetFilename().GetCString();
+    pdb_file = exe_dir.CopyByAppendingPathComponent(pdb_name).GetCString();
+  }
+
+  // If the file is not a PDB or if it doesn't have a matching GUID, fail.
   llvm::file_magic magic;
   auto ec = llvm::identify_magic(pdb_file, magic);
   if (ec || magic != llvm::file_magic::pdb)

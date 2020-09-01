@@ -63,7 +63,8 @@
  * then the constraints admit no integer solution and
  * a zero-column matrix is returned.
  */
-static struct isl_mat *particular_solution(struct isl_mat *B, struct isl_vec *d)
+static __isl_give isl_mat *particular_solution(__isl_keep isl_mat *B,
+	__isl_keep isl_vec *d)
 {
 	int i, j;
 	struct isl_mat *M = NULL;
@@ -125,8 +126,8 @@ error:
  * The columns of this matrix generate the lattice that satisfies
  * the single (linear) modulo constraint.
  */
-static struct isl_mat *parameter_compression_1(
-			struct isl_mat *B, struct isl_vec *d)
+static __isl_take isl_mat *parameter_compression_1(__isl_keep isl_mat *B,
+	__isl_keep isl_vec *d)
 {
 	struct isl_mat *U;
 
@@ -156,8 +157,8 @@ static struct isl_mat *parameter_compression_1(
  * Putting this on the common denominator, we have
  * D * L_i^{-T} = U_i^T diag(D/d_i, D, ..., D).
  */
-static struct isl_mat *parameter_compression_multi(
-			struct isl_mat *B, struct isl_vec *d)
+static __isl_give isl_mat *parameter_compression_multi(__isl_keep isl_mat *B,
+	__isl_keep isl_vec *d)
 {
 	int i, j, k;
 	isl_int D;
@@ -704,8 +705,9 @@ error:
 	return NULL;
 }
 
-struct isl_basic_set *isl_basic_set_remove_equalities(
-	struct isl_basic_set *bset, struct isl_mat **T, struct isl_mat **T2)
+__isl_give isl_basic_set *isl_basic_set_remove_equalities(
+	__isl_take isl_basic_set *bset, __isl_give isl_mat **T,
+	__isl_give isl_mat **T2)
 {
 	if (T)
 		*T = NULL;

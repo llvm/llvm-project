@@ -322,8 +322,10 @@ struct MockPassInstrumentationCallbacks {
   MOCK_METHOD2(runBeforePass, bool(StringRef PassID, llvm::Any));
   MOCK_METHOD2(runBeforeSkippedPass, void(StringRef PassID, llvm::Any));
   MOCK_METHOD2(runBeforeNonSkippedPass, void(StringRef PassID, llvm::Any));
-  MOCK_METHOD2(runAfterPass, void(StringRef PassID, llvm::Any));
-  MOCK_METHOD1(runAfterPassInvalidated, void(StringRef PassID));
+  MOCK_METHOD3(runAfterPass,
+               void(StringRef PassID, llvm::Any, const PreservedAnalyses &PA));
+  MOCK_METHOD2(runAfterPassInvalidated,
+               void(StringRef PassID, const PreservedAnalyses &PA));
   MOCK_METHOD2(runBeforeAnalysis, void(StringRef PassID, llvm::Any));
   MOCK_METHOD2(runAfterAnalysis, void(StringRef PassID, llvm::Any));
 
@@ -340,9 +342,13 @@ struct MockPassInstrumentationCallbacks {
           this->runBeforeNonSkippedPass(P, IR);
         });
     Callbacks.registerAfterPassCallback(
-        [this](StringRef P, llvm::Any IR) { this->runAfterPass(P, IR); });
+        [this](StringRef P, llvm::Any IR, const PreservedAnalyses &PA) {
+          this->runAfterPass(P, IR, PA);
+        });
     Callbacks.registerAfterPassInvalidatedCallback(
-        [this](StringRef P) { this->runAfterPassInvalidated(P); });
+        [this](StringRef P, const PreservedAnalyses &PA) {
+          this->runAfterPassInvalidated(P, PA);
+        });
     Callbacks.registerBeforeAnalysisCallback([this](StringRef P, llvm::Any IR) {
       return this->runBeforeAnalysis(P, IR);
     });
@@ -365,7 +371,8 @@ struct MockPassInstrumentationCallbacks {
     EXPECT_CALL(*this, runBeforeNonSkippedPass(Not(HasNameRegex("Mock")),
                                                HasName(IRName)))
         .Times(AnyNumber());
-    EXPECT_CALL(*this, runAfterPass(Not(HasNameRegex("Mock")), HasName(IRName)))
+    EXPECT_CALL(*this,
+                runAfterPass(Not(HasNameRegex("Mock")), HasName(IRName), _))
         .Times(AnyNumber());
     EXPECT_CALL(*this,
                 runBeforeAnalysis(Not(HasNameRegex("Mock")), HasName(IRName)))
@@ -528,8 +535,8 @@ TEST_F(ModuleCallbacksTest, InstrumentedPasses) {
       CallbacksHandle,
       runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("<string>")))
       .InSequence(PISequence);
-  EXPECT_CALL(CallbacksHandle,
-              runAfterPass(HasNameRegex("MockPassHandle"), HasName("<string>")))
+  EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("MockPassHandle"),
+                                            HasName("<string>"), _))
       .InSequence(PISequence);
 
   // No passes are skipped, so there should be no calls to
@@ -569,7 +576,8 @@ TEST_F(ModuleCallbacksTest, InstrumentedSkippedPasses) {
   EXPECT_CALL(CallbacksHandle,
               runBeforeNonSkippedPass(HasNameRegex("MockPassHandle"), _))
       .Times(0);
-  EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("MockPassHandle"), _))
+  EXPECT_CALL(CallbacksHandle,
+              runAfterPass(HasNameRegex("MockPassHandle"), _, _))
       .Times(0);
   EXPECT_CALL(CallbacksHandle,
               runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), _))
@@ -609,20 +617,20 @@ TEST_F(ModuleCallbacksTest, InstrumentedSkippedPasses) {
 
   // The `runAfterPass` checks are the same as these of
   // `runBeforeNonSkippedPass`.
-  EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("PassManager"), _))
+  EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("PassManager"), _, _))
       .Times(5);
   EXPECT_CALL(CallbacksHandle,
-              runAfterPass(HasNameRegex("ModuleToFunctionPassAdaptor"), _))
+              runAfterPass(HasNameRegex("ModuleToFunctionPassAdaptor"), _, _))
       .Times(1);
   EXPECT_CALL(
       CallbacksHandle,
-      runAfterPass(HasNameRegex("ModuleToPostOrderCGSCCPassAdaptor"), _))
+      runAfterPass(HasNameRegex("ModuleToPostOrderCGSCCPassAdaptor"), _, _))
       .Times(1);
   EXPECT_CALL(CallbacksHandle,
-              runAfterPass(HasNameRegex("CGSCCToFunctionPassAdaptor"), _))
+              runAfterPass(HasNameRegex("CGSCCToFunctionPassAdaptor"), _, _))
       .Times(1);
   EXPECT_CALL(CallbacksHandle,
-              runAfterPass(HasNameRegex("FunctionToLoopPassAdaptor"), _))
+              runAfterPass(HasNameRegex("FunctionToLoopPassAdaptor"), _, _))
       .Times(1);
 
   // Ignore analyses introduced by adaptor passes.
@@ -701,7 +709,7 @@ TEST_F(FunctionCallbacksTest, InstrumentedPasses) {
       runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("foo")))
       .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
-              runAfterPass(HasNameRegex("MockPassHandle"), HasName("foo")))
+              runAfterPass(HasNameRegex("MockPassHandle"), HasName("foo"), _))
       .InSequence(PISequence);
 
   // No passes are skipped, so there should be no calls to
@@ -713,7 +721,7 @@ TEST_F(FunctionCallbacksTest, InstrumentedPasses) {
 
   // Our mock pass does not invalidate IR.
   EXPECT_CALL(CallbacksHandle,
-              runAfterPassInvalidated(HasNameRegex("MockPassHandle")))
+              runAfterPassInvalidated(HasNameRegex("MockPassHandle"), _))
       .Times(0);
 
   StringRef PipelineText = "test-transform";
@@ -746,12 +754,14 @@ TEST_F(FunctionCallbacksTest, InstrumentedSkippedPasses) {
   EXPECT_CALL(CallbacksHandle,
               runBeforeNonSkippedPass(HasNameRegex("MockPassHandle"), _))
       .Times(0);
-  EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("MockPassHandle"), _))
+  EXPECT_CALL(CallbacksHandle,
+              runAfterPass(HasNameRegex("MockPassHandle"), _, _))
       .Times(0);
   EXPECT_CALL(CallbacksHandle,
-              runAfterPassInvalidated(HasNameRegex("MockPassHandle")))
+              runAfterPassInvalidated(HasNameRegex("MockPassHandle"), _))
       .Times(0);
-  EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("MockPassHandle"), _))
+  EXPECT_CALL(CallbacksHandle,
+              runAfterPass(HasNameRegex("MockPassHandle"), _, _))
       .Times(0);
   EXPECT_CALL(CallbacksHandle,
               runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), _))
@@ -807,12 +817,12 @@ TEST_F(LoopCallbacksTest, InstrumentedPasses) {
       runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("loop")))
       .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
-              runAfterPass(HasNameRegex("MockPassHandle"), HasName("loop")))
+              runAfterPass(HasNameRegex("MockPassHandle"), HasName("loop"), _))
       .InSequence(PISequence);
 
   // Our mock pass does not invalidate IR.
   EXPECT_CALL(CallbacksHandle,
-              runAfterPassInvalidated(HasNameRegex("MockPassHandle")))
+              runAfterPassInvalidated(HasNameRegex("MockPassHandle"), _))
       .Times(0);
 
   // No passes are skipped, so there should be no calls to
@@ -859,15 +869,15 @@ TEST_F(LoopCallbacksTest, InstrumentedInvalidatingPasses) {
       runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("loop")))
       .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
-              runAfterPassInvalidated(HasNameRegex("MockPassHandle")))
+              runAfterPassInvalidated(HasNameRegex("MockPassHandle"), _))
       .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
-              runAfterPassInvalidated(HasNameRegex("^PassManager")))
+              runAfterPassInvalidated(HasNameRegex("^PassManager"), _))
       .InSequence(PISequence);
 
   // Our mock pass invalidates IR, thus normal runAfterPass is never called.
   EXPECT_CALL(CallbacksHandle,
-              runAfterPass(HasNameRegex("MockPassHandle"), HasName("loop")))
+              runAfterPass(HasNameRegex("MockPassHandle"), HasName("loop"), _))
       .Times(0);
 
   StringRef PipelineText = "test-transform";
@@ -901,10 +911,11 @@ TEST_F(LoopCallbacksTest, InstrumentedSkippedPasses) {
   EXPECT_CALL(CallbacksHandle,
               runBeforeNonSkippedPass(HasNameRegex("MockPassHandle"), _))
       .Times(0);
-  EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("MockPassHandle"), _))
+  EXPECT_CALL(CallbacksHandle,
+              runAfterPass(HasNameRegex("MockPassHandle"), _, _))
       .Times(0);
   EXPECT_CALL(CallbacksHandle,
-              runAfterPassInvalidated(HasNameRegex("MockPassHandle")))
+              runAfterPassInvalidated(HasNameRegex("MockPassHandle"), _))
       .Times(0);
   EXPECT_CALL(CallbacksHandle,
               runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), _))
@@ -960,12 +971,12 @@ TEST_F(CGSCCCallbacksTest, InstrumentedPasses) {
       runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("(foo)")))
       .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
-              runAfterPass(HasNameRegex("MockPassHandle"), HasName("(foo)")))
+              runAfterPass(HasNameRegex("MockPassHandle"), HasName("(foo)"), _))
       .InSequence(PISequence);
 
   // Our mock pass does not invalidate IR.
   EXPECT_CALL(CallbacksHandle,
-              runAfterPassInvalidated(HasNameRegex("MockPassHandle")))
+              runAfterPassInvalidated(HasNameRegex("MockPassHandle"), _))
       .Times(0);
 
   // No passes are skipped, so there should be no calls to
@@ -1012,15 +1023,15 @@ TEST_F(CGSCCCallbacksTest, InstrumentedInvalidatingPasses) {
       runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("(foo)")))
       .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
-              runAfterPassInvalidated(HasNameRegex("MockPassHandle")))
+              runAfterPassInvalidated(HasNameRegex("MockPassHandle"), _))
       .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
-              runAfterPassInvalidated(HasNameRegex("^PassManager")))
+              runAfterPassInvalidated(HasNameRegex("^PassManager"), _))
       .InSequence(PISequence);
 
   // Our mock pass does invalidate IR, thus normal runAfterPass is never called.
   EXPECT_CALL(CallbacksHandle,
-              runAfterPass(HasNameRegex("MockPassHandle"), HasName("(foo)")))
+              runAfterPass(HasNameRegex("MockPassHandle"), HasName("(foo)"), _))
       .Times(0);
 
   StringRef PipelineText = "test-transform";
@@ -1055,10 +1066,11 @@ TEST_F(CGSCCCallbacksTest, InstrumentedSkippedPasses) {
   EXPECT_CALL(CallbacksHandle,
               runBeforeNonSkippedPass(HasNameRegex("MockPassHandle"), _))
       .Times(0);
-  EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("MockPassHandle"), _))
+  EXPECT_CALL(CallbacksHandle,
+              runAfterPass(HasNameRegex("MockPassHandle"), _, _))
       .Times(0);
   EXPECT_CALL(CallbacksHandle,
-              runAfterPassInvalidated(HasNameRegex("MockPassHandle")))
+              runAfterPassInvalidated(HasNameRegex("MockPassHandle"), _))
       .Times(0);
   EXPECT_CALL(CallbacksHandle,
               runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), _))

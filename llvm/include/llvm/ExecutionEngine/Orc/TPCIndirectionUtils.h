@@ -206,4 +206,4 @@ TPCIndirectionUtils::CreateWithABI(TargetProcessControl &TPC) {
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_T_H
+#endif // LLVM_EXECUTIONENGINE_ORC_TPCINDIRECTIONUTILS_H

@@ -323,6 +323,78 @@ define <vscale x 2 x double> @fma_nxv2f64_3(<vscale x 2 x double> %a, <vscale x 
   ret <vscale x 2 x double> %r
 }
 
+define <vscale x 8 x half> @fneg_nxv8f16(<vscale x 8 x half> %a) {
+; CHECK-LABEL: fneg_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %minus.one = insertelement <vscale x 8 x half> undef, half -1.0, i64 0
+  %minus.one.vec = shufflevector <vscale x 8 x half> %minus.one, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %neg = fmul <vscale x 8 x half> %a, %minus.one.vec
+  ret <vscale x 8 x half> %neg
+}
+
+define <vscale x 4 x half> @fneg_nxv4f16(<vscale x 4 x half> %a) {
+; CHECK-LABEL: fneg_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %minus.one = insertelement <vscale x 4 x half> undef, half -1.0, i64 0
+  %minus.one.vec = shufflevector <vscale x 4 x half> %minus.one, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
+  %neg = fmul <vscale x 4 x half> %a, %minus.one.vec
+  ret <vscale x 4 x half> %neg
+}
+
+define <vscale x 2 x half> @fneg_nxv2f16(<vscale x 2 x half> %a) {
+; CHECK-LABEL: fneg_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %minus.one = insertelement <vscale x 2 x half> undef, half -1.0, i64 0
+  %minus.one.vec = shufflevector <vscale x 2 x half> %minus.one, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
+  %neg = fmul <vscale x 2 x half> %a, %minus.one.vec
+  ret <vscale x 2 x half> %neg
+}
+
+define <vscale x 4 x float> @fneg_nxv4f32(<vscale x 4 x float> %a) {
+; CHECK-LABEL: fneg_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fneg z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %minus.one = insertelement <vscale x 4 x float> undef, float -1.0, i64 0
+  %minus.one.vec = shufflevector <vscale x 4 x float> %minus.one, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %neg = fmul <vscale x 4 x float> %a, %minus.one.vec
+  ret <vscale x 4 x float> %neg
+}
+
+define <vscale x 2 x float> @fneg_nxv2f32(<vscale x 2 x float> %a) {
+; CHECK-LABEL: fneg_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fneg z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %minus.one = insertelement <vscale x 2 x float> undef, float -1.0, i64 0
+  %minus.one.vec = shufflevector <vscale x 2 x float> %minus.one, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  %neg = fmul <vscale x 2 x float> %a, %minus.one.vec
+  ret <vscale x 2 x float> %neg
+}
+
+define <vscale x 2 x double> @fneg_nxv2f64(<vscale x 2 x double> %a) {
+; CHECK-LABEL: fneg_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fneg z0.d, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %minus.one = insertelement <vscale x 2 x double> undef, double -1.0, i64 0
+  %minus.one.vec = shufflevector <vscale x 2 x double> %minus.one, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
+  %neg = fmul <vscale x 2 x double> %a, %minus.one.vec
+  ret <vscale x 2 x double> %neg
+}
+
 define <vscale x 8 x half> @frecps_h(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: frecps_h:
 ; CHECK:       // %bb.0:
@@ -408,6 +480,62 @@ define void @float_copy(<vscale x 4 x float>* %P1, <vscale x 4 x float>* %P2) {
   ret void
 }
 
+; FCEIL
+
+define <vscale x 8 x half> @frintp_nxv8f16(<vscale x 8 x half> %a) {
+; CHECK-LABEL: frintp_nxv8f16:
+; CHECK: ptrue p0.h
+; CHECK-NEXT: frintp z0.h, p0/m, z0.h
+; CHECK-NEXT: ret
+  %res = call <vscale x 8 x half> @llvm.ceil.nxv8f16(<vscale x 8 x half> %a)
+  ret <vscale x 8 x half> %res  
+}
+
+define <vscale x 4 x half> @frintp_nxv4f16(<vscale x 4 x half> %a) {
+; CHECK-LABEL: frintp_nxv4f16:
+; CHECK: ptrue p0.s
+; CHECK-NEXT: frintp z0.h, p0/m, z0.h
+; CHECK-NEXT: ret
+  %res = call <vscale x 4 x half> @llvm.ceil.nxv4f16(<vscale x 4 x half> %a)
+  ret <vscale x 4 x half> %res  
+}
+
+define <vscale x 2 x half> @frintp_nxv2f16(<vscale x 2 x half> %a) {
+; CHECK-LABEL: frintp_nxv2f16:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: frintp z0.h, p0/m, z0.h
+; CHECK-NEXT: ret
+  %res = call <vscale x 2 x half> @llvm.ceil.nxv2f16(<vscale x 2 x half> %a)
+  ret <vscale x 2 x half> %res  
+}
+
+define <vscale x 4 x float> @frintp_nxv4f32(<vscale x 4 x float> %a) {
+; CHECK-LABEL: frintp_nxv4f32:
+; CHECK: ptrue p0.s
+; CHECK-NEXT: frintp z0.s, p0/m, z0.s
+; CHECK-NEXT: ret
+  %res = call <vscale x 4 x float> @llvm.ceil.nxv4f32(<vscale x 4 x float> %a)
+  ret <vscale x 4 x float> %res  
+}
+
+define <vscale x 2 x float> @frintp_nxv2f32(<vscale x 2 x float> %a) {
+; CHECK-LABEL: frintp_nxv2f32:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: frintp z0.s, p0/m, z0.s
+; CHECK-NEXT: ret
+  %res = call <vscale x 2 x float> @llvm.ceil.nxv2f32(<vscale x 2 x float> %a)
+  ret <vscale x 2 x float> %res  
+}
+
+define <vscale x 2 x double> @frintp_nxv2f64(<vscale x 2 x double> %a) {
+; CHECK-LABEL: frintp_nxv2f64:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: frintp z0.d, p0/m, z0.d
+; CHECK-NEXT: ret
+  %res = call <vscale x 2 x double> @llvm.ceil.nxv2f64(<vscale x 2 x double> %a)
+  ret <vscale x 2 x double> %res  
+}
+
 declare <vscale x 8 x half> @llvm.aarch64.sve.frecps.x.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 4 x float>  @llvm.aarch64.sve.frecps.x.nxv4f32(<vscale x 4 x float> , <vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.frecps.x.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
@@ -422,6 +550,13 @@ declare <vscale x 2 x float> @llvm.fma.nxv2f32(<vscale x 2 x float>, <vscale x 2
 declare <vscale x 8 x half> @llvm.fma.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 4 x half> @llvm.fma.nxv4f16(<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>)
 declare <vscale x 2 x half> @llvm.fma.nxv2f16(<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>)
+
+declare <vscale x 8 x half> @llvm.ceil.nxv8f16( <vscale x 8 x half>)
+declare <vscale x 4 x half> @llvm.ceil.nxv4f16( <vscale x 4 x half>)
+declare <vscale x 2 x half> @llvm.ceil.nxv2f16( <vscale x 2 x half>)
+declare <vscale x 4 x float> @llvm.ceil.nxv4f32(<vscale x 4 x float>)
+declare <vscale x 2 x float> @llvm.ceil.nxv2f32(<vscale x 2 x float>)
+declare <vscale x 2 x double> @llvm.ceil.nxv2f64(<vscale x 2 x double>)
 
 ; Function Attrs: nounwind readnone
 declare double @llvm.aarch64.sve.faddv.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>) #2

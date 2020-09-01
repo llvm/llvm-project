@@ -26,6 +26,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -552,10 +553,10 @@ Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
   return std::string(Relative.str());
 }
 
-Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
-                   bool WriteSymtab, object::Archive::Kind Kind,
-                   bool Deterministic, bool Thin,
-                   std::unique_ptr<MemoryBuffer> OldArchiveBuf) {
+static Error writeArchiveToStream(raw_ostream &Out,
+                                  ArrayRef<NewArchiveMember> NewMembers,
+                                  bool WriteSymtab, object::Archive::Kind Kind,
+                                  bool Deterministic, bool Thin) {
   assert((!Thin || !isBSDLike(Kind)) && "Only the gnu format has a thin mode");
 
   SmallString<0> SymNamesBuf;
@@ -608,12 +609,6 @@ Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
     }
   }
 
-  Expected<sys::fs::TempFile> Temp =
-      sys::fs::TempFile::create(ArcName + ".temp-archive-%%%%%%%.a");
-  if (!Temp)
-    return Temp.takeError();
-
-  raw_fd_ostream Out(Temp->FD, false);
   if (Thin)
     Out << "!<thin>\n";
   else
@@ -626,6 +621,25 @@ Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
     Out << M.Header << M.Data << M.Padding;
 
   Out.flush();
+  return Error::success();
+}
+
+Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
+                   bool WriteSymtab, object::Archive::Kind Kind,
+                   bool Deterministic, bool Thin,
+                   std::unique_ptr<MemoryBuffer> OldArchiveBuf) {
+  Expected<sys::fs::TempFile> Temp =
+      sys::fs::TempFile::create(ArcName + ".temp-archive-%%%%%%%.a");
+  if (!Temp)
+    return Temp.takeError();
+  raw_fd_ostream Out(Temp->FD, false);
+
+  if (Error E = writeArchiveToStream(Out, NewMembers, WriteSymtab, Kind,
+                                     Deterministic, Thin)) {
+    if (Error DiscardError = Temp->discard())
+      return joinErrors(std::move(E), std::move(DiscardError));
+    return E;
+  }
 
   // At this point, we no longer need whatever backing memory
   // was used to generate the NewMembers. On Windows, this buffer
@@ -640,6 +654,21 @@ Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
   OldArchiveBuf.reset();
 
   return Temp->keep(ArcName);
+}
+
+Expected<std::unique_ptr<MemoryBuffer>>
+writeArchiveToBuffer(ArrayRef<NewArchiveMember> NewMembers, bool WriteSymtab,
+                     object::Archive::Kind Kind, bool Deterministic,
+                     bool Thin) {
+  SmallVector<char, 0> ArchiveBufferVector;
+  raw_svector_ostream ArchiveStream(ArchiveBufferVector);
+
+  if (Error E = writeArchiveToStream(ArchiveStream, NewMembers, WriteSymtab,
+                                     Kind, Deterministic, Thin))
+    return std::move(E);
+
+  return std::make_unique<SmallVectorMemoryBuffer>(
+      std::move(ArchiveBufferVector));
 }
 
 } // namespace llvm

@@ -45,8 +45,7 @@ using LoweringCallback = std::function<std::unique_ptr<llvm::Module>(
 /// instead uses a small wrapper library that exports a stable and conveniently
 /// typed ABI on top of GPU runtimes such as CUDA or ROCm (HIP).
 std::unique_ptr<OperationPass<ModuleOp>>
-createConvertGpuLaunchFuncToGpuRuntimeCallsPass(
-    StringRef gpuBinaryAnnotation = "");
+createGpuToLLVMConversionPass(StringRef gpuBinaryAnnotation = "");
 
 /// Collect a set of patterns to convert from the GPU dialect to LLVM.
 void populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,

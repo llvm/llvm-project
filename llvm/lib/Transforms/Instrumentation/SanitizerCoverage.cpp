@@ -425,15 +425,13 @@ bool ModuleSanitizerCoverage::instrumentModule(
 
   SanCovTracePCIndir =
       M.getOrInsertFunction(SanCovTracePCIndirName, VoidTy, IntptrTy);
-  // Make sure smaller parameters are zero-extended to i64 as required by the
-  // x86_64 ABI.
+  // Make sure smaller parameters are zero-extended to i64 if required by the
+  // target ABI.
   AttributeList SanCovTraceCmpZeroExtAL;
-  if (TargetTriple.getArch() == Triple::x86_64) {
-    SanCovTraceCmpZeroExtAL =
-        SanCovTraceCmpZeroExtAL.addParamAttribute(*C, 0, Attribute::ZExt);
-    SanCovTraceCmpZeroExtAL =
-        SanCovTraceCmpZeroExtAL.addParamAttribute(*C, 1, Attribute::ZExt);
-  }
+  SanCovTraceCmpZeroExtAL =
+      SanCovTraceCmpZeroExtAL.addParamAttribute(*C, 0, Attribute::ZExt);
+  SanCovTraceCmpZeroExtAL =
+      SanCovTraceCmpZeroExtAL.addParamAttribute(*C, 1, Attribute::ZExt);
 
   SanCovTraceCmpFunction[0] =
       M.getOrInsertFunction(SanCovTraceCmp1, SanCovTraceCmpZeroExtAL, VoidTy,
@@ -458,8 +456,7 @@ bool ModuleSanitizerCoverage::instrumentModule(
 
   {
     AttributeList AL;
-    if (TargetTriple.getArch() == Triple::x86_64)
-      AL = AL.addParamAttribute(*C, 0, Attribute::ZExt);
+    AL = AL.addParamAttribute(*C, 0, Attribute::ZExt);
     SanCovTraceDivFunction[0] =
         M.getOrInsertFunction(SanCovTraceDiv4, AL, VoidTy, IRB.getInt32Ty());
   }

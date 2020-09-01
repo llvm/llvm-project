@@ -19,10 +19,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
 ## Case 1: test we use "Libraries" when dumping a valid section with a null-terminated string.
   - Name:      .deplibs.single

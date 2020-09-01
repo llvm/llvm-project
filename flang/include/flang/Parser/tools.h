@@ -74,6 +74,15 @@ struct UnwrapperHelper {
     }
   }
 
+  template <typename A, typename B>
+  static const A *Unwrap(const UnlabeledStatement<B> &x) {
+    return Unwrap<A>(x.statement);
+  }
+  template <typename A, typename B>
+  static const A *Unwrap(const Statement<B> &x) {
+    return Unwrap<A>(x.statement);
+  }
+
   template <typename A, typename B> static const A *Unwrap(B &x) {
     if constexpr (std::is_same_v<std::decay_t<A>, std::decay_t<B>>) {
       return &x;

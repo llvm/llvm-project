@@ -54,7 +54,7 @@ static isl_stat unwrapped_guarded_poly_bound(__isl_take isl_basic_set *bset,
 	struct isl_bound *bound = (struct isl_bound *)user;
 	isl_pw_qpolynomial_fold *top_pwf;
 	isl_pw_qpolynomial_fold *top_pwf_tight;
-	isl_space *dim;
+	isl_space *space;
 	isl_morph *morph;
 	isl_stat r;
 
@@ -71,17 +71,17 @@ static isl_stat unwrapped_guarded_poly_bound(__isl_take isl_basic_set *bset,
 	bset = isl_morph_basic_set(isl_morph_copy(morph), bset);
 	poly = isl_qpolynomial_morph_domain(poly, isl_morph_copy(morph));
 
-	dim = isl_morph_get_ran_space(morph);
-	dim = isl_space_params(dim);
+	space = isl_morph_get_ran_space(morph);
+	space = isl_space_params(space);
 
 	top_pwf = bound->pwf;
 	top_pwf_tight = bound->pwf_tight;
 
-	dim = isl_space_from_domain(dim);
-	dim = isl_space_add_dims(dim, isl_dim_out, 1);
-	bound->pwf = isl_pw_qpolynomial_fold_zero(isl_space_copy(dim),
+	space = isl_space_from_domain(space);
+	space = isl_space_add_dims(space, isl_dim_out, 1);
+	bound->pwf = isl_pw_qpolynomial_fold_zero(isl_space_copy(space),
 						  bound->type);
-	bound->pwf_tight = isl_pw_qpolynomial_fold_zero(dim, bound->type);
+	bound->pwf_tight = isl_pw_qpolynomial_fold_zero(space, bound->type);
 
 	r = compressed_guarded_poly_bound(bset, poly, user);
 
@@ -313,7 +313,7 @@ __isl_give isl_union_pw_qpolynomial_fold *isl_union_pw_qpolynomial_bound(
 	__isl_take isl_union_pw_qpolynomial *upwqp,
 	enum isl_fold type, isl_bool *tight)
 {
-	isl_space *dim;
+	isl_space *space;
 	struct isl_union_bound_data data = { type, 1, NULL };
 
 	if (!upwqp)
@@ -322,8 +322,8 @@ __isl_give isl_union_pw_qpolynomial_fold *isl_union_pw_qpolynomial_bound(
 	if (!tight)
 		data.tight = isl_bool_false;
 
-	dim = isl_union_pw_qpolynomial_get_space(upwqp);
-	data.res = isl_union_pw_qpolynomial_fold_zero(dim, type);
+	space = isl_union_pw_qpolynomial_get_space(upwqp);
+	data.res = isl_union_pw_qpolynomial_fold_zero(space, type);
 	if (isl_union_pw_qpolynomial_foreach_pw_qpolynomial(upwqp,
 						    &bound_pw, &data) < 0)
 		goto error;

@@ -342,6 +342,7 @@ private:
 raw_ostream &operator<<(raw_ostream &OS, const SampleRecord &Sample);
 
 class FunctionSamples;
+class SampleProfileReaderItaniumRemapper;
 
 using BodySampleMap = std::map<LineLocation, SampleRecord>;
 // NOTE: Using a StringMap here makes parsed profiles consume around 17% more
@@ -428,35 +429,15 @@ public:
     return &iter->second;
   }
 
-  /// Returns a pointer to FunctionSamples at the given callsite location \p Loc
-  /// with callee \p CalleeName. If no callsite can be found, relax the
-  /// restriction to return the FunctionSamples at callsite location \p Loc
-  /// with the maximum total sample count.
-  const FunctionSamples *findFunctionSamplesAt(const LineLocation &Loc,
-                                               StringRef CalleeName) const {
-    std::string CalleeGUID;
-    CalleeName = getRepInFormat(CalleeName, UseMD5, CalleeGUID);
-
-    auto iter = CallsiteSamples.find(Loc);
-    if (iter == CallsiteSamples.end())
-      return nullptr;
-    auto FS = iter->second.find(CalleeName);
-    if (FS != iter->second.end())
-      return &FS->second;
-    // If we cannot find exact match of the callee name, return the FS with
-    // the max total count. Only do this when CalleeName is not provided,
-    // i.e., only for indirect calls.
-    if (!CalleeName.empty())
-      return nullptr;
-    uint64_t MaxTotalSamples = 0;
-    const FunctionSamples *R = nullptr;
-    for (const auto &NameFS : iter->second)
-      if (NameFS.second.getTotalSamples() >= MaxTotalSamples) {
-        MaxTotalSamples = NameFS.second.getTotalSamples();
-        R = &NameFS.second;
-      }
-    return R;
-  }
+  /// Returns a pointer to FunctionSamples at the given callsite location
+  /// \p Loc with callee \p CalleeName. If no callsite can be found, relax
+  /// the restriction to return the FunctionSamples at callsite location
+  /// \p Loc with the maximum total sample count. If \p Remapper is not
+  /// nullptr, use \p Remapper to find FunctionSamples with equivalent name
+  /// as \p CalleeName.
+  const FunctionSamples *
+  findFunctionSamplesAt(const LineLocation &Loc, StringRef CalleeName,
+                        SampleProfileReaderItaniumRemapper *Remapper) const;
 
   bool empty() const { return TotalSamples == 0; }
 
@@ -630,7 +611,11 @@ public:
   /// tree nodes in the profile.
   ///
   /// \returns the FunctionSamples pointer to the inlined instance.
-  const FunctionSamples *findFunctionSamples(const DILocation *DIL) const;
+  /// If \p Remapper is not nullptr, it will be used to find matching
+  /// FunctionSamples with not exactly the same but equivalent name.
+  const FunctionSamples *findFunctionSamples(
+      const DILocation *DIL,
+      SampleProfileReaderItaniumRemapper *Remapper = nullptr) const;
 
   static SampleProfileFormat Format;
 
@@ -647,6 +632,10 @@ public:
   static uint64_t getGUID(StringRef Name) {
     return UseMD5 ? std::stoull(Name.data()) : Function::getGUID(Name);
   }
+
+  // Find all the names in the current FunctionSamples including names in
+  // all the inline instances and names of call targets.
+  void findAllNames(DenseSet<StringRef> &NameSet) const;
 
 private:
   /// Mangled name of the function.

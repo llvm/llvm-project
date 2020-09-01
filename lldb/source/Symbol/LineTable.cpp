@@ -315,7 +315,7 @@ uint32_t LineTable::FindLineEntryIndexByFileIndex(
     if (m_entries[idx].is_terminal_entry)
       continue;
 
-    if (llvm::find(file_indexes, m_entries[idx].file_idx) == file_indexes.end())
+    if (!llvm::is_contained(file_indexes, m_entries[idx].file_idx))
       continue;
 
     // Exact match always wins.  Otherwise try to find the closest line > the

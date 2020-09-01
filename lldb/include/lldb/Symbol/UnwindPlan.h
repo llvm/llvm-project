@@ -393,6 +393,7 @@ public:
         m_plan_is_sourced_from_compiler(rhs.m_plan_is_sourced_from_compiler),
         m_plan_is_valid_at_all_instruction_locations(
             rhs.m_plan_is_valid_at_all_instruction_locations),
+        m_plan_is_for_signal_trap(rhs.m_plan_is_for_signal_trap),
         m_lsda_address(rhs.m_lsda_address),
         m_personality_func_addr(rhs.m_personality_func_addr) {
     m_row_list.reserve(rhs.m_row_list.size());

@@ -2270,7 +2270,7 @@ __tree<_Tp, _Compare, _Allocator>::__construct_node(const __container_value_type
     __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
     __node_traits::construct(__na, _NodeTypes::__get_ptr(__h->__value_), __v);
     __h.get_deleter().__value_constructed = true;
-    return _LIBCPP_EXPLICIT_MOVE(__h);  // explicitly moved for C++03
+    return __h;
 }
 
 #endif  // _LIBCPP_CXX03_LANG

@@ -274,14 +274,15 @@ LoadCommands:
         reserved2:       0x00000000
         reserved3:       0x00000000
 DWARF:           
-  debug_abbrev:     
-    - Code:            0x00000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_yes
-      Attributes:      
-        - Attribute:       0x2001
-          Form:            DW_FORM_implicit_const
-          Value:           0x12345678
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       0x2001
+              Form:            DW_FORM_implicit_const
+              Value:           0x12345678
 ...
 
 #CHECK: DWARF:           

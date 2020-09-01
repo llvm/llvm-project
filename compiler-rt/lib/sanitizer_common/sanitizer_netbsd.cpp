@@ -110,6 +110,11 @@ int internal_mprotect(void *addr, uptr length, int prot) {
   return _REAL(mprotect, addr, length, prot);
 }
 
+int internal_madvise(uptr addr, uptr length, int advice) {
+  DEFINE__REAL(int, madvise, void *a, uptr b, int c);
+  return _REAL(madvise, (void *)addr, length, advice);
+}
+
 uptr internal_close(fd_t fd) {
   CHECK(&_sys_close);
   return _sys_close(fd);

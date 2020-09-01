@@ -240,6 +240,11 @@ void SparcV9TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__sparc_v9__");
     Builder.defineMacro("__sparcv9__");
   }
+
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
 void SparcV9TargetInfo::fillValidCPUList(

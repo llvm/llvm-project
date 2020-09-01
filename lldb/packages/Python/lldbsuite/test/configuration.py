@@ -135,9 +135,6 @@ test_result = None
 capture_path = None
 replay_path = None
 
-# Test rerun configuration vars
-rerun_all_issues = False
-
 # The names of all tests. Used to assert we don't have two tests with the
 # same base name.
 all_tests = set()

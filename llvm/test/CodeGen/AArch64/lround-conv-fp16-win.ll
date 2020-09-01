@@ -22,6 +22,8 @@ entry:
 ; CHECK-LABEL: testmhxs:
 ; CHECK:       fcvtas  w8, h0
 ; CHECK-NEXT:  sxtw    x0, w8
+; CHECK-NEXT:  .seh_startepilogue
+; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT:  ret
 define i64 @testmhxs(half %x) {
 entry:

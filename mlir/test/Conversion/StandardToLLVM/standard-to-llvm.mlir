@@ -40,6 +40,27 @@ func @sine(%arg0 : f32) {
 
 // -----
 
+// CHECK-LABEL: func @ceilf(
+// CHECK-SAME: !llvm.float
+func @ceilf(%arg0 : f32) {
+  // CHECK: "llvm.intr.ceil"(%arg0) : (!llvm.float) -> !llvm.float
+  %0 = ceilf %arg0 : f32
+  std.return
+}
+
+// -----
+
+// CHECK-LABEL: func @floorf(
+// CHECK-SAME: !llvm.float
+func @floorf(%arg0 : f32) {
+  // CHECK: "llvm.intr.floor"(%arg0) : (!llvm.float) -> !llvm.float
+  %0 = floorf %arg0 : f32
+  std.return
+}
+
+// -----
+
+
 // CHECK-LABEL: func @rsqrt_double(
 // CHECK-SAME: !llvm.double
 func @rsqrt_double(%arg0 : f64) {

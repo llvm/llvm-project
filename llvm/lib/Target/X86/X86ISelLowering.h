@@ -384,8 +384,10 @@ namespace llvm {
     /// Vector comparison generating mask bits for fp and
     /// integer signed and unsigned data types.
     CMPM,
-    // Vector comparison with SAE for FP values
-    CMPM_SAE,
+    // Vector mask comparison generating mask bits for FP values.
+    CMPMM,
+    // Vector mask comparison with SAE for FP values.
+    CMPMM_SAE,
 
     // Arithmetic operations with FLAGS results.
     ADD,
@@ -746,6 +748,9 @@ namespace llvm {
     // Conversions between float and half-float.
     STRICT_CVTPS2PH,
     STRICT_CVTPH2PS,
+
+    // Mwaitx builtin is lowered to this if the base pointer needs saving.
+    MWAITX_DAG,
 
     // Compare and swap.
     LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,

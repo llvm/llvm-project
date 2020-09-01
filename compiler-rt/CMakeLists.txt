@@ -112,7 +112,7 @@ if (COMPILER_RT_STANDALONE_BUILD)
   endif()
 
   # Ensure that fat libraries are built correctly on Darwin
-  if(CMAKE_HOST_APPLE AND APPLE)
+  if(APPLE)
     include(UseLibtool)
   endif()
 

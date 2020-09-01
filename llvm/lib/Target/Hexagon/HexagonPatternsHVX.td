@@ -364,6 +364,14 @@ let Predicates = [UseHVX] in {
              (V6_vasrw (V6_vaslw HVI32:$Vs, (A2_tfrsi 16)), (A2_tfrsi 16))>;
   }
 
+  // Take a pair of vectors Vt:Vs and shift them towards LSB by (Rt & HwLen).
+  def: Pat<(VecI8 (valign HVI8:$Vt, HVI8:$Vs, I32:$Rt)),
+           (LoVec (V6_valignb HvxVR:$Vt, HvxVR:$Vs, I32:$Rt))>;
+  def: Pat<(VecI16 (valign HVI16:$Vt, HVI16:$Vs, I32:$Rt)),
+           (LoVec (V6_valignb HvxVR:$Vt, HvxVR:$Vs, I32:$Rt))>;
+  def: Pat<(VecI32 (valign HVI32:$Vt, HVI32:$Vs, I32:$Rt)),
+           (LoVec (V6_valignb HvxVR:$Vt, HvxVR:$Vs, I32:$Rt))>;
+
   def: Pat<(HexagonVASL HVI8:$Vs, I32:$Rt),
            (V6_vpackeb (V6_vaslh (HiVec (VZxtb HvxVR:$Vs)), I32:$Rt),
                        (V6_vaslh (LoVec (VZxtb HvxVR:$Vs)), I32:$Rt))>;

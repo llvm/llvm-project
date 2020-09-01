@@ -13,7 +13,7 @@ entry:
 
 ; CHECK:      [[X:[^ ]+]] = load{{.*}}__msan_param_tls{{.*}}
 ; CHECK:      [[Y:[^ ]+]] = load{{.*}}__msan_param_tls{{.*}}
-; CHECK:      [[OR:[^ ]+]] = or i32 [[Y]], [[X]]
+; CHECK:      [[OR:[^ ]+]] = or i32 [[X]], [[Y]]
 
 ; Make sure the shadow of the (x < y) comparison isn't truncated to i1.
 ; CHECK-NOT:  trunc i32 [[OR]] to i1

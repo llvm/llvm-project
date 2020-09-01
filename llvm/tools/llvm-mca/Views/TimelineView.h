@@ -118,11 +118,7 @@ namespace mca {
 /// a TimelineViewEntry object. TimelineViewEntry objects are then used
 /// to print the timeline information, as well as the "average wait times"
 /// for every instruction in the input assembly sequence.
-class TimelineView : public View {
-  const llvm::MCSubtargetInfo &STI;
-  llvm::MCInstPrinter &MCIP;
-  llvm::ArrayRef<llvm::MCInst> Source;
-
+class TimelineView : public InstructionView {
   unsigned CurrentCycle;
   unsigned MaxCycle;
   unsigned LastCycle;

@@ -773,6 +773,11 @@ void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
   if (!D->hasBody())
     return;
 
+  // Skip CUDA/HIP kernel launch stub functions.
+  if (CGM.getLangOpts().CUDA && !CGM.getLangOpts().CUDAIsDevice &&
+      D->hasAttr<CUDAGlobalAttr>())
+    return;
+
   bool InstrumentRegions = CGM.getCodeGenOpts().hasProfileClangInstr();
   llvm::IndexedInstrProfReader *PGOReader = CGM.getPGOReader();
   if (!InstrumentRegions && !PGOReader)
@@ -829,6 +834,18 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
 
 bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {
   if (!D->getBody())
+    return true;
+
+  // Skip host-only functions in the CUDA device compilation and device-only
+  // functions in the host compilation. Just roughly filter them out based on
+  // the function attributes. If there are effectively host-only or device-only
+  // ones, their coverage mapping may still be generated.
+  if (CGM.getLangOpts().CUDA &&
+      ((CGM.getLangOpts().CUDAIsDevice && !D->hasAttr<CUDADeviceAttr>() &&
+        !D->hasAttr<CUDAGlobalAttr>()) ||
+       (!CGM.getLangOpts().CUDAIsDevice &&
+        (D->hasAttr<CUDAGlobalAttr>() ||
+         (!D->hasAttr<CUDAHostAttr>() && D->hasAttr<CUDADeviceAttr>())))))
     return true;
 
   // Don't map the functions in system headers.

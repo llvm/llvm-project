@@ -430,7 +430,7 @@ from ``baz``. To fix this, you could add ``CHECK-NEXT`` matchers for every
    CHECK:      Value:
    CHECK-SAME:        {{ 1$}}
 
-This verifies that the *next* time "``Value:``" appears in the ouput, it has
+This verifies that the *next* time "``Value:``" appears in the output, it has
 the value ``1``.
 
 Note: a "``CHECK-SAME:``" cannot be the first directive in a file.
@@ -730,35 +730,60 @@ numeric expression constraint based on those variables via a numeric
 substitution. This allows ``CHECK:`` directives to verify a numeric relation
 between two numbers, such as the need for consecutive registers to be used.
 
-The syntax to define a numeric variable is ``[[#%<fmtspec>,<NUMVAR>:]]`` where:
+The syntax to capture a numeric value is
+``[[#%<fmtspec>,<NUMVAR>:]]`` where:
 
-* ``%<fmtspec>`` is an optional scanf-style matching format specifier to
-  indicate what number format to match (e.g. hex number).  Currently accepted
-  format specifiers are ``%u``, ``%d``, ``%x`` and ``%X``.  If absent, the
-  format specifier defaults to ``%u``.
+* ``%<fmtspec>,`` is an optional format specifier to indicate what number
+  format to match and the minimum number of digits to expect.
 
-* ``<NUMVAR>`` is the name of the numeric variable to define to the matching
-  value.
+* ``<NUMVAR>:`` is an optional definition of variable ``<NUMVAR>`` from the
+  captured value.
+
+The syntax of ``<fmtspec>`` is: ``.<precision><conversion specifier>`` where:
+
+* ``.<precision>`` is an optional printf-style precision specifier in which
+  ``<precision>`` indicates the minimum number of digits that the value matched
+  must have, expecting leading zeros if needed.
+
+* ``<conversion specifier>`` is an optional scanf-style conversion specifier
+  to indicate what number format to match (e.g. hex number).  Currently
+  accepted format specifiers are ``%u``, ``%d``, ``%x`` and ``%X``.  If absent,
+  the format specifier defaults to ``%u``.
+
 
 For example:
 
 .. code-block:: llvm
 
-    ; CHECK: mov r[[#REG:]], 0x[[#%X,IMM:]]
+    ; CHECK: mov r[[#REG:]], 0x[[#%.8X,ADDR:]]
 
-would match ``mov r5, 0xF0F0`` and set ``REG`` to the value ``5`` and ``IMM``
-to the value ``0xF0F0``.
+would match ``mov r5, 0x0000FEFE`` and set ``REG`` to the value ``5`` and
+``ADDR`` to the value ``0xFEFE``. Note that due to the precision it would fail
+to match ``mov r5, 0xFEFE``.
+
+As a result of the numeric variable definition being optional, it is possible
+to only check that a numeric value is present in a given format. This can be
+useful when the value itself is not useful, for instance:
+
+.. code-block:: gas
+
+    ; CHECK-NOT: mov r0, r[[#]]
+
+to check that a value is synthesized rather than moved around.
+
 
 The syntax of a numeric substitution is
-``[[#%<fmtspec>: <constraint> <expr>]]`` where:
+``[[#%<fmtspec>, <constraint> <expr>]]`` where:
 
-* ``%<fmtspec>`` is the same matching format specifier as for defining numeric
-  variables but acting as a printf-style format to indicate how a numeric
-  expression value should be matched against.  If absent, the format specifier
-  is inferred from the matching format of the numeric variable(s) used by the
-  expression constraint if any, and defaults to ``%u`` if no numeric variable
-  is used.  In case of conflict between matching formats of several numeric
-  variables the format specifier is mandatory.
+* ``<fmtspec>`` is the same format specifier as for defining a variable but
+  in this context indicating how a numeric expression value should be matched
+  against. If absent, both components of the format specifier are inferred from
+  the matching format of the numeric variable(s) used by the expression
+  constraint if any, and defaults to ``%u`` if no numeric variable is used,
+  denoting that the value should be unsigned with no leading zeros. In case of
+  conflict between format specifiers of several numeric variables, the
+  conversion specifier becomes mandatory but the precision specifier remains
+  optional.
 
 * ``<constraint>`` is the constraint describing how the value to match must
   relate to the value of the numeric expression. The only currently accepted
@@ -824,20 +849,11 @@ but would not match the text:
 Due to ``7`` being unequal to ``5 + 1`` and ``a0463443`` being unequal to
 ``a0463440 + 7``.
 
-The syntax also supports an empty expression, equivalent to writing {{[0-9]+}},
-for cases where the input must contain a numeric value but the value itself
-does not matter:
-
-.. code-block:: gas
-
-    ; CHECK-NOT: mov r0, r[[#]]
-
-to check that a value is synthesized rather than moved around.
 
 A numeric variable can also be defined to the result of a numeric expression,
 in which case the numeric expression constraint is checked and if verified the
-variable is assigned to the value. The unified syntax for both defining numeric
-variables and checking a numeric expression is thus
+variable is assigned to the value. The unified syntax for both checking a
+numeric expression and capturing its value into a numeric variable is thus
 ``[[#%<fmtspec>,<NUMVAR>: <constraint> <expr>]]`` with each element as
 described previously. One can use this syntax to make a testcase more
 self-describing by using variables instead of values:

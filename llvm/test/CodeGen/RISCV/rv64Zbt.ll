@@ -109,15 +109,14 @@ declare i32 @llvm.fshl.i32(i32, i32, i32)
 define signext i32 @fshl_i32(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
 ; RV64I-LABEL: fshl_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a3, a2, 31
-; RV64I-NEXT:    beqz a3, .LBB4_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    addi a4, zero, 32
-; RV64I-NEXT:    sub a2, a4, a2
-; RV64I-NEXT:    srlw a1, a1, a2
-; RV64I-NEXT:    sllw a0, a0, a3
+; RV64I-NEXT:    andi a2, a2, 31
+; RV64I-NEXT:    sll a0, a0, a2
+; RV64I-NEXT:    not a2, a2
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    srli a1, a1, 1
+; RV64I-NEXT:    srl a1, a1, a2
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:  .LBB4_2:
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IB-LABEL: fshl_i32:
@@ -138,15 +137,11 @@ declare i64 @llvm.fshl.i64(i64, i64, i64)
 define i64 @fshl_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ; RV64I-LABEL: fshl_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a3, a2, 63
-; RV64I-NEXT:    beqz a3, .LBB5_2
-; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    sll a0, a0, a2
-; RV64I-NEXT:    addi a2, zero, 64
-; RV64I-NEXT:    sub a2, a2, a3
+; RV64I-NEXT:    not a2, a2
+; RV64I-NEXT:    srli a1, a1, 1
 ; RV64I-NEXT:    srl a1, a1, a2
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:  .LBB5_2:
 ; RV64I-NEXT:    ret
 ;
 ; RV64IB-LABEL: fshl_i64:
@@ -167,16 +162,15 @@ declare i32 @llvm.fshr.i32(i32, i32, i32)
 define signext i32 @fshr_i32(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
 ; RV64I-LABEL: fshr_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a3, a2, 31
-; RV64I-NEXT:    beqz a3, .LBB6_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    srlw a1, a1, a3
-; RV64I-NEXT:    addi a3, zero, 32
-; RV64I-NEXT:    sub a2, a3, a2
-; RV64I-NEXT:    sllw a0, a0, a2
-; RV64I-NEXT:    or a1, a0, a1
-; RV64I-NEXT:  .LBB6_2:
-; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    andi a2, a2, 31
+; RV64I-NEXT:    ori a3, a2, 32
+; RV64I-NEXT:    srl a1, a1, a3
+; RV64I-NEXT:    slli a0, a0, 1
+; RV64I-NEXT:    xori a2, a2, 31
+; RV64I-NEXT:    sll a0, a0, a2
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IB-LABEL: fshr_i32:
@@ -197,16 +191,11 @@ declare i64 @llvm.fshr.i64(i64, i64, i64)
 define i64 @fshr_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ; RV64I-LABEL: fshr_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a3, a2, 63
-; RV64I-NEXT:    beqz a3, .LBB7_2
-; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    srl a1, a1, a2
-; RV64I-NEXT:    addi a2, zero, 64
-; RV64I-NEXT:    sub a2, a2, a3
+; RV64I-NEXT:    not a2, a2
+; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    sll a0, a0, a2
-; RV64I-NEXT:    or a1, a0, a1
-; RV64I-NEXT:  .LBB7_2:
-; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IB-LABEL: fshr_i64:

@@ -100,11 +100,19 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::ObjCTypeParam:
   case Decl::Binding:
     llvm_unreachable("Declaration should not be in declstmts!");
-  case Decl::Function:  // void X();
   case Decl::Record:    // struct/union/class X;
-  case Decl::Enum:      // enum X;
-  case Decl::EnumConstant: // enum ? { X = ? }
   case Decl::CXXRecord: // struct/union/class X; [C++]
+    if (CGDebugInfo *DI = getDebugInfo())
+      if (cast<RecordDecl>(D).getDefinition())
+        DI->EmitAndRetainType(getContext().getRecordType(cast<RecordDecl>(&D)));
+    return;
+  case Decl::Enum:      // enum X;
+    if (CGDebugInfo *DI = getDebugInfo())
+      if (cast<EnumDecl>(D).getDefinition())
+        DI->EmitAndRetainType(getContext().getEnumType(cast<EnumDecl>(&D)));
+    return;
+  case Decl::Function:     // void X();
+  case Decl::EnumConstant: // enum ? { X = ? }
   case Decl::StaticAssert: // static_assert(X, ""); [C++0x]
   case Decl::Label:        // __label__ x;
   case Decl::Import:
@@ -157,12 +165,11 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
 
   case Decl::Typedef:      // typedef int X;
   case Decl::TypeAlias: {  // using X = int; [C++0x]
-    const TypedefNameDecl &TD = cast<TypedefNameDecl>(D);
-    QualType Ty = TD.getUnderlyingType();
-
+    QualType Ty = cast<TypedefNameDecl>(D).getUnderlyingType();
+    if (CGDebugInfo *DI = getDebugInfo())
+      DI->EmitAndRetainType(Ty);
     if (Ty->isVariablyModifiedType())
       EmitVariablyModifiedType(Ty);
-
     return;
   }
   }
@@ -2088,21 +2095,47 @@ void CodeGenFunction::pushStackRestore(CleanupKind Kind, Address SPMem) {
   EHStack.pushCleanup<CallStackRestore>(Kind, SPMem);
 }
 
-void CodeGenFunction::pushLifetimeExtendedDestroy(
-    CleanupKind cleanupKind, Address addr, QualType type,
-    Destroyer *destroyer, bool useEHCleanupForArray) {
-  // Push an EH-only cleanup for the object now.
-  // FIXME: When popping normal cleanups, we need to keep this EH cleanup
-  // around in case a temporary's destructor throws an exception.
-  if (cleanupKind & EHCleanup)
-    EHStack.pushCleanup<DestroyObject>(
-        static_cast<CleanupKind>(cleanupKind & ~NormalCleanup), addr, type,
-        destroyer, useEHCleanupForArray);
+void CodeGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
+                                                  Address addr, QualType type,
+                                                  Destroyer *destroyer,
+                                                  bool useEHCleanupForArray) {
+  // If we're not in a conditional branch, we don't need to bother generating a
+  // conditional cleanup.
+  if (!isInConditionalBranch()) {
+    // Push an EH-only cleanup for the object now.
+    // FIXME: When popping normal cleanups, we need to keep this EH cleanup
+    // around in case a temporary's destructor throws an exception.
+    if (cleanupKind & EHCleanup)
+      EHStack.pushCleanup<DestroyObject>(
+          static_cast<CleanupKind>(cleanupKind & ~NormalCleanup), addr, type,
+          destroyer, useEHCleanupForArray);
 
-  // Remember that we need to push a full cleanup for the object at the
-  // end of the full-expression.
-  pushCleanupAfterFullExpr<DestroyObject>(
-      cleanupKind, addr, type, destroyer, useEHCleanupForArray);
+    return pushCleanupAfterFullExprWithActiveFlag<DestroyObject>(
+        cleanupKind, Address::invalid(), addr, type, destroyer, useEHCleanupForArray);
+  }
+
+  // Otherwise, we should only destroy the object if it's been initialized.
+  // Re-use the active flag and saved address across both the EH and end of
+  // scope cleanups.
+
+  using SavedType = typename DominatingValue<Address>::saved_type;
+  using ConditionalCleanupType =
+      EHScopeStack::ConditionalCleanup<DestroyObject, Address, QualType,
+                                       Destroyer *, bool>;
+
+  Address ActiveFlag = createCleanupActiveFlag();
+  SavedType SavedAddr = saveValueInCond(addr);
+
+  if (cleanupKind & EHCleanup) {
+    EHStack.pushCleanup<ConditionalCleanupType>(
+        static_cast<CleanupKind>(cleanupKind & ~NormalCleanup), SavedAddr, type,
+        destroyer, useEHCleanupForArray);
+    initFullExprCleanupWithFlag(ActiveFlag);
+  }
+
+  pushCleanupAfterFullExprWithActiveFlag<ConditionalCleanupType>(
+      cleanupKind, ActiveFlag, SavedAddr, type, destroyer,
+      useEHCleanupForArray);
 }
 
 /// emitDestroy - Immediately perform the destruction of the given

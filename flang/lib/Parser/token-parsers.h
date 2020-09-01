@@ -62,7 +62,7 @@ constexpr auto letter{"abcdefghijklmnopqrstuvwxyz"_ch};
 constexpr auto digit{"0123456789"_ch};
 
 // Skips over optional spaces.  Always succeeds.
-constexpr struct Space {
+struct Space {
   using resultType = Success;
   constexpr Space() {}
   static std::optional<Success> Parse(ParseState &state) {
@@ -74,7 +74,8 @@ constexpr struct Space {
     }
     return {Success{}};
   }
-} space;
+};
+constexpr Space space;
 
 // Skips a space that in free form requires a warning if it precedes a
 // character that could begin an identifier or keyword.  Always succeeds.
@@ -85,7 +86,7 @@ inline void MissingSpace(ParseState &state) {
   }
 }
 
-constexpr struct SpaceCheck {
+struct SpaceCheck {
   using resultType = Success;
   constexpr SpaceCheck() {}
   static std::optional<Success> Parse(ParseState &state) {
@@ -101,7 +102,8 @@ constexpr struct SpaceCheck {
     }
     return {Success{}};
   }
-} spaceCheck;
+};
+constexpr SpaceCheck spaceCheck;
 
 // Matches a token string.  Spaces in the token string denote where
 // spaces may appear in the source; they can be made mandatory for
@@ -346,7 +348,7 @@ struct BOZLiteral {
 
 // R711 digit-string -> digit [digit]...
 // N.B. not a token -- no space is skipped
-constexpr struct DigitString {
+struct DigitString {
   using resultType = CharBlock;
   static std::optional<resultType> Parse(ParseState &state) {
     if (std::optional<const char *> ch1{state.PeekAtNextChar()}) {
@@ -363,7 +365,8 @@ constexpr struct DigitString {
     }
     return std::nullopt;
   }
-} digitString;
+};
+constexpr DigitString digitString;
 
 struct SignedIntLiteralConstantWithoutKind {
   using resultType = CharBlock;
@@ -380,7 +383,7 @@ struct SignedIntLiteralConstantWithoutKind {
   }
 };
 
-constexpr struct DigitString64 {
+struct DigitString64 {
   using resultType = std::uint64_t;
   static std::optional<std::uint64_t> Parse(ParseState &state) {
     std::optional<const char *> firstDigit{digit.Parse(state)};
@@ -406,7 +409,8 @@ constexpr struct DigitString64 {
     }
     return {value};
   }
-} digitString64;
+};
+constexpr DigitString64 digitString64;
 
 // R707 signed-int-literal-constant -> [sign] int-literal-constant
 // N.B. Spaces are consumed before and after the sign, since the sign
@@ -537,7 +541,7 @@ struct HollerithLiteral {
   }
 };
 
-constexpr struct ConsumedAllInputParser {
+struct ConsumedAllInputParser {
   using resultType = Success;
   constexpr ConsumedAllInputParser() {}
   static inline std::optional<Success> Parse(ParseState &state) {
@@ -546,7 +550,8 @@ constexpr struct ConsumedAllInputParser {
     }
     return std::nullopt;
   }
-} consumedAllInput;
+};
+constexpr ConsumedAllInputParser consumedAllInput;
 
 template <char goal> struct SkipPast {
   using resultType = Success;
@@ -599,7 +604,7 @@ inline constexpr auto optionalListBeforeColons(const PA &p) {
 // the ones that specify the source form) that might appear before the
 // next statement.  Skip over empty statements (bare semicolons) when
 // not in strict standard conformance mode.  Always succeeds.
-constexpr struct SkipStuffBeforeStatement {
+struct SkipStuffBeforeStatement {
   using resultType = Success;
   static std::optional<Success> Parse(ParseState &state) {
     if (UserState * ustate{state.userState()}) {
@@ -637,7 +642,8 @@ constexpr struct SkipStuffBeforeStatement {
     }
     return {Success{}};
   }
-} skipStuffBeforeStatement;
+};
+constexpr SkipStuffBeforeStatement skipStuffBeforeStatement;
 
 // R602 underscore -> _
 constexpr auto underscore{"_"_ch};

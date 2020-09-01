@@ -1,5 +1,5 @@
 # REQUIRES: lld
-# RUN: yaml2obj %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 # RUN: lldb-test object-file %t.obj | FileCheck %s
 
 # CHECK-DAG: UUID: 14B292E0-D81A-B4F1-4C4C-44205044422E-00000001

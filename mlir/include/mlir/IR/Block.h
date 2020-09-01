@@ -207,7 +207,10 @@ public:
   }
 
   /// Return true if this block has no predecessors.
-  bool hasNoPredecessors();
+  bool hasNoPredecessors() { return pred_begin() == pred_end(); }
+
+  /// Returns true if this blocks has no successors.
+  bool hasNoSuccessors() { return succ_begin() == succ_end(); }
 
   /// If this block has exactly one predecessor, return it.  Otherwise, return
   /// null.

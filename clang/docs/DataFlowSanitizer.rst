@@ -214,7 +214,7 @@ For example:
     assert(ij_label & i_label);  // ij_label has i_label
     assert(ij_label & j_label);  // ij_label has j_label
     assert(!(ij_label & k_label));  // ij_label doesn't have k_label
-    assert(ij_label == 3)  // Verifies all of the above
+    assert(ij_label == 3);  // Verifies all of the above
 
     dfsan_label ijk_label = dfsan_get_label(i + j + k);
 

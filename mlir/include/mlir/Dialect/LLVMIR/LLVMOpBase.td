@@ -15,21 +15,26 @@
 #define LLVMIR_OP_BASE
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def LLVM_Dialect : Dialect {
   let name = "llvm";
   let cppNamespace = "LLVM";
+
+  /// FIXME: at the moment this is a dependency of the translation to LLVM IR,
+  /// not really one of this dialect per-se.
+  let dependentDialects = ["omp::OpenMPDialect"];
+
   let hasRegionArgAttrVerify = 1;
+  let hasOperationAttrVerify = 1;
   let extraClassDeclaration = [{
-    ~LLVMDialect();
-    const llvm::DataLayout &getDataLayout();
+    /// Name of the data layout attributes.
+    static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
 
-  private:
-    friend LLVMType;
-
-    // This can't be a unique_ptr because the ctor is generated inline
-    // in the class definition at the moment.
-    detail::LLVMDialectImpl *impl;
+    /// Verifies if the given string is a well-formed data layout descriptor.
+    /// Uses `reportError` to report errors.
+    static LogicalResult verifyDataLayoutString(
+        StringRef descr, llvm::function_ref<void (const Twine &)> reportError);
   }];
 }
 
@@ -208,13 +213,15 @@ class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
 
 // LLVM vector reduction over a single vector.
 class LLVM_VectorReduction<string mnem>
-    : LLVM_OneResultIntrOp<"experimental.vector.reduce." # mnem, [], [0], []>,
+    : LLVM_OneResultIntrOp<"experimental.vector.reduce." # mnem,
+                           [], [0], [NoSideEffect]>,
       Arguments<(ins LLVM_Type)>;
 
 // LLVM vector reduction over a single vector, with an initial value,
 // and with permission to reassociate the reduction operations.
 class LLVM_VectorReductionV2<string mnem>
-    : LLVM_OpBase<LLVM_Dialect, "intr.experimental.vector.reduce.v2." # mnem, []>,
+    : LLVM_OpBase<LLVM_Dialect, "intr.experimental.vector.reduce.v2." # mnem,
+                  [NoSideEffect]>,
       Results<(outs LLVM_Type:$res)>,
       Arguments<(ins LLVM_Type, LLVM_Type,
                  DefaultValuedAttr<BoolAttr, "false">:$reassoc)> {

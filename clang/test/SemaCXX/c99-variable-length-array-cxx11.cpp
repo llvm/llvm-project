@@ -17,13 +17,13 @@ struct POD {
 };
 
 // We allow VLAs of POD types, only.
-void vla(int N) {
-  int array1[N]; // expected-warning{{variable length arrays are a C99 feature}}
-  POD array2[N]; // expected-warning{{variable length arrays are a C99 feature}}
-  StillPOD array3[N]; // expected-warning{{variable length arrays are a C99 feature}}
-  StillPOD2 array4[N][3]; // expected-warning{{variable length arrays are a C99 feature}}
+void vla(int N) { // expected-note 5{{here}}
+  int array1[N]; // expected-warning{{variable length arrays are a C99 feature}} expected-note {{variable 'N'}}
+  POD array2[N]; // expected-warning{{variable length arrays are a C99 feature}} expected-note {{variable 'N'}}
+  StillPOD array3[N]; // expected-warning{{variable length arrays are a C99 feature}} expected-note {{variable 'N'}}
+  StillPOD2 array4[N][3]; // expected-warning{{variable length arrays are a C99 feature}} expected-note {{variable 'N'}}
   NonPOD array5[N]; // expected-error{{no matching constructor for initialization of 'NonPOD [N]'}}
-  // expected-warning@-1{{variable length arrays are a C99 feature}}
+  // expected-warning@-1{{variable length arrays are a C99 feature}} expected-note@-1 {{variable 'N'}}
   // expected-note@-16{{candidate constructor not viable}}
   // expected-note@-18{{candidate constructor (the implicit copy constructor) not viable}}
   // expected-note@-19{{candidate constructor (the implicit move constructor) not viable}}

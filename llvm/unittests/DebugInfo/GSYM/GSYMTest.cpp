@@ -1414,32 +1414,31 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
     - /tmp/main.c
     - main
   debug_abbrev:
-    - Code:            0x00000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_language
-          Form:            DW_FORM_data2
-    - Code:            0x00000002
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_addr
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
   debug_info:
-    - Length:          52
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -1454,7 +1453,6 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
             - Value:           0x0000000000001000
             - Value:           0x0000000000002000
         - AbbrCode:        0x00000000
-          Values:
   )";
   auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
@@ -1493,32 +1491,31 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
     - /tmp/main.c
     - main
   debug_abbrev:
-    - Code:            0x00000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-        - Attribute:       DW_AT_language
-          Form:            DW_FORM_data2
-    - Code:            0x00000002
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
   debug_info:
-    - Length:          44
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -1533,7 +1530,6 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
             - Value:           0x0000000000001000
             - Value:           0x0000000000001000
         - AbbrCode:        0x00000000
-          Values:
   )";
   auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
@@ -1576,48 +1572,47 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
     - dump
     - this
   debug_abbrev:
-    - Code:            0x00000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_language
-          Form:            DW_FORM_data2
-    - Code:            0x00000002
-      Tag:             DW_TAG_structure_type
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-    - Code:            0x00000003
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_addr
-    - Code:            0x00000004
-      Tag:             DW_TAG_formal_parameter
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_type
-          Form:            DW_FORM_ref4
-        - Attribute:       DW_AT_artificial
-          Form:            DW_FORM_flag_present
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x00000002
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x00000003
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+        - Code:            0x00000004
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_artificial
+              Form:            DW_FORM_flag_present
   debug_info:
-    - Length:          68
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -1640,11 +1635,8 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
             - Value:           0x0000000000000022
             - Value:           0x0000000000000001
         - AbbrCode:        0x00000000
-          Values:
         - AbbrCode:        0x00000000
-          Values:
         - AbbrCode:        0x00000000
-          Values:
   )";
   auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
@@ -1696,32 +1688,31 @@ TEST(GSYMTest, TestDWARFTextRanges) {
     - dead_stripped
     - dead_stripped2
   debug_abbrev:
-    - Code:            0x00000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-        - Attribute:       DW_AT_language
-          Form:            DW_FORM_data2
-    - Code:            0x00000002
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
   debug_info:
-    - Length:          78
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -1746,8 +1737,6 @@ TEST(GSYMTest, TestDWARFTextRanges) {
             - Value:           0x0000000000000000
             - Value:           0x0000000000000040
         - AbbrCode:        0x00000000
-          Values:
-
   )";
   auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
@@ -1793,48 +1782,47 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
     - main
     - inline1
   debug_abbrev:
-    - Code:            0x00000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-        - Attribute:       DW_AT_language
-          Form:            DW_FORM_data2
-        - Attribute:       DW_AT_stmt_list
-          Form:            DW_FORM_sec_offset
-    - Code:            0x00000002
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-    - Code:            0x00000003
-      Tag:             DW_TAG_inlined_subroutine
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-        - Attribute:       DW_AT_call_file
-          Form:            DW_FORM_data4
-        - Attribute:       DW_AT_call_line
-          Form:            DW_FORM_data4
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x00000003
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data4
   debug_info:
-    - Length:          74
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -1857,9 +1845,7 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
             - Value:           0x0000000000000001
             - Value:           0x000000000000000A
         - AbbrCode:        0x00000000
-          Values:
         - AbbrCode:        0x00000000
-          Values:
   debug_line:
     - Length:          96
       Version:         2
@@ -2048,48 +2034,47 @@ TEST(GSYMTest, TestDWARFNoLines) {
     - no_lines_no_decl
     - no_lines_with_decl
   debug_abbrev:
-    - Code:            0x00000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-        - Attribute:       DW_AT_language
-          Form:            DW_FORM_data2
-        - Attribute:       DW_AT_stmt_list
-          Form:            DW_FORM_sec_offset
-    - Code:            0x00000002
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-    - Code:            0x00000003
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-        - Attribute:       DW_AT_decl_file
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_decl_line
-          Form:            DW_FORM_data1
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x00000003
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
   debug_info:
-    - Length:          103
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -2124,7 +2109,6 @@ TEST(GSYMTest, TestDWARFNoLines) {
             - Value:           0x0000000000000001
             - Value:           0x0000000000000028
         - AbbrCode:        0x00000000
-          Values:          []
   debug_line:
     - Length:          92
       Version:         2
@@ -2293,7 +2277,6 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
   //
   // 0x0000004e:   NULL
 
-
   StringRef yamldata = R"(
   debug_str:
     - ''
@@ -2303,42 +2286,41 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
     - stripped2
     - stripped3
   debug_abbrev:
-    - Code:            0x00000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-        - Attribute:       DW_AT_language
-          Form:            DW_FORM_data2
-    - Code:            0x00000002
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-    - Code:            0x00000003
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_addr
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x00000003
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
   debug_info:
-    - Length:          75
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        4
       Entries:
         - AbbrCode:        0x00000001
@@ -2368,7 +2350,6 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
             - Value:           0x0000000000004000
             - Value:           0x0000000000003FFF
         - AbbrCode:        0x00000000
-          Values:          []
   )";
   auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
@@ -2445,42 +2426,41 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
     - stripped2
     - stripped3
   debug_abbrev:
-    - Code:            0x00000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-        - Attribute:       DW_AT_language
-          Form:            DW_FORM_data2
-    - Code:            0x00000002
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-    - Code:            0x00000003
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_addr
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x00000003
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
   debug_info:
-    - Length:          103
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -2510,7 +2490,6 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
             - Value:           0x0000000000004000
             - Value:           0x0000000000003FFF
         - AbbrCode:        0x00000000
-          Values:          []
   )";
   auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());

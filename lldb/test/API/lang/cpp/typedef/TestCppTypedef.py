@@ -29,8 +29,16 @@ class TestCppTypedef(TestBase):
 
         # First of all, check that we can get a typedefed type correctly in a simple case
 
-        expr_result = frame.EvaluateExpression("(SF)s")
-        self.assertTrue(expr_result.IsValid(), "Expression failed with: " + str(expr_result.GetError()))
+        expr_result = self.expect_expr("(SF)s", result_children=[ValueCheck(value="0.5")])
+        self.expect_expr("(ns::SF)s", result_children=[ValueCheck(value="0.5")])
+        self.expect_expr("(ST::SF)s", result_children=[ValueCheck(value="0.5")])
+
+        self.filecheck("image dump ast a.out", __file__, "--strict-whitespace")
+# CHECK:      {{^}}|-TypedefDecl {{.*}} SF 'S<float>'
+# CHECK:      {{^}}|-NamespaceDecl {{.*}} ns
+# CHECK-NEXT: {{^}}| `-TypedefDecl {{.*}} SF 'S<float>'
+# CHECK:      {{^}}`-CXXRecordDecl {{.*}} struct ST definition
+# CHECK:      {{^}}  `-TypedefDecl {{.*}} SF 'S<float>'
 
         typedef_type = expr_result.GetType();
         self.assertTrue(typedef_type.IsValid(), "Can't get `SF` type of evaluated expression")

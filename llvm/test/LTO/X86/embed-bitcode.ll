@@ -10,11 +10,11 @@
 
 ; RUN: llvm-lto2 run -r %t1.o,_start,px -r %t2.o,foo,px -r %t3.o,bar,px -r %t2.o,bar,lx -lto-embed-bitcode -o %t3 %t1.o %t2.o %t3.o
 ; RUN: llvm-readelf -S %t3.0 | FileCheck %s --check-prefix=CHECK-ELF
-; RUN: llvm-objcopy -O binary -j .llvmbc %t3.0 %t-embedded.bc
+; RUN: llvm-objcopy --dump-section=.llvmbc=%t-embedded.bc %t3.0 /dev/null
 ; RUN: llvm-dis %t-embedded.bc -o - | FileCheck %s --check-prefix=CHECK-LL
 
-; CHECK-ELF: .text
-; CHECK-ELF: .llvmbc
+; CHECK-ELF:      .text   PROGBITS 0000000000000000 [[#%x,OFF:]] [[#%x,SIZE:]] 00 AX 0
+; CHECK-ELF-NEXT: .llvmbc PROGBITS 0000000000000000 [[#%x,OFF:]] [[#%x,SIZE:]] 00    0
 
 ; CHECK-LL: @_start
 ; CHECK-LL: @foo

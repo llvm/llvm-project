@@ -48,10 +48,8 @@ static llvm::cl::opt<bool> verifyDiagnostics(
     llvm::cl::init(false));
 
 int main(int argc, char **argv) {
-  mlir::registerAllDialects();
   mlir::registerAllTranslations();
 
-  mlir::registerDialect<mlir::standalone::StandaloneDialect>();
   // TODO: Register standalone translations here.
 
   llvm::InitLLVM y(argc, argv);

@@ -214,7 +214,7 @@ operations.
 We allow `index` types in tensors and memrefs as a code generation strategy has
 to map `index` to an implementation type and hence needs to be able to
 materialize corresponding values. However, the target might lack support for
-`vector` values with the target specfic equivalent of the `index` type.
+`vector` values with the target specific equivalent of the `index` type.
 
 ### Bit width of a non-primitive type and `index` is undefined
 
@@ -457,13 +457,6 @@ experience. When we do, we should chat with benoitjacob@ and
 
 This section describes the design decisions that shaped the dialect extensible
 type system present in MLIR.
-
-#### Reserving dialect type kinds
-
-Dialects that wish to define type extensions must reserve a range of type kinds
-within a '.def' file within the core IR library. This means that every dialect
-wishing to define custom types must modify this file, but it guarantees that all
-type casting checkings are performed in O(1) time.
 
 #### Interactions between dialects
 

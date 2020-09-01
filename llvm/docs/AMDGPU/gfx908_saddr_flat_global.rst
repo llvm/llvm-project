@@ -16,4 +16,4 @@ See :ref:`vaddr<amdgpu_synid908_vaddr_flat_global>` for description of available
 
 *Size:* 2 dwords.
 
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`exec<amdgpu_synid_exec>`, :ref:`off<amdgpu_synid_off>`
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack<amdgpu_synid_xnack>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`exec<amdgpu_synid_exec>`, :ref:`off<amdgpu_synid_off>`

@@ -1,8 +1,8 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff \
-; RUN: -code-model=small < %s | FileCheck %s --check-prefixes=CHECK,SMALL
+; RUN: -code-model=small < %s | FileCheck %s --check-prefix=SMALL
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff \
-; RUN: -code-model=large < %s | FileCheck %s --check-prefixes=CHECK,LARGE
+; RUN: -code-model=large < %s | FileCheck %s --check-prefix=LARGE
 
 @a = common global i32 0
 
@@ -41,5 +41,8 @@ define void @test_store(i32 zeroext %0) {
 ; LARGE: stw [[REG3:[0-9]+]], 0([[REG2]])
 ; LARGE: blr
 
-; CHECK: .tc a[TC],a
-; CHECK: .tc b[TC],b
+; SMALL: .tc a[TC],a
+; SMALL: .tc b[TC],b
+
+; LARGE: .tc a[TE],a
+; LARGE: .tc b[TE],b

@@ -44,6 +44,8 @@ public:
                      MachineIRBuilder &B) const;
   bool legalizeFceil(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &B) const;
+  bool legalizeFrem(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    MachineIRBuilder &B) const;
   bool legalizeIntrinsicTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
   bool legalizeITOFP(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -67,9 +69,7 @@ public:
 
   bool legalizeGlobalValue(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;
-  bool legalizeLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
-                    MachineIRBuilder &B,
-                    GISelChangeObserver &Observer) const;
+  bool legalizeLoad(LegalizerHelper &Helper, MachineInstr &MI) const;
 
   bool legalizeFMad(MachineInstr &MI, MachineRegisterInfo &MRI,
                     MachineIRBuilder &B) const;

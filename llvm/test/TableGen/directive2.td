@@ -11,6 +11,7 @@ def TestDirectiveLanguage : DirectiveLanguage {
   let directivePrefix = "TDLD_";
   let clausePrefix = "TDLC_";
   let includeHeader = "tdl.h.inc";
+  let flangClauseBaseClass = "TdlClause";
 }
 
 def TDLC_ClauseA : Clause<"clausea"> {
@@ -18,6 +19,13 @@ def TDLC_ClauseA : Clause<"clausea"> {
 }
 def TDLC_ClauseB : Clause<"clauseb"> {
   let isDefault = 1;
+  let flangClassValue = "IntExpr";
+  let isValueList = 1;
+}
+def TDLC_ClauseC : Clause<"clausec"> {
+  let flangClassValue = "Name";
+  let defaultValue = "*";
+  let isValueOptional = 1;
 }
 
 def TDL_DirA : Directive<"dira"> {
@@ -44,9 +52,10 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  enum class Clause {
 // CHECK-NEXT:    TDLC_clausea,
 // CHECK-NEXT:    TDLC_clauseb,
+// CHECK-NEXT:    TDLC_clausec,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT:  static constexpr std::size_t Clause_enumSize = 2;
+// CHECK-NEXT:  static constexpr std::size_t Clause_enumSize = 3;
 // CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions
 // CHECK-NEXT:  Directive getTdlDirectiveKind(llvm::StringRef Str);
@@ -91,6 +100,7 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    return llvm::StringSwitch<Clause>(Str)
 // IMPL-NEXT:      .Case("clausea",TDLC_clauseb)
 // IMPL-NEXT:      .Case("clauseb",TDLC_clauseb)
+// IMPL-NEXT:      .Case("clausec",TDLC_clausec)
 // IMPL-NEXT:      .Default(TDLC_clauseb);
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
@@ -100,6 +110,8 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:        return "clausea";
 // IMPL-NEXT:      case TDLC_clauseb:
 // IMPL-NEXT:        return "clauseb";
+// IMPL-NEXT:      case TDLC_clausec:
+// IMPL-NEXT:        return "clausec";
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Clause kind");
 // IMPL-NEXT:  }
@@ -164,3 +176,52 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT: }
 // GEN-EMPTY:
 // GEN-NEXT: #endif // GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES
+// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES
+// GEN-EMPTY:
+// GEN-NEXT:  EMPTY_CLASS(Clausea);
+// GEN-NEXT:  WRAPPER_CLASS(Clauseb, std::list<IntExpr>);
+// GEN-NEXT:  WRAPPER_CLASS(Clausec, std::optional<Name>);
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// GEN-EMPTY:
+// GEN-NEXT:  Clausea
+// GEN-NEXT:  , Clauseb
+// GEN-NEXT:  , Clausec
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+// GEN-NEXT:  #undef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+// GEN-EMPTY:
+// GEN-NEXT:  NODE(TdlClause, Clausea)
+// GEN-NEXT:  NODE(TdlClause, Clauseb)
+// GEN-NEXT:  NODE(TdlClause, Clausec)
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_UNPARSE
+// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_UNPARSE
+// GEN-EMPTY:
+// GEN-NEXT:  void Before(const TdlClause::Clausea &) { Word("CLAUSEA"); }
+// GEN-NEXT:  void Unparse(const TdlClause::Clauseb &x) {
+// GEN-NEXT:    Word("CLAUSEB");
+// GEN-NEXT:    Put("(");
+// GEN-NEXT:    Walk(x.v, ",");
+// GEN-NEXT:    Put(")");
+// GEN-NEXT:  }
+// GEN-NEXT:  void Unparse(const TdlClause::Clausec &x) {
+// GEN-NEXT:  Word("CLAUSEC");
+// GEN-NEXT:    Put("(");
+// GEN-NEXT:    if (x.v.has_value())
+// GEN-NEXT:    Walk(x.v);
+// GEN-NEXT:    else
+// GEN-NEXT:    Put("*");
+// GEN-NEXT:    Put(")");
+// GEN-NEXT:  }
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_UNPARSE

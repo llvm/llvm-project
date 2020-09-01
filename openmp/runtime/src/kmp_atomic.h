@@ -39,7 +39,7 @@
 #define KMP_DO_ALIGN(alignment) /* Nothing */
 #endif
 
-#if (_MSC_VER < 1600) && defined(_DEBUG)
+#if defined(_MSC_VER) && (_MSC_VER < 1600) && defined(_DEBUG)
 // Workaround for the problem of _DebugHeapTag unresolved external.
 // This problem prevented to use our static debug library for C tests
 // compiled with /MDd option (the library itself built with /MTd),

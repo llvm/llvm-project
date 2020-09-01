@@ -158,6 +158,10 @@ static void buildPrologSpill(LivePhysRegs &LiveRegs, MachineBasicBlock &MBB,
     return;
   }
 
+  // Don't clobber the TmpVGPR if we also need a scratch reg for the stack
+  // offset in the spill.
+  LiveRegs.addReg(SpillReg);
+
   MCPhysReg OffsetReg = findScratchNonCalleeSaveRegister(
     MF->getRegInfo(), LiveRegs, AMDGPU::VGPR_32RegClass);
 
@@ -176,6 +180,8 @@ static void buildPrologSpill(LivePhysRegs &LiveRegs, MachineBasicBlock &MBB,
     .addImm(0) // dlc
     .addImm(0) // swz
     .addMemOperand(MMO);
+
+  LiveRegs.removeReg(SpillReg);
 }
 
 static void buildEpilogReload(LivePhysRegs &LiveRegs, MachineBasicBlock &MBB,
@@ -1070,15 +1076,15 @@ static bool allStackObjectsAreDead(const MachineFrameInfo &MFI) {
 }
 
 #ifndef NDEBUG
-static bool allSGPRSpillsAreDead(const MachineFrameInfo &MFI,
-                                 Optional<int> FramePointerSaveIndex,
-                                 Optional<int> BasePointerSaveIndex) {
+static bool allSGPRSpillsAreDead(const MachineFunction &MF) {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd();
        I != E; ++I) {
     if (!MFI.isDeadObjectIndex(I) &&
         MFI.getStackID(I) == TargetStackID::SGPRSpill &&
-        ((FramePointerSaveIndex && I != FramePointerSaveIndex) ||
-         (BasePointerSaveIndex && I != BasePointerSaveIndex))) {
+        (I != FuncInfo->FramePointerSaveIndex &&
+         I != FuncInfo->BasePointerSaveIndex)) {
       return false;
     }
   }
@@ -1105,7 +1111,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
   FuncInfo->removeDeadFrameIndices(MFI);
-  assert(allSGPRSpillsAreDead(MFI, None, None) &&
+  assert(allSGPRSpillsAreDead(MF) &&
          "SGPR spill should have been removed in SILowerSGPRSpills");
 
   // FIXME: The other checks should be redundant with allStackObjectsAreDead,

@@ -226,11 +226,12 @@ void tools::AddTargetFeature(const ArgList &Args,
   }
 }
 
-/// Get the (LLVM) name of the R600 gpu we are targeting.
-static std::string getR600TargetGPU(const ArgList &Args) {
+/// Get the (LLVM) name of the AMDGPU gpu we are targeting.
+static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
+                                      const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
-    const char *GPUName = A->getValue();
-    return llvm::StringSwitch<const char *>(GPUName)
+    auto GPUName = getProcessorFromTargetID(T, A->getValue());
+    return llvm::StringSwitch<std::string>(GPUName)
         .Cases("rv630", "rv635", "r600")
         .Cases("rv610", "rv620", "rs780", "rs880")
         .Case("rv740", "rv770")
@@ -238,7 +239,7 @@ static std::string getR600TargetGPU(const ArgList &Args) {
         .Cases("sumo", "sumo2", "sumo")
         .Case("hemlock", "cypress")
         .Case("aruba", "cayman")
-        .Default(GPUName);
+        .Default(GPUName.str());
   }
   return "";
 }
@@ -364,7 +365,7 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
 
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
-    return getR600TargetGPU(Args);
+    return getAMDGPUTargetGPU(T, Args);
 
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
@@ -685,6 +686,11 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("asan-preinit");
     }
+    if (SanArgs.needsHeapProfRt() && SanArgs.linkRuntimes()) {
+      SharedRuntimes.push_back("heapprof");
+      if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
+        HelperStaticRuntimes.push_back("heapprof-preinit");
+    }
     if (SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
       if (SanArgs.requiresMinimalRuntime())
         SharedRuntimes.push_back("ubsan_minimal");
@@ -697,6 +703,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       else
         SharedRuntimes.push_back("scudo");
     }
+    if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes())
+      SharedRuntimes.push_back("tsan");
     if (SanArgs.needsHwasanRt() && SanArgs.linkRuntimes())
       SharedRuntimes.push_back("hwasan");
   }
@@ -720,6 +728,13 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       StaticRuntimes.push_back("asan_cxx");
   }
 
+  if (!SanArgs.needsSharedRt() && SanArgs.needsHeapProfRt() &&
+      SanArgs.linkRuntimes()) {
+    StaticRuntimes.push_back("heapprof");
+    if (SanArgs.linkCXXRuntimes())
+      StaticRuntimes.push_back("heapprof_cxx");
+  }
+
   if (!SanArgs.needsSharedRt() && SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {
     StaticRuntimes.push_back("hwasan");
     if (SanArgs.linkCXXRuntimes())
@@ -734,7 +749,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("msan_cxx");
   }
-  if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsTsanRt() &&
+      SanArgs.linkRuntimes()) {
     StaticRuntimes.push_back("tsan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("tsan_cxx");

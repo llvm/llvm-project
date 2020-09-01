@@ -15,6 +15,10 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 using namespace llvm;
 
 int main(int argc, const char **argv) {
@@ -27,6 +31,16 @@ int main(int argc, const char **argv) {
     ++argv;
     --argc;
     ExpectCrash = true;
+
+    // Crash is expected, so disable crash report and symbolization to reduce
+    // output and avoid potentially slow symbolization.
+#ifdef _WIN32
+    SetEnvironmentVariableA("LLVM_DISABLE_CRASH_REPORT", "1");
+    SetEnvironmentVariableA("LLVM_DISABLE_SYMBOLIZATION", "1");
+#else
+    setenv("LLVM_DISABLE_CRASH_REPORT", "1", 0);
+    setenv("LLVM_DISABLE_SYMBOLIZATION", "1", 0);
+#endif
   }
 
   if (argc == 0)

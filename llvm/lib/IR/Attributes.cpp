@@ -1087,10 +1087,10 @@ AttributeList::get(LLVMContext &C,
                            return LHS.first < RHS.first;
                          }) &&
          "Misordered Attributes list!");
-  assert(llvm::none_of(Attrs,
-                       [](const std::pair<unsigned, Attribute> &Pair) {
-                         return Pair.second.hasAttribute(Attribute::None);
-                       }) &&
+  assert(llvm::all_of(Attrs,
+                      [](const std::pair<unsigned, Attribute> &Pair) {
+                        return Pair.second.isValid();
+                      }) &&
          "Pointless attribute!");
 
   // Create a vector if (unsigned, AttributeSetNode*) pairs from the attributes
@@ -1559,14 +1559,6 @@ void AttrBuilder::clear() {
   PreallocatedType = nullptr;
 }
 
-AttrBuilder &AttrBuilder::addAttribute(Attribute::AttrKind Val) {
-  assert((unsigned)Val < Attribute::EndAttrKinds && "Attribute out of range!");
-  assert(!Attribute::doesAttrKindHaveArgument(Val) &&
-         "Adding integer attribute without adding a value!");
-  Attrs[Val] = true;
-  return *this;
-}
-
 AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
   if (Attr.isStringAttribute()) {
     addAttribute(Attr.getKindAsString(), Attr.getValueAsString());
@@ -1937,21 +1929,19 @@ static void adjustCallerStackProbes(Function &Caller, const Function &Callee) {
 /// that is no larger.
 static void
 adjustCallerStackProbeSize(Function &Caller, const Function &Callee) {
-  if (Callee.hasFnAttribute("stack-probe-size")) {
-    uint64_t CalleeStackProbeSize;
-    Callee.getFnAttribute("stack-probe-size")
-          .getValueAsString()
-          .getAsInteger(0, CalleeStackProbeSize);
-    if (Caller.hasFnAttribute("stack-probe-size")) {
-      uint64_t CallerStackProbeSize;
-      Caller.getFnAttribute("stack-probe-size")
-            .getValueAsString()
-            .getAsInteger(0, CallerStackProbeSize);
+  Attribute CalleeAttr = Callee.getFnAttribute("stack-probe-size");
+  if (CalleeAttr.isValid()) {
+    Attribute CallerAttr = Caller.getFnAttribute("stack-probe-size");
+    if (CallerAttr.isValid()) {
+      uint64_t CallerStackProbeSize, CalleeStackProbeSize;
+      CallerAttr.getValueAsString().getAsInteger(0, CallerStackProbeSize);
+      CalleeAttr.getValueAsString().getAsInteger(0, CalleeStackProbeSize);
+
       if (CallerStackProbeSize > CalleeStackProbeSize) {
-        Caller.addFnAttr(Callee.getFnAttribute("stack-probe-size"));
+        Caller.addFnAttr(CalleeAttr);
       }
     } else {
-      Caller.addFnAttr(Callee.getFnAttribute("stack-probe-size"));
+      Caller.addFnAttr(CalleeAttr);
     }
   }
 }
@@ -1967,18 +1957,15 @@ adjustCallerStackProbeSize(Function &Caller, const Function &Callee) {
 /// handled as part of inline cost analysis.
 static void
 adjustMinLegalVectorWidth(Function &Caller, const Function &Callee) {
-  if (Caller.hasFnAttribute("min-legal-vector-width")) {
-    if (Callee.hasFnAttribute("min-legal-vector-width")) {
-      uint64_t CallerVectorWidth;
-      Caller.getFnAttribute("min-legal-vector-width")
-            .getValueAsString()
-            .getAsInteger(0, CallerVectorWidth);
-      uint64_t CalleeVectorWidth;
-      Callee.getFnAttribute("min-legal-vector-width")
-            .getValueAsString()
-            .getAsInteger(0, CalleeVectorWidth);
+  Attribute CallerAttr = Caller.getFnAttribute("min-legal-vector-width");
+  if (CallerAttr.isValid()) {
+    Attribute CalleeAttr = Callee.getFnAttribute("min-legal-vector-width");
+    if (CalleeAttr.isValid()) {
+      uint64_t CallerVectorWidth, CalleeVectorWidth;
+      CallerAttr.getValueAsString().getAsInteger(0, CallerVectorWidth);
+      CalleeAttr.getValueAsString().getAsInteger(0, CalleeVectorWidth);
       if (CallerVectorWidth < CalleeVectorWidth)
-        Caller.addFnAttr(Callee.getFnAttribute("min-legal-vector-width"));
+        Caller.addFnAttr(CalleeAttr);
     } else {
       // If the callee doesn't have the attribute then we don't know anything
       // and must drop the attribute from the caller.

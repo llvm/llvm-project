@@ -26,20 +26,18 @@ define amdgpu_ps float @ds_fadd_f32_ss(float addrspace(3)* inreg %ptr, float inr
 define amdgpu_ps float @ds_fadd_f32_ss_offset(float addrspace(3)* inreg %ptr, float inreg %val) {
 ; GFX8-LABEL: ds_fadd_f32_ss_offset:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_add_u32 s0, s2, 0x200
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v0, s3
+; GFX8-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX8-NEXT:    s_mov_b32 m0, -1
-; GFX8-NEXT:    ds_add_rtn_f32 v0, v0, v1
+; GFX8-NEXT:    ds_add_rtn_f32 v0, v1, v0 offset:512
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: ds_fadd_f32_ss_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_add_u32 s0, s2, 0x200
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    ds_add_rtn_f32 v0, v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s3
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    ds_add_rtn_f32 v0, v1, v0 offset:512
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(3)* %ptr, i32 128
@@ -69,19 +67,17 @@ define amdgpu_ps void @ds_fadd_f32_ss_nortn(float addrspace(3)* inreg %ptr, floa
 define amdgpu_ps void @ds_fadd_f32_ss_offset_nortn(float addrspace(3)* inreg %ptr, float inreg %val) {
 ; GFX8-LABEL: ds_fadd_f32_ss_offset_nortn:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_add_u32 s0, s2, 0x200
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v0, s3
+; GFX8-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX8-NEXT:    s_mov_b32 m0, -1
-; GFX8-NEXT:    ds_add_rtn_f32 v0, v0, v1
+; GFX8-NEXT:    ds_add_rtn_f32 v0, v1, v0 offset:512
 ; GFX8-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: ds_fadd_f32_ss_offset_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_add_u32 s0, s2, 0x200
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    ds_add_rtn_f32 v0, v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s3
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    ds_add_rtn_f32 v0, v1, v0 offset:512
 ; GFX9-NEXT:    s_endpgm
   %gep = getelementptr float, float addrspace(3)* %ptr, i32 128
   %unused = call float @llvm.amdgcn.ds.fadd(float addrspace(3)* %gep, float %val, i32 0, i32 0, i1 false)

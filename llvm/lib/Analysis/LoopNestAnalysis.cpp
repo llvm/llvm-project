@@ -228,6 +228,28 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
       InnerLoop.getExitingBlock() != InnerLoopLatch || !InnerLoopExit)
     return false;
 
+  // Returns whether the block `ExitBlock` contains at least one LCSSA Phi node.
+  auto ContainsLCSSAPhi = [](const BasicBlock &ExitBlock) {
+    return any_of(ExitBlock.phis(), [](const PHINode &PN) {
+      return PN.getNumIncomingValues() == 1;
+    });
+  };
+
+  // Returns whether the block `BB` qualifies for being an extra Phi block. The
+  // extra Phi block is the additional block inserted after the exit block of an
+  // "guarded" inner loop which contains "only" Phi nodes corresponding to the
+  // LCSSA Phi nodes in the exit block.
+  auto IsExtraPhiBlock = [&](const BasicBlock &BB) {
+    return BB.getFirstNonPHI() == BB.getTerminator() &&
+           all_of(BB.phis(), [&](const PHINode &PN) {
+             return all_of(PN.blocks(), [&](const BasicBlock *IncomingBlock) {
+               return IncomingBlock == InnerLoopExit ||
+                      IncomingBlock == OuterLoopHeader;
+             });
+           });
+  };
+
+  const BasicBlock *ExtraPhiBlock = nullptr;
   // Ensure the only branch that may exist between the loops is the inner loop
   // guard.
   if (OuterLoopHeader != InnerLoopPreHeader) {
@@ -237,6 +259,8 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
     if (!BI || BI != InnerLoop.getLoopGuardBranch())
       return false;
 
+    bool InnerLoopExitContainsLCSSA = ContainsLCSSAPhi(*InnerLoopExit);
+
     // The successors of the inner loop guard should be the inner loop
     // preheader and the outer loop latch.
     for (const BasicBlock *Succ : BI->successors()) {
@@ -244,6 +268,20 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
         continue;
       if (Succ == OuterLoopLatch)
         continue;
+
+      // If `InnerLoopExit` contains LCSSA Phi instructions, additional block
+      // may be inserted before the `OuterLoopLatch` to which `BI` jumps. The
+      // loops are still considered perfectly nested if the extra block only
+      // contains Phi instructions from InnerLoopExit and OuterLoopHeader.
+      if (InnerLoopExitContainsLCSSA && IsExtraPhiBlock(*Succ) &&
+          Succ->getSingleSuccessor() == OuterLoopLatch) {
+        // Points to the extra block so that we can reference it later in the
+        // final check. We can also conclude that the inner loop is
+        // guarded and there exists LCSSA Phi node in the exit block later if we
+        // see a non-null `ExtraPhiBlock`.
+        ExtraPhiBlock = Succ;
+        continue;
+      }
 
       DEBUG_WITH_TYPE(VerboseDebug, {
         dbgs() << "Inner loop guard successor " << Succ->getName()
@@ -255,7 +293,9 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
   }
 
   // Ensure the inner loop exit block leads to the outer loop latch.
-  if (InnerLoopExit->getSingleSuccessor() != OuterLoopLatch) {
+  const BasicBlock *SuccInner = InnerLoopExit->getSingleSuccessor();
+  if (!SuccInner ||
+      (SuccInner != OuterLoopLatch && SuccInner != ExtraPhiBlock)) {
     DEBUG_WITH_TYPE(
         VerboseDebug,
         dbgs() << "Inner loop exit block " << *InnerLoopExit

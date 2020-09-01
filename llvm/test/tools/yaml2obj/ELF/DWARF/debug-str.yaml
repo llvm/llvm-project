@@ -13,17 +13,16 @@
 ## Check the default sh_type, sh_entsize, sh_info, sh_flags and sh_addralign of the
 ## .debug_str section header.
 
-# RUN: llvm-readelf -S %t1.o | FileCheck %s --check-prefix=SHDRS-DEFAULT
+# RUN: llvm-readelf -S %t1.o | FileCheck -DSIZE=000006 %s --check-prefix=SHDRS-DEFAULT
 
-# SHDRS-DEFAULT: Name       Type     Address          Off    Size   ES Flg Lk Inf Al
-# SHDRS-DEFAULT: .debug_str PROGBITS 0000000000000000 000040 000006 01 MS  0  0   1
+# SHDRS-DEFAULT: Name       Type     Address          Off    Size     ES Flg Lk Inf Al
+# SHDRS-DEFAULT: .debug_str PROGBITS 0000000000000000 000040 [[SIZE]] 01 MS  0  0   1
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_str:
     - a
@@ -41,10 +40,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:    .debug_str
     Type:    SHT_PROGBITS
@@ -65,10 +63,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:  .debug_str
     Type:  SHT_PROGBITS
@@ -83,10 +80,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:  .debug_str
     Type:  SHT_PROGBITS
@@ -102,10 +98,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:    .debug_str
     Type:    SHT_PROGBITS
@@ -126,10 +121,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:         .sec               # Linked by .debug_str.
     Type:         SHT_STRTAB
@@ -153,10 +147,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:         .sec               # Linked by .debug_str.
     Type:         SHT_STRTAB
@@ -196,10 +189,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name: .debug_str
     Type: SHT_DYNAMIC
@@ -209,10 +201,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name: .debug_str
     Type: SHT_DYNAMIC
@@ -222,3 +213,17 @@ Sections:
 DWARF:
   debug_str:
     - a
+
+## i) Test that the .debug_str section header is emitted if the "debug_str"
+## entry is empty.
+
+# RUN: yaml2obj --docnum=10 %s -o %t10.o
+# RUN: llvm-readelf -S %t10.o | FileCheck -DSIZE=000000 %s --check-prefix=SHDRS-DEFAULT
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_str: []

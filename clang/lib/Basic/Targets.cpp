@@ -363,6 +363,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     switch (os) {
     case llvm::Triple::Linux:
       return new LinuxTargetInfo<PPC64TargetInfo>(Triple, Opts);
+    case llvm::Triple::FreeBSD:
+      return new FreeBSDTargetInfo<PPC64TargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return new NetBSDTargetInfo<PPC64TargetInfo>(Triple, Opts);
     case llvm::Triple::OpenBSD:
@@ -396,6 +398,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     switch (os) {
     case llvm::Triple::FreeBSD:
       return new FreeBSDTargetInfo<RISCV64TargetInfo>(Triple, Opts);
+    case llvm::Triple::OpenBSD:
+      return new OpenBSDTargetInfo<RISCV64TargetInfo>(Triple, Opts);
     case llvm::Triple::Fuchsia:
       return new FuchsiaTargetInfo<RISCV64TargetInfo>(Triple, Opts);
     case llvm::Triple::Linux:
@@ -412,8 +416,6 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new SolarisTargetInfo<SparcV8TargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return new NetBSDTargetInfo<SparcV8TargetInfo>(Triple, Opts);
-    case llvm::Triple::OpenBSD:
-      return new OpenBSDTargetInfo<SparcV8TargetInfo>(Triple, Opts);
     case llvm::Triple::RTEMS:
       return new RTEMSTargetInfo<SparcV8TargetInfo>(Triple, Opts);
     default:
@@ -427,8 +429,6 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new LinuxTargetInfo<SparcV8elTargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return new NetBSDTargetInfo<SparcV8elTargetInfo>(Triple, Opts);
-    case llvm::Triple::OpenBSD:
-      return new OpenBSDTargetInfo<SparcV8elTargetInfo>(Triple, Opts);
     case llvm::Triple::RTEMS:
       return new RTEMSTargetInfo<SparcV8elTargetInfo>(Triple, Opts);
     default:
@@ -455,6 +455,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     switch (os) {
     case llvm::Triple::Linux:
       return new LinuxTargetInfo<SystemZTargetInfo>(Triple, Opts);
+    case llvm::Triple::ZOS:
+      return new ZOSTargetInfo<SystemZTargetInfo>(Triple, Opts);
     default:
       return new SystemZTargetInfo(Triple, Opts);
     }
@@ -657,6 +659,17 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
     return nullptr;
   }
 
+  // Check the TuneCPU name if specified.
+  if (!Opts->TuneCPU.empty() &&
+      !Target->isValidTuneCPUName(Opts->TuneCPU)) {
+    Diags.Report(diag::err_target_unknown_cpu) << Opts->TuneCPU;
+    SmallVector<StringRef, 32> ValidList;
+    Target->fillValidTuneCPUList(ValidList);
+    if (!ValidList.empty())
+      Diags.Report(diag::note_valid_options) << llvm::join(ValidList, ", ");
+    return nullptr;
+  }
+
   // Set the target ABI if specified.
   if (!Opts->ABI.empty() && !Target->setABI(Opts->ABI)) {
     Diags.Report(diag::err_target_unknown_abi) << Opts->ABI;
@@ -671,14 +684,13 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
 
   // Compute the default target features, we need the target to handle this
   // because features may have dependencies on one another.
-  llvm::StringMap<bool> Features;
-  if (!Target->initFeatureMap(Features, Diags, Opts->CPU,
+  if (!Target->initFeatureMap(Opts->FeatureMap, Diags, Opts->CPU,
                               Opts->FeaturesAsWritten))
     return nullptr;
 
   // Add the features to the compile options.
   Opts->Features.clear();
-  for (const auto &F : Features)
+  for (const auto &F : Opts->FeatureMap)
     Opts->Features.push_back((F.getValue() ? "+" : "-") + F.getKey().str());
   // Sort here, so we handle the features in a predictable order. (This matters
   // when we're dealing with features that overlap.)

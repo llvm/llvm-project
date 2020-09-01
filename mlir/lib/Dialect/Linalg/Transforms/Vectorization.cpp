@@ -76,9 +76,7 @@ static LogicalResult isContraction(Operation *op) {
   if (!genericOp)
     return failure();
 
-  auto mapRange =
-      genericOp.indexing_maps().getAsRange<AffineMapAttr, AffineMap>();
-
+  auto mapRange = genericOp.indexing_maps().getAsValueRange<AffineMapAttr>();
   return success(
       genericOp.getNumInputs() == 2 && genericOp.getNumOutputs() == 1 &&
       llvm::all_of(mapRange,

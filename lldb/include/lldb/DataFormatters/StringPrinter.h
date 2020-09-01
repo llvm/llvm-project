@@ -109,7 +109,7 @@ public:
 
     uint64_t GetLocation() const { return m_location; }
 
-    void SetProcessSP(lldb::ProcessSP p) { m_process_sp = p; }
+    void SetProcessSP(lldb::ProcessSP p) { m_process_sp = std::move(p); }
 
     lldb::ProcessSP GetProcessSP() const { return m_process_sp; }
 

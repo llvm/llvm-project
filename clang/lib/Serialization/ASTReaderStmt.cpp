@@ -226,6 +226,8 @@ void ASTStmtReader::VisitIfStmt(IfStmt *S) {
     S->setInit(Record.readSubStmt());
 
   S->setIfLoc(readSourceLocation());
+  S->setLParenLoc(readSourceLocation());
+  S->setRParenLoc(readSourceLocation());
   if (HasElse)
     S->setElseLoc(readSourceLocation());
 }
@@ -247,6 +249,8 @@ void ASTStmtReader::VisitSwitchStmt(SwitchStmt *S) {
     S->setConditionVariable(Record.getContext(), readDeclAs<VarDecl>());
 
   S->setSwitchLoc(readSourceLocation());
+  S->setLParenLoc(readSourceLocation());
+  S->setRParenLoc(readSourceLocation());
 
   SwitchCase *PrevSC = nullptr;
   for (auto E = Record.size(); Record.getIdx() != E; ) {
@@ -708,7 +712,8 @@ void ASTStmtReader::VisitUnaryOperator(UnaryOperator *E) {
   E->setOperatorLoc(readSourceLocation());
   E->setCanOverflow(Record.readInt());
   if (hasFP_Features)
-    E->setStoredFPFeatures(FPOptionsOverride(Record.readInt()));
+    E->setStoredFPFeatures(
+        FPOptionsOverride::getFromOpaqueInt(Record.readInt()));
 }
 
 void ASTStmtReader::VisitOffsetOfExpr(OffsetOfExpr *E) {
@@ -999,7 +1004,8 @@ void ASTStmtReader::VisitCallExpr(CallExpr *E) {
     E->setArg(I, Record.readSubExpr());
   E->setADLCallKind(static_cast<CallExpr::ADLCallKind>(Record.readInt()));
   if (HasFPFeatures)
-    E->setStoredFPFeatures(FPOptionsOverride(Record.readInt()));
+    E->setStoredFPFeatures(
+        FPOptionsOverride::getFromOpaqueInt(Record.readInt()));
 }
 
 void ASTStmtReader::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
@@ -1096,7 +1102,8 @@ void ASTStmtReader::VisitBinaryOperator(BinaryOperator *E) {
   E->setRHS(Record.readSubExpr());
   E->setOperatorLoc(readSourceLocation());
   if (hasFP_Features)
-    E->setStoredFPFeatures(FPOptionsOverride(Record.readInt()));
+    E->setStoredFPFeatures(
+        FPOptionsOverride::getFromOpaqueInt(Record.readInt()));
 }
 
 void ASTStmtReader::VisitCompoundAssignOperator(CompoundAssignOperator *E) {

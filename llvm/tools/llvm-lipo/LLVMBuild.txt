@@ -17,4 +17,4 @@
 type = Tool
 name = llvm-lipo
 parent = Tools
-required_libraries = Object Option Support
+required_libraries = Object Option Support BinaryFormat

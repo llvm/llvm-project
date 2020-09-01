@@ -15,4 +15,4 @@
 "test.sparse_attr"() {foo.sparse_attr = sparse<[[1, 2, 3]],  -2.0> : vector<1x1x1xf16>} : () -> ()
 
 // CHECK: opaque<"", "0xDEADBEEF"> : tensor<100xf32>
-"test.opaue_attr"() {foo.opaque_attr = opaque<"", "0xEBFE"> : tensor<100xf32> } : () -> ()
+"test.opaque_attr"() {foo.opaque_attr = opaque<"", "0xEBFE"> : tensor<100xf32> } : () -> ()

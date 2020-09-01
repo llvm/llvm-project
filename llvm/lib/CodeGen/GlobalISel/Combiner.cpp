@@ -130,8 +130,6 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF,
       WrapperObserver.addObserver(CSEInfo);
     RAIIDelegateInstaller DelInstall(MF, &WrapperObserver);
     for (MachineBasicBlock *MBB : post_order(&MF)) {
-      if (MBB->empty())
-        continue;
       for (auto MII = MBB->rbegin(), MIE = MBB->rend(); MII != MIE;) {
         MachineInstr *CurMI = &*MII;
         ++MII;
@@ -155,5 +153,8 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF,
     MFChanged |= Changed;
   } while (Changed);
 
+  assert(!CSEInfo || (!errorToBool(CSEInfo->verify()) &&
+                         "CSEInfo is not consistent. Likely missing calls to "
+                         "observer on mutations"));
   return MFChanged;
 }

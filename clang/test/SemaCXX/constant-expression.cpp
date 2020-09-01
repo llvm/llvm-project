@@ -107,15 +107,15 @@ extern const int recurse1;
 // recurse2 cannot be used in a constant expression because it is not
 // initialized by a constant expression. The same expression appearing later in
 // the TU would be a constant expression, but here it is not.
-const int recurse2 = recurse1;
+const int recurse2 = recurse1; // expected-note {{here}}
 const int recurse1 = 1;
 int array1[recurse1]; // ok
-int array2[recurse2]; // expected-warning {{variable length array}} expected-warning {{integer constant expression}}
+int array2[recurse2]; // expected-warning {{variable length array}} expected-warning {{integer constant expression}} expected-note {{initializer of 'recurse2' is not a constant expression}}
 
 namespace FloatConvert {
   typedef int a[(int)42.3];
   typedef int a[(int)42.997];
-  typedef int b[(long long)4e20]; // expected-warning {{variable length}} expected-error {{variable length}} expected-warning {{'long long' is a C++11 extension}}
+  typedef int b[(long long)4e20]; // expected-warning {{variable length}} expected-error {{variable length}} expected-warning {{'long long' is a C++11 extension}} expected-note {{value 4.0E+20 is outside the range of representable values}}
 }
 
 // PR12626

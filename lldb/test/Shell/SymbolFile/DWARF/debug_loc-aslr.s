@@ -4,7 +4,7 @@
 
 # REQUIRES: x86
 
-# RUN: yaml2obj %S/Inputs/debug_loc-aslr.yaml >%t.dmp
+# RUN: yaml2obj %S/Inputs/debug_loc-aslr.yaml -o %t.dmp
 # RUN: llvm-mc --triple=x86_64-pc-linux --filetype=obj %s >%t.o
 # RUN: %lldb -c %t.dmp -o "image add %t.o" \
 # RUN:   -o "image load --file %t.o --slide 0x470000" \

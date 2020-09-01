@@ -295,6 +295,10 @@ void X86InstPrinterCommon::printRoundingControl(const MCInst *MI, unsigned Op,
 /// \see MCInstPrinter::printInst
 void X86InstPrinterCommon::printPCRelImm(const MCInst *MI, uint64_t Address,
                                          unsigned OpNo, raw_ostream &O) {
+  // Do not print the numberic target address when symbolizing.
+  if (SymbolizeOperands)
+    return;
+
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isImm()) {
     if (PrintBranchImmAsAddress) {

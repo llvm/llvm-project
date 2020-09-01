@@ -32,19 +32,17 @@ public:
                       mlir::DialectAsmPrinter &p) const override;
 };
 
-/// Register the dialect with MLIR
-inline void registerFIR() {
-  // we want to register exactly once
-  [[maybe_unused]] static bool init_once = [] {
-    mlir::registerDialect<mlir::AffineDialect>();
-    mlir::registerDialect<mlir::LLVM::LLVMDialect>();
-    mlir::registerDialect<mlir::omp::OpenMPDialect>();
-    mlir::registerDialect<mlir::scf::SCFDialect>();
-    mlir::registerDialect<mlir::StandardOpsDialect>();
-    mlir::registerDialect<mlir::vector::VectorDialect>();
-    mlir::registerDialect<FIROpsDialect>();
-    return true;
-  }();
+/// Register the dialect with the provided registry.
+inline void registerFIRDialects(mlir::DialectRegistry &registry) {
+  // clang-format off
+  registry.insert<mlir::AffineDialect,
+                  mlir::LLVM::LLVMDialect,
+                  mlir::omp::OpenMPDialect,
+                  mlir::scf::SCFDialect,
+                  mlir::StandardOpsDialect,
+                  mlir::vector::VectorDialect,
+                  FIROpsDialect>();
+  // clang-format on
 }
 
 /// Register the standard passes we use. This comes from registerAllPasses(),

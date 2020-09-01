@@ -44,6 +44,16 @@ define i1 @ptest_first(<vscale x 4 x i1> %a) {
   ret i1 %out
 }
 
+define i1 @ptest_first_same_ops(<vscale x 2 x i1> %a) {
+; OPT-LABEL: ptest_first_same_ops
+; OPT: %[[OUT:.*]] = call i1 @llvm.aarch64.sve.ptest.first.nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> %a)
+; OPT-NOT: convert
+; OPT-NEXT: ret i1 %[[OUT]]
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %a)
+  %2 = tail call i1 @llvm.aarch64.sve.ptest.first.nxv16i1(<vscale x 16 x i1> %1, <vscale x 16 x i1> %1)
+  ret i1 %2
+}
+
 define i1 @ptest_last(<vscale x 8 x i1> %a) {
 ; OPT-LABEL: ptest_last
 ; OPT: %mask = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 0)

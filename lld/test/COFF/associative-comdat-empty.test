@@ -1,4 +1,4 @@
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 # RUN: not lld-link /include:symbol /dll /noentry /nodefaultlib %t.obj /out:%t.exe 2>&1 | FileCheck %s
 
 # Tests an associative comdat being associated with an empty section errors.

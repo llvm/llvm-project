@@ -26,6 +26,10 @@
 // same call context of that function (and not split between caller and callee
 // contexts of a directly recursive call, for example).
 //
+// Additionally, these routines can't simplify to the instructions that are not
+// def-reachable, meaning we can't just scan the basic block for instructions
+// to simplify to.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
@@ -98,18 +102,38 @@ struct SimplifyQuery {
   // be safely used.
   const InstrInfoQuery IIQ;
 
+  /// Controls whether simplifications are allowed to constrain the range of
+  /// possible values for uses of undef. If it is false, simplifications are not
+  /// allowed to assume a particular value for a use of undef for example.
+  bool CanUseUndef = true;
+
   SimplifyQuery(const DataLayout &DL, const Instruction *CXTI = nullptr)
       : DL(DL), CxtI(CXTI) {}
 
   SimplifyQuery(const DataLayout &DL, const TargetLibraryInfo *TLI,
                 const DominatorTree *DT = nullptr,
                 AssumptionCache *AC = nullptr,
-                const Instruction *CXTI = nullptr, bool UseInstrInfo = true)
-      : DL(DL), TLI(TLI), DT(DT), AC(AC), CxtI(CXTI), IIQ(UseInstrInfo) {}
+                const Instruction *CXTI = nullptr, bool UseInstrInfo = true,
+                bool CanUseUndef = true)
+      : DL(DL), TLI(TLI), DT(DT), AC(AC), CxtI(CXTI), IIQ(UseInstrInfo),
+        CanUseUndef(CanUseUndef) {}
   SimplifyQuery getWithInstruction(Instruction *I) const {
     SimplifyQuery Copy(*this);
     Copy.CxtI = I;
     return Copy;
+  }
+  SimplifyQuery getWithoutUndef() const {
+    SimplifyQuery Copy(*this);
+    Copy.CanUseUndef = false;
+    return Copy;
+  }
+
+  /// If CanUseUndef is true, returns whether \p V is undef.
+  /// Otherwise always return false.
+  bool isUndefValue(Value *V) const {
+    if (!CanUseUndef)
+      return false;
+    return isa<UndefValue>(V);
   }
 };
 

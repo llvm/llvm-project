@@ -488,6 +488,17 @@ StringRef llvm::dwarf::MacroString(unsigned Encoding) {
   }
 }
 
+StringRef llvm::dwarf::GnuMacroString(unsigned Encoding) {
+  switch (Encoding) {
+  default:
+    return StringRef();
+#define HANDLE_DW_MACRO_GNU(ID, NAME)                                          \
+  case DW_MACRO_GNU_##NAME:                                                    \
+    return "DW_MACRO_GNU_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+}
+
 unsigned llvm::dwarf::getMacro(StringRef MacroString) {
   return StringSwitch<unsigned>(MacroString)
 #define HANDLE_DW_MACRO(ID, NAME) .Case("DW_MACRO_" #NAME, ID)

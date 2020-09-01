@@ -1099,7 +1099,7 @@ defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_NO_RTN <
   "buffer_atomic_add_f32", VGPR_32, f32, atomic_fadd_global_noret
 >;
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_NO_RTN <
-  "buffer_atomic_pk_add_f16", VGPR_32, v2f16, atomic_pk_fadd_global_noret
+  "buffer_atomic_pk_add_f16", VGPR_32, v2f16, atomic_fadd_global_noret
 >;
 
 } // End SubtargetPredicate = HasAtomicFaddInsts

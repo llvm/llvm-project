@@ -20,6 +20,14 @@ define i32* @get_strong_default_global() {
 ; STATIC: movl $strong_default_global, %eax
 ; CHECK32: movl strong_default_global@GOT(%eax), %eax
 
+@strong_hidden_global = hidden global i32 42
+define i32* @get_hidden_default_global() {
+  ret i32* @strong_hidden_global
+}
+; CHECK: leaq strong_hidden_global(%rip), %rax
+; STATIC: movl $strong_hidden_global, %eax
+; CHECK32: leal strong_hidden_global@GOTOFF(%eax), %eax
+
 @weak_default_global = weak global i32 42
 define i32* @get_weak_default_global() {
   ret i32* @weak_default_global
@@ -96,6 +104,14 @@ define i32* @get_strong_default_alias() {
 ; STATIC: movl $strong_default_alias, %eax
 ; CHECK32: movl strong_default_alias@GOT(%eax), %eax
 
+@strong_hidden_alias = hidden alias i32, i32* @aliasee
+define i32* @get_strong_hidden_alias() {
+  ret i32* @strong_hidden_alias
+}
+; CHECK: leaq strong_hidden_alias(%rip), %rax
+; STATIC: movl $strong_hidden_alias, %eax
+; CHECK32: leal strong_hidden_alias@GOTOFF(%eax), %eax
+
 @weak_default_alias = weak alias i32, i32* @aliasee
 define i32* @get_weak_default_alias() {
   ret i32* @weak_default_alias
@@ -148,6 +164,16 @@ define void()* @get_strong_default_function() {
 ; CHECK: movq strong_default_function@GOTPCREL(%rip), %rax
 ; STATIC: movl $strong_default_function, %eax
 ; CHECK32: movl strong_default_function@GOT(%eax), %eax
+
+define hidden void @strong_hidden_function() {
+  ret void
+}
+define void()* @get_strong_hidden_function() {
+  ret void()* @strong_hidden_function
+}
+; CHECK: leaq strong_hidden_function(%rip), %rax
+; STATIC: movl $strong_hidden_function, %eax
+; CHECK32: leal strong_hidden_function@GOTOFF(%eax), %eax
 
 define weak void @weak_default_function() {
   ret void
@@ -234,6 +260,9 @@ define void()* @get_external_preemptable_function() {
 
 ; COMMON:      .globl strong_default_alias
 ; COMMON-NEXT: .set strong_default_alias, aliasee
+; COMMON-NEXT: .globl strong_hidden_alias
+; COMMON-NEXT: .hidden strong_hidden_alias
+; COMMON-NEXT: .set strong_hidden_alias, aliasee
 ; COMMON-NEXT: .weak weak_default_alias
 ; COMMON-NEXT: .set weak_default_alias, aliasee
 ; COMMON-NEXT: .globl strong_local_alias

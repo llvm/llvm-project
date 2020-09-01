@@ -628,6 +628,7 @@
 // PPCPOWER10:#define _ARCH_PWR7 1
 // PPCPOWER10:#define _ARCH_PWR8 1
 // PPCPOWER10:#define _ARCH_PWR9 1
+// PPCPOWER10:#define __MMA__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu future -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCFUTURE %s
 //
@@ -645,6 +646,10 @@
 // PPCFUTURE:#define _ARCH_PWR8 1
 // PPCFUTURE:#define _ARCH_PWR9 1
 // PPCFUTURE:#define _ARCH_PWR_FUTURE 1
+// PPCFUTURE:#define __MMA__ 1
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-feature +mma -target-cpu power9 -fno-signed-char < /dev/null | FileCheck -check-prefix PPC-MMA %s
+// PPC-MMA:#define __MMA__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-feature +float128 -target-cpu power9 -fno-signed-char < /dev/null | FileCheck -check-prefix PPC-FLOAT128 %s
 // PPC-FLOAT128:#define __FLOAT128__ 1
@@ -1062,6 +1067,7 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-freebsd11 -target-abi elfv1 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv1 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-freebsd12 -target-abi elfv1 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv1 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-freebsd13 -target-abi elfv2 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv2 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64le-unknown-freebsd13 -target-abi elfv2 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv2 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-openbsd -target-abi elfv2 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv2 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-linux-musl -target-abi elfv2 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv2 %s
 
@@ -1074,4 +1080,5 @@
 // PPC64LE-LINUX:#define _CALL_LINUX 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-freebsd < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-FREEBSD %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64le-unknown-freebsd < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-FREEBSD %s
 // PPC64-FREEBSD-NOT: #define __LONG_DOUBLE_128__ 1

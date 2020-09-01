@@ -474,11 +474,10 @@ StructType StructType::get(llvm::ArrayRef<mlir::Type> elementTypes) {
   assert(!elementTypes.empty() && "expected at least 1 element type");
 
   // Call into a helper 'get' method in 'TypeBase' to get a uniqued instance
-  // of this type. The first two parameters are the context to unique in and the
-  // kind of the type. The parameters after the type kind are forwarded to the
-  // storage instance.
+  // of this type. The first parameter is the context to unique in. The
+  // parameters after the context are forwarded to the storage instance.
   mlir::MLIRContext *ctx = elementTypes.front().getContext();
-  return Base::get(ctx, ToyTypes::Struct, elementTypes);
+  return Base::get(ctx, elementTypes);
 }
 
 /// Returns the element types of this struct type.

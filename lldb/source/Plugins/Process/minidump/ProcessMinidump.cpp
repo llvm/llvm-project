@@ -121,6 +121,72 @@ private:
   lldb::addr_t m_base;
   lldb::addr_t m_size;
 };
+
+/// Duplicate the HashElfTextSection() from the breakpad sources.
+///
+/// Breakpad, a Google crash log reporting tool suite, creates minidump files
+/// for many different architectures. When using Breakpad to create ELF
+/// minidumps, it will check for a GNU build ID when creating a minidump file
+/// and if one doesn't exist in the file, it will say the UUID of the file is a
+/// checksum of up to the first 4096 bytes of the .text section. Facebook also
+/// uses breakpad and modified this hash to avoid collisions so we can
+/// calculate and check for this as well.
+///
+/// The breakpad code might end up hashing up to 15 bytes that immediately
+/// follow the .text section in the file, so this code must do exactly what it
+/// does so we can get an exact match for the UUID.
+///
+/// \param[in] module_sp The module to grab the .text section from.
+///
+/// \param[in/out] breakpad_uuid A vector that will receive the calculated
+///                breakpad .text hash.
+///
+/// \param[in/out] facebook_uuid A vector that will receive the calculated
+///                facebook .text hash.
+///
+void HashElfTextSection(ModuleSP module_sp, std::vector<uint8_t> &breakpad_uuid,
+                        std::vector<uint8_t> &facebook_uuid) {
+  SectionList *sect_list = module_sp->GetSectionList();
+  if (sect_list == nullptr)
+    return;
+  SectionSP sect_sp = sect_list->FindSectionByName(ConstString(".text"));
+  if (!sect_sp)
+    return;
+  constexpr size_t kMDGUIDSize = 16;
+  constexpr size_t kBreakpadPageSize = 4096;
+  // The breakpad code has a bug where it might access beyond the end of a
+  // .text section by up to 15 bytes, so we must ensure we round up to the
+  // next kMDGUIDSize byte boundary.
+  DataExtractor data;
+  const size_t text_size = sect_sp->GetFileSize();
+  const size_t read_size = std::min<size_t>(
+      llvm::alignTo(text_size, kMDGUIDSize), kBreakpadPageSize);
+  sect_sp->GetObjectFile()->GetData(sect_sp->GetFileOffset(), read_size, data);
+
+  breakpad_uuid.assign(kMDGUIDSize, 0);
+  facebook_uuid.assign(kMDGUIDSize, 0);
+
+  // The only difference between the breakpad hash and the facebook hash is the
+  // hashing of the text section size into the hash prior to hashing the .text
+  // contents.
+  for (size_t i = 0; i < kMDGUIDSize; i++)
+    facebook_uuid[i] ^= text_size % 255;
+
+  // This code carefully duplicates how the hash was created in Breakpad
+  // sources, including the error where it might has an extra 15 bytes past the
+  // end of the .text section if the .text section is less than a page size in
+  // length.
+  const uint8_t *ptr = data.GetDataStart();
+  const uint8_t *ptr_end = data.GetDataEnd();
+  while (ptr < ptr_end) {
+    for (unsigned i = 0; i < kMDGUIDSize; i++) {
+      breakpad_uuid[i] ^= ptr[i];
+      facebook_uuid[i] ^= ptr[i];
+    }
+    ptr += kMDGUIDSize;
+  }
+}
+
 } // namespace
 
 ConstString ProcessMinidump::GetPluginNameStatic() {
@@ -338,32 +404,6 @@ ArchSpec ProcessMinidump::GetArchitecture() {
   return ArchSpec(triple);
 }
 
-static MemoryRegionInfo GetMemoryRegionInfo(const MemoryRegionInfos &regions,
-                                            lldb::addr_t load_addr) {
-  MemoryRegionInfo region;
-  auto pos = llvm::upper_bound(regions, load_addr);
-  if (pos != regions.begin() &&
-      std::prev(pos)->GetRange().Contains(load_addr)) {
-    return *std::prev(pos);
-  }
-
-  if (pos == regions.begin())
-    region.GetRange().SetRangeBase(0);
-  else
-    region.GetRange().SetRangeBase(std::prev(pos)->GetRange().GetRangeEnd());
-
-  if (pos == regions.end())
-    region.GetRange().SetRangeEnd(UINT64_MAX);
-  else
-    region.GetRange().SetRangeEnd(pos->GetRange().GetRangeBase());
-
-  region.SetReadable(MemoryRegionInfo::eNo);
-  region.SetWritable(MemoryRegionInfo::eNo);
-  region.SetExecutable(MemoryRegionInfo::eNo);
-  region.SetMapped(MemoryRegionInfo::eNo);
-  return region;
-}
-
 void ProcessMinidump::BuildMemoryRegions() {
   if (m_memory_regions)
     return;
@@ -388,7 +428,7 @@ void ProcessMinidump::BuildMemoryRegions() {
       MemoryRegionInfo::RangeType section_range(load_addr,
                                                 section_sp->GetByteSize());
       MemoryRegionInfo region =
-          ::GetMemoryRegionInfo(*m_memory_regions, load_addr);
+          MinidumpParser::GetMemoryRegionInfo(*m_memory_regions, load_addr);
       if (region.GetMapped() != MemoryRegionInfo::eYes &&
           region.GetRange().GetRangeBase() <= section_range.GetRangeBase() &&
           section_range.GetRangeEnd() <= region.GetRange().GetRangeEnd()) {
@@ -409,7 +449,7 @@ void ProcessMinidump::BuildMemoryRegions() {
 Status ProcessMinidump::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                             MemoryRegionInfo &region) {
   BuildMemoryRegions();
-  region = ::GetMemoryRegionInfo(*m_memory_regions, load_addr);
+  region = MinidumpParser::GetMemoryRegionInfo(*m_memory_regions, load_addr);
   return Status();
 }
 
@@ -494,10 +534,33 @@ void ProcessMinidump::ReadModuleList() {
         const bool match = dmp_bytes.empty() || mod_bytes.empty() ||
             mod_bytes.take_front(dmp_bytes.size()) == dmp_bytes;
         if (!match) {
+          // Breakpad generates minindump files, and if there is no GNU build
+          // ID in the binary, it will calculate a UUID by hashing first 4096
+          // bytes of the .text section and using that as the UUID for a module
+          // in the minidump. Facebook uses a modified breakpad client that
+          // uses a slightly modified this hash to avoid collisions. Check for
+          // UUIDs from the minindump that match these cases and accept the
+          // module we find if they do match.
+          std::vector<uint8_t> breakpad_uuid;
+          std::vector<uint8_t> facebook_uuid;
+          HashElfTextSection(module_sp, breakpad_uuid, facebook_uuid);
+          if (dmp_bytes == llvm::ArrayRef<uint8_t>(breakpad_uuid)) {
+            LLDB_LOG(log, "Breakpad .text hash match for {0}.", name);
+          } else if (dmp_bytes == llvm::ArrayRef<uint8_t>(facebook_uuid)) {
+            LLDB_LOG(log, "Facebook .text hash match for {0}.", name);
+          } else {
+            // The UUID wasn't a partial match and didn't match the .text hash
+            // so remove the module from the target, we will need to create a
+            // placeholder object file.
             GetTarget().GetImages().Remove(module_sp);
             module_sp.reset();
+          }
+        } else {
+          LLDB_LOG(log, "Partial uuid match for {0}.", name);
         }
       }
+    } else {
+      LLDB_LOG(log, "Full uuid match for {0}.", name);
     }
     if (module_sp) {
       // Watch out for place holder modules that have different paths, but the

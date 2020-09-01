@@ -16,9 +16,9 @@
 
 # SYM: Value            Size Type   Bind   Vis     Ndx
 # SYM: 0000000010028298    0 NOTYPE LOCAL  HIDDEN    4 .TOC.
-# SYM: 0000000010010284    0 FUNC   GLOBAL DEFAULT   3 ifunc1
+# SYM: 0000000010010288    0 FUNC   GLOBAL DEFAULT   3 ifunc1
 # SYM: 0000000010010210    0 IFUNC  GLOBAL DEFAULT   2 ifunc2
-# SYM: 0000000010010274    0 FUNC   GLOBAL DEFAULT   3 ifunc3
+# SYM: 0000000010010278    0 FUNC   GLOBAL DEFAULT   3 ifunc3
 
 # SECTIONS: .plt NOBITS 00000000100302a0 0002a0 000018 00 WA 0 0 8
 
@@ -27,14 +27,14 @@
 # CHECK: <_start>:
 # CHECK-NEXT:                 addis 2, 12, 2
 # CHECK-NEXT:                 addi 2, 2, -32636
-# CHECK-NEXT: 1001021c:       bl 0x1001023c
+# CHECK-NEXT: 1001021c:       bl 0x10010240
 # CHECK-NEXT:                 ld 2, 24(1)
-# CHECK-NEXT: 10010224:       bl 0x10010250
+# CHECK-NEXT: 10010224:       bl 0x10010254
 # CHECK-NEXT:                 ld 2, 24(1)
 # CHECK-NEXT:                 addis 3, 2, -2
-# CHECK-NEXT:                 addi 3, 3, 32748
+# CHECK-NEXT:                 addi 3, 3, 32752
 # CHECK-NEXT:                 addis 3, 2, -2
-# CHECK-NEXT:                 addi 3, 3, 32732
+# CHECK-NEXT:                 addi 3, 3, 32736
 
 # .plt[0] - .TOC. = 0x100302a0 - 0x10028298 = (1<<16) - 32760
 # CHECK: <__plt_ifunc2>:
@@ -57,19 +57,19 @@
 ## ifunc2 and ifunc3 have the same code sequence as their PLT call stubs.
 # CHECK:      Disassembly of section .glink:
 # CHECK-EMPTY:
-# CHECK-NEXT: 0000000010010264 <.glink>:
+# CHECK-NEXT: 0000000010010268 <.glink>:
 # CHECK-NEXT:     addis 12, 2, 1
 # CHECK-NEXT:     ld 12, -32760(12)
 # CHECK-NEXT:     mtctr 12
 # CHECK-NEXT:     bctr
 # CHECK-EMPTY:
-# CHECK-NEXT: 0000000010010274 <ifunc3>:
+# CHECK-NEXT: 0000000010010278 <ifunc3>:
 # CHECK-NEXT:     addis 12, 2, 1
 # CHECK-NEXT:     ld 12, -32752(12)
 # CHECK-NEXT:     mtctr 12
 # CHECK-NEXT:     bctr
 # CHECK-EMPTY:
-# CHECK-NEXT: 0000000010010284 <ifunc1>:
+# CHECK-NEXT: 0000000010010288 <ifunc1>:
 # CHECK-NEXT:     addis 12, 2, 1
 # CHECK-NEXT:     ld 12, -32744(12)
 # CHECK-NEXT:     mtctr 12

@@ -98,6 +98,46 @@ void if_with_bool_literal_condition() {
   // CHECK-FIXES-NEXT: {{^  i = 11;$}}
 }
 
+void if_with_negated_bool_condition() {
+  int i = 10;
+  if (!true) {
+    i = 11;
+  } else {
+    i = 12;
+  }
+  i = 13;
+  // CHECK-MESSAGES: :[[@LINE-6]]:7: warning: {{.*}} in if statement condition
+  // CHECK-FIXES:      {{^  int i = 10;$}}
+  // CHECK-FIXES-NEXT: {{^  {$}}
+  // CHECK-FIXES-NEXT: {{^    i = 12;$}}
+  // CHECK-FIXES-NEXT: {{^  }$}}
+  // CHECK-FIXES-NEXT: {{^  i = 13;$}}
+
+  i = 14;
+  if (!false) {
+    i = 15;
+  } else {
+    i = 16;
+  }
+  i = 17;
+  // CHECK-MESSAGES: :[[@LINE-6]]:7: warning: {{.*}} in if statement condition
+  // CHECK-FIXES:      {{^  i = 14;$}}
+  // CHECK-FIXES-NEXT: {{^  {$}}
+  // CHECK-FIXES-NEXT: {{^    i = 15;$}}
+  // CHECK-FIXES-NEXT: {{^  }$}}
+  // CHECK-FIXES-NEXT: {{^  i = 17;$}}
+
+  i = 18;
+  if (!true) {
+    i = 19;
+  }
+  i = 20;
+  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: {{.*}} in if statement condition
+  // CHECK-FIXES:      {{^  i = 18;$}}
+  // CHECK-FIXES-NEXT: {{^  $}}
+  // CHECK-FIXES-NEXT: {{^  i = 20;$}}
+}
+
 void operator_equals() {
   int i = 0;
   bool b1 = (i > 2);

@@ -1138,3 +1138,20 @@ namespace test58 {
   // CHECK-LABEL: @_ZN6test581AC1INS_5StateEEET_MNS_8identityIS3_E4typeEFbvE
   void fn1() { A(a, &State::m_fn1); }
 }
+
+namespace test59 {
+  // verify no crash.
+  template<typename T>
+  void f(T g) {
+    auto [e] = g;
+    [](decltype(e)) {};
+  }
+}
+
+namespace test60 {
+  struct X { int i, j; };
+  auto [a,b] = X{1,2};
+  template<typename T> void f(decltype(a + T())) {}
+  // CHECK-LABEL: @_ZN6test601fIiEEvDTplL_ZNS_1aEEcvT__EE
+  template void f<int>(int);
+}

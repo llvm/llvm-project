@@ -16,7 +16,7 @@
 ; Low slice starts at 0 (base) and is 8-bytes aligned.
 ; High slice starts at 4 (base + 4-bytes) and is 4-bytes aligned.
 ;
-; STRESS-LABEL: t1:
+; STRESS-LABEL: _t1:
 ; Load out[out_start + 8].real, this is base + 8 * 8 + 0.
 ; STRESS: vmovss 64([[BASE:[^(]+]]), [[OUT_Real:%xmm[0-9]+]]
 ; Load out[out_start + 8].imm, this is base + 8 * 8 + 4.
@@ -31,7 +31,7 @@
 ; STRESS-NEXT: vmovlps [[RES_Vec]], ([[BASE]])
 ;
 ; Same for REGULAR, we eliminate register bank copy with each slices.
-; REGULAR-LABEL: t1:
+; REGULAR-LABEL: _t1:
 ; Load out[out_start + 8].real, this is base + 8 * 8 + 0.
 ; REGULAR: vmovss 64([[BASE:[^)]+]]), [[OUT_Real:%xmm[0-9]+]]
 ; Load out[out_start + 8].imm, this is base + 8 * 8 + 4.
@@ -90,14 +90,14 @@ declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 ; Low slice starts at 0 (base) and is 8-bytes aligned.
 ; High slice starts at 6 (base + 6-bytes) and is 2-bytes aligned.
 ;
-; STRESS-LABEL: t2:
+; STRESS-LABEL: _t2:
 ; STRESS: movzwl 6([[BASE:[^)]+]]), %eax
 ; STRESS-NEXT: addl ([[BASE]]), %eax
 ; STRESS-NEXT: ret
 ;
 ; For the REGULAR heuristic, this is not profitable to slice things that are not
 ; next to each other in memory. Here we have a hole with bytes #4-5.
-; REGULAR-LABEL: t2:
+; REGULAR-LABEL: _t2:
 ; REGULAR: shrq $48
 define i32 @t2(%class.Complex* nocapture %out, i64 %out_start) {
   %arrayidx = getelementptr inbounds %class.Complex, %class.Complex* %out, i64 %out_start
@@ -117,11 +117,11 @@ define i32 @t2(%class.Complex* nocapture %out, i64 %out_start) {
 ; Second slice uses bytes numbered 6 and 7.
 ; Third slice uses bytes numbered 4 to 7.
 ;
-; STRESS-LABEL: t3:
+; STRESS-LABEL: _t3:
 ; STRESS: shrq $48
 ; STRESS: shrq $32
 ;
-; REGULAR-LABEL: t3:
+; REGULAR-LABEL: _t3:
 ; REGULAR: shrq $48
 ; REGULAR: shrq $32
 define i32 @t3(%class.Complex* nocapture %out, i64 %out_start) {

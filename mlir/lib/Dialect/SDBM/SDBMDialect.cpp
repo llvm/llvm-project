@@ -13,11 +13,11 @@ using namespace mlir;
 
 SDBMDialect::SDBMDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context, TypeID::get<SDBMDialect>()) {
-  uniquer.registerStorageType(TypeID::get<detail::SDBMBinaryExprStorage>());
-  uniquer.registerStorageType(TypeID::get<detail::SDBMConstantExprStorage>());
-  uniquer.registerStorageType(TypeID::get<detail::SDBMDiffExprStorage>());
-  uniquer.registerStorageType(TypeID::get<detail::SDBMNegExprStorage>());
-  uniquer.registerStorageType(TypeID::get<detail::SDBMTermExprStorage>());
+  uniquer.registerParametricStorageType<detail::SDBMBinaryExprStorage>();
+  uniquer.registerParametricStorageType<detail::SDBMConstantExprStorage>();
+  uniquer.registerParametricStorageType<detail::SDBMDiffExprStorage>();
+  uniquer.registerParametricStorageType<detail::SDBMNegExprStorage>();
+  uniquer.registerParametricStorageType<detail::SDBMTermExprStorage>();
 }
 
 SDBMDialect::~SDBMDialect() = default;

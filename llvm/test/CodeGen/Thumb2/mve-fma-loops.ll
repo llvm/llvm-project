@@ -9,18 +9,19 @@ define arm_aapcs_vfpcc void @fmas1(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB0_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB0_1: @ %vector.body
+; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r4, #4
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
 ; CHECK-NEXT:    vfmas.f32 q1, q0, r12
 ; CHECK-NEXT:    vstrw.32 q1, [r2], #16
-; CHECK-NEXT:    letp lr, .LBB0_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
+; CHECK-NEXT:    letp lr, .LBB0_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
@@ -44,7 +45,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -71,18 +72,19 @@ define arm_aapcs_vfpcc void @fmas2(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB1_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB1_1: @ %vector.body
+; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r4, #4
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    vfmas.f32 q1, q0, r12
 ; CHECK-NEXT:    vstrw.32 q1, [r2], #16
-; CHECK-NEXT:    letp lr, .LBB1_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
+; CHECK-NEXT:    letp lr, .LBB1_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
@@ -106,7 +108,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -134,18 +136,19 @@ define arm_aapcs_vfpcc void @fma1(float* nocapture readonly %x, float* nocapture
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB2_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB2_1: @ %vector.body
+; CHECK-NEXT:  .LBB2_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r4, #4
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    vfma.f32 q1, q0, r12
 ; CHECK-NEXT:    vstrw.32 q1, [r2], #16
-; CHECK-NEXT:    letp lr, .LBB2_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
+; CHECK-NEXT:    letp lr, .LBB2_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
@@ -169,7 +172,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -196,18 +199,19 @@ define arm_aapcs_vfpcc void @fma2(float* nocapture readonly %x, float* nocapture
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB3_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB3_1: @ %vector.body
+; CHECK-NEXT:  .LBB3_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r4, #4
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    vfma.f32 q1, q0, r12
 ; CHECK-NEXT:    vstrw.32 q1, [r2], #16
-; CHECK-NEXT:    letp lr, .LBB3_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
+; CHECK-NEXT:    letp lr, .LBB3_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
@@ -231,7 +235,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -259,19 +263,20 @@ define arm_aapcs_vfpcc void @fmss1(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB4_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r4, s0
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:    eor r12, r4, #-2147483648
 ; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:  .LBB4_1: @ %vector.body
+; CHECK-NEXT:  .LBB4_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r4, #4
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
 ; CHECK-NEXT:    vfmas.f32 q1, q0, r12
 ; CHECK-NEXT:    vstrw.32 q1, [r2], #16
-; CHECK-NEXT:    letp lr, .LBB4_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
+; CHECK-NEXT:    letp lr, .LBB4_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
@@ -296,7 +301,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -323,12 +328,13 @@ define arm_aapcs_vfpcc void @fmss2(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB5_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r4, s0
 ; CHECK-NEXT:    vdup.32 q0, r4
 ; CHECK-NEXT:    vneg.f32 q0, q0
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB5_1: @ %vector.body
+; CHECK-NEXT:  .LBB5_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    vmov q3, q0
@@ -336,8 +342,8 @@ define arm_aapcs_vfpcc void @fmss2(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    vldrw.u32 q2, [r1], #16
 ; CHECK-NEXT:    vfma.f32 q3, q2, q1
 ; CHECK-NEXT:    vstrw.32 q3, [r2], #16
-; CHECK-NEXT:    letp lr, .LBB5_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
+; CHECK-NEXT:    letp lr, .LBB5_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
@@ -361,7 +367,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -389,11 +395,12 @@ define arm_aapcs_vfpcc void @fmss3(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
+; CHECK-NEXT:  .LBB6_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    vdup.32 q0, r12
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB6_1: @ %vector.body
+; CHECK-NEXT:  .LBB6_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    vmov q3, q0
@@ -401,8 +408,8 @@ define arm_aapcs_vfpcc void @fmss3(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    vldrw.u32 q2, [r0], #16
 ; CHECK-NEXT:    vfms.f32 q3, q2, q1
 ; CHECK-NEXT:    vstrw.32 q3, [r2], #16
-; CHECK-NEXT:    letp lr, .LBB6_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
+; CHECK-NEXT:    letp lr, .LBB6_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
@@ -426,7 +433,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -454,11 +461,12 @@ define arm_aapcs_vfpcc void @fmss4(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
+; CHECK-NEXT:  .LBB7_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    vdup.32 q0, r12
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB7_1: @ %vector.body
+; CHECK-NEXT:  .LBB7_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    vmov q3, q0
@@ -466,8 +474,8 @@ define arm_aapcs_vfpcc void @fmss4(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    vldrw.u32 q2, [r1], #16
 ; CHECK-NEXT:    vfms.f32 q3, q2, q1
 ; CHECK-NEXT:    vstrw.32 q3, [r2], #16
-; CHECK-NEXT:    letp lr, .LBB7_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
+; CHECK-NEXT:    letp lr, .LBB7_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
@@ -491,7 +499,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -519,19 +527,20 @@ define arm_aapcs_vfpcc void @fms1(float* nocapture readonly %x, float* nocapture
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB8_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r4, s0
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:    eor r12, r4, #-2147483648
 ; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:  .LBB8_1: @ %vector.body
+; CHECK-NEXT:  .LBB8_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r4, #4
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    vfma.f32 q1, q0, r12
 ; CHECK-NEXT:    vstrw.32 q1, [r2], #16
-; CHECK-NEXT:    letp lr, .LBB8_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
+; CHECK-NEXT:    letp lr, .LBB8_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
@@ -556,7 +565,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -583,19 +592,20 @@ define arm_aapcs_vfpcc void @fms2(float* nocapture readonly %x, float* nocapture
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
+; CHECK-NEXT:  .LBB9_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    vdup.32 q0, r12
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB9_1: @ %vector.body
+; CHECK-NEXT:  .LBB9_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q2, [r1], #16
 ; CHECK-NEXT:    vfms.f32 q2, q1, q0
 ; CHECK-NEXT:    vstrw.32 q2, [r2], #16
-; CHECK-NEXT:    letp lr, .LBB9_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
+; CHECK-NEXT:    letp lr, .LBB9_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
@@ -619,7 +629,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -647,10 +657,11 @@ define arm_aapcs_vfpcc void @fms3(float* nocapture readonly %x, float* nocapture
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB10_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB10_1: @ %vector.body
+; CHECK-NEXT:  .LBB10_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
@@ -658,8 +669,8 @@ define arm_aapcs_vfpcc void @fms3(float* nocapture readonly %x, float* nocapture
 ; CHECK-NEXT:    vneg.f32 q1, q1
 ; CHECK-NEXT:    vfma.f32 q1, q0, r12
 ; CHECK-NEXT:    vstrw.32 q1, [r2], #16
-; CHECK-NEXT:    letp lr, .LBB10_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
+; CHECK-NEXT:    letp lr, .LBB10_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
@@ -683,7 +694,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -711,10 +722,11 @@ define arm_aapcs_vfpcc void @fms4(float* nocapture readonly %x, float* nocapture
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB11_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB11_1: @ %vector.body
+; CHECK-NEXT:  .LBB11_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
@@ -722,8 +734,8 @@ define arm_aapcs_vfpcc void @fms4(float* nocapture readonly %x, float* nocapture
 ; CHECK-NEXT:    vneg.f32 q1, q1
 ; CHECK-NEXT:    vfma.f32 q1, q0, r12
 ; CHECK-NEXT:    vstrw.32 q1, [r2], #16
-; CHECK-NEXT:    letp lr, .LBB11_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
+; CHECK-NEXT:    letp lr, .LBB11_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
@@ -747,7 +759,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)

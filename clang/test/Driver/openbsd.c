@@ -58,8 +58,6 @@
 // RUN:   | FileCheck -check-prefix=CHECK-AMD64-M32 %s
 // RUN: %clang -target powerpc-unknown-openbsd -### -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-POWERPC %s
-// RUN: %clang -target sparc-unknown-openbsd -### -no-integrated-as -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-SPARC %s
 // RUN: %clang -target sparc64-unknown-openbsd -### -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-SPARC64 %s
 // RUN: %clang -target mips64-unknown-openbsd -### -no-integrated-as -c %s 2>&1 \
@@ -72,7 +70,6 @@
 // RUN:   | FileCheck -check-prefix=CHECK-MIPS64EL-PIC %s
 // CHECK-AMD64-M32: as{{.*}}" "--32"
 // CHECK-POWERPC: as{{.*}}" "-mppc" "-many"
-// CHECK-SPARC: as{{.*}}" "-32" "-Av8"
 // CHECK-SPARC64: as{{.*}}" "-64" "-Av9"
 // CHECK-MIPS64: as{{.*}}" "-mabi" "64" "-EB"
 // CHECK-MIPS64-PIC: as{{.*}}" "-mabi" "64" "-EB" "-KPIC"
@@ -80,8 +77,6 @@
 // CHECK-MIPS64EL-PIC: as{{.*}}" "-mabi" "64" "-EL" "-KPIC"
 
 // Check that the integrated assembler is enabled for SPARC
-// RUN: %clang -target sparc-unknown-openbsd -### -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-IAS %s
 // RUN: %clang -target sparc64-unknown-openbsd -### -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-IAS %s
 // CHECK-IAS-NOT: "-no-integrated-as"
@@ -122,8 +117,3 @@
 // RUN: %clang -target powerpc-unknown-openbsd -### -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-POWERPC-SECUREPLT %s
 // CHECK-POWERPC-SECUREPLT: "-target-feature" "+secure-plt"
-
-// Check -fno-init-array
-// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd %s -### 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-CTORS %s
-// CHECK-CTORS: "-fno-use-init-array"

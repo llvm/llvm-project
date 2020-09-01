@@ -51,7 +51,13 @@ __isl_give PW *FN(PW,ZERO)(__isl_take isl_space *space OPT_TYPE_PARAM)
 	return FN(PW,alloc_size)(space OPT_TYPE_ARG(NO_LOC), 0);
 }
 
-__isl_give PW *FN(PW,add_piece)(__isl_take PW *pw,
+/* Add a piece with domain "set" and base expression "el"
+ * to the piecewise expression "pw".
+ *
+ * Do this independently of the values of "set" and "el",
+ * such that this function can be used by isl_pw_*_dup.
+ */
+__isl_give PW *FN(PW,add_dup_piece)(__isl_take PW *pw,
 	__isl_take isl_set *set, __isl_take EL *el)
 {
 	isl_ctx *ctx;
@@ -59,12 +65,6 @@ __isl_give PW *FN(PW,add_piece)(__isl_take PW *pw,
 
 	if (!pw || !set || !el)
 		goto error;
-
-	if (isl_set_plain_is_empty(set) || FN(EL,EL_IS_ZERO)(el)) {
-		isl_set_free(set);
-		FN(EL,free)(el);
-		return pw;
-	}
 
 	ctx = isl_set_get_ctx(set);
 	if (!OPT_EQUAL_TYPES(pw->, el->))
@@ -86,6 +86,29 @@ error:
 	isl_set_free(set);
 	FN(EL,free)(el);
 	return NULL;
+}
+
+/* Add a piece with domain "set" and base expression "el"
+ * to the piecewise expression "pw", provided the domain
+ * is not obviously empty and the base expression
+ * is not equal to the default value.
+ */
+__isl_give PW *FN(PW,add_piece)(__isl_take PW *pw,
+	__isl_take isl_set *set, __isl_take EL *el)
+{
+	isl_bool skip;
+
+	skip = isl_set_plain_is_empty(set);
+	if (skip >= 0 && !skip)
+		skip = FN(EL,EL_IS_ZERO)(el);
+	if (skip >= 0 && !skip)
+		return FN(PW,add_dup_piece)(pw, set, el);
+
+	isl_set_free(set);
+	FN(EL,free)(el);
+	if (skip < 0)
+		return FN(PW,free)(pw);
+	return pw;
 }
 
 /* Does the space of "set" correspond to that of the domain of "el".
@@ -154,7 +177,7 @@ __isl_give PW *FN(PW,dup)(__isl_keep PW *pw)
 		return NULL;
 
 	for (i = 0; i < pw->n; ++i)
-		dup = FN(PW,add_piece)(dup, isl_set_copy(pw->p[i].set),
+		dup = FN(PW,add_dup_piece)(dup, isl_set_copy(pw->p[i].set),
 					    FN(EL,copy)(pw->p[i].FIELD));
 
 	return dup;
@@ -1573,12 +1596,13 @@ __isl_give PW *FN(PW,reset_domain_space)(__isl_take PW *pw,
 	return FN(PW,reset_space_and_domain)(pw, space, domain);
 }
 
-__isl_give PW *FN(PW,reset_space)(__isl_take PW *pw, __isl_take isl_space *dim)
+__isl_give PW *FN(PW,reset_space)(__isl_take PW *pw,
+	__isl_take isl_space *space)
 {
 	isl_space *domain;
 
-	domain = isl_space_domain(isl_space_copy(dim));
-	return FN(PW,reset_space_and_domain)(pw, dim, domain);
+	domain = isl_space_domain(isl_space_copy(space));
+	return FN(PW,reset_space_and_domain)(pw, space, domain);
 }
 
 __isl_give PW *FN(PW,set_tuple_id)(__isl_take PW *pw, enum isl_dim_type type,
@@ -1666,6 +1690,28 @@ isl_stat FN(PW,foreach_piece)(__isl_keep PW *pw,
 			return isl_stat_error;
 
 	return isl_stat_ok;
+}
+
+/* Does "test" succeed on every cell of "pw"?
+ */
+isl_bool FN(PW,every_piece)(__isl_keep PW *pw,
+	isl_bool (*test)(__isl_keep isl_set *set,
+		__isl_keep EL *el, void *user), void *user)
+{
+	int i;
+
+	if (!pw)
+		return isl_bool_error;
+
+	for (i = 0; i < pw->n; ++i) {
+		isl_bool r;
+
+		r = test(pw->p[i].set, pw->p[i].FIELD, user);
+		if (r < 0 || !r)
+			return r;
+	}
+
+	return isl_bool_true;
 }
 
 /* Is "pw" defined over a single universe domain?
@@ -1791,8 +1837,8 @@ __isl_give PW *FN(PW,mul_isl_int)(__isl_take PW *pw, isl_int v)
 		return pw;
 	if (pw && DEFAULT_IS_ZERO && isl_int_is_zero(v)) {
 		PW *zero;
-		isl_space *dim = FN(PW,get_space)(pw);
-		zero = FN(PW,ZERO)(dim OPT_TYPE_ARG(pw->));
+		isl_space *space = FN(PW,get_space)(pw);
+		zero = FN(PW,ZERO)(space OPT_TYPE_ARG(pw->));
 		FN(PW,free)(pw);
 		return zero;
 	}

@@ -120,6 +120,38 @@ void VERegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   Offset += MI.getOperand(FIOperandNum + 2).getImm();
 
+  if (MI.getOpcode() == VE::STQrii) {
+    const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+    Register SrcReg = MI.getOperand(3).getReg();
+    Register SrcHiReg = getSubReg(SrcReg, VE::sub_even);
+    Register SrcLoReg = getSubReg(SrcReg, VE::sub_odd);
+    // VE stores HiReg to 8(addr) and LoReg to 0(addr)
+    MachineInstr *StMI = BuildMI(*MI.getParent(), II, dl, TII.get(VE::STrii))
+                             .addReg(FrameReg)
+                             .addImm(0)
+                             .addImm(0)
+                             .addReg(SrcLoReg);
+    replaceFI(MF, II, *StMI, dl, 0, Offset, FrameReg);
+    MI.setDesc(TII.get(VE::STrii));
+    MI.getOperand(3).setReg(SrcHiReg);
+    Offset += 8;
+  } else if (MI.getOpcode() == VE::LDQrii) {
+    const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+    Register DestReg = MI.getOperand(0).getReg();
+    Register DestHiReg = getSubReg(DestReg, VE::sub_even);
+    Register DestLoReg = getSubReg(DestReg, VE::sub_odd);
+    // VE loads HiReg from 8(addr) and LoReg from 0(addr)
+    MachineInstr *StMI =
+        BuildMI(*MI.getParent(), II, dl, TII.get(VE::LDrii), DestLoReg)
+            .addReg(FrameReg)
+            .addImm(0)
+            .addImm(0);
+    replaceFI(MF, II, *StMI, dl, 1, Offset, FrameReg);
+    MI.setDesc(TII.get(VE::LDrii));
+    MI.getOperand(0).setReg(DestHiReg);
+    Offset += 8;
+  }
+
   replaceFI(MF, II, MI, dl, FIOperandNum, Offset, FrameReg);
 }
 

@@ -696,11 +696,8 @@ bool GotSection::isNeeded() const {
 }
 
 void GotSection::writeTo(uint8_t *buf) {
-  // Buf points to the start of this section's buffer,
-  // whereas InputSectionBase::relocateAlloc() expects its argument
-  // to point to the start of the output section.
   target->writeGotHeader(buf);
-  relocateAlloc(buf - outSecOff, buf - outSecOff + size);
+  relocateAlloc(buf, buf + size);
 }
 
 static uint64_t getMipsPageAddr(uint64_t addr) {
@@ -2698,15 +2695,6 @@ void GdbIndexSection::initOutputSize() {
   }
 }
 
-static std::vector<InputSection *> getDebugInfoSections() {
-  std::vector<InputSection *> ret;
-  for (InputSectionBase *s : inputSections)
-    if (InputSection *isec = dyn_cast<InputSection>(s))
-      if (isec->name == ".debug_info")
-        ret.push_back(isec);
-  return ret;
-}
-
 static std::vector<GdbIndexSection::CuEntry> readCuList(DWARFContext &dwarf) {
   std::vector<GdbIndexSection::CuEntry> ret;
   for (std::unique_ptr<DWARFUnit> &cu : dwarf.compile_units())
@@ -2860,30 +2848,40 @@ createSymbols(ArrayRef<std::vector<GdbIndexSection::NameAttrEntry>> nameAttrs,
 
 // Returns a newly-created .gdb_index section.
 template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
-  std::vector<InputSection *> sections = getDebugInfoSections();
-
-  // .debug_gnu_pub{names,types} are useless in executables.
-  // They are present in input object files solely for creating
-  // a .gdb_index. So we can remove them from the output.
-  for (InputSectionBase *s : inputSections)
+  // Collect InputFiles with .debug_info. See the comment in
+  // LLDDwarfObj<ELFT>::LLDDwarfObj. If we do lightweight parsing in the future,
+  // note that isec->data() may uncompress the full content, which should be
+  // parallelized.
+  SetVector<InputFile *> files;
+  for (InputSectionBase *s : inputSections) {
+    InputSection *isec = dyn_cast<InputSection>(s);
+    if (!isec)
+      continue;
+    // .debug_gnu_pub{names,types} are useless in executables.
+    // They are present in input object files solely for creating
+    // a .gdb_index. So we can remove them from the output.
     if (s->name == ".debug_gnu_pubnames" || s->name == ".debug_gnu_pubtypes")
       s->markDead();
+    else if (isec->name == ".debug_info")
+      files.insert(isec->file);
+  }
 
-  std::vector<GdbChunk> chunks(sections.size());
-  std::vector<std::vector<NameAttrEntry>> nameAttrs(sections.size());
+  std::vector<GdbChunk> chunks(files.size());
+  std::vector<std::vector<NameAttrEntry>> nameAttrs(files.size());
 
-  parallelForEachN(0, sections.size(), [&](size_t i) {
+  parallelForEachN(0, files.size(), [&](size_t i) {
     // To keep memory usage low, we don't want to keep cached DWARFContext, so
     // avoid getDwarf() here.
-    ObjFile<ELFT> *file = sections[i]->getFile<ELFT>();
+    ObjFile<ELFT> *file = cast<ObjFile<ELFT>>(files[i]);
     DWARFContext dwarf(std::make_unique<LLDDwarfObj<ELFT>>(file));
+    auto &dobj = static_cast<const LLDDwarfObj<ELFT> &>(dwarf.getDWARFObj());
 
-    chunks[i].sec = sections[i];
+    // If the are multiple compile units .debug_info (very rare ld -r --unique),
+    // this only picks the last one. Other address ranges are lost.
+    chunks[i].sec = dobj.getInfoSection();
     chunks[i].compilationUnits = readCuList(dwarf);
-    chunks[i].addressAreas = readAddressAreas(dwarf, sections[i]);
-    nameAttrs[i] = readPubNamesAndTypes<ELFT>(
-        static_cast<const LLDDwarfObj<ELFT> &>(dwarf.getDWARFObj()),
-        chunks[i].compilationUnits);
+    chunks[i].addressAreas = readAddressAreas(dwarf, chunks[i].sec);
+    nameAttrs[i] = readPubNamesAndTypes<ELFT>(dobj, chunks[i].compilationUnits);
   });
 
   auto *ret = make<GdbIndexSection>();
@@ -3497,7 +3495,7 @@ void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
     assert(isec->getParent() != nullptr);
     if (InputSection *d = findExidxSection(isec)) {
       memcpy(buf + offset, d->data().data(), d->data().size());
-      d->relocateAlloc(buf, buf + d->getSize());
+      d->relocateAlloc(buf + d->outSecOff, buf + d->outSecOff + d->getSize());
       offset += d->getSize();
     } else {
       // A Linker generated CANTUNWIND section.
@@ -3527,8 +3525,8 @@ bool ARMExidxSyntheticSection::classof(const SectionBase *d) {
 }
 
 ThunkSection::ThunkSection(OutputSection *os, uint64_t off)
-    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
-                       ".text.thunk") {
+    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS,
+                       config->emachine == EM_PPC64 ? 16 : 4, ".text.thunk") {
   this->parent = os;
   this->outSecOff = off;
 }

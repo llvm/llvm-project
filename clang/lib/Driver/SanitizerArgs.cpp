@@ -866,6 +866,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                 LinkCXXRuntimes) ||
                     D.CCCIsCXX();
 
+  NeedsHeapProfRt =
+      Args.hasFlag(options::OPT_fmemprof, options::OPT_fno_memprof, false);
+
   // Finally, initialize the set of available and recoverable sanitizers.
   Sanitizers.Mask |= Kinds;
   RecoverableSanitizers.Mask |= RecoverableKinds;

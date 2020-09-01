@@ -350,7 +350,7 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
 
   // TODO(sbc): Encode the relocations in the data section and write a loop
   // here to apply them.
-  uint32_t segmentVA = outputSeg->startVA + outputSegmentOffset;
+  uint64_t segmentVA = outputSeg->startVA + outputSegmentOffset;
   for (const WasmRelocation &rel : relocations) {
     uint64_t offset = rel.Offset - getInputSectionOffset();
     uint64_t outputOffset = segmentVA + offset;

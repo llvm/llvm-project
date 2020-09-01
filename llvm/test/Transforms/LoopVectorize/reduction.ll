@@ -503,8 +503,7 @@ exit:
 ;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ;CHECK: add <4 x i32>
 ;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
-;CHECK: %sum.lcssa = phi i32 [ %[[SCALAR:.*]], %.lr.ph ], [ %[[VECTOR:.*]], %middle.block ]
-;CHECK: %sum.copy = phi i32 [ %[[SCALAR]], %.lr.ph ], [ %[[VECTOR]], %middle.block ]
+;CHECK: %sum.copy = phi i32 [ %[[SCALAR:.*]], %.lr.ph ], [ %[[VECTOR:.*]], %middle.block ]
 ;CHECK: ret i32
 define i32 @reduction_sum_multiuse(i32 %n, i32* noalias nocapture %A, i32* noalias nocapture %B) {
   %1 = icmp sgt i32 %n, 0
@@ -544,7 +543,7 @@ end:
 ; variable. We cannot vectorize this.
 ; CHECK-LABEL: reduction_reset(
 ; CHECK-NOT: <4 x i32>
-define void @reduction_reset(i32 %N, i32* nocapture readonly %arrayA, i32* nocapture %arrayB) { 
+define void @reduction_reset(i32 %N, i32* nocapture readonly %arrayA, i32* nocapture %arrayB) {
 entry:
   %c4 = icmp sgt i32 %N, 0
   br i1 %c4, label %.lr.ph.preheader, label %._crit_edge

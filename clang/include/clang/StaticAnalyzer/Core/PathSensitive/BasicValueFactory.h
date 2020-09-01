@@ -79,11 +79,11 @@ public:
 };
 
 class PointerToMemberData : public llvm::FoldingSetNode {
-  const DeclaratorDecl *D;
+  const NamedDecl *D;
   llvm::ImmutableList<const CXXBaseSpecifier *> L;
 
 public:
-  PointerToMemberData(const DeclaratorDecl *D,
+  PointerToMemberData(const NamedDecl *D,
                       llvm::ImmutableList<const CXXBaseSpecifier *> L)
       : D(D), L(L) {}
 
@@ -92,11 +92,11 @@ public:
   iterator begin() const { return L.begin(); }
   iterator end() const { return L.end(); }
 
-  static void Profile(llvm::FoldingSetNodeID& ID, const DeclaratorDecl *D,
+  static void Profile(llvm::FoldingSetNodeID &ID, const NamedDecl *D,
                       llvm::ImmutableList<const CXXBaseSpecifier *> L);
 
-  void Profile(llvm::FoldingSetNodeID& ID) { Profile(ID, D, L); }
-  const DeclaratorDecl *getDeclaratorDecl() const {return D;}
+  void Profile(llvm::FoldingSetNodeID &ID) { Profile(ID, D, L); }
+  const NamedDecl *getDeclaratorDecl() const { return D; }
 
   llvm::ImmutableList<const CXXBaseSpecifier *> getCXXBaseList() const {
     return L;
@@ -236,9 +236,9 @@ public:
   const LazyCompoundValData *getLazyCompoundValData(const StoreRef &store,
                                             const TypedValueRegion *region);
 
-  const PointerToMemberData *getPointerToMemberData(
-      const DeclaratorDecl *DD,
-      llvm::ImmutableList<const CXXBaseSpecifier *> L);
+  const PointerToMemberData *
+  getPointerToMemberData(const NamedDecl *ND,
+                         llvm::ImmutableList<const CXXBaseSpecifier *> L);
 
   llvm::ImmutableList<SVal> getEmptySValList() {
     return SValListFactory.getEmptyList();

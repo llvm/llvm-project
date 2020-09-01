@@ -3,7 +3,10 @@
 
 include "llvm/TableGen/SearchableTable.td"
 
-class IntrinsicProperty;
+class IntrinsicProperty<bit is_default = 0> {
+  bit IsDefault = is_default;
+}
+
 class SDNodeProperty;
 
 class ValueType<int size, int value> {
@@ -24,6 +27,7 @@ class Intrinsic<list<LLVMType> param_types = []> {
   list<LLVMType> ParamTypes = param_types;
   list<IntrinsicProperty> IntrProperties = [];
   list<SDNodeProperty> Properties = [];
+  bit DisableDefaultAttributes = 1;
 }
 
 def iAny : ValueType<0, 253>;

@@ -406,7 +406,6 @@ define void @accessible_after_return11_loop() {
 ; CHECK-NEXT:    [[C_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_1]], label [[FOR_BODY_I]], label [[INIT_PARSE_EXIT:%.*]]
 ; CHECK:       init_parse.exit:
-; CHECK-NEXT:    store i32 0, i32* @linenum, align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull undef)
 ; CHECK-NEXT:    store i32 0, i32* @linenum, align 4
 ; CHECK-NEXT:    br label [[FOR_BODY_I20:%.*]]

@@ -30,6 +30,7 @@ using evaluate::characteristics::Procedure;
 class CheckHelper {
 public:
   explicit CheckHelper(SemanticsContext &c) : context_{c} {}
+  CheckHelper(SemanticsContext &c, const Scope &s) : context_{c}, scope_{&s} {}
 
   void Check() { Check(context_.globalScope()); }
   void Check(const ParamValue &, bool canBeAssumed);
@@ -42,6 +43,7 @@ public:
   void Check(const DeclTypeSpec &, bool canHaveAssumedTypeParameters);
   void Check(const Symbol &);
   void Check(const Scope &);
+  void CheckInitialization(const Symbol &);
 
 private:
   template <typename A> void CheckSpecExpr(const A &x) {
@@ -61,6 +63,7 @@ private:
   void CheckSubprogram(const Symbol &, const SubprogramDetails &);
   void CheckAssumedTypeEntity(const Symbol &, const ObjectEntityDetails &);
   void CheckDerivedType(const Symbol &, const DerivedTypeDetails &);
+  void CheckHostAssoc(const Symbol &, const HostAssocDetails &);
   void CheckGeneric(const Symbol &, const GenericDetails &);
   std::optional<std::vector<Procedure>> Characterize(const SymbolVector &);
   bool CheckDefinedOperator(const SourceName &, const GenericKind &,
@@ -94,6 +97,9 @@ private:
     }
   }
   bool IsResultOkToDiffer(const FunctionResult &);
+  bool IsScopePDT() const {
+    return scope_ && scope_->IsParameterizedDerivedType();
+  }
 
   SemanticsContext &context_;
   evaluate::FoldingContext &foldingContext_{context_.foldingContext()};
@@ -147,7 +153,10 @@ void CheckHelper::Check(const Symbol &symbol) {
     CheckVolatile(symbol, isAssociated, derived);
   }
   if (isAssociated) {
-    return; // only care about checking VOLATILE on associated symbols
+    if (const auto *details{symbol.detailsIf<HostAssocDetails>()}) {
+      CheckHostAssoc(symbol, *details);
+    }
+    return; // no other checks on associated symbols
   }
   if (IsPointer(symbol)) {
     CheckPointer(symbol);
@@ -446,15 +455,20 @@ void CheckHelper::CheckObjectEntity(
       }
     }
   }
+  bool badInit{false};
   if (symbol.owner().kind() != Scope::Kind::DerivedType &&
       IsInitialized(symbol, true /*ignore DATA, already caught*/)) { // C808
     if (IsAutomatic(symbol)) {
+      badInit = true;
       messages_.Say("An automatic variable must not be initialized"_err_en_US);
     } else if (IsDummy(symbol)) {
+      badInit = true;
       messages_.Say("A dummy argument must not be initialized"_err_en_US);
     } else if (IsFunctionResult(symbol)) {
+      badInit = true;
       messages_.Say("A function result must not be initialized"_err_en_US);
     } else if (IsInBlankCommon(symbol)) {
+      badInit = true;
       messages_.Say(
           "A variable in blank COMMON should not be initialized"_en_US);
     }
@@ -476,6 +490,51 @@ void CheckHelper::CheckObjectEntity(
       messages_.Say("CLASS entity '%s' must be a dummy argument or have "
                     "ALLOCATABLE or POINTER attribute"_err_en_US,
           symbol.name());
+    }
+  }
+  if (!badInit && !IsScopePDT()) {
+    CheckInitialization(symbol);
+  }
+}
+
+void CheckHelper::CheckInitialization(const Symbol &symbol) {
+  const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
+  if (!details) {
+    // not an object
+  } else if (const auto &init{details->init()}) { // 8.2 para 4
+    int initRank{init->Rank()};
+    int symbolRank{details->shape().Rank()};
+    if (IsPointer(symbol)) {
+      // Pointer initialization rank/shape errors are caught earlier in
+      // name resolution
+    } else if (details->shape().IsImpliedShape() ||
+        details->shape().IsDeferredShape()) {
+      if (symbolRank != initRank) {
+        messages_.Say(
+            "%s-shape array '%s' has rank %d, but its initializer has rank %d"_err_en_US,
+            details->shape().IsImpliedShape() ? "Implied" : "Deferred",
+            symbol.name(), symbolRank, initRank);
+      }
+    } else if (symbolRank != initRank && initRank != 0) {
+      // Pointer initializer rank errors are caught elsewhere
+      messages_.Say(
+          "'%s' has rank %d, but its initializer has rank %d"_err_en_US,
+          symbol.name(), symbolRank, initRank);
+    } else if (auto symbolShape{evaluate::GetShape(foldingContext_, symbol)}) {
+      if (!evaluate::AsConstantExtents(foldingContext_, *symbolShape)) {
+        // C762
+        messages_.Say(
+            "Shape of '%s' is not implied, deferred, nor constant"_err_en_US,
+            symbol.name());
+      } else if (auto initShape{evaluate::GetShape(foldingContext_, *init)}) {
+        if (initRank == symbolRank) {
+          evaluate::CheckConformance(
+              messages_, *symbolShape, *initShape, "object", "initializer");
+        } else {
+          CHECK(initRank == 0);
+          // TODO: expand scalar now, or in lowering?
+        }
+      }
     }
   }
 }
@@ -755,6 +814,21 @@ void CheckHelper::CheckDerivedType(
   if (HasIntrinsicTypeName(symbol)) { // C729
     messages_.Say("A derived type name cannot be the name of an intrinsic"
                   " type"_err_en_US);
+  }
+}
+
+void CheckHelper::CheckHostAssoc(
+    const Symbol &symbol, const HostAssocDetails &details) {
+  const Symbol &hostSymbol{details.symbol()};
+  if (hostSymbol.test(Symbol::Flag::ImplicitOrError)) {
+    if (details.implicitOrSpecExprError) {
+      messages_.Say("Implicitly typed local entity '%s' not allowed in"
+                    " specification expression"_err_en_US,
+          symbol.name());
+    } else if (details.implicitOrExplicitTypeError) {
+      messages_.Say(
+          "No explicit type declared for '%s'"_err_en_US, symbol.name());
+    }
   }
 }
 
@@ -1268,7 +1342,8 @@ void CheckHelper::Check(const Scope &scope) {
   if (const Symbol * symbol{scope.symbol()}) {
     innermostSymbol_ = symbol;
   } else if (scope.IsDerivedType()) {
-    return; // PDT instantiations have null symbol()
+    // PDT instantiations have no symbol.
+    return;
   }
   for (const auto &set : scope.equivalenceSets()) {
     CheckEquivalenceSet(set);
@@ -1555,6 +1630,16 @@ evaluate::Shape SubprogramMatchHelper::FoldShape(const evaluate::Shape &shape) {
 
 void CheckDeclarations(SemanticsContext &context) {
   CheckHelper{context}.Check();
+}
+
+void CheckInstantiatedDerivedType(
+    SemanticsContext &context, const DerivedTypeSpec &type) {
+  if (const Scope * scope{type.scope()}) {
+    CheckHelper checker{context};
+    for (const auto &pair : *scope) {
+      checker.CheckInitialization(*pair.second);
+    }
+  }
 }
 
 } // namespace Fortran::semantics

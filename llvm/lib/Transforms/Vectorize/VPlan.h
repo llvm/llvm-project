@@ -115,7 +115,7 @@ private:
 
   /// The vectorization factor. Each entry in the scalar map contains UF x VF
   /// scalar values.
-  unsigned VF;
+  ElementCount VF;
 
   /// The vector and scalar map storage. We use std::map and not DenseMap
   /// because insertions to DenseMap invalidate its iterators.
@@ -126,7 +126,7 @@ private:
 
 public:
   /// Construct an empty map with the given unroll and vectorization factors.
-  VectorizerValueMap(unsigned UF, unsigned VF) : UF(UF), VF(VF) {}
+  VectorizerValueMap(unsigned UF, ElementCount VF) : UF(UF), VF(VF) {}
 
   /// \return True if the map has any vector entry for \p Key.
   bool hasAnyVectorValue(Value *Key) const {
@@ -151,12 +151,15 @@ public:
   /// \return True if the map has a scalar entry for \p Key and \p Instance.
   bool hasScalarValue(Value *Key, const VPIteration &Instance) const {
     assert(Instance.Part < UF && "Queried Scalar Part is too large.");
-    assert(Instance.Lane < VF && "Queried Scalar Lane is too large.");
+    assert(Instance.Lane < VF.getKnownMinValue() &&
+           "Queried Scalar Lane is too large.");
+    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
+
     if (!hasAnyScalarValue(Key))
       return false;
     const ScalarParts &Entry = ScalarMapStorage.find(Key)->second;
     assert(Entry.size() == UF && "ScalarParts has wrong dimensions.");
-    assert(Entry[Instance.Part].size() == VF &&
+    assert(Entry[Instance.Part].size() == VF.getKnownMinValue() &&
            "ScalarParts has wrong dimensions.");
     return Entry[Instance.Part][Instance.Lane] != nullptr;
   }
@@ -195,7 +198,7 @@ public:
       // TODO: Consider storing uniform values only per-part, as they occupy
       //       lane 0 only, keeping the other VF-1 redundant entries null.
       for (unsigned Part = 0; Part < UF; ++Part)
-        Entry[Part].resize(VF, nullptr);
+        Entry[Part].resize(VF.getKnownMinValue(), nullptr);
       ScalarMapStorage[Key] = Entry;
     }
     ScalarMapStorage[Key][Instance.Part][Instance.Lane] = Scalar;
@@ -234,14 +237,15 @@ struct VPCallback {
 /// VPTransformState holds information passed down when "executing" a VPlan,
 /// needed for generating the output IR.
 struct VPTransformState {
-  VPTransformState(unsigned VF, unsigned UF, LoopInfo *LI, DominatorTree *DT,
-                   IRBuilder<> &Builder, VectorizerValueMap &ValueMap,
-                   InnerLoopVectorizer *ILV, VPCallback &Callback)
+  VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
+                   DominatorTree *DT, IRBuilder<> &Builder,
+                   VectorizerValueMap &ValueMap, InnerLoopVectorizer *ILV,
+                   VPCallback &Callback)
       : VF(VF), UF(UF), Instance(), LI(LI), DT(DT), Builder(Builder),
         ValueMap(ValueMap), ILV(ILV), Callback(Callback) {}
 
   /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
-  unsigned VF;
+  ElementCount VF;
   unsigned UF;
 
   /// Hold the indices to generate specific scalar instructions. Null indicates
@@ -1583,7 +1587,7 @@ class VPlan {
   VPBlockBase *Entry;
 
   /// Holds the VFs applicable to this VPlan.
-  SmallSet<unsigned, 2> VFs;
+  SmallSetVector<ElementCount, 2> VFs;
 
   /// Holds the name of the VPlan, for printing.
   std::string Name;
@@ -1647,9 +1651,9 @@ public:
     return BackedgeTakenCount;
   }
 
-  void addVF(unsigned VF) { VFs.insert(VF); }
+  void addVF(ElementCount VF) { VFs.insert(VF); }
 
-  bool hasVF(unsigned VF) { return VFs.count(VF); }
+  bool hasVF(ElementCount VF) { return VFs.count(VF); }
 
   const std::string &getName() const { return Name; }
 

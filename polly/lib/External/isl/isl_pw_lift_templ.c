@@ -10,20 +10,6 @@
 
 #include <isl_pw_macro.h>
 
-static isl_bool any_divs(__isl_keep isl_set *set)
-{
-	int i;
-
-	if (!set)
-		return isl_bool_error;
-
-	for (i = 0; i < set->n; ++i)
-		if (set->p[i]->n_div > 0)
-			return isl_bool_true;
-
-	return isl_bool_false;
-}
-
 static isl_stat foreach_lifted_subset(__isl_take isl_set *set,
 	__isl_take EL *el,
 	isl_stat (*fn)(__isl_take isl_set *set, __isl_take EL *el,
@@ -72,7 +58,7 @@ isl_stat FN(PW,foreach_lifted_piece)(__isl_keep PW *pw,
 		isl_set *set;
 		EL *el;
 
-		any = any_divs(pw->p[i].set);
+		any = isl_set_involves_locals(pw->p[i].set);
 		if (any < 0)
 			return isl_stat_error;
 		set = isl_set_copy(pw->p[i].set);

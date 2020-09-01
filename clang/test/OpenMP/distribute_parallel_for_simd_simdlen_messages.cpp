@@ -38,7 +38,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 
 // expected-error@+5 {{expected ')'}} expected-note@+5 {{to match this '('}}
-// expected-error@+4 2 {{expression is not an integral constant expression}}
+// expected-error@+4 2 {{integral constant expression}}
 // expected-note@+3 2 {{read of non-const variable 'argc' is not allowed in a constant expression}}
 #pragma omp target
 #pragma omp teams
@@ -72,7 +72,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
 #pragma omp teams
 // expected-error@+3 2 {{directive '#pragma omp distribute parallel for simd' cannot contain more than one 'simdlen' clause}}
 // expected-error@+2 {{argument to 'simdlen' clause must be a strictly positive integer value}}
-// expected-error@+1 2 {{expression is not an integral constant expression}}
+// expected-error@+1 2 {{integral constant expression}}
 #pragma omp distribute parallel for simd simdlen (foobool(argc)), simdlen (true), simdlen (-5)
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i-ST];
@@ -84,7 +84,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 
 #if __cplusplus <= 199711L
-  // expected-error@+6 2 {{expression is not an integral constant expression}}
+  // expected-error@+6 2 {{integral constant expression}}
 #else
   // expected-error@+4 2 {{integral constant expression must have integral or unscoped enumeration type, not 'char *'}}
 #endif
@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
 #endif
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd simdlen (foobool(1) > 0 ? 1 : 2) // expected-error {{expression is not an integral constant expression}}
+#pragma omp distribute parallel for simd simdlen (foobool(1) > 0 ? 1 : 2) // expected-error {{integral constant expression}}
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i-4];
 
@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
 #endif
 #pragma omp target
 #pragma omp teams
-// expected-error@+3 {{expression is not an integral constant expression}}
+// expected-error@+3 {{integral constant expression}}
 // expected-error@+2 2 {{directive '#pragma omp distribute parallel for simd' cannot contain more than one 'simdlen' clause}}
 // expected-error@+1 {{argument to 'simdlen' clause must be a strictly positive integer value}}
 #pragma omp distribute parallel for simd simdlen (foobool(argc)), simdlen (true), simdlen (-5)
@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
     argv[0][i] = argv[0][i] - argv[0][i-4];
 
 #if __cplusplus <= 199711L
-  // expected-error@+6 {{expression is not an integral constant expression}}
+  // expected-error@+6 {{integral constant expression}}
 #else
   // expected-error@+4 {{integral constant expression must have integral or unscoped enumeration type, not 'char *'}}
 #endif

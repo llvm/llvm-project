@@ -119,7 +119,7 @@ namespace {
         ValueTy = lvalue.getType();
         ValueSizeInBits = C.getTypeSize(ValueTy);
         AtomicTy = ValueTy = CGF.getContext().getExtVectorType(
-            lvalue.getType(), cast<llvm::VectorType>(
+            lvalue.getType(), cast<llvm::FixedVectorType>(
                                   lvalue.getExtVectorAddress().getElementType())
                                   ->getNumElements());
         AtomicSizeInBits = C.getTypeSize(AtomicTy);
@@ -307,7 +307,14 @@ static RValue emitAtomicLibcall(CodeGenFunction &CGF,
   const CGFunctionInfo &fnInfo =
     CGF.CGM.getTypes().arrangeBuiltinFunctionCall(resultType, args);
   llvm::FunctionType *fnTy = CGF.CGM.getTypes().GetFunctionType(fnInfo);
-  llvm::FunctionCallee fn = CGF.CGM.CreateRuntimeFunction(fnTy, fnName);
+  llvm::AttrBuilder fnAttrB;
+  fnAttrB.addAttribute(llvm::Attribute::NoUnwind);
+  fnAttrB.addAttribute(llvm::Attribute::WillReturn);
+  llvm::AttributeList fnAttrs = llvm::AttributeList::get(
+      CGF.getLLVMContext(), llvm::AttributeList::FunctionIndex, fnAttrB);
+
+  llvm::FunctionCallee fn =
+      CGF.CGM.CreateRuntimeFunction(fnTy, fnName, fnAttrs);
   auto callee = CGCallee::forDirect(fn);
   return CGF.EmitCall(fnInfo, callee, ReturnValueSlot(), args);
 }

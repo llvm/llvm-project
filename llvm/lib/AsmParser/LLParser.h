@@ -372,8 +372,11 @@ namespace llvm {
     bool ParseOptionalParamAccesses(
         std::vector<FunctionSummary::ParamAccess> &Params);
     bool ParseParamNo(uint64_t &ParamNo);
-    bool ParseParamAccess(FunctionSummary::ParamAccess &Param);
-    bool ParseParamAccessCall(FunctionSummary::ParamAccess::Call &Call);
+    using IdLocListType = std::vector<std::pair<unsigned, LocTy>>;
+    bool ParseParamAccess(FunctionSummary::ParamAccess &Param,
+                          IdLocListType &IdLocList);
+    bool ParseParamAccessCall(FunctionSummary::ParamAccess::Call &Call,
+                              IdLocListType &IdLocList);
     bool ParseParamAccessOffset(ConstantRange &range);
     bool ParseOptionalRefs(std::vector<ValueInfo> &Refs);
     bool ParseTypeIdEntry(unsigned ID);

@@ -45,10 +45,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .dynamic
     Type:    SHT_DYNAMIC
@@ -122,10 +121,9 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .dynamic
     Type:    SHT_DYNAMIC
@@ -161,10 +159,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .dynsym
     Type:    SHT_PROGBITS
@@ -190,10 +187,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .dynamic
     Type:    SHT_DYNAMIC
@@ -222,10 +218,9 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .dynamic
     Type:    SHT_DYNAMIC
@@ -294,10 +289,9 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:         .gnu.version
     Type:         SHT_GNU_versym
@@ -366,17 +360,15 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name: .dynsym
     Type: SHT_DYNSYM
@@ -384,10 +376,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 DynamicSymbols: []
 
 ## Case 9: Check what we print when:
@@ -422,10 +413,9 @@ DynamicSymbols: []
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name: .dynsym
     Type: SHT_DYNSYM
@@ -433,10 +423,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .dynamic
     Type:    SHT_DYNAMIC
@@ -457,10 +446,9 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS[[BITS]]
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .dynamic
     Type:    SHT_DYNAMIC
@@ -470,8 +458,8 @@ Sections:
       - Tag:   DT_NULL
         Value: 0
 
-## Check we report a warning when the DT_STRSZ value is broken so that the dynamic string
-## table goes past the end of the file. Document we stop dumping symbols and report an error.
+## Case 10: Check we report a warning when the DT_STRSZ value is broken so that the dynamic string
+##          table goes past the end of the file. Document we stop dumping symbols and report an error.
 
 # RUN: yaml2obj %s --docnum=13 -o %t14
 # RUN: llvm-readobj --dyn-symbols %t14 2>&1 | \
@@ -521,10 +509,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:    .dynstr
     Type:    SHT_STRTAB
@@ -552,25 +539,58 @@ ProgramHeaders:
       - Section: .dynstr
       - Section: .dynamic
 
-## Check we report a warning when the entry size of the dynamic symbol table is zero.
-# RUN: yaml2obj %s --docnum=14 -o %t15
-# RUN: llvm-readobj --dyn-symbols %t15 2>&1 | FileCheck %s -DFILE=%t15 --check-prefix=DYNSYM-ZERO-ENTSIZE-LLVM
-# RUN: llvm-readelf --dyn-symbols %t15 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t15 --check-prefix=DYNSYM-ZERO-ENTSIZE-GNU --implicit-check-not="Symbol table"
+## Case 11: check various warnings we report when fields of the SHT_DYNSYM section are broken.
+
+## a) check we report a warning when the entry size of the dynamic symbol table is zero.
+# RUN: yaml2obj %s --docnum=14 -DENTSIZE=0x0 -o %t15.entsize
+# RUN: llvm-readobj --dyn-symbols %t15.entsize 2>&1 | FileCheck %s -DFILE=%t15.entsize --check-prefix=DYNSYM-ZERO-ENTSIZE-LLVM
+# RUN: llvm-readelf --dyn-symbols %t15.entsize 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t15.entsize --check-prefix=DYNSYM-ZERO-ENTSIZE-GNU --implicit-check-not="Symbol table"
 
 # DYNSYM-ZERO-ENTSIZE-LLVM:      DynamicSymbols [
-# DYNSYM-ZERO-ENTSIZE-LLVM-NEXT:  warning: '[[FILE]]': SHT_DYNSYM section with index 1 has invalid size (0x10) or entry size (0x0)
+# DYNSYM-ZERO-ENTSIZE-LLVM-NEXT:  warning: '[[FILE]]': SHT_DYNSYM section with index 1 has invalid size (0x20) or entry size (0x0)
 # DYNSYM-ZERO-ENTSIZE-LLVM-NEXT: ]
 
-# DYNSYM-ZERO-ENTSIZE-GNU:  warning: '[[FILE]]': SHT_DYNSYM section with index 1 has invalid size (0x10) or entry size (0x0)
+# DYNSYM-ZERO-ENTSIZE-GNU:  warning: '[[FILE]]': SHT_DYNSYM section with index 1 has invalid size (0x20) or entry size (0x0)
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
-  - Name:    .dynsym
-    Type:    SHT_DYNSYM
-    EntSize: 0x0
+  - Name:     .dynsym
+    Type:     SHT_DYNSYM
+    EntSize:  [[ENTSIZE=<none>]]
+    ShOffset: [[OFFSET=<none>]]
+    ShSize:   [[SIZE=<none>]]
+DynamicSymbols:
+  - Name: foo
+
+## b) check we report a warning when the sh_offset field of the SHT_DYNSYM section is
+##    invalid (sh_offset + sh_size is greater than the file size). Check we don't dump
+##    dynamic symbols in this case.
+# RUN: yaml2obj --docnum=14 %s -DOFFSET=0xffffffff -o %t15.offset
+# RUN: llvm-readobj %t15.offset --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t15.offset \
+# RUN:   --check-prefixes=OFFSET-BROKEN,OFFSET-BROKEN-LLVM
+# RUN: llvm-readelf %t15.offset --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t15.offset \
+# RUN:   --implicit-check-not="Symbol table" --check-prefix=OFFSET-BROKEN
+
+# OFFSET-BROKEN: warning: '[[FILE]]': unable to read dynamic symbols from SHT_DYNSYM section with index 1: offset (0xffffffff) + size (0x20) is greater than the file size (0x148)
+
+# OFFSET-BROKEN-LLVM:      DynamicSymbols [
+# OFFSET-BROKEN-LLVM-NEXT: ]
+
+## c) check we report a warning when the sh_size field of the SHT_DYNSYM section is
+##    invalid (sh_offset + sh_size is greater than the file size). Check we don't dump
+##    dynamic symbols in this case.
+# RUN: yaml2obj --docnum=14 %s -DSIZE=0xffffffff -o %t15.size
+# RUN: llvm-readobj %t15.size --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t15.size \
+# RUN:   --check-prefixes=SIZE-BROKEN,SIZE-BROKEN-LLVM
+# RUN: llvm-readelf %t15.size --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t15.size \
+# RUN:   --implicit-check-not="Symbol table" --check-prefix=SIZE-BROKEN
+
+# SIZE-BROKEN: warning: '[[FILE]]': unable to read dynamic symbols from SHT_DYNSYM section with index 1: offset (0x34) + size (0xffffffff) is greater than the file size (0x148)
+
+# SIZE-BROKEN-LLVM:      DynamicSymbols [
+# SIZE-BROKEN-LLVM-NEXT: ]

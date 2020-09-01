@@ -931,49 +931,32 @@ static __isl_give isl_ast_graft *set_enforced_from_list(
 
 /* Does "aff" have a negative constant term?
  */
-static isl_stat aff_constant_is_negative(__isl_take isl_set *set,
-	__isl_take isl_aff *aff, void *user)
+static isl_bool aff_constant_is_negative(__isl_keep isl_set *set,
+	__isl_keep isl_aff *aff, void *user)
 {
-	int *neg = user;
+	isl_bool is_neg;
 	isl_val *v;
 
 	v = isl_aff_get_constant_val(aff);
-	*neg = isl_val_is_neg(v);
+	is_neg = isl_val_is_neg(v);
 	isl_val_free(v);
-	isl_set_free(set);
-	isl_aff_free(aff);
 
-	return *neg ? isl_stat_ok : isl_stat_error;
+	return is_neg;
 }
 
 /* Does "pa" have a negative constant term over its entire domain?
  */
-static isl_stat pw_aff_constant_is_negative(__isl_take isl_pw_aff *pa,
+static isl_bool pw_aff_constant_is_negative(__isl_keep isl_pw_aff *pa,
 	void *user)
 {
-	isl_stat r;
-	int *neg = user;
-
-	r = isl_pw_aff_foreach_piece(pa, &aff_constant_is_negative, user);
-	isl_pw_aff_free(pa);
-
-	return (*neg && r >= 0) ? isl_stat_ok : isl_stat_error;
+	return isl_pw_aff_every_piece(pa, &aff_constant_is_negative, NULL);
 }
 
 /* Does each element in "list" have a negative constant term?
- *
- * The callback terminates the iteration as soon an element has been
- * found that does not have a negative constant term.
  */
 static int list_constant_is_negative(__isl_keep isl_pw_aff_list *list)
 {
-	int neg = 1;
-
-	if (isl_pw_aff_list_foreach(list,
-				&pw_aff_constant_is_negative, &neg) < 0 && neg)
-		return -1;
-
-	return neg;
+	return isl_pw_aff_list_every(list, &pw_aff_constant_is_negative, NULL);
 }
 
 /* Add 1 to each of the elements in "list", where each of these elements

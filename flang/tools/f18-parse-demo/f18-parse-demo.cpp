@@ -33,6 +33,7 @@
 #include "flang/Parser/unparse.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 #include <cstring>
@@ -42,9 +43,7 @@
 #include <optional>
 #include <stdlib.h>
 #include <string>
-#include <sys/wait.h>
 #include <time.h>
-#include <unistd.h>
 #include <vector>
 
 static std::list<std::string> argList(int argc, char *const argv[]) {
@@ -60,7 +59,7 @@ std::vector<std::string> filesToDelete;
 void CleanUpAtExit() {
   for (const auto &path : filesToDelete) {
     if (!path.empty()) {
-      unlink(path.data());
+      llvm::sys::fs::remove(path);
     }
   }
 }
@@ -98,36 +97,29 @@ struct DriverOptions {
   const char *prefix{nullptr};
 };
 
-bool ParentProcess() {
-  if (fork() == 0) {
-    return false; // in child process
-  }
-  int childStat{0};
-  wait(&childStat);
-  if (!WIFEXITED(childStat) || WEXITSTATUS(childStat) != 0) {
-    exit(EXIT_FAILURE);
-  }
-  return true;
-}
-
-void Exec(std::vector<char *> &argv, bool verbose = false) {
+void Exec(std::vector<llvm::StringRef> &argv, bool verbose = false) {
   if (verbose) {
     for (size_t j{0}; j < argv.size(); ++j) {
       llvm::errs() << (j > 0 ? " " : "") << argv[j];
     }
     llvm::errs() << '\n';
   }
-  argv.push_back(nullptr);
-  execvp(argv[0], &argv[0]);
-  llvm::errs() << "execvp(" << argv[0]
-               << ") failed: " << llvm::sys::StrError(errno) << '\n';
-  exit(EXIT_FAILURE);
+  std::string ErrMsg;
+  llvm::ErrorOr<std::string> Program = llvm::sys::findProgramByName(argv[0]);
+  if (!Program)
+    ErrMsg = Program.getError().message();
+  if (!Program ||
+      llvm::sys::ExecuteAndWait(
+          Program.get(), argv, llvm::None, {}, 0, 0, &ErrMsg)) {
+    llvm::errs() << "execvp(" << argv[0] << ") failed: " << ErrMsg << '\n';
+    exit(EXIT_FAILURE);
+  }
 }
 
 void RunOtherCompiler(DriverOptions &driver, char *source, char *relo) {
-  std::vector<char *> argv;
+  std::vector<llvm::StringRef> argv;
   for (size_t j{0}; j < driver.fcArgs.size(); ++j) {
-    argv.push_back(driver.fcArgs[j].data());
+    argv.push_back(driver.fcArgs[j]);
   }
   char dashC[3] = "-c", dashO[3] = "-o";
   argv.push_back(dashC);
@@ -230,60 +222,52 @@ std::string CompileFortran(
 
   std::string relo{RelocatableName(driver, path)};
 
-  char tmpSourcePath[32];
-  std::snprintf(tmpSourcePath, sizeof tmpSourcePath, "/tmp/f18-%lx.f90",
-      static_cast<unsigned long>(getpid()));
+  llvm::SmallString<32> tmpSourcePath;
   {
-    std::error_code EC;
-    llvm::raw_fd_ostream tmpSource(tmpSourcePath, EC, llvm::sys::fs::F_None);
+    int fd;
+    std::error_code EC =
+        llvm::sys::fs::createUniqueFile("f18-%%%%.f90", fd, tmpSourcePath);
     if (EC) {
-      llvm::errs() << EC.message();
+      llvm::errs() << EC.message() << "\n";
       std::exit(EXIT_FAILURE);
     }
+    llvm::raw_fd_ostream tmpSource(fd, /*shouldClose*/ true);
     Unparse(tmpSource, parseTree, driver.encoding, true /*capitalize*/,
         options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes));
   }
 
-  if (ParentProcess()) {
-    filesToDelete.push_back(tmpSourcePath);
-    if (!driver.compileOnly && driver.outputPath.empty()) {
-      filesToDelete.push_back(relo);
-    }
-    return relo;
+  RunOtherCompiler(driver, tmpSourcePath.data(), relo.data());
+  filesToDelete.emplace_back(tmpSourcePath);
+  if (!driver.compileOnly && driver.outputPath.empty()) {
+    filesToDelete.push_back(relo);
   }
-  RunOtherCompiler(driver, tmpSourcePath, relo.data());
-  return {};
+  return relo;
 }
 
 std::string CompileOtherLanguage(std::string path, DriverOptions &driver) {
   std::string relo{RelocatableName(driver, path)};
-  if (ParentProcess()) {
-    if (!driver.compileOnly && driver.outputPath.empty()) {
-      filesToDelete.push_back(relo);
-    }
-    return relo;
-  }
   RunOtherCompiler(driver, path.data(), relo.data());
-  return {};
+  if (!driver.compileOnly && driver.outputPath.empty()) {
+    filesToDelete.push_back(relo);
+  }
+  return relo;
 }
 
 void Link(std::vector<std::string> &relocatables, DriverOptions &driver) {
-  if (!ParentProcess()) {
-    std::vector<char *> argv;
-    for (size_t j{0}; j < driver.fcArgs.size(); ++j) {
-      argv.push_back(driver.fcArgs[j].data());
-    }
-    for (auto &relo : relocatables) {
-      argv.push_back(relo.data());
-    }
-    if (!driver.outputPath.empty()) {
-      char dashO[3] = "-o";
-      argv.push_back(dashO);
-      argv.push_back(driver.outputPath.data());
-    }
-    Exec(argv, driver.verbose);
+  std::vector<llvm::StringRef> argv;
+  for (size_t j{0}; j < driver.fcArgs.size(); ++j) {
+    argv.push_back(driver.fcArgs[j].data());
   }
+  for (auto &relo : relocatables) {
+    argv.push_back(relo.data());
+  }
+  if (!driver.outputPath.empty()) {
+    char dashO[3] = "-o";
+    argv.push_back(dashO);
+    argv.push_back(driver.outputPath.data());
+  }
+  Exec(argv, driver.verbose);
 }
 
 int main(int argc, char *const argv[]) {

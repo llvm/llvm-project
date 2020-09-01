@@ -32,15 +32,6 @@ struct TargetEnvAttributeStorage;
 struct VerCapExtAttributeStorage;
 } // namespace detail
 
-/// SPIR-V dialect-specific attribute kinds.
-namespace AttrKind {
-enum Kind {
-  InterfaceVarABI = Attribute::FIRST_SPIRV_ATTR, /// Interface var ABI
-  TargetEnv,                                     /// Target environment
-  VerCapExt, /// (version, extension, capability) triple
-};
-} // namespace AttrKind
-
 /// An attribute that specifies the information regarding the interface
 /// variable: descriptor set, binding, storage class.
 class InterfaceVarABIAttr

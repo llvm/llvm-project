@@ -12,6 +12,7 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 
 namespace clang {
 namespace tooling {
@@ -100,7 +101,8 @@ unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
           [](const SourceManager &SM, Lexer &Lex, Token Tok) -> unsigned {
             if (checkAndConsumeDirectiveWithName(Lex, "ifndef", Tok)) {
               skipComments(Lex, Tok);
-              if (checkAndConsumeDirectiveWithName(Lex, "define", Tok))
+              if (checkAndConsumeDirectiveWithName(Lex, "define", Tok) &&
+                  Tok.isAtStartOfLine())
                 return SM.getFileOffset(Tok.getLocation());
             }
             return 0;
@@ -173,12 +175,22 @@ inline StringRef trimInclude(StringRef IncludeName) {
 const char IncludeRegexPattern[] =
     R"(^[\t\ ]*#[\t\ ]*(import|include)[^"<]*(["<][^">]*[">]))";
 
+// The filename of Path excluding extension.
+// Used to match implementation with headers, this differs from sys::path::stem:
+//  - in names with multiple dots (foo.cu.cc) it terminates at the *first*
+//  - an empty stem is never returned: /foo/.bar.x => .bar
+//  - we don't bother to handle . and .. specially
+StringRef matchingStem(llvm::StringRef Path) {
+  StringRef Name = llvm::sys::path::filename(Path);
+  return Name.substr(0, Name.find('.', 1));
+}
+
 } // anonymous namespace
 
 IncludeCategoryManager::IncludeCategoryManager(const IncludeStyle &Style,
                                                StringRef FileName)
     : Style(Style), FileName(FileName) {
-  FileStem = llvm::sys::path::stem(FileName);
+  FileStem = matchingStem(FileName);
   for (const auto &Category : Style.IncludeCategories)
     CategoryRegexs.emplace_back(Category.Regex, llvm::Regex::IgnoreCase);
   IsMainFile = FileName.endswith(".c") || FileName.endswith(".cc") ||
@@ -221,8 +233,7 @@ int IncludeCategoryManager::getSortIncludePriority(StringRef IncludeName,
 bool IncludeCategoryManager::isMainHeader(StringRef IncludeName) const {
   if (!IncludeName.startswith("\""))
     return false;
-  StringRef HeaderStem =
-      llvm::sys::path::stem(IncludeName.drop_front(1).drop_back(1));
+  StringRef HeaderStem = matchingStem(IncludeName.drop_front(1).drop_back(1));
   if (FileStem.startswith(HeaderStem) ||
       FileStem.startswith_lower(HeaderStem)) {
     llvm::Regex MainIncludeRegex(HeaderStem.str() + Style.IncludeIsMainRegex,

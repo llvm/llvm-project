@@ -1,6 +1,6 @@
 # REQUIRES: arm
 
-# RUN: yaml2obj %s > %t.exe
+# RUN: yaml2obj %s -o %t.exe
 # RUN: %lldb %t.exe -o "disassemble -b -n entry" -b | FileCheck %s
 
 # CHECK: {{.*}}.exe[0x401000] <+0>: 0x0040 lsls   r0, r0, #0x1

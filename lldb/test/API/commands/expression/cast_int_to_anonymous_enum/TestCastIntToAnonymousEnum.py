@@ -19,4 +19,4 @@ class TestCastIntToAnonymousEnum(TestBase):
         lldbutil.run_to_source_breakpoint(self, '// break here',
                 lldb.SBFileSpec("main.cpp", False))
 
-        self.expect("expr (flow_e)0", substrs=['(flow_e) $0 = A'])
+        self.expect_expr("(flow_e)0", result_type="flow_e", result_value="A")

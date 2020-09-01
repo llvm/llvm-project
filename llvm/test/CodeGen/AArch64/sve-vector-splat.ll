@@ -303,7 +303,7 @@ define <vscale x 2 x double> @splat_nxv2f64_zero() {
 
 define <vscale x 8 x half> @splat_nxv8f16_imm() {
 ; CHECK-LABEL: splat_nxv8f16_imm:
-; CHECK: mov z0.h, #1.0
+; CHECK: fmov z0.h, #1.00000000
 ; CHECK-NEXT: ret
   %1 = insertelement <vscale x 8 x half> undef, half 1.0, i32 0
   %2 = shufflevector <vscale x 8 x half> %1, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
@@ -312,7 +312,7 @@ define <vscale x 8 x half> @splat_nxv8f16_imm() {
 
 define <vscale x 4 x half> @splat_nxv4f16_imm() {
 ; CHECK-LABEL: splat_nxv4f16_imm:
-; CHECK: mov z0.h, #1.0
+; CHECK: fmov z0.h, #1.00000000
 ; CHECK-NEXT: ret
   %1 = insertelement <vscale x 4 x half> undef, half 1.0, i32 0
   %2 = shufflevector <vscale x 4 x half> %1, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
@@ -321,7 +321,7 @@ define <vscale x 4 x half> @splat_nxv4f16_imm() {
 
 define <vscale x 2 x half> @splat_nxv2f16_imm() {
 ; CHECK-LABEL: splat_nxv2f16_imm:
-; CHECK: mov z0.h, #1.0
+; CHECK: fmov z0.h, #1.00000000
 ; CHECK-NEXT: ret
   %1 = insertelement <vscale x 2 x half> undef, half 1.0, i32 0
   %2 = shufflevector <vscale x 2 x half> %1, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
@@ -330,7 +330,7 @@ define <vscale x 2 x half> @splat_nxv2f16_imm() {
 
 define <vscale x 4 x float> @splat_nxv4f32_imm() {
 ; CHECK-LABEL: splat_nxv4f32_imm:
-; CHECK: mov z0.s, #1.0
+; CHECK: fmov z0.s, #1.00000000
 ; CHECK-NEXT: ret
   %1 = insertelement <vscale x 4 x float> undef, float 1.0, i32 0
   %2 = shufflevector <vscale x 4 x float> %1, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
@@ -339,7 +339,7 @@ define <vscale x 4 x float> @splat_nxv4f32_imm() {
 
 define <vscale x 2 x float> @splat_nxv2f32_imm() {
 ; CHECK-LABEL: splat_nxv2f32_imm:
-; CHECK: mov z0.s, #1.0
+; CHECK: fmov z0.s, #1.00000000
 ; CHECK-NEXT: ret
   %1 = insertelement <vscale x 2 x float> undef, float 1.0, i32 0
   %2 = shufflevector <vscale x 2 x float> %1, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
@@ -348,7 +348,7 @@ define <vscale x 2 x float> @splat_nxv2f32_imm() {
 
 define <vscale x 2 x double> @splat_nxv2f64_imm() {
 ; CHECK-LABEL: splat_nxv2f64_imm:
-; CHECK: mov z0.d, #1.0
+; CHECK: fmov z0.d, #1.00000000
 ; CHECK-NEXT: ret
   %1 = insertelement <vscale x 2 x double> undef, double 1.0, i32 0
   %2 = shufflevector <vscale x 2 x double> %1, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer

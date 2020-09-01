@@ -488,6 +488,7 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
   if (!std::equal(op_begin(), op_end(), I->op_begin()))
     return false;
 
+  // WARNING: this logic must be kept in sync with EliminateDuplicatePHINodes()!
   if (const PHINode *thisPHI = dyn_cast<PHINode>(this)) {
     const PHINode *otherPHI = cast<PHINode>(I);
     return std::equal(thisPHI->block_begin(), thisPHI->block_end(),
@@ -670,6 +671,13 @@ bool Instruction::isAssociative() const {
   default:
     return false;
   }
+}
+
+bool Instruction::isCommutative() const {
+  if (auto *II = dyn_cast<IntrinsicInst>(this))
+    return II->isCommutative();
+  // TODO: Should allow icmp/fcmp?
+  return isCommutative(getOpcode());
 }
 
 unsigned Instruction::getNumSuccessors() const {

@@ -22,6 +22,7 @@
 #ifndef MLIR_DIALECT_LLVMIR_ROCDLDIALECT_H_
 #define MLIR_DIALECT_LLVMIR_ROCDLDIALECT_H_
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"

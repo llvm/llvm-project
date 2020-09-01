@@ -54,3 +54,13 @@ struct Two {
   virtual ~Two();
 };
 } // namespace result
+
+namespace func_shadow {
+void One(int);
+struct One {
+  int one = 142;
+  constexpr One() = default;
+  virtual ~One();
+};
+void One(float);
+} // namespace func_shadow

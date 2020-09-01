@@ -11,12 +11,17 @@
 #include "utils/FPUtil/BasicOperations.h"
 #include "utils/FPUtil/BitPatterns.h"
 #include "utils/FPUtil/ClassificationFunctions.h"
+#include "utils/FPUtil/FPBits.h"
 #include "utils/FPUtil/FloatOperations.h"
 #include "utils/FPUtil/FloatProperties.h"
+#include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
 
+using FPBits = __llvm_libc::fputil::FPBits<double>;
 using __llvm_libc::fputil::valueAsBits;
 using __llvm_libc::fputil::valueFromBits;
+
+namespace mpfr = __llvm_libc::testing::mpfr;
 
 using BitPatterns = __llvm_libc::fputil::BitPatterns<double>;
 using Properties = __llvm_libc::fputil::FloatProperties<double>;
@@ -127,17 +132,19 @@ TEST(FrexpTest, SomeIntegers) {
 }
 
 TEST(FrexpTest, InDoubleRange) {
-  using BitsType = Properties::BitsType;
-  constexpr BitsType count = 1000000;
-  constexpr BitsType step = UINT64_MAX / count;
-  for (BitsType i = 0, v = 0; i <= count; ++i, v += step) {
-    double x = valueFromBits(v);
+  using UIntType = FPBits::UIntType;
+  constexpr UIntType count = 1000001;
+  constexpr UIntType step = UIntType(-1) / count;
+  for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
+    double x = FPBits(v);
     if (isnan(x) || isinf(x) || x == 0.0)
       continue;
-    int exponent;
-    double frac = __llvm_libc::frexp(x, &exponent);
 
-    ASSERT_TRUE(__llvm_libc::fputil::abs(frac) < 1.0);
-    ASSERT_TRUE(__llvm_libc::fputil::abs(frac) >= 0.5);
+    mpfr::BinaryOutput<double> result;
+    result.f = __llvm_libc::frexp(x, &result.i);
+
+    ASSERT_TRUE(__llvm_libc::fputil::abs(result.f) < 1.0);
+    ASSERT_TRUE(__llvm_libc::fputil::abs(result.f) >= 0.5);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Frexp, x, result, 0.0);
   }
 }

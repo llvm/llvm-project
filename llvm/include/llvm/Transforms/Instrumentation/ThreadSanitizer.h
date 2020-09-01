@@ -28,6 +28,7 @@ FunctionPass *createThreadSanitizerLegacyPassPass();
 struct ThreadSanitizerPass : public PassInfoMixin<ThreadSanitizerPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

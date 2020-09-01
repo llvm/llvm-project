@@ -3,15 +3,15 @@
 ; legacy pass manager doesn't introduce unexpected structural changes in the
 ; pass pipeline.
 ;
-; RUN: opt -disable-output -disable-verify -debug-pass=Structure \
+; RUN: opt -enable-new-pm=0 -disable-output -disable-verify -debug-pass=Structure \
 ; RUN:     -O2 %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O2
 ; RUN: llvm-profdata merge %S/Inputs/pass-pipelines.proftext -o %t.profdata
-; RUN: opt -disable-output -disable-verify -debug-pass=Structure \
+; RUN: opt -enable-new-pm=0 -disable-output -disable-verify -debug-pass=Structure \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -O2 %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O2 --check-prefix=PGOUSE
-; RUN: opt -disable-output -disable-verify -debug-pass=Structure \
+; RUN: opt -enable-new-pm=0 -disable-output -disable-verify -debug-pass=Structure \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -hot-cold-split \
 ; RUN:     -O2 %s 2>&1 \

@@ -1,4 +1,4 @@
-# RUN: yaml2obj %p/Inputs/implicit_const_form_support.yaml > %ttest
+# RUN: yaml2obj %p/Inputs/implicit_const_form_support.yaml -o %ttest
 # RUN: lldb-test breakpoints %ttest %s | FileCheck %s
 
 ## The intention of the test is to check that DW_FORM_implicit_const

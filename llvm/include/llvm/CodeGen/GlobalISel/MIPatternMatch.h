@@ -251,6 +251,12 @@ m_GLShr(const LHS &L, const RHS &R) {
   return BinaryOp_match<LHS, RHS, TargetOpcode::G_LSHR, false>(L, R);
 }
 
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_ASHR, false>
+m_GAShr(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_ASHR, false>(L, R);
+}
+
 // Helper for unary instructions (G_[ZSA]EXT/G_TRUNC) etc
 template <typename SrcTy, unsigned Opcode> struct UnaryOp_match {
   SrcTy L;

@@ -16,7 +16,8 @@ const int b = a;
 #else
 
 const int a = 5;
-typedef int T[b]; // expected-error {{variable length array}} expected-error {{must be an integer constant expression}}
+typedef int T[b]; // expected-error {{variable length array}} expected-error {{must be an integer constant expression}} expected-note {{initializer of 'b'}}
+// expected-note@14 {{here}}
 typedef int T[5];
 
 #endif

@@ -158,20 +158,24 @@ std::error_code FileCollector::copyFiles(bool StopOnError) {
   std::lock_guard<std::mutex> lock(Mutex);
 
   for (auto &entry : VFSWriter.getMappings()) {
-    // Create directory tree.
-    if (std::error_code EC =
-            sys::fs::create_directories(sys::path::parent_path(entry.RPath),
-                                        /*IgnoreExisting=*/true)) {
-      if (StopOnError)
-        return EC;
-    }
-
     // Get the status of the original file/directory.
     sys::fs::file_status Stat;
     if (std::error_code EC = sys::fs::status(entry.VPath, Stat)) {
       if (StopOnError)
         return EC;
       continue;
+    }
+
+    // Continue if the file doesn't exist.
+    if (Stat.type() == sys::fs::file_type::file_not_found)
+      continue;
+
+    // Create directory tree.
+    if (std::error_code EC =
+            sys::fs::create_directories(sys::path::parent_path(entry.RPath),
+                                        /*IgnoreExisting=*/true)) {
+      if (StopOnError)
+        return EC;
     }
 
     if (Stat.type() == sys::fs::file_type::directory_file) {

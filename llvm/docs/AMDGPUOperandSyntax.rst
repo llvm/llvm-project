@@ -85,7 +85,7 @@ GFX10 *Image* instructions may use special *NSA* (Non-Sequential Address) syntax
     Syntax                                Description
     ===================================== =================================================
     **[Vm**, \ **Vn**, ... **Vk**\ **]**  A sequence of 32-bit *vector* registers.
-                                          Each register may be specified using a syntax
+                                          Each register may be specified using syntax
                                           defined :ref:`above<amdgpu_synid_v>`.
 
                                           In contrast with standard syntax, registers
@@ -408,6 +408,10 @@ High and low 32 bits of *flat scratch* address may be accessed as separate regis
     [flat_scratch_hi]         High 32 bits of *flat scratch* address register (an SP3 syntax).
     ========================= =========================================================================
 
+Note that *flat_scratch*, *flat_scratch_lo* and *flat_scratch_hi* are not accessible as assembler
+registers in GFX10, but *flat_scratch* is readable/writable with the help of
+*s_get_reg* and *s_set_reg* instructions.
+
 .. _amdgpu_synid_xnack:
 
 xnack
@@ -438,6 +442,10 @@ High and low 32 bits of *xnack mask* may be accessed as separate registers:
     [xnack_mask_lo]       Low 32 bits of *xnack mask* register (an SP3 syntax).
     [xnack_mask_hi]       High 32 bits of *xnack mask* register (an SP3 syntax).
     ===================== ==============================================================
+
+Note that *xnack_mask*, *xnack_mask_lo* and *xnack_mask_hi* are not accessible as assembler
+registers in GFX10, but *xnack_mask* is readable/writable with the help of
+*s_get_reg* and *s_set_reg* instructions.
 
 .. _amdgpu_synid_vcc:
 .. _amdgpu_synid_vcc_lo:
@@ -631,6 +639,9 @@ Other floating-point numbers have to be encoded as :ref:`literals<amdgpu_synid_l
     0.15915494            1.0/(2.0*pi). Use only for 16- and 32-bit operands.   GFX8, GFX9, GFX10
     0.15915494309189532   1.0/(2.0*pi).                                         GFX8, GFX9, GFX10
     ===================== ===================================================== ==================
+
+.. WARNING:: Floating-point inline constants cannot be used with *16-bit integer* operands. \
+             Assembler will attempt to encode these values as literals.
 
 .. WARNING:: GFX7 does not support inline constants for *f16* operands.
 
@@ -859,7 +870,7 @@ operations produce 64-bit integer results.
 Syntax of Expressions
 ---------------------
 
-The syntax of expressions is shown below::
+Syntax of expressions is shown below::
 
     expr ::= expr binop expr | primaryexpr ;
 
@@ -1065,6 +1076,8 @@ Depending on operand kind, this is performed by either assembler or AMDGPU H/W (
     Expected type  Required FP Type Conversion        Description
     ============== ================ ================= =================================================================
     i16, u16, b16  f16              f16(num)          Convert to f16 and use bits of the result as an integer value.
+                                                      The value has to be encoded as a literal or an error occurs.
+                                                      Note that the value cannot be encoded as an inline constant.
     i32, u32, b32  f32              f32(num)          Convert to f32 and use bits of the result as an integer value.
     i64, u64, b64  \-               \-                Conversion disabled.
     f16            f16              f16(num)          Convert to f16.

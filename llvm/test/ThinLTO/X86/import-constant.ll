@@ -14,13 +14,23 @@
 ; RUN: llvm-dis %t-out.1.3.import.bc -o - | FileCheck %s --check-prefix=IMPORT
 ; RUN: llvm-dis %t-out.1.4.opt.bc -o - | FileCheck %s --check-prefix=OPT
 
+; Check when importing references is prohibited
+; RUN: llvm-lto2 run -save-temps %t1.bc %t2.bc -o %t-out-norefs \
+; RUN:    -import-constants-with-refs=false \
+; RUN:    -r=%t1.bc,main,plx \
+; RUN:    -r=%t1.bc,_Z6getObjv,l \
+; RUN:    -r=%t2.bc,_Z6getObjv,pl \
+; RUN:    -r=%t2.bc,val,pl \
+; RUN:    -r=%t2.bc,outer,pl
+; RUN: llvm-dis %t-out-norefs.1.3.import.bc -o - | FileCheck %s --check-prefix=NOREFS
+
 ; Check that variable has been promoted in the source module
 ; PROMOTE: @_ZL3Obj.llvm.{{.*}} = hidden constant %struct.S { i32 4, i32 8, i32* @val }
 
 ; @outer is a write-only variable, so it's been converted to zeroinitializer.
 ; IMPORT:      @outer = internal local_unnamed_addr global %struct.Q zeroinitializer
-; IMPORT-NEXT: @_ZL3Obj.llvm.{{.*}} =  available_externally hidden constant %struct.S { i32 4, i32 8, i32* @val }
-; IMPORT-NEXT: @val = external dso_local global i32
+; IMPORT-NEXT: @_ZL3Obj.llvm.{{.*}} = available_externally hidden constant %struct.S { i32 4, i32 8, i32* @val }
+; IMPORT-NEXT: @val = available_externally global i32 42
 
 ; OPT: @outer = internal unnamed_addr global %struct.Q zeroinitializer
 
@@ -28,6 +38,9 @@
 ; OPT-NEXT: entry:
 ; OPT-NEXT:   store %struct.S* null, %struct.S** getelementptr inbounds (%struct.Q, %struct.Q* @outer, i64 0, i32 0)
 ; OPT-NEXT:   ret i32 12
+
+; NOREFS:      @outer = internal local_unnamed_addr global %struct.Q zeroinitializer
+; NOREFS-NEXT: @_ZL3Obj.llvm.{{.*}} = external hidden constant %struct.S
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

@@ -733,19 +733,212 @@ tfe
 
 See a description :ref:`here<amdgpu_synid_tfe>`.
 
-.. _amdgpu_synid_dfmt:
+.. _amdgpu_synid_fmt:
 
-dfmt
+fmt
+~~~
+
+Specifies data and numeric formats used by the operation.
+The default numeric format is BUF_NUM_FORMAT_UNORM.
+The default data format is BUF_DATA_FORMAT_8.
+
+    ========================================= ===============================================================
+    Syntax                                    Description
+    ========================================= ===============================================================
+    format:{0..127}                           Use format specified as either an
+                                              :ref:`integer number<amdgpu_synid_integer_number>` or an
+                                              :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+    format:[<data format>]                    Use the specified data format and
+                                              default numeric format.
+    format:[<numeric format>]                 Use the specified numeric format and
+                                              default data format.
+    format:[<data format>, <numeric format>]  Use the specified data and numeric formats.
+    format:[<numeric format>, <data format>]  Use the specified data and numeric formats.
+    ========================================= ===============================================================
+
+.. _amdgpu_synid_format_data:
+
+Supported data formats are defined in the following table:
+
+    ========================================= ===============================
+    Syntax                                    Note
+    ========================================= ===============================
+    BUF_DATA_FORMAT_INVALID
+    BUF_DATA_FORMAT_8                         Default value.
+    BUF_DATA_FORMAT_16
+    BUF_DATA_FORMAT_8_8
+    BUF_DATA_FORMAT_32
+    BUF_DATA_FORMAT_16_16
+    BUF_DATA_FORMAT_10_11_11
+    BUF_DATA_FORMAT_11_11_10
+    BUF_DATA_FORMAT_10_10_10_2
+    BUF_DATA_FORMAT_2_10_10_10
+    BUF_DATA_FORMAT_8_8_8_8
+    BUF_DATA_FORMAT_32_32
+    BUF_DATA_FORMAT_16_16_16_16
+    BUF_DATA_FORMAT_32_32_32
+    BUF_DATA_FORMAT_32_32_32_32
+    BUF_DATA_FORMAT_RESERVED_15
+    ========================================= ===============================
+
+.. _amdgpu_synid_format_num:
+
+Supported numeric formats are defined below:
+
+    ========================================= ===============================
+    Syntax                                    Note
+    ========================================= ===============================
+    BUF_NUM_FORMAT_UNORM                      Default value.
+    BUF_NUM_FORMAT_SNORM
+    BUF_NUM_FORMAT_USCALED
+    BUF_NUM_FORMAT_SSCALED
+    BUF_NUM_FORMAT_UINT
+    BUF_NUM_FORMAT_SINT
+    BUF_NUM_FORMAT_SNORM_OGL                  GFX7 only.
+    BUF_NUM_FORMAT_RESERVED_6                 GFX8 and GFX9 only.
+    BUF_NUM_FORMAT_FLOAT
+    ========================================= ===============================
+
+Examples:
+
+.. parsed-literal::
+
+  format:0
+  format:127
+  format:[BUF_DATA_FORMAT_16]
+  format:[BUF_DATA_FORMAT_16,BUF_NUM_FORMAT_SSCALED]
+  format:[BUF_NUM_FORMAT_FLOAT]
+
+.. _amdgpu_synid_ufmt:
+
+ufmt
 ~~~~
 
-TBD
+Specifies a unified format used by the operation.
+The default format is BUF_FMT_8_UNORM.
+GFX10 only.
 
-.. _amdgpu_synid_nfmt:
+    ========================================= ===============================================================
+    Syntax                                    Description
+    ========================================= ===============================================================
+    format:{0..127}                           Use unified format specified as either an
+                                              :ref:`integer number<amdgpu_synid_integer_number>` or an
+                                              :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+                                              Note that unified format numbers are not compatible with
+                                              format numbers used for pre-GFX10 ISA.
+    format:[<unified format>]                 Use the specified unified format.
+    ========================================= ===============================================================
 
-nfmt
-~~~~
+Unified format is a replacement for :ref:`data<amdgpu_synid_format_data>`
+and :ref:`numeric<amdgpu_synid_format_num>` formats. For compatibility with older ISA,
+:ref:`syntax with data and numeric formats<amdgpu_synid_fmt>` is still accepthed
+provided that the combination of formats can be mapped to a unified format.
 
-TBD
+Supported unified formats and equivalent combinations of data and numeric formats
+are defined below:
+
+    ============================== ============================== =============================
+    Syntax                         Equivalent Data Format         Equivalent Numeric Format
+    ============================== ============================== =============================
+    BUF_FMT_INVALID                BUF_DATA_FORMAT_INVALID        BUF_NUM_FORMAT_UNORM
+
+    BUF_FMT_8_UNORM                BUF_DATA_FORMAT_8              BUF_NUM_FORMAT_UNORM
+    BUF_FMT_8_SNORM                BUF_DATA_FORMAT_8              BUF_NUM_FORMAT_SNORM
+    BUF_FMT_8_USCALED              BUF_DATA_FORMAT_8              BUF_NUM_FORMAT_USCALED
+    BUF_FMT_8_SSCALED              BUF_DATA_FORMAT_8              BUF_NUM_FORMAT_SSCALED
+    BUF_FMT_8_UINT                 BUF_DATA_FORMAT_8              BUF_NUM_FORMAT_UINT
+    BUF_FMT_8_SINT                 BUF_DATA_FORMAT_8              BUF_NUM_FORMAT_SINT
+
+    BUF_FMT_16_UNORM               BUF_DATA_FORMAT_16             BUF_NUM_FORMAT_UNORM
+    BUF_FMT_16_SNORM               BUF_DATA_FORMAT_16             BUF_NUM_FORMAT_SNORM
+    BUF_FMT_16_USCALED             BUF_DATA_FORMAT_16             BUF_NUM_FORMAT_USCALED
+    BUF_FMT_16_SSCALED             BUF_DATA_FORMAT_16             BUF_NUM_FORMAT_SSCALED
+    BUF_FMT_16_UINT                BUF_DATA_FORMAT_16             BUF_NUM_FORMAT_UINT
+    BUF_FMT_16_SINT                BUF_DATA_FORMAT_16             BUF_NUM_FORMAT_SINT
+    BUF_FMT_16_FLOAT               BUF_DATA_FORMAT_16             BUF_NUM_FORMAT_FLOAT
+
+    BUF_FMT_8_8_UNORM              BUF_DATA_FORMAT_8_8            BUF_NUM_FORMAT_UNORM
+    BUF_FMT_8_8_SNORM              BUF_DATA_FORMAT_8_8            BUF_NUM_FORMAT_SNORM
+    BUF_FMT_8_8_USCALED            BUF_DATA_FORMAT_8_8            BUF_NUM_FORMAT_USCALED
+    BUF_FMT_8_8_SSCALED            BUF_DATA_FORMAT_8_8            BUF_NUM_FORMAT_SSCALED
+    BUF_FMT_8_8_UINT               BUF_DATA_FORMAT_8_8            BUF_NUM_FORMAT_UINT
+    BUF_FMT_8_8_SINT               BUF_DATA_FORMAT_8_8            BUF_NUM_FORMAT_SINT
+
+    BUF_FMT_32_UINT                BUF_DATA_FORMAT_32             BUF_NUM_FORMAT_UINT
+    BUF_FMT_32_SINT                BUF_DATA_FORMAT_32             BUF_NUM_FORMAT_SINT
+    BUF_FMT_32_FLOAT               BUF_DATA_FORMAT_32             BUF_NUM_FORMAT_FLOAT
+
+    BUF_FMT_16_16_UNORM            BUF_DATA_FORMAT_16_16          BUF_NUM_FORMAT_UNORM
+    BUF_FMT_16_16_SNORM            BUF_DATA_FORMAT_16_16          BUF_NUM_FORMAT_SNORM
+    BUF_FMT_16_16_USCALED          BUF_DATA_FORMAT_16_16          BUF_NUM_FORMAT_USCALED
+    BUF_FMT_16_16_SSCALED          BUF_DATA_FORMAT_16_16          BUF_NUM_FORMAT_SSCALED
+    BUF_FMT_16_16_UINT             BUF_DATA_FORMAT_16_16          BUF_NUM_FORMAT_UINT
+    BUF_FMT_16_16_SINT             BUF_DATA_FORMAT_16_16          BUF_NUM_FORMAT_SINT
+    BUF_FMT_16_16_FLOAT            BUF_DATA_FORMAT_16_16          BUF_NUM_FORMAT_FLOAT
+
+    BUF_FMT_10_11_11_UNORM         BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_UNORM
+    BUF_FMT_10_11_11_SNORM         BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SNORM
+    BUF_FMT_10_11_11_USCALED       BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_USCALED
+    BUF_FMT_10_11_11_SSCALED       BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SSCALED
+    BUF_FMT_10_11_11_UINT          BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_UINT
+    BUF_FMT_10_11_11_SINT          BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SINT
+    BUF_FMT_10_11_11_FLOAT         BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_FLOAT
+
+    BUF_FMT_11_11_10_UNORM         BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_UNORM
+    BUF_FMT_11_11_10_SNORM         BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SNORM
+    BUF_FMT_11_11_10_USCALED       BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_USCALED
+    BUF_FMT_11_11_10_SSCALED       BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SSCALED
+    BUF_FMT_11_11_10_UINT          BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_UINT
+    BUF_FMT_11_11_10_SINT          BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SINT
+    BUF_FMT_11_11_10_FLOAT         BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_FLOAT
+
+    BUF_FMT_10_10_10_2_UNORM       BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_UNORM
+    BUF_FMT_10_10_10_2_SNORM       BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_SNORM
+    BUF_FMT_10_10_10_2_USCALED     BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_USCALED
+    BUF_FMT_10_10_10_2_SSCALED     BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_SSCALED
+    BUF_FMT_10_10_10_2_UINT        BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_UINT
+    BUF_FMT_10_10_10_2_SINT        BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_SINT
+
+    BUF_FMT_2_10_10_10_UNORM       BUF_DATA_FORMAT_2_10_10_10     BUF_NUM_FORMAT_UNORM
+    BUF_FMT_2_10_10_10_SNORM       BUF_DATA_FORMAT_2_10_10_10     BUF_NUM_FORMAT_SNORM
+    BUF_FMT_2_10_10_10_USCALED     BUF_DATA_FORMAT_2_10_10_10     BUF_NUM_FORMAT_USCALED
+    BUF_FMT_2_10_10_10_SSCALED     BUF_DATA_FORMAT_2_10_10_10     BUF_NUM_FORMAT_SSCALED
+    BUF_FMT_2_10_10_10_UINT        BUF_DATA_FORMAT_2_10_10_10     BUF_NUM_FORMAT_UINT
+    BUF_FMT_2_10_10_10_SINT        BUF_DATA_FORMAT_2_10_10_10     BUF_NUM_FORMAT_SINT
+
+    BUF_FMT_8_8_8_8_UNORM          BUF_DATA_FORMAT_8_8_8_8        BUF_NUM_FORMAT_UNORM
+    BUF_FMT_8_8_8_8_SNORM          BUF_DATA_FORMAT_8_8_8_8        BUF_NUM_FORMAT_SNORM
+    BUF_FMT_8_8_8_8_USCALED        BUF_DATA_FORMAT_8_8_8_8        BUF_NUM_FORMAT_USCALED
+    BUF_FMT_8_8_8_8_SSCALED        BUF_DATA_FORMAT_8_8_8_8        BUF_NUM_FORMAT_SSCALED
+    BUF_FMT_8_8_8_8_UINT           BUF_DATA_FORMAT_8_8_8_8        BUF_NUM_FORMAT_UINT
+    BUF_FMT_8_8_8_8_SINT           BUF_DATA_FORMAT_8_8_8_8        BUF_NUM_FORMAT_SINT
+
+    BUF_FMT_32_32_UINT             BUF_DATA_FORMAT_32_32          BUF_NUM_FORMAT_UINT
+    BUF_FMT_32_32_SINT             BUF_DATA_FORMAT_32_32          BUF_NUM_FORMAT_SINT
+    BUF_FMT_32_32_FLOAT            BUF_DATA_FORMAT_32_32          BUF_NUM_FORMAT_FLOAT
+
+    BUF_FMT_16_16_16_16_UNORM      BUF_DATA_FORMAT_16_16_16_16    BUF_NUM_FORMAT_UNORM
+    BUF_FMT_16_16_16_16_SNORM      BUF_DATA_FORMAT_16_16_16_16    BUF_NUM_FORMAT_SNORM
+    BUF_FMT_16_16_16_16_USCALED    BUF_DATA_FORMAT_16_16_16_16    BUF_NUM_FORMAT_USCALED
+    BUF_FMT_16_16_16_16_SSCALED    BUF_DATA_FORMAT_16_16_16_16    BUF_NUM_FORMAT_SSCALED
+    BUF_FMT_16_16_16_16_UINT       BUF_DATA_FORMAT_16_16_16_16    BUF_NUM_FORMAT_UINT
+    BUF_FMT_16_16_16_16_SINT       BUF_DATA_FORMAT_16_16_16_16    BUF_NUM_FORMAT_SINT
+    BUF_FMT_16_16_16_16_FLOAT      BUF_DATA_FORMAT_16_16_16_16    BUF_NUM_FORMAT_FLOAT
+
+    BUF_FMT_32_32_32_UINT          BUF_DATA_FORMAT_32_32_32       BUF_NUM_FORMAT_UINT
+    BUF_FMT_32_32_32_SINT          BUF_DATA_FORMAT_32_32_32       BUF_NUM_FORMAT_SINT
+    BUF_FMT_32_32_32_FLOAT         BUF_DATA_FORMAT_32_32_32       BUF_NUM_FORMAT_FLOAT
+    BUF_FMT_32_32_32_32_UINT       BUF_DATA_FORMAT_32_32_32_32    BUF_NUM_FORMAT_UINT
+    BUF_FMT_32_32_32_32_SINT       BUF_DATA_FORMAT_32_32_32_32    BUF_NUM_FORMAT_SINT
+    BUF_FMT_32_32_32_32_FLOAT      BUF_DATA_FORMAT_32_32_32_32    BUF_NUM_FORMAT_FLOAT
+    ============================== ============================== =============================
+
+Examples:
+
+.. parsed-literal::
+
+  format:0
+  format:[BUF_FMT_32_UINT]
 
 SMRD/SMEM Modifiers
 -------------------
@@ -1491,8 +1684,8 @@ See a description :ref:`here<amdgpu_synid_clamp>`.
 
 .. _amdgpu_synid_mad_mix:
 
-VOP3P V_MAD_MIX Modifiers
--------------------------
+VOP3P MAD_MIX/FMA_MIX Modifiers
+-------------------------------
 
 *v_mad_mix\** and *v_fma_mix\**
 instructions use *op_sel* and *op_sel_hi* modifiers

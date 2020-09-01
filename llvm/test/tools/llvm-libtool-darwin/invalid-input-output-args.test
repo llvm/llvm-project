@@ -10,7 +10,7 @@
 # RUN: not llvm-libtool-darwin -static %t.input 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NO-OUTPUT
 
-# NO-OUTPUT: for the -o option: must be specified at least once!
+# NO-OUTPUT: for the -o option: must be specified
 
 ## Missing argument to -o:
 # RUN: not llvm-libtool-darwin -static %t.input -o 2>&1 | \
@@ -22,7 +22,7 @@
 # RUN: not llvm-libtool-darwin -static %t.input -o %t.lib1 -o %t.lib2 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=DOUBLE-OUTPUT
 
-# DOUBLE-OUTPUT: for the -o option: must occur exactly one time!
+# DOUBLE-OUTPUT: for the -o option: may only occur zero or one times!
 
 ## Input file not found:
 # RUN: not llvm-libtool-darwin -static -o %t.lib %t.missing 2>&1 | \

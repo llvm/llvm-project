@@ -1,0 +1,15 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_ARM
+  Flags:           [ EF_ARM_SOFT_FLOAT, EF_ARM_EABI_VER5 ]
+Sections:
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000010000
+    AddressAlign:    0x0000000000000004
+    Content:         040000001400000003000000474E5500

@@ -339,6 +339,9 @@ private:
           assert(TargetSymbol && "No target symbol from parsePairRelocation?");
           break;
         }
+        case PCRel32TLV:
+          return make_error<JITLinkError>(
+              "MachO TLV relocations not yet supported");
         default:
           llvm_unreachable("Special relocation kind should not appear in "
                            "mach-o file");

@@ -1,6 +1,6 @@
 # REQUIRES: aarch64
 
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 # RUN: lld-link /out:%t.dll /dll %t.obj /export:exportfn1 /export:exportfn2 /implib:%t.lib
 # RUN: llvm-objdump -p %t.dll | FileCheck %s
 # RUN: llvm-objdump -r %t.lib | FileCheck %s --check-prefix=RELOCS

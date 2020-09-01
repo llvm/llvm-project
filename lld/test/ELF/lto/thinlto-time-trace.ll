@@ -5,13 +5,13 @@
 ; RUN: opt -module-summary %p/Inputs/thinlto.ll -o %t2.o
 
 ; Test single-threaded
-; RUN: ld.lld --thinlto-jobs=1 -time-trace -time-trace-granularity=0 -shared %t1.o %t2.o -o %t3.so
+; RUN: ld.lld --thinlto-jobs=1 --time-trace --time-trace-granularity=0 -shared %t1.o %t2.o -o %t3.so
 ; RUN: cat %t3.so.time-trace \
 ; RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 ; RUN:   | FileCheck %s
 
 ; Test multi-threaded
-; RUN: ld.lld -time-trace -time-trace-granularity=0 -shared %t1.o %t2.o -o %t4.so
+; RUN: ld.lld --time-trace --time-trace-granularity=0 -shared %t1.o %t2.o -o %t4.so
 ; RUN: cat %t4.so.time-trace \
 ; RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 ; RUN:   | FileCheck %s

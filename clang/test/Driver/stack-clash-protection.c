@@ -1,6 +1,6 @@
 // RUN: %clang -target i386-unknown-linux -fstack-clash-protection -### %s 2>&1 | FileCheck %s -check-prefix=SCP-i386
-// RUN: %clang -target i386-unknown-linux -fnostack-clash-protection -fstack-clash-protection -### %s 2>&1 | FileCheck %s -check-prefix=SCP-i386
-// RUN: %clang -target i386-unknown-linux -fstack-clash-protection -fnostack-clash-protection -### %s 2>&1 | FileCheck %s -check-prefix=SCP-i386-NO
+// RUN: %clang -target i386-unknown-linux -fno-stack-clash-protection -fstack-clash-protection -### %s 2>&1 | FileCheck %s -check-prefix=SCP-i386
+// RUN: %clang -target i386-unknown-linux -fstack-clash-protection -fno-stack-clash-protection -### %s 2>&1 | FileCheck %s -check-prefix=SCP-i386-NO
 // SCP-i386: "-fstack-clash-protection"
 // SCP-i386-NO-NOT: "-fstack-clash-protection"
 

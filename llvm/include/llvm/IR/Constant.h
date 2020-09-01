@@ -78,7 +78,8 @@ public:
   bool isMinSignedValue() const;
 
   /// Return true if this is a finite and non-zero floating-point scalar
-  /// constant or a vector constant with all finite and non-zero elements.
+  /// constant or a fixed width vector constant with all finite and non-zero
+  /// elements.
   bool isFiniteNonZeroFP() const;
 
   /// Return true if this is a normal (as opposed to denormal) floating-point
@@ -100,11 +101,13 @@ public:
   bool isElementWiseEqual(Value *Y) const;
 
   /// Return true if this is a vector constant that includes any undefined
-  /// elements.
+  /// elements. Since it is impossible to inspect a scalable vector element-
+  /// wise at compile time, this function returns true only if the entire
+  /// vector is undef
   bool containsUndefElement() const;
 
-  /// Return true if this is a vector constant that includes any constant
-  /// expressions.
+  /// Return true if this is a fixed width vector constant that includes
+  /// any constant expressions.
   bool containsConstantExpression() const;
 
   /// Return true if evaluation of this constant could trap. This is true for

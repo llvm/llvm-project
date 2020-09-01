@@ -53,6 +53,13 @@ public:
                             const TargetRegisterInfo *TRI) const override;
 
   bool canCopyGluedNodeDuringSchedule(SDNode *N) const override;
+
+protected:
+  virtual MachineInstr *foldMemoryOperandImpl(
+      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
+      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
+      LiveIntervals *LIS = nullptr) const override;
+
 private:
   void expandLoadStackGuard(MachineBasicBlock::iterator MI) const override;
 };

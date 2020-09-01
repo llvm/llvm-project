@@ -2692,6 +2692,10 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
   // (convergent, noduplicate, or cross-basic-block tokens).
   // FIXME: We might be able to safely handle some of these in non-duplicated
   // regions.
+  TargetTransformInfo::TargetCostKind CostKind =
+      L.getHeader()->getParent()->hasMinSize()
+      ? TargetTransformInfo::TCK_CodeSize
+      : TargetTransformInfo::TCK_SizeAndLatency;
   int LoopCost = 0;
   for (auto *BB : L.blocks()) {
     int Cost = 0;
@@ -2705,7 +2709,7 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
         if (CB->isConvergent() || CB->cannotDuplicate())
           return false;
 
-      Cost += TTI.getUserCost(&I, TargetTransformInfo::TCK_CodeSize);
+      Cost += TTI.getUserCost(&I, CostKind);
     }
     assert(Cost >= 0 && "Must not have negative costs!");
     LoopCost += Cost;

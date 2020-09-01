@@ -126,7 +126,7 @@ define i16 @rotr_i16(i16 %x, i16 %z) {
 ; CHECK-NEXT:    clrlwi 5, 5, 28
 ; CHECK-NEXT:    srw 4, 6, 4
 ; CHECK-NEXT:    slw 3, 3, 5
-; CHECK-NEXT:    or 3, 3, 4
+; CHECK-NEXT:    or 3, 4, 3
 ; CHECK-NEXT:    blr
   %f = call i16 @llvm.fshr.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f

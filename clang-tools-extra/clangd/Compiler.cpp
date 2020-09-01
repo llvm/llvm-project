@@ -78,6 +78,8 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   CI->getPreprocessorOpts().PCHThroughHeader.clear();
   CI->getPreprocessorOpts().PCHWithHdrStop = false;
   CI->getPreprocessorOpts().PCHWithHdrStopCreate = false;
+  // Don't crash on `#pragma clang __debug parser_crash`
+  CI->getPreprocessorOpts().DisablePragmaDebugCrash = true;
 
   // Recovery expression currently only works for C++.
   if (CI->getLangOpts()->CPlusPlus) {

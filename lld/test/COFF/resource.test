@@ -1,4 +1,4 @@
-# RUN: yaml2obj < %p/Inputs/ret42.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
 # RUN: lld-link /out:%t.exe /entry:main %t.obj %p/Inputs/resource.res
 
 # Check if the binary contains UTF-16LE string "Hello" copied from resource.res.

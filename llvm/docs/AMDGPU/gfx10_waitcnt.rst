@@ -62,4 +62,3 @@ Examples:
     s_waitcnt expcnt(2) lgkmcnt(3)
     s_waitcnt vmcnt(1), expcnt(2), lgkmcnt(3)
     s_waitcnt vmcnt(1) & lgkmcnt_sat(100) & expcnt(2)
-

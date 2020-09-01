@@ -1,7 +1,24 @@
-set(system_libs)
-if ( LLVM_ENABLE_ZLIB AND HAVE_LIBZ )
-  set(system_libs ${system_libs} ${ZLIB_LIBRARIES})
+if(LLVM_ENABLE_ZLIB)
+  set(imported_libs ZLIB::ZLIB)
 endif()
+
+function(get_system_libname libpath libname)
+  get_filename_component(libpath ${libpath} NAME)
+  set(prefixes ${CMAKE_FIND_LIBRARY_PREFIXES})
+  set(suffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  list(FILTER prefixes EXCLUDE REGEX "^\\s*$")
+  list(FILTER suffixes EXCLUDE REGEX "^\\s*$")
+  if( prefixes )
+    string(REPLACE ";" "|" prefixes "${prefixes}")
+    string(REGEX REPLACE "^(${prefixes})" "" libpath ${libpath})
+  endif()
+  if( suffixes )
+    string(REPLACE ";" "|" suffixes "${suffixes}")
+    string(REGEX REPLACE "(${suffixes})$" "" libpath ${libpath})
+  endif()
+  set(${libname} "${libpath}" PARENT_SCOPE)
+endfunction()
+
 if( MSVC OR MINGW )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
@@ -21,10 +38,8 @@ elseif( CMAKE_HOST_UNIX )
     STRING(REGEX REPLACE "^lib" "" Backtrace_LIBFILE ${Backtrace_LIBFILE})
     set(system_libs ${system_libs} ${Backtrace_LIBFILE})
   endif()
-  if(LLVM_ENABLE_TERMINFO)
-    if(HAVE_TERMINFO)
-      set(system_libs ${system_libs} ${TERMINFO_LIBS})
-    endif()
+  if( LLVM_ENABLE_TERMINFO )
+    set(imported_libs ${imported_libs} "${TERMINFO_LIB}")
   endif()
   if( LLVM_ENABLE_THREADS AND (HAVE_LIBATOMIC OR HAVE_CXX_LIBATOMICS64) )
     set(system_libs ${system_libs} atomic)
@@ -46,9 +61,35 @@ endif()
 
 # Link Z3 if the user wants to build it.
 if(LLVM_WITH_Z3)
-  set(Z3_LINK_FILES ${Z3_LIBRARIES})
-else()
-  set(Z3_LINK_FILES "")
+  set(system_libs ${system_libs} ${Z3_LIBRARIES})
+endif()
+
+# Override the C runtime allocator on Windows and embed it into LLVM tools & libraries
+if(LLVM_INTEGRATED_CRT_ALLOC)
+  if (CMAKE_BUILD_TYPE AND NOT ${LLVM_USE_CRT_${uppercase_CMAKE_BUILD_TYPE}} MATCHES "^(MT|MTd)$")
+    message(FATAL_ERROR "LLVM_INTEGRATED_CRT_ALLOC only works with /MT or /MTd. Use LLVM_USE_CRT_${uppercase_CMAKE_BUILD_TYPE} to set the appropriate option.")
+  endif()
+
+  string(REGEX REPLACE "(/|\\\\)$" "" LLVM_INTEGRATED_CRT_ALLOC "${LLVM_INTEGRATED_CRT_ALLOC}")
+
+  if(NOT EXISTS "${LLVM_INTEGRATED_CRT_ALLOC}")
+    message(FATAL_ERROR "Cannot find the path to `git clone` for the CRT allocator! (${LLVM_INTEGRATED_CRT_ALLOC}). Currently, rpmalloc, snmalloc and mimalloc are supported.")
+  endif()
+
+  if(LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$")
+    add_definitions(-DENABLE_OVERRIDE -DENABLE_PRELOAD)
+    set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
+  elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17" PARENT_SCOPE)
+    set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/override/malloc.cc" "${LLVM_INTEGRATED_CRT_ALLOC}/src/override/new.cc")
+    set(system_libs ${system_libs} "mincore.lib" "-INCLUDE:malloc")
+  elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "mimalloc$")
+    set(MIMALLOC_LIB "${LLVM_INTEGRATED_CRT_ALLOC}/out/msvc-x64/Release/mimalloc-static.lib")
+    if(NOT EXISTS "${MIMALLOC_LIB}")
+	  message(FATAL_ERROR "Cannot find the mimalloc static library. To build it, first apply the patch from https://github.com/microsoft/mimalloc/issues/268 then build the Release x64 target through ${LLVM_INTEGRATED_CRT_ALLOC}\\ide\\vs2019\\mimalloc.sln")
+    endif()
+    set(system_libs ${system_libs} "${MIMALLOC_LIB}" "-INCLUDE:malloc")
+  endif()
 endif()
 
 add_llvm_component_library(LLVMSupport
@@ -56,6 +97,7 @@ add_llvm_component_library(LLVMSupport
   ABIBreak.cpp
   ARMTargetParser.cpp
   AMDGPUMetadata.cpp
+  APFixedPoint.cpp
   APFloat.cpp
   APInt.cpp
   APSInt.cpp
@@ -171,6 +213,8 @@ add_llvm_component_library(LLVMSupport
   xxhash.cpp
   Z3Solver.cpp
 
+  ${ALLOCATOR_FILES}
+
 # System
   Atomic.cpp
   DynamicLibrary.cpp
@@ -194,10 +238,30 @@ add_llvm_component_library(LLVMSupport
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ADT
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support
   ${Backtrace_INCLUDE_DIRS}
-  LINK_LIBS ${system_libs} ${delayload_flags} ${Z3_LINK_FILES}
+  LINK_LIBS ${system_libs} ${imported_libs} ${delayload_flags}
   )
 
-set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${system_libs}")
+set(llvm_system_libs ${system_libs})
+
+if(LLVM_ENABLE_ZLIB)
+  # CMAKE_BUILD_TYPE is only meaningful to single-configuration generators.
+  if(CMAKE_BUILD_TYPE)
+    string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
+    get_property(zlib_library TARGET ZLIB::ZLIB PROPERTY LOCATION_${build_type})
+  endif()
+  if(NOT zlib_library)
+    get_property(zlib_library TARGET ZLIB::ZLIB PROPERTY LOCATION)
+  endif()
+  get_system_libname(${zlib_library} zlib_library)
+  set(llvm_system_libs ${llvm_system_libs} "${zlib_library}")
+endif()
+
+if(LLVM_ENABLE_TERMINFO)
+  get_system_libname(${TERMINFO_LIB} terminfo_library)
+  set(llvm_system_libs ${llvm_system_libs} "${terminfo_library}")
+endif()
+
+set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${llvm_system_libs}")
 
 if(LLVM_WITH_Z3)
   target_include_directories(LLVMSupport SYSTEM

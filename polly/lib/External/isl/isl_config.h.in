@@ -1,47 +1,11 @@
 /* isl_config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define if HeaderSearchOptions::AddPath takes 4 arguments */
-#undef ADDPATH_TAKES_4_ARGUMENTS
-
-/* Clang installation prefix */
-#undef CLANG_PREFIX
-
-/* Define if CompilerInstance::createDiagnostics takes argc and argv */
-#undef CREATEDIAGNOSTICS_TAKES_ARG
-
-/* Define if CompilerInstance::createPreprocessor takes TranslationUnitKind */
-#undef CREATEPREPROCESSOR_TAKES_TUKIND
-
-/* Define if TargetInfo::CreateTargetInfo takes pointer */
-#undef CREATETARGETINFO_TAKES_POINTER
-
-/* Define if TargetInfo::CreateTargetInfo takes shared_ptr */
-#undef CREATETARGETINFO_TAKES_SHARED_PTR
-
-/* Define if CompilerInvocation::CreateFromArgs takes ArrayRef */
-#undef CREATE_FROM_ARGS_TAKES_ARRAYREF
-
-/* Define if Driver constructor takes default image name */
-#undef DRIVER_CTOR_TAKES_DEFAULTIMAGENAME
-
-/* Define to Diagnostic for older versions of clang */
-#undef DiagnosticsEngine
-
 /* most gcc compilers know a function __attribute__((__warn_unused_result__))
    */
 #undef GCC_WARN_UNUSED_RESULT
 
-/* Define if llvm/ADT/OwningPtr.h exists */
-#undef HAVE_ADT_OWNINGPTR_H
-
-/* Define if clang/Basic/DiagnosticOptions.h exists */
-#undef HAVE_BASIC_DIAGNOSTICOPTIONS_H
-
 /* define if the compiler supports basic C++11 syntax */
 #undef HAVE_CXX11
-
-/* Define if Driver constructor takes CXXIsProduction argument */
-#undef HAVE_CXXISPRODUCTION
 
 /* Define to 1 if you have the declaration of `ffs', and to 0 if you don't. */
 #undef HAVE_DECL_FFS
@@ -88,23 +52,11 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define if Driver constructor takes IsProduction argument */
-#undef HAVE_ISPRODUCTION
-
-/* Define if clang/Lex/PreprocessorOptions.h exists */
-#undef HAVE_LEX_PREPROCESSOROPTIONS_H
-
 /* Define to 1 if you have the `gmp' library (-lgmp). */
 #undef HAVE_LIBGMP
 
-/* Define if llvm/Option/Arg.h exists */
-#undef HAVE_LLVM_OPTION_ARG_H
-
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
-
-/* Define if SourceManager has a setMainFileID method */
-#undef HAVE_SETMAINFILEID
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
@@ -130,15 +82,6 @@
 /* define if your compiler has __attribute__ */
 #undef HAVE___ATTRIBUTE__
 
-/* Return type of HandleTopLevelDeclReturn */
-#undef HandleTopLevelDeclContinue
-
-/* Return type of HandleTopLevelDeclReturn */
-#undef HandleTopLevelDeclReturn
-
-/* Define to Language::C or InputKind::C for newer versions of clang */
-#undef IK_C
-
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
@@ -163,12 +106,6 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* Defined if CompilerInstance::setInvocation takes a shared_ptr */
-#undef SETINVOCATION_TAKES_SHARED_PTR
-
-/* Define if CompilerInvocation::setLangDefaults takes 5 arguments */
-#undef SETLANGDEFAULTS_TAKES_5_ARGUMENTS
-
 /* The size of `char', as computed by sizeof. */
 #undef SIZEOF_CHAR
 
@@ -187,9 +124,6 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
-/* Define if Driver::BuildCompilation takes ArrayRef */
-#undef USE_ARRAYREF
-
 /* use gmp to implement isl_int */
 #undef USE_GMP_FOR_MP
 
@@ -201,26 +135,5 @@
 
 /* Version number of package */
 #undef VERSION
-
-/* Define to getParamType for newer versions of clang */
-#undef getArgType
-
-/* Define to getHostTriple for older versions of clang */
-#undef getDefaultTargetTriple
-
-/* Define to getInstantiationLineNumber for older versions of clang */
-#undef getExpansionLineNumber
-
-/* Define to getImmediateInstantiationRange for older versions of clang */
-#undef getImmediateExpansionRange
-
-/* Define to getNumParams for newer versions of clang */
-#undef getNumArgs
-
-/* Define to getResultType for older versions of clang */
-#undef getReturnType
-
-/* Define to InitializeBuiltins for older versions of clang */
-#undef initializeBuiltins
 
 #include <isl_config_post.h>

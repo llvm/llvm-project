@@ -96,7 +96,7 @@ bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
   if (!TRI->isVGPR(*MRI, Reg))
     return false;
 
-  if (Register::isPhysicalRegister(Reg))
+  if (Reg.isPhysical())
     return false;
 
   if (VRM->hasPhys(Reg))
@@ -126,7 +126,7 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
           continue;
 
         const Register VirtReg = MO.getReg();
-        if (Register::isPhysicalRegister(VirtReg))
+        if (VirtReg.isPhysical())
           continue;
 
         if (!VRM->hasPhys(VirtReg))

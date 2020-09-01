@@ -175,7 +175,7 @@ GCNNSAReassign::CheckNSA(const MachineInstr &MI, bool Fast) const {
   for (unsigned I = 0; I < Info->VAddrDwords; ++I) {
     const MachineOperand &Op = MI.getOperand(VAddr0Idx + I);
     Register Reg = Op.getReg();
-    if (Register::isPhysicalRegister(Reg) || !VRM->isAssignedReg(Reg))
+    if (Reg.isPhysical() || !VRM->isAssignedReg(Reg))
       return NSA_Status::FIXED;
 
     Register PhysReg = VRM->getPhys(Reg);

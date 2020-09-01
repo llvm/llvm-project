@@ -211,15 +211,31 @@ body: |
 name: test_trunc_v4s32_to_v4s1
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
 
     ; CHECK-LABEL: name: test_trunc_v4s32_to_v4s1
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s1>) = G_TRUNC [[COPY]](<4 x s32>)
-    ; CHECK: S_ENDPGM 0, implicit [[TRUNC]](<4 x s1>)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[UV]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[UV1]](s32)
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[UV2]](s32)
+    ; CHECK: [[TRUNC3:%[0-9]+]]:_(s1) = G_TRUNC [[UV3]](s32)
+    ; CHECK: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<4 x s32>)
+    ; CHECK: [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<4 x s32>)
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[UV4]], [[UV8]]
+    ; CHECK: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC1]](s1), [[UV5]], [[UV9]]
+    ; CHECK: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC2]](s1), [[UV6]], [[UV10]]
+    ; CHECK: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC3]](s1), [[UV7]], [[UV11]]
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32), [[SELECT2]](s32), [[SELECT3]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<4 x s32>)
     %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(<4 x s1>) = G_TRUNC %0
-    S_ENDPGM 0, implicit %1
+    %1:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %2:_(<4 x s32>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    %3:_(<4 x s1>) = G_TRUNC %0
+    %4:_(<4 x s32>) = G_SELECT %3, %1, %2
+    S_ENDPGM 0, implicit %4
 ...
 
 ---
@@ -375,12 +391,14 @@ body: |
     ; CHECK-LABEL: name: test_trunc_v2s96_to_v2s8
     ; CHECK: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; CHECK: [[COPY1:%[0-9]+]]:_(s96) = COPY $vgpr3_vgpr4_vgpr5
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s96>) = G_BUILD_VECTOR [[COPY]](s96), [[COPY1]](s96)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s8>) = G_TRUNC [[BUILD_VECTOR]](<2 x s96>)
-    ; CHECK: S_ENDPGM 0, implicit [[TRUNC]](<2 x s8>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s96)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s96)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[TRUNC]](s32), [[TRUNC1]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<2 x s32>)
     %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(s96) = COPY $vgpr3_vgpr4_vgpr5
     %2:_(<2 x s96>) = G_BUILD_VECTOR %0, %1
     %3:_(<2 x s8>) = G_TRUNC %2
-    S_ENDPGM 0, implicit %3
+    %4:_(<2 x s32>) = G_ANYEXT %3
+    S_ENDPGM 0, implicit %4
 ...

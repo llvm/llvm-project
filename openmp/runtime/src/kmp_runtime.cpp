@@ -1389,13 +1389,7 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
 int __kmp_fork_call(ident_t *loc, int gtid,
                     enum fork_context_e call_context, // Intel, GNU, ...
                     kmp_int32 argc, microtask_t microtask, launch_t invoker,
-/* TODO: revert workaround for Intel(R) 64 tracker #96 */
-#if (KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64) && KMP_OS_LINUX
-                    va_list *ap
-#else
-                    va_list ap
-#endif
-                    ) {
+                    kmp_va_list ap) {
   void **argv;
   int i;
   int master_tid;
@@ -1505,12 +1499,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       parent_team->t.t_argc = argc;
       argv = (void **)parent_team->t.t_argv;
       for (i = argc - 1; i >= 0; --i)
-/* TODO: revert workaround for Intel(R) 64 tracker #96 */
-#if (KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64) && KMP_OS_LINUX
-        *argv++ = va_arg(*ap, void *);
-#else
-        *argv++ = va_arg(ap, void *);
-#endif
+        *argv++ = va_arg(kmp_va_deref(ap), void *);
       // Increment our nested depth levels, but not increase the serialization
       if (parent_team == master_th->th.th_serial_team) {
         // AC: we are in serialized parallel
@@ -1820,12 +1809,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
           argv = (void **)team->t.t_argv;
           if (ap) {
             for (i = argc - 1; i >= 0; --i)
-// TODO: revert workaround for Intel(R) 64 tracker #96
-#if (KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64) && KMP_OS_LINUX
-              *argv++ = va_arg(*ap, void *);
-#else
-              *argv++ = va_arg(ap, void *);
-#endif
+              *argv++ = va_arg(kmp_va_deref(ap), void *);
           } else {
             for (i = 0; i < argc; ++i)
               // Get args from parent team for teams construct
@@ -1856,12 +1840,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         } else {
           argv = args;
           for (i = argc - 1; i >= 0; --i)
-// TODO: revert workaround for Intel(R) 64 tracker #96
-#if (KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64) && KMP_OS_LINUX
-            *argv++ = va_arg(*ap, void *);
-#else
-            *argv++ = va_arg(ap, void *);
-#endif
+            *argv++ = va_arg(kmp_va_deref(ap), void *);
           KMP_MB();
 
 #if OMPT_SUPPORT
@@ -2146,12 +2125,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
     argv = (void **)team->t.t_argv;
     if (ap) {
       for (i = argc - 1; i >= 0; --i) {
-// TODO: revert workaround for Intel(R) 64 tracker #96
-#if (KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64) && KMP_OS_LINUX
-        void *new_argv = va_arg(*ap, void *);
-#else
-        void *new_argv = va_arg(ap, void *);
-#endif
+        void *new_argv = va_arg(kmp_va_deref(ap), void *);
         KMP_CHECK_UPDATE(*argv, new_argv);
         argv++;
       }

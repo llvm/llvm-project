@@ -219,6 +219,10 @@ public:
 
   bool MatchesOperand(StackFrame &frame, const Instruction::Operand &op);
 
+  llvm::Optional<DataExtractor>
+  GetLocationExpression(lldb::addr_t load_function_start,
+                        lldb::addr_t addr) const;
+
 private:
   /// Pretty-prints the location expression to a stream
   ///
@@ -236,10 +240,6 @@ private:
   ///     names.
   void DumpLocation(Stream *s, const DataExtractor &data,
                     lldb::DescriptionLevel level, ABI *abi) const;
-
-  llvm::Optional<DataExtractor>
-  GetLocationExpression(lldb::addr_t load_function_start,
-                        lldb::addr_t addr) const;
 
   /// Module which defined this expression.
   lldb::ModuleWP m_module_wp;

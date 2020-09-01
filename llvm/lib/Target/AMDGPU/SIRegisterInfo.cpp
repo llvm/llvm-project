@@ -322,7 +322,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
-  unsigned ScratchRSrcReg = MFI->getScratchRSrcReg();
+  Register ScratchRSrcReg = MFI->getScratchRSrcReg();
   if (ScratchRSrcReg != AMDGPU::NoRegister) {
     // Reserve 4 SGPRs for the scratch buffer resource descriptor in case we need
     // to spill.
@@ -555,16 +555,22 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_S256_RESTORE:
   case AMDGPU::SI_SPILL_V256_SAVE:
   case AMDGPU::SI_SPILL_V256_RESTORE:
+  case AMDGPU::SI_SPILL_A256_SAVE:
+  case AMDGPU::SI_SPILL_A256_RESTORE:
     return 8;
   case AMDGPU::SI_SPILL_S192_SAVE:
   case AMDGPU::SI_SPILL_S192_RESTORE:
   case AMDGPU::SI_SPILL_V192_SAVE:
   case AMDGPU::SI_SPILL_V192_RESTORE:
+  case AMDGPU::SI_SPILL_A192_SAVE:
+  case AMDGPU::SI_SPILL_A192_RESTORE:
     return 6;
   case AMDGPU::SI_SPILL_S160_SAVE:
   case AMDGPU::SI_SPILL_S160_RESTORE:
   case AMDGPU::SI_SPILL_V160_SAVE:
   case AMDGPU::SI_SPILL_V160_RESTORE:
+  case AMDGPU::SI_SPILL_A160_SAVE:
+  case AMDGPU::SI_SPILL_A160_RESTORE:
     return 5;
   case AMDGPU::SI_SPILL_S128_SAVE:
   case AMDGPU::SI_SPILL_S128_RESTORE:
@@ -993,7 +999,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
   MachineBasicBlock *MBB = MI->getParent();
   MachineFunction *MF = MBB->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
-  DenseSet<Register> SGPRSpillVGPRDefinedSet;
+  DenseSet<Register> SGPRSpillVGPRDefinedSet; // FIXME: This should be removed
 
   ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills
     = MFI->getSGPRToVGPRSpills(Index);
@@ -1026,6 +1032,8 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
           NumSubRegs == 1 ? SuperReg : getSubReg(SuperReg, SplitParts[i]);
       SIMachineFunctionInfo::SpilledReg Spill = VGPRSpills[i];
 
+      bool UseKill = IsKill && i == NumSubRegs - 1;
+
       // During SGPR spilling to VGPR, determine if the VGPR is defined. The
       // only circumstance in which we say it is undefined is when it is the
       // first spill to this VGPR in the first basic block.
@@ -1038,7 +1046,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
       auto MIB = BuildMI(*MBB, MI, DL,
               TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
               Spill.VGPR)
-        .addReg(SubReg, getKillRegState(IsKill))
+        .addReg(SubReg, getKillRegState(UseKill))
         .addImm(Spill.Lane)
         .addReg(Spill.VGPR, VGPRDefined ? 0 : RegState::Undef);
 
@@ -1047,6 +1055,9 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
         // and need to ensure later spills think the value is defined.
         MIB.addReg(SuperReg, RegState::ImplicitDefine);
       }
+
+      if (NumSubRegs > 1)
+        MIB.addReg(SuperReg, getKillRegState(UseKill) | RegState::Implicit);
 
       // FIXME: Since this spills to another register instead of an actual
       // frame index, we should delete the frame index when all references to
@@ -1278,6 +1289,9 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_V32_SAVE:
     case AMDGPU::SI_SPILL_A1024_SAVE:
     case AMDGPU::SI_SPILL_A512_SAVE:
+    case AMDGPU::SI_SPILL_A256_SAVE:
+    case AMDGPU::SI_SPILL_A192_SAVE:
+    case AMDGPU::SI_SPILL_A160_SAVE:
     case AMDGPU::SI_SPILL_A128_SAVE:
     case AMDGPU::SI_SPILL_A96_SAVE:
     case AMDGPU::SI_SPILL_A64_SAVE:
@@ -1311,6 +1325,9 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_A64_RESTORE:
     case AMDGPU::SI_SPILL_A96_RESTORE:
     case AMDGPU::SI_SPILL_A128_RESTORE:
+    case AMDGPU::SI_SPILL_A160_RESTORE:
+    case AMDGPU::SI_SPILL_A192_RESTORE:
+    case AMDGPU::SI_SPILL_A256_RESTORE:
     case AMDGPU::SI_SPILL_A512_RESTORE:
     case AMDGPU::SI_SPILL_A1024_RESTORE: {
       const MachineOperand *VData = TII->getNamedOperand(*MI,

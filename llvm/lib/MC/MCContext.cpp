@@ -662,7 +662,6 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
 MCSectionXCOFF *MCContext::getXCOFFSection(StringRef Section,
                                            XCOFF::StorageMappingClass SMC,
                                            XCOFF::SymbolType Type,
-                                           XCOFF::StorageClass SC,
                                            SectionKind Kind,
                                            const char *BeginSymName) {
   // Do the lookup. If we have a hit, return it.
@@ -684,8 +683,8 @@ MCSectionXCOFF *MCContext::getXCOFFSection(StringRef Section,
   // QualName->getUnqualifiedName() and CachedName are the same except when
   // CachedName contains invalid character(s) such as '$' for an XCOFF symbol.
   MCSectionXCOFF *Result = new (XCOFFAllocator.Allocate())
-      MCSectionXCOFF(QualName->getUnqualifiedName(), SMC, Type, SC, Kind,
-                     QualName, Begin, CachedName);
+      MCSectionXCOFF(QualName->getUnqualifiedName(), SMC, Type, Kind, QualName,
+                     Begin, CachedName);
   Entry.second = Result;
 
   auto *F = new MCDataFragment();

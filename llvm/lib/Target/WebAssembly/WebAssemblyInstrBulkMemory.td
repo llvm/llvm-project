@@ -39,7 +39,7 @@ let mayStore = 1, hasSideEffects = 1 in
 defm MEMORY_INIT_A#B :
   BULK_I<(outs),
          (ins i32imm_op:$seg, i32imm_op:$idx, rc:$dest,
-              rc:$offset, rc:$size),
+              I32:$offset, I32:$size),
          (outs), (ins i32imm_op:$seg, i32imm_op:$idx),
          [],
          "memory.init\t$seg, $idx, $dest, $offset, $size",

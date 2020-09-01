@@ -13,28 +13,28 @@
 
 const mach_vm_size_t alloc_size = sizeof(int);
 static int *global_ptr;
-static bool realloc_success = false;
 
 static int *alloc() {
   mach_vm_address_t addr;
-  kern_return_t res =
+  kern_return_t kr =
       mach_vm_allocate(mach_task_self(), &addr, alloc_size, VM_FLAGS_ANYWHERE);
-  assert(res == KERN_SUCCESS);
+  assert(kr == KERN_SUCCESS);
   return (int *)addr;
 }
 
 static void alloc_fixed(int *ptr) {
   mach_vm_address_t addr = (mach_vm_address_t)ptr;
   // Re-allocation via VM_FLAGS_FIXED sporadically fails.
-  kern_return_t res =
+  kern_return_t kr =
       mach_vm_allocate(mach_task_self(), &addr, alloc_size, VM_FLAGS_FIXED);
-  realloc_success = res == KERN_SUCCESS;
+  if (kr != KERN_SUCCESS)
+    global_ptr = NULL;
 }
 
 static void dealloc(int *ptr) {
-  kern_return_t res =
+  kern_return_t kr =
       mach_vm_deallocate(mach_task_self(), (mach_vm_address_t)ptr, alloc_size);
-  assert(res == KERN_SUCCESS);
+  assert(kr == KERN_SUCCESS);
 }
 
 static void *Thread(void *arg) {
@@ -53,26 +53,30 @@ static void *Thread(void *arg) {
   return NULL;
 }
 
-static void try_realloc_on_same_address() {
+static bool try_realloc_on_same_address() {
   barrier_init(&barrier, 2);
   global_ptr = alloc();
   pthread_t t;
   pthread_create(&t, NULL, Thread, NULL);
 
   barrier_wait(&barrier);
-  *global_ptr = 8;  // Assignment 2
+  if (global_ptr)
+    *global_ptr = 8;  // Assignment 2
 
   pthread_join(t, NULL);
   dealloc(global_ptr);
+
+  return global_ptr != NULL;
 }
 
 int main(int argc, const char *argv[]) {
+  bool success;
   for (int i = 0; i < 10; i++) {
-    try_realloc_on_same_address();
-    if (realloc_success) break;
+    success = try_realloc_on_same_address();
+    if (success) break;
   }
 
-  if (!realloc_success)
+  if (!success)
     fprintf(stderr, "Unable to set up testing condition; silently pass test\n");
 
   printf("Done.\n");

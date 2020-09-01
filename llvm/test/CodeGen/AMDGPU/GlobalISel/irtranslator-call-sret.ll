@@ -49,9 +49,12 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   ; GCN:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY20]], [[C5]](s32)
   ; GCN:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; GCN:   $vgpr0 = COPY [[FRAME_INDEX1]](p5)
-  ; GCN:   $vgpr1 = COPY [[FRAME_INDEX]](p5)
-  ; GCN:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
-  ; GCN:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
+  ; GCN:   [[COPY21:%[0-9]+]]:_(p5) = COPY $sp_reg
+  ; GCN:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GCN:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C6]](s32)
+  ; GCN:   G_STORE [[FRAME_INDEX]](p5), [[PTR_ADD2]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; GCN:   [[COPY22:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; GCN:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY22]](<4 x s32>)
   ; GCN:   $sgpr4_sgpr5 = COPY [[COPY11]](p4)
   ; GCN:   $sgpr6_sgpr7 = COPY [[COPY12]](p4)
   ; GCN:   $sgpr8_sgpr9 = COPY [[PTR_ADD1]](p4)
@@ -60,11 +63,11 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   ; GCN:   $sgpr13 = COPY [[COPY16]](s32)
   ; GCN:   $sgpr14 = COPY [[COPY17]](s32)
   ; GCN:   $vgpr31 = COPY [[OR1]](s32)
-  ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; GCN:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
+  ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GCN:   ADJCALLSTACKDOWN 0, 8, implicit-def $scc
+  ; GCN:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
   ; GCN:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX1]](p5) :: (dereferenceable load 1 from %ir.out.gep02, addrspace 5)
-  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p5) :: (dereferenceable load 4 from %ir.out.gep1, addrspace 5)
+  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD3]](p5) :: (dereferenceable load 4 from %ir.out.gep1, addrspace 5)
   ; GCN:   G_STORE [[LOAD]](s8), [[DEF]](p1) :: (volatile store 1 into `i8 addrspace(1)* undef`, addrspace 1)
   ; GCN:   G_STORE [[LOAD1]](s32), [[COPY10]](p1) :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
   ; GCN:   S_ENDPGM 0

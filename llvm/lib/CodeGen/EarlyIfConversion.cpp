@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/Passes.h"
@@ -794,6 +795,17 @@ static unsigned adjCycles(unsigned Cyc, int Delta) {
   return Cyc + Delta;
 }
 
+namespace {
+/// Helper class to simplify emission of cycle counts into optimization remarks.
+struct Cycles {
+  const char *Key;
+  unsigned Value;
+};
+template <typename Remark> Remark &operator<<(Remark &R, Cycles C) {
+  return R << ore::NV(C.Key, C.Value) << (C.Value == 1 ? " cycle" : " cycles");
+}
+} // anonymous namespace
+
 /// Apply cost model and heuristics to the if-conversion in IfConv.
 /// Return true if the conversion is a good idea.
 ///
@@ -814,6 +826,9 @@ bool EarlyIfConverter::shouldConvertIf() {
   // Set a somewhat arbitrary limit on the critical path extension we accept.
   unsigned CritLimit = SchedModel.MispredictPenalty/2;
 
+  MachineBasicBlock &MBB = *IfConv.Head;
+  MachineOptimizationRemarkEmitter MORE(*MBB.getParent(), nullptr);
+
   // If-conversion only makes sense when there is unexploited ILP. Compute the
   // maximum-ILP resource length of the trace after if-conversion. Compare it
   // to the shortest critical path.
@@ -825,6 +840,17 @@ bool EarlyIfConverter::shouldConvertIf() {
                     << ", minimal critical path " << MinCrit << '\n');
   if (ResLength > MinCrit + CritLimit) {
     LLVM_DEBUG(dbgs() << "Not enough available ILP.\n");
+    MORE.emit([&]() {
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "IfConversion",
+                                        MBB.findDebugLoc(MBB.back()), &MBB);
+      R << "did not if-convert branch: the resulting critical path ("
+        << Cycles{"ResLength", ResLength}
+        << ") would extend the shorter leg's critical path ("
+        << Cycles{"MinCrit", MinCrit} << ") by more than the threshold of "
+        << Cycles{"CritLimit", CritLimit}
+        << ", which cannot be hidden by available ILP.";
+      return R;
+    });
     return false;
   }
 
@@ -839,6 +865,14 @@ bool EarlyIfConverter::shouldConvertIf() {
   // Look at all the tail phis, and compute the critical path extension caused
   // by inserting select instructions.
   MachineTraceMetrics::Trace TailTrace = MinInstr->getTrace(IfConv.Tail);
+  struct CriticalPathInfo {
+    unsigned Extra; //< Count of extra cycles that the component adds.
+    unsigned Depth; //< Absolute depth of the component in cycles.
+  };
+  CriticalPathInfo Cond{};
+  CriticalPathInfo TBlock{};
+  CriticalPathInfo FBlock{};
+  bool ShouldConvert = true;
   for (unsigned i = 0, e = IfConv.PHIs.size(); i != e; ++i) {
     SSAIfConv::PHIInfo &PI = IfConv.PHIs[i];
     unsigned Slack = TailTrace.getInstrSlack(*PI.PHI);
@@ -850,9 +884,11 @@ bool EarlyIfConverter::shouldConvertIf() {
     if (CondDepth > MaxDepth) {
       unsigned Extra = CondDepth - MaxDepth;
       LLVM_DEBUG(dbgs() << "Condition adds " << Extra << " cycles.\n");
+      if (Extra > Cond.Extra)
+        Cond = {Extra, CondDepth};
       if (Extra > CritLimit) {
         LLVM_DEBUG(dbgs() << "Exceeds limit of " << CritLimit << '\n');
-        return false;
+        ShouldConvert = false;
       }
     }
 
@@ -861,9 +897,11 @@ bool EarlyIfConverter::shouldConvertIf() {
     if (TDepth > MaxDepth) {
       unsigned Extra = TDepth - MaxDepth;
       LLVM_DEBUG(dbgs() << "TBB data adds " << Extra << " cycles.\n");
+      if (Extra > TBlock.Extra)
+        TBlock = {Extra, TDepth};
       if (Extra > CritLimit) {
         LLVM_DEBUG(dbgs() << "Exceeds limit of " << CritLimit << '\n');
-        return false;
+        ShouldConvert = false;
       }
     }
 
@@ -872,13 +910,63 @@ bool EarlyIfConverter::shouldConvertIf() {
     if (FDepth > MaxDepth) {
       unsigned Extra = FDepth - MaxDepth;
       LLVM_DEBUG(dbgs() << "FBB data adds " << Extra << " cycles.\n");
+      if (Extra > FBlock.Extra)
+        FBlock = {Extra, FDepth};
       if (Extra > CritLimit) {
         LLVM_DEBUG(dbgs() << "Exceeds limit of " << CritLimit << '\n');
-        return false;
+        ShouldConvert = false;
       }
     }
   }
-  return true;
+
+  // Organize by "short" and "long" legs, since the diagnostics get confusing
+  // when referring to the "true" and "false" sides of the branch, given that
+  // those don't always correlate with what the user wrote in source-terms.
+  const CriticalPathInfo Short = TBlock.Extra > FBlock.Extra ? FBlock : TBlock;
+  const CriticalPathInfo Long = TBlock.Extra > FBlock.Extra ? TBlock : FBlock;
+
+  if (ShouldConvert) {
+    MORE.emit([&]() {
+      MachineOptimizationRemark R(DEBUG_TYPE, "IfConversion",
+                                  MBB.back().getDebugLoc(), &MBB);
+      R << "performing if-conversion on branch: the condition adds "
+        << Cycles{"CondCycles", Cond.Extra} << " to the critical path";
+      if (Short.Extra > 0)
+        R << ", and the short leg adds another "
+          << Cycles{"ShortCycles", Short.Extra};
+      if (Long.Extra > 0)
+        R << ", and the long leg adds another "
+          << Cycles{"LongCycles", Long.Extra};
+      R << ", each staying under the threshold of "
+        << Cycles{"CritLimit", CritLimit} << ".";
+      return R;
+    });
+  } else {
+    MORE.emit([&]() {
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "IfConversion",
+                                        MBB.back().getDebugLoc(), &MBB);
+      R << "did not if-convert branch: the condition would add "
+        << Cycles{"CondCycles", Cond.Extra} << " to the critical path";
+      if (Cond.Extra > CritLimit)
+        R << " exceeding the limit of " << Cycles{"CritLimit", CritLimit};
+      if (Short.Extra > 0) {
+        R << ", and the short leg would add another "
+          << Cycles{"ShortCycles", Short.Extra};
+        if (Short.Extra > CritLimit)
+          R << " exceeding the limit of " << Cycles{"CritLimit", CritLimit};
+      }
+      if (Long.Extra > 0) {
+        R << ", and the long leg would add another "
+          << Cycles{"LongCycles", Long.Extra};
+        if (Long.Extra > CritLimit)
+          R << " exceeding the limit of " << Cycles{"CritLimit", CritLimit};
+      }
+      R << ".";
+      return R;
+    });
+  }
+
+  return ShouldConvert;
 }
 
 /// Attempt repeated if-conversion on MBB, return true if successful.

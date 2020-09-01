@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
@@ -45,6 +46,10 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
+
+STATISTIC(NumAggregateReconstructionsSimplified,
+          "Number of aggregate reconstructions turned into reuse of the "
+          "original aggregate");
 
 /// Return true if the value is cheaper to scalarize than it is to leave as a
 /// vector operation. IsConstantExtractIndex indicates whether we are extracting
@@ -180,15 +185,19 @@ static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
   // extelt (bitcast VecX), IndexC --> bitcast X[IndexC]
   auto *SrcTy = cast<VectorType>(X->getType());
   Type *DestTy = Ext.getType();
-  unsigned NumSrcElts = SrcTy->getNumElements();
-  unsigned NumElts = Ext.getVectorOperandType()->getNumElements();
+  ElementCount NumSrcElts = SrcTy->getElementCount();
+  ElementCount NumElts =
+      cast<VectorType>(Ext.getVectorOperandType())->getElementCount();
   if (NumSrcElts == NumElts)
     if (Value *Elt = findScalarElement(X, ExtIndexC))
       return new BitCastInst(Elt, DestTy);
 
+  assert(NumSrcElts.isScalable() == NumElts.isScalable() &&
+         "Src and Dst must be the same sort of vector type");
+
   // If the source elements are wider than the destination, try to shift and
   // truncate a subset of scalar bits of an insert op.
-  if (NumSrcElts < NumElts) {
+  if (NumSrcElts.getKnownMinValue() < NumElts.getKnownMinValue()) {
     Value *Scalar;
     uint64_t InsIndexC;
     if (!match(X, m_InsertElt(m_Value(), m_Value(Scalar),
@@ -199,7 +208,8 @@ static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
     // into. Example: if we inserted element 1 of a <2 x i64> and we are
     // extracting an i16 (narrowing ratio = 4), then this extract must be from 1
     // of elements 4-7 of the bitcasted vector.
-    unsigned NarrowingRatio = NumElts / NumSrcElts;
+    unsigned NarrowingRatio =
+        NumElts.getKnownMinValue() / NumSrcElts.getKnownMinValue();
     if (ExtIndexC / NarrowingRatio != InsIndexC)
       return nullptr;
 
@@ -261,7 +271,7 @@ static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
 
 /// Find elements of V demanded by UserInstr.
 static APInt findDemandedEltsBySingleUser(Value *V, Instruction *UserInstr) {
-  unsigned VWidth = cast<VectorType>(V->getType())->getNumElements();
+  unsigned VWidth = cast<FixedVectorType>(V->getType())->getNumElements();
 
   // Conservatively assume that all elements are needed.
   APInt UsedElts(APInt::getAllOnesValue(VWidth));
@@ -279,7 +289,7 @@ static APInt findDemandedEltsBySingleUser(Value *V, Instruction *UserInstr) {
   case Instruction::ShuffleVector: {
     ShuffleVectorInst *Shuffle = cast<ShuffleVectorInst>(UserInstr);
     unsigned MaskNumElts =
-        cast<VectorType>(UserInstr->getType())->getNumElements();
+        cast<FixedVectorType>(UserInstr->getType())->getNumElements();
 
     UsedElts = APInt(VWidth, 0);
     for (unsigned i = 0; i < MaskNumElts; i++) {
@@ -305,7 +315,7 @@ static APInt findDemandedEltsBySingleUser(Value *V, Instruction *UserInstr) {
 /// no user demands an element of V, then the corresponding bit
 /// remains unset in the returned value.
 static APInt findDemandedEltsByAllUsers(Value *V) {
-  unsigned VWidth = cast<VectorType>(V->getType())->getNumElements();
+  unsigned VWidth = cast<FixedVectorType>(V->getType())->getNumElements();
 
   APInt UnionUsedElts(VWidth, 0);
   for (const Use &U : V->uses()) {
@@ -335,17 +345,17 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   auto *IndexC = dyn_cast<ConstantInt>(Index);
   if (IndexC) {
     ElementCount EC = EI.getVectorOperandType()->getElementCount();
-    unsigned NumElts = EC.Min;
+    unsigned NumElts = EC.getKnownMinValue();
 
     // InstSimplify should handle cases where the index is invalid.
     // For fixed-length vector, it's invalid to extract out-of-range element.
-    if (!EC.Scalable && IndexC->getValue().uge(NumElts))
+    if (!EC.isScalable() && IndexC->getValue().uge(NumElts))
       return nullptr;
 
     // This instruction only demands the single element from the input vector.
     // Skip for scalable type, the number of elements is unknown at
     // compile-time.
-    if (!EC.Scalable && NumElts != 1) {
+    if (!EC.isScalable() && NumElts != 1) {
       // If the input vector has a single use, simplify it based on this use
       // property.
       if (SrcVec->hasOneUse()) {
@@ -462,7 +472,7 @@ static bool collectSingleShuffleElements(Value *V, Value *LHS, Value *RHS,
                                          SmallVectorImpl<int> &Mask) {
   assert(LHS->getType() == RHS->getType() &&
          "Invalid CollectSingleShuffleElements");
-  unsigned NumElts = cast<VectorType>(V->getType())->getNumElements();
+  unsigned NumElts = cast<FixedVectorType>(V->getType())->getNumElements();
 
   if (isa<UndefValue>(V)) {
     Mask.assign(NumElts, -1);
@@ -504,7 +514,7 @@ static bool collectSingleShuffleElements(Value *V, Value *LHS, Value *RHS,
         unsigned ExtractedIdx =
         cast<ConstantInt>(EI->getOperand(1))->getZExtValue();
         unsigned NumLHSElts =
-            cast<VectorType>(LHS->getType())->getNumElements();
+            cast<FixedVectorType>(LHS->getType())->getNumElements();
 
         // This must be extracting from either LHS or RHS.
         if (EI->getOperand(0) == LHS || EI->getOperand(0) == RHS) {
@@ -534,8 +544,8 @@ static bool collectSingleShuffleElements(Value *V, Value *LHS, Value *RHS,
 static void replaceExtractElements(InsertElementInst *InsElt,
                                    ExtractElementInst *ExtElt,
                                    InstCombinerImpl &IC) {
-  VectorType *InsVecType = InsElt->getType();
-  VectorType *ExtVecType = ExtElt->getVectorOperandType();
+  auto *InsVecType = cast<FixedVectorType>(InsElt->getType());
+  auto *ExtVecType = cast<FixedVectorType>(ExtElt->getVectorOperandType());
   unsigned NumInsElts = InsVecType->getNumElements();
   unsigned NumExtElts = ExtVecType->getNumElements();
 
@@ -663,7 +673,7 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
           }
 
           unsigned NumLHSElts =
-              cast<VectorType>(RHS->getType())->getNumElements();
+              cast<FixedVectorType>(RHS->getType())->getNumElements();
           Mask[InsertedIdx % NumElts] = NumLHSElts + ExtractedIdx;
           return std::make_pair(LR.first, RHS);
         }
@@ -672,7 +682,8 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
           // We've gone as far as we can: anything on the other side of the
           // extractelement will already have been converted into a shuffle.
           unsigned NumLHSElts =
-              cast<VectorType>(EI->getOperand(0)->getType())->getNumElements();
+              cast<FixedVectorType>(EI->getOperand(0)->getType())
+                  ->getNumElements();
           for (unsigned i = 0; i != NumElts; ++i)
             Mask.push_back(i == InsertedIdx ? ExtractedIdx : NumLHSElts + i);
           return std::make_pair(EI->getOperand(0), PermittedRHS);
@@ -692,6 +703,285 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
   for (unsigned i = 0; i != NumElts; ++i)
     Mask.push_back(i);
   return std::make_pair(V, nullptr);
+}
+
+/// Look for chain of insertvalue's that fully define an aggregate, and trace
+/// back the values inserted, see if they are all were extractvalue'd from
+/// the same source aggregate from the exact same element indexes.
+/// If they were, just reuse the source aggregate.
+/// This potentially deals with PHI indirections.
+Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
+    InsertValueInst &OrigIVI) {
+  Type *AggTy = OrigIVI.getType();
+  unsigned NumAggElts;
+  switch (AggTy->getTypeID()) {
+  case Type::StructTyID:
+    NumAggElts = AggTy->getStructNumElements();
+    break;
+  case Type::ArrayTyID:
+    NumAggElts = AggTy->getArrayNumElements();
+    break;
+  default:
+    llvm_unreachable("Unhandled aggregate type?");
+  }
+
+  // Arbitrary aggregate size cut-off. Motivation for limit of 2 is to be able
+  // to handle clang C++ exception struct (which is hardcoded as {i8*, i32}),
+  // FIXME: any interesting patterns to be caught with larger limit?
+  assert(NumAggElts > 0 && "Aggregate should have elements.");
+  if (NumAggElts > 2)
+    return nullptr;
+
+  static constexpr auto NotFound = None;
+  static constexpr auto FoundMismatch = nullptr;
+
+  // Try to find a value of each element of an aggregate.
+  // FIXME: deal with more complex, not one-dimensional, aggregate types
+  SmallVector<Optional<Value *>, 2> AggElts(NumAggElts, NotFound);
+
+  // Do we know values for each element of the aggregate?
+  auto KnowAllElts = [&AggElts]() {
+    return all_of(AggElts,
+                  [](Optional<Value *> Elt) { return Elt != NotFound; });
+  };
+
+  int Depth = 0;
+
+  // Arbitrary `insertvalue` visitation depth limit. Let's be okay with
+  // every element being overwritten twice, which should never happen.
+  static const int DepthLimit = 2 * NumAggElts;
+
+  // Recurse up the chain of `insertvalue` aggregate operands until either we've
+  // reconstructed full initializer or can't visit any more `insertvalue`'s.
+  for (InsertValueInst *CurrIVI = &OrigIVI;
+       Depth < DepthLimit && CurrIVI && !KnowAllElts();
+       CurrIVI = dyn_cast<InsertValueInst>(CurrIVI->getAggregateOperand()),
+                       ++Depth) {
+    Value *InsertedValue = CurrIVI->getInsertedValueOperand();
+    ArrayRef<unsigned int> Indices = CurrIVI->getIndices();
+
+    // Don't bother with more than single-level aggregates.
+    if (Indices.size() != 1)
+      return nullptr; // FIXME: deal with more complex aggregates?
+
+    // Now, we may have already previously recorded the value for this element
+    // of an aggregate. If we did, that means the CurrIVI will later be
+    // overwritten with the already-recorded value. But if not, let's record it!
+    Optional<Value *> &Elt = AggElts[Indices.front()];
+    Elt = Elt.getValueOr(InsertedValue);
+
+    // FIXME: should we handle chain-terminating undef base operand?
+  }
+
+  // Was that sufficient to deduce the full initializer for the aggregate?
+  if (!KnowAllElts())
+    return nullptr; // Give up then.
+
+  // We now want to find the source[s] of the aggregate elements we've found.
+  // And with "source" we mean the original aggregate[s] from which
+  // the inserted elements were extracted. This may require PHI translation.
+
+  enum class AggregateDescription {
+    /// When analyzing the value that was inserted into an aggregate, we did
+    /// not manage to find defining `extractvalue` instruction to analyze.
+    NotFound,
+    /// When analyzing the value that was inserted into an aggregate, we did
+    /// manage to find defining `extractvalue` instruction[s], and everything
+    /// matched perfectly - aggregate type, element insertion/extraction index.
+    Found,
+    /// When analyzing the value that was inserted into an aggregate, we did
+    /// manage to find defining `extractvalue` instruction, but there was
+    /// a mismatch: either the source type from which the extraction was didn't
+    /// match the aggregate type into which the insertion was,
+    /// or the extraction/insertion channels mismatched,
+    /// or different elements had different source aggregates.
+    FoundMismatch
+  };
+  auto Describe = [](Optional<Value *> SourceAggregate) {
+    if (SourceAggregate == NotFound)
+      return AggregateDescription::NotFound;
+    if (*SourceAggregate == FoundMismatch)
+      return AggregateDescription::FoundMismatch;
+    return AggregateDescription::Found;
+  };
+
+  // Given the value \p Elt that was being inserted into element \p EltIdx of an
+  // aggregate AggTy, see if \p Elt was originally defined by an
+  // appropriate extractvalue (same element index, same aggregate type).
+  // If found, return the source aggregate from which the extraction was.
+  // If \p PredBB is provided, does PHI translation of an \p Elt first.
+  auto FindSourceAggregate =
+      [&](Value *Elt, unsigned EltIdx, Optional<BasicBlock *> UseBB,
+          Optional<BasicBlock *> PredBB) -> Optional<Value *> {
+    // For now(?), only deal with, at most, a single level of PHI indirection.
+    if (UseBB && PredBB)
+      Elt = Elt->DoPHITranslation(*UseBB, *PredBB);
+    // FIXME: deal with multiple levels of PHI indirection?
+
+    // Did we find an extraction?
+    auto *EVI = dyn_cast<ExtractValueInst>(Elt);
+    if (!EVI)
+      return NotFound;
+
+    Value *SourceAggregate = EVI->getAggregateOperand();
+
+    // Is the extraction from the same type into which the insertion was?
+    if (SourceAggregate->getType() != AggTy)
+      return FoundMismatch;
+    // And the element index doesn't change between extraction and insertion?
+    if (EVI->getNumIndices() != 1 || EltIdx != EVI->getIndices().front())
+      return FoundMismatch;
+
+    return SourceAggregate; // AggregateDescription::Found
+  };
+
+  // Given elements AggElts that were constructing an aggregate OrigIVI,
+  // see if we can find appropriate source aggregate for each of the elements,
+  // and see it's the same aggregate for each element. If so, return it.
+  auto FindCommonSourceAggregate =
+      [&](Optional<BasicBlock *> UseBB,
+          Optional<BasicBlock *> PredBB) -> Optional<Value *> {
+    Optional<Value *> SourceAggregate;
+
+    for (auto I : enumerate(AggElts)) {
+      assert(Describe(SourceAggregate) != AggregateDescription::FoundMismatch &&
+             "We don't store nullptr in SourceAggregate!");
+      assert((Describe(SourceAggregate) == AggregateDescription::Found) ==
+                 (I.index() != 0) &&
+             "SourceAggregate should be valid after the the first element,");
+
+      // For this element, is there a plausible source aggregate?
+      // FIXME: we could special-case undef element, IFF we know that in the
+      //        source aggregate said element isn't poison.
+      Optional<Value *> SourceAggregateForElement =
+          FindSourceAggregate(*I.value(), I.index(), UseBB, PredBB);
+
+      // Okay, what have we found? Does that correlate with previous findings?
+
+      // Regardless of whether or not we have previously found source
+      // aggregate for previous elements (if any), if we didn't find one for
+      // this element, passthrough whatever we have just found.
+      if (Describe(SourceAggregateForElement) != AggregateDescription::Found)
+        return SourceAggregateForElement;
+
+      // Okay, we have found source aggregate for this element.
+      // Let's see what we already know from previous elements, if any.
+      switch (Describe(SourceAggregate)) {
+      case AggregateDescription::NotFound:
+        // This is apparently the first element that we have examined.
+        SourceAggregate = SourceAggregateForElement; // Record the aggregate!
+        continue; // Great, now look at next element.
+      case AggregateDescription::Found:
+        // We have previously already successfully examined other elements.
+        // Is this the same source aggregate we've found for other elements?
+        if (*SourceAggregateForElement != *SourceAggregate)
+          return FoundMismatch;
+        continue; // Still the same aggregate, look at next element.
+      case AggregateDescription::FoundMismatch:
+        llvm_unreachable("Can't happen. We would have early-exited then.");
+      };
+    }
+
+    assert(Describe(SourceAggregate) == AggregateDescription::Found &&
+           "Must be a valid Value");
+    return *SourceAggregate;
+  };
+
+  Optional<Value *> SourceAggregate;
+
+  // Can we find the source aggregate without looking at predecessors?
+  SourceAggregate = FindCommonSourceAggregate(/*UseBB=*/None, /*PredBB=*/None);
+  if (Describe(SourceAggregate) != AggregateDescription::NotFound) {
+    if (Describe(SourceAggregate) == AggregateDescription::FoundMismatch)
+      return nullptr; // Conflicting source aggregates!
+    ++NumAggregateReconstructionsSimplified;
+    return replaceInstUsesWith(OrigIVI, *SourceAggregate);
+  }
+
+  // Okay, apparently we need to look at predecessors.
+
+  // We should be smart about picking the "use" basic block, which will be the
+  // merge point for aggregate, where we'll insert the final PHI that will be
+  // used instead of OrigIVI. Basic block of OrigIVI is *not* the right choice.
+  // We should look in which blocks each of the AggElts is being defined,
+  // they all should be defined in the same basic block.
+  BasicBlock *UseBB = nullptr;
+
+  for (const Optional<Value *> &Elt : AggElts) {
+    // If this element's value was not defined by an instruction, ignore it.
+    auto *I = dyn_cast<Instruction>(*Elt);
+    if (!I)
+      continue;
+    // Otherwise, in which basic block is this instruction located?
+    BasicBlock *BB = I->getParent();
+    // If it's the first instruction we've encountered, record the basic block.
+    if (!UseBB) {
+      UseBB = BB;
+      continue;
+    }
+    // Otherwise, this must be the same basic block we've seen previously.
+    if (UseBB != BB)
+      return nullptr;
+  }
+
+  // If *all* of the elements are basic-block-independent, meaning they are
+  // either function arguments, or constant expressions, then if we didn't
+  // handle them without predecessor-aware handling, we won't handle them now.
+  if (!UseBB)
+    return nullptr;
+
+  // If we didn't manage to find source aggregate without looking at
+  // predecessors, and there are no predecessors to look at, then we're done.
+  if (pred_empty(UseBB))
+    return nullptr;
+
+  // Arbitrary predecessor count limit.
+  static const int PredCountLimit = 64;
+
+  // Cache the (non-uniqified!) list of predecessors in a vector,
+  // checking the limit at the same time for efficiency.
+  SmallVector<BasicBlock *, 4> Preds; // May have duplicates!
+  for (BasicBlock *Pred : predecessors(UseBB)) {
+    // Don't bother if there are too many predecessors.
+    if (Preds.size() >= PredCountLimit) // FIXME: only count duplicates once?
+      return nullptr;
+    Preds.emplace_back(Pred);
+  }
+
+  // For each predecessor, what is the source aggregate,
+  // from which all the elements were originally extracted from?
+  // Note that we want for the map to have stable iteration order!
+  SmallDenseMap<BasicBlock *, Value *, 4> SourceAggregates;
+  for (BasicBlock *Pred : Preds) {
+    std::pair<decltype(SourceAggregates)::iterator, bool> IV =
+        SourceAggregates.insert({Pred, nullptr});
+    // Did we already evaluate this predecessor?
+    if (!IV.second)
+      continue;
+
+    // Let's hope that when coming from predecessor Pred, all elements of the
+    // aggregate produced by OrigIVI must have been originally extracted from
+    // the same aggregate. Is that so? Can we find said original aggregate?
+    SourceAggregate = FindCommonSourceAggregate(UseBB, Pred);
+    if (Describe(SourceAggregate) != AggregateDescription::Found)
+      return nullptr; // Give up.
+    IV.first->second = *SourceAggregate;
+  }
+
+  // All good! Now we just need to thread the source aggregates here.
+  // Note that we have to insert the new PHI here, ourselves, because we can't
+  // rely on InstCombinerImpl::run() inserting it into the right basic block.
+  // Note that the same block can be a predecessor more than once,
+  // and we need to preserve that invariant for the PHI node.
+  BuilderTy::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(UseBB->getFirstNonPHI());
+  auto *PHI =
+      Builder.CreatePHI(AggTy, Preds.size(), OrigIVI.getName() + ".merged");
+  for (BasicBlock *Pred : Preds)
+    PHI->addIncoming(SourceAggregates[Pred], Pred);
+
+  ++NumAggregateReconstructionsSimplified;
+  return replaceInstUsesWith(OrigIVI, PHI);
 }
 
 /// Try to find redundant insertvalue instructions, like the following ones:
@@ -726,6 +1016,10 @@ Instruction *InstCombinerImpl::visitInsertValueInst(InsertValueInst &I) {
 
   if (IsRedundant)
     return replaceInstUsesWith(I, I.getOperand(0));
+
+  if (Instruction *NewI = foldAggregateConstructionIntoAggregateReuse(I))
+    return NewI;
+
   return nullptr;
 }
 
@@ -856,7 +1150,8 @@ static Instruction *foldInsEltIntoSplat(InsertElementInst &InsElt) {
   // For example:
   // inselt (shuf (inselt undef, X, 0), undef, <0,undef,0,undef>), X, 1
   //   --> shuf (inselt undef, X, 0), undef, <0,0,0,undef>
-  unsigned NumMaskElts = Shuf->getType()->getNumElements();
+  unsigned NumMaskElts =
+      cast<FixedVectorType>(Shuf->getType())->getNumElements();
   SmallVector<int, 16> NewMask(NumMaskElts);
   for (unsigned i = 0; i != NumMaskElts; ++i)
     NewMask[i] = i == IdxC ? 0 : Shuf->getMaskValue(i);
@@ -894,7 +1189,8 @@ static Instruction *foldInsEltIntoIdentityShuffle(InsertElementInst &InsElt) {
   // that same index value.
   // For example:
   // inselt (shuf X, IdMask), (extelt X, IdxC), IdxC --> shuf X, IdMask'
-  unsigned NumMaskElts = Shuf->getType()->getNumElements();
+  unsigned NumMaskElts =
+      cast<FixedVectorType>(Shuf->getType())->getNumElements();
   SmallVector<int, 16> NewMask(NumMaskElts);
   ArrayRef<int> OldMask = Shuf->getShuffleMask();
   for (unsigned i = 0; i != NumMaskElts; ++i) {
@@ -1224,7 +1520,7 @@ static bool canEvaluateShuffled(Value *V, ArrayRef<int> Mask,
       // longer vector ops, but that may result in more expensive codegen.
       Type *ITy = I->getType();
       if (ITy->isVectorTy() &&
-          Mask.size() > cast<VectorType>(ITy)->getNumElements())
+          Mask.size() > cast<FixedVectorType>(ITy)->getNumElements())
         return false;
       for (Value *Operand : I->operands()) {
         if (!canEvaluateShuffled(Operand, Mask, Depth - 1))
@@ -1382,7 +1678,8 @@ static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
     case Instruction::GetElementPtr: {
       SmallVector<Value*, 8> NewOps;
       bool NeedsRebuild =
-          (Mask.size() != cast<VectorType>(I->getType())->getNumElements());
+          (Mask.size() !=
+           cast<FixedVectorType>(I->getType())->getNumElements());
       for (int i = 0, e = I->getNumOperands(); i != e; ++i) {
         Value *V;
         // Recursively call evaluateInDifferentElementOrder on vector arguments
@@ -1437,7 +1734,7 @@ static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
 static bool isShuffleExtractingFromLHS(ShuffleVectorInst &SVI,
                                        ArrayRef<int> Mask) {
   unsigned LHSElems =
-      cast<VectorType>(SVI.getOperand(0)->getType())->getNumElements();
+      cast<FixedVectorType>(SVI.getOperand(0)->getType())->getNumElements();
   unsigned MaskElems = Mask.size();
   unsigned BegIdx = Mask.front();
   unsigned EndIdx = Mask.back();
@@ -1569,7 +1866,8 @@ static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
   // For example:
   // shuf (inselt undef, X, 2), undef, <2,2,undef>
   //   --> shuf (inselt undef, X, 0), undef, <0,0,undef>
-  unsigned NumMaskElts = Shuf.getType()->getNumElements();
+  unsigned NumMaskElts =
+      cast<FixedVectorType>(Shuf.getType())->getNumElements();
   SmallVector<int, 16> NewMask(NumMaskElts, 0);
   for (unsigned i = 0; i != NumMaskElts; ++i)
     if (Mask[i] == UndefMaskElem)
@@ -1587,7 +1885,7 @@ static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
 
   // Canonicalize to choose from operand 0 first unless operand 1 is undefined.
   // Commuting undef to operand 0 conflicts with another canonicalization.
-  unsigned NumElts = Shuf.getType()->getNumElements();
+  unsigned NumElts = cast<FixedVectorType>(Shuf.getType())->getNumElements();
   if (!isa<UndefValue>(Shuf.getOperand(1)) &&
       Shuf.getMaskValue(0) >= (int)NumElts) {
     // TODO: Can we assert that both operands of a shuffle-select are not undef
@@ -1722,8 +2020,8 @@ static Instruction *foldTruncShuffle(ShuffleVectorInst &Shuf,
   // and the source element type must be larger than the shuffle element type.
   Type *SrcType = X->getType();
   if (!SrcType->isVectorTy() || !SrcType->isIntOrIntVectorTy() ||
-      cast<VectorType>(SrcType)->getNumElements() !=
-          cast<VectorType>(DestType)->getNumElements() ||
+      cast<FixedVectorType>(SrcType)->getNumElements() !=
+          cast<FixedVectorType>(DestType)->getNumElements() ||
       SrcType->getScalarSizeInBits() % DestType->getScalarSizeInBits() != 0)
     return nullptr;
 
@@ -1767,10 +2065,11 @@ static Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
 
   // We need a narrow condition value. It must be extended with undef elements
   // and have the same number of elements as this shuffle.
-  unsigned NarrowNumElts = Shuf.getType()->getNumElements();
+  unsigned NarrowNumElts =
+      cast<FixedVectorType>(Shuf.getType())->getNumElements();
   Value *NarrowCond;
   if (!match(Cond, m_OneUse(m_Shuffle(m_Value(NarrowCond), m_Undef()))) ||
-      cast<VectorType>(NarrowCond->getType())->getNumElements() !=
+      cast<FixedVectorType>(NarrowCond->getType())->getNumElements() !=
           NarrowNumElts ||
       !cast<ShuffleVectorInst>(Cond)->isIdentityWithPadding())
     return nullptr;
@@ -1810,7 +2109,7 @@ static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   // new shuffle mask. Otherwise, copy the original mask element. Example:
   //   shuf (shuf X, Y, <C0, C1, C2, undef, C4>), undef, <0, undef, 2, 3> -->
   //   shuf X, Y, <C0, undef, C2, undef>
-  unsigned NumElts = Shuf.getType()->getNumElements();
+  unsigned NumElts = cast<FixedVectorType>(Shuf.getType())->getNumElements();
   SmallVector<int, 16> NewMask(NumElts);
   assert(NumElts < Mask.size() &&
          "Identity with extract must have less elements than its inputs");
@@ -1835,7 +2134,7 @@ static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf,
   // TODO: This restriction could be removed if the insert has only one use
   //       (because the transform would require a new length-changing shuffle).
   int NumElts = Mask.size();
-  if (NumElts != (int)(cast<VectorType>(V0->getType())->getNumElements()))
+  if (NumElts != (int)(cast<FixedVectorType>(V0->getType())->getNumElements()))
     return nullptr;
 
   // This is a specialization of a fold in SimplifyDemandedVectorElts. We may
@@ -1930,9 +2229,10 @@ static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
   Value *X = Shuffle0->getOperand(0);
   Value *Y = Shuffle1->getOperand(0);
   if (X->getType() != Y->getType() ||
-      !isPowerOf2_32(Shuf.getType()->getNumElements()) ||
-      !isPowerOf2_32(Shuffle0->getType()->getNumElements()) ||
-      !isPowerOf2_32(cast<VectorType>(X->getType())->getNumElements()) ||
+      !isPowerOf2_32(cast<FixedVectorType>(Shuf.getType())->getNumElements()) ||
+      !isPowerOf2_32(
+          cast<FixedVectorType>(Shuffle0->getType())->getNumElements()) ||
+      !isPowerOf2_32(cast<FixedVectorType>(X->getType())->getNumElements()) ||
       isa<UndefValue>(X) || isa<UndefValue>(Y))
     return nullptr;
   assert(isa<UndefValue>(Shuffle0->getOperand(1)) &&
@@ -1943,8 +2243,8 @@ static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
   // operands directly by adjusting the shuffle mask to account for the narrower
   // types:
   // shuf (widen X), (widen Y), Mask --> shuf X, Y, Mask'
-  int NarrowElts = cast<VectorType>(X->getType())->getNumElements();
-  int WideElts = Shuffle0->getType()->getNumElements();
+  int NarrowElts = cast<FixedVectorType>(X->getType())->getNumElements();
+  int WideElts = cast<FixedVectorType>(Shuffle0->getType())->getNumElements();
   assert(WideElts > NarrowElts && "Unexpected types for identity with padding");
 
   ArrayRef<int> Mask = Shuf.getShuffleMask();
@@ -1985,9 +2285,13 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
                                           SVI.getType(), ShufQuery))
     return replaceInstUsesWith(SVI, V);
 
+  // Bail out for scalable vectors
+  if (isa<ScalableVectorType>(LHS->getType()))
+    return nullptr;
+
   // shuffle x, x, mask --> shuffle x, undef, mask'
-  unsigned VWidth = SVI.getType()->getNumElements();
-  unsigned LHSWidth = cast<VectorType>(LHS->getType())->getNumElements();
+  unsigned VWidth = cast<FixedVectorType>(SVI.getType())->getNumElements();
+  unsigned LHSWidth = cast<FixedVectorType>(LHS->getType())->getNumElements();
   ArrayRef<int> Mask = SVI.getShuffleMask();
   Type *Int32Ty = Type::getInt32Ty(SVI.getContext());
 
@@ -2001,7 +2305,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (match(LHS, m_BitCast(m_Value(X))) && match(RHS, m_Undef()) &&
       X->getType()->isVectorTy() && VWidth == LHSWidth) {
     // Try to create a scaled mask constant.
-    auto *XType = cast<VectorType>(X->getType());
+    auto *XType = cast<FixedVectorType>(X->getType());
     unsigned XNumElts = XType->getNumElements();
     SmallVector<int, 16> ScaledMask;
     if (XNumElts >= VWidth) {
@@ -2109,7 +2413,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (isShuffleExtractingFromLHS(SVI, Mask)) {
     Value *V = LHS;
     unsigned MaskElems = Mask.size();
-    VectorType *SrcTy = cast<VectorType>(V->getType());
+    auto *SrcTy = cast<FixedVectorType>(V->getType());
     unsigned VecBitWidth = SrcTy->getPrimitiveSizeInBits().getFixedSize();
     unsigned SrcElemBitWidth = DL.getTypeSizeInBits(SrcTy->getElementType());
     assert(SrcElemBitWidth && "vector elements must have a bitwidth");
@@ -2227,11 +2531,11 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (LHSShuffle) {
     LHSOp0 = LHSShuffle->getOperand(0);
     LHSOp1 = LHSShuffle->getOperand(1);
-    LHSOp0Width = cast<VectorType>(LHSOp0->getType())->getNumElements();
+    LHSOp0Width = cast<FixedVectorType>(LHSOp0->getType())->getNumElements();
   }
   if (RHSShuffle) {
     RHSOp0 = RHSShuffle->getOperand(0);
-    RHSOp0Width = cast<VectorType>(RHSOp0->getType())->getNumElements();
+    RHSOp0Width = cast<FixedVectorType>(RHSOp0->getType())->getNumElements();
   }
   Value* newLHS = LHS;
   Value* newRHS = RHS;

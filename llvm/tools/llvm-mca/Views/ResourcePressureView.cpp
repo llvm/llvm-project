@@ -21,10 +21,10 @@ namespace mca {
 ResourcePressureView::ResourcePressureView(const llvm::MCSubtargetInfo &sti,
                                            MCInstPrinter &Printer,
                                            ArrayRef<MCInst> S)
-    : STI(sti), MCIP(Printer), Source(S), LastInstructionIdx(0) {
+    : InstructionView(sti, Printer, S), LastInstructionIdx(0) {
   // Populate the map of resource descriptors.
   unsigned R2VIndex = 0;
-  const MCSchedModel &SM = STI.getSchedModel();
+  const MCSchedModel &SM = getSubTargetInfo().getSchedModel();
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
     unsigned NumUnits = ProcResource.NumUnits;
@@ -37,7 +37,7 @@ ResourcePressureView::ResourcePressureView(const llvm::MCSubtargetInfo &sti,
   }
 
   NumResourceUnits = R2VIndex;
-  ResourceUsage.resize(NumResourceUnits * (Source.size() + 1));
+  ResourceUsage.resize(NumResourceUnits * (getSource().size() + 1));
   std::fill(ResourceUsage.begin(), ResourceUsage.end(), 0.0);
 }
 
@@ -52,6 +52,7 @@ void ResourcePressureView::onEvent(const HWInstructionEvent &Event) {
     return;
 
   const auto &IssueEvent = static_cast<const HWInstructionIssuedEvent &>(Event);
+  ArrayRef<llvm::MCInst> Source = getSource();
   const unsigned SourceIdx = Event.IR.getSourceIndex() % Source.size();
   for (const std::pair<ResourceRef, ResourceCycles> &Use :
        IssueEvent.UsedResources) {
@@ -105,7 +106,7 @@ void ResourcePressureView::printResourcePressurePerIter(raw_ostream &OS) const {
   formatted_raw_ostream FOS(TempStream);
 
   FOS << "\n\nResources:\n";
-  const MCSchedModel &SM = STI.getSchedModel();
+  const MCSchedModel &SM = getSubTargetInfo().getSchedModel();
   for (unsigned I = 1, ResourceIndex = 0, E = SM.getNumProcResourceKinds();
        I < E; ++I) {
     const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
@@ -132,6 +133,7 @@ void ResourcePressureView::printResourcePressurePerIter(raw_ostream &OS) const {
   FOS << '\n';
   FOS.flush();
 
+  ArrayRef<llvm::MCInst> Source = getSource();
   const unsigned Executions = LastInstructionIdx / Source.size() + 1;
   for (unsigned I = 0, E = NumResourceUnits; I < E; ++I) {
     double Usage = ResourceUsage[I + Source.size() * E];
@@ -148,13 +150,11 @@ void ResourcePressureView::printResourcePressurePerInst(raw_ostream &OS) const {
   formatted_raw_ostream FOS(TempStream);
 
   FOS << "\n\nResource pressure by instruction:\n";
-  printColumnNames(FOS, STI.getSchedModel());
+  printColumnNames(FOS, getSubTargetInfo().getSchedModel());
   FOS << "Instructions:\n";
 
-  std::string Instruction;
-  raw_string_ostream InstrStream(Instruction);
-
   unsigned InstrIndex = 0;
+  ArrayRef<llvm::MCInst> Source = getSource();
   const unsigned Executions = LastInstructionIdx / Source.size() + 1;
   for (const MCInst &MCI : Source) {
     unsigned BaseEltIdx = InstrIndex * NumResourceUnits;
@@ -163,16 +163,7 @@ void ResourcePressureView::printResourcePressurePerInst(raw_ostream &OS) const {
       printResourcePressure(FOS, Usage / Executions, (J + 1) * 7);
     }
 
-    MCIP.printInst(&MCI, 0, "", STI, InstrStream);
-    InstrStream.flush();
-    StringRef Str(Instruction);
-
-    // Remove any tabs or spaces at the beginning of the instruction.
-    Str = Str.ltrim();
-
-    FOS << Str << '\n';
-    Instruction = "";
-
+    FOS << printInstructionString(MCI) << '\n';
     FOS.flush();
     OS << Buffer;
     Buffer = "";

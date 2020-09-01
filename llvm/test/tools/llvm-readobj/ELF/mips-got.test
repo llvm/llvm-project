@@ -579,3 +579,75 @@ Sections:
 # RUN: llvm-readobj -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning:
 
 # NAME-ERR-NOTFOUND:      warning: '[[FILE]]': unable to read the name of SHT_PROGBITS section with index 2: a section [index 2] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+
+## Check that we correctly show .got section content when there are some other zero-sized
+## sections with the same address as the .got section.
+## In this test the empty .data section has the same address as the .got section.
+
+# RUN: yaml2obj --docnum=4 %s -o %t.err7.o
+# RUN: llvm-readobj -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o --check-prefix=SAME-ADDR-LLVM
+# RUN: llvm-readelf -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o --check-prefix=SAME-ADDR-GNU
+
+# SAME-ADDR-LLVM:      Primary GOT {
+# SAME-ADDR-LLVM-NEXT:   Canonical gp value: 0x9112
+# SAME-ADDR-LLVM-NEXT:   Reserved entries [
+# SAME-ADDR-LLVM-NEXT:     Entry {
+# SAME-ADDR-LLVM-NEXT:       Address: 0x1122
+# SAME-ADDR-LLVM-NEXT:       Access: -32752
+# SAME-ADDR-LLVM-NEXT:       Initial: 0x0
+# SAME-ADDR-LLVM-NEXT:       Purpose: Lazy resolver
+# SAME-ADDR-LLVM-NEXT:     }
+# SAME-ADDR-LLVM-NEXT:   ]
+# SAME-ADDR-LLVM-NEXT:   Local entries [
+# SAME-ADDR-LLVM-NEXT:   ]
+# SAME-ADDR-LLVM-NEXT:   Global entries [
+# SAME-ADDR-LLVM-NEXT:     Entry {
+# SAME-ADDR-LLVM-NEXT:       Address: 0x112A
+# SAME-ADDR-LLVM-NEXT:       Access: -32744
+# SAME-ADDR-LLVM-NEXT:       Initial: 0x0
+# SAME-ADDR-LLVM-NEXT:       Value: 0x0
+# SAME-ADDR-LLVM-NEXT:       Type: None (0x0)
+# SAME-ADDR-LLVM-NEXT:       Section: Undefined (0x0)
+# SAME-ADDR-LLVM-NEXT:       Name: foo (1)
+# SAME-ADDR-LLVM-NEXT:     }
+# SAME-ADDR-LLVM-NEXT:   ]
+# SAME-ADDR-LLVM-NEXT:   Number of TLS and multi-GOT entries: 0
+# SAME-ADDR-LLVM-NEXT: }
+
+# SAME-ADDR-GNU:      Primary GOT:
+# SAME-ADDR-GNU-NEXT:  Canonical gp value: 0000000000009112
+# SAME-ADDR-GNU-EMPTY:
+# SAME-ADDR-GNU-NEXT:  Reserved entries:
+# SAME-ADDR-GNU-NEXT:            Address     Access          Initial Purpose
+# SAME-ADDR-GNU-NEXT:   0000000000001122 -32752(gp) 0000000000000000 Lazy resolver
+# SAME-ADDR-GNU-EMPTY:
+# SAME-ADDR-GNU-NEXT:  Global entries:
+# SAME-ADDR-GNU-NEXT:            Address     Access          Initial         Sym.Val. Type    Ndx Name
+# SAME-ADDR-GNU-NEXT:   000000000000112a -32744(gp) 0000000000000000 0000000000000000 NOTYPE  UND foo
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Address: 0x1122
+    Size:    0
+  - Name:    .got
+    Type:    SHT_PROGBITS
+    Address: 0x1122
+    Size:    16
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_MIPS_LOCAL_GOTNO
+        Value: 1
+      - Tag:   DT_MIPS_GOTSYM
+        Value: 1
+      - Tag:   DT_PLTGOT
+        Value: 0x1122
+DynamicSymbols:
+  - Name: foo

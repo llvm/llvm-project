@@ -38,14 +38,12 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    [[ENDIAN]]
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  [[ENDIAN]]
+  Type:  ET_EXEC
 DWARF:
   debug_gnu_pubtypes:
-    Length:
-      TotalLength: 0x1234
+    Length:     0x1234
     Version:    2
     UnitOffset: 0x1234
     UnitSize:   0x4321
@@ -91,10 +89,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:    .debug_gnu_pubtypes
     Type:    SHT_PROGBITS
@@ -112,10 +109,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name: .debug_gnu_pubtypes
     Type: SHT_PROGBITS
@@ -130,18 +126,16 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name: .debug_gnu_pubtypes
     Type: SHT_PROGBITS
     Size: 0x10
 DWARF:
   debug_gnu_pubtypes:
-    Length:
-      TotalLength: 0x1234
+    Length:     0x1234
     Version:    2
     UnitOffset: 0x1234
     UnitSize:   0x4321
@@ -154,18 +148,16 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:    .debug_gnu_pubtypes
     Type:    SHT_PROGBITS
     Content: "00"
 DWARF:
   debug_gnu_pubtypes:
-    Length:
-      TotalLength: 0x1234
+    Length:     0x1234
     Version:    2
     UnitOffset: 0x1234
     UnitSize:   0x4321
@@ -183,10 +175,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:         .debug_gnu_pubtypes
     Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
@@ -209,10 +200,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:         .debug_gnu_pubtypes
     Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
@@ -227,8 +217,7 @@ Sections:
     Type:         SHT_STRTAB
 DWARF:
   debug_gnu_pubtypes:
-    Length:
-      TotalLength: 0x1234
+    Length:     0x1234
     Version:    2
     UnitOffset: 0x1234
     UnitSize:   0x4321
@@ -238,21 +227,19 @@ DWARF:
 
 # RUN: not yaml2obj --docnum=8 %s -o %t8.o 2>&1 | FileCheck %s --check-prefix=MISSING-KEY --ignore-case
 
-#      MISSING-KEY: YAML:260:9: error: missing required key 'Descriptor'
+#      MISSING-KEY: YAML:{{.*}}:9: error: missing required key 'Descriptor'
 # MISSING-KEY-NEXT:       - DieOffset: 0x12345678
 # MISSING-KEY-NEXT:         ^
 # MISSING-KEY-NEXT: yaml2obj: error: failed to parse YAML input: Invalid argument
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_gnu_pubtypes:
-    Length:
-      TotalLength: 0x1234
+    Length:     0x1234
     Version:    2
     UnitOffset: 0x1234
     UnitSize:   0x4321

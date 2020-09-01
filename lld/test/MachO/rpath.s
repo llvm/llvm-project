@@ -1,0 +1,16 @@
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
+# RUN: lld -flavor darwinnew -o %t %t.o
+
+## Check that -rpath generates LC_RPATH.
+# RUN: lld -flavor darwinnew -o %t %t.o -rpath /some/rpath
+# RUN: llvm-objdump --macho --all-headers %t | FileCheck %s
+# CHECK:      LC_RPATH
+# CHECK-NEXT: cmdsize 24
+# CHECK-NEXT: path /some/rpath
+
+.text
+.global _main
+_main:
+  mov $0, %rax
+  ret

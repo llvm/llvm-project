@@ -154,6 +154,7 @@ class TargetAPITestCase(TestBase):
     @add_test_categories(['pyapi'])
     @skipIfWindows  # stdio manipulation unsupported on Windows
     @skipIfRemote   # stdio manipulation unsupported on remote iOS devices<rdar://problem/54581135>
+    @skipIfReproducer  # stdout not captured by reproducers
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     @no_debug_info_test
     def test_launch_simple(self):
@@ -168,7 +169,7 @@ class TargetAPITestCase(TestBase):
 
         process = target.LaunchSimple(
             ['foo', 'bar'], ['baz'], self.get_process_working_directory())
-        self.runCmd("run")
+        process.Continue()
         self.assertEqual(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertIn('arg: foo', output)
@@ -179,7 +180,7 @@ class TargetAPITestCase(TestBase):
         self.runCmd("setting set target.env-vars bar=baz")
         process = target.LaunchSimple(None, None,
                                       self.get_process_working_directory())
-        self.runCmd("run")
+        process.Continue()
         self.assertEqual(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertIn('arg: foo', output)
@@ -188,7 +189,7 @@ class TargetAPITestCase(TestBase):
         self.runCmd("settings set target.disable-stdio true")
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
-        self.runCmd("run")
+        process.Continue()
         self.assertEqual(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertEqual(output, "")

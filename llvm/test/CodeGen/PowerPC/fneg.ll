@@ -39,3 +39,33 @@ define float @fma_fneg_fsub(float %x, float %y0, float %y1, float %z) {
   %r = call float @llvm.fmuladd.f32(float %negx, float %negy, float %z)
   ret float %r
 }
+
+; Verify that we didn't hit assertion for this case.
+define double @fneg_no_ice(float %x) {
+; CHECK-LABEL: fneg_no_ice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lis r3, .LCPI3_0@ha
+; CHECK-NEXT:    lfs f0, .LCPI3_0@l(r3)
+; CHECK-NEXT:    fsubs f0, f0, f1
+; CHECK-NEXT:    fmul f1, f0, f0
+; CHECK-NEXT:    fmul f1, f0, f1
+; CHECK-NEXT:    blr
+  %y = fsub fast float 1.0, %x
+  %e = fpext float %y to double
+  %e2 = fmul double %e, %e
+  %e3 = fmul double %e, %e2
+  ret double %e3
+}
+
+define double @fneg_fmul_const(double %x) {
+; CHECK-LABEL: fneg_fmul_const:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lis r3, .LCPI4_0@ha
+; CHECK-NEXT:    lfd f0, .LCPI4_0@l(r3)
+; CHECK-NEXT:    fmul f1, f1, f0
+; CHECK-NEXT:    blr
+entry:
+  %f = fmul double %x, 1.2345
+  %s = fneg double %f
+  ret double %s
+}

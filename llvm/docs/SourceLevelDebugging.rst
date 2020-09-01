@@ -1054,6 +1054,32 @@ and this will materialize an additional DWARF attribute as:
      ...
      DW_AT_elemental [DW_FORM_flag_present]  (true)
 
+There are a few DWARF tags defined to represent Fortran specific constructs i.e DW_TAG_string_type for representing Fortran character(n). In LLVM this is represented as DIStringType.
+
+.. code-block:: fortran
+
+  character(len=*), intent(in) :: string
+
+a Fortran front-end would generate the following descriptors:
+
+.. code-block:: text
+
+  !DILocalVariable(name: "string", arg: 1, scope: !10, file: !3, line: 4, type: !15)
+  !DIStringType(name: "character(*)!2", stringLength: !16, stringLengthExpression: !DIExpression(), size: 32)
+
+and this will materialize in DWARF tags as:
+
+.. code-block:: text
+
+   DW_TAG_string_type
+                DW_AT_name      ("character(*)!2")
+                DW_AT_string_length     (0x00000064)
+   0x00000064:    DW_TAG_variable
+                  DW_AT_location      (DW_OP_fbreg +16)
+                  DW_AT_type  (0x00000083 "integer*8")
+                  ...
+                  DW_AT_artificial    (true)
+
 Debugging information format
 ============================
 

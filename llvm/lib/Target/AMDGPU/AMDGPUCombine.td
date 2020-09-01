@@ -47,18 +47,9 @@ def AMDGPUPreLegalizerCombinerHelper: GICombinerHelper<
   let DisableRuleOption = "amdgpuprelegalizercombiner-disable-rule";
 }
 
-
-// FIXME: combines_for_extload can introduce illegal extloads which
-// aren't re-legalized.
-// FIXME: Is there a way to remove a single item from all_combines?
-def all_combines_minus_extload : GICombineGroup<[trivial_combines,
-  ptr_add_immed_chain, combine_indexed_load_store, undef_combines,
-  identity_combines]
->;
-
 def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
   "AMDGPUGenPostLegalizerCombinerHelper",
-  [all_combines_minus_extload, gfx6gfx7_combines,
+  [all_combines, gfx6gfx7_combines,
    uchar_to_float, cvt_f32_ubyteN]> {
   let DisableRuleOption = "amdgpupostlegalizercombiner-disable-rule";
 }

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 class A1 {};
-class B1; // expected-note{{'B1' is not defined, but forward declared here; conversion would be valid if it's derived from 'A1'}}
+class B1; // expected-note{{'B1' is not defined, but forward declared here; conversion would be valid if it was derived from 'A1'}}
 B1 *b1;
 A1 *a1 = b1; // expected-error{{cannot initialize a variable of type 'A1 *' with an lvalue of type 'B1 *'}}
 

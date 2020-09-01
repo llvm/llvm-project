@@ -1,8 +1,8 @@
 Test that we correctly find a PE/COFF file in our executable search path, and
 use it when opening minidumps.
 
-RUN: yaml2obj %S/Inputs/find-module.exe.yaml > %T/find-module.exe
-RUN: yaml2obj %S/Inputs/find-module.dmp.yaml > %T/find-module.dmp
+RUN: yaml2obj %S/Inputs/find-module.exe.yaml -o %T/find-module.exe
+RUN: yaml2obj %S/Inputs/find-module.dmp.yaml -o %T/find-module.dmp
 RUN: %lldb -O "settings set target.exec-search-paths %T" \
 RUN:   -c %T/find-module.dmp -o "image dump objfile" -o exit | FileCheck %s
 

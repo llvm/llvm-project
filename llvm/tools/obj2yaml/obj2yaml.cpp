@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "obj2yaml.h"
-#include "Error.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/Minidump.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/InitLLVM.h"
 
 using namespace llvm;
@@ -30,7 +30,7 @@ static Error dumpObject(const ObjectFile &Obj) {
   if (Obj.isWasm())
     return errorCodeToError(wasm2yaml(outs(), cast<WasmObjectFile>(Obj)));
 
-  return errorCodeToError(obj2yaml_error::unsupported_obj_file_format);
+  llvm_unreachable("unexpected object file format");
 }
 
 static Error dumpInput(StringRef File) {

@@ -295,6 +295,61 @@ enum CFileCpuId : uint8_t {
 StringRef getMappingClassString(XCOFF::StorageMappingClass SMC);
 StringRef getRelocationTypeString(XCOFF::RelocationType Type);
 
+struct TracebackTable {
+  // Byte 1
+  static constexpr uint32_t VersionMask = 0xFF00'0000;
+  static constexpr uint8_t VersionShift = 24;
+
+  // Byte 2
+  static constexpr uint32_t LanguageIdMask = 0x00FF'0000;
+  static constexpr uint8_t LanguageIdShift = 16;
+
+  // Byte 3
+  static constexpr uint32_t IsGlobaLinkageMask = 0x0000'8000;
+  static constexpr uint32_t IsOutOfLineEpilogOrPrologueMask = 0x0000'4000;
+  static constexpr uint32_t HasTraceBackTableOffsetMask = 0x0000'2000;
+  static constexpr uint32_t IsInternalProcedureMask = 0x0000'1000;
+  static constexpr uint32_t HasControlledStorageMask = 0x0000'0800;
+  static constexpr uint32_t IsTOClessMask = 0x0000'0400;
+  static constexpr uint32_t IsFloatingPointPresentMask = 0x0000'0200;
+  static constexpr uint32_t IsFloatingPointOperationLogOrAbortEnabledMask =
+      0x0000'0100;
+
+  // Byte 4
+  static constexpr uint32_t IsInterruptHandlerMask = 0x0000'0080;
+  static constexpr uint32_t IsFunctionNamePresentMask = 0x0000'0040;
+  static constexpr uint32_t IsAllocaUsedMask = 0x0000'0020;
+  static constexpr uint32_t OnConditionDirectiveMask = 0x0000'001C;
+  static constexpr uint32_t IsCRSavedMask = 0x0000'0002;
+  static constexpr uint32_t IsLRSavedMask = 0x0000'0001;
+  static constexpr uint8_t OnConditionDirectiveShift = 2;
+
+  // Byte 5
+  static constexpr uint32_t IsBackChainStoredMask = 0x8000'0000;
+  static constexpr uint32_t IsFixupMask = 0x4000'0000;
+  static constexpr uint32_t FPRSavedMask = 0x3F00'0000;
+  static constexpr uint32_t FPRSavedShift = 24;
+
+  // Byte 6
+  static constexpr uint32_t HasExtensionTableMask = 0x0080'0000;
+  static constexpr uint32_t HasVectorInfoMask = 0x0040'0000;
+  static constexpr uint32_t GPRSavedMask = 0x003F'0000;
+  static constexpr uint32_t GPRSavedShift = 16;
+
+  // Byte 7
+  static constexpr uint32_t NumberOfFixedParmsMask = 0x0000'FF00;
+  static constexpr uint8_t NumberOfFixedParmsShift = 8;
+
+  // Byte 8
+  static constexpr uint32_t NumberOfFloatingPointParmsMask = 0x0000'00FE;
+  static constexpr uint32_t HasParmsOnStackMask = 0x0000'0001;
+  static constexpr uint8_t NumberOfFloatingPointParmsShift = 1;
+
+  // Masks to select leftmost bits for decoding parameter type information.
+  static constexpr uint32_t ParmTypeIsFloatingBit = 0x8000'0000;
+  static constexpr uint32_t ParmTypeFloatingIsDoubleBit = 0x4000'0000;
+};
+
 } // end namespace XCOFF
 } // end namespace llvm
 

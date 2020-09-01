@@ -3942,39 +3942,39 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; AVX512-NEXT:    pushq %rbx
 ; AVX512-NEXT:    subq $24, %rsp
 ; AVX512-NEXT:    movq %r8, %rax
-; AVX512-NEXT:    movq %rcx, %r15
+; AVX512-NEXT:    movq %rcx, %r14
 ; AVX512-NEXT:    movq %rdx, %rbx
+; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r15
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r12
-; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r13
 ; AVX512-NEXT:    movq $0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
 ; AVX512-NEXT:    movq %rax, %rdx
 ; AVX512-NEXT:    movq %r9, %rcx
 ; AVX512-NEXT:    callq __muloti4
-; AVX512-NEXT:    movq %rax, %r14
+; AVX512-NEXT:    movq %rax, %r13
 ; AVX512-NEXT:    movq %rdx, %rbp
 ; AVX512-NEXT:    movq $0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
 ; AVX512-NEXT:    movq %rbx, %rdi
-; AVX512-NEXT:    movq %r15, %rsi
+; AVX512-NEXT:    movq %r14, %rsi
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
-; AVX512-NEXT:    movq %r13, %rcx
+; AVX512-NEXT:    movq %r12, %rcx
 ; AVX512-NEXT:    callq __muloti4
 ; AVX512-NEXT:    cmpq $0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    setne %cl
 ; AVX512-NEXT:    kmovd %ecx, %k0
 ; AVX512-NEXT:    cmpq $0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    setne %cl
-; AVX512-NEXT:    kshiftlw $1, %k0, %k0
 ; AVX512-NEXT:    andl $1, %ecx
 ; AVX512-NEXT:    kmovw %ecx, %k1
+; AVX512-NEXT:    kshiftlw $1, %k0, %k0
 ; AVX512-NEXT:    korw %k0, %k1, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    movq %rdx, 24(%r12)
-; AVX512-NEXT:    movq %rax, 16(%r12)
-; AVX512-NEXT:    movq %rbp, 8(%r12)
-; AVX512-NEXT:    movq %r14, (%r12)
+; AVX512-NEXT:    movq %rdx, 24(%r15)
+; AVX512-NEXT:    movq %rax, 16(%r15)
+; AVX512-NEXT:    movq %rbp, 8(%r15)
+; AVX512-NEXT:    movq %r13, (%r15)
 ; AVX512-NEXT:    addq $24, %rsp
 ; AVX512-NEXT:    popq %rbx
 ; AVX512-NEXT:    popq %r12

@@ -56,7 +56,7 @@ createLanaiMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (CPUName.empty())
     CPUName = "generic";
 
-  return createLanaiMCSubtargetInfoImpl(TT, CPUName, FS);
+  return createLanaiMCSubtargetInfoImpl(TT, CPUName, /*TuneCPU*/ CPUName, FS);
 }
 
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,

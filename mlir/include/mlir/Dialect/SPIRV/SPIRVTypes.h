@@ -65,19 +65,6 @@ struct StructTypeStorage;
 
 } // namespace detail
 
-namespace TypeKind {
-enum Kind {
-  Array = Type::FIRST_SPIRV_TYPE,
-  CooperativeMatrix,
-  Image,
-  Matrix,
-  Pointer,
-  RuntimeArray,
-  Struct,
-  LAST_SPIRV_TYPE = Struct,
-};
-}
-
 // Base SPIR-V type for providing availability queries.
 class SPIRVType : public Type {
 public:

@@ -50,6 +50,7 @@ class EventAPITestCase(TestBase):
 
         # Now launch the process, and do not stop at the entry point.
         error = lldb.SBError()
+        flags = target.GetLaunchInfo().GetLaunchFlags()
         process = target.Launch(listener,
                                 None,      # argv
                                 None,      # envp
@@ -57,7 +58,7 @@ class EventAPITestCase(TestBase):
                                 None,      # stdout_path
                                 None,      # stderr_path
                                 None,      # working directory
-                                0,         # launch flags
+                                flags,     # launch flags
                                 False,     # Stop at entry
                                 error)     # error
 
@@ -145,6 +146,7 @@ class EventAPITestCase(TestBase):
 
         # Now launch the process, and do not stop at entry point.
         error = lldb.SBError()
+        flags = target.GetLaunchInfo().GetLaunchFlags()
         process = target.Launch(listener,
                                 None,      # argv
                                 None,      # envp
@@ -152,7 +154,7 @@ class EventAPITestCase(TestBase):
                                 None,      # stdout_path
                                 None,      # stderr_path
                                 None,      # working directory
-                                0,         # launch flags
+                                flags,     # launch flags
                                 False,     # Stop at entry
                                 error)     # error
         self.assertTrue(error.Success() and process, PROCESS_IS_VALID)
@@ -224,6 +226,7 @@ class EventAPITestCase(TestBase):
 
         # Now launch the process, and do not stop at the entry point.
         error = lldb.SBError()
+        flags = target.GetLaunchInfo().GetLaunchFlags()
         process = target.Launch(listener,
                                 None,      # argv
                                 None,      # envp
@@ -231,7 +234,7 @@ class EventAPITestCase(TestBase):
                                 None,      # stdout_path
                                 None,      # stderr_path
                                 None,      # working directory
-                                0,         # launch flags
+                                flags,     # launch flags
                                 False,     # Stop at entry
                                 error)     # error
 

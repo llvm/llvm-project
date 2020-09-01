@@ -12,6 +12,13 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+// Forward declaration from Dialect.h
+template <typename ConcreteDialect>
+void registerDialect(DialectRegistry &registry);
+
+namespace linalg {
+class LinalgDialect;
+} // end namespace linalg
 
 #define GEN_PASS_CLASSES
 #include "mlir/Transforms/Passes.h.inc"

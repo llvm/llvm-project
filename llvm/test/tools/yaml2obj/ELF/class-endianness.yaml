@@ -29,6 +29,5 @@
 --- !ELF
 FileHeader: !FileHeader
   Class: ELFCLASS[[BITS]]
-  Data: ELFDATA2[[ENCODE]]
-  Type: ET_EXEC
-  Machine: EM_X86_64
+  Data:  ELFDATA2[[ENCODE]]
+  Type:  ET_EXEC

@@ -316,7 +316,7 @@ defm atomic_load_fmax_#as : binary_atomic_op<SIatomic_fmax, 0>;
 } // End let AddressSpaces = ...
 } // End foreach AddrSpace
 
-def atomic_fadd_global_noret : PatFrag<
+def atomic_fadd_global_noret_impl : PatFrag<
   (ops node:$ptr, node:$value),
   (atomic_load_fadd node:$ptr, node:$value)> {
   // FIXME: Move this
@@ -325,14 +325,9 @@ def atomic_fadd_global_noret : PatFrag<
   let AddressSpaces = StoreAddress_global.AddrSpaces;
 }
 
-def atomic_pk_fadd_global_noret : PatFrag<
-    (ops node:$ptr, node:$value),
-    (atomic_load_fadd node:$ptr, node:$value)> {
-  // FIXME: Move this
-  let MemoryVT = v2f16;
-  let IsAtomic = 1;
-  let AddressSpaces = StoreAddress_global.AddrSpaces;
-}
+def atomic_fadd_global_noret : PatFrags<(ops node:$src0, node:$src1),
+  [(int_amdgcn_global_atomic_fadd node:$src0, node:$src1),
+   (atomic_fadd_global_noret_impl node:$src0, node:$src1)]>;
 
 //===----------------------------------------------------------------------===//
 // SDNodes PatFrags for loads/stores with a glue input.
@@ -438,16 +433,15 @@ def zextloadi16_local_m0 : PatFrag<(ops node:$ptr), (zextloadi16_glue node:$ptr)
 }
 
 def load_align8_local_m0 : PatFrag<(ops node:$ptr),
-                                   (load_local_m0 node:$ptr)> {
+                                   (load_local_m0 node:$ptr)>, Aligned<8> {
   let IsLoad = 1;
   let IsNonExtLoad = 1;
-  let MinAlignment = 8;
 }
+
 def load_align16_local_m0 : PatFrag<(ops node:$ptr),
-                                    (load_local_m0 node:$ptr)> {
+                                   (load_local_m0 node:$ptr)>, Aligned<16> {
   let IsLoad = 1;
   let IsNonExtLoad = 1;
-  let MinAlignment = 16;
 }
 
 } // End IsLoad = 1
@@ -523,20 +517,18 @@ def truncstorei16_local_m0 : PatFrag<(ops node:$val, node:$ptr),
 }
 }
 
-def store_align16_local_m0 : PatFrag <
-  (ops node:$value, node:$ptr),
-  (store_local_m0 node:$value, node:$ptr)> {
+def store_align8_local_m0 : PatFrag <(ops node:$value, node:$ptr),
+                                     (store_local_m0 node:$value, node:$ptr)>,
+                            Aligned<8> {
   let IsStore = 1;
   let IsTruncStore = 0;
-  let MinAlignment = 16;
 }
 
-def store_align8_local_m0 : PatFrag <
-  (ops node:$value, node:$ptr),
-  (store_local_m0 node:$value, node:$ptr)> {
+def store_align16_local_m0 : PatFrag <(ops node:$value, node:$ptr),
+                                     (store_local_m0 node:$value, node:$ptr)>,
+                            Aligned<16> {
   let IsStore = 1;
   let IsTruncStore = 0;
-  let MinAlignment = 8;
 }
 
 let AddressSpaces = StoreAddress_local.AddrSpaces in {
@@ -1089,8 +1081,14 @@ def clampmod0 : NamedOperandBit_0<"ClampSI", NamedMatchClass<"ClampSI">>;
 def highmod : NamedOperandBit<"High", NamedMatchClass<"High">>;
 
 def DLC : NamedOperandBit<"DLC", NamedMatchClass<"DLC">>;
+def DLC_0 : NamedOperandBit_0<"DLC", NamedMatchClass<"DLC">>;
+
 def GLC : NamedOperandBit<"GLC", NamedMatchClass<"GLC">>;
+def GLC_0 : NamedOperandBit_0<"GLC", NamedMatchClass<"GLC">>;
+
 def SLC : NamedOperandBit<"SLC", NamedMatchClass<"SLC">>;
+def SLC_0 : NamedOperandBit_0<"SLC", NamedMatchClass<"SLC">>;
+
 def TFE : NamedOperandBit<"TFE", NamedMatchClass<"TFE">>;
 def SWZ : NamedOperandBit<"SWZ", NamedMatchClass<"SWZ">>;
 def UNorm : NamedOperandBit<"UNorm", NamedMatchClass<"UNorm">>;
@@ -1295,6 +1293,7 @@ def PackedI16InputMods : PackedIntInputMods<PackedI16InputModsMatchClass>;
 
 def DS1Addr1Offset : ComplexPattern<i32, 2, "SelectDS1Addr1Offset">;
 def DS64Bit4ByteAligned : ComplexPattern<i32, 3, "SelectDS64Bit4ByteAligned">;
+def DS128Bit8ByteAligned : ComplexPattern<i64, 3, "SelectDS128Bit8ByteAligned">;
 
 def MOVRELOffset : ComplexPattern<i32, 2, "SelectMOVRELOffset">;
 
@@ -1513,6 +1512,10 @@ class getVOPSrc0ForVT<ValueType VT> {
           )
        )
     );
+}
+
+class getSOPSrcForVT<ValueType VT> {
+  RegisterOperand ret = !if(!eq(VT.Size, 64), SSrc_b64, SSrc_b32);
 }
 
 // Returns the vreg register class to use for source operand given VT

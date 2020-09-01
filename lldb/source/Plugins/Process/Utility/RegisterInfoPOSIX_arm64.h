@@ -98,6 +98,7 @@ public:
   bool IsSVERegVG(unsigned reg) const;
 
   uint32_t GetRegNumSVEZ0() const;
+  uint32_t GetRegNumSVEFFR() const;
   uint32_t GetRegNumFPCR() const;
   uint32_t GetRegNumFPSR() const;
 

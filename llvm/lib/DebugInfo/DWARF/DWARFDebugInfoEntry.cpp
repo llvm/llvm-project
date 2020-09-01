@@ -38,7 +38,8 @@ bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U, uint64_t *OffsetPtr,
     AbbrevDecl = nullptr;
     return true;
   }
-  AbbrevDecl = U.getAbbreviations()->getAbbreviationDeclaration(AbbrCode);
+  if (const auto *AbbrevSet = U.getAbbreviations())
+    AbbrevDecl = AbbrevSet->getAbbreviationDeclaration(AbbrCode);
   if (nullptr == AbbrevDecl) {
     // Restore the original offset.
     *OffsetPtr = Offset;

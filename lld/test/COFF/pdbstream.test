@@ -1,4 +1,4 @@
-# RUN: yaml2obj %p/Inputs/empty.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/empty.yaml -o %t.obj
 
 # RUN: lld-link /entry:main %t.obj /out:%t.exe /debug /pdbstream:srcsrv=%p/Inputs/stream.txt
 # RUN: llvm-pdbutil export -stream=srcsrv -out=- %t.pdb | FileCheck %s

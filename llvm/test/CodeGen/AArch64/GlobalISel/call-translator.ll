@@ -151,6 +151,42 @@ define void @test_abi_exts_call(i8* %addr) {
   ret void
 }
 
+; CHECK-LABEL: name: test_zext_in_callee
+; CHECK: bb.1 (%ir-block.0):
+; CHECK:   liveins: $x0
+; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p0) :: (load 1 from %ir.addr)
+; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD]](s8)
+; CHECK:   $w0 = COPY [[ZEXT]](s32)
+; CHECK:   BL @has_zext_param, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0
+; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+; CHECK:   RET_ReallyLR
+declare void @has_zext_param(i8 zeroext)
+define void @test_zext_in_callee(i8* %addr) {
+  %val = load i8, i8* %addr
+  call void @has_zext_param(i8 %val)
+  ret void
+}
+
+; CHECK-LABEL: name: test_sext_in_callee
+; CHECK: bb.1 (%ir-block.0):
+; CHECK:   liveins: $x0
+; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p0) :: (load 1 from %ir.addr)
+; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+; CHECK:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD]](s8)
+; CHECK:   $w0 = COPY [[SEXT]](s32)
+; CHECK:   BL @has_sext_param, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0
+; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+; CHECK:   RET_ReallyLR
+declare void @has_sext_param(i8 signext)
+define void @test_sext_in_callee(i8* %addr) {
+  %val = load i8, i8* %addr
+  call void @has_sext_param(i8 %val)
+  ret void
+}
+
 ; CHECK-LABEL: name: test_abi_sext_ret
 ; CHECK: [[VAL:%[0-9]+]]:_(s8) = G_LOAD
 ; CHECK: [[SVAL:%[0-9]+]]:_(s32) = G_SEXT [[VAL]](s8)

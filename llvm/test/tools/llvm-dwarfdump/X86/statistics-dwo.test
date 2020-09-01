@@ -69,28 +69,28 @@ RUN: llvm-dwarfdump --statistics statistics-fib.split-dwarf.o | FileCheck %s
 # }
 #
 
-CHECK: "version":5
-CHECK: "#functions":3
-CHECK: "#functions with location":3
-CHECK: "#inlined functions":7
-CHECK: "#inlined functions with abstract origins":7
-CHECK: "#unique source variables":9
-CHECK: "#source variables":30
+CHECK:      "version": 6,
+CHECK:      "#functions": 3,
+CHECK:      "#functions with location": 3,
+CHECK:      "#inlined functions": 7,
+CHECK:      "#inlined functions with abstract origins": 7,
+CHECK:      "#unique source variables": 9,
+CHECK:      "#source variables": 30,
 
 # Ideally the value below would be 33 but currently it's not.
-CHECK: "#source variables with location":22
-CHECK: "#call site entries":7
-CHECK: "sum_all_variables(#bytes in parent scope)":2817
-CHECK: "sum_all_variables(#bytes in parent scope covered by DW_AT_location)":1160
-CHECK: "#bytes witin functions":594
-CHECK: "#bytes witin inlined functions":345
-CHECK: "#params":12
-CHECK: "#params with source location":12
-CHECK: "#params with type":12
-CHECK: "#params with binary location":12
-CHECK: "#local vars":18
-CHECK: "#local vars with source location":18
-CHECK: "#local vars with type":18
+CHECK:      "#source variables with location": 22,
+CHECK:      "#call site entries": 7,
+CHECK:      "sum_all_variables(#bytes in parent scope)": 2817,
+CHECK:      "sum_all_variables(#bytes in parent scope covered by DW_AT_location)": 1160,
+CHECK:      "#bytes within functions": 594,
+CHECK:      "#bytes within inlined functions": 345,
+CHECK:      "#params": 12,
+CHECK-NEXT: "#params with source location": 12,
+CHECK-NEXT: "#params with type": 12,
+CHECK-NEXT: "#params with binary location": 12,
+CHECK-NEXT: "#local vars": 18,
+CHECK-NEXT: "#local vars with source location": 18,
+CHECK-NEXT: "#local vars with type": 18,
 
 # Ideally the value below would be 18, but currently it's not.
-CHECK: "#local vars with binary location":10
+CHECK:      "#local vars with binary location": 10,

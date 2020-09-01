@@ -10,14 +10,16 @@
 #ifndef MLIR_C_REGISTRATION_H
 #define MLIR_C_REGISTRATION_H
 
+#include "mlir-c/IR.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** Registers all dialects known to core MLIR with the system. This must be
- * called before creating an MlirContext if it needs access to the registered
- * dialects. */
-void mlirRegisterAllDialects();
+/** Registers all dialects known to core MLIR with the provided Context.
+ * This is needed before creating IR for these Dialects.
+ */
+void mlirRegisterAllDialects(MlirContext context);
 
 #ifdef __cplusplus
 }

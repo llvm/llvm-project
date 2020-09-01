@@ -377,11 +377,10 @@ fuseProducerOfDep(OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
 Optional<FusionInfo> mlir::linalg::fuseProducerOf(
     OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
     const LinalgDependenceGraph &graph, OperationFolder *folder) {
-  SmallVector<LinalgDependenceGraph::DependenceType, 4> deps = {
-      LinalgDependenceGraph::DependenceType::RAW,
-      LinalgDependenceGraph::DependenceType::WAW,
-  };
-  for (auto dep : deps) {
+  for (auto dep : {
+           LinalgDependenceGraph::DependenceType::RAW,
+           LinalgDependenceGraph::DependenceType::WAW,
+       }) {
     if (auto res =
             fuseProducerOfDep(b, consumer, consumerIdx, graph, folder, dep))
       return res;
@@ -773,6 +772,9 @@ struct FuseTensorReshapeOpAsProducer {
   static LinalgOp fuse(TensorReshapeOp producer, LinalgOp consumer,
                        unsigned consumerIdx, PatternRewriter &rewriter,
                        OperationFolder *folder = nullptr) {
+    if (producer.src().getDefiningOp<ConstantOp>())
+      return nullptr;
+
     if (!isFusible(producer, consumer, consumerIdx))
       return nullptr;
 
@@ -826,20 +828,19 @@ struct FuseTensorReshapeOpAsProducer {
 
 /// Implementation of fusion on tensor ops when consumer is a TensorReshapeOp.
 struct FuseTensorReshapeOpAsConsumer {
-  static bool isFusible(LinalgOp producer, TensorReshapeOp consumer,
-                        unsigned consumerIdx) {
+  static bool isCollapsingAndFusible(LinalgOp producer,
+                                     TensorReshapeOp consumer,
+                                     unsigned consumerIdx) {
     return isa<GenericOp, IndexedGenericOp>(producer.getOperation()) &&
            producer.hasTensorSemantics() &&
            isTensorReshapeOpFusible(consumer, producer.getOutputIndexingMap(0),
                                     /*asProducer=*/false);
   }
 
-  static LinalgOp fuse(LinalgOp producer, TensorReshapeOp consumer,
-                       unsigned consumerIdx, PatternRewriter &rewriter,
-                       OperationFolder *folder = nullptr) {
-    if (!isFusible(producer, consumer, consumerIdx))
-      return nullptr;
-
+  static LinalgOp fuseCollapsingCase(LinalgOp producer,
+                                     TensorReshapeOp consumer,
+                                     unsigned consumerIdx,
+                                     PatternRewriter &rewriter) {
     // The indexing_maps for the operands of the fused operation are same as
     // those for the operands of the producer.
     SmallVector<AffineMap, 4> fusedIndexMaps =
@@ -881,6 +882,77 @@ struct FuseTensorReshapeOpAsConsumer {
     rewriter.cloneRegionBefore(producerOp->getRegion(0), fusedRegion,
                                fusedRegion.begin());
     return fusedOp;
+  }
+
+  static bool isExpandingAndFusible(LinalgOp producer, TensorReshapeOp consumer,
+                                    unsigned consumerIdx) {
+    // Is fusible only if:
+    //   1) The producer is a generic op.
+    //   2) The producer has tensor semantics.
+    //   3) The tensor reshape op is a expanding case.
+    //   4) All the shapes are the same for the generic op.
+    //   5) All the indexing maps in producer are identity.
+    //   6) All the loops in producer are parallel loops.
+    //   7) The producer has a single user.
+    auto types = producer.getInputOutputShapedTypes();
+    assert(!types.empty());
+    return isa<GenericOp>(producer.getOperation()) &&
+           producer.hasTensorSemantics() &&
+           consumer.getSrcType().getRank() <
+               consumer.getResultType().getRank() &&
+           std::equal(types.begin() + 1, types.end(), types.begin()) &&
+           llvm::all_of(producer.getIndexingMaps(),
+                        [](AffineMap map) { return map.isIdentity(); }) &&
+           llvm::all_of(producer.iterator_types(),
+                        [](Attribute attr) {
+                          return attr.cast<StringAttr>().getValue() ==
+                                 getParallelIteratorTypeName();
+                        }) &&
+           producer.getOperation()->hasOneUse();
+  }
+
+  static LinalgOp fuseExpandingCase(LinalgOp producer, TensorReshapeOp consumer,
+                                    unsigned consumerIdx,
+                                    PatternRewriter &rewriter) {
+    Location loc = producer.getLoc();
+    auto dstShape = consumer.getResultType().cast<ShapedType>().getShape();
+    SmallVector<Value, 4> args;
+    for (auto arg : producer.getOperation()->getOperands()) {
+      auto type = RankedTensorType::get(
+          dstShape, arg.getType().cast<ShapedType>().getElementType());
+      args.push_back(rewriter.createOrFold<linalg::TensorReshapeOp>(
+          loc, type, arg, consumer.reassociation()));
+    }
+
+    SmallVector<Type, 4> resultTypes;
+    for (auto t : producer.getOutputTensorTypes()) {
+      Type type = RankedTensorType::get(dstShape,
+                                        t.cast<ShapedType>().getElementType());
+      resultTypes.push_back(type);
+    }
+
+    int rank = dstShape.size();
+    int numArgsIn = producer.getNumInputs();
+    int numArgsOut = producer.getNumOutputs();
+    auto genericOp = rewriter.create<linalg::GenericOp>(
+        loc, resultTypes, args, numArgsIn, numArgsOut,
+        SmallVector<AffineMap, 3>(args.size() + resultTypes.size(),
+                                  rewriter.getMultiDimIdentityMap(rank)),
+        SmallVector<StringRef, 3>(rank, getParallelIteratorTypeName()));
+    Region &region = genericOp.getRegion();
+    rewriter.cloneRegionBefore(producer.getOperation()->getRegion(0), region,
+                               region.begin());
+    return cast<LinalgOp>(genericOp.getOperation());
+  }
+
+  static LinalgOp fuse(LinalgOp producer, TensorReshapeOp consumer,
+                       unsigned consumerIdx, PatternRewriter &rewriter,
+                       OperationFolder *folder = nullptr) {
+    if (isCollapsingAndFusible(producer, consumer, consumerIdx))
+      return fuseCollapsingCase(producer, consumer, consumerIdx, rewriter);
+    if (isExpandingAndFusible(producer, consumer, consumerIdx))
+      return fuseExpandingCase(producer, consumer, consumerIdx, rewriter);
+    return nullptr;
   }
 };
 

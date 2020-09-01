@@ -85,7 +85,10 @@ def _match_decorator_property(expected, actual):
         return expected == actual
 
 
-def expectedFailure(expected_fn, bugnumber=None):
+def expectedFailure(func, bugnumber=None):
+    return unittest2.expectedFailure(func)
+
+def expectedFailureIfFn(expected_fn, bugnumber=None):
     def expectedFailure_impl(func):
         if isinstance(func, type) and issubclass(func, unittest2.TestCase):
             raise Exception(
@@ -93,11 +96,7 @@ def expectedFailure(expected_fn, bugnumber=None):
 
         @wraps(func)
         def wrapper(*args, **kwargs):
-            self = args[0]
-            if funcutils.requires_self(expected_fn):
-                xfail_reason = expected_fn(self)
-            else:
-                xfail_reason = expected_fn()
+            xfail_reason = expected_fn(*args, **kwargs)
             if xfail_reason is not None:
                 xfail_func = unittest2.expectedFailure(func)
                 xfail_func(*args, **kwargs)
@@ -234,7 +233,7 @@ def _decorateTest(mode,
     if mode == DecorateMode.Skip:
         return skipTestIfFn(fn, bugnumber)
     elif mode == DecorateMode.Xfail:
-        return expectedFailure(fn, bugnumber)
+        return expectedFailureIfFn(fn, bugnumber)
     else:
         return None
 
@@ -427,7 +426,7 @@ def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
         arch - A sequence of architecture names specifying the architectures
             for which a test is expected to fail. None means all architectures.
     """
-    return expectedFailure(
+    return expectedFailureIfFn(
         _skip_for_android(
             "xfailing on android",
             api_levels,
@@ -511,10 +510,9 @@ def skipIfNoSBHeaders(func):
         if lldb.remote_platform:
             return "skip because SBHeaders tests make no sense remotely"
 
-        if lldbplatformutil.getHostPlatform() == 'darwin':
+        if lldbplatformutil.getHostPlatform() == 'darwin' and configuration.lldb_framework_path:
             header = os.path.join(
-                os.environ["LLDB_LIB_DIR"],
-                'LLDB.framework',
+                configuration.lldb_framework_path,
                 'Versions',
                 'Current',
                 'Headers',
@@ -863,8 +861,6 @@ def skipUnlessFeature(feature):
 
 def skipIfReproducer(func):
     """Skip this test if the environment is set up to run LLDB with reproducers."""
-    def is_reproducer():
-        if configuration.capture_path or configuration.replay_path:
-            return "reproducers unsupported"
-        return None
-    return skipTestIfFn(is_reproducer)(func)
+    return unittest2.skipIf(
+        configuration.capture_path or configuration.replay_path,
+        "reproducers unsupported")(func)

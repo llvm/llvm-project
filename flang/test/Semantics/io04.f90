@@ -2,6 +2,7 @@
   character(kind=1,len=50) internal_file
   character(kind=1,len=100) msg
   character(20) sign
+  character, parameter :: const_internal_file = "(I6)"
   integer*1 stat1, id1
   integer*2 stat2
   integer*4 stat4
@@ -9,6 +10,8 @@
   integer :: iunit = 10
   integer, parameter :: junit = 11
   integer, pointer :: a(:)
+  integer, parameter :: const_id = 66666
+  procedure(), pointer :: procptr
 
   namelist /nnn/ nn1, nn2
 
@@ -66,6 +69,9 @@
   !ERROR: If NML appears, a data list must not appear
   write(10, nnn, rec=40, fmt=1) 'Ok'
 
+  !ERROR: Internal file variable 'const_internal_file' must be definable
+  write(const_internal_file, fmt=*)
+
   !ERROR: If UNIT=* appears, POS must not appear
   write(*, pos=n, nml=nnn)
 
@@ -118,7 +124,13 @@
   !ERROR: ID kind (1) is smaller than default INTEGER kind (4)
   write(id=id1, unit=10, asynchronous='Yes') 'Ok'
 
+  !ERROR: ID variable 'const_id' must be definable
+  write(10, *, asynchronous='yes', id=const_id, iostat=stat2) 'Ok'
+
   write(*, '(X)')
+
+  !ERROR: Output item must not be a procedure pointer
+  print*, n1, procptr, n2
 
 1 format (A)
 9 continue

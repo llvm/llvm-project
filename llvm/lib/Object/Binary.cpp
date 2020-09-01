@@ -93,7 +93,8 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   llvm_unreachable("Unexpected Binary File Type");
 }
 
-Expected<OwningBinary<Binary>> object::createBinary(StringRef Path) {
+Expected<OwningBinary<Binary>> object::createBinary(StringRef Path,
+                                                    LLVMContext *Context) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(Path, /*FileSize=*/-1,
                                    /*RequiresNullTerminator=*/false);
@@ -102,7 +103,7 @@ Expected<OwningBinary<Binary>> object::createBinary(StringRef Path) {
   std::unique_ptr<MemoryBuffer> &Buffer = FileOrErr.get();
 
   Expected<std::unique_ptr<Binary>> BinOrErr =
-      createBinary(Buffer->getMemBufferRef());
+      createBinary(Buffer->getMemBufferRef(), Context);
   if (!BinOrErr)
     return BinOrErr.takeError();
   std::unique_ptr<Binary> &Bin = BinOrErr.get();

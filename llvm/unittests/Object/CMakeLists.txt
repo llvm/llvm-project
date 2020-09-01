@@ -12,6 +12,7 @@ add_llvm_unittest(ObjectTests
   ObjectFileTest.cpp
   SymbolSizeTest.cpp
   SymbolicFileTest.cpp
+  XCOFFObjectFileTest.cpp
   )
 
 target_link_libraries(ObjectTests PRIVATE LLVMTestingSupport)

@@ -64,25 +64,31 @@
 // CK21: [[ST:%.+]] = type { i32, i32, float* }
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK21: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 32, i64 281474976710659]
+// CK21-USE: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 32, i64 281474976710659]
+// CK21-NOUSE: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 281474976710659]
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK21: [[SIZE01:@.+]] = private {{.*}}constant [1 x i64] [i64 492]
-// CK21: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK21-USE: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK21-NOUSE: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK21: [[MTYPE02:@.+]] = private {{.*}}constant [2 x i64] [i64 32, i64 281474976710674]
+// CK21-USE: [[MTYPE02:@.+]] = private {{.*}}constant [2 x i64] [i64 32, i64 281474976710674]
+// CK21-NOUSE: [[MTYPE02:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 281474976710674]
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK21: [[SIZE03:@.+]] = private {{.*}}constant [1 x i64] [i64 492]
-// CK21: [[MTYPE03:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK21-USE: [[MTYPE03:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK21-NOUSE: [[MTYPE03:@.+]] = private {{.*}}constant [1 x i64] [i64 2]
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK21: [[SIZE04:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK21: [[MTYPE04:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK21-USE: [[MTYPE04:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK21-NOUSE: [[MTYPE04:@.+]] = private {{.*}}constant [1 x i64] [i64 2]
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK21: [[MTYPE05:@.+]] = private {{.*}}constant [3 x i64] [i64 32, i64 281474976710659, i64 281474976710659]
+// CK21-USE: [[MTYPE05:@.+]] = private {{.*}}constant [3 x i64] [i64 32, i64 281474976710659, i64 281474976710659]
+// CK21-NOUSE: [[MTYPE05:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 281474976710659, i64 281474976710659]
 
 // CK21-LABEL: explicit_maps_template_args_and_members{{.*}}(
 

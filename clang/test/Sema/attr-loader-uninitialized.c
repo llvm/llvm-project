@@ -10,6 +10,10 @@ const int can_still_be_const __attribute__((loader_uninitialized));
 extern int external_rejected __attribute__((loader_uninitialized));
 // expected-error@-1 {{variable 'external_rejected' cannot be declared both 'extern' and with the 'loader_uninitialized' attribute}}
 
+struct S;
+extern struct S incomplete_external_rejected __attribute__((loader_uninitialized));
+// expected-error@-1 {{variable 'incomplete_external_rejected' cannot be declared both 'extern' and with the 'loader_uninitialized' attribute}}
+
 int noargs __attribute__((loader_uninitialized(0)));
 // expected-error@-1 {{'loader_uninitialized' attribute takes no arguments}}
 
@@ -35,3 +39,8 @@ __private_extern__ int initialized_private_extern_rejected __attribute__((loader
 
 extern __attribute__((visibility("hidden"))) int extern_hidden __attribute__((loader_uninitialized));
 // expected-error@-1 {{variable 'extern_hidden' cannot be declared both 'extern' and with the 'loader_uninitialized' attribute}}
+
+struct Incomplete;
+struct Incomplete incomplete __attribute__((loader_uninitialized));
+// expected-error@-1 {{variable has incomplete type 'struct Incomplete'}}
+// expected-note@-3 {{forward declaration of 'struct Incomplete'}}

@@ -115,7 +115,7 @@ static void CrashHandler(int) { Fuzzer::StaticCrashSignalCallback(); }
 void SetSignalHandler(const FuzzingOptions& Options) {
   HandlerOpt = &Options;
 
-  if (Options.UnitTimeoutSec > 0)
+  if (Options.HandleAlrm && Options.UnitTimeoutSec > 0)
     Timer.SetTimer(Options.UnitTimeoutSec / 2 + 1);
 
   if (Options.HandleInt || Options.HandleTerm)

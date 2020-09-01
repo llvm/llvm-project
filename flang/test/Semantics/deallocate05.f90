@@ -21,6 +21,7 @@ Type(t),Allocatable :: x(:)
 
 Real :: r
 Integer :: s
+Integer, Parameter :: const_s = 13
 Integer :: e
 Integer :: pi
 Character(256) :: ee
@@ -56,6 +57,8 @@ Deallocate(x%p)
 
 !ERROR: STAT may not be duplicated in a DEALLOCATE statement
 Deallocate(x, stat=s, stat=s)
+!ERROR: STAT variable 'const_s' must be definable
+Deallocate(x, stat=const_s)
 !ERROR: ERRMSG may not be duplicated in a DEALLOCATE statement
 Deallocate(x, errmsg=ee, errmsg=ee)
 !ERROR: STAT may not be duplicated in a DEALLOCATE statement

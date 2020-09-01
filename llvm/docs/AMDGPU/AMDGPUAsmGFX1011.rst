@@ -71,8 +71,8 @@ VOP3P
     **INSTRUCTION**                    **DST**       **SRC0**        **SRC1**        **SRC2**           **MODIFIERS**
     \ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|
     v_dot2_f32_f16                 :ref:`vdst<amdgpu_synid1011_vdst32_0>`,     :ref:`src0<amdgpu_synid1011_src32_0>`::ref:`f16x2<amdgpu_synid1011_type_dev>`, :ref:`src1<amdgpu_synid1011_src32_1>`::ref:`f16x2<amdgpu_synid1011_type_dev>`, :ref:`src2<amdgpu_synid1011_src32_1>`::ref:`f32<amdgpu_synid1011_type_dev>`       :ref:`neg_lo<amdgpu_synid_neg_lo>` :ref:`neg_hi<amdgpu_synid_neg_hi>` :ref:`clamp<amdgpu_synid_clamp>`
-    v_dot2_i32_i16                 :ref:`vdst<amdgpu_synid1011_vdst32_0>`,     :ref:`src0<amdgpu_synid1011_src32_0>`::ref:`i16x2<amdgpu_synid1011_type_dev>`, :ref:`src1<amdgpu_synid1011_src32_1>`::ref:`i16x2<amdgpu_synid1011_type_dev>`, :ref:`src2<amdgpu_synid1011_src32_1>`::ref:`i32<amdgpu_synid1011_type_dev>`       :ref:`clamp<amdgpu_synid_clamp>`
-    v_dot2_u32_u16                 :ref:`vdst<amdgpu_synid1011_vdst32_0>`,     :ref:`src0<amdgpu_synid1011_src32_0>`::ref:`u16x2<amdgpu_synid1011_type_dev>`, :ref:`src1<amdgpu_synid1011_src32_1>`::ref:`u16x2<amdgpu_synid1011_type_dev>`, :ref:`src2<amdgpu_synid1011_src32_1>`::ref:`u32<amdgpu_synid1011_type_dev>`       :ref:`clamp<amdgpu_synid_clamp>`
+    v_dot2_i32_i16                 :ref:`vdst<amdgpu_synid1011_vdst32_0>`,     :ref:`src0<amdgpu_synid1011_src32_2>`::ref:`i16x2<amdgpu_synid1011_type_dev>`, :ref:`src1<amdgpu_synid1011_src32_3>`::ref:`i16x2<amdgpu_synid1011_type_dev>`, :ref:`src2<amdgpu_synid1011_src32_1>`::ref:`i32<amdgpu_synid1011_type_dev>`       :ref:`clamp<amdgpu_synid_clamp>`
+    v_dot2_u32_u16                 :ref:`vdst<amdgpu_synid1011_vdst32_0>`,     :ref:`src0<amdgpu_synid1011_src32_2>`::ref:`u16x2<amdgpu_synid1011_type_dev>`, :ref:`src1<amdgpu_synid1011_src32_3>`::ref:`u16x2<amdgpu_synid1011_type_dev>`, :ref:`src2<amdgpu_synid1011_src32_1>`::ref:`u32<amdgpu_synid1011_type_dev>`       :ref:`clamp<amdgpu_synid_clamp>`
     v_dot4_i32_i8                  :ref:`vdst<amdgpu_synid1011_vdst32_0>`,     :ref:`src0<amdgpu_synid1011_src32_0>`::ref:`i8x4<amdgpu_synid1011_type_dev>`,  :ref:`src1<amdgpu_synid1011_src32_1>`::ref:`i8x4<amdgpu_synid1011_type_dev>`,  :ref:`src2<amdgpu_synid1011_src32_1>`::ref:`i32<amdgpu_synid1011_type_dev>`       :ref:`clamp<amdgpu_synid_clamp>`
     v_dot4_u32_u8                  :ref:`vdst<amdgpu_synid1011_vdst32_0>`,     :ref:`src0<amdgpu_synid1011_src32_0>`::ref:`u8x4<amdgpu_synid1011_type_dev>`,  :ref:`src1<amdgpu_synid1011_src32_1>`::ref:`u8x4<amdgpu_synid1011_type_dev>`,  :ref:`src2<amdgpu_synid1011_src32_1>`::ref:`u32<amdgpu_synid1011_type_dev>`       :ref:`clamp<amdgpu_synid_clamp>`
     v_dot8_i32_i4                  :ref:`vdst<amdgpu_synid1011_vdst32_0>`,     :ref:`src0<amdgpu_synid1011_src32_0>`::ref:`i4x8<amdgpu_synid1011_type_dev>`,  :ref:`src1<amdgpu_synid1011_src32_1>`::ref:`i4x8<amdgpu_synid1011_type_dev>`,  :ref:`src2<amdgpu_synid1011_src32_1>`::ref:`i32<amdgpu_synid1011_type_dev>`       :ref:`clamp<amdgpu_synid_clamp>`
@@ -87,6 +87,8 @@ VOP3P
     AMDGPUAsmGFX10
     gfx1011_src32_0
     gfx1011_src32_1
+    gfx1011_src32_2
+    gfx1011_src32_3
     gfx1011_vdst32_0
     gfx1011_vsrc32_0
     gfx1011_type_dev

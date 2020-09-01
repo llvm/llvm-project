@@ -18,6 +18,19 @@
 # CHECK-BTI-NEXT: bti   c
 # CHECK-BTI-NEXT: adrp  x16, {{.*}}
 
+# RUN: yaml2obj -D SYM=0 %s -o %tindex
+# RUN: llvm-objdump -d %tindex 2>&1 | FileCheck %s --check-prefix=INVALID_INDEX -DFILE=%tindex
+
+# INVALID_INDEX: warning: '[[FILE]]': PLT entry at 0x210030 references an invalid symbol{{$}}
+# INVALID_INDEX: Disassembly of section .text:
+
+# RUN: yaml2obj -D ST_NAME=0x1234 %s -o %tst_name
+# RUN: llvm-objdump -d %tst_name 2>&1 | FileCheck %s --check-prefix=INVALID_ST_NAME -DFILE=%tst_name
+
+# INVALID_ST_NAME:      warning: '[[FILE]]': st_name (0x1234) is past the end of the string table of size 0x7
+# INVALID_ST_NAME-NEXT: warning: '[[FILE]]': PLT entry at 0x210030 references an invalid symbol{{$}}
+# INVALID_ST_NAME:      Disassembly of section .text:
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
@@ -32,7 +45,7 @@ Sections:
     Info:    .got.plt
     Relocations:
       - Offset: 0x0000000000230018
-        Symbol: f1
+        Symbol: [[SYM=f1]]
         Type:   R_AARCH64_JUMP_SLOT
       - Offset: 0x0000000000230020
         Symbol: f2
@@ -52,6 +65,7 @@ Sections:
     Content: '000000000000000000000000000000000000000000000000100021000000000010002100000000001000210000000000'
 Symbols:
   - Name:    f1
+    StName:  [[ST_NAME=<none>]]
     Type:    STT_FUNC
     Binding: STB_GLOBAL
   - Name:    f2

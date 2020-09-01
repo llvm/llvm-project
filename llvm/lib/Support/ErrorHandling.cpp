@@ -192,7 +192,8 @@ static void out_of_memory_new_handler() {
 void llvm::install_out_of_memory_new_handler() {
   std::new_handler old = std::set_new_handler(out_of_memory_new_handler);
   (void)old;
-  assert(old == nullptr && "new-handler already installed");
+  assert((old == nullptr || old == out_of_memory_new_handler) &&
+         "new-handler already installed");
 }
 #endif
 

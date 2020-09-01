@@ -197,6 +197,30 @@ OPTIONS
 
   When printing symbols, only print symbols with a value up to ``address``.
 
+.. option:: --symbolize-operands
+
+  When disassembling, symbolize a branch target operand to print a label instead of a real address.
+
+  When printing a PC-relative global symbol reference, print it as an offset from the leading symbol.
+
+  Only works with an X86 linked image.
+
+  Example:
+    A non-symbolized branch instruction with a local target and pc-relative memory access like
+
+  .. code-block:: none
+
+      cmp eax, dword ptr [rip + 4112]
+      jge 0x20117e <_start+0x25>
+
+  might become
+
+  .. code-block:: none
+
+     <L0>:
+       cmp eax, dword ptr <g>
+       jge	<L0>
+
 .. option:: --triple=<string>
 
   Target triple to disassemble for, see ``--version`` for available targets.

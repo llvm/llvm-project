@@ -1,4 +1,4 @@
-# RUN: yaml2obj < %p/Inputs/ret42.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
 # RUN: lld-link /entry:foo /subsystem:console \
 # RUN:   /alternatename:foo=main /out:%t.exe %t.obj
 # RUN: lld-link /entry:foo /subsystem:console \
@@ -7,7 +7,7 @@
 # RUN:   /alternatename:nosuchsym1=nosuchsym2 \
 # RUN:   /out:%t.exe %t.obj
 
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 # RUN: lld-link /entry:foo /subsystem:console /out:%t.exe %t.obj
 
 --- !COFF

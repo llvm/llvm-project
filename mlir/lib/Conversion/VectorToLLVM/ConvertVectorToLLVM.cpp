@@ -128,17 +128,16 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter, T op,
 
   // TODO: this should use the MLIR data layout when it becomes available and
   // stop depending on translation.
-  LLVM::LLVMDialect *dialect = typeConverter.getDialect();
   llvm::LLVMContext llvmContext;
   align = LLVM::TypeToLLVMIRTranslator(llvmContext)
               .getPreferredAlignment(elementTy.cast<LLVM::LLVMType>(),
-                                     dialect->getDataLayout());
+                                     typeConverter.getDataLayout());
   return success();
 }
 
 // Helper that returns the base address of a memref.
-LogicalResult getBase(ConversionPatternRewriter &rewriter, Location loc,
-                      Value memref, MemRefType memRefType, Value &base) {
+static LogicalResult getBase(ConversionPatternRewriter &rewriter, Location loc,
+                             Value memref, MemRefType memRefType, Value &base) {
   // Inspect stride and offset structure.
   //
   // TODO: flat memory only for now, generalize
@@ -154,8 +153,9 @@ LogicalResult getBase(ConversionPatternRewriter &rewriter, Location loc,
 }
 
 // Helper that returns a pointer given a memref base.
-LogicalResult getBasePtr(ConversionPatternRewriter &rewriter, Location loc,
-                         Value memref, MemRefType memRefType, Value &ptr) {
+static LogicalResult getBasePtr(ConversionPatternRewriter &rewriter,
+                                Location loc, Value memref,
+                                MemRefType memRefType, Value &ptr) {
   Value base;
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();
@@ -165,9 +165,9 @@ LogicalResult getBasePtr(ConversionPatternRewriter &rewriter, Location loc,
 }
 
 // Helper that returns a bit-casted pointer given a memref base.
-LogicalResult getBasePtr(ConversionPatternRewriter &rewriter, Location loc,
-                         Value memref, MemRefType memRefType, Type type,
-                         Value &ptr) {
+static LogicalResult getBasePtr(ConversionPatternRewriter &rewriter,
+                                Location loc, Value memref,
+                                MemRefType memRefType, Type type, Value &ptr) {
   Value base;
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();
@@ -179,9 +179,10 @@ LogicalResult getBasePtr(ConversionPatternRewriter &rewriter, Location loc,
 
 // Helper that returns vector of pointers given a memref base and an index
 // vector.
-LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter, Location loc,
-                             Value memref, Value indices, MemRefType memRefType,
-                             VectorType vType, Type iType, Value &ptrs) {
+static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
+                                    Location loc, Value memref, Value indices,
+                                    MemRefType memRefType, VectorType vType,
+                                    Type iType, Value &ptrs) {
   Value base;
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();
@@ -1146,6 +1147,28 @@ public:
     Location loc = op->getLoc();
     Type i64Type = rewriter.getIntegerType(64);
     MemRefType memRefType = xferOp.getMemRefType();
+
+    if (auto memrefVectorElementType =
+            memRefType.getElementType().dyn_cast<VectorType>()) {
+      // Memref has vector element type.
+      if (memrefVectorElementType.getElementType() !=
+          xferOp.getVectorType().getElementType())
+        return failure();
+#ifndef NDEBUG
+      // Check that memref vector type is a suffix of 'vectorType.
+      unsigned memrefVecEltRank = memrefVectorElementType.getRank();
+      unsigned resultVecRank = xferOp.getVectorType().getRank();
+      assert(memrefVecEltRank <= resultVecRank);
+      // TODO: Move this to isSuffix in Vector/Utils.h.
+      unsigned rankOffset = resultVecRank - memrefVecEltRank;
+      auto memrefVecEltShape = memrefVectorElementType.getShape();
+      auto resultVecShape = xferOp.getVectorType().getShape();
+      for (unsigned i = 0; i < memrefVecEltRank; ++i)
+        assert(memrefVecEltShape[i] != resultVecShape[rankOffset + i] &&
+               "memref vector element shape should match suffix of vector "
+               "result shape.");
+#endif // ifndef NDEBUG
+    }
 
     // 1. Get the source/dst address as an LLVM vector pointer.
     //    The vector pointer would always be on address space 0, therefore

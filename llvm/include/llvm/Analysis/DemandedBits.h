@@ -61,6 +61,20 @@ public:
 
   void print(raw_ostream &OS);
 
+  /// Compute alive bits of one addition operand from alive output and known
+  /// operand bits
+  static APInt determineLiveOperandBitsAdd(unsigned OperandNo,
+                                           const APInt &AOut,
+                                           const KnownBits &LHS,
+                                           const KnownBits &RHS);
+
+  /// Compute alive bits of one subtraction operand from alive output and known
+  /// operand bits
+  static APInt determineLiveOperandBitsSub(unsigned OperandNo,
+                                           const APInt &AOut,
+                                           const KnownBits &LHS,
+                                           const KnownBits &RHS);
+
 private:
   void performAnalysis();
   void determineLiveOperandBits(const Instruction *UserI,

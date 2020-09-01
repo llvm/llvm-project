@@ -448,11 +448,11 @@ static __isl_give isl_flow *isl_flow_alloc(__isl_keep isl_access_info *acc)
 
 	dep->n_source = n;
 	for (i = 0; i < acc->n_must; ++i) {
-		isl_space *dim;
-		dim = space_align_and_join(
+		isl_space *space;
+		space = space_align_and_join(
 			isl_map_get_space(acc->source[i].map),
 			isl_space_reverse(isl_map_get_space(acc->sink.map)));
-		dep->dep[2 * i].map = isl_map_empty(dim);
+		dep->dep[2 * i].map = isl_map_empty(space);
 		dep->dep[2 * i + 1].map = isl_map_copy(dep->dep[2 * i].map);
 		dep->dep[2 * i].data = acc->source[i].data;
 		dep->dep[2 * i + 1].data = acc->source[i].data;
@@ -462,11 +462,11 @@ static __isl_give isl_flow *isl_flow_alloc(__isl_keep isl_access_info *acc)
 			goto error;
 	}
 	for (i = acc->n_must; i < acc->n_must + acc->n_may; ++i) {
-		isl_space *dim;
-		dim = space_align_and_join(
+		isl_space *space;
+		space = space_align_and_join(
 			isl_map_get_space(acc->source[i].map),
 			isl_space_reverse(isl_map_get_space(acc->sink.map)));
-		dep->dep[acc->n_must + i].map = isl_map_empty(dim);
+		dep->dep[acc->n_must + i].map = isl_map_empty(space);
 		dep->dep[acc->n_must + i].data = acc->source[i].data;
 		dep->dep[acc->n_must + i].must = 0;
 		if (!dep->dep[acc->n_must + i].map)
@@ -552,14 +552,15 @@ isl_ctx *isl_flow_get_ctx(__isl_keep isl_flow *deps)
  * be greater than the loop iterator of the range at the last
  * of the level/2 shared loops, i.e., loop level/2 - 1.
  */
-static __isl_give isl_map *after_at_level(__isl_take isl_space *dim, int level)
+static __isl_give isl_map *after_at_level(__isl_take isl_space *space,
+	int level)
 {
 	struct isl_basic_map *bmap;
 
 	if (level % 2)
-		bmap = isl_basic_map_equal(dim, level/2);
+		bmap = isl_basic_map_equal(space, level/2);
 	else
-		bmap = isl_basic_map_more_at(dim, level/2 - 1);
+		bmap = isl_basic_map_more_at(space, level/2 - 1);
 
 	return isl_map_from_basic_map(bmap);
 }
@@ -666,7 +667,7 @@ static struct isl_map *last_later_source(struct isl_access_info *acc,
 					 int k, int after_level,
 					 struct isl_set **empty)
 {
-	isl_space *dim;
+	isl_space *space;
 	struct isl_set *set_C;
 	struct isl_map *read_map;
 	struct isl_map *write_map;
@@ -681,9 +682,9 @@ static struct isl_map *last_later_source(struct isl_access_info *acc,
 
 	write_map = isl_map_reverse(write_map);
 	dep_map = isl_map_apply_range(read_map, write_map);
-	dim = space_align_and_join(isl_map_get_space(acc->source[k].map),
+	space = space_align_and_join(isl_map_get_space(acc->source[k].map),
 		    isl_space_reverse(isl_map_get_space(acc->source[j].map)));
-	after_write = after_at_level(dim, after_level);
+	after_write = after_at_level(space, after_level);
 	after_write = isl_map_apply_range(after_write, old_map);
 	after_write = isl_map_reverse(after_write);
 	dep_map = isl_map_intersect(dep_map, after_write);
@@ -808,7 +809,7 @@ static __isl_give isl_map *all_later_sources(__isl_keep isl_access_info *acc,
 	__isl_take isl_map *old_map,
 	int j, int before_level, int k, int after_level)
 {
-	isl_space *dim;
+	isl_space *space;
 	isl_set *set_C;
 	isl_map *read_map;
 	isl_map *write_map;
@@ -823,9 +824,10 @@ static __isl_give isl_map *all_later_sources(__isl_keep isl_access_info *acc,
 
 	write_map = isl_map_reverse(write_map);
 	dep_map = isl_map_apply_range(read_map, write_map);
-	dim = isl_space_join(isl_map_get_space(acc->source[acc->n_must + j].map),
+	space = isl_space_join(isl_map_get_space(
+		    acc->source[acc->n_must + j].map),
 		    isl_space_reverse(isl_map_get_space(acc->source[k].map)));
-	after_write = after_at_level(dim, after_level);
+	after_write = after_at_level(space, after_level);
 	after_write = isl_map_apply_range(after_write, old_map);
 	after_write = isl_map_reverse(after_write);
 	dep_map = isl_map_intersect(dep_map, after_write);
@@ -1069,7 +1071,7 @@ static __isl_give isl_flow *compute_mem_based_dependences(
 	for (i = 0; i < acc->n_may; ++i) {
 		int plevel;
 		int is_before;
-		isl_space *dim;
+		isl_space *space;
 		isl_map *before;
 		isl_map *dep;
 
@@ -1080,11 +1082,11 @@ static __isl_give isl_flow *compute_mem_based_dependences(
 		is_before = plevel & 1;
 		plevel >>= 1;
 
-		dim = isl_map_get_space(res->dep[i].map);
+		space = isl_map_get_space(res->dep[i].map);
 		if (is_before)
-			before = isl_map_lex_le_first(dim, plevel);
+			before = isl_map_lex_le_first(space, plevel);
 		else
-			before = isl_map_lex_lt_first(dim, plevel);
+			before = isl_map_lex_lt_first(space, plevel);
 		dep = isl_map_apply_range(isl_map_copy(acc->source[i].map),
 			isl_map_reverse(isl_map_copy(acc->sink.map)));
 		dep = isl_map_intersect(dep, before);
@@ -2340,16 +2342,16 @@ struct isl_compute_flow_data {
 static isl_stat count_matching_array(__isl_take isl_map *map, void *user)
 {
 	int eq;
-	isl_space *dim;
+	isl_space *space;
 	struct isl_compute_flow_data *data;
 
 	data = (struct isl_compute_flow_data *)user;
 
-	dim = isl_space_range(isl_map_get_space(map));
+	space = isl_space_range(isl_map_get_space(map));
 
-	eq = isl_space_is_equal(dim, data->dim);
+	eq = isl_space_is_equal(space, data->dim);
 
-	isl_space_free(dim);
+	isl_space_free(space);
 	isl_map_free(map);
 
 	if (eq < 0)
@@ -2363,17 +2365,17 @@ static isl_stat count_matching_array(__isl_take isl_map *map, void *user)
 static isl_stat collect_matching_array(__isl_take isl_map *map, void *user)
 {
 	int eq;
-	isl_space *dim;
+	isl_space *space;
 	struct isl_sched_info *info;
 	struct isl_compute_flow_data *data;
 
 	data = (struct isl_compute_flow_data *)user;
 
-	dim = isl_space_range(isl_map_get_space(map));
+	space = isl_space_range(isl_map_get_space(map));
 
-	eq = isl_space_is_equal(dim, data->dim);
+	eq = isl_space_is_equal(space, data->dim);
 
-	isl_space_free(dim);
+	isl_space_free(space);
 
 	if (eq < 0)
 		goto error;

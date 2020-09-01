@@ -106,7 +106,7 @@ subroutine s6
  integer :: a(5) = 1
  !DEF: /s6/Block1/i ObjectEntity INTEGER(4)
  !DEF: /s6/Block1/j (LocalityLocal) HostAssoc INTEGER(8)
- !DEF: /s6/Block1/k (LocalityLocalInit) HostAssoc INTEGER(4)
+ !DEF: /s6/Block1/k (Implicit, LocalityLocalInit) HostAssoc INTEGER(4)
   !DEF: /s6/Block1/a (LocalityShared) HostAssoc INTEGER(4)
  do concurrent(integer::i=1:5)local(j)local_init(k)shared(a)
   !REF: /s6/Block1/a

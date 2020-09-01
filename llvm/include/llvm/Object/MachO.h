@@ -615,6 +615,7 @@ public:
     case MachO::PLATFORM_IOSSIMULATOR: return "iossimulator";
     case MachO::PLATFORM_TVOSSIMULATOR: return "tvossimulator";
     case MachO::PLATFORM_WATCHOSSIMULATOR: return "watchossimulator";
+    case MachO::PLATFORM_DRIVERKIT: return "driverkit";
     default:
       std::string ret;
       raw_string_ostream ss(ret);

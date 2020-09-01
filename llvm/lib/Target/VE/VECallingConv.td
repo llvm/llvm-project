@@ -14,6 +14,9 @@
 // Aurora VE
 //===----------------------------------------------------------------------===//
 def CC_VE_C_Stack: CallingConv<[
+  // F128 are assigned to the stack in 16-byte aligned units
+  CCIfType<[f128], CCAssignToStackWithShadow<16, 16, [SX7]>>,
+
   // All of the rest are assigned to the stack in 8-byte aligned units.
   CCAssignToStack<0, 8>
 ]>;
@@ -36,6 +39,14 @@ def CC_VE : CallingConv<[
   CCIfType<[i64, f64],
            CCAssignToReg<[SX0, SX1, SX2, SX3, SX4, SX5, SX6, SX7]>>,
 
+  // long double --> pair of generic 64 bit registers
+  //
+  // NOTE: If Q1 is allocated while SX1 is free, llvm tries to allocate SX1 for
+  //       following operands, this masks SX1 to avoid such behavior.
+  CCIfType<[f128],
+           CCAssignToRegWithShadow<[Q0, Q1, Q2, Q3],
+                                   [SX0, SX1, SX3, SX5]>>,
+
   // Alternatively, they are assigned to the stack in 8-byte aligned units.
   CCDelegateTo<CC_VE_C_Stack>
 ]>;
@@ -52,6 +63,9 @@ def CC_VE2 : CallingConv<[
   //    | float|   0  |
   //    +------+------+
   CCIfType<[f32], CCBitConvertToType<i64>>,
+
+  // F128 are assigned to the stack in 16-byte aligned units
+  CCIfType<[f128], CCAssignToStack<16, 16>>,
 
   CCAssignToStack<0, 8>
 ]>;
@@ -71,6 +85,11 @@ def RetCC_VE : CallingConv<[
   //     --> generic 64 bit registers
   CCIfType<[i64, f64],
            CCAssignToReg<[SX0, SX1, SX2, SX3, SX4, SX5, SX6, SX7]>>,
+
+  // long double --> pair of generic 64 bit registers
+  CCIfType<[f128],
+           CCAssignToRegWithShadow<[Q0, Q1, Q2, Q3],
+                                   [SX0, SX1, SX3, SX5]>>,
 ]>;
 
 // Callee-saved registers

@@ -40,7 +40,7 @@ __imp__unexported:
 # Test specifying -export-all-symbols, on an object file that contains
 # dllexport directive for some of the symbols.
 
-# RUN: yaml2obj < %p/Inputs/export.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/export.yaml -o %t.obj
 #
 # RUN: lld-link -safeseh:no -out:%t.dll -dll %t.obj -lldmingw -export-all-symbols -output-def:%t.def
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix=CHECK2 %s
@@ -91,7 +91,7 @@ __imp__unexported:
 
 # Test that we handle import libraries together with -opt:noref.
 
-# RUN: yaml2obj < %p/Inputs/hello32.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
 # RUN: lld-link -lldmingw -dll -out:%t.dll -entry:main@0 %t.obj -implib:%t.lib -opt:noref %p/Inputs/std32.lib -output-def:%t.def
 # RUN: echo "EOF" >> %t.def
 # RUN: cat %t.def | FileCheck -check-prefix=CHECK-IMPLIB %s

@@ -580,7 +580,7 @@ func @index_cast(%arg0: index, %arg1: i1) {
   return
 }
 
-// Checking conversion of integer types to floating point.
+// Checking conversion of signed integer types to floating point.
 // CHECK-LABEL: @sitofp
 func @sitofp(%arg0 : i32, %arg1 : i64) {
 // CHECK-NEXT: = llvm.sitofp {{.*}} : !llvm.i32 to !llvm.float
@@ -591,6 +591,20 @@ func @sitofp(%arg0 : i32, %arg1 : i64) {
   %2 = sitofp %arg1: i64 to f32
 // CHECK-NEXT: = llvm.sitofp {{.*}} : !llvm.i64 to !llvm.double
   %3 = sitofp %arg1: i64 to f64
+  return
+}
+
+// Checking conversion of unsigned integer types to floating point.
+// CHECK-LABEL: @uitofp
+func @uitofp(%arg0 : i32, %arg1 : i64) {
+// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.i32 to !llvm.float
+  %0 = uitofp %arg0: i32 to f32
+// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.i32 to !llvm.double
+  %1 = uitofp %arg0: i32 to f64
+// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.i64 to !llvm.float
+  %2 = uitofp %arg1: i64 to f32
+// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.i64 to !llvm.double
+  %3 = uitofp %arg1: i64 to f64
   return
 }
 
@@ -631,6 +645,21 @@ func @fptosi(%arg0 : f32, %arg1 : f64) {
   %3 = fptosi %arg1: f64 to i64
   return
 }
+
+// Checking conversion of floating point to integer types.
+// CHECK-LABEL: @fptoui
+func @fptoui(%arg0 : f32, %arg1 : f64) {
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.float to !llvm.i32
+  %0 = fptoui %arg0: f32 to i32
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.float to !llvm.i64
+  %1 = fptoui %arg0: f32 to i64
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.double to !llvm.i32
+  %2 = fptoui %arg1: f64 to i32
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.double to !llvm.i64
+  %3 = fptoui %arg1: f64 to i64
+  return
+}
+
 
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fptrunc
@@ -1216,27 +1245,27 @@ func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fval : 
 // -----
 
 // CHECK-LABEL: func @generic_atomic_rmw
-func @generic_atomic_rmw(%I : memref<10xf32>, %i : index) -> f32 {
-  %x = generic_atomic_rmw %I[%i] : memref<10xf32> {
-    ^bb0(%old_value : f32):
-      %c1 = constant 1.0 : f32
-      atomic_yield %c1 : f32
+func @generic_atomic_rmw(%I : memref<10xi32>, %i : index) -> i32 {
+  %x = generic_atomic_rmw %I[%i] : memref<10xi32> {
+    ^bb0(%old_value : i32):
+      %c1 = constant 1 : i32
+      atomic_yield %c1 : i32
   }
-  // CHECK: [[init:%.*]] = llvm.load %{{.*}} : !llvm.ptr<float>
-  // CHECK-NEXT: llvm.br ^bb1([[init]] : !llvm.float)
-  // CHECK-NEXT: ^bb1([[loaded:%.*]]: !llvm.float):
-  // CHECK-NEXT: [[c1:%.*]] = llvm.mlir.constant(1.000000e+00 : f32)
+  // CHECK: [[init:%.*]] = llvm.load %{{.*}} : !llvm.ptr<i32>
+  // CHECK-NEXT: llvm.br ^bb1([[init]] : !llvm.i32)
+  // CHECK-NEXT: ^bb1([[loaded:%.*]]: !llvm.i32):
+  // CHECK-NEXT: [[c1:%.*]] = llvm.mlir.constant(1 : i32)
   // CHECK-NEXT: [[pair:%.*]] = llvm.cmpxchg %{{.*}}, [[loaded]], [[c1]]
-  // CHECK-SAME:                    acq_rel monotonic : !llvm.float
+  // CHECK-SAME:                    acq_rel monotonic : !llvm.i32
   // CHECK-NEXT: [[new:%.*]] = llvm.extractvalue [[pair]][0]
   // CHECK-NEXT: [[ok:%.*]] = llvm.extractvalue [[pair]][1]
-  // CHECK-NEXT: llvm.cond_br [[ok]], ^bb2, ^bb1([[new]] : !llvm.float)
+  // CHECK-NEXT: llvm.cond_br [[ok]], ^bb2, ^bb1([[new]] : !llvm.i32)
   // CHECK-NEXT: ^bb2:
-  %c2 = constant 2.0 : f32
-  %add = addf %c2, %x : f32
-  return %add : f32
-  // CHECK-NEXT: [[c2:%.*]] = llvm.mlir.constant(2.000000e+00 : f32)
-  // CHECK-NEXT: [[add:%.*]] = llvm.fadd [[c2]], [[new]] : !llvm.float
+  %c2 = constant 2 : i32
+  %add = addi %c2, %x : i32
+  return %add : i32
+  // CHECK-NEXT: [[c2:%.*]] = llvm.mlir.constant(2 : i32)
+  // CHECK-NEXT: [[add:%.*]] = llvm.add [[c2]], [[new]] : !llvm.i32
   // CHECK-NEXT: llvm.return [[add]]
 }
 

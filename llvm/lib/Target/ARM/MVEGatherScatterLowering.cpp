@@ -47,7 +47,7 @@ using namespace llvm;
 #define DEBUG_TYPE "arm-mve-gather-scatter-lowering"
 
 cl::opt<bool> EnableMaskedGatherScatters(
-    "enable-arm-maskedgatscat", cl::Hidden, cl::init(false),
+    "enable-arm-maskedgatscat", cl::Hidden, cl::init(true),
     cl::desc("Enable the generation of masked gathers and scatters"));
 
 namespace {

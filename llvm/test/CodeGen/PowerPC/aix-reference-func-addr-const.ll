@@ -20,6 +20,7 @@ entry:
 ;CHECK-NEXT:     .align  2
 ;CHECK-NEXT:     bar_ptr1:
 ;CHECK-NEXT:     .vbyte	4, bar[DS]
+;CHECK-NEXT:     .extern .foo[PR]
 ;CHECK-NEXT:     .extern foo[DS]
 
 ;CHECK64:         .csect .data[RW],3
@@ -31,4 +32,5 @@ entry:
 ;CHECK64-NEXT:         .align  3
 ;CHECK64-NEXT:    bar_ptr1:
 ;CHECK64-NEXT:         .vbyte	8, bar[DS]
+;CHECK64-NEXT:         .extern .foo[PR]
 ;CHECK64-NEXT:         .extern foo[DS]

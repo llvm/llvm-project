@@ -19,10 +19,12 @@ namespace mlir {
 class AbstractOperation;
 class DiagnosticEngine;
 class Dialect;
+class DialectRegistry;
 class InFlightDiagnostic;
 class Location;
 class MLIRContextImpl;
 class StorageUniquer;
+DialectRegistry &getGlobalDialectRegistry();
 
 /// MLIRContext is the top-level object for a collection of MLIR modules.  It
 /// holds immortal uniqued objects like types, and the tables used to unique
@@ -34,33 +36,68 @@ class StorageUniquer;
 ///
 class MLIRContext {
 public:
-  explicit MLIRContext();
+  /// Create a new Context.
+  /// The loadAllDialects parameters allows to load all dialects from the global
+  /// registry on Context construction. It is deprecated and will be removed
+  /// soon.
+  explicit MLIRContext(bool loadAllDialects = true);
   ~MLIRContext();
 
-  /// Return information about all registered IR dialects.
-  std::vector<Dialect *> getRegisteredDialects();
+  /// Return information about all IR dialects loaded in the context.
+  std::vector<Dialect *> getLoadedDialects();
+
+  /// Return the dialect registry associated with this context.
+  DialectRegistry &getDialectRegistry();
+
+  /// Return information about all available dialects in the registry in this
+  /// context.
+  std::vector<StringRef> getAvailableDialects();
 
   /// Get a registered IR dialect with the given namespace. If an exact match is
   /// not found, then return nullptr.
-  Dialect *getRegisteredDialect(StringRef name);
+  Dialect *getLoadedDialect(StringRef name);
 
   /// Get a registered IR dialect for the given derived dialect type. The
   /// derived type must provide a static 'getDialectNamespace' method.
-  template <typename T> T *getRegisteredDialect() {
-    return static_cast<T *>(getRegisteredDialect(T::getDialectNamespace()));
+  template <typename T>
+  T *getLoadedDialect() {
+    return static_cast<T *>(getLoadedDialect(T::getDialectNamespace()));
   }
 
   /// Get (or create) a dialect for the given derived dialect type. The derived
   /// type must provide a static 'getDialectNamespace' method.
   template <typename T>
-  T *getOrCreateDialect() {
-    return static_cast<T *>(getOrCreateDialect(
-        T::getDialectNamespace(), TypeID::get<T>(), [this]() {
+  T *getOrLoadDialect() {
+    return static_cast<T *>(
+        getOrLoadDialect(T::getDialectNamespace(), TypeID::get<T>(), [this]() {
           std::unique_ptr<T> dialect(new T(this));
-          dialect->dialectID = TypeID::get<T>();
           return dialect;
         }));
   }
+
+  /// Load a dialect in the context.
+  template <typename Dialect>
+  void loadDialect() {
+    getOrLoadDialect<Dialect>();
+  }
+
+  /// Load a list dialects in the context.
+  template <typename Dialect, typename OtherDialect, typename... MoreDialects>
+  void loadDialect() {
+    getOrLoadDialect<Dialect>();
+    loadDialect<OtherDialect, MoreDialects...>();
+  }
+
+  /// Deprecated: load all globally registered dialects into this context.
+  /// This method will be removed soon, it can be used temporarily as we're
+  /// phasing out the global registry.
+  void loadAllGloballyRegisteredDialects();
+
+  /// Get (or create) a dialect for the given derived dialect name.
+  /// The dialect will be loaded from the registry if no dialect is found.
+  /// If no dialect is loaded for this name and none is available in the
+  /// registry, returns nullptr.
+  Dialect *getOrLoadDialect(StringRef name);
 
   /// Return true if we allow to create operation for unregistered dialects.
   bool allowsUnregisteredDialects();
@@ -119,14 +156,22 @@ public:
   /// instances. This should not be used directly.
   StorageUniquer &getAttributeUniquer();
 
+  /// These APIs are tracking whether the context will be used in a
+  /// multithreading environment: this has no effect other than enabling
+  /// assertions on misuses of some APIs.
+  void enterMultiThreadedExecution();
+  void exitMultiThreadedExecution();
+
 private:
   const std::unique_ptr<MLIRContextImpl> impl;
 
   /// Get a dialect for the provided namespace and TypeID: abort the program if
-  /// a dialect exist for this namespace with different TypeID. Returns a
-  /// pointer to the dialect owned by the context.
-  Dialect *getOrCreateDialect(StringRef dialectNamespace, TypeID dialectID,
-                              function_ref<std::unique_ptr<Dialect>()> ctor);
+  /// a dialect exist for this namespace with different TypeID. If a dialect has
+  /// not been loaded for this namespace/TypeID yet, use the provided ctor to
+  /// create one on the fly and load it. Returns a pointer to the dialect owned
+  /// by the context.
+  Dialect *getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
+                            function_ref<std::unique_ptr<Dialect>()> ctor);
 
   MLIRContext(const MLIRContext &) = delete;
   void operator=(const MLIRContext &) = delete;

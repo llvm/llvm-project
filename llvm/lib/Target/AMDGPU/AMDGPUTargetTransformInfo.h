@@ -88,8 +88,8 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
     AMDGPU::FeatureEnableUnsafeDSOffsetFolding,
     AMDGPU::FeatureFlatForGlobal,
     AMDGPU::FeaturePromoteAlloca,
-    AMDGPU::FeatureUnalignedBufferAccess,
     AMDGPU::FeatureUnalignedScratchAccess,
+    AMDGPU::FeatureUnalignedAccessMode,
 
     AMDGPU::FeatureAutoWaitcntBeforeBarrier,
 

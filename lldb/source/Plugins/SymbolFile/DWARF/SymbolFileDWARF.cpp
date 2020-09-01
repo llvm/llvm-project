@@ -3091,386 +3091,350 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   if (die.GetDWARF() != this)
     return die.GetDWARF()->ParseVariableDIE(sc, die, func_low_pc);
 
-  VariableSP var_sp;
   if (!die)
-    return var_sp;
+    return nullptr;
 
-  var_sp = GetDIEToVariable()[die.GetDIE()];
-  if (var_sp)
+  if (VariableSP var_sp = GetDIEToVariable()[die.GetDIE()])
     return var_sp; // Already been parsed!
 
   const dw_tag_t tag = die.Tag();
   ModuleSP module = GetObjectFile()->GetModule();
 
-  if ((tag == DW_TAG_variable) || (tag == DW_TAG_constant) ||
-      (tag == DW_TAG_formal_parameter && sc.function)) {
-    DWARFAttributes attributes;
-    const size_t num_attributes = die.GetAttributes(attributes);
-    DWARFDIE spec_die;
-    if (num_attributes > 0) {
-      const char *name = nullptr;
-      const char *mangled = nullptr;
-      Declaration decl;
-      uint32_t i;
-      DWARFFormValue type_die_form;
-      DWARFExpression location;
-      bool is_external = false;
-      bool is_artificial = false;
-      bool location_is_const_value_data = false;
-      bool has_explicit_location = false;
-      DWARFFormValue const_value;
-      Variable::RangeList scope_ranges;
-      // AccessType accessibility = eAccessNone;
+  if (tag != DW_TAG_variable && tag != DW_TAG_constant &&
+      (tag != DW_TAG_formal_parameter || !sc.function))
+    return nullptr;
 
-      for (i = 0; i < num_attributes; ++i) {
-        dw_attr_t attr = attributes.AttributeAtIndex(i);
-        DWARFFormValue form_value;
+  DWARFAttributes attributes;
+  const size_t num_attributes = die.GetAttributes(attributes);
+  DWARFDIE spec_die;
+  VariableSP var_sp;
+  const char *name = nullptr;
+  const char *mangled = nullptr;
+  Declaration decl;
+  DWARFFormValue type_die_form;
+  DWARFExpression location;
+  bool is_external = false;
+  bool is_artificial = false;
+  DWARFFormValue const_value_form, location_form;
+  Variable::RangeList scope_ranges;
 
-        if (attributes.ExtractFormValueAtIndex(i, form_value)) {
-          switch (attr) {
-          case DW_AT_decl_file:
-            decl.SetFile(sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(
-                form_value.Unsigned()));
-            break;
-          case DW_AT_decl_line:
-            decl.SetLine(form_value.Unsigned());
-            break;
-          case DW_AT_decl_column:
-            decl.SetColumn(form_value.Unsigned());
-            break;
-          case DW_AT_name:
-            name = form_value.AsCString();
-            break;
-          case DW_AT_linkage_name:
-          case DW_AT_MIPS_linkage_name:
-            mangled = form_value.AsCString();
-            break;
-          case DW_AT_type:
-            type_die_form = form_value;
-            break;
-          case DW_AT_external:
-            is_external = form_value.Boolean();
-            break;
-          case DW_AT_const_value:
-            // If we have already found a DW_AT_location attribute, ignore this
-            // attribute.
-            if (!has_explicit_location) {
-              location_is_const_value_data = true;
-              // The constant value will be either a block, a data value or a
-              // string.
-              auto debug_info_data = die.GetData();
-              if (DWARFFormValue::IsBlockForm(form_value.Form())) {
-                // Retrieve the value as a block expression.
-                uint32_t block_offset =
-                    form_value.BlockData() - debug_info_data.GetDataStart();
-                uint32_t block_length = form_value.Unsigned();
-                location = DWARFExpression(
-                    module,
-                    DataExtractor(debug_info_data, block_offset, block_length),
-                    die.GetCU());
-              } else if (DWARFFormValue::IsDataForm(form_value.Form())) {
-                // Retrieve the value as a data expression.
-                uint32_t data_offset = attributes.DIEOffsetAtIndex(i);
-                if (auto data_length = form_value.GetFixedSize())
-                  location = DWARFExpression(
-                      module,
-                      DataExtractor(debug_info_data, data_offset, *data_length),
-                      die.GetCU());
-                else {
-                  const uint8_t *data_pointer = form_value.BlockData();
-                  if (data_pointer) {
-                    form_value.Unsigned();
-                  } else if (DWARFFormValue::IsDataForm(form_value.Form())) {
-                    // we need to get the byte size of the type later after we
-                    // create the variable
-                    const_value = form_value;
-                  }
-                }
-              } else {
-                // Retrieve the value as a string expression.
-                if (form_value.Form() == DW_FORM_strp) {
-                  uint32_t data_offset = attributes.DIEOffsetAtIndex(i);
-                  if (auto data_length = form_value.GetFixedSize())
-                    location = DWARFExpression(module,
-                                               DataExtractor(debug_info_data,
-                                                             data_offset,
-                                                             *data_length),
-                                               die.GetCU());
-                } else {
-                  const char *str = form_value.AsCString();
-                  uint32_t string_offset =
-                      str - (const char *)debug_info_data.GetDataStart();
-                  uint32_t string_length = strlen(str) + 1;
-                  location = DWARFExpression(module,
-                                             DataExtractor(debug_info_data,
-                                                           string_offset,
-                                                           string_length),
-                                             die.GetCU());
-                }
-              }
-            }
-            break;
-          case DW_AT_location: {
-            location_is_const_value_data = false;
-            has_explicit_location = true;
-            if (DWARFFormValue::IsBlockForm(form_value.Form())) {
-              auto data = die.GetData();
+  for (size_t i = 0; i < num_attributes; ++i) {
+    dw_attr_t attr = attributes.AttributeAtIndex(i);
+    DWARFFormValue form_value;
 
-              uint32_t block_offset =
-                  form_value.BlockData() - data.GetDataStart();
-              uint32_t block_length = form_value.Unsigned();
-              location = DWARFExpression(
-                  module, DataExtractor(data, block_offset, block_length),
-                  die.GetCU());
-            } else {
-              DataExtractor data = die.GetCU()->GetLocationData();
-              dw_offset_t offset = form_value.Unsigned();
-              if (form_value.Form() == DW_FORM_loclistx)
-                offset = die.GetCU()->GetLoclistOffset(offset).getValueOr(-1);
-              if (data.ValidOffset(offset)) {
-                data = DataExtractor(data, offset, data.GetByteSize() - offset);
-                location = DWARFExpression(module, data, die.GetCU());
-                assert(func_low_pc != LLDB_INVALID_ADDRESS);
-                location.SetLocationListAddresses(
-                    attributes.CompileUnitAtIndex(i)->GetBaseAddress(),
-                    func_low_pc);
-              }
-            }
-          } break;
-          case DW_AT_specification:
-            spec_die = form_value.Reference();
-            break;
-          case DW_AT_start_scope:
-            // TODO: Implement this.
-            break;
-          case DW_AT_artificial:
-            is_artificial = form_value.Boolean();
-            break;
-          case DW_AT_accessibility:
-            break; // accessibility =
-                   // DW_ACCESS_to_AccessType(form_value.Unsigned()); break;
-          case DW_AT_declaration:
-          case DW_AT_description:
-          case DW_AT_endianity:
-          case DW_AT_segment:
-          case DW_AT_visibility:
-          default:
-          case DW_AT_abstract_origin:
-          case DW_AT_sibling:
-            break;
-          }
-        }
+    if (!attributes.ExtractFormValueAtIndex(i, form_value))
+      continue;
+    switch (attr) {
+    case DW_AT_decl_file:
+      decl.SetFile(sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(
+          form_value.Unsigned()));
+      break;
+    case DW_AT_decl_line:
+      decl.SetLine(form_value.Unsigned());
+      break;
+    case DW_AT_decl_column:
+      decl.SetColumn(form_value.Unsigned());
+      break;
+    case DW_AT_name:
+      name = form_value.AsCString();
+      break;
+    case DW_AT_linkage_name:
+    case DW_AT_MIPS_linkage_name:
+      mangled = form_value.AsCString();
+      break;
+    case DW_AT_type:
+      type_die_form = form_value;
+      break;
+    case DW_AT_external:
+      is_external = form_value.Boolean();
+      break;
+    case DW_AT_const_value:
+      const_value_form = form_value;
+      break;
+    case DW_AT_location:
+      location_form = form_value;
+      break;
+    case DW_AT_specification:
+      spec_die = form_value.Reference();
+      break;
+    case DW_AT_start_scope:
+      // TODO: Implement this.
+      break;
+    case DW_AT_artificial:
+      is_artificial = form_value.Boolean();
+      break;
+    case DW_AT_declaration:
+    case DW_AT_description:
+    case DW_AT_endianity:
+    case DW_AT_segment:
+    case DW_AT_visibility:
+    default:
+    case DW_AT_abstract_origin:
+    case DW_AT_sibling:
+      break;
+    }
+  }
+
+  // Prefer DW_AT_location over DW_AT_const_value. Both can be emitted e.g.
+  // for static constexpr member variables -- DW_AT_const_value will be
+  // present in the class declaration and DW_AT_location in the DIE defining
+  // the member.
+  bool location_is_const_value_data = false;
+  bool has_explicit_location = false;
+  bool use_type_size_for_value = false;
+  if (location_form.IsValid()) {
+    has_explicit_location = true;
+    if (DWARFFormValue::IsBlockForm(location_form.Form())) {
+      const DWARFDataExtractor &data = die.GetData();
+
+      uint32_t block_offset = location_form.BlockData() - data.GetDataStart();
+      uint32_t block_length = location_form.Unsigned();
+      location = DWARFExpression(
+          module, DataExtractor(data, block_offset, block_length), die.GetCU());
+    } else {
+      DataExtractor data = die.GetCU()->GetLocationData();
+      dw_offset_t offset = location_form.Unsigned();
+      if (location_form.Form() == DW_FORM_loclistx)
+        offset = die.GetCU()->GetLoclistOffset(offset).getValueOr(-1);
+      if (data.ValidOffset(offset)) {
+        data = DataExtractor(data, offset, data.GetByteSize() - offset);
+        location = DWARFExpression(module, data, die.GetCU());
+        assert(func_low_pc != LLDB_INVALID_ADDRESS);
+        location.SetLocationListAddresses(
+            location_form.GetUnit()->GetBaseAddress(), func_low_pc);
       }
+    }
+  } else if (const_value_form.IsValid()) {
+    location_is_const_value_data = true;
+    // The constant value will be either a block, a data value or a
+    // string.
+    const DWARFDataExtractor &debug_info_data = die.GetData();
+    if (DWARFFormValue::IsBlockForm(const_value_form.Form())) {
+      // Retrieve the value as a block expression.
+      uint32_t block_offset =
+          const_value_form.BlockData() - debug_info_data.GetDataStart();
+      uint32_t block_length = const_value_form.Unsigned();
+      location = DWARFExpression(
+          module, DataExtractor(debug_info_data, block_offset, block_length),
+          die.GetCU());
+    } else if (DWARFFormValue::IsDataForm(const_value_form.Form())) {
+      // Constant value size does not have to match the size of the
+      // variable. We will fetch the size of the type after we create
+      // it.
+      use_type_size_for_value = true;
+    } else if (const char *str = const_value_form.AsCString()) {
+      uint32_t string_length = strlen(str) + 1;
+      location = DWARFExpression(
+          module,
+          DataExtractor(str, string_length, die.GetCU()->GetByteOrder(),
+                        die.GetCU()->GetAddressByteSize()),
+          die.GetCU());
+    }
+  }
 
-      const DWARFDIE parent_context_die = GetDeclContextDIEContainingDIE(die);
-      const dw_tag_t parent_tag = die.GetParent().Tag();
-      bool is_static_member =
-          (parent_tag == DW_TAG_compile_unit ||
-           parent_tag == DW_TAG_partial_unit) &&
-          (parent_context_die.Tag() == DW_TAG_class_type ||
-           parent_context_die.Tag() == DW_TAG_structure_type);
+  const DWARFDIE parent_context_die = GetDeclContextDIEContainingDIE(die);
+  const dw_tag_t parent_tag = die.GetParent().Tag();
+  bool is_static_member = (parent_tag == DW_TAG_compile_unit ||
+                           parent_tag == DW_TAG_partial_unit) &&
+                          (parent_context_die.Tag() == DW_TAG_class_type ||
+                           parent_context_die.Tag() == DW_TAG_structure_type);
 
-      ValueType scope = eValueTypeInvalid;
+  ValueType scope = eValueTypeInvalid;
 
-      const DWARFDIE sc_parent_die = GetParentSymbolContextDIE(die);
-      SymbolContextScope *symbol_context_scope = nullptr;
+  const DWARFDIE sc_parent_die = GetParentSymbolContextDIE(die);
+  SymbolContextScope *symbol_context_scope = nullptr;
 
-      bool has_explicit_mangled = mangled != nullptr;
-      if (!mangled) {
-        // LLDB relies on the mangled name (DW_TAG_linkage_name or
-        // DW_AT_MIPS_linkage_name) to generate fully qualified names
-        // of global variables with commands like "frame var j". For
-        // example, if j were an int variable holding a value 4 and
-        // declared in a namespace B which in turn is contained in a
-        // namespace A, the command "frame var j" returns
-        //   "(int) A::B::j = 4".
-        // If the compiler does not emit a linkage name, we should be
-        // able to generate a fully qualified name from the
-        // declaration context.
-        if ((parent_tag == DW_TAG_compile_unit ||
-             parent_tag == DW_TAG_partial_unit) &&
-            Language::LanguageIsCPlusPlus(GetLanguage(*die.GetCU())))
-          mangled = GetDWARFDeclContext(die)
-                        .GetQualifiedNameAsConstString()
-                        .GetCString();
+  bool has_explicit_mangled = mangled != nullptr;
+  if (!mangled) {
+    // LLDB relies on the mangled name (DW_TAG_linkage_name or
+    // DW_AT_MIPS_linkage_name) to generate fully qualified names
+    // of global variables with commands like "frame var j". For
+    // example, if j were an int variable holding a value 4 and
+    // declared in a namespace B which in turn is contained in a
+    // namespace A, the command "frame var j" returns
+    //   "(int) A::B::j = 4".
+    // If the compiler does not emit a linkage name, we should be
+    // able to generate a fully qualified name from the
+    // declaration context.
+    if ((parent_tag == DW_TAG_compile_unit ||
+         parent_tag == DW_TAG_partial_unit) &&
+        Language::LanguageIsCPlusPlus(GetLanguage(*die.GetCU())))
+      mangled =
+          GetDWARFDeclContext(die).GetQualifiedNameAsConstString().GetCString();
+  }
+
+  if (tag == DW_TAG_formal_parameter)
+    scope = eValueTypeVariableArgument;
+  else {
+    // DWARF doesn't specify if a DW_TAG_variable is a local, global
+    // or static variable, so we have to do a little digging:
+    // 1) DW_AT_linkage_name implies static lifetime (but may be missing)
+    // 2) An empty DW_AT_location is an (optimized-out) static lifetime var.
+    // 3) DW_AT_location containing a DW_OP_addr implies static lifetime.
+    // Clang likes to combine small global variables into the same symbol
+    // with locations like: DW_OP_addr(0x1000), DW_OP_constu(2), DW_OP_plus
+    // so we need to look through the whole expression.
+    bool is_static_lifetime =
+        has_explicit_mangled || (has_explicit_location && !location.IsValid());
+    // Check if the location has a DW_OP_addr with any address value...
+    lldb::addr_t location_DW_OP_addr = LLDB_INVALID_ADDRESS;
+    if (!location_is_const_value_data) {
+      bool op_error = false;
+      location_DW_OP_addr = location.GetLocation_DW_OP_addr(0, op_error);
+      if (op_error) {
+        StreamString strm;
+        location.DumpLocationForAddress(&strm, eDescriptionLevelFull, 0, 0,
+                                        nullptr);
+        GetObjectFile()->GetModule()->ReportError(
+            "0x%8.8x: %s has an invalid location: %s", die.GetOffset(),
+            die.GetTagAsCString(), strm.GetData());
       }
+      if (location_DW_OP_addr != LLDB_INVALID_ADDRESS)
+        is_static_lifetime = true;
+    }
+    SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
+    if (debug_map_symfile)
+      // Set the module of the expression to the linked module
+      // instead of the oject file so the relocated address can be
+      // found there.
+      location.SetModule(debug_map_symfile->GetObjectFile()->GetModule());
 
-      if (tag == DW_TAG_formal_parameter)
-        scope = eValueTypeVariableArgument;
-      else {
-        // DWARF doesn't specify if a DW_TAG_variable is a local, global
-        // or static variable, so we have to do a little digging:
-        // 1) DW_AT_linkage_name implies static lifetime (but may be missing)
-        // 2) An empty DW_AT_location is an (optimized-out) static lifetime var.
-        // 3) DW_AT_location containing a DW_OP_addr implies static lifetime.
-        // Clang likes to combine small global variables into the same symbol
-        // with locations like: DW_OP_addr(0x1000), DW_OP_constu(2), DW_OP_plus
-        // so we need to look through the whole expression.
-        bool is_static_lifetime =
-            has_explicit_mangled ||
-            (has_explicit_location && !location.IsValid());
-        // Check if the location has a DW_OP_addr with any address value...
-        lldb::addr_t location_DW_OP_addr = LLDB_INVALID_ADDRESS;
-        if (!location_is_const_value_data) {
-          bool op_error = false;
-          location_DW_OP_addr = location.GetLocation_DW_OP_addr(0, op_error);
-          if (op_error) {
-            StreamString strm;
-            location.DumpLocationForAddress(&strm, eDescriptionLevelFull, 0, 0,
-                                            nullptr);
-            GetObjectFile()->GetModule()->ReportError(
-                "0x%8.8x: %s has an invalid location: %s", die.GetOffset(),
-                die.GetTagAsCString(), strm.GetData());
-          }
-          if (location_DW_OP_addr != LLDB_INVALID_ADDRESS)
-            is_static_lifetime = true;
-        }
-        SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
-        if (debug_map_symfile)
-          // Set the module of the expression to the linked module
-          // instead of the oject file so the relocated address can be
-          // found there.
-          location.SetModule(debug_map_symfile->GetObjectFile()->GetModule());
+    if (is_static_lifetime) {
+      if (is_external)
+        scope = eValueTypeVariableGlobal;
+      else
+        scope = eValueTypeVariableStatic;
 
-        if (is_static_lifetime) {
-          if (is_external)
-            scope = eValueTypeVariableGlobal;
-          else
-            scope = eValueTypeVariableStatic;
-
-          if (debug_map_symfile) {
-            // When leaving the DWARF in the .o files on darwin, when we have a
-            // global variable that wasn't initialized, the .o file might not
-            // have allocated a virtual address for the global variable. In
-            // this case it will have created a symbol for the global variable
-            // that is undefined/data and external and the value will be the
-            // byte size of the variable. When we do the address map in
-            // SymbolFileDWARFDebugMap we rely on having an address, we need to
-            // do some magic here so we can get the correct address for our
-            // global variable. The address for all of these entries will be
-            // zero, and there will be an undefined symbol in this object file,
-            // and the executable will have a matching symbol with a good
-            // address. So here we dig up the correct address and replace it in
-            // the location for the variable, and set the variable's symbol
-            // context scope to be that of the main executable so the file
-            // address will resolve correctly.
-            bool linked_oso_file_addr = false;
-            if (is_external && location_DW_OP_addr == 0) {
-              // we have a possible uninitialized extern global
-              ConstString const_name(mangled ? mangled : name);
-              ObjectFile *debug_map_objfile =
-                  debug_map_symfile->GetObjectFile();
-              if (debug_map_objfile) {
-                Symtab *debug_map_symtab = debug_map_objfile->GetSymtab();
-                if (debug_map_symtab) {
-                  Symbol *exe_symbol =
-                      debug_map_symtab->FindFirstSymbolWithNameAndType(
-                          const_name, eSymbolTypeData, Symtab::eDebugYes,
-                          Symtab::eVisibilityExtern);
-                  if (exe_symbol) {
-                    if (exe_symbol->ValueIsAddress()) {
-                      const addr_t exe_file_addr =
-                          exe_symbol->GetAddressRef().GetFileAddress();
-                      if (exe_file_addr != LLDB_INVALID_ADDRESS) {
-                        if (location.Update_DW_OP_addr(exe_file_addr)) {
-                          linked_oso_file_addr = true;
-                          symbol_context_scope = exe_symbol;
-                        }
-                      }
+      if (debug_map_symfile) {
+        // When leaving the DWARF in the .o files on darwin, when we have a
+        // global variable that wasn't initialized, the .o file might not
+        // have allocated a virtual address for the global variable. In
+        // this case it will have created a symbol for the global variable
+        // that is undefined/data and external and the value will be the
+        // byte size of the variable. When we do the address map in
+        // SymbolFileDWARFDebugMap we rely on having an address, we need to
+        // do some magic here so we can get the correct address for our
+        // global variable. The address for all of these entries will be
+        // zero, and there will be an undefined symbol in this object file,
+        // and the executable will have a matching symbol with a good
+        // address. So here we dig up the correct address and replace it in
+        // the location for the variable, and set the variable's symbol
+        // context scope to be that of the main executable so the file
+        // address will resolve correctly.
+        bool linked_oso_file_addr = false;
+        if (is_external && location_DW_OP_addr == 0) {
+          // we have a possible uninitialized extern global
+          ConstString const_name(mangled ? mangled : name);
+          ObjectFile *debug_map_objfile = debug_map_symfile->GetObjectFile();
+          if (debug_map_objfile) {
+            Symtab *debug_map_symtab = debug_map_objfile->GetSymtab();
+            if (debug_map_symtab) {
+              Symbol *exe_symbol =
+                  debug_map_symtab->FindFirstSymbolWithNameAndType(
+                      const_name, eSymbolTypeData, Symtab::eDebugYes,
+                      Symtab::eVisibilityExtern);
+              if (exe_symbol) {
+                if (exe_symbol->ValueIsAddress()) {
+                  const addr_t exe_file_addr =
+                      exe_symbol->GetAddressRef().GetFileAddress();
+                  if (exe_file_addr != LLDB_INVALID_ADDRESS) {
+                    if (location.Update_DW_OP_addr(exe_file_addr)) {
+                      linked_oso_file_addr = true;
+                      symbol_context_scope = exe_symbol;
                     }
                   }
                 }
               }
             }
-
-            if (!linked_oso_file_addr) {
-              // The DW_OP_addr is not zero, but it contains a .o file address
-              // which needs to be linked up correctly.
-              const lldb::addr_t exe_file_addr =
-                  debug_map_symfile->LinkOSOFileAddress(this,
-                                                        location_DW_OP_addr);
-              if (exe_file_addr != LLDB_INVALID_ADDRESS) {
-                // Update the file address for this variable
-                location.Update_DW_OP_addr(exe_file_addr);
-              } else {
-                // Variable didn't make it into the final executable
-                return var_sp;
-              }
-            }
           }
-        } else {
-          if (location_is_const_value_data &&
-              die.GetDIE()->IsGlobalOrStaticScopeVariable())
-            scope = eValueTypeVariableStatic;
-          else {
-            scope = eValueTypeVariableLocal;
-            if (debug_map_symfile) {
-              // We need to check for TLS addresses that we need to fixup
-              if (location.ContainsThreadLocalStorage()) {
-                location.LinkThreadLocalStorage(
-                    debug_map_symfile->GetObjectFile()->GetModule(),
-                    [this, debug_map_symfile](
-                        lldb::addr_t unlinked_file_addr) -> lldb::addr_t {
-                      return debug_map_symfile->LinkOSOFileAddress(
-                          this, unlinked_file_addr);
-                    });
-                scope = eValueTypeVariableThreadLocal;
-              }
-            }
+        }
+
+        if (!linked_oso_file_addr) {
+          // The DW_OP_addr is not zero, but it contains a .o file address
+          // which needs to be linked up correctly.
+          const lldb::addr_t exe_file_addr =
+              debug_map_symfile->LinkOSOFileAddress(this, location_DW_OP_addr);
+          if (exe_file_addr != LLDB_INVALID_ADDRESS) {
+            // Update the file address for this variable
+            location.Update_DW_OP_addr(exe_file_addr);
+          } else {
+            // Variable didn't make it into the final executable
+            return var_sp;
           }
         }
       }
-
-      if (symbol_context_scope == nullptr) {
-        switch (parent_tag) {
-        case DW_TAG_subprogram:
-        case DW_TAG_inlined_subroutine:
-        case DW_TAG_lexical_block:
-          if (sc.function) {
-            symbol_context_scope = sc.function->GetBlock(true).FindBlockByID(
-                sc_parent_die.GetID());
-            if (symbol_context_scope == nullptr)
-              symbol_context_scope = sc.function;
+    } else {
+      if (location_is_const_value_data &&
+          die.GetDIE()->IsGlobalOrStaticScopeVariable())
+        scope = eValueTypeVariableStatic;
+      else {
+        scope = eValueTypeVariableLocal;
+        if (debug_map_symfile) {
+          // We need to check for TLS addresses that we need to fixup
+          if (location.ContainsThreadLocalStorage()) {
+            location.LinkThreadLocalStorage(
+                debug_map_symfile->GetObjectFile()->GetModule(),
+                [this, debug_map_symfile](
+                    lldb::addr_t unlinked_file_addr) -> lldb::addr_t {
+                  return debug_map_symfile->LinkOSOFileAddress(
+                      this, unlinked_file_addr);
+                });
+            scope = eValueTypeVariableThreadLocal;
           }
-          break;
-
-        default:
-          symbol_context_scope = sc.comp_unit;
-          break;
         }
-      }
-
-      if (symbol_context_scope) {
-        SymbolFileTypeSP type_sp(
-            new SymbolFileType(*this, GetUID(type_die_form.Reference())));
-
-        if (const_value.Form() && type_sp && type_sp->GetType())
-          location.UpdateValue(
-              const_value.Unsigned(),
-              type_sp->GetType()->GetByteSize(nullptr).getValueOr(0),
-              die.GetCU()->GetAddressByteSize());
-
-        var_sp = std::make_shared<Variable>(
-            die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
-            scope_ranges, &decl, location, is_external, is_artificial,
-            is_static_member);
-
-        var_sp->SetLocationIsConstantValueData(location_is_const_value_data);
-      } else {
-        // Not ready to parse this variable yet. It might be a global or static
-        // variable that is in a function scope and the function in the symbol
-        // context wasn't filled in yet
-        return var_sp;
       }
     }
-    // Cache var_sp even if NULL (the variable was just a specification or was
-    // missing vital information to be able to be displayed in the debugger
-    // (missing location due to optimization, etc)) so we don't re-parse this
-    // DIE over and over later...
-    GetDIEToVariable()[die.GetDIE()] = var_sp;
-    if (spec_die)
-      GetDIEToVariable()[spec_die.GetDIE()] = var_sp;
   }
+
+  if (symbol_context_scope == nullptr) {
+    switch (parent_tag) {
+    case DW_TAG_subprogram:
+    case DW_TAG_inlined_subroutine:
+    case DW_TAG_lexical_block:
+      if (sc.function) {
+        symbol_context_scope =
+            sc.function->GetBlock(true).FindBlockByID(sc_parent_die.GetID());
+        if (symbol_context_scope == nullptr)
+          symbol_context_scope = sc.function;
+      }
+      break;
+
+    default:
+      symbol_context_scope = sc.comp_unit;
+      break;
+    }
+  }
+
+  if (symbol_context_scope) {
+    auto type_sp = std::make_shared<SymbolFileType>(
+        *this, GetUID(type_die_form.Reference()));
+
+    if (use_type_size_for_value && type_sp->GetType())
+      location.UpdateValue(
+          const_value_form.Unsigned(),
+          type_sp->GetType()->GetByteSize(nullptr).getValueOr(0),
+          die.GetCU()->GetAddressByteSize());
+
+    var_sp = std::make_shared<Variable>(
+        die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
+        scope_ranges, &decl, location, is_external, is_artificial,
+        is_static_member);
+
+    var_sp->SetLocationIsConstantValueData(location_is_const_value_data);
+  } else {
+    // Not ready to parse this variable yet. It might be a global or static
+    // variable that is in a function scope and the function in the symbol
+    // context wasn't filled in yet
+    return var_sp;
+  }
+  // Cache var_sp even if NULL (the variable was just a specification or was
+  // missing vital information to be able to be displayed in the debugger
+  // (missing location due to optimization, etc)) so we don't re-parse this
+  // DIE over and over later...
+  GetDIEToVariable()[die.GetDIE()] = var_sp;
+  if (spec_die)
+    GetDIEToVariable()[spec_die.GetDIE()] = var_sp;
+
   return var_sp;
 }
 

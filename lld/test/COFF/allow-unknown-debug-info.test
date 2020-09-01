@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 # RUN: lld-link -safeseh:no /dll /noentry /debug %t.obj 2>&1 | FileCheck %s
 
 # CHECK: ignoring section .debug$S with unrecognized magic 0x1

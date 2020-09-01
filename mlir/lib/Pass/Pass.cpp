@@ -18,6 +18,7 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -73,33 +74,6 @@ void Pass::printAsTextualPipeline(raw_ostream &os) {
   passOptions.print(os);
 }
 
-/// Forwarding function to execute this pass.
-LogicalResult Pass::run(Operation *op, AnalysisManager am) {
-  passState.emplace(op, am);
-
-  // Instrument before the pass has run.
-  auto pi = am.getPassInstrumentor();
-  if (pi)
-    pi->runBeforePass(this, op);
-
-  // Invoke the virtual runOnOperation method.
-  runOnOperation();
-
-  // Invalidate any non preserved analyses.
-  am.invalidate(passState->preservedAnalyses);
-
-  // Instrument after the pass has run.
-  bool passFailed = passState->irAndPassFailed.getInt();
-  if (pi) {
-    if (passFailed)
-      pi->runAfterPassFailed(this, op);
-    else
-      pi->runAfterPass(this, op);
-  }
-
-  // Return if the pass signaled a failure.
-  return failure(passFailed);
-}
 
 //===----------------------------------------------------------------------===//
 // Verifier Passes
@@ -286,17 +260,17 @@ OpPassManager &OpPassManager::operator=(const OpPassManager &rhs) {
 OpPassManager::~OpPassManager() {}
 
 OpPassManager::pass_iterator OpPassManager::begin() {
-  return impl->passes.begin();
+  return MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.begin();
 }
-OpPassManager::pass_iterator OpPassManager::end() { return impl->passes.end(); }
+OpPassManager::pass_iterator OpPassManager::end() {
+  return MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.end();
+}
 
-/// Run all of the passes in this manager over the current operation.
-LogicalResult OpPassManager::run(Operation *op, AnalysisManager am) {
-  // Run each of the held passes.
-  for (auto &pass : impl->passes)
-    if (failed(pass->run(op, am)))
-      return failure();
-  return success();
+OpPassManager::const_pass_iterator OpPassManager::begin() const {
+  return ArrayRef<std::unique_ptr<Pass>>{impl->passes}.begin();
+}
+OpPassManager::const_pass_iterator OpPassManager::end() const {
+  return ArrayRef<std::unique_ptr<Pass>>{impl->passes}.end();
 }
 
 /// Nest a new operation pass manager for the given operation kind under this
@@ -346,23 +320,66 @@ void OpPassManager::printAsTextualPipeline(raw_ostream &os) {
   ::printAsTextualPipeline(impl->passes, os);
 }
 
+static void registerDialectsForPipeline(const OpPassManager &pm,
+                                        DialectRegistry &dialects) {
+  for (const Pass &pass : pm.getPasses())
+    pass.getDependentDialects(dialects);
+}
+
+void OpPassManager::getDependentDialects(DialectRegistry &dialects) const {
+  registerDialectsForPipeline(*this, dialects);
+}
+
 //===----------------------------------------------------------------------===//
 // OpToOpPassAdaptor
 //===----------------------------------------------------------------------===//
 
-/// Utility to run the given operation and analysis manager on a provided op
-/// pass manager.
-static LogicalResult runPipeline(OpPassManager &pm, Operation *op,
-                                 AnalysisManager am) {
-  // Run the pipeline over the provided operation.
-  auto result = pm.run(op, am);
+LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
+                                     AnalysisManager am) {
+  pass->passState.emplace(op, am);
 
-  // Clear out any computed operation analyses. These analyses won't be used
-  // any more in this pipeline, and this helps reduce the current working set
-  // of memory. If preserving these analyses becomes important in the future
-  // we can re-evaluate this.
-  am.clear();
-  return result;
+  // Instrument before the pass has run.
+  PassInstrumentor *pi = am.getPassInstrumentor();
+  if (pi)
+    pi->runBeforePass(pass, op);
+
+  // Invoke the virtual runOnOperation method.
+  pass->runOnOperation();
+
+  // Invalidate any non preserved analyses.
+  am.invalidate(pass->passState->preservedAnalyses);
+
+  // Instrument after the pass has run.
+  bool passFailed = pass->passState->irAndPassFailed.getInt();
+  if (pi) {
+    if (passFailed)
+      pi->runAfterPassFailed(pass, op);
+    else
+      pi->runAfterPass(pass, op);
+  }
+
+  // Return if the pass signaled a failure.
+  return failure(passFailed);
+}
+
+/// Run the given operation and analysis manager on a provided op pass manager.
+LogicalResult OpToOpPassAdaptor::runPipeline(
+    iterator_range<OpPassManager::pass_iterator> passes, Operation *op,
+    AnalysisManager am) {
+  auto scope_exit = llvm::make_scope_exit([&] {
+    // Clear out any computed operation analyses. These analyses won't be used
+    // any more in this pipeline, and this helps reduce the current working set
+    // of memory. If preserving these analyses becomes important in the future
+    // we can re-evaluate this.
+    am.clear();
+  });
+
+  // Run the pipeline over the provided operation.
+  for (Pass &pass : passes)
+    if (failed(run(&pass, op, am)))
+      return failure();
+
+  return success();
 }
 
 /// Find an operation pass manager that can operate on an operation of the given
@@ -376,6 +393,11 @@ static OpPassManager *findPassManagerFor(MutableArrayRef<OpPassManager> mgrs,
 
 OpToOpPassAdaptor::OpToOpPassAdaptor(OpPassManager &&mgr) {
   mgrs.emplace_back(std::move(mgr));
+}
+
+void OpToOpPassAdaptor::getDependentDialects(DialectRegistry &dialects) const {
+  for (auto &pm : mgrs)
+    pm.getDependentDialects(dialects);
 }
 
 /// Merge the current pass adaptor into given 'rhs'.
@@ -435,7 +457,7 @@ void OpToOpPassAdaptor::runOnOperationImpl() {
         // Run the held pipeline over the current operation.
         if (instrumentor)
           instrumentor->runBeforePipeline(mgr->getOpName(), parentInfo);
-        auto result = runPipeline(*mgr, &op, am.slice(&op));
+        auto result = runPipeline(mgr->getPasses(), &op, am.nest(&op));
         if (instrumentor)
           instrumentor->runAfterPipeline(mgr->getOpName(), parentInfo);
 
@@ -474,7 +496,7 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl() {
       for (auto &op : block) {
         // Add this operation iff the name matches the any of the pass managers.
         if (findPassManagerFor(mgrs, op.getName()))
-          opAMPairs.emplace_back(&op, am.slice(&op));
+          opAMPairs.emplace_back(&op, am.nest(&op));
       }
     }
   }
@@ -514,7 +536,8 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl() {
 
           if (instrumentor)
             instrumentor->runBeforePipeline(pm->getOpName(), parentInfo);
-          auto pipelineResult = runPipeline(*pm, it.first, it.second);
+          auto pipelineResult =
+              runPipeline(pm->getPasses(), it.first, it.second);
           if (instrumentor)
             instrumentor->runAfterPipeline(pm->getOpName(), parentInfo);
 
@@ -687,7 +710,7 @@ PassManager::runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
   llvm::CrashRecoveryContext recoveryContext;
   recoveryContext.RunSafelyOnThread([&] {
     for (std::unique_ptr<Pass> &pass : passes)
-      if (failed(pass->run(module, am)))
+      if (failed(OpToOpPassAdaptor::run(pass.get(), module, am)))
         return;
     passManagerResult = success();
   });
@@ -721,14 +744,26 @@ LogicalResult PassManager::run(ModuleOp module) {
   // pipeline.
   getImpl().coalesceAdjacentAdaptorPasses();
 
+  // Register all dialects for the current pipeline.
+  DialectRegistry dependentDialects;
+  getDependentDialects(dependentDialects);
+  dependentDialects.loadAll(module.getContext());
+
   // Construct an analysis manager for the pipeline.
   ModuleAnalysisManager am(module, instrumentor.get());
 
+  // Notify the context that we start running a pipeline for book keeping.
+  module.getContext()->enterMultiThreadedExecution();
+
   // If reproducer generation is enabled, run the pass manager with crash
   // handling enabled.
-  LogicalResult result = crashReproducerFileName
-                             ? runWithCrashRecovery(module, am)
-                             : OpPassManager::run(module, am);
+  LogicalResult result =
+      crashReproducerFileName
+          ? runWithCrashRecovery(module, am)
+          : OpToOpPassAdaptor::runPipeline(getPasses(), module, am);
+
+  // Notify the context that the run is done.
+  module.getContext()->exitMultiThreadedExecution();
 
   // Dump all of the pass statistics if necessary.
   if (passStatisticsMode)
@@ -768,7 +803,7 @@ PassInstrumentor *AnalysisManager::getPassInstrumentor() const {
 }
 
 /// Get an analysis manager for the given child operation.
-AnalysisManager AnalysisManager::slice(Operation *op) {
+AnalysisManager AnalysisManager::nest(Operation *op) {
   assert(op->getParentOp() == impl->getOperation() &&
          "'op' has a different parent operation");
   auto it = impl->childAnalyses.find(op);

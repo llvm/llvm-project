@@ -230,7 +230,7 @@ define signext i32 @ror_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-NEXT:    srlw a2, a0, a1
 ; RV64I-NEXT:    neg a1, a1
 ; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IB-LABEL: ror_i32:
@@ -259,7 +259,7 @@ define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-NEXT:    srl a2, a0, a1
 ; RV64I-NEXT:    neg a1, a1
 ; RV64I-NEXT:    sll a0, a0, a1
-; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IB-LABEL: ror_i64:
@@ -291,7 +291,7 @@ define signext i32 @rori_i32(i32 signext %a) nounwind {
 ;
 ; RV64IB-LABEL: rori_i32:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    fsriw a0, a0, a0, 1
+; RV64IB-NEXT:    roriw a0, a0, 1
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: rori_i32:

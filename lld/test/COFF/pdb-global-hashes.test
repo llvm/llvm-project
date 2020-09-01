@@ -1,6 +1,6 @@
-RUN: yaml2obj %p/Inputs/pdb-hashes-1.yaml > %t.1.obj
-RUN: yaml2obj %p/Inputs/pdb-hashes-2.yaml > %t.2.obj
-RUN: yaml2obj %p/Inputs/pdb-hashes-2-missing.yaml > %t.2.missing.obj
+RUN: yaml2obj %p/Inputs/pdb-hashes-1.yaml -o %t.1.obj
+RUN: yaml2obj %p/Inputs/pdb-hashes-2.yaml -o %t.2.obj
+RUN: yaml2obj %p/Inputs/pdb-hashes-2-missing.yaml -o %t.2.missing.obj
 RUN: lld-link /debug %t.1.obj %t.2.obj /entry:main /nodefaultlib /PDB:%t.nohash.pdb
 RUN: lld-link /debug:ghash %t.1.obj %t.2.obj /entry:main /nodefaultlib /PDB:%t.hash.pdb
 RUN: lld-link /debug:ghash %t.1.obj %t.2.missing.obj /entry:main /nodefaultlib /PDB:%t.mixed.pdb

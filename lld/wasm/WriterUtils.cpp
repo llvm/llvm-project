@@ -119,8 +119,8 @@ void writeSig(raw_ostream &os, const WasmSignature &sig) {
     writeValueType(os, paramType, "param type");
   }
   writeUleb128(os, sig.Returns.size(), "result Count");
-  if (sig.Returns.size()) {
-    writeValueType(os, sig.Returns[0], "result type");
+  for (ValType returnType : sig.Returns) {
+    writeValueType(os, returnType, "result type");
   }
 }
 

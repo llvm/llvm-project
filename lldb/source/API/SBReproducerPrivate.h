@@ -16,6 +16,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/ReproducerInstrumentation.h"
+#include "lldb/Utility/ReproducerProvider.h"
 
 #include "llvm/ADT/DenseMap.h"
 

@@ -23,13 +23,12 @@ define hidden i32 @_Z4loopPiPjiS0_i(i32* noalias nocapture readonly %s1, i32* no
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT71:%.*]] = insertelement <4 x i32> undef, i32 [[X]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT72:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT71]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[TMP3]])
-; CHECK-NEXT:    [[NUM_ELEMENTS:%.*]] = add i32 [[TRIP_COUNT_MINUS_183]], 1
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[LSR_IV9:%.*]] = phi i32* [ [[SCEVGEP10:%.*]], [[VECTOR_BODY]] ], [ [[D:%.*]], [[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[TMP3]], [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[NUM_ELEMENTS]], [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[N]], [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[LSR_IV911:%.*]] = bitcast i32* [[LSR_IV9]] to <4 x i32>*
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
@@ -108,7 +107,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
   %5 = insertelement <4 x i32> undef, i32 %trip.count.minus.183, i32 0
   %6 = shufflevector <4 x i32> %5, <4 x i32> undef, <4 x i32> zeroinitializer
-  %7 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.183)
+  %7 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
   call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %broadcast.splat72, <4 x i32>* %lsr.iv911, i32 4, <4 x i1> %7)
   %index.next = add i32 %index, 4
   %scevgep10 = getelementptr i32, i32* %lsr.iv9, i32 4

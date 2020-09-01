@@ -39,7 +39,7 @@ OPTIONS
 
 **--bb** *basic-block-specifier*
 
- Extract basic blocks(s) specicified in *basic-block-specifier*. May be
+ Extract basic blocks(s) specified in *basic-block-specifier*. May be
  specified multiple times. Each <function:bb[;bb]> specifier pair will create
  a function. If multiple basic blocks are specified in one pair, the first
  block in the sequence should dominate the rest.

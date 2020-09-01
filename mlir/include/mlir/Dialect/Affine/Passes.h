@@ -35,6 +35,9 @@ createAffineLoopInvariantCodeMotionPass();
 /// ops.
 std::unique_ptr<OperationPass<FuncOp>> createAffineParallelizePass();
 
+/// Normalize affine.parallel ops so that lower bounds are 0 and steps are 1.
+std::unique_ptr<OperationPass<FuncOp>> createAffineParallelNormalizePass();
+
 /// Performs packing (or explicit copying) of accessed memref regions into
 /// buffers in the specified faster memory space through either pointwise copies
 /// or DMA operations.

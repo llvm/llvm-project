@@ -519,7 +519,7 @@ public:
 
       // Call onto PassInstrumentation's AfterPass callbacks immediately after
       // running the pass.
-      PI.runAfterPass<IRUnitT>(*P, IR);
+      PI.runAfterPass<IRUnitT>(*P, IR, PassPA);
 
       // Update the analysis manager as each pass runs and potentially
       // invalidates analyses.
@@ -1244,7 +1244,7 @@ public:
         PassPA = Pass.run(F, FAM);
       }
 
-      PI.runAfterPass(Pass, F);
+      PI.runAfterPass(Pass, F, PassPA);
 
       // We know that the function pass couldn't have invalidated any other
       // function's analyses (that's the contract of a function pass), so
@@ -1308,6 +1308,7 @@ struct RequireAnalysisPass
 
     return PreservedAnalyses::all();
   }
+  static bool isRequired() { return true; }
 };
 
 /// A no-op pass template which simply forces a specific analysis result
@@ -1368,8 +1369,9 @@ public:
       // false).
       if (!PI.runBeforePass<IRUnitT>(P, IR))
         continue;
-      PA.intersect(P.run(IR, AM, std::forward<Ts>(Args)...));
-      PI.runAfterPass(P, IR);
+      PreservedAnalyses IterPA = P.run(IR, AM, std::forward<Ts>(Args)...);
+      PA.intersect(IterPA);
+      PI.runAfterPass(P, IR, IterPA);
     }
     return PA;
   }

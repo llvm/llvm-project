@@ -1,6 +1,6 @@
-# RUN: yaml2obj < %p/Inputs/include1a.yaml > %t1.obj
-# RUN: yaml2obj < %p/Inputs/include1b.yaml > %t2.obj
-# RUN: yaml2obj < %p/Inputs/include1c.yaml > %t3.obj
+# RUN: yaml2obj %p/Inputs/include1a.yaml -o %t1.obj
+# RUN: yaml2obj %p/Inputs/include1b.yaml -o %t2.obj
+# RUN: yaml2obj %p/Inputs/include1c.yaml -o %t3.obj
 # RUN: rm -f %t2.lib %t3.lib
 # RUN: llvm-ar cru %t2.lib %t2.obj
 # RUN: llvm-ar cru %t3.lib %t3.obj

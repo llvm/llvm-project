@@ -204,6 +204,9 @@ def MathAPI : PublicAPI<"math.h"> {
    "roundl",
    "sincosf",
    "sinf",
+   "sqrt",
+   "sqrtf",
+   "sqrtl",
    "trunc",
    "truncf",
    "truncl",
@@ -236,6 +239,7 @@ def StringAPI : PublicAPI<"string.h"> {
     "strspn",
     "strstr",
     "strtok",
+    "strtok_r",
     "strxfrm",   
   ];
 

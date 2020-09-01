@@ -1903,7 +1903,6 @@ exit:
 }
 
 ; Shows how we can leverage dominance to eliminate duplicating selects.
-; TODO: We can optimize further if we eliminate duplicating Phis and similify the whole thing to phi[x, y] * 3.
 define i32 @select_dominance_chain(i1 %cond, i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_dominance_chain(
 ; CHECK-NEXT:  entry:
@@ -1926,10 +1925,7 @@ define i32 @select_dominance_chain(i1 %cond, i32 %x, i32 %y) {
 ; CHECK-NEXT:    br label [[MERGE_3]]
 ; CHECK:       merge.3:
 ; CHECK-NEXT:    [[S_3:%.*]] = phi i32 [ [[Y:%.*]], [[IF_FALSE_3]] ], [ [[X:%.*]], [[IF_TRUE_3]] ]
-; CHECK-NEXT:    [[S_2:%.*]] = phi i32 [ [[Y]], [[IF_FALSE_3]] ], [ [[X]], [[IF_TRUE_3]] ]
-; CHECK-NEXT:    [[S_1:%.*]] = phi i32 [ [[Y]], [[IF_FALSE_3]] ], [ [[X]], [[IF_TRUE_3]] ]
-; CHECK-NEXT:    [[SUM_1:%.*]] = add i32 [[S_1]], [[S_2]]
-; CHECK-NEXT:    [[SUM_2:%.*]] = add i32 [[SUM_1]], [[S_3]]
+; CHECK-NEXT:    [[SUM_2:%.*]] = mul i32 [[S_3]], 3
 ; CHECK-NEXT:    ret i32 [[SUM_2]]
 ;
 entry:
@@ -2452,13 +2448,14 @@ exit:
   ret i32 %sel
 }
 
-; FIXME: We shouldn't remove selects with undef true/false values.
+; Negative tests to ensure we don't remove selects with undef true/false values.
 ; See https://bugs.llvm.org/show_bug.cgi?id=31633
 ; https://lists.llvm.org/pipermail/llvm-dev/2016-October/106182.html
 ; https://reviews.llvm.org/D83360
 define i32 @false_undef(i1 %cond, i32 %x) {
 ; CHECK-LABEL: @false_undef(
-; CHECK-NEXT:    ret i32 [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 [[X:%.*]], i32 undef
+; CHECK-NEXT:    ret i32 [[S]]
 ;
   %s = select i1 %cond, i32 %x, i32 undef
   ret i32 %s
@@ -2466,7 +2463,8 @@ define i32 @false_undef(i1 %cond, i32 %x) {
 
 define i32 @true_undef(i1 %cond, i32 %x) {
 ; CHECK-LABEL: @true_undef(
-; CHECK-NEXT:    ret i32 [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 undef, i32 [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
 ;
   %s = select i1 %cond, i32 undef, i32 %x
   ret i32 %s
@@ -2474,7 +2472,8 @@ define i32 @true_undef(i1 %cond, i32 %x) {
 
 define <2 x i32> @false_undef_vec(i1 %cond, <2 x i32> %x) {
 ; CHECK-LABEL: @false_undef_vec(
-; CHECK-NEXT:    ret <2 x i32> [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], <2 x i32> [[X:%.*]], <2 x i32> undef
+; CHECK-NEXT:    ret <2 x i32> [[S]]
 ;
   %s = select i1 %cond, <2 x i32> %x, <2 x i32> undef
   ret <2 x i32> %s
@@ -2482,7 +2481,8 @@ define <2 x i32> @false_undef_vec(i1 %cond, <2 x i32> %x) {
 
 define <2 x i32> @true_undef_vec(i1 %cond, <2 x i32> %x) {
 ; CHECK-LABEL: @true_undef_vec(
-; CHECK-NEXT:    ret <2 x i32> [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], <2 x i32> undef, <2 x i32> [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[S]]
 ;
   %s = select i1 %cond, <2 x i32> undef, <2 x i32> %x
   ret <2 x i32> %s

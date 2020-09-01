@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 
 
 ; There is no dependence between the store and the two loads. So we can combine the loads
@@ -6,8 +6,8 @@
 
 ; GCN-LABEL: {{^}}ds_combine_nodep
 
-; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:7 offset1:8
-; GCN-NEXT: ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
+; GCN: ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
+; GCN-NEXT: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:7 offset1:8
 define amdgpu_kernel void @ds_combine_nodep(float addrspace(1)* %out, float addrspace(3)* %inptr) {
 
   %base = bitcast float addrspace(3)* %inptr to i8 addrspace(3)*

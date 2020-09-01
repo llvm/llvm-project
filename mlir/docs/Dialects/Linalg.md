@@ -268,7 +268,7 @@ to correspond to the operations inside the region: the region can capture
 buffers arbitrarily and write into them. If this conflicts with some parallel
 iterator requirement, this is undefined behavior.
 
-Previous examples already ellaborate compute payloads with an unregistered function `"some_compute"`. The following code snippet shows what the result will be when using a concrete operation `addf`:
+Previous examples already elaborate compute payloads with an unregistered function `"some_compute"`. The following code snippet shows what the result will be when using a concrete operation `addf`:
 ```
 // File name: example3.mlir
 #indexing_maps = [

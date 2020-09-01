@@ -15,7 +15,7 @@
 #define FLT_EPSILON     0x1.0p-23f
 
 #define FP_ILOGB0 (-2147483647 - 1)
-#define FP_ILOGBNAN (-2147483647 - 1)
+#define FP_ILOGBNAN 2147483647
 
 #define M_E_F           0x1.5bf0a8p+1f
 #define M_LOG2E_F       0x1.715476p+0f

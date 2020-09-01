@@ -205,7 +205,7 @@ struct MCExtraProcessorInfo {
 /// subtargets can't be done. Nonetheless, the abstract model is
 /// useful. Futhermore, subtargets typically extend this model with processor
 /// specific resources to model any hardware features that can be exploited by
-/// sceduling heuristics and aren't sufficiently represented in the abstract.
+/// scheduling heuristics and aren't sufficiently represented in the abstract.
 ///
 /// The abstract pipeline is built around the notion of an "issue point". This
 /// is merely a reference point for counting machine cycles. The physical

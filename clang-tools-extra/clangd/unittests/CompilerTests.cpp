@@ -51,6 +51,11 @@ TEST(BuildCompilerInvocation, DropsPCH) {
               IsEmpty());
 }
 
+TEST(BuildCompilerInvocation, PragmaDebugCrash) {
+  TestTU TU = TestTU::withCode("#pragma clang __debug parser_crash");
+  TU.build(); // no-crash
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

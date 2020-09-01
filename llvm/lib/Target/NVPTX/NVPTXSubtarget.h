@@ -83,7 +83,7 @@ public:
   unsigned getPTXVersion() const { return PTXVersion; }
 
   NVPTXSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS);
-  void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
+  void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 };
 
 } // End llvm namespace

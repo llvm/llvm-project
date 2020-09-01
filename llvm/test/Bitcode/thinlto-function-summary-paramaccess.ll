@@ -210,11 +210,11 @@ entry:
 }
 
 ; SSI-LABEL: for function 'CallMany'
-; SSI: p[]: empty-set, @Callee(arg0, [-715,-714)), @Callee(arg0, [-33,-32)), @Callee(arg0, [124,125))
-; BC-NEXT: <PARAM_ACCESS op0=0 op1=0 op2=0 op3=3 op4=0 op5=[[CALLEE]] op6=1431 op7=1429 op8=0 op9=[[CALLEE]] op10=67 op11=65 op12=0 op13=[[CALLEE]] op14=248 op15=250/>
+; SSI: p[]: empty-set, @Callee(arg0, [-715,125))
+; BC-NEXT: <PARAM_ACCESS op0=0 op1=0 op2=0 op3=1 op4=0 op5=[[CALLEE]] op6=1431 op7=250/>
 ; BC-NEXT: <PERMODULE
-; DIS-DAG: = gv: (name: "CallMany", summaries: {{.*}} calls: ((callee: ^{{.*}})), params: ((param: 0, offset: [0, -1], calls: ((callee: ^{{.*}}, param: 0, offset: [-715, -715]), (callee: ^{{.*}}, param: 0, offset: [-33, -33]), (callee: ^{{.*}}, param: 0, offset: [124, 124]))))))) ; guid = 17150418543861409076
-; DCO-DAG: = gv: (guid: 17150418543861409076, summaries: (function: (module: ^0, flags: ({{[^()]+}}), insts: 7, funcFlags: ({{[^()]+}}), calls: ((callee: ^[[CALLEE:.]])), params: ((param: 0, offset: [0, -1], calls: ((callee: ^[[CALLEE]], param: 0, offset: [-715, -715]), (callee: ^[[CALLEE]], param: 0, offset: [-33, -33]), (callee: ^[[CALLEE]], param: 0, offset: [124, 124]))))))){{$}}
+; DIS-DAG: = gv: (name: "CallMany", summaries: {{.*}} calls: ((callee: ^{{.*}})), params: ((param: 0, offset: [0, -1], calls: ((callee: ^{{.*}}, param: 0, offset: [-715, 124]))))))) ; guid = 17150418543861409076
+; DCO-DAG: = gv: (guid: 17150418543861409076, summaries: (function: (module: ^0, flags: ({{[^()]+}}), insts: 7, funcFlags: ({{[^()]+}}), calls: ((callee: ^[[CALLEE:.]])), params: ((param: 0, offset: [0, -1], calls: ((callee: ^[[CALLEE]], param: 0, offset: [-715, 124]))))))){{$}}
 define void @CallMany(i8* %p) #0 {
 entry:
   %p0 = getelementptr i8, i8* %p, i64 -715
@@ -230,11 +230,11 @@ entry:
 }
 
 ; SSI-LABEL: for function 'CallMany2'
-; SSI: p[]: empty-set, @Callee(arg0, [-715,-714)), @Callee2(arg1, [-33,-32)), @Callee(arg0, [124,125))
-; BC-NEXT: <PARAM_ACCESS op0=0 op1=0 op2=0 op3=3 op4=0 op5=[[CALLEE]] op6=1431 op7=1429 op8=1 op9=[[CALLEE2:-?[0-9]+]] op10=67 op11=65 op12=0 op13=[[CALLEE]] op14=248 op15=250/>
+; SSI: p[]: empty-set, @Callee(arg0, [-715,125)), @Callee2(arg1, [-33,-32))
+; BC-NEXT: <PARAM_ACCESS op0=0 op1=0 op2=0 op3=2 op4=0 op5=[[CALLEE]] op6=1431 op7=250 op8=1 op9=[[CALLEE2:-?[0-9]+]] op10=67 op11=65/>
 ; BC-NEXT: <PERMODULE
-; DIS-DAG: = gv: (name: "CallMany2", summaries: {{.*}} calls: ((callee: ^{{.*}}), (callee: ^{{.*}})), params: ((param: 0, offset: [0, -1], calls: ((callee: ^{{.*}}, param: 0, offset: [-715, -715]), (callee: ^{{.*}}, param: 1, offset: [-33, -33]), (callee: ^{{.*}}, param: 0, offset: [124, 124]))))))) ; guid = 16654048340802466690
-; DCO-DAG: = gv: (guid: 16654048340802466690, summaries: (function: (module: ^0, flags: ({{[^()]+}}), insts: 7, funcFlags: ({{[^()]+}}), calls: ((callee: ^{{[0-9]+}}), (callee: ^{{[0-9]+}})), params: ((param: 0, offset: [0, -1], calls: ((callee: ^{{[0-9]+}}, param: 0, offset: [-715, -715]), (callee: ^{{[0-9]+}}, param: 1, offset: [-33, -33]), (callee: ^{{[0-9]+}}, param: 0, offset: [124, 124]))))))){{$}}
+; DIS-DAG: = gv: (name: "CallMany2", summaries: {{.*}} calls: ((callee: ^{{.*}}), (callee: ^{{.*}})), params: ((param: 0, offset: [0, -1], calls: ((callee: ^{{.*}}, param: 0, offset: [-715, 124]), (callee: ^{{.*}}, param: 1, offset: [-33, -33]))))))) ; guid = 16654048340802466690
+; DCO-DAG: = gv: (guid: 16654048340802466690, summaries: (function: (module: ^0, flags: ({{[^()]+}}), insts: 7, funcFlags: ({{[^()]+}}), calls: ((callee: ^{{[0-9]+}}), (callee: ^{{[0-9]+}})), params: ((param: 0, offset: [0, -1], calls: ((callee: ^{{[0-9]+}}, param: 0, offset: [-715, 124]), (callee: ^{{[0-9]+}}, param: 1, offset: [-33, -33]))))))){{$}}
 define void @CallMany2(i8* %p) #0 {
 entry:
   %p0 = getelementptr i8, i8* %p, i64 -715
@@ -250,7 +250,7 @@ entry:
 }
 
 ; SSI-LABEL: for function 'CallManyUnsafe'
-; SSI: p[]: full-set, @Callee(arg0, [-715,-714)), @Callee(arg0, [-33,-32)), @Callee(arg0, [124,125))
+; SSI: p[]: full-set, @Callee(arg0, [-715,125))
 ; BC-NEXT: <PERMODULE
 ; DIS-DAG: = gv: (name: "CallManyUnsafe", summaries: {{.*}} calls: ((callee: ^{{.*}}))))) ; guid = 15696680128757863301
 ; DCO-DAG: = gv: (guid: 15696680128757863301, summaries: (function: (module: ^0, flags: ({{[^()]+}}), insts: 9, funcFlags: ({{[^()]+}}), calls: ((callee: ^[[CALLEE:.]]))))){{$}}
@@ -286,8 +286,8 @@ entry:
 
 
 ; COMBINED: <FLAGS op0=0/>
-; COMBINED-NEXT: <VALUE_GUID op0=1 op1=[[CALLEE1:72710208629861106]]/>
-; COMBINED-NEXT: <VALUE_GUID op0=2 op1=[[CALLEE2:900789920918863816]]/>
+; COMBINED-NEXT: <VALUE_GUID op0=[[CALLEE1:1]] op1=72710208629861106/>
+; COMBINED-NEXT: <VALUE_GUID op0=[[CALLEE2:2]] op1=900789920918863816/>
 ; COMBINED-NEXT: <VALUE_GUID op0=3 op1=1075564720951610524/>
 ; COMBINED-NEXT: <VALUE_GUID op0=4 op1=1417835201204712148/>
 ; COMBINED-NEXT: <VALUE_GUID op0=5 op1=2949024673554120799/>
@@ -334,8 +334,8 @@ entry:
 ; COMBINED-NEXT: <COMBINED abbrevid=4 op0=16
 ; COMBINED-NEXT: <PARAM_ACCESS op0=0 op1=0 op2=0 op3=1 op4=0 op5=[[CALLEE2]] op6=1431 op7=1429/>
 ; COMBINED-NEXT: <COMBINED abbrevid=4 op0=17
-; COMBINED-NEXT: <PARAM_ACCESS op0=0 op1=0 op2=0 op3=3 op4=0 op5=[[CALLEE2]] op6=1431 op7=1429 op8=1 op9=[[CALLEE1]] op10=67 op11=65 op12=0 op13=[[CALLEE2]] op14=248 op15=250/>
+; COMBINED-NEXT: <PARAM_ACCESS op0=0 op1=0 op2=0 op3=2 op4=0 op5=[[CALLEE2]] op6=1431 op7=250 op8=1 op9=[[CALLEE1]] op10=67 op11=65/>
 ; COMBINED-NEXT: <COMBINED abbrevid=4 op0=18
-; COMBINED-NEXT: <PARAM_ACCESS op0=0 op1=0 op2=0 op3=3 op4=0 op5=[[CALLEE2]] op6=1431 op7=1429 op8=0 op9=[[CALLEE2]] op10=67 op11=65 op12=0 op13=[[CALLEE2]] op14=248 op15=250/>
+; COMBINED-NEXT: <PARAM_ACCESS op0=0 op1=0 op2=0 op3=1 op4=0 op5=[[CALLEE2]] op6=1431 op7=250/>
 ; COMBINED-NEXT: <COMBINED abbrevid=4 op0=19
 ; COMBINED-NEXT: <BLOCK_COUNT op0=19/>

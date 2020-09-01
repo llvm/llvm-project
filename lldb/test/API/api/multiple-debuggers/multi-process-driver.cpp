@@ -1,11 +1,11 @@
 
-// This program creates NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS of pthreads, 
+// This program creates NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS of pthreads,
 // creates an lldb Debugger on each thread, creates targets, inserts two
 // breakpoints, runs to the first breakpoint, backtraces, runs to the second
 // breakpoint, backtraces, kills the inferior process, closes down the
 // debugger.
 
-// The main thread keeps track of which pthreads have completed and which 
+// The main thread keeps track of which pthreads have completed and which
 // pthreads have completed successfully, and exits when all pthreads have
 // completed successfully, or our time limit has been exceeded.
 
@@ -23,6 +23,7 @@
 #include "lldb/API/SBDebugger.h"
 
 #include <chrono>
+#include <csignal>
 #include <thread>
 
 #define NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS 10
@@ -220,7 +221,7 @@ int main (int argc, char **argv)
 #if !defined(_MSC_VER)
   signal(SIGPIPE, SIG_IGN);
 #endif
-  
+
     SBDebugger::Initialize();
 
     completed_threads_array = (bool *) malloc (sizeof (bool) * NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS);

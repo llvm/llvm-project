@@ -1272,6 +1272,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   const TargetOptions &TargetOpts = Target.getTargetOpts();
   AddString(TargetOpts.Triple, Record);
   AddString(TargetOpts.CPU, Record);
+  AddString(TargetOpts.TuneCPU, Record);
   AddString(TargetOpts.ABI, Record);
   Record.push_back(TargetOpts.FeaturesAsWritten.size());
   for (unsigned I = 0, N = TargetOpts.FeaturesAsWritten.size(); I != N; ++I) {
@@ -4178,11 +4179,11 @@ void ASTWriter::WriteFloatControlPragmaOptions(Sema &SemaRef) {
     return;
 
   RecordData Record;
-  Record.push_back(SemaRef.FpPragmaStack.CurrentValue);
+  Record.push_back(SemaRef.FpPragmaStack.CurrentValue.getAsOpaqueInt());
   AddSourceLocation(SemaRef.FpPragmaStack.CurrentPragmaLocation, Record);
   Record.push_back(SemaRef.FpPragmaStack.Stack.size());
   for (const auto &StackEntry : SemaRef.FpPragmaStack.Stack) {
-    Record.push_back(StackEntry.Value);
+    Record.push_back(StackEntry.Value.getAsOpaqueInt());
     AddSourceLocation(StackEntry.PragmaLocation, Record);
     AddSourceLocation(StackEntry.PragmaPushLocation, Record);
     AddString(StackEntry.StackSlotLabel, Record);
@@ -5127,7 +5128,7 @@ void ASTRecordWriter::AddAPFloat(const llvm::APFloat &Value) {
 }
 
 static void WriteFixedPointSemantics(ASTRecordWriter &Record,
-                                     FixedPointSemantics FPSema) {
+                                     llvm::FixedPointSemantics FPSema) {
   Record.push_back(FPSema.getWidth());
   Record.push_back(FPSema.getScale());
   Record.push_back(FPSema.isSigned() | FPSema.isSaturated() << 1 |

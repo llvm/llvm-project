@@ -187,7 +187,7 @@ static isl_stat extract_coefficients(isl_qpolynomial *poly,
 		while (i > 0) {
 			if (i == n - 1) {
 				int j;
-				isl_space *dim;
+				isl_space *space;
 				isl_qpolynomial *b;
 				isl_qpolynomial *f;
 				for (j = 2; j <= left[i - 1]; ++j)
@@ -196,9 +196,9 @@ static isl_stat extract_coefficients(isl_qpolynomial *poly,
 				b = isl_qpolynomial_coeff(c[i - 1], isl_dim_in,
 					n - 1 - i, left[i - 1]);
 				b = isl_qpolynomial_project_domain_on_params(b);
-				dim = isl_qpolynomial_get_domain_space(b);
-				f = isl_qpolynomial_rat_cst_on_domain(dim, ctx->one,
-					multinom->el[i]);
+				space = isl_qpolynomial_get_domain_space(b);
+				f = isl_qpolynomial_rat_cst_on_domain(space,
+					ctx->one, multinom->el[i]);
 				b = isl_qpolynomial_mul(b, f);
 				k[n - 1] = left[n - 2];
 				if (add_fold(b, dom, k, n, d, data) < 0)

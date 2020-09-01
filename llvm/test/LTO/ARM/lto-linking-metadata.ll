@@ -1,7 +1,8 @@
 ; RUN: opt %s -o %t1.bc
 
-; RUN: llvm-lto %t1.bc -o %t1.save.opt -save-merged-module -O1 --exported-symbol=foo
+; RUN: llvm-lto %t1.bc -o %t1.save.opt -save-linked-module -save-merged-module -O1 --exported-symbol=foo
 ; RUN: llvm-dis < %t1.save.opt.merged.bc | FileCheck %s
+; RUN: llvm-dis < %t1.save.opt.linked.bc | FileCheck %s --check-prefix=CHECK-LINKED
 
 ; RUN: llvm-lto2 run %t1.bc -o %t.out.o -save-temps \
 ; RUN:     -r=%t1.bc,foo,pxl
@@ -17,3 +18,6 @@ entry:
 
 ; CHECK: !llvm.module.flags = !{[[MD_NUM:![0-9]+]]}
 ; CHECK: [[MD_NUM]] = !{i32 1, !"LTOPostLink", i32 1}
+
+; CHECK-LINKED: @foo
+; CHECK-LINKED-NOT: LTOPostLink

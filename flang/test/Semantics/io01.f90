@@ -21,6 +21,7 @@
   integer :: unit10 = 10
   integer :: unit11 = 11
   integer :: n = 40
+  integer, parameter :: const_new_unit = 66
 
   integer(kind=1) :: stat1
   integer(kind=2) :: stat2
@@ -72,6 +73,9 @@
   !ERROR: Duplicate NEWUNIT specifier
   !ERROR: If NEWUNIT appears, FILE or STATUS must also appear
   open(newunit=n, newunit=nn, iostat=stat4)
+
+  !ERROR: NEWUNIT variable 'const_new_unit' must be definable
+  open(newunit=const_new_unit, status=cc)
 
   !ERROR: Duplicate UNIT specifier
   open(unit=100, unit=100)

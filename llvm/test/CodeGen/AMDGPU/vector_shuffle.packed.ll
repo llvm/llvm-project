@@ -733,26 +733,17 @@ define amdgpu_kernel void @fma_shuffle(<4 x half> addrspace(1)* nocapture readon
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x10
-; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v6, 3, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v4
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
-; GFX9-NEXT:    v_mov_b32_e32 v3, s3
-; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v4
-; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX9-NEXT:    v_mov_b32_e32 v5, s5
-; GFX9-NEXT:    v_add_co_u32_e32 v4, vcc, s4, v4
-; GFX9-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v5, vcc
-; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
-; GFX9-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off
-; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[4:5], off
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v6, s[0:1]
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v6, s[2:3]
+; GFX9-NEXT:    global_load_dwordx2 v[4:5], v6, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_pk_fma_f16 v6, v0, v2, v6 op_sel_hi:[0,1,1]
-; GFX9-NEXT:    v_pk_fma_f16 v2, v1, v2, v7 op_sel_hi:[0,1,1]
-; GFX9-NEXT:    v_pk_fma_f16 v0, v0, v3, v6 op_sel:[1,0,0]
+; GFX9-NEXT:    v_pk_fma_f16 v4, v0, v2, v4 op_sel_hi:[0,1,1]
+; GFX9-NEXT:    v_pk_fma_f16 v2, v1, v2, v5 op_sel_hi:[0,1,1]
+; GFX9-NEXT:    v_pk_fma_f16 v0, v0, v3, v4 op_sel:[1,0,0]
 ; GFX9-NEXT:    v_pk_fma_f16 v1, v1, v3, v2 op_sel:[1,0,0]
-; GFX9-NEXT:    global_store_dwordx2 v[4:5], v[0:1], off
+; GFX9-NEXT:    global_store_dwordx2 v6, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
 entry:
   %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x()

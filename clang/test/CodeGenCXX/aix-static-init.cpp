@@ -38,8 +38,8 @@ namespace test4 {
   }
 } // namespace test4
 
-// CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @__sinit80000000_clang_1145401da454a7baad10bfe313c46638, i8* null }]
-// CHECK: @llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @__sterm80000000_clang_1145401da454a7baad10bfe313c46638, i8* null }]
+// CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I__, i8* null }]
+// CHECK: @llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__D_a, i8* null }]
 
 // CHECK: define internal void @__cxx_global_var_init() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
@@ -174,7 +174,7 @@ namespace test4 {
 // CHECK:   ret void
 // CHECK: }
 
-// CHECK: define void @__sinit80000000_clang_1145401da454a7baad10bfe313c46638() [[ATTR:#[0-9]+]] {
+// CHECK: define internal void @_GLOBAL__sub_I__() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
 // CHECK:   call void @__cxx_global_var_init()
 // CHECK:   call void @__cxx_global_var_init.1()
@@ -183,7 +183,7 @@ namespace test4 {
 // CHECK:   ret void
 // CHECK: }
 
-// CHECK: define void @__sterm80000000_clang_1145401da454a7baad10bfe313c46638() [[ATTR:#[0-9]+]] {
+// CHECK: define internal void @_GLOBAL__D_a() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
 // CHECK:   call void @__finalize__ZZN5test41fEvE11staticLocal()
 // CHECK:   call void @__finalize__ZN5test31tE()

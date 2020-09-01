@@ -34,6 +34,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strrchr
     libc.src.string.strspn
     libc.src.string.strstr
+    libc.src.string.strtok
+    libc.src.string.strtok_r
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -73,6 +75,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.roundl
     libc.src.math.sincosf
     libc.src.math.sinf
+    libc.src.math.sqrt
+    libc.src.math.sqrtf
+    libc.src.math.sqrtl
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl

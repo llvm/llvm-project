@@ -128,7 +128,6 @@ int main(int argc, char **argv) {
 // CHECK_DAG: [[TG]] = load i8*, i8** [[TG_ADDR]],
 // CHECK-DAG: [[ARGV_REF]] = load i8*, i8** [[ARGV_ADDR:%.+]],
 // CHECK-DAG: [[ARGV_ADDR]] = load i8**, i8*** [[ARGV_ADDR_REF:%.+]],
-// CHECK-DAG: [[ARGV_ADDR_REF:%.+]] = load i8***, i8**** [[ARGV:%.+]],
-// CHECK-DAG: [[ARGV]] = getelementptr inbounds [[CAPS_TY]], [[CAPS_TY]]* [[CAP]], i32 0, i32 2
+// CHECK-DAG: [[ARGV_ADDR_REF]] = getelementptr inbounds [[CAPS_TY]], [[CAPS_TY]]* [[CAP]], i32 0, i32 2
 
 #endif

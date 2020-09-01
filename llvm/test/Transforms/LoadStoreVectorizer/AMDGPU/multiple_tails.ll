@@ -1,4 +1,5 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -basic-aa -load-store-vectorizer -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -basic-aa -load-store-vectorizer -S -o - %s | FileCheck -check-prefixes=GCN,GFX7 %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -basic-aa -load-store-vectorizer -S -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
 target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
 
@@ -6,10 +7,10 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 ; for a the same head starting a chain.
 @0 = internal addrspace(3) global [16384 x i32] undef
 
-; CHECK-LABEL: @no_crash(
-; CHECK: store <2 x i32> zeroinitializer
-; CHECK: store i32 0
-; CHECK: store i32 0
+; GCN-LABEL: @no_crash(
+; GCN: store <2 x i32> zeroinitializer
+; GCN: store i32 0
+; GCN: store i32 0
 
 define amdgpu_kernel void @no_crash(i32 %arg) {
   %tmp2 = add i32 %arg, 14
@@ -28,13 +29,22 @@ define amdgpu_kernel void @no_crash(i32 %arg) {
 ; Check adjiacent memory locations are properly matched and the
 ; longest chain vectorized
 
-; CHECK-LABEL: @interleave_get_longest
-; CHECK: load <4 x i32>
-; CHECK: load i32
-; CHECK: store <2 x i32> zeroinitializer
-; CHECK: load i32
-; CHECK: load i32
-; CHECK: load i32
+; GCN-LABEL: @interleave_get_longest
+
+; GFX7: load <2 x i32>
+; GFX7: load i32
+; GFX7: store <2 x i32> zeroinitializer
+; GFX7: load i32
+; GFX7: load <2 x i32>
+; GFX7: load i32
+; GFX7: load i32
+
+; GFX9: load <4 x i32>
+; GFX9: load i32
+; GFX9: store <2 x i32> zeroinitializer
+; GFX9: load i32
+; GFX9: load i32
+; GFX9: load i32
 
 define amdgpu_kernel void @interleave_get_longest(i32 %arg) {
   %a1 = add i32 %arg, 1

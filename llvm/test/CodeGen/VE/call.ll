@@ -1,5 +1,11 @@
 ; RUN: llc < %s -mtriple=ve-unknown-unknown | FileCheck %s
 
+declare i32 @sample_add(i32, i32)
+declare i32 @stack_callee_int(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
+declare i32 @stack_callee_int_szext(i1 signext, i8 zeroext, i32, i32, i32, i32, i32, i32, i16 zeroext, i8 signext)
+declare float @stack_callee_float(float, float, float, float, float, float, float, float, float, float)
+declare void @test(i64)
+
 define i32 @sample_call() {
 ; CHECK-LABEL: sample_call:
 ; CHECK:       .LBB{{[0-9]+}}_2:
@@ -13,8 +19,6 @@ define i32 @sample_call() {
   %r = tail call i32 @sample_add(i32 1, i32 2)
   ret i32 %r
 }
-
-declare i32 @sample_add(i32, i32)
 
 define i32 @stack_call_int() {
 ; CHECK-LABEL: stack_call_int:
@@ -40,8 +44,6 @@ define i32 @stack_call_int() {
   ret i32 %r
 }
 
-declare i32 @stack_callee_int(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
-
 define i32 @stack_call_int_szext() {
 ; CHECK-LABEL: stack_call_int_szext:
 ; CHECK:       .LBB{{[0-9]+}}_2:
@@ -64,8 +66,6 @@ define i32 @stack_call_int_szext() {
   %r = tail call i32 @stack_callee_int_szext(i1 -1, i8 -1, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i16 -1, i8 -1)
   ret i32 %r
 }
-
-declare i32 @stack_callee_int_szext(i1 signext, i8 zeroext, i32, i32, i32, i32, i32, i32, i16 zeroext, i8 signext)
 
 define float @stack_call_float() {
 ; CHECK-LABEL: stack_call_float:
@@ -90,8 +90,6 @@ define float @stack_call_float() {
   %r = tail call float @stack_callee_float(float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0)
   ret float %r
 }
-
-declare float @stack_callee_float(float, float, float, float, float, float, float, float, float, float)
 
 define float @stack_call_float2(float %p0) {
 ; CHECK-LABEL: stack_call_float2:

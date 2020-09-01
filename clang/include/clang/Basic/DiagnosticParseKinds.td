@@ -62,6 +62,20 @@ def warn_misleading_indentation : Warning<
 def note_previous_statement : Note<
   "previous statement is here">;
 
+def subst_compound_token_kind : TextSubstitution<
+  "%select{%1 and |}0%2 tokens "
+  "%select{introducing statement expression|terminating statement expression|"
+  "introducing attribute|terminating attribute|"
+  "forming pointer to member type}3">;
+def warn_compound_token_split_by_macro : Warning<
+  "%sub{subst_compound_token_kind}0,1,2,3 appear in different "
+  "macro expansion contexts">, InGroup<CompoundTokenSplitByMacro>;
+def note_compound_token_split_second_token_here : Note<
+  "%select{|second }0%1 token is here">;
+def warn_compound_token_split_by_whitespace : Warning<
+  "%sub{subst_compound_token_kind}0,1,2,3 are separated by whitespace">,
+  InGroup<CompoundTokenSplitBySpace>, DefaultIgnore;
+
 def ext_thread_before : Extension<"'__thread' before '%0'">;
 def ext_keyword_as_ident : ExtWarn<
   "keyword '%0' will be made available as an identifier "

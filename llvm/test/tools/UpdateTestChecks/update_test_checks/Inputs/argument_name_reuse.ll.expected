@@ -3,7 +3,7 @@
 
 define i32 @reuse_arg_names(i32 %X, i32 %Y) {
 ; CHECK-LABEL: define {{[^@]+}}@reuse_arg_names
-; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = sub i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[Q:%.*]] = add i32 [[Z]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[Q]]

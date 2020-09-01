@@ -94,6 +94,7 @@ def AffineLoopUnrollAndJam : FunctionPass<"affine-loop-unroll-jam"> {
 def AffineVectorize : FunctionPass<"affine-super-vectorize"> {
   let summary = "Vectorize to a target independent n-D vector abstraction";
   let constructor = "mlir::createSuperVectorizePass()";
+  let dependentDialects = ["vector::VectorDialect"];
   let options = [
     ListOption<"vectorSizes", "virtual-vector-size", "int64_t",
                "Specify an n-D virtual vector size for vectorization",
@@ -115,6 +116,12 @@ def AffineVectorize : FunctionPass<"affine-super-vectorize"> {
 def AffineParallelize : FunctionPass<"affine-parallelize"> {
   let summary = "Convert affine.for ops into 1-D affine.parallel";
   let constructor = "mlir::createAffineParallelizePass()";
+}
+
+def AffineParallelNormalize : FunctionPass<"affine-parallel-normalize"> {
+  let summary = "Normalize affine.parallel ops so that lower bounds are 0 and "
+                "steps are 1";
+  let constructor = "mlir::createAffineParallelNormalizePass()";
 }
 
 def SimplifyAffineStructures : FunctionPass<"simplify-affine-structures"> {

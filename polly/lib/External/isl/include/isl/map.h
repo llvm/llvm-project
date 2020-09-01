@@ -265,6 +265,10 @@ __isl_give isl_pw_multi_aff *isl_map_lexmin_pw_multi_aff(
 __isl_export
 __isl_give isl_pw_multi_aff *isl_map_lexmax_pw_multi_aff(
 	__isl_take isl_map *map);
+__isl_export
+__isl_give isl_multi_pw_aff *isl_map_min_multi_pw_aff(__isl_take isl_map *map);
+__isl_export
+__isl_give isl_multi_pw_aff *isl_map_max_multi_pw_aff(__isl_take isl_map *map);
 
 void isl_basic_map_print_internal(__isl_keep isl_basic_map *bmap,
 	FILE *out, int indent);
@@ -287,18 +291,22 @@ isl_bool isl_basic_map_is_strict_subset(__isl_keep isl_basic_map *bmap1,
 
 __isl_export
 __isl_give isl_map *isl_map_universe(__isl_take isl_space *space);
-__isl_give isl_map *isl_map_nat_universe(__isl_take isl_space *dim);
+__isl_give isl_map *isl_map_nat_universe(__isl_take isl_space *space);
 __isl_export
 __isl_give isl_map *isl_map_empty(__isl_take isl_space *space);
-__isl_give isl_map *isl_map_identity(__isl_take isl_space *dim);
-__isl_give isl_map *isl_map_lex_lt_first(__isl_take isl_space *dim, unsigned n);
-__isl_give isl_map *isl_map_lex_le_first(__isl_take isl_space *dim, unsigned n);
-__isl_give isl_map *isl_map_lex_lt(__isl_take isl_space *set_dim);
-__isl_give isl_map *isl_map_lex_le(__isl_take isl_space *set_dim);
-__isl_give isl_map *isl_map_lex_gt_first(__isl_take isl_space *dim, unsigned n);
-__isl_give isl_map *isl_map_lex_ge_first(__isl_take isl_space *dim, unsigned n);
-__isl_give isl_map *isl_map_lex_gt(__isl_take isl_space *set_dim);
-__isl_give isl_map *isl_map_lex_ge(__isl_take isl_space *set_dim);
+__isl_give isl_map *isl_map_identity(__isl_take isl_space *space);
+__isl_give isl_map *isl_map_lex_lt_first(__isl_take isl_space *space,
+	unsigned n);
+__isl_give isl_map *isl_map_lex_le_first(__isl_take isl_space *space,
+	unsigned n);
+__isl_give isl_map *isl_map_lex_lt(__isl_take isl_space *set_space);
+__isl_give isl_map *isl_map_lex_le(__isl_take isl_space *set_space);
+__isl_give isl_map *isl_map_lex_gt_first(__isl_take isl_space *space,
+	unsigned n);
+__isl_give isl_map *isl_map_lex_ge_first(__isl_take isl_space *space,
+	unsigned n);
+__isl_give isl_map *isl_map_lex_gt(__isl_take isl_space *set_space);
+__isl_give isl_map *isl_map_lex_ge(__isl_take isl_space *set_space);
 __isl_null isl_map *isl_map_free(__isl_take isl_map *map);
 __isl_give isl_map *isl_map_copy(__isl_keep isl_map *map);
 __isl_export
@@ -403,7 +411,7 @@ __isl_give isl_map *isl_map_subtract_range(__isl_take isl_map *map,
 	__isl_take isl_set *dom);
 __isl_export
 __isl_give isl_map *isl_map_complement(__isl_take isl_map *map);
-struct isl_map *isl_map_fix_input_si(struct isl_map *map,
+__isl_give isl_map *isl_map_fix_input_si(__isl_take isl_map *map,
 		unsigned input, int value);
 __isl_give isl_map *isl_map_fix_si(__isl_take isl_map *map,
 		enum isl_dim_type type, unsigned pos, int value);
@@ -467,7 +475,7 @@ __isl_give isl_basic_map *isl_basic_map_remove_divs_involving_dims(
 	enum isl_dim_type type, unsigned first, unsigned n);
 __isl_give isl_map *isl_map_remove_divs_involving_dims(__isl_take isl_map *map,
 	enum isl_dim_type type, unsigned first, unsigned n);
-struct isl_map *isl_map_remove_inputs(struct isl_map *map,
+__isl_give isl_map *isl_map_remove_inputs(__isl_take isl_map *map,
 	unsigned first, unsigned n);
 
 __isl_give isl_basic_map *isl_basic_map_equate(__isl_take isl_basic_map *bmap,
@@ -526,6 +534,9 @@ __isl_export
 __isl_give isl_set *isl_map_domain(__isl_take isl_map *bmap);
 __isl_export
 __isl_give isl_set *isl_map_range(__isl_take isl_map *map);
+__isl_export
+__isl_give isl_map *isl_set_insert_domain(__isl_take isl_set *set,
+	__isl_take isl_space *domain);
 __isl_give isl_map *isl_map_domain_map(__isl_take isl_map *map);
 __isl_give isl_map *isl_map_range_map(__isl_take isl_map *map);
 __isl_give isl_map *isl_set_wrapped_domain_map(__isl_take isl_set *set);
@@ -684,6 +695,22 @@ __isl_give isl_map *isl_map_lex_ge_map(__isl_take isl_map *map1,
 __isl_give isl_map *isl_map_lex_gt_map(__isl_take isl_map *map1,
 	__isl_take isl_map *map2);
 
+__isl_overload
+__isl_give isl_map *isl_map_eq_at_multi_pw_aff(__isl_take isl_map *map,
+	__isl_take isl_multi_pw_aff *mpa);
+__isl_overload
+__isl_give isl_map *isl_map_lex_lt_at_multi_pw_aff(__isl_take isl_map *map,
+	__isl_take isl_multi_pw_aff *mpa);
+__isl_overload
+__isl_give isl_map *isl_map_lex_le_at_multi_pw_aff(__isl_take isl_map *map,
+	__isl_take isl_multi_pw_aff *mpa);
+__isl_overload
+__isl_give isl_map *isl_map_lex_gt_at_multi_pw_aff(__isl_take isl_map *map,
+	__isl_take isl_multi_pw_aff *mpa);
+__isl_overload
+__isl_give isl_map *isl_map_lex_ge_at_multi_pw_aff(__isl_take isl_map *map,
+	__isl_take isl_multi_pw_aff *mpa);
+
 __isl_give isl_basic_map *isl_basic_map_align_params(
 	__isl_take isl_basic_map *bmap, __isl_take isl_space *model);
 __isl_give isl_map *isl_map_align_params(__isl_take isl_map *map,
@@ -701,7 +728,7 @@ __isl_give isl_mat *isl_basic_map_inequalities_matrix(
 		enum isl_dim_type c2, enum isl_dim_type c3,
 		enum isl_dim_type c4, enum isl_dim_type c5);
 __isl_give isl_basic_map *isl_basic_map_from_constraint_matrices(
-	__isl_take isl_space *dim,
+	__isl_take isl_space *space,
 	__isl_take isl_mat *eq, __isl_take isl_mat *ineq, enum isl_dim_type c1,
 	enum isl_dim_type c2, enum isl_dim_type c3,
 	enum isl_dim_type c4, enum isl_dim_type c5);

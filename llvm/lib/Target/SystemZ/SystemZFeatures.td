@@ -196,7 +196,7 @@ def Arch11NewFeatures : SystemZFeatureList<[
 
 //===----------------------------------------------------------------------===//
 //
-// New features added in the Twelvth Edition of the z/Architecture
+// New features added in the Twelfth Edition of the z/Architecture
 //
 //===----------------------------------------------------------------------===//
 

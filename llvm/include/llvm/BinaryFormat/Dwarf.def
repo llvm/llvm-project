@@ -17,7 +17,7 @@
     defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||             \
     defined HANDLE_DW_CC || defined HANDLE_DW_LNS || defined HANDLE_DW_LNE ||  \
     defined HANDLE_DW_LNCT || defined HANDLE_DW_MACRO ||                       \
-    defined HANDLE_MACRO_FLAG ||                                               \
+    defined HANDLE_DW_MACRO_GNU || defined HANDLE_MACRO_FLAG ||                \
     defined HANDLE_DW_RLE || defined HANDLE_DW_LLE ||                          \
     (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                   \
     defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||                \
@@ -86,6 +86,10 @@
 
 #ifndef HANDLE_DW_MACRO
 #define HANDLE_DW_MACRO(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_MACRO_GNU
+#define HANDLE_DW_MACRO_GNU(ID, NAME)
 #endif
 
 #ifndef HANDLE_MACRO_FLAG
@@ -837,6 +841,18 @@ HANDLE_DW_MACRO(0x0a, import_sup)
 HANDLE_DW_MACRO(0x0b, define_strx)
 HANDLE_DW_MACRO(0x0c, undef_strx)
 
+// GNU .debug_macro extension.
+HANDLE_DW_MACRO_GNU(0x01, define)
+HANDLE_DW_MACRO_GNU(0x02, undef)
+HANDLE_DW_MACRO_GNU(0x03, start_file)
+HANDLE_DW_MACRO_GNU(0x04, end_file)
+HANDLE_DW_MACRO_GNU(0x05, define_indirect)
+HANDLE_DW_MACRO_GNU(0x06, undef_indirect)
+HANDLE_DW_MACRO_GNU(0x07, transparent_include)
+HANDLE_DW_MACRO_GNU(0x08, define_indirect_alt)
+HANDLE_DW_MACRO_GNU(0x09, undef_indirect_alt)
+HANDLE_DW_MACRO_GNU(0x0a, transparent_include_alt)
+
 // DWARF v5 Macro header flags.
 HANDLE_MACRO_FLAG(0x01, OFFSET_SIZE)
 HANDLE_MACRO_FLAG(0x02, DEBUG_LINE_OFFSET)
@@ -986,6 +1002,7 @@ HANDLE_DW_SECT(8, RNGLISTS)
 #undef HANDLE_DW_LNE
 #undef HANDLE_DW_LNCT
 #undef HANDLE_DW_MACRO
+#undef HANDLE_DW_MACRO_GNU
 #undef HANDLE_MACRO_FLAG
 #undef HANDLE_DW_RLE
 #undef HANDLE_DW_LLE

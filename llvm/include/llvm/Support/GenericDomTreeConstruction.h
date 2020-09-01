@@ -79,14 +79,15 @@ struct SemiNCAInfo {
   using UpdateKind = typename DomTreeT::UpdateKind;
   struct BatchUpdateInfo {
     // Note: Updates inside PreViewCFG are aleady legalized.
-    BatchUpdateInfo(GraphDiffT &PreViewCFG)
-        : PreViewCFG(PreViewCFG),
+    BatchUpdateInfo(GraphDiffT &PreViewCFG, GraphDiffT *PostViewCFG = nullptr)
+        : PreViewCFG(PreViewCFG), PostViewCFG(PostViewCFG),
           NumLegalized(PreViewCFG.getNumLegalizedUpdates()) {}
 
     // Remembers if the whole tree was recalculated at some point during the
     // current batch update.
     bool IsRecalculated = false;
     GraphDiffT &PreViewCFG;
+    GraphDiffT *PostViewCFG;
     const size_t NumLegalized;
   };
 
@@ -107,8 +108,19 @@ struct SemiNCAInfo {
   static SmallVector<NodePtr, 8> getChildren(NodePtr N, BatchUpdatePtr BUI) {
     if (BUI)
       return BUI->PreViewCFG.template getChildren<Inversed>(N);
-    GraphDiffT GD;
-    return GD.template getChildren<Inversed>(N);
+    return getChildren<Inversed>(N);
+  }
+
+  template <bool Inversed>
+  static SmallVector<NodePtr, 8> getChildren(NodePtr N) {
+    using DirectedNodeT =
+        std::conditional_t<Inversed, Inverse<NodePtr>, NodePtr>;
+    auto R = children<DirectedNodeT>(N);
+    SmallVector<NodePtr, 8> Res(detail::reverse_if<!Inversed>(R));
+
+    // Remove nullptr children for clang.
+    llvm::erase_value(Res, nullptr);
+    return Res;
   }
 
   NodePtr getIDom(NodePtr BB) const {
@@ -549,12 +561,21 @@ struct SemiNCAInfo {
     auto *Parent = DT.Parent;
     DT.reset();
     DT.Parent = Parent;
-    SemiNCAInfo SNCA(nullptr);  // Since we are rebuilding the whole tree,
-                                // there's no point doing it incrementally.
+    // If the update is using the actual CFG, BUI is null. If it's using a view,
+    // BUI is non-null and the PreCFGView is used. When calculating from
+    // scratch, make the PreViewCFG equal to the PostCFGView, so Post is used.
+    BatchUpdatePtr PostViewBUI = nullptr;
+    if (BUI && BUI->PostViewCFG) {
+      BUI->PreViewCFG = *BUI->PostViewCFG;
+      PostViewBUI = BUI;
+    }
+    // This is rebuilding the whole tree, not incrementally, but PostViewBUI is
+    // used in case the caller needs a DT update with a CFGView.
+    SemiNCAInfo SNCA(PostViewBUI);
 
     // Step #0: Number blocks in depth-first order and initialize variables used
     // in later stages of the algorithm.
-    DT.Roots = FindRoots(DT, nullptr);
+    DT.Roots = FindRoots(DT, PostViewBUI);
     SNCA.doFullDFSWalk(DT, AlwaysDescend);
 
     SNCA.runSemiNCA(DT);
@@ -1128,7 +1149,10 @@ struct SemiNCAInfo {
   //===--------------------- DomTree Batch Updater --------------------------===
   //~~
 
-  static void ApplyUpdates(DomTreeT &DT, GraphDiffT &PreViewCFG) {
+  static void ApplyUpdates(DomTreeT &DT, GraphDiffT &PreViewCFG,
+                           GraphDiffT *PostViewCFG) {
+    // Note: the PostViewCFG is only used when computing from scratch. It's data
+    // should already included in the PreViewCFG for incremental updates.
     const size_t NumUpdates = PreViewCFG.getNumLegalizedUpdates();
     if (NumUpdates == 0)
       return;
@@ -1137,14 +1161,22 @@ struct SemiNCAInfo {
     // machinery.
     if (NumUpdates == 1) {
       UpdateT Update = PreViewCFG.popUpdateForIncrementalUpdates();
-      if (Update.getKind() == UpdateKind::Insert)
-        InsertEdge(DT, /*BUI=*/nullptr, Update.getFrom(), Update.getTo());
-      else
-        DeleteEdge(DT, /*BUI=*/nullptr, Update.getFrom(), Update.getTo());
+      if (!PostViewCFG) {
+        if (Update.getKind() == UpdateKind::Insert)
+          InsertEdge(DT, /*BUI=*/nullptr, Update.getFrom(), Update.getTo());
+        else
+          DeleteEdge(DT, /*BUI=*/nullptr, Update.getFrom(), Update.getTo());
+      } else {
+        BatchUpdateInfo BUI(*PostViewCFG, PostViewCFG);
+        if (Update.getKind() == UpdateKind::Insert)
+          InsertEdge(DT, &BUI, Update.getFrom(), Update.getTo());
+        else
+          DeleteEdge(DT, &BUI, Update.getFrom(), Update.getTo());
+      }
       return;
     }
 
-    BatchUpdateInfo BUI(PreViewCFG);
+    BatchUpdateInfo BUI(PreViewCFG, PostViewCFG);
     // Recalculate the DominatorTree when the number of updates
     // exceeds a threshold, which usually makes direct updating slower than
     // recalculation. We select this threshold proportional to the
@@ -1560,8 +1592,10 @@ void DeleteEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
 template <class DomTreeT>
 void ApplyUpdates(DomTreeT &DT,
                   GraphDiff<typename DomTreeT::NodePtr,
-                            DomTreeT::IsPostDominator> &PreViewCFG) {
-  SemiNCAInfo<DomTreeT>::ApplyUpdates(DT, PreViewCFG);
+                            DomTreeT::IsPostDominator> &PreViewCFG,
+                  GraphDiff<typename DomTreeT::NodePtr,
+                            DomTreeT::IsPostDominator> *PostViewCFG) {
+  SemiNCAInfo<DomTreeT>::ApplyUpdates(DT, PreViewCFG, PostViewCFG);
 }
 
 template <class DomTreeT>

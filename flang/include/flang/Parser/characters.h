@@ -151,6 +151,33 @@ inline constexpr std::optional<char> BackslashEscapeChar(char ch) {
   }
 }
 
+// Does not include spaces or line ending characters.
+inline constexpr bool IsValidFortranTokenCharacter(char ch) {
+  switch (ch) {
+  case '"':
+  case '%':
+  case '\'':
+  case '(':
+  case ')':
+  case '*':
+  case '+':
+  case ',':
+  case '-':
+  case '.':
+  case '/':
+  case ':':
+  case ';':
+  case '<':
+  case '=':
+  case '>':
+  case '[':
+  case ']':
+    return true;
+  default:
+    return IsLegalIdentifierStart(ch) || IsDecimalDigit(ch);
+  }
+}
+
 struct EncodedCharacter {
   static constexpr int maxEncodingBytes{6};
   char buffer[maxEncodingBytes];

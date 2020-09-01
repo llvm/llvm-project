@@ -34,6 +34,10 @@ config("compiler_defaults") {
     defines += [ "NDEBUG" ]
   }
 
+  if (llvm_enable_expensive_checks) {
+    defines += [ "EXPENSIVE_CHECKS" ]
+  }
+
   asmflags = target_flags
   cflags = target_flags
   ldflags = target_flags + target_ldflags

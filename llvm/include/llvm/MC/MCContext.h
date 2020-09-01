@@ -565,7 +565,6 @@ namespace llvm {
     MCSectionXCOFF *getXCOFFSection(StringRef Section,
                                     XCOFF::StorageMappingClass MappingClass,
                                     XCOFF::SymbolType CSectType,
-                                    XCOFF::StorageClass StorageClass,
                                     SectionKind K,
                                     const char *BeginSymName = nullptr);
 

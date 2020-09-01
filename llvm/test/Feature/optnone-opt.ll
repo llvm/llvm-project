@@ -66,8 +66,8 @@ attributes #0 = { optnone noinline }
 ; Additional IR passes that opt doesn't turn on by default.
 ; MORE-DAG: Skipping pass 'Dead Code Elimination'
 ; MORE-DAG: Skipping pass 'Dead Instruction Elimination'
+; NPM-MORE-DAG: Skipping pass: DCEPass
 ; NPM-MORE-DAG: Skipping pass: GVNHoistPass
-; NPM-MORE-DAG: Skipping pass: LowerAtomicPass
 
 ; Loop IR passes that opt doesn't turn on by default.
 ; LOOP-DAG: Skipping pass 'Delete dead loops'

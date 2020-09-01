@@ -89,10 +89,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS[[BITS=64]]
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_NONE
+  Class: ELFCLASS[[BITS=64]]
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Name:         .foo
     Type:         SHT_PROGBITS

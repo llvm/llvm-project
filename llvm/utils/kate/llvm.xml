@@ -68,6 +68,7 @@
       <item> zeroext </item>
       <item> signext </item>
       <item> inreg </item>
+      <item> byref </item>
       <item> byval </item>
       <item> sret </item>
       <item> noalias </item>

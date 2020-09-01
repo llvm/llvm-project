@@ -13,22 +13,23 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
+using namespace mlir::tblgen;
 
 //===----------------------------------------------------------------------===//
 // OpMethodSignature definitions
 //===----------------------------------------------------------------------===//
 
-tblgen::OpMethodSignature::OpMethodSignature(StringRef retType, StringRef name,
-                                             StringRef params)
+OpMethodSignature::OpMethodSignature(StringRef retType, StringRef name,
+                                     StringRef params)
     : returnType(retType), methodName(name), parameters(params) {}
 
-void tblgen::OpMethodSignature::writeDeclTo(raw_ostream &os) const {
+void OpMethodSignature::writeDeclTo(raw_ostream &os) const {
   os << returnType << (elideSpaceAfterType(returnType) ? "" : " ") << methodName
      << "(" << parameters << ")";
 }
 
-void tblgen::OpMethodSignature::writeDefTo(raw_ostream &os,
-                                           StringRef namePrefix) const {
+void OpMethodSignature::writeDefTo(raw_ostream &os,
+                                   StringRef namePrefix) const {
   // We need to remove the default values for parameters in method definition.
   // TODO: We are using '=' and ',' as delimiters for parameter
   // initializers. This is incorrect for initializer list with more than one
@@ -50,7 +51,7 @@ void tblgen::OpMethodSignature::writeDefTo(raw_ostream &os,
      << removeParamDefaultValue(parameters) << ")";
 }
 
-bool tblgen::OpMethodSignature::elideSpaceAfterType(StringRef type) {
+bool OpMethodSignature::elideSpaceAfterType(StringRef type) {
   return type.empty() || type.endswith("&") || type.endswith("*");
 }
 
@@ -58,28 +59,27 @@ bool tblgen::OpMethodSignature::elideSpaceAfterType(StringRef type) {
 // OpMethodBody definitions
 //===----------------------------------------------------------------------===//
 
-tblgen::OpMethodBody::OpMethodBody(bool declOnly) : isEffective(!declOnly) {}
+OpMethodBody::OpMethodBody(bool declOnly) : isEffective(!declOnly) {}
 
-tblgen::OpMethodBody &tblgen::OpMethodBody::operator<<(Twine content) {
+OpMethodBody &OpMethodBody::operator<<(Twine content) {
   if (isEffective)
     body.append(content.str());
   return *this;
 }
 
-tblgen::OpMethodBody &tblgen::OpMethodBody::operator<<(int content) {
+OpMethodBody &OpMethodBody::operator<<(int content) {
   if (isEffective)
     body.append(std::to_string(content));
   return *this;
 }
 
-tblgen::OpMethodBody &
-tblgen::OpMethodBody::operator<<(const FmtObjectBase &content) {
+OpMethodBody &OpMethodBody::operator<<(const FmtObjectBase &content) {
   if (isEffective)
     body.append(content.str());
   return *this;
 }
 
-void tblgen::OpMethodBody::writeTo(raw_ostream &os) const {
+void OpMethodBody::writeTo(raw_ostream &os) const {
   auto bodyRef = StringRef(body).drop_while([](char c) { return c == '\n'; });
   os << bodyRef;
   if (bodyRef.empty() || bodyRef.back() != '\n')
@@ -90,18 +90,11 @@ void tblgen::OpMethodBody::writeTo(raw_ostream &os) const {
 // OpMethod definitions
 //===----------------------------------------------------------------------===//
 
-tblgen::OpMethod::OpMethod(StringRef retType, StringRef name, StringRef params,
-                           OpMethod::Property property, bool declOnly)
+OpMethod::OpMethod(StringRef retType, StringRef name, StringRef params,
+                   OpMethod::Property property, bool declOnly)
     : properties(property), isDeclOnly(declOnly),
       methodSignature(retType, name, params), methodBody(declOnly) {}
-
-tblgen::OpMethodBody &tblgen::OpMethod::body() { return methodBody; }
-
-bool tblgen::OpMethod::isStatic() const { return properties & MP_Static; }
-
-bool tblgen::OpMethod::isPrivate() const { return properties & MP_Private; }
-
-void tblgen::OpMethod::writeDeclTo(raw_ostream &os) const {
+void OpMethod::writeDeclTo(raw_ostream &os) const {
   os.indent(2);
   if (isStatic())
     os << "static ";
@@ -109,7 +102,7 @@ void tblgen::OpMethod::writeDeclTo(raw_ostream &os) const {
   os << ";";
 }
 
-void tblgen::OpMethod::writeDefTo(raw_ostream &os, StringRef namePrefix) const {
+void OpMethod::writeDefTo(raw_ostream &os, StringRef namePrefix) const {
   if (isDeclOnly)
     return;
 
@@ -123,14 +116,12 @@ void tblgen::OpMethod::writeDefTo(raw_ostream &os, StringRef namePrefix) const {
 // OpConstructor definitions
 //===----------------------------------------------------------------------===//
 
-void mlir::tblgen::OpConstructor::addMemberInitializer(StringRef name,
-                                                       StringRef value) {
+void OpConstructor::addMemberInitializer(StringRef name, StringRef value) {
   memberInitializers.append(std::string(llvm::formatv(
       "{0}{1}({2})", memberInitializers.empty() ? " : " : ", ", name, value)));
 }
 
-void mlir::tblgen::OpConstructor::writeDefTo(raw_ostream &os,
-                                             StringRef namePrefix) const {
+void OpConstructor::writeDefTo(raw_ostream &os, StringRef namePrefix) const {
   if (isDeclOnly)
     return;
 
@@ -144,25 +135,21 @@ void mlir::tblgen::OpConstructor::writeDefTo(raw_ostream &os,
 // Class definitions
 //===----------------------------------------------------------------------===//
 
-tblgen::Class::Class(StringRef name) : className(name) {}
+Class::Class(StringRef name) : className(name) {}
 
-tblgen::OpMethod &tblgen::Class::newMethod(StringRef retType, StringRef name,
-                                           StringRef params,
-                                           OpMethod::Property property,
-                                           bool declOnly) {
+OpMethod &Class::newMethod(StringRef retType, StringRef name, StringRef params,
+                           OpMethod::Property property, bool declOnly) {
   methods.emplace_back(retType, name, params, property, declOnly);
   return methods.back();
 }
 
-tblgen::OpConstructor &tblgen::Class::newConstructor(StringRef params,
-                                                     bool declOnly) {
+OpConstructor &Class::newConstructor(StringRef params, bool declOnly) {
   constructors.emplace_back("", getClassName(), params,
                             OpMethod::MP_Constructor, declOnly);
   return constructors.back();
 }
 
-void tblgen::Class::newField(StringRef type, StringRef name,
-                             StringRef defaultValue) {
+void Class::newField(StringRef type, StringRef name, StringRef defaultValue) {
   std::string varName = formatv("{0} {1}", type, name).str();
   std::string field = defaultValue.empty()
                           ? varName
@@ -170,7 +157,7 @@ void tblgen::Class::newField(StringRef type, StringRef name,
   fields.push_back(std::move(field));
 }
 
-void tblgen::Class::writeDeclTo(raw_ostream &os) const {
+void Class::writeDeclTo(raw_ostream &os) const {
   bool hasPrivateMethod = false;
   os << "class " << className << " {\n";
   os << "public:\n";
@@ -200,7 +187,7 @@ void tblgen::Class::writeDeclTo(raw_ostream &os) const {
   os << "};\n";
 }
 
-void tblgen::Class::writeDefTo(raw_ostream &os) const {
+void Class::writeDefTo(raw_ostream &os) const {
   for (const auto &method :
        llvm::concat<const OpMethod>(constructors, methods)) {
     method.writeDefTo(os, className);
@@ -212,16 +199,16 @@ void tblgen::Class::writeDefTo(raw_ostream &os) const {
 // OpClass definitions
 //===----------------------------------------------------------------------===//
 
-tblgen::OpClass::OpClass(StringRef name, StringRef extraClassDeclaration)
+OpClass::OpClass(StringRef name, StringRef extraClassDeclaration)
     : Class(name), extraClassDeclaration(extraClassDeclaration) {}
 
-void tblgen::OpClass::addTrait(Twine trait) {
+void OpClass::addTrait(Twine trait) {
   auto traitStr = trait.str();
   if (traitsSet.insert(traitStr).second)
     traitsVec.push_back(std::move(traitStr));
 }
 
-void tblgen::OpClass::writeDeclTo(raw_ostream &os) const {
+void OpClass::writeDeclTo(raw_ostream &os) const {
   os << "class " << className << " : public ::mlir::Op<" << className;
   for (const auto &trait : traitsVec)
     os << ", " << trait;

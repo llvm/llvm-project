@@ -256,7 +256,7 @@ public:
   }
 
   void SourceInitFileCwd(CommandReturnObject &result);
-  void SourceInitFileHome(CommandReturnObject &result);
+  void SourceInitFileHome(CommandReturnObject &result, bool is_repl = false);
 
   bool AddCommand(llvm::StringRef name, const lldb::CommandObjectSP &cmd_sp,
                   bool can_replace);
@@ -350,6 +350,10 @@ public:
                               CommandReturnObject &result);
 
   CommandObject *GetCommandObjectForCommand(llvm::StringRef &command_line);
+
+  /// Returns the auto-suggestion string that should be added to the given
+  /// command line.
+  llvm::Optional<std::string> GetAutoSuggestionForCommand(llvm::StringRef line);
 
   // This handles command line completion.
   void HandleCompletion(CompletionRequest &request);
@@ -500,6 +504,12 @@ public:
   const CommandObject::CommandMap &GetUserCommands() const {
     return m_user_dict;
   }
+
+  const CommandObject::CommandMap &GetCommands() const {
+    return m_command_dict;
+  }
+
+  const CommandObject::CommandMap &GetAliases() const { return m_alias_dict; }
 
   /// Specify if the command interpreter should allow that the user can
   /// specify a custom exit code when calling 'quit'.

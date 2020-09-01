@@ -96,7 +96,7 @@ private:
   D32 *m_data_32;
   D64 *m_data_64;
 };
-  
+
 namespace Foundation1010 {
   namespace {
     struct DataDescriptor_32 {
@@ -107,7 +107,7 @@ namespace Foundation1010 {
       uint32_t _priv2;
       uint32_t _data;
     };
-    
+
     struct DataDescriptor_64 {
       uint64_t _used;
       uint64_t _offset;
@@ -117,11 +117,11 @@ namespace Foundation1010 {
       uint64_t _data;
     };
   }
-  
+
   using NSArrayMSyntheticFrontEnd =
       GenericNSArrayMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
 }
-  
+
 namespace Foundation1428 {
   namespace {
     struct DataDescriptor_32 {
@@ -130,7 +130,7 @@ namespace Foundation1428 {
       uint32_t _size;
       uint32_t _data;
     };
-    
+
     struct DataDescriptor_64 {
       uint64_t _used;
       uint64_t _offset;
@@ -138,11 +138,11 @@ namespace Foundation1428 {
       uint64_t _data;
     };
   }
-  
+
   using NSArrayMSyntheticFrontEnd =
       GenericNSArrayMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
 }
-  
+
 namespace Foundation1437 {
   template <typename PtrType>
   struct DataDescriptor {
@@ -154,11 +154,11 @@ namespace Foundation1437 {
     uint32_t _muts;
     uint32_t _used;
   };
-    
+
   using NSArrayMSyntheticFrontEnd =
      GenericNSArrayMSyntheticFrontEnd<
         DataDescriptor<uint32_t>, DataDescriptor<uint64_t>>;
-  
+
   template <typename DD>
   uint64_t
   __NSArrayMSize_Impl(lldb_private::Process &process,
@@ -173,7 +173,7 @@ namespace Foundation1437 {
     }
     return descriptor._used;
   }
-  
+
   uint64_t
   __NSArrayMSize(lldb_private::Process &process, lldb::addr_t valobj_addr,
                  Status &error) {
@@ -227,23 +227,23 @@ public:
 private:
   ExecutionContextRef m_exe_ctx_ref;
   uint8_t m_ptr_size;
-    
+
   D32 *m_data_32;
   D64 *m_data_64;
   CompilerType m_id_type;
 };
-    
+
 namespace Foundation1300 {
     struct IDD32 {
         uint32_t used;
         uint32_t list;
     };
-    
+
     struct IDD64 {
         uint64_t used;
         uint64_t list;
     };
-    
+
     using NSArrayISyntheticFrontEnd =
         GenericNSArrayISyntheticFrontEnd<IDD32, IDD64, true>;
 }
@@ -258,18 +258,18 @@ namespace Foundation1436 {
         uint32_t used;
         uint32_t list; // in Inline cases, this is the first element
     };
-    
+
     struct IDD64 {
         uint64_t used;
         uint64_t list; // in Inline cases, this is the first element
     };
-    
+
     using NSArrayI_TransferSyntheticFrontEnd =
         GenericNSArrayISyntheticFrontEnd<IDD32, IDD64, false>;
 
     using NSArrayISyntheticFrontEnd =
         GenericNSArrayISyntheticFrontEnd<IDD32, IDD64, true>;
-    
+
     using NSFrozenArrayMSyntheticFrontEnd =
         Foundation1437::NSArrayMSyntheticFrontEnd;
 
@@ -820,11 +820,9 @@ lldb_private::formatters::NSArraySyntheticFrontEndCreator(
       return (new Foundation1436::NSArrayISyntheticFrontEnd(valobj_sp));
     if (runtime->GetFoundationVersion() >= 1430)
       return (new Foundation1430::NSArrayISyntheticFrontEnd(valobj_sp));
-    else
-      return (new Foundation1300::NSArrayISyntheticFrontEnd(valobj_sp));
+    return (new Foundation1300::NSArrayISyntheticFrontEnd(valobj_sp));
   } else if (class_name == g_NSArrayI_Transfer) {
       return (new Foundation1436::NSArrayI_TransferSyntheticFrontEnd(valobj_sp));
-  } else if (class_name == g_NSArray0) {
   } else if (class_name == g_NSFrozenArrayM) {
     return (new Foundation1436::NSFrozenArrayMSyntheticFrontEnd(valobj_sp));
   } else if (class_name == g_NSArray0) {

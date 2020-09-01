@@ -159,6 +159,22 @@ template <> struct ScalarTraits<MaybeAlign> {
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
+template <> struct ScalarTraits<Align> {
+  static void output(const Align &Alignment, void *, llvm::raw_ostream &OS) {
+    OS << Alignment.value();
+  }
+  static StringRef input(StringRef Scalar, void *, Align &Alignment) {
+    unsigned long long N;
+    if (getAsUnsignedInteger(Scalar, 10, N))
+      return "invalid number";
+    if (!isPowerOf2_64(N))
+      return "must be a power of two";
+    Alignment = Align(N);
+    return StringRef();
+  }
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
+
 } // end namespace yaml
 } // end namespace llvm
 

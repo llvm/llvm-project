@@ -63,32 +63,38 @@ void SummaryView::onEvent(const HWInstructionEvent &Event) {
 }
 
 void SummaryView::printView(raw_ostream &OS) const {
-  unsigned Instructions = Source.size();
-  unsigned Iterations = (LastInstructionIdx / Instructions) + 1;
-  unsigned TotalInstructions = Instructions * Iterations;
-  unsigned TotalUOps = NumMicroOps * Iterations;
-  double IPC = (double)TotalInstructions / TotalCycles;
-  double UOpsPerCycle = (double)TotalUOps / TotalCycles;
-  double BlockRThroughput = computeBlockRThroughput(
-      SM, DispatchWidth, NumMicroOps, ProcResourceUsage);
-
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
-  TempStream << "Iterations:        " << Iterations;
-  TempStream << "\nInstructions:      " << TotalInstructions;
-  TempStream << "\nTotal Cycles:      " << TotalCycles;
-  TempStream << "\nTotal uOps:        " << TotalUOps << '\n';
-  TempStream << "\nDispatch Width:    " << DispatchWidth;
+  DisplayValues DV;
+
+  collectData(DV);
+  TempStream << "Iterations:        " << DV.Iterations;
+  TempStream << "\nInstructions:      " << DV.TotalInstructions;
+  TempStream << "\nTotal Cycles:      " << DV.TotalCycles;
+  TempStream << "\nTotal uOps:        " << DV.TotalUOps << '\n';
+  TempStream << "\nDispatch Width:    " << DV.DispatchWidth;
   TempStream << "\nuOps Per Cycle:    "
-             << format("%.2f", floor((UOpsPerCycle * 100) + 0.5) / 100);
+             << format("%.2f", floor((DV.UOpsPerCycle * 100) + 0.5) / 100);
   TempStream << "\nIPC:               "
-             << format("%.2f", floor((IPC * 100) + 0.5) / 100);
+             << format("%.2f", floor((DV.IPC * 100) + 0.5) / 100);
   TempStream << "\nBlock RThroughput: "
-             << format("%.1f", floor((BlockRThroughput * 10) + 0.5) / 10)
+             << format("%.1f", floor((DV.BlockRThroughput * 10) + 0.5) / 10)
              << '\n';
   TempStream.flush();
   OS << Buffer;
 }
 
+void SummaryView::collectData(DisplayValues &DV) const {
+  DV.Instructions = Source.size();
+  DV.Iterations = (LastInstructionIdx / DV.Instructions) + 1;
+  DV.TotalInstructions = DV.Instructions * DV.Iterations;
+  DV.TotalCycles = TotalCycles;
+  DV.DispatchWidth = DispatchWidth;
+  DV.TotalUOps = NumMicroOps * DV.Iterations;
+  DV.UOpsPerCycle = (double)DV.TotalUOps / TotalCycles;
+  DV.IPC = (double)DV.TotalInstructions / TotalCycles;
+  DV.BlockRThroughput = computeBlockRThroughput(SM, DispatchWidth, NumMicroOps,
+                                                ProcResourceUsage);
+}
 } // namespace mca.
 } // namespace llvm

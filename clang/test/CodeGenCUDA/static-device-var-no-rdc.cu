@@ -1,11 +1,11 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -std=c++11 \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefixes=DEV %s
 
-// RUN: %clang_cc1 -triple x86_64-gnu-linux \
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -std=c++11 \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefixes=HOST %s
 
@@ -53,6 +53,12 @@ static __constant__ int y;
 // DEV-NOT: @_ZL1z
 static int z;
 
+// Test implicit static constant variable, which should not be externalized.
+// HOST-DAG: @_ZL2z2 = internal constant i32 456
+// DEV-DAG: @_ZL2z2 = internal addrspace(4) constant i32 456
+
+static constexpr int z2 = 456;
+
 // Test static device variable in inline function, which should not be
 // externalized nor registered.
 // DEV-DAG: @_ZZ6devfunPPKiE1p = linkonce_odr addrspace(4) constant i32 2, comdat
@@ -72,6 +78,7 @@ __global__ void kernel(int *a, const int **b) {
   a[4] = x4;
   a[5] = x5;
   b[0] = &w;
+  b[1] = &z2;
   devfun(b);
 }
 
@@ -81,11 +88,12 @@ __host__ __device__ void hdf(int *a) {
 
 int* getDeviceSymbol(int *x);
 
-void foo(int *a) {
+void foo(const int **a) {
   getDeviceSymbol(&x);
   getDeviceSymbol(&x5);
   getDeviceSymbol(&y);
   z = 123;
+  a[0] = &z2;
 }
 
 // HOST: __hipRegisterVar({{.*}}@_ZL1x {{.*}}@[[DEVNAMEX]]

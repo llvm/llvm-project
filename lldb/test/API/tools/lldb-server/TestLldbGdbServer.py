@@ -807,7 +807,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             post_handle_thread_id = int(post_handle_thread_id, 16)
             self.assertEqual(post_handle_thread_id, print_thread_id)
 
-    @unittest2.expectedFailure()
+    @expectedFailure
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_Hc_then_Csignal_signals_correct_thread_launch_debugserver(self):

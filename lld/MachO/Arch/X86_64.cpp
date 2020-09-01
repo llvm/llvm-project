@@ -29,12 +29,12 @@ struct X86_64 : TargetInfo {
                              const relocation_info &) const override;
   void relocateOne(uint8_t *loc, const Reloc &, uint64_t val) const override;
 
-  void writeStub(uint8_t *buf, const DylibSymbol &) const override;
+  void writeStub(uint8_t *buf, const macho::Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
   void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
                             uint64_t entryAddr) const override;
 
-  void prepareSymbolRelocation(lld::macho::Symbol &, const InputSection *,
+  void prepareSymbolRelocation(lld::macho::Symbol *, const InputSection *,
                                const Reloc &) override;
   uint64_t resolveSymbolVA(uint8_t *buf, const lld::macho::Symbol &,
                            uint8_t type) const override;
@@ -182,7 +182,7 @@ static constexpr uint8_t stub[] = {
     0xff, 0x25, 0, 0, 0, 0, // jmpq *__la_symbol_ptr(%rip)
 };
 
-void X86_64::writeStub(uint8_t *buf, const DylibSymbol &sym) const {
+void X86_64::writeStub(uint8_t *buf, const macho::Symbol &sym) const {
   memcpy(buf, stub, 2); // just copy the two nonzero bytes
   uint64_t stubAddr = in.stubs->addr + sym.stubsIndex * sizeof(stub);
   writeRipRelative(buf, stubAddr, sizeof(stub),
@@ -217,42 +217,73 @@ void X86_64::writeStubHelperEntry(uint8_t *buf, const DylibSymbol &sym,
                    in.stubHelper->addr);
 }
 
-void X86_64::prepareSymbolRelocation(lld::macho::Symbol &sym,
+void X86_64::prepareSymbolRelocation(lld::macho::Symbol *sym,
                                      const InputSection *isec, const Reloc &r) {
   switch (r.type) {
-  case X86_64_RELOC_GOT_LOAD:
-    // TODO: implement mov -> lea relaxation for non-dynamic symbols
-  case X86_64_RELOC_GOT:
-    in.got->addEntry(sym);
+  case X86_64_RELOC_GOT_LOAD: {
+    if (needsBinding(sym))
+      in.got->addEntry(sym);
+
+    if (sym->isTlv())
+      error("found GOT relocation referencing thread-local variable in " +
+            toString(isec));
     break;
+  }
+  case X86_64_RELOC_GOT: {
+    in.got->addEntry(sym);
+
+    if (sym->isTlv())
+      error("found GOT relocation referencing thread-local variable in " +
+            toString(isec));
+    break;
+  }
   case X86_64_RELOC_BRANCH: {
-    // TODO: weak dysyms should go into the weak binding section instead
-    if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
-      in.stubs->addEntry(*dysym);
+    if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+      if (in.stubs->addEntry(dysym)) {
+        if (sym->isWeakDef()) {
+          in.binding->addEntry(dysym, in.lazyPointers,
+                               sym->stubsIndex * WordSize);
+          in.weakBinding->addEntry(sym, in.lazyPointers,
+                                   sym->stubsIndex * WordSize);
+        } else {
+          in.lazyBinding->addEntry(dysym);
+        }
+      }
+    } else if (auto *defined = dyn_cast<Defined>(sym)) {
+      if (defined->isWeakDef() && defined->isExternal())
+        if (in.stubs->addEntry(sym))
+          in.weakBinding->addEntry(sym, in.lazyPointers,
+                                   sym->stubsIndex * WordSize);
+    }
     break;
   }
   case X86_64_RELOC_UNSIGNED: {
-    if (auto *dysym = dyn_cast<DylibSymbol>(&sym)) {
+    if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
       if (r.length != 3) {
         error("X86_64_RELOC_UNSIGNED referencing the dynamic symbol " +
               dysym->getName() + " must have r_length = 3");
         return;
       }
-      in.binding->addEntry(dysym, isec, r.offset, r.addend);
     }
+    addNonLazyBindingEntries(sym, isec, r.offset, r.addend);
     break;
   }
   case X86_64_RELOC_SIGNED:
   case X86_64_RELOC_SIGNED_1:
   case X86_64_RELOC_SIGNED_2:
   case X86_64_RELOC_SIGNED_4:
+    // TODO: warn if they refer to a weak global
     break;
-  case X86_64_RELOC_TLV:
-    if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
-      error("relocations to thread-local dylib symbols not yet implemented");
-    else
-      assert(isa<Defined>(&sym));
+  case X86_64_RELOC_TLV: {
+    if (needsBinding(sym))
+      in.tlvPointers->addEntry(sym);
+
+    if (!sym->isTlv())
+      error(
+          "found X86_64_RELOC_TLV referencing a non-thread-local variable in " +
+          toString(isec));
     break;
+  }
   case X86_64_RELOC_SUBTRACTOR:
     fatal("TODO: handle relocation type " + std::to_string(r.type));
     break;
@@ -264,13 +295,22 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol &sym,
 uint64_t X86_64::resolveSymbolVA(uint8_t *buf, const lld::macho::Symbol &sym,
                                  uint8_t type) const {
   switch (type) {
-  case X86_64_RELOC_GOT_LOAD:
+  case X86_64_RELOC_GOT_LOAD: {
+    if (!sym.isInGot()) {
+      if (buf[-2] != 0x8b)
+        error("X86_64_RELOC_GOT_LOAD must be used with movq instructions");
+      buf[-2] = 0x8d;
+      return sym.getVA();
+    }
+    LLVM_FALLTHROUGH;
+  }
   case X86_64_RELOC_GOT:
     return in.got->addr + sym.gotIndex * WordSize;
-  case X86_64_RELOC_BRANCH:
-    if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
-      return in.stubs->addr + dysym->stubsIndex * sizeof(stub);
+  case X86_64_RELOC_BRANCH: {
+    if (sym.isInStubs())
+      return in.stubs->addr + sym.stubsIndex * sizeof(stub);
     return sym.getVA();
+  }
   case X86_64_RELOC_UNSIGNED:
   case X86_64_RELOC_SIGNED:
   case X86_64_RELOC_SIGNED_1:
@@ -278,8 +318,8 @@ uint64_t X86_64::resolveSymbolVA(uint8_t *buf, const lld::macho::Symbol &sym,
   case X86_64_RELOC_SIGNED_4:
     return sym.getVA();
   case X86_64_RELOC_TLV: {
-    if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
-      error("relocations to thread-local dylib symbols not yet implemented");
+    if (sym.isInGot())
+      return in.tlvPointers->addr + sym.gotIndex * WordSize;
 
     // Convert the movq to a leaq.
     assert(isa<Defined>(&sym));

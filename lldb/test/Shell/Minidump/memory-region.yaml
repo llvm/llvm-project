@@ -1,7 +1,7 @@
 # Check that memory region parsing works correctly, with a particular emphasis
 # on the boundary conditions.
 
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: %lldb -b -c %t \
 # RUN:   -o "memory region 0" -o "memory region 0xd9000" \
 # RUN:   -o "memory region 0xd9001" -o "memory region 0xdafff" \

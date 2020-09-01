@@ -1,8 +1,8 @@
 # REQUIRES: x86
 
-# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=8 %s > %T/command-disassemble-process.exe
-# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=8000 %s > %T/command-disassemble-process.big.exe
-# RUN: yaml2obj --docnum=2 %s > %t
+# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=8 %s -o %T/command-disassemble-process.exe
+# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=8000 %s -o %T/command-disassemble-process.big.exe
+# RUN: yaml2obj --docnum=2 %s -o %t
 
 # RUN: %lldb -c %t %T/command-disassemble-process.exe \
 # RUN:   -o "settings set interpreter.stop-command-source-on-error false" \

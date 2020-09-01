@@ -174,19 +174,25 @@ private:
   /// well-defined bitwise representation.
   SmallVector<unsigned, 8> NonIntegralAddressSpaces;
 
-  void setAlignment(AlignTypeEnum align_type, Align abi_align, Align pref_align,
-                    uint32_t bit_width);
+  /// Attempts to set the alignment of the given type. Returns an error
+  /// description on failure.
+  Error setAlignment(AlignTypeEnum align_type, Align abi_align,
+                     Align pref_align, uint32_t bit_width);
+
   Align getAlignmentInfo(AlignTypeEnum align_type, uint32_t bit_width,
                          bool ABIAlign, Type *Ty) const;
-  void setPointerAlignment(uint32_t AddrSpace, Align ABIAlign, Align PrefAlign,
-                           uint32_t TypeByteWidth, uint32_t IndexWidth);
+
+  /// Attempts to set the alignment of a pointer in the given address space.
+  /// Returns an error description on failure.
+  Error setPointerAlignment(uint32_t AddrSpace, Align ABIAlign, Align PrefAlign,
+                            uint32_t TypeByteWidth, uint32_t IndexWidth);
 
   /// Internal helper method that returns requested alignment for type.
   Align getAlignment(Type *Ty, bool abi_or_pref) const;
 
-  /// Parses a target data specification string. Assert if the string is
-  /// malformed.
-  void parseSpecifier(StringRef LayoutDescription);
+  /// Attempts to parse a target data specification string and reports an error
+  /// if the string is malformed.
+  Error parseSpecifier(StringRef Desc);
 
   // Free all internal data structures.
   void clear();
@@ -228,6 +234,10 @@ public:
 
   /// Parse a data layout string (with fallback to default values).
   void reset(StringRef LayoutDescription);
+
+  /// Parse a data layout string and return the layout. Return an error
+  /// description on failure.
+  static Expected<DataLayout> parse(StringRef LayoutDescription);
 
   /// Layout endianness...
   bool isLittleEndian() const { return !BigEndian; }
@@ -686,9 +696,9 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   case Type::ScalableVectorTyID: {
     VectorType *VTy = cast<VectorType>(Ty);
     auto EltCnt = VTy->getElementCount();
-    uint64_t MinBits = EltCnt.Min *
-                        getTypeSizeInBits(VTy->getElementType()).getFixedSize();
-    return TypeSize(MinBits, EltCnt.Scalable);
+    uint64_t MinBits = EltCnt.getKnownMinValue() *
+                       getTypeSizeInBits(VTy->getElementType()).getFixedSize();
+    return TypeSize(MinBits, EltCnt.isScalable());
   }
   default:
     llvm_unreachable("DataLayout::getTypeSizeInBits(): Unsupported type");

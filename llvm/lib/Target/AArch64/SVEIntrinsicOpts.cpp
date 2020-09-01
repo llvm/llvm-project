@@ -160,7 +160,7 @@ bool SVEIntrinsicOpts::optimizePTest(IntrinsicInst *I) {
     I->eraseFromParent();
     if (Op1->use_empty())
       Op1->eraseFromParent();
-    if (Op2->use_empty())
+    if (Op1 != Op2 && Op2->use_empty())
       Op2->eraseFromParent();
 
     return true;

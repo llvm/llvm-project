@@ -10,9 +10,12 @@
 #include "src/math/frexpl.h"
 #include "utils/FPUtil/BasicOperations.h"
 #include "utils/FPUtil/FPBits.h"
+#include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
 
 using FPBits = __llvm_libc::fputil::FPBits<long double>;
+
+namespace mpfr = __llvm_libc::testing::mpfr;
 
 TEST(FrexplTest, SpecialNumbers) {
   int exponent;
@@ -94,10 +97,11 @@ TEST(FrexplTest, LongDoubleRange) {
     if (isnan(x) || isinf(x) || x == 0.0l)
       continue;
 
-    int exponent;
-    long double frac = __llvm_libc::frexpl(x, &exponent);
+    mpfr::BinaryOutput<long double> result;
+    result.f = __llvm_libc::frexpl(x, &result.i);
 
-    ASSERT_TRUE(__llvm_libc::fputil::abs(frac) < 1.0l);
-    ASSERT_TRUE(__llvm_libc::fputil::abs(frac) >= 0.5l);
+    ASSERT_TRUE(__llvm_libc::fputil::abs(result.f) < 1.0);
+    ASSERT_TRUE(__llvm_libc::fputil::abs(result.f) >= 0.5);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Frexp, x, result, 0.0);
   }
 }

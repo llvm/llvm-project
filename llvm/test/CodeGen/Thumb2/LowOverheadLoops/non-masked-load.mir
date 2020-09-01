@@ -108,12 +108,15 @@ body:             |
   ; CHECK-LABEL: name: non_masked_load
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r2
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r7
   ; CHECK:   tCMPi8 renamable $r2, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   t2IT 0, 2, implicit-def $itstate
   ; CHECK:   renamable $r0 = tMOVi8 $noreg, 0, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
   ; CHECK:   renamable $r0 = tUXTB killed renamable $r0, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
   ; CHECK:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
+  ; CHECK: bb.1.vector.ph:
+  ; CHECK:   successors: %bb.2(0x80000000)
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2
   ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
@@ -129,8 +132,8 @@ body:             |
   ; CHECK:   renamable $r3 = t2LSRri killed renamable $r12, 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3 = t2SUBrs renamable $r2, killed renamable $r3, 34, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $lr = t2DLS killed renamable $lr
-  ; CHECK: bb.1.vector.body:
-  ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  ; CHECK: bb.2.vector.body:
+  ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r2, $r3
   ; CHECK:   renamable $vpr = MVE_VCTP8 renamable $r2, 0, $noreg
   ; CHECK:   $q1 = MVE_VORR killed $q0, killed $q0, 0, $noreg, undef $q1
@@ -140,8 +143,8 @@ body:             |
   ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 16, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $q2 = MVE_VADDi8 killed renamable $q2, renamable $q1, 0, $noreg, undef renamable $q2
   ; CHECK:   renamable $q0 = MVE_VADDi8 killed renamable $q2, killed renamable $q0, 0, $noreg, undef renamable $q0
-  ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.1
-  ; CHECK: bb.2.middle.block:
+  ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK: bb.3.middle.block:
   ; CHECK:   liveins: $q0, $q1, $r3
   ; CHECK:   renamable $vpr = MVE_VCTP8 killed renamable $r3, 0, $noreg
   ; CHECK:   renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr
@@ -158,6 +161,11 @@ body:             |
     renamable $r0 = tMOVi8 $noreg, 0, 0, $cpsr, implicit killed $r0, implicit $itstate
     renamable $r0 = tUXTB killed renamable $r0, 0, $cpsr, implicit killed $r0, implicit $itstate
     tBX_RET 0, killed $cpsr, implicit $r0, implicit killed $itstate
+
+  bb.1.vector.ph:
+    successors: %bb.2(0x80000000)
+    liveins: $r0, $r1, $r2, $lr
+
     frame-setup tPUSH 14, $noreg, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4
@@ -174,8 +182,8 @@ body:             |
     renamable $r3 = t2SUBrs renamable $r2, killed renamable $r3, 34, 14, $noreg, $noreg
     t2DoLoopStart renamable $lr
 
-  bb.1.vector.body:
-    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  bb.2.vector.body:
+    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $lr, $q0, $r0, $r1, $r2, $r3
 
     renamable $vpr = MVE_VCTP8 renamable $r2, 0, $noreg
@@ -187,10 +195,10 @@ body:             |
     renamable $q2 = MVE_VADDi8 killed renamable $q2, renamable $q1, 0, $noreg, undef renamable $q2
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $q0 = MVE_VADDi8 killed renamable $q2, killed renamable $q0, 0, $noreg, undef renamable $q0
-    t2LoopEnd renamable $lr, %bb.1, implicit-def dead $cpsr
-    tB %bb.2, 14, $noreg
+    t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
+    tB %bb.3, 14, $noreg
 
-  bb.2.middle.block:
+  bb.3.middle.block:
     liveins: $q0, $q1, $r3
 
     renamable $vpr = MVE_VCTP8 killed renamable $r3, 0, $noreg

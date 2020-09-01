@@ -45,3 +45,15 @@ error:
 	FN(PW,free)(pw);
 	return NULL;
 }
+
+__isl_give PW *FN(PW,add_dims)(__isl_take PW *pw, enum isl_dim_type type,
+	unsigned n)
+{
+	isl_size pos;
+
+	pos = FN(PW,dim)(pw, type);
+	if (pos < 0)
+		return FN(PW,free)(pw);
+
+	return FN(PW,insert_dims)(pw, type, pos, n);
+}

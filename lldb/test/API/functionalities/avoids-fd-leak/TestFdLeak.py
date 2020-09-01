@@ -24,7 +24,7 @@ class AvoidsFdLeakTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailure(python_leaky_fd_version, "bugs.freebsd.org/197376")
+    @expectedFailureIfFn(python_leaky_fd_version, "bugs.freebsd.org/197376")
     @expectedFailureAll(
         oslist=['freebsd'],
         bugnumber="llvm.org/pr25624 still failing with Python 2.7.10")
@@ -36,7 +36,7 @@ class AvoidsFdLeakTestCase(TestBase):
     def test_fd_leak_basic(self):
         self.do_test([])
 
-    @expectedFailure(python_leaky_fd_version, "bugs.freebsd.org/197376")
+    @expectedFailureIfFn(python_leaky_fd_version, "bugs.freebsd.org/197376")
     @expectedFailureAll(
         oslist=['freebsd'],
         bugnumber="llvm.org/pr25624 still failing with Python 2.7.10")
@@ -68,7 +68,7 @@ class AvoidsFdLeakTestCase(TestBase):
             process.GetExitStatus() == 0,
             "Process returned non-zero status. Were incorrect file descriptors passed?")
 
-    @expectedFailure(python_leaky_fd_version, "bugs.freebsd.org/197376")
+    @expectedFailureIfFn(python_leaky_fd_version, "bugs.freebsd.org/197376")
     @expectedFailureAll(
         oslist=['freebsd'],
         bugnumber="llvm.org/pr25624 still failing with Python 2.7.10")

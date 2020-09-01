@@ -9,6 +9,8 @@
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -22,9 +24,12 @@ struct MyAnalysis {
 struct OtherAnalysis {
   OtherAnalysis(Operation *) {}
 };
+struct OpSpecificAnalysis {
+  OpSpecificAnalysis(ModuleOp) {}
+};
 
 TEST(AnalysisManagerTest, FineGrainModuleAnalysisPreservation) {
-  MLIRContext context;
+  MLIRContext context(false);
 
   // Test fine grain invalidation of the module analysis manager.
   OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
@@ -45,7 +50,7 @@ TEST(AnalysisManagerTest, FineGrainModuleAnalysisPreservation) {
 }
 
 TEST(AnalysisManagerTest, FineGrainFunctionAnalysisPreservation) {
-  MLIRContext context;
+  MLIRContext context(false);
   Builder builder(&context);
 
   // Create a function and a module.
@@ -58,7 +63,7 @@ TEST(AnalysisManagerTest, FineGrainFunctionAnalysisPreservation) {
   // Test fine grain invalidation of the function analysis manager.
   ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
   AnalysisManager am = mam;
-  AnalysisManager fam = am.slice(func1);
+  AnalysisManager fam = am.nest(func1);
 
   // Query two different analyses, but only preserve one before invalidating.
   fam.getAnalysis<MyAnalysis>();
@@ -74,7 +79,7 @@ TEST(AnalysisManagerTest, FineGrainFunctionAnalysisPreservation) {
 }
 
 TEST(AnalysisManagerTest, FineGrainChildFunctionAnalysisPreservation) {
-  MLIRContext context;
+  MLIRContext context(false);
   Builder builder(&context);
 
   // Create a function and a module.
@@ -117,7 +122,7 @@ struct CustomInvalidatingAnalysis {
 };
 
 TEST(AnalysisManagerTest, CustomInvalidation) {
-  MLIRContext context;
+  MLIRContext context(false);
   Builder builder(&context);
 
   // Create a function and a module.
@@ -138,4 +143,18 @@ TEST(AnalysisManagerTest, CustomInvalidation) {
   am.invalidate(pa);
   EXPECT_TRUE(am.getCachedAnalysis<CustomInvalidatingAnalysis>().hasValue());
 }
+
+TEST(AnalysisManagerTest, OpSpecificAnalysis) {
+  MLIRContext context;
+
+  // Create a module.
+  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
+  AnalysisManager am = mam;
+
+  // Query the op specific analysis for the module and verify that its cached.
+  am.getAnalysis<OpSpecificAnalysis, ModuleOp>();
+  EXPECT_TRUE(am.getCachedAnalysis<OpSpecificAnalysis>().hasValue());
+}
+
 } // end namespace

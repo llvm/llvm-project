@@ -22,4 +22,3 @@ The value is truncated to 7 bits, but only 3 low bits are significant.
     1            Request *write* permission.
     2            Request *execute* permission.
     ============ ==============================
-

@@ -10,7 +10,7 @@ AMDGPU Instructions Notation
 Introduction
 ============
 
-This is an overview of notation used to describe the syntax of AMDGPU assembler instructions.
+This is an overview of notation used to describe syntax of AMDGPU assembler instructions.
 
 This notation mimics the :ref:`syntax of assembler instructions<amdgpu_syn_instructions>`
 except that instead of real operands and modifiers it provides references to their description.

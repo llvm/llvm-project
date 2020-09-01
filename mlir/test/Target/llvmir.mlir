@@ -1139,13 +1139,13 @@ llvm.func @atomicrmw(
 }
 
 // CHECK-LABEL: @cmpxchg
-llvm.func @cmpxchg(%ptr : !llvm.ptr<float>, %cmp : !llvm.float, %val: !llvm.float) {
-  // CHECK: cmpxchg float* %{{.*}}, float %{{.*}}, float %{{.*}} acq_rel monotonic
-  %0 = llvm.cmpxchg %ptr, %cmp, %val acq_rel monotonic : !llvm.float
-  // CHECK: %{{[0-9]+}} = extractvalue { float, i1 } %{{[0-9]+}}, 0
-  %1 = llvm.extractvalue %0[0] : !llvm.struct<(float, i1)>
-  // CHECK: %{{[0-9]+}} = extractvalue { float, i1 } %{{[0-9]+}}, 1
-  %2 = llvm.extractvalue %0[1] : !llvm.struct<(float, i1)>
+llvm.func @cmpxchg(%ptr : !llvm.ptr<i32>, %cmp : !llvm.i32, %val: !llvm.i32) {
+  // CHECK: cmpxchg i32* %{{.*}}, i32 %{{.*}}, i32 %{{.*}} acq_rel monotonic
+  %0 = llvm.cmpxchg %ptr, %cmp, %val acq_rel monotonic : !llvm.i32
+  // CHECK: %{{[0-9]+}} = extractvalue { i32, i1 } %{{[0-9]+}}, 0
+  %1 = llvm.extractvalue %0[0] : !llvm.struct<(i32, i1)>
+  // CHECK: %{{[0-9]+}} = extractvalue { i32, i1 } %{{[0-9]+}}, 1
+  %2 = llvm.extractvalue %0[1] : !llvm.struct<(i32, i1)>
   llvm.return
 }
 
@@ -1283,7 +1283,7 @@ llvm.func @volatile_store_and_load() {
 // -----
 
 // Check that nontemporal attribute is exported as metadata node.
-llvm.func @nontemoral_store_and_load() {
+llvm.func @nontemporal_store_and_load() {
   %val = llvm.mlir.constant(5 : i32) : !llvm.i32
   %size = llvm.mlir.constant(1 : i64) : !llvm.i64
   %0 = llvm.alloca %size x !llvm.i32 : (!llvm.i64) -> (!llvm.ptr<i32>)
@@ -1295,3 +1295,19 @@ llvm.func @nontemoral_store_and_load() {
 }
 
 // CHECK: ![[NODE]] = !{i32 1}
+
+// -----
+
+// Check that the translation does not crash in absence of a data layout.
+module {
+  // CHECK: declare void @module_default_layout
+  llvm.func @module_default_layout()
+}
+
+// -----
+
+// CHECK: target datalayout = "E"
+module attributes {llvm.data_layout = "E"} {
+  llvm.func @module_big_endian()
+}
+

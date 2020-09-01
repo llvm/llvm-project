@@ -24,6 +24,18 @@ define <vscale x 16 x i16> @load_split_i16(<vscale x 16 x i16>* %a) {
   ret <vscale x 16 x i16> %load
 }
 
+define <vscale x 24 x i16> @load_split_24i16(<vscale x 24 x i16>* %a) {
+; CHECK-LABEL: load_split_24i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ret
+  %load = load <vscale x 24 x i16>, <vscale x 24 x i16>* %a
+  ret <vscale x 24 x i16> %load
+}
+
 define <vscale x 32 x i16> @load_split_32i16(<vscale x 32 x i16>* %a) {
 ; CHECK-LABEL: load_split_32i16:
 ; CHECK:       // %bb.0:

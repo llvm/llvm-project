@@ -3,22 +3,38 @@ message(STATUS "LLDB.framework: install path is '${LLDB_FRAMEWORK_INSTALL_DIR}'"
 message(STATUS "LLDB.framework: resources subdirectory is 'Versions/${LLDB_FRAMEWORK_VERSION}/Resources'")
 
 # Configure liblldb as a framework bundle
-set_target_properties(liblldb PROPERTIES
-  FRAMEWORK ON
-  FRAMEWORK_VERSION ${LLDB_FRAMEWORK_VERSION}
+if(NOT APPLE_EMBEDDED)
+  set_target_properties(liblldb PROPERTIES
+    FRAMEWORK ON
+    FRAMEWORK_VERSION ${LLDB_FRAMEWORK_VERSION}
 
-  OUTPUT_NAME LLDB
-  VERSION ${LLDB_VERSION}
-  LIBRARY_OUTPUT_DIRECTORY ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}
+    OUTPUT_NAME LLDB
+    VERSION ${LLDB_VERSION}
+    LIBRARY_OUTPUT_DIRECTORY ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}
 
-  # Compatibility version
-  SOVERSION "1.0.0"
+    # Compatibility version
+    SOVERSION "1.0.0"
 
-  MACOSX_FRAMEWORK_IDENTIFIER com.apple.LLDB.framework
-  MACOSX_FRAMEWORK_BUNDLE_VERSION ${LLDB_VERSION}
-  MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${LLDB_VERSION}
-  MACOSX_FRAMEWORK_INFO_PLIST ${LLDB_SOURCE_DIR}/resources/LLDB-Info.plist.in
-)
+    MACOSX_FRAMEWORK_IDENTIFIER com.apple.LLDB.framework
+    MACOSX_FRAMEWORK_BUNDLE_VERSION ${LLDB_VERSION}
+    MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${LLDB_VERSION}
+    MACOSX_FRAMEWORK_INFO_PLIST ${LLDB_SOURCE_DIR}/resources/LLDB-Info.plist.in
+  )
+else()
+  set_target_properties(liblldb PROPERTIES
+    FRAMEWORK ON
+    FRAMEWORK_VERSION ${LLDB_FRAMEWORK_VERSION}
+
+    # Note: iOS doesn't specify version, as the framework layout is flat.
+    OUTPUT_NAME LLDB
+    LIBRARY_OUTPUT_DIRECTORY ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}
+
+    MACOSX_FRAMEWORK_IDENTIFIER com.apple.LLDB.framework
+    MACOSX_FRAMEWORK_BUNDLE_VERSION ${LLDB_VERSION}
+    MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${LLDB_VERSION}
+    MACOSX_FRAMEWORK_INFO_PLIST ${LLDB_SOURCE_DIR}/resources/LLDB-Info.plist.in
+  )
+endif()
 
 # Used in llvm_add_library() to set default output directories for multi-config
 # generators. Overwrite to account for special framework output directory.
@@ -30,7 +46,7 @@ set_output_directory(liblldb
 lldb_add_post_install_steps_darwin(liblldb ${LLDB_FRAMEWORK_INSTALL_DIR})
 
 # Affects the layout of the framework bundle (default is macOS layout).
-if(IOS)
+if(APPLE_EMBEDDED)
   set_target_properties(liblldb PROPERTIES
     XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "${IPHONEOS_DEPLOYMENT_TARGET}")
 else()
@@ -41,13 +57,16 @@ endif()
 # Add -Wdocumentation parameter
 set(CMAKE_XCODE_ATTRIBUTE_CLANG_WARN_DOCUMENTATION_COMMENTS "YES")
 
-# Apart from this one, CMake creates all required symlinks in the framework bundle.
-add_custom_command(TARGET liblldb POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E create_symlink
-          Versions/Current/Headers
-          ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Headers
-  COMMENT "LLDB.framework: create Headers symlink"
-)
+# On iOS, there is no versioned framework layout. Skip this symlink step.
+if(NOT APPLE_EMBEDDED)
+  # Apart from this one, CMake creates all required symlinks in the framework bundle.
+  add_custom_command(TARGET liblldb POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+            Versions/Current/Headers
+            ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Headers
+    COMMENT "LLDB.framework: create Headers symlink"
+  )
+endif()
 
 # At configuration time, collect headers for the framework bundle and copy them
 # into a staging directory. Later we can copy over the entire folder.
@@ -79,16 +98,14 @@ add_dependencies(liblldb liblldb-resource-headers)
 
 # At build time, copy the staged headers into the framework bundle (and do
 # some post-processing in-place).
-if (NOT IOS)
 add_custom_command(TARGET liblldb POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${lldb_header_staging} $<TARGET_FILE_DIR:liblldb>/Headers
   COMMAND ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.sh $<TARGET_FILE_DIR:liblldb>/Headers ${LLDB_VERSION}
   COMMENT "LLDB.framework: copy framework headers"
 )
-endif()
 
 # Copy vendor-specific headers from clang (without staging).
-if(NOT IOS)
+if(NOT APPLE_EMBEDDED)
   if (TARGET clang-resource-headers)
     add_dependencies(liblldb clang-resource-headers)
     set(clang_resource_headers_dir $<TARGET_PROPERTY:clang-resource-headers,RUNTIME_OUTPUT_DIRECTORY>)
@@ -117,6 +134,16 @@ if(NOT IOS)
             ${clang_resource_headers_dir}
             $<TARGET_FILE_DIR:liblldb>/Resources/Clang/include
     COMMENT "LLDB.framework: copy clang vendor-specific headers"
+  )
+endif()
+
+# IOS framework bundles are flat
+if(NOT APPLE_EMBEDDED)
+  add_custom_command(TARGET liblldb POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+            Versions/Current/XPCServices
+            ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/XPCServices
+    COMMENT "LLDB.framework: create symlink XPCServices"
   )
 endif()
 

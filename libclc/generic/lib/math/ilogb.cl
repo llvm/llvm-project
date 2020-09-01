@@ -31,7 +31,15 @@ _CLC_OVERLOAD _CLC_DEF int ilogb(float x) {
     int rs = -118 - (int) clz(ux & MANTBITS_SP32);
     int r = (int) (ax >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
     r = ax < 0x00800000U ? rs : r;
-    r = ax > EXPBITS_SP32 | ax == 0 ? 0x80000000 : r;
+    r = ax == 0 ? FP_ILOGB0 : r;
+
+    // We could merge those 2 tests and have:
+    //
+    //    r = ax >= EXPBITS_SP32 ? 0x7fffffff : r
+    //
+    // since FP_ILOGBNAN is set to INT_MAX, but it's clearer this way and
+    // FP_ILOGBNAN can change without requiring changes to ilogb() code.
+    r = ax > EXPBITS_SP32 ? FP_ILOGBNAN : r;
     r = ax == EXPBITS_SP32 ? 0x7fffffff : r;
     return r;
 }
@@ -47,7 +55,15 @@ _CLC_OVERLOAD _CLC_DEF int ilogb(double x) {
     int r = (int) (ax >> EXPSHIFTBITS_DP64) - EXPBIAS_DP64;
     int rs = -1011 - (int) clz(ax & MANTBITS_DP64);
     r = ax < 0x0010000000000000UL ? rs : r;
-    r = ax > 0x7ff0000000000000UL | ax == 0UL ? 0x80000000 : r;
+    r = ax == 0UL ? FP_ILOGB0 : r;
+
+    // We could merge those 2 tests and have:
+    //
+    //    r = ax >= 0x7ff0000000000000UL ? 0x7fffffff : r
+    //
+    // since FP_ILOGBNAN is set to INT_MAX, but it's clearer this way and
+    // FP_ILOGBNAN can change without requiring changes to ilogb() code.
+    r = ax > 0x7ff0000000000000UL ? FP_ILOGBNAN : r;
     r = ax == 0x7ff0000000000000UL ? 0x7fffffff : r;
     return r;
 }

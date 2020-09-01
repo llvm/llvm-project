@@ -104,7 +104,7 @@ In practice, register files A and B are rarely equal. They can typically store
 the same data but there's usually some restrictions on what operations you can
 do on each register file. A fairly common pattern is for one of them to be
 accessible to integer operations and the other accessible to floating point
-operations. To accomodate this, let's rename A and B to GPR (general purpose
+operations. To accommodate this, let's rename A and B to GPR (general purpose
 registers) and FPR (floating point registers).
 
 We now have some additional constraints that limit us. An operation like G_FMUL

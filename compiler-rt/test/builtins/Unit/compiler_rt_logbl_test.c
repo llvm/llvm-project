@@ -1,9 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 
-//
-// Bug 42496
-// XFAIL: sparcv9-target-arch
-//
 #define QUAD_PRECISION
 #include <math.h>
 #include <stdio.h>

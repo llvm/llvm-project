@@ -92,8 +92,8 @@ TEST(OperationsTest, SourcePreds) {
       ConstantStruct::get(StructType::create(Ctx, "OpaqueStruct"));
   Constant *a =
       ConstantArray::get(ArrayType::get(i32->getType(), 2), {i32, i32});
-  Constant *v8i8 = ConstantVector::getSplat({8, false}, i8);
-  Constant *v4f16 = ConstantVector::getSplat({4, false}, f16);
+  Constant *v8i8 = ConstantVector::getSplat(ElementCount::getFixed(8), i8);
+  Constant *v4f16 = ConstantVector::getSplat(ElementCount::getFixed(4), f16);
   Constant *p0i32 =
       ConstantPointerNull::get(PointerType::get(i32->getType(), 0));
 

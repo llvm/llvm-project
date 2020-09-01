@@ -12,10 +12,26 @@ def TestDirectiveLanguage : DirectiveLanguage {
   let clausePrefix = "TDLC_";
   let makeEnumAvailableInNamespace = 1;
   let enableBitmaskEnumInNamespace = 1;
+  let flangClauseBaseClass = "TdlClause";
 }
 
-def TDLC_ClauseA : Clause<"clausea"> {}
+def TDLCV_vala : ClauseVal<"vala",1,1> {}
+def TDLCV_valb : ClauseVal<"valb",2,1> {}
+def TDLCV_valc : ClauseVal<"valc",3,0> { let isDefault = 1; }
+
+def TDLC_ClauseA : Clause<"clausea"> {
+  let flangClass = "TdlClauseA";
+  let enumClauseValue = "AKind";
+  let allowedClauseValues = [
+    TDLCV_vala,
+    TDLCV_valb,
+    TDLCV_valc
+  ];
+}
+
 def TDLC_ClauseB : Clause<"clauseb"> {
+  let flangClassValue = "IntExpr";
+  let isValueOptional = 1;
   let isDefault = 1;
 }
 
@@ -56,6 +72,16 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  constexpr auto TDLC_clausea = llvm::tdl::Clause::TDLC_clausea;
 // CHECK-NEXT:  constexpr auto TDLC_clauseb = llvm::tdl::Clause::TDLC_clauseb;
 // CHECK-EMPTY:
+// CHECK-NEXT:  enum class AKind {
+// CHECK-NEXT:    TDLCV_vala=1,
+// CHECK-NEXT:    TDLCV_valb=2,
+// CHECK-NEXT:    TDLCV_valc=3,
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  constexpr auto TDLCV_vala = llvm::tdl::AKind::TDLCV_vala;
+// CHECK-NEXT:  constexpr auto TDLCV_valb = llvm::tdl::AKind::TDLCV_valb;
+// CHECK-NEXT:  constexpr auto TDLCV_valc = llvm::tdl::AKind::TDLCV_valc;
+// CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions
 // CHECK-NEXT:  Directive getTdlDirectiveKind(llvm::StringRef Str);
 // CHECK-EMPTY:
@@ -67,6 +93,8 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-EMPTY:
 // CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p Version.
 // CHECK-NEXT:  bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
+// CHECK-EMPTY:
+// CHECK-NEXT:  AKind getAKind(StringRef);
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace tdl
 // CHECK-NEXT:  } // namespace llvm
@@ -109,6 +137,14 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:        return "clauseb";
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Clause kind");
+// IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  AKind llvm::tdl::getAKind(llvm::StringRef Str) {
+// IMPL-NEXT:    return llvm::StringSwitch<AKind>(Str)
+// IMPL-NEXT:      .Case("vala",TDLCV_vala)
+// IMPL-NEXT:      .Case("valb",TDLCV_valb)
+// IMPL-NEXT:      .Case("valc",TDLCV_valc)
+// IMPL-NEXT:      .Default(TDLCV_valc);
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
 // IMPL-NEXT:  bool llvm::tdl::isAllowedClauseForDirective(Directive D, Clause C, unsigned Version) {
@@ -173,4 +209,35 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:  }
 // GEN-EMPTY:
 // GEN-NEXT:  #endif // GEN_FLANG_DIRECTIVE_CLAUSE_MAP
-
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES
+// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES
+// GEN-EMPTY:
+// GEN-NEXT:  WRAPPER_CLASS(Clauseb, std::optional<IntExpr>);
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// GEN-EMPTY:
+// GEN-NEXT:  TdlClauseA
+// GEN-NEXT:  , Clauseb
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+// GEN-NEXT:  #undef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+// GEN-EMPTY:
+// GEN-NEXT:  NODE(TdlClause, Clauseb)
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_UNPARSE
+// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_UNPARSE
+// GEN-EMPTY:
+// GEN-NEXT:  void Unparse(const TdlClause::Clauseb &x) {
+// GEN-NEXT:    Word("CLAUSEB");
+// GEN-NEXT:    Walk("(", x.v, ")");
+// GEN-NEXT:  }
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_UNPARSE

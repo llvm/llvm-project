@@ -55,7 +55,7 @@ INVALID-SYMBOL-INDR-ARCHIVE-UNIVERSAL: macho-invalid-symbol-indr-archive-univers
 RUN: not llvm-objdump --macho -d %p/Inputs/macho-invalid-symbol-strx 2>&1 | FileCheck --check-prefix INVALID-SYMBOL-STRX %s
 INVALID-SYMBOL-STRX: macho-invalid-symbol-strx': truncated or malformed object (bad string table index: 22 past the end of string table, for symbol at index 1)
 
-RUN: not llvm-objdump -d %p/Inputs/macho-invalid-symbol-strx 2>&1 | FileCheck --check-prefix INVALID-SYMBOL-STRX-NO-MACHO-FLAG %s
+RUN: llvm-objdump -d %p/Inputs/macho-invalid-symbol-strx 2>&1 | FileCheck --check-prefix INVALID-SYMBOL-STRX-NO-MACHO-FLAG %s
 INVALID-SYMBOL-STRX-NO-MACHO-FLAG: macho-invalid-symbol-strx': truncated or malformed object (bad string index: 22 for symbol at index 1)
 
 RUN: not llvm-objdump --macho -d --arch all %p/Inputs/macho-invalid-symbol-strx-universal 2>&1 | FileCheck --check-prefix INVALID-SYMBOL-STRX-UNIVERSAL %s

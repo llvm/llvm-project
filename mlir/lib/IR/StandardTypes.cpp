@@ -22,10 +22,10 @@ using namespace mlir::detail;
 // Type
 //===----------------------------------------------------------------------===//
 
-bool Type::isBF16() { return getKind() == StandardTypes::BF16; }
-bool Type::isF16() { return getKind() == StandardTypes::F16; }
-bool Type::isF32() { return getKind() == StandardTypes::F32; }
-bool Type::isF64() { return getKind() == StandardTypes::F64; }
+bool Type::isBF16() { return isa<BFloat16Type>(); }
+bool Type::isF16() { return isa<Float16Type>(); }
+bool Type::isF32() { return isa<Float32Type>(); }
+bool Type::isF64() { return isa<Float64Type>(); }
 
 bool Type::isIndex() { return isa<IndexType>(); }
 
@@ -90,17 +90,23 @@ bool Type::isIntOrFloat() { return isa<IntegerType, FloatType>(); }
 
 bool Type::isIntOrIndexOrFloat() { return isIntOrFloat() || isIndex(); }
 
+unsigned Type::getIntOrFloatBitWidth() {
+  assert(isIntOrFloat() && "only integers and floats have a bitwidth");
+  if (auto intType = dyn_cast<IntegerType>())
+    return intType.getWidth();
+  return cast<FloatType>().getWidth();
+}
+
 //===----------------------------------------------------------------------===//
 /// ComplexType
 //===----------------------------------------------------------------------===//
 
 ComplexType ComplexType::get(Type elementType) {
-  return Base::get(elementType.getContext(), StandardTypes::Complex,
-                   elementType);
+  return Base::get(elementType.getContext(), elementType);
 }
 
 ComplexType ComplexType::getChecked(Type elementType, Location location) {
-  return Base::getChecked(location, StandardTypes::Complex, elementType);
+  return Base::getChecked(location, elementType);
 }
 
 /// Verify the construction of an integer type.
@@ -142,37 +148,26 @@ IntegerType::SignednessSemantics IntegerType::getSignedness() const {
 //===----------------------------------------------------------------------===//
 
 unsigned FloatType::getWidth() {
-  switch (getKind()) {
-  case StandardTypes::BF16:
-  case StandardTypes::F16:
+  if (isa<Float16Type, BFloat16Type>())
     return 16;
-  case StandardTypes::F32:
+  if (isa<Float32Type>())
     return 32;
-  case StandardTypes::F64:
+  if (isa<Float64Type>())
     return 64;
-  default:
-    llvm_unreachable("unexpected type");
-  }
+  llvm_unreachable("unexpected float type");
 }
 
 /// Returns the floating semantics for the given type.
 const llvm::fltSemantics &FloatType::getFloatSemantics() {
-  if (isBF16())
+  if (isa<BFloat16Type>())
     return APFloat::BFloat();
-  if (isF16())
+  if (isa<Float16Type>())
     return APFloat::IEEEhalf();
-  if (isF32())
+  if (isa<Float32Type>())
     return APFloat::IEEEsingle();
-  if (isF64())
+  if (isa<Float64Type>())
     return APFloat::IEEEdouble();
   llvm_unreachable("non-floating point type used");
-}
-
-unsigned Type::getIntOrFloatBitWidth() {
-  assert(isIntOrFloat() && "only integers and floats have a bitwidth");
-  if (auto intType = dyn_cast<IntegerType>())
-    return intType.getWidth();
-  return cast<FloatType>().getWidth();
 }
 
 //===----------------------------------------------------------------------===//
@@ -269,13 +264,12 @@ bool ShapedType::hasStaticShape(ArrayRef<int64_t> shape) const {
 //===----------------------------------------------------------------------===//
 
 VectorType VectorType::get(ArrayRef<int64_t> shape, Type elementType) {
-  return Base::get(elementType.getContext(), StandardTypes::Vector, shape,
-                   elementType);
+  return Base::get(elementType.getContext(), shape, elementType);
 }
 
 VectorType VectorType::getChecked(ArrayRef<int64_t> shape, Type elementType,
                                   Location location) {
-  return Base::getChecked(location, StandardTypes::Vector, shape, elementType);
+  return Base::getChecked(location, shape, elementType);
 }
 
 LogicalResult VectorType::verifyConstructionInvariants(Location loc,
@@ -304,7 +298,7 @@ ArrayRef<int64_t> VectorType::getShape() const { return getImpl()->getShape(); }
 static LogicalResult checkTensorElementType(Location location,
                                             Type elementType) {
   if (!TensorType::isValidElementType(elementType))
-    return emitError(location, "invalid tensor element type");
+    return emitError(location, "invalid tensor element type: ") << elementType;
   return success();
 }
 
@@ -324,15 +318,13 @@ bool TensorType::isValidElementType(Type type) {
 
 RankedTensorType RankedTensorType::get(ArrayRef<int64_t> shape,
                                        Type elementType) {
-  return Base::get(elementType.getContext(), StandardTypes::RankedTensor, shape,
-                   elementType);
+  return Base::get(elementType.getContext(), shape, elementType);
 }
 
 RankedTensorType RankedTensorType::getChecked(ArrayRef<int64_t> shape,
                                               Type elementType,
                                               Location location) {
-  return Base::getChecked(location, StandardTypes::RankedTensor, shape,
-                          elementType);
+  return Base::getChecked(location, shape, elementType);
 }
 
 LogicalResult RankedTensorType::verifyConstructionInvariants(
@@ -353,13 +345,12 @@ ArrayRef<int64_t> RankedTensorType::getShape() const {
 //===----------------------------------------------------------------------===//
 
 UnrankedTensorType UnrankedTensorType::get(Type elementType) {
-  return Base::get(elementType.getContext(), StandardTypes::UnrankedTensor,
-                   elementType);
+  return Base::get(elementType.getContext(), elementType);
 }
 
 UnrankedTensorType UnrankedTensorType::getChecked(Type elementType,
                                                   Location location) {
-  return Base::getChecked(location, StandardTypes::UnrankedTensor, elementType);
+  return Base::getChecked(location, elementType);
 }
 
 LogicalResult
@@ -448,8 +439,8 @@ MemRefType MemRefType::getImpl(ArrayRef<int64_t> shape, Type elementType,
     cleanedAffineMapComposition.push_back(map);
   }
 
-  return Base::get(context, StandardTypes::MemRef, shape, elementType,
-                   cleanedAffineMapComposition, memorySpace);
+  return Base::get(context, shape, elementType, cleanedAffineMapComposition,
+                   memorySpace);
 }
 
 ArrayRef<int64_t> MemRefType::getShape() const { return getImpl()->getShape(); }
@@ -466,15 +457,13 @@ unsigned MemRefType::getMemorySpace() const { return getImpl()->memorySpace; }
 
 UnrankedMemRefType UnrankedMemRefType::get(Type elementType,
                                            unsigned memorySpace) {
-  return Base::get(elementType.getContext(), StandardTypes::UnrankedMemRef,
-                   elementType, memorySpace);
+  return Base::get(elementType.getContext(), elementType, memorySpace);
 }
 
 UnrankedMemRefType UnrankedMemRefType::getChecked(Type elementType,
                                                   unsigned memorySpace,
                                                   Location location) {
-  return Base::getChecked(location, StandardTypes::UnrankedMemRef, elementType,
-                          memorySpace);
+  return Base::getChecked(location, elementType, memorySpace);
 }
 
 unsigned UnrankedMemRefType::getMemorySpace() const {
@@ -646,7 +635,7 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
 /// Get or create a new TupleType with the provided element types. Assumes the
 /// arguments define a well-formed type.
 TupleType TupleType::get(TypeRange elementTypes, MLIRContext *context) {
-  return Base::get(context, StandardTypes::Tuple, elementTypes);
+  return Base::get(context, elementTypes);
 }
 
 /// Get or create an empty tuple type.

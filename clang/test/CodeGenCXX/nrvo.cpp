@@ -85,8 +85,6 @@ X test2(bool B) {
   // %lpad: landing pad for ctor of 'y', dtor of 'y'
   // CHECK-EH:      [[CAUGHTVAL:%.*]] = landingpad { i8*, i32 }
   // CHECK-EH-NEXT:   cleanup
-  // CHECK-EH-NEXT: extractvalue { i8*, i32 } [[CAUGHTVAL]], 0
-  // CHECK-EH-NEXT: extractvalue { i8*, i32 } [[CAUGHTVAL]], 1
   // CHECK-EH-NEXT: br label
   // -> %eh.cleanup
 

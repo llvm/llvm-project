@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-instsimplify=0 < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-instsimplify=0 -hexagon-masked-vmem=0 < %s | FileCheck %s
 
 ; This test checks that store a vector predicate of type v128i1 is lowered
 ; without crashing.

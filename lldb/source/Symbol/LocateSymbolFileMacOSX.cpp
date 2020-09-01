@@ -27,6 +27,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Utility/UUID.h"
@@ -53,6 +54,17 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
   return_module_spec.GetFileSpec().Clear();
   return_module_spec.GetSymbolFileSpec().Clear();
 
+  const UUID *uuid = module_spec.GetUUIDPtr();
+  const ArchSpec *arch = module_spec.GetArchitecturePtr();
+
+  if (repro::Loader *l = repro::Reproducer::Instance().GetLoader()) {
+    static repro::SymbolFileLoader symbol_file_loader(l);
+    std::pair<FileSpec, FileSpec> paths = symbol_file_loader.GetPaths(uuid);
+    return_module_spec.GetFileSpec() = paths.first;
+    return_module_spec.GetSymbolFileSpec() = paths.second;
+    return 1;
+  }
+
   int items_found = 0;
 
   if (g_dlsym_DBGCopyFullDSYMURLForUUID == nullptr ||
@@ -68,9 +80,6 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
       g_dlsym_DBGCopyDSYMPropertyLists == nullptr) {
     return items_found;
   }
-
-  const UUID *uuid = module_spec.GetUUIDPtr();
-  const ArchSpec *arch = module_spec.GetArchitecturePtr();
 
   if (uuid && uuid->IsValid()) {
     // Try and locate the dSYM file using DebugSymbols first
@@ -245,6 +254,12 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
         }
       }
     }
+  }
+
+  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
+    g->GetOrCreate<repro::SymbolFileProvider>().AddSymbolFile(
+        uuid, return_module_spec.GetFileSpec(),
+        return_module_spec.GetSymbolFileSpec());
   }
 
   return items_found;
@@ -464,6 +479,25 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
   const UUID *uuid_ptr = module_spec.GetUUIDPtr();
   const FileSpec *file_spec_ptr = module_spec.GetFileSpecPtr();
 
+  if (repro::Loader *l = repro::Reproducer::Instance().GetLoader()) {
+    static repro::SymbolFileLoader symbol_file_loader(l);
+    std::pair<FileSpec, FileSpec> paths = symbol_file_loader.GetPaths(uuid_ptr);
+    if (paths.first)
+      module_spec.GetFileSpec() = paths.first;
+    if (paths.second)
+      module_spec.GetSymbolFileSpec() = paths.second;
+    return true;
+  }
+
+  // Lambda to capture the state of module_spec before returning from this
+  // function.
+  auto RecordResult = [&]() {
+    if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
+      g->GetOrCreate<repro::SymbolFileProvider>().AddSymbolFile(
+          uuid_ptr, module_spec.GetFileSpec(), module_spec.GetSymbolFileSpec());
+    }
+  };
+
   // It's expensive to check for the DBGShellCommands defaults setting, only do
   // it once per lldb run and cache the result.
   static bool g_have_checked_for_dbgshell_command = false;
@@ -489,6 +523,7 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
   // When g_dbgshell_command is NULL, the user has not enabled the use of an
   // external program to find the symbols, don't run it for them.
   if (!force_lookup && g_dbgshell_command == NULL) {
+    RecordResult();
     return false;
   }
 
@@ -613,8 +648,10 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                 ::CFDictionaryGetKeysAndValues(plist.get(), NULL,
                                                (const void **)&values[0]);
                 if (num_values == 1) {
-                  return GetModuleSpecInfoFromUUIDDictionary(values[0],
-                                                             module_spec);
+                  success = GetModuleSpecInfoFromUUIDDictionary(values[0],
+                                                                module_spec);
+                  RecordResult();
+                  return success;
                 } else {
                   for (CFIndex i = 0; i < num_values; ++i) {
                     ModuleSpec curr_module_spec;
@@ -623,6 +660,7 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                       if (module_spec.GetArchitecture().IsCompatibleMatch(
                               curr_module_spec.GetArchitecture())) {
                         module_spec = curr_module_spec;
+                        RecordResult();
                         return true;
                       }
                     }
@@ -644,5 +682,6 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
       }
     }
   }
+  RecordResult();
   return success;
 }

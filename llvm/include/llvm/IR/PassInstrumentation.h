@@ -76,8 +76,8 @@ public:
   using BeforePassFunc = bool(StringRef, Any);
   using BeforeSkippedPassFunc = void(StringRef, Any);
   using BeforeNonSkippedPassFunc = void(StringRef, Any);
-  using AfterPassFunc = void(StringRef, Any);
-  using AfterPassInvalidatedFunc = void(StringRef);
+  using AfterPassFunc = void(StringRef, Any, const PreservedAnalyses &);
+  using AfterPassInvalidatedFunc = void(StringRef, const PreservedAnalyses &);
   using BeforeAnalysisFunc = void(StringRef, Any);
   using AfterAnalysisFunc = void(StringRef, Any);
 
@@ -199,20 +199,22 @@ public:
   /// just been executed and constant reference to \p IR it operates on.
   /// \p IR is guaranteed to be valid at this point.
   template <typename IRUnitT, typename PassT>
-  void runAfterPass(const PassT &Pass, const IRUnitT &IR) const {
+  void runAfterPass(const PassT &Pass, const IRUnitT &IR,
+                    const PreservedAnalyses &PA) const {
     if (Callbacks)
       for (auto &C : Callbacks->AfterPassCallbacks)
-        C(Pass.name(), llvm::Any(&IR));
+        C(Pass.name(), llvm::Any(&IR), PA);
   }
 
   /// AfterPassInvalidated instrumentation point - takes \p Pass instance
   /// that has just been executed. For use when IR has been invalidated
   /// by \p Pass execution.
   template <typename IRUnitT, typename PassT>
-  void runAfterPassInvalidated(const PassT &Pass) const {
+  void runAfterPassInvalidated(const PassT &Pass,
+                               const PreservedAnalyses &PA) const {
     if (Callbacks)
       for (auto &C : Callbacks->AfterPassInvalidatedCallbacks)
-        C(Pass.name());
+        C(Pass.name(), PA);
   }
 
   /// BeforeAnalysis instrumentation point - takes \p Analysis instance

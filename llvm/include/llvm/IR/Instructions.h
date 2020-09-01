@@ -1561,6 +1561,16 @@ public:
   static CallInst *Create(CallInst *CI, ArrayRef<OperandBundleDef> Bundles,
                           Instruction *InsertPt = nullptr);
 
+  /// Create a clone of \p CI with a different set of operand bundles and
+  /// insert it before \p InsertPt.
+  ///
+  /// The returned call instruction is identical \p CI in every way except that
+  /// the operand bundle for the new instruction is set to the operand bundle
+  /// in \p Bundle.
+  static CallInst *CreateWithReplacedBundle(CallInst *CI,
+                                            OperandBundleDef Bundle,
+                                            Instruction *InsertPt = nullptr);
+
   /// Generate the IR for a call to malloc:
   /// 1. Compute the malloc call's argument as the specified type's size,
   ///    possibly multiplied by the array size if the array size is not
@@ -2036,8 +2046,9 @@ public:
   /// Examples: shufflevector <4 x n> A, <4 x n> B, <1,2,3>
   ///           shufflevector <4 x n> A, <4 x n> B, <1,2,3,4,5>
   bool changesLength() const {
-    unsigned NumSourceElts =
-        cast<VectorType>(Op<0>()->getType())->getElementCount().Min;
+    unsigned NumSourceElts = cast<VectorType>(Op<0>()->getType())
+                                 ->getElementCount()
+                                 .getKnownMinValue();
     unsigned NumMaskElts = ShuffleMask.size();
     return NumSourceElts != NumMaskElts;
   }
@@ -2047,7 +2058,7 @@ public:
   /// Example: shufflevector <2 x n> A, <2 x n> B, <1,2,3>
   bool increasesLength() const {
     unsigned NumSourceElts =
-        cast<VectorType>(Op<0>()->getType())->getNumElements();
+        cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
     unsigned NumMaskElts = ShuffleMask.size();
     return NumSourceElts < NumMaskElts;
   }
@@ -2240,7 +2251,8 @@ public:
 
   /// Return true if this shuffle mask is an extract subvector mask.
   bool isExtractSubvectorMask(int &Index) const {
-    int NumSrcElts = cast<VectorType>(Op<0>()->getType())->getNumElements();
+    int NumSrcElts =
+        cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
     return isExtractSubvectorMask(ShuffleMask, NumSrcElts, Index);
   }
 
@@ -3777,6 +3789,16 @@ public:
   /// bundles in \p Bundles.
   static InvokeInst *Create(InvokeInst *II, ArrayRef<OperandBundleDef> Bundles,
                             Instruction *InsertPt = nullptr);
+
+  /// Create a clone of \p II with a different set of operand bundles and
+  /// insert it before \p InsertPt.
+  ///
+  /// The returned invoke instruction is identical to \p II in every way except
+  /// that the operand bundle for the new instruction is set to the operand
+  /// bundle in \p Bundle.
+  static InvokeInst *CreateWithReplacedBundle(InvokeInst *II,
+                                              OperandBundleDef Bundles,
+                                              Instruction *InsertPt = nullptr);
 
   // get*Dest - Return the destination basic blocks...
   BasicBlock *getNormalDest() const {

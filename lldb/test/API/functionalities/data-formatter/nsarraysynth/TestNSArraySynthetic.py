@@ -51,6 +51,8 @@ class NSArraySyntheticTestCase(TestBase):
                     substrs=['@"6 elements"'])
         self.expect('frame variable other_arr',
                     substrs=['@"4 elements"'])
+        self.expect('frame variable empty_arr',
+                    substrs=['@"0 elements"'])
         self.expect(
             'frame variable arr --ptr-depth 1',
             substrs=[
@@ -69,6 +71,10 @@ class NSArraySyntheticTestCase(TestBase):
                 '[1] = 0x',
                 '[2] = 0x',
                 '[3] = 0x'])
+        self.expect(
+            'frame variable empty_arr --ptr-depth 1',
+            substrs=[
+                '@"0 elements"'])
         self.expect(
             'frame variable arr --ptr-depth 1 -d no-run-target',
             substrs=[
@@ -104,3 +110,6 @@ class NSArraySyntheticTestCase(TestBase):
         self.assertTrue(
             self.frame().FindVariable("other_arr").MightHaveChildren(),
             "arr says it does not have children!")
+        self.assertFalse(
+            self.frame().FindVariable("empty_arr").MightHaveChildren(),
+            "arr says it does have children!")

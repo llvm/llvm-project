@@ -53,20 +53,18 @@ define amdgpu_ps float @ds_fmax_f32_ss(float addrspace(3)* inreg %ptr, float inr
 define amdgpu_ps float @ds_fmax_f32_ss_offset(float addrspace(3)* inreg %ptr, float inreg %val) {
 ; GFX8-LABEL: ds_fmax_f32_ss_offset:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_add_u32 s0, s2, 0x200
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v0, s3
+; GFX8-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX8-NEXT:    s_mov_b32 m0, -1
-; GFX8-NEXT:    ds_max_rtn_f32 v0, v0, v1
+; GFX8-NEXT:    ds_max_rtn_f32 v0, v1, v0 offset:512
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: ds_fmax_f32_ss_offset:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_add_u32 s0, s2, 0x200
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    ds_max_rtn_f32 v0, v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s3
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    ds_max_rtn_f32 v0, v1, v0 offset:512
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
   ; GFX8-MIR-LABEL: name: ds_fmax_f32_ss_offset
@@ -74,12 +72,10 @@ define amdgpu_ps float @ds_fmax_f32_ss_offset(float addrspace(3)* inreg %ptr, fl
   ; GFX8-MIR:   liveins: $sgpr2, $sgpr3
   ; GFX8-MIR:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX8-MIR:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
-  ; GFX8-MIR:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 512
-  ; GFX8-MIR:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
-  ; GFX8-MIR:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_U32_]]
-  ; GFX8-MIR:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; GFX8-MIR:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; GFX8-MIR:   $m0 = S_MOV_B32 -1
-  ; GFX8-MIR:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[COPY2]], [[COPY3]], 0, 0, implicit $m0, implicit $exec :: (load store 4 on %ir.gep, addrspace 3)
+  ; GFX8-MIR:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; GFX8-MIR:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[COPY3]], [[COPY2]], 512, 0, implicit $m0, implicit $exec :: (load store 4 on %ir.gep, addrspace 3)
   ; GFX8-MIR:   $vgpr0 = COPY [[DS_MAX_RTN_F32_]]
   ; GFX8-MIR:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX9-MIR-LABEL: name: ds_fmax_f32_ss_offset
@@ -87,11 +83,9 @@ define amdgpu_ps float @ds_fmax_f32_ss_offset(float addrspace(3)* inreg %ptr, fl
   ; GFX9-MIR:   liveins: $sgpr2, $sgpr3
   ; GFX9-MIR:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX9-MIR:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
-  ; GFX9-MIR:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 512
-  ; GFX9-MIR:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
-  ; GFX9-MIR:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_U32_]]
-  ; GFX9-MIR:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
-  ; GFX9-MIR:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[COPY2]], [[COPY3]], 0, 0, implicit $exec :: (load store 4 on %ir.gep, addrspace 3)
+  ; GFX9-MIR:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; GFX9-MIR:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; GFX9-MIR:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[COPY3]], [[COPY2]], 512, 0, implicit $exec :: (load store 4 on %ir.gep, addrspace 3)
   ; GFX9-MIR:   $vgpr0 = COPY [[DS_MAX_RTN_F32_gfx9_]]
   ; GFX9-MIR:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %gep = getelementptr float, float addrspace(3)* %ptr, i32 128
@@ -140,42 +134,36 @@ define amdgpu_ps void @ds_fmax_f32_ss_nortn(float addrspace(3)* inreg %ptr, floa
 define amdgpu_ps void @ds_fmax_f32_ss_offset_nortn(float addrspace(3)* inreg %ptr, float inreg %val) {
 ; GFX8-LABEL: ds_fmax_f32_ss_offset_nortn:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_add_u32 s0, s2, 0x200
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v0, s3
+; GFX8-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX8-NEXT:    s_mov_b32 m0, -1
-; GFX8-NEXT:    ds_max_rtn_f32 v0, v0, v1
+; GFX8-NEXT:    ds_max_rtn_f32 v0, v1, v0 offset:512
 ; GFX8-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: ds_fmax_f32_ss_offset_nortn:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_add_u32 s0, s2, 0x200
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    ds_max_rtn_f32 v0, v0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s3
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    ds_max_rtn_f32 v0, v1, v0 offset:512
 ; GFX9-NEXT:    s_endpgm
   ; GFX8-MIR-LABEL: name: ds_fmax_f32_ss_offset_nortn
   ; GFX8-MIR: bb.1 (%ir-block.0):
   ; GFX8-MIR:   liveins: $sgpr2, $sgpr3
   ; GFX8-MIR:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX8-MIR:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
-  ; GFX8-MIR:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 512
-  ; GFX8-MIR:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
-  ; GFX8-MIR:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_U32_]]
-  ; GFX8-MIR:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; GFX8-MIR:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; GFX8-MIR:   $m0 = S_MOV_B32 -1
-  ; GFX8-MIR:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[COPY2]], [[COPY3]], 0, 0, implicit $m0, implicit $exec :: (load store 4 on %ir.gep, addrspace 3)
+  ; GFX8-MIR:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; GFX8-MIR:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[COPY3]], [[COPY2]], 512, 0, implicit $m0, implicit $exec :: (load store 4 on %ir.gep, addrspace 3)
   ; GFX8-MIR:   S_ENDPGM 0
   ; GFX9-MIR-LABEL: name: ds_fmax_f32_ss_offset_nortn
   ; GFX9-MIR: bb.1 (%ir-block.0):
   ; GFX9-MIR:   liveins: $sgpr2, $sgpr3
   ; GFX9-MIR:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX9-MIR:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
-  ; GFX9-MIR:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 512
-  ; GFX9-MIR:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
-  ; GFX9-MIR:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_U32_]]
-  ; GFX9-MIR:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
-  ; GFX9-MIR:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[COPY2]], [[COPY3]], 0, 0, implicit $exec :: (load store 4 on %ir.gep, addrspace 3)
+  ; GFX9-MIR:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; GFX9-MIR:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; GFX9-MIR:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[COPY3]], [[COPY2]], 512, 0, implicit $exec :: (load store 4 on %ir.gep, addrspace 3)
   ; GFX9-MIR:   S_ENDPGM 0
   %gep = getelementptr float, float addrspace(3)* %ptr, i32 128
   %unused = call float @llvm.amdgcn.ds.fmax(float addrspace(3)* %gep, float %val, i32 0, i32 0, i1 false)

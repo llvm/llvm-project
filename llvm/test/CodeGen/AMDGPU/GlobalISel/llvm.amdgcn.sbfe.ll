@@ -674,8 +674,7 @@ define amdgpu_kernel void @bfe_sext_in_reg_i24(i32 addrspace(1)* %out, i32 addrs
 ; GFX6-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_bfe_i32 s0, s0, 0x180000
-; GFX6-NEXT:    s_lshl_b32 s0, s0, 8
-; GFX6-NEXT:    s_ashr_i32 s0, s0, 8
+; GFX6-NEXT:    s_bfe_i32 s0, s0, 0x180000
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX6-NEXT:    s_endpgm
@@ -830,8 +829,7 @@ define amdgpu_kernel void @sext_in_reg_i8_to_i32_bfe(i32 addrspace(1)* %out, i32
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_add_i32 s2, s2, s0
 ; GFX6-NEXT:    s_bfe_i32 s0, s2, 0x80000
-; GFX6-NEXT:    s_lshl_b32 s0, s0, 24
-; GFX6-NEXT:    s_ashr_i32 s0, s0, 24
+; GFX6-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX6-NEXT:    s_endpgm
@@ -854,8 +852,7 @@ define amdgpu_kernel void @sext_in_reg_i8_to_i32_bfe_wrong(i32 addrspace(1)* %ou
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_add_i32 s2, s2, s0
 ; GFX6-NEXT:    s_bfe_i32 s0, s2, 8
-; GFX6-NEXT:    s_lshl_b32 s0, s0, 24
-; GFX6-NEXT:    s_ashr_i32 s0, s0, 24
+; GFX6-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX6-NEXT:    s_endpgm
@@ -879,8 +876,7 @@ define amdgpu_kernel void @sextload_i8_to_i32_bfe(i32 addrspace(1)* %out, i8 add
 ; GFX6-NEXT:    buffer_load_sbyte v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    v_bfe_i32 v0, v0, 0, 8
-; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 24, v0
-; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 24, v0
+; GFX6-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX6-NEXT:    s_endpgm
   %load = load i8, i8 addrspace(1)* %ptr, align 1
@@ -904,8 +900,7 @@ define amdgpu_kernel void @sextload_i8_to_i32_bfe_0(i32 addrspace(1)* %out, i8 a
 ; GFX6-NEXT:    buffer_load_sbyte v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    v_bfe_i32 v0, v0, 8, 0
-; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 24, v0
-; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 24, v0
+; GFX6-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX6-NEXT:    s_endpgm
   %load = load i8, i8 addrspace(1)* %ptr, align 1
@@ -927,8 +922,7 @@ define amdgpu_kernel void @sext_in_reg_i1_bfe_offset_0(i32 addrspace(1)* %out, i
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_lshl_b32 s0, s0, 31
-; GFX6-NEXT:    s_ashr_i32 s0, s0, 31
+; GFX6-NEXT:    s_bfe_i32 s0, s0, 0x10000
 ; GFX6-NEXT:    s_bfe_i32 s0, s0, 0x10000
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -951,8 +945,7 @@ define amdgpu_kernel void @sext_in_reg_i1_bfe_offset_1(i32 addrspace(1)* %out, i
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_lshl_b32 s0, s0, 30
-; GFX6-NEXT:    s_ashr_i32 s0, s0, 30
+; GFX6-NEXT:    s_bfe_i32 s0, s0, 0x20000
 ; GFX6-NEXT:    s_bfe_i32 s0, s0, 0x10001
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -975,8 +968,7 @@ define amdgpu_kernel void @sext_in_reg_i2_bfe_offset_1(i32 addrspace(1)* %out, i
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_lshl_b32 s0, s0, 30
-; GFX6-NEXT:    s_ashr_i32 s0, s0, 30
+; GFX6-NEXT:    s_bfe_i32 s0, s0, 0x20000
 ; GFX6-NEXT:    s_bfe_i32 s0, s0, 0x20001
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0

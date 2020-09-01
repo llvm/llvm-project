@@ -102,8 +102,8 @@ define amdgpu_kernel void @v_clamp_negzero_maybe_snan_f32(float addrspace(1)* %o
 ; SI: buffer_store_dword [[MED]]
 ; SI: buffer_store_dword [[MAX]]
 
-; GFX89: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[MED]]
-; GFX89: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[MAX]]
+; GFX89: {{flat|global}}_store_dword v{{.+}}, [[MED]]
+; GFX89: {{flat|global}}_store_dword v{{.+}}, [[MAX]]
 define amdgpu_kernel void @v_clamp_multi_use_max_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid

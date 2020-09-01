@@ -121,6 +121,8 @@ private:
   DenseMap<const BasicBlock *, SmallVector<std::pair<unsigned, Marker>, 4>>
       BBMarkers;
 
+  bool HasUnknownLifetimeStartOrEnd = false;
+
   void dumpAllocas() const;
   void dumpBlockLiveness() const;
   void dumpLiveRanges() const;

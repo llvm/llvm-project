@@ -3051,4 +3051,85 @@ TEST_F(AArch64GISelMITest, MoreElementsFreeze) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+// Test fewer elements of G_INSERT_VECTOR_ELEMENT
+TEST_F(AArch64GISelMITest, FewerElementsInsertVectorElt) {
+  setUp();
+  if (!TM)
+    return;
+
+  DefineLegalizerInfo(A, {});
+
+  LLT P0{LLT::pointer(0, 64)};
+  LLT S64{LLT::scalar(64)};
+  LLT S16{LLT::scalar(16)};
+  LLT V2S16{LLT::vector(2, 16)};
+  LLT V3S16{LLT::vector(3, 16)};
+  LLT V8S16{LLT::vector(8, 16)};
+
+  auto Ptr0 = B.buildIntToPtr(P0, Copies[0]);
+  auto VectorV8 = B.buildLoad(V8S16, Ptr0, MachinePointerInfo(), Align(8));
+  auto Value = B.buildTrunc(S16, Copies[1]);
+
+  auto Seven = B.buildConstant(S64, 7);
+  auto InsertV8Constant7_0 =
+      B.buildInsertVectorElement(V8S16, VectorV8, Value, Seven);
+  auto InsertV8Constant7_1 =
+      B.buildInsertVectorElement(V8S16, VectorV8, Value, Seven);
+
+  B.buildStore(InsertV8Constant7_0, Ptr0, MachinePointerInfo(), Align(8),
+               MachineMemOperand::MOVolatile);
+  B.buildStore(InsertV8Constant7_1, Ptr0, MachinePointerInfo(), Align(8),
+               MachineMemOperand::MOVolatile);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  // Perform Legalization
+  B.setInsertPt(*EntryMBB, InsertV8Constant7_0->getIterator());
+
+  // This should index the high element of the 4th piece of an unmerge.
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.fewerElementsVector(*InsertV8Constant7_0, 0, V2S16));
+
+  // This case requires extracting an intermediate vector type into the target
+  // v4s16.
+  B.setInsertPt(*EntryMBB, InsertV8Constant7_1->getIterator());
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.fewerElementsVector(*InsertV8Constant7_1, 0, V3S16));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[PTR0:%[0-9]+]]:_(p0) = G_INTTOPTR [[COPY0]]
+  CHECK: [[VEC8:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[PTR0]]:_(p0) :: (load 16, align 8)
+  CHECK: [[INSERT_VAL:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]]
+
+
+  CHECK: [[UNMERGE0:%[0-9]+]]:_(<2 x s16>), [[UNMERGE1:%[0-9]+]]:_(<2 x s16>), [[UNMERGE2:%[0-9]+]]:_(<2 x s16>), [[UNMERGE3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[VEC8]]
+  CHECK: [[ONE:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  CHECK: [[SUB_INSERT_7:%[0-9]+]]:_(<2 x s16>) = G_INSERT_VECTOR_ELT [[UNMERGE3]]:_, [[INSERT_VAL]]:_(s16), [[ONE]]
+  CHECK: [[INSERT_V8_7_0:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[UNMERGE0]]:_(<2 x s16>), [[UNMERGE1]]:_(<2 x s16>), [[UNMERGE2]]:_(<2 x s16>), [[SUB_INSERT_7]]:_(<2 x s16>)
+
+
+  CHECK: [[UNMERGE1_0:%[0-9]+]]:_(s16), [[UNMERGE1_1:%[0-9]+]]:_(s16), [[UNMERGE1_2:%[0-9]+]]:_(s16), [[UNMERGE1_3:%[0-9]+]]:_(s16), [[UNMERGE1_4:%[0-9]+]]:_(s16), [[UNMERGE1_5:%[0-9]+]]:_(s16), [[UNMERGE1_6:%[0-9]+]]:_(s16), [[UNMERGE1_7:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[VEC8]]:_(<8 x s16>)
+  CHECK: [[IMPDEF_S16:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  CHECK: [[BUILD0:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UNMERGE1_0]]:_(s16), [[UNMERGE1_1]]:_(s16), [[UNMERGE1_2]]:_(s16)
+  CHECK: [[BUILD1:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UNMERGE1_3]]:_(s16), [[UNMERGE1_4]]:_(s16), [[UNMERGE1_5]]:_(s16)
+  CHECK: [[BUILD2:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UNMERGE1_6]]:_(s16), [[UNMERGE1_7]]:_(s16), [[IMPDEF_S16]]:_(s16)
+  CHECK: [[IMPDEF_V3S16:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
+  CHECK: [[ONE_1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  CHECK: [[SUB_INSERT_7_V3S16:%[0-9]+]]:_(<3 x s16>) = G_INSERT_VECTOR_ELT [[BUILD2]]:_, [[INSERT_VAL]]:_(s16), [[ONE_1]]
+  CHECK: [[WIDE_CONCAT:%[0-9]+]]:_(<24 x s16>) = G_CONCAT_VECTORS [[BUILD0]]:_(<3 x s16>), [[BUILD1]]:_(<3 x s16>), [[SUB_INSERT_7_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>)
+  CHECK: [[INSERT_V8_7_1:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[WIDE_CONCAT]]:_(<24 x s16>), 0
+
+  CHECK: G_STORE [[INSERT_V8_7_0]]
+  CHECK: G_STORE [[INSERT_V8_7_1]]
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 } // namespace

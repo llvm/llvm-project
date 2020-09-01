@@ -514,7 +514,8 @@ enum NodeType {
   /// IDX is first scaled by the runtime scaling factor of T. Elements IDX
   /// through (IDX + num_elements(T) - 1) must be valid VECTOR indices. If this
   /// condition cannot be determined statically but is false at runtime, then
-  /// the result vector is undefined.
+  /// the result vector is undefined. The IDX parameter must be a vector index
+  /// constant type, which for most targets will be an integer pointer type.
   ///
   /// This operation supports extracting a fixed-width vector from a scalable
   /// vector, but not the other way around.

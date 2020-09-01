@@ -781,7 +781,7 @@ unsigned LLVMGetPointerAddressSpace(LLVMTypeRef PointerTy) {
 }
 
 unsigned LLVMGetVectorSize(LLVMTypeRef VectorTy) {
-  return unwrap<VectorType>(VectorTy)->getNumElements();
+  return unwrap<VectorType>(VectorTy)->getElementCount().getKnownMinValue();
 }
 
 /*--.. Operations on other types ...........................................--*/

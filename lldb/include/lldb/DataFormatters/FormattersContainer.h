@@ -74,7 +74,7 @@ public:
       : m_type_name(type_name), m_is_regex(false) {}
   /// Creates a matcher that accepts any type matching the given regex.
   TypeMatcher(RegularExpression regex)
-      : m_type_name_regex(regex), m_is_regex(true) {}
+      : m_type_name_regex(std::move(regex)), m_is_regex(true) {}
 
   /// True iff this matches the given type name.
   bool Matches(ConstString type_name) const {
@@ -200,6 +200,13 @@ public:
   uint32_t GetCount() {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
     return m_map.size();
+  }
+
+  void AutoComplete(CompletionRequest &request) {
+    ForEach([&request](const TypeMatcher &matcher, const ValueSP &value) {
+      request.TryCompleteCurrentArg(matcher.GetMatchString().GetStringRef());
+      return true;
+    });
   }
 
 protected:

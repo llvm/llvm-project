@@ -56,7 +56,7 @@ add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" Li
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
 add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
 add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig LUAANDSWIG_FOUND)
-add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonInterpAndLibs PYTHONINTERPANDLIBS_FOUND)
+add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonAndSwig PYTHONANDSWIG_FOUND)
 add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION 2.8)
 
 option(LLDB_USE_SYSTEM_SIX "Use six.py shipped with system and do not install a copy of it" OFF)
@@ -143,9 +143,9 @@ if (LLDB_ENABLE_PYTHON)
     "Embed PYTHONHOME in the binary. If set to OFF, PYTHONHOME environment variable will be used to to locate Python."
     ${default_embed_python_home})
 
-  include_directories(${PYTHON_INCLUDE_DIRS})
+  include_directories(${Python3_INCLUDE_DIRS})
   if (LLDB_EMBED_PYTHON_HOME)
-    get_filename_component(PYTHON_HOME "${PYTHON_EXECUTABLE}" DIRECTORY)
+    get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
     set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
   endif()
@@ -159,36 +159,21 @@ endif ()
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/../clang/include")
 
 # Disable GCC warnings
-check_cxx_compiler_flag("-Wno-deprecated-declarations"
-                        CXX_SUPPORTS_NO_DEPRECATED_DECLARATIONS)
-if (CXX_SUPPORTS_NO_DEPRECATED_DECLARATIONS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
-endif ()
+check_cxx_compiler_flag("-Wno-deprecated-declarations" CXX_SUPPORTS_NO_DEPRECATED_DECLARATIONS)
+append_if(CXX_SUPPORTS_NO_DEPRECATED_DECLARATIONS "-Wno-deprecated-declarations" CMAKE_CXX_FLAGS)
 
-check_cxx_compiler_flag("-Wno-unknown-pragmas"
-                        CXX_SUPPORTS_NO_UNKNOWN_PRAGMAS)
-if (CXX_SUPPORTS_NO_UNKNOWN_PRAGMAS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
-endif ()
+check_cxx_compiler_flag("-Wno-unknown-pragmas" CXX_SUPPORTS_NO_UNKNOWN_PRAGMAS)
+append_if(CXX_SUPPORTS_NO_UNKNOWN_PRAGMAS "-Wno-unknown-pragmas" CMAKE_CXX_FLAGS)
 
-check_cxx_compiler_flag("-Wno-strict-aliasing"
-                        CXX_SUPPORTS_NO_STRICT_ALIASING)
-if (CXX_SUPPORTS_NO_STRICT_ALIASING)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-strict-aliasing")
-endif ()
+check_cxx_compiler_flag("-Wno-strict-aliasing" CXX_SUPPORTS_NO_STRICT_ALIASING)
+append_if(CXX_SUPPORTS_NO_STRICT_ALIASING "-Wno-strict-aliasing" CMAKE_CXX_FLAGS)
 
 # Disable Clang warnings
-check_cxx_compiler_flag("-Wno-deprecated-register"
-                        CXX_SUPPORTS_NO_DEPRECATED_REGISTER)
-if (CXX_SUPPORTS_NO_DEPRECATED_REGISTER)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-register")
-endif ()
+check_cxx_compiler_flag("-Wno-deprecated-register" CXX_SUPPORTS_NO_DEPRECATED_REGISTER)
+append_if(CXX_SUPPORTS_NO_DEPRECATED_REGISTER "-Wno-deprecated-register" CMAKE_CXX_FLAGS)
 
-check_cxx_compiler_flag("-Wno-vla-extension"
-                        CXX_SUPPORTS_NO_VLA_EXTENSION)
-if (CXX_SUPPORTS_NO_VLA_EXTENSION)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-vla-extension")
-endif ()
+check_cxx_compiler_flag("-Wno-vla-extension" CXX_SUPPORTS_NO_VLA_EXTENSION)
+append_if(CXX_SUPPORTS_NO_VLA_EXTENSION "-Wno-vla-extension" CMAKE_CXX_FLAGS)
 
 # Disable MSVC warnings
 if( MSVC )
@@ -267,7 +252,7 @@ endif()
 
 # Find Apple-specific libraries or frameworks that may be needed.
 if (APPLE)
-  if(NOT IOS)
+  if(NOT APPLE_EMBEDDED)
     find_library(CARBON_LIBRARY Carbon)
     find_library(CORE_SERVICES_LIBRARY CoreServices)
   endif()
@@ -307,5 +292,4 @@ if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
   add_definitions(-DANDROID_USE_ACCEPT_WORKAROUND)
 endif()
 
-find_package(Backtrace)
 include(LLDBGenerateConfig)

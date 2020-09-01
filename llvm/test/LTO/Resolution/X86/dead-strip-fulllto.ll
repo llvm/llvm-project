@@ -1,7 +1,8 @@
 ; RUN: opt -module-summary -o %t %s
 ; RUN: opt -module-summary -o %t2 %S/Inputs/dead-strip-fulllto.ll
 
-; RUN: llvm-lto2 run --pass-remarks-output=%t4.yaml --pass-remarks-filter=. \
+; Adding '--pass-remarks-with-hotness' should not cause crash.
+; RUN: llvm-lto2 run --pass-remarks-output=%t4.yaml --pass-remarks-filter=. --pass-remarks-with-hotness \
 ; RUN:               %t -r %t,main,px -r %t,live1, -r %t,live2,p -r %t,dead2,p \
 ; RUN:               %t2 -r %t2,live1,p -r %t2,live2, -r %t2,dead1,p -r %t2,dead2, -r %t2,odr, \
 ; RUN:               -save-temps -o %t3

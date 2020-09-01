@@ -1,6 +1,17 @@
 ; RUN: llc < %s -mtriple=ve-unknown-unknown | FileCheck %s
 
 ; Function Attrs: norecurse nounwind readonly
+define void @storef128(fp128* nocapture %0, fp128 %1) {
+; CHECK-LABEL: storef128:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    st %s2, 8(, %s0)
+; CHECK-NEXT:    st %s3, (, %s0)
+; CHECK-NEXT:    or %s11, 0, %s9
+  store fp128 %1, fp128* %0, align 16
+  ret void
+}
+
+; Function Attrs: norecurse nounwind readonly
 define void @storef64(double* nocapture %0, double %1) {
 ; CHECK-LABEL: storef64:
 ; CHECK:       .LBB{{[0-9]+}}_2:
@@ -17,6 +28,17 @@ define void @storef32(float* nocapture %0, float %1) {
 ; CHECK-NEXT:    stu %s1, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
   store float %1, float* %0, align 16
+  ret void
+}
+
+; Function Attrs: norecurse nounwind readonly
+define void @storei128(i128* nocapture %0, i128 %1) {
+; CHECK-LABEL: storei128:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    st %s2, 8(, %s0)
+; CHECK-NEXT:    st %s1, (, %s0)
+; CHECK-NEXT:    or %s11, 0, %s9
+  store i128 %1, i128* %0, align 16
   ret void
 }
 
@@ -94,6 +116,18 @@ define void @storei8tr(i8* nocapture %0, i64 %1) {
 }
 
 ; Function Attrs: norecurse nounwind readonly
+define void @storef128stk(fp128 %0) {
+; CHECK-LABEL: storef128stk:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    st %s1, 176(, %s11)
+; CHECK-NEXT:    st %s0, 184(, %s11)
+; CHECK-NEXT:    or %s11, 0, %s9
+  %addr = alloca fp128, align 16
+  store fp128 %0, fp128* %addr, align 16
+  ret void
+}
+
+; Function Attrs: norecurse nounwind readonly
 define void @storef64stk(double %0) {
 ; CHECK-LABEL: storef64stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
@@ -112,6 +146,18 @@ define void @storef32stk(float %0) {
 ; CHECK-NEXT:    or %s11, 0, %s9
   %addr = alloca float, align 16
   store float %0, float* %addr, align 16
+  ret void
+}
+
+; Function Attrs: norecurse nounwind readonly
+define void @storei128stk(i128 %0) {
+; CHECK-LABEL: storei128stk:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    st %s1, 184(, %s11)
+; CHECK-NEXT:    st %s0, 176(, %s11)
+; CHECK-NEXT:    or %s11, 0, %s9
+  %addr = alloca i128, align 16
+  store i128 %0, i128* %addr, align 16
   ret void
 }
 

@@ -1,6 +1,9 @@
 # Main API.
 add_mlir_library(MLIRCAPIIR
+  AffineMap.cpp
   IR.cpp
+  StandardAttributes.cpp
+  StandardTypes.cpp
 
   EXCLUDE_FROM_LIBMLIR
 

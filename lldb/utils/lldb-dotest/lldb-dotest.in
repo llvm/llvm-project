@@ -1,4 +1,4 @@
-#!@PYTHON_EXECUTABLE@
+#!@Python3_EXECUTABLE@
 import subprocess
 import sys
 
@@ -12,6 +12,7 @@ dsymutil = '@LLDB_TEST_DSYMUTIL_CONFIGURED@'
 filecheck = '@LLDB_TEST_FILECHECK_CONFIGURED@'
 yaml2obj = '@LLDB_TEST_YAML2OBJ_CONFIGURED@'
 lldb_libs_dir = "@LLDB_LIBS_DIR_CONFIGURED@"
+lldb_framework_dir = "@LLDB_FRAMEWORK_DIR@"
 lldb_build_intel_pt = "@LLDB_BUILD_INTEL_PT@"
 
 if __name__ == '__main__':
@@ -28,6 +29,7 @@ if __name__ == '__main__':
     cmd.extend(['--yaml2obj', yaml2obj])
     cmd.extend(['--filecheck', filecheck])
     cmd.extend(['--lldb-libs-dir', lldb_libs_dir])
+    cmd.extend(['--framework', lldb_framework_dir])
     if lldb_build_intel_pt == "1":
         cmd.extend(['--enable-plugin', 'intel-pt'])
     cmd.extend(wrapper_args)

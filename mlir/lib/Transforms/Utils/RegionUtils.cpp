@@ -497,6 +497,9 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
       Value rhsOperand = rhsOperands[operand];
       if (lhsOperand == rhsOperand)
         continue;
+      // Check that the types of the operands match.
+      if (lhsOperand.getType() != rhsOperand.getType())
+        return failure();
 
       // Check that these uses are both external, or both internal.
       bool lhsIsInBlock = lhsOperand.getParentBlock() == leaderBlock;

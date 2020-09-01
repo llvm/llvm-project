@@ -413,9 +413,7 @@ void Patch843419Section::writeTo(uint8_t *buf) {
   write32le(buf, read32le(patchee->data().begin() + patcheeOffset));
 
   // Apply any relocation transferred from the original patchee section.
-  // For a SyntheticSection Buf already has outSecOff added, but relocateAlloc
-  // also adds outSecOff so we need to subtract to avoid double counting.
-  this->relocateAlloc(buf - outSecOff, buf - outSecOff + getSize());
+  relocateAlloc(buf, buf + getSize());
 
   // Return address is the next instruction after the one we have just copied.
   uint64_t s = getLDSTAddr() + 4;

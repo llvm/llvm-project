@@ -26,11 +26,11 @@ func @main() {
   %c6 = constant 6 : index
 
   %cast_data = memref_cast %data : memref<2x6xf32> to memref<*xf32>
-  call @mgpuMemHostRegisterFloat(%cast_data) : (memref<*xf32>) -> ()
+  gpu.host_register %cast_data : memref<*xf32>
   %cast_sum = memref_cast %sum : memref<2xf32> to memref<*xf32>
-  call @mgpuMemHostRegisterFloat(%cast_sum) : (memref<*xf32>) -> ()
+  gpu.host_register %cast_sum : memref<*xf32>
   %cast_mul = memref_cast %mul : memref<2xf32> to memref<*xf32>
-  call @mgpuMemHostRegisterFloat(%cast_mul) : (memref<*xf32>) -> ()
+  gpu.host_register %cast_mul : memref<*xf32>
 
   store %cst0, %data[%c0, %c0] : memref<2x6xf32>
   store %cst1, %data[%c0, %c1] : memref<2x6xf32>
@@ -66,5 +66,4 @@ func @main() {
   return
 }
 
-func @mgpuMemHostRegisterFloat(%ptr : memref<*xf32>)
 func @print_memref_f32(memref<*xf32>)

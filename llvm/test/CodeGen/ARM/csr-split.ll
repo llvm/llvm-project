@@ -15,12 +15,13 @@ define dso_local signext i32 @test1(i32* %b) local_unnamed_addr  {
 ; CHECK-NEXT:    cmp r0, r4
 ; CHECK-NEXT:    popne {r4, lr}
 ; CHECK-NEXT:    movne pc, lr
+; CHECK-NEXT:  .LBB0_1: @ %if.then
 ; CHECK-NEXT:    bl callVoid
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    pop {r4, lr}
 ; CHECK-NEXT:    b callNonVoid
 ; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:  .LCPI0_0:
 ; CHECK-NEXT:    .long a
 entry:

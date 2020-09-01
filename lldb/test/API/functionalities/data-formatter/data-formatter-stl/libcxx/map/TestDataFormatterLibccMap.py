@@ -19,6 +19,11 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         ns = 'ndk' if lldbplatformutil.target_is_android() else ''
         self.namespace = 'std'
 
+    def check_pair(self, first_value, second_value):
+        pair_children = [ValueCheck(name="first", value=first_value),
+                         ValueCheck(name="second", value=second_value)]
+        return ValueCheck(children=pair_children)
+
     @add_test_categories(["libc++"])
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
@@ -51,10 +56,8 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         self.addTearDownHook(cleanup)
 
         ns = self.namespace
-        self.expect('p ii',
-                    substrs=['%s::map' % ns,
-                             'size=0',
-                             '{}'])
+        self.expect_expr("ii", result_summary="size=0", result_children=[])
+
         self.expect('frame var ii',
                     substrs=['%s::map' % ns,
                              'size=0',
@@ -62,14 +65,10 @@ class LibcxxMapDataFormatterTestCase(TestBase):
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.expect('p ii',
-                    substrs=['%s::map' % ns, 'size=2',
-                             '[0] = ',
-                             'first = 0',
-                             'second = 0',
-                             '[1] = ',
-                             'first = 1',
-                             'second = 1'])
+        self.expect_expr("ii", result_summary="size=2", result_children=[
+            self.check_pair("0", "0"),
+            self.check_pair("1", "1")
+        ])
 
         self.expect('frame variable ii',
                     substrs=['%s::map' % ns, 'size=2',

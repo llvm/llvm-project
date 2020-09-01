@@ -853,6 +853,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_SUBRANGE:
       case bitc::METADATA_ENUMERATOR:
       case bitc::METADATA_BASIC_TYPE:
+      case bitc::METADATA_STRING_TYPE:
       case bitc::METADATA_DERIVED_TYPE:
       case bitc::METADATA_COMPOSITE_TYPE:
       case bitc::METADATA_SUBROUTINE_TYPE:
@@ -1321,6 +1322,20 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         GET_OR_DISTINCT(DIBasicType,
                         (Context, Record[1], getMDString(Record[2]), Record[3],
                          Record[4], Record[5], Flags)),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_STRING_TYPE: {
+    if (Record.size() != 8)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DIStringType,
+                        (Context, Record[1], getMDString(Record[2]),
+                         getMDOrNull(Record[3]), getMDOrNull(Record[4]),
+                         Record[5], Record[6], Record[7])),
         NextMetadataNo);
     NextMetadataNo++;
     break;

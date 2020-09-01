@@ -136,15 +136,9 @@ int main (int argc, const char **argv)
             while (1)
                 sleep (10);
       });
-    dispatch_async (dispatch_get_global_queue(QOS_CLASS_UNSPECIFIED, 0), ^{
-            pthread_setname_np ("unspecified QoS");
-            atomic_fetch_add(&thread_count, 1);
-            while (1)
-                sleep (10);
-      });
 
     // Unfortunately there is no pthread_barrier on darwin.
-    while ((atomic_load(&thread_count) < 13) || (finished_enqueueing_work == 0))
+    while ((atomic_load(&thread_count) < 12) || (finished_enqueueing_work == 0))
         sleep (1);
 
     stopper ();

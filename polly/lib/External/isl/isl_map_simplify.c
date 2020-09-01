@@ -28,14 +28,14 @@
 #include <set_to_map.c>
 #include <set_from_map.c>
 
-static void swap_equality(struct isl_basic_map *bmap, int a, int b)
+static void swap_equality(__isl_keep isl_basic_map *bmap, int a, int b)
 {
 	isl_int *t = bmap->eq[a];
 	bmap->eq[a] = bmap->eq[b];
 	bmap->eq[b] = t;
 }
 
-static void swap_inequality(struct isl_basic_map *bmap, int a, int b)
+static void swap_inequality(__isl_keep isl_basic_map *bmap, int a, int b)
 {
 	if (a != b) {
 		isl_int *t = bmap->ineq[a];
@@ -581,7 +581,7 @@ static __isl_give isl_basic_map *set_div_from_eq(__isl_take isl_basic_map *bmap,
  * from all constraints.
  *
  * If "progress" is not NULL, then it gets set if the elimination
- * result in any changes.
+ * results in any changes.
  * The elimination process may result in some equality constraints
  * getting interchanged or removed.
  * If "swap" or "drop" are not NULL, then they get called when
@@ -894,7 +894,7 @@ out:
 	return bmap;
 }
 
-static int n_pure_div_eq(struct isl_basic_map *bmap)
+static int n_pure_div_eq(__isl_keep isl_basic_map *bmap)
 {
 	int i, j;
 	isl_size v_div;
@@ -1322,8 +1322,11 @@ __isl_give isl_basic_map *isl_basic_map_detect_inequality_pairs(
 	return bmap;
 }
 
-/* Eliminate knowns divs from constraints where they appear with
- * a (positive or negative) unit coefficient.
+/* Given a known integer division "div" that is not integral
+ * (with denominator 1), eliminate it from the constraints in "bmap"
+ * where it appears with a (positive or negative) unit coefficient.
+ * If "progress" is not NULL, then it gets set if the elimination
+ * results in any changes.
  *
  * That is, replace
  *
@@ -1353,6 +1356,62 @@ __isl_give isl_basic_map *isl_basic_map_detect_inequality_pairs(
  * being modified by this function.  The modified constraint may
  * no longer imply this div constraint, so we add it back to make
  * sure we do not lose any information.
+ */
+static __isl_give isl_basic_map *eliminate_unit_div(
+	__isl_take isl_basic_map *bmap, int div, int *progress)
+{
+	int j;
+	isl_size v_div, dim;
+	isl_ctx *ctx;
+
+	v_div = isl_basic_map_var_offset(bmap, isl_dim_div);
+	dim = isl_basic_map_dim(bmap, isl_dim_all);
+	if (v_div < 0 || dim < 0)
+		return isl_basic_map_free(bmap);
+
+	ctx = isl_basic_map_get_ctx(bmap);
+
+	for (j = 0; j < bmap->n_ineq; ++j) {
+		int s;
+
+		if (!isl_int_is_one(bmap->ineq[j][1 + v_div + div]) &&
+		    !isl_int_is_negone(bmap->ineq[j][1 + v_div + div]))
+			continue;
+
+		if (progress)
+			*progress = 1;
+
+		s = isl_int_sgn(bmap->ineq[j][1 + v_div + div]);
+		isl_int_set_si(bmap->ineq[j][1 + v_div + div], 0);
+		if (s < 0)
+			isl_seq_combine(bmap->ineq[j],
+				ctx->negone, bmap->div[div] + 1,
+				bmap->div[div][0], bmap->ineq[j], 1 + dim);
+		else
+			isl_seq_combine(bmap->ineq[j],
+				ctx->one, bmap->div[div] + 1,
+				bmap->div[div][0], bmap->ineq[j], 1 + dim);
+		if (s < 0) {
+			isl_int_add(bmap->ineq[j][0],
+				bmap->ineq[j][0], bmap->div[div][0]);
+			isl_int_sub_ui(bmap->ineq[j][0],
+				bmap->ineq[j][0], 1);
+		}
+
+		bmap = isl_basic_map_extend_constraints(bmap, 0, 1);
+		bmap = isl_basic_map_add_div_constraint(bmap, div, s);
+		if (!bmap)
+			return NULL;
+	}
+
+	return bmap;
+}
+
+/* Eliminate selected known divs from constraints where they appear with
+ * a (positive or negative) unit coefficient.
+ * In particular, only handle those for which "select" returns isl_bool_true.
+ * If "progress" is not NULL, then it gets set if the elimination
+ * results in any changes.
  *
  * We skip integral divs, i.e., those with denominator 1, as we would
  * risk eliminating the div from the div constraints.  We do not need
@@ -1360,60 +1419,98 @@ __isl_give isl_basic_map *isl_basic_map_detect_inequality_pairs(
  * out to form an equality and this equality can then be used to eliminate
  * the div from all constraints.
  */
-static __isl_give isl_basic_map *eliminate_unit_divs(
-	__isl_take isl_basic_map *bmap, int *progress)
+static __isl_give isl_basic_map *eliminate_selected_unit_divs(
+	__isl_take isl_basic_map *bmap,
+	isl_bool (*select)(__isl_keep isl_basic_map *bmap, int div),
+	int *progress)
 {
-	int i, j;
-	isl_ctx *ctx;
-	unsigned total;
+	int i;
 
 	if (!bmap)
 		return NULL;
 
-	ctx = isl_basic_map_get_ctx(bmap);
-	total = isl_basic_map_offset(bmap, isl_dim_div);
-
 	for (i = 0; i < bmap->n_div; ++i) {
+		isl_bool selected;
+
 		if (isl_int_is_zero(bmap->div[i][0]))
 			continue;
 		if (isl_int_is_one(bmap->div[i][0]))
 			continue;
-		for (j = 0; j < bmap->n_ineq; ++j) {
-			int s;
-
-			if (!isl_int_is_one(bmap->ineq[j][total + i]) &&
-			    !isl_int_is_negone(bmap->ineq[j][total + i]))
-				continue;
-
-			*progress = 1;
-
-			s = isl_int_sgn(bmap->ineq[j][total + i]);
-			isl_int_set_si(bmap->ineq[j][total + i], 0);
-			if (s < 0)
-				isl_seq_combine(bmap->ineq[j],
-					ctx->negone, bmap->div[i] + 1,
-					bmap->div[i][0], bmap->ineq[j],
-					total + bmap->n_div);
-			else
-				isl_seq_combine(bmap->ineq[j],
-					ctx->one, bmap->div[i] + 1,
-					bmap->div[i][0], bmap->ineq[j],
-					total + bmap->n_div);
-			if (s < 0) {
-				isl_int_add(bmap->ineq[j][0],
-					bmap->ineq[j][0], bmap->div[i][0]);
-				isl_int_sub_ui(bmap->ineq[j][0],
-					bmap->ineq[j][0], 1);
-			}
-
-			bmap = isl_basic_map_extend_constraints(bmap, 0, 1);
-			bmap = isl_basic_map_add_div_constraint(bmap, i, s);
-			if (!bmap)
-				return NULL;
-		}
+		selected = select(bmap, i);
+		if (selected < 0)
+			return isl_basic_map_free(bmap);
+		if (!selected)
+			continue;
+		bmap = eliminate_unit_div(bmap, i, progress);
+		if (!bmap)
+			return NULL;
 	}
 
 	return bmap;
+}
+
+/* eliminate_selected_unit_divs callback that selects every
+ * integer division.
+ */
+static isl_bool is_any_div(__isl_keep isl_basic_map *bmap, int div)
+{
+	return isl_bool_true;
+}
+
+/* Eliminate known divs from constraints where they appear with
+ * a (positive or negative) unit coefficient.
+ * If "progress" is not NULL, then it gets set if the elimination
+ * results in any changes.
+ */
+static __isl_give isl_basic_map *eliminate_unit_divs(
+	__isl_take isl_basic_map *bmap, int *progress)
+{
+	return eliminate_selected_unit_divs(bmap, &is_any_div, progress);
+}
+
+/* eliminate_selected_unit_divs callback that selects
+ * integer divisions that only appear with
+ * a (positive or negative) unit coefficient
+ * (outside their div constraints).
+ */
+static isl_bool is_pure_unit_div(__isl_keep isl_basic_map *bmap, int div)
+{
+	int i;
+	isl_size v_div, n_ineq;
+
+	v_div = isl_basic_map_var_offset(bmap, isl_dim_div);
+	n_ineq = isl_basic_map_n_inequality(bmap);
+	if (v_div < 0 || n_ineq < 0)
+		return isl_bool_error;
+
+	for (i = 0; i < n_ineq; ++i) {
+		isl_bool skip;
+
+		if (isl_int_is_zero(bmap->ineq[i][1 + v_div + div]))
+			continue;
+		skip = isl_basic_map_is_div_constraint(bmap,
+							bmap->ineq[i], div);
+		if (skip < 0)
+			return isl_bool_error;
+		if (skip)
+			continue;
+		if (!isl_int_is_one(bmap->ineq[i][1 + v_div + div]) &&
+		    !isl_int_is_negone(bmap->ineq[i][1 + v_div + div]))
+			return isl_bool_false;
+	}
+
+	return isl_bool_true;
+}
+
+/* Eliminate known divs from constraints where they appear with
+ * a (positive or negative) unit coefficient,
+ * but only if they do not appear in any other constraints
+ * (other than the div constraints).
+ */
+__isl_give isl_basic_map *isl_basic_map_eliminate_pure_unit_divs(
+	__isl_take isl_basic_map *bmap)
+{
+	return eliminate_selected_unit_divs(bmap, &is_pure_unit_div, NULL);
 }
 
 __isl_give isl_basic_map *isl_basic_map_simplify(__isl_take isl_basic_map *bmap)
@@ -1448,7 +1545,8 @@ __isl_give isl_basic_map *isl_basic_map_simplify(__isl_take isl_basic_map *bmap)
 	return bmap;
 }
 
-struct isl_basic_set *isl_basic_set_simplify(struct isl_basic_set *bset)
+__isl_give isl_basic_set *isl_basic_set_simplify(
+	__isl_take isl_basic_set *bset)
 {
 	return bset_from_bmap(isl_basic_map_simplify(bset_to_bmap(bset)));
 }
@@ -1489,13 +1587,6 @@ isl_bool isl_basic_map_is_div_constraint(__isl_keep isl_basic_map *bmap,
 
 	return isl_bool_true;
 }
-
-isl_bool isl_basic_set_is_div_constraint(__isl_keep isl_basic_set *bset,
-	isl_int *constraint, unsigned div)
-{
-	return isl_basic_map_is_div_constraint(bset, constraint, div);
-}
-
 
 /* If the only constraints a div d=floor(f/m)
  * appears in are its two defining constraints
@@ -1591,7 +1682,8 @@ __isl_give isl_basic_map *isl_basic_map_finalize(__isl_take isl_basic_map *bmap)
 	return bmap;
 }
 
-struct isl_basic_set *isl_basic_set_finalize(struct isl_basic_set *bset)
+__isl_give isl_basic_set *isl_basic_set_finalize(
+	__isl_take isl_basic_set *bset)
 {
 	return bset_from_bmap(isl_basic_map_finalize(bset_to_bmap(bset)));
 }
@@ -1718,8 +1810,8 @@ error:
 	return NULL;
 }
 
-struct isl_basic_set *isl_basic_set_eliminate_vars(
-	struct isl_basic_set *bset, unsigned pos, unsigned n)
+__isl_give isl_basic_set *isl_basic_set_eliminate_vars(
+	__isl_take isl_basic_set *bset, unsigned pos, unsigned n)
 {
 	return bset_from_bmap(isl_basic_map_eliminate_vars(bset_to_bmap(bset),
 								pos, n));
@@ -1775,7 +1867,7 @@ __isl_give isl_basic_set *isl_basic_set_eliminate(
  * Therefore, start over after calling
  * isl_basic_map_drop_constraints_involving_dims.
  */
-__isl_give isl_basic_map *isl_basic_map_drop_constraint_involving_unknown_divs(
+__isl_give isl_basic_map *isl_basic_map_drop_constraints_involving_unknown_divs(
 	__isl_take isl_basic_map *bmap)
 {
 	isl_bool known;
@@ -1811,13 +1903,26 @@ __isl_give isl_basic_map *isl_basic_map_drop_constraint_involving_unknown_divs(
 	return bmap;
 }
 
+/* Remove all constraints from "bset" that reference any unknown local
+ * variables (directly or indirectly).
+ */
+__isl_give isl_basic_set *isl_basic_set_drop_constraints_involving_unknown_divs(
+	__isl_take isl_basic_set *bset)
+{
+	isl_basic_map *bmap;
+
+	bmap = bset_to_bmap(bset);
+	bmap = isl_basic_map_drop_constraints_involving_unknown_divs(bmap);
+	return bset_from_bmap(bmap);
+}
+
 /* Remove all constraints from "map" that reference any unknown local
  * variables (directly or indirectly).
  *
  * Since constraints may get dropped from the basic maps,
  * they may no longer be disjoint from each other.
  */
-__isl_give isl_map *isl_map_drop_constraint_involving_unknown_divs(
+__isl_give isl_map *isl_map_drop_constraints_involving_unknown_divs(
 	__isl_take isl_map *map)
 {
 	int i;
@@ -1835,7 +1940,7 @@ __isl_give isl_map *isl_map_drop_constraint_involving_unknown_divs(
 
 	for (i = 0; i < map->n; ++i) {
 		map->p[i] =
-		    isl_basic_map_drop_constraint_involving_unknown_divs(
+		    isl_basic_map_drop_constraints_involving_unknown_divs(
 								    map->p[i]);
 		if (!map->p[i])
 			return isl_map_free(map);
@@ -1850,16 +1955,15 @@ __isl_give isl_map *isl_map_drop_constraint_involving_unknown_divs(
 /* Don't assume equalities are in order, because align_divs
  * may have changed the order of the divs.
  */
-static void compute_elimination_index(__isl_keep isl_basic_map *bmap, int *elim)
+static void compute_elimination_index(__isl_keep isl_basic_map *bmap, int *elim,
+	unsigned len)
 {
 	int d, i;
-	unsigned total;
 
-	total = isl_space_dim(bmap->dim, isl_dim_all);
-	for (d = 0; d < total; ++d)
+	for (d = 0; d < len; ++d)
 		elim[d] = -1;
 	for (i = 0; i < bmap->n_eq; ++i) {
-		for (d = total - 1; d >= 0; --d) {
+		for (d = len - 1; d >= 0; --d) {
 			if (isl_int_is_zero(bmap->eq[i][1+d]))
 				continue;
 			elim[d] = i;
@@ -1869,19 +1973,17 @@ static void compute_elimination_index(__isl_keep isl_basic_map *bmap, int *elim)
 }
 
 static void set_compute_elimination_index(__isl_keep isl_basic_set *bset,
-	int *elim)
+	int *elim, unsigned len)
 {
-	compute_elimination_index(bset_to_bmap(bset), elim);
+	compute_elimination_index(bset_to_bmap(bset), elim, len);
 }
 
 static int reduced_using_equalities(isl_int *dst, isl_int *src,
-	__isl_keep isl_basic_map *bmap, int *elim)
+	__isl_keep isl_basic_map *bmap, int *elim, unsigned total)
 {
 	int d;
 	int copied = 0;
-	unsigned total;
 
-	total = isl_space_dim(bmap->dim, isl_dim_all);
 	for (d = total - 1; d >= 0; --d) {
 		if (isl_int_is_zero(src[1+d]))
 			continue;
@@ -1897,10 +1999,10 @@ static int reduced_using_equalities(isl_int *dst, isl_int *src,
 }
 
 static int set_reduced_using_equalities(isl_int *dst, isl_int *src,
-	__isl_keep isl_basic_set *bset, int *elim)
+	__isl_keep isl_basic_set *bset, int *elim, unsigned total)
 {
 	return reduced_using_equalities(dst, src,
-					bset_to_bmap(bset), elim);
+					bset_to_bmap(bset), elim, total);
 }
 
 static __isl_give isl_basic_set *isl_basic_set_reduce_using_equalities(
@@ -1926,13 +2028,13 @@ static __isl_give isl_basic_set *isl_basic_set_reduce_using_equalities(
 	elim = isl_alloc_array(bset->ctx, int, dim);
 	if (!elim)
 		goto error;
-	set_compute_elimination_index(context, elim);
+	set_compute_elimination_index(context, elim, dim);
 	for (i = 0; i < bset->n_eq; ++i)
 		set_reduced_using_equalities(bset->eq[i], bset->eq[i],
-							context, elim);
+							context, elim, dim);
 	for (i = 0; i < bset->n_ineq; ++i)
 		set_reduced_using_equalities(bset->ineq[i], bset->ineq[i],
-							context, elim);
+							context, elim, dim);
 	isl_basic_set_free(context);
 	free(elim);
 	bset = isl_basic_set_simplify(bset);
@@ -2551,10 +2653,24 @@ static __isl_give isl_basic_set *uset_gist_uncompressed(
 	return uset_gist_full(bset, ineq, context);
 }
 
+/* Replace "bset" by an empty basic set in the same space.
+ */
+static __isl_give isl_basic_set *replace_by_empty(
+	__isl_take isl_basic_set *bset)
+{
+	isl_space *space;
+
+	space = isl_basic_set_get_space(bset);
+	isl_basic_set_free(bset);
+	return isl_basic_set_empty(space);
+}
+
 /* Remove all information from "bset" that is redundant in the context
  * of "context", for the case where the combined equalities of
  * "bset" and "context" allow for a compression that can be obtained
  * by preapplication of "T".
+ * If the compression of "context" is empty, meaning that "bset" and
+ * "context" do not intersect, then return the empty set.
  *
  * "bset" itself is not transformed by "T".  Instead, the inequalities
  * are extracted from "bset" and those are transformed by "T".
@@ -2598,7 +2714,7 @@ static __isl_give isl_basic_set *uset_gist_compressed(
 	if (isl_basic_set_plain_is_empty(context)) {
 		isl_mat_free(ineq);
 		isl_basic_set_free(context);
-		return isl_basic_set_set_to_empty(bset);
+		return replace_by_empty(bset);
 	}
 
 	ctx = isl_mat_get_ctx(ineq);
@@ -2677,6 +2793,8 @@ static __isl_give isl_basic_set *project_onto_involved(
  * compute the gist inside this intersection and then reduce
  * the constraints with respect to the equalities of the context
  * that only involve variables already involved in the input.
+ * If the intersection of the affine hulls turns out to be empty,
+ * then return the empty set.
  *
  * If two constraints are mutually redundant, then uset_gist_full
  * will remove the second of those constraints.  We therefore first
@@ -2726,7 +2844,7 @@ static __isl_give isl_basic_set *uset_gist(__isl_take isl_basic_set *bset,
 	if (T && T->n_col == 0) {
 		isl_mat_free(T);
 		isl_basic_set_free(context);
-		return isl_basic_set_set_to_empty(bset);
+		return replace_by_empty(bset);
 	}
 
 	aff_context = isl_basic_set_affine_hull(isl_basic_set_copy(context));
@@ -3609,8 +3727,8 @@ error:
 	return NULL;
 }
 
-struct isl_basic_set *isl_basic_set_gist(struct isl_basic_set *bset,
-						struct isl_basic_set *context)
+__isl_give isl_basic_set *isl_basic_set_gist(__isl_take isl_basic_set *bset,
+	__isl_take isl_basic_set *context)
 {
 	return bset_from_bmap(isl_basic_map_gist(bset_to_bmap(bset),
 						bset_to_bmap(context)));
@@ -3712,11 +3830,11 @@ isl_bool isl_basic_map_plain_is_disjoint(__isl_keep isl_basic_map *bmap1,
 	elim = isl_alloc_array(bmap1->ctx, int, total);
 	if (!elim)
 		goto error;
-	compute_elimination_index(bmap1, elim);
+	compute_elimination_index(bmap1, elim, total);
 	for (i = 0; i < bmap2->n_eq; ++i) {
 		int reduced;
 		reduced = reduced_using_equalities(v->block.data, bmap2->eq[i],
-							bmap1, elim);
+							bmap1, elim, total);
 		if (reduced && !isl_int_is_zero(v->block.data[0]) &&
 		    isl_seq_first_non_zero(v->block.data + 1, total) == -1)
 			goto disjoint;
@@ -3724,16 +3842,16 @@ isl_bool isl_basic_map_plain_is_disjoint(__isl_keep isl_basic_map *bmap1,
 	for (i = 0; i < bmap2->n_ineq; ++i) {
 		int reduced;
 		reduced = reduced_using_equalities(v->block.data,
-						bmap2->ineq[i], bmap1, elim);
+					bmap2->ineq[i], bmap1, elim, total);
 		if (reduced && isl_int_is_neg(v->block.data[0]) &&
 		    isl_seq_first_non_zero(v->block.data + 1, total) == -1)
 			goto disjoint;
 	}
-	compute_elimination_index(bmap2, elim);
+	compute_elimination_index(bmap2, elim, total);
 	for (i = 0; i < bmap1->n_ineq; ++i) {
 		int reduced;
 		reduced = reduced_using_equalities(v->block.data,
-						bmap1->ineq[i], bmap2, elim);
+					bmap1->ineq[i], bmap2, elim, total);
 		if (reduced && isl_int_is_neg(v->block.data[0]) &&
 		    isl_seq_first_non_zero(v->block.data + 1, total) == -1)
 			goto disjoint;
@@ -3803,13 +3921,11 @@ static isl_bool isl_map_plain_is_disjoint_global(__isl_keep isl_map *map1,
 	if (disjoint < 0 || disjoint)
 		return disjoint;
 
-	match = isl_space_tuple_is_equal(map1->dim, isl_dim_in,
-				map2->dim, isl_dim_in);
+	match = isl_map_tuple_is_equal(map1, isl_dim_in, map2, isl_dim_in);
 	if (match < 0 || !match)
 		return match < 0 ? isl_bool_error : isl_bool_true;
 
-	match = isl_space_tuple_is_equal(map1->dim, isl_dim_out,
-				map2->dim, isl_dim_out);
+	match = isl_map_tuple_is_equal(map1, isl_dim_out, map2, isl_dim_out);
 	if (match < 0 || !match)
 		return match < 0 ? isl_bool_error : isl_bool_true;
 
@@ -4811,6 +4927,36 @@ static __isl_give isl_basic_map *fix_cst_lower(__isl_take isl_basic_map *bmap,
 	return isl_basic_map_drop_redundant_divs(bmap);
 }
 
+/* Do any of the integer divisions of "bmap" involve integer division "div"?
+ *
+ * The integer division "div" could only ever appear in any later
+ * integer division (with an explicit representation).
+ */
+static isl_bool any_div_involves_div(__isl_keep isl_basic_map *bmap, int div)
+{
+	int i;
+	isl_size v_div, n_div;
+
+	v_div = isl_basic_map_var_offset(bmap, isl_dim_div);
+	n_div = isl_basic_map_dim(bmap, isl_dim_div);
+	if (v_div < 0 || n_div < 0)
+		return isl_bool_error;
+
+	for (i = div + 1; i < n_div; ++i) {
+		isl_bool unknown;
+
+		unknown = isl_basic_map_div_is_marked_unknown(bmap, i);
+		if (unknown < 0)
+			return isl_bool_error;
+		if (unknown)
+			continue;
+		if (!isl_int_is_zero(bmap->div[i][1 + 1 + v_div + div]))
+			return isl_bool_true;
+	}
+
+	return isl_bool_false;
+}
+
 /* Remove divs that are not strictly needed based on the inequality
  * constraints.
  * In particular, if a div only occurs positively (or negatively)
@@ -4860,7 +5006,7 @@ static __isl_give isl_basic_map *isl_basic_map_drop_redundant_divs_ineq(
 	isl_size off;
 	int *pairs = NULL;
 	int n = 0;
-	int n_ineq;
+	isl_size n_ineq;
 
 	if (!bmap)
 		goto error;
@@ -4875,18 +5021,20 @@ static __isl_give isl_basic_map *isl_basic_map_drop_redundant_divs_ineq(
 		goto error;
 
 	n_ineq = isl_basic_map_n_inequality(bmap);
+	if (n_ineq < 0)
+		goto error;
 	for (i = 0; i < bmap->n_div; ++i) {
 		int pos, neg;
 		int last_pos, last_neg;
 		int redundant;
 		int defined;
-		isl_bool opp, set_div;
+		isl_bool involves, opp, set_div;
 
 		defined = !isl_int_is_zero(bmap->div[i][0]);
-		for (j = i; j < bmap->n_div; ++j)
-			if (!isl_int_is_zero(bmap->div[j][1 + 1 + off + i]))
-				break;
-		if (j < bmap->n_div)
+		involves = any_div_involves_div(bmap, i);
+		if (involves < 0)
+			goto error;
+		if (involves)
 			continue;
 		for (j = 0; j < bmap->n_eq; ++j)
 			if (!isl_int_is_zero(bmap->eq[j][1 + off + i]))

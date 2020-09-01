@@ -7,15 +7,15 @@ namespace std_example {
 
 struct A {
   constexpr A(int i) : val(i) { }
-  constexpr operator int() const { return val; }
-  constexpr operator long() const { return 43; }
+  constexpr operator int() const { return val; } // expected-note {{here}}
+  constexpr operator long() const { return 43; } // expected-note {{here}}
 private:
   int val;
 };
 template<int> struct X { };
 constexpr A a = 42;
 X<a> x;     // ok, unique conversion to int
-int ary[a]; // expected-error {{size of array has non-integer type 'const std_example::A'}}
+int ary[a]; // expected-error {{ambiguous conversion from type 'const std_example::A' to an integral or unscoped enumeration type}}
 
 }
 
@@ -23,15 +23,15 @@ struct OK {
   constexpr OK() {}
   constexpr operator int() const { return 8; }
 } constexpr ok;
-extern struct Incomplete incomplete; // expected-note 4{{forward decl}}
+extern struct Incomplete incomplete; // expected-note 5{{forward decl}}
 struct Explicit {
   constexpr Explicit() {}
-  constexpr explicit operator int() const { return 4; } // expected-note 4{{here}}
+  constexpr explicit operator int() const { return 4; } // expected-note 5{{here}}
 } constexpr expl;
 struct Ambiguous {
   constexpr Ambiguous() {}
-  constexpr operator int() const { return 2; } // expected-note 4{{here}}
-  constexpr operator long() const { return 1; } // expected-note 4{{here}}
+  constexpr operator int() const { return 2; } // expected-note 5{{here}}
+  constexpr operator long() const { return 1; } // expected-note 5{{here}}
 } constexpr ambig;
 
 constexpr int test_ok = ok; // ok
@@ -68,12 +68,10 @@ alignas(ambig) int alignas4; // expected-error {{ambiguous conversion}}
 
 // [dcl.array]p1: If the constant-expression is present, it shall be an integral
 // constant expression
-// FIXME: The VLA recovery results in us giving diagnostics which aren't great
-// here.
 int array1[ok];
-int array2[incomplete]; // expected-error {{non-integer type}}
-int array3[expl]; // expected-error {{non-integer type}}
-int array4[ambig]; // expected-error {{non-integer type}}
+int array2[incomplete]; // expected-error {{incomplete}}
+int array3[expl]; // expected-error {{explicit conversion}}
+int array4[ambig]; // expected-error {{ambiguous conversion}}
 
 // [class.bit]p1: The constasnt-expression shall be an integral constant
 // expression

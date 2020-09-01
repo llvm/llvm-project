@@ -5157,13 +5157,13 @@ define <64 x i1> @mask64_insert(i32 %a) {
 ; KNL-LABEL: mask64_insert:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    movq %rdi, %rax
-; KNL-NEXT:    movw $-4, %cx
-; KNL-NEXT:    kmovw %ecx, %k0
-; KNL-NEXT:    kshiftrw $1, %k0, %k0
-; KNL-NEXT:    kshiftlw $1, %k0, %k0
 ; KNL-NEXT:    andl $1, %esi
-; KNL-NEXT:    kmovw %esi, %k1
-; KNL-NEXT:    korw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %esi, %k0
+; KNL-NEXT:    movw $-4, %cx
+; KNL-NEXT:    kmovw %ecx, %k1
+; KNL-NEXT:    kshiftrw $1, %k1, %k1
+; KNL-NEXT:    kshiftlw $1, %k1, %k1
+; KNL-NEXT:    korw %k0, %k1, %k0
 ; KNL-NEXT:    kmovw %k0, (%rdi)
 ; KNL-NEXT:    movw $-3, 6(%rdi)
 ; KNL-NEXT:    movl $-131075, 2(%rdi) ## imm = 0xFFFDFFFD
@@ -5198,13 +5198,13 @@ define <64 x i1> @mask64_insert(i32 %a) {
 ; AVX512DQ-LABEL: mask64_insert:
 ; AVX512DQ:       ## %bb.0:
 ; AVX512DQ-NEXT:    movq %rdi, %rax
-; AVX512DQ-NEXT:    movw $-4, %cx
-; AVX512DQ-NEXT:    kmovw %ecx, %k0
-; AVX512DQ-NEXT:    kshiftrw $1, %k0, %k0
-; AVX512DQ-NEXT:    kshiftlw $1, %k0, %k0
 ; AVX512DQ-NEXT:    andl $1, %esi
-; AVX512DQ-NEXT:    kmovw %esi, %k1
-; AVX512DQ-NEXT:    korw %k1, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %esi, %k0
+; AVX512DQ-NEXT:    movw $-4, %cx
+; AVX512DQ-NEXT:    kmovw %ecx, %k1
+; AVX512DQ-NEXT:    kshiftrw $1, %k1, %k1
+; AVX512DQ-NEXT:    kshiftlw $1, %k1, %k1
+; AVX512DQ-NEXT:    korw %k0, %k1, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, (%rdi)
 ; AVX512DQ-NEXT:    movw $-3, 6(%rdi)
 ; AVX512DQ-NEXT:    movl $-131075, 2(%rdi) ## imm = 0xFFFDFFFD

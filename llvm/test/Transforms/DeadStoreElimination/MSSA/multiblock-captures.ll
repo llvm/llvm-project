@@ -12,7 +12,7 @@ declare void @capture(i8*)
 define i8* @test_return_captures_1() {
 ; CHECK-LABEL: @test_return_captures_1(
 ; CHECK-NEXT:    [[M:%.*]] = call i8* @malloc(i64 24)
-; CHECK-NEXT:    store i8 1, i8* [[M]]
+; CHECK-NEXT:    store i8 1, i8* [[M]], align 1
 ; CHECK-NEXT:    ret i8* [[M]]
 ;
   %m = call i8* @malloc(i64 24)
@@ -27,7 +27,7 @@ define i8* @test_return_captures_2() {
 ; CHECK-NEXT:    [[M:%.*]] = call i8* @malloc(i64 24)
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store i8 1, i8* [[M]]
+; CHECK-NEXT:    store i8 1, i8* [[M]], align 1
 ; CHECK-NEXT:    ret i8* [[M]]
 ;
   %m = call i8* @malloc(i64 24)
@@ -49,8 +49,8 @@ define void @test_malloc_capture_1(%S1* %E) {
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[F_PTR:%.*]] = getelementptr [[S1:%.*]], %S1* [[E:%.*]], i32 0, i32 0
-; CHECK-NEXT:    store i8* [[M]], i8** [[F_PTR]]
-; CHECK-NEXT:    store i8 1, i8* [[M]]
+; CHECK-NEXT:    store i8* [[M]], i8** [[F_PTR]], align 4
+; CHECK-NEXT:    store i8 1, i8* [[M]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %m = call i8* @malloc(i64 24)
@@ -68,11 +68,11 @@ exit:
 define i8* @test_malloc_capture_2() {
 ; CHECK-LABEL: @test_malloc_capture_2(
 ; CHECK-NEXT:    [[M:%.*]] = call i8* @malloc(i64 24)
-; CHECK-NEXT:    store i8 0, i8* [[M]]
+; CHECK-NEXT:    store i8 0, i8* [[M]], align 1
 ; CHECK-NEXT:    call void @capture(i8* [[M]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store i8 1, i8* [[M]]
+; CHECK-NEXT:    store i8 1, i8* [[M]], align 1
 ; CHECK-NEXT:    ret i8* [[M]]
 ;
   %m = call i8* @malloc(i64 24)
@@ -92,7 +92,7 @@ define i8* @test_malloc_capture_3() {
 ; CHECK-NEXT:    [[M:%.*]] = call i8* @malloc(i64 24)
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store i8 1, i8* [[M]]
+; CHECK-NEXT:    store i8 1, i8* [[M]], align 1
 ; CHECK-NEXT:    call void @capture(i8* [[M]])
 ; CHECK-NEXT:    ret i8* [[M]]
 ;
@@ -111,11 +111,11 @@ exit:
 define i8* @test_malloc_capture_4() {
 ; CHECK-LABEL: @test_malloc_capture_4(
 ; CHECK-NEXT:    [[M:%.*]] = call i8* @malloc(i64 24)
-; CHECK-NEXT:    store i8 0, i8* [[M]]
+; CHECK-NEXT:    store i8 0, i8* [[M]], align 1
 ; CHECK-NEXT:    call void @may_throw_readnone()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store i8 1, i8* [[M]]
+; CHECK-NEXT:    store i8 1, i8* [[M]], align 1
 ; CHECK-NEXT:    call void @capture(i8* [[M]])
 ; CHECK-NEXT:    ret i8* [[M]]
 ;
@@ -138,11 +138,11 @@ define i8* @test_malloc_capture_5() {
 ; CHECK-LABEL: @test_malloc_capture_5(
 ; CHECK-NEXT:    [[M:%.*]] = call i8* @malloc(i64 24)
 ; CHECK-NEXT:    call void @capture(i8* [[M]])
-; CHECK-NEXT:    store i8 0, i8* [[M]]
+; CHECK-NEXT:    store i8 0, i8* [[M]], align 1
 ; CHECK-NEXT:    call void @may_throw_readnone()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store i8 1, i8* [[M]]
+; CHECK-NEXT:    store i8 1, i8* [[M]], align 1
 ; CHECK-NEXT:    ret i8* [[M]]
 ;
 
@@ -164,11 +164,11 @@ exit:
 define i8* @test_malloc_capture_6() {
 ; CHECK-LABEL: @test_malloc_capture_6(
 ; CHECK-NEXT:    [[M:%.*]] = call i8* @malloc(i64 24)
-; CHECK-NEXT:    store i8 0, i8* [[M]]
+; CHECK-NEXT:    store i8 0, i8* [[M]], align 1
 ; CHECK-NEXT:    call void @may_throw_readnone()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store i8 1, i8* [[M]]
+; CHECK-NEXT:    store i8 1, i8* [[M]], align 1
 ; CHECK-NEXT:    call void @capture(i8* [[M]])
 ; CHECK-NEXT:    ret i8* [[M]]
 ;
@@ -184,15 +184,20 @@ exit:
   ret i8* %m
 }
 
-; We can remove the first store 'store i8 0, i8* %m' even though there is a
+; We *could* remove the first store 'store i8 0, i8* %m' even though there is a
 ; throwing instruction between them, because %m escapes after the killing store.
+; But this would require using PointerMayBeCapturedBefore in
+; isInvisibleToCallerBeforeRet, which we currently do not do to limit
+; compile-time, as this appears to hardly ever lead to more stores eliminated
+; in practice.
 define i8* @test_malloc_capture_7() {
 ; CHECK-LABEL: @test_malloc_capture_7(
 ; CHECK-NEXT:    [[M:%.*]] = call i8* @malloc(i64 24)
+; CHECK-NEXT:    store i8 0, i8* [[M]], align 1
 ; CHECK-NEXT:    call void @may_throw()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store i8 1, i8* [[M]]
+; CHECK-NEXT:    store i8 1, i8* [[M]], align 1
 ; CHECK-NEXT:    call void @capture(i8* [[M]])
 ; CHECK-NEXT:    ret i8* [[M]]
 ;
@@ -229,8 +234,8 @@ exit:
 ; Cannot remove first store i8 0, i8* %m, as the call to @capture captures the object.
 define void @test_alloca_capture_1() {
 ; CHECK-LABEL: @test_alloca_capture_1(
-; CHECK-NEXT:    [[M:%.*]] = alloca i8
-; CHECK-NEXT:    store i8 0, i8* [[M]]
+; CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    store i8 0, i8* [[M]], align 1
 ; CHECK-NEXT:    call void @capture(i8* [[M]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -250,11 +255,11 @@ exit:
 ; becomes invalid after the function returns.
 define void @test_alloca_capture_2(%S1* %E) {
 ; CHECK-LABEL: @test_alloca_capture_2(
-; CHECK-NEXT:    [[M:%.*]] = alloca i8
+; CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[F_PTR:%.*]] = getelementptr [[S1:%.*]], %S1* [[E:%.*]], i32 0, i32 0
-; CHECK-NEXT:    store i8* [[M]], i8** [[F_PTR]]
+; CHECK-NEXT:    store i8* [[M]], i8** [[F_PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %m = alloca i8

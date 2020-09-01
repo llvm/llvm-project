@@ -137,15 +137,23 @@ namespace detail {
 // MLIRContext. This class manages all creation and uniquing of attributes.
 class AttributeUniquer {
 public:
-  /// Get an uniqued instance of attribute T.
+  /// Get an uniqued instance of a parametric attribute T.
   template <typename T, typename... Args>
-  static T get(MLIRContext *ctx, unsigned kind, Args &&... args) {
+  static typename std::enable_if_t<
+      !std::is_same<typename T::ImplType, AttributeStorage>::value, T>
+  get(MLIRContext *ctx, Args &&...args) {
     return ctx->getAttributeUniquer().get<typename T::ImplType>(
-        T::getTypeID(),
         [ctx](AttributeStorage *storage) {
           initializeAttributeStorage(storage, ctx, T::getTypeID());
         },
-        kind, std::forward<Args>(args)...);
+        T::getTypeID(), std::forward<Args>(args)...);
+  }
+  /// Get an uniqued instance of a singleton attribute T.
+  template <typename T>
+  static typename std::enable_if_t<
+      std::is_same<typename T::ImplType, AttributeStorage>::value, T>
+  get(MLIRContext *ctx) {
+    return ctx->getAttributeUniquer().get<typename T::ImplType>(T::getTypeID());
   }
 
   template <typename T, typename... Args>
@@ -154,6 +162,26 @@ public:
     assert(impl && "cannot mutate null attribute");
     return ctx->getAttributeUniquer().mutate(T::getTypeID(), impl,
                                              std::forward<Args>(args)...);
+  }
+
+  /// Register a parametric attribute instance T with the uniquer.
+  template <typename T>
+  static typename std::enable_if_t<
+      !std::is_same<typename T::ImplType, AttributeStorage>::value>
+  registerAttribute(MLIRContext *ctx) {
+    ctx->getAttributeUniquer()
+        .registerParametricStorageType<typename T::ImplType>(T::getTypeID());
+  }
+  /// Register a singleton attribute instance T with the uniquer.
+  template <typename T>
+  static typename std::enable_if_t<
+      std::is_same<typename T::ImplType, AttributeStorage>::value>
+  registerAttribute(MLIRContext *ctx) {
+    ctx->getAttributeUniquer()
+        .registerSingletonStorageType<typename T::ImplType>(
+            T::getTypeID(), [ctx](AttributeStorage *storage) {
+              initializeAttributeStorage(storage, ctx, T::getTypeID());
+            });
   }
 
 private:

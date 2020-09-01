@@ -1,0 +1,67 @@
+# RUN: llc -mtriple=arm64-apple-ios -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs  %s -o - | FileCheck %s
+
+# Noreturn functions conservatively need to save and restore lr.
+# When there is no available register, the stack is used at call site.
+# If the stack also needs to be set up for a call in the outlined function,
+# bail-out this case since we do not handle adjusting the stack twice.
+
+# CHECK-NOT: OUTLINED_FUNCTION
+
+--- |
+  @g = external global i32
+  define void @stack_1() #0 { ret void }
+  define void @stack_2() #0 { ret void }
+  define void @baz() { ret void }
+  attributes #0 = { noredzone noreturn }
+...
+---
+name:            stack_1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x4, $x0, $x1, $x2, $x3
+    $w8 = MOVZWi 259, 0
+    $x9 = ADRP target-flags(aarch64-page) @g
+    $x9 = ADDXri $x9, target-flags(aarch64-pageoff, aarch64-nc) @g, 0
+    STRXui  $x9, $x1, 0
+    STRHHui $w8, $x1, 8
+    $w8 = ORRWrs $wzr, $w4, 0, implicit-def $x8
+    STRXui $x8, $x3, 0
+    STPXi $x3, $xzr, $x2, 0
+    $w8 = MOVZWi 271, 0
+    STRHHui $w8, $x2, 8
+    $x8 = ORRXrs $xzr, $x0, 0
+    $x0 = ORRXrs $xzr, $x1, 0
+    $x1 = ORRXrs $xzr, $x2, 0
+    BL @baz, implicit-def dead $lr, implicit $sp, implicit $x8, implicit $x0, implicit $x1, implicit $x3, implicit $x4, implicit-def $sp, implicit-def $x5, implicit-def $x6, implicit-def $x7, implicit-def $x8,  implicit-def $x9, implicit-def $x10,  implicit-def $x11, implicit-def $x12, implicit-def $x13,  implicit-def $x14, implicit-def $x15, implicit-def $x18
+    BRK 1
+...
+---
+name:            stack_2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x4, $x0, $x1, $x2, $x3
+    $w8 = MOVZWi 259, 0
+    $x9 = ADRP target-flags(aarch64-page) @g
+    $x9 = ADDXri $x9, target-flags(aarch64-pageoff, aarch64-nc) @g, 0
+    STRXui $x9, $x1, 0
+    STRHHui $w8, $x1, 8
+    $w8 = ORRWrs $wzr, $w4, 0, implicit-def $x8
+    STRXui $x8, $x3, 0
+    STPXi $x3, $xzr, $x2, 0
+    $w8 = MOVZWi 271, 0
+    STRHHui $w8, $x2, 8
+    $x8 = ORRXrs $xzr, $x0, 0
+    $x0 = ORRXrs $xzr, $x1, 0
+    $x1 = ORRXrs $xzr, $x2, 0
+    BL @baz, implicit-def dead $lr, implicit $sp, implicit $x8, implicit $x0, implicit $x1, implicit $x3, implicit $x4, implicit-def $sp, implicit-def $x5, implicit-def $x6, implicit-def $x7, implicit-def $x8,  implicit-def $x9, implicit-def $x10,  implicit-def $x11, implicit-def $x12, implicit-def $x13,  implicit-def $x14, implicit-def $x15, implicit-def $x18
+    BRK 1
+...
+---
+name:            baz
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $w8
+    RET undef $lr

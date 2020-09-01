@@ -4,6 +4,7 @@
 ; Make sure libcalls are replaced with intrinsic calls.
 
 declare float @llvm.fabs.f32(float)
+declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 declare double @llvm.fabs.f64(double)
 declare fp128 @llvm.fabs.f128(fp128)
 
@@ -12,6 +13,8 @@ declare double @fabs(double)
 declare fp128 @fabsl(fp128)
 declare float @llvm.fma.f32(float, float, float)
 declare float @llvm.fmuladd.f32(float, float, float)
+
+declare void @use(float)
 
 define float @replace_fabs_call_f32(float %x) {
 ; CHECK-LABEL: @replace_fabs_call_f32(
@@ -116,8 +119,8 @@ define float @square_fabs_shrink_call1(float %x) {
 define float @square_fabs_shrink_call2(float %x) {
 ; CHECK-LABEL: @square_fabs_shrink_call2(
 ; CHECK-NEXT:    [[SQ:%.*]] = fmul float [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = call float @llvm.fabs.f32(float [[SQ]])
-; CHECK-NEXT:    ret float [[TRUNC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[SQ]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %sq = fmul float %x, %x
   %ext = fpext float %sq to double
@@ -744,4 +747,55 @@ define half @select_fcmp_nnan_nsz_uge_negzero_unary_fneg(half %x) {
   %negx = fneg nnan nsz half %x
   %fabs = select i1 %gezero, half %x, half %negx
   ret half %fabs
+}
+
+define float @select_fneg(i1 %c, float %x) {
+; CHECK-LABEL: @select_fneg(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %n = fneg float %x
+  %s = select i1 %c, float %n, float %x
+  %fabs = call float @llvm.fabs.f32(float %s)
+  ret float %fabs
+}
+
+define float @select_fneg_use1(i1 %c, float %x) {
+; CHECK-LABEL: @select_fneg_use1(
+; CHECK-NEXT:    [[N:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    call void @use(float [[N]])
+; CHECK-NEXT:    [[FABS:%.*]] = call fast float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %n = fneg float %x
+  call void @use(float %n)
+  %s = select i1 %c, float %x, float %n
+  %fabs = call fast float @llvm.fabs.f32(float %s)
+  ret float %fabs
+}
+
+define float @select_fneg_use2(i1 %c, float %x) {
+; CHECK-LABEL: @select_fneg_use2(
+; CHECK-NEXT:    [[N:%.*]] = fneg arcp float [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], float [[N]], float [[X]]
+; CHECK-NEXT:    call void @use(float [[S]])
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan nsz float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %n = fneg arcp float %x
+  %s = select i1 %c, float %n, float %x
+  call void @use(float %s)
+  %fabs = call nnan nsz float @llvm.fabs.f32(float %s)
+  ret float %fabs
+}
+
+define <2 x float> @select_fneg_vec(<2 x i1> %c, <2 x float> %x) {
+; CHECK-LABEL: @select_fneg_vec(
+; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[FABS]]
+;
+  %n = fneg <2 x float> %x
+  %s = select fast <2 x i1> %c, <2 x float> %x, <2 x float> %n
+  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %s)
+  ret <2 x float> %fabs
 }

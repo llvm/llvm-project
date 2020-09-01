@@ -1381,48 +1381,48 @@ define <2 x i32> @ssubo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ;
 ; AVX512-LABEL: ssubo_v2i128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    pushq %rbp
+; AVX512-NEXT:    pushq %r14
 ; AVX512-NEXT:    pushq %rbx
-; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512-NEXT:    testq %r9, %r9
-; AVX512-NEXT:    setns %al
-; AVX512-NEXT:    testq %rsi, %rsi
-; AVX512-NEXT:    setns %bl
-; AVX512-NEXT:    cmpb %al, %bl
-; AVX512-NEXT:    setne %bpl
-; AVX512-NEXT:    subq %r8, %rdi
-; AVX512-NEXT:    sbbq %r9, %rsi
-; AVX512-NEXT:    setns %al
-; AVX512-NEXT:    cmpb %al, %bl
-; AVX512-NEXT:    setne %al
-; AVX512-NEXT:    andb %bpl, %al
+; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; AVX512-NEXT:    subq {{[0-9]+}}(%rsp), %rdx
-; AVX512-NEXT:    movq %rcx, %rbp
-; AVX512-NEXT:    sbbq %r10, %rbp
+; AVX512-NEXT:    movq %rcx, %r14
+; AVX512-NEXT:    sbbq %r11, %r14
 ; AVX512-NEXT:    setns %bl
 ; AVX512-NEXT:    testq %rcx, %rcx
 ; AVX512-NEXT:    setns %cl
 ; AVX512-NEXT:    cmpb %bl, %cl
-; AVX512-NEXT:    setne %r8b
-; AVX512-NEXT:    testq %r10, %r10
+; AVX512-NEXT:    setne %bl
+; AVX512-NEXT:    testq %r11, %r11
+; AVX512-NEXT:    setns %al
+; AVX512-NEXT:    cmpb %al, %cl
+; AVX512-NEXT:    setne %al
+; AVX512-NEXT:    andb %bl, %al
+; AVX512-NEXT:    kmovd %eax, %k0
+; AVX512-NEXT:    testq %r9, %r9
+; AVX512-NEXT:    setns %al
+; AVX512-NEXT:    testq %rsi, %rsi
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    cmpb %al, %cl
+; AVX512-NEXT:    setne %al
+; AVX512-NEXT:    subq %r8, %rdi
+; AVX512-NEXT:    sbbq %r9, %rsi
 ; AVX512-NEXT:    setns %bl
 ; AVX512-NEXT:    cmpb %bl, %cl
 ; AVX512-NEXT:    setne %cl
-; AVX512-NEXT:    andb %r8b, %cl
-; AVX512-NEXT:    kmovd %ecx, %k0
+; AVX512-NEXT:    andb %al, %cl
+; AVX512-NEXT:    andl $1, %ecx
+; AVX512-NEXT:    kmovw %ecx, %k1
 ; AVX512-NEXT:    kshiftlw $1, %k0, %k0
-; AVX512-NEXT:    andl $1, %eax
-; AVX512-NEXT:    kmovw %eax, %k1
 ; AVX512-NEXT:    korw %k0, %k1, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    movq %rdx, 16(%r11)
-; AVX512-NEXT:    movq %rdi, (%r11)
-; AVX512-NEXT:    movq %rbp, 24(%r11)
-; AVX512-NEXT:    movq %rsi, 8(%r11)
+; AVX512-NEXT:    movq %rdx, 16(%r10)
+; AVX512-NEXT:    movq %rdi, (%r10)
+; AVX512-NEXT:    movq %r14, 24(%r10)
+; AVX512-NEXT:    movq %rsi, 8(%r10)
 ; AVX512-NEXT:    popq %rbx
-; AVX512-NEXT:    popq %rbp
+; AVX512-NEXT:    popq %r14
 ; AVX512-NEXT:    retq
   %t = call {<2 x i128>, <2 x i1>} @llvm.ssub.with.overflow.v2i128(<2 x i128> %a0, <2 x i128> %a1)
   %val = extractvalue {<2 x i128>, <2 x i1>} %t, 0

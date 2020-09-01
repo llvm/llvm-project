@@ -1,5 +1,11 @@
 /* Typemap definitions, to allow SWIG to properly handle 'char**' data types. */
 
+%inline %{
+
+#include "../bindings/python/python-typemaps.h"
+
+%}
+
 %typemap(in) char ** {
   /* Check if is a list  */
   if (PythonList::Check($input)) {
@@ -61,7 +67,7 @@
 
 %typemap(in) lldb::tid_t {
   PythonObject obj = Retain<PythonObject>($input);
-  lldb::tid_t value = unwrapOrSetPythonException(As<unsigned long long>(obj)); 
+  lldb::tid_t value = unwrapOrSetPythonException(As<unsigned long long>(obj));
   if (PyErr_Occurred())
     return nullptr;
   $1 = value;
@@ -475,21 +481,6 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
         return NULL;
     }
 }
-
-%inline %{
-
-struct Py_buffer_RAII {
-  Py_buffer buffer = {};
-  Py_buffer_RAII() {};
-  Py_buffer &operator=(const Py_buffer_RAII &) = delete;
-  Py_buffer_RAII(const Py_buffer_RAII &) = delete;
-  ~Py_buffer_RAII() {
-    if (buffer.obj)
-      PyBuffer_Release(&buffer);
-  }
-};
-
-%}
 
 // These two pybuffer macros are copied out of swig/Lib/python/pybuffer.i,
 // and fixed so they will not crash if PyObject_GetBuffer fails.

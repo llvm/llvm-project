@@ -233,6 +233,9 @@ void emitInlinedInto(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
                      bool ForProfileContext = false,
                      const char *PassName = nullptr);
 
+/// get call site location as string
+std::string getCallSiteLocation(DebugLoc DLoc);
+
 /// Add location info to ORE message.
 void addLocationToRemarks(OptimizationRemark &Remark, DebugLoc DLoc);
 

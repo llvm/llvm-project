@@ -199,6 +199,12 @@ namespace llvm {
                                  unsigned Encoding,
                                  DINode::DIFlags Flags = DINode::FlagZero);
 
+    /// Create debugging information entry for a string
+    /// type.
+    /// \param Name        Type name.
+    /// \param SizeInBits  Size of the type.
+    DIStringType *createStringType(StringRef Name, uint64_t SizeInBits);
+
     /// Create debugging information entry for a qualified
     /// type, e.g. 'const int'.
     /// \param Tag         Tag identifing type, e.g. dwarf::TAG_volatile_type

@@ -179,8 +179,9 @@ entry:
 ; CM: LDS_WRITE
 ; CM: LDS_WRITE
 
-; GCN: ds_write2_b32
-; GCN: ds_write2_b32
+; SICIVI: ds_write2_b32
+; SICIVI: ds_write2_b32
+; GFX9: ds_write_b128
 define amdgpu_kernel void @store_local_v4i32_align4(<4 x i32> addrspace(3)* %out, <4 x i32> %in) {
 entry:
   store <4 x i32> %in, <4 x i32> addrspace(3)* %out, align 4

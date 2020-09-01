@@ -1,8 +1,8 @@
 # RUN: rm -rf %t.dir
 # RUN: mkdir %t.dir
 # RUN: cd %t.dir
-# RUN: yaml2obj %p/Inputs/single-file-split-dwarf.yaml > %t.dir/test
-# RUN: yaml2obj %p/Inputs/single-file-split-dwarf.o.yaml > %t.dir/test.o
+# RUN: yaml2obj %p/Inputs/single-file-split-dwarf.yaml -o %t.dir/test
+# RUN: yaml2obj %p/Inputs/single-file-split-dwarf.o.yaml -o %t.dir/test.o
 # RUN: lldb-test breakpoints %t.dir/test %s | FileCheck %s
 
 # This test checks that source code location is shown correctly

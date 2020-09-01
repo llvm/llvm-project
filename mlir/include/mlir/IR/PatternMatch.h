@@ -252,6 +252,9 @@ public:
   template <typename OpTy, typename... Args>
   OpTy create(Location location, Args... args) {
     OperationState state(location, OpTy::getOperationName());
+    if (!state.name.getAbstractOperation())
+      llvm::report_fatal_error("Building op `" + state.name.getStringRef() +
+                               "` but it isn't registered in this MLIRContext");
     OpTy::build(*this, state, args...);
     auto *op = createOperation(state);
     auto result = dyn_cast<OpTy>(op);
@@ -325,6 +328,11 @@ public:
   /// merging.
   virtual void mergeBlocks(Block *source, Block *dest,
                            ValueRange argValues = llvm::None);
+
+  // Merge the operations of block 'source' before the operation 'op'. Source
+  // block should not have existing predecessors or successors.
+  void mergeBlockBefore(Block *source, Operation *op,
+                        ValueRange argValues = llvm::None);
 
   /// Split the operations starting at "before" (inclusive) out of the given
   /// block into a new block, and return it.

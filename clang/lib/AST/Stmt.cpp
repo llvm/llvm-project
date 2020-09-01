@@ -827,9 +827,9 @@ void MSAsmStmt::initialize(const ASTContext &C, StringRef asmstr,
 }
 
 IfStmt::IfStmt(const ASTContext &Ctx, SourceLocation IL, bool IsConstexpr,
-               Stmt *Init, VarDecl *Var, Expr *Cond, Stmt *Then,
-               SourceLocation EL, Stmt *Else)
-    : Stmt(IfStmtClass) {
+               Stmt *Init, VarDecl *Var, Expr *Cond, SourceLocation LPL,
+               SourceLocation RPL, Stmt *Then, SourceLocation EL, Stmt *Else)
+    : Stmt(IfStmtClass), LParenLoc(LPL), RParenLoc(RPL) {
   bool HasElse = Else != nullptr;
   bool HasVar = Var != nullptr;
   bool HasInit = Init != nullptr;
@@ -862,7 +862,8 @@ IfStmt::IfStmt(EmptyShell Empty, bool HasElse, bool HasVar, bool HasInit)
 
 IfStmt *IfStmt::Create(const ASTContext &Ctx, SourceLocation IL,
                        bool IsConstexpr, Stmt *Init, VarDecl *Var, Expr *Cond,
-                       Stmt *Then, SourceLocation EL, Stmt *Else) {
+                       SourceLocation LPL, SourceLocation RPL, Stmt *Then,
+                       SourceLocation EL, Stmt *Else) {
   bool HasElse = Else != nullptr;
   bool HasVar = Var != nullptr;
   bool HasInit = Init != nullptr;
@@ -871,7 +872,7 @@ IfStmt *IfStmt::Create(const ASTContext &Ctx, SourceLocation IL,
           NumMandatoryStmtPtr + HasElse + HasVar + HasInit, HasElse),
       alignof(IfStmt));
   return new (Mem)
-      IfStmt(Ctx, IL, IsConstexpr, Init, Var, Cond, Then, EL, Else);
+      IfStmt(Ctx, IL, IsConstexpr, Init, Var, Cond, LPL, RPL, Then, EL, Else);
 }
 
 IfStmt *IfStmt::CreateEmpty(const ASTContext &Ctx, bool HasElse, bool HasVar,
@@ -947,8 +948,10 @@ void ForStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
 }
 
 SwitchStmt::SwitchStmt(const ASTContext &Ctx, Stmt *Init, VarDecl *Var,
-                       Expr *Cond)
-    : Stmt(SwitchStmtClass), FirstCase(nullptr) {
+                       Expr *Cond, SourceLocation LParenLoc,
+                       SourceLocation RParenLoc)
+    : Stmt(SwitchStmtClass), FirstCase(nullptr), LParenLoc(LParenLoc),
+      RParenLoc(RParenLoc) {
   bool HasInit = Init != nullptr;
   bool HasVar = Var != nullptr;
   SwitchStmtBits.HasInit = HasInit;
@@ -973,13 +976,14 @@ SwitchStmt::SwitchStmt(EmptyShell Empty, bool HasInit, bool HasVar)
 }
 
 SwitchStmt *SwitchStmt::Create(const ASTContext &Ctx, Stmt *Init, VarDecl *Var,
-                               Expr *Cond) {
+                               Expr *Cond, SourceLocation LParenLoc,
+                               SourceLocation RParenLoc) {
   bool HasInit = Init != nullptr;
   bool HasVar = Var != nullptr;
   void *Mem = Ctx.Allocate(
       totalSizeToAlloc<Stmt *>(NumMandatoryStmtPtr + HasInit + HasVar),
       alignof(SwitchStmt));
-  return new (Mem) SwitchStmt(Ctx, Init, Var, Cond);
+  return new (Mem) SwitchStmt(Ctx, Init, Var, Cond, LParenLoc, RParenLoc);
 }
 
 SwitchStmt *SwitchStmt::CreateEmpty(const ASTContext &Ctx, bool HasInit,

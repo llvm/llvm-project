@@ -12,6 +12,7 @@
 
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
@@ -78,6 +79,25 @@ MachOUniversalBinary::ObjectForArch::getAsObjectFile() const {
   StringRef ObjectName = Parent->getFileName();
   MemoryBufferRef ObjBuffer(ObjectData, ObjectName);
   return ObjectFile::createMachOObjectFile(ObjBuffer, cputype, Index);
+}
+
+Expected<std::unique_ptr<IRObjectFile>>
+MachOUniversalBinary::ObjectForArch::getAsIRObject(LLVMContext &Ctx) const {
+  if (!Parent)
+    report_fatal_error("MachOUniversalBinary::ObjectForArch::getAsIRObject() "
+                       "called when Parent is a nullptr");
+
+  StringRef ParentData = Parent->getData();
+  StringRef ObjectData;
+  if (Parent->getMagic() == MachO::FAT_MAGIC) {
+    ObjectData = ParentData.substr(Header.offset, Header.size);
+  } else { // Parent->getMagic() == MachO::FAT_MAGIC_64
+    ObjectData = ParentData.substr(Header64.offset, Header64.size);
+  }
+  StringRef ObjectName = Parent->getFileName();
+  MemoryBufferRef ObjBuffer(ObjectData, ObjectName);
+
+  return IRObjectFile::create(ObjBuffer, Ctx);
 }
 
 Expected<std::unique_ptr<Archive>>
@@ -232,6 +252,15 @@ MachOUniversalBinary::getMachOObjectForArch(StringRef ArchName) const {
   if (!O)
     return O.takeError();
   return O->getAsObjectFile();
+}
+
+Expected<std::unique_ptr<IRObjectFile>>
+MachOUniversalBinary::getIRObjectForArch(StringRef ArchName,
+                                         LLVMContext &Ctx) const {
+  Expected<ObjectForArch> O = getObjectForArch(ArchName);
+  if (!O)
+    return O.takeError();
+  return O->getAsIRObject(Ctx);
 }
 
 Expected<std::unique_ptr<Archive>>

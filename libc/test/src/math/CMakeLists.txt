@@ -18,10 +18,10 @@ function(add_fp_unittest name)
 
   add_libc_unittest(${name} ${MATH_UNITTEST_UNPARSED_ARGUMENTS})
   get_fq_target_name(${name} fq_target_name)
-  target_link_libraries(${fq_target_name} PRIVATE LibcFPTestHelpers)
   if(MATH_UNITTEST_NEED_MPFR)
     target_link_libraries(${fq_target_name} PRIVATE libcMPFRWrapper -lmpfr -lgmp)
   endif()
+  target_link_libraries(${fq_target_name} PRIVATE LibcFPTestHelpers)
 endfunction(add_fp_unittest)
 
 add_fp_unittest(
@@ -333,6 +333,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   frexp_test
+  NEED_MPFR
   SUITE
     libc_math_unittests
   SRCS
@@ -345,6 +346,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   frexpf_test
+  NEED_MPFR
   SUITE
     libc_math_unittests
   SRCS
@@ -357,6 +359,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   frexpl_test
+  NEED_MPFR
   SUITE
     libc_math_unittests
   SRCS
@@ -508,5 +511,44 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.fmaxl
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  sqrtf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    sqrtf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.sqrtf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  sqrt_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    sqrt_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.sqrt
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  sqrtl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    sqrtl_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.sqrtl
     libc.utils.FPUtil.fputil
 )

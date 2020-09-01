@@ -1,1 +1,1 @@
-_CLC_DECL void barrier(cl_mem_fence_flags flags);
+_CLC_DECL _CLC_OVERLOAD void barrier(cl_mem_fence_flags flags);

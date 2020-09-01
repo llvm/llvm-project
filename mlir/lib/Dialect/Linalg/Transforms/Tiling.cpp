@@ -382,7 +382,8 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
   if (!options.interchangeVector.empty())
     applyPermutationToVector(iteratorTypes, options.interchangeVector);
   GenerateLoopNest<LoopTy>::doit(
-      loopRanges, iteratorTypes, [&](ValueRange localIvs) {
+      loopRanges, iteratorTypes,
+      [&](ValueRange localIvs) {
         auto &b = ScopedContext::getBuilderRef();
         auto loc = ScopedContext::getLocation();
         ivs.assign(localIvs.begin(), localIvs.end());
@@ -401,7 +402,8 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
         auto operands = getAssumedNonViewOperands(op);
         views.append(operands.begin(), operands.end());
         res = op.clone(b, loc, views);
-      });
+      },
+      options.distribution);
 
   // 4. Transforms index arguments of `linalg.generic` w.r.t. to the tiling.
   transformIndexedGenericOpIndices(b, res, ivs, loopIndexToRangeIndex);
@@ -410,8 +412,14 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
   SmallVector<Operation *, 8> loops;
   loops.reserve(ivs.size());
   for (auto iv : ivs) {
-    loops.push_back(iv.cast<BlockArgument>().getOwner()->getParentOp());
-    assert(loops.back() && "no owner found for induction variable!");
+    if (iv.isa<BlockArgument>()) {
+      loops.push_back(iv.cast<BlockArgument>().getOwner()->getParentOp());
+      assert(loops.back() && "no owner found for induction variable!");
+    } else {
+      // TODO: Instead of doing this, try to recover the ops used instead of the
+      // loop.
+      loops.push_back(nullptr);
+    }
   }
   return TiledLinalgOp{res, loops};
 }

@@ -91,14 +91,13 @@ SBFileSpec SBHostOS::GetUserHomeDirectory() {
   LLDB_RECORD_STATIC_METHOD_NO_ARGS(lldb::SBFileSpec, SBHostOS,
                                     GetUserHomeDirectory);
 
-  SBFileSpec sb_fspec;
-
-  llvm::SmallString<64> home_dir_path;
-  llvm::sys::path::home_directory(home_dir_path);
-  FileSpec homedir(home_dir_path.c_str());
+  FileSpec homedir;
+  FileSystem::Instance().GetHomeDirectory(homedir);
   FileSystem::Instance().Resolve(homedir);
 
+  SBFileSpec sb_fspec;
   sb_fspec.SetFileSpec(homedir);
+
   return LLDB_RECORD_RESULT(sb_fspec);
 }
 

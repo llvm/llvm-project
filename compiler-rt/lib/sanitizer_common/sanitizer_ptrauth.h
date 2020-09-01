@@ -18,4 +18,6 @@
 #define ptrauth_string_discriminator(__string) ((int)0)
 #endif
 
+#define STRIP_PC(pc) ((uptr)ptrauth_strip(pc, 0))
+
 #endif // SANITIZER_PTRAUTH_H

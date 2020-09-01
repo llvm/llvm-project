@@ -2562,7 +2562,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node(const __container_val
     __h.get_deleter().__value_constructed = true;
     __h->__hash_ = hash_function()(__h->__value_);
     __h->__next_ = nullptr;
-    return _LIBCPP_EXPLICIT_MOVE(__h);  // explicitly moved for C++03
+    return __h;
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -2576,7 +2576,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node_hash(size_t __hash,
     __h.get_deleter().__value_constructed = true;
     __h->__hash_ = __hash;
     __h->__next_ = nullptr;
-    return _LIBCPP_EXPLICIT_MOVE(__h);  // explicitly moved for C++03
+    return __h;
 }
 
 #endif  // _LIBCPP_CXX03_LANG

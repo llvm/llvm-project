@@ -10870,3 +10870,32 @@ define <16 x i32> @test_maskz_expand_d_512(<16 x i32> %data, i16 %mask) {
 }
 
 declare <16 x i32> @llvm.x86.avx512.mask.expand.d.512(<16 x i32> %data, <16 x i32> %src0, i16 %mask)
+
+define <16 x float> @test_cmp_512(<16 x float> %a, <16 x float> %b, <16 x float> %c, <16 x float> %d, float* %p) {
+; X86-LABEL: test_cmp_512:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vcmpltps {sae}, %zmm1, %zmm0, %k0 ## encoding: [0x62,0xf1,0x7c,0x18,0xc2,0xc1,0x01]
+; X86-NEXT:    vcmpltps %zmm3, %zmm2, %k1 ## encoding: [0x62,0xf1,0x6c,0x48,0xc2,0xcb,0x01]
+; X86-NEXT:    kxnorw %k1, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc9]
+; X86-NEXT:    vmovaps (%eax), %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7c,0xc9,0x28,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_cmp_512:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    vcmpltps {sae}, %zmm1, %zmm0, %k0 ## encoding: [0x62,0xf1,0x7c,0x18,0xc2,0xc1,0x01]
+; X64-NEXT:    vcmpltps %zmm3, %zmm2, %k1 ## encoding: [0x62,0xf1,0x6c,0x48,0xc2,0xcb,0x01]
+; X64-NEXT:    kxnorw %k1, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc9]
+; X64-NEXT:    vmovaps (%rdi), %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7c,0xc9,0x28,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+ entry:
+   %0 = tail call <16 x i1> @llvm.x86.avx512.cmp.ps.512(<16 x float> %a, <16 x float> %b, i32 1, i32 8)
+   %1 = tail call <16 x i1> @llvm.x86.avx512.cmp.ps.512(<16 x float> %c, <16 x float> %d, i32 1, i32 4)
+   %2 = bitcast float* %p to <16 x float>*
+   %3 = load <16 x float>, <16 x float>* %2
+   %4 = xor <16 x i1> %0, %1
+   %5 = select <16 x i1> %4, <16 x float> zeroinitializer, <16 x float> %3
+   ret <16 x float> %5
+}
+
+declare <16 x i1> @llvm.x86.avx512.cmp.ps.512(<16 x float>, <16 x float>, i32, i32)

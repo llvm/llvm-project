@@ -32,6 +32,10 @@ public:
     f(infoSection);
   }
 
+  InputSection *getInfoSection() const {
+    return cast<InputSection>(infoSection.sec);
+  }
+
   const llvm::DWARFSection &getLoclistsSection() const override {
     return loclistsSection;
   }

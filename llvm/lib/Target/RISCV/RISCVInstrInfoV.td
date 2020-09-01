@@ -124,6 +124,27 @@ class VWholeLoad<bits<3> nf, string opcodestr>
   let vm = 1;
   let Uses = [];
 }
+
+// segment load vd, (rs1), vm
+class VUnitStrideSegmentLoad<bits<3> nf, RISCVLSUMOP lumop,
+                             RISCVWidth width, string opcodestr>
+    : RVInstVLU<nf, width.Value{3}, lumop, width.Value{2-0},
+                (outs VRegOp:$vd),
+                (ins GPR:$rs1, VMaskOp:$vm), opcodestr, "$vd, (${rs1})$vm">;
+
+// segment load vd, (rs1), rs2, vm
+class VStridedSegmentLoad<bits<3> nf, RISCVWidth width, string opcodestr>
+    : RVInstVLS<nf, width.Value{3}, width.Value{2-0},
+                (outs VRegOp:$vd),
+                (ins GPR:$rs1, GPR:$rs2, VMaskOp:$vm), opcodestr,
+                "$vd, (${rs1}), $rs2$vm">;
+
+// segment load vd, (rs1), vs2, vm
+class VIndexedSegmentLoad<bits<3> nf, RISCVWidth width, string opcodestr>
+    : RVInstVLX<nf, width.Value{3}, width.Value{2-0},
+                (outs VRegOp:$vd),
+                (ins GPR:$rs1, VRegOp:$vs2, VMaskOp:$vm), opcodestr,
+                "$vd, (${rs1}), $vs2$vm">;
 } // hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
@@ -154,6 +175,24 @@ class VWholeStore<bits<3> nf, string opcodestr>
   let vm = 1;
   let Uses = [];
 }
+
+// segment store vd, vs3, (rs1), vm
+class VUnitStrideSegmentStore<bits<3> nf, RISCVWidth width, string opcodestr>
+    : RVInstVSU<nf, width.Value{3}, SUMOPUnitStride, width.Value{2-0},
+                (outs), (ins VRegOp:$vs3, GPR:$rs1, VMaskOp:$vm), opcodestr,
+                "$vs3, (${rs1})$vm">;
+
+// segment store vd, vs3, (rs1), rs2, vm
+class VStridedSegmentStore<bits<3> nf, RISCVWidth width, string opcodestr>
+    : RVInstVSS<nf, width.Value{3}, width.Value{2-0}, (outs),
+                (ins VRegOp:$vs3, GPR:$rs1, GPR:$rs2, VMaskOp:$vm),
+                opcodestr, "$vs3, (${rs1}), $rs2$vm">;
+
+// segment store vd, vs3, (rs1), vs2, vm
+class VIndexedSegmentStore<bits<3> nf, RISCVWidth width, string opcodestr>
+    : RVInstVSX<nf, width.Value{3}, MOPSTIndexedOrder, width.Value{2-0}, (outs),
+                (ins VRegOp:$vs3, GPR:$rs1, VRegOp:$vs2, VMaskOp:$vm),
+                opcodestr, "$vs3, (${rs1}), $vs2$vm">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 1
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
@@ -253,6 +292,29 @@ class VALUVs2<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, string opcodestr>
                (ins VRegOp:$vs2, VMaskOp:$vm),
                opcodestr, "$vd, $vs2$vm">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in {
+// vamo vd, (rs1), vs2, vd, vm
+class VAMOWd<RISCVAMOOP amoop, RISCVWidth width, string opcodestr>
+    : RVInstVAMO<amoop, width.Value{2-0}, (outs VRegOp:$vd_wd),
+            (ins GPR:$rs1, VRegOp:$vs2, VRegOp:$vd, VMaskOp:$vm),
+            opcodestr, "$vd_wd, (${rs1}), $vs2, $vd$vm"> {
+    let Constraints = "$vd_wd = $vd";
+    let wd = 1;
+    bits<5> vd;
+    let Inst{11-7} = vd;
+}
+
+// vamo x0, (rs1), vs2, vs3, vm
+class VAMONoWd<RISCVAMOOP amoop, RISCVWidth width, string opcodestr>
+    : RVInstVAMO<amoop, width.Value{2-0}, (outs),
+            (ins GPR:$rs1, VRegOp:$vs2, VRegOp:$vs3, VMaskOp:$vm),
+            opcodestr, "x0, (${rs1}), $vs2, $vs3$vm"> {
+    bits<5> vs3;
+    let Inst{11-7} = vs3;
+}
+
+} // hasSideEffects = 0, mayLoad = 1, mayStore = 1
 
 //===----------------------------------------------------------------------===//
 // Combination of instruction classes.
@@ -359,6 +421,11 @@ multiclass VALU_FV_V<string opcodestr, bits<6> funct6> {
 
 multiclass VALU_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
   def "" : VALUVs2<funct6, vs1, OPFVV, opcodestr>;
+}
+
+multiclass VAMO<RISCVAMOOP amoop, RISCVWidth width, string opcodestr> {
+  def _WD : VAMOWd<amoop, width, opcodestr>;
+  def _UNWD : VAMONoWd<amoop, width, opcodestr>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -913,3 +980,122 @@ foreach nf = [1, 2, 4, 8] in {
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasStdExtV]
+
+let Predicates = [HasStdExtZvlsseg] in {
+  foreach nf=2-8 in {
+    def VLSEG#nf#E8_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStride, LSWidth8, "vlseg"#nf#"e8.v">;
+    def VLSEG#nf#E16_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStride, LSWidth16, "vlseg"#nf#"e16.v">;
+    def VLSEG#nf#E32_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStride, LSWidth32, "vlseg"#nf#"e32.v">;
+    def VLSEG#nf#E64_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStride, LSWidth64, "vlseg"#nf#"e64.v">;
+    def VLSEG#nf#E128_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStride, LSWidth128, "vlseg"#nf#"e128.v">;
+    def VLSEG#nf#E256_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStride, LSWidth256, "vlseg"#nf#"e256.v">;
+    def VLSEG#nf#E512_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStride, LSWidth512, "vlseg"#nf#"e512.v">;
+    def VLSEG#nf#E1024_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStride, LSWidth1024, "vlseg"#nf#"e1024.v">;
+
+    def VLSEG#nf#E8FF_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStrideFF, LSWidth8, "vlseg"#nf#"e8ff.v">;
+    def VLSEG#nf#E16FF_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStrideFF, LSWidth16, "vlseg"#nf#"e16ff.v">;
+    def VLSEG#nf#E32FF_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStrideFF, LSWidth32, "vlseg"#nf#"e32ff.v">;
+    def VLSEG#nf#E64FF_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStrideFF, LSWidth64, "vlseg"#nf#"e64ff.v">;
+    def VLSEG#nf#E128FF_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStrideFF, LSWidth128, "vlseg"#nf#"e128ff.v">;
+    def VLSEG#nf#E256FF_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStrideFF, LSWidth256, "vlseg"#nf#"e256ff.v">;
+    def VLSEG#nf#E512FF_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStrideFF, LSWidth512, "vlseg"#nf#"e512ff.v">;
+    def VLSEG#nf#E1024FF_V : VUnitStrideSegmentLoad<!add(nf, -1), LUMOPUnitStrideFF, LSWidth1024, "vlseg"#nf#"e1024ff.v">;
+
+    def VSSEG#nf#E8_V : VUnitStrideSegmentStore<!add(nf, -1), LSWidth8, "vsseg"#nf#"e8.v">;
+    def VSSEG#nf#E16_V : VUnitStrideSegmentStore<!add(nf, -1), LSWidth16, "vsseg"#nf#"e16.v">;
+    def VSSEG#nf#E32_V : VUnitStrideSegmentStore<!add(nf, -1), LSWidth32, "vsseg"#nf#"e32.v">;
+    def VSSEG#nf#E64_V : VUnitStrideSegmentStore<!add(nf, -1), LSWidth64, "vsseg"#nf#"e64.v">;
+    def VSSEG#nf#E128_V : VUnitStrideSegmentStore<!add(nf, -1), LSWidth128, "vsseg"#nf#"e128.v">;
+    def VSSEG#nf#E256_V : VUnitStrideSegmentStore<!add(nf, -1), LSWidth256, "vsseg"#nf#"e256.v">;
+    def VSSEG#nf#E512_V : VUnitStrideSegmentStore<!add(nf, -1), LSWidth512, "vsseg"#nf#"e512.v">;
+    def VSSEG#nf#E1024_V : VUnitStrideSegmentStore<!add(nf, -1), LSWidth1024, "vsseg"#nf#"e1024.v">;
+
+    // Vector Strided Instructions
+    def VLSSEG#nf#E8_V : VStridedSegmentLoad<!add(nf, -1), LSWidth8, "vlsseg"#nf#"e8.v">;
+    def VLSSEG#nf#E16_V : VStridedSegmentLoad<!add(nf, -1), LSWidth16, "vlsseg"#nf#"e16.v">;
+    def VLSSEG#nf#E32_V : VStridedSegmentLoad<!add(nf, -1), LSWidth32, "vlsseg"#nf#"e32.v">;
+    def VLSSEG#nf#E64_V : VStridedSegmentLoad<!add(nf, -1), LSWidth64, "vlsseg"#nf#"e64.v">;
+    def VLSSEG#nf#E128_V : VStridedSegmentLoad<!add(nf, -1), LSWidth128, "vlsseg"#nf#"e128.v">;
+    def VLSSEG#nf#E256_V : VStridedSegmentLoad<!add(nf, -1), LSWidth256, "vlsseg"#nf#"e256.v">;
+    def VLSSEG#nf#E512_V : VStridedSegmentLoad<!add(nf, -1), LSWidth512, "vlsseg"#nf#"e512.v">;
+    def VLSSEG#nf#E1024_V : VStridedSegmentLoad<!add(nf, -1), LSWidth1024, "vlsseg"#nf#"e1024.v">;
+
+    def VSSSEG#nf#E8_V : VStridedSegmentStore<!add(nf, -1), LSWidth8, "vssseg"#nf#"e8.v">;
+    def VSSSEG#nf#E16_V : VStridedSegmentStore<!add(nf, -1), LSWidth16, "vssseg"#nf#"e16.v">;
+    def VSSSEG#nf#E32_V : VStridedSegmentStore<!add(nf, -1), LSWidth32, "vssseg"#nf#"e32.v">;
+    def VSSSEG#nf#E64_V : VStridedSegmentStore<!add(nf, -1), LSWidth64, "vssseg"#nf#"e64.v">;
+    def VSSSEG#nf#E128_V : VStridedSegmentStore<!add(nf, -1), LSWidth128, "vssseg"#nf#"e128.v">;
+    def VSSSEG#nf#E256_V : VStridedSegmentStore<!add(nf, -1), LSWidth256, "vssseg"#nf#"e256.v">;
+    def VSSSEG#nf#E512_V : VStridedSegmentStore<!add(nf, -1), LSWidth512, "vssseg"#nf#"e512.v">;
+    def VSSSEG#nf#E1024_V : VStridedSegmentStore<!add(nf, -1), LSWidth1024, "vssseg"#nf#"e1024.v">;
+
+    // Vector Indexed Instructions
+    def VLXSEG#nf#EI8_V : VIndexedSegmentLoad<!add(nf, -1), LSWidth8, "vlxseg"#nf#"ei8.v">;
+    def VLXSEG#nf#EI16_V : VIndexedSegmentLoad<!add(nf, -1), LSWidth16, "vlxseg"#nf#"ei16.v">;
+    def VLXSEG#nf#EI32_V : VIndexedSegmentLoad<!add(nf, -1), LSWidth32, "vlxseg"#nf#"ei32.v">;
+    def VLXSEG#nf#EI64_V : VIndexedSegmentLoad<!add(nf, -1), LSWidth64, "vlxseg"#nf#"ei64.v">;
+    def VLXSEG#nf#EI128_V : VIndexedSegmentLoad<!add(nf, -1), LSWidth128, "vlxseg"#nf#"ei128.v">;
+    def VLXSEG#nf#EI256_V : VIndexedSegmentLoad<!add(nf, -1), LSWidth256, "vlxseg"#nf#"ei256.v">;
+    def VLXSEG#nf#EI512_V : VIndexedSegmentLoad<!add(nf, -1), LSWidth512, "vlxseg"#nf#"ei512.v">;
+    def VLXSEG#nf#EI1024_V : VIndexedSegmentLoad<!add(nf, -1), LSWidth1024, "vlxseg"#nf#"ei1024.v">;
+
+    def VSXSEG#nf#EI8_V : VIndexedSegmentStore<!add(nf, -1), LSWidth8, "vsxseg"#nf#"ei8.v">;
+    def VSXSEG#nf#EI16_V : VIndexedSegmentStore<!add(nf, -1), LSWidth16, "vsxseg"#nf#"ei16.v">;
+    def VSXSEG#nf#EI32_V : VIndexedSegmentStore<!add(nf, -1), LSWidth32, "vsxseg"#nf#"ei32.v">;
+    def VSXSEG#nf#EI64_V : VIndexedSegmentStore<!add(nf, -1), LSWidth64, "vsxseg"#nf#"ei64.v">;
+    def VSXSEG#nf#EI128_V : VIndexedSegmentStore<!add(nf, -1), LSWidth128, "vsxseg"#nf#"ei128.v">;
+    def VSXSEG#nf#EI256_V : VIndexedSegmentStore<!add(nf, -1), LSWidth256, "vsxseg"#nf#"ei256.v">;
+    def VSXSEG#nf#EI512_V : VIndexedSegmentStore<!add(nf, -1), LSWidth512, "vsxseg"#nf#"ei512.v">;
+    def VSXSEG#nf#EI1024_V : VIndexedSegmentStore<!add(nf, -1), LSWidth1024, "vsxseg"#nf#"ei1024.v">;
+  }
+} // Predicates = [HasStdExtZvlsseg]
+
+let Predicates = [HasStdExtZvamo, HasStdExtA] in {
+  defm VAMOSWAPEI8 : VAMO<AMOOPVamoSwap, LSWidth8, "vamoswapei8.v">;
+  defm VAMOSWAPEI16 : VAMO<AMOOPVamoSwap, LSWidth16, "vamoswapei16.v">;
+  defm VAMOSWAPEI32 : VAMO<AMOOPVamoSwap, LSWidth32, "vamoswapei32.v">;
+
+  defm VAMOADDEI8 : VAMO<AMOOPVamoAdd, LSWidth8, "vamoaddei8.v">;
+  defm VAMOADDEI16 : VAMO<AMOOPVamoAdd, LSWidth16, "vamoaddei16.v">;
+  defm VAMOADDEI32 : VAMO<AMOOPVamoAdd, LSWidth32, "vamoaddei32.v">;
+
+  defm VAMOXOREI8 : VAMO<AMOOPVamoXor, LSWidth8, "vamoxorei8.v">;
+  defm VAMOXOREI16 : VAMO<AMOOPVamoXor, LSWidth16, "vamoxorei16.v">;
+  defm VAMOXOREI32 : VAMO<AMOOPVamoXor, LSWidth32, "vamoxorei32.v">;
+
+  defm VAMOANDEI8 : VAMO<AMOOPVamoAnd, LSWidth8, "vamoandei8.v">;
+  defm VAMOANDEI16 : VAMO<AMOOPVamoAnd, LSWidth16, "vamoandei16.v">;
+  defm VAMOANDEI32 : VAMO<AMOOPVamoAnd, LSWidth32, "vamoandei32.v">;
+
+  defm VAMOOREI8 : VAMO<AMOOPVamoOr, LSWidth8, "vamoorei8.v">;
+  defm VAMOOREI16 : VAMO<AMOOPVamoOr, LSWidth16, "vamoorei16.v">;
+  defm VAMOOREI32 : VAMO<AMOOPVamoOr, LSWidth32, "vamoorei32.v">;
+
+  defm VAMOMINEI8 : VAMO<AMOOPVamoMin, LSWidth8, "vamominei8.v">;
+  defm VAMOMINEI16 : VAMO<AMOOPVamoMin, LSWidth16, "vamominei16.v">;
+  defm VAMOMINEI32 : VAMO<AMOOPVamoMin, LSWidth32, "vamominei32.v">;
+
+  defm VAMOMAXEI8 : VAMO<AMOOPVamoMax, LSWidth8, "vamomaxei8.v">;
+  defm VAMOMAXEI16 : VAMO<AMOOPVamoMax, LSWidth16, "vamomaxei16.v">;
+  defm VAMOMAXEI32 : VAMO<AMOOPVamoMax, LSWidth32, "vamomaxei32.v">;
+
+  defm VAMOMINUEI8 : VAMO<AMOOPVamoMinu, LSWidth8, "vamominuei8.v">;
+  defm VAMOMINUEI16 : VAMO<AMOOPVamoMinu, LSWidth16, "vamominuei16.v">;
+  defm VAMOMINUEI32 : VAMO<AMOOPVamoMinu, LSWidth32, "vamominuei32.v">;
+
+  defm VAMOMAXUEI8 : VAMO<AMOOPVamoMaxu, LSWidth8, "vamomaxuei8.v">;
+  defm VAMOMAXUEI16 : VAMO<AMOOPVamoMaxu, LSWidth16, "vamomaxuei16.v">;
+  defm VAMOMAXUEI32 : VAMO<AMOOPVamoMaxu, LSWidth32, "vamomaxuei32.v">;
+} // Predicates = [HasStdExtZvamo, HasStdExtA]
+
+let Predicates = [HasStdExtZvamo, HasStdExtA, IsRV64] in {
+  defm VAMOSWAPEI64 : VAMO<AMOOPVamoSwap, LSWidth64, "vamoswapei64.v">;
+  defm VAMOADDEI64 : VAMO<AMOOPVamoAdd, LSWidth64, "vamoaddei64.v">;
+  defm VAMOXOREI64 : VAMO<AMOOPVamoXor, LSWidth64, "vamoxorei64.v">;
+  defm VAMOANDEI64 : VAMO<AMOOPVamoAnd, LSWidth64, "vamoandei64.v">;
+  defm VAMOOREI64 : VAMO<AMOOPVamoOr, LSWidth64, "vamoorei64.v">;
+  defm VAMOMINEI64 : VAMO<AMOOPVamoMin, LSWidth64, "vamominei64.v">;
+  defm VAMOMAXEI64 : VAMO<AMOOPVamoMax, LSWidth64, "vamomaxei64.v">;
+  defm VAMOMINUEI64 : VAMO<AMOOPVamoMinu, LSWidth64, "vamominuei64.v">;
+  defm VAMOMAXUEI64 : VAMO<AMOOPVamoMaxu, LSWidth64, "vamomaxuei64.v">;
+} // Predicates = [HasStdExtZvamo, HasStdExtA, IsRV64]

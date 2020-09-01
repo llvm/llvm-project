@@ -14,13 +14,14 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Reproducer.h"
 
 using namespace lldb_private;
 
 namespace {
 class SymbolsTest : public ::testing::Test {
 public:
-  SubsystemRAII<FileSystem, HostInfo> subsystems;
+  SubsystemRAII<repro::Reproducer, FileSystem, HostInfo> subsystems;
 };
 } // namespace
 

@@ -34,22 +34,20 @@ class MCSectionXCOFF final : public MCSection {
 
   XCOFF::StorageMappingClass MappingClass;
   XCOFF::SymbolType Type;
-  XCOFF::StorageClass StorageClass;
   MCSymbolXCOFF *const QualName;
   StringRef SymbolTableName;
   static constexpr unsigned DefaultAlignVal = 4;
 
   MCSectionXCOFF(StringRef Name, XCOFF::StorageMappingClass SMC,
-                 XCOFF::SymbolType ST, XCOFF::StorageClass SC, SectionKind K,
-                 MCSymbolXCOFF *QualName, MCSymbol *Begin,
-                 StringRef SymbolTableName)
+                 XCOFF::SymbolType ST, SectionKind K, MCSymbolXCOFF *QualName,
+                 MCSymbol *Begin, StringRef SymbolTableName)
       : MCSection(SV_XCOFF, Name, K, Begin), MappingClass(SMC), Type(ST),
-        StorageClass(SC), QualName(QualName), SymbolTableName(SymbolTableName) {
+        QualName(QualName), SymbolTableName(SymbolTableName) {
     assert((ST == XCOFF::XTY_SD || ST == XCOFF::XTY_CM || ST == XCOFF::XTY_ER) &&
            "Invalid or unhandled type for csect.");
     assert(QualName != nullptr && "QualName is needed.");
-    QualName->setStorageClass(SC);
     QualName->setRepresentedCsect(this);
+    QualName->setStorageClass(XCOFF::C_HIDEXT);
     // A csect is 4 byte aligned by default, except for undefined symbol csects.
     if (Type != XCOFF::XTY_ER)
       setAlignment(Align(DefaultAlignVal));
@@ -65,7 +63,9 @@ public:
   }
 
   XCOFF::StorageMappingClass getMappingClass() const { return MappingClass; }
-  XCOFF::StorageClass getStorageClass() const { return StorageClass; }
+  XCOFF::StorageClass getStorageClass() const {
+    return QualName->getStorageClass();
+  }
   XCOFF::SymbolType getCSectType() const { return Type; }
   MCSymbolXCOFF *getQualNameSymbol() const { return QualName; }
 

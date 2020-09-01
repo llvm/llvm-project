@@ -276,63 +276,64 @@ LoadCommands:
 DWARF:
   debug_str:       
     - World
-  debug_abbrev:    
-    - Code:            0x00000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_no
-      Attributes:      
-        - Attribute:       0x2000
-          Form:            DW_FORM_addr
-        - Attribute:       0x2001
-          Form:            DW_FORM_block
-        - Attribute:       DW_AT_MIPS_loop_begin
-          Form:            DW_FORM_block1
-        - Attribute:       DW_AT_MIPS_tail_loop_begin
-          Form:            DW_FORM_block2
-        - Attribute:       DW_AT_MIPS_epilog_begin
-          Form:            DW_FORM_block4
-        - Attribute:       DW_AT_MIPS_loop_unroll_factor
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_MIPS_software_pipeline_depth
-          Form:            DW_FORM_data2
-        - Attribute:       DW_AT_MIPS_linkage_name
-          Form:            DW_FORM_data4
-        - Attribute:       DW_AT_MIPS_stride
-          Form:            DW_FORM_data8
-        - Attribute:       DW_AT_MIPS_abstract_name
-          Form:            DW_FORM_string
-        - Attribute:       DW_AT_MIPS_clone_origin
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_MIPS_has_inlines
-          Form:            DW_FORM_ref_addr
-        - Attribute:       DW_AT_MIPS_stride_byte
-          Form:            DW_FORM_ref1
-        - Attribute:       DW_AT_MIPS_stride_elem
-          Form:            DW_FORM_ref2
-        - Attribute:       DW_AT_MIPS_ptr_dopetype
-          Form:            DW_FORM_ref4
-        - Attribute:       DW_AT_MIPS_allocatable_dopetype
-          Form:            DW_FORM_ref8
-        - Attribute:       DW_AT_MIPS_assumed_shape_dopetype
-          Form:            DW_FORM_ref_sig8
-        - Attribute:       DW_AT_MIPS_assumed_size
-          Form:            DW_FORM_ref_udata
-        - Attribute:       0x2012
-          Form:            DW_FORM_flag
-        - Attribute:       0x2013
-          Form:            DW_FORM_flag
-        - Attribute:       0x2014
-          Form:            DW_FORM_flag_present
-        - Attribute:       0x2015
-          Form:            DW_FORM_sdata
-        - Attribute:       0x2017
-          Form:            DW_FORM_udata
-        - Attribute:       0x2018
-          Form:            DW_FORM_GNU_ref_alt
-        - Attribute:       0x2019
-          Form:            DW_FORM_sec_offset
-        - Attribute:       0x201A
-          Form:            DW_FORM_addr
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       0x2000
+              Form:            DW_FORM_addr
+            - Attribute:       0x2001
+              Form:            DW_FORM_block
+            - Attribute:       DW_AT_MIPS_loop_begin
+              Form:            DW_FORM_block1
+            - Attribute:       DW_AT_MIPS_tail_loop_begin
+              Form:            DW_FORM_block2
+            - Attribute:       DW_AT_MIPS_epilog_begin
+              Form:            DW_FORM_block4
+            - Attribute:       DW_AT_MIPS_loop_unroll_factor
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_MIPS_software_pipeline_depth
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_MIPS_linkage_name
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_MIPS_stride
+              Form:            DW_FORM_data8
+            - Attribute:       DW_AT_MIPS_abstract_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_MIPS_clone_origin
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_MIPS_has_inlines
+              Form:            DW_FORM_ref_addr
+            - Attribute:       DW_AT_MIPS_stride_byte
+              Form:            DW_FORM_ref1
+            - Attribute:       DW_AT_MIPS_stride_elem
+              Form:            DW_FORM_ref2
+            - Attribute:       DW_AT_MIPS_ptr_dopetype
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_MIPS_allocatable_dopetype
+              Form:            DW_FORM_ref8
+            - Attribute:       DW_AT_MIPS_assumed_shape_dopetype
+              Form:            DW_FORM_ref_sig8
+            - Attribute:       DW_AT_MIPS_assumed_size
+              Form:            DW_FORM_ref_udata
+            - Attribute:       0x2012
+              Form:            DW_FORM_flag
+            - Attribute:       0x2013
+              Form:            DW_FORM_flag
+            - Attribute:       0x2014
+              Form:            DW_FORM_flag_present
+            - Attribute:       0x2015
+              Form:            DW_FORM_sdata
+            - Attribute:       0x2017
+              Form:            DW_FORM_udata
+            - Attribute:       0x2018
+              Form:            DW_FORM_GNU_ref_alt
+            - Attribute:       0x2019
+              Form:            DW_FORM_sec_offset
+            - Attribute:       0x201A
+              Form:            DW_FORM_addr
   debug_info:      
     - Length:          168
       Version:         2

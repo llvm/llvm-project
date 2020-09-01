@@ -293,10 +293,8 @@ define <4 x i32> @ugt_smax(<4 x i32> %x) {
 define <4 x i32> @ule_smax(<4 x i32> %x) {
 ; CHECK-LABEL: ule_smax:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pxor {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp ule <4 x i32> %x, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
   %r = sext <4 x i1> %cmp to <4 x i32>
@@ -317,11 +315,9 @@ define <4 x i32> @ult_smin(<4 x i32> %x) {
 define <4 x i32> @uge_smin(<4 x i32> %x) {
 ; CHECK-LABEL: uge_smin:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pxor {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
-; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp uge <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
   %r = sext <4 x i1> %cmp to <4 x i32>

@@ -19,6 +19,7 @@
 #include "lldb/Target/RegisterCheckpoint.h"
 #include "lldb/Target/StackFrameList.h"
 #include "lldb/Utility/Broadcaster.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UserID.h"
@@ -910,6 +911,12 @@ public:
                                  bool stop_other_threads, Status &status);
 
   // Thread Plan accessors:
+
+  /// Format the thread plan information for auto completion.
+  ///
+  /// \param[in] request
+  ///     The reference to the completion handler.
+  void AutoCompleteThreadPlans(CompletionRequest &request) const;
 
   /// Gets the plan which will execute next on the plan stack.
   ///

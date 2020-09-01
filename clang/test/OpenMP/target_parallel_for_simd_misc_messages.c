@@ -144,11 +144,11 @@ void test_collapse() {
 #pragma omp target parallel for simd collapse(4, 8)
   for (i = 0; i < 16; ++i)
     ; // expected-error {{expected 4 for loops after '#pragma omp target parallel for simd', but found only 1}}
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp target parallel for simd collapse(2.5)
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp target parallel for simd collapse(foo())
   for (i = 0; i < 16; ++i)
     ;
@@ -379,11 +379,11 @@ void test_safelen() {
 #pragma omp target parallel for simd safelen(4, 8)
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp target parallel for simd safelen(2.5)
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp target parallel for simd safelen(foo())
   for (i = 0; i < 16; ++i)
     ;
@@ -464,11 +464,11 @@ void test_simdlen() {
 #pragma omp target parallel for simd simdlen(4, 8)
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp target parallel for simd simdlen(2.5)
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp target parallel for simd simdlen(foo())
   for (i = 0; i < 16; ++i)
     ;

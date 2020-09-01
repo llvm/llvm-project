@@ -256,9 +256,9 @@ func @atomicrmw(%ptr : !llvm.ptr<float>, %val : !llvm.float) {
 }
 
 // CHECK-LABEL: @cmpxchg
-func @cmpxchg(%ptr : !llvm.ptr<float>, %cmp : !llvm.float, %new : !llvm.float) {
-  // CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : !llvm.float
-  %0 = llvm.cmpxchg %ptr, %cmp, %new acq_rel monotonic : !llvm.float
+func @cmpxchg(%ptr : !llvm.ptr<i32>, %cmp : !llvm.i32, %new : !llvm.i32) {
+  // CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : !llvm.i32
+  %0 = llvm.cmpxchg %ptr, %cmp, %new acq_rel monotonic : !llvm.i32
   llvm.return
 }
 

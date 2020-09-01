@@ -4,7 +4,6 @@ AX_SUBMODULE(gmp,system|build,system)
 case "$with_gmp" in
 system)
 	if test "x$with_gmp_prefix" != "x"; then
-		isl_configure_args="$isl_configure_args --with-gmp=$with_gmp_prefix"
 		MP_CPPFLAGS="-I$with_gmp_prefix/include"
 		MP_LDFLAGS="-L$with_gmp_prefix/lib"
 	fi
