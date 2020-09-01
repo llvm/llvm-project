@@ -92,5 +92,20 @@ int main()
     if (test__divsf3(0x1.0p+0F, 0x1.0001p+0F, UINT32_C(0x3f7fff00)))
       return 1;
 
+    // smallest normal value divided by 2.0
+    if (test__divsf3(0x1.0p-126F, 2.0F, UINT32_C(0x00400000)))
+      return 1;
+    // smallest subnormal result
+    if (test__divsf3(0x1.0p-126F, 0x1p+23F, UINT32_C(0x00000001)))
+      return 1;
+
+    // some misc test cases obtained by fuzzing against h/w implementation
+    if (test__divsf3(-0x1.3e75e6p-108F, -0x1.cf372p+38F, UINT32_C(0x00000006)))
+      return 1;
+    if (test__divsf3(0x1.e77c54p+81F, -0x1.e77c52p-47F, UINT32_C(0xff800000)))
+      return 1;
+    if (test__divsf3(0x1.fffffep-126F, 2.F, UINT32_C(0x00800000)))
+      return 1;
+
     return 0;
 }
