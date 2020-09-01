@@ -124,7 +124,7 @@ static void printAllocaOp(OpAsmPrinter &p, AllocaOp &op) {
                                   op.getContext());
 
   p << op.getOperationName() << ' ' << op.arraySize() << " x " << elemTy;
-  if (op.alignment().hasValue() && op.alignment()->getSExtValue() != 0)
+  if (op.alignment().hasValue() && *op.alignment() != 0)
     p.printOptionalAttrDict(op.getAttrs());
   else
     p.printOptionalAttrDict(op.getAttrs(), {"alignment"});
@@ -914,9 +914,8 @@ static LogicalResult verify(AddressOfOp op) {
     return op.emitOpError(
         "must reference a global defined by 'llvm.mlir.global' or 'llvm.func'");
 
-  if (global &&
-      global.getType().getPointerTo(global.addr_space().getZExtValue()) !=
-          op.getResult().getType())
+  if (global && global.getType().getPointerTo(global.addr_space()) !=
+                    op.getResult().getType())
     return op.emitOpError(
         "the type must be a pointer to the type of the referenced global");
 

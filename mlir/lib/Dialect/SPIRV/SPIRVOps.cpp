@@ -250,7 +250,7 @@ static void printMemoryAccessAttribute(
     MemoryOpTy memoryOp, OpAsmPrinter &printer,
     SmallVectorImpl<StringRef> &elidedAttrs,
     Optional<spirv::MemoryAccess> memoryAccessAtrrValue = None,
-    Optional<llvm::APInt> alignmentAttrValue = None) {
+    Optional<uint32_t> alignmentAttrValue = None) {
   // Print optional memory access attribute.
   if (auto memAccess = (memoryAccessAtrrValue ? memoryAccessAtrrValue
                                               : memoryOp.memory_access())) {
@@ -280,7 +280,7 @@ static void printSourceMemoryAccessAttribute(
     MemoryOpTy memoryOp, OpAsmPrinter &printer,
     SmallVectorImpl<StringRef> &elidedAttrs,
     Optional<spirv::MemoryAccess> memoryAccessAtrrValue = None,
-    Optional<llvm::APInt> alignmentAttrValue = None) {
+    Optional<uint32_t> alignmentAttrValue = None) {
 
   printer << ", ";
 
