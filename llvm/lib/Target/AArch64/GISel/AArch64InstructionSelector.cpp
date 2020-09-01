@@ -41,6 +41,7 @@
 #define DEBUG_TYPE "aarch64-isel"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 namespace {
 
@@ -1883,7 +1884,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       return false;
     }
 
-    const Register CondReg = I.getOperand(0).getReg();
+    Register CondReg = I.getOperand(0).getReg();
     MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
 
     // Speculation tracking/SLH assumes that optimized TB(N)Z/CB(N)Z
@@ -1893,7 +1894,19 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       return true;
 
     if (ProduceNonFlagSettingCondBr) {
-      auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::TBNZW))
+      unsigned BOpc = AArch64::TBNZW;
+      // Try to fold a not, i.e. a xor, cond, 1.
+      Register XorSrc;
+      int64_t Cst;
+      if (mi_match(CondReg, MRI,
+                   m_GTrunc(m_GXor(m_Reg(XorSrc), m_ICst(Cst)))) &&
+          Cst == 1) {
+        CondReg = XorSrc;
+        BOpc = AArch64::TBZW;
+        if (MRI.getType(XorSrc).getSizeInBits() > 32)
+          BOpc = AArch64::TBZX;
+      }
+      auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(BOpc))
                      .addUse(CondReg)
                      .addImm(/*bit offset=*/0)
                      .addMBB(DestMBB);
