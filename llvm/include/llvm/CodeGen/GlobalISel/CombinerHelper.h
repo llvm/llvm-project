@@ -258,6 +258,16 @@ public:
   bool applyCombineAddP2IToPtrAdd(MachineInstr &MI,
                                   std::pair<Register, bool> &PtrRegAndCommute);
 
+  /// Transform anyext(trunc(x)) to x.
+  bool matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
+  bool applyCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
+
+  /// Transform [asz]ext([asz]ext(x)) to [asz]ext x.
+  bool matchCombineExtOfExt(MachineInstr &MI,
+                            std::tuple<Register, unsigned> &MatchInfo);
+  bool applyCombineExtOfExt(MachineInstr &MI,
+                            std::tuple<Register, unsigned> &MatchInfo);
+
   /// Return true if any explicit use operand on \p MI is defined by a
   /// G_IMPLICIT_DEF.
   bool matchAnyExplicitUseIsUndef(MachineInstr &MI);
