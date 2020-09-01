@@ -86,7 +86,7 @@ static void writeDWARFOffset(uint64_t Offset, dwarf::DwarfFormat Format,
 }
 
 Error DWARFYAML::emitDebugStr(raw_ostream &OS, const DWARFYAML::Data &DI) {
-  for (auto Str : DI.DebugStrings) {
+  for (StringRef Str : *DI.DebugStrings) {
     OS.write(Str.data(), Str.size());
     OS.write('\0');
   }

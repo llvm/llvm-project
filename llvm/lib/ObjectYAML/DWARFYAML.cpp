@@ -24,7 +24,7 @@ bool DWARFYAML::Data::isEmpty() const {
 
 SetVector<StringRef> DWARFYAML::Data::getNonEmptySectionNames() const {
   SetVector<StringRef> SecNames;
-  if (!DebugStrings.empty())
+  if (DebugStrings)
     SecNames.insert("debug_str");
   if (DebugAranges)
     SecNames.insert("debug_aranges");
