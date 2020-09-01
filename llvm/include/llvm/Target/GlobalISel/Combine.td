@@ -373,6 +373,14 @@ def ext_ext_fold: GICombineRule <
   (apply [{ return Helper.applyCombineExtOfExt(*${root}, ${matchinfo}); }])
 >;
 
+def not_cmp_fold_matchinfo : GIDefMatchData<"Register">;
+def not_cmp_fold : GICombineRule<
+  (defs root:$d, not_cmp_fold_matchinfo:$info),
+  (match (wip_match_opcode G_XOR): $d,
+  [{ return Helper.matchNotCmp(*${d}, ${info}); }]),
+  (apply [{ return Helper.applyNotCmp(*${d}, ${info}); }])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -400,4 +408,5 @@ def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     hoist_logic_op_with_same_opcode_hands,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
-    known_bits_simplifications, ext_ext_fold]>;
+    known_bits_simplifications, ext_ext_fold,
+    not_cmp_fold]>;
