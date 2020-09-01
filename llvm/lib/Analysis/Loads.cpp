@@ -516,7 +516,7 @@ bool llvm::canReplacePointersIfEqual(Value *A, Value *B, const DataLayout &DL,
   if (auto *C = dyn_cast<Constant>(B)) {
     // Do not allow replacing a pointer with a constant pointer, unless it is
     // either null or at least one byte is dereferenceable.
-    APInt OneByte(DL.getPointerTypeSizeInBits(A->getType()), 1);
+    APInt OneByte(DL.getPointerTypeSizeInBits(Ty), 1);
     return C->isNullValue() ||
            isDereferenceableAndAlignedPointer(B, Align(1), OneByte, DL, CtxI);
   }
