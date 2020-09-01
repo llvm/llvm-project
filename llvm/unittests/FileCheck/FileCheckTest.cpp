@@ -1,4 +1,4 @@
-//===- llvm/unittest/Support/FileCheckTest.cpp - FileCheck tests --===//
+//===- llvm/unittest/FileCheck/FileCheckTest.cpp - FileCheck tests --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/FileCheck.h"
-#include "../lib/Support/FileCheckImpl.h"
+#include "llvm/FileCheck/FileCheck.h"
+#include "../lib/FileCheck/FileCheckImpl.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"

@@ -71,7 +71,6 @@ static_library("Support") {
     "Error.cpp",
     "ErrorHandling.cpp",
     "ExtensibleRTTI.cpp",
-    "FileCheck.cpp",
     "FileCollector.cpp",
     "FileOutputBuffer.cpp",
     "FileUtilities.cpp",
