@@ -1,9 +1,12 @@
 // RUN: %clang_cc1 %s -verify
 // RUN: %clang_cc1 %s -verify=expected,space -Wcompound-token-split
-// RUN: %clang_cc1 %s -verify=expected,space -Wall
+
+// Ensure we get the same warnings after -frewrite-includes
+// RUN: %clang_cc1 %s -E -frewrite-includes -o %t
+// RUN: %clang_cc1 -x c++ %t -verify=expected,space -Wcompound-token-split
 
 #ifdef LSQUARE
-[ // expected-note {{second '[' token is here}}
+[
 #else
 
 #define VAR(type, name, init) type name = (init)
@@ -27,7 +30,7 @@ int f2() {
   return n;
 }
 
-[ // expected-warning-re {{{{^}}'[' tokens introducing attribute appear in different source files}}
+[ // space-warning-re {{{{^}}'[' tokens introducing attribute are separated by whitespace}}
 #define LSQUARE
 #include __FILE__
   noreturn ]]  void g();

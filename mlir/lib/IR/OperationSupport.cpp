@@ -199,6 +199,12 @@ void OperationState::addRegion(std::unique_ptr<Region> &&region) {
   regions.push_back(std::move(region));
 }
 
+void OperationState::addRegions(
+    MutableArrayRef<std::unique_ptr<Region>> regions) {
+  for (std::unique_ptr<Region> &region : regions)
+    addRegion(std::move(region));
+}
+
 //===----------------------------------------------------------------------===//
 // OperandStorage
 //===----------------------------------------------------------------------===//

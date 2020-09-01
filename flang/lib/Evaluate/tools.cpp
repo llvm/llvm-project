@@ -661,11 +661,6 @@ std::optional<Expr<SomeType>> ConvertToType(
 
 std::optional<Expr<SomeType>> ConvertToType(
     const Symbol &symbol, Expr<SomeType> &&x) {
-  if (int xRank{x.Rank()}; xRank > 0) {
-    if (symbol.Rank() != xRank) {
-      return std::nullopt;
-    }
-  }
   if (auto symType{DynamicType::From(symbol)}) {
     return ConvertToType(*symType, std::move(x));
   }

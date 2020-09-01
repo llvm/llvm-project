@@ -2935,13 +2935,6 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
   const auto &RtPtrChecking = *LAI->getRuntimePointerChecking();
   if (!RtPtrChecking.Need)
     return;
-  Instruction *FirstCheckInst;
-  Instruction *MemRuntimeCheck;
-  std::tie(FirstCheckInst, MemRuntimeCheck) =
-      addRuntimeChecks(MemCheckBlock->getTerminator(), OrigLoop,
-                       RtPtrChecking.getChecks(), RtPtrChecking.getSE());
-  assert(MemRuntimeCheck && "no RT checks generated although RtPtrChecking "
-                            "claimed checks are required");
 
   if (MemCheckBlock->getParent()->hasOptSize() || OptForSizeBasedOnProfile) {
     assert(Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled &&
@@ -2963,17 +2956,26 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
       SplitBlock(MemCheckBlock, MemCheckBlock->getTerminator(), DT, LI, nullptr,
                  "vector.ph");
 
+  auto *CondBranch = cast<BranchInst>(
+      Builder.CreateCondBr(Builder.getTrue(), Bypass, LoopVectorPreHeader));
+  ReplaceInstWithInst(MemCheckBlock->getTerminator(), CondBranch);
+  LoopBypassBlocks.push_back(MemCheckBlock);
+  AddedSafetyChecks = true;
+
   // Update dominator only if this is first RT check.
   if (LoopBypassBlocks.empty()) {
     DT->changeImmediateDominator(Bypass, MemCheckBlock);
     DT->changeImmediateDominator(LoopExitBlock, MemCheckBlock);
   }
 
-  ReplaceInstWithInst(
-      MemCheckBlock->getTerminator(),
-      BranchInst::Create(Bypass, LoopVectorPreHeader, MemRuntimeCheck));
-  LoopBypassBlocks.push_back(MemCheckBlock);
-  AddedSafetyChecks = true;
+  Instruction *FirstCheckInst;
+  Instruction *MemRuntimeCheck;
+  std::tie(FirstCheckInst, MemRuntimeCheck) =
+      addRuntimeChecks(MemCheckBlock->getTerminator(), OrigLoop,
+                       RtPtrChecking.getChecks(), RtPtrChecking.getSE());
+  assert(MemRuntimeCheck && "no RT checks generated although RtPtrChecking "
+                            "claimed checks are required");
+  CondBranch->setCondition(MemRuntimeCheck);
 
   // We currently don't use LoopVersioning for the actual loop cloning but we
   // still use it to add the noalias metadata.
@@ -6841,7 +6843,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   // detection.
   for (auto &Reduction : Legal->getReductionVars()) {
     RecurrenceDescriptor &RedDes = Reduction.second;
-    SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
+    const SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
     VecValuesToIgnore.insert(Casts.begin(), Casts.end());
   }
   // Ignore type-casting instructions we identified during induction

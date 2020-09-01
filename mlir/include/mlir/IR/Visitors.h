@@ -43,7 +43,7 @@ public:
   static WalkResult interrupt() { return {Interrupt}; }
   static WalkResult advance() { return {Advance}; }
 
-  /// Returns if the walk was interrupted.
+  /// Returns true if the walk was interrupted.
   bool wasInterrupted() const { return result == Interrupt; }
 };
 

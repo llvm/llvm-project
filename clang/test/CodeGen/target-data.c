@@ -130,6 +130,10 @@
 // RUN: FileCheck %s -check-prefix=PPC64-FREEBSD
 // PPC64-FREEBSD: target datalayout = "E-m:e-i64:64-n32:64"
 
+// RUN: %clang_cc1 -triple powerpc64le-freebsd -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=PPC64LE-FREEBSD
+// PPC64LE-FREEBSD: target datalayout = "e-m:e-i64:64-n32:64"
+
 // RUN: %clang_cc1 -triple powerpc64-linux -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=PPC64-LINUX
 // PPC64-LINUX: target datalayout = "E-m:e-i64:64-n32:64"

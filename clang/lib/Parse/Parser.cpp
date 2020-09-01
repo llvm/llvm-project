@@ -233,13 +233,12 @@ void Parser::checkCompoundToken(SourceLocation FirstTokLoc,
     return;
   SourceLocation SecondTokLoc = Tok.getLocation();
 
-  // We expect both tokens to come from the same FileID.
-  FileID FirstID = PP.getSourceManager().getFileID(FirstTokLoc);
-  FileID SecondID = PP.getSourceManager().getFileID(SecondTokLoc);
-  if (FirstID != SecondID) {
-    Diag(FirstTokLoc, (FirstTokLoc.isMacroID() || SecondTokLoc.isMacroID())
-                          ? diag::warn_compound_token_split_by_macro
-                          : diag::warn_compound_token_split_by_file)
+  // If either token is in a macro, we expect both tokens to come from the same
+  // macro expansion.
+  if ((FirstTokLoc.isMacroID() || SecondTokLoc.isMacroID()) &&
+      PP.getSourceManager().getFileID(FirstTokLoc) !=
+          PP.getSourceManager().getFileID(SecondTokLoc)) {
+    Diag(FirstTokLoc, diag::warn_compound_token_split_by_macro)
         << (FirstTokKind == Tok.getKind()) << FirstTokKind << Tok.getKind()
         << static_cast<int>(Op) << SourceRange(FirstTokLoc);
     Diag(SecondTokLoc, diag::note_compound_token_split_second_token_here)
@@ -249,7 +248,7 @@ void Parser::checkCompoundToken(SourceLocation FirstTokLoc,
   }
 
   // We expect the tokens to abut.
-  if (Tok.hasLeadingSpace()) {
+  if (Tok.hasLeadingSpace() || Tok.isAtStartOfLine()) {
     SourceLocation SpaceLoc = PP.getLocForEndOfToken(FirstTokLoc);
     if (SpaceLoc.isInvalid())
       SpaceLoc = FirstTokLoc;

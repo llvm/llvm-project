@@ -43,6 +43,49 @@ def DirectiveAttrDictValidB : TestFormat_Op<"attrdict_valid_b", [{
 }]>;
 
 //===----------------------------------------------------------------------===//
+// custom
+
+// CHECK: error: expected '<' before custom directive name
+def DirectiveCustomInvalidA : TestFormat_Op<"custom_invalid_a", [{
+  custom(
+}]>;
+// CHECK: error: expected custom directive name identifier
+def DirectiveCustomInvalidB : TestFormat_Op<"custom_invalid_b", [{
+  custom<>
+}]>;
+// CHECK: error: expected '>' after custom directive name
+def DirectiveCustomInvalidC : TestFormat_Op<"custom_invalid_c", [{
+  custom<MyDirective(
+}]>;
+// CHECK: error: expected '(' before custom directive parameters
+def DirectiveCustomInvalidD : TestFormat_Op<"custom_invalid_d", [{
+  custom<MyDirective>)
+}]>;
+// CHECK: error: only variables and types may be used as parameters to a custom directive
+def DirectiveCustomInvalidE : TestFormat_Op<"custom_invalid_e", [{
+  custom<MyDirective>(operands)
+}]>;
+// CHECK: error: expected ')' after custom directive parameters
+def DirectiveCustomInvalidF : TestFormat_Op<"custom_invalid_f", [{
+  custom<MyDirective>($operand<
+}]>, Arguments<(ins I64:$operand)>;
+// CHECK: error: type directives within a custom directive may only refer to variables
+def DirectiveCustomInvalidH : TestFormat_Op<"custom_invalid_h", [{
+  custom<MyDirective>(type(operands))
+}]>;
+
+// CHECK-NOT: error
+def DirectiveCustomValidA : TestFormat_Op<"custom_valid_a", [{
+  custom<MyDirective>($operand) attr-dict
+}]>, Arguments<(ins Optional<I64>:$operand)>;
+def DirectiveCustomValidB : TestFormat_Op<"custom_valid_b", [{
+  custom<MyDirective>($operand, type($operand), type($result)) attr-dict
+}]>, Arguments<(ins I64:$operand)>, Results<(outs I64:$result)>;
+def DirectiveCustomValidC : TestFormat_Op<"custom_valid_c", [{
+  custom<MyDirective>($attr) attr-dict
+}]>, Arguments<(ins I64Attr:$attr)>;
+
+//===----------------------------------------------------------------------===//
 // functional-type
 
 // CHECK: error: 'functional-type' is only valid as a top-level directive
@@ -88,6 +131,28 @@ def DirectiveOperandsInvalidB : TestFormat_Op<"operands_invalid_b", [{
 // CHECK-NOT: error:
 def DirectiveOperandsValid : TestFormat_Op<"operands_valid", [{
   operands attr-dict
+}]>;
+
+//===----------------------------------------------------------------------===//
+// regions
+
+// CHECK: error: 'regions' directive creates overlap in format
+def DirectiveRegionsInvalidA : TestFormat_Op<"regions_invalid_a", [{
+  regions regions attr-dict
+}]>;
+// CHECK: error: 'regions' directive creates overlap in format
+def DirectiveRegionsInvalidB : TestFormat_Op<"regions_invalid_b", [{
+  $region regions attr-dict
+}]> {
+  let regions = (region AnyRegion:$region);
+}
+// CHECK: error: 'regions' is only valid as a top-level directive
+def DirectiveRegionsInvalidC : TestFormat_Op<"regions_invalid_c", [{
+  type(regions)
+}]>;
+// CHECK-NOT: error:
+def DirectiveRegionsValid : TestFormat_Op<"regions_valid", [{
+  regions attr-dict
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -206,7 +271,7 @@ def OptionalInvalidB : TestFormat_Op<"optional_invalid_b", [{
 def OptionalInvalidC : TestFormat_Op<"optional_invalid_c", [{
   ($attr)? attr-dict
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
-// CHECK: error: first element of an operand group must be an attribute, literal, or operand
+// CHECK: error: first element of an operand group must be an attribute, literal, operand, or region
 def OptionalInvalidD : TestFormat_Op<"optional_invalid_d", [{
   (type($operand) $operand^)? attr-dict
 }]>, Arguments<(ins Optional<I64>:$operand)>;
@@ -238,12 +303,16 @@ def OptionalInvalidJ : TestFormat_Op<"optional_invalid_j", [{
 def OptionalInvalidK : TestFormat_Op<"optional_invalid_k", [{
   ($arg^)
 }]>, Arguments<(ins Variadic<I64>:$arg)>;
+// CHECK: error: only variables can be used to anchor an optional group
+def OptionalInvalidL : TestFormat_Op<"optional_invalid_l", [{
+  (custom<MyDirective>($arg)^)?
+}]>, Arguments<(ins I64:$arg)>;
 
 //===----------------------------------------------------------------------===//
 // Variables
 //===----------------------------------------------------------------------===//
 
-// CHECK: error: expected variable to refer to an argument, result, or successor
+// CHECK: error: expected variable to refer to an argument, region, result, or successor
 def VariableInvalidA : TestFormat_Op<"variable_invalid_a", [{
   $unknown_arg attr-dict
 }]>;
@@ -283,11 +352,35 @@ def VariableInvalidH : TestFormat_Op<"variable_invalid_h", [{
 def VariableInvalidI : TestFormat_Op<"variable_invalid_i", [{
   (`foo` $attr^)? `:` attr-dict
 }]>, Arguments<(ins OptionalAttr<ElementsAttr>:$attr)>;
-// CHECK-NOT: error:
+// CHECK: error: region 'region' is already bound
 def VariableInvalidJ : TestFormat_Op<"variable_invalid_j", [{
+  $region $region attr-dict
+}]> {
+  let regions = (region AnyRegion:$region);
+}
+// CHECK: error: region 'region' is already bound
+def VariableInvalidK : TestFormat_Op<"variable_invalid_K", [{
+  regions $region attr-dict
+}]> {
+  let regions = (region AnyRegion:$region);
+}
+// CHECK: error: regions can only be used at the top level
+def VariableInvalidL : TestFormat_Op<"variable_invalid_l", [{
+  type($region)
+}]> {
+  let regions = (region AnyRegion:$region);
+}
+// CHECK: error: region #0, named 'region', not found
+def VariableInvalidM : TestFormat_Op<"variable_invalid_m", [{
+  attr-dict
+}]> {
+  let regions = (region AnyRegion:$region);
+}
+// CHECK-NOT: error:
+def VariableValidA : TestFormat_Op<"variable_valid_a", [{
   $attr `:` attr-dict
 }]>, Arguments<(ins OptionalAttr<I1Attr>:$attr)>;
-def VariableInvalidK : TestFormat_Op<"variable_invalid_k", [{
+def VariableValidB : TestFormat_Op<"variable_valid_b", [{
   (`foo` $attr^)? `:` attr-dict
 }]>, Arguments<(ins OptionalAttr<I1Attr>:$attr)>;
 

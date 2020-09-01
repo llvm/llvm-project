@@ -96,7 +96,6 @@ TEST(DWARFExpression, DW_OP_convert) {
       "            Form:            DW_FORM_data1\n"
       "debug_info:\n"
       "  - Version:         4\n"
-      "    AbbrOffset:      0\n"
       "    AddrSize:        8\n"
       "    Entries:\n"
       "      - AbbrCode:        0x00000001\n"
@@ -132,9 +131,7 @@ TEST(DWARFExpression, DW_OP_convert) {
       "        Values:\n"
       "          - Value:           0x000000000000000b\n" // DW_ATE_numeric_string
       "          - Value:           0x0000000000000001\n"
-      ""
-      "      - AbbrCode:        0x00000000\n"
-      "        Values:          []\n";
+      "      - AbbrCode:        0x00000000\n";
   uint8_t offs_uint32_t = 0x0000000e;
   uint8_t offs_uint64_t = 0x00000011;
   uint8_t offs_sint64_t = 0x00000014;

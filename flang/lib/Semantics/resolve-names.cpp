@@ -5733,9 +5733,9 @@ void DeclarationVisitor::NonPointerInitialization(const parser::Name &name,
       } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
         CHECK(!details->init());
         Walk(expr);
-        // TODO: check C762 - all bounds and type parameters of component
-        // are colons or constant expressions if component is initialized
         if (inComponentDecl) {
+          // TODO: check C762 - all bounds and type parameters of component
+          // are colons or constant expressions if component is initialized
           // Can't convert to type of component, which might not yet
           // be known; that's done later during instantiation.
           if (MaybeExpr value{EvaluateExpr(expr)}) {

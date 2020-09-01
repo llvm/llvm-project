@@ -27,7 +27,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define void @delete_parallel_0() {
 ; CHECK-LABEL: define {{[^@]+}}@delete_parallel_0()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 0, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*)* @.omp_outlined.willreturn to void (i32*, i32*, ...)*))
+; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 noundef 0, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*)* @.omp_outlined.willreturn to void (i32*, i32*, ...)*))
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -99,9 +99,9 @@ entry:
 define void @delete_parallel_1() {
 ; CHECK-LABEL: define {{[^@]+}}@delete_parallel_1()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 0, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
-; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 0, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*)* @.omp_outlined..0 to void (i32*, i32*, ...)*))
-; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 0, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
+; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 noundef 0, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
+; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 noundef 0, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*)* @.omp_outlined..0 to void (i32*, i32*, ...)*))
+; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 noundef 0, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -190,10 +190,10 @@ define void @delete_parallel_2() {
 ; CHECK-NEXT:    [[TMP:%.*]] = bitcast i32* [[A]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull align 4 dereferenceable(4) [[TMP]]) #0
 ; CHECK-NEXT:    store i32 0, i32* [[A]], align 4
-; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 1, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*)* @.omp_outlined..3 to void (i32*, i32*, ...)*), i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
-; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 1, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*)* @.omp_outlined..4 to void (i32*, i32*, ...)*), i32* nocapture noundef nonnull align 4 dereferenceable(4) [[A]])
-; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 1, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*)* @.omp_outlined..5 to void (i32*, i32*, ...)*), i32* nocapture noundef nonnull align 4 dereferenceable(4) [[A]])
-; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 1, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*)* @.omp_outlined..6 to void (i32*, i32*, ...)*), i32* nocapture noundef nonnull align 4 dereferenceable(4) [[A]])
+; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 noundef 1, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*)* @.omp_outlined..3 to void (i32*, i32*, ...)*), i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
+; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 noundef 1, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*)* @.omp_outlined..4 to void (i32*, i32*, ...)*), i32* nocapture noundef nonnull align 4 dereferenceable(4) [[A]])
+; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 noundef 1, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*)* @.omp_outlined..5 to void (i32*, i32*, ...)*), i32* nocapture noundef nonnull align 4 dereferenceable(4) [[A]])
+; CHECK-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @0, i32 noundef 1, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*)* @.omp_outlined..6 to void (i32*, i32*, ...)*), i32* nocapture noundef nonnull align 4 dereferenceable(4) [[A]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[A]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[TMP1]])
 ; CHECK-NEXT:    ret void

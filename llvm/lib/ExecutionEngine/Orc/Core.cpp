@@ -1884,6 +1884,57 @@ Expected<SymbolMap> ExecutionSession::legacyLookup(
 #endif
 }
 
+std::vector<std::shared_ptr<JITDylib>>
+JITDylib::getDFSLinkOrder(ArrayRef<std::shared_ptr<JITDylib>> JDs) {
+  if (JDs.empty())
+    return {};
+
+  auto &ES = JDs.front()->getExecutionSession();
+  return ES.runSessionLocked([&]() {
+    DenseSet<JITDylib *> Visited;
+    std::vector<std::shared_ptr<JITDylib>> Result;
+
+    for (auto &JD : JDs) {
+
+      if (Visited.count(JD.get()))
+        continue;
+
+      SmallVector<std::shared_ptr<JITDylib>, 64> WorkStack;
+      WorkStack.push_back(JD);
+      Visited.insert(JD.get());
+
+      while (!WorkStack.empty()) {
+        Result.push_back(std::move(WorkStack.back()));
+        WorkStack.pop_back();
+
+        for (auto &KV : llvm::reverse(Result.back()->LinkOrder)) {
+          auto &JD = *KV.first;
+          if (Visited.count(&JD))
+            continue;
+          Visited.insert(&JD);
+          WorkStack.push_back(JD.shared_from_this());
+        }
+      }
+    }
+    return Result;
+  });
+}
+
+std::vector<std::shared_ptr<JITDylib>>
+JITDylib::getReverseDFSLinkOrder(ArrayRef<std::shared_ptr<JITDylib>> JDs) {
+  auto Tmp = getDFSLinkOrder(JDs);
+  std::reverse(Tmp.begin(), Tmp.end());
+  return Tmp;
+}
+
+std::vector<std::shared_ptr<JITDylib>> JITDylib::getDFSLinkOrder() {
+  return getDFSLinkOrder({shared_from_this()});
+}
+
+std::vector<std::shared_ptr<JITDylib>> JITDylib::getReverseDFSLinkOrder() {
+  return getReverseDFSLinkOrder({shared_from_this()});
+}
+
 void ExecutionSession::lookup(
     LookupKind K, const JITDylibSearchOrder &SearchOrder,
     SymbolLookupSet Symbols, SymbolState RequiredState,

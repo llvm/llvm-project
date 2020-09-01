@@ -12,6 +12,8 @@ define double @double() {
 ; CHECK:      double:
 ; CHECK:               adrp    x8, __real@2000000000800001
 ; CHECK-NEXT:          ldr     d0, [x8, __real@2000000000800001]
+; CHECK-NEXT:          .seh_startepilogue
+; CHECK-NEXT:          .seh_endepilogue
 ; CHECK-NEXT:          ret
 
 ; MINGW:              .section        .rdata,"dr"
@@ -21,4 +23,6 @@ define double @double() {
 ; MINGW:      double:
 ; MINGW:               adrp    x8, [[LABEL]]
 ; MINGW-NEXT:          ldr     d0, [x8, [[LABEL]]]
+; MINGW-NEXT:          .seh_startepilogue
+; MINGW-NEXT:          .seh_endepilogue
 ; MINGW-NEXT:          ret

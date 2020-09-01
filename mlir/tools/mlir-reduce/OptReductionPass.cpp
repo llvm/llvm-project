@@ -23,7 +23,8 @@ OptReductionPass::OptReductionPass(const Tester &test, MLIRContext *context,
     : context(context), test(test), optPass(std::move(optPass)) {}
 
 OptReductionPass::OptReductionPass(const OptReductionPass &srcPass)
-    : test(srcPass.test), optPass(srcPass.optPass.get()) {}
+    : OptReductionBase<OptReductionPass>(srcPass), test(srcPass.test),
+      optPass(srcPass.optPass.get()) {}
 
 /// Runs the pass instance in the pass pipeline.
 void OptReductionPass::runOnOperation() {

@@ -51,16 +51,16 @@ public:
   // Returns the dialects extra class declaration code.
   llvm::Optional<StringRef> getExtraClassDeclaration() const;
 
-  // Returns if this dialect has a constant materializer or not.
+  // Returns true if this dialect has a constant materializer.
   bool hasConstantMaterializer() const;
 
-  /// Returns if this dialect has an operation attribute verifier.
+  /// Returns true if this dialect has an operation attribute verifier.
   bool hasOperationAttrVerify() const;
 
-  /// Returns if this dialect has a region argument attribute verifier.
+  /// Returns true if this dialect has a region argument attribute verifier.
   bool hasRegionArgAttrVerify() const;
 
-  /// Returns if this dialect has a region result attribute verifier.
+  /// Returns true if this dialect has a region result attribute verifier.
   bool hasRegionResultAttrVerify() const;
 
   // Returns whether two dialects are equal by checking the equality of the

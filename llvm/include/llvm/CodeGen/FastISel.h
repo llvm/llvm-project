@@ -510,18 +510,6 @@ protected:
                    unsigned NumArgs);
   bool lowerCallTo(CallLoweringInfo &CLI);
 
-  bool isCommutativeIntrinsic(IntrinsicInst const *II) {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::sadd_with_overflow:
-    case Intrinsic::uadd_with_overflow:
-    case Intrinsic::smul_with_overflow:
-    case Intrinsic::umul_with_overflow:
-      return true;
-    default:
-      return false;
-    }
-  }
-
   bool lowerCall(const CallInst *I);
   /// Select and emit code for a binary operator instruction, which has
   /// an opcode which directly corresponds to the given ISD opcode.

@@ -1847,8 +1847,10 @@ struct DSEState {
         return None;
       WalkerStepLimit -= StepCost;
 
+      // Return for MemoryPhis. They cannot be eliminated directly and the
+      // caller is responsible for traversing them.
       if (isa<MemoryPhi>(Current))
-        break;
+        return Current;
 
       // Below, check if CurrentDef is a valid candidate to be eliminated by
       // KillingDef. If it is not, check the next candidate.
@@ -1894,9 +1896,13 @@ struct DSEState {
         continue;
       }
 
+      // If Current does not have an analyzable write location, skip it
       auto CurrentLoc = getLocForWriteEx(CurrentI);
-      if (!CurrentLoc)
-        break;
+      if (!CurrentLoc) {
+        StepAgain = true;
+        Current = CurrentDef->getDefiningAccess();
+        continue;
+      }
 
       if (IsMemTerm) {
         // If the killing def is a memory terminator (e.g. lifetime.end), check
@@ -1933,24 +1939,17 @@ struct DSEState {
       }
     } while (StepAgain);
 
-    MemoryAccess *EarlierAccess = Current;
     // Accesses to objects accessible after the function returns can only be
     // eliminated if the access is killed along all paths to the exit. Collect
     // the blocks with killing (=completely overwriting MemoryDefs) and check if
     // they cover all paths from EarlierAccess to any function exit.
     SmallPtrSet<Instruction *, 16> KillingDefs;
     KillingDefs.insert(KillingDef->getMemoryInst());
+    MemoryAccess *EarlierAccess = Current;
     Instruction *EarlierMemInst =
-        isa<MemoryDef>(EarlierAccess)
-            ? cast<MemoryDef>(EarlierAccess)->getMemoryInst()
-            : nullptr;
-    LLVM_DEBUG({
-      dbgs() << "  Checking for reads of " << *EarlierAccess;
-      if (EarlierMemInst)
-        dbgs() << " (" << *EarlierMemInst << ")\n";
-      else
-        dbgs() << ")\n";
-    });
+        cast<MemoryDef>(EarlierAccess)->getMemoryInst();
+    LLVM_DEBUG(dbgs() << "  Checking for reads of " << *EarlierAccess << " ("
+                      << *EarlierMemInst << ")\n");
 
     SmallSetVector<MemoryAccess *, 32> WorkList;
     auto PushMemUses = [&WorkList](MemoryAccess *Acc) {
@@ -1962,7 +1961,7 @@ struct DSEState {
     // Optimistically collect all accesses for reads. If we do not find any
     // read clobbers, add them to the cache.
     SmallPtrSet<MemoryAccess *, 16> KnownNoReads;
-    if (!EarlierMemInst || !EarlierMemInst->mayReadFromMemory())
+    if (!EarlierMemInst->mayReadFromMemory())
       KnownNoReads.insert(EarlierAccess);
     // Check if EarlierDef may be read.
     for (unsigned I = 0; I < WorkList.size(); I++) {

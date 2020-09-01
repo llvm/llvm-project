@@ -48,10 +48,11 @@ void dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 
 void dumpDebugStrings(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   StringRef RemainingTable = DCtx.getDWARFObj().getStrSection();
+  Y.DebugStrings.emplace();
   while (RemainingTable.size() > 0) {
     auto SymbolPair = RemainingTable.split('\0');
     RemainingTable = SymbolPair.second;
-    Y.DebugStrings.push_back(SymbolPair.first);
+    Y.DebugStrings->push_back(SymbolPair.first);
   }
 }
 

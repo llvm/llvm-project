@@ -240,7 +240,7 @@ sw.default:
 
 define i1 @test8(i64* %p) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[A:%.*]] = load i64, i64* [[P:%.*]], align 4, !range !0
+; CHECK-NEXT:    [[A:%.*]] = load i64, i64* [[P:%.*]], align 4, [[RNG0:!range !.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i64 [[A]], 0
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -251,7 +251,7 @@ define i1 @test8(i64* %p) {
 
 define i1 @test9(i64* %p) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[A:%.*]] = load i64, i64* [[P:%.*]], align 4, !range !1
+; CHECK-NEXT:    [[A:%.*]] = load i64, i64* [[P:%.*]], align 4, [[RNG1:!range !.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i64 [[A]], 0
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -262,7 +262,7 @@ define i1 @test9(i64* %p) {
 
 define i1 @test10(i64* %p) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[A:%.*]] = load i64, i64* [[P:%.*]], align 4, !range !2
+; CHECK-NEXT:    [[A:%.*]] = load i64, i64* [[P:%.*]], align 4, [[RNG2:!range !.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i64 [[A]], 0
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -275,7 +275,7 @@ define i1 @test10(i64* %p) {
 
 define i1 @test11() {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[POSITIVE:%.*]] = load i32, i32* @g, align 4, !range !3
+; CHECK-NEXT:    [[POSITIVE:%.*]] = load i32, i32* @g, align 4, [[RNG3:!range !.*]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[POSITIVE]], 1
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp sgt i32 [[ADD]], 0
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
@@ -657,7 +657,7 @@ else:
 @limit = external global i32
 define i1 @test15(i32 %a) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[LIMIT:%.*]] = load i32, i32* @limit, align 4, !range !4
+; CHECK-NEXT:    [[LIMIT:%.*]] = load i32, i32* @limit, align 4, [[RNG4:!range !.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A:%.*]], [[LIMIT]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:

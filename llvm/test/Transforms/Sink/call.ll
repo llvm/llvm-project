@@ -1,6 +1,7 @@
 ; RUN: opt < %s -basic-aa -sink -S | FileCheck %s
 
 declare i32 @f_load_global() nounwind readonly
+declare i32 @f_load_global_throwable() readonly
 declare i32 @f_load_arg(i32*) nounwind readonly argmemonly
 declare void @f_store_global(i32) nounwind
 declare void @f_store_arg(i32*) nounwind argmemonly
@@ -18,6 +19,18 @@ declare i32 @f_readnone(i32) nounwind readnone
 ; CHECK-NEXT: ret i32 %l
 define i32 @test_sink_no_stores(i1 %z) {
   %l = call i32 @f_load_global()
+  br i1 %z, label %true, label %false
+true:
+  ret i32 %l
+false:
+  ret i32 0
+}
+
+; CHECK-LABEL: @test_throwable_no_stores(
+; CHECK:         %l = call i32 @f_load_global
+; CHECK-NEXT:    br i1 %z
+define i32 @test_throwable_no_stores(i1 %z) {
+  %l = call i32 @f_load_global_throwable()
   br i1 %z, label %true, label %false
 true:
   ret i32 %l

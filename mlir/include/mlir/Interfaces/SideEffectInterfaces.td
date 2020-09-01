@@ -104,7 +104,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
       });
     }
 
-    /// Returns if this operation only has the given effect.
+    /// Returns true if this operation only has the given effect.
     template <typename Effect> bool onlyHasEffect() {
       SmallVector<SideEffects::EffectInstance<}] # baseEffect # [{>, 4> effects;
       getEffects(effects);
@@ -113,14 +113,14 @@ class EffectOpInterfaceBase<string name, string baseEffect>
       });
     }
 
-    /// Returns if this operation has no effects.
+    /// Returns true if this operation has no effects.
     bool hasNoEffect() {
       SmallVector<SideEffects::EffectInstance<}] # baseEffect # [{>, 4> effects;
       getEffects(effects);
       return effects.empty();
     }
 
-    /// Returns if the given operation has no effects for this interface.
+    /// Returns true if the given operation has no effects for this interface.
     static bool hasNoEffect(Operation *op) {
       if (auto interface = dyn_cast<}] # name # [{>(op))
         return interface.hasNoEffect();
