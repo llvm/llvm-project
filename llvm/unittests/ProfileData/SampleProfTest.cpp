@@ -19,12 +19,15 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 #include <string>
 #include <vector>
 
 using namespace llvm;
 using namespace sampleprof;
+
+using llvm::unittest::TempFile;
 
 static ::testing::AssertionResult NoError(std::error_code EC) {
   if (!EC)
@@ -60,21 +63,14 @@ struct SampleProfTest : ::testing::Test {
     Reader->collectFuncsFrom(M);
   }
 
-  void createRemapFile(SmallVectorImpl<char> &RemapPath, StringRef &RemapFile) {
-    std::error_code EC =
-        llvm::sys::fs::createTemporaryFile("remapfile", "", RemapPath);
-    ASSERT_TRUE(NoError(EC));
-    RemapFile = StringRef(RemapPath.data(), RemapPath.size());
-
-    std::unique_ptr<raw_fd_ostream> OS(
-        new raw_fd_ostream(RemapFile, EC, sys::fs::OF_None));
-    *OS << R"(
+  TempFile createRemapFile() {
+    return TempFile("remapfile", "", R"(
       # Types 'int' and 'long' are equivalent
       type i l
       # Function names 'foo' and 'faux' are equivalent
       name 3foo 4faux
-    )";
-    OS->close();
+    )",
+                    /*Unique*/ true);
   }
 
   // Verify profile summary is consistent in the roundtrip to and from
@@ -137,10 +133,8 @@ struct SampleProfTest : ::testing::Test {
   }
 
   void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5) {
-    SmallVector<char, 128> ProfilePath;
-    ASSERT_TRUE(NoError(llvm::sys::fs::createTemporaryFile("profile", "", ProfilePath)));
-    StringRef Profile(ProfilePath.data(), ProfilePath.size());
-    createWriter(Format, Profile);
+    TempFile ProfileFile("profile", "", "", /*Unique*/ true);
+    createWriter(Format, ProfileFile.path());
     if (Format == SampleProfileFormat::SPF_Ext_Binary && UseMD5)
       static_cast<SampleProfileWriterExtBinary *>(Writer.get())->setUseMD5();
 
@@ -207,10 +201,8 @@ struct SampleProfTest : ::testing::Test {
     FunctionType *fn_type =
         FunctionType::get(Type::getVoidTy(Context), {}, false);
 
-    SmallVector<char, 128> RemapPath;
-    StringRef RemapFile;
+    TempFile RemapFile(createRemapFile());
     if (Remap) {
-      createRemapFile(RemapPath, RemapFile);
       FooName = "_Z4fauxi";
       BarName = "_Z3barl";
       GooName = "_Z3gool";
@@ -234,7 +226,7 @@ struct SampleProfTest : ::testing::Test {
 
     Writer->getOutputStream().flush();
 
-    readProfile(M, Profile, RemapFile);
+    readProfile(M, ProfileFile.path(), RemapFile.path());
     EC = Reader->read();
     ASSERT_TRUE(NoError(EC));
 
@@ -375,24 +367,21 @@ struct SampleProfTest : ::testing::Test {
 
   void testSuffixElisionPolicy(SampleProfileFormat Format, StringRef Policy,
                                const StringMap<uint64_t> &Expected) {
-    SmallVector<char, 128> ProfilePath;
-    std::error_code EC;
-    EC = llvm::sys::fs::createTemporaryFile("profile", "", ProfilePath);
-    ASSERT_TRUE(NoError(EC));
-    StringRef ProfileFile(ProfilePath.data(), ProfilePath.size());
+    TempFile ProfileFile("profile", "", "", /*Unique*/ true);
 
     Module M("my_module", Context);
     setupModuleForElisionTest(&M, Policy);
     StringMap<FunctionSamples> ProfMap = setupFcnSamplesForElisionTest(Policy);
 
     // write profile
-    createWriter(Format, ProfileFile);
+    createWriter(Format, ProfileFile.path());
+    std::error_code EC;
     EC = Writer->write(ProfMap);
     ASSERT_TRUE(NoError(EC));
     Writer->getOutputStream().flush();
 
     // read profile
-    readProfile(M, ProfileFile);
+    readProfile(M, ProfileFile.path());
     EC = Reader->read();
     ASSERT_TRUE(NoError(EC));
 
