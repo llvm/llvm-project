@@ -348,12 +348,17 @@ static __inline fp_t __divXf3__(fp_t a, fp_t b) {
     // effectively doubling its value as well as its error estimation.
     residualLo = (aSignificand << (significandBits + 1)) - quotient_UQ1 * bSignificand;
     writtenExponent -= 1;
+    aSignificand <<= 1;
   } else {
     // Highest bit is 1 (the UQ1.(SB+1) value is in [1, 2)), convert it
     // to UQ1.SB by right shifting by 1. Least significant bit is omitted.
     quotient_UQ1 >>= 1;
     residualLo = (aSignificand << significandBits) - quotient_UQ1 * bSignificand;
   }
+  // NB: residualLo is calculated above for the normal result case.
+  //     It is re-computed on denormal path that is expected to be not so
+  //     performance-sensitive.
+
   // Now, q cannot be greater than a/b and can differ by at most 8*P * 2^-W + 2^-SB
   // Each NextAfter() increments the floating point value by at least 2^-SB
   // (more, if exponent was incremented).
@@ -381,19 +386,25 @@ static __inline fp_t __divXf3__(fp_t a, fp_t b) {
   // Now, quotient_UQ1_SB <= the correctly-rounded result
   // and may need taking NextAfter() up to 3 times (see error estimates above)
   // r = a - b * q
+  rep_t absResult;
+  if (writtenExponent > 0) {
+    // Clear the implicit bit
+    absResult = quotient_UQ1 & significandMask;
+    // Insert the exponent
+    absResult |= (rep_t)writtenExponent << significandBits;
+    residualLo <<= 1;
+  } else {
+    // Prevent shift amount from being negative
+    if (significandBits + writtenExponent < 0)
+      return fromRep(quotientSign);
 
-  if (writtenExponent < 0) {
-    // Result is definitely subnormal, flushing to zero
-    return fromRep(quotientSign);
+    absResult = quotient_UQ1 >> (-writtenExponent + 1);
+
+    // multiplied by two to prevent shift amount to be negative
+    residualLo = (aSignificand << (significandBits + writtenExponent)) - (absResult * bSignificand << 1);
   }
 
-  // Clear the implicit bit
-  rep_t absResult = quotient_UQ1 & significandMask;
-  // Insert the exponent
-  absResult |= (rep_t)writtenExponent << significandBits;
-
   // Round
-  residualLo <<= 1;
   residualLo += absResult & 1; // tie to even
   // The above line conditionally turns the below LT comparison into LTE
   absResult += residualLo > bSignificand;
@@ -404,11 +415,5 @@ static __inline fp_t __divXf3__(fp_t a, fp_t b) {
 #if defined(QUAD_PRECISION)
   absResult += absResult < infRep && residualLo > (4 + 1) * bSignificand;
 #endif
-
-  if ((absResult & ~significandMask) == 0) {
-    // Result is subnormal, flushing to zero
-    return fromRep(quotientSign);
-  }
-  // Result is normal, insert the sign and return
   return fromRep(absResult | quotientSign);
 }
