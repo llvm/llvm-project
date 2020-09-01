@@ -33,7 +33,6 @@ add_llvm_unittest(SupportTests
   ErrorOrTest.cpp
   ErrorTest.cpp
   ExtensibleRTTITest.cpp
-  FileCheckTest.cpp
   FileCollectorTest.cpp
   FileOutputBufferTest.cpp
   FileUtilitiesTest.cpp

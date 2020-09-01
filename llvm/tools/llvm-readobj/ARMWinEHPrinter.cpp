@@ -62,7 +62,6 @@
 // epilogue of the function.
 
 #include "ARMWinEHPrinter.h"
-#include "Error.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ARMWinEH.h"
@@ -217,7 +216,7 @@ Decoder::getSectionContaining(const COFFObjectFile &COFF, uint64_t VA) {
     if (VA >= Address && (VA - Address) <= Size)
       return Section;
   }
-  return readobj_error::unknown_symbol;
+  return inconvertibleErrorCode();
 }
 
 ErrorOr<object::SymbolRef> Decoder::getSymbol(const COFFObjectFile &COFF,
@@ -235,7 +234,7 @@ ErrorOr<object::SymbolRef> Decoder::getSymbol(const COFFObjectFile &COFF,
     if (*Address == VA)
       return Symbol;
   }
-  return readobj_error::unknown_symbol;
+  return inconvertibleErrorCode();
 }
 
 ErrorOr<SymbolRef> Decoder::getRelocatedSymbol(const COFFObjectFile &,
@@ -246,7 +245,7 @@ ErrorOr<SymbolRef> Decoder::getRelocatedSymbol(const COFFObjectFile &,
     if (RelocationOffset == Offset)
       return *Relocation.getSymbol();
   }
-  return readobj_error::unknown_symbol;
+  return inconvertibleErrorCode();
 }
 
 bool Decoder::opcode_0xxxxxxx(const uint8_t *OC, unsigned &Offset,
