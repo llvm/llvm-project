@@ -34,6 +34,7 @@ getParentOpsWithTrait(mlir::Operation *op) {
   return parentLoops;
 }
 
+#if 0
 unsigned getNumCommonSurroundingOps(
     const llvm::SmallVectorImpl<mlir::Operation *> OpsA,
     const llvm::SmallVectorImpl<mlir::Operation *> OpsB) {
@@ -46,6 +47,7 @@ unsigned getNumCommonSurroundingOps(
   }
   return numCommonOps;
 }
+#endif
 
 /// This is based on MLIR's MemRefDataFlowOpt which is specialized on AffineRead
 /// and AffineWrite interface

@@ -412,8 +412,7 @@ private:
     return res;
   }
 
-  template <int KIND>
-  fir::ExtendedValue genval(const Fortran::evaluate::TypeParamInquiry<KIND> &) {
+  fir::ExtendedValue genval(const Fortran::evaluate::TypeParamInquiry &) {
     TODO();
   }
 

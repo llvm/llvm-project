@@ -2445,18 +2445,19 @@ void Fortran::lower::LoweringBridge::lower(
 }
 
 void Fortran::lower::LoweringBridge::parseSourceFile(llvm::SourceMgr &srcMgr) {
-  auto owningRef = mlir::parseSourceFile(srcMgr, context.get());
+  auto owningRef = mlir::parseSourceFile(srcMgr, &context);
   module.reset(new mlir::ModuleOp(owningRef.get().getOperation()));
   owningRef.release();
 }
 
 Fortran::lower::LoweringBridge::LoweringBridge(
+    mlir::MLIRContext &ctx,
     const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
     const Fortran::evaluate::IntrinsicProcTable &intrinsics,
     const Fortran::parser::CookedSource &cooked)
-    : defaultKinds{defaultKinds}, intrinsics{intrinsics}, cooked{&cooked},
-      context{std::make_unique<mlir::MLIRContext>()}, kindMap{context.get()} {
-  context.get()->getDiagEngine().registerHandler([](mlir::Diagnostic &diag) {
+    : defaultKinds{defaultKinds},
+      intrinsics{intrinsics}, cooked{&cooked}, context{ctx}, kindMap{&ctx} {
+  context.getDiagEngine().registerHandler([](mlir::Diagnostic &diag) {
     auto &os = llvm::errs();
     switch (diag.getSeverity()) {
     case mlir::DiagnosticSeverity::Error:
@@ -2478,5 +2479,5 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     return mlir::success();
   });
   module = std::make_unique<mlir::ModuleOp>(
-      mlir::ModuleOp::create(mlir::UnknownLoc::get(context.get())));
+      mlir::ModuleOp::create(mlir::UnknownLoc::get(&context)));
 }
