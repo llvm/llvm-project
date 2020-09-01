@@ -180,7 +180,6 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
       if ((case_value & value) == case_value) {
         // hey a case matched!!
         any_match = true;
-
         if (first_match) {
           ss.Printf("[.%s", val_name.second.AsCString());
           first_match = false;
