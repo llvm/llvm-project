@@ -24,8 +24,9 @@ public:
   ~MutationDispatcher() {}
   /// Indicate that we are about to start a new sequence of mutations.
   void StartMutationSequence();
-  /// Print the current sequence of mutations.
-  void PrintMutationSequence();
+  /// Print the current sequence of mutations. Only prints the full sequence
+  /// when Verbose is true.
+  void PrintMutationSequence(bool Verbose = true);
   /// Indicate that the current sequence of mutations was successful.
   void RecordSuccessfulMutationSequence();
   /// Mutates data by invoking user-provided mutator.
