@@ -72,7 +72,7 @@ static const uptr kAllocBegMagic = 0xCC6E96B9;
 
 struct ChunkHeader {
   // 1-st 8 bytes.
-  u32 chunk_state       : 8;  // Must be first.
+  atomic_uint8_t chunk_state;
   u32 alloc_tid         : 24;
 
   u32 free_tid          : 24;
@@ -88,7 +88,7 @@ struct ChunkHeader {
   // align < 8 -> 0
   // else      -> log2(min(align, 512)) - 2
   u32 user_requested_alignment_log : 3;
-  u32 alloc_context_id;
+  atomic_uint32_t alloc_context_id;
 };
 
 struct ChunkBase : ChunkHeader {
@@ -140,8 +140,13 @@ struct QuarantineCallback {
   }
 
   void Recycle(AsanChunk *m) {
-    CHECK_EQ(m->chunk_state, CHUNK_QUARANTINE);
-    atomic_store((atomic_uint8_t*)m, CHUNK_AVAILABLE, memory_order_relaxed);
+    u8 old_chunk_state = CHUNK_QUARANTINE;
+    if (!atomic_compare_exchange_strong(&m->chunk_state, &old_chunk_state,
+                                        CHUNK_AVAILABLE,
+                                        memory_order_acquire)) {
+      CHECK_EQ(old_chunk_state, CHUNK_QUARANTINE);
+    }
+
     CHECK_NE(m->alloc_tid, kInvalidTid);
     CHECK_NE(m->free_tid, kInvalidTid);
     PoisonShadow(m->Beg(),
@@ -301,22 +306,25 @@ struct Allocator {
     // housekeeping chunk, like TransferBatch. Start by assuming the former.
     AsanChunk *ac = GetAsanChunk((void *)chunk);
     uptr allocated_size = allocator.GetActuallyAllocatedSize((void *)ac);
-    uptr beg = ac->Beg();
-    uptr end = ac->Beg() + ac->UsedSize(true);
-    uptr chunk_end = chunk + allocated_size;
-    if (chunk < beg && beg < end && end <= chunk_end &&
-        ac->chunk_state == CHUNK_ALLOCATED) {
-      // Looks like a valid AsanChunk in use, poison redzones only.
-      PoisonShadow(chunk, beg - chunk, kAsanHeapLeftRedzoneMagic);
-      uptr end_aligned_down = RoundDownTo(end, SHADOW_GRANULARITY);
-      FastPoisonShadowPartialRightRedzone(
-          end_aligned_down, end - end_aligned_down,
-          chunk_end - end_aligned_down, kAsanHeapLeftRedzoneMagic);
-    } else {
-      // This is either not an AsanChunk or freed or quarantined AsanChunk.
-      // In either case, poison everything.
-      PoisonShadow(chunk, allocated_size, kAsanHeapLeftRedzoneMagic);
+    if (atomic_load(&ac->chunk_state, memory_order_acquire) ==
+        CHUNK_ALLOCATED) {
+      uptr beg = ac->Beg();
+      uptr end = ac->Beg() + ac->UsedSize(true);
+      uptr chunk_end = chunk + allocated_size;
+      if (chunk < beg && beg < end && end <= chunk_end) {
+        // Looks like a valid AsanChunk in use, poison redzones only.
+        PoisonShadow(chunk, beg - chunk, kAsanHeapLeftRedzoneMagic);
+        uptr end_aligned_down = RoundDownTo(end, SHADOW_GRANULARITY);
+        FastPoisonShadowPartialRightRedzone(
+            end_aligned_down, end - end_aligned_down,
+            chunk_end - end_aligned_down, kAsanHeapLeftRedzoneMagic);
+        return;
+      }
     }
+
+    // This is either not an AsanChunk or freed or quarantined AsanChunk.
+    // In either case, poison everything.
+    PoisonShadow(chunk, allocated_size, kAsanHeapLeftRedzoneMagic);
   }
 
   void ReInitialize(const AllocatorOptions &options) {
@@ -381,14 +389,17 @@ struct Allocator {
                          AsanChunk *right_chunk) {
     // Prefer an allocated chunk over freed chunk and freed chunk
     // over available chunk.
-    if (left_chunk->chunk_state != right_chunk->chunk_state) {
-      if (left_chunk->chunk_state == CHUNK_ALLOCATED)
+    u8 left_state = atomic_load(&left_chunk->chunk_state, memory_order_relaxed);
+    u8 right_state =
+        atomic_load(&right_chunk->chunk_state, memory_order_relaxed);
+    if (left_state != right_state) {
+      if (left_state == CHUNK_ALLOCATED)
         return left_chunk;
-      if (right_chunk->chunk_state == CHUNK_ALLOCATED)
+      if (right_state == CHUNK_ALLOCATED)
         return right_chunk;
-      if (left_chunk->chunk_state == CHUNK_QUARANTINE)
+      if (left_state == CHUNK_QUARANTINE)
         return left_chunk;
-      if (right_chunk->chunk_state == CHUNK_QUARANTINE)
+      if (right_state == CHUNK_QUARANTINE)
         return right_chunk;
     }
     // Same chunk_state: choose based on offset.
@@ -403,9 +414,10 @@ struct Allocator {
   bool UpdateAllocationStack(uptr addr, BufferedStackTrace *stack) {
     AsanChunk *m = GetAsanChunkByAddr(addr);
     if (!m) return false;
-    if (m->chunk_state != CHUNK_ALLOCATED) return false;
+    if (atomic_load(&m->chunk_state, memory_order_acquire) != CHUNK_ALLOCATED)
+      return false;
     if (m->Beg() != addr) return false;
-    atomic_store((atomic_uint32_t *)&m->alloc_context_id, StackDepotPut(*stack),
+    atomic_store(&m->alloc_context_id, StackDepotPut(*stack),
                  memory_order_relaxed);
     return true;
   }
@@ -524,7 +536,8 @@ struct Allocator {
     }
     m->user_requested_alignment_log = user_requested_alignment_log;
 
-    m->alloc_context_id = StackDepotPut(*stack);
+    atomic_store(&m->alloc_context_id, StackDepotPut(*stack),
+                 memory_order_relaxed);
 
     uptr size_rounded_down_to_granularity =
         RoundDownTo(size, SHADOW_GRANULARITY);
@@ -557,7 +570,7 @@ struct Allocator {
                                                  : __lsan::kDirectlyLeaked;
 #endif
     // Must be the last mutation of metadata in this function.
-    atomic_store((atomic_uint8_t *)m, CHUNK_ALLOCATED, memory_order_release);
+    atomic_store(&m->chunk_state, CHUNK_ALLOCATED, memory_order_release);
     ASAN_MALLOC_HOOK(res, size);
     return res;
   }
@@ -565,10 +578,10 @@ struct Allocator {
   // Set quarantine flag if chunk is allocated, issue ASan error report on
   // available and quarantined chunks. Return true on success, false otherwise.
   bool AtomicallySetQuarantineFlagIfAllocated(AsanChunk *m, void *ptr,
-                                   BufferedStackTrace *stack) {
+                                              BufferedStackTrace *stack) {
     u8 old_chunk_state = CHUNK_ALLOCATED;
     // Flip the chunk_state atomically to avoid race on double-free.
-    if (!atomic_compare_exchange_strong((atomic_uint8_t *)m, &old_chunk_state,
+    if (!atomic_compare_exchange_strong(&m->chunk_state, &old_chunk_state,
                                         CHUNK_QUARANTINE,
                                         memory_order_acquire)) {
       ReportInvalidFree(ptr, old_chunk_state, stack);
@@ -582,7 +595,8 @@ struct Allocator {
   // Expects the chunk to already be marked as quarantined by using
   // AtomicallySetQuarantineFlagIfAllocated.
   void QuarantineChunk(AsanChunk *m, void *ptr, BufferedStackTrace *stack) {
-    CHECK_EQ(m->chunk_state, CHUNK_QUARANTINE);
+    CHECK_EQ(atomic_load(&m->chunk_state, memory_order_relaxed),
+             CHUNK_QUARANTINE);
     CHECK_GE(m->alloc_tid, 0);
     if (SANITIZER_WORDSIZE == 64)  // On 32-bits this resides in user area.
       CHECK_EQ(m->free_tid, kInvalidTid);
@@ -677,7 +691,7 @@ struct Allocator {
 
     void *new_ptr = Allocate(new_size, 8, stack, FROM_MALLOC, true);
     if (new_ptr) {
-      u8 chunk_state = m->chunk_state;
+      u8 chunk_state = atomic_load(&m->chunk_state, memory_order_acquire);
       if (chunk_state != CHUNK_ALLOCATED)
         ReportInvalidFree(old_ptr, chunk_state, stack);
       CHECK_NE(REAL(memcpy), nullptr);
@@ -774,7 +788,8 @@ struct Allocator {
   uptr AllocationSize(uptr p) {
     AsanChunk *m = GetAsanChunkByAddr(p);
     if (!m) return 0;
-    if (m->chunk_state != CHUNK_ALLOCATED) return 0;
+    if (atomic_load(&m->chunk_state, memory_order_acquire) != CHUNK_ALLOCATED)
+      return 0;
     if (m->Beg() != p) return 0;
     return m->UsedSize();
   }
@@ -840,13 +855,16 @@ static AsanAllocator &get_allocator() {
 }
 
 bool AsanChunkView::IsValid() const {
-  return chunk_ && chunk_->chunk_state != CHUNK_AVAILABLE;
+  return chunk_ && atomic_load(&chunk_->chunk_state, memory_order_relaxed) !=
+                       CHUNK_AVAILABLE;
 }
 bool AsanChunkView::IsAllocated() const {
-  return chunk_ && chunk_->chunk_state == CHUNK_ALLOCATED;
+  return chunk_ && atomic_load(&chunk_->chunk_state, memory_order_relaxed) ==
+                       CHUNK_ALLOCATED;
 }
 bool AsanChunkView::IsQuarantined() const {
-  return chunk_ && chunk_->chunk_state == CHUNK_QUARANTINE;
+  return chunk_ && atomic_load(&chunk_->chunk_state, memory_order_relaxed) ==
+                       CHUNK_QUARANTINE;
 }
 uptr AsanChunkView::Beg() const { return chunk_->Beg(); }
 uptr AsanChunkView::End() const { return Beg() + UsedSize(); }
@@ -867,7 +885,9 @@ static StackTrace GetStackTraceFromId(u32 id) {
   return res;
 }
 
-u32 AsanChunkView::GetAllocStackId() const { return chunk_->alloc_context_id; }
+u32 AsanChunkView::GetAllocStackId() const {
+  return atomic_load(&chunk_->alloc_context_id, memory_order_relaxed);
+}
 u32 AsanChunkView::GetFreeStackId() const { return chunk_->free_context_id; }
 
 StackTrace AsanChunkView::GetAllocStack() const {
@@ -1052,10 +1072,10 @@ void GetAllocatorGlobalRange(uptr *begin, uptr *end) {
 uptr PointsIntoChunk(void* p) {
   uptr addr = reinterpret_cast<uptr>(p);
   __asan::AsanChunk *m = __asan::instance.GetAsanChunkByAddrFastLocked(addr);
-  if (!m) return 0;
-  uptr chunk = m->Beg();
-  if (m->chunk_state != __asan::CHUNK_ALLOCATED)
+  if (!m || atomic_load(&m->chunk_state, memory_order_acquire) !=
+                __asan::CHUNK_ALLOCATED)
     return 0;
+  uptr chunk = m->Beg();
   if (m->AddrIsInside(addr, /*locked_version=*/true))
     return chunk;
   if (IsSpecialCaseOfOperatorNew0(chunk, m->UsedSize(/*locked_version*/ true),
@@ -1096,7 +1116,8 @@ LsanMetadata::LsanMetadata(uptr chunk) {
 
 bool LsanMetadata::allocated() const {
   __asan::AsanChunk *m = reinterpret_cast<__asan::AsanChunk *>(metadata_);
-  return m->chunk_state == __asan::CHUNK_ALLOCATED;
+  return atomic_load(&m->chunk_state, memory_order_relaxed) ==
+         __asan::CHUNK_ALLOCATED;
 }
 
 ChunkTag LsanMetadata::tag() const {
@@ -1116,7 +1137,7 @@ uptr LsanMetadata::requested_size() const {
 
 u32 LsanMetadata::stack_trace_id() const {
   __asan::AsanChunk *m = reinterpret_cast<__asan::AsanChunk *>(metadata_);
-  return m->alloc_context_id;
+  return atomic_load(&m->alloc_context_id, memory_order_relaxed);
 }
 
 void ForEachChunk(ForEachChunkCallback callback, void *arg) {
@@ -1127,7 +1148,9 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
   uptr addr = reinterpret_cast<uptr>(p);
   __asan::AsanChunk *m = __asan::instance.GetAsanChunkByAddr(addr);
   if (!m) return kIgnoreObjectInvalid;
-  if ((m->chunk_state == __asan::CHUNK_ALLOCATED) && m->AddrIsInside(addr)) {
+  if ((atomic_load(&m->chunk_state, memory_order_acquire) ==
+       __asan::CHUNK_ALLOCATED) &&
+      m->AddrIsInside(addr)) {
     if (m->lsan_tag == kIgnored)
       return kIgnoreObjectAlreadyIgnored;
     m->lsan_tag = __lsan::kIgnored;
