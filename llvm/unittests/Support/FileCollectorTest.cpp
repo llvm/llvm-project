@@ -95,7 +95,7 @@ TEST(FileCollectorTest, addDirectory) {
   // Make sure we've only seen the added files.
   llvm::SmallString<128> ddd(file_root.path());
   llvm::sys::path::append(ddd, "ddd");
-  TempFile d(ddd.str(), "", "", /*Unique*/ true);
+  TempFile d(ddd);
   EXPECT_FALSE(FileCollector.hasSeen(d.path()));
 }
 
