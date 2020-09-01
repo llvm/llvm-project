@@ -476,32 +476,81 @@ static void print(OpAsmPrinter &printer, DataOp &op) {
 //===----------------------------------------------------------------------===//
 
 /// Parse acc.loop operation
-/// operation := `acc.loop` `gang`? `vector`? `worker`? `seq`?
+/// operation := `acc.loop` `gang`? `vector`? `worker`?
 ///                         `private` `(` value-list `)`?
 ///                         `reduction` `(` value-list `)`?
 ///                         region attr-dict?
 static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
-
   Builder &builder = parser.getBuilder();
   unsigned executionMapping = 0;
   SmallVector<Type, 8> operandTypes;
   SmallVector<OpAsmParser::OperandType, 8> privateOperands, reductionOperands;
+  SmallVector<OpAsmParser::OperandType, 8> tileOperands;
+  bool hasWorkerNum = false, hasVectorLength = false, hasGangNum = false;
+  bool hasGangStatic = false;
+  OpAsmParser::OperandType workerNum, vectorLength, gangNum, gangStatic;
+  Type intType = builder.getI64Type();
 
   // gang?
-  if (succeeded(parser.parseOptionalKeyword(LoopOp::getGangAttrName())))
+  if (succeeded(parser.parseOptionalKeyword(LoopOp::getGangKeyword())))
     executionMapping |= OpenACCExecMapping::GANG;
 
-  // vector?
-  if (succeeded(parser.parseOptionalKeyword(LoopOp::getVectorAttrName())))
-    executionMapping |= OpenACCExecMapping::VECTOR;
+  // optional gang operand
+  if (succeeded(parser.parseOptionalLParen())) {
+    if (succeeded(parser.parseOptionalKeyword(LoopOp::getGangNumKeyword()))) {
+      hasGangNum = true;
+      parser.parseColon();
+      if (parser.parseOperand(gangNum) ||
+          parser.resolveOperand(gangNum, intType, result.operands)) {
+        return failure();
+      }
+    }
+    parser.parseOptionalComma();
+    if (succeeded(
+            parser.parseOptionalKeyword(LoopOp::getGangStaticKeyword()))) {
+      hasGangStatic = true;
+      parser.parseColon();
+      if (parser.parseOperand(gangStatic) ||
+          parser.resolveOperand(gangStatic, intType, result.operands)) {
+        return failure();
+      }
+    }
+    if (failed(parser.parseRParen()))
+      return failure();
+  }
 
   // worker?
-  if (succeeded(parser.parseOptionalKeyword(LoopOp::getWorkerAttrName())))
+  if (succeeded(parser.parseOptionalKeyword(LoopOp::getWorkerKeyword())))
     executionMapping |= OpenACCExecMapping::WORKER;
 
-  // seq?
-  if (succeeded(parser.parseOptionalKeyword(LoopOp::getSeqAttrName())))
-    executionMapping |= OpenACCExecMapping::SEQ;
+  // optional worker operand
+  if (succeeded(parser.parseOptionalLParen())) {
+    hasWorkerNum = true;
+    if (parser.parseOperand(workerNum) ||
+        parser.resolveOperand(workerNum, intType, result.operands) ||
+        parser.parseRParen()) {
+      return failure();
+    }
+  }
+
+  // vector?
+  if (succeeded(parser.parseOptionalKeyword(LoopOp::getVectorKeyword())))
+    executionMapping |= OpenACCExecMapping::VECTOR;
+
+  // optional vector operand
+  if (succeeded(parser.parseOptionalLParen())) {
+    hasVectorLength = true;
+    if (parser.parseOperand(vectorLength) ||
+        parser.resolveOperand(vectorLength, intType, result.operands) ||
+        parser.parseRParen()) {
+      return failure();
+    }
+  }
+
+  // tile()?
+  if (failed(parseOperandList(parser, LoopOp::getTileKeyword(), tileOperands,
+                              operandTypes, result)))
+    return failure();
 
   // private()?
   if (failed(parseOperandList(parser, LoopOp::getPrivateKeyword(),
@@ -526,7 +575,12 @@ static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
 
   result.addAttribute(LoopOp::getOperandSegmentSizeAttr(),
                       builder.getI32VectorAttr(
-                          {static_cast<int32_t>(privateOperands.size()),
+                          {static_cast<int32_t>(hasGangNum ? 1 : 0),
+                           static_cast<int32_t>(hasGangStatic ? 1 : 0),
+                           static_cast<int32_t>(hasWorkerNum ? 1 : 0),
+                           static_cast<int32_t>(hasVectorLength ? 1 : 0),
+                           static_cast<int32_t>(tileOperands.size()),
+                           static_cast<int32_t>(privateOperands.size()),
                            static_cast<int32_t>(reductionOperands.size())}));
 
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
@@ -544,17 +598,44 @@ static void print(OpAsmPrinter &printer, LoopOp &op) {
           ? op.getAttrOfType<IntegerAttr>(LoopOp::getExecutionMappingAttrName())
                 .getInt()
           : 0;
-  if ((execMapping & OpenACCExecMapping::GANG) == OpenACCExecMapping::GANG)
-    printer << " " << LoopOp::getGangAttrName();
 
-  if ((execMapping & OpenACCExecMapping::WORKER) == OpenACCExecMapping::WORKER)
-    printer << " " << LoopOp::getWorkerAttrName();
+  if (execMapping & OpenACCExecMapping::GANG) {
+    printer << " " << LoopOp::getGangKeyword();
+    Value gangNum = op.gangNum();
+    Value gangStatic = op.gangStatic();
 
-  if ((execMapping & OpenACCExecMapping::VECTOR) == OpenACCExecMapping::VECTOR)
-    printer << " " << LoopOp::getVectorAttrName();
+    // Print optional gang operands
+    if (gangNum || gangStatic) {
+      printer << "(";
+      if (gangNum) {
+        printer << LoopOp::getGangNumKeyword() << ": " << gangNum;
+        if (gangStatic)
+          printer << ", ";
+      }
+      if (gangStatic)
+        printer << LoopOp::getGangStaticKeyword() << ": " << gangStatic;
+      printer << ")";
+    }
+  }
 
-  if ((execMapping & OpenACCExecMapping::SEQ) == OpenACCExecMapping::SEQ)
-    printer << " " << LoopOp::getSeqAttrName();
+  if (execMapping & OpenACCExecMapping::WORKER) {
+    printer << " " << LoopOp::getWorkerKeyword();
+
+    // Print optional worker operand if present
+    if (Value workerNum = op.workerNum())
+      printer << "(" << workerNum << ")";
+  }
+
+  if (execMapping & OpenACCExecMapping::VECTOR) {
+    printer << " " << LoopOp::getVectorKeyword();
+
+    // Print optional vector operand if present
+    if (Value vectorLength = op.vectorLength())
+      printer << "(" << vectorLength << ")";
+  }
+
+  // tile()?
+  printOperandList(op.tileOperands(), LoopOp::getTileKeyword(), printer);
 
   // private()?
   printOperandList(op.privateOperands(), LoopOp::getPrivateKeyword(), printer);
