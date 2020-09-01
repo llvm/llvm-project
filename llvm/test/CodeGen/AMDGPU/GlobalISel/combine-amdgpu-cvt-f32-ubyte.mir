@@ -228,9 +228,7 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte0_zext_lshr_8
     ; CHECK: liveins: $vgpr0
     ; CHECK: %arg:_(s32) = COPY $vgpr0
-    ; CHECK: %trunc:_(s16) = G_TRUNC %arg(s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT %trunc(s16)
-    ; CHECK: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 [[ANYEXT]]
+    ; CHECK: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %arg
     ; CHECK: $vgpr0 = COPY %result(s32)
     %arg:_(s32) = COPY $vgpr0
     %trunc:_(s16) = G_TRUNC %arg
@@ -251,9 +249,7 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte0_zext_lshr_16
     ; CHECK: liveins: $vgpr0
     ; CHECK: %arg:_(s32) = COPY $vgpr0
-    ; CHECK: %trunc:_(s16) = G_TRUNC %arg(s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT %trunc(s16)
-    ; CHECK: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 [[ANYEXT]]
+    ; CHECK: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %arg
     ; CHECK: $vgpr0 = COPY %result(s32)
     %arg:_(s32) = COPY $vgpr0
     %trunc:_(s16) = G_TRUNC %arg
@@ -274,9 +270,7 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte0_zext_lshr_24
     ; CHECK: liveins: $vgpr0
     ; CHECK: %arg:_(s32) = COPY $vgpr0
-    ; CHECK: %trunc:_(s16) = G_TRUNC %arg(s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT %trunc(s16)
-    ; CHECK: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE3 [[ANYEXT]]
+    ; CHECK: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE3 %arg
     ; CHECK: $vgpr0 = COPY %result(s32)
     %arg:_(s32) = COPY $vgpr0
     %trunc:_(s16) = G_TRUNC %arg
@@ -297,9 +291,7 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte1_zext_lshr_8
     ; CHECK: liveins: $vgpr0
     ; CHECK: %arg:_(s32) = COPY $vgpr0
-    ; CHECK: %trunc:_(s16) = G_TRUNC %arg(s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT %trunc(s16)
-    ; CHECK: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 [[ANYEXT]]
+    ; CHECK: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %arg
     ; CHECK: $vgpr0 = COPY %result(s32)
     %arg:_(s32) = COPY $vgpr0
     %trunc:_(s16) = G_TRUNC %arg
