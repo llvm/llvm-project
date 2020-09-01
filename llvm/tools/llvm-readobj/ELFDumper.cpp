@@ -2250,8 +2250,21 @@ void ELFDumper<ELFT>::parseDynamicTable(const ELFFile<ELFT> *Obj) {
 
   // Derive the dynamic symbol table size from the DT_HASH hash table, if
   // present.
-  if (HashTable && DynSymRegion)
-    DynSymRegion->Size = HashTable->nchain * DynSymRegion->EntSize;
+  if (HashTable && DynSymRegion) {
+    const uint64_t FileSize = ObjF->getELFFile()->getBufSize();
+    const uint64_t DerivedSize =
+        (uint64_t)HashTable->nchain * DynSymRegion->EntSize;
+    const uint64_t Offset =
+        (const uint8_t *)DynSymRegion->Addr - ObjF->getELFFile()->base();
+    if (DerivedSize > FileSize - Offset)
+      reportUniqueWarning(createError(
+          "the size (0x" + Twine::utohexstr(DerivedSize) +
+          ") of the dynamic symbol table at 0x" + Twine::utohexstr(Offset) +
+          ", derived from the hash table, goes past the end of the file (0x" +
+          Twine::utohexstr(FileSize) + ") and will be ignored"));
+    else
+      DynSymRegion->Size = HashTable->nchain * DynSymRegion->EntSize;
+  }
 }
 
 template <typename ELFT>
