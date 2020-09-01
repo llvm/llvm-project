@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 %s -verify
 // RUN: %clang_cc1 %s -verify=expected,space -Wcompound-token-split
-// RUN: %clang_cc1 %s -verify=expected,space -Wall
 
 #ifdef LSQUARE
 [ // expected-note {{second '[' token is here}}
