@@ -242,3 +242,98 @@ body:             |
     $vgpr0 = COPY %2
 
 ...
+
+---
+name: sext_inreg_s32_select_sextload_from_1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4, $vgpr5
+
+    ; GCN-LABEL: name: sext_inreg_s32_select_sextload_from_1
+    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4, $vgpr5
+    ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; GCN: [[COPY1:%[0-9]+]]:_(p1) = COPY $vgpr2_vgpr3
+    ; GCN: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; GCN: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; GCN: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[COPY3]]
+    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[SEXTLOAD1:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY1]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[SEXTLOAD]], [[SEXTLOAD1]]
+    ; GCN: $vgpr0 = COPY [[SELECT]](s32)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(p1) = COPY $vgpr2_vgpr3
+    %2:_(s32) = COPY $vgpr4
+    %3:_(s32) = COPY $vgpr5
+    %4:_(s1) = G_ICMP intpred(eq), %2, %3
+    %5:_(s32) = G_SEXTLOAD %0 :: (load 1, addrspace 1)
+    %6:_(s32) = G_SEXTLOAD %1 :: (load 1, addrspace 1)
+    %7:_(s32) = G_SELECT %4, %5, %6
+    %8:_(s32) = G_SEXT_INREG %7, 8
+    $vgpr0 = COPY %8
+
+...
+
+---
+name: sext_inreg_s32_select_sextload_from_1_fail_lhs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4, $vgpr5
+
+    ; GCN-LABEL: name: sext_inreg_s32_select_sextload_from_1_fail_lhs
+    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4, $vgpr5
+    ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; GCN: [[COPY1:%[0-9]+]]:_(p1) = COPY $vgpr2_vgpr3
+    ; GCN: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; GCN: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; GCN: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[COPY3]]
+    ; GCN: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 4, addrspace 1)
+    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY1]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[LOAD]], [[SEXTLOAD]]
+    ; GCN: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[SELECT]], 8
+    ; GCN: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(p1) = COPY $vgpr2_vgpr3
+    %2:_(s32) = COPY $vgpr4
+    %3:_(s32) = COPY $vgpr5
+    %4:_(s1) = G_ICMP intpred(eq), %2, %3
+    %5:_(s32) = G_LOAD %0 :: (load 4, addrspace 1)
+    %6:_(s32) = G_SEXTLOAD %1 :: (load 1, addrspace 1)
+    %7:_(s32) = G_SELECT %4, %5, %6
+    %8:_(s32) = G_SEXT_INREG %7, 8
+    $vgpr0 = COPY %8
+
+...
+
+---
+name: sext_inreg_s32_select_sextload_from_1_fail_rhs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4, $vgpr5
+
+    ; GCN-LABEL: name: sext_inreg_s32_select_sextload_from_1_fail_rhs
+    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4, $vgpr5
+    ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; GCN: [[COPY1:%[0-9]+]]:_(p1) = COPY $vgpr2_vgpr3
+    ; GCN: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; GCN: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; GCN: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[COPY3]]
+    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p1) :: (load 4, addrspace 1)
+    ; GCN: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[SEXTLOAD]], [[LOAD]]
+    ; GCN: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[SELECT]], 8
+    ; GCN: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(p1) = COPY $vgpr2_vgpr3
+    %2:_(s32) = COPY $vgpr4
+    %3:_(s32) = COPY $vgpr5
+    %4:_(s1) = G_ICMP intpred(eq), %2, %3
+    %5:_(s32) = G_SEXTLOAD %0 :: (load 1, addrspace 1)
+    %6:_(s32) = G_LOAD %1 :: (load 4, addrspace 1)
+    %7:_(s32) = G_SELECT %4, %5, %6
+    %8:_(s32) = G_SEXT_INREG %7, 8
+    $vgpr0 = COPY %8
+
+...
