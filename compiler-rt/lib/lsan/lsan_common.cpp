@@ -25,8 +25,6 @@
 #include "sanitizer_common/sanitizer_thread_registry.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
-extern "C" const char *__lsan_current_stage = "unknown";
-
 #if CAN_SANITIZE_LEAKS
 namespace __lsan {
 
@@ -362,7 +360,6 @@ static void FloodFillTag(Frontier *frontier, ChunkTag tag) {
 // ForEachChunk callback. If the chunk is marked as leaked, marks all chunks
 // which are reachable from it as indirectly leaked.
 static void MarkIndirectlyLeakedCb(uptr chunk, void *arg) {
-  __lsan_current_stage = "MarkIndirectlyLeakedCb";
   chunk = GetUserBegin(chunk);
   LsanMetadata m(chunk);
   if (m.allocated() && m.tag() != kReachable) {
@@ -375,7 +372,6 @@ static void MarkIndirectlyLeakedCb(uptr chunk, void *arg) {
 // frontier.
 static void CollectIgnoredCb(uptr chunk, void *arg) {
   CHECK(arg);
-  __lsan_current_stage = "CollectIgnoredCb";
   chunk = GetUserBegin(chunk);
   LsanMetadata m(chunk);
   if (m.allocated() && m.tag() == kIgnored) {
@@ -405,7 +401,6 @@ struct InvalidPCParam {
 static void MarkInvalidPCCb(uptr chunk, void *arg) {
   CHECK(arg);
   InvalidPCParam *param = reinterpret_cast<InvalidPCParam *>(arg);
-  __lsan_current_stage = "MarkInvalidPCCb";
   chunk = GetUserBegin(chunk);
   LsanMetadata m(chunk);
   if (m.allocated() && m.tag() != kReachable && m.tag() != kIgnored) {
@@ -481,7 +476,6 @@ static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads,
 // ForEachChunk callback. Resets the tags to pre-leak-check state.
 static void ResetTagsCb(uptr chunk, void *arg) {
   (void)arg;
-  __lsan_current_stage = "ResetTagsCb";
   chunk = GetUserBegin(chunk);
   LsanMetadata m(chunk);
   if (m.allocated() && m.tag() != kIgnored)
@@ -498,7 +492,6 @@ static void PrintStackTraceById(u32 stack_trace_id) {
 static void CollectLeaksCb(uptr chunk, void *arg) {
   CHECK(arg);
   LeakReport *leak_report = reinterpret_cast<LeakReport *>(arg);
-  __lsan_current_stage = "CollectLeaksCb";
   chunk = GetUserBegin(chunk);
   LsanMetadata m(chunk);
   if (!m.allocated()) return;
