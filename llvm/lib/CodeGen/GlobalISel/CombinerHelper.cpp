@@ -1744,6 +1744,78 @@ bool CombinerHelper::applyCombineAddP2IToPtrAdd(
   return true;
 }
 
+bool CombinerHelper::matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) {
+  assert(MI.getOpcode() == TargetOpcode::G_ANYEXT && "Expected a G_ANYEXT");
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  return mi_match(SrcReg, MRI,
+                  m_GTrunc(m_all_of(m_Reg(Reg), m_SpecificType(DstTy))));
+}
+
+bool CombinerHelper::applyCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) {
+  assert(MI.getOpcode() == TargetOpcode::G_ANYEXT && "Expected a G_ANYEXT");
+  Register DstReg = MI.getOperand(0).getReg();
+  MI.eraseFromParent();
+  replaceRegWith(MRI, DstReg, Reg);
+  return true;
+}
+
+bool CombinerHelper::matchCombineExtOfExt(
+    MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo) {
+  assert((MI.getOpcode() == TargetOpcode::G_ANYEXT ||
+          MI.getOpcode() == TargetOpcode::G_SEXT ||
+          MI.getOpcode() == TargetOpcode::G_ZEXT) &&
+         "Expected a G_[ASZ]EXT");
+  Register SrcReg = MI.getOperand(1).getReg();
+  MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
+  // Match exts with the same opcode, anyext([sz]ext) and sext(zext).
+  unsigned Opc = MI.getOpcode();
+  unsigned SrcOpc = SrcMI->getOpcode();
+  if (Opc == SrcOpc ||
+      (Opc == TargetOpcode::G_ANYEXT &&
+       (SrcOpc == TargetOpcode::G_SEXT || SrcOpc == TargetOpcode::G_ZEXT)) ||
+      (Opc == TargetOpcode::G_SEXT && SrcOpc == TargetOpcode::G_ZEXT)) {
+    MatchInfo = std::make_tuple(SrcMI->getOperand(1).getReg(), SrcOpc);
+    return true;
+  }
+  return false;
+}
+
+bool CombinerHelper::applyCombineExtOfExt(
+    MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo) {
+  assert((MI.getOpcode() == TargetOpcode::G_ANYEXT ||
+          MI.getOpcode() == TargetOpcode::G_SEXT ||
+          MI.getOpcode() == TargetOpcode::G_ZEXT) &&
+         "Expected a G_[ASZ]EXT");
+
+  Register Reg = std::get<0>(MatchInfo);
+  unsigned SrcExtOp = std::get<1>(MatchInfo);
+
+  // Combine exts with the same opcode.
+  if (MI.getOpcode() == SrcExtOp) {
+    Observer.changingInstr(MI);
+    MI.getOperand(1).setReg(Reg);
+    Observer.changedInstr(MI);
+    return true;
+  }
+
+  // Combine:
+  // - anyext([sz]ext x) to [sz]ext x
+  // - sext(zext x) to zext x
+  if (MI.getOpcode() == TargetOpcode::G_ANYEXT ||
+      (MI.getOpcode() == TargetOpcode::G_SEXT &&
+       SrcExtOp == TargetOpcode::G_ZEXT)) {
+    Register DstReg = MI.getOperand(0).getReg();
+    Builder.setInstrAndDebugLoc(MI);
+    Builder.buildInstr(SrcExtOp, {DstReg}, {Reg});
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
 bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) {
   return any_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
     return MO.isReg() &&
