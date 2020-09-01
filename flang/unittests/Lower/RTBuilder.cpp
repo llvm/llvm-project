@@ -21,8 +21,8 @@
 c_float_complex_t c99_cacosf(c_float_complex_t);
 
 TEST(RTBuilderTest, ComplexRuntimeInterface) {
-  fir::registerFIR();
   mlir::MLIRContext ctx;
+  fir::registerAndLoadDialects(ctx);
   mlir::Type c99_cacosf_signature{
       Fortran::lower::RuntimeTableKey<decltype(c99_cacosf)>::getTypeModel()(
           &ctx)};

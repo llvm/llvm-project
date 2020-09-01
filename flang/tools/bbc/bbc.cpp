@@ -154,7 +154,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   if (!(fixedForm || freeForm)) {
     auto dot = path.rfind(".");
     if (dot != std::string::npos) {
-      std::string suffix{path.substr(dot + 1)};
+      std::string suffix = path.substr(dot + 1);
       options.isFixedForm = suffix == "f" || suffix == "F" || suffix == "ff";
     }
   }
@@ -198,7 +198,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   }
 
   // run semantics
-  auto &parseTree{*parsing.parseTree()};
+  auto &parseTree = *parsing.parseTree();
   Fortran::semantics::Semantics semantics{semanticsContext, parseTree,
                                           parsing.cooked()};
   semantics.Perform();
@@ -211,7 +211,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     semantics.DumpSymbols(llvm::outs());
 
   if (pftDumpTest) {
-    if (auto ast{Fortran::lower::createPFT(parseTree, semanticsContext)}) {
+    if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext)) {
       Fortran::lower::dumpPFT(llvm::outs(), *ast);
       return mlir::success();
     }
@@ -222,12 +222,14 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   // translate to FIR dialect of MLIR
   llvm::Triple triple(fir::determineTargetTriple(targetTriple));
   fir::NameUniquer nameUniquer;
+  mlir::MLIRContext ctx;
+  fir::registerAndLoadDialects(ctx);
   auto burnside = Fortran::lower::LoweringBridge::create(
-      semanticsContext.defaultKinds(), semanticsContext.intrinsics(),
+      ctx, semanticsContext.defaultKinds(), semanticsContext.intrinsics(),
       parsing.cooked());
   burnside.lower(parseTree, nameUniquer, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
-  fir::KindMapping kindMap(mlirModule.getContext());
+  fir::KindMapping kindMap(&ctx);
   fir::setTargetTriple(mlirModule, triple);
   fir::setNameUniquer(mlirModule, nameUniquer);
   fir::setKindMapping(mlirModule, kindMap);
@@ -303,7 +305,6 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 }
 
 int main(int argc, char **argv) {
-  fir::registerFIR();
   fir::registerFIRPasses();
   fir::registerOptPasses();
   [[maybe_unused]] llvm::InitLLVM y(argc, argv);
