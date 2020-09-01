@@ -26,7 +26,7 @@ ELF Improvements
 
 * ``--lto-emit-asm`` is added to emit assembly output for debugging purposes.
   (`D77231 <https://reviews.llvm.org/D77231>`_)
-* ``--lto-whole-program-visibility`` is added to support LTO whole-program devirtualization.
+* ``--lto-whole-program-visibility`` is added to specify that classes have hidden LTO visibility in LTO and ThinLTO links of source files compiled with ``-fwhole-program-vtables``. See `LTOVisibility <https://clang.llvm.org/docs/LTOVisibility.html>`_ for details.
   (`D71913 <https://reviews.llvm.org/D71913>`_)
 * ``--print-archive-stats=`` is added to print the number of members and the number of fetched members for each archive.
   The feature is similar to GNU gold's ``--print-symbol-counts=``.

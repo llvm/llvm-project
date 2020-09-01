@@ -306,7 +306,8 @@ Modified Compiler Flags
 - -mcpu is now supported for RISC-V, and recognises the generic-rv32,
   rocket-rv32, sifive-e31, generic-rv64, rocket-rv64, and sifive-u54 target
   CPUs.
-
+- ``-fwhole-program-vtables`` (along with ``-flto*``) now prepares all classes for possible whole program visibility if specified during the LTO link.
+  (`D71913 <https://reviews.llvm.org/D71913>`_)
 
 New Pragmas in Clang
 --------------------
