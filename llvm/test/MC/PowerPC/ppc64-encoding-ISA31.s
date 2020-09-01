@@ -666,3 +666,9 @@
 # CHECK-BE: vstrihl. 2, 2                         # encoding: [0x10,0x42,0x14,0x0d]
 # CHECK-LE: vstrihl. 2, 2                         # encoding: [0x0d,0x14,0x42,0x10]
             vstrihl. 2, 2
+# CHECK-BE: xvcvspbf16 33, 34                     # encoding: [0xf0,0x31,0x17,0x6f]
+# CHECK-LE: xvcvspbf16 33, 34                     # encoding: [0x6f,0x17,0x31,0xf0]
+            xvcvspbf16 33, 34
+# CHECK-BE: xvcvbf16spn 33, 34                    # encoding: [0xf0,0x30,0x17,0x6f]
+# CHECK-LE: xvcvbf16spn 33, 34                    # encoding: [0x6f,0x17,0x30,0xf0]
+            xvcvbf16spn 33, 34
