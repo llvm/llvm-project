@@ -13,10 +13,9 @@ func f() {
   // The Objective-C runtime recognizes this as a tagged pointer.
   // CHECK-DAG: (NSNumber) inlined = {{.*}}Int64(42)
   let inlined = NSNumber(value: 42)
-  // FIXME: The dataformatters wrongly think this is an OptionSet.
-  // CHECK-DAG: (CMYK) enumerator = [.yellow]
+  // CHECK-DAG: (CMYK) enumerator = .yellow
   let enumerator = yellow
-  // CHECK-DAG: (FourColors) typedef = [.cyan]
+  // CHECK-DAG: (FourColors) typedef = .cyan
   let typedef = FourColors(0)
   let union = Union(i: 23)
   // CHECK-DAG: (OBJCSTUFF_MyString) renamed = {{.*}} "with swift_name"
