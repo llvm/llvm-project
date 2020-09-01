@@ -969,7 +969,7 @@ define i64 @v_udiv_i64_pow2k_denom(i64 %num) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_movk_i32 s6, 0x1000
-; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, 0
+; CHECK-NEXT:    v_cvt_f32_ubyte0_e32 v2, 0
 ; CHECK-NEXT:    s_mov_b32 s7, 0xfffff000
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v3, s6
 ; CHECK-NEXT:    v_mac_f32_e32 v3, 0x4f800000, v2
@@ -1108,7 +1108,7 @@ define <2 x i64> @v_udiv_v2i64_pow2k_denom(<2 x i64> %num) {
 ; GISEL-NEXT:    v_cvt_f32_u32_e32 v4, s10
 ; GISEL-NEXT:    s_sub_u32 s8, 0, s10
 ; GISEL-NEXT:    s_cselect_b32 s4, 1, 0
-; GISEL-NEXT:    v_cvt_f32_u32_e32 v5, 0
+; GISEL-NEXT:    v_cvt_f32_ubyte0_e32 v5, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v6, v4
 ; GISEL-NEXT:    s_and_b32 s4, s4, 1
 ; GISEL-NEXT:    v_mac_f32_e32 v4, 0x4f800000, v5
@@ -1370,7 +1370,7 @@ define <2 x i64> @v_udiv_v2i64_pow2k_denom(<2 x i64> %num) {
 ; CGP:       ; %bb.0:
 ; CGP-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CGP-NEXT:    s_movk_i32 s10, 0x1000
-; CGP-NEXT:    v_cvt_f32_u32_e32 v4, 0
+; CGP-NEXT:    v_cvt_f32_ubyte0_e32 v4, 0
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v5, s10
 ; CGP-NEXT:    s_mov_b32 s8, 0xfffff000
 ; CGP-NEXT:    v_mov_b32_e32 v6, v5
@@ -1630,7 +1630,7 @@ define i64 @v_udiv_i64_oddk_denom(i64 %num) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s6, 0x12d8fb
-; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, 0
+; CHECK-NEXT:    v_cvt_f32_ubyte0_e32 v2, 0
 ; CHECK-NEXT:    s_mov_b32 s7, 0xffed2705
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v3, s6
 ; CHECK-NEXT:    v_mac_f32_e32 v3, 0x4f800000, v2
@@ -1769,7 +1769,7 @@ define <2 x i64> @v_udiv_v2i64_oddk_denom(<2 x i64> %num) {
 ; GISEL-NEXT:    v_cvt_f32_u32_e32 v4, s10
 ; GISEL-NEXT:    s_sub_u32 s8, 0, s10
 ; GISEL-NEXT:    s_cselect_b32 s4, 1, 0
-; GISEL-NEXT:    v_cvt_f32_u32_e32 v5, 0
+; GISEL-NEXT:    v_cvt_f32_ubyte0_e32 v5, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v6, v4
 ; GISEL-NEXT:    s_and_b32 s4, s4, 1
 ; GISEL-NEXT:    v_mac_f32_e32 v4, 0x4f800000, v5
@@ -2031,7 +2031,7 @@ define <2 x i64> @v_udiv_v2i64_oddk_denom(<2 x i64> %num) {
 ; CGP:       ; %bb.0:
 ; CGP-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CGP-NEXT:    s_mov_b32 s10, 0x12d8fb
-; CGP-NEXT:    v_cvt_f32_u32_e32 v4, 0
+; CGP-NEXT:    v_cvt_f32_ubyte0_e32 v4, 0
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v5, s10
 ; CGP-NEXT:    s_mov_b32 s8, 0xffed2705
 ; CGP-NEXT:    v_mov_b32_e32 v6, v5
@@ -3133,7 +3133,7 @@ define <2 x i64> @v_udiv_v2i64_24bit(<2 x i64> %num, <2 x i64> %den) {
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_mov_b32 s6, 0xffffff
-; GISEL-NEXT:    v_cvt_f32_u32_e32 v1, 0
+; GISEL-NEXT:    v_cvt_f32_ubyte0_e32 v1, 0
 ; GISEL-NEXT:    v_and_b32_e32 v3, s6, v4
 ; GISEL-NEXT:    v_and_b32_e32 v4, s6, v6
 ; GISEL-NEXT:    v_cvt_f32_u32_e32 v5, v3
