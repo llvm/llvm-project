@@ -64,7 +64,6 @@ size_t FileSize(const std::string &Path);
 void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
                              Vector<std::string> *V, bool TopDir);
 
-bool MkDirRecursive(const std::string &Dir);
 void RmDirRecursive(const std::string &Dir);
 
 // Iterate files and dirs inside Dir, recursively.
