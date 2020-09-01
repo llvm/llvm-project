@@ -437,6 +437,18 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = SrcOpKnown.extractBits(BitWidth, BitWidth * DstIdx);
     break;
   }
+  case TargetOpcode::G_BSWAP: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+    Known.byteSwap();
+    break;
+  }
+  case TargetOpcode::G_BITREVERSE: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+    Known.reverseBits();
+    break;
+  }
   }
 
   assert(!Known.hasConflict() && "Bits known to be one AND zero?");

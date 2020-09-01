@@ -261,6 +261,14 @@ public:
 
   /// Update known bits based on XORing with RHS.
   KnownBits &operator^=(const KnownBits &RHS);
+
+  KnownBits byteSwap() {
+    return KnownBits(Zero.byteSwap(), One.byteSwap());
+  }
+
+  KnownBits reverseBits() {
+    return KnownBits(Zero.reverseBits(), One.reverseBits());
+  }
 };
 
 inline KnownBits operator&(KnownBits LHS, const KnownBits &RHS) {
