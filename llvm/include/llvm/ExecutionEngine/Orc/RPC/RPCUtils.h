@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_RPCUTILS_H
-#define LLVM_EXECUTIONENGINE_ORC_RPCUTILS_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_RPC_RPCUTILS_H
+#define LLVM_EXECUTIONENGINE_ORC_RPC_RPCUTILS_H
 
 #include <map>
 #include <thread>
@@ -1684,4 +1684,4 @@ public:
 } // end namespace orc
 } // end namespace llvm
 
-#endif
+#endif // LLVM_EXECUTIONENGINE_ORC_RPC_RPCUTILS_H

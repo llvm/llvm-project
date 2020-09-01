@@ -72,6 +72,9 @@ bool lldb_private::formatters::NSBundleSummaryProvider(
         valobj.GetCompilerType().GetBasicTypeFromAST(lldb::eBasicTypeObjCID),
         true));
 
+    if (!text)
+      return false;
+
     StreamString summary_stream;
     bool was_nsstring_ok =
         NSStringSummaryProvider(*text, summary_stream, options);
@@ -117,6 +120,10 @@ bool lldb_private::formatters::NSTimeZoneSummaryProvider(
     uint64_t offset = ptr_size;
     ValueObjectSP text(valobj.GetSyntheticChildAtOffset(
         offset, valobj.GetCompilerType(), true));
+
+    if (!text)
+      return false;
+
     StreamString summary_stream;
     bool was_nsstring_ok =
         NSStringSummaryProvider(*text, summary_stream, options);
@@ -162,6 +169,10 @@ bool lldb_private::formatters::NSNotificationSummaryProvider(
     uint64_t offset = ptr_size;
     ValueObjectSP text(valobj.GetSyntheticChildAtOffset(
         offset, valobj.GetCompilerType(), true));
+
+    if (!text)
+      return false;
+
     StreamString summary_stream;
     bool was_nsstring_ok =
         NSStringSummaryProvider(*text, summary_stream, options);

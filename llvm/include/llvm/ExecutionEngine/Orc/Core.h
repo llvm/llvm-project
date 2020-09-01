@@ -287,7 +287,7 @@ public:
     for (UnderlyingVector::size_type I = 1; I != Symbols.size(); ++I)
       if (Symbols[I].first == Symbols[I - 1].first)
         return true;
-    return true;
+    return false;
   }
 #endif
 
