@@ -168,6 +168,8 @@ TEST_F(FormatTest, NestedNameSpecifiers) {
   verifyFormat("vector<::Type> v;");
   verifyFormat("::ns::SomeFunction(::ns::SomeOtherFunction())");
   verifyFormat("static constexpr bool Bar = decltype(bar())::value;");
+  verifyFormat("static constexpr bool Bar = typeof(bar())::value;");
+  verifyFormat("static constexpr bool Bar = _Atomic(bar())::value;");
   verifyFormat("bool a = 2 < ::SomeFunction();");
   verifyFormat("ALWAYS_INLINE ::std::string getName();");
   verifyFormat("some::string getName();");
@@ -7904,7 +7906,10 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("auto PointerBinding = [](const char *S) {};");
   verifyFormat("typedef typeof(int(int, int)) *MyFunc;");
   verifyFormat("[](const decltype(*a) &value) {}");
+  verifyFormat("[](const typeof(*a) &value) {}");
+  verifyFormat("[](const _Atomic(a *) &value) {}");
   verifyFormat("decltype(a * b) F();");
+  verifyFormat("typeof(a * b) F();");
   verifyFormat("#define MACRO() [](A *a) { return 1; }");
   verifyFormat("Constructor() : member([](A *a, B *b) {}) {}");
   verifyIndependentOfContext("typedef void (*f)(int *a);");
@@ -7970,6 +7975,8 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("delete *x;", Left);
   verifyFormat("typedef typeof(int(int, int))* MyFuncPtr;", Left);
   verifyFormat("[](const decltype(*a)* ptr) {}", Left);
+  verifyFormat("[](const typeof(*a)* ptr) {}", Left);
+  verifyFormat("[](const _Atomic(a*)* ptr) {}", Left);
   verifyFormat("typedef typeof /*comment*/ (int(int, int))* MyFuncPtr;", Left);
   verifyFormat("auto x(A&&, B&&, C&&) -> D;", Left);
   verifyFormat("auto x = [](A&&, B&&, C&&) -> D {};", Left);
@@ -8066,6 +8073,8 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("foo<b && false>();");
   verifyFormat("foo<b & 1>();");
   verifyFormat("decltype(*::std::declval<const T &>()) void F();");
+  verifyFormat("typeof(*::std::declval<const T &>()) void F();");
+  verifyFormat("_Atomic(*::std::declval<const T &>()) void F();");
   verifyFormat(
       "template <class T, class = typename std::enable_if<\n"
       "                       std::is_integral<T>::value &&\n"
@@ -8089,6 +8098,9 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("MACRO(int *i);");
   verifyIndependentOfContext("MACRO(auto *a);");
   verifyIndependentOfContext("MACRO(const A *a);");
+  verifyIndependentOfContext("MACRO(_Atomic(A) *a);");
+  verifyIndependentOfContext("MACRO(decltype(A) *a);");
+  verifyIndependentOfContext("MACRO(typeof(A) *a);");
   verifyIndependentOfContext("MACRO(A *const a);");
   verifyIndependentOfContext("MACRO(A *restrict a);");
   verifyIndependentOfContext("MACRO(A *__restrict__ a);");
@@ -8639,6 +8651,10 @@ TEST_F(FormatTest, BreaksLongDeclarations) {
                "LooooooooooooooooooooooooooooooooooongFunctionDefinition() {}");
   verifyFormat("decltype(LoooooooooooooooooooooooooooooooooooooooongName)\n"
                "LooooooooooooooooooooooooooooooooooongFunctionDefinition() {}");
+  verifyFormat("typeof(LoooooooooooooooooooooooooooooooooooooooooongName)\n"
+               "LooooooooooooooooooooooooooooooooooongFunctionDefinition() {}");
+  verifyFormat("_Atomic(LooooooooooooooooooooooooooooooooooooooooongName)\n"
+               "LooooooooooooooooooooooooooooooooooongFunctionDefinition() {}");
   verifyFormat("LoooooooooooooooooooooooooooooooooooooooongReturnType\n"
                "LooooooooooooooooooooooooooongFunctionDeclaration(T... t);");
   verifyFormat("LoooooooooooooooooooooooooooooooooooooooongReturnType\n"
@@ -8988,6 +9004,8 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
   verifyFormat("int foo(int i) { return fo1{}(i); }");
   verifyFormat("int foo(int i) { return fo1{}(i); }");
   verifyFormat("auto i = decltype(x){};");
+  verifyFormat("auto i = typeof(x){};");
+  verifyFormat("auto i = _Atomic(x){};");
   verifyFormat("std::vector<int> v = {1, 0 /* comment */};");
   verifyFormat("Node n{1, Node{1000}, //\n"
                "       2};");
@@ -11580,6 +11598,8 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("auto i = std::make_unique<int>(5);", NoSpace);
   verifyFormat("size_t x = sizeof(x);", NoSpace);
   verifyFormat("auto f(int x) -> decltype(x);", NoSpace);
+  verifyFormat("auto f(int x) -> typeof(x);", NoSpace);
+  verifyFormat("auto f(int x) -> _Atomic(x);", NoSpace);
   verifyFormat("int f(T x) noexcept(x.create());", NoSpace);
   verifyFormat("alignas(128) char a[128];", NoSpace);
   verifyFormat("size_t x = alignof(MyType);", NoSpace);
@@ -11628,6 +11648,8 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("auto i = std::make_unique<int> (5);", Space);
   verifyFormat("size_t x = sizeof (x);", Space);
   verifyFormat("auto f (int x) -> decltype (x);", Space);
+  verifyFormat("auto f (int x) -> typeof (x);", Space);
+  verifyFormat("auto f (int x) -> _Atomic (x);", Space);
   verifyFormat("int f (T x) noexcept (x.create ());", Space);
   verifyFormat("alignas (128) char a[128];", Space);
   verifyFormat("size_t x = alignof (MyType);", Space);
@@ -11680,6 +11702,8 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("auto i = std::make_unique<int> (5);", SomeSpace);
   verifyFormat("size_t x = sizeof (x);", SomeSpace);
   verifyFormat("auto f (int x) -> decltype (x);", SomeSpace);
+  verifyFormat("auto f (int x) -> typeof (x);", SomeSpace);
+  verifyFormat("auto f (int x) -> _Atomic (x);", SomeSpace);
   verifyFormat("int f (T x) noexcept (x.create());", SomeSpace);
   verifyFormat("alignas (128) char a[128];", SomeSpace);
   verifyFormat("size_t x = alignof (MyType);", SomeSpace);
@@ -14934,6 +14958,8 @@ TEST_F(FormatTest, FormatsLambdas) {
                    "});"));
   verifyFormat("void f() {\n"
                "  SomeFunction([](decltype(x), A *a) {});\n"
+               "  SomeFunction([](typeof(x), A *a) {});\n"
+               "  SomeFunction([](_Atomic(x), A *a) {});\n"
                "}");
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    [](const aaaaaaaaaa &a) { return a; });");
@@ -16573,6 +16599,45 @@ TEST_F(FormatTest, TypenameMacros) {
   verifyFormat("x = (STACK_OF(uint64_t))*a;", Macros);
   verifyFormat("x = (STACK_OF(uint64_t))&a;", Macros);
   verifyFormat("vector<STACK_OF(uint64_t)* attr> x;", Macros);
+}
+
+TEST_F(FormatTest, AtomicQualifier) {
+  // Check that we treate _Atomic as a type and not a function call
+  FormatStyle Google = getGoogleStyleWithColumns(0);
+  verifyFormat("struct foo {\n"
+               "  int a1;\n"
+               "  _Atomic(a) a2;\n"
+               "  _Atomic(_Atomic(int) *const) a3;\n"
+               "};",
+               Google);
+  verifyFormat("_Atomic(uint64_t) a;");
+  verifyFormat("_Atomic(uint64_t) *a;");
+  verifyFormat("_Atomic(uint64_t const *) *a;");
+  verifyFormat("_Atomic(uint64_t *const) *a;");
+  verifyFormat("_Atomic(const uint64_t *) *a;");
+  verifyFormat("_Atomic(uint64_t) a;");
+  verifyFormat("_Atomic(_Atomic(uint64_t)) a;");
+  verifyFormat("_Atomic(_Atomic(uint64_t)) a, b;");
+  verifyFormat("for (_Atomic(uint64_t) *a = NULL; a;) {\n}");
+  verifyFormat("_Atomic(uint64_t) f(_Atomic(uint64_t) *arg);");
+
+  verifyFormat("_Atomic(uint64_t) *s(InitValue);");
+  verifyFormat("_Atomic(uint64_t) *s{InitValue};");
+  FormatStyle Style = getLLVMStyle();
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("_Atomic(uint64_t)* s(InitValue);", Style);
+  verifyFormat("_Atomic(uint64_t)* s{InitValue};", Style);
+  verifyFormat("_Atomic(int)* a;", Style);
+  verifyFormat("_Atomic(int*)* a;", Style);
+  verifyFormat("vector<_Atomic(uint64_t)* attr> x;", Style);
+
+  Style.SpacesInCStyleCastParentheses = true;
+  Style.SpacesInParentheses = false;
+  verifyFormat("x = ( _Atomic(uint64_t) )*a;", Style);
+  Style.SpacesInCStyleCastParentheses = false;
+  Style.SpacesInParentheses = true;
+  verifyFormat("x = (_Atomic( uint64_t ))*a;", Style);
+  verifyFormat("x = (_Atomic( uint64_t ))&a;", Style);
 }
 
 TEST_F(FormatTest, AmbersandInLamda) {

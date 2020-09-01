@@ -101,8 +101,8 @@ namespace format {
   TYPE(TrailingAnnotation)                                                     \
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \
+  TYPE(TypeDeclarationParen)                                                   \
   TYPE(TypenameMacro)                                                          \
-  TYPE(TypenameMacroParen)                                                     \
   TYPE(UnaryOperator)                                                          \
   TYPE(UntouchableMacroFunc)                                                   \
   TYPE(CSharpStringLiteral)                                                    \
@@ -526,6 +526,7 @@ public:
     case tok::kw_decltype:
     case tok::kw_noexcept:
     case tok::kw_static_assert:
+    case tok::kw__Atomic:
     case tok::kw___attribute:
       return true;
     default:
