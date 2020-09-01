@@ -71,9 +71,8 @@ public:
     }
 
     // OnResolve -- De-intern the symbols and pass the result to the linker.
-    auto OnResolve = [this, LookupContinuation = std::move(LC)](
-                         Expected<SymbolMap> Result) mutable {
-      auto Main = Layer.getExecutionSession().intern("_main");
+    auto OnResolve = [LookupContinuation =
+                          std::move(LC)](Expected<SymbolMap> Result) mutable {
       if (!Result)
         LookupContinuation->run(Result.takeError());
       else {
