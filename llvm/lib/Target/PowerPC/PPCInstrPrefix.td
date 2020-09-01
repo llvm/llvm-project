@@ -515,6 +515,11 @@ def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
 def PairedVectorMemops : Predicate<"PPCSubTarget->pairedVectorMemops()">;
 def MMA : Predicate<"PPCSubTarget->hasMMA()">;
 
+def RCCp {
+  dag AToVSRC = (COPY_TO_REGCLASS $XA, VSRC);
+  dag BToVSRC = (COPY_TO_REGCLASS $XB, VSRC);
+}
+
 let Predicates = [PrefixInstrs] in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
     defm PADDI8 :
@@ -1349,6 +1354,13 @@ let Predicates = [IsISA3_1] in {
              (v1i128 (COPY_TO_REGCLASS (LXVRWX xoaddr:$src), VRRC))>;
   def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 64)),
              (v1i128 (COPY_TO_REGCLASS (LXVRDX xoaddr:$src), VRRC))>;
+}
+
+let Predicates = [IsISA3_1, HasVSX] in {
+  def : Pat<(v16i8 (int_ppc_vsx_xvcvspbf16 v16i8:$XA)),
+            (COPY_TO_REGCLASS (XVCVSPBF16 RCCp.AToVSRC), VRRC)>;
+  def : Pat<(v16i8 (int_ppc_vsx_xvcvbf16spn v16i8:$XA)),
+            (COPY_TO_REGCLASS (XVCVBF16SPN RCCp.AToVSRC), VRRC)>;
 }
 
 let AddedComplexity = 400, Predicates = [IsISA3_1] in {
