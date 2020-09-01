@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Error.h"
 #include "ObjDumper.h"
 #include "llvm-readobj.h"
 #include "llvm/Object/Wasm.h"
