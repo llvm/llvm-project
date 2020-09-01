@@ -247,6 +247,12 @@ public:
     One.insertBits(SubBits.One, BitPosition);
   }
 
+  /// Return a subset of the known bits from [bitPosition,bitPosition+numBits).
+  KnownBits extractBits(unsigned NumBits, unsigned BitPosition) {
+    return KnownBits(Zero.extractBits(NumBits, BitPosition),
+                     One.extractBits(NumBits, BitPosition));
+  }
+
   /// Update known bits based on ANDing with RHS.
   KnownBits &operator&=(const KnownBits &RHS);
 

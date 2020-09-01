@@ -419,6 +419,24 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
+  case TargetOpcode::G_UNMERGE_VALUES: {
+    Register NumOps = MI.getNumOperands();
+    Register SrcReg = MI.getOperand(NumOps - 1).getReg();
+    if (MRI.getType(SrcReg).isVector())
+      return; // TODO: Handle vectors.
+
+    KnownBits SrcOpKnown;
+    computeKnownBitsImpl(SrcReg, SrcOpKnown, DemandedElts, Depth + 1);
+
+    // Figure out the result operand index
+    unsigned DstIdx = 0;
+    for (; DstIdx != NumOps - 1 && MI.getOperand(DstIdx).getReg() != R;
+         ++DstIdx)
+      ;
+
+    Known = SrcOpKnown.extractBits(BitWidth, BitWidth * DstIdx);
+    break;
+  }
   }
 
   assert(!Known.hasConflict() && "Bits known to be one AND zero?");
@@ -477,6 +495,24 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
     unsigned SrcBits = MI.getOperand(2).getImm();
     unsigned InRegBits = TyBits - SrcBits + 1;
     return std::max(computeNumSignBits(Src, DemandedElts, Depth + 1), InRegBits);
+  }
+  case TargetOpcode::G_SEXTLOAD: {
+    // FIXME: We need an in-memory type representation.
+    if (DstTy.isVector())
+      return 1;
+
+    // e.g. i16->i32 = '17' bits known.
+    const MachineMemOperand *MMO = *MI.memoperands_begin();
+    return TyBits - MMO->getSizeInBits() + 1;
+  }
+  case TargetOpcode::G_ZEXTLOAD: {
+    // FIXME: We need an in-memory type representation.
+    if (DstTy.isVector())
+      return 1;
+
+    // e.g. i16->i32 = '16' bits known.
+    const MachineMemOperand *MMO = *MI.memoperands_begin();
+    return TyBits - MMO->getSizeInBits();
   }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();

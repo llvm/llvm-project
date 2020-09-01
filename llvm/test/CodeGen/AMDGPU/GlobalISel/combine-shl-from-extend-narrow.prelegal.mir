@@ -91,8 +91,7 @@ body:             |
     ; GFX6: %masked:_(s8) = G_AND %narrow, %masklow6
     ; GFX6: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 2
     ; GFX6: [[SHL:%[0-9]+]]:_(s8) = G_SHL %masked, [[C]](s8)
-    ; GFX6: %shl:_(s16) = G_ZEXT [[SHL]](s8)
-    ; GFX6: %result:_(s32) = G_ANYEXT %shl(s16)
+    ; GFX6: %result:_(s32) = G_ZEXT [[SHL]](s8)
     ; GFX6: $vgpr0 = COPY %result(s32)
     ; GFX9-LABEL: name: narrow_shl_s16_by_2_from_zext_s8
     ; GFX9: liveins: $vgpr0
@@ -102,8 +101,7 @@ body:             |
     ; GFX9: %masked:_(s8) = G_AND %narrow, %masklow6
     ; GFX9: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 2
     ; GFX9: [[SHL:%[0-9]+]]:_(s8) = G_SHL %masked, [[C]](s8)
-    ; GFX9: %shl:_(s16) = G_ZEXT [[SHL]](s8)
-    ; GFX9: %result:_(s32) = G_ANYEXT %shl(s16)
+    ; GFX9: %result:_(s32) = G_ZEXT [[SHL]](s8)
     ; GFX9: $vgpr0 = COPY %result(s32)
     %argument:_(s32) = COPY $vgpr0
     %narrow:_(s8) = G_TRUNC %argument
