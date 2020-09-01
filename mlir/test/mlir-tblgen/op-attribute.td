@@ -138,8 +138,8 @@ def BOp : NS_Op<"b_op", []> {
 
 // DEF: ::mlir::Attribute BOp::any_attr()
 // DEF: bool BOp::bool_attr()
-// DEF: ::llvm::APInt BOp::i32_attr()
-// DEF: ::llvm::APInt BOp::i64_attr()
+// DEF: uint32_t BOp::i32_attr()
+// DEF: uint64_t BOp::i64_attr()
 // DEF: ::llvm::APFloat BOp::f32_attr()
 // DEF: ::llvm::APFloat BOp::f64_attr()
 // DEF: ::llvm::StringRef BOp::str_attr()
@@ -196,7 +196,7 @@ def DOp : NS_Op<"d_op", []> {
 }
 
 // DECL-LABEL: DOp declarations
-// DECL: static void build({{.*}}, ::llvm::APInt i32_attr, ::llvm::APFloat f64_attr, ::llvm::StringRef str_attr, bool bool_attr, ::SomeI32Enum enum_attr, ::llvm::APInt dv_i32_attr, ::llvm::APFloat dv_f64_attr, ::llvm::StringRef dv_str_attr = "abc", bool dv_bool_attr = true, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
+// DECL: static void build({{.*}}, uint32_t i32_attr, ::llvm::APFloat f64_attr, ::llvm::StringRef str_attr, bool bool_attr, ::SomeI32Enum enum_attr, uint32_t dv_i32_attr, ::llvm::APFloat dv_f64_attr, ::llvm::StringRef dv_str_attr = "abc", bool dv_bool_attr = true, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
 
 // DEF-LABEL: DOp definitions
 // DEF: odsState.addAttribute("str_attr", odsBuilder.getStringAttr(str_attr));
@@ -238,7 +238,7 @@ def EOp : NS_Op<"e_op", []> {
 }
 
 // DECL-LABEL: EOp declarations
-// DECL: static void build({{.*}}, ::llvm::APInt i32_attr, ::llvm::APInt dv_i32_attr, ::llvm::APFloat f64_attr, ::llvm::APFloat dv_f64_attr, ::llvm::StringRef str_attr, ::llvm::StringRef dv_str_attr, bool bool_attr, bool dv_bool_attr, ::SomeI32Enum enum_attr, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
+// DECL: static void build({{.*}}, uint32_t i32_attr, uint32_t dv_i32_attr, ::llvm::APFloat f64_attr, ::llvm::APFloat dv_f64_attr, ::llvm::StringRef str_attr, ::llvm::StringRef dv_str_attr, bool bool_attr, bool dv_bool_attr, ::SomeI32Enum enum_attr, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
 
 // Test mixing operands and attributes in arbitrary order
 // ---

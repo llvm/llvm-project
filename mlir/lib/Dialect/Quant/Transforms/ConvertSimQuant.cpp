@@ -89,9 +89,9 @@ public:
   QuantizedType convertFakeQuantAttrsToType(ConstFakeQuant fqOp,
                                             Type expressedType) const {
     return fakeQuantAttrsToType(
-        fqOp.getLoc(), fqOp.num_bits().getSExtValue(),
-        fqOp.min().convertToFloat(), fqOp.max().convertToFloat(),
-        fqOp.narrow_range(), expressedType, fqOp.is_signed());
+        fqOp.getLoc(), fqOp.num_bits(), fqOp.min().convertToFloat(),
+        fqOp.max().convertToFloat(), fqOp.narrow_range(), expressedType,
+        fqOp.is_signed());
   }
 };
 
@@ -115,9 +115,8 @@ public:
     for (auto m : fqOp.max())
       max.push_back(m.cast<FloatAttr>().getValueAsDouble());
 
-    return fakeQuantAttrsToType(fqOp.getLoc(), fqOp.num_bits().getSExtValue(),
-                                fqOp.axis().getSExtValue(), min, max,
-                                fqOp.narrow_range(), expressedType,
+    return fakeQuantAttrsToType(fqOp.getLoc(), fqOp.num_bits(), fqOp.axis(),
+                                min, max, fqOp.narrow_range(), expressedType,
                                 fqOp.is_signed());
   }
 };

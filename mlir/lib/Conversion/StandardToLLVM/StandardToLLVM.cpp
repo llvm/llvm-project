@@ -1804,8 +1804,8 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
     if (!typeConverter.getOptions().useAlignedAlloc)
       return None;
 
-    if (allocOp.alignment())
-      return allocOp.alignment().getValue().getSExtValue();
+    if (Optional<uint64_t> alignment = allocOp.alignment())
+      return *alignment;
 
     // Whenever we don't have alignment set, we will use an alignment
     // consistent with the element type; since the allocation size has to be a
@@ -1843,8 +1843,7 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
       accessAlignment = nullptr;
       return rewriter.create<LLVM::AllocaOp>(
           loc, elementPtrType, cumulativeSize,
-          allocaOp.alignment() ? allocaOp.alignment().getValue().getSExtValue()
-                               : 0);
+          allocaOp.alignment() ? *allocaOp.alignment() : 0);
     }
 
     // Heap allocations.
@@ -1892,9 +1891,8 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
       callArgs = {alignedAllocAlignmentValue, cumulativeSize};
     } else {
       // Adjust the allocation size to consider alignment.
-      if (allocOp.alignment()) {
-        accessAlignment = createIndexConstant(
-            rewriter, loc, allocOp.alignment().getValue().getSExtValue());
+      if (Optional<uint64_t> alignment = allocOp.alignment()) {
+        accessAlignment = createIndexConstant(rewriter, loc, *alignment);
         cumulativeSize = rewriter.create<LLVM::SubOp>(
             loc,
             rewriter.create<LLVM::AddOp>(loc, cumulativeSize, accessAlignment),
@@ -2537,7 +2535,7 @@ struct PrefetchOpLowering : public LoadStoreOpLowering<PrefetchOp> {
         rewriter.getI32IntegerAttr(prefetchOp.isWrite()));
     auto localityHint = rewriter.create<LLVM::ConstantOp>(
         op->getLoc(), llvmI32Type,
-        rewriter.getI32IntegerAttr(prefetchOp.localityHint().getZExtValue()));
+        rewriter.getI32IntegerAttr(prefetchOp.localityHint()));
     auto isData = rewriter.create<LLVM::ConstantOp>(
         op->getLoc(), llvmI32Type,
         rewriter.getI32IntegerAttr(prefetchOp.isDataCache()));
@@ -3063,7 +3061,7 @@ struct AssumeAlignmentOpLowering
                   ConversionPatternRewriter &rewriter) const override {
     AssumeAlignmentOp::Adaptor transformed(operands);
     Value memref = transformed.memref();
-    unsigned alignment = cast<AssumeAlignmentOp>(op).alignment().getZExtValue();
+    unsigned alignment = cast<AssumeAlignmentOp>(op).alignment();
 
     MemRefDescriptor memRefDescriptor(memref);
     Value ptr = memRefDescriptor.alignedPtr(rewriter, memref.getLoc());
