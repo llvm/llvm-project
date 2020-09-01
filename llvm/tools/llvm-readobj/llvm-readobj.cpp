@@ -19,7 +19,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-readobj.h"
-#include "Error.h"
 #include "ObjDumper.h"
 #include "WindowsResourceDumper.h"
 #include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
@@ -579,12 +578,16 @@ static void dumpArchive(const Archive *Arc, ScopedPrinter &Writer) {
         reportError(std::move(E), Arc->getFileName());
       continue;
     }
-    if (ObjectFile *Obj = dyn_cast<ObjectFile>(&*ChildOrErr.get()))
+
+    Binary *Bin = ChildOrErr->get();
+    if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin))
       dumpObject(*Obj, Writer, Arc);
-    else if (COFFImportFile *Imp = dyn_cast<COFFImportFile>(&*ChildOrErr.get()))
+    else if (COFFImportFile *Imp = dyn_cast<COFFImportFile>(Bin))
       dumpCOFFImportFile(Imp, Writer);
     else
-      reportWarning(errorCodeToError(readobj_error::unrecognized_file_format),
+      reportWarning(createStringError(errc::invalid_argument,
+                                      Bin->getFileName() +
+                                          " has an unsupported file type"),
                     Arc->getFileName());
   }
   if (Err)
@@ -634,8 +637,7 @@ static void dumpInput(StringRef File, ScopedPrinter &Writer) {
   else if (WindowsResource *WinRes = dyn_cast<WindowsResource>(&Binary))
     dumpWindowsResourceFile(WinRes, Writer);
   else
-    reportError(errorCodeToError(readobj_error::unrecognized_file_format),
-                File);
+    llvm_unreachable("unrecognized file type");
 
   CVTypes.Binaries.push_back(std::move(*BinaryOrErr));
 }
