@@ -79,6 +79,10 @@ public:
     return {(unsigned)llvm::NextPowerOf2(Min), Scalable};
   }
 
+  bool isKnownMultipleOf(unsigned RHS) const {
+    return Min % RHS == 0;
+  }
+
   static ElementCount getFixed(unsigned Min) { return {Min, false}; }
   static ElementCount getScalable(unsigned Min) { return {Min, true}; }
   static ElementCount get(unsigned Min, bool Scalable) {
