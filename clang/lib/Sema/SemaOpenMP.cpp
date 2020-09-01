@@ -2430,7 +2430,7 @@ bool Sema::isOpenMPGlobalCapturedDecl(ValueDecl *D, unsigned Level,
         DSAStackTy::DSAVarData DVar = DSAStack->getImplicitDSA(D, Level);
         if (DVar.CKind != OMPC_shared)
           return true;
-      } while (Level >= 0);
+      } while (Level > 0);
     }
   }
   return true;
