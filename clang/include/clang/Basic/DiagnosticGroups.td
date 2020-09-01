@@ -949,7 +949,7 @@ def Consumed       : DiagGroup<"consumed">;
 // warning should be active _only_ when -Wall is passed in, mark it as
 // DefaultIgnore in addition to putting it here.
 def All : DiagGroup<"all", [Most, Parentheses, Switch, SwitchBool,
-                            MisleadingIndentation, CompoundTokenSplit]>;
+                            MisleadingIndentation]>;
 
 // Warnings that should be in clang-cl /w4.
 def : DiagGroup<"CL4", [All, Extra]>;
