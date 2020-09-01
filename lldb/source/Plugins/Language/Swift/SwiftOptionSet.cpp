@@ -174,6 +174,14 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
       if ((case_value & value) == case_value) {
         // hey a case matched!!
         any_match = true;
+
+        // Print single valued sets without enclosing in brackets.
+        if (first_match && case_value == value) {
+          ss.Printf(".%s", val_name.second.AsCString());
+          dest.assign(ss.GetData());
+          return true;
+        }
+
         if (first_match) {
           ss.Printf("[.%s", val_name.second.AsCString());
           first_match = false;
