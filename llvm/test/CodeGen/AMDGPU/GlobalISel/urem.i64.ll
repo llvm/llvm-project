@@ -10,12 +10,10 @@ define i64 @v_urem_i64(i64 %num, i64 %den) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_or_b32_e32 v5, v1, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
-; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[4:5]
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, 1
-; CHECK-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
 ; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; CHECK-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
+; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; CHECK-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz BB0_2
 ; CHECK-NEXT:  ; %bb.1:
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v4, v2
@@ -186,10 +184,7 @@ define amdgpu_ps i64 @s_urem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    s_mov_b32 s5, -1
 ; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], s[4:5]
-; CHECK-NEXT:    v_cmp_eq_u64_e64 s[6:7], s[6:7], 0
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[8:9], 0, 1
-; CHECK-NEXT:    s_xor_b64 vcc, s[6:7], s[8:9]
-; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; CHECK-NEXT:    v_cmp_ne_u64_e64 vcc, s[6:7], 0
 ; CHECK-NEXT:    s_cbranch_vccz BB1_2
 ; CHECK-NEXT:  ; %bb.1:
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v0, s2
@@ -320,11 +315,14 @@ define amdgpu_ps i64 @s_urem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; CHECK-NEXT:    s_mov_b32 s5, 0
-; CHECK-NEXT:  BB1_2: ; %Flow
+; CHECK-NEXT:    s_branch BB1_3
+; CHECK-NEXT:  BB1_2:
+; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; CHECK-NEXT:  BB1_3: ; %Flow
 ; CHECK-NEXT:    s_and_b32 s1, s5, 1
 ; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
-; CHECK-NEXT:    s_cbranch_scc0 BB1_4
-; CHECK-NEXT:  ; %bb.3:
+; CHECK-NEXT:    s_cbranch_scc0 BB1_5
+; CHECK-NEXT:  ; %bb.4:
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v0, s2
 ; CHECK-NEXT:    s_sub_i32 s1, 0, s2
 ; CHECK-NEXT:    v_rcp_iflag_f32_e32 v0, v0
@@ -342,7 +340,7 @@ define amdgpu_ps i64 @s_urem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_subrev_i32_e32 v1, vcc, s2, v0
 ; CHECK-NEXT:    v_cmp_le_u32_e32 vcc, s2, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; CHECK-NEXT:  BB1_4:
+; CHECK-NEXT:  BB1_5:
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    ; return to shader part epilog
@@ -623,12 +621,10 @@ define <2 x i64> @v_urem_v2i64(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:    v_mov_b32_e32 v9, v1
 ; CGP-NEXT:    v_or_b32_e32 v1, v9, v5
 ; CGP-NEXT:    v_mov_b32_e32 v0, 0
-; CGP-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; CGP-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, 1
-; CGP-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; CGP-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; CGP-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; CGP-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; CGP-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
+; CGP-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; CGP-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
 ; CGP-NEXT:    s_cbranch_execz BB2_2
 ; CGP-NEXT:  ; %bb.1:
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v0, v4
@@ -784,12 +780,10 @@ define <2 x i64> @v_urem_v2i64(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CGP-NEXT:    v_or_b32_e32 v5, v3, v7
 ; CGP-NEXT:    v_mov_b32_e32 v4, 0
-; CGP-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[4:5]
-; CGP-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, 1
-; CGP-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; CGP-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
 ; CGP-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; CGP-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; CGP-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
+; CGP-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; CGP-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
 ; CGP-NEXT:    s_cbranch_execz BB2_6
 ; CGP-NEXT:  ; %bb.5:
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v4, v6
@@ -2258,15 +2252,13 @@ define i64 @v_urem_i64_pow2_shl_denom(i64 %x, i64 %y) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_movk_i32 s4, 0x1000
 ; CHECK-NEXT:    s_mov_b32 s5, 0
-; CHECK-NEXT:    v_mov_b32_e32 v6, 0
 ; CHECK-NEXT:    v_lshl_b64 v[4:5], s[4:5], v2
-; CHECK-NEXT:    v_or_b32_e32 v7, v1, v5
-; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[6:7]
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, 1
-; CHECK-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; CHECK-NEXT:    v_or_b32_e32 v3, v1, v5
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; CHECK-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
+; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; CHECK-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz BB7_2
 ; CHECK-NEXT:  ; %bb.1:
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, v4
@@ -2697,16 +2689,14 @@ define <2 x i64> @v_urem_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; CGP-NEXT:    v_mov_b32_e32 v7, v1
 ; CGP-NEXT:    s_movk_i32 s4, 0x1000
 ; CGP-NEXT:    s_mov_b32 s5, 0
-; CGP-NEXT:    v_mov_b32_e32 v0, 0
 ; CGP-NEXT:    v_lshl_b64 v[10:11], s[4:5], v4
 ; CGP-NEXT:    v_lshl_b64 v[8:9], s[4:5], v6
 ; CGP-NEXT:    v_or_b32_e32 v1, v7, v11
-; CGP-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; CGP-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, 1
-; CGP-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; CGP-NEXT:    v_mov_b32_e32 v0, 0
+; CGP-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; CGP-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; CGP-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; CGP-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
+; CGP-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; CGP-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
 ; CGP-NEXT:    s_cbranch_execz BB8_2
 ; CGP-NEXT:  ; %bb.1:
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v0, v10
@@ -2862,12 +2852,10 @@ define <2 x i64> @v_urem_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; CGP-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CGP-NEXT:    v_or_b32_e32 v5, v3, v9
 ; CGP-NEXT:    v_mov_b32_e32 v4, 0
-; CGP-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[4:5]
-; CGP-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, 1
-; CGP-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; CGP-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
 ; CGP-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; CGP-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; CGP-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
+; CGP-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; CGP-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
 ; CGP-NEXT:    s_cbranch_execz BB8_6
 ; CGP-NEXT:  ; %bb.5:
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v4, v8

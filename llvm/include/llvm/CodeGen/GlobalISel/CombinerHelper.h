@@ -355,6 +355,10 @@ public:
   /// \return true if \p MI is a G_SEXT_INREG that can be erased.
   bool matchRedundantSExtInReg(MachineInstr &MI);
 
+  /// Combine inverting a result of a compare into the opposite cond code.
+  bool matchNotCmp(MachineInstr &MI, Register &CmpReg);
+  bool applyNotCmp(MachineInstr &MI, Register &CmpReg);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);
