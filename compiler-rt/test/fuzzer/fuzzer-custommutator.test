@@ -11,13 +11,3 @@ LLVMFuzzerCustomMutatorWithLenControl: INFO: found LLVMFuzzerCustomMutator
 LLVMFuzzerCustomMutatorWithLenControl: In LLVMFuzzerCustomMutator
 LLVMFuzzerCustomMutatorWithLenControl: {{.*}} lim: {{[1-9][0-9]?}} {{.*}}
 LLVMFuzzerCustomMutatorWithLenControl: BINGO
-
-# sanity check: verify that we do get long lines with verbose printing on
-RUN: %cpp_compiler %S/CustomMutatorWithLongSequencesTest.cpp -o %t-CustomMutatorWithLongSequencesTest
-RUN: not %run %t-CustomMutatorWithLongSequencesTest -verbosity=2 2> %t-mutate-verbose-log
-RUN: grep "NEW" %t-mutate-verbose-log | grep '.\{1024\}'
-
-# check a target that prints long mutation sequences and verifies the printed
-# output does not get too large
-RUN: not %run %t-CustomMutatorWithLongSequencesTest 2> %t-mutate-log
-RUN: grep "NEW" %t-mutate-log | grep -v '.\{1024\}'
