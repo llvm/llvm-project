@@ -36,7 +36,6 @@ executable("llvm-readobj") {
     "COFFDumper.cpp",
     "COFFImportDumper.cpp",
     "ELFDumper.cpp",
-    "Error.cpp",
     "MachODumper.cpp",
     "ObjDumper.cpp",
     "WasmDumper.cpp",
