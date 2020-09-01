@@ -70,7 +70,6 @@ public:
   LogicalResult
   matchAndRewrite(ConstSizeOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-
     rewriter.replaceOpWithNewOp<ConstantIndexOp>(op, op.value().getSExtValue());
     return success();
   }
