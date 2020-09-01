@@ -16,7 +16,6 @@ RUN: %run %t-SimpleTest %t/SUB1 -runs=0 2>&1 | FileCheck %s --check-prefix=LONG
 LONG: INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 8192 bytes
 RUN: rm -rf %t/SUB1
 
-# Verify error message prints to console when directory does not exist
 RUN: rm -rf %t.dir && mkdir -p %t.dir
 RUN: not %run %t-SimpleTest -artifact_prefix=%t.dir/NONEXISTENT_DIR/ 2>&1 | FileCheck %s --check-prefix=NONEXISTENT_DIR_RGX
 RUN: not %run %t-SimpleTest -artifact_prefix=%t.dir/NONEXISTENT_DIR/myprefix 2>&1 | FileCheck %s --check-prefix=NONEXISTENT_DIR_RGX
@@ -24,39 +23,3 @@ RUN: not %run %t-SimpleTest -features_dir=%t.dir/NONEXISTENT_DIR/ 2>&1 | FileChe
 RUN: not %run %t-SimpleTest %t.dir/NONEXISTENT_DIR 2>&1 | FileCheck %s --check-prefix=NONEXISTENT_DIR_RGX
 RUN: not %run %t-SimpleTest -exact_artifact_path=%t.dir/NONEXISTENT_DIR/myprefix 2>&1 | FileCheck %s --check-prefix=NONEXISTENT_DIR_RGX
 NONEXISTENT_DIR_RGX: ERROR: The required directory "{{.*/NONEXISTENT_DIR/?}}" does not exist
-
-# Verify error message prints to console when given directory is an empty
-# string
-RUN: not %run %t-SimpleTest "" 2>&1 | FileCheck %s --check-prefix=INVALID_DIR_RGX
-INVALID_DIR_RGX: ERROR: Provided directory path is an empty string
-
-# Verify error message prints to console when directory creation fails
-# For platforms without functioning chmod (i.e. Windows), use a forbidden
-# character in the directory name.
-RUN: rm -rf %t.dir && mkdir -p %t.dir/access_restricted && (chmod u-w %t.dir/access_restricted || true)
-RUN: not %run %t-SimpleTest -create_missing_dirs=1 %t.dir/access_restricted/?corpus? 2>&1 | FileCheck %s --check-prefix=DIR_CREATION_FAILURE
-DIR_CREATION_FAILURE: ERROR: Failed to create directory "{{.*/access_restricted/\?corpus\?}}"
-
-# Verify directories and sub-directories are created when -create_missing_dirs=1
-RUN: not %run %t-SimpleTest -create_missing_dirs=1 -artifact_prefix=%t.dir/subdira/./././artifacts/ -features_dir=%t.dir/subdirb/../dummy_dir/././../subdirb/features/ %t.dir/subdirc/corpus
-RUN: test -e %t.dir/subdira/artifacts/
-RUN: test -e %t.dir/subdirb/features/
-RUN: test -e %t.dir/subdirc/corpus/
-RUN: test -e %t.dir/dummy_dir
-
-# Verify directories and sub-directories are created for exact_artifact_path
-# when -create_missing_dirs=1
-RUN: not %run %t-SimpleTest -create_missing_dirs=1 -exact_artifact_path=%t.dir/subdird/exact_artifacts/abc
-RUN: test -e %t.dir/subdird/exact_artifacts/abc
-
-# Verify directories and sub-directories are created for artifact_prefix when
-# it's referring to a file name prefix and -create_missing_dirs=1
-RUN: not %run %t-SimpleTest -create_missing_dirs=1 -artifact_prefix=%t.dir/subdire/myprefix
-RUN: test -e %t.dir/subdire/ && not test -e %t.dir/subdire/myprefix
-
-# Verify directories are created when referring to relative paths and
-# -create_missing_dirs=1
-RUN: cd %t.dir && not %run %t-SimpleTest -create_missing_dirs=1 -artifact_prefix=cwd_artifacts/ -features_dir=cwd_features/subdirtest/ ./cwd_corpus
-RUN: test -e %t.dir/cwd_artifacts/
-RUN: test -e %t.dir/cwd_features/subdirtest/
-RUN: test -e %t.dir/cwd_corpus/

@@ -167,7 +167,3 @@ FUZZER_DEPRECATED_FLAG(use_clang_coverage)
 FUZZER_FLAG_STRING(data_flow_trace, "Experimental: use the data flow trace")
 FUZZER_FLAG_STRING(collect_data_flow,
                    "Experimental: collect the data flow trace")
-
-FUZZER_FLAG_INT(create_missing_dirs, 0, "Automatically attempt to create "
-     "directories for arguments that would normally expect them to already "
-     "exist (i.e. artifact_prefix, exact_artifact_path, features_dir, corpus)")

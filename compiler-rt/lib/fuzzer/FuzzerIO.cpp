@@ -144,38 +144,6 @@ void VPrintf(bool Verbose, const char *Fmt, ...) {
   fflush(OutputFile);
 }
 
-static bool MkDirRecursiveInner(const std::string &Leaf) {
-  // Prevent chance of potential infinite recursion
-  if (Leaf == ".")
-    return true;
-
-  const std::string &Dir = DirName(Leaf);
-
-  if (IsDirectory(Dir)) {
-    MkDir(Leaf);
-    return IsDirectory(Leaf);
-  }
-
-  bool ret = MkDirRecursiveInner(Dir);
-  if (!ret) {
-    // Give up early if a previous MkDir failed
-    return ret;
-  }
-
-  MkDir(Leaf);
-  return IsDirectory(Leaf);
-}
-
-bool MkDirRecursive(const std::string &Dir) {
-  if (Dir.empty())
-    return false;
-
-  if (IsDirectory(Dir))
-    return true;
-
-  return MkDirRecursiveInner(Dir);
-}
-
 void RmDirRecursive(const std::string &Dir) {
   IterateDirRecursive(
       Dir, [](const std::string &Path) {},
