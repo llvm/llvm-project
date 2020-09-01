@@ -749,10 +749,6 @@ public:
 
   StringRef getExternalContentsPrefixDir() const;
 
-  void setFallthrough(bool Fallthrough);
-
-  std::vector<llvm::StringRef> getRoots() const;
-
   void dump(raw_ostream &OS) const;
   void dumpEntry(raw_ostream &OS, Entry *E, int NumSpaces = 0) const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
