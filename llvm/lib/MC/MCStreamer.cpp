@@ -692,6 +692,8 @@ void MCStreamer::EmitWinCFIEndProc(SMLoc Loc) {
 
   MCSymbol *Label = emitCFILabel();
   CurFrame->End = Label;
+  if (!CurFrame->FuncletOrFuncEnd)
+    CurFrame->FuncletOrFuncEnd = CurFrame->End;
 }
 
 void MCStreamer::EmitWinCFIFuncletOrFuncEnd(SMLoc Loc) {

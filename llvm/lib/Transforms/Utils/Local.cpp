@@ -91,6 +91,18 @@ using namespace llvm::PatternMatch;
 #define DEBUG_TYPE "local"
 
 STATISTIC(NumRemoved, "Number of unreachable basic blocks removed");
+STATISTIC(NumPHICSEs, "Number of PHI's that got CSE'd");
+
+static cl::opt<bool> PHICSEDebugHash(
+    "phicse-debug-hash",
+#ifdef EXPENSIVE_CHECKS
+    cl::init(true),
+#else
+    cl::init(false),
+#endif
+    cl::Hidden,
+    cl::desc("Perform extra assertion checking to verify that PHINodes's hash "
+             "function is well-behaved w.r.t. its isEqual predicate"));
 
 // Max recursion depth for collectBitParts used when detecting bswap and
 // bitreverse idioms
@@ -1117,6 +1129,8 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   return true;
 }
 
+// WARNING: this logic must be kept in sync with
+//          Instruction::isIdenticalToWhenDefined()!
 bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
   // This implementation doesn't currently consider undef operands
   // specially. Theoretically, two phis which are identical except for
@@ -1131,7 +1145,11 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
       return DenseMapInfo<PHINode *>::getTombstoneKey();
     }
 
-    static unsigned getHashValue(PHINode *PN) {
+    static bool isSentinel(PHINode *PN) {
+      return PN == getEmptyKey() || PN == getTombstoneKey();
+    }
+
+    static unsigned getHashValueImpl(PHINode *PN) {
       // Compute a hash value on the operands. Instcombine will likely have
       // sorted them, which helps expose duplicates, but we have to check all
       // the operands to be safe in case instcombine hasn't run.
@@ -1140,11 +1158,31 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
           hash_combine_range(PN->block_begin(), PN->block_end())));
     }
 
-    static bool isEqual(PHINode *LHS, PHINode *RHS) {
-      if (LHS == getEmptyKey() || LHS == getTombstoneKey() ||
-          RHS == getEmptyKey() || RHS == getTombstoneKey())
+    static unsigned getHashValue(PHINode *PN) {
+#ifndef NDEBUG
+      // If -phicse-debug-hash was specified, return a constant -- this
+      // will force all hashing to collide, so we'll exhaustively search
+      // the table for a match, and the assertion in isEqual will fire if
+      // there's a bug causing equal keys to hash differently.
+      if (PHICSEDebugHash)
+        return 0;
+#endif
+      return getHashValueImpl(PN);
+    }
+
+    static bool isEqualImpl(PHINode *LHS, PHINode *RHS) {
+      if (isSentinel(LHS) || isSentinel(RHS))
         return LHS == RHS;
       return LHS->isIdenticalTo(RHS);
+    }
+
+    static bool isEqual(PHINode *LHS, PHINode *RHS) {
+      // These comparisons are nontrivial, so assert that equality implies
+      // hash equality (DenseMap demands this as an invariant).
+      bool Result = isEqualImpl(LHS, RHS);
+      assert(!Result || (isSentinel(LHS) && LHS == RHS) ||
+             getHashValueImpl(LHS) == getHashValueImpl(RHS));
+      return Result;
     }
   };
 
@@ -1157,6 +1195,7 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
     auto Inserted = PHISet.insert(PN);
     if (!Inserted.second) {
       // A duplicate. Replace this PHI with its duplicate.
+      ++NumPHICSEs;
       PN->replaceAllUsesWith(*Inserted.first);
       PN->eraseFromParent();
       Changed = true;

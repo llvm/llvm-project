@@ -1438,9 +1438,7 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
             - Attribute:       DW_AT_high_pc
               Form:            DW_FORM_addr
   debug_info:
-    - Length:          52
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -1455,7 +1453,6 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
             - Value:           0x0000000000001000
             - Value:           0x0000000000002000
         - AbbrCode:        0x00000000
-          Values:
   )";
   auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
@@ -1518,9 +1515,7 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
             - Attribute:       DW_AT_high_pc
               Form:            DW_FORM_data4
   debug_info:
-    - Length:          44
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -1535,7 +1530,6 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
             - Value:           0x0000000000001000
             - Value:           0x0000000000001000
         - AbbrCode:        0x00000000
-          Values:
   )";
   auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
@@ -1618,9 +1612,7 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
             - Attribute:       DW_AT_artificial
               Form:            DW_FORM_flag_present
   debug_info:
-    - Length:          68
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -1643,11 +1635,8 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
             - Value:           0x0000000000000022
             - Value:           0x0000000000000001
         - AbbrCode:        0x00000000
-          Values:
         - AbbrCode:        0x00000000
-          Values:
         - AbbrCode:        0x00000000
-          Values:
   )";
   auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
@@ -1723,9 +1712,7 @@ TEST(GSYMTest, TestDWARFTextRanges) {
             - Attribute:       DW_AT_high_pc
               Form:            DW_FORM_data4
   debug_info:
-    - Length:          78
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -1750,8 +1737,6 @@ TEST(GSYMTest, TestDWARFTextRanges) {
             - Value:           0x0000000000000000
             - Value:           0x0000000000000040
         - AbbrCode:        0x00000000
-          Values:
-
   )";
   auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
@@ -1837,9 +1822,7 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
             - Attribute:       DW_AT_call_line
               Form:            DW_FORM_data4
   debug_info:
-    - Length:          74
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -1862,9 +1845,7 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
             - Value:           0x0000000000000001
             - Value:           0x000000000000000A
         - AbbrCode:        0x00000000
-          Values:
         - AbbrCode:        0x00000000
-          Values:
   debug_line:
     - Length:          96
       Version:         2
@@ -2093,9 +2074,7 @@ TEST(GSYMTest, TestDWARFNoLines) {
             - Attribute:       DW_AT_decl_line
               Form:            DW_FORM_data1
   debug_info:
-    - Length:          103
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -2130,7 +2109,6 @@ TEST(GSYMTest, TestDWARFNoLines) {
             - Value:           0x0000000000000001
             - Value:           0x0000000000000028
         - AbbrCode:        0x00000000
-          Values:          []
   debug_line:
     - Length:          92
       Version:         2
@@ -2342,9 +2320,7 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
             - Attribute:       DW_AT_high_pc
               Form:            DW_FORM_addr
   debug_info:
-    - Length:          75
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        4
       Entries:
         - AbbrCode:        0x00000001
@@ -2374,7 +2350,6 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
             - Value:           0x0000000000004000
             - Value:           0x0000000000003FFF
         - AbbrCode:        0x00000000
-          Values:          []
   )";
   auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
@@ -2485,9 +2460,7 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
             - Attribute:       DW_AT_high_pc
               Form:            DW_FORM_addr
   debug_info:
-    - Length:          103
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -2517,7 +2490,6 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
             - Value:           0x0000000000004000
             - Value:           0x0000000000003FFF
         - AbbrCode:        0x00000000
-          Values:          []
   )";
   auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());

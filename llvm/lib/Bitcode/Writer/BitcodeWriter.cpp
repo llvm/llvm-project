@@ -4852,6 +4852,9 @@ void llvm::EmbedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
       M, ModuleConstant->getType(), true, llvm::GlobalValue::PrivateLinkage,
       ModuleConstant);
   GV->setSection(getSectionNameForBitcode(T));
+  // Set alignment to 1 to prevent padding between two contributions from input
+  // sections after linking.
+  GV->setAlignment(Align(1));
   UsedArray.push_back(
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, UsedElementType));
   if (llvm::GlobalVariable *Old =
@@ -4875,6 +4878,7 @@ void llvm::EmbedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
                                   llvm::GlobalValue::PrivateLinkage,
                                   CmdConstant);
     GV->setSection(getSectionNameForCommandline(T));
+    GV->setAlignment(Align(1));
     UsedArray.push_back(
         ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, UsedElementType));
     if (llvm::GlobalVariable *Old = M.getGlobalVariable("llvm.cmdline", true)) {

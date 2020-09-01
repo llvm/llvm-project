@@ -1662,7 +1662,8 @@ LogicalResult AffineForOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
   return success();
 }
 
-/// Returns if the provided value is the induction variable of a AffineForOp.
+/// Returns true if the provided value is the induction variable of a
+/// AffineForOp.
 bool mlir::isForInductionVar(Value val) {
   return getForInductionVarOwner(val) != AffineForOp();
 }

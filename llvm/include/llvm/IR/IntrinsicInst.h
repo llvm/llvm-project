@@ -52,6 +52,37 @@ public:
     return getCalledFunction()->getIntrinsicID();
   }
 
+  /// Return true if swapping the first two arguments to the intrinsic produces
+  /// the same result.
+  bool isCommutative() const {
+    switch (getIntrinsicID()) {
+    case Intrinsic::maxnum:
+    case Intrinsic::minnum:
+    case Intrinsic::maximum:
+    case Intrinsic::minimum:
+    case Intrinsic::smax:
+    case Intrinsic::smin:
+    case Intrinsic::umax:
+    case Intrinsic::umin:
+    case Intrinsic::sadd_sat:
+    case Intrinsic::uadd_sat:
+    case Intrinsic::sadd_with_overflow:
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::smul_with_overflow:
+    case Intrinsic::umul_with_overflow:
+    // TODO: These fixed-point math intrinsics have commutative first two
+    //       operands, but callers may not handle instructions with more than
+    //       two operands.
+    // case Intrinsic::smul_fix:
+    // case Intrinsic::umul_fix:
+    // case Intrinsic::smul_fix_sat:
+    // case Intrinsic::umul_fix_sat:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const CallInst *I) {
     if (const Function *CF = I->getCalledFunction())

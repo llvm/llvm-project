@@ -7,23 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 // <memory>
-//
-// template <>
-// class allocator<void>
-// {
-// public:
-//     typedef void*                                 pointer;
-//     typedef const void*                           const_pointer;
-//     typedef void                                  value_type;
-//
-//     template <class _Up> struct rebind {typedef allocator<_Up> other;};
-// };
-//
-// Deprecated in C++17
 
-// UNSUPPORTED: c++03, c++11, c++14
+// Check that allocator<void> is deprecated in C++17.
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
+// REQUIRES: c++17
 
 #include <memory>
 #include "test_macros.h"
@@ -33,6 +20,5 @@ int main(int, char**)
     typedef std::allocator<void>::pointer AP;             // expected-warning {{'allocator<void>' is deprecated}}
     typedef std::allocator<void>::const_pointer ACP;      // expected-warning {{'allocator<void>' is deprecated}}
     typedef std::allocator<void>::rebind<int>::other ARO; // expected-warning {{'allocator<void>' is deprecated}}
-
-  return 0;
+    return 0;
 }

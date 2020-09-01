@@ -6979,7 +6979,7 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
     assert(VT.isVector() == MemVT.isVector() &&
            "Cannot use an ext load to convert to or from a vector!");
     assert((!VT.isVector() ||
-            VT.getVectorNumElements() == MemVT.getVectorNumElements()) &&
+            VT.getVectorElementCount() == MemVT.getVectorElementCount()) &&
            "Cannot use an ext load to change the number of vector elements!");
   }
 
@@ -9637,24 +9637,24 @@ std::pair<EVT, EVT>
 SelectionDAG::GetDependentSplitDestVTs(const EVT &VT, const EVT &EnvVT,
                                        bool *HiIsEmpty) const {
   EVT EltTp = VT.getVectorElementType();
-  bool IsScalable = VT.isScalableVector();
   // Examples:
   //   custom VL=8  with enveloping VL=8/8 yields 8/0 (hi empty)
   //   custom VL=9  with enveloping VL=8/8 yields 8/1
   //   custom VL=10 with enveloping VL=8/8 yields 8/2
   //   etc.
-  unsigned VTNumElts = VT.getVectorNumElements();
-  unsigned EnvNumElts = EnvVT.getVectorNumElements();
+  ElementCount VTNumElts = VT.getVectorElementCount();
+  ElementCount EnvNumElts = EnvVT.getVectorElementCount();
+  assert(VTNumElts.isScalable() == EnvNumElts.isScalable() &&
+         "Mixing fixed width and scalable vectors when enveloping a type");
   EVT LoVT, HiVT;
-  if (VTNumElts > EnvNumElts) {
+  if (VTNumElts.getKnownMinValue() > EnvNumElts.getKnownMinValue()) {
     LoVT = EnvVT;
-    HiVT = EVT::getVectorVT(*getContext(), EltTp, VTNumElts - EnvNumElts,
-                            IsScalable);
+    HiVT = EVT::getVectorVT(*getContext(), EltTp, VTNumElts - EnvNumElts);
     *HiIsEmpty = false;
   } else {
     // Flag that hi type has zero storage size, but return split envelop type
     // (this would be easier if vector types with zero elements were allowed).
-    LoVT = EVT::getVectorVT(*getContext(), EltTp, VTNumElts, IsScalable);
+    LoVT = EVT::getVectorVT(*getContext(), EltTp, VTNumElts);
     HiVT = EnvVT;
     *HiIsEmpty = true;
   }

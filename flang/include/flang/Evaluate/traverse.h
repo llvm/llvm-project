@@ -120,7 +120,7 @@ public:
       return visitor_(x.GetFirstSymbol());
     }
   }
-  template <int KIND> Result operator()(const TypeParamInquiry<KIND> &x) const {
+  Result operator()(const TypeParamInquiry &x) const {
     return visitor_(x.base());
   }
   Result operator()(const Triplet &x) const {

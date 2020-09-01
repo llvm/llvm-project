@@ -406,9 +406,7 @@ Slices:
           - DieOffset:       0x0000006F
             Name:            char
       debug_info:
-        - Length:          115
-          Version:         4
-          AbbrOffset:      0
+        - Version:         4
           AddrSize:        4
           Entries:
             - AbbrCode:        0x00000001
@@ -450,7 +448,6 @@ Slices:
                 - Value:           0x0000000000000001
                 - Value:           0x0000000000000060
             - AbbrCode:        0x00000000
-              Values:          []
             - AbbrCode:        0x00000004
               Values:
                 - Value:           0x000000000000004E
@@ -471,7 +468,6 @@ Slices:
                 - Value:           0x0000000000000006
                 - Value:           0x0000000000000001
             - AbbrCode:        0x00000000
-              Values:          []
       debug_line:
         - Length:          55
           Version:         4

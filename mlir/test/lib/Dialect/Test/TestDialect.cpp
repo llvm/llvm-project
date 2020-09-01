@@ -268,6 +268,130 @@ void FoldToCallOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// Test Format* operations
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// Parsing
+
+static ParseResult parseCustomDirectiveOperands(
+    OpAsmParser &parser, OpAsmParser::OperandType &operand,
+    Optional<OpAsmParser::OperandType> &optOperand,
+    SmallVectorImpl<OpAsmParser::OperandType> &varOperands) {
+  if (parser.parseOperand(operand))
+    return failure();
+  if (succeeded(parser.parseOptionalComma())) {
+    optOperand.emplace();
+    if (parser.parseOperand(*optOperand))
+      return failure();
+  }
+  if (parser.parseArrow() || parser.parseLParen() ||
+      parser.parseOperandList(varOperands) || parser.parseRParen())
+    return failure();
+  return success();
+}
+static ParseResult
+parseCustomDirectiveResults(OpAsmParser &parser, Type &operandType,
+                            Type &optOperandType,
+                            SmallVectorImpl<Type> &varOperandTypes) {
+  if (parser.parseColon())
+    return failure();
+
+  if (parser.parseType(operandType))
+    return failure();
+  if (succeeded(parser.parseOptionalComma())) {
+    if (parser.parseType(optOperandType))
+      return failure();
+  }
+  if (parser.parseArrow() || parser.parseLParen() ||
+      parser.parseTypeList(varOperandTypes) || parser.parseRParen())
+    return failure();
+  return success();
+}
+static ParseResult parseCustomDirectiveOperandsAndTypes(
+    OpAsmParser &parser, OpAsmParser::OperandType &operand,
+    Optional<OpAsmParser::OperandType> &optOperand,
+    SmallVectorImpl<OpAsmParser::OperandType> &varOperands, Type &operandType,
+    Type &optOperandType, SmallVectorImpl<Type> &varOperandTypes) {
+  if (parseCustomDirectiveOperands(parser, operand, optOperand, varOperands) ||
+      parseCustomDirectiveResults(parser, operandType, optOperandType,
+                                  varOperandTypes))
+    return failure();
+  return success();
+}
+static ParseResult parseCustomDirectiveRegions(
+    OpAsmParser &parser, Region &region,
+    SmallVectorImpl<std::unique_ptr<Region>> &varRegions) {
+  if (parser.parseRegion(region))
+    return failure();
+  if (failed(parser.parseOptionalComma()))
+    return success();
+  std::unique_ptr<Region> varRegion = std::make_unique<Region>();
+  if (parser.parseRegion(*varRegion))
+    return failure();
+  varRegions.emplace_back(std::move(varRegion));
+  return success();
+}
+static ParseResult
+parseCustomDirectiveSuccessors(OpAsmParser &parser, Block *&successor,
+                               SmallVectorImpl<Block *> &varSuccessors) {
+  if (parser.parseSuccessor(successor))
+    return failure();
+  if (failed(parser.parseOptionalComma()))
+    return success();
+  Block *varSuccessor;
+  if (parser.parseSuccessor(varSuccessor))
+    return failure();
+  varSuccessors.append(2, varSuccessor);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Printing
+
+static void printCustomDirectiveOperands(OpAsmPrinter &printer, Value operand,
+                                         Value optOperand,
+                                         OperandRange varOperands) {
+  printer << operand;
+  if (optOperand)
+    printer << ", " << optOperand;
+  printer << " -> (" << varOperands << ")";
+}
+static void printCustomDirectiveResults(OpAsmPrinter &printer, Type operandType,
+                                        Type optOperandType,
+                                        TypeRange varOperandTypes) {
+  printer << " : " << operandType;
+  if (optOperandType)
+    printer << ", " << optOperandType;
+  printer << " -> (" << varOperandTypes << ")";
+}
+static void
+printCustomDirectiveOperandsAndTypes(OpAsmPrinter &printer, Value operand,
+                                     Value optOperand, OperandRange varOperands,
+                                     Type operandType, Type optOperandType,
+                                     TypeRange varOperandTypes) {
+  printCustomDirectiveOperands(printer, operand, optOperand, varOperands);
+  printCustomDirectiveResults(printer, operandType, optOperandType,
+                              varOperandTypes);
+}
+static void printCustomDirectiveRegions(OpAsmPrinter &printer, Region &region,
+                                        MutableArrayRef<Region> varRegions) {
+  printer.printRegion(region);
+  if (!varRegions.empty()) {
+    printer << ", ";
+    for (Region &region : varRegions)
+      printer.printRegion(region);
+  }
+}
+static void printCustomDirectiveSuccessors(OpAsmPrinter &printer,
+                                           Block *successor,
+                                           SuccessorRange varSuccessors) {
+  printer << successor;
+  if (!varSuccessors.empty())
+    printer << ", " << varSuccessors.front();
+}
+
+//===----------------------------------------------------------------------===//
 // Test IsolatedRegionOp - parse passthrough region arguments.
 //===----------------------------------------------------------------------===//
 

@@ -643,38 +643,6 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::BOZLiteralConstant &x) {
   return AsGenericExpr(std::move(value.value));
 }
 
-// For use with SearchTypes to create a TypeParamInquiry with the
-// right integer kind.
-struct TypeParamInquiryVisitor {
-  using Result = std::optional<Expr<SomeInteger>>;
-  using Types = IntegerTypes;
-  TypeParamInquiryVisitor(int k, NamedEntity &&b, const Symbol &param)
-      : kind{k}, base{std::move(b)}, parameter{param} {}
-  TypeParamInquiryVisitor(int k, const Symbol &param)
-      : kind{k}, parameter{param} {}
-  template <typename T> Result Test() {
-    if (kind == T::kind) {
-      return Expr<SomeInteger>{
-          Expr<T>{TypeParamInquiry<T::kind>{std::move(base), parameter}}};
-    }
-    return std::nullopt;
-  }
-  int kind;
-  std::optional<NamedEntity> base;
-  const Symbol &parameter;
-};
-
-static std::optional<Expr<SomeInteger>> MakeBareTypeParamInquiry(
-    const Symbol *symbol) {
-  if (std::optional<DynamicType> dyType{DynamicType::From(symbol)}) {
-    if (dyType->category() == TypeCategory::Integer) {
-      return common::SearchTypes(
-          TypeParamInquiryVisitor{dyType->kind(), *symbol});
-    }
-  }
-  return std::nullopt;
-}
-
 // Names and named constants
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
   if (std::optional<int> kind{IsImpliedDo(n.source)}) {
@@ -690,7 +658,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
     if (ultimate.has<semantics::TypeParamDetails>()) {
       // A bare reference to a derived type parameter (within a parameterized
       // derived type definition)
-      return AsMaybeExpr(MakeBareTypeParamInquiry(&ultimate));
+      return Fold(ConvertToType(
+          ultimate, AsGenericExpr(TypeParamInquiry{std::nullopt, ultimate})));
     } else {
       if (n.symbol->attrs().test(semantics::Attr::VOLATILE)) {
         if (const semantics::Scope *
@@ -922,7 +891,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
       if (const Symbol * symbol{GetLastSymbol(*baseExpr)}) {
         if (!context_.HasError(symbol)) {
           Say("'%s' is not an array"_err_en_US, symbol->name());
-          context_.SetError(const_cast<Symbol &>(*symbol));
+          context_.SetError(*symbol);
         }
       }
     } else if (std::optional<DataRef> dataRef{
@@ -989,9 +958,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
       if (auto *designator{UnwrapExpr<Designator<SomeDerived>>(*dtExpr)}) {
         if (std::optional<DynamicType> dyType{DynamicType::From(*sym)}) {
           if (dyType->category() == TypeCategory::Integer) {
-            return AsMaybeExpr(
-                common::SearchTypes(TypeParamInquiryVisitor{dyType->kind(),
-                    IgnoreAnySubscripts(std::move(*designator)), *sym}));
+            return Fold(ConvertToType(*dyType,
+                AsGenericExpr(TypeParamInquiry{
+                    IgnoreAnySubscripts(std::move(*designator)), *sym})));
           }
         }
         Say(name, "Type parameter is not INTEGER"_err_en_US);
@@ -1559,7 +1528,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                 AttachDeclaration(
                     Say(expr.source,
                         "Rank-%d array value is not compatible with scalar component '%s'"_err_en_US,
-                        symbol->name()),
+                        GetRank(*valueShape), symbol->name()),
                     *symbol);
               } else if (CheckConformance(messages, *componentShape,
                              *valueShape, "component", "value")) {
@@ -1824,13 +1793,13 @@ bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
         // allowed in specification parts (10.1.11 para 5).
         Say("The module function '%s' may not be referenced recursively in a specification expression"_err_en_US,
             symbol.name());
-        context_.SetError(const_cast<Symbol &>(symbol));
+        context_.SetError(symbol);
         return false;
       }
     } else { // 10.1.11 para 4
       Say("The internal function '%s' may not be referenced in a specification expression"_err_en_US,
           symbol.name());
-      context_.SetError(const_cast<Symbol &>(symbol));
+      context_.SetError(symbol);
       return false;
     }
   }

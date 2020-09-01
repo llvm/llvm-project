@@ -457,12 +457,12 @@ public:
     return TerminatorStatus::Unknown;
   }
 
-  /// Returns if the operation is known to be a terminator.
+  /// Returns true if the operation is known to be a terminator.
   bool isKnownTerminator() {
     return getTerminatorStatus() == TerminatorStatus::Terminator;
   }
 
-  /// Returns if the operation is known to *not* be a terminator.
+  /// Returns true if the operation is known to *not* be a terminator.
   bool isKnownNonTerminator() {
     return getTerminatorStatus() == TerminatorStatus::NonTerminator;
   }
@@ -483,7 +483,7 @@ public:
   LogicalResult fold(ArrayRef<Attribute> operands,
                      SmallVectorImpl<OpFoldResult> &results);
 
-  /// Returns if the operation was registered with a particular trait, e.g.
+  /// Returns true if the operation was registered with a particular trait, e.g.
   /// hasTrait<OperandsAreSignlessIntegerLike>().
   template <template <typename T> class Trait> bool hasTrait() {
     auto *absOp = getAbstractOperation();

@@ -1,8 +1,11 @@
-// This test checks that the SEH directives don't cause the assembler to fail.
-// Checking that llvm-readobj doesn't bail out on the unwind data, but not
-// really checking the contents yet.
+// This test checks that the SEH directives emit the correct unwind data.
 
 // RUN: llvm-mc -triple aarch64-pc-win32 -filetype=obj %s | llvm-readobj -S -r -u - | FileCheck %s
+
+// Check that the output assembler directives also can be parsed, and
+// that they produce equivalent output:
+
+// RUN: llvm-mc -triple aarch64-pc-win32 -filetype=asm %s | llvm-mc -triple aarch64-pc-win32 -filetype=obj - | llvm-readobj -S -r -u - | FileCheck %s
 
 // CHECK:      Sections [
 // CHECK:        Section {
@@ -17,7 +20,7 @@
 // CHECK-NEXT:   }
 // CHECK:        Section {
 // CHECK:          Name: .xdata
-// CHECK:          RawDataSize: 20
+// CHECK:          RawDataSize: 48
 // CHECK:          RelocationCount: 1
 // CHECK:          Characteristics [
 // CHECK-NEXT:       ALIGN_4BYTES
@@ -38,11 +41,53 @@
 
 // CHECK-NEXT: Relocations [
 // CHECK-NEXT:   Section (4) .xdata {
-// CHECK-NEXT:     0x8 IMAGE_REL_ARM64_ADDR32NB __C_specific_handler
+// CHECK-NEXT:     0x24 IMAGE_REL_ARM64_ADDR32NB __C_specific_handler
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (5) .pdata {
 // CHECK-NEXT:     0x0 IMAGE_REL_ARM64_ADDR32NB func
 // CHECK-NEXT:     0x4 IMAGE_REL_ARM64_ADDR32NB .xdata
+// CHECK-NEXT:   }
+// CHECK-NEXT: ]
+
+// CHECK-NEXT: UnwindInformation [
+// CHECK-NEXT:   RuntimeFunction {
+// CHECK-NEXT:     Function: func
+// CHECK-NEXT:     ExceptionRecord: .xdata
+// CHECK-NEXT:     ExceptionData {
+// CHECK-NEXT:       FunctionLength: 72
+// CHECK:            Prologue [
+// CHECK-NEXT:         0xe3                ; nop
+// CHECK-NEXT:         0xe202              ; add fp, sp, #16
+// CHECK-NEXT:         0xdd41              ; str d13, [sp, #8]
+// CHECK-NEXT:         0xde83              ; str d12, [sp, #-32]!
+// CHECK-NEXT:         0xd882              ; stp d10, d11, [sp, #16]
+// CHECK-NEXT:         0xda03              ; stp d8, d9, [sp, #-32]!
+// CHECK-NEXT:         0x83                ; stp x29, x30, [sp, #-32]!
+// CHECK-NEXT:         0x46                ; stp x29, x30, [sp, #48]
+// CHECK-NEXT:         0xd141              ; str x24, [sp, #8]
+// CHECK-NEXT:         0xd483              ; str x23, [sp, #-32]!
+// CHECK-NEXT:         0xc882              ; stp x21, x22, [sp, #16]
+// CHECK-NEXT:         0xcc03              ; stp x19, x20, [sp, #-32]!
+// CHECK-NEXT:         0x83                ; stp x29, x30, [sp, #-32]!
+// CHECK-NEXT:         0xe1                ; mov fp, sp
+// CHECK-NEXT:         0x01                ; sub sp, #16
+// CHECK-NEXT:         0xe4                ; end
+// CHECK-NEXT:       ]
+// CHECK-NEXT:       EpilogueScopes [
+// CHECK-NEXT:         EpilogueScope {
+// CHECK-NEXT:           StartOffset: 16
+// CHECK-NEXT:           EpilogueStartIndex: 25
+// CHECK-NEXT:           Opcodes [
+// CHECK-NEXT:             0x01                ; add sp, #16
+// CHECK-NEXT:             0xe4                ; end
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ]
+// CHECK-NEXT:       ExceptionHandler [
+// CHECK-NEXT:         Routine: __C_specific_handler (0x0)
+// CHECK-NEXT:         Parameter: 0x0
+// CHECK-NEXT:       ]
+// CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
@@ -58,13 +103,44 @@ func:
     sub sp, sp, #24
     .seh_stackalloc 24
     mov x29, sp
+    .seh_set_fp
+    stp x29, x30, [sp, #-32]!
+    .seh_save_fplr_x 32
+    stp x19, x20, [sp, #-32]!
+    .seh_save_regp_x x19, 32
+    stp x21, x22, [sp, #16]
+    .seh_save_regp x21, 16
+    str x23, [sp, #-32]!
+    .seh_save_reg_x x23, 32
+    str x24, [sp, #8]
+    .seh_save_reg x24, 8
+    stp x29, x30, [sp, #48]
+    .seh_save_fplr 48
+    stp x29, x30, [sp, #-32]!
+    .seh_save_fplr_x 32
+    stp d8, d9, [sp, #-32]!
+    .seh_save_fregp_x d8, 32
+    stp d10, d11, [sp, #16]
+    .seh_save_fregp d10, 16
+    str d12, [sp, #-32]!
+    .seh_save_freg_x d12, 32
+    str d13, [sp, #8]
+    .seh_save_freg d13, 8
+    add x29, sp, #16
+    .seh_add_fp 16
+    nop
+    .seh_nop
     .seh_endprologue
+    nop
+    .seh_startepilogue
+    add sp, sp, #24
+    .seh_stackalloc 24
+    .seh_endepilogue
+    ret
     .seh_handler __C_specific_handler, @except
     .seh_handlerdata
     .long 0
     .text
-    add sp, sp, #24
-    ret
     .seh_endproc
 
     // Function with no .seh directives; no pdata/xdata entries are

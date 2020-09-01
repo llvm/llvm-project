@@ -108,6 +108,7 @@ static_library("CodeGen") {
     "MachineFunction.cpp",
     "MachineFunctionPass.cpp",
     "MachineFunctionPrinterPass.cpp",
+    "MachineFunctionSplitter.cpp",
     "MachineInstr.cpp",
     "MachineInstrBundle.cpp",
     "MachineLICM.cpp",

@@ -3598,7 +3598,7 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
   // Normalize parameters to produce a better search key.
   spec->CookParameters(GetFoldingContext());
   if (!spec->MightBeParameterized()) {
-    spec->EvaluateParameters(GetFoldingContext());
+    spec->EvaluateParameters(context());
   }
   if (const DeclTypeSpec *
       extant{currScope().FindInstantiatedDerivedType(*spec, category)}) {
@@ -3647,7 +3647,7 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
       BeginAttrs();
       Symbol *typeParam{MakeTypeSymbol(
           paramName, TypeParamDetails{common::TypeParamAttr::Len})};
-      typeParam->set(Symbol::Flag::Error);
+      context().SetError(*typeParam);
       EndAttrs();
     } else if (!symbol->has<TypeParamDetails>()) {
       Say2(paramName, "'%s' is not defined as a type parameter"_err_en_US,
@@ -4778,7 +4778,7 @@ bool DeclarationVisitor::OkToAddComponent(
   for (const Scope *scope{&currScope()}; scope;) {
     CHECK(scope->IsDerivedType());
     if (auto *prev{FindInScope(*scope, name)}) {
-      if (!prev->test(Symbol::Flag::Error)) {
+      if (!context().HasError(*prev)) {
         auto msg{""_en_US};
         if (extends) {
           msg = "Type cannot be extended as it has a component named"
@@ -5733,9 +5733,9 @@ void DeclarationVisitor::NonPointerInitialization(const parser::Name &name,
       } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
         CHECK(!details->init());
         Walk(expr);
-        // TODO: check C762 - all bounds and type parameters of component
-        // are colons or constant expressions if component is initialized
         if (inComponentDecl) {
+          // TODO: check C762 - all bounds and type parameters of component
+          // are colons or constant expressions if component is initialized
           // Can't convert to type of component, which might not yet
           // be known; that's done later during instantiation.
           if (MaybeExpr value{EvaluateExpr(expr)}) {

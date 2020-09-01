@@ -1903,7 +1903,6 @@ exit:
 }
 
 ; Shows how we can leverage dominance to eliminate duplicating selects.
-; TODO: We can optimize further if we eliminate duplicating Phis and similify the whole thing to phi[x, y] * 3.
 define i32 @select_dominance_chain(i1 %cond, i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_dominance_chain(
 ; CHECK-NEXT:  entry:

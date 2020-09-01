@@ -4142,9 +4142,11 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
   assert(Tok.is(tok::l_square) && NextToken().is(tok::l_square) &&
          "Not a double square bracket attribute list");
 
-  Diag(Tok.getLocation(), diag::warn_cxx98_compat_attribute);
+  SourceLocation OpenLoc = Tok.getLocation();
+  Diag(OpenLoc, diag::warn_cxx98_compat_attribute);
 
   ConsumeBracket();
+  checkCompoundToken(OpenLoc, tok::l_square, CompoundToken::AttrBegin);
   ConsumeBracket();
 
   SourceLocation CommonScopeLoc;
@@ -4227,8 +4229,11 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
         << AttrName;
   }
 
+  SourceLocation CloseLoc = Tok.getLocation();
   if (ExpectAndConsume(tok::r_square))
     SkipUntil(tok::r_square);
+  else if (Tok.is(tok::r_square))
+    checkCompoundToken(CloseLoc, tok::r_square, CompoundToken::AttrEnd);
   if (endLoc)
     *endLoc = Tok.getLocation();
   if (ExpectAndConsume(tok::r_square))

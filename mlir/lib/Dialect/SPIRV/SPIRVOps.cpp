@@ -2849,9 +2849,9 @@ static ParseResult parseCooperativeMatrixLoadNVOp(OpAsmParser &parser,
       parser.parseType(ptrType) || parser.parseKeywordType("as", elementType)) {
     return failure();
   }
-  SmallVector<Type, 3> OperandType = {ptrType, strideType, columnMajorType};
-  if (parser.resolveOperands(operandInfo, OperandType, parser.getNameLoc(),
-                             state.operands)) {
+  if (parser.resolveOperands(operandInfo,
+                             {ptrType, strideType, columnMajorType},
+                             parser.getNameLoc(), state.operands)) {
     return failure();
   }
 
@@ -2904,10 +2904,9 @@ static ParseResult parseCooperativeMatrixStoreNVOp(OpAsmParser &parser,
       parser.parseType(elementType)) {
     return failure();
   }
-  SmallVector<Type, 4> OperandType = {ptrType, elementType, strideType,
-                                      columnMajorType};
-  if (parser.resolveOperands(operandInfo, OperandType, parser.getNameLoc(),
-                             state.operands)) {
+  if (parser.resolveOperands(
+          operandInfo, {ptrType, elementType, strideType, columnMajorType},
+          parser.getNameLoc(), state.operands)) {
     return failure();
   }
 

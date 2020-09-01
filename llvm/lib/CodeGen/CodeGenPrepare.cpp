@@ -2044,7 +2044,12 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
     switch (II->getIntrinsicID()) {
     default: break;
     case Intrinsic::assume: {
+      Value *Operand = II->getOperand(0);
       II->eraseFromParent();
+      // Prune the operand, it's most likely dead.
+      RecursivelyDeleteTriviallyDeadInstructions(
+          Operand, TLInfo, nullptr,
+          [&](Value *V) { removeAllAssertingVHReferences(V); });
       return true;
     }
 

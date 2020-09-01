@@ -15710,8 +15710,8 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorSetccToSVE(
   auto Pg = getPredicateForFixedLengthVector(DAG, DL, InVT);
 
   EVT CmpVT = Pg.getValueType();
-  SmallVector<SDValue, 4> CmpOps = {Pg, Op1, Op2, Op.getOperand(2)};
-  auto Cmp = DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, CmpVT, CmpOps);
+  auto Cmp = DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, CmpVT,
+                         {Pg, Op1, Op2, Op.getOperand(2)});
 
   EVT PromoteVT = ContainerVT.changeTypeToInteger();
   auto Promote = DAG.getBoolExtOrTrunc(Cmp, DL, PromoteVT, InVT);

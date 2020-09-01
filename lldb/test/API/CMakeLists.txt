@@ -98,7 +98,7 @@ endif()
 
 if(CMAKE_HOST_APPLE)
   if(LLDB_BUILD_FRAMEWORK)
-    list(APPEND LLDB_TEST_COMMON_ARGS --framework ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework)
+    set(LLDB_FRAMEWORK_DIR ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework)
   endif()
 
   # Use the same identity for testing

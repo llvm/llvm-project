@@ -5,8 +5,8 @@
 define void @test1(float %A, float %B, float* %PA, float* %PB) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[C:%.*]] = fadd float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store float [[C]], float* [[PA:%.*]]
-; CHECK-NEXT:    store float [[C]], float* [[PB:%.*]]
+; CHECK-NEXT:    store float [[C]], float* [[PA:%.*]], align 4
+; CHECK-NEXT:    store float [[C]], float* [[PB:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %C = fadd float %A, %B
@@ -19,8 +19,8 @@ define void @test1(float %A, float %B, float* %PA, float* %PB) {
 define void @test2(float %A, float %B, i1* %PA, i1* %PB) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[C:%.*]] = fcmp oeq float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i1 [[C]], i1* [[PA:%.*]]
-; CHECK-NEXT:    store i1 [[C]], i1* [[PB:%.*]]
+; CHECK-NEXT:    store i1 [[C]], i1* [[PA:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C]], i1* [[PB:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %C = fcmp oeq float %A, %B
@@ -33,8 +33,8 @@ define void @test2(float %A, float %B, i1* %PA, i1* %PB) {
 define void @test3(float %A, float %B, i1* %PA, i1* %PB) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[C:%.*]] = fcmp uge float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i1 [[C]], i1* [[PA:%.*]]
-; CHECK-NEXT:    store i1 [[C]], i1* [[PB:%.*]]
+; CHECK-NEXT:    store i1 [[C]], i1* [[PA:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C]], i1* [[PB:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %C = fcmp uge float %A, %B
@@ -47,8 +47,8 @@ define void @test3(float %A, float %B, i1* %PA, i1* %PB) {
 define void @test4(i32 %A, i32 %B, i1* %PA, i1* %PB) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i1 [[C]], i1* [[PA:%.*]]
-; CHECK-NEXT:    store i1 [[C]], i1* [[PB:%.*]]
+; CHECK-NEXT:    store i1 [[C]], i1* [[PA:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C]], i1* [[PB:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %C = icmp eq i32 %A, %B
@@ -61,8 +61,8 @@ define void @test4(i32 %A, i32 %B, i1* %PA, i1* %PB) {
 define void @test5(i32 %A, i32 %B, i1* %PA, i1* %PB) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i1 [[C]], i1* [[PA:%.*]]
-; CHECK-NEXT:    store i1 [[C]], i1* [[PB:%.*]]
+; CHECK-NEXT:    store i1 [[C]], i1* [[PA:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C]], i1* [[PB:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %C = icmp sgt i32 %A, %B
@@ -77,8 +77,8 @@ define void @test5(i32 %A, i32 %B, i1* %PA, i1* %PB) {
 define void @test6(float %f, i1* %p1, i1* %p2) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[C1:%.*]] = fcmp ult float [[F:%.*]], [[F]]
-; CHECK-NEXT:    store i1 [[C1]], i1* [[P1:%.*]]
-; CHECK-NEXT:    store i1 [[C1]], i1* [[P2:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[P1:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C1]], i1* [[P2:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %c1 = fcmp ult float %f, %f
@@ -692,14 +692,14 @@ define i32 @select_not_invert_pred_cond_wrong_select_op(i8 %x, i8 %y, i32 %t, i3
 ; negation of each negation to check for the same issue one level deeper.
 define void @not_not_min(i32* %px, i32* %py, i32* %pout) {
 ; CHECK-LABEL: @not_not_min(
-; CHECK-NEXT:    [[X:%.*]] = load volatile i32, i32* [[PX:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = load volatile i32, i32* [[PY:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = load volatile i32, i32* [[PX:%.*]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = load volatile i32, i32* [[PY:%.*]], align 4
 ; CHECK-NEXT:    [[CMPA:%.*]] = icmp slt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[CMPB:%.*]] = xor i1 [[CMPA]], true
 ; CHECK-NEXT:    [[RA:%.*]] = select i1 [[CMPA]], i32 [[X]], i32 [[Y]]
-; CHECK-NEXT:    store volatile i32 [[RA]], i32* [[POUT:%.*]]
-; CHECK-NEXT:    store volatile i32 [[RA]], i32* [[POUT]]
-; CHECK-NEXT:    store volatile i32 [[RA]], i32* [[POUT]]
+; CHECK-NEXT:    store volatile i32 [[RA]], i32* [[POUT:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 [[RA]], i32* [[POUT]], align 4
+; CHECK-NEXT:    store volatile i32 [[RA]], i32* [[POUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %x = load volatile i32, i32* %px
@@ -762,3 +762,292 @@ define i32 @PR41083_2(i32 %p) {
   %m = mul i32 %sel, %s2
   ret i32 %m
 }
+
+define float @maxnum(float %a, float %b) {
+; CHECK-LABEL: @maxnum(
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.maxnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %x = call float @llvm.maxnum.f32(float %a, float %b)
+  %y = call float @llvm.maxnum.f32(float %b, float %a)
+  %r = fdiv nnan float %x, %y
+  ret float %r
+}
+
+define <2 x float> @minnum(<2 x float> %a, <2 x float> %b) {
+; CHECK-LABEL: @minnum(
+; CHECK-NEXT:    [[X:%.*]] = call fast <2 x float> @llvm.minnum.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]])
+; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float 1.000000e+00>
+;
+  %x = call fast <2 x float> @llvm.minnum.v2f32(<2 x float> %a, <2 x float> %b)
+  %y = call fast <2 x float> @llvm.minnum.v2f32(<2 x float> %b, <2 x float> %a)
+  %r = fdiv nnan <2 x float> %x, %y
+  ret <2 x float> %r
+}
+
+define <2 x double> @maximum(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @maximum(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.maximum.v2f64(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]])
+; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+;
+  %x = call fast <2 x double> @llvm.maximum.v2f64(<2 x double> %a, <2 x double> %b)
+  %y = call <2 x double> @llvm.maximum.v2f64(<2 x double> %b, <2 x double> %a)
+  %r = fdiv nnan <2 x double> %x, %y
+  ret <2 x double> %r
+}
+
+define double @minimum(double %a, double %b) {
+; CHECK-LABEL: @minimum(
+; CHECK-NEXT:    [[X:%.*]] = call double @llvm.minimum.f64(double [[A:%.*]], double [[B:%.*]])
+; CHECK-NEXT:    ret double 1.000000e+00
+;
+  %x = call nsz double @llvm.minimum.f64(double %a, double %b)
+  %y = call ninf double @llvm.minimum.f64(double %b, double %a)
+  %r = fdiv nnan double %x, %y
+  ret double %r
+}
+define i16 @sadd_ov(i16 %a, i16 %b) {
+; CHECK-LABEL: @sadd_ov(
+; CHECK-NEXT:    [[X:%.*]] = call { i16, i1 } @llvm.sadd.with.overflow.i16(i16 [[A:%.*]], i16 [[B:%.*]])
+; CHECK-NEXT:    [[X1:%.*]] = extractvalue { i16, i1 } [[X]], 0
+; CHECK-NEXT:    ret i16 [[X1]]
+;
+  %x = call {i16, i1} @llvm.sadd.with.overflow.i16(i16 %a, i16 %b)
+  %y = call {i16, i1} @llvm.sadd.with.overflow.i16(i16 %b, i16 %a)
+  %x1 = extractvalue {i16, i1} %x, 0
+  %y1 = extractvalue {i16, i1} %y, 0
+  %o = or i16 %x1, %y1
+  ret i16 %o
+}
+
+define <5 x i65> @uadd_ov(<5 x i65> %a, <5 x i65> %b) {
+; CHECK-LABEL: @uadd_ov(
+; CHECK-NEXT:    [[X:%.*]] = call { <5 x i65>, <5 x i1> } @llvm.uadd.with.overflow.v5i65(<5 x i65> [[A:%.*]], <5 x i65> [[B:%.*]])
+; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <5 x i65>, <5 x i1> } [[X]], 0
+; CHECK-NEXT:    ret <5 x i65> [[X1]]
+;
+  %x = call {<5 x i65>, <5 x i1>} @llvm.uadd.with.overflow.v5i65(<5 x i65> %a, <5 x i65> %b)
+  %y = call {<5 x i65>, <5 x i1>} @llvm.uadd.with.overflow.v5i65(<5 x i65> %b, <5 x i65> %a)
+  %x1 = extractvalue {<5 x i65>, <5 x i1>} %x, 0
+  %y1 = extractvalue {<5 x i65>, <5 x i1>} %y, 0
+  %o = or <5 x i65> %x1, %y1
+  ret <5 x i65> %o
+}
+
+define i37 @smul_ov(i37 %a, i37 %b) {
+; CHECK-LABEL: @smul_ov(
+; CHECK-NEXT:    [[X:%.*]] = call { i37, i1 } @llvm.smul.with.overflow.i37(i37 [[A:%.*]], i37 [[B:%.*]])
+; CHECK-NEXT:    [[X1:%.*]] = extractvalue { i37, i1 } [[X]], 0
+; CHECK-NEXT:    ret i37 [[X1]]
+;
+  %x = call {i37, i1} @llvm.smul.with.overflow.i37(i37 %a, i37 %b)
+  %y = call {i37, i1} @llvm.smul.with.overflow.i37(i37 %b, i37 %a)
+  %x1 = extractvalue {i37, i1} %x, 0
+  %y1 = extractvalue {i37, i1} %y, 0
+  %o = or i37 %x1, %y1
+  ret i37 %o
+}
+
+define <2 x i31> @umul_ov(<2 x i31> %a, <2 x i31> %b) {
+; CHECK-LABEL: @umul_ov(
+; CHECK-NEXT:    [[X:%.*]] = call { <2 x i31>, <2 x i1> } @llvm.umul.with.overflow.v2i31(<2 x i31> [[A:%.*]], <2 x i31> [[B:%.*]])
+; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <2 x i31>, <2 x i1> } [[X]], 0
+; CHECK-NEXT:    ret <2 x i31> [[X1]]
+;
+  %x = call {<2 x i31>, <2 x i1>} @llvm.umul.with.overflow.v2i31(<2 x i31> %a, <2 x i31> %b)
+  %y = call {<2 x i31>, <2 x i1>} @llvm.umul.with.overflow.v2i31(<2 x i31> %b, <2 x i31> %a)
+  %x1 = extractvalue {<2 x i31>, <2 x i1>} %x, 0
+  %y1 = extractvalue {<2 x i31>, <2 x i1>} %y, 0
+  %o = or <2 x i31> %x1, %y1
+  ret <2 x i31> %o
+}
+
+define i64 @sadd_sat(i64 %a, i64 %b) {
+; CHECK-LABEL: @sadd_sat(
+; CHECK-NEXT:    [[X:%.*]] = call i64 @llvm.sadd.sat.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    ret i64 [[X]]
+;
+  %x = call i64 @llvm.sadd.sat.i64(i64 %a, i64 %b)
+  %y = call i64 @llvm.sadd.sat.i64(i64 %b, i64 %a)
+  %o = or i64 %x, %y
+  ret i64 %o
+}
+
+define <2 x i64> @uadd_sat(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @uadd_sat(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]])
+; CHECK-NEXT:    ret <2 x i64> [[X]]
+;
+  %x = call <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64> %a, <2 x i64> %b)
+  %y = call <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64> %b, <2 x i64> %a)
+  %o = or <2 x i64> %x, %y
+  ret <2 x i64> %o
+}
+
+define <2 x i64> @smax(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @smax(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i64> @llvm.smax.v2i64(<2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]])
+; CHECK-NEXT:    ret <2 x i64> [[X]]
+;
+  %x = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %a, <2 x i64> %b)
+  %y = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %b, <2 x i64> %a)
+  %o = or <2 x i64> %x, %y
+  ret <2 x i64> %o
+}
+
+define i4 @smin(i4 %a, i4 %b) {
+; CHECK-LABEL: @smin(
+; CHECK-NEXT:    [[X:%.*]] = call i4 @llvm.smin.i4(i4 [[A:%.*]], i4 [[B:%.*]])
+; CHECK-NEXT:    ret i4 [[X]]
+;
+  %x = call i4 @llvm.smin.i4(i4 %a, i4 %b)
+  %y = call i4 @llvm.smin.i4(i4 %b, i4 %a)
+  %o = or i4 %x, %y
+  ret i4 %o
+}
+
+define i67 @umax(i67 %a, i67 %b) {
+; CHECK-LABEL: @umax(
+; CHECK-NEXT:    [[X:%.*]] = call i67 @llvm.umax.i67(i67 [[A:%.*]], i67 [[B:%.*]])
+; CHECK-NEXT:    ret i67 [[X]]
+;
+  %x = call i67 @llvm.umax.i67(i67 %a, i67 %b)
+  %y = call i67 @llvm.umax.i67(i67 %b, i67 %a)
+  %o = or i67 %x, %y
+  ret i67 %o
+}
+
+define <3 x i17> @umin(<3 x i17> %a, <3 x i17> %b) {
+; CHECK-LABEL: @umin(
+; CHECK-NEXT:    [[X:%.*]] = call <3 x i17> @llvm.umin.v3i17(<3 x i17> [[A:%.*]], <3 x i17> [[B:%.*]])
+; CHECK-NEXT:    ret <3 x i17> [[X]]
+;
+  %x = call <3 x i17> @llvm.umin.v3i17(<3 x i17> %a, <3 x i17> %b)
+  %y = call <3 x i17> @llvm.umin.v3i17(<3 x i17> %b, <3 x i17> %a)
+  %o = or <3 x i17> %x, %y
+  ret <3 x i17> %o
+}
+
+; Negative test - mismatched intrinsics
+
+define i4 @smin_umin(i4 %a, i4 %b) {
+; CHECK-LABEL: @smin_umin(
+; CHECK-NEXT:    [[X:%.*]] = call i4 @llvm.smin.i4(i4 [[A:%.*]], i4 [[B:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call i4 @llvm.umin.i4(i4 [[B]], i4 [[A]])
+; CHECK-NEXT:    [[O:%.*]] = or i4 [[X]], [[Y]]
+; CHECK-NEXT:    ret i4 [[O]]
+;
+  %x = call i4 @llvm.smin.i4(i4 %a, i4 %b)
+  %y = call i4 @llvm.umin.i4(i4 %b, i4 %a)
+  %o = or i4 %x, %y
+  ret i4 %o
+}
+
+; TODO: handle >2 args
+
+define i16 @smul_fix(i16 %a, i16 %b) {
+; CHECK-LABEL: @smul_fix(
+; CHECK-NEXT:    [[X:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A:%.*]], i16 [[B:%.*]], i32 3)
+; CHECK-NEXT:    [[Y:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[B]], i16 [[A]], i32 3)
+; CHECK-NEXT:    [[O:%.*]] = or i16 [[X]], [[Y]]
+; CHECK-NEXT:    ret i16 [[O]]
+;
+  %x = call i16 @llvm.smul.fix.i16(i16 %a, i16 %b, i32 3)
+  %y = call i16 @llvm.smul.fix.i16(i16 %b, i16 %a, i32 3)
+  %o = or i16 %x, %y
+  ret i16 %o
+}
+
+; TODO: handle >2 args
+
+define i16 @umul_fix(i16 %a, i16 %b, i32 %s) {
+; CHECK-LABEL: @umul_fix(
+; CHECK-NEXT:    [[X:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A:%.*]], i16 [[B:%.*]], i32 1)
+; CHECK-NEXT:    [[Y:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[B]], i16 [[A]], i32 1)
+; CHECK-NEXT:    [[O:%.*]] = or i16 [[X]], [[Y]]
+; CHECK-NEXT:    ret i16 [[O]]
+;
+  %x = call i16 @llvm.umul.fix.i16(i16 %a, i16 %b, i32 1)
+  %y = call i16 @llvm.umul.fix.i16(i16 %b, i16 %a, i32 1)
+  %o = or i16 %x, %y
+  ret i16 %o
+}
+
+; TODO: handle >2 args
+
+define <3 x i16> @smul_fix_sat(<3 x i16> %a, <3 x i16> %b) {
+; CHECK-LABEL: @smul_fix_sat(
+; CHECK-NEXT:    [[X:%.*]] = call <3 x i16> @llvm.smul.fix.sat.v3i16(<3 x i16> [[A:%.*]], <3 x i16> [[B:%.*]], i32 2)
+; CHECK-NEXT:    [[Y:%.*]] = call <3 x i16> @llvm.smul.fix.sat.v3i16(<3 x i16> [[B]], <3 x i16> [[A]], i32 2)
+; CHECK-NEXT:    [[O:%.*]] = or <3 x i16> [[X]], [[Y]]
+; CHECK-NEXT:    ret <3 x i16> [[O]]
+;
+  %x = call <3 x i16> @llvm.smul.fix.sat.v3i16(<3 x i16> %a, <3 x i16> %b, i32 2)
+  %y = call <3 x i16> @llvm.smul.fix.sat.v3i16(<3 x i16> %b, <3 x i16> %a, i32 2)
+  %o = or <3 x i16> %x, %y
+  ret <3 x i16> %o
+}
+
+; TODO: handle >2 args
+
+define <3 x i16> @umul_fix_sat(<3 x i16> %a, <3 x i16> %b) {
+; CHECK-LABEL: @umul_fix_sat(
+; CHECK-NEXT:    [[X:%.*]] = call <3 x i16> @llvm.umul.fix.sat.v3i16(<3 x i16> [[A:%.*]], <3 x i16> [[B:%.*]], i32 3)
+; CHECK-NEXT:    [[Y:%.*]] = call <3 x i16> @llvm.umul.fix.sat.v3i16(<3 x i16> [[B]], <3 x i16> [[A]], i32 3)
+; CHECK-NEXT:    [[O:%.*]] = or <3 x i16> [[X]], [[Y]]
+; CHECK-NEXT:    ret <3 x i16> [[O]]
+;
+  %x = call <3 x i16> @llvm.umul.fix.sat.v3i16(<3 x i16> %a, <3 x i16> %b, i32 3)
+  %y = call <3 x i16> @llvm.umul.fix.sat.v3i16(<3 x i16> %b, <3 x i16> %a, i32 3)
+  %o = or <3 x i16> %x, %y
+  ret <3 x i16> %o
+}
+
+define i16 @umul_smul_fix(i16 %a, i16 %b, i32 %s) {
+; CHECK-LABEL: @umul_smul_fix(
+; CHECK-NEXT:    [[X:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A:%.*]], i16 [[B:%.*]], i32 1)
+; CHECK-NEXT:    [[Y:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[B]], i16 [[A]], i32 1)
+; CHECK-NEXT:    [[O:%.*]] = or i16 [[X]], [[Y]]
+; CHECK-NEXT:    ret i16 [[O]]
+;
+  %x = call i16 @llvm.umul.fix.i16(i16 %a, i16 %b, i32 1)
+  %y = call i16 @llvm.smul.fix.i16(i16 %b, i16 %a, i32 1)
+  %o = or i16 %x, %y
+  ret i16 %o
+}
+
+define i16 @umul_fix_scale(i16 %a, i16 %b, i32 %s) {
+; CHECK-LABEL: @umul_fix_scale(
+; CHECK-NEXT:    [[X:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A:%.*]], i16 [[B:%.*]], i32 1)
+; CHECK-NEXT:    [[Y:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[B]], i16 [[A]], i32 2)
+; CHECK-NEXT:    [[O:%.*]] = or i16 [[X]], [[Y]]
+; CHECK-NEXT:    ret i16 [[O]]
+;
+  %x = call i16 @llvm.umul.fix.i16(i16 %a, i16 %b, i32 1)
+  %y = call i16 @llvm.umul.fix.i16(i16 %b, i16 %a, i32 2)
+  %o = or i16 %x, %y
+  ret i16 %o
+}
+
+declare float @llvm.maxnum.f32(float, float)
+declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>)
+declare <2 x double> @llvm.maximum.v2f64(<2 x double>, <2 x double>)
+declare double @llvm.minimum.f64(double, double)
+
+declare {i16, i1} @llvm.sadd.with.overflow.i16(i16, i16)
+declare {<5 x i65>, <5 x i1>} @llvm.uadd.with.overflow.v5i65(<5 x i65>, <5 x i65>)
+declare {i37, i1} @llvm.smul.with.overflow.i37(i37, i37)
+declare {<2 x i31>, <2 x i1>} @llvm.umul.with.overflow.v2i31(<2 x i31>, <2 x i31>)
+declare i64 @llvm.sadd.sat.i64(i64, i64)
+declare <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64>, <2 x i64>)
+
+declare <2 x i64> @llvm.smax.v2i64(<2 x i64>, <2 x i64>)
+declare i4 @llvm.smin.i4(i4, i4)
+declare i4 @llvm.umin.i4(i4, i4)
+declare i67 @llvm.umax.i67(i67, i67)
+declare <3 x i17> @llvm.umin.v3i17(<3 x i17>, <3 x i17>)
+
+declare i16 @llvm.smul.fix.i16(i16, i16, i32)
+declare i16 @llvm.umul.fix.i16(i16, i16, i32)
+declare <3 x i16> @llvm.smul.fix.sat.v3i16(<3 x i16>, <3 x i16>, i32)
+declare <3 x i16> @llvm.umul.fix.sat.v3i16(<3 x i16>, <3 x i16>, i32)

@@ -9,6 +9,7 @@
 #include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace lldb_private;

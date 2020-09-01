@@ -531,6 +531,8 @@ private:
   void mangleNeonVectorType(const DependentVectorType *T);
   void mangleAArch64NeonVectorType(const VectorType *T);
   void mangleAArch64NeonVectorType(const DependentVectorType *T);
+  void mangleAArch64FixedSveVectorType(const VectorType *T);
+  void mangleAArch64FixedSveVectorType(const DependentVectorType *T);
 
   void mangleIntegerLiteral(QualType T, const llvm::APSInt &Value);
   void mangleMemberExprBase(const Expr *base, bool isArrow);
@@ -3323,6 +3325,103 @@ void CXXNameMangler::mangleAArch64NeonVectorType(const DependentVectorType *T) {
   Diags.Report(T->getAttributeLoc(), DiagID);
 }
 
+// The AArch64 ACLE specifies that fixed-length SVE vector and predicate types
+// defined with the 'arm_sve_vector_bits' attribute map to the same AAPCS64
+// type as the sizeless variants.
+//
+// The mangling scheme for VLS types is implemented as a "pseudo" template:
+//
+//   '__SVE_VLS<<type>, <vector length>>'
+//
+// Combining the existing SVE type and a specific vector length (in bits).
+// For example:
+//
+//   typedef __SVInt32_t foo __attribute__((arm_sve_vector_bits(512)));
+//
+// is described as '__SVE_VLS<__SVInt32_t, 512u>' and mangled as:
+//
+//   "9__SVE_VLSI" + base type mangling + "Lj" + __ARM_FEATURE_SVE_BITS + "EE"
+//
+//   i.e. 9__SVE_VLSIu11__SVInt32_tLj512EE
+//
+// The latest ACLE specification (00bet5) does not contain details of this
+// mangling scheme, it will be specified in the next revision. The mangling
+// scheme is otherwise defined in the appendices to the Procedure Call Standard
+// for the Arm Architecture, see
+// https://github.com/ARM-software/abi-aa/blob/master/aapcs64/aapcs64.rst#appendix-c-mangling
+void CXXNameMangler::mangleAArch64FixedSveVectorType(const VectorType *T) {
+  assert((T->getVectorKind() == VectorType::SveFixedLengthDataVector ||
+          T->getVectorKind() == VectorType::SveFixedLengthPredicateVector) &&
+         "expected fixed-length SVE vector!");
+
+  QualType EltType = T->getElementType();
+  assert(EltType->isBuiltinType() &&
+         "expected builtin type for fixed-length SVE vector!");
+
+  StringRef TypeName;
+  switch (cast<BuiltinType>(EltType)->getKind()) {
+  case BuiltinType::SChar:
+    TypeName = "__SVInt8_t";
+    break;
+  case BuiltinType::UChar: {
+    if (T->getVectorKind() == VectorType::SveFixedLengthDataVector)
+      TypeName = "__SVUint8_t";
+    else
+      TypeName = "__SVBool_t";
+    break;
+  }
+  case BuiltinType::Short:
+    TypeName = "__SVInt16_t";
+    break;
+  case BuiltinType::UShort:
+    TypeName = "__SVUint16_t";
+    break;
+  case BuiltinType::Int:
+    TypeName = "__SVInt32_t";
+    break;
+  case BuiltinType::UInt:
+    TypeName = "__SVUint32_t";
+    break;
+  case BuiltinType::Long:
+    TypeName = "__SVInt64_t";
+    break;
+  case BuiltinType::ULong:
+    TypeName = "__SVUint64_t";
+    break;
+  case BuiltinType::Float16:
+    TypeName = "__SVFloat16_t";
+    break;
+  case BuiltinType::Float:
+    TypeName = "__SVFloat32_t";
+    break;
+  case BuiltinType::Double:
+    TypeName = "__SVFloat64_t";
+    break;
+  case BuiltinType::BFloat16:
+    TypeName = "__SVBfloat16_t";
+    break;
+  default:
+    llvm_unreachable("unexpected element type for fixed-length SVE vector!");
+  }
+
+  unsigned VecSizeInBits = getASTContext().getTypeInfo(T).Width;
+
+  if (T->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+    VecSizeInBits *= 8;
+
+  Out << "9__SVE_VLSI" << 'u' << TypeName.size() << TypeName << "Lj"
+      << VecSizeInBits << "EE";
+}
+
+void CXXNameMangler::mangleAArch64FixedSveVectorType(
+    const DependentVectorType *T) {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(
+      DiagnosticsEngine::Error,
+      "cannot mangle this dependent fixed-length SVE vector type yet");
+  Diags.Report(T->getAttributeLoc(), DiagID);
+}
+
 // GNU extension: vector types
 // <type>                  ::= <vector-type>
 // <vector-type>           ::= Dv <positive dimension number> _
@@ -3342,6 +3441,10 @@ void CXXNameMangler::mangleType(const VectorType *T) {
       mangleAArch64NeonVectorType(T);
     else
       mangleNeonVectorType(T);
+    return;
+  } else if (T->getVectorKind() == VectorType::SveFixedLengthDataVector ||
+             T->getVectorKind() == VectorType::SveFixedLengthPredicateVector) {
+    mangleAArch64FixedSveVectorType(T);
     return;
   }
   Out << "Dv" << T->getNumElements() << '_';
@@ -3364,6 +3467,10 @@ void CXXNameMangler::mangleType(const DependentVectorType *T) {
       mangleAArch64NeonVectorType(T);
     else
       mangleNeonVectorType(T);
+    return;
+  } else if (T->getVectorKind() == VectorType::SveFixedLengthDataVector ||
+             T->getVectorKind() == VectorType::SveFixedLengthPredicateVector) {
+    mangleAArch64FixedSveVectorType(T);
     return;
   }
 

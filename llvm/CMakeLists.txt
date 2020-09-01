@@ -642,6 +642,13 @@ endif()
 
 if (LLVM_BUILD_STATIC)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+  # Remove shared library suffixes from use in find_library
+  foreach (shared_lib_suffix ${CMAKE_SHARED_LIBRARY_SUFFIX} ${CMAKE_IMPORT_LIBRARY_SUFFIX})
+    list(FIND CMAKE_FIND_LIBRARY_SUFFIXES ${shared_lib_suffix} shared_lib_suffix_idx)
+    if(NOT ${shared_lib_suffix_idx} EQUAL -1)
+      list(REMOVE_AT CMAKE_FIND_LIBRARY_SUFFIXES ${shared_lib_suffix_idx})
+    endif()
+  endforeach()
 endif()
 
 # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.

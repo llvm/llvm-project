@@ -55,6 +55,10 @@ MlirContext mlirContextCreate() {
   return wrap(context);
 }
 
+int mlirContextEqual(MlirContext ctx1, MlirContext ctx2) {
+  return unwrap(ctx1) == unwrap(ctx2);
+}
+
 void mlirContextDestroy(MlirContext context) { delete unwrap(context); }
 
 /* ========================================================================== */
@@ -348,6 +352,10 @@ void mlirValuePrint(MlirValue value, MlirStringCallback callback,
 
 MlirType mlirTypeParseGet(MlirContext context, const char *type) {
   return wrap(mlir::parseType(type, unwrap(context)));
+}
+
+MlirContext mlirTypeGetContext(MlirType type) {
+  return wrap(unwrap(type).getContext());
 }
 
 int mlirTypeEqual(MlirType t1, MlirType t2) { return unwrap(t1) == unwrap(t2); }

@@ -245,9 +245,9 @@ void RocmInstallationDetector::detectDeviceLibrary() {
     // - ${ROCM_ROOT}/lib/*
     // - ${ROCM_ROOT}/lib/bitcode/*
     // so try to detect these layouts.
-    static llvm::SmallVector<const char *, 2> SubDirsList[] = {
+    static constexpr std::array<const char *, 2> SubDirsList[] = {
         {"amdgcn", "bitcode"},
-        {"lib"},
+        {"lib", ""},
         {"lib", "bitcode"},
     };
 

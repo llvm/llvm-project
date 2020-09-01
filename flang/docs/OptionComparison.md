@@ -1,11 +1,3 @@
-<!--===- docs/OptionComparison.md 
-  
-   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-   See https://llvm.org/LICENSE.txt for license information.
-   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
--->
-
 # Compiler options
 
 This document catalogs the options processed by F18's peers/competitors.  Much of the document is taken up by a set of tables that list the options categorized into different topics.  Some of the table headings link to more information about the contents of the tables.  For example, the table on **Standards conformance** options links to [notes on Standards conformance](#standards).

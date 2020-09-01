@@ -62,7 +62,7 @@ func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
   %c1 = constant 1 : index
 
   acc.parallel {
-    acc.loop seq {
+    acc.loop {
       scf.for %arg3 = %c0 to %c10 step %c1 {
         scf.for %arg4 = %c0 to %c10 step %c1 {
           scf.for %arg5 = %c0 to %c10 step %c1 {
@@ -76,7 +76,7 @@ func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
         }
       }
       acc.yield
-    }
+    } attributes {seq}
     acc.yield
   }
 
@@ -88,7 +88,7 @@ func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
 //  CHECK-NEXT:   %{{.*}} = constant 10 : index
 //  CHECK-NEXT:   %{{.*}} = constant 1 : index
 //  CHECK-NEXT:   acc.parallel {
-//  CHECK-NEXT:     acc.loop seq {
+//  CHECK-NEXT:     acc.loop {
 //  CHECK-NEXT:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //  CHECK-NEXT:         scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //  CHECK-NEXT:           scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
@@ -102,7 +102,7 @@ func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
 //  CHECK-NEXT:         }
 //  CHECK-NEXT:       }
 //  CHECK-NEXT:       acc.yield
-//  CHECK-NEXT:     }
+//  CHECK-NEXT:     } attributes {seq}
 //  CHECK-NEXT:     acc.yield
 //  CHECK-NEXT:   }
 //  CHECK-NEXT:   return %{{.*}} : memref<10x10xf32>
@@ -128,7 +128,7 @@ func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>,
             acc.yield
           }
 
-          acc.loop seq {
+          acc.loop {
             // for i = 0 to 10 step 1
             //   d[x] += c[i]
             scf.for %i = %lb to %c10 step %st {
@@ -138,7 +138,7 @@ func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>,
               store %z, %d[%x] : memref<10xf32>
             }
             acc.yield
-          }
+          } attributes {seq}
         }
         acc.yield
       }
@@ -167,7 +167,7 @@ func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>,
 // CHECK-NEXT:             }
 // CHECK-NEXT:             acc.yield
 // CHECK-NEXT:           }
-// CHECK-NEXT:           acc.loop seq {
+// CHECK-NEXT:           acc.loop {
 // CHECK-NEXT:             scf.for %{{.*}} = [[C0]] to [[C10]] step [[C1]] {
 // CHECK-NEXT:               %{{.*}} = load %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:               %{{.*}} = load %{{.*}}[%{{.*}}] : memref<10xf32>
@@ -175,7 +175,7 @@ func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>,
 // CHECK-NEXT:               store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:             }
 // CHECK-NEXT:             acc.yield
-// CHECK-NEXT:           }
+// CHECK-NEXT:           } attributes {seq}
 // CHECK-NEXT:         }
 // CHECK-NEXT:         acc.yield
 // CHECK-NEXT:       }
@@ -184,4 +184,51 @@ func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>,
 // CHECK-NEXT:     acc.terminator
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return %{{.*}} : memref<10xf32>
+// CHECK-NEXT: }
+
+func @testop() -> () {
+  %workerNum = constant 1 : i64
+  %vectorLength = constant 128 : i64
+  %gangNum = constant 8 : i64
+  %gangStatic = constant 2 : i64
+  %tileSize = constant 2 : i64
+  acc.loop gang worker vector {
+  }
+  acc.loop gang(num: %gangNum) {
+  }
+  acc.loop gang(static: %gangStatic) {
+  }
+  acc.loop worker(%workerNum) {
+  }
+  acc.loop vector(%vectorLength) {
+  }
+  acc.loop gang(num: %gangNum) worker vector {
+  }
+  acc.loop gang(num: %gangNum, static: %gangStatic) worker(%workerNum) vector(%vectorLength) {
+  }
+  acc.loop tile(%tileSize : i64, %tileSize : i64) {
+  }
+  return
+}
+
+// CHECK:      [[WORKERNUM:%.*]] = constant 1 : i64
+// CHECK-NEXT: [[VECTORLENGTH:%.*]] = constant 128 : i64
+// CHECK-NEXT: [[GANGNUM:%.*]] = constant 8 : i64
+// CHECK-NEXT: [[GANGSTATIC:%.*]] = constant 2 : i64
+// CHECK-NEXT: [[TILESIZE:%.*]] = constant 2 : i64
+// CHECK-NEXT: acc.loop gang worker vector {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.loop gang(num: [[GANGNUM]]) {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.loop gang(static: [[GANGSTATIC]]) {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.loop worker([[WORKERNUM]]) {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.loop vector([[VECTORLENGTH]]) {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.loop gang(num: [[GANGNUM]]) worker vector {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.loop gang(num: [[GANGNUM]], static: [[GANGSTATIC]]) worker([[WORKERNUM]]) vector([[VECTORLENGTH]]) {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.loop tile([[TILESIZE]]: i64, [[TILESIZE]]: i64) {
 // CHECK-NEXT: }

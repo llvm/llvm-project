@@ -50,9 +50,9 @@ public:
   }
   void preserve(TypeID id) { preservedIDs.insert(id); }
 
-  /// Returns if the given analysis has been marked as preserved. Note that this
-  /// simply checks for the presence of a given analysis ID and should not be
-  /// used as a general preservation checker.
+  /// Returns true if the given analysis has been marked as preserved. Note that
+  /// this simply checks for the presence of a given analysis ID and should not
+  /// be used as a general preservation checker.
   template <typename AnalysisT> bool isPreserved() const {
     return isPreserved(TypeID::get<AnalysisT>());
   }
@@ -265,14 +265,14 @@ public:
 
   /// Query for an analysis of a child operation, constructing it if necessary.
   template <typename AnalysisT> AnalysisT &getChildAnalysis(Operation *op) {
-    return slice(op).template getAnalysis<AnalysisT>();
+    return nest(op).template getAnalysis<AnalysisT>();
   }
 
   /// Query for an analysis of a child operation of a specifc derived operation
   /// type, constructing it if necessary.
   template <typename AnalysisT, typename OpT>
   AnalysisT &getChildAnalysis(OpT child) {
-    return slice(child).template getAnalysis<AnalysisT, OpT>();
+    return nest(child).template getAnalysis<AnalysisT, OpT>();
   }
 
   /// Query for a cached analysis of a child operation, or return null.
@@ -287,7 +287,7 @@ public:
   }
 
   /// Get an analysis manager for the given child operation.
-  AnalysisManager slice(Operation *op);
+  AnalysisManager nest(Operation *op);
 
   /// Invalidate any non preserved analyses,
   void invalidate(const PreservedAnalyses &pa) { impl->invalidate(pa); }

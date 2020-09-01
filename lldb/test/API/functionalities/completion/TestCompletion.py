@@ -44,9 +44,9 @@ class CommandLineCompletionTestCase(TestBase):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                           '// Break here', self.main_source_spec)
         self.assertEquals(process.GetState(), lldb.eStateStopped)
-        
-        # Since CommandInterpreter has been corrected to update the current execution 
-        # context at the beginning of HandleCompletion, we're here explicitly testing  
+
+        # Since CommandInterpreter has been corrected to update the current execution
+        # context at the beginning of HandleCompletion, we're here explicitly testing
         # the scenario where "frame var" is completed without any preceding commands.
 
         self.complete_from_to('frame variable fo',
@@ -133,7 +133,7 @@ class CommandLineCompletionTestCase(TestBase):
     @skipIfRemote
     def test_common_completion_process_pid_and_name(self):
         # The LLDB process itself and the process already attached to are both
-        # ignored by the process discovery mechanism, thus we need a process known 
+        # ignored by the process discovery mechanism, thus we need a process known
         # to us here.
         self.build()
         server = self.spawnSubprocess(
@@ -143,9 +143,9 @@ class CommandLineCompletionTestCase(TestBase):
         self.assertIsNotNone(server)
         pid = server.pid
 
-        self.complete_from_to('process attach -p ', [str(pid)])
-        self.complete_from_to('platform process attach -p ', [str(pid)])
-        self.complete_from_to('platform process info ', [str(pid)])
+        self.completions_contain('process attach -p ', [str(pid)])
+        self.completions_contain('platform process attach -p ', [str(pid)])
+        self.completions_contain('platform process info ', [str(pid)])
 
         self.completions_contain_str('process attach -n ', "a.out")
         self.completions_contain_str('platform process attach -n ', "a.out")
@@ -562,7 +562,7 @@ class CommandLineCompletionTestCase(TestBase):
 
         self.complete_from_to('frame select ', ['0'])
         self.complete_from_to('thread backtrace -s ', ['0'])
-    
+
     def test_frame_recognizer_delete(self):
         self.runCmd("frame recognizer add -l py_class -s module_name -n recognizer_name")
         self.check_completion_with_desc('frame recognizer delete ', [['0', 'py_class, module module_name, symbol recognizer_name']])
@@ -580,6 +580,27 @@ class CommandLineCompletionTestCase(TestBase):
         # No completion for Qu because the candidate is
         # (anonymous namespace)::Quux().
         self.complete_from_to('breakpoint set -n Qu', '')
+
+    def test_completion_type_formatter_delete(self):
+        self.runCmd('type filter add --child a Aoo')
+        self.complete_from_to('type filter delete ', ['Aoo'])
+        self.runCmd('type filter add --child b -x Boo')
+        self.complete_from_to('type filter delete ', ['Boo'])
+
+        self.runCmd('type format add -f hex Coo')
+        self.complete_from_to('type format delete ', ['Coo'])
+        self.runCmd('type format add -f hex -x Doo')
+        self.complete_from_to('type format delete ', ['Doo'])
+
+        self.runCmd('type summary add -c Eoo')
+        self.complete_from_to('type summary delete ', ['Eoo'])
+        self.runCmd('type summary add -x -c Foo')
+        self.complete_from_to('type summary delete ', ['Foo'])
+
+        self.runCmd('type synthetic add Goo -l test')
+        self.complete_from_to('type synthetic delete ', ['Goo'])
+        self.runCmd('type synthetic add -x Hoo -l test')
+        self.complete_from_to('type synthetic delete ', ['Hoo'])
 
     @skipIf(archs=no_match(['x86_64']))
     def test_register_read_and_write_on_x86(self):
@@ -693,7 +714,7 @@ class CommandLineCompletionTestCase(TestBase):
         for subcommand in subcommands:
             self.complete_from_to('breakpoint ' + subcommand + ' ',
                                   ['1'])
-        
+
         bp2 = target.BreakpointCreateByName('Bar', 'a.out')
         self.assertTrue(bp2)
         self.assertEqual(bp2.GetNumLocations(), 1)
@@ -702,7 +723,7 @@ class CommandLineCompletionTestCase(TestBase):
             self.complete_from_to('breakpoint ' + subcommand + ' ',
                                   ['1',
                                    '2'])
-        
+
         for subcommand in subcommands:
             self.complete_from_to('breakpoint ' + subcommand + ' 1 ',
                                   ['1',

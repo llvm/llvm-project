@@ -10,6 +10,7 @@
 #define MLIR_BINDINGS_PYTHON_PYBINDUTILS_H
 
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #include "llvm/ADT/Twine.h"
 

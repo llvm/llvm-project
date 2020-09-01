@@ -8,8 +8,8 @@
 
 ; Deep Wrapper enabled
 
-; RUN: opt -attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=7 -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_NPM,NOT_CGSCC_OPM,NOT_TUNIT_NPM,IS__TUNIT____,IS________OPM,IS__TUNIT_OPM,CHECK_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_TUNIT_NPM_ENABLED,IS__TUNIT_____ENABLED,IS________OPM_ENABLED,IS__TUNIT_OPM_ENABLED
-; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=7 -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_OPM,NOT_CGSCC_NPM,NOT_TUNIT_OPM,IS__TUNIT____,IS________NPM,IS__TUNIT_NPM,CHECK_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_TUNIT_OPM_ENABLED,IS__TUNIT_____ENABLED,IS________NPM_ENABLED,IS__TUNIT_NPM_ENABLED
+; RUN: opt -attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=8 -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_NPM,NOT_CGSCC_OPM,NOT_TUNIT_NPM,IS__TUNIT____,IS________OPM,IS__TUNIT_OPM,CHECK_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_TUNIT_NPM_ENABLED,IS__TUNIT_____ENABLED,IS________OPM_ENABLED,IS__TUNIT_OPM_ENABLED
+; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=8 -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_OPM,NOT_CGSCC_NPM,NOT_TUNIT_OPM,IS__TUNIT____,IS________NPM,IS__TUNIT_NPM,CHECK_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_TUNIT_OPM_ENABLED,IS__TUNIT_____ENABLED,IS________NPM_ENABLED,IS__TUNIT_NPM_ENABLED
 ; RUN: opt -attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_NPM,IS__CGSCC____,IS________OPM,IS__CGSCC_OPM,CHECK_ENABLED,NOT_TUNIT_NPM_ENABLED,NOT_TUNIT_OPM_ENABLED,NOT_CGSCC_NPM_ENABLED,IS__CGSCC_____ENABLED,IS________OPM_ENABLED,IS__CGSCC_OPM_ENABLED
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM,CHECK_ENABLED,NOT_TUNIT_NPM_ENABLED,NOT_TUNIT_OPM_ENABLED,NOT_CGSCC_OPM_ENABLED,IS__CGSCC_____ENABLED,IS________NPM_ENABLED,IS__CGSCC_NPM_ENABLED
 ; RUN: opt -attributor -attributor-cgscc -disable-inlining -attributor-allow-deep-wrappers -S < %s | FileCheck %s --check-prefix=DWRAPPER
@@ -120,16 +120,16 @@ entry:
 define i32 @outer1() {
 ; CHECK_DISABLED-LABEL: define {{[^@]+}}@outer1()
 ; CHECK_DISABLED-NEXT:  entry:
-; CHECK_DISABLED-NEXT:    [[RET1:%.*]] = call i32 @inner1(i32 1, i32 2)
-; CHECK_DISABLED-NEXT:    [[RET2:%.*]] = call i32 @inner2(i32 1, i32 2)
+; CHECK_DISABLED-NEXT:    [[RET1:%.*]] = call i32 @inner1(i32 noundef 1, i32 noundef 2)
+; CHECK_DISABLED-NEXT:    [[RET2:%.*]] = call i32 @inner2(i32 noundef 1, i32 noundef 2)
 ; CHECK_DISABLED-NEXT:    [[RET3:%.*]] = call i32 @inner3(i32 [[RET1]], i32 [[RET2]])
 ; CHECK_DISABLED-NEXT:    [[RET4:%.*]] = call i32 @inner4(i32 [[RET3]], i32 [[RET3]])
 ; CHECK_DISABLED-NEXT:    ret i32 [[RET4]]
 ;
 ; CHECK_ENABLED-LABEL: define {{[^@]+}}@outer1()
 ; CHECK_ENABLED-NEXT:  entry:
-; CHECK_ENABLED-NEXT:    [[RET1:%.*]] = call i32 @inner1(i32 1, i32 2)
-; CHECK_ENABLED-NEXT:    [[RET2:%.*]] = call i32 @inner2(i32 1, i32 2)
+; CHECK_ENABLED-NEXT:    [[RET1:%.*]] = call i32 @inner1(i32 noundef 1, i32 noundef 2)
+; CHECK_ENABLED-NEXT:    [[RET2:%.*]] = call i32 @inner2(i32 noundef 1, i32 noundef 2)
 ; CHECK_ENABLED-NEXT:    [[RET3:%.*]] = call i32 @inner3.internalized(i32 [[RET1]], i32 [[RET2]])
 ; CHECK_ENABLED-NEXT:    [[RET4:%.*]] = call i32 @inner4.internalized(i32 [[RET3]], i32 [[RET3]])
 ; CHECK_ENABLED-NEXT:    ret i32 [[RET4]]
@@ -153,7 +153,7 @@ define linkonce_odr void @unused_arg(i8) {
 
 define void @unused_arg_caller() {
 ; CHECK_DISABLED-LABEL: define {{[^@]+}}@unused_arg_caller()
-; CHECK_DISABLED-NEXT:    call void @unused_arg(i8 0)
+; CHECK_DISABLED-NEXT:    call void @unused_arg(i8 noundef 0)
 ; CHECK_DISABLED-NEXT:    ret void
 ;
 ; IS__TUNIT_____ENABLED: Function Attrs: nofree noreturn nosync nounwind readnone willreturn

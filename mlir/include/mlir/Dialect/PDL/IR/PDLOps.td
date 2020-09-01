@@ -296,7 +296,7 @@ def PDL_PatternOp : PDL_Op<"pattern", [IsolatedFromAbove, Symbol]> {
       %resultType = pdl.type
       %inputOperand = pdl.input
       %root, %results = pdl.operation "foo.op"(%inputOperand) -> (%resultType)
-      pdl.rewrite(%root) {
+      pdl.rewrite %root {
         pdl.replace %root with (%inputOperand)
       }
     }
@@ -305,9 +305,13 @@ def PDL_PatternOp : PDL_Op<"pattern", [IsolatedFromAbove, Symbol]> {
 
   let arguments = (ins OptionalAttr<StrAttr>:$rootKind,
                        Confined<I16Attr, [IntNonNegative]>:$benefit,
-                       OptionalAttr<StrAttr>:$sym_name);
-
+                       OptionalAttr<SymbolNameAttr>:$sym_name);
   let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = [{
+    ($sym_name^)? `:` `benefit` `(` $benefit `)`
+    (`,` `root` `(` $rootKind^ `)`)? attr-dict-with-keyword $body
+  }];
+
   let builders = [
     OpBuilder<"OpBuilder &builder, OperationState &state, "
               "Optional<StringRef> rootKind = llvm::None, "
@@ -405,6 +409,12 @@ def PDL_RewriteOp : PDL_Op<"rewrite", [
                        Variadic<PDL_PositionalValue>:$externalArgs,
                        OptionalAttr<ArrayAttr>:$externalConstParams);
   let regions = (region AnyRegion:$body);
+  let assemblyFormat = [{
+    $root (`with` $name^ ($externalConstParams^)?
+                         (`(` $externalArgs^ `:` type($externalArgs) `)`)?)?
+          ($body^)?
+    attr-dict-with-keyword
+  }];
 }
 
 def PDL_RewriteEndOp : PDL_Op<"rewrite_end", [Terminator,

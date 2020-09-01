@@ -47,6 +47,48 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
 
   void emitInst(uint32_t Inst) override;
 
+  void EmitARM64WinCFIAllocStack(unsigned Size) override {
+    OS << "\t.seh_stackalloc " << Size << "\n";
+  }
+  void EmitARM64WinCFISaveFPLR(int Offset) override {
+    OS << "\t.seh_save_fplr " << Offset << "\n";
+  }
+  void EmitARM64WinCFISaveFPLRX(int Offset) override {
+    OS << "\t.seh_save_fplr_x " << Offset << "\n";
+  }
+  void EmitARM64WinCFISaveReg(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_reg x" << Reg << ", " << Offset << "\n";
+  }
+  void EmitARM64WinCFISaveRegX(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_reg_x x" << Reg << ", " << Offset << "\n";
+  }
+  void EmitARM64WinCFISaveRegP(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_regp x" << Reg << ", " << Offset << "\n";
+  }
+  void EmitARM64WinCFISaveRegPX(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_regp_x x" << Reg << ", " << Offset << "\n";
+  }
+  void EmitARM64WinCFISaveFReg(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_freg d" << Reg << ", " << Offset << "\n";
+  }
+  void EmitARM64WinCFISaveFRegX(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_freg_x d" << Reg << ", " << Offset << "\n";
+  }
+  void EmitARM64WinCFISaveFRegP(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_fregp d" << Reg << ", " << Offset << "\n";
+  }
+  void EmitARM64WinCFISaveFRegPX(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_fregp_x d" << Reg << ", " << Offset << "\n";
+  }
+  void EmitARM64WinCFISetFP() override { OS << "\t.seh_set_fp\n"; }
+  void EmitARM64WinCFIAddFP(unsigned Size) override {
+    OS << "\t.seh_add_fp " << Size << "\n";
+  }
+  void EmitARM64WinCFINop() override { OS << "\t.seh_nop\n"; }
+  void EmitARM64WinCFIPrologEnd() override { OS << "\t.seh_endprologue\n"; }
+  void EmitARM64WinCFIEpilogStart() override { OS << "\t.seh_startepilogue\n"; }
+  void EmitARM64WinCFIEpilogEnd() override { OS << "\t.seh_endepilogue\n"; }
+
 public:
   AArch64TargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
 };
