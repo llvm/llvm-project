@@ -3357,14 +3357,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::BITREVERSE: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known.Zero = Known2.Zero.reverseBits();
-    Known.One = Known2.One.reverseBits();
+    Known = Known2.reverseBits();
     break;
   }
   case ISD::BSWAP: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known.Zero = Known2.Zero.byteSwap();
-    Known.One = Known2.One.byteSwap();
+    Known = Known2.byteSwap();
     break;
   }
   case ISD::ABS: {
