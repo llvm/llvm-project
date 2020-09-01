@@ -211,7 +211,7 @@ struct Data {
   bool IsLittleEndian;
   bool Is64BitAddrSize;
   std::vector<AbbrevTable> DebugAbbrev;
-  std::vector<StringRef> DebugStrings;
+  Optional<std::vector<StringRef>> DebugStrings;
   Optional<std::vector<StringOffsetsTable>> DebugStrOffsets;
   Optional<std::vector<ARange>> DebugAranges;
   std::vector<Ranges> DebugRanges;
