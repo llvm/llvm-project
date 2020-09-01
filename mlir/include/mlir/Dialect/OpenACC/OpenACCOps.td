@@ -224,6 +224,14 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
 
   let arguments = (ins OptionalAttr<I64Attr>:$collapse,
+                       Optional<AnyInteger>:$gangNum,
+                       Optional<AnyInteger>:$gangStatic,
+                       Optional<AnyInteger>:$workerNum,
+                       Optional<AnyInteger>:$vectorLength,
+                       UnitAttr:$loopSeq,
+                       UnitAttr:$loopIndependent,
+                       UnitAttr:$loopAuto,
+                       Variadic<AnyInteger>:$tileOperands,
                        Variadic<AnyType>:$privateOperands,
                        OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands);
@@ -234,11 +242,16 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
   let extraClassDeclaration = [{
     static StringRef getCollapseAttrName() { return "collapse"; }
-    static StringRef getExecutionMappingAttrName() { return "exec_mapping"; }
-    static StringRef getGangAttrName() { return "gang"; }
     static StringRef getSeqAttrName() { return "seq"; }
-    static StringRef getVectorAttrName() { return "vector"; }
-    static StringRef getWorkerAttrName() { return "worker"; }
+    static StringRef getIndependentAttrName() { return "independent"; }
+    static StringRef getAutoAttrName() { return "auto"; }
+    static StringRef getExecutionMappingAttrName() { return "exec_mapping"; }
+    static StringRef getGangKeyword() { return "gang"; }
+    static StringRef getGangNumKeyword() { return "num"; }
+    static StringRef getGangStaticKeyword() { return "static"; }
+    static StringRef getVectorKeyword() { return "vector"; }
+    static StringRef getWorkerKeyword() { return "worker"; }
+    static StringRef getTileKeyword() { return "tile"; }
     static StringRef getPrivateKeyword() { return "private"; }
     static StringRef getReductionKeyword() { return "reduction"; }
   }];
