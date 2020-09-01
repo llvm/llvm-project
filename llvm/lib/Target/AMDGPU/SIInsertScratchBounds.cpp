@@ -54,7 +54,7 @@ public:
 
   bool insertBoundsCheck(MachineFunction &MF, MachineInstr *MI,
                          const int64_t SizeEstimate,
-                         const unsigned SizeReg,
+                         const Register SizeReg,
                          MachineBasicBlock **NextBB);
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -63,7 +63,7 @@ public:
 static void zeroReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
                     const SIRegisterInfo *RI, const SIInstrInfo *TII,
                     MachineBasicBlock::iterator &I, const DebugLoc &DL,
-                    unsigned Reg) {
+                    Register Reg) {
 
   auto EndDstRC = MRI->getRegClass(Reg);
   uint32_t RegSize = RI->getRegSizeInBits(*EndDstRC) / 32;
@@ -144,7 +144,7 @@ FunctionPass *llvm::createSIInsertScratchBoundsPass() {
 bool SIInsertScratchBounds::insertBoundsCheck(MachineFunction &MF,
                                               MachineInstr *MI,
                                               const int64_t SizeEstimate,
-                                              const unsigned SizeReg,
+                                              const Register SizeReg,
                                               MachineBasicBlock **NextBB) {
   const bool IsLoad = MI->mayLoad();
   DebugLoc DL = MI->getDebugLoc();
@@ -164,6 +164,14 @@ bool SIInsertScratchBounds::insertBoundsCheck(MachineFunction &MF,
     }
     // Else: estimate may be revised upward so we cannot statically delete
   }
+
+  // Workaround if VCC is live over the block split
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  Register VCCReg = ST->isWave32() ? AMDGPU::VCC_LO : AMDGPU::VCC;
+  Register SavedVCCReg;
+  auto Liveness = MI->getParent()->computeRegisterLiveness(TRI, VCCReg, MI, 16);
+  if (Liveness != MachineBasicBlock::LQR_Dead)
+    SavedVCCReg = MRI->createVirtualRegister(RI->getWaveMaskRegClass());
 
   // Setup new block structure
   MachineBasicBlock *PreAccessBB = MI->getParent();
@@ -196,18 +204,36 @@ bool SIInsertScratchBounds::insertBoundsCheck(MachineFunction &MF,
   MachineBasicBlock::iterator PreI = PreAccessBB->end();
   MachineBasicBlock::iterator PostI = PostAccessBB->begin();
   MachineBasicBlock::iterator ScratchI = ScratchAccessBB->end();
-  unsigned AddrReg;
+  Register AddrReg;
   bool KillAddr = false;
+
+  if (SavedVCCReg) {
+    BuildMI(*PreAccessBB, PreI, DL, TII->get(AMDGPU::COPY), SavedVCCReg)
+      .addReg(VCCReg, RegState::Kill);
+    BuildMI(*PostAccessBB, PostI, DL, TII->get(AMDGPU::COPY), VCCReg)
+      .addReg(SavedVCCReg, RegState::Kill);
+  }
 
   if (Offset && (Offset->getImm() > 0)) {
     AddrReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     KillAddr = true;
 
     if (Addr && Addr->isReg()) {
-      TII->getAddNoCarry(*PreAccessBB, PreI, DL, AddrReg)
-        .addImm(Offset->getImm())
-        .addReg(Addr->getReg())
-        .addImm(0); // clamp bit
+      if (ST->hasAddNoCarry()) {
+        BuildMI(*PreAccessBB, PreI, DL,
+                TII->get(AMDGPU::V_ADD_U32_e32), AddrReg)
+          .addImm(Offset->getImm())
+          .addReg(Addr->getReg());
+      } else {
+        // IMM for getAddNoCarry must be in a register
+        Register ImmReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+        BuildMI(*PreAccessBB, PreI, DL, TII->get(AMDGPU::S_MOV_B32), ImmReg)
+          .addImm(Offset->getImm());
+        TII->getAddNoCarry(*PreAccessBB, PreI, DL, AddrReg)
+          .addReg(ImmReg, RegState::Kill)
+          .addReg(Addr->getReg())
+          .addImm(0); // clamp bit
+      }
     } else {
       BuildMI(*PreAccessBB, PreI, DL,
               TII->get(AMDGPU::V_MOV_B32_e32), AddrReg)
@@ -219,9 +245,9 @@ bool SIInsertScratchBounds::insertBoundsCheck(MachineFunction &MF,
   }
 
   if (RI->isVGPR(*MRI, AddrReg)) {
-    const unsigned CondReg
+    const Register CondReg
       = MRI->createVirtualRegister(RI->getWaveMaskRegClass());
-    const unsigned ExecReg
+    const Register ExecReg
       = MRI->createVirtualRegister(RI->getWaveMaskRegClass());
 
     BuildMI(*PreAccessBB, PreI, DL,
@@ -242,9 +268,9 @@ bool SIInsertScratchBounds::insertBoundsCheck(MachineFunction &MF,
 
     if (IsLoad) {
       MachineOperand &Dst = MI->getOperand(0);
-      const unsigned DstReg = Dst.getReg();
+      const Register DstReg = Dst.getReg();
       const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
-      const unsigned LoadDstReg = MRI->createVirtualRegister(DstRC);
+      const Register LoadDstReg = MRI->createVirtualRegister(DstRC);
 
       Dst.setReg(LoadDstReg);
 
@@ -273,11 +299,11 @@ bool SIInsertScratchBounds::insertBoundsCheck(MachineFunction &MF,
         .addMBB(PostAccessBB);
 
       MachineOperand &Dst = MI->getOperand(0);
-      const unsigned DstReg = Dst.getReg();
+      const Register DstReg = Dst.getReg();
 
       const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
-      const unsigned LoadDstReg = MRI->createVirtualRegister(DstRC);
-      const unsigned ZeroDstReg = MRI->createVirtualRegister(DstRC);
+      const Register LoadDstReg = MRI->createVirtualRegister(DstRC);
+      const Register ZeroDstReg = MRI->createVirtualRegister(DstRC);
 
       zeroReg(*OutOfBoundsBB, MRI, RI, TII, OOBI, DL, ZeroDstReg);
 
@@ -320,7 +346,7 @@ bool SIInsertScratchBounds::runOnMachineFunction(MachineFunction &MF) {
     (int64_t) FrameInfo.estimateStackSize(MF);
 
   bool Changed = false;
-  unsigned SizeReg = 0; // defer assigning a register until required
+  Register SizeReg; // defer assigning a register until required
 
   MachineFunction::iterator NextBB;
   for (MachineFunction::iterator BI = MF.begin();

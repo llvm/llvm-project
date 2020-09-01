@@ -249,3 +249,57 @@ entry:
 
   ret void
 }
+
+; GCN-LABEL: {{^}}block_split_with_vcc:
+;
+; Mostly just check this example compile at all.
+;
+; GCN: s_mov_b32 [[BOUNDS:s[0-9]+]], 0x404
+; GFX9: v_cmp_gt_u32_e64 [[BOUNDSMASK:s\[[0-9]+:[0-9]+\]]], [[BOUNDS]], [[OFFSET:v[0-9]+]]
+; GFX9: s_and_saveexec_b64 [[EXECMASK:s\[[0-9]+:[0-9]+\]]], [[BOUNDSMASK]]
+; GFX10: v_cmp_gt_u32_e64 [[BOUNDSMASK:s[0-9]+]], [[BOUNDS]], [[OFFSET:v[0-9]+]]
+; GFX10: s_and_saveexec_b32 [[EXECMASK:s[0-9]+]], [[BOUNDSMASK]]
+; GCN: buffer_store_dword [[LOADVALUE:v[0-9]+]], [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}]
+; GFX9: s_mov_b64 exec, [[EXECMASK]]
+; GFX10: s_mov_b32 exec_lo, [[EXECMASK]]
+
+define amdgpu_ps void @block_split_with_vcc(i32 inreg %0, i32 inreg %1, i32 inreg %2, <2 x float> %3, <2 x float> %4, <2 x float> %5, <3 x float> %6, <2 x float> %7, <2 x float> %8, <2 x float> %9, float %10, float %11, float %12, float %13, float %14, i32 %15, i32 %16, i32 %17, i32 %18) local_unnamed_addr {
+.entry:
+  %19 = alloca [256 x i32], align 4, addrspace(5)
+  br label %21
+
+.preheader:                                       ; preds = %21
+  %20 = icmp eq i32 %22, 0
+  br label %27
+
+21:                                               ; preds = %.entry, %21
+  %22 = phi i32 [ 0, %.entry ], [ %25, %21 ]
+  %23 = phi i1 [ true, %.entry ], [ %26, %21 ]
+  %24 = getelementptr [256 x i32], [256 x i32] addrspace(5)* %19, i32 0, i32 %22
+  store i32 0, i32 addrspace(5)* %24, align 4
+  %25 = add i32 %22, 1
+  %26 = icmp slt i32 %22, 256
+  br i1 %23, label %21, label %.preheader, !llvm.loop !1
+
+27:                                               ; preds = %.preheader, %27
+  %.1 = phi i32 [ %.i1, %27 ], [ 0, %.preheader ]
+  %28 = add nuw nsw i32 %.1, 32
+  %29 = getelementptr [256 x i32], [256 x i32] addrspace(5)* %19, i32 0, i32 %28
+  %30 = load i32, i32 addrspace(5)* %29, align 4
+  %31 = icmp eq i32 %30, 0
+  %.i1 = select i1 %31, i32 0, i32 32
+  %.not = xor i1 %31, true
+  %brmerge = or i1 %20, %.not
+  br i1 %brmerge, label %32, label %27
+
+32:                                               ; preds = %27
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float 0.000000e+00, float undef, float undef, float undef, i1 true, i1 true)
+  ret void
+}
+
+declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #0
+
+attributes #0 = { inaccessiblememonly nounwind willreturn writeonly }
+attributes #1 = { nounwind "InitialPSInputAddr"="0" "amdgpu-unroll-threshold"="700" "denormal-fp-math-f32"="preserve-sign" "target-features"=",+enable-scratch-bounds-checks" }
+
+!1 = distinct !{!1}
