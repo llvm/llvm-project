@@ -135,11 +135,11 @@ program selectCaseProg
      case (40)
      case (90)
      case (91:99)
-     !ERROR: CASE (81_16:90_16) conflicts with previous cases
+     !ERROR: CASE (81_4:90_4) conflicts with previous cases
      case (81:90)
-     !ERROR: CASE (:80_16) conflicts with previous cases
+     !ERROR: CASE (:80_4) conflicts with previous cases
      case (:80)
-     !ERROR: CASE (200_16) conflicts with previous cases
+     !ERROR: CASE (200_4) conflicts with previous cases
      case (200)
      case default
   end select
