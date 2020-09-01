@@ -123,7 +123,7 @@ struct EndianAdapter final
   explicit EndianAdapter(EndianType &&Item)
       : FormatAdapter<EndianType>(std::move(Item)) {}
 
-  void format(llvm::raw_ostream &Stream, StringRef Style) {
+  void format(llvm::raw_ostream &Stream, StringRef Style) override {
     format_provider<T>::format(static_cast<T>(this->Item), Stream, Style);
   }
 };

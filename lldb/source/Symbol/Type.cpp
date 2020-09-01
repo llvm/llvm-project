@@ -375,6 +375,7 @@ llvm::Optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
       if (ArchSpec arch = m_symbol_file->GetObjectFile()->GetArchitecture()) {
         m_byte_size = arch.GetAddressByteSize();
         m_byte_size_has_value = true;
+        return m_byte_size;
       }
     } break;
   }

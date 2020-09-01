@@ -21,7 +21,6 @@ from datetime import date
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
-
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.todo', 'sphinx.ext.mathjax', 'sphinx.ext.intersphinx']
@@ -30,13 +29,29 @@ extensions = ['sphinx.ext.todo', 'sphinx.ext.mathjax', 'sphinx.ext.intersphinx']
 templates_path = ['_templates']
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = {
+    '.rst': 'restructuredtext',
+}
+try:
+  import recommonmark
+except ImportError:
+  # manpages do not use any .md sources
+  if not tags.has('builder-man'):
+    raise
+else:
+  import sphinx
+  if sphinx.version_info >= (3, 0):
+    # This requires 0.5 or later.
+    extensions.append('recommonmark')
+  else:
+    source_parsers = {'.md': 'recommonmark.parser.CommonMarkParser'}
+  source_suffix['.md'] = 'markdown'
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'ReleaseNotes'
+master_doc = 'Overview'
 
 # General information about the project.
 project = u'Flang'
@@ -196,7 +211,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('ReleaseNotes', 'Flang.tex', u'Flang Documentation',
+  ('Overview', 'Flang.tex', u'Flang Documentation',
    u'The Flang Team', 'manual'),
 ]
 
@@ -237,8 +252,8 @@ man_pages = []
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('ReleaseNotes', 'Flang', u'Flang Documentation',
-   u'The Flang Team', 'Flang', 'One line description of project.',
+  ('Overview', 'Flang', u'Flang Documentation',
+   u'The Flang Team', 'Flang', 'A Fortran front end for LLVM.',
    'Miscellaneous'),
 ]
 
