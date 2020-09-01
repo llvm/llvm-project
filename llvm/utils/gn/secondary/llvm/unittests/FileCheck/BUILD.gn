@@ -4,6 +4,7 @@ unittest("FileCheckTests") {
   deps = [
     "//llvm/lib/FileCheck",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [ "FileCheckTest.cpp" ]
 }
