@@ -70,9 +70,6 @@ def subst_compound_token_kind : TextSubstitution<
 def warn_compound_token_split_by_macro : Warning<
   "%sub{subst_compound_token_kind}0,1,2,3 appear in different "
   "macro expansion contexts">, InGroup<CompoundTokenSplitByMacro>;
-def warn_compound_token_split_by_file : Warning<
-  "%sub{subst_compound_token_kind}0,1,2,3 appear in different source files">,
-  InGroup<CompoundTokenSplit>;
 def note_compound_token_split_second_token_here : Note<
   "%select{|second }0%1 token is here">;
 def warn_compound_token_split_by_whitespace : Warning<
