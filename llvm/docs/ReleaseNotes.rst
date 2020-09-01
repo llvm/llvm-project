@@ -170,7 +170,6 @@ External Open Source Projects Using LLVM 12
 
 * A project...
 
-
 Additional Information
 ======================
 
