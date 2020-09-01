@@ -701,3 +701,27 @@ TEST_F(AArch64GISelMITest, TestKnownBitsBSwapBitReverse) {
   EXPECT_EQ(TestVal, BitReverseKnown.One.getZExtValue());
   EXPECT_EQ(~TestVal, BitReverseKnown.Zero.getZExtValue());
 }
+
+TEST_F(AArch64GISelMITest, TestKnownBitsUMax) {
+  StringRef MIRString = R"(
+   %val:_(s32) = COPY $w0
+   %zext:_(s64) = G_ZEXT %val
+   %const:_(s64) = G_CONSTANT i64 -256
+   %umax:_(s64) = G_UMAX %zext, %const
+   %copy_umax:_(s64) = COPY %umax
+)";
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register CopyUMax = Copies[Copies.size() - 1];
+  GISelKnownBits Info(*MF);
+
+  KnownBits KnownUmax = Info.getKnownBits(CopyUMax);
+  EXPECT_EQ(64u, KnownUmax.getBitWidth());
+  EXPECT_EQ(0u, KnownUmax.Zero.getZExtValue());
+  EXPECT_EQ(0xffffffffffffff00, KnownUmax.One.getZExtValue());
+
+  EXPECT_EQ(0u, KnownUmax.Zero.getZExtValue());
+  EXPECT_EQ(0xffffffffffffff00, KnownUmax.One.getZExtValue());
+}
