@@ -137,6 +137,18 @@ vector unsigned long long test_vec_mod_ull(void) {
   return vec_mod(vulla, vullb);
 }
 
+vector unsigned char test_xvcvspbf16(vector unsigned char vc) {
+  // CHECK-LABEL: @test_xvcvspbf16(
+  // CHECK:    [[TMP0:%.*]] = call <16 x i8> @llvm.ppc.vsx.xvcvspbf16(<16 x i8> [[VC:%.*]])
+  return __builtin_vsx_xvcvspbf16(vc);
+}
+
+vector unsigned char test_xvcvbf16spn(vector unsigned char vc) {
+  // CHECK-LABEL: @test_xvcvbf16spn(
+  // CHECK:    [[TMP0:%.*]] = call <16 x i8> @llvm.ppc.vsx.xvcvbf16spn(<16 x i8> [[VC:%.*]])
+  return __builtin_vsx_xvcvbf16spn(vc);
+}
+
 vector unsigned long long test_vpdepd(void) {
   // CHECK: @llvm.ppc.altivec.vpdepd(<2 x i64>
   // CHECK-NEXT: ret <2 x i64>
