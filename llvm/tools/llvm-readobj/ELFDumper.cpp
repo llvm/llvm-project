@@ -5691,12 +5691,14 @@ void DumpStyle<ELFT>::printFunctionStackSize(const ELFObjectFile<ELFT> *Obj,
   uint64_t StackSize = Data.getULEB128(Offset);
   // getULEB128() does not advance Offset if it is not able to extract a valid
   // integer.
-  if (*Offset == PrevOffset)
-    reportError(
+  if (*Offset == PrevOffset) {
+    reportWarning(
         createStringError(object_error::parse_failed,
                           "could not extract a valid stack size in section %s",
                           SectionName.data()),
         Obj->getFileName());
+    return;
+  }
 
   printStackSizeEntry(StackSize, FuncName);
 }
@@ -5750,13 +5752,14 @@ void DumpStyle<ELFT>::printStackSize(const ELFObjectFile<ELFT> *Obj,
   }
 
   uint64_t Offset = Reloc.getOffset();
-  if (!Data.isValidOffsetForDataOfSize(Offset, sizeof(Elf_Addr) + 1))
-    reportError(
-        createStringError(object_error::parse_failed,
-                          "found invalid relocation offset into section %s "
-                          "while trying to extract a stack size entry",
-                          StackSizeSectionName.data()),
-        FileStr);
+  if (!Data.isValidOffsetForDataOfSize(Offset, sizeof(Elf_Addr) + 1)) {
+    reportUniqueWarning(createStringError(
+        object_error::parse_failed,
+        "found invalid relocation offset (0x" + Twine::utohexstr(Offset) +
+            ") into section " + StackSizeSectionName +
+            " while trying to extract a stack size entry"));
+    return;
+  }
 
   uint64_t Addend = Data.getAddress(&Offset);
   uint64_t SymValue = Resolver(Reloc, RelocSymValue, Addend);
@@ -5770,7 +5773,6 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
   // This function ignores potentially erroneous input, unless it is directly
   // related to stack size reporting.
   const ELFFile<ELFT> *EF = Obj->getELFFile();
-  StringRef FileStr = Obj->getFileName();
   for (const SectionRef &Sec : Obj->sections()) {
     StringRef SectionName = getSectionName(Sec);
     if (SectionName != ".stack_sizes")
@@ -5785,12 +5787,11 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
       // The function address is followed by a ULEB representing the stack
       // size. Check for an extra byte before we try to process the entry.
       if (!Data.isValidOffsetForDataOfSize(Offset, sizeof(Elf_Addr) + 1)) {
-        reportError(
-            createStringError(
-                object_error::parse_failed,
-                "section %s ended while trying to extract a stack size entry",
-                SectionName.data()),
-            FileStr);
+        reportUniqueWarning(createStringError(
+            object_error::parse_failed,
+            describe(EF, *ElfSec) +
+                " ended while trying to extract a stack size entry"));
+        break;
       }
       uint64_t SymValue = Data.getAddress(&Offset);
       printFunctionStackSize(Obj, SymValue, /*FunctionSec=*/None, SectionName,
@@ -5832,12 +5833,14 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
       continue;
 
     Expected<section_iterator> RelSecOrErr = Sec.getRelocatedSection();
-    if (!RelSecOrErr)
-      reportError(createStringError(object_error::parse_failed,
-                                    "%s: failed to get a relocated section: %s",
-                                    SectionName.data(),
-                                    toString(RelSecOrErr.takeError()).c_str()),
-                  Obj->getFileName());
+    if (!RelSecOrErr) {
+      reportUniqueWarning(
+          createStringError(object_error::parse_failed,
+                            describe(Obj->getELFFile(), *ElfSec) +
+                                ": failed to get a relocated section: " +
+                                toString(RelSecOrErr.takeError())));
+      continue;
+    }
 
     const Elf_Shdr *ContentsSec =
         Obj->getSection((*RelSecOrErr)->getRawDataRefImpl());
@@ -5881,14 +5884,19 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
     std::tie(IsSupportedFn, Resolver) = getRelocationResolver(*Obj);
     auto Contents = unwrapOrError(this->FileName, StackSizesSec.getContents());
     DataExtractor Data(Contents, Obj->isLittleEndian(), sizeof(Elf_Addr));
+    size_t I = 0;
     for (const RelocationRef &Reloc : RelocSec.relocations()) {
-      if (!IsSupportedFn || !IsSupportedFn(Reloc.getType()))
-        reportError(createStringError(
-                        object_error::parse_failed,
-                        "unsupported relocation type in section %s: %s",
-                        getSectionName(RelocSec).data(),
-                        EF->getRelocationTypeName(Reloc.getType()).data()),
-                    Obj->getFileName());
+      ++I;
+      if (!IsSupportedFn || !IsSupportedFn(Reloc.getType())) {
+        const Elf_Shdr *RelocSecShdr =
+            Obj->getSection(RelocSec.getRawDataRefImpl());
+        reportUniqueWarning(createStringError(
+            object_error::parse_failed,
+            describe(EF, *RelocSecShdr) +
+                " contains an unsupported relocation with index " + Twine(I) +
+                ": " + EF->getRelocationTypeName(Reloc.getType())));
+        continue;
+      }
       this->printStackSize(Obj, Reloc, FunctionSec, StackSizeSectionName,
                            Resolver, Data);
     }
