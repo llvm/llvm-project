@@ -49,6 +49,13 @@ public:
     return { Min / RHS, Scalable };
   }
 
+  friend ElementCount operator-(const ElementCount &LHS,
+                                const ElementCount &RHS) {
+    assert(LHS.Scalable == RHS.Scalable &&
+           "Arithmetic using mixed scalable and fixed types");
+    return {LHS.Min - RHS.Min, LHS.Scalable};
+  }
+
   bool operator==(const ElementCount& RHS) const {
     return Min == RHS.Min && Scalable == RHS.Scalable;
   }
