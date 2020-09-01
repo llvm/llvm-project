@@ -54,7 +54,7 @@ public:
                      ArrayRef<const MemRegion *> Regions,
                      const LocationContext *LCtx, const CallEvent *Call) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
-                  const char *Sep) const;
+                  const char *Sep) const override;
   void checkLiveSymbols(ProgramStateRef State, SymbolReaper &SR) const;
 
 private:
