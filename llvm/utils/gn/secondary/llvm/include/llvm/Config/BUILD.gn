@@ -286,9 +286,9 @@ write_cmake_config("config") {
   }
 
   if (llvm_enable_terminfo) {
-    values += [ "HAVE_TERMINFO=1" ]
+    values += [ "LLVM_ENABLE_TERMINFO=1" ]
   } else {
-    values += [ "HAVE_TERMINFO=" ]
+    values += [ "LLVM_ENABLE_TERMINFO=" ]
   }
 
   if (llvm_enable_dia_sdk) {
