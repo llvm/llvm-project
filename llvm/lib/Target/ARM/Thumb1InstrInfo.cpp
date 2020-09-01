@@ -152,37 +152,3 @@ bool Thumb1InstrInfo::canCopyGluedNodeDuringSchedule(SDNode *N) const {
 
   return false;
 }
-
-MachineInstr *Thumb1InstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    LiveIntervals *LIS) const {
-  // Replace:
-  // ldr Rd, func address
-  // blx Rd
-  // with:
-  // bl func
-
-  if (MI.getOpcode() == ARM::tBLXr && LoadMI.getOpcode() == ARM::tLDRpci &&
-      MI.getParent() == LoadMI.getParent()) {
-    unsigned CPI = LoadMI.getOperand(1).getIndex();
-    const MachineConstantPool *MCP = MF.getConstantPool();
-    if (CPI >= MCP->getConstants().size())
-      return nullptr;
-    const MachineConstantPoolEntry &CPE = MCP->getConstants()[CPI];
-    assert(!CPE.isMachineConstantPoolEntry() && "Invalid constpool entry");
-    const Function *Callee = dyn_cast<Function>(CPE.Val.ConstVal);
-    if (!Callee)
-      return nullptr;
-    const char *FuncName = MF.createExternalSymbolName(Callee->getName());
-    MachineInstrBuilder MIB =
-        BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(ARM::tBL))
-            .add(predOps(ARMCC::AL))
-            .addExternalSymbol(FuncName);
-    for (auto &MO : MI.implicit_operands())
-      MIB.add(MO);
-    return MIB.getInstr();
-  }
-
-  return nullptr;
-}
