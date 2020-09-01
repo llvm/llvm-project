@@ -672,12 +672,13 @@ public:
     initFullExprCleanup();
   }
 
-  /// Queue a cleanup to be pushed after finishing the current
-  /// full-expression.
+  /// Queue a cleanup to be pushed after finishing the current full-expression,
+  /// potentially with an active flag.
   template <class T, class... As>
   void pushCleanupAfterFullExpr(CleanupKind Kind, As... A) {
     if (!isInConditionalBranch())
-      return pushCleanupAfterFullExprImpl<T>(Kind, Address::invalid(), A...);
+      return pushCleanupAfterFullExprWithActiveFlag<T>(Kind, Address::invalid(),
+                                                       A...);
 
     Address ActiveFlag = createCleanupActiveFlag();
     assert(!DominatingValue<Address>::needsSaving(ActiveFlag) &&
@@ -687,12 +688,12 @@ public:
     SavedTuple Saved{saveValueInCond(A)...};
 
     typedef EHScopeStack::ConditionalCleanup<T, As...> CleanupType;
-    pushCleanupAfterFullExprImpl<CleanupType>(Kind, ActiveFlag, Saved);
+    pushCleanupAfterFullExprWithActiveFlag<CleanupType>(Kind, ActiveFlag, Saved);
   }
 
   template <class T, class... As>
-  void pushCleanupAfterFullExprImpl(CleanupKind Kind, Address ActiveFlag,
-                                    As... A) {
+  void pushCleanupAfterFullExprWithActiveFlag(CleanupKind Kind,
+                                              Address ActiveFlag, As... A) {
     LifetimeExtendedCleanupHeader Header = {sizeof(T), Kind,
                                             ActiveFlag.isValid()};
 
