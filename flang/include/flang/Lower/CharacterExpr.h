@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_LOWER_CHARACTEREXPR_H
 #define FORTRAN_LOWER_CHARACTEREXPR_H
@@ -107,7 +111,10 @@ public:
   static bool isCharacter(mlir::Type type);
 
   /// Extract the kind of a character type
-  static int getCharacterKind(mlir::Type type);
+  static fir::KindTy getCharacterKind(mlir::Type type);
+
+  /// Extract the kind of a character or array of character type.
+  static fir::KindTy getCharacterOrSequenceKind(mlir::Type type);
 
   /// Determine the base character type
   static fir::CharacterType getCharacterType(mlir::Type type);
@@ -129,6 +136,14 @@ public:
   /// otherwise it is a CharArrayBoxValue.
   fir::ExtendedValue toExtendedValue(mlir::Value character,
                                      mlir::Value len = {});
+
+  /// Is `type` a sequence (array) of CHARACTER type? Return true for any of the
+  /// following cases:
+  ///   - !fir.array<len x dim x ... x !fir.char<kind>>
+  ///   - !fir.array<dim x !fir.char<kind, len>>
+  ///   - !fir.ref<T>  where T is either of the first two cases
+  ///   - !fir.box<T>  where T is either of the first two cases
+  static bool isArray(mlir::Type type);
 
 private:
   fir::CharBoxValue materializeValue(const fir::CharBoxValue &str);

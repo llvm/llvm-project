@@ -29,6 +29,7 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Parser/parse-tree.h"
@@ -41,6 +42,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
+
 #define DEBUG_TYPE "flang-lower-bridge"
 
 #undef TODO
@@ -2435,12 +2437,12 @@ Fortran::lower::LoweringBridge::createFoldingContext() const {
 }
 
 void Fortran::lower::LoweringBridge::lower(
-    const Fortran::parser::Program &prg, fir::NameUniquer &uniquer,
+    const Fortran::parser::Program &prg,
     const Fortran::semantics::SemanticsContext &semanticsContext) {
   auto pft = Fortran::lower::createPFT(prg, semanticsContext);
   if (dumpBeforeFir)
     Fortran::lower::dumpPFT(llvm::errs(), *pft);
-  FirConverter converter{*this, uniquer};
+  FirConverter converter{*this, *fir::getNameUniquer(getModule())};
   converter.run(*pft);
 }
 
@@ -2451,12 +2453,14 @@ void Fortran::lower::LoweringBridge::parseSourceFile(llvm::SourceMgr &srcMgr) {
 }
 
 Fortran::lower::LoweringBridge::LoweringBridge(
-    mlir::MLIRContext &ctx,
+    mlir::MLIRContext &context,
     const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
     const Fortran::evaluate::IntrinsicProcTable &intrinsics,
-    const Fortran::parser::CookedSource &cooked)
-    : defaultKinds{defaultKinds},
-      intrinsics{intrinsics}, cooked{&cooked}, context{ctx}, kindMap{&ctx} {
+    const Fortran::parser::CookedSource &cooked, llvm::Triple &triple,
+    fir::NameUniquer &uniquer, fir::KindMapping &kindMap)
+    : defaultKinds{defaultKinds}, intrinsics{intrinsics}, cooked{&cooked},
+      context{context}, kindMap{kindMap} {
+  // Register the diagnostic handler.
   context.getDiagEngine().registerHandler([](mlir::Diagnostic &diag) {
     auto &os = llvm::errs();
     switch (diag.getSeverity()) {
@@ -2478,6 +2482,12 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     os.flush();
     return mlir::success();
   });
+
+  // Create the module and attach the attributes.
   module = std::make_unique<mlir::ModuleOp>(
       mlir::ModuleOp::create(mlir::UnknownLoc::get(&context)));
+  assert(module.get() && "module was not created");
+  fir::setTargetTriple(*module.get(), triple);
+  fir::setNameUniquer(*module.get(), uniquer);
+  fir::setKindMapping(*module.get(), kindMap);
 }
