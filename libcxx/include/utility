@@ -499,7 +499,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
           second(_VSTD::get<1>(_VSTD::forward<_Tuple>(__p))) {}
 
     template <class... _Args1, class... _Args2>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     pair(piecewise_construct_t __pc,
          tuple<_Args1...> __first_args, tuple<_Args2...> __second_args)
         _NOEXCEPT_((is_nothrow_constructible<first_type, _Args1...>::value &&
@@ -508,7 +508,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
                 typename __make_tuple_indices<sizeof...(_Args1)>::type(),
                 typename __make_tuple_indices<sizeof...(_Args2) >::type()) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     pair& operator=(typename conditional<
                         is_copy_assignable<first_type>::value &&
                         is_copy_assignable<second_type>::value,
@@ -521,7 +521,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
         return *this;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     pair& operator=(typename conditional<
                         is_move_assignable<first_type>::value &&
                         is_move_assignable<second_type>::value,
@@ -537,7 +537,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
     template <class _Tuple, _EnableB<
             _CheckTLC<_Tuple>::template __enable_assign<_Tuple>()
      > = false>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     pair& operator=(_Tuple&& __p) {
         first = _VSTD::get<0>(_VSTD::forward<_Tuple>(__p));
         second = _VSTD::get<1>(_VSTD::forward<_Tuple>(__p));
@@ -545,7 +545,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
     }
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     void
     swap(pair& __p) _NOEXCEPT_(__is_nothrow_swappable<first_type>::value &&
                                __is_nothrow_swappable<second_type>::value)
@@ -558,10 +558,10 @@ private:
 
 #ifndef _LIBCPP_CXX03_LANG
     template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
-        _LIBCPP_INLINE_VISIBILITY
-        pair(piecewise_construct_t,
-             tuple<_Args1...>& __first_args, tuple<_Args2...>& __second_args,
-             __tuple_indices<_I1...>, __tuple_indices<_I2...>);
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    pair(piecewise_construct_t,
+         tuple<_Args1...>& __first_args, tuple<_Args2...>& __second_args,
+         __tuple_indices<_I1...>, __tuple_indices<_I2...>);
 #endif
 };
 
@@ -619,7 +619,7 @@ operator<=(const pair<_T1,_T2>& __x, const pair<_T1,_T2>& __y)
 }
 
 template <class _T1, class _T2>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 typename enable_if
 <
     __is_swappable<_T1>::value &&
