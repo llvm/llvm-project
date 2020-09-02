@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=CHECK-ERR %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=CHECK-ERR --implicit-check-not=error: %s
 
 ds_add_u32 v1, v2 offset:65535
 // CHECK: [0xff,0xff,0x00,0xd8,0x01,0x02,0x00,0x00]
