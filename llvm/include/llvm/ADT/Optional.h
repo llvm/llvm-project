@@ -43,21 +43,21 @@ class OptionalStorage {
 public:
   ~OptionalStorage() { reset(); }
 
-  OptionalStorage() noexcept : empty(), hasVal(false) {}
+  constexpr OptionalStorage() noexcept : empty(), hasVal(false) {}
 
-  OptionalStorage(OptionalStorage const &other) : OptionalStorage() {
+  constexpr OptionalStorage(OptionalStorage const &other) : OptionalStorage() {
     if (other.hasValue()) {
       emplace(other.value);
     }
   }
-  OptionalStorage(OptionalStorage &&other) : OptionalStorage() {
+  constexpr OptionalStorage(OptionalStorage &&other) : OptionalStorage() {
     if (other.hasValue()) {
       emplace(std::move(other.value));
     }
   }
 
   template <class... Args>
-  explicit OptionalStorage(in_place_t, Args &&... args)
+  constexpr explicit OptionalStorage(in_place_t, Args &&... args)
       : value(std::forward<Args>(args)...), hasVal(true) {}
 
   void reset() noexcept {
@@ -67,13 +67,13 @@ public:
     }
   }
 
-  bool hasValue() const noexcept { return hasVal; }
+  constexpr bool hasValue() const noexcept { return hasVal; }
 
   T &getValue() LLVM_LVALUE_FUNCTION noexcept {
     assert(hasVal);
     return value;
   }
-  T const &getValue() const LLVM_LVALUE_FUNCTION noexcept {
+  constexpr T const &getValue() const LLVM_LVALUE_FUNCTION noexcept {
     assert(hasVal);
     return value;
   }
@@ -148,16 +148,16 @@ template <typename T> class OptionalStorage<T, true> {
 public:
   ~OptionalStorage() = default;
 
-  OptionalStorage() noexcept : empty{} {}
+  constexpr OptionalStorage() noexcept : empty{} {}
 
-  OptionalStorage(OptionalStorage const &other) = default;
-  OptionalStorage(OptionalStorage &&other) = default;
+  constexpr OptionalStorage(OptionalStorage const &other) = default;
+  constexpr OptionalStorage(OptionalStorage &&other) = default;
 
   OptionalStorage &operator=(OptionalStorage const &other) = default;
   OptionalStorage &operator=(OptionalStorage &&other) = default;
 
   template <class... Args>
-  explicit OptionalStorage(in_place_t, Args &&... args)
+  constexpr explicit OptionalStorage(in_place_t, Args &&... args)
       : value(std::forward<Args>(args)...), hasVal(true) {}
 
   void reset() noexcept {
@@ -167,13 +167,13 @@ public:
     }
   }
 
-  bool hasValue() const noexcept { return hasVal; }
+  constexpr bool hasValue() const noexcept { return hasVal; }
 
   T &getValue() LLVM_LVALUE_FUNCTION noexcept {
     assert(hasVal);
     return value;
   }
-  T const &getValue() const LLVM_LVALUE_FUNCTION noexcept {
+  constexpr T const &getValue() const LLVM_LVALUE_FUNCTION noexcept {
     assert(hasVal);
     return value;
   }
@@ -221,11 +221,12 @@ public:
   constexpr Optional() {}
   constexpr Optional(NoneType) {}
 
-  Optional(const T &y) : Storage(optional_detail::in_place_t{}, y) {}
-  Optional(const Optional &O) = default;
+  constexpr Optional(const T &y) : Storage(optional_detail::in_place_t{}, y) {}
+  constexpr Optional(const Optional &O) = default;
 
-  Optional(T &&y) : Storage(optional_detail::in_place_t{}, std::move(y)) {}
-  Optional(Optional &&O) = default;
+  constexpr Optional(T &&y)
+      : Storage(optional_detail::in_place_t{}, std::move(y)) {}
+  constexpr Optional(Optional &&O) = default;
 
   Optional &operator=(T &&y) {
     Storage = std::move(y);
@@ -238,7 +239,7 @@ public:
     Storage.emplace(std::forward<ArgTypes>(Args)...);
   }
 
-  static inline Optional create(const T *y) {
+  static constexpr Optional create(const T *y) {
     return y ? Optional(*y) : Optional();
   }
 
@@ -250,16 +251,20 @@ public:
 
   void reset() { Storage.reset(); }
 
-  const T *getPointer() const { return &Storage.getValue(); }
+  constexpr const T *getPointer() const { return &Storage.getValue(); }
   T *getPointer() { return &Storage.getValue(); }
-  const T &getValue() const LLVM_LVALUE_FUNCTION { return Storage.getValue(); }
+  constexpr const T &getValue() const LLVM_LVALUE_FUNCTION {
+    return Storage.getValue();
+  }
   T &getValue() LLVM_LVALUE_FUNCTION { return Storage.getValue(); }
 
-  explicit operator bool() const { return hasValue(); }
-  bool hasValue() const { return Storage.hasValue(); }
-  const T *operator->() const { return getPointer(); }
+  constexpr explicit operator bool() const { return hasValue(); }
+  constexpr bool hasValue() const { return Storage.hasValue(); }
+  constexpr const T *operator->() const { return getPointer(); }
   T *operator->() { return getPointer(); }
-  const T &operator*() const LLVM_LVALUE_FUNCTION { return getValue(); }
+  constexpr const T &operator*() const LLVM_LVALUE_FUNCTION {
+    return getValue();
+  }
   T &operator*() LLVM_LVALUE_FUNCTION { return getValue(); }
 
   template <typename U>
@@ -295,136 +300,152 @@ public:
 };
 
 template <typename T, typename U>
-bool operator==(const Optional<T> &X, const Optional<U> &Y) {
+constexpr bool operator==(const Optional<T> &X, const Optional<U> &Y) {
   if (X && Y)
     return *X == *Y;
   return X.hasValue() == Y.hasValue();
 }
 
 template <typename T, typename U>
-bool operator!=(const Optional<T> &X, const Optional<U> &Y) {
+constexpr bool operator!=(const Optional<T> &X, const Optional<U> &Y) {
   return !(X == Y);
 }
 
 template <typename T, typename U>
-bool operator<(const Optional<T> &X, const Optional<U> &Y) {
+constexpr bool operator<(const Optional<T> &X, const Optional<U> &Y) {
   if (X && Y)
     return *X < *Y;
   return X.hasValue() < Y.hasValue();
 }
 
 template <typename T, typename U>
-bool operator<=(const Optional<T> &X, const Optional<U> &Y) {
+constexpr bool operator<=(const Optional<T> &X, const Optional<U> &Y) {
   return !(Y < X);
 }
 
 template <typename T, typename U>
-bool operator>(const Optional<T> &X, const Optional<U> &Y) {
+constexpr bool operator>(const Optional<T> &X, const Optional<U> &Y) {
   return Y < X;
 }
 
 template <typename T, typename U>
-bool operator>=(const Optional<T> &X, const Optional<U> &Y) {
+constexpr bool operator>=(const Optional<T> &X, const Optional<U> &Y) {
   return !(X < Y);
 }
 
-template<typename T>
-bool operator==(const Optional<T> &X, NoneType) {
+template <typename T>
+constexpr bool operator==(const Optional<T> &X, NoneType) {
   return !X;
 }
 
-template<typename T>
-bool operator==(NoneType, const Optional<T> &X) {
+template <typename T>
+constexpr bool operator==(NoneType, const Optional<T> &X) {
   return X == None;
 }
 
-template<typename T>
-bool operator!=(const Optional<T> &X, NoneType) {
+template <typename T>
+constexpr bool operator!=(const Optional<T> &X, NoneType) {
   return !(X == None);
 }
 
-template<typename T>
-bool operator!=(NoneType, const Optional<T> &X) {
+template <typename T>
+constexpr bool operator!=(NoneType, const Optional<T> &X) {
   return X != None;
 }
 
-template <typename T> bool operator<(const Optional<T> &X, NoneType) {
+template <typename T> constexpr bool operator<(const Optional<T> &X, NoneType) {
   return false;
 }
 
-template <typename T> bool operator<(NoneType, const Optional<T> &X) {
+template <typename T> constexpr bool operator<(NoneType, const Optional<T> &X) {
   return X.hasValue();
 }
 
-template <typename T> bool operator<=(const Optional<T> &X, NoneType) {
+template <typename T>
+constexpr bool operator<=(const Optional<T> &X, NoneType) {
   return !(None < X);
 }
 
-template <typename T> bool operator<=(NoneType, const Optional<T> &X) {
+template <typename T>
+constexpr bool operator<=(NoneType, const Optional<T> &X) {
   return !(X < None);
 }
 
-template <typename T> bool operator>(const Optional<T> &X, NoneType) {
+template <typename T> constexpr bool operator>(const Optional<T> &X, NoneType) {
   return None < X;
 }
 
-template <typename T> bool operator>(NoneType, const Optional<T> &X) {
+template <typename T> constexpr bool operator>(NoneType, const Optional<T> &X) {
   return X < None;
 }
 
-template <typename T> bool operator>=(const Optional<T> &X, NoneType) {
+template <typename T>
+constexpr bool operator>=(const Optional<T> &X, NoneType) {
   return None <= X;
 }
 
-template <typename T> bool operator>=(NoneType, const Optional<T> &X) {
+template <typename T>
+constexpr bool operator>=(NoneType, const Optional<T> &X) {
   return X <= None;
 }
 
-template <typename T> bool operator==(const Optional<T> &X, const T &Y) {
+template <typename T>
+constexpr bool operator==(const Optional<T> &X, const T &Y) {
   return X && *X == Y;
 }
 
-template <typename T> bool operator==(const T &X, const Optional<T> &Y) {
+template <typename T>
+constexpr bool operator==(const T &X, const Optional<T> &Y) {
   return Y && X == *Y;
 }
 
-template <typename T> bool operator!=(const Optional<T> &X, const T &Y) {
+template <typename T>
+constexpr bool operator!=(const Optional<T> &X, const T &Y) {
   return !(X == Y);
 }
 
-template <typename T> bool operator!=(const T &X, const Optional<T> &Y) {
+template <typename T>
+constexpr bool operator!=(const T &X, const Optional<T> &Y) {
   return !(X == Y);
 }
 
-template <typename T> bool operator<(const Optional<T> &X, const T &Y) {
+template <typename T>
+constexpr bool operator<(const Optional<T> &X, const T &Y) {
   return !X || *X < Y;
 }
 
-template <typename T> bool operator<(const T &X, const Optional<T> &Y) {
+template <typename T>
+constexpr bool operator<(const T &X, const Optional<T> &Y) {
   return Y && X < *Y;
 }
 
-template <typename T> bool operator<=(const Optional<T> &X, const T &Y) {
+template <typename T>
+constexpr bool operator<=(const Optional<T> &X, const T &Y) {
   return !(Y < X);
 }
 
-template <typename T> bool operator<=(const T &X, const Optional<T> &Y) {
+template <typename T>
+constexpr bool operator<=(const T &X, const Optional<T> &Y) {
   return !(Y < X);
 }
 
-template <typename T> bool operator>(const Optional<T> &X, const T &Y) {
+template <typename T>
+constexpr bool operator>(const Optional<T> &X, const T &Y) {
   return Y < X;
 }
 
-template <typename T> bool operator>(const T &X, const Optional<T> &Y) {
+template <typename T>
+constexpr bool operator>(const T &X, const Optional<T> &Y) {
   return Y < X;
 }
 
-template <typename T> bool operator>=(const Optional<T> &X, const T &Y) {
+template <typename T>
+constexpr bool operator>=(const Optional<T> &X, const T &Y) {
   return !(X < Y);
 }
 
-template <typename T> bool operator>=(const T &X, const Optional<T> &Y) {
+template <typename T>
+constexpr bool operator>=(const T &X, const Optional<T> &Y) {
   return !(X < Y);
 }
 
