@@ -186,7 +186,7 @@ void OperationState::addOperands(ValueRange newOperands) {
   operands.append(newOperands.begin(), newOperands.end());
 }
 
-void OperationState::addSuccessors(SuccessorRange newSuccessors) {
+void OperationState::addSuccessors(BlockRange newSuccessors) {
   successors.append(newSuccessors.begin(), newSuccessors.end());
 }
 

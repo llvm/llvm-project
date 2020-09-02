@@ -32,25 +32,25 @@ class Operation final
 public:
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
-                           ArrayRef<Type> resultTypes, ArrayRef<Value> operands,
+                           TypeRange resultTypes, ValueRange operands,
                            ArrayRef<NamedAttribute> attributes,
-                           ArrayRef<Block *> successors, unsigned numRegions);
+                           BlockRange successors, unsigned numRegions);
 
   /// Overload of create that takes an existing MutableDictionaryAttr to avoid
   /// unnecessarily uniquing a list of attributes.
   static Operation *create(Location location, OperationName name,
-                           ArrayRef<Type> resultTypes, ArrayRef<Value> operands,
+                           TypeRange resultTypes, ValueRange operands,
                            MutableDictionaryAttr attributes,
-                           ArrayRef<Block *> successors, unsigned numRegions);
+                           BlockRange successors, unsigned numRegions);
 
   /// Create a new Operation from the fields stored in `state`.
   static Operation *create(const OperationState &state);
 
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
-                           ArrayRef<Type> resultTypes, ArrayRef<Value> operands,
+                           TypeRange resultTypes, ValueRange operands,
                            MutableDictionaryAttr attributes,
-                           ArrayRef<Block *> successors = {},
+                           BlockRange successors = {},
                            RegionRange regions = {});
 
   /// The name of an operation is the key identifier for it.
@@ -633,7 +633,7 @@ private:
   bool hasValidOrder() { return orderIndex != kInvalidOrderIdx; }
 
 private:
-  Operation(Location location, OperationName name, ArrayRef<Type> resultTypes,
+  Operation(Location location, OperationName name, TypeRange resultTypes,
             unsigned numSuccessors, unsigned numRegions,
             const MutableDictionaryAttr &attributes, bool hasOperandStorage);
 
