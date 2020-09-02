@@ -31,13 +31,13 @@ int main(int argc, const char *argv[]) {
 // CHECK:   14|      2|int main(int argc, const char *argv[]) {
 // CHECK:   15|      2|  if (argc < 2)
 // CHECK:   16|      0|    return 1;
-// CHECK:   17|      2|
+// CHECK:   17|       |
 // CHECK:   18|      2|  FILE *F = fopen(argv[1], "r+b");
 // CHECK:   19|      2|  if (!F) {
 // CHECK:   20|       |    // File might not exist, try opening with truncation
 // CHECK:   21|      1|    F = fopen(argv[1], "w+b");
 // CHECK:   22|      1|  }
 // CHECK:   23|      2|  __llvm_profile_set_file_object(F, 1);
-// CHECK:   24|      2|
+// CHECK:   24|       |
 // CHECK:   25|      2|  return 0;
 // CHECK:   26|      2|}

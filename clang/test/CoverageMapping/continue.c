@@ -1,5 +1,4 @@
-// RUN: %strip_comments > %t.stripped.c
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name continue.c %t.stripped.c | FileCheck %s
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name continue.c %s | FileCheck %s
 
 int main() {                    // CHECK: File 0, [[@LINE]]:12 -> [[@LINE+21]]:2 = #0
   int j = 0;                    // CHECK-NEXT: File 0, [[@LINE+2]]:18 -> [[@LINE+2]]:24 = (#0 + #1)

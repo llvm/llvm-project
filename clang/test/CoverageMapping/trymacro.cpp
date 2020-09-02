@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -fexceptions -fcxx-exceptions -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name trymacro.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -triple %itanium_abi_triple -std=c++11 -fexceptions -fcxx-exceptions -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name trymacro.cpp %s | FileCheck %s
 
 // CHECK: Z3fn1v:
 void fn1() try { return; } // CHECK: [[@LINE]]:12 -> [[@LINE+1]]:14 = #1
