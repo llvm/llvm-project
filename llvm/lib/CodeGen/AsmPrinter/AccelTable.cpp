@@ -190,7 +190,6 @@ public:
 template <typename DataT>
 class Dwarf5AccelTableWriter : public AccelTableWriter {
   struct Header {
-    uint32_t UnitLength = 0;
     uint16_t Version = 5;
     uint16_t Padding = 0;
     uint32_t CompUnitCount;
