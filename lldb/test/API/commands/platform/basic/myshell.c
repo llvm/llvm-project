@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-#ifdef WIN32
+#if defined(_WIN32) || defined(_WIN64)
   char *cmd_opt = "/C";
 #else
   char *cmd_opt = "-c";
