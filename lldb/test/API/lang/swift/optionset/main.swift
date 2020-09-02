@@ -41,6 +41,8 @@ func main() {
   //%self.expect('expression user_option', substrs=['rawValue = 123456'])
   //%self.expect('frame variable sdk_option_single_valued', substrs=['.insertionIndex'])
   //%self.expect('frame variable sdk_option_single_valued', matching=False, substrs=['['])
+  //%self.expect('expression sdk_option_single_valued', substrs=['.insertionIndex'])
+  //%self.expect('expression sdk_option_single_valued', matching=False, substrs=['['])
   //%self.expect('frame variable sdk_option_exhaustive', substrs=['[.firstEqual, .insertionIndex]'])
   //%self.expect('expression sdk_option_exhaustive', substrs=['[.firstEqual, .insertionIndex]'])
   //%self.expect('frame variable sdk_option_nonexhaustive', substrs=['[.firstEqual, 0x1]'])
