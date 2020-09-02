@@ -217,14 +217,6 @@ DeclTypeSpec &Scope::MakeDerivedType(
   return declTypeSpecs_.emplace_back(category, std::move(spec));
 }
 
-void Scope::set_chars(parser::CookedSource &cooked) {
-  CHECK(kind_ == Kind::Module);
-  CHECK(parent_.IsGlobal() || parent_.IsModuleFile());
-  CHECK(DEREF(symbol_).test(Symbol::Flag::ModFile));
-  // TODO: Preserve the CookedSource rather than acquiring its string.
-  chars_ = cooked.AcquireData();
-}
-
 Scope::ImportKind Scope::GetImportKind() const {
   if (importKind_) {
     return *importKind_;
