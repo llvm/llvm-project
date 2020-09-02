@@ -28,8 +28,10 @@ set(MODULES
 )
 
 set(include ${FLANG_BINARY_DIR}/include/flang)
-
-set(include ${FLANG_BINARY_DIR}/include/flang)
+target_include_directories(f18
+  PRIVATE
+  ${CMAKE_CURRENT_BINARY_DIR}
+)
 
 # Create module files directly from the top-level module source directory
 foreach(filename ${MODULES})
@@ -64,5 +66,6 @@ file(COPY ${CMAKE_BINARY_DIR}/tools/flang/bin/flang DESTINATION ${CMAKE_BINARY_D
 # The flang script to be installed needs a different path to the headers.
 set(FLANG_INTRINSIC_MODULES_DIR ${CMAKE_INSTALL_PREFIX}/include/flang)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flang.sh.in ${FLANG_BINARY_DIR}/bin/flang-install.sh @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/f18_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/f18_version.h @ONLY)
 
 install(PROGRAMS ${FLANG_BINARY_DIR}/bin/flang-install.sh DESTINATION bin RENAME flang PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE)
