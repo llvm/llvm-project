@@ -354,9 +354,7 @@ static uint64_t GetDebugInfoSize(lldb::SBModule module) {
 
 static std::string ConvertDebugInfoSizeToString(uint64_t debug_info) {
   std::ostringstream oss;
-  oss << " (";
   oss << std::fixed << std::setprecision(1);
-
   if (debug_info < 1024) {
     oss << debug_info << "B";
   } else if (debug_info < 1024 * 1024) {
@@ -368,9 +366,7 @@ static std::string ConvertDebugInfoSizeToString(uint64_t debug_info) {
   } else {
     double gb = double(debug_info) / (1024.0 * 1024.0 * 1024.0);
     oss << gb << "GB";
-    ;
   }
-  oss << ")";
   return oss.str();
 }
 llvm::json::Value CreateModule(lldb::SBModule &module) {
@@ -386,11 +382,13 @@ llvm::json::Value CreateModule(lldb::SBModule &module) {
   object.try_emplace("path", module_path);
   if (module.GetNumCompileUnits() > 0) {
     std::string symbol_str = "Symbols loaded.";
+    std::string debug_info_size;
     uint64_t debug_info = GetDebugInfoSize(module);
     if (debug_info > 0) {
-      symbol_str += ConvertDebugInfoSizeToString(debug_info);
+      debug_info_size = ConvertDebugInfoSizeToString(debug_info);
     }
     object.try_emplace("symbolStatus", symbol_str);
+    object.try_emplace("debugInfoSize", debug_info_size);
     char symbol_path_arr[PATH_MAX];
     module.GetSymbolFileSpec().GetPath(symbol_path_arr,
                                        sizeof(symbol_path_arr));

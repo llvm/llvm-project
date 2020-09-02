@@ -32,26 +32,18 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertIn('path', program_module, 'make sure path is in module')
         self.assertEqual(program, program_module['path'])
         self.assertTrue('symbolFilePath' not in program_module, 'Make sure a.out.stripped has no debug info')
-        self.assertEqual('Symbols not found.', program_module['symbolStatus'])
         symbols_path = self.getBuildArtifact(symbol_basename)
         self.vscode.request_evaluate('`%s' % ('target symbols add -s "%s" "%s"' % (program, symbols_path)))
-
-        def checkSymbolsLoaded():
-            active_modules = self.vscode.get_active_modules()
-            program_module = active_modules[program_basename]
-            return 'Symbols loaded.' == program_module['symbolStatus']
 
         def checkSymbolsLoadedWithSize():
             active_modules = self.vscode.get_active_modules()
             program_module = active_modules[program_basename]
-            symbolsStatus = program_module['symbolStatus']
-            symbol_regex = re.compile(r"Symbols loaded. \([0-9]+(\.[0-9]*)?[KMG]?B\)")
+            symbolsStatus = program_module['debugInfoSize']
+            symbol_regex = re.compile(r"[0-9]+(\.[0-9]*)?[KMG]?B")
             return symbol_regex.match(program_module['symbolStatus'])
                 
         if expect_debug_info_size:
             self.waitUntil(checkSymbolsLoadedWithSize)
-        else:
-            self.waitUntil(checkSymbolsLoaded)
         active_modules = self.vscode.get_active_modules()
         program_module = active_modules[program_basename]
         self.assertEqual(program_basename, program_module['name'])
