@@ -1943,6 +1943,17 @@ def fvisibility_EQ : Joined<["-"], "fvisibility=">, Group<f_Group>,
 def fvisibility_inlines_hidden : Flag<["-"], "fvisibility-inlines-hidden">, Group<f_Group>,
   HelpText<"Give inline C++ member functions hidden visibility by default">,
   Flags<[CC1Option]>;
+def fvisibility_inlines_hidden_static_local_var :
+  Flag<["-"], "fvisibility-inlines-hidden-static-local-var">, Group<f_Group>,
+  HelpText<"When -fvisibility-inlines-hidden is enabled, static variables in "
+           "inline C++ member functions will also be given hidden visibility "
+           "by default">,
+  Flags<[CC1Option]>;
+def fno_visibility_inlines_hidden_static_local_var :
+  Flag<["-"], "fno-visibility-inlines-hidden-static-local-var">, Group<f_Group>,
+  HelpText<"Disables -fvisibility-inlines-hidden-static-local-var "
+           "(this is the default on non-darwin targets)">,
+  Flags<[CC1Option]>;
 def fvisibility_ms_compat : Flag<["-"], "fvisibility-ms-compat">, Group<f_Group>,
   HelpText<"Give global types 'default' visibility and global functions and "
            "variables 'hidden' visibility by default">;
