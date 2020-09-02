@@ -1092,8 +1092,6 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
                   [&ast_ctx, input, name_parts,
                    &results](swift::ModuleDecl *module) -> void {
 
-                swift::ModuleDecl::AccessPathTy access_path;
-
                 for (auto imported_module : swift::namelookup::getAllImports(module)) {
                   auto module = imported_module.importedModule;
                   TypesOrDecls local_results;
