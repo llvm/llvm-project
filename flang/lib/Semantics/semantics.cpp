@@ -45,17 +45,17 @@
 
 namespace Fortran::semantics {
 
-using NameToSymbolMap = std::map<const char *, SymbolRef>;
+using NameToSymbolMap = std::multimap<parser::CharBlock, SymbolRef>;
 static void DoDumpSymbols(llvm::raw_ostream &, const Scope &, int indent = 0);
 static void PutIndent(llvm::raw_ostream &, int indent);
 
 static void GetSymbolNames(const Scope &scope, NameToSymbolMap &symbols) {
   // Finds all symbol names in the scope without collecting duplicates.
   for (const auto &pair : scope) {
-    symbols.emplace(pair.second->name().begin(), *pair.second);
+    symbols.emplace(pair.second->name(), *pair.second);
   }
   for (const auto &pair : scope.commonBlocks()) {
-    symbols.emplace(pair.second->name().begin(), *pair.second);
+    symbols.emplace(pair.second->name(), *pair.second);
   }
   for (const auto &child : scope.children()) {
     GetSymbolNames(child, symbols);
