@@ -97,6 +97,11 @@ public:
            (SrcAS == DPUADDR_SPACE::MRAM && DestAS == DPUADDR_SPACE::WRAM);
   }
 
+  SDValue LowerDMAUnchecked(SelectionDAG &DAG, const SDLoc &dl, const EVT &evt,
+                            SDValue Chain, SDValue ra, SDValue rb, SDValue Size,
+                            bool CanFetchConstant, uint64_t Length,
+                            int DPUISD) const;
+
 private:
   CodeGenOpt::Level optLevel;
 

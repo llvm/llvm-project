@@ -21,6 +21,9 @@
 
 namespace llvm {
 
+static const uint32_t MramAlignment = 8;
+static const uint32_t WramAlignment = 4;
+
 static SDValue EmitMemFnCall(const char *FunctionName, SelectionDAG &DAG,
                              const SDLoc &dl, SDValue Chain, SDValue Dst,
                              SDValue Src, SDValue Size, RTLIB::Libcall LC) {
@@ -49,6 +52,40 @@ static SDValue EmitMemFnCall(const char *FunctionName, SelectionDAG &DAG,
   return CallResult.second;
 }
 
+static SDValue EmitMemcpyMW(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                            SDValue Mram, SDValue Wram, int32_t DstAlign,
+                            int32_t SrcAlign, SDValue Size,
+                            bool CanFetchConstant, uint64_t Length) {
+  if ((SrcAlign == MramAlignment) && (DstAlign == MramAlignment) &&
+      CanFetchConstant && properDMASize(Length)) {
+    const DPUTargetLowering &DTL =
+        static_cast<const DPUTargetLowering &>(DAG.getTargetLoweringInfo());
+    return DTL.LowerDMAUnchecked(DAG, dl, Mram.getValueType(), Chain, Wram,
+                                 Mram, Size, CanFetchConstant, Length,
+                                 DPUISD::SDMA);
+  } else {
+    return EmitMemFnCall("__memcpy_mw", DAG, dl, Chain, Mram, Wram, Size,
+                         RTLIB::MEMCPY);
+  }
+}
+
+static SDValue EmitMemcpyWM(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                            SDValue Wram, SDValue Mram, int32_t DstAlign,
+                            int32_t SrcAlign, SDValue Size,
+                            bool CanFetchConstant, uint64_t Length) {
+  if ((SrcAlign == MramAlignment) && (DstAlign == MramAlignment) &&
+      CanFetchConstant && properDMASize(Length)) {
+    const DPUTargetLowering &DTL =
+        static_cast<const DPUTargetLowering &>(DAG.getTargetLoweringInfo());
+    return DTL.LowerDMAUnchecked(DAG, dl, Wram.getValueType(), Chain, Wram,
+                                 Mram, Size, CanFetchConstant, Length,
+                                 DPUISD::LDMA);
+  } else {
+    return EmitMemFnCall("__memcpy_wm", DAG, dl, Chain, Wram, Mram, Size,
+                         RTLIB::MEMCPY);
+  }
+}
+
 SDValue DPUSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, unsigned Align, bool isVolatile, bool AlwaysInline,
@@ -60,17 +97,31 @@ SDValue DPUSelectionDAGInfo::EmitTargetCodeForMemcpy(
   bool DstIsMramPtr = DstPtrInfo.getAddrSpace() == DPUADDR_SPACE::MRAM;
   bool SrcIsMramPtr = SrcPtrInfo.getAddrSpace() == DPUADDR_SPACE::MRAM;
 
+  uint64_t Length;
+  bool CanFetchConstant = canFetchConstantTo(Size, &Length);
+
+  int32_t SrcAlign = getSDValueAlignment(Src);
+  int32_t DstAlign = getSDValueAlignment(Dst);
+  if ((int32_t)Align > DstAlign)
+    DstAlign = Align;
+
   if (DstIsMramPtr) {
     if (SrcIsMramPtr) {
       return EmitMemFnCall("__memcpy_mm", DAG, dl, Chain, Dst, Src, Size,
                            RTLIB::MEMCPY);
     }
 
-    return EmitMemFnCall("__memcpy_mw", DAG, dl, Chain, Dst, Src, Size,
-                         RTLIB::MEMCPY);
+    return EmitMemcpyMW(DAG, dl, Chain, Dst, Src, DstAlign, SrcAlign, Size,
+                        CanFetchConstant, Length);
   } else if (SrcIsMramPtr) {
-    return EmitMemFnCall("__memcpy_wm", DAG, dl, Chain, Dst, Src, Size,
-                         RTLIB::MEMCPY);
+    return EmitMemcpyWM(DAG, dl, Chain, Dst, Src, DstAlign, SrcAlign, Size,
+                        CanFetchConstant, Length);
+  } else {
+    if ((DstAlign % WramAlignment == 0) && (SrcAlign % WramAlignment == 0) &&
+        CanFetchConstant && (Length % WramAlignment == 0)) {
+      return EmitMemFnCall("__memcpy_wram_4align", DAG, dl, Chain, Dst, Src,
+                           Size, RTLIB::MEMCPY);
+    }
   }
 
   return SDValue();
@@ -104,12 +155,17 @@ SDValue DPUSelectionDAGInfo::EmitTargetCodeForMemset(
     SDValue Size, unsigned Align, bool isVolatile,
     MachinePointerInfo DstPtrInfo) const {
   bool DstIsMramPtr = DstPtrInfo.getAddrSpace() == DPUADDR_SPACE::MRAM;
+
   uint64_t Length;
+  bool CanFetchConstant = canFetchConstantTo(Size, &Length);
+
+  int32_t DstAlign = getSDValueAlignment(Dst);
+  if ((int32_t)Align > DstAlign)
+    DstAlign = Align;
 
   if (DstIsMramPtr) {
-    const uint32_t MramAlignment = 8;
-    if ((getSDValueAlignment(Dst) % MramAlignment == 0) &&
-        canFetchConstantTo(Size, &Length) && (Length % MramAlignment == 0)) {
+    if ((DstAlign % MramAlignment == 0) && CanFetchConstant &&
+        (Length % MramAlignment == 0)) {
       return EmitMemFnCall("__memset_mram_8align", DAG, dl, Chain, Dst, Src,
                            Size, RTLIB::MEMSET);
     } else {
@@ -117,9 +173,8 @@ SDValue DPUSelectionDAGInfo::EmitTargetCodeForMemset(
                            RTLIB::MEMSET);
     }
   } else {
-    const uint32_t WramAlignment = 4;
-    if ((getSDValueAlignment(Dst) % WramAlignment == 0) &&
-        canFetchConstantTo(Size, &Length) && (Length % WramAlignment == 0)) {
+    if ((DstAlign % WramAlignment == 0) && CanFetchConstant &&
+        (Length % WramAlignment == 0)) {
       return EmitMemFnCall("__memset_wram_4align", DAG, dl, Chain, Dst, Src,
                            Size, RTLIB::MEMSET);
     }

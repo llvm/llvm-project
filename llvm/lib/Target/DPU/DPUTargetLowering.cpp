@@ -1814,6 +1814,29 @@ SDValue DPUTargetLowering::LowerShift(SDValue Op, SelectionDAG &DAG,
 
 static uint64_t FormatDMASize(uint64_t size) { return (size >> 3) - 1; }
 
+SDValue DPUTargetLowering::LowerDMAUnchecked(
+    SelectionDAG &DAG, const SDLoc &dl, const EVT &evt, SDValue Chain,
+    SDValue ra, SDValue rb, SDValue Size, bool CanFetchConstant,
+    uint64_t Length, int DPUISD) const {
+
+  if (CanFetchConstant) {
+    Size = DAG.getConstant(FormatDMASize(Length), dl, MVT::i32);
+  } else {
+    const EVT &raVT = ra.getValueType();
+    // to + (((nb_of_bytes >> 3) - 1) << 24);
+    SDValue tmp =
+        DAG.getNode(ISD::SRL, dl, raVT, Size, DAG.getConstant(3, dl, MVT::i32));
+    tmp =
+        DAG.getNode(ISD::SUB, dl, raVT, tmp, DAG.getConstant(1, dl, MVT::i32));
+    ra = DAG.getNode(DPUISD::LslAdd, dl, raVT, ra, tmp,
+                     DAG.getConstant(24, dl, MVT::i32));
+    Size = DAG.getConstant(0, dl, MVT::i32);
+  }
+
+  SDValue Ops[] = {Chain, ra, rb, Size};
+  return DAG.getNode(DPUISD, dl, evt, Ops);
+}
+
 SDValue DPUTargetLowering::LowerDMA(SDValue Op, SelectionDAG &DAG,
                                     int DPUISD) const {
   SDLoc dl(Op);
@@ -1837,27 +1860,15 @@ SDValue DPUTargetLowering::LowerDMA(SDValue Op, SelectionDAG &DAG,
     }
   }
 
-  if (canFetchConstantTo(immDma, &size)) {
-    if (size % 8 || size > 2048) {
-      LowerUnsupported(
-          Op, DAG,
-          "DMA transfer size needs to be a multiple of 8 in range [8; 2048]");
-    }
-    immDma = DAG.getConstant(FormatDMASize(size), dl, MVT::i32);
-  } else {
-    const EVT &raVT = ra.getValueType();
-    // to + (((nb_of_bytes >> 3) - 1) << 24);
-    SDValue tmp = DAG.getNode(ISD::SRL, dl, raVT, immDma,
-                              DAG.getConstant(3, dl, MVT::i32));
-    tmp =
-        DAG.getNode(ISD::SUB, dl, raVT, tmp, DAG.getConstant(1, dl, MVT::i32));
-    ra = DAG.getNode(DPUISD::LslAdd, dl, raVT, ra, tmp,
-                     DAG.getConstant(24, dl, MVT::i32));
-    immDma = DAG.getConstant(0, dl, MVT::i32);
+  bool CanFetchConstant = canFetchConstantTo(immDma, &size);
+  if (CanFetchConstant && !properDMASize(size)) {
+    LowerUnsupported(
+        Op, DAG,
+        "DMA transfer size needs to be a multiple of 8 in range [8; 2048]");
   }
 
-  SDValue Ops[] = {chain, ra, rb, immDma};
-  return DAG.getNode(DPUISD, dl, evt, Ops);
+  return LowerDMAUnchecked(DAG, dl, evt, chain, ra, rb, immDma,
+                           CanFetchConstant, size, DPUISD);
 }
 
 static uint64_t PageSizeLog2ToNcCondition(uint64_t pageSize) {

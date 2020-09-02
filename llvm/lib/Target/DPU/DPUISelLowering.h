@@ -207,12 +207,28 @@ __attribute__((used)) static int32_t getSDValueAlignment(SDValue Op) {
     SDValue Op1 = Op.getOperand(1);
     uint64_t Size;
     if (canFetchConstantTo(Op1, &Size)) {
-      return 1 << __builtin_ctz(Size);
+      int32_t ConstantAlign = 1 << __builtin_ctz(Size);
+      if (auto *GV = dyn_cast<GlobalAddressSDNode>(Op0)) {
+        int32_t OpAlign = GV->getGlobal()->getAlignment();
+        return OpAlign > ConstantAlign ? OpAlign : ConstantAlign;
+      } else {
+        return ConstantAlign;
+      }
     } else if (canFetchConstantTo(Op0, &Size)) {
-      return 1 << __builtin_ctz(Size);
+      int32_t ConstantAlign = 1 << __builtin_ctz(Size);
+      if (auto *GV = dyn_cast<GlobalAddressSDNode>(Op1)) {
+        int32_t OpAlign = GV->getGlobal()->getAlignment();
+        return OpAlign > ConstantAlign ? OpAlign : ConstantAlign;
+      } else {
+        return ConstantAlign;
+      }
     }
   }
   return -1;
+}
+
+__attribute__((used)) static bool properDMASize(uint64_t Size) {
+  return (Size % 8 == 0) && (Size <= 2048);
 }
 
 } // namespace llvm
