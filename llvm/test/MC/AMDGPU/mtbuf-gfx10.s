@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=GFX10 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX10-ERR %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck -check-prefix=GFX10-ERR --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // Positive tests for legacy format syntax.
