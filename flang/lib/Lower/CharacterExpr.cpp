@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/ConvertType.h"
@@ -17,20 +21,28 @@
 // CharacterExprHelper implementation
 //===----------------------------------------------------------------------===//
 
-/// Get fir.char<kind> type with the same kind as inside str.
-fir::CharacterType
-Fortran::lower::CharacterExprHelper::getCharacterType(mlir::Type type) {
+template <bool checkForScalar>
+static fir::CharacterType recoverCharacterType(mlir::Type type) {
   if (auto boxType = type.dyn_cast<fir::BoxCharType>())
     return boxType.getEleTy();
   if (auto refType = type.dyn_cast<fir::ReferenceType>())
     type = refType.getEleTy();
   if (auto seqType = type.dyn_cast<fir::SequenceType>()) {
-    assert(seqType.getShape().size() == 1 && "rank must be 1");
+    // In a context where `type` may be a sequence, we want to opt out of this
+    // assertion by setting `checkForScalar` to `false`.
+    assert((!checkForScalar || seqType.getShape().size() == 1) &&
+           "rank must be 1 for a scalar CHARACTER");
     type = seqType.getEleTy();
   }
   if (auto charType = type.dyn_cast<fir::CharacterType>())
     return charType;
   llvm_unreachable("Invalid character value type");
+}
+
+/// Get fir.char<kind> type with the same kind as inside str.
+fir::CharacterType
+Fortran::lower::CharacterExprHelper::getCharacterType(mlir::Type type) {
+  return recoverCharacterType<true>(type);
 }
 
 fir::CharacterType Fortran::lower::CharacterExprHelper::getCharacterType(
@@ -499,6 +511,25 @@ bool Fortran::lower::CharacterExprHelper::isCharacter(mlir::Type type) {
   return type.isa<fir::CharacterType>();
 }
 
-int Fortran::lower::CharacterExprHelper::getCharacterKind(mlir::Type type) {
-  return getCharacterType(type).getFKind();
+fir::KindTy
+Fortran::lower::CharacterExprHelper::getCharacterKind(mlir::Type type) {
+  return recoverCharacterType<true>(type).getFKind();
+}
+
+fir::KindTy Fortran::lower::CharacterExprHelper::getCharacterOrSequenceKind(
+    mlir::Type type) {
+  return recoverCharacterType<false>(type).getFKind();
+}
+
+bool Fortran::lower::CharacterExprHelper::isArray(mlir::Type type) {
+  if (auto boxTy = type.dyn_cast<fir::BoxType>())
+    type = boxTy.getEleTy();
+  if (auto eleTy = fir::dyn_cast_ptrEleTy(type))
+    type = eleTy;
+  if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
+    auto charTy = seqTy.getEleTy().dyn_cast<fir::CharacterType>();
+    assert(charTy);
+    return (!charTy.singleton()) || (seqTy.getDimension() > 1);
+  }
+  return false;
 }

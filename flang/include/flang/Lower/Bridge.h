@@ -18,6 +18,13 @@
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 
+namespace fir {
+struct NameUniquer;
+}
+namespace llvm {
+class Triple;
+}
+
 namespace Fortran {
 namespace common {
 class IntrinsicTypeDefaultKinds;
@@ -48,8 +55,11 @@ public:
   create(mlir::MLIRContext &ctx,
          const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
          const Fortran::evaluate::IntrinsicProcTable &intrinsics,
-         const Fortran::parser::AllCookedSources &allCooked) {
-    return LoweringBridge{defaultKinds, intrinsics, allCooked};
+         const Fortran::parser::AllCookedSource &allCooked,
+         llvm::Triple &triple, fir::NameUniquer &uniquer,
+         fir::KindMapping &kindMap) {
+    return LoweringBridge(ctx, defaultKinds, intrinsics, allCooked, triple,
+                          uniquer, kindMap);
   }
 
   //===--------------------------------------------------------------------===//
@@ -93,7 +103,8 @@ private:
       mlir::MLIRContext &ctx,
       const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
       const Fortran::evaluate::IntrinsicProcTable &intrinsics,
-      const Fortran::parser::AllCookedSources &);
+      const Fortran::parser::AllCookedSource &cooked, llvm::Triple &triple,
+      fir::NameUniquer &uniquer, fir::KindMapping &kindMap);
   LoweringBridge() = delete;
   LoweringBridge(const LoweringBridge &) = delete;
 
@@ -102,7 +113,7 @@ private:
   const Fortran::parser::AllCookedSources *cooked;
   std::unique_ptr<mlir::MLIRContext> context;
   std::unique_ptr<mlir::ModuleOp> module;
-  fir::KindMapping kindMap;
+  fir::KindMapping &kindMap;
 };
 
 } // namespace lower

@@ -142,6 +142,22 @@ static void printModule(mlir::ModuleOp mlirModule, llvm::raw_ostream &out) {
   out << '\n';
 }
 
+// Translate front-end KINDs for use in the IR and code gen.
+static std::vector<fir::KindTy>
+fromDefaultKinds(const Fortran::common::IntrinsicTypeDefaultKinds &defKinds) {
+  return {static_cast<fir::KindTy>(defKinds.GetDefaultKind(
+              Fortran::common::TypeCategory::Character)),
+          static_cast<fir::KindTy>(
+              defKinds.GetDefaultKind(Fortran::common::TypeCategory::Complex)),
+          static_cast<fir::KindTy>(defKinds.doublePrecisionKind()),
+          static_cast<fir::KindTy>(
+              defKinds.GetDefaultKind(Fortran::common::TypeCategory::Integer)),
+          static_cast<fir::KindTy>(
+              defKinds.GetDefaultKind(Fortran::common::TypeCategory::Logical)),
+          static_cast<fir::KindTy>(
+              defKinds.GetDefaultKind(Fortran::common::TypeCategory::Real))};
+}
+
 //===----------------------------------------------------------------------===//
 // Translate Fortran input to FIR, a dialect of MLIR.
 //===----------------------------------------------------------------------===//
@@ -224,24 +240,23 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   fir::NameUniquer nameUniquer;
   mlir::MLIRContext ctx;
   fir::registerAndLoadDialects(ctx);
+  auto &defKinds = semanticsContext.defaultKinds();
+  fir::KindMapping kindMap(
+      &ctx, llvm::ArrayRef<fir::KindTy>{fromDefaultKinds(defKinds)});
   auto burnside = Fortran::lower::LoweringBridge::create(
-      ctx, semanticsContext.defaultKinds(), semanticsContext.intrinsics(),
-      parsing.cooked());
-  burnside.lower(parseTree, nameUniquer, semanticsContext);
+      ctx, defKinds, semanticsContext.intrinsics(), parsing.cooked(), triple,
+      nameUniquer, kindMap);
+  burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
-  fir::KindMapping kindMap(&ctx);
-  fir::setTargetTriple(mlirModule, triple);
-  fir::setNameUniquer(mlirModule, nameUniquer);
-  fir::setKindMapping(mlirModule, kindMap);
   std::error_code ec;
   std::string outputName = outputFilename;
   if (!outputName.size())
     outputName = llvm::sys::path::stem(inputFilename).str().append(".mlir");
   llvm::raw_fd_ostream out(outputName, ec);
-  if (ec) {
-    llvm::errs() << "could not open output file " << outputName << '\n';
-    return mlir::failure();
-  }
+  if (ec)
+    return mlir::emitError(mlir::UnknownLoc::get(&ctx),
+                           "could not open output file ")
+           << outputName;
 
   // Otherwise run the default passes.
   mlir::PassManager pm(mlirModule.getContext());
@@ -278,6 +293,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   if (emitLLVM) {
     // Continue to lower from MLIR down to LLVM IR. Emit LLVM and MLIR.
     pm.addPass(fir::createFirCodeGenRewritePass());
+    pm.addPass(fir::createFirTargetRewritePass());
     pm.addPass(fir::createFIRToLLVMPass(nameUniquer));
     std::error_code ec;
     llvm::ToolOutputFile outFile(outputName + ".ll", ec,
