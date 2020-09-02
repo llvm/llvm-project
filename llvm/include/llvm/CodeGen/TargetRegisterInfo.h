@@ -449,6 +449,13 @@ public:
     return nullptr;
   }
 
+  /// Return a register mask for the registers preserved by the unwinder,
+  /// or nullptr if no custom mask is needed.
+  virtual const uint32_t *
+  getCustomEHPadPreservedMask(const MachineFunction &MF) const {
+    return nullptr;
+  }
+
   /// Return a register mask that clobbers everything.
   virtual const uint32_t *getNoPreservedMask() const {
     llvm_unreachable("target does not provide no preserved mask");

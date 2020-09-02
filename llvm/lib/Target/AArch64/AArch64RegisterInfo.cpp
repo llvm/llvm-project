@@ -240,6 +240,14 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return SCS ? CSR_AArch64_AAPCS_SCS_RegMask : CSR_AArch64_AAPCS_RegMask;
 }
 
+const uint32_t *AArch64RegisterInfo::getCustomEHPadPreservedMask(
+    const MachineFunction &MF) const {
+  if (MF.getSubtarget<AArch64Subtarget>().isTargetLinux())
+    return CSR_AArch64_AAPCS_RegMask;
+
+  return nullptr;
+}
+
 const uint32_t *AArch64RegisterInfo::getTLSCallPreservedMask() const {
   if (TT.isOSDarwin())
     return CSR_Darwin_AArch64_TLS_RegMask;
