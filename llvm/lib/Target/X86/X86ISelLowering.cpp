@@ -10888,20 +10888,25 @@ static bool isTargetShuffleEquivalent(ArrayRef<int> Mask,
 // Attempt to create a shuffle mask from a VSELECT condition mask.
 static bool createShuffleMaskFromVSELECT(SmallVectorImpl<int> &Mask,
                                          SDValue Cond) {
-  if (!ISD::isBuildVectorOfConstantSDNodes(Cond.getNode()))
+  EVT CondVT = Cond.getValueType();
+  unsigned EltSizeInBits = CondVT.getScalarSizeInBits();
+  unsigned NumElts = CondVT.getVectorNumElements();
+
+  APInt UndefElts;
+  SmallVector<APInt, 32> EltBits;
+  if (!getTargetConstantBitsFromNode(Cond, EltSizeInBits, UndefElts, EltBits,
+                                     true, false))
     return false;
 
-  unsigned Size = Cond.getValueType().getVectorNumElements();
-  Mask.resize(Size, SM_SentinelUndef);
+  Mask.resize(NumElts, SM_SentinelUndef);
 
-  for (int i = 0; i != (int)Size; ++i) {
-    SDValue CondElt = Cond.getOperand(i);
+  for (int i = 0; i != (int)NumElts; ++i) {
     Mask[i] = i;
     // Arbitrarily choose from the 2nd operand if the select condition element
     // is undef.
     // TODO: Can we do better by matching patterns such as even/odd?
-    if (CondElt.isUndef() || isNullConstant(CondElt))
-      Mask[i] += Size;
+    if (UndefElts[i] || EltBits[i].isNullValue())
+      Mask[i] += NumElts;
   }
 
   return true;
@@ -18139,9 +18144,11 @@ static SDValue lowerVSELECTtoVectorShuffle(SDValue Op,
 
   // Only non-legal VSELECTs reach this lowering, convert those into generic
   // shuffles and re-use the shuffle lowering path for blends.
-  SmallVector<int, 32> Mask;
-  if (createShuffleMaskFromVSELECT(Mask, Cond))
-    return DAG.getVectorShuffle(VT, SDLoc(Op), LHS, RHS, Mask);
+  if (ISD::isBuildVectorOfConstantSDNodes(Cond.getNode())) {
+    SmallVector<int, 32> Mask;
+    if (createShuffleMaskFromVSELECT(Mask, Cond))
+      return DAG.getVectorShuffle(VT, SDLoc(Op), LHS, RHS, Mask);
+  }
 
   return SDValue();
 }
@@ -40268,6 +40275,36 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     SmallVector<int, 64> Mask;
     if (createShuffleMaskFromVSELECT(Mask, Cond))
       return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
+  }
+
+  // fold vselect(cond, pshufb(x), pshufb(y)) -> or (pshufb(x), pshufb(y))
+  // by forcing the unselected elements to zero.
+  // TODO: Can we handle more shuffles with this?
+  if (N->getOpcode() == ISD::VSELECT && CondVT.isVector() &&
+      LHS.getOpcode() == X86ISD::PSHUFB && RHS.getOpcode() == X86ISD::PSHUFB &&
+      LHS.hasOneUse() && RHS.hasOneUse()) {
+    MVT SimpleVT = VT.getSimpleVT();
+    bool LHSUnary, RHSUnary;
+    SmallVector<SDValue, 1> LHSOps, RHSOps;
+    SmallVector<int, 64> LHSMask, RHSMask, CondMask;
+    if (createShuffleMaskFromVSELECT(CondMask, Cond) &&
+        getTargetShuffleMask(LHS.getNode(), SimpleVT, true, LHSOps, LHSMask,
+                             LHSUnary) &&
+        getTargetShuffleMask(RHS.getNode(), SimpleVT, true, RHSOps, RHSMask,
+                             RHSUnary)) {
+      int NumElts = VT.getVectorNumElements();
+      for (int i = 0; i != NumElts; ++i) {
+        if (CondMask[i] < NumElts)
+          RHSMask[i] = 0x80;
+        else
+          LHSMask[i] = 0x80;
+      }
+      LHS = DAG.getNode(X86ISD::PSHUFB, DL, VT, LHS.getOperand(0),
+                        getConstVector(LHSMask, SimpleVT, DAG, DL, true));
+      RHS = DAG.getNode(X86ISD::PSHUFB, DL, VT, RHS.getOperand(0),
+                        getConstVector(RHSMask, SimpleVT, DAG, DL, true));
+      return DAG.getNode(ISD::OR, DL, VT, LHS, RHS);
+    }
   }
 
   // If we have SSE[12] support, try to form min/max nodes. SSE min/max
