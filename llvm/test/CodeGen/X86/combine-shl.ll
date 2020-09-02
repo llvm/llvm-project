@@ -414,10 +414,10 @@ define <4 x i32> @combine_vec_shl_ge_ashr_extact1(<4 x i32> %x) {
 ; SSE2-LABEL: combine_vec_shl_ge_ashr_extact1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psrad $5, %xmm1
+; SSE2-NEXT:    psrad $3, %xmm1
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    psrad $3, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,3],xmm1[2,3]
+; SSE2-NEXT:    psrad $5, %xmm2
+; SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrad $8, %xmm1
 ; SSE2-NEXT:    psrad $4, %xmm0
@@ -476,10 +476,10 @@ define <4 x i32> @combine_vec_shl_lt_ashr_extact1(<4 x i32> %x) {
 ; SSE2-LABEL: combine_vec_shl_lt_ashr_extact1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psrad $7, %xmm1
+; SSE2-NEXT:    psrad $5, %xmm1
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    psrad $5, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,3],xmm1[2,3]
+; SSE2-NEXT:    psrad $7, %xmm2
+; SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrad $8, %xmm1
 ; SSE2-NEXT:    psrad $6, %xmm0
@@ -541,10 +541,10 @@ define <4 x i32> @combine_vec_shl_gt_lshr1(<4 x i32> %x) {
 ; SSE2-LABEL: combine_vec_shl_gt_lshr1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psrld $5, %xmm1
+; SSE2-NEXT:    psrld $3, %xmm1
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    psrld $3, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,3],xmm1[2,3]
+; SSE2-NEXT:    psrld $5, %xmm2
+; SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrld $8, %xmm1
 ; SSE2-NEXT:    psrld $4, %xmm0
@@ -606,10 +606,10 @@ define <4 x i32> @combine_vec_shl_le_lshr1(<4 x i32> %x) {
 ; SSE2-LABEL: combine_vec_shl_le_lshr1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psrld $7, %xmm1
+; SSE2-NEXT:    psrld $5, %xmm1
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    psrld $5, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,3],xmm1[2,3]
+; SSE2-NEXT:    psrld $7, %xmm2
+; SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrld $8, %xmm1
 ; SSE2-NEXT:    psrld $6, %xmm0
