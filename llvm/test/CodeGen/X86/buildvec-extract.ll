@@ -407,13 +407,13 @@ define <2 x i64> @extract0_i16_zext_insert0_i64_zero(<8 x i16> %x) {
 define <2 x i64> @extract1_i16_zext_insert0_i64_undef(<8 x i16> %x) {
 ; SSE-LABEL: extract1_i16_zext_insert0_i64_undef:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: extract1_i16_zext_insert0_i64_undef:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3]
+; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX-NEXT:    retq
   %e = extractelement <8 x i16> %x, i32 1
@@ -650,8 +650,7 @@ define <2 x i64> @extract2_i16_zext_insert1_i64_zero(<8 x i16> %x) {
 define <2 x i64> @extract3_i16_zext_insert1_i64_undef(<8 x i16> %x) {
 ; SSE2-LABEL: extract3_i16_zext_insert1_i64_undef:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
-; SSE2-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE2-NEXT:    psrlq $48, %xmm0
 ; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
 ; SSE2-NEXT:    retq
 ;

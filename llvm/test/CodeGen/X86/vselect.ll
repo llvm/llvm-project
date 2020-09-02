@@ -569,7 +569,7 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ; SSE2-NEXT:    movd %edi, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,1,1]
 ; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm2[1,1]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[1,3]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[1,1]
 ; SSE2-NEXT:    pand %xmm0, %xmm2
 ; SSE2-NEXT:    pandn %xmm1, %xmm0
