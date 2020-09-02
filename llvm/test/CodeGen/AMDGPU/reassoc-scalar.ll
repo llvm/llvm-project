@@ -113,7 +113,7 @@ bb:
 
 ; GCN-LABEL: reassoc_i32_ga:
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, var@rel32@lo+4
-; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, var@rel32@hi+4
+; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, var@rel32@hi+12
 ; GCN: s_endpgm
 define amdgpu_kernel void @reassoc_i32_ga(i64 %x) {
 bb:

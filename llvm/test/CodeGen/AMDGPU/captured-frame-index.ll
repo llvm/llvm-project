@@ -183,7 +183,7 @@ define amdgpu_kernel void @stored_fi_to_global_huge_frame_offset(i32 addrspace(5
 ; GCN-LABEL: {{^}}cannot_select_assertzext_valuetype:
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN: s_add_u32 s{{[0-9]+}}, s[[PC_LO]], g1@gotpcrel32@lo+4
-; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC_HI]], g1@gotpcrel32@hi+4
+; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC_HI]], g1@gotpcrel32@hi+12
 ; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 4{{$}}
 ; GCN: buffer_store_dword [[FI]]
 define amdgpu_kernel void @cannot_select_assertzext_valuetype(i32 addrspace(1)* %out, i32 %idx) #0 {
