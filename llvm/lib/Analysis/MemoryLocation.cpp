@@ -176,6 +176,21 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
               cast<ConstantInt>(II->getArgOperand(0))->getZExtValue()),
           AATags);
 
+    case Intrinsic::masked_load:
+      assert(ArgIdx == 0 && "Invalid argument index");
+      return MemoryLocation(
+          Arg,
+          LocationSize::upperBound(DL.getTypeStoreSize(II->getType())),
+          AATags);
+
+    case Intrinsic::masked_store:
+      assert(ArgIdx == 1 && "Invalid argument index");
+      return MemoryLocation(
+          Arg,
+          LocationSize::upperBound(
+              DL.getTypeStoreSize(II->getArgOperand(0)->getType())),
+          AATags);
+
     case Intrinsic::invariant_end:
       // The first argument to an invariant.end is a "descriptor" type (e.g. a
       // pointer to a empty struct) which is never actually dereferenced.
