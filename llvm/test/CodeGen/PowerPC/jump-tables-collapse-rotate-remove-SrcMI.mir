@@ -51,4 +51,4 @@ body:             |
 #
 # CHECK-PASS-NOT:     %2:g8rc = RLDICL killed %1, 0, 32
 # CHECK-PASS-NOT:     %3:g8rc = RLDICR %2, 2, 61
-# CHECK-PASS:     %3:g8rc = RLDIC %1, 2, 30
+# CHECK-PASS:     %3:g8rc = RLDIC killed %1, 2, 30
