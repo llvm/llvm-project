@@ -100,36 +100,36 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Type *ScalarTy = Scalar->getType();
   if (!Load || !Load->isSimple())
     return false;
+  auto *Ty = dyn_cast<FixedVectorType>(I.getType());
+  if (!Ty)
+    return false;
 
   // TODO: Extend this to match GEP with constant offsets.
   Value *PtrOp = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(PtrOp->getType()) && "Expected a pointer type");
 
-  unsigned VectorSize = TTI.getMinVectorRegisterBitWidth();
+  unsigned MinVectorSize = TTI.getMinVectorRegisterBitWidth();
   uint64_t ScalarSize = ScalarTy->getPrimitiveSizeInBits();
-  if (!ScalarSize || !VectorSize || VectorSize % ScalarSize != 0)
+  if (!ScalarSize || !MinVectorSize || MinVectorSize % ScalarSize != 0)
     return false;
 
   // Check safety of replacing the scalar load with a larger vector load.
-  unsigned VecNumElts = VectorSize / ScalarSize;
-  auto *VectorTy = VectorType::get(ScalarTy, VecNumElts, false);
-  // TODO: Allow insert/extract subvector if the type does not match.
-  if (VectorTy != I.getType())
-    return false;
+  unsigned MinVecNumElts = MinVectorSize / ScalarSize;
+  auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
   Align Alignment = Load->getAlign();
   const DataLayout &DL = I.getModule()->getDataLayout();
-  if (!isSafeToLoadUnconditionally(PtrOp, VectorTy, Alignment, DL, Load, &DT))
+  if (!isSafeToLoadUnconditionally(PtrOp, MinVecTy, Alignment, DL, Load, &DT))
     return false;
 
   unsigned AS = Load->getPointerAddressSpace();
 
   // Original pattern: insertelt undef, load [free casts of] ScalarPtr, 0
   int OldCost = TTI.getMemoryOpCost(Instruction::Load, ScalarTy, Alignment, AS);
-  APInt DemandedElts = APInt::getOneBitSet(VecNumElts, 0);
-  OldCost += TTI.getScalarizationOverhead(VectorTy, DemandedElts, true, false);
+  APInt DemandedElts = APInt::getOneBitSet(MinVecNumElts, 0);
+  OldCost += TTI.getScalarizationOverhead(MinVecTy, DemandedElts, true, false);
 
   // New pattern: load VecPtr
-  int NewCost = TTI.getMemoryOpCost(Instruction::Load, VectorTy, Alignment, AS);
+  int NewCost = TTI.getMemoryOpCost(Instruction::Load, MinVecTy, Alignment, AS);
 
   // We can aggressively convert to the vector form because the backend can
   // invert this transform if it does not result in a performance win.
@@ -139,8 +139,18 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // It is safe and potentially profitable to load a vector directly:
   // inselt undef, load Scalar, 0 --> load VecPtr
   IRBuilder<> Builder(Load);
-  Value *CastedPtr = Builder.CreateBitCast(PtrOp, VectorTy->getPointerTo(AS));
-  LoadInst *VecLd = Builder.CreateAlignedLoad(VectorTy, CastedPtr, Alignment);
+  Value *CastedPtr = Builder.CreateBitCast(PtrOp, MinVecTy->getPointerTo(AS));
+  Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
+
+  // If the insert type does not match the target's minimum vector type,
+  // use an identity shuffle to shrink/grow the vector.
+  if (Ty != MinVecTy) {
+    unsigned OutputNumElts = Ty->getNumElements();
+    SmallVector<int, 16> Mask(OutputNumElts, UndefMaskElem);
+    for (unsigned i = 0; i < OutputNumElts && i < MinVecNumElts; ++i)
+      Mask[i] = i;
+    VecLd = Builder.CreateShuffleVector(VecLd, UndefValue::get(MinVecTy), Mask);
+  }
   replaceValue(I, *VecLd);
   ++NumVecLoad;
   return true;
