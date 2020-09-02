@@ -173,6 +173,10 @@ public:
                      One.extractBits(NumBits, BitPosition));
   }
 
+  /// Return KnownBits based on this, but updated given that the underlying
+  /// value is known to be greater than or equal to Val.
+  KnownBits makeGE(const APInt &Val) const;
+
   /// Returns the minimum number of trailing zero bits.
   unsigned countMinTrailingZeros() const {
     return Zero.countTrailingOnes();
@@ -240,6 +244,18 @@ public:
   /// Compute known bits resulting from adding LHS and RHS.
   static KnownBits computeForAddSub(bool Add, bool NSW, const KnownBits &LHS,
                                     KnownBits RHS);
+
+  /// Compute known bits for umax(LHS, RHS).
+  static KnownBits umax(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute known bits for umin(LHS, RHS).
+  static KnownBits umin(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute known bits for smax(LHS, RHS).
+  static KnownBits smax(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute known bits for smin(LHS, RHS).
+  static KnownBits smin(const KnownBits &LHS, const KnownBits &RHS);
 
   /// Insert the bits from a smaller known bits starting at bitPosition.
   void insertBits(const KnownBits &SubBits, unsigned BitPosition) {
