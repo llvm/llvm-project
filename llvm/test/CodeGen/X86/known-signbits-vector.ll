@@ -321,20 +321,12 @@ define <2 x double> @signbits_sext_shl_sitofp(<2 x i16> %a0) nounwind {
   ret <2 x double> %3
 }
 
-; TODO: Fix vpshufd+vpsrlq -> vpshufd/vpermilps
 define <2 x double> @signbits_ashr_concat_ashr_extract_sitofp(<2 x i64> %a0, <4 x i64> %a1) nounwind {
-; X86-LABEL: signbits_ashr_concat_ashr_extract_sitofp:
-; X86:       # %bb.0:
-; X86-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,3,2,3]
-; X86-NEXT:    vcvtdq2pd %xmm0, %xmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: signbits_ashr_concat_ashr_extract_sitofp:
-; X64:       # %bb.0:
-; X64-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-NEXT:    vcvtdq2pd %xmm0, %xmm0
-; X64-NEXT:    retq
+; CHECK-LABEL: signbits_ashr_concat_ashr_extract_sitofp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
   %1 = ashr <2 x i64> %a0, <i64 16, i64 16>
   %2 = shufflevector <2 x i64> %1, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %3 = shufflevector <4 x i64> %a1, <4 x i64> %2, <4 x i32> <i32 0, i32 1, i32 4, i32 5>

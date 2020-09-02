@@ -12,7 +12,7 @@ define <4 x float> @test(float %a, float %b, float %c) nounwind {
 ;
 ; X64-LABEL: test:
 ; X64:       # %bb.0:
-; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; X64-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],zero,zero
 ; X64-NEXT:    xorps %xmm2, %xmm2
 ; X64-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm1[0,1]

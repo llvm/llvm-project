@@ -9,7 +9,7 @@ define <8 x float> @insert_subvector_256(i16 %x0, i16 %x1, <8 x float> %v) nounw
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpinsrw $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; X86-NEXT:    vpbroadcastd %xmm1, %xmm1
 ; X86-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7]
 ; X86-NEXT:    retl
 ;
@@ -17,7 +17,7 @@ define <8 x float> @insert_subvector_256(i16 %x0, i16 %x1, <8 x float> %v) nounw
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovd %edi, %xmm1
 ; X64-NEXT:    vpinsrw $1, %esi, %xmm1, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; X64-NEXT:    vpbroadcastd %xmm1, %xmm1
 ; X64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7]
 ; X64-NEXT:    retq
   %ins1 = insertelement <2 x i16> undef, i16 %x0, i32 0
