@@ -50,14 +50,25 @@ struct PlatformConnectOptions {
 
 // PlatformShellCommand
 struct PlatformShellCommand {
-  PlatformShellCommand(const char *shell_command = nullptr)
+  PlatformShellCommand(llvm::StringRef shell_interpreter,
+                       llvm::StringRef shell_command)
       : m_command(), m_working_dir(), m_status(0), m_signo(0) {
-    if (shell_command && shell_command[0])
-      m_command = shell_command;
+    if (!shell_interpreter.empty())
+      m_shell = shell_interpreter.str();
+
+    if (!m_shell.empty() && !shell_command.empty())
+      m_command = shell_command.str();
+  }
+
+  PlatformShellCommand(llvm::StringRef shell_command = llvm::StringRef())
+      : m_shell(), m_command(), m_working_dir(), m_status(0), m_signo(0) {
+    if (!shell_command.empty())
+      m_command = shell_command.str();
   }
 
   ~PlatformShellCommand() = default;
 
+  std::string m_shell;
   std::string m_command;
   std::string m_working_dir;
   std::string m_output;
@@ -163,6 +174,13 @@ void SBPlatformConnectOptions::SetLocalCacheDirectory(const char *path) {
 }
 
 // SBPlatformShellCommand
+SBPlatformShellCommand::SBPlatformShellCommand(const char *shell_interpreter,
+                                               const char *shell_command)
+    : m_opaque_ptr(new PlatformShellCommand(shell_interpreter, shell_command)) {
+  LLDB_RECORD_CONSTRUCTOR(SBPlatformShellCommand, (const char *, const char *),
+                          shell_interpreter, shell_command);
+}
+
 SBPlatformShellCommand::SBPlatformShellCommand(const char *shell_command)
     : m_opaque_ptr(new PlatformShellCommand(shell_command)) {
   LLDB_RECORD_CONSTRUCTOR(SBPlatformShellCommand, (const char *),
@@ -198,6 +216,24 @@ void SBPlatformShellCommand::Clear() {
   m_opaque_ptr->m_output = std::string();
   m_opaque_ptr->m_status = 0;
   m_opaque_ptr->m_signo = 0;
+}
+
+const char *SBPlatformShellCommand::GetShell() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBPlatformShellCommand, GetShell);
+
+  if (m_opaque_ptr->m_shell.empty())
+    return nullptr;
+  return m_opaque_ptr->m_shell.c_str();
+}
+
+void SBPlatformShellCommand::SetShell(const char *shell_interpreter) {
+  LLDB_RECORD_METHOD(void, SBPlatformShellCommand, SetShell, (const char *),
+                     shell_interpreter);
+
+  if (shell_interpreter && shell_interpreter[0])
+    m_opaque_ptr->m_shell = shell_interpreter;
+  else
+    m_opaque_ptr->m_shell.clear();
 }
 
 const char *SBPlatformShellCommand::GetCommand() {
@@ -557,7 +593,8 @@ SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
       if (working_dir)
         shell_command.SetWorkingDirectory(working_dir);
     }
-    return platform_sp->RunShellCommand(command, FileSpec(working_dir),
+    return platform_sp->RunShellCommand(shell_command.m_opaque_ptr->m_shell,
+                                        command, FileSpec(working_dir),
                                         &shell_command.m_opaque_ptr->m_status,
                                         &shell_command.m_opaque_ptr->m_signo,
                                         &shell_command.m_opaque_ptr->m_output,
@@ -699,6 +736,8 @@ void RegisterMethods<SBPlatformShellCommand>(Registry &R) {
       SBPlatformShellCommand &,
       SBPlatformShellCommand, operator=,(const lldb::SBPlatformShellCommand &));
   LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, Clear, ());
+  LLDB_REGISTER_METHOD(const char *, SBPlatformShellCommand, GetShell, ());
+  LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, SetShell, (const char *));
   LLDB_REGISTER_METHOD(const char *, SBPlatformShellCommand, GetCommand, ());
   LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, SetCommand,
                        (const char *));

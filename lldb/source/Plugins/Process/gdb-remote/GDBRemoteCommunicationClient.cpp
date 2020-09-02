@@ -2812,7 +2812,7 @@ lldb::addr_t GDBRemoteCommunicationClient::GetShlibInfoAddr() {
 }
 
 lldb_private::Status GDBRemoteCommunicationClient::RunShellCommand(
-    const char *command, // Shouldn't be NULL
+    llvm::StringRef command,
     const FileSpec &
         working_dir, // Pass empty FileSpec to use the current working directory
     int *status_ptr, // Pass NULL if you don't want the process exit status
@@ -2823,7 +2823,7 @@ lldb_private::Status GDBRemoteCommunicationClient::RunShellCommand(
     const Timeout<std::micro> &timeout) {
   lldb_private::StreamString stream;
   stream.PutCString("qPlatform_shell:");
-  stream.PutBytesAsRawHex8(command, strlen(command));
+  stream.PutBytesAsRawHex8(command.data(), command.size());
   stream.PutChar(',');
   uint32_t timeout_sec = UINT32_MAX;
   if (timeout) {

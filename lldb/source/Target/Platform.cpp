@@ -1319,7 +1319,23 @@ MmapArgList Platform::GetMmapArgumentList(const ArchSpec &arch, addr_t addr,
 }
 
 lldb_private::Status Platform::RunShellCommand(
-    const char *command, // Shouldn't be nullptr
+    llvm::StringRef command,
+    const FileSpec &
+        working_dir, // Pass empty FileSpec to use the current working directory
+    int *status_ptr, // Pass nullptr if you don't want the process exit status
+    int *signo_ptr, // Pass nullptr if you don't want the signal that caused the
+                    // process to exit
+    std::string
+        *command_output, // Pass nullptr if you don't want the command output
+    const Timeout<std::micro> &timeout) {
+  return RunShellCommand(llvm::StringRef(), command, working_dir, status_ptr,
+                         signo_ptr, command_output, timeout);
+}
+
+lldb_private::Status Platform::RunShellCommand(
+    llvm::StringRef shell,   // Pass empty if you want to use the default
+                             // shell interpreter
+    llvm::StringRef command, // Shouldn't be empty
     const FileSpec &
         working_dir, // Pass empty FileSpec to use the current working directory
     int *status_ptr, // Pass nullptr if you don't want the process exit status
@@ -1329,8 +1345,8 @@ lldb_private::Status Platform::RunShellCommand(
         *command_output, // Pass nullptr if you don't want the command output
     const Timeout<std::micro> &timeout) {
   if (IsHost())
-    return Host::RunShellCommand(command, working_dir, status_ptr, signo_ptr,
-                                 command_output, timeout);
+    return Host::RunShellCommand(shell, command, working_dir, status_ptr,
+                                 signo_ptr, command_output, timeout);
   else
     return Status("unimplemented");
 }
