@@ -20620,7 +20620,7 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
       SDLoc DL(N);
       SDValue NewIdx;
       LLVMContext &Ctx = *DAG.getContext();
-      unsigned NumElts = VT.getVectorNumElements();
+      ElementCount NumElts = VT.getVectorElementCount();
       unsigned EltSizeInBits = VT.getScalarSizeInBits();
       if ((EltSizeInBits % N1SrcSVT.getSizeInBits()) == 0) {
         unsigned Scale = EltSizeInBits / N1SrcSVT.getSizeInBits();
@@ -20628,7 +20628,7 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
         NewIdx = DAG.getVectorIdxConstant(InsIdx * Scale, DL);
       } else if ((N1SrcSVT.getSizeInBits() % EltSizeInBits) == 0) {
         unsigned Scale = N1SrcSVT.getSizeInBits() / EltSizeInBits;
-        if ((NumElts % Scale) == 0 && (InsIdx % Scale) == 0) {
+        if (NumElts.isKnownMultipleOf(Scale) && (InsIdx % Scale) == 0) {
           NewVT = EVT::getVectorVT(Ctx, N1SrcSVT, NumElts / Scale);
           NewIdx = DAG.getVectorIdxConstant(InsIdx / Scale, DL);
         }

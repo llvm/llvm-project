@@ -3227,11 +3227,6 @@ backend.
 Operating System Features and Limitations
 -----------------------------------------
 
-Darwin (macOS)
-^^^^^^^^^^^^^^
-
-Thread Sanitizer is not supported.
-
 Windows
 ^^^^^^^
 

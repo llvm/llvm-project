@@ -454,7 +454,9 @@ TEST(TypeHierarchy, DeriveFromImplicitSpec) {
   template <typename T>
   struct Parent {};
 
-  struct Child : Parent<int> {};
+  struct Child1 : Parent<int> {};
+
+  struct Child2 : Parent<char> {};
 
   Parent<int> Fo^o;
   )cpp");
@@ -468,8 +470,10 @@ TEST(TypeHierarchy, DeriveFromImplicitSpec) {
       testPath(TU.Filename));
   ASSERT_TRUE(bool(Result));
   EXPECT_THAT(*Result,
-              AllOf(WithName("Parent<int>"), WithKind(SymbolKind::Struct),
-                    Children(AllOf(WithName("Child"),
+              AllOf(WithName("Parent"), WithKind(SymbolKind::Struct),
+                    Children(AllOf(WithName("Child1"),
+                                   WithKind(SymbolKind::Struct), Children()),
+                             AllOf(WithName("Child2"),
                                    WithKind(SymbolKind::Struct), Children()))));
 }
 
@@ -491,8 +495,8 @@ TEST(TypeHierarchy, DeriveFromPartialSpec) {
       AST, Source.points()[0], 2, TypeHierarchyDirection::Children, Index.get(),
       testPath(TU.Filename));
   ASSERT_TRUE(bool(Result));
-  EXPECT_THAT(*Result, AllOf(WithName("Parent<int>"),
-                             WithKind(SymbolKind::Struct), Children()));
+  EXPECT_THAT(*Result, AllOf(WithName("Parent"), WithKind(SymbolKind::Struct),
+                             Children()));
 }
 
 TEST(TypeHierarchy, DeriveFromTemplate) {
@@ -510,15 +514,15 @@ TEST(TypeHierarchy, DeriveFromTemplate) {
   auto AST = TU.build();
   auto Index = TU.index();
 
-  // FIXME: We'd like this to return the implicit specialization Child<int>,
-  //        but currently libIndex does not expose relationships between
-  //        implicit specializations.
+  // FIXME: We'd like this to show the implicit specializations Parent<int>
+  //        and Child<int>, but currently libIndex does not expose relationships
+  //        between implicit specializations.
   llvm::Optional<TypeHierarchyItem> Result = getTypeHierarchy(
       AST, Source.points()[0], 2, TypeHierarchyDirection::Children, Index.get(),
       testPath(TU.Filename));
   ASSERT_TRUE(bool(Result));
   EXPECT_THAT(*Result,
-              AllOf(WithName("Parent<int>"), WithKind(SymbolKind::Struct),
+              AllOf(WithName("Parent"), WithKind(SymbolKind::Struct),
                     Children(AllOf(WithName("Child"),
                                    WithKind(SymbolKind::Struct), Children()))));
 }

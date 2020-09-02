@@ -766,9 +766,8 @@ public:
     case spirv::MemoryAccess::None:
     case spirv::MemoryAccess::Nontemporal:
     case spirv::MemoryAccess::Volatile: {
-      unsigned alignment = memoryAccess == spirv::MemoryAccess::Aligned
-                               ? op.alignment().getValue().getZExtValue()
-                               : 0;
+      unsigned alignment =
+          memoryAccess == spirv::MemoryAccess::Aligned ? *op.alignment() : 0;
       bool isNonTemporal = memoryAccess == spirv::MemoryAccess::Nontemporal;
       bool isVolatile = memoryAccess == spirv::MemoryAccess::Volatile;
       replaceWithLoadOrStore(op, rewriter, this->typeConverter, alignment,

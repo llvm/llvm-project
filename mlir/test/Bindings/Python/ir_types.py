@@ -154,3 +154,61 @@ def testNoneType():
   print("none type:", mlir.ir.NoneType(ctx))
 
 run(testNoneType)
+
+# CHECK-LABEL: TEST: testComplexType
+def testComplexType():
+  ctx = mlir.ir.Context()
+  complex_i32 = mlir.ir.ComplexType(ctx.parse_type("complex<i32>"))
+  # CHECK: complex type element: i32
+  print("complex type element:", complex_i32.element_type)
+
+  f32 = mlir.ir.F32Type(ctx)
+  # CHECK: complex type: complex<f32>
+  print("complex type:", mlir.ir.ComplexType.get_complex(f32))
+
+  index = mlir.ir.IndexType(ctx)
+  try:
+    complex_invalid = mlir.ir.ComplexType.get_complex(index)
+  except ValueError as e:
+    # CHECK: invalid 'Type(index)' and expected floating point or integer type.
+    print(e)
+  else:
+    print("Exception not produced")
+
+run(testComplexType)
+
+# CHECK-LABEL: TEST: testVectorType
+def testVectorType():
+  ctx = mlir.ir.Context()
+  f32 = mlir.ir.F32Type(ctx)
+  shape = [2, 3]
+  # CHECK: vector type: vector<2x3xf32>
+  print("vector type:", mlir.ir.VectorType.get_vector(shape, f32))
+
+  index = mlir.ir.IndexType(ctx)
+  try:
+    vector_invalid = mlir.ir.VectorType.get_vector(shape, index)
+  except ValueError as e:
+    # CHECK: invalid 'Type(index)' and expected floating point or integer type.
+    print(e)
+  else:
+    print("Exception not produced")
+
+run(testVectorType)
+
+# CHECK-LABEL: TEST: testTupleType
+def testTupleType():
+  ctx = mlir.ir.Context()
+  i32 = mlir.ir.IntegerType(ctx.parse_type("i32"))
+  f32 = mlir.ir.F32Type(ctx)
+  vector = mlir.ir.VectorType(ctx.parse_type("vector<2x3xf32>"))
+  l = [i32, f32, vector]
+  tuple_type = mlir.ir.TupleType.get_tuple(ctx, l)
+  # CHECK: tuple type: tuple<i32, f32, vector<2x3xf32>>
+  print("tuple type:", tuple_type)
+  # CHECK: number of types: 3
+  print("number of types:", tuple_type.num_types)
+  # CHECK: pos-th type in the tuple type: f32
+  print("pos-th type in the tuple type:", tuple_type.get_type(1))
+
+run(testTupleType)

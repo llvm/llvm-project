@@ -484,6 +484,9 @@ BUILTIN(__builtin_vsx_xvcvdpsp, "V4fV2d", "")
 BUILTIN(__builtin_vsx_xvcvsphp, "V4fV4f", "")
 BUILTIN(__builtin_vsx_xvcvhpsp, "V4fV8Us", "")
 
+BUILTIN(__builtin_vsx_xvcvspbf16, "V16UcV16Uc", "")
+BUILTIN(__builtin_vsx_xvcvbf16spn, "V16UcV16Uc", "")
+
 // Vector Test Data Class builtins
 BUILTIN(__builtin_vsx_xvtstdcdp, "V2ULLiV2dIi", "")
 BUILTIN(__builtin_vsx_xvtstdcsp, "V4UiV4fIi", "")

@@ -526,6 +526,18 @@ void DWARFContext::dump(
     }
   };
 
+  auto DumpStrSection = [&](StringRef Section) {
+    DataExtractor StrData(Section, isLittleEndian(), 0);
+    uint64_t Offset = 0;
+    uint64_t StrOffset = 0;
+    while (const char *CStr = StrData.getCStr(&Offset)) {
+      OS << format("0x%8.8" PRIx64 ": \"", StrOffset);
+      OS.write_escaped(CStr);
+      OS << "\"\n";
+      StrOffset = Offset;
+    }
+  };
+
   if (const auto *Off = shouldDump(Explicit, ".debug_line", DIDT_ID_DebugLine,
                                    DObj->getLineSection().Data)) {
     DWARFDataExtractor LineData(*DObj, DObj->getLineSection(), isLittleEndian(),
@@ -556,37 +568,16 @@ void DWARFContext::dump(
   }
 
   if (shouldDump(Explicit, ".debug_str", DIDT_ID_DebugStr,
-                 DObj->getStrSection())) {
-    DataExtractor strData(DObj->getStrSection(), isLittleEndian(), 0);
-    uint64_t offset = 0;
-    uint64_t strOffset = 0;
-    while (const char *s = strData.getCStr(&offset)) {
-      OS << format("0x%8.8" PRIx64 ": \"%s\"\n", strOffset, s);
-      strOffset = offset;
-    }
-  }
+                 DObj->getStrSection()))
+    DumpStrSection(DObj->getStrSection());
+
   if (shouldDump(ExplicitDWO, ".debug_str.dwo", DIDT_ID_DebugStr,
-                 DObj->getStrDWOSection())) {
-    DataExtractor strDWOData(DObj->getStrDWOSection(), isLittleEndian(), 0);
-    uint64_t offset = 0;
-    uint64_t strDWOOffset = 0;
-    while (const char *s = strDWOData.getCStr(&offset)) {
-      OS << format("0x%8.8" PRIx64 ": \"%s\"\n", strDWOOffset, s);
-      strDWOOffset = offset;
-    }
-  }
+                 DObj->getStrDWOSection()))
+    DumpStrSection(DObj->getStrDWOSection());
+
   if (shouldDump(Explicit, ".debug_line_str", DIDT_ID_DebugLineStr,
-                 DObj->getLineStrSection())) {
-    DataExtractor strData(DObj->getLineStrSection(), isLittleEndian(), 0);
-    uint64_t offset = 0;
-    uint64_t strOffset = 0;
-    while (const char *s = strData.getCStr(&offset)) {
-      OS << format("0x%8.8" PRIx64 ": \"", strOffset);
-      OS.write_escaped(s);
-      OS << "\"\n";
-      strOffset = offset;
-    }
-  }
+                 DObj->getLineStrSection()))
+    DumpStrSection(DObj->getLineStrSection());
 
   if (shouldDump(Explicit, ".debug_addr", DIDT_ID_DebugAddr,
                  DObj->getAddrSection().Data)) {

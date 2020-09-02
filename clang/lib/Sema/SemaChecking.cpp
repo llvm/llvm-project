@@ -12064,13 +12064,13 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
             << E->getType());
   }
 
-  IntRange MinSourceRange =
+  IntRange SourceTypeRange =
+      IntRange::forTargetOfCanonicalType(S.Context, Source);
+  IntRange LikelySourceRange =
       GetExprRange(S.Context, E, S.isConstantEvaluated(), /*Approximate*/ true);
-  IntRange MaxSourceRange =
-      GetExprRange(S.Context, E, S.isConstantEvaluated(), /*Approximate*/ false);
   IntRange TargetRange = IntRange::forTargetOfCanonicalType(S.Context, Target);
 
-  if (MinSourceRange.Width > TargetRange.Width) {
+  if (LikelySourceRange.Width > TargetRange.Width) {
     // If the source is a constant, use a default-on diagnostic.
     // TODO: this should happen for bitfield stores, too.
     Expr::EvalResult Result;
@@ -12103,9 +12103,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     return DiagnoseImpCast(S, E, T, CC, diag::warn_impcast_integer_precision);
   }
 
-  // Only warn here if E can't possibly reach the target range, not only if
-  // it's not likely to be in that range.
-  if (TargetRange.Width > MaxSourceRange.Width) {
+  if (TargetRange.Width > SourceTypeRange.Width) {
     if (auto *UO = dyn_cast<UnaryOperator>(E))
       if (UO->getOpcode() == UO_Minus)
         if (Source->isUnsignedIntegerType()) {
@@ -12118,8 +12116,9 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
         }
   }
 
-  if (TargetRange.Width == MinSourceRange.Width && !TargetRange.NonNegative &&
-      MinSourceRange.NonNegative && Source->isSignedIntegerType()) {
+  if (TargetRange.Width == LikelySourceRange.Width &&
+      !TargetRange.NonNegative && LikelySourceRange.NonNegative &&
+      Source->isSignedIntegerType()) {
     // Warn when doing a signed to signed conversion, warn if the positive
     // source value is exactly the width of the target type, which will
     // cause a negative value to be stored.
@@ -12144,9 +12143,9 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     // Fall through for non-constants to give a sign conversion warning.
   }
 
-  if ((TargetRange.NonNegative && !MinSourceRange.NonNegative) ||
-      (!TargetRange.NonNegative && MinSourceRange.NonNegative &&
-       MinSourceRange.Width == TargetRange.Width)) {
+  if ((TargetRange.NonNegative && !LikelySourceRange.NonNegative) ||
+      (!TargetRange.NonNegative && LikelySourceRange.NonNegative &&
+       LikelySourceRange.Width == TargetRange.Width)) {
     if (S.SourceMgr.isInSystemMacro(CC))
       return;
 

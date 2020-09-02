@@ -303,6 +303,18 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("csky-unknown-unknown");
+  EXPECT_EQ(Triple::csky, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("csky-unknown-linux");
+  EXPECT_EQ(Triple::csky, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
   T = Triple("riscv32-unknown-unknown");
   EXPECT_EQ(Triple::riscv32, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -882,6 +894,12 @@ TEST(TripleTest, BitWidthPredicates) {
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
   EXPECT_TRUE(T.isRISCV());
+
+  T.setArch(Triple::csky);
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_TRUE(T.isArch32Bit());
+  EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_TRUE(T.isCSKY());
 }
 
 TEST(TripleTest, BitWidthArchVariants) {
@@ -980,6 +998,10 @@ TEST(TripleTest, BitWidthArchVariants) {
   T.setArch(Triple::riscv64);
   EXPECT_EQ(Triple::riscv32, T.get32BitArchVariant().getArch());
   EXPECT_EQ(Triple::riscv64, T.get64BitArchVariant().getArch());
+
+  T.setArch(Triple::csky);
+  EXPECT_EQ(Triple::csky, T.get32BitArchVariant().getArch());
+  EXPECT_EQ(Triple::UnknownArch, T.get64BitArchVariant().getArch());
 
   T.setArch(Triple::thumbeb);
   EXPECT_EQ(Triple::thumbeb, T.get32BitArchVariant().getArch());
@@ -1134,6 +1156,10 @@ TEST(TripleTest, EndianArchVariants) {
   T.setArch(Triple::le64);
   EXPECT_EQ(Triple::UnknownArch, T.getBigEndianArchVariant().getArch());
   EXPECT_EQ(Triple::le64, T.getLittleEndianArchVariant().getArch());
+
+  T.setArch(Triple::csky);
+  EXPECT_EQ(Triple::UnknownArch, T.getBigEndianArchVariant().getArch());
+  EXPECT_EQ(Triple::csky, T.getLittleEndianArchVariant().getArch());
 }
 
 TEST(TripleTest, getOSVersion) {
@@ -1359,6 +1385,9 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::XCOFF, Triple("powerpc64-ibm-aix").getObjectFormat());
   EXPECT_EQ(Triple::XCOFF, Triple("powerpc---xcoff").getObjectFormat());
   EXPECT_EQ(Triple::XCOFF, Triple("powerpc64---xcoff").getObjectFormat());
+
+  EXPECT_EQ(Triple::ELF, Triple("csky-unknown-unknown").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("csky-unknown-linux").getObjectFormat());
 
   Triple MSVCNormalized(Triple::normalize("i686-pc-windows-msvc-elf"));
   EXPECT_EQ(Triple::ELF, MSVCNormalized.getObjectFormat());

@@ -77,12 +77,12 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   ::mlir::Region &someRegion();
 // CHECK:   ::mlir::MutableArrayRef<Region> someRegions();
 // CHECK:   ::mlir::IntegerAttr attr1Attr()
-// CHECK:   ::llvm::APInt attr1();
+// CHECK:   uint32_t attr1();
 // CHECK:   ::mlir::FloatAttr attr2Attr()
 // CHECK:   ::llvm::Optional< ::llvm::APFloat > attr2();
 // CHECK:   static void build(Value val);
 // CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type r, ::llvm::ArrayRef<::mlir::Type> s, ::mlir::Value a, ::mlir::ValueRange b, ::mlir::IntegerAttr attr1, /*optional*/::mlir::FloatAttr attr2, unsigned someRegionsCount)
-// CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type r, ::llvm::ArrayRef<::mlir::Type> s, ::mlir::Value a, ::mlir::ValueRange b, ::llvm::APInt attr1, /*optional*/::mlir::FloatAttr attr2, unsigned someRegionsCount)
+// CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type r, ::llvm::ArrayRef<::mlir::Type> s, ::mlir::Value a, ::mlir::ValueRange b, uint32_t attr1, /*optional*/::mlir::FloatAttr attr2, unsigned someRegionsCount)
 // CHECK:   static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes, unsigned numRegions)
 // CHECK:   static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser, ::mlir::OperationState &result);
 // CHECK:   void print(::mlir::OpAsmPrinter &p);

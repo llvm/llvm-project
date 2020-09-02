@@ -1,4 +1,4 @@
-; RUN: opt -debug-pass=Executions -phi-values -memcpyopt -instcombine -disable-output < %s 2>&1 | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-MEMCPY
+; RUN: opt -debug-pass=Executions -phi-values -memcpyopt -instcombine -disable-output < %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-MEMCPY
 ; RUN: opt -debug-pass=Executions -memdep -instcombine -disable-output < %s 2>&1 | FileCheck %s -check-prefix=CHECK
 
 ; Check that phi values is not run when it's not already available, and that
@@ -9,9 +9,8 @@
 ; CHECK: Executing Pass 'Memory Dependence Analysis'
 ; CHECK-MEMCPY: Executing Pass 'MemCpy Optimization'
 ; CHECK-MEMCPY-DAG: Freeing Pass 'MemCpy Optimization'
-; CHECK-DAG: Freeing Pass 'Phi Values Analysis'
 ; CHECK-DAG: Freeing Pass 'Memory Dependence Analysis'
-; CHECK-MEMCPY-NOT: Freeing Pass 'Basic Alias Analysis (stateless AA impl)'
+; CHECK-DAG: Freeing Pass 'Phi Values Analysis'
 ; CHECK-NOT: Executing Pass 'Phi Values Analysis'
 ; CHECK-NOT: Executing Pass 'Basic Alias Analysis (stateless AA impl)'
 ; CHECK: Executing Pass 'Combine redundant instructions'

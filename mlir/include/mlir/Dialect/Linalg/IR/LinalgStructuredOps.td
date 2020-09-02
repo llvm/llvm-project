@@ -477,9 +477,9 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
       };
     }
 
-    unsigned getNumInputs() { return args_in().getSExtValue(); }
+    unsigned getNumInputs() { return args_in(); }
 
-    unsigned getNumOutputs() { return args_out().getSExtValue(); }
+    unsigned getNumOutputs() { return args_out(); }
 
     StringRef getLibraryCallName() {
       return library_call().hasValue() ? library_call().getValue() : "";
@@ -498,7 +498,7 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
     llvm::Optional<unsigned> getSymbolSource() {
       auto ss = symbol_source();
       return ss.hasValue() ?
-        llvm::Optional<unsigned>(ss.getValue().getLimitedValue()) : llvm::None;
+        llvm::Optional<unsigned>(ss.getValue()) : llvm::None;
     }
   }];
 

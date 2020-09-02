@@ -215,17 +215,9 @@ def LLVM_FNegOp : LLVM_UnaryArithmeticOp<"fneg", "CreateFNeg">;
 // Common code definition that is used to verify and set the alignment attribute
 // of LLVM ops that accept such an attribute.
 class MemoryOpWithAlignmentBase {
-  code alignmentVerifierCode = [{
-    if (alignment().hasValue()) {
-      auto align = alignment().getValue().getSExtValue();
-      if (align < 0)
-        return emitOpError("expected positive alignment");
-    }
-    return success();
-  }];
   code setAlignmentCode = [{
     if ($alignment.hasValue()) {
-      auto align = $alignment.getValue().getZExtValue();
+      auto align = $alignment.getValue();
       if (align != 0)
         inst->setAlignment(llvm::Align(align));
     }
@@ -266,7 +258,6 @@ def LLVM_AllocaOp :
   }]>];
   let parser = [{ return parseAllocaOp(parser, result); }];
   let printer = [{ printAllocaOp(p, *this); }];
-  let verifier = alignmentVerifierCode;
 }
 def LLVM_GEPOp : LLVM_OneResultOp<"getelementptr", [NoSideEffect]>,
                  Arguments<(ins LLVM_Type:$base, Variadic<LLVM_Type>:$indices)>,
@@ -301,7 +292,6 @@ def LLVM_LoadOp :
     "bool isNonTemporal = false">];
   let parser = [{ return parseLoadOp(parser, result); }];
   let printer = [{ printLoadOp(p, *this); }];
-  let verifier = alignmentVerifierCode;
 }
 def LLVM_StoreOp :
     MemoryOpWithAlignmentAndAttributes,
@@ -321,7 +311,6 @@ def LLVM_StoreOp :
     ];
   let parser = [{ return parseStoreOp(parser, result); }];
   let printer = [{ printStoreOp(p, *this); }];
-  let verifier = alignmentVerifierCode;
 }
 
 // Casts.
@@ -646,7 +635,7 @@ def LLVM_AddressOfOp
     OpBuilder<"OpBuilder &builder, OperationState &result, GlobalOp global, "
               "ArrayRef<NamedAttribute> attrs = {}", [{
       build(builder, result,
-            global.getType().getPointerTo(global.addr_space().getZExtValue()),
+            global.getType().getPointerTo(global.addr_space()),
             global.sym_name(), attrs);}]>,
 
     OpBuilder<"OpBuilder &builder, OperationState &result, LLVMFuncOp func, "
@@ -917,8 +906,8 @@ def LLVM_MatrixColumnMajorLoadOp
     llvm::Align align = dl.getABITypeAlign(
       $data->getType()->getPointerElementType());
     $res = mb.CreateColumnMajorLoad(
-      $data, align, $stride, $isVolatile.getZExtValue(), $rows.getZExtValue(),
-      $columns.getZExtValue());
+      $data, align, $stride, $isVolatile, $rows,
+      $columns);
   }];
   let assemblyFormat = "$data `,` `<` `stride` `=` $stride `>` attr-dict"
     "`:` type($res) `from` type($data) `stride` type($stride)";
@@ -943,8 +932,8 @@ def LLVM_MatrixColumnMajorStoreOp
     llvm::Align align = dl.getABITypeAlign(
       $data->getType()->getPointerElementType());
     mb.CreateColumnMajorStore(
-      $matrix, $data, align, $stride, $isVolatile.getZExtValue(),
-      $rows.getZExtValue(), $columns.getZExtValue());
+      $matrix, $data, align, $stride, $isVolatile,
+      $rows, $columns);
   }];
   let assemblyFormat = "$matrix `,` $data `,` `<` `stride` `=` $stride `>` "
     "attr-dict`:` type($matrix) `to` type($data) `stride` type($stride)";
@@ -960,8 +949,8 @@ def LLVM_MatrixMultiplyOp
   string llvmBuilder = [{
     llvm::MatrixBuilder<decltype(builder)> mb(builder);
     $res = mb.CreateMatrixMultiply(
-      $lhs, $rhs, $lhs_rows.getZExtValue(), $lhs_columns.getZExtValue(),
-      $rhs_columns.getZExtValue());
+      $lhs, $rhs, $lhs_rows, $lhs_columns,
+      $rhs_columns);
   }];
   let assemblyFormat = "$lhs `,` $rhs attr-dict "
     "`:` `(` type($lhs) `,` type($rhs) `)` `->` type($res)";
@@ -975,7 +964,7 @@ def LLVM_MatrixTransposeOp
   string llvmBuilder = [{
     llvm::MatrixBuilder<decltype(builder)> mb(builder);
     $res = mb.CreateMatrixTranspose(
-      $matrix, $rows.getZExtValue(), $columns.getZExtValue());
+      $matrix, $rows, $columns);
   }];
   let assemblyFormat = "$matrix attr-dict `:` type($matrix) `into` type($res)";
 }
@@ -999,9 +988,9 @@ def LLVM_MaskedLoadOp
                  Variadic<LLVM_Type>:$pass_thru, I32Attr:$alignment)> {
   string llvmBuilder = [{
     $res = $pass_thru.empty() ? builder.CreateMaskedLoad(
-      $data, llvm::Align($alignment.getZExtValue()), $mask) :
+      $data, llvm::Align($alignment), $mask) :
       builder.CreateMaskedLoad(
-        $data, llvm::Align($alignment.getZExtValue()), $mask, $pass_thru[0]);
+        $data, llvm::Align($alignment), $mask, $pass_thru[0]);
   }];
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
@@ -1014,7 +1003,7 @@ def LLVM_MaskedStoreOp
                  I32Attr:$alignment)> {
   string llvmBuilder = [{
     builder.CreateMaskedStore(
-      $value, $data, llvm::Align($alignment.getZExtValue()), $mask);
+      $value, $data, llvm::Align($alignment), $mask);
   }];
   let assemblyFormat = "$value `,` $data `,` $mask attr-dict `:` "
     "type($value) `,` type($mask) `into` type($data)";
@@ -1027,9 +1016,9 @@ def LLVM_masked_gather
                  Variadic<LLVM_Type>:$pass_thru, I32Attr:$alignment)> {
   string llvmBuilder = [{
     $res = $pass_thru.empty() ? builder.CreateMaskedGather(
-      $ptrs, llvm::Align($alignment.getZExtValue()), $mask) :
+      $ptrs, llvm::Align($alignment), $mask) :
       builder.CreateMaskedGather(
-        $ptrs, llvm::Align($alignment.getZExtValue()), $mask, $pass_thru[0]);
+        $ptrs, llvm::Align($alignment), $mask, $pass_thru[0]);
   }];
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
@@ -1042,7 +1031,7 @@ def LLVM_masked_scatter
                  I32Attr:$alignment)> {
   string llvmBuilder = [{
     builder.CreateMaskedScatter(
-      $value, $ptrs, llvm::Align($alignment.getZExtValue()), $mask);
+      $value, $ptrs, llvm::Align($alignment), $mask);
   }];
   let assemblyFormat = "$value `,` $ptrs `,` $mask attr-dict `:` "
     "type($value) `,` type($mask) `into` type($ptrs)";

@@ -3477,6 +3477,9 @@ def warn_acquired_before_after_cycle : Warning<
 def warn_acquire_requires_negative_cap : Warning<
   "acquiring %0 '%1' requires negative capability '%2'">,
   InGroup<ThreadSafetyNegative>, DefaultIgnore;
+def warn_fun_requires_negative_cap : Warning<
+  "calling function %0 requires negative capability '%1'">,
+  InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 
 // Thread safety warnings on pass by reference
 def warn_guarded_pass_by_reference : Warning<
