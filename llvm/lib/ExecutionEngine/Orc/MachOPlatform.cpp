@@ -305,7 +305,7 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
     preserveInitSectionIfPresent(InitSectionSymbols, G, "__objc_selrefs");
     preserveInitSectionIfPresent(InitSectionSymbols, G, "__objc_classlist");
 
-    if (!InitSymbolDeps.empty()) {
+    if (!InitSectionSymbols.empty()) {
       std::lock_guard<std::mutex> Lock(InitScraperMutex);
       InitSymbolDeps[&MR] = std::move(InitSectionSymbols);
     }
