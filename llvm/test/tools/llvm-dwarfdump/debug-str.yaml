@@ -1,14 +1,19 @@
-## Show that llvm-dwarfdump dumps the .debug_str section when --debug-str is
-## specified.
+## a) Show that llvm-dwarfdump dumps the .debug_str and
+## .debug_str.dwo sections when --debug-str is specified.
 
-# RUN: yaml2obj %s -o %t.o
+##                        "some string\0foo\0\0"
+# RUN: yaml2obj -DCONTENT="736f6d6520737472696e6700666f6f0000" %s -o %t.o
 # RUN: llvm-dwarfdump %t.o --debug-str | FileCheck %s
 
-# CHECK:      .debug_str contents:
-# CHECK-NEXT: 0x00000000: "some string"
-# CHECK-NEXT: 0x0000000c: "foo"
-# CHECK-NEXT: 0x00000010: ""
-# CHECK-NOT:  {{.}}
+#  CHECK:      .debug_str contents:
+#  CHECK-NEXT: 0x00000000: "some string"
+#  CHECK-NEXT: 0x0000000c: "foo"
+#  CHECK-NEXT: 0x00000010: ""
+#  CHECK:      .debug_str.dwo contents:
+#  CHECK-NEXT: 0x00000000: "some string"
+#  CHECK-NEXT: 0x0000000c: "foo"
+#  CHECK-NEXT: 0x00000010: ""
+# CHECK-EMPTY:
 
 --- !ELF
 FileHeader:
@@ -17,6 +22,25 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
 Sections:
-  - Name: .debug_str
-    Type: SHT_PROGBITS
-    Content: '736f6d6520737472696e6700666f6f0000' ## "some string\0foo\0\0"
+  - Name:    .debug_str
+    Type:    SHT_PROGBITS
+    Content: [[CONTENT]]
+  - Name:    .debug_str.dwo
+    Type:    SHT_PROGBITS
+    Content: [[CONTENT]]
+
+## b) Test how we dump unprintable chars.
+
+##                        ['\t', '\0', '\001', '\0', '\\', '0', '0', '1', '\0']
+# RUN: yaml2obj -DCONTENT="090001005C30303100" %s -o %t2.o
+# RUN: llvm-dwarfdump --debug-str %t2.o | FileCheck %s --check-prefix=ESCAPED
+
+#       ESCAPED: .debug_str contents:
+#  ESCAPED-NEXT: 0x00000000: "\t"
+#  ESCAPED-NEXT: 0x00000002: "\001"
+#  ESCAPED-NEXT: 0x00000004: "\\001"
+#       ESCAPED: .debug_str.dwo contents:
+#  ESCAPED-NEXT: 0x00000000: "\t"
+#  ESCAPED-NEXT: 0x00000002: "\001"
+#  ESCAPED-NEXT: 0x00000004: "\\001"
+# ESCAPED-EMPTY:
