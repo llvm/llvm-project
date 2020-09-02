@@ -23,6 +23,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -2112,9 +2113,27 @@ bool llvm::runIPSCCP(
   }
 
   // Zap all returns which we've identified as zap to change.
+  SmallSetVector<Function *, 8> FuncZappedReturn;
   for (unsigned i = 0, e = ReturnsToZap.size(); i != e; ++i) {
     Function *F = ReturnsToZap[i]->getParent()->getParent();
     ReturnsToZap[i]->setOperand(0, UndefValue::get(F->getReturnType()));
+    // Record all functions that are zapped.
+    FuncZappedReturn.insert(F);
+  }
+
+  // Remove the returned attribute for zapped functions and the
+  // corresponding call sites.
+  for (Function *F : FuncZappedReturn) {
+    for (Argument &A : F->args())
+      F->removeParamAttr(A.getArgNo(), Attribute::Returned);
+    for (Use &U : F->uses()) {
+      // Skip over blockaddr users.
+      if (isa<BlockAddress>(U.getUser()))
+        continue;
+      CallBase *CB = cast<CallBase>(U.getUser());
+      for (Use &Arg : CB->args())
+        CB->removeParamAttr(CB->getArgOperandNo(&Arg), Attribute::Returned);
+    }
   }
 
   // If we inferred constant or undef values for globals variables, we can
