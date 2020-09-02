@@ -103,7 +103,7 @@ define double @rsqrt_x_reassociate_extra_use(double %x, double * %p) {
 ; CHECK-LABEL: @rsqrt_x_reassociate_extra_use(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
 ; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv double 1.000000e+00, [[SQRT]]
-; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc nsz double [[RSQRT]], [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = fdiv reassoc nsz double [[X:%.*]], [[SQRT]]
 ; CHECK-NEXT:    store double [[RSQRT]], double* [[P:%.*]], align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;
@@ -119,7 +119,7 @@ define <2 x float> @x_add_y_rsqrt_reassociate_extra_use(<2 x float> %x, <2 x flo
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[SQRT:%.*]] = call fast <2 x float> @llvm.sqrt.v2f32(<2 x float> [[ADD]])
 ; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv fast <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[SQRT]]
-; CHECK-NEXT:    [[RES:%.*]] = fmul fast <2 x float> [[ADD]], [[RSQRT]]
+; CHECK-NEXT:    [[RES:%.*]] = fdiv fast <2 x float> [[ADD]], [[SQRT]]
 ; CHECK-NEXT:    store <2 x float> [[RSQRT]], <2 x float>* [[P:%.*]], align 8
 ; CHECK-NEXT:    ret <2 x float> [[RES]]
 ;
