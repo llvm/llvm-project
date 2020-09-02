@@ -54,8 +54,8 @@ class AbstractBox {
 public:
   AbstractBox() = delete;
   AbstractBox(mlir::Value addr) : addr{addr} {
-    assert(isa_passbyref_type(addr.getType()) &&
-           "box values must be references");
+    //assert(isa_passbyref_type(addr.getType()) &&
+    //       "box values must be references");
   }
 
   /// An abstract box always contains a memory reference to a value.
