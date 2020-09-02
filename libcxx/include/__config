@@ -398,9 +398,7 @@
 #elif defined(_LIBCPP_COMPILER_CLANG)
 # define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
 #else
-// This definition is potentially buggy, but it's only taken with GCC in C++03,
-// which we barely support anyway. See llvm.org/PR39713
-# define _LIBCPP_ALIGNOF(_Tp) __alignof(_Tp)
+# error "We don't know a correct way to implement alignof(T) in C++03 outside of Clang"
 #endif
 
 #define _LIBCPP_PREFERRED_ALIGNOF(_Tp) __alignof(_Tp)
