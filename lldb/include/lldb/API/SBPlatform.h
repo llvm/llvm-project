@@ -51,6 +51,7 @@ protected:
 
 class LLDB_API SBPlatformShellCommand {
 public:
+  SBPlatformShellCommand(const char *shell, const char *shell_command);
   SBPlatformShellCommand(const char *shell_command);
 
   SBPlatformShellCommand(const SBPlatformShellCommand &rhs);
@@ -60,6 +61,10 @@ public:
   ~SBPlatformShellCommand();
 
   void Clear();
+
+  const char *GetShell();
+
+  void SetShell(const char *shell);
 
   const char *GetCommand();
 

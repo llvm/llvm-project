@@ -171,15 +171,24 @@ Status RemoteAwarePlatform::ResolveExecutable(
 }
 
 Status RemoteAwarePlatform::RunShellCommand(
-    const char *command, const FileSpec &working_dir, int *status_ptr,
+    llvm::StringRef command, const FileSpec &working_dir, int *status_ptr,
     int *signo_ptr, std::string *command_output,
     const Timeout<std::micro> &timeout) {
+  return RunShellCommand(llvm::StringRef(), command, working_dir, status_ptr,
+                         signo_ptr, command_output, timeout);
+}
+
+Status RemoteAwarePlatform::RunShellCommand(
+    llvm::StringRef shell, llvm::StringRef command, const FileSpec &working_dir,
+    int *status_ptr, int *signo_ptr, std::string *command_output,
+    const Timeout<std::micro> &timeout) {
   if (IsHost())
-    return Host::RunShellCommand(command, working_dir, status_ptr, signo_ptr,
-                                 command_output, timeout);
+    return Host::RunShellCommand(shell, command, working_dir, status_ptr,
+                                 signo_ptr, command_output, timeout);
   if (m_remote_platform_sp)
-    return m_remote_platform_sp->RunShellCommand(
-        command, working_dir, status_ptr, signo_ptr, command_output, timeout);
+    return m_remote_platform_sp->RunShellCommand(shell, command, working_dir,
+                                                 status_ptr, signo_ptr,
+                                                 command_output, timeout);
   return Status("unable to run a remote command without a platform");
 }
 

@@ -631,6 +631,8 @@ let Command = "platform shell" in {
     Desc<"Run the commands on the host shell when enabled.">;
   def platform_shell_timeout : Option<"timeout", "t">, Arg<"Value">,
     Desc<"Seconds to wait for the remote host to finish running the command.">;
+  def platform_shell_interpreter : Option<"shell", "s">, Arg<"Path">,
+    Desc<"Shell interpreter path. This is the binary used to run the command.">;
 }
 
 let Command = "process attach" in {
