@@ -1991,7 +1991,7 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
 }
 
 void CodeGenModule::addUsedGlobal(llvm::GlobalValue *GV) {
-  assert(!GV->isDeclaration() &&
+  assert(isa<llvm::Function>(GV) || !GV->isDeclaration() &&
          "Only globals with definition can force usage.");
   LLVMUsed.emplace_back(GV);
 }
