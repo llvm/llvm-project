@@ -998,6 +998,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.UniqueInternalLinkageNames =
       Args.hasArg(OPT_funique_internal_linkage_names);
 
+  Opts.SplitMachineFunctions = Args.hasArg(OPT_fsplit_machine_functions);
+
   Opts.MergeFunctions = Args.hasArg(OPT_fmerge_functions);
 
   Opts.NoUseJumpTables = Args.hasArg(OPT_fno_jump_tables);
