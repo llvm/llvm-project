@@ -18,10 +18,13 @@ namespace clang {
 
 class MigratorOptions {
 public:
-#define MIGRATOROPT(Name, Bits, Description) unsigned Name : Bits;
-#include "clang/Frontend/MigratorOptions.def"
-
-  MigratorOptions() : NoNSAllocReallocError(0), NoFinalizeRemoval(0) {}
+  unsigned NoNSAllocReallocError : 1;
+  unsigned NoFinalizeRemoval : 1;
+  MigratorOptions() {
+    NoNSAllocReallocError = 0;
+    NoFinalizeRemoval = 0;
+  }
 };
+
 }
 #endif

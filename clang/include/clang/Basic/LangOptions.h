@@ -227,12 +227,75 @@ public:
   };
 
 public:
+  /// Set of enabled sanitizers.
+  SanitizerSet Sanitize;
+
+  /// Paths to blacklist files specifying which objects
+  /// (files, functions, variables) should not be instrumented.
+  std::vector<std::string> SanitizerBlacklistFiles;
+
+  /// Paths to the XRay "always instrument" files specifying which
+  /// objects (files, functions, variables) should be imbued with the XRay
+  /// "always instrument" attribute.
+  /// WARNING: This is a deprecated field and will go away in the future.
+  std::vector<std::string> XRayAlwaysInstrumentFiles;
+
+  /// Paths to the XRay "never instrument" files specifying which
+  /// objects (files, functions, variables) should be imbued with the XRay
+  /// "never instrument" attribute.
+  /// WARNING: This is a deprecated field and will go away in the future.
+  std::vector<std::string> XRayNeverInstrumentFiles;
+
+  /// Paths to the XRay attribute list files, specifying which objects
+  /// (files, functions, variables) should be imbued with the appropriate XRay
+  /// attribute(s).
+  std::vector<std::string> XRayAttrListFiles;
+
+  clang::ObjCRuntime ObjCRuntime;
+
+  CoreFoundationABI CFRuntime = CoreFoundationABI::Unspecified;
+
+  std::string ObjCConstantStringClass;
+
+  /// The name of the handler function to be called when -ftrapv is
+  /// specified.
+  ///
+  /// If none is specified, abort (GCC-compatible behaviour).
+  std::string OverflowHandler;
+
+  /// The module currently being compiled as specified by -fmodule-name.
+  std::string ModuleName;
+
+  /// The name of the current module, of which the main source file
+  /// is a part. If CompilingModule is set, we are compiling the interface
+  /// of this module, otherwise we are compiling an implementation file of
+  /// it. This starts as ModuleName in case -fmodule-name is provided and
+  /// changes during compilation to reflect the current module.
+  std::string CurrentModule;
+
+  /// The names of any features to enable in module 'requires' decls
+  /// in addition to the hard-coded list in Module.cpp and the target features.
+  ///
+  /// This list is sorted.
+  std::vector<std::string> ModuleFeatures;
+
   /// Options for parsing comments.
   CommentOptions CommentOpts;
 
-#define LANGOPT(Name, Bits, Default, Description)
-#define TYPED_LANGOPT(Type, Name, Description) Type Name;
-#include "clang/Basic/LangOptions.def"
+  /// A list of all -fno-builtin-* function names (e.g., memset).
+  std::vector<std::string> NoBuiltinFuncs;
+
+  /// Triples of the OpenMP targets that the host code codegen should
+  /// take into account in order to generate accurate offloading descriptors.
+  std::vector<llvm::Triple> OMPTargetTriples;
+
+  /// Name of the IR file that contains the result of the OpenMP target
+  /// host code generation.
+  std::string OMPHostIRFile;
+
+  /// Indicates whether the front-end is explicitly told that the
+  /// input is a header file (i.e. -x c-header).
+  bool IsHeaderFile = false;
 
   LangOptions();
 

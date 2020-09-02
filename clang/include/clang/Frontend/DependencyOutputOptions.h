@@ -24,15 +24,49 @@ enum class DependencyOutputFormat { Make, NMake };
 /// file generation.
 class DependencyOutputOptions {
 public:
-#define TYPED_DEPENDENCY_OUTPUTOPT(Type, Name, Description) Type Name;
-#define DEPENDENCY_OUTPUTOPT(Name, Bits, Description) unsigned Name : Bits;
-#include "clang/Frontend/DependencyOutputOptions.def"
+  unsigned IncludeSystemHeaders : 1; ///< Include system header dependencies.
+  unsigned ShowHeaderIncludes : 1;   ///< Show header inclusions (-H).
+  unsigned UsePhonyTargets : 1;      ///< Include phony targets for each
+                                     /// dependency, which can avoid some 'make'
+                                     /// problems.
+  unsigned AddMissingHeaderDeps : 1; ///< Add missing headers to dependency list
+  unsigned IncludeModuleFiles : 1; ///< Include module file dependencies.
+
+  /// Destination of cl.exe style /showIncludes info.
+  ShowIncludesDestination ShowIncludesDest = ShowIncludesDestination::None;
+
+  /// The format for the dependency file.
+  DependencyOutputFormat OutputFormat = DependencyOutputFormat::Make;
+
+  /// The file to write dependency output to.
+  std::string OutputFile;
+
+  /// The file to write header include output to. This is orthogonal to
+  /// ShowHeaderIncludes (-H) and will include headers mentioned in the
+  /// predefines buffer. If the output file is "-", output will be sent to
+  /// stderr.
+  std::string HeaderIncludeOutputFile;
+
+  /// A list of names to use as the targets in the dependency file; this list
+  /// must contain at least one entry.
+  std::vector<std::string> Targets;
+
+  /// A list of filenames to be used as extra dependencies for every target.
+  std::vector<std::string> ExtraDeps;
+
+  /// In /showIncludes mode, pretend the main TU is a header with this name.
+  std::string ShowIncludesPretendHeader;
+
+  /// The file to write GraphViz-formatted header dependencies to.
+  std::string DOTOutputFile;
+
+  /// The directory to copy module dependencies to when collecting them.
+  std::string ModuleDependencyOutputDir;
+
 public:
   DependencyOutputOptions()
       : IncludeSystemHeaders(0), ShowHeaderIncludes(0), UsePhonyTargets(0),
-        AddMissingHeaderDeps(0), IncludeModuleFiles(0),
-        ShowIncludesDest(ShowIncludesDestination::None),
-        OutputFormat(DependencyOutputFormat::Make) {}
+        AddMissingHeaderDeps(0), IncludeModuleFiles(0) {}
 };
 
 }  // end namespace clang

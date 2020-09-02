@@ -6,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines the analyzer options avaible with -analyzer-config, using
-//  the ANLAYZER_OPTION and ANALYZER_OPTION_DEPENDS_ON_USER_MODE macros.
-//  Other analyzer options use the simpler ANALYZEROPT and TYPED_ANALYZEROPT
-//  macro.
+//  This file defines the analyzer options avaible with -analyzer-config.
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,15 +29,6 @@ define both 'ANALYZER_OPTION' and 'ANALYZER_OPTION_DEPENDS_ON_USER_MODE' macros!
 #endif
 #endif
 
-#ifndef TYPED_ANALYZEROPT
-#define TYPED_ANALYZEROPT(TYPE, NAME, DESCRIPTION)
-#endif
-
-#ifndef ANALYZEROPT
-#define ANALYZEROPT(NAME, BITS, DESCRIPTION)                                   \
-  TYPED_ANALYZEROPT(unsigned, NAME, DESCRITPTION)
-#endif
-
 #ifndef ANALYZER_OPTION
 /// Create a new analyzer option, but dont generate a method for it in
 /// AnalyzerOptions.
@@ -54,8 +42,7 @@ define both 'ANALYZER_OPTION' and 'ANALYZER_OPTION_DEPENDS_ON_USER_MODE' macros!
 ///             (-analyzer-config CMDFLAG=VALUE)
 ///   DESC - Description of the flag.
 ///   DEFAULT_VAL - The default value for CMDFLAG.
-#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
-  TYPED_ANALYZEROPT(TYPE, NAME, DESC)
+#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)
 #endif
 
 #ifndef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
@@ -75,8 +62,7 @@ define both 'ANALYZER_OPTION' and 'ANALYZER_OPTION_DEPENDS_ON_USER_MODE' macros!
 ///   DEEP_VAL - The default value for CMDFLAG, when "user-mode" was set to
 ///              "deep".
 #define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
-                                             SHALLOW_VAL, DEEP_VAL)            \
-  TYPED_ANALYZEROPT(TYPE, NAME, DESC)
+                                             SHALLOW_VAL, DEEP_VAL)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -449,79 +435,5 @@ ANALYZER_OPTION_DEPENDS_ON_USER_MODE(
     "\"basic-inlining\", \"inlining\", \"dynamic\", \"dynamic-bifurcate\".",
     /* SHALLOW_VAL */ "inlining", /* DEEP_VAL */ "dynamic-bifurcate")
 
-//===----------------------------------------------------------------------===//
-// Other analyzer options.
-//===----------------------------------------------------------------------===//
-
-TYPED_ANALYZEROPT(CheckersAndPackagesTy, CheckersAndPackages,
-                  "Pairs of checker/package name and enable/disable.")
-
-TYPED_ANALYZEROPT(
-    std::vector<std::string>, SilencedCheckersAndPackages,
-    "Vector of checker/package names which will not emit warnings.")
-
-TYPED_ANALYZEROPT(ConfigTable, Config,
-                  "A key-value table of use-specified configuration values.")
-TYPED_ANALYZEROPT(AnalysisStores, AnalysisStoreOpt, "")
-TYPED_ANALYZEROPT(AnalysisConstraints, AnalysisConstraintsOpt, "")
-TYPED_ANALYZEROPT(AnalysisDiagClients, AnalysisDiagOpt, "")
-TYPED_ANALYZEROPT(AnalysisPurgeMode, AnalysisPurgeOpt, "")
-
-TYPED_ANALYZEROPT(std::string, AnalyzeSpecificFunction, "")
-
-TYPED_ANALYZEROPT(std::string, DumpExplodedGraphTo,
-                  "File path to which the exploded graph should be dumped.")
-
-TYPED_ANALYZEROPT(std::string, FullCompilerInvocation,
-                  "Store full compiler invocation for reproducible "
-                  "instructions in the generated report.")
-
-TYPED_ANALYZEROPT(unsigned, maxBlockVisitOnPath,
-                  "The maximum number of times the analyzer visits a block.")
-
-ANALYZEROPT(
-    DisableAllCheckers, 1,
-    "Disable all analyzer checkers. This flag allows one to disable analyzer "
-    "checkers on the code processed by the given analysis consumer. Note, the "
-    "code will get parsed and the command-line options will get checked.")
-
-ANALYZEROPT(ShowCheckerHelp, 1, "")
-ANALYZEROPT(ShowCheckerHelpAlpha, 1, "")
-ANALYZEROPT(ShowCheckerHelpDeveloper, 1, "")
-
-ANALYZEROPT(ShowCheckerOptionList, 1, "")
-ANALYZEROPT(ShowCheckerOptionAlphaList, 1, "")
-ANALYZEROPT(ShowCheckerOptionDeveloperList, 1, "")
-
-ANALYZEROPT(ShowEnabledCheckerList, 1, "")
-ANALYZEROPT(ShowConfigOptionsList, 1, "")
-ANALYZEROPT(ShouldEmitErrorsOnInvalidConfigValue, 1, "")
-ANALYZEROPT(AnalyzeAll, 1, "")
-ANALYZEROPT(AnalyzerDisplayProgress, 1, "")
-ANALYZEROPT(AnalyzeNestedBlocks, 1, "")
-
-ANALYZEROPT(eagerlyAssumeBinOpBifurcation, 1, "")
-
-ANALYZEROPT(TrimGraph, 1, "")
-ANALYZEROPT(visualizeExplodedGraphWithGraphViz, 1, "")
-ANALYZEROPT(UnoptimizedCFG, 1, "")
-ANALYZEROPT(PrintStats, 1, "")
-
-ANALYZEROPT(
-    NoRetryExhausted, 1,
-    "Do not re-analyze paths leading to exhausted nodes with a different "
-    "strategy. We get better code coverage when retry is enabled.")
-
-ANALYZEROPT(AnalyzerWerror, 1, "Emit analyzer warnings as errors.")
-
-TYPED_ANALYZEROPT(unsigned, InlineMaxStackDepth,
-                  "The inlining stack depth limit. Cap the stack depth at 4 "
-                  "calls (5 stack frames, base + 4 calls).")
-
-TYPED_ANALYZEROPT(AnalysisInliningMode, InliningMode,
-                  "The mode of function selection used during inlining.")
-
 #undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
 #undef ANALYZER_OPTION
-#undef TYPED_ANALYZEROPT
-#undef ANALYZEROPT
