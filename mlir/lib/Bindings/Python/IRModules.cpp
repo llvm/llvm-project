@@ -11,10 +11,14 @@
 
 #include "mlir-c/StandardAttributes.h"
 #include "mlir-c/StandardTypes.h"
+#include "llvm/ADT/SmallVector.h"
+#include <pybind11/stl.h>
 
 namespace py = pybind11;
 using namespace mlir;
 using namespace mlir::python;
+
+using llvm::SmallVector;
 
 //------------------------------------------------------------------------------
 // Docstrings (trivial, non-duplicated docstrings are included inline).
@@ -149,6 +153,20 @@ private:
   py::str value;
   bool invoked = false;
 };
+
+} // namespace
+
+//------------------------------------------------------------------------------
+// Type-checking utilities.
+//------------------------------------------------------------------------------
+
+namespace {
+
+/// Checks whether the given type is an integer or float type.
+int mlirTypeIsAIntegerOrFloat(MlirType type) {
+  return mlirTypeIsAInteger(type) || mlirTypeIsABF16(type) ||
+         mlirTypeIsAF16(type) || mlirTypeIsAF32(type) || mlirTypeIsAF64(type);
+}
 
 } // namespace
 
@@ -465,6 +483,102 @@ public:
   }
 };
 
+/// Complex Type subclass - ComplexType.
+class PyComplexType : public PyConcreteType<PyComplexType> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAComplex;
+  static constexpr const char *pyClassName = "ComplexType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get_complex",
+        [](PyType &elementType) {
+          // The element must be a floating point or integer scalar type.
+          if (mlirTypeIsAIntegerOrFloat(elementType.type)) {
+            MlirType t = mlirComplexTypeGet(elementType.type);
+            return PyComplexType(t);
+          }
+          throw SetPyError(
+              PyExc_ValueError,
+              llvm::Twine("invalid '") +
+                  py::repr(py::cast(elementType)).cast<std::string>() +
+                  "' and expected floating point or integer type.");
+        },
+        py::keep_alive<0, 1>(), "Create a complex type");
+    c.def_property_readonly(
+        "element_type",
+        [](PyComplexType &self) -> PyType {
+          MlirType t = mlirComplexTypeGetElementType(self.type);
+          return PyType(t);
+        },
+        "Returns element type.");
+  }
+};
+
+/// Vector Type subclass - VectorType.
+class PyVectorType : public PyConcreteType<PyVectorType> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAVector;
+  static constexpr const char *pyClassName = "VectorType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get_vector",
+        [](std::vector<int64_t> shape, PyType &elementType) {
+          // The element must be a floating point or integer scalar type.
+          if (mlirTypeIsAIntegerOrFloat(elementType.type)) {
+            MlirType t =
+                mlirVectorTypeGet(shape.size(), shape.data(), elementType.type);
+            return PyVectorType(t);
+          }
+          throw SetPyError(
+              PyExc_ValueError,
+              llvm::Twine("invalid '") +
+                  py::repr(py::cast(elementType)).cast<std::string>() +
+                  "' and expected floating point or integer type.");
+        },
+        py::keep_alive<0, 2>(), "Create a vector type");
+  }
+};
+
+/// Tuple Type subclass - TupleType.
+class PyTupleType : public PyConcreteType<PyTupleType> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsATuple;
+  static constexpr const char *pyClassName = "TupleType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get_tuple",
+        [](PyMlirContext &context, py::list elementList) {
+          intptr_t num = py::len(elementList);
+          // Mapping py::list to SmallVector.
+          SmallVector<MlirType, 4> elements;
+          for (auto element : elementList)
+            elements.push_back(element.cast<PyType>().type);
+          MlirType t = mlirTupleTypeGet(context.context, num, elements.data());
+          return PyTupleType(t);
+        },
+        py::keep_alive<0, 1>(), "Create a tuple type");
+    c.def(
+        "get_type",
+        [](PyTupleType &self, intptr_t pos) -> PyType {
+          MlirType t = mlirTupleTypeGetType(self.type, pos);
+          return PyType(t);
+        },
+        py::keep_alive<0, 1>(), "Returns the pos-th type in the tuple type.");
+    c.def_property_readonly(
+        "num_types",
+        [](PyTupleType &self) -> intptr_t {
+          return mlirTupleTypeGetNumTypes(self.type);
+        },
+        "Returns the number of types contained in a tuple.");
+  }
+};
+
 } // namespace
 
 //------------------------------------------------------------------------------
@@ -771,4 +885,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyF32Type::bind(m);
   PyF64Type::bind(m);
   PyNoneType::bind(m);
+  PyComplexType::bind(m);
+  PyVectorType::bind(m);
+  PyTupleType::bind(m);
 }
