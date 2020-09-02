@@ -43,6 +43,10 @@ DIAGOPT(Name, Bits, Default)
      ENUM_DIAGOPT(Name, Type, Bits, Default)
 #endif
 
+#ifndef TYPED_DIAGOPT
+#define TYPED_DIAGOPT(Type, Name, Description)
+#endif
+
 SEMANTIC_DIAGOPT(IgnoreWarnings, 1, 0)   /// -w
 DIAGOPT(NoRewriteMacros, 1, 0)  /// -Wno-rewrite-macros
 DIAGOPT(Pedantic, 1, 0)         /// -pedantic
@@ -95,9 +99,32 @@ VALUE_DIAGOPT(TabStop, 32, DefaultTabStop) /// The distance between tab stops.
 /// Column limit for formatting message diagnostics, or 0 if unused.
 VALUE_DIAGOPT(MessageLength, 32, 0)
 
+TYPED_DIAGOPT(std::string, DiagnosticLogFile,
+              "The file to log diagnostic output to.")
+
+TYPED_DIAGOPT(std::string, DiagnosticSerializationFile,
+              "The file to serialize diagnostics to (non-appending).")
+
+TYPED_DIAGOPT(std::vector<std::string>, Warnings,
+              "The list of -W... options used to alter the diagnostic "
+              "mappings, with the prefixes removed.")
+
+TYPED_DIAGOPT(std::vector<std::string>, UndefPrefixes,
+              "The list of prefixes from -Wundef-prefix=... used to generate "
+              "warnings for undefined macros.")
+
+TYPED_DIAGOPT(std::vector<std::string>, Remarks,
+              "The list of -R... options used to alter the diagnostic "
+              "mappings, with the prefixes removed.")
+
+TYPED_DIAGOPT(std::vector<std::string>, VerifyPrefixes,
+              "The prefixes for comment directives sought by -verify "
+              "(\"expected\" by /// default).")
+
 #undef DIAGOPT
 #undef ENUM_DIAGOPT
 #undef VALUE_DIAGOPT
 #undef SEMANTIC_DIAGOPT
 #undef SEMANTIC_ENUM_DIAGOPT
 #undef SEMANTIC_VALUE_DIAGOPT
+#undef TYPED_DIAGOPT
