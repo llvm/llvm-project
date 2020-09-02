@@ -7278,11 +7278,10 @@ define <16 x i16> @PR24935(<16 x i16> %a, <16 x i16> %b) {
 ;
 ; AVX2-SLOW-LABEL: PR24935:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm2 = ymm1[8,9,8,9,8,9,8,9,0,1,14,15,12,13,0,1,24,25,24,25,24,25,24,25,16,17,30,31,28,29,16,17]
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm2 = zero,zero,zero,zero,ymm1[8,9],zero,zero,zero,zero,ymm1[14,15,12,13,0,1,24,25,24,25],zero,zero,ymm1[24,25,16,17,30,31,28,29,16,17]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[6,7,4,5,0,1,10,11,4,5,4,5,4,5,4,5,22,23,20,21,16,17,26,27,20,21,20,21,20,21,20,21]
-; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} ymm3 = <255,255,255,255,u,u,255,255,255,255,0,0,u,u,0,0,u,u,u,u,255,255,0,0,u,u,u,u,u,u,0,0>
-; AVX2-SLOW-NEXT:    vpblendvb %ymm3, %ymm1, %ymm2, %ymm1
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[6,7,4,5],zero,zero,ymm1[10,11,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16,17],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-SLOW-NEXT:    vpor %ymm2, %ymm1, %ymm1
 ; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} ymm2 = ymm0[1,1,1,1,4,5,6,7,9,9,9,9,12,13,14,15]
 ; AVX2-SLOW-NEXT:    vpshufhw {{.*#+}} ymm2 = ymm2[0,1,2,3,5,5,5,5,8,9,10,11,13,13,13,13]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
@@ -7294,11 +7293,10 @@ define <16 x i16> @PR24935(<16 x i16> %a, <16 x i16> %b) {
 ;
 ; AVX2-FAST-LABEL: PR24935:
 ; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm2 = ymm1[8,9,8,9,8,9,8,9,0,1,14,15,12,13,0,1,24,25,24,25,24,25,24,25,16,17,30,31,28,29,16,17]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm2 = zero,zero,zero,zero,ymm1[8,9],zero,zero,zero,zero,ymm1[14,15,12,13,0,1,24,25,24,25],zero,zero,ymm1[24,25,16,17,30,31,28,29,16,17]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[6,7,4,5,0,1,10,11,4,5,4,5,4,5,4,5,22,23,20,21,16,17,26,27,20,21,20,21,20,21,20,21]
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm3 = <255,255,255,255,u,u,255,255,255,255,0,0,u,u,0,0,u,u,u,u,255,255,0,0,u,u,u,u,u,u,0,0>
-; AVX2-FAST-NEXT:    vpblendvb %ymm3, %ymm1, %ymm2, %ymm1
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[6,7,4,5],zero,zero,ymm1[10,11,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16,17],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-FAST-NEXT:    vpor %ymm2, %ymm1, %ymm1
 ; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm2 = ymm0[u,u,2,3,2,3,u,u,10,11,u,u,u,u,u,u,u,u,18,19,18,19,u,u,26,27,u,u,u,u,u,u]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[u,u,u,u,u,u,u,u,u,u,u,u,6,7,u,u,18,19,u,u,u,u,u,u,u,u,24,25,16,17,u,u]
@@ -7330,11 +7328,10 @@ define <16 x i16> @PR24935(<16 x i16> %a, <16 x i16> %b) {
 ;
 ; XOPAVX2-LABEL: PR24935:
 ; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    vpshufb {{.*#+}} ymm2 = ymm1[8,9,8,9,8,9,8,9,0,1,14,15,12,13,0,1,24,25,24,25,24,25,24,25,16,17,30,31,28,29,16,17]
+; XOPAVX2-NEXT:    vpshufb {{.*#+}} ymm2 = zero,zero,zero,zero,ymm1[8,9],zero,zero,zero,zero,ymm1[14,15,12,13,0,1,24,25,24,25],zero,zero,ymm1[24,25,16,17,30,31,28,29,16,17]
 ; XOPAVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
-; XOPAVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[6,7,4,5,0,1,10,11,4,5,4,5,4,5,4,5,22,23,20,21,16,17,26,27,20,21,20,21,20,21,20,21]
-; XOPAVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = <255,255,255,255,u,u,255,255,255,255,0,0,u,u,0,0,u,u,u,u,255,255,0,0,u,u,u,u,u,u,0,0>
-; XOPAVX2-NEXT:    vpblendvb %ymm3, %ymm1, %ymm2, %ymm1
+; XOPAVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[6,7,4,5],zero,zero,ymm1[10,11,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16,17],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; XOPAVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
 ; XOPAVX2-NEXT:    vpshuflw {{.*#+}} ymm2 = ymm0[1,1,1,1,4,5,6,7,9,9,9,9,12,13,14,15]
 ; XOPAVX2-NEXT:    vpshufhw {{.*#+}} ymm2 = ymm2[0,1,2,3,5,5,5,5,8,9,10,11,13,13,13,13]
 ; XOPAVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
