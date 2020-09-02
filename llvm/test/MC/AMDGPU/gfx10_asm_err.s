@@ -1,9 +1,9 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx601 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX6-7,GFX6-8,GFX6-9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx701 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX6-7,GFX6-8,GFX6-9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx801 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX6-8,GFX6-9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX6-9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+WavefrontSize32,-WavefrontSize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX10 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX10 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx601 %s 2>&1 | FileCheck --check-prefixes=GFX6-7,GFX6-8,GFX6-9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx701 %s 2>&1 | FileCheck --check-prefixes=GFX6-7,GFX6-8,GFX6-9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx801 %s 2>&1 | FileCheck --check-prefixes=GFX6-8,GFX6-9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck --check-prefixes=GFX6-9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+WavefrontSize32,-WavefrontSize64 %s 2>&1 | FileCheck --check-prefixes=GFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 %s 2>&1 | FileCheck --check-prefixes=GFX10 --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // ENC_DS.
@@ -124,6 +124,7 @@ s_bitreplicate_b64_b32 s[0:1], s2
 
 s_set_gpr_idx_idx s0
 // GFX10: error: instruction not supported on this GPU
+// GFX6-7: error: instruction not supported on this GPU
 
 // GFX6, GFX7, GFX8, GFX9.
 
@@ -167,6 +168,7 @@ s_pack_hh_b32_b16 s0, s1, s2
 
 s_rfe_restore_b64 s[0:1], s2
 // GFX10: error: instruction not supported on this GPU
+// GFX6-7: error: instruction not supported on this GPU
 
 // GFX6, GFX7, GFX8, GFX9.
 

@@ -68,7 +68,7 @@ func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:    affine.for %[[I1:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:      affine.for %[[I2:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:        affine.for %[[I3:.*]] = 0 to %{{.*}} step 5 {
-  //      CHECK:          %[[ALLOC:.*]] = alloc() : memref<5x4x3xf32>
+  //      CHECK:          %[[ALLOC:.*]] = alloc() {alignment = 128 : i64} : memref<5x4x3xf32>
   // CHECK-NEXT:          scf.for %[[I4:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
   // CHECK-NEXT:            scf.for %[[I5:.*]] = %[[C0]] to %[[C4]] step %[[C1]] {
   // CHECK-NEXT:              scf.for %[[I6:.*]] = %[[C0]] to %[[C5]] step %[[C1]] {
@@ -145,7 +145,7 @@ func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:    affine.for %[[I1:.*]] = 0 to %{{.*}} step 4 {
   // CHECK-NEXT:      affine.for %[[I2:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:        affine.for %[[I3:.*]] = 0 to %{{.*}} step 5 {
-  // CHECK:               %[[ALLOC:.*]] = alloc() : memref<5x4x3xf32>
+  // CHECK:               %[[ALLOC:.*]] = alloc() {alignment = 128 : i64} : memref<5x4x3xf32>
   // CHECK-NEXT:          %[[VECTOR_VIEW:.*]] = vector.type_cast {{.*}} : memref<5x4x3xf32>
   //      CHECK:          store %{{.*}}, {{.*}} : memref<vector<5x4x3xf32>>
   // CHECK-NEXT:          scf.for %[[I4:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {

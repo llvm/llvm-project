@@ -108,7 +108,7 @@ public:
            "Only the memref typed values can be set to be appended to the "
            "function argument list at the moment");
     resultTypeConversions.emplace_back(
-        [&](Type origin, Type input) -> Optional<ResultConversionKind> {
+        [=](Type origin, Type input) -> Optional<ResultConversionKind> {
           if (origin.template isa<T>() && input.template isa<U>())
             return kind;
           return llvm::None;

@@ -1340,7 +1340,6 @@ private:
                      const int64_t Width,
                      const SMLoc Loc);
 
-  void errorExpTgt();
   OperandMatchResultTy parseExpTgtImpl(StringRef Str, uint8_t &Val);
   SMLoc getFlatOffsetLoc(const OperandVector &Operands) const;
   SMLoc getSMEMOffsetLoc(const OperandVector &Operands) const;
@@ -4705,22 +4704,18 @@ bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     if (getLexer().is(AsmToken::Comma))
       Parser.Lex();
 
-    switch (Res) {
-      case MatchOperand_Success: break;
-      case MatchOperand_ParseFail:
+    if (Res != MatchOperand_Success) {
+      if (!Parser.hasPendingError()) {
         // FIXME: use real operand location rather than the current location.
-        Error(getLexer().getLoc(), "failed parsing operand.");
-        while (!getLexer().is(AsmToken::EndOfStatement)) {
-          Parser.Lex();
-        }
-        return true;
-      case MatchOperand_NoMatch:
-        // FIXME: use real operand location rather than the current location.
-        Error(getLexer().getLoc(), "not a valid operand.");
-        while (!getLexer().is(AsmToken::EndOfStatement)) {
-          Parser.Lex();
-        }
-        return true;
+        StringRef Msg =
+          (Res == MatchOperand_ParseFail) ? "failed parsing operand." :
+                                            "not a valid operand.";
+        Error(getLexer().getLoc(), Msg);
+      }
+      while (!getLexer().is(AsmToken::EndOfStatement)) {
+        Parser.Lex();
+      }
+      return true;
     }
   }
 
@@ -5004,8 +4999,10 @@ AMDGPUAsmParser::parseSymbolicSplitFormat(StringRef FormatStr,
     }
     if (Dfmt == DFMT_UNDEF) {
       Error(Loc, "duplicate numeric format");
-    } else if (Nfmt == NFMT_UNDEF){
+      return MatchOperand_ParseFail;
+    } else if (Nfmt == NFMT_UNDEF) {
       Error(Loc, "duplicate data format");
+      return MatchOperand_ParseFail;
     }
   }
 
@@ -5014,8 +5011,10 @@ AMDGPUAsmParser::parseSymbolicSplitFormat(StringRef FormatStr,
 
   if (isGFX10()) {
     auto Ufmt = convertDfmtNfmt2Ufmt(Dfmt, Nfmt);
-    if (Ufmt == UFMT_UNDEF)
+    if (Ufmt == UFMT_UNDEF) {
       Error(FormatLoc, "unsupported format");
+      return MatchOperand_ParseFail;
+    }
     Format = Ufmt;
   } else {
     Format = encodeDfmtNfmt(Dfmt, Nfmt);
@@ -5077,7 +5076,9 @@ AMDGPUAsmParser::parseSymbolicOrNumericFormat(int64_t &Format) {
     if (Res != MatchOperand_Success)
       return Res;
 
-    skipToken(AsmToken::RBrac, "expected a closing square bracket");
+    if (!skipToken(AsmToken::RBrac, "expected a closing square bracket"))
+      return MatchOperand_ParseFail;
+
     return MatchOperand_Success;
   }
 
@@ -5119,7 +5120,10 @@ AMDGPUAsmParser::parseFORMAT(OperandVector &Operands) {
   trySkipToken(AsmToken::Comma);
 
   if (!FormatFound) {
-    if (parseSymbolicOrNumericFormat(Format) == MatchOperand_Success) {
+    Res = parseSymbolicOrNumericFormat(Format);
+    if (Res == MatchOperand_ParseFail)
+      return Res;
+    if (Res == MatchOperand_Success) {
       auto Size = Operands.size();
       AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands[Size - 2]);
       assert(Op.isImm() && Op.getImmTy() == AMDGPUOperand::ImmTyFORMAT);
@@ -5340,12 +5344,14 @@ AMDGPUAsmParser::parseSWaitCntOps(OperandVector &Operands) {
   int64_t Waitcnt = getWaitcntBitMask(ISA);
   SMLoc S = getLoc();
 
-  // If parse failed, do not return error code
-  // to avoid excessive error messages.
   if (isToken(AsmToken::Identifier) && peekToken().is(AsmToken::LParen)) {
-    while (parseCnt(Waitcnt) && !isToken(AsmToken::EndOfStatement));
+    while (!isToken(AsmToken::EndOfStatement)) {
+      if (!parseCnt(Waitcnt))
+        return MatchOperand_ParseFail;
+    }
   } else {
-    parseExpr(Waitcnt);
+    if (!parseExpr(Waitcnt))
+      return MatchOperand_ParseFail;
   }
 
   Operands.push_back(AMDGPUOperand::CreateImm(this, Waitcnt, S));
@@ -5419,8 +5425,6 @@ AMDGPUAsmParser::parseHwreg(OperandVector &Operands) {
   int64_t ImmVal = 0;
   SMLoc Loc = getLoc();
 
-  // If parse failed, do not return error code
-  // to avoid excessive error messages.
   if (trySkipId("hwreg", AsmToken::LParen)) {
     OperandInfoTy HwReg(ID_UNKNOWN_);
     int64_t Offset = OFFSET_DEFAULT_;
@@ -5428,10 +5432,16 @@ AMDGPUAsmParser::parseHwreg(OperandVector &Operands) {
     if (parseHwregBody(HwReg, Offset, Width) &&
         validateHwreg(HwReg, Offset, Width, Loc)) {
       ImmVal = encodeHwreg(HwReg.Id, Offset, Width);
+    } else {
+      return MatchOperand_ParseFail;
     }
   } else if (parseExpr(ImmVal)) {
-    if (ImmVal < 0 || !isUInt<16>(ImmVal))
+    if (ImmVal < 0 || !isUInt<16>(ImmVal)) {
       Error(Loc, "invalid immediate: only 16-bit values are legal");
+      return MatchOperand_ParseFail;
+    }
+  } else {
+    return MatchOperand_ParseFail;
   }
 
   Operands.push_back(AMDGPUOperand::CreateImm(this, ImmVal, Loc, AMDGPUOperand::ImmTyHwreg));
@@ -5518,8 +5528,6 @@ AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
   int64_t ImmVal = 0;
   SMLoc Loc = getLoc();
 
-  // If parse failed, do not return error code
-  // to avoid excessive error messages.
   if (trySkipId("sendmsg", AsmToken::LParen)) {
     OperandInfoTy Msg(ID_UNKNOWN_);
     OperandInfoTy Op(OP_NONE_);
@@ -5527,10 +5535,16 @@ AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
     if (parseSendMsgBody(Msg, Op, Stream) &&
         validateSendMsg(Msg, Op, Stream, Loc)) {
       ImmVal = encodeMsg(Msg.Id, Op.Id, Stream.Id);
+    } else {
+      return MatchOperand_ParseFail;
     }
   } else if (parseExpr(ImmVal)) {
-    if (ImmVal < 0 || !isUInt<16>(ImmVal))
+    if (ImmVal < 0 || !isUInt<16>(ImmVal)) {
       Error(Loc, "invalid immediate: only 16-bit values are legal");
+      return MatchOperand_ParseFail;
+    }
+  } else {
+    return MatchOperand_ParseFail;
   }
 
   Operands.push_back(AMDGPUOperand::CreateImm(this, ImmVal, Loc, AMDGPUOperand::ImmTySendMsg));
@@ -5594,7 +5608,7 @@ OperandMatchResultTy AMDGPUAsmParser::parseInterpAttr(OperandVector &Operands) {
   Parser.Lex();
   if (Attr > 63) {
     Error(S, "out of bounds attr");
-    return MatchOperand_Success;
+    return MatchOperand_ParseFail;
   }
 
   SMLoc SChan = SMLoc::getFromPointer(Chan.data());
@@ -5609,10 +5623,6 @@ OperandMatchResultTy AMDGPUAsmParser::parseInterpAttr(OperandVector &Operands) {
 //===----------------------------------------------------------------------===//
 // exp
 //===----------------------------------------------------------------------===//
-
-void AMDGPUAsmParser::errorExpTgt() {
-  Error(Parser.getTok().getLoc(), "invalid exp target");
-}
 
 OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
                                                       uint8_t &Val) {
@@ -5631,8 +5641,10 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
 
-    if (Val > 7)
-      errorExpTgt();
+    if (Val > 7) {
+      Error(getLoc(), "invalid exp target");
+      return MatchOperand_ParseFail;
+    }
 
     return MatchOperand_Success;
   }
@@ -5642,8 +5654,10 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
 
-    if (Val > 4 || (Val == 4 && !isGFX10()))
-      errorExpTgt();
+    if (Val > 4 || (Val == 4 && !isGFX10())) {
+      Error(getLoc(), "invalid exp target");
+      return MatchOperand_ParseFail;
+    }
 
     Val += 12;
     return MatchOperand_Success;
@@ -5659,8 +5673,10 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
 
-    if (Val >= 32)
-      errorExpTgt();
+    if (Val >= 32) {
+      Error(getLoc(), "invalid exp target");
+      return MatchOperand_ParseFail;
+    }
 
     Val += 32;
     return MatchOperand_Success;
@@ -5671,8 +5687,8 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
     if (Str.getAsInteger(10, Val))
       return MatchOperand_ParseFail;
 
-    errorExpTgt();
-    return MatchOperand_Success;
+    Error(getLoc(), "invalid exp target");
+    return MatchOperand_ParseFail;
   }
 
   return MatchOperand_NoMatch;
@@ -6107,12 +6123,12 @@ int64_t AMDGPUAsmParser::parseGPRIdxMacro() {
       Error(S, (Imm == 0)?
                "expected a VGPR index mode or a closing parenthesis" :
                "expected a VGPR index mode");
-      break;
+      return UNDEF;
     }
 
     if (Imm & Mode) {
       Error(S, "duplicate VGPR index mode");
-      break;
+      return UNDEF;
     }
     Imm |= Mode;
 
@@ -6120,7 +6136,7 @@ int64_t AMDGPUAsmParser::parseGPRIdxMacro() {
       break;
     if (!skipToken(AsmToken::Comma,
                    "expected a comma or a closing parenthesis"))
-      break;
+      return UNDEF;
   }
 
   return Imm;
@@ -6128,6 +6144,8 @@ int64_t AMDGPUAsmParser::parseGPRIdxMacro() {
 
 OperandMatchResultTy
 AMDGPUAsmParser::parseGPRIdxMode(OperandVector &Operands) {
+
+  using namespace llvm::AMDGPU::VGPRIndexMode;
 
   int64_t Imm = 0;
   SMLoc S = Parser.getTok().getLoc();
@@ -6139,15 +6157,16 @@ AMDGPUAsmParser::parseGPRIdxMode(OperandVector &Operands) {
     Parser.Lex();
     Parser.Lex();
 
-    // If parse failed, trigger an error but do not return error code
-    // to avoid excessive error messages.
     Imm = parseGPRIdxMacro();
+    if (Imm == UNDEF)
+      return MatchOperand_ParseFail;
 
   } else {
     if (getParser().parseAbsoluteExpression(Imm))
-      return MatchOperand_NoMatch;
+      return MatchOperand_ParseFail;
     if (Imm < 0 || !isUInt<4>(Imm)) {
       Error(S, "invalid immediate: only 4-bit values are legal");
+      return MatchOperand_ParseFail;
     }
   }
 
@@ -6173,22 +6192,22 @@ AMDGPUAsmParser::parseSOppBrTarget(OperandVector &Operands) {
   if (isRegister() || isModifier())
     return MatchOperand_NoMatch;
 
-  if (parseExpr(Operands)) {
+  if (!parseExpr(Operands))
+    return MatchOperand_ParseFail;
 
-    AMDGPUOperand &Opr = ((AMDGPUOperand &)*Operands[Operands.size() - 1]);
-    assert(Opr.isImm() || Opr.isExpr());
-    SMLoc Loc = Opr.getStartLoc();
+  AMDGPUOperand &Opr = ((AMDGPUOperand &)*Operands[Operands.size() - 1]);
+  assert(Opr.isImm() || Opr.isExpr());
+  SMLoc Loc = Opr.getStartLoc();
 
-    // Currently we do not support arbitrary expressions as branch targets.
-    // Only labels and absolute expressions are accepted.
-    if (Opr.isExpr() && !Opr.isSymbolRefExpr()) {
-      Error(Loc, "expected an absolute expression or a label");
-    } else if (Opr.isImm() && !Opr.isS16Imm()) {
-      Error(Loc, "expected a 16-bit signed jump offset");
-    }
+  // Currently we do not support arbitrary expressions as branch targets.
+  // Only labels and absolute expressions are accepted.
+  if (Opr.isExpr() && !Opr.isSymbolRefExpr()) {
+    Error(Loc, "expected an absolute expression or a label");
+  } else if (Opr.isImm() && !Opr.isS16Imm()) {
+    Error(Loc, "expected a 16-bit signed jump offset");
   }
 
-  return MatchOperand_Success; // avoid excessive error messages
+  return MatchOperand_Success;
 }
 
 //===----------------------------------------------------------------------===//

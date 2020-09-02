@@ -17,7 +17,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -129,10 +128,6 @@ INITIALIZE_PASS_END(InstSimplifyLegacyPass, "instsimplify",
 // Public interface to the simplify instructions pass.
 FunctionPass *llvm::createInstSimplifyLegacyPass() {
   return new InstSimplifyLegacyPass();
-}
-
-void LLVMAddInstructionSimplifyPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createInstSimplifyLegacyPass());
 }
 
 PreservedAnalyses InstSimplifyPass::run(Function &F,
