@@ -3229,9 +3229,19 @@ TEST(MemorySanitizer, dlopenFailed) {
 #if !defined(__FreeBSD__) && !defined(__NetBSD__)
 TEST(MemorySanitizer, sched_getaffinity) {
   cpu_set_t mask;
-  int res = sched_getaffinity(getpid(), sizeof(mask), &mask);
-  ASSERT_EQ(0, res);
-  EXPECT_NOT_POISONED(mask);
+  if (sched_getaffinity(getpid(), sizeof(mask), &mask) == 0)
+    EXPECT_NOT_POISONED(mask);
+  else {
+    // The call to sched_getaffinity() may have failed because the Affinity
+    // mask is too small for the number of CPUs on the system (i.e. the
+    // system has more than 1024 CPUs). Allocate a mask large enough for
+    // twice as many CPUs.
+    cpu_set_t *DynAffinity;
+    DynAffinity = CPU_ALLOC(2048);
+    int res = sched_getaffinity(getpid(), CPU_ALLOC_SIZE(2048), DynAffinity);
+    ASSERT_EQ(0, res);
+    EXPECT_NOT_POISONED(*DynAffinity);
+  }
 }
 #endif
 
