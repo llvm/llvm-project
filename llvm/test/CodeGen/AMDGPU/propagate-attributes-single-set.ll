@@ -18,19 +18,19 @@
 ; LLC: sample asm
 ; LLC: foo1:
 ; LLC: foo4@gotpcrel32@lo+4
-; LLC: foo4@gotpcrel32@hi+4
+; LLC: foo4@gotpcrel32@hi+12
 ; LLC: foo3@gotpcrel32@lo+4
-; LLC: foo3@gotpcrel32@hi+4
+; LLC: foo3@gotpcrel32@hi+12
 ; LLC: foo2@gotpcrel32@lo+4
-; LLC: foo2@gotpcrel32@hi+4
+; LLC: foo2@gotpcrel32@hi+12
 ; LLC: foo1@gotpcrel32@lo+4
-; LLC: foo1@gotpcrel32@hi+4
+; LLC: foo1@gotpcrel32@hi+12
 ; LLC: kernel1:
 ; LLC: foo1@gotpcrel32@lo+4
-; LLC: foo1@gotpcrel32@hi+4
+; LLC: foo1@gotpcrel32@hi+12
 ; LLC: kernel2:
 ; LLC: foo2@gotpcrel32@lo+4
-; LLC: foo2@gotpcrel32@hi+4
+; LLC: foo2@gotpcrel32@hi+12
 
 declare void @foo4() #1
 
