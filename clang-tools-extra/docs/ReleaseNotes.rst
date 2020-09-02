@@ -138,6 +138,11 @@ New checks
   Checks whether there are local variables that are declared without an initial
   value.
 
+- New :doc:`cppcoreguidelines-const-correctness
+  <clang-tidy/checks/cppcoreguidelines-const-correctness>` check.
+
+  Suggest adding ``const`` to unmodified local variables.
+
 - New :doc:`darwin-dispatch-once-nonstatic
   <clang-tidy/checks/darwin-dispatch-once-nonstatic>` check.
 

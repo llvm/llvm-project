@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <regex>
+
 #include "InitVariablesCheck.h"
 
 #include "clang/AST/ASTContext.h"
@@ -26,7 +28,9 @@ InitVariablesCheck::InitVariablesCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
           Options.getLocalOrGlobal("IncludeStyle", "llvm"))),
-      MathHeader(Options.get("MathHeader", "math.h")) {}
+      MathHeader(getLangOpts().CPlusPlus11
+                     ? Options.get("MathHeader", "cmath")
+                     : Options.get("MathHeader", "math.h")) {}
 
 void InitVariablesCheck::registerMatchers(MatchFinder *Finder) {
   std::string BadDecl = "badDecl";
@@ -75,9 +79,11 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
   const char *InitializationString = nullptr;
   bool AddMathInclude = false;
 
-  if (TypePtr->isIntegerType())
+  if (TypePtr->isBooleanType()) {
+    InitializationString = " = false";
+  } else if (TypePtr->isIntegerType()) {
     InitializationString = " = 0";
-  else if (TypePtr->isFloatingType()) {
+  } else if (TypePtr->isFloatingType()) {
     InitializationString = " = NAN";
     AddMathInclude = true;
   } else if (TypePtr->isAnyPointerType()) {
@@ -85,6 +91,12 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
       InitializationString = " = nullptr";
     else
       InitializationString = " = NULL";
+  }
+
+  if (InitializationString && getLangOpts().CPlusPlus11) {
+    std::regex re(" = (.*)");
+    InitializationString =
+        std::regex_replace(InitializationString, re, "{$1}").c_str();
   }
 
   if (InitializationString) {

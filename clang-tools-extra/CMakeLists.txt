@@ -15,8 +15,8 @@ add_subdirectory(tool-template)
 
 # Add the common testsuite after all the tools.
 if(CLANG_INCLUDE_TESTS)
-add_subdirectory(test)
-add_subdirectory(unittests)
+  add_subdirectory(test)
+  add_subdirectory(unittests)
 endif()
 
 option(CLANG_TOOLS_EXTRA_INCLUDE_DOCS "Generate build targets for the Clang Extra Tools docs."
