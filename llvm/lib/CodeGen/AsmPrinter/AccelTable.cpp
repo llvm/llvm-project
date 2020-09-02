@@ -190,7 +190,6 @@ public:
 template <typename DataT>
 class Dwarf5AccelTableWriter : public AccelTableWriter {
   struct Header {
-    uint32_t UnitLength = 0;
     uint16_t Version = 5;
     uint16_t Padding = 0;
     uint32_t CompUnitCount;
@@ -506,7 +505,7 @@ template <typename DataT> void Dwarf5AccelTableWriter<DataT>::emitData() const {
       for (const auto *Value : Hash->Values)
         emitEntry(*static_cast<const DataT *>(Value));
       Asm->OutStreamer->AddComment("End of list: " + Hash->Name.getString());
-      Asm->emitInt32(0);
+      Asm->emitInt8(0);
     }
   }
 }

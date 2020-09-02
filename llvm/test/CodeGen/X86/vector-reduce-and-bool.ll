@@ -297,7 +297,7 @@ define i1 @trunc_v8i32_v8i1(<8 x i32>) {
 ; AVX1-LABEL: trunc_v8i32_v8i1:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u>
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]

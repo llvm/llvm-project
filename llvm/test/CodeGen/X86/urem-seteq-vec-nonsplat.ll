@@ -200,26 +200,24 @@ define <4 x i32> @test_urem_even_allones_eq(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-SSE2-NEXT:    psrld $1, %xmm1
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[3,0]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0,2]
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
+; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,3,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    psrld $31, %xmm1
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[3,0]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[0,2]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    movdqa %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    psrld $2, %xmm1
+; CHECK-SSE2-NEXT:    psrld $31, %xmm2
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
 ; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm1
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
@@ -300,26 +298,24 @@ define <4 x i32> @test_urem_even_allones_ne(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-SSE2-NEXT:    psrld $1, %xmm1
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[3,0]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0,2]
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
+; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,3,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    psrld $31, %xmm1
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[3,0]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[0,2]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    movdqa %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    psrld $2, %xmm1
+; CHECK-SSE2-NEXT:    psrld $31, %xmm2
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
 ; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm1
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    pandn {{.*}}(%rip), %xmm0
@@ -638,13 +634,12 @@ define <4 x i32> @test_urem_odd_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[3,0]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[0,2]
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm1
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,2,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
@@ -722,25 +717,23 @@ define <4 x i32> @test_urem_even_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-SSE2-NEXT:    psrld $1, %xmm1
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[3,0]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0,2]
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
+; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,3,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[3,0]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[0,2]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    movdqa %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    psrld $2, %xmm1
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
 ; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm1
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
@@ -857,15 +850,15 @@ define <4 x i32> @test_urem_odd_even_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-SSE41-NEXT:    pmuludq %xmm1, %xmm3
 ; CHECK-SSE41-NEXT:    pmuludq %xmm0, %xmm2
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
 ; CHECK-SSE41-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
 ; CHECK-SSE41-NEXT:    psrld $2, %xmm2
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
 ; CHECK-SSE41-NEXT:    psrld $5, %xmm3
 ; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm2[0,1,2,3],xmm3[4,5,6,7]
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm3
-; CHECK-SSE41-NEXT:    psubd %xmm3, %xmm0
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm1[4,5,6,7]
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
+; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm2
+; CHECK-SSE41-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
@@ -880,11 +873,11 @@ define <4 x i32> @test_urem_odd_even_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
-; CHECK-AVX1-NEXT:    vpsrld $2, %xmm2, %xmm3
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; CHECK-AVX1-NEXT:    vpsrld $2, %xmm3, %xmm3
 ; CHECK-AVX1-NEXT:    vpsrld $5, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm3[0,1,2,3],xmm1[4,5,6,7]
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
 ; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
@@ -989,25 +982,22 @@ define <4 x i32> @test_urem_even_one(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-SSE2-NEXT:    psrld $1, %xmm1
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[3,0]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0,2]
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
+; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,3,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-SSE2-NEXT:    psrld $2, %xmm1
-; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[3,0]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0,2]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    psrld $2, %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm0[2,3]
+; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
@@ -1098,20 +1088,18 @@ define <4 x i32> @test_urem_odd_even_one(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,3,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    movaps %xmm0, %xmm3
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[2,0],xmm2[3,0]
-; CHECK-SSE2-NEXT:    movaps %xmm2, %xmm4
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,1],xmm3[0,2]
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [5,14,1,100]
-; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm4
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,2,2,3]
 ; CHECK-SSE2-NEXT:    psrld $5, %xmm1
+; CHECK-SSE2-NEXT:    movaps %xmm0, %xmm3
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm3 = xmm2[0],xmm3[1]
 ; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm1[3,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm1
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
-; CHECK-SSE2-NEXT:    psubd %xmm4, %xmm0
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [5,14,1,100]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm4
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[0,2,2,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[0,2,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
@@ -1208,13 +1196,12 @@ define <4 x i32> @test_urem_odd_INT_MIN(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[3,0]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[0,2]
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm1
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,2,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
@@ -1292,25 +1279,23 @@ define <4 x i32> @test_urem_even_INT_MIN(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-SSE2-NEXT:    psrld $1, %xmm1
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[3,0]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0,2]
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
+; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,3,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[3,0]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[0,2]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    movdqa %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    psrld $2, %xmm1
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
 ; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm1
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
@@ -1427,15 +1412,15 @@ define <4 x i32> @test_urem_odd_even_INT_MIN(<4 x i32> %X) nounwind {
 ; CHECK-SSE41-NEXT:    pmuludq %xmm1, %xmm3
 ; CHECK-SSE41-NEXT:    pmuludq %xmm0, %xmm2
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
 ; CHECK-SSE41-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
 ; CHECK-SSE41-NEXT:    psrld $2, %xmm2
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
 ; CHECK-SSE41-NEXT:    psrld $5, %xmm3
 ; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm2[0,1,2,3],xmm3[4,5,6,7]
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm3
-; CHECK-SSE41-NEXT:    psubd %xmm3, %xmm0
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm1[4,5,6,7]
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
+; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm2
+; CHECK-SSE41-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
@@ -1450,11 +1435,11 @@ define <4 x i32> @test_urem_odd_even_INT_MIN(<4 x i32> %X) nounwind {
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
-; CHECK-AVX1-NEXT:    vpsrld $2, %xmm2, %xmm3
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; CHECK-AVX1-NEXT:    vpsrld $2, %xmm3, %xmm3
 ; CHECK-AVX1-NEXT:    vpsrld $5, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm3[0,1,2,3],xmm1[4,5,6,7]
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
 ; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
@@ -1512,17 +1497,17 @@ define <4 x i32> @test_urem_odd_allones_and_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; CHECK-SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm1
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [5,4294967295,16,5]
+; CHECK-SSE2-NEXT:    pmuludq %xmm4, %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm3
 ; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm1[3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],xmm2[2,3]
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [5,4294967295,16,5]
-; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
@@ -1536,15 +1521,15 @@ define <4 x i32> @test_urem_odd_allones_and_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-SSE41-NEXT:    pmuludq %xmm2, %xmm3
 ; CHECK-SSE41-NEXT:    pmuludq %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
 ; CHECK-SSE41-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
 ; CHECK-SSE41-NEXT:    psrld $2, %xmm2
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm3
 ; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm2[4,5,6,7]
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm3
-; CHECK-SSE41-NEXT:    psubd %xmm3, %xmm0
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm1[4,5,6,7]
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
+; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm2
+; CHECK-SSE41-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
@@ -1558,11 +1543,11 @@ define <4 x i32> @test_urem_odd_allones_and_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm3, %xmm2
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; CHECK-AVX1-NEXT:    vpsrld $2, %xmm1, %xmm3
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm3[0,1,2,3],xmm1[4,5,6,7]
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
+; CHECK-AVX1-NEXT:    vpsrld $2, %xmm3, %xmm3
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm2, %xmm2
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm3[4,5,6,7]
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm3[0,1,2,3],xmm1[4,5,6,7]
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
@@ -1614,24 +1599,23 @@ define <4 x i32> @test_urem_even_allones_and_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm4
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[1,3,2,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],xmm0[1,2]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2,3,1]
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm2
+; CHECK-SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [14,4294967295,16,14]
+; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm1
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm4
 ; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1],xmm2[3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,3],xmm1[2,3]
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [14,4294967295,16,14]
-; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm4, %xmm2
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm4, %xmm1
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
@@ -1648,15 +1632,15 @@ define <4 x i32> @test_urem_even_allones_and_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-SSE41-NEXT:    pmuludq %xmm2, %xmm4
 ; CHECK-SSE41-NEXT:    pmuludq %xmm3, %xmm1
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm4[2,3],xmm1[4,5],xmm4[6,7]
 ; CHECK-SSE41-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm4[2,3],xmm2[4,5],xmm4[6,7]
 ; CHECK-SSE41-NEXT:    psrld $2, %xmm2
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm4
 ; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm4 = xmm4[0,1,2,3],xmm2[4,5,6,7]
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm4 = xmm1[0,1],xmm4[2,3],xmm1[4,5],xmm4[6,7]
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm4
-; CHECK-SSE41-NEXT:    psubd %xmm4, %xmm0
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm1[4,5,6,7]
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm4[2,3],xmm2[4,5],xmm4[6,7]
+; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm2
+; CHECK-SSE41-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
@@ -1672,11 +1656,11 @@ define <4 x i32> @test_urem_even_allones_and_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm4, %xmm2, %xmm2
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; CHECK-AVX1-NEXT:    vpsrld $2, %xmm1, %xmm3
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm3[0,1,2,3],xmm1[4,5,6,7]
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
+; CHECK-AVX1-NEXT:    vpsrld $2, %xmm3, %xmm3
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm2, %xmm2
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm3[4,5,6,7]
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm3[0,1,2,3],xmm1[4,5,6,7]
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
@@ -1722,25 +1706,28 @@ define <4 x i32> @test_urem_odd_even_allones_and_poweroftwo(<4 x i32> %X) nounwi
 ; CHECK-SSE2-LABEL: test_urem_odd_even_allones_and_poweroftwo:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [3435973837,2147483649,268435456,1374389535]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm3
-; CHECK-SSE2-NEXT:    movdqa %xmm3, %xmm2
-; CHECK-SSE2-NEXT:    psrld $5, %xmm2
-; CHECK-SSE2-NEXT:    psrld $31, %xmm3
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm2[3,3]
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [5,4294967295,16,100]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm4
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[0,2,2,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm0, %xmm1
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[1,1,3,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm1
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],xmm4[2,3]
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3]
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [5,4294967295,16,100]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; CHECK-SSE2-NEXT:    movdqa %xmm3, %xmm4
+; CHECK-SSE2-NEXT:    psrld $5, %xmm4
+; CHECK-SSE2-NEXT:    psrld $31, %xmm3
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm4[3,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -1758,13 +1745,13 @@ define <4 x i32> @test_urem_odd_even_allones_and_poweroftwo(<4 x i32> %X) nounwi
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm3
 ; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm2[4,5,6,7]
 ; CHECK-SSE41-NEXT:    pmuludq %xmm0, %xmm1
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-SSE41-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-SSE41-NEXT:    psrld $2, %xmm2
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm1[4,5,6,7]
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm2
-; CHECK-SSE41-NEXT:    psubd %xmm2, %xmm0
+; CHECK-SSE41-NEXT:    psrld $2, %xmm1
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
+; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm1
+; CHECK-SSE41-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
@@ -1780,9 +1767,10 @@ define <4 x i32> @test_urem_odd_even_allones_and_poweroftwo(<4 x i32> %X) nounwi
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm2, %xmm2
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm3[4,5,6,7]
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm1
+; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-AVX1-NEXT:    vpsrld $2, %xmm1, %xmm3
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm3[0,1,2,3],xmm1[4,5,6,7]
+; CHECK-AVX1-NEXT:    vpsrld $2, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm3[4,5,6,7]
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
@@ -1875,24 +1863,21 @@ define <4 x i32> @test_urem_even_allones_and_one(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm4
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[1,3,2,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],xmm0[1,2]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2,3,1]
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm1
-; CHECK-SSE2-NEXT:    movaps %xmm0, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[3,0]
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm4
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1],xmm1[3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0,2]
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,0],xmm1[3,3]
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [14,4294967295,1,14]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm4, %xmm3
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm4, %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -1996,9 +1981,7 @@ define <4 x i32> @test_urem_odd_even_allones_and_one(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    pmuludq %xmm0, %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm1
-; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm4
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[2,0],xmm1[3,0]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm4[0,2]
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
@@ -2099,18 +2082,16 @@ define <4 x i32> @test_urem_odd_poweroftwo_and_one(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[3,0]
 ; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm2[3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[0,2]
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [5,16,1,5]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm4
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[0,2,2,3]
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm0[2,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm1
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
@@ -2198,23 +2179,20 @@ define <4 x i32> @test_urem_even_poweroftwo_and_one(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm4
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[1,3,2,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],xmm0[1,2]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2,3,1]
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm1
-; CHECK-SSE2-NEXT:    movaps %xmm0, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[3,0]
 ; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1],xmm1[3,3]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0,2]
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [14,16,1,14]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm4, %xmm3
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm4, %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -2315,9 +2293,7 @@ define <4 x i32> @test_urem_odd_even_poweroftwo_and_one(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    pmuludq %xmm0, %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm1
-; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm4
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[2,0],xmm1[3,0]
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm4[0,2]
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
@@ -2408,23 +2384,25 @@ define <4 x i32> @test_urem_odd_allones_and_poweroftwo_and_one(<4 x i32> %X) nou
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [3435973837,2147483649,268435456,0]
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
-; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,3],xmm3[2,3]
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [5,4294967295,16,1]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    movdqa %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    psrld $2, %xmm1
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3]
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [5,4294967295,16,1]
+; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; CHECK-SSE2-NEXT:    psrld $31, %xmm3
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm0[3,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm2
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm4
-; CHECK-SSE2-NEXT:    psrld $31, %xmm4
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1],xmm0[3,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm4, %xmm1
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
@@ -2435,18 +2413,18 @@ define <4 x i32> @test_urem_odd_allones_and_poweroftwo_and_one(<4 x i32> %X) nou
 ; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [3435973837,2147483649,268435456,0]
 ; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-SSE41-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[3,3,3,3]
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-SSE41-NEXT:    movdqa %xmm2, %xmm3
-; CHECK-SSE41-NEXT:    psrld $2, %xmm3
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm2[4,5,6,7]
+; CHECK-SSE41-NEXT:    psrld $2, %xmm2
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm3[4,5,6,7]
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; CHECK-SSE41-NEXT:    pmuludq %xmm1, %xmm2
-; CHECK-SSE41-NEXT:    psrld $31, %xmm2
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5],xmm0[6,7]
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm2
-; CHECK-SSE41-NEXT:    psubd %xmm2, %xmm0
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; CHECK-SSE41-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE41-NEXT:    psrld $31, %xmm3
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1,2,3,4,5],xmm0[6,7]
+; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm3
+; CHECK-SSE41-NEXT:    psubd %xmm3, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
@@ -2456,9 +2434,10 @@ define <4 x i32> @test_urem_odd_allones_and_poweroftwo_and_one(<4 x i32> %X) nou
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [3435973837,2147483649,268435456,0]
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[3,3,3,3]
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-AVX1-NEXT:    vpsrld $2, %xmm2, %xmm3
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
+; CHECK-AVX1-NEXT:    vpsrld $2, %xmm2, %xmm2
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm3[4,5,6,7]
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
@@ -2507,26 +2486,27 @@ define <4 x i32> @test_urem_odd_allones_and_poweroftwo_and_one(<4 x i32> %X) nou
 define <4 x i32> @test_urem_even_allones_and_poweroftwo_and_one(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-LABEL: test_urem_even_allones_and_poweroftwo_and_one:
 ; CHECK-SSE2:       # %bb.0:
-; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-SSE2-NEXT:    psrld $1, %xmm1
-; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2454267027,2147483649,268435456,0]
-; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
-; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,3],xmm3[2,3]
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [14,4294967295,16,1]
-; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm3
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,3,2,3]
+; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm4
+; CHECK-SSE2-NEXT:    psrld $1, %xmm4
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,1],xmm0[2,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm4
-; CHECK-SSE2-NEXT:    psrld $31, %xmm4
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1],xmm0[3,3]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm4, %xmm1
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[1,3,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    psrld $2, %xmm2
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3]
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [14,4294967295,16,1]
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-SSE2-NEXT:    psrld $31, %xmm3
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm0[3,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
@@ -2542,18 +2522,18 @@ define <4 x i32> @test_urem_even_allones_and_poweroftwo_and_one(<4 x i32> %X) no
 ; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3,4,5,6,7]
 ; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2454267027,2147483649,268435456,0]
 ; CHECK-SSE41-NEXT:    pmuludq %xmm2, %xmm1
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-SSE41-NEXT:    movdqa %xmm1, %xmm3
-; CHECK-SSE41-NEXT:    psrld $2, %xmm3
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm1[4,5,6,7]
-; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; CHECK-SSE41-NEXT:    pmuludq %xmm1, %xmm2
-; CHECK-SSE41-NEXT:    psrld $31, %xmm2
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5],xmm0[6,7]
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm2
-; CHECK-SSE41-NEXT:    psubd %xmm2, %xmm0
+; CHECK-SSE41-NEXT:    psrld $2, %xmm1
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm3[4,5,6,7]
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; CHECK-SSE41-NEXT:    pmuludq %xmm2, %xmm3
+; CHECK-SSE41-NEXT:    psrld $31, %xmm3
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1,2,3,4,5],xmm0[6,7]
+; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm3
+; CHECK-SSE41-NEXT:    psubd %xmm3, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
@@ -2565,9 +2545,10 @@ define <4 x i32> @test_urem_even_allones_and_poweroftwo_and_one(<4 x i32> %X) no
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3,4,5,6,7]
 ; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [2454267027,2147483649,268435456,0]
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-AVX1-NEXT:    vpsrld $2, %xmm1, %xmm3
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm3[0,1,2,3],xmm1[4,5,6,7]
+; CHECK-AVX1-NEXT:    vpsrld $2, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm3[4,5,6,7]
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm3, %xmm2
