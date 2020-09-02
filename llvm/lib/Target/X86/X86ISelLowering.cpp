@@ -35730,8 +35730,8 @@ namespace llvm {
     enum {
       MaxShuffleCombineDepth = 8
     };
-  };
-}; // namespace llvm
+  }
+} // namespace llvm
 
 /// Fully generic combining of x86 shuffle instructions.
 ///
