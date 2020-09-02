@@ -52,10 +52,8 @@ module Clang_Basic {
   textual header "Basic/BuiltinsX86_64.def"
   textual header "Basic/BuiltinsXCore.def"
   textual header "Basic/CodeGenOptions.def"
-  textual header "Basic/CommentOptions.def"
   textual header "Basic/DiagnosticOptions.def"
   textual header "Basic/Features.def"
-  textual header "Basic/FileSystemOptions.def"
   textual header "Basic/FPOptions.def"
   textual header "Basic/MSP430Target.def"
   textual header "Basic/LangOptions.def"
@@ -65,7 +63,6 @@ module Clang_Basic {
   textual header "Basic/OpenMPKinds.def"
   textual header "Basic/OperatorKinds.def"
   textual header "Basic/Sanitizers.def"
-  textual header "Basic/TargetOptions.def"
   textual header "Basic/TokenKinds.def"
   textual header "Basic/X86Target.def"
 
@@ -110,35 +107,17 @@ module Clang_Frontend {
   umbrella "Frontend"
 
   textual header "Basic/LangStandards.def"
-  textual header "Frontend/DependencyOutputOptions.def"
-  textual header "Frontend/FrontendOptions.def"
-  textual header "Frontend/MigratorOptions.def"
-  textual header "Frontend/PreprocessorOutputOptions.def"
 
   module * { export * }
 }
 
 module Clang_FrontendTool { requires cplusplus umbrella "FrontendTool" module * { export * } }
 module Clang_Index { requires cplusplus umbrella "Index" module * { export * } }
-module Clang_Lex {
-  requires cplusplus
-  umbrella "Lex"
-  textual header "Lex/HeaderSearchOptions.def"
-  textual header "Lex/PreprocessorOptions.def"
-
-  module * { export * }
-}
+module Clang_Lex { requires cplusplus umbrella "Lex" module * { export * } }
 module Clang_Parse { requires cplusplus umbrella "Parse" module * { export * } }
 module Clang_Rewrite { requires cplusplus umbrella "Rewrite/Core" module * { export * } }
 module Clang_RewriteFrontend { requires cplusplus umbrella "Rewrite/Frontend" module * { export * } }
-module Clang_Sema {
-  requires cplusplus
-  umbrella "Sema"
-
-  textual header "Sema/CodeCompleteOptions.def"
-
-  module * { export * }
-}
+module Clang_Sema { requires cplusplus umbrella "Sema" module * { export * } }
 
 module Clang_Serialization {
   requires cplusplus
