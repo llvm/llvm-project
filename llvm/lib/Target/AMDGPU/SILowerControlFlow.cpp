@@ -335,21 +335,13 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   bool ExecModified = MI.getOperand(3).getImm() != 0;
   MachineBasicBlock::iterator Start = MBB.begin();
 
-  // We are running before TwoAddressInstructions, and si_else's operands are
-  // tied. In order to correctly tie the registers, split this into a copy of
-  // the src like it does.
-  Register CopyReg = MRI->createVirtualRegister(BoolRC);
-  MachineInstr *CopyExec =
-    BuildMI(MBB, Start, DL, TII->get(AMDGPU::COPY), CopyReg)
-      .add(MI.getOperand(1)); // Saved EXEC
-
   // This must be inserted before phis and any spill code inserted before the
   // else.
   Register SaveReg = ExecModified ?
     MRI->createVirtualRegister(BoolRC) : DstReg;
   MachineInstr *OrSaveExec =
     BuildMI(MBB, Start, DL, TII->get(OrSaveExecOpc), SaveReg)
-    .addReg(CopyReg);
+    .add(MI.getOperand(1)); // Saved EXEC
 
   MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
 
@@ -386,16 +378,13 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   LIS->RemoveMachineInstrFromMaps(MI);
   MI.eraseFromParent();
 
-  LIS->InsertMachineInstrInMaps(*CopyExec);
   LIS->InsertMachineInstrInMaps(*OrSaveExec);
 
   LIS->InsertMachineInstrInMaps(*Xor);
   LIS->InsertMachineInstrInMaps(*Branch);
 
-  // src reg is tied to dst reg.
   LIS->removeInterval(DstReg);
   LIS->createAndComputeVirtRegInterval(DstReg);
-  LIS->createAndComputeVirtRegInterval(CopyReg);
   if (ExecModified)
     LIS->createAndComputeVirtRegInterval(SaveReg);
 
