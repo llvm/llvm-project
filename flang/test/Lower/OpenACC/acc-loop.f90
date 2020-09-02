@@ -1,6 +1,7 @@
 ! This test checks lowering of OpenACC loop directive.
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
+! XFAIL: *
 
 program acc_loop
 
