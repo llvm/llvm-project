@@ -1251,6 +1251,12 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
   BuildMI(*MBB, FuncInfo->InsertPt, SDB->getCurDebugLoc(), II)
     .addSym(Label);
 
+  // If the unwinder does not preserve all registers, ensure that the
+  // function marks the clobbered registers as used.
+  const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
+  if (auto *RegMask = TRI.getCustomEHPadPreservedMask(*MF))
+    MF->getRegInfo().addPhysRegsUsedFromRegMask(RegMask);
+
   if (Pers == EHPersonality::Wasm_CXX) {
     if (const auto *CPI = dyn_cast<CatchPadInst>(LLVMBB->getFirstNonPHI()))
       mapWasmLandingPadIndex(MBB, CPI);
