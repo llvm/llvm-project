@@ -1094,6 +1094,14 @@ const AsmToken &MasmParser::Lex() {
     tok = &Lexer.Lex();
   }
 
+  // Recognize and bypass line continuations.
+  while (tok->is(AsmToken::BackSlash) &&
+         Lexer.peekTok().is(AsmToken::EndOfStatement)) {
+    // Eat both the backslash and the end of statement.
+    Lexer.Lex();
+    tok = &Lexer.Lex();
+  }
+
   if (tok->is(AsmToken::Eof)) {
     // If this is the end of an included file, pop the parent file off the
     // include stack.
