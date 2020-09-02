@@ -234,6 +234,7 @@ static bool hasAnalyzableMemoryWrite(Instruction *I,
     case Intrinsic::memset_element_unordered_atomic:
     case Intrinsic::init_trampoline:
     case Intrinsic::lifetime_end:
+    case Intrinsic::masked_store:
       return true;
     }
   }
@@ -257,8 +258,8 @@ static bool hasAnalyzableMemoryWrite(Instruction *I,
 /// Return a Location stored to by the specified instruction. If isRemovable
 /// returns true, this function and getLocForRead completely describe the memory
 /// operations for this instruction.
-static MemoryLocation getLocForWrite(Instruction *Inst) {
-
+static MemoryLocation getLocForWrite(Instruction *Inst,
+                                     const TargetLibraryInfo &TLI) {
   if (StoreInst *SI = dyn_cast<StoreInst>(Inst))
     return MemoryLocation::get(SI);
 
@@ -274,6 +275,8 @@ static MemoryLocation getLocForWrite(Instruction *Inst) {
       return MemoryLocation(); // Unhandled intrinsic.
     case Intrinsic::init_trampoline:
       return MemoryLocation(II->getArgOperand(0));
+    case Intrinsic::masked_store:
+      return MemoryLocation::getForArgument(II, 1, TLI);
     case Intrinsic::lifetime_end: {
       uint64_t Len = cast<ConstantInt>(II->getArgOperand(0))->getZExtValue();
       return MemoryLocation(II->getArgOperand(1), Len);
@@ -325,6 +328,7 @@ static bool isRemovable(Instruction *I) {
     case Intrinsic::memcpy_element_unordered_atomic:
     case Intrinsic::memmove_element_unordered_atomic:
     case Intrinsic::memset_element_unordered_atomic:
+    case Intrinsic::masked_store:
       return true;
     }
   }
@@ -370,9 +374,10 @@ static bool isShortenableAtTheBeginning(Instruction *I) {
 }
 
 /// Return the pointer that is being written to.
-static Value *getStoredPointerOperand(Instruction *I) {
+static Value *getStoredPointerOperand(Instruction *I,
+                                      const TargetLibraryInfo &TLI) {
   //TODO: factor this to reuse getLocForWrite
-  MemoryLocation Loc = getLocForWrite(I);
+  MemoryLocation Loc = getLocForWrite(I, TLI);
   assert(Loc.Ptr &&
          "unable to find pointer written for analyzable instruction?");
   // TODO: most APIs don't expect const Value *
@@ -485,6 +490,24 @@ isOverwrite(const MemoryLocation &Later, const MemoryLocation &Earlier,
 
   // Later may overwrite earlier completely with other partial writes.
   return OW_MaybePartial;
+}
+
+static OverwriteResult isMaskedStoreOverwrite(Instruction *Later,
+                                              Instruction *Earlier) {
+  auto *IIL = dyn_cast<IntrinsicInst>(Later);
+  auto *IIE = dyn_cast<IntrinsicInst>(Earlier);
+  if (IIL == nullptr || IIE == nullptr)
+    return OW_Unknown;
+  if (IIL->getIntrinsicID() != Intrinsic::masked_store ||
+      IIE->getIntrinsicID() != Intrinsic::masked_store)
+    return OW_Unknown;
+  // Pointers.
+  if (IIL->getArgOperand(1) != IIE->getArgOperand(1))
+    return OW_Unknown;
+  // Masks.
+  if (IIL->getArgOperand(3) != IIE->getArgOperand(3))
+    return OW_Unknown;
+  return OW_Complete;
 }
 
 /// Return 'OW_Complete' if a store to the 'Later' location completely
@@ -796,7 +819,7 @@ static bool handleFree(CallInst *F, AliasAnalysis *AA,
         break;
 
       Value *DepPointer =
-          getUnderlyingObject(getStoredPointerOperand(Dependency));
+          getUnderlyingObject(getStoredPointerOperand(Dependency, *TLI));
 
       // Check for aliasing.
       if (!AA->isMustAlias(F->getArgOperand(0), DepPointer))
@@ -902,7 +925,7 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
     if (hasAnalyzableMemoryWrite(&*BBI, *TLI) && isRemovable(&*BBI)) {
       // See through pointer-to-pointer bitcasts
       SmallVector<const Value *, 4> Pointers;
-      getUnderlyingObjects(getStoredPointerOperand(&*BBI), Pointers);
+      getUnderlyingObjects(getStoredPointerOperand(&*BBI, *TLI), Pointers);
 
       // Stores to stack values are valid candidates for removal.
       bool AllDead = true;
@@ -1119,11 +1142,12 @@ static bool tryToShortenBegin(Instruction *EarlierWrite,
 }
 
 static bool removePartiallyOverlappedStores(const DataLayout &DL,
-                                            InstOverlapIntervalsTy &IOL) {
+                                            InstOverlapIntervalsTy &IOL,
+                                            const TargetLibraryInfo &TLI) {
   bool Changed = false;
   for (auto OI : IOL) {
     Instruction *EarlierWrite = OI.first;
-    MemoryLocation Loc = getLocForWrite(EarlierWrite);
+    MemoryLocation Loc = getLocForWrite(EarlierWrite, TLI);
     assert(isRemovable(EarlierWrite) && "Expect only removable instruction");
 
     const Value *Ptr = Loc.Ptr->stripPointerCasts();
@@ -1284,7 +1308,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
       continue;
 
     // Figure out what location is being stored to.
-    MemoryLocation Loc = getLocForWrite(Inst);
+    MemoryLocation Loc = getLocForWrite(Inst, *TLI);
 
     // If we didn't get a useful location, fail.
     if (!Loc.Ptr)
@@ -1308,7 +1332,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
       Instruction *DepWrite = InstDep.getInst();
       if (!hasAnalyzableMemoryWrite(DepWrite, *TLI))
         break;
-      MemoryLocation DepLoc = getLocForWrite(DepWrite);
+      MemoryLocation DepLoc = getLocForWrite(DepWrite, *TLI);
       // If we didn't get a useful location, or if it isn't a size, bail out.
       if (!DepLoc.Ptr)
         break;
@@ -1352,6 +1376,11 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
         int64_t InstWriteOffset, DepWriteOffset;
         OverwriteResult OR = isOverwrite(Loc, DepLoc, DL, *TLI, DepWriteOffset,
                                          InstWriteOffset, *AA, BB.getParent());
+        if (OR == OW_Unknown) {
+          // isOverwrite punts on MemoryLocations with an imprecise size, such
+          // as masked stores. Handle this here, somwewhat inelegantly.
+          OR = isMaskedStoreOverwrite(Inst, DepWrite);
+        }
         if (OR == OW_MaybePartial)
           OR = isPartialOverwrite(Loc, DepLoc, DepWriteOffset, InstWriteOffset,
                                   DepWrite, IOL);
@@ -1433,7 +1462,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
   }
 
   if (EnablePartialOverwriteTracking)
-    MadeChange |= removePartiallyOverlappedStores(DL, IOL);
+    MadeChange |= removePartiallyOverlappedStores(DL, IOL, *TLI);
 
   // If this block ends in a return, unwind, or unreachable, all allocas are
   // dead at its end, which means stores to them are also dead.
@@ -2494,7 +2523,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
 
   if (EnablePartialOverwriteTracking)
     for (auto &KV : State.IOLs)
-      MadeChange |= removePartiallyOverlappedStores(State.DL, KV.second);
+      MadeChange |= removePartiallyOverlappedStores(State.DL, KV.second, TLI);
 
   MadeChange |= State.eliminateDeadWritesAtEndOfFunction();
   return MadeChange;
