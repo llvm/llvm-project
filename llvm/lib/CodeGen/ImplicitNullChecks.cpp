@@ -368,18 +368,26 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
   const MachineOperand *BaseOp;
 
 
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI) ||
-      !BaseOp->isReg() || BaseOp->getReg() != PointerReg)
+  // FIXME: This handles only simple addressing mode.
+  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI))
+   return SR_Unsuitable;
+
+  // We need the base of the memory instruction to be same as the register
+  // where the null check is performed (i.e. PointerReg).
+  if (!BaseOp->isReg() || BaseOp->getReg() != PointerReg)
     return SR_Unsuitable;
 
-  // FIXME: This algorithm assumes instructions have fixed-size offsets.
+  // Scalable offsets are a part of scalable vectors (SVE for AArch64). That
+  // target is in-practice unsupported for ImplicitNullChecks.
   if (OffsetIsScalable)
+    return SR_Unsuitable;
+
+  if (!MI.mayLoadOrStore() || MI.isPredicable())
     return SR_Unsuitable;
 
   // We want the mem access to be issued at a sane offset from PointerReg,
   // so that if PointerReg is null then the access reliably page faults.
-  if (!(MI.mayLoadOrStore() && !MI.isPredicable() &&
-        -PageSize < Offset && Offset < PageSize))
+  if (!(-PageSize < Offset && Offset < PageSize))
     return SR_Unsuitable;
 
   // Finally, check whether the current memory access aliases with previous one.
