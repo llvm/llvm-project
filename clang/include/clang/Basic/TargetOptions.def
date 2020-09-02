@@ -1,0 +1,88 @@
+//===--- TargetOptions.def - Target option database -------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the target options. Users of this file must
+// define the TYPED_TARGETOPT macro to make use of this information.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TYPED_TARGETOPT
+#error Define the TYPED_TARGETOPT macro to handle target options
+#endif
+
+TYPED_TARGETOPT(std::string, Triple,
+                "The name of the target triple to compile for.")
+
+TYPED_TARGETOPT(
+    std::string, HostTriple,
+    "When compiling for the device side, contains the triple used to "
+    "compile for the host.")
+
+TYPED_TARGETOPT(std::string, CPU,
+                "If given, the name of the target CPU to generate code for.")
+
+TYPED_TARGETOPT(std::string, TuneCPU,
+                "If given, the name of the target CPU to tune code for.")
+
+TYPED_TARGETOPT(std::string, FPMath,
+                "If given, the unit to use for floating point math.")
+
+TYPED_TARGETOPT(std::string, ABI,
+                "If given, the name of the target ABI to use.")
+
+TYPED_TARGETOPT(llvm::EABI, EABIVersion, "The EABI version to use.")
+
+TYPED_TARGETOPT(std::string, LinkerVersion,
+                "If given, the version string of the linker in use.")
+
+TYPED_TARGETOPT(std::vector<std::string>, FeaturesAsWritten,
+                "The list of target specific features to enable or disable, as "
+                "written on the command line.")
+
+TYPED_TARGETOPT(
+    std::vector<std::string>, Features,
+    "The list of target specific features to enable or disable -- this "
+    "should be a list of strings starting with by '+' or '-'.")
+
+TYPED_TARGETOPT(llvm::StringMap<bool>, FeatureMap,
+                "The map of which features have been enabled disabled based on "
+                "the command line.")
+
+TYPED_TARGETOPT(OpenCLOptions, SupportedOpenCLOptions,
+                "Supported OpenCL extensions and optional core features.")
+
+TYPED_TARGETOPT(
+    std::vector<std::string>, OpenCLExtensionsAsWritten,
+    "The list of OpenCL extensions to enable or disable, as written on "
+    "the command line.")
+
+TYPED_TARGETOPT(
+    bool, ForceEnableInt128,
+    "If given, enables support for __int128_t and __uint128_t types.")
+
+TYPED_TARGETOPT(
+    bool, NVPTXUseShortPointers,
+    "If enabled, use 32-bit pointers for accessing const/local/shared "
+    "address space.")
+
+TYPED_TARGETOPT(
+    std::string, CodeModel,
+    "The code model to be used as specified by the user. Corresponds to "
+    "CodeModel::Model enum defined in include/llvm/Support/CodeGen.h, "
+    "plus \"default\" for the case when the user has not explicitly "
+    "specified a code model.")
+
+TYPED_TARGETOPT(
+    llvm::VersionTuple, SDKVersion,
+    "The version of the SDK which was used during the compilation. The option "
+    "is used for two different purposes. On Darwin the version is propagated "
+    "to LLVM where it's used to support SDK Version metadata (See D55673). "
+    "CUDA compilation uses it to control parts of CUDA compilation in clang "
+    "that depend on specific version of the CUDA SDK.")
+
+#undef TYPED_TARGETOPT

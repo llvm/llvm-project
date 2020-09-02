@@ -23,14 +23,10 @@ namespace clang {
 struct CommentOptions {
   using BlockCommandNamesTy = std::vector<std::string>;
 
-  /// Command names to treat as block commands in comments.
-  /// Should not include the leading backslash.
-  BlockCommandNamesTy BlockCommandNames;
+#define TYPED_COMMENTOPT(Type, Name, Description) Type Name;
+#include "clang/Basic/CommentOptions.def"
 
-  /// Treat ordinary comments as documentation comments.
-  bool ParseAllComments = false;
-
-  CommentOptions() = default;
+  CommentOptions() : ParseAllComments(false) {}
 };
 
 } // namespace clang

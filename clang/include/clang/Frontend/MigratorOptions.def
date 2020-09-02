@@ -1,0 +1,27 @@
+//===--- MigratorOptions.def - Migrator option database ---------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the migrator options. Users of this file must
+// define the TYPED_MIGRATOROPT macro to make use of this information.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TYPED_MIGRATOROPT
+#define TYPED_MIGRATOROPT(Type, Name, Description)
+#endif
+
+#ifndef MIGRATOROPT
+#define MIGRATOROPT(Name, Bits, Description)                                   \
+  TYPED_MIGRATOROPT(unsigned, Name, Description)
+#endif
+
+MIGRATOROPT(NoNSAllocReallocError, 1, "")
+MIGRATOROPT(NoFinalizeRemoval, 1, "")
+
+#undef TYPED_MIGRATOROPT
+#undef MIGRATOROPT

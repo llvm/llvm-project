@@ -1,0 +1,26 @@
+//===--- CommentOptions.def - Comment option database -------------*- C++
+//-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the comment options. Users of this file must
+// define the TYPED_COMMENTOPT macro to make use of this information.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TYPED_COMMENTOPT
+#define TYPED_COMMENTOPT(Type, Name, Description)
+#endif
+
+TYPED_COMMENTOPT(BlockCommandNamesTy, BlockCommandNames,
+                 "Command names to treat as vlock commands in comments. Should "
+                 "not include the leading backslash.")
+
+TYPED_COMMENTOPT(bool, ParseAllComments,
+                 "Treat ordinary comments as documentation comments")
+
+#undef TYPED_COMMENTOPT
