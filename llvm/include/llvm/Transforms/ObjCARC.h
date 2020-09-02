@@ -44,10 +44,11 @@ Pass *createObjCARCContractPass();
 //
 Pass *createObjCARCOptPass();
 
-class ObjCARCOptPass : public PassInfoMixin<ObjCARCOptPass> {
-public:
-  ObjCARCOptPass() {}
+struct ObjCARCOptPass : public PassInfoMixin<ObjCARCOptPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
 
+struct ObjCARCContractPass : public PassInfoMixin<ObjCARCContractPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
