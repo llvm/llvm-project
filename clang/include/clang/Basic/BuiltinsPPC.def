@@ -100,6 +100,11 @@ BUILTIN(__builtin_altivec_vmulouh, "V4UiV8UsV8Us", "")
 BUILTIN(__builtin_altivec_vmulosh, "V4SiV8SsV8Ss", "")
 BUILTIN(__builtin_altivec_vmulouw, "V2ULLiV4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vmulosw, "V2SLLiV4SiV4Si", "")
+BUILTIN(__builtin_altivec_vmuleud, "V1ULLLiV2ULLiV2ULLi", "")
+BUILTIN(__builtin_altivec_vmulesd, "V1SLLLiV2SLLiV2SLLi", "")
+BUILTIN(__builtin_altivec_vmuloud, "V1ULLLiV2ULLiV2ULLi", "")
+BUILTIN(__builtin_altivec_vmulosd, "V1SLLLiV2SLLiV2SLLi", "")
+BUILTIN(__builtin_altivec_vmsumcud, "V1ULLLiV2ULLiV2ULLiV1ULLLi", "")
 
 BUILTIN(__builtin_altivec_vnmsubfp, "V4fV4fV4fV4f", "")
 
