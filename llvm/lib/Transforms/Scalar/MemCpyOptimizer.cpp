@@ -271,10 +271,12 @@ private:
     AU.setPreservesCFG();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<MemoryDependenceWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addPreserved<AAResultsWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<MemoryDependenceWrapperPass>();
     AU.addPreserved<MemoryDependenceWrapperPass>();
   }
 };
@@ -522,7 +524,6 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
 
       auto *T = LI->getType();
       if (T->isAggregateType()) {
-        AliasAnalysis &AA = LookupAliasAnalysis();
         MemoryLocation LoadLoc = MemoryLocation::get(LI);
 
         // We use alias analysis to check if an instruction may store to
@@ -531,7 +532,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
         // of at the store position.
         Instruction *P = SI;
         for (auto &I : make_range(++LI->getIterator(), SI->getIterator())) {
-          if (isModSet(AA.getModRefInfo(&I, LoadLoc))) {
+          if (isModSet(AA->getModRefInfo(&I, LoadLoc))) {
             P = &I;
             break;
           }
@@ -542,7 +543,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
         // position if nothing alias the store memory after this and the store
         // destination is not in the range.
         if (P && P != SI) {
-          if (!moveUp(AA, SI, P, LI))
+          if (!moveUp(*AA, SI, P, LI))
             P = nullptr;
         }
 
@@ -553,7 +554,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
           // memmove must be used to preserve semantic. If not, memcpy can
           // be used.
           bool UseMemMove = false;
-          if (!AA.isNoAlias(MemoryLocation::get(SI), LoadLoc))
+          if (!AA->isNoAlias(MemoryLocation::get(SI), LoadLoc))
             UseMemMove = true;
 
           uint64_t Size = DL.getTypeStoreSize(T);
@@ -597,11 +598,10 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
         // the call and the store.
         Value *CpyDest = SI->getPointerOperand()->stripPointerCasts();
         bool CpyDestIsLocal = isa<AllocaInst>(CpyDest);
-        AliasAnalysis &AA = LookupAliasAnalysis();
         MemoryLocation StoreLoc = MemoryLocation::get(SI);
         for (BasicBlock::iterator I = --SI->getIterator(), E = C->getIterator();
              I != E; --I) {
-          if (isModOrRefSet(AA.getModRefInfo(&*I, StoreLoc))) {
+          if (isModOrRefSet(AA->getModRefInfo(&*I, StoreLoc))) {
             C = nullptr;
             break;
           }
@@ -811,20 +811,18 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
 
   // Since we're changing the parameter to the callsite, we need to make sure
   // that what would be the new parameter dominates the callsite.
-  DominatorTree &DT = LookupDomTree();
   if (Instruction *cpyDestInst = dyn_cast<Instruction>(cpyDest))
-    if (!DT.dominates(cpyDestInst, C))
+    if (!DT->dominates(cpyDestInst, C))
       return false;
 
   // In addition to knowing that the call does not access src in some
   // unexpected manner, for example via a global, which we deduce from
   // the use analysis, we also need to know that it does not sneakily
   // access dest.  We rely on AA to figure this out for us.
-  AliasAnalysis &AA = LookupAliasAnalysis();
-  ModRefInfo MR = AA.getModRefInfo(C, cpyDest, LocationSize::precise(srcSize));
+  ModRefInfo MR = AA->getModRefInfo(C, cpyDest, LocationSize::precise(srcSize));
   // If necessary, perform additional analysis.
   if (isModOrRefSet(MR))
-    MR = AA.callCapturesBefore(C, cpyDest, LocationSize::precise(srcSize), &DT);
+    MR = AA->callCapturesBefore(C, cpyDest, LocationSize::precise(srcSize), DT);
   if (isModOrRefSet(MR))
     return false;
 
@@ -908,8 +906,6 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   if (!MDepLen || !MLen || MDepLen->getZExtValue() < MLen->getZExtValue())
     return false;
 
-  AliasAnalysis &AA = LookupAliasAnalysis();
-
   // Verify that the copied-from memory doesn't change in between the two
   // transfers.  For example, in:
   //    memcpy(a <- b)
@@ -932,8 +928,8 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   // source and dest might overlap.  We still want to eliminate the intermediate
   // value, but we have to generate a memmove instead of memcpy.
   bool UseMemMove = false;
-  if (!AA.isNoAlias(MemoryLocation::getForDest(M),
-                    MemoryLocation::getForSource(MDep)))
+  if (!AA->isNoAlias(MemoryLocation::getForDest(M),
+                     MemoryLocation::getForSource(MDep)))
     UseMemMove = true;
 
   // If all checks passed, then we can transform M.
@@ -1057,11 +1053,9 @@ static bool hasUndefContents(Instruction *I, ConstantInt *Size) {
 /// The \p MemCpy must have a Constant length.
 bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
                                                MemSetInst *MemSet) {
-  AliasAnalysis &AA = LookupAliasAnalysis();
-
   // Make sure that memcpy(..., memset(...), ...), that is we are memsetting and
   // memcpying from the same address. Otherwise it is hard to reason about.
-  if (!AA.isMustAlias(MemSet->getRawDest(), MemCpy->getRawSource()))
+  if (!AA->isMustAlias(MemSet->getRawDest(), MemCpy->getRawSource()))
     return false;
 
   // A known memset size is required.
@@ -1189,14 +1183,12 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
 /// Transforms memmove calls to memcpy calls when the src/dst are guaranteed
 /// not to alias.
 bool MemCpyOptPass::processMemMove(MemMoveInst *M) {
-  AliasAnalysis &AA = LookupAliasAnalysis();
-
   if (!TLI->has(LibFunc_memmove))
     return false;
 
   // See if the pointers alias.
-  if (!AA.isNoAlias(MemoryLocation::getForDest(M),
-                    MemoryLocation::getForSource(M)))
+  if (!AA->isNoAlias(MemoryLocation::getForDest(M),
+                     MemoryLocation::getForSource(M)))
     return false;
 
   LLVM_DEBUG(dbgs() << "MemCpyOptPass: Optimizing memmove -> memcpy: " << *M
@@ -1250,12 +1242,10 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
 
   // If it is greater than the memcpy, then we check to see if we can force the
   // source of the memcpy to the alignment we need.  If we fail, we bail out.
-  AssumptionCache &AC = LookupAssumptionCache();
-  DominatorTree &DT = LookupDomTree();
   MaybeAlign MemDepAlign = MDep->getSourceAlign();
   if ((!MemDepAlign || *MemDepAlign < *ByValAlign) &&
-      getOrEnforceKnownAlignment(MDep->getSource(), ByValAlign, DL, &CB, &AC,
-                                 &DT) < *ByValAlign)
+      getOrEnforceKnownAlignment(MDep->getSource(), ByValAlign, DL, &CB, AC,
+                                 DT) < *ByValAlign)
     return false;
 
   // The address space of the memcpy source must match the byval argument
@@ -1301,15 +1291,13 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
 bool MemCpyOptPass::iterateOnFunction(Function &F) {
   bool MadeChange = false;
 
-  DominatorTree &DT = LookupDomTree();
-
   // Walk all instruction in the function.
   for (BasicBlock &BB : F) {
     // Skip unreachable blocks. For example processStore assumes that an
     // instruction in a BB can't be dominated by a later instruction in the
     // same BB (which is a scenario that can happen for an unreachable BB that
     // has itself as a predecessor).
-    if (!DT.isReachableFromEntry(&BB))
+    if (!DT->isReachableFromEntry(&BB))
       continue;
 
     for (BasicBlock::iterator BI = BB.begin(), BE = BB.end(); BI != BE;) {
@@ -1347,19 +1335,11 @@ bool MemCpyOptPass::iterateOnFunction(Function &F) {
 PreservedAnalyses MemCpyOptPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &MD = AM.getResult<MemoryDependenceAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  auto *AA = &AM.getResult<AAManager>(F);
+  auto *AC = &AM.getResult<AssumptionAnalysis>(F);
+  auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
 
-  auto LookupAliasAnalysis = [&]() -> AliasAnalysis & {
-    return AM.getResult<AAManager>(F);
-  };
-  auto LookupAssumptionCache = [&]() -> AssumptionCache & {
-    return AM.getResult<AssumptionAnalysis>(F);
-  };
-  auto LookupDomTree = [&]() -> DominatorTree & {
-    return AM.getResult<DominatorTreeAnalysis>(F);
-  };
-
-  bool MadeChange = runImpl(F, &MD, &TLI, LookupAliasAnalysis,
-                            LookupAssumptionCache, LookupDomTree);
+  bool MadeChange = runImpl(F, &MD, &TLI, AA, AC, DT);
   if (!MadeChange)
     return PreservedAnalyses::all();
 
@@ -1370,18 +1350,15 @@ PreservedAnalyses MemCpyOptPass::run(Function &F, FunctionAnalysisManager &AM) {
   return PA;
 }
 
-bool MemCpyOptPass::runImpl(
-    Function &F, MemoryDependenceResults *MD_, TargetLibraryInfo *TLI_,
-    std::function<AliasAnalysis &()> LookupAliasAnalysis_,
-    std::function<AssumptionCache &()> LookupAssumptionCache_,
-    std::function<DominatorTree &()> LookupDomTree_) {
+bool MemCpyOptPass::runImpl(Function &F, MemoryDependenceResults *MD_,
+                            TargetLibraryInfo *TLI_, AliasAnalysis *AA_,
+                            AssumptionCache *AC_, DominatorTree *DT_) {
   bool MadeChange = false;
   MD = MD_;
   TLI = TLI_;
-  LookupAliasAnalysis = std::move(LookupAliasAnalysis_);
-  LookupAssumptionCache = std::move(LookupAssumptionCache_);
-  LookupDomTree = std::move(LookupDomTree_);
-
+  AA = AA_;
+  AC = AC_;
+  DT = DT_;
   // If we don't have at least memset and memcpy, there is little point of doing
   // anything here.  These are required by a freestanding implementation, so if
   // even they are disabled, there is no point in trying hard.
@@ -1405,17 +1382,9 @@ bool MemCpyOptLegacyPass::runOnFunction(Function &F) {
 
   auto *MD = &getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
   auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+  auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
-  auto LookupAliasAnalysis = [this]() -> AliasAnalysis & {
-    return getAnalysis<AAResultsWrapperPass>().getAAResults();
-  };
-  auto LookupAssumptionCache = [this, &F]() -> AssumptionCache & {
-    return getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  };
-  auto LookupDomTree = [this]() -> DominatorTree & {
-    return getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  };
-
-  return Impl.runImpl(F, MD, TLI, LookupAliasAnalysis, LookupAssumptionCache,
-                      LookupDomTree);
+  return Impl.runImpl(F, MD, TLI, AA, AC, DT);
 }

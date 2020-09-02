@@ -388,7 +388,14 @@
          __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 130000 || \
          __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 60000)
 #      define _LIBCPP_HAS_ALIGNED_ALLOC
-#      define _LIBCPP_HAS_TIMESPEC_GET
+       // TODO: Apple SDKs don't define ::timespec_get unconditionally in C++
+       //       mode. This should be fixed in future SDKs, but for the time
+       //       being we need to avoid trying to use that declaration when
+       //       the SDK doesn't provide it.
+#      include <sys/cdefs.h>
+#      if (__DARWIN_C_LEVEL >= __DARWIN_C_FULL)
+#        define _LIBCPP_HAS_TIMESPEC_GET
+#      endif
 #    endif
 #  endif // __APPLE__
 #endif

@@ -800,11 +800,29 @@ int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
 #if SANITIZER_FREEBSD
 int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
                           const void *newp, uptr newlen) {
-  static decltype(sysctlbyname) *real = nullptr;
-  if (!real)
-    real = (decltype(sysctlbyname) *)dlsym(RTLD_NEXT, "sysctlbyname");
-  CHECK(real);
-  return real(sname, oldp, (size_t *)oldlenp, newp, (size_t)newlen);
+  // Note: this function can be called during startup, so we need to avoid
+  // calling any interceptable functions. On FreeBSD >= 1300045 sysctlbyname()
+  // is a real syscall, but for older versions it calls sysctlnametomib()
+  // followed by sysctl(). To avoid calling the intercepted version and
+  // asserting if this happens during startup, call the real sysctlnametomib()
+  // followed by internal_sysctl() if the syscall is not available.
+#ifdef SYS___sysctlbyname
+  return internal_syscall(SYSCALL(__sysctlbyname), sname,
+                          internal_strlen(sname), oldp, (size_t *)oldlenp, newp,
+                          (size_t)newlen);
+#else
+  static decltype(sysctlnametomib) *real_sysctlnametomib = nullptr;
+  if (!real_sysctlnametomib)
+    real_sysctlnametomib =
+        (decltype(sysctlnametomib) *)dlsym(RTLD_NEXT, "sysctlnametomib");
+  CHECK(real_sysctlnametomib);
+
+  int oid[CTL_MAXNAME];
+  size_t len = CTL_MAXNAME;
+  if (real_sysctlnametomib(sname, oid, &len) == -1)
+    return (-1);
+  return internal_sysctl(oid, len, oldp, oldlenp, newp, newlen);
+#endif
 }
 #endif
 #endif

@@ -299,13 +299,16 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
     MaterializationResponsibility &MR, const Triple &TT,
     jitlink::PassConfiguration &Config) {
 
+  if (!MR.getInitializerSymbol())
+    return;
+
   Config.PrePrunePasses.push_back([this, &MR](jitlink::LinkGraph &G) -> Error {
     JITLinkSymbolVector InitSectionSymbols;
     preserveInitSectionIfPresent(InitSectionSymbols, G, "__mod_init_func");
     preserveInitSectionIfPresent(InitSectionSymbols, G, "__objc_selrefs");
     preserveInitSectionIfPresent(InitSectionSymbols, G, "__objc_classlist");
 
-    if (!InitSymbolDeps.empty()) {
+    if (!InitSectionSymbols.empty()) {
       std::lock_guard<std::mutex> Lock(InitScraperMutex);
       InitSymbolDeps[&MR] = std::move(InitSectionSymbols);
     }
@@ -323,10 +326,8 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
 
     JITTargetAddress ObjCImageInfoAddr = 0;
     if (auto *ObjCImageInfoSec = G.findSectionByName("__objc_image_info")) {
-      if (auto Addr = jitlink::SectionRange(*ObjCImageInfoSec).getStart()) {
+      if (auto Addr = jitlink::SectionRange(*ObjCImageInfoSec).getStart())
         ObjCImageInfoAddr = Addr;
-        dbgs() << "Recorded __objc_imageinfo @ " << formatv("{0:x16}", Addr);
-      }
     }
 
     // Record __mod_init_func.

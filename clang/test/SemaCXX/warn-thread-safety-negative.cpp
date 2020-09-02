@@ -50,7 +50,7 @@ public:
   }
 
   void bar() {
-    baz();        // expected-warning {{calling function 'baz' requires holding  '!mu'}}
+    baz();        // expected-warning {{calling function 'baz' requires negative capability '!mu'}}
   }
 
   void baz() EXCLUSIVE_LOCKS_REQUIRED(!mu) {

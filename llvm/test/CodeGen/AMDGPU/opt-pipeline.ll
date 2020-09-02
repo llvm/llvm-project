@@ -164,6 +164,8 @@
 ; GCN-O1-NEXT:         Recognize loop idioms
 ; GCN-O1-NEXT:         Delete dead loops
 ; GCN-O1-NEXT:         Unroll loops
+; GCN-O1-NEXT:       SROA
+; GCN-O1-NEXT:       Function Alias Analysis Results
 ; GCN-O1-NEXT:       Phi Values Analysis
 ; GCN-O1-NEXT:       Memory Dependence Analysis
 ; GCN-O1-NEXT:       MemCpy Optimization
@@ -483,6 +485,8 @@
 ; GCN-O2-NEXT:         Recognize loop idioms
 ; GCN-O2-NEXT:         Delete dead loops
 ; GCN-O2-NEXT:         Unroll loops
+; GCN-O2-NEXT:       SROA
+; GCN-O2-NEXT:       Function Alias Analysis Results
 ; GCN-O2-NEXT:       MergedLoadStoreMotion
 ; GCN-O2-NEXT:       Phi Values Analysis
 ; GCN-O2-NEXT:       Function Alias Analysis Results
@@ -491,9 +495,9 @@
 ; GCN-O2-NEXT:       Lazy Block Frequency Analysis
 ; GCN-O2-NEXT:       Optimization Remark Emitter
 ; GCN-O2-NEXT:       Global Value Numbering
-; GCN-O2-NEXT:       Phi Values Analysis
 ; GCN-O2-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:       Function Alias Analysis Results
+; GCN-O2-NEXT:       Phi Values Analysis
 ; GCN-O2-NEXT:       Memory Dependence Analysis
 ; GCN-O2-NEXT:       MemCpy Optimization
 ; GCN-O2-NEXT:       Sparse Conditional Constant Propagation
@@ -842,6 +846,8 @@
 ; GCN-O3-NEXT:         Recognize loop idioms
 ; GCN-O3-NEXT:         Delete dead loops
 ; GCN-O3-NEXT:         Unroll loops
+; GCN-O3-NEXT:       SROA
+; GCN-O3-NEXT:       Function Alias Analysis Results
 ; GCN-O3-NEXT:       MergedLoadStoreMotion
 ; GCN-O3-NEXT:       Phi Values Analysis
 ; GCN-O3-NEXT:       Function Alias Analysis Results
@@ -850,9 +856,9 @@
 ; GCN-O3-NEXT:       Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:       Optimization Remark Emitter
 ; GCN-O3-NEXT:       Global Value Numbering
-; GCN-O3-NEXT:       Phi Values Analysis
 ; GCN-O3-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:       Function Alias Analysis Results
+; GCN-O3-NEXT:       Phi Values Analysis
 ; GCN-O3-NEXT:       Memory Dependence Analysis
 ; GCN-O3-NEXT:       MemCpy Optimization
 ; GCN-O3-NEXT:       Sparse Conditional Constant Propagation

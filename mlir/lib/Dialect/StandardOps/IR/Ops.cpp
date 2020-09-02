@@ -468,7 +468,7 @@ void AssertOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(AssumeAlignmentOp op) {
-  unsigned alignment = op.alignment().getZExtValue();
+  unsigned alignment = op.alignment();
   if (!llvm::isPowerOf2_32(alignment))
     return op.emitOpError("alignment must be power of 2");
   return success();

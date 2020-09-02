@@ -49,6 +49,13 @@ public:
     return { Min / RHS, Scalable };
   }
 
+  friend ElementCount operator-(const ElementCount &LHS,
+                                const ElementCount &RHS) {
+    assert(LHS.Scalable == RHS.Scalable &&
+           "Arithmetic using mixed scalable and fixed types");
+    return {LHS.Min - RHS.Min, LHS.Scalable};
+  }
+
   bool operator==(const ElementCount& RHS) const {
     return Min == RHS.Min && Scalable == RHS.Scalable;
   }
@@ -70,6 +77,10 @@ public:
 
   ElementCount NextPowerOf2() const {
     return {(unsigned)llvm::NextPowerOf2(Min), Scalable};
+  }
+
+  bool isKnownMultipleOf(unsigned RHS) const {
+    return Min % RHS == 0;
   }
 
   static ElementCount getFixed(unsigned Min) { return {Min, false}; }

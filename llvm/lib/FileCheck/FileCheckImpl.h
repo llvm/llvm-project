@@ -12,13 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_SUPPORT_FILECHECKIMPL_H
-#define LLVM_LIB_SUPPORT_FILECHECKIMPL_H
+#ifndef LLVM_LIB_FILECHECK_FILECHECKIMPL_H
+#define LLVM_LIB_FILECHECK_FILECHECKIMPL_H
 
-#include "llvm/Support/FileCheck.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/FileCheck/FileCheck.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SourceMgr.h"
 #include <map>

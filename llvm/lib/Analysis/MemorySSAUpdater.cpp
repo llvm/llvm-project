@@ -713,8 +713,8 @@ void MemorySSAUpdater::updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
           NewPhi->addIncoming(IncPhi, IncBB);
       }
     }
-    if (onlySingleValue(NewPhi)) {
-      MPhiMap[Phi] = nullptr;
+    if (auto *SingleAccess = onlySingleValue(NewPhi)) {
+      MPhiMap[Phi] = SingleAccess;
       removeMemoryAccess(NewPhi);
     }
   };

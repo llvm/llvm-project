@@ -1744,6 +1744,78 @@ bool CombinerHelper::applyCombineAddP2IToPtrAdd(
   return true;
 }
 
+bool CombinerHelper::matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) {
+  assert(MI.getOpcode() == TargetOpcode::G_ANYEXT && "Expected a G_ANYEXT");
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  return mi_match(SrcReg, MRI,
+                  m_GTrunc(m_all_of(m_Reg(Reg), m_SpecificType(DstTy))));
+}
+
+bool CombinerHelper::applyCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) {
+  assert(MI.getOpcode() == TargetOpcode::G_ANYEXT && "Expected a G_ANYEXT");
+  Register DstReg = MI.getOperand(0).getReg();
+  MI.eraseFromParent();
+  replaceRegWith(MRI, DstReg, Reg);
+  return true;
+}
+
+bool CombinerHelper::matchCombineExtOfExt(
+    MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo) {
+  assert((MI.getOpcode() == TargetOpcode::G_ANYEXT ||
+          MI.getOpcode() == TargetOpcode::G_SEXT ||
+          MI.getOpcode() == TargetOpcode::G_ZEXT) &&
+         "Expected a G_[ASZ]EXT");
+  Register SrcReg = MI.getOperand(1).getReg();
+  MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
+  // Match exts with the same opcode, anyext([sz]ext) and sext(zext).
+  unsigned Opc = MI.getOpcode();
+  unsigned SrcOpc = SrcMI->getOpcode();
+  if (Opc == SrcOpc ||
+      (Opc == TargetOpcode::G_ANYEXT &&
+       (SrcOpc == TargetOpcode::G_SEXT || SrcOpc == TargetOpcode::G_ZEXT)) ||
+      (Opc == TargetOpcode::G_SEXT && SrcOpc == TargetOpcode::G_ZEXT)) {
+    MatchInfo = std::make_tuple(SrcMI->getOperand(1).getReg(), SrcOpc);
+    return true;
+  }
+  return false;
+}
+
+bool CombinerHelper::applyCombineExtOfExt(
+    MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo) {
+  assert((MI.getOpcode() == TargetOpcode::G_ANYEXT ||
+          MI.getOpcode() == TargetOpcode::G_SEXT ||
+          MI.getOpcode() == TargetOpcode::G_ZEXT) &&
+         "Expected a G_[ASZ]EXT");
+
+  Register Reg = std::get<0>(MatchInfo);
+  unsigned SrcExtOp = std::get<1>(MatchInfo);
+
+  // Combine exts with the same opcode.
+  if (MI.getOpcode() == SrcExtOp) {
+    Observer.changingInstr(MI);
+    MI.getOperand(1).setReg(Reg);
+    Observer.changedInstr(MI);
+    return true;
+  }
+
+  // Combine:
+  // - anyext([sz]ext x) to [sz]ext x
+  // - sext(zext x) to zext x
+  if (MI.getOpcode() == TargetOpcode::G_ANYEXT ||
+      (MI.getOpcode() == TargetOpcode::G_SEXT &&
+       SrcExtOp == TargetOpcode::G_ZEXT)) {
+    Register DstReg = MI.getOperand(0).getReg();
+    Builder.setInstrAndDebugLoc(MI);
+    Builder.buildInstr(SrcExtOp, {DstReg}, {Reg});
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
 bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) {
   return any_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
     return MO.isReg() &&
@@ -2157,6 +2229,74 @@ bool CombinerHelper::matchRedundantSExtInReg(MachineInstr &MI) {
   unsigned ExtBits = MI.getOperand(2).getImm();
   unsigned TypeSize = MRI.getType(Src).getScalarSizeInBits();
   return KB->computeNumSignBits(Src) >= (TypeSize - ExtBits + 1);
+}
+
+static bool isConstValidTrue(const TargetLowering &TLI, unsigned ScalarSizeBits,
+                             int64_t Cst, bool IsVector, bool IsFP) {
+  // For i1, Cst will always be -1 regardless of boolean contents.
+  return (ScalarSizeBits == 1 && Cst == -1) ||
+         isConstTrueVal(TLI, Cst, IsVector, IsFP);
+}
+
+bool CombinerHelper::matchNotCmp(MachineInstr &MI, Register &CmpReg) {
+  assert(MI.getOpcode() == TargetOpcode::G_XOR);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  const auto &TLI = *Builder.getMF().getSubtarget().getTargetLowering();
+  Register XorSrc;
+  Register CstReg;
+  int64_t Cst;
+  // We match xor(src, true) here.
+  if (!mi_match(MI.getOperand(0).getReg(), MRI,
+                m_GXor(m_Reg(XorSrc), m_Reg(CstReg))))
+    return false;
+
+  if (!MRI.hasOneNonDBGUse(XorSrc))
+    return false;
+
+  // Now try match src to either icmp or fcmp.
+  bool IsFP = false;
+  if (!mi_match(XorSrc, MRI, m_GICmp(m_Pred(), m_Reg(), m_Reg()))) {
+    // Try fcmp.
+    if (!mi_match(XorSrc, MRI, m_GFCmp(m_Pred(), m_Reg(), m_Reg())))
+      return false;
+    IsFP = true;
+  }
+
+  if (Ty.isVector()) {
+    MachineInstr *CstDef = MRI.getVRegDef(CstReg);
+    auto MaybeCst = getBuildVectorConstantSplat(*CstDef, MRI);
+    if (!MaybeCst)
+      return false;
+    if (!isConstValidTrue(TLI, Ty.getScalarSizeInBits(), *MaybeCst, true, IsFP))
+      return false;
+  } else {
+    if (!mi_match(CstReg, MRI, m_ICst(Cst)))
+      return false;
+    if (!isConstValidTrue(TLI, Ty.getSizeInBits(), Cst, false, IsFP))
+      return false;
+  }
+
+  CmpReg = XorSrc;
+  return true;
+}
+
+bool CombinerHelper::applyNotCmp(MachineInstr &MI, Register &CmpReg) {
+  MachineInstr *CmpDef = MRI.getVRegDef(CmpReg);
+  assert(CmpDef && "Should have been given an MI reg");
+  assert(CmpDef->getOpcode() == TargetOpcode::G_ICMP ||
+         CmpDef->getOpcode() == TargetOpcode::G_FCMP);
+
+  Observer.changingInstr(*CmpDef);
+  MachineOperand &PredOp = CmpDef->getOperand(1);
+  CmpInst::Predicate NewP = CmpInst::getInversePredicate(
+      (CmpInst::Predicate)PredOp.getPredicate());
+  PredOp.setPredicate(NewP);
+  Observer.changedInstr(*CmpDef);
+
+  replaceRegWith(MRI, MI.getOperand(0).getReg(),
+                 CmpDef->getOperand(0).getReg());
+  MI.eraseFromParent();
+  return true;
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {

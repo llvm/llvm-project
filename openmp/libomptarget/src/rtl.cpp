@@ -84,15 +84,6 @@ __attribute__((destructor(101))) void deinit() {
 
 void RTLsTy::LoadRTLs() {
 
-  if (char *envStr = getenv("LIBOMPTARGET_INFO")) {
-    InfoLevel = std::stoi(envStr);
-  }
-#ifdef OMPTARGET_DEBUG
-  if (char *envStr = getenv("LIBOMPTARGET_DEBUG")) {
-    DebugLevel = std::stoi(envStr);
-  }
-#endif // OMPTARGET_DEBUG
-
   // FIXME this is amdgcn specific.
   // Propogate HIP_VISIBLE_DEVICES if set to ROCR_VISIBLE_DEVICES.
   if (char *hipVisDevs = getenv("HIP_VISIBLE_DEVICES")) {

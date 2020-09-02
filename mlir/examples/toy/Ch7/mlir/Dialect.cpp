@@ -365,7 +365,7 @@ void StructAccessOp::build(mlir::OpBuilder &b, mlir::OperationState &state,
 
 static mlir::LogicalResult verify(StructAccessOp op) {
   StructType structTy = op.input().getType().cast<StructType>();
-  size_t index = op.index().getZExtValue();
+  size_t index = op.index();
   if (index >= structTy.getNumElementTypes())
     return op.emitOpError()
            << "index should be within the range of the input struct type";

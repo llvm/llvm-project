@@ -247,6 +247,12 @@ public:
     One.insertBits(SubBits.One, BitPosition);
   }
 
+  /// Return a subset of the known bits from [bitPosition,bitPosition+numBits).
+  KnownBits extractBits(unsigned NumBits, unsigned BitPosition) {
+    return KnownBits(Zero.extractBits(NumBits, BitPosition),
+                     One.extractBits(NumBits, BitPosition));
+  }
+
   /// Update known bits based on ANDing with RHS.
   KnownBits &operator&=(const KnownBits &RHS);
 
@@ -255,6 +261,14 @@ public:
 
   /// Update known bits based on XORing with RHS.
   KnownBits &operator^=(const KnownBits &RHS);
+
+  KnownBits byteSwap() {
+    return KnownBits(Zero.byteSwap(), One.byteSwap());
+  }
+
+  KnownBits reverseBits() {
+    return KnownBits(Zero.reverseBits(), One.reverseBits());
+  }
 };
 
 inline KnownBits operator&(KnownBits LHS, const KnownBits &RHS) {

@@ -2075,9 +2075,10 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
 
   // Handle -mtune.
 
-  // Default to "generic" unless -march is present.
+  // Default to "generic" unless -march is present or targetting the PS4.
   std::string TuneCPU;
-  if (!Args.hasArg(clang::driver::options::OPT_march_EQ))
+  if (!Args.hasArg(clang::driver::options::OPT_march_EQ) &&
+      !getToolChain().getTriple().isPS4CPU())
     TuneCPU = "generic";
 
   // Override based on -mtune.

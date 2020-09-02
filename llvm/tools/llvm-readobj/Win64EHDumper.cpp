@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Win64EHDumper.h"
-#include "Error.h"
 #include "llvm-readobj.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -120,10 +119,10 @@ static std::error_code getSymbol(const COFFObjectFile &COFF, uint64_t VA,
       return errorToErrorCode(Address.takeError());
     if (*Address == VA) {
       Sym = Symbol;
-      return readobj_error::success;
+      return std::error_code();
     }
   }
-  return readobj_error::unknown_symbol;
+  return inconvertibleErrorCode();
 }
 
 static std::string formatSymbol(const Dumper::Context &Ctx,
