@@ -113,7 +113,6 @@ static void dumpTypeTagName(raw_ostream &OS, dwarf::Tag T) {
 }
 
 static void dumpArrayType(raw_ostream &OS, const DWARFDie &D) {
-  Optional<uint64_t> Bound;
   for (const DWARFDie &C : D.children())
     if (C.getTag() == DW_TAG_subrange_type) {
       Optional<uint64_t> LB;
