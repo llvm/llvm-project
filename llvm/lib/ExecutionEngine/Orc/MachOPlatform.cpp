@@ -326,10 +326,8 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
 
     JITTargetAddress ObjCImageInfoAddr = 0;
     if (auto *ObjCImageInfoSec = G.findSectionByName("__objc_image_info")) {
-      if (auto Addr = jitlink::SectionRange(*ObjCImageInfoSec).getStart()) {
+      if (auto Addr = jitlink::SectionRange(*ObjCImageInfoSec).getStart())
         ObjCImageInfoAddr = Addr;
-        dbgs() << "Recorded __objc_imageinfo @ " << formatv("{0:x16}", Addr);
-      }
     }
 
     // Record __mod_init_func.
