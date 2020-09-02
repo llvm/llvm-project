@@ -11,7 +11,6 @@
 ; CHECK-MEMCPY-DAG: Freeing Pass 'MemCpy Optimization'
 ; CHECK-DAG: Freeing Pass 'Memory Dependence Analysis'
 ; CHECK-DAG: Freeing Pass 'Phi Values Analysis'
-; CHECK-MEMCPY-NOT: Freeing Pass 'Basic Alias Analysis (stateless AA impl)'
 ; CHECK-NOT: Executing Pass 'Phi Values Analysis'
 ; CHECK-NOT: Executing Pass 'Basic Alias Analysis (stateless AA impl)'
 ; CHECK: Executing Pass 'Combine redundant instructions'
