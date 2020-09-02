@@ -443,6 +443,18 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
 
 llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit);
 
+/// Create a runInTerminal reverse request object
+///
+/// \param[in] launch_request
+///     The original launch_request object whose fields are used to construct
+///     the reverse request object.
+///
+/// \return
+///     A "runInTerminal" JSON object that follows the specification outlined by
+///     Microsoft.
+llvm::json::Object
+CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request);
+
 } // namespace lldb_vscode
 
 #endif
