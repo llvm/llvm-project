@@ -120,11 +120,11 @@ template <class ELFT> class DumpStyle;
 /// order (DT_REL, DT_RELSZ, DT_RELENT for example).
 struct DynRegionInfo {
   DynRegionInfo(StringRef ObjName) : FileName(ObjName) {}
-  DynRegionInfo(const void *A, uint64_t S, uint64_t ES, StringRef ObjName)
+  DynRegionInfo(const uint8_t *A, uint64_t S, uint64_t ES, StringRef ObjName)
       : Addr(A), Size(S), EntSize(ES), FileName(ObjName) {}
 
   /// Address in current address space.
-  const void *Addr = nullptr;
+  const uint8_t *Addr = nullptr;
   /// Size in bytes of the region.
   uint64_t Size = 0;
   /// Size of each entity in the region.
@@ -863,8 +863,6 @@ private:
   }
   void printHashedSymbol(const Elf_Sym *FirstSym, uint32_t Sym,
                          StringRef StrTable, uint32_t Bucket);
-  void printRelocHeader(unsigned SType);
-
   void printRelReloc(unsigned SecIndex, const Elf_Shdr *SymTab,
                      const Elf_Rel &R, unsigned RelIndex) override;
   void printRelaReloc(unsigned SecIndex, const Elf_Shdr *SymTab,
@@ -3682,7 +3680,8 @@ void GNUStyle<ELFT>::printRelRelaReloc(const Elf_Sym *Sym, StringRef SymbolName,
   OS << Addend << "\n";
 }
 
-template <class ELFT> void GNUStyle<ELFT>::printRelocHeader(unsigned SType) {
+template <class ELFT>
+static void printRelocHeaderFields(formatted_raw_ostream &OS, unsigned SType) {
   bool IsRela = SType == ELF::SHT_RELA || SType == ELF::SHT_ANDROID_RELA;
   bool IsRelr = SType == ELF::SHT_RELR || SType == ELF::SHT_ANDROID_RELR;
   if (ELFT::Is64Bits)
@@ -3701,6 +3700,16 @@ template <class ELFT> void GNUStyle<ELFT>::printRelocHeader(unsigned SType) {
   if (IsRela)
     OS << " + Addend";
   OS << "\n";
+}
+
+template <class ELFT>
+static void printDynamicRelocHeader(const ELFFile<ELFT> &Obj,
+                                    formatted_raw_ostream &OS, unsigned Type,
+                                    StringRef Name, const DynRegionInfo &Reg) {
+  uint64_t Offset = Reg.Addr - Obj.base();
+  OS << "\n'" << Name.str().c_str() << "' relocation section at offset 0x"
+     << to_hexString(Offset, false) << " contains " << Reg.Size << " bytes:\n";
+  printRelocHeaderFields<ELFT>(OS, Type);
 }
 
 template <class ELFT>
@@ -3754,7 +3763,7 @@ template <class ELFT> void GNUStyle<ELFT>::printRelocations() {
     OS << "\nRelocation section '" << Name << "' at offset 0x"
        << to_hexString(Offset, false) << " contains " << EntriesNum
        << " entries:\n";
-    printRelocHeader(Sec.sh_type);
+    printRelocHeaderFields<ELFT>(OS, Sec.sh_type);
     this->printRelocationsHelper(Sec);
   }
   if (!HasRelocSections)
@@ -4436,49 +4445,31 @@ template <class ELFT> void GNUStyle<ELFT>::printDynamicRelocations() {
   const DynRegionInfo &DynRelrRegion = this->dumper()->getDynRelrRegion();
   const DynRegionInfo &DynPLTRelRegion = this->dumper()->getDynPLTRelRegion();
   if (DynRelaRegion.Size > 0) {
-    OS << "\n'RELA' relocation section at offset "
-       << format_hex(reinterpret_cast<const uint8_t *>(DynRelaRegion.Addr) -
-                         this->Obj.base(),
-                     1)
-       << " contains " << DynRelaRegion.Size << " bytes:\n";
-    printRelocHeader(ELF::SHT_RELA);
+    printDynamicRelocHeader(this->Obj, OS, ELF::SHT_RELA, "RELA",
+                            DynRelaRegion);
     for (const Elf_Rela &Rela : this->dumper()->dyn_relas())
       printDynamicRelocation(Rela);
   }
   if (DynRelRegion.Size > 0) {
-    OS << "\n'REL' relocation section at offset "
-       << format_hex(reinterpret_cast<const uint8_t *>(DynRelRegion.Addr) -
-                         this->Obj.base(),
-                     1)
-       << " contains " << DynRelRegion.Size << " bytes:\n";
-    printRelocHeader(ELF::SHT_REL);
+    printDynamicRelocHeader(this->Obj, OS, ELF::SHT_REL, "REL", DynRelRegion);
     for (const Elf_Rel &Rel : this->dumper()->dyn_rels())
       printDynamicRelocation(Rel);
   }
   if (DynRelrRegion.Size > 0) {
-    OS << "\n'RELR' relocation section at offset "
-       << format_hex(reinterpret_cast<const uint8_t *>(DynRelrRegion.Addr) -
-                         this->Obj.base(),
-                     1)
-       << " contains " << DynRelrRegion.Size << " bytes:\n";
-    printRelocHeader(ELF::SHT_REL);
+    printDynamicRelocHeader(this->Obj, OS, ELF::SHT_REL, "RELR", DynRelrRegion);
     Elf_Relr_Range Relrs = this->dumper()->dyn_relrs();
     for (const Elf_Rel &R : this->Obj.decode_relrs(Relrs))
       printDynamicRelocation(R);
   }
   if (DynPLTRelRegion.Size) {
-    OS << "\n'PLT' relocation section at offset "
-       << format_hex(reinterpret_cast<const uint8_t *>(DynPLTRelRegion.Addr) -
-                         this->Obj.base(),
-                     1)
-       << " contains " << DynPLTRelRegion.Size << " bytes:\n";
-
     if (DynPLTRelRegion.EntSize == sizeof(Elf_Rela)) {
-      printRelocHeader(ELF::SHT_RELA);
+      printDynamicRelocHeader(this->Obj, OS, ELF::SHT_RELA, "PLT",
+                              DynPLTRelRegion);
       for (const Elf_Rela &Rela : DynPLTRelRegion.getAsArrayRef<Elf_Rela>())
         printDynamicRelocation(Rela);
     } else {
-      printRelocHeader(ELF::SHT_REL);
+      printDynamicRelocHeader(this->Obj, OS, ELF::SHT_REL, "PLT",
+                              DynPLTRelRegion);
       for (const Elf_Rel &Rel : DynPLTRelRegion.getAsArrayRef<Elf_Rel>())
         printDynamicRelocation(Rel);
     }
