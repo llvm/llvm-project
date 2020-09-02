@@ -38,7 +38,7 @@
 #  define _LIBCPP_ABI_VERSION 1
 #endif
 
-#ifndef __STDC_HOSTED__
+#if __STDC_HOSTED__ == 0
 #  define _LIBCPP_FREESTANDING
 #endif
 
