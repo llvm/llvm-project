@@ -84,6 +84,11 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
     // TODO: Support DMA ops.
     return false;
   } else if (!isa<ConstantOp>(op)) {
+    // Register op in the set of ops defined inside the loop. This set is used
+    // to prevent hoisting ops that depend on other ops defined inside the loop
+    // which are themselves not being hoisted.
+    definedOps.insert(&op);
+
     if (isMemRefDereferencingOp(op)) {
       Value memref = isa<AffineLoadOp>(op)
                          ? cast<AffineLoadOp>(op).getMemRef()
@@ -110,9 +115,6 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
         }
       }
     }
-
-    // Insert this op in the defined ops list.
-    definedOps.insert(&op);
 
     if (op.getNumOperands() == 0 && !isa<AffineYieldOp>(op)) {
       LLVM_DEBUG(llvm::dbgs() << "\nNon-constant op with 0 operands\n");
