@@ -345,14 +345,13 @@ transformer::detail::buildMatchers(const RewriteRule &Rule) {
   // Each anyOf explicitly controls the traversal kind. The anyOf itself is set
   // to `TK_AsIs` to ensure no nodes are skipped, thereby deferring to the kind
   // of the branches. Then, each branch is either left as is, if the kind is
-  // already set, or explicitly set to `TK_IgnoreUnlessSpelledInSource`. We
-  // choose this setting, because we think it is the one most friendly to
-  // beginners, who are (largely) the target audience of Transformer.
+  // already set, or explicitly set to `TK_AsIs`. We choose this setting because
+  // it is the default interpretation of matchers.
   std::vector<DynTypedMatcher> Matchers;
   for (const auto &Bucket : Buckets) {
     DynTypedMatcher M = DynTypedMatcher::constructVariadic(
         DynTypedMatcher::VO_AnyOf, Bucket.first,
-        taggedMatchers("Tag", Bucket.second, TK_IgnoreUnlessSpelledInSource));
+        taggedMatchers("Tag", Bucket.second, TK_AsIs));
     M.setAllowBind(true);
     // `tryBind` is guaranteed to succeed, because `AllowBind` was set to true.
     Matchers.push_back(M.tryBind(RootID)->withTraversalKind(TK_AsIs));
