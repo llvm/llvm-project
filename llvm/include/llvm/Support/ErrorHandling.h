@@ -110,9 +110,9 @@ void install_out_of_memory_new_handler();
 /// the following unwind succeeds, e.g. do not trigger additional allocations
 /// in the unwind chain.
 ///
-/// If no error handler is installed (default), then a bad_alloc exception
-/// is thrown, if LLVM is compiled with exception support, otherwise an
-/// assertion is called.
+/// If no error handler is installed (default), throws a bad_alloc exception
+/// if LLVM is compiled with exception support. Otherwise prints the error
+/// to standard error and calls abort().
 LLVM_ATTRIBUTE_NORETURN void report_bad_alloc_error(const char *Reason,
                                                     bool GenCrashDiag = true);
 
