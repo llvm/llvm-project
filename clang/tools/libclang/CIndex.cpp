@@ -164,6 +164,12 @@ CXSourceRange cxloc::translateSourceRange(const SourceManager &SM,
   return Result;
 }
 
+CharSourceRange cxloc::translateCXRangeToCharRange(CXSourceRange R) {
+  return CharSourceRange::getCharRange(
+      SourceLocation::getFromRawEncoding(R.begin_int_data),
+      SourceLocation::getFromRawEncoding(R.end_int_data));
+}
+
 //===----------------------------------------------------------------------===//
 // Cursor visitor.
 //===----------------------------------------------------------------------===//
