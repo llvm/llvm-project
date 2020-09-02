@@ -21,10 +21,10 @@ namespace lldb_private {
 
 class CommandObjectRegexCommand : public CommandObjectRaw {
 public:
-  CommandObjectRegexCommand(CommandInterpreter &interpreter, llvm::StringRef name,
-    llvm::StringRef help, llvm::StringRef syntax,
-                            uint32_t max_matches, uint32_t completion_type_mask,
-                            bool is_removable);
+  CommandObjectRegexCommand(CommandInterpreter &interpreter,
+                            llvm::StringRef name, llvm::StringRef help,
+                            llvm::StringRef syntax, uint32_t max_matches,
+                            uint32_t completion_type_mask, bool is_removable);
 
   ~CommandObjectRegexCommand() override;
 
