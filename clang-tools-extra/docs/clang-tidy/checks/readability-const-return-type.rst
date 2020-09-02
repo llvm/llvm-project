@@ -11,7 +11,7 @@ return types.
 Examples:
 
 .. code-block:: c++
-		
+
   const int foo();
   const Clazz foo();
   Clazz *const foo();
