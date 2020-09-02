@@ -1596,6 +1596,16 @@ public:
         else
           m_timeout = std::chrono::seconds(timeout_sec);
         break;
+      case 's': {
+        if (option_arg.empty()) {
+          error.SetErrorStringWithFormat(
+              "missing shell interpreter path for option -i|--interpreter.");
+          return error;
+        }
+
+        m_shell_interpreter = option_arg.str();
+        break;
+      }
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -1606,10 +1616,12 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_timeout.reset();
       m_use_host_platform = false;
+      m_shell_interpreter.clear();
     }
 
     Timeout<std::micro> m_timeout = std::chrono::seconds(10);
     bool m_use_host_platform;
+    std::string m_shell_interpreter;
   };
 
   CommandObjectPlatformShell(CommandInterpreter &interpreter)
@@ -1635,7 +1647,6 @@ public:
 
     const bool is_alias = !raw_command_line.contains("platform");
     OptionsWithRaw args(raw_command_line);
-    const char *expr = args.GetRawPart().c_str();
 
     if (args.HasArgs())
       if (!ParseOptions(args.GetArgs(), result))
@@ -1647,6 +1658,8 @@ public:
       return false;
     }
 
+    llvm::StringRef cmd = args.GetRawPart();
+
     PlatformSP platform_sp(
         m_options.m_use_host_platform
             ? Platform::GetHostPlatform()
@@ -1657,7 +1670,8 @@ public:
       std::string output;
       int status = -1;
       int signo = -1;
-      error = (platform_sp->RunShellCommand(expr, working_dir, &status, &signo,
+      error = (platform_sp->RunShellCommand(m_options.m_shell_interpreter, cmd,
+                                            working_dir, &status, &signo,
                                             &output, m_options.m_timeout));
       if (!output.empty())
         result.GetOutputStream().PutCString(output);
