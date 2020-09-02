@@ -38,6 +38,7 @@
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
+using namespace vector;
 
 ///
 /// Implements a high-level vectorization strategy on a Function.
@@ -918,6 +919,42 @@ static Value vectorizeConstant(Operation *op, ConstantOp constant, Type type) {
   return b.createOperation(state)->getResult(0);
 }
 
+/// Returns the vector type resulting from applying the provided vectorization
+/// strategy on the scalar type.
+static VectorType getVectorType(Type scalarTy,
+                                const VectorizationStrategy *strategy) {
+  assert(!scalarTy.isa<VectorType>() && "Expected scalar type");
+  return VectorType::get(strategy->vectorSizes, scalarTy);
+}
+
+/// Returns true if the provided value is vector uniform given the vectorization
+/// strategy.
+// TODO: For now, only values that are invariants to all the loops in the
+// vectorization strategy are considered vector uniforms.
+static bool isUniformDefinition(Value value,
+                                const VectorizationStrategy *strategy) {
+  for (auto loopToDim : strategy->loopToVectorDim) {
+    auto loop = cast<AffineForOp>(loopToDim.first);
+    if (!loop.isDefinedOutsideOfLoop(value))
+      return false;
+  }
+  return true;
+}
+
+/// Generates a broadcast op for the provided uniform value using the
+/// vectorization strategy in 'state'.
+static Value vectorizeUniform(Value value, VectorizationState *state) {
+  OpBuilder builder(value.getContext());
+  builder.setInsertionPointAfter(value);
+
+  auto vectorTy = getVectorType(value.getType(), state->strategy);
+  auto bcast = builder.create<BroadcastOp>(value.getLoc(), vectorTy, value);
+
+  // Add broadcast to the replacement map to reuse it for other uses.
+  state->replacementMap[value] = bcast;
+  return bcast;
+}
+
 /// Tries to vectorize a given operand `op` of Operation `op` during
 /// def-chain propagation or during terminal vectorization, by applying the
 /// following logic:
@@ -927,7 +964,8 @@ static Value vectorizeConstant(Operation *op, ConstantOp constant, Type type) {
 ///    vectorize atm (i.e. broadcasting required), returns nullptr to indicate
 ///    failure;
 /// 3. if the `op` is a constant, returns the vectorized form of the constant;
-/// 4. non-constant scalars are currently non-vectorizable, in particular to
+/// 4. if the `op` is uniform, returns a vector broadcast of the `op`;
+/// 5. non-constant scalars are currently non-vectorizable, in particular to
 ///    guard against vectorizing an index which may be loop-variant and needs
 ///    special handling.
 ///
@@ -963,12 +1001,15 @@ static Value vectorizeOperand(Value operand, Operation *op,
     return nullptr;
   }
   // 3. vectorize constant.
-  if (auto constant = operand.getDefiningOp<ConstantOp>()) {
-    return vectorizeConstant(
-        op, constant,
-        VectorType::get(state->strategy->vectorSizes, operand.getType()));
-  }
-  // 4. currently non-vectorizable.
+  if (auto constant = operand.getDefiningOp<ConstantOp>())
+    return vectorizeConstant(op, constant,
+                             getVectorType(operand.getType(), state->strategy));
+
+  // 4. Uniform values.
+  if (isUniformDefinition(operand, state->strategy))
+    return vectorizeUniform(operand, state);
+
+  // 5. currently non-vectorizable.
   LLVM_DEBUG(dbgs() << "-> non-vectorizable: " << operand);
   return nullptr;
 }
