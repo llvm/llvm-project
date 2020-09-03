@@ -195,8 +195,8 @@
 #   error "__cpp_lib_constexpr_swap_algorithms should not be defined before c++2a"
 # endif
 
-# ifdef __cpp_lib_constexpr_utility 
-#   error "__cpp_lib_constexpr_utility  should not be defined before c++2a"
+# ifdef __cpp_lib_constexpr_utility
+#   error "__cpp_lib_constexpr_utility should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_destroying_delete
@@ -555,8 +555,8 @@
 #   error "__cpp_lib_constexpr_swap_algorithms should not be defined before c++2a"
 # endif
 
-# ifdef __cpp_lib_constexpr_utility 
-#   error "__cpp_lib_constexpr_utility  should not be defined before c++2a"
+# ifdef __cpp_lib_constexpr_utility
+#   error "__cpp_lib_constexpr_utility should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_destroying_delete
@@ -1029,8 +1029,8 @@
 #   error "__cpp_lib_constexpr_swap_algorithms should not be defined before c++2a"
 # endif
 
-# ifdef __cpp_lib_constexpr_utility 
-#   error "__cpp_lib_constexpr_utility  should not be defined before c++2a"
+# ifdef __cpp_lib_constexpr_utility
+#   error "__cpp_lib_constexpr_utility should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_destroying_delete
@@ -1734,11 +1734,11 @@
 #   endif
 # endif
 
-# ifndef __cpp_lib_constexpr_utility 
-#   error "__cpp_lib_constexpr_utility  should be defined in c++2a"
+# ifndef __cpp_lib_constexpr_utility
+#   error "__cpp_lib_constexpr_utility should be defined in c++2a"
 # endif
-# if __cpp_lib_constexpr_utility  != 201811L
-#   error "__cpp_lib_constexpr_utility  should have the value 201811L in c++2a"
+# if __cpp_lib_constexpr_utility != 201811L
+#   error "__cpp_lib_constexpr_utility should have the value 201811L in c++2a"
 # endif
 
 # if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
