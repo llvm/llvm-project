@@ -9,6 +9,12 @@ add_llvm_executable(check-gdb-llvm-support
 )
 target_link_libraries(check-gdb-llvm-support PRIVATE LLVMSupport)
 
+add_llvm_executable(check-gdb-mlir-support
+        llvm-prettyprinters/gdb/mlir-support.cpp
+)
+target_include_directories(check-gdb-mlir-support PRIVATE ${LLVM_EXTERNAL_MLIR_SOURCE_DIR}/include)
+target_link_libraries(check-gdb-mlir-support PRIVATE MLIRIR)
+
 set(DEBUGINFO_TESTS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(DEBUGINFO_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -19,6 +25,7 @@ set(DEBUGINFO_TEST_DEPS
   llvm-config
   llvm-objdump
   check-gdb-llvm-support
+  check-gdb-mlir-support
   not
   )
 
