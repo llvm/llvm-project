@@ -254,3 +254,18 @@ func @powvec(%arg0 : vector<3xf16>, %arg1 : vector<3xf16>) -> () {
 
 // -----
 
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Round
+//===----------------------------------------------------------------------===//
+
+func @round(%arg0 : f32) -> () {
+  // CHECK: spv.GLSL.Round {{%.*}} : f32
+  %2 = spv.GLSL.Round %arg0 : f32
+  return
+}
+
+func @roundvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spv.GLSL.Round {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.Round %arg0 : vector<3xf16>
+  return
+}

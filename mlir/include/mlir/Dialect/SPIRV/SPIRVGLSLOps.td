@@ -430,6 +430,36 @@ def SPV_GLSLFloorOp : SPV_GLSLUnaryArithmeticOp<"Floor", 8, SPV_Float> {
 
 // -----
 
+def SPV_GLSLRoundOp: SPV_GLSLUnaryArithmeticOp<"Round", 1, SPV_Float> {
+  let summary = "Rounds to the whole number";
+
+  let description = [{
+    Result is the value equal to the nearest whole number.
+
+    The operand x must be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    <!-- End of AutoGen section -->
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    floor-op ::= ssa-id `=` `spv.GLSL.Round` ssa-use `:`
+                float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.Round %0 : f32
+    %3 = spv.GLSL.Round %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPV_GLSLInverseSqrtOp : SPV_GLSLUnaryArithmeticOp<"InverseSqrt", 32, SPV_Float> {
   let summary = "Reciprocal of sqrt(operand)";
 
