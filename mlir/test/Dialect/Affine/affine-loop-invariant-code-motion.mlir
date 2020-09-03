@@ -566,3 +566,50 @@ func @do_not_hoist_dependent_side_effect_free_op(%arg0: memref<10x512xf32>) {
 // CHECK-NEXT:    affine.load
 // CHECK-NEXT:    mulf
 // CHECK-NEXT:  }
+
+// -----
+
+// CHECK-LABEL: func @vector_loop_nothing_invariant
+func @vector_loop_nothing_invariant() {
+  %m1 = alloc() : memref<40xf32>
+  %m2 = alloc() : memref<40xf32>
+  affine.for %arg0 = 0 to 10 {
+    %v0 = affine.vector_load %m1[%arg0*4] : memref<40xf32>, vector<4xf32>
+    %v1 = affine.vector_load %m2[%arg0*4] : memref<40xf32>, vector<4xf32>
+    %v2 = addf %v0, %v1 : vector<4xf32>
+    affine.vector_store %v2, %m1[%arg0*4] : memref<40xf32>, vector<4xf32>
+  }
+  return
+}
+
+// CHECK:       affine.for
+// CHECK-NEXT:    affine.vector_load
+// CHECK-NEXT:    affine.vector_load
+// CHECK-NEXT:    addf
+// CHECK-NEXT:    affine.vector_store
+// CHECK-NEXT:  }
+
+// -----
+
+// CHECK-LABEL: func @vector_loop_all_invariant
+func @vector_loop_all_invariant() {
+  %m1 = alloc() : memref<4xf32>
+  %m2 = alloc() : memref<4xf32>
+  %m3 = alloc() : memref<4xf32>
+  affine.for %arg0 = 0 to 10 {
+    %v0 = affine.vector_load %m1[0] : memref<4xf32>, vector<4xf32>
+    %v1 = affine.vector_load %m2[0] : memref<4xf32>, vector<4xf32>
+    %v2 = addf %v0, %v1 : vector<4xf32>
+    affine.vector_store %v2, %m3[0] : memref<4xf32>, vector<4xf32>
+  }
+  return
+}
+
+// CHECK:       alloc()
+// CHECK-NEXT:  alloc()
+// CHECK-NEXT:  alloc()
+// CHECK-NEXT:  affine.vector_load
+// CHECK-NEXT:  affine.vector_load
+// CHECK-NEXT:  addf
+// CHECK-NEXT:  affine.vector_store
+// CHECK-NEXT:  affine.for
