@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX9ERR %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefix=GFX9ERR --implicit-check-not=error: %s
 
 v_cvt_f16_u16_e64 v5, 0.5
 // GFX9ERR: error: invalid literal operand

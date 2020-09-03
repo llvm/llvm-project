@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=SI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=VI %s
+// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=SI --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=VI --implicit-check-not=error: %s
 
 v_interp_p1_f32 v0, v1, attr64.w
 // GCN: :25: error: out of bounds attr

@@ -396,25 +396,6 @@ func @vec_rejected_10(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    return
 }
 
-// This should not vectorize and should not crash.
-// CHECK-LABEL: @vec_rejected_11
-func @vec_rejected_11(%A : memref<?x?xf32>, %C : memref<?x?xf32>) {
-  %c0 = constant 0 : index
-  %N = dim %A, %c0 : memref<?x?xf32>
-  affine.for %i = 0 to %N {
-// CHECK-NOT: vector
-    %a = affine.load %A[%i, %i] : memref<?x?xf32> // not vectorized
-    affine.for %j = 0 to %N {
-      %b = affine.load %A[%i, %j] : memref<?x?xf32> // may be vectorized
-// CHECK-NOT: vector
-      %c = addf %a, %b : f32 // not vectorized because %a wasn't
-// CHECK-NOT: vector
-      affine.store %c, %C[%i, %j] : memref<?x?xf32> // not vectorized because %c wasn't
-    }
-  }
-  return
-}
-
 // This should not vectorize due to the sequential dependence in the scf.
 // CHECK-LABEL: @vec_rejected_sequential
 func @vec_rejected_sequential(%A : memref<?xf32>) {

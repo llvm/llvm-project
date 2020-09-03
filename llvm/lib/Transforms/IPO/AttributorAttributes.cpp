@@ -2015,7 +2015,6 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         // the argument is poison. Furthermore, if the argument is poison and
         // the position is known to have noundef attriubte, this callsite is
         // considered UB.
-        // TODO: Check also nopoison attribute if it is introduced.
         if (idx >= Callee->arg_size())
           break;
         Value *ArgVal = CB.getArgOperand(idx);
@@ -2028,7 +2027,9 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         //   (3) Simplified to null pointer where known to be nonnull.
         //       The argument is a poison value and violate noundef attribute.
         IRPosition CalleeArgumentIRP = IRPosition::callsite_argument(CB, idx);
-        if (!CalleeArgumentIRP.hasAttr({Attribute::NoUndef}))
+        auto &NoUndefAA = A.getAAFor<AANoUndef>(*this, CalleeArgumentIRP,
+                                                /* TrackDependence */ false);
+        if (!NoUndefAA.isKnownNoUndef())
           continue;
         auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
             *this, IRPosition::value(*ArgVal), /* TrackDependence */ false);
@@ -2097,9 +2098,14 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
 
     // If the returned position of the anchor scope has noundef attriubte, check
     // all returned instructions.
-    // TODO: If AANoUndef is implemented, ask it here.
-    if (IRPosition::returned(*getAnchorScope()).hasAttr({Attribute::NoUndef}))
-      A.checkForAllReturnedValuesAndReturnInsts(InspectReturnInstForUB, *this);
+    if (!getAnchorScope()->getReturnType()->isVoidTy()) {
+      auto &RetPosNoUndefAA =
+          A.getAAFor<AANoUndef>(*this, IRPosition::returned(*getAnchorScope()),
+                                /* TrackDependence */ false);
+      if (RetPosNoUndefAA.isKnownNoUndef())
+        A.checkForAllReturnedValuesAndReturnInsts(InspectReturnInstForUB,
+                                                  *this);
+    }
 
     if (NoUBPrevSize != AssumedNoUBInsts.size() ||
         UBPrevSize != KnownUBInsts.size())
@@ -7781,6 +7787,10 @@ struct AANoUndefImpl : AANoUndef {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
+    if (getIRPosition().hasAttr({Attribute::NoUndef})) {
+      indicateOptimisticFixpoint();
+      return;
+    }
     Value &V = getAssociatedValue();
     if (isa<UndefValue>(V))
       indicatePessimisticFixpoint();

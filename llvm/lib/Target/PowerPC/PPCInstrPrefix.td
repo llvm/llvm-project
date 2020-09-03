@@ -1256,16 +1256,25 @@ let Predicates = [IsISA3_1] in {
   }
 
   def VMULESD : VXForm_1<968, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vmulesd $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vmulesd $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v1i128:$vD, (int_ppc_altivec_vmulesd v2i64:$vA,
+                               v2i64:$vB))]>;
   def VMULEUD : VXForm_1<712, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vmuleud $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vmuleud $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v1i128:$vD, (int_ppc_altivec_vmuleud v2i64:$vA,
+                               v2i64:$vB))]>;
   def VMULOSD : VXForm_1<456, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vmulosd $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vmulosd $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v1i128:$vD, (int_ppc_altivec_vmulosd v2i64:$vA,
+                               v2i64:$vB))]>;
   def VMULOUD : VXForm_1<200, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vmuloud $vD, $vA, $vB", IIC_VecGeneral, []>;
-  def VMSUMCUD : VAForm_1a<23, (outs vrrc:$vD),
-                           (ins vrrc:$vA, vrrc:$vB, vrrc:$vC),
-                           "vmsumcud $vD, $vA, $vB, $vC", IIC_VecGeneral, []>;
+                         "vmuloud $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v1i128:$vD, (int_ppc_altivec_vmuloud v2i64:$vA,
+                               v2i64:$vB))]>;
+  def VMSUMCUD : VAForm_1a<23, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB, vrrc:$vC),
+                           "vmsumcud $vD, $vA, $vB, $vC", IIC_VecGeneral,
+                           [(set v1i128:$vD, (int_ppc_altivec_vmsumcud
+                                 v2i64:$vA, v2i64:$vB, v1i128:$vC))]>;
   def VDIVSQ : VXForm_1<267, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                         "vdivsq $vD, $vA, $vB", IIC_VecGeneral, []>;
   def VDIVUQ : VXForm_1<11, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),

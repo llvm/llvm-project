@@ -11,7 +11,7 @@ define void  @t1(i32 %a, x86_mmx* %P) nounwind {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    shll $12, %ecx
 ; X32-NEXT:    movd %ecx, %xmm0
-; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
+; X32-NEXT:    psllq $32, %xmm0
 ; X32-NEXT:    movq %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
@@ -19,7 +19,7 @@ define void  @t1(i32 %a, x86_mmx* %P) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    shll $12, %edi
 ; X64-NEXT:    movd %edi, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
+; X64-NEXT:    psllq $32, %xmm0
 ; X64-NEXT:    movq %xmm0, (%rsi)
 ; X64-NEXT:    retq
  %tmp12 = shl i32 %a, 12
@@ -36,7 +36,7 @@ define <4 x float> @t2(<4 x float>* %P) nounwind {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    xorps %xmm1, %xmm1
-; X32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],mem[0,0]
+; X32-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,2]
 ; X32-NEXT:    retl
 ;
@@ -44,7 +44,7 @@ define <4 x float> @t2(<4 x float>* %P) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    xorps %xmm1, %xmm1
-; X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],mem[0,0]
+; X64-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,2]
 ; X64-NEXT:    retq
   %tmp1 = load <4 x float>, <4 x float>* %P

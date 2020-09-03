@@ -63,7 +63,7 @@ areAllOpsInTheBlockListInvariant(Region &blockList, Value indVar,
 
 static bool isMemRefDereferencingOp(Operation &op) {
   // TODO: Support DMA Ops.
-  return isa<AffineLoadOp, AffineStoreOp>(op);
+  return isa<AffineReadOpInterface, AffineWriteOpInterface>(op);
 }
 
 // Returns true if the individual op is loop invariant.
@@ -84,10 +84,15 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
     // TODO: Support DMA ops.
     return false;
   } else if (!isa<ConstantOp>(op)) {
+    // Register op in the set of ops defined inside the loop. This set is used
+    // to prevent hoisting ops that depend on other ops defined inside the loop
+    // which are themselves not being hoisted.
+    definedOps.insert(&op);
+
     if (isMemRefDereferencingOp(op)) {
-      Value memref = isa<AffineLoadOp>(op)
-                         ? cast<AffineLoadOp>(op).getMemRef()
-                         : cast<AffineStoreOp>(op).getMemRef();
+      Value memref = isa<AffineReadOpInterface>(op)
+                         ? cast<AffineReadOpInterface>(op).getMemRef()
+                         : cast<AffineWriteOpInterface>(op).getMemRef();
       for (auto *user : memref.getUsers()) {
         // If this memref has a user that is a DMA, give up because these
         // operations write to this memref.
@@ -97,8 +102,9 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
         // If the memref used by the load/store is used in a store elsewhere in
         // the loop nest, we do not hoist. Similarly, if the memref used in a
         // load is also being stored too, we do not hoist the load.
-        if (isa<AffineStoreOp>(user) ||
-            (isa<AffineLoadOp>(user) && isa<AffineStoreOp>(op))) {
+        if (isa<AffineWriteOpInterface>(user) ||
+            (isa<AffineReadOpInterface>(user) &&
+             isa<AffineWriteOpInterface>(op))) {
           if (&op != user) {
             SmallVector<AffineForOp, 8> userIVs;
             getLoopIVs(*user, &userIVs);
@@ -110,9 +116,6 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
         }
       }
     }
-
-    // Insert this op in the defined ops list.
-    definedOps.insert(&op);
 
     if (op.getNumOperands() == 0 && !isa<AffineYieldOp>(op)) {
       LLVM_DEBUG(llvm::dbgs() << "\nNon-constant op with 0 operands\n");

@@ -589,7 +589,8 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
     Assert(!GV.isDSOLocal(),
            "GlobalValue with DLLImport Storage is dso_local!", &GV);
 
-    Assert((GV.isDeclaration() && GV.hasExternalLinkage()) ||
+    Assert((GV.isDeclaration() &&
+            (GV.hasExternalLinkage() || GV.hasExternalWeakLinkage())) ||
                GV.hasAvailableExternallyLinkage(),
            "Global is marked as dllimport, but not external", &GV);
   }

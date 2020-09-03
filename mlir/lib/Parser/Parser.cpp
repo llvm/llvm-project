@@ -863,8 +863,8 @@ public:
   /// Emit a diagnostic at the specified location and return failure.
   InFlightDiagnostic emitError(llvm::SMLoc loc, const Twine &message) override {
     emittedError = true;
-    return parser.emitError(loc, "custom op '" + opDefinition->name + "' " +
-                                     message);
+    return parser.emitError(loc, "custom op '" + opDefinition->name.strref() +
+                                     "' " + message);
   }
 
   llvm::SMLoc getCurrentLocation() override {

@@ -530,7 +530,13 @@ void DWARFContext::dump(
     DataExtractor StrData(Section, isLittleEndian(), 0);
     uint64_t Offset = 0;
     uint64_t StrOffset = 0;
-    while (const char *CStr = StrData.getCStr(&Offset)) {
+    while (StrData.isValidOffset(Offset)) {
+      Error Err = Error::success();
+      const char *CStr = StrData.getCStr(&Offset, &Err);
+      if (Err) {
+        DumpOpts.WarningHandler(std::move(Err));
+        return;
+      }
       OS << format("0x%8.8" PRIx64 ": \"", StrOffset);
       OS.write_escaped(CStr);
       OS << "\"\n";

@@ -14,6 +14,7 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <thread>
 #include <vector>
 
@@ -23,7 +24,8 @@ static bool Ready;
 
 static constexpr scudo::Chunk::Origin Origin = scudo::Chunk::Origin::Malloc;
 
-static void disableDebuggerdMaybe() {
+// Fuchsia complains that the function is not used.
+UNUSED static void disableDebuggerdMaybe() {
 #if SCUDO_ANDROID
   // Disable the debuggerd signal handler on Android, without this we can end
   // up spending a significant amount of time creating tombstones.

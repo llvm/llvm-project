@@ -38,7 +38,7 @@
 #  define _LIBCPP_ABI_VERSION 1
 #endif
 
-#ifndef __STDC_HOSTED__
+#if __STDC_HOSTED__ == 0
 #  define _LIBCPP_FREESTANDING
 #endif
 
@@ -388,14 +388,7 @@
          __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 130000 || \
          __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 60000)
 #      define _LIBCPP_HAS_ALIGNED_ALLOC
-       // TODO: Apple SDKs don't define ::timespec_get unconditionally in C++
-       //       mode. This should be fixed in future SDKs, but for the time
-       //       being we need to avoid trying to use that declaration when
-       //       the SDK doesn't provide it.
-#      include <sys/cdefs.h>
-#      if (__DARWIN_C_LEVEL >= __DARWIN_C_FULL)
-#        define _LIBCPP_HAS_TIMESPEC_GET
-#      endif
+#      define _LIBCPP_HAS_TIMESPEC_GET
 #    endif
 #  endif // __APPLE__
 #endif
@@ -405,9 +398,7 @@
 #elif defined(_LIBCPP_COMPILER_CLANG)
 # define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
 #else
-// This definition is potentially buggy, but it's only taken with GCC in C++03,
-// which we barely support anyway. See llvm.org/PR39713
-# define _LIBCPP_ALIGNOF(_Tp) __alignof(_Tp)
+# error "We don't know a correct way to implement alignof(T) in C++03 outside of Clang"
 #endif
 
 #define _LIBCPP_PREFERRED_ALIGNOF(_Tp) __alignof(_Tp)

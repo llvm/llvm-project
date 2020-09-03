@@ -22,9 +22,9 @@ public:
   }
   void Save(const std::string &s) {
     offsets_[s] = cooked_.Put(s);
-    cooked_.PutProvenance(cooked_.allSources().AddCompilerInsertion(s));
+    cooked_.PutProvenance(allSources_.AddCompilerInsertion(s));
   }
-  void Marshal() { cooked_.Marshal(); }
+  void Marshal() { cooked_.Marshal(allSources_); }
   parser::CharBlock operator()(const std::string &s) {
     return {cooked_.data().data() + offsets_[s], s.size()};
   }
@@ -32,12 +32,13 @@ public:
     return parser::ContextualMessages{cooked_.data(), &buffer};
   }
   void Emit(llvm::raw_ostream &o, const parser::Messages &messages) {
-    messages.Emit(o, cooked_);
+    messages.Emit(o, allCookedSources_);
   }
 
 private:
   parser::AllSources allSources_;
-  parser::CookedSource cooked_{allSources_};
+  parser::AllCookedSources allCookedSources_{allSources_};
+  parser::CookedSource &cooked_{allCookedSources_.NewCookedSource()};
   std::map<std::string, std::size_t> offsets_;
 };
 

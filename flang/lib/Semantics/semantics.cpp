@@ -45,17 +45,17 @@
 
 namespace Fortran::semantics {
 
-using NameToSymbolMap = std::map<const char *, SymbolRef>;
+using NameToSymbolMap = std::multimap<parser::CharBlock, SymbolRef>;
 static void DoDumpSymbols(llvm::raw_ostream &, const Scope &, int indent = 0);
 static void PutIndent(llvm::raw_ostream &, int indent);
 
 static void GetSymbolNames(const Scope &scope, NameToSymbolMap &symbols) {
   // Finds all symbol names in the scope without collecting duplicates.
   for (const auto &pair : scope) {
-    symbols.emplace(pair.second->name().begin(), *pair.second);
+    symbols.emplace(pair.second->name(), *pair.second);
   }
   for (const auto &pair : scope.commonBlocks()) {
-    symbols.emplace(pair.second->name().begin(), *pair.second);
+    symbols.emplace(pair.second->name(), *pair.second);
   }
   for (const auto &child : scope.children()) {
     GetSymbolNames(child, symbols);
@@ -181,9 +181,9 @@ static bool PerformStatementSemantics(
 SemanticsContext::SemanticsContext(
     const common::IntrinsicTypeDefaultKinds &defaultKinds,
     const common::LanguageFeatureControl &languageFeatures,
-    parser::AllSources &allSources)
+    parser::AllCookedSources &allCookedSources)
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
-      allSources_{allSources},
+      allCookedSources_{allCookedSources},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
       foldingContext_{
           parser::ContextualMessages{&messages_}, defaultKinds_, intrinsics_} {}
@@ -351,7 +351,7 @@ bool Semantics::Perform() {
 }
 
 void Semantics::EmitMessages(llvm::raw_ostream &os) const {
-  context_.messages().Emit(os, cooked_);
+  context_.messages().Emit(os, context_.allCookedSources());
 }
 
 void Semantics::DumpSymbols(llvm::raw_ostream &os) {
@@ -361,9 +361,10 @@ void Semantics::DumpSymbols(llvm::raw_ostream &os) {
 void Semantics::DumpSymbolsSources(llvm::raw_ostream &os) const {
   NameToSymbolMap symbols;
   GetSymbolNames(context_.globalScope(), symbols);
+  const parser::AllCookedSources &allCooked{context_.allCookedSources()};
   for (const auto &pair : symbols) {
     const Symbol &symbol{pair.second};
-    if (auto sourceInfo{cooked_.GetSourcePositionRange(symbol.name())}) {
+    if (auto sourceInfo{allCooked.GetSourcePositionRange(symbol.name())}) {
       os << symbol.name().ToString() << ": " << sourceInfo->first.file.path()
          << ", " << sourceInfo->first.line << ", " << sourceInfo->first.column
          << "-" << sourceInfo->second.column << "\n";

@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=verde -show-encoding %s 2>&1 | FileCheck -check-prefix=SI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck -check-prefix=VI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=verde %s 2>&1 | FileCheck -check-prefix=SI --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=VI --implicit-check-not=error: %s
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
 
 exp prim v1, off, off, off

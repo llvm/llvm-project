@@ -266,7 +266,7 @@ define <4 x float> @combine_vec_fcopysign_fptrunc_sgn(<4 x float> %x, <4 x doubl
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    orps %xmm5, %xmm1
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; SSE-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1],xmm6[0],xmm3[3]
+; SSE-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm6[0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE-NEXT:    andps %xmm4, %xmm0
 ; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
