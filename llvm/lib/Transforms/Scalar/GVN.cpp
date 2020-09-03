@@ -295,9 +295,7 @@ GVN::Expression GVN::ValueTable::createExpr(Instruction *I) {
     // of their operands get the same value number by sorting the operand value
     // numbers.  Since commutative operands are the 1st two operands it is more
     // efficient to sort by hand rather than using, say, std::sort.
-    assert(((isa<BinaryOperator>(I) && I->getNumOperands() == 2) ||
-            (isa<IntrinsicInst>(I) && I->getNumOperands() == 3))
-            && "Unsupported commutative instruction!");
+    assert(I->getNumOperands() >= 2 && "Unsupported commutative instruction!");
     if (e.varargs[0] > e.varargs[1])
       std::swap(e.varargs[0], e.varargs[1]);
     e.commutative = true;
@@ -1840,9 +1838,7 @@ uint32_t GVN::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
   }
 
   if (Exp.commutative) {
-    assert((Exp.varargs.size() == 2 ||
-            (Exp.opcode == Instruction::Call && Exp.varargs.size() == 3))
-            && "Unsupported commutative instruction!");
+    assert(Exp.varargs.size() >= 2 && "Unsupported commutative instruction!");
     if (Exp.varargs[0] > Exp.varargs[1]) {
       std::swap(Exp.varargs[0], Exp.varargs[1]);
       uint32_t Opcode = Exp.opcode >> 8;
