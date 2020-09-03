@@ -3,7 +3,7 @@
 
 define i35 @smax(i35 %x) {
 ; CHECK-LABEL: @smax(
-; CHECK-NEXT:    [[R:%.*]] = call i35 @llvm.smax.i35(i35 42, i35 [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i35 @llvm.smax.i35(i35 [[X:%.*]], i35 42)
 ; CHECK-NEXT:    ret i35 [[R]]
 ;
   %r = call i35 @llvm.smax.i35(i35 42, i35 %x)
@@ -12,7 +12,7 @@ define i35 @smax(i35 %x) {
 
 define i5 @smin(i5 %x) {
 ; CHECK-LABEL: @smin(
-; CHECK-NEXT:    [[R:%.*]] = call i5 @llvm.smin.i5(i5 10, i5 [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i5 @llvm.smin.i5(i5 [[X:%.*]], i5 10)
 ; CHECK-NEXT:    ret i5 [[R]]
 ;
   %r = call i5 @llvm.smin.i5(i5 42, i5 %x)
@@ -21,7 +21,7 @@ define i5 @smin(i5 %x) {
 
 define <2 x i35> @umax(<2 x i35> %x) {
 ; CHECK-LABEL: @umax(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i35> @llvm.umax.v2i35(<2 x i35> <i35 42, i35 43>, <2 x i35> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i35> @llvm.umax.v2i35(<2 x i35> [[X:%.*]], <2 x i35> <i35 42, i35 43>)
 ; CHECK-NEXT:    ret <2 x i35> [[R]]
 ;
   %r = call <2 x i35> @llvm.umax.v2i35(<2 x i35> <i35 42, i35 43>, <2 x i35> %x)
@@ -30,7 +30,7 @@ define <2 x i35> @umax(<2 x i35> %x) {
 
 define <3 x i35> @umin(<3 x i35> %x) {
 ; CHECK-LABEL: @umin(
-; CHECK-NEXT:    [[R:%.*]] = call <3 x i35> @llvm.umin.v3i35(<3 x i35> <i35 undef, i35 42, i35 43>, <3 x i35> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i35> @llvm.umin.v3i35(<3 x i35> [[X:%.*]], <3 x i35> <i35 undef, i35 42, i35 43>)
 ; CHECK-NEXT:    ret <3 x i35> [[R]]
 ;
   %r = call <3 x i35> @llvm.umin.v3i35(<3 x i35> <i35 undef, i35 42, i35 43>, <3 x i35> %x)
@@ -39,7 +39,7 @@ define <3 x i35> @umin(<3 x i35> %x) {
 
 define i35 @smul_fix(i35 %x) {
 ; CHECK-LABEL: @smul_fix(
-; CHECK-NEXT:    [[R:%.*]] = call i35 @llvm.smul.fix.i35(i35 42, i35 [[X:%.*]], i32 2)
+; CHECK-NEXT:    [[R:%.*]] = call i35 @llvm.smul.fix.i35(i35 [[X:%.*]], i35 42, i32 2)
 ; CHECK-NEXT:    ret i35 [[R]]
 ;
   %r = call i35 @llvm.smul.fix.i35(i35 42, i35 %x, i32 2)
@@ -48,7 +48,7 @@ define i35 @smul_fix(i35 %x) {
 
 define i5 @umul_fix(i5 %x) {
 ; CHECK-LABEL: @umul_fix(
-; CHECK-NEXT:    [[R:%.*]] = call i5 @llvm.umul.fix.i5(i5 10, i5 [[X:%.*]], i32 3)
+; CHECK-NEXT:    [[R:%.*]] = call i5 @llvm.umul.fix.i5(i5 [[X:%.*]], i5 10, i32 3)
 ; CHECK-NEXT:    ret i5 [[R]]
 ;
   %r = call i5 @llvm.umul.fix.i5(i5 42, i5 %x, i32 3)
@@ -57,7 +57,7 @@ define i5 @umul_fix(i5 %x) {
 
 define <2 x i35> @smul_fix_sat(<2 x i35> %x) {
 ; CHECK-LABEL: @smul_fix_sat(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i35> @llvm.smul.fix.sat.v2i35(<2 x i35> <i35 42, i35 43>, <2 x i35> [[X:%.*]], i32 4)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i35> @llvm.smul.fix.sat.v2i35(<2 x i35> [[X:%.*]], <2 x i35> <i35 42, i35 43>, i32 4)
 ; CHECK-NEXT:    ret <2 x i35> [[R]]
 ;
   %r = call <2 x i35> @llvm.smul.fix.sat.v2i35(<2 x i35> <i35 42, i35 43>, <2 x i35> %x, i32 4)
@@ -66,7 +66,7 @@ define <2 x i35> @smul_fix_sat(<2 x i35> %x) {
 
 define <3 x i35> @umul_fix_sat(<3 x i35> %x) {
 ; CHECK-LABEL: @umul_fix_sat(
-; CHECK-NEXT:    [[R:%.*]] = call <3 x i35> @llvm.umul.fix.sat.v3i35(<3 x i35> <i35 undef, i35 42, i35 43>, <3 x i35> [[X:%.*]], i32 5)
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i35> @llvm.umul.fix.sat.v3i35(<3 x i35> [[X:%.*]], <3 x i35> <i35 undef, i35 42, i35 43>, i32 5)
 ; CHECK-NEXT:    ret <3 x i35> [[R]]
 ;
   %r = call <3 x i35> @llvm.umul.fix.sat.v3i35(<3 x i35> <i35 undef, i35 42, i35 43>, <3 x i35> %x, i32 5)
