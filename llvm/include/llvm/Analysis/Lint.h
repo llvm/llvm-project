@@ -1,4 +1,4 @@
-//===-- llvm/IR/Lint.h - LLVM IR Lint ---------------------------*- C++ -*-===//
+//===-- llvm/Analysis/Lint.h - LLVM IR Lint ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,10 +16,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_IR_LINT_H
-#define LLVM_IR_LINT_H
-
-#include "llvm/IR/PassManager.h"
+#ifndef LLVM_ANALYSIS_LINT_H
+#define LLVM_ANALYSIS_LINT_H
 
 namespace llvm {
 
@@ -32,20 +30,19 @@ class Function;
 /// Check a module or function.
 FunctionPass *createLintPass();
 
-/// Lint a module.
+/// Check a module.
 ///
 /// This should only be used for debugging, because it plays games with
 /// PassManagers and stuff.
-void lintModule(const Module &M);
+void lintModule(
+  const Module &M    ///< The module to be checked
+);
 
-// Lint a function.
-void lintFunction(const Function &F);
+// lintFunction - Check a function.
+void lintFunction(
+  const Function &F  ///< The function to be checked
+);
 
-class LintPass : public PassInfoMixin<LintPass> {
-public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
+} // End llvm namespace
 
-} // namespace llvm
-
-#endif // LLVM_IR_LINT_H
+#endif

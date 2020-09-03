@@ -67,6 +67,7 @@ static_library("Analysis") {
     "LazyCallGraph.cpp",
     "LazyValueInfo.cpp",
     "LegacyDivergenceAnalysis.cpp",
+    "Lint.cpp",
     "Loads.cpp",
     "LoopAccessAnalysis.cpp",
     "LoopAnalysisManager.cpp",
