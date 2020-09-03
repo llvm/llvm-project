@@ -186,7 +186,7 @@ Symbols:
 # SHORT-GNU:      Stack Sizes:
 # SHORT-GNU-NEXT:  Size     Function
 # SHORT-GNU-NEXT:     8     foo
-# SHORT-GNU-NEXT: warning: '[[FILE]]': found invalid relocation offset (0x1) into section .stack_sizes while trying to extract a stack size entry
+# SHORT-GNU-NEXT: warning: '[[FILE]]': found invalid relocation offset (0x1) into SHT_PROGBITS section with index 2 while trying to extract a stack size entry
 # SHORT-GNU-NEXT:     8     foo
 
 # SHORT-LLVM:     StackSizes [
@@ -194,7 +194,7 @@ Symbols:
 # SHORT-LLVM-NEXT:     Function: foo
 # SHORT-LLVM-NEXT:     Size: 0x8
 # SHORT-LLVM-NEXT:   }
-# SHORT-LLVM-NEXT: warning: '[[FILE]]': found invalid relocation offset (0x1) into section .stack_sizes while trying to extract a stack size entry
+# SHORT-LLVM-NEXT: warning: '[[FILE]]': found invalid relocation offset (0x1) into SHT_PROGBITS section with index 2 while trying to extract a stack size entry
 # SHORT-LLVM-NEXT:   Entry {
 # SHORT-LLVM-NEXT:     Function: foo
 # SHORT-LLVM-NEXT:     Size: 0x8
@@ -361,9 +361,8 @@ Symbols:
 # RUN: llvm-readelf --stack-sizes %t06 2>&1 | FileCheck %s --check-prefix=BADSIZE -DFILE=%t06
 # RUN: llvm-readobj --stack-sizes %t06 2>&1 | FileCheck %s --check-prefix=BADSIZE -DFILE=%t06
 
-## TODO: these messages should be improved to include section indices.
-# BADSIZE: warning: '[[FILE]]': could not extract a valid stack size in section .stack_sizes
-# BADSIZE: warning: '[[FILE]]': could not extract a valid stack size in section .stack_sizes
+# BADSIZE: warning: '[[FILE]]': could not extract a valid stack size in SHT_PROGBITS section with index 2
+# BADSIZE: warning: '[[FILE]]': could not extract a valid stack size in SHT_PROGBITS section with index 3
 
 --- !ELF
 FileHeader:
@@ -460,7 +459,7 @@ Symbols:
 # NORELOCSECTION-OUT-LLVM:      StackSizes [
 # NORELOCSECTION-OUT-LLVM-NEXT: ]
 
-# NORELOCSECTION-ERR: warning: '[[FILE]]': section .stack_sizes does not have a corresponding relocation section
+# NORELOCSECTION-ERR: warning: '[[FILE]]': .stack_sizes (SHT_PROGBITS section with index 2) does not have a corresponding relocation section
 
 --- !ELF
 FileHeader:
