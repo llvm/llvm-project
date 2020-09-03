@@ -217,6 +217,31 @@ exit:                                            ; preds = %bb102
   ret void
 }
 
+; Check the phi with incoming value from kill branch is not incomplete after the conditional discard pass.
+; This test does not need to check specific pattern, module verifier will catch the problem.
+
+; GCN-LABEL: {{^}}kill_with_phi:
+define amdgpu_ps { <4 x float> } @kill_with_phi(float %arg0){
+.entry:
+  %tmp0 = fptosi float %arg0 to i32
+  %tmp1 = icmp slt i32 %tmp0, 150
+  br i1 %tmp1, label %kill_br, label %next
+
+kill_br:                                               ; preds = %.entry
+  call void @llvm.amdgcn.kill(i1 false)
+  br label %exit
+
+next:                                               ; preds = %.entry
+  %tmp3 = icmp slt i32 %tmp0, 180
+  %tmp4 = select i1 %tmp3, float 5.000000e-01, float 1.000000e+01
+  br label %exit
+
+exit:                                               ; preds = %next, %kill_br
+  %outp = phi float [ undef, %kill_br ], [ %tmp4, %next ]
+  %tmp5 = insertelement <4 x float> <float 5.000000e-01, float 5.000000e-01, float undef, float 1.000000e+00>, float %outp, i32 2
+  %tmp6 = insertvalue { <4 x float> } undef, <4 x float> %tmp5, 0
+  ret { <4 x float> } %tmp6
+}
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
