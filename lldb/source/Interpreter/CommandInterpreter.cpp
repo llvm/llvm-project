@@ -2091,9 +2091,12 @@ static void GetHomeInitFile(llvm::SmallVectorImpl<char> &init_file,
   FileSystem::Instance().Resolve(init_file);
 }
 
-static void GetHomeREPLInitFile(llvm::SmallVectorImpl<char> &init_file,
-                                LanguageType language) {
-  if (language == LanguageType::eLanguageTypeUnknown)
+static void GetHomeREPLInitFile(llvm::SmallVectorImpl<char> &init_file) {
+  LanguageSet repl_languages = Language::GetLanguagesSupportingREPLs();
+  LanguageType language = eLanguageTypeUnknown;
+  if (auto main_repl_language = repl_languages.GetSingularLanguage())
+    language = *main_repl_language;
+  else
     return;
 
   std::string init_file_name =
@@ -2191,13 +2194,8 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
 
   llvm::SmallString<128> init_file;
 
-  if (is_repl) {
-    LanguageType language = {};
-    TargetSP target_sp = GetDebugger().GetSelectedTarget();
-    if (target_sp)
-      language = target_sp->GetLanguage();
-    GetHomeREPLInitFile(init_file, language);
-  }
+  if (is_repl)
+    GetHomeREPLInitFile(init_file);
 
   if (init_file.empty())
     GetHomeInitFile(init_file);
