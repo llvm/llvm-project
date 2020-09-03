@@ -744,21 +744,38 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
 bool StdLibraryFunctionsChecker::Signature::matches(
     const FunctionDecl *FD) const {
   assert(!isInvalid());
-  // Check number of arguments:
+  // Check the number of arguments.
   if (FD->param_size() != ArgTys.size())
     return false;
 
-  // Check return type.
-  if (!isIrrelevant(RetTy))
-    if (RetTy != FD->getReturnType().getCanonicalType())
-      return false;
+  // The "restrict" keyword is illegal in C++, however, many libc
+  // implementations use the "__restrict" compiler intrinsic in functions
+  // prototypes. The "__restrict" keyword qualifies a type as a restricted type
+  // even in C++.
+  // In case of any non-C99 languages, we don't want to match based on the
+  // restrict qualifier because we cannot know if the given libc implementation
+  // qualifies the paramter type or not.
+  auto RemoveRestrict = [&FD](QualType T) {
+    if (!FD->getASTContext().getLangOpts().C99)
+      T.removeLocalRestrict();
+    return T;
+  };
 
-  // Check argument types.
+  // Check the return type.
+  if (!isIrrelevant(RetTy)) {
+    QualType FDRetTy = RemoveRestrict(FD->getReturnType().getCanonicalType());
+    if (RetTy != FDRetTy)
+      return false;
+  }
+
+  // Check the argument types.
   for (size_t I = 0, E = ArgTys.size(); I != E; ++I) {
     QualType ArgTy = ArgTys[I];
     if (isIrrelevant(ArgTy))
       continue;
-    if (ArgTy != FD->getParamDecl(I)->getType().getCanonicalType())
+    QualType FDArgTy =
+        RemoveRestrict(FD->getParamDecl(I)->getType().getCanonicalType());
+    if (ArgTy != FDArgTy)
       return false;
   }
 
@@ -988,6 +1005,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     void operator()(StringRef Name, const std::vector<Summary> &Summaries) {
       for (const Summary &S : Summaries)
         operator()(Name, S);
+    }
+    // Add the same summary for different names with the Signature explicitly
+    // given.
+    void operator()(std::vector<StringRef> Names, Signature Sign, Summary Sum) {
+      for (StringRef Name : Names)
+        operator()(Name, Sign, Sum);
     }
   } addToFunctionSummaryMap(ACtx, FunctionSummaryMap, DisplayLoadedSummaries);
 
@@ -2048,6 +2071,11 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                 EvalCallAsPure)
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1),
                                       /*BufSizeMultiplier=*/ArgNo(2))));
+    addToFunctionSummaryMap(
+        {"__test_restrict_param_0", "__test_restrict_param_1",
+         "__test_restrict_param_2"},
+        Signature(ArgTypes{VoidPtrRestrictTy}, RetType{VoidTy}),
+        Summary(EvalCallAsPure));
   }
 }
 
