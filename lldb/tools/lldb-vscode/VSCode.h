@@ -9,6 +9,7 @@
 #ifndef LLDB_TOOLS_LLDB_VSCODE_VSCODE_H
 #define LLDB_TOOLS_LLDB_VSCODE_VSCODE_H
 
+#include <condition_variable>
 #include <iosfwd>
 #include <map>
 #include <set>
