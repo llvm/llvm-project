@@ -52,6 +52,7 @@ ENUM_CLASS(IoSpecKind, Access, Action, Advance, Asynchronous, Blank, Decimal,
     Id, Iomsg, Iostat, Name, Named, Newunit, Nextrec, Nml, Number, Opened, Pad,
     Pending, Pos, Position, Read, Readwrite, Rec, Recl, Round, Sequential, Sign,
     Size, Status, Stream, Unformatted, Unit, Write,
+    Carriagecontrol, // nonstandard
     Convert, // nonstandard
     Dispose, // nonstandard
 )
