@@ -547,7 +547,15 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
   using namespace mlir::edsc::op;
 
   TransferReadOp transfer = cast<TransferReadOp>(op);
-  if (transfer.permutation_map().isMinorIdentity()) {
+
+  // Fall back to a loop if the fastest varying stride is not 1 or it is
+  // permuted.
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  auto successStrides =
+      getStridesAndOffset(transfer.getMemRefType(), strides, offset);
+  if (succeeded(successStrides) && strides.back() == 1 &&
+      transfer.permutation_map().isMinorIdentity()) {
     // If > 1D, emit a bunch of loops around 1-D vector transfers.
     if (transfer.getVectorType().getRank() > 1)
       return NDTransferOpHelper<TransferReadOp>(rewriter, transfer, options)
@@ -621,7 +629,15 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
   using namespace edsc::op;
 
   TransferWriteOp transfer = cast<TransferWriteOp>(op);
-  if (transfer.permutation_map().isMinorIdentity()) {
+
+  // Fall back to a loop if the fastest varying stride is not 1 or it is
+  // permuted.
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  auto successStrides =
+      getStridesAndOffset(transfer.getMemRefType(), strides, offset);
+  if (succeeded(successStrides) && strides.back() == 1 &&
+      transfer.permutation_map().isMinorIdentity()) {
     // If > 1D, emit a bunch of loops around 1-D vector transfers.
     if (transfer.getVectorType().getRank() > 1)
       return NDTransferOpHelper<TransferWriteOp>(rewriter, transfer, options)

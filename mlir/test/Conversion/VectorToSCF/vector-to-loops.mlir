@@ -457,3 +457,28 @@ func @transfer_write_minor_identity(%A : vector<3x3xf32>, %B : memref<?x?x?x?xf3
 //       CHECK:      }
 //       CHECK:    }
 //       CHECK:    return
+
+// -----
+
+func @transfer_read_strided(%A : memref<8x4xf32, affine_map<(d0, d1) -> (d0 + d1 * 8)>>) -> vector<4xf32> {
+  %c0 = constant 0 : index
+  %f0 = constant 0.0 : f32
+  %0 = vector.transfer_read %A[%c0, %c0], %f0
+      : memref<8x4xf32, affine_map<(d0, d1) -> (d0 + d1 * 8)>>, vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: transfer_read_strided(
+// CHECK: scf.for
+// CHECK: load
+
+func @transfer_write_strided(%A : vector<4xf32>, %B : memref<8x4xf32, affine_map<(d0, d1) -> (d0 + d1 * 8)>>) {
+  %c0 = constant 0 : index
+  vector.transfer_write %A, %B[%c0, %c0] :
+    vector<4xf32>, memref<8x4xf32, affine_map<(d0, d1) -> (d0 + d1 * 8)>>
+  return
+}
+
+// CHECK-LABEL: transfer_write_strided(
+// CHECK: scf.for
+// CHECK: store
