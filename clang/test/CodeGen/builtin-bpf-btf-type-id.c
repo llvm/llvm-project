@@ -1,5 +1,5 @@
 // REQUIRES: bpf-registered-target
-// RUN: %clang -target bpf -emit-llvm -S -g %s -o - | FileCheck %s
+// RUN: %clang -target bpf -emit-llvm -S -g -Xclang -disable-llvm-passes %s -o - | FileCheck %s
 
 unsigned test1(int a) { return __builtin_btf_type_id(a, 0); }
 unsigned test2(int a) { return __builtin_btf_type_id(&a, 0); }
