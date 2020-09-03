@@ -26,7 +26,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/Lint.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
@@ -47,7 +46,6 @@ using namespace llvm;
 
 void llvm::initializeCore(PassRegistry &Registry) {
   initializeDominatorTreeWrapperPassPass(Registry);
-  initializeLintLegacyPassPass(Registry);
   initializePrintModulePassWrapperPass(Registry);
   initializePrintFunctionPassWrapperPass(Registry);
   initializeSafepointIRVerifierPass(Registry);
