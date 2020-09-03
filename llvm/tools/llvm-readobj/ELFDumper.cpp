@@ -731,11 +731,10 @@ public:
                                   std::function<void()> PrintHeader);
   void printFunctionStackSize(const ELFObjectFile<ELFT> *Obj, uint64_t SymValue,
                               Optional<SectionRef> FunctionSec,
-                              const StringRef SectionName, DataExtractor Data,
+                              const Elf_Shdr &StackSizeSec, DataExtractor Data,
                               uint64_t *Offset);
   void printStackSize(const ELFObjectFile<ELFT> *Obj, RelocationRef Rel,
-                      SectionRef FunctionSec,
-                      const StringRef &StackSizeSectionName,
+                      SectionRef FunctionSec, const Elf_Shdr &StackSizeSec,
                       const RelocationResolver &Resolver, DataExtractor Data);
   virtual void printStackSizeEntry(uint64_t Size, StringRef FuncName) = 0;
   virtual void printMipsGOT(const MipsGOTParser<ELFT> &Parser) = 0;
@@ -5596,7 +5595,7 @@ template <class ELFT>
 void DumpStyle<ELFT>::printFunctionStackSize(const ELFObjectFile<ELFT> *Obj,
                                              uint64_t SymValue,
                                              Optional<SectionRef> FunctionSec,
-                                             const StringRef SectionName,
+                                             const Elf_Shdr &StackSizeSec,
                                              DataExtractor Data,
                                              uint64_t *Offset) {
   // This function ignores potentially erroneous input, unless it is directly
@@ -5641,8 +5640,8 @@ void DumpStyle<ELFT>::printFunctionStackSize(const ELFObjectFile<ELFT> *Obj,
   if (*Offset == PrevOffset) {
     reportWarning(
         createStringError(object_error::parse_failed,
-                          "could not extract a valid stack size in section %s",
-                          SectionName.data()),
+                          "could not extract a valid stack size in " +
+                              describe(*Obj->getELFFile(), StackSizeSec)),
         Obj->getFileName());
     return;
   }
@@ -5662,7 +5661,7 @@ template <class ELFT>
 void DumpStyle<ELFT>::printStackSize(const ELFObjectFile<ELFT> *Obj,
                                      RelocationRef Reloc,
                                      SectionRef FunctionSec,
-                                     const StringRef &StackSizeSectionName,
+                                     const Elf_Shdr &StackSizeSec,
                                      const RelocationResolver &Resolver,
                                      DataExtractor Data) {
   // This function ignores potentially erroneous input, unless it is directly
@@ -5703,15 +5702,15 @@ void DumpStyle<ELFT>::printStackSize(const ELFObjectFile<ELFT> *Obj,
     reportUniqueWarning(createStringError(
         object_error::parse_failed,
         "found invalid relocation offset (0x" + Twine::utohexstr(Offset) +
-            ") into section " + StackSizeSectionName +
+            ") into " + describe(*Obj->getELFFile(), StackSizeSec) +
             " while trying to extract a stack size entry"));
     return;
   }
 
   uint64_t Addend = Data.getAddress(&Offset);
   uint64_t SymValue = Resolver(Reloc, RelocSymValue, Addend);
-  this->printFunctionStackSize(Obj, SymValue, FunctionSec, StackSizeSectionName,
-                               Data, &Offset);
+  this->printFunctionStackSize(Obj, SymValue, FunctionSec, StackSizeSec, Data,
+                               &Offset);
 }
 
 template <class ELFT>
@@ -5721,8 +5720,7 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
   // related to stack size reporting.
   const ELFFile<ELFT> *EF = Obj->getELFFile();
   for (const SectionRef &Sec : Obj->sections()) {
-    StringRef SectionName = getSectionName(Sec);
-    if (SectionName != ".stack_sizes")
+    if (getSectionName(Sec) != ".stack_sizes")
       continue;
     PrintHeader();
     const Elf_Shdr *ElfSec = Obj->getSection(Sec.getRawDataRefImpl());
@@ -5741,8 +5739,8 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
         break;
       }
       uint64_t SymValue = Data.getAddress(&Offset);
-      printFunctionStackSize(Obj, SymValue, /*FunctionSec=*/None, SectionName,
-                             Data, &Offset);
+      printFunctionStackSize(Obj, SymValue, /*FunctionSec=*/None, *ElfSec, Data,
+                             &Offset);
     }
   }
 }
@@ -5807,22 +5805,23 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
     PrintHeader();
     const SectionRef &StackSizesSec = StackSizeMapEntry.first;
     const SectionRef &RelocSec = StackSizeMapEntry.second;
+    const Elf_Shdr *StackSizesELFSec =
+        Obj->getSection(StackSizesSec.getRawDataRefImpl());
 
     // Warn about stack size sections without a relocation section.
-    StringRef StackSizeSectionName = getSectionName(StackSizesSec);
     if (RelocSec == NullSection) {
-      reportWarning(createError("section " + StackSizeSectionName +
-                                " does not have a corresponding "
-                                "relocation section"),
-                    Obj->getFileName());
+      reportWarning(
+          createError(".stack_sizes (" +
+                      describe(*Obj->getELFFile(), *StackSizesELFSec) +
+                      ") does not have a corresponding "
+                      "relocation section"),
+          Obj->getFileName());
       continue;
     }
 
     // A .stack_sizes section header's sh_link field is supposed to point
     // to the section that contains the functions whose stack sizes are
     // described in it.
-    const Elf_Shdr *StackSizesELFSec =
-        Obj->getSection(StackSizesSec.getRawDataRefImpl());
     const SectionRef FunctionSec = Obj->toSectionRef(unwrapOrError(
         this->FileName, EF->getSection(StackSizesELFSec->sh_link)));
 
@@ -5844,8 +5843,8 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
                 ": " + EF->getRelocationTypeName(Reloc.getType())));
         continue;
       }
-      this->printStackSize(Obj, Reloc, FunctionSec, StackSizeSectionName,
-                           Resolver, Data);
+      this->printStackSize(Obj, Reloc, FunctionSec, *StackSizesELFSec, Resolver,
+                           Data);
     }
   }
 }
