@@ -878,34 +878,7 @@ TEST_F(TransformerTest, OrderedRuleMultipleKinds) {
 }
 
 // Verifies that a rule with a top-level matcher for an implicit node (like
-// `implicitCastExpr`) does not change the code, when the AST traversal skips
-// implicit nodes. In this test, only the rule with the explicit-node matcher
-// will fire.
-TEST_F(TransformerTest, OrderedRuleImplicitIgnored) {
-  std::string Input = R"cc(
-    void f1();
-    int f2();
-    void call_f1() { f1(); }
-    float call_f2() { return f2(); }
-  )cc";
-  std::string Expected = R"cc(
-    void f1();
-    int f2();
-    void call_f1() { REPLACE_F1; }
-    float call_f2() { return f2(); }
-  )cc";
-
-  RewriteRule ReplaceF1 =
-      makeRule(callExpr(callee(functionDecl(hasName("f1")))),
-               changeTo(cat("REPLACE_F1")));
-  RewriteRule ReplaceF2 =
-      makeRule(implicitCastExpr(hasSourceExpression(callExpr())),
-               changeTo(cat("REPLACE_F2")));
-  testRule(applyFirst({ReplaceF1, ReplaceF2}), Input, Expected);
-}
-
-// Verifies that explicitly setting the traversal kind fixes the problem in the
-// previous test.
+// `implicitCastExpr`) works correctly -- the implicit nodes are not skipped.
 TEST_F(TransformerTest, OrderedRuleImplicitMatched) {
   std::string Input = R"cc(
     void f1();
@@ -920,12 +893,11 @@ TEST_F(TransformerTest, OrderedRuleImplicitMatched) {
     float call_f2() { return REPLACE_F2; }
   )cc";
 
-  RewriteRule ReplaceF1 = makeRule(
-      traverse(clang::TK_AsIs, callExpr(callee(functionDecl(hasName("f1"))))),
-      changeTo(cat("REPLACE_F1")));
+  RewriteRule ReplaceF1 =
+      makeRule(callExpr(callee(functionDecl(hasName("f1")))),
+               changeTo(cat("REPLACE_F1")));
   RewriteRule ReplaceF2 =
-      makeRule(traverse(clang::TK_AsIs,
-                        implicitCastExpr(hasSourceExpression(callExpr()))),
+      makeRule(implicitCastExpr(hasSourceExpression(callExpr())),
                changeTo(cat("REPLACE_F2")));
   testRule(applyFirst({ReplaceF1, ReplaceF2}), Input, Expected);
 }
