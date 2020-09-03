@@ -1264,9 +1264,16 @@ private:
     return std::visit([&](const auto &x) { return genval(x); }, des.u);
   }
 
+  mlir::Type genType(const Fortran::evaluate::DynamicType &dt) {
+    if (dt.category() != Fortran::common::TypeCategory::Derived)
+      return converter.genType(dt.category(), dt.kind());
+    llvm::report_fatal_error("derived types not implemented");
+  }
+  
   template <typename A>
   fir::ExtendedValue gen(const Fortran::evaluate::FunctionRef<A> &func) {
-    auto resTy = converter.genType(*func.proc().GetSymbol());
+    assert(func.GetType().has_value() && "function has no type");
+    auto resTy = genType(*func.GetType());
     auto retVal = genProcedureRef(func, llvm::ArrayRef<mlir::Type>{resTy});
     auto mem = builder.create<fir::AllocaOp>(getLoc(), resTy);
     builder.create<fir::StoreOp>(getLoc(), fir::getBase(retVal), mem);
