@@ -26,16 +26,8 @@ struct Fchar {
   LenT len;
 };
 
-template <typename... T> using SubF18 = void (*)(Fchar, Fchar, T...);
-template <typename... T>
-using SubF77 = void (*)(char *, char *, T..., LenT, LenT);
-template <typename... T>
-void CallSubroutine(SubF18<T...> f, Fchar s1, Fchar s2, T... args) {
-  f(s1, s2, args...);
-}
-
-template <typename... T>
-void CallSubroutine(SubF77<T...> f, Fchar s1, Fchar s2, T... args) {
+template <typename F, typename... T>
+void CallSubroutine(F f, Fchar s1, Fchar s2, T... args) {
   f(s1.data, s2.data, args..., s1.len, s2.len);
 }
 
@@ -113,29 +105,9 @@ bool Check(const FcharData<Kind> &test, const FcharData<Kind> &ref,
   return true;
 }
 
-// Call compiled test subroutine and compare variable afterwards with a
-// reference. Compare against result from reference subroutine.
-template <int Kind, typename... T>
-bool TestSubroutine(const std::string &testName, SubF18<T...> fooTest,
-    SubF18<T...> fooRef, const FcharData<Kind> &s1, const FcharData<Kind> &s2,
-    T... otherArgs) {
-  // Make copies because data may be modified
-  FcharData<Kind> testS1{s1}, testS2{s2};
-  CallSubroutine(fooTest, testS1.getFchar(), testS2.getFchar(), otherArgs...);
-
-  // Compare against reference subroutine
-  FcharData<Kind> refS1{s1}, refS2{s2};
-  CallSubroutine(fooRef, refS1.getFchar(), refS2.getFchar(), otherArgs...);
-
-  auto description{testName + " KIND=" + std::to_string(Kind)};
-  bool result{Check(testS1, refS1, description + " s1")};
-  result &= Check(testS2, refS2, description + " s2");
-  return result;
-}
-
 // Compare against precomputed results.
-template <int Kind, typename... T>
-bool TestSubroutine(const std::string &testName, SubF18<T...> fooTest,
+template <int Kind, typename F, typename... T>
+bool TestSubroutine(const std::string &testName, F fooTest,
     const FcharData<Kind> &s1, const FcharData<Kind> &refS1,
     const FcharData<Kind> &s2, const FcharData<Kind> &refS2, T... otherArgs) {
   // Make copies because data may be modified
@@ -176,13 +148,13 @@ extern "C" {
 //   CHARACTER(*, K) :: s1, s2
 //   s1 = s2
 // END SUBROUTINE
-void _QPassign1(Fchar, Fchar);
-void _QPassign2(Fchar, Fchar);
-void _QPassign4(Fchar, Fchar);
+void _QPassign1(char *, char *, LenT, LenT);
+void _QPassign2(char *, char *, LenT, LenT);
+void _QPassign4(char *, char *, LenT, LenT);
 }
 
 template <int Kind, typename Func>
-void TestNormalAssignement(Func testedSub, int &tests, int &passed) {
+void TestNormalAssignment(Func testedSub, int &tests, int &passed) {
   auto &s1{Inputs<Kind>::s1};
   auto &s2{Inputs<Kind>::s2};
   auto &s3{Inputs<Kind>::s3};
@@ -221,13 +193,13 @@ extern "C" {
 //   INTEGER :: lb, ub
 //   s1(lb:ub) = s2
 // END SUBROUTINE
-void _QPassign_substring1(Fchar s1, Fchar s2, int *lb, int *ub);
-void _QPassign_substring2(Fchar, Fchar, int *, int *);
-void _QPassign_substring4(Fchar, Fchar, int *, int *);
+void _QPassign_substring1(char *s1, char *s2, int *lb, int *ub, LenT, LenT);
+void _QPassign_substring2(char *, char *, int *, int *, LenT, LenT);
+void _QPassign_substring4(char *, char *, int *, int *, LenT, LenT);
 }
 
 template <int Kind, typename Func>
-void TestSubstringAssignement(Func testedSub, int &tests, int &passed) {
+void TestSubstringAssignment(Func testedSub, int &tests, int &passed) {
   auto &s1{Inputs<Kind>::s3};
   auto &s2{Inputs<Kind>::s1};
   int lb{3};
@@ -257,13 +229,13 @@ extern "C" {
 //   INTEGER :: lb
 //   s1(lb:) = s2
 // END SUBROUTINE
-void _QPassign_overlap1(Fchar s1, Fchar s2, int *lb);
-void _QPassign_overlap2(Fchar, Fchar, int *);
-void _QPassign_overlap4(Fchar, Fchar, int *);
+void _QPassign_overlap1(char *s1, char *s2, int *lb, LenT, LenT);
+void _QPassign_overlap2(char *, char *, int *, LenT, LenT);
+void _QPassign_overlap4(char *, char *, int *, LenT, LenT);
 }
 
 template <int Kind, typename Func>
-void TestOverlappingAssignement(Func testedSub, int &tests, int &passed) {
+void TestOverlappingAssignment(Func testedSub, int &tests, int &passed) {
   auto &s1{Inputs<Kind>::s1};
   auto &s2{Inputs<Kind>::s2};
   int lb{2};
@@ -290,13 +262,13 @@ extern "C" {
 //   CHARACTER(l2, K) :: s2
 //   s1 = s2
 // END SUBROUTINE
-void _QPassign_spec_expr_len1(Fchar s1, Fchar s2, int *l1, int *l2);
-void _QPassign_spec_expr_len2(Fchar s1, Fchar s2, int *l1, int *l2);
-void _QPassign_spec_expr_len4(Fchar s1, Fchar s2, int *l1, int *l2);
+void _QPassign_spec_expr_len1(char *s1, char *s2, int *l1, int *l2, LenT, LenT);
+void _QPassign_spec_expr_len2(char *s1, char *s2, int *l1, int *l2, LenT, LenT);
+void _QPassign_spec_expr_len4(char *s1, char *s2, int *l1, int *l2, LenT, LenT);
 }
 
 template <int Kind, typename Func>
-void TestSpecExprLenAssignement(Func testedSub, int &tests, int &passed) {
+void TestSpecExprLenAssignment(Func testedSub, int &tests, int &passed) {
   auto &s1{Inputs<Kind>::s1};
   auto &s2{Inputs<Kind>::s2};
   auto &s3{Inputs<Kind>::s3};
@@ -339,7 +311,7 @@ extern "C" {
 //  CHARACTER(*) :: s1, s2
 //  s2 = s1 // " another piece of string"
 // END SUBROUTINE
-void _QPconcat1(Fchar s1, Fchar s2);
+void _QPconcat1(char *s1, char *s2, LenT, LenT);
 }
 
 template <int Kind, typename Func>
@@ -360,21 +332,21 @@ void TestConcat(Func testedSub, int &tests, int &passed) {
 int main(int, char **) {
   int tests{0}, passed{0};
 
-  TestNormalAssignement<1>(_QPassign1, tests, passed);
-  TestNormalAssignement<2>(_QPassign2, tests, passed);
-  TestNormalAssignement<4>(_QPassign4, tests, passed);
+  TestNormalAssignment<1>(_QPassign1, tests, passed);
+  TestNormalAssignment<2>(_QPassign2, tests, passed);
+  TestNormalAssignment<4>(_QPassign4, tests, passed);
 
-  TestSubstringAssignement<1>(_QPassign_substring1, tests, passed);
-  TestSubstringAssignement<2>(_QPassign_substring2, tests, passed);
-  TestSubstringAssignement<4>(_QPassign_substring4, tests, passed);
+  TestSubstringAssignment<1>(_QPassign_substring1, tests, passed);
+  TestSubstringAssignment<2>(_QPassign_substring2, tests, passed);
+  TestSubstringAssignment<4>(_QPassign_substring4, tests, passed);
 
-  TestOverlappingAssignement<1>(_QPassign_overlap1, tests, passed);
-  TestOverlappingAssignement<2>(_QPassign_overlap2, tests, passed);
-  TestOverlappingAssignement<4>(_QPassign_overlap4, tests, passed);
+  TestOverlappingAssignment<1>(_QPassign_overlap1, tests, passed);
+  TestOverlappingAssignment<2>(_QPassign_overlap2, tests, passed);
+  TestOverlappingAssignment<4>(_QPassign_overlap4, tests, passed);
 
-  TestSpecExprLenAssignement<1>(_QPassign_spec_expr_len1, tests, passed);
-  TestSpecExprLenAssignement<2>(_QPassign_spec_expr_len2, tests, passed);
-  TestSpecExprLenAssignement<4>(_QPassign_spec_expr_len4, tests, passed);
+  TestSpecExprLenAssignment<1>(_QPassign_spec_expr_len1, tests, passed);
+  TestSpecExprLenAssignment<2>(_QPassign_spec_expr_len2, tests, passed);
+  TestSpecExprLenAssignment<4>(_QPassign_spec_expr_len4, tests, passed);
 
   TestConcat<1>(_QPconcat1, tests, passed);
 
