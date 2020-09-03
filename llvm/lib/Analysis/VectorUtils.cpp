@@ -342,7 +342,7 @@ int llvm::getSplatIndex(ArrayRef<int> Mask) {
 /// This function is not fully general. It checks only 2 cases:
 /// the input value is (1) a splat constant vector or (2) a sequence
 /// of instructions that broadcasts a scalar at element 0.
-const llvm::Value *llvm::getSplatValue(const Value *V) {
+Value *llvm::getSplatValue(const Value *V) {
   if (isa<VectorType>(V->getType()))
     if (auto *C = dyn_cast<Constant>(V))
       return C->getSplatValue();
