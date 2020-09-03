@@ -326,7 +326,8 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
   }
 
   const SectionList &list = *module.GetSectionList();
-  llvm::DenseMap<addr_t, Symbol> symbols;
+  llvm::DenseSet<addr_t> found_symbol_addresses;
+  std::vector<Symbol> symbols;
   auto add_symbol = [&](addr_t address, llvm::Optional<addr_t> size,
                         llvm::StringRef name) {
     address += base;
@@ -338,8 +339,12 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
                name, address);
       return;
     }
-    symbols.try_emplace(
-        address, /*symID*/ 0, Mangled(name), eSymbolTypeCode,
+    // Keep track of what addresses were already added so far and only add
+    // the symbol with the first address.
+    if (!found_symbol_addresses.insert(address).second)
+      return;
+    symbols.emplace_back(
+        /*symID*/ 0, Mangled(name), eSymbolTypeCode,
         /*is_global*/ true, /*is_debug*/ false,
         /*is_trampoline*/ false, /*is_artificial*/ false,
         AddressRange(section_sp, address - section_sp->GetFileAddress(),
@@ -359,8 +364,8 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
       LLDB_LOG(log, "Failed to parse: {0}. Skipping record.", line);
   }
 
-  for (auto &KV : symbols)
-    symtab.AddSymbol(std::move(KV.second));
+  for (Symbol &symbol : symbols)
+    symtab.AddSymbol(std::move(symbol));
   symtab.CalculateSymbolSizes();
 }
 
