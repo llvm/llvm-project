@@ -7,16 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86TargetObjectFile.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/Mangler.h"
-#include "llvm/IR/Operator.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCSectionCOFF.h"
-#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Target/TargetMachine.h"
 
