@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/StandardTypes.h"
 #include "llvm/ADT/DenseMap.h"
@@ -34,9 +35,10 @@ static test::TestStruct getTestStruct(mlir::MLIRContext *context) {
   auto elementsAttr =
       mlir::DenseIntElementsAttr::get(elementsType, {1, 2, 3, 4, 5, 6});
   auto optionalAttr = nullptr;
+  auto defaultValuedAttr = nullptr;
 
   return test::TestStruct::get(integerAttr, floatAttr, elementsAttr,
-                               optionalAttr, context);
+                               optionalAttr, defaultValuedAttr, context);
 }
 
 /// Validates that test::TestStruct::classof correctly identifies a valid
@@ -165,6 +167,14 @@ TEST(StructsGenTest, EmptyOptional) {
   mlir::MLIRContext context;
   auto structAttr = getTestStruct(&context);
   EXPECT_EQ(structAttr.sample_optional_integer(), nullptr);
+}
+
+TEST(StructsGenTest, GetDefaultValuedAttr) {
+  mlir::MLIRContext context;
+  mlir::Builder builder(&context);
+  auto structAttr = getTestStruct(&context);
+  EXPECT_EQ(structAttr.sample_default_valued_integer(),
+            builder.getI32IntegerAttr(42));
 }
 
 } // namespace mlir
