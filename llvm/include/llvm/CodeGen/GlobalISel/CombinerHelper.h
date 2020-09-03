@@ -244,6 +244,14 @@ public:
   bool applyCombineShiftToUnmerge(MachineInstr &MI, const unsigned &ShiftVal);
   bool tryCombineShiftToUnmerge(MachineInstr &MI, unsigned TargetShiftAmount);
 
+  /// Transform <ty,...> G_UNMERGE(G_MERGE ty X, Y, Z) -> ty X, Y, Z.
+  bool
+  matchCombineUnmergeMergeToPlainValues(MachineInstr &MI,
+                                        SmallVectorImpl<Register> &Operands);
+  bool
+  applyCombineUnmergeMergeToPlainValues(MachineInstr &MI,
+                                        SmallVectorImpl<Register> &Operands);
+
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
   bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg);
   bool applyCombineI2PToP2I(MachineInstr &MI, Register &Reg);
