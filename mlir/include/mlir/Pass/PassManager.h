@@ -26,9 +26,9 @@ class Any;
 
 namespace mlir {
 class AnalysisManager;
+class Identifier;
 class MLIRContext;
 class ModuleOp;
-class OperationName;
 class Operation;
 class Pass;
 class PassInstrumentation;
@@ -47,7 +47,7 @@ struct OpPassManagerImpl;
 /// other OpPassManagers or the top-level PassManager.
 class OpPassManager {
 public:
-  OpPassManager(OperationName name, bool verifyPasses);
+  OpPassManager(Identifier name, MLIRContext *context, bool verifyPasses);
   OpPassManager(OpPassManager &&rhs);
   OpPassManager(const OpPassManager &rhs);
   ~OpPassManager();
@@ -70,10 +70,10 @@ public:
 
   /// Nest a new operation pass manager for the given operation kind under this
   /// pass manager.
-  OpPassManager &nest(const OperationName &nestedName);
+  OpPassManager &nest(Identifier nestedName);
   OpPassManager &nest(StringRef nestedName);
   template <typename OpT> OpPassManager &nest() {
-    return nest(OpT::getOperationName());
+    return nest(Identifier::get(OpT::getOperationName(), getContext()));
   }
 
   /// Add the given pass to this pass manager. If this pass has a concrete
@@ -93,7 +93,7 @@ public:
   MLIRContext *getContext() const;
 
   /// Return the operation name that this pass manager operates on.
-  const OperationName &getOpName() const;
+  Identifier getOpName() const;
 
   /// Returns the internal implementation instance.
   detail::OpPassManagerImpl &getImpl();
