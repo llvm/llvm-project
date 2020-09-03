@@ -31,7 +31,7 @@ using namespace lldb_private;
 using namespace lldb_private::repro;
 
 SBReplayOptions::SBReplayOptions()
-    : m_opaque_up(std::make_unique<ReplayOptions>()){};
+    : m_opaque_up(std::make_unique<ReplayOptions>()){}
 
 SBReplayOptions::SBReplayOptions(const SBReplayOptions &rhs)
     : m_opaque_up(std::make_unique<ReplayOptions>(*rhs.m_opaque_up)) {}
