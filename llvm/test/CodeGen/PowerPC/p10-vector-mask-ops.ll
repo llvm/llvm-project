@@ -64,3 +64,59 @@ entry:
   %ext = tail call i32 @llvm.ppc.altivec.vextractqm(<1 x i128> %a)
   ret i32 %ext
 }
+
+declare <16 x i8> @llvm.ppc.altivec.vexpandbm(<16 x i8>)
+declare <8 x i16> @llvm.ppc.altivec.vexpandhm(<8 x i16>)
+declare <4 x i32> @llvm.ppc.altivec.vexpandwm(<4 x i32>)
+declare <2 x i64> @llvm.ppc.altivec.vexpanddm(<2 x i64>)
+declare <1 x i128> @llvm.ppc.altivec.vexpandqm(<1 x i128>)
+
+define <16 x i8> @test_vexpandbm(<16 x i8> %a) {
+; CHECK-LABEL: test_vexpandbm:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vexpandbm v2, v2
+; CHECK-NEXT:    blr
+entry:
+  %exp = tail call <16 x i8> @llvm.ppc.altivec.vexpandbm(<16 x i8> %a)
+  ret <16 x i8> %exp
+}
+
+define <8 x i16> @test_vexpandhm(<8 x i16> %a) {
+; CHECK-LABEL: test_vexpandhm:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vexpandhm v2, v2
+; CHECK-NEXT:    blr
+entry:
+  %exp = tail call <8 x i16> @llvm.ppc.altivec.vexpandhm(<8 x i16> %a)
+  ret <8 x i16> %exp
+}
+
+define <4 x i32> @test_vexpandwm(<4 x i32> %a) {
+; CHECK-LABEL: test_vexpandwm:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vexpandwm v2, v2
+; CHECK-NEXT:    blr
+entry:
+  %exp = tail call <4 x i32> @llvm.ppc.altivec.vexpandwm(<4 x i32> %a)
+  ret <4 x i32> %exp
+}
+
+define <2 x i64> @test_vexpanddm(<2 x i64> %a) {
+; CHECK-LABEL: test_vexpanddm:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vexpanddm v2, v2
+; CHECK-NEXT:    blr
+entry:
+  %exp = tail call <2 x i64> @llvm.ppc.altivec.vexpanddm(<2 x i64> %a)
+  ret <2 x i64> %exp
+}
+
+define <1 x i128> @test_vexpandqm(<1 x i128> %a) {
+; CHECK-LABEL: test_vexpandqm:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vexpandqm v2, v2
+; CHECK-NEXT:    blr
+entry:
+  %exp = tail call <1 x i128> @llvm.ppc.altivec.vexpandqm(<1 x i128> %a)
+  ret <1 x i128> %exp
+}

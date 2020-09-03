@@ -1003,19 +1003,24 @@ let Predicates = [IsISA3_1] in {
                                       (int_ppc_altivec_vextractqm v1i128:$vB))]>;
   def VEXPANDBM : VXForm_RD5_XO5_RS5<1602, 0, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandbm $vD, $vB", IIC_VecGeneral,
-                                     []>;
+                                     [(set v16i8:$vD, (int_ppc_altivec_vexpandbm
+					   v16i8:$vB))]>;
   def VEXPANDHM : VXForm_RD5_XO5_RS5<1602, 1, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandhm $vD, $vB", IIC_VecGeneral,
-                                     []>;
+                                     [(set v8i16:$vD, (int_ppc_altivec_vexpandhm
+                                           v8i16:$vB))]>;
   def VEXPANDWM : VXForm_RD5_XO5_RS5<1602, 2, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandwm $vD, $vB", IIC_VecGeneral,
-                                     []>;
+                                     [(set v4i32:$vD, (int_ppc_altivec_vexpandwm
+                                           v4i32:$vB))]>;
   def VEXPANDDM : VXForm_RD5_XO5_RS5<1602, 3, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpanddm $vD, $vB", IIC_VecGeneral,
-                                     []>;
+                                     [(set v2i64:$vD, (int_ppc_altivec_vexpanddm
+                                           v2i64:$vB))]>;
   def VEXPANDQM : VXForm_RD5_XO5_RS5<1602, 4, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandqm $vD, $vB", IIC_VecGeneral,
-                                     []>;
+                                     [(set v1i128:$vD, (int_ppc_altivec_vexpandqm
+                                           v1i128:$vB))]>;
   def MTVSRBM : VXForm_RD5_XO5_RS5<1602, 16, (outs vrrc:$vD), (ins g8rc:$rB),
                                    "mtvsrbm $vD, $rB", IIC_VecGeneral,
                                    []>;
