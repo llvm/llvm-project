@@ -3,8 +3,9 @@
 ; RUN:   -enable-ppc-pcrel-tls < %s | FileCheck %s --check-prefix=CHECK-S
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   --relocation-model=pic -mcpu=pwr10 -ppc-asm-full-reg-names \
-; RUN:   -enable-ppc-pcrel-tls --filetype=obj < %s | \
-; RUN:   llvm-objdump --mcpu=pwr10 -dr - | FileCheck %s --check-prefix=CHECK-O
+; RUN:   -enable-ppc-pcrel-tls --filetype=obj -o %t.o < %s
+; RUN: llvm-objdump --mcpu=pwr10 -dr %t.o |FileCheck %s --check-prefix=CHECK-O
+; RUN: llvm-readelf -s %t.o | FileCheck %s --check-prefix=CHECK-SYM
 
 ; These test cases are to ensure that when using pc relative memory operations
 ; ABI correct code and relocations are produced for General Dynamic TLS Model.
@@ -45,6 +46,9 @@ define i32 @GeneralDynamicValueLoad() {
   ; CHECK-O-NEXT:    0000000000000054:  R_PPC64_TLSGD        x
   ; CHECK-O-NEXT:    0000000000000054:  R_PPC64_REL24_NOTOC  __tls_get_addr
   ; CHECK-O-NEXT:    58: 00 00 63 80                   lwz 3, 0(3)
+
+  ; CHECK-SYM-LABEL: Symbol table '.symtab' contains 7 entries
+  ; CHECK-SYM:         6: 0000000000000000     0 TLS     GLOBAL DEFAULT  UND x
   entry:
     %0 = load i32, i32* @x, align 4
     ret i32 %0
