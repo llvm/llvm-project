@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fsyntax-only -verify -msve-vector-bits=1024 -fallow-half-arguments-and-returns %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fsyntax-only -verify -msve-vector-bits=2048 -fallow-half-arguments-and-returns %s
 
-#define N __ARM_FEATURE_SVE_BITS_EXPERIMENTAL
+#define N __ARM_FEATURE_SVE_BITS
 
 typedef __SVInt8_t svint8_t;
 typedef __SVInt16_t svint16_t;

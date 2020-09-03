@@ -7,7 +7,7 @@
 
 #include <arm_sve.h>
 
-#define N __ARM_FEATURE_SVE_BITS_EXPERIMENTAL
+#define N __ARM_FEATURE_SVE_BITS
 
 typedef svint8_t fixed_int8_t __attribute__((arm_sve_vector_bits(N)));
 typedef svint16_t fixed_int16_t __attribute__((arm_sve_vector_bits(N)));
