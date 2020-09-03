@@ -175,6 +175,7 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(StringRef Path) {
 static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI, raw_ostream &OS) {
   AsmLexer Lexer(MAI);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(SrcMgr.getMainFileID())->getBuffer());
+  Lexer.setLexMasmIntegers(true);
 
   bool Error = false;
   while (Lexer.Lex().isNot(AsmToken::Eof)) {
