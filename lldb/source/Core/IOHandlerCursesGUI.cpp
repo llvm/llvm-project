@@ -1497,19 +1497,18 @@ struct Row {
   ValueObjectManager value;
   Row *parent;
   // The process stop ID when the children were calculated.
-  uint32_t children_stop_id;
-  int row_idx;
-  int x;
-  int y;
+  uint32_t children_stop_id = 0;
+  int row_idx = 0;
+  int x = 1;
+  int y = 1;
   bool might_have_children;
-  bool expanded;
-  bool calculated_children;
+  bool expanded = false;
+  bool calculated_children = false;
   std::vector<Row> children;
 
   Row(const ValueObjectSP &v, Row *p)
-      : value(v, lldb::eDynamicDontRunTarget, true), parent(p), row_idx(0),
-        x(1), y(1), might_have_children(v ? v->MightHaveChildren() : false),
-        expanded(false), calculated_children(false), children() {}
+      : value(v, lldb::eDynamicDontRunTarget, true), parent(p),
+        might_have_children(v ? v->MightHaveChildren() : false) {}
 
   size_t GetDepth() const {
     if (parent)
