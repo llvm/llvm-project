@@ -33,26 +33,6 @@ public:
     /// Unknown execution mode (orphaned directive).
     EM_Unknown,
   };
-  /// Pairs of workgroup barriers control the master and worker warps.
-  /// The context where they are used causes additional control logic
-  /// around the workgroup barrier.  This enum is used to determine which
-  /// device RTL is used to create the workgroup barrier. The masterStart
-  /// and terminate type have NO additional logic so they simply emit a
-  /// call to OMPRTL__kmpc_barrier_simple_spmd
-  enum CTA_BarrierType {
-    /// generate call to OMPRTL__kmpc_amd_worker_start
-    CTA_AmdWorkerStart,
-    /// generate call to OMPRTL__kmpc_amd_worker_end
-    CTA_AmdWorkerEnd,
-    /// generate call to OMPRTL__kmpc_barrier_simple_spmd
-    CTA_AmdMasterStart,
-    /// generate call to OMPRTL__kmpc_amd_master_end for amdgcn or
-    //. two callse to __kmpc_barrier_simple_spmd.
-    CTA_DoubleMasterBarrier,
-    /// generate call to OMPRTL__kmpc_barrier_simple_spmd
-    CTA_BarrierTerminate,
-  };
-
 private:
   /// Parallel outlined function work for workers to execute.
   llvm::SmallVector<llvm::Function *, 16> Work;
@@ -78,8 +58,7 @@ private:
   bool requiresFullRuntime() const { return RequiresFullRuntime; }
 
   /// Get barrier to synchronize all threads in a block.
-  void syncCTAThreads(CodeGenFunction &CGF,
-                      CGOpenMPRuntimeGPU::CTA_BarrierType barrier_type);
+  void syncCTAThreads(CodeGenFunction &CGF);
 
   /// Emit the worker function for the current target region.
   void emitWorkerFunction(WorkerFunctionState &WST);

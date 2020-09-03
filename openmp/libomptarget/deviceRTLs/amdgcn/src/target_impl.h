@@ -109,11 +109,10 @@ INLINE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t) {
   // AMDGCN doesn't need to sync threads in a warp
 }
 
-INLINE void __kmpc_impl_named_sync(uint32_t num_threads) {
-  (void)num_threads;
-  // TODO: Implement on top of __SHARED__
-  __builtin_amdgcn_s_barrier();
-}
+DEVICE void __kmpc_impl_named_sync(uint32_t num_threads);
+
+// TODO: Likely to rename during upstreaming
+DEVICE void __kmpc_impl_target_init();
 
 INLINE void __kmpc_impl_threadfence() {
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");

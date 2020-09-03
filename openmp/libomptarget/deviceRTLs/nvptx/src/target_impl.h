@@ -183,6 +183,9 @@ INLINE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t Mask) {
 #endif // CUDA_VERSION
 }
 
+INLINE void __kmpc_impl_target_init() {/*nvptx needs no setup for named_sync */
+}
+
 INLINE void __kmpc_impl_named_sync(uint32_t num_threads) {
   // The named barrier for active parallel threads of a team in an L1 parallel
   // region to synchronize with each other.

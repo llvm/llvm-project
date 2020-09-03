@@ -75,10 +75,6 @@ DEVICE SHARED omptarget_nvptx_ThreadPrivateContext
 // copy of these variables for each kernel, instance, and team.
 ////////////////////////////////////////////////////////////////////////////////
 volatile DEVICE SHARED omptarget_nvptx_WorkFn omptarget_nvptx_workFn;
-#ifdef __AMDGCN__
-DEVICE SHARED bool omptarget_workers_active;
-DEVICE SHARED bool omptarget_master_active;
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // OpenMP kernel execution parameters

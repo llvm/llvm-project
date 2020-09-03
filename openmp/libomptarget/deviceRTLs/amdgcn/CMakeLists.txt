@@ -76,7 +76,6 @@ set(hip_sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_libcall.hip
   ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_locks.hip
   ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_smid.hip
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_sync.hip
   ${CMAKE_CURRENT_SOURCE_DIR}/src/target_impl.hip
   ${devicertl_base_directory}/common/src/cancel.cu
   ${devicertl_base_directory}/common/src/critical.cu
