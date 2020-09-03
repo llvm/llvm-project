@@ -14,8 +14,7 @@
 
 using namespace clang;
 
-LangOptions::LangOptions()
-    : CFRuntime(CoreFoundationABI::Unspecified), IsHeaderFile(false) {
+LangOptions::LangOptions() {
 #define LANGOPT(Name, Bits, Default, Description) Name = Default;
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Description) set##Name(Default);
 #include "clang/Basic/LangOptions.def"

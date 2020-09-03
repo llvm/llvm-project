@@ -20,10 +20,9 @@
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
-#include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <memory>
 #include <string>
 
@@ -87,9 +86,6 @@ public:
 
   LangOptions *getLangOpts() { return LangOpts.get(); }
   const LangOptions *getLangOpts() const { return LangOpts.get(); }
-
-  CommentOptions &getCommentOpts() { return LangOpts->CommentOpts; }
-  const CommentOptions &getCommentOpts() const { return LangOpts->CommentOpts; }
 
   TargetOptions &getTargetOpts() { return *TargetOpts.get(); }
   const TargetOptions &getTargetOpts() const { return *TargetOpts.get(); }
@@ -237,14 +233,6 @@ public:
 
   FrontendOptions &getFrontendOpts() { return FrontendOpts; }
   const FrontendOptions &getFrontendOpts() const { return FrontendOpts; }
-
-  CodeCompleteOptions &getCodeCompleteOpts() {
-    return FrontendOpts.CodeCompleteOpts;
-  }
-
-  const CodeCompleteOptions &getCodeCompleteOpts() const {
-    return FrontendOpts.CodeCompleteOpts;
-  }
 
   PreprocessorOutputOptions &getPreprocessorOutputOpts() {
     return PreprocessorOutputOpts;
