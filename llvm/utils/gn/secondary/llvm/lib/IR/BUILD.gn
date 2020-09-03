@@ -47,6 +47,7 @@ static_library("IR") {
     "LLVMContextImpl.cpp",
     "LLVMRemarkStreamer.cpp",
     "LegacyPassManager.cpp",
+    "Lint.cpp",
     "MDBuilder.cpp",
     "Mangler.cpp",
     "Metadata.cpp",

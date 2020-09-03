@@ -33,6 +33,7 @@ add_llvm_component_library(LLVMCore
   LLVMContextImpl.cpp
   LLVMRemarkStreamer.cpp
   LegacyPassManager.cpp
+  Lint.cpp
   MDBuilder.cpp
   Mangler.cpp
   Metadata.cpp
