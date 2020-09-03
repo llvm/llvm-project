@@ -272,12 +272,12 @@ private:
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<MemoryDependenceWrapperPass>();
     AU.addPreserved<MemoryDependenceWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addPreserved<AAResultsWrapperPass>();
   }
 };
 
