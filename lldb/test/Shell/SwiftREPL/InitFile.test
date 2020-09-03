@@ -1,0 +1,11 @@
+// Test that the Swift REPL init file works.
+// REQUIRES: system-darwin
+// RUN: export HOME=%t
+// RUN: mkdir -p %t
+// RUN: echo 'br set -f main.c -l 123' > ~/.lldbinit
+// RUN: echo 'br set -f swift-repl.c -l 456' > ~/.lldbinit-swift-repl
+// RUN: %lldb-init --repl < %s 2>&1 | FileCheck %s
+
+:br list
+// CHECK: Current breakpoints
+// CHECK-NEXT: file = 'swift-repl.c', line = 456, exact_match = 0, locations = 0 (pending)
