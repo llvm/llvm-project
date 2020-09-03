@@ -31,8 +31,8 @@ bar:
   nop
   blr
 
-# CHECK:      10010164: bl .-12
+# CHECK:      10010164: bl 0x10010158
 # CHECK-NEXT:           nop
-# CHECK-NEXT: 1001016c: bl .-20
+# CHECK-NEXT: 1001016c: bl 0x10010158
 # CHECK-NEXT:           nop
 # CHECK-NEXT:           blr

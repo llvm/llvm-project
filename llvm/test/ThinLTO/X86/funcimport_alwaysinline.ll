@@ -11,7 +11,7 @@
 
 ; foo() being always_inline should be imported irrespective of the
 ; instruction limit
-; CHECK1: define available_externally dso_local void @foo()
+; CHECK1: define available_externally void @foo()
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

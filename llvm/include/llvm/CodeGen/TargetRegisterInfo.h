@@ -40,6 +40,7 @@ class MachineInstr;
 class RegScavenger;
 class VirtRegMap;
 class LiveIntervals;
+class LiveInterval;
 
 class TargetRegisterClass {
 public:
@@ -80,7 +81,7 @@ public:
   }
 
   /// Return the specified register in the class.
-  unsigned getRegister(unsigned i) const {
+  MCRegister getRegister(unsigned i) const {
     return MC->getRegister(i);
   }
 
@@ -284,6 +285,12 @@ public:
     return getRegClassInfo(RC).SpillAlignment / 8;
   }
 
+  /// Return the minimum required alignment in bytes for a spill slot for
+  /// a register of this class.
+  Align getSpillAlign(const TargetRegisterClass &RC) const {
+    return Align(getRegClassInfo(RC).SpillAlignment / 8);
+  }
+
   /// Return true if the given TargetRegisterClass has the ValueType T.
   bool isTypeLegalForClass(const TargetRegisterClass &RC, MVT T) const {
     for (auto I = legalclasstypes_begin(RC); *I != MVT::Other; ++I)
@@ -308,8 +315,8 @@ public:
   /// Returns the Register Class of a physical register of the given type,
   /// picking the most sub register class of the right type that contains this
   /// physreg.
-  const TargetRegisterClass *
-    getMinimalPhysRegClass(unsigned Reg, MVT VT = MVT::Other) const;
+  const TargetRegisterClass *getMinimalPhysRegClass(MCRegister Reg,
+                                                    MVT VT = MVT::Other) const;
 
   /// Return the maximal subclass of the given register class that is
   /// allocatable or NULL.
@@ -324,12 +331,12 @@ public:
 
   /// Return the additional cost of using this register instead
   /// of other registers in its class.
-  unsigned getCostPerUse(unsigned RegNo) const {
+  unsigned getCostPerUse(MCRegister RegNo) const {
     return InfoDesc[RegNo].CostPerUse;
   }
 
   /// Return true if the register is in the allocation of any register class.
-  bool isInAllocatableClass(unsigned RegNo) const {
+  bool isInAllocatableClass(MCRegister RegNo) const {
     return InfoDesc[RegNo].inAllocatableClass;
   }
 
@@ -394,7 +401,7 @@ public:
   }
 
   /// Returns true if Reg contains RegUnit.
-  bool hasRegUnit(unsigned Reg, unsigned RegUnit) const {
+  bool hasRegUnit(MCRegister Reg, unsigned RegUnit) const {
     for (MCRegUnitIterator Units(Reg, this); Units.isValid(); ++Units)
       if (*Units == RegUnit)
         return true;
@@ -405,7 +412,7 @@ public:
   /// operation, in which case we chain backwards through all such operations
   /// to the ultimate source register.  If a physical register is encountered,
   /// we stop the search.
-  virtual unsigned lookThruCopyLike(unsigned SrcReg,
+  virtual Register lookThruCopyLike(Register SrcReg,
                                     const MachineRegisterInfo *MRI) const;
 
   /// Return a null-terminated list of all of the callee-saved registers on
@@ -478,13 +485,19 @@ public:
   /// Returns false if we can't guarantee that Physreg, specified as an IR asm
   /// clobber constraint, will be preserved across the statement.
   virtual bool isAsmClobberable(const MachineFunction &MF,
-                               unsigned PhysReg) const {
+                                MCRegister PhysReg) const {
     return true;
+  }
+
+  /// Returns true if PhysReg cannot be written to in inline asm statements.
+  virtual bool isInlineAsmReadOnlyReg(const MachineFunction &MF,
+                                      unsigned PhysReg) const {
+    return false;
   }
 
   /// Returns true if PhysReg is unallocatable and constant throughout the
   /// function.  Used by MachineRegisterInfo::isConstantPhysReg().
-  virtual bool isConstantPhysReg(unsigned PhysReg) const { return false; }
+  virtual bool isConstantPhysReg(MCRegister PhysReg) const { return false; }
 
   /// Returns true if the register class is considered divergent.
   virtual bool isDivergentRegClass(const TargetRegisterClass *RC) const {
@@ -496,14 +509,14 @@ public:
   /// have call sequences where a GOT register may be updated by the caller
   /// prior to a call and is guaranteed to be restored (also by the caller)
   /// after the call.
-  virtual bool isCallerPreservedPhysReg(unsigned PhysReg,
+  virtual bool isCallerPreservedPhysReg(MCRegister PhysReg,
                                         const MachineFunction &MF) const {
     return false;
   }
 
   /// This is a wrapper around getCallPreservedMask().
   /// Return true if the register is preserved after the call.
-  virtual bool isCalleeSavedPhysReg(unsigned PhysReg,
+  virtual bool isCalleeSavedPhysReg(MCRegister PhysReg,
                                     const MachineFunction &MF) const;
 
   /// Prior to adding the live-out mask to a stackmap or patchpoint
@@ -513,8 +526,8 @@ public:
 
   /// Return a super-register of the specified register
   /// Reg so its sub-register of index SubIdx is Reg.
-  unsigned getMatchingSuperReg(unsigned Reg, unsigned SubIdx,
-                               const TargetRegisterClass *RC) const {
+  MCRegister getMatchingSuperReg(MCRegister Reg, unsigned SubIdx,
+                                 const TargetRegisterClass *RC) const {
     return MCRegisterInfo::getMatchingSuperReg(Reg, SubIdx, RC->MC);
   }
 
@@ -598,8 +611,8 @@ public:
   }
 
   /// Debugging helper: dump register in human readable form to dbgs() stream.
-  static void dumpReg(unsigned Reg, unsigned SubRegIndex = 0,
-                      const TargetRegisterInfo* TRI = nullptr);
+  static void dumpReg(Register Reg, unsigned SubRegIndex = 0,
+                      const TargetRegisterInfo *TRI = nullptr);
 
 protected:
   /// Overridden by TableGen in targets that have sub-registers.
@@ -738,7 +751,7 @@ public:
     const TargetRegisterClass *RC) const = 0;
 
   /// Returns size in bits of a phys/virtual/generic register.
-  unsigned getRegSizeInBits(unsigned Reg, const MachineRegisterInfo &MRI) const;
+  unsigned getRegSizeInBits(Register Reg, const MachineRegisterInfo &MRI) const;
 
   /// Get the weight in units of pressure for this register unit.
   virtual unsigned getRegUnitWeight(unsigned RegUnit) const = 0;
@@ -777,20 +790,19 @@ public:
   /// independent register allocation hints. Targets that override this
   /// function should typically call this default implementation as well and
   /// expect to see generic copy hints added.
-  virtual bool getRegAllocationHints(unsigned VirtReg,
-                                     ArrayRef<MCPhysReg> Order,
-                                     SmallVectorImpl<MCPhysReg> &Hints,
-                                     const MachineFunction &MF,
-                                     const VirtRegMap *VRM = nullptr,
-                                     const LiveRegMatrix *Matrix = nullptr)
-    const;
+  virtual bool
+  getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
+                        SmallVectorImpl<MCPhysReg> &Hints,
+                        const MachineFunction &MF,
+                        const VirtRegMap *VRM = nullptr,
+                        const LiveRegMatrix *Matrix = nullptr) const;
 
   /// A callback to allow target a chance to update register allocation hints
   /// when a register is "changed" (e.g. coalesced) to another register.
   /// e.g. On ARM, some virtual registers should target register pairs,
   /// if one of pair is coalesced to another register, the allocation hint of
   /// the other half of the pair should be changed to point to the new register.
-  virtual void updateRegAllocHint(unsigned Reg, unsigned NewReg,
+  virtual void updateRegAllocHint(Register Reg, Register NewReg,
                                   MachineFunction &MF) const {
     // Do nothing.
   }
@@ -848,14 +860,14 @@ public:
   /// spill slot. This tells PEI not to create a new stack frame
   /// object for the given register. It should be called only after
   /// determineCalleeSaves().
-  virtual bool hasReservedSpillSlot(const MachineFunction &MF, unsigned Reg,
+  virtual bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
                                     int &FrameIdx) const {
     return false;
   }
 
   /// Returns true if the live-ins should be tracked after register allocation.
   virtual bool trackLivenessAfterRegAlloc(const MachineFunction &MF) const {
-    return false;
+    return true;
   }
 
   /// True if the stack can be realigned for the target.
@@ -885,7 +897,7 @@ public:
   /// Insert defining instruction(s) for BaseReg to be a pointer to FrameIdx
   /// before insertion point I.
   virtual void materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                                            unsigned BaseReg, int FrameIdx,
+                                            Register BaseReg, int FrameIdx,
                                             int64_t Offset) const {
     llvm_unreachable("materializeFrameBaseRegister does not exist on this "
                      "target");
@@ -893,14 +905,14 @@ public:
 
   /// Resolve a frame index operand of an instruction
   /// to reference the indicated base register plus offset instead.
-  virtual void resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
+  virtual void resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                                  int64_t Offset) const {
     llvm_unreachable("resolveFrameIndex does not exist on this target");
   }
 
   /// Determine whether a given base register plus offset immediate is
   /// encodable to resolve a frame index.
-  virtual bool isFrameOffsetLegal(const MachineInstr *MI, unsigned BaseReg,
+  virtual bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
                                   int64_t Offset) const {
     llvm_unreachable("isFrameOffsetLegal does not exist on this target");
   }
@@ -913,7 +925,7 @@ public:
                                      MachineBasicBlock::iterator I,
                                      MachineBasicBlock::iterator &UseMI,
                                      const TargetRegisterClass *RC,
-                                     unsigned Reg) const {
+                                     Register Reg) const {
     return false;
   }
 
@@ -929,7 +941,7 @@ public:
                                    RegScavenger *RS = nullptr) const = 0;
 
   /// Return the assembly name for \p Reg.
-  virtual StringRef getRegAsmName(unsigned Reg) const {
+  virtual StringRef getRegAsmName(MCRegister Reg) const {
     // FIXME: We are assuming that the assembly name is equal to the TableGen
     // name converted to lower case
     //
@@ -952,6 +964,12 @@ public:
                               LiveIntervals &LIS) const
   { return true; }
 
+  /// Region split has a high compile time cost especially for large live range.
+  /// This method is used to decide whether or not \p VirtReg should
+  /// go through this expensive splitting heuristic.
+  virtual bool shouldRegionSplitForVirtReg(const MachineFunction &MF,
+                                           const LiveInterval &VirtReg) const;
+
   //===--------------------------------------------------------------------===//
   /// Debug information queries.
 
@@ -960,7 +978,7 @@ public:
   virtual Register getFrameRegister(const MachineFunction &MF) const = 0;
 
   /// Mark a register and all its aliases as reserved in the given set.
-  void markSuperRegs(BitVector &RegisterSet, unsigned Reg) const;
+  void markSuperRegs(BitVector &RegisterSet, MCRegister Reg) const;
 
   /// Returns true if for every register in the set all super registers are part
   /// of the set as well.
@@ -1164,7 +1182,7 @@ Printable printVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print register classes or register banks
 /// on a \ref raw_ostream.
-Printable printRegClassOrBank(unsigned Reg, const MachineRegisterInfo &RegInfo,
+Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
                               const TargetRegisterInfo *TRI);
 
 } // end namespace llvm

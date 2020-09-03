@@ -15,31 +15,16 @@ namespace doc {
 
 llvm::Expected<std::unique_ptr<Generator>>
 findGeneratorByName(llvm::StringRef Format) {
-  for (auto I = GeneratorRegistry::begin(), E = GeneratorRegistry::end();
-       I != E; ++I) {
-    if (I->getName() != Format)
+  for (const auto &Generator : GeneratorRegistry::entries()) {
+    if (Generator.getName() != Format)
       continue;
-    return I->instantiate();
+    return Generator.instantiate();
   }
   return createStringError(llvm::inconvertibleErrorCode(),
                            "can't find generator: " + Format);
 }
 
 // Enum conversion
-
-std::string getAccess(AccessSpecifier AS) {
-  switch (AS) {
-  case AccessSpecifier::AS_public:
-    return "public";
-  case AccessSpecifier::AS_protected:
-    return "protected";
-  case AccessSpecifier::AS_private:
-    return "private";
-  case AccessSpecifier::AS_none:
-    return {};
-  }
-  llvm_unreachable("Unknown AccessSpecifier");
-}
 
 std::string getTagType(TagTypeKind AS) {
   switch (AS) {
@@ -82,7 +67,7 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
     // pointing.
     auto It = std::find(I->Children.begin(), I->Children.end(), R.USR);
     if (It != I->Children.end()) {
-      // If it is found, just change I to point the namespace refererence found.
+      // If it is found, just change I to point the namespace reference found.
       I = &*It;
     } else {
       // If it is not found a new reference is created

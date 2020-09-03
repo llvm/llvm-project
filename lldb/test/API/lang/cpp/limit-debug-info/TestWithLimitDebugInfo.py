@@ -46,13 +46,7 @@ class TestWithLimitDebugInfo(TestBase):
         # Get frame for current thread
         frame = thread.GetSelectedFrame()
 
-        v1 = frame.EvaluateExpression("1")
-        self.assertTrue(
-            v1.IsValid(),
-            "'expr 1' results in a valid SBValue object")
-        self.assertTrue(
-            v1.GetError().Success(),
-            "'expr 1' succeeds without an error.")
+        self.expect_expr("1", result_type="int", result_value="1")
 
         v2 = frame.EvaluateExpression("this")
         self.assertTrue(

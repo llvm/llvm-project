@@ -101,7 +101,7 @@ define i63 @mad_i64_i32_sextops_i32_i63(i32 %arg0, i32 %arg1, i63 %arg2) #0 {
 ; CI: v_bfe_i32 v[[B1:[0-9]+]], v1, 0, 31
 ; CI: v_ashr_i64
 ; CI: v_bfe_i32 v[[B2:[0-9]+]], v0, 0, 31
-; CI: v_mad_i64_i32 v[0:1], s{{\[[0-9]+:[0-9]+\]}}, v[[B2]], v[[B1]], v[1:2]
+; CI: v_mad_i64_i32 v[0:1], s{{\[[0-9]+:[0-9]+\]}}, v[[B2]], v[[B1]], v{{\[[0-9]+:[0-9]+\]}}
 define i63 @mad_i64_i32_sextops_i31_i63(i31 %arg0, i31 %arg1, i63 %arg2) #0 {
   %sext0 = sext i31 %arg0 to i63
   %sext1 = sext i31 %arg1 to i63

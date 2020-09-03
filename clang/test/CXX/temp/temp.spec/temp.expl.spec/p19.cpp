@@ -14,7 +14,7 @@ struct X<int>::Inner {
 
 template<> template<typename U>
 void X<int>::f(int x, U y) { 
-  x = y; // expected-error{{incompatible type}}
+  x = y; // expected-error{{incompatible pointer to integer conversion}}
 }
 
 void test(X<int> xi, X<long> xl, float *fp) {

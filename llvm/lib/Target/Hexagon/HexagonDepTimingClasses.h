@@ -5,63 +5,58 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Automatically generated file, please consult code owner before editing.
+// Automatically generated file, do not edit!
 //===----------------------------------------------------------------------===//
 
 
-#ifndef TARGET_HEXAGON_HEXAGON_DEP_TIMING_CLASSES_H
-#define TARGET_HEXAGON_HEXAGON_DEP_TIMING_CLASSES_H
+#ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPTIMINGCLASSES_H
+#define LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPTIMINGCLASSES_H
 
 #include "HexagonInstrInfo.h"
 
 namespace llvm {
 
-inline bool is_TC3x(unsigned SchedClass) {
+inline bool is_TC1(unsigned SchedClass) {
   switch (SchedClass) {
-  case Hexagon::Sched::tc_05d3a09b:
-  case Hexagon::Sched::tc_0d8f5752:
-  case Hexagon::Sched::tc_13bfbcf9:
-  case Hexagon::Sched::tc_174516e8:
-  case Hexagon::Sched::tc_1a2fd869:
-  case Hexagon::Sched::tc_1c4528a2:
-  case Hexagon::Sched::tc_32779c6f:
-  case Hexagon::Sched::tc_5b54b33f:
-  case Hexagon::Sched::tc_6b25e783:
-  case Hexagon::Sched::tc_76851da1:
-  case Hexagon::Sched::tc_9debc299:
-  case Hexagon::Sched::tc_a9d88b22:
-  case Hexagon::Sched::tc_bafaade3:
-  case Hexagon::Sched::tc_bcf98408:
-  case Hexagon::Sched::tc_bdceeac1:
-  case Hexagon::Sched::tc_c8ce0b5c:
-  case Hexagon::Sched::tc_d1aa9eaa:
-  case Hexagon::Sched::tc_d773585a:
-  case Hexagon::Sched::tc_df3319ed:
-    return true;
-  default:
-    return false;
-  }
-}
-
-inline bool is_TC2early(unsigned SchedClass) {
-  switch (SchedClass) {
-  case Hexagon::Sched::tc_b4407292:
-  case Hexagon::Sched::tc_fc3999b4:
-    return true;
-  default:
-    return false;
-  }
-}
-
-inline bool is_TC4x(unsigned SchedClass) {
-  switch (SchedClass) {
-  case Hexagon::Sched::tc_2f7c551d:
-  case Hexagon::Sched::tc_2ff964b4:
-  case Hexagon::Sched::tc_3a867367:
-  case Hexagon::Sched::tc_3b470976:
-  case Hexagon::Sched::tc_4560740b:
-  case Hexagon::Sched::tc_a58fd5cc:
-  case Hexagon::Sched::tc_b8bffe55:
+  case Hexagon::Sched::tc_112d30d6:
+  case Hexagon::Sched::tc_151bf368:
+  case Hexagon::Sched::tc_1c2c7a4a:
+  case Hexagon::Sched::tc_1d41f8b7:
+  case Hexagon::Sched::tc_23708a21:
+  case Hexagon::Sched::tc_24f426ab:
+  case Hexagon::Sched::tc_2f573607:
+  case Hexagon::Sched::tc_388f9897:
+  case Hexagon::Sched::tc_3d14a17b:
+  case Hexagon::Sched::tc_3fbf1042:
+  case Hexagon::Sched::tc_407e96f9:
+  case Hexagon::Sched::tc_42ff66ba:
+  case Hexagon::Sched::tc_4a55d03c:
+  case Hexagon::Sched::tc_5502c366:
+  case Hexagon::Sched::tc_55b33fda:
+  case Hexagon::Sched::tc_56a124a7:
+  case Hexagon::Sched::tc_57a55b54:
+  case Hexagon::Sched::tc_59a7822c:
+  case Hexagon::Sched::tc_5b347363:
+  case Hexagon::Sched::tc_5da50c4b:
+  case Hexagon::Sched::tc_60e324ff:
+  case Hexagon::Sched::tc_651cbe02:
+  case Hexagon::Sched::tc_6fc5dbea:
+  case Hexagon::Sched::tc_711c805f:
+  case Hexagon::Sched::tc_713b66bf:
+  case Hexagon::Sched::tc_9124c04f:
+  case Hexagon::Sched::tc_9c52f549:
+  case Hexagon::Sched::tc_9e27f2f9:
+  case Hexagon::Sched::tc_9f6cd987:
+  case Hexagon::Sched::tc_a1297125:
+  case Hexagon::Sched::tc_a7a13fac:
+  case Hexagon::Sched::tc_b837298f:
+  case Hexagon::Sched::tc_c57d9f39:
+  case Hexagon::Sched::tc_d33e5eee:
+  case Hexagon::Sched::tc_decdde8a:
+  case Hexagon::Sched::tc_ed03645c:
+  case Hexagon::Sched::tc_eeda4109:
+  case Hexagon::Sched::tc_ef921005:
+  case Hexagon::Sched::tc_f999c66e:
     return true;
   default:
     return false;
@@ -70,72 +65,87 @@ inline bool is_TC4x(unsigned SchedClass) {
 
 inline bool is_TC2(unsigned SchedClass) {
   switch (SchedClass) {
-  case Hexagon::Sched::tc_002cb246:
-  case Hexagon::Sched::tc_14b5c689:
-  case Hexagon::Sched::tc_1c80410a:
-  case Hexagon::Sched::tc_4414d8b1:
-  case Hexagon::Sched::tc_6132ba3d:
-  case Hexagon::Sched::tc_61830035:
-  case Hexagon::Sched::tc_679309b8:
-  case Hexagon::Sched::tc_703e822c:
-  case Hexagon::Sched::tc_779080bf:
-  case Hexagon::Sched::tc_784490da:
-  case Hexagon::Sched::tc_88b4f13d:
-  case Hexagon::Sched::tc_9461ff31:
-  case Hexagon::Sched::tc_9e313203:
-  case Hexagon::Sched::tc_a813cf9a:
-  case Hexagon::Sched::tc_bfec0f01:
-  case Hexagon::Sched::tc_cf8126ae:
-  case Hexagon::Sched::tc_d08ee0f4:
-  case Hexagon::Sched::tc_e4a7f9f0:
-  case Hexagon::Sched::tc_f429765c:
-  case Hexagon::Sched::tc_f675fee8:
-  case Hexagon::Sched::tc_f9058dd7:
+  case Hexagon::Sched::tc_01d44cb2:
+  case Hexagon::Sched::tc_0dfac0a7:
+  case Hexagon::Sched::tc_1fcb8495:
+  case Hexagon::Sched::tc_20131976:
+  case Hexagon::Sched::tc_2c13e7f5:
+  case Hexagon::Sched::tc_3edca78f:
+  case Hexagon::Sched::tc_5e4cf0e8:
+  case Hexagon::Sched::tc_65279839:
+  case Hexagon::Sched::tc_7401744f:
+  case Hexagon::Sched::tc_84a7500d:
+  case Hexagon::Sched::tc_8a825db2:
+  case Hexagon::Sched::tc_8b5bd4f5:
+  case Hexagon::Sched::tc_95a33176:
+  case Hexagon::Sched::tc_9b3c0462:
+  case Hexagon::Sched::tc_a08b630b:
+  case Hexagon::Sched::tc_a4e22bbd:
+  case Hexagon::Sched::tc_a7bdb22c:
+  case Hexagon::Sched::tc_bb831a7c:
+  case Hexagon::Sched::tc_c20701f0:
+  case Hexagon::Sched::tc_d3632d88:
+  case Hexagon::Sched::tc_d61dfdc3:
+  case Hexagon::Sched::tc_e3d699e3:
+  case Hexagon::Sched::tc_f098b237:
+  case Hexagon::Sched::tc_f34c1c21:
     return true;
   default:
     return false;
   }
 }
 
-inline bool is_TC1(unsigned SchedClass) {
+inline bool is_TC3x(unsigned SchedClass) {
   switch (SchedClass) {
-  case Hexagon::Sched::tc_0663f615:
-  case Hexagon::Sched::tc_0a705168:
-  case Hexagon::Sched::tc_0ae0825c:
-  case Hexagon::Sched::tc_1b6f7cec:
-  case Hexagon::Sched::tc_1fc97744:
-  case Hexagon::Sched::tc_20cdee80:
-  case Hexagon::Sched::tc_2332b92e:
-  case Hexagon::Sched::tc_2eabeebe:
-  case Hexagon::Sched::tc_3d495a39:
-  case Hexagon::Sched::tc_4c5ba658:
-  case Hexagon::Sched::tc_56336eb0:
-  case Hexagon::Sched::tc_56f114f4:
-  case Hexagon::Sched::tc_57890846:
-  case Hexagon::Sched::tc_5a2711e5:
-  case Hexagon::Sched::tc_5b7c0967:
-  case Hexagon::Sched::tc_640086b5:
-  case Hexagon::Sched::tc_643b4717:
-  case Hexagon::Sched::tc_85c9c08f:
-  case Hexagon::Sched::tc_85d5d03f:
-  case Hexagon::Sched::tc_862b3e70:
-  case Hexagon::Sched::tc_946df596:
-  case Hexagon::Sched::tc_9c3ecd83:
-  case Hexagon::Sched::tc_9fc3dae0:
-  case Hexagon::Sched::tc_a1123dda:
-  case Hexagon::Sched::tc_a1c00888:
-  case Hexagon::Sched::tc_ae53734a:
-  case Hexagon::Sched::tc_b31c2e97:
-  case Hexagon::Sched::tc_b4b5c03a:
-  case Hexagon::Sched::tc_b51dc29a:
-  case Hexagon::Sched::tc_cd374165:
-  case Hexagon::Sched::tc_cfd8378a:
-  case Hexagon::Sched::tc_d5b7b0c1:
-  case Hexagon::Sched::tc_d9d43ecb:
-  case Hexagon::Sched::tc_db2bce9c:
-  case Hexagon::Sched::tc_de4df740:
-  case Hexagon::Sched::tc_de554571:
-  case Hexagon::Sched::tc_e78647bd:
+  case Hexagon::Sched::tc_01e1be3b:
+  case Hexagon::Sched::tc_1248597c:
+  case Hexagon::Sched::tc_197dce51:
+  case Hexagon::Sched::tc_28e55c6f:
+  case Hexagon::Sched::tc_2c3e17fc:
+  case Hexagon::Sched::tc_38382228:
+  case Hexagon::Sched::tc_38e0bae9:
+  case Hexagon::Sched::tc_4abdbdc6:
+  case Hexagon::Sched::tc_503ce0f3:
+  case Hexagon::Sched::tc_556f6577:
+  case Hexagon::Sched::tc_5a4b5e58:
+  case Hexagon::Sched::tc_6ae3426b:
+  case Hexagon::Sched::tc_6d861a95:
+  case Hexagon::Sched::tc_788b1d09:
+  case Hexagon::Sched::tc_7f8ae742:
+  case Hexagon::Sched::tc_9406230a:
+  case Hexagon::Sched::tc_a154b476:
+  case Hexagon::Sched::tc_a38c45dc:
+  case Hexagon::Sched::tc_c21d7447:
+  case Hexagon::Sched::tc_d7718fbe:
+  case Hexagon::Sched::tc_db596beb:
+  case Hexagon::Sched::tc_f0cdeccf:
+  case Hexagon::Sched::tc_fae9dfa5:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool is_TC2early(unsigned SchedClass) {
+  switch (SchedClass) {
+  case Hexagon::Sched::tc_45f9d1be:
+  case Hexagon::Sched::tc_a4ee89db:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool is_TC4x(unsigned SchedClass) {
+  switch (SchedClass) {
+  case Hexagon::Sched::tc_02fe1c65:
+  case Hexagon::Sched::tc_0a195f2c:
+  case Hexagon::Sched::tc_7f7f45f5:
+  case Hexagon::Sched::tc_9783714b:
+  case Hexagon::Sched::tc_9e72dc89:
+  case Hexagon::Sched::tc_9edb7c77:
+  case Hexagon::Sched::tc_f0e8e832:
+  case Hexagon::Sched::tc_f7569068:
     return true;
   default:
     return false;
@@ -143,4 +153,4 @@ inline bool is_TC1(unsigned SchedClass) {
 }
 } // namespace llvm
 
-#endif
+#endif  // LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPTIMINGCLASSES_H

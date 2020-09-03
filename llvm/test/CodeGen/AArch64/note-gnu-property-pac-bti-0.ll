@@ -9,6 +9,6 @@ attributes #0 = { "branch-target-enforcement" }
 ; Both attributes present in a file with no functions.
 ; ASM:	    .word	3221225472
 ; ASM-NEXT:	.word	4
-; ASM-NEXT	.word	3
+; ASM-NEXT:	.word	3
 
 ; OBJ: Properties: aarch64 feature: BTI, PAC

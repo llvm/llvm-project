@@ -45,6 +45,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -96,6 +97,10 @@ static cl::opt<bool> ClInstrumentAtomics(
     cl::desc("instrument atomic instructions (rmw, cmpxchg)"), cl::Hidden,
     cl::init(true));
 
+static cl::opt<bool> ClInstrumentByval("hwasan-instrument-byval",
+                                       cl::desc("instrument byval arguments"),
+                                       cl::Hidden, cl::init(true));
+
 static cl::opt<bool> ClRecover(
     "hwasan-recover",
     cl::desc("Enable recovery mode (continue-after-error)."),
@@ -119,7 +124,7 @@ static cl::opt<bool> ClGenerateTagsWithCalls(
     cl::init(false));
 
 static cl::opt<bool> ClGlobals("hwasan-globals", cl::desc("Instrument globals"),
-                               cl::Hidden, cl::init(false));
+                               cl::Hidden, cl::init(false), cl::ZeroOrMore);
 
 static cl::opt<int> ClMatchAllTag(
     "hwasan-match-all-tag",
@@ -211,10 +216,10 @@ public:
                                  unsigned AccessSizeIndex,
                                  Instruction *InsertBefore);
   void instrumentMemIntrinsic(MemIntrinsic *MI);
-  bool instrumentMemAccess(Instruction *I);
-  Value *isInterestingMemoryAccess(Instruction *I, bool *IsWrite,
-                                   uint64_t *TypeSize, unsigned *Alignment,
-                                   Value **MaybeMask);
+  bool instrumentMemAccess(InterestingMemoryOperand &O);
+  bool ignoreAccess(Value *Ptr);
+  void getInterestingMemoryOperands(
+      Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting);
 
   bool isInterestingAlloca(const AllocaInst &AI);
   bool tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
@@ -300,7 +305,10 @@ public:
 
   explicit HWAddressSanitizerLegacyPass(bool CompileKernel = false,
                                         bool Recover = false)
-      : FunctionPass(ID), CompileKernel(CompileKernel), Recover(Recover) {}
+      : FunctionPass(ID), CompileKernel(CompileKernel), Recover(Recover) {
+    initializeHWAddressSanitizerLegacyPassPass(
+        *PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override { return "HWAddressSanitizer"; }
 
@@ -500,62 +508,62 @@ Value *HWAddressSanitizer::getDynamicShadowNonTls(IRBuilder<> &IRB) {
   }
 }
 
-Value *HWAddressSanitizer::isInterestingMemoryAccess(Instruction *I,
-                                                     bool *IsWrite,
-                                                     uint64_t *TypeSize,
-                                                     unsigned *Alignment,
-                                                     Value **MaybeMask) {
+bool HWAddressSanitizer::ignoreAccess(Value *Ptr) {
+  // Do not instrument acesses from different address spaces; we cannot deal
+  // with them.
+  Type *PtrTy = cast<PointerType>(Ptr->getType()->getScalarType());
+  if (PtrTy->getPointerAddressSpace() != 0)
+    return true;
+
+  // Ignore swifterror addresses.
+  // swifterror memory addresses are mem2reg promoted by instruction
+  // selection. As such they cannot have regular uses like an instrumentation
+  // function and it makes no sense to track them as memory.
+  if (Ptr->isSwiftError())
+    return true;
+
+  return false;
+}
+
+void HWAddressSanitizer::getInterestingMemoryOperands(
+    Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting) {
   // Skip memory accesses inserted by another instrumentation.
-  if (I->hasMetadata("nosanitize")) return nullptr;
+  if (I->hasMetadata("nosanitize"))
+    return;
 
   // Do not instrument the load fetching the dynamic shadow address.
   if (LocalDynamicShadow == I)
-    return nullptr;
+    return;
 
-  Value *PtrOperand = nullptr;
-  const DataLayout &DL = I->getModule()->getDataLayout();
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-    if (!ClInstrumentReads) return nullptr;
-    *IsWrite = false;
-    *TypeSize = DL.getTypeStoreSizeInBits(LI->getType());
-    *Alignment = LI->getAlignment();
-    PtrOperand = LI->getPointerOperand();
+    if (!ClInstrumentReads || ignoreAccess(LI->getPointerOperand()))
+      return;
+    Interesting.emplace_back(I, LI->getPointerOperandIndex(), false,
+                             LI->getType(), LI->getAlign());
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-    if (!ClInstrumentWrites) return nullptr;
-    *IsWrite = true;
-    *TypeSize = DL.getTypeStoreSizeInBits(SI->getValueOperand()->getType());
-    *Alignment = SI->getAlignment();
-    PtrOperand = SI->getPointerOperand();
+    if (!ClInstrumentWrites || ignoreAccess(SI->getPointerOperand()))
+      return;
+    Interesting.emplace_back(I, SI->getPointerOperandIndex(), true,
+                             SI->getValueOperand()->getType(), SI->getAlign());
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
-    if (!ClInstrumentAtomics) return nullptr;
-    *IsWrite = true;
-    *TypeSize = DL.getTypeStoreSizeInBits(RMW->getValOperand()->getType());
-    *Alignment = 0;
-    PtrOperand = RMW->getPointerOperand();
+    if (!ClInstrumentAtomics || ignoreAccess(RMW->getPointerOperand()))
+      return;
+    Interesting.emplace_back(I, RMW->getPointerOperandIndex(), true,
+                             RMW->getValOperand()->getType(), None);
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
-    if (!ClInstrumentAtomics) return nullptr;
-    *IsWrite = true;
-    *TypeSize = DL.getTypeStoreSizeInBits(XCHG->getCompareOperand()->getType());
-    *Alignment = 0;
-    PtrOperand = XCHG->getPointerOperand();
+    if (!ClInstrumentAtomics || ignoreAccess(XCHG->getPointerOperand()))
+      return;
+    Interesting.emplace_back(I, XCHG->getPointerOperandIndex(), true,
+                             XCHG->getCompareOperand()->getType(), None);
+  } else if (auto CI = dyn_cast<CallInst>(I)) {
+    for (unsigned ArgNo = 0; ArgNo < CI->getNumArgOperands(); ArgNo++) {
+      if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
+          ignoreAccess(CI->getArgOperand(ArgNo)))
+        continue;
+      Type *Ty = CI->getParamByValType(ArgNo);
+      Interesting.emplace_back(I, ArgNo, false, Ty, Align(1));
+    }
   }
-
-  if (PtrOperand) {
-    // Do not instrument accesses from different address spaces; we cannot deal
-    // with them.
-    Type *PtrTy = cast<PointerType>(PtrOperand->getType()->getScalarType());
-    if (PtrTy->getPointerAddressSpace() != 0)
-      return nullptr;
-
-    // Ignore swifterror addresses.
-    // swifterror memory addresses are mem2reg promoted by instruction
-    // selection. As such they cannot have regular uses like an instrumentation
-    // function and it makes no sense to track them as memory.
-    if (PtrOperand->isSwiftError())
-      return nullptr;
-  }
-
-  return PtrOperand;
 }
 
 static unsigned getPointerOperandIndex(Instruction *I) {
@@ -713,45 +721,32 @@ void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   MI->eraseFromParent();
 }
 
-bool HWAddressSanitizer::instrumentMemAccess(Instruction *I) {
-  LLVM_DEBUG(dbgs() << "Instrumenting: " << *I << "\n");
-  bool IsWrite = false;
-  unsigned Alignment = 0;
-  uint64_t TypeSize = 0;
-  Value *MaybeMask = nullptr;
+bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
+  Value *Addr = O.getPtr();
 
-  if (ClInstrumentMemIntrinsics && isa<MemIntrinsic>(I)) {
-    instrumentMemIntrinsic(cast<MemIntrinsic>(I));
-    return true;
-  }
+  LLVM_DEBUG(dbgs() << "Instrumenting: " << O.getInsn() << "\n");
 
-  Value *Addr =
-      isInterestingMemoryAccess(I, &IsWrite, &TypeSize, &Alignment, &MaybeMask);
-
-  if (!Addr)
-    return false;
-
-  if (MaybeMask)
+  if (O.MaybeMask)
     return false; //FIXME
 
-  IRBuilder<> IRB(I);
-  if (isPowerOf2_64(TypeSize) &&
-      (TypeSize / 8 <= (1UL << (kNumberOfAccessSizes - 1))) &&
-      (Alignment >= (1UL << Mapping.Scale) || Alignment == 0 ||
-       Alignment >= TypeSize / 8)) {
-    size_t AccessSizeIndex = TypeSizeToSizeIndex(TypeSize);
+  IRBuilder<> IRB(O.getInsn());
+  if (isPowerOf2_64(O.TypeSize) &&
+      (O.TypeSize / 8 <= (1ULL << (kNumberOfAccessSizes - 1))) &&
+      (!O.Alignment || *O.Alignment >= (1ULL << Mapping.Scale) ||
+       *O.Alignment >= O.TypeSize / 8)) {
+    size_t AccessSizeIndex = TypeSizeToSizeIndex(O.TypeSize);
     if (ClInstrumentWithCalls) {
-      IRB.CreateCall(HwasanMemoryAccessCallback[IsWrite][AccessSizeIndex],
+      IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],
                      IRB.CreatePointerCast(Addr, IntptrTy));
     } else {
-      instrumentMemAccessInline(Addr, IsWrite, AccessSizeIndex, I);
+      instrumentMemAccessInline(Addr, O.IsWrite, AccessSizeIndex, O.getInsn());
     }
   } else {
-    IRB.CreateCall(HwasanMemoryAccessCallbackSized[IsWrite],
+    IRB.CreateCall(HwasanMemoryAccessCallbackSized[O.IsWrite],
                    {IRB.CreatePointerCast(Addr, IntptrTy),
-                    ConstantInt::get(IntptrTy, TypeSize / 8)});
+                    ConstantInt::get(IntptrTy, O.TypeSize / 8)});
   }
-  untagPointerOperand(I, Addr);
+  untagPointerOperand(O.getInsn(), Addr);
 
   return true;
 }
@@ -789,7 +784,7 @@ bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI,
     // llvm.memset right here into either a sequence of stores, or a call to
     // hwasan_tag_memory.
     if (ShadowSize)
-      IRB.CreateMemSet(ShadowPtr, JustTag, ShadowSize, Align::None());
+      IRB.CreateMemSet(ShadowPtr, JustTag, ShadowSize, Align(1));
     if (Size != AlignedSize) {
       IRB.CreateStore(
           ConstantInt::get(Int8Ty, Size % Mapping.getObjectAlignment()),
@@ -1089,7 +1084,8 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
 
   LLVM_DEBUG(dbgs() << "Function: " << F.getName() << "\n");
 
-  SmallVector<Instruction*, 16> ToInstrument;
+  SmallVector<InterestingMemoryOperand, 16> OperandsToInstrument;
+  SmallVector<MemIntrinsic *, 16> IntrinToInstrument;
   SmallVector<AllocaInst*, 8> AllocasToInstrument;
   SmallVector<Instruction*, 8> RetVec;
   SmallVector<Instruction*, 8> LandingPadVec;
@@ -1115,31 +1111,31 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
       if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
         LandingPadVec.push_back(&Inst);
 
-      Value *MaybeMask = nullptr;
-      bool IsWrite;
-      unsigned Alignment;
-      uint64_t TypeSize;
-      Value *Addr = isInterestingMemoryAccess(&Inst, &IsWrite, &TypeSize,
-                                              &Alignment, &MaybeMask);
-      if (Addr || isa<MemIntrinsic>(Inst))
-        ToInstrument.push_back(&Inst);
+      getInterestingMemoryOperands(&Inst, OperandsToInstrument);
+
+      if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst))
+        IntrinToInstrument.push_back(MI);
     }
   }
 
   initializeCallbacks(*F.getParent());
 
+  bool Changed = false;
+
   if (!LandingPadVec.empty())
-    instrumentLandingPads(LandingPadVec);
+    Changed |= instrumentLandingPads(LandingPadVec);
 
   if (AllocasToInstrument.empty() && F.hasPersonalityFn() &&
       F.getPersonalityFn()->getName() == kHwasanPersonalityThunkName) {
     // __hwasan_personality_thunk is a no-op for functions without an
     // instrumented stack, so we can drop it.
     F.setPersonalityFn(nullptr);
+    Changed = true;
   }
 
-  if (AllocasToInstrument.empty() && ToInstrument.empty())
-    return false;
+  if (AllocasToInstrument.empty() && OperandsToInstrument.empty() &&
+      IntrinToInstrument.empty())
+    return Changed;
 
   assert(!LocalDynamicShadow);
 
@@ -1149,14 +1145,11 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
                /*WithFrameRecord*/ ClRecordStackHistory &&
                    !AllocasToInstrument.empty());
 
-  bool Changed = false;
   if (!AllocasToInstrument.empty()) {
     Value *StackTag =
         ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
-    Changed |= instrumentStack(AllocasToInstrument, AllocaDbgMap, RetVec,
-                               StackTag);
+    instrumentStack(AllocasToInstrument, AllocaDbgMap, RetVec, StackTag);
   }
-
   // Pad and align each of the allocas that we instrumented to stop small
   // uninteresting allocas from hiding in instrumented alloca's padding and so
   // that we have enough space to store real tags for short granules.
@@ -1165,7 +1158,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
     uint64_t Size = getAllocaSizeInBytes(*AI);
     uint64_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
     AI->setAlignment(
-        MaybeAlign(std::max(AI->getAlignment(), Mapping.getObjectAlignment())));
+        Align(std::max(AI->getAlignment(), Mapping.getObjectAlignment())));
     if (Size != AlignedSize) {
       Type *AllocatedType = AI->getAllocatedType();
       if (AI->isArrayAllocation()) {
@@ -1178,7 +1171,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
       auto *NewAI = new AllocaInst(
           TypeWithPadding, AI->getType()->getAddressSpace(), nullptr, "", AI);
       NewAI->takeName(AI);
-      NewAI->setAlignment(MaybeAlign(AI->getAlignment()));
+      NewAI->setAlignment(AI->getAlign());
       NewAI->setUsedWithInAlloca(AI->isUsedWithInAlloca());
       NewAI->setSwiftError(AI->isSwiftError());
       NewAI->copyMetadata(*AI);
@@ -1216,13 +1209,18 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
     }
   }
 
-  for (auto Inst : ToInstrument)
-    Changed |= instrumentMemAccess(Inst);
+  for (auto &Operand : OperandsToInstrument)
+    instrumentMemAccess(Operand);
+
+  if (ClInstrumentMemIntrinsics && !IntrinToInstrument.empty()) {
+    for (auto Inst : IntrinToInstrument)
+      instrumentMemIntrinsic(cast<MemIntrinsic>(Inst));
+  }
 
   LocalDynamicShadow = nullptr;
   StackBaseTag = nullptr;
 
-  return Changed;
+  return true;
 }
 
 void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
@@ -1325,8 +1323,9 @@ void HWAddressSanitizer::instrumentGlobals() {
   // cases where two libraries mutually depend on each other.
   //
   // We only need one note per binary, so put everything for the note in a
-  // comdat.
-  Comdat *NoteComdat = M.getOrInsertComdat(kHwasanNoteName);
+  // comdat. This need to be a comdat with an .init_array section to prevent
+  // newer versions of lld from discarding the note.
+  Comdat *NoteComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
 
   Type *Int8Arr0Ty = ArrayType::get(Int8Ty, 0);
   auto Start =

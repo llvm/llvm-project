@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_SERIALIZATION_ASTREADER_H
 #define LLVM_CLANG_SERIALIZATION_ASTREADER_H
 
-#include "clang/AST/DeclObjC.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -724,9 +723,10 @@ private:
 
   struct PendingMacroInfo {
     ModuleFile *M;
-    uint64_t MacroDirectivesOffset;
+    /// Offset relative to ModuleFile::MacroOffsetsBase.
+    uint32_t MacroDirectivesOffset;
 
-    PendingMacroInfo(ModuleFile *M, uint64_t MacroDirectivesOffset)
+    PendingMacroInfo(ModuleFile *M, uint32_t MacroDirectivesOffset)
         : M(M), MacroDirectivesOffset(MacroDirectivesOffset) {}
   };
 
@@ -850,6 +850,18 @@ private:
   int PragmaMSPointersToMembersState = -1;
   SourceLocation PointersToMembersPragmaLocation;
 
+  /// The pragma float_control state.
+  Optional<unsigned> FpPragmaCurrentValue;
+  SourceLocation FpPragmaCurrentLocation;
+  struct FpPragmaStackEntry {
+    unsigned Value;
+    SourceLocation Location;
+    SourceLocation PushLocation;
+    StringRef SlotLabel;
+  };
+  llvm::SmallVector<FpPragmaStackEntry, 2> FpPragmaStack;
+  llvm::SmallVector<std::string, 2> FpPragmaStrings;
+
   /// The pragma pack state.
   Optional<unsigned> PragmaPackCurrentValue;
   SourceLocation PragmaPackCurrentLocation;
@@ -883,6 +895,12 @@ private:
 
   // A list of late parsed template function data.
   SmallVector<uint64_t, 1> LateParsedTemplates;
+
+  /// The IDs of all decls to be checked for deferred diags.
+  ///
+  /// Sema tracks these to emit deferred diags.
+  SmallVector<uint64_t, 4> DeclsToCheckForDeferredDiags;
+
 
 public:
   struct ImportedSubmodule {
@@ -1088,12 +1106,6 @@ private:
 
   using DataPointers =
       std::pair<CXXRecordDecl *, struct CXXRecordDecl::DefinitionData *>;
-  using IDDataPointers = std::pair<ObjCInterfaceDecl *,
-                                   struct ObjCInterfaceDecl::DefinitionData *>;
-  using ProtoDataPointers = std::pair<ObjCProtocolDecl *,
-                                   struct ObjCProtocolDecl::DefinitionData *>;
-  using CatDataPointers =
-      std::pair<ObjCCategoryDecl *, struct ObjCCategoryDecl::DefinitionData *>;
 
   /// Record definitions in which we found an ODR violation.
   llvm::SmallDenseMap<CXXRecordDecl *, llvm::SmallVector<DataPointers, 2>, 2>
@@ -1106,25 +1118,6 @@ private:
   /// Enum definitions in which we found an ODR violation.
   llvm::SmallDenseMap<EnumDecl *, llvm::SmallVector<EnumDecl *, 2>, 2>
       PendingEnumOdrMergeFailures;
-
-  /// C/ObjC definitions in which the structural equivalence check fails
-  llvm::SmallDenseMap<RecordDecl *, llvm::SmallVector<RecordDecl *, 2>, 2>
-      PendingRecordOdrMergeFailures;
-
-  /// ObjCInterfaceDecl in which we found an ODR violation.
-  llvm::SmallDenseMap<ObjCInterfaceDecl *, llvm::SmallVector<IDDataPointers, 2>,
-                      2>
-      PendingObjCInterfaceOdrMergeFailures;
-
-  /// ObjCProtocolDecl in which we found an ODR violation.
-  llvm::SmallDenseMap<ObjCProtocolDecl *, llvm::SmallVector<ProtoDataPointers, 2>,
-                      2>
-      PendingObjCProtocolOdrMergeFailures;
-
-  /// ObjCCategoryDecl in which we found an ODR violation.
-  llvm::SmallDenseMap<ObjCCategoryDecl *, llvm::SmallVector<CatDataPointers, 2>,
-                      2>
-      PendingObjCCategoryOdrMergeFailures;
 
   /// DeclContexts in which we have diagnosed an ODR violation.
   llvm::SmallPtrSet<DeclContext*, 2> DiagnosedOdrMergeFailures;
@@ -1369,7 +1362,7 @@ private:
                           unsigned PreviousGeneration = 0);
 
   RecordLocation getLocalBitOffset(uint64_t GlobalOffset);
-  uint64_t getGlobalBitOffset(ModuleFile &M, uint32_t LocalOffset);
+  uint64_t getGlobalBitOffset(ModuleFile &M, uint64_t LocalOffset);
 
   /// Returns the first preprocessed entity ID that begins or ends after
   /// \arg Loc.
@@ -1889,7 +1882,8 @@ public:
   /// ReadBlockAbbrevs - Enter a subblock of the specified BlockID with the
   /// specified cursor.  Read the abbreviations that are at the top of the block
   /// and then leave the cursor pointing into the block.
-  static bool ReadBlockAbbrevs(llvm::BitstreamCursor &Cursor, unsigned BlockID);
+  static bool ReadBlockAbbrevs(llvm::BitstreamCursor &Cursor, unsigned BlockID,
+                               uint64_t *StartOfBlockOffset = nullptr);
 
   /// Finds all the visible declarations with a given name.
   /// The current implementation of this method just loads the entire
@@ -2000,6 +1994,9 @@ public:
 
   void ReadUnusedLocalTypedefNameCandidates(
       llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) override;
+
+  void ReadDeclsToCheckForDeferredDiags(
+      llvm::SmallVector<Decl *, 4> &Decls) override;
 
   void ReadReferencedSelectors(
            SmallVectorImpl<std::pair<Selector, SourceLocation>> &Sels) override;
@@ -2214,7 +2211,7 @@ public:
   /// \param MacroDirectivesOffset Offset of the serialized macro directive
   /// history.
   void addPendingMacro(IdentifierInfo *II, ModuleFile *M,
-                       uint64_t MacroDirectivesOffset);
+                       uint32_t MacroDirectivesOffset);
 
   /// Read the set of macros defined by this external macro source.
   void ReadDefinedMacros() override;

@@ -55,9 +55,14 @@ enum MCFixupKind {
 
   FirstTargetFixupKind = 128,
 
-  // Limit range of target fixups, in case we want to pack more efficiently
-  // later.
-  MaxTargetFixupKind = (1 << 8)
+  /// The range [FirstLiteralRelocationKind, MaxTargetFixupKind) is used for
+  /// relocations coming from .reloc directive. Fixup kind
+  /// FirstLiteralRelocationKind+V represents the relocation type with number V.
+  FirstLiteralRelocationKind = 256,
+
+  /// Set limit to accommodate the highest reloc type in use for all Targets,
+  /// currently R_AARCH64_IRELATIVE at 1032, including room for expansion.
+  MaxFixupKind = FirstLiteralRelocationKind + 1032 + 32,
 };
 
 /// Encode information on a single operation to perform on a byte
@@ -92,7 +97,7 @@ class MCFixup {
 public:
   static MCFixup create(uint32_t Offset, const MCExpr *Value,
                         MCFixupKind Kind, SMLoc Loc = SMLoc()) {
-    assert(Kind < MaxTargetFixupKind && "Kind out of range!");
+    assert(Kind <= MaxFixupKind && "Kind out of range!");
     MCFixup FI;
     FI.Value = Value;
     FI.Offset = Offset;

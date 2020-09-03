@@ -6,7 +6,7 @@
 # RUN: llvm-objdump --dynamic-reloc %t | FileCheck --implicit-check-not=R_X86 %s
 # RUN: llvm-objdump -R %t | FileCheck --implicit-check-not=R_X86 %s
 
-# CHECK:      file format ELF64-x86-64
+# CHECK:      file format elf64-x86-64
 # CHECK:      DYNAMIC RELOCATION RECORDS
 # CHECK-NEXT: 0000000000000000 R_X86_64_RELATIVE *ABS*
 # CHECK-NEXT: 0000000000000000 R_X86_64_JUMP_SLOT bar

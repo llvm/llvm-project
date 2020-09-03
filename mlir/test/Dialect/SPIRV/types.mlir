@@ -1,6 +1,6 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
-// TODO(b/133530217): Add more tests after switching to the generic parser.
+// TODO: Add more tests after switching to the generic parser.
 
 //===----------------------------------------------------------------------===//
 // ArrayType
@@ -12,8 +12,8 @@ func @scalar_array_type(!spv.array<16xf32>, !spv.array<8 x i32>) -> ()
 // CHECK: func @vector_array_type(!spv.array<32 x vector<4xf32>>)
 func @vector_array_type(!spv.array< 32 x vector<4xf32> >) -> ()
 
-// CHECK: func @array_type_stride(!spv.array<4 x !spv.array<4 x f32 [4]> [128]>)
-func @array_type_stride(!spv.array< 4 x !spv.array<4 x f32 [4]> [128]>) -> ()
+// CHECK: func @array_type_stride(!spv.array<4 x !spv.array<4 x f32, stride=4>, stride=128>)
+func @array_type_stride(!spv.array< 4 x !spv.array<4 x f32, stride=4>, stride = 128>) -> ()
 
 // -----
 
@@ -78,7 +78,7 @@ func @llvm_type(!spv.array<4x!llvm.i32>) -> ()
 // -----
 
 // expected-error @+1 {{ArrayStride must be greater than zero}}
-func @array_type_zero_stide(!spv.array<4xi32 [0]>) -> ()
+func @array_type_zero_stride(!spv.array<4xi32, stride=0>) -> ()
 
 // -----
 
@@ -132,6 +132,9 @@ func @scalar_runtime_array_type(!spv.rtarray<f32>, !spv.rtarray<i32>) -> ()
 // CHECK: func @vector_runtime_array_type(!spv.rtarray<vector<4xf32>>)
 func @vector_runtime_array_type(!spv.rtarray< vector<4xf32> >) -> ()
 
+// CHECK: func @runtime_array_type_stride(!spv.rtarray<f32, stride=4>)
+func @runtime_array_type_stride(!spv.rtarray<f32, stride=4>) -> ()
+
 // -----
 
 // expected-error @+1 {{expected '<'}}
@@ -146,6 +149,11 @@ func @missing_element_type(!spv.rtarray<>) -> ()
 
 // expected-error @+1 {{expected non-function type}}
 func @redundant_count(!spv.rtarray<4xf32>) -> ()
+
+// -----
+
+// expected-error @+1 {{ArrayStride must be greater than zero}}
+func @runtime_array_type_zero_stride(!spv.rtarray<i32, stride=0>) -> ()
 
 // -----
 
@@ -267,17 +275,23 @@ func @struct_type_with_decoration7(!spv.struct<f32 [0], !spv.struct<i32, f32 [No
 // CHECK: func @struct_type_with_decoration8(!spv.struct<f32, !spv.struct<i32 [0], f32 [4, NonReadable]>>)
 func @struct_type_with_decoration8(!spv.struct<f32, !spv.struct<i32 [0], f32 [4, NonReadable]>>)
 
+// CHECK: func @struct_type_with_matrix_1(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, ColMajor, MatrixStride=16]>)
+func @struct_type_with_matrix_1(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, ColMajor, MatrixStride=16]>)
+
+// CHECK: func @struct_type_with_matrix_2(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=16]>)
+func @struct_type_with_matrix_2(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=16]>)
+
 // CHECK: func @struct_empty(!spv.struct<>)
 func @struct_empty(!spv.struct<>)
 
 // -----
 
-// expected-error @+1 {{layout specification must be given for all members}}
+// expected-error @+1 {{offset specification must be given for all members}}
 func @struct_type_missing_offset1((!spv.struct<f32, i32 [4]>) -> ()
 
 // -----
 
-// expected-error @+1 {{layout specification must be given for all members}}
+// expected-error @+1 {{offset specification must be given for all members}}
 func @struct_type_missing_offset2(!spv.struct<f32 [3], i32>) -> ()
 
 // -----
@@ -319,3 +333,117 @@ func @struct_type_missing_comma(!spv.struct<f32 [0 NonWritable], i32 [4]>)
 
 // expected-error @+1 {{expected ']'}}
 func @struct_type_missing_comma(!spv.struct<f32 [0, NonWritable NonReadable], i32 [4]>)
+
+// -----
+
+// expected-error @+1 {{expected ']'}}
+func @struct_type_missing_comma(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, RowMajor MatrixStride=16]>)
+
+// -----
+
+// expected-error @+1 {{expected integer value}}
+func @struct_missing_member_decorator_value(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=]>)
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// CooperativeMatrix
+//===----------------------------------------------------------------------===//
+
+// CHECK: func @coop_matrix_type(!spv.coopmatrix<8x16xi32, Subgroup>, !spv.coopmatrix<8x8xf32, Workgroup>)
+func @coop_matrix_type(!spv.coopmatrix<8x16xi32, Subgroup>, !spv.coopmatrix<8x8xf32, Workgroup>) -> ()
+
+// -----
+
+// expected-error @+1 {{expected ','}}
+func @missing_scope(!spv.coopmatrix<8x16xi32>) -> ()
+
+// -----
+
+// expected-error @+1 {{expected rows and columns size}}
+func @missing_count(!spv.coopmatrix<8xi32, Subgroup>) -> ()
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Matrix
+//===----------------------------------------------------------------------===//
+// CHECK: func @matrix_type(!spv.matrix<2 x vector<2xf16>>)
+func @matrix_type(!spv.matrix<2 x vector<2xf16>>) -> ()
+
+// -----
+
+// CHECK: func @matrix_type(!spv.matrix<3 x vector<3xf32>>)
+func @matrix_type(!spv.matrix<3 x vector<3xf32>>) -> ()
+
+// -----
+
+// CHECK: func @matrix_type(!spv.matrix<4 x vector<4xf16>>)
+func @matrix_type(!spv.matrix<4 x vector<4xf16>>) -> ()
+
+// -----
+
+// expected-error @+1 {{matrix is expected to have 2, 3, or 4 columns}}
+func @matrix_invalid_size(!spv.matrix<5 x vector<3xf32>>) -> ()
+
+// -----
+
+// expected-error @+1 {{matrix is expected to have 2, 3, or 4 columns}}
+func @matrix_invalid_size(!spv.matrix<1 x vector<3xf32>>) -> ()
+
+// -----
+
+// expected-error @+1 {{matrix columns size has to be less than or equal to 4 and greater than or equal 2, but found 5}}
+func @matrix_invalid_columns_size(!spv.matrix<3 x vector<5xf32>>) -> ()
+
+// -----
+
+// expected-error @+1 {{matrix columns size has to be less than or equal to 4 and greater than or equal 2, but found 1}}
+func @matrix_invalid_columns_size(!spv.matrix<3 x vector<1xf32>>) -> ()
+
+// -----
+
+// expected-error @+1 {{expected '<'}}
+func @matrix_invalid_format(!spv.matrix 3 x vector<3xf32>>) -> ()
+
+// -----
+
+// expected-error @+1 {{unbalanced ')' character in pretty dialect name}}
+func @matrix_invalid_format(!spv.matrix< 3 x vector<3xf32>) -> ()
+
+// -----
+
+// expected-error @+1 {{expected 'x' in dimension list}}
+func @matrix_invalid_format(!spv.matrix<2 vector<3xi32>>) -> ()
+
+// -----
+
+// expected-error @+1 {{matrix must be composed using vector type, got 'i32'}}
+func @matrix_invalid_type(!spv.matrix< 3 x i32>) -> ()
+
+// -----
+
+// expected-error @+1 {{matrix must be composed using vector type, got '!spv.array<16 x f32>'}}
+func @matrix_invalid_type(!spv.matrix< 3 x !spv.array<16 x f32>>) -> ()
+
+// -----
+
+// expected-error @+1 {{matrix must be composed using vector type, got '!spv.rtarray<i32>'}}
+func @matrix_invalid_type(!spv.matrix< 3 x !spv.rtarray<i32>>) -> ()
+
+// -----
+
+// expected-error @+1 {{matrix columns' elements must be of Float type, got 'i32'}}
+func @matrix_invalid_type(!spv.matrix<2 x vector<3xi32>>) -> ()
+
+// -----
+
+// expected-error @+1 {{expected single unsigned integer for number of columns}}
+func @matrix_size_type(!spv.matrix< x vector<3xi32>>) -> ()
+
+// -----
+
+// expected-error @+1 {{expected single unsigned integer for number of columns}}
+func @matrix_size_type(!spv.matrix<2.0 x vector<3xi32>>) -> ()
+
+// -----

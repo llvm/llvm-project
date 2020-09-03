@@ -1,11 +1,3 @@
-//===-- main.cpp ------------------------------------------------*- C++ -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 // This test is intended to create a situation in which a breakpoint will be
 // hit in two threads at nearly the same moment.  The expected result is that
 // the breakpoint in the second thread will be hit while the breakpoint handler

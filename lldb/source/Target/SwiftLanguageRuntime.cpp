@@ -13,19 +13,18 @@
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "SwiftLanguageRuntimeImpl.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/StringPrinter.h"
-#include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
@@ -48,7 +47,6 @@
 // FIXME: we should not need this
 #include "Plugins/Language/Swift/SwiftFormatters.h"
 #include "Plugins/Language/Swift/SwiftRuntimeFailureRecognizer.h"
-#include "Plugins/ExpressionParser/Clang/ClangExpressionVariable.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -165,7 +163,7 @@ FindSymbolForSwiftObject(Process &process, RuntimeKind runtime_kind,
 }
 
 static lldb::BreakpointResolverSP
-CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp, bool throw_bp) {
+CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp, bool throw_bp) {
   BreakpointResolverSP resolver_sp;
 
   if (throw_bp)
@@ -306,11 +304,13 @@ public:
                : false;
   }
 
-  DISALLOW_COPY_AND_ASSIGN(SwiftLanguageRuntimeStub);
+  SwiftLanguageRuntimeStub(const SwiftLanguageRuntimeStub &) = delete;
+  const SwiftLanguageRuntimeStub &
+  operator=(const SwiftLanguageRuntimeStub &) = delete;
 };
 
 static bool HasReflectionInfo(ObjectFile *obj_file) {
-  auto findSectionInObject = [&](std::string name) {
+  auto findSectionInObject = [&](StringRef name) {
     ConstString section_name(name);
     SectionSP section_sp =
         obj_file->GetSectionList()->FindSectionByName(section_name);
@@ -424,6 +424,7 @@ SwiftLanguageRuntimeImpl::SwiftLanguageRuntimeImpl(Process &process)
   SetupSwiftError();
   Target &target = m_process.GetTarget();
   m_modules_to_add.Append(target.GetImages());
+  RegisterSwiftRuntimeFailureRecognizer(m_process);
 }
 
 LanguageRuntime *
@@ -914,7 +915,6 @@ static bool IsSwiftReferenceType(ValueObject &object) {
   return false;
 }
 
-
 bool SwiftLanguageRuntimeImpl::GetObjectDescription(Stream &str,
                                                     ValueObject &object) {
   if (object.IsUninitializedReference()) {
@@ -1019,7 +1019,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
                   error = argument_values.GetValueAtIndex(0)->GetValueAsData(
                       &exe_ctx, data, NULL);
                   lldb::offset_t offset = 0;
-                  lldb::addr_t fn_ptr_addr = data.GetPointer(&offset);
+                  lldb::addr_t fn_ptr_addr = data.GetAddress(&offset);
                   Address fn_ptr_address;
                   fn_ptr_address.SetLoadAddress(fn_ptr_addr, &target);
                   // Now check to see if this has debug info:
@@ -1124,10 +1124,8 @@ ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
     auto *persistent_state =
         target.GetSwiftPersistentExpressionState(*exe_scope);
 
-    const bool is_error = true;
-    auto prefix = persistent_state->GetPersistentVariablePrefix(is_error);
     ConstString persistent_variable_name(
-        persistent_state->GetNextPersistentVariableName(target, prefix));
+        persistent_state->GetNextPersistentVariableName(/*is_error*/ true));
 
     lldb::ValueObjectSP const_valobj_sp;
 
@@ -1184,8 +1182,10 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
     return error_valobj_sp;
   SwiftASTContext *ast_context = maybe_ast_context->get();
 
-  lldb::DataBufferSP buffer(new lldb_private::DataBufferHeap(
-      arg0->GetScalar().GetBytes(), arg0->GetScalar().GetByteSize()));
+  auto buffer_up =
+      std::make_unique<DataBufferHeap>(arg0->GetScalar().GetByteSize(), 0);
+  arg0->GetScalar().GetBytes(buffer_up->GetData());
+  lldb::DataBufferSP buffer(std::move(buffer_up));
 
   CompilerType swift_error_proto_type = ast_context->GetErrorType();
   if (!swift_error_proto_type.IsValid())
@@ -1214,11 +1214,6 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
   auto *ast_context = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
       &*type_system_or_err);
   if (ast_context && !ast_context->HasFatalErrors()) {
-    SwiftPersistentExpressionState *persistent_state =
-        llvm::cast<SwiftPersistentExpressionState>(
-            target.GetPersistentExpressionStateForLanguage(
-                lldb::eLanguageTypeSwift));
-
     std::string module_name = "$__lldb_module_for_";
     module_name.append(&name.GetCString()[1]);
     SourceModule module_info;
@@ -1240,6 +1235,13 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
               ast_context->GetIdentifier(name.GetCString()), module_decl);
       var_decl->setInterfaceType(GetSwiftType(ast_context->GetErrorType()));
       var_decl->setDebuggerVar(true);
+
+      SwiftPersistentExpressionState *persistent_state =
+          llvm::cast<SwiftPersistentExpressionState>(
+              target.GetPersistentExpressionStateForLanguage(
+                  lldb::eLanguageTypeSwift));
+      if (!persistent_state)
+        return;
 
       persistent_state->RegisterSwiftPersistentDecl(var_decl);
 
@@ -1453,7 +1455,7 @@ protected:
           base_object_sp = m_backend.GetSyntheticBase(
               0, base_type, true,
               Mangled(base_type_name)
-                  .GetDemangledName(lldb::eLanguageTypeSwift));
+                  .GetDemangledName());
           return base_object_sp;
         } else
           return nullptr;
@@ -1761,7 +1763,7 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationBeforeReturn(
 }
 
 lldb::BreakpointResolverSP
-SwiftLanguageRuntime::CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp,
+SwiftLanguageRuntime::CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp,
                                               bool throw_bp) {
   return ::CreateExceptionResolver(bkpt, catch_bp, throw_bp);
 }
@@ -1849,7 +1851,7 @@ protected:
     stream.Printf("kind=%s",
                   SwiftDemangleNodeKindToCString(node_ptr->getKind()));
     if (node_ptr->hasText()) {
-      std::string Text = node_ptr->getText();
+      std::string Text = node_ptr->getText().str();
       stream.Printf(", text=\"%s\"", Text.c_str());
     }
     if (node_ptr->hasIndex())
@@ -2022,7 +2024,6 @@ void SwiftLanguageRuntime::Initialize() {
         return CommandObjectSP(new CommandObjectMultiwordSwift(interpreter));
       },
       SwiftLanguageRuntimeImpl::GetBreakpointExceptionPrecondition);
-  RegisterSwiftRuntimeFailureRecognizer();
 }
 
 void SwiftLanguageRuntime::Terminate() {

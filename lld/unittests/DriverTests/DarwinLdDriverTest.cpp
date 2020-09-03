@@ -31,7 +31,7 @@ class DarwinLdParserTest : public testing::Test {
 protected:
   int inputFileCount() { return _ctx.getNodes().size(); }
 
-  std::string inputFile(int index) {
+  StringRef inputFile(int index) {
     Node &node = *_ctx.getNodes()[index];
     if (node.kind() == Node::Kind::File)
       return cast<FileNode>(&node)->getFile()->path();

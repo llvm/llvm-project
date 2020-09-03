@@ -1,11 +1,12 @@
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 import("//llvm/utils/unittest/unittest.gni")
 
+test_cflags = [ "-DSCUDO_DEBUG=1" ]
+
 unittest("ScudoUnitTest") {
   configs += [ "//llvm/utils/gn/build:crt_code" ]
-  deps = [
-    "//compiler-rt/lib/scudo/standalone:sources",
-  ]
+  cflags = test_cflags
+  deps = [ "//compiler-rt/lib/scudo/standalone:sources" ]
   sources = [
     "atomic_test.cpp",
     "bytemap_test.cpp",
@@ -33,6 +34,7 @@ unittest("ScudoUnitTest") {
 
 unittest("ScudoCUnitTest") {
   configs += [ "//llvm/utils/gn/build:crt_code" ]
+  cflags = test_cflags
   deps = [
     "//compiler-rt/lib/scudo/standalone:c_wrapper_sources",
     "//compiler-rt/lib/scudo/standalone:sources",
@@ -46,6 +48,7 @@ unittest("ScudoCUnitTest") {
 
 unittest("ScudoCxxUnitTest") {
   configs += [ "//llvm/utils/gn/build:crt_code" ]
+  cflags = test_cflags
   deps = [
     "//compiler-rt/lib/scudo/standalone:c_wrapper_sources",
     "//compiler-rt/lib/scudo/standalone:cxx_wrapper_sources",
@@ -56,7 +59,7 @@ unittest("ScudoCxxUnitTest") {
     "wrappers_cpp_test.cpp",
   ]
   if (is_clang) {
-    cflags = [ "-Wno-mismatched-new-delete" ]
+    cflags += [ "-Wno-mismatched-new-delete" ]
   }
   has_custom_main = true
 }

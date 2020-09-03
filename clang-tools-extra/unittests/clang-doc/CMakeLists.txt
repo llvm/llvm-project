@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   support
   BitstreamReader
+  FrontendOpenMP
   )
 
 get_filename_component(CLANG_DOC_SOURCE_DIR

@@ -44,22 +44,22 @@ static const TargetRegisterClass &getGlobalBaseRegClass(MachineFunction &MF) {
   return Mips::GPR32RegClass;
 }
 
-Register MipsFunctionInfo::getGlobalBaseReg() {
+Register MipsFunctionInfo::getGlobalBaseReg(MachineFunction &MF) {
   if (!GlobalBaseReg)
     GlobalBaseReg =
         MF.getRegInfo().createVirtualRegister(&getGlobalBaseRegClass(MF));
   return GlobalBaseReg;
 }
 
-Register MipsFunctionInfo::getGlobalBaseRegForGlobalISel() {
+Register MipsFunctionInfo::getGlobalBaseRegForGlobalISel(MachineFunction &MF) {
   if (!GlobalBaseReg) {
-    getGlobalBaseReg();
-    initGlobalBaseReg();
+    getGlobalBaseReg(MF);
+    initGlobalBaseReg(MF);
   }
   return GlobalBaseReg;
 }
 
-void MipsFunctionInfo::initGlobalBaseReg() {
+void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
   if (!GlobalBaseReg)
     return;
 
@@ -68,14 +68,13 @@ void MipsFunctionInfo::initGlobalBaseReg() {
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   DebugLoc DL;
-  unsigned V0, V1;
   const TargetRegisterClass *RC;
   const MipsABIInfo &ABI =
       static_cast<const MipsTargetMachine &>(MF.getTarget()).getABI();
   RC = (ABI.IsN64()) ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
 
-  V0 = RegInfo.createVirtualRegister(RC);
-  V1 = RegInfo.createVirtualRegister(RC);
+  Register V0 = RegInfo.createVirtualRegister(RC);
+  Register V1 = RegInfo.createVirtualRegister(RC);
 
   if (ABI.IsN64()) {
     MF.getRegInfo().addLiveIn(Mips::T9_64);
@@ -147,7 +146,7 @@ void MipsFunctionInfo::initGlobalBaseReg() {
       .addReg(Mips::V0).addReg(Mips::T9);
 }
 
-void MipsFunctionInfo::createEhDataRegsFI() {
+void MipsFunctionInfo::createEhDataRegsFI(MachineFunction &MF) {
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   for (int I = 0; I < 4; ++I) {
     const TargetRegisterClass &RC =
@@ -155,12 +154,12 @@ void MipsFunctionInfo::createEhDataRegsFI() {
             ? Mips::GPR64RegClass
             : Mips::GPR32RegClass;
 
-    EhDataRegFI[I] = MF.getFrameInfo().CreateStackObject(TRI.getSpillSize(RC),
-        TRI.getSpillAlignment(RC), false);
+    EhDataRegFI[I] = MF.getFrameInfo().CreateStackObject(
+        TRI.getSpillSize(RC), TRI.getSpillAlign(RC), false);
   }
 }
 
-void MipsFunctionInfo::createISRRegFI() {
+void MipsFunctionInfo::createISRRegFI(MachineFunction &MF) {
   // ISRs require spill slots for Status & ErrorPC Coprocessor 0 registers.
   // The current implementation only supports Mips32r2+ not Mips64rX. Status
   // is always 32 bits, ErrorPC is 32 or 64 bits dependent on architecture,
@@ -170,7 +169,7 @@ void MipsFunctionInfo::createISRRegFI() {
 
   for (int I = 0; I < 2; ++I)
     ISRDataRegFI[I] = MF.getFrameInfo().CreateStackObject(
-        TRI.getSpillSize(RC), TRI.getSpillAlignment(RC), false);
+        TRI.getSpillSize(RC), TRI.getSpillAlign(RC), false);
 }
 
 bool MipsFunctionInfo::isEhDataRegFI(int FI) const {
@@ -181,19 +180,22 @@ bool MipsFunctionInfo::isEhDataRegFI(int FI) const {
 bool MipsFunctionInfo::isISRRegFI(int FI) const {
   return IsISR && (FI == ISRDataRegFI[0] || FI == ISRDataRegFI[1]);
 }
-MachinePointerInfo MipsFunctionInfo::callPtrInfo(const char *ES) {
+MachinePointerInfo MipsFunctionInfo::callPtrInfo(MachineFunction &MF,
+                                                 const char *ES) {
   return MachinePointerInfo(MF.getPSVManager().getExternalSymbolCallEntry(ES));
 }
 
-MachinePointerInfo MipsFunctionInfo::callPtrInfo(const GlobalValue *GV) {
+MachinePointerInfo MipsFunctionInfo::callPtrInfo(MachineFunction &MF,
+                                                 const GlobalValue *GV) {
   return MachinePointerInfo(MF.getPSVManager().getGlobalValueCallEntry(GV));
 }
 
-int MipsFunctionInfo::getMoveF64ViaSpillFI(const TargetRegisterClass *RC) {
+int MipsFunctionInfo::getMoveF64ViaSpillFI(MachineFunction &MF,
+                                           const TargetRegisterClass *RC) {
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   if (MoveF64ViaSpillFI == -1) {
     MoveF64ViaSpillFI = MF.getFrameInfo().CreateStackObject(
-        TRI.getSpillSize(*RC), TRI.getSpillAlignment(*RC), false);
+        TRI.getSpillSize(*RC), TRI.getSpillAlign(*RC), false);
   }
   return MoveF64ViaSpillFI;
 }

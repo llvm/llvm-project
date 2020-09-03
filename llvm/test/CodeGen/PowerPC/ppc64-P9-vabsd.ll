@@ -395,13 +395,13 @@ entry:
   ret <16 x i8> %vecins123
 ; CHECK-LABEL: sub_absv_8_ext
 ; CHECK-NOT: vabsdub
-; CHECK: subf
+; CHECK: sub
 ; CHECK-NOT: vabsdub
 ; CHECK: xor
 ; CHECK-NOT: vabsdub
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: sub_absv_8_ext
-; CHECK-PWR8: subf
+; CHECK-PWR8: sub
 ; CHECK-PWR8: xor
 ; CHECK-PWR8: blr
 }

@@ -65,7 +65,7 @@ attributes #2 = { nounwind readonly }
 
 
 ; CHECK-LABEL: amdgpu_ps_main:
-; CHECK s_buffer_load_dword
+; CHECK: s_buffer_load_dword
 define amdgpu_ps void @_amdgpu_ps_main(i32 %arg) local_unnamed_addr {
 .entry:
   %tmp = insertelement <2 x i32> zeroinitializer, i32 %arg, i32 0

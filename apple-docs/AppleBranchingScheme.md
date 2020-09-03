@@ -29,8 +29,16 @@ upstreamed to the LLVM project, including some special support for Swift.
 Critically, however, none of these branches *depend on* the
 [github.com/apple/swift](https://github.com/apple/swift) repository.
 
-Although there are a few non-trivial differences from LLVM, the goal is to
-minimize this difference, and do almost all development upstream.
+Today there are a few non-trivial differences from LLVM, but we are
+actively working on either upstreaming or reverting those differences. The goal
+is to fully eliminate all differences between `apple/master` and
+`llvm.org/master`.
+
+Any LLVM development that does not depend on the Swift repository should happen
+upstream. The only changes that are allowed to be submitted without going
+through upstream LLVM are those that are either directly related to upstreaming
+content or that are needed because of the existing differences (e.g., resolving
+merge conflicts or fixing build errors).
 
 - [apple/master](https://github.com/apple/llvm-project/tree/apple/master) is
   directly downstream of
@@ -40,7 +48,7 @@ minimize this difference, and do almost all development upstream.
   (see also <http://llvm.org/docs/Contributing.html>).
 - `apple/stable/*`: These branches are periodic stabilization branches, where
   fixes are cherry-picked from LLVM.  At time of writing:
-    - [apple/stable/20191106](https://github.com/apple/llvm-project/tree/apple/stable/20191106)
+    - [apple/stable/20200108](https://github.com/apple/llvm-project/tree/apple/stable/20200108)
       is the most recent stabilization branch.
     - [apple/stable/20190619](https://github.com/apple/llvm-project/tree/apple/stable/20190619)
       is the current stabilization branch for
@@ -50,12 +58,13 @@ minimize this difference, and do almost all development upstream.
 ## Downstream branches that depend on [Swift](https://github.com/apple/swift)
 
 The `swift/*` branches are downstream of `apple/*`, and include content that
-depends [Swift](https://github.com/apple/swift).  The naming scheme is
+depends on [Swift](https://github.com/apple/swift).  The naming scheme is
 `swift/<swift-branch>`, where `<swift-branch>` is the aligned Swift branch.
 
 The branches are automerged from a branch in the `apple/*` namespace.  They are
 expected to have zero differences outside the `lldb/` and `apple-llvm-config/`
-directories.
+directories. Any changes outside of these directories should be submitted in
+the upstream LLVM repository.
 
 These are the most important branches:
 

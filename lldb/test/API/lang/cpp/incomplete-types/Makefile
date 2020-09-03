@@ -5,7 +5,7 @@ all: limit nolimit
 
 include Makefile.rules
 
-# Force a.cpp to be built with no debug inforamtion
+# Force a.cpp to be built with no debug information
 a.o: CFLAGS = $(CFLAGS_NO_DEBUG)
 
 # The default testsuite setup forces -fno-limit-debug-info. Let's not rely on

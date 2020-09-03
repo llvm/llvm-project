@@ -74,7 +74,7 @@ std::string NativeTypeUDT::getName() const {
   if (UnmodifiedType)
     return UnmodifiedType->getName();
 
-  return Tag->getName();
+  return std::string(Tag->getName());
 }
 
 SymIndexId NativeTypeUDT::getLexicalParentId() const { return 0; }

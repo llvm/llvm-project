@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Host_posix_ConnectionFileDescriptorPosix_h_
-#define liblldb_Host_posix_ConnectionFileDescriptorPosix_h_
+#ifndef LLDB_HOST_POSIX_CONNECTIONFILEDESCRIPTORPOSIX_H
+#define LLDB_HOST_POSIX_CONNECTIONFILEDESCRIPTORPOSIX_H
 
 #include <atomic>
 #include <memory>
@@ -116,9 +116,11 @@ protected:
 private:
   void InitializeSocket(Socket *socket);
 
-  DISALLOW_COPY_AND_ASSIGN(ConnectionFileDescriptor);
+  ConnectionFileDescriptor(const ConnectionFileDescriptor &) = delete;
+  const ConnectionFileDescriptor &
+  operator=(const ConnectionFileDescriptor &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_ConnectionFileDescriptor_h_
+#endif // LLDB_HOST_POSIX_CONNECTIONFILEDESCRIPTORPOSIX_H

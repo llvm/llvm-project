@@ -42,8 +42,7 @@ MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
   else
     MF.insert(std::next(Loop->getIterator()), NewBB);
 
-  // FIXME: Add DenseMapInfo trait for Register so we can use it as a key.
-  DenseMap<unsigned, Register> Remaps;
+  DenseMap<Register, Register> Remaps;
   auto InsertPt = NewBB->end();
   for (MachineInstr &MI : *Loop) {
     MachineInstr *NewMI = MF.CloneMachineInstr(&MI);

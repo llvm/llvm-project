@@ -577,14 +577,15 @@ void CodeGenModule::destroyConstantSignedPointerCaches() {
 
 llvm::Constant *CodeGenModule::getFunctionPointer(llvm::Constant *pointer,
                                                   QualType functionType,
-                                                  const FunctionDecl *FD) {
+                                                  GlobalDecl GD) {
   if (auto pointerAuth = getFunctionPointerAuthInfo(functionType)) {
     // Check a cache that, for now, just has entries for functions signed
     // with the standard function-pointer scheme.
     // Cache function pointers based on their decl.  Anything without a decl is
     // going to be a one-off that doesn't need to be cached anyway.
     llvm::Constant **entry = nullptr;
-    if (FD) {
+    if (GD) {
+      auto FD = cast<FunctionDecl>(GD.getDecl());
       auto &cache =
           getOrCreateCache<ByDeclCacheTy>(ConstantSignedPointersByDecl);
       entry = &cache[FD->getCanonicalDecl()];
@@ -607,9 +608,10 @@ llvm::Constant *CodeGenModule::getFunctionPointer(llvm::Constant *pointer,
   return pointer;
 }
 
-llvm::Constant *CodeGenModule::getFunctionPointer(const FunctionDecl *FD,
+llvm::Constant *CodeGenModule::getFunctionPointer(GlobalDecl GD,
                                                   llvm::Type *Ty) {
-  return getFunctionPointer(getRawFunctionPointer(FD, Ty), FD->getType(), FD);
+  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
+  return getFunctionPointer(getRawFunctionPointer(GD, Ty), FD->getType(), FD);
 }
 
 llvm::Constant *

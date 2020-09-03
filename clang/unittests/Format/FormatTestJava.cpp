@@ -337,12 +337,12 @@ TEST_F(FormatTestJava, Annotations) {
                "List<Integer> list;");
 
   verifyFormat(
-    "@Test\n"
-    "@Feature({\"Android-TabSwitcher\"})\n"
-    "@CommandLineFlags.Add({ChromeSwitches.DISABLE_FIRST_RUN_EXPERIENCE})\n"
-    "@Features.EnableFeatures({FEATURE})\n"
-    "public void test(@Foo.bar(\"baz\") @Quux.Qoob int theFirstParaaaaam,\n"
-    "    @Foo.bar(\"baz\") @Quux.Qoob int theSecondParaaaaaaaaaaaaaaaam) {}");
+      "@Test\n"
+      "@Feature({\"Android-TabSwitcher\"})\n"
+      "@CommandLineFlags.Add({ChromeSwitches.DISABLE_FIRST_RUN_EXPERIENCE})\n"
+      "@Features.EnableFeatures({FEATURE})\n"
+      "public void test(@Foo.bar(\"baz\") @Quux.Qoob int theFirstParaaaaam,\n"
+      "    @Foo.bar(\"baz\") @Quux.Qoob int theSecondParaaaaaaaaaaaaaaaam) {}");
 }
 
 TEST_F(FormatTestJava, Generics) {
@@ -460,19 +460,18 @@ TEST_F(FormatTestJava, MethodDeclarations) {
 }
 
 TEST_F(FormatTestJava, MethodReference) {
-  EXPECT_EQ(
-      "private void foo() {\n"
-      "  f(this::methodReference);\n"
-      "  f(C.super::methodReference);\n"
-      "  Consumer<String> c = System.out::println;\n"
-      "  Iface<Integer> mRef = Ty::<Integer>meth;\n"
-      "}",
-      format("private void foo() {\n"
-             "  f(this ::methodReference);\n"
-             "  f(C.super ::methodReference);\n"
-             "  Consumer<String> c = System.out ::println;\n"
-             "  Iface<Integer> mRef = Ty :: <Integer> meth;\n"
-             "}"));
+  EXPECT_EQ("private void foo() {\n"
+            "  f(this::methodReference);\n"
+            "  f(C.super::methodReference);\n"
+            "  Consumer<String> c = System.out::println;\n"
+            "  Iface<Integer> mRef = Ty::<Integer>meth;\n"
+            "}",
+            format("private void foo() {\n"
+                   "  f(this ::methodReference);\n"
+                   "  f(C.super ::methodReference);\n"
+                   "  Consumer<String> c = System.out ::println;\n"
+                   "  Iface<Integer> mRef = Ty :: <Integer> meth;\n"
+                   "}"));
 }
 
 TEST_F(FormatTestJava, CppKeywords) {
@@ -575,16 +574,15 @@ TEST_F(FormatTestJava, KeepsDelimitersOnOwnLineInJavaDocComments) {
 }
 
 TEST_F(FormatTestJava, RetainsLogicalShifts) {
-    verifyFormat("void f() {\n"
-                 "  int a = 1;\n"
-                 "  a >>>= 1;\n"
-                 "}");
-    verifyFormat("void f() {\n"
-                 "  int a = 1;\n"
-                 "  a = a >>> 1;\n"
-                 "}");
+  verifyFormat("void f() {\n"
+               "  int a = 1;\n"
+               "  a >>>= 1;\n"
+               "}");
+  verifyFormat("void f() {\n"
+               "  int a = 1;\n"
+               "  a = a >>> 1;\n"
+               "}");
 }
 
-
-} // end namespace tooling
+} // namespace format
 } // end namespace clang

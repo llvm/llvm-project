@@ -25,8 +25,8 @@ def ThunderX2T99Model : SchedMachineModel {
   let PostRAScheduler       =   1; // Using PostRA sched.
   let CompleteModel         =   1;
 
-  list<Predicate> UnsupportedFeatures = SVEUnsupported.F;
-
+  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
+                                                    PAUnsupported.F);
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
 }
@@ -1482,7 +1482,7 @@ def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^RBITv")>;
 // ASIMD bitwise insert, D-form
 // ASIMD bitwise insert, Q-form
 def : InstRW<[THX2T99Write_5Cyc_F01],
-            (instregex "^BIFv", "^BITv", "^BSLv")>;
+            (instregex "^BIFv", "^BITv", "^BSLv", "^BSPv")>;
 
 // ASIMD count, D-form
 // ASIMD count, Q-form

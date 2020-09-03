@@ -990,7 +990,7 @@ llvm::Error Util::getSymbolTableRegion(const DefinedAtom* atom,
     inGlobalsRegion = false;
     return llvm::Error::success();
   case Atom::scopeLinkageUnit:
-    if ((_ctx.exportMode() == MachOLinkingContext::ExportMode::whiteList) &&
+    if ((_ctx.exportMode() == MachOLinkingContext::ExportMode::exported) &&
         _ctx.exportSymbolNamed(atom->name())) {
       return llvm::make_error<GenericError>(
                           Twine("cannot export hidden symbol ") + atom->name());
@@ -1037,7 +1037,7 @@ llvm::Error Util::addSymbols(const lld::File &atomFile,
 
   // Add all stabs.
   for (auto &stab : _stabs) {
-    Symbol sym;
+    lld::mach_o::normalized::Symbol sym;
     sym.type = static_cast<NListType>(stab.type);
     sym.scope = 0;
     sym.sect = stab.other;
@@ -1066,7 +1066,7 @@ llvm::Error Util::addSymbols(const lld::File &atomFile,
           AtomAndIndex ai = { atom, sect->finalSectionIndex, symbolScope };
           globals.push_back(ai);
         } else {
-          Symbol sym;
+          lld::mach_o::normalized::Symbol sym;
           sym.name  = atom->name();
           sym.type  = N_SECT;
           sym.scope = symbolScope;
@@ -1082,7 +1082,7 @@ llvm::Error Util::addSymbols(const lld::File &atomFile,
         char tmpName[16];
         sprintf(tmpName, "L%04u", tempNum++);
         StringRef tempRef(tmpName);
-        Symbol sym;
+        lld::mach_o::normalized::Symbol sym;
         sym.name  = tempRef.copy(file.ownedAllocations);
         sym.type  = N_SECT;
         sym.scope = 0;
@@ -1099,7 +1099,7 @@ llvm::Error Util::addSymbols(const lld::File &atomFile,
   std::sort(globals.begin(), globals.end(), AtomSorter());
   const uint32_t globalStartIndex = file.localSymbols.size();
   for (AtomAndIndex &ai : globals) {
-    Symbol sym;
+    lld::mach_o::normalized::Symbol sym;
     sym.name  = ai.atom->name();
     sym.type  = N_SECT;
     sym.scope = ai.scope;
@@ -1124,7 +1124,7 @@ llvm::Error Util::addSymbols(const lld::File &atomFile,
   std::sort(undefs.begin(), undefs.end(), AtomSorter());
   const uint32_t start = file.globalSymbols.size() + file.localSymbols.size();
   for (AtomAndIndex &ai : undefs) {
-    Symbol sym;
+    lld::mach_o::normalized::Symbol sym;
     uint16_t desc = 0;
     if (!rMode) {
       uint8_t ordinal = 0;

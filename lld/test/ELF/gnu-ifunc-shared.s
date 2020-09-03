@@ -11,40 +11,40 @@
 // handler and a JUMP_SLOT is used for a preemptible ifunc
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: fct:
+// DISASM-NEXT: <fct>:
 // DISASM-NEXT:     1308:       retq
-// DISASM:     fct2:
+// DISASM:     <fct2>:
 // DISASM-NEXT:     1309:       retq
-// DISASM:     f1:
-// DISASM-NEXT:     130a:       callq   65
-// DISASM-NEXT:     130f:       callq   28
-// DISASM-NEXT:     1314:       callq   39
+// DISASM:     <f1>:
+// DISASM-NEXT:     130a:       callq   0x1350
+// DISASM-NEXT:     130f:       callq   0x1330
+// DISASM-NEXT:     1314:       callq   0x1340
 // DISASM-NEXT:     1319:       retq
-// DISASM:     f2:
+// DISASM:     <f2>:
 // DISASM-NEXT:     131a:       retq
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
-// DISASM-NEXT: .plt:
+// DISASM-NEXT: <.plt>:
 // DISASM-NEXT:     1320:       pushq   8482(%rip)
 // DISASM-NEXT:     1326:       jmpq    *8484(%rip)
 // DISASM-NEXT:     132c:       nopl    (%rax)
 // DISASM-EMPTY:
-// DISASM-NEXT:   fct2@plt:
+// DISASM-NEXT:   <fct2@plt>:
 // DISASM-NEXT:     1330:       jmpq    *8482(%rip)
 // DISASM-NEXT:     1336:       pushq   $0
-// DISASM-NEXT:     133b:       jmp     -32 <.plt>
+// DISASM-NEXT:     133b:       jmp     0x1320 <.plt>
 // DISASM-EMPTY:
-// DISASM-NEXT:   f2@plt:
+// DISASM-NEXT:   <f2@plt>:
 // DISASM-NEXT:     1340:       jmpq    *8474(%rip)
 // DISASM-NEXT:     1346:       pushq   $1
-// DISASM-NEXT:     134b:       jmp     -48 <.plt>
+// DISASM-NEXT:     134b:       jmp     0x1320 <.plt>
 // DISASM:      Disassembly of section .iplt:
 // DISASM-EMPTY:
-// DISASM:      .iplt:
+// DISASM:      <.iplt>:
 // DISASM-NEXT:     1350:       jmpq    *8466(%rip)
 // DISASM-NEXT:     1356:       pushq   $0
-// DISASM-NEXT:     135b:       jmp     -64 <.plt>
+// DISASM-NEXT:     135b:       jmp     0x1320 <.plt>
 
 // CHECK: Relocations [
 // CHECK-NEXT:   Section (5) .rela.dyn {

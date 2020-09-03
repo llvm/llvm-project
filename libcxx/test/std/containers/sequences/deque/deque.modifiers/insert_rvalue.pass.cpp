@@ -10,7 +10,7 @@
 
 // iterator insert (const_iterator p, value_type&& v);
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <deque>
 #include <cassert>

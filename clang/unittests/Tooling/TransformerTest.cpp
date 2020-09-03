@@ -81,7 +81,7 @@ protected:
   void appendToHeader(StringRef S) { FileContents[0].second += S; }
 
   void addFile(StringRef Filename, StringRef Content) {
-    FileContents.emplace_back(Filename, Content);
+    FileContents.emplace_back(std::string(Filename), std::string(Content));
   }
 
   llvm::Optional<std::string> rewrite(StringRef Input) {
@@ -174,7 +174,7 @@ TEST_F(TransformerTest, Flag) {
                                     hasName("proto::ProtoCommandLineFlag"))))
                                .bind(Flag)),
                         unless(callee(cxxMethodDecl(hasName("GetProto"))))),
-      changeTo(node(Flag), cat("EXPR")));
+      changeTo(node(std::string(Flag)), cat("EXPR")));
 
   std::string Input = R"cc(
     proto::ProtoCommandLineFlag flag;
@@ -229,7 +229,7 @@ TEST_F(TransformerTest, AddIncludeAngled) {
 TEST_F(TransformerTest, NodePartNameNamedDecl) {
   StringRef Fun = "fun";
   RewriteRule Rule = makeRule(functionDecl(hasName("bad")).bind(Fun),
-                              changeTo(name(Fun), cat("good")));
+                              changeTo(name(std::string(Fun)), cat("good")));
 
   std::string Input = R"cc(
     int bad(int x);
@@ -261,7 +261,7 @@ TEST_F(TransformerTest, NodePartNameDeclRef) {
 
   StringRef Ref = "ref";
   testRule(makeRule(declRefExpr(to(functionDecl(hasName("bad")))).bind(Ref),
-                    changeTo(name(Ref), cat("good"))),
+                    changeTo(name(std::string(Ref)), cat("good"))),
            Input, Expected);
 }
 
@@ -279,7 +279,7 @@ TEST_F(TransformerTest, NodePartNameDeclRefFailure) {
 
   StringRef Ref = "ref";
   Transformer T(makeRule(declRefExpr(to(functionDecl())).bind(Ref),
-                         changeTo(name(Ref), cat("good"))),
+                         changeTo(name(std::string(Ref)), cat("good"))),
                 consumer());
   T.registerMatchers(&MatchFinder);
   EXPECT_FALSE(rewrite(Input));
@@ -288,7 +288,7 @@ TEST_F(TransformerTest, NodePartNameDeclRefFailure) {
 TEST_F(TransformerTest, NodePartMember) {
   StringRef E = "expr";
   RewriteRule Rule = makeRule(memberExpr(member(hasName("bad"))).bind(E),
-                              changeTo(member(E), cat("good")));
+                              changeTo(member(std::string(E)), cat("good")));
 
   std::string Input = R"cc(
     struct S {
@@ -341,7 +341,8 @@ TEST_F(TransformerTest, NodePartMemberQualified) {
   )cc";
 
   StringRef E = "expr";
-  testRule(makeRule(memberExpr().bind(E), changeTo(member(E), cat("good"))),
+  testRule(makeRule(memberExpr().bind(E),
+                    changeTo(member(std::string(E)), cat("good"))),
            Input, Expected);
 }
 
@@ -373,7 +374,7 @@ TEST_F(TransformerTest, NodePartMemberMultiToken) {
 
   StringRef MemExpr = "member";
   testRule(makeRule(memberExpr().bind(MemExpr),
-                    changeTo(member(MemExpr), cat("good"))),
+                    changeTo(member(std::string(MemExpr)), cat("good"))),
            Input, Expected);
 }
 
@@ -391,9 +392,10 @@ TEST_F(TransformerTest, InsertBeforeEdit) {
   )cc";
 
   StringRef Ret = "return";
-  testRule(makeRule(returnStmt().bind(Ret),
-                    insertBefore(statement(Ret), cat("int y = 3;"))),
-           Input, Expected);
+  testRule(
+      makeRule(returnStmt().bind(Ret),
+               insertBefore(statement(std::string(Ret)), cat("int y = 3;"))),
+      Input, Expected);
 }
 
 TEST_F(TransformerTest, InsertAfterEdit) {
@@ -412,9 +414,10 @@ TEST_F(TransformerTest, InsertAfterEdit) {
   )cc";
 
   StringRef Decl = "decl";
-  testRule(makeRule(declStmt().bind(Decl),
-                    insertAfter(statement(Decl), cat("int y = 3;"))),
-           Input, Expected);
+  testRule(
+      makeRule(declStmt().bind(Decl),
+               insertAfter(statement(std::string(Decl)), cat("int y = 3;"))),
+      Input, Expected);
 }
 
 TEST_F(TransformerTest, RemoveEdit) {
@@ -431,8 +434,32 @@ TEST_F(TransformerTest, RemoveEdit) {
   )cc";
 
   StringRef Decl = "decl";
-  testRule(makeRule(declStmt().bind(Decl), remove(statement(Decl))), Input,
-           Expected);
+  testRule(
+      makeRule(declStmt().bind(Decl), remove(statement(std::string(Decl)))),
+      Input, Expected);
+}
+
+TEST_F(TransformerTest, WithMetadata) {
+  std::string Input = R"cc(
+    int f() {
+      int x = 5;
+      return 7;
+    }
+  )cc";
+
+  Transformer T(
+      makeRule(declStmt().bind("decl"),
+               withMetadata(remove(statement(std::string("decl"))), 17)),
+      consumer());
+  T.registerMatchers(&MatchFinder);
+  auto Factory = newFrontendActionFactory(&MatchFinder);
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      Factory->create(), Input, std::vector<std::string>(), "input.cc",
+      "clang-tool", std::make_shared<PCHContainerOperations>(), {}));
+  ASSERT_EQ(Changes.size(), 1u);
+  const llvm::Any &Metadata = Changes[0].getMetadata();
+  ASSERT_TRUE(llvm::any_isa<int>(Metadata));
+  EXPECT_THAT(llvm::any_cast<int>(Metadata), 17);
 }
 
 TEST_F(TransformerTest, MultiChange) {
@@ -452,12 +479,13 @@ TEST_F(TransformerTest, MultiChange) {
   )";
 
   StringRef C = "C", T = "T", E = "E";
-  testRule(makeRule(ifStmt(hasCondition(expr().bind(C)),
-                           hasThen(stmt().bind(T)), hasElse(stmt().bind(E))),
-                    {changeTo(node(C), cat("true")),
-                     changeTo(statement(T), cat("{ /* then */ }")),
-                     changeTo(statement(E), cat("{ /* else */ }"))}),
-           Input, Expected);
+  testRule(
+      makeRule(ifStmt(hasCondition(expr().bind(C)), hasThen(stmt().bind(T)),
+                      hasElse(stmt().bind(E))),
+               {changeTo(node(std::string(C)), cat("true")),
+                changeTo(statement(std::string(T)), cat("{ /* then */ }")),
+                changeTo(statement(std::string(E)), cat("{ /* else */ }"))}),
+      Input, Expected);
 }
 
 TEST_F(TransformerTest, OrderedRuleUnrelated) {
@@ -467,7 +495,7 @@ TEST_F(TransformerTest, OrderedRuleUnrelated) {
                                     hasName("proto::ProtoCommandLineFlag"))))
                                .bind(Flag)),
                         unless(callee(cxxMethodDecl(hasName("GetProto"))))),
-      changeTo(node(Flag), cat("PROTO")));
+      changeTo(node(std::string(Flag)), cat("PROTO")));
 
   std::string Input = R"cc(
     proto::ProtoCommandLineFlag flag;
@@ -566,6 +594,59 @@ TEST_F(TransformerTest, OrderedRuleMultipleKinds) {
   testRule(Rule, Input, Expected);
 }
 
+// Verifies that a rule with a top-level matcher for an implicit node (like
+// `implicitCastExpr`) does not change the code, when the AST traversal skips
+// implicit nodes. In this test, only the rule with the explicit-node matcher
+// will fire.
+TEST_F(TransformerTest, OrderedRuleImplicitIgnored) {
+  std::string Input = R"cc(
+    void f1();
+    int f2();
+    void call_f1() { f1(); }
+    float call_f2() { return f2(); }
+  )cc";
+  std::string Expected = R"cc(
+    void f1();
+    int f2();
+    void call_f1() { REPLACE_F1; }
+    float call_f2() { return f2(); }
+  )cc";
+
+  RewriteRule ReplaceF1 =
+      makeRule(callExpr(callee(functionDecl(hasName("f1")))),
+               changeTo(cat("REPLACE_F1")));
+  RewriteRule ReplaceF2 =
+      makeRule(implicitCastExpr(hasSourceExpression(callExpr())),
+               changeTo(cat("REPLACE_F2")));
+  testRule(applyFirst({ReplaceF1, ReplaceF2}), Input, Expected);
+}
+
+// Verifies that explicitly setting the traversal kind fixes the problem in the
+// previous test.
+TEST_F(TransformerTest, OrderedRuleImplicitMatched) {
+  std::string Input = R"cc(
+    void f1();
+    int f2();
+    void call_f1() { f1(); }
+    float call_f2() { return f2(); }
+  )cc";
+  std::string Expected = R"cc(
+    void f1();
+    int f2();
+    void call_f1() { REPLACE_F1; }
+    float call_f2() { return REPLACE_F2; }
+  )cc";
+
+  RewriteRule ReplaceF1 = makeRule(
+      traverse(clang::TK_AsIs, callExpr(callee(functionDecl(hasName("f1"))))),
+      changeTo(cat("REPLACE_F1")));
+  RewriteRule ReplaceF2 =
+      makeRule(traverse(clang::TK_AsIs,
+                        implicitCastExpr(hasSourceExpression(callExpr()))),
+               changeTo(cat("REPLACE_F2")));
+  testRule(applyFirst({ReplaceF1, ReplaceF2}), Input, Expected);
+}
+
 //
 // Negative tests (where we expect no transformation to occur).
 //
@@ -582,9 +663,10 @@ TEST_F(TransformerTest, TextGeneratorFailure) {
     }
     std::string toString() const override { return "AlwaysFail"; }
   };
-  Transformer T(makeRule(binaryOperator().bind(O),
-                         changeTo(node(O), std::make_shared<AlwaysFail>())),
-                consumer());
+  Transformer T(
+      makeRule(binaryOperator().bind(O),
+               changeTo(node(std::string(O)), std::make_shared<AlwaysFail>())),
+      consumer());
   T.registerMatchers(&MatchFinder);
   EXPECT_FALSE(rewrite(Input));
   EXPECT_THAT(Changes, IsEmpty());
@@ -597,8 +679,8 @@ TEST_F(TransformerTest, OverlappingEditsInRule) {
   // Try to change the whole binary-operator expression AND one its operands:
   StringRef O = "O", L = "L";
   Transformer T(makeRule(binaryOperator(hasLHS(expr().bind(L))).bind(O),
-                         {changeTo(node(O), cat("DELETE_OP")),
-                          changeTo(node(L), cat("DELETE_LHS"))}),
+                         {changeTo(node(std::string(O)), cat("DELETE_OP")),
+                          changeTo(node(std::string(L)), cat("DELETE_LHS"))}),
                 consumer());
   T.registerMatchers(&MatchFinder);
   EXPECT_FALSE(rewrite(Input));
@@ -611,7 +693,8 @@ TEST_F(TransformerTest, OverlappingEditsMultipleMatches) {
   std::string Input = "int conflictOneRule() { return -7; }";
   // Try to change the whole binary-operator expression AND one its operands:
   StringRef E = "E";
-  Transformer T(makeRule(expr().bind(E), changeTo(node(E), cat("DELETE_EXPR"))),
+  Transformer T(makeRule(expr().bind(E),
+                         changeTo(node(std::string(E)), cat("DELETE_EXPR"))),
                 consumer());
   T.registerMatchers(&MatchFinder);
   // The rewrite process fails because the changes conflict with each other...
@@ -649,7 +732,7 @@ TEST_F(TransformerTest, SimpleMacro) {
 
   StringRef zero = "zero";
   RewriteRule R = makeRule(integerLiteral(equals(0)).bind(zero),
-                           changeTo(node(zero), cat("999")));
+                           changeTo(node(std::string(zero)), cat("999")));
   testRule(R, Input, Expected);
 }
 
@@ -746,7 +829,7 @@ TEST_F(TransformerTest, MatchSpansMacroTextButChangeDoesNot) {
 
   StringRef E = "expr";
   testRule(makeRule(binaryOperator(hasLHS(expr().bind(E))),
-                    changeTo(node(E), cat("LIT"))),
+                    changeTo(node(std::string(E)), cat("LIT"))),
            Input, Expected);
 }
 
@@ -764,7 +847,7 @@ TEST_F(TransformerTest, MatchSpansMacroTextButChangeDoesNotAnchoredInMacro) {
 
   StringRef E = "expr";
   testRule(makeRule(binaryOperator(hasRHS(expr().bind(E))),
-                    changeTo(node(E), cat("LIT"))),
+                    changeTo(node(std::string(E)), cat("LIT"))),
            Input, Expected);
 }
 
@@ -779,7 +862,7 @@ TEST_F(TransformerTest, NoPartialRewriteOMacroExpansion) {
 
   StringRef zero = "zero";
   RewriteRule R = makeRule(integerLiteral(equals(0)).bind(zero),
-                           changeTo(node(zero), cat("0")));
+                           changeTo(node(std::string(zero)), cat("0")));
   testRule(R, Input, Input);
 }
 
@@ -810,4 +893,46 @@ TEST(TransformerDeathTest, OrderedRuleTypes) {
                "Matcher must be.*node matcher");
 }
 #endif
+
+// Edits are able to span multiple files; in this case, a header and an
+// implementation file.
+TEST_F(TransformerTest, MultipleFiles) {
+  std::string Header = R"cc(void RemoveThisFunction();)cc";
+  std::string Source = R"cc(#include "input.h"
+                            void RemoveThisFunction();)cc";
+  Transformer T(
+      makeRule(functionDecl(hasName("RemoveThisFunction")), changeTo(cat(""))),
+      consumer());
+  T.registerMatchers(&MatchFinder);
+  auto Factory = newFrontendActionFactory(&MatchFinder);
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      Factory->create(), Source, std::vector<std::string>(), "input.cc",
+      "clang-tool", std::make_shared<PCHContainerOperations>(),
+      {{"input.h", Header}}));
+
+  std::sort(Changes.begin(), Changes.end(),
+            [](const AtomicChange &L, const AtomicChange &R) {
+              return L.getFilePath() < R.getFilePath();
+            });
+
+  ASSERT_EQ(Changes[0].getFilePath(), "./input.h");
+  EXPECT_THAT(Changes[0].getInsertedHeaders(), IsEmpty());
+  EXPECT_THAT(Changes[0].getRemovedHeaders(), IsEmpty());
+  llvm::Expected<std::string> UpdatedCode =
+      clang::tooling::applyAllReplacements(Header,
+                                           Changes[0].getReplacements());
+  ASSERT_TRUE(static_cast<bool>(UpdatedCode))
+      << "Could not update code: " << llvm::toString(UpdatedCode.takeError());
+  EXPECT_EQ(format(*UpdatedCode), format(R"cc(;)cc"));
+
+  ASSERT_EQ(Changes[1].getFilePath(), "input.cc");
+  EXPECT_THAT(Changes[1].getInsertedHeaders(), IsEmpty());
+  EXPECT_THAT(Changes[1].getRemovedHeaders(), IsEmpty());
+  UpdatedCode = clang::tooling::applyAllReplacements(
+      Source, Changes[1].getReplacements());
+  ASSERT_TRUE(static_cast<bool>(UpdatedCode))
+      << "Could not update code: " << llvm::toString(UpdatedCode.takeError());
+  EXPECT_EQ(format(*UpdatedCode), format(R"cc(#include "input.h"
+                        ;)cc"));
+}
 } // namespace

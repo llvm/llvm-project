@@ -1,4 +1,4 @@
-//===-- DWARFDebugArangeSet.cpp ---------------------------------*- C++ -*-===//
+//===-- DWARFDebugArangeSet.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -63,7 +63,8 @@ llvm::Error DWARFDebugArangeSet::extract(const DWARFDataExtractor &data,
   // 1 - the version looks good
   // 2 - the address byte size looks plausible
   // 3 - the length seems to make sense
-  // size looks plausible
+  // 4 - size looks plausible
+  // 5 - the arange tuples do not contain a segment field
   if (m_header.version < 2 || m_header.version > 5)
     return llvm::make_error<llvm::object::GenericBinaryError>(
         "Invalid arange header version");
@@ -80,6 +81,10 @@ llvm::Error DWARFDebugArangeSet::extract(const DWARFDataExtractor &data,
                         1))
     return llvm::make_error<llvm::object::GenericBinaryError>(
         "Invalid arange header length");
+
+  if (m_header.seg_size)
+    return llvm::make_error<llvm::object::GenericBinaryError>(
+        "segmented arange entries are not supported");
 
   // The first tuple following the header in each set begins at an offset
   // that is a multiple of the size of a single tuple (that is, twice the

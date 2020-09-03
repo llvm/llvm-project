@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CommandObjectWatchpoint_h_
-#define liblldb_CommandObjectWatchpoint_h_
+#ifndef LLDB_SOURCE_COMMANDS_COMMANDOBJECTWATCHPOINT_H
+#define LLDB_SOURCE_COMMANDS_COMMANDOBJECTWATCHPOINT_H
 
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
@@ -28,4 +28,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_CommandObjectWatchpoint_h_
+#endif // LLDB_SOURCE_COMMANDS_COMMANDOBJECTWATCHPOINT_H

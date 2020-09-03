@@ -241,7 +241,9 @@ private:
   /// Swift native NSError isa.
   llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
 
-  DISALLOW_COPY_AND_ASSIGN(SwiftLanguageRuntimeImpl);
+  SwiftLanguageRuntimeImpl(const SwiftLanguageRuntimeImpl &) = delete;
+  const SwiftLanguageRuntimeImpl &
+  operator=(const SwiftLanguageRuntimeImpl &) = delete;
 };
 
 } // namespace lldb_private

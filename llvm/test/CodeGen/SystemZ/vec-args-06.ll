@@ -1,6 +1,8 @@
 ; Test multiple return values (LLVM ABI extension)
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -mattr=soft-float \
+; RUN:   | FileCheck %s --check-prefix=SOFT-FLOAT
 
 ; Up to eight vector return values fit into VRs.
 define { <2 x double>, <2 x double>, <2 x double>, <2 x double>,
@@ -23,6 +25,17 @@ define { <2 x double>, <2 x double>, <2 x double>, <2 x double>,
 ; CHECK: larl [[TMP:%r[0-5]]], .LCPI
 ; CHECK: vl %v31, 0([[TMP]])
 ; CHECK: br %r14
+
+; SOFT-FLOAT-LABEL: f1:
+; SOFT-FLOAT-NOT: %{{[fv]}}
+; SOFT-FLOAT: llihf
+; SOFT-FLOAT-NEXT: oilf
+; SOFT-FLOAT-NEXT: stg
+; SOFT-FLOAT-NEXT: llihh
+; SOFT-FLOAT-NEXT: stg
+; SOFT-FLOAT-NEXT: llihf
+; SOFT-FLOAT-NOT: %{{[fv]}}
+; SOFT-FLOAT: br      %r14
   ret { <2 x double>, <2 x double>, <2 x double>, <2 x double>,
         <2 x double>, <2 x double>, <2 x double>, <2 x double> }
       { <2 x double> <double 1.0, double 1.1>,
@@ -68,6 +81,17 @@ define { <2 x double>, <2 x double>, <2 x double>, <2 x double>,
 ; CHECK: vl [[VTMP:%v[0-9]+]], 0([[TMP]])
 ; CHECK: vst [[VTMP]], 0(%r2)
 ; CHECK: br %r14
+
+; SOFT-FLOAT-LABEL: f2:
+; SOFT-FLOAT-NOT: %{{[fv]}}
+; SOFT-FLOAT: llihf
+; SOFT-FLOAT-NEXT: oilf
+; SOFT-FLOAT-NEXT: stg
+; SOFT-FLOAT-NEXT: llihh
+; SOFT-FLOAT-NEXT: stg
+; SOFT-FLOAT-NEXT: llihf
+; SOFT-FLOAT-NOT: %{{[fv]}}
+; SOFT-FLOAT: br      %r14
   ret { <2 x double>, <2 x double>, <2 x double>, <2 x double>,
         <2 x double>, <2 x double>, <2 x double>, <2 x double>,
         <2 x double> }

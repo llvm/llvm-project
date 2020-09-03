@@ -13,8 +13,19 @@ define i32 @main(i32 %argc, i8** %argv) {
   ret i32 0
 }
 
+define i32 @dead_aligned_alloc(i32 %size, i32 %alignment, i8 %value) {
+; CHECK-LABEL: @dead_aligned_alloc(
+; CHECK-NEXT:    ret i32 0
+;
+  %aligned_allocation = tail call i8* @aligned_alloc(i32 %alignment, i32 %size)
+  store i8 %value, i8* %aligned_allocation
+  tail call void @free(i8* %aligned_allocation)
+  ret i32 0
+}
+
 declare noalias i8* @calloc(i32, i32) nounwind
 declare noalias i8* @malloc(i32)
+declare noalias i8* @aligned_alloc(i32, i32)
 declare void @free(i8*)
 
 define i1 @foo() {
@@ -129,6 +140,31 @@ if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
+; Same optimization with even a builtin 'operator delete' would be
+; incorrect in general.
+; 'if (p) delete p;' cannot result in a call to 'operator delete(0)'.
+define void @test6a(i8* %foo) minsize {
+; CHECK-LABEL: @test6a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[FOO:%.*]], null
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @_ZdlPv(i8* [[FOO]])
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret void
+entry:
+  %tobool = icmp eq i8* %foo, null
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  tail call void @_ZdlPv(i8* %foo) builtin
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  ret void
+}
+
 declare i8* @_ZnwmRKSt9nothrow_t(i64, i8*) nobuiltin
 declare void @_ZdlPvRKSt9nothrow_t(i8*, i8*) nobuiltin
 declare i32 @__gxx_personality_v0(...)
@@ -231,7 +267,16 @@ declare void @_ZdaPvSt11align_val_t(i8*, i64) nobuiltin
 declare void @_ZdlPvSt11align_val_tRKSt9nothrow_t(i8*, i64, i8*) nobuiltin
 ; delete[](void*, align_val_t, nothrow)
 declare void @_ZdaPvSt11align_val_tRKSt9nothrow_t(i8*, i64, i8*) nobuiltin
+; delete(void*, unsigned int, align_val_t)
+declare void @_ZdlPvjSt11align_val_t(i8*, i32, i32) nobuiltin
+; delete(void*, unsigned long, align_val_t)
+declare void @_ZdlPvmSt11align_val_t(i8*, i64, i64) nobuiltin
+; delete[](void*, unsigned int, align_val_t)
+declare void @_ZdaPvjSt11align_val_t(i8*, i32, i32) nobuiltin
+; delete[](void*, unsigned long, align_val_t)
+declare void @_ZdaPvmSt11align_val_t(i8*, i64, i64) nobuiltin
 
+declare void @llvm.assume(i1)
 
 define void @test8() {
 ; CHECK-LABEL: @test8(
@@ -266,6 +311,20 @@ define void @test8() {
   call void @_ZdlPvSt11align_val_tRKSt9nothrow_t(i8* %nwjat, i64 8, i8* %nt) builtin
   %najat = call i8* @_ZnajSt11align_val_tRKSt9nothrow_t(i32 32, i32 8, i8* %nt) builtin
   call void @_ZdaPvSt11align_val_tRKSt9nothrow_t(i8* %najat, i64 8, i8* %nt) builtin
+  %nwa2 = call i8* @_ZnwmSt11align_val_t(i64 32, i64 8) builtin
+  call void @_ZdlPvmSt11align_val_t(i8* %nwa2, i64 32, i64 8) builtin
+  %nwja2 = call i8* @_ZnwjSt11align_val_t(i32 32, i32 8) builtin
+  call void @_ZdlPvjSt11align_val_t(i8* %nwa2, i32 32, i32 8) builtin
+  %naa2 = call i8* @_ZnamSt11align_val_t(i64 32, i64 8) builtin
+  call void @_ZdaPvmSt11align_val_t(i8* %naa2, i64 32, i64 8) builtin
+  %naja2 = call i8* @_ZnajSt11align_val_t(i32 32, i32 8) builtin
+  call void @_ZdaPvjSt11align_val_t(i8* %naja2, i32 32, i32 8) builtin
+
+  ; Check that the alignment assume does not prevent the removal.
+  %nwa3 = call i8* @_ZnwmSt11align_val_t(i64 32, i64 16) builtin
+  call void @llvm.assume(i1 true) [ "align"(i8* %nwa3, i64 16) ]
+  call void @_ZdlPvmSt11align_val_t(i8* %nwa3, i64 32, i64 16) builtin
+
   ret void
 }
 
@@ -292,7 +351,7 @@ define void @test10()  {
 
 define void @test11() {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable(8) i8* @_Znwm(i64 8) #6
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable(8) i8* @_Znwm(i64 8) #7
 ; CHECK-NEXT:    call void @_ZdlPv(i8* nonnull [[CALL]])
 ; CHECK-NEXT:    ret void
 ;

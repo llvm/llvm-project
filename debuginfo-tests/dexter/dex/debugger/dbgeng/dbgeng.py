@@ -32,13 +32,13 @@ class DbgEng(DebuggerBase):
     def _custom_init(self):
         try:
           res = setup.setup_everything(self.context.options.executable)
-          self.client, self.hProcess = res
+          self.client = res
           self.running = True
         except Exception as e:
           raise Exception('Failed to start debuggee: {}'.format(e))
 
     def _custom_exit(self):
-        setup.cleanup(self.client, self.hProcess)
+        setup.cleanup(self.client)
 
     def _load_interface(self):
         arch = platform.architecture()[0]
@@ -76,11 +76,21 @@ class DbgEng(DebuggerBase):
             x.RemoveFlags(breakpoint.BreakpointFlags.DEBUG_BREAKPOINT_ENABLED)
             self.client.Control.RemoveBreakpoint(x)
 
-    def add_breakpoint(self, file_, line):
-        # This is something to implement in the future -- as it stands, Dexter
-        # doesn't test for such things as "I can set a breakpoint on this line".
-        # This is only called AFAICT right now to ensure we break on every step.
+    def _add_breakpoint(self, file_, line):
+        # Breakpoint setting/deleting is not supported by dbgeng at this moment
+        # but is something that should be considered in the future.
+        # TODO: this method is called in the DefaultController but has no effect.
         pass
+
+    def _add_conditional_breakpoint(self, file_, line, condition):
+        # breakpoint setting/deleting is not supported by dbgeng at this moment
+        # but is something that should be considered in the future.
+        raise NotImplementedError('add_conditional_breakpoint is not yet implemented by dbgeng')
+
+    def _delete_conditional_breakpoint(self, file_, line, condition):
+        # breakpoint setting/deleting is not supported by dbgeng at this moment
+        # but is something that should be considered in the future.
+        raise NotImplementedError('delete_conditional_breakpoint is not yet implemented by dbgeng')
 
     def launch(self):
         # We are, by this point, already launched.
@@ -96,7 +106,7 @@ class DbgEng(DebuggerBase):
         # We never go -- we always single step.
         pass
 
-    def get_step_info(self):
+    def _get_step_info(self, watches, step_index):
         frames = self.step_info
         state_frames = []
 
@@ -118,12 +128,12 @@ class DbgEng(DebuggerBase):
                                    watches={})
           for expr in map(
               lambda watch, idx=i: self.evaluate_expression(watch, idx),
-              self.watches):
+              watches):
               state_frame.watches[expr.expression] = expr
           state_frames.append(state_frame)
 
         return StepIR(
-            step_index=self.step_index, frames=dex_frames,
+            step_index=step_index, frames=dex_frames,
             stop_reason=StopReason.STEP,
             program_state=ProgramState(state_frames))
 

@@ -9,7 +9,7 @@
 
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: _start:
+// DISASM-NEXT: <_start>:
 // DISASM-NEXT:   movq $-8, %rax
 // DISASM-NEXT:   movq $-8, %r15
 // DISASM-NEXT:   leaq -8(%rax), %rax

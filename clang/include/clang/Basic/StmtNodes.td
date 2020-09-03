@@ -69,7 +69,9 @@ def UnaryOperator : StmtNode<Expr>;
 def OffsetOfExpr : StmtNode<Expr>;
 def UnaryExprOrTypeTraitExpr : StmtNode<Expr>;
 def ArraySubscriptExpr : StmtNode<Expr>;
+def MatrixSubscriptExpr : StmtNode<Expr>;
 def OMPArraySectionExpr : StmtNode<Expr>;
+def OMPIteratorExpr : StmtNode<Expr>;
 def CallExpr : StmtNode<Expr>;
 def MemberExpr : StmtNode<Expr>;
 def CastExpr : StmtNode<Expr, 1>;
@@ -81,6 +83,7 @@ def BinaryConditionalOperator : StmtNode<AbstractConditionalOperator>;
 def ImplicitCastExpr : StmtNode<CastExpr>;
 def ExplicitCastExpr : StmtNode<CastExpr, 1>;
 def CStyleCastExpr : StmtNode<ExplicitCastExpr>;
+def OMPArrayShapingExpr : StmtNode<Expr>;
 def CompoundLiteralExpr : StmtNode<Expr>;
 def ExtVectorElementExpr : StmtNode<Expr>;
 def InitListExpr : StmtNode<Expr>;
@@ -118,6 +121,7 @@ def CXXStaticCastExpr : StmtNode<CXXNamedCastExpr>;
 def CXXDynamicCastExpr : StmtNode<CXXNamedCastExpr>;
 def CXXReinterpretCastExpr : StmtNode<CXXNamedCastExpr>;
 def CXXConstCastExpr : StmtNode<CXXNamedCastExpr>;
+def CXXAddrspaceCastExpr : StmtNode<CXXNamedCastExpr>;
 def CXXFunctionalCastExpr : StmtNode<ExplicitCastExpr>;
 def CXXTypeidExpr : StmtNode<Expr>;
 def UserDefinedLiteral : StmtNode<CallExpr>;
@@ -162,8 +166,9 @@ def CoawaitExpr : StmtNode<CoroutineSuspendExpr>;
 def DependentCoawaitExpr : StmtNode<Expr>;
 def CoyieldExpr : StmtNode<CoroutineSuspendExpr>;
 
-// C++2a Concepts expressions
+// C++20 Concepts expressions
 def ConceptSpecializationExpr : StmtNode<Expr>;
+def RequiresExpr : StmtNode<Expr>;
 
 // Obj-C Expressions.
 def ObjCStringLiteral : StmtNode<Expr>;
@@ -194,6 +199,7 @@ def ConvertVectorExpr : StmtNode<Expr>;
 def BlockExpr : StmtNode<Expr>;
 def OpaqueValueExpr : StmtNode<Expr>;
 def TypoExpr : StmtNode<Expr>;
+def RecoveryExpr : StmtNode<Expr>;
 def BuiltinBitCastExpr : StmtNode<ExplicitCastExpr>;
 
 // Microsoft Extensions.
@@ -231,6 +237,8 @@ def OMPBarrierDirective : StmtNode<OMPExecutableDirective>;
 def OMPTaskwaitDirective : StmtNode<OMPExecutableDirective>;
 def OMPTaskgroupDirective : StmtNode<OMPExecutableDirective>;
 def OMPFlushDirective : StmtNode<OMPExecutableDirective>;
+def OMPDepobjDirective : StmtNode<OMPExecutableDirective>;
+def OMPScanDirective : StmtNode<OMPExecutableDirective>;
 def OMPOrderedDirective : StmtNode<OMPExecutableDirective>;
 def OMPAtomicDirective : StmtNode<OMPExecutableDirective>;
 def OMPTargetDirective : StmtNode<OMPExecutableDirective>;

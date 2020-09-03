@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadMemory_h_
-#define liblldb_ThreadMemory_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_THREADMEMORY_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_THREADMEMORY_H
 
 #include <string>
 
@@ -100,7 +100,8 @@ protected:
   lldb::addr_t m_register_data_addr;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ThreadMemory);
+  ThreadMemory(const ThreadMemory &) = delete;
+  const ThreadMemory &operator=(const ThreadMemory &) = delete;
 };
 
-#endif // liblldb_ThreadMemory_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_THREADMEMORY_H

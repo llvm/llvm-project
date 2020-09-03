@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03
+
 #include <cstddef>
 #include <type_traits>
 
@@ -40,6 +42,12 @@ int main(int, char**)
                   std::alignment_of<void*>::value,
                   "std::alignment_of<std::max_align_t>::value >= "
                   "std::alignment_of<void*>::value");
+
+#ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
+    static_assert(std::alignment_of<std::max_align_t>::value <=
+                  __STDCPP_DEFAULT_NEW_ALIGNMENT__,
+                  "max_align_t alignment is no larger than new alignment");
+#endif
 
   return 0;
 }

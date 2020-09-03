@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // Test the number of regions
@@ -16,7 +16,7 @@ func @correct_number_of_regions() {
 // -----
 
 func @missing_regions() {
-    // expected-error@+1 {{op has incorrect number of regions: expected 2 but found 1}}
+    // expected-error@+1 {{expected 2 regions}}
     "test.two_region_op"()(
       {"work"() : () -> ()}
     ) : () -> ()
@@ -26,7 +26,7 @@ func @missing_regions() {
 // -----
 
 func @extra_regions() {
-    // expected-error@+1 {{op has incorrect number of regions: expected 2 but found 3}}
+    // expected-error@+1 {{expected 2 regions}}
     "test.two_region_op"()(
       {"work"() : () -> ()},
       {"work"() : () -> ()},

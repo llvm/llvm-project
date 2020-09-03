@@ -32,6 +32,7 @@ void __tsan_malloc(void *thr, void *pc, void *p, unsigned long sz);
 void __tsan_free(void *p, unsigned long sz);
 void __tsan_acquire(void *thr, void *addr);
 void __tsan_release(void *thr, void *addr);
+void __tsan_release_acquire(void *thr, void *addr);
 void __tsan_release_merge(void *thr, void *addr);
 
 void *current_proc;
@@ -77,6 +78,7 @@ int main(void) {
   __tsan_func_enter(thr0, (char*)&main + 1);
   __tsan_malloc(thr0, (char*)&barfoo + 1, buf, 10);
   __tsan_release(thr0, buf);
+  __tsan_release_acquire(thr0, buf);
   __tsan_release_merge(thr0, buf);
   void *thr1 = 0;
   __tsan_go_start(thr0, &thr1, (char*)&barfoo + 1);

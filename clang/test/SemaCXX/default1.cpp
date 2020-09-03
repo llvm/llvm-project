@@ -31,7 +31,7 @@ struct Y { // expected-note 2{{candidate constructor (the implicit copy construc
 // expected-note@-2 2 {{candidate constructor (the implicit move constructor) not viable}}
 #endif
 
-  explicit Y(int);
+  explicit Y(int); // expected-note 2{{explicit constructor is not a candidate}}
 };
 
 void k(Y y = 17); // expected-error{{no viable conversion}} \

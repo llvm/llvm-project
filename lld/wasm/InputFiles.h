@@ -91,7 +91,7 @@ class ObjFile : public InputFile {
 public:
   explicit ObjFile(MemoryBufferRef m, StringRef archiveName)
       : InputFile(ObjectKind, m) {
-    this->archiveName = archiveName;
+    this->archiveName = std::string(archiveName);
   }
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
 
@@ -103,9 +103,9 @@ public:
   void dumpInfo() const;
 
   uint32_t calcNewIndex(const WasmRelocation &reloc) const;
-  uint32_t calcNewValue(const WasmRelocation &reloc) const;
-  uint32_t calcNewAddend(const WasmRelocation &reloc) const;
-  uint32_t calcExpectedValue(const WasmRelocation &reloc) const;
+  uint64_t calcNewValue(const WasmRelocation &reloc) const;
+  uint64_t calcNewAddend(const WasmRelocation &reloc) const;
+  uint64_t calcExpectedValue(const WasmRelocation &reloc) const;
   Symbol *getSymbol(const WasmRelocation &reloc) const {
     return symbols[reloc.Index];
   };
@@ -118,6 +118,7 @@ public:
   std::vector<bool> typeIsUsed;
   // Maps function indices to table indices
   std::vector<uint32_t> tableEntries;
+  std::vector<uint32_t> tableEntriesRel;
   std::vector<bool> keptComdats;
   std::vector<InputSegment *> segments;
   std::vector<InputFunction *> functions;
@@ -154,13 +155,21 @@ class BitcodeFile : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef m, StringRef archiveName)
       : InputFile(BitcodeKind, m) {
-    this->archiveName = archiveName;
+    this->archiveName = std::string(archiveName);
   }
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
 
   void parse();
   std::unique_ptr<llvm::lto::InputFile> obj;
+
+  // Set to true once LTO is complete in order prevent further bitcode objects
+  // being added.
+  static bool doneLTO;
 };
+
+inline bool isBitcode(MemoryBufferRef mb) {
+  return identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode;
+}
 
 // Will report a fatal() error if the input buffer is not a valid bitcode
 // or wasm object file.

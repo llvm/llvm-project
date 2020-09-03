@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_LineEntry_h_
-#define liblldb_LineEntry_h_
+#ifndef LLDB_SYMBOL_LINEENTRY_H
+#define LLDB_SYMBOL_LINEENTRY_H
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Utility/FileSpec.h"
@@ -118,7 +118,7 @@ struct LineEntry {
   /// range.
   ///
   /// If the initial LineEntry this method is called on is a line #0, only the
-  /// range of contiuous LineEntries with line #0 will be included in the
+  /// range of continuous LineEntries with line #0 will be included in the
   /// complete range.
   ///
   /// @param[in] include_inlined_functions
@@ -173,4 +173,4 @@ bool operator<(const LineEntry &lhs, const LineEntry &rhs);
 
 } // namespace lldb_private
 
-#endif // liblldb_LineEntry_h_
+#endif // LLDB_SYMBOL_LINEENTRY_H

@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCTARGETOPTIONS_H
 #define LLVM_MC_MCTARGETOPTIONS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include <string>
 #include <vector>
 
@@ -53,10 +54,15 @@ public:
   /// Preserve Comments in Assembly.
   bool PreserveAsmComments : 1;
 
+  bool Dwarf64 : 1;
   int DwarfVersion = 0;
 
   std::string ABIName;
+  std::string AssemblyLanguage;
   std::string SplitDwarfFile;
+
+  const char *Argv0 = nullptr;
+  ArrayRef<const char *> CommandLineArgs;
 
   /// Additional paths to search for `.include` directives when using the
   /// integrated assembler.
@@ -68,6 +74,11 @@ public:
   /// textual name of the ABI that we want the backend to use, e.g. o32, or
   /// aapcs-linux.
   StringRef getABIName() const;
+
+  /// getAssemblyLanguage - If this returns a non-empty string this represents
+  /// the textual name of the assembly language that we will use for this
+  /// target, e.g. masm.
+  StringRef getAssemblyLanguage() const;
 };
 
 } // end namespace llvm

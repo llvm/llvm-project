@@ -12,7 +12,7 @@ clzero
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      100   0.33                  U     clzero
+# CHECK-NEXT:  1      5     0.50                  U     clzero
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SBDivider
@@ -26,8 +26,8 @@ clzero
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
-# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     clzero
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   clzero

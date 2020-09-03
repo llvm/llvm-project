@@ -9,7 +9,7 @@
 define float @exp_f32(float %x) #0 {
 ; GNU-LABEL: exp_f32:
 ; GNU:       # %bb.0:
-; GNU-NEXT:    jmp __expf_finite # TAILCALL
+; GNU-NEXT:    jmp expf # TAILCALL
 ;
 ; WIN-LABEL: exp_f32:
 ; WIN:       # %bb.0:
@@ -25,7 +25,7 @@ define float @exp_f32(float %x) #0 {
 define double @exp_f64(double %x) #0 {
 ; GNU-LABEL: exp_f64:
 ; GNU:       # %bb.0:
-; GNU-NEXT:    jmp __exp_finite # TAILCALL
+; GNU-NEXT:    jmp exp # TAILCALL
 ;
 ; WIN-LABEL: exp_f64:
 ; WIN:       # %bb.0:
@@ -44,7 +44,7 @@ define x86_fp80 @exp_f80(x86_fp80 %x) #0 {
 ; GNU-NEXT:    subq $24, %rsp
 ; GNU-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GNU-NEXT:    fstpt (%rsp)
-; GNU-NEXT:    callq __expl_finite
+; GNU-NEXT:    callq expl
 ; GNU-NEXT:    addq $24, %rsp
 ; GNU-NEXT:    retq
 ;
@@ -80,7 +80,7 @@ define x86_fp80 @exp_f80(x86_fp80 %x) #0 {
 define float @exp2_f32(float %x) #0 {
 ; GNU-LABEL: exp2_f32:
 ; GNU:       # %bb.0:
-; GNU-NEXT:    jmp __exp2f_finite # TAILCALL
+; GNU-NEXT:    jmp exp2f # TAILCALL
 ;
 ; WIN-LABEL: exp2_f32:
 ; WIN:       # %bb.0:
@@ -96,7 +96,7 @@ define float @exp2_f32(float %x) #0 {
 define double @exp2_f64(double %x) #0 {
 ; GNU-LABEL: exp2_f64:
 ; GNU:       # %bb.0:
-; GNU-NEXT:    jmp __exp2_finite # TAILCALL
+; GNU-NEXT:    jmp exp2 # TAILCALL
 ;
 ; WIN-LABEL: exp2_f64:
 ; WIN:       # %bb.0:
@@ -115,7 +115,7 @@ define x86_fp80 @exp2_f80(x86_fp80 %x) #0 {
 ; GNU-NEXT:    subq $24, %rsp
 ; GNU-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GNU-NEXT:    fstpt (%rsp)
-; GNU-NEXT:    callq __exp2l_finite
+; GNU-NEXT:    callq exp2l
 ; GNU-NEXT:    addq $24, %rsp
 ; GNU-NEXT:    retq
 ;
@@ -151,7 +151,7 @@ define x86_fp80 @exp2_f80(x86_fp80 %x) #0 {
 define float @log_f32(float %x) #0 {
 ; GNU-LABEL: log_f32:
 ; GNU:       # %bb.0:
-; GNU-NEXT:    jmp __logf_finite # TAILCALL
+; GNU-NEXT:    jmp logf # TAILCALL
 ;
 ; WIN-LABEL: log_f32:
 ; WIN:       # %bb.0:
@@ -167,7 +167,7 @@ define float @log_f32(float %x) #0 {
 define double @log_f64(double %x) #0 {
 ; GNU-LABEL: log_f64:
 ; GNU:       # %bb.0:
-; GNU-NEXT:    jmp __log_finite # TAILCALL
+; GNU-NEXT:    jmp log # TAILCALL
 ;
 ; WIN-LABEL: log_f64:
 ; WIN:       # %bb.0:
@@ -186,7 +186,7 @@ define x86_fp80 @log_f80(x86_fp80 %x) #0 {
 ; GNU-NEXT:    subq $24, %rsp
 ; GNU-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GNU-NEXT:    fstpt (%rsp)
-; GNU-NEXT:    callq __logl_finite
+; GNU-NEXT:    callq logl
 ; GNU-NEXT:    addq $24, %rsp
 ; GNU-NEXT:    retq
 ;
@@ -222,7 +222,7 @@ define x86_fp80 @log_f80(x86_fp80 %x) #0 {
 define float @log2_f32(float %x) #0 {
 ; GNU-LABEL: log2_f32:
 ; GNU:       # %bb.0:
-; GNU-NEXT:    jmp __log2f_finite # TAILCALL
+; GNU-NEXT:    jmp log2f # TAILCALL
 ;
 ; WIN-LABEL: log2_f32:
 ; WIN:       # %bb.0:
@@ -238,7 +238,7 @@ define float @log2_f32(float %x) #0 {
 define double @log2_f64(double %x) #0 {
 ; GNU-LABEL: log2_f64:
 ; GNU:       # %bb.0:
-; GNU-NEXT:    jmp __log2_finite # TAILCALL
+; GNU-NEXT:    jmp log2 # TAILCALL
 ;
 ; WIN-LABEL: log2_f64:
 ; WIN:       # %bb.0:
@@ -257,7 +257,7 @@ define x86_fp80 @log2_f80(x86_fp80 %x) #0 {
 ; GNU-NEXT:    subq $24, %rsp
 ; GNU-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GNU-NEXT:    fstpt (%rsp)
-; GNU-NEXT:    callq __log2l_finite
+; GNU-NEXT:    callq log2l
 ; GNU-NEXT:    addq $24, %rsp
 ; GNU-NEXT:    retq
 ;
@@ -293,7 +293,7 @@ define x86_fp80 @log2_f80(x86_fp80 %x) #0 {
 define float @log10_f32(float %x) #0 {
 ; GNU-LABEL: log10_f32:
 ; GNU:       # %bb.0:
-; GNU-NEXT:    jmp __log10f_finite # TAILCALL
+; GNU-NEXT:    jmp log10f # TAILCALL
 ;
 ; WIN-LABEL: log10_f32:
 ; WIN:       # %bb.0:
@@ -309,7 +309,7 @@ define float @log10_f32(float %x) #0 {
 define double @log10_f64(double %x) #0 {
 ; GNU-LABEL: log10_f64:
 ; GNU:       # %bb.0:
-; GNU-NEXT:    jmp __log10_finite # TAILCALL
+; GNU-NEXT:    jmp log10 # TAILCALL
 ;
 ; WIN-LABEL: log10_f64:
 ; WIN:       # %bb.0:
@@ -328,7 +328,7 @@ define x86_fp80 @log10_f80(x86_fp80 %x) #0 {
 ; GNU-NEXT:    subq $24, %rsp
 ; GNU-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GNU-NEXT:    fstpt (%rsp)
-; GNU-NEXT:    callq __log10l_finite
+; GNU-NEXT:    callq log10l
 ; GNU-NEXT:    addq $24, %rsp
 ; GNU-NEXT:    retq
 ;
@@ -365,7 +365,7 @@ define float @pow_f32(float %x) #0 {
 ; GNU-LABEL: pow_f32:
 ; GNU:       # %bb.0:
 ; GNU-NEXT:    movaps %xmm0, %xmm1
-; GNU-NEXT:    jmp __powf_finite # TAILCALL
+; GNU-NEXT:    jmp powf # TAILCALL
 ;
 ; WIN-LABEL: pow_f32:
 ; WIN:       # %bb.0:
@@ -384,7 +384,7 @@ define double @pow_f64(double %x) #0 {
 ; GNU-LABEL: pow_f64:
 ; GNU:       # %bb.0:
 ; GNU-NEXT:    movaps %xmm0, %xmm1
-; GNU-NEXT:    jmp __pow_finite # TAILCALL
+; GNU-NEXT:    jmp pow # TAILCALL
 ;
 ; WIN-LABEL: pow_f64:
 ; WIN:       # %bb.0:
@@ -407,7 +407,7 @@ define x86_fp80 @pow_f80(x86_fp80 %x) #0 {
 ; GNU-NEXT:    fld %st(0)
 ; GNU-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; GNU-NEXT:    fstpt (%rsp)
-; GNU-NEXT:    callq __powl_finite
+; GNU-NEXT:    callq powl
 ; GNU-NEXT:    addq $40, %rsp
 ; GNU-NEXT:    retq
 ;

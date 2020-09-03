@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,GFX9 %s
 
@@ -389,10 +389,10 @@ declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "target-features"="+fp32-denormals" }
-attributes #3 = { nounwind "target-features"="-fp64-fp16-denormals" }
+attributes #2 = { nounwind "denormal-fp-math-f32"="ieee.ieee" }
+attributes #3 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

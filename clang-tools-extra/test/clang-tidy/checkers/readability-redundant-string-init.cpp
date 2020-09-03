@@ -34,6 +34,12 @@ void f() {
   std::string d(R"()");
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: redundant string initialization
   // CHECK-FIXES: std::string d;
+  std::string e{""};
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: redundant string initialization
+  // CHECK-FIXES: std::string e;
+  std::string f = {""};
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: redundant string initialization
+  // CHECK-FIXES: std::string f;
 
   std::string u = "u";
   std::string w("w");
@@ -227,3 +233,53 @@ void otherTestStringTests() {
   other::wstring e = L"";
   other::wstring f(L"");
 }
+
+class Foo {
+  std::string A = "";
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: redundant string initialization
+  // CHECK-FIXES:  std::string A;
+  std::string B;
+  std::string C;
+  std::string D;
+  std::string E = "NotEmpty";
+
+public:
+  // Check redundant constructor where Field has a redundant initializer.
+  Foo() : A("") {}
+  // CHECK-MESSAGES: [[@LINE-1]]:11: warning: redundant string initialization
+  // CHECK-FIXES:  Foo()  {}
+
+  // Check redundant constructor where Field has no initializer.
+  Foo(char) : B("") {}
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: redundant string initialization
+  // CHECK-FIXES:  Foo(char)  {}
+
+  // Check redundant constructor where Field has a valid initializer.
+  Foo(long) : E("") {}
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: redundant string initialization
+  // CHECK-FIXES:  Foo(long) : E() {}
+
+  // Check how it handles removing 1 initializer, and defaulting the other.
+  Foo(int) : B(""), E("") {}
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: redundant string initialization
+  // CHECK-MESSAGES: [[@LINE-2]]:21: warning: redundant string initialization
+  // CHECK-FIXES:  Foo(int) :  E() {}
+
+  Foo(short) : B{""} {}
+  // CHECK-MESSAGES: [[@LINE-1]]:16: warning: redundant string initialization
+  // CHECK-FIXES:  Foo(short)  {}
+
+  Foo(float) : A{""}, B{""} {}
+  // CHECK-MESSAGES: [[@LINE-1]]:16: warning: redundant string initialization
+  // CHECK-MESSAGES: [[@LINE-2]]:23: warning: redundant string initialization
+  // CHECK-FIXES:  Foo(float)  {}
+
+
+  // Check how it handles removing some redundant initializers while leaving
+  // valid initializers intact.
+  Foo(std::string Arg) : A(Arg), B(""), C("NonEmpty"), D(R"()"), E("") {}
+  // CHECK-MESSAGES: [[@LINE-1]]:34: warning: redundant string initialization
+  // CHECK-MESSAGES: [[@LINE-2]]:56: warning: redundant string initialization
+  // CHECK-MESSAGES: [[@LINE-3]]:66: warning: redundant string initialization
+  // CHECK-FIXES:  Foo(std::string Arg) : A(Arg),  C("NonEmpty"),  E() {}
+};

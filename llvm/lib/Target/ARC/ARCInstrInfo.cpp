@@ -161,7 +161,7 @@ static bool isJumpOpcode(int Opc) { return Opc == ARC::J; }
 ///    condition.  These operands can be passed to other TargetInstrInfo
 ///    methods to create new branches.
 ///
-/// Note that RemoveBranch and InsertBranch must be implemented to support
+/// Note that RemoveBranch and insertBranch must be implemented to support
 /// cases where this method returns success.
 ///
 /// If AllowModify is true, then this routine is allowed to modify the basic
@@ -292,18 +292,18 @@ void ARCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
 void ARCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
-                                       unsigned SrcReg, bool isKill,
+                                       Register SrcReg, bool isKill,
                                        int FrameIndex,
                                        const TargetRegisterClass *RC,
                                        const TargetRegisterInfo *TRI) const {
   DebugLoc dl = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  unsigned Align = MFI.getObjectAlignment(FrameIndex);
 
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FrameIndex),
-      MachineMemOperand::MOStore, MFI.getObjectSize(FrameIndex), Align);
+      MachineMemOperand::MOStore, MFI.getObjectSize(FrameIndex),
+      MFI.getObjectAlign(FrameIndex));
 
   assert(MMO && "Couldn't get MachineMemOperand for store to stack.");
   assert(TRI->getSpillSize(*RC) == 4 &&
@@ -321,16 +321,16 @@ void ARCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
 void ARCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
-                                        unsigned DestReg, int FrameIndex,
+                                        Register DestReg, int FrameIndex,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI) const {
   DebugLoc dl = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  unsigned Align = MFI.getObjectAlignment(FrameIndex);
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FrameIndex),
-      MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex), Align);
+      MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
+      MFI.getObjectAlign(FrameIndex));
 
   assert(MMO && "Couldn't get MachineMemOperand for store to stack.");
   assert(TRI->getSpillSize(*RC) == 4 &&
@@ -375,7 +375,7 @@ unsigned ARCInstrInfo::insertBranch(MachineBasicBlock &MBB,
   assert(!BytesAdded && "Code size not handled.");
 
   // Shouldn't be a fall through.
-  assert(TBB && "InsertBranch must not be told to insert a fallthrough");
+  assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 3 || Cond.size() == 0) &&
          "ARC branch conditions have two components!");
 

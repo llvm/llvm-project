@@ -1,6 +1,6 @@
 // This code used to crash but unpredictably and rarely.
-// Even with the current set of run-lines, if a buildbot tells you that
-// you broke this test there's a chance that someone else broke it
+// Even with the current set of run-lines, if a buildbot tells you
+// that you broke this test there's a chance that someone else broke it
 // a few commits ago.
 
 struct S {

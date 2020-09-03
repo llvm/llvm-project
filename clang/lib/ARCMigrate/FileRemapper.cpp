@@ -43,7 +43,7 @@ std::string FileRemapper::getRemapInfoFile(StringRef outputDir) {
   assert(!outputDir.empty());
   SmallString<128> InfoFile = outputDir;
   llvm::sys::path::append(InfoFile, "remap");
-  return InfoFile.str();
+  return std::string(InfoFile.str());
 }
 
 bool FileRemapper::initFromDisk(StringRef outputDir, DiagnosticsEngine &Diag,
@@ -56,7 +56,7 @@ bool FileRemapper::initFromFile(StringRef filePath, DiagnosticsEngine &Diag,
                                 bool ignoreIfFilesChanged) {
   assert(FromToMappings.empty() &&
          "initFromDisk should be called before any remap calls");
-  std::string infoFile = filePath;
+  std::string infoFile = std::string(filePath);
   if (!llvm::sys::fs::exists(infoFile))
     return false;
 
@@ -120,7 +120,7 @@ bool FileRemapper::flushToFile(StringRef outputPath, DiagnosticsEngine &Diag) {
   using namespace llvm::sys;
 
   std::error_code EC;
-  std::string infoFile = outputPath;
+  std::string infoFile = std::string(outputPath);
   llvm::raw_fd_ostream infoOut(infoFile, EC, llvm::sys::fs::OF_None);
   if (EC)
     return report(EC.message(), Diag);

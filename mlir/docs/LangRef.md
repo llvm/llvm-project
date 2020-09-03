@@ -1,4 +1,4 @@
-# MLIR Specification
+# MLIR Language Reference
 
 MLIR (Multi-Level IR) is a compiler intermediate representation with
 similarities to traditional three-address SSA representations (like
@@ -12,8 +12,8 @@ continuous design provides a framework to lower from dataflow graphs to
 high-performance target-specific code.
 
 This document defines and describes the key concepts in MLIR, and is intended to
-be a dry reference document - the [rationale documentation](Rationale.md),
-[glossary](https://mlir.llvm.org/getting_started/Glossary/), and other content are hosted elsewhere.
+be a dry reference document - the [rationale documentation](Rationale/Rationale.md),
+[glossary](../getting_started/Glossary.md), and other content are hosted elsewhere.
 
 MLIR is designed to be used in three different forms: a human-readable textual
 form suitable for debugging, an in-memory form suitable for programmatic
@@ -148,7 +148,7 @@ integer-literal ::= decimal-literal | hexadecimal-literal
 decimal-literal ::= digit+
 hexadecimal-literal ::= `0x` hex_digit+
 float-literal ::= [-+]?[0-9]+[.][0-9]*([eE][-+]?[0-9]+)?
-string-literal  ::= `"` [^"\n\f\v\r]* `"`   TODO define escaping rules
+string-literal  ::= `"` [^"\n\f\v\r]* `"`   TODO: define escaping rules
 ```
 
 Not listed here, but MLIR does support comments. They use standard BCPL syntax,
@@ -241,8 +241,8 @@ Syntax:
 ```
 operation         ::= op-result-list? (generic-operation | custom-operation)
                       trailing-location?
-generic-operation ::= string-literal '(' ssa-use-list? ')' attribute-dict?
-                      `:` function-type
+generic-operation ::= string-literal `(` ssa-use-list? `)`  successor-list?
+                      (`(` region-list `)`)? attribute-dict? `:` function-type
 custom-operation  ::= bare-id custom-operation-format
 op-result-list    ::= op-result (`,` op-result)* `=`
 op-result         ::= ssa-id (`:` integer-literal)
@@ -307,11 +307,11 @@ Example:
 module ::= `module` symbol-ref-id? (`attributes` attribute-dict)? region
 ```
 
-An MLIR module represents an opaque top-level container operation. It contains a
-single region containing a single block that is comprised of any operations.
-Operations within this region must not implicitly capture values defined above
-it. Modules have an optional symbol name that can be used to refer to them in
-operations.
+An MLIR Module represents a top-level container operation. It contains
+a single region containing a single block which can contain any
+operations.  Operations within this region must not implicitly capture
+values defined outside the module.  Modules have an optional symbol
+name that can be used to refer to them in operations.
 
 ### Functions
 
@@ -391,9 +391,10 @@ block-arg-list ::= `(` ssa-id-and-type-list? `)`
 ```
 
 A [block](https://en.wikipedia.org/wiki/Basic_block) is a sequential list of
-operations without control flow (calls are not considered control flow for this
-purpose) that are executed from top to bottom. The last operation in a block is
-a [terminator operation](#terminator-operations), which ends the block.
+operations without control flow (a call or entering an op's region is not
+considered control flow for this purpose) that are executed from top to bottom.
+The last operation in a block is a
+[terminator operation](#terminator-operations), which ends the block.
 
 Blocks in MLIR take a list of block arguments, which represent SSA PHI nodes in
 a functional notation. The arguments are defined by the block, and values are
@@ -431,7 +432,7 @@ cases from the IR compared to traditional "PHI nodes are operations" SSA IRs
 [parallel copy semantics](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.524.5461&rep=rep1&type=pdf)
 of SSA is immediately apparent, and function arguments are no longer a special
 case: they become arguments to the entry block
-[[more rationale](Rationale.md#block-arguments-vs-phi-nodes)].
+[[more rationale](Rationale/Rationale.md#block-arguments-vs-phi-nodes)].
 
 ## Regions
 
@@ -501,20 +502,23 @@ outside the region completely.
 Regions are Single-Entry-Multiple-Exit (SEME). This means that control can only
 flow into the first block of the region, but can flow out of the region at the
 end of any of the contained blocks (This behavior is similar to that of a
-function body in most programming languages). When exiting a Region, control is
-returned to the enclosing operation.
+function body in most programming languages). A terminator of a block within a
+region may transfer the control flow to another block in this region, or return
+it to the immediately enclosing op. The semantics of the enclosing op defines
+where the control flow is transmitted next. It may, for example, enter a region
+of the same op, including the same region that returned the control flow.
 
 The enclosing operation determines the way in which control is transmitted into
-the entry block of a Region. The successor to a region’s exit points may not
+the entry block of a Region. The successor to a Region’s exit points may not
 necessarily exist: for example a call to a function that does not return.
-Concurrent or asynchronous execution of regions is unspecified. Operations may
+Concurrent or asynchronous execution of Regions is unspecified. Operations may
 define specific rules of execution, e.g. sequential loops or switch cases.
 
 A Region may also enter another region within the enclosing operation. If an
 operation has multiple regions, the semantics of the operation defines into
 which regions the control flows and in which order, if any. An operation may
-transmit control into regions that were specified in other operations, in
-particular those that defined the values the given operation uses. Thus such
+transmit control into Regions that were specified in other operations, in
+particular those that defined the values the given operation uses. Thus, such
 operations can be treated opaquely in the enclosing control flow graph,
 providing a level of control flow isolation similar to that of the call
 operation.
@@ -644,7 +648,7 @@ the lighter syntax: `!foo.something<a%%123^^^>>>` because it contains characters
 that are not allowed in the lighter syntax, as well as unbalanced `<>`
 characters.
 
-See [here](DefiningAttributesAndTypes.md) to learn how to define dialect types.
+See [here](Tutorials/DefiningAttributesAndTypes.md) to learn how to define dialect types.
 
 ### Standard Types
 
@@ -727,10 +731,10 @@ index-type ::= `index`
 ```
 
 The `index` type is a signless integer whose size is equal to the natural
-machine word of the target ([rationale](Rationale.md#signless-types)) and is
+machine word of the target ([rationale](Rationale/Rationale.md#signless-types)) and is
 used by the affine constructs in MLIR. Unlike fixed-size integers, it cannot be
 used as an element of vector, tensor or memref type
-([rationale](Rationale.md#index-type-disallowed-in-vectortensormemref-types)).
+([rationale](Rationale/Rationale.md#index-type-disallowed-in-vectortensormemref-types)).
 
 **Rationale:** integers of platform-specific bit widths are practical to express
 sizes, dimensionalities and subscripts.
@@ -741,11 +745,16 @@ Syntax:
 
 ```
 // Sized integers like i1, i4, i8, i16, i32.
-integer-type ::= `i` [1-9][0-9]*
+signed-integer-type ::= `si` [1-9][0-9]*
+unsigned-integer-type ::= `ui` [1-9][0-9]*
+signless-integer-type ::= `i` [1-9][0-9]*
+integer-type ::= signed-integer-type |
+                 unsigned-integer-type |
+                 signless-integer-type
 ```
 
-MLIR supports arbitrary precision integer types. Integer types are signless, but
-have a designated width.
+MLIR supports arbitrary precision integer types. Integer types have a designated
+width and may have signedness semantics.
 
 **Rationale:** low precision integers (like `i2`, `i4` etc) are useful for
 low-precision inference chips, and arbitrary precision integers are useful for
@@ -753,7 +762,7 @@ hardware synthesis (where a 13 bit multiplier is a lot cheaper/smaller than a 16
 bit one).
 
 TODO: Need to decide on a representation for quantized integers
-([initial thoughts](Rationale.md#quantized-integer-operations)).
+([initial thoughts](Rationale/Rationale.md#quantized-integer-operations)).
 
 #### Memref Type
 
@@ -852,20 +861,20 @@ Examples of memref static type
 
 ```mlir
 // Identity index/layout map
-#identity = (d0, d1) -> (d0, d1)
+#identity = affine_map<(d0, d1) -> (d0, d1)>
 
 // Column major layout.
-#col_major = (d0, d1, d2) -> (d2, d1, d0)
+#col_major = affine_map<(d0, d1, d2) -> (d2, d1, d0)>
 
 // A 2-d tiled layout with tiles of size 128 x 256.
-#tiled_2d_128x256 = (d0, d1) -> (d0 div 128, d1 div 256, d0 mod 128, d1 mod 256)
+#tiled_2d_128x256 = affine_map<(d0, d1) -> (d0 div 128, d1 div 256, d0 mod 128, d1 mod 256)>
 
 // A tiled data layout with non-constant tile sizes.
-#tiled_dynamic = (d0, d1)[s0, s1] -> (d0 floordiv s0, d1 floordiv s1,
-                              d0 mod s0, d1 mod s1)
+#tiled_dynamic = affine_map<(d0, d1)[s0, s1] -> (d0 floordiv s0, d1 floordiv s1,
+                             d0 mod s0, d1 mod s1)>
 
 // A layout that yields a padding on two at either end of the minor dimension.
-#padded = (d0, d1) -> (d0, (d1 + 2) floordiv 2, (d1 + 2) mod 2)
+#padded = affine_map<(d0, d1) -> (d0, (d1 + 2) floordiv 2, (d1 + 2) mod 2)>
 
 
 // The dimension list "16x32" defines the following 2D index space:
@@ -893,11 +902,11 @@ memref<16x32xf32, #identity, memspace0>
 %T = alloc(%M, %N) [%B1, %B2] : memref<?x?xf32, #tiled_dynamic>
 
 // A memref that has a two-element padding at either end. The allocation size
-// will fit 16 * 68 float elements of data.
+// will fit 16 * 64 float elements of data.
 %P = alloc() : memref<16x64xf32, #padded>
 
 // Affine map with symbol 's0' used as offset for the first dimension.
-#imapS = (d0, d1) [s0] -> (d0 + s0, d1)
+#imapS = affine_map<(d0, d1) [s0] -> (d0 + s0, d1)>
 // Allocate memref and bind the following symbols:
 // '%n' is bound to the dynamic second dimension of the memref type.
 // '%o' is bound to the symbol 's0' in the affine map of the memref type.
@@ -935,7 +944,7 @@ multidimensional index from one index space to another. For example, the
 following figure shows an index map which maps a 2-dimensional index from a 2x2
 index space to a 3x3 index space, using symbols `S0` and `S1` as offsets.
 
-![Index Map Example](includes/img/index-map.svg)
+![Index Map Example](/includes/img/index-map.svg)
 
 The number of domain dimensions and range dimensions of an index map can be
 different, but must match the number of dimensions of the input and output index
@@ -1100,7 +1109,7 @@ each element may be of a different type.
 
 **Rationale:** Though this type is first class in the type system, MLIR provides
 no standard operations for operating on `tuple` types
-([rationale](Rationale.md#tuple-types)).
+([rationale](Rationale/Rationale.md#tuple-types)).
 
 Examples:
 
@@ -1147,7 +1156,8 @@ attribute-dict ::= `{` `}`
 attribute-entry ::= dialect-attribute-entry | dependent-attribute-entry
 dialect-attribute-entry ::= dialect-namespace `.` bare-id `=` attribute-value
 dependent-attribute-entry ::= dependent-attribute-name `=` attribute-value
-dependent-attribute-name ::= (letter|[_]) (letter|digit|[_$])*
+dependent-attribute-name ::= ((letter|[_]) (letter|digit|[_$])*)
+                           | string-literal
 ```
 
 Attributes are the mechanism for specifying constant data on operations in
@@ -1188,10 +1198,10 @@ These aliases *must* be defined before their uses. Alias names may not contain a
 Example:
 
 ```mlir
-#map = (d0) -> (d0 + 10)
+#map = affine_map<(d0) -> (d0 + 10)>
 
 // Using the original attribute.
-%b = affine.apply (d0) -> (d0 + 10) (%a)
+%b = affine.apply affine_map<(d0) -> (d0 + 10)> (%a)
 
 // Using the attribute alias.
 %b = affine.apply #map(%a)
@@ -1233,7 +1243,7 @@ the lighter syntax: `#foo.something<a%%123^^^>>>` because it contains characters
 that are not allowed in the lighter syntax, as well as unbalanced `<>`
 characters.
 
-See [here](DefiningAttributesAndTypes.md) to learn how to define dialect
+See [here](Tutorials/DefiningAttributesAndTypes.md) to learn how to define dialect
 attribute values.
 
 ### Standard Attribute Values
@@ -1262,10 +1272,10 @@ standard-attribute ::=   affine-map-attribute
 Syntax:
 
 ```
-affine-map-attribute ::= affine-map
+affine-map-attribute ::= `affine_map` `<` affine-map `>`
 ```
 
-An affine-map attribute is an attribute that represents a affine-map object.
+An affine-map attribute is an attribute that represents an affine-map object.
 
 #### Array Attribute
 
@@ -1324,9 +1334,10 @@ dense-elements-attribute ::= `dense` `<` attribute-value `>` `:`
 ```
 
 A dense elements attribute is an elements attribute where the storage for the
-constant vector or tensor value has been packed to the element bitwidth. The
-element type of the vector or tensor constant must be of integer, index, or
-floating point type.
+constant vector or tensor value has been densely packed. The attribute supports
+storing integer or floating point elements, with integer/index/floating element
+types. It also support storing string elements with a custom dialect string
+element type.
 
 ##### Opaque Elements Attribute
 
@@ -1419,7 +1430,7 @@ is not specified, is a 64-bit integer.
 Syntax:
 
 ```
-integer-set-attribute ::= affine-map
+integer-set-attribute ::= `affine_set` `<` integer-set `>`
 ```
 
 An integer-set attribute is an attribute that represents an integer-set object.
@@ -1453,14 +1464,16 @@ This attribute can only be held internally by
 [array attributes](#array-attribute) and
 [dictionary attributes](#dictionary-attribute)(including the top-level operation
 attribute dictionary), i.e. no other attribute kinds such as Locations or
-extended attribute kinds. If a reference to a symbol is necessary from outside
-of the symbol table that the symbol is defined in, a
-[string attribute](#string-attribute) can be used to refer to the symbol name.
+extended attribute kinds.
 
-**Rationale:** Given that MLIR models global accesses with symbol references, to
-enable efficient multi-threading, it becomes difficult to effectively reason
-about their uses. By restricting the places that can legally hold a symbol
-reference, we can always opaquely reason about a symbols usage characteristics.
+**Rationale:** Identifying accesses to global data is critical to
+enabling efficient multi-threaded compilation.  Restricting global
+data access to occur through symbols and limiting the places that can
+legally hold a symbol reference simplifies reasoning about these data
+accesses.
+
+See [`Symbols And SymbolTables`](SymbolsAndSymbolTables.md) for more
+information.
 
 #### Type Attribute
 

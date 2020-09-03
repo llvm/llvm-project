@@ -52,23 +52,21 @@ The instructions are for building libc++ on
 FreeBSD, Linux, or Mac using `libc++abi`_ as the C++ ABI library.
 On Linux, it is also possible to use :ref:`libsupc++ <libsupcxx>` or libcxxrt.
 
-It is possible to keep your LLVM and libc++ trees separate so you can avoid
-rebuilding LLVM as often. An out-of-tree build would look like this:
+It is possible to build libc++ standalone (i.e. without building other LLVM
+projects). A standalone build would look like this:
 
 .. code-block:: bash
 
-  $ cd where-you-want-libcxx-to-live
-  $ # Check out the sources (includes everything, but we'll only use libcxx)
-  $ ``git clone https://github.com/llvm/llvm-project.git``
-  $ cd where-you-want-to-build
+  $ git clone https://github.com/llvm/llvm-project.git llvm-project
+  $ cd llvm-project
   $ mkdir build && cd build
-  $ export CC=clang CXX=clang++
-  $ cmake -DLLVM_PATH=path/to/separate/llvm \
+  $ cmake -DCMAKE_C_COMPILER=clang \
+          -DCMAKE_CXX_COMPILER=clang++ \
           -DLIBCXX_CXX_ABI=libcxxabi \
           -DLIBCXX_CXX_ABI_INCLUDE_PATHS=path/to/separate/libcxxabi/include \
-          path/to/llvm-project/libcxx
+          ../libcxx
   $ make
-  $ make check-libcxx # optional
+  $ make check-cxx # optional
 
 
 Experimental Support for Windows
@@ -166,7 +164,7 @@ libc++ specific options
 
 .. option:: LIBCXX_ENABLE_ASSERTIONS:BOOL
 
-  **Default**: ``ON``
+  **Default**: ``OFF``
 
   Build libc++ with assertions enabled.
 
@@ -380,18 +378,24 @@ The following options allow building libc++ for a different ABI version.
   See ``include/__config`` for the list of ABI macros.
 
 
-.. option:: LIBCXX_HAS_MERGED_TYPEINFO_NAMES_DEFAULT
+.. option:: LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION
 
-  **Default**: ``None``. When defined this option overrides the libraries default configuration
-  for whether merged type info names are present.
+  **Default**: ``None``, which lets the library figure out which implementation
+  to use based on the object format.
+
+  This setting defines what implementation to use for comparing typeinfo objects.
+  There are two main implementations, which differ on whether we make the assumption
+  that type info names for a type have been fully merged are unique across the entire
+  program. This may not be the case for libraries built with ``-Bsymbolic`` or due to
+  compiler or linker bugs (Ex. llvm.org/PR37398).
 
 
-  Build ``std::type_info`` with the assumption that type info names for a type have been fully
-  merged are unique across the entire program. This may not be the case for libraries built with
-  ``-Bsymbolic`` or due to compiler or linker bugs (Ex. llvm.org/PR37398).
+  When the value is set to ``1``, we assume that typeinfos are unique across the
+  whole program, and typeinfo comparisons compare only the pointer value.
 
-  When the value is ``ON`` typeinfo comparisons compare only the pointer value, otherwise ``strcmp``
-  is used as a fallback.
+  When the value is set to ``2``, we do not assume that typeinfos are unique across
+  the whole program. We first compare the pointers, and then use ``strcmp`` on the
+  typeinfo names as a fallback.
 
 
 .. _LLVM-specific variables:

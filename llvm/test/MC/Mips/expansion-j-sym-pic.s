@@ -13,11 +13,11 @@
 # Repeat the tests using ELF output.
 
 # RUN: llvm-mc %s -triple mips-unknown-linux-gnu -filetype=obj | \
-# RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-O32
+# RUN:   llvm-objdump -d -r - | FileCheck %s --check-prefixes=ELF-O32
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -filetype=obj | \
-# RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-NXX,ELF-N32
+# RUN:   llvm-objdump -d -r - | FileCheck %s --check-prefixes=ELF-NXX,ELF-N32
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnu -filetype=obj | \
-# RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-NXX,ELF-N64
+# RUN:   llvm-objdump -d -r - | FileCheck %s --check-prefixes=ELF-NXX,ELF-N64
 
   .weak weak_label
 

@@ -789,9 +789,13 @@ pshufw $90, %mm4, %mm0
 // CHECK:  encoding: [0x0f,0x0b]
         	ud2a
 
-// CHECK: ud2b
-// CHECK:  encoding: [0x0f,0xb9]
-        	ud2b
+// CHECK: ud1w %ax, %ax
+// CHECK:  encoding: [0x0f,0xb9,0xc0]
+        	ud1 %ax, %ax
+
+// CHECK: ud1w %ax, %ax
+// CHECK:  encoding: [0x0f,0xb9,0xc0]
+        	ud2b %ax, %ax
 
 // CHECK: loope 0
 // CHECK: encoding: [0xe1,A]
@@ -1029,3 +1033,15 @@ enqcmd  (%edi), %edi
 // CHECK: enqcmds (%edi), %edi
 // CHECK: encoding: [0x67,0xf3,0x0f,0x38,0xf8,0x3f]
 enqcmds (%edi), %edi
+
+// CHECK: serialize
+// CHECK: encoding: [0x0f,0x01,0xe8]
+serialize
+
+// CHECK: xsusldtrk
+// CHECK: encoding: [0xf2,0x0f,0x01,0xe8]
+xsusldtrk
+
+// CHECK: xresldtrk
+// CHECK: encoding: [0xf2,0x0f,0x01,0xe9]
+xresldtrk

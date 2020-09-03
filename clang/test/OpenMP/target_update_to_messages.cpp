@@ -1,6 +1,12 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=40 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp-simd -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -fopenmp-version=40 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
 void foo() {
 }
@@ -59,6 +65,22 @@ struct S7 {
   double *p;
   unsigned bfa : 4;
 };
+struct S8 {
+  int *ptr;
+  int a;
+  struct S7* S;
+  void foo() {
+#pragma omp target update to(*this) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+    {}
+#pragma omp target update to(*(this->ptr)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(*(this->S->i+this->S->p)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(*(this->S->i+this->S->s6[0].pp)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(*(a+this->ptr)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(*(*(this->ptr)+a+this->ptr)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(*(this+this)) // expected-error {{invalid operands to binary expression ('S8 *' and 'S8 *')}}
+    {}
+  }
+};
 
 S3 h;
 #pragma omp threadprivate(h) // expected-note 2 {{defined as threadprivate or thread local}}
@@ -89,12 +111,12 @@ T tmain(T argc) {
 #pragma omp target update to(x)
 #pragma omp target update to(t[:I])
 #pragma omp target update to(T) // expected-error {{'T' does not refer to a value}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update to(I) // expected-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target update to(I) // le50-error 2 {{expected addressable lvalue in 'to' clause}} le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
 #pragma omp target update to(S2::S2s)
 #pragma omp target update to(S2::S2sc)
 #pragma omp target update to(to)
 #pragma omp target update to(y x) // expected-error {{expected ',' or ')' in 'to' clause}}
-#pragma omp target update to(argc > 0 ? x : y) // expected-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}} 
+#pragma omp target update to(argc > 0 ? x : y) // le50-error 2 {{expected addressable lvalue in 'to' clause}} le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
 #pragma omp target update to(S1) // expected-error {{'S1' does not refer to a value}}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}}
 #pragma omp target update to(ba)
@@ -106,7 +128,7 @@ T tmain(T argc) {
 
 #pragma omp target update to(x, a[:2]) // expected-error {{subscripted value is not an array or pointer}}
 #pragma omp target update to(x, c[:]) // expected-error {{subscripted value is not an array or pointer}}
-#pragma omp target update to(x, (m+1)[2]) // expected-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target update to(x, (m+1)[2]) // le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
 #pragma omp target update to(s7.i, s7.a[:3])
 #pragma omp target update to(s7.s6[1].aa[0:5])
 #pragma omp target update to(x, s7.s6[:5].aa[6]) // expected-error {{OpenMP array section is not allowed here}}
@@ -135,6 +157,8 @@ int main(int argc, char **argv) {
   const int (&l)[5] = da;
   S7 s7;
   int *m;
+  int **BB, *offset;
+  int ***BBB;
 
 #pragma omp target update to // expected-error {{expected '(' after 'to'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
@@ -147,7 +171,7 @@ int main(int argc, char **argv) {
 #pragma omp target update to(S2::S2sc)
 #pragma omp target update to(to)
 #pragma omp target update to(y x) // expected-error {{expected ',' or ')' in 'to' clause}}
-#pragma omp target update to(argc > 0 ? x : y) // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(argc > 0 ? x : y) // le50-error {{expected addressable lvalue in 'to' clause}} le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(S1) // expected-error {{'S1' does not refer to a value}}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}}
 #pragma omp target update to(ba)
@@ -159,7 +183,7 @@ int main(int argc, char **argv) {
 
 #pragma omp target update to(x, a[:2]) // expected-error {{subscripted value is not an array or pointer}}
 #pragma omp target update to(x, c[:]) // expected-error {{subscripted value is not an array or pointer}}
-#pragma omp target update to(x, (m+1)[2]) // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target update to(x, (m+1)[2]) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
 #pragma omp target update to(s7.i, s7.a[:3])
 #pragma omp target update to(s7.s6[1].aa[0:5])
 #pragma omp target update to(x, s7.s6[:5].aa[6]) // expected-error {{OpenMP array section is not allowed here}}
@@ -172,6 +196,18 @@ int main(int argc, char **argv) {
 #pragma omp target update to(s7.x)
   }
 
+#pragma omp target update to(**(BB+*offset)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(**(BB+y)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(*(m+*offset)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(**(*offset+BB)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(**(y+BB)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(*(*offset+m)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(**(*offset+BB+*m)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(**(*(*(&offset))+BB+*m)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(*(x+*(y+*(**BB+BBB)+s7.i))) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(*(m+(m))) // expected-error {{invalid operands to binary expression ('int *' and 'int *')}}
+#pragma omp target update to(*(1+y+y)) // expected-error {{indirection requires pointer operand ('int' invalid)}}
+  {}
   return tmain<int, 3>(argc)+tmain<from, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}
 }
 

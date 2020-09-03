@@ -222,11 +222,16 @@ public:
 /// referenced by the name table and interpreted with the help of the
 /// abbreviation table.
 class DWARFDebugNames : public DWARFAcceleratorTable {
-  /// The fixed-size part of a DWARF v5 Name Index header
-  struct HeaderPOD {
-    uint32_t UnitLength;
+public:
+  class NameIndex;
+  class NameIterator;
+  class ValueIterator;
+
+  /// DWARF v5 Name Index header.
+  struct Header {
+    uint64_t UnitLength;
+    dwarf::DwarfFormat Format;
     uint16_t Version;
-    uint16_t Padding;
     uint32_t CompUnitCount;
     uint32_t LocalTypeUnitCount;
     uint32_t ForeignTypeUnitCount;
@@ -234,15 +239,6 @@ class DWARFDebugNames : public DWARFAcceleratorTable {
     uint32_t NameCount;
     uint32_t AbbrevTableSize;
     uint32_t AugmentationStringSize;
-  };
-
-public:
-  class NameIndex;
-  class NameIterator;
-  class ValueIterator;
-
-  /// DWARF v5 Name Index header.
-  struct Header : public HeaderPOD {
     SmallString<8> AugmentationString;
 
     Error extract(const DWARFDataExtractor &AS, uint64_t *Offset);
@@ -461,7 +457,10 @@ public:
 
     Error extract();
     uint64_t getUnitOffset() const { return Base; }
-    uint64_t getNextUnitOffset() const { return Base + 4 + Hdr.UnitLength; }
+    uint64_t getNextUnitOffset() const {
+      return Base + dwarf::getUnitLengthFieldByteSize(Hdr.Format) +
+             Hdr.UnitLength;
+    }
     void dump(ScopedPrinter &W) const;
 
     friend class DWARFDebugNames;

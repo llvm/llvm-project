@@ -17,6 +17,8 @@
 #define SCUDO_MALLOC_ALIGNMENT FIRST_32_SECOND_64(8U, 16U)
 #endif
 
+extern "C" {
+
 INTERFACE WEAK void *SCUDO_PREFIX(calloc)(size_t nmemb, size_t size) {
   scudo::uptr Product;
   if (UNLIKELY(scudo::checkForCallocOverflow(size, nmemb, &Product))) {
@@ -141,15 +143,32 @@ INTERFACE WEAK int SCUDO_PREFIX(malloc_iterate)(
   return 0;
 }
 
+INTERFACE WEAK void SCUDO_PREFIX(malloc_enable)() { SCUDO_ALLOCATOR.enable(); }
+
 INTERFACE WEAK void SCUDO_PREFIX(malloc_disable)() {
   SCUDO_ALLOCATOR.disable();
 }
 
-INTERFACE WEAK void SCUDO_PREFIX(malloc_enable)() { SCUDO_ALLOCATOR.enable(); }
+void SCUDO_PREFIX(malloc_postinit)() {
+  SCUDO_ALLOCATOR.initGwpAsan();
+  pthread_atfork(SCUDO_PREFIX(malloc_disable), SCUDO_PREFIX(malloc_enable),
+                 SCUDO_PREFIX(malloc_enable));
+}
 
 INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, UNUSED int value) {
   if (param == M_DECAY_TIME) {
-    // TODO(kostyak): set release_to_os_interval_ms accordingly.
+    if (SCUDO_ANDROID) {
+      if (value == 0) {
+        // Will set the release values to their minimum values.
+        value = INT32_MIN;
+      } else {
+        // Will set the release values to their maximum values.
+        value = INT32_MAX;
+      }
+    }
+
+    SCUDO_ALLOCATOR.setOption(scudo::Option::ReleaseInterval,
+                              static_cast<scudo::sptr>(value));
     return 1;
   } else if (param == M_PURGE) {
     SCUDO_ALLOCATOR.releaseToOS();
@@ -172,7 +191,56 @@ INTERFACE WEAK void *SCUDO_PREFIX(aligned_alloc)(size_t alignment,
 }
 
 INTERFACE WEAK int SCUDO_PREFIX(malloc_info)(UNUSED int options, FILE *stream) {
-  fputs("<malloc version=\"scudo-1\">", stream);
-  fputs("</malloc>", stream);
+  const scudo::uptr max_size =
+      decltype(SCUDO_ALLOCATOR)::PrimaryT::SizeClassMap::MaxSize;
+  auto *sizes = static_cast<scudo::uptr *>(
+      SCUDO_PREFIX(calloc)(max_size, sizeof(scudo::uptr)));
+  auto callback = [](uintptr_t, size_t size, void *arg) {
+    auto *sizes = reinterpret_cast<scudo::uptr *>(arg);
+    if (size < max_size)
+      sizes[size]++;
+  };
+  SCUDO_ALLOCATOR.iterateOverChunks(0, -1ul, callback, sizes);
+
+  fputs("<malloc version=\"scudo-1\">\n", stream);
+  for (scudo::uptr i = 0; i != max_size; ++i)
+    if (sizes[i])
+      fprintf(stream, "<alloc size=\"%lu\" count=\"%lu\"/>\n", i, sizes[i]);
+  fputs("</malloc>\n", stream);
+  SCUDO_PREFIX(free)(sizes);
   return 0;
 }
+
+// Disable memory tagging for the heap. The caller must disable memory tag
+// checks globally (e.g. by clearing TCF0 on aarch64) before calling this
+// function, and may not re-enable them after calling the function. The program
+// must be single threaded at the point when the function is called.
+INTERFACE WEAK void SCUDO_PREFIX(malloc_disable_memory_tagging)() {
+  SCUDO_ALLOCATOR.disableMemoryTagging();
+}
+
+// Sets whether scudo records stack traces and other metadata for allocations
+// and deallocations. This function only has an effect if the allocator and
+// hardware support memory tagging. The program must be single threaded at the
+// point when the function is called.
+INTERFACE WEAK void
+SCUDO_PREFIX(malloc_set_track_allocation_stacks)(int track) {
+  SCUDO_ALLOCATOR.setTrackAllocationStacks(track);
+}
+
+// Sets whether scudo zero-initializes all allocated memory. The program must
+// be single threaded at the point when the function is called.
+INTERFACE WEAK void SCUDO_PREFIX(malloc_set_zero_contents)(int zero_contents) {
+  SCUDO_ALLOCATOR.setFillContents(zero_contents ? scudo::ZeroFill
+                                                : scudo::NoFill);
+}
+
+// Sets whether scudo pattern-initializes all allocated memory. The program must
+// be single threaded at the point when the function is called.
+INTERFACE WEAK void
+SCUDO_PREFIX(malloc_set_pattern_fill_contents)(int pattern_fill_contents) {
+  SCUDO_ALLOCATOR.setFillContents(
+      pattern_fill_contents ? scudo::PatternOrZeroFill : scudo::NoFill);
+}
+
+} // extern "C"

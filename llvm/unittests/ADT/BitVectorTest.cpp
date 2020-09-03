@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "gtest/gtest.h"
 
@@ -178,6 +179,24 @@ TYPED_TEST(BitVectorTest, TrivialOperation) {
   EXPECT_TRUE(Vec.empty());
 }
 
+TYPED_TEST(BitVectorTest, Equality) {
+  TypeParam A;
+  TypeParam B;
+  EXPECT_TRUE(A == B);
+  A.resize(10);
+  EXPECT_FALSE(A == B);
+  B.resize(10);
+  EXPECT_TRUE(A == B);
+  A.set(5);
+  EXPECT_FALSE(A == B);
+  B.set(5);
+  EXPECT_TRUE(A == B);
+  A.resize(20);
+  EXPECT_FALSE(A == B);
+  B.resize(20);
+  EXPECT_TRUE(A == B);
+}
+
 TYPED_TEST(BitVectorTest, SimpleFindOpsMultiWord) {
   TypeParam A;
 
@@ -278,6 +297,18 @@ TYPED_TEST(BitVectorTest, SimpleFindOpsSingleWord) {
   EXPECT_EQ(-1, A.find_last_unset());
 
   A.resize(20);
+  ASSERT_TRUE(SmallBitVectorIsSmallMode(A));
+  EXPECT_EQ(-1, A.find_first());
+  EXPECT_EQ(-1, A.find_last());
+  EXPECT_EQ(-1, A.find_next(5));
+  EXPECT_EQ(-1, A.find_next(19));
+  EXPECT_EQ(-1, A.find_prev(5));
+  EXPECT_EQ(-1, A.find_prev(20));
+  EXPECT_EQ(0, A.find_first_unset());
+  EXPECT_EQ(19, A.find_last_unset());
+  EXPECT_EQ(6, A.find_next_unset(5));
+  EXPECT_EQ(-1, A.find_next_unset(19));
+
   A.set(3);
   A.set(4);
   A.set(16);
@@ -300,6 +331,19 @@ TYPED_TEST(BitVectorTest, SimpleFindOpsSingleWord) {
   EXPECT_EQ(5, A.find_next_unset(4));
   EXPECT_EQ(13, A.find_next_unset(12));
   EXPECT_EQ(17, A.find_next_unset(15));
+
+  A.set();
+  ASSERT_TRUE(SmallBitVectorIsSmallMode(A));
+  EXPECT_EQ(0, A.find_first());
+  EXPECT_EQ(19, A.find_last());
+  EXPECT_EQ(6, A.find_next(5));
+  EXPECT_EQ(-1, A.find_next(19));
+  EXPECT_EQ(4, A.find_prev(5));
+  EXPECT_EQ(19, A.find_prev(20));
+  EXPECT_EQ(-1, A.find_first_unset());
+  EXPECT_EQ(-1, A.find_last_unset());
+  EXPECT_EQ(-1, A.find_next_unset(5));
+  EXPECT_EQ(-1, A.find_next_unset(19));
 }
 
 TEST(BitVectorTest, FindInRangeMultiWord) {
@@ -1149,4 +1193,70 @@ TYPED_TEST(BitVectorTest, PushBack) {
   EXPECT_EQ(213U, Vec.size());
   EXPECT_EQ(102U, Vec.count());
 }
+
+TYPED_TEST(BitVectorTest, DenseSet) {
+  DenseSet<TypeParam> Set;
+  TypeParam A(10, true);
+  auto I = Set.insert(A);
+  EXPECT_EQ(true, I.second);
+
+  TypeParam B(5, true);
+  I = Set.insert(B);
+  EXPECT_EQ(true, I.second);
+
+  TypeParam C(20, false);
+  C.set(19);
+  I = Set.insert(C);
+  EXPECT_EQ(true, I.second);
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  TypeParam D;
+  EXPECT_DEATH(Set.insert(D),
+               "Empty/Tombstone value shouldn't be inserted into map!");
+#endif
+
+  EXPECT_EQ(3U, Set.size());
+  EXPECT_EQ(1U, Set.count(A));
+  EXPECT_EQ(1U, Set.count(B));
+  EXPECT_EQ(1U, Set.count(C));
+
+  EXPECT_EQ(true, Set.erase(B));
+  EXPECT_EQ(2U, Set.size());
+
+  EXPECT_EQ(true, Set.erase(C));
+  EXPECT_EQ(1U, Set.size());
+
+  EXPECT_EQ(true, Set.erase(A));
+  EXPECT_EQ(0U, Set.size());
 }
+
+/// Test that capacity doesn't affect hashing.
+TYPED_TEST(BitVectorTest, DenseMapHashing) {
+  using DMI = DenseMapInfo<TypeParam>;
+  {
+    TypeParam A;
+    A.resize(200);
+    A.set(100);
+
+    TypeParam B;
+    B.resize(200);
+    B.set(100);
+    B.reserve(1000);
+
+    EXPECT_EQ(DMI::getHashValue(A), DMI::getHashValue(B));
+  }
+  {
+    TypeParam A;
+    A.resize(20);
+    A.set(10);
+
+    TypeParam B;
+    B.resize(20);
+    B.set(10);
+    B.reserve(1000);
+
+    EXPECT_EQ(DMI::getHashValue(A), DMI::getHashValue(B));
+  }
+}
+
+} // namespace

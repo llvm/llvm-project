@@ -10,11 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/Designator.h"
+#include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 using namespace clang;
 
@@ -154,7 +157,9 @@ static void CheckArrayDesignatorSyntax(Parser &P, SourceLocation Loc,
 /// initializer (because it is an expression).  We need to consider this case
 /// when parsing array designators.
 ///
-ExprResult Parser::ParseInitializerWithPotentialDesignator() {
+/// \p CodeCompleteCB is called with Designation parsed so far.
+ExprResult Parser::ParseInitializerWithPotentialDesignator(
+    llvm::function_ref<void(const Designation &)> CodeCompleteCB) {
 
   // If this is the old-style GNU extension:
   //   designation ::= identifier ':'
@@ -193,6 +198,11 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
       // designator: '.' identifier
       SourceLocation DotLoc = ConsumeToken();
 
+      if (Tok.is(tok::code_completion)) {
+        CodeCompleteCB(Desig);
+        cutOffParsing();
+        return ExprError();
+      }
       if (Tok.isNot(tok::identifier)) {
         Diag(Tok.getLocation(), diag::err_expected_field_designator);
         return ExprError();
@@ -407,7 +417,6 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
   return ExprError();
 }
 
-
 /// ParseBraceInitializer - Called when parsing an initializer that has a
 /// leading open brace.
 ///
@@ -444,6 +453,10 @@ ExprResult Parser::ParseBraceInitializer() {
       Actions, EnterExpressionEvaluationContext::InitList);
 
   bool InitExprsOk = true;
+  auto CodeCompleteDesignation = [&](const Designation &D) {
+    Actions.CodeCompleteDesignator(PreferredType.get(T.getOpenLocation()),
+                                   InitExprs, D);
+  };
 
   while (1) {
     // Handle Microsoft __if_exists/if_not_exists if necessary.
@@ -463,7 +476,7 @@ ExprResult Parser::ParseBraceInitializer() {
     // initializer directly.
     ExprResult SubElt;
     if (MayBeDesignationStart())
-      SubElt = ParseInitializerWithPotentialDesignator();
+      SubElt = ParseInitializerWithPotentialDesignator(CodeCompleteDesignation);
     else
       SubElt = ParseInitializer();
 
@@ -543,13 +556,17 @@ bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
     return false;
   }
 
+  auto CodeCompleteDesignation = [&](const Designation &D) {
+    Actions.CodeCompleteDesignator(PreferredType.get(Braces.getOpenLocation()),
+                                   InitExprs, D);
+  };
   while (!isEofOrEom()) {
     trailingComma = false;
     // If we know that this cannot be a designation, just parse the nested
     // initializer directly.
     ExprResult SubElt;
     if (MayBeDesignationStart())
-      SubElt = ParseInitializerWithPotentialDesignator();
+      SubElt = ParseInitializerWithPotentialDesignator(CodeCompleteDesignation);
     else
       SubElt = ParseInitializer();
 

@@ -173,16 +173,17 @@ shortcut in the BBEdit preferences, under Menus & Shortcuts.
 
 
 CLion Integration
-==================
+=================
 
 :program:`clang-format` is integrated into `CLion <https://www.jetbrains
-.com/clion/>`_ as an alternative code formatter. It is disabled by default and
-can be turned on in Settings/Preferences | Editor | Code Style.
+.com/clion/>`_ as an alternative code formatter. CLion turns it on
+automatically when there is a ``.clang-format`` file under the project root.
+Code style rules are applied as you type, including indentation,
+auto-completion, code generation, and refactorings.
 
-If :program:`clang-format` support is enabled, CLion detects config files when
-opening a project and suggests overriding the current IDE settings. Code style
-rules from the ``.clang-format`` files are then applied automatically to all
-editor actions, including auto-completion, code generation, and refactorings.
+:program:`clang-format` can also be enabled without a ``.clang-format`` file.
+In this case, CLion prompts you to create one based on the current IDE settings
+or the default LLVM style.
 
 
 Visual Studio Integration
@@ -190,6 +191,12 @@ Visual Studio Integration
 
 Download the latest Visual Studio extension from the `alpha build site
 <https://llvm.org/builds/>`_. The default key-binding is Ctrl-R,Ctrl-F.
+
+
+Visual Studio Code Integration
+==============================
+
+Get the latest Visual Studio Code extension from the `Visual Studio Marketplace <https://marketplace.visualstudio.com/items?itemName=xaver.clang-format>`_. The default key-binding is Alt-Shift-F.
 
 
 Script for patch reformatting
@@ -234,3 +241,8 @@ In an SVN client, you can do:
 
 The option `-U0` will create a diff without context lines (the script would format
 those as well).
+
+Current State of Clang Format for LLVM
+======================================
+
+The following table :doc:`ClangFormattedStatus` shows the current status of clang-formatting for the entire LLVM source tree.

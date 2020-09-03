@@ -15,7 +15,6 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -283,6 +282,9 @@ static bool updateOperand(FoldCandidate &Fold,
   assert(!Fold.needsShrink() && "not handled");
 
   if (Fold.isImm()) {
+    // FIXME: ChangeToImmediate should probably clear the subreg flags. It's
+    // reinterpreted as TargetFlags.
+    Old.setSubReg(0);
     Old.ChangeToImmediate(Fold.ImmToFold);
     return true;
   }
@@ -613,19 +615,26 @@ void SIFoldOperands::foldOperand(
   if (frameIndexMayFold(TII, *UseMI, UseOpIdx, OpToFold)) {
     // Sanity check that this is a stack access.
     // FIXME: Should probably use stack pseudos before frame lowering.
-    MachineOperand *SOff = TII->getNamedOperand(*UseMI, AMDGPU::OpName::soffset);
-    if (!SOff->isReg() || (SOff->getReg() != MFI->getScratchWaveOffsetReg() &&
-                           SOff->getReg() != MFI->getStackPtrOffsetReg()))
-      return;
 
     if (TII->getNamedOperand(*UseMI, AMDGPU::OpName::srsrc)->getReg() !=
         MFI->getScratchRSrcReg())
       return;
 
+    // Ensure this is either relative to the current frame or the current wave.
+    MachineOperand &SOff =
+        *TII->getNamedOperand(*UseMI, AMDGPU::OpName::soffset);
+    if ((!SOff.isReg() || SOff.getReg() != MFI->getStackPtrOffsetReg()) &&
+        (!SOff.isImm() || SOff.getImm() != 0))
+      return;
+
     // A frame index will resolve to a positive constant, so it should always be
     // safe to fold the addressing mode, even pre-GFX9.
     UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getIndex());
-    SOff->setReg(MFI->getStackPtrOffsetReg());
+
+    // If this is relative to the current wave, update it to be relative to the
+    // current frame.
+    if (SOff.isImm())
+      SOff.ChangeToRegister(MFI->getStackPtrOffsetReg(), false);
     return;
   }
 
@@ -908,6 +917,21 @@ static bool evalBinaryInstruction(unsigned Opcode, int32_t &Result,
   case AMDGPU::S_XOR_B32:
     Result = LHS ^ RHS;
     return true;
+  case AMDGPU::S_XNOR_B32:
+    Result = ~(LHS ^ RHS);
+    return true;
+  case AMDGPU::S_NAND_B32:
+    Result = ~(LHS & RHS);
+    return true;
+  case AMDGPU::S_NOR_B32:
+    Result = ~(LHS | RHS);
+    return true;
+  case AMDGPU::S_ANDN2_B32:
+    Result = LHS & ~RHS;
+    return true;
+  case AMDGPU::S_ORN2_B32:
+    Result = LHS | ~RHS;
+    return true;
   case AMDGPU::V_LSHL_B32_e64:
   case AMDGPU::V_LSHL_B32_e32:
   case AMDGPU::S_LSHL_B32:
@@ -1008,10 +1032,16 @@ static bool tryConstantFoldOp(MachineRegisterInfo &MRI,
   if (!Src0->isImm() && !Src1->isImm())
     return false;
 
-  if (MI->getOpcode() == AMDGPU::V_LSHL_OR_B32) {
+  if (MI->getOpcode() == AMDGPU::V_LSHL_OR_B32 ||
+      MI->getOpcode() == AMDGPU::V_LSHL_ADD_U32 ||
+      MI->getOpcode() == AMDGPU::V_AND_OR_B32) {
     if (Src0->isImm() && Src0->getImm() == 0) {
       // v_lshl_or_b32 0, X, Y -> copy Y
       // v_lshl_or_b32 0, X, K -> v_mov_b32 K
+      // v_lshl_add_b32 0, X, Y -> copy Y
+      // v_lshl_add_b32 0, X, K -> v_mov_b32 K
+      // v_and_or_b32 0, X, Y -> copy Y
+      // v_and_or_b32 0, X, K -> v_mov_b32 K
       bool UseCopy = TII->getNamedOperand(*MI, AMDGPU::OpName::src2)->isReg();
       MI->RemoveOperand(Src1Idx);
       MI->RemoveOperand(Src0Idx);
@@ -1382,8 +1412,8 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
   case AMDGPU::V_MUL_F32_e64:
   case AMDGPU::V_MUL_F16_e64: {
     // If output denormals are enabled, omod is ignored.
-    if ((Op == AMDGPU::V_MUL_F32_e64 && MFI->getMode().FP32Denormals) ||
-        (Op == AMDGPU::V_MUL_F16_e64 && MFI->getMode().FP64FP16Denormals))
+    if ((Op == AMDGPU::V_MUL_F32_e64 && MFI->getMode().FP32OutputDenormals) ||
+        (Op == AMDGPU::V_MUL_F16_e64 && MFI->getMode().FP64FP16OutputDenormals))
       return std::make_pair(nullptr, SIOutMods::NONE);
 
     const MachineOperand *RegOp = nullptr;
@@ -1412,8 +1442,8 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
   case AMDGPU::V_ADD_F32_e64:
   case AMDGPU::V_ADD_F16_e64: {
     // If output denormals are enabled, omod is ignored.
-    if ((Op == AMDGPU::V_ADD_F32_e64 && MFI->getMode().FP32Denormals) ||
-        (Op == AMDGPU::V_ADD_F16_e64 && MFI->getMode().FP64FP16Denormals))
+    if ((Op == AMDGPU::V_ADD_F32_e64 && MFI->getMode().FP32OutputDenormals) ||
+        (Op == AMDGPU::V_ADD_F16_e64 && MFI->getMode().FP64FP16OutputDenormals))
       return std::make_pair(nullptr, SIOutMods::NONE);
 
     // Look through the DAGCombiner canonicalization fmul x, 2 -> fadd x, x

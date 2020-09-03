@@ -13,8 +13,8 @@
 //     space.
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ProcessElfCore_h_
-#define liblldb_ProcessElfCore_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H
 
 #include <list>
 #include <vector>
@@ -125,7 +125,8 @@ private:
   lldb::ModuleSP m_core_module_sp;
   lldb_private::FileSpec m_core_file;
   std::string m_dyld_plugin_name;
-  DISALLOW_COPY_AND_ASSIGN(ProcessElfCore);
+  ProcessElfCore(const ProcessElfCore &) = delete;
+  const ProcessElfCore &operator=(const ProcessElfCore &) = delete;
 
   // True if m_thread_contexts contains valid entries
   bool m_thread_data_valid = false;
@@ -165,4 +166,4 @@ private:
   llvm::Error parseLinuxNotes(llvm::ArrayRef<lldb_private::CoreNote> notes);
 };
 
-#endif // liblldb_ProcessElfCore_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H

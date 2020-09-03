@@ -76,7 +76,7 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
 void Thumb1InstrInfo::
 storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                    unsigned SrcReg, bool isKill, int FI,
+                    Register SrcReg, bool isKill, int FI,
                     const TargetRegisterClass *RC,
                     const TargetRegisterInfo *TRI) const {
   assert((RC == &ARM::tGPRRegClass ||
@@ -92,7 +92,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     MachineFrameInfo &MFI = MF.getFrameInfo();
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOStore,
-        MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
+        MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
     BuildMI(MBB, I, DL, get(ARM::tSTRspi))
         .addReg(SrcReg, getKillRegState(isKill))
         .addFrameIndex(FI)
@@ -104,7 +104,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
 
 void Thumb1InstrInfo::
 loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                     unsigned DestReg, int FI,
+                     Register DestReg, int FI,
                      const TargetRegisterClass *RC,
                      const TargetRegisterInfo *TRI) const {
   assert(
@@ -121,7 +121,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     MachineFrameInfo &MFI = MF.getFrameInfo();
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOLoad,
-        MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
+        MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
     BuildMI(MBB, I, DL, get(ARM::tLDRspi), DestReg)
         .addFrameIndex(FI)
         .addImm(0)

@@ -2,7 +2,7 @@
 # By default, sections are SHT_PROGBITS, but .note sections (excluding
 # .note.GNU-stack) are SHT_NOTE sections.
 
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # RUN: llvm-objcopy --add-section=.foo=/dev/null %t.o %t-foo.o
 # RUN: llvm-objcopy --add-section=.note.foo=/dev/null %t.o %t-regular-note.o
 # RUN: llvm-objcopy --add-section=.note.GNU-stack=/dev/null %t.o %t-gnu-stack.o

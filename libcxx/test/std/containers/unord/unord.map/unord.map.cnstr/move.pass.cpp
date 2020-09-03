@@ -14,7 +14,7 @@
 
 // unordered_map(unordered_map&& u);
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <unordered_map>
 #include <string>

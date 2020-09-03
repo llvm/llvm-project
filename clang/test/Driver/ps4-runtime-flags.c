@@ -10,10 +10,15 @@
 // RUN: %clang -target x86_64-scei-ps4 -fprofile-arcs -fno-profile-arcs %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-NO-PROFILE %s
 // RUN: %clang -target x86_64-scei-ps4 -fprofile-generate %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-PROFILE %s
 // RUN: %clang -target x86_64-scei-ps4 -fno-profile-generate %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-NO-PROFILE %s
+// RUN: %clang -target x86_64-scei-ps4 -fprofile-generate -fno-profile-generate %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-NO-PROFILE %s
 // RUN: %clang -target x86_64-scei-ps4 -fprofile-generate=dir %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-PROFILE %s
 // RUN: %clang -target x86_64-scei-ps4 -fprofile-instr-generate %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-PROFILE %s
 // RUN: %clang -target x86_64-scei-ps4 -fno-profile-instr-generate %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-NO-PROFILE %s
+// RUN: %clang -target x86_64-scei-ps4 -fprofile-instr-generate -fno-profile-instr-generate %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-NO-PROFILE %s
+// RUN: %clang -target x86_64-scei-ps4 -fprofile-generate -fno-profile-instr-generate %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-PROFILE %s
 // RUN: %clang -target x86_64-scei-ps4 -fprofile-instr-generate=somefile.profraw %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-PROFILE %s
+// RUN: %clang -target x86_64-scei-ps4 -fcs-profile-generate %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-PROFILE %s
+// RUN: %clang -target x86_64-scei-ps4 -fcs-profile-generate -fno-profile-generate %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-NO-PROFILE %s
 //
 // CHECK-PS4-PROFILE: "--dependent-lib=libclang_rt.profile-x86_64.a"
 // CHECK-PS4-NO-PROFILE-NOT: "--dependent-lib=libclang_rt.profile-x86_64.a"

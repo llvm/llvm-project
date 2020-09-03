@@ -61,6 +61,12 @@ const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
   return DB;
 }
 
+const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
+                                           llvm::Error &&E) {
+  DB.AddString(toString(std::move(E)));
+  return DB;
+}
+
 static void DummyArgToStringFn(DiagnosticsEngine::ArgumentKind AK, intptr_t QT,
                             StringRef Modifier, StringRef Argument,
                             ArrayRef<DiagnosticsEngine::ArgumentValue> PrevArgs,

@@ -25,7 +25,7 @@ namespace lldb {
         IsValid () const;
 
         explicit operator bool() const;
-        
+
         lldb::SBFileSpec
         GetFileSpec () const;
 

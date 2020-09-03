@@ -265,7 +265,7 @@ bool AVRDAGToDAGISel::SelectInlineAsmMemoryOperand(const SDValue &Op,
       if (RI.getRegClass(Reg) != &AVR::PTRDISPREGSRegClass) {
         SDLoc dl(CopyFromRegOp);
 
-        unsigned VReg = RI.createVirtualRegister(&AVR::PTRDISPREGSRegClass);
+        Register VReg = RI.createVirtualRegister(&AVR::PTRDISPREGSRegClass);
 
         SDValue CopyToReg =
             CurDAG->getCopyToReg(CopyFromRegOp, dl, VReg, CopyFromRegOp);
@@ -294,7 +294,7 @@ bool AVRDAGToDAGISel::SelectInlineAsmMemoryOperand(const SDValue &Op,
   // More generic case.
   // Create chain that puts Op into pointer register
   // and return that register.
-  unsigned VReg = RI.createVirtualRegister(&AVR::PTRDISPREGSRegClass);
+  Register VReg = RI.createVirtualRegister(&AVR::PTRDISPREGSRegClass);
 
   SDValue CopyToReg = CurDAG->getCopyToReg(Op, dl, VReg, Op);
   SDValue CopyFromReg =

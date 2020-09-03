@@ -16,6 +16,7 @@ class TestScriptedResolver(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_scripted_resolver(self):
         """Use a scripted resolver to set a by symbol name breakpoint"""
         self.build()
@@ -38,10 +39,22 @@ class TestScriptedResolver(TestBase):
         """Make sure we get appropriate errors when we give invalid key/value
            options"""
         self.build()
-        self.do_test_bad_options()        
+        self.do_test_bad_options()
+
+    def test_copy_from_dummy_target(self):
+        """Make sure we don't crash during scripted breakpoint copy from dummy target"""
+        self.build()
+        self.do_test_copy_from_dummy_target()
 
     def make_target_and_import(self):
-        target = lldbutil.run_to_breakpoint_make_target(self)
+        target = self.make_target()
+        self.import_resolver_script()
+        return target
+
+    def make_target(self):
+        return lldbutil.run_to_breakpoint_make_target(self)
+
+    def import_resolver_script(self):
         interp = self.dbg.GetCommandInterpreter()
         error = lldb.SBError()
 
@@ -52,7 +65,6 @@ class TestScriptedResolver(TestBase):
         result = lldb.SBCommandReturnObject()
         interp.HandleCommand(command, result)
         self.assertTrue(result.Succeeded(), "com scr imp failed: %s"%(result.GetError()))
-        return target
 
     def make_extra_args(self):
         json_string = '{"symbol":"break_on_me", "test1": "value1"}'
@@ -110,7 +122,7 @@ class TestScriptedResolver(TestBase):
         module_list.Clear()
         file_list.Append(lldb.SBFileSpec("noFileOfThisName.xxx"))
         wrong.append(target.BreakpointCreateFromScript("resolver.Resolver", extra_args, module_list, file_list))
-        
+
         # Now make sure the CU level iteration obeys the file filters:
         file_list.Clear()
         module_list.Clear()
@@ -142,7 +154,7 @@ class TestScriptedResolver(TestBase):
         # Now run to main and ensure we hit the breakpoints we should have:
 
         lldbutil.run_to_breakpoint_do_run(self, target, right[0])
-        
+
         # Test the hit counts:
         for i in range(0, len(right)):
             self.assertEqual(right[i].GetHitCount(), 1, "Breakpoint %d has the wrong hit count"%(i))
@@ -167,12 +179,12 @@ class TestScriptedResolver(TestBase):
         bkpt = target.BreakpointCreateFromScript("resolver.Resolver", extra_args, module_list, file_list)
         self.assertTrue(bkpt.GetNumLocations() > 0, "Resolver got no locations.")
         self.expect("script print(resolver.Resolver.got_files)", substrs=["2"], msg="Was only passed modules")
-        
+
         # Make a breakpoint that asks for modules, check that we didn't get any files:
         bkpt = target.BreakpointCreateFromScript("resolver.ResolverModuleDepth", extra_args, module_list, file_list)
         self.assertTrue(bkpt.GetNumLocations() > 0, "ResolverModuleDepth got no locations.")
         self.expect("script print(resolver.Resolver.got_files)", substrs=["2"], msg="Was only passed modules")
-        
+
         # Make a breakpoint that asks for compile units, check that we didn't get any files:
         bkpt = target.BreakpointCreateFromScript("resolver.ResolverCUDepth", extra_args, module_list, file_list)
         self.assertTrue(bkpt.GetNumLocations() > 0, "ResolverCUDepth got no locations.")
@@ -187,7 +199,7 @@ class TestScriptedResolver(TestBase):
         bkpt = target.BreakpointCreateFromScript("resolver.ResolverFuncDepth", extra_args, module_list, file_list)
         self.assertTrue(bkpt.GetNumLocations() > 0, "ResolverFuncDepth got no locations.")
         self.expect("script print(resolver.Resolver.got_files)", substrs=["3"], msg="Was only passed modules")
-        self.expect("script print(resolver.Resolver.func_list)", substrs=["break_on_me", "main", "test_func"], msg="Saw all the functions")
+        self.expect("script print(resolver.Resolver.func_list)", substrs=['test_func', 'break_on_me', 'main'], msg="Saw all the functions")
 
     def do_test_cli(self):
         target = self.make_target_and_import()
@@ -210,15 +222,35 @@ class TestScriptedResolver(TestBase):
         bp_se = bp_sc.GetLineEntry()
         self.assertEqual(bp_se.GetLine(), 12, "Got the right line number")
         self.assertEqual(bp_se.GetFileSpec().GetFilename(), "main.c", "Got the right filename")
-        
+
     def do_test_bad_options(self):
         target = self.make_target_and_import()
 
-        self.expect("break set -P resolver.Resolver -k a_key", error = True, msg="Missing value at end", 
+        self.expect("break set -P resolver.Resolver -k a_key", error = True, msg="Missing value at end",
            substrs=['Key: "a_key" missing value'])
-        self.expect("break set -P resolver.Resolver -v a_value", error = True, msg="Missing key at end", 
+        self.expect("break set -P resolver.Resolver -v a_value", error = True, msg="Missing key at end",
            substrs=['Value: "a_value" missing matching key'])
-        self.expect("break set -P resolver.Resolver -v a_value -k a_key -v another_value", error = True, msg="Missing key among args", 
+        self.expect("break set -P resolver.Resolver -v a_value -k a_key -v another_value", error = True, msg="Missing key among args",
            substrs=['Value: "a_value" missing matching key'])
-        self.expect("break set -P resolver.Resolver -k a_key -k a_key -v another_value", error = True, msg="Missing value among args", 
+        self.expect("break set -P resolver.Resolver -k a_key -k a_key -v another_value", error = True, msg="Missing value among args",
            substrs=['Key: "a_key" missing value'])
+
+    def do_test_copy_from_dummy_target(self):
+        # Import breakpoint scripted resolver.
+        self.import_resolver_script()
+
+        # Create a scripted breakpoint.
+        self.runCmd("breakpoint set -P resolver.Resolver -k symbol -v break_on_me",
+                    BREAKPOINT_CREATED)
+
+        # This is the function to remove breakpoints from the dummy target
+        # to get a clean state for the next test case.
+        def cleanup():
+            self.runCmd('breakpoint delete -D -f', check=False)
+            self.runCmd('breakpoint list', check=False)
+
+        # Execute the cleanup function during test case tear down.
+        self.addTearDownHook(cleanup)
+
+        # Check that target creating doesn't crash.
+        target = self.make_target()

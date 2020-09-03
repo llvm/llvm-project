@@ -11,19 +11,19 @@ define void @transpose_multiply(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, <9 x
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <9 x double>* [[A_PTR:%.*]] to double*
 ; CHECK-NEXT:    [[COL_CAST:%.*]] = bitcast double* [[TMP0]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST]], align 8
-; CHECK-NEXT:    [[COL_GEP:%.*]] = getelementptr double, double* [[TMP0]], i32 3
+; CHECK-NEXT:    [[COL_GEP:%.*]] = getelementptr double, double* [[TMP0]], i64 3
 ; CHECK-NEXT:    [[COL_CAST1:%.*]] = bitcast double* [[COL_GEP]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST1]], align 8
-; CHECK-NEXT:    [[COL_GEP3:%.*]] = getelementptr double, double* [[TMP0]], i32 6
+; CHECK-NEXT:    [[COL_GEP3:%.*]] = getelementptr double, double* [[TMP0]], i64 6
 ; CHECK-NEXT:    [[COL_CAST4:%.*]] = bitcast double* [[COL_GEP3]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST4]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <9 x double>* [[B_PTR:%.*]] to double*
 ; CHECK-NEXT:    [[COL_CAST6:%.*]] = bitcast double* [[TMP1]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST6]], align 8
-; CHECK-NEXT:    [[COL_GEP8:%.*]] = getelementptr double, double* [[TMP1]], i32 3
+; CHECK-NEXT:    [[COL_GEP8:%.*]] = getelementptr double, double* [[TMP1]], i64 3
 ; CHECK-NEXT:    [[COL_CAST9:%.*]] = bitcast double* [[COL_GEP8]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD10:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST9]], align 8
-; CHECK-NEXT:    [[COL_GEP11:%.*]] = getelementptr double, double* [[TMP1]], i32 6
+; CHECK-NEXT:    [[COL_GEP11:%.*]] = getelementptr double, double* [[TMP1]], i64 6
 ; CHECK-NEXT:    [[COL_CAST12:%.*]] = bitcast double* [[COL_GEP11]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST12]], align 8
 
@@ -227,21 +227,21 @@ define void @transpose_multiply(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, <9 x
 ; CHECK-NEXT:    [[TMP108:%.*]] = bitcast <9 x double>* [[C_PTR:%.*]] to double*
 ; CHECK-NEXT:    [[TMP109:%.*]] = bitcast double* [[TMP108]] to <3 x double>*
 ; CHECK-NEXT:    store <3 x double> [[TMP47]], <3 x double>* [[TMP109]], align 8
-; CHECK-NEXT:    [[TMP110:%.*]] = getelementptr double, double* [[TMP108]], i32 3
+; CHECK-NEXT:    [[TMP110:%.*]] = getelementptr double, double* [[TMP108]], i64 3
 ; CHECK-NEXT:    [[TMP111:%.*]] = bitcast double* [[TMP110]] to <3 x double>*
 ; CHECK-NEXT:    store <3 x double> [[TMP77]], <3 x double>* [[TMP111]], align 8
-; CHECK-NEXT:    [[TMP112:%.*]] = getelementptr double, double* [[TMP108]], i32 6
+; CHECK-NEXT:    [[TMP112:%.*]] = getelementptr double, double* [[TMP108]], i64 6
 ; CHECK-NEXT:    [[TMP113:%.*]] = bitcast double* [[TMP112]] to <3 x double>*
 ; CHECK-NEXT:    store <3 x double> [[TMP107]], <3 x double>* [[TMP113]], align 8
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
-  %a = load <9 x double>, <9 x double>* %A.Ptr
-  %b = load <9 x double>, <9 x double>* %B.Ptr
+  %a = load <9 x double>, <9 x double>* %A.Ptr, align 8
+  %b = load <9 x double>, <9 x double>* %B.Ptr, align 8
   %a.trans  = call <9 x double> @llvm.matrix.transpose(<9 x double> %a, i32 3, i32 3)
   %c = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> %a.trans, <9 x double> %b, i32 3, i32 3, i32 3)
-  store <9 x double> %c, <9 x double>* %C.Ptr
+  store <9 x double> %c, <9 x double>* %C.Ptr, align 8
   ret void
 }
 
@@ -255,19 +255,19 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <9 x double>* [[A_PTR:%.*]] to double*
 ; CHECK-NEXT:    [[COL_CAST:%.*]] = bitcast double* [[TMP0]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST]], align 8
-; CHECK-NEXT:    [[COL_GEP:%.*]] = getelementptr double, double* [[TMP0]], i32 3
+; CHECK-NEXT:    [[COL_GEP:%.*]] = getelementptr double, double* [[TMP0]], i64 3
 ; CHECK-NEXT:    [[COL_CAST1:%.*]] = bitcast double* [[COL_GEP]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST1]], align 8
-; CHECK-NEXT:    [[COL_GEP3:%.*]] = getelementptr double, double* [[TMP0]], i32 6
+; CHECK-NEXT:    [[COL_GEP3:%.*]] = getelementptr double, double* [[TMP0]], i64 6
 ; CHECK-NEXT:    [[COL_CAST4:%.*]] = bitcast double* [[COL_GEP3]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST4]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <9 x double>* [[B_PTR:%.*]] to double*
 ; CHECK-NEXT:    [[COL_CAST6:%.*]] = bitcast double* [[TMP1]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST6]], align 8
-; CHECK-NEXT:    [[COL_GEP8:%.*]] = getelementptr double, double* [[TMP1]], i32 3
+; CHECK-NEXT:    [[COL_GEP8:%.*]] = getelementptr double, double* [[TMP1]], i64 3
 ; CHECK-NEXT:    [[COL_CAST9:%.*]] = bitcast double* [[COL_GEP8]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD10:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST9]], align 8
-; CHECK-NEXT:    [[COL_GEP11:%.*]] = getelementptr double, double* [[TMP1]], i32 6
+; CHECK-NEXT:    [[COL_GEP11:%.*]] = getelementptr double, double* [[TMP1]], i64 6
 ; CHECK-NEXT:    [[COL_CAST12:%.*]] = bitcast double* [[COL_GEP11]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST12]], align 8
 
@@ -474,10 +474,10 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 ; CHECK-NEXT:    [[TMP110:%.*]] = bitcast <9 x double>* [[C_PTR:%.*]] to double*
 ; CHECK-NEXT:    [[COL_CAST92:%.*]] = bitcast double* [[TMP110]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD93:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST92]], align 8
-; CHECK-NEXT:    [[COL_GEP94:%.*]] = getelementptr double, double* [[TMP110]], i32 3
+; CHECK-NEXT:    [[COL_GEP94:%.*]] = getelementptr double, double* [[TMP110]], i64 3
 ; CHECK-NEXT:    [[COL_CAST95:%.*]] = bitcast double* [[COL_GEP94]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD96:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST95]], align 8
-; CHECK-NEXT:    [[COL_GEP97:%.*]] = getelementptr double, double* [[TMP110]], i32 6
+; CHECK-NEXT:    [[COL_GEP97:%.*]] = getelementptr double, double* [[TMP110]], i64 6
 ; CHECK-NEXT:    [[COL_CAST98:%.*]] = bitcast double* [[COL_GEP97]] to <3 x double>*
 ; CHECK-NEXT:    [[COL_LOAD99:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST98]], align 8
 
@@ -492,22 +492,22 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 ; CHECK-NEXT:    [[TMP111:%.*]] = bitcast <9 x double>* [[C_PTR]] to double*
 ; CHECK-NEXT:    [[TMP112:%.*]] = bitcast double* [[TMP111]] to <3 x double>*
 ; CHECK-NEXT:    store <3 x double> [[TMP108]], <3 x double>* [[TMP112]], align 8
-; CHECK-NEXT:    [[TMP113:%.*]] = getelementptr double, double* [[TMP111]], i32 3
+; CHECK-NEXT:    [[TMP113:%.*]] = getelementptr double, double* [[TMP111]], i64 3
 ; CHECK-NEXT:    [[TMP114:%.*]] = bitcast double* [[TMP113]] to <3 x double>*
 ; CHECK-NEXT:    store <3 x double> [[TMP109]], <3 x double>* [[TMP114]], align 8
-; CHECK-NEXT:    [[TMP115:%.*]] = getelementptr double, double* [[TMP111]], i32 6
+; CHECK-NEXT:    [[TMP115:%.*]] = getelementptr double, double* [[TMP111]], i64 6
 ; CHECK-NEXT:    [[TMP116:%.*]] = bitcast double* [[TMP115]] to <3 x double>*
 ; CHECK-NEXT:    store <3 x double> [[TMP110]], <3 x double>* [[TMP116]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <9 x double>, <9 x double>* %A.Ptr
-  %b = load <9 x double>, <9 x double>* %B.Ptr
+  %a = load <9 x double>, <9 x double>* %A.Ptr, align 8
+  %b = load <9 x double>, <9 x double>* %B.Ptr, align 8
   %a.trans  = call <9 x double> @llvm.matrix.transpose(<9 x double> %a, i32 3, i32 3)
   %mult = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> %a.trans, <9 x double> %b, i32 3, i32 3, i32 3)
-  %c = load <9 x double>, <9 x double>* %C.Ptr
+  %c = load <9 x double>, <9 x double>* %C.Ptr, align 8
   %res = fadd <9 x double> %c, %mult
 
-  store <9 x double> %res, <9 x double>* %C.Ptr
+  store <9 x double> %res, <9 x double>* %C.Ptr, align 8
   ret void
 }

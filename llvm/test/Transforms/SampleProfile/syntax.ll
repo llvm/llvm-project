@@ -16,10 +16,13 @@
 ; RUN: not opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/bad_samples.prof 2>&1 | FileCheck -check-prefix=BAD-SAMPLES %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/bad_mangle.prof 2>&1 >/dev/null
 
-define void @empty() {
+define void @empty() #0 {
 entry:
   ret void
 }
+
+attributes #0 = { "use-sample-profile" }
+
 ; NO-DEBUG: warning: No debug information found in function empty: Function profile not used
 ; MISSING-FILE: missing.prof: Could not open profile:
 ; BAD-FN-HEADER: error: {{.*}}bad_fn_header.prof: Could not open profile: Unrecognized sample profile encoding format

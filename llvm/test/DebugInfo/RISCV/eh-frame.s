@@ -8,7 +8,7 @@ func:
   ret
   .cfi_endproc
 
-# CHECK: 00000000 00000010 ffffffff CIE
+# CHECK: 00000000 00000010 00000000 CIE
 # CHECK:   Version:               1
 # CHECK:   Augmentation:          "zR"
 # CHECK:   Code alignment factor: 1
@@ -28,7 +28,7 @@ func:
 # CHECK:   Augmentation data:     1B
 # CHECK:   DW_CFA_def_cfa: reg2 +0
 #
-# CHECK: 00000014 00000010 00000018 FDE cie=00000018 pc=00000000...00000004
+# CHECK: 00000014 00000010 00000018 FDE cie=00000000 pc=00000000...00000004
 # CHECK:   DW_CFA_nop:
 # CHECK:   DW_CFA_nop:
 # CHECK:   DW_CFA_nop:

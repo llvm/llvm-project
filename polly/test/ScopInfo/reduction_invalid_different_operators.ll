@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-scops -analyze < %s | FileCheck %s
 ;
 ; int f() {
 ;   int i, sum = 0, sth = 0;

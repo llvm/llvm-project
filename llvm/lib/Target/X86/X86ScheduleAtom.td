@@ -244,6 +244,7 @@ defm : AtomWriteResPair<WriteFCmp64X,       [AtomPort01], [AtomPort01],  6,  7, 
 defm : X86WriteResPairUnsupported<WriteFCmp64Y>;
 defm : X86WriteResPairUnsupported<WriteFCmp64Z>;
 defm : AtomWriteResPair<WriteFCom,           [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
+defm : AtomWriteResPair<WriteFComX,          [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
 defm : AtomWriteResPair<WriteFMul,           [AtomPort0],  [AtomPort0],  4,  4,  [4],  [4]>;
 defm : AtomWriteResPair<WriteFMulX,          [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
 defm : X86WriteResPairUnsupported<WriteFMulY>;
@@ -368,8 +369,10 @@ def  : WriteRes<WriteVecStoreX,       [AtomPort0]>;
 defm : X86WriteResUnsupported<WriteVecStoreY>;
 def  : WriteRes<WriteVecStoreNT,      [AtomPort0]>;
 defm : X86WriteResUnsupported<WriteVecStoreNTY>;
-def  : WriteRes<WriteVecMaskedStore,  [AtomPort0]>;
-defm : X86WriteResUnsupported<WriteVecMaskedStoreY>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore32>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore64>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore32Y>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore64Y>;
 
 def  : WriteRes<WriteVecMove,          [AtomPort0]>;
 def  : WriteRes<WriteVecMoveX,        [AtomPort01]>;

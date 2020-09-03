@@ -1,0 +1,55 @@
+## Check how llvm-dwarfdump calculates section sizes
+## with --show-section-sizes for ELF objects.
+
+# RUN: yaml2obj %s | llvm-dwarfdump - --show-section-sizes \
+# RUN:   | FileCheck %s --match-full-lines --strict-whitespace
+
+#      CHECK:----------------------------------------------------
+# CHECK-NEXT:file: {{.*}}
+# CHECK-NEXT:----------------------------------------------------
+# CHECK-NEXT:SECTION          SIZE (b)
+# CHECK-NEXT:---------------  --------
+# CHECK-NEXT:.debug_info            17 (1.62%)
+# CHECK-NEXT:.debug_loc              1 (0.10%)
+# CHECK-NEXT:.debug_type            26 (2.48%)
+# CHECK-NEXT:.debug_foo            100 (9.54%)
+# CHECK-NEXT:.debug_info.dwo         9 (0.86%)
+# CHECK-NEXT:.debug_line            19 (1.81%)
+# CHECK-EMPTY:
+# CHECK-NEXT: Total Size: 172  (16.41%)
+# CHECK-NEXT: Total File Size: 1048
+# CHECK-NEXT:----------------------------------------------------
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .debug_info
+    Type: SHT_PROGBITS
+    Size: 17
+  - Name: .debug_line
+    Type: SHT_PROGBITS
+    Size: 19
+  - Name: .debug_loc
+    Type: SHT_PROGBITS
+    Size: 1
+  - Name: .debug_type
+    Type: SHT_PROGBITS
+    Size: 13
+  - Name: .debug_type (1)
+    Type: SHT_PROGBITS
+    Size: 13
+  - Name: .debug_foo
+    Type: SHT_PROGBITS
+    Size: 100
+  - Name: .debug_info.dwo
+    Type: SHT_PROGBITS
+    Size: 9
+## This is a debug section following the Mach-O naming style, and is used
+## to show that such sections are not included in the report.
+  - Name: __debug_bar
+    Type: SHT_PROGBITS
+    Size: 1

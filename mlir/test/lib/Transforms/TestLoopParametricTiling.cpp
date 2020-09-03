@@ -1,6 +1,6 @@
 //===- TestLoopParametricTiling.cpp --- Parametric loop tiling pass -------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
@@ -23,7 +23,7 @@ namespace {
 // Extracts fixed-range loops for top-level loop nests with ranges defined in
 // the pass constructor.  Assumes loops are permutable.
 class SimpleParametricLoopTilingPass
-    : public FunctionPass<SimpleParametricLoopTilingPass> {
+    : public PassWrapper<SimpleParametricLoopTilingPass, FunctionPass> {
 public:
   SimpleParametricLoopTilingPass() = default;
   SimpleParametricLoopTilingPass(const SimpleParametricLoopTilingPass &) {}
@@ -33,9 +33,9 @@ public:
 
   void runOnFunction() override {
     FuncOp func = getFunction();
-    func.walk([this](loop::ForOp op) {
+    func.walk([this](scf::ForOp op) {
       // Ignore nested loops.
-      if (op.getParentRegion()->getParentOfType<loop::ForOp>())
+      if (op.getParentRegion()->getParentOfType<scf::ForOp>())
         return;
       extractFixedOuterLoops(op, sizes);
     });
@@ -48,12 +48,11 @@ public:
 };
 } // end namespace
 
-std::unique_ptr<OpPassBase<FuncOp>>
-mlir::createSimpleParametricTilingPass(ArrayRef<int64_t> outerLoopSizes) {
-  return std::make_unique<SimpleParametricLoopTilingPass>(outerLoopSizes);
+namespace mlir {
+void registerSimpleParametricTilingPass() {
+  PassRegistration<SimpleParametricLoopTilingPass>(
+      "test-extract-fixed-outer-loops",
+      "test application of parametric tiling to the outer loops so that the "
+      "ranges of outer loops become static");
 }
-
-static PassRegistration<SimpleParametricLoopTilingPass>
-    reg("test-extract-fixed-outer-loops",
-        "test application of parametric tiling to the outer loops so that the "
-        "ranges of outer loops become static");
+} // namespace mlir

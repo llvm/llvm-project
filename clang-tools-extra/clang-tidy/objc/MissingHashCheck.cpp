@@ -37,10 +37,6 @@ AST_MATCHER_P(ObjCContainerDecl, hasInstanceMethod,
 } // namespace
 
 void MissingHashCheck::registerMatchers(MatchFinder *Finder) {
-  // This check should only be applied to Objective-C sources.
-  if (!getLangOpts().ObjC)
-    return;
-
   Finder->addMatcher(
       objcMethodDecl(
           hasName("isEqual:"), isInstanceMethod(),

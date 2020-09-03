@@ -60,7 +60,7 @@ fin:
   ret void
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!22, !23}

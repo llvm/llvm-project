@@ -6,38 +6,10 @@
 # RUN:   .rodata : { *(.aaa) *(.bbb) A = .; *(.ccc) B = .; } \
 # RUN: }" > %t.script
 # RUN: ld.lld -o %t.so --script %t.script %t.o -shared
-# RUN: llvm-readobj --dyn-symbols %t.so | FileCheck %s
+# RUN: llvm-nm -D %t.so | FileCheck %s
 
-# CHECK:      DynamicSymbols [
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name:
-# CHECK-NEXT:     Value:
-# CHECK-NEXT:     Size:
-# CHECK-NEXT:     Binding:
-# CHECK-NEXT:     Type:
-# CHECK-NEXT:     Other:
-# CHECK-NEXT:     Section:
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: A
-# CHECK-NEXT:     Value: 0x226
-# CHECK-NEXT:     Size:
-# CHECK-NEXT:     Binding:
-# CHECK-NEXT:     Type:
-# CHECK-NEXT:     Other:
-# CHECK-NEXT:     Section:
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: B
-# CHECK-NEXT:     Value: 0x227
-# CHECK-NEXT:     Size:
-# CHECK-NEXT:     Binding:
-# CHECK-NEXT:     Type:
-# CHECK-NEXT:     Other:
-# CHECK-NEXT:     Section:
-# CHECK-NEXT:   }
-# CHECK-NEXT: ]
-
+# CHECK: 000000000000025e R A
+# CHECK: 000000000000025f R B
 
 .section .aaa,"a"
 .byte 11

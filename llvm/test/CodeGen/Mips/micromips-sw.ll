@@ -7,10 +7,10 @@
 ; RUN:   | FileCheck --check-prefix=MM6 %s
 
 define void @fun(i32 %val) {
-; MM2-LABEL: fun:
+; MM2-LABEL: <fun>:
 ; MM2:         cb e5 sw $ra, 20($sp)
 
-; MM6-LABEL: fun:
+; MM6-LABEL: <fun>:
 ; MM6:         fb fd 00 14 sw $ra, 20($sp)
 entry:
   call i32* @fun1()

@@ -3,18 +3,18 @@
 ## load command of this type (LC_VERSION_MIN_IPHONEOS, LC_VERSION_MIN_MACOSX,
 ## LC_VERSION_MIN_TVOS, LC_VERSION_MIN_WATCHOS).
 
-# RUN: yaml2obj %p/Inputs/min_iphoneos_version_lc.yaml > %t.iphoneos
+# RUN: yaml2obj %p/Inputs/min_iphoneos_version_lc.yaml -o %t.iphoneos
 # RUN: llvm-objcopy %t.iphoneos %t.iphoneos.copy
 # RUN: cmp %t.iphoneos %t.iphoneos.copy
 
-# RUN: yaml2obj %p/Inputs/min_macos_version_lc.yaml > %t.macos
+# RUN: yaml2obj %p/Inputs/min_macos_version_lc.yaml -o %t.macos
 # RUN: llvm-objcopy %t.macos %t.macos.copy
 # RUN: cmp %t.macos %t.macos.copy
 
-# RUN: yaml2obj %p/Inputs/min_tvos_version_lc.yaml > %t.tvos
+# RUN: yaml2obj %p/Inputs/min_tvos_version_lc.yaml -o %t.tvos
 # RUN: llvm-objcopy %t.tvos %t.tvos.copy
 # RUN: cmp %t.tvos %t.tvos.copy
 
-# RUN: yaml2obj %p/Inputs/min_watchos_version_lc.yaml > %t.watchos
+# RUN: yaml2obj %p/Inputs/min_watchos_version_lc.yaml -o %t.watchos
 # RUN: llvm-objcopy %t.watchos %t.watchos.copy
 # RUN: cmp %t.watchos %t.watchos.copy

@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 #include <string>
 
 namespace clang {
@@ -25,12 +25,6 @@ public:
   /// Supported include styles.
   enum IncludeStyle { IS_LLVM = 0, IS_Google = 1 };
 
-  /// Converts "llvm" to ``IS_LLVM``, otherwise returns ``IS_Google``.
-  static IncludeStyle parseIncludeStyle(const std::string &Value);
-
-  /// Converts ``IncludeStyle`` to string representation.
-  static StringRef toString(IncludeStyle Style);
-
   /// The classifications of inclusions, in the order they should be sorted.
   enum IncludeKinds {
     IK_MainTUInclude = 0,    ///< e.g. ``#include "foo.h"`` when editing foo.cc
@@ -42,21 +36,12 @@ public:
 
   /// ``IncludeSorter`` constructor; takes the FileID and name of the file to be
   /// processed by the sorter.
-  IncludeSorter(const SourceManager *SourceMgr, const LangOptions *LangOpts,
-                const FileID FileID, StringRef FileName, IncludeStyle Style);
-
-  /// Returns the ``SourceManager``-specific file ID for the file being handled
-  /// by the sorter.
-  const FileID current_FileID() const { return CurrentFileID; }
+  IncludeSorter(const SourceManager *SourceMgr, const FileID FileID,
+                StringRef FileName, IncludeStyle Style);
 
   /// Adds the given include directive to the sorter.
   void AddInclude(StringRef FileName, bool IsAngled,
                   SourceLocation HashLocation, SourceLocation EndLocation);
-
-  /// Returns the edits needed to sort the current set of includes and reset the
-  /// internal state (so that different blocks of includes are sorted separately
-  /// within the same file).
-  std::vector<FixItHint> GetEdits();
 
   /// Creates a quoted inclusion directive in the right sort order. Returns None
   /// on error or if header inclusion directive for header already exists.
@@ -66,7 +51,6 @@ private:
   typedef SmallVector<SourceRange, 1> SourceRangeVector;
 
   const SourceManager *SourceMgr;
-  const LangOptions *LangOpts;
   const IncludeStyle Style;
   FileID CurrentFileID;
   /// The file name stripped of common suffixes.
@@ -80,6 +64,11 @@ private:
 };
 
 } // namespace utils
+
+template <> struct OptionEnumMapping<utils::IncludeSorter::IncludeStyle> {
+  static ArrayRef<std::pair<utils::IncludeSorter::IncludeStyle, StringRef>>
+  getEnumMapping();
+};
 } // namespace tidy
 } // namespace clang
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H

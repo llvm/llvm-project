@@ -201,7 +201,7 @@ End:
 ; CHECK-LABEL: TBB.split:
 ; CHECK-NEXT: store i32 %v, i32* %a
 ; CHECK-NEXT: %[[CALL2:.*]] = call i32 @callee(i32* nonnull %a, i32 1, i32 2)
-; CHECK-NEXT br label %Tail
+; CHECK-NEXT: br label %Tail
 ; CHECK-LABEL: Tail:
 ; CHECK: %[[MERGED:.*]] = phi i32 [ %[[CALL1]], %Header.split ], [ %[[CALL2]], %TBB.split ]
 ; CHECK: ret i32 %[[MERGED]]
@@ -239,7 +239,7 @@ End:                                           ; preds = %CallSite, %TBB
 ; CHECK-NEXT: br label %CallSite
 ; CHECK-LABEL: TBB.split:
 ; CHECK: call void @bar(i32* nonnull %ptrarg, i32 %l2)
-; CHECK-NEXT br label %CallSite
+; CHECK-NEXT: br label %CallSite
 ; CHECK-LABEL: CallSite:
 ; CHECK-NEXT:  %l = phi i32 [ %l1, %Header.split ], [ %l2, %TBB.split ]
 ; CHECK: call void @bari(i32 %l)

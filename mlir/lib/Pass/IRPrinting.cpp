@@ -1,6 +1,6 @@
 //===- IRPrinting.cpp -----------------------------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -33,8 +33,7 @@ public:
       //   - Operation pointer
       addDataToHash(hasher, op);
       //   - Attributes
-      addDataToHash(hasher,
-                    op->getAttrList().getDictionary().getAsOpaquePointer());
+      addDataToHash(hasher, op->getMutableAttrDict());
       //   - Blocks in Regions
       for (Region &region : op->getRegions()) {
         for (Block &block : region) {
@@ -98,7 +97,7 @@ private:
 
 /// Returns true if the given pass is hidden from IR printing.
 static bool isHiddenPass(Pass *pass) {
-  return isAdaptorPass(pass) || isa<VerifierPass>(pass);
+  return isa<OpToOpPassAdaptor, VerifierPass>(pass);
 }
 
 static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
@@ -141,7 +140,7 @@ void IRPrinterInstrumentation::runBeforePass(Pass *pass, Operation *op) {
     beforePassFingerPrints.try_emplace(pass, op);
 
   config->printBeforeIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << formatv("*** IR Dump Before {0} ***", pass->getName());
+    out << formatv("// *** IR Dump Before {0} ***", pass->getName());
     printIR(op, config->shouldPrintAtModuleScope(), out, OpPrintingFlags());
     out << "\n\n";
   });
@@ -165,20 +164,20 @@ void IRPrinterInstrumentation::runAfterPass(Pass *pass, Operation *op) {
   }
 
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << formatv("*** IR Dump After {0} ***", pass->getName());
+    out << formatv("// *** IR Dump After {0} ***", pass->getName());
     printIR(op, config->shouldPrintAtModuleScope(), out, OpPrintingFlags());
     out << "\n\n";
   });
 }
 
 void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
-  if (isAdaptorPass(pass))
+  if (isa<OpToOpPassAdaptor>(pass))
     return;
   if (config->shouldPrintAfterOnlyOnChange())
     beforePassFingerPrints.erase(pass);
 
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << formatv("*** IR Dump After {0} Failed ***", pass->getName());
+    out << formatv("// *** IR Dump After {0} Failed ***", pass->getName());
     printIR(op, config->shouldPrintAtModuleScope(), out,
             OpPrintingFlags().printGenericOpForm());
     out << "\n\n";
@@ -256,6 +255,10 @@ struct BasicIRPrinterConfig : public PassManager::IRPrinterConfig {
 /// Add an instrumentation to print the IR before and after pass execution,
 /// using the provided configuration.
 void PassManager::enableIRPrinting(std::unique_ptr<IRPrinterConfig> config) {
+  if (config->shouldPrintAtModuleScope() &&
+      getContext()->isMultithreadingEnabled())
+    llvm::report_fatal_error("IR printing can't be setup on a pass-manager "
+                             "without disabling multi-threading first.");
   addInstrumentation(
       std::make_unique<IRPrinterInstrumentation>(std::move(config)));
 }

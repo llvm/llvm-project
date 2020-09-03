@@ -1,19 +1,19 @@
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize -S < %s | \
+; RUN:   -tail-predication=enabled -loop-vectorize -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,PREFER-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=-mve \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=false -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve \
-; RUN:   -disable-mve-tail-predication=true -loop-vectorize \
+; RUN:   -tail-predication=disabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
@@ -21,33 +21,36 @@
 ; 'isHardwareLoopProfitable' return false, so that we test avoiding folding for
 ; these cases.
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve,-lob \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,PREFER-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
 ; RUN:   -prefer-predicate-over-epilog=false \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
 ; RUN:   -prefer-predicate-over-epilog=true \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,FOLDING-OPT
 
 define void @prefer_folding(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL:    prefer_folding(
 ; PREFER-FOLDING: vector.body:
-; PREFER-FOLDING: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32
-; PREFER-FOLDING: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32
-; PREFER-FOLDING: call void @llvm.masked.store.v4i32.p0v4i32
+; PREFER-FOLDING: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; PREFER-FOLDING: %[[VIVELEM0:.*]] = add i32 %index, 0
+; PREFER-FOLDING: %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[VIVELEM0]], i32 430)
+; PREFER-FOLDING: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %active.lane.mask,
+; PREFER-FOLDING: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %active.lane.mask,
+; PREFER-FOLDING: call void @llvm.masked.store.v4i32.p0v4i32({{.*}}, <4 x i1> %active.lane.mask
 ; PREFER-FOLDING: br i1 %{{.*}}, label %{{.*}}, label %vector.body
 ;
 ; NO-FOLDING-NOT: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(
@@ -200,9 +203,9 @@ define void @narrowing_load_not_allowed(i8* noalias nocapture %A, i8* noalias no
 ; PREFER-FOLDING:     br i1 %{{.*}}, label %{{.*}}, label %vector.body
 
 ; FOLDING-OPT:        vector.body:
-; FOLDING-OPT         call <8 x i16> @llvm.masked.load.v8i16.p0v8i16
-; FOLDING-OPT         call <8 x i8> @llvm.masked.load.v8i8.p0v8i8
-; FOLDING-OPT         call void @llvm.masked.store.v8i8.p0v8i8
+; FOLDING-OPT:        call <8 x i16> @llvm.masked.load.v8i16.p0v8i16
+; FOLDING-OPT:        call <8 x i8> @llvm.masked.load.v8i8.p0v8i8
+; FOLDING-OPT:        call void @llvm.masked.store.v8i8.p0v8i8
 ; FOLDING-OPT:        br i1 %{{.*}}, label %{{.*}}, label %vector.body
 entry:
   br label %for.body
@@ -507,9 +510,13 @@ for.body:
 define void @float(float* noalias nocapture %A, float* noalias nocapture readonly %B, float* noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL:    float(
 ; PREFER-FOLDING: vector.body:
-; PREFER-FOLDING: call <4 x float> @llvm.masked.load.v4f32.p0v4f32
-; PREFER-FOLDING: call <4 x float> @llvm.masked.load.v4f32.p0v4f32
-; PREFER-FOLDING: call void @llvm.masked.store.v4f32.p0v4f32
+; PREFER-FOLDING: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; PREFER-FOLDING: %[[VIVELEM0:.*]] = add i32 %index, 0
+; PREFER-FOLDING: %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[VIVELEM0]], i32 430)
+; PREFER-FOLDING: call <4 x float> @llvm.masked.load.v4f32.p0v4f32({{.*}}%active.lane.mask
+; PREFER-FOLDING: call <4 x float> @llvm.masked.load.v4f32.p0v4f32({{.*}}%active.lane.mask
+; PREFER-FOLDING: call void @llvm.masked.store.v4f32.p0v4f32({{.*}}%active.lane.mask
+; PREFER-FOLDING: %index.next = add i32 %index, 4
 ; PREFER-FOLDING: br i1 %{{.*}}, label %{{.*}}, label %vector.body
 entry:
   br label %for.body
@@ -555,8 +562,6 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-; TODO: this fpext could be allowed, but we don't lower it very efficiently yet,
-; so reject this for now.
 define void @fpext_allowed(float* noalias nocapture %A, half* noalias nocapture readonly %B, float* noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL:        fpext_allowed(
 ; PREFER-FOLDING:     vector.body:
@@ -584,8 +589,6 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-; TODO: this fptrunc could be allowed, but we don't lower it very efficiently yet,
-; so reject this for now.
 define void @fptrunc_allowed(half* noalias nocapture %A, float* noalias nocapture readonly %B, float* noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL:        fptrunc_allowed(
 ; PREFER-FOLDING:     vector.body:
@@ -615,10 +618,10 @@ for.body:
 
 define void @fptrunc_not_allowed(float* noalias nocapture %A, float* noalias nocapture readonly %B, float* noalias nocapture readonly %C, half* noalias nocapture %D) #0 {
 ; CHECK-LABEL:        fptrunc_not_allowed(
-; PREFER-FOLDING:     vector.body:
+; PREFER-FOLDING-NOT: vector.body:
 ; PREFER-FOLDING-NOT: llvm.masked.load
 ; PREFER-FOLDING-NOT: llvm.masked.store
-; PREFER-FOLDING:     br i1 %{{.*}}, label %{{.*}}, label %vector.body
+; PREFER-FOLDING:     br i1 %{{.*}}, label %{{.*}}, label %for.body
 entry:
   br label %for.body
 

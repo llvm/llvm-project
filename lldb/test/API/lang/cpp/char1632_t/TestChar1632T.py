@@ -55,8 +55,8 @@ class Char1632TestCase(TestBase):
             "frame variable cs16 cs32",
             substrs=[
                 '(const char16_t *) cs16 = ',
-                '(const char32_t *) cs32 = ',
                 'u"hello world ྒྙྐ"',
+                '(const char32_t *) cs32 = ',
                 'U"hello world ྒྙྐ"'])
 
         # Check that we correctly report the non-const types
@@ -64,8 +64,8 @@ class Char1632TestCase(TestBase):
             "frame variable s16 s32",
             substrs=[
                 '(char16_t *) s16 = ',
-                '(char32_t *) s32 = ',
                 'u"ﺸﺵۻ"',
+                '(char32_t *) s32 = ',
                 'U"ЕЙРГЖО"'])
 
         # Check that we correctly report the array types
@@ -92,8 +92,8 @@ class Char1632TestCase(TestBase):
             "frame variable s16 s32",
             substrs=[
                 '(char16_t *) s16 = 0x',
-                '(char32_t *) s32 = ',
                 '"色ハ匂ヘト散リヌルヲ"',
+                '(char32_t *) s32 = ',
                 '"෴"'])
 
         # check the same as above for arrays
@@ -107,13 +107,9 @@ class Char1632TestCase(TestBase):
                 '"෴"'])
 
         # check that zero values are properly handles
-        self.expect('frame variable cs16_zero', substrs=["U+0000 u'\\0'"])
-        self.expect(
-            'frame variable cs32_zero',
-            substrs=["U+0x00000000 U'\\0'"])
-        self.expect('expression cs16_zero', substrs=["U+0000 u'\\0'"])
-        self.expect('expression cs32_zero', substrs=["U+0x00000000 U'\\0'"])
+        self.expect_expr('cs16_zero', result_summary="U+0000 u'\\0'")
+        self.expect_expr('cs32_zero', result_summary="U+0x00000000 U'\\0'")
 
         # Check that we can run expressions that return charN_t
-        self.expect("expression u'a'", substrs=['(char16_t) $', "61 u'a'"])
-        self.expect("expression U'a'", substrs=['(char32_t) $', "61 U'a'"])
+        self.expect_expr("u'a'", result_type="char16_t", result_summary="U+0061 u'a'")
+        self.expect_expr("U'a'", result_type="char32_t", result_summary="U+0x00000061 U'a'")

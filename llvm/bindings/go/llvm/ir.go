@@ -224,21 +224,22 @@ const (
 //-------------------------------------------------------------------------
 
 const (
-	VoidTypeKind      TypeKind = C.LLVMVoidTypeKind
-	FloatTypeKind     TypeKind = C.LLVMFloatTypeKind
-	DoubleTypeKind    TypeKind = C.LLVMDoubleTypeKind
-	X86_FP80TypeKind  TypeKind = C.LLVMX86_FP80TypeKind
-	FP128TypeKind     TypeKind = C.LLVMFP128TypeKind
-	PPC_FP128TypeKind TypeKind = C.LLVMPPC_FP128TypeKind
-	LabelTypeKind     TypeKind = C.LLVMLabelTypeKind
-	IntegerTypeKind   TypeKind = C.LLVMIntegerTypeKind
-	FunctionTypeKind  TypeKind = C.LLVMFunctionTypeKind
-	StructTypeKind    TypeKind = C.LLVMStructTypeKind
-	ArrayTypeKind     TypeKind = C.LLVMArrayTypeKind
-	PointerTypeKind   TypeKind = C.LLVMPointerTypeKind
-	VectorTypeKind    TypeKind = C.LLVMVectorTypeKind
-	MetadataTypeKind  TypeKind = C.LLVMMetadataTypeKind
-	TokenTypeKind     TypeKind = C.LLVMTokenTypeKind
+	VoidTypeKind           TypeKind = C.LLVMVoidTypeKind
+	FloatTypeKind          TypeKind = C.LLVMFloatTypeKind
+	DoubleTypeKind         TypeKind = C.LLVMDoubleTypeKind
+	X86_FP80TypeKind       TypeKind = C.LLVMX86_FP80TypeKind
+	FP128TypeKind          TypeKind = C.LLVMFP128TypeKind
+	PPC_FP128TypeKind      TypeKind = C.LLVMPPC_FP128TypeKind
+	LabelTypeKind          TypeKind = C.LLVMLabelTypeKind
+	IntegerTypeKind        TypeKind = C.LLVMIntegerTypeKind
+	FunctionTypeKind       TypeKind = C.LLVMFunctionTypeKind
+	StructTypeKind         TypeKind = C.LLVMStructTypeKind
+	ArrayTypeKind          TypeKind = C.LLVMArrayTypeKind
+	PointerTypeKind        TypeKind = C.LLVMPointerTypeKind
+	MetadataTypeKind       TypeKind = C.LLVMMetadataTypeKind
+	TokenTypeKind          TypeKind = C.LLVMTokenTypeKind
+	VectorTypeKind    	   TypeKind = C.LLVMVectorTypeKind
+	ScalableVectorTypeKind TypeKind = C.LLVMScalableVectorTypeKind
 )
 
 //-------------------------------------------------------------------------
@@ -1256,6 +1257,7 @@ func (bb BasicBlock) MoveAfter(pos BasicBlock)  { C.LLVMMoveBasicBlockAfter(bb.C
 
 // Operations on instructions
 func (v Value) EraseFromParentAsInstruction()      { C.LLVMInstructionEraseFromParent(v.C) }
+func (v Value) RemoveFromParentAsInstruction()     { C.LLVMInstructionRemoveFromParent(v.C) }
 func (v Value) InstructionParent() (bb BasicBlock) { bb.C = C.LLVMGetInstructionParent(v.C); return }
 func (v Value) InstructionDebugLoc() (md Metadata) { md.C = C.LLVMInstructionGetDebugLoc(v.C); return }
 func (v Value) InstructionSetDebugLoc(md Metadata) { C.LLVMInstructionSetDebugLoc(v.C, md.C) }

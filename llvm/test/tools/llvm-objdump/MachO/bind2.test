@@ -1,0 +1,5 @@
+# RUN: llvm-objdump --macho --bind %p/Inputs/bind2.macho-x86_64 | FileCheck %s  
+
+# CHECK: __DATA   __data             0x00001008 pointer         0 libSystem        _malloc
+# CHECK: __DATA   __data             0x00001050 pointer         0 libSystem        _malloc
+# CHECK: __DATA   __data             0x00001458 pointer         0 libSystem        _malloc

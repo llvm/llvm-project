@@ -295,8 +295,8 @@ void SwiftASTManipulatorBase::DoInitialization() {
             break;
           }
         }
-      } else if (FD->hasName() && FD->getBaseIdentifier().str()
-                                    .startswith(m_wrapper_func_prefix)) {
+      } else if (FD->hasName() && FD->getBaseIdentifier().str().startswith(
+                                      m_wrapper_func_prefix)) {
         m_wrapper_decl = FD;
       }
 

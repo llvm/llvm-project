@@ -18,20 +18,20 @@ b.cpp:
 
 CHECK-LABEL: .debug_types.dwo contents:
 CHECK: [[COMMONUOFF:0x[0-9a-f]*]]:
-CHECK-LABEL: Type Unit: length = 0x00000020 version = 0x0004 abbr_offset =
-CHECK:         0x0000 addr_size = 0x08 name = 'common' type_signature = [[COMMONSIG:0x[0-9a-f]*]] type_offset = 0x[[COMMONOFF:.*]] (next unit at [[AUOFF:.*]])
+CHECK-LABEL: Type Unit: length = 0x00000020, format = DWARF32, version = 0x0004, abbr_offset =
+CHECK:         0x0000, addr_size = 0x08, name = 'common', type_signature = [[COMMONSIG:0x[0-9a-f]*]], type_offset = 0x[[COMMONOFF:.*]] (next unit at [[AUOFF:.*]])
 CHECK:                DW_TAG_type_unit
 CHECK: [[COMMONOFF]]:   DW_TAG_structure_type
 CHECK:                    DW_AT_name {{.*}} "common"
 CHECK: [[AUOFF]]:
-CHECK-LABEL: Type Unit: length = 0x00000020 version = 0x0004 abbr_offset =
-CHECK:         0x0000 addr_size = 0x08 name = 'adistinct' type_signature = [[ASIG:0x[0-9a-f]*]] type_offset = 0x[[AOFF:.*]] (next unit at [[BUOFF:.*]])
+CHECK-LABEL: Type Unit: length = 0x00000020, format = DWARF32, version = 0x0004, abbr_offset =
+CHECK:         0x0000, addr_size = 0x08, name = 'adistinct', type_signature = [[ASIG:0x[0-9a-f]*]], type_offset = 0x[[AOFF:.*]] (next unit at [[BUOFF:.*]])
 CHECK:             DW_TAG_type_unit
 CHECK: 0x00000042:   DW_TAG_structure_type
 CHECK:                 DW_AT_name {{.*}} "adistinct"
 CHECK: [[BUOFF]]:
-CHECK-LABEL: Type Unit: length = 0x00000020 version = 0x0004 abbr_offset =
-CHECK:         0x{{.*}} addr_size = 0x08 name = 'bdistinct' type_signature = [[BSIG:0x[0-9a-f]*]] type_offset = 0x[[BOFF:.*]] (next unit at [[XUOFF:.*]])
+CHECK-LABEL: Type Unit: length = 0x00000020, format = DWARF32, version = 0x0004, abbr_offset =
+CHECK:         0x{{.*}}, addr_size = 0x08, name = 'bdistinct', type_signature = [[BSIG:0x[0-9a-f]*]], type_offset = 0x[[BOFF:.*]] (next unit at [[XUOFF:.*]])
 CHECK:             DW_TAG_type_unit
 CHECK: 0x00000066:   DW_TAG_structure_type
 CHECK:                 DW_AT_name {{.*}} "bdistinct"

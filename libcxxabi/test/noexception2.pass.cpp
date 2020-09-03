@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
-// REQUIRES: libcxxabi-no-exceptions
+// UNSUPPORTED: c++03
+// REQUIRES: no-exceptions
 
 #include <cxxabi.h>
 #include <exception>

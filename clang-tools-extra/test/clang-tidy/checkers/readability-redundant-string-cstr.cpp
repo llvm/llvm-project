@@ -15,6 +15,8 @@ struct basic_string {
   basic_string();
   basic_string(const C *p, const A &a = A());
 
+  ~basic_string();
+
   const C *c_str() const;
   const C *data() const;
 
@@ -205,3 +207,42 @@ void dummy(const char*) {}
 void invalid(const NotAString &s) {
   dummy(s.c_str());
 }
+
+// Test for rvalue std::string.
+void m1(std::string&&) {
+  std::string s;
+
+  m1(s.c_str());
+
+  void (*m1p1)(std::string&&);
+  m1p1 = m1;
+  m1p1(s.c_str());
+
+  using m1tp = void (*)(std::string &&);
+  m1tp m1p2 = m1;
+  m1p2(s.c_str());  
+}
+
+namespace PR45286 {
+struct Foo {
+  void func(const std::string &) {}
+  void func2(std::string &&) {}
+};
+
+void bar() {
+  std::string Str{"aaa"};
+  Foo Foo;
+  Foo.func(Str.c_str());
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}Foo.func(Str);{{$}}
+
+  // Ensure it doesn't transform Binding to r values
+  Foo.func2(Str.c_str());
+
+  // Ensure its not confused by parens
+  Foo.func((Str.c_str()));
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}Foo.func((Str));{{$}}
+  Foo.func2((Str.c_str()));
+}
+} // namespace PR45286

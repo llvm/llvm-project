@@ -65,6 +65,7 @@ void SectionBase::finalize() {}
 void SectionBase::markSymbols() {}
 void SectionBase::replaceSectionReferences(
     const DenseMap<SectionBase *, SectionBase *> &) {}
+void SectionBase::onRemove() {}
 
 template <class ELFT> void ELFWriter<ELFT>::writeShdr(const SectionBase &Sec) {
   uint8_t *B = Buf.getBufferStart() + Sec.HeaderOffset;
@@ -111,7 +112,9 @@ void ELFSectionSizer<ELFT>::visit(RelocationSection &Sec) {
 template <class ELFT>
 void ELFSectionSizer<ELFT>::visit(GnuDebugLinkSection &Sec) {}
 
-template <class ELFT> void ELFSectionSizer<ELFT>::visit(GroupSection &Sec) {}
+template <class ELFT> void ELFSectionSizer<ELFT>::visit(GroupSection &Sec) {
+  Sec.Size = sizeof(Elf_Word) + Sec.GroupMembers.size() * sizeof(Elf_Word);
+}
 
 template <class ELFT>
 void ELFSectionSizer<ELFT>::visit(SectionIndexSection &Sec) {}
@@ -605,6 +608,7 @@ static bool isValidReservedSectionIndex(uint16_t Index, uint16_t Machine) {
   if (Machine == EM_HEXAGON) {
     switch (Index) {
     case SHN_HEXAGON_SCOMMON:
+    case SHN_HEXAGON_SCOMMON_1:
     case SHN_HEXAGON_SCOMMON_2:
     case SHN_HEXAGON_SCOMMON_4:
     case SHN_HEXAGON_SCOMMON_8:
@@ -741,7 +745,7 @@ void SymbolTableSection::prepareForLayout() {
   // Reserve proper amount of space in section index table, so we can
   // layout sections correctly. We will fill the table with correct
   // indexes later in fillShdnxTable.
-  if (SectionIndexTable)  
+  if (SectionIndexTable)
     SectionIndexTable->reserve(Symbols.size());
 
   // Add all of our strings to SymbolNames so that SymbolNames has the right
@@ -963,8 +967,24 @@ Error Section::removeSectionReferences(
 }
 
 void GroupSection::finalize() {
-  this->Info = Sym->Index;
-  this->Link = SymTab->Index;
+  this->Info = Sym ? Sym->Index : 0;
+  this->Link = SymTab ? SymTab->Index : 0;
+}
+
+Error GroupSection::removeSectionReferences(
+    bool AllowBrokenLinks, function_ref<bool(const SectionBase *)> ToRemove) {
+  if (ToRemove(SymTab)) {
+    if (!AllowBrokenLinks)
+      return createStringError(
+          llvm::errc::invalid_argument,
+          "section '.symtab' cannot be removed because it is "
+          "referenced by the group section '%s'",
+          this->Name.data());
+    SymTab = nullptr;
+    Sym = nullptr;
+  }
+  llvm::erase_if(GroupMembers, ToRemove);
+  return Error::success();
 }
 
 Error GroupSection::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
@@ -986,6 +1006,13 @@ void GroupSection::replaceSectionReferences(
   for (SectionBase *&Sec : GroupMembers)
     if (SectionBase *To = FromTo.lookup(Sec))
       Sec = To;
+}
+
+void GroupSection::onRemove() {
+  // As the header section of the group is removed, drop the Group flag in its
+  // former members.
+  for (SectionBase *Sec : GroupMembers)
+    Sec->Flags &= ~SHF_GROUP;
 }
 
 void Section::initialize(SectionTableRef SecTable) {
@@ -1097,14 +1124,6 @@ static bool compareSegmentsByOffset(const Segment *A, const Segment *B) {
   if (A->OriginalOffset < B->OriginalOffset)
     return true;
   if (A->OriginalOffset > B->OriginalOffset)
-    return false;
-  return A->Index < B->Index;
-}
-
-static bool compareSegmentsByPAddr(const Segment *A, const Segment *B) {
-  if (A->PAddr < B->PAddr)
-    return true;
-  if (A->PAddr > B->PAddr)
     return false;
   return A->Index < B->Index;
 }
@@ -1241,7 +1260,7 @@ std::unique_ptr<Object> IHexELFBuilder::build() {
 template <class ELFT> void ELFBuilder<ELFT>::setParentSegment(Segment &Child) {
   for (Segment &Parent : Obj.segments()) {
     // Every segment will overlap with itself but we don't want a segment to
-    // be it's own parent so we avoid that situation.
+    // be its own parent so we avoid that situation.
     if (&Child != &Parent && segmentOverlapsSegment(Child, Parent)) {
       // We want a canonical "most parental" segment but this requires
       // inspecting the ParentSegment.
@@ -1330,18 +1349,20 @@ void ELFBuilder<ELFT>::initGroupSection(GroupSection *GroupSec) {
     error("invalid alignment " + Twine(GroupSec->Align) + " of group section '" +
           GroupSec->Name + "'");
   SectionTableRef SecTable = Obj.sections();
-  auto SymTab = SecTable.template getSectionOfType<SymbolTableSection>(
-      GroupSec->Link,
-      "link field value '" + Twine(GroupSec->Link) + "' in section '" +
-          GroupSec->Name + "' is invalid",
-      "link field value '" + Twine(GroupSec->Link) + "' in section '" +
-          GroupSec->Name + "' is not a symbol table");
-  Symbol *Sym = SymTab->getSymbolByIndex(GroupSec->Info);
-  if (!Sym)
-    error("info field value '" + Twine(GroupSec->Info) + "' in section '" +
-          GroupSec->Name + "' is not a valid symbol index");
-  GroupSec->setSymTab(SymTab);
-  GroupSec->setSymbol(Sym);
+  if (GroupSec->Link != SHN_UNDEF) {
+    auto SymTab = SecTable.template getSectionOfType<SymbolTableSection>(
+        GroupSec->Link,
+        "link field value '" + Twine(GroupSec->Link) + "' in section '" +
+            GroupSec->Name + "' is invalid",
+        "link field value '" + Twine(GroupSec->Link) + "' in section '" +
+            GroupSec->Name + "' is not a symbol table");
+    Symbol *Sym = SymTab->getSymbolByIndex(GroupSec->Info);
+    if (!Sym)
+      error("info field value '" + Twine(GroupSec->Info) + "' in section '" +
+            GroupSec->Name + "' is not a valid symbol index");
+    GroupSec->setSymTab(SymTab);
+    GroupSec->setSymbol(Sym);
+  }
   if (GroupSec->Contents.size() % sizeof(ELF::Elf32_Word) ||
       GroupSec->Contents.empty())
     error("the content of the section " + GroupSec->Name + " is malformed");
@@ -1520,7 +1541,7 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
       continue;
     }
     auto &Sec = makeSection(Shdr);
-    Sec.Name = unwrapOrError(ElfFile.getSectionName(&Shdr));
+    Sec.Name = std::string(unwrapOrError(ElfFile.getSectionName(&Shdr)));
     Sec.Type = Sec.OriginalType = Shdr.sh_type;
     Sec.Flags = Sec.OriginalFlags = Shdr.sh_flags;
     Sec.Addr = Shdr.sh_addr;
@@ -1567,27 +1588,7 @@ template <class ELFT> void ELFBuilder<ELFT>::readSections(bool EnsureSymtab) {
     Obj.SymbolTable->initialize(Obj.sections());
     initSymbolTable(Obj.SymbolTable);
   } else if (EnsureSymtab) {
-    // Reuse an existing SHT_STRTAB section if it exists.
-    StringTableSection *StrTab = nullptr;
-    for (auto &Sec : Obj.sections()) {
-      if (Sec.Type == ELF::SHT_STRTAB && !(Sec.Flags & SHF_ALLOC)) {
-        StrTab = static_cast<StringTableSection *>(&Sec);
-
-        // Prefer a string table that is not the section header string table, if
-        // such a table exists.
-        if (Obj.SectionNames != &Sec)
-          break;
-      }
-    }
-    if (!StrTab)
-      StrTab = &Obj.addSection<StringTableSection>();
-
-    SymbolTableSection &SymTab = Obj.addSection<SymbolTableSection>();
-    SymTab.Name = ".symtab";
-    SymTab.Link = StrTab->Index;
-    SymTab.initialize(Obj.sections());
-    SymTab.addSymbol("", 0, 0, nullptr, 0, 0, 0, 0);
-    Obj.SymbolTable = &SymTab;
+    Obj.addNewSymbolTable();
   }
 
   // Now that all sections and symbols have been added we can add
@@ -1846,6 +1847,7 @@ Error Object::removeSections(bool AllowBrokenLinks,
   for (auto &RemoveSec : make_range(Iter, std::end(Sections))) {
     for (auto &Segment : Segments)
       Segment->removeSection(RemoveSec.get());
+    RemoveSec->onRemove();
     RemoveSections.insert(RemoveSec.get());
   }
 
@@ -1878,6 +1880,33 @@ Error Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
   return Error::success();
 }
 
+void Object::addNewSymbolTable() {
+  assert(!SymbolTable && "Object must not has a SymbolTable.");
+
+  // Reuse an existing SHT_STRTAB section if it exists.
+  StringTableSection *StrTab = nullptr;
+  for (SectionBase &Sec : sections()) {
+    if (Sec.Type == ELF::SHT_STRTAB && !(Sec.Flags & SHF_ALLOC)) {
+      StrTab = static_cast<StringTableSection *>(&Sec);
+
+      // Prefer a string table that is not the section header string table, if
+      // such a table exists.
+      if (SectionNames != &Sec)
+        break;
+    }
+  }
+  if (!StrTab)
+    StrTab = &addSection<StringTableSection>();
+
+  SymbolTableSection &SymTab = addSection<SymbolTableSection>();
+  SymTab.Name = ".symtab";
+  SymTab.Link = StrTab->Index;
+  SymTab.initialize(sections());
+  SymTab.addSymbol("", 0, 0, nullptr, 0, 0, 0, 0);
+
+  SymbolTable = &SymTab;
+}
+
 void Object::sortSections() {
   // Use stable_sort to maintain the original ordering as closely as possible.
   llvm::stable_sort(Sections, [](const SecPtr &A, const SecPtr &B) {
@@ -1902,8 +1931,7 @@ static void orderSegments(std::vector<Segment *> &Segments) {
 // returns an Offset one past the end of the last segment.
 static uint64_t layoutSegments(std::vector<Segment *> &Segments,
                                uint64_t Offset) {
-  assert(std::is_sorted(std::begin(Segments), std::end(Segments),
-                        compareSegmentsByOffset));
+  assert(llvm::is_sorted(Segments, compareSegmentsByOffset));
   // The only way a segment should move is if a section was between two
   // segments and that section was removed. If that section isn't in a segment
   // then it's acceptable, but not ideal, to simply move it to after the
@@ -2225,56 +2253,29 @@ Error BinaryWriter::write() {
 }
 
 Error BinaryWriter::finalize() {
-  // We need a temporary list of segments that has a special order to it
-  // so that we know that anytime ->ParentSegment is set that segment has
-  // already had it's offset properly set. We only want to consider the segments
-  // that will affect layout of allocated sections so we only add those.
-  std::vector<Segment *> OrderedSegments;
-  for (const SectionBase &Sec : Obj.allocSections())
-    if (Sec.ParentSegment != nullptr)
-      OrderedSegments.push_back(Sec.ParentSegment);
-
-  // For binary output, we're going to use physical addresses instead of
-  // virtual addresses, since a binary output is used for cases like ROM
-  // loading and physical addresses are intended for ROM loading.
-  // However, if no segment has a physical address, we'll fallback to using
-  // virtual addresses for all.
-  if (all_of(OrderedSegments,
-             [](const Segment *Seg) { return Seg->PAddr == 0; }))
-    for (Segment *Seg : OrderedSegments)
-      Seg->PAddr = Seg->VAddr;
-
-  llvm::stable_sort(OrderedSegments, compareSegmentsByPAddr);
-
-  // Because we add a ParentSegment for each section we might have duplicate
-  // segments in OrderedSegments. If there were duplicates then layoutSegments
-  // would do very strange things.
-  auto End =
-      std::unique(std::begin(OrderedSegments), std::end(OrderedSegments));
-  OrderedSegments.erase(End, std::end(OrderedSegments));
-
   // Compute the section LMA based on its sh_offset and the containing segment's
-  // p_offset and p_paddr. Also compute the minimum LMA of all sections as
-  // MinAddr. In the output, the contents between address 0 and MinAddr will be
-  // skipped.
+  // p_offset and p_paddr. Also compute the minimum LMA of all non-empty
+  // sections as MinAddr. In the output, the contents between address 0 and
+  // MinAddr will be skipped.
   uint64_t MinAddr = UINT64_MAX;
   for (SectionBase &Sec : Obj.allocSections()) {
     if (Sec.ParentSegment != nullptr)
       Sec.Addr =
           Sec.Offset - Sec.ParentSegment->Offset + Sec.ParentSegment->PAddr;
-    MinAddr = std::min(MinAddr, Sec.Addr);
+    if (Sec.Size > 0)
+      MinAddr = std::min(MinAddr, Sec.Addr);
   }
 
   // Now that every section has been laid out we just need to compute the total
   // file size. This might not be the same as the offset returned by
   // layoutSections, because we want to truncate the last segment to the end of
-  // its last section, to match GNU objcopy's behaviour.
+  // its last non-empty section, to match GNU objcopy's behaviour.
   TotalSize = 0;
-  for (SectionBase &Sec : Obj.allocSections()) {
-    Sec.Offset = Sec.Addr - MinAddr;
-    if (Sec.Type != SHT_NOBITS)
+  for (SectionBase &Sec : Obj.allocSections())
+    if (Sec.Type != SHT_NOBITS && Sec.Size > 0) {
+      Sec.Offset = Sec.Addr - MinAddr;
       TotalSize = std::max(TotalSize, Sec.Offset + Sec.Size);
-  }
+    }
 
   if (Error E = Buf.allocate(TotalSize))
     return E;

@@ -180,7 +180,7 @@ thread safety annotations.
   Since libc++ 4.0 this extension has been disabled by default. This macro
   may be defined to re-enable it in order to support existing code that depends
   on the extension. New use of this extension should be discouraged.
-  See `PR 27374 <http://llvm.org/PR27374>`_ for more information.
+  See `PR 27374 <https://llvm.org/PR27374>`_ for more information.
 
   Note: The "reduced-arity-initialization" extension is still offered but only
   for explicit conversions. Example:

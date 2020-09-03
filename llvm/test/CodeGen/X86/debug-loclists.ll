@@ -21,10 +21,10 @@
 ; CHECK-NEXT:   DW_AT_name {{.*}} "r"
 
 ; CHECK:      .debug_loclists contents:
-; CHECK-NEXT: 0x00000000: locations list header: length = 0x00000035, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000003
+; CHECK-NEXT: 0x00000000: locations list header: length = 0x00000035, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000003
 
 ; DWO:      .debug_loclists.dwo contents:
-; DWO-NEXT: 0x00000000: locations list header: length = 0x00000035, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000003
+; DWO-NEXT: 0x00000000: locations list header: length = 0x00000035, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000003
 
 ; CHECK-NEXT: offsets: [
 ; CHECK-NEXT: 0x0000000c => 0x00000018

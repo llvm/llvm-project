@@ -1,5 +1,5 @@
-RUN: dsymutil -s %p/Inputs/fat-test.dylib | FileCheck -check-prefix=ALL -check-prefix=I386 %s 
-RUN: dsymutil -arch i386 -s %p/Inputs/fat-test.dylib | FileCheck -check-prefix=I386 -check-prefix=ONE %s
+RUN: dsymutil -s %p/Inputs/fat-test.dylib | FileCheck -check-prefixes=ALL,I386 %s
+RUN: dsymutil -arch i386 -s %p/Inputs/fat-test.dylib | FileCheck -check-prefixes=I386,ONE %s
 
 
 ALL:  ----------------------------------------------------------------------

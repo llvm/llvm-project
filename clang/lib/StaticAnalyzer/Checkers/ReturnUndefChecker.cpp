@@ -122,6 +122,6 @@ void ento::registerReturnUndefChecker(CheckerManager &mgr) {
   mgr.registerChecker<ReturnUndefChecker>();
 }
 
-bool ento::shouldRegisterReturnUndefChecker(const LangOptions &LO) {
+bool ento::shouldRegisterReturnUndefChecker(const CheckerManager &mgr) {
   return true;
 }

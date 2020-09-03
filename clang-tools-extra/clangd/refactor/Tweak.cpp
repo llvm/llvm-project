@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Tweak.h"
-#include "Logger.h"
-#include "Path.h"
 #include "SourceCode.h"
 #include "index/Index.h"
+#include "support/Logger.h"
+#include "support/Path.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -46,10 +46,10 @@ void validateRegistry() {
 } // namespace
 
 Tweak::Selection::Selection(const SymbolIndex *Index, ParsedAST &AST,
-                            unsigned RangeBegin, unsigned RangeEnd)
+                            unsigned RangeBegin, unsigned RangeEnd,
+                            SelectionTree ASTSelection)
     : Index(Index), AST(&AST), SelectionBegin(RangeBegin),
-      SelectionEnd(RangeEnd),
-      ASTSelection(AST.getASTContext(), AST.getTokens(), RangeBegin, RangeEnd) {
+      SelectionEnd(RangeEnd), ASTSelection(std::move(ASTSelection)) {
   auto &SM = AST.getSourceManager();
   Code = SM.getBufferData(SM.getMainFileID());
   Cursor = SM.getComposedLoc(SM.getMainFileID(), RangeBegin);

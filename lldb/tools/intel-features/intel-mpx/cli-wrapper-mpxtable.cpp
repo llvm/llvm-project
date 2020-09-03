@@ -19,6 +19,7 @@
 #include "lldb/API/SBThread.h"
 
 #include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
 
 static bool GetPtr(char *cptr, uint64_t &ptr, lldb::SBFrame &frame,
                    lldb::SBCommandReturnObject &result) {

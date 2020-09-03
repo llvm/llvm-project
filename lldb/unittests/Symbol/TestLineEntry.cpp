@@ -1,4 +1,4 @@
-//===-- TestLineEntry.cpp ------------------------------*- C++ -*-===//
+//===-- TestLineEntry.cpp -------------------------------------------------===//
 //
 //
 //                     The LLVM Compiler Infrastructure
@@ -49,7 +49,7 @@ void LineEntryTest::SetUp() {
   auto ExpectedFile = TestFile::fromYamlFile("inlined-functions.yaml");
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   m_file.emplace(std::move(*ExpectedFile));
-  m_module_sp = std::make_shared<Module>(ModuleSpec(FileSpec(m_file->name())));
+  m_module_sp = std::make_shared<Module>(m_file->moduleSpec());
 }
 
 llvm::Expected<LineEntry> LineEntryTest::GetLineEntryForLine(uint32_t line) {

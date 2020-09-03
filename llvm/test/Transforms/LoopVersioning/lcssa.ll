@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -loop-versioning -S < %s | FileCheck %s
+; RUN: opt -basic-aa -loop-versioning -S < %s | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
 define void @fill(i8** %ls1.20, i8** %ls2.21, i8* %cse3.22) {
@@ -69,4 +69,4 @@ bb3:
   ret void
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }

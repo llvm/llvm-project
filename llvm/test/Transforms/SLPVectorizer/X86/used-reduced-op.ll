@@ -55,13 +55,7 @@ define void @n() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP38:%.*]] = icmp slt <4 x i32> [[TMP37]], zeroinitializer
 ; CHECK-NEXT:    [[TMP39:%.*]] = sub nsw <4 x i32> zeroinitializer, [[TMP37]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = select <4 x i1> [[TMP38]], <4 x i32> [[TMP39]], <4 x i32> [[TMP37]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP40]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp slt <4 x i32> [[TMP40]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i32> [[TMP40]], <4 x i32> [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp slt <4 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> [[RDX_SHUF1]]
-; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i32> [[RDX_MINMAX_SELECT3]], i32 0
+; CHECK-NEXT:    [[TMP41:%.*]] = call i32 @llvm.experimental.vector.reduce.smin.v4i32(<4 x i32> [[TMP40]])
 ; CHECK-NEXT:    [[TMP42:%.*]] = icmp slt i32 [[TMP41]], [[TMP32]]
 ; CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i32 [[TMP41]], i32 [[TMP32]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = icmp slt i32 [[TMP43]], [[B_0]]

@@ -1,3 +1,0 @@
-// REQUIRES: x86_64-linux
-// RUN: llvm-objdump --disassemble %p/Inputs/call-absolute-symbol.elf-x86_64 | FileCheck %s
-CHECK: 201000:	e8 fb f0 df ff 	callq	-2100997 <foo>

@@ -507,8 +507,10 @@ TEST_F(RegistryTest, HasArgs) {
 
 TEST_F(RegistryTest, ParenExpr) {
   Matcher<Stmt> Value = constructMatcher("parenExpr").getTypedMatcher<Stmt>();
-  EXPECT_TRUE(matches("int i = (1);", Value));
-  EXPECT_FALSE(matches("int i = 1;", Value));
+  EXPECT_TRUE(
+      matches("int i = (1);", traverse(ast_type_traits::TK_AsIs, Value)));
+  EXPECT_FALSE(
+      matches("int i = 1;", traverse(ast_type_traits::TK_AsIs, Value)));
 }
 
 TEST_F(RegistryTest, EqualsMatcher) {

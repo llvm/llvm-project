@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_DARWIN_H
 
 #include "Cuda.h"
+#include "ROCm.h"
 #include "clang/Driver/DarwinSDKInfo.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
@@ -40,13 +41,8 @@ protected:
   }
 
 public:
-  MachOTool(
-      const char *Name, const char *ShortName, const ToolChain &TC,
-      ResponseFileSupport ResponseSupport = RF_None,
-      llvm::sys::WindowsEncodingMethod ResponseEncoding = llvm::sys::WEM_UTF8,
-      const char *ResponseFlag = "@")
-      : Tool(Name, ShortName, TC, ResponseSupport, ResponseEncoding,
-             ResponseFlag) {}
+  MachOTool(const char *Name, const char *ShortName, const ToolChain &TC)
+      : Tool(Name, ShortName, TC) {}
 };
 
 class LLVM_LIBRARY_VISIBILITY Assembler : public MachOTool {
@@ -66,12 +62,10 @@ class LLVM_LIBRARY_VISIBILITY Linker : public MachOTool {
   bool NeedsTempPath(const InputInfoList &Inputs) const;
   void AddLinkArgs(Compilation &C, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs,
-                   const InputInfoList &Inputs) const;
+                   const InputInfoList &Inputs, unsigned Version[5]) const;
 
 public:
-  Linker(const ToolChain &TC)
-      : MachOTool("darwin::Linker", "linker", TC, RF_FileList,
-                  llvm::sys::WEM_UTF8, "-filelist") {}
+  Linker(const ToolChain &TC) : MachOTool("darwin::Linker", "linker", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
@@ -303,6 +297,7 @@ public:
   mutable Optional<DarwinSDKInfo> SDKInfo;
 
   CudaInstallationDetector CudaInstallation;
+  RocmInstallationDetector RocmInstallation;
 
 private:
   void AddDeploymentTarget(llvm::opt::DerivedArgList &Args) const;
@@ -502,6 +497,8 @@ public:
 
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const override;
+  void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                         llvm::opt::ArgStringList &CC1Args) const override;
 
   bool UseObjCMixedDispatch() const override {
     // This is only used with the non-fragile ABI and non-legacy dispatch.

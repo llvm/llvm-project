@@ -78,7 +78,7 @@ endfunction()
 
 # These flags are required to emit LLVM Bitcode. We check them together because
 # if any of them are not supported, there is no point in finding out which are.
-set(compiler_flags_required -emit-llvm -O1 --cuda-device-only -std=c++11 --cuda-path=${CUDA_TOOLKIT_ROOT_DIR})
+set(compiler_flags_required -emit-llvm -O1 --cuda-device-only -std=c++14 --cuda-path=${CUDA_TOOLKIT_ROOT_DIR})
 set(compiler_flags_required_src "extern \"C\" __device__ int thread() { return threadIdx.x; }")
 check_bitcode_compilation(LIBOMPTARGET_NVPTX_CUDA_COMPILER_SUPPORTS_FLAGS_REQUIRED "${compiler_flags_required_src}" ${compiler_flags_required})
 

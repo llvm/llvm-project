@@ -20,7 +20,9 @@ void NativeTypeTypedef::dump(raw_ostream &OS, int Indent,
                     PdbSymbolIdField::Type, ShowIdFields, RecurseIdFields);
 }
 
-std::string NativeTypeTypedef::getName() const { return Record.Name; }
+std::string NativeTypeTypedef::getName() const {
+  return std::string(Record.Name);
+}
 
 SymIndexId NativeTypeTypedef::getTypeId() const {
   return Session.getSymbolCache().findSymbolByTypeIndex(Record.Type);

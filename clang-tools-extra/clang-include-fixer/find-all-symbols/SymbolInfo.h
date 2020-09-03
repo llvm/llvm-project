@@ -74,7 +74,7 @@ public:
   SymbolInfo(llvm::StringRef Name, SymbolKind Type, llvm::StringRef FilePath,
              const std::vector<Context> &Contexts);
 
-  void SetFilePath(llvm::StringRef Path) { FilePath = Path; }
+  void SetFilePath(llvm::StringRef Path) { FilePath = std::string(Path); }
 
   /// Get symbol name.
   llvm::StringRef getName() const { return Name; }

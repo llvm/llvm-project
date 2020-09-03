@@ -7,11 +7,6 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-//
-// This test uses new symbols that were not defined in the libc++ shipped on
-// darwin11 and darwin12:
-// XFAIL: availability=macosx10.7
-// XFAIL: availability=macosx10.8
 
 // <memory>
 
@@ -23,7 +18,7 @@
 //                                         shared_ptr<T> w, memory_order success,
 //                                         memory_order failure);
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <memory>
 #include <cassert>

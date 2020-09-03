@@ -27,7 +27,7 @@ std::string LibPath(const std::string Name = "PipSqueak") {
   std::string Path = fs::getMainExecutable(Argv0, Ptr);
   llvm::SmallString<256> Buf(path::parent_path(Path));
   path::append(Buf, (Name + LTDL_SHLIB_EXT).c_str());
-  return Buf.str();
+  return std::string(Buf.str());
 }
 
 #if defined(_WIN32) || (defined(HAVE_DLFCN_H) && defined(HAVE_DLOPEN))

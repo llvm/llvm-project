@@ -635,6 +635,9 @@ BUILTIN(__builtin_msa_ld_h, "V8Ssv*Ii", "nc")
 BUILTIN(__builtin_msa_ld_w, "V4Siv*Ii", "nc")
 BUILTIN(__builtin_msa_ld_d, "V2SLLiv*Ii", "nc")
 
+BUILTIN(__builtin_msa_ldr_d, "V2SLLiv*Ii", "nc")
+BUILTIN(__builtin_msa_ldr_w, "V4Siv*Ii", "nc")
+
 BUILTIN(__builtin_msa_ldi_b, "V16cIi", "nc")
 BUILTIN(__builtin_msa_ldi_h, "V8sIi", "nc")
 BUILTIN(__builtin_msa_ldi_w, "V4iIi", "nc")
@@ -856,6 +859,9 @@ BUILTIN(__builtin_msa_st_b, "vV16Scv*Ii", "nc")
 BUILTIN(__builtin_msa_st_h, "vV8Ssv*Ii", "nc")
 BUILTIN(__builtin_msa_st_w, "vV4Siv*Ii", "nc")
 BUILTIN(__builtin_msa_st_d, "vV2SLLiv*Ii", "nc")
+
+BUILTIN(__builtin_msa_str_d, "vV2SLLiv*Ii", "nc")
+BUILTIN(__builtin_msa_str_w, "vV4Siv*Ii", "nc")
 
 BUILTIN(__builtin_msa_subs_s_b, "V16ScV16ScV16Sc", "nc")
 BUILTIN(__builtin_msa_subs_s_h, "V8SsV8SsV8Ss", "nc")

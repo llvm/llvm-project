@@ -17,6 +17,7 @@ class Issue11581TestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_11581_commands(self):
         # This is the function to remove the custom commands in order to have a
         # clean slate for the next test case.
@@ -50,7 +51,7 @@ class Issue11581TestCase(TestBase):
             frame = process.GetSelectedThread().GetSelectedFrame()
             pointer = frame.FindVariable("r14")
             addr = pointer.GetValueAsUnsigned(0)
-            self.assertTrue(addr != 0, "could not read pointer to StgClosure")
+            self.assertNotEqual(addr, 0, "could not read pointer to StgClosure")
             addr = addr - 1
             self.runCmd("register write r14 %d" % addr)
             self.expect(
@@ -60,7 +61,8 @@ class Issue11581TestCase(TestBase):
             self.expect("expr --show-types -- *(StgClosure*)$r14",
                         substrs=["(StgClosure) $",
                                  "(StgClosure *) &$", "0x",
-                                 "addr = ",
-                                 "load_address = ",
                                  hex(addr)[2:].rstrip("L"),
+                                 "addr = ",
+                                 str(addr),
+                                 "load_address = ",
                                  str(addr)])

@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -gvn -S | FileCheck %s
+; RUN: opt < %s -basic-aa -gvn -S | FileCheck %s
 
 ; The input *.ll is obtained by manually annotating "invariant.load" to the 
 ; two loads. With "invariant.load" metadata, the second load is redundant.

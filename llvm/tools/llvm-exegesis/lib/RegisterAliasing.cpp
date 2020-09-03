@@ -79,5 +79,14 @@ RegisterAliasingTrackerCache::getRegisterClass(unsigned RegClassIndex) const {
   return *Found;
 }
 
+std::string debugString(const MCRegisterInfo &RegInfo, const BitVector &Regs) {
+  std::string Result;
+  for (const unsigned Reg : Regs.set_bits()) {
+    Result.append(RegInfo.getName(Reg));
+    Result.push_back(' ');
+  }
+  return Result;
+}
+
 } // namespace exegesis
 } // namespace llvm

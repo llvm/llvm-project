@@ -5,9 +5,9 @@
 %S = type { i32, i32 }
 
 define i32 @method(%S* %this, i32 %arg.a, i32 %arg.b) {
-  %a = alloca i32
+  %a = alloca i32, align 4
   store i32 %arg.a, i32* %a, align 4
-  %b = alloca i32
+  %b = alloca i32, align 4
   store i32 %arg.b, i32* %b
   %1 = load i32, i32* %a, align 4
   %2 = load i32, i32* %b, align 4
@@ -22,7 +22,7 @@ define i32 @method(%S* %this, i32 %arg.a, i32 %arg.b) {
 }
 
 define i32 @main() {
-  %s = alloca %S
+  %s = alloca %S, align 4
   store %S zeroinitializer, %S* %s
   %1 = getelementptr inbounds %S, %S* %s, i32 0, i32 0
   %2 = getelementptr inbounds %S, %S* %s, i32 0, i32 1

@@ -1,11 +1,13 @@
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=40 -fopenmp %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=45 -fopenmp %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected -fopenmp-version=50 -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -95,7 +97,7 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute simd private (k, argv[1]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
 
-#pragma omp target teams distribute simd private(ba) allocate(omp_thread_mem_alloc: ba) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute simd' directive}}
+#pragma omp target teams distribute simd private(ba) allocate(omp_thread_mem_alloc: ba) uses_allocators(omp_thread_mem_alloc) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute simd' directive}} le45-error {{unexpected OpenMP clause 'uses_allocators' in directive '#pragma omp target teams distribute simd'}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target teams distribute simd private(ca) // expected-error {{const-qualified variable without mutable fields cannot be private}}

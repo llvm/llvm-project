@@ -20,7 +20,7 @@ using namespace llvm::pdb;
 
 std::string llvm::pdb::truncateStringBack(StringRef S, uint32_t MaxLen) {
   if (MaxLen == 0 || S.size() <= MaxLen || S.size() <= 3)
-    return S;
+    return std::string(S);
 
   assert(MaxLen >= 3);
   uint32_t FinalLen = std::min<size_t>(S.size(), MaxLen - 3);
@@ -30,7 +30,7 @@ std::string llvm::pdb::truncateStringBack(StringRef S, uint32_t MaxLen) {
 
 std::string llvm::pdb::truncateStringMiddle(StringRef S, uint32_t MaxLen) {
   if (MaxLen == 0 || S.size() <= MaxLen || S.size() <= 3)
-    return S;
+    return std::string(S);
 
   assert(MaxLen >= 3);
   uint32_t FinalLen = std::min<size_t>(S.size(), MaxLen - 3);
@@ -41,7 +41,7 @@ std::string llvm::pdb::truncateStringMiddle(StringRef S, uint32_t MaxLen) {
 
 std::string llvm::pdb::truncateStringFront(StringRef S, uint32_t MaxLen) {
   if (MaxLen == 0 || S.size() <= MaxLen || S.size() <= 3)
-    return S;
+    return std::string(S);
 
   assert(MaxLen >= 3);
   S = S.take_back(MaxLen - 3);
@@ -82,7 +82,7 @@ std::string llvm::pdb::typesetItemList(ArrayRef<std::string> Opts,
     if (!Opts.empty()) {
       Result += Sep;
       Result += "\n";
-      Result += formatv("{0}", fmt_repeat(' ', IndentLevel));
+      Result += std::string(formatv("{0}", fmt_repeat(' ', IndentLevel)));
     }
   }
   return Result;
@@ -92,7 +92,7 @@ std::string llvm::pdb::typesetStringList(uint32_t IndentLevel,
                                          ArrayRef<StringRef> Strings) {
   std::string Result = "[";
   for (const auto &S : Strings) {
-    Result += formatv("\n{0}{1}", fmt_repeat(' ', IndentLevel), S);
+    Result += std::string(formatv("\n{0}{1}", fmt_repeat(' ', IndentLevel), S));
   }
   Result += "]";
   return Result;
@@ -169,7 +169,7 @@ StringRef llvm::pdb::formatTypeLeafKind(TypeLeafKind K) {
 }
 
 std::string llvm::pdb::formatSegmentOffset(uint16_t Segment, uint32_t Offset) {
-  return formatv("{0:4}:{1:4}", Segment, Offset);
+  return std::string(formatv("{0:4}:{1:4}", Segment, Offset));
 }
 
 #define PUSH_CHARACTERISTIC_FLAG(Enum, TheOpt, Value, Style, Descriptive)      \

@@ -1,4 +1,4 @@
-//===-- REPL.cpp ------------------------------------------------*- C++ -*-===//
+//===-- REPL.cpp ----------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,11 +53,11 @@ std::string REPL::GetSourcePath() {
   ConstString file_basename = GetSourceFileBasename();
   FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir();
   if (tmpdir_file_spec) {
-    tmpdir_file_spec.GetFilename().SetCString(file_basename.AsCString());
+    tmpdir_file_spec.GetFilename() = file_basename;
     m_repl_source_path = tmpdir_file_spec.GetPath();
   } else {
     tmpdir_file_spec = FileSpec("/tmp");
-    tmpdir_file_spec.AppendPathComponent(file_basename.AsCString());
+    tmpdir_file_spec.AppendPathComponent(file_basename.GetStringRef());
   }
 
   return tmpdir_file_spec.GetPath();
@@ -216,7 +216,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
           ci.SetPromptOnQuit(false);
 
         // Execute the command
-        CommandReturnObject result;
+        CommandReturnObject result(debugger.GetUseColor());
         result.SetImmediateOutputStream(output_sp);
         result.SetImmediateErrorStream(error_sp);
         ci.HandleCommand(code.c_str(), eLazyBoolNo, result);
@@ -252,7 +252,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
           lldb::IOHandlerSP io_handler_sp(ci.GetIOHandler());
           if (io_handler_sp) {
             io_handler_sp->SetIsDone(false);
-            debugger.PushIOHandler(ci.GetIOHandler());
+            debugger.RunIOHandlerAsync(ci.GetIOHandler());
           }
         }
       }
@@ -296,6 +296,8 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
 
       PersistentExpressionState *persistent_state =
           m_target.GetPersistentExpressionStateForLanguage(GetLanguage());
+      if (!persistent_state)
+        return;
 
       if (!persistent_state)
       {
@@ -309,12 +311,10 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       const char *expr_prefix = nullptr;
       lldb::ValueObjectSP result_valobj_sp;
       Status error;
-      lldb::ModuleSP jit_module_sp;
       lldb::ExpressionResults execution_results =
           UserExpression::Evaluate(exe_ctx, expr_options, code.c_str(),
                                    expr_prefix, result_valobj_sp, error,
-                                   nullptr, // Fixed Expression
-                                   &jit_module_sp);
+                                   nullptr); // fixed expression
 
       // CommandInterpreter &ci = debugger.GetCommandInterpreter();
 
@@ -388,7 +388,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
               lldb::IOHandlerSP io_handler_sp(ci.GetIOHandler());
               if (io_handler_sp) {
                 io_handler_sp->SetIsDone(false);
-                debugger.PushIOHandler(ci.GetIOHandler());
+                debugger.RunIOHandlerAsync(ci.GetIOHandler());
               }
             }
             break;
@@ -406,6 +406,11 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
           case lldb::eExpressionStoppedForDebug:
             // Shoulnd't happen???
             error_sp->Printf("error: stopped for debug -- %s\n",
+                             error.AsCString());
+            break;
+          case lldb::eExpressionThreadVanished:
+            // Shoulnd't happen???
+            error_sp->Printf("error: expression thread vanished -- %s\n",
                              error.AsCString());
             break;
           }
@@ -545,7 +550,7 @@ Status REPL::RunLoop() {
                                                       save_default_line);
   }
 
-  debugger.PushIOHandler(io_handler_sp);
+  debugger.RunIOHandlerAsync(io_handler_sp);
 
   // Check if we are in dedicated REPL mode where LLDB was start with the "--
   // repl" option from the command line. Currently we know this by checking if

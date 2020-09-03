@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11
+// UNSUPPORTED: c++03, c++11
 
 // See https://bugs.llvm.org/show_bug.cgi?id=33271
 // UNSUPPORTED: ubsan
@@ -29,7 +29,7 @@ struct minig {
       return {};
     }
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     minig get_return_object() { return minig{this}; };
     void return_void() {}
     void unhandled_exception() {}

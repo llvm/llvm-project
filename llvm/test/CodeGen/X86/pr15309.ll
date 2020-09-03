@@ -17,16 +17,12 @@ define void @test_convert_float2_ulong2(<2 x i64>* nocapture %src, <2 x float>* 
 ; CHECK-NEXT:    movl %edi, (%esp)
 ; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    testl %ecx, %ecx
-; CHECK-NEXT:    setns %dl
+; CHECK-NEXT:    shrl $31, %ecx
 ; CHECK-NEXT:    fildll (%esp)
-; CHECK-NEXT:    fadds {{\.LCPI.*}}(,%edx,4)
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    setns %cl
-; CHECK-NEXT:    fildll {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; CHECK-NEXT:    shrl $31, %esi
+; CHECK-NEXT:    fildll {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fadds {{\.LCPI.*}}(,%esi,4)
 ; CHECK-NEXT:    fstps 84(%eax)
 ; CHECK-NEXT:    fstps 80(%eax)
 ; CHECK-NEXT:    addl $20, %esp

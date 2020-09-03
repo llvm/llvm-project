@@ -19,6 +19,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include <vector>
@@ -73,16 +74,15 @@ public:
   /// can be set in the PassBuilder when using a LLVM as a library.
   PipelineTuningOptions();
 
-  /// Tuning option to set loop interleaving on/off. Its default value is that
-  /// of the flag: `-interleave-loops`.
+  /// Tuning option to set loop interleaving on/off, set based on opt level.
   bool LoopInterleaving;
 
-  /// Tuning option to enable/disable loop vectorization. Its default value is
-  /// that of the flag: `-vectorize-loops`.
+  /// Tuning option to enable/disable loop vectorization, set based on opt
+  /// level.
   bool LoopVectorization;
 
-  /// Tuning option to enable/disable slp loop vectorization. Its default value
-  /// is that of the flag: `vectorize-slp`.
+  /// Tuning option to enable/disable slp loop vectorization, set based on opt
+  /// level.
   bool SLPVectorization;
 
   /// Tuning option to enable/disable loop unrolling. Its default value is true.
@@ -92,6 +92,12 @@ public:
   /// is that of the flag: `-forget-scev-loop-unroll`.
   bool ForgetAllSCEVInLoopUnroll;
 
+  /// Tuning option to enable/disable coroutine intrinsic lowering. Its default
+  /// value is false. Frontends such as Clang may enable this conditionally. For
+  /// example, Clang enables this option if the flags `-std=c++2a` or above, or
+  /// `-fcoroutines-ts`, have been specified.
+  bool Coroutines;
+
   /// Tuning option to cap the number of calls to retrive clobbering accesses in
   /// MemorySSA, in LICM.
   unsigned LicmMssaOptCap;
@@ -99,6 +105,10 @@ public:
   /// Tuning option to disable promotion to scalars in LICM with MemorySSA, if
   /// the number of access is too large.
   unsigned LicmMssaNoAccForPromotionCap;
+
+  /// Tuning option to enable/disable call graph profile. Its default value is
+  /// that of the flag: `-enable-npm-call-graph-profile`.
+  bool CallGraphProfile;
 };
 
 /// This class provides access to building LLVM's passes.
@@ -143,11 +153,26 @@ public:
   ///
   /// This enumerates the LLVM-provided high-level optimization levels. Each
   /// level has a specific goal and rationale.
-  enum OptimizationLevel {
+  class OptimizationLevel final {
+    unsigned SpeedLevel = 2;
+    unsigned SizeLevel = 0;
+    OptimizationLevel(unsigned SpeedLevel, unsigned SizeLevel)
+        : SpeedLevel(SpeedLevel), SizeLevel(SizeLevel) {
+      // Check that only valid combinations are passed.
+      assert(SpeedLevel <= 3 &&
+             "Optimization level for speed should be 0, 1, 2, or 3");
+      assert(SizeLevel <= 2 &&
+             "Optimization level for size should be 0, 1, or 2");
+      assert((SizeLevel == 0 || SpeedLevel == 2) &&
+             "Optimize for size should be encoded with speedup level == 2");
+    }
+
+  public:
+    OptimizationLevel() = default;
     /// Disable as many optimizations as possible. This doesn't completely
     /// disable the optimizer in all cases, for example always_inline functions
     /// can be required to be inlined for correctness.
-    O0,
+    static const OptimizationLevel O0;
 
     /// Optimize quickly without destroying debuggability.
     ///
@@ -161,10 +186,9 @@ public:
     ///
     /// As an example, complex loop transformations such as versioning,
     /// vectorization, or fusion don't make sense here due to the degree to
-    /// which the executed code differs from the source code, and the compile time
-    /// cost.
-    O1,
-
+    /// which the executed code differs from the source code, and the compile
+    /// time cost.
+    static const OptimizationLevel O1;
     /// Optimize for fast execution as much as possible without triggering
     /// significant incremental compile time or code size growth.
     ///
@@ -181,8 +205,7 @@ public:
     ///
     /// This is expected to be a good default optimization level for the vast
     /// majority of users.
-    O2,
-
+    static const OptimizationLevel O2;
     /// Optimize for fast execution as much as possible.
     ///
     /// This mode is significantly more aggressive in trading off compile time
@@ -197,8 +220,7 @@ public:
     /// order to make even significantly slower compile times at least scale
     /// reasonably. This does not preclude very substantial constant factor
     /// costs though.
-    O3,
-
+    static const OptimizationLevel O3;
     /// Similar to \c O2 but tries to optimize for small code size instead of
     /// fast execution without triggering significant incremental execution
     /// time slowdowns.
@@ -209,8 +231,7 @@ public:
     /// A consequence of the different core goal is that this should in general
     /// produce substantially smaller executables that still run in
     /// a reasonable amount of time.
-    Os,
-
+    static const OptimizationLevel Os;
     /// A very specialized mode that will optimize for code size at any and all
     /// costs.
     ///
@@ -218,7 +239,24 @@ public:
     /// any effort taken to reduce the size is worth it regardless of the
     /// execution time impact. You should expect this level to produce rather
     /// slow, but very small, code.
-    Oz
+    static const OptimizationLevel Oz;
+
+    bool isOptimizingForSpeed() const {
+      return SizeLevel == 0 && SpeedLevel > 0;
+    }
+
+    bool isOptimizingForSize() const { return SizeLevel > 0; }
+
+    bool operator==(const OptimizationLevel &Other) const {
+      return SizeLevel == Other.SizeLevel && SpeedLevel == Other.SpeedLevel;
+    }
+    bool operator!=(const OptimizationLevel &Other) const {
+      return SizeLevel != Other.SizeLevel || SpeedLevel != Other.SpeedLevel;
+    }
+
+    unsigned getSpeedupLevel() const { return SpeedLevel; }
+
+    unsigned getSizeLevel() const { return SizeLevel; }
   };
 
   explicit PassBuilder(TargetMachine *TM = nullptr,
@@ -305,6 +343,12 @@ public:
   buildModuleSimplificationPipeline(OptimizationLevel Level,
                                     ThinLTOPhase Phase,
                                     bool DebugLogging = false);
+
+  /// Construct the module pipeline that performs inlining as well as
+  /// the inlining-driven cleanups.
+  ModuleInlinerWrapperPass buildInlinerPipeline(OptimizationLevel Level,
+                                                ThinLTOPhase Phase,
+                                                bool DebugLogging = false);
 
   /// Construct the core LLVM module optimization pipeline.
   ///
@@ -471,6 +515,12 @@ public:
   /// returns false.
   Error parseAAPipeline(AAManager &AA, StringRef PipelineText);
 
+  /// Returns true if the pass name is the name of an alias analysis pass.
+  bool isAAPassName(StringRef PassName);
+
+  /// Returns true if the pass name is the name of a (non-alias) analysis pass.
+  bool isAnalysisPassName(StringRef PassName);
+
   /// Register a callback for a default optimizer pipeline extension
   /// point
   ///
@@ -556,7 +606,7 @@ public:
   /// is not triggered at O0. Extensions to the O0 pipeline should append their
   /// passes to the end of the overall pipeline.
   void registerOptimizerLastEPCallback(
-      const std::function<void(FunctionPassManager &, OptimizationLevel)> &C) {
+      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
     OptimizerLastEPCallbacks.push_back(C);
   }
 
@@ -643,6 +693,10 @@ public:
   }
 
 private:
+  // O1 pass pipeline
+  FunctionPassManager buildO1FunctionSimplificationPipeline(
+      OptimizationLevel Level, ThinLTOPhase Phase, bool DebugLogging = false);
+
   static Optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
 
@@ -688,7 +742,7 @@ private:
       CGSCCOptimizerLateEPCallbacks;
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
       VectorizerStartEPCallbacks;
-  SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       OptimizerLastEPCallbacks;
   // Module callbacks
   SmallVector<std::function<void(ModulePassManager &)>, 2>

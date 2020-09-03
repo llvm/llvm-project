@@ -12,7 +12,7 @@ define i32 @func_1(i16 %arg1 , i32 %arg2) #0 {
 ; CHECK-NEXT:    i32.shl $push2=, $0, $pop1
 ; CHECK-NEXT:    i32.const $push4=, 16
 ; CHECK-NEXT:    i32.shr_s $push3=, $pop2, $pop4
-; CHECK-NEXT:    i32.call $push0=, get_int, $pop3
+; CHECK-NEXT:    call $push0=, get_int, $pop3
 ; CHECK-NEXT:    end_function
 entry:
   %retval = call i32 @get_int(i16 signext %arg1)

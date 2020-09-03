@@ -9,6 +9,7 @@
 #include "MacroUsageCheck.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Regex.h"
 #include <algorithm>
@@ -71,9 +72,6 @@ void MacroUsageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void MacroUsageCheck::registerPPCallbacks(const SourceManager &SM,
                                           Preprocessor *PP,
                                           Preprocessor *ModuleExpanderPP) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   PP->addPPCallbacks(std::make_unique<MacroUsageCallbacks>(
       this, SM, AllowedRegexp, CheckCapsOnly, IgnoreCommandLineMacros));
 }

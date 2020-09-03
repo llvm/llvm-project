@@ -1,4 +1,4 @@
-//===-- PlatformAndroidRemoteGDBServer.cpp ----------------------*- C++ -*-===//
+//===-- PlatformAndroidRemoteGDBServer.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -117,7 +117,7 @@ Status PlatformAndroidRemoteGDBServer::ConnectRemote(Args &args) {
   if (!UriParser::Parse(url, scheme, host, remote_port, path))
     return Status("Invalid URL: %s", url);
   if (host != "localhost")
-    m_device_id = host;
+    m_device_id = std::string(host);
 
   m_socket_namespace.reset();
   if (scheme == ConnectionFileDescriptor::UNIX_CONNECT_SCHEME)
@@ -188,7 +188,7 @@ Status PlatformAndroidRemoteGDBServer::MakeConnectURL(
     if (error.Success()) {
       m_port_forwards[pid] = local_port;
       std::ostringstream url_str;
-      url_str << "connect://localhost:" << local_port;
+      url_str << "connect://127.0.0.1:" << local_port;
       connect_url = url_str.str();
       break;
     }

@@ -5,16 +5,16 @@
 ; Use a macosx triple to make sure the format of those constant strings is exact.
 
 ; CHECK:       [[SIGNMASK1:L.+]]:
-; CHECK-NEXT:  .long 2147483648
-; CHECK-NEXT:  .long 2147483648
-; CHECK-NEXT:  .long 2147483648
-; CHECK-NEXT:  .long 2147483648
+; CHECK-NEXT:  .long 0x80000000
+; CHECK-NEXT:  .long 0x80000000
+; CHECK-NEXT:  .long 0x80000000
+; CHECK-NEXT:  .long 0x80000000
 
 ; CHECK:       [[MAGMASK1:L.+]]:
-; CHECK-NEXT:  .long 2147483647
-; CHECK-NEXT:  .long 2147483647
-; CHECK-NEXT:  .long 2147483647
-; CHECK-NEXT:  .long 2147483647
+; CHECK-NEXT:  .long 0x7fffffff
+; CHECK-NEXT:  .long 0x7fffffff
+; CHECK-NEXT:  .long 0x7fffffff
+; CHECK-NEXT:  .long 0x7fffffff
 
 define <4 x float> @v4f32(<4 x float> %a, <4 x float> %b) nounwind {
 ; SSE2-LABEL: v4f32:
@@ -36,30 +36,30 @@ define <4 x float> @v4f32(<4 x float> %a, <4 x float> %b) nounwind {
 }
 
 ; SSE2:       [[MAGMASK2:L.+]]:
-; SSE2-NEXT:  .long 2147483647
-; SSE2-NEXT:  .long 2147483647
-; SSE2-NEXT:  .long 2147483647
-; SSE2-NEXT:  .long 2147483647
+; SSE2-NEXT:  .long 0x7fffffff
+; SSE2-NEXT:  .long 0x7fffffff
+; SSE2-NEXT:  .long 0x7fffffff
+; SSE2-NEXT:  .long 0x7fffffff
 
 ; AVX:       [[SIGNMASK2:L.+]]:
-; AVX-NEXT:  .long 2147483648
-; AVX-NEXT:  .long 2147483648
-; AVX-NEXT:  .long 2147483648
-; AVX-NEXT:  .long 2147483648
-; AVX-NEXT:  .long 2147483648
-; AVX-NEXT:  .long 2147483648
-; AVX-NEXT:  .long 2147483648
-; AVX-NEXT:  .long 2147483648
+; AVX-NEXT:  .long 0x80000000
+; AVX-NEXT:  .long 0x80000000
+; AVX-NEXT:  .long 0x80000000
+; AVX-NEXT:  .long 0x80000000
+; AVX-NEXT:  .long 0x80000000
+; AVX-NEXT:  .long 0x80000000
+; AVX-NEXT:  .long 0x80000000
+; AVX-NEXT:  .long 0x80000000
 
 ; AVX:       [[MAGMASK2:L.+]]:
-; AVX-NEXT:  .long 2147483647
-; AVX-NEXT:  .long 2147483647
-; AVX-NEXT:  .long 2147483647
-; AVX-NEXT:  .long 2147483647
-; AVX-NEXT:  .long 2147483647
-; AVX-NEXT:  .long 2147483647
-; AVX-NEXT:  .long 2147483647
-; AVX-NEXT:  .long 2147483647
+; AVX-NEXT:  .long 0x7fffffff
+; AVX-NEXT:  .long 0x7fffffff
+; AVX-NEXT:  .long 0x7fffffff
+; AVX-NEXT:  .long 0x7fffffff
+; AVX-NEXT:  .long 0x7fffffff
+; AVX-NEXT:  .long 0x7fffffff
+; AVX-NEXT:  .long 0x7fffffff
+; AVX-NEXT:  .long 0x7fffffff
 
 define <8 x float> @v8f32(<8 x float> %a, <8 x float> %b) nounwind {
 ; SSE2-LABEL: v8f32:
@@ -86,12 +86,12 @@ define <8 x float> @v8f32(<8 x float> %a, <8 x float> %b) nounwind {
 }
 
 ; CHECK:        [[SIGNMASK3:L.+]]:
-; CHECK-NEXT:   .quad -9223372036854775808
-; CHECK-NEXT:   .quad -9223372036854775808
+; CHECK-NEXT:   .quad 0x8000000000000000
+; CHECK-NEXT:   .quad 0x8000000000000000
 
 ; CHECK:        [[MAGMASK3:L.+]]:
-; CHECK-NEXT:   .quad 9223372036854775807
-; CHECK-NEXT:   .quad 9223372036854775807
+; CHECK-NEXT:   .quad 0x7fffffffffffffff
+; CHECK-NEXT:   .quad 0x7fffffffffffffff
 
 define <2 x double> @v2f64(<2 x double> %a, <2 x double> %b) nounwind {
 ; SSE2-LABEL: v2f64:
@@ -113,20 +113,20 @@ define <2 x double> @v2f64(<2 x double> %a, <2 x double> %b) nounwind {
 }
 
 ; SSE2:        [[MAGMASK4:L.+]]:
-; SSE2-NEXT:   .quad 9223372036854775807
-; SSE2-NEXT:   .quad 9223372036854775807
+; SSE2-NEXT:   .quad 0x7fffffffffffffff
+; SSE2-NEXT:   .quad 0x7fffffffffffffff
 
 ; AVX:        [[SIGNMASK4:L.+]]:
-; AVX-NEXT:   .quad -9223372036854775808
-; AVX-NEXT:   .quad -9223372036854775808
-; AVX-NEXT:   .quad -9223372036854775808
-; AVX-NEXT:   .quad -9223372036854775808
+; AVX-NEXT:   .quad 0x8000000000000000
+; AVX-NEXT:   .quad 0x8000000000000000
+; AVX-NEXT:   .quad 0x8000000000000000
+; AVX-NEXT:   .quad 0x8000000000000000
 
 ; AVX:        [[MAGMASK4:L.+]]:
-; AVX-NEXT:   .quad 9223372036854775807
-; AVX-NEXT:   .quad 9223372036854775807
-; AVX-NEXT:   .quad 9223372036854775807
-; AVX-NEXT:   .quad 9223372036854775807
+; AVX-NEXT:   .quad 0x7fffffffffffffff
+; AVX-NEXT:   .quad 0x7fffffffffffffff
+; AVX-NEXT:   .quad 0x7fffffffffffffff
+; AVX-NEXT:   .quad 0x7fffffffffffffff
 
 define <4 x double> @v4f64(<4 x double> %a, <4 x double> %b) nounwind {
 ; SSE2-LABEL: v4f64:

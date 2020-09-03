@@ -16,12 +16,12 @@ public:
 // CHECK-LABEL: define void @_Z1gv()
 void g() {
   // CHECK:      call void @_ZN1TC1Ev([[T:%.*]]* [[AGG1:%.*]])
-  // CHECK-NEXT: call void @_Z1fRK1T([[T]]* dereferenceable({{[0-9]+}}) [[AGG1]])
+  // CHECK-NEXT: call void @_Z1fRK1T([[T]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AGG1]])
   // CHECK-NEXT: call void @_ZN1TD1Ev([[T]]* [[AGG1]])
   f();
 
   // CHECK-NEXT: call void @_ZN1TC1Ev([[T:%.*]]* [[AGG2:%.*]])
-  // CHECK-NEXT: call void @_Z1fRK1T([[T]]* dereferenceable({{[0-9]+}}) [[AGG2]])
+  // CHECK-NEXT: call void @_Z1fRK1T([[T]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AGG2]])
   // CHECK-NEXT: call void @_ZN1TD1Ev([[T]]* [[AGG2]])
   f();
 

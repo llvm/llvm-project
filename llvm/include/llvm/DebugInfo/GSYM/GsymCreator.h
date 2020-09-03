@@ -16,6 +16,7 @@
 #include <thread>
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/Range.h"
@@ -135,9 +136,13 @@ class GsymCreator {
   mutable std::recursive_mutex Mutex;
   std::vector<FunctionInfo> Funcs;
   StringTableBuilder StrTab;
+  StringSet<> StringStorage;
   DenseMap<llvm::gsym::FileEntry, uint32_t> FileEntryToIndex;
   std::vector<llvm::gsym::FileEntry> Files;
   std::vector<uint8_t> UUID;
+  Optional<AddressRanges> ValidTextRanges;
+  AddressRanges Ranges;
+  llvm::Optional<uint64_t> BaseAddress;
   bool Finalized = false;
 
 public:
@@ -162,9 +167,12 @@ public:
   /// All strings used by GSYM files must be uniqued by adding them to this
   /// string pool and using the returned offset for any string values.
   ///
-  /// \param   S The string to insert into the string table.
+  /// \param S The string to insert into the string table.
+  /// \param Copy If true, then make a backing copy of the string. If false,
+  ///             the string is owned by another object that will stay around
+  ///             long enough for the GsymCreator to save the GSYM file.
   /// \returns The unique 32 bit offset into the string table.
-  uint32_t insertString(StringRef S);
+  uint32_t insertString(StringRef S, bool Copy = true);
 
   /// Insert a file into this GSYM creator.
   ///
@@ -221,6 +229,66 @@ public:
   void forEachFunctionInfo(
       std::function<bool(const FunctionInfo &)> const &Callback) const;
 
+  /// Get the current number of FunctionInfo objects contained in this
+  /// object.
+  size_t getNumFunctionInfos() const;
+
+  /// Check if an address has already been added as a function info.
+  ///
+  /// FunctionInfo data can come from many sources: debug info, symbol tables,
+  /// exception information, and more. Symbol tables should be added after
+  /// debug info and can use this function to see if a symbol's start address
+  /// has already been added to the GsymReader. Calling this before adding
+  /// a function info from a source other than debug info avoids clients adding
+  /// many redundant FunctionInfo objects from many sources only for them to be
+  /// removed during the finalize() call.
+  bool hasFunctionInfoForAddress(uint64_t Addr) const;
+
+  /// Set valid .text address ranges that all functions must be contained in.
+  void SetValidTextRanges(AddressRanges &TextRanges) {
+    ValidTextRanges = TextRanges;
+  }
+
+  /// Get the valid text ranges.
+  const Optional<AddressRanges> GetValidTextRanges() const {
+    return ValidTextRanges;
+  }
+
+  /// Check if an address is a valid code address.
+  ///
+  /// Any functions whose addresses do not exist within these function bounds
+  /// will not be converted into the final GSYM. This allows the object file
+  /// to figure out the valid file address ranges of all the code sections
+  /// and ensure we don't add invalid functions to the final output. Many
+  /// linkers have issues when dead stripping functions from DWARF debug info
+  /// where they set the DW_AT_low_pc to zero, but newer DWARF has the
+  /// DW_AT_high_pc as an offset from the DW_AT_low_pc and these size
+  /// attributes have no relocations that can be applied. This results in DWARF
+  /// where many functions have an DW_AT_low_pc of zero and a valid offset size
+  /// for DW_AT_high_pc. If we extract all valid ranges from an object file
+  /// that are marked with executable permissions, we can properly ensure that
+  /// these functions are removed.
+  ///
+  /// \param Addr An address to check.
+  ///
+  /// \returns True if the address is in the valid text ranges or if no valid
+  ///          text ranges have been set, false otherwise.
+  bool IsValidTextAddress(uint64_t Addr) const;
+
+  /// Set the base address to use for the GSYM file.
+  ///
+  /// Setting the base address to use for the GSYM file. Object files typically
+  /// get loaded from a base address when the OS loads them into memory. Using
+  /// GSYM files for symbolication becomes easier if the base address in the
+  /// GSYM header is the same address as it allows addresses to be easily slid
+  /// and allows symbolication without needing to find the original base
+  /// address in the original object file.
+  ///
+  /// \param  Addr The address to use as the base address of the GSYM file
+  ///              when it is saved to disk.
+  void setBaseAddress(uint64_t Addr) {
+    BaseAddress = Addr;
+  }
 };
 
 } // namespace gsym

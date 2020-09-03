@@ -42,6 +42,13 @@
 // RUN: llvm-profdata merge -o %t.m4.profdata ./
 // RUN: %clang_profuse=%t.m4.profdata -O0 -o - -S -emit-llvm %s | FileCheck %s --check-prefix=COMMON  --check-prefix=PGOMERGE
 
+/// Test that the merge pool size can be larger than 10.
+// RUN: rm -fr %t.dir5
+// RUN: mkdir -p %t.dir5
+// RUN: env LLVM_PROFILE_FILE=%t.dir5/e_%20m.profraw %run %t
+// RUN: not ls %t.dir5/e_%20m.profraw
+// RUN: ls %t.dir5/e_*.profraw | count 1
+
 int begin(int i) {
   // COMMON: br i1 %{{.*}}, label %{{.*}}, label %{{.*}}, !prof ![[PD1:[0-9]+]]
   if (i)

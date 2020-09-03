@@ -1,4 +1,4 @@
-//===-- CommandObjectScript.cpp ---------------------------------*- C++ -*-===//
+//===-- CommandObjectScript.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,8 +20,7 @@ using namespace lldb_private;
 
 // CommandObjectScript
 
-CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter,
-                                         ScriptLanguage script_lang)
+CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter)
     : CommandObjectRaw(
           interpreter, "script",
           "Invoke the script interpreter with provided code and display any "

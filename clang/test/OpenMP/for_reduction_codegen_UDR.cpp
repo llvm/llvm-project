@@ -53,8 +53,8 @@ void init_plus(BaseS1&, const BaseS1&);
 
 // CHECK-DAG: [[S_FLOAT_TY:%.+]] = type { %{{[^,]+}}, %{{[^,]+}}, float }
 // CHECK-DAG: [[S_INT_TY:%.+]] = type { %{{[^,]+}}, %{{[^,]+}}, i{{[0-9]+}} }
-// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 66, i32 0, i32 0, i8*
-// CHECK-DAG: [[REDUCTION_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 18, i32 0, i32 0, i8*
+// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 0, i32 0, i8*
+// CHECK-DAG: [[REDUCTION_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 18, i32 0, i32 0, i8*
 // CHECK-DAG: [[REDUCTION_LOCK:@.+]] = common global [8 x i32] zeroinitializer
 
 #pragma omp declare reduction(operator* : S<int> : omp_out.f = 17 * omp_in.f) initializer(omp_priv = S<int>())
@@ -185,7 +185,7 @@ int main() {
 // CHECK: call {{.*}} [[S_FLOAT_TY_DESTR:@.+]]([[S_FLOAT_TY]]*
 // CHECK: ret
 //
-// CHECK: define internal void [[MAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, float* dereferenceable(4) %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(12) %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(12) %{{.+}}, float* dereferenceable(4) %{{.+}}, [2 x i32]* dereferenceable(8) %vec, [4 x [[S_FLOAT_TY]]]* dereferenceable(48) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, float* nonnull align 4 dereferenceable(4) %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(12) %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(12) %{{.+}}, float* nonnull align 4 dereferenceable(4) %{{.+}}, [2 x i32]* nonnull align 4 dereferenceable(8) %vec, [4 x [[S_FLOAT_TY]]]* nonnull align 4 dereferenceable(48) %{{.+}})
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca float,
 // CHECK: [[VAR_PRIV:%.+]] = alloca [[S_FLOAT_TY]],
 // CHECK: [[VAR1_PRIV:%.+]] = alloca [[S_FLOAT_TY]],
@@ -203,9 +203,11 @@ int main() {
 // For + reduction operation initial value of private variable is -1.
 // CHECK: call void [[RED_INIT1:@.+]](float* %{{.+}}, float* %{{.+}})
 
+// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* [[VAR_PRIV]]
 // For & reduction operation initial value of private variable is defined by call of 'init()' function.
 // CHECK: call void [[RED_INIT2:@.+]](
 
+// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* [[VAR1_PRIV]]
 // For && reduction operation initial value of private variable is 1.0.
 // CHECK: call void [[RED_INIT3:@.+]](
 
@@ -374,7 +376,7 @@ int main() {
 // CHECK: define internal void [[RED_COMB4]](
 // CHECK: fadd float 5.550000e+02, %
 
-// CHECK: define internal void [[MAIN_MICROTASK1]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i64 %{{.+}}, i64 %{{.+}}, i32* {{.+}} %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, [10 x [4 x [[S_FLOAT_TY]]]]* dereferenceable(480) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK1]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i64 %{{.+}}, i64 %{{.+}}, i32* {{.+}} %{{.+}}, [2 x i32]* nonnull align 4 dereferenceable(8) %{{.+}}, [10 x [4 x [[S_FLOAT_TY]]]]* nonnull align 4 dereferenceable(480) %{{.+}})
 
 // Reduction list for runtime.
 // CHECK: [[RED_LIST:%.+]] = alloca [4 x i8*],
@@ -575,7 +577,7 @@ int main() {
 
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK2]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i64 %{{.+}}, i64 %{{.+}}, i32* {{.+}} %{{.+}}, [10 x [4 x [[S_FLOAT_TY]]]]* dereferenceable(480) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK2]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i64 %{{.+}}, i64 %{{.+}}, i32* {{.+}} %{{.+}}, [10 x [4 x [[S_FLOAT_TY]]]]* nonnull align 4 dereferenceable(480) %{{.+}})
 
 // CHECK: [[ARRS_PRIV:%.+]] = alloca [10 x [4 x [[S_FLOAT_TY]]]],
 
@@ -598,6 +600,17 @@ int main() {
 // CHECK: br i1 [[DONE]],
 
 // Check initialization of private copy.
+// CHECK: [[BEGIN:%.+]] = getelementptr inbounds [10 x [4 x [[S_FLOAT_TY]]]], [10 x [4 x [[S_FLOAT_TY]]]]* [[ARRS_PRIV]], i32 0, i32 0, i32 0
+// CHECK: [[END:%.+]] = getelementptr inbounds [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[BEGIN]], i64 40
+// CHECK: br label %[[CTOR:[^,]+]]
+// CHECK: [[CTOR]]:
+// CHECK: [[CUR:%.+]] = phi [[S_FLOAT_TY]]* [ [[BEGIN]], %{{.+}} ], [ [[NEXT:%.+]], %[[CTOR]] ]
+// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* [[CUR]])
+// CHECK: [[NEXT:%.+]] = getelementptr inbounds [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[CUR]], i64 1
+// CHECK: [[IS_DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* [[NEXT]], [[END]]
+// CHECK: br i1 [[IS_DONE]], label %[[DONE:[^,]+]], label %[[CTOR]]
+// CHECK: [[DONE]]:
+
 // CHECK: [[BEGIN:%.+]] = getelementptr inbounds [10 x [4 x [[S_FLOAT_TY]]]], [10 x [4 x [[S_FLOAT_TY]]]]* [[ARRS_PRIV]], i32 0, i32 0, i32 0
 // CHECK: [[LHS_BEGIN:%.+]] = bitcast [10 x [4 x [[S_FLOAT_TY]]]]* %{{.+}} to [[S_FLOAT_TY]]*
 // CHECK: [[END:%.+]] = getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[BEGIN]], i64 40
@@ -760,7 +773,7 @@ int main() {
 
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK3]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[S_FLOAT_TY]]*** dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK3]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[S_FLOAT_TY]]*** nonnull align 8 dereferenceable(8) %{{.+}})
 
 // CHECK: [[VAR2_ORIG_ADDR:%.+]] = alloca [[S_FLOAT_TY]]***,
 
@@ -788,7 +801,7 @@ int main() {
 // CHECK: store [[S_FLOAT_TY]]* [[PSEUDO_VAR2_PRIV]], [[S_FLOAT_TY]]** [[REF]]
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK4]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [5 x [[S_FLOAT_TY]]]* dereferenceable(60) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK4]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [5 x [[S_FLOAT_TY]]]* nonnull align 4 dereferenceable(60) %{{.+}})
 
 // CHECK: [[VVAR2_ORIG_ADDR:%.+]] = alloca [5 x [[S_FLOAT_TY]]]*,
 // CHECK: [[VVAR2_PRIV:%.+]] = alloca [5 x [[S_FLOAT_TY]]],
@@ -809,7 +822,7 @@ int main() {
 // CHECK: [[VVAR2_PRIV:%.+]] = getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[VVAR2_PRIV_PTR]], i64 [[OFFSET]]
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK5]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* dereferenceable(48) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK5]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* nonnull align 4 dereferenceable(48) %{{.+}})
 
 // CHECK: [[VAR3_ORIG_ADDR:%.+]] = alloca [4 x [[S_FLOAT_TY]]]*,
 // CHECK: [[VAR3_PRIV:%.+]] = alloca [2 x [[S_FLOAT_TY]]],
@@ -842,7 +855,7 @@ int main() {
 
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK6]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* dereferenceable(48) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK6]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* nonnull align 4 dereferenceable(48) %{{.+}})
 
 // CHECK: [[VAR3_ORIG_ADDR:%.+]] = alloca [4 x [[S_FLOAT_TY]]]*,
 
@@ -877,7 +890,7 @@ int main() {
 // CHECK: call {{.*}} [[S_INT_TY_DESTR]]([[S_INT_TY]]*
 // CHECK: ret
 //
-// CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32* dereferenceable(4) %{{.+}}, [[S_INT_TY]]* dereferenceable(12) %{{.+}}, [[S_INT_TY]]* dereferenceable(12) %{{.+}}, i32* dereferenceable(4) %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, [2 x [[S_INT_TY]]]* dereferenceable(24) %{{.+}})
+// CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}}, [[S_INT_TY]]* nonnull align 4 dereferenceable(12) %{{.+}}, [[S_INT_TY]]* nonnull align 4 dereferenceable(12) %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}}, [2 x i32]* nonnull align 4 dereferenceable(8) %{{.+}}, [2 x [[S_INT_TY]]]* nonnull align 4 dereferenceable(24) %{{.+}})
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
@@ -901,9 +914,11 @@ int main() {
 // For + reduction operation initial value of private variable is 0.
 // CHECK: call void [[RED_INIT6:@.+]](
 
+// CHECK: call void @_ZN1SIiEC1Ev([[S_INT_TY]]* [[VAR_PRIV]]
 // For & reduction operation initial value of private variable is ones in all bits.
 // CHECK: call void [[RED_INIT2:@.+]](
 
+// CHECK: call void @_ZN1SIiEC1Ev([[S_INT_TY]]* [[VAR1_PRIV]]
 // For && reduction operation initial value of private variable is 1.0.
 // CHECK: call void [[RED_INIT7:@.+]](
 
@@ -1063,7 +1078,7 @@ int main() {
 // CHECK: call void [[RED_COMB8]](
 // CHECK: ret void
 
-// CHECK: define internal void [[TMAIN_MICROTASK2]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [42 x [[S_INT_TY]]]* dereferenceable(504) %{{.*}}, [2 x i32]* dereferenceable(8) %{{.*}}, i32* dereferenceable(4) %{{.*}}, [2 x [[S_INT_TY]]]* dereferenceable(24) %{{.*}}, [[S_INT_TY]]* dereferenceable(12) %{{.*}})
+// CHECK: define internal void [[TMAIN_MICROTASK2]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [42 x [[S_INT_TY]]]* nonnull align 4 dereferenceable(504) %{{.*}}, [2 x i32]* nonnull align 4 dereferenceable(8) %{{.*}}, i32* nonnull align 4 dereferenceable(4) %{{.*}}, [2 x [[S_INT_TY]]]* nonnull align 4 dereferenceable(24) %{{.*}}, [[S_INT_TY]]* nonnull align 4 dereferenceable(12) %{{.*}})
 
 // CHECK: [[ARR_ORIG_ADDR:%.+]] = alloca [42 x [[S_INT_TY]]]*,
 // CHECK: [[ARR_PRIV:%.+]] = alloca [40 x [[S_INT_TY]]],

@@ -1,4 +1,4 @@
-# UNSUPPORTED: system-windows, system-freebsd
+# UNSUPPORTED: system-freebsd
 
 # This tests that data formatters continue to work when replaying a reproducer.
 

@@ -1,0 +1,1 @@
+Checks: '-*,llvm-*,-llvm-include-order,misc-*,-misc-no-recursion,-misc-unused-parameters,-misc-non-private-member-variables-in-classes'

@@ -5,6 +5,7 @@
 ; will always be in program memory.
 
 ; CHECK: RELOCATION RECORDS FOR [.text]:
+; CHECK-NEXT: OFFSET   TYPE        VALUE
 ; CHECK-NEXT: 00000002 R_AVR_16_PM .text
 
 foo:

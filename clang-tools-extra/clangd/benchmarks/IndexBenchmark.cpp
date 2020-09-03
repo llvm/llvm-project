@@ -83,6 +83,12 @@ static void DexQueries(benchmark::State &State) {
 }
 BENCHMARK(DexQueries);
 
+static void DexBuild(benchmark::State &State) {
+  for (auto _ : State)
+    buildDex();
+}
+BENCHMARK(DexBuild);
+
 } // namespace
 } // namespace clangd
 } // namespace clang

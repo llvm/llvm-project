@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.unix.Stream -analyzer-store region -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream -verify %s
 
 typedef struct _IO_FILE FILE;
 extern FILE *fopen(const char *path, const char *mode);
@@ -19,4 +19,4 @@ void f1() {
 
 void f2() {
   FILE *f = fopen("file", "r");
-} // expected-warning {{Opened File never closed. Potential Resource leak}}
+} // expected-warning {{Opened stream never closed. Potential resource leak}}

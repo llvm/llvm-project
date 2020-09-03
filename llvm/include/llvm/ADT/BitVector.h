@@ -14,6 +14,7 @@
 #define LLVM_ADT_BITVECTOR_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
@@ -531,24 +532,10 @@ public:
 
   // Comparison operators.
   bool operator==(const BitVector &RHS) const {
-    unsigned ThisWords = NumBitWords(size());
-    unsigned RHSWords  = NumBitWords(RHS.size());
-    unsigned i;
-    for (i = 0; i != std::min(ThisWords, RHSWords); ++i)
-      if (Bits[i] != RHS.Bits[i])
-        return false;
-
-    // Verify that any extra words are all zeros.
-    if (i != ThisWords) {
-      for (; i != ThisWords; ++i)
-        if (Bits[i])
-          return false;
-    } else if (i != RHSWords) {
-      for (; i != RHSWords; ++i)
-        if (RHS.Bits[i])
-          return false;
-    }
-    return true;
+    if (size() != RHS.size())
+      return false;
+    unsigned NumWords = NumBitWords(size());
+    return Bits.take_front(NumWords) == RHS.Bits.take_front(NumWords);
   }
 
   bool operator!=(const BitVector &RHS) const {
@@ -719,6 +706,14 @@ public:
     if (this == &RHS) return *this;
 
     Size = RHS.size();
+
+    // Handle tombstone when the BitVector is a key of a DenseHash.
+    if (RHS.isInvalid()) {
+      std::free(Bits.data());
+      Bits = None;
+      return *this;
+    }
+
     unsigned RHSWords = NumBitWords(Size);
     if (Size <= getBitCapacity()) {
       if (Size)
@@ -756,6 +751,16 @@ public:
   void swap(BitVector &RHS) {
     std::swap(Bits, RHS.Bits);
     std::swap(Size, RHS.Size);
+  }
+
+  void invalid() {
+    assert(!Size && Bits.empty());
+    Size = (unsigned)-1;
+  }
+  bool isInvalid() const { return Size == (unsigned)-1; }
+
+  ArrayRef<BitWord> getData() const {
+    return Bits.take_front(NumBitWords(size()));
   }
 
   //===--------------------------------------------------------------------===//
@@ -932,6 +937,23 @@ inline size_t capacity_in_bytes(const BitVector &X) {
   return X.getMemorySize();
 }
 
+template <> struct DenseMapInfo<BitVector> {
+  static inline BitVector getEmptyKey() { return BitVector(); }
+  static inline BitVector getTombstoneKey() {
+    BitVector V;
+    V.invalid();
+    return V;
+  }
+  static unsigned getHashValue(const BitVector &V) {
+    return DenseMapInfo<std::pair<unsigned, ArrayRef<uintptr_t>>>::getHashValue(
+        std::make_pair(V.size(), V.getData()));
+  }
+  static bool isEqual(const BitVector &LHS, const BitVector &RHS) {
+    if (LHS.isInvalid() || RHS.isInvalid())
+      return LHS.isInvalid() == RHS.isInvalid();
+    return LHS == RHS;
+  }
+};
 } // end namespace llvm
 
 namespace std {

@@ -1,0 +1,84 @@
+//===-- IR/VPIntrinsics.def - Describes llvm.vp.* Intrinsics -*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains descriptions of the various Vector Predication intrinsics.
+// This is used as a central place for enumerating the different instructions
+// and should eventually be the place to put comments about the instructions.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+// Provide definitions of macros so that users of this file do not have to
+// define everything to use it...
+//
+#ifndef REGISTER_VP_INTRINSIC
+#define REGISTER_VP_INTRINSIC(VPID, MASKPOS, VLENPOS)
+#endif
+
+// Map this VP intrinsic to its functional Opcode
+#ifndef HANDLE_VP_TO_OC
+#define HANDLE_VP_TO_OC(VPID, OC)
+#endif
+
+///// Integer Arithmetic /////
+
+// llvm.vp.add(x,y,mask,vlen)
+REGISTER_VP_INTRINSIC(vp_add, 2, 3)
+HANDLE_VP_TO_OC(vp_add, Add)
+
+// llvm.vp.and(x,y,mask,vlen)
+REGISTER_VP_INTRINSIC(vp_and, 2, 3)
+HANDLE_VP_TO_OC(vp_and, And)
+
+// llvm.vp.ashr(x,y,mask,vlen)
+REGISTER_VP_INTRINSIC(vp_ashr, 2, 3)
+HANDLE_VP_TO_OC(vp_ashr, AShr)
+
+// llvm.vp.lshr(x,y,mask,vlen)
+REGISTER_VP_INTRINSIC(vp_lshr, 2, 3)
+HANDLE_VP_TO_OC(vp_lshr, LShr)
+
+// llvm.vp.mul(x,y,mask,vlen)
+REGISTER_VP_INTRINSIC(vp_mul, 2, 3)
+HANDLE_VP_TO_OC(vp_mul, Mul)
+
+// llvm.vp.or(x,y,mask,vlen)
+REGISTER_VP_INTRINSIC(vp_or, 2, 3)
+HANDLE_VP_TO_OC(vp_or, Or)
+
+// llvm.vp.sdiv(x,y,mask,vlen)
+REGISTER_VP_INTRINSIC(vp_sdiv, 2, 3)
+HANDLE_VP_TO_OC(vp_sdiv, SDiv)
+
+// llvm.vp.shl(x,y,mask,vlen)
+REGISTER_VP_INTRINSIC(vp_shl, 2, 3)
+HANDLE_VP_TO_OC(vp_shl, Shl)
+
+// llvm.vp.srem(x,y,mask,vlen)
+REGISTER_VP_INTRINSIC(vp_srem, 2, 3)
+HANDLE_VP_TO_OC(vp_srem, SRem)
+
+// llvm.vp.sub(x,y,mask,vlen)
+REGISTER_VP_INTRINSIC(vp_sub, 2, 3)
+HANDLE_VP_TO_OC(vp_sub, Sub)
+
+// llvm.vp.udiv(x,y,mask,vlen)
+REGISTER_VP_INTRINSIC(vp_udiv, 2, 3)
+HANDLE_VP_TO_OC(vp_udiv, UDiv)
+
+// llvm.vp.urem(x,y,mask,vlen)
+REGISTER_VP_INTRINSIC(vp_urem, 2, 3)
+HANDLE_VP_TO_OC(vp_urem, URem)
+
+// llvm.vp.xor(x,y,mask,vlen)
+REGISTER_VP_INTRINSIC(vp_xor, 2, 3)
+HANDLE_VP_TO_OC(vp_xor, Xor)
+
+#undef REGISTER_VP_INTRINSIC
+#undef HANDLE_VP_TO_OC

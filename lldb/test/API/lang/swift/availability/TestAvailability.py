@@ -45,7 +45,7 @@ class TestAvailability(TestBase):
     def testAvailability(self):
         platform_name = lldbplatformutil.getPlatform()
         os_name = getOSName(platform_name)
-        platform = lldb.DBG.GetSelectedPlatform()
+        platform = lldb.selected_platform
         major = platform.GetOSMajorVersion()
         minor = platform.GetOSMinorVersion()
         version = '%d.%d'%(major, minor)

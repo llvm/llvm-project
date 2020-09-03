@@ -7,9 +7,7 @@ if (llvm_install_binutils_symlinks) {
 }
 foreach(target, symlinks) {
   symlink_or_copy(target) {
-    deps = [
-      ":llvm-readobj",
-    ]
+    deps = [ ":llvm-readobj" ]
     source = "llvm-readobj"
     output = "$root_out_dir/bin/$target"
   }

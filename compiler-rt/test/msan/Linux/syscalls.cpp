@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include <linux/aio_abi.h>
+#include <signal.h>
 #include <sys/ptrace.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
@@ -122,6 +123,10 @@ int main(int argc, char *argv[]) {
   __msan_poison(buf, sizeof(buf));
   __sanitizer_syscall_post_socketpair(0, 0, 0, 0, (int *)buf);
   assert(__msan_test_shadow(buf, sizeof(buf)) == 2 * sizeof(int));
+
+  __msan_poison(buf, sizeof(buf));
+  __sanitizer_syscall_post_sigaltstack(0, nullptr, (stack_t *)buf);
+  assert(__msan_test_shadow(buf, sizeof(buf)) == sizeof(stack_t));
 
   return 0;
 }

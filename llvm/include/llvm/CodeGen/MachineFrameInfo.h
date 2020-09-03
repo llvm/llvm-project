@@ -460,22 +460,34 @@ public:
     Objects[ObjectIdx+NumFixedObjects].Size = Size;
   }
 
+  LLVM_ATTRIBUTE_DEPRECATED(inline unsigned getObjectAlignment(int ObjectIdx)
+                                const,
+                            "Use getObjectAlign instead") {
+    return getObjectAlign(ObjectIdx).value();
+  }
+
   /// Return the alignment of the specified stack object.
-  unsigned getObjectAlignment(int ObjectIdx) const {
-    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
+  Align getObjectAlign(int ObjectIdx) const {
+    assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
-    return Objects[ObjectIdx + NumFixedObjects].Alignment.value();
+    return Objects[ObjectIdx + NumFixedObjects].Alignment;
   }
 
   /// setObjectAlignment - Change the alignment of the specified stack object.
-  void setObjectAlignment(int ObjectIdx, unsigned Align) {
-    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
+  void setObjectAlignment(int ObjectIdx, Align Alignment) {
+    assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
-    Objects[ObjectIdx + NumFixedObjects].Alignment = assumeAligned(Align);
+    Objects[ObjectIdx + NumFixedObjects].Alignment = Alignment;
 
     // Only ensure max alignment for the default stack.
     if (getStackID(ObjectIdx) == 0)
-      ensureMaxAlignment(Align);
+      ensureMaxAlignment(Alignment);
+  }
+
+  LLVM_ATTRIBUTE_DEPRECATED(inline void setObjectAlignment(int ObjectIdx,
+                                                           unsigned Align),
+                            "Use the version that takes Align instead") {
+    setObjectAlignment(ObjectIdx, assumeAligned(Align));
   }
 
   /// Return the underlying Alloca of the specified
@@ -563,12 +575,19 @@ public:
 
   /// Return the alignment in bytes that this function must be aligned to,
   /// which is greater than the default stack alignment provided by the target.
-  unsigned getMaxAlignment() const { return MaxAlignment.value(); }
+  LLVM_ATTRIBUTE_DEPRECATED(unsigned getMaxAlignment() const,
+                            "Use getMaxAlign instead") {
+    return MaxAlignment.value();
+  }
+  /// Return the alignment in bytes that this function must be aligned to,
+  /// which is greater than the default stack alignment provided by the target.
+  Align getMaxAlign() const { return MaxAlignment; }
 
   /// Make sure the function is at least Align bytes aligned.
   void ensureMaxAlignment(Align Alignment);
-  /// FIXME: Remove this once transition to Align is over.
-  inline void ensureMaxAlignment(unsigned Align) {
+
+  LLVM_ATTRIBUTE_DEPRECATED(inline void ensureMaxAlignment(unsigned Align),
+                            "Use the version that uses Align instead") {
     ensureMaxAlignment(assumeAligned(Align));
   }
 
@@ -736,11 +755,12 @@ public:
   /// a nonnegative identifier to represent it.
   int CreateStackObject(uint64_t Size, Align Alignment, bool isSpillSlot,
                         const AllocaInst *Alloca = nullptr, uint8_t ID = 0);
-  /// FIXME: Remove this function when transition to Align is over.
-  inline int CreateStackObject(uint64_t Size, unsigned Alignment,
-                               bool isSpillSlot,
-                               const AllocaInst *Alloca = nullptr,
-                               uint8_t ID = 0) {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline int CreateStackObject(uint64_t Size, unsigned Alignment,
+                                   bool isSpillSlot,
+                                   const AllocaInst *Alloca = nullptr,
+                                   uint8_t ID = 0),
+      "Use CreateStackObject that takes an Align instead") {
     return CreateStackObject(Size, assumeAligned(Alignment), isSpillSlot,
                              Alloca, ID);
   }
@@ -748,8 +768,9 @@ public:
   /// Create a new statically sized stack object that represents a spill slot,
   /// returning a nonnegative identifier to represent it.
   int CreateSpillStackObject(uint64_t Size, Align Alignment);
-  /// FIXME: Remove this function when transition to Align is over.
-  inline int CreateSpillStackObject(uint64_t Size, unsigned Alignment) {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline int CreateSpillStackObject(uint64_t Size, unsigned Alignment),
+      "Use CreateSpillStackObject that takes an Align instead") {
     return CreateSpillStackObject(Size, assumeAligned(Alignment));
   }
 
@@ -764,7 +785,9 @@ public:
   /// created, whether or not the index returned is actually used.
   int CreateVariableSizedObject(Align Alignment, const AllocaInst *Alloca);
   /// FIXME: Remove this function when transition to Align is over.
-  int CreateVariableSizedObject(unsigned Alignment, const AllocaInst *Alloca) {
+  LLVM_ATTRIBUTE_DEPRECATED(int CreateVariableSizedObject(
+                                unsigned Alignment, const AllocaInst *Alloca),
+                            "Use the version that takes an Align instead") {
     return CreateVariableSizedObject(assumeAligned(Alignment), Alloca);
   }
 
@@ -777,8 +800,8 @@ public:
 
   /// Used by prolog/epilog inserter to set the function's callee saved
   /// information.
-  void setCalleeSavedInfo(const std::vector<CalleeSavedInfo> &CSI) {
-    CSInfo = CSI;
+  void setCalleeSavedInfo(std::vector<CalleeSavedInfo> CSI) {
+    CSInfo = std::move(CSI);
   }
 
   /// Has the callee saved info been calculated yet?

@@ -69,14 +69,6 @@ template <typename... Ts> Stencil cat(Ts &&... Parts) {
 // Functions for conveniently building stencils.
 //
 
-/// DEPRECATED: Use `cat` instead.
-/// \returns exactly the text provided.
-Stencil text(llvm::StringRef Text);
-
-/// DEPRECATED: Use `cat` instead.
-/// \returns the source corresponding to the selected range.
-Stencil selection(RangeSelector Selector);
-
 /// Generates the source of the expression bound to \p Id, wrapping it in
 /// parentheses if it may parse differently depending on context. For example, a
 /// binary operation is always wrapped, while a variable reference is never
@@ -112,7 +104,7 @@ Stencil maybeAddressOf(llvm::StringRef ExprId);
 /// Additionally, `e` is wrapped in parentheses, if needed.
 Stencil access(llvm::StringRef BaseId, Stencil Member);
 inline Stencil access(llvm::StringRef BaseId, llvm::StringRef Member) {
-  return access(BaseId, text(Member));
+  return access(BaseId, detail::makeStencil(Member));
 }
 
 /// Chooses between the two stencil parts, based on whether \p ID is bound in
@@ -123,7 +115,8 @@ Stencil ifBound(llvm::StringRef Id, Stencil TrueStencil, Stencil FalseStencil);
 /// match.
 inline Stencil ifBound(llvm::StringRef Id, llvm::StringRef TrueText,
                        llvm::StringRef FalseText) {
-  return ifBound(Id, text(TrueText), text(FalseText));
+  return ifBound(Id, detail::makeStencil(TrueText),
+                 detail::makeStencil(FalseText));
 }
 
 /// Wraps a \c MatchConsumer in a \c Stencil, so that it can be used in a \c

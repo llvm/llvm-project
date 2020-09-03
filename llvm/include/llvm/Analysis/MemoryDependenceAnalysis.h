@@ -19,7 +19,6 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerSumType.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Metadata.h"
@@ -35,6 +34,7 @@
 
 namespace llvm {
 
+class AAResults;
 class AssumptionCache;
 class DominatorTree;
 class Function;
@@ -355,7 +355,7 @@ private:
   ReverseDepMapType ReverseNonLocalDeps;
 
   /// Current AA implementation, just a cache.
-  AliasAnalysis &AA;
+  AAResults &AA;
   AssumptionCache &AC;
   const TargetLibraryInfo &TLI;
   DominatorTree &DT;
@@ -365,7 +365,7 @@ private:
   unsigned DefaultBlockScanLimit;
 
 public:
-  MemoryDependenceResults(AliasAnalysis &AA, AssumptionCache &AC,
+  MemoryDependenceResults(AAResults &AA, AssumptionCache &AC,
                           const TargetLibraryInfo &TLI, DominatorTree &DT,
                           PhiValues &PV, unsigned DefaultBlockScanLimit)
       : AA(AA), AC(AC), TLI(TLI), DT(DT), PV(PV),
@@ -465,18 +465,6 @@ public:
   /// with the same queried instruction.
   MemDepResult getInvariantGroupPointerDependency(LoadInst *LI, BasicBlock *BB);
 
-  /// Looks at a memory location for a load (specified by MemLocBase, Offs, and
-  /// Size) and compares it against a load.
-  ///
-  /// If the specified load could be safely widened to a larger integer load
-  /// that is 1) still efficient, 2) safe for the target, and 3) would provide
-  /// the specified memory location value, then this function returns the size
-  /// in bytes of the load width to use.  If not, this returns zero.
-  static unsigned getLoadLoadClobberFullWidthSize(const Value *MemLocBase,
-                                                  int64_t MemLocOffs,
-                                                  unsigned MemLocSize,
-                                                  const LoadInst *LI);
-
   /// Release memory in caches.
   void releaseMemory();
 
@@ -490,7 +478,8 @@ private:
                                    BasicBlock *BB,
                                    SmallVectorImpl<NonLocalDepResult> &Result,
                                    DenseMap<BasicBlock *, Value *> &Visited,
-                                   bool SkipFirstBlock = false);
+                                   bool SkipFirstBlock = false,
+                                   bool IsIncomplete = false);
   MemDepResult GetNonLocalInfoForBlock(Instruction *QueryInst,
                                        const MemoryLocation &Loc, bool isLoad,
                                        BasicBlock *BB, NonLocalDepInfo *Cache,

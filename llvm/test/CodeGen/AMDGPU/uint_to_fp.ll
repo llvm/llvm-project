@@ -17,7 +17,7 @@ define amdgpu_kernel void @s_uint_to_fp_i32_to_f32(float addrspace(1)* %out, i32
 
 ; R600: INT_TO_FLT
 define amdgpu_kernel void @v_uint_to_fp_i32_to_f32(float addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %val = load i32, i32 addrspace(1)* %in.gep
@@ -67,7 +67,7 @@ define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f32(<4 x float> addrspace(1)*
 ; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 define amdgpu_kernel void @v_uint_to_fp_v4i32(<4 x float> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr <4 x float>, <4 x float> addrspace(1)* %out, i32 %tid
   %value = load <4 x i32>, <4 x i32> addrspace(1)* %in.gep
@@ -78,7 +78,7 @@ define amdgpu_kernel void @v_uint_to_fp_v4i32(<4 x float> addrspace(1)* %out, <4
 
 ; FUNC-LABEL: {{^}}s_uint_to_fp_i1_to_f32:
 ; SI: v_cmp_eq_u32_e64 [[CMP:s\[[0-9]+:[0-9]\]]],
-; SI-NEXT: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1.0, [[CMP]]
+; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1.0, [[CMP]]
 ; SI: buffer_store_dword [[RESULT]],
 ; SI: s_endpgm
 define amdgpu_kernel void @s_uint_to_fp_i1_to_f32(float addrspace(1)* %out, i32 %in) #0 {
@@ -106,7 +106,7 @@ define amdgpu_kernel void @s_uint_to_fp_i1_to_f32_load(float addrspace(1)* %out,
 ; SI: {{buffer|flat}}_store_dword {{.*}}[[RESULT]]
 ; SI: s_endpgm
 define amdgpu_kernel void @v_uint_to_fp_i1_f32_load(float addrspace(1)* %out, i1 addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i1, i1 addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %val = load i1, i1 addrspace(1)* %in.gep
@@ -133,7 +133,7 @@ entry:
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

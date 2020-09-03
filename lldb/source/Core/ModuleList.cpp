@@ -1,4 +1,4 @@
-//===-- ModuleList.cpp ------------------------------------------*- C++ -*-===//
+//===-- ModuleList.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/OptionValueFileSpec.h"
+#include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/LocateSymbolFile.h"
@@ -97,6 +98,8 @@ ModuleListProperties::ModuleListProperties() {
   m_collection_sp =
       std::make_shared<OptionValueProperties>(ConstString("symbols"));
   m_collection_sp->Initialize(g_modulelist_properties);
+  m_collection_sp->SetValueChangedCallback(ePropertySymLinkPaths,
+                                           [this] { UpdateSymlinkMappings(); });
 
   llvm::SmallString<128> path;
   clang::driver::Driver::getDefaultModuleCachePath(path);
@@ -160,6 +163,28 @@ SwiftModuleLoadingMode ModuleListProperties::GetSwiftModuleLoadingMode() const {
 bool ModuleListProperties::SetSwiftModuleLoadingMode(SwiftModuleLoadingMode mode) {
   return m_collection_sp->SetPropertyAtIndexAsEnumeration(
       nullptr, ePropertySwiftModuleLoadingMode, mode);
+}
+
+void ModuleListProperties::UpdateSymlinkMappings() {
+  FileSpecList list = m_collection_sp
+                          ->GetPropertyAtIndexAsOptionValueFileSpecList(
+                              nullptr, false, ePropertySymLinkPaths)
+                          ->GetCurrentValue();
+  llvm::sys::ScopedWriter lock(m_symlink_paths_mutex);
+  const bool notify = false;
+  m_symlink_paths.Clear(notify);
+  for (FileSpec symlink : list) {
+    FileSpec resolved;
+    Status status = FileSystem::Instance().Readlink(symlink, resolved);
+    if (status.Success())
+      m_symlink_paths.Append(ConstString(symlink.GetPath()),
+                             ConstString(resolved.GetPath()), notify);
+  }
+}
+
+PathMappingList ModuleListProperties::GetSymlinkMappings() const {
+  llvm::sys::ScopedReader lock(m_symlink_paths_mutex);
+  return m_symlink_paths;
 }
 
 ModuleList::ModuleList()
@@ -394,7 +419,7 @@ void ModuleList::FindFunctions(ConstString name,
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     collection::const_iterator pos, end = m_modules.end();
     for (pos = m_modules.begin(); pos != end; ++pos) {
-      (*pos)->FindFunctions(lookup_info.GetLookupName(), nullptr,
+      (*pos)->FindFunctions(lookup_info.GetLookupName(), CompilerDeclContext(),
                             lookup_info.GetNameTypeMask(), include_symbols,
                             include_inlines, sc_list);
     }
@@ -407,8 +432,8 @@ void ModuleList::FindFunctions(ConstString name,
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     collection::const_iterator pos, end = m_modules.end();
     for (pos = m_modules.begin(); pos != end; ++pos) {
-      (*pos)->FindFunctions(name, nullptr, name_type_mask, include_symbols,
-                            include_inlines, sc_list);
+      (*pos)->FindFunctions(name, CompilerDeclContext(), name_type_mask,
+                            include_symbols, include_inlines, sc_list);
     }
   }
 }
@@ -482,7 +507,8 @@ void ModuleList::FindGlobalVariables(ConstString name, size_t max_matches,
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
   for (pos = m_modules.begin(); pos != end; ++pos) {
-    (*pos)->FindGlobalVariables(name, nullptr, max_matches, variable_list);
+    (*pos)->FindGlobalVariables(name, CompilerDeclContext(), max_matches,
+                                variable_list);
   }
 }
 
@@ -707,10 +733,6 @@ size_t ModuleList::GetSize() const {
 }
 
 void ModuleList::Dump(Stream *s) const {
-  //  s.Printf("%.*p: ", (int)sizeof(void*) * 2, this);
-  //  s.Indent();
-  //  s << "ModuleList\n";
-
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
   for (pos = m_modules.begin(); pos != end; ++pos) {
@@ -949,7 +971,7 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
       if (!FileSystem::Instance().IsDirectory(search_path_spec))
         continue;
       search_path_spec.AppendPathComponent(
-          module_spec.GetFileSpec().GetFilename().AsCString());
+          module_spec.GetFileSpec().GetFilename().GetStringRef());
       if (!FileSystem::Instance().Exists(search_path_spec))
         continue;
 
@@ -1088,7 +1110,7 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
             error.SetErrorStringWithFormat(
                 "cannot locate a module for UUID '%s'", uuid_str.c_str());
           else
-            error.SetErrorStringWithFormat("cannot locate a module");
+            error.SetErrorString("cannot locate a module");
         }
       }
     }

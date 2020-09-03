@@ -13,7 +13,7 @@ define void @ec_GFp_nistp256_points_mul() {
 ; CHECK:    subfze 6, 4
 ; CHECK:    sradi 7, 6, 63
 ; CHECK:    srad 6, 6, 3
-; CHECK:    subfc 5, 5, 7
+; CHECK:    subc 5, 7, 5
 ; CHECK:    subfe 5, 4, 6
 ; CHECK:    sradi 5, 5, 63
 
@@ -25,7 +25,7 @@ define void @ec_GFp_nistp256_points_mul() {
 ; MSSA:     subfic 5, 3, 0
 ; MSSA:     subfze 5, 4
 ; MSSA:     sradi 5, 5, 63
-; MSSA:     subfc 3, 3, 5
+; MSSA:     subc 3, 5, 3
 ; MSSA:     subfe 3, 4, 5
 ; MSSA:     sradi 3, 3, 63
 ; MSSA:     std 3, 0(3)

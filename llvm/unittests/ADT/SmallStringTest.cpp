@@ -96,6 +96,20 @@ TEST_F(SmallStringTest, AppendSmallVector) {
   EXPECT_STREQ("abcabc", theString.c_str());
 }
 
+TEST_F(SmallStringTest, StringRefConversion) {
+  StringRef abc = "abc";
+  theString.assign(abc.begin(), abc.end());
+  StringRef theStringRef = theString;
+  EXPECT_EQ("abc", theStringRef);
+}
+
+TEST_F(SmallStringTest, StdStringConversion) {
+  StringRef abc = "abc";
+  theString.assign(abc.begin(), abc.end());
+  std::string theStdString = std::string(theString);
+  EXPECT_EQ("abc", theStdString);
+}
+
 TEST_F(SmallStringTest, Substr) {
   theString = "hello";
   EXPECT_EQ("lo", theString.substr(3));

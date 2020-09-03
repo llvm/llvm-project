@@ -6,4 +6,3 @@
 _func1:
         adr r0, _func2
 @ CHECK-ERROR: unsupported relocation on symbol
-

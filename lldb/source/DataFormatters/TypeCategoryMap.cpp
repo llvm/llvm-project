@@ -1,5 +1,4 @@
-//===-- TypeCategoryMap.cpp ----------------------------------------*- C++
-//-*-===//
+//===-- TypeCategoryMap.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -173,7 +172,6 @@ template <typename ImplSP>
 void TypeCategoryMap::Get(FormattersMatchData &match_data, ImplSP &retval) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
 
-  uint32_t reason_why;
   ActiveCategoriesIterator begin, end = m_active_categories.end();
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
@@ -182,13 +180,12 @@ void TypeCategoryMap::Get(FormattersMatchData &match_data, ImplSP &retval) {
     for (auto match : match_data.GetMatchesVector()) {
       LLDB_LOGF(
           log,
-          "[%s] candidate match = %s %s %s %s reason = %" PRIu32,
+          "[%s] candidate match = %s %s %s %s",
           __FUNCTION__,
           match.GetTypeName().GetCString(),
           match.DidStripPointer() ? "strip-pointers" : "no-strip-pointers",
           match.DidStripReference() ? "strip-reference" : "no-strip-reference",
-          match.DidStripTypedef() ? "strip-typedef" : "no-strip-typedef",
-          match.GetReason());
+          match.DidStripTypedef() ? "strip-typedef" : "no-strip-typedef");
     }
   }
 
@@ -199,7 +196,7 @@ void TypeCategoryMap::Get(FormattersMatchData &match_data, ImplSP &retval) {
               category_sp->GetName());
     if (!category_sp->Get(
             match_data.GetValueObject().GetObjectRuntimeLanguage(),
-            match_data.GetMatchesVector(), current_format, &reason_why))
+            match_data.GetMatchesVector(), current_format))
       continue;
 
     retval = std::move(current_format);

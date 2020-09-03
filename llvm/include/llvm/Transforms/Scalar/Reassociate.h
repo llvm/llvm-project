@@ -25,7 +25,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include <deque>
@@ -37,6 +36,7 @@ class BasicBlock;
 class BinaryOperator;
 class Function;
 class Instruction;
+class IRBuilderBase;
 class Value;
 
 /// A private "module" namespace for types and utilities used by Reassociate.
@@ -114,7 +114,7 @@ private:
   bool CombineXorOpnd(Instruction *I, reassociate::XorOpnd *Opnd1,
                       reassociate::XorOpnd *Opnd2, APInt &ConstOpnd,
                       Value *&Res);
-  Value *buildMinimalMultiplyDAG(IRBuilder<> &Builder,
+  Value *buildMinimalMultiplyDAG(IRBuilderBase &Builder,
                                  SmallVectorImpl<reassociate::Factor> &Factors);
   Value *OptimizeMul(BinaryOperator *I,
                      SmallVectorImpl<reassociate::ValueEntry> &Ops);

@@ -20,7 +20,7 @@ StringRef CodeGenHwModes::DefaultModeName = "DefaultMode";
 
 HwMode::HwMode(Record *R) {
   Name = R->getName();
-  Features = R->getValueAsString("Features");
+  Features = std::string(R->getValueAsString("Features"));
 }
 
 LLVM_DUMP_METHOD

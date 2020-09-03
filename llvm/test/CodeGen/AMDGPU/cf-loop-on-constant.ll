@@ -102,7 +102,7 @@ for.body:
 ; GCN: s_add_i32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80
 ; GCN: s_add_i32 s{{[0-9]+}}, s{{[0-9]+}}, 4
 
-; GCN: s_cbranch_vccnz [[LOOPBB]]
+; GCN: s_cbranch_{{vccz|vccnz}} [[LOOPBB]]
 ; GCN-NEXT: ; %bb.2
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @loop_arg_0(float addrspace(3)* %ptr, i32 %n) nounwind {

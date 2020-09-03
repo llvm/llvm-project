@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 // REQUIRES: c++11 || c++14
 
 // <functional>
@@ -56,21 +56,23 @@ int g(int) { return 0; }
 
 int main(int, char**)
 {
-    assert(globalMemCounter.checkOutstandingNewEq(0));
-    {
-        std::function<int(int)> f = A();
-        assert(A::count == 1);
-        assert(globalMemCounter.checkOutstandingNewEq(1));
-        assert(f.target<A>());
-        assert(f.target<int(*)(int)>() == 0);
-        std::function<int(int)> f2(std::allocator_arg, bare_allocator<A>(), std::move(f));
-        assert(A::count == 1);
-        assert(globalMemCounter.checkOutstandingNewEq(1));
-        assert(f2.target<A>());
-        assert(f2.target<int(*)(int)>() == 0);
-        assert(f.target<A>() == 0);
-        assert(f.target<int(*)(int)>() == 0);
-    }
+  globalMemCounter.reset();
+  assert(globalMemCounter.checkOutstandingNewEq(0));
+  {
+    std::function<int(int)> f = A();
+    assert(A::count == 1);
+    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(f.target<A>());
+    assert(f.target<int (*)(int)>() == 0);
+    std::function<int(int)> f2(std::allocator_arg, bare_allocator<A>(),
+                               std::move(f));
+    assert(A::count == 1);
+    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(f2.target<A>());
+    assert(f2.target<int (*)(int)>() == 0);
+    assert(f.target<A>() == 0);
+    assert(f.target<int (*)(int)>() == 0);
+  }
     assert(globalMemCounter.checkOutstandingNewEq(0));
     {
         // Test that moving a function constructed from a reference wrapper
@@ -83,7 +85,7 @@ int main(int, char**)
         assert(A::count == 1);
         assert(f.target<A>() == nullptr);
         assert(f.target<Ref>());
-        std::function<int(int)> f2(std::allocator_arg, std::allocator<void>{},
+        std::function<int(int)> f2(std::allocator_arg, std::allocator<int>{},
                                    std::move(f));
         assert(A::count == 1);
         assert(f2.target<A>() == nullptr);
@@ -99,7 +101,7 @@ int main(int, char**)
         std::function<int(int)> f(p);
         assert(f.target<A>() == nullptr);
         assert(f.target<Ptr>());
-        std::function<int(int)> f2(std::allocator_arg, std::allocator<void>(),
+        std::function<int(int)> f2(std::allocator_arg, std::allocator<int>(),
                                    std::move(f));
         assert(f2.target<A>() == nullptr);
         assert(f2.target<Ptr>());

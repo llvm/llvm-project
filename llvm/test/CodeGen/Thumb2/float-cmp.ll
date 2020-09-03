@@ -54,8 +54,8 @@ define i1 @cmp_f_ole(float %a, float %b) {
 }
 define i1 @cmp_f_one(float %a, float %b) {
 ; CHECK-LABEL: cmp_f_one:
-; NONE: bl __aeabi_fcmpgt
-; NONE: bl __aeabi_fcmplt
+; NONE: bl __aeabi_fcmpeq
+; NONE: bl __aeabi_fcmpun
 ; HARD: vcmp.f32
 ; HARD: movmi r0, #1
 ; HARD: movgt r0, #1
@@ -198,10 +198,10 @@ define i1 @cmp_d_ole(double %a, double %b) {
 }
 define i1 @cmp_d_one(double %a, double %b) {
 ; CHECK-LABEL: cmp_d_one:
-; NONE: bl __aeabi_dcmpgt
-; NONE: bl __aeabi_dcmplt
-; SP: bl __aeabi_dcmpgt
-; SP: bl __aeabi_dcmplt
+; NONE: bl __aeabi_dcmpeq
+; NONE: bl __aeabi_dcmpun
+; SP: bl __aeabi_dcmpeq
+; SP: bl __aeabi_dcmpun
 ; DP: vcmp.f64
 ; DP: movmi r0, #1
 ; DP: movgt r0, #1

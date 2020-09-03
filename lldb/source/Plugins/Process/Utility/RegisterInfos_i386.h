@@ -145,7 +145,7 @@
         DR_OFFSET(i), eEncodingUint, eFormatHex,                               \
                   {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,                   \
                    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,                   \
-                   LLDB_INVALID_REGNUM },                                      \
+                   lldb_##reg##i##_i386 },                                     \
                    nullptr, nullptr, nullptr, 0                                \
   }
 

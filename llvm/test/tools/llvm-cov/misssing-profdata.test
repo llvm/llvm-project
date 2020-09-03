@@ -1,0 +1,2 @@
+RUN: not llvm-cov show -instr-profile=%t.nonexistent %t.nonexistent 2>&1 | FileCheck %s
+CHECK: Could not read profile data

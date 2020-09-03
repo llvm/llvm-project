@@ -106,7 +106,7 @@ llvm-opt-fuzzer
 
 A |LLVM IR fuzzer| aimed at finding bugs in optimization passes.
 
-It receives optimzation pipeline and runs it for each fuzzer input.
+It receives optimization pipeline and runs it for each fuzzer input.
 
 Interface of this fuzzer almost directly mirrors ``llvm-isel-fuzzer``. Both
 ``mtriple`` and ``passes`` arguments are required. Passes are specified in a

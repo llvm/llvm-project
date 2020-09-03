@@ -16,7 +16,7 @@ class ModuleLoadedNotifysTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    # DyanmicLoaderDarwin should batch up notifications about
+    # DynamicLoaderDarwin should batch up notifications about
     # newly added/removed libraries.  Other DynamicLoaders may
     # not be written this way.
     @skipUnlessDarwin
@@ -52,6 +52,7 @@ class ModuleLoadedNotifysTestCase(TestBase):
             True
 
         error = lldb.SBError()
+        flags = target.GetLaunchInfo().GetLaunchFlags()
         process = target.Launch(listener,
                                 None,      # argv
                                 None,      # envp
@@ -59,7 +60,7 @@ class ModuleLoadedNotifysTestCase(TestBase):
                                 None,      # stdout_path
                                 None,      # stderr_path
                                 None,      # working directory
-                                0,         # launch flags
+                                flags,     # launch flags
                                 False,     # Stop at entry
                                 error)     # error
 

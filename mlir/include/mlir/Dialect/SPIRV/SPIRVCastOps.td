@@ -1,13 +1,13 @@
 //===-- SPIRVCastOps.td - MLIR SPIR-V Cast Ops -------*- tablegen -*-------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
 // This file contains cast ops for the SPIR-V dialect. It corresponds
-// to "3.32.11. Convertion Instructions" of the SPIR-V specification.
+// to "3.32.11. Conversion Instructions" of the SPIR-V specification.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +15,7 @@
 #define SPIRV_CAST_OPS
 
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class SPV_CastOp<string mnemonic, Type resultType, Type operandType,
                  list<OpTrait> traits = []> :
@@ -22,11 +23,11 @@ class SPV_CastOp<string mnemonic, Type resultType, Type operandType,
              !listconcat(traits,
                          [NoSideEffect, SameOperandsAndResultShape])> {
   let arguments = (ins
-    SPV_ScalarOrVectorOf<operandType>:$operand
+    SPV_ScalarOrVectorOrCoopMatrixOf<operandType>:$operand
   );
 
   let results = (outs
-    SPV_ScalarOrVectorOf<resultType>:$result
+    SPV_ScalarOrVectorOrCoopMatrixOf<resultType>:$result
   );
 
   let parser = [{ return mlir::impl::parseCastOp(parser, result); }];
@@ -61,16 +62,16 @@ def SPV_BitcastOp : SPV_Op<"Bitcast", [NoSideEffect]> {
     component of S (mapping to multiple components of L) maps its lower-
     ordered bits to the lower-numbered components of L.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     bitcast-op ::= ssa-id `=` `spv.Bitcast` ssa-use
                    `:` operand-type `to` result-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %1 = spv.Bitcast %0 : f32 to i32
     %1 = spv.Bitcast %0 : vector<2xf32> to i64
     %1 = spv.Bitcast %0 : !spv.ptr<f32, Function> to !spv.ptr<i32, Function>
@@ -107,16 +108,16 @@ def SPV_ConvertFToSOp : SPV_CastOp<"ConvertFToS", SPV_Integer, SPV_Float, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     convert-f-to-s-op ::= ssa-id `=` `spv.ConvertFToSOp` ssa-use
                           `:` operand-type `to` result-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %1 = spv.ConvertFToS %0 : f32 to i32
     %3 = spv.ConvertFToS %2 : vector<3xf32> to vector<3xi32>
     ```
@@ -140,16 +141,16 @@ def SPV_ConvertFToUOp : SPV_CastOp<"ConvertFToU", SPV_Integer, SPV_Float, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     convert-f-to-u-op ::= ssa-id `=` `spv.ConvertFToUOp` ssa-use
                           `:` operand-type `to` result-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %1 = spv.ConvertFToU %0 : f32 to i32
     %3 = spv.ConvertFToU %2 : vector<3xf32> to vector<3xi32>
     ```
@@ -171,16 +172,16 @@ def SPV_ConvertSToFOp : SPV_CastOp<"ConvertSToF", SPV_Float, SPV_Integer, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     convert-s-to-f-op ::= ssa-id `=` `spv.ConvertSToFOp` ssa-use
                           `:` operand-type `to` result-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %1 = spv.ConvertSToF %0 : i32 to f32
     %3 = spv.ConvertSToF %2 : vector<3xi32> to vector<3xf32>
     ```
@@ -202,16 +203,16 @@ def SPV_ConvertUToFOp : SPV_CastOp<"ConvertUToF", SPV_Float, SPV_Integer, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     convert-u-to-f-op ::= ssa-id `=` `spv.ConvertUToFOp` ssa-use
                           `:` operand-type `to` result-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %1 = spv.ConvertUToF %0 : i32 to f32
     %3 = spv.ConvertUToF %2 : vector<3xi32> to vector<3xf32>
     ```
@@ -235,16 +236,16 @@ def SPV_FConvertOp : SPV_CastOp<"FConvert", SPV_Float, SPV_Float, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     f-convert-op ::= ssa-id `=` `spv.FConvertOp` ssa-use
                      `:` operand-type `to` result-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %1 = spv.FConvertOp %0 : f32 to f64
     %3 = spv.FConvertOp %2 : vector<3xf32> to vector<3xf64>
     ```
@@ -269,16 +270,16 @@ def SPV_SConvertOp : SPV_CastOp<"SConvert", SPV_Integer, SPV_Integer, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     s-convert-op ::= ssa-id `=` `spv.SConvertOp` ssa-use
                      `:` operand-type `to` result-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %1 = spv.SConvertOp %0 : i32 to i64
     %3 = spv.SConvertOp %2 : vector<3xi32> to vector<3xi64>
     ```
@@ -304,16 +305,16 @@ def SPV_UConvertOp : SPV_CastOp<"UConvert", SPV_Integer, SPV_Integer, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     u-convert-op ::= ssa-id `=` `spv.UConvertOp` ssa-use
                  `:` operand-type `to` result-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %1 = spv.UConvertOp %0 : i32 to i64
     %3 = spv.UConvertOp %2 : vector<3xi32> to vector<3xi64>
     ```

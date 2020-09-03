@@ -137,15 +137,15 @@ _Sat longfract_t td_sat_long_fract;         // expected-error{{'_Sat' specifier 
 _Sat longaccum_t td_sat_long_accum;         // expected-error{{'_Sat' specifier is only valid on '_Fract' or '_Accum', not 'type-name'}}
 
 /* Bad suffixes  */
-_Accum fk = 1.0fk;    // expected-error{{invalid suffix 'fk' on integer constant}}
-_Accum kk = 1.0kk;    // expected-error{{invalid suffix 'kk' on integer constant}}
-_Accum rk = 1.0rk;    // expected-error{{invalid suffix 'rk' on integer constant}}
-_Accum rk = 1.0rr;    // expected-error{{invalid suffix 'rr' on integer constant}}
-_Accum qk = 1.0qr;    // expected-error{{invalid suffix 'qr' on integer constant}}
+_Accum fk = 1.0fk; // expected-error{{invalid suffix 'fk' on fixed-point constant}}
+_Accum kk = 1.0kk; // expected-error{{invalid suffix 'kk' on fixed-point constant}}
+_Accum rk = 1.0rk; // expected-error{{invalid suffix 'rk' on fixed-point constant}}
+_Accum rk = 1.0rr; // expected-error{{invalid suffix 'rr' on fixed-point constant}}
+_Accum qk = 1.0qr; // expected-error{{invalid suffix 'qr' on fixed-point constant}}
 
 /* Using wrong exponent notation */
-_Accum dec_with_hex_exp1 = 0.1p10k;    // expected-error{{invalid suffix 'p10k' on integer constant}}
-_Accum dec_with_hex_exp2 = 0.1P10k;    // expected-error{{invalid suffix 'P10k' on integer constant}}
+_Accum dec_with_hex_exp1 = 0.1p10k;    // expected-error{{invalid suffix 'p10k' on fixed-point constant}}
+_Accum dec_with_hex_exp2 = 0.1P10k;    // expected-error{{invalid suffix 'P10k' on fixed-point constant}}
 _Accum hex_with_dex_exp1 = 0x0.1e10k;  // expected-error{{hexadecimal floating constant requires an exponent}}
 _Accum hex_with_dex_exp2 = 0x0.1E10k;  // expected-error{{hexadecimal floating constant requires an exponent}}
 
@@ -250,3 +250,20 @@ unsigned u_const = -2.5hk;                // expected-warning{{implicit conversi
 char c_const = 256.0uk;                   // expected-warning{{implicit conversion from 256.0 cannot fit within the range of values for 'char'}}
 short _Accum sa_const5 = 256;             // expected-warning{{implicit conversion from 256 cannot fit within the range of values for 'short _Accum'}}
 unsigned short _Accum usa_const2 = -2;    // expected-warning{{implicit conversion from -2 cannot fit within the range of values for 'unsigned short _Accum'}}
+
+short _Accum add_ovf1 = 255.0hk + 20.0hk;                     // expected-warning {{overflow in expression; result is -237.0 with type 'short _Accum'}}
+short _Accum add_ovf2 = 10 + 0.5hr;                           // expected-warning {{overflow in expression; result is 0.5 with type 'short _Fract'}}
+short _Accum sub_ovf1 = 16.0uhk - 32.0uhk;                    // expected-warning {{overflow in expression; result is 240.0 with type 'unsigned short _Accum'}}
+short _Accum sub_ovf2 = -255.0hk - 20;                        // expected-warning {{overflow in expression; result is 237.0 with type 'short _Accum'}}
+short _Accum mul_ovf1 = 200.0uhk * 10.0uhk;                   // expected-warning {{overflow in expression; result is 208.0 with type 'unsigned short _Accum'}}
+short _Accum mul_ovf2 = (-0.5hr - 0.5hr) * (-0.5hr - 0.5hr);  // expected-warning {{overflow in expression; result is -1.0 with type 'short _Fract'}}
+short _Accum div_ovf1 = 255.0hk / 0.5hk;                      // expected-warning {{overflow in expression; result is -2.0 with type 'short _Accum'}}
+
+// No warnings for saturation
+short _Fract add_sat  = (_Sat short _Fract)0.5hr + 0.5hr;
+short _Accum sub_sat  = (_Sat short _Accum)-200.0hk - 80.0hk;
+short _Accum mul_sat  = (_Sat short _Accum)80.0hk * 10.0hk;
+short _Fract div_sat  = (_Sat short _Fract)0.9hr / 0.1hr;
+
+// Division by zero
+short _Accum div_zero = 4.5k / 0.0lr;  // expected-error {{initializer element is not a compile-time constant}}

@@ -1,0 +1,36 @@
+## Here we test that an arbitrary hex value can be used for a relocation type.
+
+## Show that yaml2obj is able to produce relocations for an unknown e_machine kind properly.
+# RUN: yaml2obj %s -o %t1 -DMACHINE=0x1234
+# RUN: llvm-readelf %t1 --relocations | FileCheck %s -DFIRST=Unknown -DSECOND=Unknown
+
+# CHECK: Relocation section '.rela.text' at offset 0x40 contains 4 entries:
+# CHECK:      Offset            Info             Type
+# CHECK-NEXT: 0000000000000009  0000000000000000 [[FIRST]]  0
+# CHECK-NEXT: 0000000000000008  0000000000000001 [[SECOND]] 0
+# CHECK-NEXT: 0000000000000007  000000000000007f Unknown    0
+# CHECK-NEXT: 0000000000000006  00000000000000ff Unknown    0
+
+## Show that yaml2obj is able to produce relocations for an arbitrary known e_machine kind properly.
+# RUN: yaml2obj %s -o %t2 -DMACHINE=EM_X86_64
+# RUN: llvm-readelf %t2 --relocations | FileCheck %s -DFIRST=R_X86_64_NONE -DSECOND=R_X86_64_64
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: [[MACHINE]]
+Sections:
+  - Name: .rela.text
+    Type: SHT_RELA
+    Relocations:
+## Test a few noticeable possible values: 0, 1, max(int8_t)=127, max(uint8_t)=0xFF=-1
+      - Offset: 0x9
+        Type:   0x0
+      - Offset: 0x8
+        Type:   0x1
+      - Offset: 0x7
+        Type:   0x7F
+      - Offset: 0x6
+        Type:   0xFF

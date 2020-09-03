@@ -9,7 +9,7 @@ declare i32 @llvm.cttz.i32(i32, i1) nounwind readnone
 declare i64 @llvm.cttz.i64(i64, i1) nounwind readnone
 declare <2 x i32> @llvm.cttz.v2i32(<2 x i32>, i1) nounwind readnone
 declare <4 x i32> @llvm.cttz.v4i32(<4 x i32>, i1) nounwind readnone
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; FUNC-LABEL: {{^}}s_cttz_zero_undef_i32:
 ; SI: s_load_dword [[VAL:s[0-9]+]],
@@ -33,7 +33,7 @@ define amdgpu_kernel void @s_cttz_zero_undef_i32(i32 addrspace(1)* noalias %out,
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[RESULT:T[0-9]+\.[XYZW]]]
 ; EG: FFBL_INT {{\*? *}}[[RESULT]]
 define amdgpu_kernel void @v_cttz_zero_undef_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i32, i32 addrspace(1)* %valptr, i32 %tid
   %val = load i32, i32 addrspace(1)* %in.gep, align 4
   %cttz = call i32 @llvm.cttz.i32(i32 %val, i1 true) nounwind readnone
@@ -51,7 +51,7 @@ define amdgpu_kernel void @v_cttz_zero_undef_i32(i32 addrspace(1)* noalias %out,
 ; EG: FFBL_INT {{\*? *}}[[RESULT]]
 ; EG: FFBL_INT {{\*? *}}[[RESULT]]
 define amdgpu_kernel void @v_cttz_zero_undef_v2i32(<2 x i32> addrspace(1)* noalias %out, <2 x i32> addrspace(1)* noalias %valptr) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %valptr, i32 %tid
   %val = load <2 x i32>, <2 x i32> addrspace(1)* %in.gep, align 8
   %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %val, i1 true) nounwind readnone
@@ -73,7 +73,7 @@ define amdgpu_kernel void @v_cttz_zero_undef_v2i32(<2 x i32> addrspace(1)* noali
 ; EG: FFBL_INT {{\*? *}}[[RESULT]]
 ; EG: FFBL_INT {{\*? *}}[[RESULT]]
 define amdgpu_kernel void @v_cttz_zero_undef_v4i32(<4 x i32> addrspace(1)* noalias %out, <4 x i32> addrspace(1)* noalias %valptr) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %valptr, i32 %tid
   %val = load <4 x i32>, <4 x i32> addrspace(1)* %in.gep, align 16
   %cttz = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %val, i1 true) nounwind readnone
@@ -131,7 +131,7 @@ define amdgpu_kernel void @s_cttz_zero_undef_i64_with_select(i64 addrspace(1)* n
 
 ; FUNC-LABEL: {{^}}v_cttz_zero_undef_i8_with_select:
 ; SI-NOSDWA: v_ffbl_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
-; SI-SDWA: v_ffbl_b32_sdwa
+; SI-SDWA: v_ffbl_b32_e32
 ; EG: MEM_RAT MSKOR
 define amdgpu_kernel void @v_cttz_zero_undef_i8_with_select(i8 addrspace(1)* noalias %out, i8 addrspace(1)* nocapture readonly %arrayidx) nounwind {
   %val = load i8, i8 addrspace(1)* %arrayidx, align 1
@@ -144,7 +144,7 @@ define amdgpu_kernel void @v_cttz_zero_undef_i8_with_select(i8 addrspace(1)* noa
 
 ; FUNC-LABEL: {{^}}v_cttz_zero_undef_i16_with_select:
 ; SI-NOSDWA: v_ffbl_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
-; SI-SDWA: v_ffbl_b32_sdwa
+; SI-SDWA: v_ffbl_b32_e32
 ; EG: MEM_RAT MSKOR
 define amdgpu_kernel void @v_cttz_zero_undef_i16_with_select(i16 addrspace(1)* noalias %out, i16 addrspace(1)* nocapture readonly %arrayidx) nounwind {
   %val = load i16, i16 addrspace(1)* %arrayidx, align 1
@@ -156,8 +156,8 @@ define amdgpu_kernel void @v_cttz_zero_undef_i16_with_select(i16 addrspace(1)* n
 }
 
 ; FUNC-LABEL: {{^}}v_cttz_zero_undef_i32_with_select:
-; SI: v_ffbl_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
-; SI: v_cmp_ne_u32_e32 vcc, 0
+; SI-DAG: v_ffbl_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+; SI-DAG: v_cmp_ne_u32_e32 vcc, 0
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[RESULT:T[0-9]+\.[XYZW]]]
 define amdgpu_kernel void @v_cttz_zero_undef_i32_with_select(i32 addrspace(1)* noalias %out, i32 addrspace(1)* nocapture readonly %arrayidx) nounwind {
   %val = load i32, i32 addrspace(1)* %arrayidx, align 1
@@ -172,13 +172,19 @@ define amdgpu_kernel void @v_cttz_zero_undef_i32_with_select(i32 addrspace(1)* n
 ; SI-NOSDWA: v_or_b32_e32
 ; SI-NOSDWA: v_or_b32_e32
 ; SI-NOSDWA: v_or_b32_e32
-; SI-SDWA: v_or_b32_sdwa
 ; SI-NOSDWA: v_or_b32_e32
+; SI-NOSDWA: v_or_b32_e32 [[VAL1:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
+; SI-NOSDWA: v_or_b32_e32 [[VAL2:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
+; SI-NOSDWA: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL1]]
+; SI-NOSDWA: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL2]]
+; SI-SDWA: v_or_b32_e32
 ; SI-SDWA: v_or_b32_sdwa
-; SI: v_or_b32_e32 [[VAL1:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
-; SI: v_or_b32_e32 [[VAL2:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
-; SI-DAG: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL1]]
-; SI-DAG: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL2]]
+; SI-SDWA: v_or_b32_e32 [[VAL1:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
+; SI-SDWA: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL1]]
+; SI-SDWA: v_or_b32_e32
+; SI-SDWA: v_or_b32_sdwa
+; SI-SDWA: v_or_b32_e32 [[VAL2:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
+; SI-SDWA: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL2]]
 ; SI: v_cmp_eq_u32_e32 vcc, 0
 ; SI: v_cmp_ne_u64_e32 vcc, 0
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[RESULT:T[0-9]+\.[XYZW]]]
@@ -192,8 +198,8 @@ define amdgpu_kernel void @v_cttz_zero_undef_i64_with_select(i64 addrspace(1)* n
 }
 
 ; FUNC-LABEL: {{^}}v_cttz_i32_sel_eq_neg1:
-; SI: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL:v[0-9]+]]
-; SI: v_cmp_ne_u32_e32 vcc, 0, [[VAL]]
+; SI: v_ffbl_b32_e32 [[VAL:v[0-9]+]], v{{[0-9]+}}
+; SI: buffer_store_dword [[VAL]],
 ; SI: s_endpgm
 ; EG: MEM_RAT_CACHELESS STORE_RAW
 ; EG: FFBL_INT
@@ -207,8 +213,8 @@ define amdgpu_kernel void @v_cttz_i32_sel_eq_neg1(i32 addrspace(1)* noalias %out
 }
 
 ; FUNC-LABEL: {{^}}v_cttz_i32_sel_ne_neg1:
-; SI: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL:v[0-9]+]]
-; SI: v_cmp_ne_u32_e32 vcc, 0, [[VAL]]
+; SI: v_ffbl_b32_e32 [[VAL:v[0-9]+]], v{{[0-9]+}}
+; SI: buffer_store_dword [[VAL]],
 ; SI: s_endpgm
 ; EG: MEM_RAT_CACHELESS STORE_RAW
 ; EG: FFBL_INT
@@ -240,7 +246,7 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias 
 ; FUNC-LABEL: {{^}}v_cttz_i8_sel_eq_neg1:
 ; SI: {{buffer|flat}}_load_ubyte
 ; SI-NOSDWA: v_ffbl_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
-; SI-SDWA: v_ffbl_b32_sdwa
+; SI-SDWA: v_ffbl_b32_e32
 ; EG: MEM_RAT MSKOR
 ; EG: FFBL_INT
  define amdgpu_kernel void @v_cttz_i8_sel_eq_neg1(i8 addrspace(1)* noalias %out, i8 addrspace(1)* nocapture readonly %arrayidx) nounwind {

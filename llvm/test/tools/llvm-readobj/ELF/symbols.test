@@ -1,13 +1,28 @@
 ## This is a general test for --symbols option and its aliases.
 ## There are also other symbols* tests that check specific things.
 
+## For testing and behavior documenting purposes we are using ET_REL and ET_DYN inputs.
+## Relocatable ELF objects are very different by nature from executables and dynamic libraries.
+## They might never have dynamic symbols normally, for example, though we still want
+## to document the --dyn-symbols behavior.
+## There is no need to check ET_EXEC inputs because for dumpers there is no difference
+## between them and ET_DYN inputs in the context of this test.
+
 ## Case 1: Test how llvm-readobj and llvm-readelf dumps symbols.
-# RUN: yaml2obj %s --docnum=1 -o %t64
+## a) Check relocatable objects.
+# RUN: yaml2obj %s -DBITS=64 -DTYPE=ET_REL -o %t64
 # RUN: llvm-readobj --symbols %t64 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
 # RUN: llvm-readelf --symbols %t64 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU64
-# RUN: yaml2obj %s --docnum=2 -o %t32
+# RUN: yaml2obj %s -DBITS=32 -DTYPE=ET_REL -o %t32
 # RUN: llvm-readobj --symbols %t32 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
 # RUN: llvm-readelf --symbols %t32 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU32
+## b) Check dynamic objects.
+# RUN: yaml2obj %s -DBITS=64 -DTYPE=ET_DYN -o %t64.so
+# RUN: llvm-readobj --symbols %t64.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
+# RUN: llvm-readelf --symbols %t64.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU64
+# RUN: yaml2obj %s -DBITS=32 -DTYPE=ET_DYN -o %t32.so
+# RUN: llvm-readobj --symbols %t32.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
+# RUN: llvm-readelf --symbols %t32.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU32
 
 #      SYMBOLS-LLVM:Symbols [
 # SYMBOLS-LLVM-NEXT:  Symbol {
@@ -90,9 +105,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
+  Class:   ELFCLASS[[BITS]]
   Data:    ELFDATA2LSB
-  Type:    ET_REL
+  Type:    [[TYPE]]
   Machine: EM_X86_64
 Symbols:
   - Name:  foo
@@ -102,16 +117,113 @@ Symbols:
 DynamicSymbols:
   - Name:  zed
 
+## Check the behavior when we are unable to print symbols due to an error.
+
+## Case 1: check we are able to dump symbols even when can't get the string table for the
+## SHT_SYMTAB section because of invalid sh_link value.
+# RUN: yaml2obj --docnum=2 -DLINK=0xff %s -o %t64.err1
+# RUN: llvm-readobj --symbols %t64.err1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t64.err1 --check-prefix=STRTAB-LINK-ERR-LLVM
+# RUN: llvm-readelf --symbols %t64.err1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t64.err1 --check-prefix=STRTAB-LINK-ERR-GNU
+
+# STRTAB-LINK-ERR-LLVM:      Symbols [
+# STRTAB-LINK-ERR-LLVM-NEXT: warning: '[[FILE]]': unable to get the string table for the SHT_SYMTAB section: invalid section index: 255
+# STRTAB-LINK-ERR-LLVM-NEXT:   Symbol {
+# STRTAB-LINK-ERR-LLVM-NEXT:     Name: <?> (0)
+# STRTAB-LINK-ERR-LLVM-NEXT:     Value: 0x0
+# STRTAB-LINK-ERR-LLVM-NEXT:     Size: 0
+# STRTAB-LINK-ERR-LLVM-NEXT:     Binding: Local (0x0)
+# STRTAB-LINK-ERR-LLVM-NEXT:     Type: None (0x0)
+# STRTAB-LINK-ERR-LLVM-NEXT:     Other: 0
+# STRTAB-LINK-ERR-LLVM-NEXT:     Section: Undefined (0x0)
+# STRTAB-LINK-ERR-LLVM-NEXT:   }
+# STRTAB-LINK-ERR-LLVM-NEXT:   Symbol {
+# STRTAB-LINK-ERR-LLVM-NEXT:     Name: <?> (1)
+# STRTAB-LINK-ERR-LLVM-NEXT:     Value: 0x1
+# STRTAB-LINK-ERR-LLVM-NEXT:     Size: 0
+# STRTAB-LINK-ERR-LLVM-NEXT:     Binding: Global (0x1)
+# STRTAB-LINK-ERR-LLVM-NEXT:     Type: None (0x0)
+# STRTAB-LINK-ERR-LLVM-NEXT:     Other: 0
+# STRTAB-LINK-ERR-LLVM-NEXT:     Section: .symtab (0x1)
+# STRTAB-LINK-ERR-LLVM-NEXT:   }
+# STRTAB-LINK-ERR-LLVM-NEXT: ]
+
+# STRTAB-LINK-ERR-GNU:      warning: '[[FILE]]': unable to get the string table for the SHT_SYMTAB section: invalid section index: 255
+# STRTAB-LINK-ERR-GNU:      Symbol table '.symtab' contains 2 entries:
+# STRTAB-LINK-ERR-GNU-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
+# STRTAB-LINK-ERR-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND <?>
+# STRTAB-LINK-ERR-GNU-NEXT:      1: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT     1 <?>
+
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_386
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
+  EShStrNdx: [[SHSTRTAB=2]]
+Sections:
+  - Name:    .symtab
+    Type:    SHT_SYMTAB
+    Link:    [[LINK=.strtab]]
+    EntSize: [[ENTSIZE=0x18]]
+## Define the .shstrtab section to reveal its position.
+  - Name: .shstrtab
+    Type: SHT_STRTAB
 Symbols:
-  - Name:  foo
+  - Name: foo
     Value: 0x1
-  - Name:  bar
-    Value: 0x2
-DynamicSymbols:
-  - Name:  zed
+    Binding: STB_GLOBAL
+    Index: 1
+
+## Case 2: check we report a warning when we are unable to read symbols
+##         from the the SHT_SYMTAB section.
+# RUN: yaml2obj --docnum=2 -DENTSIZE=0xFF %s -o %t64.err2
+# RUN: llvm-readobj --symbols %t64.err2 2>&1 | \
+# RUN:  FileCheck %s -DFILE=%t64.err2 --check-prefix=SYMTAB-ENTSIZE-ERR-LLVM
+# RUN: llvm-readelf --symbols %t64.err2 2>&1 | \
+# RUN:  FileCheck %s -DFILE=%t64.err2 --check-prefix=SYMTAB-ENTSIZE-ERR-GNU
+
+# SYMTAB-ENTSIZE-ERR-LLVM:      Symbols [
+# SYMTAB-ENTSIZE-ERR-LLVM-NEXT:   warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has an invalid sh_entsize: 255
+# SYMTAB-ENTSIZE-ERR-LLVM:      ]
+
+# SYMTAB-ENTSIZE-ERR-GNU:     warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has an invalid sh_entsize: 255
+# SYMTAB-ENTSIZE-ERR-GNU-NOT: {{.}}
+
+## Case 3: check we report a warning, but continue dumping, when we are unable to read the name of the SHT_SYMTAB section.
+##         In this case we set the e_shstrndx field to an invalid index so that the .shstrtab section can't be located.
+# RUN: yaml2obj --docnum=2 -DSHSTRTAB=0xff %s -o %t64.err3
+# RUN: llvm-readobj --symbols %t64.err3 2>&1 | \
+# RUN:  FileCheck %s -DFILE=%t64.err3 --check-prefix=SYMTAB-SHSTRTAB-ERR-LLVM
+# RUN: llvm-readelf --symbols %t64.err3 2>&1 | \
+# RUN:  FileCheck %s -DFILE=%t64.err3 --check-prefix=SYMTAB-SHSTRTAB-ERR-GNU
+
+# SYMTAB-SHSTRTAB-ERR-LLVM:      Symbols [
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT: warning: '[[FILE]]': unable to get the name of the SHT_SYMTAB section: section header string table index 255 does not exist
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:   Symbol {
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Name:  (0)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Value: 0x0
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Size: 0
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Binding: Local (0x0)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Type: None (0x0)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Other: 0
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Section: Undefined (0x0)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:   }
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:   Symbol {
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Name: foo (1)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Value: 0x1
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Size: 0
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Binding: Global (0x1)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Type: None (0x0)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Other: 0
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT: warning: '[[FILE]]': section header string table index 255 does not exist
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Section: <?> (0x1)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:   }
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT: ]
+
+# SYMTAB-SHSTRTAB-ERR-GNU:      warning: '[[FILE]]': unable to get the name of the SHT_SYMTAB section: section header string table index 255 does not exist
+# SYMTAB-SHSTRTAB-ERR-GNU:      Symbol table '<?>' contains 2 entries:
+# SYMTAB-SHSTRTAB-ERR-GNU-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
+# SYMTAB-SHSTRTAB-ERR-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# SYMTAB-SHSTRTAB-ERR-GNU-NEXT:      1: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT     1 foo

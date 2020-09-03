@@ -414,8 +414,8 @@ static_assert(templated<1>() == 1, "");
 
 template <int N> constexpr int callTemplated() { return templated<N>(); }
 
-constexpr int B = 10 + // the carat for the error should be pointing to the problematic call (on the next line), not here.
-    callTemplated<0>(); // expected-error{{initialized by a constant expression}} expected-error@-3{{no matching function for call to 'templated'}} expected-note{{in instantiation of function template}} expected-note@-10{{candidate disabled}}
+constexpr int B = 10 + // expected-error {{initialized by a constant expression}}
+    callTemplated<0>(); // expected-error@-3{{no matching function for call to 'templated'}} expected-note{{in instantiation of function template}} expected-note@-10{{candidate disabled}} expected-note {{in call to 'callTemplated()'}} expected-note@-3 {{subexpression not valid in a constant expression}}
 static_assert(callTemplated<1>() == 1, "");
 }
 
@@ -560,4 +560,16 @@ namespace IgnoreUnusedArgSideEffects {
   float &h() __attribute__((enable_if((B(), true), "")));
   float &x = h();
 #endif
+}
+
+namespace DefaultArgs {
+  void f(int n = __builtin_LINE()) __attribute__((enable_if(n == 12345, "only callable on line 12345"))); // expected-note {{only callable on line 12345}}
+  void g() { f(); } // expected-error {{no matching function}}
+#line 12345
+  void h() { f(); }
+
+  template<typename T> void x(int n = T()) __attribute__((enable_if(n == 0, ""))) {} // expected-note {{candidate}}
+  void y() { x<int>(); }
+  struct Z { constexpr operator int() const { return 1; } };
+  void z() { x<Z>(); } // expected-error {{no matching function}}
 }

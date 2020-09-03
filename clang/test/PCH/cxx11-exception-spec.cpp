@@ -2,6 +2,12 @@
 // RUN: %clang_cc1 -pedantic-errors -std=c++11 -include-pch %t.1 -emit-pch %s -o %t.2
 // RUN: %clang_cc1 -pedantic-errors -std=c++11 -include-pch %t.2 -verify %s
 // RUN: %clang_cc1 -pedantic-errors -std=c++11 -include-pch %t.2 -emit-llvm-only %s
+
+// RUN: %clang_cc1 -pedantic-errors -std=c++11 -emit-pch -fpch-instantiate-templates %s -o %t.1
+// RUN: %clang_cc1 -pedantic-errors -std=c++11 -include-pch %t.1 -emit-pch -fpch-instantiate-templates %s -o %t.2
+// RUN: %clang_cc1 -pedantic-errors -std=c++11 -include-pch %t.2 -verify %s
+// RUN: %clang_cc1 -pedantic-errors -std=c++11 -include-pch %t.2 -emit-llvm-only %s
+
 // expected-no-diagnostics
 
 #ifndef PHASE1_DONE

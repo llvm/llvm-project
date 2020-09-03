@@ -14,10 +14,11 @@
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [n] -> { Stmt_for_body_8[i0, i1, i2] -> [i0, i1, i2] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_for_body_8[i0, i1, i2] -> MemRef_A[o0, i1, i2] : (i0 + o0) mod 2 = 0 and 0 <= o0 <= 1 } 
+; CHECK-NEXT:             [n] -> { Stmt_for_body_8[i0, i1, i2] -> MemRef_A[1, i1, i2] : (1 + i0) mod 2 = 0; Stmt_for_body_8[i0, i1, i2] -> MemRef_A[0, i1, i2] : (i0) mod 2 = 0 };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_for_body_8[i0, i1, i2] -> MemRef_A[o0, i1, i2] : (i0 + o0) mod 2 = 0 and 0 <= o0 <= 1 };
+; CHECK-NEXT:             [n] -> { Stmt_for_body_8[i0, i1, i2] -> MemRef_A[1, i1, i2] : (1 + i0) mod 2 = 0; Stmt_for_body_8[i0, i1, i2] -> MemRef_A[0, i1, i2] : (i0) mod 2 = 0 };
 ; CHECK-NEXT: }
+
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

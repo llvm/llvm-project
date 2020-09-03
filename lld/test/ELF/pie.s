@@ -8,11 +8,11 @@
 
 ## Check -pie.
 # RUN: ld.lld -pie %t1.o -o %t
-# RUN: llvm-readobj --file-headers --sections -l --symbols -r %t | FileCheck %s
+# RUN: llvm-readobj --file-headers --sections -l -d --symbols -r %t | FileCheck %s
 
 ## Test --pic-executable alias
 # RUN: ld.lld --pic-executable %t1.o -o %t
-# RUN: llvm-readobj --file-headers --sections -l --symbols -r %t | FileCheck %s
+# RUN: llvm-readobj --file-headers --sections -l -d --symbols -r %t | FileCheck %s
 
 # CHECK:      ElfHeader {
 # CHECK-NEXT:  Ident {
@@ -46,6 +46,9 @@
 # CHECK-NEXT:    PhysicalAddress: 0x0
 
 # CHECK:         Type: PT_DYNAMIC
+
+# CHECK:      DynamicSection [
+# CHECK:        0x000000006FFFFFFB FLAGS_1 PIE
 
 ## Check -nopie
 # RUN: ld.lld -no-pie %t1.o -o %t2

@@ -28,10 +28,10 @@ b0:
   %v13 = tail call i32 @llvm.hexagon.S2.vsplatrb(i32 %v12)
   %v14 = tail call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 %v13)
   %v15 = tail call <16 x i32> @llvm.hexagon.V6.vnot(<16 x i32> %v14)
-  %v16 = tail call <512 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %v5)
+  %v16 = tail call <64 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %v5)
   %v17 = shl i32 1, %v8
   %v18 = tail call i32 @llvm.hexagon.S2.vsplatrb(i32 %v17)
-  %v19 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32> %v15, <512 x i1> %v16, i32 %v18)
+  %v19 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32> %v15, <64 x i1> %v16, i32 %v18)
   %v20 = tail call i32 @llvm.hexagon.S2.vsplatrb(i32 %a3)
   %v21 = tail call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 %v20)
   %v22 = icmp sgt i32 %v5, 0
@@ -48,8 +48,8 @@ b1:                                               ; preds = %b0
   %v30 = getelementptr inbounds i8, i8* %a0, i32 %v29
   %v31 = bitcast i8* %v30 to <16 x i32>*
   %v32 = load <16 x i32>, <16 x i32>* %v31, align 64, !tbaa !0
-  %v33 = tail call <512 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %a5)
-  %v34 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<512 x i1> %v33, i32 16843009)
+  %v33 = tail call <64 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %a5)
+  %v34 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v33, i32 16843009)
   %v35 = tail call <16 x i32> @llvm.hexagon.V6.vnot(<16 x i32> %v34)
   %v36 = add i32 %v0, %a5
   %v37 = getelementptr inbounds i8, i8* %a0, i32 %v36
@@ -127,11 +127,11 @@ b4:                                               ; preds = %b4, %b3
   %v100 = tail call <16 x i32> @llvm.hexagon.V6.vminub(<16 x i32> %v94, <16 x i32> %v91)
   %v101 = tail call <16 x i32> @llvm.hexagon.V6.vminub(<16 x i32> %v97, <16 x i32> %v99)
   %v102 = tail call <16 x i32> @llvm.hexagon.V6.vmaxub(<16 x i32> %v98, <16 x i32> %v100)
-  %v103 = tail call <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v101, <16 x i32> %v96)
-  %v104 = tail call <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v95, <16 x i32> %v102)
-  %v105 = tail call <512 x i1> @llvm.hexagon.V6.pred.or(<512 x i1> %v103, <512 x i1> %v104)
+  %v103 = tail call <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v101, <16 x i32> %v96)
+  %v104 = tail call <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v95, <16 x i32> %v102)
+  %v105 = tail call <64 x i1> @llvm.hexagon.V6.pred.or(<64 x i1> %v103, <64 x i1> %v104)
   %v106 = tail call i32 @llvm.hexagon.S6.rol.i.r(i32 %v83, i32 1)
-  %v107 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32> %v86, <512 x i1> %v105, i32 %v106)
+  %v107 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32> %v86, <64 x i1> %v105, i32 %v106)
   %v108 = add nsw i32 %v79, -64
   %v109 = icmp sgt i32 %v79, 64
   br i1 %v109, label %b4, label %b5
@@ -179,16 +179,16 @@ declare <16 x i32> @llvm.hexagon.V6.lvsplatw(i32) #1
 declare <16 x i32> @llvm.hexagon.V6.vnot(<16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vandqrt(<512 x i1>, i32) #1
+declare <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1>, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.scalar2(i32) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.scalar2(i32) #1
 
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.hexagon.S2.vsplatrb(i32) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32>, <512 x i1>, i32) #1
+declare <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32>, <64 x i1>, i32) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vd0() #1
@@ -212,10 +212,10 @@ declare <16 x i32> @llvm.hexagon.V6.vmaxub(<16 x i32>, <16 x i32>) #1
 declare <16 x i32> @llvm.hexagon.V6.vminub(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.or(<512 x i1>, <512 x i1>) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.or(<64 x i1>, <64 x i1>) #1
 
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.hexagon.S6.rol.i.r(i32, i32) #1

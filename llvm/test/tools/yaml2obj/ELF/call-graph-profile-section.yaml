@@ -1,0 +1,232 @@
+## Test how we create SHT_LLVM_CALL_GRAPH_PROFILE sections.
+
+## Test that the content of SHT_LLVM_CALL_GRAPH_PROFILE sections
+## for 32/64-bit little/big endian targets is correct.
+# RUN: yaml2obj --docnum=1 -D BITS=64 -D ENCODE=LSB %s -o %t.le64
+# RUN: llvm-readobj --cg-profile --sections --section-data %t.le64 | FileCheck %s --check-prefixes=BASIC,BASIC-LE
+# RUN: yaml2obj --docnum=1 -D BITS=64 -D ENCODE=MSB %s -o %t.be64                      
+# RUN: llvm-readobj --cg-profile --sections --section-data %t.be64 | FileCheck %s --check-prefixes=BASIC,BASIC-BE
+# RUN: yaml2obj --docnum=1 -D BITS=32 -D ENCODE=LSB %s -o %t.le32                      
+# RUN: llvm-readobj --cg-profile --sections --section-data %t.le32 | FileCheck %s --check-prefixes=BASIC,BASIC-LE
+# RUN: yaml2obj --docnum=1 -D BITS=32 -D ENCODE=MSB %s -o %t.be32                      
+# RUN: llvm-readobj --cg-profile --sections --section-data %t.be32 | FileCheck %s --check-prefixes=BASIC,BASIC-BE
+
+# BASIC:        Name: .llvm.call-graph-profile
+# BASIC-NEXT:   Type: SHT_LLVM_CALL_GRAPH_PROFILE
+# BASIC-NEXT:   Flags [
+# BASIC-NEXT:   ]
+# BASIC-NEXT:   Address: 0x0
+# BASIC-NEXT:   Offset:
+# BASIC-NEXT:   Size: 32
+## Check that we link SHT_LLVM_CALL_GRAPH_PROFILE section with .symtab by default.
+# BASIC-NEXT:   Link: [[SYMTABNDX:.*]]
+# BASIC-NEXT:   Info: 0
+# BASIC-NEXT:   AddressAlignment: 0
+## Check that the entry size is set to 16 by default.
+# BASIC-NEXT:   EntrySize: 16
+# BASIC-NEXT:   SectionData (
+# BASIC-LE-NEXT:  0000: 01000000 02000000 59000000 00000000
+# BASIC-LE-NEXT:  0010: 02000000 01000000 62000000 00000000
+# BASIC-BE-NEXT:  0000: 00000001 00000002 00000000 00000059
+# BASIC-BE-NEXT:  0010: 00000002 00000001 00000000 00000062
+# BASIC-NEXT:   )
+# BASIC-NEXT: }
+# BASIC-NEXT: Section {
+# BASIC-NEXT:   Index: [[SYMTABNDX]]
+# BASIC-NEXT:   Name: .symtab
+
+# BASIC:      CGProfile [
+# BASIC-NEXT:   CGProfileEntry {
+# BASIC-NEXT:     From: foo (1)
+# BASIC-NEXT:     To: bar (2)
+# BASIC-NEXT:     Weight: 89
+# BASIC-NEXT:   }
+# BASIC-NEXT:   CGProfileEntry {
+# BASIC-NEXT:     From: bar (2)
+# BASIC-NEXT:     To: foo (1)
+# BASIC-NEXT:     Weight: 98
+# BASIC-NEXT:   }
+# BASIC-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2[[ENCODE]]
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .llvm.call-graph-profile
+    Type: SHT_LLVM_CALL_GRAPH_PROFILE
+    Entries:
+      - From:   1
+        To:     2
+        Weight: 89
+      - From:   2
+        To:     1
+        Weight: 98
+Symbols:
+  - Name: foo
+  - Name: bar
+
+## Check we can set arbitrary sh_link and sh_entsize values.
+## Check we can specify neither "Content" nor "Entries" tags.
+# RUN: yaml2obj --docnum=2 %s -o %t.link
+# RUN: llvm-readelf --sections %t.link | FileCheck %s --check-prefix=LINK
+
+# LINK: [Nr] Name      Type                    Address          Off    Size   ES Flg Lk
+# LINK: [ 1] .llvm.foo LLVM_CALL_GRAPH_PROFILE 0000000000000000 000040 000000 00     0
+# LINK: [ 2] .llvm.bar LLVM_CALL_GRAPH_PROFILE 0000000000000000 000040 000000 ff     255
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .llvm.foo
+    Type:    SHT_LLVM_CALL_GRAPH_PROFILE
+    Link:    0x0
+    EntSize: 0
+  - Name:    .llvm.bar
+    Type:    SHT_LLVM_CALL_GRAPH_PROFILE
+    Link:    0xFF
+    EntSize: 0xFF
+
+## Check we can't specify both "Content" and "Entries" tags.
+# RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --check-prefix=BOTH
+# BOTH: error: "Entries" and "Content" can't be used together
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .llvm.foo
+    Type:    SHT_LLVM_CALL_GRAPH_PROFILE
+    Content: ""
+    Entries: []
+
+## Check we can refer to symbols by name.
+# RUN: yaml2obj --docnum=4 %s -o %t.sym
+# RUN: llvm-readobj --cg-profile %t.sym | FileCheck %s --check-prefix=SYMBOL-NAMES
+
+# SYMBOL-NAMES:      CGProfile [
+# SYMBOL-NAMES-NEXT:   CGProfileEntry {
+# SYMBOL-NAMES-NEXT:     From: foo (1)
+# SYMBOL-NAMES-NEXT:     To: bar (2)
+# SYMBOL-NAMES-NEXT:     Weight: 10
+# SYMBOL-NAMES-NEXT:   }
+# SYMBOL-NAMES-NEXT:   CGProfileEntry {
+# SYMBOL-NAMES-NEXT:     From: foo (1)
+# SYMBOL-NAMES-NEXT:     To: foo (3)
+# SYMBOL-NAMES-NEXT:     Weight: 30
+# SYMBOL-NAMES-NEXT:   }
+# SYMBOL-NAMES-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .llvm.call-graph-profile
+    Type: SHT_LLVM_CALL_GRAPH_PROFILE
+    Entries:
+## Case 1: Test we can use symbol names to describe an entry.
+      - From:   foo
+        To:     bar
+        Weight: 10
+## Case 2: Test we can refer to symbols with suffixes.
+      - From:   foo
+        To:     'foo (1)'
+        Weight: 30
+Symbols:
+  - Name: foo
+  - Name: bar
+  - Name: 'foo (1)'
+
+## Check we can describe SHT_LLVM_CALL_GRAPH_PROFILE sections using the "Content" tag.
+# RUN: yaml2obj --docnum=5 %s -o %t.content
+# RUN: llvm-readobj --sections --section-data %t.content | FileCheck %s --check-prefix=CONTENT
+
+# CONTENT:      Name: .llvm.call-graph-profile
+# CONTENT:      SectionData (
+# CONTENT-NEXT:   0000: 11223344 |
+# CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .llvm.call-graph-profile
+    Type:    SHT_LLVM_CALL_GRAPH_PROFILE
+    Content: "11223344"
+
+## Check we can't reference unknown symbols by name.
+# RUN: not yaml2obj --docnum=6 %s 2>&1 | FileCheck %s --check-prefix=UNKNOWN-NAME
+# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=UNKNOWN-NAME
+# UNKNOWN-NAME: error: unknown symbol referenced: 'bar' by YAML section '.llvm.call-graph-profile'
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .llvm.call-graph-profile
+    Type: SHT_LLVM_CALL_GRAPH_PROFILE
+## The first symbol is valid, but the second is unknown.
+    Entries:
+      - From:   foo
+        To:     bar
+        Weight: 10
+Symbols:
+  - Name: foo
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .llvm.call-graph-profile
+    Type: SHT_LLVM_CALL_GRAPH_PROFILE
+## The first symbol is unknown, but the second is valid.
+    Entries:
+      - From:   bar
+        To:     foo
+        Weight: 10
+Symbols:
+  - Name: foo
+
+## Check we can specify arbitrary symbol indexes for an SHT_LLVM_CALL_GRAPH_PROFILE section entry.
+# RUN: yaml2obj --docnum=8 %s -o %t.unk
+# RUN: llvm-readobj --sections --section-data %t.unk | FileCheck %s --check-prefix=UNKNOWN-INDEX
+
+# UNKNOWN-INDEX:      Name: .llvm.call-graph-profile
+# UNKNOWN-INDEX:      SectionData (
+# UNKNOWN-INDEX-NEXT:   0000: 01000000 02000000 03000000 00000000 |
+# UNKNOWN-INDEX-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .llvm.call-graph-profile
+    Type: SHT_LLVM_CALL_GRAPH_PROFILE
+    Entries:
+      - From:   1
+        To:     2
+        Weight: 3

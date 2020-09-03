@@ -63,6 +63,25 @@ static bool getMCRDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
       return true;
     }
   }
+  if (STI.getFeatureBits()[llvm::ARM::HasV7Ops] &&
+      ((MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 10) ||
+       (MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 11))) {
+    Info = "since v7, cp10 and cp11 are reserved for advanced SIMD or floating "
+           "point instructions";
+    return true;
+  }
+  return false;
+}
+
+static bool getMRCDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
+                                  std::string &Info) {
+  if (STI.getFeatureBits()[llvm::ARM::HasV7Ops] &&
+      ((MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 10) ||
+       (MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 11))) {
+    Info = "since v7, cp10 and cp11 are reserved for advanced SIMD or floating "
+           "point instructions";
+    return true;
+  }
   return false;
 }
 
@@ -168,7 +187,7 @@ MCSubtargetInfo *ARM_MC::createARMMCSubtargetInfo(const Triple &TT,
     if (!ArchFS.empty())
       ArchFS = (Twine(ArchFS) + "," + FS).str();
     else
-      ArchFS = FS;
+      ArchFS = std::string(FS);
   }
 
   return createARMMCSubtargetInfoImpl(TT, CPU, ArchFS);
@@ -200,7 +219,7 @@ static MCAsmInfo *createARMMCAsmInfo(const MCRegisterInfo &MRI,
     MAI = new ARMELFMCAsmInfo(TheTriple);
 
   unsigned Reg = MRI.getDwarfRegNum(ARM::SP, true);
-  MAI->addInitialFrameState(MCCFIInstruction::createDefCfa(nullptr, Reg, 0));
+  MAI->addInitialFrameState(MCCFIInstruction::cfiDefCfa(nullptr, Reg, 0));
 
   return MAI;
 }
@@ -266,7 +285,9 @@ public:
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr,
                       uint64_t Size, uint64_t &Target) const override {
     // We only handle PCRel branches for now.
-    if (Info->get(Inst.getOpcode()).OpInfo[0].OperandType!=MCOI::OPERAND_PCREL)
+    if (Inst.getNumOperands() == 0 ||
+        Info->get(Inst.getOpcode()).OpInfo[0].OperandType !=
+            MCOI::OPERAND_PCREL)
       return false;
 
     int64_t Imm = Inst.getOperand(0).getImm();
@@ -285,8 +306,15 @@ public:
     switch (Inst.getOpcode()) {
     default:
       OpId = 0;
+      if (Inst.getNumOperands() == 0)
+        return false;
       break;
+    case ARM::MVE_WLSTP_8:
+    case ARM::MVE_WLSTP_16:
+    case ARM::MVE_WLSTP_32:
+    case ARM::MVE_WLSTP_64:
     case ARM::t2WLS:
+    case ARM::MVE_LETP:
     case ARM::t2LEUpdate:
       OpId = 2;
       break;
@@ -316,8 +344,16 @@ static MCInstrAnalysis *createThumbMCInstrAnalysis(const MCInstrInfo *Info) {
   return new ThumbMCInstrAnalysis(Info);
 }
 
+bool ARM::isCDECoproc(size_t Coproc, const MCSubtargetInfo &STI) {
+  // Unfortunately we don't have ARMTargetInfo in the disassembler, so we have
+  // to rely on feature bits.
+  if (Coproc >= 8)
+    return false;
+  return STI.getFeatureBits()[ARM::FeatureCoprocCDE0 + Coproc];
+}
+
 // Force static initialization.
-extern "C" void LLVMInitializeARMTargetMC() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTargetMC() {
   for (Target *T : {&getTheARMLETarget(), &getTheARMBETarget(),
                     &getTheThumbLETarget(), &getTheThumbBETarget()}) {
     // Register the MC asm info.

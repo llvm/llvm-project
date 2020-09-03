@@ -207,4 +207,55 @@ define amdgpu_kernel void @merge_private_load_4_vector_elts_loads_v4i8() {
   ret void
 }
 
+; Make sure we don't think the alignment will increase if the base address isn't an alloca
+; ALL-LABEL: @private_store_2xi16_align2_not_alloca(
+; ALL: store i16
+; ALL: store i16
+define void @private_store_2xi16_align2_not_alloca(i16 addrspace(5)* %p, i16 addrspace(5)* %r) #0 {
+  %gep.r = getelementptr i16, i16 addrspace(5)* %r, i32 1
+  store i16 1, i16 addrspace(5)* %r, align 2
+  store i16 2, i16 addrspace(5)* %gep.r, align 2
+  ret void
+}
+
+; ALL-LABEL: @private_store_2xi16_align1_not_alloca(
+; ALIGNED: store i16
+; ALIGNED: store i16
+; UNALIGNED: store <2 x i16>
+define void @private_store_2xi16_align1_not_alloca(i16 addrspace(5)* %p, i16 addrspace(5)* %r) #0 {
+  %gep.r = getelementptr i16, i16 addrspace(5)* %r, i32 1
+  store i16 1, i16 addrspace(5)* %r, align 1
+  store i16 2, i16 addrspace(5)* %gep.r, align 1
+  ret void
+}
+
+; ALL-LABEL: @private_load_2xi16_align2_not_alloca(
+; ALL: load i16
+; ALL: load i16
+define i32 @private_load_2xi16_align2_not_alloca(i16 addrspace(5)* %p) #0 {
+  %gep.p = getelementptr i16, i16 addrspace(5)* %p, i64 1
+  %p.0 = load i16, i16 addrspace(5)* %p, align 2
+  %p.1 = load i16, i16 addrspace(5)* %gep.p, align 2
+  %zext.0 = zext i16 %p.0 to i32
+  %zext.1 = zext i16 %p.1 to i32
+  %shl.1 = shl i32 %zext.1, 16
+  %or = or i32 %zext.0, %shl.1
+  ret i32 %or
+}
+
+; ALL-LABEL: @private_load_2xi16_align1_not_alloca(
+; ALIGNED: load i16
+; ALIGNED: load i16
+; UNALIGNED: load <2 x i16>
+define i32 @private_load_2xi16_align1_not_alloca(i16 addrspace(5)* %p) #0 {
+  %gep.p = getelementptr i16, i16 addrspace(5)* %p, i64 1
+  %p.0 = load i16, i16 addrspace(5)* %p, align 1
+  %p.1 = load i16, i16 addrspace(5)* %gep.p, align 1
+  %zext.0 = zext i16 %p.0 to i32
+  %zext.1 = zext i16 %p.1 to i32
+  %shl.1 = shl i32 %zext.1, 16
+  %or = or i32 %zext.0, %shl.1
+  ret i32 %or
+}
+
 attributes #0 = { nounwind }

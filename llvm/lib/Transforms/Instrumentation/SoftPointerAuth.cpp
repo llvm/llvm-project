@@ -34,7 +34,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -83,11 +82,11 @@ class SoftPointerAuth {
   Module *M = nullptr;
 
   // Cached function pointers, initialized lazily.
-  Constant *SignPointerFn = nullptr;
-  Constant *AuthPointerFn = nullptr;
-  Constant *StripPointerFn = nullptr;
-  Constant *BlendDiscriminatorFn = nullptr;
-  Constant *SignGenericFn = nullptr;
+  FunctionCallee SignPointerFn = nullptr;
+  FunctionCallee AuthPointerFn = nullptr;
+  FunctionCallee StripPointerFn = nullptr;
+  FunctionCallee BlendDiscriminatorFn = nullptr;
+  FunctionCallee SignGenericFn = nullptr;
 
   Optional<IRBuilderTy> GlobalConstructorBuilder;
 
@@ -115,7 +114,7 @@ private:
   bool transformCalls();
   bool transformCall(CallInst *call);
   bool transformInvoke(InvokeInst *call);
-  bool transformPointerAuthCall(CallSite oldCall,
+  bool transformPointerAuthCall(CallBase *oldCall,
                                 const OperandBundleUse &bundle);
 
   Value *emitSign(IRBuilderTy &builder, Value *pointer,
@@ -131,15 +130,15 @@ private:
                          Value *value, Value *discriminator);
 
   /// Check whether the callee of a call has the right prototype.
-  bool hasExpectedPrototype(CallSite call, TypeTag resultTypeTag,
+  bool hasExpectedPrototype(CallBase *call, TypeTag resultTypeTag,
                             ArrayRef<TypeTag> argTypeTags) {
-    if (!hasType(call.getInstruction(), resultTypeTag))
+    if (!hasType(call, resultTypeTag))
       return false;
 
-    if (call.getNumArgOperands() != argTypeTags.size())
+    if (call->getNumArgOperands() != argTypeTags.size())
       return false;
     for (unsigned i = 0, e = argTypeTags.size(); i != e; ++i) {
-      if (!hasType(call.getArgOperand(i), argTypeTags[i]))
+      if (!hasType(call->getArgOperand(i), argTypeTags[i]))
         return false;
     }
     return true;
@@ -177,39 +176,38 @@ private:
   }
 
   /// Create a declaration for the given runtime function.
-  Constant *getOrInsertFunction(StringRef name, TypeTag resultTypeTag,
-                                ArrayRef<TypeTag> argTypeTags) {
+  FunctionCallee getOrInsertFunction(StringRef name, TypeTag resultTypeTag,
+                                     ArrayRef<TypeTag> argTypeTags) {
     auto resultType = getType(resultTypeTag);
     SmallVector<Type*, 4> argTypes;
     for (auto argTypeTag : argTypeTags)
       argTypes.push_back(getType(argTypeTag));
     auto functionType = FunctionType::get(resultType, argTypes, false);
-    return cast<Constant>(
-      M->getOrInsertFunction(name, functionType).getCallee());
+    return M->getOrInsertFunction(name, functionType);
   }
 
-  Constant *getSignPointerFn() {
+  FunctionCallee getSignPointerFn() {
     if (!SignPointerFn)
       SignPointerFn = getOrInsertFunction("__ptrauth_sign", VoidPtr,
                                           { VoidPtr, Key, Discriminator });
     return SignPointerFn;
   }
 
-  Constant *getAuthPointerFn() {
+  FunctionCallee getAuthPointerFn() {
     if (!AuthPointerFn)
       AuthPointerFn = getOrInsertFunction("__ptrauth_auth", VoidPtr,
                                           { VoidPtr, Key, Discriminator });
     return AuthPointerFn;
   }
 
-  Constant *getStripPointerFn() {
+  FunctionCallee getStripPointerFn() {
     if (!StripPointerFn)
       StripPointerFn = getOrInsertFunction("__ptrauth_strip", VoidPtr,
                                            { VoidPtr, Key });
     return StripPointerFn;
   }
 
-  Constant *getBlendDiscriminatorFn() {
+  FunctionCallee getBlendDiscriminatorFn() {
     if (!BlendDiscriminatorFn)
       BlendDiscriminatorFn = getOrInsertFunction("__ptrauth_blend",
                                                  Discriminator,
@@ -217,11 +215,11 @@ private:
     return BlendDiscriminatorFn;
   }
 
-  Constant *getSignGenericFn() {
+  FunctionCallee getSignGenericFn() {
     if (!SignGenericFn)
       SignGenericFn = getOrInsertFunction("__ptrauth_sign_generic", IntPtr,
                                           { IntPtr, Key, Discriminator });
-    return SignPointerFn;
+    return SignGenericFn;
   }
 };
 
@@ -715,9 +713,10 @@ bool SoftPointerAuth::transformCall(CallInst *call) {
   // Otherwise, look for our intrinsics.
   auto callee = call->getCalledFunction();
   if (!callee) return false;
-  auto intrinsic = CallSite(call).getIntrinsicID();
-  if (!intrinsic) return false;
-
+  auto intrinsicInst = dyn_cast<IntrinsicInst>(call);
+  if (!intrinsicInst)
+    return false;
+  auto intrinsic = intrinsicInst->getIntrinsicID();
   auto rebuild = [&](function_ref<llvm::Value*(IRBuilderTy&)> fn) {
     IRBuilderTy builder(call);
     auto result = fn(builder);
@@ -794,55 +793,55 @@ bool SoftPointerAuth::transformInvoke(InvokeInst *call) {
   return false;
 }
 
-bool SoftPointerAuth::transformPointerAuthCall(CallSite oldCall,
+bool SoftPointerAuth::transformPointerAuthCall(CallBase *oldCall,
                                                const OperandBundleUse &bundle) {
   if (bundle.Inputs.size() != 2 ||
       !hasType(bundle.Inputs[0], Key) ||
       !hasType(bundle.Inputs[1], Discriminator))
     return false;
 
-  IRBuilderTy builder(oldCall.getInstruction());
+  IRBuilderTy builder(oldCall);
 
   // Authenticate the callee.
-  Value *oldCallee = oldCall.getCalledValue();
+  Value *oldCallee = oldCall->getCalledOperand();
   Value *callee = builder.CreateBitCast(oldCallee, getType(VoidPtr));
   callee = emitAuth(builder, callee, bundle.Inputs[0], bundle.Inputs[1]);
   callee = builder.CreateBitCast(callee, oldCallee->getType());
 
   // Get the arguments.
-  SmallVector<Value*, 8> args(oldCall.arg_begin(), oldCall.arg_end());
+  SmallVector<Value*, 8> args(oldCall->arg_begin(), oldCall->arg_end());
 
   // Get the operand bundles besides llvm.ptrauth (probably none).
   SmallVector<OperandBundleDef, 1> opBundles;
-  for (unsigned i = 0, e = oldCall.getNumOperandBundles(); i != e; ++i) {
-    auto bundle = oldCall.getOperandBundleAt(i);
+  for (unsigned i = 0, e = oldCall->getNumOperandBundles(); i != e; ++i) {
+    auto bundle = oldCall->getOperandBundleAt(i);
     if (bundle.getTagID() != LLVMContext::OB_ptrauth) {
       opBundles.emplace_back(bundle);
     }
   }
 
   // Build the new instruction.
-  CallSite newCall;
-  if (oldCall.isInvoke()) {
-    auto oldInvoke = cast<InvokeInst>(oldCall.getInstruction());
-    newCall = builder.CreateInvoke(callee,
+  CallBase *newCall;
+  if (auto *oldInvoke = dyn_cast<InvokeInst>(oldCall)) {
+    newCall = builder.CreateInvoke(oldInvoke->getFunctionType(), callee,
                                    oldInvoke->getNormalDest(),
                                    oldInvoke->getUnwindDest(),
                                    args, opBundles);
   } else {
-    newCall = builder.CreateCall(callee, args, opBundles);
+    newCall =
+        builder.CreateCall(oldCall->getFunctionType(), callee, args, opBundles);
   }
 
   // Copy mandatory attributes.
-  newCall.setCallingConv(oldCall.getCallingConv());
-  newCall.setAttributes(oldCall.getAttributes());
+  newCall->setCallingConv(oldCall->getCallingConv());
+  newCall->setAttributes(oldCall->getAttributes());
 
   // TODO: copy metadata?
-  newCall.getInstruction()->takeName(oldCall.getInstruction());
+  newCall->takeName(oldCall);
 
   // Destroy the old call.
-  oldCall.getInstruction()->replaceAllUsesWith(newCall.getInstruction());
-  oldCall.getInstruction()->eraseFromParent();
+  oldCall->replaceAllUsesWith(newCall);
+  oldCall->eraseFromParent();
 
   return true;
 }

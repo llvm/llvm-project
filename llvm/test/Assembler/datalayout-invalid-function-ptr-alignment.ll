@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s 2>&1 | FileCheck %s
+; RUN: not --crash llvm-as %s 2>&1 | FileCheck %s
 
 ; CHECK: LLVM ERROR: Alignment is neither 0 nor a power of 2
 

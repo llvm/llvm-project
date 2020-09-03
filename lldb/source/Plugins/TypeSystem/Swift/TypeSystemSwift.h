@@ -82,6 +82,15 @@ public:
 
   TypeSystemSwift();
 
+  /// PluginInterface functions.
+  /// \{
+  static void Initialize();
+  static void Terminate();
+  ConstString GetPluginName() override;
+  uint32_t GetPluginVersion() override;
+  static ConstString GetPluginNameStatic();
+  /// \}
+
   virtual lldb::TypeSP GetCachedType(ConstString mangled) = 0;
   virtual void SetCachedType(ConstString mangled,
                              const lldb::TypeSP &type_sp) = 0;
@@ -110,6 +119,8 @@ public:
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) = 0;
   virtual CompilerType
   GetTypeFromMangledTypename(ConstString mangled_typename) = 0;
+  virtual CompilerType GetGenericArgumentType(lldb::opaque_compiler_type_t type,
+                                              size_t idx) = 0;
 
   /// Unavailable hardcoded functions that don't make sense for Swift.
   /// \{

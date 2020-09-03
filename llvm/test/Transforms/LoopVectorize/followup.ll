@@ -29,7 +29,7 @@ for.end:
 !5 = !{!"llvm.loop.vectorize.followup_all", !{!"FollowupAll"}}
 
 
-; CHECK-LABEL @followup(
+; CHECK-LABEL: @followup(
 
 ; CHECK-LABEL: vector.body:
 ; CHECK: br i1 %13, label %middle.block, label %vector.body, !llvm.loop ![[LOOP_VECTOR:[0-9]+]]

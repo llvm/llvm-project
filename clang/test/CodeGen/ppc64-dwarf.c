@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,PPC64
 static unsigned char dwarf_reg_size_table[1024];
 
 int test() {
@@ -119,10 +120,10 @@ int test() {
 // CHECK-NEXT: store i8 16, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 108), align 1
 // CHECK-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 109), align 1
 // CHECK-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 110), align 1
-// CHECK-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 111), align 1
-// CHECK-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 112), align 1
-// CHECK-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 113), align 1
-// CHECK-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 114), align 1
-// CHECK-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 115), align 1
-// CHECK-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 116), align 1
+// PPC64-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 111), align 1
+// PPC64-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 112), align 1
+// PPC64-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 113), align 1
+// PPC64-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 114), align 1
+// PPC64-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 115), align 1
+// PPC64-NEXT: store i8 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i64 0, i64 116), align 1
 // CHECK-NEXT: ret i32 1

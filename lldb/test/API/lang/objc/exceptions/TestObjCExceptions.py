@@ -23,6 +23,7 @@ class ObjCExceptionsTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         launch_info = lldb.SBLaunchInfo(["a.out", "0"])
+        launch_info.SetLaunchFlags(lldb.eLaunchFlagInheritTCCFromParent)
         lldbutil.run_to_name_breakpoint(self, "objc_exception_throw", launch_info=launch_info)
 
         self.expect("thread list",
@@ -142,8 +143,8 @@ class ObjCExceptionsTestCase(TestBase):
                 '(NSException *) exception = ',
                 '"SomeReason"',
                 'libobjc.A.dylib`objc_exception_throw',
-                'a.out`foo', 'at main.mm:24',
-                'a.out`rethrow', 'at main.mm:35',
+                'a.out`foo', 'at main.mm:16',
+                'a.out`rethrow', 'at main.mm:27',
                 'a.out`main',
             ])
 
@@ -169,8 +170,8 @@ class ObjCExceptionsTestCase(TestBase):
         self.expect('thread exception', substrs=[
                 '(MyCustomException *) exception = ',
                 'libobjc.A.dylib`objc_exception_throw',
-                'a.out`foo', 'at main.mm:26',
-                'a.out`rethrow', 'at main.mm:35',
+                'a.out`foo', 'at main.mm:18',
+                'a.out`rethrow', 'at main.mm:27',
                 'a.out`main',
             ])
 

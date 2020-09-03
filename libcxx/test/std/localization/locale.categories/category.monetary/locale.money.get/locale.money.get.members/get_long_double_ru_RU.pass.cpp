@@ -5,10 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This test is passing in an uncontrolled manner in some Apple environment.
-// UNSUPPORTED: apple-darwin
-//
+
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
@@ -35,6 +32,19 @@
 #include "test_iterators.h"
 
 #include "platform_support.h" // locale name macros
+
+// TODO:
+// Some of the assertions in this test are failing on Apple platforms.
+// Until we figure out the problem and fix it, disable these tests on
+// Apple platforms. Note that we're not using XFAIL or UNSUPPORTED markup
+// here, because this test would otherwise be disabled on all platforms
+// we test. To avoid this test becoming entirely stale, we just disable
+// the parts that fail.
+//
+// See https://llvm.org/PR45739 for the bug tracking this.
+#if defined(__APPLE__)
+#   define APPLE_FIXME
+#endif
 
 typedef std::money_get<char, input_iterator<const char*> > Fn;
 
@@ -304,6 +314,7 @@ int main(int, char**)
             assert(err == std::ios_base::goodbit);
             assert(ex == 0);
         }
+#if !defined(APPLE_FIXME)
         {   // zero, showbase
             std::string v = "0,00 RUB ";
             showbase(ios);
@@ -317,6 +328,7 @@ int main(int, char**)
             assert(ex == 0);
             noshowbase(ios);
         }
+#endif
         {   // negative one, showbase
             std::string v = "-0,01 RUB ";
             typedef input_iterator<const char*> I;
@@ -328,6 +340,7 @@ int main(int, char**)
             assert(err == std::ios_base::goodbit);
             assert(ex == -1);
         }
+#if !defined(APPLE_FIXME)
         {   // negative one, showbase
             std::string v = "-0,01 RUB ";
             showbase(ios);
@@ -341,6 +354,7 @@ int main(int, char**)
             assert(ex == -1);
             noshowbase(ios);
         }
+#endif
         {   // positive, showbase
             std::string v = "1 234 567,89 RUB ";
             typedef input_iterator<const char*> I;
@@ -352,6 +366,7 @@ int main(int, char**)
             assert(err == std::ios_base::goodbit);
             assert(ex == 123456789);
         }
+#if !defined(APPLE_FIXME)
         {   // positive, showbase
             std::string v = "1 234 567,89 RUB ";
             showbase(ios);
@@ -365,6 +380,8 @@ int main(int, char**)
             assert(ex == 123456789);
             noshowbase(ios);
         }
+#endif
+#if !defined(APPLE_FIXME)
         {   // negative, showbase
             std::string v = "-1 234 567,89 RUB ";
             showbase(ios);
@@ -378,6 +395,7 @@ int main(int, char**)
             assert(ex == -123456789);
             noshowbase(ios);
         }
+#endif
         {   // negative, showbase
             std::string v = "-1 234 567,89 \xD1\x80\xD1\x83\xD0\xB1"".";
             showbase(ios);
@@ -638,6 +656,7 @@ int main(int, char**)
             assert(err == std::ios_base::goodbit);
             assert(ex == 0);
         }
+#if !defined(APPLE_FIXME)
         {   // zero, showbase
             std::wstring v = L"0,00 RUB ";
             showbase(ios);
@@ -651,6 +670,7 @@ int main(int, char**)
             assert(ex == 0);
             noshowbase(ios);
         }
+#endif
         {   // negative one, showbase
             std::wstring v = L"-0,01 RUB ";
             typedef input_iterator<const wchar_t*> I;
@@ -662,6 +682,7 @@ int main(int, char**)
             assert(err == std::ios_base::goodbit);
             assert(ex == -1);
         }
+#if !defined(APPLE_FIXME)
         {   // negative one, showbase
             std::wstring v = L"-0,01 RUB ";
             showbase(ios);
@@ -675,6 +696,7 @@ int main(int, char**)
             assert(ex == -1);
             noshowbase(ios);
         }
+#endif
         {   // positive, showbase
             std::wstring v = L"1 234 567,89 RUB ";
             typedef input_iterator<const wchar_t*> I;
@@ -686,6 +708,7 @@ int main(int, char**)
             assert(err == std::ios_base::goodbit);
             assert(ex == 123456789);
         }
+#if !defined(APPLE_FIXME)
         {   // positive, showbase
             std::wstring v = L"1 234 567,89 RUB ";
             showbase(ios);
@@ -699,6 +722,8 @@ int main(int, char**)
             assert(ex == 123456789);
             noshowbase(ios);
         }
+#endif
+#if !defined(APPLE_FIXME)
         {   // negative, showbase
             std::wstring v = L"-1 234 567,89 RUB ";
             showbase(ios);
@@ -712,6 +737,7 @@ int main(int, char**)
             assert(ex == -123456789);
             noshowbase(ios);
         }
+#endif
         {   // negative, showbase
             std::wstring v = L"-1 234 567,89 \x440\x443\x431"".";
             showbase(ios);

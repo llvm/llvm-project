@@ -163,10 +163,6 @@ void shrink_int() {
   Agg<bool> b2 = {1};  // OK
   Agg<bool> b3 = {-1};  // expected-warning {{ cannot be narrowed }} expected-note {{silence}}
 
-  // Conversions from pointers to booleans aren't narrowing conversions.
-  Agg<bool>* ptr = &b1;
-  Agg<bool> b = {ptr};  // OK
-
   Agg<short> ce1 = { Convert<int>(100000) }; // expected-warning {{constant expression evaluates to 100000 which cannot be narrowed to type 'short'}} expected-note {{silence}} expected-warning {{changes value from 100000 to -31072}}
   Agg<char> ce2 = { ConvertVar<short>() }; // expected-warning {{non-constant-expression cannot be narrowed from type 'short' to 'char'}} expected-note {{silence}}
 }

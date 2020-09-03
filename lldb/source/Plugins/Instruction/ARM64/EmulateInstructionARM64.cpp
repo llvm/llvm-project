@@ -1,4 +1,4 @@
-//===-- EmulateInstructionARM64.cpp ------------------------------*- C++-*-===//
+//===-- EmulateInstructionARM64.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -48,6 +48,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionARM64, InstructionARM64)
 
 static bool LLDBTableGetRegisterInfo(uint32_t reg_num, RegisterInfo &reg_info) {
   if (reg_num >= llvm::array_lengthof(g_register_infos_arm64_le))
@@ -400,20 +402,12 @@ bool EmulateInstructionARM64::EvaluateInstruction(uint32_t evaluate_options) {
   if (opcode_data == nullptr)
     return false;
 
-  // printf ("opcode template for 0x%8.8x: %s\n", opcode, opcode_data->name);
   const bool auto_advance_pc =
       evaluate_options & eEmulateInstructionOptionAutoAdvancePC;
   m_ignore_conditions =
       evaluate_options & eEmulateInstructionOptionIgnoreConditions;
 
   bool success = false;
-  //    if (m_opcode_cpsr == 0 || m_ignore_conditions == false)
-  //    {
-  //        m_opcode_cpsr = ReadRegisterUnsigned (eRegisterKindLLDB,
-  //                                              gpr_cpsr_arm64,
-  //                                              0,
-  //                                              &success);
-  //    }
 
   // Only return false if we are unable to read the CPSR if we care about
   // conditions
@@ -439,7 +433,7 @@ bool EmulateInstructionARM64::EvaluateInstruction(uint32_t evaluate_options) {
     if (!success)
       return false;
 
-    if (auto_advance_pc && (new_pc_value == orig_pc_value)) {
+    if (new_pc_value == orig_pc_value) {
       EmulateInstruction::Context context;
       context.type = eContextAdvancePC;
       context.SetNoArgs();
@@ -786,10 +780,6 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
 
   RegisterValue data_Rt;
   RegisterValue data_Rt2;
-
-  //    if (vector)
-  //        CheckFPEnabled(false);
-
   RegisterInfo reg_info_base;
   RegisterInfo reg_info_Rt;
   RegisterInfo reg_info_Rt2;

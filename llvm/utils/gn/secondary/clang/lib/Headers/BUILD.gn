@@ -15,6 +15,20 @@ clang_tablegen("arm_fp16") {
   output_name = "arm_fp16.h"
 }
 
+# Generate arm_sve.h
+clang_tablegen("arm_sve") {
+  args = [ "-gen-arm-sve-header" ]
+  td_file = "//clang/include/clang/Basic/arm_sve.td"
+  output_name = "arm_sve.h"
+}
+
+# Generate arm_bf16.h
+clang_tablegen("arm_bf16") {
+  args = [ "-gen-arm-bf16" ]
+  td_file = "//clang/include/clang/Basic/arm_bf16.td"
+  output_name = "arm_bf16.h"
+}
+
 # Generate arm_mve.h
 clang_tablegen("arm_mve") {
   args = [ "-gen-arm-mve-header" ]
@@ -22,80 +36,97 @@ clang_tablegen("arm_mve") {
   output_name = "arm_mve.h"
 }
 
+# Generate arm_cde.h
+clang_tablegen("arm_cde") {
+  args = [ "-gen-arm-cde-header" ]
+  td_file = "//clang/include/clang/Basic/arm_cde.td"
+  output_name = "arm_cde.h"
+}
+
 copy("arm_headers") {
   visibility = [ ":Headers" ]
   deps = [
+    ":arm_bf16",
+    ":arm_cde",
     ":arm_fp16",
     ":arm_mve",
     ":arm_neon",
+    ":arm_sve",
   ]
-  sources = get_target_outputs(":arm_neon") + get_target_outputs(":arm_fp16") +
-            get_target_outputs(":arm_mve")
-  outputs = [
-    "$clang_resource_dir/include/{{source_file_part}}",
-  ]
+  sources = []
+  foreach(dep, deps) {
+    sources += get_target_outputs(dep)
+  }
+  outputs = [ "$clang_resource_dir/include/{{source_file_part}}" ]
 }
 
 copy("Headers") {
-  deps = [
-    ":arm_headers",
-  ]
+  deps = [ ":arm_headers" ]
 
-  # NOSORT
-  # Tell `gn format` to not reorder the sources list: Its order matches CMake,
-  # and the ordering is alphabetical but ignores leading underscores.
   sources = [
-    "arm_cmse.h",
-    "adxintrin.h",
-    "altivec.h",
-    "ammintrin.h",
-    "arm_acle.h",
-    "armintr.h",
-    "arm64intr.h",
-    "avx2intrin.h",
-    "avx512bf16intrin.h",
-    "avx512bwintrin.h",
-    "avx512bitalgintrin.h",
-    "avx512vlbitalgintrin.h",
-    "avx512cdintrin.h",
-    "avx512vpopcntdqintrin.h",
-    "avx512dqintrin.h",
-    "avx512erintrin.h",
-    "avx512fintrin.h",
-    "avx512ifmaintrin.h",
-    "avx512ifmavlintrin.h",
-    "avx512pfintrin.h",
-    "avx512vbmiintrin.h",
-    "avx512vbmivlintrin.h",
-    "avx512vbmi2intrin.h",
-    "avx512vlvbmi2intrin.h",
-    "avx512vlbf16intrin.h",
-    "avx512vlbwintrin.h",
-    "avx512vlcdintrin.h",
-    "avx512vldqintrin.h",
-    "avx512vlintrin.h",
-    "avx512vp2intersectintrin.h",
-    "avx512vlvp2intersectintrin.h",
-    "avx512vpopcntdqvlintrin.h",
-    "avx512vnniintrin.h",
-    "avx512vlvnniintrin.h",
-    "avxintrin.h",
-    "bmi2intrin.h",
-    "bmiintrin.h",
     "__clang_cuda_builtin_vars.h",
     "__clang_cuda_cmath.h",
     "__clang_cuda_complex_builtins.h",
     "__clang_cuda_device_functions.h",
     "__clang_cuda_intrinsics.h",
     "__clang_cuda_libdevice_declares.h",
+    "__clang_cuda_math.h",
     "__clang_cuda_math_forward_declares.h",
     "__clang_cuda_runtime_wrapper.h",
+    "__clang_hip_libdevice_declares.h",
+    "__clang_hip_math.h",
+    "__clang_hip_runtime_wrapper.h",
+    "__stddef_max_align_t.h",
+    "__wmmintrin_aes.h",
+    "__wmmintrin_pclmul.h",
+    "adxintrin.h",
+    "altivec.h",
+    "ammintrin.h",
+    "amxintrin.h",
+    "arm64intr.h",
+    "arm_acle.h",
+    "arm_cmse.h",
+    "armintr.h",
+    "avx2intrin.h",
+    "avx512bf16intrin.h",
+    "avx512bitalgintrin.h",
+    "avx512bwintrin.h",
+    "avx512cdintrin.h",
+    "avx512dqintrin.h",
+    "avx512erintrin.h",
+    "avx512fintrin.h",
+    "avx512ifmaintrin.h",
+    "avx512ifmavlintrin.h",
+    "avx512pfintrin.h",
+    "avx512vbmi2intrin.h",
+    "avx512vbmiintrin.h",
+    "avx512vbmivlintrin.h",
+    "avx512vlbf16intrin.h",
+    "avx512vlbitalgintrin.h",
+    "avx512vlbwintrin.h",
+    "avx512vlcdintrin.h",
+    "avx512vldqintrin.h",
+    "avx512vlintrin.h",
+    "avx512vlvbmi2intrin.h",
+    "avx512vlvnniintrin.h",
+    "avx512vlvp2intersectintrin.h",
+    "avx512vnniintrin.h",
+    "avx512vp2intersectintrin.h",
+    "avx512vpopcntdqintrin.h",
+    "avx512vpopcntdqvlintrin.h",
+    "avxintrin.h",
+    "bmi2intrin.h",
+    "bmiintrin.h",
+    "cet.h",
     "cetintrin.h",
     "cldemoteintrin.h",
-    "clzerointrin.h",
-    "cpuid.h",
     "clflushoptintrin.h",
     "clwbintrin.h",
+    "clzerointrin.h",
+    "cpuid.h",
+    "cuda_wrappers/algorithm",
+    "cuda_wrappers/complex",
+    "cuda_wrappers/new",
     "emmintrin.h",
     "enqcmdintrin.h",
     "f16cintrin.h",
@@ -116,24 +147,36 @@ copy("Headers") {
     "lwpintrin.h",
     "lzcntintrin.h",
     "mm3dnow.h",
-    "mmintrin.h",
     "mm_malloc.h",
+    "mmintrin.h",
     "module.modulemap",
     "movdirintrin.h",
     "msa.h",
     "mwaitxintrin.h",
     "nmmintrin.h",
-    "opencl-c.h",
     "opencl-c-base.h",
+    "opencl-c.h",
+    "openmp_wrappers/__clang_openmp_device_functions.h",
+    "openmp_wrappers/cmath",
+    "openmp_wrappers/complex.h",
+    "openmp_wrappers/math.h",
     "pconfigintrin.h",
     "pkuintrin.h",
     "pmmintrin.h",
     "popcntintrin.h",
+    "ppc_wrappers/emmintrin.h",
+    "ppc_wrappers/mm_malloc.h",
+    "ppc_wrappers/mmintrin.h",
+    "ppc_wrappers/pmmintrin.h",
+    "ppc_wrappers/smmintrin.h",
+    "ppc_wrappers/tmmintrin.h",
+    "ppc_wrappers/xmmintrin.h",
     "prfchwintrin.h",
     "ptwriteintrin.h",
     "rdseedintrin.h",
     "rtmintrin.h",
     "s390intrin.h",
+    "serializeintrin.h",
     "sgxintrin.h",
     "shaintrin.h",
     "smmintrin.h",
@@ -142,12 +185,12 @@ copy("Headers") {
     "stdatomic.h",
     "stdbool.h",
     "stddef.h",
-    "__stddef_max_align_t.h",
     "stdint.h",
     "stdnoreturn.h",
     "tbmintrin.h",
     "tgmath.h",
     "tmmintrin.h",
+    "tsxldtrkintrin.h",
     "unwind.h",
     "vadefs.h",
     "vaesintrin.h",
@@ -155,10 +198,9 @@ copy("Headers") {
     "vecintrin.h",
     "vpclmulqdqintrin.h",
     "waitpkgintrin.h",
+    "wasm_simd128.h",
     "wbnoinvdintrin.h",
     "wmmintrin.h",
-    "__wmmintrin_aes.h",
-    "__wmmintrin_pclmul.h",
     "x86intrin.h",
     "xmmintrin.h",
     "xopintrin.h",
@@ -167,22 +209,6 @@ copy("Headers") {
     "xsaveoptintrin.h",
     "xsavesintrin.h",
     "xtestintrin.h",
-    "cuda_wrappers/algorithm",
-    "cuda_wrappers/complex",
-    "cuda_wrappers/new",
-    "ppc_wrappers/mmintrin.h",
-    "ppc_wrappers/xmmintrin.h",
-    "ppc_wrappers/mm_malloc.h",
-    "ppc_wrappers/emmintrin.h",
-    "ppc_wrappers/pmmintrin.h",
-    "ppc_wrappers/smmintrin.h",
-    "ppc_wrappers/tmmintrin.h",
-    "openmp_wrappers/math.h",
-    "openmp_wrappers/cmath",
-    "openmp_wrappers/__clang_openmp_math.h",
-    "openmp_wrappers/__clang_openmp_math_declares.h",
   ]
-  outputs = [
-    "$clang_resource_dir/include/{{source_target_relative}}",
-  ]
+  outputs = [ "$clang_resource_dir/include/{{source_target_relative}}" ]
 }

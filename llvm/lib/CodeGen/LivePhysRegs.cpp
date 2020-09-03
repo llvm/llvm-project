@@ -276,6 +276,7 @@ void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
   const MachineFunction &MF = *MBB.getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // We walk through the block backwards and start with the live outs.
   LivePhysRegs LiveRegs;
@@ -294,6 +295,18 @@ void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
       assert(Register::isPhysicalRegister(Reg));
 
       bool IsNotLive = LiveRegs.available(MRI, Reg);
+
+      // Special-case return instructions for cases when a return is not
+      // the last instruction in the block.
+      if (MI.isReturn() && MFI.isCalleeSavedInfoValid()) {
+        for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
+          if (Info.getReg() == Reg) {
+            IsNotLive = !Info.isRestored();
+            break;
+          }
+        }
+      }
+
       MO->setIsDead(IsNotLive);
     }
 

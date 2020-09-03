@@ -121,6 +121,55 @@ for.cond.cleanup:                                 ; preds = %for.cond1.for.cond.
   ret void
 }
 
+; Test that we don't unroll loops that only contain vector intrinsics.
+; CHECK-LABEL: test_intrinsics
+; CHECK: call <16 x i8> @llvm.arm.mve.sub
+; CHECK-NOT: call <16 x i8> @llvm.arm.mve.sub
+define dso_local arm_aapcs_vfpcc void @test_intrinsics(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) {
+entry:
+  %cmp8 = icmp eq i32 %N, 0
+  %tmp8 = add i32 %N, 15
+  %tmp9 = lshr i32 %tmp8, 4
+  %tmp10 = shl nuw i32 %tmp9, 4
+  %tmp11 = add i32 %tmp10, -16
+  %tmp12 = lshr i32 %tmp11, 4
+  %tmp13 = add nuw nsw i32 %tmp12, 1
+  br i1 %cmp8, label %for.cond.cleanup, label %vector.ph
+
+vector.ph:
+  br label %vector.body
+
+vector.body:
+  %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+  %tmp14 = phi i32 [ %tmp13, %vector.ph ], [ %tmp15, %vector.body ]
+  %0 = phi i32 [ %N, %vector.ph ], [ %2, %vector.body ]
+  %tmp = getelementptr inbounds i8, i8* %a, i32 %index
+  %1 = call <16 x i1> @llvm.arm.mve.vctp8(i32 %0)
+  %2 = sub i32 %0, 16
+  %tmp2 = bitcast i8* %tmp to <16 x i8>*
+  %wide.masked.load = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %tmp2, i32 4, <16 x i1> %1, <16 x i8> undef)
+  %tmp3 = getelementptr inbounds i8, i8* %b, i32 %index
+  %tmp4 = bitcast i8* %tmp3 to <16 x i8>*
+  %wide.masked.load2 = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %tmp4, i32 4, <16 x i1> %1, <16 x i8> undef)
+  %sub = call <16 x i8> @llvm.arm.mve.sub.predicated.v16i8.v16i1(<16 x i8> %wide.masked.load2, <16 x i8> %wide.masked.load, <16 x i1> %1, <16 x i8> undef)
+  %tmp6 = getelementptr inbounds i8, i8* %c, i32 %index
+  %tmp7 = bitcast i8* %tmp6 to <16 x i8>*
+  tail call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %sub, <16 x i8>* %tmp7, i32 4, <16 x i1> %1)
+  %index.next = add i32 %index, 16
+  %tmp15 = sub i32 %tmp14, 1
+  %tmp16 = icmp ne i32 %tmp15, 0
+  br i1 %tmp16, label %vector.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %vector.body, %entry
+  ret void
+}
+
+declare <16 x i1> @llvm.arm.mve.vctp8(i32)
+declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32, <16 x i1>, <16 x i8>)
+declare <16 x i8> @llvm.arm.mve.sub.predicated.v16i8.v16i1(<16 x i8>, <16 x i8>, <16 x i1>, <16 x i8>)
+declare void @llvm.masked.store.v16i8.p0v16i8(<16 x i8>, <16 x i8>*, i32, <16 x i1>)
+
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.isvectorized", i32 1}
 !2 = distinct !{!2, !3, !1}

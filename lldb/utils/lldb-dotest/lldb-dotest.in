@@ -1,19 +1,35 @@
 #!@PYTHON_EXECUTABLE@
-import os
 import subprocess
 import sys
 
-dotest_path = '@LLDB_SOURCE_DIR@/test/API/dotest.py'
-build_dir = '@LLDB_TEST_BUILD_DIRECTORY@'
-dotest_args_str = '@LLDB_DOTEST_ARGS@'
+dotest_path = '@LLDB_SOURCE_DIR_CONFIGURED@/test/API/dotest.py'
+build_dir = '@LLDB_TEST_BUILD_DIRECTORY_CONFIGURED@'
+dotest_args_str = '@LLDB_DOTEST_ARGS_CONFIGURED@'
+arch = '@LLDB_TEST_ARCH@'
+executable = '@LLDB_TEST_EXECUTABLE_CONFIGURED@'
+compiler = '@LLDB_TEST_COMPILER_CONFIGURED@'
+dsymutil = '@LLDB_TEST_DSYMUTIL_CONFIGURED@'
+filecheck = '@LLDB_TEST_FILECHECK_CONFIGURED@'
+yaml2obj = '@LLDB_TEST_YAML2OBJ_CONFIGURED@'
+lldb_libs_dir = "@LLDB_LIBS_DIR_CONFIGURED@"
+lldb_build_intel_pt = "@LLDB_BUILD_INTEL_PT@"
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]
     dotest_args = dotest_args_str.split(';')
     # Build dotest.py command.
     cmd = [sys.executable, dotest_path]
+    cmd.extend(['--arch', arch])
     cmd.extend(dotest_args)
     cmd.extend(['--build-dir', build_dir])
+    cmd.extend(['--executable', executable])
+    cmd.extend(['--compiler', compiler])
+    cmd.extend(['--dsymutil', dsymutil])
+    cmd.extend(['--yaml2obj', yaml2obj])
+    cmd.extend(['--filecheck', filecheck])
+    cmd.extend(['--lldb-libs-dir', lldb_libs_dir])
+    if lldb_build_intel_pt == "1":
+        cmd.extend(['--enable-plugin', 'intel-pt'])
     cmd.extend(wrapper_args)
     # Invoke dotest.py and return exit code.
     print(' '.join(cmd))

@@ -1,4 +1,4 @@
-# Table-driven Operation Definition Specification (ODS)
+# Operation Definition Specification (ODS)
 
 In addition to specializing the `mlir::Op` C++ template, MLIR also supports
 defining operations in a table-driven manner. This is achieved via
@@ -10,7 +10,7 @@ equivalent `mlir::Op` C++ template specialization at compiler build time.
 This manual explains in detail all the available mechanisms for defining
 operations in such a table-driven manner. It aims to be a specification instead
 of a tutorial. Please refer to [Quickstart tutorial to adding MLIR graph
-rewrite](QuickstartRewrites.md) for the latter.
+rewrite](Tutorials/QuickstartRewrites.md) for the latter.
 
 In addition to detailing each mechanism, this manual also tries to capture
 best practices. They are rendered as quoted bullet points.
@@ -146,7 +146,7 @@ template parameter to the `Op` class.
 
 ### Operation documentation
 
-This includes both an one-line `summary` and a longer human-readable
+This includes both a one-line `summary` and a longer human-readable
 `description`. They will be used to drive automatic generation of dialect
 documentation. They need to be provided in the operation's definition body:
 
@@ -179,6 +179,10 @@ values, including two categories:
    but are instead derived from information of the operation. E.g., the output
    shape of type. This is mostly used for convenience interface generation or
    interaction with other frameworks/translation.
+
+   All derived attributes should be materializable as an Attribute. That is,
+   even though they are not materialized, it should be possible to store as
+   an attribute.
 
 Both operands and attributes are specified inside the `dag`-typed `arguments`,
 led by `ins`:
@@ -217,11 +221,28 @@ To declare a variadic operand, wrap the `TypeConstraint` for the operand with
 
 Normally operations have no variadic operands or just one variadic operand. For
 the latter case, it is easy to deduce which dynamic operands are for the static
-variadic operand definition. But if an operation has more than one variadic
-operands, it would be impossible to attribute dynamic operands to the
-corresponding static variadic operand definitions without further information
-from the operation. Therefore, the `SameVariadicOperandSize` trait is needed to
-indicate that all variadic operands have the same number of dynamic values.
+variadic operand definition. Though, if an operation has more than one variable
+length operands (either optional or variadic), it would be impossible to
+attribute dynamic operands to the corresponding static variadic operand
+definitions without further information from the operation. Therefore, either
+the `SameVariadicOperandSize` or `AttrSizedOperandSegments` trait is needed to
+indicate that all variable length operands have the same number of dynamic
+values.
+
+#### Optional operands
+
+To declare an optional operand, wrap the `TypeConstraint` for the operand with
+`Optional<...>`.
+
+Normally operations have no optional operands or just one optional operand. For
+the latter case, it is easy to deduce which dynamic operands are for the static
+operand definition. Though, if an operation has more than one variable length
+operands (either optional or variadic), it would be impossible to attribute
+dynamic operands to the corresponding static variadic operand definitions
+without further information from the operation. Therefore, either the
+`SameVariadicOperandSize` or `AttrSizedOperandSegments` trait is needed to
+indicate that all variable length operands have the same number of dynamic
+values.
 
 #### Optional attributes
 
@@ -261,6 +282,24 @@ Right now, the following primitive constraints are supported:
 
 TODO: Design and implement more primitive constraints
 
+### Operation regions
+
+The regions of an operation are specified inside of the `dag`-typed `regions`,
+led by `region`:
+
+```tablegen
+let regions = (region
+  <region-constraint>:$<region-name>,
+  ...
+);
+```
+
+#### Variadic regions
+
+Similar to the `Variadic` class used for variadic operands and results,
+`VariadicRegion<...>` can be used for regions. Variadic regions can currently
+only be specified as the last region in the regions list.
+
 ### Operation results
 
 Similar to operands, results are specified inside the `dag`-typed `results`, led
@@ -279,6 +318,24 @@ Similar to variadic operands, `Variadic<...>` can also be used for results.
 And similarly, `SameVariadicResultSize` for multiple variadic results in the
 same operation.
 
+### Operation successors
+
+For terminator operations, the successors are specified inside of the
+`dag`-typed `successors`, led by `successor`:
+
+```tablegen
+let successors = (successor
+  <successor-constraint>:$<successor-name>,
+  ...
+);
+```
+
+#### Variadic successors
+
+Similar to the `Variadic` class used for variadic operands and results,
+`VariadicSuccessor<...>` can be used for successors. Variadic successors can
+currently only be specified as the last successor in the successor list.
+
 ### Operation traits and constraints
 
 Traits are operation properties that affect syntax or semantics. MLIR C++
@@ -289,19 +346,20 @@ involving multiple operands/attributes/results are provided as the second
 template parameter to the `Op` class. They should be deriving from the `OpTrait`
 class. See [Constraints](#constraints) for more information.
 
-### Operation interfaces
+### Interfaces
 
-[Operation interfaces](Interfaces.md#operation-interfaces) are a mechanism by
-which to opaquely call methods and access information on an *Op instance*,
-without knowing the exact operation type. Operation interfaces defined in C++
-can be accessed in the ODS framework via the `OpInterfaceTrait` class. Aside
-from using pre-existing interfaces in the C++ API, the ODS framework also
-provides a simplified mechanism for defining such interfaces; that removes much
-of the boilerplate necessary.
+[Interfaces](Interfaces.md#attribute-operation-type-interfaces) allow for
+attributes, operations, and types to expose method calls without the caller
+needing to know the derived type. Operation interfaces defined in C++ can be
+accessed in the ODS framework via the `OpInterfaceTrait` class. Aside from using
+pre-existing interfaces in the C++ API, the ODS framework also provides a
+simplified mechanism for defining such interfaces which removes much of the
+boilerplate necessary.
 
-Providing a definition of the `OpInterface` class will auto-generate the C++
-classes for the interface. An `OpInterface` includes a name, for the C++ class,
-a description, and a list of interface methods.
+Providing a definition of the `AttrInterface`, `OpInterface`, or `TypeInterface`
+class will auto-generate the C++ classes for the interface. An interface
+includes a name, for the C++ class, a description, and a list of interface
+methods.
 
 ```tablegen
 def MyInterface : OpInterface<"MyInterface"> {
@@ -385,20 +443,32 @@ def MyInterface : OpInterface<"MyInterface"> {
     // Provide only a default definition of the method.
     // Note: `ConcreteOp` corresponds to the derived operation typename.
     InterfaceMethod<"/*insert doc here*/",
-      "unsigned", "getNumInputsAndOutputs", (ins), /*methodBody=*/[{}], [{
-        ConcreteOp op = cast<ConcreteOp>(getOperation());
+      "unsigned", "getNumWithDefault", (ins), /*methodBody=*/[{}], [{
+        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
         return op.getNumInputs() + op.getNumOutputs();
     }]>,
   ];
 }
 
-// Interfaces can optionally be wrapped inside DeclareOpInterfaceMethods. This
-// would result in autogenerating declarations for members `foo`, `bar` and
-// `fooStatic`. Methods with bodies are not declared inside the op
-// declaration but instead handled by the op interface trait directly.
+// Operation interfaces can optionally be wrapped inside
+// DeclareOpInterfaceMethods. This would result in autogenerating declarations
+// for members `foo`, `bar` and `fooStatic`. Methods with bodies are not
+// declared inside the op declaration but instead handled by the op interface
+// trait directly.
 def OpWithInferTypeInterfaceOp : Op<...
     [DeclareOpInterfaceMethods<MyInterface>]> { ... }
+
+// Methods that have a default implementation do not have declarations
+// generated. If an operation wishes to override the default behavior, it can
+// explicitly specify the method that it wishes to override. This will force
+// the generation of a declaration for those methods.
+def OpWithOverrideInferTypeInterfaceOp : Op<...
+    [DeclareOpInterfaceMethods<MyInterface, ["getNumWithDefault"]>]> { ... }
 ```
+
+Operation interfaces may also provide a verification method on `OpInterface` by
+setting `verify`. Setting `verify` results in the generated trait having a
+`verifyTrait` method that is applied to all operations implementing the trait.
 
 ### Builder methods
 
@@ -429,14 +499,14 @@ The following builders are generated:
 
 ```c++
 // All result-types/operands/attributes have one aggregate parameter.
-static void build(Builder *tblgen_builder, OperationState &tblgen_state,
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   ArrayRef<Type> resultTypes,
                   ValueRange operands,
                   ArrayRef<NamedAttribute> attributes);
 
 // Each result-type/operand/attribute has a separate parameter. The parameters
 // for attributes are of mlir::Attribute types.
-static void build(Builder *tblgen_builder, OperationState &tblgen_state,
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   Type i32_result, Type f32_result, ...,
                   Value i32_operand, Value f32_operand, ...,
                   IntegerAttr i32_attr, FloatAttr f32_attr, ...);
@@ -445,22 +515,21 @@ static void build(Builder *tblgen_builder, OperationState &tblgen_state,
 // for attributes are raw values unwrapped with mlir::Attribute instances.
 // (Note that this builder will not always be generated. See the following
 // explanation for more details.)
-static void build(Builder *tblgen_builder, OperationState &tblgen_state,
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   Type i32_result, Type f32_result, ...,
                   Value i32_operand, Value f32_operand, ...,
                   APInt i32_attr, StringRef f32_attr, ...);
 
 // Each operand/attribute has a separate parameter but result type is aggregate.
-static void build(Builder *tblgen_builder, OperationState &tblgen_state,
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   ArrayRef<Type> resultTypes,
                   Value i32_operand, Value f32_operand, ...,
                   IntegerAttr i32_attr, FloatAttr f32_attr, ...);
 
 // All operands/attributes have aggregate parameters.
-// Generated if InferTypeOpInterface interface is specified.
-static void build(Builder *tblgen_builder, OperationState &tblgen_state,
-                  ValueRange operands,
-                  ArrayRef<NamedAttribute> attributes);
+// Generated if return type can be inferred.
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
+                  ValueRange operands, ArrayRef<NamedAttribute> attributes);
 
 // (And manually specified builders depending on the specific op.)
 ```
@@ -484,6 +553,12 @@ behavior is essentially due to C++ function parameter default value placement
 restrictions.) Otherwise, the builder of the third form will still be generated
 but default values for the attributes not at the end of the `arguments` list
 will not be supplied in the builder's signature.
+
+ODS will generate a builder that doesn't require return type specified if
+
+*   Op implements InferTypeOpInterface interface;
+*   All return types are either buildable types or are the same as a given
+    operand (e.g., `AllTypesMatch` constraint between operand and result);
 
 And there may potentially exist other builders depending on the specific op;
 please refer to the
@@ -520,8 +595,8 @@ def MyOp : ... {
   ...
 
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &state, float val = 0.5f", [{
-      state.addAttribute("attr", builder->getF32FloatAttr(val));
+    OpBuilder<"OpBuilder &builder, OperationState &state, float val = 0.5f", [{
+      state.addAttribute("attr", builder.getF32FloatAttr(val));
     }]>
   ];
 }
@@ -530,8 +605,8 @@ def MyOp : ... {
 The generated builder will look like:
 
 ```c++
-static void build(Builder *builder, OperationState &state, float val = 0.5f) {
-  state.addAttribute("attr", builder->getF32FloatAttr(val));
+static void build(OpBuilder &builder, OperationState &state, float val = 0.5f) {
+  state.addAttribute("attr", builder.getF32FloatAttr(val));
 }
 ```
 
@@ -552,7 +627,162 @@ let verifier = [{
 ```
 
 Code placed in `verifier` will be called after the auto-generated verification
-code.
+code. The order of trait verification excluding those of `verifier` should not
+be relied upon.
+
+### Declarative Assembly Format
+
+The custom assembly form of the operation may be specified in a declarative
+string that matches the operations operands, attributes, etc. With the ability
+to express additional information that needs to be parsed to build the
+operation:
+
+```tablegen
+def CallOp : Std_Op<"call", ...> {
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$args);
+  let results = (outs Variadic<AnyType>);
+
+  let assemblyFormat = [{
+    $callee `(` $args `)` attr-dict `:` functional-type($args, results)
+  }];
+}
+```
+
+The format is comprised of three components:
+
+#### Directives
+
+A directive is a type of builtin function, with an optional set of arguments.
+The available directives are as follows:
+
+*   `attr-dict`
+
+    -   Represents the attribute dictionary of the operation.
+
+*   `attr-dict-with-keyword`
+
+    -   Represents the attribute dictionary of the operation, but prefixes the
+        dictionary with an `attributes` keyword.
+
+*   `functional-type` ( inputs , results )
+
+    -   Formats the `inputs` and `results` arguments as a
+        [function type](LangRef.md#function-type).
+    -   The constraints on `inputs` and `results` are the same as the `input` of
+        the `type` directive.
+
+*   `operands`
+
+    -   Represents all of the operands of an operation.
+
+*   `results`
+
+    -   Represents all of the results of an operation.
+
+*   `successors`
+
+    -   Represents all of the successors of an operation.
+
+*   `type` ( input )
+
+    -   Represents the type of the given input.
+    -   `input` must be either an operand or result [variable](#variables), the
+        `operands` directive, or the `results` directive.
+
+#### Literals
+
+A literal is either a keyword or punctuation surrounded by \`\`.
+
+The following are the set of valid punctuation:
+  `:`, `,`, `=`, `<`, `>`, `(`, `)`, `[`, `]`, `->`
+
+#### Variables
+
+A variable is an entity that has been registered on the operation itself, i.e.
+an argument(attribute or operand), result, successor, etc. In the `CallOp`
+example above, the variables would be `$callee` and `$args`.
+
+Attribute variables are printed with their respective value type, unless that
+value type is buildable. In those cases, the type of the attribute is elided.
+
+#### Optional Groups
+
+In certain situations operations may have "optional" information, e.g.
+attributes or an empty set of variadic operands. In these situations a section
+of the assembly format can be marked as `optional` based on the presence of this
+information. An optional group is defined by wrapping a set of elements within
+`()` followed by a `?` and has the following requirements:
+
+*   The first element of the group must either be a literal, attribute, or an
+    operand.
+    -   This is because the first element must be optionally parsable.
+*   Exactly one argument variable within the group must be marked as the anchor
+    of the group.
+    -   The anchor is the element whose presence controls whether the group
+        should be printed/parsed.
+    -   An element is marked as the anchor by adding a trailing `^`.
+    -   The first element is *not* required to be the anchor of the group.
+*   Literals, variables, and type directives are the only valid elements within
+    the group.
+    -   Any attribute variable may be used, but only optional attributes can be
+        marked as the anchor.
+    -   Only variadic or optional operand arguments can be used.
+    -   The operands to a type directive must be defined within the optional
+        group.
+
+An example of an operation with an optional group is `std.return`, which has a
+variadic number of operands.
+
+```
+def ReturnOp : ... {
+  let arguments = (ins Variadic<AnyType>:$operands);
+
+  // We only print the operands and types if there are a non-zero number
+  // of operands.
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+}
+```
+
+#### Requirements
+
+The format specification has a certain set of requirements that must be adhered
+to:
+
+1. The output and operation name are never shown as they are fixed and cannot be
+   altered.
+1. All operands within the operation must appear within the format, either
+   individually or with the `operands` directive.
+1. All operand and result types must appear within the format using the various
+   `type` directives, either individually or with the `operands` or `results`
+   directives.
+1. The `attr-dict` directive must always be present.
+1. Must not contain overlapping information; e.g. multiple instances of
+   'attr-dict', types, operands, etc.
+   -  Note that `attr-dict` does not overlap with individual attributes. These
+      attributes will simply be elided when printing the attribute dictionary.
+
+##### Type Inference
+
+One requirement of the format is that the types of operands and results must
+always be present. In certain instances, the type of a variable may be deduced
+via type constraints or other information available. In these cases, the type of
+that variable may be elided from the format.
+
+* Buildable Types
+
+Some type constraints may only have one representation, allowing for them to
+be directly buildable; for example the `I32` or `Index` types. Types in `ODS`
+may mark themselves as buildable by setting the `builderCall` field or
+inheriting from the `BuildableType` class.
+
+* Trait Equality Constraints
+
+There are many operations that have known type equality constraints registered
+as traits on the operation; for example the true, false, and result values of a
+`select` operation often have the same type. The assembly format may inspect
+these equal constraints to discern the types of missing variables. The currently
+supported traits are: `AllTypesMatch`, `TypesMatchWith`, `SameTypeOperands`,
+and `SameOperandsAndResultType`.
 
 ### `hasCanonicalizer`
 
@@ -620,9 +850,8 @@ to access them. For example, for a binary arithmetic operation, it may provide
 `.lhs()` to access the first operand and `.rhs()` to access the second operand.
 
 The operand adaptor class lives in the same namespace as the operation class,
-and has the name of the operation followed by `OperandAdaptor`. A template
-declaration `OperandAdaptor<>` is provided to look up the operand adaptor for
-the given operation.
+and has the name of the operation followed by `Adaptor` as well as an alias
+`Adaptor` inside the op class.
 
 Operand adaptors can be used in function templates that also process operations:
 
@@ -634,7 +863,7 @@ std::pair<Value, Value> zip(BinaryOpTy &&op) {
 
 void process(AddOp op, ArrayRef<Value> newOperands) {
   zip(op);
-  zip(OperandAdaptor<AddOp>(newOperands));
+  zip(Adaptor<AddOp>(newOperands));
   /*...*/
 }
 ```
@@ -649,7 +878,7 @@ significantly involve writing constraints. We have the `Constraint` class in
 
 An operation's constraint can cover different range; it may
 
-* Only concern a single attribute (e.g. being an 32-bit integer greater than 5),
+* Only concern a single attribute (e.g. being a 32-bit integer greater than 5),
 * Multiple operands and results (e.g., the 1st result's shape must be the same
   as the 1st operand), or
 * Intrinsic to the operation itself (e.g., having no side effect).
@@ -734,11 +963,11 @@ is used. They serve as "hooks" to the enclosing environment.  This includes
   we want the constraints on each type definition reads naturally and we want
   to attach type constraints directly to an operand/result, `$_self` will be
   replaced by the operand/result's type. E.g., for `F32` in `F32:$operand`, its
-  `$_self` will be expanded as `getOperand(...)->getType()`.
+  `$_self` will be expanded as `getOperand(...).getType()`.
 
-TODO(b/130663252): Reconsider the leading symbol for special placeholders.
-Eventually we want to allow referencing operand/result $-names; such $-names
-can start with underscore.
+TODO: Reconsider the leading symbol for special placeholders. Eventually we want
+to allow referencing operand/result $-names; such $-names can start with
+underscore.
 
 For example, to write an attribute `attr` is an `IntegerAttr`, in C++ you can
 just call `attr.isa<IntegerAttr>()`. The code can be wrapped in a `CPred` as
@@ -802,9 +1031,36 @@ duplication, which is being worked on right now.
 
 ## Attribute Definition
 
+An attribute is a compile-time known constant of an operation.
+
+ODS provides attribute wrappers over C++ attribute classes. There are a few
+common C++ [attribute classes][AttrClasses] defined in MLIR's core IR library
+and one is free to define dialect-specific attribute classes. ODS allows one
+to use these attributes in TableGen to define operations, potentially with
+more fine-grained constraints. For example, `StrAttr` directly maps to
+`StringAttr`; `F32Attr`/`F64Attr` requires the `FloatAttr` to additionally
+be of a certain bitwidth.
+
+ODS attributes are defined as having a storage type (corresponding to a backing
+`mlir::Attribute` that _stores_ the attribute), a return type (corresponding to
+the C++ _return_ type of the generated of the helper getters) as well as method
+to convert between the internal storage and the helper method.
+
+### Attribute decorators
+
+There are a few important attribute adapters/decorators/modifers that can be
+applied to ODS attributes to specify common additional properties like
+optionality, default values, etc.:
+
+*   `DefaultValuedAttr`: specifies the
+    [default value](#attributes-with-default-values) for an attribute.
+*   `OptionalAttr`: specifies an attribute as [optional](#optional-attributes).
+*   `Confined`: adapts an attribute with
+    [further constraints](#confining-attributes).
+
 ### Enum attributes
 
-Some attributes can only take values from an predefined enum, e.g., the
+Some attributes can only take values from a predefined enum, e.g., the
 comparison kind of a comparison op. To define such attributes, ODS provides
 several mechanisms: `StrEnumAttr`, `IntEnumAttr`, and `BitEnumAttr`.
 
@@ -1014,19 +1270,6 @@ llvm::Optional<MyBitEnum> symbolizeMyBitEnum(uint32_t value) {
 }
 ```
 
-TODO(b/132506080): This following is outdated. Update it.
-
-An attribute is a compile time known constant of an operation. Attributes are
-required to be known to construct an operation (e.g., the padding behavior is
-required to fully define the `conv2d` op).
-
-Attributes are defined as having a storage type (corresponding to a derived
-class of `mlir::Attribute`), a return type (that corresponds to the C++ type to
-use in the generation of the helper accessors) as well as method to convert
-between the internal storage and the helper method. Derived attributes are a
-special class of attributes that do not have storage but are instead calculated
-based on the operation and its attributes.
-
 ## Debugging Tips
 
 ### Run `mlir-tblgen` to see the generated content
@@ -1047,7 +1290,7 @@ mlir-tblgen --gen-op-decls -I /path/to/mlir/include /path/to/input/td/file
 # To see op C++ class definition
 mlir-tblgen --gen-op-defs -I /path/to/mlir/include /path/to/input/td/file
 # To see op documentation
-mlir-tblgen --gen-op-doc -I /path/to/mlir/include /path/to/input/td/file
+mlir-tblgen --gen-dialect-doc -I /path/to/mlir/include /path/to/input/td/file
 
 # To see op interface C++ class declaration
 mlir-tblgen --gen-op-interface-decls -I /path/to/mlir/include /path/to/input/td/file
@@ -1056,7 +1299,6 @@ mlir-tblgen --gen-op-interface-defs -I /path/to/mlir/include /path/to/input/td/f
 # To see op interface documentation
 mlir-tblgen --gen-op-interface-doc -I /path/to/mlir/include /path/to/input/td/file
 ```
-
 
 ## Appendix
 
@@ -1099,7 +1341,7 @@ requirements that were desirable:
 *   The op's traits (e.g., commutative) are modelled along with the op in the
     registry.
 *   The op's operand/return type constraints are modelled along with the op in
-    the registry (see [Shape inference](#shape-inference) discussion below),
+    the registry (see [Shape inference](ShapeInference.md) discussion below),
     this allows (e.g.) optimized concise syntax in textual dumps.
 *   Behavior of the op is documented along with the op with a summary and a
     description. The description is written in markdown and extracted for
@@ -1122,89 +1364,13 @@ requirements that were desirable:
 
     TODO: document expectation if the dependent op's definition changes.
 
-### A proposal for auto-generating printer and parser methods
-
-NOTE: Auto-generating printing/parsing (as explained in the below) has _not_
-been prototyped, and potentially just being able to specify custom printer/
-parser methods are sufficient. This should presumably be influenced by the
-design of the assembler/disassembler logic that LLVM backends get for free
-for machine instructions.
-
-The custom assembly form of the operation is specified using a string with
-matching operation name, operands and attributes. With the ability
-to express additional information that needs to be parsed to build the
-operation:
-
-```tablegen
-tfl.add $lhs, $rhs {fused_activation_function: $fused_activation_function}: ${type(self)}
-```
-
-1. The output is never shown in the "mnemonics" string as that is fixed form
-   and cannot be altered.
-1. Custom parsing of ops may include some punctuation (e.g., parenthesis).
-1. The operands/results are added to the created operation in the order that
-   they are shown in the input and output dags.
-1. The `${type(self)}` operator is used to represent the type of the operator.
-   The type of operands can also be queried.
-1. Attributes names are matched to the placeholders in the mnemonic strings.
-   E.g., attribute axis is matched with `$axis`. Custom parsing for attribute
-   type can be defined along with the attribute definition.
-1. The information in the custom assembly form should be sufficient to invoke
-   the builder generated. That may require being able to propagate information
-   (e.g., the `$lhs` has the same type as the result).
-
-Printing is effectively the inverse of the parsing function generated with the
-mnemonic string serving as a template.
-
-### Shape inference
-
-Type constraints are along (at least) three axis: 1) elemental type, 2) rank
-(including static or dynamic), 3) dimensions. While some ops have no compile
-time fixed shape (e.g., output shape is dictated by data) we could still have
-some knowledge of constraints/bounds in the system for that op (e.g., the output
-of a `tf.where` is at most the size of the input data). And so there are
-additional valuable constraints that could be captured even without full
-knowledge.
-
-Initially the shape inference will be declaratively specified using:
-
-*   Constraint on the operands of an operation directly. For example
-    constraining the input type to be tensor/vector elements or that the
-    elemental type be of a specific type (e.g., output of sign is of elemental
-    type `i1`) or class (e.g., float like).
-*   Constraints across operands and results of an operation. For example,
-    enabling specifying equality constraints on type/constituents of a type
-    (shape and elemental type) between operands and results (e.g., the output
-    type of an add is the same as those of the input operands).
-
-In general there is an input/output transfer function which maps the inputs to
-the outputs (e.g., given input X and Y [or slices thereof] with these sizes, the
-output is Z [or this slice thereof]). Such a function could be used to determine
-the output type (shape) for given input type (shape).
-
-But shape functions are determined by attributes and could be arbitrarily
-complicated with a wide-range of specification possibilities. Equality
-relationships are common (e.g., the elemental type of the output matches the
-primitive type of the inputs, both inputs have exactly the same type [primitive
-type and shape]) and so these should be easy to specify. Algebraic relationships
-would also be common (e.g., a concat of `[n,m]` and `[n,m]` matrix along axis 0
-is `[n+n, m]` matrix), while some ops only have defined shapes under certain
-cases (e.g., matrix multiplication of `[a,b]` and `[c,d]` is only defined if
-`b == c`). As ops are also verified, the shape inference need only specify rules
-for the allowed cases (e.g., shape inference for matmul can ignore the case
-where `b != c`), which would simplify type constraint specification.
-
-Instead of specifying an additional mechanism to specify a shape transfer
-function, the reference implementation of the operation will be used to derive
-the shape function. The reference implementation is general and can support the
-arbitrary computations needed to specify output shapes.
-
 [TableGen]: https://llvm.org/docs/TableGen/index.html
 [TableGenIntro]: https://llvm.org/docs/TableGen/LangIntro.html
 [TableGenRef]: https://llvm.org/docs/TableGen/LangRef.html
 [TableGenBackend]: https://llvm.org/docs/TableGen/BackEnds.html#introduction
-[OpBase]: ../include/mlir/IR/OpBase.td
-[OpDefinitionsGen]: ../tools/mlir-tblgen/OpDefinitionsGen.cpp
-[EnumsGen]: ../tools/mlir-tblgen/EnumsGen.cpp
+[OpBase]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/OpBase.td
+[OpDefinitionsGen]: https://github.com/llvm/llvm-project/blob/master/mlir/tools/mlir-tblgen/OpDefinitionsGen.cpp
+[EnumsGen]: https://github.com/llvm/llvm-project/blob/master/mlir/tools/mlir-tblgen/EnumsGen.cpp
 [StringAttr]: LangRef.md#string-attribute
 [IntegerAttr]: LangRef.md#integer-attribute
+[AttrClasses]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/Attributes.h

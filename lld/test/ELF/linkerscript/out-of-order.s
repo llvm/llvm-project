@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-linux %s -o %t.o
 # RUN: echo "SECTIONS { .data 0x4000 : {*(.data)} .dynsym 0x2000 : {*(.dynsym)} .dynstr : {*(.dynstr)} }" > %t.script
 # RUN: ld.lld --hash-style=sysv -o %t.so --script %t.script %t.o -shared
-# RUN: llvm-objdump -section-headers %t.so | FileCheck %s
+# RUN: llvm-objdump --section-headers %t.so | FileCheck %s
 
 # Note: how the layout is done:
 #  we need to layout 2 segments, each contains sections:

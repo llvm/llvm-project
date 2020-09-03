@@ -1,4 +1,4 @@
-//===- StringSet.h - The LLVM Compiler Driver -------------------*- C++ -*-===//
+//===- StringSet.h - An efficient set built on StringMap --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,44 +14,38 @@
 #define LLVM_ADT_STRINGSET_H
 
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Allocator.h"
-#include <cassert>
-#include <initializer_list>
-#include <utility>
 
 namespace llvm {
 
-  /// StringSet - A wrapper for StringMap that provides set-like functionality.
-  template <class AllocatorTy = MallocAllocator>
-  class StringSet : public StringMap<NoneType, AllocatorTy> {
-    using base = StringMap<NoneType, AllocatorTy>;
+/// StringSet - A wrapper for StringMap that provides set-like functionality.
+template <class AllocatorTy = MallocAllocator>
+class StringSet : public StringMap<NoneType, AllocatorTy> {
+  using Base = StringMap<NoneType, AllocatorTy>;
 
-  public:
-    StringSet() = default;
-    StringSet(std::initializer_list<StringRef> S) {
-      for (StringRef X : S)
-        insert(X);
-    }
-    explicit StringSet(AllocatorTy A) : base(A) {}
+public:
+  StringSet() = default;
+  StringSet(std::initializer_list<StringRef> initializer) {
+    for (StringRef str : initializer)
+      insert(str);
+  }
+  explicit StringSet(AllocatorTy a) : Base(a) {}
 
-    std::pair<typename base::iterator, bool> insert(StringRef Key) {
-      assert(!Key.empty());
-      return base::insert(std::make_pair(Key, None));
-    }
+  std::pair<typename Base::iterator, bool> insert(StringRef key) {
+    return Base::try_emplace(key);
+  }
 
-    template <typename InputIt>
-    void insert(const InputIt &Begin, const InputIt &End) {
-      for (auto It = Begin; It != End; ++It)
-        base::insert(std::make_pair(*It, None));
-    }
+  template <typename InputIt>
+  void insert(const InputIt &begin, const InputIt &end) {
+    for (auto it = begin; it != end; ++it)
+      insert(*it);
+  }
 
-    template <typename ValueTy>
-    std::pair<typename base::iterator, bool>
-    insert(const StringMapEntry<ValueTy> &MapEntry) {
-      return insert(MapEntry.getKey());
-    }
-  };
+  template <typename ValueTy>
+  std::pair<typename Base::iterator, bool>
+  insert(const StringMapEntry<ValueTy> &mapEntry) {
+    return insert(mapEntry.getKey());
+  }
+};
 
 } // end namespace llvm
 

@@ -36,15 +36,16 @@ using namespace llvm::object;
 using namespace llvm::support;
 using namespace llvm::support::endian;
 using namespace llvm::sys;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
+std::vector<InputSectionBase *> elf::inputSections;
+DenseSet<std::pair<const Symbol *, uint64_t>> elf::ppc64noTocRelax;
+
 // Returns a string to construct an error message.
-std::string toString(const elf::InputSectionBase *sec) {
+std::string lld::toString(const InputSectionBase *sec) {
   return (toString(sec->file) + ":(" + sec->name + ")").str();
 }
-
-namespace elf {
-std::vector<InputSectionBase *> inputSections;
 
 template <class ELFT>
 static ArrayRef<uint8_t> getSectionContents(ObjFile<ELFT> &file,
@@ -138,7 +139,7 @@ size_t InputSectionBase::getSize() const {
     return s->getSize();
   if (uncompressedSize >= 0)
     return uncompressedSize;
-  return rawData.size();
+  return rawData.size() - bytesDropped;
 }
 
 void InputSectionBase::uncompress() const {
@@ -307,7 +308,7 @@ std::string InputSectionBase::getLocation(uint64_t offset) {
 
   // File->sourceFile contains STT_FILE symbol that contains a
   // source file name. If it's missing, we use an object file name.
-  std::string srcFile = getFile<ELFT>()->sourceFile;
+  std::string srcFile = std::string(getFile<ELFT>()->sourceFile);
   if (srcFile.empty())
     srcFile = toString(file);
 
@@ -338,7 +339,7 @@ std::string InputSectionBase::getSrcMsg(const Symbol &sym, uint64_t offset) {
 //
 //   path/to/foo.o:(function bar) in archive path/to/bar.a
 std::string InputSectionBase::getObjMsg(uint64_t off) {
-  std::string filename = file->getName();
+  std::string filename = std::string(file->getName());
 
   std::string archive;
   if (!file->archiveName.empty())
@@ -438,12 +439,12 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
       // hopefully creates a frame that is ignored at runtime. Also, don't warn
       // on .gcc_except_table and debug sections.
       //
-      // See the comment in maybeReportUndefined for PPC64 .toc .
+      // See the comment in maybeReportUndefined for PPC32 .got2 and PPC64 .toc
       auto *d = dyn_cast<Defined>(&sym);
       if (!d) {
-        if (!sec->name.startswith(".debug") &&
-            !sec->name.startswith(".zdebug") && sec->name != ".eh_frame" &&
-            sec->name != ".gcc_except_table" && sec->name != ".toc") {
+        if (!isDebugSection(*sec) && sec->name != ".eh_frame" &&
+            sec->name != ".gcc_except_table" && sec->name != ".got2" &&
+            sec->name != ".toc") {
           uint32_t secIdx = cast<Undefined>(sym).discardedSecIdx;
           Elf_Shdr_Impl<ELFT> sec =
               CHECK(file->getObj().sections(), file)[secIdx];
@@ -465,7 +466,7 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
       if (!RelTy::IsRela)
         addend = target->getImplicitAddend(bufLoc, type);
 
-      if (config->emachine == EM_MIPS && config->relocatable &&
+      if (config->emachine == EM_MIPS &&
           target->getRelExpr(type, sym, bufLoc) == R_MIPS_GOTREL) {
         // Some MIPS relocations depend on "gp" value. By default,
         // this value has 0x7ff0 offset from a .got section. But
@@ -485,6 +486,14 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
       else if (config->relocatable && type != target->noneRel)
         sec->relocations.push_back({R_ABS, type, rel.r_offset, addend, &sym});
+    } else if (config->emachine == EM_PPC && type == R_PPC_PLTREL24 &&
+               p->r_addend >= 0x8000) {
+      // Similar to R_MIPS_GPREL{16,32}. If the addend of R_PPC_PLTREL24
+      // indicates that r30 is relative to the input section .got2
+      // (r_addend>=0x8000), after linking, r30 should be relative to the output
+      // section .got2 . To compensate for the shift, adjust r_addend by
+      // ppc32Got2OutSecOff.
+      p->r_addend += sec->file->ppc32Got2OutSecOff;
     }
   }
 }
@@ -518,9 +527,14 @@ static uint32_t getARMUndefinedRelativeWeakVA(RelType type, uint32_t a,
   case R_ARM_MOVW_PREL_NC:
   case R_ARM_MOVT_PREL:
   case R_ARM_REL32:
+  case R_ARM_THM_ALU_PREL_11_0:
   case R_ARM_THM_MOVW_PREL_NC:
   case R_ARM_THM_MOVT_PREL:
+  case R_ARM_THM_PC12:
     return p + a;
+  // p + a is unrepresentable as negative immediates can't be encoded.
+  case R_ARM_THM_PC8:
+    return p;
   }
   llvm_unreachable("ARM pc-relative relocation expected\n");
 }
@@ -542,6 +556,7 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t type, uint64_t a,
   case R_AARCH64_PREL64:
   case R_AARCH64_ADR_PREL_LO21:
   case R_AARCH64_LD_PREL_LO19:
+  case R_AARCH64_PLT32:
     return p + a;
   }
   llvm_unreachable("AArch64 pc-relative relocation expected\n");
@@ -637,6 +652,7 @@ static int64_t getTlsTpOffset(const Symbol &s) {
 
     // Variant 2.
   case EM_HEXAGON:
+  case EM_SPARCV9:
   case EM_386:
   case EM_X86_64:
     return s.getVA(0) - tls->p_memsz -
@@ -646,8 +662,9 @@ static int64_t getTlsTpOffset(const Symbol &s) {
   }
 }
 
-static uint64_t getRelocTargetVA(const InputFile *file, RelType type, int64_t a,
-                                 uint64_t p, const Symbol &sym, RelExpr expr) {
+uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
+                                            int64_t a, uint64_t p,
+                                            const Symbol &sym, RelExpr expr) {
   switch (expr) {
   case R_ABS:
   case R_DTPREL:
@@ -695,7 +712,7 @@ static uint64_t getRelocTargetVA(const InputFile *file, RelType type, int64_t a,
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
     // microMIPS variants of these relocations use slightly different
     // expressions: AHL + GP - P + 3 for %lo() and AHL + GP - P - 1 for %hi()
-    // to correctly handle less-sugnificant bit of the microMIPS symbol.
+    // to correctly handle less-significant bit of the microMIPS symbol.
     uint64_t v = in.mipsGot->getGp(file) + a - p;
     if (type == R_MIPS_LO16 || type == R_MICROMIPS_LO16)
       v += 4;
@@ -732,8 +749,12 @@ static uint64_t getRelocTargetVA(const InputFile *file, RelType type, int64_t a,
                               *hiRel->sym, hiRel->expr);
     return 0;
   }
-  case R_PC: {
+  case R_PC:
+  case R_ARM_PCA: {
     uint64_t dest;
+    if (expr == R_ARM_PCA)
+      // Some PC relative ARM (Thumb) relocations align down the place.
+      p = p & 0xfffffffc;
     if (sym.isUndefWeak()) {
       // On ARM and AArch64 a branch to an undefined weak resolves to the
       // next instruction, otherwise the place.
@@ -788,7 +809,7 @@ static uint64_t getRelocTargetVA(const InputFile *file, RelType type, int64_t a,
     // --noinhibit-exec, even a non-weak undefined reference may reach here.
     // Just return A, which matches R_ABS, and the behavior of some dynamic
     // loaders.
-    if (sym.isUndefined())
+    if (sym.isUndefined() || sym.isLazy())
       return a;
     return getTlsTpOffset(sym) + a;
   case R_RELAX_TLS_GD_TO_LE_NEG:
@@ -832,6 +853,16 @@ static uint64_t getRelocTargetVA(const InputFile *file, RelType type, int64_t a,
 template <class ELFT, class RelTy>
 void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
   const unsigned bits = sizeof(typename ELFT::uint) * 8;
+  const bool isDebug = isDebugSection(*this);
+  const bool isDebugLocOrRanges =
+      isDebug && (name == ".debug_loc" || name == ".debug_ranges");
+  const bool isDebugLine = isDebug && name == ".debug_line";
+  Optional<uint64_t> tombstone;
+  for (const auto &patAndValue : llvm::reverse(config->deadRelocInNonAlloc))
+    if (patAndValue.first.match(this->name)) {
+      tombstone = patAndValue.second;
+      break;
+    }
 
   for (const RelTy &rel : rels) {
     RelType type = rel.getType(config->isMips64EL);
@@ -854,11 +885,17 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (expr == R_NONE)
       continue;
 
+    if (expr == R_SIZE) {
+      target->relocateNoSym(bufLoc, type,
+                            SignExtend64<bits>(sym.getSize() + addend));
+      continue;
+    }
+
     if (expr != R_ABS && expr != R_DTPREL && expr != R_RISCV_ADD) {
       std::string msg = getLocation<ELFT>(offset) +
                         ": has non-ABS relocation " + toString(type) +
                         " against symbol '" + toString(sym) + "'";
-      if (expr != R_PC) {
+      if (expr != R_PC && expr != R_ARM_PCA) {
         error(msg);
         return;
       }
@@ -871,15 +908,52 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // address 0. For bug-compatibilty, we accept them with warnings. We
       // know Steel Bank Common Lisp as of 2018 have this bug.
       warn(msg);
-      target->relocateOne(bufLoc, type,
-                          SignExtend64<bits>(sym.getVA(addend - offset)));
+      target->relocateNoSym(bufLoc, type,
+                            SignExtend64<bits>(sym.getVA(addend - offset)));
       continue;
     }
 
-    if (sym.isTls() && !Out::tlsPhdr)
-      target->relocateOne(bufLoc, type, 0);
-    else
-      target->relocateOne(bufLoc, type, SignExtend64<bits>(sym.getVA(addend)));
+    if (tombstone ||
+        (isDebug && (type == target->symbolicRel || expr == R_DTPREL))) {
+      // Resolve relocations in .debug_* referencing (discarded symbols or ICF
+      // folded section symbols) to a tombstone value. Resolving to addend is
+      // unsatisfactory because the result address range may collide with a
+      // valid range of low address, or leave multiple CUs claiming ownership of
+      // the same range of code, which may confuse consumers.
+      //
+      // To address the problems, we use -1 as a tombstone value for most
+      // .debug_* sections. We have to ignore the addend because we don't want
+      // to resolve an address attribute (which may have a non-zero addend) to
+      // -1+addend (wrap around to a low address).
+      //
+      // R_DTPREL type relocations represent an offset into the dynamic thread
+      // vector. The computed value is st_value plus a non-negative offset.
+      // Negative values are invalid, so -1 can be used as the tombstone value.
+      //
+      // If the referenced symbol is discarded (made Undefined), or the
+      // section defining the referenced symbol is garbage collected,
+      // sym.getOutputSection() is nullptr. `ds->section->repl != ds->section`
+      // catches the ICF folded case. However, resolving a relocation in
+      // .debug_line to -1 would stop debugger users from setting breakpoints on
+      // the folded-in function, so exclude .debug_line.
+      //
+      // For pre-DWARF-v5 .debug_loc and .debug_ranges, -1 is a reserved value
+      // (base address selection entry), use 1 (which is used by GNU ld for
+      // .debug_ranges).
+      //
+      // TODO To reduce disruption, we use 0 instead of -1 as the tombstone
+      // value. Enable -1 in a future release.
+      auto *ds = dyn_cast<Defined>(&sym);
+      if (!sym.getOutputSection() ||
+          (ds && ds->section->repl != ds->section && !isDebugLine)) {
+        // If -z dead-reloc-in-nonalloc= is specified, respect it.
+        const uint64_t value = tombstone ? SignExtend64<bits>(*tombstone)
+                                         : (isDebugLocOrRanges ? 1 : 0);
+        target->relocateNoSym(bufLoc, type, value);
+        continue;
+      }
+    }
+    target->relocateNoSym(bufLoc, type, SignExtend64<bits>(sym.getVA(addend)));
   }
 }
 
@@ -896,7 +970,7 @@ static void relocateNonAllocForRelocatable(InputSection *sec, uint8_t *buf) {
     assert(rel.expr == R_ABS);
     uint8_t *bufLoc = buf + rel.offset + sec->outSecOff;
     uint64_t targetVA = SignExtend64(rel.sym->getVA(rel.addend), bits);
-    target->relocateOne(bufLoc, rel.type, targetVA);
+    target->relocate(bufLoc, rel, targetVA);
   }
 }
 
@@ -924,6 +998,8 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
   const unsigned bits = config->wordsize * 8;
 
   for (const Relocation &rel : relocations) {
+    if (rel.expr == R_NONE)
+      continue;
     uint64_t offset = rel.offset;
     if (auto *sec = dyn_cast<InputSection>(this))
       offset += sec->outSecOff;
@@ -939,29 +1015,35 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
     switch (expr) {
     case R_RELAX_GOT_PC:
     case R_RELAX_GOT_PC_NOPIC:
-      target->relaxGot(bufLoc, type, targetVA);
+      target->relaxGot(bufLoc, rel, targetVA);
       break;
     case R_PPC64_RELAX_TOC:
-      if (!tryRelaxPPC64TocIndirection(type, rel, bufLoc))
-        target->relocateOne(bufLoc, type, targetVA);
+      // rel.sym refers to the STT_SECTION symbol associated to the .toc input
+      // section. If an R_PPC64_TOC16_LO (.toc + addend) references the TOC
+      // entry, there may be R_PPC64_TOC16_HA not paired with
+      // R_PPC64_TOC16_LO_DS. Don't relax. This loses some relaxation
+      // opportunities but is safe.
+      if (ppc64noTocRelax.count({rel.sym, rel.addend}) ||
+          !tryRelaxPPC64TocIndirection(rel, bufLoc))
+        target->relocate(bufLoc, rel, targetVA);
       break;
     case R_RELAX_TLS_IE_TO_LE:
-      target->relaxTlsIeToLe(bufLoc, type, targetVA);
+      target->relaxTlsIeToLe(bufLoc, rel, targetVA);
       break;
     case R_RELAX_TLS_LD_TO_LE:
     case R_RELAX_TLS_LD_TO_LE_ABS:
-      target->relaxTlsLdToLe(bufLoc, type, targetVA);
+      target->relaxTlsLdToLe(bufLoc, rel, targetVA);
       break;
     case R_RELAX_TLS_GD_TO_LE:
     case R_RELAX_TLS_GD_TO_LE_NEG:
-      target->relaxTlsGdToLe(bufLoc, type, targetVA);
+      target->relaxTlsGdToLe(bufLoc, rel, targetVA);
       break;
     case R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
     case R_RELAX_TLS_GD_TO_IE:
     case R_RELAX_TLS_GD_TO_IE_ABS:
     case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     case R_RELAX_TLS_GD_TO_IE_GOTPLT:
-      target->relaxTlsGdToIe(bufLoc, type, targetVA);
+      target->relaxTlsGdToIe(bufLoc, rel, targetVA);
       break;
     case R_PPC64_CALL:
       // If this is a call to __tls_get_addr, it may be part of a TLS
@@ -986,11 +1068,23 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
         }
         write32(bufLoc + 4, 0xe8410018); // ld %r2, 24(%r1)
       }
-      target->relocateOne(bufLoc, type, targetVA);
+      target->relocate(bufLoc, rel, targetVA);
       break;
     default:
-      target->relocateOne(bufLoc, type, targetVA);
+      target->relocate(bufLoc, rel, targetVA);
       break;
+    }
+  }
+
+  // Apply jumpInstrMods.  jumpInstrMods are created when the opcode of
+  // a jmp insn must be modified to shrink the jmp insn or to flip the jmp
+  // insn.  This is primarily used to relax and optimize jumps created with
+  // basic block sections.
+  if (auto *sec = dyn_cast<InputSection>(this)) {
+    for (const JumpInstrMod &jumpMod : jumpInstrMods) {
+      uint64_t offset = jumpMod.offset + sec->outSecOff;
+      uint8_t *bufLoc = buf + offset;
+      target->applyJumpInstrMod(bufLoc, jumpMod.original, jumpMod.size);
     }
   }
 }
@@ -1090,7 +1184,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
                                                    end, f->stOther))
         continue;
       if (!getFile<ELFT>()->someNoSplitStack)
-        error(toString(this) + ": " + f->getName() +
+        error(lld::toString(this) + ": " + f->getName() +
               " (with -fsplit-stack) calls " + rel.sym->getName() +
               " (without -fsplit-stack), but couldn't adjust its prologue");
     }
@@ -1353,6 +1447,3 @@ template void EhInputSection::split<ELF32LE>();
 template void EhInputSection::split<ELF32BE>();
 template void EhInputSection::split<ELF64LE>();
 template void EhInputSection::split<ELF64BE>();
-
-} // namespace elf
-} // namespace lld

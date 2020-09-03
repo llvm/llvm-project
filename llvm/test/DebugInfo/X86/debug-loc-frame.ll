@@ -1,4 +1,3 @@
-; REQUIRES: object-emission
 
 ; Check that when variables are allocated on the stack we generate debug locations
 ; for the stack location directly instead of generating a register+offset indirection.

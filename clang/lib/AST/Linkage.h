@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_AST_LINKAGE_H
 #define LLVM_CLANG_LIB_AST_LINKAGE_H
 
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"

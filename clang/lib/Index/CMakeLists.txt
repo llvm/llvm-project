@@ -36,4 +36,7 @@ add_clang_library(clangIndex
   clangRewrite
   clangSerialization
   clangToolingCore
+
+  DEPENDS
+  omp_gen
   )

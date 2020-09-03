@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INITIALIZATION_SYSTEM_LIFETIME_MANAGER_H
-#define LLDB_INITIALIZATION_SYSTEM_LIFETIME_MANAGER_H
+#ifndef LLDB_INITIALIZATION_SYSTEMLIFETIMEMANAGER_H
+#define LLDB_INITIALIZATION_SYSTEMLIFETIMEMANAGER_H
 
 #include "lldb/Initialization/SystemInitializer.h"
 #include "lldb/lldb-private-types.h"

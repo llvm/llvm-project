@@ -31,6 +31,6 @@
 # RUN: llvm-objdump --source ../c.o | FileCheck %s --implicit-check-not='main()'
 # RUN: llvm-objdump --source ../d.o | FileCheck %s --check-prefixes=CHECK,SOURCE
 
-# CHECK:       0000000000000010 main:
+# CHECK:       0000000000000010 <main>:
 # SOURCE-NEXT: ; int main() {
 # CHECK-NEXT:   10:   55                      pushq   %rbp

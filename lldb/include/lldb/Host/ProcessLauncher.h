@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_ProcessLauncher_h_
-#define lldb_Host_ProcessLauncher_h_
+#ifndef LLDB_HOST_PROCESSLAUNCHER_H
+#define LLDB_HOST_PROCESSLAUNCHER_H
 
 namespace lldb_private {
 

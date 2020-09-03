@@ -11,7 +11,7 @@
 ; CHECK: sllg [[REG2]], [[REG2]], 32
 ; CHECK: ear [[REG2]], %a1
 ; CHECK: lg [[REG2]], 40([[REG2]])
-; CHECK: sg [[REG2]], {{[0-9]*}}(%r15)
+; CHECK: cg [[REG2]], {{[0-9]*}}(%r15)
 
 define i32 @test_stack_guard() #0 {
 entry:

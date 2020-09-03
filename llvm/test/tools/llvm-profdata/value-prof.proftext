@@ -1,7 +1,7 @@
-# RUN: llvm-profdata show -ic-targets  -all-functions %s | FileCheck %s --check-prefix=ICTXT --check-prefix=ICSUM
+# RUN: llvm-profdata show -ic-targets  -all-functions %s | FileCheck %s --check-prefixes=ICTXT,ICSUM
 # RUN: llvm-profdata show -ic-targets -counts -text -all-functions %s | FileCheck %s --check-prefix=ICTEXT
 # RUN: llvm-profdata merge -o %t.profdata  %s
-# RUN: llvm-profdata show -ic-targets  -all-functions %t.profdata | FileCheck %s --check-prefix=IC --check-prefix=ICSUM
+# RUN: llvm-profdata show -ic-targets  -all-functions %t.profdata | FileCheck %s --check-prefixes=IC,ICSUM
 
 foo
 # Func Hash:
@@ -77,5 +77,5 @@ bar
 #ICSUM: Total number of sites with values: 2
 #ICSUM: Total number of profiled values: 3
 #ICSUM:	NumTargets, SiteCount
-#ICSUM	  1, 1
-#ICSUM	  2, 1
+#ICSUM:	  1, 1
+#ICSUM:	  2, 1

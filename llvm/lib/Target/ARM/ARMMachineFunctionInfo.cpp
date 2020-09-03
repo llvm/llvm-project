@@ -15,4 +15,6 @@ void ARMFunctionInfo::anchor() {}
 
 ARMFunctionInfo::ARMFunctionInfo(MachineFunction &MF)
     : isThumb(MF.getSubtarget<ARMSubtarget>().isThumb()),
-      hasThumb2(MF.getSubtarget<ARMSubtarget>().hasThumb2()) {}
+      hasThumb2(MF.getSubtarget<ARMSubtarget>().hasThumb2()),
+      IsCmseNSEntry(MF.getFunction().hasFnAttribute("cmse_nonsecure_entry")),
+      IsCmseNSCall(MF.getFunction().hasFnAttribute("cmse_nonsecure_call")) {}

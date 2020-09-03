@@ -847,6 +847,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
 
   case TST_typeofExpr:
   case TST_decltype:
+  case TST_extint:
     if (DS.getRepAsExpr() &&
         DS.getRepAsExpr()->containsUnexpandedParameterPack())
       return true;
@@ -880,6 +881,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_auto:
   case TST_auto_type:
   case TST_decltype_auto:
+  case TST_BFloat16:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case TST_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
   case TST_unknown_anytype:
@@ -936,6 +938,10 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
       break;
     }
   }
+
+  if (Expr *TRC = D.getTrailingRequiresClause())
+    if (TRC->containsUnexpandedParameterPack())
+      return true;
 
   return false;
 }

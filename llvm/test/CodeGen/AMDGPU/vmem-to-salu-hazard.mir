@@ -14,6 +14,44 @@ body:             |
     $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
     $sgpr0 = S_MOV_B32 0
 ...
+# GCN-LABEL: name: vmem_write_exec
+# GCN:      BUFFER_STORE_DWORD_OFFEN_exact
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_write_exec
+body:             |
+  bb.0:
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = IMPLICIT_DEF
+    BUFFER_STORE_DWORD_OFFEN_exact killed renamable $vgpr0, renamable $vgpr1, renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    $exec_lo = S_MOV_B32 -1
+...
+# GCN-LABEL: name: vmem_write_sgpr_chain
+# GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT: S_MOV_B32
+# GCN-NEXT: S_MOV_B32
+# GCN-NEXT: S_MOV_B32
+# GCN-NEXT: S_MOV_B32
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_write_sgpr_chain
+body:             |
+  bb.0:
+    successors:
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
+    $sgpr5 = S_MOV_B32 $sgpr0
+    $sgpr6 = S_MOV_B32 $sgpr1
+    $sgpr7 = S_MOV_B32 $sgpr2
+    $sgpr8 = S_MOV_B32 $sgpr3
+    $sgpr0 = S_MOV_B32 0
+...
 # GCN-LABEL: name: vmem_smem_write_sgpr
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
 # GCN-NEXT: V_NOP
@@ -56,7 +94,7 @@ body:             |
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr2 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $exec
+    $vgpr2 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     $sgpr0 = S_MOV_B32 0
 ...
 # GCN-LABEL: name: vmem_swait0_write_sgpr
@@ -191,6 +229,37 @@ body:             |
   bb.2:
     $sgpr0 = S_MOV_B32 0
 ...
+# GCN-LABEL: name: vmem_write_sgpr_cbranch_around
+# GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN-NEXT: S_CBRANCH
+# GCN-NEXT: S_BRANCH
+# GCN:      bb.1:
+# GCN:      S_WAITCNT
+# GCN:      V_ADD_I32
+# GCN:      bb.2:
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_write_sgpr_cbranch_around
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_CBRANCH_SCC0 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+    S_WAITCNT 0
+    $vgpr2, $vcc_lo = V_ADD_I32_e64 $vgpr1, $vgpr1, 0, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    $sgpr0 = S_MOV_B32 0
+...
 # GCN-LABEL: name: vmem_write_sgpr_branch_backedge
 # GCN:      $vgpr0 = IMPLICIT_DEF
 # GCN-NEXT: V_NOP
@@ -220,5 +289,57 @@ body:             |
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
     DS_WRITE_B32_gfx9 $vgpr0, $vgpr1, 0, 0, implicit $exec
+    $exec_lo = S_MOV_B32 -1
+...
+# GCN-LABEL: name: vmem_scratch_exec
+# GCN:      SCRATCH_LOAD_DWORD
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_scratch_exec
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = SCRATCH_LOAD_DWORD undef $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $exec_lo = S_MOV_B32 -1
+...
+# GCN-LABEL: name: vmem_flat_exec
+# GCN:      FLAT_LOAD_DWORD
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_flat_exec
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = IMPLICIT_DEF
+    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $exec_lo = S_MOV_B32 -1
+...
+# GCN-LABEL: name: vmem_global_exec
+# GCN:      GLOBAL_LOAD_DWORD
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_global_exec
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = IMPLICIT_DEF
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec
+    $exec_lo = S_MOV_B32 -1
+...
+# GCN-LABEL: name: vmem_global_atomic_exec
+# GCN: GLOBAL_ATOMIC_ADD_RTN
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            vmem_global_atomic_exec
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = IMPLICIT_DEF
+    $vgpr2 = IMPLICIT_DEF
+    $vgpr3 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst 4, addrspace 1)
     $exec_lo = S_MOV_B32 -1
 ...

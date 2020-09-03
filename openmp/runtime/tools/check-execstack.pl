@@ -74,7 +74,7 @@ B<check-execstack.pl> -- Check whether stack is executable, issue an error if so
 
 =head1 SYNOPSIS
 
-B<check-execstack.pl> I<optiion>... I<file>...
+B<check-execstack.pl> I<option>... I<file>...
 
 =head1 DESCRIPTION
 

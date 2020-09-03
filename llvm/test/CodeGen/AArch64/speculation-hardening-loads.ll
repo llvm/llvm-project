@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s --dump-input-on-failure
+; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s
 
 define i128 @ldp_single_csdb(i128* %p) speculative_load_hardening {
 entry:
@@ -90,7 +90,7 @@ define i64 @no_masking_with_full_control_flow_barriers(i64 %a, i64 %b, i64* %p) 
 ; CHECK: dsb sy
 ; CHECK: isb
 entry:
-  %0 = tail call i64 asm "autia1716", "={x17},{x16},0"(i64 %b, i64 %a)
+  %0 = tail call i64 asm "hint #12", "={x17},{x16},0"(i64 %b, i64 %a)
   %X = load i64, i64* %p, align 8
   %ret = add i64 %X, %0
 ; CHECK-NOT: csdb

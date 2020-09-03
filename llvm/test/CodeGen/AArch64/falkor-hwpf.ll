@@ -4,12 +4,12 @@
 ; Check that strided access metadata is added to loads in inner loops when compiling for Falkor.
 
 ; CHECK-LABEL: @hwpf1(
-; CHECK: load i32, i32* %gep, !falkor.strided.access !0
-; CHECK: load i32, i32* %gep2, !falkor.strided.access !0
+; CHECK: load i32, i32* %gep, align 4, !falkor.strided.access !0
+; CHECK: load i32, i32* %gep2, align 4, !falkor.strided.access !0
 
 ; NOHWPF-LABEL: @hwpf1(
-; NOHWPF: load i32, i32* %gep{{$}}
-; NOHWPF: load i32, i32* %gep2{{$}}
+; NOHWPF: load i32, i32* %gep, align 4{{$}}
+; NOHWPF: load i32, i32* %gep2, align 4{{$}}
 define void @hwpf1(i32* %p, i32* %p2) {
 entry:
   br label %loop
@@ -33,12 +33,12 @@ exit:
 
 ; Check that outer loop strided load isn't marked.
 ; CHECK-LABEL: @hwpf2(
-; CHECK: load i32, i32* %gep, !falkor.strided.access !0
-; CHECK: load i32, i32* %gep2{{$}}
+; CHECK: load i32, i32* %gep, align 4, !falkor.strided.access !0
+; CHECK: load i32, i32* %gep2, align 4{{$}}
 
 ; NOHWPF-LABEL: @hwpf2(
-; NOHWPF: load i32, i32* %gep{{$}}
-; NOHWPF: load i32, i32* %gep2{{$}}
+; NOHWPF: load i32, i32* %gep, align 4{{$}}
+; NOHWPF: load i32, i32* %gep2, align 4{{$}}
 define void @hwpf2(i32* %p) {
 entry:
   br label %loop1
@@ -78,12 +78,12 @@ exit:
 
 ; Check that non-strided load isn't marked.
 ; CHECK-LABEL: @hwpf3(
-; CHECK: load i32, i32* %gep, !falkor.strided.access !0
-; CHECK: load i32, i32* %gep2{{$}}
+; CHECK: load i32, i32* %gep, align 4, !falkor.strided.access !0
+; CHECK: load i32, i32* %gep2, align 4{{$}}
 
 ; NOHWPF-LABEL: @hwpf3(
-; NOHWPF: load i32, i32* %gep{{$}}
-; NOHWPF: load i32, i32* %gep2{{$}}
+; NOHWPF: load i32, i32* %gep, align 4{{$}}
+; NOHWPF: load i32, i32* %gep2, align 4{{$}}
 define void @hwpf3(i32* %p, i32* %p2) {
 entry:
   br label %loop

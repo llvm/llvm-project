@@ -1,12 +1,11 @@
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8 %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+fp32-denormals -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=+fp32-denormals -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=tonga -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8 %s
+; RUN: llc -march=amdgcn -mcpu=tonga -denormal-fp-math-f32=ieee -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 declare half @llvm.amdgcn.fmad.ftz.f16(half %a, half %b, half %c)
 
 ; GCN-LABEL: {{^}}mad_f16:
-; GFX8: v_ma{{[dc]}}_f16
-; GFX9: v_mad_legacy_f16
+; GCN: v_mac_f16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+$}}
 define amdgpu_kernel void @mad_f16(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
@@ -34,9 +33,7 @@ define amdgpu_kernel void @mad_f16_imm_a(
 }
 
 ; GCN-LABEL: {{^}}mad_f16_imm_b:
-; GCN:  s_movk_i32 [[KB:s[0-9]+]], 0x4800
-; GFX8: v_mad_f16 {{v[0-9]+}}, {{v[0-9]+}}, [[KB]],
-; GFX9: v_mad_legacy_f16 {{v[0-9]+}}, {{v[0-9]+}}, [[KB]],
+; GCN: v_mac_f16_e32 {{v[0-9]+}}, 0x4800, {{v[0-9]+$}}
 define amdgpu_kernel void @mad_f16_imm_b(
     half addrspace(1)* %r,
     half addrspace(1)* %a,

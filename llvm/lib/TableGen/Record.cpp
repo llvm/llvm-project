@@ -1030,7 +1030,7 @@ Init *BinOpInit::Fold(Record *CurRec) const {
       case MUL: Result = LHSv *  RHSv; break;
       case AND: Result = LHSv &  RHSv; break;
       case OR: Result = LHSv | RHSv; break;
-      case SHL: Result = LHSv << RHSv; break;
+      case SHL: Result = (uint64_t)LHSv << (uint64_t)RHSv; break;
       case SRA: Result = LHSv >> RHSv; break;
       case SRL: Result = (uint64_t)LHSv >> (uint64_t)RHSv; break;
       }
@@ -1183,21 +1183,22 @@ Init *TernOpInit::Fold(Record *CurRec) const {
       return DefInit::get(Val);
     }
     if (LHSv && MHSv && RHSv) {
-      std::string Val = RHSv->getName();
+      std::string Val = std::string(RHSv->getName());
       if (LHSv->getAsString() == RHSv->getAsString())
-        Val = MHSv->getName();
+        Val = std::string(MHSv->getName());
       return VarInit::get(Val, getType());
     }
     if (LHSs && MHSs && RHSs) {
-      std::string Val = RHSs->getValue();
+      std::string Val = std::string(RHSs->getValue());
 
       std::string::size_type found;
       std::string::size_type idx = 0;
       while (true) {
-        found = Val.find(LHSs->getValue(), idx);
+        found = Val.find(std::string(LHSs->getValue()), idx);
         if (found == std::string::npos)
           break;
-        Val.replace(found, LHSs->getValue().size(), MHSs->getValue());
+        Val.replace(found, LHSs->getValue().size(),
+                    std::string(MHSs->getValue()));
         idx = found + MHSs->getValue().size();
       }
 
@@ -1612,9 +1613,7 @@ RecTy *DefInit::getFieldType(StringInit *FieldName) const {
   return nullptr;
 }
 
-std::string DefInit::getAsString() const {
-  return Def->getName();
-}
+std::string DefInit::getAsString() const { return std::string(Def->getName()); }
 
 static void ProfileVarDefInit(FoldingSetNodeID &ID,
                               Record *Class,
@@ -1777,6 +1776,14 @@ Init *FieldInit::Fold(Record *CurRec) const {
       return FieldVal;
   }
   return const_cast<FieldInit *>(this);
+}
+
+bool FieldInit::isConcrete() const {
+  if (DefInit *DI = dyn_cast<DefInit>(Rec)) {
+    Init *FieldVal = DI->getDef()->getValue(FieldName)->getValue();
+    return FieldVal->isConcrete();
+  }
+  return false;
 }
 
 static void ProfileCondOpInit(FoldingSetNodeID &ID,
@@ -2149,11 +2156,6 @@ void Record::resolveReferences() {
   resolveReferences(R);
 }
 
-void Record::resolveReferencesTo(const RecordVal *RV) {
-  RecordValResolver R(*this, RV);
-  resolveReferences(R, RV);
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Record::dump() const { errs() << *this; }
 #endif
@@ -2292,6 +2294,8 @@ Record::getValueAsListOfStrings(StringRef FieldName) const {
   for (Init *I : List->getValues()) {
     if (StringInit *SI = dyn_cast<StringInit>(I))
       Strings.push_back(SI->getValue());
+    else if (CodeInit *CI = dyn_cast<CodeInit>(I))
+      Strings.push_back(CI->getValue());
     else
       PrintFatalError(getLoc(),
                       Twine("Record `") + getName() + "', field `" + FieldName +

@@ -169,7 +169,8 @@ public:
   Slice(const MachOObjectFile *O, uint32_t Align)
       : B(O), CPUType(O->getHeader().cputype),
         CPUSubType(O->getHeader().cpusubtype),
-        ArchName(O->getArchTriple().getArchName()), P2Alignment(Align) {}
+        ArchName(std::string(O->getArchTriple().getArchName())),
+        P2Alignment(Align) {}
 
   explicit Slice(const MachOObjectFile *O) : Slice(O, calculateAlignment(O)){};
 
@@ -214,7 +215,7 @@ public:
                       .str());
     CPUType = FO->getHeader().cputype;
     CPUSubType = FO->getHeader().cpusubtype;
-    ArchName = FO->getArchTriple().getArchName();
+    ArchName = std::string(FO->getArchTriple().getArchName());
     // Replicate the behavior of cctools lipo.
     P2Alignment = FO->is64Bit() ? 3 : 2;
   }
@@ -316,7 +317,7 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
     reportError("at least one input file should be specified");
 
   if (InputArgs.hasArg(LIPO_output))
-    C.OutputFile = InputArgs.getLastArgValue(LIPO_output);
+    C.OutputFile = std::string(InputArgs.getLastArgValue(LIPO_output));
 
   for (auto Segalign : InputArgs.filtered(LIPO_segalign)) {
     if (!Segalign->getValue(1))
@@ -762,7 +763,6 @@ static void extractSlice(ArrayRef<OwningBinary<Binary>> InputBinaries,
     reportError("input file " +
                 InputBinaries.front().getBinary()->getFileName() +
                 " must be a fat file when the -extract option is specified");
-    exit(EXIT_FAILURE);
   }
 
   SmallVector<std::unique_ptr<MachOObjectFile>, 2> ExtractedObjects;

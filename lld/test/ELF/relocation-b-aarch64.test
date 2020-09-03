@@ -9,10 +9,10 @@
 
 # CHECK: Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: foo:
-# CHECK-NEXT:    210120:       b       #4
-# CHECK: bar:
-# CHECK-NEXT:    210124:       b       #-4
+# CHECK-NEXT: <foo>:
+# CHECK-NEXT:    210120:       b       0x210124
+# CHECK: <bar>:
+# CHECK-NEXT:    210124:       b       0x210120
 
 !ELF
 FileHeader:
@@ -30,8 +30,7 @@ Sections:
     Link:            .symtab
     Info:            .text
     Relocations:
-      - Offset:          0
-        Symbol:          bar
+      - Symbol:          bar
         Type:            R_AARCH64_JUMP26
       - Offset:          4
         Symbol:          foo

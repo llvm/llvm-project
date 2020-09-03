@@ -14,7 +14,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 
 # RUN: ld.lld -o %t.exe %t.o %t.a
-# RUN: llvm-readobj --symbols %t.exe | FileCheck --check-prefix=NO-OPT %s
+# RUN: llvm-nm %t.exe | FileCheck --check-prefix=NO-OPT %s
 
 # NO-OPT-NOT: foo
 # NO-OPT-NOT: bar
@@ -49,7 +49,7 @@
 # FOO13: foo32
 # FOO13-NOT: bar
 
-# RUN: not ld.lld -o %t.exe %t.o %t.a --undefined-glob '[' 2>&1 | \
+# RUN: not ld.lld -o /dev/null %t.o %t.a --undefined-glob '[' 2>&1 | \
 # RUN:   FileCheck -check-prefix=BAD-PATTERN %s
 
 # BAD-PATTERN: --undefined-glob: invalid glob pattern: [

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv66 -mhvx -filetype=obj %s | llvm-objdump -mcpu=hexagonv66 -mhvx -d - | FileCheck %s
+# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv66 -mhvx -filetype=obj %s | llvm-objdump --mcpu=hexagonv66 --mhvx -d - | FileCheck %s
 
 # CHECK: 1d8362e4 { v4.w = vsatdw(v2.w,v3.w)
 {

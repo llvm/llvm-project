@@ -18,21 +18,22 @@
 ; will typically require only insertion of a line.
 [common]
 subdirectories =
+ AArch64
  AMDGPU
  ARC
  ARM
- AArch64
  AVR
  BPF
- Lanai
  Hexagon
+ Lanai
  MSP430
- NVPTX
  Mips
+ NVPTX
  PowerPC
  RISCV
  Sparc
  SystemZ
+ VE
  WebAssembly
  X86
  XCore

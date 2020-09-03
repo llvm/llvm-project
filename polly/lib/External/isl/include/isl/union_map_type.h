@@ -14,7 +14,7 @@ ISL_DECLARE_LIST_TYPE(union_map)
 #ifndef isl_union_set
 struct __isl_export isl_union_set;
 typedef struct isl_union_set isl_union_set;
-ISL_DECLARE_LIST_TYPE(union_set)
+ISL_DECLARE_EXPORTED_LIST_TYPE(union_set)
 #endif
 
 #if defined(__cplusplus)

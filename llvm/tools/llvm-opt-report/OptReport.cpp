@@ -225,14 +225,17 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
     };
 
     if (Remark.PassName == "inline") {
-      auto &LI = LocationInfo[File][Line][Remark.FunctionName][Column];
+      auto &LI = LocationInfo[std::string(File)][Line]
+                             [std::string(Remark.FunctionName)][Column];
       UpdateLLII(LI.Inlined);
     } else if (Remark.PassName == "loop-unroll") {
-      auto &LI = LocationInfo[File][Line][Remark.FunctionName][Column];
+      auto &LI = LocationInfo[std::string(File)][Line]
+                             [std::string(Remark.FunctionName)][Column];
       LI.UnrollCount = UnrollCount;
       UpdateLLII(LI.Unrolled);
     } else if (Remark.PassName == "loop-vectorize") {
-      auto &LI = LocationInfo[File][Line][Remark.FunctionName][Column];
+      auto &LI = LocationInfo[std::string(File)][Line]
+                             [std::string(Remark.FunctionName)][Column];
       LI.VectorizationFactor = VectorizationFactor;
       LI.InterleaveCount = InterleaveCount;
       UpdateLLII(LI.Vectorized);

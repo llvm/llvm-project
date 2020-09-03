@@ -11,16 +11,32 @@ declare_args() {
 
 template("unix_toolchain") {
   toolchain(target_name) {
+    # https://groups.google.com/a/chromium.org/d/msg/gn-dev/F_lv5T-tNDM
+    forward_variables_from(invoker.toolchain_args, "*")
+    not_needed("*")
+
     forward_variables_from(invoker, "*")
+
+    cc = "cc"
+    cxx = "c++"
+
+    if (clang_base_path != "") {
+      cc = "$clang_base_path/bin/clang"
+      cxx = "$clang_base_path/bin/clang++"
+    }
+
+    ld = cxx  # Don't use goma wrapper for linking.
+    if (use_goma) {
+      cc = "$goma_dir/gomacc $cc"
+      cxx = "$goma_dir/gomacc $cxx"
+    }
 
     tool("cc") {
       depfile = "{{output}}.d"
       command = "$cc -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}}"
       depsformat = "gcc"
       description = "CC {{output}}"
-      outputs = [
-        "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o",
-      ]
+      outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o" ]
     }
 
     tool("cxx") {
@@ -28,9 +44,7 @@ template("unix_toolchain") {
       command = "$cxx -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}}"
       depsformat = "gcc"
       description = "CXX {{output}}"
-      outputs = [
-        "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o",
-      ]
+      outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o" ]
     }
 
     tool("asm") {
@@ -38,14 +52,12 @@ template("unix_toolchain") {
       command = "$cc -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{asmflags}}"
       depsformat = "gcc"
       description = "ASM {{output}}"
-      outputs = [
-        "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o",
-      ]
+      outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o" ]
     }
 
     tool("alink") {
       if (current_os == "mac") {
-        command = "libtool -static -no_warning_for_no_symbols {{arflags}} -o {{output}} {{inputs}}"
+        command = "libtool -D -static -no_warning_for_no_symbols {{arflags}} -o {{output}} {{inputs}}"
       } else {
         # Remove the output file first so that ar doesn't try to modify the
         # existing file.
@@ -53,9 +65,7 @@ template("unix_toolchain") {
             "rm -f {{output}} && $ar rcsD {{arflags}} {{output}} {{inputs}}"
       }
       description = "AR {{output}}"
-      outputs = [
-        "{{output_dir}}/{{target_output_name}}.a",
-      ]
+      outputs = [ "{{output_dir}}/{{target_output_name}}.a" ]
       output_prefix = "lib"
       default_output_dir = "{{root_out_dir}}/lib"
     }
@@ -63,16 +73,14 @@ template("unix_toolchain") {
     tool("solink") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "mac") {
-        command = "$ld -shared {{ldflags}} -o $outfile {{libs}} {{inputs}}"
+        command = "$ld -shared {{ldflags}} -o $outfile {{inputs}} {{libs}}"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -Wl,-z,defs -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{libs}} {{inputs}}"
+        command = "$ld -shared {{ldflags}} -Wl,-z,defs -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{inputs}} {{libs}}"
         default_output_extension = ".so"
       }
       description = "SOLINK $outfile"
-      outputs = [
-        outfile,
-      ]
+      outputs = [ outfile ]
       lib_switch = "-l"
       output_prefix = "lib"
       default_output_dir = "{{root_out_dir}}/lib"
@@ -81,16 +89,14 @@ template("unix_toolchain") {
     tool("solink_module") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "mac") {
-        command = "$ld -shared {{ldflags}} -Wl,-flat_namespace -Wl,-undefined,suppress -o $outfile {{libs}} {{inputs}}"
+        command = "$ld -shared {{ldflags}} -Wl,-flat_namespace -Wl,-undefined,suppress -o $outfile {{inputs}} {{libs}}"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{libs}} {{inputs}}"
+        command = "$ld -shared {{ldflags}} -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{inputs}} {{libs}}"
         default_output_extension = ".so"
       }
       description = "SOLINK $outfile"
-      outputs = [
-        outfile,
-      ]
+      outputs = [ outfile ]
       lib_switch = "-l"
       default_output_dir = "{{root_out_dir}}/lib"
     }
@@ -98,14 +104,12 @@ template("unix_toolchain") {
     tool("link") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "mac") {
-        command = "$ld {{ldflags}} -o $outfile {{libs}} {{inputs}}"
+        command = "$ld {{ldflags}} -o $outfile {{inputs}} {{libs}}"
       } else {
-        command = "$ld {{ldflags}} -o $outfile {{libs}} -Wl,--start-group {{inputs}} -Wl,--end-group"
+        command = "$ld {{ldflags}} -o $outfile -Wl,--start-group {{inputs}} -Wl,--end-group {{libs}}"
       }
       description = "LINK $outfile"
-      outputs = [
-        outfile,
-      ]
+      outputs = [ outfile ]
       lib_switch = "-l"
 
       # Setting this allows targets to override the default executable output by
@@ -142,20 +146,6 @@ template("unix_toolchain") {
 }
 
 unix_toolchain("unix") {
-  cc = "cc"
-  cxx = "c++"
-
-  if (clang_base_path != "") {
-    cc = "$clang_base_path/bin/clang"
-    cxx = "$clang_base_path/bin/clang++"
-  }
-
-  ld = cxx  # Don't use goma wrapper for linking.
-  if (use_goma) {
-    cc = "$goma_dir/gomacc $cc"
-    cxx = "$goma_dir/gomacc $cxx"
-  }
-
   if (current_os != "mac") {
     ar = "ar"
   }
@@ -170,13 +160,11 @@ unix_toolchain("unix") {
 # as compiler and linker.
 template("stage2_unix_toolchain") {
   unix_toolchain(target_name) {
-    forward_variables_from(invoker, "*")
+    toolchain_args = {
+      forward_variables_from(invoker.toolchain_args, "*")
 
-    cc = "bin/clang"
-    cxx = "bin/clang++"
-    ld = cxx
-    if (current_os != "mac") {
-      ar = "bin/llvm-ar"
+      clang_base_path = "."
+      use_goma = false
     }
 
     deps = [
@@ -184,6 +172,7 @@ template("stage2_unix_toolchain") {
       "//:lld($host_toolchain)",
     ]
     if (current_os != "mac") {
+      ar = "bin/llvm-ar"
       deps += [ "//:llvm-ar($host_toolchain)" ]
     }
   }
@@ -193,8 +182,6 @@ stage2_unix_toolchain("stage2_unix") {
   toolchain_args = {
     current_os = host_os
     current_cpu = host_cpu
-    is_clang = true
-    use_lld = host_os != "mac"
   }
 }
 
@@ -203,8 +190,6 @@ if (android_ndk_path != "") {
     toolchain_args = {
       current_os = "android"
       current_cpu = "arm64"
-      is_clang = true
-      use_lld = true
     }
   }
 
@@ -212,8 +197,6 @@ if (android_ndk_path != "") {
     toolchain_args = {
       current_os = "android"
       current_cpu = "arm"
-      is_clang = true
-      use_lld = true
     }
   }
 }
@@ -237,26 +220,20 @@ toolchain("win") {
     command = "$cl /nologo /showIncludes /Fo{{output}} /c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}}"
     depsformat = "msvc"
     description = "CC {{output}}"
-    outputs = [
-      "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj",
-    ]
+    outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj" ]
   }
 
   tool("cxx") {
     command = "$cl /nologo /showIncludes /Fo{{output}} /c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}}"
     depsformat = "msvc"
     description = "CXX {{output}}"
-    outputs = [
-      "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj",
-    ]
+    outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj" ]
   }
 
   tool("alink") {
     command = "$link /lib /nologo {{arflags}} /out:{{output}} {{inputs}}"
     description = "LIB {{output}}"
-    outputs = [
-      "{{output_dir}}/{{target_output_name}}.lib",
-    ]
+    outputs = [ "{{output_dir}}/{{target_output_name}}.lib" ]
     default_output_dir = "{{root_out_dir}}/lib"
   }
 
@@ -265,7 +242,7 @@ toolchain("win") {
     dllfile = "$outprefix{{output_extension}}"
     libfile = "$outprefix.lib"
     pdbfile = "$outprefix.pdb"
-    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /implib:$libfile /pdb:$pdbfile {{libs}} {{inputs}}"
+    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /implib:$libfile /pdb:$pdbfile {{inputs}} {{libs}} "
     description = "LINK $dllfile"
     link_output = libfile
     depend_output = libfile
@@ -292,11 +269,9 @@ toolchain("win") {
     outprefix = "{{output_dir}}/{{target_output_name}}"
     dllfile = "$outprefix{{output_extension}}"
     pdbfile = "$outprefix.pdb"
-    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /pdb:$pdbfile {{libs}} {{inputs}}"
+    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /pdb:$pdbfile {{inputs}} {{libs}} "
     description = "LINK_MODULE $dllfile"
-    outputs = [
-      dllfile,
-    ]
+    outputs = [ dllfile ]
     lib_switch = ""
     runtime_outputs = outputs
     default_output_extension = ".dll"
@@ -308,11 +283,9 @@ toolchain("win") {
     outprefix = "{{output_dir}}/{{target_output_name}}"
     outfile = "$outprefix{{output_extension}}"
     pdbfile = "$outprefix.pdb"
-    command = "$link /nologo {{ldflags}} /out:$outfile /pdb:$pdbfile {{libs}} {{inputs}}"
+    command = "$link /nologo {{ldflags}} /out:$outfile /pdb:$pdbfile {{inputs}} {{libs}}"
     description = "LINK $outfile"
-    outputs = [
-      outfile,
-    ]
+    outputs = [ outfile ]
     lib_switch = ""
     default_output_extension = ".exe"
 

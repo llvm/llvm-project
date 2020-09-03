@@ -33,11 +33,13 @@ public:
 
   MachinePostDominatorTree();
 
-  FunctionPass *createMachinePostDominatorTreePass();
-
-  const SmallVectorImpl<MachineBasicBlock *> &getRoots() const {
-    return PDT->getRoots();
+  PostDomTreeT &getBase() {
+    if (!PDT)
+      PDT.reset(new PostDomTreeT());
+    return *PDT;
   }
+
+  FunctionPass *createMachinePostDominatorTreePass();
 
   MachineDomTreeNode *getRootNode() const { return PDT->getRootNode(); }
 

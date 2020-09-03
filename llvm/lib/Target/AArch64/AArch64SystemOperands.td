@@ -18,18 +18,18 @@ include "llvm/TableGen/SearchableTable.td"
 //===----------------------------------------------------------------------===//
 
 def HasCCPP    : Predicate<"Subtarget->hasCCPP()">,
-                 AssemblerPredicate<"FeatureCCPP", "ccpp">;
+                 AssemblerPredicate<(all_of FeatureCCPP), "ccpp">;
 
 def HasPAN     : Predicate<"Subtarget->hasPAN()">,
-                 AssemblerPredicate<"FeaturePAN",
+                 AssemblerPredicate<(all_of FeaturePAN),
                  "ARM v8.1  Privileged Access-Never extension">;
 
 def HasPsUAO   : Predicate<"Subtarget->hasPsUAO()">,
-                 AssemblerPredicate<"FeaturePsUAO",
+                 AssemblerPredicate<(all_of FeaturePsUAO),
                  "ARM v8.2 UAO PState extension (psuao)">;
 
 def HasPAN_RWV : Predicate<"Subtarget->hasPAN_RWV()">,
-                 AssemblerPredicate<"FeaturePAN_RWV",
+                 AssemblerPredicate<(all_of FeaturePAN_RWV),
                  "ARM v8.2 PAN AT S1E1R and AT S1E1W Variation">;
 
 //===----------------------------------------------------------------------===//
@@ -338,7 +338,7 @@ def : PState<"PAN",     0b00100>;
 // v8.2a "User Access Override" extension-specific PStates
 let Requires = [{ {AArch64::FeaturePsUAO} }] in
 def : PState<"UAO",     0b00011>;
-// v8.4a timining insensitivity of data processing instructions
+// v8.4a timing insensitivity of data processing instructions
 let Requires = [{ {AArch64::FeatureDIT} }] in
 def : PState<"DIT",     0b11010>;
 // v8.5a Spectre Mitigation
@@ -844,7 +844,7 @@ def : RWSysReg<"SP_EL2",             0b11, 0b110, 0b0100, 0b0001, 0b000>;
 def : RWSysReg<"SPSel",              0b11, 0b000, 0b0100, 0b0010, 0b000>;
 def : RWSysReg<"NZCV",               0b11, 0b011, 0b0100, 0b0010, 0b000>;
 def : RWSysReg<"DAIF",               0b11, 0b011, 0b0100, 0b0010, 0b001>;
-def : RWSysReg<"CurrentEL",          0b11, 0b000, 0b0100, 0b0010, 0b010>;
+def : ROSysReg<"CurrentEL",          0b11, 0b000, 0b0100, 0b0010, 0b010>;
 def : RWSysReg<"SPSR_irq",           0b11, 0b100, 0b0100, 0b0011, 0b000>;
 def : RWSysReg<"SPSR_abt",           0b11, 0b100, 0b0100, 0b0011, 0b001>;
 def : RWSysReg<"SPSR_und",           0b11, 0b100, 0b0100, 0b0011, 0b010>;
@@ -1167,7 +1167,6 @@ def : RWSysReg<"ICC_SRE_EL3",        0b11, 0b110, 0b1100, 0b1100, 0b101>;
 def : RWSysReg<"ICC_IGRPEN0_EL1",    0b11, 0b000, 0b1100, 0b1100, 0b110>;
 def : RWSysReg<"ICC_IGRPEN1_EL1",    0b11, 0b000, 0b1100, 0b1100, 0b111>;
 def : RWSysReg<"ICC_IGRPEN1_EL3",    0b11, 0b110, 0b1100, 0b1100, 0b111>;
-def : RWSysReg<"ICC_SEIEN_EL1",      0b11, 0b000, 0b1100, 0b1101, 0b000>;
 def : RWSysReg<"ICC_AP0R0_EL1",      0b11, 0b000, 0b1100, 0b1000, 0b100>;
 def : RWSysReg<"ICC_AP0R1_EL1",      0b11, 0b000, 0b1100, 0b1000, 0b101>;
 def : RWSysReg<"ICC_AP0R2_EL1",      0b11, 0b000, 0b1100, 0b1000, 0b110>;
@@ -1185,9 +1184,8 @@ def : RWSysReg<"ICH_AP1R1_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b001>;
 def : RWSysReg<"ICH_AP1R2_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b010>;
 def : RWSysReg<"ICH_AP1R3_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b011>;
 def : RWSysReg<"ICH_HCR_EL2",        0b11, 0b100, 0b1100, 0b1011, 0b000>;
-def : RWSysReg<"ICH_MISR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b010>;
+def : ROSysReg<"ICH_MISR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b010>;
 def : RWSysReg<"ICH_VMCR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b111>;
-def : RWSysReg<"ICH_VSEIR_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b100>;
 def : RWSysReg<"ICH_LR0_EL2",        0b11, 0b100, 0b1100, 0b1100, 0b000>;
 def : RWSysReg<"ICH_LR1_EL2",        0b11, 0b100, 0b1100, 0b1100, 0b001>;
 def : RWSysReg<"ICH_LR2_EL2",        0b11, 0b100, 0b1100, 0b1100, 0b010>;
@@ -1260,7 +1258,7 @@ let Requires = [{ {AArch64::FeatureSPE} }] in {
 def : RWSysReg<"PMBLIMITR_EL1", 0b11, 0b000, 0b1001, 0b1010, 0b000>;
 def : RWSysReg<"PMBPTR_EL1",    0b11, 0b000, 0b1001, 0b1010, 0b001>;
 def : RWSysReg<"PMBSR_EL1",     0b11, 0b000, 0b1001, 0b1010, 0b011>;
-def : RWSysReg<"PMBIDR_EL1",    0b11, 0b000, 0b1001, 0b1010, 0b111>;
+def : ROSysReg<"PMBIDR_EL1",    0b11, 0b000, 0b1001, 0b1010, 0b111>;
 def : RWSysReg<"PMSCR_EL2",     0b11, 0b100, 0b1001, 0b1001, 0b000>;
 def : RWSysReg<"PMSCR_EL12",    0b11, 0b101, 0b1001, 0b1001, 0b000>;
 def : RWSysReg<"PMSCR_EL1",     0b11, 0b000, 0b1001, 0b1001, 0b000>;
@@ -1269,7 +1267,7 @@ def : RWSysReg<"PMSIRR_EL1",    0b11, 0b000, 0b1001, 0b1001, 0b011>;
 def : RWSysReg<"PMSFCR_EL1",    0b11, 0b000, 0b1001, 0b1001, 0b100>;
 def : RWSysReg<"PMSEVFR_EL1",   0b11, 0b000, 0b1001, 0b1001, 0b101>;
 def : RWSysReg<"PMSLATFR_EL1",  0b11, 0b000, 0b1001, 0b1001, 0b110>;
-def : RWSysReg<"PMSIDR_EL1",    0b11, 0b000, 0b1001, 0b1001, 0b111>;
+def : ROSysReg<"PMSIDR_EL1",    0b11, 0b000, 0b1001, 0b1001, 0b111>;
 }
 
 // v8.2a "RAS extension" registers
@@ -1333,7 +1331,6 @@ def : RWSysReg<"PMMIR_EL1", 0b11, 0b000, 0b1001, 0b1110, 0b110>;
 let Requires = [{ {AArch64::FeatureRASv8_4} }] in {
 def : RWSysReg<"ERXPFGCTL_EL1", 0b11, 0b000, 0b0101, 0b0100, 0b101>;
 def : RWSysReg<"ERXPFGCDN_EL1", 0b11, 0b000, 0b0101, 0b0100, 0b110>;
-def : RWSysReg<"ERXTS_EL1",     0b11, 0b000, 0b0101, 0b0101, 0b111>;
 def : RWSysReg<"ERXMISC2_EL1",  0b11, 0b000, 0b0101, 0b0101, 0b010>;
 def : RWSysReg<"ERXMISC3_EL1",  0b11, 0b000, 0b0101, 0b0101, 0b011>;
 def : ROSysReg<"ERXPFGF_EL1",   0b11, 0b000, 0b0101, 0b0100, 0b100>;
@@ -1360,7 +1357,7 @@ def : RWSysReg<"MPAMVPM7_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b111>;
 def : ROSysReg<"MPAMIDR_EL1",  0b11, 0b000, 0b1010, 0b0100, 0b100>;
 } //FeatureMPAM
 
-// v8.4a Activitiy Monitor registers
+// v8.4a Activity Monitor registers
 //                                 Op0   Op1    CRn     CRm     Op2
 let Requires = [{ {AArch64::FeatureAM} }] in {
 def : RWSysReg<"AMCR_EL0",         0b11, 0b011, 0b1101, 0b0010, 0b000>;
@@ -1426,7 +1423,7 @@ def : RWSysReg<"TRFCR_EL2",        0b11, 0b100, 0b0001, 0b0010, 0b001>;
 def : RWSysReg<"TRFCR_EL12",       0b11, 0b101, 0b0001, 0b0010, 0b001>;
 } //FeatureTRACEV8_4
 
-// v8.4a Timining insensitivity of data processing instructions
+// v8.4a Timing insensitivity of data processing instructions
 // DIT: Data Independent Timing instructions
 //                                 Op0   Op1    CRn     CRm     Op2
 let Requires = [{ {AArch64::FeatureDIT} }] in {
@@ -1489,6 +1486,41 @@ def : RWSysReg<"TRBMAR_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b100>;
 def : RWSysReg<"TRBTRG_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b110>;
 def : ROSysReg<"TRBIDR_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b111>;
 } // FeatureTRBE
+
+
+// v8.6a Activity Monitors Virtualization Support
+let Requires = [{ {AArch64::FeatureAMVS} }] in {
+foreach n = 0-15 in {
+  foreach x = 0-1 in {
+  def : RWSysReg<"AMEVCNTVOFF"#x#n#"_EL2",
+    0b11, 0b100, 0b1101, 0b1000, 0b000>{
+      let Encoding{4} = x;
+      let Encoding{3-0} = n;
+    }
+  }
+}
+}
+
+// v8.6a Fine Grained Virtualization Traps
+//                                 Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureFineGrainedTraps} }] in {
+def : RWSysReg<"HFGRTR_EL2",       0b11, 0b100, 0b0001, 0b0001, 0b100>;
+def : RWSysReg<"HFGWTR_EL2",       0b11, 0b100, 0b0001, 0b0001, 0b101>;
+def : RWSysReg<"HFGITR_EL2",       0b11, 0b100, 0b0001, 0b0001, 0b110>;
+def : RWSysReg<"HDFGRTR_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b100>;
+def : RWSysReg<"HDFGWTR_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b101>;
+}
+
+// v8.6a Enhanced Counter Virtualization
+//                                 Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureEnhancedCounterVirtualization} }] in {
+def : RWSysReg<"CNTSCALE_EL2",     0b11, 0b100, 0b1110, 0b0000, 0b100>;
+def : RWSysReg<"CNTISCALE_EL2",    0b11, 0b100, 0b1110, 0b0000, 0b101>;
+def : RWSysReg<"CNTPOFF_EL2",      0b11, 0b100, 0b1110, 0b0000, 0b110>;
+def : RWSysReg<"CNTVFRQ_EL2",      0b11, 0b100, 0b1110, 0b0000, 0b111>;
+def : RWSysReg<"CNTPCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b101>;
+def : RWSysReg<"CNTVCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b110>;
+}
 
 // Cyclone specific system registers
 //                                 Op0    Op1     CRn     CRm    Op2

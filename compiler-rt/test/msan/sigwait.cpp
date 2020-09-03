@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <signal.h>
 #include <sys/time.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <sanitizer/msan_interface.h>
@@ -19,7 +20,9 @@ void test_sigwait() {
 
   if (pid_t pid = fork()) {
     kill(pid, SIGUSR1);
-    _exit(0);
+    int child_stat;
+    wait(&child_stat);
+    _exit(!WIFEXITED(child_stat));
   } else {
     int sig;
     int res = sigwait(&s, &sig);

@@ -17,6 +17,7 @@
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/GlobPattern.h"
 #include <atomic>
 #include <vector>
 
@@ -90,6 +91,7 @@ struct Configuration {
   uint32_t andFeatures = 0;
   llvm::CachePruningPolicy thinLTOCachePolicy;
   llvm::StringMap<uint64_t> sectionStartMap;
+  llvm::StringRef bfdname;
   llvm::StringRef chroot;
   llvm::StringRef dynamicLinker;
   llvm::StringRef dwoDir;
@@ -108,11 +110,13 @@ struct Configuration {
   llvm::StringRef optRemarksPasses;
   llvm::StringRef optRemarksFormat;
   llvm::StringRef progName;
+  llvm::StringRef printArchiveStats;
   llvm::StringRef printSymbolOrder;
   llvm::StringRef soName;
   llvm::StringRef sysroot;
   llvm::StringRef thinLTOCacheDir;
   llvm::StringRef thinLTOIndexOnlyArg;
+  llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOPrefixReplace;
   std::string rpath;
@@ -121,6 +125,7 @@ struct Configuration {
   std::vector<llvm::StringRef> filterList;
   std::vector<llvm::StringRef> searchPaths;
   std::vector<llvm::StringRef> symbolOrderingFile;
+  std::vector<llvm::StringRef> thinLTOModulesToCompile;
   std::vector<llvm::StringRef> undefined;
   std::vector<SymbolVersion> dynamicList;
   std::vector<uint8_t> buildIdVector;
@@ -140,6 +145,7 @@ struct Configuration {
   bool checkSections;
   bool compressDebugSections;
   bool cref;
+  std::vector<std::pair<llvm::GlobPattern, uint64_t>> deadRelocInNonAlloc;
   bool defineCommon;
   bool demangle = true;
   bool dependentLibraries;
@@ -152,30 +158,31 @@ struct Configuration {
   bool exportDynamic;
   bool fixCortexA53Errata843419;
   bool fixCortexA8;
-  bool forceBTI;
   bool formatBinary = false;
-  bool requireCET;
   bool gcSections;
   bool gdbIndex;
   bool gnuHash = false;
   bool gnuUnique;
-  bool hasDynamicList = false;
   bool hasDynSymTab;
   bool ignoreDataAddressEquality;
   bool ignoreFunctionAddressEquality;
   bool ltoCSProfileGenerate;
   bool ltoDebugPassManager;
+  bool ltoEmitAsm;
   bool ltoNewPassManager;
+  bool ltoUniqueBasicBlockSectionNames;
+  bool ltoWholeProgramVisibility;
   bool mergeArmExidx;
   bool mipsN32Abi = false;
   bool mmapOutputFile;
   bool nmagic;
+  bool noDynamicLinker = false;
   bool noinhibitExec;
   bool nostdlib;
   bool oFormatBinary;
   bool omagic;
+  bool optimizeBBJumps;
   bool optRemarksWithHotness;
-  bool pacPlt;
   bool picThunk;
   bool pie;
   bool printGcSections;
@@ -183,18 +190,23 @@ struct Configuration {
   bool relocatable;
   bool relrPackDynRelocs;
   bool saveTemps;
+  llvm::Optional<uint32_t> shuffleSectionSeed;
   bool singleRoRx;
   bool shared;
+  bool symbolic;
   bool isStatic = false;
   bool sysvHash = false;
   bool target1Rel;
   bool trace;
   bool thinLTOEmitImportsFiles;
   bool thinLTOIndexOnly;
+  bool timeTraceEnabled;
   bool tocOptimize;
   bool undefinedVersion;
+  bool unique;
   bool useAndroidRelrTags = false;
   bool warnBackrefs;
+  std::vector<llvm::GlobPattern> warnBackrefsExclude;
   bool warnCommon;
   bool warnIfuncTextrel;
   bool warnMissingEntry;
@@ -202,6 +214,8 @@ struct Configuration {
   bool writeAddends;
   bool zCombreloc;
   bool zCopyreloc;
+  bool zForceBti;
+  bool zForceIbt;
   bool zGlobal;
   bool zHazardplt;
   bool zIfuncNoplt;
@@ -213,8 +227,11 @@ struct Configuration {
   bool zNodlopen;
   bool zNow;
   bool zOrigin;
+  bool zPacPlt;
   bool zRelro;
   bool zRodynamic;
+  bool zShstk;
+  uint8_t zStartStopVisibility;
   bool zText;
   bool zRetpolineplt;
   bool zWxneeded;
@@ -239,7 +256,8 @@ struct Configuration {
   unsigned ltoPartitions;
   unsigned ltoo;
   unsigned optimize;
-  unsigned thinLTOJobs;
+  StringRef thinLTOJobs;
+  unsigned timeTraceGranularity;
   int32_t splitStackAdjustSize;
 
   // The following config options do not directly correspond to any

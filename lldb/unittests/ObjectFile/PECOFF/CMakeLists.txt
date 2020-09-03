@@ -5,5 +5,4 @@ add_lldb_unittest(ObjectFilePECOFFTests
     lldbUtilityHelpers
     lldbPluginObjectFilePECOFF
     LLVMTestingSupport
-    lldbPluginPlatformMacOSX
   )

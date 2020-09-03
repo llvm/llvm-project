@@ -199,6 +199,18 @@ const CallInst *BasicBlock::getTerminatingDeoptimizeCall() const {
   return nullptr;
 }
 
+const CallInst *BasicBlock::getPostdominatingDeoptimizeCall() const {
+  const BasicBlock* BB = this;
+  SmallPtrSet<const BasicBlock *, 8> Visited;
+  Visited.insert(BB);
+  while (auto *Succ = BB->getUniqueSuccessor()) {
+    if (!Visited.insert(Succ).second)
+      return nullptr;
+    BB = Succ;
+  }
+  return BB->getTerminatingDeoptimizeCall();
+}
+
 const Instruction* BasicBlock::getFirstNonPHI() const {
   for (const Instruction &I : *this)
     if (!isa<PHINode>(I))
@@ -279,7 +291,7 @@ bool BasicBlock::hasNPredecessorsOrMore(unsigned N) const {
 }
 
 const BasicBlock *BasicBlock::getSingleSuccessor() const {
-  succ_const_iterator SI = succ_begin(this), E = succ_end(this);
+  const_succ_iterator SI = succ_begin(this), E = succ_end(this);
   if (SI == E) return nullptr; // no successors
   const BasicBlock *TheSucc = *SI;
   ++SI;
@@ -287,7 +299,7 @@ const BasicBlock *BasicBlock::getSingleSuccessor() const {
 }
 
 const BasicBlock *BasicBlock::getUniqueSuccessor() const {
-  succ_const_iterator SI = succ_begin(this), E = succ_end(this);
+  const_succ_iterator SI = succ_begin(this), E = succ_end(this);
   if (SI == E) return nullptr; // No successors
   const BasicBlock *SuccBB = *SI;
   ++SI;
@@ -305,78 +317,38 @@ iterator_range<BasicBlock::phi_iterator> BasicBlock::phis() {
   return make_range<phi_iterator>(P, nullptr);
 }
 
-/// This method is used to notify a BasicBlock that the
-/// specified Predecessor of the block is no longer able to reach it.  This is
-/// actually not used to update the Predecessor list, but is actually used to
-/// update the PHI nodes that reside in the block.  Note that this should be
-/// called while the predecessor still refers to this block.
+/// Update PHI nodes in this BasicBlock before removal of predecessor \p Pred.
+/// Note that this function does not actually remove the predecessor.
 ///
+/// If \p KeepOneInputPHIs is true then don't remove PHIs that are left with
+/// zero or one incoming values, and don't simplify PHIs with all incoming
+/// values the same.
 void BasicBlock::removePredecessor(BasicBlock *Pred,
                                    bool KeepOneInputPHIs) {
-  assert((hasNUsesOrMore(16)||// Reduce cost of this assertion for complex CFGs.
+  // Use hasNUsesOrMore to bound the cost of this assertion for complex CFGs.
+  assert((hasNUsesOrMore(16) ||
           find(pred_begin(this), pred_end(this), Pred) != pred_end(this)) &&
-         "removePredecessor: BB is not a predecessor!");
+         "Pred is not a predecessor!");
 
-  if (InstList.empty()) return;
-  PHINode *APN = dyn_cast<PHINode>(&front());
-  if (!APN) return;   // Quick exit.
+  // Return early if there are no PHI nodes to update.
+  if (!isa<PHINode>(begin()))
+    return;
+  unsigned NumPreds = cast<PHINode>(front()).getNumIncomingValues();
 
-  // If there are exactly two predecessors, then we want to nuke the PHI nodes
-  // altogether.  However, we cannot do this, if this in this case:
-  //
-  //  Loop:
-  //    %x = phi [X, Loop]
-  //    %x2 = add %x, 1         ;; This would become %x2 = add %x2, 1
-  //    br Loop                 ;; %x2 does not dominate all uses
-  //
-  // This is because the PHI node input is actually taken from the predecessor
-  // basic block.  The only case this can happen is with a self loop, so we
-  // check for this case explicitly now.
-  //
-  unsigned max_idx = APN->getNumIncomingValues();
-  assert(max_idx != 0 && "PHI Node in block with 0 predecessors!?!?!");
-  if (max_idx == 2) {
-    BasicBlock *Other = APN->getIncomingBlock(APN->getIncomingBlock(0) == Pred);
-
-    // Disable PHI elimination!
-    if (this == Other) max_idx = 3;
-  }
-
-  // <= Two predecessors BEFORE I remove one?
-  if (max_idx <= 2 && !KeepOneInputPHIs) {
-    // Yup, loop through and nuke the PHI nodes
-    while (PHINode *PN = dyn_cast<PHINode>(&front())) {
-      // Remove the predecessor first.
-      PN->removeIncomingValue(Pred, !KeepOneInputPHIs);
-
-      // If the PHI _HAD_ two uses, replace PHI node with its now *single* value
-      if (max_idx == 2) {
-        if (PN->getIncomingValue(0) != PN)
-          PN->replaceAllUsesWith(PN->getIncomingValue(0));
-        else
-          // We are left with an infinite loop with no entries: kill the PHI.
-          PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
-        getInstList().pop_front();    // Remove the PHI node
-      }
-
-      // If the PHI node already only had one entry, it got deleted by
-      // removeIncomingValue.
-    }
-  } else {
-    // Okay, now we know that we need to remove predecessor #pred_idx from all
-    // PHI nodes.  Iterate over each PHI node fixing them up
-    PHINode *PN;
-    for (iterator II = begin(); (PN = dyn_cast<PHINode>(II)); ) {
-      ++II;
-      PN->removeIncomingValue(Pred, false);
-      // If all incoming values to the Phi are the same, we can replace the Phi
-      // with that value.
-      Value* PNV = nullptr;
-      if (!KeepOneInputPHIs && (PNV = PN->hasConstantValue()))
-        if (PNV != PN) {
+  // Update all PHI nodes.
+  for (iterator II = begin(); isa<PHINode>(II);) {
+    PHINode *PN = cast<PHINode>(II++);
+    PN->removeIncomingValue(Pred, !KeepOneInputPHIs);
+    if (!KeepOneInputPHIs) {
+      // If we have a single predecessor, removeIncomingValue erased the PHI
+      // node itself.
+      if (NumPreds > 1) {
+        if (Value *PNV = PN->hasConstantValue()) {
+          // Replace the PHI node with its constant value.
           PN->replaceAllUsesWith(PNV);
           PN->eraseFromParent();
         }
+      }
     }
   }
 }
@@ -514,7 +486,7 @@ void BasicBlock::renumberInstructions() {
 
 #ifndef NDEBUG
 /// In asserts builds, this checks the numbering. In non-asserts builds, it
-/// is defined as an inline function returning true in BasicBlock.h.
+/// is defined as a no-op inline function in BasicBlock.h.
 void BasicBlock::validateInstrOrdering() const {
   if (!isInstrOrderValid())
     return;

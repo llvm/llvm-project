@@ -1,4 +1,4 @@
-# RUN: llvm-mc -show-encoding -triple=wasm32-unkown-unknown -mattr=+tail-call < %s | FileCheck %s
+# RUN: llvm-mc -show-encoding -triple=wasm32-unknown-unknown -mattr=+tail-call < %s | FileCheck %s
 
 bar1:
     .functype bar1 () -> ()

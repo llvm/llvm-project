@@ -136,9 +136,15 @@ TLI_DEFINE_STRING_INTERNAL("_ZdaPvSt11align_val_tRKSt9nothrow_t")
 /// void operator delete[](void*, unsigned int);
 TLI_DEFINE_ENUM_INTERNAL(ZdaPvj)
 TLI_DEFINE_STRING_INTERNAL("_ZdaPvj")
+/// void operator delete[](void*, unsigned int, align_val_t);
+TLI_DEFINE_ENUM_INTERNAL(ZdaPvjSt11align_val_t)
+TLI_DEFINE_STRING_INTERNAL("_ZdaPvjSt11align_val_t")
 /// void operator delete[](void*, unsigned long);
 TLI_DEFINE_ENUM_INTERNAL(ZdaPvm)
 TLI_DEFINE_STRING_INTERNAL("_ZdaPvm")
+/// void operator delete[](void*, unsigned long, align_val_t);
+TLI_DEFINE_ENUM_INTERNAL(ZdaPvmSt11align_val_t)
+TLI_DEFINE_STRING_INTERNAL("_ZdaPvmSt11align_val_t")
 /// void operator delete(void*);
 TLI_DEFINE_ENUM_INTERNAL(ZdlPv)
 TLI_DEFINE_STRING_INTERNAL("_ZdlPv")
@@ -154,9 +160,15 @@ TLI_DEFINE_STRING_INTERNAL("_ZdlPvSt11align_val_tRKSt9nothrow_t")
 /// void operator delete(void*, unsigned int);
 TLI_DEFINE_ENUM_INTERNAL(ZdlPvj)
 TLI_DEFINE_STRING_INTERNAL("_ZdlPvj")
+/// void operator delete(void*, unsigned int, align_val_t)
+TLI_DEFINE_ENUM_INTERNAL(ZdlPvjSt11align_val_t)
+TLI_DEFINE_STRING_INTERNAL("_ZdlPvjSt11align_val_t")
 /// void operator delete(void*, unsigned long);
 TLI_DEFINE_ENUM_INTERNAL(ZdlPvm)
 TLI_DEFINE_STRING_INTERNAL("_ZdlPvm")
+/// void operator delete(void*, unsigned long, align_val_t)
+TLI_DEFINE_ENUM_INTERNAL(ZdlPvmSt11align_val_t)
+TLI_DEFINE_STRING_INTERNAL("_ZdlPvmSt11align_val_t")
 /// void *new[](unsigned int);
 TLI_DEFINE_ENUM_INTERNAL(Znaj)
 TLI_DEFINE_STRING_INTERNAL("_Znaj")
@@ -434,6 +446,9 @@ TLI_DEFINE_STRING_INTERNAL("__strlcat_chk")
 ///                      size_t dstsize);
 TLI_DEFINE_ENUM_INTERNAL(strlcpy_chk)
 TLI_DEFINE_STRING_INTERNAL("__strlcpy_chk")
+/// size_t __strlen_chk(const char *s1, size_t s1size);
+TLI_DEFINE_ENUM_INTERNAL(strlen_chk)
+TLI_DEFINE_STRING_INTERNAL("__strlen_chk")
 /// char *strncat_chk(char *s1, const char *s2, size_t n, size_t s1size);
 TLI_DEFINE_ENUM_INTERNAL(strncat_chk)
 TLI_DEFINE_STRING_INTERNAL("__strncat_chk")
@@ -478,6 +493,9 @@ TLI_DEFINE_STRING_INTERNAL("acoshl")
 /// long double acosl(long double x);
 TLI_DEFINE_ENUM_INTERNAL(acosl)
 TLI_DEFINE_STRING_INTERNAL("acosl")
+/// void *aligned_alloc(size_t alignment, size_t size);
+TLI_DEFINE_ENUM_INTERNAL(aligned_alloc)
+TLI_DEFINE_STRING_INTERNAL("aligned_alloc")
 /// double asin(double x);
 TLI_DEFINE_ENUM_INTERNAL(asin)
 TLI_DEFINE_STRING_INTERNAL("asin")
@@ -1119,6 +1137,15 @@ TLI_DEFINE_STRING_INTERNAL("reallocf")
 /// char *realpath(const char *file_name, char *resolved_name);
 TLI_DEFINE_ENUM_INTERNAL(realpath)
 TLI_DEFINE_STRING_INTERNAL("realpath")
+/// double remainder(double x, double y);
+TLI_DEFINE_ENUM_INTERNAL(remainder)
+TLI_DEFINE_STRING_INTERNAL("remainder")
+/// float remainderf(float x, float y);
+TLI_DEFINE_ENUM_INTERNAL(remainderf)
+TLI_DEFINE_STRING_INTERNAL("remainderf")
+/// long double remainderl(long double x, long double y);
+TLI_DEFINE_ENUM_INTERNAL(remainderl)
+TLI_DEFINE_STRING_INTERNAL("remainderl")
 /// int remove(const char *path);
 TLI_DEFINE_ENUM_INTERNAL(remove)
 TLI_DEFINE_STRING_INTERNAL("remove")
@@ -1143,6 +1170,15 @@ TLI_DEFINE_STRING_INTERNAL("rmdir")
 /// double round(double x);
 TLI_DEFINE_ENUM_INTERNAL(round)
 TLI_DEFINE_STRING_INTERNAL("round")
+/// double roundeven(double x);
+TLI_DEFINE_ENUM_INTERNAL(roundeven)
+TLI_DEFINE_STRING_INTERNAL("roundeven")
+/// float roundevenf(float x);
+TLI_DEFINE_ENUM_INTERNAL(roundevenf)
+TLI_DEFINE_STRING_INTERNAL("roundevenf")
+/// long double roundevenl(long double x);
+TLI_DEFINE_ENUM_INTERNAL(roundevenl)
+TLI_DEFINE_STRING_INTERNAL("roundevenl")
 /// float roundf(float x);
 TLI_DEFINE_ENUM_INTERNAL(roundf)
 TLI_DEFINE_STRING_INTERNAL("roundf")

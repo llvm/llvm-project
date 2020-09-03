@@ -30,11 +30,13 @@ int lprofUnlockFileHandle(FILE *F);
  * lock for exclusive access. The caller will block
  * if the lock is already held by another process. */
 FILE *lprofOpenFileEx(const char *Filename);
-/* PS4 doesn't have setenv/getenv. Define a shim. */
+/* PS4 doesn't have setenv/getenv/fork. Define a shim. */
 #if __ORBIS__
+#include <sys/types.h>
 static inline char *getenv(const char *name) { return NULL; }
 static inline int setenv(const char *name, const char *value, int overwrite)
 { return 0; }
+static pid_t fork() { return -1; }
 #endif /* #if __ORBIS__ */
 
 /* GCOV_PREFIX and GCOV_PREFIX_STRIP support */

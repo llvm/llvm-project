@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_LibCxxVariant_h_
-#define liblldb_LibCxxVariant_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXXVARIANT_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXXVARIANT_H
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -27,4 +27,4 @@ SyntheticChildrenFrontEnd *LibcxxVariantFrontEndCreator(CXXSyntheticChildren *,
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // liblldb_LibCxxVariant_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXXVARIANT_H

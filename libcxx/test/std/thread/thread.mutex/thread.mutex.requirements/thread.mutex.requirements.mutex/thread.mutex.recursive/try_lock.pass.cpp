@@ -8,6 +8,8 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
+// ALLOW_RETRIES: 2
+
 // <mutex>
 
 // class recursive_mutex;

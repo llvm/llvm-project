@@ -1,6 +1,6 @@
 //===- OptUtils.h - MLIR Execution Engine opt pass utilities ----*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -27,7 +27,7 @@ class TargetMachine;
 
 namespace mlir {
 
-/// Initialize LLVM passes that can be when running MLIR code using
+/// Initialize LLVM passes that can be used when running MLIR code using
 /// ExecutionEngine.
 void initializeLLVMPasses();
 

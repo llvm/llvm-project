@@ -20,11 +20,11 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_ACTIONS_TWEAK_H
 
 #include "ParsedAST.h"
-#include "Path.h"
 #include "Protocol.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "index/Index.h"
+#include "support/Path.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
@@ -48,7 +48,7 @@ public:
   /// Input to prepare and apply tweaks.
   struct Selection {
     Selection(const SymbolIndex *Index, ParsedAST &AST, unsigned RangeBegin,
-              unsigned RangeEnd);
+              unsigned RangeEnd, SelectionTree ASTSelection);
     /// The text of the active document.
     llvm::StringRef Code;
     /// The Index for handling codebase related queries.
@@ -81,7 +81,7 @@ public:
 
     static Effect showMessage(StringRef S) {
       Effect E;
-      E.ShowMessage = S;
+      E.ShowMessage = std::string(S);
       return E;
     }
 

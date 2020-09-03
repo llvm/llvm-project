@@ -71,8 +71,8 @@
 ; CHECK:     TypeLeafKind: LF_ENUM (0x1507)
 ; CHECK:     NumEnumerators: 2
 ; CHECK:     Properties [ (0x208)
-; CHECK        HasUniqueName (0x200)
-; CHECK        Nested (0x8)
+; CHECK:       HasUniqueName (0x200)
+; CHECK:       Nested (0x8)
 ; CHECK:     ]
 ; CHECK:     UnderlyingType: int (0x74)
 ; CHECK:     FieldListType: <field list> ({{.*}})

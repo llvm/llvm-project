@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_THREAD_POOL_H
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/thread.h"
 
 #include <future>
@@ -38,12 +39,11 @@ public:
   using TaskTy = std::function<void()>;
   using PackagedTaskTy = std::packaged_task<void()>;
 
-  /// Construct a pool with the number of threads found by
-  /// hardware_concurrency().
-  ThreadPool();
-
-  /// Construct a pool of \p ThreadCount threads
-  ThreadPool(unsigned ThreadCount);
+  /// Construct a pool using the hardware strategy \p S for mapping hardware
+  /// execution resources (threads, cores, CPUs)
+  /// Defaults to using the maximum execution resources in the system, but
+  /// accounting for the affinity mask.
+  ThreadPool(ThreadPoolStrategy S = hardware_concurrency());
 
   /// Blocking destructor: the pool will wait for all the threads to complete.
   ~ThreadPool();
@@ -68,7 +68,11 @@ public:
   /// It is an error to try to add new tasks while blocking on this call.
   void wait();
 
+  unsigned getThreadCount() const { return ThreadCount; }
+
 private:
+  bool workCompletedUnlocked() { return !ActiveThreads && Tasks.empty(); }
+
   /// Asynchronous submission of a task to the pool. The returned future can be
   /// used to wait for the task to finish and is *non-blocking* on destruction.
   std::shared_future<void> asyncImpl(TaskTy F);
@@ -83,17 +87,18 @@ private:
   std::mutex QueueLock;
   std::condition_variable QueueCondition;
 
-  /// Locking and signaling for job completion
-  std::mutex CompletionLock;
+  /// Signaling for job completion
   std::condition_variable CompletionCondition;
 
   /// Keep track of the number of thread actually busy
-  std::atomic<unsigned> ActiveThreads;
+  unsigned ActiveThreads = 0;
 
 #if LLVM_ENABLE_THREADS // avoids warning for unused variable
   /// Signal for the destruction of the pool, asking thread to exit.
-  bool EnableFlag;
+  bool EnableFlag = true;
 #endif
+
+  unsigned ThreadCount;
 };
 }
 

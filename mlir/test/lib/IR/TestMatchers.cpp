@@ -1,12 +1,12 @@
 //===- TestMatchers.cpp - Pass to test matchers ---------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
@@ -15,13 +15,14 @@ using namespace mlir;
 
 namespace {
 /// This is a test pass for verifying matchers.
-struct TestMatchers : public FunctionPass<TestMatchers> {
+struct TestMatchers : public PassWrapper<TestMatchers, FunctionPass> {
   void runOnFunction() override;
 };
 } // end anonymous namespace
 
 // This could be done better but is not worth the variadic template trouble.
-template <typename Matcher> unsigned countMatches(FuncOp f, Matcher &matcher) {
+template <typename Matcher>
+static unsigned countMatches(FuncOp f, Matcher &matcher) {
   unsigned count = 0;
   f.walk([&count, &matcher](Operation *op) {
     if (matcher.match(op))
@@ -126,12 +127,15 @@ void test2(FuncOp f) {
   auto a = m_Val(f.getArgument(0));
   FloatAttr floatAttr;
   auto p = m_Op<MulFOp>(a, m_Op<AddFOp>(a, m_Constant(&floatAttr)));
+  auto p1 = m_Op<MulFOp>(a, m_Op<AddFOp>(a, m_Constant()));
   // Last operation that is not the terminator.
   Operation *lastOp = f.getBody().front().back().getPrevNode();
   if (p.match(lastOp))
     llvm::outs()
         << "Pattern add(add(a, constant), a) matched and bound constant to: "
         << floatAttr.getValueAsDouble() << "\n";
+  if (p1.match(lastOp))
+    llvm::outs() << "Pattern add(add(a, constant), a) matched\n";
 }
 
 void TestMatchers::runOnFunction() {
@@ -143,5 +147,8 @@ void TestMatchers::runOnFunction() {
     test2(f);
 }
 
-static PassRegistration<TestMatchers> pass("test-matchers",
-                                           "Test C++ pattern matchers.");
+namespace mlir {
+void registerTestMatchers() {
+  PassRegistration<TestMatchers>("test-matchers", "Test C++ pattern matchers.");
+}
+} // namespace mlir

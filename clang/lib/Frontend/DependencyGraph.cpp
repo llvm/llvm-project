@@ -119,8 +119,7 @@ void DependencyGraphCallback::OutputGraphFile() {
     if (FileName.startswith(SysRoot))
       FileName = FileName.substr(SysRoot.size());
 
-    OS << DOT::EscapeString(FileName)
-    << "\"];\n";
+    OS << DOT::EscapeString(std::string(FileName)) << "\"];\n";
   }
 
   // Write the edges

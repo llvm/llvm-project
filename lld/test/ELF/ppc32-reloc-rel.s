@@ -7,13 +7,13 @@
   beq 1f
 1:
 # CHECK-LABEL: section .R_PPC_REL14:
-# CHECK: bt 2, .+4
+# CHECK: 100100b4: bt 2, 0x100100b8
 
 .section .R_PPC_REL24,"ax",@progbits
   b 1f
 1:
 # CHECK-LABEL: section .R_PPC_REL24:
-# CHECK: b .+4
+# CHECK: b 0x100100bc
 
 .section .R_PPC_REL32,"ax",@progbits
   .long 1f - .
@@ -25,10 +25,10 @@
   b 1f@PLT+32768
 1:
 # CHECK-LABEL: section .R_PPC_PLTREL24:
-# CHECK: b .+4
+# CHECK: b 0x100100c4
 
 .section .R_PPC_LOCAL24PC,"ax",@progbits
   b 1f@local
 1:
 # CHECK-LABEL: section .R_PPC_LOCAL24PC:
-# CHECK: b .+4
+# CHECK: b 0x100100c8

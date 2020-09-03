@@ -64,17 +64,17 @@ representation.
 
 Types in MLIR rely on having a unique `kind` value to ensure that casting checks
 remain extremely efficient
-([rationale](../../Rationale.md#reserving-dialect-type-kinds)). For `toy`, this
+([rationale](../../Rationale/Rationale.md#reserving-dialect-type-kinds)). For `toy`, this
 means we need to explicitly reserve a static range of type `kind` values in the
 symbol registry file
-[DialectSymbolRegistry](https://github.com/tensorflow/mlir/blob/master/include/mlir/IR/DialectSymbolRegistry.def).
+[DialectSymbolRegistry](https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/DialectSymbolRegistry.def).
 
 ```c++
 DEFINE_SYM_KIND_RANGE(LINALG) // Linear Algebra Dialect
 DEFINE_SYM_KIND_RANGE(TOY)    // Toy language (tutorial) Dialect
 
 // The following ranges are reserved for experimenting with MLIR dialects in a
-// private context without having to register them here.
+// private context.
 DEFINE_SYM_KIND_RANGE(PRIVATE_EXPERIMENTAL_0)
 ```
 
@@ -287,8 +287,7 @@ mlir::Type ToyDialect::parseType(mlir::DialectAsmParser &parser) const {
       return nullptr;
 
     // Check that the type is either a TensorType or another StructType.
-    if (!elementType.isa<mlir::TensorType>() &&
-        !elementType.isa<StructType>()) {
+    if (!elementType.isa<mlir::TensorType, StructType>()) {
       parser.emitError(typeLoc, "element type for a struct must either "
                                 "be a TensorType or a StructType, got: ")
           << elementType;
@@ -319,7 +318,7 @@ void ToyDialect::printType(mlir::Type type,
 
   // Print the struct type according to the parser format.
   printer << "struct<";
-  mlir::interleaveComma(structType.getElementTypes(), printer);
+  llvm::interleaveComma(structType.getElementTypes(), printer);
   printer << '>';
 }
 ```
@@ -342,7 +341,7 @@ Which generates the following:
 ```mlir
 module {
   func @multiply_transpose(%arg0: !toy.struct<tensor<*xf64>, tensor<*xf64>>) {
-    "toy.return"() : () -> ()
+    toy.return
   }
 }
 ```
@@ -391,9 +390,9 @@ modeling, we just use an [array attribute](../../LangRef.md#array-attribute)
 that contains a set of constant values for each of the `struct` elements.
 
 ```mlir
-  %0 = "toy.struct_constant"() {
-    value = [dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf64>]
-  } : () -> !toy.struct<tensor<*xf64>>
+  %0 = toy.struct_constant [
+    dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf64>
+  ] : !toy.struct<tensor<*xf64>>
 ```
 
 ##### `toy.struct_access`
@@ -401,10 +400,8 @@ that contains a set of constant values for each of the `struct` elements.
 This new operation materializes the Nth element of a `struct` value.
 
 ```mlir
-  %0 = "toy.struct_constant"() {
-    value = [dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf64>]
-  } : () -> !toy.struct<tensor<*xf64>>
-  %1 = "toy.struct_access"(%0) {index = 0 : i64} : (!toy.struct<tensor<*xf64>>) -> tensor<*xf64>
+  // Using %0 from above
+  %1 = toy.struct_access %0[0] : !toy.struct<tensor<*xf64>> -> tensor<*xf64>
 ```
 
 With these operations, we can revisit our original example:
@@ -436,18 +433,21 @@ and finally get a full MLIR module:
 ```mlir
 module {
   func @multiply_transpose(%arg0: !toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64> {
-    %0 = "toy.struct_access"(%arg0) {index = 0 : i64} : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
-    %1 = "toy.transpose"(%0) : (tensor<*xf64>) -> tensor<*xf64>
-    %2 = "toy.struct_access"(%arg0) {index = 1 : i64} : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
-    %3 = "toy.transpose"(%2) : (tensor<*xf64>) -> tensor<*xf64>
-    %4 = "toy.mul"(%1, %3) : (tensor<*xf64>, tensor<*xf64>) -> tensor<*xf64>
-    "toy.return"(%4) : (tensor<*xf64>) -> ()
+    %0 = toy.struct_access %arg0[0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+    %1 = toy.transpose(%0 : tensor<*xf64>) to tensor<*xf64>
+    %2 = toy.struct_access %arg0[1] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+    %3 = toy.transpose(%2 : tensor<*xf64>) to tensor<*xf64>
+    %4 = toy.mul %1, %3 : tensor<*xf64>
+    toy.return %4 : tensor<*xf64>
   }
   func @main() {
-    %0 = "toy.struct_constant"() {value = [dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>, dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>]} : () -> !toy.struct<tensor<*xf64>, tensor<*xf64>>
-    %1 = "toy.generic_call"(%0) {callee = @multiply_transpose} : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
-    "toy.print"(%1) : (tensor<*xf64>) -> ()
-    "toy.return"() : () -> ()
+    %0 = toy.struct_constant [
+      dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>,
+      dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
+    ] : !toy.struct<tensor<*xf64>, tensor<*xf64>>
+    %1 = toy.generic_call @multiply_transpose(%0) : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
+    toy.print %1 : tensor<*xf64>
+    toy.return
   }
 }
 ```
@@ -462,22 +462,26 @@ After inlining, the MLIR module in the previous section looks something like:
 ```mlir
 module {
   func @main() {
-    %0 = "toy.struct_constant"() {value = [dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>, dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>]} : () -> !toy.struct<tensor<*xf64>, tensor<*xf64>>
-    %1 = "toy.struct_access"(%0) {index = 0 : i64} : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
-    %2 = "toy.transpose"(%1) : (tensor<*xf64>) -> tensor<*xf64>
-    %3 = "toy.struct_access"(%0) {index = 1 : i64} : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
-    %4 = "toy.transpose"(%3) : (tensor<*xf64>) -> tensor<*xf64>
-    %5 = "toy.mul"(%2, %4) : (tensor<*xf64>, tensor<*xf64>) -> tensor<*xf64>
-    "toy.print"(%5) : (tensor<*xf64>) -> ()
-    "toy.return"() : () -> ()
+    %0 = toy.struct_constant [
+      dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>,
+      dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
+    ] : !toy.struct<tensor<*xf64>, tensor<*xf64>>
+    %1 = toy.struct_access %0[0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+    %2 = toy.transpose(%1 : tensor<*xf64>) to tensor<*xf64>
+    %3 = toy.struct_access %0[1] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+    %4 = toy.transpose(%3 : tensor<*xf64>) to tensor<*xf64>
+    %5 = toy.mul %2, %4 : tensor<*xf64>
+    toy.print %5 : tensor<*xf64>
+    toy.return
   }
 }
 ```
 
 We have several `toy.struct_access` operations that access into a
-`toy.struct_constant`. As detailed in [chapter 3](Ch-3.md), we can add folders
-for these `toy` operations by setting the `hasFolder` bit on the operation
-definition and providing a definition of the `*Op::fold` method.
+`toy.struct_constant`. As detailed in [chapter 3](Ch-3.md) (FoldConstantReshape),
+we can add folders for these `toy` operations by setting the `hasFolder` bit
+on the operation definition and providing a definition of the `*Op::fold`
+method.
 
 ```c++
 /// Fold constants.
@@ -495,7 +499,7 @@ OpFoldResult StructAccessOp::fold(ArrayRef<Attribute> operands) {
     return nullptr;
 
   size_t elementIndex = index().getZExtValue();
-  return structAttr.getValue()[elementIndex];
+  return structAttr[elementIndex];
 }
 ```
 
@@ -524,11 +528,11 @@ changes to our pipeline.
 ```mlir
 module {
   func @main() {
-    %0 = "toy.constant"() {value = dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>} : () -> tensor<2x3xf64>
-    %1 = "toy.transpose"(%0) : (tensor<2x3xf64>) -> tensor<3x2xf64>
-    %2 = "toy.mul"(%1, %1) : (tensor<3x2xf64>, tensor<3x2xf64>) -> tensor<3x2xf64>
-    "toy.print"(%2) : (tensor<3x2xf64>) -> ()
-    "toy.return"() : () -> ()
+    %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
+    %1 = toy.transpose(%0 : tensor<2x3xf64>) to tensor<3x2xf64>
+    %2 = toy.mul %1, %1 : tensor<3x2xf64>
+    toy.print %2 : tensor<3x2xf64>
+    toy.return
   }
 }
 ```
@@ -536,4 +540,4 @@ module {
 You can build `toyc-ch7` and try yourself: `toyc-ch7
 test/Examples/Toy/Ch7/struct-codegen.toy -emit=mlir`. More details on defining
 custom types can be found in
-[DefiningAttributesAndTypes](../../DefiningAttributesAndTypes.md).
+[DefiningAttributesAndTypes](../DefiningAttributesAndTypes.md).

@@ -1,4 +1,8 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
+; WARN-NOT: warning
 
 ;
 ; LD1H, LD1W, LD1D: base + 64-bit scaled offset

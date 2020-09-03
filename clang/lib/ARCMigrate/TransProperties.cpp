@@ -168,22 +168,22 @@ private:
   }
 
   void rewriteProperty(PropsTy &props, SourceLocation atLoc) {
-    ObjCPropertyDecl::PropertyAttributeKind propAttrs = getPropertyAttrs(props);
+    ObjCPropertyAttribute::Kind propAttrs = getPropertyAttrs(props);
 
-    if (propAttrs & (ObjCPropertyDecl::OBJC_PR_copy |
-                     ObjCPropertyDecl::OBJC_PR_unsafe_unretained |
-                     ObjCPropertyDecl::OBJC_PR_strong |
-                     ObjCPropertyDecl::OBJC_PR_weak))
+    if (propAttrs &
+        (ObjCPropertyAttribute::kind_copy |
+         ObjCPropertyAttribute::kind_unsafe_unretained |
+         ObjCPropertyAttribute::kind_strong | ObjCPropertyAttribute::kind_weak))
       return;
 
-    if (propAttrs & ObjCPropertyDecl::OBJC_PR_retain) {
+    if (propAttrs & ObjCPropertyAttribute::kind_retain) {
       // strong is the default.
       return doPropAction(PropAction_RetainReplacedWithStrong, props, atLoc);
     }
 
     bool HasIvarAssignedAPlusOneObject = hasIvarAssignedAPlusOneObject(props);
 
-    if (propAttrs & ObjCPropertyDecl::OBJC_PR_assign) {
+    if (propAttrs & ObjCPropertyAttribute::kind_assign) {
       if (HasIvarAssignedAPlusOneObject)
         return doPropAction(PropAction_AssignRemoved, props, atLoc);
       return doPropAction(PropAction_AssignRewritten, props, atLoc);
@@ -287,7 +287,10 @@ private:
   public:
     PlusOneAssign(ObjCIvarDecl *D) : Ivar(D) {}
 
-    bool VisitBinAssign(BinaryOperator *E) {
+    bool VisitBinaryOperator(BinaryOperator *E) {
+      if (E->getOpcode() != BO_Assign)
+        return true;
+
       Expr *lhs = E->getLHS()->IgnoreParenImpCasts();
       if (ObjCIvarRefExpr *RE = dyn_cast<ObjCIvarRefExpr>(lhs)) {
         if (RE->getDecl() != Ivar)
@@ -354,11 +357,10 @@ private:
     return ty;
   }
 
-  ObjCPropertyDecl::PropertyAttributeKind
-  getPropertyAttrs(PropsTy &props) const {
+  ObjCPropertyAttribute::Kind getPropertyAttrs(PropsTy &props) const {
     assert(!props.empty());
-    ObjCPropertyDecl::PropertyAttributeKind
-      attrs = props[0].PropD->getPropertyAttributesAsWritten();
+    ObjCPropertyAttribute::Kind attrs =
+        props[0].PropD->getPropertyAttributesAsWritten();
 
 #ifndef NDEBUG
     for (PropsTy::iterator I = props.begin(), E = props.end(); I != E; ++I)

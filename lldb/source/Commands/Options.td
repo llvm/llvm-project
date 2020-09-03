@@ -39,6 +39,11 @@ let Command = "settings read" in {
     Desc<"The file from which to read the settings.">;
 }
 
+let Command = "settings clear" in {
+  def setclear_all : Option<"all", "a">,
+    Desc<"Clear all settings.">;
+}
+
 let Command = "breakpoint list" in {
   // FIXME: We need to add an "internal" command, and then add this sort of
   // thing to it. But I need to see it for now, and don't want to wait.
@@ -318,7 +323,7 @@ let Command = "disassemble" in {
     Desc<"Address at which to start disassembling.">;
   def disassemble_options_end_address : Option<"end-address", "e">, Group<1>,
     Arg<"AddressOrExpression">, Desc<"Address at which to end disassembling.">;
-  def disassemble_options_count : Option<"count", "c">, Groups<[2,3,4,5]>,
+  def disassemble_options_count : Option<"count", "c">, Groups<[2,3,4,5,7]>,
     Arg<"NumLines">, Desc<"Number of instructions to display.">;
   def disassemble_options_name : Option<"name", "n">, Group<3>,
     Arg<"FunctionName">, Completion<"Symbol">,
@@ -333,6 +338,8 @@ let Command = "disassemble" in {
   def disassemble_options_address : Option<"address", "a">, Group<7>,
     Arg<"AddressOrExpression">,
     Desc<"Disassemble function containing this address.">;
+  def disassemble_options_force : Option<"force", "\\x01">, Groups<[2,3,4,5,7]>,
+    Desc<"Force dissasembly of large functions.">;
 }
 
 let Command = "expression" in {

@@ -1,12 +1,12 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: not ld.lld --gdb-index -e main %t.o -o %t 2>&1 | FileCheck %s
+# RUN: ld.lld --gdb-index -e main %t.o -o /dev/null 2>&1 | FileCheck %s
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/gdb-index-invalid-ranges.obj.s -o %t2.o
 # RUN: llvm-ar rc %t.a %t.o
-# RUN: not ld.lld --gdb-index -e main %t2.o %t.a -o %t 2>&1 | FileCheck --check-prefix=ARCHIVE %s
+# RUN: ld.lld --gdb-index -e main %t2.o %t.a -o /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE %s
 
-# CHECK: ld.lld: error: {{.*}}gdb-index-invalid-ranges.s.tmp.o:(.debug_info): decoding address ranges: invalid range list entry at offset 0x10
-# ARCHIVE: ld.lld: error: {{.*}}gdb-index-invalid-ranges.s.tmp.a(gdb-index-invalid-ranges.s.tmp.o):(.debug_info): decoding address ranges: invalid range list entry at offset 0x10
+# CHECK: ld.lld: warning: {{.*}}gdb-index-invalid-ranges.s.tmp.o:{{(\(\.debug_info\):)?}} decoding address ranges: invalid range list entry at offset 0x10
+# ARCHIVE: ld.lld: warning: {{.*}}gdb-index-invalid-ranges.s.tmp.a(gdb-index-invalid-ranges.s.tmp.o):{{(\(\.debug_info\):)?}} decoding address ranges: invalid range list entry at offset 0x10
 
 .section .text.foo1,"ax",@progbits
 .globl f1

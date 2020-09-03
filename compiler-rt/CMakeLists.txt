@@ -81,12 +81,34 @@ if (COMPILER_RT_STANDALONE_BUILD)
     set_target_properties(intrinsics_gen PROPERTIES FOLDER "Compiler-RT Misc")
   endif()
 
-  # Find Python interpreter.
-  include(FindPythonInterp)
-  if(NOT PYTHONINTERP_FOUND)
-    message(FATAL_ERROR "
-      Unable to find Python interpreter required testing. Please install Python
-      or specify the PYTHON_EXECUTABLE CMake variable.")
+  if(CMAKE_VERSION VERSION_LESS 3.12)
+    # Find Python interpreter.
+    include(FindPythonInterp)
+    if(NOT PYTHONINTERP_FOUND)
+      message(FATAL_ERROR "
+        Unable to find Python interpreter required testing. Please install Python
+        or specify the PYTHON_EXECUTABLE CMake variable.")
+    endif()
+
+    add_executable(Python3::Interpreter IMPORTED)
+    set_target_properties(Python3::Interpreter PROPERTIES
+      IMPORTED_LOCATION ${PYTHON_EXECUTABLE})
+    set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
+  else()
+    find_package(Python3 COMPONENTS Interpreter)
+    if(NOT Python3_Interpreter_FOUND)
+      message(WARNING "Python3 not found, using python2 as a fallback")
+      find_package(Python2 COMPONENTS Interpreter REQUIRED)
+      if(Python2_VERSION VERSION_LESS 2.7)
+        message(SEND_ERROR "Python 2.7 or newer is required")
+      endif()
+
+      # Treat python2 as python3
+      add_executable(Python3::Interpreter IMPORTED)
+      set_target_properties(Python3::Interpreter PROPERTIES
+        IMPORTED_LOCATION ${Python2_EXECUTABLE})
+      set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
+    endif()
   endif()
 
   # Ensure that fat libraries are built correctly on Darwin
@@ -281,12 +303,28 @@ if(NOT COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG)
 endif()
 append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
 
+# By default do not instrument or use profdata for compiler-rt.
+if(NOT COMPILER_RT_ENABLE_PGO)
+  if(LLVM_PROFDATA_FILE AND COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)
+    list(APPEND SANITIZER_COMMON_CFLAGS "-fno-profile-instr-use")
+  endif()
+  if(LLVM_BUILD_INSTRUMENTED MATCHES IR AND COMPILER_RT_HAS_FNO_PROFILE_GENERATE_FLAG)
+    list(APPEND SANITIZER_COMMON_CFLAGS "-fno-profile-generate")
+  elseif(LLVM_BUILD_INSTRUMENTED AND COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
+    list(APPEND SANITIZER_COMMON_CFLAGS "-fno-profile-instr-generate")
+  endif()
+endif()
+
 # The following is a workaround for powerpc64le. This is the only architecture
 # that requires -fno-function-sections to work properly. If lacking, the ASan
 # Linux test function-sections-are-bad.cpp fails with the following error:
 # 'undefined symbol: __sanitizer_unaligned_load32'.
 if(DEFINED TARGET_powerpc64le_CFLAGS)
-  append_list_if(COMPILER_RT_HAS_FNO_FUNCTION_SECTIONS_FLAG -fno-function-sections TARGET_powerpc64le_CFLAGS)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "XL")
+    append("-qnofuncsect" TARGET_powerpc64le_CFLAGS)
+  else()
+    append_list_if(COMPILER_RT_HAS_FNO_FUNCTION_SECTIONS_FLAG -fno-function-sections TARGET_powerpc64le_CFLAGS)
+  endif()
 endif()
 
 # The following is a workaround for s390x.  This avoids creation of "partial
@@ -397,7 +435,6 @@ append_list_if(COMPILER_RT_HAS_NODEFAULTLIBS_FLAG -nodefaultlibs SANITIZER_COMMO
 append_list_if(COMPILER_RT_HAS_Z_TEXT -Wl,-z,text SANITIZER_COMMON_LINK_FLAGS)
 
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)
-  list(APPEND SANITIZER_COMMON_LINK_LIBS ${COMPILER_RT_BUILTINS_LIBRARY})
   string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 else()
   if (ANDROID)
@@ -498,8 +535,6 @@ else()
   set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/../lld)
   if(EXISTS ${COMPILER_RT_LLD_PATH}/ AND LLVM_TOOL_LLD_BUILD)
     set(COMPILER_RT_HAS_LLD TRUE)
-  else()
-    set(COMPILER_RT_HAS_LLD ${COMPILER_RT_HAS_FUSE_LD_LLD_FLAG})
   endif()
 endif()
 pythonize_bool(COMPILER_RT_HAS_LLD)
@@ -514,6 +549,8 @@ if(COMPILER_RT_INCLUDE_TESTS)
     # The user can still choose to have the check targets *use* a different lit
     # by specifying -DLLVM_EXTERNAL_LIT, but we generate it regardless.
     if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
+      # Needed for lit support in standalone builds.
+      include(AddLLVM)
       add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
     elseif(NOT EXISTS ${LLVM_EXTERNAL_LIT})
       message(WARNING "Could not find LLVM source directory and LLVM_EXTERNAL_LIT does not"

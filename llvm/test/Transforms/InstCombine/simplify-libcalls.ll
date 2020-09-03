@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -instcombine | FileCheck %s
+; RUN: opt -S < %s -instcombine -instcombine-infinite-loop-threshold=2 | FileCheck %s
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f80:128:128-v64:64:64-v128:128:128-a0:0:64-f80:32:32-n8:16:32-S32"
 
 @G = constant [3 x i8] c"%s\00"		; <[3 x i8]*> [#uses=1]
@@ -173,6 +173,28 @@ define i32 @fake_toascii(i8 %x) {
 ;
   %y = call i32 @toascii(i8 %x)
   ret i32 %y
+}
+
+declare double @pow(double, double)
+declare double @exp2(double)
+
+; check to make sure only the correct libcall attributes are used
+define double @fake_exp2(double %x) {
+; CHECK-LABEL: @fake_exp2(
+; CHECK-NEXT:    [[Y:%.*]] = call double @exp2(double %x)
+; CHECK-NEXT:    ret double [[Y]]
+
+  %y = call inreg double @pow(double inreg 2.0, double inreg %x)
+  ret double %y
+}
+define double @fake_ldexp(i32 %x) {
+; CHECK-LABEL: @fake_ldexp(
+; CHECK-NEXT:    [[Z:%.*]] = call double @ldexp(double 1.0{{.*}}, i32 %x)
+; CHECK-NEXT:    ret double [[Z]]
+
+  %y = sitofp i32 %x to double
+  %z = call inreg double @exp2(double %y)
+  ret double %z
 }
 
 

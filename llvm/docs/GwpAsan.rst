@@ -55,7 +55,7 @@ Allocator Support
 GWP-ASan is not a replacement for a traditional allocator. Instead, it works by
 inserting stubs into a supporting allocator to redirect allocations to GWP-ASan
 when they're chosen to be sampled. These stubs are generally implemented in the
-implementaion of ``malloc()``, ``free()`` and ``realloc()``. The stubs are
+implementation of ``malloc()``, ``free()`` and ``realloc()``. The stubs are
 extremely small, which makes using GWP-ASan in most allocators fairly trivial.
 The stubs follow the same general pattern (example ``malloc()`` pseudocode
 below):

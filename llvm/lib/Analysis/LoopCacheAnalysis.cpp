@@ -29,6 +29,7 @@
 #include "llvm/ADT/BreadthFirstIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
@@ -64,10 +65,10 @@ static Loop *getInnerMostLoop(const LoopVectorTy &Loops) {
     return LastLoop;
   }
 
-  return (std::is_sorted(Loops.begin(), Loops.end(),
-                         [](const Loop *L1, const Loop *L2) {
-                           return L1->getLoopDepth() < L2->getLoopDepth();
-                         }))
+  return (llvm::is_sorted(Loops,
+                          [](const Loop *L1, const Loop *L2) {
+                            return L1->getLoopDepth() < L2->getLoopDepth();
+                          }))
              ? LastLoop
              : nullptr;
 }
@@ -90,7 +91,11 @@ static bool isOneDimensionalArray(const SCEV &AccessFn, const SCEV &ElemSize,
   if (!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L))
     return false;
 
-  return AR->getStepRecurrence(SE) == &ElemSize;
+  const SCEV *StepRec = AR->getStepRecurrence(SE);
+  if (StepRec && SE.isKnownNegative(StepRec))
+    StepRec = SE.getNegativeSCEV(StepRec);
+
+  return StepRec == &ElemSize;
 }
 
 /// Compute the trip count for the given loop \p L. Return the SCEV expression
@@ -285,10 +290,13 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     const SCEV *Stride = SE.getMulExpr(Coeff, ElemSize);
     const SCEV *CacheLineSize = SE.getConstant(Stride->getType(), CLS);
     Type *WiderType = SE.getWiderType(Stride->getType(), TripCount->getType());
-    Stride = SE.getNoopOrSignExtend(Stride, WiderType);
+    if (SE.isKnownNegative(Stride))
+      Stride = SE.getNegativeSCEV(Stride);
+    Stride = SE.getNoopOrAnyExtend(Stride, WiderType);
     TripCount = SE.getNoopOrAnyExtend(TripCount, WiderType);
     const SCEV *Numerator = SE.getMulExpr(Stride, TripCount);
     RefCost = SE.getUDivExpr(Numerator, CacheLineSize);
+
     LLVM_DEBUG(dbgs().indent(4)
                << "Access is consecutive: RefCost=(TripCount*Stride)/CLS="
                << *RefCost << "\n");
@@ -349,6 +357,19 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
         return false;
       }
 
+      // The array may be accessed in reverse, for example:
+      //   for (i = N; i > 0; i--)
+      //     A[i] = 0;
+      // In this case, reconstruct the access function using the absolute value
+      // of the step recurrence.
+      const SCEVAddRecExpr *AccessFnAR = dyn_cast<SCEVAddRecExpr>(AccessFn);
+      const SCEV *StepRec = AccessFnAR ? AccessFnAR->getStepRecurrence(SE) : nullptr;
+
+      if (StepRec && SE.isKnownNegative(StepRec))
+        AccessFn = SE.getAddRecExpr(AccessFnAR->getStart(),
+                                    SE.getNegativeSCEV(StepRec),
+                                    AccessFnAR->getLoop(),
+                                    AccessFnAR->getNoWrapFlags());
       const SCEV *Div = SE.getUDivExactExpr(AccessFn, ElemSize);
       Subscripts.push_back(Div);
       Sizes.push_back(ElemSize);
@@ -396,6 +417,7 @@ bool IndexedReference::isConsecutive(const Loop &L, unsigned CLS) const {
   const SCEV *Stride = SE.getMulExpr(Coeff, ElemSize);
   const SCEV *CacheLineSize = SE.getConstant(Stride->getType(), CLS);
 
+  Stride = SE.isKnownNegative(Stride) ? SE.getNegativeSCEV(Stride) : Stride;
   return SE.isKnownPredicate(ICmpInst::ICMP_ULT, Stride, CacheLineSize);
 }
 
@@ -537,6 +559,18 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
           dbgs().indent(2) << Representative << "\n";
         });
 
+
+       // FIXME: Both positive and negative access functions will be placed
+       // into the same reference group, resulting in a bi-directional array
+       // access such as:
+       //   for (i = N; i > 0; i--)
+       //     A[i] = A[N - i];
+       // having the same cost calculation as a single dimention access pattern
+       //   for (i = 0; i < N; i++)
+       //     A[i] = A[i];
+       // when in actuality, depending on the array size, the first example
+       // should have a cost closer to 2x the second due to the two cache
+       // access per iteration from opposite ends of the array
         Optional<bool> HasTemporalReuse =
             R->hasTemporalReuse(Representative, *TRT, *InnerMostLoop, DI, AA);
         Optional<bool> HasSpacialReuse =

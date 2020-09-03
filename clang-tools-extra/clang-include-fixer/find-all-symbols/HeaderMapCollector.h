@@ -29,7 +29,7 @@ public:
 
   void addHeaderMapping(llvm::StringRef OrignalHeaderPath,
                         llvm::StringRef MappingHeaderPath) {
-    HeaderMappingTable[OrignalHeaderPath] = MappingHeaderPath;
+    HeaderMappingTable[OrignalHeaderPath] = std::string(MappingHeaderPath);
   };
 
   /// Check if there is a mapping from \p Header or a regex pattern that matches

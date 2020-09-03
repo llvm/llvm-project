@@ -1,4 +1,4 @@
-//===-- ThreadPlanCallFunction.cpp ------------------------------*- C++ -*-===//
+//===-- ThreadPlanCallFunction.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -416,6 +416,7 @@ void ThreadPlanCallFunction::SetBreakpoints() {
       m_objc_language_runtime->SetExceptionBreakpoints();
     }
   }
+#ifdef LLDB_ENABLE_SWIFT
   if (GetExpressionLanguage() == eLanguageTypeSwift) {
     auto *swift_runtime 
         = SwiftLanguageRuntime::Get(m_process.shared_from_this());
@@ -429,12 +430,13 @@ void ThreadPlanCallFunction::SetBreakpoints() {
         const bool is_internal = true;
         const bool is_hardware = false;
         m_error_backstop_bp_sp = m_process.GetTarget().CreateBreakpoint(
-            &stdlib_module_list, NULL, backstop_name.str().c_str(),
-            eFunctionNameTypeFull, eLanguageTypeUnknown, 0, skip_prologue,
-            is_internal, is_hardware);
+              &stdlib_module_list, NULL, backstop_name.str().c_str(),
+              eFunctionNameTypeFull, eLanguageTypeUnknown, 0, skip_prologue,
+              is_internal, is_hardware);
       }
     }
   }
+#endif // LLDB_ENABLE_SWIFT
 }
 
 void ThreadPlanCallFunction::ClearBreakpoints() {
@@ -489,11 +491,11 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
       PersistentExpressionState *persistent_state =
           GetTarget().GetPersistentExpressionStateForLanguage(
               eLanguageTypeSwift);
-      const bool is_error = true;
-      auto prefix = persistent_state->GetPersistentVariablePrefix(is_error);
+      if (!persistent_state)
+        return false;
+#ifdef LLDB_ENABLE_SWIFT
       ConstString persistent_variable_name(
-          persistent_state->GetNextPersistentVariableName(GetTarget(),
-                                                          prefix));
+          persistent_state->GetNextPersistentVariableName(/*is_error*/ true));
       if (m_return_valobj_sp = SwiftLanguageRuntime::CalculateErrorValue(
               frame_sp, persistent_variable_name)) {
 
@@ -513,6 +515,7 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
         m_hit_error_backstop = true;
         return true;
       }
+#endif // LLDB_ENABLE_SWIFT
     }
   }
 

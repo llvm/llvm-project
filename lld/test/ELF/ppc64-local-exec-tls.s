@@ -120,33 +120,33 @@ b:
 // We are building the address of the first TLS variable, relative to the thread pointer.
 // #ha(a@tprel) --> (0 - 0x7000 + 0x8000) >> 16 = 0
 // #lo(a@tprel)) --> (0 - 0x7000) &  0xFFFF =  -0x7000 = -28672
-// Dis: test_local_exec:
+// Dis: <test_local_exec>:
 // Dis: addis 3, 13, 0
 // Dis: addi 3, 3, -28672
 
 // We are building the offset for the second TLS variable
 // Offset within tls storage - 0x7000
 // b@tprel = 8 - 0x7000 = 28664
-// Dis: test_tprel:
+// Dis: <test_tprel>:
 // Dis: addi 3, 13, -28664
 
 // #hi(b@tprel) --> (8 - 0x7000) >> 16 = -1
-// Dis: test_hi:
+// Dis: <test_hi>:
 // Dis: addis 3, 13, -1
 
 // b@tprel = 8 - 0x7000 = -28664
-// Dis: test_ds:
+// Dis: <test_ds>:
 // Dis: ld 3, -28664(13)
 
 // #lo(b@tprel) --> (8 - 0x7000) & 0xFFFF = -28664
-// Dis: test_lo_ds:
+// Dis: <test_lo_ds>:
 // Dis: ld 3, -28664(13)
 
 // #highesta(b@tprel) --> ((0x8 - 0x7000 + 0x8000) >> 48) & 0xFFFF = 0
 // #highera(b@tprel)  --> ((0x8 - 0x7000 + 0x8000) >> 32) & 0xFFFF = 0
 // #ha(k@dtprel)       --> ((0x8 - 0x7000 + 0x8000) >> 16) & 0xFFFF = 0
 // #lo(k@dtprel)       --> ((0x8 - 0x7000) & 0xFFFF = -28664
-// Dis: test_highest_a:
+// Dis: <test_highest_a>:
 // Dis: lis 4, 0
 // Dis: ori 4, 4, 0
 // Dis: lis 5, 0
@@ -156,7 +156,7 @@ b:
 // #higher(b@tprel)  --> ((0x8 - 0x7000) >> 32) & 0xFFFF = 0xFFFF = 65535
 // #hi(k@dtprel)      --> ((0x8 - 0x7000) >> 16) & 0xFFFF = 0xFFFF = 65535
 // #lo(k@dtprel)      --> ((0x8 - 0x7000) & 0xFFFF = 33796
-// Dis: test_highest:
+// Dis: <test_highest>:
 // Dis: lis 4, -1
 // Dis: ori 4, 4, 65535
 // Dis: oris 4, 4, 65535

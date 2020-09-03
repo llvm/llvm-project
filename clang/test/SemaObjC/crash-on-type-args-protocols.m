@@ -14,27 +14,27 @@
 @class A;
 
 #ifdef FIRST
-id<X> F1(id<[P> v) { // expected-error {{expected a type}} // expected-error {{use of undeclared identifier 'P'}} // expected-error {{use of undeclared identifier 'v'}} // expected-note {{to match this '('}}
+id<X> F1(id<[P> v) { // expected-error {{expected a type}} expected-error {{use of undeclared identifier 'P'}} expected-error {{use of undeclared identifier 'v'}} expected-note {{to match this '('}} expected-note {{to match this '<'}}
   return 0;
-}
+} // expected-error {{expected '>'}}
 #endif
 
 #ifdef SECOND
-id<X> F2(id<P[X> v) { // expected-error {{unknown type name 'P'}} // expected-error {{unexpected interface name 'X': expected expression}} // expected-error {{use of undeclared identifier 'v'}} // expected-note {{to match this '('}}
+id<X> F2(id<P[X> v) { // expected-error {{unknown type name 'P'}} expected-error {{unexpected interface name 'X': expected expression}} expected-error {{use of undeclared identifier 'v'}} expected-note {{to match this '('}} expected-note {{to match this '<'}}
   return 0;
-}
+} // expected-error {{expected '>'}}
 #endif
 
 #ifdef THIRD
-id<X> F3(id<P, P *[> v) { // expected-error {{unknown type name 'P'}} // expected-error {{expected expression}} // expected-error {{use of undeclared identifier 'v'}} // expected-note {{to match this '('}}
+id<X> F3(id<P, P *[> v) { // expected-error {{unknown type name 'P'}} expected-error {{expected expression}} expected-error {{use of undeclared identifier 'v'}} expected-note {{to match this '('}} expected-note {{to match this '<'}}
   return 0;
-}
+} // expected-error {{expected '>'}}
 #endif
 
 #ifdef FOURTH
-id<X> F4(id<P, P *(> v { // expected-error {{unknown type name 'P'}} // expected-error {{expected ')'}} // expected-note {{to match this '('}} // expected-note {{to match this '('}}
+id<X> F4(id<P, P *(> v { // expected-error {{unknown type name 'P'}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-note {{to match this '('}} expected-note {{to match this '<'}}
   return 0;
-}
+} // expected-error {{expected '>'}}
 #endif
 
-// expected-error {{expected '>'}} // expected-error {{expected parameter declarator}} // expected-error {{expected ')'}} // expected-error {{expected function body after function declarator}}
+// expected-error {{expected parameter declarator}} // expected-error {{expected ')'}} // expected-error {{expected function body after function declarator}}

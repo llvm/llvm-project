@@ -6,8 +6,8 @@
 ; GCN: define amdgpu_kernel void @caller(float addrspace(1)* nocapture %p) local_unnamed_addr #1 {
 ; GCN: %mul.i = fmul float %load, 1.500000e+01
 
-; UNSAFE: attributes #0 = { norecurse nounwind readnone "less-precise-fpmad"="true" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "unsafe-fp-math"="true" }
-; UNSAFE: attributes #1 = { nofree norecurse nounwind "less-precise-fpmad"="true" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "unsafe-fp-math"="true" }
+; UNSAFE: attributes #0 = { norecurse nounwind readnone "unsafe-fp-math"="true" }
+; UNSAFE: attributes #1 = { nofree norecurse nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="true" }
 
 ; NOINFS: attributes #0 = { norecurse nounwind readnone "no-infs-fp-math"="true" }
 ; NOINFS: attributes #1 = { nofree norecurse nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="false" "unsafe-fp-math"="false" }

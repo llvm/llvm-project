@@ -120,6 +120,31 @@ def lldb_iter(obj, getsize, getelem):
     for i in range(size()):
         yield elem(i)
 
+class Py_buffer_RAII(_object):
+    """Proxy of C++ Py_buffer_RAII class."""
+
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, Py_buffer_RAII, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, Py_buffer_RAII, name)
+    __repr__ = _swig_repr
+    __swig_setmethods__["buffer"] = _lldb.Py_buffer_RAII_buffer_set
+    __swig_getmethods__["buffer"] = _lldb.Py_buffer_RAII_buffer_get
+    if _newclass:
+        buffer = _swig_property(_lldb.Py_buffer_RAII_buffer_get, _lldb.Py_buffer_RAII_buffer_set)
+
+    def __init__(self):
+        """__init__(Py_buffer_RAII self) -> Py_buffer_RAII"""
+        this = _lldb.new_Py_buffer_RAII()
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_destroy__ = _lldb.delete_Py_buffer_RAII
+    __del__ = lambda self: None
+Py_buffer_RAII_swigregister = _lldb.Py_buffer_RAII_swigregister
+Py_buffer_RAII_swigregister(Py_buffer_RAII)
+
 INT32_MAX = _lldb.INT32_MAX
 UINT32_MAX = _lldb.UINT32_MAX
 UINT64_MAX = _lldb.UINT64_MAX
@@ -199,6 +224,7 @@ eLaunchFlagDontSetExitStatus = _lldb.eLaunchFlagDontSetExitStatus
 eLaunchFlagDetachOnError = _lldb.eLaunchFlagDetachOnError
 eLaunchFlagShellExpandArguments = _lldb.eLaunchFlagShellExpandArguments
 eLaunchFlagCloseTTYOnExit = _lldb.eLaunchFlagCloseTTYOnExit
+eLaunchFlagInheritTCCFromParent = _lldb.eLaunchFlagInheritTCCFromParent
 eOnlyThisThread = _lldb.eOnlyThisThread
 eAllThreads = _lldb.eAllThreads
 eOnlyDuringStepping = _lldb.eOnlyDuringStepping
@@ -610,6 +636,9 @@ eSectionTypeDWARFDebugStrDwo = _lldb.eSectionTypeDWARFDebugStrDwo
 eSectionTypeDWARFDebugStrOffsetsDwo = _lldb.eSectionTypeDWARFDebugStrOffsetsDwo
 eSectionTypeDWARFDebugTypesDwo = _lldb.eSectionTypeDWARFDebugTypesDwo
 eSectionTypeDWARFDebugRngListsDwo = _lldb.eSectionTypeDWARFDebugRngListsDwo
+eSectionTypeDWARFDebugLocDwo = _lldb.eSectionTypeDWARFDebugLocDwo
+eSectionTypeDWARFDebugLocListsDwo = _lldb.eSectionTypeDWARFDebugLocListsDwo
+eSectionTypeDWARFDebugTuIndex = _lldb.eSectionTypeDWARFDebugTuIndex
 eEmulateInstructionOptionNone = _lldb.eEmulateInstructionOptionNone
 eEmulateInstructionOptionAutoAdvancePC = _lldb.eEmulateInstructionOptionAutoAdvancePC
 eEmulateInstructionOptionIgnoreConditions = _lldb.eEmulateInstructionOptionIgnoreConditions
@@ -816,6 +845,10 @@ eCommandProcessMustBeLaunched = _lldb.eCommandProcessMustBeLaunched
 eCommandProcessMustBePaused = _lldb.eCommandProcessMustBePaused
 eTypeSummaryCapped = _lldb.eTypeSummaryCapped
 eTypeSummaryUncapped = _lldb.eTypeSummaryUncapped
+eCommandInterpreterResultSuccess = _lldb.eCommandInterpreterResultSuccess
+eCommandInterpreterResultInferiorCrash = _lldb.eCommandInterpreterResultInferiorCrash
+eCommandInterpreterResultCommandError = _lldb.eCommandInterpreterResultCommandError
+eCommandInterpreterResultQuitRequested = _lldb.eCommandInterpreterResultQuitRequested
 class SBAddress(_object):
     """
     A section + offset based address class.
@@ -1427,7 +1460,7 @@ class SBBlock(_object):
     sibling = property(GetSibling, None, doc='''A read only property that returns the same result as GetSibling().''')
     name = property(GetInlinedName, None, doc='''A read only property that returns the same result as GetInlinedName().''')
     inlined_block = property(GetContainingInlinedBlock, None, doc='''A read only property that returns the same result as GetContainingInlinedBlock().''')
-    range = property(get_ranges_access_object, None, doc='''A read only property that allows item access to the address ranges for a block by integer (range = block.range[0]) and by lldb.SBAdddress (find the range that contains the specified lldb.SBAddress like "pc_range = lldb.frame.block.range[frame.addr]").''')
+    range = property(get_ranges_access_object, None, doc='''A read only property that allows item access to the address ranges for a block by integer (range = block.range[0]) and by lldb.SBAddress (find the range that contains the specified lldb.SBAddress like "pc_range = lldb.frame.block.range[frame.addr]").''')
     ranges = property(get_ranges_array, None, doc='''A read only property that returns a list() object that contains all of the address ranges for the block.''')
     num_ranges = property(GetNumRanges, None, doc='''A read only property that returns the same result as GetNumRanges().''')
 
@@ -2511,98 +2544,6 @@ class SBBroadcaster(_object):
 SBBroadcaster_swigregister = _lldb.SBBroadcaster_swigregister
 SBBroadcaster_swigregister(SBBroadcaster)
 
-class SBCommandInterpreterRunOptions(_object):
-    """
-    SBCommandInterpreterRunOptions controls how the RunCommandInterpreter runs the code it is fed.
-    A default SBCommandInterpreterRunOptions object has:
-        StopOnContinue: false
-        StopOnError:    false
-        StopOnCrash:    false
-        EchoCommands:   true
-        PrintResults:   true
-        AddToHistory:   true
-
-
-    """
-
-    __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBCommandInterpreterRunOptions, name, value)
-    __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBCommandInterpreterRunOptions, name)
-    __repr__ = _swig_repr
-
-    def __init__(self):
-        """__init__(lldb::SBCommandInterpreterRunOptions self) -> SBCommandInterpreterRunOptions"""
-        this = _lldb.new_SBCommandInterpreterRunOptions()
-        try:
-            self.this.append(this)
-        except __builtin__.Exception:
-            self.this = this
-    __swig_destroy__ = _lldb.delete_SBCommandInterpreterRunOptions
-    __del__ = lambda self: None
-
-    def GetStopOnContinue(self):
-        """GetStopOnContinue(SBCommandInterpreterRunOptions self) -> bool"""
-        return _lldb.SBCommandInterpreterRunOptions_GetStopOnContinue(self)
-
-
-    def SetStopOnContinue(self, arg2):
-        """SetStopOnContinue(SBCommandInterpreterRunOptions self, bool arg2)"""
-        return _lldb.SBCommandInterpreterRunOptions_SetStopOnContinue(self, arg2)
-
-
-    def GetStopOnError(self):
-        """GetStopOnError(SBCommandInterpreterRunOptions self) -> bool"""
-        return _lldb.SBCommandInterpreterRunOptions_GetStopOnError(self)
-
-
-    def SetStopOnError(self, arg2):
-        """SetStopOnError(SBCommandInterpreterRunOptions self, bool arg2)"""
-        return _lldb.SBCommandInterpreterRunOptions_SetStopOnError(self, arg2)
-
-
-    def GetStopOnCrash(self):
-        """GetStopOnCrash(SBCommandInterpreterRunOptions self) -> bool"""
-        return _lldb.SBCommandInterpreterRunOptions_GetStopOnCrash(self)
-
-
-    def SetStopOnCrash(self, arg2):
-        """SetStopOnCrash(SBCommandInterpreterRunOptions self, bool arg2)"""
-        return _lldb.SBCommandInterpreterRunOptions_SetStopOnCrash(self, arg2)
-
-
-    def GetEchoCommands(self):
-        """GetEchoCommands(SBCommandInterpreterRunOptions self) -> bool"""
-        return _lldb.SBCommandInterpreterRunOptions_GetEchoCommands(self)
-
-
-    def SetEchoCommands(self, arg2):
-        """SetEchoCommands(SBCommandInterpreterRunOptions self, bool arg2)"""
-        return _lldb.SBCommandInterpreterRunOptions_SetEchoCommands(self, arg2)
-
-
-    def GetPrintResults(self):
-        """GetPrintResults(SBCommandInterpreterRunOptions self) -> bool"""
-        return _lldb.SBCommandInterpreterRunOptions_GetPrintResults(self)
-
-
-    def SetPrintResults(self, arg2):
-        """SetPrintResults(SBCommandInterpreterRunOptions self, bool arg2)"""
-        return _lldb.SBCommandInterpreterRunOptions_SetPrintResults(self, arg2)
-
-
-    def GetAddToHistory(self):
-        """GetAddToHistory(SBCommandInterpreterRunOptions self) -> bool"""
-        return _lldb.SBCommandInterpreterRunOptions_GetAddToHistory(self)
-
-
-    def SetAddToHistory(self, arg2):
-        """SetAddToHistory(SBCommandInterpreterRunOptions self, bool arg2)"""
-        return _lldb.SBCommandInterpreterRunOptions_SetAddToHistory(self, arg2)
-
-SBCommandInterpreterRunOptions_swigregister = _lldb.SBCommandInterpreterRunOptions_swigregister
-SBCommandInterpreterRunOptions_swigregister(SBCommandInterpreterRunOptions)
-
 class SBCommandInterpreter(_object):
     """
     SBCommandInterpreter handles/interprets commands for lldb.  You get the
@@ -2842,6 +2783,98 @@ def SBCommandInterpreter_EventIsCommandInterpreterEvent(event):
 def SBCommandInterpreter_GetBroadcasterClass():
     """SBCommandInterpreter_GetBroadcasterClass() -> char const *"""
     return _lldb.SBCommandInterpreter_GetBroadcasterClass()
+
+class SBCommandInterpreterRunOptions(_object):
+    """
+    SBCommandInterpreterRunOptions controls how the RunCommandInterpreter runs the code it is fed.
+    A default SBCommandInterpreterRunOptions object has:
+        StopOnContinue: false
+        StopOnError:    false
+        StopOnCrash:    false
+        EchoCommands:   true
+        PrintResults:   true
+        AddToHistory:   true
+
+
+    """
+
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, SBCommandInterpreterRunOptions, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, SBCommandInterpreterRunOptions, name)
+    __repr__ = _swig_repr
+
+    def __init__(self):
+        """__init__(lldb::SBCommandInterpreterRunOptions self) -> SBCommandInterpreterRunOptions"""
+        this = _lldb.new_SBCommandInterpreterRunOptions()
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_destroy__ = _lldb.delete_SBCommandInterpreterRunOptions
+    __del__ = lambda self: None
+
+    def GetStopOnContinue(self):
+        """GetStopOnContinue(SBCommandInterpreterRunOptions self) -> bool"""
+        return _lldb.SBCommandInterpreterRunOptions_GetStopOnContinue(self)
+
+
+    def SetStopOnContinue(self, arg2):
+        """SetStopOnContinue(SBCommandInterpreterRunOptions self, bool arg2)"""
+        return _lldb.SBCommandInterpreterRunOptions_SetStopOnContinue(self, arg2)
+
+
+    def GetStopOnError(self):
+        """GetStopOnError(SBCommandInterpreterRunOptions self) -> bool"""
+        return _lldb.SBCommandInterpreterRunOptions_GetStopOnError(self)
+
+
+    def SetStopOnError(self, arg2):
+        """SetStopOnError(SBCommandInterpreterRunOptions self, bool arg2)"""
+        return _lldb.SBCommandInterpreterRunOptions_SetStopOnError(self, arg2)
+
+
+    def GetStopOnCrash(self):
+        """GetStopOnCrash(SBCommandInterpreterRunOptions self) -> bool"""
+        return _lldb.SBCommandInterpreterRunOptions_GetStopOnCrash(self)
+
+
+    def SetStopOnCrash(self, arg2):
+        """SetStopOnCrash(SBCommandInterpreterRunOptions self, bool arg2)"""
+        return _lldb.SBCommandInterpreterRunOptions_SetStopOnCrash(self, arg2)
+
+
+    def GetEchoCommands(self):
+        """GetEchoCommands(SBCommandInterpreterRunOptions self) -> bool"""
+        return _lldb.SBCommandInterpreterRunOptions_GetEchoCommands(self)
+
+
+    def SetEchoCommands(self, arg2):
+        """SetEchoCommands(SBCommandInterpreterRunOptions self, bool arg2)"""
+        return _lldb.SBCommandInterpreterRunOptions_SetEchoCommands(self, arg2)
+
+
+    def GetPrintResults(self):
+        """GetPrintResults(SBCommandInterpreterRunOptions self) -> bool"""
+        return _lldb.SBCommandInterpreterRunOptions_GetPrintResults(self)
+
+
+    def SetPrintResults(self, arg2):
+        """SetPrintResults(SBCommandInterpreterRunOptions self, bool arg2)"""
+        return _lldb.SBCommandInterpreterRunOptions_SetPrintResults(self, arg2)
+
+
+    def GetAddToHistory(self):
+        """GetAddToHistory(SBCommandInterpreterRunOptions self) -> bool"""
+        return _lldb.SBCommandInterpreterRunOptions_GetAddToHistory(self)
+
+
+    def SetAddToHistory(self, arg2):
+        """SetAddToHistory(SBCommandInterpreterRunOptions self, bool arg2)"""
+        return _lldb.SBCommandInterpreterRunOptions_SetAddToHistory(self, arg2)
+
+SBCommandInterpreterRunOptions_swigregister = _lldb.SBCommandInterpreterRunOptions_swigregister
+SBCommandInterpreterRunOptions_swigregister(SBCommandInterpreterRunOptions)
 
 class SBCommandReturnObject(_object):
     """
@@ -4752,6 +4785,88 @@ class SBError(_object):
 SBError_swigregister = _lldb.SBError_swigregister
 SBError_swigregister(SBError)
 
+class SBEnvironment(_object):
+    """
+    Represents the environment of a certain process.
+
+    Example:
+      for entry in lldb.debugger.GetSelectedTarget().GetEnvironment().GetEntries():
+        print(entry)
+
+
+    """
+
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, SBEnvironment, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, SBEnvironment, name)
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        """
+        __init__(lldb::SBEnvironment self) -> SBEnvironment
+        __init__(lldb::SBEnvironment self, SBEnvironment rhs) -> SBEnvironment
+        """
+        this = _lldb.new_SBEnvironment(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_destroy__ = _lldb.delete_SBEnvironment
+    __del__ = lambda self: None
+
+    def GetNumValues(self):
+        """GetNumValues(SBEnvironment self) -> size_t"""
+        return _lldb.SBEnvironment_GetNumValues(self)
+
+
+    def Get(self, name):
+        """Get(SBEnvironment self, char const * name) -> char const *"""
+        return _lldb.SBEnvironment_Get(self, name)
+
+
+    def GetNameAtIndex(self, index):
+        """GetNameAtIndex(SBEnvironment self, size_t index) -> char const *"""
+        return _lldb.SBEnvironment_GetNameAtIndex(self, index)
+
+
+    def GetValueAtIndex(self, index):
+        """GetValueAtIndex(SBEnvironment self, size_t index) -> char const *"""
+        return _lldb.SBEnvironment_GetValueAtIndex(self, index)
+
+
+    def GetEntries(self):
+        """GetEntries(SBEnvironment self) -> SBStringList"""
+        return _lldb.SBEnvironment_GetEntries(self)
+
+
+    def PutEntry(self, name_and_value):
+        """PutEntry(SBEnvironment self, char const * name_and_value)"""
+        return _lldb.SBEnvironment_PutEntry(self, name_and_value)
+
+
+    def SetEntries(self, entries, append):
+        """SetEntries(SBEnvironment self, SBStringList entries, bool append)"""
+        return _lldb.SBEnvironment_SetEntries(self, entries, append)
+
+
+    def Set(self, name, value, overwrite):
+        """Set(SBEnvironment self, char const * name, char const * value, bool overwrite) -> bool"""
+        return _lldb.SBEnvironment_Set(self, name, value, overwrite)
+
+
+    def Unset(self, name):
+        """Unset(SBEnvironment self, char const * name) -> bool"""
+        return _lldb.SBEnvironment_Unset(self, name)
+
+
+    def Clear(self):
+        """Clear(SBEnvironment self)"""
+        return _lldb.SBEnvironment_Clear(self)
+
+SBEnvironment_swigregister = _lldb.SBEnvironment_swigregister
+SBEnvironment_swigregister(SBEnvironment)
+
 class SBEvent(_object):
     """
     API clients can register to receive events.
@@ -5073,7 +5188,7 @@ class SBExpressionOptions(_object):
         SetTimeoutInMicroSeconds(SBExpressionOptions self, uint32_t timeout=0)
         SetTimeoutInMicroSeconds(SBExpressionOptions self)
 
-        Sets the timeout in microseconds to run the expression for. If try all threads is set to true and the expression doesn't complete within the specified timeout, all threads will be resumed for the same timeout to see if the expresson will finish.
+        Sets the timeout in microseconds to run the expression for. If try all threads is set to true and the expression doesn't complete within the specified timeout, all threads will be resumed for the same timeout to see if the expression will finish.
         """
         return _lldb.SBExpressionOptions_SetTimeoutInMicroSeconds(self, timeout)
 
@@ -5232,6 +5347,24 @@ class SBExpressionOptions(_object):
         Gets whether to auto-apply fix-it hints to an expression.
         """
         return _lldb.SBExpressionOptions_GetAutoApplyFixIts(self)
+
+
+    def SetRetriesWithFixIts(self, retries):
+        """
+        SetRetriesWithFixIts(SBExpressionOptions self, uint64_t retries)
+
+        Sets how often LLDB should retry applying fix-its to an expression.
+        """
+        return _lldb.SBExpressionOptions_SetRetriesWithFixIts(self, retries)
+
+
+    def GetRetriesWithFixIts(self):
+        """
+        GetRetriesWithFixIts(SBExpressionOptions self) -> uint64_t
+
+        Gets how often LLDB will retry applying fix-its to an expression.
+        """
+        return _lldb.SBExpressionOptions_GetRetriesWithFixIts(self)
 
 
     def GetTopLevel(self):
@@ -5412,7 +5545,7 @@ class SBFile(_object):
         SBFile, call SBFile.Close().
 
         If there is no underlying python file to unwrap, GetFile will
-        use the file descriptor, if availble to create a new python
+        use the file descriptor, if available to create a new python
         file object using `open(fd, mode=..., closefd=False)`
 
         """
@@ -5840,11 +5973,6 @@ class SBFrame(_object):
         .
         """
         return _lldb.SBFrame_GuessLanguage(self)
-
-
-    def IsSwiftThunk(self):
-        """IsSwiftThunk(SBFrame self) -> bool"""
-        return _lldb.SBFrame_IsSwiftThunk(self)
 
 
     def IsInlined(self, *args):
@@ -6805,6 +6933,16 @@ class SBLaunchInfo(_object):
         return _lldb.SBLaunchInfo_SetEnvironmentEntries(self, envp, append)
 
 
+    def SetEnvironment(self, env, append):
+        """SetEnvironment(SBLaunchInfo self, SBEnvironment env, bool append)"""
+        return _lldb.SBLaunchInfo_SetEnvironment(self, env, append)
+
+
+    def GetEnvironment(self):
+        """GetEnvironment(SBLaunchInfo self) -> SBEnvironment"""
+        return _lldb.SBLaunchInfo_GetEnvironment(self)
+
+
     def Clear(self):
         """Clear(SBLaunchInfo self)"""
         return _lldb.SBLaunchInfo_Clear(self)
@@ -7757,6 +7895,21 @@ class SBModule(_object):
         return _lldb.SBModule_GetObjectFileEntryPointAddress(self)
 
 
+    def GetNumberAllocatedModules():
+        """
+        GetNumberAllocatedModules() -> uint32_t
+
+
+        Returns the number of modules in the module cache. This is an
+        implementation detail exposed for testing and should not be relied upon.
+
+        @return
+            The number of modules in the module cache.
+        """
+        return _lldb.SBModule_GetNumberAllocatedModules()
+
+    GetNumberAllocatedModules = staticmethod(GetNumberAllocatedModules)
+
     def __str__(self):
         """__str__(SBModule self) -> std::string"""
         return _lldb.SBModule___str__(self)
@@ -7976,6 +8129,19 @@ class SBModule(_object):
 
 SBModule_swigregister = _lldb.SBModule_swigregister
 SBModule_swigregister(SBModule)
+
+def SBModule_GetNumberAllocatedModules():
+    """
+    SBModule_GetNumberAllocatedModules() -> uint32_t
+
+
+    Returns the number of modules in the module cache. This is an
+    implementation detail exposed for testing and should not be relied upon.
+
+    @return
+        The number of modules in the module cache.
+    """
+    return _lldb.SBModule_GetNumberAllocatedModules()
 
 class SBModuleSpec(_object):
     """Proxy of C++ lldb::SBModuleSpec class."""
@@ -8369,6 +8535,12 @@ class SBPlatform(_object):
     __swig_destroy__ = _lldb.delete_SBPlatform
     __del__ = lambda self: None
 
+    def GetHostPlatform():
+        """GetHostPlatform() -> SBPlatform"""
+        return _lldb.SBPlatform_GetHostPlatform()
+
+    GetHostPlatform = staticmethod(GetHostPlatform)
+
     def IsValid(self):
         """IsValid(SBPlatform self) -> bool"""
         return _lldb.SBPlatform_IsValid(self)
@@ -8502,8 +8674,17 @@ class SBPlatform(_object):
         """GetUnixSignals(SBPlatform self) -> SBUnixSignals"""
         return _lldb.SBPlatform_GetUnixSignals(self)
 
+
+    def GetEnvironment(self):
+        """GetEnvironment(SBPlatform self) -> SBEnvironment"""
+        return _lldb.SBPlatform_GetEnvironment(self)
+
 SBPlatform_swigregister = _lldb.SBPlatform_swigregister
 SBPlatform_swigregister(SBPlatform)
+
+def SBPlatform_GetHostPlatform():
+    """SBPlatform_GetHostPlatform() -> SBPlatform"""
+    return _lldb.SBPlatform_GetHostPlatform()
 
 class SBProcess(_object):
     """
@@ -9482,6 +9663,67 @@ class SBQueueItem(_object):
 
 SBQueueItem_swigregister = _lldb.SBQueueItem_swigregister
 SBQueueItem_swigregister(SBQueueItem)
+
+class SBReproducer(_object):
+    """Proxy of C++ lldb::SBReproducer class."""
+
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, SBReproducer, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, SBReproducer, name)
+    __repr__ = _swig_repr
+
+    def Capture(path):
+        """Capture(char const * path) -> char const *"""
+        return _lldb.SBReproducer_Capture(path)
+
+    Capture = staticmethod(Capture)
+
+    def PassiveReplay(path):
+        """PassiveReplay(char const * path) -> char const *"""
+        return _lldb.SBReproducer_PassiveReplay(path)
+
+    PassiveReplay = staticmethod(PassiveReplay)
+
+    def SetAutoGenerate(b):
+        """SetAutoGenerate(bool b) -> bool"""
+        return _lldb.SBReproducer_SetAutoGenerate(b)
+
+    SetAutoGenerate = staticmethod(SetAutoGenerate)
+
+    def SetWorkingDirectory(path):
+        """SetWorkingDirectory(char const * path)"""
+        return _lldb.SBReproducer_SetWorkingDirectory(path)
+
+    SetWorkingDirectory = staticmethod(SetWorkingDirectory)
+
+    def __init__(self):
+        """__init__(lldb::SBReproducer self) -> SBReproducer"""
+        this = _lldb.new_SBReproducer()
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_destroy__ = _lldb.delete_SBReproducer
+    __del__ = lambda self: None
+SBReproducer_swigregister = _lldb.SBReproducer_swigregister
+SBReproducer_swigregister(SBReproducer)
+
+def SBReproducer_Capture(path):
+    """SBReproducer_Capture(char const * path) -> char const *"""
+    return _lldb.SBReproducer_Capture(path)
+
+def SBReproducer_PassiveReplay(path):
+    """SBReproducer_PassiveReplay(char const * path) -> char const *"""
+    return _lldb.SBReproducer_PassiveReplay(path)
+
+def SBReproducer_SetAutoGenerate(b):
+    """SBReproducer_SetAutoGenerate(bool b) -> bool"""
+    return _lldb.SBReproducer_SetAutoGenerate(b)
+
+def SBReproducer_SetWorkingDirectory(path):
+    """SBReproducer_SetWorkingDirectory(char const * path)"""
+    return _lldb.SBReproducer_SetWorkingDirectory(path)
 
 class SBSection(_object):
     """
@@ -11228,6 +11470,11 @@ class SBTarget(_object):
         return _lldb.SBTarget_BreakpointCreateByAddress(self, address)
 
 
+    def GetEnvironment(self):
+        """GetEnvironment(SBTarget self) -> SBEnvironment"""
+        return _lldb.SBTarget_GetEnvironment(self)
+
+
     def BreakpointCreateBySBAddress(self, sb_address):
         """BreakpointCreateBySBAddress(SBTarget self, SBAddress sb_address) -> SBBreakpoint"""
         return _lldb.SBTarget_BreakpointCreateBySBAddress(self, sb_address)
@@ -11861,13 +12108,13 @@ class SBThread(_object):
         return _lldb.SBThread_GetStopReasonExtendedBacktraces(self, type)
 
 
-    def GetStopDescription(self, dst):
+    def GetStopDescription(self, dst_or_null):
         """
 
         Pass only an (int)length and expect to get a Python string describing the
         stop reason.
         """
-        return _lldb.SBThread_GetStopDescription(self, dst)
+        return _lldb.SBThread_GetStopDescription(self, dst_or_null)
 
 
     def GetStopReturnValue(self):
@@ -15994,8 +16241,15 @@ def is_numeric_type(basic_type):
 
 
 
+_initialize = True
+try:
+   import lldbconfig
+   _initialize = lldbconfig.INITIALIZE
+except ImportError:
+   pass
 debugger_unique_id = 0
-SBDebugger.Initialize()
+if _initialize:
+   SBDebugger.Initialize()
 debugger = None
 target = None
 process = None

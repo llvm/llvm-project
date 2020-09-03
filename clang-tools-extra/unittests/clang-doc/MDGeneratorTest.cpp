@@ -47,14 +47,12 @@ TEST(MDGeneratorTest, emitNamespaceMD) {
 
 ## Namespaces
 
-ChildNamespace
-
+* [ChildNamespace](../ChildNamespace/index.md)
 
 
 ## Records
 
-ChildStruct
-
+* [ChildStruct](../ChildStruct.md)
 
 
 ## Functions
@@ -106,7 +104,7 @@ TEST(MDGeneratorTest, emitRecordMD) {
   assert(!Err);
   std::string Expected = R"raw(# class r
 
-*Defined at line 10 of test.cpp*
+*Defined at test.cpp#10*
 
 Inherits from F, G
 
@@ -171,7 +169,7 @@ TEST(MDGeneratorTest, emitFunctionMD) {
 
 *void f(int P)*
 
-*Defined at line 10 of test.cpp*
+*Defined at test.cpp#10*
 
 )raw";
 
@@ -202,7 +200,7 @@ TEST(MDGeneratorTest, emitEnumMD) {
 | X |
 
 
-*Defined at line 10 of test.cpp*
+*Defined at test.cpp#10*
 
 )raw";
 
@@ -331,7 +329,7 @@ TEST(MDGeneratorTest, emitCommentMD) {
 
 *void f(int I, int J)*
 
-*Defined at line 10 of test.cpp*
+*Defined at test.cpp#10*
 
 
 

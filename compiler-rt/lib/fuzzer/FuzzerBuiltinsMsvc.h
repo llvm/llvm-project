@@ -12,7 +12,7 @@
 #ifndef LLVM_FUZZER_BUILTINS_MSVC_H
 #define LLVM_FUZZER_BUILTINS_MSVC_H
 
-#include "FuzzerDefs.h"
+#include "FuzzerPlatform.h"
 
 #if LIBFUZZER_MSVC
 #include <intrin.h>

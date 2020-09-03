@@ -366,12 +366,13 @@ simply say ${var.z} because that symbol refers to the pointer z. In order to
 dereference it and get the pointed value, you should say ``${*var.z}``. The
 ``${*var`` tells LLDB to get the object that the expression paths leads to, and
 then dereference it. In this example is it equivalent to ``*(bObject.z)`` in
-C/C++ syntax. Because . and -> operators can both be used, there is no need to
-have dereferences in the middle of an expression path (e.g. you do not need to
-type ``${*(var.x).x}``) to read A::x as contained in ``*(B::x)``. To achieve
-that effect you can simply write ``${var.x->x}``, or even ``${var.x.x}``. The
-``*`` operator only binds to the result of the whole expression path, rather
-than piecewise, and there is no way to use parentheses to change that behavior.
+C/C++ syntax. Because ``.`` and ``->`` operators can both be used, there is no
+need to have dereferences in the middle of an expression path (e.g. you do not
+need to type ``${*(var.x).x}``) to read A::x as contained in ``*(B::x)``. To
+achieve that effect you can simply write ``${var.x->x}``, or even
+``${var.x.x}``. The ``*`` operator only binds to the result of the whole
+expression path, rather than piecewise, and there is no way to use parentheses
+to change that behavior.
 
 Of course, a summary string can contain more than one ${var specifier, and can
 use ``${var`` and ``${*var`` specifiers together.
@@ -573,7 +574,7 @@ the pointer value. However, because pointers have no notion of their size, the
 empty brackets [] operator does not work, and you must explicitly provide
 higher and lower bounds.
 
-In general, LLDB needs the square brackets operator [] in order to handle
+In general, LLDB needs the square brackets ``operator []`` in order to handle
 arrays and pointers correctly, and for pointers it also needs a range. However,
 a few special cases are defined to make your life easier:
 
@@ -650,7 +651,7 @@ class, as shown in this example:
 
    (lldb) type summary add -P Rectangle
    Enter your Python command(s). Type 'DONE' to end.
-   def function (valobj,internal_dict):
+   def function (valobj,internal_dict,options):
       height_val = valobj.GetChildMemberWithName('height')
       width_val = valobj.GetChildMemberWithName('width')
       height = height_val.GetValueAsUnsigned(0)
@@ -697,6 +698,12 @@ that (yet) via this method call, and you must use ``GetChildAtIndex()``
 querying it for the array items one by one. Also, handling custom formats is
 something you have to deal with on your own.
 
+``options`` Python summary formatters can optionally define this
+third argument, which is an object of type ``lldb.SBTypeSummaryOptions``,
+allowing for a few customizations of the result. The decision to
+adopt or not this third argument - and the meaning of options 
+thereof - is up to the individual formatter's writer.
+
 Other than interactively typing a Python script there are two other ways for
 you to input a Python script as a summary:
 
@@ -714,14 +721,6 @@ you to input a Python script as a summary:
   or somehow loaded it from a file, using the command script import command.
   LLDB will emit a warning if it is unable to find the function you passed, but
   will still register the binding.
-
-Starting in SVN r222593, Python summary formatters can optionally define a
-third argument: options
-
-This is an object of type ``lldb.SBTypeSummaryOptions`` that can be passed into
-the formatter, allowing for a few customizations of the result. The decision to
-adopt or not this third argument - and the meaning of options thereof - is
-within the individual formatters' writer.
 
 Regular Expression Typenames
 ----------------------------
@@ -981,10 +980,10 @@ expression:
    Error [IRForTarget]: Call to a function '_ZNSt33vector<int, std::allocator<int> >ixEm' that is not present in the target
    error: Couldn't convert the expression to DWARF
 
-The reason for this is that classes might have an overloaded operator [], or
-other special provisions and the expression command chooses to ignore synthetic
-children in the interest of equivalency with code you asked to have compiled
-from source.
+The reason for this is that classes might have an overloaded ``operator []``,
+or other special provisions and the expression command chooses to ignore
+synthetic children in the interest of equivalency with code you asked to have
+compiled from source.
 
 Filters
 -------

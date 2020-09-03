@@ -21,7 +21,7 @@ template <class RetObject>
 struct promise_type {
     RetObject get_return_object();
     suspend_always initial_suspend();
-    suspend_never final_suspend();
+    suspend_never final_suspend() noexcept;
     void return_void();
     static void unhandled_exception();
 };
@@ -36,7 +36,7 @@ struct coro {
 // Verify that the NRVO is applied to the Gro object.
 // CHECK-LABEL: define void @_Z1fi(%struct.coro* noalias sret align 8 %agg.result, i32 %0)
 coro f(int) {
-// CHECK: %call = call i8* @_Znwm(
+// CHECK: %call = call noalias nonnull i8* @_Znwm(
 // CHECK-NEXT: br label %[[CoroInit:.*]]
 
 // CHECK: {{.*}}[[CoroInit]]:
@@ -52,7 +52,7 @@ struct promise_type_with_on_alloc_failure {
     static RetObject get_return_object_on_allocation_failure();
     RetObject get_return_object();
     suspend_always initial_suspend();
-    suspend_never final_suspend();
+    suspend_never final_suspend() noexcept;
     void return_void();
     static void unhandled_exception();
 };
@@ -68,7 +68,7 @@ struct coro_two {
 // CHECK-LABEL: define void @_Z1hi(%struct.coro_two* noalias sret align 8 %agg.result, i32 %0)
  coro_two h(int) {
 
-// CHECK: %call = call i8* @_ZnwmRKSt9nothrow_t
+// CHECK: %call = call noalias i8* @_ZnwmRKSt9nothrow_t
 // CHECK-NEXT: %[[CheckNull:.*]] = icmp ne i8* %call, null
 // CHECK-NEXT: br i1 %[[CheckNull]], label %[[InitOnSuccess:.*]], label %[[InitOnFailure:.*]]
 

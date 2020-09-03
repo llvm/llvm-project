@@ -114,21 +114,19 @@ private:
 
 BinaryOperator *ASTMaker::makeAssignment(const Expr *LHS, const Expr *RHS,
                                          QualType Ty) {
- return new (C) BinaryOperator(const_cast<Expr*>(LHS), const_cast<Expr*>(RHS),
-                               BO_Assign, Ty, VK_RValue,
-                               OK_Ordinary, SourceLocation(), FPOptions());
+  return BinaryOperator::Create(
+      C, const_cast<Expr *>(LHS), const_cast<Expr *>(RHS), BO_Assign, Ty,
+      VK_RValue, OK_Ordinary, SourceLocation(), FPOptionsOverride());
 }
 
 BinaryOperator *ASTMaker::makeComparison(const Expr *LHS, const Expr *RHS,
                                          BinaryOperator::Opcode Op) {
   assert(BinaryOperator::isLogicalOp(Op) ||
          BinaryOperator::isComparisonOp(Op));
-  return new (C) BinaryOperator(const_cast<Expr*>(LHS),
-                                const_cast<Expr*>(RHS),
-                                Op,
-                                C.getLogicalOperationType(),
-                                VK_RValue,
-                                OK_Ordinary, SourceLocation(), FPOptions());
+  return BinaryOperator::Create(
+      C, const_cast<Expr *>(LHS), const_cast<Expr *>(RHS), Op,
+      C.getLogicalOperationType(), VK_RValue, OK_Ordinary, SourceLocation(),
+      FPOptionsOverride());
 }
 
 CompoundStmt *ASTMaker::makeCompound(ArrayRef<Stmt *> Stmts) {
@@ -147,9 +145,9 @@ DeclRefExpr *ASTMaker::makeDeclRefExpr(
 }
 
 UnaryOperator *ASTMaker::makeDereference(const Expr *Arg, QualType Ty) {
-  return new (C) UnaryOperator(const_cast<Expr*>(Arg), UO_Deref, Ty,
+  return UnaryOperator::Create(C, const_cast<Expr *>(Arg), UO_Deref, Ty,
                                VK_LValue, OK_Ordinary, SourceLocation(),
-                              /*CanOverflow*/ false);
+                               /*CanOverflow*/ false, FPOptionsOverride());
 }
 
 ImplicitCastExpr *ASTMaker::makeLvalueToRvalue(const Expr *Arg, QualType Ty) {
@@ -296,7 +294,8 @@ static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
       /*Args=*/CallArgs,
       /*QualType=*/C.VoidTy,
       /*ExprValueType=*/VK_RValue,
-      /*SourceLocation=*/SourceLocation(), FPOptions());
+      /*SourceLocation=*/SourceLocation(),
+      /*FPFeatures=*/FPOptionsOverride());
 }
 
 /// Create a fake body for std::call_once.
@@ -447,15 +446,16 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
   QualType DerefType = Deref->getType();
 
   // Negation predicate.
-  UnaryOperator *FlagCheck = new (C) UnaryOperator(
+  UnaryOperator *FlagCheck = UnaryOperator::Create(
+      C,
       /* input=*/
       M.makeImplicitCast(M.makeLvalueToRvalue(Deref, DerefType), DerefType,
                          CK_IntegralToBoolean),
-      /* opc=*/ UO_LNot,
-      /* QualType=*/ C.IntTy,
-      /* ExprValueKind=*/ VK_RValue,
-      /* ExprObjectKind=*/ OK_Ordinary, SourceLocation(),
-      /* CanOverflow*/ false);
+      /* opc=*/UO_LNot,
+      /* QualType=*/C.IntTy,
+      /* ExprValueKind=*/VK_RValue,
+      /* ExprObjectKind=*/OK_Ordinary, SourceLocation(),
+      /* CanOverflow*/ false, FPOptionsOverride());
 
   // Create assignment.
   BinaryOperator *FlagAssignment = M.makeAssignment(
@@ -518,9 +518,9 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
 
   // (2) Create the assignment to the predicate.
   Expr *DoneValue =
-      new (C) UnaryOperator(M.makeIntegerLiteral(0, C.LongTy), UO_Not, C.LongTy,
-                            VK_RValue, OK_Ordinary, SourceLocation(),
-                            /*CanOverflow*/false);
+      UnaryOperator::Create(C, M.makeIntegerLiteral(0, C.LongTy), UO_Not,
+                            C.LongTy, VK_RValue, OK_Ordinary, SourceLocation(),
+                            /*CanOverflow*/ false, FPOptionsOverride());
 
   BinaryOperator *B =
     M.makeAssignment(
@@ -762,7 +762,7 @@ static Stmt *createObjCPropertyGetter(ASTContext &Ctx,
       return nullptr;
 
     // Ignore weak variables, which have special behavior.
-    if (Prop->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_weak)
+    if (Prop->getPropertyAttributes() & ObjCPropertyAttribute::kind_weak)
       return nullptr;
 
     // Look to see if Sema has synthesized a body for us. This happens in

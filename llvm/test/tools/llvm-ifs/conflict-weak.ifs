@@ -2,12 +2,12 @@
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS
 
 # CHECK-IFS: Symbols:
-# CHECK-IFS-NEXT: a: { Type: Func, Weak: true }
+# CHECK-IFS-NEXT: - { Name: a, Type: Func, Weak: true }
 
---- !experimental-ifs-v1
-IfsVersion: 1.0
+--- !experimental-ifs-v2
+IfsVersion: 2.0
 Triple: x86_64-unknown-linux-gnu
 ObjectFileFormat: ELF
 Symbols:
-  a: { Type: Func, Weak: true }
+  - { Name: a, Type: Func, Weak: true }
 ...

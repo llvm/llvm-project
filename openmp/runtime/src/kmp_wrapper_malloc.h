@@ -15,11 +15,11 @@
 #define KMP_WRAPPER_MALLOC_H
 
 /* This header serves for 3 purposes:
-   1. Declaring standard memory allocation rourines in OS-independent way.
+   1. Declaring standard memory allocation routines in OS-independent way.
    2. Passing source location info through memory allocation wrappers.
    3. Enabling native memory debugging capabilities.
 
-   1. Declaring standard memory allocation rourines in OS-independent way.
+   1. Declaring standard memory allocation routines in OS-independent way.
    -----------------------------------------------------------------------
    On Linux* OS, alloca() function is declared in <alloca.h> header, while on
    Windows* OS there is no <alloca.h> header, function _alloca() (note
@@ -103,9 +103,9 @@
 #error Unknown or unsupported OS.
 #endif
 
-/* KMP_SRC_LOC_DECL -- Declaring source location paramemters, to be used in
+/* KMP_SRC_LOC_DECL -- Declaring source location parameters, to be used in
    function declaration.
-   KMP_SRC_LOC_PARM -- Source location paramemters, to be used to pass
+   KMP_SRC_LOC_PARM -- Source location parameters, to be used to pass
    parameters to underlying levels.
    KMP_SRC_LOC_CURR -- Source location arguments describing current location,
    to be used at top-level.

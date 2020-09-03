@@ -1,4 +1,4 @@
-# MLIR Quantization
+# Quantization
 
 This document outlines the design of the MLIR quantization system. While the
 term "quantization" is highly overloaded, in this case, it refers to a fairly
@@ -18,7 +18,7 @@ taken on the topic, and is not a general reference.
 
 The primary quantization mechanism supported by MLIR is a scheme which can
 express fixed point and affine transformations via uniformly spaced point on the
-Real number line.
+[Real](https://en.wikipedia.org/wiki/Real_number) number line.
 
 Further, the scheme can be applied:
 
@@ -30,11 +30,11 @@ Further, the scheme can be applied:
 
 [Fixed point](https://en.wikipedia.org/wiki/Fixed-point_arithmetic) values are a
 [Real](https://en.wikipedia.org/wiki/Real_number) number divided by a *scale*.
-We will call the result of the divided Real the *scaled value*.
+We will call the result of the divided real the *scaled value*.
 
 $$ real\_value = scaled\_value * scale $$
 
-The scale can be interpreted as the distance, in Real units, between neighboring
+The scale can be interpreted as the distance, in real units, between neighboring
 scaled values. For example, if the scale is $$ \pi $$, then fixed point values
 with this scale can only represent multiples of $$ \pi $$, and nothing in
 between. The maximum rounding error to convert an arbitrary Real to a fixed
@@ -43,10 +43,10 @@ previous example, when $$ scale = \pi $$, the maximum rounding error will be $$
 \frac{\pi}{2} $$.
 
 Multiplication can be performed on scaled values with different scales, using
-the same algorithm as multiplication of Real values (note that product scaled
+the same algorithm as multiplication of real values (note that product scaled
 value has $$ scale_{product} = scale_{left \mbox{ } operand} * scale_{right
-\mbox{ } operand} $$). Addition can be performed on scaled values, as long as
-they have the same scale, using the same algorithm as addition of Real values.
+\mbox{ } operand} $$). Addition can be performed on scaled values, so long as
+they have the same scale, using the same algorithm for addition of real values.
 This makes it convenient to represent scaled values on a computer as signed
 integers, and perform arithmetic on those signed integers, because the results
 will be correct scaled values.
@@ -55,31 +55,31 @@ will be correct scaled values.
 
 Mathematically speaking, affine values are the result of
 [adding a Real-valued *zero point*, to a scaled value](https://en.wikipedia.org/wiki/Affine_transformation#Representation).
-Or equivalently, subtracting a zero point from an affine value results in a
+Alternatively (and equivalently), subtracting a zero point from an affine value results in a
 scaled value:
 
 $$ real\_value = scaled\_value * scale = (affine\_value - zero\_point) * scale $$
 
-Essentially, affine values are a shifting of the scaled values by some constant
+Essentially, affine values are a shift of the scaled values by some constant
 amount. Arithmetic (i.e., addition, subtraction, multiplication, division)
-cannot, in general, be directly performed on affine values; you must first
-[convert](#affine-to-fixed-point) them to the equivalent scaled values.
+cannot, in general, be directly performed on affine values; they must first be
+[converted](#affine-to-fixed-point) to the equivalent scaled values.
 
 As alluded to above, the motivation for using affine values is to more
-efficiently represent the Real values that will actually be encountered during
-computation. Frequently, the Real values that will be encountered are not
-symmetric around the Real zero. We also make the assumption that the Real zero
+efficiently represent real values that will actually be encountered during
+computation. Frequently, real values that will be encountered are not
+symmetric around the real zero. We also make the assumption that the real zero
 is encountered during computation, and should thus be represented.
 
-In this case, it's inefficient to store scaled values represented by signed
-integers, as some of the signed integers will never be used. The bit patterns
+In this case, it is inefficient to store scaled values represented by signed
+integers, as some of the signed integers will never be used. In effect, the bit patterns
 corresponding to those signed integers are going to waste.
 
-In order to exactly represent the Real zero with an integral-valued affine
+In order to exactly represent the real zero with an integral-valued affine
 value, the zero point must be an integer between the minimum and maximum affine
 value (inclusive). For example, given an affine value represented by an 8 bit
 unsigned integer, we have: $$ 0 \leq zero\_point \leq 255$$. This is important,
-because in deep neural networks' convolution-like operations, we frequently
+because in convolution-like operations of deep neural networks, we frequently
 need to zero-pad inputs and outputs, so zero must be exactly representable, or
 the result will be biased.
 
@@ -99,14 +99,14 @@ scope of this document, and it is safe to assume unless otherwise stated that
 rounding should be according to the IEEE754 default of RNE (where hardware
 permits).
 
-### Converting between Real and fixed point or affine
+### Converting between real and fixed point or affine
 
-To convert a Real value to a fixed point value, you must know the scale. To
-convert a Real value to an affine value, you must know the scale and zero point.
+To convert a real value to a fixed point value, we must know the scale. To
+convert a real value to an affine value, we must know the scale and the zero point.
 
 #### Real to affine
 
-To convert an input tensor of Real-valued elements (usually represented by a
+To convert an input tensor of real-valued elements (usually represented by a
 floating point format, frequently
 [Single precision](https://en.wikipedia.org/wiki/Single-precision_floating-point_format))
 to a tensor of affine elements represented by an integral type (e.g. 8-bit
@@ -121,16 +121,16 @@ af&fine\_value_{uint8 \, or \, uint16} \\
 $$
 
 In the above, we assume that $$real\_value$$ is a Single, $$scale$$ is a Single,
-$$roundToNearestInteger$$ returns a signed 32 bit integer, and $$zero\_point$$
-is an unsigned 8 or 16 bit integer. Note that bit depth and number of fixed
+$$roundToNearestInteger$$ returns a signed 32-bit integer, and $$zero\_point$$
+is an unsigned 8-bit or 16-bit integer. Note that bit depth and number of fixed
 point values are indicative of common types on typical hardware but is not
 constrained to particular bit depths or a requirement that the entire range of
 an N-bit integer is used.
 
-#### Affine to Real
+#### Affine to real
 
 To convert an output tensor of affine elements represented by uint8
-or uint16 to a tensor of Real-valued elements (usually represented with a
+or uint16 to a tensor of real-valued elements (usually represented with a
 floating point format, frequently Single precision), the following conversion
 can be performed:
 
@@ -186,52 +186,35 @@ MLIR:
 
     *   The TFLite op-set natively supports uniform-quantized variants.
     *   Passes and tools exist to convert directly from the *TensorFlow* dialect
-        to the TFLite quantized op-set.
+        to the TFLite quantized operation set.
 
-*   [*FxpMath* dialect](#fxpmath-dialect) containing (experimental) generalized
-    representations of fixed-point math ops and conversions:
-
-    *   [Real math ops](#real-math-ops) representing common combinations of
-        arithmetic operations that closely match corresponding fixed-point math
-        concepts (as opposed to being spread across multiple ops as is typical
-        in source dialects).
-    *   [Fixed-point math ops](#fixed-point-math-ops) that for carrying out
-        computations on integers, as are typically needed by uniform
-        quantization schemes.
-    *   Passes to lower from real math ops to fixed-point math ops.
-
-*   [Solver tools](#solver-tools) which can (experimentally and generically
-    operate on computations expressed in the *FxpMath* dialect in order to
-    convert from floating point types to appropriate *QuantizedTypes*, allowing
-    the computation to be further lowered to integral math ops.
-
-Not every application of quantization will use all facilities. Specifically, the
+Not every application of quantization will use all of these facilities. Specifically, the
 TensorFlow to TensorFlow Lite conversion uses the QuantizedTypes but has its own
-ops for type conversion and expression of the backing math.
+operations for type conversion and expression of the supporting math.
 
 ## Quantization Dialect
 
 ### Quantized type
 
-TODO : Flesh this section out.
+TODO: Flesh this section out.
 
 *   QuantizedType base class
 *   UniformQuantizedType
 
-### Quantized type conversion ops
+### Quantized type conversion operations
 
 *   qcast : Convert from an expressed type to QuantizedType
 *   dcast : Convert from a QuantizedType to its expressed type
 *   scast : Convert between a QuantizedType and its storage type
 
-### Instrumentation and constraint ops
+### Instrumentation and constraint operations
 
 *   const_fake_quant : Emulates the logic of the historic TensorFlow
-    fake_quant_with_min_max_args op.
+    fake_quant_with_min_max_args operation.
 *   stats_ref : Declares that statistics should be gathered at this point with a
     unique key and made available to future passes of the solver.
 *   stats : Declares inline statistics (per layer and per axis) for the point in
-    the computation. stats_ref ops are generally converted to stats ops once
+    the computation. stats_ref ops are generally converted to statistical operations once
     trial runs have been performed.
 *   coupled_ref : Declares points in the computation to be coupled from a type
     inference perspective based on a unique key.
@@ -246,25 +229,25 @@ As originally implemented, TensorFlow Lite was the primary user of such
 operations at inference time. When quantized inference was enabled, if every
 eligible tensor passed through an appropriate fake_quant node (the rules of
 which tensors can have fake_quant applied are somewhat involved), then
-TensorFlow Lite would use the attributes of the fake_quant ops to make a
-judgment about how to convert to use kernels from its quantized ops subset.
+TensorFlow Lite would use the attributes of the fake_quant operations to make a
+judgment about how to convert to use kernels from its quantized operations subset.
 
-In MLIR-based quantization, fake_quant_\* ops are handled by converting them to
+In MLIR-based quantization, fake_quant_\* operations are handled by converting them to
 a sequence of *qcast* (quantize) followed by *dcast* (dequantize) with an
 appropriate *UniformQuantizedType* as the target of the qcast operation.
 
 This allows subsequent compiler passes to preserve the knowledge that
-quantization was simulated in a certain way while giving the compiler
+quantization was simulated in a certain way, while giving the compiler
 flexibility to move the casts as it simplifies the computation and converts it
 to a form based on integral arithmetic.
 
 This scheme also naturally allows computations that are *partially quantized*
-where the parts which could not be reduced to integral ops are still carried out
+where the parts which could not be reduced to integral operations are still carried out
 in floating point with appropriate conversions at the boundaries.
 
-## TFLite Native Quantization
+## TFLite native quantization
 
-TODO : Flesh this out
+TODO: Flesh this out
 
 ### General algorithm
 
@@ -279,81 +262,3 @@ TODO : Flesh this out
 1.  Run quantization pass that take (tfl.DQ (for both input and weights) -> op
     -> tfl.Q) and replaces with (op). Also replace (constant_float -> tfl.Q)
     with (constant_quant).
-
-## FxpMath Dialect
-
-### Real math ops
-
-Note that these all support explicit clamps, which allows for simple fusions and
-representation of some common sequences quantization-compatible math. Of
-addition, some support explicit biases, which are often represented as separate
-adds in source dialects.
-
-TODO: This op set is still evolving and needs to be completed.
-
-*   RealBinaryOp
-    *   RealAddEwOp
-    *   RealSubEwOp
-    *   RealMulEwOp
-    *   RealDivEwOp
-*   RealUnaryOp
-    *   IDENTITY
-    *   TANH
-    *   SIGMOID
-    *   EXP
-    *   LOG
-    *   NEG
-    *   RSQRT
-    *   SIN
-    *   SQUARE
-    *   SQRT
-    *   CMPZ
-    *   CMPNZ
-    *   CMPLZ
-    *   CMPGZ
-
-### Fixed-point math ops
-
-TODO: This op set only has enough ops to lower a simple power-of-two
-RealAddEwOp.
-
-*   RoundingDivideByPotFxpOp
-*   SaturatingAddFxpOp
-
-## Solver tools
-
-Solver tools exist to analyze an MLIR-computation, expressed in either a
-supported source dialect or in the *real math ops* set and solve for appropriate
-QuantizedTypes that allow the computation to be lowered to integral math.
-
-These tools are an active area of work and may be expanded in the future to
-adjacent areas such as solving for transformations to other kinds of lower
-precision types (i.e. bfloat16 or fp16).
-
-Solver tools are expected to operate in several modes, depending on the
-computation and the manner in which it was trained:
-
-*   *Transform* : With all available information in the MLIR computation, infer
-    boundaries where the computation can be carried out with integral math and
-    change types accordingly to appropriate QuantizedTypes:
-
-    *   For passthrough ops which do not perform active math, change them to
-        operate directly on the storage type, converting in and out at the edges
-        via scast ops.
-    *   For ops that have the *Quantizable* trait, the type can be set directly.
-        This includes ops from the [real math ops set]{#real-math-ops}.
-    *   For others, encase them in appropriate dcast/qcast ops, presuming that
-        some follow-on pass will know what to do with them.
-
-*   *Instrument* : Most of the time, there are not sufficient implied
-    constraints within a computation to perform many transformations. For this
-    reason, the solver can insert instrumentation ops at points where additional
-    runtime statistics may yield solutions. It is expected that such
-    computations will be lowered as-is for execution, run over an appropriate
-    eval set, and statistics at each instrumentation point made available for a
-    future invocation of the solver.
-
-*   *Simplify* : A variety of passes and simplifications are applied once
-    QuantizedTypes are added in order to arrive at a computation that is
-    expressed in as much integral math, with the fewest number of casts as
-    possible.

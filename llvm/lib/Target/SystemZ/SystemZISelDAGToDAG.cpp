@@ -1456,7 +1456,8 @@ bool SystemZDAGToDAGISel::storeLoadCanUseBlockBinary(SDNode *N,
   auto *StoreA = cast<StoreSDNode>(N);
   auto *LoadA = cast<LoadSDNode>(StoreA->getValue().getOperand(1 - I));
   auto *LoadB = cast<LoadSDNode>(StoreA->getValue().getOperand(I));
-  return !LoadA->isVolatile() && canUseBlockOperation(StoreA, LoadB);
+  return !LoadA->isVolatile() && LoadA->getMemoryVT() == LoadB->getMemoryVT() &&
+         canUseBlockOperation(StoreA, LoadB);
 }
 
 void SystemZDAGToDAGISel::Select(SDNode *Node) {
@@ -1497,8 +1498,9 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
             if (ChildOpcode == ISD::AND || ChildOpcode == ISD::OR ||
                 ChildOpcode == ISD::XOR)
               break;
-          // Check whether this expression matches OR-with-complement.
-          if (Opcode == ISD::OR && ChildOpcode == ISD::XOR) {
+          // Check whether this expression matches OR-with-complement
+          // (or matches an alternate pattern for NXOR).
+          if (ChildOpcode == ISD::XOR) {
             auto Op0 = Node->getOperand(0);
             if (auto *Op0Op1 = dyn_cast<ConstantSDNode>(Op0->getOperand(1)))
               if (Op0Op1->getZExtValue() == (uint64_t)-1)

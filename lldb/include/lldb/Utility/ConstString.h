@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ConstString_h_
-#define liblldb_ConstString_h_
+#ifndef LLDB_UTILITY_CONSTSTRING_H
+#define LLDB_UTILITY_CONSTSTRING_H
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringRef.h"
@@ -490,8 +490,13 @@ template <> struct ScalarTraits<lldb_private::ConstString> {
   static QuotingType mustQuote(StringRef S) { return QuotingType::Double; }
 };
 } // namespace yaml
+
+inline raw_ostream &operator<<(raw_ostream &os, lldb_private::ConstString s) {
+  os << s.GetStringRef();
+  return os;
+}
 } // namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(lldb_private::ConstString)
 
-#endif // liblldb_ConstString_h_
+#endif // LLDB_UTILITY_CONSTSTRING_H

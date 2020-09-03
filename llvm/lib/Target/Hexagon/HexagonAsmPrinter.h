@@ -46,7 +46,7 @@ class TargetMachine;
     bool isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB)
           const override;
 
-    void EmitInstruction(const MachineInstr *MI) override;
+    void emitInstruction(const MachineInstr *MI) override;
     void HexagonProcessInstruction(MCInst &Inst, const MachineInstr &MBB);
 
     void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);

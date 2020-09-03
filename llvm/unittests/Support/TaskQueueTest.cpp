@@ -22,7 +22,7 @@ protected:
 };
 
 TEST_F(TaskQueueTest, OrderedFutures) {
-  ThreadPool TP(1);
+  ThreadPool TP(hardware_concurrency(1));
   TaskQueue TQ(TP);
   std::atomic<int> X{ 0 };
   std::atomic<int> Y{ 0 };
@@ -66,7 +66,7 @@ TEST_F(TaskQueueTest, OrderedFutures) {
 }
 
 TEST_F(TaskQueueTest, UnOrderedFutures) {
-  ThreadPool TP(1);
+  ThreadPool TP(hardware_concurrency(1));
   TaskQueue TQ(TP);
   std::atomic<int> X{ 0 };
   std::atomic<int> Y{ 0 };
@@ -96,7 +96,7 @@ TEST_F(TaskQueueTest, UnOrderedFutures) {
 }
 
 TEST_F(TaskQueueTest, FutureWithReturnValue) {
-  ThreadPool TP(1);
+  ThreadPool TP(hardware_concurrency(1));
   TaskQueue TQ(TP);
   std::future<std::string> F1 = TQ.async([&] { return std::string("Hello"); });
   std::future<int> F2 = TQ.async([&] { return 42; });

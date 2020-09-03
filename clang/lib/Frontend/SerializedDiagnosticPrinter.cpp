@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 
@@ -237,6 +238,9 @@ private:
   /// Whether this instance should aggregate diagnostics that are
   /// generated from child processes.
   bool MergeChildRecords;
+
+  /// Whether we've started finishing and tearing down this instance.
+  bool IsFinishing = false;
 
   /// State that is shared among the various clones of this diagnostic
   /// consumer.
@@ -567,6 +571,17 @@ unsigned SDiagsWriter::getEmitDiagnosticFlag(StringRef FlagName) {
 
 void SDiagsWriter::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                                     const Diagnostic &Info) {
+  assert(!IsFinishing &&
+         "Received a diagnostic after we've already started teardown.");
+  if (IsFinishing) {
+    SmallString<256> diagnostic;
+    Info.FormatDiagnostic(diagnostic);
+    getMetaDiags()->Report(
+        diag::warn_fe_serialized_diag_failure_during_finalisation)
+        << diagnostic;
+    return;
+  }
+
   // Enter the block for a non-note diagnostic immediately, rather than waiting
   // for beginDiagnostic, in case associated notes are emitted before we get
   // there.
@@ -760,6 +775,9 @@ void SDiagsWriter::RemoveOldDiagnostics() {
 }
 
 void SDiagsWriter::finish() {
+  assert(!IsFinishing);
+  IsFinishing = true;
+
   // The original instance is responsible for writing the file.
   if (!OriginalInstance)
     return;
@@ -785,12 +803,20 @@ void SDiagsWriter::finish() {
   if (EC) {
     getMetaDiags()->Report(diag::warn_fe_serialized_diag_failure)
         << State->OutputFile << EC.message();
+    OS->clear_error();
     return;
   }
 
   // Write the generated bitstream to "Out".
   OS->write((char *)&State->Buffer.front(), State->Buffer.size());
   OS->flush();
+
+  assert(!OS->has_error());
+  if (OS->has_error()) {
+    getMetaDiags()->Report(diag::warn_fe_serialized_diag_failure)
+        << State->OutputFile << OS->error().message();
+    OS->clear_error();
+  }
 }
 
 std::error_code SDiagsMerger::visitStartOfDiagnostic() {

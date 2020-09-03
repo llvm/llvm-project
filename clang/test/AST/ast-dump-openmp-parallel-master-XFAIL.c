@@ -21,7 +21,7 @@ void test_one() {
 // CHECK-NEXT: |   `-OMPParallelDirective {{.*}} <line:4:9, col:28>
 // CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:5:3>
 // CHECK-NEXT: |       `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |         |-NullStmt {{.*}} <col:3> openmp_structured_block
+// CHECK-NEXT: |         |-NullStmt {{.*}} <col:3>
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <line:4:9> col:9 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |         |-ImplicitParamDecl {{.*}} <col:9> col:9 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |         `-ImplicitParamDecl {{.*}} <col:9> col:9 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-parallel-master-XFAIL.c:4:9) *const restrict'
@@ -30,7 +30,7 @@ void test_one() {
 // CHECK-NEXT:     `-OMPParallelDirective {{.*}} <line:10:9, col:28>
 // CHECK-NEXT:       `-CapturedStmt {{.*}} <line:11:3, col:7>
 // CHECK-NEXT:         `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:           |-CompoundStmt {{.*}} <col:3, col:7> openmp_structured_block
+// CHECK-NEXT:           |-CompoundStmt {{.*}} <col:3, col:7>
 // CHECK-NEXT:           | `-NullStmt {{.*}} <col:5>
 // CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <line:10:9> col:9 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:9> col:9 implicit .bound_tid. 'const int *const restrict'

@@ -21,6 +21,7 @@
 #include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "clang/Tooling/Transformer/MatchConsumer.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
+#include "llvm/ADT/Any.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
@@ -30,6 +31,20 @@
 
 namespace clang {
 namespace transformer {
+/// A concrete description of a source edit, represented by a character range in
+/// the source to be replaced and a corresponding replacement string.
+struct Edit {
+  CharSourceRange Range;
+  std::string Replacement;
+  llvm::Any Metadata;
+};
+
+/// Maps a match result to a list of concrete edits (with possible
+/// failure). This type is a building block of rewrite rules, but users will
+/// generally work in terms of `ASTEdit`s (below) rather than directly in terms
+/// of `EditGenerator`.
+using EditGenerator = MatchConsumer<llvm::SmallVector<Edit, 1>>;
+
 using TextGenerator = std::shared_ptr<MatchComputation<std::string>>;
 
 // Description of a source-code edit, expressed in terms of an AST node.
@@ -72,7 +87,21 @@ struct ASTEdit {
   RangeSelector TargetRange;
   TextGenerator Replacement;
   TextGenerator Note;
+  llvm::Any Metadata;
 };
+
+/// Lifts a list of `ASTEdit`s into an `EditGenerator`.
+///
+/// The `EditGenerator` will return an empty vector if any of the edits apply to
+/// portions of the source that are ineligible for rewriting (certain
+/// interactions with macros, for example) and it will fail if any invariants
+/// are violated relating to bound nodes in the match.  However, it does not
+/// fail in the case of conflicting edits -- conflict handling is left to
+/// clients.  We recommend use of the \c AtomicChange or \c Replacements classes
+/// for assistance in detecting such conflicts.
+EditGenerator editList(llvm::SmallVector<ASTEdit, 1> Edits);
+// Convenience form of `editList` for a single edit.
+EditGenerator edit(ASTEdit);
 
 /// Format of the path in an include directive -- angle brackets or quotes.
 enum class IncludeFormat {
@@ -106,7 +135,7 @@ enum class IncludeFormat {
 struct RewriteRule {
   struct Case {
     ast_matchers::internal::DynTypedMatcher Matcher;
-    SmallVector<ASTEdit, 1> Edits;
+    EditGenerator Edits;
     TextGenerator Explanation;
     // Include paths to add to the file affected by this case.  These are
     // bundled with the `Case`, rather than the `RewriteRule`, because each case
@@ -123,16 +152,22 @@ struct RewriteRule {
 
 /// Convenience function for constructing a simple \c RewriteRule.
 RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
-                     SmallVector<ASTEdit, 1> Edits,
-                     TextGenerator Explanation = nullptr);
+                     EditGenerator Edits, TextGenerator Explanation = nullptr);
+
+/// Convenience function for constructing a \c RewriteRule from multiple
+/// `ASTEdit`s.
+inline RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
+                            llvm::SmallVector<ASTEdit, 1> Edits,
+                            TextGenerator Explanation = nullptr) {
+  return makeRule(std::move(M), editList(std::move(Edits)),
+                  std::move(Explanation));
+}
 
 /// Convenience overload of \c makeRule for common case of only one edit.
 inline RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
                             ASTEdit Edit,
                             TextGenerator Explanation = nullptr) {
-  SmallVector<ASTEdit, 1> Edits;
-  Edits.emplace_back(std::move(Edit));
-  return makeRule(std::move(M), std::move(Edits), std::move(Explanation));
+  return makeRule(std::move(M), edit(std::move(Edit)), std::move(Explanation));
 }
 
 /// For every case in Rule, adds an include directive for the given header. The
@@ -203,7 +238,8 @@ inline ASTEdit change(RangeSelector Target, TextGenerator Replacement) {
 ///            changeTo(cat("bar()")))
 /// \endcode
 inline ASTEdit changeTo(TextGenerator Replacement) {
-  return changeTo(node(RewriteRule::RootID), std::move(Replacement));
+  return changeTo(node(std::string(RewriteRule::RootID)),
+                  std::move(Replacement));
 }
 /// DEPRECATED: use \c changeTo.
 inline ASTEdit change(TextGenerator Replacement) {
@@ -225,6 +261,11 @@ inline ASTEdit insertAfter(RangeSelector S, TextGenerator Replacement) {
 /// Removes the source selected by \p S.
 ASTEdit remove(RangeSelector S);
 
+inline ASTEdit withMetadata(ASTEdit edit, llvm::Any Metadata) {
+  edit.Metadata = std::move(Metadata);
+  return edit;
+}
+
 /// The following three functions are a low-level part of the RewriteRule
 /// API. We expose them for use in implementing the fixtures that interpret
 /// RewriteRule, like Transformer and TransfomerTidy, or for more advanced
@@ -240,11 +281,13 @@ namespace detail {
 /// supports mixing matchers of different kinds.
 ast_matchers::internal::DynTypedMatcher buildMatcher(const RewriteRule &Rule);
 
-/// Builds a set of matchers that cover the rule (one for each distinct node
-/// matcher base kind: Stmt, Decl, etc.). Node-matchers for `QualType` and
-/// `Type` are not permitted, since such nodes carry no source location
-/// information and are therefore not relevant for rewriting. If any such
-/// matchers are included, will return an empty vector.
+/// Builds a set of matchers that cover the rule.
+///
+/// One matcher is built for each distinct node matcher base kind: Stmt, Decl,
+/// etc. Node-matchers for `QualType` and `Type` are not permitted, since such
+/// nodes carry no source location information and are therefore not relevant
+/// for rewriting. If any such matchers are included, will return an empty
+/// vector.
 std::vector<ast_matchers::internal::DynTypedMatcher>
 buildMatchers(const RewriteRule &Rule);
 
@@ -259,28 +302,6 @@ getRuleMatchLoc(const ast_matchers::MatchFinder::MatchResult &Result);
 const RewriteRule::Case &
 findSelectedCase(const ast_matchers::MatchFinder::MatchResult &Result,
                  const RewriteRule &Rule);
-
-/// A source "transformation," represented by a character range in the source to
-/// be replaced and a corresponding replacement string.
-struct Transformation {
-  CharSourceRange Range;
-  std::string Replacement;
-};
-
-/// Attempts to translate `Edits`, which are in terms of AST nodes bound in the
-/// match `Result`, into Transformations, which are in terms of the source code
-/// text.
-///
-/// Returns an empty vector if any of the edits apply to portions of the source
-/// that are ineligible for rewriting (certain interactions with macros, for
-/// example).  Fails if any invariants are violated relating to bound nodes in
-/// the match.  However, it does not fail in the case of conflicting edits --
-/// conflict handling is left to clients.  We recommend use of the \c
-/// AtomicChange or \c Replacements classes for assistance in detecting such
-/// conflicts.
-Expected<SmallVector<Transformation, 1>>
-translateEdits(const ast_matchers::MatchFinder::MatchResult &Result,
-               llvm::ArrayRef<ASTEdit> Edits);
 } // namespace detail
 } // namespace transformer
 

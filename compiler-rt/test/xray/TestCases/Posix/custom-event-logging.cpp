@@ -1,9 +1,9 @@
 // Use the clang feature for custom xray event logging.
 //
 // RUN: %clangxx_xray -std=c++11 %s -o %t
-// RUN: XRAY_OPTIONS="patch_premain=false verbosity=1 xray_naive_log=false xray_logfile_base=custom-event-logging.xray-" %run %t 2>&1 | FileCheck %s
+// RUN: XRAY_OPTIONS="patch_premain=false verbosity=1 xray_logfile_base=custom-event-logging.xray-" %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_xray -std=c++11 -fpic -fpie %s -o %t
-// RUN: XRAY_OPTIONS="patch_premain=false verbosity=1 xray_naive_log=false xray_logfile_base=custom-event-logging.xray-" %run %t 2>&1 | FileCheck %s
+// RUN: XRAY_OPTIONS="patch_premain=false verbosity=1 xray_logfile_base=custom-event-logging.xray-" %run %t 2>&1 | FileCheck %s
 // FIXME: Support this in non-x86_64 as well
 // REQUIRES: x86_64-linux
 // REQUIRES: built-in-llvm-tree

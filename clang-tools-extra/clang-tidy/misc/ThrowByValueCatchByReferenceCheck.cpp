@@ -23,13 +23,11 @@ ThrowByValueCatchByReferenceCheck::ThrowByValueCatchByReferenceCheck(
       CheckAnonymousTemporaries(Options.get("CheckThrowTemporaries", true)),
       WarnOnLargeObject(Options.get("WarnOnLargeObject", false)),
       // Cannot access `ASTContext` from here so set it to an extremal value.
-      MaxSize(Options.get("MaxSize", std::numeric_limits<uint64_t>::max())) {}
+      MaxSizeOptions(
+          Options.get("MaxSize", std::numeric_limits<uint64_t>::max())),
+      MaxSize(MaxSizeOptions) {}
 
 void ThrowByValueCatchByReferenceCheck::registerMatchers(MatchFinder *Finder) {
-  // This is a C++ only check thus we register the matchers only for C++
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(cxxThrowExpr().bind("throw"), this);
   Finder->addMatcher(cxxCatchStmt().bind("catch"), this);
 }
@@ -37,6 +35,8 @@ void ThrowByValueCatchByReferenceCheck::registerMatchers(MatchFinder *Finder) {
 void ThrowByValueCatchByReferenceCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckThrowTemporaries", true);
+  Options.store(Opts, "WarnOnLargeObjects", WarnOnLargeObject);
+  Options.store(Opts, "MaxSize", MaxSizeOptions);
 }
 
 void ThrowByValueCatchByReferenceCheck::check(

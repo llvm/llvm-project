@@ -16,7 +16,7 @@
 
 // Precondition: a != 0
 
-COMPILER_RT_ABI si_int __clzsi2(si_int a) {
+COMPILER_RT_ABI int __clzsi2(si_int a) {
   su_int x = (su_int)a;
   si_int t = ((x & 0xFFFF0000) == 0) << 4; // if (x is small) t = 16 else 0
   x >>= 16 - t;                            // x = [0 - 0xFFFF]

@@ -17,7 +17,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -27,6 +26,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
 
@@ -54,6 +54,7 @@ namespace {
     LoopInfo         *LI;
     ScalarEvolution  *SE;
     DominatorTree    *DT;
+    const TargetTransformInfo *TTI;
     SCEVExpander     &Rewriter;
     SmallVectorImpl<WeakTrackingVH> &DeadInsts;
 
@@ -61,10 +62,11 @@ namespace {
 
   public:
     SimplifyIndvar(Loop *Loop, ScalarEvolution *SE, DominatorTree *DT,
-                   LoopInfo *LI, SCEVExpander &Rewriter,
+                   LoopInfo *LI, const TargetTransformInfo *TTI,
+                   SCEVExpander &Rewriter,
                    SmallVectorImpl<WeakTrackingVH> &Dead)
-        : L(Loop), LI(LI), SE(SE), DT(DT), Rewriter(Rewriter), DeadInsts(Dead),
-          Changed(false) {
+        : L(Loop), LI(LI), SE(SE), DT(DT), TTI(TTI), Rewriter(Rewriter),
+          DeadInsts(Dead), Changed(false) {
       assert(LI && "IV simplification requires LoopInfo");
     }
 
@@ -655,7 +657,7 @@ static Instruction *GetLoopInvariantInsertPosition(Loop *L, Instruction *Hint) {
   return Hint;
 }
 
-/// Replace the UseInst with a constant if possible.
+/// Replace the UseInst with a loop invariant expression if it is safe.
 bool SimplifyIndvar::replaceIVUserWithLoopInvariant(Instruction *I) {
   if (!SE->isSCEVable(I->getType()))
     return false;
@@ -667,10 +669,17 @@ bool SimplifyIndvar::replaceIVUserWithLoopInvariant(Instruction *I) {
     return false;
 
   // Do not generate something ridiculous even if S is loop invariant.
-  if (Rewriter.isHighCostExpansion(S, L, I))
+  if (Rewriter.isHighCostExpansion(S, L, SCEVCheapExpansionBudget, TTI, I))
     return false;
 
   auto *IP = GetLoopInvariantInsertPosition(L, I);
+
+  if (!isSafeToExpandAt(S, IP, *SE)) {
+    LLVM_DEBUG(dbgs() << "INDVARS: Can not replace IV user: " << *I
+                      << " with non-speculable loop invariant: " << *S << '\n');
+    return false;
+  }
+
   auto *Invariant = Rewriter.expandCodeFor(S, I->getType(), IP);
 
   I->replaceAllUsesWith(Invariant);
@@ -931,10 +940,11 @@ void IVVisitor::anchor() { }
 /// Simplify instructions that use this induction variable
 /// by using ScalarEvolution to analyze the IV's recurrence.
 bool simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
-                       LoopInfo *LI, SmallVectorImpl<WeakTrackingVH> &Dead,
+                       LoopInfo *LI, const TargetTransformInfo *TTI,
+                       SmallVectorImpl<WeakTrackingVH> &Dead,
                        SCEVExpander &Rewriter, IVVisitor *V) {
-  SimplifyIndvar SIV(LI->getLoopFor(CurrIV->getParent()), SE, DT, LI, Rewriter,
-                     Dead);
+  SimplifyIndvar SIV(LI->getLoopFor(CurrIV->getParent()), SE, DT, LI, TTI,
+                     Rewriter, Dead);
   SIV.simplifyUsers(CurrIV, V);
   return SIV.hasChanged();
 }
@@ -942,14 +952,16 @@ bool simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
 /// Simplify users of induction variables within this
 /// loop. This does not actually change or add IVs.
 bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
-                     LoopInfo *LI, SmallVectorImpl<WeakTrackingVH> &Dead) {
+                     LoopInfo *LI, const TargetTransformInfo *TTI,
+                     SmallVectorImpl<WeakTrackingVH> &Dead) {
   SCEVExpander Rewriter(*SE, SE->getDataLayout(), "indvars");
 #ifndef NDEBUG
   Rewriter.setDebugType(DEBUG_TYPE);
 #endif
   bool Changed = false;
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
-    Changed |= simplifyUsersOfIV(cast<PHINode>(I), SE, DT, LI, Dead, Rewriter);
+    Changed |=
+        simplifyUsersOfIV(cast<PHINode>(I), SE, DT, LI, TTI, Dead, Rewriter);
   }
   return Changed;
 }

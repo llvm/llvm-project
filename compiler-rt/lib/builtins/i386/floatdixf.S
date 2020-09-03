@@ -4,7 +4,7 @@
 
 #include "../assembly.h"
 
-// float __floatdixf(di_int a);
+// long double __floatdixf(di_int a);
 
 #ifdef __i386__
 

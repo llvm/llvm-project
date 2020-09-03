@@ -32,7 +32,7 @@ void getDebugLocation(const Region *R, unsigned &LineBegin, unsigned &LineEnd,
       auto *Scope = cast<DIScope>(DL.getScope());
 
       if (FileName.empty())
-        FileName = Scope->getFilename();
+        FileName = Scope->getFilename().str();
 
       unsigned NewLine = DL.getLine();
 

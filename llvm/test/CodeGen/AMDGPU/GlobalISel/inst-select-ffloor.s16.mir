@@ -38,8 +38,8 @@ body: |
     ; VI-LABEL: name: ffloor_s16_vv
     ; VI: liveins: $vgpr0
     ; VI: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; VI: [[V_FLOOR_F16_e64_:%[0-9]+]]:vgpr_32 = V_FLOOR_F16_e64 0, [[COPY]], 0, 0, implicit $exec
-    ; VI: $vgpr0 = COPY [[V_FLOOR_F16_e64_]]
+    ; VI: %2:vgpr_32 = nofpexcept V_FLOOR_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; VI: $vgpr0 = COPY %2
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_FFLOOR %1
@@ -60,8 +60,8 @@ body: |
     ; VI-LABEL: name: ffloor_s16_vs
     ; VI: liveins: $sgpr0
     ; VI: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; VI: [[V_FLOOR_F16_e64_:%[0-9]+]]:vgpr_32 = V_FLOOR_F16_e64 0, [[COPY]], 0, 0, implicit $exec
-    ; VI: $vgpr0 = COPY [[V_FLOOR_F16_e64_]]
+    ; VI: %2:vgpr_32 = nofpexcept V_FLOOR_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; VI: $vgpr0 = COPY %2
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_FFLOOR %1
@@ -90,8 +90,8 @@ body: |
     ; VI-LABEL: name: ffloor_fneg_s16_vv
     ; VI: liveins: $vgpr0
     ; VI: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; VI: [[V_FLOOR_F16_e64_:%[0-9]+]]:vgpr_32 = V_FLOOR_F16_e64 1, [[COPY]], 0, 0, implicit $exec
-    ; VI: $vgpr0 = COPY [[V_FLOOR_F16_e64_]]
+    ; VI: %3:vgpr_32 = nofpexcept V_FLOOR_F16_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; VI: $vgpr0 = COPY %3
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_FNEG %1

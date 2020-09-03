@@ -1,4 +1,4 @@
-; RUN: opt -tbaa -disable-basicaa -gvn -instcombine -S < %s | FileCheck %s --check-prefix=TBAA
+; RUN: opt -tbaa -disable-basic-aa -gvn -instcombine -S < %s | FileCheck %s --check-prefix=TBAA
 ; RUN: opt -tbaa -gvn -instcombine -S < %s | FileCheck %s --check-prefix=BASICAA
 
 ; According to the TBAA metadata the load and store don't alias. However,

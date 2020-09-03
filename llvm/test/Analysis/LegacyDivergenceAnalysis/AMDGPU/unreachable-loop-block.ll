@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -analyze -divergence | FileCheck %s
+; RUN: opt %s -mtriple amdgcn-- -amdgpu-use-legacy-divergence-analysis -analyze -divergence | FileCheck %s
 
 ; CHECK: DIVERGENT:  %tmp = cmpxchg volatile
 define amdgpu_kernel void @unreachable_loop(i32 %tidx) #0 {

@@ -69,8 +69,8 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
   // CHECK: store i32 %val, i32* %[[ValAddr:.+]]
 
   // CHECK: call i8* @llvm.coro.begin(
-  // CHECK: call void @_ZN8MoveOnlyC1EOS_(%struct.MoveOnly* %[[MoCopy]], %struct.MoveOnly* dereferenceable(4) %[[MoParam]])
-  // CHECK-NEXT: call void @_ZN11MoveAndCopyC1EOS_(%struct.MoveAndCopy* %[[McCopy]], %struct.MoveAndCopy* dereferenceable(4) %[[McParam]]) #
+  // CHECK: call void @_ZN8MoveOnlyC1EOS_(%struct.MoveOnly* %[[MoCopy]], %struct.MoveOnly* nonnull align 4 dereferenceable(4) %[[MoParam]])
+  // CHECK-NEXT: call void @_ZN11MoveAndCopyC1EOS_(%struct.MoveAndCopy* %[[McCopy]], %struct.MoveAndCopy* nonnull align 4 dereferenceable(4) %[[McParam]]) #
   // CHECK-NEXT: invoke void @_ZNSt12experimental16coroutine_traitsIJvi8MoveOnly11MoveAndCopyEE12promise_typeC1Ev(
 
   // CHECK: call void @_ZN14suspend_always12await_resumeEv(
@@ -103,9 +103,9 @@ void dependent_params(T x, U, U y) {
   // CHECK-NEXT: %[[y_copy:.+]] = alloca %struct.B
 
   // CHECK: call i8* @llvm.coro.begin
-  // CHECK-NEXT: call void @_ZN1AC1EOS_(%struct.A* %[[x_copy]], %struct.A* dereferenceable(512) %x)
-  // CHECK-NEXT: call void @_ZN1BC1EOS_(%struct.B* %[[unnamed_copy]], %struct.B* dereferenceable(512) %0)
-  // CHECK-NEXT: call void @_ZN1BC1EOS_(%struct.B* %[[y_copy]], %struct.B* dereferenceable(512) %y)
+  // CHECK-NEXT: call void @_ZN1AC1EOS_(%struct.A* %[[x_copy]], %struct.A* nonnull align 4 dereferenceable(512) %x)
+  // CHECK-NEXT: call void @_ZN1BC1EOS_(%struct.B* %[[unnamed_copy]], %struct.B* nonnull align 4 dereferenceable(512) %0)
+  // CHECK-NEXT: call void @_ZN1BC1EOS_(%struct.B* %[[y_copy]], %struct.B* nonnull align 4 dereferenceable(512) %y)
   // CHECK-NEXT: invoke void @_ZNSt12experimental16coroutine_traitsIJv1A1BS2_EE12promise_typeC1Ev(
 
   co_return;
@@ -142,7 +142,7 @@ struct std::experimental::coroutine_traits<void, promise_matching_constructor, i
     promise_type() = delete;
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
     void unhandled_exception() {}
   };
@@ -166,7 +166,7 @@ template <typename... Args> struct std::experimental::coroutine_traits<method, A
     promise_type(some_class&, float);
     method get_return_object();
     suspend_always initial_suspend();
-    suspend_always final_suspend();
+    suspend_always final_suspend() noexcept;
     void return_void();
     void unhandled_exception();
   };
@@ -178,6 +178,6 @@ struct some_class {
 
 // CHECK-LABEL: define void @_ZN10some_class39good_coroutine_calls_custom_constructorEf(%struct.some_class*
 method some_class::good_coroutine_calls_custom_constructor(float) {
-  // CHECK: invoke void @_ZNSt12experimental16coroutine_traitsIJ6methodR10some_classfEE12promise_typeC1ES3_f(%"struct.std::experimental::coroutine_traits<method, some_class &, float>::promise_type"* %__promise, %struct.some_class* dereferenceable(1) %{{.+}}, float
+  // CHECK: invoke void @_ZNSt12experimental16coroutine_traitsIJ6methodR10some_classfEE12promise_typeC1ES3_f(%"struct.std::experimental::coroutine_traits<method, some_class &, float>::promise_type"* %__promise, %struct.some_class* nonnull align 1 dereferenceable(1) %{{.+}}, float
   co_return;
 }

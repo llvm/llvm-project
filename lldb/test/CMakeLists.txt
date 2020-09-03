@@ -129,7 +129,7 @@ endif()
 # BEGIN Swift Mods
 if(swift IN_LIST LLVM_EXTERNAL_PROJECTS)
   add_lldb_test_dependency(
-    swift-frontend
+    swift
     repl_swift)
 endif()
 # END Swift Mods
@@ -144,6 +144,7 @@ add_lldb_test_dependency(
   lli
   llvm-config
   llvm-dwarfdump
+  llvm-dwp
   llvm-nm
   llvm-mc
   llvm-objcopy
@@ -165,6 +166,7 @@ endif()
 
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
+  LLDB_BUILD_INTEL_PT
   LLDB_ENABLE_PYTHON
   LLDB_ENABLE_LUA
   LLDB_ENABLE_LZMA
@@ -206,9 +208,33 @@ add_lit_testsuite(check-lldb-swift
   DEPENDS lldb-test-deps)
 # END SWIFT MOD
 
+# Add a lit test suite that runs the API & shell test while capturing a
+# reproducer.
+add_lit_testsuite(check-lldb-reproducers-capture
+  "Running lldb test suite with reproducer capture"
+  ${CMAKE_CURRENT_BINARY_DIR}/API
+  ${CMAKE_CURRENT_BINARY_DIR}/Shell
+  PARAMS "lldb-run-with-repro=capture"
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS lldb-test-deps)
+
+# Add a lit test suite that runs the API & shell test by replaying a
+# reproducer.
+add_lit_testsuite(check-lldb-reproducers
+  "Running lldb test suite with reproducer replay"
+  ${CMAKE_CURRENT_BINARY_DIR}/API
+  ${CMAKE_CURRENT_BINARY_DIR}/Shell
+  PARAMS "lldb-run-with-repro=replay"
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS lldb-test-deps)
+add_dependencies(check-lldb-reproducers check-lldb-reproducers-capture)
+
 if(LLDB_BUILT_STANDALONE)
   # This has to happen *AFTER* add_lit_testsuite.
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
+    # LLVM's make_paths_relative uses Python3_EXECUTABLE which isn't set in a
+    # standalone LLDB build.
+    set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
     add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
   endif()
 endif()

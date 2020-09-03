@@ -61,8 +61,8 @@ class PPCFrameLowering: public TargetFrameLowering {
   bool findScratchRegister(MachineBasicBlock *MBB,
                            bool UseAtEnd,
                            bool TwoUniqueRegsRequired = false,
-                           unsigned *SR1 = nullptr,
-                           unsigned *SR2 = nullptr) const;
+                           Register *SR1 = nullptr,
+                           Register *SR2 = nullptr) const;
   bool twoUniqueScratchRegsRequired(MachineBasicBlock *MBB) const;
 
   /**
@@ -100,6 +100,8 @@ public:
   /// the function.
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
+  void inlineStackProbe(MachineFunction &MF,
+                        MachineBasicBlock &PrologMBB) const override;
 
   bool hasFP(const MachineFunction &MF) const override;
   bool needsFP(const MachineFunction &MF) const;
@@ -113,7 +115,7 @@ public:
 
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
-                                 const std::vector<CalleeSavedInfo> &CSI,
+                                 ArrayRef<CalleeSavedInfo> CSI,
                                  const TargetRegisterInfo *TRI) const override;
   /// This function will assign callee saved gprs to volatile vector registers
   /// for prologue spills when applicable. It returns false if there are any
@@ -127,10 +129,11 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I) const override;
 
-  bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator MI,
-                                  std::vector<CalleeSavedInfo> &CSI,
-                                  const TargetRegisterInfo *TRI) const override;
+  bool
+  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              MutableArrayRef<CalleeSavedInfo> CSI,
+                              const TargetRegisterInfo *TRI) const override;
 
   /// targetHandlesStackFrameRounding - Returns true if the target is
   /// responsible for rounding up the stack frame (probably at emitPrologue
@@ -152,10 +155,6 @@ public:
   /// getBasePointerSaveOffset - Return the previous frame offset to save the
   /// base pointer.
   unsigned getBasePointerSaveOffset() const;
-
-  /// getCRSaveOffset - Return the previous frame offset to save the
-  /// CR register.
-  unsigned getCRSaveOffset() const { return CRSaveOffset; }
 
   /// getLinkageSize - Return the size of the PowerPC ABI linkage area.
   ///

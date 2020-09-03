@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBModuleSpec_h_
-#define LLDB_SBModuleSpec_h_
+#ifndef LLDB_API_SBMODULESPEC_H
+#define LLDB_API_SBMODULESPEC_H
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBFileSpec.h"
@@ -119,4 +119,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_SBModuleSpec_h_
+#endif // LLDB_API_SBMODULESPEC_H

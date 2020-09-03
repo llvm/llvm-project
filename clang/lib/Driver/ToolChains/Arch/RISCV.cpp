@@ -22,6 +22,14 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
+namespace {
+// Represents the major and version number components of a RISC-V extension
+struct RISCVExtensionVersion {
+  StringRef Major;
+  StringRef Minor;
+};
+} // end anonymous namespace
+
 static StringRef getExtensionTypeDesc(StringRef Ext) {
   if (Ext.startswith("sx"))
     return "non-standard supervisor-level extension";
@@ -29,6 +37,8 @@ static StringRef getExtensionTypeDesc(StringRef Ext) {
     return "standard supervisor-level extension";
   if (Ext.startswith("x"))
     return "non-standard user-level extension";
+  if (Ext.startswith("z"))
+    return "standard user-level extension";
   return StringRef();
 }
 
@@ -39,10 +49,29 @@ static StringRef getExtensionType(StringRef Ext) {
     return "s";
   if (Ext.startswith("x"))
     return "x";
+  if (Ext.startswith("z"))
+    return "z";
   return StringRef();
 }
 
+// If the extension is supported as experimental, return the version of that
+// extension that the compiler currently supports.
+static Optional<RISCVExtensionVersion>
+isExperimentalExtension(StringRef Ext) {
+  if (Ext == "b" || Ext == "zbb" || Ext == "zbc" || Ext == "zbe" ||
+      Ext == "zbf" || Ext == "zbm" || Ext == "zbp" || Ext == "zbr" ||
+      Ext == "zbs" || Ext == "zbt" || Ext == "zbproposedc")
+    return RISCVExtensionVersion{"0", "92"};
+  if (Ext == "v")
+    return RISCVExtensionVersion{"0", "8"};
+  return None;
+}
+
 static bool isSupportedExtension(StringRef Ext) {
+  // LLVM supports "z" extensions which are marked as experimental.
+  if (isExperimentalExtension(Ext))
+    return true;
+
   // LLVM does not support "sx", "s" nor "x" extensions.
   return false;
 }
@@ -52,17 +81,15 @@ static bool isSupportedExtension(StringRef Ext) {
 // Version number is divided into major and minor version numbers,
 // separated by a 'p'. If the minor version is 0 then 'p0' can be
 // omitted from the version string. E.g., rv32i2p0, rv32i2, rv32i2p1.
-static bool getExtensionVersion(const Driver &D, StringRef MArch,
-                                StringRef Ext, StringRef In,
+static bool getExtensionVersion(const Driver &D, const ArgList &Args,
+                                StringRef MArch, StringRef Ext, StringRef In,
                                 std::string &Major, std::string &Minor) {
-  Major = In.take_while(isDigit);
+  Major = std::string(In.take_while(isDigit));
   In = In.substr(Major.size());
-  if (Major.empty())
-    return true;
 
-  if (In.consume_front("p")) {
-    Minor = In.take_while(isDigit);
-    In = In.substr(Major.size());
+  if (Major.size() && In.consume_front("p")) {
+    Minor = std::string(In.take_while(isDigit));
+    In = In.substr(Major.size() + 1);
 
     // Expected 'p' to be followed by minor version number.
     if (Minor.empty()) {
@@ -74,7 +101,53 @@ static bool getExtensionVersion(const Driver &D, StringRef MArch,
     }
   }
 
-  // TODO: Handle extensions with version number.
+  // Expected multi-character extension with version number to have no
+  // subsequent characters (i.e. must either end string or be followed by
+  // an underscore).
+  if (Ext.size() > 1 && In.size()) {
+    std::string Error =
+        "multi-character extensions must be separated by underscores";
+    D.Diag(diag::err_drv_invalid_riscv_ext_arch_name) << MArch << Error << In;
+    return false;
+  }
+
+  // If experimental extension, require use of current version number number
+  if (auto ExperimentalExtension = isExperimentalExtension(Ext)) {
+    if (!Args.hasArg(options::OPT_menable_experimental_extensions)) {
+      std::string Error =
+          "requires '-menable-experimental-extensions' for experimental extension";
+      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
+          << MArch << Error << Ext;
+      return false;
+    } else if (Major.empty() && Minor.empty()) {
+      std::string Error =
+          "experimental extension requires explicit version number";
+      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
+          << MArch << Error << Ext;
+      return false;
+    }
+    auto SupportedVers = *ExperimentalExtension;
+    if (Major != SupportedVers.Major || Minor != SupportedVers.Minor) {
+      std::string Error =
+          "unsupported version number " + Major;
+      if (!Minor.empty())
+        Error += "." + Minor;
+      Error += " for experimental extension (this compiler supports "
+            + SupportedVers.Major.str() + "."
+            + SupportedVers.Minor.str() + ")";
+
+      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
+          << MArch << Error << Ext;
+      return false;
+    }
+    return true;
+  }
+
+  // Allow extensions to declare no version number
+  if (Major.empty() && Minor.empty())
+    return true;
+
+  // TODO: Handle supported extensions with version number.
   std::string Error = "unsupported version number " + Major;
   if (!Minor.empty())
     Error += "." + Minor;
@@ -89,7 +162,7 @@ static bool getExtensionVersion(const Driver &D, StringRef MArch,
 // Parse the ISA string containing non-standard user-level
 // extensions, standard supervisor-level extensions and
 // non-standard supervisor-level extensions.
-// These extensions start with 'x', 's', 'sx' prefixes, follow a
+// These extensions start with 'z', 'x', 's', 'sx' prefixes, follow a
 // canonical order, might have a version number (major, minor)
 // and are separated by a single underscore '_'.
 // Set the hardware features for the extensions that are supported.
@@ -105,7 +178,7 @@ static void getExtensionFeatures(const Driver &D,
   SmallVector<StringRef, 8> Split;
   Exts.split(Split, StringRef("_"));
 
-  SmallVector<StringRef, 3> Prefix{"x", "s", "sx"};
+  SmallVector<StringRef, 4> Prefix{"z", "x", "s", "sx"};
   auto I = Prefix.begin();
   auto E = Prefix.end();
 
@@ -119,8 +192,10 @@ static void getExtensionFeatures(const Driver &D,
     }
 
     StringRef Type = getExtensionType(Ext);
-    StringRef Name(Ext.substr(Type.size()));
     StringRef Desc = getExtensionTypeDesc(Ext);
+    auto Pos = Ext.find_if(isDigit);
+    StringRef Name(Ext.substr(0, Pos));
+    StringRef Vers(Ext.substr(Pos));
 
     if (Type.empty()) {
       D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
@@ -133,7 +208,7 @@ static void getExtensionFeatures(const Driver &D,
       ++I;
 
     if (I == E) {
-      std::string Error = Desc;
+      std::string Error = std::string(Desc);
       Error += " not given in canonical order";
       D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
         << MArch <<  Error << Ext;
@@ -143,35 +218,30 @@ static void getExtensionFeatures(const Driver &D,
     // The order is OK, do not advance I to the next prefix
     // to allow repeated extension type, e.g.: rv32ixabc_xdef.
 
-    if (Name.empty()) {
-      std::string Error = Desc;
+    if (Name.size() == Type.size()) {
+      std::string Error = std::string(Desc);
       Error += " name missing after";
       D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-        << MArch << Error << Ext;
+        << MArch << Error << Type;
       return;
     }
 
     std::string Major, Minor;
-    auto Pos = Name.find_if(isDigit);
-    if (Pos != StringRef::npos) {
-      auto Next =  Name.substr(Pos);
-      Name = Name.substr(0, Pos);
-      if (!getExtensionVersion(D, MArch, Ext, Next, Major, Minor))
-        return;
-    }
+    if (!getExtensionVersion(D, Args, MArch, Name, Vers, Major, Minor))
+      return;
 
     // Check if duplicated extension.
-    if (llvm::is_contained(AllExts, Ext)) {
+    if (llvm::is_contained(AllExts, Name)) {
       std::string Error = "duplicated ";
       Error += Desc;
       D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-        << MArch << Error << Ext;
+        << MArch << Error << Name;
       return;
     }
 
     // Extension format is correct, keep parsing the extensions.
     // TODO: Save Type, Name, Major, Minor to avoid parsing them later.
-    AllExts.push_back(Ext);
+    AllExts.push_back(Name);
   }
 
   // Set target features.
@@ -186,7 +256,10 @@ static void getExtensionFeatures(const Driver &D,
         << MArch << Error << Ext;
       return;
     }
-    Features.push_back(Args.MakeArgString("+" + Ext));
+    if (isExperimentalExtension(Ext))
+      Features.push_back(Args.MakeArgString("+experimental-" + Ext));
+    else
+      Features.push_back(Args.MakeArgString("+" + Ext));
   }
 }
 
@@ -251,28 +324,35 @@ static bool getArchFeatures(const Driver &D, StringRef MArch,
   // Skip rvxxx
   StringRef Exts = MArch.substr(5);
 
-  // Remove non-standard extensions and supervisor-level extensions.
-  // They have 'x', 's', 'sx' prefixes. Parse them at the end.
-  // Find the very first occurrence of 's' or 'x'.
+  // Remove multi-letter standard extensions, non-standard extensions and
+  // supervisor-level extensions. They have 'z', 'x', 's', 'sx' prefixes.
+  // Parse them at the end.
+  // Find the very first occurrence of 's', 'x' or 'z'.
   StringRef OtherExts;
-  size_t Pos = Exts.find_first_of("sx");
+  size_t Pos = Exts.find_first_of("zsx");
   if (Pos != StringRef::npos) {
     OtherExts = Exts.substr(Pos);
     Exts = Exts.substr(0, Pos);
   }
 
   std::string Major, Minor;
-  if (!getExtensionVersion(D, MArch, std::string(1, Baseline), Exts, Major,
-                           Minor))
+  if (!getExtensionVersion(D, Args, MArch, std::string(1, Baseline), Exts,
+                           Major, Minor))
     return false;
 
+  // Consume the base ISA version number and any '_' between rvxxx and the
+  // first extension
+  Exts = Exts.drop_front(Major.size());
+  if (!Minor.empty())
+    Exts = Exts.drop_front(Minor.size() + 1 /*'p'*/);
+  Exts.consume_front("_");
+
   // TODO: Use version number when setting target features
-  // and consume the underscore '_' that might follow.
 
   auto StdExtsItr = StdExts.begin();
   auto StdExtsEnd = StdExts.end();
 
-  for (auto I = Exts.begin(), E = Exts.end(); I != E; ++I) {
+  for (auto I = Exts.begin(), E = Exts.end(); I != E; ) {
     char c = *I;
 
     // Check ISA extensions are specified in the canonical order.
@@ -295,18 +375,15 @@ static bool getArchFeatures(const Driver &D, StringRef MArch,
     // Move to next char to prevent repeated letter.
     ++StdExtsItr;
 
-    if (std::next(I) != E) {
-      // Skip c.
-      std::string Next = std::string(std::next(I), E);
-      std::string Major, Minor;
-      if (!getExtensionVersion(D, MArch, std::string(1, c), Next, Major, Minor))
-        return false;
-
-      // TODO: Use version number when setting target features
-      // and consume the underscore '_' that might follow.
-    }
+    std::string Next, Major, Minor;
+    if (std::next(I) != E)
+      Next = std::string(std::next(I), E);
+    if (!getExtensionVersion(D, Args, MArch, std::string(1, c), Next, Major,
+                             Minor))
+      return false;
 
     // The order is OK, then push it into features.
+    // TODO: Use version number when setting target features
     switch (c) {
     default:
       // Currently LLVM supports only "mafdc".
@@ -331,7 +408,22 @@ static bool getArchFeatures(const Driver &D, StringRef MArch,
     case 'c':
       Features.push_back("+c");
       break;
+    case 'b':
+      Features.push_back("+experimental-b");
+      break;
+    case 'v':
+      Features.push_back("+experimental-v");
+      break;
     }
+
+    // Consume full extension name and version, including any optional '_'
+    // between this extension and the next
+    ++I;
+    I += Major.size();
+    if (Minor.size())
+      I += Minor.size() + 1 /*'p'*/;
+    if (*I == '_')
+      ++I;
   }
 
   // Dependency check.
@@ -354,6 +446,19 @@ static bool getArchFeatures(const Driver &D, StringRef MArch,
   return true;
 }
 
+// Get features except standard extension feature
+void getRISCFeaturesFromMcpu(const Driver &D, const llvm::Triple &Triple,
+                             const llvm::opt::ArgList &Args,
+                             const llvm::opt::Arg *A, StringRef Mcpu,
+                             std::vector<StringRef> &Features) {
+  bool Is64Bit = (Triple.getArch() == llvm::Triple::riscv64);
+  llvm::RISCV::CPUKind CPUKind = llvm::RISCV::parseCPUKind(Mcpu);
+  if (!llvm::RISCV::checkCPUKind(CPUKind, Is64Bit) ||
+      !llvm::RISCV::getCPUFeaturesExceptStdExt(CPUKind, Features)) {
+    D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
+  }
+}
+
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    const ArgList &Args,
                                    std::vector<StringRef> &Features) {
@@ -361,6 +466,11 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
   if (!getArchFeatures(D, MArch, Features, Args))
     return;
+
+  // If users give march and mcpu, get std extension feature from MArch
+  // and other features (ex. mirco architecture feature) from mcpu
+  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
+    getRISCFeaturesFromMcpu(D, Triple, Args, A, A->getValue(), Features);
 
   // Handle features corresponding to "-ffixed-X" options
   if (Args.hasArg(options::OPT_ffixed_x1))
@@ -433,12 +543,11 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("-relax");
 
   // GCC Compatibility: -mno-save-restore is default, unless -msave-restore is
-  // specified...
-  if (Args.hasFlag(options::OPT_msave_restore, options::OPT_mno_save_restore, false)) {
-    // ... but we don't support -msave-restore, so issue a warning.
-    D.Diag(diag::warn_drv_clang_unsupported)
-      << Args.getLastArg(options::OPT_msave_restore)->getAsString(Args);
-  }
+  // specified.
+  if (Args.hasFlag(options::OPT_msave_restore, options::OPT_mno_save_restore, false))
+    Features.push_back("+save-restore");
+  else
+    Features.push_back("-save-restore");
 
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
@@ -452,11 +561,9 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
 
   // GCC's logic around choosing a default `-mabi=` is complex. If GCC is not
   // configured using `--with-abi=`, then the logic for the default choice is
-  // defined in config.gcc. This function is based on the logic in GCC 9.2.0. We
-  // deviate from GCC's default only on baremetal targets (UnknownOS) where
-  // neither `-march` nor `-mabi` is specified.
+  // defined in config.gcc. This function is based on the logic in GCC 9.2.0.
   //
-  // The logic uses the following, in order:
+  // The logic used in GCC 9.2.0 is the following, in order:
   // 1. Explicit choices using `--with-abi=`
   // 2. A default based on `--with-arch=`, if provided
   // 3. A default based on the target triple's arch
@@ -465,38 +572,40 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
   //
   // Clang does not have `--with-arch=` or `--with-abi=`, so we use `-march=`
   // and `-mabi=` respectively instead.
+  //
+  // In order to make chosing logic more clear, Clang uses the following logic,
+  // in order:
+  // 1. Explicit choices using `-mabi=`
+  // 2. A default based on the architecture as determined by getRISCVArch
+  // 3. Choose a default based on the triple
 
   // 1. If `-mabi=` is specified, use it.
   if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
     return A->getValue();
 
-  // 2. Choose a default based on `-march=`
+  // 2. Choose a default based on the target architecture.
   //
   // rv32g | rv32*d -> ilp32d
   // rv32e -> ilp32e
   // rv32* -> ilp32
   // rv64g | rv64*d -> lp64d
   // rv64* -> lp64
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
-    StringRef MArch = A->getValue();
+  StringRef MArch = getRISCVArch(Args, Triple);
 
-    if (MArch.startswith_lower("rv32")) {
-      // FIXME: parse `March` to find `D` extension properly
-      if (MArch.substr(4).contains_lower("d") ||
-          MArch.startswith_lower("rv32g"))
-        return "ilp32d";
-      else if (MArch.startswith_lower("rv32e"))
-        return "ilp32e";
-      else
-        return "ilp32";
-    } else if (MArch.startswith_lower("rv64")) {
-      // FIXME: parse `March` to find `D` extension properly
-      if (MArch.substr(4).contains_lower("d") ||
-          MArch.startswith_lower("rv64g"))
-        return "lp64d";
-      else
-        return "lp64";
-    }
+  if (MArch.startswith_lower("rv32")) {
+    // FIXME: parse `March` to find `D` extension properly
+    if (MArch.substr(4).contains_lower("d") || MArch.startswith_lower("rv32g"))
+      return "ilp32d";
+    else if (MArch.startswith_lower("rv32e"))
+      return "ilp32e";
+    else
+      return "ilp32";
+  } else if (MArch.startswith_lower("rv64")) {
+    // FIXME: parse `March` to find `D` extension properly
+    if (MArch.substr(4).contains_lower("d") || MArch.startswith_lower("rv64g"))
+      return "lp64d";
+    else
+      return "lp64";
   }
 
   // 3. Choose a default based on the triple
@@ -526,10 +635,11 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   // GCC's logic around choosing a default `-march=` is complex. If GCC is not
   // configured using `--with-arch=`, then the logic for the default choice is
   // defined in config.gcc. This function is based on the logic in GCC 9.2.0. We
-  // deviate from GCC's default only on baremetal targets (UnknownOS) where
-  // neither `-march` nor `-mabi` is specified.
+  // deviate from GCC's default on additional `-mcpu` option (GCC does not
+  // support `-mcpu`) and baremetal targets (UnknownOS) where neither `-march`
+  // nor `-mabi` is specified.
   //
-  // The logic uses the following, in order:
+  // The logic used in GCC 9.2.0 is the following, in order:
   // 1. Explicit choices using `--with-arch=`
   // 2. A default based on `--with-abi=`, if provided
   // 3. A default based on the target triple's arch
@@ -539,6 +649,12 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   // Clang does not have `--with-arch=` or `--with-abi=`, so we use `-march=`
   // and `-mabi=` respectively instead.
   //
+  // Clang uses the following logic, in order:
+  // 1. Explicit choices using `-march=`
+  // 2. Based on `-mcpu` if the target CPU has a default ISA string
+  // 3. A default based on `-mabi`, if provided
+  // 4. A default based on the target triple's arch
+  //
   // Clang does not yet support MULTILIB_REUSE, so we use `rv{XLEN}imafdc`
   // instead of `rv{XLEN}gc` though they are (currently) equivalent.
 
@@ -546,7 +662,15 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
     return A->getValue();
 
-  // 2. Choose a default based on `-mabi=`
+  // 2. Get march (isa string) based on `-mcpu=`
+  if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
+    StringRef MArch = llvm::RISCV::getMArchFromMcpu(A->getValue());
+    // Bypass if target cpu's default march is empty.
+    if (MArch != "")
+      return MArch;
+  }
+
+  // 3. Choose a default based on `-mabi=`
   //
   // ilp32e -> rv32e
   // ilp32 | ilp32f | ilp32d -> rv32imafdc
@@ -562,7 +686,7 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
       return "rv64imafdc";
   }
 
-  // 3. Choose a default based on the triple
+  // 4. Choose a default based on the triple
   //
   // We deviate from GCC's defaults here:
   // - On `riscv{XLEN}-unknown-elf` we default to `rv{XLEN}imac`

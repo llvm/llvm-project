@@ -115,8 +115,8 @@ public:
   void build(llvm::StringRef HeaderCode, llvm::StringRef Code = "") {
     File.HeaderFilename = HeaderName;
     File.Filename = FileName;
-    File.HeaderCode = HeaderCode;
-    File.Code = Code;
+    File.HeaderCode = std::string(HeaderCode);
+    File.Code = std::string(Code);
     AST = File.build();
   }
 
@@ -698,6 +698,72 @@ TEST_F(SymbolCollectorTest, MacrosWithRefFilter) {
   CollectorOpts.RefFilter = RefKind::Unknown;
   runSymbolCollector(Header.code(), Main.code());
   EXPECT_THAT(Refs, IsEmpty());
+}
+
+TEST_F(SymbolCollectorTest, SpelledReferences) {
+  struct {
+    llvm::StringRef Header;
+    llvm::StringRef Main;
+    llvm::StringRef TargetSymbolName;
+  } TestCases[] = {
+    {
+      R"cpp(
+        struct Foo;
+        #define MACRO Foo
+      )cpp",
+      R"cpp(
+        struct $spelled[[Foo]] {
+          $spelled[[Foo]]();
+          ~$spelled[[Foo]]();
+        };
+        $spelled[[Foo]] Variable1;
+        $implicit[[MACRO]] Variable2;
+      )cpp",
+      "Foo",
+    },
+    {
+      R"cpp(
+        class Foo {
+        public:
+          Foo() = default;
+        };
+      )cpp",
+      R"cpp(
+        void f() { Foo $implicit[[f]]; f = $spelled[[Foo]]();}
+      )cpp",
+      "Foo::Foo" /// constructor.
+    },
+  };
+  CollectorOpts.RefFilter = RefKind::All;
+  CollectorOpts.RefsInHeaders = false;
+  for (const auto& T : TestCases) {
+    Annotations Header(T.Header);
+    Annotations Main(T.Main);
+    // Reset the file system.
+    InMemoryFileSystem = new llvm::vfs::InMemoryFileSystem;
+    runSymbolCollector(Header.code(), Main.code());
+
+    const auto SpelledRanges = Main.ranges("spelled");
+    const auto ImplicitRanges = Main.ranges("implicit");
+    RefSlab::Builder SpelledSlabBuilder, ImplicitSlabBuilder;
+    const auto TargetID = findSymbol(Symbols, T.TargetSymbolName).ID;
+    for (const auto &SymbolAndRefs : Refs) {
+      const auto ID = SymbolAndRefs.first;
+      if (ID != TargetID)
+        continue;
+      for (const auto &Ref : SymbolAndRefs.second)
+        if ((Ref.Kind & RefKind::Spelled) != RefKind::Unknown)
+          SpelledSlabBuilder.insert(ID, Ref);
+        else
+          ImplicitSlabBuilder.insert(ID, Ref);
+    }
+    const auto SpelledRefs = std::move(SpelledSlabBuilder).build(),
+               ImplicitRefs = std::move(ImplicitSlabBuilder).build();
+    EXPECT_THAT(SpelledRefs,
+                Contains(Pair(TargetID, HaveRanges(SpelledRanges))));
+    EXPECT_THAT(ImplicitRefs,
+                Contains(Pair(TargetID, HaveRanges(ImplicitRanges))));
+  }
 }
 
 TEST_F(SymbolCollectorTest, NameReferences) {
@@ -1422,6 +1488,20 @@ TEST_F(SymbolCollectorTest, InvalidSourceLoc) {
         __attribute__((__externally_visible__));)";
   runSymbolCollector(Header, /**/ "");
   EXPECT_THAT(Symbols, Contains(QName("operator delete")));
+}
+
+TEST_F(SymbolCollectorTest, BadUTF8) {
+  // Extracted from boost/spirit/home/support/char_encoding/iso8859_1.hpp
+  // This looks like UTF-8 and fools clang, but has high-ISO-8859-1 comments.
+  const char *Header = "int PUNCT = 0;\n"
+                       "int types[] = { /* \xa1 */PUNCT };";
+  CollectorOpts.RefFilter = RefKind::All;
+  CollectorOpts.RefsInHeaders = true;
+  runSymbolCollector(Header, "");
+  EXPECT_THAT(Symbols, Contains(QName("types")));
+  EXPECT_THAT(Symbols, Contains(QName("PUNCT")));
+  // Reference is stored, although offset within line is not reliable.
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "PUNCT").ID, _)));
 }
 
 } // namespace

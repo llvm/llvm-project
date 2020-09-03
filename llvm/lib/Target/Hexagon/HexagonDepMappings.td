@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Automatically generated file, please consult code owner before editing.
+// Automatically generated file, do not edit!
 //===----------------------------------------------------------------------===//
 
 def A2_negAlias : InstAlias<"$Rd32 = neg($Rs32)", (A2_subri IntRegs:$Rd32, 0, IntRegs:$Rs32)>;
@@ -94,6 +94,8 @@ def L4_sub_memopw_zomapAlias : InstAlias<"memw($Rs32) -= $Rt32", (L4_sub_memopw_
 def L6_deallocframe_map_to_rawAlias : InstAlias<"deallocframe", (L2_deallocframe D15, R30)>;
 def L6_return_map_to_rawAlias : InstAlias<"dealloc_return", (L4_return D15, R30)>;
 def M2_mpyuiAlias : InstAlias<"$Rd32 = mpyui($Rs32,$Rt32)", (M2_mpyi IntRegs:$Rd32, IntRegs:$Rs32, IntRegs:$Rt32)>;
+def M7_vdmpyAlias : InstAlias<"$Rdd32 = vdmpyw($Rss32,$Rtt32)", (M7_dcmpyrwc DoubleRegs:$Rdd32, DoubleRegs:$Rss32, DoubleRegs:$Rtt32)>;
+def M7_vdmpy_accAlias : InstAlias<"$Rxx32 += vdmpyw($Rss32,$Rtt32)", (M7_dcmpyrwc_acc DoubleRegs:$Rxx32, DoubleRegs:$Rss32, DoubleRegs:$Rtt32)>;
 def S2_pstorerbf_zomapAlias : InstAlias<"if (!$Pv4) memb($Rs32) = $Rt32", (S2_pstorerbf_io PredRegs:$Pv4, IntRegs:$Rs32, 0, IntRegs:$Rt32)>;
 def S2_pstorerbnewf_zomapAlias : InstAlias<"if (!$Pv4) memb($Rs32) = $Nt8.new", (S2_pstorerbnewf_io PredRegs:$Pv4, IntRegs:$Rs32, 0, IntRegs:$Nt8)>;
 def S2_pstorerbnewt_zomapAlias : InstAlias<"if ($Pv4) memb($Rs32) = $Nt8.new", (S2_pstorerbnewt_io PredRegs:$Pv4, IntRegs:$Rs32, 0, IntRegs:$Nt8)>;
@@ -253,16 +255,9 @@ def V6_vaslwv_altAlias : InstAlias<"$Vd32 = vaslw($Vu32,$Vv32)", (V6_vaslwv HvxV
 def V6_vasr_into_altAlias : InstAlias<"$Vxx32 = vasrinto($Vu32,$Vv32)", (V6_vasr_into HvxWR:$Vxx32, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
 def V6_vasrh_acc_altAlias : InstAlias<"$Vx32 += vasrh($Vu32,$Rt32)", (V6_vasrh_acc HvxVR:$Vx32, HvxVR:$Vu32, IntRegs:$Rt32)>, Requires<[UseHVX]>;
 def V6_vasrh_altAlias : InstAlias<"$Vd32 = vasrh($Vu32,$Rt32)", (V6_vasrh HvxVR:$Vd32, HvxVR:$Vu32, IntRegs:$Rt32)>, Requires<[UseHVX]>;
-def V6_vasrhbrndsat_altAlias : InstAlias<"$Vd32 = vasrhb($Vu32,$Vv32,$Rt8):rnd:sat", (V6_vasrhbrndsat HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8)>;
-def V6_vasrhubrndsat_altAlias : InstAlias<"$Vd32 = vasrhub($Vu32,$Vv32,$Rt8):rnd:sat", (V6_vasrhubrndsat HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8)>;
-def V6_vasrhubsat_altAlias : InstAlias<"$Vd32 = vasrhub($Vu32,$Vv32,$Rt8):sat", (V6_vasrhubsat HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8)>;
 def V6_vasrhv_altAlias : InstAlias<"$Vd32 = vasrh($Vu32,$Vv32)", (V6_vasrhv HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
 def V6_vasrw_acc_altAlias : InstAlias<"$Vx32 += vasrw($Vu32,$Rt32)", (V6_vasrw_acc HvxVR:$Vx32, HvxVR:$Vu32, IntRegs:$Rt32)>, Requires<[UseHVX]>;
 def V6_vasrw_altAlias : InstAlias<"$Vd32 = vasrw($Vu32,$Rt32)", (V6_vasrw HvxVR:$Vd32, HvxVR:$Vu32, IntRegs:$Rt32)>, Requires<[UseHVX]>;
-def V6_vasrwh_altAlias : InstAlias<"$Vd32 = vasrwh($Vu32,$Vv32,$Rt8)", (V6_vasrwhsat HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8)>;
-def V6_vasrwhrndsat_altAlias : InstAlias<"$Vd32 = vasrwh($Vu32,$Vv32,$Rt8):rnd:sat", (V6_vasrwhrndsat HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8)>;
-def V6_vasrwhsat_altAlias : InstAlias<"$Vd32 = vasrwh($Vu32,$Vv32,$Rt8):sat", (V6_vasrwhsat HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8)>;
-def V6_vasrwuhsat_altAlias : InstAlias<"$Vd32 = vasrwuh($Vu32,$Vv32,$Rt8):sat", (V6_vasrwuhsat HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8)>;
 def V6_vasrwv_altAlias : InstAlias<"$Vd32 = vasrw($Vu32,$Vv32)", (V6_vasrwv HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
 def V6_vavgb_altAlias : InstAlias<"$Vd32 = vavgb($Vu32,$Vv32)", (V6_vavgb HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
 def V6_vavgbrnd_altAlias : InstAlias<"$Vd32 = vavgb($Vu32,$Vv32):rnd", (V6_vavgbrnd HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;

@@ -201,3 +201,9 @@ namespace RefCollapseTypePrinting {
   template void add_rref<const int&>(); // expected-note {{instantiation of}}
   template void add_rref<const int&&>(); // expected-note {{instantiation of}}
 }
+
+namespace PR45521 {
+  struct a { template<class b> a(const b * const&); };
+  int *d;
+  const a &r = d;
+}

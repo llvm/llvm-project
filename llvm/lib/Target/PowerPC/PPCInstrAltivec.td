@@ -341,7 +341,7 @@ class VXCR_Int_Ty<bits<11> xo, string opc, Intrinsic IntID, ValueType Ty>
 //===----------------------------------------------------------------------===//
 // Instruction Definitions.
 
-def HasAltivec : Predicate<"PPCSubTarget->hasAltivec()">;
+def HasAltivec : Predicate<"Subtarget->hasAltivec()">;
 let Predicates = [HasAltivec] in {
 
 def DSS      : DSS_Form<0, 822, (outs), (ins u5imm:$STRM),
@@ -491,7 +491,7 @@ let isCommutable = 1 in {
 def VADDFP : VXForm_1<10, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                       "vaddfp $vD, $vA, $vB", IIC_VecFP,
                       [(set v4f32:$vD, (fadd v4f32:$vA, v4f32:$vB))]>;
-                      
+
 def VADDUBM : VXForm_1<0, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                       "vaddubm $vD, $vA, $vB", IIC_VecGeneral,
                       [(set v16i8:$vD, (add v16i8:$vA, v16i8:$vB))]>;
@@ -501,7 +501,7 @@ def VADDUHM : VXForm_1<64, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
 def VADDUWM : VXForm_1<128, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                       "vadduwm $vD, $vA, $vB", IIC_VecGeneral,
                       [(set v4i32:$vD, (add v4i32:$vA, v4i32:$vB))]>;
-                      
+
 def VADDCUW : VX1_Int_Ty<384, "vaddcuw", int_ppc_altivec_vaddcuw, v4i32>;
 def VADDSBS : VX1_Int_Ty<768, "vaddsbs", int_ppc_altivec_vaddsbs, v16i8>;
 def VADDSHS : VX1_Int_Ty<832, "vaddshs", int_ppc_altivec_vaddshs, v8i16>;
@@ -635,7 +635,7 @@ def VMULOUB : VX1_Int_Ty2<  8, "vmuloub", int_ppc_altivec_vmuloub,
 def VMULOUH : VX1_Int_Ty2< 72, "vmulouh", int_ppc_altivec_vmulouh,
                           v4i32, v8i16>;
 } // isCommutable
-                       
+
 def VREFP     : VX2_Int_SP<266, "vrefp",     int_ppc_altivec_vrefp>;
 def VRFIM     : VX2_Int_SP<714, "vrfim",     int_ppc_altivec_vrfim>;
 def VRFIN     : VX2_Int_SP<522, "vrfin",     int_ppc_altivec_vrfin>;
@@ -657,7 +657,7 @@ def VSUBUHM : VXForm_1<1088, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
 def VSUBUWM : VXForm_1<1152, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                       "vsubuwm $vD, $vA, $vB", IIC_VecGeneral,
                       [(set v4i32:$vD, (sub v4i32:$vA, v4i32:$vB))]>;
-                      
+
 def VSUBSBS : VX1_Int_Ty<1792, "vsubsbs" , int_ppc_altivec_vsubsbs, v16i8>;
 def VSUBSHS : VX1_Int_Ty<1856, "vsubshs" , int_ppc_altivec_vsubshs, v8i16>;
 def VSUBSWS : VX1_Int_Ty<1920, "vsubsws" , int_ppc_altivec_vsubsws, v4i32>;
@@ -869,6 +869,26 @@ def : Pat<(v8i16 (rotl v8i16:$vA, v8i16:$vB)),
 def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VRLW v4i32:$vA, v4i32:$vB))>;
 
+// Multiply
+def : Pat<(mul v8i16:$vA, v8i16:$vB), (VMLADDUHM $vA, $vB, (v8i16(V_SET0H)))>;
+
+// Add
+def : Pat<(add (mul v8i16:$vA, v8i16:$vB), v8i16:$vC), (VMLADDUHM $vA, $vB, $vC)>;
+
+// Saturating adds/subtracts.
+def : Pat<(v16i8 (saddsat v16i8:$vA, v16i8:$vB)), (v16i8 (VADDSBS $vA, $vB))>;
+def : Pat<(v16i8 (uaddsat v16i8:$vA, v16i8:$vB)), (v16i8 (VADDUBS $vA, $vB))>;
+def : Pat<(v8i16 (saddsat v8i16:$vA, v8i16:$vB)), (v8i16 (VADDSHS $vA, $vB))>;
+def : Pat<(v8i16 (uaddsat v8i16:$vA, v8i16:$vB)), (v8i16 (VADDUHS $vA, $vB))>;
+def : Pat<(v4i32 (saddsat v4i32:$vA, v4i32:$vB)), (v4i32 (VADDSWS $vA, $vB))>;
+def : Pat<(v4i32 (uaddsat v4i32:$vA, v4i32:$vB)), (v4i32 (VADDUWS $vA, $vB))>;
+def : Pat<(v16i8 (ssubsat v16i8:$vA, v16i8:$vB)), (v16i8 (VSUBSBS $vA, $vB))>;
+def : Pat<(v16i8 (usubsat v16i8:$vA, v16i8:$vB)), (v16i8 (VSUBUBS $vA, $vB))>;
+def : Pat<(v8i16 (ssubsat v8i16:$vA, v8i16:$vB)), (v8i16 (VSUBSHS $vA, $vB))>;
+def : Pat<(v8i16 (usubsat v8i16:$vA, v8i16:$vB)), (v8i16 (VSUBUHS $vA, $vB))>;
+def : Pat<(v4i32 (ssubsat v4i32:$vA, v4i32:$vB)), (v4i32 (VSUBSWS $vA, $vB))>;
+def : Pat<(v4i32 (usubsat v4i32:$vA, v4i32:$vB)), (v4i32 (VSUBUWS $vA, $vB))>;
+
 // Loads.
 def : Pat<(v4i32 (load xoaddr:$src)), (LVX xoaddr:$src)>;
 
@@ -1002,14 +1022,9 @@ def : Pat<(and v4i32:$A, (vnot_ppc v4i32:$B)),
 
 def : Pat<(fmul v4f32:$vA, v4f32:$vB),
           (VMADDFP $vA, $vB,
-             (v4i32 (VSLW (v4i32 (V_SETALLONES)), (v4i32 (V_SETALLONES)))))>; 
+             (v4i32 (VSLW (v4i32 (V_SETALLONES)), (v4i32 (V_SETALLONES)))))>;
 
-// Fused multiply add and multiply sub for packed float.  These are represented
-// separately from the real instructions above, for operations that must have
-// the additional precision, such as Newton-Rhapson (used by divide, sqrt)
-def : Pat<(PPCvmaddfp v4f32:$A, v4f32:$B, v4f32:$C),
-          (VMADDFP $A, $B, $C)>;
-def : Pat<(PPCvnmsubfp v4f32:$A, v4f32:$B, v4f32:$C),
+def : Pat<(PPCfnmsub v4f32:$A, v4f32:$B, v4f32:$C),
           (VNMSUBFP $A, $B, $C)>;
 
 def : Pat<(int_ppc_altivec_vmaddfp v4f32:$A, v4f32:$B, v4f32:$C),
@@ -1121,8 +1136,8 @@ def : Pat<(v16i8 (srl (sub v16i8:$vA, (v16i8 (bitconvert(vnot_ppc v4i32:$vB)))),
 
 } // end HasAltivec
 
-def HasP8Altivec : Predicate<"PPCSubTarget->hasP8Altivec()">;
-def HasP8Crypto : Predicate<"PPCSubTarget->hasP8Crypto()">;
+def HasP8Altivec : Predicate<"Subtarget->hasP8Altivec()">;
+def HasP8Crypto : Predicate<"Subtarget->hasP8Crypto()">;
 let Predicates = [HasP8Altivec] in {
 
 let isCommutable = 1 in {
@@ -1143,7 +1158,7 @@ def VMINSD : VX1_Int_Ty<962, "vminsd", int_ppc_altivec_vminsd, v2i64>;
 def VMINUD : VX1_Int_Ty<706, "vminud", int_ppc_altivec_vminud, v2i64>;
 } // isCommutable
 
-// Vector merge 
+// Vector merge
 def VMRGEW : VXForm_1<1932, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                       "vmrgew $vD, $vA, $vB", IIC_VecFP,
                       [(set v16i8:$vD,
@@ -1251,16 +1266,16 @@ def VPOPCNTD : VXForm_2<1987, (outs vrrc:$vD), (ins vrrc:$vB),
                         [(set v2i64:$vD, (ctpop v2i64:$vB))]>;
 
 let isCommutable = 1 in {
-// FIXME: Use AddedComplexity > 400 to ensure these patterns match before the 
+// FIXME: Use AddedComplexity > 400 to ensure these patterns match before the
 //        VSX equivalents. We need to fix this up at some point. Two possible
 //        solutions for this problem:
 //        1. Disable Altivec patterns that compete with VSX patterns using the
-//           !HasVSX predicate. This essentially favours VSX over Altivec, in 
-//           hopes of reducing register pressure (larger register set using VSX 
+//           !HasVSX predicate. This essentially favours VSX over Altivec, in
+//           hopes of reducing register pressure (larger register set using VSX
 //           instructions than VMX instructions)
 //        2. Employ a more disciplined use of AddedComplexity, which would provide
 //           more fine-grained control than option 1. This would be beneficial
-//           if we find situations where Altivec is really preferred over VSX. 
+//           if we find situations where Altivec is really preferred over VSX.
 def VEQV  : VXForm_1<1668, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                      "veqv $vD, $vA, $vB", IIC_VecGeneral,
                      [(set v4i32:$vD, (vnot_ppc (xor v4i32:$vA, v4i32:$vB)))]>;
@@ -1339,8 +1354,12 @@ def VSBOX : VXBX_Int_Ty<1480, "vsbox", int_ppc_altivec_crypto_vsbox, v2i64>;
 } // HasP8Crypto
 
 // The following altivec instructions were introduced in Power ISA 3.0
-def HasP9Altivec : Predicate<"PPCSubTarget->hasP9Altivec()">;
+def HasP9Altivec : Predicate<"Subtarget->hasP9Altivec()">;
 let Predicates = [HasP9Altivec] in {
+
+// Vector Multiply-Sum
+def VMSUMUDM : VA1a_Int_Ty3<35, "vmsumudm", int_ppc_altivec_vmsumudm,
+                            v1i128, v2i64, v1i128>;
 
 // i8 element comparisons.
 def VCMPNEB   : VCMP   <  7, "vcmpneb $vD, $vA, $vB"  , v16i8>;

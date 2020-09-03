@@ -9,8 +9,7 @@ define <16 x i8> @test(i32* %s, i32* %t) {
 ; CHECK-LE-LABEL: test:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    lfiwzx f0, 0, r3
-; CHECK-LE-NEXT:    xxpermdi vs0, f0, f0, 2
-; CHECK-LE-NEXT:    xxspltw v2, vs0, 3
+; CHECK-LE-NEXT:    xxspltw v2, vs0, 1
 ; CHECK-LE-NEXT:    blr
 
 ; CHECK-LABEL: test:

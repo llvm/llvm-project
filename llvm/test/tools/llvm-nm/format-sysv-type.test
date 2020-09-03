@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # RUN: llvm-nm %t.o --debug-syms --format=sysv | FileCheck %s
 
 !ELF

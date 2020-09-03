@@ -1,0 +1,206 @@
+# RUN: llc -march=amdgcn -mcpu=gfx802 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GCN,GFX10 %s
+
+# GCN-LABEL: {{^}}lo_to_lo:
+# GCN: v_mov_b32_sdwa v1, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+name: lo_to_lo
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1_lo16 = COPY $vgpr0_lo16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}lo_to_hi:
+# GCN: v_mov_b32_sdwa v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+name: lo_to_hi
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1_hi16 = COPY killed $vgpr0_lo16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}hi_to_lo:
+# GCN: v_mov_b32_sdwa v1, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+name: hi_to_lo
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1_lo16 = COPY $vgpr0_hi16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}hi_to_hi:
+# GCN: v_mov_b32_sdwa v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+name: hi_to_hi
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1_hi16 = COPY $vgpr0_hi16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}lo_to_lo_samereg:
+# GCN:        s_waitcnt
+# GFX10-NEXT: s_waitcnt_vscnt
+# GCN-NEXT:   s_endpgm
+name: lo_to_lo_samereg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr0_lo16 = COPY $vgpr0_lo16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}lo_to_hi_samereg:
+# GCN: v_mov_b32_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+name: lo_to_hi_samereg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr0_hi16 = COPY $vgpr0_lo16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}hi_to_lo_samereg:
+# GCN: v_mov_b32_sdwa v0, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+name: hi_to_lo_samereg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr0_lo16 = COPY killed $vgpr0_hi16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}hi_to_hi_samereg:
+# GCN:      s_waitcnt
+# GFX10-NEXT: s_waitcnt_vscnt
+# GCN-NEXT: s_endpgm
+name: hi_to_hi_samereg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr0_hi16 = COPY killed $vgpr0_hi16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}lo_to_lo_def_livein:
+# GCN: v_mov_b32_sdwa v1, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+name: lo_to_lo_def_livein
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    $vgpr1 = IMPLICIT_DEF
+    $vgpr1_lo16 = COPY $vgpr0_lo16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}lo_to_hi_def_livein:
+# GCN: v_mov_b32_sdwa v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+name: lo_to_hi_def_livein
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    $vgpr1 = IMPLICIT_DEF
+    $vgpr1_hi16 = COPY $vgpr0_lo16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}hi_to_lo_def_livein:
+# GCN: v_mov_b32_sdwa v1, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+name: hi_to_lo_def_livein
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    $vgpr1 = IMPLICIT_DEF
+    $vgpr1_lo16 = COPY killed $vgpr0_hi16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}hi_to_hi_def_livein:
+# GCN: v_mov_b32_sdwa v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+name: hi_to_hi_def_livein
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    $vgpr1 = IMPLICIT_DEF
+    $vgpr1_hi16 = COPY $vgpr0_hi16
+    S_ENDPGM 0
+...
+
+# TODO: This can be coalesced into a VGPR_32 copy
+# GCN-LABEL: {{^}}lo_to_lo_hi_to_hi:
+# GCN:      v_mov_b32_sdwa v1, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+# GCN-NEXT: v_mov_b32_sdwa v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+# GCN-NEXT: v_mov_b32_e32 v2, v1
+# GCN-NEXT: s_endpgm
+name: lo_to_lo_hi_to_hi
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1_lo16 = COPY $vgpr0_lo16
+    $vgpr1_hi16 = COPY $vgpr0_hi16
+    $vgpr2 = COPY killed $vgpr1
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}lo_to_hi_hi_to_lo:
+# GCN:      v_mov_b32_sdwa v1, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+# GCN-NEXT: v_mov_b32_sdwa v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+# GCN-NEXT: v_mov_b32_e32 v2, v1
+# GCN-NEXT: s_endpgm
+name: lo_to_hi_hi_to_lo
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1_lo16 = COPY $vgpr0_hi16
+    $vgpr1_hi16 = COPY $vgpr0_lo16
+    $vgpr2 = COPY killed $vgpr1
+    S_ENDPGM 0
+...
+
+# NB: copy of undef just killed instead of expansion
+# GCN-LABEL: {{^}}lo_to_lo_undef:
+# GCN:        s_waitcnt
+# GFX10-NEXT: s_waitcnt_vscnt
+# GCN-NEXT:   v_mov_b32_e32 v2, v1
+# GCN-NEXT:   s_endpgm
+name: lo_to_lo_undef
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr1_lo16 = COPY undef $vgpr0_lo16
+    $vgpr2 = COPY killed $vgpr1
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}lo_to_lo_sgpr_to_sgpr:
+# GCN: s_mov_b32 s1, s0
+name: lo_to_lo_sgpr_to_sgpr
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $sgpr0 = IMPLICIT_DEF
+    $sgpr1_lo16 = COPY $sgpr0_lo16
+    S_ENDPGM 0
+...

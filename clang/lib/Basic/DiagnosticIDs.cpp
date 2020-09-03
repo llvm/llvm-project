@@ -85,6 +85,7 @@ VALIDATE_DIAG_SIZE(LEX)
 VALIDATE_DIAG_SIZE(PARSE)
 VALIDATE_DIAG_SIZE(AST)
 VALIDATE_DIAG_SIZE(COMMENT)
+VALIDATE_DIAG_SIZE(CROSSTU)
 VALIDATE_DIAG_SIZE(SEMA)
 VALIDATE_DIAG_SIZE(ANALYSIS)
 VALIDATE_DIAG_SIZE(REFACTORING)
@@ -289,7 +290,7 @@ namespace clang {
 
       unsigned getOrCreateDiagID(DiagnosticIDs::Level L, StringRef Message,
                                  DiagnosticIDs &Diags) {
-        DiagDesc D(L, Message);
+        DiagDesc D(L, std::string(Message));
         // Check to see if it already exists.
         std::map<DiagDesc, unsigned>::iterator I = DiagIDs.lower_bound(D);
         if (I != DiagIDs.end() && I->first == D)

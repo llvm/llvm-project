@@ -1,5 +1,5 @@
 add_lldb_library(lldbPluginInstrumentationRuntimeMainThreadChecker PLUGIN
-  MainThreadCheckerRuntime.cpp
+  InstrumentationRuntimeMainThreadChecker.cpp
 
   LINK_LIBS
     lldbBreakpoint

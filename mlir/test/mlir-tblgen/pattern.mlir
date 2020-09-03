@@ -10,6 +10,18 @@ func @verifyFusedLocs(%arg0 : i32) -> i32 {
   return %result : i32
 }
 
+// CHECK-LABEL: verifyDesignatedLoc
+func @verifyDesignatedLoc(%arg0 : i32) -> i32 {
+  %0 = "test.loc_src"(%arg0) : (i32) -> i32 loc("loc3")
+  %1 = "test.loc_src"(%0) : (i32) -> i32 loc("loc2")
+  %2 = "test.loc_src"(%1) : (i32) -> i32 loc("loc1")
+
+  // CHECK: "test.loc_dst"({{.*}}) : (i32) -> i32 loc("loc1")
+  // CHECK: "test.loc_dst"({{.*}}) : (i32) -> i32 loc("named")
+  // CHECK: "test.loc_dst"({{.*}}) : (i32) -> i32 loc(fused<"fused">["loc2", "loc3"])
+  return %1 : i32
+}
+
 // CHECK-LABEL: verifyZeroResult
 func @verifyZeroResult(%arg0 : i32) {
   // CHECK: "test.op_i"(%arg0) : (i32) -> ()
@@ -17,7 +29,7 @@ func @verifyZeroResult(%arg0 : i32) {
   return
 }
 
-// CHECK-LABEL verifyZeroArg
+// CHECK-LABEL: verifyZeroArg
 func @verifyZeroArg() -> i32 {
   // CHECK: "test.op_k"() : () -> i32
   %0 = "test.op_j"() : () -> i32
@@ -345,5 +357,16 @@ func @generateVariadicOutputOpInNestedPattern() -> (i32) {
   // CHECK: return %[[res]]
 
   %0 = "test.one_i32_out"() : () -> (i32)
+  return %0 : i32
+}
+
+//===----------------------------------------------------------------------===//
+// Test that natives calls are only called once during rewrites.
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: redundantTest
+func @redundantTest(%arg0: i32) -> i32 {
+  %0 = "test.op_m"(%arg0) : (i32) -> i32
+  // CHECK: "test.op_m"(%arg0) {optional_attr = 314159265 : i32} : (i32) -> i32
   return %0 : i32
 }

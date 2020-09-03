@@ -9,6 +9,11 @@ from lit.llvm import llvm_config
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
+
+def _get_lldb_init_path(config):
+    return os.path.join(config.test_exec_root, 'Shell', 'lit-lldb-init')
+
+
 def _disallow(config, execName):
   warning = '''
     echo '*** Do not use \'{0}\' in tests; use \'%''{0}\'. ***' &&
@@ -16,10 +21,6 @@ def _disallow(config, execName):
   '''
   config.substitutions.append((' {0} '.format(execName),
                                warning.format(execName)))
-
-
-def _get_lldb_init_path(config):
-    return os.path.join(config.test_exec_root, 'Shell', 'lit-lldb-init')
 
 
 def use_lldb_substitutions(config):
@@ -61,6 +62,7 @@ def use_lldb_substitutions(config):
                   unresolved='ignore'),
         'lldb-test',
         'lldb-instr',
+        'lldb-vscode',
         ToolSubst('%build',
                   command="'" + sys.executable + "'",
                   extra_args=build_script_args)
@@ -70,8 +72,7 @@ def use_lldb_substitutions(config):
     _disallow(config, 'debugserver')
     _disallow(config, 'platformserver')
 
-    llvm_config.add_tool_substitutions(primary_tools,
-                                       [config.lldb_tools_dir])
+    llvm_config.add_tool_substitutions(primary_tools, [config.lldb_tools_dir])
 
 def _use_msvc_substitutions(config):
     # If running from a Visual Studio Command prompt (e.g. vcvars), this will
@@ -168,7 +169,7 @@ def use_support_substitutions(config):
         config.available_features.add('lld')
 
 
-    support_tools = ['yaml2obj', 'obj2yaml', 'llvm-pdbutil',
+    support_tools = ['yaml2obj', 'obj2yaml', 'llvm-dwp', 'llvm-pdbutil',
                      'llvm-mc', 'llvm-readobj', 'llvm-objdump',
                      'llvm-objcopy', 'lli']
     additional_tool_dirs += [config.lldb_tools_dir, config.llvm_tools_dir]
@@ -188,4 +189,4 @@ def use_lldb_repro_substitutions(config, mode):
             command=FindTool('lldb-repro'),
             extra_args=[mode, '-S', lldb_init]),
     ]
-    llvm_config.add_tool_substitutions(substitutions)
+    llvm_config.add_tool_substitutions(substitutions, [config.lldb_tools_dir])

@@ -1,6 +1,6 @@
-# RUN: yaml2obj %p/Inputs/i386-slice.yaml > %t-32.o
-# RUN: yaml2obj %p/Inputs/arm64-slice.yaml > %t-arm64.o
-# RUN: yaml2obj %p/Inputs/i386-x86_64-universal.yaml > %t-universal.o
+# RUN: yaml2obj %p/Inputs/i386-slice.yaml -o %t-32.o
+# RUN: yaml2obj %p/Inputs/arm64-slice.yaml -o %t-arm64.o
+# RUN: yaml2obj %p/Inputs/i386-x86_64-universal.yaml -o %t-universal.o
 
 # RUN: not llvm-lipo %t-universal.o -replace %t-32.o 2>&1 | FileCheck --check-prefix=MISSING_ARG %s
 # MISSING_ARG: error: replace is missing an argument: expects -replace arch_type file_name

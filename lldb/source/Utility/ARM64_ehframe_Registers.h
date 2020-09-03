@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_ARM64_ehframe_Registers_h_
-#define utility_ARM64_ehframe_Registers_h_
+#ifndef LLDB_SOURCE_UTILITY_ARM64_EHFRAME_REGISTERS_H
+#define LLDB_SOURCE_UTILITY_ARM64_EHFRAME_REGISTERS_H
 
 // The register numbers used in the eh_frame unwind information.
 // Should be the same as DWARF register numbers.
@@ -49,10 +49,34 @@ enum {
   lr, // aka x30
   sp, // aka x31 aka wzr
   pc, // value is 32
-  cpsr
-};
+  cpsr,
+  // 34-45 reserved
 
-enum {
+  // 64-bit SVE Vector granule pseudo register
+  vg = 46,
+
+  // VG ́8-bit SVE first fault register
+  ffr = 47,
+
+  // VG x ́8-bit SVE predicate registers
+  p0 = 48,
+  p1,
+  p2,
+  p3,
+  p4,
+  p5,
+  p6,
+  p7,
+  p8,
+  p9,
+  p10,
+  p11,
+  p12,
+  p13,
+  p14,
+  p15,
+
+  // V0-V31 (128 bit vector registers)
   v0 = 64,
   v1,
   v2,
@@ -84,8 +108,42 @@ enum {
   v28,
   v29,
   v30,
-  v31 // 95
+  v31,
+
+  // VG ́64-bit SVE vector registers
+  z0 = 96,
+  z1,
+  z2,
+  z3,
+  z4,
+  z5,
+  z6,
+  z7,
+  z8,
+  z9,
+  z10,
+  z11,
+  z12,
+  z13,
+  z14,
+  z15,
+  z16,
+  z17,
+  z18,
+  z19,
+  z20,
+  z21,
+  z22,
+  z23,
+  z24,
+  z25,
+  z26,
+  z27,
+  z28,
+  z29,
+  z30,
+  z31
 };
 }
 
-#endif // utility_ARM64_ehframe_Registers_h_
+#endif // LLDB_SOURCE_UTILITY_ARM64_EHFRAME_REGISTERS_H

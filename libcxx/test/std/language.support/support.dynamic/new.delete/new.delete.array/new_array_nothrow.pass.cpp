@@ -36,6 +36,7 @@ struct A
 
 int main(int, char**)
 {
+    new_handler_called = 0;
     std::set_new_handler(my_new_handler);
 #ifndef TEST_HAS_NO_EXCEPTIONS
     try

@@ -40,6 +40,7 @@ def Named : DeclNode<Decl, "named declarations", 1>;
     def Binding : DeclNode<Value>;
     def OMPDeclareReduction : DeclNode<Value>, DeclContext;
     def OMPDeclareMapper : DeclNode<Value>, DeclContext;
+    def MSGuid : DeclNode<Value>;
     def Declarator : DeclNode<Value, "declarators", 1>;
       def Field : DeclNode<Declarator, "non-static data members">;
         def ObjCIvar : DeclNode<Field>;
@@ -100,5 +101,6 @@ def OMPThreadPrivate : DeclNode<Decl>;
 def OMPAllocate : DeclNode<Decl>;
 def OMPRequires : DeclNode<Decl>;
 def Empty : DeclNode<Decl>;
+def RequiresExprBody : DeclNode<Decl>, DeclContext;
 def LifetimeExtendedTemporary : DeclNode<Decl>;
 

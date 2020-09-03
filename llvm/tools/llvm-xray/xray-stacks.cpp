@@ -42,8 +42,7 @@ static cl::opt<bool>
     StackKeepGoing("keep-going", cl::desc("Keep going on errors encountered"),
                    cl::sub(Stack), cl::init(false));
 static cl::alias StackKeepGoing2("k", cl::aliasopt(StackKeepGoing),
-                                 cl::desc("Alias for -keep-going"),
-                                 cl::sub(Stack));
+                                 cl::desc("Alias for -keep-going"));
 
 // TODO: Does there need to be an option to deduce tail or sibling calls?
 
@@ -53,8 +52,7 @@ static cl::opt<std::string> StacksInstrMap(
              "Currently supports elf file instrumentation maps."),
     cl::sub(Stack), cl::init(""));
 static cl::alias StacksInstrMap2("m", cl::aliasopt(StacksInstrMap),
-                                 cl::desc("Alias for -instr_map"),
-                                 cl::sub(Stack));
+                                 cl::desc("Alias for -instr_map"));
 
 static cl::opt<bool>
     SeparateThreadStacks("per-thread-stacks",
@@ -72,8 +70,7 @@ static cl::opt<bool>
                            "By default separates stacks per-thread."),
                   cl::sub(Stack), cl::init(false));
 static cl::alias DumpAllStacksShort("all", cl::aliasopt(DumpAllStacks),
-                                    cl::desc("Alias for -all-stacks"),
-                                    cl::sub(Stack));
+                                    cl::desc("Alias for -all-stacks"));
 
 // TODO(kpw): Add other interesting formats. Perhaps chrome trace viewer format
 // possibly with aggregations or just a linear trace of timings.
@@ -677,11 +674,12 @@ std::string CreateErrorMessage(StackTrie::AccountRecordStatus Error,
                                const FuncIdConversionHelper &Converter) {
   switch (Error) {
   case StackTrie::AccountRecordStatus::ENTRY_NOT_FOUND:
-    return formatv("Found record {0} with no matching function entry\n",
-                   format_xray_record(Record, Converter));
+    return std::string(
+        formatv("Found record {0} with no matching function entry\n",
+                format_xray_record(Record, Converter)));
   default:
-    return formatv("Unknown error type for record {0}\n",
-                   format_xray_record(Record, Converter));
+    return std::string(formatv("Unknown error type for record {0}\n",
+                               format_xray_record(Record, Converter)));
   }
 }
 

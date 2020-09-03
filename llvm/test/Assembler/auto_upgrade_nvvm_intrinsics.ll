@@ -49,7 +49,7 @@ define void @simple_upgrade(i32 %a, i64 %b, i16 %c) {
   ret void
 }
 
-; CHECK-LABEL @abs
+; CHECK-LABEL: @abs
 define void @abs(i32 %a, i64 %b) {
 ; CHECK-DAG: [[negi:%[a-zA-Z0-9.]+]] = sub i32 0, %a
 ; CHECK-DAG: [[cmpi:%[a-zA-Z0-9.]+]] = icmp sge i32 %a, 0

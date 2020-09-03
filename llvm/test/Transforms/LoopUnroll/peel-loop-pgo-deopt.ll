@@ -1,14 +1,14 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -S -debug-only=loop-unroll -loop-unroll -unroll-runtime -unroll-peel-multi-deopt-exit 2>&1 | FileCheck %s
-; RUN: opt < %s -S -debug-only=loop-unroll -unroll-peel-multi-deopt-exit -passes='require<profile-summary>,function(require<opt-remark-emit>,unroll)' 2>&1 | FileCheck %s
-; RUN: opt < %s -S -debug-only=loop-unroll -unroll-peel-multi-deopt-exit -passes='require<profile-summary>,function(require<opt-remark-emit>,unroll<no-profile-peeling>)' 2>&1 | FileCheck %s --check-prefixes=CHECK-NO-PEEL
+; RUN: opt < %s -S -debug-only=loop-unroll -unroll-peel-multi-deopt-exit -passes='require<profile-summary>,function(require<opt-remark-emit>,loop-unroll)' 2>&1 | FileCheck %s
+; RUN: opt < %s -S -debug-only=loop-unroll -unroll-peel-multi-deopt-exit -passes='require<profile-summary>,function(require<opt-remark-emit>,loop-unroll<no-profile-peeling>)' 2>&1 | FileCheck %s --check-prefixes=CHECK-NO-PEEL
 
 ; Make sure we use the profile information correctly to peel-off 3 iterations
 ; from the loop, and update the branch weights for the peeled loop properly.
 ; All side exits to deopt does not change weigths.
 
 ; CHECK: Loop Unroll: F[basic]
-; CHECK: PEELING loop %for.body with iteration count 3!
+; CHECK: PEELING loop %for.body with iteration count 4!
 ; CHECK-NO-PEEL-NOT: PEELING loop %for.body
 ; CHECK-LABEL: @basic
 ; CHECK: br i1 %c, label %{{.*}}, label %side_exit, !prof !15

@@ -1,16 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_lshrdi3
-//===-- lshrdi3_test.c - Test __lshrdi3 -----------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __lshrdi3 for the compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
 
 #include "int_lib.h"
 #include <stdio.h>
@@ -19,9 +8,9 @@
 
 // Precondition:  0 <= b < bits_in_dword
 
-COMPILER_RT_ABI di_int __lshrdi3(di_int a, si_int b);
+COMPILER_RT_ABI di_int __lshrdi3(di_int a, int b);
 
-int test__lshrdi3(di_int a, si_int b, di_int expected)
+int test__lshrdi3(di_int a, int b, di_int expected)
 {
     di_int x = __lshrdi3(a, b);
     if (x != expected)

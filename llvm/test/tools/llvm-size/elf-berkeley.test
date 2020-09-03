@@ -2,7 +2,7 @@
 ## format. It also shows that the formatting is correct (including using tabs as
 ## field separators).
 
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 
 # RUN: llvm-size -B %t.o \
 # RUN:   | FileCheck %s --match-full-lines --strict-whitespace -DFILE=%t.o --implicit-check-not={{.}}

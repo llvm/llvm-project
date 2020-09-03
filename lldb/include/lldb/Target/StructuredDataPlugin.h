@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef StructuredDataPlugin_h
-#define StructuredDataPlugin_h
+#ifndef LLDB_TARGET_STRUCTUREDDATAPLUGIN_H
+#define LLDB_TARGET_STRUCTUREDDATAPLUGIN_H
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Utility/StructuredData.h"
@@ -162,7 +162,8 @@ protected:
 private:
   lldb::ProcessWP m_process_wp;
 
-  DISALLOW_COPY_AND_ASSIGN(StructuredDataPlugin);
+  StructuredDataPlugin(const StructuredDataPlugin &) = delete;
+  const StructuredDataPlugin &operator=(const StructuredDataPlugin &) = delete;
 };
 }
 

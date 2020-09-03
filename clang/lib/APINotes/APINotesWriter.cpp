@@ -1210,7 +1210,7 @@ void APINotesWriter::Implementation::writeToStream(llvm::raw_ostream &os) {
 APINotesWriter::APINotesWriter(StringRef moduleName, const FileEntry *sourceFile)
   : Impl(*new Implementation)
 {
-  Impl.ModuleName = moduleName;
+  Impl.ModuleName = std::string(moduleName);
   Impl.SourceFile = sourceFile;
 }
 

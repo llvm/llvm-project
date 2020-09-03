@@ -26,8 +26,15 @@ NarrowingConversionsCheck::NarrowingConversionsCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       WarnOnFloatingPointNarrowingConversion(
-          Options.get("WarnOnFloatingPointNarrowingConversion", 1)),
-      PedanticMode(Options.get("PedanticMode", 0)) {}
+          Options.get("WarnOnFloatingPointNarrowingConversion", true)),
+      PedanticMode(Options.get("PedanticMode", false)) {}
+
+void NarrowingConversionsCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "WarnOnFloatingPointNarrowingConversion",
+                WarnOnFloatingPointNarrowingConversion);
+  Options.store(Opts, "PedanticMode", PedanticMode);
+}
 
 void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
   // ceil() and floor() are guaranteed to return integers, even though the type
@@ -39,12 +46,14 @@ void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
   //   i = 0.5;
   //   void f(int); f(0.5);
   Finder->addMatcher(
-      implicitCastExpr(hasImplicitDestinationType(builtinType()),
-                       hasSourceExpression(hasType(builtinType())),
-                       unless(hasSourceExpression(IsCeilFloorCallExpr)),
-                       unless(hasParent(castExpr())),
-                       unless(isInTemplateInstantiation()))
-          .bind("cast"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          implicitCastExpr(hasImplicitDestinationType(builtinType()),
+                           hasSourceExpression(hasType(builtinType())),
+                           unless(hasSourceExpression(IsCeilFloorCallExpr)),
+                           unless(hasParent(castExpr())),
+                           unless(isInTemplateInstantiation()))
+              .bind("cast")),
       this);
 
   // Binary operators:
@@ -440,7 +449,6 @@ void NarrowingConversionsCheck::check(const MatchFinder::MatchResult &Result) {
     return handleImplicitCast(*Result.Context, *Cast);
   llvm_unreachable("must be binary operator or cast expression");
 }
-
 } // namespace cppcoreguidelines
 } // namespace tidy
 } // namespace clang

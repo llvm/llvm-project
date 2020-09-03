@@ -42,7 +42,7 @@ static Error dumpInput(StringRef File) {
   // Universal MachO is not a subclass of ObjectFile, so it needs to be handled
   // here with the other binary types.
   if (Binary.isMachO() || Binary.isMachOUniversalBinary())
-    return errorCodeToError(macho2yaml(outs(), Binary));
+    return macho2yaml(outs(), Binary);
   // TODO: If this is an archive, then burst it and dump each entry
   if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary))
     return dumpObject(*Obj);

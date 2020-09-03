@@ -1,4 +1,4 @@
-//===-- Symbol.cpp ----------------------------------------------*- C++ -*-===//
+//===-- Symbol.cpp --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -122,7 +122,7 @@ bool Symbol::ValueIsAddress() const {
 ConstString Symbol::GetDisplayName() const {
   if (!m_mangled)
     return GetName();
-  return m_mangled.GetDisplayDemangledName(GetLanguage());
+  return m_mangled.GetDisplayDemangledName();
 }
 
 ConstString Symbol::GetReExportedSymbolName() const {
@@ -205,7 +205,7 @@ void Symbol::GetDescription(Stream *s, lldb::DescriptionLevel level,
       s->Printf(", value = 0x%16.16" PRIx64,
                 m_addr_range.GetBaseAddress().GetOffset());
   }
-  ConstString demangled = m_mangled.GetDemangledName(GetLanguage());
+  ConstString demangled = m_mangled.GetDemangledName();
   if (demangled)
     s->Printf(", name=\"%s\"", demangled.AsCString());
   if (m_mangled.GetMangledName())
@@ -221,7 +221,7 @@ void Symbol::Dump(Stream *s, Target *target, uint32_t index,
   // Make sure the size of the symbol is up to date before dumping
   GetByteSize();
 
-  ConstString name = m_mangled.GetName(GetLanguage(), name_preference);
+  ConstString name = m_mangled.GetName(name_preference);
   if (ValueIsAddress()) {
     if (!m_addr_range.GetBaseAddress().Dump(s, nullptr,
                                             Address::DumpStyleFileAddress))
@@ -335,7 +335,7 @@ uint32_t Symbol::GetPrologueByteSize() {
 bool Symbol::Compare(ConstString name, SymbolType type) const {
   if (type == eSymbolTypeAny || m_type == type)
     return m_mangled.GetMangledName() == name ||
-           m_mangled.GetDemangledName(GetLanguage()) == name;
+           m_mangled.GetDemangledName() == name;
   return false;
 }
 
@@ -498,11 +498,10 @@ lldb::addr_t Symbol::GetLoadAddress(Target *target) const {
     return LLDB_INVALID_ADDRESS;
 }
 
-ConstString Symbol::GetName() const { return m_mangled.GetName(GetLanguage()); }
+ConstString Symbol::GetName() const { return m_mangled.GetName(); }
 
 ConstString Symbol::GetNameNoArguments() const {
-  return m_mangled.GetName(GetLanguage(),
-                           Mangled::ePreferDemangledWithoutArguments);
+  return m_mangled.GetName(Mangled::ePreferDemangledWithoutArguments);
 }
 
 lldb::addr_t Symbol::ResolveCallableAddress(Target &target) const {
@@ -544,11 +543,11 @@ lldb::DisassemblerSP Symbol::GetInstructions(const ExecutionContext &exe_ctx,
                                              const char *flavor,
                                              bool prefer_file_cache) {
   ModuleSP module_sp(m_addr_range.GetBaseAddress().GetModule());
-  if (module_sp) {
+  if (module_sp && exe_ctx.HasTargetScope()) {
     const bool prefer_file_cache = false;
     return Disassembler::DisassembleRange(module_sp->GetArchitecture(), nullptr,
-                                          flavor, exe_ctx, m_addr_range,
-                                          prefer_file_cache);
+                                          flavor, exe_ctx.GetTargetRef(),
+                                          m_addr_range, prefer_file_cache);
   }
   return lldb::DisassemblerSP();
 }

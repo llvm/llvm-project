@@ -2,7 +2,7 @@
 
 define void @foo(i1 %c, i8* %p) {
 ; CHECK: if:
-; CHECK-NEXT: load i8, i8* %p, !range !0
+; CHECK-NEXT: load i8, i8* %p, align 1, !range !0
 ; CHECK: !0 = !{i8 0, i8 1, i8 3, i8 5}
 if:
   br i1 %c, label %then, label %else

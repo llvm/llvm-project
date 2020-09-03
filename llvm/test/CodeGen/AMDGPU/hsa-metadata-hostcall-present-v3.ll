@@ -9,24 +9,19 @@
 ; CHECK-NEXT:         .size:           1
 ; CHECK-NEXT:         .type_name:      char
 ; CHECK-NEXT:         .value_kind:     by_value
-; CHECK-NEXT:         .value_type:     i8
 ; CHECK-NEXT:       - .offset:         8
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_x
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .offset:         16
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_y
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .offset:         24
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         32
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
-; CHECK-NEXT:         .value_type:     i8
 ; CHECK:          .language:       OpenCL C
 ; CHECK-NEXT:     .language_version:
 ; CHECK-NEXT:       - 2

@@ -1,5 +1,6 @@
 #include "AliasAnalysisSummary.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Compiler.h"
 

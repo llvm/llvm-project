@@ -3,7 +3,7 @@
 ; creating v4i16->v4f16 and v4f16->v4i16 bitcasts in the selection DAG is rather
 ; difficult, so this test has to throw in some llvm.amdgcn.wqm to get them
 
-; LABEL: {{^}}test_to_i16:
+; CHECK-LABEL: {{^}}test_to_i16:
 ; CHECK: s_endpgm
 define amdgpu_ps void @test_to_i16(<4 x i32> inreg, <4 x half> inreg) #0 {
   %a_tmp = call <4 x half> @llvm.amdgcn.wqm.v4f16(<4 x half> %1)
@@ -15,7 +15,7 @@ define amdgpu_ps void @test_to_i16(<4 x i32> inreg, <4 x half> inreg) #0 {
   ret void
 }
 
-; LABEL: {{^}}test_to_half:
+; CHECK-LABEL: {{^}}test_to_half:
 ; CHECK: s_endpgm
 define amdgpu_ps void @test_to_half(<4 x i32> inreg, <4 x i16> inreg) #0 {
   %a_tmp = call <4 x i16> @llvm.amdgcn.wqm.v4i16(<4 x i16> %1)

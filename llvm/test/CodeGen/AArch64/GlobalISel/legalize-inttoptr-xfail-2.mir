@@ -1,5 +1,4 @@
-# RUN: not llc -mtriple=aarch64-- -run-pass=legalizer %s -o - 2>&1 | FileCheck %s
-# REQUIRES: asserts
+# RUN: not --crash llc -mtriple=aarch64-- -run-pass=legalizer %s -o - 2>&1 | FileCheck %s
 
 # This is to demonstrate what kind of bugs we're missing w/o some kind
 # of validation for LegalizerInfo: G_INTTOPTR could only be legal /

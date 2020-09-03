@@ -1,5 +1,5 @@
-; RUN: opt -licm -basicaa -licm-n2-threshold=0 < %s -S | FileCheck %s
-; RUN: opt -licm -basicaa -licm-n2-threshold=200 < %s -S | FileCheck %s --check-prefix=ALIAS-N2
+; RUN: opt -licm -basic-aa -licm-n2-threshold=0 < %s -S | FileCheck %s
+; RUN: opt -licm -basic-aa -licm-n2-threshold=200 < %s -S | FileCheck %s --check-prefix=ALIAS-N2
 ; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=0 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=200 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s --check-prefix=ALIAS-N2
 

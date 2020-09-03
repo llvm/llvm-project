@@ -26,7 +26,7 @@
 #include "sanitizer_placement_new.h"
 #include "sanitizer_procmaps.h"
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_GO
 #include <asm/param.h>
 #endif
 
@@ -166,7 +166,7 @@ namespace __sanitizer {
 #if !SANITIZER_SOLARIS && !SANITIZER_NETBSD
 #if !SANITIZER_S390 && !SANITIZER_OPENBSD
 uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
-                   OFF_T offset) {
+                   u64 offset) {
 #if SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
   return internal_syscall(SYSCALL(mmap), (uptr)addr, length, prot, flags, fd,
                           offset);
@@ -552,13 +552,14 @@ const char *GetEnv(const char *name) {
 #endif
 }
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD && !SANITIZER_OPENBSD
+#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD && !SANITIZER_OPENBSD && \
+    !SANITIZER_GO
 extern "C" {
 SANITIZER_WEAK_ATTRIBUTE extern void *__libc_stack_end;
 }
 #endif
 
-#if !SANITIZER_GO && !SANITIZER_FREEBSD && !SANITIZER_NETBSD &&                \
+#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD &&                \
     !SANITIZER_OPENBSD
 static void ReadNullSepFileToArray(const char *path, char ***arr,
                                    int arr_size) {
@@ -604,16 +605,21 @@ static void GetArgsAndEnv(char ***argv, char ***envp) {
 #else // SANITIZER_FREEBSD
 #if !SANITIZER_GO
   if (&__libc_stack_end) {
-#endif // !SANITIZER_GO
     uptr* stack_end = (uptr*)__libc_stack_end;
-    int argc = *stack_end;
+    // Normally argc can be obtained from *stack_end, however, on ARM glibc's
+    // _start clobbers it:
+    // https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/arm/start.S;hb=refs/heads/release/2.31/master#l75
+    // Do not special-case ARM and infer argc from argv everywhere.
+    int argc = 0;
+    while (stack_end[argc + 1]) argc++;
     *argv = (char**)(stack_end + 1);
     *envp = (char**)(stack_end + argc + 2);
-#if !SANITIZER_GO
   } else {
+#endif // !SANITIZER_GO
     static const int kMaxArgv = 2000, kMaxEnvp = 2000;
     ReadNullSepFileToArray("/proc/self/cmdline", argv, kMaxArgv);
     ReadNullSepFileToArray("/proc/self/environ", envp, kMaxEnvp);
+#if !SANITIZER_GO
   }
 #endif // !SANITIZER_GO
 #endif // SANITIZER_FREEBSD
@@ -735,6 +741,14 @@ uptr internal_getppid() {
   return internal_syscall(SYSCALL(getppid));
 }
 
+int internal_dlinfo(void *handle, int request, void *p) {
+#if SANITIZER_FREEBSD
+  return dlinfo(handle, request, p);
+#else
+  UNIMPLEMENTED();
+#endif
+}
+
 uptr internal_getdents(fd_t fd, struct linux_dirent *dirp, unsigned int count) {
 #if SANITIZER_FREEBSD
   return internal_syscall(SYSCALL(getdirentries), fd, (uptr)dirp, count, NULL);
@@ -847,9 +861,8 @@ uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
 #else
   __sanitizer_kernel_sigset_t *k_set = (__sanitizer_kernel_sigset_t *)set;
   __sanitizer_kernel_sigset_t *k_oldset = (__sanitizer_kernel_sigset_t *)oldset;
-  return internal_syscall(SYSCALL(rt_sigprocmask), (uptr)how,
-                          (uptr)&k_set->sig[0], (uptr)&k_oldset->sig[0],
-                          sizeof(__sanitizer_kernel_sigset_t));
+  return internal_syscall(SYSCALL(rt_sigprocmask), (uptr)how, (uptr)k_set,
+                          (uptr)k_oldset, sizeof(__sanitizer_kernel_sigset_t));
 #endif
 }
 
@@ -1006,9 +1019,8 @@ static uptr GetKernelAreaSize() {
   // is modified (e.g. under schroot) so check this as well.
   struct utsname uname_info;
   int pers = personality(0xffffffffUL);
-  if (!(pers & PER_MASK)
-      && uname(&uname_info) == 0
-      && internal_strstr(uname_info.machine, "64"))
+  if (!(pers & PER_MASK) && internal_uname(&uname_info) == 0 &&
+      internal_strstr(uname_info.machine, "64"))
     return 0;
 #endif  // SANITIZER_ANDROID
 
@@ -1063,7 +1075,8 @@ uptr GetMaxUserVirtualAddress() {
 
 #if !SANITIZER_ANDROID
 uptr GetPageSize() {
-#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__))
+#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__)) && \
+    defined(EXEC_PAGESIZE)
   return EXEC_PAGESIZE;
 #elif SANITIZER_FREEBSD || SANITIZER_NETBSD
 // Use sysctl as sysconf can trigger interceptors internally.
@@ -1619,6 +1632,12 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
 }
 #endif  // defined(__x86_64__) && SANITIZER_LINUX
 
+#if SANITIZER_LINUX
+int internal_uname(struct utsname *buf) {
+  return internal_syscall(SYSCALL(uname), buf);
+}
+#endif
+
 #if SANITIZER_ANDROID
 #if __ANDROID_API__ < 21
 extern "C" __attribute__((weak)) int dl_iterate_phdr(
@@ -1701,7 +1720,7 @@ HandleSignalMode GetHandleSignalMode(int signum) {
 }
 
 #if !SANITIZER_GO
-void *internal_start_thread(void(*func)(void *arg), void *arg) {
+void *internal_start_thread(void *(*func)(void *arg), void *arg) {
   // Start the thread with signals blocked, otherwise it can steal user signals.
   __sanitizer_sigset_t set, old;
   internal_sigfillset(&set);
@@ -1712,7 +1731,7 @@ void *internal_start_thread(void(*func)(void *arg), void *arg) {
 #endif
   internal_sigprocmask(SIG_SETMASK, &set, &old);
   void *th;
-  real_pthread_create(&th, nullptr, (void*(*)(void *arg))func, arg);
+  real_pthread_create(&th, nullptr, func, arg);
   internal_sigprocmask(SIG_SETMASK, &old, nullptr);
   return th;
 }
@@ -1721,7 +1740,7 @@ void internal_join_thread(void *th) {
   real_pthread_join(th, nullptr);
 }
 #else
-void *internal_start_thread(void (*func)(void *), void *arg) { return 0; }
+void *internal_start_thread(void *(*func)(void *), void *arg) { return 0; }
 
 void internal_join_thread(void *th) {}
 #endif
@@ -1846,6 +1865,105 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 #endif
   u32 instr = *(u32 *)pc;
   return (instr >> 21) & 1 ? WRITE: READ;
+#elif defined(__riscv)
+  unsigned long pc = ucontext->uc_mcontext.__gregs[REG_PC];
+  unsigned faulty_instruction = *(uint16_t *)pc;
+
+#if defined(__riscv_compressed)
+  if ((faulty_instruction & 0x3) != 0x3) {  // it's a compressed instruction
+    // set op_bits to the instruction bits [1, 0, 15, 14, 13]
+    unsigned op_bits =
+        ((faulty_instruction & 0x3) << 3) | (faulty_instruction >> 13);
+    unsigned rd = faulty_instruction & 0xF80;  // bits 7-11, inclusive
+    switch (op_bits) {
+      case 0b10'010:  // c.lwsp (rd != x0)
+#if __riscv_xlen == 64
+      case 0b10'011:  // c.ldsp (rd != x0)
+#endif
+        return rd ? SignalContext::READ : SignalContext::UNKNOWN;
+      case 0b00'010:  // c.lw
+#if __riscv_flen >= 32 && __riscv_xlen == 32
+      case 0b10'011:  // c.flwsp
+#endif
+#if __riscv_flen >= 32 || __riscv_xlen == 64
+      case 0b00'011:  // c.flw / c.ld
+#endif
+#if __riscv_flen == 64
+      case 0b00'001:  // c.fld
+      case 0b10'001:  // c.fldsp
+#endif
+        return SignalContext::READ;
+      case 0b00'110:  // c.sw
+      case 0b10'110:  // c.swsp
+#if __riscv_flen >= 32 || __riscv_xlen == 64
+      case 0b00'111:  // c.fsw / c.sd
+      case 0b10'111:  // c.fswsp / c.sdsp
+#endif
+#if __riscv_flen == 64
+      case 0b00'101:  // c.fsd
+      case 0b10'101:  // c.fsdsp
+#endif
+        return SignalContext::WRITE;
+      default:
+        return SignalContext::UNKNOWN;
+    }
+  }
+#endif
+
+  unsigned opcode = faulty_instruction & 0x7f;         // lower 7 bits
+  unsigned funct3 = (faulty_instruction >> 12) & 0x7;  // bits 12-14, inclusive
+  switch (opcode) {
+    case 0b0000011:  // loads
+      switch (funct3) {
+        case 0b000:  // lb
+        case 0b001:  // lh
+        case 0b010:  // lw
+#if __riscv_xlen == 64
+        case 0b011:  // ld
+#endif
+        case 0b100:  // lbu
+        case 0b101:  // lhu
+          return SignalContext::READ;
+        default:
+          return SignalContext::UNKNOWN;
+      }
+    case 0b0100011:  // stores
+      switch (funct3) {
+        case 0b000:  // sb
+        case 0b001:  // sh
+        case 0b010:  // sw
+#if __riscv_xlen == 64
+        case 0b011:  // sd
+#endif
+          return SignalContext::WRITE;
+        default:
+          return SignalContext::UNKNOWN;
+      }
+#if __riscv_flen >= 32
+    case 0b0000111:  // floating-point loads
+      switch (funct3) {
+        case 0b010:  // flw
+#if __riscv_flen == 64
+        case 0b011:  // fld
+#endif
+          return SignalContext::READ;
+        default:
+          return SignalContext::UNKNOWN;
+      }
+    case 0b0100111:  // floating-point stores
+      switch (funct3) {
+        case 0b010:  // fsw
+#if __riscv_flen == 64
+        case 0b011:  // fsd
+#endif
+          return SignalContext::WRITE;
+        default:
+          return SignalContext::UNKNOWN;
+      }
+#endif
+    default:
+      return SignalContext::UNKNOWN;
+  }
 #else
   (void)ucontext;
   return UNKNOWN;  // FIXME: Implement.
@@ -1924,13 +2042,13 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 # ifndef REG_EBP
 #  define REG_EBP  6 // REG_FP
 # endif
-# ifndef REG_ESP
-#  define REG_ESP 17 // REG_SP
+# ifndef REG_UESP
+#  define REG_UESP 17 // REG_SP
 # endif
 # endif
   *pc = ucontext->uc_mcontext.gregs[REG_EIP];
   *bp = ucontext->uc_mcontext.gregs[REG_EBP];
-  *sp = ucontext->uc_mcontext.gregs[REG_ESP];
+  *sp = ucontext->uc_mcontext.gregs[REG_UESP];
 # endif
 #elif defined(__powerpc__) || defined(__powerpc64__)
   ucontext_t *ucontext = (ucontext_t*)context;
@@ -2011,7 +2129,9 @@ void CheckASLR() {
   }
 
   if (UNLIKELY(paxflags & CTL_PROC_PAXFLAGS_ASLR)) {
-    Printf("This sanitizer is not compatible with enabled ASLR\n");
+    Printf("This sanitizer is not compatible with enabled ASLR.\n"
+           "To disable ASLR, please run \"paxctl +a %s\" and try again.\n",
+           GetArgv()[0]);
     Die();
   }
 #elif SANITIZER_PPC64V2
@@ -2090,7 +2210,7 @@ void CheckNoDeepBind(const char *filename, int flag) {
   if (flag & RTLD_DEEPBIND) {
     Report(
         "You are trying to dlopen a %s shared library with RTLD_DEEPBIND flag"
-        " which is incompatibe with sanitizer runtime "
+        " which is incompatible with sanitizer runtime "
         "(see https://github.com/google/sanitizers/issues/611 for details"
         "). If you want to run %s library under sanitizers please remove "
         "RTLD_DEEPBIND from dlopen flags.\n",

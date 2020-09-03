@@ -37,6 +37,13 @@ namespace llvm {
   /// \see PrettyStackTraceEntry
   void EnablePrettyStackTraceOnSigInfoForThisThread(bool ShouldEnable = true);
 
+  /// Replaces the generic bug report message that is output upon
+  /// a crash.
+  void setBugReportMsg(const char *Msg);
+
+  /// Get the bug report message that will be output upon a crash.
+  const char *getBugReportMsg();
+
   /// PrettyStackTraceEntry - This class is used to represent a frame of the
   /// "pretty" stack trace that is dumped when a program crashes. You can define
   /// subclasses of this and declare them on the program stack: when they are

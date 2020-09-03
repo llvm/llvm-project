@@ -345,6 +345,22 @@ static void RemoveFilesToRemove() {
   FileToRemoveList::removeAllFiles(FilesToRemove);
 }
 
+void sys::CleanupOnSignal(uintptr_t Context) {
+  int Sig = (int)Context;
+
+  if (llvm::is_contained(InfoSigs, Sig)) {
+    InfoSignalHandler(Sig);
+    return;
+  }
+
+  RemoveFilesToRemove();
+
+  if (llvm::is_contained(IntSigs, Sig) || Sig == SIGPIPE)
+    return;
+
+  llvm::sys::RunSignalHandlers();
+}
+
 // The signal handler that runs.
 static RETSIGTYPE SignalHandler(int Sig) {
   // Restore the signal behavior to default, so that the program actually

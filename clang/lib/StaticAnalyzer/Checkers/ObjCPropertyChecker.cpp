@@ -79,6 +79,6 @@ void ento::registerObjCPropertyChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ObjCPropertyChecker>();
 }
 
-bool ento::shouldRegisterObjCPropertyChecker(const LangOptions &LO) {
+bool ento::shouldRegisterObjCPropertyChecker(const CheckerManager &mgr) {
   return true;
 }

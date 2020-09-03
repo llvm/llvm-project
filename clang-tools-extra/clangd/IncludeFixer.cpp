@@ -9,11 +9,11 @@
 #include "IncludeFixer.h"
 #include "AST.h"
 #include "Diagnostics.h"
-#include "Logger.h"
 #include "SourceCode.h"
-#include "Trace.h"
 #include "index/Index.h"
 #include "index/Symbol.h"
+#include "support/Logger.h"
+#include "support/Trace.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
@@ -173,10 +173,10 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
           if (!I.second)
             continue;
           if (auto Edit = Inserter->insert(ToInclude->first))
-            Fixes.push_back(
-                Fix{llvm::formatv("Add include {0} for symbol {1}{2}",
-                                  ToInclude->first, Sym.Scope, Sym.Name),
-                    {std::move(*Edit)}});
+            Fixes.push_back(Fix{std::string(llvm::formatv(
+                                    "Add include {0} for symbol {1}{2}",
+                                    ToInclude->first, Sym.Scope, Sym.Name)),
+                                {std::move(*Edit)}});
         }
       } else {
         vlog("Failed to calculate include insertion for {0} into {1}: {2}", Inc,
@@ -295,7 +295,7 @@ llvm::Optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
       // it as extra scope. With "index" being a specifier, we append "index::"
       // to the extra scope.
       Result.UnresolvedScope->append((Result.Name + Split.first).str());
-      Result.Name = Split.second;
+      Result.Name = std::string(Split.second);
     }
   }
   return Result;

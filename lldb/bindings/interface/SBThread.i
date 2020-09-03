@@ -127,7 +127,7 @@ public:
     Pass only an (int)length and expect to get a Python string describing the
     stop reason.") GetStopDescription;
     size_t
-    GetStopDescription (char *dst, size_t dst_len);
+    GetStopDescription (char *dst_or_null, size_t dst_len);
 
     %feature("autodoc", "
     If the last stop on this thread was a thread plan that gathered a return value from the stop,

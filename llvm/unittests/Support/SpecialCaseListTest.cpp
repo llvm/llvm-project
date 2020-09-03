@@ -39,7 +39,7 @@ protected:
     raw_fd_ostream OF(FD, true, true);
     OF << Contents;
     OF.close();
-    return Path.str();
+    return std::string(Path.str());
   }
 };
 
@@ -172,7 +172,7 @@ TEST_F(SpecialCaseListTest, EmptySpecialCaseList) {
   EXPECT_FALSE(SCL->inSection("", "foo", "bar"));
 }
 
-TEST_F(SpecialCaseListTest, MultipleBlacklists) {
+TEST_F(SpecialCaseListTest, MultipleExclusions) {
   std::vector<std::string> Files;
   Files.push_back(makeSpecialCaseListFile("src:bar\n"
                                           "src:*foo*\n"

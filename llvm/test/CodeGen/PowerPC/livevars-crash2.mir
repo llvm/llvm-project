@@ -1,0 +1,195 @@
+# RUN: not --crash llc -mtriple powerpc64le-unknown-linux-gnu %s -o - 2>&1 \
+# RUN:   -run-pass=livevars,phi-node-elimination -verify-machineinstrs \
+# RUN:   | FileCheck %s
+
+--- |
+  define float @testfloatslt(float %c1, float %c2, float %c3, float %c4, float %a1, float %a2) {
+  entry:
+    %cmp1 = fcmp oeq float %c3, %c4
+    %cmp3tmp = fcmp oeq float %c1, %c2
+    %cmp3 = icmp slt i1 %cmp3tmp, %cmp1
+    %cond = select i1 %cmp3, float %a1, float %a2
+    ret float %cond
+  }
+  
+  define signext i32 @select-i1-vs-i1(i8** nocapture dereferenceable(8) %p) #0 {
+  entry:
+    %.pre = load i8*, i8** %p, align 8
+    br label %loop
+  
+  loop:                                             ; preds = %loop, %if.then3, %entry
+    %0 = phi i8* [ %.pre, %entry ], [ %incdec.ptr4, %if.then3 ], [ %incdec.ptr, %loop ]
+    %1 = load i8, i8* %0, align 1
+    %tobool = icmp eq i8 %1, 0
+    %incdec.ptr = getelementptr inbounds i8, i8* %0, i64 1
+    store i8* %incdec.ptr, i8** %p, align 8
+    %2 = load i8, i8* %incdec.ptr, align 1
+    %tobool2 = icmp ne i8 %2, 0
+    %or.cond = and i1 %tobool, %tobool2
+    br i1 %or.cond, label %if.then3, label %loop
+  
+  if.then3:                                         ; preds = %loop
+    %incdec.ptr4 = getelementptr inbounds i8, i8* %0, i64 2
+    store i8* %incdec.ptr4, i8** %p, align 8
+    br label %loop
+  }
+  
+...
+---
+name:            testfloatslt
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: f4rc, preferred-register: '' }
+  - { id: 1, class: f4rc, preferred-register: '' }
+  - { id: 2, class: f4rc, preferred-register: '' }
+  - { id: 3, class: f4rc, preferred-register: '' }
+  - { id: 4, class: f4rc, preferred-register: '' }
+  - { id: 5, class: f4rc, preferred-register: '' }
+  - { id: 6, class: crrc, preferred-register: '' }
+  - { id: 7, class: crbitrc, preferred-register: '' }
+  - { id: 8, class: crrc, preferred-register: '' }
+  - { id: 9, class: crbitrc, preferred-register: '' }
+  - { id: 10, class: crbitrc, preferred-register: '' }
+  - { id: 11, class: f4rc, preferred-register: '' }
+liveins:
+  - { reg: '$f1', virtual-reg: '%0' }
+  - { reg: '$f2', virtual-reg: '%1' }
+  - { reg: '$f3', virtual-reg: '%2' }
+  - { reg: '$f4', virtual-reg: '%3' }
+  - { reg: '$f5', virtual-reg: '%4' }
+  - { reg: '$f6', virtual-reg: '%5' }
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x20000000), %bb.1(0x60000000)
+    liveins: $f1, $f2, $f3, $f4, $f5, $f6
+  
+    %5:f4rc = COPY killed $f6
+    %4:f4rc = COPY killed $f5
+    %3:f4rc = COPY killed $f4
+    %2:f4rc = COPY killed $f3
+    %1:f4rc = COPY killed $f2
+    %0:f4rc = COPY killed $f1
+    %6:crrc = FCMPUS killed %2, killed %3
+    %7:crbitrc = COPY killed %6.sub_eq
+    BC killed %7, %bb.2
+    B %bb.1
+  
+  bb.1.entry:
+    successors: %bb.2(0x2aaaaaab), %bb.3(0x55555555)
+  
+    %8:crrc = FCMPUS killed %0, killed %1
+    %9:crbitrc = COPY killed %8.sub_eq
+    BC killed %9, %bb.3
+  
+  bb.2.entry:
+    successors: %bb.3(0x80000000)
+  
+  
+  bb.3.entry:
+    %11:f4rc = PHI %5, %bb.2, %4, %bb.1
+    $f1 = COPY killed %11
+    BLR8 implicit $lr8, implicit $rm, implicit killed $f1
+
+...
+---
+name:            select-i1-vs-i1
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 2, class: g8rc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+  - { id: 4, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 5, class: gprc, preferred-register: '' }
+  - { id: 6, class: crrc, preferred-register: '' }
+  - { id: 7, class: crbitrc, preferred-register: '' }
+  - { id: 8, class: gprc, preferred-register: '' }
+  - { id: 9, class: crrc, preferred-register: '' }
+  - { id: 10, class: crbitrc, preferred-register: '' }
+  - { id: 11, class: crbitrc, preferred-register: '' }
+liveins:
+  - { reg: '$x3', virtual-reg: '%4' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $x3
+  
+    %4:g8rc_and_g8rc_nox0 = COPY killed $x3
+    %0:g8rc = LD 0, %4 :: (dereferenceable load 8 from %ir.p)
+  
+  bb.1.loop:
+    successors: %bb.1(0x20000000), %bb.2(0x60000000)
+  
+    %1:g8rc_and_g8rc_nox0 = PHI %0, %bb.0, %2, %bb.1, %3, %bb.3, %2, %bb.2
+    %5:gprc = LBZ 0, %1 :: (load 1 from %ir.0)
+    %6:crrc = CMPWI killed %5, 0
+    %7:crbitrc = COPY killed %6.sub_eq
+    %2:g8rc = nuw ADDI8 %1, 1
+    STD %2, 0, %4 :: (store 8 into %ir.p)
+    %8:gprc = LBZ 1, %1 :: (load 1 from %ir.incdec.ptr)
+    BCn killed %7, %bb.1
+    B %bb.2
+  
+  bb.2.loop:
+    successors: %bb.3(0x55555555), %bb.1(0x2aaaaaab)
+  
+    %9:crrc = CMPWI killed %8, 0
+    %10:crbitrc = COPY killed %9.sub_eq
+    BC killed %10, %bb.1
+    B %bb.3
+  
+  bb.3.if.then3:
+    successors: %bb.1(0x80000000)
+  
+    %3:g8rc = nuw ADDI8 killed %1, 2
+    STD %3, 0, %4 :: (store 8 into %ir.p)
+    B %bb.1
+
+...
+
+# CHECK-LABEL: Bad machine code: LiveVariables: Block should not be in AliveBlocks
+# CHECK-NEXT:  - function:    testfloatslt
+# CHECK-NEXT:  - basic block: %bb.1 entry
+# CHECK-NEXT:  Virtual register %4 is not needed live through the block.
+
+# CHECK-LABEL: Bad machine code: LiveVariables: Block should not be in AliveBlocks
+# CHECK-NEXT:  - function:    testfloatslt
+# CHECK-NEXT:  - basic block: %bb.1 entry
+# CHECK-NEXT:  Virtual register %5 is not needed live through the block.
+
+# CHECK-LABEL: Bad machine code: LiveVariables: Block should not be in AliveBlocks
+# CHECK-NEXT:  - function:    testfloatslt
+# CHECK-NEXT:  - basic block: %bb.2 entry
+# CHECK-NEXT:  Virtual register %5 is not needed live through the block.
+# CHECK-NEXT:  LLVM ERROR: Found 3 machine code errors.

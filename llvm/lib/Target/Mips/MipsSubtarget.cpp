@@ -237,7 +237,7 @@ CodeGenOpt::Level MipsSubtarget::getOptLevelToEnablePostRAScheduler() const {
 MipsSubtarget &
 MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
                                                const TargetMachine &TM) {
-  std::string CPUName = MIPS_MC::selectMipsCPU(TM.getTargetTriple(), CPU);
+  StringRef CPUName = MIPS_MC::selectMipsCPU(TM.getTargetTriple(), CPU);
 
   // Parse features string.
   ParseSubtargetFeatures(CPUName, FS);

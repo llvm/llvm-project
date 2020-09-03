@@ -91,7 +91,7 @@ namespace {
     MachineDominatorTree *DT;      // Machine dominator tree
     MachinePostDominatorTree *PDT; // Machine post dominator tree
     MachineLoopInfo *LI;
-    const MachineBlockFrequencyInfo *MBFI;
+    MachineBlockFrequencyInfo *MBFI;
     const MachineBranchProbabilityInfo *MBPI;
     AliasAnalysis *AA;
 
@@ -269,30 +269,26 @@ MachineSinking::AllUsesDominatedByBlock(unsigned Reg,
   // into and they are all PHI nodes. In this case, machine-sink must break
   // the critical edge first. e.g.
   //
-  // %bb.1: derived from LLVM BB %bb4.preheader
+  // %bb.1:
   //   Predecessors according to CFG: %bb.0
   //     ...
-  //     %reg16385 = DEC64_32r %reg16437, implicit-def dead %eflags
+  //     %def = DEC64_32r %x, implicit-def dead %eflags
   //     ...
   //     JE_4 <%bb.37>, implicit %eflags
   //   Successors according to CFG: %bb.37 %bb.2
   //
-  // %bb.2: derived from LLVM BB %bb.nph
-  //   Predecessors according to CFG: %bb.0 %bb.1
-  //     %reg16386 = PHI %reg16434, %bb.0, %reg16385, %bb.1
-  BreakPHIEdge = true;
-  for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
-    MachineInstr *UseInst = MO.getParent();
-    unsigned OpNo = &MO - &UseInst->getOperand(0);
-    MachineBasicBlock *UseBlock = UseInst->getParent();
-    if (!(UseBlock == MBB && UseInst->isPHI() &&
-          UseInst->getOperand(OpNo+1).getMBB() == DefMBB)) {
-      BreakPHIEdge = false;
-      break;
-    }
-  }
-  if (BreakPHIEdge)
+  // %bb.2:
+  //     %p = PHI %y, %bb.0, %def, %bb.1
+  if (all_of(MRI->use_nodbg_operands(Reg), [&](MachineOperand &MO) {
+        MachineInstr *UseInst = MO.getParent();
+        unsigned OpNo = UseInst->getOperandNo(&MO);
+        MachineBasicBlock *UseBlock = UseInst->getParent();
+        return UseBlock == MBB && UseInst->isPHI() &&
+               UseInst->getOperand(OpNo + 1).getMBB() == DefMBB;
+      })) {
+    BreakPHIEdge = true;
     return true;
+  }
 
   for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
     // Determine the block of the use.
@@ -351,6 +347,11 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
                           << printMBBReference(*Pair.first) << " -- "
                           << printMBBReference(*NewSucc) << " -- "
                           << printMBBReference(*Pair.second) << '\n');
+        if (MBFI) {
+          auto NewSuccFreq = MBFI->getBlockFreq(Pair.first) *
+                             MBPI->getEdgeProbability(Pair.first, NewSucc);
+          MBFI->setBlockFreq(NewSucc, NewSuccFreq.getFrequency());
+        }
         MadeChange = true;
         ++NumSplit;
       } else
@@ -431,7 +432,7 @@ void MachineSinking::ProcessDbgInst(MachineInstr &MI) {
                     MI.getDebugLoc()->getInlinedAt());
   bool SeenBefore = SeenDbgVars.count(Var) != 0;
 
-  MachineOperand &MO = MI.getOperand(0);
+  MachineOperand &MO = MI.getDebugOperand(0);
   if (MO.isReg() && MO.getReg().isVirtual())
     SeenDbgUsers[MO.getReg()].push_back(SeenDbgUser(&MI, SeenBefore));
 
@@ -622,14 +623,13 @@ MachineSinking::GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
   //   if () {} else {}
   //   use x
   //
-  const std::vector<MachineDomTreeNode *> &Children =
-    DT->getNode(MBB)->getChildren();
-  for (const auto &DTChild : Children)
+  for (MachineDomTreeNode *DTChild : DT->getNode(MBB)->children()) {
     // DomTree children of MBB that have MBB as immediate dominator are added.
     if (DTChild->getIDom()->getBlock() == MI.getParent() &&
         // Skip MBBs already added to the AllSuccs vector above.
         !MBB->isSuccessor(DTChild->getBlock()))
       AllSuccs.push_back(DTChild->getBlock());
+  }
 
   // Sort Successors according to their loop depth or block frequency info.
   llvm::stable_sort(
@@ -733,6 +733,13 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
   if (SuccToSinkTo && SuccToSinkTo->isEHPad())
     return nullptr;
 
+  // It ought to be okay to sink instructions into an INLINEASM_BR target, but
+  // only if we make sure that MI occurs _before_ an INLINEASM_BR instruction in
+  // the source block (which this code does not yet do). So for now, forbid
+  // doing so.
+  if (SuccToSinkTo && SuccToSinkTo->isInlineAsmBrIndirectTarget())
+    return nullptr;
+
   return SuccToSinkTo;
 }
 
@@ -764,7 +771,8 @@ static bool SinkingPreventsImplicitNullCheck(MachineInstr &MI,
 
   const MachineOperand *BaseOp;
   int64_t Offset;
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI))
+  bool OffsetIsScalable;
+  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI))
     return false;
 
   if (!BaseOp->isReg())
@@ -794,7 +802,7 @@ static bool attemptDebugCopyProp(MachineInstr &SinkInst, MachineInstr &DbgMI) {
   // Copy DBG_VALUE operand and set the original to undef. We then check to
   // see whether this is something that can be copy-forwarded. If it isn't,
   // continue around the loop.
-  MachineOperand DbgMO = DbgMI.getOperand(0);
+  MachineOperand &DbgMO = DbgMI.getDebugOperand(0);
 
   const MachineOperand *SrcMO = nullptr, *DstMO = nullptr;
   auto CopyOperands = TII.isCopyInstr(SinkInst);
@@ -828,8 +836,8 @@ static bool attemptDebugCopyProp(MachineInstr &SinkInst, MachineInstr &DbgMI) {
   if (PostRA && DbgMO.getReg() != DstMO->getReg())
     return false;
 
-  DbgMI.getOperand(0).setReg(SrcMO->getReg());
-  DbgMI.getOperand(0).setSubReg(SrcMO->getSubReg());
+  DbgMO.setReg(SrcMO->getReg());
+  DbgMO.setSubReg(SrcMO->getSubReg());
   return true;
 }
 
@@ -864,7 +872,7 @@ static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
     SuccToSinkTo.insert(InsertPos, NewDbgMI);
 
     if (!attemptDebugCopyProp(MI, *DbgMI))
-      DbgMI->getOperand(0).setReg(0);
+      DbgMI->setDebugValueUndef();
   }
 }
 
@@ -998,7 +1006,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
         // This DBG_VALUE would re-order assignments. If we can't copy-propagate
         // it, it can't be recovered. Set it undef.
         if (!attemptDebugCopyProp(MI, *DbgMI))
-          DbgMI->getOperand(0).setReg(0);
+          DbgMI->setDebugValueUndef();
       } else {
         DbgUsersToSink.push_back(DbgMI);
       }
@@ -1047,7 +1055,7 @@ void MachineSinking::SalvageUnsunkDebugUsersOfCopy(
       if (User.getParent() == MI.getParent())
         continue;
 
-      assert(User.getOperand(0).isReg() &&
+      assert(User.getDebugOperand(0).isReg() &&
              "DBG_VALUE user of vreg, but non reg operand?");
       DbgDefUsers.push_back(&User);
     }
@@ -1056,8 +1064,8 @@ void MachineSinking::SalvageUnsunkDebugUsersOfCopy(
   // Point the users of this copy that are no longer dominated, at the source
   // of the copy.
   for (auto *User : DbgDefUsers) {
-    User->getOperand(0).setReg(MI.getOperand(1).getReg());
-    User->getOperand(0).setSubReg(MI.getOperand(1).getSubReg());
+    User->getDebugOperand(0).setReg(MI.getOperand(1).getReg());
+    User->getDebugOperand(0).setSubReg(MI.getOperand(1).getSubReg());
   }
 }
 
@@ -1303,7 +1311,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     // We must sink this DBG_VALUE if its operand is sunk. To avoid searching
     // for DBG_VALUEs later, record them when they're encountered.
     if (MI->isDebugValue()) {
-      auto &MO = MI->getOperand(0);
+      auto &MO = MI->getDebugOperand(0);
       if (MO.isReg() && Register::isPhysicalRegister(MO.getReg())) {
         // Bail if we can already tell the sink would be rejected, rather
         // than needlessly accumulating lots of DBG_VALUEs.

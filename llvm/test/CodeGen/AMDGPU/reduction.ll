@@ -438,10 +438,8 @@ entry:
 ; GFX9-NEXT: v_pk_max_f16 [[CANON1:v[0-9]+]], v1, v1
 ; GFX9-NEXT: v_pk_max_f16 [[CANON0:v[0-9]+]], v0, v0
 ; GFX9-NEXT: v_pk_max_f16 [[MAX:v[0-9]+]], [[CANON0]], [[CANON1]]{{$}}
+; GFX9-NEXT: v_max_f16_sdwa v{{[0-9]+}}, [[MAX]], [[MAX]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; FIXME: Extra canonicalize leftover
-; GFX9-NEXT: v_max_f16_sdwa [[TMP:v[0-9]+]], [[MAX]], [[MAX]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-NEXT: v_max_f16_e32 v0, [[MAX]], [[TMP]]
 
 ; VI-DAG: v_max_f16_sdwa [[CANON1:v[0-9]+]], v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-DAG: v_max_f16_sdwa [[CANON3:v[0-9]+]], v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
@@ -466,11 +464,7 @@ entry:
 ; GFX9-NEXT: v_pk_max_f16 [[CANON1:v[0-9]+]], v1, v1
 ; GFX9-NEXT: v_pk_max_f16 [[CANON0:v[0-9]+]], v0, v0
 ; GFX9-NEXT: v_pk_min_f16 [[MIN:v[0-9]+]], [[CANON0]], [[CANON1]]{{$}}
-
-; FIXME: Extra canonicalize leftover
-; GFX9-NEXT: v_max_f16_sdwa [[TMP:v[0-9]+]], [[MIN]], [[MIN]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-NEXT: v_min_f16_e32 v0, [[MIN]], [[TMP]]
-
+; GFX9-NEXT: v_min_f16_sdwa v{{[0-9]+}}, [[MIN]], [[MIN]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
 ; VI-DAG: v_max_f16_sdwa [[CANON1:v[0-9]+]], v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-DAG: v_max_f16_sdwa [[CANON3:v[0-9]+]], v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
@@ -507,10 +501,7 @@ entry:
 ; GFX9-NEXT: v_pk_max_f16 [[CANON1:v[0-9]+]], v1, v1
 ; GFX9-NEXT: v_pk_max_f16 [[CANON0:v[0-9]+]], v0, v0
 ; GFX9-NEXT: v_pk_max_f16 [[MAX:v[0-9]+]], [[CANON0]], [[CANON1]]{{$}}
-
-; FIXME: Extra canonicalize leftover
-; GFX9-NEXT: v_max_f16_sdwa [[TMP:v[0-9]+]], [[MAX]], [[MAX]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-NEXT: v_max_f16_e32 v0, [[MAX]], [[TMP]]
+; GFX9-NEXT: v_max_f16_sdwa v{{[0-9]+}}, [[MAX]], [[MAX]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
 ; VI-DAG: v_max_f16_sdwa [[CANON1:v[0-9]+]], v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-DAG: v_max_f16_sdwa [[CANON3:v[0-9]+]], v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
@@ -549,11 +540,7 @@ entry:
 ; GFX9-NEXT: v_pk_max_f16 [[CANON1:v[0-9]+]], v1, v1
 ; GFX9-NEXT: v_pk_max_f16 [[CANON0:v[0-9]+]], v0, v0
 ; GFX9-NEXT: v_pk_min_f16 [[MIN:v[0-9]+]], [[CANON0]], [[CANON1]]{{$}}
-
-; FIXME: Extra canonicalize leftover
-; GFX9-NEXT: v_max_f16_sdwa [[TMP:v[0-9]+]], [[MIN]], [[MIN]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-NEXT: v_min_f16_e32 v0, [[MIN]], [[TMP]]
-
+; GFX9-NEXT: v_min_f16_sdwa v{{[0-9]+}}, [[MIN]], [[MIN]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
 ; VI-DAG: v_max_f16_sdwa [[CANON1:v[0-9]+]], v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-DAG: v_max_f16_sdwa [[CANON3:v[0-9]+]], v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1

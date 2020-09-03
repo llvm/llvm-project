@@ -29,7 +29,7 @@ LoadCommands:
         offset:          0x000002B0
         align:           4
         reloff:          0x00000350
-        nreloc:          7
+        nreloc:          0
         flags:           0x80000400
         reserved1:       0x00000000
         reserved2:       0x00000000
@@ -77,7 +77,7 @@ LoadCommands:
         offset:          0x000002FC
         align:           0
         reloff:          0x00000388
-        nreloc:          2
+        nreloc:          0
         flags:           0x00000013
         reserved1:       0x00000000
         reserved2:       0x00000000
@@ -170,7 +170,7 @@ LinkEditData:
 # CHECK-NEXT:        offset:          0x000002B0
 # CHECK-NEXT:        align:           4
 # CHECK-NEXT:        reloff:          0x00000350
-# CHECK-NEXT:        nreloc:          7
+# CHECK-NEXT:        nreloc:          0
 # CHECK-NEXT:        flags:           0x80000400
 # CHECK-NEXT:        reserved1:       0x00000000
 # CHECK-NEXT:        reserved2:       0x00000000
@@ -220,7 +220,7 @@ LinkEditData:
 # CHECK-NEXT:        offset:          0x000002FC
 # CHECK-NEXT:        align:           0
 # CHECK-NEXT:        reloff:          0x00000388
-# CHECK-NEXT:        nreloc:          2
+# CHECK-NEXT:        nreloc:          0
 # CHECK-NEXT:        flags:           0x00000013
 # CHECK-NEXT:        reserved1:       0x00000000
 # CHECK-NEXT:        reserved2:       0x00000000

@@ -9,12 +9,12 @@
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
-// CHECK-DAG: [[IMPLICIT_BARRIER_SECTIONS_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 194, i32 0, i32 0, i8*
-// CHECK-DAG: [[SECTIONS_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 1026, i32 0, i32 0, i8*
+// CHECK-DAG: [[IMPLICIT_BARRIER_SECTIONS_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 194, i32 0, i32 0, i8*
+// CHECK-DAG: [[SECTIONS_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 1026, i32 0, i32 0, i8*
 // CHECK-LABEL: foo
-void foo() {};
+void foo() { extern void mayThrow(); mayThrow(); };
 // CHECK-LABEL: bar
-void bar() {};
+void bar() { extern void mayThrow(); mayThrow(); };
 
 template <class T>
 T tmain() {

@@ -727,7 +727,7 @@ Function *getFunction(std::string Name) {
 /// CreateEntryBlockAlloca - Create an alloca instruction in the entry block of
 /// the function.  This is used for mutable variables etc.
 static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
-                                          const std::string &VarName) {
+                                          StringRef VarName) {
   IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
                    TheFunction->getEntryBlock().begin());
   return TmpB.CreateAlloca(Type::getDoubleTy(*TheContext), nullptr, VarName);
@@ -1076,7 +1076,7 @@ Function *FunctionAST::codegen() {
     Builder->CreateStore(&Arg, Alloca);
 
     // Add arguments to variable symbol table.
-    NamedValues[Arg.getName()] = Alloca;
+    NamedValues[std::string(Arg.getName())] = Alloca;
   }
 
   if (Value *RetVal = Body->codegen()) {

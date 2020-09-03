@@ -13,8 +13,8 @@
 #include "SwiftPersistentExpressionState.h"
 #include "SwiftExpressionVariable.h"
 
-#include "lldb/Core/Value.h"
 #include "lldb/Expression/IRExecutionUnit.h"
+#include "lldb/Core/Value.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
@@ -133,7 +133,7 @@ void SwiftPersistentExpressionState::SwiftDeclMap::AddDecl(
   std::string name_str;
 
   if (alias.IsEmpty()) {
-    name_str = (value_decl->getBaseIdentifier().str());
+    name_str = value_decl->getBaseName().getIdentifier().str().str();
   } else {
     name_str.assign(alias.GetCString());
   }
@@ -222,4 +222,16 @@ bool SwiftPersistentExpressionState::GetSwiftPersistentDecls(
     std::vector<swift::ValueDecl *> &matches) {
   return m_swift_persistent_decls.FindMatchingDecls(name, excluding_equivalents,
                                                     matches);
+}
+
+ConstString
+SwiftPersistentExpressionState::GetNextPersistentVariableName(bool is_error) {
+  llvm::SmallString<64> name;
+  {
+    llvm::raw_svector_ostream os(name);
+    uint32_t variable_num = is_error ? m_next_persistent_error_id++
+                                     : m_next_persistent_variable_id++;
+    os << GetPersistentVariablePrefix(is_error) << variable_num;
+  }
+  return ConstString(name);
 }

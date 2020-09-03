@@ -42,8 +42,7 @@ std::string truncateQuotedNameBack(StringRef Label, StringRef Name,
     return Ret;
 
 template <typename T> std::string formatUnknownEnum(T Value) {
-  return formatv("unknown ({0})",
-                 static_cast<typename std::underlying_type<T>::type>(Value))
+  return formatv("unknown ({0})", static_cast<std::underlying_type_t<T>>(Value))
       .str();
 }
 
@@ -124,7 +123,7 @@ struct EndianAdapter final
   explicit EndianAdapter(EndianType &&Item)
       : FormatAdapter<EndianType>(std::move(Item)) {}
 
-  void format(llvm::raw_ostream &Stream, StringRef Style) {
+  void format(llvm::raw_ostream &Stream, StringRef Style) override {
     format_provider<T>::format(static_cast<T>(this->Item), Stream, Style);
   }
 };

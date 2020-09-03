@@ -1,10 +1,10 @@
 # REQUIRES: zlib, x86
 
-# RUN: yaml2obj -docnum=1 %s -o %t.o
+# RUN: yaml2obj --docnum=1 %s -o %t.o
 # RUN: ld.lld %t.o %t.o -o %t2
 # RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s
 
-# RUN: yaml2obj -docnum=2 %s -o %t.o
+# RUN: yaml2obj --docnum=2 %s -o %t.o
 # RUN: ld.lld %t.o %t.o -o %t2
 # RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s
 

@@ -1,5 +1,5 @@
-RUN: llc -filetype=obj %p/Inputs/start.ll -o %t.o
-RUN: llc -filetype=obj %p/Inputs/ret32.ll -o %t.ret32.o
+RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.o
+RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret32.s -o %t.ret32.o
 RUN: rm -f %t.a
 RUN: llvm-ar rcs %t.a %t.ret32.o
 

@@ -31,44 +31,53 @@ if(MLIR_CUDA_RUNNER_ENABLED)
     LLVMSupport
   )
   target_link_libraries(cuda-runtime-wrappers
+    PUBLIC
     LLVMSupport
     ${CUDA_RUNTIME_LIBRARY}
   )
 
-  set(FULL_LINK_LIBS
-    MLIRAffineOps
-    MLIRLoopToStandard
-    MLIRGPU
-    MLIRGPUtoCUDATransforms
-    MLIRGPUtoNVVMTransforms
-    MLIRLLVMIR
-    MLIRStandardOps
-    MLIRStandardToLLVM
-    MLIRTargetLLVMIR
-    MLIRTransforms
-    MLIRTranslation
-  )
+  get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+  get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
   set(LIBS
-    MLIRIR
-    MLIRParser
-    MLIREDSC
-    MLIRAnalysis
-    MLIRExecutionEngine
-    MLIRJitRunner
-    MLIRSupport
+    ${dialect_libs}
+    ${conversion_libs}
     LLVMCore
     LLVMSupport
+    MLIRJitRunner
+    MLIRAnalysis
+    MLIREDSC
+    MLIRExecutionEngine
+    MLIRIR
+    MLIRParser
+    MLIRSupport
+    MLIRTargetLLVMIR
+    MLIRTargetNVVMIR
+    MLIRTransforms
+    MLIRTranslation
     ${CUDA_RUNTIME_LIBRARY}
   )
-  add_llvm_executable(mlir-cuda-runner
+
+  # Manually expand the target library, since our MLIR libraries
+  # aren't plugged into the LLVM dependency tracking. If we don't
+  # do this then we can't insert the CodeGen library after ourselves
+  llvm_expand_pseudo_components(TARGET_LIBS AllTargetsCodeGens)
+  # Prepend LLVM in front of every target, this is how the library
+  # are named with CMake
+  SET(targets_to_link)
+  FOREACH(t ${TARGET_LIBS})
+    LIST(APPEND targets_to_link "LLVM${t}")
+  ENDFOREACH(t)
+
+  add_llvm_tool(mlir-cuda-runner
     mlir-cuda-runner.cpp
-  )
-  add_dependencies(mlir-cuda-runner cuda-runtime-wrappers)
+
+    DEPENDS
+    cuda-runtime-wrappers
+    )
   target_include_directories(mlir-cuda-runner
     PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
   )
   llvm_update_compile_flags(mlir-cuda-runner)
-  whole_archive_link(mlir-cuda-runner ${FULL_LINK_LIBS})
-  target_link_libraries(mlir-cuda-runner PRIVATE ${FULL_LINK_LIBS} ${LIBS})
+  target_link_libraries(mlir-cuda-runner PRIVATE ${LIBS} ${targets_to_link})
 
 endif()

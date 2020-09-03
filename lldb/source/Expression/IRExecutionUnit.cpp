@@ -1,4 +1,4 @@
-//===-- IRExecutionUnit.cpp -------------------------------------*- C++ -*-===//
+//===-- IRExecutionUnit.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -284,11 +284,9 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
 
   builder.setEngineKind(llvm::EngineKind::JIT)
       .setErrorStr(&error_string)
-      .setRelocationModel(triple.isOSBinFormatMachO()
-                              ? llvm::Reloc::PIC_
-                              : llvm::Reloc::Static)
-      .setMCJITMemoryManager(
-          std::unique_ptr<MemoryManager>(new MemoryManager(*this)))
+      .setRelocationModel(triple.isOSBinFormatMachO() ? llvm::Reloc::PIC_
+                                                      : llvm::Reloc::Static)
+      .setMCJITMemoryManager(std::make_unique<MemoryManager>(*this))
       .setOptLevel(llvm::CodeGenOpt::Less);
 
   llvm::StringRef mArch;
@@ -423,9 +421,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
         ss.PutCString("\n");
       emitNewLine = true;
       ss.PutCString("  ");
-      ss.PutCString(Mangled(failed_lookup)
-                        .GetDemangledName(lldb::eLanguageTypeObjC_plus_plus)
-                        .AsCString());
+      ss.PutCString(Mangled(failed_lookup).GetDemangledName().GetStringRef());
     }
 
     m_failed_lookups.clear();
@@ -658,10 +654,8 @@ uint8_t *IRExecutionUnit::MemoryManager::allocateDataSection(
   return return_value;
 }
 
-static ConstString
-FindBestAlternateMangledName(ConstString demangled,
-                             const lldb::LanguageType &lang_type,
-                             const SymbolContext &sym_ctx) {
+static ConstString FindBestAlternateMangledName(ConstString demangled,
+                                                const SymbolContext &sym_ctx) {
   CPlusPlusLanguage::MethodName cpp_name(demangled);
   std::string scope_qualified_name = cpp_name.GetScopeQualifiedName();
 
@@ -683,7 +677,7 @@ FindBestAlternateMangledName(ConstString demangled,
   for (size_t i = 0; i < alternates.size(); i++) {
     ConstString alternate_mangled_name = alternates[i];
     Mangled mangled(alternate_mangled_name);
-    ConstString demangled = mangled.GetDemangledName(lang_type);
+    ConstString demangled = mangled.GetDemangledName();
 
     CPlusPlusLanguage::MethodName alternate_cpp_name(demangled);
     if (!cpp_name.IsValid())
@@ -731,12 +725,11 @@ void IRExecutionUnit::CollectCandidateCPlusPlusNames(
 
     if (CPlusPlusLanguage::IsCPPMangledName(name.GetCString())) {
       Mangled mangled(name);
-      ConstString demangled =
-          mangled.GetDemangledName(lldb::eLanguageTypeC_plus_plus);
+      ConstString demangled = mangled.GetDemangledName();
 
       if (demangled) {
-        ConstString best_alternate_mangled_name = FindBestAlternateMangledName(
-            demangled, lldb::eLanguageTypeC_plus_plus, sc);
+        ConstString best_alternate_mangled_name =
+            FindBestAlternateMangledName(demangled, sc);
 
         if (best_alternate_mangled_name) {
           CPP_specs.push_back(best_alternate_mangled_name);
@@ -759,20 +752,22 @@ void IRExecutionUnit::CollectFallbackNames(
   for (const SearchSpec &C_spec : C_specs) {
     ConstString name = C_spec.name;
 
-    if (CPlusPlusLanguage::IsCPPMangledName(name.GetCString())) {
-      Mangled mangled_name(name);
-      ConstString demangled_name =
-          mangled_name.GetDemangledName(lldb::eLanguageTypeC_plus_plus);
-      if (!demangled_name.IsEmpty()) {
-        const char *demangled_cstr = demangled_name.AsCString();
-        const char *lparen_loc = strchr(demangled_cstr, '(');
-        if (lparen_loc) {
-          llvm::StringRef base_name(demangled_cstr,
-                                    lparen_loc - demangled_cstr);
-          fallback_specs.push_back(ConstString(base_name));
-        }
-      }
-    }
+    if (!CPlusPlusLanguage::IsCPPMangledName(name.GetCString()))
+      continue;
+
+    Mangled mangled_name(name);
+    ConstString demangled_name = mangled_name.GetDemangledName();
+    if (demangled_name.IsEmpty())
+      continue;
+
+    const char *demangled_cstr = demangled_name.AsCString();
+    const char *lparen_loc = strchr(demangled_cstr, '(');
+    if (!lparen_loc)
+      continue;
+
+    llvm::StringRef base_name(demangled_cstr,
+                              lparen_loc - demangled_cstr);
+    fallback_specs.push_back(ConstString(base_name));
   }
 }
 
@@ -862,7 +857,7 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
     };
 
     if (sc.module_sp) {
-      sc.module_sp->FindFunctions(spec.name, nullptr, spec.mask,
+      sc.module_sp->FindFunctions(spec.name, CompilerDeclContext(), spec.mask,
                                   true,  // include_symbols
                                   false, // include_inlines
                                   sc_list);

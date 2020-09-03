@@ -168,13 +168,15 @@ private:
   // 8 banks for SGPRs.
   // Registers already processed and recorded in RegsUsed are excluded.
   // If Bank is not -1 assume Reg:SubReg to belong to that Bank.
-  unsigned getRegBankMask(unsigned Reg, unsigned SubReg, int Bank);
+  uint32_t getRegBankMask(unsigned Reg, unsigned SubReg, int Bank);
 
-  // Return number of stalls in the instructions.
-  // UsedBanks has bits set for the banks used by all operands.
-  // If Reg and Bank provided substitute the Reg with the Bank.
-  unsigned analyzeInst(const MachineInstr& MI, unsigned& UsedBanks,
-                       unsigned Reg = AMDGPU::NoRegister, int Bank = -1);
+  // Analyze one instruction returning the number of stalls and a mask of the
+  // banks used by all operands.
+  // If Reg and Bank are provided, assume all uses of Reg will be replaced with
+  // a register chosen from Bank.
+  std::pair<unsigned, unsigned> analyzeInst(const MachineInstr &MI,
+                                            unsigned Reg = AMDGPU::NoRegister,
+                                            int Bank = -1);
 
   // Return true if register is regular VGPR or SGPR or their tuples.
   // Returns false for special registers like m0, vcc etc.
@@ -280,7 +282,9 @@ unsigned GCNRegBankReassign::getPhysRegBank(unsigned Reg) const {
 
   const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
   unsigned Size = TRI->getRegSizeInBits(*RC);
-  if (Size > 32)
+  if (Size == 16)
+    Reg = TRI->get32BitRegister(Reg);
+  else if (Size > 32)
     Reg = TRI->getSubReg(Reg, AMDGPU::sub0);
 
   if (TRI->hasVGPRs(RC)) {
@@ -292,7 +296,7 @@ unsigned GCNRegBankReassign::getPhysRegBank(unsigned Reg) const {
   return Reg % NUM_SGPR_BANKS + SGPR_BANK_OFFSET;
 }
 
-unsigned GCNRegBankReassign::getRegBankMask(unsigned Reg, unsigned SubReg,
+uint32_t GCNRegBankReassign::getRegBankMask(unsigned Reg, unsigned SubReg,
                                             int Bank) {
   if (Register::isVirtualRegister(Reg)) {
     if (!VRM->isAssignedReg(Reg))
@@ -306,14 +310,21 @@ unsigned GCNRegBankReassign::getRegBankMask(unsigned Reg, unsigned SubReg,
   }
 
   const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-  unsigned Size = TRI->getRegSizeInBits(*RC) / 32;
-  if (Size > 1)
-    Reg = TRI->getSubReg(Reg, AMDGPU::sub0);
+  unsigned Size = TRI->getRegSizeInBits(*RC);
+
+  if (Size == 16) {
+    Reg = TRI->get32BitRegister(Reg);
+    Size = 1;
+  } else {
+    Size /= 32;
+    if (Size > 1)
+      Reg = TRI->getSubReg(Reg, AMDGPU::sub0);
+  }
 
   if (TRI->hasVGPRs(RC)) {
     // VGPRs have 4 banks assigned in a round-robin fashion.
     Reg -= AMDGPU::VGPR0;
-    unsigned Mask = (1 << Size) - 1;
+    uint32_t Mask = maskTrailingOnes<uint32_t>(Size);
     unsigned Used = 0;
     // Bitmask lacks an extract method
     for (unsigned I = 0; I < Size; ++I)
@@ -321,7 +332,7 @@ unsigned GCNRegBankReassign::getRegBankMask(unsigned Reg, unsigned SubReg,
         Used |= 1 << I;
     RegsUsed.set(Reg, Reg + Size);
     Mask &= ~Used;
-    Mask <<= (Bank == -1) ? Reg % NUM_VGPR_BANKS : unsigned(Bank);
+    Mask <<= (Bank == -1) ? Reg % NUM_VGPR_BANKS : uint32_t(Bank);
     return (Mask | (Mask >> NUM_VGPR_BANKS)) & VGPR_BANK_MASK;
   }
 
@@ -347,15 +358,14 @@ unsigned GCNRegBankReassign::getRegBankMask(unsigned Reg, unsigned SubReg,
   return Mask << SGPR_BANK_OFFSET;
 }
 
-unsigned GCNRegBankReassign::analyzeInst(const MachineInstr& MI,
-                                         unsigned& UsedBanks,
-                                         unsigned Reg,
-                                         int Bank) {
+std::pair<unsigned, unsigned>
+GCNRegBankReassign::analyzeInst(const MachineInstr &MI, unsigned Reg,
+                                int Bank) {
   unsigned StallCycles = 0;
-  UsedBanks = 0;
+  unsigned UsedBanks = 0;
 
   if (MI.isDebugValue())
-    return 0;
+    return std::make_pair(StallCycles, UsedBanks);
 
   RegsUsed.reset();
   OperandMasks.clear();
@@ -372,30 +382,30 @@ unsigned GCNRegBankReassign::analyzeInst(const MachineInstr& MI,
     unsigned ShiftedBank = Bank;
 
     if (Bank != -1 && R == Reg && Op.getSubReg()) {
-      unsigned LM = TRI->getSubRegIndexLaneMask(Op.getSubReg()).getAsInteger();
-      if (!(LM & 1) && (Bank < NUM_VGPR_BANKS)) {
+      unsigned Offset = TRI->getChannelFromSubReg(Op.getSubReg());
+      LaneBitmask LM = TRI->getSubRegIndexLaneMask(Op.getSubReg());
+      if (Offset && Bank < NUM_VGPR_BANKS) {
         // If a register spans all banks we cannot shift it to avoid conflict.
-        if (countPopulation(LM) >= NUM_VGPR_BANKS)
+        if (TRI->getNumCoveredRegs(LM) >= NUM_VGPR_BANKS)
           continue;
-        ShiftedBank = (Bank + countTrailingZeros(LM)) % NUM_VGPR_BANKS;
-      } else if (!(LM & 3) && (Bank >= SGPR_BANK_OFFSET)) {
+        ShiftedBank = (Bank + Offset) % NUM_VGPR_BANKS;
+      } else if (Offset > 1 && Bank >= SGPR_BANK_OFFSET) {
         // If a register spans all banks we cannot shift it to avoid conflict.
-        if (countPopulation(LM) / 2 >= NUM_SGPR_BANKS)
+        if (TRI->getNumCoveredRegs(LM) / 2 >= NUM_SGPR_BANKS)
           continue;
-        ShiftedBank = SGPR_BANK_OFFSET + (Bank - SGPR_BANK_OFFSET +
-                                          (countTrailingZeros(LM) >> 1)) %
-                                             NUM_SGPR_BANKS;
+        ShiftedBank = SGPR_BANK_OFFSET +
+          (Bank - SGPR_BANK_OFFSET + (Offset >> 1)) % NUM_SGPR_BANKS;
       }
     }
 
-    unsigned Mask = getRegBankMask(R, Op.getSubReg(),
+    uint32_t Mask = getRegBankMask(R, Op.getSubReg(),
                                    (Reg == R) ? ShiftedBank : -1);
     StallCycles += countPopulation(UsedBanks & Mask);
     UsedBanks |= Mask;
     OperandMasks.push_back(OperandMask(Op.getReg(), Op.getSubReg(), Mask));
   }
 
-  return StallCycles;
+  return std::make_pair(StallCycles, UsedBanks);
 }
 
 unsigned GCNRegBankReassign::getOperandGatherWeight(const MachineInstr& MI,
@@ -440,10 +450,19 @@ bool GCNRegBankReassign::isReassignable(unsigned Reg) const {
   }
 
   const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(PhysReg);
+  unsigned Size = TRI->getRegSizeInBits(*RC);
+
+  // TODO: Support 16 bit registers. Those needs to be moved with their
+  //       parent VGPR_32 and potentially a sibling 16 bit sub-register.
+  if (Size < 32)
+    return false;
+
   if (TRI->hasVGPRs(RC))
     return true;
 
-  unsigned Size = TRI->getRegSizeInBits(*RC);
+  if (Size == 16)
+    return AMDGPU::SGPR_LO16RegClass.contains(PhysReg);
+
   if (Size > 32)
     PhysReg = TRI->getSubReg(PhysReg, AMDGPU::sub0);
 
@@ -496,16 +515,16 @@ unsigned GCNRegBankReassign::getFreeBanks(unsigned Reg,
 
   unsigned FreeBanks = getFreeBanks(Mask, UsedBanks);
 
-  unsigned LM = TRI->getSubRegIndexLaneMask(SubReg).getAsInteger();
-  if (!(LM & 1) && (Mask & VGPR_BANK_MASK)) {
-    unsigned Shift = countTrailingZeros(LM);
+  unsigned Offset = TRI->getChannelFromSubReg(SubReg);
+  if (Offset && (Mask & VGPR_BANK_MASK)) {
+    unsigned Shift = Offset;
     if (Shift >= NUM_VGPR_BANKS)
       return 0;
     unsigned VB = FreeBanks & VGPR_BANK_MASK;
     FreeBanks = ((VB >> Shift) | (VB << (NUM_VGPR_BANKS - Shift))) &
                 VGPR_BANK_MASK;
-  } else if (!(LM & 3) && (Mask & SGPR_BANK_MASK)) {
-    unsigned Shift = countTrailingZeros(LM) >> 1;
+  } else if (Offset > 1 && (Mask & SGPR_BANK_MASK)) {
+    unsigned Shift = Offset >> 1;
     if (Shift >= NUM_SGPR_BANKS)
       return 0;
     unsigned SB = FreeBanks >> SGPR_BANK_OFFSET;
@@ -570,7 +589,6 @@ unsigned GCNRegBankReassign::computeStallCycles(unsigned SrcReg,
                                                 unsigned Reg, int Bank,
                                                 bool Collect) {
   unsigned TotalStallCycles = 0;
-  unsigned UsedBanks = 0;
   SmallSet<const MachineInstr *, 16> Visited;
 
   for (auto &MI : MRI->use_nodbg_instructions(SrcReg)) {
@@ -578,7 +596,9 @@ unsigned GCNRegBankReassign::computeStallCycles(unsigned SrcReg,
       continue;
     if (!Visited.insert(&MI).second)
       continue;
-    unsigned StallCycles = analyzeInst(MI, UsedBanks, Reg, Bank);
+    unsigned StallCycles;
+    unsigned UsedBanks;
+    std::tie(StallCycles, UsedBanks) = analyzeInst(MI, Reg, Bank);
     TotalStallCycles += StallCycles;
     if (Collect)
       collectCandidates(MI, UsedBanks, StallCycles);
@@ -636,7 +656,11 @@ unsigned GCNRegBankReassign::tryReassign(Candidate &C) {
 
   struct BankStall {
     BankStall(unsigned b, unsigned s) : Bank(b), Stalls(s) {};
-    bool operator< (const BankStall &RHS) const { return Stalls > RHS.Stalls; }
+    bool operator<(const BankStall &RHS) const {
+      if (Stalls == RHS.Stalls)
+        return Bank < RHS.Bank;
+      return Stalls > RHS.Stalls;
+    }
     unsigned Bank;
     unsigned Stalls;
   };
@@ -653,7 +677,7 @@ unsigned GCNRegBankReassign::tryReassign(Candidate &C) {
       }
     }
   }
-  std::sort(BankStalls.begin(), BankStalls.end());
+  llvm::sort(BankStalls);
 
   Register OrigReg = VRM->getPhys(C.Reg);
   LRM->unassign(LI);
@@ -695,8 +719,9 @@ unsigned GCNRegBankReassign::collectCandidates(MachineFunction &MF,
       if (MI.isBundle())
           continue; // we analyze the instructions inside the bundle individually
 
-      unsigned UsedBanks = 0;
-      unsigned StallCycles = analyzeInst(MI, UsedBanks);
+      unsigned StallCycles;
+      unsigned UsedBanks;
+      std::tie(StallCycles, UsedBanks) = analyzeInst(MI);
 
       if (Collect)
         collectCandidates(MI, UsedBanks, StallCycles);

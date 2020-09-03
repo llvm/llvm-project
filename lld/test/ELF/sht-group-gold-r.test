@@ -10,8 +10,8 @@
 # RUN: ld.lld %p/Inputs/sht-group-gold-r.elf %t.o -o %t.exe
 # RUN: llvm-objdump -t %t.exe | FileCheck %s
 
-# CHECK: .text 00000000 bar
-# CHECK: .text 00000000 foo
+# CHECK: .text 0000000000000000 bar
+# CHECK: .text 0000000000000000 foo
 
 .globl _start
 _start:

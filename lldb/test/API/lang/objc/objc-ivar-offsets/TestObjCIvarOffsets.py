@@ -43,7 +43,7 @@ class TestObjCIvarOffsets(TestBase):
 
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(
             process, breakpoint)
-        self.assertTrue(len(thread_list) == 1)
+        self.assertEquals(len(thread_list), 1)
         thread = thread_list[0]
 
         frame = thread.GetFrameAtIndex(0)
@@ -62,7 +62,7 @@ class TestObjCIvarOffsets(TestBase):
             "Found mine->backed_int local variable.")
         backed_value = mine_backed_int.GetValueAsSigned(error)
         self.assertTrue(error.Success())
-        self.assertTrue(backed_value == 1111)
+        self.assertEquals(backed_value, 1111)
 
         # Test the value object value for DerivedClass->_derived_backed_int
 
@@ -72,7 +72,7 @@ class TestObjCIvarOffsets(TestBase):
                         "Found mine->derived_backed_int local variable.")
         derived_backed_value = mine_derived_backed_int.GetValueAsSigned(error)
         self.assertTrue(error.Success())
-        self.assertTrue(derived_backed_value == 3333)
+        self.assertEquals(derived_backed_value, 3333)
 
         # Make sure we also get bit-field offsets correct:
 
@@ -80,4 +80,4 @@ class TestObjCIvarOffsets(TestBase):
         self.assertTrue(mine_flag2, "Found mine->flag2 local variable.")
         flag2_value = mine_flag2.GetValueAsUnsigned(error)
         self.assertTrue(error.Success())
-        self.assertTrue(flag2_value == 7)
+        self.assertEquals(flag2_value, 7)

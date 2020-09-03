@@ -102,7 +102,7 @@ static isl_stat scan_0D(__isl_take isl_basic_set *bset,
 isl_stat isl_basic_set_scan(__isl_take isl_basic_set *bset,
 	struct isl_scan_callback *callback)
 {
-	unsigned dim;
+	isl_size dim;
 	struct isl_mat *B = NULL;
 	struct isl_tab *tab = NULL;
 	struct isl_vec *min;
@@ -112,10 +112,12 @@ isl_stat isl_basic_set_scan(__isl_take isl_basic_set *bset,
 	int init;
 	enum isl_lp_result res;
 
-	if (!bset)
+	dim = isl_basic_set_dim(bset, isl_dim_all);
+	if (dim < 0) {
+		bset = isl_basic_set_free(bset);
 		return isl_stat_error;
+	}
 
-	dim = isl_basic_set_total_dim(bset);
 	if (dim == 0)
 		return scan_0D(bset, callback);
 

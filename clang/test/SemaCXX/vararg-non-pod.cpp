@@ -164,6 +164,13 @@ void t6(Foo somearg, ... ) {
   __builtin_va_start(list, somearg);
 }
 
+// __builtin_stdarg_start is a compatibility alias for __builtin_va_start,
+// it should behave the same
+void t6b(Foo somearg, ... ) {
+  __builtin_va_list list;
+  __builtin_stdarg_start(list, somearg); // second argument to 'va_start' is not the last named parameter [-Wvarargs]
+}
+
 void t7(int n, ...) {
   __builtin_va_list list;
   __builtin_va_start(list, n);

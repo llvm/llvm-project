@@ -81,51 +81,11 @@ body: |
     ; GCN: liveins: $sgpr0, $sgpr1
     ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
     ; GCN: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(<2 x s32>) = G_BUILD_VECTOR %0, %1
-    S_ENDPGM 0, implicit %2
-...
-
----
-name: test_build_vector_s_v2s32_undef_s_s32_s_s32
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-
-body: |
-  bb.0:
-    liveins: $sgpr0
-
-    ; GCN-LABEL: name: test_build_vector_s_v2s32_undef_s_s32_s_s32
-    ; GCN: liveins: $sgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE undef %2:sreg_32, %subreg.sub0, [[COPY]], %subreg.sub1
-    ; GCN: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %1:sgpr(s32) = COPY $sgpr0
-    %2:sgpr(<2 x s32>) = G_BUILD_VECTOR undef %0:sgpr(s32), %1
-    S_ENDPGM 0, implicit %2
-...
-
----
-name: test_build_vector_s_v2s32_s_s32_undef_s_s32
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-
-body: |
-  bb.0:
-    liveins: $sgpr0
-
-    ; GCN-LABEL: name: test_build_vector_s_v2s32_s_s32_undef_s_s32
-    ; GCN: liveins: $sgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[COPY]], %subreg.sub0, undef %2:sreg_32, %subreg.sub1
-    ; GCN: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %2:sgpr(<2 x s32>) = G_BUILD_VECTOR %0, undef %1:sgpr(s32),
     S_ENDPGM 0, implicit %2
 ...
 
@@ -141,8 +101,8 @@ body: |
 
     ; GCN-LABEL: name: test_build_vector_s_v2s64_s_s64_s_s64
     ; GCN: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
-    ; GCN: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
+    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
     ; GCN: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[REG_SEQUENCE]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1

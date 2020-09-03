@@ -6,8 +6,8 @@
 
 # The function ordering is non-deterministic, so we need to do our
 # checks in multiple runs.
-# RUN: FileCheck -check-prefix=FOO3 -check-prefix=BOTH %s -input-file %t.out
-# RUN: FileCheck -check-prefix=FOO4 -check-prefix=BOTH %s -input-file %t.out
+# RUN: FileCheck -check-prefixes=FOO3,BOTH %s -input-file %t.out
+# RUN: FileCheck -check-prefixes=FOO4,BOTH %s -input-file %t.out
 
 # FOO3: Hash: 0x{{0+}}3
 # FOO3-NEXT: Counters: 3

@@ -19,6 +19,7 @@
 #include "AArch64RegisterInfo.h"
 #include "AArch64SelectionDAGInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
@@ -38,11 +39,13 @@ class AArch64Subtarget final : public AArch64GenSubtargetInfo {
 public:
   enum ARMProcFamilyEnum : uint8_t {
     Others,
+    A64FX,
     AppleA7,
     AppleA10,
     AppleA11,
     AppleA12,
     AppleA13,
+    Carmel,
     CortexA35,
     CortexA53,
     CortexA55,
@@ -52,6 +55,9 @@ public:
     CortexA73,
     CortexA75,
     CortexA76,
+    CortexA77,
+    CortexA78,
+    CortexX1,
     ExynosM3,
     Falkor,
     Kryo,
@@ -64,6 +70,7 @@ public:
     ThunderXT83,
     ThunderXT88,
     TSV110,
+    ThunderX3T110
   };
 
 protected:
@@ -75,6 +82,7 @@ protected:
   bool HasV8_3aOps = false;
   bool HasV8_4aOps = false;
   bool HasV8_5aOps = false;
+  bool HasV8_6aOps = false;
 
   bool HasFPARMv8 = false;
   bool HasNEON = false;
@@ -98,6 +106,10 @@ protected:
   bool HasPsUAO = false;
   bool HasPAN_RWV = false;
   bool HasCCPP = false;
+
+  // SVE extensions
+  bool HasSVE = false;
+  bool UseExperimentalZeroingPseudos = false;
 
   // Armv8.2 Crypto extensions
   bool HasSM4 = false;
@@ -125,8 +137,6 @@ protected:
   bool HasRCPC_IMMO = false;
 
   bool HasLSLFast = false;
-  bool HasSVE = false;
-  bool HasSVE2 = false;
   bool HasRCPC = false;
   bool HasAggressiveFMA = false;
 
@@ -143,7 +153,17 @@ protected:
   bool HasMTE = false;
   bool HasTME = false;
 
+  // Armv8.6-A Extensions
+  bool HasBF16 = false;
+  bool HasMatMulInt8 = false;
+  bool HasMatMulFP32 = false;
+  bool HasMatMulFP64 = false;
+  bool HasAMVS = false;
+  bool HasFineGrainedTraps = false;
+  bool HasEnhancedCounterVirtualization = false;
+
   // Arm SVE2 extensions
+  bool HasSVE2 = false;
   bool HasSVE2AES = false;
   bool HasSVE2SM4 = false;
   bool HasSVE2SHA3 = false;
@@ -196,6 +216,8 @@ protected:
   bool UseEL2ForTP = false;
   bool UseEL3ForTP = false;
   bool AllowTaggedGlobals = false;
+  bool HardenSlsRetBr = false;
+  bool HardenSlsBlr = false;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 3;
   uint16_t CacheLineSize = 0;
@@ -225,6 +247,7 @@ protected:
 
   /// GlobalISel related APIs.
   std::unique_ptr<CallLowering> CallLoweringInfo;
+  std::unique_ptr<InlineAsmLowering> InlineAsmLoweringInfo;
   std::unique_ptr<InstructionSelector> InstSelector;
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
@@ -260,6 +283,7 @@ public:
     return &getInstrInfo()->getRegisterInfo();
   }
   const CallLowering *getCallLowering() const override;
+  const InlineAsmLowering *getInlineAsmLowering() const override;
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
@@ -347,6 +371,9 @@ public:
            hasFuseCCSelect() || hasFuseLiterals();
   }
 
+  bool hardenSlsRetBr() const { return HardenSlsRetBr; }
+  bool hardenSlsBlr() const { return HardenSlsBlr; }
+
   bool useEL1ForTP() const { return UseEL1ForTP; }
   bool useEL2ForTP() const { return UseEL2ForTP; }
   bool useEL3ForTP() const { return UseEL3ForTP; }
@@ -359,7 +386,12 @@ public:
   }
   unsigned getCacheLineSize() const override { return CacheLineSize; }
   unsigned getPrefetchDistance() const override { return PrefetchDistance; }
-  unsigned getMinPrefetchStride() const override { return MinPrefetchStride; }
+  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                unsigned NumStridedMemAccesses,
+                                unsigned NumPrefetches,
+                                bool HasCall) const override {
+    return MinPrefetchStride;
+  }
   unsigned getMaxPrefetchIterationsAhead() const override {
     return MaxPrefetchIterationsAhead;
   }
@@ -371,6 +403,10 @@ public:
   unsigned getMaximumJumpTableSize() const { return MaxJumpTableSize; }
 
   unsigned getWideningBaseCost() const { return WideningBaseCost; }
+
+  bool useExperimentalZeroingPseudos() const {
+    return UseExperimentalZeroingPseudos;
+  }
 
   /// CPU has TBI (top byte of addresses is ignored during HW address
   /// translation) and OS enables it.
@@ -401,6 +437,16 @@ public:
   bool hasSVE2SM4() const { return HasSVE2SM4; }
   bool hasSVE2SHA3() const { return HasSVE2SHA3; }
   bool hasSVE2BitPerm() const { return HasSVE2BitPerm; }
+  bool hasMatMulInt8() const { return HasMatMulInt8; }
+  bool hasMatMulFP32() const { return HasMatMulFP32; }
+  bool hasMatMulFP64() const { return HasMatMulFP64; }
+
+  // Armv8.6-A Extensions
+  bool hasBF16() const { return HasBF16; }
+  bool hasFineGrainedTraps() const { return HasFineGrainedTraps; }
+  bool hasEnhancedCounterVirtualization() const {
+    return HasEnhancedCounterVirtualization;
+  }
 
   bool isLittleEndian() const { return IsLittle; }
 
@@ -438,6 +484,7 @@ public:
   bool hasDIT() const { return HasDIT; }
   bool hasTRACEV8_4() const { return HasTRACEV8_4; }
   bool hasAM() const { return HasAM; }
+  bool hasAMVS() const { return HasAMVS; }
   bool hasSEL2() const { return HasSEL2; }
   bool hasPMU() const { return HasPMU; }
   bool hasTLB_RMI() const { return HasTLB_RMI; }
@@ -497,6 +544,12 @@ public:
   }
 
   void mirFileLoaded(MachineFunction &MF) const override;
+
+  // Return the known range for the bit length of SVE data registers. A value
+  // of 0 means nothing is known about that particular limit beyong what's
+  // implied by the architecture.
+  unsigned getMaxSVEVectorSizeInBits() const;
+  unsigned getMinSVEVectorSizeInBits() const;
 };
 } // End llvm namespace
 

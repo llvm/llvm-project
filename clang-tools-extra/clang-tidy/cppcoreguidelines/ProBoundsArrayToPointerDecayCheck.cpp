@@ -8,6 +8,7 @@
 
 #include "ProBoundsArrayToPointerDecayCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -35,8 +36,7 @@ AST_MATCHER_P(Expr, hasParentIgnoringImpCasts,
               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
   const Expr *E = &Node;
   do {
-    ASTContext::DynTypedNodeList Parents =
-        Finder->getASTContext().getParents(*E);
+    DynTypedNodeList Parents = Finder->getASTContext().getParents(*E);
     if (Parents.size() != 1)
       return false;
     E = Parents[0].get<Expr>();
@@ -49,20 +49,18 @@ AST_MATCHER_P(Expr, hasParentIgnoringImpCasts,
 } // namespace
 
 void ProBoundsArrayToPointerDecayCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // The only allowed array to pointer decay
   // 1) just before array subscription
   // 2) inside a range-for over an array
   // 3) if it converts a string literal to a pointer
   Finder->addMatcher(
-      implicitCastExpr(
-          unless(hasParent(arraySubscriptExpr())),
-          unless(hasParentIgnoringImpCasts(explicitCastExpr())),
-          unless(isInsideOfRangeBeginEndStmt()),
-          unless(hasSourceExpression(ignoringParens(stringLiteral()))))
-          .bind("cast"),
+      traverse(ast_type_traits::TK_AsIs,
+               implicitCastExpr(
+                   unless(hasParent(arraySubscriptExpr())),
+                   unless(hasParentIgnoringImpCasts(explicitCastExpr())),
+                   unless(isInsideOfRangeBeginEndStmt()),
+                   unless(hasSourceExpression(ignoringParens(stringLiteral()))))
+                   .bind("cast")),
       this);
 }
 

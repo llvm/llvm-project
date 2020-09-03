@@ -1,4 +1,4 @@
-; RUN: not llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s 2>&1 | FileCheck %s
 
 ; CHECK: invalid register "flat_scratch_lo" for subtarget.
 

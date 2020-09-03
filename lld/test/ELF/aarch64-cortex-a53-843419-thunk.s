@@ -5,8 +5,7 @@
 // RUN:          .text2 0x8010000 : { *(.text.04) } } " > %t.script
 // RUN: ld.lld --script %t.script -fix-cortex-a53-843419 -verbose %t.o -o %t2 \
 // RUN:   2>&1 | FileCheck -check-prefix=CHECK-PRINT %s
-
-// RUN: llvm-objdump --no-show-raw-insn -triple=aarch64-linux-gnu -d %t2 | FileCheck %s
+// RUN: llvm-objdump --no-show-raw-insn --triple=aarch64-linux-gnu -d %t2 | FileCheck %s
 
 /// %t2 is 128 Megabytes, so delete it early.
 // RUN: rm %t2
@@ -23,11 +22,9 @@
 _start:
         bl far_away
         /// Thunk to far_away, size 16-bytes goes here.
-        /// Thunk Section with patch enabled has its size rounded up to 4KiB
-        /// this leaves the address of following sections the same modulo 4 KiB
 
         .section .text.02, "ax", %progbits
-        .space 4096 - 12
+        .space 4096 - 28
 
         /// Erratum sequence will only line up at address 0 modulo 0xffc when
         /// Thunk is inserted.
@@ -40,15 +37,15 @@ t3_ff8_ldr:
         ldr x0, [x0, :got_lo12:dat]
         ret
 
-// CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at 11FFC in unpatched output.
-// CHECK: 0000000000011ffc t3_ff8_ldr:
-// CHECK-NEXT: adrp    x0, #134213632
+// CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at 10FF8 in unpatched output.
+// CHECK: 0000000000010ff8 <t3_ff8_ldr>:
+// CHECK-NEXT: adrp    x0, #134217728
 // CHECK-NEXT: ldr     x1, [x1]
-// CHECK-NEXT: b       #8
+// CHECK-NEXT: b       0x11008
 // CHECK-NEXT: ret
-// CHECK: 000000000001200c __CortexA53843419_12004:
+// CHECK: 0000000000011008 <__CortexA53843419_11000>:
 // CHECK-NEXT: ldr     x0, [x0, #8]
-// CHECK-NEXT: b       #-8
+// CHECK-NEXT: b       0x11004
         .section .text.04, "ax", %progbits
         .globl far_away
         .type far_away, function

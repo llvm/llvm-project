@@ -29,14 +29,29 @@ namespace orc {
 
 class IRCompileLayer : public IRLayer {
 public:
-  using CompileFunction =
-      std::function<Expected<std::unique_ptr<MemoryBuffer>>(Module &)>;
+  class IRCompiler {
+  public:
+    IRCompiler(IRSymbolMapper::ManglingOptions MO) : MO(std::move(MO)) {}
+    virtual ~IRCompiler();
+    const IRSymbolMapper::ManglingOptions &getManglingOptions() const {
+      return MO;
+    }
+    virtual Expected<std::unique_ptr<MemoryBuffer>> operator()(Module &M) = 0;
+
+  protected:
+    IRSymbolMapper::ManglingOptions &manglingOptions() { return MO; }
+
+  private:
+    IRSymbolMapper::ManglingOptions MO;
+  };
 
   using NotifyCompiledFunction =
       std::function<void(VModuleKey K, ThreadSafeModule TSM)>;
 
   IRCompileLayer(ExecutionSession &ES, ObjectLayer &BaseLayer,
-                 CompileFunction Compile);
+                 std::unique_ptr<IRCompiler> Compile);
+
+  IRCompiler &getCompiler() { return *Compile; }
 
   void setNotifyCompiled(NotifyCompiledFunction NotifyCompiled);
 
@@ -45,7 +60,8 @@ public:
 private:
   mutable std::mutex IRLayerMutex;
   ObjectLayer &BaseLayer;
-  CompileFunction Compile;
+  std::unique_ptr<IRCompiler> Compile;
+  const IRSymbolMapper::ManglingOptions *ManglingOpts;
   NotifyCompiledFunction NotifyCompiled = NotifyCompiledFunction();
 };
 
@@ -90,7 +106,10 @@ public:
   /// Compile the module, and add the resulting object to the base layer
   ///        along with the given memory manager and symbol resolver.
   Error addModule(VModuleKey K, std::unique_ptr<Module> M) {
-    if (auto Err = BaseLayer.addObject(std::move(K), Compile(*M)))
+    auto Obj = Compile(*M);
+    if (!Obj)
+      return Obj.takeError();
+    if (auto Err = BaseLayer.addObject(std::move(K), std::move(*Obj)))
       return Err;
     if (NotifyCompiled)
       NotifyCompiled(std::move(K), std::move(M));

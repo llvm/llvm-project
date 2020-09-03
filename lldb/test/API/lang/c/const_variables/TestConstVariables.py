@@ -12,6 +12,7 @@ class ConstVariableTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureAll(oslist=["freebsd", "linux"], compiler="icc")
     @expectedFailureAll(archs=['mips', 'mipsel', 'mips64', 'mips64el'])
     @expectedFailureAll(
         oslist=["windows"],

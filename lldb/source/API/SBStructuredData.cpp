@@ -1,4 +1,4 @@
-//===-- SBStructuredData.cpp ------------------------------------*- C++ -*-===//
+//===-- SBStructuredData.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,7 +45,7 @@ SBStructuredData::SBStructuredData(lldb_private::StructuredDataImpl *impl)
                           (lldb_private::StructuredDataImpl *), impl);
 }
 
-SBStructuredData::~SBStructuredData() {}
+SBStructuredData::~SBStructuredData() = default;
 
 SBStructuredData &SBStructuredData::
 operator=(const lldb::SBStructuredData &rhs) {
@@ -196,8 +196,8 @@ bool SBStructuredData::GetBooleanValue(bool fail_value) const {
 }
 
 size_t SBStructuredData::GetStringValue(char *dst, size_t dst_len) const {
-  LLDB_RECORD_METHOD_CONST(size_t, SBStructuredData, GetStringValue,
-                           (char *, size_t), "", dst_len);
+  LLDB_RECORD_CHAR_PTR_METHOD_CONST(size_t, SBStructuredData, GetStringValue,
+                                    (char *, size_t), dst, "", dst_len);
 
   return (m_impl_up ? m_impl_up->GetStringValue(dst, dst_len) : 0);
 }
@@ -236,8 +236,7 @@ template <> void RegisterMethods<SBStructuredData>(Registry &R) {
                              (uint64_t));
   LLDB_REGISTER_METHOD_CONST(double, SBStructuredData, GetFloatValue, (double));
   LLDB_REGISTER_METHOD_CONST(bool, SBStructuredData, GetBooleanValue, (bool));
-  LLDB_REGISTER_CHAR_PTR_REDIRECT_CONST(size_t, SBStructuredData,
-                                        GetStringValue);
+  LLDB_REGISTER_CHAR_PTR_METHOD_CONST(size_t, SBStructuredData, GetStringValue);
 }
 
 } // namespace repro

@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_arm64.cpp ----------------------*- C++ -*-===//
+//===-- RegisterContextPOSIXCore_arm64.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,13 +17,16 @@
 using namespace lldb_private;
 
 RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
-    Thread &thread, RegisterInfoInterface *register_info,
+    Thread &thread, std::unique_ptr<RegisterInfoPOSIX_arm64> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextPOSIX_arm64(thread, 0, register_info) {
+    : RegisterContextPOSIX_arm64(thread, std::move(register_info)) {
   m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                   gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
+
+  m_fpregset = getRegset(
+      notes, m_register_info_up->GetTargetArchitecture().GetTriple(), FPR_Desc);
 }
 
 RegisterContextCorePOSIX_arm64::~RegisterContextCorePOSIX_arm64() {}
@@ -45,11 +48,26 @@ bool RegisterContextCorePOSIX_arm64::WriteFPR() {
 bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
                                                   RegisterValue &value) {
   lldb::offset_t offset = reg_info->byte_offset;
-  uint64_t v = m_gpr.GetMaxU64(&offset, reg_info->byte_size);
-  if (offset == reg_info->byte_offset + reg_info->byte_size) {
-    value = v;
-    return true;
+  if (offset + reg_info->byte_size <= GetGPRSize()) {
+    uint64_t v = m_gpr.GetMaxU64(&offset, reg_info->byte_size);
+    if (offset == reg_info->byte_offset + reg_info->byte_size) {
+      value = v;
+      return true;
+    }
   }
+
+  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+  if (reg == LLDB_INVALID_REGNUM)
+    return false;
+
+  offset -= GetGPRSize();
+  if (IsFPR(reg) && offset + reg_info->byte_size <= GetFPUSize()) {
+    Status error;
+    value.SetFromMemoryData(reg_info, m_fpregset.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+    return error.Success();
+  }
+
   return false;
 }
 

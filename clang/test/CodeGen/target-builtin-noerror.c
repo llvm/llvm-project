@@ -6,15 +6,15 @@
 
 // No warnings.
 extern __m256i a;
-int __attribute__((target("avx"))) bar(__m256i a) {
+int __attribute__((target("avx"))) bar() {
   return _mm256_extract_epi32(a, 3);
 }
 
 int baz() {
-  return bar(a);
+  return bar();
 }
 
-int __attribute__((target("avx"))) qq_avx(__m256i a) {
+int __attribute__((target("avx"))) qq_avx() {
   return _mm256_extract_epi32(a, 3);
 }
 
@@ -25,7 +25,7 @@ int qq_noavx() {
 extern __m256i a;
 int qq() {
   if (__builtin_cpu_supports("avx"))
-    return qq_avx(a);
+    return qq_avx();
   else
     return qq_noavx();
 }
@@ -81,6 +81,7 @@ void verifyfeaturestrings() {
   (void)__builtin_cpu_supports("avx512vnni");
   (void)__builtin_cpu_supports("avx512bitalg");
   (void)__builtin_cpu_supports("avx512bf16");
+  (void)__builtin_cpu_supports("avx512vp2intersect");
 }
 
 void verifycpustrings() {
@@ -100,6 +101,7 @@ void verifycpustrings() {
   (void)__builtin_cpu_is("btver2");
   (void)__builtin_cpu_is("cannonlake");
   (void)__builtin_cpu_is("cascadelake");
+  (void)__builtin_cpu_is("cooperlake");
   (void)__builtin_cpu_is("core2");
   (void)__builtin_cpu_is("corei7");
   (void)__builtin_cpu_is("goldmont");
@@ -119,6 +121,7 @@ void verifycpustrings() {
   (void)__builtin_cpu_is("skylake");
   (void)__builtin_cpu_is("skylake-avx512");
   (void)__builtin_cpu_is("slm");
+  (void)__builtin_cpu_is("tigerlake");
   (void)__builtin_cpu_is("tremont");
   (void)__builtin_cpu_is("westmere");
   (void)__builtin_cpu_is("znver1");

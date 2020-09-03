@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -352,6 +353,19 @@ public:
     return It;
   }
 
+  /// Return a range iterator which iterates over all of the set bits in the
+  /// half-open range [Start, End).
+  iterator_range<const_iterator> half_open_range(IndexT Start,
+                                                 IndexT End) const {
+    assert(Start < End && "Not a valid range");
+    auto StartIt = find(Start);
+    if (StartIt == end() || *StartIt >= End)
+      return {end(), end()};
+    auto EndIt = StartIt;
+    EndIt.advanceToLowerBound(End);
+    return {StartIt, EndIt};
+  }
+
   void print(raw_ostream &OS) const {
     OS << "{";
     for (auto It = Intervals.begin(), End = Intervals.end(); It != End;
@@ -384,10 +398,10 @@ private:
     for (IntervalMapOverlaps<MapT, MapT> I(Intervals, Other.Intervals);
          I.valid(); ++I)
       Overlaps.emplace_back(I.start(), I.stop());
-    assert(std::is_sorted(Overlaps.begin(), Overlaps.end(),
-                          [](IntervalT LHS, IntervalT RHS) {
-                            return LHS.second < RHS.first;
-                          }) &&
+    assert(llvm::is_sorted(Overlaps,
+                           [](IntervalT LHS, IntervalT RHS) {
+                             return LHS.second < RHS.first;
+                           }) &&
            "Overlaps must be sorted");
     return !Overlaps.empty();
   }

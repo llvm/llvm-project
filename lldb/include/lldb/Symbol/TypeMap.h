@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_TypeMap_h_
-#define liblldb_TypeMap_h_
+#ifndef LLDB_SYMBOL_TYPEMAP_H
+#define LLDB_SYMBOL_TYPEMAP_H
 
 #include "lldb/Symbol/Type.h"
 #include "lldb/Utility/Iterable.h"
@@ -67,9 +67,10 @@ private:
 
   collection m_types;
 
-  DISALLOW_COPY_AND_ASSIGN(TypeMap);
+  TypeMap(const TypeMap &) = delete;
+  const TypeMap &operator=(const TypeMap &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_TypeMap_h_
+#endif // LLDB_SYMBOL_TYPEMAP_H

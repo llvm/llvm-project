@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __DNBRegisterInfo_h__
-#define __DNBRegisterInfo_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBREGISTERINFO_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBREGISTERINFO_H
 
 #include "DNBDefs.h"
 #include <stdint.h>

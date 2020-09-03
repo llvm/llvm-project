@@ -12,12 +12,14 @@
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Transformer/SourceCode.h"
 #include "clang/Tooling/Transformer/SourceCodeBuilders.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include <atomic>
 #include <memory>
 #include <string>
@@ -26,7 +28,6 @@ using namespace clang;
 using namespace transformer;
 
 using ast_matchers::MatchFinder;
-using ast_type_traits::DynTypedNode;
 using llvm::errc;
 using llvm::Error;
 using llvm::Expected;
@@ -81,14 +82,14 @@ struct SelectorData {
 // A stencil operation to build a member access `e.m` or `e->m`, as appropriate.
 struct AccessData {
   AccessData(StringRef BaseId, Stencil Member)
-      : BaseId(BaseId), Member(std::move(Member)) {}
+      : BaseId(std::string(BaseId)), Member(std::move(Member)) {}
   std::string BaseId;
   Stencil Member;
 };
 
 struct IfBoundData {
   IfBoundData(StringRef Id, Stencil TrueStencil, Stencil FalseStencil)
-      : Id(Id), TrueStencil(std::move(TrueStencil)),
+      : Id(std::string(Id)), TrueStencil(std::move(TrueStencil)),
         FalseStencil(std::move(FalseStencil)) {}
   std::string Id;
   Stencil TrueStencil;
@@ -227,10 +228,37 @@ Error evalData(const UnaryOperationData &Data,
 
 Error evalData(const SelectorData &Data, const MatchFinder::MatchResult &Match,
                std::string *Result) {
-  auto Range = Data.Selector(Match);
-  if (!Range)
-    return Range.takeError();
-  *Result += tooling::getText(*Range, *Match.Context);
+  auto RawRange = Data.Selector(Match);
+  if (!RawRange)
+    return RawRange.takeError();
+  CharSourceRange Range = Lexer::makeFileCharRange(
+      *RawRange, *Match.SourceManager, Match.Context->getLangOpts());
+  if (Range.isInvalid()) {
+    // Validate the original range to attempt to get a meaningful error message.
+    // If it's valid, then something else is the cause and we just return the
+    // generic failure message.
+    if (auto Err = tooling::validateEditRange(*RawRange, *Match.SourceManager))
+      return handleErrors(std::move(Err), [](std::unique_ptr<StringError> E) {
+        assert(E->convertToErrorCode() ==
+                   llvm::make_error_code(errc::invalid_argument) &&
+               "Validation errors must carry the invalid_argument code");
+        return llvm::createStringError(
+            errc::invalid_argument,
+            "selected range could not be resolved to a valid source range; " +
+                E->getMessage());
+      });
+    return llvm::createStringError(
+        errc::invalid_argument,
+        "selected range could not be resolved to a valid source range");
+  }
+  // Validate `Range`, because `makeFileCharRange` accepts some ranges that
+  // `validateEditRange` rejects.
+  if (auto Err = tooling::validateEditRange(Range, *Match.SourceManager))
+    return joinErrors(
+        llvm::createStringError(errc::invalid_argument,
+                                "selected range is not valid for editing"),
+        std::move(Err));
+  *Result += tooling::getText(Range, *Match.Context);
   return Error::success();
 }
 
@@ -294,47 +322,41 @@ public:
 };
 } // namespace
 
-Stencil transformer::detail::makeStencil(StringRef Text) { return text(Text); }
+Stencil transformer::detail::makeStencil(StringRef Text) {
+  return std::make_shared<StencilImpl<RawTextData>>(std::string(Text));
+}
 
 Stencil transformer::detail::makeStencil(RangeSelector Selector) {
-  return selection(std::move(Selector));
-}
-
-Stencil transformer::text(StringRef Text) {
-  return std::make_shared<StencilImpl<RawTextData>>(Text);
-}
-
-Stencil transformer::selection(RangeSelector Selector) {
   return std::make_shared<StencilImpl<SelectorData>>(std::move(Selector));
 }
 
 Stencil transformer::dPrint(StringRef Id) {
-  return std::make_shared<StencilImpl<DebugPrintNodeData>>(Id);
+  return std::make_shared<StencilImpl<DebugPrintNodeData>>(std::string(Id));
 }
 
 Stencil transformer::expression(llvm::StringRef Id) {
   return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::Parens, Id);
+      UnaryNodeOperator::Parens, std::string(Id));
 }
 
 Stencil transformer::deref(llvm::StringRef ExprId) {
   return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::Deref, ExprId);
+      UnaryNodeOperator::Deref, std::string(ExprId));
 }
 
 Stencil transformer::maybeDeref(llvm::StringRef ExprId) {
   return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::MaybeDeref, ExprId);
+      UnaryNodeOperator::MaybeDeref, std::string(ExprId));
 }
 
 Stencil transformer::addressOf(llvm::StringRef ExprId) {
   return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::AddressOf, ExprId);
+      UnaryNodeOperator::AddressOf, std::string(ExprId));
 }
 
 Stencil transformer::maybeAddressOf(llvm::StringRef ExprId) {
   return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::MaybeAddressOf, ExprId);
+      UnaryNodeOperator::MaybeAddressOf, std::string(ExprId));
 }
 
 Stencil transformer::access(StringRef BaseId, Stencil Member) {

@@ -23,3 +23,7 @@ D: clang-tidy
 N: Julie Hockett
 E: juliehockett@google.com
 D: clang-doc
+
+N: Sam McCall
+E: sammccall@google.com
+D: clangd

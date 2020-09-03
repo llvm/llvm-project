@@ -28,6 +28,8 @@
 #include <vector>
 
 namespace llvm {
+class Error;
+
 namespace exegesis {
 
 struct InstructionBenchmarkKey {
@@ -66,14 +68,14 @@ struct InstructionBenchmark {
   // The number of instructions inside the repeated snippet. For example, if a
   // snippet of 3 instructions is repeated 4 times, this is 12.
   int NumRepetitions = 0;
-  enum RepetitionModeE { Duplicate, Loop };
-  RepetitionModeE RepetitionMode;
+  enum RepetitionModeE { Duplicate, Loop, AggregateMin };
   // Note that measurements are per instruction.
   std::vector<BenchmarkMeasure> Measurements;
   std::string Error;
   std::string Info;
   std::vector<uint8_t> AssembledSnippet;
-
+  // How to aggregate measurements.
+  enum ResultAggregationModeE { Min, Max, Mean, MinVariance };
   // Read functions.
   static Expected<InstructionBenchmark> readYaml(const LLVMState &State,
                                                  StringRef Filename);

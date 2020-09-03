@@ -129,7 +129,7 @@ private:
   /// the declare reduction construct is declared inside compound statement.
   LazyDeclPtr PrevDeclInScope;
 
-  virtual void anchor();
+  void anchor() override;
 
   OMPDeclareReductionDecl(Kind DK, DeclContext *DC, SourceLocation L,
                           DeclarationName Name, QualType Ty,
@@ -228,7 +228,7 @@ class OMPDeclareMapperDecl final : public ValueDecl, public DeclContext {
 
   LazyDeclPtr PrevDeclInScope;
 
-  virtual void anchor();
+  void anchor() override;
 
   OMPDeclareMapperDecl(Kind DK, DeclContext *DC, SourceLocation L,
                        DeclarationName Name, QualType Ty,

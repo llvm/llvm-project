@@ -4,13 +4,12 @@ set -ue
 
 function usage() {
   cat <<EOM
-$(basename ${0}) [-h|--help] --monorepo-root <MONOREPO-ROOT> --std <STD> --arch <ARCHITECTURE> [--lit-args <ARGS...>]
+$(basename ${0}) [-h|--help] --monorepo-root <MONOREPO-ROOT> --std <STD> --libcxx-exceptions <ON|OFF> [--lit-args <ARGS...>]
 
 This script is used to continually test libc++ and libc++abi trunk on MacOS.
 
   --monorepo-root     Full path to the root of the LLVM monorepo. Both libc++ and libc++abi from the monorepo are used.
   --std               Version of the C++ Standard to run the tests under (c++03, c++11, etc..).
-  --arch              Architecture to build the tests for (32, 64).
   --libcxx-exceptions Whether to enable exceptions when building libc++ and running the libc++ tests. libc++abi is always built with support for exceptions because other libraries in the runtime depend on it (like libobjc). This must be ON or OFF.
   [--cmake-args]      Additional arguments to pass to CMake (both the libc++ and the libc++abi configuration). If there are multiple arguments, quote them to paass them as a single argument to this script.
   [--lit-args]        Additional arguments to pass to lit. If there are multiple arguments, quote them to pass them as a single argument to this script.
@@ -32,10 +31,6 @@ while [[ $# -gt 0 ]]; do
     ;;
     --std)
     STD="${2}"
-    shift; shift
-    ;;
-    --arch)
-    ARCH="${2}"
     shift; shift
     ;;
     --libcxx-exceptions)
@@ -68,7 +63,6 @@ done
 
 if [[ -z ${MONOREPO_ROOT+x} ]]; then echo "--monorepo-root is a required parameter"; usage; exit 1; fi
 if [[ -z ${STD+x} ]]; then echo "--std is a required parameter"; usage; exit 1; fi
-if [[ -z ${ARCH+x} ]]; then echo "--arch is a required parameter"; usage; exit 1; fi
 if [[ "${LIBCXX_EXCEPTIONS}" != "ON" && "${LIBCXX_EXCEPTIONS}" != "OFF" ]]; then echo "--libcxx-exceptions is a required parameter and must be either ON or OFF"; usage; exit 1; fi
 if [[ -z ${ADDITIONAL_CMAKE_ARGS+x} ]]; then ADDITIONAL_CMAKE_ARGS=""; fi
 if [[ -z ${ADDITIONAL_LIT_ARGS+x} ]]; then ADDITIONAL_LIT_ARGS=""; fi
@@ -92,9 +86,6 @@ LLVM_INSTALL_DIR="${TEMP_DIR}/llvm-install"
 
 echo "@@@ Setting up LIT flags @@@"
 LIT_FLAGS="-sv --param=std=${STD} ${ADDITIONAL_LIT_ARGS}"
-if [[ "${ARCH}" == "32" ]]; then
-  LIT_FLAGS+=" --param=enable_32bit=true"
-fi
 echo "@@@@@@"
 
 
@@ -110,7 +101,7 @@ mkdir -p "${LLVM_BUILD_DIR}"
     ${ADDITIONAL_CMAKE_ARGS} \
     -DLLVM_LIT_ARGS="${LIT_FLAGS}" \
     -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
-    -DCMAKE_OSX_ARCHITECTURES="i386;x86_64" \
+    -DCMAKE_OSX_ARCHITECTURES="x86_64" \
     "${MONOREPO_ROOT}/llvm"
 )
 echo "@@@@@@"
@@ -129,4 +120,19 @@ echo "@@@@@@"
 
 echo "@@@ Running tests for libc++abi @@@"
 ninja -C "${LLVM_BUILD_DIR}" check-cxxabi
+echo "@@@@@@"
+
+
+# TODO: In the future, we should only build that way, and we should run the
+#       test suite against those.
+echo "@@@ Building libc++ and libc++abi using the Apple script (to make sure they work) @@@"
+"${MONOREPO_ROOT}/libcxx/utils/ci/apple-install-libcxx.sh"      \
+    --llvm-root "${MONOREPO_ROOT}"                              \
+    --build-dir "${LLVM_BUILD_DIR}/apple-build"                 \
+    --install-dir "${LLVM_BUILD_DIR}/apple-install"             \
+    --symbols-dir "${LLVM_BUILD_DIR}/apple-symbols"             \
+    --sdk macosx                                                \
+    --architectures "x86_64"                                    \
+    --version 999.99.99                                         \
+    --cache "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake"
 echo "@@@@@@"

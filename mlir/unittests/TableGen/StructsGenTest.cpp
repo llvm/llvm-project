@@ -1,6 +1,6 @@
 //===- StructsGenTest.cpp - TableGen StructsGen Tests ---------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -17,12 +17,12 @@
 
 namespace mlir {
 
-// Pull in generated enum utility declarations
+/// Pull in generated enum utility declarations and definitions.
 #include "StructAttrGenTest.h.inc"
-// And definitions
 #include "StructAttrGenTest.cpp.inc"
-// Helper that returns an example test::TestStruct for testing its
-// implementation.
+
+/// Helper that returns an example test::TestStruct for testing its
+/// implementation.
 static test::TestStruct getTestStruct(mlir::MLIRContext *context) {
   auto integerType = mlir::IntegerType::get(32, context);
   auto integerAttr = mlir::IntegerAttr::get(integerType, 127);
@@ -33,20 +33,22 @@ static test::TestStruct getTestStruct(mlir::MLIRContext *context) {
   auto elementsType = mlir::RankedTensorType::get({2, 3}, integerType);
   auto elementsAttr =
       mlir::DenseIntElementsAttr::get(elementsType, {1, 2, 3, 4, 5, 6});
+  auto optionalAttr = nullptr;
 
-  return test::TestStruct::get(integerAttr, floatAttr, elementsAttr, context);
+  return test::TestStruct::get(integerAttr, floatAttr, elementsAttr,
+                               optionalAttr, context);
 }
 
-// Validates that test::TestStruct::classof correctly identifies a valid
-// test::TestStruct.
+/// Validates that test::TestStruct::classof correctly identifies a valid
+/// test::TestStruct.
 TEST(StructsGenTest, ClassofTrue) {
   mlir::MLIRContext context;
   auto structAttr = getTestStruct(&context);
   ASSERT_TRUE(test::TestStruct::classof(structAttr));
 }
 
-// Validates that test::TestStruct::classof fails when an extra attribute is in
-// the class.
+/// Validates that test::TestStruct::classof fails when an extra attribute is in
+/// the class.
 TEST(StructsGenTest, ClassofExtraFalse) {
   mlir::MLIRContext context;
   mlir::DictionaryAttr structAttr = getTestStruct(&context);
@@ -67,8 +69,8 @@ TEST(StructsGenTest, ClassofExtraFalse) {
   ASSERT_FALSE(test::TestStruct::classof(badDictionary));
 }
 
-// Validates that test::TestStruct::classof fails when a NamedAttribute has an
-// incorrect name.
+/// Validates that test::TestStruct::classof fails when a NamedAttribute has an
+/// incorrect name.
 TEST(StructsGenTest, ClassofBadNameFalse) {
   mlir::MLIRContext context;
   mlir::DictionaryAttr structAttr = getTestStruct(&context);
@@ -88,8 +90,8 @@ TEST(StructsGenTest, ClassofBadNameFalse) {
   ASSERT_FALSE(test::TestStruct::classof(badDictionary));
 }
 
-// Validates that test::TestStruct::classof fails when a NamedAttribute has an
-// incorrect type.
+/// Validates that test::TestStruct::classof fails when a NamedAttribute has an
+/// incorrect type.
 TEST(StructsGenTest, ClassofBadTypeFalse) {
   mlir::MLIRContext context;
   mlir::DictionaryAttr structAttr = getTestStruct(&context);
@@ -113,8 +115,8 @@ TEST(StructsGenTest, ClassofBadTypeFalse) {
   ASSERT_FALSE(test::TestStruct::classof(badDictionary));
 }
 
-// Validates that test::TestStruct::classof fails when a NamedAttribute is
-// missing.
+/// Validates that test::TestStruct::classof fails when a NamedAttribute is
+/// missing.
 TEST(StructsGenTest, ClassofMissingFalse) {
   mlir::MLIRContext context;
   mlir::DictionaryAttr structAttr = getTestStruct(&context);
@@ -130,7 +132,7 @@ TEST(StructsGenTest, ClassofMissingFalse) {
   ASSERT_FALSE(test::TestStruct::classof(badDictionary));
 }
 
-// Validate the accessor for the FloatAttr value.
+/// Validate the accessor for the FloatAttr value.
 TEST(StructsGenTest, GetFloat) {
   mlir::MLIRContext context;
   auto structAttr = getTestStruct(&context);
@@ -138,7 +140,7 @@ TEST(StructsGenTest, GetFloat) {
   EXPECT_EQ(returnedAttr.getValueAsDouble(), 0.25);
 }
 
-// Validate the accessor for the IntegerAttr value.
+/// Validate the accessor for the IntegerAttr value.
 TEST(StructsGenTest, GetInteger) {
   mlir::MLIRContext context;
   auto structAttr = getTestStruct(&context);
@@ -146,7 +148,7 @@ TEST(StructsGenTest, GetInteger) {
   EXPECT_EQ(returnedAttr.getInt(), 127);
 }
 
-// Validate the accessor for the ElementsAttr value.
+/// Validate the accessor for the ElementsAttr value.
 TEST(StructsGenTest, GetElements) {
   mlir::MLIRContext context;
   auto structAttr = getTestStruct(&context);
@@ -157,6 +159,12 @@ TEST(StructsGenTest, GetElements) {
   for (const auto &valIndexIt : llvm::enumerate(denseAttr.getIntValues())) {
     EXPECT_EQ(valIndexIt.value(), valIndexIt.index() + 1);
   }
+}
+
+TEST(StructsGenTest, EmptyOptional) {
+  mlir::MLIRContext context;
+  auto structAttr = getTestStruct(&context);
+  EXPECT_EQ(structAttr.sample_optional_integer(), nullptr);
 }
 
 } // namespace mlir

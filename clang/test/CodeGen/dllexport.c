@@ -14,7 +14,7 @@
 __declspec(dllexport) extern int ExternGlobalDecl;
 
 // dllexport implies a definition.
-// CHECK-DAG: @GlobalDef = common dso_local dllexport global i32 0, align 4
+// CHECK-DAG: @GlobalDef = dso_local dllexport global i32 0, align 4
 __declspec(dllexport) int GlobalDef;
 
 // Export definition.
@@ -27,11 +27,11 @@ __declspec(dllexport) extern int GlobalDeclInit;
 int GlobalDeclInit = 1;
 
 // Redeclarations
-// CHECK-DAG: @GlobalRedecl1 = common dso_local dllexport global i32 0, align 4
+// CHECK-DAG: @GlobalRedecl1 = dso_local dllexport global i32 0, align 4
 __declspec(dllexport) extern int GlobalRedecl1;
 __declspec(dllexport)        int GlobalRedecl1;
 
-// CHECK-DAG: @GlobalRedecl2 = common dso_local dllexport global i32 0, align 4
+// CHECK-DAG: @GlobalRedecl2 = dso_local dllexport global i32 0, align 4
 __declspec(dllexport) extern int GlobalRedecl2;
                              int GlobalRedecl2;
 
@@ -70,13 +70,13 @@ __declspec(dllexport) void redecl2(void);
 //===----------------------------------------------------------------------===//
 
 // dllexport takes precedence over the dllimport if both are specified.
-// CHECK-DAG: @PrecedenceGlobal1A = common dso_local dllexport global i32 0, align 4
-// CHECK-DAG: @PrecedenceGlobal1B = common dso_local dllexport global i32 0, align 4
+// CHECK-DAG: @PrecedenceGlobal1A = dso_local dllexport global i32 0, align 4
+// CHECK-DAG: @PrecedenceGlobal1B = dso_local dllexport global i32 0, align 4
 __attribute__((dllimport, dllexport))       int PrecedenceGlobal1A;
 __declspec(dllimport) __declspec(dllexport) int PrecedenceGlobal1B;
 
-// CHECK-DAG: @PrecedenceGlobal2A = common dso_local dllexport global i32 0, align 4
-// CHECK-DAG: @PrecedenceGlobal2B = common dso_local dllexport global i32 0, align 4
+// CHECK-DAG: @PrecedenceGlobal2A = dso_local dllexport global i32 0, align 4
+// CHECK-DAG: @PrecedenceGlobal2B = dso_local dllexport global i32 0, align 4
 __attribute__((dllexport, dllimport))       int PrecedenceGlobal2A;
 __declspec(dllexport) __declspec(dllimport) int PrecedenceGlobal2B;
 
@@ -84,7 +84,7 @@ __declspec(dllexport) __declspec(dllimport) int PrecedenceGlobal2B;
 __declspec(dllexport) extern int PrecedenceGlobalRedecl1;
 __declspec(dllimport)        int PrecedenceGlobalRedecl1 = 0;
 
-// CHECK-DAG: @PrecedenceGlobalRedecl2 = common dso_local dllexport global i32 0, align 4
+// CHECK-DAG: @PrecedenceGlobalRedecl2 = dso_local dllexport global i32 0, align 4
 __declspec(dllimport) extern int PrecedenceGlobalRedecl2;
 __declspec(dllexport)        int PrecedenceGlobalRedecl2;
 
@@ -92,7 +92,7 @@ __declspec(dllexport)        int PrecedenceGlobalRedecl2;
 __attribute__((dllexport)) extern int PrecedenceGlobalMixed1;
 __declspec(dllimport)             int PrecedenceGlobalMixed1 = 1;
 
-// CHECK-DAG: @PrecedenceGlobalMixed2 = common dso_local dllexport global i32 0, align 4
+// CHECK-DAG: @PrecedenceGlobalMixed2 = dso_local dllexport global i32 0, align 4
 __attribute__((dllimport)) extern int PrecedenceGlobalMixed2;
 __declspec(dllexport)             int PrecedenceGlobalMixed2;
 

@@ -1,4 +1,4 @@
-//===-- GDBRemoteCommunicationServerPlatform.cpp ----------------*- C++ -*-===//
+//===-- GDBRemoteCommunicationServerPlatform.cpp --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -173,7 +173,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
   uint16_t port = UINT16_MAX;
   while (packet.GetNameColonValue(name, value)) {
     if (name.equals("host"))
-      hostname = value;
+      hostname = std::string(value);
     else if (name.equals("port"))
       value.getAsInteger(0, port);
   }

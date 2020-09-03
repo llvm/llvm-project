@@ -1,6 +1,6 @@
 //===- Predicate.cpp - Predicate class ------------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -60,7 +60,7 @@ tblgen::CPred::CPred(const llvm::Init *init) : Pred(init) {
 // Get condition of the C Predicate.
 std::string tblgen::CPred::getConditionImpl() const {
   assert(!isNull() && "null predicate does not have a condition");
-  return def->getValueAsString("predExpr");
+  return std::string(def->getValueAsString("predExpr"));
 }
 
 tblgen::CombinedPred::CombinedPred(const llvm::Record *record) : Pred(record) {
@@ -136,10 +136,11 @@ using Subst = std::pair<StringRef, StringRef>;
 // have children, and perform leaf substitutions inplace.  Note that after
 // substitution, nodes are still pointing to the original TableGen record.
 // All nodes are created within "allocator".
-static PredNode *buildPredicateTree(const tblgen::Pred &root,
-                                    llvm::BumpPtrAllocator &allocator,
-                                    ArrayRef<Subst> substitutions) {
-  auto *rootNode = allocator.Allocate<PredNode>();
+static PredNode *
+buildPredicateTree(const tblgen::Pred &root,
+                   llvm::SpecificBumpPtrAllocator<PredNode> &allocator,
+                   ArrayRef<Subst> substitutions) {
+  auto *rootNode = allocator.Allocate();
   new (rootNode) PredNode;
   rootNode->kind = getPredCombinerKind(root);
   rootNode->predicate = &root;
@@ -147,14 +148,15 @@ static PredNode *buildPredicateTree(const tblgen::Pred &root,
     rootNode->expr = root.getCondition();
     // Apply all parent substitutions from innermost to outermost.
     for (const auto &subst : llvm::reverse(substitutions)) {
-      auto pos = rootNode->expr.find(subst.first);
+      auto pos = rootNode->expr.find(std::string(subst.first));
       while (pos != std::string::npos) {
-        rootNode->expr.replace(pos, subst.first.size(), subst.second);
+        rootNode->expr.replace(pos, subst.first.size(),
+                               std::string(subst.second));
         // Skip the newly inserted substring, which itself may consider the
         // pattern to match.
         pos += subst.second.size();
         // Find the next possible match position.
-        pos = rootNode->expr.find(subst.first, pos);
+        pos = rootNode->expr.find(std::string(subst.first), pos);
       }
     }
     return rootNode;
@@ -171,8 +173,8 @@ static PredNode *buildPredicateTree(const tblgen::Pred &root,
   // If the current predicate is a ConcatPred, record the prefix and suffix.
   else if (rootNode->kind == PredCombinerKind::Concat) {
     const auto &concatPred = static_cast<const tblgen::ConcatPred &>(root);
-    rootNode->prefix = concatPred.getPrefix();
-    rootNode->suffix = concatPred.getSuffix();
+    rootNode->prefix = std::string(concatPred.getPrefix());
+    rootNode->suffix = std::string(concatPred.getSuffix());
   }
 
   // Build child subtrees.
@@ -211,7 +213,7 @@ static PredNode *propagateGroundTruth(
   // still point to the original predicate records.  While the original
   // predicate may be known to be true or false, it is not necessarily the case
   // after rewriting.
-  // TODO(zinenko,jpienaar): we can support ground truth for rewritten
+  // TODO: we can support ground truth for rewritten
   // predicates by either (a) having our own unique'ing of the predicates
   // instead of relying on TableGen record pointers or (b) taking ground truth
   // values optionally prefixed with a list of substitutions to apply, e.g.
@@ -338,7 +340,7 @@ static std::string getCombinedCondition(const PredNode &root) {
 }
 
 std::string tblgen::CombinedPred::getConditionImpl() const {
-  llvm::BumpPtrAllocator allocator;
+  llvm::SpecificBumpPtrAllocator<PredNode> allocator;
   auto predicateTree = buildPredicateTree(*this, allocator, {});
   predicateTree = propagateGroundTruth(
       predicateTree,

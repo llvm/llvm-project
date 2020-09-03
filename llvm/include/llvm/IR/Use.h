@@ -41,17 +41,6 @@ class Value;
 /// all of the uses for a particular value definition. It also supports jumping
 /// directly to the used value when we arrive from the User's operands, and
 /// jumping directly to the User when we arrive from the Value's uses.
-///
-/// The pointer to the used Value is explicit, and the pointer to the User is
-/// implicit. The implicit pointer is found via a waymarking algorithm
-/// described in the programmer's manual:
-///
-///   http://www.llvm.org/docs/ProgrammersManual.html#the-waymarking-algorithm
-///
-/// This is essentially the single most memory intensive object in LLVM because
-/// of the number of uses in the system. At the same time, the constant time
-/// operations it allows are essential to many optimizations having reasonable
-/// time complexity.
 class Use {
 public:
   Use(const Use &U) = delete;
@@ -60,34 +49,6 @@ public:
   /// that also works with less standard-compliant compilers
   void swap(Use &RHS);
 
-  /// Pointer traits for the UserRef PointerIntPair. This ensures we always
-  /// use the LSB regardless of pointer alignment on different targets.
-  struct UserRefPointerTraits {
-    static inline void *getAsVoidPointer(User *P) { return P; }
-
-    static inline User *getFromVoidPointer(void *P) {
-      return (User *)P;
-    }
-
-    enum { NumLowBitsAvailable = 1 };
-  };
-
-  // A type for the word following an array of hung-off Uses in memory, which is
-  // a pointer back to their User with the bottom bit set.
-  using UserRef = PointerIntPair<User *, 1, unsigned, UserRefPointerTraits>;
-
-  /// Pointer traits for the Prev PointerIntPair. This ensures we always use
-  /// the two LSBs regardless of pointer alignment on different targets.
-  struct PrevPointerTraits {
-    static inline void *getAsVoidPointer(Use **P) { return P; }
-
-    static inline Use **getFromVoidPointer(void *P) {
-      return (Use **)P;
-    }
-
-    enum { NumLowBitsAvailable = 2 };
-  };
-
 private:
   /// Destructor - Only for zap()
   ~Use() {
@@ -95,13 +56,12 @@ private:
       removeFromList();
   }
 
-  enum PrevPtrTag { zeroDigitTag, oneDigitTag, stopTag, fullStopTag };
-
   /// Constructor
-  Use(PrevPtrTag tag) { Prev.setInt(tag); }
+  Use(User *Parent) : Parent(Parent) {}
 
 public:
   friend class Value;
+  friend class User;
 
   operator Value *() const { return Val; }
   Value *get() const { return Val; }
@@ -110,7 +70,7 @@ public:
   ///
   /// For an instruction operand, for example, this will return the
   /// instruction.
-  User *getUser() const LLVM_READONLY;
+  User *getUser() const { return Parent; };
 
   inline void set(Value *Val);
 
@@ -125,38 +85,29 @@ public:
   /// Return the operand # of this use in its User.
   unsigned getOperandNo() const;
 
-  /// Initializes the waymarking tags on an array of Uses.
-  ///
-  /// This sets up the array of Uses such that getUser() can find the User from
-  /// any of those Uses.
-  static Use *initTags(Use *Start, Use *Stop);
-
   /// Destroys Use operands when the number of operands of
   /// a User changes.
   static void zap(Use *Start, const Use *Stop, bool del = false);
 
 private:
-  const Use *getImpliedUser() const LLVM_READONLY;
 
   Value *Val = nullptr;
   Use *Next = nullptr;
-  PointerIntPair<Use **, 2, PrevPtrTag, PrevPointerTraits> Prev;
-
-  void setPrev(Use **NewPrev) { Prev.setPointer(NewPrev); }
+  Use **Prev = nullptr;
+  User *Parent = nullptr;
 
   void addToList(Use **List) {
     Next = *List;
     if (Next)
-      Next->setPrev(&Next);
-    setPrev(List);
-    *List = this;
+      Next->Prev = &Next;
+    Prev = List;
+    *Prev = this;
   }
 
   void removeFromList() {
-    Use **StrippedPrev = Prev.getPointer();
-    *StrippedPrev = Next;
+    *Prev = Next;
     if (Next)
-      Next->setPrev(StrippedPrev);
+      Next->Prev = Prev;
   }
 };
 

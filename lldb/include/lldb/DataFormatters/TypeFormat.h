@@ -7,9 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_TypeFormat_h_
-#define lldb_TypeFormat_h_
-
+#ifndef LLDB_DATAFORMATTERS_TYPEFORMAT_H
+#define LLDB_DATAFORMATTERS_TYPEFORMAT_H
 
 #include <functional>
 #include <string>
@@ -153,7 +152,8 @@ protected:
   uint32_t m_my_revision;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(TypeFormatImpl);
+  TypeFormatImpl(const TypeFormatImpl &) = delete;
+  const TypeFormatImpl &operator=(const TypeFormatImpl &) = delete;
 };
 
 class TypeFormatImpl_Format : public TypeFormatImpl {
@@ -181,7 +181,9 @@ protected:
   lldb::Format m_format;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(TypeFormatImpl_Format);
+  TypeFormatImpl_Format(const TypeFormatImpl_Format &) = delete;
+  const TypeFormatImpl_Format &
+  operator=(const TypeFormatImpl_Format &) = delete;
 };
 
 class TypeFormatImpl_EnumType : public TypeFormatImpl {
@@ -210,8 +212,10 @@ protected:
   mutable std::unordered_map<void *, CompilerType> m_types;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(TypeFormatImpl_EnumType);
+  TypeFormatImpl_EnumType(const TypeFormatImpl_EnumType &) = delete;
+  const TypeFormatImpl_EnumType &
+  operator=(const TypeFormatImpl_EnumType &) = delete;
 };
 } // namespace lldb_private
 
-#endif // lldb_TypeFormat_h_
+#endif // LLDB_DATAFORMATTERS_TYPEFORMAT_H

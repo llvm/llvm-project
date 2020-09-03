@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc -amdgpu-load-store-vectorizer=0 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
 
 declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1, i1) #1

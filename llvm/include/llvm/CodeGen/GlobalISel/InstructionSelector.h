@@ -293,6 +293,13 @@ enum {
   /// - TempRegFlags - The register flags to set
   GIR_AddTempRegister,
 
+  /// Add a temporary register to the specified instruction
+  /// - InsnID - Instruction ID to modify
+  /// - TempRegID - The temporary register ID to add
+  /// - TempRegFlags - The register flags to set
+  /// - SubRegIndex - The subregister index to set
+  GIR_AddTempSubRegister,
+
   /// Add an immediate to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - Imm - The immediate to add
@@ -312,6 +319,14 @@ enum {
   /// - OldInsnID - Instruction ID to get the matched operand from
   /// - RendererFnID - Custom renderer function to call
   GIR_CustomRenderer,
+
+  /// Render operands to the specified instruction using a custom function,
+  /// reading from a specific operand.
+  /// - InsnID - Instruction ID to modify
+  /// - OldInsnID - Instruction ID to get the matched operand from
+  /// - OpIdx - Operand index in OldInsnID the render function should read from..
+  /// - RendererFnID - Custom renderer function to call
+  GIR_CustomOperandRenderer,
 
   /// Render a G_CONSTANT operator as a sign-extended immediate.
   /// - NewInsnID - Instruction ID to modify
@@ -390,6 +405,10 @@ public:
   GISelKnownBits *KnownBits = nullptr;
   MachineFunction *MF = nullptr;
 
+  virtual void setupGeneratedPerFunctionState(MachineFunction &MF) {
+    llvm_unreachable("TableGen should have emitted implementation");
+  }
+
   /// Setup per-MF selector state.
   virtual void setupMF(MachineFunction &mf,
                        GISelKnownBits &KB,
@@ -397,6 +416,7 @@ public:
     CoverageInfo = &covinfo;
     KnownBits = &KB;
     MF = &mf;
+    setupGeneratedPerFunctionState(mf);
   }
 
 protected:

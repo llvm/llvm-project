@@ -667,6 +667,5 @@ TEST_F(FormatTestProto, PreventBreaksBetweenKeyAndSubmessages) {
                "}");
 }
 
-
-} // end namespace tooling
+} // namespace format
 } // end namespace clang

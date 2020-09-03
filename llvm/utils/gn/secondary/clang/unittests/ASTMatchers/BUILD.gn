@@ -7,6 +7,7 @@ unittest("ASTMatchersTests") {
     "//clang/lib/ASTMatchers",
     "//clang/lib/Basic",
     "//clang/lib/Frontend",
+    "//clang/lib/Testing",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
   ]
@@ -15,5 +16,6 @@ unittest("ASTMatchersTests") {
     "ASTMatchersNarrowingTest.cpp",
     "ASTMatchersNodeTest.cpp",
     "ASTMatchersTraversalTest.cpp",
+    "GtestMatchersTest.cpp",
   ]
 }

@@ -34,6 +34,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -117,24 +118,58 @@ static bool isUniformlyReached(const LegacyDivergenceAnalysis &DA,
   return true;
 }
 
+static void removeDoneExport(Function &F) {
+  ConstantInt *BoolFalse = ConstantInt::getFalse(F.getContext());
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      if (IntrinsicInst *Intrin = llvm::dyn_cast<IntrinsicInst>(&I)) {
+        if (Intrin->getIntrinsicID() == Intrinsic::amdgcn_exp) {
+          Intrin->setArgOperand(6, BoolFalse); // done
+        } else if (Intrin->getIntrinsicID() == Intrinsic::amdgcn_exp_compr) {
+          Intrin->setArgOperand(4, BoolFalse); // done
+        }
+      }
+    }
+  }
+}
+
 static BasicBlock *unifyReturnBlockSet(Function &F,
                                        ArrayRef<BasicBlock *> ReturningBlocks,
+                                       bool InsertExport,
                                        const TargetTransformInfo &TTI,
                                        StringRef Name) {
   // Otherwise, we need to insert a new basic block into the function, add a PHI
   // nodes (if the function returns values), and convert all of the return
   // instructions into unconditional branches.
   BasicBlock *NewRetBlock = BasicBlock::Create(F.getContext(), Name, &F);
+  IRBuilder<> B(NewRetBlock);
+
+  if (InsertExport) {
+    // Ensure that there's only one "done" export in the shader by removing the
+    // "done" bit set on the original final export. More than one "done" export
+    // can lead to undefined behavior.
+    removeDoneExport(F);
+
+    Value *Undef = UndefValue::get(B.getFloatTy());
+    B.CreateIntrinsic(Intrinsic::amdgcn_exp, { B.getFloatTy() },
+                      {
+                        B.getInt32(9), // target, SQ_EXP_NULL
+                        B.getInt32(0), // enabled channels
+                        Undef, Undef, Undef, Undef, // values
+                        B.getTrue(), // done
+                        B.getTrue(), // valid mask
+                      });
+  }
 
   PHINode *PN = nullptr;
   if (F.getReturnType()->isVoidTy()) {
-    ReturnInst::Create(F.getContext(), nullptr, NewRetBlock);
+    B.CreateRetVoid();
   } else {
     // If the function doesn't return void... add a PHI node to the block...
-    PN = PHINode::Create(F.getReturnType(), ReturningBlocks.size(),
-                         "UnifiedRetVal");
-    NewRetBlock->getInstList().push_back(PN);
-    ReturnInst::Create(F.getContext(), PN, NewRetBlock);
+    PN = B.CreatePHI(F.getReturnType(), ReturningBlocks.size(),
+                     "UnifiedRetVal");
+    assert(!InsertExport);
+    B.CreateRet(PN);
   }
 
   // Loop over all of the blocks, replacing the return instruction with an
@@ -160,7 +195,11 @@ static BasicBlock *unifyReturnBlockSet(Function &F,
 
 bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-  if (PDT.getRoots().size() <= 1)
+
+  // If there's only one exit, we don't need to do anything, unless this is a
+  // pixel shader and that exit is an infinite loop, since we still have to
+  // insert an export in that case.
+  if (PDT.root_size() <= 1 && F.getCallingConv() != CallingConv::AMDGPU_PS)
     return false;
 
   LegacyDivergenceAnalysis &DA = getAnalysis<LegacyDivergenceAnalysis>();
@@ -168,15 +207,21 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   // Loop over all of the blocks in a function, tracking all of the blocks that
   // return.
   SmallVector<BasicBlock *, 4> ReturningBlocks;
+  SmallVector<BasicBlock *, 4> UniformlyReachedRetBlocks;
   SmallVector<BasicBlock *, 4> UnreachableBlocks;
 
   // Dummy return block for infinite loop.
   BasicBlock *DummyReturnBB = nullptr;
 
-  for (BasicBlock *BB : PDT.getRoots()) {
+  bool InsertExport = false;
+
+  bool Changed = false;
+  for (BasicBlock *BB : PDT.roots()) {
     if (isa<ReturnInst>(BB->getTerminator())) {
       if (!isUniformlyReached(DA, *BB))
         ReturningBlocks.push_back(BB);
+      else
+        UniformlyReachedRetBlocks.push_back(BB);
     } else if (isa<UnreachableInst>(BB->getTerminator())) {
       if (!isUniformlyReached(DA, *BB))
         UnreachableBlocks.push_back(BB);
@@ -188,6 +233,36 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
                                            "DummyReturnBlock", &F);
         Type *RetTy = F.getReturnType();
         Value *RetVal = RetTy->isVoidTy() ? nullptr : UndefValue::get(RetTy);
+
+        // For pixel shaders, the producer guarantees that an export is
+        // executed before each return instruction. However, if there is an
+        // infinite loop and we insert a return ourselves, we need to uphold
+        // that guarantee by inserting a null export. This can happen e.g. in
+        // an infinite loop with kill instructions, which is supposed to
+        // terminate. However, we don't need to do this if there is a non-void
+        // return value, since then there is an epilog afterwards which will
+        // still export.
+        //
+        // Note: In the case where only some threads enter the infinite loop,
+        // this can result in the null export happening redundantly after the
+        // original exports. However, The last "real" export happens after all
+        // the threads that didn't enter an infinite loop converged, which
+        // means that the only extra threads to execute the null export are
+        // threads that entered the infinite loop, and they only could've
+        // exited through being killed which sets their exec bit to 0.
+        // Therefore, unless there's an actual infinite loop, which can have
+        // invalid results, or there's a kill after the last export, which we
+        // assume the frontend won't do, this export will have the same exec
+        // mask as the last "real" export, and therefore the valid mask will be
+        // overwritten with the same value and will still be correct. Also,
+        // even though this forces an extra unnecessary export wait, we assume
+        // that this happens rare enough in practice to that we don't have to
+        // worry about performance.
+        if (F.getCallingConv() == CallingConv::AMDGPU_PS &&
+            RetTy->isVoidTy()) {
+          InsertExport = true;
+        }
+
         ReturnInst::Create(F.getContext(), RetVal, DummyReturnBB);
         ReturningBlocks.push_back(DummyReturnBB);
       }
@@ -206,6 +281,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
         BB->getTerminator()->eraseFromParent();
         BranchInst::Create(TransitionBB, DummyReturnBB, BoolTrue, BB);
       }
+      Changed = true;
     }
   }
 
@@ -224,6 +300,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
         BB->getTerminator()->eraseFromParent();
         BranchInst::Create(UnreachableBlock, BB);
       }
+      Changed = true;
     }
 
     if (!ReturningBlocks.empty()) {
@@ -247,19 +324,32 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
       // actually reached here.
       ReturnInst::Create(F.getContext(), RetVal, UnreachableBlock);
       ReturningBlocks.push_back(UnreachableBlock);
+      Changed = true;
     }
   }
 
   // Now handle return blocks.
   if (ReturningBlocks.empty())
-    return false; // No blocks return
+    return Changed; // No blocks return
 
-  if (ReturningBlocks.size() == 1)
-    return false; // Already has a single return block
+  if (ReturningBlocks.size() == 1 && !InsertExport)
+    return Changed; // Already has a single return block
 
   const TargetTransformInfo &TTI
     = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
-  unifyReturnBlockSet(F, ReturningBlocks, TTI, "UnifiedReturnBlock");
+  // Unify returning blocks. If we are going to insert the export it is also
+  // necessary to include blocks that are uniformly reached, because in addition
+  // to inserting the export the "done" bits on existing exports will be cleared
+  // and we do not want to end up with the normal export in a non-unified,
+  // uniformly reached block with the "done" bit cleared.
+  auto BlocksToUnify = std::move(ReturningBlocks);
+  if (InsertExport) {
+    BlocksToUnify.insert(BlocksToUnify.end(), UniformlyReachedRetBlocks.begin(),
+                         UniformlyReachedRetBlocks.end());
+  }
+
+  unifyReturnBlockSet(F, BlocksToUnify, InsertExport, TTI,
+                      "UnifiedReturnBlock");
   return true;
 }

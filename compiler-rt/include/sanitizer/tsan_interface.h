@@ -38,34 +38,34 @@ void __tsan_release(void *addr);
 
 // Mutex has static storage duration and no-op constructor and destructor.
 // This effectively makes tsan ignore destroy annotation.
-const unsigned __tsan_mutex_linker_init      = 1 << 0;
+static const unsigned __tsan_mutex_linker_init      = 1 << 0;
 // Mutex is write reentrant.
-const unsigned __tsan_mutex_write_reentrant  = 1 << 1;
+static const unsigned __tsan_mutex_write_reentrant  = 1 << 1;
 // Mutex is read reentrant.
-const unsigned __tsan_mutex_read_reentrant   = 1 << 2;
+static const unsigned __tsan_mutex_read_reentrant   = 1 << 2;
 // Mutex does not have static storage duration, and must not be used after
 // its destructor runs.  The opposite of __tsan_mutex_linker_init.
 // If this flag is passed to __tsan_mutex_destroy, then the destruction
 // is ignored unless this flag was previously set on the mutex.
-const unsigned __tsan_mutex_not_static       = 1 << 8;
+static const unsigned __tsan_mutex_not_static       = 1 << 8;
 
 // Mutex operation flags:
 
 // Denotes read lock operation.
-const unsigned __tsan_mutex_read_lock        = 1 << 3;
+static const unsigned __tsan_mutex_read_lock        = 1 << 3;
 // Denotes try lock operation.
-const unsigned __tsan_mutex_try_lock         = 1 << 4;
+static const unsigned __tsan_mutex_try_lock         = 1 << 4;
 // Denotes that a try lock operation has failed to acquire the mutex.
-const unsigned __tsan_mutex_try_lock_failed  = 1 << 5;
+static const unsigned __tsan_mutex_try_lock_failed  = 1 << 5;
 // Denotes that the lock operation acquires multiple recursion levels.
 // Number of levels is passed in recursion parameter.
 // This is useful for annotation of e.g. Java builtin monitors,
 // for which wait operation releases all recursive acquisitions of the mutex.
-const unsigned __tsan_mutex_recursive_lock   = 1 << 6;
+static const unsigned __tsan_mutex_recursive_lock   = 1 << 6;
 // Denotes that the unlock operation releases all recursion levels.
 // Number of released levels is returned and later must be passed to
 // the corresponding __tsan_mutex_post_lock annotation.
-const unsigned __tsan_mutex_recursive_unlock = 1 << 7;
+static const unsigned __tsan_mutex_recursive_unlock = 1 << 7;
 
 // Annotate creation of a mutex.
 // Supported flags: mutex creation flags.
@@ -152,7 +152,7 @@ void __tsan_set_fiber_name(void *fiber, const char *name);
 
 // Flags for __tsan_switch_to_fiber:
 // Do not establish a happens-before relation between fibers
-const unsigned __tsan_switch_to_fiber_no_sync = 1 << 0;
+static const unsigned __tsan_switch_to_fiber_no_sync = 1 << 0;
 
 #ifdef __cplusplus
 }  // extern "C"

@@ -8,6 +8,7 @@
 
 #include <fstream>
 
+#include "clang/Basic/FileManager.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -87,7 +88,7 @@ TEST_F(ASTUnitTest, SaveLoadPreservesLangOptionsInPrintingPolicy) {
   EXPECT_TRUE(llvm::sys::fs::exists(ASTFileName));
 
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
-      ASTFileName.str(), PCHContainerOps->getRawReader(),
+      std::string(ASTFileName.str()), PCHContainerOps->getRawReader(),
       ASTUnit::LoadEverything, Diags, FileSystemOptions(),
       /*UseDebugInfo=*/false);
 

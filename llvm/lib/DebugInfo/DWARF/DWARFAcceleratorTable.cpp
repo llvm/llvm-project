@@ -365,8 +365,8 @@ AppleAcceleratorTable::equal_range(StringRef Key) const {
 void DWARFDebugNames::Header::dump(ScopedPrinter &W) const {
   DictScope HeaderScope(W, "Header");
   W.printHex("Length", UnitLength);
+  W.printString("Format", dwarf::FormatString(Format));
   W.printNumber("Version", Version);
-  W.printHex("Padding", Padding);
   W.printNumber("CU count", CompUnitCount);
   W.printNumber("Local TU count", LocalTypeUnitCount);
   W.printNumber("Foreign TU count", ForeignTypeUnitCount);
@@ -378,30 +378,36 @@ void DWARFDebugNames::Header::dump(ScopedPrinter &W) const {
 
 Error DWARFDebugNames::Header::extract(const DWARFDataExtractor &AS,
                                              uint64_t *Offset) {
-  // Check that we can read the fixed-size part.
-  if (!AS.isValidOffset(*Offset + sizeof(HeaderPOD) - 1))
+  auto HeaderError = [Offset = *Offset](Error E) {
     return createStringError(errc::illegal_byte_sequence,
-                             "Section too small: cannot read header.");
+                             "parsing .debug_names header at 0x%" PRIx64 ": %s",
+                             Offset, toString(std::move(E)).c_str());
+  };
 
-  UnitLength = AS.getU32(Offset);
-  Version = AS.getU16(Offset);
-  Padding = AS.getU16(Offset);
-  CompUnitCount = AS.getU32(Offset);
-  LocalTypeUnitCount = AS.getU32(Offset);
-  ForeignTypeUnitCount = AS.getU32(Offset);
-  BucketCount = AS.getU32(Offset);
-  NameCount = AS.getU32(Offset);
-  AbbrevTableSize = AS.getU32(Offset);
-  AugmentationStringSize = alignTo(AS.getU32(Offset), 4);
+  DataExtractor::Cursor C(*Offset);
+  std::tie(UnitLength, Format) = AS.getInitialLength(C);
 
-  if (!AS.isValidOffsetForDataOfSize(*Offset, AugmentationStringSize))
-    return createStringError(
-        errc::illegal_byte_sequence,
-        "Section too small: cannot read header augmentation.");
+  Version = AS.getU16(C);
+  AS.skip(C, 2); // padding
+  CompUnitCount = AS.getU32(C);
+  LocalTypeUnitCount = AS.getU32(C);
+  ForeignTypeUnitCount = AS.getU32(C);
+  BucketCount = AS.getU32(C);
+  NameCount = AS.getU32(C);
+  AbbrevTableSize = AS.getU32(C);
+  AugmentationStringSize = alignTo(AS.getU32(C), 4);
+
+  if (!C)
+    return HeaderError(C.takeError());
+
+  if (!AS.isValidOffsetForDataOfSize(C.tell(), AugmentationStringSize))
+    return HeaderError(createStringError(errc::illegal_byte_sequence,
+                                         "cannot read header augmentation"));
   AugmentationString.resize(AugmentationStringSize);
-  AS.getU8(Offset, reinterpret_cast<uint8_t *>(AugmentationString.data()),
+  AS.getU8(C, reinterpret_cast<uint8_t *>(AugmentationString.data()),
            AugmentationStringSize);
-  return Error::success();
+  *Offset = C.tell();
+  return C.takeError();
 }
 
 void DWARFDebugNames::Abbrev::dump(ScopedPrinter &W) const {
@@ -486,9 +492,10 @@ Error DWARFDebugNames::NameIndex::extract() {
   if (Error E = Hdr.extract(AS, &Offset))
     return E;
 
+  const unsigned SectionOffsetSize = dwarf::getDwarfOffsetByteSize(Hdr.Format);
   CUsBase = Offset;
-  Offset += Hdr.CompUnitCount * 4;
-  Offset += Hdr.LocalTypeUnitCount * 4;
+  Offset += Hdr.CompUnitCount * SectionOffsetSize;
+  Offset += Hdr.LocalTypeUnitCount * SectionOffsetSize;
   Offset += Hdr.ForeignTypeUnitCount * 8;
   BucketsBase = Offset;
   Offset += Hdr.BucketCount * 4;
@@ -496,9 +503,9 @@ Error DWARFDebugNames::NameIndex::extract() {
   if (Hdr.BucketCount > 0)
     Offset += Hdr.NameCount * 4;
   StringOffsetsBase = Offset;
-  Offset += Hdr.NameCount * 4;
+  Offset += Hdr.NameCount * SectionOffsetSize;
   EntryOffsetsBase = Offset;
-  Offset += Hdr.NameCount * 4;
+  Offset += Hdr.NameCount * SectionOffsetSize;
 
   if (!AS.isValidOffsetForDataOfSize(Offset, Hdr.AbbrevTableSize))
     return createStringError(errc::illegal_byte_sequence,
@@ -579,20 +586,24 @@ std::error_code DWARFDebugNames::SentinelError::convertToErrorCode() const {
 
 uint64_t DWARFDebugNames::NameIndex::getCUOffset(uint32_t CU) const {
   assert(CU < Hdr.CompUnitCount);
-  uint64_t Offset = CUsBase + 4 * CU;
-  return Section.AccelSection.getRelocatedValue(4, &Offset);
+  const unsigned SectionOffsetSize = dwarf::getDwarfOffsetByteSize(Hdr.Format);
+  uint64_t Offset = CUsBase + SectionOffsetSize * CU;
+  return Section.AccelSection.getRelocatedValue(SectionOffsetSize, &Offset);
 }
 
 uint64_t DWARFDebugNames::NameIndex::getLocalTUOffset(uint32_t TU) const {
   assert(TU < Hdr.LocalTypeUnitCount);
-  uint64_t Offset = CUsBase + 4 * (Hdr.CompUnitCount + TU);
-  return Section.AccelSection.getRelocatedValue(4, &Offset);
+  const unsigned SectionOffsetSize = dwarf::getDwarfOffsetByteSize(Hdr.Format);
+  uint64_t Offset = CUsBase + SectionOffsetSize * (Hdr.CompUnitCount + TU);
+  return Section.AccelSection.getRelocatedValue(SectionOffsetSize, &Offset);
 }
 
 uint64_t DWARFDebugNames::NameIndex::getForeignTUSignature(uint32_t TU) const {
   assert(TU < Hdr.ForeignTypeUnitCount);
+  const unsigned SectionOffsetSize = dwarf::getDwarfOffsetByteSize(Hdr.Format);
   uint64_t Offset =
-      CUsBase + 4 * (Hdr.CompUnitCount + Hdr.LocalTypeUnitCount) + 8 * TU;
+      CUsBase +
+      SectionOffsetSize * (Hdr.CompUnitCount + Hdr.LocalTypeUnitCount) + 8 * TU;
   return Section.AccelSection.getU64(&Offset);
 }
 
@@ -613,7 +624,7 @@ DWARFDebugNames::NameIndex::getEntry(uint64_t *Offset) const {
 
   Entry E(*this, *AbbrevIt);
 
-  dwarf::FormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
+  dwarf::FormParams FormParams = {Hdr.Version, 0, Hdr.Format};
   for (auto &Value : E.Values) {
     if (!Value.extractValue(AS, Offset, FormParams))
       return createStringError(errc::io_error,
@@ -625,12 +636,16 @@ DWARFDebugNames::NameIndex::getEntry(uint64_t *Offset) const {
 DWARFDebugNames::NameTableEntry
 DWARFDebugNames::NameIndex::getNameTableEntry(uint32_t Index) const {
   assert(0 < Index && Index <= Hdr.NameCount);
-  uint64_t StringOffsetOffset = StringOffsetsBase + 4 * (Index - 1);
-  uint64_t EntryOffsetOffset = EntryOffsetsBase + 4 * (Index - 1);
+  const unsigned SectionOffsetSize = dwarf::getDwarfOffsetByteSize(Hdr.Format);
+  uint64_t StringOffsetOffset =
+      StringOffsetsBase + SectionOffsetSize * (Index - 1);
+  uint64_t EntryOffsetOffset =
+      EntryOffsetsBase + SectionOffsetSize * (Index - 1);
   const DWARFDataExtractor &AS = Section.AccelSection;
 
-  uint64_t StringOffset = AS.getRelocatedValue(4, &StringOffsetOffset);
-  uint64_t EntryOffset = AS.getU32(&EntryOffsetOffset);
+  uint64_t StringOffset =
+      AS.getRelocatedValue(SectionOffsetSize, &StringOffsetOffset);
+  uint64_t EntryOffset = AS.getUnsigned(&EntryOffsetOffset, SectionOffsetSize);
   EntryOffset += EntriesBase;
   return {Section.StringSection, Index, StringOffset, EntryOffset};
 }
@@ -859,13 +874,14 @@ void DWARFDebugNames::ValueIterator::next() {
 
 DWARFDebugNames::ValueIterator::ValueIterator(const DWARFDebugNames &AccelTable,
                                               StringRef Key)
-    : CurrentIndex(AccelTable.NameIndices.begin()), IsLocal(false), Key(Key) {
+    : CurrentIndex(AccelTable.NameIndices.begin()), IsLocal(false),
+      Key(std::string(Key)) {
   searchFromStartOfCurrentIndex();
 }
 
 DWARFDebugNames::ValueIterator::ValueIterator(
     const DWARFDebugNames::NameIndex &NI, StringRef Key)
-    : CurrentIndex(&NI), IsLocal(true), Key(Key) {
+    : CurrentIndex(&NI), IsLocal(true), Key(std::string(Key)) {
   if (!findInCurrentIndex())
     setEnd();
 }

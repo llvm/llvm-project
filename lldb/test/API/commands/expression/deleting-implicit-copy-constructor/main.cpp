@@ -11,7 +11,7 @@ struct IndirectlyDeletedCopyCstr {
   // will cause Sema to declare the special members of IndirectlyDeletedCopyCstr.
   // If we correctly set the deleted implicit copy constructor in NoCopyCstr then this
   // should have propagated to this record and Clang won't crash.
-  IndirectlyDeletedCopyCstr() { //%self.expect("expr IndirectlyDeletedCopyCstr x")
+  IndirectlyDeletedCopyCstr() { //%self.expect_expr("IndirectlyDeletedCopyCstr x; 1+1", result_type="int", result_value="2")
                                 //%self.dbg.GetCommandInterpreter().HandleCompletion("e ", len("e "), 0, -1, lldb.SBStringList())
   }
 };

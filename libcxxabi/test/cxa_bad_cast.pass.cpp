@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <cxxabi.h>
 #include <cassert>
 #include <stdlib.h>
 #include <exception>
 #include <typeinfo>
+
+#include "test_macros.h"
 
 class Base {
   virtual void foo() {};
@@ -31,16 +33,16 @@ void my_terminate() { exit(0); }
 int main ()
 {
     // swap-out the terminate handler
-    void (*default_handler)() = std::get_terminate(); 
+    void (*default_handler)() = std::get_terminate();
     std::set_terminate(my_terminate);
 
-#ifndef LIBCXXABI_HAS_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
     try {
 #endif
         Derived &d = test_bad_cast(gB);
         assert(false);
         ((void)d);
-#ifndef LIBCXXABI_HAS_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
     } catch (std::bad_cast) {
         // success
         return 0;

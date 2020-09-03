@@ -32,6 +32,7 @@ class LLVM_LIBRARY_VISIBILITY HexagonTargetInfo : public TargetInfo {
   bool HasHVX = false;
   bool HasHVX64B = false;
   bool HasHVX128B = false;
+  bool HasAudio = false;
   bool UseLongCalls = false;
 
 public:
@@ -56,6 +57,13 @@ public:
     LargeArrayAlign = 64;
     UseBitFieldTypeAlignment = true;
     ZeroLengthBitfieldBoundary = 32;
+    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+
+    // These are the default values anyway, but explicitly make sure
+    // that the size of the boolean type is 8 bits. Bool vectors are used
+    // for modeling predicate registers in HVX, and the bool -> byte
+    // correspondence matches the HVX architecture.
+    BoolWidth = BoolAlign = 8;
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
@@ -96,6 +104,8 @@ public:
                             DiagnosticsEngine &Diags) override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
+    if (getTriple().isMusl())
+      return TargetInfo::HexagonBuiltinVaList;
     return TargetInfo::CharPtrBuiltinVaList;
   }
 
@@ -123,6 +133,13 @@ public:
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     return RegNo < 2 ? RegNo : -1;
   }
+
+  bool isTinyCore() const {
+    // We can write more stricter checks later.
+    return CPU.find('t') != std::string::npos;
+  }
+
+  bool hasExtIntType() const override { return true; }
 };
 } // namespace targets
 } // namespace clang

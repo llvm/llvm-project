@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm < %s | FileCheck -enable-var-scope -check-prefixes=CHECK,X86 %s
 // RUN: %clang_cc1 -triple amdgcn -emit-llvm < %s | FileCheck -enable-var-scope -check-prefixes=CHECK,AMDGCN %s
 
-// CHECK: @foo = common addrspace(1) global
+// CHECK: @foo = addrspace(1) global
 int foo __attribute__((address_space(1)));
 
-// CHECK: @ban = common addrspace(1) global
+// CHECK: @ban = addrspace(1) global
 int ban[10] __attribute__((address_space(1)));
 
-// CHECK: @a = common global
+// CHECK: @a = global
 int a __attribute__((address_space(0)));
 
 // CHECK-LABEL: define i32 @test1()

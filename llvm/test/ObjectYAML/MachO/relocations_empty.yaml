@@ -1,0 +1,65 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump --macho --reloc %t | FileCheck %s --check-prefix=OBJDUMP-VERIFY
+
+# OBJDUMP-VERIFY-NOT: Relocation information
+
+# RUN: obj2yaml %t | FileCheck %s
+
+# CHECK:    Sections:
+# CHECK-NEXT:      - sectname:        __text
+# CHECK-NEXT:        segname:         __TEXT
+# CHECK-NEXT:        addr:            0x0000000000000000
+# CHECK-NEXT:        size:            0
+# CHECK-NEXT:        offset:          0x000000C8
+# CHECK-NEXT:        align:           0
+# CHECK-NEXT:        reloff:          0x00000000
+# CHECK-NEXT:        nreloc:          0
+# CHECK-NEXT:        flags:           0x80000000
+# CHECK-NEXT:        reserved1:       0x00000000
+# CHECK-NEXT:        reserved2:       0x00000000
+# CHECK-NEXT:        reserved3:       0x00000000
+# CHECK-NEXT:        content:         ''
+# CHECK-NOT:         relocations:
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           2
+  sizeofcmds:      168
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         ''
+    vmaddr:          0
+    vmsize:          0
+    fileoff:         200
+    filesize:        0
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        size:            0
+        offset:          0x000000C8
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         ''
+        relocations:     []
+  - cmd:             LC_VERSION_MIN_MACOSX
+    cmdsize:         16
+    version:         658944
+    sdk:             0
+...

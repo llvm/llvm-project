@@ -35,6 +35,7 @@ class TestSwiftStdlibSet(TestBase):
             self, 'break here', lldb.SBFileSpec('main.swift'))
         self.expect(
             "frame variable",
+            ordered=False,
             substrs=[
                 ' = 5',
                 ' = 2',

@@ -13,7 +13,7 @@ def note_expr_divide_by_zero : Note<"division by zero">;
 def note_constexpr_invalid_cast : Note<
   "%select{reinterpret_cast|dynamic_cast|cast that performs the conversions of"
   " a reinterpret_cast|cast from %1}0 is not allowed in a constant expression"
-  "%select{| in C++ standards before C++2a||}0">;
+  "%select{| in C++ standards before C++20||}0">;
 def note_constexpr_invalid_downcast : Note<
   "cannot cast object of dynamic type %0 to type %1">;
 def note_constexpr_overflow : Note<
@@ -33,7 +33,7 @@ def note_constexpr_no_return : Note<
   "control reached end of constexpr function">;
 def note_constexpr_virtual_call : Note<
   "cannot evaluate call to virtual function in a constant expression "
-  "in C++ standards before C++2a">;
+  "in C++ standards before C++20">;
 def note_constexpr_pure_virtual_call : Note<
   "pure virtual function %q0 called">;
 def note_constexpr_polymorphic_unknown_dynamic_type : Note<
@@ -57,6 +57,9 @@ def note_constexpr_non_global : Note<
 def note_constexpr_dynamic_alloc : Note<
   "%select{pointer|reference}0 to %select{|subobject of }1"
   "heap-allocated object is not a constant expression">;
+def note_consteval_address_accessible : Note<
+  "%select{pointer|reference}0 to a consteval declaration "
+  "is not a constant expression">;
 def note_constexpr_uninitialized : Note<
   "%select{|sub}0object of type %1 is not initialized">;
 def note_constexpr_subobject_declared_here : Note<
@@ -98,11 +101,19 @@ def note_constexpr_null_subobject : Note<
   "access array element of|perform pointer arithmetic on|"
   "access real component of|"
   "access imaginary component of}0 null pointer">;
+def note_constexpr_function_param_value_unknown : Note<
+  "function parameter %0 with unknown value cannot be used in a constant "
+  "expression">;
+def note_constexpr_var_init_unknown : Note<
+  "initializer of %0 is unknown">;
 def note_constexpr_var_init_non_constant : Note<
   "initializer of %0 is not a constant expression">;
+def note_constexpr_var_init_weak : Note<
+  "initializer of weak variable %0 is not considered constant because "
+  "it may be different at runtime">;
 def note_constexpr_typeid_polymorphic : Note<
   "typeid applied to expression of polymorphic type %0 is "
-  "not allowed in a constant expression in C++ standards before C++2a">;
+  "not allowed in a constant expression in C++ standards before C++20">;
 def note_constexpr_void_comparison : Note<
   "comparison between unequal pointers to void has unspecified result">;
 def note_constexpr_temporary_here : Note<"temporary created here">;
@@ -156,6 +167,9 @@ def note_constexpr_access_mutable : Note<
   "mutable member %1 is not allowed in a constant expression">;
 def note_constexpr_ltor_non_const_int : Note<
   "read of non-const variable %0 is not allowed in a constant expression">;
+def note_constexpr_ltor_non_integral : Note<
+  "read of variable %0 of non-integral, non-enumeration type %1 "
+  "is not allowed in a constant expression">;
 def note_constexpr_ltor_non_constexpr : Note<
   "read of non-constexpr variable %0 is not allowed in a constant expression">;
 def note_constexpr_ltor_incomplete_type : Note<
@@ -183,6 +197,9 @@ def note_constexpr_access_inactive_union_member : Note<
   "construction of subobject of|destruction of}0 "
   "member %1 of union with %select{active member %3|no active member}2 "
   "is not allowed in a constant expression">;
+def note_constexpr_union_member_change_during_init : Note<
+  "assignment would change active union member during the initialization of "
+  "a different member of the same union">;
 def note_constexpr_access_static_temporary : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to|reconstruction of|"
@@ -218,6 +235,14 @@ def note_constexpr_baa_insufficient_alignment : Note<
 def note_constexpr_baa_value_insufficient_alignment : Note<
   "value of the aligned pointer (%0) is not a multiple of the asserted %1 "
   "%plural{1:byte|:bytes}1">;
+def note_constexpr_invalid_alignment : Note<
+  "requested alignment %0 is not a positive power of two">;
+def note_constexpr_alignment_too_big : Note<
+  "requested alignment must be %0 or less for type %1; %2 is invalid">;
+def note_constexpr_alignment_compute : Note<
+  "cannot constant evaluate whether run-time alignment is at least %0">;
+def note_constexpr_alignment_adjust : Note<
+  "cannot constant evaluate the result of adjusting alignment to %0">;
 def note_constexpr_destroy_out_of_lifetime : Note<
   "destroying object '%0' whose lifetime has already ended">;
 def note_constexpr_unsupported_destruction : Note<
@@ -230,6 +255,12 @@ def note_constexpr_unsupported_unsized_array : Note<
 def note_constexpr_unsized_array_indexed : Note<
   "indexing of array without known bound is not allowed "
   "in a constant expression">;
+def note_constexpr_memcmp_unsupported : Note<
+  "constant evaluation of %0 between arrays of types %1 and %2 "
+  "is not supported; only arrays of narrow character types can be compared">;
+def note_constexpr_memchr_unsupported : Note<
+  "constant evaluation of %0 on array of type %1 "
+  "is not supported; only arrays of narrow character types can be searched">;
 def note_constexpr_memcpy_null : Note<
   "%select{source|destination}2 of "
   "'%select{%select{memcpy|wmemcpy}1|%select{memmove|wmemmove}1}0' "
@@ -318,12 +349,17 @@ def note_constexpr_delete_base_nonvirt_dtor : Note<
 def note_constexpr_memory_leak : Note<
   "allocation performed here was not deallocated"
   "%plural{0:|: (along with %0 other memory leak%s0)}0">;
+def note_constexpr_unsupported_layout : Note<
+  "type %0 has unexpected layout">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 
 def warn_integer_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,
   InGroup<DiagGroup<"integer-overflow">>;
+def warn_fixedpoint_constant_overflow : Warning<
+  "overflow in expression; result is %0 with type %1">,
+  InGroup<DiagGroup<"fixed-point-overflow">>;
 
 // This is a temporary diagnostic, and shall be removed once our
 // implementation is complete, and like the preceding constexpr notes belongs

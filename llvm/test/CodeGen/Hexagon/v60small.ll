@@ -1,6 +1,6 @@
 ; RUN: llc -march=hexagon -O2 -mcpu=hexagonv60  < %s | FileCheck %s
 
-; CHECK: q{{[0-3]}} = v{{[0-9]*}}and(v{{[0-9]*}},r{{[0-9]*}})
+; CHECK: q{{[0-3]}} = vand(v{{[0-9]*}},r{{[0-9]*}})
 target datalayout = "e-m:e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a:0-n16:32"
 target triple = "hexagon"
 
@@ -24,28 +24,34 @@ entry:
   %retval = alloca i32, align 4
   store i32 0, i32* %retval, align 4
   %0 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %1 = bitcast <16 x i32> %0 to <512 x i1>
+  %1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %0, i32 -1)
   %2 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 1), align 64
-  %3 = bitcast <16 x i32> %2 to <512 x i1>
-  %4 = call <512 x i1> @llvm.hexagon.V6.pred.and(<512 x i1> %1, <512 x i1> %3)
-  %5 = bitcast <512 x i1> %4 to <16 x i32>
+  %3 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %2, i32 -1)
+  %4 = call <64 x i1> @llvm.hexagon.V6.pred.and(<64 x i1> %1, <64 x i1> %3)
+  %5 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %4, i32 -1)
   store volatile <16 x i32> %5, <16 x i32>* @Q6VecPredResult, align 64
   %6 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %7 = bitcast <16 x i32> %6 to <512 x i1>
+  %7 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %6, i32 -1)
   %8 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 1), align 64
-  %9 = bitcast <16 x i32> %8 to <512 x i1>
-  %10 = call <512 x i1> @llvm.hexagon.V6.pred.and.n(<512 x i1> %7, <512 x i1> %9)
-  %11 = bitcast <512 x i1> %10 to <16 x i32>
+  %9 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %8, i32 -1)
+  %10 = call <64 x i1> @llvm.hexagon.V6.pred.and.n(<64 x i1> %7, <64 x i1> %9)
+  %11 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %10, i32 -1)
   store volatile <16 x i32> %11, <16 x i32>* @Q6VecPredResult, align 64
   ret i32 0
 
 }
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.and(<512 x i1>, <512 x i1>) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.and(<64 x i1>, <64 x i1>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.and.n(<512 x i1>, <512 x i1>) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.and.n(<64 x i1>, <64 x i1>) #1
+
+; Function Attrs: nounwind readnone
+declare <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1>, i32) #1
+
+; Function Attrs: nounwind readnone
+declare <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #1
 
 attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

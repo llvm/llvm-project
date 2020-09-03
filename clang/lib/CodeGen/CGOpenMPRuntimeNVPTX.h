@@ -193,18 +193,6 @@ protected:
   /// Full/Lightweight runtime mode. Used for better optimization.
   unsigned getDefaultLocationReserved2Flags() const override;
 
-  /// Tries to emit declare variant function for \p OldGD from \p NewGD.
-  /// \param OrigAddr LLVM IR value for \p OldGD.
-  /// \param IsForDefinition true, if requested emission for the definition of
-  /// \p OldGD.
-  /// \returns true, was able to emit a definition function for \p OldGD, which
-  /// points to \p NewGD.
-  /// NVPTX backend does not support global aliases, so just use the function,
-  /// emitted for \p NewGD instead of \p OldGD.
-  bool tryEmitDeclareVariant(const GlobalDecl &NewGD, const GlobalDecl &OldGD,
-                             llvm::GlobalValue *OrigAddr,
-                             bool IsForDefinition) override;
-
 public:
   explicit CGOpenMPRuntimeNVPTX(CodeGenModule &CGM);
   void clear() override;
@@ -395,7 +383,7 @@ public:
 
   /// Perform check on requires decl to ensure that target architecture
   /// supports unified addressing
-  void checkArchForUnifiedAddressing(const OMPRequiresDecl *D) override;
+  void processRequiresDirective(const OMPRequiresDecl *D) override;
 
   /// Returns default address space for the constant firstprivates, __constant__
   /// address space by default.

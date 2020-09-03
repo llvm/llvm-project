@@ -23,6 +23,9 @@ include "llvm/Target/Target.td"
 // Hexagon Architectures
 include "HexagonDepArch.td"
 
+def ProcTinyCore: SubtargetFeature<"tinycore", "HexagonProcFamily",
+      "TinyCore", "Hexagon Tiny Core">;
+
 // Hexagon ISA Extensions
 def ExtensionZReg: SubtargetFeature<"zreg", "UseZRegOps", "true",
       "Hexagon ZReg extension instructions">;
@@ -42,14 +45,25 @@ def ExtensionHVXV66: SubtargetFeature<"hvxv66", "HexagonHVXVersion",
       "Hexagon::ArchEnum::V66", "Hexagon HVX instructions",
       [ExtensionHVX, ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65,
        ExtensionZReg]>;
+def ExtensionHVXV67: SubtargetFeature<"hvxv67", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V67", "Hexagon HVX instructions",
+      [ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65, ExtensionHVXV66]>;
+
 
 def ExtensionHVX64B: SubtargetFeature<"hvx-length64b", "UseHVX64BOps",
       "true", "Hexagon HVX 64B instructions", [ExtensionHVX]>;
 def ExtensionHVX128B: SubtargetFeature<"hvx-length128b", "UseHVX128BOps",
       "true", "Hexagon HVX 128B instructions", [ExtensionHVX]>;
 
+def ExtensionAudio: SubtargetFeature<"audio", "UseAudioOps", "true",
+      "Hexagon Audio extension instructions">;
+
+def FeatureCompound: SubtargetFeature<"compound", "UseCompound", "true",
+      "Use compound instructions">;
 def FeaturePackets: SubtargetFeature<"packets", "UsePackets", "true",
       "Support for instruction packets">;
+def FeaturePreV65: SubtargetFeature<"prev65", "HasPreV65", "true",
+      "Support features deprecated in v65">;
 def FeatureLongCalls: SubtargetFeature<"long-calls", "UseLongCalls", "true",
       "Use constant-extended calls">;
 def FeatureMemNoShuf: SubtargetFeature<"mem_noshuf", "HasMemNoShuf", "false",
@@ -64,6 +78,8 @@ def FeatureSmallData: SubtargetFeature<"small-data", "UseSmallData", "true",
       "Allow GP-relative addressing of global variables">;
 def FeatureDuplex: SubtargetFeature<"duplex", "EnableDuplex", "true",
       "Enable generation of duplex instruction">;
+def FeatureUnsafeFP: SubtargetFeature<"unsafe-fp", "UseUnsafeMath", "true",
+      "Use unsafe FP math">;
 def FeatureReservedR19: SubtargetFeature<"reserved-r19", "ReservedR19",
       "true", "Reserve register R19">;
 def FeatureNoreturnStackElim: SubtargetFeature<"noreturn-stack-elim",
@@ -76,21 +92,36 @@ def FeatureNoreturnStackElim: SubtargetFeature<"noreturn-stack-elim",
 
 def UseMEMOPS          : Predicate<"HST->useMemops()">;
 def UseHVX64B          : Predicate<"HST->useHVX64BOps()">,
-                         AssemblerPredicate<"ExtensionHVX64B">;
+                         AssemblerPredicate<(all_of ExtensionHVX64B)>;
 def UseHVX128B         : Predicate<"HST->useHVX128BOps()">,
-                         AssemblerPredicate<"ExtensionHVX128B">;
+                         AssemblerPredicate<(all_of ExtensionHVX128B)>;
 def UseHVX             : Predicate<"HST->useHVXOps()">,
-                         AssemblerPredicate<"ExtensionHVXV60">;
-def UseHVXV60          : Predicate<"HST->useHVXOps()">,
-                         AssemblerPredicate<"ExtensionHVXV60">;
-def UseHVXV62          : Predicate<"HST->useHVXOps()">,
-                         AssemblerPredicate<"ExtensionHVXV62">;
-def UseHVXV65          : Predicate<"HST->useHVXOps()">,
-                         AssemblerPredicate<"ExtensionHVXV65">;
-def UseHVXV66          : Predicate<"HST->useHVXOps()">,
-                         AssemblerPredicate<"ExtensionHVXV66">;
+                         AssemblerPredicate<(all_of ExtensionHVXV60)>;
+def UseHVXV60          : Predicate<"HST->useHVXV60Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV60)>;
+def UseHVXV62          : Predicate<"HST->useHVXV62Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV62)>;
+def UseHVXV65          : Predicate<"HST->useHVXV65Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV65)>;
+def UseHVXV66          : Predicate<"HST->useHVXV66Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV66)>;
+def UseHVXV67          : Predicate<"HST->useHVXV67Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV67)>;
+def UseAudio           : Predicate<"HST->useAudioOps()">,
+                         AssemblerPredicate<(all_of ExtensionAudio)>;
 def UseZReg            : Predicate<"HST->useZRegOps()">,
-                         AssemblerPredicate<"ExtensionZReg">;
+                         AssemblerPredicate<(all_of ExtensionZReg)>;
+def UseCompound        : Predicate<"HST->useCompound()">;
+def HasPreV65          : Predicate<"HST->hasPreV65()">,
+                         AssemblerPredicate<(all_of FeaturePreV65)>;
+def HasMemNoShuf       : Predicate<"HST->hasMemNoShuf()">,
+                         AssemblerPredicate<(all_of FeatureMemNoShuf)>;
+def UseUnsafeMath      : Predicate<"HST->useUnsafeMath()">;
+def NotOptTinyCore     : Predicate<"!HST->isTinyCore() ||"
+                                   "MF->getFunction().hasOptSize()"> {
+  let RecomputePerFunction = 1;
+}
+def UseSmallData       : Predicate<"HST->useSmallData()">;
 
 def Hvx64:  HwMode<"+hvx-length64b">;
 def Hvx128: HwMode<"+hvx-length128b">;
@@ -99,6 +130,7 @@ def Hvx128: HwMode<"+hvx-length128b">;
 // Classes used for relation maps.
 //===----------------------------------------------------------------------===//
 
+// The classes below should remain in hierarchical order...
 class ImmRegShl;
 // ImmRegRel - Filter class used to relate instructions having reg-reg form
 // with their reg-imm counterparts.
@@ -106,17 +138,14 @@ class ImmRegRel;
 // PredRel - Filter class used to relate non-predicated instructions with their
 // predicated forms.
 class PredRel;
-// PredNewRel - Filter class used to relate predicated instructions with their
-// predicate-new forms.
 class PredNewRel: PredRel;
 // NewValueRel - Filter class used to relate regular store instructions with
 // their new-value store form.
 class NewValueRel: PredNewRel;
-// NewValueRel - Filter class used to relate load/store instructions having
-// different addressing modes with each other.
 class AddrModeRel: NewValueRel;
 class PostInc_BaseImm;
 class IntrinsicsRel;
+// ... through here.
 
 //===----------------------------------------------------------------------===//
 // Generate mapping table to relate non-predicate instructions with their
@@ -335,31 +364,43 @@ class Proc<string Name, SchedMachineModel Model,
 
 def : Proc<"generic", HexagonModelV60,
            [ArchV5, ArchV55, ArchV60,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeaturePreV65, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv5",  HexagonModelV5,
            [ArchV5,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeaturePreV65, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv55", HexagonModelV55,
            [ArchV5, ArchV55,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeaturePreV65, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv60", HexagonModelV60,
            [ArchV5, ArchV55, ArchV60,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeaturePreV65, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv62", HexagonModelV62,
            [ArchV5, ArchV55, ArchV60, ArchV62,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeaturePreV65, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv65", HexagonModelV65,
            [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65,
-            FeatureDuplex, FeatureMemNoShuf, FeatureMemops, FeatureNVJ,
-            FeatureNVS, FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv66", HexagonModelV66,
            [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66,
-            FeatureDuplex, FeatureMemNoShuf, FeatureMemops, FeatureNVJ,
+            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
+def : Proc<"hexagonv67", HexagonModelV67,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
+            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
+// Need to update the correct features for tiny core.
+// Disable NewValueJumps since the packetizer is unable to handle a packet with
+// a new value jump and another SLOT0 instruction.
+def : Proc<"hexagonv67t", HexagonModelV67T,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
+            ProcTinyCore, ExtensionAudio,
+            FeatureCompound, FeatureMemNoShuf, FeatureMemops,
             FeatureNVS, FeaturePackets, FeatureSmallData]>;
 
 //===----------------------------------------------------------------------===//

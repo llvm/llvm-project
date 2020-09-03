@@ -12,8 +12,6 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
-#define DEBUG_TYPE "orc"
-
 namespace llvm {
 namespace orc {
 
@@ -36,7 +34,7 @@ Expected<JITTargetMachineBuilder> JITTargetMachineBuilder::detectHost() {
   for (auto &Feature : FeatureMap)
     TMBuilder.getFeatures().AddFeature(Feature.first(), Feature.second);
 
-  TMBuilder.setCPU(llvm::sys::getHostCPUName());
+  TMBuilder.setCPU(std::string(llvm::sys::getHostCPUName()));
 
   return TMBuilder;
 }

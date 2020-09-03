@@ -57,7 +57,7 @@ Remark &RemarkLinker::keep(std::unique_ptr<Remark> Remark) {
 }
 
 void RemarkLinker::setExternalFilePrependPath(StringRef PrependPathIn) {
-  PrependPath = PrependPathIn;
+  PrependPath = std::string(PrependPathIn);
 }
 
 // Discard remarks with no source location.

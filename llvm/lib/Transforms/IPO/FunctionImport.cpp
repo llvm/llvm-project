@@ -306,28 +306,21 @@ static void computeImportForReferencedGlobals(
              RefSummary->modulePath() != Summary.modulePath();
     };
 
-    auto MarkExported = [&](const ValueInfo &VI, const GlobalValueSummary *S) {
-      if (ExportLists)
-        (*ExportLists)[S->modulePath()].insert(VI);
-    };
-
     for (auto &RefSummary : VI.getSummaryList())
       if (isa<GlobalVarSummary>(RefSummary.get()) &&
           Index.canImportGlobalVar(RefSummary.get(), /* AnalyzeRefs */ true) &&
           !LocalNotInModule(RefSummary.get())) {
         auto ILI = ImportList[RefSummary->modulePath()].insert(VI.getGUID());
-        // Only update stat if we haven't already imported this variable.
-        if (ILI.second)
-          NumImportedGlobalVarsThinLink++;
-        MarkExported(VI, RefSummary.get());
-        // Promote referenced functions and variables. We don't promote
-        // objects referenced by writeonly variable initializer, because
-        // we convert such variables initializers to "zeroinitializer".
-        // See processGlobalForThinLTO.
-        if (!Index.isWriteOnly(cast<GlobalVarSummary>(RefSummary.get())))
-          for (const auto &VI : RefSummary->refs())
-            for (const auto &RefFn : VI.getSummaryList())
-              MarkExported(VI, RefFn.get());
+        // Only update stat and exports if we haven't already imported this
+        // variable.
+        if (!ILI.second)
+          break;
+        NumImportedGlobalVarsThinLink++;
+        // Any references made by this variable will be marked exported later,
+        // in ComputeCrossModuleImport, after import decisions are complete,
+        // which is more efficient than adding them here.
+        if (ExportLists)
+          (*ExportLists)[RefSummary->modulePath()].insert(VI);
         break;
       }
   }
@@ -494,24 +487,11 @@ static void computeImportForFunction(
           NumImportedCriticalFunctionsThinLink++;
       }
 
-      // Make exports in the source module.
-      if (ExportLists) {
-        auto &ExportList = (*ExportLists)[ExportModulePath];
-        ExportList.insert(VI);
-        if (!PreviouslyImported) {
-          // This is the first time this function was exported from its source
-          // module, so mark all functions and globals it references as exported
-          // to the outside if they are defined in the same source module.
-          // For efficiency, we unconditionally add all the referenced GUIDs
-          // to the ExportList for this module, and will prune out any not
-          // defined in the module later in a single pass.
-          for (auto &Edge : ResolvedCalleeSummary->calls())
-            ExportList.insert(Edge.first);
-
-          for (auto &Ref : ResolvedCalleeSummary->refs())
-            ExportList.insert(Ref);
-        }
-      }
+      // Any calls/references made by this function will be marked exported
+      // later, in ComputeCrossModuleImport, after import decisions are
+      // complete, which is more efficient than adding them here.
+      if (ExportLists)
+        (*ExportLists)[ExportModulePath].insert(VI);
     }
 
     auto GetAdjustedThreshold = [](unsigned Threshold, bool IsHotCallsite) {
@@ -678,20 +658,55 @@ void llvm::ComputeCrossModuleImport(
                            &ExportLists);
   }
 
-  // When computing imports we added all GUIDs referenced by anything
-  // imported from the module to its ExportList. Now we prune each ExportList
-  // of any not defined in that module. This is more efficient than checking
-  // while computing imports because some of the summary lists may be long
-  // due to linkonce (comdat) copies.
+  // When computing imports we only added the variables and functions being
+  // imported to the export list. We also need to mark any references and calls
+  // they make as exported as well. We do this here, as it is more efficient
+  // since we may import the same values multiple times into different modules
+  // during the import computation.
   for (auto &ELI : ExportLists) {
+    FunctionImporter::ExportSetTy NewExports;
     const auto &DefinedGVSummaries =
         ModuleToDefinedGVSummaries.lookup(ELI.first());
-    for (auto EI = ELI.second.begin(); EI != ELI.second.end();) {
+    for (auto &EI : ELI.second) {
+      // Find the copy defined in the exporting module so that we can mark the
+      // values it references in that specific definition as exported.
+      // Below we will add all references and called values, without regard to
+      // whether they are also defined in this module. We subsequently prune the
+      // list to only include those defined in the exporting module, see comment
+      // there as to why.
+      auto DS = DefinedGVSummaries.find(EI.getGUID());
+      // Anything marked exported during the import computation must have been
+      // defined in the exporting module.
+      assert(DS != DefinedGVSummaries.end());
+      auto *S = DS->getSecond();
+      S = S->getBaseObject();
+      if (auto *GVS = dyn_cast<GlobalVarSummary>(S)) {
+        // Export referenced functions and variables. We don't export/promote
+        // objects referenced by writeonly variable initializer, because
+        // we convert such variables initializers to "zeroinitializer".
+        // See processGlobalForThinLTO.
+        if (!Index.isWriteOnly(GVS))
+          for (const auto &VI : GVS->refs())
+            NewExports.insert(VI);
+      } else {
+        auto *FS = cast<FunctionSummary>(S);
+        for (auto &Edge : FS->calls())
+          NewExports.insert(Edge.first);
+        for (auto &Ref : FS->refs())
+          NewExports.insert(Ref);
+      }
+    }
+    // Prune list computed above to only include values defined in the exporting
+    // module. We do this after the above insertion since we may hit the same
+    // ref/call target multiple times in above loop, and it is more efficient to
+    // avoid a set lookup each time.
+    for (auto EI = NewExports.begin(); EI != NewExports.end();) {
       if (!DefinedGVSummaries.count(EI->getGUID()))
-        ELI.second.erase(EI++);
+        NewExports.erase(EI++);
       else
         ++EI;
     }
+    ELI.second.insert(NewExports.begin(), NewExports.end());
   }
 
   assert(checkVariableImport(Index, ImportLists, ExportLists));
@@ -913,11 +928,12 @@ void llvm::gatherImportedSummariesForModule(
     const FunctionImporter::ImportMapTy &ImportList,
     std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex) {
   // Include all summaries from the importing module.
-  ModuleToSummariesForIndex[ModulePath] =
+  ModuleToSummariesForIndex[std::string(ModulePath)] =
       ModuleToDefinedGVSummaries.lookup(ModulePath);
   // Include summaries for imports.
   for (auto &ILI : ImportList) {
-    auto &SummariesForIndex = ModuleToSummariesForIndex[ILI.first()];
+    auto &SummariesForIndex =
+        ModuleToSummariesForIndex[std::string(ILI.first())];
     const auto &DefinedGVSummaries =
         ModuleToDefinedGVSummaries.lookup(ILI.first());
     for (auto &GI : ILI.second) {
@@ -976,6 +992,8 @@ bool llvm::convertToDeclaration(GlobalValue &GV) {
     GV.replaceAllUsesWith(NewGV);
     return false;
   }
+  if (!GV.isImplicitDSOLocal())
+    GV.setDSOLocal(false);
   return true;
 }
 
@@ -1214,8 +1232,15 @@ Expected<bool> FunctionImporter::importFunctions(
     // have loaded all the required metadata!
     UpgradeDebugInfo(*SrcModule);
 
+    // Set the partial sample profile ratio in the profile summary module flag
+    // of the imported source module, if applicable, so that the profile summary
+    // module flag will match with that of the destination module when it's
+    // imported.
+    SrcModule->setPartialSampleProfileRatio(Index);
+
     // Link in the specified functions.
-    if (renameModuleForThinLTO(*SrcModule, Index, &GlobalsToImport))
+    if (renameModuleForThinLTO(*SrcModule, Index, ClearDSOLocalOnDeclarations,
+                               &GlobalsToImport))
       return true;
 
     if (PrintImports) {
@@ -1224,10 +1249,12 @@ Expected<bool> FunctionImporter::importFunctions(
                << " from " << SrcModule->getSourceFileName() << "\n";
     }
 
-    if (Mover.move(std::move(SrcModule), GlobalsToImport.getArrayRef(),
-                   [](GlobalValue &, IRMover::ValueAdder) {},
-                   /*IsPerformingImport=*/true))
-      report_fatal_error("Function Import: link error");
+    if (Error Err = Mover.move(
+            std::move(SrcModule), GlobalsToImport.getArrayRef(),
+            [](GlobalValue &, IRMover::ValueAdder) {},
+            /*IsPerformingImport=*/true))
+      report_fatal_error("Function Import: link error: " +
+                         toString(std::move(Err)));
 
     ImportedCount += GlobalsToImport.size();
     NumImportedModules++;
@@ -1284,16 +1311,18 @@ static bool doImportingForModule(Module &M) {
 
   // Next we need to promote to global scope and rename any local values that
   // are potentially exported to other modules.
-  if (renameModuleForThinLTO(M, *Index, nullptr)) {
+  if (renameModuleForThinLTO(M, *Index, /*clearDSOOnDeclarations=*/false,
+                             /*GlobalsToImport=*/nullptr)) {
     errs() << "Error renaming module\n";
     return false;
   }
 
   // Perform the import now.
   auto ModuleLoader = [&M](StringRef Identifier) {
-    return loadFile(Identifier, M.getContext());
+    return loadFile(std::string(Identifier), M.getContext());
   };
-  FunctionImporter Importer(*Index, ModuleLoader);
+  FunctionImporter Importer(*Index, ModuleLoader,
+                            /*ClearDSOLocalOnDeclarations=*/false);
   Expected<bool> Result = Importer.importFunctions(M, ImportList);
 
   // FIXME: Probably need to propagate Errors through the pass manager.

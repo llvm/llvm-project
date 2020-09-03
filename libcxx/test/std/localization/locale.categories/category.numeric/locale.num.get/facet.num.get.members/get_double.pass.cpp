@@ -5,11 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// PR11871
-// XFAIL: with_system_cxx_lib=macosx10.7
-// PR15445
-// XFAIL: with_system_cxx_lib=macosx10.8
 
 // <locale>
 
@@ -198,6 +193,7 @@ int main(int, char**)
         assert(v == 123);
     }
     {
+        // See PR11871
         v = -1;
         const char str[] = "2-";
         std::ios_base::iostate err = ios.goodbit;
@@ -268,6 +264,7 @@ int main(int, char**)
         assert(err == ios.failbit);
     }
     {
+        // See PR15445
         v = -1;
         const char str[] = "3;14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651e+10";
         std::ios_base::iostate err = ios.goodbit;

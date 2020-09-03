@@ -1,4 +1,4 @@
-//===-- TypeList.cpp --------------------------------------------*- C++ -*-===//
+//===-- TypeList.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -107,7 +107,8 @@ void TypeList::RemoveMismatchedTypes(const char *qualified_typename,
     type_basename = qualified_typename;
     type_scope = "";
   }
-  return RemoveMismatchedTypes(type_scope, type_basename, type_class,
+  return RemoveMismatchedTypes(std::string(type_scope),
+                               std::string(type_basename), type_class,
                                exact_match);
 }
 

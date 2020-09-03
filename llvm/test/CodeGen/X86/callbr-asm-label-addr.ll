@@ -4,10 +4,10 @@ define i32 @test1(i32 %x) {
 ; CHECK-LABEL: test1:
 ; CHECK:         .quad .Ltmp0
 ; CHECK-NEXT:    .quad .Ltmp1
-; CHECK-LABEL: .Ltmp1:
-; CHECK-LABEL: .LBB0_1: # %bar
+; CHECK: .Ltmp1:
+; CHECK-NEXT: # %bb.1: # %bar
 ; CHECK-NEXT:    callq foo
-; CHECK-LABEL: .Ltmp0:
+; CHECK-NEXT: .Ltmp0:
 ; CHECK-NEXT:  # %bb.2: # %baz
 entry:
   callbr void asm sideeffect ".quad ${0:l}\0A\09.quad ${1:l}", "i,X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test1, %baz), i8* blockaddress(@test1, %bar))

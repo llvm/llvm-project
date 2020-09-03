@@ -4,22 +4,28 @@
 define void @f(<4 x half>* %a, <4 x half>* %b, <8 x half>* %c) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl (%rdi), %r8d
-; CHECK-NEXT:    movzwl 2(%rdi), %r9d
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    movzwl 2(%rdi), %ecx
+; CHECK-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movzwl 6(%rdi), %r8d
 ; CHECK-NEXT:    movzwl 4(%rdi), %r11d
-; CHECK-NEXT:    movzwl 6(%rdi), %edi
-; CHECK-NEXT:    movzwl (%rsi), %r10d
-; CHECK-NEXT:    movzwl 2(%rsi), %ecx
-; CHECK-NEXT:    movzwl 4(%rsi), %eax
-; CHECK-NEXT:    movzwl 6(%rsi), %esi
-; CHECK-NEXT:    movw %si, 14(%rdx)
-; CHECK-NEXT:    movw %di, 12(%rdx)
-; CHECK-NEXT:    movw %ax, 10(%rdx)
+; CHECK-NEXT:    movq (%rsi), %rsi
+; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movdqa -{{[0-9]+}}(%rsp), %xmm0
+; CHECK-NEXT:    pextrw $1, %xmm0, %r9d
+; CHECK-NEXT:    movd %xmm0, %r10d
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    pextrw $3, %xmm0, %eax
+; CHECK-NEXT:    pextrw $2, %xmm0, %edi
 ; CHECK-NEXT:    movw %r11w, 8(%rdx)
-; CHECK-NEXT:    movw %cx, 6(%rdx)
-; CHECK-NEXT:    movw %r9w, 4(%rdx)
+; CHECK-NEXT:    movw %cx, 4(%rdx)
+; CHECK-NEXT:    movw %r8w, 12(%rdx)
+; CHECK-NEXT:    movw %si, (%rdx)
+; CHECK-NEXT:    movw %di, 10(%rdx)
+; CHECK-NEXT:    movw %ax, 14(%rdx)
 ; CHECK-NEXT:    movw %r10w, 2(%rdx)
-; CHECK-NEXT:    movw %r8w, (%rdx)
+; CHECK-NEXT:    movw %r9w, 6(%rdx)
 ; CHECK-NEXT:    retq
   %tmp4 = load <4 x half>, <4 x half>* %a
   %tmp5 = load <4 x half>, <4 x half>* %b

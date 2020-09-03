@@ -18,6 +18,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -134,7 +136,9 @@ static bool isLoopNeverExecuted(Loop *L) {
 /// is unable to delete it due to hoisting trivially loop invariant
 /// instructions out of the loop.
 static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
-                                           ScalarEvolution &SE, LoopInfo &LI) {
+                                           ScalarEvolution &SE, LoopInfo &LI,
+                                           MemorySSA *MSSA,
+                                           OptimizationRemarkEmitter &ORE) {
   assert(L->isLCSSAForm(DT) && "Expected LCSSA!");
 
   // We can only remove the loop if there is a preheader that we can branch from
@@ -164,7 +168,12 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
       std::fill(P.incoming_values().begin(), P.incoming_values().end(),
                 UndefValue::get(P.getType()));
     }
-    deleteDeadLoop(L, &DT, &SE, &LI);
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "NeverExecutes", L->getStartLoc(),
+                                L->getHeader())
+             << "Loop deleted because it never executes";
+    });
+    deleteDeadLoop(L, &DT, &SE, &LI, MSSA);
     ++NumDeleted;
     return LoopDeletionResult::Deleted;
   }
@@ -200,7 +209,12 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   }
 
   LLVM_DEBUG(dbgs() << "Loop is invariant, delete it!");
-  deleteDeadLoop(L, &DT, &SE, &LI);
+  ORE.emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "Invariant", L->getStartLoc(),
+                              L->getHeader())
+           << "Loop deleted because it is invariant";
+  });
+  deleteDeadLoop(L, &DT, &SE, &LI, MSSA);
   ++NumDeleted;
 
   return LoopDeletionResult::Deleted;
@@ -212,15 +226,22 @@ PreservedAnalyses LoopDeletionPass::run(Loop &L, LoopAnalysisManager &AM,
 
   LLVM_DEBUG(dbgs() << "Analyzing Loop for deletion: ");
   LLVM_DEBUG(L.dump());
-  std::string LoopName = L.getName();
-  auto Result = deleteLoopIfDead(&L, AR.DT, AR.SE, AR.LI);
+  std::string LoopName = std::string(L.getName());
+  // For the new PM, we can't use OptimizationRemarkEmitter as an analysis
+  // pass. Function analyses need to be preserved across loop transformations
+  // but ORE cannot be preserved (see comment before the pass definition).
+  OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
+  auto Result = deleteLoopIfDead(&L, AR.DT, AR.SE, AR.LI, AR.MSSA, ORE);
   if (Result == LoopDeletionResult::Unmodified)
     return PreservedAnalyses::all();
 
   if (Result == LoopDeletionResult::Deleted)
     Updater.markLoopAsDeleted(L, LoopName);
 
-  return getLoopPassPreservedAnalyses();
+  auto PA = getLoopPassPreservedAnalyses();
+  if (AR.MSSA)
+    PA.preserve<MemorySSAAnalysis>();
+  return PA;
 }
 
 namespace {
@@ -235,6 +256,7 @@ public:
   bool runOnLoop(Loop *L, LPPassManager &) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MemorySSAWrapperPass>();
     getLoopAnalysisUsage(AU);
   }
 };
@@ -255,11 +277,19 @@ bool LoopDeletionLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  auto *MSSAAnalysis = getAnalysisIfAvailable<MemorySSAWrapperPass>();
+  MemorySSA *MSSA = nullptr;
+  if (MSSAAnalysis)
+    MSSA = &MSSAAnalysis->getMSSA();
+  // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
+  // pass.  Function analyses need to be preserved across loop transformations
+  // but ORE cannot be preserved (see comment before the pass definition).
+  OptimizationRemarkEmitter ORE(L->getHeader()->getParent());
 
   LLVM_DEBUG(dbgs() << "Analyzing Loop for deletion: ");
   LLVM_DEBUG(L->dump());
 
-  LoopDeletionResult Result = deleteLoopIfDead(L, DT, SE, LI);
+  LoopDeletionResult Result = deleteLoopIfDead(L, DT, SE, LI, MSSA, ORE);
 
   if (Result == LoopDeletionResult::Deleted)
     LPM.markLoopAsDeleted(*L);

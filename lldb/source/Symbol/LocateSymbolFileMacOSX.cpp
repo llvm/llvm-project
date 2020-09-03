@@ -1,4 +1,4 @@
-//===-- LocateSymbolFileMacOSX.cpp ------------------------------*- C++ -*-===//
+//===-- LocateSymbolFileMacOSX.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -253,48 +253,34 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
 FileSpec Symbols::FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec,
                                          const lldb_private::UUID *uuid,
                                          const ArchSpec *arch) {
-  char path[PATH_MAX];
-  if (dsym_bundle_fspec.GetPath(path, sizeof(path)) == 0)
-    return {};
+  std::string dsym_bundle_path = dsym_bundle_fspec.GetPath();
+  llvm::SmallString<128> buffer(dsym_bundle_path);
+  llvm::sys::path::append(buffer, "Contents", "Resources", "DWARF");
 
-  ::strncat(path, "/Contents/Resources/DWARF", sizeof(path) - strlen(path) - 1);
+  std::error_code EC;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs =
+      FileSystem::Instance().GetVirtualFileSystem();
+  llvm::vfs::recursive_directory_iterator Iter(*vfs, buffer.str(), EC);
+  llvm::vfs::recursive_directory_iterator End;
+  for (; Iter != End && !EC; Iter.increment(EC)) {
+    llvm::ErrorOr<llvm::vfs::Status> Status = vfs->status(Iter->path());
+    if (Status->isDirectory())
+      continue;
 
-  DIR *dirp = opendir(path);
-  if (!dirp)
-    return {};
-
-  // Make sure we close the directory before exiting this scope.
-  auto cleanup_dir = llvm::make_scope_exit([&]() { closedir(dirp); });
-
-  FileSpec dsym_fspec;
-  dsym_fspec.GetDirectory().SetCString(path);
-  struct dirent *dp;
-  while ((dp = readdir(dirp)) != NULL) {
-    // Only search directories
-    if (dp->d_type == DT_DIR || dp->d_type == DT_UNKNOWN) {
-      if (dp->d_namlen == 1 && dp->d_name[0] == '.')
-        continue;
-
-      if (dp->d_namlen == 2 && dp->d_name[0] == '.' && dp->d_name[1] == '.')
-        continue;
-    }
-
-    if (dp->d_type == DT_REG || dp->d_type == DT_UNKNOWN) {
-      dsym_fspec.GetFilename().SetCString(dp->d_name);
-      ModuleSpecList module_specs;
-      if (ObjectFile::GetModuleSpecifications(dsym_fspec, 0, 0, module_specs)) {
-        ModuleSpec spec;
-        for (size_t i = 0; i < module_specs.GetSize(); ++i) {
-          bool got_spec = module_specs.GetModuleSpecAtIndex(i, spec);
-          UNUSED_IF_ASSERT_DISABLED(got_spec);
-          assert(got_spec);
-          if ((uuid == NULL ||
-               (spec.GetUUIDPtr() && spec.GetUUID() == *uuid)) &&
-              (arch == NULL ||
-               (spec.GetArchitecturePtr() &&
-                spec.GetArchitecture().IsCompatibleMatch(*arch)))) {
-            return dsym_fspec;
-          }
+    FileSpec dsym_fspec(Iter->path());
+    ModuleSpecList module_specs;
+    if (ObjectFile::GetModuleSpecifications(dsym_fspec, 0, 0, module_specs)) {
+      ModuleSpec spec;
+      for (size_t i = 0; i < module_specs.GetSize(); ++i) {
+        bool got_spec = module_specs.GetModuleSpecAtIndex(i, spec);
+        assert(got_spec); // The call has side-effects so can't be inlined.
+        UNUSED_IF_ASSERT_DISABLED(got_spec);
+        if ((uuid == nullptr ||
+             (spec.GetUUIDPtr() && spec.GetUUID() == *uuid)) &&
+            (arch == nullptr ||
+             (spec.GetArchitecturePtr() &&
+              spec.GetArchitecture().IsCompatibleMatch(*arch)))) {
+          return dsym_fspec;
         }
       }
     }

@@ -1,9 +1,9 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa -mattr=-code-object-v3 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=CO-V2 -check-prefix=CI-HSA  %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa -mattr=-code-object-v3 -mcpu=carrizo -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=CO-V2 -check-prefix=VI-HSA  %s
-; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=MESA -check-prefix=SI-MESA %s
-; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=MESA -check-prefix=VI-MESA %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mattr=-code-object-v3 -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2,SI-MESA %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mattr=-code-object-v3 -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2,VI-MESA %s
+; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa -mattr=-code-object-v3 -mcpu=carrizo -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=CO-V2 -check-prefix=VI-HSA  %s
+; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=hawaii -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=MESA -check-prefix=SI-MESA %s
+; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=tonga -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=MESA -check-prefix=VI-MESA %s
+; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mattr=+flat-for-global,-code-object-v3 -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2,SI-MESA %s
+; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mattr=-code-object-v3 -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2,VI-MESA %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0
@@ -13,7 +13,7 @@ declare i32 @llvm.amdgcn.workitem.id.z() #0
 ; MESA: .long 47180
 ; MESA-NEXT: .long 132{{$}}
 
-; ALL-LABEL {{^}}test_workitem_id_x:
+; ALL-LABEL: {{^}}test_workitem_id_x:
 ; CO-V2: enable_vgpr_workitem_id = 0
 
 ; ALL-NOT: v0
@@ -28,7 +28,7 @@ define amdgpu_kernel void @test_workitem_id_x(i32 addrspace(1)* %out) #1 {
 ; MESA: .long 47180
 ; MESA-NEXT: .long 2180{{$}}
 
-; ALL-LABEL {{^}}test_workitem_id_y:
+; ALL-LABEL: {{^}}test_workitem_id_y:
 ; CO-V2: enable_vgpr_workitem_id = 1
 
 ; ALL-NOT: v1
@@ -43,7 +43,7 @@ define amdgpu_kernel void @test_workitem_id_y(i32 addrspace(1)* %out) #1 {
 ; MESA: .long 47180
 ; MESA-NEXT: .long 4228{{$}}
 
-; ALL-LABEL {{^}}test_workitem_id_z:
+; ALL-LABEL: {{^}}test_workitem_id_z:
 ; CO-V2: enable_vgpr_workitem_id = 2
 
 ; ALL-NOT: v2

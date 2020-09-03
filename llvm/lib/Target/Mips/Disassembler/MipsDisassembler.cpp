@@ -72,7 +72,6 @@ public:
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 };
 
@@ -564,7 +563,7 @@ static MCDisassembler *createMipselDisassembler(
   return new MipsDisassembler(STI, Ctx, false);
 }
 
-extern "C" void LLVMInitializeMipsDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheMipsTarget(),
                                          createMipsDisassembler);
@@ -1220,7 +1219,6 @@ static DecodeStatus readInstruction32(ArrayRef<uint8_t> Bytes, uint64_t Address,
 DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                               ArrayRef<uint8_t> Bytes,
                                               uint64_t Address,
-                                              raw_ostream &VStream,
                                               raw_ostream &CStream) const {
   uint32_t Insn;
   DecodeStatus Result;

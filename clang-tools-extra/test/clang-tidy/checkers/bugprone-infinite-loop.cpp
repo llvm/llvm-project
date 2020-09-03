@@ -4,8 +4,18 @@ void simple_infinite_loop1() {
   int i = 0;
   int j = 0;
   while (i < 10) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (i) are updated in the loop body [bugprone-infinite-loop]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (i) are updated in the loop body [bugprone-infinite-loop]
     j++;
+  }
+
+  while (int k = 10) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; it does not check any variables in the condition [bugprone-infinite-loop]
+    j--;
+  }
+
+  while (int k = 10) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; it does not check any variables in the condition [bugprone-infinite-loop]
+    k--;
   }
 
   do {
@@ -27,6 +37,16 @@ void simple_infinite_loop2() {
     j++;
   }
 
+  while (int k = Limit) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (Limit) are updated in the loop body [bugprone-infinite-loop]
+    j--;
+  }
+
+  while (int k = Limit) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (Limit) are updated in the loop body [bugprone-infinite-loop]
+    k--;
+  }
+
   do {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (i, Limit) are updated in the loop body [bugprone-infinite-loop]
     j++;
@@ -44,11 +64,50 @@ void simple_not_infinite1() {
     // Not an error since 'Limit' is updated.
     Limit--;
   }
+
+  while (Limit--) {
+    // Not an error since 'Limit' is updated.
+    i++;
+  }
+
+  while ((Limit)--) {
+    // Not an error since 'Limit' is updated.
+    i++;
+  }
+
+  while ((Limit) -= 1) {
+    // Not an error since 'Limit' is updated.
+  }
+
+  while (int k = Limit) {
+    // Not an error since 'Limit' is updated.
+    Limit--;
+  }
+
+  while (int k = Limit) {
+    // Not an error since 'Limit' is updated
+    (Limit)--;
+  }
+
+  while (int k = Limit--) {
+    // Not an error since 'Limit' is updated.
+    i++;
+  }
+
   do {
     Limit--;
   } while (i < Limit);
 
   for (i = 0; i < Limit; Limit--) {
+  }
+
+  for (i = 0; i < Limit; (Limit) = Limit - 1) {
+  }
+
+  for (i = 0; i < Limit; (Limit) -= 1) {
+  }
+
+  for (i = 0; i < Limit; --(Limit)) {
   }
 }
 
@@ -317,4 +376,13 @@ void lambda_capture() {
     int *p = &i;
     (*p)++;
   } while (i < Limit);
+}
+
+void evaluatable(bool CondVar) {
+  for (; false && CondVar;) {
+  }
+  while (false && CondVar) {
+  }
+  do {
+  } while (false && CondVar);
 }

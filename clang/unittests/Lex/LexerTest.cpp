@@ -98,7 +98,7 @@ protected:
                              SourceMgr, LangOpts, &Invalid);
     if (Invalid)
       return "<INVALID>";
-    return Str;
+    return std::string(Str);
   }
 
   FileSystemOptions FileMgrOpts;
@@ -555,5 +555,18 @@ TEST_F(LexerTest, FindNextToken) {
   }
   EXPECT_THAT(GeneratedByNextToken, ElementsAre("abcd", "=", "0", ";", "int",
                                                 "xyz", "=", "abcd", ";"));
+}
+
+TEST_F(LexerTest, CreatedFIDCountForPredefinedBuffer) {
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP("", ModLoader);
+  while (1) {
+    Token tok;
+    PP->Lex(tok);
+    if (tok.is(tok::eof))
+      break;
+  }
+  EXPECT_EQ(SourceMgr.getNumCreatedFIDsForFileID(PP->getPredefinesFileID()),
+            1U);
 }
 } // anonymous namespace

@@ -29,7 +29,7 @@ void f2() {
 void f3() {
   char dst[2];
   const char *src = "abdef";
-  strlcpy(dst, src, 5); // expected-warning{{Size argument is greater than the length of the destination buffer}}
+  strlcpy(dst, src, 5); // expected-warning{{String copy function overflows the destination buffer}}
 }
 
 void f4() {
@@ -112,7 +112,8 @@ void f9(int unknown_size, char* unknown_src, char* unknown_dst){
   clang_analyzer_eval(strlen(unknown_dst));// expected-warning{{UNKNOWN}}
 
   //size is unknown
-  len = strlcat(buf+2,unknown_src+1, sizeof(buf));// expected-warning{{Size argument is greater than the length of the destination buffer}};
+  len = strlcat(buf + 2, unknown_src + 1, sizeof(buf));
+  // expected-warning@-1 {{String concatenation function overflows the destination buffer}}
 }
 
 void f10(){
@@ -121,7 +122,8 @@ void f10(){
 
   len = strlcpy(buf,"abba",sizeof(buf));
   clang_analyzer_eval(len==4);// expected-warning{{TRUE}}
-  strlcat(buf, "efghi",9);// expected-warning{{Size argument is greater than the length of the destination buffer}}
+  strlcat(buf, "efghi", 9);
+  // expected-warning@-1 {{String concatenation function overflows the destination buffer}}
 }
 
 void f11() {

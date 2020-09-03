@@ -11,6 +11,7 @@ struct isl_union_map {
 };
 
 __isl_keep isl_space *isl_union_map_peek_space(__isl_keep isl_union_map *umap);
+__isl_keep isl_space *isl_union_set_peek_space(__isl_keep isl_union_set *uset);
 isl_bool isl_union_map_is_params(__isl_keep isl_union_map *umap);
 isl_bool isl_union_map_space_has_equal_params(__isl_keep isl_union_map *umap,
 	__isl_keep isl_space *space);

@@ -1,0 +1,41 @@
+// FIXME: Actually, "perl".
+REQUIRES: shell
+
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: cp %S/report-1.html %t.output_dir
+RUN: cp %S/report-2.html %t.output_dir
+RUN: cp %S/report-3.html %t.output_dir
+RUN: mkdir %t.output_dir/subdirectory
+RUN: cp %S/subdirectory/report-4.html %t.output_dir/subdirectory
+
+RUN: %scan-build --generate-index-only %t.output_dir
+
+RUN: ls %t.output_dir | FileCheck -check-prefix CHECK-FILES %s
+
+CHECK-FILES:      index.html
+CHECK-FILES-NEXT: report-1.html
+CHECK-FILES-NEXT: report-2.html
+
+// report-3.html is a duplicate of report-1.html so it's not present.
+CHECK-FILES-NOT:  report-3.html
+CHECK-FILES-NEXT: scanview.css
+CHECK-FILES-NEXT: sorttable.js
+CHECK-FILES-NEXT: subdirectory
+
+RUN: ls %t.output_dir/subdirectory | FileCheck -check-prefix CHECK-SUB %s
+
+CHECK-SUB: report-4.html
+
+RUN: cat %t.output_dir/index.html | FileCheck -check-prefix CHECK-INDEX %s
+
+CHECK-INDEX:      cat1
+CHECK-INDEX-NEXT: bug1
+CHECK-INDEX-NEXT: cat2
+CHECK-INDEX-NEXT: bug2
+CHECK-INDEX-NEXT: cat4
+CHECK-INDEX-NEXT: bug4
+
+CHECK-INDEX:     report-1.html#EndPath
+CHECK-INDEX:     report-2.html#EndPath
+CHECK-INDEX-NOT: report-3.html#EndPath
+CHECK-INDEX:     subdirectory/report-4.html#EndPath

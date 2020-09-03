@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformOpenBSD_h_
-#define liblldb_PlatformOpenBSD_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_OPENBSD_PLATFORMOPENBSD_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_OPENBSD_PLATFORMOPENBSD_H
 
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
 
@@ -54,10 +54,11 @@ public:
                                   lldb::addr_t offset) override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformOpenBSD);
+  PlatformOpenBSD(const PlatformOpenBSD &) = delete;
+  const PlatformOpenBSD &operator=(const PlatformOpenBSD &) = delete;
 };
 
 } // namespace platform_openbsd
 } // namespace lldb_private
 
-#endif // liblldb_PlatformOpenBSD_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_OPENBSD_PLATFORMOPENBSD_H

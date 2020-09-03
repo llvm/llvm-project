@@ -1,6 +1,55 @@
 // RUN: %clang_cc1 -ffixed-point -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,SIGNED
 // RUN: %clang_cc1 -ffixed-point -fpadding-on-unsigned-fixed-point -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,UNSIGNED
 
+// Subtraction between different fixed point types
+short _Accum sa_const = 1.0hk - 2.0hk;  // CHECK-DAG: @sa_const  = {{.*}}global i16 -128, align 2
+_Accum a_const = 1.0hk - 2.0k;          // CHECK-DAG: @a_const   = {{.*}}global i32 -32768, align 4
+long _Accum la_const = 1.0hk - 2.0lk;   // CHECK-DAG: @la_const  = {{.*}}global i64 -2147483648, align 8
+short _Accum sa_const2 = 0.5hr - 2.0hk; // CHECK-DAG: @sa_const2  = {{.*}}global i16 -192, align 2
+short _Accum sa_const3 = 0.5r - 2.0hk;  // CHECK-DAG: @sa_const3  = {{.*}}global i16 -192, align 2
+short _Accum sa_const4 = 0.5lr - 2.0hk; // CHECK-DAG: @sa_const4  = {{.*}}global i16 -192, align 2
+short _Accum sa_const5 = 2.0hk - 0.5lr; // CHECK-DAG: @sa_const5  = {{.*}}global i16 192, align 2
+
+// Unsigned subtraction
+unsigned short _Accum usa_const = 3.0uhk - 2.0uhk;
+// CHECK-SIGNED-DAG:   @usa_const = {{.*}}global i16 768, align 2
+// CHECK-UNSIGNED-DAG: @usa_const = {{.*}}global i16 384, align 2
+
+// Unsigned - signed
+short _Accum sa_const6 = 1.0uhk - 2.0hk;
+// CHECK-DAG: @sa_const6 = {{.*}}global i16 -128, align 2
+
+// Subtraction with negative number
+short _Accum sa_const7 = 0.5hr - (-2.0hk);
+// CHECK-DAG: @sa_const7 = {{.*}}global i16 320, align 2
+
+// Int subtraction
+unsigned short _Accum usa_const2 = 2 - 0.5uhk;
+// CHECK-SIGNED-DAG:   @usa_const2 = {{.*}}global i16 640, align 2
+// CHECK-UNSIGNED-DAG: @usa_const2 = {{.*}}global i16 320, align 2
+short _Accum sa_const8 = 2 - (-0.5hk);   // CHECK-DAG: @sa_const8 = {{.*}}global i16 320, align 2
+short _Accum sa_const9 = 257 - 2.0hk;    // CHECK-DAG: @sa_const9 = {{.*}}global i16 32640, align 2
+long _Fract lf_const = 0.5lr - 1;        // CHECK-DAG: @lf_const  = {{.*}}global i32 -1073741824, align 4
+
+// Saturated subtraction
+_Sat short _Accum sat_sa_const = (_Sat short _Accum)128.0hk - (-128.0hk);
+// CHECK-DAG: @sat_sa_const = {{.*}}global i16 32767, align 2
+_Sat unsigned short _Accum sat_usa_const = (_Sat unsigned short _Accum)128.0uhk - (-128.0uhk);
+// CHECK-SIGNED-DAG:   @sat_usa_const = {{.*}}global i16 65535, align 2
+// CHECK-UNSIGNED-DAG: @sat_usa_const = {{.*}}global i16 32767, align 2
+_Sat short _Accum sat_sa_const2 = (_Sat short _Accum)128.0hk - (-128);
+// CHECK-DAG: @sat_sa_const2 = {{.*}}global i16 32767, align 2
+_Sat unsigned short _Accum sat_usa_const2 = (_Sat unsigned short _Accum)128.0uhk - (-128);
+// CHECK-SIGNED-DAG:   @sat_usa_const2 = {{.*}}global i16 65535, align 2
+// CHECK-UNSIGNED-DAG: @sat_usa_const2 = {{.*}}global i16 32767, align 2
+_Sat unsigned short _Accum sat_usa_const3 = (_Sat unsigned short _Accum)0.5uhk - 2;
+// CHECK-DAG:   @sat_usa_const3 = {{.*}}global i16 0, align 2
+_Sat short _Accum sat_sa_const3 = (_Sat short _Accum)-128.0hk - 128;
+// CHECK-DAG: @sat_sa_const3 = {{.*}}global i16 -32768, align 2
+_Sat short _Accum sat_sa_const4 = (_Sat short _Accum)-150.0hk - 130.0lk;
+// CHECK-DAG: @sat_sa_const4 = {{.*}}global i16 -32768, align 2
+
+
 void SignedSubtraction() {
   // CHECK-LABEL: SignedSubtraction
   short _Accum sa;
@@ -370,7 +419,7 @@ void SaturatedSubtraction() {
   // SIGNED-NEXT: [[USA_SAT_RESIZE:%[a-z0-9]+]] = zext i16 [[USA_SAT]] to i40
   // SIGNED-NEXT: [[I_RESIZE:%[a-z0-9]+]] = sext i32 [[I]] to i40
   // SIGNED-NEXT: [[I_UPSCALE:%[a-z0-9]+]] = shl i40 [[I_RESIZE]], 8
-  // SIGNED-NEXT: [[SUM:%[0-9]+]] = call i40 @llvm.usub.sat.i40(i40 [[USA_SAT_RESIZE]], i40 [[I_UPSCALE]])
+  // SIGNED-NEXT: [[SUM:%[0-9]+]] = call i40 @llvm.ssub.sat.i40(i40 [[USA_SAT_RESIZE]], i40 [[I_UPSCALE]])
   // SIGNED-NEXT: [[USE_MAX:%[0-9]+]] = icmp sgt i40 [[SUM]], 65535
   // SIGNED-NEXT: [[RESULT:%[a-z0-9]+]] = select i1 [[USE_MAX]], i40 65535, i40 [[SUM]]
   // SIGNED-NEXT: [[USE_MIN:%[0-9]+]] = icmp slt i40 [[RESULT]], 0
@@ -379,7 +428,7 @@ void SaturatedSubtraction() {
   // UNSIGNED-NEXT: [[USA_SAT_RESIZE:%[a-z0-9]+]] = zext i16 [[USA_SAT]] to i39
   // UNSIGNED-NEXT: [[I_RESIZE:%[a-z0-9]+]] = sext i32 [[I]] to i39
   // UNSIGNED-NEXT: [[I_UPSCALE:%[a-z0-9]+]] = shl i39 [[I_RESIZE]], 7
-  // UNSIGNED-NEXT: [[SUM:%[0-9]+]] = call i39 @llvm.usub.sat.i39(i39 [[USA_SAT_RESIZE]], i39 [[I_UPSCALE]])
+  // UNSIGNED-NEXT: [[SUM:%[0-9]+]] = call i39 @llvm.ssub.sat.i39(i39 [[USA_SAT_RESIZE]], i39 [[I_UPSCALE]])
   // UNSIGNED-NEXT: [[USE_MAX:%[0-9]+]] = icmp sgt i39 [[SUM]], 32767
   // UNSIGNED-NEXT: [[RESULT:%[a-z0-9]+]] = select i1 [[USE_MAX]], i39 32767, i39 [[SUM]]
   // UNSIGNED-NEXT: [[USE_MIN:%[0-9]+]] = icmp slt i39 [[RESULT]], 0

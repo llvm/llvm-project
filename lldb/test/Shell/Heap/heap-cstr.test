@@ -1,4 +1,5 @@
 # REQUIRES: system-darwin
+# REQUIRES: python
 # RUN: %clang_host %p/Inputs/cstr.c -g -o %t
 # RUN: %lldb -b -s %s -f %t | FileCheck %s
 

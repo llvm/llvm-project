@@ -50,7 +50,7 @@ private:
   struct VarInfo {
     llvm::GlobalVariable *Var;
     const VarDecl *D;
-    unsigned Flag;
+    DeviceVarFlags Flags;
   };
   llvm::SmallVector<VarInfo, 16> DeviceVars;
   /// Keeps track of variable containing handle of GPU binary. Populated by
@@ -117,23 +117,38 @@ private:
 
   void emitDeviceStubBodyLegacy(CodeGenFunction &CGF, FunctionArgList &Args);
   void emitDeviceStubBodyNew(CodeGenFunction &CGF, FunctionArgList &Args);
-  std::string getDeviceSideName(const Decl *ND);
+  std::string getDeviceSideName(const NamedDecl *ND) override;
 
 public:
   CGNVCUDARuntime(CodeGenModule &CGM);
 
   void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) override;
   void registerDeviceVar(const VarDecl *VD, llvm::GlobalVariable &Var,
-                         unsigned Flags) override {
-    DeviceVars.push_back({&Var, VD, Flags});
+                         bool Extern, bool Constant) override {
+    DeviceVars.push_back({&Var,
+                          VD,
+                          {DeviceVarFlags::Variable, Extern, Constant,
+                           /*Normalized*/ false, /*Type*/ 0}});
+  }
+  void registerDeviceSurf(const VarDecl *VD, llvm::GlobalVariable &Var,
+                          bool Extern, int Type) override {
+    DeviceVars.push_back({&Var,
+                          VD,
+                          {DeviceVarFlags::Surface, Extern, /*Constant*/ false,
+                           /*Normalized*/ false, Type}});
+  }
+  void registerDeviceTex(const VarDecl *VD, llvm::GlobalVariable &Var,
+                         bool Extern, int Type, bool Normalized) override {
+    DeviceVars.push_back({&Var,
+                          VD,
+                          {DeviceVarFlags::Texture, Extern, /*Constant*/ false,
+                           Normalized, Type}});
   }
 
   /// Creates module constructor function
   llvm::Function *makeModuleCtorFunction() override;
   /// Creates module destructor function
   llvm::Function *makeModuleDtorFunction() override;
-  /// Construct and return the stub name of a kernel.
-  std::string getDeviceStubName(llvm::StringRef Name) const override;
 };
 
 }
@@ -204,40 +219,30 @@ llvm::FunctionType *CGNVCUDARuntime::getRegisterLinkedBinaryFnTy() const {
   return llvm::FunctionType::get(VoidTy, Params, false);
 }
 
-std::string CGNVCUDARuntime::getDeviceSideName(const Decl *D) {
-  auto *ND = cast<const NamedDecl>(D);
+std::string CGNVCUDARuntime::getDeviceSideName(const NamedDecl *ND) {
+  GlobalDecl GD;
+  // D could be either a kernel or a variable.
+  if (auto *FD = dyn_cast<FunctionDecl>(ND))
+    GD = GlobalDecl(FD, KernelReferenceKind::Kernel);
+  else
+    GD = GlobalDecl(ND);
   std::string DeviceSideName;
   if (DeviceMC->shouldMangleDeclName(ND)) {
     SmallString<256> Buffer;
     llvm::raw_svector_ostream Out(Buffer);
-    DeviceMC->mangleName(ND, Out);
-    DeviceSideName = Out.str();
+    DeviceMC->mangleName(GD, Out);
+    DeviceSideName = std::string(Out.str());
   } else
-    DeviceSideName = ND->getIdentifier()->getName();
+    DeviceSideName = std::string(ND->getIdentifier()->getName());
   return DeviceSideName;
 }
 
 void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
                                      FunctionArgList &Args) {
-  // Ensure either we have different ABIs between host and device compilations,
-  // says host compilation following MSVC ABI but device compilation follows
-  // Itanium C++ ABI or, if they follow the same ABI, kernel names after
-  // mangling should be the same after name stubbing. The later checking is
-  // very important as the device kernel name being mangled in host-compilation
-  // is used to resolve the device binaries to be executed. Inconsistent naming
-  // result in undefined behavior. Even though we cannot check that naming
-  // directly between host- and device-compilations, the host- and
-  // device-mangling in host compilation could help catching certain ones.
-  assert((CGF.CGM.getContext().getAuxTargetInfo() &&
-          (CGF.CGM.getContext().getAuxTargetInfo()->getCXXABI() !=
-           CGF.CGM.getContext().getTargetInfo().getCXXABI())) ||
-         getDeviceStubName(getDeviceSideName(CGF.CurFuncDecl)) ==
-             CGF.CurFn->getName());
-
   EmittedKernels.push_back({CGF.CurFn, CGF.CurFuncDecl});
   if (CudaFeatureEnabled(CGM.getTarget().getSDKVersion(),
                          CudaFeature::CUDA_USES_NEW_LAUNCH) ||
-      CGF.getLangOpts().HIPUseNewLaunchAPI)
+      (CGF.getLangOpts().HIP && CGF.getLangOpts().HIPUseNewLaunchAPI))
     emitDeviceStubBodyNew(CGF, Args);
   else
     emitDeviceStubBodyLegacy(CGF, Args);
@@ -418,7 +423,8 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
   // each emitted kernel.
   llvm::Argument &GpuBinaryHandlePtr = *RegisterKernelsFunc->arg_begin();
   for (auto &&I : EmittedKernels) {
-    llvm::Constant *KernelName = makeConstantString(getDeviceSideName(I.D));
+    llvm::Constant *KernelName =
+        makeConstantString(getDeviceSideName(cast<NamedDecl>(I.D)));
     llvm::Constant *NullPtr = llvm::ConstantPointerNull::get(VoidPtrTy);
     llvm::Value *Args[] = {
         &GpuBinaryHandlePtr,
@@ -434,30 +440,70 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
     Builder.CreateCall(RegisterFunc, Args);
   }
 
+  llvm::Type *VarSizeTy = IntTy;
+  // For HIP or CUDA 9.0+, device variable size is type of `size_t`.
+  if (CGM.getLangOpts().HIP ||
+      ToCudaVersion(CGM.getTarget().getSDKVersion()) >= CudaVersion::CUDA_90)
+    VarSizeTy = SizeTy;
+
   // void __cudaRegisterVar(void **, char *, char *, const char *,
   //                        int, int, int, int)
   llvm::Type *RegisterVarParams[] = {VoidPtrPtrTy, CharPtrTy, CharPtrTy,
-                                     CharPtrTy,    IntTy,     IntTy,
+                                     CharPtrTy,    IntTy,     VarSizeTy,
                                      IntTy,        IntTy};
   llvm::FunctionCallee RegisterVar = CGM.CreateRuntimeFunction(
-      llvm::FunctionType::get(IntTy, RegisterVarParams, false),
+      llvm::FunctionType::get(VoidTy, RegisterVarParams, false),
       addUnderscoredPrefixToName("RegisterVar"));
+  // void __cudaRegisterSurface(void **, const struct surfaceReference *,
+  //                            const void **, const char *, int, int);
+  llvm::FunctionCallee RegisterSurf = CGM.CreateRuntimeFunction(
+      llvm::FunctionType::get(
+          VoidTy, {VoidPtrPtrTy, VoidPtrTy, CharPtrTy, CharPtrTy, IntTy, IntTy},
+          false),
+      addUnderscoredPrefixToName("RegisterSurface"));
+  // void __cudaRegisterTexture(void **, const struct textureReference *,
+  //                            const void **, const char *, int, int, int)
+  llvm::FunctionCallee RegisterTex = CGM.CreateRuntimeFunction(
+      llvm::FunctionType::get(
+          VoidTy,
+          {VoidPtrPtrTy, VoidPtrTy, CharPtrTy, CharPtrTy, IntTy, IntTy, IntTy},
+          false),
+      addUnderscoredPrefixToName("RegisterTexture"));
   for (auto &&Info : DeviceVars) {
     llvm::GlobalVariable *Var = Info.Var;
-    unsigned Flags = Info.Flag;
     llvm::Constant *VarName = makeConstantString(getDeviceSideName(Info.D));
-    uint64_t VarSize =
-        CGM.getDataLayout().getTypeAllocSize(Var->getValueType());
-    llvm::Value *Args[] = {
-        &GpuBinaryHandlePtr,
-        Builder.CreateBitCast(Var, VoidPtrTy),
-        VarName,
-        VarName,
-        llvm::ConstantInt::get(IntTy, (Flags & ExternDeviceVar) ? 1 : 0),
-        llvm::ConstantInt::get(IntTy, VarSize),
-        llvm::ConstantInt::get(IntTy, (Flags & ConstantDeviceVar) ? 1 : 0),
-        llvm::ConstantInt::get(IntTy, 0)};
-    Builder.CreateCall(RegisterVar, Args);
+    switch (Info.Flags.getKind()) {
+    case DeviceVarFlags::Variable: {
+      uint64_t VarSize =
+          CGM.getDataLayout().getTypeAllocSize(Var->getValueType());
+      llvm::Value *Args[] = {
+          &GpuBinaryHandlePtr,
+          Builder.CreateBitCast(Var, VoidPtrTy),
+          VarName,
+          VarName,
+          llvm::ConstantInt::get(IntTy, Info.Flags.isExtern()),
+          llvm::ConstantInt::get(VarSizeTy, VarSize),
+          llvm::ConstantInt::get(IntTy, Info.Flags.isConstant()),
+          llvm::ConstantInt::get(IntTy, 0)};
+      Builder.CreateCall(RegisterVar, Args);
+      break;
+    }
+    case DeviceVarFlags::Surface:
+      Builder.CreateCall(
+          RegisterSurf,
+          {&GpuBinaryHandlePtr, Builder.CreateBitCast(Var, VoidPtrTy), VarName,
+           VarName, llvm::ConstantInt::get(IntTy, Info.Flags.getSurfTexType()),
+           llvm::ConstantInt::get(IntTy, Info.Flags.isExtern())});
+      break;
+    case DeviceVarFlags::Texture:
+      Builder.CreateCall(
+          RegisterTex,
+          {&GpuBinaryHandlePtr, Builder.CreateBitCast(Var, VoidPtrTy), VarName,
+           VarName, llvm::ConstantInt::get(IntTy, Info.Flags.getSurfTexType()),
+           llvm::ConstantInt::get(IntTy, Info.Flags.isNormalized()),
+           llvm::ConstantInt::get(IntTy, Info.Flags.isExtern())});
+      break;
+    }
   }
 
   Builder.CreateRetVoid();
@@ -551,8 +597,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     if (CudaGpuBinary) {
       // If fatbin is available from early finalization, create a string
       // literal containing the fat binary loaded from the given file.
-      FatBinStr = makeConstantString(CudaGpuBinary->getBuffer(), "",
-                                     FatbinConstantName, 8);
+      FatBinStr = makeConstantString(std::string(CudaGpuBinary->getBuffer()),
+                                     "", FatbinConstantName, 8);
     } else {
       // If fatbin is not available, create an external symbol
       // __hip_fatbin in section .hip_fatbin. The external symbol is supposed
@@ -586,7 +632,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
 
     // For CUDA, create a string literal containing the fat binary loaded from
     // the given file.
-    FatBinStr = makeConstantString(CudaGpuBinary->getBuffer(), "",
+    FatBinStr = makeConstantString(std::string(CudaGpuBinary->getBuffer()), "",
                                    FatbinConstantName, 8);
     FatMagic = CudaFatMagic;
   }
@@ -691,8 +737,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     SmallString<64> ModuleID;
     llvm::raw_svector_ostream OS(ModuleID);
     OS << ModuleIDPrefix << llvm::format("%" PRIx64, FatbinWrapper->getGUID());
-    llvm::Constant *ModuleIDConstant =
-        makeConstantString(ModuleID.str(), "", ModuleIDSectionName, 32);
+    llvm::Constant *ModuleIDConstant = makeConstantString(
+        std::string(ModuleID.str()), "", ModuleIDSectionName, 32);
 
     // Create an alias for the FatbinWrapper that nvcc will look for.
     llvm::GlobalAlias::create(llvm::GlobalValue::ExternalLinkage,
@@ -795,12 +841,6 @@ llvm::Function *CGNVCUDARuntime::makeModuleDtorFunction() {
   }
   DtorBuilder.CreateRetVoid();
   return ModuleDtorFunc;
-}
-
-std::string CGNVCUDARuntime::getDeviceStubName(llvm::StringRef Name) const {
-  if (!CGM.getLangOpts().HIP)
-    return Name;
-  return (Name + ".stub").str();
 }
 
 CGCUDARuntime *CodeGen::CreateNVCUDARuntime(CodeGenModule &CGM) {

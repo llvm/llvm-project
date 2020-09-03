@@ -503,6 +503,12 @@
             integer (kind=kmp_size_t_kind) :: omp_capture_affinity
           end function omp_capture_affinity
 
+          subroutine omp_display_env(verbose) bind(c)
+            use omp_lib_kinds
+            logical (kind=omp_logical_kind), value :: verbose
+          end subroutine omp_display_env
+
+
 !         ***
 !         *** kmp_* entry points
 !         ***

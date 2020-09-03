@@ -1,4 +1,4 @@
-//===-- Type.cpp ------------------------------------------------*- C++ -*-===//
+//===-- Type.cpp ----------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -170,7 +170,7 @@ Type::Type()
 }
 
 void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
-                          bool show_name) {
+                          bool show_name, ExecutionContextScope *exe_scope) {
   *s << "id = " << (const UserID &)*this;
 
   // Call the name accessor to make sure we resolve the type name
@@ -186,7 +186,7 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
   }
 
   // Call the get byte size accesor so we resolve our byte size
-  if (GetByteSize())
+  if (GetByteSize(exe_scope))
     s->Printf(", byte-size = %" PRIu64, m_byte_size);
   bool show_fullpaths = (level == lldb::eDescriptionLevelVerbose);
   m_decl.Dump(s, show_fullpaths);
@@ -302,7 +302,7 @@ void Type::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
 
 ConstString Type::GetName() {
   if (!m_name)
-    m_name = GetForwardCompilerType().GetConstTypeName();
+    m_name = GetForwardCompilerType().GetTypeName();
   return m_name;
 }
 
@@ -312,7 +312,7 @@ void Type::DumpValue(ExecutionContext *exe_ctx, Stream *s,
                      const DataExtractor &data, uint32_t data_byte_offset,
                      bool show_types, bool show_summary, bool verbose,
                      lldb::Format format) {
-  if (ResolveClangType(ResolveState::Forward)) {
+  if (ResolveCompilerType(ResolveState::Forward)) {
     if (show_types) {
       s->PutChar('(');
       if (verbose)
@@ -323,7 +323,9 @@ void Type::DumpValue(ExecutionContext *exe_ctx, Stream *s,
 
     GetForwardCompilerType().DumpValue(
         exe_ctx, s, format == lldb::eFormatDefault ? GetFormat() : format, data,
-        data_byte_offset, GetByteSize().getValueOr(0),
+        data_byte_offset,
+        GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr)
+            .getValueOr(0),
         0, // Bitfield bit size
         0, // Bitfield bit offset
         show_types, show_summary, verbose, 0);
@@ -352,8 +354,7 @@ llvm::Optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   case eEncodingIsTypedefUID: {
     Type *encoding_type = GetEncodingType();
     if (encoding_type)
-      if (llvm::Optional<uint64_t> size =
-              encoding_type->GetByteSize(exe_scope)) {
+      if (llvm::Optional<uint64_t> size = encoding_type->GetByteSize(exe_scope)) {
         m_byte_size = *size;
         m_byte_size_has_value = true;
         return m_byte_size;
@@ -374,6 +375,7 @@ llvm::Optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
       if (ArchSpec arch = m_symbol_file->GetObjectFile()->GetArchitecture()) {
         m_byte_size = arch.GetAddressByteSize();
         m_byte_size_has_value = true;
+        return m_byte_size;
       }
     } break;
   }
@@ -468,7 +470,7 @@ bool Type::WriteToMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
 
 const Declaration &Type::GetDeclaration() const { return m_decl; }
 
-bool Type::ResolveClangType(ResolveState compiler_type_resolve_state) {
+bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
   // TODO: This needs to consider the correct type system to use.
   Type *encoding_type = nullptr;
   if (!m_compiler_type.IsValid()) {
@@ -629,7 +631,7 @@ bool Type::ResolveClangType(ResolveState compiler_type_resolve_state) {
           break;
         }
       }
-      encoding_type->ResolveClangType(encoding_compiler_type_resolve_state);
+      encoding_type->ResolveCompilerType(encoding_compiler_type_resolve_state);
     }
   }
   return m_compiler_type.IsValid();
@@ -649,33 +651,22 @@ void Type::GetDeclContext(
 }
 
 CompilerType Type::GetFullCompilerType() {
-  ResolveClangType(ResolveState::Full);
+  ResolveCompilerType(ResolveState::Full);
   return m_compiler_type;
 }
 
 CompilerType Type::GetLayoutCompilerType() {
-  ResolveClangType(ResolveState::Layout);
+  ResolveCompilerType(ResolveState::Layout);
   return m_compiler_type;
 }
 
 CompilerType Type::GetForwardCompilerType() {
-  ResolveClangType(ResolveState::Forward);
+  ResolveCompilerType(ResolveState::Forward);
   return m_compiler_type;
 }
 
-int Type::Compare(const Type &a, const Type &b) {
-  // Just compare the UID values for now...
-  lldb::user_id_t a_uid = a.GetID();
-  lldb::user_id_t b_uid = b.GetID();
-  if (a_uid < b_uid)
-    return -1;
-  if (a_uid > b_uid)
-    return 1;
-  return 0;
-}
-
 ConstString Type::GetQualifiedName() {
-  return GetForwardCompilerType().GetConstTypeName();
+  return GetForwardCompilerType().GetTypeName();
 }
 
 bool Type::GetTypeScopeAndBasename(const llvm::StringRef& name,

@@ -23,9 +23,12 @@
 #include "clang/AST/CommentVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/Type.h"
 #include "llvm/Support/JSON.h"
 
 namespace clang {
+
+class APValue;
 
 class NodeStreamer {
   bool FirstChild = true;
@@ -64,7 +67,7 @@ public:
 
     // We need to capture an owning-string in the lambda because the lambda
     // is invoked in a deferred manner.
-    std::string LabelStr = !Label.empty() ? Label : "inner";
+    std::string LabelStr(!Label.empty() ? Label : "inner");
     bool WasFirstChild = FirstChild;
     auto DumpWithIndent = [=](bool IsLastChild) {
       if (WasFirstChild) {
@@ -201,6 +204,7 @@ public:
   void Visit(const OMPClause *C);
   void Visit(const BlockDecl::Capture &C);
   void Visit(const GenericSelectionExpr::ConstAssociation &A);
+  void Visit(const APValue &Value, QualType Ty);
 
   void VisitTypedefType(const TypedefType *TT);
   void VisitFunctionType(const FunctionType *T);

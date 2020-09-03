@@ -41,6 +41,11 @@ class CCIf<string predicate, CCAction A> : CCPredicateAction<A> {
 class CCIfByVal<CCAction A> : CCIf<"ArgFlags.isByVal()", A> {
 }
 
+/// CCIfPreallocated - If the current argument has Preallocated parameter attribute,
+/// apply Action A.
+class CCIfPreallocated<CCAction A> : CCIf<"ArgFlags.isPreallocated()", A> {
+}
+
 /// CCIfSwiftSelf - If the current argument has swiftself parameter attribute,
 /// apply Action A.
 class CCIfSwiftSelf<CCAction A> : CCIf<"ArgFlags.isSwiftSelf()", A> {

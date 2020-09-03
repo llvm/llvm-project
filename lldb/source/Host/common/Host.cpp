@@ -1,4 +1,4 @@
-//===-- Host.cpp ------------------------------------------------*- C++ -*-===//
+//===-- Host.cpp ----------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,7 +28,7 @@
 
 #if defined(__linux__) || defined(__FreeBSD__) ||                              \
     defined(__FreeBSD_kernel__) || defined(__APPLE__) ||                       \
-    defined(__NetBSD__) || defined(__OpenBSD__)
+    defined(__NetBSD__) || defined(__OpenBSD__) || defined(__EMSCRIPTEN__)
 #if !defined(__ANDROID__)
 #include <spawn.h>
 #endif
@@ -500,6 +500,8 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
     const bool first_arg_is_executable = true;
     launch_info.SetArguments(args, first_arg_is_executable);
   }
+
+  launch_info.GetEnvironment() = Host::GetEnvironment();
 
   if (working_dir)
     launch_info.SetWorkingDirectory(working_dir);

@@ -166,8 +166,9 @@ class Register<string n, list<string> altNames = []> {
   // CostPerUse - Additional cost of instructions using this register compared
   // to other registers in its class. The register allocator will try to
   // minimize the number of instructions using a register with a CostPerUse.
-  // This is used by the x86-64 and ARM Thumb targets where some registers
-  // require larger instruction encodings.
+  // This is used by the ARC target, by the ARM Thumb and x86-64 targets, where
+  // some registers require larger instruction encodings, by the RISC-V target,
+  // where some registers preclude using some C instructions.
   int CostPerUse = 0;
 
   // CoveredBySubRegs - When this bit is set, the value of this register is
@@ -223,7 +224,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   list<ValueType> RegTypes = regTypes;
 
   // Size - Specify the spill size in bits of the registers.  A default value of
-  // zero lets tablgen pick an appropriate size.
+  // zero lets tablegen pick an appropriate size.
   int Size = 0;
 
   // Alignment - Specify the alignment required of the registers when they are
@@ -274,6 +275,17 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // useful as it is sometimes beneficial to assign registers to highly
   // constrained classes first. The value has to be in the range [0,63].
   int AllocationPriority = 0;
+
+  // Generate register pressure set for this register class and any class
+  // synthesized from it. Set to 0 to inhibit unneeded pressure sets.
+  bit GeneratePressureSet = 1;
+
+  // Weight override for register pressure calculation. This is the value
+  // TargetRegisterClass::getRegClassWeight() will return. The weight is in
+  // units of pressure for this register class. If unset tablegen will
+  // calculate a weight based on a number of register units in this register
+  // class registers. The weight is per register.
+  int Weight = ?;
 
   // The diagnostic type to present when referencing this operand in a match
   // failure error message. If this is empty, the default Match_InvalidOperand
@@ -652,14 +664,21 @@ class Predicate<string cond> {
   /// feature from the AssemblerPredicate class in addition to Predicate.
   bit AssemblerMatcherPredicate = 0;
 
-  /// AssemblerCondString - Name of the subtarget feature being tested used
-  /// as alternative condition string used for assembler matcher.
-  /// e.g. "ModeThumb" is translated to "(Bits & ModeThumb) != 0".
-  ///      "!ModeThumb" is translated to "(Bits & ModeThumb) == 0".
-  /// It can also list multiple features separated by ",".
-  /// e.g. "ModeThumb,FeatureThumb2" is translated to
+  /// AssemblerCondDag - Set of subtarget features being tested used
+  /// as alternative condition string used for assembler matcher. Must be used
+  /// with (all_of) to indicate that all features must be present, or (any_of)
+  /// to indicate that at least one must be. The required lack of presence of
+  /// a feature can be tested using a (not) node including the feature.
+  /// e.g. "(all_of ModeThumb)" is translated to "(Bits & ModeThumb) != 0".
+  ///      "(all_of (not ModeThumb))" is translated to
+  ///      "(Bits & ModeThumb) == 0".
+  ///      "(all_of ModeThumb, FeatureThumb2)" is translated to
   ///      "(Bits & ModeThumb) != 0 && (Bits & FeatureThumb2) != 0".
-  string AssemblerCondString = "";
+  ///      "(any_of ModeTumb, FeatureThumb2)" is translated to
+  ///      "(Bits & ModeThumb) != 0 || (Bits & FeatureThumb2) != 0".
+  /// all_of and any_of cannot be combined in a single dag, instead multiple
+  /// predicates can be placed onto Instruction definitions.
+  dag AssemblerCondDag;
 
   /// PredicateName - User-level name to use for the predicate. Mainly for use
   /// in diagnostics such as missing feature errors in the asm matcher.
@@ -684,7 +703,7 @@ class Requires<list<Predicate> preds> {
 /// ops definition - This is just a simple marker used to identify the operand
 /// list for an instruction. outs and ins are identical both syntactically and
 /// semantically; they are used to define def operands and use operands to
-/// improve readibility. This should be used like this:
+/// improve readability. This should be used like this:
 ///     (outs R32:$dst), (ins R32:$src1, R32:$src2) or something similar.
 def ops;
 def outs;
@@ -888,6 +907,10 @@ def untyped_imm_0 : TypedOperand<"OPERAND_GENERIC_IMM_0"> {
 ///
 def zero_reg;
 
+/// undef_tied_input - Special node to indicate an input register tied
+/// to an output which defaults to IMPLICIT_DEF.
+def undef_tied_input;
+
 /// All operands which the MC layer classifies as predicates should inherit from
 /// this class in some manner. This is already handled for the most commonly
 /// used PredicateOperand, but may be useful in other circumstances.
@@ -994,10 +1017,10 @@ def INLINEASM_BR : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);
   let AsmString = "";
-  let hasSideEffects = 0;  // Note side effect is encoded in an operand.
-  let isTerminator = 1;
-  let isBranch = 1;
-  let isIndirectBranch = 1;
+  // Unlike INLINEASM, this is always treated as having side-effects.
+  let hasSideEffects = 1;
+  // Despite potentially branching, this instruction is intentionally _not_
+  // marked as a terminator or a branch.
 }
 def CFI_INSTRUCTION : StandardPseudoInstruction {
   let OutOperandList = (outs);
@@ -1150,6 +1173,18 @@ def LOAD_STACK_GUARD : StandardPseudoInstruction {
   let hasSideEffects = 0;
   bit isPseudo = 1;
 }
+def PREALLOCATED_SETUP : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins i32imm:$a);
+  let usesCustomInserter = 1;
+  let hasSideEffects = 1;
+}
+def PREALLOCATED_ARG : StandardPseudoInstruction {
+  let OutOperandList = (outs ptr_rc:$loc);
+  let InOperandList = (ins i32imm:$a, i32imm:$b);
+  let usesCustomInserter = 1;
+  let hasSideEffects = 1;
+}
 def LOCAL_ESCAPE : StandardPseudoInstruction {
   // This instruction is really just a label. It has to be part of the chain so
   // that it doesn't get dropped from the DAG, but it produces nothing and has
@@ -1182,7 +1217,7 @@ def PATCHABLE_FUNCTION_ENTER : StandardPseudoInstruction {
   let InOperandList = (ins);
   let AsmString = "# XRay Function Enter.";
   let usesCustomInserter = 1;
-  let hasSideEffects = 0;
+  let hasSideEffects = 1;
 }
 def PATCHABLE_RET : StandardPseudoInstruction {
   let OutOperandList = (outs);
@@ -1198,7 +1233,7 @@ def PATCHABLE_FUNCTION_EXIT : StandardPseudoInstruction {
   let InOperandList = (ins);
   let AsmString = "# XRay Function Exit.";
   let usesCustomInserter = 1;
-  let hasSideEffects = 0; // FIXME: is this correct?
+  let hasSideEffects = 1;
   let isReturn = 0; // Original return instruction will follow
 }
 def PATCHABLE_TAIL_CALL : StandardPseudoInstruction {
@@ -1336,11 +1371,15 @@ class AsmParserVariant {
 }
 def DefaultAsmParserVariant : AsmParserVariant;
 
+// Operators for combining SubtargetFeatures in AssemblerPredicates
+def any_of;
+def all_of;
+
 /// AssemblerPredicate - This is a Predicate that can be used when the assembler
 /// matches instructions and aliases.
-class AssemblerPredicate<string cond, string name = ""> {
+class AssemblerPredicate<dag cond, string name = ""> {
   bit AssemblerMatcherPredicate = 1;
-  string AssemblerCondString = cond;
+  dag AssemblerCondDag = cond;
   string PredicateName = name;
 }
 

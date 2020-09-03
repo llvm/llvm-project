@@ -189,18 +189,25 @@ public:
   /// Set up preprocessor for RunAnalysis action.
   bool SetUpStaticAnalyzer = false;
 
+  /// Prevents intended crashes when using #pragma clang __debug. For testing.
+  bool DisablePragmaDebugCrash = false;
+
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}
 
-  void addMacroDef(StringRef Name) { Macros.emplace_back(Name, false); }
-  void addMacroUndef(StringRef Name) { Macros.emplace_back(Name, true); }
+  void addMacroDef(StringRef Name) {
+    Macros.emplace_back(std::string(Name), false);
+  }
+  void addMacroUndef(StringRef Name) {
+    Macros.emplace_back(std::string(Name), true);
+  }
 
   void addRemappedFile(StringRef From, StringRef To) {
-    RemappedFiles.emplace_back(From, To);
+    RemappedFiles.emplace_back(std::string(From), std::string(To));
   }
 
   void addRemappedFile(StringRef From, llvm::MemoryBuffer *To) {
-    RemappedFileBuffers.emplace_back(From, To);
+    RemappedFileBuffers.emplace_back(std::string(From), To);
   }
 
   void clearRemappedFiles() {

@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 
 #include <memory>
+#include <type_traits>
 
 using namespace llvm;
 
@@ -222,6 +223,43 @@ TEST(UniqueFunctionTest, CountForwardingMoves) {
   UnmovableF(Unmovable());
   Unmovable X;
   UnmovableF(X);
+}
+
+TEST(UniqueFunctionTest, Const) {
+  // Can assign from const lambda.
+  unique_function<int(int) const> Plus2 = [X(std::make_unique<int>(2))](int Y) {
+    return *X + Y;
+  };
+  EXPECT_EQ(5, Plus2(3));
+
+  // Can call through a const ref.
+  const auto &Plus2Ref = Plus2;
+  EXPECT_EQ(5, Plus2Ref(3));
+
+  // Can move-construct and assign.
+  unique_function<int(int) const> Plus2A = std::move(Plus2);
+  EXPECT_EQ(5, Plus2A(3));
+  unique_function<int(int) const> Plus2B;
+  Plus2B = std::move(Plus2A);
+  EXPECT_EQ(5, Plus2B(3));
+
+  // Can convert to non-const function type, but not back.
+  unique_function<int(int)> Plus2C = std::move(Plus2B);
+  EXPECT_EQ(5, Plus2C(3));
+
+  // Overloaded call operator correctly resolved.
+  struct ChooseCorrectOverload {
+    StringRef operator()() { return "non-const"; }
+    StringRef operator()() const { return "const"; }
+  };
+  unique_function<StringRef()> ChooseMutable = ChooseCorrectOverload();
+  ChooseCorrectOverload A;
+  EXPECT_EQ("non-const", ChooseMutable());
+  EXPECT_EQ("non-const", A());
+  unique_function<StringRef() const> ChooseConst = ChooseCorrectOverload();
+  const ChooseCorrectOverload &X = A;
+  EXPECT_EQ("const", ChooseConst());
+  EXPECT_EQ("const", X());
 }
 
 } // anonymous namespace

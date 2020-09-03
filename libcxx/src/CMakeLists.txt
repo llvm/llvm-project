@@ -4,6 +4,8 @@ set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTOR
 set(LIBCXX_SOURCES
   algorithm.cpp
   any.cpp
+  atomic.cpp
+  barrier.cpp
   bind.cpp
   charconv.cpp
   chrono.cpp
@@ -27,6 +29,7 @@ set(LIBCXX_SOURCES
   new.cpp
   optional.cpp
   random.cpp
+  random_shuffle.cpp
   regex.cpp
   shared_mutex.cpp
   stdexcept.cpp
@@ -160,7 +163,8 @@ if (LIBCXX_ENABLE_SHARED)
   if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(cxx_shared)
   endif()
-  target_link_libraries(cxx_shared PRIVATE ${LIBCXX_LIBRARIES})
+  target_link_libraries(cxx_shared PUBLIC cxx-headers
+                                   PRIVATE ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_shared
     PROPERTIES
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
@@ -203,16 +207,19 @@ if (LIBCXX_ENABLE_SHARED)
   endif()
 
   if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
-    if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
-      set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++sjlj-abi.v${LIBCXX_LIBCPPABI_VERSION}.exp")
-    else()
-      set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.v${LIBCXX_LIBCPPABI_VERSION}.exp")
-    endif()
     target_link_libraries(cxx_shared PRIVATE
       "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
-      "-Wl,-reexported_symbols_list,${RE_EXPORT_LIST}"
+      "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.v${LIBCXX_LIBCPPABI_VERSION}.exp"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
+
+    if (LIBCXX_ENABLE_EXCEPTIONS)
+      if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
+        target_link_libraries(cxx_shared PRIVATE "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi-exceptions.sjlj.exp")
+      else()
+        target_link_libraries(cxx_shared PRIVATE "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi-exceptions.exp")
+      endif()
+    endif()
 
     if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
       target_link_libraries(cxx_shared PRIVATE "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi-new-delete.exp")
@@ -238,7 +245,8 @@ endif()
 # Build the static library.
 if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
-  target_link_libraries(cxx_static PRIVATE ${LIBCXX_LIBRARIES})
+  target_link_libraries(cxx_static PUBLIC cxx-headers
+                                   PRIVATE ${LIBCXX_LIBRARIES})
   set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
   set_target_properties(cxx_static
     PROPERTIES
@@ -278,7 +286,7 @@ if (LIBCXX_ENABLE_STATIC)
     endif()
     add_custom_command(TARGET cxx_static POST_BUILD
     COMMAND
-      ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/merge_archives.py
+      ${Python3_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/merge_archives.py
     ARGS
       -o $<TARGET_LINKER_FILE:cxx_static>
       --ar "${CMAKE_AR}"
@@ -292,7 +300,7 @@ if (LIBCXX_ENABLE_STATIC)
 endif()
 
 # Add a meta-target for both libraries.
-add_custom_target(cxx DEPENDS cxx-headers ${LIBCXX_BUILD_TARGETS})
+add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 
 if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   set(LIBCXX_EXPERIMENTAL_SOURCES
@@ -311,11 +319,6 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
       OUTPUT_NAME   "c++experimental"
   )
   cxx_add_common_build_flags(cxx_experimental)
-  # Overwrite the previously-set Standard flag with -std=c++14 if supported
-  check_flag_supported(-std=c++14)
-  if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG)
-    target_compile_options(cxx_experimental PRIVATE "-std=c++14")
-  endif()
 endif()
 
 
@@ -352,7 +355,7 @@ if (LIBCXX_INSTALL_LIBRARY)
   endif()
 
   if(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY)
-    install(TARGETS ${LIBCXX_INSTALL_TARGETS} ${experimental_lib}
+    install(TARGETS cxx_experimental
       LIBRARY DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
       ARCHIVE DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
       RUNTIME DESTINATION ${LIBCXX_INSTALL_PREFIX}bin COMPONENT cxx)
@@ -380,10 +383,14 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
     if(LIBCXX_INSTALL_HEADERS)
       set(header_install_target install-cxx-headers)
     endif()
+    if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS)
+      set(pstl_install_target install-pstl)
+    endif()
     add_custom_target(install-cxx
                       DEPENDS ${lib_install_target}
                               ${experimental_lib_install_target}
                               ${header_install_target}
+                              ${pstl_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
@@ -391,9 +398,9 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
                       DEPENDS ${lib_install_target}
                               ${experimental_lib_install_target}
                               ${header_install_target}
+                              ${pstl_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -DCMAKE_INSTALL_DO_STRIP=1
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
-    add_custom_target(install-libcxx DEPENDS install-cxx)
 endif()

@@ -1,6 +1,6 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>"                            \
 ; RUN: "-aa-pipeline=basic-aa,globals-aa" 2>&1 | FileCheck %s
-; RUN: opt < %s -analyze -basicaa -globals-aa -da | FileCheck %s
+; RUN: opt < %s -analyze -basic-aa -globals-aa -da | FileCheck %s
 define void @i32_subscript(i32* %a) {
 entry:
   br label %for.body

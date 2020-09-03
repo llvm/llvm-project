@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   AsmPrinter
+  BinaryFormat
   DebugInfoDWARF
   MC
   Object
@@ -11,10 +12,16 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(DebugInfoDWARFTests
   DwarfGenerator.cpp
   DwarfUtils.cpp
+  DWARFAcceleratorTableTest.cpp
+  DWARFDataExtractorTest.cpp
+  DWARFDebugArangeSetTest.cpp
+  DWARFDebugFrameTest.cpp
   DWARFDebugInfoTest.cpp
   DWARFDebugLineTest.cpp
   DWARFDieTest.cpp
+  DWARFExpressionCompactPrinterTest.cpp
   DWARFFormValueTest.cpp
+  DWARFListTableTest.cpp
   DWARFLocationExpressionTest.cpp
   )
 

@@ -69,7 +69,28 @@ func main() {
     //%            ])
   }
 
-  let colors = [ColorCode.RGB(155,219,255), ColorCode.Hex(0x4545ff)]
+  var colors = [ColorCode.RGB(155,219,255), ColorCode.Hex(0x4545ff)]
+
+  let unsafe_ptr = UnsafePointer(&colors[0])
+  //% self.expect("frame variable -d run-target unsafe_ptr",
+  //%            patterns=[
+  //%            '\(UnsafePointer<(.*)\.ColorCode>\) unsafe_ptr = 0[xX][0-9a-fA-F]+ {',
+  //%            '\[0\] = RGB {',
+  //%            'RGB = \(0 = 155, 1 = 219, 2 = 255\)'
+  //%            ])
+
+  var unsafe_mutable_ptr = UnsafeMutablePointer(&colors[1])
+  //% self.expect("frame variable -d run-target unsafe_mutable_ptr",
+  //%            patterns=[
+  //%            '\(UnsafeMutablePointer<(.*)\.ColorCode>\) unsafe_mutable_ptr = 0[xX][0-9a-fA-F]+ {',
+  //%            '\[0\] = Hex \(Hex = 4539903\)'
+  //%            ])
+
+  let unsafe_raw_ptr = UnsafeRawPointer(&colors[0])
+  //% self.expect("frame variable -d run-target unsafe_raw_ptr",
+  //%            patterns=[
+  //%            '\(UnsafeRawPointer\) unsafe_raw_ptr = 0[xX][0-9a-fA-F]+'
+  //%            ])
 
   colors.withUnsafeBufferPointer {
     let buf = $0
@@ -132,14 +153,14 @@ func main() {
     let alias = rawbuf as ByteBuffer
     //% self.expect("frame variable -d run-target alias",
     //%            patterns=[
-    //%            '\((.*)\.ByteBuffer\) alias = 256 values \(0[xX][0-9a-fA-F]+\) {',
-    //%            '\[([0-9]+)\] = (\\1)'
+    //%            '\(ByteBuffer\) alias = 256 values \(0[xX][0-9a-fA-F]+\) {',
+    //%            '\[([0-9]+)\] = (\\1)',
     //%            ])
     typealias ByteBufferAlias = ByteBuffer
     let secondAlias = alias as ByteBufferAlias
     //% self.expect("frame variable -d run-target secondAlias",
     //%            patterns=[
-    //%            '\((.*)\.ByteBufferAlias\) secondAlias = 256 values \(0[xX][0-9a-fA-F]+\) {',
+    //%            '\(ByteBufferAlias\) secondAlias = 256 values \(0[xX][0-9a-fA-F]+\) {',
     //%            '\[([0-9]+)\] = (\\1)'
     //%            ])
   }

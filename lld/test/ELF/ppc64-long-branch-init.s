@@ -12,10 +12,10 @@
 
 # CHECK: Disassembly of section .init:
 # CHECK-EMPTY:
-# CHECK-LABEL: _init:
+# CHECK-LABEL: <_init>:
 # CHECK:         blr
 # CHECK-EMPTY:
-# CHECK-LABEL: __long_branch_foo:
+# CHECK-LABEL: <__long_branch_foo>:
 
 .globl foo
 foo:

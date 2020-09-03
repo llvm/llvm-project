@@ -31,33 +31,107 @@ Type *GEPOperator::getResultElementType() const {
   return cast<GetElementPtrConstantExpr>(this)->getResultElementType();
 }
 
-bool GEPOperator::accumulateConstantOffset(const DataLayout &DL,
-                                           APInt &Offset) const {
-  assert(Offset.getBitWidth() ==
-             DL.getIndexSizeInBits(getPointerAddressSpace()) &&
-         "The offset bit width does not match DL specification.");
+Align GEPOperator::getMaxPreservedAlignment(const DataLayout &DL) const {
+  /// compute the worse possible offset for every level of the GEP et accumulate
+  /// the minimum alignment into Result.
+
+  Align Result = Align(llvm::Value::MaximumAlignment);
+  for (gep_type_iterator GTI = gep_type_begin(this), GTE = gep_type_end(this);
+       GTI != GTE; ++GTI) {
+    int64_t Offset = 1;
+    ConstantInt *OpC = dyn_cast<ConstantInt>(GTI.getOperand());
+
+    if (StructType *STy = GTI.getStructTypeOrNull()) {
+      const StructLayout *SL = DL.getStructLayout(STy);
+      Offset = SL->getElementOffset(OpC->getZExtValue());
+    } else {
+      assert(GTI.isSequential() && "should be sequencial");
+      /// If the index isn't know we take 1 because it is the index that will
+      /// give the worse alignment of the offset.
+      int64_t ElemCount = 1;
+      if (OpC)
+        ElemCount = OpC->getZExtValue();
+      Offset = DL.getTypeAllocSize(GTI.getIndexedType()) * ElemCount;
+    }
+    Result = Align(MinAlign(Offset, Result.value()));
+  }
+  return Result;
+}
+
+bool GEPOperator::accumulateConstantOffset(
+    const DataLayout &DL, APInt &Offset,
+    function_ref<bool(Value &, APInt &)> ExternalAnalysis) const {
+   assert(Offset.getBitWidth() ==
+              DL.getIndexSizeInBits(getPointerAddressSpace()) &&
+          "The offset bit width does not match DL specification.");
+
+  bool UsedExternalAnalysis = false;
+  auto AccumulateOffset = [&](APInt Index, uint64_t Size) -> bool {
+    Index = Index.sextOrTrunc(Offset.getBitWidth());
+    APInt IndexedSize = APInt(Offset.getBitWidth(), Size);
+    // For array or vector indices, scale the index by the size of the type.
+    if (!UsedExternalAnalysis) {
+      Offset += Index * IndexedSize;
+    } else {
+      // External Analysis can return a result higher/lower than the value
+      // represents. We need to detect overflow/underflow.
+      bool Overflow = false;
+      APInt OffsetPlus = Index.smul_ov(IndexedSize, Overflow);
+      if (Overflow)
+        return false;
+      Offset = Offset.sadd_ov(OffsetPlus, Overflow);
+      if (Overflow)
+        return false;
+    }
+    return true;
+  };
 
   for (gep_type_iterator GTI = gep_type_begin(this), GTE = gep_type_end(this);
        GTI != GTE; ++GTI) {
-    ConstantInt *OpC = dyn_cast<ConstantInt>(GTI.getOperand());
-    if (!OpC)
-      return false;
-    if (OpC->isZero())
-      continue;
+    // Scalable vectors are multiplied by a runtime constant.
+    bool ScalableType = false;
+    if (isa<ScalableVectorType>(GTI.getIndexedType()))
+      ScalableType = true;
 
-    // Handle a struct index, which adds its field offset to the pointer.
-    if (StructType *STy = GTI.getStructTypeOrNull()) {
-      unsigned ElementIdx = OpC->getZExtValue();
-      const StructLayout *SL = DL.getStructLayout(STy);
-      Offset += APInt(Offset.getBitWidth(), SL->getElementOffset(ElementIdx));
+    Value *V = GTI.getOperand();
+    StructType *STy = GTI.getStructTypeOrNull();
+    // Handle ConstantInt if possible.
+    if (auto ConstOffset = dyn_cast<ConstantInt>(V)) {
+      if (ConstOffset->isZero())
+        continue;
+      // if the type is scalable and the constant is not zero (vscale * n * 0 =
+      // 0) bailout.
+      if (ScalableType)
+        return false;
+      // Handle a struct index, which adds its field offset to the pointer.
+      if (STy) {
+        unsigned ElementIdx = ConstOffset->getZExtValue();
+        const StructLayout *SL = DL.getStructLayout(STy);
+        // Element offset is in bytes.
+        if (!AccumulateOffset(
+                APInt(Offset.getBitWidth(), SL->getElementOffset(ElementIdx)),
+                1))
+          return false;
+        continue;
+      }
+      if (!AccumulateOffset(ConstOffset->getValue(),
+                            DL.getTypeAllocSize(GTI.getIndexedType())))
+        return false;
       continue;
     }
 
-    // For array or vector indices, scale the index by the size of the type.
-    APInt Index = OpC->getValue().sextOrTrunc(Offset.getBitWidth());
-    Offset += Index * APInt(Offset.getBitWidth(),
-                            DL.getTypeAllocSize(GTI.getIndexedType()));
+    // The operand is not constant, check if an external analysis was provided.
+    // External analsis is not applicable to a struct type.
+    if (!ExternalAnalysis || STy || ScalableType)
+      return false;
+    APInt AnalysisIndex;
+    if (!ExternalAnalysis(*V, AnalysisIndex))
+      return false;
+    UsedExternalAnalysis = true;
+    if (!AccumulateOffset(AnalysisIndex,
+                          DL.getTypeAllocSize(GTI.getIndexedType())))
+      return false;
   }
   return true;
 }
-}
+} // namespace llvm

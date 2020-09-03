@@ -7,7 +7,7 @@ define void @f0(i8* %len_addr) {
  entry:
   %len = load i8, i8* %len_addr, !range !0
   %len_norange = load i8, i8* %len_addr
-; CHECK:  %len = load i8, i8* %len_addr, !range !0
+; CHECK:  %len = load i8, i8* %len_addr, align 1, !range !0
 ; CHECK-NEXT:  -->  %len U: [0,127) S: [0,127)
 ; CHECK:  %len_norange = load i8, i8* %len_addr
 ; CHECK-NEXT:  -->  %len_norange U: full-set S: full-set
@@ -48,7 +48,7 @@ define void @f1(i8* %len_addr) {
  entry:
   %len = load i8, i8* %len_addr, !range !0
   %len_norange = load i8, i8* %len_addr
-; CHECK:  %len = load i8, i8* %len_addr, !range !0
+; CHECK:  %len = load i8, i8* %len_addr, align 1, !range !0
 ; CHECK-NEXT:  -->  %len U: [0,127) S: [0,127)
 ; CHECK:  %len_norange = load i8, i8* %len_addr
 ; CHECK-NEXT:  -->  %len_norange U: full-set S: full-set
@@ -89,7 +89,7 @@ define void @f2(i8* %len_addr) {
  entry:
   %len = load i8, i8* %len_addr, !range !0
   %len_norange = load i8, i8* %len_addr
-; CHECK:  %len = load i8, i8* %len_addr, !range !0
+; CHECK:  %len = load i8, i8* %len_addr, align 1, !range !0
 ; CHECK-NEXT:  -->  %len U: [0,127) S: [0,127)
 ; CHECK:  %len_norange = load i8, i8* %len_addr
 ; CHECK-NEXT:  -->  %len_norange U: full-set S: full-set

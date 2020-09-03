@@ -42,7 +42,7 @@ class TestFrameVar(TestBase):
         # environment variables, add them using SetArguments or
         # SetEnvironmentEntries
 
-        launch_info = lldb.SBLaunchInfo(None)
+        launch_info = target.GetLaunchInfo()
         process = target.Launch(launch_info, error)
         self.assertTrue(process, PROCESS_IS_VALID)
 
@@ -54,7 +54,7 @@ class TestFrameVar(TestBase):
             "There should be a thread stopped at our breakpoint")
 
         # The hit count for the breakpoint should be 1.
-        self.assertTrue(breakpoint.GetHitCount() == 1)
+        self.assertEquals(breakpoint.GetHitCount(), 1)
 
         frame = threads[0].GetFrameAtIndex(0)
         command_result = lldb.SBCommandReturnObject()

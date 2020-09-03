@@ -23,6 +23,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -63,7 +64,8 @@ void ModuleSymbolTable::addModule(Module *M) {
     SymTab.push_back(&GV);
 
   CollectAsmSymbols(*M, [this](StringRef Name, BasicSymbolRef::Flags Flags) {
-    SymTab.push_back(new (AsmSymbols.Allocate()) AsmSymbol(Name, Flags));
+    SymTab.push_back(new (AsmSymbols.Allocate())
+                         AsmSymbol(std::string(Name), Flags));
   });
 }
 
@@ -114,6 +116,10 @@ initializeRecordStreamer(const Module &M,
       T->createMCAsmParser(*STI, *Parser, *MCII, MCOptions));
   if (!TAP)
     return;
+
+  // Module-level inline asm is assumed to use At&t syntax (see
+  // AsmPrinter::doInitialization()).
+  Parser->setAssemblerDialect(InlineAsm::AD_ATT);
 
   Parser->setTargetParser(*TAP);
   if (Parser->Run(false))

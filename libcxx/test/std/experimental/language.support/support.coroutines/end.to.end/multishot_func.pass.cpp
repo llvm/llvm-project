@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11
+// UNSUPPORTED: c++03, c++11
 
 #include <experimental/coroutine>
 #include <cassert>
@@ -26,7 +26,7 @@ template <typename R> struct func {
     R result;
     func get_return_object() { return {this}; }
     suspend_always initial_suspend() { return {}; }
-    suspend_never final_suspend() { return {}; }
+    suspend_never final_suspend() noexcept { return {}; }
     void return_void() {}
     template <typename F>
     suspend_always yield_value(F&& f) {

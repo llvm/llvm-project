@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
 class StringRef;
@@ -24,8 +23,8 @@ class Value;
 class CallInst;
 class DataLayout;
 class Instruction;
+class IRBuilderBase;
 class TargetLibraryInfo;
-class BasicBlock;
 class Function;
 class OptimizationRemarkEmitter;
 class BlockFrequencyInfo;
@@ -50,25 +49,26 @@ public:
   /// optimal value to replace the instruction with or 0 if a more
   /// optimal form can't be found.
   /// The call must not be an indirect call.
-  Value *optimizeCall(CallInst *CI);
+  Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
 
 private:
-  Value *optimizeMemCpyChk(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeMemMoveChk(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeMemSetChk(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeMemCpyChk(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeMemMoveChk(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeMemSetChk(CallInst *CI, IRBuilderBase &B);
 
   /// Str/Stp cpy are similar enough to be handled in the same functions.
-  Value *optimizeStrpCpyChk(CallInst *CI, IRBuilder<> &B, LibFunc Func);
-  Value *optimizeStrpNCpyChk(CallInst *CI, IRBuilder<> &B, LibFunc Func);
-  Value *optimizeMemCCpyChk(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeSNPrintfChk(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeSPrintfChk(CallInst *CI,IRBuilder<> &B);
-  Value *optimizeStrCatChk(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrLCat(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrNCatChk(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrLCpyChk(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeVSNPrintfChk(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeVSPrintfChk(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeStrpCpyChk(CallInst *CI, IRBuilderBase &B, LibFunc Func);
+  Value *optimizeStrpNCpyChk(CallInst *CI, IRBuilderBase &B, LibFunc Func);
+  Value *optimizeStrLenChk(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeMemCCpyChk(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeSNPrintfChk(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeSPrintfChk(CallInst *CI,IRBuilderBase &B);
+  Value *optimizeStrCatChk(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrLCat(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrNCatChk(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrLCpyChk(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeVSNPrintfChk(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeVSPrintfChk(CallInst *CI, IRBuilderBase &B);
 
   /// Checks whether the call \p CI to a fortified libcall is foldable
   /// to the non-fortified version.
@@ -132,7 +132,7 @@ private:
     eraseFromParent(I);
   }
 
-  Value *foldMallocMemset(CallInst *Memset, IRBuilder<> &B);
+  Value *foldMallocMemset(CallInst *Memset, IRBuilderBase &B);
 
 public:
   LibCallSimplifier(
@@ -150,99 +150,96 @@ public:
   /// other instructions that use the given instruction were modified
   /// and the given instruction is dead.
   /// The call must not be an indirect call.
-  Value *optimizeCall(CallInst *CI);
+  Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
 
 private:
   // String and Memory Library Call Optimizations
-  Value *optimizeStrCat(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrNCat(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrChr(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrRChr(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrCmp(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrNCmp(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrNDup(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrCpy(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStpCpy(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrNCpy(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrLen(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrPBrk(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrTo(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrSpn(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrCSpn(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrStr(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeMemChr(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeMemRChr(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeMemCmp(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeBCmp(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeMemCmpBCmpCommon(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeMemCCpy(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeMemPCpy(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeMemCpy(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeMemMove(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeMemSet(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeRealloc(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeWcslen(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeBCopy(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeStrCat(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrNCat(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrChr(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrRChr(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrCmp(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrNCmp(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrNDup(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrCpy(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStpCpy(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrNCpy(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrLen(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrPBrk(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrTo(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrSpn(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrCSpn(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrStr(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeMemChr(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeMemRChr(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeMemCmp(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeBCmp(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeMemCmpBCmpCommon(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeMemCCpy(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeMemPCpy(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeMemCpy(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeMemMove(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeMemSet(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeRealloc(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeWcslen(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeBCopy(CallInst *CI, IRBuilderBase &B);
   // Wrapper for all String/Memory Library Call Optimizations
-  Value *optimizeStringMemoryLibCall(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeStringMemoryLibCall(CallInst *CI, IRBuilderBase &B);
 
   // Math Library Optimizations
-  Value *optimizeCAbs(CallInst *CI, IRBuilder<> &B);
-  Value *optimizePow(CallInst *CI, IRBuilder<> &B);
-  Value *replacePowWithExp(CallInst *Pow, IRBuilder<> &B);
-  Value *replacePowWithSqrt(CallInst *Pow, IRBuilder<> &B);
-  Value *optimizeExp2(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeFMinFMax(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeLog(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeSqrt(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeSinCosPi(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeTan(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeCAbs(CallInst *CI, IRBuilderBase &B);
+  Value *optimizePow(CallInst *CI, IRBuilderBase &B);
+  Value *replacePowWithExp(CallInst *Pow, IRBuilderBase &B);
+  Value *replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B);
+  Value *optimizeExp2(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeFMinFMax(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeLog(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeSqrt(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeSinCosPi(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeTan(CallInst *CI, IRBuilderBase &B);
   // Wrapper for all floating point library call optimizations
   Value *optimizeFloatingPointLibCall(CallInst *CI, LibFunc Func,
-                                      IRBuilder<> &B);
+                                      IRBuilderBase &B);
 
   // Integer Library Call Optimizations
-  Value *optimizeFFS(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeFls(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeAbs(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeIsDigit(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeIsAscii(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeToAscii(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeAtoi(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeStrtol(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeFFS(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeFls(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeAbs(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeIsDigit(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeIsAscii(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeToAscii(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeAtoi(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrtol(CallInst *CI, IRBuilderBase &B);
 
   // Formatting and IO Library Call Optimizations
-  Value *optimizeErrorReporting(CallInst *CI, IRBuilder<> &B,
+  Value *optimizeErrorReporting(CallInst *CI, IRBuilderBase &B,
                                 int StreamArg = -1);
-  Value *optimizePrintF(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeSPrintF(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeSnPrintF(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeFPrintF(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeFWrite(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeFRead(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeFPuts(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeFGets(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeFPutc(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeFGetc(CallInst *CI, IRBuilder<> &B);
-  Value *optimizePuts(CallInst *CI, IRBuilder<> &B);
+  Value *optimizePrintF(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeSPrintF(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeSnPrintF(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeFPrintF(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeFWrite(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeFPuts(CallInst *CI, IRBuilderBase &B);
+  Value *optimizePuts(CallInst *CI, IRBuilderBase &B);
 
   // Helper methods
-  Value *emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len, IRBuilder<> &B);
+  Value *emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len,
+                          IRBuilderBase &B);
   void classifyArgUse(Value *Val, Function *F, bool IsFloat,
                       SmallVectorImpl<CallInst *> &SinCalls,
                       SmallVectorImpl<CallInst *> &CosCalls,
                       SmallVectorImpl<CallInst *> &SinCosCalls);
-  Value *optimizePrintFString(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeSPrintFString(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeSnPrintFString(CallInst *CI, IRBuilder<> &B);
-  Value *optimizeFPrintFString(CallInst *CI, IRBuilder<> &B);
+  Value *optimizePrintFString(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeSPrintFString(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeSnPrintFString(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeFPrintFString(CallInst *CI, IRBuilderBase &B);
 
   /// hasFloatVersion - Checks if there is a float version of the specified
   /// function by checking for an existing function with name FuncName + f
   bool hasFloatVersion(StringRef FuncName);
 
   /// Shared code to optimize strlen+wcslen.
-  Value *optimizeStringLength(CallInst *CI, IRBuilder<> &B, unsigned CharSize);
+  Value *optimizeStringLength(CallInst *CI, IRBuilderBase &B, unsigned CharSize);
 };
 } // End llvm namespace
 

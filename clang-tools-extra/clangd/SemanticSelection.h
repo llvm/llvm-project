@@ -22,10 +22,13 @@ namespace clangd {
 /// Returns the list of all interesting ranges around the Position \p Pos.
 /// The interesting ranges corresponds to the AST nodes in the SelectionTree
 /// containing \p Pos.
-/// Any range in the result strictly contains all the previous ranges in the
-/// result. front() is the inner most range. back() is the outermost range.
-llvm::Expected<std::vector<Range>> getSemanticRanges(ParsedAST &AST,
-                                                     Position Pos);
+/// If pos is not in any interesting range, return [Pos, Pos).
+llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos);
+
+/// Returns a list of ranges whose contents might be collapsible in an editor.
+/// This should include large scopes, preprocessor blocks etc.
+llvm::Expected<std::vector<FoldingRange>> getFoldingRanges(ParsedAST &AST);
+
 } // namespace clangd
 } // namespace clang
 

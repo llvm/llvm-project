@@ -20,6 +20,32 @@ specific class of bugs on its own.  Instead, it provides a generic
 dynamic data flow analysis framework to be used by clients to help
 detect application-specific issues within their own code.
 
+How to build libc++ with DFSan
+==============================
+
+DFSan requires either all of your code to be instrumented or for uninstrumented
+functions to be listed as ``uninstrumented`` in the `ABI list`_.
+
+If you'd like to have instrumented libc++ functions, then you need to build it
+with DFSan instrumentation from source. Here is an example of how to build
+libc++ and the libc++ ABI with data flow sanitizer instrumentation.
+
+.. code-block:: console
+
+  cd libcxx-build
+
+  # An example using ninja
+  cmake -GNinja path/to/llvm-project/llvm \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DLLVM_USE_SANITIZER="DataFlow" \
+    -DLLVM_ENABLE_LIBCXX=ON \
+    -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi"
+
+  ninja cxx cxxabi
+
+Note: Ensure you are building with a sufficiently new version of Clang.
+
 Usage
 =====
 
@@ -32,6 +58,8 @@ the propagation of tags through the program according to its data flow.
 The APIs are defined in the header file ``sanitizer/dfsan_interface.h``.
 For further information about each function, please refer to the header
 file.
+
+.. _ABI list:
 
 ABI List
 --------

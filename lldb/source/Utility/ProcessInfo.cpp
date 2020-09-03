@@ -1,4 +1,4 @@
-//===-- ProcessInfo.cpp -----------------------------------------*- C++ -*-===//
+//===-- ProcessInfo.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -76,7 +76,7 @@ void ProcessInfo::SetExecutableFile(const FileSpec &exe_file,
 
 llvm::StringRef ProcessInfo::GetArg0() const { return m_arg0; }
 
-void ProcessInfo::SetArg0(llvm::StringRef arg) { m_arg0 = arg; }
+void ProcessInfo::SetArg0(llvm::StringRef arg) { m_arg0 = std::string(arg); }
 
 void ProcessInfo::SetArguments(char const **argv,
                                bool first_arg_is_executable) {
@@ -337,6 +337,7 @@ void llvm::yaml::MappingTraits<ProcessInstanceInfo>::mapping(
     IO &io, ProcessInstanceInfo &Info) {
   io.mapRequired("executable", Info.m_executable);
   io.mapRequired("arg0", Info.m_arg0);
+  io.mapRequired("args", Info.m_arguments);
   io.mapRequired("arch", Info.m_arch);
   io.mapRequired("uid", Info.m_uid);
   io.mapRequired("gid", Info.m_gid);

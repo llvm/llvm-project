@@ -1,11 +1,11 @@
 // clang-format off
-// REQUIRES: lld
+// REQUIRES: lld, x86
 
 // Test that we can set display source of functions.
-// RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s 
+// RUN: %clang_cl --target=x86_64-windows-msvc -Od -Z7 -c /Fo%t.obj -- %s
+// RUN: lld-link -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/source-list.lldbinit | FileCheck %s
-
 
 
 // Some context lines before

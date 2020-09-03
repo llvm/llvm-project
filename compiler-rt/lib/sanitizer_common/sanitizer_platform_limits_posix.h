@@ -47,6 +47,7 @@ extern unsigned struct_timezone_sz;
 extern unsigned struct_tms_sz;
 extern unsigned struct_itimerspec_sz;
 extern unsigned struct_sigevent_sz;
+extern unsigned struct_stack_t_sz;
 extern unsigned struct_sched_param_sz;
 extern unsigned struct_statfs64_sz;
 extern unsigned struct_regex_sz;
@@ -702,6 +703,12 @@ struct __sanitizer_dl_phdr_info {
 
 extern unsigned struct_ElfW_Phdr_sz;
 #endif
+
+struct __sanitizer_protoent {
+  char *p_name;
+  char **p_aliases;
+  int p_proto;
+};
 
 struct __sanitizer_addrinfo {
   int ai_flags;

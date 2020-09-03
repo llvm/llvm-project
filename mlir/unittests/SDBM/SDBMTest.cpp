@@ -1,6 +1,6 @@
 //===- SDBMTest.cpp - SDBM expression unit tests --------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -16,6 +16,9 @@
 #include "llvm/ADT/DenseSet.h"
 
 using namespace mlir;
+
+/// Load the SDBM dialect.
+static DialectRegistration<SDBMDialect> SDBMRegistration;
 
 static MLIRContext *ctx() {
   static thread_local MLIRContext context;

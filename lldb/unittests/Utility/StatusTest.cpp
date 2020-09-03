@@ -1,4 +1,4 @@
-//===-- StatusTest.cpp ------------------------------------------*- C++ -*-===//
+//===-- StatusTest.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,6 +39,15 @@ TEST(StatusTest, ErrorConstructor) {
 
   foo = llvm::Error::success();
   EXPECT_TRUE(foo.Success());
+}
+
+TEST(StatusTest, ErrorCodeConstructor) {
+  EXPECT_TRUE(Status(std::error_code()).Success());
+
+  Status eagain = std::error_code(EAGAIN, std::generic_category());
+  EXPECT_TRUE(eagain.Fail());
+  EXPECT_EQ(eErrorTypePOSIX, eagain.GetType());
+  EXPECT_EQ(Status::ValueType(EAGAIN), eagain.GetError());
 }
 
 TEST(StatusTest, ErrorConversion) {

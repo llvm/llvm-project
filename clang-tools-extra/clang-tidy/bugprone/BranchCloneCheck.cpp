@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/CloneDetection.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/Support/Casting.h"
 
 using namespace clang;
@@ -59,7 +60,8 @@ namespace bugprone {
 
 void BranchCloneCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      ifStmt(stmt().bind("if"),
+      ifStmt(unless(allOf(isConstexpr(), isInTemplateInstantiation())),
+             stmt().bind("if"),
              hasParent(stmt(unless(ifStmt(hasElse(equalsBoundNode("if")))))),
              hasElse(stmt().bind("else"))),
       this);
@@ -129,7 +131,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
         KnownAsClone[j] = true;
 
         if (NumCopies == 2) {
-          // We report the first occurence only when we find the second one.
+          // We report the first occurrence only when we find the second one.
           diag(Branches[i]->getBeginLoc(),
                "repeated branch in conditional chain");
           SourceLocation End =
@@ -203,7 +205,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
 
         SourceLocation EndLoc = (EndCurrent - 1)->back()->getEndLoc();
         // If the case statement is generated from a macro, it's SourceLocation
-        // may be invalid, resuling in an assertation failure down the line.
+        // may be invalid, resulting in an assertion failure down the line.
         // While not optimal, try the begin location in this case, it's still
         // better then nothing.
         if (EndLoc.isInvalid())

@@ -1,15 +1,7 @@
 // REQUIRES: native-run
 // UNSUPPORTED: arm, aarch64
-// RUN: %clang_builtins %s %librt -o %t && %run_nomprotect %t
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_clear_cache
-//===-- clear_cache_test.c - Test clear_cache -----------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 
 #include <stdio.h>
 #include <string.h>
@@ -30,28 +22,56 @@ typedef int (*pfunc)(void);
 static int func1() { return 1; }
 static int func2() { return 2; }
 
-void *__attribute__((noinline))
+void __attribute__((noinline))
 memcpy_f(void *dst, const void *src, size_t n) {
 // ARM and MIPS nartually align functions, but use the LSB for ISA selection
 // (THUMB, MIPS16/uMIPS respectively).  Ensure that the ISA bit is ignored in
 // the memcpy
 #if defined(__arm__) || defined(__mips__)
-  return (void *)((uintptr_t)memcpy(dst, (void *)((uintptr_t)src & ~1), n) |
-                  ((uintptr_t)src & 1));
+  memcpy(dst, (void *)((uintptr_t)src & ~1), n);
 #else
-  return memcpy(dst, (void *)((uintptr_t)src), n);
+  memcpy(dst, (void *)((uintptr_t)src), n);
+#endif
+}
+
+// Realign the 'dst' pointer as if it has been returned by memcpy() above.
+// We need to split it because we're using two mappings for the same area.
+void *__attribute__((noinline))
+realign_f(void *dst, const void *src, size_t n) {
+#if defined(__arm__) || defined(__mips__)
+  return (void *)((uintptr_t)dst | ((uintptr_t)src & 1));
+#else
+  return dst;
 #endif
 }
 
 int main()
 {
     const int kSize = 128;
-#if !defined(_WIN32)
+#if defined(__NetBSD__)
+    // we need to create separate RW and RX mappings to satisfy MPROTECT
+    uint8_t *write_buffer = mmap(0, kSize,
+                                 PROT_MPROTECT(PROT_READ | PROT_WRITE |
+                                               PROT_EXEC),
+                                 MAP_ANON | MAP_PRIVATE, -1, 0);
+    if (write_buffer == MAP_FAILED)
+      return 1;
+    uint8_t *execution_buffer = mremap(write_buffer, kSize, NULL, kSize,
+                                       MAP_REMAPDUP);
+    if (execution_buffer == MAP_FAILED)
+      return 1;
+
+    if (mprotect(write_buffer, kSize, PROT_READ | PROT_WRITE) == -1)
+      return 1;
+    if (mprotect(execution_buffer, kSize, PROT_READ | PROT_EXEC) == -1)
+      return 1;
+#elif !defined(_WIN32)
     uint8_t *execution_buffer = mmap(0, kSize,
                                      PROT_READ | PROT_WRITE | PROT_EXEC,
                                      MAP_ANON | MAP_PRIVATE, -1, 0);
     if (execution_buffer == MAP_FAILED)
       return 1;
+    uint8_t *write_buffer = execution_buffer;
 #else
     HANDLE mapping = CreateFileMapping(INVALID_HANDLE_VALUE, NULL,
                                        PAGE_EXECUTE_READWRITE, 0, kSize, NULL);
@@ -62,16 +82,19 @@ int main()
         mapping, FILE_MAP_ALL_ACCESS | FILE_MAP_EXECUTE, 0, 0, 0);
     if (execution_buffer == NULL)
         return 1;
+    uint8_t *write_buffer = execution_buffer;
 #endif
 
     // verify you can copy and execute a function
-    pfunc f1 = (pfunc)memcpy_f(execution_buffer, func1, kSize);
+    memcpy_f(write_buffer, func1, kSize);
+    pfunc f1 = (pfunc)realign_f(execution_buffer, func1, kSize);
     __clear_cache(execution_buffer, execution_buffer + kSize);
     if ((*f1)() != 1)
         return 1;
 
     // verify you can overwrite a function with another
-    pfunc f2 = (pfunc)memcpy_f(execution_buffer, func2, kSize);
+    memcpy_f(write_buffer, func2, kSize);
+    pfunc f2 = (pfunc)realign_f(execution_buffer, func2, kSize);
     __clear_cache(execution_buffer, execution_buffer + kSize);
     if ((*f2)() != 2)
         return 1;

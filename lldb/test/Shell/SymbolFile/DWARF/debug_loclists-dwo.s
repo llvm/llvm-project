@@ -82,6 +82,11 @@ lookup_loclists:
         .quad   .Ltmp1
 .Ldebug_addr_end0:
 
+# The presence of an extra non-dwo loclists section should not confuse us.
+# .debug_info.dwo always refers to .debug_loclists.dwo
+        .section        .debug_loclists,"",@progbits
+        .quad 0xdeadbeefbaadf00d
+
         .section        .debug_loclists.dwo,"e",@progbits
         .long   .Ldebug_loclist_table_end0-.Ldebug_loclist_table_start0 # Length
 .Ldebug_loclist_table_start0:

@@ -22,10 +22,10 @@
 ; GFX9-DAG: s_mov_b32 s[[DESC3:[0-9]+]], 0xe00000
 
 ; OFFREG is offset system SGPR
-; GCN: buffer_store_dword {{v[0-9]+}}, off, s{{\[}}[[DESC0]]:[[DESC3]]], s12 offset:{{[0-9]+}} ; 4-byte Folded Spill
-; GCN: buffer_load_dword v{{[0-9]+}}, off, s{{\[}}[[DESC0]]:[[DESC3]]], s12 offset:{{[0-9]+}} ; 4-byte Folded Reload
+; GCN: buffer_store_dword {{v[0-9]+}}, off, s{{\[}}[[DESC0]]:[[DESC3]]], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; GCN: buffer_load_dword v{{[0-9]+}}, off, s{{\[}}[[DESC0]]:[[DESC3]]], 0 offset:{{[0-9]+}} ; 4-byte Folded Reload
 ; GCN: NumVgprs: 256
-; GCN: ScratchSize: 1536
+; GCN: ScratchSize: 768
 
 define amdgpu_vs void @main([9 x <4 x i32>] addrspace(4)* inreg %arg, [17 x <4 x i32>] addrspace(4)* inreg %arg1, [17 x <4 x i32>] addrspace(4)* inreg %arg2, [34 x <8 x i32>] addrspace(4)* inreg %arg3, [16 x <4 x i32>] addrspace(4)* inreg %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10) #0 {
 bb:
@@ -38,7 +38,7 @@ bb:
   %tmp16 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp15, align 16, !tbaa !0
   %tmp17 = add i32 %arg5, %arg7
   %tmp16.cast = bitcast <4 x i32> %tmp16 to <4 x i32>
-  %tmp18 = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %tmp16.cast, i32 %tmp17, i32 0, i1 false, i1 false)
+  %tmp18 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp16.cast, i32 %tmp17, i32 0, i32 0, i32 0)
   %tmp19 = extractelement <4 x float> %tmp18, i32 0
   %tmp20 = extractelement <4 x float> %tmp18, i32 1
   %tmp21 = extractelement <4 x float> %tmp18, i32 2
@@ -489,7 +489,7 @@ declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 
 declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32>, i32, i32, i1, i1) #2
+declare <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32, i32 immarg) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

@@ -1,4 +1,4 @@
-//===-- Reproducer.cpp ------------------------------------------*- C++ -*-===//
+//===-- Reproducer.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -62,7 +62,9 @@ llvm::Error Reproducer::Initialize(ReproducerMode mode,
     return Instance().SetCapture(root);
   } break;
   case ReproducerMode::Replay:
-    return Instance().SetReplay(root);
+    return Instance().SetReplay(root, /*passive*/ false);
+  case ReproducerMode::PassiveReplay:
+    return Instance().SetReplay(root, /*passive*/ true);
   case ReproducerMode::Off:
     break;
   };
@@ -127,7 +129,7 @@ llvm::Error Reproducer::SetCapture(llvm::Optional<FileSpec> root) {
   return Error::success();
 }
 
-llvm::Error Reproducer::SetReplay(llvm::Optional<FileSpec> root) {
+llvm::Error Reproducer::SetReplay(llvm::Optional<FileSpec> root, bool passive) {
   std::lock_guard<std::mutex> guard(m_mutex);
 
   if (root && m_generator)
@@ -140,7 +142,7 @@ llvm::Error Reproducer::SetReplay(llvm::Optional<FileSpec> root) {
     return Error::success();
   }
 
-  m_loader.emplace(*root);
+  m_loader.emplace(*root, passive);
   if (auto e = m_loader->LoadIndex())
     return e;
 
@@ -227,8 +229,9 @@ void Generator::AddProvidersToIndex() {
   yout << files;
 }
 
-Loader::Loader(FileSpec root)
-    : m_root(MakeAbsolute(std::move(root))), m_loaded(false) {}
+Loader::Loader(FileSpec root, bool passive)
+    : m_root(MakeAbsolute(std::move(root))), m_loaded(false),
+      m_passive_replay(passive) {}
 
 llvm::Error Loader::LoadIndex() {
   if (m_loaded)
@@ -269,39 +272,14 @@ DataRecorder::Create(const FileSpec &filename) {
   return std::move(recorder);
 }
 
-DataRecorder *CommandProvider::GetNewDataRecorder() {
-  std::size_t i = m_data_recorders.size() + 1;
-  std::string filename = (llvm::Twine(Info::name) + llvm::Twine("-") +
-                          llvm::Twine(i) + llvm::Twine(".yaml"))
-                             .str();
-  auto recorder_or_error =
-      DataRecorder::Create(GetRoot().CopyByAppendingPathComponent(filename));
-  if (!recorder_or_error) {
-    llvm::consumeError(recorder_or_error.takeError());
-    return nullptr;
-  }
-
-  m_data_recorders.push_back(std::move(*recorder_or_error));
-  return m_data_recorders.back().get();
-}
-
-void CommandProvider::Keep() {
-  std::vector<std::string> files;
-  for (auto &recorder : m_data_recorders) {
-    recorder->Stop();
-    files.push_back(recorder->GetFilename().GetPath());
-  }
-
-  FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
+llvm::Expected<std::unique_ptr<YamlRecorder>>
+YamlRecorder::Create(const FileSpec &filename) {
   std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+  auto recorder = std::make_unique<YamlRecorder>(std::move(filename), ec);
   if (ec)
-    return;
-  yaml::Output yout(os);
-  yout << files;
+    return llvm::errorCodeToError(ec);
+  return std::move(recorder);
 }
-
-void CommandProvider::Discard() { m_data_recorders.clear(); }
 
 void VersionProvider::Keep() {
   FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
@@ -321,7 +299,12 @@ void WorkingDirectoryProvider::Keep() {
   os << m_cwd << "\n";
 }
 
-void FileProvider::recordInterestingDirectory(const llvm::Twine &dir) {
+void FileProvider::RecordInterestingDirectory(const llvm::Twine &dir) {
+  if (m_collector)
+    m_collector->addFile(dir);
+}
+
+void FileProvider::RecordInterestingDirectoryRecursive(const llvm::Twine &dir) {
   if (m_collector)
     m_collector->addDirectory(dir);
 }

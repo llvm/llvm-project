@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %t2 --icf=all --eh-frame-hdr
-# RUN: llvm-objdump -s -section-headers %t2 | FileCheck %s
+# RUN: llvm-objdump -s --section-headers %t2 | FileCheck %s
 
 ## Check .eh_frame_hdr contains single FDE and no garbage data at tail.
 # CHECK: Sections:

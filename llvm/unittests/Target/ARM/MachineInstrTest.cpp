@@ -10,13 +10,365 @@
 
 using namespace llvm;
 
+TEST(MachineInstructionDoubleWidthResult, IsCorrect) {
+  using namespace ARM;
+
+  auto DoubleWidthResult = [](unsigned Opcode) {
+    switch (Opcode) {
+    default:
+      break;
+    case MVE_VMULLBp16:
+    case MVE_VMULLBp8:
+    case MVE_VMULLBs16:
+    case MVE_VMULLBs32:
+    case MVE_VMULLBs8:
+    case MVE_VMULLBu16:
+    case MVE_VMULLBu32:
+    case MVE_VMULLBu8:
+    case MVE_VMULLTp16:
+    case MVE_VMULLTp8:
+    case MVE_VMULLTs16:
+    case MVE_VMULLTs32:
+    case MVE_VMULLTs8:
+    case MVE_VMULLTu16:
+    case MVE_VMULLTu32:
+    case MVE_VMULLTu8:
+    case MVE_VQDMULL_qr_s16bh:
+    case MVE_VQDMULL_qr_s16th:
+    case MVE_VQDMULL_qr_s32bh:
+    case MVE_VQDMULL_qr_s32th:
+    case MVE_VQDMULLs16bh:
+    case MVE_VQDMULLs16th:
+    case MVE_VQDMULLs32bh:
+    case MVE_VQDMULLs32th:
+    case MVE_VMOVLs16bh:
+    case MVE_VMOVLs16th:
+    case MVE_VMOVLs8bh:
+    case MVE_VMOVLs8th:
+    case MVE_VMOVLu16bh:
+    case MVE_VMOVLu16th:
+    case MVE_VMOVLu8bh:
+    case MVE_VMOVLu8th:
+    case MVE_VSHLL_imms16bh:
+    case MVE_VSHLL_imms16th:
+    case MVE_VSHLL_imms8bh:
+    case MVE_VSHLL_imms8th:
+    case MVE_VSHLL_immu16bh:
+    case MVE_VSHLL_immu16th:
+    case MVE_VSHLL_immu8bh:
+    case MVE_VSHLL_immu8th:
+    case MVE_VSHLL_lws16bh:
+    case MVE_VSHLL_lws16th:
+    case MVE_VSHLL_lws8bh:
+    case MVE_VSHLL_lws8th:
+    case MVE_VSHLL_lwu16bh:
+    case MVE_VSHLL_lwu16th:
+    case MVE_VSHLL_lwu8bh:
+    case MVE_VSHLL_lwu8th:
+      return true;
+    }
+    return false;
+  };
+
+  LLVMInitializeARMTargetInfo();
+  LLVMInitializeARMTarget();
+  LLVMInitializeARMTargetMC();
+
+  auto TT(Triple::normalize("thumbv8.1m.main-none-none-eabi"));
+  std::string Error;
+  const Target *T = TargetRegistry::lookupTarget(TT, Error);
+  if (!T) {
+    dbgs() << Error;
+    return;
+  }
+
+  TargetOptions Options;
+  auto TM = std::unique_ptr<LLVMTargetMachine>(
+    static_cast<LLVMTargetMachine*>(
+      T->createTargetMachine(TT, "generic", "", Options, None, None,
+                             CodeGenOpt::Default)));
+  ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                  std::string(TM->getTargetFeatureString()),
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
+  const ARMBaseInstrInfo *TII = ST.getInstrInfo();
+  auto MII = TM->getMCInstrInfo();
+
+  for (unsigned i = 0; i < ARM::INSTRUCTION_LIST_END; ++i) {
+    const MCInstrDesc &Desc = TII->get(i);
+
+    uint64_t Flags = Desc.TSFlags;
+    if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
+      continue;
+
+    bool Valid = (Flags & ARMII::DoubleWidthResult) != 0;
+    ASSERT_EQ(DoubleWidthResult(i), Valid)
+              << MII->getName(i)
+              << ": mismatched expectation for tail-predicated safety\n";
+  }
+}
+
+TEST(MachineInstructionHorizontalReduction, IsCorrect) {
+  using namespace ARM;
+
+  auto HorizontalReduction = [](unsigned Opcode) {
+    switch (Opcode) {
+    default:
+      break;
+    case MVE_VABAVs16:
+    case MVE_VABAVs32:
+    case MVE_VABAVs8:
+    case MVE_VABAVu16:
+    case MVE_VABAVu32:
+    case MVE_VABAVu8:
+    case MVE_VADDLVs32acc:
+    case MVE_VADDLVs32no_acc:
+    case MVE_VADDLVu32acc:
+    case MVE_VADDLVu32no_acc:
+    case MVE_VADDVs16acc:
+    case MVE_VADDVs16no_acc:
+    case MVE_VADDVs32acc:
+    case MVE_VADDVs32no_acc:
+    case MVE_VADDVs8acc:
+    case MVE_VADDVs8no_acc:
+    case MVE_VADDVu16acc:
+    case MVE_VADDVu16no_acc:
+    case MVE_VADDVu32acc:
+    case MVE_VADDVu32no_acc:
+    case MVE_VADDVu8acc:
+    case MVE_VADDVu8no_acc:
+    case MVE_VMAXAVs16:
+    case MVE_VMAXAVs32:
+    case MVE_VMAXAVs8:
+    case MVE_VMAXNMAVf16:
+    case MVE_VMAXNMAVf32:
+    case MVE_VMAXNMVf16:
+    case MVE_VMAXNMVf32:
+    case MVE_VMAXVs16:
+    case MVE_VMAXVs32:
+    case MVE_VMAXVs8:
+    case MVE_VMAXVu16:
+    case MVE_VMAXVu32:
+    case MVE_VMAXVu8:
+    case MVE_VMINAVs16:
+    case MVE_VMINAVs32:
+    case MVE_VMINAVs8:
+    case MVE_VMINNMAVf16:
+    case MVE_VMINNMAVf32:
+    case MVE_VMINNMVf16:
+    case MVE_VMINNMVf32:
+    case MVE_VMINVs16:
+    case MVE_VMINVs32:
+    case MVE_VMINVs8:
+    case MVE_VMINVu16:
+    case MVE_VMINVu32:
+    case MVE_VMINVu8:
+    case MVE_VMLADAVas16:
+    case MVE_VMLADAVas32:
+    case MVE_VMLADAVas8:
+    case MVE_VMLADAVau16:
+    case MVE_VMLADAVau32:
+    case MVE_VMLADAVau8:
+    case MVE_VMLADAVaxs16:
+    case MVE_VMLADAVaxs32:
+    case MVE_VMLADAVaxs8:
+    case MVE_VMLADAVs16:
+    case MVE_VMLADAVs32:
+    case MVE_VMLADAVs8:
+    case MVE_VMLADAVu16:
+    case MVE_VMLADAVu32:
+    case MVE_VMLADAVu8:
+    case MVE_VMLADAVxs16:
+    case MVE_VMLADAVxs32:
+    case MVE_VMLADAVxs8:
+    case MVE_VMLALDAVas16:
+    case MVE_VMLALDAVas32:
+    case MVE_VMLALDAVau16:
+    case MVE_VMLALDAVau32:
+    case MVE_VMLALDAVaxs16:
+    case MVE_VMLALDAVaxs32:
+    case MVE_VMLALDAVs16:
+    case MVE_VMLALDAVs32:
+    case MVE_VMLALDAVu16:
+    case MVE_VMLALDAVu32:
+    case MVE_VMLALDAVxs16:
+    case MVE_VMLALDAVxs32:
+    case MVE_VMLSDAVas16:
+    case MVE_VMLSDAVas32:
+    case MVE_VMLSDAVas8:
+    case MVE_VMLSDAVaxs16:
+    case MVE_VMLSDAVaxs32:
+    case MVE_VMLSDAVaxs8:
+    case MVE_VMLSDAVs16:
+    case MVE_VMLSDAVs32:
+    case MVE_VMLSDAVs8:
+    case MVE_VMLSDAVxs16:
+    case MVE_VMLSDAVxs32:
+    case MVE_VMLSDAVxs8:
+    case MVE_VMLSLDAVas16:
+    case MVE_VMLSLDAVas32:
+    case MVE_VMLSLDAVaxs16:
+    case MVE_VMLSLDAVaxs32:
+    case MVE_VMLSLDAVs16:
+    case MVE_VMLSLDAVs32:
+    case MVE_VMLSLDAVxs16:
+    case MVE_VMLSLDAVxs32:
+    case MVE_VRMLALDAVHas32:
+    case MVE_VRMLALDAVHau32:
+    case MVE_VRMLALDAVHaxs32:
+    case MVE_VRMLALDAVHs32:
+    case MVE_VRMLALDAVHu32:
+    case MVE_VRMLALDAVHxs32:
+    case MVE_VRMLSLDAVHas32:
+    case MVE_VRMLSLDAVHaxs32:
+    case MVE_VRMLSLDAVHs32:
+    case MVE_VRMLSLDAVHxs32:
+      return true;
+    }
+    return false;
+  };
+
+  LLVMInitializeARMTargetInfo();
+  LLVMInitializeARMTarget();
+  LLVMInitializeARMTargetMC();
+
+  auto TT(Triple::normalize("thumbv8.1m.main-none-none-eabi"));
+  std::string Error;
+  const Target *T = TargetRegistry::lookupTarget(TT, Error);
+  if (!T) {
+    dbgs() << Error;
+    return;
+  }
+
+  TargetOptions Options;
+  auto TM = std::unique_ptr<LLVMTargetMachine>(
+    static_cast<LLVMTargetMachine*>(
+      T->createTargetMachine(TT, "generic", "", Options, None, None,
+                             CodeGenOpt::Default)));
+  ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                  std::string(TM->getTargetFeatureString()),
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
+  const ARMBaseInstrInfo *TII = ST.getInstrInfo();
+  auto MII = TM->getMCInstrInfo();
+
+  for (unsigned i = 0; i < ARM::INSTRUCTION_LIST_END; ++i) {
+    const MCInstrDesc &Desc = TII->get(i);
+
+    uint64_t Flags = Desc.TSFlags;
+    if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
+      continue;
+    bool Valid = (Flags & ARMII::HorizontalReduction) != 0;
+    ASSERT_EQ(HorizontalReduction(i), Valid)
+              << MII->getName(i)
+              << ": mismatched expectation for tail-predicated safety\n";
+  }
+}
+
+TEST(MachineInstructionRetainsPreviousHalfElement, IsCorrect) {
+  using namespace ARM;
+
+  auto RetainsPreviousHalfElement = [](unsigned Opcode) {
+    switch (Opcode) {
+    default:
+      break;
+    case MVE_VMOVNi16bh:
+    case MVE_VMOVNi16th:
+    case MVE_VMOVNi32bh:
+    case MVE_VMOVNi32th:
+    case MVE_VQMOVNs16bh:
+    case MVE_VQMOVNs16th:
+    case MVE_VQMOVNs32bh:
+    case MVE_VQMOVNs32th:
+    case MVE_VQMOVNu16bh:
+    case MVE_VQMOVNu16th:
+    case MVE_VQMOVNu32bh:
+    case MVE_VQMOVNu32th:
+    case MVE_VQMOVUNs16bh:
+    case MVE_VQMOVUNs16th:
+    case MVE_VQMOVUNs32bh:
+    case MVE_VQMOVUNs32th:
+    case MVE_VQRSHRNbhs16:
+    case MVE_VQRSHRNbhs32:
+    case MVE_VQRSHRNbhu16:
+    case MVE_VQRSHRNbhu32:
+    case MVE_VQRSHRNths16:
+    case MVE_VQRSHRNths32:
+    case MVE_VQRSHRNthu16:
+    case MVE_VQRSHRNthu32:
+    case MVE_VQRSHRUNs16bh:
+    case MVE_VQRSHRUNs16th:
+    case MVE_VQRSHRUNs32bh:
+    case MVE_VQRSHRUNs32th:
+    case MVE_VQSHRNbhs16:
+    case MVE_VQSHRNbhs32:
+    case MVE_VQSHRNbhu16:
+    case MVE_VQSHRNbhu32:
+    case MVE_VQSHRNths16:
+    case MVE_VQSHRNths32:
+    case MVE_VQSHRNthu16:
+    case MVE_VQSHRNthu32:
+    case MVE_VQSHRUNs16bh:
+    case MVE_VQSHRUNs16th:
+    case MVE_VQSHRUNs32bh:
+    case MVE_VQSHRUNs32th:
+    case MVE_VRSHRNi16bh:
+    case MVE_VRSHRNi16th:
+    case MVE_VRSHRNi32bh:
+    case MVE_VRSHRNi32th:
+    case MVE_VSHRNi16bh:
+    case MVE_VSHRNi16th:
+    case MVE_VSHRNi32bh:
+    case MVE_VSHRNi32th:
+    case MVE_VCVTf16f32bh:
+    case MVE_VCVTf16f32th:
+    case MVE_VCVTf32f16bh:
+    case MVE_VCVTf32f16th:
+      return true;
+    }
+    return false;
+  };
+
+  LLVMInitializeARMTargetInfo();
+  LLVMInitializeARMTarget();
+  LLVMInitializeARMTargetMC();
+
+  auto TT(Triple::normalize("thumbv8.1m.main-none-none-eabi"));
+  std::string Error;
+  const Target *T = TargetRegistry::lookupTarget(TT, Error);
+  if (!T) {
+    dbgs() << Error;
+    return;
+  }
+
+  TargetOptions Options;
+  auto TM = std::unique_ptr<LLVMTargetMachine>(
+    static_cast<LLVMTargetMachine*>(
+      T->createTargetMachine(TT, "generic", "", Options, None, None,
+                             CodeGenOpt::Default)));
+  ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                  std::string(TM->getTargetFeatureString()),
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
+  const ARMBaseInstrInfo *TII = ST.getInstrInfo();
+  auto MII = TM->getMCInstrInfo();
+
+  for (unsigned i = 0; i < ARM::INSTRUCTION_LIST_END; ++i) {
+    const MCInstrDesc &Desc = TII->get(i);
+
+    uint64_t Flags = Desc.TSFlags;
+    if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
+      continue;
+
+    bool Valid = (Flags & ARMII::RetainsPreviousHalfElement) != 0;
+    ASSERT_EQ(RetainsPreviousHalfElement(i), Valid)
+              << MII->getName(i)
+              << ": mismatched expectation for tail-predicated safety\n";
+  }
+}
 // Test for instructions that aren't immediately obviously valid within a
 // tail-predicated loop. This should be marked up in their tablegen
 // descriptions. Currently we, conservatively, disallow:
 // - cross beat carries.
-// - narrowing of results.
 // - complex operations.
-// - horizontal operations.
+// - horizontal operations with exchange.
 // - byte swapping.
 // - interleaved memory instructions.
 // TODO: Add to this list once we can handle them safely.
@@ -55,6 +407,18 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VADD_qr_i16:
     case MVE_VADD_qr_i32:
     case MVE_VADD_qr_i8:
+    case MVE_VADDVs16acc:
+    case MVE_VADDVs16no_acc:
+    case MVE_VADDVs32acc:
+    case MVE_VADDVs32no_acc:
+    case MVE_VADDVs8acc:
+    case MVE_VADDVs8no_acc:
+    case MVE_VADDVu16acc:
+    case MVE_VADDVu16no_acc:
+    case MVE_VADDVu32acc:
+    case MVE_VADDVu32no_acc:
+    case MVE_VADDVu8acc:
+    case MVE_VADDVu8no_acc:
     case MVE_VADDf16:
     case MVE_VADDf32:
     case MVE_VADDi16:
@@ -62,12 +426,8 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VADDi8:
     case MVE_VAND:
     case MVE_VBIC:
-    case MVE_VBICIZ0v4i32:
-    case MVE_VBICIZ0v8i16:
-    case MVE_VBICIZ16v4i32:
-    case MVE_VBICIZ24v4i32:
-    case MVE_VBICIZ8v4i32:
-    case MVE_VBICIZ8v8i16:
+    case MVE_VBICimmi16:
+    case MVE_VBICimmi32:
     case MVE_VBRSR16:
     case MVE_VBRSR32:
     case MVE_VBRSR8:
@@ -149,6 +509,64 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VFMA_qr_Sf32:
     case MVE_VFMA_qr_f16:
     case MVE_VFMA_qr_f32:
+    case MVE_VFMAf16:
+    case MVE_VFMAf32:
+    case MVE_VFMSf16:
+    case MVE_VFMSf32:
+    case MVE_VMAXAs16:
+    case MVE_VMAXAs32:
+    case MVE_VMAXAs8:
+    case MVE_VMAXs16:
+    case MVE_VMAXs32:
+    case MVE_VMAXs8:
+    case MVE_VMAXu16:
+    case MVE_VMAXu32:
+    case MVE_VMAXu8:
+    case MVE_VMINAs16:
+    case MVE_VMINAs32:
+    case MVE_VMINAs8:
+    case MVE_VMINs16:
+    case MVE_VMINs32:
+    case MVE_VMINs8:
+    case MVE_VMINu16:
+    case MVE_VMINu32:
+    case MVE_VMINu8:
+    case MVE_VMLADAVas16:
+    case MVE_VMLADAVas32:
+    case MVE_VMLADAVas8:
+    case MVE_VMLADAVau16:
+    case MVE_VMLADAVau32:
+    case MVE_VMLADAVau8:
+    case MVE_VMLADAVs16:
+    case MVE_VMLADAVs32:
+    case MVE_VMLADAVs8:
+    case MVE_VMLADAVu16:
+    case MVE_VMLADAVu32:
+    case MVE_VMLADAVu8:
+    case MVE_VMLALDAVs16:
+    case MVE_VMLALDAVs32:
+    case MVE_VMLALDAVu16:
+    case MVE_VMLALDAVu32:
+    case MVE_VMLALDAVas16:
+    case MVE_VMLALDAVas32:
+    case MVE_VMLALDAVau16:
+    case MVE_VMLALDAVau32:
+    case MVE_VMLSDAVas16:
+    case MVE_VMLSDAVas32:
+    case MVE_VMLSDAVas8:
+    case MVE_VMLSDAVs16:
+    case MVE_VMLSDAVs32:
+    case MVE_VMLSDAVs8:
+    case MVE_VMLSLDAVas16:
+    case MVE_VMLSLDAVas32:
+    case MVE_VMLSLDAVs16:
+    case MVE_VMLSLDAVs32:
+    case MVE_VRMLALDAVHas32:
+    case MVE_VRMLALDAVHau32:
+    case MVE_VRMLALDAVHs32:
+    case MVE_VRMLALDAVHu32:
+    case MVE_VRMLSLDAVHas32:
+    case MVE_VRMLSLDAVHs32:
     case MVE_VMLAS_qr_s16:
     case MVE_VMLAS_qr_s32:
     case MVE_VMLAS_qr_s8:
@@ -242,6 +660,10 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VMOVimmi32:	
     case MVE_VMOVimmi64:
     case MVE_VMOVimmi8:	
+    case MVE_VMOVNi16bh:
+    case MVE_VMOVNi16th:
+    case MVE_VMOVNi32bh:
+    case MVE_VMOVNi32th:
     case MVE_VMULLBp16:
     case MVE_VMULLBp8:
     case MVE_VMULLBs16:
@@ -278,14 +700,8 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VNEGs8:
     case MVE_VORN:
     case MVE_VORR:
-    case MVE_VORRIZ0v4i32:
-    case MVE_VORRIZ0v8i16:
-    case MVE_VORRIZ16v4i32:
-    case MVE_VORRIZ24v4i32:
-    case MVE_VORRIZ8v4i32:
-    case MVE_VORRIZ8v8i16:
-    case MVE_VPNOT:
-    case MVE_VPSEL:
+    case MVE_VORRimmi16:
+    case MVE_VORRimmi32:
     case MVE_VPST:	
     case MVE_VQABSs16:
     case MVE_VQABSs32:
@@ -313,6 +729,18 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VQNEGs16:
     case MVE_VQNEGs32:
     case MVE_VQNEGs8:
+    case MVE_VQMOVNs16bh:
+    case MVE_VQMOVNs16th:
+    case MVE_VQMOVNs32bh:
+    case MVE_VQMOVNs32th:
+    case MVE_VQMOVNu16bh:
+    case MVE_VQMOVNu16th:
+    case MVE_VQMOVNu32bh:
+    case MVE_VQMOVNu32th:
+    case MVE_VQMOVUNs16bh:
+    case MVE_VQMOVUNs16th:
+    case MVE_VQMOVUNs32bh:
+    case MVE_VQMOVUNs32th:
     case MVE_VQRSHL_by_vecs16:
     case MVE_VQRSHL_by_vecs32:
     case MVE_VQRSHL_by_vecs8:
@@ -346,6 +774,30 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VQSHL_qru16:
     case MVE_VQSHL_qru32:
     case MVE_VQSHL_qru8:
+    case MVE_VQRSHRNbhs16:
+    case MVE_VQRSHRNbhs32:
+    case MVE_VQRSHRNbhu16:
+    case MVE_VQRSHRNbhu32:
+    case MVE_VQRSHRNths16:
+    case MVE_VQRSHRNths32:
+    case MVE_VQRSHRNthu16:
+    case MVE_VQRSHRNthu32:
+    case MVE_VQRSHRUNs16bh:
+    case MVE_VQRSHRUNs16th:
+    case MVE_VQRSHRUNs32bh:
+    case MVE_VQRSHRUNs32th:
+    case MVE_VQSHRNbhs16:
+    case MVE_VQSHRNbhs32:
+    case MVE_VQSHRNbhu16:
+    case MVE_VQSHRNbhu32:
+    case MVE_VQSHRNths16:
+    case MVE_VQSHRNths32:
+    case MVE_VQSHRNthu16:
+    case MVE_VQSHRNthu32:
+    case MVE_VQSHRUNs16bh:
+    case MVE_VQSHRUNs16th:
+    case MVE_VQSHRUNs32bh:
+    case MVE_VQSHRUNs32th:
     case MVE_VQSUB_qr_s16:
     case MVE_VQSUB_qr_s32:
     case MVE_VQSUB_qr_s8:
@@ -394,6 +846,10 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VRSHR_immu16:
     case MVE_VRSHR_immu32:
     case MVE_VRSHR_immu8:
+    case MVE_VRSHRNi16bh:
+    case MVE_VRSHRNi16th:
+    case MVE_VRSHRNi32bh:
+    case MVE_VRSHRNi32th:
     case MVE_VSHL_by_vecs16:
     case MVE_VSHL_by_vecs32:
     case MVE_VSHL_by_vecs8:
@@ -415,6 +871,10 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VSHR_immu16:
     case MVE_VSHR_immu32:
     case MVE_VSHR_immu8:
+    case MVE_VSHRNi16bh:
+    case MVE_VSHRNi16th:
+    case MVE_VSHRNi32bh:
+    case MVE_VSHRNi32th:
     case MVE_VSLIimm16:
     case MVE_VSLIimm32:
     case MVE_VSLIimm8:
@@ -472,7 +932,7 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
   LLVMInitializeARMTarget();
   LLVMInitializeARMTargetMC();
 
-  auto TT(Triple::normalize("thumbv8.1m.main-arm-none-eabi"));
+  auto TT(Triple::normalize("thumbv8.1m.main-none-none-eabi"));
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
@@ -485,9 +945,9 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     static_cast<LLVMTargetMachine*>(
       T->createTargetMachine(TT, "generic", "", Options, None, None,
                              CodeGenOpt::Default)));
-  ARMSubtarget ST(TM->getTargetTriple(), TM->getTargetCPU(),
-                  TM->getTargetFeatureString(),
-                  *static_cast<const ARMBaseTargetMachine*>(TM.get()), false);
+  ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                  std::string(TM->getTargetFeatureString()),
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
   const ARMBaseInstrInfo *TII = ST.getInstrInfo();
   auto MII = TM->getMCInstrInfo();
 
@@ -507,5 +967,149 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
                 << ": mismatched expectation for tail-predicated safety\n";
       break;
     }
+  }
+}
+
+TEST(MachineInstr, HasSideEffects) {
+  using namespace ARM;
+  std::set<unsigned> UnpredictableOpcodes = {
+      // MVE Instructions
+      MVE_VCTP8,
+      MVE_VCTP16,
+      MVE_VCTP32,
+      MVE_VCTP64,
+      MVE_VPST,
+      MVE_VPTv16i8,
+      MVE_VPTv8i16,
+      MVE_VPTv4i32,
+      MVE_VPTv16i8r,
+      MVE_VPTv8i16r,
+      MVE_VPTv4i32r,
+      MVE_VPTv16s8,
+      MVE_VPTv8s16,
+      MVE_VPTv4s32,
+      MVE_VPTv16s8r,
+      MVE_VPTv8s16r,
+      MVE_VPTv4s32r,
+      MVE_VPTv16u8,
+      MVE_VPTv8u16,
+      MVE_VPTv4u32,
+      MVE_VPTv16u8r,
+      MVE_VPTv8u16r,
+      MVE_VPTv4u32r,
+      MVE_VPTv8f16,
+      MVE_VPTv4f32,
+      MVE_VPTv8f16r,
+      MVE_VPTv4f32r,
+      MVE_VADC,
+      MVE_VADCI,
+      MVE_VSBC,
+      MVE_VSBCI,
+      MVE_VSHLC,
+      // FP Instructions
+      FLDMXIA,
+      FLDMXDB_UPD,
+      FLDMXIA_UPD,
+      FSTMXDB_UPD,
+      FSTMXIA,
+      FSTMXIA_UPD,
+      VLDR_FPCXTNS_off,
+      VLDR_FPCXTNS_off,
+      VLDR_FPCXTNS_post,
+      VLDR_FPCXTNS_pre,
+      VLDR_FPCXTS_off,
+      VLDR_FPCXTS_post,
+      VLDR_FPCXTS_pre,
+      VLDR_FPSCR_NZCVQC_off,
+      VLDR_FPSCR_NZCVQC_post,
+      VLDR_FPSCR_NZCVQC_pre,
+      VLDR_FPSCR_off,
+      VLDR_FPSCR_post,
+      VLDR_FPSCR_pre,
+      VLDR_P0_off,
+      VLDR_P0_post,
+      VLDR_P0_pre,
+      VLDR_VPR_off,
+      VLDR_VPR_post,
+      VLDR_VPR_pre,
+      VLLDM,
+      VLSTM,
+      VMRS,
+      VMRS_FPCXTNS,
+      VMRS_FPCXTS,
+      VMRS_FPEXC,
+      VMRS_FPINST,
+      VMRS_FPINST2,
+      VMRS_FPSCR_NZCVQC,
+      VMRS_FPSID,
+      VMRS_MVFR0,
+      VMRS_MVFR1,
+      VMRS_MVFR2,
+      VMRS_P0,
+      VMRS_VPR,
+      VMSR,
+      VMSR_FPCXTNS,
+      VMSR_FPCXTS,
+      VMSR_FPEXC,
+      VMSR_FPINST,
+      VMSR_FPINST2,
+      VMSR_FPSCR_NZCVQC,
+      VMSR_FPSID,
+      VMSR_P0,
+      VMSR_VPR,
+      VSCCLRMD,
+      VSCCLRMS,
+      VSTR_FPCXTNS_off,
+      VSTR_FPCXTNS_post,
+      VSTR_FPCXTNS_pre,
+      VSTR_FPCXTS_off,
+      VSTR_FPCXTS_post,
+      VSTR_FPCXTS_pre,
+      VSTR_FPSCR_NZCVQC_off,
+      VSTR_FPSCR_NZCVQC_post,
+      VSTR_FPSCR_NZCVQC_pre,
+      VSTR_FPSCR_off,
+      VSTR_FPSCR_post,
+      VSTR_FPSCR_pre,
+      VSTR_P0_off,
+      VSTR_P0_post,
+      VSTR_P0_pre,
+      VSTR_VPR_off,
+      VSTR_VPR_post,
+      VSTR_VPR_pre,
+  };
+
+  LLVMInitializeARMTargetInfo();
+  LLVMInitializeARMTarget();
+  LLVMInitializeARMTargetMC();
+
+  auto TT(Triple::normalize("thumbv8.1m.main-none-none-eabi"));
+  std::string Error;
+  const Target *T = TargetRegistry::lookupTarget(TT, Error);
+  if (!T) {
+    dbgs() << Error;
+    return;
+  }
+
+  TargetOptions Options;
+  auto TM = std::unique_ptr<LLVMTargetMachine>(
+      static_cast<LLVMTargetMachine *>(T->createTargetMachine(
+          TT, "generic", "", Options, None, None, CodeGenOpt::Default)));
+  ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                  std::string(TM->getTargetFeatureString()),
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
+  const ARMBaseInstrInfo *TII = ST.getInstrInfo();
+  auto MII = TM->getMCInstrInfo();
+
+  for (unsigned Op = 0; Op < ARM::INSTRUCTION_LIST_END; ++Op) {
+    const MCInstrDesc &Desc = TII->get(Op);
+    if ((Desc.TSFlags & ARMII::DomainMask) != ARMII::DomainMVE &&
+        (Desc.TSFlags & ARMII::DomainMask) != ARMII::DomainVFP)
+      continue;
+    if (UnpredictableOpcodes.count(Op))
+      continue;
+
+    ASSERT_FALSE(Desc.hasUnmodeledSideEffects())
+        << MII->getName(Op) << " has unexpected side effects";
   }
 }

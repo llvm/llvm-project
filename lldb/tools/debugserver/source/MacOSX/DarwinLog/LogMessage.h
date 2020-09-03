@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LogMessage_h
-#define LogMessage_h
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGMESSAGE_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGMESSAGE_H
 
 #include <string>
 
@@ -36,4 +36,4 @@ protected:
   LogMessage();
 };
 
-#endif /* LogMessage_h */
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_LOGMESSAGE_H

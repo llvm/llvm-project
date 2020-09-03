@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Stream_h_
-#define liblldb_Stream_h_
+#ifndef LLDB_UTILITY_STREAM_H
+#define LLDB_UTILITY_STREAM_H
 
 #include "lldb/Utility/Flags.h"
 #include "lldb/lldb-defines.h"
@@ -56,12 +56,13 @@ public:
   ///
   /// Construct with dump flags \a flags and the default address size. \a
   /// flags can be any of the above enumeration logical OR'ed together.
-  Stream(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order);
+  Stream(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order,
+         bool colors = false);
 
   /// Construct a default Stream, not binary, host byte order and host addr
   /// size.
   ///
-  Stream();
+  Stream(bool colors = false);
 
   // FIXME: Streams should not be copyable.
   Stream(const Stream &other) : m_forwarder(*this) { (*this) = other; }
@@ -270,10 +271,8 @@ public:
   /// optional string following the indentation spaces.
   ///
   /// \param[in] s
-  ///     A C string to print following the indentation. If nullptr, just
-  ///     output the indentation characters.
-  size_t Indent(const char *s = nullptr);
-  size_t Indent(llvm::StringRef s);
+  ///     A string to print following the indentation.
+  size_t Indent(llvm::StringRef s = "");
 
   /// Decrement the current indentation level.
   void IndentLess(unsigned amount = 2);
@@ -405,8 +404,10 @@ protected:
     }
 
   public:
-    RawOstreamForward(Stream &target)
-        : llvm::raw_ostream(/*unbuffered*/ true), m_target(target) {}
+    RawOstreamForward(Stream &target, bool colors = false)
+        : llvm::raw_ostream(/*unbuffered*/ true), m_target(target) {
+      enable_colors(colors);
+    }
   };
   RawOstreamForward m_forwarder;
 };
@@ -461,4 +462,4 @@ void DumpAddressRange(llvm::raw_ostream &s, uint64_t lo_addr, uint64_t hi_addr,
 
 } // namespace lldb_private
 
-#endif // liblldb_Stream_h_
+#endif // LLDB_UTILITY_STREAM_H

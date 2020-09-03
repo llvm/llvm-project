@@ -22,7 +22,5 @@ copy("include") {
     "xray/xray_log_interface.h",
     "xray/xray_records.h",
   ]
-  outputs = [
-    "$clang_resource_dir/include/{{source_target_relative}}",
-  ]
+  outputs = [ "$clang_resource_dir/include/{{source_target_relative}}" ]
 }

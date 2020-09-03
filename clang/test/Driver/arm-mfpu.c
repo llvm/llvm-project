@@ -84,7 +84,7 @@
 // CHECK-VFP3-D16-DAG: "-target-feature" "-vfp4d16sp"
 // CHECK-VFP3-D16-DAG: "-target-feature" "-fp-armv8d16sp"
 // CHECK-VFP3-D16-DAG: "-target-feature" "+fp64"
-// CHECK-VFP3-D16-NOT: "-target-feature" "+d32"
+// CHECK-VFP3-D16-DAG: "-target-feature" "-d32"
 // CHECK-VFP3-D16-DAG: "-target-feature" "-neon"
 
 // RUN: %clang -target arm-linux-eabi -mfpu=vfpv3-d16-fp16 %s -### -o %t.o 2>&1 \
@@ -98,7 +98,7 @@
 // CHECK-VFP3-D16-FP16-DAG: "-target-feature" "-vfp4d16sp"
 // CHECK-VFP3-D16-FP16-DAG: "-target-feature" "-fp-armv8d16sp"
 // CHECK-VFP3-D16-FP16-DAG: "-target-feature" "+fp64"
-// CHECK-VFP3-D16-FP16-NOT: "-target-feature" "+d32"
+// CHECK-VFP3-D16-FP16-DAG: "-target-feature" "-d32"
 // CHECK-VFP3-D16-FP16-DAG: "-target-feature" "-neon"
 // CHECK-VFP3-D16-FP16-DAG: "-target-feature" "-crypto"
 
@@ -108,8 +108,8 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SOFT-ABI-FP-3 %s
 // CHECK-VFP3XD-NOT: "-target-feature" "+soft-float"
 // CHECK-VFP3XD-DAG: "-target-feature" "+soft-float-abi"
-// CHECK-VFP3XD-NOT: "-target-feature" "+fp64"
-// CHECK-VFP3XD-NOT: "-target-feature" "+d32"
+// CHECK-VFP3XD-DAG: "-target-feature" "-fp64"
+// CHECK-VFP3XD-DAG: "-target-feature" "-d32"
 // CHECK-VFP3XD-DAG: "-target-feature" "+vfp3d16sp"
 // CHECK-VFP3XD-DAG: "-target-feature" "-fp16"
 // CHECK-VFP3XD-DAG: "-target-feature" "-vfp4d16sp"
@@ -127,8 +127,8 @@
 // CHECK-VFP3XD-FP16-DAG: "-target-feature" "+fp16"
 // CHECK-VFP3XD-FP16-DAG: "-target-feature" "-vfp4d16sp"
 // CHECK-VFP3XD-FP16-DAG: "-target-feature" "-fp-armv8d16sp"
-// CHECK-VFP3XD-FP16-NOT: "-target-feature" "+fp64"
-// CHECK-VFP3XD-FP16-NOT: "-target-feature" "+d32"
+// CHECK-VFP3XD-FP16-DAG: "-target-feature" "-fp64"
+// CHECK-VFP3XD-FP16-DAG: "-target-feature" "-d32"
 // CHECK-VFP3XD-FP16-DAG: "-target-feature" "-neon"
 // CHECK-VFP3XD-FP16-DAG: "-target-feature" "-crypto"
 
@@ -162,7 +162,7 @@
 // CHECK-VFP4-D16-DAG: "-target-feature" "+vfp4d16"
 // CHECK-VFP4-D16-DAG: "-target-feature" "-fp-armv8d16sp"
 // CHECK-VFP4-D16-DAG: "-target-feature" "+fp64"
-// CHECK-VFP4-D16-NOT: "-target-feature" "+d32"
+// CHECK-VFP4-D16-DAG: "-target-feature" "-d32"
 // CHECK-VFP4-D16-DAG: "-target-feature" "-neon"
 
 // RUN: %clang -target arm-linux-eabi -mfpu=fp4-sp-d16 %s -### -o %t.o 2>&1 \
@@ -175,8 +175,8 @@
 // CHECK-FP4-SP-D16-DAG: "-target-feature" "+soft-float-abi"
 // CHECK-FP4-SP-D16-DAG: "-target-feature" "+vfp4d16sp"
 // CHECK-FP4-SP-D16-DAG: "-target-feature" "-fp-armv8d16sp"
-// CHECK-FP4-SP-D16-NOT: "-target-feature" "+fp64"
-// CHECK-FP4-SP-D16-NOT: "-target-feature" "+d32"
+// CHECK-FP4-SP-D16-DAG: "-target-feature" "-fp64"
+// CHECK-FP4-SP-D16-DAG: "-target-feature" "-d32"
 // CHECK-FP4-SP-D16-DAG: "-target-feature" "-neon"
 
 // RUN: %clang -target arm-linux-eabi -mfpu=fp5-sp-d16 %s -### -o %t.o 2>&1 \
@@ -189,8 +189,8 @@
 // CHECK-FP5-SP-D16-DAG: "-target-feature" "+soft-float-abi"
 // CHECK-FP5-SP-D16-DAG: "-target-feature" "+fp-armv8d16sp"
 // CHECK-FP5-SP-D16-DAG: "-target-feature" "-neon"
-// CHECK-FP5-SP-D16-NOT: "-target-feature" "+fp64"
-// CHECK-FP5-SP-D16-NOT: "-target-feature" "+d32"
+// CHECK-FP5-SP-D16-DAG: "-target-feature" "-fp64"
+// CHECK-FP5-SP-D16-DAG: "-target-feature" "-d32"
 // CHECK-FP5-SP-D16-DAG: "-target-feature" "-crypto"
 
 // RUN: %clang -target arm-linux-eabi -mfpu=fp5-dp-d16 %s -### -o %t.o 2>&1 \
@@ -203,7 +203,7 @@
 // CHECK-FP5-DP-D16-DAG: "-target-feature" "+soft-float-abi"
 // CHECK-FP5-DP-D16-DAG: "-target-feature" "+fp-armv8d16"
 // CHECK-FP5-DP-D16-DAG: "-target-feature" "+fp64"
-// CHECK-FP5-DP-D16-NOT: "-target-feature" "+d32"
+// CHECK-FP5-DP-D16-DAG: "-target-feature" "-d32"
 // CHECK-FP5-DP-D16-DAG: "-target-feature" "-neon"
 // CHECK-FP5-DP-D16-DAG: "-target-feature" "-crypto"
 // CHECK-SOFT-ABI-FP-5-DAG: "-target-feature" "+soft-float"
@@ -323,8 +323,8 @@
 // CHECK-NO-FP-DAG: "-target-feature" "-vfp3d16sp"
 // CHECK-NO-FP-DAG: "-target-feature" "-vfp4d16sp"
 // CHECK-NO-FP-DAG: "-target-feature" "-fp-armv8d16sp"
-// CHECK-NO-FP-NOT: "-target-feature" "+fp64"
-// CHECK-NO-FP-NOT: "-target-feature" "+d32"
+// CHECK-NO-FP-DAG: "-target-feature" "-fp64"
+// CHECK-NO-FP-DAG: "-target-feature" "-d32"
 // CHECK-NO-FP-DAG: "-target-feature" "-neon"
 // CHECK-NO-FP-DAG: "-target-feature" "-crypto"
 
@@ -382,8 +382,8 @@
 // CHECK-ARM7-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+soft-float"
 // CHECK-ARM7-ANDROID-FP-DEFAULT-DAG: "-target-feature" "+soft-float-abi"
 // CHECK-ARM7-ANDROID-FP-DEFAULT-DAG: "-target-feature" "+vfp3"
-// CHECK-ARM7-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+vfp4"
-// CHECK-ARM7-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+fp-armv8"
+// CHECK-ARM7-ANDROID-FP-DEFAULT-DAG: "-target-feature" "-vfp4"
+// CHECK-ARM7-ANDROID-FP-DEFAULT-DAG: "-target-feature" "-fp-armv8"
 // CHECK-ARM7-ANDROID-FP-DEFAULT-DAG: "-target-feature" "+neon"
 // CHECK-ARM7-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+crypto"
 
@@ -391,7 +391,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ARM7-ANDROID-FP-D16 %s
 // CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+soft-float"
 // CHECK-ARM7-ANDROID-FP-D16-DAG: "-target-feature" "+soft-float-abi"
-// CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+d32"
+// CHECK-ARM7-ANDROID-FP-D16-DAG: "-target-feature" "-d32"
 // CHECK-ARM7-ANDROID-FP-D16-DAG: "-target-feature" "+vfp3d16"
 // CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+vfp4"
 // CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+fp-armv8"
@@ -403,3 +403,40 @@
 // CHECK-SOFTFLOATABI-INHIBITS-MVE-NOT: "-target-feature" "+mve"
 // CHECK-SOFTFLOATABI-INHIBITS-MVE-DAG: "-target-feature" "-mve"
 // CHECK-SOFTFLOATABI-INHIBITS-MVE-DAG: "-target-feature" "-mve.fp"
+
+// RUN: %clang -target arm-none-none-eabi %s -march=armv8.1-m.main+mve.fp -mfpu=none -### -c 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MVEFP-FPUNONE %s
+// CHECK-MVEFP-FPUNONE-DAG: "-target-feature" "-vfp2sp"
+// CHECK-MVEFP-FPUNONE-DAG: "-target-feature" "-vfp3d16sp"
+// CHECK-MVEFP-FPUNONE-DAG: "-target-feature" "-vfp4d16sp"
+// CHECK-MVEFP-FPUNONE-DAG: "-target-feature" "-fp-armv8d16sp"
+// CHECK-MVEFP-FPUNONE-DAG: "-target-feature" "-fp64"
+// CHECK-MVEFP-FPUNONE-DAG: "-target-feature" "-d32"
+// CHECK-MVEFP-FPUNONE-DAG: "-target-feature" "-neon"
+// CHECK-MVEFP-FPUNONE-DAG: "-target-feature" "-crypto"
+// CHECK-MVEFP-FPUNONE-DAG: "-target-feature" "+mve"
+// CHECK-MVEFP-FPUNONE-DAG: "-target-feature" "+dsp"
+// CHECK-MVEFP-FPUNONE-DAG: "-target-feature" "-mve.fp"
+// CHECK-MVEFP-FPUNONE-NOT: "-target-feature" "-fpregs"
+
+// RUN: %clang -target arm-none-none-eabi %s -march=armv8.1-m.main+mve.fp+nomve -mfpu=none -### -c 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MVEFP-NOMVE-FPUNONE %s
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-vfp2sp"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-vfp3d16sp"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-vfp4d16sp"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-fp-armv8d16sp"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-fp64"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-d32"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-neon"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-crypto"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "+dsp"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-mve"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-mve.fp"
+// CHECK-MVEFP-NOMVE-FPUNONE-DAG: "-target-feature" "-fpregs"
+
+// RUN: %clang -target arm-none-none-eabi %s -march=armv8.1-m.main+mve -mfpu=none -### -c 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MVEI-FPUNONE %s
+// CHECK-MVEI-FPUNONE-DAG: "-target-feature" "-mve.fp"
+// CHECK-MVEI-FPUNONE-DAG: "-target-feature" "+mve"
+// CHECK-MVEI-FPUNONE-DAG: "-target-feature" "+dsp"
+// CHECK-MVEI-FPUNONE-NOT: "-target-feature" "-fpregs"

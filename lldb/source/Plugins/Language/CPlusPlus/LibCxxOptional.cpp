@@ -1,4 +1,4 @@
-//===-- LibCxxOptional.cpp --------------------------------------*- C++ -*-===//
+//===-- LibCxxOptional.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,11 +26,12 @@ public:
 
   bool MightHaveChildren() override { return true; }
   bool Update() override;
-  size_t CalculateNumChildren() override { return m_size; }
+  size_t CalculateNumChildren() override { return m_has_value ? 1U : 0U; }
   ValueObjectSP GetChildAtIndex(size_t idx) override;
 
 private:
-  size_t m_size = 0;
+  /// True iff the option contains a value.
+  bool m_has_value = false;
 };
 } // namespace
 
@@ -44,13 +45,13 @@ bool OptionalFrontEnd::Update() {
   // __engaged_ is a bool flag and is true if the optional contains a value.
   // Converting it to unsigned gives us a size of 1 if it contains a value
   // and 0 if not.
-  m_size = engaged_sp->GetValueAsUnsigned(0);
+  m_has_value = engaged_sp->GetValueAsUnsigned(0) == 1;
 
   return false;
 }
 
 ValueObjectSP OptionalFrontEnd::GetChildAtIndex(size_t idx) {
-  if (idx >= m_size)
+  if (!m_has_value)
     return ValueObjectSP();
 
   // __val_ contains the underlying value of an optional if it has one.
@@ -71,7 +72,7 @@ ValueObjectSP OptionalFrontEnd::GetChildAtIndex(size_t idx) {
   if (!holder_type)
     return ValueObjectSP();
 
-  return val_sp->Clone(ConstString(llvm::formatv("Value").str()));
+  return val_sp->Clone(ConstString("Value"));
 }
 
 SyntheticChildrenFrontEnd *

@@ -1,0 +1,55 @@
+## Check that yaml2obj limits the output size by default to 10 MB.
+## Check it is possible to change this limit using the
+## --max-size command line option.
+
+## One of the often cases to reach the limit is to create a section with a
+## large portion of data. Check this case is handled properly.
+
+## 0x9FFEC0 = 0xA00000 (10 MB) - sizeof(Elf_Ehdr) - sizeof(Elf_Shdr) * 4.
+# RUN: yaml2obj %s -DSIZE=0x9FFEC0 --docnum=1 -o /dev/null 2>&1
+# RUN: not yaml2obj %s -DSIZE=0x9FFEC1 --docnum=1 -o /dev/null 2>&1 | \
+# RUN:  FileCheck %s --check-prefix=ERROR
+
+# ERROR: error: the desired output size is greater than permitted. Use the --max-size option to change the limit
+
+## We use 0xA00008 instead of 0xA00001 here because the section header table
+## offset is aligned to 8 bytes, so we need to request 7 more bytes for it.
+# RUN: yaml2obj %s -DSIZE=0x9FFEC1 --docnum=1 --max-size=0xA00008 -o /dev/null
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .section
+    Type: SHT_PROGBITS
+    Size: [[SIZE]]
+  - Name: .strtab
+    Type: SHT_PROGBITS
+    Size: 0x0
+  - Name: .shstrtab
+    Type: SHT_PROGBITS
+    Size: 0x0
+
+## Another possible case is when an alignment gap inserted
+## is too large because of overaligning. Check it is also handled properly.
+# RUN: not yaml2obj %s --docnum=2 -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERROR
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+  - Name:         .bar
+    Type:         SHT_PROGBITS
+    AddressAlign: 0xA00100
+    Size: 0x0
+
+## Check that we can drop the limit with the use of --max-size=0.
+# RUN: yaml2obj --max-size=0 %s --docnum=2 -o /dev/null

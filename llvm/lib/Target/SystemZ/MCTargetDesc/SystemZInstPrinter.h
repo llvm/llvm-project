@@ -46,6 +46,10 @@ public:
 private:
   // Print various types of operand.
   void printOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printOperand(const MCInst *MI, uint64_t /*Address*/, unsigned OpNum,
+                    raw_ostream &O) {
+    printOperand(MI, OpNum, O);
+  }
   void printBDAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printBDXAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printBDLAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
@@ -65,7 +69,12 @@ private:
   void printU32ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU48ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printPCRelOperand(const MCInst *MI, int OpNum, raw_ostream &O);
-  void printPCRelTLSOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printPCRelOperand(const MCInst *MI, uint64_t /*Address*/, int OpNum,
+                         raw_ostream &O) {
+    printPCRelOperand(MI, OpNum, O);
+  }
+  void printPCRelTLSOperand(const MCInst *MI, uint64_t Address, int OpNum,
+                            raw_ostream &O);
 
   // Print the mnemonic for a condition-code mask ("ne", "lh", etc.)
   // This forms part of the instruction name rather than the operand list.

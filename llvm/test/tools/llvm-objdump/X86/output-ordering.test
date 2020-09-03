@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # RUN: llvm-objdump --file-headers --private-headers --section-headers --syms \
 # RUN:   --full-contents --dwarf=frames \
 # RUN:   --reloc %t.o | FileCheck %s --check-prefixes=CHECK,RELOC
@@ -10,7 +10,7 @@
 ## --reloc, so we test them independently.
 
 ## File headers (-f)
-# CHECK: file format ELF64-x86-64
+# CHECK: file format elf64-x86-64
 # CHECK: architecture: x86_64
 # CHECK: start address: 0x0000000000000000
 ## Private headers (-p)

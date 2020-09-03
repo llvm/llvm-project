@@ -51,10 +51,9 @@ namespace llvm {
   FunctionPass *createPPCExpandISELPass();
   FunctionPass *createPPCPreEmitPeepholePass();
   void LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
-                                    AsmPrinter &AP, bool IsDarwin);
+                                    AsmPrinter &AP);
   bool LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
-                                         MCOperand &OutMO, AsmPrinter &AP,
-                                         bool IsDarwin);
+                                         MCOperand &OutMO, AsmPrinter &AP);
 
   void initializePPCCTRLoopsPass(PassRegistry&);
 #ifndef NDEBUG
@@ -99,33 +98,33 @@ namespace llvm {
     /// the function's picbase, e.g. lo16(symbol-picbase).
     MO_PIC_FLAG = 2,
 
-    /// MO_NLP_FLAG - If this bit is set, the symbol reference is actually to
-    /// the non_lazy_ptr for the global, e.g. lo16(symbol$non_lazy_ptr-picbase).
-    MO_NLP_FLAG = 4,
+    /// MO_PCREL_FLAG - If this bit is set, the symbol reference is relative to
+    /// the current instruction address(pc), e.g., var@pcrel. Fixup is VK_PCREL.
+    MO_PCREL_FLAG = 4,
 
-    /// MO_NLP_HIDDEN_FLAG - If this bit is set, the symbol reference is to a
-    /// symbol with hidden visibility.  This causes a different kind of
-    /// non-lazy-pointer to be generated.
-    MO_NLP_HIDDEN_FLAG = 8,
+    /// MO_GOT_FLAG - If this bit is set the symbol reference is to be computed
+    /// via the GOT. For example when combined with the MO_PCREL_FLAG it should
+    /// produce the relocation @got@pcrel. Fixup is VK_PPC_GOT_PCREL.
+    MO_GOT_FLAG = 8,
 
     /// The next are not flags but distinct values.
-    MO_ACCESS_MASK = 0xf0,
+    MO_ACCESS_MASK = 0xf00,
 
     /// MO_LO, MO_HA - lo16(symbol) and ha16(symbol)
-    MO_LO = 1 << 4,
-    MO_HA = 2 << 4,
+    MO_LO = 1 << 8,
+    MO_HA = 2 << 8,
 
-    MO_TPREL_LO = 4 << 4,
-    MO_TPREL_HA = 3 << 4,
+    MO_TPREL_LO = 4 << 8,
+    MO_TPREL_HA = 3 << 8,
 
     /// These values identify relocations on immediates folded
     /// into memory operations.
-    MO_DTPREL_LO = 5 << 4,
-    MO_TLSLD_LO = 6 << 4,
-    MO_TOC_LO = 7 << 4,
+    MO_DTPREL_LO = 5 << 8,
+    MO_TLSLD_LO = 6 << 8,
+    MO_TOC_LO = 7 << 8,
 
     // Symbol for VK_PPC_TLS fixup attached to an ADD instruction
-    MO_TLS = 8 << 4
+    MO_TLS = 8 << 8
   };
   } // end namespace PPCII
 

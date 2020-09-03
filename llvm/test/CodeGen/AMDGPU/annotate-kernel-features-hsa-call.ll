@@ -231,7 +231,7 @@ define void @use_kernarg_segment_ptr() #1 {
   ret void
 }
 
-; HSA: define void @func_indirect_use_kernarg_segment_ptr() #14 {
+; HSA: define void @func_indirect_use_kernarg_segment_ptr() #11 {
 define void @func_indirect_use_kernarg_segment_ptr() #1 {
   call void @use_kernarg_segment_ptr()
   ret void
@@ -295,12 +295,26 @@ define amdgpu_kernel void @func_kern_defined() #3 {
   ret void
 }
 
+; HSA: define i32 @use_dispatch_ptr_ret_type() #20 {
+define i32 @use_dispatch_ptr_ret_type() #1 {
+  %dispatch.ptr = call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
+  store volatile i8 addrspace(4)* %dispatch.ptr, i8 addrspace(4)* addrspace(1)* undef
+  ret i32 0
+}
+
+; HSA: define float @func_indirect_use_dispatch_ptr_constexpr_cast_func() #20 {
+define float @func_indirect_use_dispatch_ptr_constexpr_cast_func() #1 {
+  %f = call float bitcast (i32()* @use_dispatch_ptr_ret_type to float()*)()
+  %fadd = fadd float %f, 1.0
+  ret float %fadd
+}
+
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind "target-cpu"="fiji" }
 attributes #2 = { nounwind "target-cpu"="gfx900" }
 attributes #3 = { nounwind }
 
-; HSA: attributes #0 = { nounwind readnone speculatable }
+; HSA: attributes #0 = { nounwind readnone speculatable willreturn }
 ; HSA: attributes #1 = { nounwind "amdgpu-work-item-id-x" "target-cpu"="fiji" "uniform-work-group-size"="false" }
 ; HSA: attributes #2 = { nounwind "amdgpu-work-item-id-y" "target-cpu"="fiji" "uniform-work-group-size"="false" }
 ; HSA: attributes #3 = { nounwind "amdgpu-work-item-id-z" "target-cpu"="fiji" "uniform-work-group-size"="false" }
@@ -319,4 +333,5 @@ attributes #3 = { nounwind }
 ; HSA: attributes #16 = { nounwind "amdgpu-implicitarg-ptr" "target-cpu"="fiji" "uniform-work-group-size"="false" }
 ; HSA: attributes #17 = { nounwind "uniform-work-group-size"="false" }
 ; HSA: attributes #18 = { nounwind }
-; HSA: attributes #19 = { nounwind "amdgpu-flat-scratch" "uniform-work-group-size"="false" }
+; HSA: attributes #19 = { nounwind "amdgpu-calls" "uniform-work-group-size"="false" }
+; HSA: attributes #20 = { nounwind "amdgpu-dispatch-ptr" "target-cpu"="fiji" }

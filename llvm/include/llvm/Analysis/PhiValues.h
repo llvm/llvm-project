@@ -29,7 +29,6 @@
 
 namespace llvm {
 
-class Use;
 class Value;
 class PHINode;
 class Function;

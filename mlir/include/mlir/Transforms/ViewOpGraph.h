@@ -1,6 +1,6 @@
 //===- ViewOpGraph.h - View/write op graphviz graphs ------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -20,7 +20,7 @@
 namespace mlir {
 class Block;
 class ModuleOp;
-template <typename T> class OpPassBase;
+template <typename T> class OperationPass;
 
 /// Displays the graph in a window. This is for use from the debugger and
 /// depends on Graphviz to generate the graph.
@@ -32,7 +32,7 @@ raw_ostream &writeGraph(raw_ostream &os, Block &block, bool shortNames = false,
                         const Twine &title = "");
 
 /// Creates a pass to print op graphs.
-std::unique_ptr<OpPassBase<ModuleOp>>
+std::unique_ptr<OperationPass<ModuleOp>>
 createPrintOpGraphPass(raw_ostream &os = llvm::errs(), bool shortNames = false,
                        const Twine &title = "");
 

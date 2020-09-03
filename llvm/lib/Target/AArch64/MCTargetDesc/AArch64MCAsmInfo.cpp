@@ -60,7 +60,7 @@ const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(
   const MCExpr *Res =
       MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOT, Context);
   MCSymbol *PCSym = Context.createTempSymbol();
-  Streamer.EmitLabel(PCSym);
+  Streamer.emitLabel(PCSym);
   const MCExpr *PC = MCSymbolRefExpr::create(PCSym, Context);
   return MCBinaryExpr::createSub(Res, PC, Context);
 }
@@ -95,8 +95,6 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
 
   // Exceptions handling
   ExceptionsType = ExceptionHandling::DwarfCFI;
-
-  UseIntegratedAssembler = true;
 
   HasIdentDirective = true;
 }

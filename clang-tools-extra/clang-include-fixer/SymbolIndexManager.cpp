@@ -25,7 +25,7 @@ using find_all_symbols::SymbolAndSignals;
 // related to the given source file.
 static double similarityScore(llvm::StringRef FileName,
                               llvm::StringRef Header) {
-  // Compute the maximum number of common path segements between Header and
+  // Compute the maximum number of common path segments between Header and
   // a suffix of FileName.
   // We do not do a full longest common substring computation, as Header
   // specifies the path we would directly #include, so we assume it is rooted

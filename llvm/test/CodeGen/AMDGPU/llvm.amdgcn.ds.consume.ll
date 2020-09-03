@@ -127,8 +127,8 @@ define amdgpu_kernel void @ds_consume_lds_m0_restore(i32 addrspace(3)* %lds, i32
   ret void
 }
 
-declare i32 @llvm.amdgcn.ds.consume.p3i32(i32 addrspace(3)* nocapture, i1) #1
-declare i32 @llvm.amdgcn.ds.consume.p2i32(i32 addrspace(2)* nocapture, i1) #1
+declare i32 @llvm.amdgcn.ds.consume.p3i32(i32 addrspace(3)* nocapture, i1 immarg) #1
+declare i32 @llvm.amdgcn.ds.consume.p2i32(i32 addrspace(2)* nocapture, i1 immarg) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly convergent nounwind }

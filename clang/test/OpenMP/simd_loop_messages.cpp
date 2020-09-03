@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4,expectedw %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4,expectedw %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4,expectedw %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4,expectedw %s -Wuninitialized
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5,expectedw %s -fopenmp-version=50 -DOMP50 -Wuninitialized
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5,expectedw %s -fopenmp-version=50 -DOMP50 -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized -Wno-openmp-loop-form
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized -Wno-openmp
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized -Wno-openmp-loop-form
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized -Wno-openmp
 
 static int sii;
 // expected-note@+1 {{defined as threadprivate or thread local}}

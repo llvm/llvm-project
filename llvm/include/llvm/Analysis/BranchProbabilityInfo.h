@@ -55,8 +55,9 @@ public:
   BranchProbabilityInfo() = default;
 
   BranchProbabilityInfo(const Function &F, const LoopInfo &LI,
-                        const TargetLibraryInfo *TLI = nullptr) {
-    calculate(F, LI, TLI);
+                        const TargetLibraryInfo *TLI = nullptr,
+                        PostDominatorTree *PDT = nullptr) {
+    calculate(F, LI, TLI, PDT);
   }
 
   BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
@@ -74,6 +75,9 @@ public:
     PostDominatedByUnreachable = std::move(RHS.PostDominatedByUnreachable);
     return *this;
   }
+
+  bool invalidate(Function &, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
 
   void releaseMemory();
 
@@ -95,7 +99,7 @@ public:
                                        const BasicBlock *Dst) const;
 
   BranchProbability getEdgeProbability(const BasicBlock *Src,
-                                       succ_const_iterator Dst) const;
+                                       const_succ_iterator Dst) const;
 
   /// Test if an edge is hot relative to other out-edges of the Src.
   ///
@@ -117,6 +121,7 @@ public:
   raw_ostream &printEdgeProbability(raw_ostream &OS, const BasicBlock *Src,
                                     const BasicBlock *Dst) const;
 
+protected:
   /// Set the raw edge probability for the given edge.
   ///
   /// This allows a pass to explicitly set the edge probability for an edge. It
@@ -126,13 +131,22 @@ public:
   void setEdgeProbability(const BasicBlock *Src, unsigned IndexInSuccessors,
                           BranchProbability Prob);
 
+public:
+  /// Set the raw probabilities for all edges from the given block.
+  ///
+  /// This allows a pass to explicitly set edge probabilities for a block. It
+  /// can be used when updating the CFG to update the branch probability
+  /// information.
+  void setEdgeProbability(const BasicBlock *Src,
+                          const SmallVectorImpl<BranchProbability> &Probs);
+
   static BranchProbability getBranchProbStackProtector(bool IsLikely) {
     static const BranchProbability LikelyProb((1u << 20) - 1, 1u << 20);
     return IsLikely ? LikelyProb : LikelyProb.getCompl();
   }
 
   void calculate(const Function &F, const LoopInfo &LI,
-                 const TargetLibraryInfo *TLI = nullptr);
+                 const TargetLibraryInfo *TLI, PostDominatorTree *PDT);
 
   /// Forget analysis results for the given basic block.
   void eraseBlock(const BasicBlock *BB);

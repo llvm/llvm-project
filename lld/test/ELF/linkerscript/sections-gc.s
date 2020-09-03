@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: echo "SECTIONS { .text : { *(.text*) } }" > %t.script
 # RUN: ld.lld %t --gc-sections --script %t.script -o %t1
-# RUN: llvm-objdump -section-headers %t1 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t1 | FileCheck %s
 
 # CHECK:      Sections:
 # CHECK-NEXT:  Name      Size

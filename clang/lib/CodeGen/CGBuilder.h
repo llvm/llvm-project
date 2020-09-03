@@ -22,16 +22,15 @@ class CodeGenFunction;
 /// This is an IRBuilder insertion helper that forwards to
 /// CodeGenFunction::InsertHelper, which adds necessary metadata to
 /// instructions.
-class CGBuilderInserter : protected llvm::IRBuilderDefaultInserter {
+class CGBuilderInserter final : public llvm::IRBuilderDefaultInserter {
 public:
   CGBuilderInserter() = default;
   explicit CGBuilderInserter(CodeGenFunction *CGF) : CGF(CGF) {}
 
-protected:
   /// This forwards to CodeGenFunction::InsertHelper.
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
                     llvm::BasicBlock *BB,
-                    llvm::BasicBlock::iterator InsertPt) const;
+                    llvm::BasicBlock::iterator InsertPt) const override;
 private:
   CodeGenFunction *CGF = nullptr;
 };
@@ -68,38 +67,34 @@ public:
   // take an alignment.
   llvm::LoadInst *CreateLoad(Address Addr, const llvm::Twine &Name = "") {
     return CreateAlignedLoad(Addr.getPointer(),
-                             Addr.getAlignment().getQuantity(),
-                             Name);
+                             Addr.getAlignment().getAsAlign(), Name);
   }
   llvm::LoadInst *CreateLoad(Address Addr, const char *Name) {
     // This overload is required to prevent string literals from
     // ending up in the IsVolatile overload.
     return CreateAlignedLoad(Addr.getPointer(),
-                             Addr.getAlignment().getQuantity(),
-                             Name);
+                             Addr.getAlignment().getAsAlign(), Name);
   }
   llvm::LoadInst *CreateLoad(Address Addr, bool IsVolatile,
                              const llvm::Twine &Name = "") {
-    return CreateAlignedLoad(Addr.getPointer(),
-                             Addr.getAlignment().getQuantity(),
-                             IsVolatile,
-                             Name);
+    return CreateAlignedLoad(
+        Addr.getPointer(), Addr.getAlignment().getAsAlign(), IsVolatile, Name);
   }
 
   using CGBuilderBaseTy::CreateAlignedLoad;
   llvm::LoadInst *CreateAlignedLoad(llvm::Value *Addr, CharUnits Align,
                                     const llvm::Twine &Name = "") {
-    return CreateAlignedLoad(Addr, Align.getQuantity(), Name);
+    return CreateAlignedLoad(Addr, Align.getAsAlign(), Name);
   }
   llvm::LoadInst *CreateAlignedLoad(llvm::Value *Addr, CharUnits Align,
                                     const char *Name) {
-    return CreateAlignedLoad(Addr, Align.getQuantity(), Name);
+    return CreateAlignedLoad(Addr, Align.getAsAlign(), Name);
   }
   llvm::LoadInst *CreateAlignedLoad(llvm::Type *Ty, llvm::Value *Addr,
                                     CharUnits Align,
                                     const llvm::Twine &Name = "") {
     assert(Addr->getType()->getPointerElementType() == Ty);
-    return CreateAlignedLoad(Addr, Align.getQuantity(), Name);
+    return CreateAlignedLoad(Addr, Align.getAsAlign(), Name);
   }
 
   // Note that we intentionally hide the CreateStore APIs that don't
@@ -113,7 +108,7 @@ public:
   using CGBuilderBaseTy::CreateAlignedStore;
   llvm::StoreInst *CreateAlignedStore(llvm::Value *Val, llvm::Value *Addr,
                                       CharUnits Align, bool IsVolatile = false) {
-    return CreateAlignedStore(Val, Addr, Align.getQuantity(), IsVolatile);
+    return CreateAlignedStore(Val, Addr, Align.getAsAlign(), IsVolatile);
   }
 
   // FIXME: these "default-aligned" APIs should be removed,
@@ -282,6 +277,13 @@ public:
     return CreateMemCpy(Dest.getPointer(), Dest.getAlignment().getAsAlign(),
                         Src.getPointer(), Src.getAlignment().getAsAlign(), Size,
                         IsVolatile);
+  }
+
+  using CGBuilderBaseTy::CreateMemCpyInline;
+  llvm::CallInst *CreateMemCpyInline(Address Dest, Address Src, uint64_t Size) {
+    return CreateMemCpyInline(
+        Dest.getPointer(), Dest.getAlignment().getAsAlign(), Src.getPointer(),
+        Src.getAlignment().getAsAlign(), getInt64(Size));
   }
 
   using CGBuilderBaseTy::CreateMemMove;

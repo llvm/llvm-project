@@ -160,3 +160,39 @@ body: |
     %1:_(<2 x p0>) = G_INTTOPTR %0
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
 ...
+
+---
+name: test_inttoptr_s29_to_p3
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_inttoptr_s29_to_p3
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 536870911
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; CHECK: [[INTTOPTR:%[0-9]+]]:_(p3) = G_INTTOPTR [[AND]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[INTTOPTR]](p3)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s29) = G_TRUNC %0
+    %2:_(p3) = G_INTTOPTR %1
+    S_ENDPGM 0, implicit %2
+...
+
+---
+name: test_inttoptr_s33_to_p3
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_inttoptr_s33_to_p3
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK: [[INTTOPTR:%[0-9]+]]:_(p3) = G_INTTOPTR [[TRUNC]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[INTTOPTR]](p3)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s33) = G_TRUNC %0
+    %2:_(p3) = G_INTTOPTR %1
+    S_ENDPGM 0, implicit %2
+...

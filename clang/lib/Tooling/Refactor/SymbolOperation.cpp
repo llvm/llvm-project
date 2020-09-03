@@ -68,7 +68,7 @@ static bool escapesEnclosingDecl(const DeclContext *Ctx, const RecordDecl *RD) {
   // still local if the enclosing function is inside a function/method that
   // doesn't return this record.
   const auto *D = cast<Decl>(Ctx);
-  if (D->isLexicallyWithinFunctionOrMethod())
+  if (!D->isDefinedOutsideFunctionOrMethod())
     return escapesEnclosingDecl(D->getParentFunctionOrMethod(), RD);
 
   return true;
@@ -80,6 +80,21 @@ static bool escapesEnclosingDecl(const RecordDecl *RD,
   // escape in source files will be used only in the initial TU.
   return LangOpts.IsHeaderFile &&
          escapesEnclosingDecl(RD->getParentFunctionOrMethod(), RD);
+}
+
+static bool isInLocalScope(const Decl *D) {
+  const DeclContext *LDC = D->getLexicalDeclContext();
+  while (true) {
+    if (LDC->isFunctionOrMethod())
+      return true;
+    if (!isa<TagDecl>(LDC))
+      return false;
+    if (const auto *CRD = dyn_cast<CXXRecordDecl>(LDC))
+      if (CRD->isLambda())
+        return true;
+    LDC = LDC->getLexicalParent();
+  }
+  return false;
 }
 
 /// Return true if the given declaration corresponds to a local symbol.
@@ -99,7 +114,7 @@ bool clang::tooling::isLocalSymbol(const NamedDecl *FoundDecl,
     return false;
 
   // Local declarations are defined in a function or a method, or are anonymous.
-  if (!FoundDecl->isLexicallyWithinFunctionOrMethod())
+  if (!isInLocalScope(FoundDecl))
     return false;
 
   // A locally defined record is global when it is returned from the enclosing

@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj <%s | llvm-objdump --disassemble - | FileCheck %s
+; RUN: llc -filetype=obj <%s | llvm-objdump -d - | FileCheck %s
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 

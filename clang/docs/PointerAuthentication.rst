@@ -129,7 +129,7 @@ There are three levels of the pointer authentication language feature:
 
 - The language also provides extensions to override the default rules used by the language implementation.  For example, the ``__ptrauth`` type qualifier can be used to change how pointers are signed when they are stored in a particular variable or field; this provides much stronger protection than is guaranteed by the default rules for C function and data pointers.
 
-- FInally, the language provides the ``<ptrauth.h>`` intrinsic interface for manually signing and authenticating pointers in code.  These can be used in circumstances where very specific behavior is required.
+- Finally, the language provides the ``<ptrauth.h>`` intrinsic interface for manually signing and authenticating pointers in code.  These can be used in circumstances where very specific behavior is required.
 
 Language implementation
 ~~~~~~~~~~~~~~~~~~~~~~~

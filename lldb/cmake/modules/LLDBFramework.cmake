@@ -59,8 +59,7 @@ list(REMOVE_ITEM root_public_headers ${root_private_headers})
 set(lldb_header_staging ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders)
 foreach(header
     ${public_headers}
-    ${root_public_headers}
-    ${LLDB_SOURCE_DIR}/include/lldb/Utility/SharingPtr.h)
+    ${root_public_headers})
 
   get_filename_component(basename ${header} NAME)
   set(staged_header ${lldb_header_staging}/${basename})

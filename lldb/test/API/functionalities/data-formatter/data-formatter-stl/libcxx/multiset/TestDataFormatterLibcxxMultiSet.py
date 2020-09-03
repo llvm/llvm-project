@@ -103,18 +103,20 @@ class LibcxxMultiSetDataFormatterTestCase(TestBase):
             "frame variable ss",
             substrs=[
                 "size=4",
+                '[0] = "a"',
+                '[1] = "a very long string is right here"',
                 '[2] = "b"',
                 '[3] = "c"',
-                '[0] = "a"',
-                '[1] = "a very long string is right here"'])
+            ])
         self.expect(
             "p ss",
             substrs=[
                 "size=4",
+                '[0] = "a"',
+                '[1] = "a very long string is right here"',
                 '[2] = "b"',
                 '[3] = "c"',
-                '[0] = "a"',
-                '[1] = "a very long string is right here"'])
+            ])
         self.expect("frame variable ss[2]", substrs=[' = "b"'])
         lldbutil.continue_to_breakpoint(process, bkpt)
         self.expect(

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_MipsLinuxSignals_H_
-#define liblldb_MipsLinuxSignals_H_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_MIPSLINUXSIGNALS_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_MIPSLINUXSIGNALS_H
 
 #include "lldb/Target/UnixSignals.h"
 
@@ -25,4 +25,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_MipsLinuxSignals_H_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_MIPSLINUXSIGNALS_H

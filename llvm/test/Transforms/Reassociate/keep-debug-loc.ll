@@ -22,7 +22,7 @@ define void @fn2() !dbg !6 {
 
 define void @fn3() !dbg !8 {
 ; CHECK-LABEL: @fn3
-; CHECK: load i16, i16* undef, !dbg ![[LOC2:[0-9]+]]
+; CHECK: load i16, i16* undef, align 2, !dbg ![[LOC2:[0-9]+]]
 ; CHECK-NOT: or i16
   %instruction = load i16, i16* undef, !dbg !9
   %dbgless_instruction = or i16 %instruction, 0

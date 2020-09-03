@@ -1164,9 +1164,9 @@ define void @isel_crash_32b(i8* %cV_R.addr) {
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 eintry:
-  %__a.addr.i = alloca <4 x i64>, align 16
-  %__b.addr.i = alloca <4 x i64>, align 16
-  %vCr = alloca <4 x i64>, align 16
+  %__a.addr.i = alloca <4 x i64>, align 32
+  %__b.addr.i = alloca <4 x i64>, align 32
+  %vCr = alloca <4 x i64>, align 32
   store <4 x i64> zeroinitializer, <4 x i64>* %vCr, align 16
   %tmp = load <4 x i64>, <4 x i64>* %vCr, align 16
   %tmp2 = load i8, i8* %cV_R.addr, align 4
@@ -1255,9 +1255,9 @@ define void @isel_crash_16w(i16* %cV_R.addr) {
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 eintry:
-  %__a.addr.i = alloca <4 x i64>, align 16
-  %__b.addr.i = alloca <4 x i64>, align 16
-  %vCr = alloca <4 x i64>, align 16
+  %__a.addr.i = alloca <4 x i64>, align 32
+  %__b.addr.i = alloca <4 x i64>, align 32
+  %vCr = alloca <4 x i64>, align 32
   store <4 x i64> zeroinitializer, <4 x i64>* %vCr, align 16
   %tmp = load <4 x i64>, <4 x i64>* %vCr, align 16
   %tmp2 = load i16, i16* %cV_R.addr, align 4
@@ -1346,9 +1346,9 @@ define void @isel_crash_8d(i32* %cV_R.addr) {
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 eintry:
-  %__a.addr.i = alloca <4 x i64>, align 16
-  %__b.addr.i = alloca <4 x i64>, align 16
-  %vCr = alloca <4 x i64>, align 16
+  %__a.addr.i = alloca <4 x i64>, align 32
+  %__b.addr.i = alloca <4 x i64>, align 32
+  %vCr = alloca <4 x i64>, align 32
   store <4 x i64> zeroinitializer, <4 x i64>* %vCr, align 16
   %tmp = load <4 x i64>, <4 x i64>* %vCr, align 16
   %tmp2 = load i32, i32* %cV_R.addr, align 4
@@ -1436,9 +1436,9 @@ define void @isel_crash_4q(i64* %cV_R.addr) {
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 eintry:
-  %__a.addr.i = alloca <4 x i64>, align 16
-  %__b.addr.i = alloca <4 x i64>, align 16
-  %vCr = alloca <4 x i64>, align 16
+  %__a.addr.i = alloca <4 x i64>, align 32
+  %__b.addr.i = alloca <4 x i64>, align 32
+  %vCr = alloca <4 x i64>, align 32
   store <4 x i64> zeroinitializer, <4 x i64>* %vCr, align 16
   %tmp = load <4 x i64>, <4 x i64>* %vCr, align 16
   %tmp2 = load i64, i64* %cV_R.addr, align 4

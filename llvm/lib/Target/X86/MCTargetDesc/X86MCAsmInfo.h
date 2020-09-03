@@ -13,7 +13,6 @@
 #ifndef LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCASMINFO_H
 #define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCASMINFO_H
 
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAsmInfoELF.h"
@@ -47,6 +46,13 @@ class X86MCAsmInfoMicrosoft : public MCAsmInfoMicrosoft {
 
 public:
   explicit X86MCAsmInfoMicrosoft(const Triple &Triple);
+};
+
+class X86MCAsmInfoMicrosoftMASM : public X86MCAsmInfoMicrosoft {
+  void anchor() override;
+
+public:
+  explicit X86MCAsmInfoMicrosoftMASM(const Triple &Triple);
 };
 
 class X86MCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {

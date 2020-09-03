@@ -1,5 +1,5 @@
-## Check that --disassemble-functions implies --disassemble.
-# RUN: yaml2obj %s | llvm-objdump - --disassemble-functions=main | FileCheck %s
+## Check that --disassemble-symbols implies --disassemble.
+# RUN: yaml2obj %s | llvm-objdump - --disassemble-symbols=main | FileCheck %s
 
 --- !ELF
 FileHeader:
@@ -18,5 +18,5 @@ Symbols:
     Section: .text
 ...
 
-# CHECK: 0000000000000000 main:
+# CHECK: 0000000000000000 <main>:
 # CHECK-NEXT:        0: 90                            nop

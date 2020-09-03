@@ -11,10 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/Filesystem.h"
-#include "lld/Common/Threads.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Parallel.h"
+#include "llvm/Support/Path.h"
 #if LLVM_ON_UNIX
 #include <unistd.h>
 #endif
@@ -39,12 +40,41 @@ using namespace lld;
 // This function spawns a background thread to remove the file.
 // The calling thread returns almost immediately.
 void lld::unlinkAsync(StringRef path) {
+  if (!sys::fs::exists(path) || !sys::fs::is_regular_file(path))
+    return;
+
 // Removing a file is async on windows.
 #if defined(_WIN32)
+  // On Windows co-operative programs can be expected to open LLD's
+  // output in FILE_SHARE_DELETE mode. This allows us to delete the
+  // file (by moving it to a temporary filename and then deleting
+  // it) so that we can link another output file that overwrites
+  // the existing file, even if the current file is in use.
+  //
+  // This is done on a best effort basis - we do not error if the
+  // operation fails. The consequence is merely that the user
+  // experiences an inconvenient work-flow.
+  //
+  // The code here allows LLD to work on all versions of Windows.
+  // However, at Windows 10 1903 it seems that the behavior of
+  // Windows has changed, so that we could simply delete the output 
+  // file. This code should be simplified once support for older
+  // versions of Windows is dropped.
+  //
+  // Warning: It seems that the WINVER and _WIN32_WINNT preprocessor
+  // defines affect the behavior of the Windows versions of the calls
+  // we are using here. If this code stops working this is worth
+  // bearing in mind.
+  SmallString<128> tmpName;
+  if (!sys::fs::createUniqueFile(path + "%%%%%%%%.tmp", tmpName)) {
+    if (!sys::fs::rename(path, tmpName))
+      path = tmpName;
+    else
+      sys::fs::remove(tmpName);
+  }
   sys::fs::remove(path);
 #else
-  if (!threadsEnabled || !sys::fs::exists(path) ||
-      !sys::fs::is_regular_file(path))
+  if (parallel::strategy.ThreadsRequested == 1)
     return;
 
   // We cannot just remove path from a different thread because we are now going

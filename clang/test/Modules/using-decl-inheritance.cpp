@@ -1,3 +1,4 @@
+// RUN: rm -rf %t
 // RUN: %clang_cc1 -x c++ -fmodules -fmodules-local-submodule-visibility -fmodules-cache-path=%t %s -verify
 // RUN: %clang_cc1 -x c++ -fmodules -fmodules-cache-path=%t %s -verify
 

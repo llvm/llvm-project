@@ -14,6 +14,7 @@ class TestInterruptThreadNames(TestBase):
 
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # While loop with non fixed number of iterations.
     def test_with_python_api(self):
         """Test that we get thread names when interrupting a process."""
         self.build()
@@ -22,7 +23,7 @@ class TestInterruptThreadNames(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        launch_info = lldb.SBLaunchInfo(None)
+        launch_info = target.GetLaunchInfo()
         error = lldb.SBError()
         self.dbg.SetAsync(True)
         process = target.Launch(launch_info, error)
@@ -31,12 +32,14 @@ class TestInterruptThreadNames(TestBase):
         listener = self.dbg.GetListener()
         broadcaster = process.GetBroadcaster()
         rc = broadcaster.AddListener(listener, lldb.SBProcess.eBroadcastBitStateChanged)
-        self.assertTrue(rc != 0, "Unable to add listener to process")
+        self.assertNotEqual(rc, 0, "Unable to add listener to process")
         self.assertTrue(self.wait_for_running(process, listener), "Check that process is up and running")
 
         inferior_set_up = self.wait_until_program_setup_complete(process, listener)
 
-        self.assertTrue(inferior_set_up.IsValid() and inferior_set_up.GetValueAsSigned() == 1, "Check that the program was able to create its threads within the allotted time")
+        # Check that the program was able to create its threads within the allotted time
+        self.assertTrue(inferior_set_up.IsValid())
+        self.assertEquals(inferior_set_up.GetValueAsSigned(), 1)
 
         self.check_number_of_threads(process)
 

@@ -22,6 +22,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <atomic>
+#include <cassert>
 #include <cstdarg>
 #include <cstdio>
 #include <tuple>
@@ -31,6 +32,10 @@
 #endif
 
 using namespace llvm;
+
+static const char *BugReportMsg =
+    "PLEASE submit a bug report to " BUG_REPORT_URL
+    " and include the crash backtrace.\n";
 
 // If backtrace support is not enabled, compile out support for pretty stack
 // traces.  This has the secondary effect of not requiring thread local storage
@@ -144,6 +149,8 @@ static CrashHandlerStringStorage crashHandlerStringStorage;
 /// This callback is run if a fatal signal is delivered to the process, it
 /// prints the pretty stack trace.
 static void CrashHandler(void *) {
+  errs() << BugReportMsg ;
+
 #ifndef __APPLE__
   // On non-apple systems, just emit the crash stack trace to stderr.
   PrintCurStackTrace(errs());
@@ -194,6 +201,14 @@ static void printForSigInfoIfNeeded() {
 }
 
 #endif // ENABLE_BACKTRACES
+
+void llvm::setBugReportMsg(const char *Msg) {
+  BugReportMsg = Msg;
+}
+
+const char *llvm::getBugReportMsg() {
+  return BugReportMsg;
+}
 
 PrettyStackTraceEntry::PrettyStackTraceEntry() {
 #if ENABLE_BACKTRACES

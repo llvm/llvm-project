@@ -364,10 +364,16 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
                                        unsigned PointerReg,
                                        ArrayRef<MachineInstr *> PrevInsts) {
   int64_t Offset;
+  bool OffsetIsScalable;
   const MachineOperand *BaseOp;
 
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI) ||
+
+  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI) ||
       !BaseOp->isReg() || BaseOp->getReg() != PointerReg)
+    return SR_Unsuitable;
+
+  // FIXME: This algorithm assumes instructions have fixed-size offsets.
+  if (OffsetIsScalable)
     return SR_Unsuitable;
 
   // We want the mem access to be issued at a sane offset from PointerReg,

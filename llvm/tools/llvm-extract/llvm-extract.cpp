@@ -31,6 +31,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Transforms/IPO.h"
 #include <memory>
+#include <utility>
 using namespace llvm;
 
 cl::OptionCategory ExtractCat("llvm-extract Options");
@@ -51,6 +52,10 @@ static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"),
 
 static cl::opt<bool> DeleteFn("delete",
                               cl::desc("Delete specified Globals from Module"),
+                              cl::cat(ExtractCat));
+
+static cl::opt<bool> KeepConstInit("keep-const-init",
+                              cl::desc("Keep initializers of constants"),
                               cl::cat(ExtractCat));
 
 static cl::opt<bool>
@@ -252,8 +257,9 @@ int main(int argc, char **argv) {
   }
 
   // Figure out which BasicBlocks we should extract.
-  SmallVector<SmallVector<BasicBlock *, 16>, 4> GroupOfBBs;
+  SmallVector<std::pair<Function *, SmallVector<StringRef, 16>>, 2> BBMap;
   for (StringRef StrPair : ExtractBlocks) {
+    SmallVector<StringRef, 16> BBNames;
     auto BBInfo = StrPair.split(':');
     // Get the function.
     Function *F = M->getFunction(BBInfo.first);
@@ -262,26 +268,11 @@ int main(int argc, char **argv) {
              << BBInfo.first << "'!\n";
       return 1;
     }
-    // Do not materialize this function.
+    // Add the function to the materialize list, and store the basic block names
+    // to check after materialization.
     GVs.insert(F);
-    // Get the basic blocks.
-    SmallVector<BasicBlock *, 16> BBs;
-    SmallVector<StringRef, 16> BBNames;
-    BBInfo.second.split(BBNames, ';', /*MaxSplit=*/-1,
-                        /*KeepEmpty=*/false);
-    for (StringRef BBName : BBNames) {
-      auto Res = llvm::find_if(*F, [&](const BasicBlock &BB) {
-        return BB.getName().equals(BBName);
-      });
-      if (Res == F->end()) {
-        errs() << argv[0] << ": function " << F->getName()
-               << " doesn't contain a basic block named '" << BBInfo.second
-               << "'!\n";
-        return 1;
-      }
-      BBs.push_back(&*Res);
-    }
-    GroupOfBBs.push_back(BBs);
+    BBInfo.second.split(BBNames, ';', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+    BBMap.push_back({F, std::move(BBNames)});
   }
 
   // Use *argv instead of argv[0] to work around a wrong GCC warning.
@@ -333,7 +324,7 @@ int main(int argc, char **argv) {
   {
     std::vector<GlobalValue *> Gvs(GVs.begin(), GVs.end());
     legacy::PassManager Extract;
-    Extract.add(createGVExtractionPass(Gvs, DeleteFn));
+    Extract.add(createGVExtractionPass(Gvs, DeleteFn, KeepConstInit));
     Extract.run(*M);
 
     // Now that we have all the GVs we want, mark the module as fully
@@ -345,6 +336,27 @@ int main(int argc, char **argv) {
   // Extract the specified basic blocks from the module and erase the existing
   // functions.
   if (!ExtractBlocks.empty()) {
+    // Figure out which BasicBlocks we should extract.
+    SmallVector<SmallVector<BasicBlock *, 16>, 4> GroupOfBBs;
+    for (auto &P : BBMap) {
+      SmallVector<BasicBlock *, 16> BBs;
+      for (StringRef BBName : P.second) {
+        // The function has been materialized, so add its matching basic blocks
+        // to the block extractor list, or fail if a name is not found.
+        auto Res = llvm::find_if(*P.first, [&](const BasicBlock &BB) {
+          return BB.getName().equals(BBName);
+        });
+        if (Res == P.first->end()) {
+          errs() << argv[0] << ": function " << P.first->getName()
+                 << " doesn't contain a basic block named '" << BBName
+                 << "'!\n";
+          return 1;
+        }
+        BBs.push_back(&*Res);
+      }
+      GroupOfBBs.push_back(BBs);
+    }
+
     legacy::PassManager PM;
     PM.add(createBlockExtractorPass(GroupOfBBs, true));
     PM.run(*M);
@@ -369,7 +381,7 @@ int main(int argc, char **argv) {
   if (OutputAssembly)
     Passes.add(
         createPrintModulePass(Out.os(), "", PreserveAssemblyUseListOrder));
-  else if (Force || !CheckBitcodeOutputToConsole(Out.os(), true))
+  else if (Force || !CheckBitcodeOutputToConsole(Out.os()))
     Passes.add(createBitcodeWriterPass(Out.os(), PreserveBitcodeUseListOrder));
 
   Passes.run(*M.get());

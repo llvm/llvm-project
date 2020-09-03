@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
 # RUN: rm -f %t.a
 # RUN: llvm-ar crs %t.a %t

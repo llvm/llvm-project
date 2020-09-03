@@ -10,6 +10,8 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 
 using namespace clang::ast_matchers;
 
@@ -24,16 +26,26 @@ AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
 InitVariablesCheck::InitVariablesCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.getLocalOrGlobal("IncludeStyle", "llvm"))),
+      IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
+                                            utils::IncludeSorter::IS_LLVM)),
       MathHeader(Options.get("MathHeader", "math.h")) {}
 
+void InitVariablesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IncludeStyle", IncludeStyle);
+  Options.store(Opts, "MathHeader", MathHeader);
+}
+
 void InitVariablesCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(varDecl(unless(hasInitializer(anything())),
-                             unless(isInstantiated()), isLocalVarDecl(),
-                             unless(isStaticLocal()), isDefinition())
-                         .bind("vardecl"),
-                     this);
+  std::string BadDecl = "badDecl";
+  Finder->addMatcher(
+      varDecl(unless(hasInitializer(anything())), unless(isInstantiated()),
+              isLocalVarDecl(), unless(isStaticLocal()), isDefinition(),
+              unless(hasParent(cxxCatchStmt())),
+              optionally(hasParent(declStmt(hasParent(
+                  cxxForRangeStmt(hasLoopVariable(varDecl().bind(BadDecl))))))),
+              unless(equalsBoundNode(BadDecl)))
+          .bind("vardecl"),
+      this);
 }
 
 void InitVariablesCheck::registerPPCallbacks(const SourceManager &SM,
@@ -92,14 +104,11 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
                    MatchedDecl->getName().size()),
                InitializationString);
     if (AddMathInclude) {
-      auto IncludeHint = IncludeInserter->CreateIncludeInsertion(
+      Diagnostic << IncludeInserter->CreateIncludeInsertion(
           Source.getFileID(MatchedDecl->getBeginLoc()), MathHeader, false);
-      if (IncludeHint)
-        Diagnostic << *IncludeHint;
     }
   }
 }
-
 } // namespace cppcoreguidelines
 } // namespace tidy
 } // namespace clang

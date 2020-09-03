@@ -92,7 +92,6 @@ public:
     bool
     IsPlanStale();
 
-    // This section allows an SBThreadPlan to push another of the common types of plans...
     SBThreadPlan
     QueueThreadPlanForStepOverRange (SBAddress &start_address,
                                      lldb::addr_t range_size);

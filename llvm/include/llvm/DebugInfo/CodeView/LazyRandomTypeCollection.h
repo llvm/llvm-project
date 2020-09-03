@@ -79,6 +79,7 @@ public:
   uint32_t capacity() override;
   Optional<TypeIndex> getFirst() override;
   Optional<TypeIndex> getNext(TypeIndex Prev) override;
+  bool replaceType(TypeIndex &Index, CVType Data, bool Stabilize) override;
 
 private:
   Error ensureTypeExists(TypeIndex Index);

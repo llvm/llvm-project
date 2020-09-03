@@ -345,7 +345,6 @@ define <32 x i8> @test_divconstant_32i8(<32 x i8> %a) nounwind {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpmovzxbw {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
 ; AVX512BW-NEXT:    vpsrlvw {{.*}}(%rip), %zmm1, %zmm1
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpmullw {{.*}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpsrlw $8, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1
@@ -793,7 +792,6 @@ define <32 x i8> @test_remconstant_32i8(<32 x i8> %a) nounwind {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpmovzxbw {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
 ; AVX512BW-NEXT:    vpsrlvw {{.*}}(%rip), %zmm1, %zmm1
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpmullw {{.*}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpsrlw $8, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1

@@ -19,6 +19,7 @@
 #include "FuzzerDictionary.h"
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
+#include "FuzzerPlatform.h"
 #include "FuzzerUtil.h"
 #include "FuzzerValueBitMap.h"
 #include <set>
@@ -240,7 +241,9 @@ void TracePC::IterateCoveredFunctions(CallBack CB) {
 void TracePC::SetFocusFunction(const std::string &FuncName) {
   // This function should be called once.
   assert(!FocusFunctionCounterPtr);
-  if (FuncName.empty())
+  // "auto" is not a valid function name. If this function is called with "auto"
+  // that means the auto focus functionality failed.
+  if (FuncName.empty() || FuncName == "auto")
     return;
   for (size_t M = 0; M < NumModules; M++) {
     auto &PCTE = ModulePCTable[M];
@@ -256,6 +259,10 @@ void TracePC::SetFocusFunction(const std::string &FuncName) {
       return;
     }
   }
+
+  Printf("ERROR: Failed to set focus function. Make sure the function name is "
+         "valid (%s) and symbolization is enabled.\n", FuncName.c_str());
+  exit(1);
 }
 
 bool TracePC::ObservedFocusFunction() {

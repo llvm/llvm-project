@@ -32,7 +32,7 @@ int main() {
   // CHECK: b = i ? YES : NO;
 
   b = i * 2;
-  // CHECK b = (i * 2) ? YES : NO;
+  // CHECK: b = (i * 2) ? YES : NO;
 
   b = 1 ? 2 : 3;
   // CHECK: b = 1 ? 2 ? YES : NO : 3 ? YES : NO;

@@ -88,8 +88,10 @@ emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
                             0, MIFlags);
     }
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tADDhirr), ARM::SP)
-      .addReg(ARM::SP).addReg(ScratchReg, RegState::Kill)
-      .add(predOps(ARMCC::AL));
+        .addReg(ARM::SP)
+        .addReg(ScratchReg, RegState::Kill)
+        .add(predOps(ARMCC::AL))
+        .setMIFlags(MIFlags);
     return;
   }
   // FIXME: This is assuming the heuristics in emitThumbRegPlusImmediate
@@ -127,7 +129,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
       // We need to keep the stack aligned properly.  To do this, we round the
       // amount of space needed for the outgoing arguments up to the next
       // alignment boundary.
-      Amount = alignTo(Amount, getStackAlignment());
+      Amount = alignTo(Amount, getStackAlign());
 
       // Replace the pseudo instruction with a new instruction...
       unsigned Opc = Old.getOpcode();
@@ -180,9 +182,9 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   if (ArgRegsSaveSize) {
     emitPrologueEpilogueSPUpdate(MBB, MBBI, TII, dl, *RegInfo, -ArgRegsSaveSize,
                                  ARM::NoRegister, MachineInstr::FrameSetup);
-    CFAOffset -= ArgRegsSaveSize;
-    unsigned CFIIndex = MF.addFrameInst(
-        MCCFIInstruction::createDefCfaOffset(nullptr, CFAOffset));
+    CFAOffset += ArgRegsSaveSize;
+    unsigned CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, CFAOffset));
     BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
         .setMIFlags(MachineInstr::FrameSetup);
@@ -193,9 +195,9 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
       emitPrologueEpilogueSPUpdate(MBB, MBBI, TII, dl, *RegInfo,
                                    -(NumBytes - ArgRegsSaveSize),
                                    ARM::NoRegister, MachineInstr::FrameSetup);
-      CFAOffset -= NumBytes - ArgRegsSaveSize;
+      CFAOffset += NumBytes - ArgRegsSaveSize;
       unsigned CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::createDefCfaOffset(nullptr, CFAOffset));
+          MCCFIInstruction::cfiDefCfaOffset(nullptr, CFAOffset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
@@ -257,9 +259,9 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (adjustedGPRCS1Size) {
-    CFAOffset -= adjustedGPRCS1Size;
-    unsigned CFIIndex = MF.addFrameInst(
-        MCCFIInstruction::createDefCfaOffset(nullptr, CFAOffset));
+    CFAOffset += adjustedGPRCS1Size;
+    unsigned CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, CFAOffset));
     BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
         .setMIFlags(MachineInstr::FrameSetup);
@@ -305,8 +307,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
         .setMIFlags(MachineInstr::FrameSetup)
         .add(predOps(ARMCC::AL));
     if(FramePtrOffsetInBlock) {
-      CFAOffset += FramePtrOffsetInBlock;
-      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfa(
+      CFAOffset -= FramePtrOffsetInBlock;
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
           nullptr, MRI->getDwarfRegNum(FramePtr, true), CFAOffset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
@@ -384,9 +386,9 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     emitPrologueEpilogueSPUpdate(MBB, MBBI, TII, dl, *RegInfo, -NumBytes,
                                  ScratchRegister, MachineInstr::FrameSetup);
     if (!HasFP) {
-      CFAOffset -= NumBytes;
+      CFAOffset += NumBytes;
       unsigned CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::createDefCfaOffset(nullptr, CFAOffset));
+          MCCFIInstruction::cfiDefCfaOffset(nullptr, CFAOffset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
@@ -402,7 +404,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   AFI->setDPRCalleeSavedAreaSize(DPRCSSize);
 
   if (RegInfo->needsStackRealignment(MF)) {
-    const unsigned NrBitsToZero = countTrailingZeros(MFI.getMaxAlignment());
+    const unsigned NrBitsToZero = Log2(MFI.getMaxAlign());
     // Emit the following sequence, using R4 as a temporary, since we cannot use
     // SP as a source or destination register for the shifts:
     // mov  r4, sp
@@ -804,11 +806,9 @@ static const unsigned *findNextOrderedReg(const unsigned *CurrentReg,
   return CurrentReg;
 }
 
-bool Thumb1FrameLowering::
-spillCalleeSavedRegisters(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MI,
-                          const std::vector<CalleeSavedInfo> &CSI,
-                          const TargetRegisterInfo *TRI) const {
+bool Thumb1FrameLowering::spillCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   if (CSI.empty())
     return false;
 
@@ -927,11 +927,9 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
   return true;
 }
 
-bool Thumb1FrameLowering::
-restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI,
-                            std::vector<CalleeSavedInfo> &CSI,
-                            const TargetRegisterInfo *TRI) const {
+bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   if (CSI.empty())
     return false;
 
@@ -1047,6 +1045,10 @@ restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
         continue;
       // ARMv4T requires BX, see emitEpilogue
       if (!STI.hasV5TOps())
+        continue;
+
+      // CMSE entry functions must return via BXNS, see emitEpilogue.
+      if (AFI->isCmseNSEntryFunction())
         continue;
 
       // Pop LR into PC.

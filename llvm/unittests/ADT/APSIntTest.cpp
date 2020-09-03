@@ -150,6 +150,29 @@ TEST(APSIntTest, FromString) {
   EXPECT_EQ(APSInt("-1234").getExtValue(), -1234);
 }
 
+TEST(APSIntTest, FromStringBitWidth) {
+  EXPECT_EQ(APSInt("0").getBitWidth(), 1U);
+  EXPECT_EQ(APSInt("000").getBitWidth(), 1U);
+  EXPECT_EQ(APSInt("1").getBitWidth(), 1U);
+  EXPECT_EQ(APSInt("2").getBitWidth(), 2U);
+  EXPECT_EQ(APSInt("3").getBitWidth(), 2U);
+  EXPECT_EQ(APSInt("003").getBitWidth(), 2U);
+  EXPECT_EQ(APSInt("15").getBitWidth(), 4U);
+  EXPECT_EQ(APSInt("16").getBitWidth(), 5U);
+  EXPECT_EQ(APSInt("17").getBitWidth(), 5U);
+
+  EXPECT_EQ(APSInt("-0").getBitWidth(), 1U);
+  EXPECT_EQ(APSInt("-000").getBitWidth(), 1U);
+  EXPECT_EQ(APSInt("-1").getBitWidth(), 1U);
+  EXPECT_EQ(APSInt("-2").getBitWidth(), 2U);
+  EXPECT_EQ(APSInt("-3").getBitWidth(), 3U);
+  EXPECT_EQ(APSInt("-003").getBitWidth(), 3U);
+  EXPECT_EQ(APSInt("-5").getBitWidth(), 4U);
+  EXPECT_EQ(APSInt("-15").getBitWidth(), 5U);
+  EXPECT_EQ(APSInt("-16").getBitWidth(), 5U);
+  EXPECT_EQ(APSInt("-17").getBitWidth(), 6U);
+}
+
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
 
 TEST(APSIntTest, StringDeath) {

@@ -18,7 +18,6 @@
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Error.h"

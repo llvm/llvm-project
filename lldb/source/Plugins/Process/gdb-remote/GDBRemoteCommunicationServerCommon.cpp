@@ -1,4 +1,4 @@
-//===-- GDBRemoteCommunicationServerCommon.cpp ------------------*- C++ -*-===//
+//===-- GDBRemoteCommunicationServerCommon.cpp ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -842,6 +842,7 @@ GDBRemoteCommunicationServerCommon::Handle_qSupported(
   response.PutCString(";QThreadSuffixSupported+");
   response.PutCString(";QListThreadsInStopReply+");
   response.PutCString(";qEcho+");
+  response.PutCString(";qXfer:features:read+");
 #if defined(__linux__) || defined(__NetBSD__)
   response.PutCString(";QPassSignals+");
   response.PutCString(";qXfer:auxv:read+");
@@ -1227,7 +1228,7 @@ void GDBRemoteCommunicationServerCommon::
     if (cpu_subtype != 0)
       response.Printf("cpusubtype:%" PRIx32 ";", cpu_subtype);
 
-    const std::string vendor = proc_triple.getVendorName();
+    const std::string vendor = proc_triple.getVendorName().str();
     if (!vendor.empty())
       response.Printf("vendor:%s;", vendor.c_str());
 #else
@@ -1236,7 +1237,7 @@ void GDBRemoteCommunicationServerCommon::
     response.PutStringAsRawHex8(proc_triple.getTriple());
     response.PutChar(';');
 #endif
-    std::string ostype = proc_triple.getOSName();
+    std::string ostype = std::string(proc_triple.getOSName());
     // Adjust so ostype reports ios for Apple/ARM and Apple/ARM64.
     if (proc_triple.getVendor() == llvm::Triple::Apple) {
       switch (proc_triple.getArch()) {

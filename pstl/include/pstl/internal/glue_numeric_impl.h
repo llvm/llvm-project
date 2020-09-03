@@ -101,17 +101,25 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 exclusive_scan(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator1 __last,
                _ForwardIterator2 __result, _Tp __init)
 {
-    return transform_exclusive_scan(std::forward<_ExecutionPolicy>(__exec), __first, __last, __result, __init,
-                                    std::plus<_Tp>(), __pstl::__internal::__no_op());
+    using namespace __pstl;
+    return __internal::__pattern_transform_scan(
+        std::forward<_ExecutionPolicy>(__exec), __first, __last, __result, __pstl::__internal::__no_op(), __init,
+        std::plus<_Tp>(), /*inclusive=*/std::false_type(),
+        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
+        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _Tp, class _BinaryOperation>
-_ForwardIterator2
+__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator2>
 exclusive_scan(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator1 __last,
                _ForwardIterator2 __result, _Tp __init, _BinaryOperation __binary_op)
 {
-    return transform_exclusive_scan(std::forward<_ExecutionPolicy>(__exec), __first, __last, __result, __init,
-                                    __binary_op, __pstl::__internal::__no_op());
+    using namespace __pstl;
+    return __internal::__pattern_transform_scan(
+        std::forward<_ExecutionPolicy>(__exec), __first, __last, __result, __pstl::__internal::__no_op(), __init,
+        __binary_op, /*inclusive=*/std::false_type(),
+        __internal::__is_vectorization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec),
+        __internal::__is_parallelization_preferred<_ExecutionPolicy, _ForwardIterator1, _ForwardIterator2>(__exec));
 }
 
 // [inclusive.scan]

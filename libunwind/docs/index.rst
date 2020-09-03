@@ -71,8 +71,8 @@ Notes and Known Issues
 Getting Involved
 ================
 
-First please review our `Developer's Policy <http://llvm.org/docs/DeveloperPolicy.html>`__
-and `Getting started with LLVM <http://llvm.org/docs/GettingStarted.html>`__.
+First please review our `Developer's Policy <https://llvm.org/docs/DeveloperPolicy.html>`__
+and `Getting started with LLVM <https://llvm.org/docs/GettingStarted.html>`__.
 
 **Bug Reports**
 
@@ -84,7 +84,7 @@ Please include "libunwind" in your subject.
 **Patches**
 
 If you want to contribute a patch to libunwind, the best place for that is
-`Phabricator <http://llvm.org/docs/Phabricator.html>`_. Please include [libunwind] in the subject and
+`Phabricator <https://llvm.org/docs/Phabricator.html>`_. Please include [libunwind] in the subject and
 add `cfe-commits` as a subscriber. Also make sure you are subscribed to the
 `cfe-commits mailing list <http://lists.llvm.org/mailman/listinfo/cfe-commits>`_.
 
@@ -97,7 +97,7 @@ Please include [libunwind] in the subject.
 
 Quick Links
 ===========
-* `LLVM Homepage <http://llvm.org/>`_
+* `LLVM Homepage <https://llvm.org/>`_
 * `LLVM Bugzilla <https://bugs.llvm.org/>`_
 * `cfe-commits Mailing List`_
 * `cfe-dev Mailing List`_

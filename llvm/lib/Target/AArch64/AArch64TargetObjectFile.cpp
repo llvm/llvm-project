@@ -20,7 +20,6 @@ using namespace dwarf;
 void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
                                              const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
-  InitializeELF(TM.Options.UseInitArray);
   // AARCH64 ELF ABI does not define static relocation type for TLS offset
   // within a module.  Do not generate AT_location for TLS variables.
   SupportDebugThreadLocalLocation = false;
@@ -43,7 +42,7 @@ const MCExpr *AArch64_MachoTargetObjectFile::getTTypeGlobalReference(
     const MCExpr *Res =
         MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOT, getContext());
     MCSymbol *PCSym = getContext().createTempSymbol();
-    Streamer.EmitLabel(PCSym);
+    Streamer.emitLabel(PCSym);
     const MCExpr *PC = MCSymbolRefExpr::create(PCSym, getContext());
     return MCBinaryExpr::createSub(Res, PC, getContext());
   }
@@ -68,7 +67,7 @@ const MCExpr *AArch64_MachoTargetObjectFile::getIndirectSymViaGOTPCRel(
   const MCExpr *Res =
       MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOT, getContext());
   MCSymbol *PCSym = getContext().createTempSymbol();
-  Streamer.EmitLabel(PCSym);
+  Streamer.emitLabel(PCSym);
   const MCExpr *PC = MCSymbolRefExpr::create(PCSym, getContext());
   return MCBinaryExpr::createSub(Res, PC, getContext());
 }

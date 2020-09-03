@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_RegisterContextThreadMemory_h_
-#define lldb_RegisterContextThreadMemory_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTTHREADMEMORY_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTTHREADMEMORY_H
 
 #include <vector>
 
@@ -92,9 +92,11 @@ protected:
   uint32_t m_stop_id;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(RegisterContextThreadMemory);
+  RegisterContextThreadMemory(const RegisterContextThreadMemory &) = delete;
+  const RegisterContextThreadMemory &
+  operator=(const RegisterContextThreadMemory &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // lldb_RegisterContextThreadMemory_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTTHREADMEMORY_H

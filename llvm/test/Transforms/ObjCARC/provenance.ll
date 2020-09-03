@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -disable-basicaa -pa-eval %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -disable-basic-aa -pa-eval %s 2>&1 | FileCheck %s
 
 @"\01l_objc_msgSend_fixup_" = global i8 0
 @g1 = global i8 0, section "__OBJC,__message_refs,literal_pointers,no_dead_strip"

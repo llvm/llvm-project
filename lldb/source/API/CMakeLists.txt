@@ -14,19 +14,19 @@ endif()
 
 get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
-if(LLDB_ENABLE_PYTHON)
-  get_target_property(lldb_bindings_dir swig_wrapper BINARY_DIR)
-  set(lldb_python_wrapper ${lldb_bindings_dir}/LLDBWrapPython.cpp)
-endif()
-
-if(LLDB_ENABLE_LUA)
-  get_target_property(lldb_bindings_dir swig_wrapper_lua BINARY_DIR)
-  set(lldb_lua_wrapper ${lldb_bindings_dir}/LLDBWrapLua.cpp)
-endif()
-
 if(LLDB_BUILD_FRAMEWORK)
   set(option_install_prefix INSTALL_PREFIX ${LLDB_FRAMEWORK_INSTALL_DIR})
   set(option_framework FRAMEWORK)
+endif()
+
+if(LLDB_ENABLE_PYTHON)
+  get_target_property(python_bindings_dir swig_wrapper_python BINARY_DIR)
+  set(lldb_python_wrapper ${python_bindings_dir}/LLDBWrapPython.cpp)
+endif()
+
+if(LLDB_ENABLE_LUA)
+  get_target_property(lua_bindings_dir swig_wrapper_lua BINARY_DIR)
+  set(lldb_lua_wrapper ${lua_bindings_dir}/LLDBWrapLua.cpp)
 endif()
 
 add_lldb_library(liblldb SHARED ${option_framework}
@@ -39,12 +39,14 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBBreakpointOptionCommon.cpp
   SBBroadcaster.cpp
   SBCommandInterpreter.cpp
+  SBCommandInterpreterRunOptions.cpp
   SBCommandReturnObject.cpp
   SBCommunication.cpp
   SBCompileUnit.cpp
   SBData.cpp
   SBDebugger.cpp
   SBDeclaration.cpp
+  SBEnvironment.cpp
   SBError.cpp
   SBEvent.cpp
   SBExecutionContext.cpp
@@ -134,15 +136,15 @@ endif()
 
 if(PYTHON_RPATH)
   set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "${PYTHON_RPATH}")
-  set_property(TARGET liblldb APPEND PROPERTY BUILD_RPATH "${PYTHON_RPATH}")
+  set_property(TARGET liblldb APPEND PROPERTY BUILD_RPATH   "${PYTHON_RPATH}")
 endif()
 
 if (MSVC)
   set_source_files_properties(SBReproducer.cpp PROPERTIES COMPILE_FLAGS /bigobj)
 endif()
 
-if(lldb_python_wrapper)
-  add_dependencies(liblldb swig_wrapper)
+if(LLDB_ENABLE_PYTHON)
+  add_dependencies(liblldb swig_wrapper_python)
 
   if (MSVC)
     set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
@@ -162,7 +164,7 @@ if(lldb_python_wrapper)
   endif ()
 endif()
 
-if(lldb_lua_wrapper)
+if(LLDB_ENABLE_LUA)
   add_dependencies(liblldb swig_wrapper_lua)
   target_include_directories(liblldb PRIVATE ${LUA_INCLUDE_DIR})
 

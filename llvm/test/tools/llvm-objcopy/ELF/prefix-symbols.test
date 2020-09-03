@@ -1,8 +1,8 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --prefix-symbols prefix %t %t2
-# RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefix=COMMON --check-prefix=BASIC
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefixes=COMMON,BASIC
 # RUN: llvm-objcopy --redefine-sym bar=baz --prefix-symbols prefix %t %t3
-# RUN: llvm-readobj --symbols %t3 | FileCheck %s --check-prefix=COMMON --check-prefix=REDEF
+# RUN: llvm-readobj --symbols %t3 | FileCheck %s --check-prefixes=COMMON,REDEF
 
 !ELF
 FileHeader:

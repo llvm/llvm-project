@@ -18,18 +18,22 @@
 
 #include "CoroInternal.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/Transforms/Utils/Local.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/circular_raw_ostream.h"
-#include "llvm/Support/OptimalLayout.h"
+#include "llvm/Support/OptimizedStructLayout.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
+#include <algorithm>
 
 using namespace llvm;
 
@@ -105,7 +109,6 @@ struct SuspendCrossingInfo {
     size_t const DefIndex = Mapping.blockToIndex(DefBB);
     size_t const UseIndex = Mapping.blockToIndex(UseBB);
 
-    assert(Block[UseIndex].Consumes[DefIndex] && "use must consume def");
     bool const Result = Block[UseIndex].Kills[DefIndex];
     LLVM_DEBUG(dbgs() << UseBB->getName() << " => " << DefBB->getName()
                       << " answer is " << Result << "\n");
@@ -383,7 +386,7 @@ public:
         report_fatal_error("Coroutines cannot handle non static allocas yet");
     }
 
-    return addField(Ty, MaybeAlign(AI->getAlignment()), ForSpill, IsHeader);
+    return addField(Ty, AI->getAlign(), ForSpill, IsHeader);
   }
 
   /// Add a field to this structure.
@@ -398,7 +401,7 @@ public:
 
     // The field alignment might not be the type alignment, but we need
     // to remember the type alignment anyway to build the type.
-    Align TyAlignment = Align(DL.getABITypeAlignment(Ty));
+    Align TyAlignment = DL.getABITypeAlign(Ty);
     if (!FieldAlignment) FieldAlignment = TyAlignment;
 
     // Lay out header fields immediately.
@@ -409,7 +412,7 @@ public:
 
     // Everything else has a flexible offset.
     } else {
-      Offset = OptimalLayoutField::FlexibleOffset;
+      Offset = OptimizedStructLayoutField::FlexibleOffset;
     }
 
     Fields.push_back({FieldSize, Offset, ForSpill, Ty, 0,
@@ -442,7 +445,7 @@ void FrameTypeBuilder::finish(StructType *Ty) {
 
   // Prepare the optimal-layout field array.
   // The Id in the layout field is a pointer to our Field for it.
-  SmallVector<OptimalLayoutField, 8> LayoutFields;
+  SmallVector<OptimizedStructLayoutField, 8> LayoutFields;
   LayoutFields.reserve(Fields.size());
   for (auto &Field : Fields) {
     LayoutFields.emplace_back(&Field, Field.Size, Field.Alignment,
@@ -450,11 +453,11 @@ void FrameTypeBuilder::finish(StructType *Ty) {
   }
 
   // Perform layout.
-  auto SizeAndAlign = performOptimalLayout(LayoutFields);
+  auto SizeAndAlign = performOptimizedStructLayout(LayoutFields);
   StructSize = SizeAndAlign.first;
   StructAlign = SizeAndAlign.second;
 
-  auto getField = [](const OptimalLayoutField &LayoutField) -> Field & {
+  auto getField = [](const OptimizedStructLayoutField &LayoutField) -> Field & {
     return *static_cast<Field *>(const_cast<void*>(LayoutField.Id));
   };
 
@@ -619,6 +622,61 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   return FrameTy;
 }
 
+// We use a pointer use visitor to discover if there are any writes into an
+// alloca that dominates CoroBegin. If that is the case, insertSpills will copy
+// the value from the alloca into the coroutine frame spill slot corresponding
+// to that alloca.
+namespace {
+struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
+  using Base = PtrUseVisitor<AllocaUseVisitor>;
+  AllocaUseVisitor(const DataLayout &DL, const DominatorTree &DT,
+                   const CoroBeginInst &CB)
+      : PtrUseVisitor(DL), DT(DT), CoroBegin(CB) {}
+
+  // We are only interested in uses that dominate coro.begin.
+  void visit(Instruction &I) {
+    if (DT.dominates(&I, &CoroBegin))
+      Base::visit(I);
+  }
+  // We need to provide this overload as PtrUseVisitor uses a pointer based
+  // visiting function.
+  void visit(Instruction *I) { return visit(*I); }
+
+  void visitLoadInst(LoadInst &) {} // Good. Nothing to do.
+
+  // If the use is an operand, the pointer escaped and anything can write into
+  // that memory. If the use is the pointer, we are definitely writing into the
+  // alloca and therefore we need to copy.
+  void visitStoreInst(StoreInst &SI) { PI.setAborted(&SI); }
+
+  // Any other instruction that is not filtered out by PtrUseVisitor, will
+  // result in the copy.
+  void visitInstruction(Instruction &I) { PI.setAborted(&I); }
+
+private:
+  const DominatorTree &DT;
+  const CoroBeginInst &CoroBegin;
+};
+} // namespace
+static bool mightWriteIntoAllocaPtr(AllocaInst &A, const DominatorTree &DT,
+                                    const CoroBeginInst &CB) {
+  const DataLayout &DL = A.getModule()->getDataLayout();
+  AllocaUseVisitor Visitor(DL, DT, CB);
+  auto PtrI = Visitor.visitPtr(A);
+  if (PtrI.isEscaped() || PtrI.isAborted()) {
+    auto *PointerEscapingInstr = PtrI.getEscapingInst()
+                                     ? PtrI.getEscapingInst()
+                                     : PtrI.getAbortingInst();
+    if (PointerEscapingInstr) {
+      LLVM_DEBUG(
+          dbgs() << "AllocaInst copy was triggered by instruction: "
+                 << *PointerEscapingInstr << "\n");
+    }
+    return true;
+  }
+  return false;
+}
+
 // We need to make room to insert a spill after initial PHIs, but before
 // catchswitch instruction. Placing it before violates the requirement that
 // catchswitch, like all other EHPads must be the first nonPHI in a block.
@@ -670,6 +728,7 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
   PointerType *FramePtrTy = FrameTy->getPointerTo();
   auto *FramePtr =
       cast<Instruction>(Builder.CreateBitCast(CB, FramePtrTy, "FramePtr"));
+  DominatorTree DT(*CB->getFunction());
 
   Value *CurrentValue = nullptr;
   BasicBlock *CurrentBlock = nullptr;
@@ -716,12 +775,12 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
   };
 
   // Create a load instruction to reload the spilled value from the coroutine
-  // frame.
-  auto CreateReload = [&](Instruction *InsertBefore) {
+  // frame. Populates the Value pointer reference provided with the frame GEP.
+  auto CreateReload = [&](Instruction *InsertBefore, Value *&G) {
     assert(Index != InvalidFieldIndex && "accessing unassigned field number");
     Builder.SetInsertPoint(InsertBefore);
 
-    auto *G = GetFramePointer(Index, CurrentValue);
+    G = GetFramePointer(Index, CurrentValue);
     G->setName(CurrentValue->getName() + Twine(".reload.addr"));
 
     return isa<AllocaInst>(CurrentValue)
@@ -730,6 +789,7 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
                                     CurrentValue->getName() + Twine(".reload"));
   };
 
+  Value *GEP = nullptr, *CurrentGEP = nullptr;
   for (auto const &E : Spills) {
     // If we have not seen the value, generate a spill.
     if (CurrentValue != E.def()) {
@@ -778,11 +838,17 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
           // that the suspend will be followed by a branch.
           InsertPt = CSI->getParent()->getSingleSuccessor()->getFirstNonPHI();
         } else {
+          auto *I = cast<Instruction>(E.def());
+          assert(!I->isTerminator() && "unexpected terminator");
           // For all other values, the spill is placed immediately after
           // the definition.
-          assert(!cast<Instruction>(E.def())->isTerminator() &&
-                 "unexpected terminator");
-          InsertPt = cast<Instruction>(E.def())->getNextNode();
+          if (DT.dominates(CB, I)) {
+            InsertPt = I->getNextNode();
+          } else {
+            // Unless, it is not dominated by CoroBegin, then it will be
+            // inserted immediately after CoroFrame is computed.
+            InsertPt = FramePtr->getNextNode();
+          }
         }
 
         Builder.SetInsertPoint(InsertPt);
@@ -796,7 +862,7 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
     // If we have not seen the use block, generate a reload in it.
     if (CurrentBlock != E.userBlock()) {
       CurrentBlock = E.userBlock();
-      CurrentReload = CreateReload(&*CurrentBlock->getFirstInsertionPt());
+      CurrentReload = CreateReload(&*CurrentBlock->getFirstInsertionPt(), GEP);
     }
 
     // If we have a single edge PHINode, remove it and replace it with a reload
@@ -810,6 +876,19 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
       continue;
     }
 
+    // If we have not seen this GEP instruction, migrate any dbg.declare from
+    // the alloca to it.
+    if (CurrentGEP != GEP) {
+      CurrentGEP = GEP;
+      TinyPtrVector<DbgDeclareInst *> DIs = FindDbgDeclareUses(CurrentValue);
+      if (!DIs.empty())
+        DIBuilder(*CurrentBlock->getParent()->getParent(),
+                  /*AllowUnresolved*/ false)
+            .insertDeclare(CurrentGEP, DIs.front()->getVariable(),
+                           DIs.front()->getExpression(),
+                           DIs.front()->getDebugLoc(), DIs.front());
+    }
+
     // Replace all uses of CurrentValue in the current instruction with reload.
     E.user()->replaceUsesOfWith(CurrentValue, CurrentReload);
   }
@@ -821,16 +900,71 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
   SpillBlock->splitBasicBlock(&SpillBlock->front(), "PostSpill");
   Shape.AllocaSpillBlock = SpillBlock;
 
-  // If we found any allocas, replace all of their remaining uses with Geps.
-  Builder.SetInsertPoint(&SpillBlock->front());
-  for (auto &P : Allocas) {
-    auto *G = GetFramePointer(P.second, P.first);
+  // retcon and retcon.once lowering assumes all uses have been sunk.
+  if (Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce) {
+    // If we found any allocas, replace all of their remaining uses with Geps.
+    Builder.SetInsertPoint(&SpillBlock->front());
+    for (auto &P : Allocas) {
+      auto *G = GetFramePointer(P.second, P.first);
 
-    // We are not using ReplaceInstWithInst(P.first, cast<Instruction>(G)) here,
-    // as we are changing location of the instruction.
-    G->takeName(P.first);
-    P.first->replaceAllUsesWith(G);
-    P.first->eraseFromParent();
+      // We are not using ReplaceInstWithInst(P.first, cast<Instruction>(G))
+      // here, as we are changing location of the instruction.
+      G->takeName(P.first);
+      P.first->replaceAllUsesWith(G);
+      P.first->eraseFromParent();
+    }
+    return FramePtr;
+  }
+
+  // If we found any alloca, replace all of their remaining uses with GEP
+  // instructions. Because new dbg.declare have been created for these alloca,
+  // we also delete the original dbg.declare and replace other uses with undef.
+  // Note: We cannot replace the alloca with GEP instructions indiscriminately,
+  // as some of the uses may not be dominated by CoroBegin.
+  bool MightNeedToCopy = false;
+  Builder.SetInsertPoint(&Shape.AllocaSpillBlock->front());
+  SmallVector<Instruction *, 4> UsersToUpdate;
+  for (auto &P : Allocas) {
+    AllocaInst *const A = P.first;
+
+    for (auto *DI : FindDbgDeclareUses(A))
+      DI->eraseFromParent();
+    replaceDbgUsesWithUndef(A);
+
+    UsersToUpdate.clear();
+    for (User *U : A->users()) {
+      auto *I = cast<Instruction>(U);
+      if (DT.dominates(CB, I))
+        UsersToUpdate.push_back(I);
+      else
+        MightNeedToCopy = true;
+    }
+    if (!UsersToUpdate.empty()) {
+      auto *G = GetFramePointer(P.second, A);
+      G->takeName(A);
+      for (Instruction *I : UsersToUpdate)
+        I->replaceUsesOfWith(A, G);
+    }
+  }
+  // If we discovered such uses not dominated by CoroBegin, see if any of them
+  // preceed coro begin and have instructions that can modify the
+  // value of the alloca and therefore would require a copying the value into
+  // the spill slot in the coroutine frame.
+  if (MightNeedToCopy) {
+    Builder.SetInsertPoint(FramePtr->getNextNode());
+
+    for (auto &P : Allocas) {
+      AllocaInst *const A = P.first;
+      if (mightWriteIntoAllocaPtr(*A, DT, *CB)) {
+        if (A->isArrayAllocation())
+          report_fatal_error(
+              "Coroutines cannot handle copying of array allocas yet");
+
+        auto *G = GetFramePointer(P.second, A);
+        auto *Value = Builder.CreateLoad(A->getAllocatedType(), A);
+        Builder.CreateStore(Value, G);
+      }
+    }
   }
   return FramePtr;
 }
@@ -1032,78 +1166,6 @@ static void rewriteMaterializableInstructions(IRBuilder<> &IRB,
   }
 }
 
-// Move early uses of spilled variable after CoroBegin.
-// For example, if a parameter had address taken, we may end up with the code
-// like:
-//        define @f(i32 %n) {
-//          %n.addr = alloca i32
-//          store %n, %n.addr
-//          ...
-//          call @coro.begin
-//    we need to move the store after coro.begin
-static void moveSpillUsesAfterCoroBegin(Function &F, SpillInfo const &Spills,
-                                        CoroBeginInst *CoroBegin) {
-  DominatorTree DT(F);
-  SmallVector<Instruction *, 8> NeedsMoving;
-
-  Value *CurrentValue = nullptr;
-
-  // Collect the spills for arguments and other not-materializable values.
-
-
-  // It is safe not to sink swift_getFunctionReplacement() users of argument
-  // values.
-  auto isSwiftFunctionReplacementCall = [&F](Instruction *inst) -> bool {
-    auto *callInst = dyn_cast<CallInst>(inst);
-    if (!callInst)
-      return false;
-    auto *bitcast = dyn_cast<BitCastInst>(callInst->getCalledOperand());
-    if (!bitcast)
-      return false;
-    auto callInst2 = dyn_cast<CallInst>(bitcast->getOperand(0));
-    if (!callInst2)
-      return false;
-    auto calledFunc = callInst2->getCalledFunction();
-    if (!calledFunc || callInst2->getParent() != &F.getEntryBlock() ||
-        callInst->getParent()->getSinglePredecessor() != &F.getEntryBlock())
-      return false;
-    if (calledFunc->getName().equals("swift_getFunctionReplacement") ||
-        calledFunc->getName().equals("swift_getFunctionReplacement50")) {
-      return true;
-    }
-    return false;
-  };
-
-  for (auto const &E : Spills) {
-    if (CurrentValue == E.def())
-      continue;
-
-    CurrentValue = E.def();
-
-    for (User *U : CurrentValue->users()) {
-      Instruction *I = cast<Instruction>(U);
-      if (!DT.dominates(CoroBegin, I) && !isSwiftFunctionReplacementCall(I)) {
-        LLVM_DEBUG(dbgs() << "will move: " << *I << "\n");
-
-        // TODO: Make this more robust. Currently if we run into a situation
-        // where simple instruction move won't work we panic and
-        // report_fatal_error.
-        for (User *UI : I->users()) {
-          if (!DT.dominates(CoroBegin, cast<Instruction>(UI)))
-            report_fatal_error("cannot move instruction since its users are not"
-                               " dominated by CoroBegin");
-        }
-
-        NeedsMoving.push_back(I);
-      }
-    }
-  }
-
-  Instruction *InsertPt = CoroBegin->getNextNode();
-  for (Instruction *I : NeedsMoving)
-    I->moveBefore(InsertPt);
-}
-
 // Splits the block at a particular instruction unless it is the first
 // instruction in the block with a single predecessor.
 static BasicBlock *splitBlockIfNotFirst(Instruction *I, const Twine &Name) {
@@ -1221,7 +1283,7 @@ static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
 
     // Allocate memory.
     auto Alloca = Builder.CreateAlloca(Builder.getInt8Ty(), AI->getSize());
-    Alloca->setAlignment(MaybeAlign(AI->getAlignment()));
+    Alloca->setAlignment(Align(AI->getAlignment()));
 
     for (auto U : AI->users()) {
       // Replace gets with the allocation.
@@ -1281,7 +1343,7 @@ static Value *emitGetSwiftErrorValue(IRBuilder<> &Builder, Type *ValueTy,
   auto FnTy = FunctionType::get(ValueTy, {}, false);
   auto Fn = ConstantPointerNull::get(FnTy->getPointerTo());
 
-  auto Call = Builder.CreateCall(Fn, {});
+  auto Call = Builder.CreateCall(FnTy, Fn, {});
   Shape.SwiftErrorOps.push_back(Call);
 
   return Call;
@@ -1297,7 +1359,7 @@ static Value *emitSetSwiftErrorValue(IRBuilder<> &Builder, Value *V,
                                 {V->getType()}, false);
   auto Fn = ConstantPointerNull::get(FnTy->getPointerTo());
 
-  auto Call = Builder.CreateCall(Fn, { V });
+  auto Call = Builder.CreateCall(FnTy, Fn, { V });
   Shape.SwiftErrorOps.push_back(Call);
 
   return Call;
@@ -1437,11 +1499,125 @@ static void eliminateSwiftError(Function &F, coro::Shape &Shape) {
   }
 }
 
-void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
-  // Lower coro.dbg.declare to coro.dbg.value, since we are going to rewrite
-  // access to local variables.
-  LowerDbgDeclare(F);
+/// retcon and retcon.once conventions assume that all spill uses can be sunk
+/// after the coro.begin intrinsic.
+static void sinkSpillUsesAfterCoroBegin(Function &F, const SpillInfo &Spills,
+                                        CoroBeginInst *CoroBegin) {
+  DominatorTree Dom(F);
 
+  SmallSetVector<Instruction *, 32> ToMove;
+  SmallVector<Instruction *, 32> Worklist;
+
+  // Collect all users that precede coro.begin.
+  for (auto const &Entry : Spills) {
+    auto *SpillDef = Entry.def();
+    for (User *U : SpillDef->users()) {
+      auto Inst = cast<Instruction>(U);
+      if (Inst->getParent() != CoroBegin->getParent() ||
+          Dom.dominates(CoroBegin, Inst))
+        continue;
+      if (ToMove.insert(Inst))
+        Worklist.push_back(Inst);
+    }
+  }
+  // Recursively collect users before coro.begin.
+  while (!Worklist.empty()) {
+    auto *Def = Worklist.back();
+    Worklist.pop_back();
+    for (User *U : Def->users()) {
+      auto Inst = cast<Instruction>(U);
+      if (Dom.dominates(CoroBegin, Inst))
+        continue;
+      if (ToMove.insert(Inst))
+        Worklist.push_back(Inst);
+    }
+  }
+
+  // Sort by dominance.
+  SmallVector<Instruction *, 64> InsertionList(ToMove.begin(), ToMove.end());
+  std::sort(InsertionList.begin(), InsertionList.end(),
+            [&Dom](Instruction *A, Instruction *B) -> bool {
+              // If a dominates b it should preceed (<) b.
+              return Dom.dominates(A, B);
+            });
+
+  Instruction *InsertPt = CoroBegin->getNextNode();
+  for (Instruction *Inst : InsertionList)
+    Inst->moveBefore(InsertPt);
+
+  return;
+}
+
+/// For each local variable that all of its user are only used inside one of
+/// suspended region, we sink their lifetime.start markers to the place where
+/// after the suspend block. Doing so minimizes the lifetime of each variable,
+/// hence minimizing the amount of data we end up putting on the frame.
+static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
+                                     SuspendCrossingInfo &Checker) {
+  DominatorTree DT(F);
+
+  // Collect all possible basic blocks which may dominate all uses of allocas.
+  SmallPtrSet<BasicBlock *, 4> DomSet;
+  DomSet.insert(&F.getEntryBlock());
+  for (auto *CSI : Shape.CoroSuspends) {
+    BasicBlock *SuspendBlock = CSI->getParent();
+    assert(isSuspendBlock(SuspendBlock) && SuspendBlock->getSingleSuccessor() &&
+           "should have split coro.suspend into its own block");
+    DomSet.insert(SuspendBlock->getSingleSuccessor());
+  }
+
+  for (Instruction &I : instructions(F)) {
+    if (!isa<AllocaInst>(&I))
+      continue;
+
+    for (BasicBlock *DomBB : DomSet) {
+      bool Valid = true;
+      SmallVector<Instruction *, 1> BCInsts;
+
+      auto isUsedByLifetimeStart = [&](Instruction *I) {
+        if (isa<BitCastInst>(I) && I->hasOneUse())
+          if (auto *IT = dyn_cast<IntrinsicInst>(I->user_back()))
+            return IT->getIntrinsicID() == Intrinsic::lifetime_start;
+        return false;
+      };
+
+      for (User *U : I.users()) {
+        Instruction *UI = cast<Instruction>(U);
+        // For all users except lifetime.start markers, if they are all
+        // dominated by one of the basic blocks and do not cross
+        // suspend points as well, then there is no need to spill the
+        // instruction.
+        if (!DT.dominates(DomBB, UI->getParent()) ||
+            Checker.isDefinitionAcrossSuspend(DomBB, U)) {
+          // Skip bitcast used by lifetime.start markers.
+          if (isUsedByLifetimeStart(UI)) {
+            BCInsts.push_back(UI);
+            continue;
+          }
+          Valid = false;
+          break;
+        }
+      }
+      // Sink lifetime.start markers to dominate block when they are
+      // only used outside the region.
+      if (Valid && BCInsts.size() != 0) {
+        auto *NewBitcast = BCInsts[0]->clone();
+        auto *NewLifetime = cast<Instruction>(BCInsts[0]->user_back())->clone();
+        NewLifetime->replaceUsesOfWith(BCInsts[0], NewBitcast);
+        NewBitcast->insertBefore(DomBB->getTerminator());
+        NewLifetime->insertBefore(DomBB->getTerminator());
+
+        // All the outsided lifetime.start markers are no longer necessary.
+        for (Instruction *S : BCInsts) {
+          S->user_back()->eraseFromParent();
+        }
+        break;
+      }
+    }
+  }
+}
+
+void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   eliminateSwiftError(F, Shape);
 
   if (Shape.ABI == coro::ABI::Switch &&
@@ -1491,6 +1667,25 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     Spills.clear();
   }
 
+  sinkLifetimeStartMarkers(F, Shape, Checker);
+  // Collect lifetime.start info for each alloca.
+  using LifetimeStart = SmallPtrSet<Instruction *, 2>;
+  llvm::DenseMap<Instruction *, std::unique_ptr<LifetimeStart>> LifetimeMap;
+  for (Instruction &I : instructions(F)) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II || II->getIntrinsicID() != Intrinsic::lifetime_start)
+      continue;
+
+    if (auto *OpInst = dyn_cast<BitCastInst>(I.getOperand(1)))
+      if (auto *AI = dyn_cast<AllocaInst>(OpInst->getOperand(0))) {
+
+        if (LifetimeMap.find(AI) == LifetimeMap.end())
+          LifetimeMap[AI] = std::make_unique<LifetimeStart>();
+
+        LifetimeMap[AI]->insert(OpInst);
+      }
+  }
+
   // Collect the spills for arguments and other not-materializable values.
   for (Argument &A : F.args())
     for (User *U : A.users())
@@ -1536,17 +1731,31 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
       continue;
     }
 
-    for (User *U : I.users())
-      if (Checker.isDefinitionAcrossSuspend(I, U)) {
+    auto Iter = LifetimeMap.find(&I);
+    for (User *U : I.users()) {
+      bool NeedSpill = false;
+
+      // Check against lifetime.start if the instruction has the info.
+      if (Iter != LifetimeMap.end())
+        for (auto *S : *Iter->second) {
+          if ((NeedSpill = Checker.isDefinitionAcrossSuspend(*S, U)))
+            break;
+        }
+      else
+        NeedSpill = Checker.isDefinitionAcrossSuspend(I, U);
+
+      if (NeedSpill) {
         // We cannot spill a token.
         if (I.getType()->isTokenTy())
           report_fatal_error(
               "token definition is separated from the use by a suspend point");
         Spills.emplace_back(&I, U);
       }
+    }
   }
   LLVM_DEBUG(dump("Spills", Spills));
-  moveSpillUsesAfterCoroBegin(F, Spills, Shape.CoroBegin);
+  if (Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce)
+    sinkSpillUsesAfterCoroBegin(F, Spills, Shape.CoroBegin);
   Shape.FrameTy = buildFrameType(F, Shape, Spills);
   Shape.FramePtr = insertSpills(Spills, Shape);
   lowerLocalAllocas(LocalAllocas, DeadInstructions);

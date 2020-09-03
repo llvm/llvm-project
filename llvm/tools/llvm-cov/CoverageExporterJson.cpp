@@ -53,7 +53,7 @@
 #include <utility>
 
 /// The semantic version combined as a string.
-#define LLVM_COVERAGE_EXPORT_JSON_STR "2.0.0"
+#define LLVM_COVERAGE_EXPORT_JSON_STR "2.0.1"
 
 /// Unique type identifier for JSON coverage export.
 #define LLVM_COVERAGE_EXPORT_JSON_TYPE_STR "llvm.coverage.json.export"
@@ -72,8 +72,9 @@ int64_t clamp_uint64_to_int64(uint64_t u) {
 }
 
 json::Array renderSegment(const coverage::CoverageSegment &Segment) {
-  return json::Array({Segment.Line, Segment.Col, clamp_uint64_to_int64(Segment.Count),
-                      Segment.HasCount, Segment.IsRegionEntry});
+  return json::Array({Segment.Line, Segment.Col,
+                      clamp_uint64_to_int64(Segment.Count), Segment.HasCount,
+                      Segment.IsRegionEntry, Segment.IsGapRegion});
 }
 
 json::Array renderRegion(const coverage::CountedRegion &Region) {
@@ -162,12 +163,14 @@ json::Array renderFiles(const coverage::CoverageMapping &Coverage,
                         ArrayRef<std::string> SourceFiles,
                         ArrayRef<FileCoverageSummary> FileReports,
                         const CoverageViewOptions &Options) {
-  auto NumThreads = Options.NumThreads;
-  if (NumThreads == 0) {
-    NumThreads = std::max(1U, std::min(llvm::heavyweight_hardware_concurrency(),
-                                       unsigned(SourceFiles.size())));
+  ThreadPoolStrategy S = hardware_concurrency(Options.NumThreads);
+  if (Options.NumThreads == 0) {
+    // If NumThreads is not specified, create one thread for each input, up to
+    // the number of hardware cores.
+    S = heavyweight_hardware_concurrency(SourceFiles.size());
+    S.Limit = true;
   }
-  ThreadPool Pool(NumThreads);
+  ThreadPool Pool(S);
   json::Array FileArray;
   std::mutex FileArrayMutex;
 

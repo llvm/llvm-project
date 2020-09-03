@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-inline | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -test-inline | FileCheck %s
 
 // CHECK-LABEL: func @inline_with_arg
 func @inline_with_arg(%arg0 : i32) -> i32 {

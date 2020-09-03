@@ -43,14 +43,6 @@ void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
-  // Don't register the check if OpenMP is not enabled; the OpenMP pragmas are
-  // completely ignored then, so no OpenMP entires will be present in the AST.
-  if (!getLangOpts().OpenMP)
-    return;
-  // Similarly, if C++ Exceptions are not enabled, nothing to do.
-  if (!getLangOpts().CPlusPlus || !getLangOpts().CXXExceptions)
-    return;
-
   Finder->addMatcher(ompExecutableDirective(
                          unless(isStandaloneDirective()),
                          hasStructuredBlock(stmt().bind("structured-block")))

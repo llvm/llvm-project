@@ -9,6 +9,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
@@ -284,10 +285,8 @@ TEST(YAMLIO, MultilineStrings) {
     YOut << Original;
   }
   auto Expected = "---\n"
-                  "str1:            'a multiline string\n"
-                  "foobarbaz'\n"
-                  "str2:            'another one\r"
-                  "foobarbaz'\n"
+                  "str1:            \"a multiline string\\nfoobarbaz\"\n"
+                  "str2:            \"another one\\rfoobarbaz\"\n"
                   "str3:            a one-line string\n"
                   "...\n";
   ASSERT_EQ(Serialized, Expected);

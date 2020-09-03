@@ -1,16 +1,3 @@
-//===-- call_apsr.h - Helpers for ARM EABI floating point tests -----------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file declares helpers for ARM EABI floating point tests for the
-// compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
-
 #ifndef CALL_APSR_H
 #define CALL_APSR_H
 
@@ -29,10 +16,22 @@ union cpsr {
     uint32_t value;
 };
 
-extern __attribute__((pcs("aapcs")))
-uint32_t call_apsr_f(float a, float b, __attribute__((pcs("aapcs"))) void (*fn)(float, float));
+__attribute__((noinline, pcs("aapcs"))) static uint32_t call_apsr_f(float a, float b,
+                                                                    __attribute__((pcs("aapcs"))) void (*fn)(float, float)) {
+  uint32_t result;
+  fn(a, b);
+  asm volatile("mrs %0, apsr"
+               : "=r"(result));
+  return result;
+}
 
-extern __attribute__((pcs("aapcs")))
-uint32_t call_apsr_d(double a, double b, __attribute__((pcs("aapcs"))) void (*fn)(double, double));
+__attribute__((noinline, pcs("aapcs"))) static uint32_t call_apsr_d(double a, double b,
+                                                                    __attribute__((pcs("aapcs"))) void (*fn)(double, double)) {
+  uint32_t result;
+  fn(a, b);
+  asm volatile("mrs %0, apsr"
+               : "=r"(result));
+  return result;
+}
 
 #endif // CALL_APSR_H

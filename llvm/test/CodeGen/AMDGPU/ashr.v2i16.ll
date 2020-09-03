@@ -42,8 +42,8 @@ define amdgpu_kernel void @s_ashr_v2i16(<2 x i16> addrspace(1)* %out, i32, <2 x 
 ; CI-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 16
 ; CI: v_ashrrev_i32_e32 v{{[0-9]+}}, 16, [[LHS]]
 ; CI: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
-; CI: v_ashrrev_i32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; CI: v_ashrrev_i32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; CI: v_ashr_i32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; CI: v_ashr_i32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; CI: v_lshlrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
 ; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
 ; CI: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}

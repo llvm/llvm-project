@@ -68,10 +68,12 @@ class VectorType;
       CALL,         // Function call.
       CALL_PRED,    // Function call that's predicable.
       CALL_NOLINK,  // Function call with branch not branch-and-link.
+      tSECALL,      // CMSE non-secure function call.
       BRCOND,       // Conditional branch.
       BR_JT,        // Jumptable branch.
       BR2_JT,       // Jumptable branch (2 level - jumptable entry is a jump).
       RET_FLAG,     // Return with a flag operand.
+      SERET_FLAG,   // CMSE Entry function return with a flag operand.
       INTRET_FLAG,  // Interrupt return with an LR-offset and a flag operand.
 
       PIC_ADD,      // Add with a PC operand and a PIC label.
@@ -84,7 +86,9 @@ class VectorType;
       CMN,          // ARM CMN instructions.
       CMPZ,         // ARM compare that sets only Z flag.
       CMPFP,        // ARM VFP compare instruction, sets FPSCR.
+      CMPFPE,       // ARM VFP signalling compare instruction, sets FPSCR.
       CMPFPw0,      // ARM VFP compare against zero instruction, sets FPSCR.
+      CMPFPEw0,     // ARM VFP signalling compare against zero instruction, sets FPSCR.
       FMSTAT,       // ARM fmstat instruction.
 
       CMOV,         // ARM conditional move instructions.
@@ -131,6 +135,7 @@ class VectorType;
       LE,           // Low-overhead loops, Loop End
 
       PREDICATE_CAST, // Predicate cast for MVE i1 types
+      VECTOR_REG_CAST, // Reinterpret the current contents of a vector register
 
       VCMP,         // Vector compare.
       VCMPZ,        // Vector compare to zero.
@@ -199,9 +204,35 @@ class VectorType;
       VTBL2,        // 2-register shuffle with mask
       VMOVN,        // MVE vmovn
 
+      // MVE Saturating truncates
+      VQMOVNs,      // Vector (V) Saturating (Q) Move and Narrow (N), signed (s)
+      VQMOVNu,      // Vector (V) Saturating (Q) Move and Narrow (N), unsigned (u)
+
+      // MVE float <> half converts
+      VCVTN,        // MVE vcvt f32 -> f16, truncating into either the bottom or top lanes
+      VCVTL,        // MVE vcvt f16 -> f32, extending from either the bottom or top lanes
+
       // Vector multiply long:
       VMULLs,       // ...signed
       VMULLu,       // ...unsigned
+
+      // MVE reductions
+      VADDVs,       // sign- or zero-extend the elements of a vector to i32,
+      VADDVu,       //   add them all together, and return an i32 of their sum
+      VADDLVs,      // sign- or zero-extend elements to i64 and sum, returning
+      VADDLVu,      //   the low and high 32-bit halves of the sum
+      VADDLVAs,     // same as VADDLV[su] but also add an input accumulator
+      VADDLVAu,     //   provided as low and high halves
+      VADDLVps,     // same as VADDLVs but with a v4i1 predicate mask
+      VADDLVpu,     // same as VADDLVu but with a v4i1 predicate mask
+      VADDLVAps,    // same as VADDLVps but with a v4i1 predicate mask
+      VADDLVApu,    // same as VADDLVpu but with a v4i1 predicate mask
+      VMLAVs,
+      VMLAVu,
+      VMLALVs,
+      VMLALVu,
+      VMLALVAs,
+      VMLALVAu,
 
       SMULWB,       // Signed multiply word by half word, bottom
       SMULWT,       // Signed multiply word by half word, top
@@ -335,7 +366,15 @@ class VectorType;
     SDValue PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const;
     SDValue PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const;
     SDValue PerformCMOVToBFICombine(SDNode *N, SelectionDAG &DAG) const;
+    SDValue PerformIntrinsicCombine(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
+    bool SimplifyDemandedBitsForTargetNode(SDValue Op,
+                                           const APInt &OriginalDemandedBits,
+                                           const APInt &OriginalDemandedElts,
+                                           KnownBits &Known,
+                                           TargetLoweringOpt &TLO,
+                                           unsigned Depth) const override;
 
     bool isDesirableToTransformToIntegerOp(unsigned Opc, EVT VT) const override;
 
@@ -347,10 +386,7 @@ class VectorType;
                                         MachineMemOperand::Flags Flags,
                                         bool *Fast) const override;
 
-    EVT getOptimalMemOpType(uint64_t Size,
-                            unsigned DstAlign, unsigned SrcAlign,
-                            bool IsMemset, bool ZeroMemset,
-                            bool MemcpyStrSrc,
+    EVT getOptimalMemOpType(const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
@@ -358,6 +394,7 @@ class VectorType;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
     bool shouldSinkOperands(Instruction *I,
                             SmallVectorImpl<Use *> &Ops) const override;
+    Type* shouldConvertSplatType(ShuffleVectorInst* SVI) const override;
 
     bool isFNegFree(EVT VT) const override;
 
@@ -416,9 +453,9 @@ class VectorType;
                                        const SelectionDAG &DAG,
                                        unsigned Depth) const override;
 
-    bool targetShrinkDemandedConstant(SDValue Op, const APInt &Demanded,
+    bool targetShrinkDemandedConstant(SDValue Op, const APInt &DemandedBits,
+                                      const APInt &DemandedElts,
                                       TargetLoweringOpt &TLO) const override;
-
 
     bool ExpandInlineAsm(CallInst *CI) const override;
 
@@ -537,12 +574,12 @@ class VectorType;
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
-    unsigned
+    Register
     getExceptionPointerRegister(const Constant *PersonalityFn) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
-    unsigned
+    Register
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
     Instruction *makeDMB(IRBuilder<> &Builder, ARM_MB::MemBOpt Domain) const;
@@ -614,7 +651,7 @@ class VectorType;
     /// Returns true if \p VecTy is a legal interleaved access type. This
     /// function checks the vector element type and the overall width of the
     /// vector.
-    bool isLegalInterleavedAccessType(unsigned Factor, VectorType *VecTy,
+    bool isLegalInterleavedAccessType(unsigned Factor, FixedVectorType *VecTy,
                                       const DataLayout &DL) const;
 
     bool alignLoopsWithOptSize() const override;
@@ -731,6 +768,8 @@ class VectorType;
     SDValue LowerDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed) const;
     void ExpandDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed,
                            SmallVectorImpl<SDValue> &Results) const;
+    SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
+                          const ARMSubtarget *Subtarget) const;
     SDValue LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG, bool Signed,
                                    SDValue &Chain) const;
     SDValue LowerREM(SDNode *N, SelectionDAG &DAG) const;
@@ -739,12 +778,13 @@ class VectorType;
     SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFSETCC(SDValue Op, SelectionDAG &DAG) const;
     void lowerABS(SDNode *N, SmallVectorImpl<SDValue> &Results,
                   SelectionDAG &DAG) const;
     void LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
                    SelectionDAG &DAG) const;
 
-    Register getRegisterByName(const char* RegName, EVT VT,
+    Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
 
     SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
@@ -752,6 +792,11 @@ class VectorType;
 
     bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                     EVT VT) const override;
+
+    SDValue MoveToHPR(const SDLoc &dl, SelectionDAG &DAG, MVT LocVT, MVT ValVT,
+                      SDValue Val) const;
+    SDValue MoveFromHPR(const SDLoc &dl, SelectionDAG &DAG, MVT LocVT,
+                        MVT ValVT, SDValue Val) const;
 
     SDValue ReconstructShuffle(SDValue Op, SelectionDAG &DAG) const;
 
@@ -771,6 +816,17 @@ class VectorType;
     void insertCopiesSplitCSR(
       MachineBasicBlock *Entry,
       const SmallVectorImpl<MachineBasicBlock *> &Exits) const override;
+
+    bool
+    splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
+                                SDValue *Parts, unsigned NumParts, MVT PartVT,
+                                Optional<CallingConv::ID> CC) const override;
+
+    SDValue
+    joinRegisterPartsIntoValue(SelectionDAG &DAG, const SDLoc &DL,
+                               const SDValue *Parts, unsigned NumParts,
+                               MVT PartVT, EVT ValueVT,
+                               Optional<CallingConv::ID> CC) const override;
 
     SDValue
     LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
@@ -792,7 +848,7 @@ class VectorType;
                       SmallVectorImpl<SDValue> &InVals) const override;
 
     /// HandleByVal - Target-specific cleanup for ByVal support.
-    void HandleByVal(CCState *, unsigned &, unsigned) const override;
+    void HandleByVal(CCState *, unsigned &, Align) const override;
 
     /// IsEligibleForTailCallOptimization - Check whether the call is eligible
     /// for tail call optimization. Targets which want to do tail call
@@ -829,7 +885,7 @@ class VectorType;
     SDValue getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                       SDValue &ARMcc, SelectionDAG &DAG, const SDLoc &dl) const;
     SDValue getVFPCmp(SDValue LHS, SDValue RHS, SelectionDAG &DAG,
-                      const SDLoc &dl) const;
+                      const SDLoc &dl, bool Signaling = false) const;
     SDValue duplicateCmp(SDValue Cmp, SelectionDAG &DAG) const;
 
     SDValue OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const;

@@ -30,14 +30,13 @@ class TestSwiftExpressionObjCContext(TestBase):
         self.build()
 
         target,  _, _, _ = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec('main.m'))
-        # Register shlib so it can run on-device.
-        self.registerSharedLibrariesWithTarget(target, ['Foo'])
+            self, "break here", lldb.SBFileSpec('main.m'),
+            extra_images=['Foo'])
 
         # This is expected to fail because we can't yet import ObjC
         # modules into a Swift context.
         self.expect("expr -lang Swift -- Bar()", "failure",
-                    substrs=["cannot find 'Bar' in scope"],
+                    substrs=["cannot find 'Bar'"],
                     error=True)
         self.expect("expr -lang Swift -- (1, 2, 3)",
                     "context-less swift expression works",

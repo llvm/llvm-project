@@ -1,6 +1,6 @@
 //===- ToyCombine.td - Pattern Match Optimizations for Toy -*- tablegen -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -41,7 +41,7 @@ def ReshapeReshapeOptPattern : Pat<(ReshapeOp(ReshapeOp $arg)),
 
 // Reshape(Constant(x)) = x'
 def ReshapeConstant :
-  NativeCodeCall<"$0.reshape(($1->getType()).cast<ShapedType>())">;
+  NativeCodeCall<"$0.reshape(($1.getType()).cast<ShapedType>())">;
 def FoldConstantReshapeOptPattern : Pat<
   (ReshapeOp:$res (ConstantOp $arg)),
   (ConstantOp (ReshapeConstant $arg, $res))>;
@@ -54,7 +54,7 @@ def FoldConstantReshapeOptPattern : Pat<
 // on operand properties.
 
 // Reshape(x) = x, where input and output shapes are identical
-def TypesAreIdentical : Constraint<CPred<"$0->getType() == $1->getType()">>;
+def TypesAreIdentical : Constraint<CPred<"$0.getType() == $1.getType()">>;
 def RedundantReshapeOptPattern : Pat<
   (ReshapeOp:$res $arg), (replaceWithValue $arg),
   [(TypesAreIdentical $res, $arg)]>;

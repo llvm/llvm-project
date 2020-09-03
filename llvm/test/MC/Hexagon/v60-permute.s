@@ -1,5 +1,5 @@
 #RUN: llvm-mc -triple=hexagon -mcpu=hexagonv60 -filetype=obj -mhvx %s | \
-#RUN: llvm-objdump -triple=hexagon -mcpu=hexagonv60 -mhvx -d - | \
+#RUN: llvm-objdump --triple=hexagon --mcpu=hexagonv60 --mhvx -d - | \
 #RUN: FileCheck %s
 
 #CHECK: 1fd2d5cf { v15.b = vpack(v21.h{{ *}},{{ *}}v18.h):sat }

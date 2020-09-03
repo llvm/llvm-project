@@ -1,6 +1,6 @@
 ; RUN: llc -mattr=lpm,lpmw < %s -march=avr | FileCheck %s
 
-@callbackPtr = common global void (i16)* null, align 8
+@callbackPtr = common global void (i16) addrspace(1)* null, align 8
 @myValuePtr = common global i16* null, align 8
 
 @externalConstant = external global i16, align 2
@@ -13,7 +13,7 @@ define void @loadCallbackPtr() {
 entry:
   ; CHECK:      ldi     r{{[0-9]+}}, pm_lo8(externalFunction)
   ; CHECK-NEXT: ldi     r{{[0-9]+}}, pm_hi8(externalFunction)
-  store void (i16)* @externalFunction, void (i16)** @callbackPtr, align 8
+  store void (i16) addrspace(1)* @externalFunction, void (i16) addrspace(1)** @callbackPtr, align 8
   ret void
 }
 

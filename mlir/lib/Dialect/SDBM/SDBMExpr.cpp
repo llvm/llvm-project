@@ -1,6 +1,6 @@
 //===- SDBMExpr.cpp - MLIR SDBM Expression implementation -----------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -301,8 +301,9 @@ AffineExpr SDBMExpr::getAsAffineExpr() const {
 // expression is already a sum expression, update its constant and extract the
 // LHS if the constant becomes zero.  Otherwise, construct a sum expression.
 template <typename Result>
-Result addConstantAndSink(SDBMDirectExpr expr, int64_t constant, bool negated,
-                          function_ref<Result(SDBMDirectExpr)> builder) {
+static Result addConstantAndSink(SDBMDirectExpr expr, int64_t constant,
+                                 bool negated,
+                                 function_ref<Result(SDBMDirectExpr)> builder) {
   SDBMDialect *dialect = expr.getDialect();
   if (auto sumExpr = expr.dyn_cast<SDBMSumExpr>()) {
     if (negated)
@@ -450,7 +451,7 @@ Optional<SDBMExpr> SDBMExpr::tryConvertAffineExpr(AffineExpr affine) {
       if (pattern.match(expr)) {
         if (SDBMExpr converted = visit(x.matched())) {
           if (auto varConverted = converted.dyn_cast<SDBMTermExpr>())
-            // TODO(ntv): return varConverted.stripe(C.getConstantValue());
+            // TODO: return varConverted.stripe(C.getConstantValue());
             return SDBMStripeExpr::get(
                 varConverted,
                 SDBMConstantExpr::get(dialect,

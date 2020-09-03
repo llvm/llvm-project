@@ -111,6 +111,7 @@ clang_Type_getNumObjCTypeArgs
 clang_Type_getObjCTypeArg
 clang_Type_getModifiedType
 clang_Type_getNullability
+clang_Type_getValueType
 clang_VerbatimBlockLineComment_getText
 clang_VerbatimLineComment_getText
 clang_HTMLTagComment_getAsString

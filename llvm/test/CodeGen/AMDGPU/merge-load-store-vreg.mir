@@ -115,7 +115,7 @@ body:             |
     %2:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %1, implicit $exec
     V_CMP_NE_U32_e32 1, %2, implicit-def $vcc, implicit $exec
     DS_WRITE_B32 %0.sub0, %0.sub0, 1024, 0, implicit $m0, implicit $exec :: (store 4 into %ir.tmp)
-    undef %3.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec
+    %3:vreg_64 = V_LSHLREV_B64 0, 0, implicit $exec
     DS_WRITE_B32 %0.sub0, %3.sub0, 1056, 0, implicit $m0, implicit $exec :: (store 4 into %ir.tmp1)
     %4:vgpr_32 = DS_READ_B32 %3.sub0, 1088, 0, implicit $m0, implicit $exec :: (load 4 from %ir.tmp2)
     %5:vgpr_32 = DS_READ_B32 %3.sub0, 1120, 0, implicit $m0, implicit $exec :: (load 4 from %ir.tmp3)
@@ -146,7 +146,7 @@ body:             |
     %2:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %1, implicit $exec
     V_CMP_NE_U32_e32 1, %2, implicit-def $vcc, implicit $exec
     DS_WRITE_B32 %0.sub0, %0.sub0, 0, 0, implicit $m0, implicit $exec :: (store 4 into %ir.tmp)
-    undef %3.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec
+    %3:vreg_64 = V_LSHLREV_B64 0, 0, implicit $exec
     DS_WRITE_B32 %0.sub0, %3.sub0, 32, 0, implicit $m0, implicit $exec :: (store 4 into %ir.tmp1)
     %4:vgpr_32 = DS_READ_B32 %3.sub0, 0, 0, implicit $m0, implicit $exec :: (load 4 from %ir.tmp2)
     %5:vgpr_32 = DS_READ_B32 %3.sub0, 32, 0, implicit $m0, implicit $exec :: (load 4 from %ir.tmp3)

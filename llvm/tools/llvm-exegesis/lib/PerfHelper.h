@@ -15,8 +15,12 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_PERFHELPER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/Error.h"
+
+#include <cstdint>
 #include <functional>
 #include <memory>
 
@@ -36,7 +40,7 @@ class PerfEvent {
 public:
   // http://perfmon2.sourceforge.net/manv4/libpfm.html
   // Events are expressed as strings. e.g. "INSTRUCTION_RETIRED"
-  explicit PerfEvent(StringRef pfm_event_string);
+  explicit PerfEvent(StringRef PfmEventString);
 
   PerfEvent(const PerfEvent &) = delete;
   PerfEvent(PerfEvent &&other);
@@ -63,42 +67,36 @@ private:
 
 // Uses a valid PerfEvent to configure the Kernel so we can measure the
 // underlying event.
-struct Counter {
+class Counter {
+public:
   // event: the PerfEvent to measure.
-  explicit Counter(const PerfEvent &event);
+  explicit Counter(PerfEvent &&event);
 
   Counter(const Counter &) = delete;
   Counter(Counter &&other) = default;
 
-  ~Counter();
+  virtual ~Counter();
 
-  void start();         // Starts the measurement of the event.
-  void stop();          // Stops the measurement of the event.
-  int64_t read() const; // Return the current value of the counter.
+  /// Starts the measurement of the event.
+  virtual void start();
+
+  /// Stops the measurement of the event.
+  void stop();
+
+  /// Returns the current value of the counter or -1 if it cannot be read.
+  int64_t read() const;
+
+  /// Returns the current value of the counter or error if it cannot be read.
+  virtual llvm::Expected<llvm::SmallVector<int64_t, 4>> readOrError() const;
+
+  virtual int numValues() const;
 
 private:
+  PerfEvent Event;
 #ifdef HAVE_LIBPFM
   int FileDescriptor = -1;
 #endif
 };
-
-// Helper to measure a list of PerfEvent for a particular function.
-// callback is called for each successful measure (PerfEvent needs to be valid).
-template <typename Function>
-void Measure(
-    ArrayRef<PerfEvent> Events,
-    const std::function<void(const PerfEvent &Event, int64_t Value)> &Callback,
-    Function Fn) {
-  for (const auto &Event : Events) {
-    if (!Event.valid())
-      continue;
-    Counter Cnt(Event);
-    Cnt.start();
-    Fn();
-    Cnt.stop();
-    Callback(Event, Cnt.read());
-  }
-}
 
 } // namespace pfm
 } // namespace exegesis

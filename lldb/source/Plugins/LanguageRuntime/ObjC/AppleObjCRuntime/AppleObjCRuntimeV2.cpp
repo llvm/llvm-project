@@ -1,4 +1,4 @@
-//===-- AppleObjCRuntimeV2.cpp ----------------------------------*- C++ -*-===//
+//===-- AppleObjCRuntimeV2.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,13 +15,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -64,6 +62,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/Basic/TargetInfo.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
@@ -408,7 +407,7 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
   }
 }
 
-static void RegisterObjCExceptionRecognizer();
+static void RegisterObjCExceptionRecognizer(Process *process);
 
 AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
                                        const ModuleSP &objc_module_sp)
@@ -430,7 +429,7 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
   m_has_object_getClass =
       (objc_module_sp->FindFirstSymbolWithNameAndType(
            g_gdb_object_getClass, eSymbolTypeCode) != nullptr);
-  RegisterObjCExceptionRecognizer();
+  RegisterObjCExceptionRecognizer(process);
 }
 
 bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
@@ -590,8 +589,8 @@ protected:
     case 0:
       break;
     case 1: {
-      regex_up.reset(new RegularExpression(
-          llvm::StringRef::withNullAsEmpty(command.GetArgumentAtIndex(0))));
+      regex_up = std::make_unique<RegularExpression>(
+          llvm::StringRef::withNullAsEmpty(command.GetArgumentAtIndex(0)));
       if (!regex_up->IsValid()) {
         result.AppendError(
             "invalid argument - please provide a valid regular expression");
@@ -834,8 +833,8 @@ lldb_private::ConstString AppleObjCRuntimeV2::GetPluginName() {
 uint32_t AppleObjCRuntimeV2::GetPluginVersion() { return 1; }
 
 BreakpointResolverSP
-AppleObjCRuntimeV2::CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp,
-                                            bool throw_bp) {
+AppleObjCRuntimeV2::CreateExceptionResolver(const BreakpointSP &bkpt,
+                                            bool catch_bp, bool throw_bp) {
   BreakpointResolverSP resolver_sp;
 
   if (throw_bp)
@@ -905,12 +904,12 @@ size_t AppleObjCRuntimeV2::GetByteOffsetForIvar(CompilerType &parent_ast_type,
                                                 const char *ivar_name) {
   uint32_t ivar_offset = LLDB_INVALID_IVAR_OFFSET;
 
-  const char *class_name = parent_ast_type.GetConstTypeName().AsCString();
-  if (class_name && class_name[0] && ivar_name && ivar_name[0]) {
+  ConstString class_name = parent_ast_type.GetTypeName();
+  if (!class_name.IsEmpty() && ivar_name && ivar_name[0]) {
     // Make the objective C V2 mangled name for the ivar offset from the class
     // name and ivar name
     std::string buffer("OBJC_IVAR_$_");
-    buffer.append(class_name);
+    buffer.append(class_name.AsCString());
     buffer.push_back('.');
     buffer.append(ivar_name);
     ConstString ivar_const_str(buffer.c_str());
@@ -1475,8 +1474,6 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
 
     Value return_value;
     return_value.SetValueType(Value::eValueTypeScalar);
-    // return_value.SetContext (Value::eContextTypeClangType,
-    // clang_uint32_t_type);
     return_value.SetCompilerType(clang_uint32_t_type);
     return_value.GetScalar() = 0;
 
@@ -1540,7 +1537,7 @@ uint32_t AppleObjCRuntimeV2::ParseClassInfoArray(const DataExtractor &data,
   // Iterate through all ClassInfo structures
   lldb::offset_t offset = 0;
   for (uint32_t i = 0; i < num_class_infos; ++i) {
-    ObjCISA isa = data.GetPointer(&offset);
+    ObjCISA isa = data.GetAddress(&offset);
 
     if (isa == 0) {
       if (should_log)
@@ -1701,13 +1698,11 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
     // Next make the function caller for our implementation utility function.
     Value value;
     value.SetValueType(Value::eValueTypeScalar);
-    // value.SetContext (Value::eContextTypeClangType, clang_void_pointer_type);
     value.SetCompilerType(clang_void_pointer_type);
     arguments.PushValue(value);
     arguments.PushValue(value);
 
     value.SetValueType(Value::eValueTypeScalar);
-    // value.SetContext (Value::eContextTypeClangType, clang_uint32_t_type);
     value.SetCompilerType(clang_uint32_t_type);
     arguments.PushValue(value);
     arguments.PushValue(value);
@@ -1773,8 +1768,6 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
 
     Value return_value;
     return_value.SetValueType(Value::eValueTypeScalar);
-    // return_value.SetContext (Value::eContextTypeClangType,
-    // clang_uint32_t_type);
     return_value.SetCompilerType(clang_uint32_t_type);
     return_value.GetScalar() = 0;
 
@@ -2019,39 +2012,9 @@ void AppleObjCRuntimeV2::WarnIfNoClassesCached(
   }
 }
 
-ConstString
-AppleObjCRuntimeV2::GetActualTypeName(ObjCLanguageRuntime::ObjCISA isa) {
-  if (isa == g_objc_Tagged_ISA) {
-    static const ConstString g_objc_tagged_isa_name("_lldb_Tagged_ObjC_ISA");
-    return g_objc_tagged_isa_name;
-  }
-  if (isa == g_objc_Tagged_ISA_NSAtom) {
-    static const ConstString g_objc_tagged_isa_nsatom_name("NSAtom");
-    return g_objc_tagged_isa_nsatom_name;
-  }
-  if (isa == g_objc_Tagged_ISA_NSNumber) {
-    static const ConstString g_objc_tagged_isa_nsnumber_name("NSNumber");
-    return g_objc_tagged_isa_nsnumber_name;
-  }
-  if (isa == g_objc_Tagged_ISA_NSDateTS) {
-    static const ConstString g_objc_tagged_isa_nsdatets_name("NSDateTS");
-    return g_objc_tagged_isa_nsdatets_name;
-  }
-  if (isa == g_objc_Tagged_ISA_NSManagedObject) {
-    static const ConstString g_objc_tagged_isa_nsmanagedobject_name(
-        "NSManagedObject");
-    return g_objc_tagged_isa_nsmanagedobject_name;
-  }
-  if (isa == g_objc_Tagged_ISA_NSDate) {
-    static const ConstString g_objc_tagged_isa_nsdate_name("NSDate");
-    return g_objc_tagged_isa_nsdate_name;
-  }
-  return ObjCLanguageRuntime::GetActualTypeName(isa);
-}
-
 DeclVendor *AppleObjCRuntimeV2::GetDeclVendor() {
   if (!m_decl_vendor_up)
-    m_decl_vendor_up.reset(new AppleObjCDeclVendor(*this));
+    m_decl_vendor_up = std::make_unique<AppleObjCDeclVendor>(*this);
 
   return m_decl_vendor_up.get();
 }
@@ -2548,7 +2511,7 @@ bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
     ObjCISA isa, ObjCISA &ret_isa) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-  LLDB_LOGF(log, "AOCRT::NPI Evalulate(isa = 0x%" PRIx64 ")", (uint64_t)isa);
+  LLDB_LOGF(log, "AOCRT::NPI Evaluate(isa = 0x%" PRIx64 ")", (uint64_t)isa);
 
   if ((isa & ~m_objc_debug_isa_class_mask) == 0)
     return false;
@@ -2621,7 +2584,7 @@ bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
 
           lldb::offset_t offset = 0;
           for (unsigned i = 0; i != num_new_classes; ++i)
-            m_indexed_isa_cache.push_back(data.GetPointer(&offset));
+            m_indexed_isa_cache.push_back(data.GetAddress(&offset));
         }
       }
 
@@ -2629,7 +2592,7 @@ bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
       if (index > m_indexed_isa_cache.size())
         return false;
 
-      LLDB_LOGF(log, "AOCRT::NPI Evalulate(ret_isa = 0x%" PRIx64 ")",
+      LLDB_LOGF(log, "AOCRT::NPI Evaluate(ret_isa = 0x%" PRIx64 ")",
                 (uint64_t)m_indexed_isa_cache[index]);
 
       ret_isa = m_indexed_isa_cache[index];
@@ -2756,16 +2719,14 @@ class ObjCExceptionThrowFrameRecognizer : public StackFrameRecognizer {
   };
 };
 
-static void RegisterObjCExceptionRecognizer() {
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
-    FileSpec module;
-    ConstString function;
-    std::tie(module, function) = AppleObjCRuntime::GetExceptionThrowLocation();
-    std::vector<ConstString> symbols = {function};
-    StackFrameRecognizerManager::AddRecognizer(
-        StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
-        module.GetFilename(), symbols,
-        /*first_instruction_only*/ true);
-  });
+static void RegisterObjCExceptionRecognizer(Process *process) {
+  FileSpec module;
+  ConstString function;
+  std::tie(module, function) = AppleObjCRuntime::GetExceptionThrowLocation();
+  std::vector<ConstString> symbols = {function};
+
+  process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
+      StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
+      module.GetFilename(), symbols,
+      /*first_instruction_only*/ true);
 }

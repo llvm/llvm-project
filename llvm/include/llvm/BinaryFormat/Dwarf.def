@@ -22,7 +22,7 @@
     (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                   \
     defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||                \
     defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                   \
-    defined HANDLE_DW_END)
+    defined HANDLE_DW_END || defined HANDLE_DW_SECT)
 #error "Missing macro definition of HANDLE_DW*"
 #endif
 
@@ -117,7 +117,7 @@
 #endif
 
 #ifndef HANDLE_DWARF_SECTION
-#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME)
+#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)
 #endif
 
 #ifndef HANDLE_DW_IDX
@@ -126,6 +126,10 @@
 
 #ifndef HANDLE_DW_END
 #define HANDLE_DW_END(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_SECT
+#define HANDLE_DW_SECT(ID, NAME)
 #endif
 
 HANDLE_DW_TAG(0x0000, null, 2, DWARF, DW_KIND_NONE)
@@ -420,7 +424,6 @@ HANDLE_DW_AT(0x3e06, APPLE_ptrauth_extra_discriminator, 0, LLVM)
 HANDLE_DW_AT(0x3e07, LLVM_apinotes, 0, APPLE)
 
 // Apple extensions.
-
 HANDLE_DW_AT(0x3fe1, APPLE_optimized, 0, APPLE)
 HANDLE_DW_AT(0x3fe2, APPLE_flags, 0, APPLE)
 HANDLE_DW_AT(0x3fe3, APPLE_isa, 0, APPLE)
@@ -664,6 +667,7 @@ HANDLE_DW_OP(0xa9, reinterpret, 5, DWARF)
 HANDLE_DW_OP(0xe0, GNU_push_tls_address, 0, GNU)
 // Extensions for WebAssembly.
 HANDLE_DW_OP(0xed, WASM_location, 0, WASM)
+HANDLE_DW_OP(0xee, WASM_location_int, 0, WASM)
 // The GNU entry value extension.
 HANDLE_DW_OP(0xf3, GNU_entry_value, 0, GNU)
 // Extensions for Fission proposal.
@@ -897,7 +901,8 @@ HANDLE_DW_CFA_PRED(0x2d, AARCH64_negate_ra_state, SELECT_AARCH64)
 HANDLE_DW_CFA_PRED(0x2e, GNU_args_size, SELECT_X86)
 
 // Apple Objective-C Property Attributes.
-// Keep this list in sync with clang's DeclSpec.h ObjCPropertyAttributeKind!
+// Keep this list in sync with clang's DeclObjCCommon.h
+// ObjCPropertyAttribute::Kind!
 HANDLE_DW_APPLE_PROPERTY(0x01, readonly)
 HANDLE_DW_APPLE_PROPERTY(0x02, getter)
 HANDLE_DW_APPLE_PROPERTY(0x04, assign)
@@ -922,38 +927,38 @@ HANDLE_DW_UT(0x04, skeleton)
 HANDLE_DW_UT(0x05, split_compile)
 HANDLE_DW_UT(0x06, split_type)
 
-// DWARF section types. (enum name, ELF name, ELF DWO name, cmdline name)
+// DWARF section types. (enum name, ELF name, ELF DWO name, cmdline name, option)
 // Note that these IDs don't mean anything.
 // TODO: Add Mach-O and COFF names.
 // Official DWARF sections.
-HANDLE_DWARF_SECTION(DebugAbbrev, ".debug_abbrev", "debug-abbrev")
-HANDLE_DWARF_SECTION(DebugAddr, ".debug_addr", "debug-addr")
-HANDLE_DWARF_SECTION(DebugAranges, ".debug_aranges", "debug-aranges")
-HANDLE_DWARF_SECTION(DebugInfo, ".debug_info", "debug-info")
-HANDLE_DWARF_SECTION(DebugTypes, ".debug_types", "debug-types")
-HANDLE_DWARF_SECTION(DebugLine, ".debug_line", "debug-line")
-HANDLE_DWARF_SECTION(DebugLineStr, ".debug_line_str", "debug-line-str")
-HANDLE_DWARF_SECTION(DebugLoc, ".debug_loc", "debug-loc")
-HANDLE_DWARF_SECTION(DebugLoclists, ".debug_loclists", "debug-loclists")
-HANDLE_DWARF_SECTION(DebugFrame, ".debug_frame", "debug-frame")
-HANDLE_DWARF_SECTION(DebugMacro, ".debug_macro", "debug-macro")
-HANDLE_DWARF_SECTION(DebugNames, ".debug_names", "debug-names")
-HANDLE_DWARF_SECTION(DebugPubnames, ".debug_pubnames", "debug-pubnames")
-HANDLE_DWARF_SECTION(DebugPubtypes, ".debug_pubtypes", "debug-pubtypes")
-HANDLE_DWARF_SECTION(DebugGnuPubnames, ".debug_gnu_pubnames", "debug-gnu-pubnames")
-HANDLE_DWARF_SECTION(DebugGnuPubtypes, ".debug_gnu_pubtypes", "debug-gnu-pubtypes")
-HANDLE_DWARF_SECTION(DebugRanges, ".debug_ranges", "debug-ranges")
-HANDLE_DWARF_SECTION(DebugRnglists, ".debug_rnglists", "debug-rnglists")
-HANDLE_DWARF_SECTION(DebugStr, ".debug_str", "debug-str")
-HANDLE_DWARF_SECTION(DebugStrOffsets, ".debug_str_offsets", "debug-str-offsets")
-HANDLE_DWARF_SECTION(DebugCUIndex, ".debug_cu_index", "debug-cu-index")
-HANDLE_DWARF_SECTION(DebugTUIndex, ".debug_tu_index", "debug-tu-index")
+HANDLE_DWARF_SECTION(DebugAbbrev, ".debug_abbrev", "debug-abbrev", BoolOption)
+HANDLE_DWARF_SECTION(DebugAddr, ".debug_addr", "debug-addr", BoolOption)
+HANDLE_DWARF_SECTION(DebugAranges, ".debug_aranges", "debug-aranges", BoolOption)
+HANDLE_DWARF_SECTION(DebugInfo, ".debug_info", "debug-info", OffsetOption)
+HANDLE_DWARF_SECTION(DebugTypes, ".debug_types", "debug-types", OffsetOption)
+HANDLE_DWARF_SECTION(DebugLine, ".debug_line", "debug-line", OffsetOption)
+HANDLE_DWARF_SECTION(DebugLineStr, ".debug_line_str", "debug-line-str", BoolOption)
+HANDLE_DWARF_SECTION(DebugLoc, ".debug_loc", "debug-loc", OffsetOption)
+HANDLE_DWARF_SECTION(DebugLoclists, ".debug_loclists", "debug-loclists", OffsetOption)
+HANDLE_DWARF_SECTION(DebugFrame, ".debug_frame", "debug-frame", OffsetOption)
+HANDLE_DWARF_SECTION(DebugMacro, ".debug_macro", "debug-macro", BoolOption)
+HANDLE_DWARF_SECTION(DebugNames, ".debug_names", "debug-names", BoolOption)
+HANDLE_DWARF_SECTION(DebugPubnames, ".debug_pubnames", "debug-pubnames", BoolOption)
+HANDLE_DWARF_SECTION(DebugPubtypes, ".debug_pubtypes", "debug-pubtypes", BoolOption)
+HANDLE_DWARF_SECTION(DebugGnuPubnames, ".debug_gnu_pubnames", "debug-gnu-pubnames", BoolOption)
+HANDLE_DWARF_SECTION(DebugGnuPubtypes, ".debug_gnu_pubtypes", "debug-gnu-pubtypes", BoolOption)
+HANDLE_DWARF_SECTION(DebugRanges, ".debug_ranges", "debug-ranges", BoolOption)
+HANDLE_DWARF_SECTION(DebugRnglists, ".debug_rnglists", "debug-rnglists", BoolOption)
+HANDLE_DWARF_SECTION(DebugStr, ".debug_str", "debug-str", BoolOption)
+HANDLE_DWARF_SECTION(DebugStrOffsets, ".debug_str_offsets", "debug-str-offsets", BoolOption)
+HANDLE_DWARF_SECTION(DebugCUIndex, ".debug_cu_index", "debug-cu-index", BoolOption)
+HANDLE_DWARF_SECTION(DebugTUIndex, ".debug_tu_index", "debug-tu-index", BoolOption)
 // Vendor extensions.
-HANDLE_DWARF_SECTION(AppleNames, ".apple_names", "apple-names")
-HANDLE_DWARF_SECTION(AppleTypes, ".apple_types", "apple-types")
-HANDLE_DWARF_SECTION(AppleNamespaces, ".apple_namespaces", "apple-namespaces")
-HANDLE_DWARF_SECTION(AppleObjC, ".apple_objc", "apple-objc")
-HANDLE_DWARF_SECTION(GdbIndex, ".gdb_index", "gdb-index")
+HANDLE_DWARF_SECTION(AppleNames, ".apple_names", "apple-names", BoolOption)
+HANDLE_DWARF_SECTION(AppleTypes, ".apple_types", "apple-types", BoolOption)
+HANDLE_DWARF_SECTION(AppleNamespaces, ".apple_namespaces", "apple-namespaces", BoolOption)
+HANDLE_DWARF_SECTION(AppleObjC, ".apple_objc", "apple-objc", BoolOption)
+HANDLE_DWARF_SECTION(GdbIndex, ".gdb_index", "gdb-index", BoolOption)
 
 HANDLE_DW_IDX(0x01, compile_unit)
 HANDLE_DW_IDX(0x02, type_unit)
@@ -961,6 +966,15 @@ HANDLE_DW_IDX(0x03, die_offset)
 HANDLE_DW_IDX(0x04, parent)
 HANDLE_DW_IDX(0x05, type_hash)
 
+// DWARF package file section identifiers.
+// DWARFv5, section 7.3.5.3, table 7.1.
+HANDLE_DW_SECT(1, INFO)
+HANDLE_DW_SECT(3, ABBREV)
+HANDLE_DW_SECT(4, LINE)
+HANDLE_DW_SECT(5, LOCLISTS)
+HANDLE_DW_SECT(6, STR_OFFSETS)
+HANDLE_DW_SECT(7, MACRO)
+HANDLE_DW_SECT(8, RNGLISTS)
 
 #undef HANDLE_DW_TAG
 #undef HANDLE_DW_AT
@@ -985,3 +999,4 @@ HANDLE_DW_IDX(0x05, type_hash)
 #undef HANDLE_DWARF_SECTION
 #undef HANDLE_DW_IDX
 #undef HANDLE_DW_END
+#undef HANDLE_DW_SECT

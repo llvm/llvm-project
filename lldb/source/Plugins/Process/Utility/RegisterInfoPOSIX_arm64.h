@@ -6,15 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextLinux_arm64_H_
-#define liblldb_RegisterContextLinux_arm64_H_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_ARM64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_ARM64_H
 
-#include "RegisterInfoInterface.h"
+#include "RegisterInfoAndSetInterface.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"
 
-class RegisterInfoPOSIX_arm64 : public lldb_private::RegisterInfoInterface {
+class RegisterInfoPOSIX_arm64
+    : public lldb_private::RegisterInfoAndSetInterface {
 public:
+  enum { GPRegSet = 0, FPRegSet };
+
   // based on RegisterContextDarwin_arm64.h
   struct GPR {
     uint64_t x[29]; // x0-x28
@@ -57,11 +60,28 @@ public:
 
   size_t GetGPRSize() const override;
 
+  size_t GetFPRSize() const override;
+
   const lldb_private::RegisterInfo *GetRegisterInfo() const override;
 
   uint32_t GetRegisterCount() const override;
 
+  const lldb_private::RegisterSet *
+  GetRegisterSet(size_t reg_set) const override;
+
+  size_t GetRegisterSetCount() const override;
+
+  size_t GetRegisterSetFromRegisterIndex(uint32_t reg_index) const override;
+
 private:
+  uint32_t num_registers;
+  uint32_t num_gpr_registers;
+  uint32_t num_fpr_registers;
+
+  uint32_t last_gpr;
+  uint32_t first_fpr;
+  uint32_t last_fpr;
+
   const lldb_private::RegisterInfo *m_register_info_p;
   uint32_t m_register_info_count;
 };

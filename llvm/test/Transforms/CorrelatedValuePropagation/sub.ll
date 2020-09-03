@@ -53,7 +53,7 @@ define void @test2(i32 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A:%.*]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[A]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[A]], 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

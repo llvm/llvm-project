@@ -101,7 +101,7 @@ struct ScopedFile {
 
 TEST(FileCollectorTest, addFile) {
   ScopedDir root("add_file_root", true);
-  std::string root_fs = root.Path.str();
+  std::string root_fs = std::string(root.Path.str());
   TestingFileCollector FileCollector(root_fs, root_fs);
 
   FileCollector.addFile("/path/to/a");
@@ -163,7 +163,7 @@ TEST(FileCollectorTest, copyFiles) {
 
   // Create file collector and add files.
   ScopedDir root("copy_files_root", true);
-  std::string root_fs = root.Path.str();
+  std::string root_fs = std::string(root.Path.str());
   TestingFileCollector FileCollector(root_fs, root_fs);
   FileCollector.addFile(a.Path);
   FileCollector.addFile(b.Path);
@@ -191,7 +191,7 @@ TEST(FileCollectorTest, recordAndConstructDirectory) {
 
   // Create file collector and add files.
   ScopedDir root("copy_files_root", true);
-  std::string root_fs = root.Path.str();
+  std::string root_fs = std::string(root.Path.str());
   TestingFileCollector FileCollector(root_fs, root_fs);
   FileCollector.addFile(a.Path);
 
@@ -229,7 +229,7 @@ TEST(FileCollectorTest, recordVFSAccesses) {
 
   // Create file collector and add files.
   ScopedDir root("copy_files_root", true);
-  std::string root_fs = root.Path.str();
+  std::string root_fs = std::string(root.Path.str());
   auto Collector = std::make_shared<TestingFileCollector>(root_fs, root_fs);
   auto VFS =
       FileCollector::createCollectorVFS(vfs::getRealFileSystem(), Collector);
@@ -276,7 +276,7 @@ TEST(FileCollectorTest, Symlinks) {
 
   // Root where files are copied to.
   ScopedDir reproducer_root("reproducer_root", true);
-  std::string root_fs = reproducer_root.Path.str();
+  std::string root_fs = std::string(reproducer_root.Path.str());
   TestingFileCollector FileCollector(root_fs, root_fs);
 
   // Add all the files to the collector.
@@ -322,7 +322,7 @@ TEST(FileCollectorTest, recordVFSSymlinkAccesses) {
 
   // Create file collector and add files.
   ScopedDir root("copy_files_root", true);
-  std::string root_fs = root.Path.str();
+  std::string root_fs = std::string(root.Path.str());
   auto Collector = std::make_shared<TestingFileCollector>(root_fs, root_fs);
   auto VFS =
       FileCollector::createCollectorVFS(vfs::getRealFileSystem(), Collector);

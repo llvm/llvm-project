@@ -14,6 +14,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_CHECKERMANAGER_H
 
 #include "clang/Analysis/ProgramPoint.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
@@ -36,15 +37,18 @@ class TranslationUnitDecl;
 namespace ento {
 
 class AnalysisManager;
+class CXXAllocatorCall;
 class BugReporter;
 class CallEvent;
 class CheckerBase;
 class CheckerContext;
 class CheckerRegistry;
+struct CheckerRegistryData;
 class ExplodedGraph;
 class ExplodedNode;
 class ExplodedNodeSet;
 class ExprEngine;
+struct EvalCallOptions;
 class MemRegion;
 struct NodeBuilderContext;
 class ObjCMethodCall;
@@ -121,14 +125,38 @@ enum class ObjCMessageVisitKind {
 };
 
 class CheckerManager {
-  ASTContext &Context;
+  ASTContext *Context = nullptr;
   const LangOptions LangOpts;
-  AnalyzerOptions &AOptions;
+  const AnalyzerOptions &AOptions;
+  const Preprocessor *PP = nullptr;
   CheckerNameRef CurrentCheckerName;
+  DiagnosticsEngine &Diags;
+  std::unique_ptr<CheckerRegistryData> RegistryData;
 
 public:
-  CheckerManager(ASTContext &Context, AnalyzerOptions &AOptions)
-      : Context(Context), LangOpts(Context.getLangOpts()), AOptions(AOptions) {}
+  // These constructors are defined in the Frontend library, because
+  // CheckerRegistry, a crucial component of the initialization is in there.
+  // CheckerRegistry cannot be moved to the Core library, because the checker
+  // registration functions are defined in the Checkers library, and the library
+  // dependencies look like this: Core -> Checkers -> Frontend.
+
+  CheckerManager(
+      ASTContext &Context, AnalyzerOptions &AOptions, const Preprocessor &PP,
+      ArrayRef<std::string> plugins,
+      ArrayRef<std::function<void(CheckerRegistry &)>> checkerRegistrationFns);
+
+  /// Constructs a CheckerManager that ignores all non TblGen-generated
+  /// checkers. Useful for unit testing, unless the checker infrastructure
+  /// itself is tested.
+  CheckerManager(ASTContext &Context, AnalyzerOptions &AOptions,
+                 const Preprocessor &PP)
+      : CheckerManager(Context, AOptions, PP, {}, {}) {}
+
+  /// Constructs a CheckerManager without requiring an AST. No checker
+  /// registration will take place. Only useful when one needs to print the
+  /// help flags through CheckerRegistryData, and the AST is unavalaible.
+  CheckerManager(AnalyzerOptions &AOptions, const LangOptions &LangOpts,
+                 DiagnosticsEngine &Diags, ArrayRef<std::string> plugins);
 
   ~CheckerManager();
 
@@ -140,8 +168,19 @@ public:
   void finishedCheckerRegistration();
 
   const LangOptions &getLangOpts() const { return LangOpts; }
-  AnalyzerOptions &getAnalyzerOptions() const { return AOptions; }
-  ASTContext &getASTContext() const { return Context; }
+  const AnalyzerOptions &getAnalyzerOptions() const { return AOptions; }
+  const Preprocessor &getPreprocessor() const {
+    assert(PP);
+    return *PP;
+  }
+  const CheckerRegistryData &getCheckerRegistryData() const {
+    return *RegistryData;
+  }
+  DiagnosticsEngine &getDiagnostics() const { return Diags; }
+  ASTContext &getASTContext() const {
+    assert(Context);
+    return *Context;
+  }
 
   /// Emits an error through a DiagnosticsEngine about an invalid user supplied
   /// checker option value.
@@ -327,11 +366,9 @@ public:
                                      ExprEngine &Eng);
 
   /// Run checkers between C++ operator new and constructor calls.
-  void runCheckersForNewAllocator(const CXXNewExpr *NE, SVal Target,
-                                  ExplodedNodeSet &Dst,
-                                  ExplodedNode *Pred,
-                                  ExprEngine &Eng,
-                                  bool wasInlined = false);
+  void runCheckersForNewAllocator(const CXXAllocatorCall &Call,
+                                  ExplodedNodeSet &Dst, ExplodedNode *Pred,
+                                  ExprEngine &Eng, bool wasInlined = false);
 
   /// Run checkers for live symbols.
   ///
@@ -400,9 +437,9 @@ public:
   /// Run checkers for evaluating a call.
   ///
   /// Warning: Currently, the CallEvent MUST come from a CallExpr!
-  void runCheckersForEvalCall(ExplodedNodeSet &Dst,
-                              const ExplodedNodeSet &Src,
-                              const CallEvent &CE, ExprEngine &Eng);
+  void runCheckersForEvalCall(ExplodedNodeSet &Dst, const ExplodedNodeSet &Src,
+                              const CallEvent &CE, ExprEngine &Eng,
+                              const EvalCallOptions &CallOpts);
 
   /// Run checkers for the entire Translation Unit.
   void runCheckersOnEndOfTranslationUnit(const TranslationUnitDecl *TU,
@@ -472,7 +509,7 @@ public:
       CheckerFn<void (const Stmt *, CheckerContext &)>;
 
   using CheckNewAllocatorFunc =
-      CheckerFn<void (const CXXNewExpr *, SVal, CheckerContext &)>;
+      CheckerFn<void(const CXXAllocatorCall &Call, CheckerContext &)>;
 
   using CheckDeadSymbolsFunc =
       CheckerFn<void (SymbolReaper &, CheckerContext &)>;

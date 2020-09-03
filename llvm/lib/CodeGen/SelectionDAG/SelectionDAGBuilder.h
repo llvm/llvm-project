@@ -14,19 +14,16 @@
 #define LLVM_LIB_CODEGEN_SELECTIONDAG_SELECTIONDAGBUILDER_H
 
 #include "StatepointLowering.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Statepoint.h"
@@ -55,7 +52,6 @@ class CatchSwitchInst;
 class CleanupPadInst;
 class CleanupReturnInst;
 class Constant;
-class ConstantInt;
 class ConstrainedFPIntrinsic;
 class DbgValueInst;
 class DataLayout;
@@ -77,6 +73,7 @@ class PHINode;
 class ResumeInst;
 class ReturnInst;
 class SDDbgValue;
+class SelectionDAG;
 class StoreInst;
 class SwiftErrorValueTracking;
 class SwitchInst;
@@ -142,6 +139,20 @@ private:
   /// no other ordering requirements. We bunch them up and the emit a single
   /// tokenfactor for them just before terminator instructions.
   SmallVector<SDValue, 8> PendingExports;
+
+  /// Similar to loads, nodes corresponding to constrained FP intrinsics are
+  /// bunched up and emitted when necessary.  These can be moved across each
+  /// other and any (normal) memory operation (load or store), but not across
+  /// calls or instructions having unspecified side effects.  As a special
+  /// case, constrained FP intrinsics using fpexcept.strict may not be deleted
+  /// even if otherwise unused, so they need to be chained before any
+  /// terminator instruction (like PendingExports).  We track the latter
+  /// set of nodes in a separate list.
+  SmallVector<SDValue, 8> PendingConstrainedFP;
+  SmallVector<SDValue, 8> PendingConstrainedFPStrict;
+
+  /// Update root to include all chains from the Pending list.
+  SDValue updateRoot(SmallVectorImpl<SDValue> &Pending);
 
   /// A unique monotonically increasing number used to order the SDNodes we
   /// create.
@@ -395,6 +406,8 @@ public:
     SelectionDAGBuilder *SDB;
   };
 
+  // Data related to deferred switch lowerings. Used to construct additional
+  // Basic Blocks in SelectionDAGISel::FinishBasicBlock.
   std::unique_ptr<SDAGSwitchLowering> SL;
 
   /// A StackProtectorDescriptor structure used to communicate stack protector
@@ -447,12 +460,18 @@ public:
 
   /// Return the current virtual root of the Selection DAG, flushing any
   /// PendingLoad items. This must be done before emitting a store or any other
-  /// node that may need to be ordered after any prior load instructions.
+  /// memory node that may need to be ordered after any prior load instructions.
+  SDValue getMemoryRoot();
+
+  /// Similar to getMemoryRoot, but also flushes PendingConstrainedFP(Strict)
+  /// items. This must be done before emitting any call other any other node
+  /// that may need to be ordered after FP instructions due to other side
+  /// effects.
   SDValue getRoot();
 
   /// Similar to getRoot, but instead of flushing all the PendingLoad items,
-  /// flush all the PendingExports items. It is necessary to do this before
-  /// emitting a terminator instruction.
+  /// flush all the PendingExports (and PendingConstrainedFPStrict) items.
+  /// It is necessary to do this before emitting a terminator instruction.
   SDValue getControlRoot();
 
   SDLoc getCurSDLoc() const {
@@ -498,7 +517,6 @@ public:
   void resolveOrClearDbgInfo();
 
   SDValue getValue(const Value *V);
-  bool findValue(const Value *V) const;
 
   /// Return the SDNode for the specified IR value if it exists.
   SDNode *getNodeForIRValue(const Value *V) {
@@ -537,7 +555,7 @@ public:
   bool isExportableFromCurrentBlock(const Value *V, const BasicBlock *FromBB);
   void CopyToExportRegsIfNeeded(const Value *V);
   void ExportFromCurrentBlock(const Value *V);
-  void LowerCallTo(ImmutableCallSite CS, SDValue Callee, bool IsTailCall,
+  void LowerCallTo(const CallBase &CB, SDValue Callee, bool IsTailCall,
                    const BasicBlock *EHPadBB = nullptr,
                    const TargetLowering::PtrAuthInfo *PAI = nullptr);
 
@@ -608,7 +626,7 @@ public:
 
   // This function is responsible for the whole statepoint lowering process.
   // It uniformly handles invoke and call statepoints.
-  void LowerStatepoint(ImmutableStatepoint ISP,
+  void LowerStatepoint(const GCStatepointInst &I,
                        const BasicBlock *EHPadBB = nullptr);
 
   void LowerCallSiteWithDeoptBundle(const CallBase *Call, SDValue Callee,
@@ -622,7 +640,7 @@ public:
                                         bool VarArgDisallowed,
                                         bool ForceVoidReturnTy);
 
-  void LowerCallSiteWithPtrAuthBundle(ImmutableCallSite CS,
+  void LowerCallSiteWithPtrAuthBundle(const CallBase &CB,
                                       const BasicBlock *EHPadBB);
 
   /// Returns the type of FrameIndex and TargetFrameIndex nodes.
@@ -748,7 +766,7 @@ private:
   void visitStoreToSwiftError(const StoreInst &I);
   void visitFreeze(const FreezeInst &I);
 
-  void visitInlineAsm(ImmutableCallSite CS);
+  void visitInlineAsm(const CallBase &Call);
   void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
@@ -758,8 +776,7 @@ private:
   void visitVAEnd(const CallInst &I);
   void visitVACopy(const CallInst &I);
   void visitStackmap(const CallInst &I);
-  void visitPatchpoint(ImmutableCallSite CS,
-                       const BasicBlock *EHPadBB = nullptr);
+  void visitPatchpoint(const CallBase &CB, const BasicBlock *EHPadBB = nullptr);
 
   // These two are implemented in StatepointLowering.cpp
   void visitGCRelocate(const GCRelocateInst &Relocate);
@@ -779,7 +796,7 @@ private:
 
   void HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB);
 
-  void emitInlineAsmError(ImmutableCallSite CS, const Twine &Message);
+  void emitInlineAsmError(const CallBase &Call, const Twine &Message);
 
   /// If V is an function argument then create corresponding DBG_VALUE machine
   /// instruction for it now. At the end of instruction selection, they will be

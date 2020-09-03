@@ -62,12 +62,15 @@ Name prefix            Description
 ``boost-``             Checks related to Boost library.
 ``bugprone-``          Checks that target bugprone code constructs.
 ``cert-``              Checks related to CERT Secure Coding Guidelines.
-``cppcoreguidelines-`` Checks related to C++ Core Guidelines.
 ``clang-analyzer-``    Clang Static Analyzer checks.
+``cppcoreguidelines-`` Checks related to C++ Core Guidelines.
+``darwin-``            Checks related to Darwin coding conventions.
 ``fuchsia-``           Checks related to Fuchsia coding conventions.
 ``google-``            Checks related to Google coding conventions.
 ``hicpp-``             Checks related to High Integrity C++ Coding Standard.
+``linuxkernel-``       Checks related to the Linux Kernel coding conventions.
 ``llvm-``              Checks related to the LLVM coding conventions.
+``llvmlibc-``          Checks related to the LLVM-libc coding standards.
 ``misc-``              Checks that we didn't have a better category for.
 ``modernize-``         Checks that advocate usage of modern (currently "modern"
                        means "C++11") language constructs.
@@ -244,17 +247,20 @@ An overview of all the command-line options:
   Configuration files:
     clang-tidy attempts to read configuration for each source file from a
     .clang-tidy file located in the closest parent directory of the source
-    file. If any configuration options have a corresponding command-line
-    option, command-line option takes precedence. The effective
-    configuration can be inspected using -dump-config:
+    file. If InheritParentConfig is true in a config file, the configuration file
+    in the parent directory (if any exists) will be taken and current config file
+    will be applied on top of the parent one. If any configuration options have
+    a corresponding command-line option, command-line option takes precedence.
+    The effective configuration can be inspected using -dump-config:
 
       $ clang-tidy -dump-config
       ---
-      Checks:          '-*,some-check'
-      WarningsAsErrors: ''
-      HeaderFilterRegex: ''
-      FormatStyle:     none
-      User:            user
+      Checks:              '-*,some-check'
+      WarningsAsErrors:    ''
+      HeaderFilterRegex:   ''
+      FormatStyle:         none
+      InheritParentConfig: true
+      User:                user
       CheckOptions:
         - key:             some-check.SomeOption
           value:           'some value'

@@ -39,14 +39,14 @@ static bool lowerLoadRelative(Function &F) {
   for (auto I = F.use_begin(), E = F.use_end(); I != E;) {
     auto CI = dyn_cast<CallInst>(I->getUser());
     ++I;
-    if (!CI || CI->getCalledValue() != &F)
+    if (!CI || CI->getCalledOperand() != &F)
       continue;
 
     IRBuilder<> B(CI);
     Value *OffsetPtr =
         B.CreateGEP(Int8Ty, CI->getArgOperand(0), CI->getArgOperand(1));
     Value *OffsetPtrI32 = B.CreateBitCast(OffsetPtr, Int32PtrTy);
-    Value *OffsetI32 = B.CreateAlignedLoad(Int32Ty, OffsetPtrI32, 4);
+    Value *OffsetI32 = B.CreateAlignedLoad(Int32Ty, OffsetPtrI32, Align(4));
 
     Value *ResultPtr = B.CreateGEP(Int8Ty, CI->getArgOperand(0), OffsetI32);
 

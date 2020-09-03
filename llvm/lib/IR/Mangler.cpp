@@ -94,15 +94,18 @@ static void addByteCountSuffix(raw_ostream &OS, const Function *F,
                                const DataLayout &DL) {
   // Calculate arguments size total.
   unsigned ArgWords = 0;
+
+  const unsigned PtrSize = DL.getPointerSize();
+
   for (Function::const_arg_iterator AI = F->arg_begin(), AE = F->arg_end();
        AI != AE; ++AI) {
-    Type *Ty = AI->getType();
     // 'Dereference' type in case of byval or inalloca parameter attribute.
-    if (AI->hasByValOrInAllocaAttr())
-      Ty = cast<PointerType>(Ty)->getElementType();
+    uint64_t AllocSize = AI->hasPassPointeeByValueAttr() ?
+      AI->getPassPointeeByValueCopySize(DL) :
+      DL.getTypeAllocSize(AI->getType());
+
     // Size should be aligned to pointer size.
-    unsigned PtrSize = DL.getPointerSize();
-    ArgWords += alignTo(DL.getTypeAllocSize(Ty), PtrSize);
+    ArgWords += alignTo(AllocSize, PtrSize);
   }
 
   OS << '@' << ArgWords;

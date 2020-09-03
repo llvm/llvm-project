@@ -53,21 +53,6 @@ std::ostream &
 operator<<(std::ostream &OS, const MachineFunction &MF);
 }
 
-/// Create a TargetMachine. As we lack a dedicated always available target for
-/// unittests, we go for "AArch64".
-static std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
-  Triple TargetTriple("aarch64--");
-  std::string Error;
-  const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
-  if (!T)
-    return nullptr;
-
-  TargetOptions Options;
-  return std::unique_ptr<LLVMTargetMachine>(
-      static_cast<LLVMTargetMachine *>(T->createTargetMachine(
-          "AArch64", "", "", Options, None, None, CodeGenOpt::Aggressive)));
-}
-
 static std::unique_ptr<Module> parseMIR(LLVMContext &Context,
                                         std::unique_ptr<MIRParser> &MIR,
                                         const TargetMachine &TM,
@@ -90,31 +75,13 @@ static std::unique_ptr<Module> parseMIR(LLVMContext &Context,
 
   return M;
 }
-
 static std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
 createDummyModule(LLVMContext &Context, const LLVMTargetMachine &TM,
-                  StringRef MIRFunc) {
-  SmallString<512> S;
-  StringRef MIRString = (Twine(R"MIR(
----
-...
-name: func
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-body: |
-  bb.1:
-    %0(s64) = COPY $x0
-    %1(s64) = COPY $x1
-    %2(s64) = COPY $x2
-)MIR") + Twine(MIRFunc) + Twine("...\n"))
-                            .toNullTerminatedStringRef(S);
+                  StringRef MIRString, const char *FuncName) {
   std::unique_ptr<MIRParser> MIR;
   auto MMI = std::make_unique<MachineModuleInfo>(&TM);
   std::unique_ptr<Module> M =
-      parseMIR(Context, MIR, TM, MIRString, "func", *MMI);
+      parseMIR(Context, MIR, TM, MIRString, FuncName, *MMI);
   return make_pair(std::move(M), std::move(MMI));
 }
 
@@ -137,11 +104,23 @@ static void collectCopies(SmallVectorImpl<Register> &Copies,
 class GISelMITest : public ::testing::Test {
 protected:
   GISelMITest() : ::testing::Test() {}
+
+  /// Prepare a target specific LLVMTargetMachine.
+  virtual std::unique_ptr<LLVMTargetMachine> createTargetMachine() const = 0;
+
+  /// Get the stub sample MIR test function.
+  virtual void getTargetTestModuleString(SmallString<512> &S,
+                                         StringRef MIRFunc) const = 0;
+
   void setUp(StringRef ExtraAssembly = "") {
     TM = createTargetMachine();
     if (!TM)
       return;
-    ModuleMMIPair = createDummyModule(Context, *TM, ExtraAssembly);
+
+    SmallString<512> MIRString;
+    getTargetTestModuleString(MIRString, ExtraAssembly);
+
+    ModuleMMIPair = createDummyModule(Context, *TM, MIRString, "func");
     MF = getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
     collectCopies(Copies, MF);
     EntryMBB = &*MF->begin();
@@ -149,6 +128,7 @@ protected:
     MRI = &MF->getRegInfo();
     B.setInsertPt(*EntryMBB, EntryMBB->end());
   }
+
   LLVMContext Context;
   std::unique_ptr<LLVMTargetMachine> TM;
   MachineFunction *MF;
@@ -158,6 +138,18 @@ protected:
   MachineBasicBlock *EntryMBB;
   MachineIRBuilder B;
   MachineRegisterInfo *MRI;
+};
+
+class AArch64GISelMITest : public GISelMITest {
+  std::unique_ptr<LLVMTargetMachine> createTargetMachine() const override;
+  void getTargetTestModuleString(SmallString<512> &S,
+                                 StringRef MIRFunc) const override;
+};
+
+class AMDGPUGISelMITest : public GISelMITest {
+  std::unique_ptr<LLVMTargetMachine> createTargetMachine() const override;
+  void getTargetTestModuleString(SmallString<512> &S,
+                                 StringRef MIRFunc) const override;
 };
 
 #define DefineLegalizerInfo(Name, SettingUpActionsBlock)                       \
@@ -173,6 +165,8 @@ protected:
       (void)s32;                                                               \
       const LLT s64 = LLT::scalar(64);                                         \
       (void)s64;                                                               \
+      const LLT s128 = LLT::scalar(128);                                       \
+      (void)s128;                                                              \
       do                                                                       \
         SettingUpActionsBlock while (0);                                       \
       computeTables();                                                         \

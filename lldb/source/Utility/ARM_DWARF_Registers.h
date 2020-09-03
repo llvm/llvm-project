@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_ARM_DWARF_Registers_h_
-#define utility_ARM_DWARF_Registers_h_
+#ifndef LLDB_SOURCE_UTILITY_ARM_DWARF_REGISTERS_H
+#define LLDB_SOURCE_UTILITY_ARM_DWARF_REGISTERS_H
 
 #include "lldb/lldb-private.h"
 
@@ -204,4 +204,4 @@ enum {
   dwarf_q15
 };
 
-#endif // utility_ARM_DWARF_Registers_h_
+#endif // LLDB_SOURCE_UTILITY_ARM_DWARF_REGISTERS_H

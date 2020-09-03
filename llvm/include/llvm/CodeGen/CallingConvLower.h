@@ -26,7 +26,6 @@ namespace llvm {
 
 class CCState;
 class MVT;
-class TargetMachine;
 class TargetRegisterInfo;
 
 /// CCValAssign - Represent assignment of one arg/retval to a location.
@@ -165,9 +164,9 @@ public:
 /// Describes a register that needs to be forwarded from the prologue to a
 /// musttail call.
 struct ForwardedRegister {
-  ForwardedRegister(unsigned VReg, MCPhysReg PReg, MVT VT)
+  ForwardedRegister(Register VReg, MCPhysReg PReg, MVT VT)
       : VReg(VReg), PReg(PReg), VT(VT) {}
-  unsigned VReg;
+  Register VReg;
   MCPhysReg PReg;
   MVT VT;
 };
@@ -222,9 +221,7 @@ private:
   // ByValRegs[1] describes how "%t" is stored (Begin == r3, End == r4).
   //
   // In case of 8 bytes stack alignment,
-  // ByValRegs may also contain information about wasted registers.
   // In function shown above, r3 would be wasted according to AAPCS rules.
-  // And in that case ByValRegs[1].Waste would be "true".
   // ByValRegs vector size still would be 2,
   // while "%t" goes to the stack: it wouldn't be described in ByValRegs.
   //
@@ -234,19 +231,13 @@ private:
   // 3. Argument analysis (LowerFormatArguments, for example). After
   // some byval argument was analyzed, InRegsParamsProcessed is increased.
   struct ByValInfo {
-    ByValInfo(unsigned B, unsigned E, bool IsWaste = false) :
-      Begin(B), End(E), Waste(IsWaste) {}
+    ByValInfo(unsigned B, unsigned E) : Begin(B), End(E) {}
+
     // First register allocated for current parameter.
     unsigned Begin;
 
     // First after last register allocated for current parameter.
     unsigned End;
-
-    // Means that current range of registers doesn't belong to any
-    // parameters. It was wasted due to stack alignment rules.
-    // For more information see:
-    // AAPCS, 5.5 Parameter Passing, Stage C, C.3.
-    bool Waste;
   };
   SmallVector<ByValInfo, 4 > ByValRegs;
 
@@ -282,8 +273,8 @@ public:
 
   /// isAllocated - Return true if the specified register (or an alias) is
   /// allocated.
-  bool isAllocated(unsigned Reg) const {
-    return UsedRegs[Reg/32] & (1 << (Reg&31));
+  bool isAllocated(MCRegister Reg) const {
+    return UsedRegs[Reg / 32] & (1 << (Reg & 31));
   }
 
   /// AnalyzeFormalArguments - Analyze an array of argument values,
@@ -333,7 +324,7 @@ public:
   /// A shadow allocated register is a register that was allocated
   /// but wasn't added to the location list (Locs).
   /// \returns true if the register was allocated as shadow or false otherwise.
-  bool IsShadowAllocatedReg(unsigned Reg) const;
+  bool IsShadowAllocatedReg(MCRegister Reg) const;
 
   /// AnalyzeCallResult - Same as above except it's specialized for calls which
   /// produce a single value.
@@ -351,15 +342,17 @@ public:
   /// AllocateReg - Attempt to allocate one register.  If it is not available,
   /// return zero.  Otherwise, return the register, marking it and any aliases
   /// as allocated.
-  unsigned AllocateReg(unsigned Reg) {
-    if (isAllocated(Reg)) return 0;
+  MCRegister AllocateReg(MCPhysReg Reg) {
+    if (isAllocated(Reg))
+      return MCRegister();
     MarkAllocated(Reg);
     return Reg;
   }
 
   /// Version of AllocateReg with extra register to be shadowed.
-  unsigned AllocateReg(unsigned Reg, unsigned ShadowReg) {
-    if (isAllocated(Reg)) return 0;
+  MCRegister AllocateReg(MCPhysReg Reg, MCPhysReg ShadowReg) {
+    if (isAllocated(Reg))
+      return MCRegister();
     MarkAllocated(Reg);
     MarkAllocated(ShadowReg);
     return Reg;
@@ -368,13 +361,13 @@ public:
   /// AllocateReg - Attempt to allocate one of the specified registers.  If none
   /// are available, return zero.  Otherwise, return the first one available,
   /// marking it and any aliases as allocated.
-  unsigned AllocateReg(ArrayRef<MCPhysReg> Regs) {
+  MCPhysReg AllocateReg(ArrayRef<MCPhysReg> Regs) {
     unsigned FirstUnalloc = getFirstUnallocated(Regs);
     if (FirstUnalloc == Regs.size())
-      return 0;    // Didn't find the reg.
+      return MCRegister();    // Didn't find the reg.
 
     // Mark the register and any aliases as allocated.
-    unsigned Reg = Regs[FirstUnalloc];
+    MCPhysReg Reg = Regs[FirstUnalloc];
     MarkAllocated(Reg);
     return Reg;
   }
@@ -382,7 +375,7 @@ public:
   /// AllocateRegBlock - Attempt to allocate a block of RegsRequired consecutive
   /// registers. If this is not possible, return zero. Otherwise, return the first
   /// register of the block that were allocated, marking the entire block as allocated.
-  unsigned AllocateRegBlock(ArrayRef<MCPhysReg> Regs, unsigned RegsRequired) {
+  MCPhysReg AllocateRegBlock(ArrayRef<MCPhysReg> Regs, unsigned RegsRequired) {
     if (RegsRequired > Regs.size())
       return 0;
 
@@ -409,13 +402,13 @@ public:
   }
 
   /// Version of AllocateReg with list of registers to be shadowed.
-  unsigned AllocateReg(ArrayRef<MCPhysReg> Regs, const MCPhysReg *ShadowRegs) {
+  MCRegister AllocateReg(ArrayRef<MCPhysReg> Regs, const MCPhysReg *ShadowRegs) {
     unsigned FirstUnalloc = getFirstUnallocated(Regs);
     if (FirstUnalloc == Regs.size())
-      return 0;    // Didn't find the reg.
+      return MCRegister();    // Didn't find the reg.
 
     // Mark the register and any aliases as allocated.
-    unsigned Reg = Regs[FirstUnalloc], ShadowReg = ShadowRegs[FirstUnalloc];
+    MCRegister Reg = Regs[FirstUnalloc], ShadowReg = ShadowRegs[FirstUnalloc];
     MarkAllocated(Reg);
     MarkAllocated(ShadowReg);
     return Reg;
@@ -423,42 +416,51 @@ public:
 
   /// AllocateStack - Allocate a chunk of stack space with the specified size
   /// and alignment.
-  unsigned AllocateStack(unsigned Size, unsigned Alignment) {
-    const Align CheckedAlignment(Alignment);
-    StackOffset = alignTo(StackOffset, CheckedAlignment);
+  unsigned AllocateStack(unsigned Size, Align Alignment) {
+    StackOffset = alignTo(StackOffset, Alignment);
     unsigned Result = StackOffset;
     StackOffset += Size;
-    MaxStackArgAlign = std::max(CheckedAlignment, MaxStackArgAlign);
-    ensureMaxAlignment(CheckedAlignment);
+    MaxStackArgAlign = std::max(Alignment, MaxStackArgAlign);
+    ensureMaxAlignment(Alignment);
     return Result;
+  }
+
+  // FIXME: Deprecate this function when transition to Align is over.
+  LLVM_ATTRIBUTE_DEPRECATED(unsigned AllocateStack(unsigned Size,
+                                                   unsigned Alignment),
+                            "Use the version that takes Align instead.") {
+    return AllocateStack(Size, Align(Alignment));
   }
 
   void ensureMaxAlignment(Align Alignment) {
     if (!AnalyzingMustTailForwardedRegs)
-      MF.getFrameInfo().ensureMaxAlignment(Alignment.value());
+      MF.getFrameInfo().ensureMaxAlignment(Alignment);
   }
 
   /// Version of AllocateStack with extra register to be shadowed.
-  unsigned AllocateStack(unsigned Size, unsigned Align, unsigned ShadowReg) {
+  LLVM_ATTRIBUTE_DEPRECATED(unsigned AllocateStack(unsigned Size,
+                                                   unsigned Alignment,
+                                                   unsigned ShadowReg),
+                            "Use the version that takes Align instead.") {
     MarkAllocated(ShadowReg);
-    return AllocateStack(Size, Align);
+    return AllocateStack(Size, Align(Alignment));
   }
 
   /// Version of AllocateStack with list of extra registers to be shadowed.
   /// Note that, unlike AllocateReg, this shadows ALL of the shadow registers.
-  unsigned AllocateStack(unsigned Size, unsigned Align,
+  unsigned AllocateStack(unsigned Size, Align Alignment,
                          ArrayRef<MCPhysReg> ShadowRegs) {
     for (unsigned i = 0; i < ShadowRegs.size(); ++i)
       MarkAllocated(ShadowRegs[i]);
-    return AllocateStack(Size, Align);
+    return AllocateStack(Size, Alignment);
   }
 
   // HandleByVal - Allocate a stack slot large enough to pass an argument by
   // value. The size and alignment information of the argument is encoded in its
   // parameter attribute.
-  void HandleByVal(unsigned ValNo, MVT ValVT,
-                   MVT LocVT, CCValAssign::LocInfo LocInfo,
-                   int MinSize, int MinAlign, ISD::ArgFlagsTy ArgFlags);
+  void HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
+                   CCValAssign::LocInfo LocInfo, int MinSize, Align MinAlign,
+                   ISD::ArgFlagsTy ArgFlags);
 
   // Returns count of byval arguments that are to be stored (even partly)
   // in registers.
@@ -569,7 +571,7 @@ public:
 
 private:
   /// MarkAllocated - Mark a register and all of its aliases as allocated.
-  void MarkAllocated(unsigned Reg);
+  void MarkAllocated(MCPhysReg Reg);
 };
 
 } // end namespace llvm

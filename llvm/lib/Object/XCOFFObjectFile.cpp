@@ -11,13 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/MC/SubtargetFeature.h"
 #include <cstddef>
 #include <cstring>
 
 namespace llvm {
 namespace object {
 
-enum { FUNCTION_SYM = 0x20, SYM_TYPE_MASK = 0x07, RELOC_OVERFLOW = 65535 };
+static const uint8_t FunctionSym = 0x20;
+static const uint8_t SymTypeMask = 0x07;
+static const uint16_t NoRelMask = 0x0001;
 
 // Checks that [Ptr, Ptr + Size) bytes fall inside the memory buffer
 // 'M'. Returns a pointer to the underlying object on success.
@@ -25,8 +28,8 @@ template <typename T>
 static Expected<const T *> getObject(MemoryBufferRef M, const void *Ptr,
                                      const uint64_t Size = sizeof(T)) {
   uintptr_t Addr = uintptr_t(Ptr);
-  if (std::error_code EC = Binary::checkOffset(M, Addr, Size))
-    return errorCodeToError(EC);
+  if (Error E = Binary::checkOffset(M, Addr, Size))
+    return std::move(E);
   return reinterpret_cast<const T *>(Addr);
 }
 
@@ -314,58 +317,98 @@ bool XCOFFObjectFile::isSectionVirtual(DataRefImpl Sec) const {
 }
 
 relocation_iterator XCOFFObjectFile::section_rel_begin(DataRefImpl Sec) const {
-  llvm_unreachable("Not yet implemented!");
-  return relocation_iterator(RelocationRef());
+  if (is64Bit())
+    report_fatal_error("64-bit support not implemented yet");
+  const XCOFFSectionHeader32 *SectionEntPtr = toSection32(Sec);
+  auto RelocationsOrErr = relocations(*SectionEntPtr);
+  if (Error E = RelocationsOrErr.takeError())
+    return relocation_iterator(RelocationRef());
+  DataRefImpl Ret;
+  Ret.p = reinterpret_cast<uintptr_t>(&*RelocationsOrErr.get().begin());
+  return relocation_iterator(RelocationRef(Ret, this));
 }
 
 relocation_iterator XCOFFObjectFile::section_rel_end(DataRefImpl Sec) const {
-  llvm_unreachable("Not yet implemented!");
-  return relocation_iterator(RelocationRef());
+  if (is64Bit())
+    report_fatal_error("64-bit support not implemented yet");
+  const XCOFFSectionHeader32 *SectionEntPtr = toSection32(Sec);
+  auto RelocationsOrErr = relocations(*SectionEntPtr);
+  if (Error E = RelocationsOrErr.takeError())
+    return relocation_iterator(RelocationRef());
+  DataRefImpl Ret;
+  Ret.p = reinterpret_cast<uintptr_t>(&*RelocationsOrErr.get().end());
+  return relocation_iterator(RelocationRef(Ret, this));
 }
 
 void XCOFFObjectFile::moveRelocationNext(DataRefImpl &Rel) const {
-  llvm_unreachable("Not yet implemented!");
-  return;
+  Rel.p = reinterpret_cast<uintptr_t>(viewAs<XCOFFRelocation32>(Rel.p) + 1);
 }
 
 uint64_t XCOFFObjectFile::getRelocationOffset(DataRefImpl Rel) const {
-  llvm_unreachable("Not yet implemented!");
-  uint64_t Result = 0;
-  return Result;
+  if (is64Bit())
+    report_fatal_error("64-bit support not implemented yet");
+  const XCOFFRelocation32 *Reloc = viewAs<XCOFFRelocation32>(Rel.p);
+  const XCOFFSectionHeader32 *Sec32 = sectionHeaderTable32();
+  const uint32_t RelocAddress = Reloc->VirtualAddress;
+  const uint16_t NumberOfSections = getNumberOfSections();
+  for (uint16_t i = 0; i < NumberOfSections; ++i) {
+    // Find which section this relocation is belonging to, and get the
+    // relocation offset relative to the start of the section.
+    if (Sec32->VirtualAddress <= RelocAddress &&
+        RelocAddress < Sec32->VirtualAddress + Sec32->SectionSize) {
+      return RelocAddress - Sec32->VirtualAddress;
+    }
+    ++Sec32;
+  }
+  return InvalidRelocOffset;
 }
 
 symbol_iterator XCOFFObjectFile::getRelocationSymbol(DataRefImpl Rel) const {
-  llvm_unreachable("Not yet implemented!");
-  return symbol_iterator(SymbolRef());
+  if (is64Bit())
+    report_fatal_error("64-bit support not implemented yet");
+  const XCOFFRelocation32 *Reloc = viewAs<XCOFFRelocation32>(Rel.p);
+  const uint32_t Index = Reloc->SymbolIndex;
+
+  if (Index >= getLogicalNumberOfSymbolTableEntries32())
+    return symbol_end();
+
+  DataRefImpl SymDRI;
+  SymDRI.p = reinterpret_cast<uintptr_t>(getPointerToSymbolTable() + Index);
+  return symbol_iterator(SymbolRef(SymDRI, this));
 }
 
 uint64_t XCOFFObjectFile::getRelocationType(DataRefImpl Rel) const {
-  llvm_unreachable("Not yet implemented!");
-  uint64_t Result = 0;
-  return Result;
+  if (is64Bit())
+    report_fatal_error("64-bit support not implemented yet");
+  return viewAs<XCOFFRelocation32>(Rel.p)->Type;
 }
 
 void XCOFFObjectFile::getRelocationTypeName(
     DataRefImpl Rel, SmallVectorImpl<char> &Result) const {
-  llvm_unreachable("Not yet implemented!");
-  return;
+  if (is64Bit())
+    report_fatal_error("64-bit support not implemented yet");
+  const XCOFFRelocation32 *Reloc = viewAs<XCOFFRelocation32>(Rel.p);
+  StringRef Res = XCOFF::getRelocationTypeString(Reloc->Type);
+  Result.append(Res.begin(), Res.end());
 }
 
-uint32_t XCOFFObjectFile::getSymbolFlags(DataRefImpl Symb) const {
+Expected<uint32_t> XCOFFObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   uint32_t Result = 0;
   llvm_unreachable("Not yet implemented!");
   return Result;
 }
 
 basic_symbol_iterator XCOFFObjectFile::symbol_begin() const {
-  assert(!is64Bit() && "64-bit support not implemented yet.");
+  if (is64Bit())
+    report_fatal_error("64-bit support not implemented yet");
   DataRefImpl SymDRI;
   SymDRI.p = reinterpret_cast<uintptr_t>(SymbolTblPtr);
   return basic_symbol_iterator(SymbolRef(SymDRI, this));
 }
 
 basic_symbol_iterator XCOFFObjectFile::symbol_end() const {
-  assert(!is64Bit() && "64-bit support not implemented yet.");
+  if (is64Bit())
+    report_fatal_error("64-bit support not implemented yet");
   DataRefImpl SymDRI;
   SymDRI.p = reinterpret_cast<uintptr_t>(
       SymbolTblPtr + getLogicalNumberOfSymbolTableEntries32());
@@ -400,9 +443,9 @@ SubtargetFeatures XCOFFObjectFile::getFeatures() const {
 }
 
 bool XCOFFObjectFile::isRelocatableObject() const {
-  bool Result = false;
-  llvm_unreachable("Not yet implemented!");
-  return Result;
+  if (is64Bit())
+    report_fatal_error("64-bit support not implemented yet");
+  return !(fileHeader32()->Flags & NoRelMask);
 }
 
 Expected<uint64_t> XCOFFObjectFile::getStartAddress() const {
@@ -588,7 +631,7 @@ Expected<uint32_t> XCOFFObjectFile::getLogicalNumberOfRelocationEntries(
 
   uint16_t SectionIndex = &Sec - sectionHeaderTable32() + 1;
 
-  if (Sec.NumberOfRelocations < RELOC_OVERFLOW)
+  if (Sec.NumberOfRelocations < XCOFF::RelocOverflow)
     return Sec.NumberOfRelocations;
   for (const auto &Sec : sections32()) {
     if (Sec.Flags == XCOFF::STYP_OVRFLO &&
@@ -608,6 +651,7 @@ XCOFFObjectFile::relocations(const XCOFFSectionHeader32 &Sec) const {
 
   uint32_t NumRelocEntries = NumRelocEntriesOrErr.get();
 
+  assert(sizeof(XCOFFRelocation32) == XCOFF::RelocationSerializationSize32);
   auto RelocationOrErr =
       getObject<XCOFFRelocation32>(Data, reinterpret_cast<void *>(RelocAddr),
                                    NumRelocEntries * sizeof(XCOFFRelocation32));
@@ -623,9 +667,11 @@ Expected<XCOFFStringTable>
 XCOFFObjectFile::parseStringTable(const XCOFFObjectFile *Obj, uint64_t Offset) {
   // If there is a string table, then the buffer must contain at least 4 bytes
   // for the string table's size. Not having a string table is not an error.
-  if (auto EC = Binary::checkOffset(
-          Obj->Data, reinterpret_cast<uintptr_t>(Obj->base() + Offset), 4))
+  if (Error E = Binary::checkOffset(
+          Obj->Data, reinterpret_cast<uintptr_t>(Obj->base() + Offset), 4)) {
+    consumeError(std::move(E));
     return XCOFFStringTable{0, nullptr};
+  }
 
   // Read the size out of the buffer.
   uint32_t Size = support::endian::read32be(Obj->base() + Offset);
@@ -722,6 +768,8 @@ uint8_t XCOFFSymbolRef::getNumberOfAuxEntries() const {
   return OwningObjectPtr->toSymbolEntry(SymEntDataRef)->NumberOfAuxEntries;
 }
 
+// TODO: The function needs to return an error if there is no csect auxiliary
+// entry.
 const XCOFFCsectAuxEnt32 *XCOFFSymbolRef::getXCOFFCsectAuxEnt32() const {
   assert(!OwningObjectPtr->is64Bit() &&
          "32-bit interface called on 64-bit object file.");
@@ -747,6 +795,8 @@ int16_t XCOFFSymbolRef::getSectionNumber() const {
   return OwningObjectPtr->toSymbolEntry(SymEntDataRef)->SectionNumber;
 }
 
+// TODO: The function name needs to be changed to express the purpose of the
+// function.
 bool XCOFFSymbolRef::hasCsectAuxEnt() const {
   XCOFF::StorageClass SC = getStorageClass();
   return (SC == XCOFF::C_EXT || SC == XCOFF::C_WEAKEXT ||
@@ -757,7 +807,7 @@ bool XCOFFSymbolRef::isFunction() const {
   if (OwningObjectPtr->is64Bit())
     report_fatal_error("64-bit support is unimplemented yet.");
 
-  if (getType() & FUNCTION_SYM)
+  if (getType() & FunctionSym)
     return true;
 
   if (!hasCsectAuxEnt())
@@ -766,7 +816,7 @@ bool XCOFFSymbolRef::isFunction() const {
   const XCOFFCsectAuxEnt32 *CsectAuxEnt = getXCOFFCsectAuxEnt32();
 
   // A function definition should be a label definition.
-  if ((CsectAuxEnt->SymbolAlignmentAndType & SYM_TYPE_MASK) != XCOFF::XTY_LD)
+  if ((CsectAuxEnt->SymbolAlignmentAndType & SymTypeMask) != XCOFF::XTY_LD)
     return false;
 
   if (CsectAuxEnt->StorageMappingClass != XCOFF::XMC_PR)

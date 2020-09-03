@@ -78,10 +78,11 @@ class CrashingRecursiveInferiorTestCase(TestBase):
             "thread backtrace all",
             substrs=[
                 stop_reason,
+                'recursive_function',
                 'main',
                 'argc',
                 'argv',
-                'recursive_function'])
+            ])
 
         # And it should report the correct line number.
         self.expect("thread backtrace all",
@@ -138,4 +139,3 @@ class CrashingRecursiveInferiorTestCase(TestBase):
         # of the inferior after a crash.
         self.expect("p i",
                     startstr='(int) $0 =')
-

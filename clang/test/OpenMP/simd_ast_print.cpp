@@ -164,8 +164,8 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: *a = 2;
 #ifdef OMP5
-#pragma omp simd private(argc, b),lastprivate(d,f) collapse(2) aligned(a : 4) if(simd:a) nontemporal(argc, c, d) lastprivate(conditional: e, f)
-// OMP50-NEXT: #pragma omp simd private(argc,b) lastprivate(d,f) collapse(2) aligned(a: 4) if(simd: a) nontemporal(argc,c,d) lastprivate(conditional: e,f)
+#pragma omp simd private(argc, b),lastprivate(d,f) collapse(2) aligned(a : 4) if(simd:a) nontemporal(argc, c, d) lastprivate(conditional: e, f) order(concurrent)
+// OMP50-NEXT: #pragma omp simd private(argc,b) lastprivate(d,f) collapse(2) aligned(a: 4) if(simd: a) nontemporal(argc,c,d) lastprivate(conditional: e,f) order(concurrent)
 #else
 #pragma omp simd private(argc, b),lastprivate(d,f) collapse(2) aligned(a : 4)
 // OMP45-NEXT: #pragma omp simd private(argc,b) lastprivate(d,f) collapse(2) aligned(a: 4)

@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -pedantic-errors -std=c++11 -emit-pch %s -o %t
 // RUN: %clang_cc1 -pedantic-errors -std=c++11 -include-pch %t -verify %s
 
+// RUN: %clang_cc1 -pedantic-errors -std=c++11 -emit-pch -fpch-instantiate-templates %s -o %t
+// RUN: %clang_cc1 -pedantic-errors -std=c++11 -include-pch %t -verify %s
+
 #ifndef HEADER_INCLUDED
 
 #define HEADER_INCLUDED
@@ -31,9 +34,9 @@ constexpr T plus_seven(T other) {
 
 static_assert(D(4).k == 9, "");
 constexpr int f(C c) { return 0; } // expected-error {{not a literal type}}
-// expected-note@13 {{not an aggregate and has no constexpr constructors}}
+// expected-note@16 {{not an aggregate and has no constexpr constructors}}
 constexpr B b; // expected-error {{constant expression}} expected-note {{non-constexpr}}
-               // expected-note@9 {{here}}
+               // expected-note@12 {{here}}
 
 static_assert(plus_seven(3) == 10, "");
 

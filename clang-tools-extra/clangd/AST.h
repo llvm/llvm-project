@@ -109,7 +109,6 @@ NestedNameSpecifierLoc getQualifierLoc(const NamedDecl &ND);
 QualType declaredType(const TypeDecl *D);
 
 /// Retrieves the deduced type at a given location (auto, decltype).
-/// Retuns None unless Loc starts an auto/decltype token.
 /// It will return the underlying type.
 llvm::Optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
 
@@ -147,6 +146,21 @@ std::string getQualification(ASTContext &Context,
                              const DeclContext *DestContext,
                              const NamedDecl *ND,
                              llvm::ArrayRef<std::string> VisibleNamespaces);
+
+/// Whether we must avoid computing linkage for D during code completion.
+/// Clang aggressively caches linkage computation, which is stable after the AST
+/// is built. Unfortunately the AST is incomplete during code completion, so
+/// linkage may still change.
+///
+/// Example: `auto x = []{^}` at file scope.
+/// During code completion, the initializer for x hasn't been parsed yet.
+/// x has type `undeduced auto`, and external linkage.
+/// If we compute linkage at this point, the external linkage will be cached.
+///
+/// After code completion the initializer is attached, and x has a lambda type.
+/// This means x has "unique external" linkage. If we computed linkage above,
+/// the cached value is incorrect. (clang catches this with an assertion).
+bool hasUnstableLinkage(const Decl *D);
 
 } // namespace clangd
 } // namespace clang

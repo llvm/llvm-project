@@ -58,7 +58,7 @@ public:
                                      PointerEscapeKind Kind) const;
 
   void printState(raw_ostream &OS, ProgramStateRef State,
-                  const char *NL, const char *Sep) const;
+                  const char *NL, const char *Sep) const override;
 };
 } // end anonymous namespace
 
@@ -188,6 +188,6 @@ void ento::registerObjCContainersChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCContainersChecker>();
 }
 
-bool ento::shouldRegisterObjCContainersChecker(const LangOptions &LO) {
+bool ento::shouldRegisterObjCContainersChecker(const CheckerManager &mgr) {
   return true;
 }

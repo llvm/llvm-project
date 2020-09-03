@@ -22,11 +22,6 @@ using namespace object;
 namespace {
 
 class XCOFFDumper : public ObjDumper {
-  enum {
-    SymbolTypeMask = 0x07,
-    SymbolAlignmentMask = 0xF8,
-    SymbolAlignmentBitOffset = 3
-  };
 
 public:
   XCOFFDumper(const XCOFFObjectFile &Obj, ScopedPrinter &Writer)
@@ -211,17 +206,15 @@ void XCOFFDumper::printCsectAuxEnt32(const XCOFFCsectAuxEnt32 *AuxEntPtr) {
   DictScope SymDs(W, "CSECT Auxiliary Entry");
   W.printNumber("Index",
                 Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(AuxEntPtr)));
-  if ((AuxEntPtr->SymbolAlignmentAndType & SymbolTypeMask) == XCOFF::XTY_LD)
+  if (AuxEntPtr->isLabel())
     W.printNumber("ContainingCsectSymbolIndex", AuxEntPtr->SectionOrLength);
   else
     W.printNumber("SectionLen", AuxEntPtr->SectionOrLength);
   W.printHex("ParameterHashIndex", AuxEntPtr->ParameterHashIndex);
   W.printHex("TypeChkSectNum", AuxEntPtr->TypeChkSectNum);
   // Print out symbol alignment and type.
-  W.printNumber("SymbolAlignmentLog2",
-                (AuxEntPtr->SymbolAlignmentAndType & SymbolAlignmentMask) >>
-                    SymbolAlignmentBitOffset);
-  W.printEnum("SymbolType", AuxEntPtr->SymbolAlignmentAndType & SymbolTypeMask,
+  W.printNumber("SymbolAlignmentLog2", AuxEntPtr->getAlignmentLog2());
+  W.printEnum("SymbolType", AuxEntPtr->getSymbolType(),
               makeArrayRef(CsectSymbolTypeClass));
   W.printEnum("StorageMappingClass",
               static_cast<uint8_t>(AuxEntPtr->StorageMappingClass),

@@ -22,6 +22,35 @@ public:
   Failure(const Twine &S) : StringError(S, inconvertibleErrorCode()) {}
 };
 
+// A class representing failures that happened during clustering calculations.
+class ClusteringError : public ErrorInfo<ClusteringError> {
+public:
+  static char ID;
+  ClusteringError(const Twine &S) : Msg(S.str()) {}
+
+  void log(raw_ostream &OS) const override;
+
+  std::error_code convertToErrorCode() const override;
+
+private:
+  std::string Msg;
+};
+
+// A class representing failures that happened during snippet execution.
+// Instead of terminating the program crashes are logged into the output.
+class SnippetCrash : public ErrorInfo<SnippetCrash> {
+public:
+  static char ID;
+  SnippetCrash(const Twine &S) : Msg(S.str()) {}
+
+  void log(raw_ostream &OS) const override;
+
+  std::error_code convertToErrorCode() const override;
+
+private:
+  std::string Msg;
+};
+
 } // namespace exegesis
 } // namespace llvm
 

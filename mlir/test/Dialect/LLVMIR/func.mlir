@@ -118,7 +118,7 @@ module {
 // -----
 
 module {
-  // expected-error@+1 {{expects one region}}
+  // expected-error@+1 {{requires one region}}
   "llvm.func"() {sym_name = "no_region", type = !llvm<"void ()">} : () -> ()
 }
 

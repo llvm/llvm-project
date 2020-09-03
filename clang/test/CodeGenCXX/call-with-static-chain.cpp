@@ -33,7 +33,7 @@ void test() {
   // CHECK64: call <2 x float> bitcast (<2 x float> ()* @f3 to <2 x float> (i8*)*)(i8* nest bitcast (<2 x float> ()* @f3 to i8*))
   __builtin_call_with_static_chain(f3(), f3);
 
-  // CHECK32: call dereferenceable(8) %struct.A* bitcast (%struct.A* ()* @f4 to %struct.A* (i8*)*)(i8* nest bitcast (%struct.A* ()* @f4 to i8*))
-  // CHECK64: call dereferenceable(16) %struct.A* bitcast (%struct.A* ()* @f4 to %struct.A* (i8*)*)(i8* nest bitcast (%struct.A* ()* @f4 to i8*))
+  // CHECK32: call nonnull align 4 dereferenceable(8) %struct.A* bitcast (%struct.A* ()* @f4 to %struct.A* (i8*)*)(i8* nest bitcast (%struct.A* ()* @f4 to i8*))
+  // CHECK64: call nonnull align 8 dereferenceable(16) %struct.A* bitcast (%struct.A* ()* @f4 to %struct.A* (i8*)*)(i8* nest bitcast (%struct.A* ()* @f4 to i8*))
   __builtin_call_with_static_chain(f4(), f4);
 }

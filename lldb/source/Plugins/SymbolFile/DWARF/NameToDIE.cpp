@@ -1,4 +1,4 @@
-//===-- NameToDIE.cpp -------------------------------------------*- C++ -*-===//
+//===-- NameToDIE.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,28 +26,38 @@ void NameToDIE::Insert(ConstString name, const DIERef &die_ref) {
   m_map.Append(name, die_ref);
 }
 
-size_t NameToDIE::Find(ConstString name, DIEArray &info_array) const {
-  return m_map.GetValues(name, info_array);
+bool NameToDIE::Find(ConstString name,
+                     llvm::function_ref<bool(DIERef ref)> callback) const {
+  for (const auto &entry : m_map.equal_range(name))
+    if (!callback(entry.value))
+      return false;
+  return true;
 }
 
-size_t NameToDIE::Find(const RegularExpression &regex,
-                       DIEArray &info_array) const {
-  return m_map.GetValues(regex, info_array);
+bool NameToDIE::Find(const RegularExpression &regex,
+                     llvm::function_ref<bool(DIERef ref)> callback) const {
+  for (const auto &entry : m_map)
+    if (regex.Execute(entry.cstring.GetCString())) {
+      if (!callback(entry.value))
+        return false;
+    }
+  return true;
 }
 
-size_t NameToDIE::FindAllEntriesForUnit(const DWARFUnit &unit,
-                                        DIEArray &info_array) const {
-  const size_t initial_size = info_array.size();
+void NameToDIE::FindAllEntriesForUnit(
+    const DWARFUnit &unit,
+    llvm::function_ref<bool(DIERef ref)> callback) const {
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
     const DIERef &die_ref = m_map.GetValueAtIndexUnchecked(i);
     if (unit.GetSymbolFileDWARF().GetDwoNum() == die_ref.dwo_num() &&
         unit.GetDebugSection() == die_ref.section() &&
         unit.GetOffset() <= die_ref.die_offset() &&
-        die_ref.die_offset() < unit.GetNextUnitOffset())
-      info_array.push_back(die_ref);
+        die_ref.die_offset() < unit.GetNextUnitOffset()) {
+      if (!callback(die_ref))
+        return;
+    }
   }
-  return info_array.size() - initial_size;
 }
 
 void NameToDIE::Dump(Stream *s) {

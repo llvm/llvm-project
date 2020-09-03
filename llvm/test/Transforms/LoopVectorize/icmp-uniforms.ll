@@ -33,3 +33,27 @@ for.end:
   %tmp4 = phi i32 [ %tmp3, %for.body ]
   ret i32 %tmp4
 }
+
+; Check for crash exposed by D76992.
+; CHECK:       N0 [label =
+; CHECK-NEXT:    "loop:\n" +
+; CHECK-NEXT:      "WIDEN-INDUCTION %iv = phi 0, %iv.next\l" +
+; CHECK-NEXT:      "WIDEN\l""  %cond0 = icmp %iv, 13\l" +
+; CHECK-NEXT:      "WIDEN-SELECT%s = select %cond0, 10, 20\l" +
+; CHECK-NEXT:      "EMIT vp<%1> = icmp ule ir<%iv> vp<%0>\l"
+; CHECK-NEXT:  ]
+define void @test() {
+entry:
+  br label %loop
+
+loop:                       ; preds = %loop, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %cond0 = icmp ult i64 %iv, 13
+  %s = select i1 %cond0, i32 10, i32 20
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 14
+  br i1 %exitcond, label %exit, label %loop
+
+exit:           ; preds = %loop
+  ret void
+}

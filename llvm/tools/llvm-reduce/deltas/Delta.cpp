@@ -47,7 +47,7 @@ bool IsReduced(Module &M, TestRunner &Test, SmallString<128> &CurrentFilepath) {
 static int getLines(StringRef Filepath) {
   int Lines = 0;
   std::string CurrLine;
-  std::ifstream FileStream(Filepath);
+  std::ifstream FileStream{std::string(Filepath)};
 
   while (std::getline(FileStream, CurrLine))
     ++Lines;

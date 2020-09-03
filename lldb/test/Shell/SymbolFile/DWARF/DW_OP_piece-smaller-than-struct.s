@@ -1,4 +1,4 @@
-# REQUIRES: rdar59115751
+# REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -o %t -triple x86_64-pc-linux %s
 # RUN: %lldb %t -o "target variable reset" -b | FileCheck %s

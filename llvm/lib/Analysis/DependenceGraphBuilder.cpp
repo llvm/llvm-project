@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DependenceGraphBuilder.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/EnumeratedArray.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
@@ -372,6 +373,109 @@ void AbstractDependenceGraphBuilder<G>::createMemoryDependencyEdges() {
       }
     }
   }
+}
+
+template <class G> void AbstractDependenceGraphBuilder<G>::simplify() {
+  if (!shouldSimplify())
+    return;
+  LLVM_DEBUG(dbgs() << "==== Start of Graph Simplification ===\n");
+
+  // This algorithm works by first collecting a set of candidate nodes that have
+  // an out-degree of one (in terms of def-use edges), and then ignoring those
+  // whose targets have an in-degree more than one. Each node in the resulting
+  // set can then be merged with its corresponding target and put back into the
+  // worklist until no further merge candidates are available.
+  SmallPtrSet<NodeType *, 32> CandidateSourceNodes;
+
+  // A mapping between nodes and their in-degree. To save space, this map
+  // only contains nodes that are targets of nodes in the CandidateSourceNodes.
+  DenseMap<NodeType *, unsigned> TargetInDegreeMap;
+
+  for (NodeType *N : Graph) {
+    if (N->getEdges().size() != 1)
+      continue;
+    EdgeType &Edge = N->back();
+    if (!Edge.isDefUse())
+      continue;
+    CandidateSourceNodes.insert(N);
+
+    // Insert an element into the in-degree map and initialize to zero. The
+    // count will get updated in the next step.
+    TargetInDegreeMap.insert({&Edge.getTargetNode(), 0});
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "Size of candidate src node list:" << CandidateSourceNodes.size()
+           << "\nNode with single outgoing def-use edge:\n";
+    for (NodeType *N : CandidateSourceNodes) {
+      dbgs() << N << "\n";
+    }
+  });
+
+  for (NodeType *N : Graph) {
+    for (EdgeType *E : *N) {
+      NodeType *Tgt = &E->getTargetNode();
+      auto TgtIT = TargetInDegreeMap.find(Tgt);
+      if (TgtIT != TargetInDegreeMap.end())
+        ++(TgtIT->second);
+    }
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "Size of target in-degree map:" << TargetInDegreeMap.size()
+           << "\nContent of in-degree map:\n";
+    for (auto &I : TargetInDegreeMap) {
+      dbgs() << I.first << " --> " << I.second << "\n";
+    }
+  });
+
+  SmallVector<NodeType *, 32> Worklist(CandidateSourceNodes.begin(),
+                                       CandidateSourceNodes.end());
+  while (!Worklist.empty()) {
+    NodeType &Src = *Worklist.pop_back_val();
+    // As nodes get merged, we need to skip any node that has been removed from
+    // the candidate set (see below).
+    if (!CandidateSourceNodes.erase(&Src))
+      continue;
+
+    assert(Src.getEdges().size() == 1 &&
+           "Expected a single edge from the candidate src node.");
+    NodeType &Tgt = Src.back().getTargetNode();
+    assert(TargetInDegreeMap.find(&Tgt) != TargetInDegreeMap.end() &&
+           "Expected target to be in the in-degree map.");
+
+    if (TargetInDegreeMap[&Tgt] != 1)
+      continue;
+
+    if (!areNodesMergeable(Src, Tgt))
+      continue;
+
+    // Do not merge if there is also an edge from target to src (immediate
+    // cycle).
+    if (Tgt.hasEdgeTo(Src))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Merging:" << Src << "\nWith:" << Tgt << "\n");
+
+    mergeNodes(Src, Tgt);
+
+    // If the target node is in the candidate set itself, we need to put the
+    // src node back into the worklist again so it gives the target a chance
+    // to get merged into it. For example if we have:
+    // {(a)->(b), (b)->(c), (c)->(d), ...} and the worklist is initially {b, a},
+    // then after merging (a) and (b) together, we need to put (a,b) back in
+    // the worklist so that (c) can get merged in as well resulting in
+    // {(a,b,c) -> d}
+    // We also need to remove the old target (b), from the worklist. We first
+    // remove it from the candidate set here, and skip any item from the
+    // worklist that is not in the set.
+    if (CandidateSourceNodes.erase(&Tgt)) {
+      Worklist.push_back(&Src);
+      CandidateSourceNodes.insert(&Src);
+      LLVM_DEBUG(dbgs() << "Putting " << &Src << " back in the worklist.\n");
+    }
+  }
+  LLVM_DEBUG(dbgs() << "=== End of Graph Simplification ===\n");
 }
 
 template <class G>

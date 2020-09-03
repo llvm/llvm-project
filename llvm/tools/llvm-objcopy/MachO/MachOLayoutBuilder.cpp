@@ -17,7 +17,7 @@ namespace macho {
 
 uint32_t MachOLayoutBuilder::computeSizeOfCmds() const {
   uint32_t Size = 0;
-  for (const auto &LC : O.LoadCommands) {
+  for (const LoadCommand &LC : O.LoadCommands) {
     const MachO::macho_load_command &MLC = LC.MachOLoadCommand;
     auto cmd = MLC.load_command_data.cmd;
     switch (cmd) {
@@ -61,15 +61,16 @@ void MachOLayoutBuilder::updateDySymTab(MachO::macho_load_command &MLC) {
   assert(MLC.load_command_data.cmd == MachO::LC_DYSYMTAB);
   // Make sure that nlist entries in the symbol table are sorted by the those
   // types. The order is: local < defined external < undefined external.
-  assert(std::is_sorted(O.SymTable.Symbols.begin(), O.SymTable.Symbols.end(),
-                        [](const std::unique_ptr<SymbolEntry> &A,
-                           const std::unique_ptr<SymbolEntry> &B) {
-                          bool AL = A->isLocalSymbol(), BL = B->isLocalSymbol();
-                          if (AL != BL)
-                            return AL;
-                          return !AL && !A->isUndefinedSymbol() &&
-                                         B->isUndefinedSymbol();
-                        }) &&
+  assert(llvm::is_sorted(O.SymTable.Symbols,
+                         [](const std::unique_ptr<SymbolEntry> &A,
+                            const std::unique_ptr<SymbolEntry> &B) {
+                           bool AL = A->isLocalSymbol(),
+                                BL = B->isLocalSymbol();
+                           if (AL != BL)
+                             return AL;
+                           return !AL && !A->isUndefinedSymbol() &&
+                                  B->isUndefinedSymbol();
+                         }) &&
          "Symbols are not sorted by their types.");
 
   uint32_t NumLocalSymbols = 0;
@@ -107,7 +108,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
   const bool IsObjectFile =
       O.Header.FileType == MachO::HeaderFileType::MH_OBJECT;
   uint64_t Offset = IsObjectFile ? (HeaderSize + O.Header.SizeOfCmds) : 0;
-  for (auto &LC : O.LoadCommands) {
+  for (LoadCommand &LC : O.LoadCommands) {
     auto &MLC = LC.MachOLoadCommand;
     StringRef Segname;
     uint64_t SegmentVmAddr;
@@ -142,30 +143,30 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
     uint64_t SegOffset = Offset;
     uint64_t SegFileSize = 0;
     uint64_t VMSize = 0;
-    for (auto &Sec : LC.Sections) {
+    for (std::unique_ptr<Section> &Sec : LC.Sections) {
+      assert(SegmentVmAddr <= Sec->Addr &&
+             "Section's address cannot be smaller than Segment's one");
+      uint32_t SectOffset = Sec->Addr - SegmentVmAddr;
       if (IsObjectFile) {
-        if (Sec.isVirtualSection()) {
-          Sec.Offset = 0;
+        if (Sec->isVirtualSection()) {
+          Sec->Offset = 0;
         } else {
           uint64_t PaddingSize =
-              offsetToAlignment(SegFileSize, Align(1ull << Sec.Align));
-          Sec.Offset = SegOffset + SegFileSize + PaddingSize;
-          Sec.Size = Sec.Content.size();
-          SegFileSize += PaddingSize + Sec.Size;
+              offsetToAlignment(SegFileSize, Align(1ull << Sec->Align));
+          Sec->Offset = SegOffset + SegFileSize + PaddingSize;
+          Sec->Size = Sec->Content.size();
+          SegFileSize += PaddingSize + Sec->Size;
         }
-        VMSize = std::max(VMSize, Sec.Addr + Sec.Size);
       } else {
-        if (Sec.isVirtualSection()) {
-          Sec.Offset = 0;
-          VMSize += Sec.Size;
+        if (Sec->isVirtualSection()) {
+          Sec->Offset = 0;
         } else {
-          uint32_t SectOffset = Sec.Addr - SegmentVmAddr;
-          Sec.Offset = SegOffset + SectOffset;
-          Sec.Size = Sec.Content.size();
-          SegFileSize = std::max(SegFileSize, SectOffset + Sec.Size);
-          VMSize = std::max(VMSize, SegFileSize);
+          Sec->Offset = SegOffset + SectOffset;
+          Sec->Size = Sec->Content.size();
+          SegFileSize = std::max(SegFileSize, SectOffset + Sec->Size);
         }
       }
+      VMSize = std::max(VMSize, SectOffset + Sec->Size);
     }
 
     if (IsObjectFile) {
@@ -204,21 +205,33 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
 }
 
 uint64_t MachOLayoutBuilder::layoutRelocations(uint64_t Offset) {
-  for (auto &LC : O.LoadCommands)
-    for (auto &Sec : LC.Sections) {
-      Sec.RelOff = Sec.Relocations.empty() ? 0 : Offset;
-      Sec.NReloc = Sec.Relocations.size();
-      Offset += sizeof(MachO::any_relocation_info) * Sec.NReloc;
+  for (LoadCommand &LC : O.LoadCommands)
+    for (std::unique_ptr<Section> &Sec : LC.Sections) {
+      Sec->RelOff = Sec->Relocations.empty() ? 0 : Offset;
+      Sec->NReloc = Sec->Relocations.size();
+      Offset += sizeof(MachO::any_relocation_info) * Sec->NReloc;
     }
 
   return Offset;
 }
 
 Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
+  // If we are building the layout of an executable or dynamic library
+  // which does not have any segments other than __LINKEDIT,
+  // the Offset can be equal to zero by this time. It happens because of the
+  // convention that in such cases the file offsets specified by LC_SEGMENT
+  // start with zero (unlike the case of a relocatable object file).
+  const uint64_t HeaderSize =
+      Is64Bit ? sizeof(MachO::mach_header_64) : sizeof(MachO::mach_header);
+  assert((!(O.Header.FileType == MachO::HeaderFileType::MH_OBJECT) ||
+          Offset >= HeaderSize + O.Header.SizeOfCmds) &&
+         "Incorrect tail offset");
+  Offset = std::max(Offset, HeaderSize + O.Header.SizeOfCmds);
+
   // The order of LINKEDIT elements is as follows:
   // rebase info, binding info, weak binding info, lazy binding info, export
   // trie, data-in-code, symbol table, indirect symbol table, symbol table
-  // strings.
+  // strings, code signature.
   uint64_t NListSize = Is64Bit ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
   uint64_t StartOfLinkEdit = Offset;
   uint64_t StartOfRebaseInfo = StartOfLinkEdit;
@@ -237,8 +250,10 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
   uint64_t StartOfSymbolStrings =
       StartOfIndirectSymbols +
       sizeof(uint32_t) * O.IndirectSymTable.Symbols.size();
+  uint64_t StartOfCodeSignature =
+      StartOfSymbolStrings + StrTableBuilder.getSize();
   uint64_t LinkEditSize =
-      (StartOfSymbolStrings + StrTableBuilder.getSize()) - StartOfLinkEdit;
+      (StartOfCodeSignature + O.CodeSignature.Data.size()) - StartOfLinkEdit;
 
   // Now we have determined the layout of the contents of the __LINKEDIT
   // segment. Update its load command.
@@ -260,10 +275,14 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     }
   }
 
-  for (auto &LC : O.LoadCommands) {
+  for (LoadCommand &LC : O.LoadCommands) {
     auto &MLC = LC.MachOLoadCommand;
     auto cmd = MLC.load_command_data.cmd;
     switch (cmd) {
+    case MachO::LC_CODE_SIGNATURE:
+      MLC.linkedit_data_command_data.dataoff = StartOfCodeSignature;
+      MLC.linkedit_data_command_data.datasize = O.CodeSignature.Data.size();
+      break;
     case MachO::LC_SYMTAB:
       MLC.symtab_command_data.symoff = StartOfSymbols;
       MLC.symtab_command_data.nsyms = O.SymTable.Symbols.size();
@@ -314,6 +333,19 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
           O.Exports.Trie.empty() ? 0 : StartOfExportTrie;
       MLC.dyld_info_command_data.export_size = O.Exports.Trie.size();
       break;
+    // Note that LC_ENCRYPTION_INFO.cryptoff despite its name and the comment in
+    // <mach-o/loader.h> is not an offset in the binary file, instead, it is a
+    // relative virtual address. At the moment modification of the __TEXT
+    // segment of executables isn't supported anyway (e.g. data in code entries
+    // are not recalculated). Moreover, in general
+    // LC_ENCRYPT_INFO/LC_ENCRYPTION_INFO_64 are nontrivial to update because
+    // without making additional assumptions (e.g. that the entire __TEXT
+    // segment should be encrypted) we do not know how to recalculate the
+    // boundaries of the encrypted part. For now just copy over these load
+    // commands until we encounter a real world usecase where
+    // LC_ENCRYPT_INFO/LC_ENCRYPTION_INFO_64 need to be adjusted.
+    case MachO::LC_ENCRYPTION_INFO:
+    case MachO::LC_ENCRYPTION_INFO_64:
     case MachO::LC_LOAD_DYLINKER:
     case MachO::LC_MAIN:
     case MachO::LC_RPATH:
@@ -326,6 +358,7 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     case MachO::LC_BUILD_VERSION:
     case MachO::LC_ID_DYLIB:
     case MachO::LC_LOAD_DYLIB:
+    case MachO::LC_LOAD_WEAK_DYLIB:
     case MachO::LC_UUID:
     case MachO::LC_SOURCE_VERSION:
       // Nothing to update.

@@ -3,12 +3,12 @@
 
 # RUN: echo "SECTIONS { .writable : { *(.writable) } }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
-# RUN: llvm-objdump -section-headers %t.out | \
+# RUN: llvm-objdump --section-headers %t.out | \
 # RUN:   FileCheck -check-prefix=TEXTORPHAN %s
 
 # RUN: echo "SECTIONS { .text : { *(.text) } }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
-# RUN: llvm-objdump -section-headers %t.out | \
+# RUN: llvm-objdump --section-headers %t.out | \
 # RUN:   FileCheck -check-prefix=WRITABLEORPHAN %s
 
 # TEXTORPHAN:      Sections:

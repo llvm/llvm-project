@@ -9,6 +9,21 @@ target triple = "i386-pc-windows-msvc19.0.24215"
 declare x86_stdcallcc void @tail_std(i32)
 declare void @capture(i32*)
 
+define x86_thiscallcc void @preallocated(i32* %this, i32* preallocated(i32) %args) {
+entry:
+  %val = load i32, i32* %args
+  store i32 0, i32* %args
+  tail call x86_stdcallcc void @tail_std(i32 %val)
+  ret void
+}
+
+; CHECK-LABEL: _preallocated:                              # @preallocated
+; CHECK:         movl    4(%esp), %[[reg:[^ ]*]]
+; CHECK:         movl    $0, 4(%esp)
+; CHECK:         pushl   %[[reg]]
+; CHECK:         calll   _tail_std@4
+; CHECK:         retl    $4
+
 define x86_thiscallcc void @inalloca(i32* %this, i32* inalloca %args) {
 entry:
   %val = load i32, i32* %args

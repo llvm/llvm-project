@@ -17,6 +17,20 @@
 #include <cstddef>       // for std::max_align_t
 #include "test_macros.h"
 
+// The following tests assume naturally aligned types exist
+// up to 64bit (double). For larger types, max_align_t should
+// give the correct alignment. For pre-C++11 testing, only
+// the lower bound is checked.
+
+#if TEST_STD_VER < 11
+struct natural_alignment {
+    long t1;
+    long long t2;
+    double t3;
+    long double t4;
+};
+#endif
+
 int main(int, char**)
 {
     {
@@ -250,9 +264,6 @@ int main(int, char**)
     static_assert(std::alignment_of<T1>::value == 8, "");
     static_assert(sizeof(T1) == 16, "");
     }
-    // Use alignof(std::max_align_t) below to find the max alignment instead of
-    // hardcoding it, because it's different on different platforms.
-    // (For example 8 on arm and 16 on x86.)
     {
     typedef std::aligned_storage<16>::type T1;
 #if TEST_STD_VER > 11
@@ -260,8 +271,15 @@ int main(int, char**)
 #endif
     static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
-    static_assert(std::alignment_of<T1>::value == TEST_ALIGNOF(std::max_align_t),
-                  "");
+#if TEST_STD_VER >= 11
+    const size_t alignment = TEST_ALIGNOF(std::max_align_t) > 16 ?
+        16 : TEST_ALIGNOF(std::max_align_t);
+    static_assert(std::alignment_of<T1>::value == alignment, "");
+#else
+    static_assert(std::alignment_of<T1>::value >=
+                  TEST_ALIGNOF(natural_alignment), "");
+    static_assert(std::alignment_of<T1>::value <= 16, "");
+#endif
     static_assert(sizeof(T1) == 16, "");
     }
     {
@@ -271,9 +289,17 @@ int main(int, char**)
 #endif
     static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
-    static_assert(std::alignment_of<T1>::value == TEST_ALIGNOF(std::max_align_t),
-                  "");
-    static_assert(sizeof(T1) == 16 + TEST_ALIGNOF(std::max_align_t), "");
+#if TEST_STD_VER >= 11
+    const size_t alignment = TEST_ALIGNOF(std::max_align_t) > 16 ?
+        16 : TEST_ALIGNOF(std::max_align_t);
+    static_assert(std::alignment_of<T1>::value == alignment, "");
+    static_assert(sizeof(T1) == 16 + alignment, "");
+#else
+    static_assert(std::alignment_of<T1>::value >=
+                  TEST_ALIGNOF(natural_alignment), "");
+    static_assert(std::alignment_of<T1>::value <= 16, "");
+    static_assert(sizeof(T1) % TEST_ALIGNOF(natural_alignment) == 0, "");
+#endif
     }
     {
     typedef std::aligned_storage<10>::type T1;

@@ -19,3 +19,11 @@ double b;
 
 // CHECK-DAG: "?$S4@@3US@@B"
 const auto [x2, y2] = f();
+
+// CHECK-DAG: "?i1@@3V<lambda_1>@0@B"
+inline const auto i1 = [](auto x) { return 0; };
+// CHECK-DAG: "?i2@@3V<lambda_1>@0@B"
+inline const auto i2 = [](auto x) { return 1; };
+// CHECK-DAG: "??$?RH@<lambda_1>@i1@@QBE?A?<auto>@@H@Z"
+// CHECK-DAG: "??$?RH@<lambda_1>@i2@@QBE?A?<auto>@@H@Z"
+int g() {return i1(1) + i2(1); }

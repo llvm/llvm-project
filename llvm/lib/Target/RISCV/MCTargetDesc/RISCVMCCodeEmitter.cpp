@@ -80,6 +80,10 @@ public:
   unsigned getImmOpValue(const MCInst &MI, unsigned OpNo,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
+
+  unsigned getVMaskReg(const MCInst &MI, unsigned OpNo,
+                       SmallVectorImpl<MCFixup> &Fixups,
+                       const MCSubtargetInfo &STI) const;
 };
 } // end anonymous namespace
 
@@ -89,13 +93,14 @@ MCCodeEmitter *llvm::createRISCVMCCodeEmitter(const MCInstrInfo &MCII,
   return new RISCVMCCodeEmitter(Ctx, MCII);
 }
 
-// Expand PseudoCALL(Reg) and PseudoTAIL to AUIPC and JALR with relocation
-// types. We expand PseudoCALL(Reg) and PseudoTAIL while encoding, meaning AUIPC
-// and JALR won't go through RISCV MC to MC compressed instruction
-// transformation. This is acceptable because AUIPC has no 16-bit form and
-// C_JALR have no immediate operand field.  We let linker relaxation deal with
-// it. When linker relaxation enabled, AUIPC and JALR have chance relax to JAL.
-// If C extension is enabled, JAL has chance relax to C_JAL.
+// Expand PseudoCALL(Reg), PseudoTAIL and PseudoJump to AUIPC and JALR with
+// relocation types. We expand those pseudo-instructions while encoding them,
+// meaning AUIPC and JALR won't go through RISCV MC to MC compressed
+// instruction transformation. This is acceptable because AUIPC has no 16-bit
+// form and C_JALR has no immediate operand field.  We let linker relaxation
+// deal with it. When linker relaxation is enabled, AUIPC and JALR have a
+// chance to relax to JAL.
+// If the C extension is enabled, JAL has a chance relax to C_JAL.
 void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI, raw_ostream &OS,
                                             SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
@@ -108,9 +113,12 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI, raw_ostream &OS,
   } else if (MI.getOpcode() == RISCV::PseudoCALLReg) {
     Func = MI.getOperand(1);
     Ra = MI.getOperand(0).getReg();
-  } else {
+  } else if (MI.getOpcode() == RISCV::PseudoCALL) {
     Func = MI.getOperand(0);
     Ra = RISCV::X1;
+  } else if (MI.getOpcode() == RISCV::PseudoJump) {
+    Func = MI.getOperand(1);
+    Ra = MI.getOperand(0).getReg();
   }
   uint32_t Binary;
 
@@ -125,8 +133,9 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI, raw_ostream &OS,
   Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
   support::endian::write(OS, Binary, support::little);
 
-  if (MI.getOpcode() == RISCV::PseudoTAIL)
-    // Emit JALR X0, X6, 0
+  if (MI.getOpcode() == RISCV::PseudoTAIL ||
+      MI.getOpcode() == RISCV::PseudoJump)
+    // Emit JALR X0, Ra, 0
     TmpInst = MCInstBuilder(RISCV::JALR).addReg(RISCV::X0).addReg(Ra).addImm(0);
   else
     // Emit JALR Ra, Ra, 0
@@ -180,9 +189,13 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   // Get byte count of instruction.
   unsigned Size = Desc.getSize();
 
+  // RISCVInstrInfo::getInstSizeInBytes hard-codes the number of expanded
+  // instructions for each pseudo, and must be updated when adding new pseudos
+  // or changing existing ones.
   if (MI.getOpcode() == RISCV::PseudoCALLReg ||
       MI.getOpcode() == RISCV::PseudoCALL ||
-      MI.getOpcode() == RISCV::PseudoTAIL) {
+      MI.getOpcode() == RISCV::PseudoTAIL ||
+      MI.getOpcode() == RISCV::PseudoJump) {
     expandFunctionCall(MI, OS, Fixups, STI);
     MCNumEmitted += 2;
     return;
@@ -366,6 +379,22 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   }
 
   return 0;
+}
+
+unsigned RISCVMCCodeEmitter::getVMaskReg(const MCInst &MI, unsigned OpNo,
+                                         SmallVectorImpl<MCFixup> &Fixups,
+                                         const MCSubtargetInfo &STI) const {
+  MCOperand MO = MI.getOperand(OpNo);
+  assert(MO.isReg() && "Expected a register.");
+
+  switch (MO.getReg()) {
+  default:
+    llvm_unreachable("Invalid mask register.");
+  case RISCV::V0:
+    return 0;
+  case RISCV::NoRegister:
+    return 1;
+  }
 }
 
 #include "RISCVGenMCCodeEmitter.inc"

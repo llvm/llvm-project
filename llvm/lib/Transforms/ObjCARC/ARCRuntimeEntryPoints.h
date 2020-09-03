@@ -22,19 +22,15 @@
 #ifndef LLVM_LIB_TRANSFORMS_OBJCARC_ARCRUNTIMEENTRYPOINTS_H
 #define LLVM_LIB_TRANSFORMS_OBJCARC_ARCRUNTIMEENTRYPOINTS_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
 namespace llvm {
 
 class Function;
-class LLVMContext;
+class Module;
 
 namespace objcarc {
 

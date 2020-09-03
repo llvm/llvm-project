@@ -2,11 +2,11 @@
 // directives. We cannot map #line directives back to
 // a SourceLocation.
 
-// RUN: %clang_cc1 %s -Rpass=inline -debug-info-kind=line-tables-only -dwarf-column-info -emit-llvm-only -verify -fno-experimental-new-pass-manager
+// RUN: %clang_cc1 %s -Rpass=inline -debug-info-kind=line-tables-only -emit-llvm-only -verify -fno-experimental-new-pass-manager
 
 // The new PM inliner is not added to the default pipeline at O0, so we add
 // some optimizations to trigger it.
-// RUN: %clang_cc1 %s -Rpass=inline -fexperimental-new-pass-manager -O1 -debug-info-kind=line-tables-only -dwarf-column-info -emit-llvm-only -verify
+// RUN: %clang_cc1 %s -Rpass=inline -fexperimental-new-pass-manager -O1 -debug-info-kind=line-tables-only -emit-llvm-only -verify
 
 int foo(int x, int y) __attribute__((always_inline));
 int foo(int x, int y) { return x + y; }

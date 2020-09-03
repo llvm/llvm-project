@@ -112,7 +112,8 @@ RValue CodeGenFunction::EmitCXXDestructorCall(
   commonEmitCXXMemberOrOperatorCall(*this, DtorDecl, This, ImplicitParam,
                                     ImplicitParamTy, CE, Args, nullptr);
   return EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
-                  ReturnValueSlot(), Args);
+                  ReturnValueSlot(), Args, nullptr,
+                  CE ? CE->getExprLoc() : SourceLocation{});
 }
 
 RValue CodeGenFunction::EmitCXXPseudoDestructorExpr(
@@ -129,7 +130,7 @@ RValue CodeGenFunction::EmitCXXPseudoDestructorExpr(
     // If this is s.x, emit s as an lvalue. If it is s->x, emit s as a scalar.
     if (E->isArrow()) {
       BaseValue = EmitPointerWithAlignment(BaseExpr);
-      const PointerType *PTy = BaseExpr->getType()->getAs<PointerType>();
+      const auto *PTy = BaseExpr->getType()->castAs<PointerType>();
       BaseQuals = PTy->getPointeeType().getQualifiers();
     } else {
       LValue BaseLV = EmitLValue(BaseExpr);
@@ -380,7 +381,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
           IsArrow ? Base->getType()->getPointeeType() : Base->getType();
       EmitCXXDestructorCall(GD, Callee, This.getPointer(*this), ThisTy,
                             /*ImplicitParam=*/nullptr,
-                            /*ImplicitParamTy=*/QualType(), nullptr);
+                            /*ImplicitParamTy=*/QualType(), CE);
     }
     return RValue::get(nullptr);
   }
@@ -1427,8 +1428,7 @@ namespace {
     }
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
-      const FunctionProtoType *FPT =
-          OperatorDelete->getType()->getAs<FunctionProtoType>();
+      const auto *FPT = OperatorDelete->getType()->castAs<FunctionProtoType>();
       CallArgList DeleteArgs;
 
       // The first argument is always a void* (or C* for a destroying operator
@@ -1638,6 +1638,12 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     RValue RV =
       EmitNewDeleteCall(*this, allocator, allocatorType, allocatorArgs);
 
+    // Set !heapallocsite metadata on the call to operator new.
+    if (getDebugInfo())
+      if (auto *newCall = dyn_cast<llvm::CallBase>(RV.getScalarVal()))
+        getDebugInfo()->addHeapAllocSiteMetadata(newCall, allocType,
+                                                 E->getExprLoc());
+
     // If this was a call to a global replaceable allocation function that does
     // not take an alignment argument, the allocator is known to produce
     // storage that's suitably aligned for any object that fits, up to a known
@@ -1770,9 +1776,7 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
   assert((!NumElements && CookieSize.isZero()) ||
          DeleteFD->getOverloadedOperator() == OO_Array_Delete);
 
-  const FunctionProtoType *DeleteFTy =
-    DeleteFD->getType()->getAs<FunctionProtoType>();
-
+  const auto *DeleteFTy = DeleteFD->getType()->castAs<FunctionProtoType>();
   CallArgList DeleteArgs;
 
   auto Params = getUsualDeleteParams(DeleteFD);
@@ -1869,10 +1873,13 @@ static void EmitDestroyingObjectDelete(CodeGenFunction &CGF,
 }
 
 /// Emit the code for deleting a single object.
-static void EmitObjectDelete(CodeGenFunction &CGF,
+/// \return \c true if we started emitting UnconditionalDeleteBlock, \c false
+/// if not.
+static bool EmitObjectDelete(CodeGenFunction &CGF,
                              const CXXDeleteExpr *DE,
                              Address Ptr,
-                             QualType ElementType) {
+                             QualType ElementType,
+                             llvm::BasicBlock *UnconditionalDeleteBlock) {
   // C++11 [expr.delete]p3:
   //   If the static type of the object to be deleted is different from its
   //   dynamic type, the static type shall be a base class of the dynamic type
@@ -1919,7 +1926,7 @@ static void EmitObjectDelete(CodeGenFunction &CGF,
         if (UseVirtualCall) {
           CGF.CGM.getCXXABI().emitVirtualObjectDelete(CGF, DE, Ptr, ElementType,
                                                       Dtor);
-          return;
+          return false;
         }
       }
     }
@@ -1954,7 +1961,15 @@ static void EmitObjectDelete(CodeGenFunction &CGF,
     }
   }
 
+  // When optimizing for size, call 'operator delete' unconditionally.
+  if (CGF.CGM.getCodeGenOpts().OptimizeSize > 1) {
+    CGF.EmitBlock(UnconditionalDeleteBlock);
+    CGF.PopCleanupBlock();
+    return true;
+  }
+
   CGF.PopCleanupBlock();
+  return false;
 }
 
 namespace {
@@ -2031,6 +2046,12 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   Address Ptr = EmitPointerWithAlignment(Arg);
 
   // Null check the pointer.
+  //
+  // We could avoid this null check if we can determine that the object
+  // destruction is trivial and doesn't require an array cookie; we can
+  // unconditionally perform the operator delete call in that case. For now, we
+  // assume that deleted pointers are null rarely enough that it's better to
+  // keep the branch. This might be worth revisiting for a -O0 code size win.
   llvm::BasicBlock *DeleteNotNull = createBasicBlock("delete.notnull");
   llvm::BasicBlock *DeleteEnd = createBasicBlock("delete.end");
 
@@ -2076,11 +2097,11 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
 
   if (E->isArrayForm()) {
     EmitArrayDelete(*this, E, Ptr, DeleteTy);
+    EmitBlock(DeleteEnd);
   } else {
-    EmitObjectDelete(*this, E, Ptr, DeleteTy);
+    if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd))
+      EmitBlock(DeleteEnd);
   }
-
-  EmitBlock(DeleteEnd);
 }
 
 static bool isGLValueFromPointerDeref(const Expr *E) {

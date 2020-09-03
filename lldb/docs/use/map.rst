@@ -609,6 +609,38 @@ Breakpoint Commands
                </td>
          </tr>
 
+         <tr>
+               <td class="header" colspan="2">Disable a breakpoint.</td>
+         </tr>
+         <tr>
+               <td class="content">
+                  <b>(gdb)</b> disable 1
+                  <br>
+               </td>
+               <td class="content">
+                  <b>(lldb)</b> breakpoint disable 1
+                  <br>
+                  <b>(lldb)</b> br dis 1
+                  <br>
+               </td>
+         </tr>
+
+         <tr>
+               <td class="header" colspan="2">Enable a breakpoint.</td>
+         </tr>
+         <tr>
+               <td class="content">
+                  <b>(gdb)</b> enable 1
+                  <br>
+               </td>
+               <td class="content">
+                  <b>(lldb)</b> breakpoint enable 1
+                  <br>
+                  <b>(lldb)</b> br en 1
+                  <br>
+               </td>
+         </tr>
+
       </tbody>
    </table>
 

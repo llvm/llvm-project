@@ -27,10 +27,6 @@ class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
 class Target;
-class Triple;
-class StringRef;
-class raw_pwrite_stream;
-class raw_ostream;
 
 MCCodeEmitter *createSparcMCCodeEmitter(const MCInstrInfo &MCII,
                                         const MCRegisterInfo &MRI,

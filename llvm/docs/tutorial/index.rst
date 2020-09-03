@@ -51,5 +51,5 @@ External Tutorials
 Advanced Topics
 ===============
 
-#. `Writing an Optimization for LLVM <http://llvm.org/pubs/2004-09-22-LCPCLLVMTutorial.html>`_
+#. `Writing an Optimization for LLVM <https://llvm.org/pubs/2004-09-22-LCPCLLVMTutorial.html>`_
 

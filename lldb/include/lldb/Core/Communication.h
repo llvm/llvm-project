@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Communication_h_
-#define liblldb_Communication_h_
+#ifndef LLDB_CORE_COMMUNICATION_H
+#define LLDB_CORE_COMMUNICATION_H
 
 #include "lldb/Host/HostThread.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -359,9 +359,10 @@ protected:
   size_t GetCachedBytes(void *dst, size_t dst_len);
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Communication);
+  Communication(const Communication &) = delete;
+  const Communication &operator=(const Communication &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_Communication_h_
+#endif // LLDB_CORE_COMMUNICATION_H

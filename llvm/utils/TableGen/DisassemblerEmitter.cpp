@@ -136,7 +136,7 @@ void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   // ARM and Thumb have a CHECK() macro to deal with DecodeStatuses.
   if (Target.getName() == "ARM" || Target.getName() == "Thumb" ||
       Target.getName() == "AArch64" || Target.getName() == "ARM64") {
-    std::string PredicateNamespace = Target.getName();
+    std::string PredicateNamespace = std::string(Target.getName());
     if (PredicateNamespace == "Thumb")
       PredicateNamespace = "ARM";
 
@@ -148,9 +148,9 @@ void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
     return;
   }
 
-  EmitFixedLenDecoder(Records, OS, Target.getName(),
-                      "if (", " == MCDisassembler::Fail)",
-                      "MCDisassembler::Success", "MCDisassembler::Fail", "");
+  EmitFixedLenDecoder(Records, OS, std::string(Target.getName()), "if (",
+                      " == MCDisassembler::Fail)", "MCDisassembler::Success",
+                      "MCDisassembler::Fail", "");
 }
 
 } // end namespace llvm

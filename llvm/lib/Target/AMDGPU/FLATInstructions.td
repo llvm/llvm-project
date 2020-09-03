@@ -1,4 +1,4 @@
-//===-- FLATInstructions.td - FLAT Instruction Defintions -----------------===//
+//===-- FLATInstructions.td - FLAT Instruction Definitions ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -100,7 +100,7 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
                   !if(ps.is_flat_scratch, 0b01, 0));
 
   // Signed offset. Highest bit ignored for flat and treated as 12-bit
-  // unsigned for flat acceses.
+  // unsigned for flat accesses.
   bits<13> offset;
   bits<1> nv = 0; // XXX - What does this actually do?
 
@@ -175,7 +175,7 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
 }
 
 multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
-  let is_flat_global = 1 in {
+  let is_flat_global = 1, SubtargetPredicate = HasFlatGlobalInsts in {
     def "" : FLAT_Load_Pseudo<opName, regClass, HasTiedInput, 1>,
       GlobalSaddrTable<0, opName>;
     def _SADDR : FLAT_Load_Pseudo<opName, regClass, HasTiedInput, 1, 1>,
@@ -183,13 +183,50 @@ multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit Ha
   }
 }
 
+class FLAT_Global_Load_AddTid_Pseudo <string opName, RegisterClass regClass,
+  bit HasTiedOutput = 0, bit HasSignedOffset = 0> : FLAT_Pseudo<
+  opName,
+  (outs regClass:$vdst),
+  !con((ins SReg_64:$saddr, flat_offset:$offset, GLC:$glc, SLC:$slc, DLC:$dlc),
+    !if(HasTiedOutput, (ins regClass:$vdst_in), (ins))),
+  " $vdst, $saddr$offset$glc$slc$dlc"> {
+  let is_flat_global = 1;
+  let has_data = 0;
+  let mayLoad = 1;
+  let has_vaddr = 0;
+  let has_saddr = 1;
+  let enabled_saddr = 1;
+  let maybeAtomic = 1;
+
+  let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
+  let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
+}
+
 multiclass FLAT_Global_Store_Pseudo<string opName, RegisterClass regClass> {
-  let is_flat_global = 1 in {
+  let is_flat_global = 1, SubtargetPredicate = HasFlatGlobalInsts in {
     def "" : FLAT_Store_Pseudo<opName, regClass, 1>,
       GlobalSaddrTable<0, opName>;
     def _SADDR : FLAT_Store_Pseudo<opName, regClass, 1, 1>,
       GlobalSaddrTable<1, opName>;
   }
+}
+
+class FLAT_Global_Store_AddTid_Pseudo <string opName, RegisterClass vdataClass,
+  bit HasSignedOffset = 0> : FLAT_Pseudo<
+  opName,
+  (outs),
+  !con(
+    (ins vdataClass:$vdata, SReg_64:$saddr),
+      (ins flat_offset:$offset, GLC:$glc, SLC:$slc, DLC:$dlc)),
+  " $vdata, $saddr$offset$glc$slc$dlc"> {
+  let is_flat_global = 1;
+  let mayLoad  = 0;
+  let mayStore = 1;
+  let has_vdst = 0;
+  let has_vaddr = 0;
+  let has_saddr = 1;
+  let enabled_saddr = 1;
+  let maybeAtomic = 1;
 }
 
 class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
@@ -279,6 +316,7 @@ multiclass FLAT_Atomic_Pseudo<
     AtomicNoRet <opName, 0> {
     let PseudoInstr = NAME;
     let FPAtomic = isFP;
+    let AddedComplexity = -1; // Prefer global atomics if available
   }
 
   def _RTN : FLAT_AtomicRet_Pseudo <opName,
@@ -290,6 +328,7 @@ multiclass FLAT_Atomic_Pseudo<
        GlobalSaddrTable<0, opName#"_rtn">,
        AtomicNoRet <opName, 1>{
     let FPAtomic = isFP;
+    let AddedComplexity = -1; // Prefer global atomics if available
   }
 }
 
@@ -367,10 +406,12 @@ multiclass FLAT_Global_Atomic_Pseudo<
   SDPatternOperator atomic_rtn = null_frag,
   SDPatternOperator atomic_no_rtn = null_frag,
   ValueType data_vt = vt,
-  RegisterClass data_rc = vdst_rc> :
-    FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, atomic_no_rtn, data_vt, data_rc>,
-    FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, atomic_rtn, data_vt, data_rc>;
-
+  RegisterClass data_rc = vdst_rc> {
+  let is_flat_global = 1, SubtargetPredicate = HasFlatGlobalInsts in {
+    defm "" : FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, atomic_no_rtn, data_vt, data_rc>;
+    defm "" : FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, atomic_rtn, data_vt, data_rc>;
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // Flat Instructions
@@ -507,7 +548,6 @@ defm FLAT_ATOMIC_FMAX_X2     : FLAT_Atomic_Pseudo <"flat_atomic_fmax_x2",
 
 } // End SubtargetPredicate = isGFX7GFX10
 
-let SubtargetPredicate = HasFlatGlobalInsts in {
 defm GLOBAL_LOAD_UBYTE    : FLAT_Global_Load_Pseudo <"global_load_ubyte", VGPR_32>;
 defm GLOBAL_LOAD_SBYTE    : FLAT_Global_Load_Pseudo <"global_load_sbyte", VGPR_32>;
 defm GLOBAL_LOAD_USHORT   : FLAT_Global_Load_Pseudo <"global_load_ushort", VGPR_32>;
@@ -523,6 +563,8 @@ defm GLOBAL_LOAD_SBYTE_D16    : FLAT_Global_Load_Pseudo <"global_load_sbyte_d16"
 defm GLOBAL_LOAD_SBYTE_D16_HI : FLAT_Global_Load_Pseudo <"global_load_sbyte_d16_hi", VGPR_32, 1>;
 defm GLOBAL_LOAD_SHORT_D16    : FLAT_Global_Load_Pseudo <"global_load_short_d16", VGPR_32, 1>;
 defm GLOBAL_LOAD_SHORT_D16_HI : FLAT_Global_Load_Pseudo <"global_load_short_d16_hi", VGPR_32, 1>;
+let OtherPredicates = [HasGFX10_BEncoding] in
+def  GLOBAL_LOAD_DWORD_ADDTID : FLAT_Global_Load_AddTid_Pseudo <"global_load_dword_addtid", VGPR_32>;
 
 defm GLOBAL_STORE_BYTE    : FLAT_Global_Store_Pseudo <"global_store_byte", VGPR_32>;
 defm GLOBAL_STORE_SHORT   : FLAT_Global_Store_Pseudo <"global_store_short", VGPR_32>;
@@ -530,6 +572,8 @@ defm GLOBAL_STORE_DWORD   : FLAT_Global_Store_Pseudo <"global_store_dword", VGPR
 defm GLOBAL_STORE_DWORDX2 : FLAT_Global_Store_Pseudo <"global_store_dwordx2", VReg_64>;
 defm GLOBAL_STORE_DWORDX3 : FLAT_Global_Store_Pseudo <"global_store_dwordx3", VReg_96>;
 defm GLOBAL_STORE_DWORDX4 : FLAT_Global_Store_Pseudo <"global_store_dwordx4", VReg_128>;
+let OtherPredicates = [HasGFX10_BEncoding] in
+def  GLOBAL_STORE_DWORD_ADDTID : FLAT_Global_Store_AddTid_Pseudo <"global_store_dword_addtid", VGPR_32>;
 
 defm GLOBAL_STORE_BYTE_D16_HI  : FLAT_Global_Store_Pseudo <"global_store_byte_d16_hi", VGPR_32>;
 defm GLOBAL_STORE_SHORT_D16_HI : FLAT_Global_Store_Pseudo <"global_store_short_d16_hi", VGPR_32>;
@@ -615,9 +659,12 @@ defm GLOBAL_ATOMIC_INC_X2 : FLAT_Global_Atomic_Pseudo <"global_atomic_inc_x2",
 
 defm GLOBAL_ATOMIC_DEC_X2 : FLAT_Global_Atomic_Pseudo <"global_atomic_dec_x2",
                               VReg_64, i64, atomic_dec_global_64>;
+
+let SubtargetPredicate = HasGFX10_BEncoding in
+defm GLOBAL_ATOMIC_CSUB : FLAT_Global_Atomic_Pseudo_RTN <"global_atomic_csub",
+                              VGPR_32, i32, atomic_csub_global_32>;
 } // End is_flat_global = 1
 
-} // End SubtargetPredicate = HasFlatGlobalInsts
 
 
 let SubtargetPredicate = HasFlatScratchInsts in {
@@ -896,8 +943,8 @@ def : FlatSignedLoadPat_D16 <GLOBAL_LOAD_SHORT_D16, load_d16_lo_global, v2i16>;
 def : FlatSignedLoadPat_D16 <GLOBAL_LOAD_SHORT_D16, load_d16_lo_global, v2f16>;
 }
 
-def : FlatStoreSignedAtomicPat <GLOBAL_STORE_DWORD, store_atomic_global, i32>;
-def : FlatStoreSignedAtomicPat <GLOBAL_STORE_DWORDX2, store_atomic_global, i64, VReg_64>;
+def : FlatStoreSignedAtomicPat <GLOBAL_STORE_DWORD, atomic_store_global_32, i32>;
+def : FlatStoreSignedAtomicPat <GLOBAL_STORE_DWORDX2, atomic_store_global_64, i64, VReg_64>;
 
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_ADD_RTN, atomic_load_add_global_32, i32>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SUB_RTN, atomic_load_sub_global_32, i32>;
@@ -912,6 +959,7 @@ def : FlatSignedAtomicPat <GLOBAL_ATOMIC_OR_RTN, atomic_load_or_global_32, i32>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SWAP_RTN, atomic_swap_global_32, i32>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_CMPSWAP_RTN, AMDGPUatomic_cmp_swap_global_32, i32, v2i32>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_XOR_RTN, atomic_load_xor_global_32, i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_CSUB_RTN, atomic_csub_global_32, i32>;
 
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_ADD_X2_RTN, atomic_load_add_global_64, i64>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SUB_X2_RTN, atomic_load_sub_global_64, i64>;
@@ -1212,6 +1260,9 @@ multiclass FLAT_Real_GlblAtomics_gfx10<bits<7> op> :
   FLAT_Real_RTN_gfx10<op>,
   FLAT_Real_SADDR_RTN_gfx10<op>;
 
+multiclass FLAT_Real_GlblAtomics_RTN_gfx10<bits<7> op> :
+  FLAT_Real_RTN_gfx10<op>,
+  FLAT_Real_SADDR_RTN_gfx10<op>;
 
 // ENC_FLAT.
 defm FLAT_LOAD_UBYTE            : FLAT_Real_Base_gfx10<0x008>;
@@ -1297,6 +1348,7 @@ defm GLOBAL_ATOMIC_SWAP         : FLAT_Real_GlblAtomics_gfx10<0x030>;
 defm GLOBAL_ATOMIC_CMPSWAP      : FLAT_Real_GlblAtomics_gfx10<0x031>;
 defm GLOBAL_ATOMIC_ADD          : FLAT_Real_GlblAtomics_gfx10<0x032>;
 defm GLOBAL_ATOMIC_SUB          : FLAT_Real_GlblAtomics_gfx10<0x033>;
+defm GLOBAL_ATOMIC_CSUB         : FLAT_Real_GlblAtomics_RTN_gfx10<0x034>;
 defm GLOBAL_ATOMIC_SMIN         : FLAT_Real_GlblAtomics_gfx10<0x035>;
 defm GLOBAL_ATOMIC_UMIN         : FLAT_Real_GlblAtomics_gfx10<0x036>;
 defm GLOBAL_ATOMIC_SMAX         : FLAT_Real_GlblAtomics_gfx10<0x037>;
@@ -1325,7 +1377,8 @@ defm GLOBAL_ATOMIC_DEC_X2       : FLAT_Real_GlblAtomics_gfx10<0x05d>;
 defm GLOBAL_ATOMIC_FCMPSWAP_X2  : FLAT_Real_GlblAtomics_gfx10<0x05e>;
 defm GLOBAL_ATOMIC_FMIN_X2      : FLAT_Real_GlblAtomics_gfx10<0x05f>;
 defm GLOBAL_ATOMIC_FMAX_X2      : FLAT_Real_GlblAtomics_gfx10<0x060>;
-
+defm GLOBAL_LOAD_DWORD_ADDTID   : FLAT_Real_Base_gfx10<0x016>;
+defm GLOBAL_STORE_DWORD_ADDTID  : FLAT_Real_Base_gfx10<0x017>;
 
 // ENC_FLAT_SCRATCH.
 defm SCRATCH_LOAD_UBYTE         : FLAT_Real_AllAddr_gfx10<0x008>;

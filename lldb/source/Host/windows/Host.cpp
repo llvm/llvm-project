@@ -1,4 +1,4 @@
-//===-- source/Host/windows/Host.cpp ----------------------------*- C++ -*-===//
+//===-- source/Host/windows/Host.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -225,7 +225,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
 
     int status;
     std::string output;
-    std::string command = expand_command.GetString();
+    std::string command = expand_command.GetString().str();
     Status e =
         RunShellCommand(command.c_str(), launch_info.GetWorkingDirectory(),
                         &status, nullptr, &output, std::chrono::seconds(10));

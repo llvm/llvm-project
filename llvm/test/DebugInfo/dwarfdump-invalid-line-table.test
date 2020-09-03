@@ -1,5 +1,0 @@
-Verify that dwarfdump doesn't crash on invalid line table prologue.
-OSS-Fuzz Issue 4644 (https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=4644)
-
-RUN: llvm-dwarfdump --verbose %p/Inputs/invalid.linetable 2>&1 | FileCheck %s --check-prefix=INVALID-LINE-TABLE
-INVALID-LINE-TABLE: invalid directory or file table description

@@ -60,10 +60,10 @@ class ExprDiagnosticsTestCase(TestBase):
         self.assertIn("<user expression 3>:1:10", value.GetError().GetCString())
 
         # Multiline top-level expressions.
-        value = frame.EvaluateExpression("void x() {}\nvoid foo(unknown_type x) {}", top_level_opts)
+        value = frame.EvaluateExpression("void x() {}\nvoid foo;", top_level_opts)
         self.assertFalse(value.GetError().Success())
-        self.assertIn("\nvoid foo(unknown_type x) {}\n         ^\n", value.GetError().GetCString())
-        self.assertIn("<user expression 4>:2:10", value.GetError().GetCString())
+        self.assertIn("\nvoid foo;\n     ^", value.GetError().GetCString())
+        self.assertIn("<user expression 4>:2:6", value.GetError().GetCString())
 
         # Test that we render Clang's 'notes' correctly.
         value = frame.EvaluateExpression("struct SFoo{}; struct SFoo { int x; };", top_level_opts)
@@ -101,7 +101,6 @@ class ExprDiagnosticsTestCase(TestBase):
         self.runCmd("expr @import Foundation")
         value = frame.EvaluateExpression("NSLog(1);")
         self.assertFalse(value.GetError().Success())
-        print(value.GetError().GetCString())
         # LLDB should print the source line that defines NSLog. To not rely on any
         # header paths/line numbers or the actual formatting of the Foundation headers, only look
         # for a few tokens in the output.

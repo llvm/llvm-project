@@ -92,15 +92,6 @@ private:
         ", length=" + formatv("{0:d}", RI.r_length));
   }
 
-  MachO::relocation_info
-  getRelocationInfo(const object::relocation_iterator RelItr) {
-    MachO::any_relocation_info ARI =
-        getObject().getRelocation(RelItr->getRawDataRefImpl());
-    MachO::relocation_info RI;
-    memcpy(&RI, &ARI, sizeof(MachO::relocation_info));
-    return RI;
-  }
-
   using PairRelocInfo =
       std::tuple<MachOARM64RelocationKind, Symbol *, uint64_t>;
 
@@ -191,6 +182,8 @@ private:
     using namespace support;
     auto &Obj = getObject();
 
+    LLVM_DEBUG(dbgs() << "Processing relocations:\n");
+
     for (auto &S : Obj.sections()) {
 
       JITTargetAddress SectionAddress = S.getAddress();
@@ -209,8 +202,8 @@ private:
             getSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
         if (!NSec.GraphSection) {
           LLVM_DEBUG({
-            dbgs() << "Skipping relocations for MachO section " << NSec.SegName
-                   << "/" << NSec.SectName
+            dbgs() << "  Skipping relocations for MachO section "
+                   << NSec.SegName << "/" << NSec.SectName
                    << " which has no associated graph section\n";
           });
           continue;
@@ -231,9 +224,10 @@ private:
         JITTargetAddress FixupAddress = SectionAddress + (uint32_t)RI.r_address;
 
         LLVM_DEBUG({
-          dbgs() << "Processing " << getMachOARM64RelocationKindName(*Kind)
-                 << " relocation at " << format("0x%016" PRIx64, FixupAddress)
-                 << "\n";
+          auto &NSec =
+              getSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
+          dbgs() << "  " << NSec.SectName << " + "
+                 << formatv("{0:x8}", RI.r_address) << ":\n";
         });
 
         // Find the block that the fixup points to.
@@ -278,11 +272,12 @@ private:
             return make_error<JITLinkError>(
                 "Invalid relocation pair: Addend + " +
                 getMachOARM64RelocationKindName(*Kind));
-          else
-            LLVM_DEBUG({
-              dbgs() << "  pair is " << getMachOARM64RelocationKindName(*Kind)
-                     << "`\n";
-            });
+
+          LLVM_DEBUG({
+            dbgs() << "    Addend: value = " << formatv("{0:x6}", Addend)
+                   << ", pair is " << getMachOARM64RelocationKindName(*Kind)
+                   << "\n";
+          });
 
           // Find the address of the value to fix up.
           JITTargetAddress PairedFixupAddress =
@@ -392,6 +387,7 @@ private:
         }
 
         LLVM_DEBUG({
+          dbgs() << "    ";
           Edge GE(*Kind, FixupAddress - BlockToFix->getAddress(), *TargetSymbol,
                   Addend);
           printEdge(dbgs(), *BlockToFix, GE,

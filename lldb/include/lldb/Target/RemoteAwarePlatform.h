@@ -22,6 +22,10 @@ public:
   bool GetModuleSpec(const FileSpec &module_file_spec, const ArchSpec &arch,
                      ModuleSpec &module_spec) override;
 
+  Status
+  ResolveExecutable(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
+                    const FileSpecList *module_search_paths_ptr) override;
+
   lldb::user_id_t OpenFile(const FileSpec &file_spec, File::OpenOptions flags,
                            uint32_t mode, Status &error) override;
 

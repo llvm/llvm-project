@@ -38,18 +38,18 @@ public:
   /// specified immediate.
   void
   emitLoadConstPool(MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
-                    const DebugLoc &dl, unsigned DestReg, unsigned SubIdx,
+                    const DebugLoc &dl, Register DestReg, unsigned SubIdx,
                     int Val, ARMCC::CondCodes Pred = ARMCC::AL,
-                    unsigned PredReg = 0,
+                    Register PredReg = Register(),
                     unsigned MIFlags = MachineInstr::NoFlags) const override;
 
   // rewrite MI to access 'Offset' bytes from the FP. Update Offset to be
   // however much remains to be handled. Return 'true' if no further
   // work is required.
   bool rewriteFrameIndex(MachineBasicBlock::iterator II, unsigned FrameRegIdx,
-                         unsigned FrameReg, int &Offset,
+                         Register FrameReg, int &Offset,
                          const ARMBaseInstrInfo &TII) const;
-  void resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
+  void resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                          int64_t Offset) const override;
   void eliminateFrameIndex(MachineBasicBlock::iterator II,
                            int SPAdj, unsigned FIOperandNum,

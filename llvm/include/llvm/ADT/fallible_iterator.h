@@ -86,7 +86,7 @@ public:
     return fallible_iterator(std::move(I), &Err);
   }
 
-  /// Construct a fallible iteratro that can be used as an end-of-range value.
+  /// Construct a fallible iterator that can be used as an end-of-range value.
   ///
   /// A value created by this method can be dereferenced (if the underlying
   /// value points at a valid value) and compared, but not incremented or
@@ -96,12 +96,10 @@ public:
   }
 
   /// Forward dereference to the underlying iterator.
-  auto operator*() -> decltype(*std::declval<Underlying>()) { return *I; }
+  decltype(auto) operator*() { return *I; }
 
   /// Forward const dereference to the underlying iterator.
-  auto operator*() const -> decltype(*std::declval<const Underlying>()) {
-    return *I;
-  }
+  decltype(auto) operator*() const { return *I; }
 
   /// Forward structure dereference to the underlying iterator (if the
   /// underlying iterator supports it).

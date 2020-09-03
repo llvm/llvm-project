@@ -4,8 +4,8 @@
 define i32 @fptosi_wh(half %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: fptosi_wh
-; CHECK: fcvt s1, h0
-; CHECK: fcvtzs [[REG:w[0-9]+]], s1
+; CHECK: fcvt s0, h0
+; CHECK: fcvtzs [[REG:w[0-9]+]], s0
 ; CHECK: mov w0, [[REG]]
   %conv = fptosi half %a to i32
   ret i32 %conv
@@ -15,8 +15,8 @@ entry:
 define i32 @fptoui_swh(half %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: fptoui_swh
-; CHECK: fcvt s1, h0
-; CHECK: fcvtzu [[REG:w[0-9]+]], s1
+; CHECK: fcvt s0, h0
+; CHECK: fcvtzu [[REG:w[0-9]+]], s0
 ; CHECK: mov w0, [[REG]]
   %conv = fptoui half %a to i32
   ret i32 %conv

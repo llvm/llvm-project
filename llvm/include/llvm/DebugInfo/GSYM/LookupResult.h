@@ -24,11 +24,13 @@ struct SourceLocation {
   StringRef Dir; ///< Line entry source file directory path.
   StringRef Base; ///< Line entry source file basename.
   uint32_t Line = 0; ///< Source file line number.
+  uint32_t Offset = 0; ///< Byte size offset within the named function.
 };
 
 inline bool operator==(const SourceLocation &LHS, const SourceLocation &RHS) {
   return LHS.Name == RHS.Name && LHS.Dir == RHS.Dir &&
-         LHS.Base == RHS.Base && LHS.Line == RHS.Line;
+         LHS.Base == RHS.Base && LHS.Line == RHS.Line &&
+         LHS.Offset == RHS.Offset;
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const SourceLocation &R);

@@ -44,6 +44,6 @@ Options
 .. option:: Std
 
    The namespace used to suggest `P0214`_ alternatives. If not specified, `std::`
-   for `-std=c++2a` and `std::experimental::` for `-std=c++11`.
+   for `-std=c++20` and `std::experimental::` for `-std=c++11`.
 
 .. _P0214: https://wg21.link/p0214

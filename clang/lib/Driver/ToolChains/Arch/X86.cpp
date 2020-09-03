@@ -31,7 +31,7 @@ const char *x86::getX86TargetCPU(const ArgList &Args,
     //
     // FIXME: We should also incorporate the detected target features for use
     // with -native.
-    std::string CPU = llvm::sys::getHostCPUName();
+    std::string CPU = std::string(llvm::sys::getHostCPUName());
     if (!CPU.empty() && CPU != "generic")
       return Args.MakeArgString(CPU);
   }
@@ -93,12 +93,13 @@ const char *x86::getX86TargetCPU(const ArgList &Args,
     return "x86-64";
 
   switch (Triple.getOS()) {
-  case llvm::Triple::FreeBSD:
   case llvm::Triple::NetBSD:
-  case llvm::Triple::OpenBSD:
     return "i486";
   case llvm::Triple::Haiku:
+  case llvm::Triple::OpenBSD:
     return "i586";
+  case llvm::Triple::FreeBSD:
+    return "i686";
   default:
     // Fallback to p4.
     return "pentium4";
@@ -146,6 +147,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // flags). This is a bit hacky but keeps existing usages working. We should
   // consider deprecating this and instead warn if the user requests external
   // retpoline thunks and *doesn't* request some form of retpolines.
+  auto SpectreOpt = clang::driver::options::ID::OPT_INVALID;
   if (Args.hasArgNoClaim(options::OPT_mretpoline, options::OPT_mno_retpoline,
                          options::OPT_mspeculative_load_hardening,
                          options::OPT_mno_speculative_load_hardening)) {
@@ -153,12 +155,14 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
                      false)) {
       Features.push_back("+retpoline-indirect-calls");
       Features.push_back("+retpoline-indirect-branches");
+      SpectreOpt = options::OPT_mretpoline;
     } else if (Args.hasFlag(options::OPT_mspeculative_load_hardening,
                             options::OPT_mno_speculative_load_hardening,
                             false)) {
       // On x86, speculative load hardening relies on at least using retpolines
       // for indirect calls.
       Features.push_back("+retpoline-indirect-calls");
+      SpectreOpt = options::OPT_mspeculative_load_hardening;
     }
   } else if (Args.hasFlag(options::OPT_mretpoline_external_thunk,
                           options::OPT_mno_retpoline_external_thunk, false)) {
@@ -166,6 +170,44 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     // eventually switch to an error here.
     Features.push_back("+retpoline-indirect-calls");
     Features.push_back("+retpoline-indirect-branches");
+    SpectreOpt = options::OPT_mretpoline_external_thunk;
+  }
+
+  auto LVIOpt = clang::driver::options::ID::OPT_INVALID;
+  if (Args.hasFlag(options::OPT_mlvi_hardening, options::OPT_mno_lvi_hardening,
+                   false)) {
+    Features.push_back("+lvi-load-hardening");
+    Features.push_back("+lvi-cfi"); // load hardening implies CFI protection
+    LVIOpt = options::OPT_mlvi_hardening;
+  } else if (Args.hasFlag(options::OPT_mlvi_cfi, options::OPT_mno_lvi_cfi,
+                          false)) {
+    Features.push_back("+lvi-cfi");
+    LVIOpt = options::OPT_mlvi_cfi;
+  }
+
+  if (Args.hasFlag(options::OPT_m_seses, options::OPT_mno_seses, false)) {
+    if (LVIOpt == options::OPT_mlvi_hardening)
+      D.Diag(diag::err_drv_argument_not_allowed_with)
+          << D.getOpts().getOptionName(options::OPT_mlvi_hardening)
+          << D.getOpts().getOptionName(options::OPT_m_seses);
+
+    if (SpectreOpt != clang::driver::options::ID::OPT_INVALID)
+      D.Diag(diag::err_drv_argument_not_allowed_with)
+          << D.getOpts().getOptionName(SpectreOpt)
+          << D.getOpts().getOptionName(options::OPT_m_seses);
+
+    Features.push_back("+seses");
+    if (!Args.hasArg(options::OPT_mno_lvi_cfi)) {
+      Features.push_back("+lvi-cfi");
+      LVIOpt = options::OPT_mlvi_cfi;
+    }
+  }
+
+  if (SpectreOpt != clang::driver::options::ID::OPT_INVALID &&
+      LVIOpt != clang::driver::options::ID::OPT_INVALID) {
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << D.getOpts().getOptionName(SpectreOpt)
+        << D.getOpts().getOptionName(LVIOpt);
   }
 
   // Now add any that the user explicitly requested on the command line,

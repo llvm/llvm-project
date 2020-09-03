@@ -147,6 +147,32 @@ body: |
     %4, %5 = V_SUBB_U32_e64 %6, %7, %3, 0, implicit $exec
 ...
 
+# GCN-LABEL: name: cluster_subrev_subbrev
+# GCN: S_NOP 0, implicit-def $vcc
+# GCN: dead %2:vgpr_32, %3:sreg_64_xexec = V_SUBREV_I32_e64 %0, %1, 0, implicit $exec
+# GCN: dead %4:vgpr_32, dead %5:sreg_64_xexec = V_SUBBREV_U32_e64 %6, %7, %3, 0, implicit $exec
+name: cluster_subrev_subbrev
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: sreg_64_xexec }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: vgpr_32 }
+  - { id: 7, class: vgpr_32 }
+
+body: |
+  bb.0:
+    %0 = V_MOV_B32_e32 0, implicit $exec
+    %1 = V_MOV_B32_e32 0, implicit $exec
+    %2, %3 = V_SUBREV_I32_e64 %0, %1, 0, implicit $exec
+    %6 = V_MOV_B32_e32 0, implicit $exec
+    %7 = V_MOV_B32_e32 0, implicit $exec
+    S_NOP 0, implicit def $vcc
+    %4, %5 = V_SUBBREV_U32_e64 %6, %7, %3, 0, implicit $exec
+...
+
 # GCN-LABEL: name: cluster_cmp_cndmask
 # GCN: S_NOP 0, implicit-def $vcc
 # GCN-NEXT: %3:sreg_64_xexec = V_CMP_EQ_I32_e64 %0, %1, implicit $exec

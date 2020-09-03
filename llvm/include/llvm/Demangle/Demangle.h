@@ -40,7 +40,21 @@ enum MSDemangleFlags {
   MSDF_NoReturnType = 1 << 3,
   MSDF_NoMemberType = 1 << 4,
 };
-char *microsoftDemangle(const char *mangled_name, char *buf, size_t *n,
+
+/// Demangles the Microsoft symbol pointed at by mangled_name and returns it.
+/// Returns a pointer to the start of a null-terminated demangled string on
+/// success, or nullptr on error.
+/// If n_read is non-null and demangling was successful, it receives how many
+/// bytes of the input string were consumed.
+/// buf can point to a *n_buf bytes large buffer where the demangled name is
+/// stored. If the buffer is too small, it is grown with realloc(). If buf is
+/// nullptr, then this malloc()s memory for the result.
+/// *n_buf stores the size of buf on input if buf is non-nullptr, and it
+/// receives the size of the demangled string on output if n_buf is not nullptr.
+/// status receives one of the demangle_ enum entries above if it's not nullptr.
+/// Flags controls various details of the demangled representation.
+char *microsoftDemangle(const char *mangled_name, size_t *n_read,
+                        char *buf, size_t *n_buf,
                         int *status, MSDemangleFlags Flags = MSDF_None);
 
 /// Attempt to demangle a string using different demangling schemes.

@@ -89,6 +89,7 @@ TableGen also has the following keywords::
    bit   bits      class   code         dag
    def   foreach   defm    field        in
    int   let       list    multiclass   string
+   if    then      else
 
 TableGen also has "bang operators" which have a
 wide variety of meanings:
@@ -124,8 +125,8 @@ TableGen's top-level production consists of "objects".
 
 .. productionlist::
    TableGenFile: `Object`*
-   Object: `Class` | `Def` | `Defm` | `Defset` | `Let` | `MultiClass` |
-           `Foreach`
+   Object: `Class` | `Def` | `Defm` | `Defset` | `Defvar` | `Let` |
+           `MultiClass` | `Foreach` | `If`
 
 ``class``\es
 ------------
@@ -135,13 +136,13 @@ TableGen's top-level production consists of "objects".
    TemplateArgList: "<" `Declaration` ("," `Declaration`)* ">"
 
 A ``class`` declaration creates a record which other records can inherit
-from. A class can be parametrized by a list of "template arguments", whose
+from. A class can be parameterized by a list of "template arguments", whose
 values can be used in the class body.
 
 A given class can only be defined once. A ``class`` declaration is
 considered to define the class if any of the following is true:
 
-.. break ObjectBody into its consituents so that they are present here?
+.. break ObjectBody into its constituents so that they are present here?
 
 #. The :token:`TemplateArgList` is present.
 #. The :token:`Body` in the :token:`ObjectBody` is present and is not empty.
@@ -262,7 +263,7 @@ of:
      foreach i = 0-5 in
      def Foo#i;
 
-* a variable defined by ``defset``
+* a variable defined by ``defset`` or ``defvar``
 
 * the implicit template argument ``NAME`` in a ``class`` or ``multiclass``
 
@@ -348,6 +349,7 @@ It is after parsing the base class list that the "let stack" is applied.
    BodyList: BodyItem*
    BodyItem: `Declaration` ";"
            :| "let" `TokIdentifier` [ "{" `RangeList` "}" ] "=" `Value` ";"
+           :| `Defvar`
 
 The ``let`` form allows overriding the value of an inherited field.
 
@@ -359,8 +361,8 @@ The ``let`` form allows overriding the value of an inherited field.
 
 Defines a record whose name is given by the optional :token:`Value`. The value
 is parsed in a special mode where global identifiers (records and variables
-defined by ``defset``) are not recognized, and all unrecognized identifiers
-are interpreted as strings.
+defined by ``defset``, and variables defined at global scope by ``defvar``) are
+not recognized, and all unrecognized identifiers are interpreted as strings.
 
 If no name is given, the record is anonymous. The final name of anonymous
 records is undefined, but globally unique.
@@ -420,6 +422,36 @@ The given type must be ``list<A>``, where ``A`` is some class. It is an error
 to define a record (via ``def`` or ``defm``) inside the braces which doesn't
 derive from ``A``.
 
+``defvar``
+----------
+.. productionlist::
+   Defvar: "defvar" `TokIdentifier` "=" `Value` ";"
+
+The identifier on the left of the ``=`` is defined to be a global or local
+variable, whose value is given by the expression on the right of the ``=``. The
+type of the variable is automatically inferred.
+
+A ``defvar`` statement at the top level of the file defines a global variable,
+in the same scope used by ``defset``. If a ``defvar`` statement appears inside
+any other construction, including classes, multiclasses and ``foreach``
+statements, then the variable is scoped to the inside of that construction
+only.
+
+In contexts where the ``defvar`` statement will be encountered multiple times,
+the definition is re-evaluated for each instance. For example, a ``defvar``
+inside a ``foreach`` can construct a value based on the iteration variable,
+which will be different every time round the loop; a ``defvar`` inside a
+templated class or multiclass can have a definition depending on the template
+parameters.
+
+Variables local to a ``foreach`` go out of scope at the end of each loop
+iteration, so their previous value is not accessible in the next iteration. (It
+won't work to ``defvar i=!add(i,1)`` each time you go round the loop.)
+
+In general, ``defvar`` variables are immutable once they are defined. It is an
+error to define the same variable name twice in the same scope (but legal to
+shadow the first definition temporarily in an inner scope).
+
 ``foreach``
 -----------
 
@@ -434,6 +466,24 @@ iterated value.
 
 Note that the productions involving RangeList and RangePiece have precedence
 over the more generic value parsing based on the first token.
+
+``if``
+------
+
+.. productionlist::
+   If: "if" `Value` "then" `IfBody`
+     :| "if" `Value` "then" `IfBody` "else" `IfBody`
+   IfBody: "{" `Object`* "}" | `Object`
+
+The value expression after the ``if`` keyword is evaluated, and if it evaluates
+to true (in the same sense used by the ``!if`` operator), then the object
+definition(s) after the ``then`` keyword are executed. Otherwise, if there is
+an ``else`` keyword, the definition(s) after the ``else`` are executed instead.
+
+Because the braces around the ``then`` clause are optional, this grammar rule
+has the usual ambiguity about dangling ``else`` clauses, and it is resolved in
+the usual way: in a case like ``if v1 then if v2 then {...} else {...}``, the
+``else`` binds to the inner ``if`` rather than the outer one.
 
 Top-Level ``let``
 -----------------

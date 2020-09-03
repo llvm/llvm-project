@@ -29,6 +29,7 @@ add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
     lldbTarget
     ws2_32
     rpcrt4
+    psapi
   LINK_COMPONENTS
     Support
   )

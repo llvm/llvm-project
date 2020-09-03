@@ -46,7 +46,7 @@ def find_compilation_database(path):
 
 
 def MergeSymbols(directory, args):
-  """Merge all symbol files (yaml) in a given directaory into a single file."""
+  """Merge all symbol files (yaml) in a given directory into a single file."""
   invocation = [args.binary, '-merge-dir='+directory, args.saving_path]
   subprocess.call(invocation)
   print 'Merge is finished. Saving results in ' + args.saving_path

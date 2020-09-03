@@ -3,13 +3,16 @@
 ; Make sure this doesn't crash.
 ; ALL-LABEL: {{^}}test:
 ; ALL: s_mov_b32 s[[LO:[0-9]+]], SCRATCH_RSRC_DWORD0
-; ALL: s_mov_b32 s[[OFF:[0-9]+]], s3
 ; ALL: s_mov_b32 s[[HI:[0-9]+]], 0xe80000
 
 ; Make sure we are handling hazards correctly.
-; SGPR: buffer_load_dword [[VHI:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:16
+; SGPR: buffer_load_dword [[VHI:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:4
+; SGPR-NEXT: s_mov_b64 exec, s[0:1]
 ; SGPR-NEXT: s_waitcnt vmcnt(0)
-; SGPR-NEXT: v_readfirstlane_b32 s[[HI:[0-9]+]], [[VHI]]
+; SGPR-NEXT: v_readlane_b32 s{{[0-9]+}}, [[VHI]], 0
+; SGPR-NEXT: v_readlane_b32 s{{[0-9]+}}, [[VHI]], 1
+; SGPR-NEXT: v_readlane_b32 s{{[0-9]+}}, [[VHI]], 2
+; SGPR-NEXT: v_readlane_b32 s[[HI:[0-9]+]], [[VHI]], 3
 ; SGPR-NEXT: s_nop 4
 ; SGPR-NEXT: buffer_store_dword v0, off, s[0:[[HI]]{{\]}}, 0
 

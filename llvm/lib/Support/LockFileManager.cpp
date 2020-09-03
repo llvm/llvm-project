@@ -14,6 +14,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cerrno>
@@ -162,7 +163,7 @@ LockFileManager::LockFileManager(StringRef FileName)
   this->FileName = FileName;
   if (std::error_code EC = sys::fs::make_absolute(this->FileName)) {
     std::string S("failed to obtain absolute path for ");
-    S.append(this->FileName.str());
+    S.append(std::string(this->FileName.str()));
     setError(EC, S);
     return;
   }
@@ -181,7 +182,7 @@ LockFileManager::LockFileManager(StringRef FileName)
   if (std::error_code EC = sys::fs::createUniqueFile(
           UniqueLockFileName, UniqueLockFileID, UniqueLockFileName)) {
     std::string S("failed to create unique file ");
-    S.append(UniqueLockFileName.str());
+    S.append(std::string(UniqueLockFileName.str()));
     setError(EC, S);
     return;
   }
@@ -195,19 +196,14 @@ LockFileManager::LockFileManager(StringRef FileName)
     }
 
     raw_fd_ostream Out(UniqueLockFileID, /*shouldClose=*/true);
-    Out << HostID << ' ';
-#if LLVM_ON_UNIX
-    Out << getpid();
-#else
-    Out << "1";
-#endif
+    Out << HostID << ' ' << sys::Process::getProcessId();
     Out.close();
 
     if (Out.has_error()) {
       // We failed to write out PID, so report the error, remove the
       // unique lock file, and fail.
       std::string S("failed to write to ");
-      S.append(UniqueLockFileName.str());
+      S.append(std::string(UniqueLockFileName.str()));
       setError(Out.error(), S);
       sys::fs::remove(UniqueLockFileName);
       return;
@@ -253,7 +249,7 @@ LockFileManager::LockFileManager(StringRef FileName)
     // ownership.
     if ((EC = sys::fs::remove(LockFileName))) {
       std::string S("failed to remove lockfile ");
-      S.append(UniqueLockFileName.str());
+      S.append(std::string(UniqueLockFileName.str()));
       setError(EC, S);
       return;
     }

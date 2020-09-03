@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdlib.h>
+
 #if __cplusplus >= 201703L
 extern int abs (int __x) throw()  __attribute__ ((__const__)) ;
 extern long int labs (long int __x) throw() __attribute__ ((__const__)) ;
@@ -20,4 +22,10 @@ abs(long __i) { return __builtin_labs(__i); }
 
 inline long long
 abs(long long __x) { return __builtin_llabs (__x); }
+
+float fabs(float __x) { return __builtin_fabs(__x); }
+
+float abs(float __x) { return fabs(__x); }
+double abs(double __x) { return fabs(__x); }
+
 }

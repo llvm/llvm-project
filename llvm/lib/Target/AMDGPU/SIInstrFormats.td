@@ -114,6 +114,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // FLAT_SCRATCH segment. Must be 0 for non-FLAT instructions.
   field bit IsNonFlatSeg = 0;
 
+  // Reads the mode register, usually for FP environment.
+  field bit ReadsModeReg = 0;
+
   // This bit indicates that this uses the floating point double precision
   // rounding mode flags
   field bit FPDPRounding = 0;
@@ -303,7 +306,7 @@ class MIMGe_gfx10 <bits<8> op> : MIMGe {
   bits<3> dim;
   bits<2> nsa;
   bits<1> dlc;
-  bits<1> a16 = 0; // TODO: this should be an operand
+  bits<1> a16;
 
   let Inst{0} = op{7};
   let Inst{2-1} = nsa;

@@ -26,7 +26,8 @@ namespace llvm {
 
 class SystemZTargetMachine : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  SystemZSubtarget Subtarget;
+
+  mutable StringMap<std::unique_ptr<SystemZSubtarget>> SubtargetMap;
 
 public:
   SystemZTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -35,11 +36,11 @@ public:
                        CodeGenOpt::Level OL, bool JIT);
   ~SystemZTargetMachine() override;
 
-  const SystemZSubtarget *getSubtargetImpl() const { return &Subtarget; }
-
-  const SystemZSubtarget *getSubtargetImpl(const Function &) const override {
-    return &Subtarget;
-  }
+  const SystemZSubtarget *getSubtargetImpl(const Function &) const override;
+  // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
+  // subtargets are per-function entities based on the target-specific
+  // attributes of each function.
+  const SystemZSubtarget *getSubtargetImpl() const = delete;
 
   // Override LLVMTargetMachine
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;

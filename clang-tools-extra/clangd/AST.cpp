@@ -25,7 +25,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Index/USRGeneration.h"
-#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -96,7 +95,7 @@ getUsingNamespaceDirectives(const DeclContext *DestContext,
   return VisibleNamespaceDecls;
 }
 
-// Goes over all parents of SourceContext until we find a comman ancestor for
+// Goes over all parents of SourceContext until we find a common ancestor for
 // DestContext and SourceContext. Any qualifier including and above common
 // ancestor is redundant, therefore we stop at lowest common ancestor.
 // In addition to that stops early whenever IsVisible returns true. This can be
@@ -417,16 +416,8 @@ public:
 
 llvm::Optional<QualType> getDeducedType(ASTContext &ASTCtx,
                                         SourceLocation Loc) {
-  Token Tok;
-  // Only try to find a deduced type if the token is auto or decltype.
-  if (!Loc.isValid() ||
-      Lexer::getRawToken(Loc, Tok, ASTCtx.getSourceManager(),
-                         ASTCtx.getLangOpts(), false) ||
-      !Tok.is(tok::raw_identifier) ||
-      !(Tok.getRawIdentifier() == "auto" ||
-        Tok.getRawIdentifier() == "decltype")) {
+  if (!Loc.isValid())
     return {};
-  }
   DeducedTypeVisitor V(Loc);
   V.TraverseAST(ASTCtx);
   if (V.DeducedType.isNull())
@@ -471,6 +462,13 @@ std::string getQualification(ASTContext &Context,
           return OS.str() == Namespace;
         });
       });
+}
+
+bool hasUnstableLinkage(const Decl *D) {
+  // Linkage of a ValueDecl depends on the type.
+  // If that's not deduced yet, deducing it may change the linkage.
+  auto *VD = llvm::dyn_cast_or_null<ValueDecl>(D);
+  return VD && !VD->getType().isNull() && VD->getType()->isUndeducedType();
 }
 
 } // namespace clangd

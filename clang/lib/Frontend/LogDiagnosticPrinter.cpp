@@ -11,7 +11,6 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/PlistSupport.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -34,27 +33,6 @@ static StringRef getLevelName(DiagnosticsEngine::Level Level) {
   case DiagnosticsEngine::Fatal:   return "fatal error";
   }
   llvm_unreachable("Invalid DiagnosticsEngine level!");
-}
-
-void LogDiagnosticPrinter::EmitDiagEntryLocation(
-    llvm::raw_ostream &OS, StringRef Indent,
-    const LogDiagnosticPrinter::DiagEntryLocation &Del) {
-  OS << Indent << "<dict>\n";
-  if (!Del.Filename.empty()) {
-    OS << Indent << "  <key>filename</key>\n";
-    OS << Indent << "  ";
-    EmitString(OS, Del.Filename) << '\n';
-  }
-  OS << Indent << "  <key>line</key>\n";
-  OS << Indent << "  ";
-  EmitInteger(OS, Del.Line) << '\n';
-  OS << Indent << "  <key>column</key>\n";
-  OS << Indent << "  ";
-  EmitInteger(OS, Del.Column) << '\n';
-  OS << Indent << "  <key>offset</key>\n";
-  OS << Indent << "  ";
-  EmitInteger(OS, Del.Offset) << '\n';
-  OS << Indent << "</dict>\n";
 }
 
 void
@@ -91,41 +69,6 @@ LogDiagnosticPrinter::EmitDiagEntry(llvm::raw_ostream &OS,
     OS << "      <key>WarningOption</key>\n"
        << "      ";
     EmitString(OS, DE.WarningOption) << '\n';
-  }
-  if (!DE.SourceRanges.empty()) {
-    OS << "      <key>source-ranges</key>\n"
-       << "      <array>\n";
-    for (auto R = DE.SourceRanges.begin(), E = DE.SourceRanges.end(); R != E;
-         ++R) {
-      OS << "        <dict>\n";
-      OS << "          <key>start-at</key>\n";
-      EmitDiagEntryLocation(OS, "          ", R->Start);
-      OS << "          <key>end-before</key>\n";
-      EmitDiagEntryLocation(OS, "          ", R->End);
-      OS << "        </dict>\n";
-    }
-    OS << "      </array>\n";
-  }
-  if (!DE.FixIts.empty()) {
-    OS << "      <key>fixits</key>\n"
-       << "      <array>\n";
-    for (auto F = DE.FixIts.begin(), E = DE.FixIts.end(); F != E; ++F) {
-      OS << "        <dict>\n";
-      OS << "          <key>start-at</key>\n";
-      EmitDiagEntryLocation(OS, "          ", F->RemoveRange.Start);
-      OS << "          <key>end-before</key>\n";
-      EmitDiagEntryLocation(OS, "          ", F->RemoveRange.End);
-      // Always issue a replacement key/value, even if CodeToInsert is empty.
-      OS << "          <key>replacement</key>\n"
-         << "          ";
-      if (F->CodeToInsert.empty()) {
-        OS << "<string/>\n";
-      } else {
-        EmitString(OS, F->CodeToInsert) << '\n';
-      }
-      OS << "        </dict>\n";
-    }
-    OS << "      </array>\n";
   }
   OS << "    </dict>\n";
 }
@@ -177,7 +120,7 @@ void LogDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
     if (FID.isValid()) {
       const FileEntry *FE = SM.getFileEntryForID(FID);
       if (FE && FE->isValid())
-        MainFilename = FE->getName();
+        MainFilename = std::string(FE->getName());
     }
   }
 
@@ -186,12 +129,13 @@ void LogDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   DE.DiagnosticID = Info.getID();
   DE.DiagnosticLevel = Level;
 
-  DE.WarningOption = DiagnosticIDs::getWarningOptionForDiag(DE.DiagnosticID);
+  DE.WarningOption =
+      std::string(DiagnosticIDs::getWarningOptionForDiag(DE.DiagnosticID));
 
   // Format the message.
   SmallString<100> MessageStr;
   Info.FormatDiagnostic(MessageStr);
-  DE.Message = MessageStr.str();
+  DE.Message = std::string(MessageStr.str());
 
   // Set the location information.
   DE.Filename = "";
@@ -206,7 +150,7 @@ void LogDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
       if (FID.isValid()) {
         const FileEntry *FE = SM.getFileEntryForID(FID);
         if (FE && FE->isValid())
-          DE.Filename = FE->getName();
+          DE.Filename = std::string(FE->getName());
       }
     } else {
       DE.Filename = PLoc.getFilename();
@@ -215,72 +159,7 @@ void LogDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
     }
   }
 
-  auto InitDer = [](DiagEntryRange &Der, const CharSourceRange &R,
-                    const DiagEntry &DE, const Diagnostic &Info,
-                    const LangOptions *LangOpts) -> bool {
-    if (!R.isValid() || !Info.hasSourceManager())
-      return false;
-
-    SourceManager &SM = Info.getSourceManager();
-    FullSourceLoc StartLoc = FullSourceLoc(R.getBegin(), SM);
-    FullSourceLoc EndLoc = FullSourceLoc(R.getEnd(), SM);
-    if (StartLoc.isInvalid() || EndLoc.isInvalid())
-      return false;
-
-    PresumedLoc StartPLoc =
-        StartLoc.hasManager() ? StartLoc.getPresumedLoc() : PresumedLoc();
-    StringRef StartFilename = StartPLoc.getFilename();
-    if (!DE.Filename.empty() && DE.Filename == StartFilename)
-      StartFilename = "";
-
-    PresumedLoc EndPLoc =
-        EndLoc.hasManager() ? EndLoc.getPresumedLoc() : PresumedLoc();
-    StringRef EndFilename = EndPLoc.getFilename();
-    if (!DE.Filename.empty() && DE.Filename == EndFilename)
-      EndFilename = "";
-
-    unsigned TokSize = 0;
-    if (R.isTokenRange())
-      TokSize = Lexer::MeasureTokenLength(R.getEnd(), SM, *LangOpts);
-    Der = {{StartFilename, StartPLoc.getLine(), StartPLoc.getColumn(),
-            StartLoc.getFileOffset()},
-           {EndFilename, EndPLoc.getLine(), EndPLoc.getColumn() + TokSize,
-            EndLoc.getFileOffset() + TokSize}};
-    return true;
-  };
-
-  ArrayRef<CharSourceRange> ranges = Info.getRanges();
-  for (ArrayRef<CharSourceRange>::iterator R = ranges.begin(),
-       E = ranges.end(); R != E; ++R) {
-    DiagEntryRange Der;
-    bool Success = InitDer(Der, *R, DE, Info, LangOpts);
-    if (Success)
-      DE.SourceRanges.push_back(Der);
-  }
-
-  ArrayRef<FixItHint> fixits = Info.getFixItHints();
-  for (ArrayRef<FixItHint>::iterator F = fixits.begin(), E = fixits.end();
-       F != E; ++F) {
-    // We follow FixItRewriter's example in not (yet) handling
-    // fix-its in macros.
-    if (F->RemoveRange.getBegin().isMacroID() ||
-        F->RemoveRange.getEnd().isMacroID()) {
-      // If any bad FixItHint, skip all of them; the rest
-      // might not make sense independent of the skipped ones.
-      DE.FixIts.clear();
-      break;
-    }
-    if (F->isNull())
-      continue;
-
-    DiagEntryFixIt FI;
-    bool Success = InitDer(FI.RemoveRange, F->RemoveRange, DE, Info, LangOpts);
-    if (Success) {
-      FI.CodeToInsert = F->CodeToInsert;
-      DE.FixIts.push_back(FI);
-    }
-  }
-
   // Record the diagnostic entry.
   Entries.push_back(DE);
 }
+

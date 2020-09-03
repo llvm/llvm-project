@@ -12,8 +12,10 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Log.h"
+#include "Utility/UuidCompatibility.h"
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -136,7 +138,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   size_t framework_pos = raw_path.find("LLDB.framework");
   if (framework_pos != std::string::npos) {
     framework_pos += strlen("LLDB.framework");
-#if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
+#if TARGET_OS_EMBEDDED
     // Shallow bundle
     raw_path.resize(framework_pos);
 #else
@@ -276,6 +278,9 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
 #elif defined(TARGET_OS_WATCHOS) && TARGET_OS_WATCHOS == 1
         arch_32.GetTriple().setOS(llvm::Triple::WatchOS);
         arch_64.GetTriple().setOS(llvm::Triple::WatchOS);
+#elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
+        arch_32.GetTriple().setOS(llvm::Triple::MacOSX);
+        arch_64.GetTriple().setOS(llvm::Triple::MacOSX);
 #else
         arch_32.GetTriple().setOS(llvm::Triple::IOS);
         arch_64.GetTriple().setOS(llvm::Triple::IOS);
@@ -297,6 +302,19 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
   }
 }
 
+/// Return and cache $DEVELOPER_DIR if it is set and exists.
+static std::string GetEnvDeveloperDir() {
+  static std::string g_env_developer_dir;
+  static std::once_flag g_once_flag;
+  std::call_once(g_once_flag, [&]() {
+    if (const char *developer_dir_env_var = getenv("DEVELOPER_DIR")) {
+      FileSpec fspec(developer_dir_env_var);
+      if (FileSystem::Instance().Exists(fspec))
+        g_env_developer_dir = fspec.GetPath();
+    }});
+  return g_env_developer_dir;
+}
+
 FileSpec HostInfoMacOSX::GetXcodeContentsDirectory() {
   static FileSpec g_xcode_contents_path;
   static std::once_flag g_once_flag;
@@ -313,16 +331,14 @@ FileSpec HostInfoMacOSX::GetXcodeContentsDirectory() {
       }
     }
 
-    if (const char *developer_dir_env_var = getenv("DEVELOPER_DIR")) {
-      FileSpec fspec(developer_dir_env_var);
-      if (FileSystem::Instance().Exists(fspec)) {
-        // FIXME: This looks like it couldn't possibly work!
-        std::string xcode_contents_dir =
-            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath());
-        if (!xcode_contents_dir.empty()) {
-          g_xcode_contents_path = FileSpec(xcode_contents_dir);
-          return;
-        }
+    llvm::SmallString<128> env_developer_dir(GetEnvDeveloperDir());
+    if (!env_developer_dir.empty()) {
+      llvm::sys::path::append(env_developer_dir, "Contents");
+      std::string xcode_contents_dir =
+          XcodeSDK::FindXcodeContentsDirectoryInPath(env_developer_dir);
+      if (!xcode_contents_dir.empty()) {
+        g_xcode_contents_path = FileSpec(xcode_contents_dir);
+        return;
       }
     }
 
@@ -359,8 +375,7 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
   std::string sdk_name = XcodeSDK::GetCanonicalName(info);
   auto find_sdk = [](std::string sdk_name) -> std::string {
     std::string xcrun_cmd;
-    Environment env = Host::GetEnvironment();
-    std::string developer_dir = env.lookup("DEVELOPER_DIR");
+    std::string developer_dir = GetEnvDeveloperDir();
     if (developer_dir.empty())
       if (FileSpec fspec = HostInfo::GetShlibDir())
         if (FileSystem::Instance().Exists(fspec)) {
@@ -443,4 +458,65 @@ llvm::StringRef HostInfoMacOSX::GetXcodeSDKPath(XcodeSDK sdk) {
     return it->second;
   auto it_new = g_sdk_path.insert({sdk.GetString(), GetXcodeSDK(sdk)});
   return it_new.first->second;
+}
+
+namespace {
+struct dyld_shared_cache_dylib_text_info {
+  uint64_t version; // current version 1
+  // following fields all exist in version 1
+  uint64_t loadAddressUnslid;
+  uint64_t textSegmentSize;
+  uuid_t dylibUuid;
+  const char *path; // pointer invalid at end of iterations
+  // following fields all exist in version 2
+  uint64_t textSegmentOffset; // offset from start of cache
+};
+typedef struct dyld_shared_cache_dylib_text_info
+    dyld_shared_cache_dylib_text_info;
+}
+
+extern "C" int dyld_shared_cache_iterate_text(
+    const uuid_t cacheUuid,
+    void (^callback)(const dyld_shared_cache_dylib_text_info *info));
+extern "C" uint8_t *_dyld_get_shared_cache_range(size_t *length);
+extern "C" bool _dyld_get_shared_cache_uuid(uuid_t uuid);
+
+namespace {
+class SharedCacheInfo {
+public:
+  const UUID &GetUUID() const { return m_uuid; };
+  const llvm::StringMap<SharedCacheImageInfo> &GetImages() const {
+    return m_images;
+  };
+
+  SharedCacheInfo();
+
+private:
+  llvm::StringMap<SharedCacheImageInfo> m_images;
+  UUID m_uuid;
+};
+}
+
+SharedCacheInfo::SharedCacheInfo() {
+  size_t shared_cache_size;
+  uint8_t *shared_cache_start =
+      _dyld_get_shared_cache_range(&shared_cache_size);
+  uuid_t dsc_uuid;
+  _dyld_get_shared_cache_uuid(dsc_uuid);
+  m_uuid = UUID::fromData(dsc_uuid);
+
+  dyld_shared_cache_iterate_text(
+      dsc_uuid, ^(const dyld_shared_cache_dylib_text_info *info) {
+        m_images[info->path] = SharedCacheImageInfo{
+            UUID::fromData(info->dylibUuid, 16),
+            std::make_shared<DataBufferUnowned>(
+                shared_cache_start + info->textSegmentOffset,
+                shared_cache_size - info->textSegmentOffset)};
+      });
+}
+
+SharedCacheImageInfo
+HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name) {
+  static SharedCacheInfo g_shared_cache_info;
+  return g_shared_cache_info.GetImages().lookup(image_name);
 }

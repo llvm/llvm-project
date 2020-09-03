@@ -135,8 +135,8 @@ static bool runImpl(CallGraphSCC &SCC, CallGraph &CG) {
             SCCMightUnwind |= InstMightUnwind;
           }
           if (CheckReturnViaAsm && !SCCMightReturn)
-            if (auto ICS = ImmutableCallSite(&I))
-              if (const auto *IA = dyn_cast<InlineAsm>(ICS.getCalledValue()))
+            if (const auto *CB = dyn_cast<CallBase>(&I))
+              if (const auto *IA = dyn_cast<InlineAsm>(CB->getCalledOperand()))
                 if (IA->hasSideEffects())
                   SCCMightReturn = true;
         }

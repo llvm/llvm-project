@@ -10,9 +10,9 @@
 ; INSN:   getelementptr i32, i32* %x, i64 %indvars.iv
 ; INSN:   getelementptr i32, i32* %y, i64 %indvars.iv
 ; INSN:   getelementptr i32, i32* %q, i64 %indvars.iv
-; REGS    %lsr.iv4 = phi
-; REGS    %lsr.iv2 = phi
-; REGS    %lsr.iv1 = phi
+; REGS:   %lsr.iv4 = phi
+; REGS:   %lsr.iv2 = phi
+; REGS:   %lsr.iv1 = phi
 ; REGS:   getelementptr i32, i32* %lsr.iv1, i64 1
 ; REGS:   getelementptr i32, i32* %lsr.iv2, i64 1
 ; REGS:   getelementptr i32, i32* %lsr.iv4, i64 1

@@ -7,7 +7,7 @@ the tests where None is passed to SB API which expects (const char *) in the
 C++ API counterpart.  Passing None should not crash lldb!
 
 There are three exceptions to the above general rules, though; API objects
-SBCommadnReturnObject, SBStream, and SBSymbolContextList, are all valid objects
+SBCommandReturnObject, SBStream, and SBSymbolContextList, are all valid objects
 after default construction.
 """
 
@@ -114,6 +114,7 @@ class APIDefaultConstructorTestCase(TestBase):
         sb_compileunit.fuzz_obj(obj)
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_SBDebugger(self):
         obj = lldb.SBDebugger()
         if self.TraceOn():
@@ -180,6 +181,7 @@ class APIDefaultConstructorTestCase(TestBase):
         sb_function.fuzz_obj(obj)
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_SBFile(self):
         sbf = lldb.SBFile()
         self.assertFalse(sbf.IsValid())

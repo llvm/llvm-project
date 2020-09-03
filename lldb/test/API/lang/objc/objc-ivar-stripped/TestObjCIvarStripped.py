@@ -50,7 +50,7 @@ class TestObjCIvarStripped(TestBase):
 
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(
             process, breakpoint)
-        self.assertTrue(len(thread_list) == 1)
+        self.assertEquals(len(thread_list), 1)
         thread = thread_list[0]
 
         frame = thread.GetFrameAtIndex(0)
@@ -64,4 +64,4 @@ class TestObjCIvarStripped(TestBase):
         self.assertTrue(ivar, "Got result for mc->_foo")
         ivar_value = ivar.GetValueAsSigned(error)
         self.assertTrue(error.Success())
-        self.assertTrue(ivar_value == 3)
+        self.assertEquals(ivar_value, 3)

@@ -1,0 +1,23 @@
+// FIXME: Actually, "perl".
+REQUIRES: shell
+
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: %scan-build -plist-html -o %t.output_dir %clang -S %S/Inputs/single_null_dereference.c \
+RUN:     | FileCheck %s -check-prefix CHECK-STDOUT
+
+// Test combined plist and html output with -plist-html
+
+CHECK-STDOUT: scan-build: Using '{{.*}}' for static analysis
+CHECK-STDOUT: scan-build: Analysis run complete.
+CHECK-STDOUT: scan-build: Analysis results (plist files) deposited in '{{.*}}'
+CHECK-STDOUT: scan-build: 1 bug found.
+CHECK-STDOUT: scan-build: Run 'scan-view {{.*}}' to examine bug reports.
+
+// We expect both html files and the plist files.
+RUN: ls %t.output_dir/*/ | FileCheck %s -check-prefix CHECK-FILENAMES
+
+CHECK-FILENAMES: index.html
+CHECK-FILENAMES-DAG: report-{{.*}}.html
+CHECK-FILENAMES-DAG: report-{{.*}}.plist
+CHECK-FILENAMES: scanview.css
+CHECK-FILENAMES: sorttable.js

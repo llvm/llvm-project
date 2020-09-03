@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BreakpointLocation_h_
-#define liblldb_BreakpointLocation_h_
+#ifndef LLDB_BREAKPOINT_BREAKPOINTLOCATION_H
+#define LLDB_BREAKPOINT_BREAKPOINTLOCATION_H
 
 #include <memory>
 #include <mutex>
@@ -345,9 +345,10 @@ private:
 
   void SendBreakpointLocationChangedEvent(lldb::BreakpointEventType eventKind);
 
-  DISALLOW_COPY_AND_ASSIGN(BreakpointLocation);
+  BreakpointLocation(const BreakpointLocation &) = delete;
+  const BreakpointLocation &operator=(const BreakpointLocation &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_BreakpointLocation_h_
+#endif // LLDB_BREAKPOINT_BREAKPOINTLOCATION_H

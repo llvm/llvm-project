@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=polaris10 -run-pass si-insert-skips -amdgpu-skip-threshold=1 %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=polaris10 -run-pass si-insert-skips -amdgpu-skip-threshold-legacy=1 %s -o - | FileCheck %s
 # https://bugs.freedesktop.org/show_bug.cgi?id=99019
 --- |
   define amdgpu_ps void @kill_uncond_branch() {
@@ -14,13 +14,13 @@
 
 # CHECK: bb.1:
 # CHECK: V_CMPX_LE_F32_e32
-# CHECK-NEXT: S_CBRANCH_EXECNZ %bb.2, implicit $exec
+# CHECK-NEXT: S_CBRANCH_EXECZ %bb.3, implicit $exec
+
+# CHECK: bb.2:
+# CHECK: S_ENDPGM 0
 
 # CHECK: bb.3:
 # CHECK-NEXT: EXP_DONE
-# CHECK: S_ENDPGM 0
-
-# CHECK: bb.2:
 # CHECK: S_ENDPGM 0
 
 name: kill_uncond_branch

@@ -43,7 +43,7 @@ void f() {
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: perform subtraction in the duration domain [abseil-duration-subtraction]
   // CHECK-FIXES: if (absl::ToDoubleSeconds(d - absl::Seconds(1)) > 10) {}
 
-  // A nested occurance
+  // A nested occurrence
   x = absl::ToDoubleSeconds(d) - absl::ToDoubleSeconds(absl::Seconds(5));
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: perform subtraction in the duration domain [abseil-duration-subtraction]
   // CHECK-FIXES: absl::ToDoubleSeconds(d - absl::Seconds(5))

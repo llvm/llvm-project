@@ -17,8 +17,8 @@ TEST(PointerEmbeddedIntTest, Basic) {
 
   EXPECT_EQ(42, I);
   EXPECT_EQ(43, I + 1);
-  EXPECT_EQ(sizeof(uintptr_t) * CHAR_BIT - CHAR_BIT,
-            PointerLikeTypeTraits<decltype(I)>::NumLowBitsAvailable);
+  EXPECT_EQ((int)sizeof(uintptr_t) * CHAR_BIT - CHAR_BIT,
+            (int)PointerLikeTypeTraits<decltype(I)>::NumLowBitsAvailable);
 
   EXPECT_FALSE(I == J);
   EXPECT_TRUE(I != J);

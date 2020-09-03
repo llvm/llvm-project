@@ -1,5 +1,4 @@
-//===-- SBTypeCategory.cpp ----------------------------------------*- C++
-//-*-===//
+//===-- SBTypeCategory.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,7 +39,7 @@ SBTypeCategory::SBTypeCategory(const lldb::SBTypeCategory &rhs)
   LLDB_RECORD_CONSTRUCTOR(SBTypeCategory, (const lldb::SBTypeCategory &), rhs);
 }
 
-SBTypeCategory::~SBTypeCategory() {}
+SBTypeCategory::~SBTypeCategory() = default;
 
 bool SBTypeCategory::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeCategory, IsValid);

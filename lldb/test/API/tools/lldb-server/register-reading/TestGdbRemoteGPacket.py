@@ -40,7 +40,7 @@ class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.connect_to_debug_monitor()
         context = self.expect_gdbremote_sequence()
         register_bank = context.get("register_bank")
-        self.assertTrue(register_bank[0] != 'E')
+        self.assertNotEqual(register_bank[0], 'E')
 
         self.test_sequence.add_log_lines(
             ["read packet: $G" + register_bank + "#00",
@@ -48,7 +48,7 @@ class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
               "capture": {1: "G_reply"}}],
             True)
         context = self.expect_gdbremote_sequence()
-        self.assertTrue(context.get("G_reply")[0] != 'E')
+        self.assertNotEqual(context.get("G_reply")[0], 'E')
 
     @skipIfOutOfTreeDebugserver
     @debugserver_test
@@ -105,7 +105,7 @@ class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
         reg_bank = context.get("register_bank")
-        self.assertTrue(reg_bank[0] != 'E')
+        self.assertNotEqual(reg_bank[0], 'E')
 
         byte_order = self.get_target_byte_order()
         get_reg_value = lambda reg_name : _extract_register_value(

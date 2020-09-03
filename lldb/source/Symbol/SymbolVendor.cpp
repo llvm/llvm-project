@@ -1,4 +1,4 @@
-//===-- SymbolVendor.cpp ----------------------------------------*- C++ -*-===//
+//===-- SymbolVendor.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,7 +53,7 @@ SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
   }
   if (!sym_objfile_sp)
     sym_objfile_sp = module_sp->GetObjectFile()->shared_from_this();
-  instance_up.reset(new SymbolVendor(module_sp));
+  instance_up = std::make_unique<SymbolVendor>(module_sp);
   instance_up->AddSymbolFileRepresentation(sym_objfile_sp);
   return instance_up.release();
 }

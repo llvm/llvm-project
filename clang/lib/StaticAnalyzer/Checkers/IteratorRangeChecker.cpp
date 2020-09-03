@@ -27,22 +27,41 @@ using namespace iterator;
 namespace {
 
 class IteratorRangeChecker
-  : public Checker<check::PreCall> {
+  : public Checker<check::PreCall, check::PreStmt<UnaryOperator>,
+                   check::PreStmt<BinaryOperator>,
+                   check::PreStmt<ArraySubscriptExpr>,
+                   check::PreStmt<MemberExpr>> {
 
   std::unique_ptr<BugType> OutOfRangeBugType;
 
-  void verifyDereference(CheckerContext &C, const SVal &Val) const;
-  void verifyIncrement(CheckerContext &C, const SVal &Iter) const;
-  void verifyDecrement(CheckerContext &C, const SVal &Iter) const;
+  void verifyDereference(CheckerContext &C, SVal Val) const;
+  void verifyIncrement(CheckerContext &C, SVal Iter) const;
+  void verifyDecrement(CheckerContext &C, SVal Iter) const;
   void verifyRandomIncrOrDecr(CheckerContext &C, OverloadedOperatorKind Op,
-                              const SVal &LHS, const SVal &RHS) const;
-  void reportBug(const StringRef &Message, const SVal &Val,
-                 CheckerContext &C, ExplodedNode *ErrNode) const;
+                              SVal LHS, SVal RHS) const;
+  void verifyAdvance(CheckerContext &C, SVal LHS, SVal RHS) const;
+  void verifyPrev(CheckerContext &C, SVal LHS, SVal RHS) const;
+  void verifyNext(CheckerContext &C, SVal LHS, SVal RHS) const;
+  void reportBug(const StringRef &Message, SVal Val, CheckerContext &C,
+                 ExplodedNode *ErrNode) const;
+
 public:
   IteratorRangeChecker();
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
+  void checkPreStmt(const UnaryOperator *UO, CheckerContext &C) const;
+  void checkPreStmt(const BinaryOperator *BO, CheckerContext &C) const;
+  void checkPreStmt(const ArraySubscriptExpr *ASE, CheckerContext &C) const;
+  void checkPreStmt(const MemberExpr *ME, CheckerContext &C) const;
 
+  using AdvanceFn = void (IteratorRangeChecker::*)(CheckerContext &, SVal,
+                                                   SVal) const;
+
+  CallDescriptionMap<AdvanceFn> AdvanceFunctions = {
+      {{{"std", "advance"}, 2}, &IteratorRangeChecker::verifyAdvance},
+      {{{"std", "prev"}, 2}, &IteratorRangeChecker::verifyPrev},
+      {{{"std", "next"}, 2}, &IteratorRangeChecker::verifyNext},
+  };
 };
 
 bool isPastTheEnd(ProgramStateRef State, const IteratorPosition &Pos);
@@ -107,11 +126,73 @@ void IteratorRangeChecker::checkPreCall(const CallEvent &Call,
         verifyDereference(C, Call.getArgSVal(0));
       }
     }
+  } else {
+    const AdvanceFn *Verifier = AdvanceFunctions.lookup(Call);
+    if (Verifier) {
+      if (Call.getNumArgs() > 1) {
+        (this->**Verifier)(C, Call.getArgSVal(0), Call.getArgSVal(1));
+      } else {
+        auto &BVF = C.getSValBuilder().getBasicValueFactory();
+        (this->**Verifier)(
+            C, Call.getArgSVal(0),
+            nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
+      }
+    }
   }
 }
 
+void IteratorRangeChecker::checkPreStmt(const UnaryOperator *UO,
+                                        CheckerContext &C) const {
+  if (isa<CXXThisExpr>(UO->getSubExpr()))
+    return;
+
+  ProgramStateRef State = C.getState();
+  UnaryOperatorKind OK = UO->getOpcode();
+  SVal SubVal = State->getSVal(UO->getSubExpr(), C.getLocationContext());
+
+  if (isDereferenceOperator(OK)) {
+    verifyDereference(C, SubVal);
+  } else if (isIncrementOperator(OK)) {
+    verifyIncrement(C, SubVal);
+  } else if (isDecrementOperator(OK)) {
+    verifyDecrement(C, SubVal);
+  }
+}
+
+void IteratorRangeChecker::checkPreStmt(const BinaryOperator *BO,
+                                        CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  BinaryOperatorKind OK = BO->getOpcode();
+  SVal LVal = State->getSVal(BO->getLHS(), C.getLocationContext());
+
+  if (isDereferenceOperator(OK)) {
+    verifyDereference(C, LVal);
+  } else if (isRandomIncrOrDecrOperator(OK)) {
+    SVal RVal = State->getSVal(BO->getRHS(), C.getLocationContext());
+    verifyRandomIncrOrDecr(C, BinaryOperator::getOverloadedOperator(OK), LVal,
+                           RVal);
+  }
+}
+
+void IteratorRangeChecker::checkPreStmt(const ArraySubscriptExpr *ASE,
+                                        CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  SVal LVal = State->getSVal(ASE->getLHS(), C.getLocationContext());
+  verifyDereference(C, LVal);
+}
+
+void IteratorRangeChecker::checkPreStmt(const MemberExpr *ME,
+                                        CheckerContext &C) const {
+  if (!ME->isArrow() || ME->isImplicitAccess())
+    return;
+
+  ProgramStateRef State = C.getState();
+  SVal BaseVal = State->getSVal(ME->getBase(), C.getLocationContext());
+  verifyDereference(C, BaseVal);
+}
+
 void IteratorRangeChecker::verifyDereference(CheckerContext &C,
-                                             const SVal &Val) const {
+                                             SVal Val) const {
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Val);
   if (Pos && isPastTheEnd(State, *Pos)) {
@@ -123,24 +204,21 @@ void IteratorRangeChecker::verifyDereference(CheckerContext &C,
   }
 }
 
-void IteratorRangeChecker::verifyIncrement(CheckerContext &C,
-                                          const SVal &Iter) const {
+void IteratorRangeChecker::verifyIncrement(CheckerContext &C, SVal Iter) const {
   auto &BVF = C.getSValBuilder().getBasicValueFactory();
   verifyRandomIncrOrDecr(C, OO_Plus, Iter,
                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
 }
 
-void IteratorRangeChecker::verifyDecrement(CheckerContext &C,
-                                          const SVal &Iter) const {
+void IteratorRangeChecker::verifyDecrement(CheckerContext &C, SVal Iter) const {
   auto &BVF = C.getSValBuilder().getBasicValueFactory();
   verifyRandomIncrOrDecr(C, OO_Minus, Iter,
                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
 }
 
 void IteratorRangeChecker::verifyRandomIncrOrDecr(CheckerContext &C,
-                                                 OverloadedOperatorKind Op,
-                                                 const SVal &LHS,
-                                                 const SVal &RHS) const {
+                                                  OverloadedOperatorKind Op,
+                                                  SVal LHS, SVal RHS) const {
   auto State = C.getState();
 
   auto Value = RHS;
@@ -180,12 +258,32 @@ void IteratorRangeChecker::verifyRandomIncrOrDecr(CheckerContext &C,
   }
 }
 
-void IteratorRangeChecker::reportBug(const StringRef &Message,
-                                    const SVal &Val, CheckerContext &C,
-                                    ExplodedNode *ErrNode) const {
+void IteratorRangeChecker::verifyAdvance(CheckerContext &C, SVal LHS,
+                                         SVal RHS) const {
+  verifyRandomIncrOrDecr(C, OO_PlusEqual, LHS, RHS);
+}
+
+void IteratorRangeChecker::verifyPrev(CheckerContext &C, SVal LHS,
+                                      SVal RHS) const {
+  verifyRandomIncrOrDecr(C, OO_Minus, LHS, RHS);
+}
+
+void IteratorRangeChecker::verifyNext(CheckerContext &C, SVal LHS,
+                                      SVal RHS) const {
+  verifyRandomIncrOrDecr(C, OO_Plus, LHS, RHS);
+}
+
+void IteratorRangeChecker::reportBug(const StringRef &Message, SVal Val,
+                                     CheckerContext &C,
+                                     ExplodedNode *ErrNode) const {
   auto R = std::make_unique<PathSensitiveBugReport>(*OutOfRangeBugType, Message,
                                                     ErrNode);
+
+  const auto *Pos = getIteratorPosition(C.getState(), Val);
+  assert(Pos && "Iterator without known position cannot be out-of-range.");
+
   R->markInteresting(Val);
+  R->markInteresting(Pos->getContainer());
   C.emitReport(std::move(R));
 }
 
@@ -268,6 +366,6 @@ void ento::registerIteratorRangeChecker(CheckerManager &mgr) {
   mgr.registerChecker<IteratorRangeChecker>();
 }
 
-bool ento::shouldRegisterIteratorRangeChecker(const LangOptions &LO) {
+bool ento::shouldRegisterIteratorRangeChecker(const CheckerManager &mgr) {
   return true;
 }

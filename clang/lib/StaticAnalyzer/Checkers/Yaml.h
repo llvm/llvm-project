@@ -15,6 +15,7 @@
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKER_YAML_H
 
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLTraits.h"
 
 namespace clang {

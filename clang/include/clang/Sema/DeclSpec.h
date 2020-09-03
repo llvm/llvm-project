@@ -23,6 +23,7 @@
 #define LLVM_CLANG_SEMA_DECLSPEC_H
 
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjCCommon.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/Lambda.h"
@@ -186,14 +187,14 @@ public:
   SourceLocation getLastQualifierNameLoc() const;
 
   /// No scope specifier.
-  bool isEmpty() const { return !Range.isValid(); }
+  bool isEmpty() const { return Range.isInvalid() && getScopeRep() == nullptr; }
   /// A scope specifier is present, but may be valid or invalid.
   bool isNotEmpty() const { return !isEmpty(); }
 
   /// An error occurred during parsing of the scope specifier.
-  bool isInvalid() const { return isNotEmpty() && getScopeRep() == nullptr; }
+  bool isInvalid() const { return Range.isValid() && getScopeRep() == nullptr; }
   /// A scope specifier is present, and it refers to a real scope.
-  bool isValid() const { return isNotEmpty() && getScopeRep() != nullptr; }
+  bool isValid() const { return getScopeRep() != nullptr; }
 
   /// Indicate that this nested-name-specifier is invalid.
   void SetInvalid(SourceRange R) {
@@ -278,7 +279,9 @@ public:
   static const TST TST_char32 = clang::TST_char32;
   static const TST TST_int = clang::TST_int;
   static const TST TST_int128 = clang::TST_int128;
+  static const TST TST_extint = clang::TST_extint;
   static const TST TST_half = clang::TST_half;
+  static const TST TST_BFloat16 = clang::TST_BFloat16;
   static const TST TST_float = clang::TST_float;
   static const TST TST_double = clang::TST_double;
   static const TST TST_float16 = clang::TST_Float16;
@@ -349,6 +352,7 @@ private:
   unsigned TypeSpecOwned : 1;
   unsigned TypeSpecPipe : 1;
   unsigned TypeSpecSat : 1;
+  unsigned ConstrainedAuto : 1;
 
   // type-qualifiers
   unsigned TypeQualifiers : 5;  // Bitwise OR of TQ.
@@ -369,6 +373,7 @@ private:
     UnionParsedType TypeRep;
     Decl *DeclRep;
     Expr *ExprRep;
+    TemplateIdAnnotation *TemplateIdRep;
   };
 
   /// ExplicitSpecifier - Store information about explicit spicifer.
@@ -411,7 +416,10 @@ private:
             T == TST_underlyingType || T == TST_atomic);
   }
   static bool isExprRep(TST T) {
-    return (T == TST_typeofExpr || T == TST_decltype);
+    return (T == TST_typeofExpr || T == TST_decltype || T == TST_extint);
+  }
+  static bool isTemplateIdRep(TST T) {
+    return (T == TST_auto || T == TST_decltype_auto);
   }
 
   DeclSpec(const DeclSpec &) = delete;
@@ -430,7 +438,8 @@ public:
         TypeSpecComplex(TSC_unspecified), TypeSpecSign(TSS_unspecified),
         TypeSpecType(TST_unspecified), TypeAltiVecVector(false),
         TypeAltiVecPixel(false), TypeAltiVecBool(false), TypeSpecOwned(false),
-        TypeSpecPipe(false), TypeSpecSat(false), TypeQualifiers(TQ_unspecified),
+        TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
+        TypeQualifiers(TQ_unspecified),
         FS_inline_specified(false), FS_forceinline_specified(false),
         FS_virtual_specified(false), FS_noreturn_specified(false),
         Friend_specified(false), ConstexprSpecifier(CSK_unspecified),
@@ -478,6 +487,7 @@ public:
   bool isTypeRep() const { return isTypeRep((TST) TypeSpecType); }
   bool isTypeSpecPipe() const { return TypeSpecPipe; }
   bool isTypeSpecSat() const { return TypeSpecSat; }
+  bool isConstrainedAuto() const { return ConstrainedAuto; }
 
   ParsedType getRepAsType() const {
     assert(isTypeRep((TST) TypeSpecType) && "DeclSpec does not store a type");
@@ -490,6 +500,11 @@ public:
   Expr *getRepAsExpr() const {
     assert(isExprRep((TST) TypeSpecType) && "DeclSpec does not store an expr");
     return ExprRep;
+  }
+  TemplateIdAnnotation *getRepAsTemplateId() const {
+    assert(isTemplateIdRep((TST) TypeSpecType) &&
+           "DeclSpec does not store a template id");
+    return TemplateIdRep;
   }
   CXXScopeSpec &getTypeSpecScope() { return TypeScope; }
   const CXXScopeSpec &getTypeSpecScope() const { return TypeScope; }
@@ -656,6 +671,13 @@ public:
                        unsigned &DiagID, ParsedType Rep,
                        const PrintingPolicy &Policy);
   bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
+                       unsigned &DiagID, TypeResult Rep,
+                       const PrintingPolicy &Policy) {
+    if (Rep.isInvalid())
+      return SetTypeSpecError();
+    return SetTypeSpecType(T, Loc, PrevSpec, DiagID, Rep.get(), Policy);
+  }
+  bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
                        unsigned &DiagID, Decl *Rep, bool Owned,
                        const PrintingPolicy &Policy);
   bool SetTypeSpecType(TST T, SourceLocation TagKwLoc,
@@ -665,6 +687,9 @@ public:
   bool SetTypeSpecType(TST T, SourceLocation TagKwLoc,
                        SourceLocation TagNameLoc, const char *&PrevSpec,
                        unsigned &DiagID, Decl *Rep, bool Owned,
+                       const PrintingPolicy &Policy);
+  bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
+                       unsigned &DiagID, TemplateIdAnnotation *Rep,
                        const PrintingPolicy &Policy);
 
   bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
@@ -682,6 +707,9 @@ public:
   bool SetTypePipe(bool isPipe, SourceLocation Loc,
                        const char *&PrevSpec, unsigned &DiagID,
                        const PrintingPolicy &Policy);
+  bool SetExtIntType(SourceLocation KWLoc, Expr *BitWidth,
+                     const char *&PrevSpec, unsigned &DiagID,
+                     const PrintingPolicy &Policy);
   bool SetTypeSpecSat(SourceLocation Loc, const char *&PrevSpec,
                       unsigned &DiagID);
   bool SetTypeSpecError();
@@ -815,31 +843,10 @@ public:
     DQ_CSNullability = 0x40
   };
 
-  /// PropertyAttributeKind - list of property attributes.
-  /// Keep this list in sync with LLVM's Dwarf.h ApplePropertyAttributes.
-  enum ObjCPropertyAttributeKind {
-    DQ_PR_noattr = 0x0,
-    DQ_PR_readonly = 0x01,
-    DQ_PR_getter = 0x02,
-    DQ_PR_assign = 0x04,
-    DQ_PR_readwrite = 0x08,
-    DQ_PR_retain = 0x10,
-    DQ_PR_copy = 0x20,
-    DQ_PR_nonatomic = 0x40,
-    DQ_PR_setter = 0x80,
-    DQ_PR_atomic = 0x100,
-    DQ_PR_weak =   0x200,
-    DQ_PR_strong = 0x400,
-    DQ_PR_unsafe_unretained = 0x800,
-    DQ_PR_nullability = 0x1000,
-    DQ_PR_null_resettable = 0x2000,
-    DQ_PR_class = 0x4000,
-    DQ_PR_direct = 0x8000,
-  };
-
   ObjCDeclSpec()
-    : objcDeclQualifier(DQ_None), PropertyAttributes(DQ_PR_noattr),
-      Nullability(0), GetterName(nullptr), SetterName(nullptr) { }
+      : objcDeclQualifier(DQ_None),
+        PropertyAttributes(ObjCPropertyAttribute::kind_noattr), Nullability(0),
+        GetterName(nullptr), SetterName(nullptr) {}
 
   ObjCDeclQualifier getObjCDeclQualifier() const {
     return (ObjCDeclQualifier)objcDeclQualifier;
@@ -851,32 +858,35 @@ public:
     objcDeclQualifier = (ObjCDeclQualifier) (objcDeclQualifier & ~DQVal);
   }
 
-  ObjCPropertyAttributeKind getPropertyAttributes() const {
-    return ObjCPropertyAttributeKind(PropertyAttributes);
+  ObjCPropertyAttribute::Kind getPropertyAttributes() const {
+    return ObjCPropertyAttribute::Kind(PropertyAttributes);
   }
-  void setPropertyAttributes(ObjCPropertyAttributeKind PRVal) {
+  void setPropertyAttributes(ObjCPropertyAttribute::Kind PRVal) {
     PropertyAttributes =
-      (ObjCPropertyAttributeKind)(PropertyAttributes | PRVal);
+        (ObjCPropertyAttribute::Kind)(PropertyAttributes | PRVal);
   }
 
   NullabilityKind getNullability() const {
-    assert(((getObjCDeclQualifier() & DQ_CSNullability) ||
-            (getPropertyAttributes() & DQ_PR_nullability)) &&
-           "Objective-C declspec doesn't have nullability");
+    assert(
+        ((getObjCDeclQualifier() & DQ_CSNullability) ||
+         (getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)) &&
+        "Objective-C declspec doesn't have nullability");
     return static_cast<NullabilityKind>(Nullability);
   }
 
   SourceLocation getNullabilityLoc() const {
-    assert(((getObjCDeclQualifier() & DQ_CSNullability) ||
-            (getPropertyAttributes() & DQ_PR_nullability)) &&
-           "Objective-C declspec doesn't have nullability");
+    assert(
+        ((getObjCDeclQualifier() & DQ_CSNullability) ||
+         (getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)) &&
+        "Objective-C declspec doesn't have nullability");
     return NullabilityLoc;
   }
 
   void setNullability(SourceLocation loc, NullabilityKind kind) {
-    assert(((getObjCDeclQualifier() & DQ_CSNullability) ||
-            (getPropertyAttributes() & DQ_PR_nullability)) &&
-           "Set the nullability declspec or property attribute first");
+    assert(
+        ((getObjCDeclQualifier() & DQ_CSNullability) ||
+         (getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)) &&
+        "Set the nullability declspec or property attribute first");
     Nullability = static_cast<unsigned>(kind);
     NullabilityLoc = loc;
   }
@@ -903,8 +913,8 @@ private:
   // (space saving is negligible).
   unsigned objcDeclQualifier : 7;
 
-  // NOTE: VC++ treats enums as signed, avoid using ObjCPropertyAttributeKind
-  unsigned PropertyAttributes : 16;
+  // NOTE: VC++ treats enums as signed, avoid using ObjCPropertyAttribute::Kind
+  unsigned PropertyAttributes : NumObjCPropertyAttrsBits;
 
   unsigned Nullability : 2;
 
@@ -1503,6 +1513,8 @@ struct DeclaratorChunk {
   struct MemberPointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/__unaligned/_Atomic.
     unsigned TypeQuals : 5;
+    /// Location of the '*' token.
+    unsigned StarLoc;
     // CXXScopeSpec has a constructor, so it can't be a direct member.
     // So we need some pointer-aligned storage and a bit of trickery.
     alignas(CXXScopeSpec) char ScopeMem[sizeof(CXXScopeSpec)];
@@ -1645,11 +1657,13 @@ struct DeclaratorChunk {
 
   static DeclaratorChunk getMemberPointer(const CXXScopeSpec &SS,
                                           unsigned TypeQuals,
-                                          SourceLocation Loc) {
+                                          SourceLocation StarLoc,
+                                          SourceLocation EndLoc) {
     DeclaratorChunk I;
     I.Kind          = MemberPointer;
     I.Loc           = SS.getBeginLoc();
-    I.EndLoc        = Loc;
+    I.EndLoc = EndLoc;
+    I.Mem.StarLoc = StarLoc.getRawEncoding();
     I.Mem.TypeQuals = TypeQuals;
     new (I.Mem.ScopeMem) CXXScopeSpec(SS);
     return I;
@@ -1757,7 +1771,8 @@ enum class DeclaratorContext {
     TemplateArgContext,  // Any template argument (in template argument list).
     TemplateTypeArgContext, // Template type argument (in default argument).
     AliasDeclContext,    // C++11 alias-declaration.
-    AliasTemplateContext // C++11 alias-declaration template.
+    AliasTemplateContext, // C++11 alias-declaration template.
+    RequiresExprContext   // C++2a requires-expression.
 };
 
 
@@ -1826,6 +1841,18 @@ private:
   /// The asm label, if specified.
   Expr *AsmLabel;
 
+  /// \brief The constraint-expression specified by the trailing
+  /// requires-clause, or null if no such clause was specified.
+  Expr *TrailingRequiresClause;
+
+  /// If this declarator declares a template, its template parameter lists.
+  ArrayRef<TemplateParameterList *> TemplateParameterLists;
+
+  /// If the declarator declares an abbreviated function template, the innermost
+  /// template parameter list containing the invented and explicit template
+  /// parameters (if any).
+  TemplateParameterList *InventedTemplateParameterList;
+
 #ifndef _MSC_VER
   union {
 #endif
@@ -1855,7 +1882,9 @@ public:
         GroupingParens(false), FunctionDefinition(FDK_Declaration),
         Redeclaration(false), Extension(false), ObjCIvar(false),
         ObjCWeakProperty(false), InlineStorageUsed(false),
-        Attrs(ds.getAttributePool().getFactory()), AsmLabel(nullptr) {}
+        Attrs(ds.getAttributePool().getFactory()), AsmLabel(nullptr),
+        TrailingRequiresClause(nullptr),
+        InventedTemplateParameterList(nullptr) {}
 
   ~Declarator() {
     clear();
@@ -1976,6 +2005,7 @@ public:
     case DeclaratorContext::TemplateTypeArgContext:
     case DeclaratorContext::TrailingReturnContext:
     case DeclaratorContext::TrailingReturnVarContext:
+    case DeclaratorContext::RequiresExprContext:
       return true;
     }
     llvm_unreachable("unknown context kind!");
@@ -1998,6 +2028,7 @@ public:
     case DeclaratorContext::TemplateParamContext:
     case DeclaratorContext::CXXCatchContext:
     case DeclaratorContext::ObjCCatchContext:
+    case DeclaratorContext::RequiresExprContext:
       return true;
 
     case DeclaratorContext::TypeNameContext:
@@ -2034,6 +2065,7 @@ public:
     case DeclaratorContext::MemberContext:
     case DeclaratorContext::PrototypeContext:
     case DeclaratorContext::TemplateParamContext:
+    case DeclaratorContext::RequiresExprContext:
       // Maybe one day...
       return false;
 
@@ -2111,6 +2143,7 @@ public:
     case DeclaratorContext::TemplateArgContext:
     case DeclaratorContext::TemplateTypeArgContext:
     case DeclaratorContext::TrailingReturnContext:
+    case DeclaratorContext::RequiresExprContext:
       return false;
     }
     llvm_unreachable("unknown context kind!");
@@ -2332,6 +2365,7 @@ public:
     case DeclaratorContext::TemplateTypeArgContext:
     case DeclaratorContext::TrailingReturnContext:
     case DeclaratorContext::TrailingReturnVarContext:
+    case DeclaratorContext::RequiresExprContext:
       return false;
     }
     llvm_unreachable("unknown context kind!");
@@ -2365,6 +2399,7 @@ public:
     case DeclaratorContext::TrailingReturnContext:
     case DeclaratorContext::TrailingReturnVarContext:
     case DeclaratorContext::TemplateTypeArgContext:
+    case DeclaratorContext::RequiresExprContext:
       return false;
 
     case DeclaratorContext::BlockContext:
@@ -2399,6 +2434,46 @@ public:
           Chunk.Fun.hasTrailingReturnType())
         return true;
     return false;
+  }
+
+  /// \brief Sets a trailing requires clause for this declarator.
+  void setTrailingRequiresClause(Expr *TRC) {
+    TrailingRequiresClause = TRC;
+  }
+
+  /// \brief Sets a trailing requires clause for this declarator.
+  Expr *getTrailingRequiresClause() {
+    return TrailingRequiresClause;
+  }
+
+  /// \brief Determine whether a trailing requires clause was written in this
+  /// declarator.
+  bool hasTrailingRequiresClause() const {
+    return TrailingRequiresClause != nullptr;
+  }
+
+  /// Sets the template parameter lists that preceded the declarator.
+  void setTemplateParameterLists(ArrayRef<TemplateParameterList *> TPLs) {
+    TemplateParameterLists = TPLs;
+  }
+
+  /// The template parameter lists that preceded the declarator.
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
+    return TemplateParameterLists;
+  }
+
+  /// Sets the template parameter list generated from the explicit template
+  /// parameters along with any invented template parameters from
+  /// placeholder-typed parameters.
+  void setInventedTemplateParameterList(TemplateParameterList *Invented) {
+    InventedTemplateParameterList = Invented;
+  }
+
+  /// The template parameter list generated from the explicit template
+  /// parameters along with any invented template parameters from
+  /// placeholder-typed parameters, if there were any such parameters.
+  TemplateParameterList * getInventedTemplateParameterList() const {
+    return InventedTemplateParameterList;
   }
 
   /// takeAttributes - Takes attributes from the given parsed-attributes
@@ -2599,6 +2674,26 @@ struct LambdaIntroducer {
     Captures.push_back(LambdaCapture(Kind, Loc, Id, EllipsisLoc, InitKind, Init,
                                      InitCaptureType, ExplicitRange));
   }
+};
+
+struct InventedTemplateParameterInfo {
+  /// The number of parameters in the template parameter list that were
+  /// explicitly specified by the user, as opposed to being invented by use
+  /// of an auto parameter.
+  unsigned NumExplicitTemplateParams = 0;
+
+  /// If this is a generic lambda or abbreviated function template, use this
+  /// as the depth of each 'auto' parameter, during initial AST construction.
+  unsigned AutoTemplateParameterDepth = 0;
+
+  /// Store the list of the template parameters for a generic lambda or an
+  /// abbreviated function template.
+  /// If this is a generic lambda or abbreviated function template, this holds
+  /// the explicit template parameters followed by the auto parameters
+  /// converted into TemplateTypeParmDecls.
+  /// It can be used to construct the generic lambda or abbreviated template's
+  /// template parameter list during initial AST construction.
+  SmallVector<NamedDecl*, 4> TemplateParams;
 };
 
 } // end namespace clang

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++2a -fconcepts-ts -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
+// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++2a -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
 // expected-no-diagnostics
 
 namespace test1 {

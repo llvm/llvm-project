@@ -38,6 +38,7 @@ LLVM and API reference documentation.
    PointerAuth
    ScudoHardenedAllocator
    MemTagSanitizer
+   Security
    SegmentedStacks
    StackMaps
    SpeculativeLoadHardening
@@ -54,8 +55,8 @@ LLVM and API reference documentation.
 API Reference
 -------------
 
-`Doxygen generated documentation <http://llvm.org/doxygen/>`_
-  (`classes <http://llvm.org/doxygen/inherits.html>`_)
+`Doxygen generated documentation <https://llvm.org/doxygen/>`_
+  (`classes <https://llvm.org/doxygen/inherits.html>`_)
 
 :doc:`HowToUseAttributes`
   Answers some questions about the new Attributes infrastructure.
@@ -191,7 +192,7 @@ Additional Topics
 
 :doc:`MemTagSanitizer`
   Security hardening for production code aiming to mitigate memory
-  related vulnerabilities. Based on ARMv9 Memory Tagging Extension.
+  related vulnerabilities. Based on the Armv8.5-A Memory Tagging Extension.
 
 :doc:`Dependence Graphs <DependenceGraphs/index>`
   A description of the design of the various dependence graphs such as

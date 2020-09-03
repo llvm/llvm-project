@@ -1,4 +1,4 @@
-//===-- CompletionRequestTest.cpp -------------------------------*- C++ -*-===//
+//===-- CompletionRequestTest.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,8 @@ TEST(CompletionRequest, Constructor) {
   CompletionRequest request(command, cursor_pos, result);
   result.GetMatches(matches);
 
-  EXPECT_STREQ(request.GetRawLine().str().c_str(), command.c_str());
+  EXPECT_EQ(request.GetRawLine(), "a b");
+  EXPECT_EQ(request.GetRawLineWithUnusedSuffix(), command);
   EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
   EXPECT_EQ(request.GetCursorIndex(), arg_index);
 
@@ -38,7 +39,8 @@ TEST(CompletionRequest, FakeLastArg) {
 
   CompletionRequest request(command, cursor_pos, result);
 
-  EXPECT_STREQ(request.GetRawLine().str().c_str(), command.c_str());
+  EXPECT_EQ(request.GetRawLine(), command);
+  EXPECT_EQ(request.GetRawLineWithUnusedSuffix(), command);
   EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
   EXPECT_EQ(request.GetCursorIndex(), 3U);
 
@@ -93,7 +95,8 @@ TEST(CompletionRequest, ShiftArguments) {
   CompletionRequest request(command, cursor_pos, result);
   result.GetMatches(matches);
 
-  EXPECT_STREQ(request.GetRawLine().str().c_str(), command.c_str());
+  EXPECT_EQ(request.GetRawLine(), "a b");
+  EXPECT_EQ(request.GetRawLineWithUnusedSuffix(), command);
   EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
   EXPECT_EQ(request.GetCursorIndex(), arg_index);
 
@@ -104,7 +107,8 @@ TEST(CompletionRequest, ShiftArguments) {
   request.ShiftArguments();
 
   // The raw line/cursor stays identical.
-  EXPECT_STREQ(request.GetRawLine().str().c_str(), command.c_str());
+  EXPECT_EQ(request.GetRawLine(), "a b");
+  EXPECT_EQ(request.GetRawLineWithUnusedSuffix(), command);
   EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
 
   // Partially parsed line and cursor should be updated.

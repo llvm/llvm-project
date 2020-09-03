@@ -40,7 +40,7 @@ class ObjCSBTypeTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Get Frame #0.
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEquals(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -60,9 +60,9 @@ class ObjCSBTypeTestCase(TestBase):
         aFooType = aBarType.GetDirectBaseClassAtIndex(0)
 
         self.assertTrue(aFooType.IsValid(), "Foo should be a valid data type")
-        self.assertTrue(aFooType.GetName() == "Foo", "Foo has the right name")
+        self.assertEquals(aFooType.GetName(), "Foo", "Foo has the right name")
 
-        self.assertTrue(aBarType.GetNumberOfFields() == 1, "Bar has a field")
+        self.assertEquals(aBarType.GetNumberOfFields(), 1, "Bar has a field")
         aBarField = aBarType.GetFieldAtIndex(0)
 
         self.assertTrue(

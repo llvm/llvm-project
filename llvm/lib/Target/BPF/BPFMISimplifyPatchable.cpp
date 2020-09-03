@@ -22,6 +22,9 @@
 //    r1 = <calculated field_info>
 //    add r3, struct_base_reg, r1
 //
+// This pass also removes the intermediate load generated in IR pass for
+// __builtin_btf_type_id() intrinsic.
+//
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
@@ -55,10 +58,10 @@ private:
   bool removeLD(void);
   void processCandidate(MachineRegisterInfo *MRI, MachineBasicBlock &MBB,
                         MachineInstr &MI, Register &SrcReg, Register &DstReg,
-                        const GlobalValue *GVal);
+                        const GlobalValue *GVal, bool IsAma);
   void processDstReg(MachineRegisterInfo *MRI, Register &DstReg,
                      Register &SrcReg, const GlobalValue *GVal,
-                     bool doSrcRegProp);
+                     bool doSrcRegProp, bool IsAma);
   void processInst(MachineRegisterInfo *MRI, MachineInstr *Inst,
                    MachineOperand *RelocOp, const GlobalValue *GVal);
   void checkADDrr(MachineRegisterInfo *MRI, MachineOperand *RelocOp,
@@ -70,9 +73,10 @@ private:
 public:
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (!skipFunction(MF.getFunction())) {
-      initialize(MF);
-    }
+    if (skipFunction(MF.getFunction()))
+      return false;
+
+    initialize(MF);
     return removeLD();
   }
 };
@@ -115,10 +119,21 @@ void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
     else
       continue;
 
-    // It must be a form of %1 = *(type *)(%2 + 0) or *(type *)(%2 + 0) = %1.
+    // It must be a form of %2 = *(type *)(%1 + 0) or *(type *)(%1 + 0) = %2.
     const MachineOperand &ImmOp = DefInst->getOperand(2);
     if (!ImmOp.isImm() || ImmOp.getImm() != 0)
       continue;
+
+    // Reject the form:
+    //   %1 = ADD_rr %2, %3
+    //   *(type *)(%2 + 0) = %1
+    if (Opcode == BPF::STB || Opcode == BPF::STH || Opcode == BPF::STW ||
+        Opcode == BPF::STD || Opcode == BPF::STB32 || Opcode == BPF::STH32 ||
+        Opcode == BPF::STW32) {
+      const MachineOperand &Opnd = DefInst->getOperand(0);
+      if (Opnd.isReg() && Opnd.getReg() == I->getReg())
+        continue;
+    }
 
     BuildMI(*DefInst->getParent(), *DefInst, DefInst->getDebugLoc(), TII->get(COREOp))
         .add(DefInst->getOperand(0)).addImm(Opcode).add(*BaseOp)
@@ -143,25 +158,27 @@ void BPFMISimplifyPatchable::checkShift(MachineRegisterInfo *MRI,
 
 void BPFMISimplifyPatchable::processCandidate(MachineRegisterInfo *MRI,
     MachineBasicBlock &MBB, MachineInstr &MI, Register &SrcReg,
-    Register &DstReg, const GlobalValue *GVal) {
+    Register &DstReg, const GlobalValue *GVal, bool IsAma) {
   if (MRI->getRegClass(DstReg) == &BPF::GPR32RegClass) {
-    // We can optimize such a pattern:
-    //  %1:gpr = LD_imm64 @"llvm.s:0:4$0:2"
-    //  %2:gpr32 = LDW32 %1:gpr, 0
-    //  %3:gpr = SUBREG_TO_REG 0, %2:gpr32, %subreg.sub_32
-    //  %4:gpr = ADD_rr %0:gpr, %3:gpr
-    //  or similar patterns below for non-alu32 case.
-    auto Begin = MRI->use_begin(DstReg), End = MRI->use_end();
-    decltype(End) NextI;
-    for (auto I = Begin; I != End; I = NextI) {
-      NextI = std::next(I);
-      if (!MRI->getUniqueVRegDef(I->getReg()))
-        continue;
+    if (IsAma) {
+      // We can optimize such a pattern:
+      //  %1:gpr = LD_imm64 @"llvm.s:0:4$0:2"
+      //  %2:gpr32 = LDW32 %1:gpr, 0
+      //  %3:gpr = SUBREG_TO_REG 0, %2:gpr32, %subreg.sub_32
+      //  %4:gpr = ADD_rr %0:gpr, %3:gpr
+      //  or similar patterns below for non-alu32 case.
+      auto Begin = MRI->use_begin(DstReg), End = MRI->use_end();
+      decltype(End) NextI;
+      for (auto I = Begin; I != End; I = NextI) {
+        NextI = std::next(I);
+        if (!MRI->getUniqueVRegDef(I->getReg()))
+          continue;
 
-      unsigned Opcode = I->getParent()->getOpcode();
-      if (Opcode == BPF::SUBREG_TO_REG) {
-        Register TmpReg = I->getParent()->getOperand(0).getReg();
-        processDstReg(MRI, TmpReg, DstReg, GVal, false);
+        unsigned Opcode = I->getParent()->getOpcode();
+        if (Opcode == BPF::SUBREG_TO_REG) {
+          Register TmpReg = I->getParent()->getOperand(0).getReg();
+          processDstReg(MRI, TmpReg, DstReg, GVal, false, IsAma);
+        }
       }
     }
 
@@ -171,12 +188,12 @@ void BPFMISimplifyPatchable::processCandidate(MachineRegisterInfo *MRI,
   }
 
   // All uses of DstReg replaced by SrcReg
-  processDstReg(MRI, DstReg, SrcReg, GVal, true);
+  processDstReg(MRI, DstReg, SrcReg, GVal, true, IsAma);
 }
 
 void BPFMISimplifyPatchable::processDstReg(MachineRegisterInfo *MRI,
     Register &DstReg, Register &SrcReg, const GlobalValue *GVal,
-    bool doSrcRegProp) {
+    bool doSrcRegProp, bool IsAma) {
   auto Begin = MRI->use_begin(DstReg), End = MRI->use_end();
   decltype(End) NextI;
   for (auto I = Begin; I != End; I = NextI) {
@@ -185,7 +202,7 @@ void BPFMISimplifyPatchable::processDstReg(MachineRegisterInfo *MRI,
       I->setReg(SrcReg);
 
     // The candidate needs to have a unique definition.
-    if (MRI->getUniqueVRegDef(I->getReg()))
+    if (IsAma && MRI->getUniqueVRegDef(I->getReg()))
       processInst(MRI, I->getParent(), &*I, GVal);
   }
 }
@@ -257,28 +274,26 @@ bool BPFMISimplifyPatchable::removeLD() {
       if (!DefInst)
         continue;
 
-      bool IsCandidate = false;
-      const GlobalValue *GVal = nullptr;
-      if (DefInst->getOpcode() == BPF::LD_imm64) {
-        const MachineOperand &MO = DefInst->getOperand(1);
-        if (MO.isGlobal()) {
-          GVal = MO.getGlobal();
-          auto *GVar = dyn_cast<GlobalVariable>(GVal);
-          if (GVar) {
-            // Global variables representing structure offset or
-            // patchable extern globals.
-            if (GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr)) {
-              assert(MI.getOperand(2).getImm() == 0);
-              IsCandidate = true;
-            }
-          }
-        }
-      }
-
-      if (!IsCandidate)
+      if (DefInst->getOpcode() != BPF::LD_imm64)
         continue;
 
-      processCandidate(MRI, MBB, MI, SrcReg, DstReg, GVal);
+      const MachineOperand &MO = DefInst->getOperand(1);
+      if (!MO.isGlobal())
+        continue;
+
+      const GlobalValue *GVal = MO.getGlobal();
+      auto *GVar = dyn_cast<GlobalVariable>(GVal);
+      if (!GVar)
+        continue;
+
+      // Global variables representing structure offset or type id.
+      bool IsAma = false;
+      if (GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr))
+        IsAma = true;
+      else if (!GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr))
+        continue;
+
+      processCandidate(MRI, MBB, MI, SrcReg, DstReg, GVal, IsAma);
 
       ToErase = &MI;
       Changed = true;

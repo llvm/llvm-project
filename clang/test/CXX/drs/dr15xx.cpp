@@ -135,6 +135,18 @@ namespace dr1512 { // dr1512: 4
 #endif
 }
 
+namespace dr1514 { // dr1514: 11
+#if __cplusplus >= 201103L
+  struct S {
+    enum E : int {}; // expected-note {{previous}}
+    enum E : int {}; // expected-error {{redefinition}}
+  };
+  S::E se; // OK, complete type, not zero-width bitfield.
+
+  // The behavior in other contexts is superseded by DR1966.
+#endif
+}
+
 namespace dr1518 { // dr1518: 4
 #if __cplusplus >= 201103L
 struct Z0 { // expected-note 0+ {{candidate}}
@@ -142,7 +154,7 @@ struct Z0 { // expected-note 0+ {{candidate}}
 };
 struct Z { // expected-note 0+ {{candidate}}
   explicit Z(); // expected-note 0+ {{here}}
-  explicit Z(int);
+  explicit Z(int); // expected-note {{not a candidate}}
   explicit Z(int, int); // expected-note 0+ {{here}}
 };
 template <class T> int Eat(T); // expected-note 0+ {{candidate}}

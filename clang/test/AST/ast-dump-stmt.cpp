@@ -1,4 +1,12 @@
-// RUN: %clang_cc1 -std=c++2a -triple x86_64-linux-gnu -fcxx-exceptions -ast-dump %s | FileCheck -strict-whitespace %s
+// Test without serialization:
+// RUN: %clang_cc1 -std=c++2a -triple x86_64-linux-gnu -fcxx-exceptions -ast-dump %s \
+// RUN: | FileCheck -strict-whitespace %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -std=c++2a -triple x86_64-linux-gnu -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c++ -std=c++2a -triple x86_64-linux-gnu -fcxx-exceptions -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck -strict-whitespace %s
 
 namespace n {
 void function() {}
@@ -122,6 +130,7 @@ void TestIf(bool b) {
     ;
   // CHECK: IfStmt 0x{{[^ ]*}} <line:[[@LINE-2]]:3, line:[[@LINE-1]]:5>
   // CHECK-NEXT: ConstantExpr 0x{{[^ ]*}} <line:[[@LINE-3]]:17, col:30> 'bool'
+  // CHECK-NEXT: value: Int 1
   // CHECK-NEXT: BinaryOperator
   // CHECK-NEXT: UnaryExprOrTypeTraitExpr
   // CHECK-NEXT: ParenExpr
@@ -136,6 +145,7 @@ void TestIf(bool b) {
     ;
   // CHECK: IfStmt 0x{{[^ ]*}} <line:[[@LINE-4]]:3, line:[[@LINE-1]]:5> has_else
   // CHECK-NEXT: ConstantExpr 0x{{[^ ]*}} <line:[[@LINE-5]]:17, col:30> 'bool'
+  // CHECK-NEXT: value: Int 1
   // CHECK-NEXT: BinaryOperator
   // CHECK-NEXT: UnaryExprOrTypeTraitExpr
   // CHECK-NEXT: ParenExpr

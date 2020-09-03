@@ -15,7 +15,7 @@
 #include "X86ATTInstPrinter.h"
 #include "X86BaseInfo.h"
 #include "X86MCTargetDesc.h"
-#include "Utils/X86ShuffleDecode.h"
+#include "X86ShuffleDecode.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/raw_ostream.h"
@@ -199,6 +199,40 @@ using namespace llvm;
   CASE_AVX512_INS_COMMON(Inst##SD, Z, m_Int)      \
   CASE_AVX512_INS_COMMON(Inst##SS, Z, m_Int)
 
+#define CASE_FMA4(Inst, suf)                      \
+  CASE_AVX_INS_COMMON(Inst, 4, suf)               \
+  CASE_AVX_INS_COMMON(Inst, 4Y, suf)
+
+#define CASE_FMA4_PACKED_RR(Inst)                 \
+  CASE_FMA4(Inst##PD, rr)                         \
+  CASE_FMA4(Inst##PS, rr)
+
+#define CASE_FMA4_PACKED_RM(Inst)                 \
+  CASE_FMA4(Inst##PD, rm)                         \
+  CASE_FMA4(Inst##PS, rm)
+
+#define CASE_FMA4_PACKED_MR(Inst)                 \
+  CASE_FMA4(Inst##PD, mr)                         \
+  CASE_FMA4(Inst##PS, mr)
+
+#define CASE_FMA4_SCALAR_RR(Inst)                 \
+  CASE_AVX_INS_COMMON(Inst##SD4, , rr)            \
+  CASE_AVX_INS_COMMON(Inst##SS4, , rr)            \
+  CASE_AVX_INS_COMMON(Inst##SD4, , rr_Int)        \
+  CASE_AVX_INS_COMMON(Inst##SS4, , rr_Int)
+
+#define CASE_FMA4_SCALAR_RM(Inst)                 \
+  CASE_AVX_INS_COMMON(Inst##SD4, , rm)            \
+  CASE_AVX_INS_COMMON(Inst##SS4, , rm)            \
+  CASE_AVX_INS_COMMON(Inst##SD4, , rm_Int)        \
+  CASE_AVX_INS_COMMON(Inst##SS4, , rm_Int)
+
+#define CASE_FMA4_SCALAR_MR(Inst)                 \
+  CASE_AVX_INS_COMMON(Inst##SD4, , mr)            \
+  CASE_AVX_INS_COMMON(Inst##SS4, , mr)            \
+  CASE_AVX_INS_COMMON(Inst##SD4, , mr_Int)        \
+  CASE_AVX_INS_COMMON(Inst##SS4, , mr_Int)
+
 static unsigned getVectorRegSize(unsigned RegNo) {
   if (X86::ZMM0 <= RegNo && RegNo <= X86::ZMM31)
     return 512;
@@ -247,14 +281,15 @@ static void printMasking(raw_ostream &OS, const MCInst *MI,
     OS << " {z}";
 }
 
-static bool printFMA3Comments(const MCInst *MI, raw_ostream &OS) {
+static bool printFMAComments(const MCInst *MI, raw_ostream &OS,
+                             const MCInstrInfo &MCII) {
   const char *Mul1Name = nullptr, *Mul2Name = nullptr, *AccName = nullptr;
   unsigned NumOperands = MI->getNumOperands();
   bool RegForm = false;
   bool Negate = false;
   StringRef AccStr = "+";
 
-  // The operands for FMA instructions without rounding fall into two forms.
+  // The operands for FMA3 instructions without rounding fall into two forms:
   //  dest, src1, src2, src3
   //  dest, src1, mask, src2, src3
   // Where src3 is either a register or 5 memory address operands. So to find
@@ -262,9 +297,112 @@ static bool printFMA3Comments(const MCInst *MI, raw_ostream &OS) {
   // index from the end by taking into account memory vs register form when
   // finding src2.
 
+  // The operands for FMA4 instructions:
+  //  dest, src1, src2, src3
+  // Where src2 OR src3 are either a register or 5 memory address operands. So
+  // to find dest and src1 we can index from the front, src2 (reg/mem) follows
+  // and then src3 (reg) will be at the end.
+
   switch (MI->getOpcode()) {
   default:
     return false;
+
+  CASE_FMA4_PACKED_RR(FMADD)
+  CASE_FMA4_SCALAR_RR(FMADD)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
+  CASE_FMA4_PACKED_RM(FMADD)
+  CASE_FMA4_SCALAR_RM(FMADD)
+    Mul2Name = getRegName(MI->getOperand(2).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    break;
+  CASE_FMA4_PACKED_MR(FMADD)
+  CASE_FMA4_SCALAR_MR(FMADD)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    break;
+
+  CASE_FMA4_PACKED_RR(FMSUB)
+  CASE_FMA4_SCALAR_RR(FMSUB)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
+  CASE_FMA4_PACKED_RM(FMSUB)
+  CASE_FMA4_SCALAR_RM(FMSUB)
+    Mul2Name = getRegName(MI->getOperand(2).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    break;
+  CASE_FMA4_PACKED_MR(FMSUB)
+  CASE_FMA4_SCALAR_MR(FMSUB)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    break;
+
+  CASE_FMA4_PACKED_RR(FNMADD)
+  CASE_FMA4_SCALAR_RR(FNMADD)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
+  CASE_FMA4_PACKED_RM(FNMADD)
+  CASE_FMA4_SCALAR_RM(FNMADD)
+    Mul2Name = getRegName(MI->getOperand(2).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    Negate = true;
+    break;
+  CASE_FMA4_PACKED_MR(FNMADD)
+  CASE_FMA4_SCALAR_MR(FNMADD)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    Negate = true;
+    break;
+
+  CASE_FMA4_PACKED_RR(FNMSUB)
+  CASE_FMA4_SCALAR_RR(FNMSUB)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
+  CASE_FMA4_PACKED_RM(FNMSUB)
+  CASE_FMA4_SCALAR_RM(FNMSUB)
+    Mul2Name = getRegName(MI->getOperand(2).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    Negate = true;
+    break;
+  CASE_FMA4_PACKED_MR(FNMSUB)
+  CASE_FMA4_SCALAR_MR(FNMSUB)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-";
+    Negate = true;
+    break;
+
+  CASE_FMA4_PACKED_RR(FMADDSUB)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
+  CASE_FMA4_PACKED_RM(FMADDSUB)
+    Mul2Name = getRegName(MI->getOperand(2).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "+/-";
+    break;
+  CASE_FMA4_PACKED_MR(FMADDSUB)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "+/-";
+    break;
+
+  CASE_FMA4_PACKED_RR(FMSUBADD)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
+  CASE_FMA4_PACKED_RM(FMSUBADD)
+    Mul2Name = getRegName(MI->getOperand(2).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-/+";
+    break;
+  CASE_FMA4_PACKED_MR(FMSUBADD)
+    AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    Mul1Name = getRegName(MI->getOperand(1).getReg());
+    AccStr = "-/+";
+    break;
+
   CASE_FMA_PACKED_REG(FMADD132)
   CASE_FMA_SCALAR_REG(FMADD132)
     Mul2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
@@ -476,8 +614,9 @@ static bool printFMA3Comments(const MCInst *MI, raw_ostream &OS) {
   if (!Mul2Name) Mul2Name = "mem";
   if (!AccName)  AccName = "mem";
 
-  OS << DestName << " = ";
-  // TODO: Print masking information?
+  OS << DestName;
+  printMasking(OS, MI, MCII);
+  OS << " = ";
 
   if (Negate)
     OS << '-';
@@ -504,7 +643,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   unsigned NumOperands = MI->getNumOperands();
   bool RegForm = false;
 
-  if (printFMA3Comments(MI, OS))
+  if (printFMAComments(MI, OS, MCII))
     return true;
 
   switch (MI->getOpcode()) {
@@ -669,14 +808,14 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::PSLLDQri:
   case X86::VPSLLDQri:
   case X86::VPSLLDQYri:
-  case X86::VPSLLDQZ128rr:
-  case X86::VPSLLDQZ256rr:
-  case X86::VPSLLDQZrr:
+  case X86::VPSLLDQZ128ri:
+  case X86::VPSLLDQZ256ri:
+  case X86::VPSLLDQZri:
     Src1Name = getRegName(MI->getOperand(1).getReg());
     LLVM_FALLTHROUGH;
-  case X86::VPSLLDQZ128rm:
-  case X86::VPSLLDQZ256rm:
-  case X86::VPSLLDQZrm:
+  case X86::VPSLLDQZ128mi:
+  case X86::VPSLLDQZ256mi:
+  case X86::VPSLLDQZmi:
     DestName = getRegName(MI->getOperand(0).getReg());
     if (MI->getOperand(NumOperands - 1).isImm())
       DecodePSLLDQMask(getRegOperandNumElts(MI, 8, 0),
@@ -687,14 +826,14 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::PSRLDQri:
   case X86::VPSRLDQri:
   case X86::VPSRLDQYri:
-  case X86::VPSRLDQZ128rr:
-  case X86::VPSRLDQZ256rr:
-  case X86::VPSRLDQZrr:
+  case X86::VPSRLDQZ128ri:
+  case X86::VPSRLDQZ256ri:
+  case X86::VPSRLDQZri:
     Src1Name = getRegName(MI->getOperand(1).getReg());
     LLVM_FALLTHROUGH;
-  case X86::VPSRLDQZ128rm:
-  case X86::VPSRLDQZ256rm:
-  case X86::VPSRLDQZrm:
+  case X86::VPSRLDQZ128mi:
+  case X86::VPSRLDQZ256mi:
+  case X86::VPSRLDQZmi:
     DestName = getRegName(MI->getOperand(0).getReg());
     if (MI->getOperand(NumOperands - 1).isImm())
       DecodePSRLDQMask(getRegOperandNumElts(MI, 8, 0),
@@ -1178,28 +1317,28 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DecodeSubVectorBroadcast(16, 8, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z128, r)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z128, rr)
     Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
     LLVM_FALLTHROUGH;
-  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z128, m)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z128, rm)
     DecodeSubVectorBroadcast(4, 2, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z256, r)
-  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z256, r)
+  CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z256, rr)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z256, rr)
     Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
     LLVM_FALLTHROUGH;
-  CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z256, m)
-  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z256, m)
+  CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z256, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z256, rm)
     DecodeSubVectorBroadcast(8, 2, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z, r)
-  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z, r)
+  CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z, rr)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z, rr)
     Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
     LLVM_FALLTHROUGH;
-  CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z, m)
-  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z, m)
+  CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z, rm)
     DecodeSubVectorBroadcast(16, 2, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;

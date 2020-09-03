@@ -313,11 +313,11 @@ struct OpenCLTypeStruct {
   // Vector size (if applicable; 0 for scalars and generic types).
   const unsigned VectorWidth;
   // 0 if the type is not a pointer.
-  const bool IsPointer;
+  const bool IsPointer : 1;
   // 0 if the type is not const.
-  const bool IsConst;
+  const bool IsConst : 1;
   // 0 if the type is not volatile.
-  const bool IsVolatile;
+  const bool IsVolatile : 1;
   // Access qualifier.
   const OpenCLAccessQual AccessQualifier;
   // Address space of the pointer (if applicable).
@@ -333,11 +333,11 @@ struct OpenCLBuiltinStruct {
   // index SigTableIndex is the return type.
   const unsigned NumTypes;
   // Function attribute __attribute__((pure))
-  const bool IsPure;
+  const bool IsPure : 1;
   // Function attribute __attribute__((const))
-  const bool IsConst;
+  const bool IsConst : 1;
   // Function attribute __attribute__((convergent))
-  const bool IsConv;
+  const bool IsConv : 1;
   // OpenCL extension(s) required for this overload.
   const unsigned short Extension;
   // First OpenCL version in which this overload was introduced (e.g. CL20).
@@ -473,11 +473,18 @@ void BuiltinNameEmitter::EmitSignatureTable() {
   // Store a type (e.g. int, float, int2, ...). The type is stored as an index
   // of a struct OpenCLType table. Multiple entries following each other form a
   // signature.
-  OS << "static const unsigned SignatureTable[] = {\n";
+  OS << "static const unsigned short SignatureTable[] = {\n";
   for (const auto &P : SignaturesList) {
     OS << "  // " << P.second << "\n  ";
     for (const Record *R : P.first) {
-      OS << TypeMap.find(R)->second << ", ";
+      unsigned Entry = TypeMap.find(R)->second;
+      if (Entry > USHRT_MAX) {
+        // Report an error when seeing an entry that is too large for the
+        // current index type (unsigned short).  When hitting this, the type
+        // of SignatureTable will need to be changed.
+        PrintFatalError("Entry in SignatureTable exceeds limit.");
+      }
+      OS << Entry << ", ";
     }
     OS << "\n";
   }
@@ -553,7 +560,7 @@ void BuiltinNameEmitter::GroupBySignature() {
       CurSignatureList->push_back(Signature.second);
     }
     // Sort the list to facilitate future comparisons.
-    std::sort(CurSignatureList->begin(), CurSignatureList->end());
+    llvm::sort(*CurSignatureList);
 
     // Check if we have already seen another function with the same list of
     // signatures.  If so, just add the name of the function.
@@ -597,7 +604,8 @@ void BuiltinNameEmitter::EmitStringMatcher() {
       SS << "return std::make_pair(" << CumulativeIndex << ", " << Ovl.size()
          << ");";
       SS.flush();
-      ValidBuiltins.push_back(StringMatcher::StringPair(FctName, RetStmt));
+      ValidBuiltins.push_back(
+          StringMatcher::StringPair(std::string(FctName), RetStmt));
     }
     CumulativeIndex += Ovl.size();
   }
@@ -751,9 +759,7 @@ static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
   }
 
   // End of switch statement.
-  OS << "    default:\n"
-     << "      llvm_unreachable(\"OpenCL builtin type not handled yet\");\n"
-     << "  } // end of switch (Ty.ID)\n\n";
+  OS << "  } // end of switch (Ty.ID)\n\n";
 
   // Step 2.
   // Add ExtVector types if this was a generic type, as the switch statement

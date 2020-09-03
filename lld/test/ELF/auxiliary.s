@@ -10,6 +10,6 @@
 # CHECK-NEXT: 0x000000007FFFFFFD AUXILIARY     Auxiliary library: [aaa]
 # CHECK-NEXT: 0x000000007FFFFFFD AUXILIARY     Auxiliary library: [bbb]
 
-# RUN: not ld.lld %t.o -f aaa --auxiliary bbb -o %t 2>&1 \
+# RUN: not ld.lld %t.o -f aaa --auxiliary bbb -o /dev/null 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR %s
 # ERR: -f may not be used without -shared

@@ -150,10 +150,9 @@ static MCAsmInfo *createSystemZMCAsmInfo(const MCRegisterInfo &MRI,
                                          const Triple &TT,
                                          const MCTargetOptions &Options) {
   MCAsmInfo *MAI = new SystemZMCAsmInfo(TT);
-  MCCFIInstruction Inst =
-      MCCFIInstruction::createDefCfa(nullptr,
-                                     MRI.getDwarfRegNum(SystemZ::R15D, true),
-                                     SystemZMC::CFAOffsetFromInitialSP);
+  MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(
+      nullptr, MRI.getDwarfRegNum(SystemZ::R15D, true),
+      SystemZMC::CFAOffsetFromInitialSP);
   MAI->addInitialFrameState(Inst);
   return MAI;
 }
@@ -183,7 +182,7 @@ static MCInstPrinter *createSystemZMCInstPrinter(const Triple &T,
   return new SystemZInstPrinter(MAI, MII, MRI);
 }
 
-extern "C" void LLVMInitializeSystemZTargetMC() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
   // Register the MCAsmInfo.
   TargetRegistry::RegisterMCAsmInfo(getTheSystemZTarget(),
                                     createSystemZMCAsmInfo);

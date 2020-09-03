@@ -139,95 +139,6 @@ entry:
   ret void
 }
 
-; Legacy use of r600 intrinsics by GCN
-
-; The tgid values are stored in sgprs offset by the number of user
-; sgprs.
-
-; FUNC-LABEL: {{^}}tgid_x_legacy:
-; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], s2{{$}}
-; GCN-NOHSA: buffer_store_dword [[VVAL]]
-
-; GCN-NOHSA: COMPUTE_PGM_RSRC2:USER_SGPR: 2
-; GCN: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
-; GCN: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
-; GCN: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
-; GCN: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
-define amdgpu_kernel void @tgid_x_legacy(i32 addrspace(1)* %out) {
-entry:
-  %0 = call i32 @llvm.r600.read.tgid.x() #0
-  store i32 %0, i32 addrspace(1)* %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}tgid_y_legacy:
-; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], s3
-; GCN-NOHSA: buffer_store_dword [[VVAL]]
-
-; GCN-NOHSA: COMPUTE_PGM_RSRC2:USER_SGPR: 2
-define amdgpu_kernel void @tgid_y_legacy(i32 addrspace(1)* %out) {
-entry:
-  %0 = call i32 @llvm.r600.read.tgid.y() #0
-  store i32 %0, i32 addrspace(1)* %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}tgid_z_legacy:
-; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], s3{{$}}
-; GCN-NOHSA: buffer_store_dword [[VVAL]]
-
-; GCN-NOHSA: COMPUTE_PGM_RSRC2:USER_SGPR: 2
-; GCN: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
-; GCN: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
-; GCN: COMPUTE_PGM_RSRC2:TGID_Z_EN: 1
-; GCN: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
-define amdgpu_kernel void @tgid_z_legacy(i32 addrspace(1)* %out) {
-entry:
-  %0 = call i32 @llvm.r600.read.tgid.z() #0
-  store i32 %0, i32 addrspace(1)* %out
-  ret void
-}
-
-; GCN-NOHSA: .section .AMDGPU.config
-; GCN-NOHSA: .long 47180
-; GCN-NOHSA-NEXT: .long 132{{$}}
-
-; FUNC-LABEL: {{^}}tidig_x_legacy:
-; GCN-NOHSA: buffer_store_dword v0
-define amdgpu_kernel void @tidig_x_legacy(i32 addrspace(1)* %out) {
-entry:
-  %0 = call i32 @llvm.r600.read.tidig.x() #0
-  store i32 %0, i32 addrspace(1)* %out
-  ret void
-}
-
-; GCN-NOHSA: .section .AMDGPU.config
-; GCN-NOHSA: .long 47180
-; GCN-NOHSA-NEXT: .long 2180{{$}}
-
-; FUNC-LABEL: {{^}}tidig_y_legacy:
-
-; GCN-NOHSA: buffer_store_dword v1
-define amdgpu_kernel void @tidig_y_legacy(i32 addrspace(1)* %out) {
-entry:
-  %0 = call i32 @llvm.r600.read.tidig.y() #0
-  store i32 %0, i32 addrspace(1)* %out
-  ret void
-}
-
-; GCN-NOHSA: .section .AMDGPU.config
-; GCN-NOHSA: .long 47180
-; GCN-NOHSA-NEXT: .long 4228{{$}}
-
-; FUNC-LABEL: {{^}}tidig_z_legacy:
-; GCN-NOHSA: buffer_store_dword v2
-define amdgpu_kernel void @tidig_z_legacy(i32 addrspace(1)* %out) {
-entry:
-  %0 = call i32 @llvm.r600.read.tidig.z() #0
-  store i32 %0, i32 addrspace(1)* %out
-  ret void
-}
-
 declare i32 @llvm.r600.read.ngroups.x() #0
 declare i32 @llvm.r600.read.ngroups.y() #0
 declare i32 @llvm.r600.read.ngroups.z() #0
@@ -239,13 +150,5 @@ declare i32 @llvm.r600.read.global.size.z() #0
 declare i32 @llvm.r600.read.local.size.x() #0
 declare i32 @llvm.r600.read.local.size.y() #0
 declare i32 @llvm.r600.read.local.size.z() #0
-
-declare i32 @llvm.r600.read.tgid.x() #0
-declare i32 @llvm.r600.read.tgid.y() #0
-declare i32 @llvm.r600.read.tgid.z() #0
-
-declare i32 @llvm.r600.read.tidig.x() #0
-declare i32 @llvm.r600.read.tidig.y() #0
-declare i32 @llvm.r600.read.tidig.z() #0
 
 attributes #0 = { readnone }

@@ -25,7 +25,7 @@ define i32 @test3(i32 %a) {
 ; CHECK-LABEL: test3:
 ; CHECK-NOT: mul
 ; CHECK: slwi r[[REG1:[0-9]+]], r3, 4
-; CHECK-NEXT: subf r[[REG2:[0-9]+]], r3, r[[REG1]]
+; CHECK-NEXT: sub r[[REG2:[0-9]+]], r[[REG1]], r3
 
 ; negtive constant
 
@@ -56,7 +56,7 @@ define i32 @test6(i32 %a) {
 ; CHECK-LABEL: test6:
 ; CHECK-NOT: mul
 ; CHECK: slwi r[[REG1:[0-9]+]], r3, 4
-; CHECK-NEXT: subf r[[REG2:[0-9]+]], r[[REG1]], r3
+; CHECK-NEXT: sub r[[REG2:[0-9]+]], r3, r[[REG1]]
 ; CHECK-NOT: neg
 
 ; boundary case
@@ -76,4 +76,4 @@ define i32 @test8(i32 %a) {
 ; CHECK-LABEL: test8:
 ; CHECK-NOT: mul
 ; CHECK: slwi r[[REG1:[0-9]+]], r3, 31
-; CHECK-NEXT: subf r[[REG2:[0-9]+]], r3, r[[REG1]]
+; CHECK-NEXT: sub r[[REG2:[0-9]+]], r[[REG1]], r3

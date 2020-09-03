@@ -35,8 +35,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_load_mip_v4f16:
-; UNPACKED: image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm d16{{$}}
-; PACKED: image_load_mip v[0:1], v[0:3], s[0:7] dmask:0xf unorm d16{{$}}
+; UNPACKED: image_load_mip v[0:3], v[0:2], s[0:7] dmask:0xf unorm d16{{$}}
+; PACKED: image_load_mip v[0:1], v[0:2], s[0:7] dmask:0xf unorm d16{{$}}
 ; GFX10: image_load_mip v[0:1], v[0:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm d16{{$}}
 define amdgpu_ps <2 x float> @image_load_mip_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %mip) {
 main_body:
@@ -46,8 +46,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_load_3d_v2f16:
-; UNPACKED: image_load v[0:1], v[0:3], s[0:7] dmask:0x3 unorm d16{{$}}
-; PACKED: image_load v0, v[0:3], s[0:7] dmask:0x3 unorm d16{{$}}
+; UNPACKED: image_load v[0:1], v[0:2], s[0:7] dmask:0x3 unorm d16{{$}}
+; PACKED: image_load v0, v[0:2], s[0:7] dmask:0x3 unorm d16{{$}}
 ; GFX10: image_load v0, v[0:2], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_3D unorm d16{{$}}
 define amdgpu_ps float @image_load_3d_v2f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %r) {
 main_body:

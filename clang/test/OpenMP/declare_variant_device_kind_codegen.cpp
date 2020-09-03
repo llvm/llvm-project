@@ -40,20 +40,11 @@
 
 // expected-no-diagnostics
 
+// CHECK-NOT: alias
+
 // CHECK-NOT: ret i32 {{1|4|81|84}}
-// CHECK-DAG: @_Z3barv = {{.*}}alias i32 (), i32 ()* @_Z3foov
-// CHECK-DAG: @_ZN16SpecSpecialFuncs6MethodEv = {{.*}}alias i32 (%struct.SpecSpecialFuncs*), i32 (%struct.SpecSpecialFuncs*)* @_ZN16SpecSpecialFuncs7method_Ev
-// CHECK-DAG: @_ZN16SpecSpecialFuncs6methodEv = linkonce_odr {{.*}}alias i32 (%struct.SpecSpecialFuncs*), i32 (%struct.SpecSpecialFuncs*)* @_ZN16SpecSpecialFuncs7method_Ev
-// CHECK-DAG: @_ZN12SpecialFuncs6methodEv = linkonce_odr {{.*}}alias i32 (%struct.SpecialFuncs*), i32 (%struct.SpecialFuncs*)* @_ZN12SpecialFuncs7method_Ev
-// CHECK-DAG: @_Z5prio_v = {{.*}}alias i32 (), i32 ()* @_Z5prio1v
-// CHECK-DAG: @_ZL6prio1_v = internal alias i32 (), i32 ()* @_ZL5prio2v
-// CHECK-DAG: @_Z4callv = {{.*}}alias i32 (), i32 ()* @_Z4testv
-// CHECK-DAG: @_ZL9stat_usedv = internal alias i32 (), i32 ()* @_ZL10stat_used_v
-// CHECK-DAG: @_ZN12SpecialFuncs6MethodEv = {{.*}}alias i32 (%struct.SpecialFuncs*), i32 (%struct.SpecialFuncs*)* @_ZN12SpecialFuncs7method_Ev
-// CHECK-DAG: @fn_linkage = {{.*}}alias i32 (), i32 ()* @_Z18fn_linkage_variantv
-// CHECK-DAG: @_Z11fn_linkage1v = {{.*}}alias i32 (), i32 ()* @fn_linkage_variant1
 // CHECK-DAG: declare {{.*}}i32 @_Z5bazzzv()
-// CHECK-DAG: declare {{.*}}i32 @_Z3bazv()
+// CHECK-DAG: define {{.*}}i32 @_Z3bazv()
 // CHECK-DAG: ret i32 2
 // CHECK-DAG: ret i32 3
 // CHECK-DAG: ret i32 5
@@ -64,25 +55,25 @@
 // CHECK-DAG: ret i32 85
 // CHECK-DAG: ret i32 86
 // CHECK-DAG: ret i32 87
-// CHECK-NOT: ret i32 {{1|4|81|84}}
+// CHECK-NOT: ret i32 {{4|81|84}}
 
 #ifndef HEADER
 #define HEADER
 
 #pragma omp declare target
 #ifdef HOST
-#define CORRECT host
-#define SUBSET host, cpu
+#define SUBSET host
+#define CORRECT host, cpu
 #define WRONG host, nohost
 #endif // HOST
 #ifdef CPU
-#define CORRECT cpu
-#define SUBSET host, cpu
+#define SUBSET cpu
+#define CORRECT cpu, any
 #define WRONG cpu, gpu
 #endif // CPU
 #ifdef NOHOST
-#define CORRECT nohost
-#define SUBSET nohost, cpu
+#define SUBSET nohost
+#define CORRECT nohost, cpu
 #define WRONG nohost, host
 #endif // NOHOST
 

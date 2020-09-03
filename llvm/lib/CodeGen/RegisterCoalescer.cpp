@@ -571,7 +571,7 @@ void RegisterCoalescer::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 void RegisterCoalescer::eliminateDeadDefs() {
-  SmallVector<unsigned, 8> NewRegs;
+  SmallVector<Register, 8> NewRegs;
   LiveRangeEdit(nullptr, NewRegs, *MF, *LIS,
                 nullptr, this).eliminateDeadDefs(DeadDefs);
 }
@@ -674,6 +674,12 @@ bool RegisterCoalescer::adjustCopiesBackFrom(const CoalescerPair &CP,
     if (SS != S.end() && SlotIndex::isSameInstr(SS->start, SS->end)) {
       S.removeSegment(*SS, true);
       continue;
+    }
+    // The subrange may have ended before FillerStart. If so, extend it.
+    if (!S.getVNInfoAt(FillerStart)) {
+      SlotIndex BBStart =
+          LIS->getMBBStartIdx(LIS->getMBBFromIndex(FillerStart));
+      S.extendInBlock(BBStart, FillerStart);
     }
     VNInfo *SubBValNo = S.getVNInfoAt(CopyIdx);
     S.addSegment(LiveInterval::Segment(FillerStart, FillerEnd, SubBValNo));
@@ -1058,7 +1064,9 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
     return false;
 
   MachineBasicBlock &MBB = *CopyMI.getParent();
-  if (MBB.isEHPad())
+  // If this block is the target of an invoke/inlineasm_br, moving the copy into
+  // the predecessor is tricker, and we don't handle it.
+  if (MBB.isEHPad() || MBB.isInlineAsmBrIndirectTarget())
     return false;
 
   if (MBB.pred_size() != 2)
@@ -1439,6 +1447,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
       SlotIndex CurrIdx = LIS->getInstructionIndex(NewMI);
       LaneBitmask DstMask = TRI->getSubRegIndexLaneMask(NewIdx);
       bool UpdatedSubRanges = false;
+      SlotIndex DefIndex =
+          CurrIdx.getRegSlot(NewMI.getOperand(0).isEarlyClobber());
+      VNInfo::Allocator &Alloc = LIS->getVNInfoAllocator();
       for (LiveInterval::SubRange &SR : DstInt.subranges()) {
         if ((SR.LaneMask & DstMask).none()) {
           LLVM_DEBUG(dbgs()
@@ -1449,6 +1460,14 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
             SR.removeValNo(RmValNo);
             UpdatedSubRanges = true;
           }
+        } else {
+          // We know that this lane is defined by this instruction,
+          // but at this point it may be empty because it is not used by
+          // anything. This happens when updateRegDefUses adds the missing
+          // lanes. Assign that lane a dead def so that the interferences
+          // are properly modeled.
+          if (SR.empty())
+            SR.createDeadDef(DefIndex, Alloc);
         }
       }
       if (UpdatedSubRanges)
@@ -2412,7 +2431,7 @@ public:
   /// Add foreign virtual registers to ShrinkRegs if their live range ended at
   /// the erased instrs.
   void eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
-                   SmallVectorImpl<unsigned> &ShrinkRegs,
+                   SmallVectorImpl<Register> &ShrinkRegs,
                    LiveInterval *LI = nullptr);
 
   /// Remove liverange defs at places where implicit defs will be removed.
@@ -2885,7 +2904,8 @@ bool JoinVals::resolveConflicts(JoinVals &Other) {
     if (V.Resolution != CR_Unresolved)
       continue;
     LLVM_DEBUG(dbgs() << "\t\tconflict at " << printReg(Reg) << ':' << i << '@'
-                      << LR.getValNumInfo(i)->def << '\n');
+                      << LR.getValNumInfo(i)->def
+                      << ' ' << PrintLaneMask(LaneMask) << '\n');
     if (SubRangeJoin)
       return false;
 
@@ -3153,7 +3173,7 @@ void JoinVals::removeImplicitDefs() {
 }
 
 void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
-                           SmallVectorImpl<unsigned> &ShrinkRegs,
+                           SmallVectorImpl<Register> &ShrinkRegs,
                            LiveInterval *LI) {
   for (unsigned i = 0, e = LR.getNumValNums(); i != e; ++i) {
     // Get the def location before markUnused() below invalidates it.
@@ -3421,7 +3441,7 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 
   // Erase COPY and IMPLICIT_DEF instructions. This may cause some external
   // registers to require trimming.
-  SmallVector<unsigned, 8> ShrinkRegs;
+  SmallVector<Register, 8> ShrinkRegs;
   LHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs, &LHS);
   RHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs);
   while (!ShrinkRegs.empty())
@@ -3470,7 +3490,7 @@ void RegisterCoalescer::buildVRegToDbgValueMap(MachineFunction &MF)
   // vreg => DbgValueLoc map.
   auto CloseNewDVRange = [this, &ToInsert](SlotIndex Slot) {
     for (auto *X : ToInsert)
-      DbgVRegToValues[X->getOperand(0).getReg()].push_back({Slot, X});
+      DbgVRegToValues[X->getDebugOperand(0).getReg()].push_back({Slot, X});
 
     ToInsert.clear();
   };
@@ -3482,8 +3502,8 @@ void RegisterCoalescer::buildVRegToDbgValueMap(MachineFunction &MF)
     SlotIndex CurrentSlot = Slots.getMBBStartIdx(&MBB);
 
     for (auto &MI : MBB) {
-      if (MI.isDebugValue() && MI.getOperand(0).isReg() &&
-          MI.getOperand(0).getReg().isVirtual()) {
+      if (MI.isDebugValue() && MI.getDebugOperand(0).isReg() &&
+          MI.getDebugOperand(0).getReg().isVirtual()) {
         ToInsert.push_back(&MI);
       } else if (!MI.isDebugInstr()) {
         CurrentSlot = Slots.getInstructionIndex(MI);
@@ -3582,10 +3602,10 @@ void RegisterCoalescer::checkMergingChangesDbgValuesImpl(unsigned Reg,
       // "Other" is live and there is a DBG_VALUE of Reg: test if we should
       // set it undef.
       if (DbgValueSetIt->first >= SegmentIt->start &&
-          DbgValueSetIt->second->getOperand(0).getReg() != 0 &&
+          DbgValueSetIt->second->getDebugOperand(0).getReg() != 0 &&
           ShouldUndef(DbgValueSetIt->first)) {
         // Mark undef, erase record of this DBG_VALUE to avoid revisiting.
-        DbgValueSetIt->second->getOperand(0).setReg(0);
+        DbgValueSetIt->second->setDebugValueUndef();
         continue;
       }
       ++DbgValueSetIt;
@@ -3853,6 +3873,23 @@ void RegisterCoalescer::releaseMemory() {
 }
 
 bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
+  LLVM_DEBUG(dbgs() << "********** SIMPLE REGISTER COALESCING **********\n"
+                    << "********** Function: " << fn.getName() << '\n');
+
+  // Variables changed between a setjmp and a longjump can have undefined value
+  // after the longjmp. This behaviour can be observed if such a variable is
+  // spilled, so longjmp won't restore the value in the spill slot.
+  // RegisterCoalescer should not run in functions with a setjmp to avoid
+  // merging such undefined variables with predictable ones.
+  //
+  // TODO: Could specifically disable coalescing registers live across setjmp
+  // calls
+  if (fn.exposesReturnsTwice()) {
+    LLVM_DEBUG(
+        dbgs() << "* Skipped as it exposes funcions that returns twice.\n");
+    return false;
+  }
+
   MF = &fn;
   MRI = &fn.getRegInfo();
   const TargetSubtargetInfo &STI = fn.getSubtarget();
@@ -3870,9 +3907,6 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   // either be enabled unconditionally or replaced by a more general live range
   // splitting optimization.
   JoinSplitEdges = EnableJoinSplits;
-
-  LLVM_DEBUG(dbgs() << "********** SIMPLE REGISTER COALESCING **********\n"
-                    << "********** Function: " << MF->getName() << '\n');
 
   if (VerifyCoalescing)
     MF->verify(this, "Before register coalescing");

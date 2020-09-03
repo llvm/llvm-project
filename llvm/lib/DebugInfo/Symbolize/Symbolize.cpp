@@ -51,8 +51,9 @@ LLVMSymbolizer::symbolizeCodeCommon(SymbolizableModule *Info,
   if (Opts.RelativeAddresses)
     ModuleOffset.Address += Info->getModulePreferredBase();
 
-  DILineInfo LineInfo = Info->symbolizeCode(ModuleOffset, Opts.PrintFunctions,
-                                            Opts.UseSymbolTable);
+  DILineInfo LineInfo = Info->symbolizeCode(
+      ModuleOffset, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
+      Opts.UseSymbolTable);
   if (Opts.Demangle)
     LineInfo.FunctionName = DemangleName(LineInfo.FunctionName, Info);
   return LineInfo;
@@ -66,8 +67,7 @@ LLVMSymbolizer::symbolizeCode(const ObjectFile &Obj,
   if (I != Modules.end())
     return symbolizeCodeCommon(I->second.get(), ModuleOffset);
 
-  std::unique_ptr<DIContext> Context =
-        DWARFContext::create(Obj, nullptr, DWARFContext::defaultErrorHandler);
+  std::unique_ptr<DIContext> Context = DWARFContext::create(Obj);
   Expected<SymbolizableModule *> InfoOrErr =
                      createModuleInfo(&Obj, std::move(Context), ModuleName);
   if (!InfoOrErr)
@@ -104,7 +104,8 @@ LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
     ModuleOffset.Address += Info->getModulePreferredBase();
 
   DIInliningInfo InlinedContext = Info->symbolizeInlinedCode(
-      ModuleOffset, Opts.PrintFunctions, Opts.UseSymbolTable);
+      ModuleOffset, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
+      Opts.UseSymbolTable);
   if (Opts.Demangle) {
     for (int i = 0, n = InlinedContext.getNumberOfFrames(); i < n; i++) {
       auto *Frame = InlinedContext.getMutableFrame(i);
@@ -184,7 +185,7 @@ std::string getDarwinDWARFResourceForPath(
   }
   sys::path::append(ResourceName, "Contents", "Resources", "DWARF");
   sys::path::append(ResourceName, Basename);
-  return ResourceName.str();
+  return std::string(ResourceName.str());
 }
 
 bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
@@ -205,14 +206,14 @@ bool findDebugBinary(const std::string &OrigPath,
   // Try relative/path/to/original_binary/debuglink_name
   llvm::sys::path::append(DebugPath, DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = DebugPath.str();
+    Result = std::string(DebugPath.str());
     return true;
   }
   // Try relative/path/to/original_binary/.debug/debuglink_name
   DebugPath = OrigDir;
   llvm::sys::path::append(DebugPath, ".debug", DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = DebugPath.str();
+    Result = std::string(DebugPath.str());
     return true;
   }
   // Make the path absolute so that lookups will go to
@@ -234,7 +235,7 @@ bool findDebugBinary(const std::string &OrigPath,
   llvm::sys::path::append(DebugPath, llvm::sys::path::relative_path(OrigDir),
                           DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = DebugPath.str();
+    Result = std::string(DebugPath.str());
     return true;
   }
   return false;
@@ -342,7 +343,7 @@ bool findDebugBinary(const std::vector<std::string> &DebugFileDirectory,
 #endif
     );
     if (llvm::sys::fs::exists(Path)) {
-      Result = Path.str();
+      Result = std::string(Path.str());
       return true;
     }
   } else {
@@ -350,7 +351,7 @@ bool findDebugBinary(const std::vector<std::string> &DebugFileDirectory,
       // Try <debug-file-directory>/.build-id/../...
       SmallString<128> Path = getDebugPath(Directory);
       if (llvm::sys::fs::exists(Path)) {
-        Result = Path.str();
+        Result = std::string(Path.str());
         return true;
       }
     }
@@ -366,9 +367,11 @@ ObjectFile *LLVMSymbolizer::lookUpDsymFile(const std::string &ExePath,
   // resource directory.
   std::vector<std::string> DsymPaths;
   StringRef Filename = sys::path::filename(ExePath);
-  DsymPaths.push_back(getDarwinDWARFResourceForPath(ExePath, Filename));
+  DsymPaths.push_back(
+      getDarwinDWARFResourceForPath(ExePath, std::string(Filename)));
   for (const auto &Path : Opts.DsymHints) {
-    DsymPaths.push_back(getDarwinDWARFResourceForPath(Path, Filename));
+    DsymPaths.push_back(
+        getDarwinDWARFResourceForPath(Path, std::string(Filename)));
   }
   for (const auto &Path : DsymPaths) {
     auto DbgObjOrErr = getOrCreateObject(Path, ArchName);
@@ -509,11 +512,11 @@ LLVMSymbolizer::createModuleInfo(const ObjectFile *Obj,
   std::unique_ptr<SymbolizableModule> SymMod;
   if (InfoOrErr)
     SymMod = std::move(*InfoOrErr);
-  auto InsertResult =
-      Modules.insert(std::make_pair(ModuleName, std::move(SymMod)));
+  auto InsertResult = Modules.insert(
+      std::make_pair(std::string(ModuleName), std::move(SymMod)));
   assert(InsertResult.second);
-  if (std::error_code EC = InfoOrErr.getError())
-    return errorCodeToError(EC);
+  if (!InfoOrErr)
+    return InfoOrErr.takeError();
   return InsertResult.first->second.get();
 }
 
@@ -552,8 +555,11 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
     if (!EC && DebugInfo != nullptr && !PDBFileName.empty()) {
       using namespace pdb;
       std::unique_ptr<IPDBSession> Session;
-      if (auto Err = loadDataForEXE(PDB_ReaderType::DIA,
-                                    Objects.first->getFileName(), Session)) {
+      PDB_ReaderType ReaderType = Opts.UseNativePDBReader
+                                      ? PDB_ReaderType::Native
+                                      : PDB_ReaderType::DIA;
+      if (auto Err = loadDataForEXE(ReaderType, Objects.first->getFileName(),
+                                    Session)) {
         Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());
         // Return along the PDB filename to provide more context
         return createFileError(PDBFileName, std::move(Err));
@@ -562,9 +568,7 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
     }
   }
   if (!Context)
-    Context =
-        DWARFContext::create(*Objects.second, nullptr,
-                             DWARFContext::defaultErrorHandler, Opts.DWPName);
+    Context = DWARFContext::create(*Objects.second, nullptr, Opts.DWPName);
   return createModuleInfo(Objects.first, std::move(Context), ModuleName);
 }
 
@@ -620,7 +624,7 @@ LLVMSymbolizer::DemangleName(const std::string &Name,
     // Only do MSVC C++ demangling on symbols starting with '?'.
     int status = 0;
     char *DemangledName = microsoftDemangle(
-        Name.c_str(), nullptr, nullptr, &status,
+        Name.c_str(), nullptr, nullptr, nullptr, &status,
         MSDemangleFlags(MSDF_NoAccessSpecifier | MSDF_NoCallingConvention |
                         MSDF_NoMemberType | MSDF_NoReturnType));
     if (status != 0)

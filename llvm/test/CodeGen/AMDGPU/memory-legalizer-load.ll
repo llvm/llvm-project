@@ -447,8 +447,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}nontemporal_private_0:
-; GFX89: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen glc slc{{$}}
-; GFX10: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen slc{{$}}
+; GFX89: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 offen glc slc{{$}}
+; GFX10: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 offen slc{{$}}
 ; GFX10:         .amdhsa_kernel nontemporal_private_0
 ; GFX10WGP-NOT:  .amdhsa_workgroup_processor_mode 0
 ; GFX10CU:       .amdhsa_workgroup_processor_mode 0
@@ -462,8 +462,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}nontemporal_private_1:
-; GFX89: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen glc slc{{$}}
-; GFX10: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen slc{{$}}
+; GFX89: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 offen glc slc{{$}}
+; GFX10: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 offen slc{{$}}
 ; GFX10:         .amdhsa_kernel nontemporal_private_1
 ; GFX10WGP-NOT:  .amdhsa_workgroup_processor_mode 0
 ; GFX10CU:       .amdhsa_workgroup_processor_mode 0
@@ -885,7 +885,8 @@ entry:
 ; GFX89:         flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GFX10WGP:      flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GFX10CU-NOT:   flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
-; GFX89-NOT:     s_waitcnt vmcnt(0){{$}}
+; GFX89:         s_waitcnt lgkmcnt(0){{$}}
+; GFX89:         s_waitcnt vmcnt(0){{$}}
 ; GFX10WGP:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
 ; GFX89-NOT:     buffer_wbinvl1_vol
 ; GFX10WGP-NEXT: buffer_gl0_inv
@@ -912,7 +913,8 @@ entry:
 ; GFX89:         flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GFX10WGP:      flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GFX10CU:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
-; GFX89-NOT:     s_waitcnt vmcnt(0){{$}}
+; GFX89:         s_waitcnt lgkmcnt(0){{$}}
+; GFX89:         s_waitcnt vmcnt(0){{$}}
 ; GFX10WGP-NEXT: s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
 ; GFX89-NOT:     buffer_wbinvl1_vol
 ; GFX10WGP-NEXT: buffer_gl0_inv

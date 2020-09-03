@@ -1,23 +1,19 @@
-add_llvm_pass_plugin(Bye
+if(LLVM_BYE_LINK_INTO_TOOLS)
+  message(WARNING "Setting LLVM_BYE_LINK_INTO_TOOLS=ON only makes sense for testing purpose")
+endif()
+
+# The plugin expects to not link against the Support and Core libraries,
+# but expects them to exist in the process loading the plugin. This doesn't
+# work with DLLs on Windows (where a shared library can't have undefined
+# references), so just skip this example on Windows.
+if (NOT WIN32)
+  add_llvm_pass_plugin(Bye
     Bye.cpp
     DEPENDS
     intrinsics_gen
     BUILDTREE_ONLY
-    )
+   )
 
-if (LLVM_LINK_LLVM_DYLIB)
-  target_link_libraries(Bye PUBLIC LLVM)
-else()
-  target_link_libraries(Bye
-    PUBLIC
-    LLVMSupport
-    LLVMCore
-    LLVMipo
-    LLVMPasses
-    )
-endif()
-
-if( LLVM_BUILD_EXAMPLES )
   install(TARGETS ${name} RUNTIME DESTINATION examples)
+  set_target_properties(${name} PROPERTIES FOLDER "Examples")
 endif()
-set_target_properties(${name} PROPERTIES FOLDER "Examples")

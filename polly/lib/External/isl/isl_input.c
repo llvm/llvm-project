@@ -2,6 +2,7 @@
  * Copyright 2008-2009 Katholieke Universiteit Leuven
  * Copyright 2010      INRIA Saclay
  * Copyright 2012-2013 Ecole Normale Superieure
+ * Copyright 2019      Cerebras Systems
  *
  * Use of this software is governed by the MIT license
  *
@@ -10,6 +11,7 @@
  * and INRIA Saclay - Ile-de-France, Parc Club Orsay Universite,
  * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France 
  * and Ecole Normale Superieure, 45 rue d’Ulm, 75230 Paris, France
+ * and Cerebras Systems, 175 S San Antonio Rd, Los Altos, CA, USA
  */
 
 #include <ctype.h>
@@ -17,6 +19,7 @@
 #include <string.h>
 #include <isl_ctx_private.h>
 #include <isl_map_private.h>
+#include <isl_id_private.h>
 #include <isl/set.h>
 #include <isl_seq.h>
 #include <isl_stream_private.h>
@@ -251,7 +254,30 @@ struct isl_val *isl_val_read_from_str(struct isl_ctx *ctx,
 	return val;
 }
 
-static int accept_cst_factor(__isl_keep isl_stream *s, isl_int *f)
+/* Perform an integer division on *f and
+ * an integer value read from the stream.
+ */
+static isl_stat int_div_by_cst(__isl_keep isl_stream *s, isl_int *f)
+{
+	struct isl_token *tok;
+
+	tok = next_token(s);
+	if (!tok || tok->type != ISL_TOKEN_VALUE) {
+		isl_stream_error(s, tok, "expecting constant value");
+		goto error;
+	}
+
+	isl_int_fdiv_q(*f, *f, tok->u.v);
+
+	isl_token_free(tok);
+
+	return isl_stat_ok;
+error:
+	isl_token_free(tok);
+	return isl_stat_error;
+}
+
+static isl_stat accept_cst_factor(__isl_keep isl_stream *s, isl_int *f)
 {
 	struct isl_token *tok;
 
@@ -268,10 +294,10 @@ static int accept_cst_factor(__isl_keep isl_stream *s, isl_int *f)
 	if (isl_stream_eat_if_available(s, '*'))
 		return accept_cst_factor(s, f);
 
-	return 0;
+	return isl_stat_ok;
 error:
 	isl_token_free(tok);
-	return -1;
+	return isl_stat_error;
 }
 
 /* Given an affine expression aff, return an affine expression
@@ -437,8 +463,24 @@ error:
 	return NULL;
 }
 
+/* Divide "pa" by an integer constant read from the stream.
+ */
+static __isl_give isl_pw_aff *pw_aff_div_by_cst(__isl_keep isl_stream *s,
+	__isl_take isl_pw_aff *pa)
+{
+	isl_int f;
+	isl_int_init(f);
+	isl_int_set_si(f, 1);
+	if (accept_cst_factor(s, &f) < 0)
+		pa = isl_pw_aff_free(pa);
+	pa = isl_pw_aff_scale_down(pa, f);
+	isl_int_clear(f);
+
+	return pa;
+}
+
 static __isl_give isl_pw_aff *accept_affine_factor(__isl_keep isl_stream *s,
-	__isl_take isl_space *dim, struct vars *v)
+	__isl_take isl_space *space, struct vars *v)
 {
 	struct isl_token *tok = NULL;
 	isl_pw_aff *res = NULL;
@@ -465,7 +507,7 @@ static __isl_give isl_pw_aff *accept_affine_factor(__isl_keep isl_stream *s,
 			goto error;
 		}
 
-		aff = isl_aff_zero_on_domain(isl_local_space_from_space(isl_space_copy(dim)));
+		aff = isl_aff_zero_on_domain(isl_local_space_from_space(isl_space_copy(space)));
 		if (!aff)
 			goto error;
 		isl_int_set_si(aff->v->el[2 + pos], 1);
@@ -473,12 +515,12 @@ static __isl_give isl_pw_aff *accept_affine_factor(__isl_keep isl_stream *s,
 		isl_token_free(tok);
 	} else if (tok->type == ISL_TOKEN_VALUE) {
 		if (isl_stream_eat_if_available(s, '*')) {
-			res = accept_affine_factor(s, isl_space_copy(dim), v);
+			res = accept_affine_factor(s, isl_space_copy(space), v);
 			res = isl_pw_aff_scale(res, tok->u.v);
 		} else {
 			isl_local_space *ls;
 			isl_aff *aff;
-			ls = isl_local_space_from_space(isl_space_copy(dim));
+			ls = isl_local_space_from_space(isl_space_copy(space));
 			aff = isl_aff_zero_on_domain(ls);
 			aff = isl_aff_add_constant(aff, tok->u.v);
 			res = isl_pw_aff_from_aff(aff);
@@ -487,7 +529,7 @@ static __isl_give isl_pw_aff *accept_affine_factor(__isl_keep isl_stream *s,
 	} else if (tok->type == '(') {
 		isl_token_free(tok);
 		tok = NULL;
-		res = accept_affine(s, isl_space_copy(dim), v);
+		res = accept_affine(s, isl_space_copy(space), v);
 		if (!res)
 			goto error;
 		if (isl_stream_eat(s, ')'))
@@ -495,18 +537,18 @@ static __isl_give isl_pw_aff *accept_affine_factor(__isl_keep isl_stream *s,
 	} else if (is_start_of_div(tok)) {
 		isl_stream_push_token(s, tok);
 		tok = NULL;
-		res = accept_div(s, isl_space_copy(dim), v);
+		res = accept_div(s, isl_space_copy(space), v);
 	} else if (tok->type == ISL_TOKEN_MIN || tok->type == ISL_TOKEN_MAX) {
 		isl_stream_push_token(s, tok);
 		tok = NULL;
-		res = accept_minmax(s, isl_space_copy(dim), v);
+		res = accept_minmax(s, isl_space_copy(space), v);
 	} else {
 		isl_stream_error(s, tok, "expecting factor");
 		goto error;
 	}
 	if (isl_stream_eat_if_available(s, '%') ||
 	    isl_stream_eat_if_available(s, ISL_TOKEN_MOD)) {
-		isl_space_free(dim);
+		isl_space_free(space);
 		return affine_mod(s, v, res);
 	}
 	if (isl_stream_eat_if_available(s, '*')) {
@@ -520,25 +562,18 @@ static __isl_give isl_pw_aff *accept_affine_factor(__isl_keep isl_stream *s,
 		res = isl_pw_aff_scale(res, f);
 		isl_int_clear(f);
 	}
-	if (isl_stream_eat_if_available(s, '/')) {
-		isl_int f;
-		isl_int_init(f);
-		isl_int_set_si(f, 1);
-		if (accept_cst_factor(s, &f) < 0) {
-			isl_int_clear(f);
-			goto error2;
-		}
-		res = isl_pw_aff_scale_down(res, f);
-		isl_int_clear(f);
-	}
+	if (isl_stream_eat_if_available(s, '/'))
+		res = pw_aff_div_by_cst(s, res);
+	if (isl_stream_eat_if_available(s, ISL_TOKEN_INT_DIV))
+		res = isl_pw_aff_floor(pw_aff_div_by_cst(s, res));
 
-	isl_space_free(dim);
+	isl_space_free(space);
 	return res;
 error:
 	isl_token_free(tok);
 error2:
 	isl_pw_aff_free(res);
-	isl_space_free(dim);
+	isl_space_free(space);
 	return NULL;
 }
 
@@ -618,6 +653,10 @@ static __isl_give isl_pw_aff *accept_affine(__isl_keep isl_stream *s,
 				if (!res)
 					goto error;
 			} else {
+				if (isl_stream_eat_if_available(s,
+							ISL_TOKEN_INT_DIV) &&
+				    int_div_by_cst(s, &tok->u.v) < 0)
+					goto error;
 				res = add_cst(res, tok->u.v);
 			}
 			sign = 1;
@@ -704,7 +743,7 @@ static __isl_give isl_pw_aff *accept_extended_affine(__isl_keep isl_stream *s,
 static __isl_give isl_pw_aff *accept_ternary(__isl_keep isl_stream *s,
 	__isl_take isl_map *cond, struct vars *v, int rational)
 {
-	isl_space *dim;
+	isl_space *space;
 	isl_pw_aff *pwaff1 = NULL, *pwaff2 = NULL, *pa_cond;
 
 	if (!cond)
@@ -713,17 +752,17 @@ static __isl_give isl_pw_aff *accept_ternary(__isl_keep isl_stream *s,
 	if (isl_stream_eat(s, '?'))
 		goto error;
 
-	dim = isl_space_wrap(isl_map_get_space(cond));
-	pwaff1 = accept_extended_affine(s, dim, v, rational);
+	space = isl_space_wrap(isl_map_get_space(cond));
+	pwaff1 = accept_extended_affine(s, space, v, rational);
 	if (!pwaff1)
 		goto error;
 
 	if (isl_stream_eat(s, ':'))
 		goto error;
 
-	dim = isl_pw_aff_get_domain_space(pwaff1);
-	pwaff2 = accept_extended_affine(s, dim, v, rational);
-	if (!pwaff1)
+	space = isl_pw_aff_get_domain_space(pwaff1);
+	pwaff2 = accept_extended_affine(s, space, v, rational);
+	if (!pwaff2)
 		goto error;
 
 	pa_cond = isl_set_indicator_function(isl_map_wrap(cond));
@@ -753,7 +792,7 @@ static void set_current_line_col(__isl_keep isl_stream *s, int *line, int *col)
 /* Push a token encapsulating "pa" onto "s", with the given
  * line and column.
  */
-static int push_aff(__isl_keep isl_stream *s, int line, int col,
+static isl_stat push_aff(__isl_keep isl_stream *s, int line, int col,
 	__isl_take isl_pw_aff *pa)
 {
 	struct isl_token *tok;
@@ -765,10 +804,27 @@ static int push_aff(__isl_keep isl_stream *s, int line, int col,
 	tok->u.pwaff = pa;
 	isl_stream_push_token(s, tok);
 
-	return 0;
+	return isl_stat_ok;
 error:
 	isl_pw_aff_free(pa);
-	return -1;
+	return isl_stat_error;
+}
+
+/* Is the next token a comparison operator?
+ */
+static int next_is_comparator(__isl_keep isl_stream *s)
+{
+	int is_comp;
+	struct isl_token *tok;
+
+	tok = isl_stream_next_token(s);
+	if (!tok)
+		return 0;
+
+	is_comp = is_comparator(tok);
+	isl_stream_push_token(s, tok);
+
+	return is_comp;
 }
 
 /* Accept an affine expression that may involve ternary operators.
@@ -783,9 +839,7 @@ static __isl_give isl_pw_aff *accept_extended_affine(__isl_keep isl_stream *s,
 	isl_space *space;
 	isl_map *cond;
 	isl_pw_aff *pwaff;
-	struct isl_token *tok;
 	int line = -1, col = -1;
-	int is_comp;
 
 	set_current_line_col(s, &line, &col);
 
@@ -794,14 +848,7 @@ static __isl_give isl_pw_aff *accept_extended_affine(__isl_keep isl_stream *s,
 		pwaff = isl_pw_aff_set_rational(pwaff);
 	if (!pwaff)
 		return NULL;
-
-	tok = isl_stream_next_token(s);
-	if (!tok)
-		return isl_pw_aff_free(pwaff);
-
-	is_comp = is_comparator(tok);
-	isl_stream_push_token(s, tok);
-	if (!is_comp)
+	if (!next_is_comparator(s))
 		return pwaff;
 
 	space = isl_pw_aff_get_domain_space(pwaff);
@@ -822,17 +869,23 @@ static __isl_give isl_map *read_var_def(__isl_keep isl_stream *s,
 	int rational)
 {
 	isl_pw_aff *def;
-	int pos;
+	isl_size pos;
 	isl_map *def_map;
 
 	if (type == isl_dim_param)
 		pos = isl_map_dim(map, isl_dim_param);
 	else {
 		pos = isl_map_dim(map, isl_dim_in);
-		if (type == isl_dim_out)
-			pos += isl_map_dim(map, isl_dim_out);
+		if (type == isl_dim_out) {
+			isl_size n_out = isl_map_dim(map, isl_dim_out);
+			if (pos < 0 || n_out < 0)
+				return isl_map_free(map);
+			pos += n_out;
+		}
 		type = isl_dim_in;
 	}
+	if (pos < 0)
+		return isl_map_free(map);
 	--pos;
 
 	def = accept_extended_affine(s, isl_space_wrap(isl_map_get_space(map)),
@@ -954,6 +1007,25 @@ static int next_is_tuple(__isl_keep isl_stream *s)
 	return is_tuple;
 }
 
+/* Does the next token mark the end of a tuple element?
+ */
+static int next_is_end_tuple_element(__isl_keep isl_stream *s)
+{
+	return isl_stream_next_token_is(s, ',') ||
+	    isl_stream_next_token_is(s, ']');
+}
+
+/* Is the next token one that necessarily forms the start of a condition?
+ */
+static int next_is_condition_start(__isl_keep isl_stream *s)
+{
+	return isl_stream_next_token_is(s, ISL_TOKEN_EXISTS) ||
+	    isl_stream_next_token_is(s, ISL_TOKEN_NOT) ||
+	    isl_stream_next_token_is(s, ISL_TOKEN_TRUE) ||
+	    isl_stream_next_token_is(s, ISL_TOKEN_FALSE) ||
+	    isl_stream_next_token_is(s, ISL_TOKEN_MAP);
+}
+
 /* Is "pa" an expression in term of earlier dimensions?
  * The alternative is that the dimension is defined to be equal to itself,
  * meaning that it has a universe domain and an expression that depends
@@ -961,35 +1033,36 @@ static int next_is_tuple(__isl_keep isl_stream *s)
  * of "n" expressions.  The final dimensions of "pa" correspond to
  * these "n" expressions.
  */
-static int pw_aff_is_expr(__isl_keep isl_pw_aff *pa, int i, int n)
+static isl_bool pw_aff_is_expr(__isl_keep isl_pw_aff *pa, int i, int n)
 {
 	isl_aff *aff;
 
 	if (!pa)
-		return -1;
+		return isl_bool_error;
 	if (pa->n != 1)
-		return 1;
+		return isl_bool_true;
 	if (!isl_set_plain_is_universe(pa->p[0].set))
-		return 1;
+		return isl_bool_true;
 
 	aff = pa->p[0].aff;
 	if (isl_int_is_zero(aff->v->el[aff->v->size - n + i]))
-		return 1;
-	return 0;
+		return isl_bool_true;
+	return isl_bool_false;
 }
 
 /* Does the tuple contain any dimensions that are defined
  * in terms of earlier dimensions?
  */
-static int tuple_has_expr(__isl_keep isl_multi_pw_aff *tuple)
+static isl_bool tuple_has_expr(__isl_keep isl_multi_pw_aff *tuple)
 {
-	int i, n;
-	int has_expr = 0;
+	int i;
+	isl_size n;
+	isl_bool has_expr = isl_bool_false;
 	isl_pw_aff *pa;
 
-	if (!tuple)
-		return -1;
 	n = isl_multi_pw_aff_dim(tuple, isl_dim_out);
+	if (n < 0)
+		return isl_bool_error;
 	for (i = 0; i < n; ++i) {
 		pa = isl_multi_pw_aff_get_pw_aff(tuple, i);
 		has_expr = pw_aff_is_expr(pa, i, n);
@@ -1024,17 +1097,220 @@ static __isl_give isl_space *space_set_dim_name(__isl_take isl_space *space,
 	return space;
 }
 
+/* Construct an isl_pw_aff defined on a "space" (with v->n variables)
+ * that is equal to the last of those variables.
+ */
+static __isl_give isl_pw_aff *identity_tuple_el_on_space(
+	__isl_take isl_space *space, struct vars *v)
+{
+	isl_aff *aff;
+
+	aff = isl_aff_zero_on_domain(isl_local_space_from_space(space));
+	aff = isl_aff_add_coefficient_si(aff, isl_dim_in, v->n - 1, 1);
+	return isl_pw_aff_from_aff(aff);
+}
+
+/* Construct an isl_pw_aff defined on the domain space of "pa"
+ * that is equal to the last variable in "v".
+ *
+ * That is, if D is the domain space of "pa", then construct
+ *
+ *	D[..., i] -> i.
+ */
+static __isl_give isl_pw_aff *init_range(__isl_keep isl_pw_aff *pa,
+	struct vars *v)
+{
+	isl_space *space;
+
+	space = isl_pw_aff_get_domain_space(pa);
+	return identity_tuple_el_on_space(space, v);
+}
+
+/* Impose the lower bound "lower" on the variable represented by "range_pa".
+ *
+ * In particular, "range_pa" is of the form
+ *
+ *	D[..., i] -> i : C
+ *
+ * with D also the domains space of "lower' and "C" some constraints.
+ *
+ * Return the expression
+ *
+ *	D[..., i] -> i : C and i >= lower
+ */
+static __isl_give isl_pw_aff *set_lower(__isl_take isl_pw_aff *range_pa,
+	__isl_take isl_pw_aff *lower)
+{
+	isl_set *range;
+
+	range = isl_pw_aff_ge_set(isl_pw_aff_copy(range_pa), lower);
+	return isl_pw_aff_intersect_domain(range_pa, range);
+}
+
+/* Impose the upper bound "upper" on the variable represented by "range_pa".
+ *
+ * In particular, "range_pa" is of the form
+ *
+ *	D[..., i] -> i : C
+ *
+ * with D also the domains space of "upper' and "C" some constraints.
+ *
+ * Return the expression
+ *
+ *	D[..., i] -> i : C and i <= upper
+ */
+static __isl_give isl_pw_aff *set_upper(__isl_take isl_pw_aff *range_pa,
+	__isl_take isl_pw_aff *upper)
+{
+	isl_set *range;
+
+	range = isl_pw_aff_le_set(isl_pw_aff_copy(range_pa), upper);
+	return isl_pw_aff_intersect_domain(range_pa, range);
+}
+
+/* Construct a piecewise affine expression corresponding
+ * to the last variable in "v" that is greater than or equal to "pa".
+ *
+ * In particular, if D is the domain space of "pa",
+ * then construct the expression
+ *
+ *	D[..., i] -> i,
+ *
+ * impose lower bound "pa" and return
+ *
+ *	D[..., i] -> i : i >= pa
+ */
+static __isl_give isl_pw_aff *construct_lower(__isl_take isl_pw_aff *pa,
+	struct vars *v)
+{
+	return set_lower(init_range(pa, v), pa);
+}
+
+/* Construct a piecewise affine expression corresponding
+ * to the last variable in "v" that is smaller than or equal to "pa".
+ *
+ * In particular, if D is the domain space of "pa",
+ * then construct the expression
+ *
+ *	D[..., i] -> i,
+ *
+ * impose lower bound "pa" and return
+ *
+ *	D[..., i] -> i : i <= pa
+ */
+static __isl_give isl_pw_aff *construct_upper(__isl_take isl_pw_aff *pa,
+	struct vars *v)
+{
+	return set_upper(init_range(pa, v), pa);
+}
+
+/* Construct a piecewise affine expression corresponding
+ * to the last variable in "v" that ranges between "pa" and "pa2".
+ *
+ * In particular, if D is the domain space of "pa" (and "pa2"),
+ * then construct the expression
+ *
+ *	D[..., i] -> i,
+ *
+ * impose lower bound "pa" and upper bound "pa2" and return
+ *
+ *	D[..., i] -> i : pa <= i <= pa2
+ */
+static __isl_give isl_pw_aff *construct_range(__isl_take isl_pw_aff *pa,
+	__isl_take isl_pw_aff *pa2, struct vars *v)
+{
+	return set_upper(set_lower(init_range(pa, v), pa), pa2);
+}
+
+static int resolve_paren_expr(__isl_keep isl_stream *s,
+	struct vars *v, __isl_take isl_map *map, int rational);
+
+/* Given that the (piecewise) affine expression "pa"
+ * has just been parsed, followed by a colon,
+ * continue parsing as part of a piecewise affine expression.
+ *
+ * In particular, check if the colon is followed by a condition.
+ * If so, parse the conditions(a) on "pa" and include them in the domain.
+ * Otherwise, if the colon is followed by another (piecewise) affine expression
+ * then consider the two expressions as endpoints of a range of values and
+ * return a piecewise affine expression that takes values in that range.
+ * Note that an affine expression followed by a comparison operator
+ * is considered to be part of a condition.
+ * If the colon is not followed by anything (inside the tuple element),
+ * then consider "pa" as a lower bound on a range of values without upper bound
+ * and return a piecewise affine expression that takes values in that range.
+ */
+static __isl_give isl_pw_aff *update_piecewise_affine_colon(
+	__isl_take isl_pw_aff *pa, __isl_keep isl_stream *s,
+	struct vars *v, int rational)
+{
+	isl_space *dom_space;
+	isl_map *map;
+
+	dom_space = isl_pw_aff_get_domain_space(pa);
+	map = isl_map_universe(isl_space_from_domain(dom_space));
+
+	if (isl_stream_next_token_is(s, '('))
+		if (resolve_paren_expr(s, v, isl_map_copy(map), rational))
+			goto error;
+	if (next_is_end_tuple_element(s)) {
+		isl_map_free(map);
+		return construct_lower(pa, v);
+	}
+	if (!next_is_condition_start(s)) {
+		int line = -1, col = -1;
+		isl_space *space;
+		isl_pw_aff *pa2;
+
+		set_current_line_col(s, &line, &col);
+		space = isl_space_wrap(isl_map_get_space(map));
+		pa2 = accept_affine(s, space, v);
+		if (rational)
+			pa2 = isl_pw_aff_set_rational(pa2);
+		if (!next_is_comparator(s)) {
+			isl_map_free(map);
+			pa2 = isl_pw_aff_domain_factor_domain(pa2);
+			return construct_range(pa, pa2, v);
+		}
+		if (push_aff(s, line, col, pa2) < 0)
+			goto error;
+	}
+
+	map = read_formula(s, v, map, rational);
+	pa = isl_pw_aff_intersect_domain(pa, isl_map_domain(map));
+
+	return pa;
+error:
+	isl_map_free(map);
+	isl_pw_aff_free(pa);
+	return NULL;
+}
+
 /* Accept a piecewise affine expression.
  *
  * At the outer level, the piecewise affine expression may be of the form
  *
  *	aff1 : condition1; aff2 : conditions2; ...
  *
+ * or one of
+ *
+ *	aff :
+ *	aff1 : aff2
+ *	: aff
+ *	:
+ *
  * or simply
  *
  *	aff
  *
  * each of the affine expressions may in turn include ternary operators.
+ *
+ * If the first token is a colon, then the expression must be
+ * ":" or ": aff2", depending on whether anything follows the colon
+ * inside the tuple element.
+ * The first is considered to represent an arbitrary value.
+ * The second is considered to represent a range of values
+ * with the given upper bound and no lower bound.
  *
  * There may be parentheses around some subexpression of "aff1"
  * around "aff1" itself, around "aff1 : condition1" and/or
@@ -1050,6 +1326,13 @@ static __isl_give isl_pw_aff *accept_piecewise_affine(__isl_keep isl_stream *s,
 {
 	isl_pw_aff *res;
 	isl_space *res_space;
+
+	if (isl_stream_eat_if_available(s, ':')) {
+		if (next_is_end_tuple_element(s))
+			return identity_tuple_el_on_space(space, v);
+		else
+			return construct_upper(accept_affine(s, space, v), v);
+	}
 
 	res_space = isl_space_from_domain(isl_space_copy(space));
 	res_space = isl_space_add_dims(res_space, isl_dim_out, 1);
@@ -1074,15 +1357,8 @@ static __isl_give isl_pw_aff *accept_piecewise_affine(__isl_keep isl_stream *s,
 			pa = accept_extended_affine(s, isl_space_copy(space),
 							v, rational);
 		}
-		if (isl_stream_eat_if_available(s, ':')) {
-			isl_space *dom_space;
-			isl_set *dom;
-
-			dom_space = isl_pw_aff_get_domain_space(pa);
-			dom = isl_set_universe(dom_space);
-			dom = read_formula(s, v, dom, rational);
-			pa = isl_pw_aff_intersect_domain(pa, dom);
-		}
+		if (isl_stream_eat_if_available(s, ':'))
+			pa = update_piecewise_affine_colon(pa, s, v, rational);
 
 		res = isl_pw_aff_union_add(res, pa);
 
@@ -1114,9 +1390,7 @@ static __isl_give isl_pw_aff *read_tuple_var_def(__isl_keep isl_stream *s,
 	space = isl_space_wrap(isl_space_alloc(s->ctx, 0, v->n, 0));
 
 	def = accept_piecewise_affine(s, space, v, rational);
-
-	space = isl_space_set_alloc(s->ctx, 0, v->n);
-	def = isl_pw_aff_reset_domain_space(def, space);
+	def = isl_pw_aff_domain_factor_domain(def);
 
 	return def;
 }
@@ -1229,12 +1503,9 @@ error:
 static __isl_give isl_pw_aff *identity_tuple_el(struct vars *v)
 {
 	isl_space *space;
-	isl_aff *aff;
 
 	space = isl_space_set_alloc(v->ctx, 0, v->n);
-	aff = isl_aff_zero_on_domain(isl_local_space_from_space(space));
-	aff = isl_aff_add_coefficient_si(aff, isl_dim_in, v->n - 1, 1);
-	return isl_pw_aff_from_aff(aff);
+	return identity_tuple_el_on_space(space, v);
 }
 
 /* This function is called for each element in a tuple inside read_tuple.
@@ -1275,7 +1546,10 @@ static __isl_give isl_space *read_tuple_pw_aff_el(__isl_keep isl_stream *s,
 		isl_token_free(tok);
 		pa = identity_tuple_el(v);
 	} else if (new_name) {
-		int pos = isl_space_dim(space, isl_dim_out) - 1;
+		isl_size pos = isl_space_dim(space, isl_dim_out);
+		if (pos < 0)
+			goto error;
+		pos -= 1;
 		space = space_set_dim_name(space, pos, v->v->name);
 		isl_token_free(tok);
 		if (isl_stream_eat_if_available(s, '='))
@@ -1318,7 +1592,8 @@ error:
 static __isl_give isl_multi_pw_aff *read_tuple(__isl_keep isl_stream *s,
 	struct vars *v, int rational, int comma)
 {
-	int i, n;
+	int i;
+	isl_size n;
 	isl_space *space;
 	isl_pw_aff_list *list;
 
@@ -1327,6 +1602,8 @@ static __isl_give isl_multi_pw_aff *read_tuple(__isl_keep isl_stream *s,
 	space = read_tuple_space(s, v, space, rational, comma,
 				&read_tuple_pw_aff_el, &list);
 	n = isl_space_dim(space, isl_dim_set);
+	if (n < 0)
+		space = isl_space_free(space);
 	for (i = 0; i + 1 < n; ++i) {
 		isl_pw_aff *pa;
 
@@ -1350,14 +1627,15 @@ static __isl_give isl_map *map_from_tuple(__isl_take isl_multi_pw_aff *tuple,
 	__isl_take isl_map *map, enum isl_dim_type type, struct vars *v,
 	int rational)
 {
-	int i, n;
+	int i;
+	isl_size n;
 	isl_ctx *ctx;
 	isl_space *space = NULL;
 
-	if (!map || !tuple)
+	n = isl_multi_pw_aff_dim(tuple, isl_dim_out);
+	if (!map || n < 0)
 		goto error;
 	ctx = isl_multi_pw_aff_get_ctx(tuple);
-	n = isl_multi_pw_aff_dim(tuple, isl_dim_out);
 	space = isl_space_range(isl_multi_pw_aff_get_space(tuple));
 	if (!space)
 		goto error;
@@ -1463,14 +1741,14 @@ static __isl_give isl_set *list_cmp(__isl_keep isl_set *set, int type,
 	__isl_take isl_pw_aff_list *left, __isl_take isl_pw_aff_list *right)
 {
 	isl_space *space;
-	int n;
+	isl_size n;
 	isl_multi_pw_aff *mpa1, *mpa2;
 
-	if (!set || !left || !right)
+	n = isl_pw_aff_list_n_pw_aff(left);
+	if (!set || n < 0 || !right)
 		goto error;
 
 	space = isl_set_get_space(set);
-	n = isl_pw_aff_list_n_pw_aff(left);
 	space = isl_space_from_domain(space);
 	space = isl_space_add_dims(space, isl_dim_out, n);
 	mpa1 = isl_multi_pw_aff_from_pw_aff_list(isl_space_copy(space), left);
@@ -1575,7 +1853,7 @@ static __isl_give isl_map *add_constraint(__isl_keep isl_stream *s,
 	struct isl_token *tok;
 	int type;
 	isl_pw_aff_list *list1 = NULL, *list2 = NULL;
-	int n1, n2;
+	isl_size n1, n2;
 	isl_set *set;
 
 	set = isl_map_wrap(map);
@@ -1593,10 +1871,10 @@ static __isl_give isl_map *add_constraint(__isl_keep isl_stream *s,
 	isl_token_free(tok);
 	for (;;) {
 		list2 = accept_affine_list(s, isl_set_get_space(set), v);
-		if (!list2)
-			goto error;
 		n1 = isl_pw_aff_list_n_pw_aff(list1);
 		n2 = isl_pw_aff_list_n_pw_aff(list2);
+		if (n1 < 0 || n2 < 0)
+			goto error;
 		if (is_list_comparator_type(type) && n1 != n2) {
 			isl_stream_error(s, NULL,
 					"list arguments not of same size");
@@ -1607,12 +1885,9 @@ static __isl_give isl_map *add_constraint(__isl_keep isl_stream *s,
 		isl_pw_aff_list_free(list1);
 		list1 = list2;
 
-		tok = isl_stream_next_token(s);
-		if (!is_comparator(tok)) {
-			if (tok)
-				isl_stream_push_token(s, tok);
+		if (!next_is_comparator(s))
 			break;
-		}
+		tok = isl_stream_next_token(s);
 		type = tok->type;
 		isl_token_free(tok);
 	}
@@ -1670,6 +1945,7 @@ static int resolve_paren_expr(__isl_keep isl_stream *s,
 	struct vars *v, __isl_take isl_map *map, int rational)
 {
 	struct isl_token *tok, *tok2;
+	int has_paren;
 	int line, col;
 	isl_pw_aff *pwaff;
 
@@ -1681,11 +1957,7 @@ static int resolve_paren_expr(__isl_keep isl_stream *s,
 		if (resolve_paren_expr(s, v, isl_map_copy(map), rational))
 			goto error;
 
-	if (isl_stream_next_token_is(s, ISL_TOKEN_EXISTS) ||
-	    isl_stream_next_token_is(s, ISL_TOKEN_NOT) ||
-	    isl_stream_next_token_is(s, ISL_TOKEN_TRUE) ||
-	    isl_stream_next_token_is(s, ISL_TOKEN_FALSE) ||
-	    isl_stream_next_token_is(s, ISL_TOKEN_MAP)) {
+	if (next_is_condition_start(s)) {
 		map = read_formula(s, v, map, rational);
 		if (isl_stream_eat(s, ')'))
 			goto error;
@@ -1706,20 +1978,16 @@ static int resolve_paren_expr(__isl_keep isl_stream *s,
 	if (!pwaff)
 		goto error;
 
-	tok2 = isl_token_new(s->ctx, line, col, 0);
-	if (!tok2)
-		goto error2;
-	tok2->type = ISL_TOKEN_AFF;
-	tok2->u.pwaff = pwaff;
+	has_paren = isl_stream_eat_if_available(s, ')');
 
-	if (isl_stream_eat_if_available(s, ')')) {
-		isl_stream_push_token(s, tok2);
+	if (push_aff(s, line, col, pwaff) < 0)
+		goto error;
+
+	if (has_paren) {
 		isl_token_free(tok);
 		isl_map_free(map);
 		return 0;
 	}
-
-	isl_stream_push_token(s, tok2);
 
 	map = read_formula(s, v, map, rational);
 	if (isl_stream_eat(s, ')'))
@@ -1730,8 +1998,6 @@ static int resolve_paren_expr(__isl_keep isl_stream *s,
 	isl_stream_push_token(s, tok);
 
 	return 0;
-error2:
-	isl_pw_aff_free(pwaff);
 error:
 	isl_token_free(tok);
 	isl_map_free(map);
@@ -1860,24 +2126,30 @@ static __isl_give isl_map *read_formula(__isl_keep isl_stream *s,
 	return res;
 }
 
-static int polylib_pos_to_isl_pos(__isl_keep isl_basic_map *bmap, int pos)
+static isl_size polylib_pos_to_isl_pos(__isl_keep isl_basic_map *bmap, int pos)
 {
-	if (pos < isl_basic_map_dim(bmap, isl_dim_out))
-		return 1 + isl_basic_map_dim(bmap, isl_dim_param) +
-			   isl_basic_map_dim(bmap, isl_dim_in) + pos;
-	pos -= isl_basic_map_dim(bmap, isl_dim_out);
+	isl_size n_out, n_in, n_param, n_div;
 
-	if (pos < isl_basic_map_dim(bmap, isl_dim_in))
-		return 1 + isl_basic_map_dim(bmap, isl_dim_param) + pos;
-	pos -= isl_basic_map_dim(bmap, isl_dim_in);
+	n_param = isl_basic_map_dim(bmap, isl_dim_param);
+	n_in = isl_basic_map_dim(bmap, isl_dim_in);
+	n_out = isl_basic_map_dim(bmap, isl_dim_out);
+	n_div = isl_basic_map_dim(bmap, isl_dim_div);
+	if (n_param < 0 || n_in < 0 || n_out < 0 || n_div < 0)
+		return isl_size_error;
 
-	if (pos < isl_basic_map_dim(bmap, isl_dim_div))
-		return 1 + isl_basic_map_dim(bmap, isl_dim_param) +
-			   isl_basic_map_dim(bmap, isl_dim_in) +
-			   isl_basic_map_dim(bmap, isl_dim_out) + pos;
-	pos -= isl_basic_map_dim(bmap, isl_dim_div);
+	if (pos < n_out)
+		return 1 + n_param + n_in + pos;
+	pos -= n_out;
 
-	if (pos < isl_basic_map_dim(bmap, isl_dim_param))
+	if (pos < n_in)
+		return 1 + n_param + pos;
+	pos -= n_in;
+
+	if (pos < n_div)
+		return 1 + n_param + n_in + n_out + pos;
+	pos -= n_div;
+
+	if (pos < n_param)
 		return 1 + pos;
 
 	return 0;
@@ -1891,6 +2163,7 @@ static __isl_give isl_basic_map *basic_map_read_polylib_constraint(
 	int type;
 	int k;
 	isl_int *c;
+	isl_size total;
 
 	if (!bmap)
 		return NULL;
@@ -1922,8 +2195,11 @@ static __isl_give isl_basic_map *basic_map_read_polylib_constraint(
 	if (k < 0)
 		goto error;
 
-	for (j = 0; j < 1 + isl_basic_map_total_dim(bmap); ++j) {
-		int pos;
+	total = isl_basic_map_dim(bmap, isl_dim_all);
+	if (total < 0)
+		return isl_basic_map_free(bmap);
+	for (j = 0; j < 1 + total; ++j) {
+		isl_size pos;
 		tok = isl_stream_next_token(s);
 		if (!tok || tok->type != ISL_TOKEN_VALUE) {
 			isl_stream_error(s, tok, "expecting coefficient");
@@ -1938,8 +2214,11 @@ static __isl_give isl_basic_map *basic_map_read_polylib_constraint(
 			goto error;
 		}
 		pos = polylib_pos_to_isl_pos(bmap, j);
-		isl_int_set(c[pos], tok->u.v);
+		if (pos >= 0)
+			isl_int_set(c[pos], tok->u.v);
 		isl_token_free(tok);
+		if (pos < 0)
+			return isl_basic_map_free(bmap);
 	}
 
 	return bmap;
@@ -3179,11 +3458,13 @@ __isl_give isl_aff *isl_stream_read_aff(__isl_keep isl_stream *s)
 {
 	isl_aff *aff;
 	isl_multi_aff *ma;
+	isl_size dim;
 
 	ma = isl_stream_read_multi_aff(s);
-	if (!ma)
-		return NULL;
-	if (isl_multi_aff_dim(ma, isl_dim_out) != 1)
+	dim = isl_multi_aff_dim(ma, isl_dim_out);
+	if (dim < 0)
+		goto error;
+	if (dim != 1)
 		isl_die(s->ctx, isl_error_invalid,
 			"expecting single affine expression",
 			goto error);
@@ -3314,12 +3595,15 @@ __isl_give isl_pw_aff *isl_pw_aff_read_from_str(isl_ctx *ctx, const char *str)
 static __isl_give isl_multi_pw_aff *extract_mpa_from_tuple(
 	__isl_take isl_space *dom_space, __isl_keep isl_multi_pw_aff *tuple)
 {
-	int dim, i, n;
+	int i;
+	isl_size dim, n;
 	isl_space *space;
 	isl_multi_pw_aff *mpa;
 
 	n = isl_multi_pw_aff_dim(tuple, isl_dim_out);
 	dim = isl_space_dim(dom_space, isl_dim_all);
+	if (n < 0 || dim < 0)
+		dom_space = isl_space_free(dom_space);
 	space = isl_space_range(isl_multi_pw_aff_get_space(tuple));
 	space = isl_space_align_params(space, isl_space_copy(dom_space));
 	if (!isl_space_is_params(dom_space))
@@ -3380,13 +3664,15 @@ static __isl_give isl_pw_multi_aff *read_conditional_multi_aff(
 		if (!tuple)
 			goto error;
 	}
+	mpa = extract_mpa_from_tuple(isl_set_get_space(dom), tuple);
+	isl_multi_pw_aff_free(tuple);
+	if (!mpa)
+		dom = isl_set_free(dom);
 
 	dom = read_optional_formula(s, dom, v, 0);
 
 	vars_drop(v, v->n - n);
 
-	mpa = extract_mpa_from_tuple(isl_set_get_space(dom), tuple);
-	isl_multi_pw_aff_free(tuple);
 	pma = isl_pw_multi_aff_from_multi_pw_aff(mpa);
 	pma = isl_pw_multi_aff_intersect_domain(pma, dom);
 
@@ -3396,18 +3682,18 @@ error:
 	return NULL;
 }
 
-/* Read an isl_pw_multi_aff from "s".
+/* Read an isl_union_pw_multi_aff from "s".
  *
  * In particular, first read the parameters and then read a sequence
- * of one or more tuples of affine expressions with optional conditions and
+ * of zero or more tuples of affine expressions with optional conditions and
  * add them up.
  */
-__isl_give isl_pw_multi_aff *isl_stream_read_pw_multi_aff(
+__isl_give isl_union_pw_multi_aff *isl_stream_read_union_pw_multi_aff(
 	__isl_keep isl_stream *s)
 {
 	struct vars *v;
 	isl_set *dom;
-	isl_pw_multi_aff *pma = NULL;
+	isl_union_pw_multi_aff *upma = NULL;
 
 	v = vars_new(s->ctx);
 	if (!v)
@@ -3422,28 +3708,55 @@ __isl_give isl_pw_multi_aff *isl_stream_read_pw_multi_aff(
 	if (isl_stream_eat(s, '{'))
 		goto error;
 
-	pma = read_conditional_multi_aff(s, isl_set_copy(dom), v);
+	upma = isl_union_pw_multi_aff_empty(isl_set_get_space(dom));
 
-	while (isl_stream_eat_if_available(s, ';')) {
-		isl_pw_multi_aff *pma2;
+	do {
+		isl_pw_multi_aff *pma;
+		isl_union_pw_multi_aff *upma2;
 
-		pma2 = read_conditional_multi_aff(s, isl_set_copy(dom), v);
-		pma = isl_pw_multi_aff_union_add(pma, pma2);
-		if (!pma)
+		if (isl_stream_next_token_is(s, '}'))
+			break;
+
+		pma = read_conditional_multi_aff(s, isl_set_copy(dom), v);
+		upma2 = isl_union_pw_multi_aff_from_pw_multi_aff(pma);
+		upma = isl_union_pw_multi_aff_union_add(upma, upma2);
+		if (!upma)
 			goto error;
-	}
+	} while (isl_stream_eat_if_available(s, ';'));
 
 	if (isl_stream_eat(s, '}'))
 		goto error;
 
 	isl_set_free(dom);
 	vars_free(v);
-	return pma;
+	return upma;
 error:
-	isl_pw_multi_aff_free(pma);
+	isl_union_pw_multi_aff_free(upma);
 	isl_set_free(dom);
 	vars_free(v);
 	return NULL;
+}
+
+/* Read an isl_pw_multi_aff from "s".
+ *
+ * Read a more generic isl_union_pw_multi_aff first and
+ * then check that the result lives in a single space.
+ */
+__isl_give isl_pw_multi_aff *isl_stream_read_pw_multi_aff(
+	__isl_keep isl_stream *s)
+{
+	isl_bool single_space;
+	isl_union_pw_multi_aff *upma;
+
+	upma = isl_stream_read_union_pw_multi_aff(s);
+	single_space = isl_union_pw_multi_aff_isa_pw_multi_aff(upma);
+	if (single_space < 0)
+		upma = isl_union_pw_multi_aff_free(upma);
+	else if (!single_space)
+		isl_die(s->ctx, isl_error_invalid,
+			"expecting expression in single space",
+			upma = isl_union_pw_multi_aff_free(upma));
+	return isl_union_pw_multi_aff_as_pw_multi_aff(upma);
 }
 
 __isl_give isl_pw_multi_aff *isl_pw_multi_aff_read_from_str(isl_ctx *ctx,
@@ -3456,33 +3769,6 @@ __isl_give isl_pw_multi_aff *isl_pw_multi_aff_read_from_str(isl_ctx *ctx,
 	pma = isl_stream_read_pw_multi_aff(s);
 	isl_stream_free(s);
 	return pma;
-}
-
-/* Read an isl_union_pw_multi_aff from "s".
- * We currently read a generic object and if it turns out to be a set or
- * a map, we convert that to an isl_union_pw_multi_aff.
- * It would be more efficient if we were to construct
- * the isl_union_pw_multi_aff directly.
- */
-__isl_give isl_union_pw_multi_aff *isl_stream_read_union_pw_multi_aff(
-	__isl_keep isl_stream *s)
-{
-	struct isl_obj obj;
-
-	obj = obj_read(s);
-	if (!obj.v)
-		return NULL;
-
-	if (obj.type == isl_obj_map || obj.type == isl_obj_set)
-		obj = to_union(s->ctx, obj);
-	if (obj.type == isl_obj_union_map)
-		return isl_union_pw_multi_aff_from_union_map(obj.v);
-	if (obj.type == isl_obj_union_set)
-		return isl_union_pw_multi_aff_from_union_set(obj.v);
-
-	obj.type->free(obj.v);
-	isl_die(s->ctx, isl_error_invalid, "unexpected object type",
-		return NULL);
 }
 
 /* Read an isl_union_pw_multi_aff from "str".
@@ -3525,85 +3811,15 @@ error:
 	return NULL;
 }
 
-/* This function is called for each element in a tuple inside
- * isl_stream_read_multi_val.
- * Read an isl_val from "s" and add it to *list.
- */
-static __isl_give isl_space *read_val_el(__isl_keep isl_stream *s,
-	struct vars *v, __isl_take isl_space *space, int rational, void *user)
-{
-	isl_val_list **list = (isl_val_list **) user;
-	isl_val *val;
+#undef BASE
+#define BASE val
 
-	val = isl_stream_read_val(s);
-	*list = isl_val_list_add(*list, val);
-	if (!*list)
-		return isl_space_free(space);
+#include <isl_multi_read_no_explicit_domain_templ.c>
 
-	return space;
-}
+#undef BASE
+#define BASE id
 
-/* Read an isl_multi_val from "s".
- *
- * We first read a tuple space, collecting the element values in a list.
- * Then we create an isl_multi_val from the space and the isl_val_list.
- */
-__isl_give isl_multi_val *isl_stream_read_multi_val(__isl_keep isl_stream *s)
-{
-	struct vars *v;
-	isl_set *dom = NULL;
-	isl_space *space;
-	isl_multi_val *mv = NULL;
-	isl_val_list *list;
-
-	v = vars_new(s->ctx);
-	if (!v)
-		return NULL;
-
-	dom = isl_set_universe(isl_space_params_alloc(s->ctx, 0));
-	if (next_is_tuple(s)) {
-		dom = read_map_tuple(s, dom, isl_dim_param, v, 1, 0);
-		if (isl_stream_eat(s, ISL_TOKEN_TO))
-			goto error;
-	}
-	if (!isl_set_plain_is_universe(dom))
-		isl_die(s->ctx, isl_error_invalid,
-			"expecting universe parameter domain", goto error);
-	if (isl_stream_eat(s, '{'))
-		goto error;
-
-	space = isl_set_get_space(dom);
-
-	list = isl_val_list_alloc(s->ctx, 0);
-	space = read_tuple_space(s, v, space, 1, 0, &read_val_el, &list);
-	mv = isl_multi_val_from_val_list(space, list);
-
-	if (isl_stream_eat(s, '}'))
-		goto error;
-
-	vars_free(v);
-	isl_set_free(dom);
-	return mv;
-error:
-	vars_free(v);
-	isl_set_free(dom);
-	isl_multi_val_free(mv);
-	return NULL;
-}
-
-/* Read an isl_multi_val from "str".
- */
-__isl_give isl_multi_val *isl_multi_val_read_from_str(isl_ctx *ctx,
-	const char *str)
-{
-	isl_multi_val *mv;
-	isl_stream *s = isl_stream_new_str(ctx, str);
-	if (!s)
-		return NULL;
-	mv = isl_stream_read_multi_val(s);
-	isl_stream_free(s);
-	return mv;
-}
+#include <isl_multi_read_no_explicit_domain_templ.c>
 
 /* Read a multi-affine expression from "s".
  * If the multi-affine expression has a domain, then the tuple
@@ -3618,7 +3834,8 @@ __isl_give isl_multi_aff *isl_stream_read_multi_aff(__isl_keep isl_stream *s)
 	struct vars *v;
 	isl_set *dom = NULL;
 	isl_multi_pw_aff *tuple = NULL;
-	int dim, i, n;
+	int i;
+	isl_size dim, n;
 	isl_space *space, *dom_space;
 	isl_multi_aff *ma = NULL;
 
@@ -3644,7 +3861,7 @@ __isl_give isl_multi_aff *isl_stream_read_multi_aff(__isl_keep isl_stream *s)
 	if (isl_stream_eat_if_available(s, ISL_TOKEN_TO)) {
 		isl_set *set;
 		isl_space *space;
-		int has_expr;
+		isl_bool has_expr;
 
 		has_expr = tuple_has_expr(tuple);
 		if (has_expr < 0)
@@ -3666,6 +3883,8 @@ __isl_give isl_multi_aff *isl_stream_read_multi_aff(__isl_keep isl_stream *s)
 
 	n = isl_multi_pw_aff_dim(tuple, isl_dim_out);
 	dim = isl_set_dim(dom, isl_dim_all);
+	if (n < 0 || dim < 0)
+		goto error;
 	dom_space = isl_set_get_space(dom);
 	space = isl_space_range(isl_multi_pw_aff_get_space(tuple));
 	space = isl_space_align_params(space, isl_space_copy(dom_space));

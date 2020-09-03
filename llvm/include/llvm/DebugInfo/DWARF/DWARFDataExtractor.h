@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARFDATAEXTRACTOR_H
 #define LLVM_DEBUGINFO_DWARFDATAEXTRACTOR_H
 
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/Support/DataExtractor.h"
 
@@ -32,12 +33,39 @@ public:
   /// Constructor for cases when there are no relocations.
   DWARFDataExtractor(StringRef Data, bool IsLittleEndian, uint8_t AddressSize)
     : DataExtractor(Data, IsLittleEndian, AddressSize) {}
+  DWARFDataExtractor(ArrayRef<uint8_t> Data, bool IsLittleEndian,
+                     uint8_t AddressSize)
+      : DataExtractor(
+            StringRef(reinterpret_cast<const char *>(Data.data()), Data.size()),
+            IsLittleEndian, AddressSize) {}
+
+  /// Truncating constructor
+  DWARFDataExtractor(const DWARFDataExtractor &Other, size_t Length)
+      : DataExtractor(Other.getData().substr(0, Length), Other.isLittleEndian(),
+                      Other.getAddressSize()),
+        Obj(Other.Obj), Section(Other.Section) {}
+
+  /// Extracts the DWARF "initial length" field, which can either be a 32-bit
+  /// value smaller than 0xfffffff0, or the value 0xffffffff followed by a
+  /// 64-bit length. Returns the actual length, and the DWARF format which is
+  /// encoded in the field. In case of errors, it returns {0, DWARF32} and
+  /// leaves the offset unchanged.
+  std::pair<uint64_t, dwarf::DwarfFormat>
+  getInitialLength(uint64_t *Off, Error *Err = nullptr) const;
+
+  std::pair<uint64_t, dwarf::DwarfFormat> getInitialLength(Cursor &C) const {
+    return getInitialLength(&getOffset(C), &getError(C));
+  }
 
   /// Extracts a value and applies a relocation to the result if
   /// one exists for the given offset.
   uint64_t getRelocatedValue(uint32_t Size, uint64_t *Off,
                              uint64_t *SectionIndex = nullptr,
                              Error *Err = nullptr) const;
+  uint64_t getRelocatedValue(Cursor &C, uint32_t Size,
+                             uint64_t *SectionIndex = nullptr) const {
+    return getRelocatedValue(Size, &getOffset(C), SectionIndex, &getError(C));
+  }
 
   /// Extracts an address-sized value and applies a relocation to the result if
   /// one exists for the given offset.
@@ -55,8 +83,6 @@ public:
   /// reflect the absolute address of this pointer.
   Optional<uint64_t> getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
                                        uint64_t AbsPosOffset = 0) const;
-
-  size_t size() const { return Section == nullptr ? 0 : Section->Data.size(); }
 };
 
 } // end namespace llvm

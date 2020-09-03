@@ -1,4 +1,4 @@
-//===-- SBSymbolContextList.cpp ---------------------------------*- C++ -*-===//
+//===-- SBSymbolContextList.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,7 +28,7 @@ SBSymbolContextList::SBSymbolContextList(const SBSymbolContextList &rhs)
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBSymbolContextList::~SBSymbolContextList() {}
+SBSymbolContextList::~SBSymbolContextList() = default;
 
 const SBSymbolContextList &SBSymbolContextList::
 operator=(const SBSymbolContextList &rhs) {

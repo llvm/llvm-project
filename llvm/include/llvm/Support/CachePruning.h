@@ -14,12 +14,13 @@
 #ifndef LLVM_SUPPORT_CACHE_PRUNING_H
 #define LLVM_SUPPORT_CACHE_PRUNING_H
 
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Optional.h"
 #include <chrono>
 
 namespace llvm {
 
 template <typename T> class Expected;
+class StringRef;
 
 /// Policy for the pruneCache() function. A default constructed
 /// CachePruningPolicy provides a reasonable default policy.

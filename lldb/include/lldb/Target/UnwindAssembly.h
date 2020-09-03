@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_UnwindAssembly_h_
-#define utility_UnwindAssembly_h_
+#ifndef LLDB_TARGET_UNWINDASSEMBLY_H
+#define LLDB_TARGET_UNWINDASSEMBLY_H
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -45,9 +45,10 @@ protected:
 
 private:
   UnwindAssembly() = delete;
-  DISALLOW_COPY_AND_ASSIGN(UnwindAssembly);
+  UnwindAssembly(const UnwindAssembly &) = delete;
+  const UnwindAssembly &operator=(const UnwindAssembly &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // utility_UnwindAssembly_h_
+#endif // LLDB_TARGET_UNWINDASSEMBLY_H

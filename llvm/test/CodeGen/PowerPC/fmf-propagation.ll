@@ -107,7 +107,7 @@ define float @fmul_fadd_reassoc2(float %x, float %y, float %z) {
 ; The fadd is now fully 'fast'. This implies that contraction is allowed.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fadd_fast1:'
-; FMFDEBUG:         fma nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
+; FMFDEBUG:         fma reassoc {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fadd_fast1:'
 
 define float @fmul_fadd_fast1(float %x, float %y, float %z) {
@@ -122,15 +122,15 @@ define float @fmul_fadd_fast1(float %x, float %y, float %z) {
 ; GLOBAL-NEXT:    xsmaddasp 3, 1, 2
 ; GLOBAL-NEXT:    fmr 1, 3
 ; GLOBAL-NEXT:    blr
-  %mul = fmul fast float %x, %y
-  %add = fadd fast float %mul, %z
+  %mul = fmul reassoc float %x, %y
+  %add = fadd reassoc float %mul, %z
   ret float %add
 }
 
 ; This shouldn't change anything - the intermediate fmul result is now also flagged.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fadd_fast2:'
-; FMFDEBUG:         fma nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
+; FMFDEBUG:         fma reassoc {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fadd_fast2:'
 
 define float @fmul_fadd_fast2(float %x, float %y, float %z) {
@@ -145,8 +145,8 @@ define float @fmul_fadd_fast2(float %x, float %y, float %z) {
 ; GLOBAL-NEXT:    xsmaddasp 3, 1, 2
 ; GLOBAL-NEXT:    fmr 1, 3
 ; GLOBAL-NEXT:    blr
-  %mul = fmul fast float %x, %y
-  %add = fadd fast float %mul, %z
+  %mul = fmul reassoc float %x, %y
+  %add = fadd reassoc float %mul, %z
   ret float %add
 }
 
@@ -212,11 +212,11 @@ define float @fmul_fma_reassoc2(float %x) {
 ; The FMA is now fully 'fast'. This implies that reassociation is allowed.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast1:'
-; FMFDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
+; FMFDEBUG:         fmul reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast1:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast1:'
-; GLOBALDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
+; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast1:'
 
 define float @fmul_fma_fast1(float %x) {
@@ -234,18 +234,18 @@ define float @fmul_fma_fast1(float %x) {
 ; GLOBAL-NEXT:    xsmulsp 1, 1, 0
 ; GLOBAL-NEXT:    blr
   %mul = fmul float %x, 42.0
-  %fma = call fast float @llvm.fma.f32(float %x, float 7.0, float %mul)
+  %fma = call reassoc float @llvm.fma.f32(float %x, float 7.0, float %mul)
   ret float %fma
 }
 
 ; This shouldn't change anything - the intermediate fmul result is now also flagged.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast2:'
-; FMFDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
+; FMFDEBUG:         fmul reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast2:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast2:'
-; GLOBALDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
+; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast2:'
 
 define float @fmul_fma_fast2(float %x) {
@@ -262,27 +262,30 @@ define float @fmul_fma_fast2(float %x) {
 ; GLOBAL-NEXT:    lfs 0, .LCPI9_0@toc@l(3)
 ; GLOBAL-NEXT:    xsmulsp 1, 1, 0
 ; GLOBAL-NEXT:    blr
-  %mul = fmul fast float %x, 42.0
-  %fma = call fast float @llvm.fma.f32(float %x, float 7.0, float %mul)
+  %mul = fmul reassoc float %x, 42.0
+  %fma = call reassoc float @llvm.fma.f32(float %x, float 7.0, float %mul)
   ret float %fma
 }
 
 ; Reduced precision for sqrt is allowed - should use estimate and NR iterations.
 
-; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_afn:'
-; FMFDEBUG:         fmul afn {{t[0-9]+}}
-; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_afn:'
+; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_afn_ieee:'
+; FMFDEBUG:         fmul ninf afn {{t[0-9]+}}
+; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_afn_ieee:'
 
-; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_afn:'
-; GLOBALDEBUG:         fmul afn {{t[0-9]+}}
-; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_afn:'
+; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_afn_ieee:'
+; GLOBALDEBUG:         fmul ninf afn {{t[0-9]+}}
+; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_afn_ieee:'
 
-define float @sqrt_afn(float %x) {
-; FMF-LABEL: sqrt_afn:
+define float @sqrt_afn_ieee(float %x) #0 {
+; FMF-LABEL: sqrt_afn_ieee:
 ; FMF:       # %bb.0:
+; FMF-NEXT:    xsabsdp 0, 1
+; FMF-NEXT:    addis 3, 2, .LCPI10_2@toc@ha
+; FMF-NEXT:    lfs 2, .LCPI10_2@toc@l(3)
+; FMF-NEXT:    fcmpu 0, 0, 2
 ; FMF-NEXT:    xxlxor 0, 0, 0
-; FMF-NEXT:    fcmpu 0, 1, 0
-; FMF-NEXT:    beq 0, .LBB10_2
+; FMF-NEXT:    blt 0, .LBB10_2
 ; FMF-NEXT:  # %bb.1:
 ; FMF-NEXT:    xsrsqrtesp 0, 1
 ; FMF-NEXT:    addis 3, 2, .LCPI10_0@toc@ha
@@ -298,11 +301,14 @@ define float @sqrt_afn(float %x) {
 ; FMF-NEXT:    fmr 1, 0
 ; FMF-NEXT:    blr
 ;
-; GLOBAL-LABEL: sqrt_afn:
+; GLOBAL-LABEL: sqrt_afn_ieee:
 ; GLOBAL:       # %bb.0:
+; GLOBAL-NEXT:    xsabsdp 0, 1
+; GLOBAL-NEXT:    addis 3, 2, .LCPI10_2@toc@ha
+; GLOBAL-NEXT:    lfs 2, .LCPI10_2@toc@l(3)
+; GLOBAL-NEXT:    fcmpu 0, 0, 2
 ; GLOBAL-NEXT:    xxlxor 0, 0, 0
-; GLOBAL-NEXT:    fcmpu 0, 1, 0
-; GLOBAL-NEXT:    beq 0, .LBB10_2
+; GLOBAL-NEXT:    blt 0, .LBB10_2
 ; GLOBAL-NEXT:  # %bb.1:
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI10_0@toc@ha
@@ -316,59 +322,196 @@ define float @sqrt_afn(float %x) {
 ; GLOBAL-NEXT:  .LBB10_2:
 ; GLOBAL-NEXT:    fmr 1, 0
 ; GLOBAL-NEXT:    blr
+  %rt = call afn ninf float @llvm.sqrt.f32(float %x)
+  ret float %rt
+}
+
+define float @sqrt_afn_ieee_inf(float %x) #0 {
+; FMF-LABEL: sqrt_afn_ieee_inf:
+; FMF:       # %bb.0:
+; FMF-NEXT:    xssqrtsp 1, 1
+; FMF-NEXT:    blr
+;
+; GLOBAL-LABEL: sqrt_afn_ieee_inf:
+; GLOBAL:       # %bb.0:
+; GLOBAL-NEXT:    xssqrtsp 1, 1
+; GLOBAL-NEXT:    blr
+  %rt = call afn float @llvm.sqrt.f32(float %x)
+  ret float %rt
+}
+
+; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_afn_preserve_sign:'
+; FMFDEBUG:         fmul ninf afn {{t[0-9]+}}
+; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_afn_preserve_sign:'
+
+; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_afn_preserve_sign:'
+; GLOBALDEBUG:         fmul ninf afn {{t[0-9]+}}
+; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_afn_preserve_sign:'
+
+define float @sqrt_afn_preserve_sign(float %x) #1 {
+; FMF-LABEL: sqrt_afn_preserve_sign:
+; FMF:       # %bb.0:
+; FMF-NEXT:    xxlxor 0, 0, 0
+; FMF-NEXT:    fcmpu 0, 1, 0
+; FMF-NEXT:    beq 0, .LBB12_2
+; FMF-NEXT:  # %bb.1:
+; FMF-NEXT:    xsrsqrtesp 0, 1
+; FMF-NEXT:    addis 3, 2, .LCPI12_0@toc@ha
+; FMF-NEXT:    addis 4, 2, .LCPI12_1@toc@ha
+; FMF-NEXT:    lfs 2, .LCPI12_0@toc@l(3)
+; FMF-NEXT:    lfs 3, .LCPI12_1@toc@l(4)
+; FMF-NEXT:    xsmulsp 1, 1, 0
+; FMF-NEXT:    xsmulsp 0, 1, 0
+; FMF-NEXT:    xsmulsp 1, 1, 2
+; FMF-NEXT:    xsaddsp 0, 0, 3
+; FMF-NEXT:    xsmulsp 0, 1, 0
+; FMF-NEXT:  .LBB12_2:
+; FMF-NEXT:    fmr 1, 0
+; FMF-NEXT:    blr
+;
+; GLOBAL-LABEL: sqrt_afn_preserve_sign:
+; GLOBAL:       # %bb.0:
+; GLOBAL-NEXT:    xxlxor 0, 0, 0
+; GLOBAL-NEXT:    fcmpu 0, 1, 0
+; GLOBAL-NEXT:    beq 0, .LBB12_2
+; GLOBAL-NEXT:  # %bb.1:
+; GLOBAL-NEXT:    xsrsqrtesp 0, 1
+; GLOBAL-NEXT:    addis 3, 2, .LCPI12_0@toc@ha
+; GLOBAL-NEXT:    addis 4, 2, .LCPI12_1@toc@ha
+; GLOBAL-NEXT:    lfs 2, .LCPI12_0@toc@l(3)
+; GLOBAL-NEXT:    lfs 3, .LCPI12_1@toc@l(4)
+; GLOBAL-NEXT:    xsmulsp 1, 1, 0
+; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
+; GLOBAL-NEXT:    xsmulsp 0, 1, 3
+; GLOBAL-NEXT:    xsmulsp 0, 0, 2
+; GLOBAL-NEXT:  .LBB12_2:
+; GLOBAL-NEXT:    fmr 1, 0
+; GLOBAL-NEXT:    blr
+  %rt = call afn ninf float @llvm.sqrt.f32(float %x)
+  ret float %rt
+}
+
+define float @sqrt_afn_preserve_sign_inf(float %x) #1 {
+; FMF-LABEL: sqrt_afn_preserve_sign_inf:
+; FMF:       # %bb.0:
+; FMF-NEXT:    xssqrtsp 1, 1
+; FMF-NEXT:    blr
+;
+; GLOBAL-LABEL: sqrt_afn_preserve_sign_inf:
+; GLOBAL:       # %bb.0:
+; GLOBAL-NEXT:    xssqrtsp 1, 1
+; GLOBAL-NEXT:    blr
   %rt = call afn float @llvm.sqrt.f32(float %x)
   ret float %rt
 }
 
 ; The call is now fully 'fast'. This implies that approximation is allowed.
 
-; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast:'
-; FMFDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
-; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast:'
+; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast_ieee:'
+; FMFDEBUG:         fmul ninf afn reassoc {{t[0-9]+}}
+; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast_ieee:'
 
-; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast:'
-; GLOBALDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
-; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast:'
+; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast_ieee:'
+; GLOBALDEBUG:         fmul ninf afn reassoc {{t[0-9]+}}
+; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast_ieee:'
 
-define float @sqrt_fast(float %x) {
-; FMF-LABEL: sqrt_fast:
+define float @sqrt_fast_ieee(float %x) #0 {
+; FMF-LABEL: sqrt_fast_ieee:
 ; FMF:       # %bb.0:
+; FMF-NEXT:    xsabsdp 0, 1
+; FMF-NEXT:    addis 3, 2, .LCPI14_2@toc@ha
+; FMF-NEXT:    lfs 2, .LCPI14_2@toc@l(3)
+; FMF-NEXT:    fcmpu 0, 0, 2
 ; FMF-NEXT:    xxlxor 0, 0, 0
-; FMF-NEXT:    fcmpu 0, 1, 0
-; FMF-NEXT:    beq 0, .LBB11_2
+; FMF-NEXT:    blt 0, .LBB14_2
 ; FMF-NEXT:  # %bb.1:
 ; FMF-NEXT:    xsrsqrtesp 0, 1
-; FMF-NEXT:    addis 3, 2, .LCPI11_0@toc@ha
-; FMF-NEXT:    addis 4, 2, .LCPI11_1@toc@ha
-; FMF-NEXT:    lfs 2, .LCPI11_0@toc@l(3)
-; FMF-NEXT:    lfs 3, .LCPI11_1@toc@l(4)
+; FMF-NEXT:    addis 3, 2, .LCPI14_0@toc@ha
+; FMF-NEXT:    addis 4, 2, .LCPI14_1@toc@ha
+; FMF-NEXT:    lfs 2, .LCPI14_0@toc@l(3)
+; FMF-NEXT:    lfs 3, .LCPI14_1@toc@l(4)
 ; FMF-NEXT:    xsmulsp 1, 1, 0
 ; FMF-NEXT:    xsmaddasp 2, 1, 0
 ; FMF-NEXT:    xsmulsp 0, 1, 3
 ; FMF-NEXT:    xsmulsp 0, 0, 2
-; FMF-NEXT:  .LBB11_2:
+; FMF-NEXT:  .LBB14_2:
 ; FMF-NEXT:    fmr 1, 0
 ; FMF-NEXT:    blr
 ;
-; GLOBAL-LABEL: sqrt_fast:
+; GLOBAL-LABEL: sqrt_fast_ieee:
 ; GLOBAL:       # %bb.0:
+; GLOBAL-NEXT:    xsabsdp 0, 1
+; GLOBAL-NEXT:    addis 3, 2, .LCPI14_2@toc@ha
+; GLOBAL-NEXT:    lfs 2, .LCPI14_2@toc@l(3)
+; GLOBAL-NEXT:    fcmpu 0, 0, 2
 ; GLOBAL-NEXT:    xxlxor 0, 0, 0
-; GLOBAL-NEXT:    fcmpu 0, 1, 0
-; GLOBAL-NEXT:    beq 0, .LBB11_2
+; GLOBAL-NEXT:    blt 0, .LBB14_2
 ; GLOBAL-NEXT:  # %bb.1:
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
-; GLOBAL-NEXT:    addis 3, 2, .LCPI11_0@toc@ha
-; GLOBAL-NEXT:    addis 4, 2, .LCPI11_1@toc@ha
-; GLOBAL-NEXT:    lfs 2, .LCPI11_0@toc@l(3)
-; GLOBAL-NEXT:    lfs 3, .LCPI11_1@toc@l(4)
+; GLOBAL-NEXT:    addis 3, 2, .LCPI14_0@toc@ha
+; GLOBAL-NEXT:    addis 4, 2, .LCPI14_1@toc@ha
+; GLOBAL-NEXT:    lfs 2, .LCPI14_0@toc@l(3)
+; GLOBAL-NEXT:    lfs 3, .LCPI14_1@toc@l(4)
 ; GLOBAL-NEXT:    xsmulsp 1, 1, 0
 ; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
 ; GLOBAL-NEXT:    xsmulsp 0, 1, 3
 ; GLOBAL-NEXT:    xsmulsp 0, 0, 2
-; GLOBAL-NEXT:  .LBB11_2:
+; GLOBAL-NEXT:  .LBB14_2:
 ; GLOBAL-NEXT:    fmr 1, 0
 ; GLOBAL-NEXT:    blr
-  %rt = call fast float @llvm.sqrt.f32(float %x)
+  %rt = call reassoc afn ninf float @llvm.sqrt.f32(float %x)
+  ret float %rt
+}
+
+; The call is now fully 'fast'. This implies that approximation is allowed.
+
+; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast_preserve_sign:'
+; FMFDEBUG:         fmul ninf afn reassoc {{t[0-9]+}}
+; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast_preserve_sign:'
+
+; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast_preserve_sign:'
+; GLOBALDEBUG:         fmul ninf afn reassoc {{t[0-9]+}}
+; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast_preserve_sign:'
+
+define float @sqrt_fast_preserve_sign(float %x) #1 {
+; FMF-LABEL: sqrt_fast_preserve_sign:
+; FMF:       # %bb.0:
+; FMF-NEXT:    xxlxor 0, 0, 0
+; FMF-NEXT:    fcmpu 0, 1, 0
+; FMF-NEXT:    beq 0, .LBB15_2
+; FMF-NEXT:  # %bb.1:
+; FMF-NEXT:    xsrsqrtesp 0, 1
+; FMF-NEXT:    addis 3, 2, .LCPI15_0@toc@ha
+; FMF-NEXT:    addis 4, 2, .LCPI15_1@toc@ha
+; FMF-NEXT:    lfs 2, .LCPI15_0@toc@l(3)
+; FMF-NEXT:    lfs 3, .LCPI15_1@toc@l(4)
+; FMF-NEXT:    xsmulsp 1, 1, 0
+; FMF-NEXT:    xsmaddasp 2, 1, 0
+; FMF-NEXT:    xsmulsp 0, 1, 3
+; FMF-NEXT:    xsmulsp 0, 0, 2
+; FMF-NEXT:  .LBB15_2:
+; FMF-NEXT:    fmr 1, 0
+; FMF-NEXT:    blr
+;
+; GLOBAL-LABEL: sqrt_fast_preserve_sign:
+; GLOBAL:       # %bb.0:
+; GLOBAL-NEXT:    xxlxor 0, 0, 0
+; GLOBAL-NEXT:    fcmpu 0, 1, 0
+; GLOBAL-NEXT:    beq 0, .LBB15_2
+; GLOBAL-NEXT:  # %bb.1:
+; GLOBAL-NEXT:    xsrsqrtesp 0, 1
+; GLOBAL-NEXT:    addis 3, 2, .LCPI15_0@toc@ha
+; GLOBAL-NEXT:    addis 4, 2, .LCPI15_1@toc@ha
+; GLOBAL-NEXT:    lfs 2, .LCPI15_0@toc@l(3)
+; GLOBAL-NEXT:    lfs 3, .LCPI15_1@toc@l(4)
+; GLOBAL-NEXT:    xsmulsp 1, 1, 0
+; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
+; GLOBAL-NEXT:    xsmulsp 0, 1, 3
+; GLOBAL-NEXT:    xsmulsp 0, 0, 2
+; GLOBAL-NEXT:  .LBB15_2:
+; GLOBAL-NEXT:    fmr 1, 0
+; GLOBAL-NEXT:    blr
+  %rt = call reassoc ninf afn float @llvm.sqrt.f32(float %x)
   ret float %rt
 }
 
@@ -387,10 +530,10 @@ define double @fcmp_nnan(double %a, double %y, double %z) {
 ; FMF:       # %bb.0:
 ; FMF-NEXT:    xxlxor 0, 0, 0
 ; FMF-NEXT:    xscmpudp 0, 1, 0
-; FMF-NEXT:    blt 0, .LBB12_2
+; FMF-NEXT:    blt 0, .LBB16_2
 ; FMF-NEXT:  # %bb.1:
 ; FMF-NEXT:    fmr 3, 2
-; FMF-NEXT:  .LBB12_2:
+; FMF-NEXT:  .LBB16_2:
 ; FMF-NEXT:    fmr 1, 3
 ; FMF-NEXT:    blr
 ;
@@ -398,10 +541,10 @@ define double @fcmp_nnan(double %a, double %y, double %z) {
 ; GLOBAL:       # %bb.0:
 ; GLOBAL-NEXT:    xxlxor 0, 0, 0
 ; GLOBAL-NEXT:    xscmpudp 0, 1, 0
-; GLOBAL-NEXT:    blt 0, .LBB12_2
+; GLOBAL-NEXT:    blt 0, .LBB16_2
 ; GLOBAL-NEXT:  # %bb.1:
 ; GLOBAL-NEXT:    fmr 3, 2
-; GLOBAL-NEXT:  .LBB12_2:
+; GLOBAL-NEXT:  .LBB16_2:
 ; GLOBAL-NEXT:    fmr 1, 3
 ; GLOBAL-NEXT:    blr
   %cmp = fcmp nnan ult double %a, 0.0
@@ -477,3 +620,5 @@ define float @fneg_fsub_nozeros_1(float %x, float %y, float %z) {
   ret float %add
 }
 
+attributes #0 = { "denormal-fp-math"="ieee,ieee" }
+attributes #1 = { "denormal-fp-math"="preserve-sign,preserve-sign" }

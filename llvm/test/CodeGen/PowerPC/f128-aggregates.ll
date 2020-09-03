@@ -1,9 +1,8 @@
 ; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -verify-machineinstrs \
-; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
+; RUN:   -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s \
+; RUN:   | FileCheck %s
 ; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -verify-machineinstrs \
-; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s \
+; RUN:   -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s \
 ; RUN:   | FileCheck -check-prefix=CHECK-BE %s
 
 ; Testing homogeneous aggregates.
@@ -343,7 +342,7 @@ define fp128 @sum_float128(i32 signext %count, ...) {
 ; CHECK-DAG:     std r7, 64(r1)
 ; CHECK-DAG:     std r6, 56(r1)
 ; CHECK-DAG:     std r4, 40(r1)
-; CHECK-DAG:     cmpwi cr0, r3, 1
+; CHECK-DAG:     cmpwi r3, 1
 ; CHECK-DAG:     std r5, 48(r1)
 ; CHECK-DAG:     addis [[REG:r[0-9]+]], r2, .LCPI17_0@toc@ha
 ; CHECK-DAG:     addi [[REG1:r[0-9]+]], [[REG]], .LCPI17_0@toc@l

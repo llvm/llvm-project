@@ -99,13 +99,11 @@ define i8 @nopreserve4(i8 %A, i8 %B) {
   ret i8 %add
 }
 
-; TODO: computeKnownBits() should look through a shufflevector.
-
 define <3 x i32> @shl_nuw_nsw_shuffle_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_nuw_nsw_shuffle_splat_vec(
 ; CHECK-NEXT:    [[T2:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[T2]], <2 x i32> undef, <3 x i32> <i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[T3:%.*]] = shl nsw <3 x i32> [[SHUF]], <i32 17, i32 17, i32 17>
+; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw <3 x i32> [[SHUF]], <i32 17, i32 17, i32 17>
 ; CHECK-NEXT:    ret <3 x i32> [[T3]]
 ;
   %t2 = zext <2 x i8> %x to <2 x i32>
@@ -130,3 +128,15 @@ define <3 x i32> @shl_nuw_nsw_shuffle_undef_elt_splat_vec(<2 x i8> %x) {
   ret <3 x i32> %t3
 }
 
+; Make sure we don't crash on a ConstantExpr shufflevector
+define <vscale x 2 x i64> @mul_nuw_nsw_shuffle_constant_expr(<vscale x 2 x i8> %z) {
+; CHECK-LABEL: @mul_nuw_nsw_shuffle_constant_expr(
+; CHECK-NEXT:    [[XX:%.*]] = zext <vscale x 2 x i8> [[Z:%.*]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[T3:%.*]] = mul <vscale x 2 x i64> [[XX]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 3, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[T3]]
+;
+  %xx = zext <vscale x 2 x i8> %z to <vscale x 2 x i64>
+  %shuf = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 3, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer
+  %t3 = mul <vscale x 2 x i64> %shuf, %xx
+  ret <vscale x 2 x i64> %t3
+}

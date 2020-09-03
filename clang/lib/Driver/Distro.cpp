@@ -11,9 +11,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 using namespace clang::driver;
 using namespace clang;
@@ -70,6 +71,7 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS,
                       .Case("disco", Distro::UbuntuDisco)
                       .Case("eoan", Distro::UbuntuEoan)
                       .Case("focal", Distro::UbuntuFocal)
+                      .Case("groovy", Distro::UbuntuGroovy)
                       .Default(Distro::UnknownDistro);
     if (Version != Distro::UnknownDistro)
       return Version;

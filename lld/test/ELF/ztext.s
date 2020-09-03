@@ -10,11 +10,15 @@
 # RUN: ld.lld -z notext %t.o %t2.so -o %t3
 # RUN: llvm-readobj  --dynamic-table -r %t3 | FileCheck --check-prefix=STATIC %s
 
-# RUN: not ld.lld %t.o %t2.so -o %t -shared 2>&1 | FileCheck --check-prefix=ERR %s
-# RUN: not ld.lld -z text %t.o %t2.so -o %t -shared 2>&1 | FileCheck --check-prefix=ERR %s
+# RUN: not ld.lld %t.o %t2.so -o /dev/null -shared 2>&1 | FileCheck --check-prefix=ERR %s
+# RUN: not ld.lld -z text %t.o %t2.so -o /dev/null -shared 2>&1 | FileCheck --check-prefix=ERR %s
 # ERR: error: can't create dynamic relocation
 
 # If the preference is to have text relocations, don't create plt of copy relocations.
+
+# CHECK: DynamicSection [
+# CHECK:   FLAGS TEXTREL
+# CHECK:   TEXTREL 0x0
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section {{.*}} .rela.dyn {
@@ -24,9 +28,9 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# CHECK: DynamicSection [
-# CHECK:   FLAGS TEXTREL
-# CHECK:   TEXTREL 0x0
+# STATIC: DynamicSection [
+# STATIC:   FLAGS TEXTREL
+# STATIC:   TEXTREL 0x0
 
 # STATIC:      Relocations [
 # STATIC-NEXT:   Section {{.*}} .rela.dyn {
@@ -34,10 +38,6 @@
 # STATIC-NEXT:     0x201298 R_X86_64_PC64 zed 0x0
 # STATIC-NEXT:   }
 # STATIC-NEXT: ]
-
-# STATIC: DynamicSection [
-# STATIC:   FLAGS TEXTREL
-# STATIC:   TEXTREL 0x0
 
 foo:
 .quad foo

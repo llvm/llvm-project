@@ -1,4 +1,4 @@
-//===-- PlatformDarwin.cpp --------------------------------------*- C++ -*-===//
+//===-- PlatformDarwin.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -236,6 +236,30 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
             module_spec.GetSymbolFileSpec().GetFilename().AsCString());
 
   Status err;
+
+  if (IsHost()) {
+    // When debugging on the host, we are most likely using the same shared
+    // cache as our inferior. The dylibs from the shared cache might not
+    // exist on the filesystem, so let's use the images in our own memory
+    // to create the modules.
+
+    // Check if the requested image is in our shared cache.
+    SharedCacheImageInfo image_info =
+        HostInfo::GetSharedCacheImageInfo(module_spec.GetFileSpec().GetPath());
+
+    // If we found it and it has the correct UUID, let's proceed with
+    // creating a module from the memory contents.
+    if (image_info.uuid &&
+        (!module_spec.GetUUID() || module_spec.GetUUID() == image_info.uuid)) {
+      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(), image_info.uuid,
+                                   image_info.data_sp);
+      err = ModuleList::GetSharedModule(shared_cache_spec, module_sp,
+                                        module_search_paths_ptr,
+                                        old_module_sp_ptr, did_create_ptr);
+      if (module_sp)
+        return err;
+    }
+  }
 
   err = ModuleList::GetSharedModule(module_spec, module_sp,
                                     module_search_paths_ptr, old_module_sp_ptr,
@@ -546,6 +570,8 @@ bool PlatformDarwin::ARMGetSupportedArchitectureAtIndex(uint32_t idx,
 #define OSNAME "watchos"
 #elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
 #define OSNAME "bridgeos"
+#elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
+#define OSNAME "macosx"
 #else
 #define OSNAME "ios"
 #endif
@@ -1506,7 +1532,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     default:
       llvm_unreachable("unsupported sdk");
     }
-    options.push_back(minimum_version_option.GetString());
+    options.push_back(std::string(minimum_version_option.GetString()));
   }
 
   FileSpec sysroot_spec;

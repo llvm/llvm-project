@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OptionValueDictionary_h_
-#define liblldb_OptionValueDictionary_h_
+#ifndef LLDB_INTERPRETER_OPTIONVALUEDICTIONARY_H
+#define LLDB_INTERPRETER_OPTIONVALUEDICTIONARY_H
 
 #include <map>
 
@@ -81,4 +81,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_OptionValueDictionary_h_
+#endif // LLDB_INTERPRETER_OPTIONVALUEDICTIONARY_H

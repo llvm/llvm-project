@@ -45,8 +45,7 @@ void X86IntelInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   if (MI->getOpcode() == X86::DATA16_PREFIX &&
       STI.getFeatureBits()[X86::Mode16Bit]) {
     OS << "\tdata32";
-  } else if (!printAliasInstr(MI, OS) &&
-             !printVecCompareInstr(MI, OS))
+  } else if (!printAliasInstr(MI, Address, OS) && !printVecCompareInstr(MI, OS))
     printInstruction(MI, Address, OS);
 
   // Next always print the annotation.

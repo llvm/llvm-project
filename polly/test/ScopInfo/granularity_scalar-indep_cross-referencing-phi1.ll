@@ -57,6 +57,6 @@ return:
 ; CHECK-NEXT:         Instructions {
 ; CHECK-NEXT:               %valA = phi double [ 4.200000e+01, %entry ], [ %valB, %for ]
 ; CHECK-NEXT:               %valB = phi double [ 2.100000e+01, %entry ], [ %valA, %for ]
-; CHECK-NEXT:               store double %valA, double* %A
+; CHECK-NEXT:               store double %valA, double* %A, align 8
 ; CHECK-NEXT:         }
 ; CHECK-NEXT: }

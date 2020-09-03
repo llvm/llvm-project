@@ -13,6 +13,8 @@
 #include "SymbolLocation.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -27,10 +29,43 @@ namespace clangd {
 /// This is a bitfield which can be combined from different kinds.
 enum class RefKind : uint8_t {
   Unknown = 0,
-  Declaration = static_cast<uint8_t>(index::SymbolRole::Declaration),
-  Definition = static_cast<uint8_t>(index::SymbolRole::Definition),
-  Reference = static_cast<uint8_t>(index::SymbolRole::Reference),
-  All = Declaration | Definition | Reference,
+  // Points to symbol declaration. Example:
+  //
+  // class Foo;
+  //       ^ Foo declaration
+  // Foo foo;
+  // ^ this does not reference Foo declaration
+  Declaration = 1 << 0,
+  // Points to symbol definition. Example:
+  //
+  // int foo();
+  //     ^ references foo declaration, but not foo definition
+  // int foo() { return 42; }
+  //     ^ references foo definition, but not declaration
+  // bool bar() { return true; }
+  //      ^ references both definition and declaration
+  Definition = 1 << 1,
+  // Points to symbol reference. Example:
+  //
+  // int Foo = 42;
+  // int Bar = Foo + 1;
+  //           ^ this is a reference to Foo
+  Reference = 1 << 2,
+  // The reference explicitly spells out declaration's name. Such references can
+  // not come from macro expansions or implicit AST nodes.
+  //
+  // class Foo { public: Foo() {} };
+  //       ^ references declaration, definition and explicitly spells out name
+  // #define MACRO Foo
+  //     v there is an implicit constructor call here which is not a spelled ref
+  // Foo foo;
+  // ^ this reference explicitly spells out Foo's name
+  // struct Bar {
+  //   MACRO Internal;
+  //   ^ this references Foo, but does not explicitly spell out its name
+  // };
+  Spelled = 1 << 3,
+  All = Declaration | Definition | Reference | Spelled,
 };
 
 inline RefKind operator|(RefKind L, RefKind R) {
@@ -99,9 +134,17 @@ public:
     RefSlab build() &&;
 
   private:
+    // A ref we're storing with its symbol to consume with build().
+    // All strings are interned, so DenseMapInfo can use pointer comparisons.
+    struct Entry {
+      SymbolID Symbol;
+      Ref Reference;
+    };
+    friend struct llvm::DenseMapInfo<Entry>;
+
     llvm::BumpPtrAllocator Arena;
     llvm::UniqueStringSaver UniqueStrings; // Contents on the arena.
-    llvm::DenseMap<SymbolID, std::set<Ref>> Refs;
+    llvm::DenseSet<Entry> Entries;
   };
 
 private:
@@ -117,5 +160,32 @@ private:
 
 } // namespace clangd
 } // namespace clang
+
+namespace llvm {
+template <> struct DenseMapInfo<clang::clangd::RefSlab::Builder::Entry> {
+  using Entry = clang::clangd::RefSlab::Builder::Entry;
+  static inline Entry getEmptyKey() {
+    static Entry E{clang::clangd::SymbolID(""), {}};
+    return E;
+  }
+  static inline Entry getTombstoneKey() {
+    static Entry E{clang::clangd::SymbolID("TOMBSTONE"), {}};
+    return E;
+  }
+  static unsigned getHashValue(const Entry &Val) {
+    return llvm::hash_combine(
+        Val.Symbol, reinterpret_cast<uintptr_t>(Val.Reference.Location.FileURI),
+        Val.Reference.Location.Start.rep(), Val.Reference.Location.End.rep());
+  }
+  static bool isEqual(const Entry &LHS, const Entry &RHS) {
+    return std::tie(LHS.Symbol, LHS.Reference.Location.FileURI,
+                    LHS.Reference.Kind) ==
+               std::tie(RHS.Symbol, RHS.Reference.Location.FileURI,
+                        RHS.Reference.Kind) &&
+           LHS.Reference.Location.Start == RHS.Reference.Location.Start &&
+           LHS.Reference.Location.End == RHS.Reference.Location.End;
+  }
+};
+} // namespace llvm
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_REF_H

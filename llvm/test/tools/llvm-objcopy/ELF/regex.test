@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
 # No symbol matches, because pattern is implicitly enveloped in '^$'
 # RUN: llvm-objcopy --discard-all --regex -K 'ba' %t %t2

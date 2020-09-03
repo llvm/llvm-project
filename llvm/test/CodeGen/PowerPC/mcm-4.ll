@@ -23,41 +23,41 @@ entry:
 }
 
 ; MEDIUM: [[VAR:[a-z0-9A-Z_.]+]]:
-; MEDIUM: .quad 4562098671269285104
+; MEDIUM: .quad 0x3f4fd4920b498cf0
 ; MEDIUM-LABEL: test_double_const:
 ; MEDIUM: addis [[REG1:[0-9]+]], 2, [[VAR]]@toc@ha
 ; MEDIUM: addi [[REG2:[0-9]+]], [[REG1]], [[VAR]]@toc@l
 ; MEDIUM: lfd {{[0-9]+}}, 0([[REG2]])
 
 ; MEDIUM-VSX: [[VAR:[a-z0-9A-Z_.]+]]:
-; MEDIUM-VSX: .quad 4562098671269285104
+; MEDIUM-VSX: .quad 0x3f4fd4920b498cf0
 ; MEDIUM-VSX-LABEL: test_double_const:
 ; MEDIUM-VSX: addis [[REG1:[0-9]+]], 2, [[VAR]]@toc@ha
 ; MEDIUM-VSX: lfd {{[0-9]+}}, [[VAR]]@toc@l([[REG1]])
 
 ; LARGE: [[VAR:[a-z0-9A-Z_.]+]]:
-; LARGE: .quad 4562098671269285104
+; LARGE: .quad 0x3f4fd4920b498cf0
 ; LARGE-LABEL: test_double_const:
 ; LARGE: addis [[REG1:[0-9]+]], 2, [[VAR2:[a-z0-9A-Z_.]+]]@toc@ha
 ; LARGE: ld [[REG2:[0-9]+]], [[VAR2]]@toc@l([[REG1]])
 ; LARGE: lfd {{[0-9]+}}, 0([[REG2]])
 
 ; LARGE-VSX: [[VAR:[a-z0-9A-Z_.]+]]:
-; LARGE-VSX: .quad 4562098671269285104
+; LARGE-VSX: .quad 0x3f4fd4920b498cf0
 ; LARGE-VSX-LABEL: test_double_const:
 ; LARGE-VSX: addis [[REG1:[0-9]+]], 2, [[VAR2:[a-z0-9A-Z_.]+]]@toc@ha
 ; LARGE-VSX: ld [[REG2:[0-9]+]], [[VAR2]]@toc@l([[REG1]])
 ; LARGE-VSX: lfdx {{[0-9]+}}, 0, [[REG2]]
 
 ; MEDIUM-P9: [[VAR:[a-z0-9A-Z_.]+]]:
-; MEDIUM-P9: .quad 4562098671269285104
+; MEDIUM-P9: .quad 0x3f4fd4920b498cf0
 ; MEDIUM-P9-LABEL: test_double_const:
 ; MEDIUM-P9: addis [[REG1:[0-9]+]], 2, [[VAR]]@toc@ha
 ; MEDIUM-P9: addi [[REG2:[0-9]+]], [[REG1]], [[VAR]]@toc@l
 ; MEDIUM-P9: lfd {{[0-9]+}}, 0([[REG2]])
 
 ; LARGE-P9: [[VAR:[a-z0-9A-Z_.]+]]:
-; LARGE-P9: .quad 4562098671269285104
+; LARGE-P9: .quad 0x3f4fd4920b498cf0
 ; LARGE-P9-LABEL: test_double_const:
 ; LARGE-P9: addis [[REG1:[0-9]+]], 2, [[VAR2:[a-z0-9A-Z_.]+]]@toc@ha
 ; LARGE-P9: ld [[REG2:[0-9]+]], [[VAR2]]@toc@l([[REG1]])

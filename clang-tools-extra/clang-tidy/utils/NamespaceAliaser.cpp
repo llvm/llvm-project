@@ -43,11 +43,11 @@ NamespaceAliaser::createAlias(ASTContext &Context, const Stmt &Statement,
   // FIXME: Also doesn't consider file or class-scope aliases.
 
   const auto *ExistingAlias = selectFirst<NamedDecl>(
-      "alias",
-      match(functionDecl(hasBody(compoundStmt(has(declStmt(
-                has(namespaceAliasDecl(hasTargetNamespace(hasName(Namespace)))
-                        .bind("alias"))))))),
-            *Function, Context));
+      "alias", match(functionDecl(hasBody(compoundStmt(has(declStmt(
+                         has(namespaceAliasDecl(hasTargetNamespace(hasName(
+                                                    std::string(Namespace))))
+                                 .bind("alias"))))))),
+                     *Function, Context));
 
   if (ExistingAlias != nullptr) {
     AddedAliases[Function][Namespace.str()] = ExistingAlias->getName().str();

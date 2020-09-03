@@ -13,6 +13,6 @@ set(LLVM_LINK_COMPONENTS
   WebAssemblyInfo
   )
 
-add_llvm_unittest(WebAssemblyTests
+add_llvm_target_unittest(WebAssemblyTests
   WebAssemblyExceptionInfoTest.cpp
   )

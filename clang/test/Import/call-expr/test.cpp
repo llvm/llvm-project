@@ -5,4 +5,4 @@ void expr() {
 
 // CHECK: FunctionDecl 0x{{[^ ]*}} <{{[^>]*}}> line:{{.*}}:{{[^ ]*}} used f 'void ()'
 // CHECK: -CallExpr 0x{{[^ ]*}} <{{[^>]*}}> 'void' adl
-// CHECK: -CXXOperatorCallExpr 0x{{[^ ]*}} <{{[^>]*}}> 'void' adl
+// CHECK: -CXXOperatorCallExpr 0x{{[^ ]*}} <{{[^>]*}}> 'void' '+' adl

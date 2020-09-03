@@ -1,6 +1,6 @@
 //===- TokenKinds.def - MLIR Token Description ------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -11,9 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !defined(TOK_MARKER) && !defined(TOK_IDENTIFIER) && !defined(TOK_LITERAL)&&\
-    !defined(TOK_PUNCTUATION) && !defined(TOK_OPERATOR) && !defined(TOK_KEYWORD)
-#  error Must define one of the TOK_ macros.
+#if !defined(TOK_MARKER) && !defined(TOK_IDENTIFIER) &&                        \
+    !defined(TOK_LITERAL) && !defined(TOK_PUNCTUATION) &&                      \
+    !defined(TOK_KEYWORD)
+#error Must define one of the TOK_ macros.
 #endif
 
 #ifndef TOK_MARKER
@@ -28,13 +29,9 @@
 #ifndef TOK_PUNCTUATION
 #define TOK_PUNCTUATION(NAME, SPELLING)
 #endif
-#ifndef TOK_OPERATOR
-#define TOK_OPERATOR(NAME, SPELLING)
-#endif
 #ifndef TOK_KEYWORD
 #define TOK_KEYWORD(SPELLING)
 #endif
-
 
 // Markers
 TOK_MARKER(eof)
@@ -49,39 +46,37 @@ TOK_IDENTIFIER(caret_identifier)       // ^foo
 TOK_IDENTIFIER(exclamation_identifier) // !foo
 
 // Literals
-TOK_LITERAL(floatliteral)               // 2.0
-TOK_LITERAL(integer)                    // 42
-TOK_LITERAL(string)                     // "foo"
-TOK_LITERAL(inttype)                    // i421
+TOK_LITERAL(floatliteral) // 2.0
+TOK_LITERAL(integer)      // 42
+TOK_LITERAL(string)       // "foo"
+TOK_LITERAL(inttype)      // i4, si8, ui16
 
 // Punctuation.
-TOK_PUNCTUATION(arrow,            "->")
-TOK_PUNCTUATION(at,               "@")
-TOK_PUNCTUATION(colon,            ":")
-TOK_PUNCTUATION(comma,            ",")
-TOK_PUNCTUATION(question,         "?")
-TOK_PUNCTUATION(l_paren,          "(")
-TOK_PUNCTUATION(r_paren,          ")")
-TOK_PUNCTUATION(l_brace,          "{")
-TOK_PUNCTUATION(r_brace,          "}")
-TOK_PUNCTUATION(l_square,         "[")
-TOK_PUNCTUATION(r_square,         "]")
-TOK_PUNCTUATION(less,             "<")
-TOK_PUNCTUATION(greater,          ">")
-TOK_PUNCTUATION(equal,            "=")
-TOK_PUNCTUATION(ellipsis,         "...")
-// TODO: More punctuation.
-
-// Operators.
-TOK_OPERATOR(plus,               "+")
-TOK_OPERATOR(minus,              "-")
-TOK_OPERATOR(star,               "*")
-// TODO: More operator tokens
+TOK_PUNCTUATION(arrow, "->")
+TOK_PUNCTUATION(at, "@")
+TOK_PUNCTUATION(colon, ":")
+TOK_PUNCTUATION(comma, ",")
+TOK_PUNCTUATION(ellipsis, "...")
+TOK_PUNCTUATION(equal, "=")
+TOK_PUNCTUATION(greater, ">")
+TOK_PUNCTUATION(l_brace, "{")
+TOK_PUNCTUATION(l_paren, "(")
+TOK_PUNCTUATION(l_square, "[")
+TOK_PUNCTUATION(less, "<")
+TOK_PUNCTUATION(minus, "-")
+TOK_PUNCTUATION(plus, "+")
+TOK_PUNCTUATION(question, "?")
+TOK_PUNCTUATION(r_brace, "}")
+TOK_PUNCTUATION(r_paren, ")")
+TOK_PUNCTUATION(r_square, "]")
+TOK_PUNCTUATION(star, "*")
 
 // Keywords.  These turn "foo" into Token::kw_foo enums.
 
 // NOTE: Please key these alphabetized to make it easier to find something in
 // this list and to cater to OCD.
+TOK_KEYWORD(affine_map)
+TOK_KEYWORD(affine_set)
 TOK_KEYWORD(attributes)
 TOK_KEYWORD(bf16)
 TOK_KEYWORD(ceildiv)
@@ -120,5 +115,4 @@ TOK_KEYWORD(vector)
 #undef TOK_IDENTIFIER
 #undef TOK_LITERAL
 #undef TOK_PUNCTUATION
-#undef TOK_OPERATOR
 #undef TOK_KEYWORD

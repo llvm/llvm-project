@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SYMBOLFILE_DWARF_DWARFCONTEXT_H
-#define LLDB_PLUGINS_SYMBOLFILE_DWARF_DWARFCONTEXT_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFCONTEXT_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFCONTEXT_H
 
 #include "DWARFDataExtractor.h"
 #include "lldb/Core/Section.h"
@@ -31,22 +31,27 @@ private:
   SectionData m_data_debug_abbrev;
   SectionData m_data_debug_addr;
   SectionData m_data_debug_aranges;
+  SectionData m_data_debug_cu_index;
   SectionData m_data_debug_info;
   SectionData m_data_debug_line;
   SectionData m_data_debug_line_str;
+  SectionData m_data_debug_loc;
+  SectionData m_data_debug_loclists;
   SectionData m_data_debug_macro;
   SectionData m_data_debug_ranges;
   SectionData m_data_debug_rnglists;
   SectionData m_data_debug_str;
   SectionData m_data_debug_str_offsets;
+  SectionData m_data_debug_tu_index;
   SectionData m_data_debug_types;
 
-  bool isDwo() { return m_dwo_section_list != nullptr; }
-
   const DWARFDataExtractor &
-  LoadOrGetSection(lldb::SectionType main_section_type,
+  LoadOrGetSection(llvm::Optional<lldb::SectionType> main_section_type,
                    llvm::Optional<lldb::SectionType> dwo_section_type,
                    SectionData &data);
+
+  const DWARFDataExtractor &getOrLoadCuIndexData();
+  const DWARFDataExtractor &getOrLoadTuIndexData();
 
 public:
   explicit DWARFContext(SectionList *main_section_list,
@@ -60,12 +65,16 @@ public:
   const DWARFDataExtractor &getOrLoadDebugInfoData();
   const DWARFDataExtractor &getOrLoadLineData();
   const DWARFDataExtractor &getOrLoadLineStrData();
+  const DWARFDataExtractor &getOrLoadLocData();
+  const DWARFDataExtractor &getOrLoadLocListsData();
   const DWARFDataExtractor &getOrLoadMacroData();
   const DWARFDataExtractor &getOrLoadRangesData();
   const DWARFDataExtractor &getOrLoadRngListsData();
   const DWARFDataExtractor &getOrLoadStrData();
   const DWARFDataExtractor &getOrLoadStrOffsetsData();
   const DWARFDataExtractor &getOrLoadDebugTypesData();
+
+  bool isDwo() { return m_dwo_section_list != nullptr; }
 
   llvm::DWARFContext &GetAsLLVM();
 };

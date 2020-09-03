@@ -14,6 +14,7 @@
 
 using namespace lldb_private;
 
+#ifndef _WIN32
 TEST(CommunicationTest, SynchronizeWhileClosing) {
   // Set up a communication object reading from a pipe.
   Pipe pipe;
@@ -33,3 +34,4 @@ TEST(CommunicationTest, SynchronizeWhileClosing) {
 
   ASSERT_TRUE(comm.StopReadThread());
 }
+#endif

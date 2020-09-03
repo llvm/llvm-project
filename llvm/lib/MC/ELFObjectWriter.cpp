@@ -40,7 +40,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/Endian.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Host.h"
@@ -73,7 +73,7 @@ class ELFObjectWriter;
 struct ELFWriter;
 
 bool isDwoSection(const MCSectionELF &Sec) {
-  return Sec.getSectionName().endswith(".dwo");
+  return Sec.getName().endswith(".dwo");
 }
 
 class SymbolTableWriter {
@@ -343,7 +343,7 @@ void ELFWriter::align(unsigned Alignment) {
 
 unsigned ELFWriter::addToSectionTable(const MCSectionELF *Sec) {
   SectionTable.push_back(Sec);
-  StrTabBuilder.add(Sec->getSectionName());
+  StrTabBuilder.add(Sec->getName());
   return SectionTable.size();
 }
 
@@ -569,26 +569,6 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
                      IsReserved);
 }
 
-// True if the assembler knows nothing about the final value of the symbol.
-// This doesn't cover the comdat issues, since in those cases the assembler
-// can at least know that all symbols in the section will move together.
-static bool isWeak(const MCSymbolELF &Sym) {
-  if (Sym.getType() == ELF::STT_GNU_IFUNC)
-    return true;
-
-  switch (Sym.getBinding()) {
-  default:
-    llvm_unreachable("Unknown binding");
-  case ELF::STB_LOCAL:
-    return false;
-  case ELF::STB_GLOBAL:
-    return false;
-  case ELF::STB_WEAK:
-  case ELF::STB_GNU_UNIQUE:
-    return true;
-  }
-}
-
 bool ELFWriter::isInSymtab(const MCAsmLayout &Layout, const MCSymbolELF &Symbol,
                            bool Used, bool Renamed) {
   if (Symbol.isVariable()) {
@@ -660,7 +640,7 @@ void ELFWriter::computeSymbolTable(
       continue;
 
     if (Symbol.isTemporary() && Symbol.isUndefined()) {
-      Ctx.reportError(SMLoc(), "Undefined temporary symbol");
+      Ctx.reportError(SMLoc(), "Undefined temporary symbol " + Symbol.getName());
       continue;
     }
 
@@ -804,7 +784,7 @@ MCSectionELF *ELFWriter::createRelocationSection(MCContext &Ctx,
   if (OWriter.Relocations[&Sec].empty())
     return nullptr;
 
-  const StringRef SectionName = Sec.getSectionName();
+  const StringRef SectionName = Sec.getName();
   std::string RelaSectionName = hasRelocationAddend() ? ".rela" : ".rel";
   RelaSectionName += SectionName;
 
@@ -863,7 +843,7 @@ bool ELFWriter::maybeWriteCompression(
 void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
                                  const MCAsmLayout &Layout) {
   MCSectionELF &Section = static_cast<MCSectionELF &>(Sec);
-  StringRef SectionName = Section.getSectionName();
+  StringRef SectionName = Section.getName();
 
   auto &MC = Asm.getContext();
   const auto &MAI = MC.getAsmInfo();
@@ -1021,7 +1001,7 @@ void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
   case ELF::SHT_RELA: {
     sh_link = SymbolTableIndex;
     assert(sh_link && ".symtab not found");
-    const MCSection *InfoSection = Section.getAssociatedSection();
+    const MCSection *InfoSection = Section.getLinkedToSection();
     sh_info = SectionIndexMap.lookup(cast<MCSectionELF>(InfoSection));
     break;
   }
@@ -1044,12 +1024,12 @@ void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
   }
 
   if (Section.getFlags() & ELF::SHF_LINK_ORDER) {
-    const MCSymbol *Sym = Section.getAssociatedSymbol();
+    const MCSymbol *Sym = Section.getLinkedToSymbol();
     const MCSectionELF *Sec = cast<MCSectionELF>(&Sym->getSection());
     sh_link = SectionIndexMap.lookup(Sec);
   }
 
-  WriteSecHdrEntry(StrTabBuilder.getOffset(Section.getSectionName()),
+  WriteSecHdrEntry(StrTabBuilder.getOffset(Section.getName()),
                    Section.getType(), Section.getFlags(), 0, Offset, Size,
                    sh_link, sh_info, Section.getAlignment(),
                    Section.getEntrySize());
@@ -1200,7 +1180,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
       uint64_t SecStart = W.OS.tell();
 
       writeRelocations(Asm,
-                       cast<MCSectionELF>(*RelSection->getAssociatedSection()));
+                       cast<MCSectionELF>(*RelSection->getLinkedToSection()));
 
       uint64_t SecEnd = W.OS.tell();
       SectionOffsets[RelSection] = std::make_pair(SecStart, SecEnd);
@@ -1534,7 +1514,8 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   const auto &SymA = cast<MCSymbolELF>(SA);
   if (IsPCRel) {
     assert(!InSet);
-    if (isWeak(SymA))
+    if (SymA.getBinding() != ELF::STB_LOCAL ||
+        SymA.getType() == ELF::STT_GNU_IFUNC)
       return false;
   }
   return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB,

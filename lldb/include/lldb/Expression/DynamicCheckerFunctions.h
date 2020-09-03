@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_DynamicCheckerFunctions_h_
-#define liblldb_DynamicCheckerFunctions_h_
+#ifndef LLDB_EXPRESSION_DYNAMICCHECKERFUNCTIONS_H
+#define LLDB_EXPRESSION_DYNAMICCHECKERFUNCTIONS_H
 
 #include "lldb/lldb-types.h"
 
@@ -59,4 +59,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // liblldb_DynamicCheckerFunctions_h_
+#endif // LLDB_EXPRESSION_DYNAMICCHECKERFUNCTIONS_H

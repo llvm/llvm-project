@@ -1,6 +1,6 @@
 //===- NestedMacher.h - Nested matcher for Function -------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -73,7 +73,7 @@ private:
 ///   1. recursively matches a substructure in the tree;
 ///   2. uses a filter function to refine matches with extra semantic
 ///      constraints (passed via a lambda of type FilterFunctionType);
-///   3. TODO(ntv) optionally applies actions (lambda).
+///   3. TODO: optionally applies actions (lambda).
 ///
 /// Nested patterns are meant to capture imperfectly nested loops while matching
 /// properties over the whole loop nest. For instance, in vectorization we are

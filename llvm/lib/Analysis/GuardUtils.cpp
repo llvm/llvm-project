@@ -47,7 +47,7 @@ bool llvm::parseWidenableBranch(const User *U, Value *&Condition,
 
   Use *C, *WC;
   if (parseWidenableBranch(const_cast<User*>(U), C, WC, IfTrueBB, IfFalseBB)) {
-    if (C) 
+    if (C)
       Condition = C->get();
     else
       Condition = ConstantInt::getTrue(IfTrueBB->getContext());
@@ -66,10 +66,10 @@ bool llvm::parseWidenableBranch(User *U, Use *&C,Use *&WC,
   auto *Cond = BI->getCondition();
   if (!Cond->hasOneUse())
     return false;
-  
+
   IfTrueBB = BI->getSuccessor(0);
   IfFalseBB = BI->getSuccessor(1);
-  
+
   if (match(Cond, m_Intrinsic<Intrinsic::experimental_widenable_condition>())) {
     WC = &BI->getOperandUse(0);
     C = nullptr;
@@ -88,7 +88,7 @@ bool llvm::parseWidenableBranch(User *U, Use *&C,Use *&WC,
   if (!And)
     // Could be a constexpr
     return false;
-  
+
   if (match(A, m_Intrinsic<Intrinsic::experimental_widenable_condition>()) &&
       A->hasOneUse()) {
     WC = &And->getOperandUse(0);

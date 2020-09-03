@@ -34,7 +34,7 @@
 // CHECK-ELF:     Name: sym
 // CHECK-ELF-NEXT:     Value: 0x101104C
 
-// CHECK: 00011000 _start:
+// CHECK: 00011000 <_start>:
 // CHECK-NEXT:    11000:        b.w     #14680132 <__Thumbv7ABSLongThunk_f3>
 // CHECK-NEXT:    11004:        b.w     #14680128 <__Thumbv7ABSLongThunk_f3>
 // CHECK-NEXT:    11008:        b.w     #14680128 <__Thumbv7ABSLongThunk_f4>

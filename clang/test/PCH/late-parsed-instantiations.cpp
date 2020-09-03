@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -fdelayed-template-parsing -std=c++14 -emit-pch %s -o %t.pch -verify
 // RUN: %clang_cc1 -fdelayed-template-parsing -std=c++14 -include-pch %t.pch %s -verify
 
+// RUN: %clang_cc1 -fdelayed-template-parsing -std=c++14 -emit-pch -fpch-instantiate-templates %s -o %t.pch -verify
+// RUN: %clang_cc1 -fdelayed-template-parsing -std=c++14 -include-pch %t.pch %s -verify
+
 #ifndef HEADER_INCLUDED
 
 #define HEADER_INCLUDED

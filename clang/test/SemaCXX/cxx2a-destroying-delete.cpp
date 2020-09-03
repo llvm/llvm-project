@@ -123,3 +123,21 @@ namespace first_param_conversion {
     delete e; // expected-error {{ambiguous conversion from derived class 'first_param_conversion::E' to base class 'first_param_conversion::B':}}
   }
 }
+
+namespace templated {
+  template<typename T> using id_alias = T;
+  template<typename T> struct id_struct { using type = T; };
+
+  template<typename T> struct A {
+    void operator delete(A *, std::destroying_delete_t);
+  };
+  template<typename T> struct B {
+    void operator delete(B<T> *, std::destroying_delete_t);
+  };
+  template<typename T> struct C {
+    void operator delete(id_alias<C> *, std::destroying_delete_t);
+  };
+  template<typename T> struct D {
+    void operator delete(typename id_struct<D>::type *, std::destroying_delete_t); // expected-error {{use 'D<T> *'}}
+  };
+}

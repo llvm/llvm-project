@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -x c++ -emit-llvm %s -o - -femit-all-decls | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls | FileCheck %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fopenmp-version=50 -x c++ -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -x c++ -emit-llvm %s -o - -femit-all-decls | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fopenmp-version=50 -x c++ -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 #ifndef HEADER
@@ -68,6 +68,15 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i)
   for (int j = argc; j < argv[argc][argc]; ++j)
     ;
+// CHECK: call void @__kmpc_taskgroup(
+// CHECK: call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 1, i64 80, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{.+}}*)* [[TASK_CANCEL:@.+]] to i32 (i32, i8*)*))
+// CHECK: call void @__kmpc_taskloop(
+// CHECK: call void @__kmpc_end_taskgroup(
+#pragma omp taskloop
+  for (int i = 0; i < 10; ++i) {
+#pragma omp cancel taskgroup
+#pragma omp cancellation point taskgroup
+  }
 }
 
 // CHECK: define internal i32 [[TASK1]](
@@ -148,6 +157,25 @@ int main(int argc, char **argv) {
 // CHECK: br label
 // CHECK: ret i32 0
 
+// CHECK: define internal i32 [[TASK_CANCEL]](
+// CHECK: [[RES:%.+]] = call i32 @__kmpc_cancel(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 4)
+// CHECK: [[IS_CANCEL:%.+]] = icmp ne i32 [[RES]], 0
+// CHECK: br i1 [[IS_CANCEL]], label %[[EXIT:.+]], label %[[CONTINUE:[^,]+]]
+// CHECK: [[EXIT]]:
+// CHECK: store i32 1, i32* [[CLEANUP_SLOT:%.+]],
+// CHECK: br label %[[DONE:[^,]+]]
+// CHECK: [[CONTINUE]]:
+// CHECK: [[RES:%.+]] = call i32 @__kmpc_cancellationpoint(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 4)
+// CHECK: [[IS_CANCEL:%.+]] = icmp ne i32 [[RES]], 0
+// CHECK: br i1 [[IS_CANCEL]], label %[[EXIT2:.+]], label %[[CONTINUE2:[^,]+]]
+// CHECK: [[EXIT2]]:
+// CHECK: store i32 1, i32* [[CLEANUP_SLOT]],
+// CHECK: br label %[[DONE]]
+// CHECK: store i32 0, i32* [[CLEANUP_SLOT]],
+// CHECK: br label %[[DONE]]
+// CHECK: [[DONE]]:
+// CHECK: ret i32 0
+
 // CHECK-LABEL: @_ZN1SC2Ei
 struct S {
   int a;
@@ -200,5 +228,21 @@ struct S {
 // CHECK: store i32 %{{.+}}, i32* %
 // CHECK: br label %
 // CHECK: ret i32 0
+
+class St {
+public:
+  operator int();
+  St &operator+=(int);
+};
+
+// CHECK-LABEL: taskloop_with_class
+void taskloop_with_class() {
+  St s1;
+  // CHECK: [[TD:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @{{.+}}, i32 [[GTID:%.+]], i32 1, i64 88, i64 8, i32 (i32, i8*)* bitcast (i32 (i32, [[TD_TYPE:%.+]]*)* @{{.+}} to i32 (i32, i8*)*))
+  // CHECK: call void @__kmpc_taskloop(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* [[TD]], i32 1, i64* %{{.+}}, i64* %{{.+}}, i64 %{{.+}}, i32 1, i32 0, i64 0, i8* bitcast (void ([[TD_TYPE]]*, [[TD_TYPE]]*, i32)* @{{.+}} to i8*))
+#pragma omp taskloop
+  for (St s = St(); s < s1; s += 1) {
+  }
+}
 
 #endif

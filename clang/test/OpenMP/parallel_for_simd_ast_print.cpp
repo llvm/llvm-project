@@ -155,11 +155,11 @@ int main (int argc, char **argv) {
   static int *a;
 // CHECK: static int *a;
 #ifdef OMP5
-#pragma omp parallel for simd if(parallel :b) ordered if(simd: b) nontemporal(argc, c) lastprivate(conditional:d,f)
+#pragma omp parallel for simd if(parallel :b) if(simd: b) nontemporal(argc, c) lastprivate(conditional:d,f) order(concurrent)
 #else
 #pragma omp parallel for simd if(parallel :b) ordered
 #endif // OMP5
-// OMP50-NEXT: #pragma omp parallel for simd if(parallel: b) ordered if(simd: b) nontemporal(argc,c) lastprivate(conditional: d,f)
+// OMP50-NEXT: #pragma omp parallel for simd if(parallel: b) if(simd: b) nontemporal(argc,c) lastprivate(conditional: d,f) order(concurrent)
 // OMP45-NEXT: #pragma omp parallel for simd if(parallel: b) ordered
   for (int i=0; i < 2; ++i)*a=2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

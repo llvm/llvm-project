@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
-#define LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
+#ifndef LLDB_UNITTESTS_TOOLS_LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
+#define LLDB_UNITTESTS_TOOLS_LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
 
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -183,4 +183,4 @@ namespace lldb_private {
 std::ostream &operator<<(std::ostream &OS, const RegisterValue &RegVal);
 }
 
-#endif // LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
+#endif // LLDB_UNITTESTS_TOOLS_LLDB_SERVER_TESTS_MESSAGEOBJECTS_H

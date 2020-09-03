@@ -13,6 +13,6 @@ attributes #0 = { "branch-target-enforcement" }
 ; BTI attribute present
 ; ASM:	    .word	3221225472
 ; ASM-NEXT:	.word	4
-; ASM-NEXT	.word	1
+; ASM-NEXT:	.word	1
 
 ; OBJ: Properties: aarch64 feature: BTI

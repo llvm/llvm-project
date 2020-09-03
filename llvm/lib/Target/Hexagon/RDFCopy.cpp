@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "RDFCopy.h"
-#include "RDFGraph.h"
-#include "RDFLiveness.h"
-#include "RDFRegisters.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RDFGraph.h"
+#include "llvm/CodeGen/RDFLiveness.h"
+#include "llvm/CodeGen/RDFRegisters.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"

@@ -26,6 +26,28 @@ standard output, unless the **-o** option is specified (see below).
 OPTIONS
 -------
 
+**--alias** *alias-name*
+
+ Extract the alias named *function-name* from the LLVM bitcode.  May be
+ specified multiple times to extract multiple alias at once.
+
+**--ralias** *alias-regular-expr*
+
+ Extract the alias matching *alias-regular-expr* from the LLVM bitcode.
+ All alias matching the regular expression will be extracted.  May be
+ specified multiple times.
+
+**--bb** *basic-block-specifier*
+
+ Extract basic blocks(s) specicified in *basic-block-specifier*. May be
+ specified multiple times. Each <function:bb[;bb]> specifier pair will create
+ a function. If multiple basic blocks are specified in one pair, the first
+ block in the sequence should dominate the rest.
+
+**--delete**
+
+ Delete specified Globals from Module.
+
 **-f**
 
  Enable binary output on terminals.  Normally, :program:`llvm-extract` will
@@ -54,6 +76,14 @@ OPTIONS
  Extract the global variable(s) matching *global-regular-expr* from the LLVM
  bitcode.  All global variables matching the regular expression will be
  extracted.  May be specified multiple times.
+
+**--keep-const-init**
+
+ Preserve the values of constant globals.
+
+**--recursive**
+
+ Recursively extract all called functions
 
 **-help**
 

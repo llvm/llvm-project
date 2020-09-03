@@ -32,7 +32,7 @@ b7:                                               ; preds = %b6
   br label %b8
 
 b8:                                               ; preds = %b7
-  %v0 = tail call <512 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> undef, i32 -1)
+  %v0 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> undef, i32 -1)
   br i1 undef, label %b9, label %b11
 
 b9:                                               ; preds = %b8
@@ -42,9 +42,9 @@ b10:                                              ; preds = %b12
   br label %b11
 
 b11:                                              ; preds = %b10, %b8
-  %v1 = phi <512 x i1> [ %v0, %b8 ], [ undef, %b10 ]
-  %v2 = tail call <512 x i1> @llvm.hexagon.V6.pred.and(<512 x i1> %v1, <512 x i1> undef)
-  %v3 = tail call <16 x i32> @llvm.hexagon.V6.vaddbq(<512 x i1> %v2, <16 x i32> undef, <16 x i32> undef)
+  %v1 = phi <64 x i1> [ %v0, %b8 ], [ undef, %b10 ]
+  %v2 = tail call <64 x i1> @llvm.hexagon.V6.pred.and(<64 x i1> %v1, <64 x i1> undef)
+  %v3 = tail call <16 x i32> @llvm.hexagon.V6.vaddbq(<64 x i1> %v2, <16 x i32> undef, <16 x i32> undef)
   %v4 = tail call <16 x i32> @llvm.hexagon.V6.valignb(<16 x i32> undef, <16 x i32> %v3, i32 undef)
   %v5 = tail call <16 x i32> @llvm.hexagon.V6.valignb(<16 x i32> %v4, <16 x i32> undef, i32 undef)
   %v6 = tail call <16 x i32> @llvm.hexagon.V6.vand(<16 x i32> %v5, <16 x i32> undef)
@@ -53,9 +53,9 @@ b11:                                              ; preds = %b10, %b8
   %v9 = tail call <32 x i32> @llvm.hexagon.V6.vshufoeb(<16 x i32> undef, <16 x i32> %v8)
   %v10 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v9)
   %v11 = tail call <16 x i32> @llvm.hexagon.V6.vor(<16 x i32> %v10, <16 x i32> undef)
-  %v12 = tail call <512 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v11, i32 -1)
-  %v13 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<512 x i1> %v12, i32 undef)
-  tail call void @llvm.hexagon.V6.vmaskedstoreq(<512 x i1> undef, i8* undef, <16 x i32> %v13)
+  %v12 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v11, i32 -1)
+  %v13 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v12, i32 undef)
+  tail call void @llvm.hexagon.V6.vmaskedstoreq(<64 x i1> undef, i8* undef, <16 x i32> %v13)
   unreachable
 
 b12:                                              ; preds = %b12, %b9
@@ -69,22 +69,22 @@ b13:                                              ; preds = %b5
 }
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #1
+declare <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.and(<512 x i1>, <512 x i1>) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.and(<64 x i1>, <64 x i1>) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.valignb(<16 x i32>, <16 x i32>, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vandqrt(<512 x i1>, i32) #1
+declare <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1>, i32) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.hexagon.V6.vmaskedstoreq(<512 x i1>, i8*, <16 x i32>) #2
+declare void @llvm.hexagon.V6.vmaskedstoreq(<64 x i1>, i8*, <16 x i32>) #2
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vaddbq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vaddbq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vor(<16 x i32>, <16 x i32>) #1

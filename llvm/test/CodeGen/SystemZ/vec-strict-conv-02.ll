@@ -9,7 +9,7 @@ declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(<2 x float
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
 
 ; Test cases where both elements of a v2f64 are converted to f32s.
-define void @f1(<2 x double> %val, <2 x float> *%ptr) {
+define void @f1(<2 x double> %val, <2 x float> *%ptr) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK: vledb {{%v[0-9]+}}, %v24, 0, 0
 ; CHECK: br %r14
@@ -35,7 +35,7 @@ define float @f2(<2 x double> %vec) #0 {
 }
 
 ; Test cases where even elements of a v4f32 are converted to f64s.
-define <2 x double> @f3(<4 x float> %vec) {
+define <2 x double> @f3(<4 x float> %vec) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: vldeb %v24, {{%v[0-9]+}}
 ; CHECK: br %r14
@@ -47,7 +47,7 @@ define <2 x double> @f3(<4 x float> %vec) {
 }
 
 ; Test conversion of an f32 in a vector register to an f64.
-define double @f4(<4 x float> %vec) {
+define double @f4(<4 x float> %vec) #0 {
 ; CHECK-LABEL: f4:
 ; CHECK: wldeb %f0, %v24
 ; CHECK: br %r14

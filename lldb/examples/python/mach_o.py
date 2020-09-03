@@ -965,7 +965,7 @@ class Mach:
                         result = False
                         print('error: section %s is missing in %s' % (lhs_section.sectname, rhs.path))
             else:
-                print('error: comaparing a %s mach-o file with a %s mach-o file is not supported' % (self.type, rhs.type))
+                print('error: comparing a %s mach-o file with a %s mach-o file is not supported' % (self.type, rhs.type))
                 result = False
             if not result:
                 print('error: mach files differ')

@@ -56,6 +56,7 @@ class AddressBreakpointTestCase(TestBase):
         launch_info = lldb.SBLaunchInfo(None)
         flags = launch_info.GetLaunchFlags()
         flags &= ~lldb.eLaunchFlagDisableASLR
+        flags &= lldb.eLaunchFlagInheritTCCFromParent
         launch_info.SetLaunchFlags(flags)
 
         error = lldb.SBError()
@@ -71,7 +72,7 @@ class AddressBreakpointTestCase(TestBase):
             "There should be a thread stopped at our breakpoint")
 
         # The hit count for the breakpoint should be 1.
-        self.assertTrue(breakpoint.GetHitCount() == 1)
+        self.assertEquals(breakpoint.GetHitCount(), 1)
 
         process.Kill()
 
@@ -88,4 +89,4 @@ class AddressBreakpointTestCase(TestBase):
             "There should be a thread stopped at our breakpoint")
 
         # The hit count for the breakpoint should now be 2.
-        self.assertTrue(breakpoint.GetHitCount() == 2)
+        self.assertEquals(breakpoint.GetHitCount(), 2)

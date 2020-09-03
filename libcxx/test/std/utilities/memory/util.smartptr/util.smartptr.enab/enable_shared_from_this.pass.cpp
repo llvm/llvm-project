@@ -54,6 +54,7 @@ struct PrivateBase : private std::enable_shared_from_this<PrivateBase> {
 
 int main(int, char**)
 {
+    globalMemCounter.reset();
     {  // https://bugs.llvm.org/show_bug.cgi?id=18843
     std::shared_ptr<T const> t1(new T);
     std::shared_ptr<T const> t2(std::make_shared<T>());

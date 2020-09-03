@@ -2,7 +2,9 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
+#pragma omp requires dynamic_allocators
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -30,7 +32,7 @@ struct S1; // expected-note {{declared here}} expected-note{{forward declaration
 extern S1 a;
 class S2 {
   mutable int a;
-  
+
 public:
   S2() : a(0) {}
   S2(const S2 &s2) : a(s2.a) {}

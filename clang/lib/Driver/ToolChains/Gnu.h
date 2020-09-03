@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_GNU_H
 
 #include "Cuda.h"
+#include "ROCm.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include <set>
@@ -35,21 +36,11 @@ bool findMIPSMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
 
 namespace tools {
 
-/// Base class for all GNU tools that provide the same behavior when
-/// it comes to response files support
-class LLVM_LIBRARY_VISIBILITY GnuTool : public Tool {
-  virtual void anchor();
-
-public:
-  GnuTool(const char *Name, const char *ShortName, const ToolChain &TC)
-      : Tool(Name, ShortName, TC, RF_Full, llvm::sys::WEM_CurrentCodePage) {}
-};
-
 /// Directly call GNU Binutils' assembler and linker.
 namespace gnutools {
-class LLVM_LIBRARY_VISIBILITY Assembler : public GnuTool {
+class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
 public:
-  Assembler(const ToolChain &TC) : GnuTool("GNU::Assembler", "assembler", TC) {}
+  Assembler(const ToolChain &TC) : Tool("GNU::Assembler", "assembler", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 
@@ -59,9 +50,23 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
+class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
-  Linker(const ToolChain &TC) : GnuTool("GNU::Linker", "linker", TC) {}
+  Linker(const ToolChain &TC) : Tool("GNU::Linker", "linker", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+  bool isLinkJob() const override { return true; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
+
+class LLVM_LIBRARY_VISIBILITY StaticLibTool : public Tool {
+public:
+  StaticLibTool(const ToolChain &TC)
+      : Tool("GNU::StaticLibTool", "static-lib-linker", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
@@ -75,10 +80,10 @@ public:
 
 /// gcc - Generic GCC tool implementations.
 namespace gcc {
-class LLVM_LIBRARY_VISIBILITY Common : public GnuTool {
+class LLVM_LIBRARY_VISIBILITY Common : public Tool {
 public:
   Common(const char *Name, const char *ShortName, const ToolChain &TC)
-      : GnuTool(Name, ShortName, TC) {}
+      : Tool(Name, ShortName, TC) {}
 
   // A gcc tool has an "integrated" assembler that it will call to produce an
   // object. Let it use that assembler so that we don't have to deal with
@@ -278,6 +283,7 @@ public:
 protected:
   GCCInstallationDetector GCCInstallation;
   CudaInstallationDetector CudaInstallation;
+  RocmInstallationDetector RocmInstallation;
 
 public:
   Generic_GCC(const Driver &D, const llvm::Triple &Triple,
@@ -313,6 +319,16 @@ protected:
 
   /// Check whether the target triple's architecture is 32-bits.
   bool isTarget32Bit() const { return getTriple().isArch32Bit(); }
+
+  void PushPPaths(ToolChain::path_list &PPaths);
+  void AddMultilibPaths(const Driver &D, const std::string &SysRoot,
+                        const std::string &OSLibDir,
+                        const std::string &MultiarchTriple,
+                        path_list &Paths);
+  void AddMultiarchPaths(const Driver &D, const std::string &SysRoot,
+                         const std::string &OSLibDir, path_list &Paths);
+  void AddMultilibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                              llvm::opt::ArgStringList &CC1Args) const;
 
   // FIXME: This should be final, but the CrossWindows toolchain does weird
   // things that can't be easily generalized.
@@ -356,6 +372,12 @@ public:
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,
                              Action::OffloadKind DeviceOffloadKind) const override;
+
+  virtual std::string getDynamicLinker(const llvm::opt::ArgList &Args) const {
+    return {};
+  }
+
+  virtual void addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {}
 };
 
 } // end namespace toolchains

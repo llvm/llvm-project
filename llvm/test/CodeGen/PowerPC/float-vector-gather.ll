@@ -1,4 +1,4 @@
-; NOTE: This test ensures that for both Big and Little Endian cases a set of
+; NOTE: This test ensures that, for both Big and Little Endian cases, a set of
 ; NOTE: 4 floats is gathered into a v4f32 register using xxmrghw and xxmrgld
 ; RUN: llc -verify-machineinstrs -mcpu=pwr9 -ppc-vsr-nums-as-vr \
 ; RUN: -ppc-asm-full-reg-names -mtriple=powerpc64le-unknown-linux-gnu < %s \

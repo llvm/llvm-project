@@ -17,7 +17,7 @@ define i32 @PR29058(i8 %x, i32 %y) {
 ; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    cmpb $1, %dil
-; CHECK-NEXT:    sbbb %dl, %dl
+; CHECK-NEXT:    sbbl %edx, %edx
 ; CHECK-NEXT:    orb %dl, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax

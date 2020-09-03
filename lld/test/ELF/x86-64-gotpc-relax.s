@@ -14,13 +14,13 @@
 # 0x201188 + 7 - 30 = 0x201171
 # DISASM:      Disassembly of section .text:
 # DISASM-EMPTY:
-# DISASM-NEXT: foo:
+# DISASM-NEXT: <foo>:
 # DISASM-NEXT:   201170: 90 nop
-# DISASM:      hid:
+# DISASM:      <hid>:
 # DISASM-NEXT:   201171: 90 nop
-# DISASM:      ifunc:
+# DISASM:      <ifunc>:
 # DISASM-NEXT:   201172: c3 retq
-# DISASM:      _start:
+# DISASM:      <_start>:
 # DISASM-NEXT: leaq -10(%rip), %rax
 # DISASM-NEXT: leaq -17(%rip), %rax
 # DISASM-NEXT: leaq -23(%rip), %rax
@@ -33,19 +33,19 @@
 # DISASM-NEXT: leaq -72(%rip), %rax
 # DISASM-NEXT: movq 4192(%rip), %rax
 # DISASM-NEXT: movq 4185(%rip), %rax
-# DISASM-NEXT: callq -93 <foo>
-# DISASM-NEXT: callq -99 <foo>
-# DISASM-NEXT: callq -104 <hid>
-# DISASM-NEXT: callq -110 <hid>
+# DISASM-NEXT: callq 0x201170 <foo>
+# DISASM-NEXT: callq 0x201170 <foo>
+# DISASM-NEXT: callq 0x201171 <hid>
+# DISASM-NEXT: callq 0x201171 <hid>
 # DISASM-NEXT: callq *4155(%rip)
 # DISASM-NEXT: callq *4149(%rip)
-# DISASM-NEXT: jmp   -128 <foo>
+# DISASM-NEXT: jmp   0x201170 <foo>
 # DISASM-NEXT: nop
-# DISASM-NEXT: jmp   -134 <foo>
+# DISASM-NEXT: jmp   0x201170 <foo>
 # DISASM-NEXT: nop
-# DISASM-NEXT: jmp   -139 <hid>
+# DISASM-NEXT: jmp   0x201171 <hid>
 # DISASM-NEXT: nop
-# DISASM-NEXT: jmp   -145 <hid>
+# DISASM-NEXT: jmp   0x201171 <hid>
 # DISASM-NEXT: nop
 # DISASM-NEXT: jmpq  *4119(%rip)
 # DISASM-NEXT: jmpq  *4113(%rip)

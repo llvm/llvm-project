@@ -127,7 +127,7 @@ public:
   /// \{
   /// Use these passthrough functions rather than calling into Swift directly,
   /// since some day we may want to support more than one swift variant.
-  static bool IsSwiftMangledName(const char *name);
+  static bool IsSwiftMangledName(llvm::StringRef name);
 
   enum DemangleMode { eSimplified, eTypeName, eDisplayTypeName };
   static std::string DemangleSymbolAsString(llvm::StringRef symbol,
@@ -197,7 +197,7 @@ public:
                                 Value::ValueType &value_type) override;
   TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                  ValueObject &static_value) override;
-  lldb::BreakpointResolverSP CreateExceptionResolver(Breakpoint *bkpt,
+  lldb::BreakpointResolverSP CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
                                                      bool catch_bp,
                                                      bool throw_bp) override;
   bool CouldHaveDynamicValue(ValueObject &in_value) override;
@@ -330,7 +330,7 @@ public:
   static bool IsSwiftClassName(const char *name);
   /// Determines wether \c variable is the "self" object.
   static bool IsSelf(Variable &variable);
-  bool IsWhitelistedRuntimeValue(ConstString name) override;
+  bool IsAllowedRuntimeValue(ConstString name) override;
 
   lldb::SyntheticChildrenSP
   GetBridgedSyntheticChildProvider(ValueObject &valobj);
@@ -343,7 +343,8 @@ public:
 
   bool IsABIStable();
 
-  DISALLOW_COPY_AND_ASSIGN(SwiftLanguageRuntime);
+  SwiftLanguageRuntime(const SwiftLanguageRuntime &) = delete;
+  const SwiftLanguageRuntime &operator=(const SwiftLanguageRuntime &) = delete;
 
   static AppleObjCRuntimeV2 *GetObjCRuntime(lldb_private::Process &process);
 protected:

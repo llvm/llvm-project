@@ -212,7 +212,7 @@ public:
   }
 
   Align getStorageAlignment() const {
-    return Align(cast<ConstantInt>(getArgOperand(AlignArg))->getZExtValue());
+    return cast<ConstantInt>(getArgOperand(AlignArg))->getAlignValue();
   }
 
   Value *getStorage() const {
@@ -347,7 +347,7 @@ public:
   /// The required alignment of the promise.  This must match the
   /// alignment of the promise alloca in the coroutine.
   Align getAlignment() const {
-    return Align(cast<ConstantInt>(getArgOperand(AlignArg))->getZExtValue());
+    return cast<ConstantInt>(getArgOperand(AlignArg))->getAlignValue();
   }
 
   // Methods to support type inquiry through isa, cast, and dyn_cast:
@@ -468,8 +468,8 @@ public:
   Value *getSize() const {
     return getArgOperand(SizeArg);
   }
-  unsigned getAlignment() const {
-    return cast<ConstantInt>(getArgOperand(AlignArg))->getZExtValue();
+  Align getAlignment() const {
+    return cast<ConstantInt>(getArgOperand(AlignArg))->getAlignValue();
   }
 
   // Methods to support type inquiry through isa, cast, and dyn_cast:

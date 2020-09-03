@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_PROCESS_UTIILTY_NATIVE_REGISTER_CONTEXT_REGISTER_INFO
-#define LLDB_PLUGINS_PROCESS_UTIILTY_NATIVE_REGISTER_CONTEXT_REGISTER_INFO
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEREGISTERCONTEXTREGISTERINFO_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEREGISTERCONTEXTREGISTERINFO_H
 
 #include <memory>
 
@@ -33,7 +33,7 @@ public:
 
   const RegisterInfoInterface &GetRegisterInfoInterface() const;
 
-private:
+protected:
   std::unique_ptr<RegisterInfoInterface> m_register_info_interface_up;
 };
 }

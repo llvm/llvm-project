@@ -11,8 +11,7 @@
 ; CHECK: [[CST2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
 ; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[CST2]](s64)
 ; CHECK: G_STORE [[LO]](s64), [[GEP2]](p0) :: (store 8 into stack, align 1)
-; CHECK: [[CST3:%[0-9]+]]:_(s64) = COPY [[CST]]
-; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[CST3]](s64)
+; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[CST]](s64)
 ; CHECK: G_STORE [[HI]](s64), [[GEP3]](p0) :: (store 8 into stack + 8, align 1)
 define void @test_split_struct([2 x i64]* %ptr) {
   %struct = load [2 x i64], [2 x i64]* %ptr

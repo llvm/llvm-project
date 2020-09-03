@@ -326,7 +326,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
   return new_thread_plan_sp;
 }
 
-bool SwiftLanguageRuntime::IsSwiftMangledName(const char *name) {
+bool SwiftLanguageRuntime::IsSwiftMangledName(llvm::StringRef name) {
   return swift::Demangle::isSwiftSymbol(name);
 }
 
@@ -814,7 +814,7 @@ bool SwiftLanguageRuntime::GetTargetOfPartialApply(SymbolContext &curr_sc,
   std::string apply_target =
       demangle_ctx.getThunkTarget(apply_name.GetStringRef());
   if (!apply_target.empty()) {
-    curr_sc.module_sp->FindFunctions(ConstString(apply_target), nullptr,
+    curr_sc.module_sp->FindFunctions(ConstString(apply_target), CompilerDeclContext(),
                                      eFunctionNameTypeFull, true, false,
                                      sc_list);
     size_t num_symbols = sc_list.GetSize();

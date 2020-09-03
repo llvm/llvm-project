@@ -356,3 +356,184 @@ define i64 @load64le_nop_shift(i8* %arg) {
   %o7 = or i64 %o6, %s7
   ret i64 %o7
 }
+
+define void @PR39538(i8* %t0, i32* %t1) {
+; CHECK-LABEL: @PR39538(
+; CHECK-NEXT:    [[T6:%.*]] = getelementptr inbounds i8, i8* [[T0:%.*]], i64 1
+; CHECK-NEXT:    [[T11:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 2
+; CHECK-NEXT:    [[T16:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 3
+; CHECK-NEXT:    [[T20:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 4
+; CHECK-NEXT:    [[T24:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 5
+; CHECK-NEXT:    [[T29:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 6
+; CHECK-NEXT:    [[T34:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 7
+; CHECK-NEXT:    [[T39:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 8
+; CHECK-NEXT:    [[T43:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 9
+; CHECK-NEXT:    [[T48:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 10
+; CHECK-NEXT:    [[T53:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 11
+; CHECK-NEXT:    [[T58:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 12
+; CHECK-NEXT:    [[T62:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 13
+; CHECK-NEXT:    [[T67:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 14
+; CHECK-NEXT:    [[T72:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 15
+; CHECK-NEXT:    [[T38:%.*]] = getelementptr inbounds i32, i32* [[T1:%.*]], i64 1
+; CHECK-NEXT:    [[T57:%.*]] = getelementptr inbounds i32, i32* [[T1]], i64 2
+; CHECK-NEXT:    [[T76:%.*]] = getelementptr inbounds i32, i32* [[T1]], i64 3
+; CHECK-NEXT:    [[T3:%.*]] = load i8, i8* [[T0]], align 1
+; CHECK-NEXT:    [[T7:%.*]] = load i8, i8* [[T6]], align 1
+; CHECK-NEXT:    [[T12:%.*]] = load i8, i8* [[T11]], align 1
+; CHECK-NEXT:    [[T17:%.*]] = load i8, i8* [[T16]], align 1
+; CHECK-NEXT:    [[T21:%.*]] = load i8, i8* [[T20]], align 1
+; CHECK-NEXT:    [[T25:%.*]] = load i8, i8* [[T24]], align 1
+; CHECK-NEXT:    [[T30:%.*]] = load i8, i8* [[T29]], align 1
+; CHECK-NEXT:    [[T35:%.*]] = load i8, i8* [[T34]], align 1
+; CHECK-NEXT:    [[T40:%.*]] = load i8, i8* [[T39]], align 1
+; CHECK-NEXT:    [[T44:%.*]] = load i8, i8* [[T43]], align 1
+; CHECK-NEXT:    [[T49:%.*]] = load i8, i8* [[T48]], align 1
+; CHECK-NEXT:    [[T54:%.*]] = load i8, i8* [[T53]], align 1
+; CHECK-NEXT:    [[T59:%.*]] = load i8, i8* [[T58]], align 1
+; CHECK-NEXT:    [[T63:%.*]] = load i8, i8* [[T62]], align 1
+; CHECK-NEXT:    [[T68:%.*]] = load i8, i8* [[T67]], align 1
+; CHECK-NEXT:    [[T73:%.*]] = load i8, i8* [[T72]], align 1
+; CHECK-NEXT:    [[T4:%.*]] = zext i8 [[T3]] to i32
+; CHECK-NEXT:    [[T8:%.*]] = zext i8 [[T7]] to i32
+; CHECK-NEXT:    [[T13:%.*]] = zext i8 [[T12]] to i32
+; CHECK-NEXT:    [[T18:%.*]] = zext i8 [[T17]] to i32
+; CHECK-NEXT:    [[T22:%.*]] = zext i8 [[T21]] to i32
+; CHECK-NEXT:    [[T26:%.*]] = zext i8 [[T25]] to i32
+; CHECK-NEXT:    [[T31:%.*]] = zext i8 [[T30]] to i32
+; CHECK-NEXT:    [[T36:%.*]] = zext i8 [[T35]] to i32
+; CHECK-NEXT:    [[T41:%.*]] = zext i8 [[T40]] to i32
+; CHECK-NEXT:    [[T45:%.*]] = zext i8 [[T44]] to i32
+; CHECK-NEXT:    [[T50:%.*]] = zext i8 [[T49]] to i32
+; CHECK-NEXT:    [[T55:%.*]] = zext i8 [[T54]] to i32
+; CHECK-NEXT:    [[T60:%.*]] = zext i8 [[T59]] to i32
+; CHECK-NEXT:    [[T64:%.*]] = zext i8 [[T63]] to i32
+; CHECK-NEXT:    [[T69:%.*]] = zext i8 [[T68]] to i32
+; CHECK-NEXT:    [[T74:%.*]] = zext i8 [[T73]] to i32
+; CHECK-NEXT:    [[T5:%.*]] = shl nuw i32 [[T4]], 24
+; CHECK-NEXT:    [[T23:%.*]] = shl nuw i32 [[T22]], 24
+; CHECK-NEXT:    [[T42:%.*]] = shl nuw i32 [[T41]], 24
+; CHECK-NEXT:    [[T61:%.*]] = shl nuw i32 [[T60]], 24
+; CHECK-NEXT:    [[T9:%.*]] = shl nuw nsw i32 [[T8]], 16
+; CHECK-NEXT:    [[T27:%.*]] = shl nuw nsw i32 [[T26]], 16
+; CHECK-NEXT:    [[T46:%.*]] = shl nuw nsw i32 [[T45]], 16
+; CHECK-NEXT:    [[T65:%.*]] = shl nuw nsw i32 [[T64]], 16
+; CHECK-NEXT:    [[T14:%.*]] = shl nuw nsw i32 [[T13]], 8
+; CHECK-NEXT:    [[T32:%.*]] = shl nuw nsw i32 [[T31]], 8
+; CHECK-NEXT:    [[T51:%.*]] = shl nuw nsw i32 [[T50]], 8
+; CHECK-NEXT:    [[T70:%.*]] = shl nuw nsw i32 [[T69]], 8
+; CHECK-NEXT:    [[T10:%.*]] = or i32 [[T9]], [[T5]]
+; CHECK-NEXT:    [[T15:%.*]] = or i32 [[T10]], [[T14]]
+; CHECK-NEXT:    [[T19:%.*]] = or i32 [[T15]], [[T18]]
+; CHECK-NEXT:    [[T28:%.*]] = or i32 [[T27]], [[T23]]
+; CHECK-NEXT:    [[T33:%.*]] = or i32 [[T28]], [[T32]]
+; CHECK-NEXT:    [[T37:%.*]] = or i32 [[T33]], [[T36]]
+; CHECK-NEXT:    [[T47:%.*]] = or i32 [[T46]], [[T42]]
+; CHECK-NEXT:    [[T52:%.*]] = or i32 [[T47]], [[T51]]
+; CHECK-NEXT:    [[T56:%.*]] = or i32 [[T52]], [[T55]]
+; CHECK-NEXT:    [[T66:%.*]] = or i32 [[T65]], [[T61]]
+; CHECK-NEXT:    [[T71:%.*]] = or i32 [[T66]], [[T70]]
+; CHECK-NEXT:    [[T75:%.*]] = or i32 [[T71]], [[T74]]
+; CHECK-NEXT:    store i32 [[T19]], i32* [[T1]], align 4
+; CHECK-NEXT:    store i32 [[T37]], i32* [[T38]], align 4
+; CHECK-NEXT:    store i32 [[T56]], i32* [[T57]], align 4
+; CHECK-NEXT:    store i32 [[T75]], i32* [[T76]], align 4
+; CHECK-NEXT:    ret void
+;
+  %t6 = getelementptr inbounds i8, i8* %t0, i64 1
+  %t11 = getelementptr inbounds i8, i8* %t0, i64 2
+  %t16 = getelementptr inbounds i8, i8* %t0, i64 3
+  %t20 = getelementptr inbounds i8, i8* %t0, i64 4
+  %t24 = getelementptr inbounds i8, i8* %t0, i64 5
+  %t29 = getelementptr inbounds i8, i8* %t0, i64 6
+  %t34 = getelementptr inbounds i8, i8* %t0, i64 7
+  %t39 = getelementptr inbounds i8, i8* %t0, i64 8
+  %t43 = getelementptr inbounds i8, i8* %t0, i64 9
+  %t48 = getelementptr inbounds i8, i8* %t0, i64 10
+  %t53 = getelementptr inbounds i8, i8* %t0, i64 11
+  %t58 = getelementptr inbounds i8, i8* %t0, i64 12
+  %t62 = getelementptr inbounds i8, i8* %t0, i64 13
+  %t67 = getelementptr inbounds i8, i8* %t0, i64 14
+  %t72 = getelementptr inbounds i8, i8* %t0, i64 15
+  %t38 = getelementptr inbounds i32, i32* %t1, i64 1
+  %t57 = getelementptr inbounds i32, i32* %t1, i64 2
+  %t76 = getelementptr inbounds i32, i32* %t1, i64 3
+  %t3 = load i8, i8* %t0, align 1
+  %t7 = load i8, i8* %t6, align 1
+  %t12 = load i8, i8* %t11, align 1
+  %t17 = load i8, i8* %t16, align 1
+  %t21 = load i8, i8* %t20, align 1
+  %t25 = load i8, i8* %t24, align 1
+  %t30 = load i8, i8* %t29, align 1
+  %t35 = load i8, i8* %t34, align 1
+  %t40 = load i8, i8* %t39, align 1
+  %t44 = load i8, i8* %t43, align 1
+  %t49 = load i8, i8* %t48, align 1
+  %t54 = load i8, i8* %t53, align 1
+  %t59 = load i8, i8* %t58, align 1
+  %t63 = load i8, i8* %t62, align 1
+  %t68 = load i8, i8* %t67, align 1
+  %t73 = load i8, i8* %t72, align 1
+  %t4 = zext i8 %t3 to i32
+  %t8 = zext i8 %t7 to i32
+  %t13 = zext i8 %t12 to i32
+  %t18 = zext i8 %t17 to i32
+  %t22 = zext i8 %t21 to i32
+  %t26 = zext i8 %t25 to i32
+  %t31 = zext i8 %t30 to i32
+  %t36 = zext i8 %t35 to i32
+  %t41 = zext i8 %t40 to i32
+  %t45 = zext i8 %t44 to i32
+  %t50 = zext i8 %t49 to i32
+  %t55 = zext i8 %t54 to i32
+  %t60 = zext i8 %t59 to i32
+  %t64 = zext i8 %t63 to i32
+  %t69 = zext i8 %t68 to i32
+  %t74 = zext i8 %t73 to i32
+  %t5 = shl nuw i32 %t4, 24
+  %t23 = shl nuw i32 %t22, 24
+  %t42 = shl nuw i32 %t41, 24
+  %t61 = shl nuw i32 %t60, 24
+  %t9 = shl nuw nsw i32 %t8, 16
+  %t27 = shl nuw nsw i32 %t26, 16
+  %t46 = shl nuw nsw i32 %t45, 16
+  %t65 = shl nuw nsw i32 %t64, 16
+  %t14 = shl nuw nsw i32 %t13, 8
+  %t32 = shl nuw nsw i32 %t31, 8
+  %t51 = shl nuw nsw i32 %t50, 8
+  %t70 = shl nuw nsw i32 %t69, 8
+  %t10 = or i32 %t9, %t5
+  %t15 = or i32 %t10, %t14
+  %t19 = or i32 %t15, %t18
+  %t28 = or i32 %t27, %t23
+  %t33 = or i32 %t28, %t32
+  %t37 = or i32 %t33, %t36
+  %t47 = or i32 %t46, %t42
+  %t52 = or i32 %t47, %t51
+  %t56 = or i32 %t52, %t55
+  %t66 = or i32 %t65, %t61
+  %t71 = or i32 %t66, %t70
+  %t75 = or i32 %t71, %t74
+  store i32 %t19, i32* %t1, align 4
+  store i32 %t37, i32* %t38, align 4
+  store i32 %t56, i32* %t57, align 4
+  store i32 %t75, i32* %t76, align 4
+  ret void
+}
+
+; Do not crash on constant expressions.
+
+@g1 = external dso_local unnamed_addr constant [8 x i8], align 1
+@g2 = external dso_local unnamed_addr constant [5 x i8], align 1
+
+define void @load_combine_constant_expression(i64* %t1) {
+; CHECK-LABEL: @load_combine_constant_expression(
+; CHECK-NEXT:    store i64 or (i64 shl (i64 zext (i32 ptrtoint ([8 x i8]* @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint ([5 x i8]* @g2 to i32) to i64)), i64* [[T1:%.*]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr i64, i64* [[T1]], i64 1
+; CHECK-NEXT:    store i64 or (i64 shl (i64 zext (i32 ptrtoint ([8 x i8]* @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint ([5 x i8]* @g2 to i32) to i64)), i64* [[T3]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i64 or (i64 shl (i64 zext (i32 ptrtoint ([8 x i8]* @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint ([5 x i8]* @g2 to i32) to i64)), i64* %t1, align 4
+  %t3 = getelementptr i64, i64* %t1, i64 1
+  store i64 or (i64 shl (i64 zext (i32 ptrtoint ([8 x i8]* @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint ([5 x i8]* @g2 to i32) to i64)), i64* %t3, align 4
+  ret void
+}

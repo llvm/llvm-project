@@ -138,7 +138,7 @@ def skipTestIfFn(expected_fn, bugnumber=None):
             if reason is not None:
                 self.skipTest(reason)
             else:
-                func(*args, **kwargs)
+                return func(*args, **kwargs)
         return wrapper
 
     # Some decorators can be called both with no arguments (e.g. @expectedFailureWindows)
@@ -174,7 +174,7 @@ def _decorateTest(mode,
         skip_for_debug_info = _match_decorator_property(
             debug_info, self.getDebugInfo())
         skip_for_triple = _match_decorator_property(
-            triple, lldb.DBG.GetSelectedPlatform().GetTriple())
+            triple, lldb.selected_platform.GetTriple())
         skip_for_remote = _match_decorator_property(
             remote, lldb.remote_platform is not None)
 
@@ -412,14 +412,15 @@ def expectedFailureOS(
         debug_info=debug_info)
 
 
-def expectedFailureDarwin(bugnumber=None, compilers=None, debug_info=None):
+def expectedFailureDarwin(bugnumber=None, compilers=None, debug_info=None, archs=None):
     # For legacy reasons, we support both "darwin" and "macosx" as OS X
     # triples.
     return expectedFailureOS(
         lldbplatform.darwin_all,
         bugnumber,
         compilers,
-        debug_info=debug_info)
+        debug_info=debug_info,
+        archs=archs)
 
 
 def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
@@ -517,9 +518,7 @@ def skipIfOutOfTreeDebugserver(func):
 
 def skipIfRemote(func):
     """Decorate the item to skip tests if testing remotely."""
-    def is_remote():
-        return "skip on remote platform" if lldb.remote_platform else None
-    return skipTestIfFn(is_remote)(func)
+    return unittest2.skipIf(lldb.remote_platform, "skip on remote platform")(func)
 
 
 def skipIfNoSBHeaders(func):
@@ -555,10 +554,9 @@ def skipIfNoSBHeaders(func):
 def skipIfRosetta(bugnumber):
     """Skip a test when running the testsuite on macOS under the Rosetta translation layer."""
     def is_running_rosetta(self):
-        if not lldbplatformutil.getPlatform() in ['darwin', 'macosx']:
-            return "not on macOS"
-        if (platform.uname()[5] == "arm") and (self.getArchitecture() == "x86_64"):
-            return "skipped under Rosetta"
+        if lldbplatformutil.getPlatform() in ['darwin', 'macosx']:
+            if (platform.uname()[5] == "arm") and (self.getArchitecture() == "x86_64"):
+                return "skipped under Rosetta"
         return None
     return skipTestIfFn(is_running_rosetta)
 
@@ -932,8 +930,6 @@ def skipUnlessFeature(feature):
 
 def skipIfReproducer(func):
     """Skip this test if the environment is set up to run LLDB with reproducers."""
-    def is_reproducer():
-        if configuration.capture_path or configuration.replay_path:
-            return "reproducers unsupported"
-        return None
-    return skipTestIfFn(is_reproducer)(func)
+    return unittest2.skipIf(
+        configuration.capture_path or configuration.replay_path,
+        "reproducers unsupported")(func)

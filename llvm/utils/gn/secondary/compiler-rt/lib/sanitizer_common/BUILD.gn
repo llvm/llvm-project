@@ -1,9 +1,7 @@
 source_set("sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
-  deps = [
-    "//llvm/utils/gn/build/libs/pthread",
-  ]
+  deps = [ "//llvm/utils/gn/build/libs/pthread" ]
   libs = []
   if (current_os == "linux" || current_os == "android") {
     libs += [ "dl" ]
@@ -106,9 +104,11 @@ source_set("sources") {
     "sanitizer_procmaps.h",
     "sanitizer_procmaps_bsd.cpp",
     "sanitizer_procmaps_common.cpp",
+    "sanitizer_procmaps_fuchsia.cpp",
     "sanitizer_procmaps_linux.cpp",
     "sanitizer_procmaps_mac.cpp",
     "sanitizer_procmaps_solaris.cpp",
+    "sanitizer_ptrauth.h",
     "sanitizer_quarantine.h",
     "sanitizer_report_decorator.h",
     "sanitizer_ring_buffer.h",
@@ -125,6 +125,7 @@ source_set("sources") {
     "sanitizer_stacktrace_printer.h",
     "sanitizer_stacktrace_sparc.cpp",
     "sanitizer_stoptheworld.h",
+    "sanitizer_stoptheworld_fuchsia.cpp",
     "sanitizer_stoptheworld_linux_libcdep.cpp",
     "sanitizer_stoptheworld_mac.cpp",
     "sanitizer_stoptheworld_netbsd_libcdep.cpp",
@@ -168,10 +169,9 @@ source_set("sources") {
 source_set("nolibc_sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
-  deps = [
-    "//llvm/utils/gn/build/libs/pthread",
-  ]
+  deps = [ "//llvm/utils/gn/build/libs/pthread" ]
   sources = [
+    # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
     "sanitizer_common_nolibc.cpp",
   ]
 }

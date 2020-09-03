@@ -79,9 +79,9 @@ DWARFLocationInterpreter::Interpret(const DWARFLocationEntry &E) {
   }
   case dwarf::DW_LLE_offset_pair: {
     if (!Base) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Unable to resolve DW_LLE_offset_pair: base address unknown");
+      return createStringError(inconvertibleErrorCode(),
+                               "Unable to resolve location list offset pair: "
+                               "Base address not defined");
     }
     DWARFAddressRange Range{Base->Address + E.Value0, Base->Address + E.Value1,
                             Base->SectionIndex};
@@ -106,16 +106,15 @@ DWARFLocationInterpreter::Interpret(const DWARFLocationEntry &E) {
   }
 }
 
-// When directly dumping the .debug_loc without a compile unit, we have to guess
-// at the DWARF version. This only affects DW_OP_call_ref, which is a rare
-// expression that LLVM doesn't produce. Guessing the wrong version means we
-// won't be able to pretty print expressions in DWARF2 binaries produced by
-// non-LLVM tools.
 static void dumpExpression(raw_ostream &OS, ArrayRef<uint8_t> Data,
                            bool IsLittleEndian, unsigned AddressSize,
                            const MCRegisterInfo *MRI, DWARFUnit *U) {
-  DWARFDataExtractor Extractor(toStringRef(Data), IsLittleEndian, AddressSize);
-  DWARFExpression(Extractor, dwarf::DWARF_VERSION, AddressSize).print(OS, MRI, U);
+  DWARFDataExtractor Extractor(Data, IsLittleEndian, AddressSize);
+  // Note. We do not pass any format to DWARFExpression, even if the
+  // corresponding unit is known. For now, there is only one operation,
+  // DW_OP_call_ref, which depends on the format; it is rarely used, and
+  // is unexpected in location tables.
+  DWARFExpression(Extractor, AddressSize).print(OS, MRI, U);
 }
 
 bool DWARFLocationTable::dumpLocationList(uint64_t *Offset, raw_ostream &OS,
@@ -161,9 +160,7 @@ bool DWARFLocationTable::dumpLocationList(uint64_t *Offset, raw_ostream &OS,
     return true;
   });
   if (E) {
-    OS << "\n";
-    OS.indent(Indent);
-    OS << "error: " << toString(std::move(E));
+    DumpOpts.RecoverableErrorHandler(std::move(E));
     return false;
   }
   return true;

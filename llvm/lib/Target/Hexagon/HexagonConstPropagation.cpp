@@ -754,6 +754,9 @@ void MachineConstPropagator::visitBranchesFrom(const MachineInstr &BrI) {
     ++It;
   }
 
+  if (B.mayHaveInlineAsmBr())
+    EvalOk = false;
+
   if (EvalOk) {
     // Need to add all CFG successors that lead to EH landing pads.
     // There won't be explicit branches to these blocks, but they must
@@ -810,8 +813,12 @@ void MachineConstPropagator::visitUsesOf(unsigned Reg) {
 
 bool MachineConstPropagator::computeBlockSuccessors(const MachineBasicBlock *MB,
       SetVector<const MachineBasicBlock*> &Targets) {
+  Targets.clear();
+
   MachineBasicBlock::const_iterator FirstBr = MB->end();
   for (const MachineInstr &MI : *MB) {
+    if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
+      return false;
     if (MI.isDebugInstr())
       continue;
     if (MI.isBranch()) {
@@ -820,7 +827,6 @@ bool MachineConstPropagator::computeBlockSuccessors(const MachineBasicBlock *MB,
     }
   }
 
-  Targets.clear();
   MachineBasicBlock::const_iterator End = MB->end();
 
   bool DoNext = true;
@@ -2836,6 +2842,9 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
   if (MI.isCopy())
     return false;
 
+  MachineFunction *MF = MI.getParent()->getParent();
+  auto &HST = MF->getSubtarget<HexagonSubtarget>();
+
   // Collect all virtual register-def operands.
   SmallVector<unsigned,2> DefRegs;
   for (const MachineOperand &MO : MI.operands()) {
@@ -2923,11 +2932,13 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
             NewMI = BuildMI(B, At, DL, *NewD, NewR)
                       .addImm(Hi)
                       .addImm(Lo);
-          } else {
+          } else if (MF->getFunction().hasOptSize() || !HST.isTinyCore()) {
+            // Disable CONST64 for tiny core since it takes a LD resource.
             NewD = &HII.get(Hexagon::CONST64);
             NewMI = BuildMI(B, At, DL, *NewD, NewR)
                       .addImm(V);
-          }
+          } else
+            return false;
         }
       }
       (void)NewMI;

@@ -7,8 +7,8 @@ target triple = "powerpc64le-unknown-linux-gnu"
 %typ = type { i32, i32 }
 
 ; On release builds, it doesn't crash, spewing nonsense instead.
-; To make sure it works, check that and is still alive.
-; CHECK: and
+; To make sure it works, check that rldicl is still alive.
+; CHECK: rldicl
 ; Also, in release, it emits a COPY from a 32-bit register to
 ; a 64-bit register, which happens to be emitted as cror [!]
 ; by the confused CodeGen.  Just to be sure, check there isn't one.

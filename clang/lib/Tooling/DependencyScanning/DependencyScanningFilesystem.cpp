@@ -106,7 +106,8 @@ DependencyScanningFilesystemSharedCache::
   // sharding gives a performance edge by reducing the lock contention.
   // FIXME: A better heuristic might also consider the OS to account for
   // the different cost of lock contention on different OSes.
-  NumShards = std::max(2u, llvm::hardware_concurrency() / 4);
+  NumShards =
+      std::max(2u, llvm::hardware_concurrency().compute_thread_count() / 4);
   CacheShards = std::make_unique<CacheShard[]>(NumShards);
 }
 

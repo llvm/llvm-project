@@ -1,5 +1,3 @@
-; REQUIRES: object-emission
-
 ; RUN: %llc_dwarf -filetype=obj < %s > %t
 ; RUN: llvm-dwarfdump %t | FileCheck %s
 

@@ -147,15 +147,30 @@ class AdvDataFormatterTestCase(TestBase):
         self.runCmd("type summary add -c -x \"i_am_cool \[[0-9]\]\"")
         self.runCmd("type summary add -c i_am_cool")
 
-        self.expect("frame variable cool_array",
-                    substrs=['[0]',
-                             '[1]',
-                             '[2]',
-                             '[3]',
-                             '[4]',
-                             'integer',
-                             'character',
-                             'floating'])
+        self.expect(
+            "frame variable cool_array",
+            substrs=[
+                '[0]',
+                'integer',
+                'floating',
+                'character',
+                '[1]',
+                'integer',
+                'floating',
+                'character',
+                '[2]',
+                'integer',
+                'floating',
+                'character',
+                '[3]',
+                'integer',
+                'floating',
+                'character',
+                '[4]',
+                'integer',
+                'floating',
+                'character',
+            ])
 
         self.runCmd(
             "type summary add --summary-string \"int = ${*var.int_pointer}, float = ${*var.float_pointer}\" IWrapPointers")
@@ -315,11 +330,12 @@ class AdvDataFormatterTestCase(TestBase):
             matching=True,
             substrs=[
                 'e_2',
-                'n_2',
-                'r_2',
                 'i_2',
                 'k_2',
-                'o_2'])
+                'n_2',
+                'o_2',
+                'r_2',
+            ])
         self.expect(
             'frame variable a_long_guy --show-all-children',
             matching=False,

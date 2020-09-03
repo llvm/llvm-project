@@ -54,7 +54,7 @@ void ASTDumper::dumpLookups(const DeclContext *DC, bool DumpDecls) {
           NodeDumper.AddChild([=] {
             NodeDumper.dumpBareDeclRef(*RI);
 
-            if ((*RI)->isHidden())
+            if (!(*RI)->isUnconditionallyVisible())
               OS << " hidden";
 
             // If requested, dump the redecl chain for this lookup.
@@ -159,17 +159,22 @@ void QualType::dump(const char *msg) const {
   dump();
 }
 
-LLVM_DUMP_METHOD void QualType::dump() const { dump(llvm::errs()); }
-
-LLVM_DUMP_METHOD void QualType::dump(llvm::raw_ostream &OS) const {
-  ASTDumper Dumper(OS, nullptr, nullptr);
+LLVM_DUMP_METHOD void QualType::dump() const {
+  ASTDumper Dumper(llvm::errs(), /*ShowColors=*/false);
   Dumper.Visit(*this);
 }
 
-LLVM_DUMP_METHOD void Type::dump() const { dump(llvm::errs()); }
+LLVM_DUMP_METHOD void QualType::dump(llvm::raw_ostream &OS,
+                                     const ASTContext &Context) const {
+  ASTDumper Dumper(OS, Context, Context.getDiagnostics().getShowColors());
+  Dumper.Visit(*this);
+}
 
-LLVM_DUMP_METHOD void Type::dump(llvm::raw_ostream &OS) const {
-  QualType(this, 0).dump(OS);
+LLVM_DUMP_METHOD void Type::dump() const { QualType(this, 0).dump(); }
+
+LLVM_DUMP_METHOD void Type::dump(llvm::raw_ostream &OS,
+                                 const ASTContext &Context) const {
+  QualType(this, 0).dump(OS, Context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -189,8 +194,7 @@ LLVM_DUMP_METHOD void Decl::dump(raw_ostream &OS, bool Deserialize,
     (void)Deserialize; // FIXME?
     P.Visit(this);
   } else {
-    ASTDumper P(OS, &Ctx.getCommentCommandTraits(), &SM,
-                SM.getDiagnostics().getShowColors(), Ctx.getPrintingPolicy());
+    ASTDumper P(OS, Ctx, Ctx.getDiagnostics().getShowColors());
     P.setDeserialize(Deserialize);
     P.Visit(this);
   }
@@ -198,9 +202,7 @@ LLVM_DUMP_METHOD void Decl::dump(raw_ostream &OS, bool Deserialize,
 
 LLVM_DUMP_METHOD void Decl::dumpColor() const {
   const ASTContext &Ctx = getASTContext();
-  ASTDumper P(llvm::errs(), &Ctx.getCommentCommandTraits(),
-              &Ctx.getSourceManager(), /*ShowColors*/ true,
-              Ctx.getPrintingPolicy());
+  ASTDumper P(llvm::errs(), Ctx, /*ShowColors=*/true);
   P.Visit(this);
 }
 
@@ -214,10 +216,8 @@ LLVM_DUMP_METHOD void DeclContext::dumpLookups(raw_ostream &OS,
   const DeclContext *DC = this;
   while (!DC->isTranslationUnit())
     DC = DC->getParent();
-  ASTContext &Ctx = cast<TranslationUnitDecl>(DC)->getASTContext();
-  const SourceManager &SM = Ctx.getSourceManager();
-  ASTDumper P(OS, &Ctx.getCommentCommandTraits(), &Ctx.getSourceManager(),
-              SM.getDiagnostics().getShowColors(), Ctx.getPrintingPolicy());
+  const ASTContext &Ctx = cast<TranslationUnitDecl>(DC)->getASTContext();
+  ASTDumper P(OS, Ctx, Ctx.getDiagnostics().getShowColors());
   P.setDeserialize(Deserialize);
   P.dumpLookups(this, DumpDecls);
 }
@@ -226,27 +226,19 @@ LLVM_DUMP_METHOD void DeclContext::dumpLookups(raw_ostream &OS,
 // Stmt method implementations
 //===----------------------------------------------------------------------===//
 
-LLVM_DUMP_METHOD void Stmt::dump(SourceManager &SM) const {
-  dump(llvm::errs(), SM);
-}
-
-LLVM_DUMP_METHOD void Stmt::dump(raw_ostream &OS, SourceManager &SM) const {
-  ASTDumper P(OS, nullptr, &SM);
-  P.Visit(this);
-}
-
-LLVM_DUMP_METHOD void Stmt::dump(raw_ostream &OS) const {
-  ASTDumper P(OS, nullptr, nullptr);
-  P.Visit(this);
-}
-
 LLVM_DUMP_METHOD void Stmt::dump() const {
-  ASTDumper P(llvm::errs(), nullptr, nullptr);
+  ASTDumper P(llvm::errs(), /*ShowColors=*/false);
+  P.Visit(this);
+}
+
+LLVM_DUMP_METHOD void Stmt::dump(raw_ostream &OS,
+                                 const ASTContext &Context) const {
+  ASTDumper P(OS, Context, Context.getDiagnostics().getShowColors());
   P.Visit(this);
 }
 
 LLVM_DUMP_METHOD void Stmt::dumpColor() const {
-  ASTDumper P(llvm::errs(), nullptr, nullptr, /*ShowColors*/true);
+  ASTDumper P(llvm::errs(), /*ShowColors=*/true);
   P.Visit(this);
 }
 
@@ -255,27 +247,42 @@ LLVM_DUMP_METHOD void Stmt::dumpColor() const {
 //===----------------------------------------------------------------------===//
 
 LLVM_DUMP_METHOD void Comment::dump() const {
-  dump(llvm::errs(), nullptr, nullptr);
-}
-
-LLVM_DUMP_METHOD void Comment::dump(const ASTContext &Context) const {
-  dump(llvm::errs(), &Context.getCommentCommandTraits(),
-       &Context.getSourceManager());
-}
-
-void Comment::dump(raw_ostream &OS, const CommandTraits *Traits,
-                   const SourceManager *SM) const {
-  const FullComment *FC = dyn_cast<FullComment>(this);
+  const auto *FC = dyn_cast<FullComment>(this);
   if (!FC)
     return;
-  ASTDumper D(OS, Traits, SM);
-  D.Visit(FC, FC);
+  ASTDumper Dumper(llvm::errs(), /*ShowColors=*/false);
+  Dumper.Visit(FC, FC);
+}
+
+LLVM_DUMP_METHOD void Comment::dump(raw_ostream &OS,
+                                    const ASTContext &Context) const {
+  const auto *FC = dyn_cast<FullComment>(this);
+  if (!FC)
+    return;
+  ASTDumper Dumper(OS, Context, Context.getDiagnostics().getShowColors());
+  Dumper.Visit(FC, FC);
 }
 
 LLVM_DUMP_METHOD void Comment::dumpColor() const {
-  const FullComment *FC = dyn_cast<FullComment>(this);
+  const auto *FC = dyn_cast<FullComment>(this);
   if (!FC)
     return;
-  ASTDumper D(llvm::errs(), nullptr, nullptr, /*ShowColors*/true);
-  D.Visit(FC, FC);
+  ASTDumper Dumper(llvm::errs(), /*ShowColors=*/true);
+  Dumper.Visit(FC, FC);
+}
+
+//===----------------------------------------------------------------------===//
+// APValue method implementations
+//===----------------------------------------------------------------------===//
+
+LLVM_DUMP_METHOD void APValue::dump() const {
+  ASTDumper Dumper(llvm::errs(), /*ShowColors=*/false);
+  Dumper.Visit(*this, /*Ty=*/QualType());
+}
+
+LLVM_DUMP_METHOD void APValue::dump(raw_ostream &OS,
+                                    const ASTContext &Context) const {
+  ASTDumper Dumper(llvm::errs(), Context,
+                   Context.getDiagnostics().getShowColors());
+  Dumper.Visit(*this, /*Ty=*/Context.getPointerType(Context.CharTy));
 }

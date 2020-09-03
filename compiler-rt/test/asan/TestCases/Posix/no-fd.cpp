@@ -4,6 +4,12 @@
 
 // Test ASan initialization
 
+// This test closes the 0, 1, and 2 file descriptors before an exec() and relies
+// on them remaining closed across an execve(). This is not the case on newer
+// versions of Android. On PPC with ASLR turned on, this fails when linked with
+// lld - see https://bugs.llvm.org/show_bug.cgi?id=45076.
+// UNSUPPORTED: android, powerpc
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

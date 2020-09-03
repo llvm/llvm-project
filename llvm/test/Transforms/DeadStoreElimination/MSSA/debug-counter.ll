@@ -3,16 +3,16 @@
 ; REQUIRES: asserts
 
 ; Eliminates store to %R in the entry block.
-; RUN: opt < %s -basicaa -dse -enable-dse-memoryssa -debug-counter=dse-memoryssa-skip=0,dse-memoryssa-count=1 -S | FileCheck --check-prefix=SKIP0-COUNT1 %s
+; RUN: opt < %s -basic-aa -dse -enable-dse-memoryssa -debug-counter=dse-memoryssa-skip=0,dse-memoryssa-count=1 -S | FileCheck --check-prefix=SKIP0-COUNT1 %s
 
 ; Eliminates store to %P in the entry block.
-; RUN: opt < %s -basicaa -dse -enable-dse-memoryssa -debug-counter=dse-memoryssa-skip=1,dse-memoryssa-count=1 -S | FileCheck --check-prefix=SKIP1-COUNT1 %s
+; RUN: opt < %s -basic-aa -dse -enable-dse-memoryssa -debug-counter=dse-memoryssa-skip=1,dse-memoryssa-count=1 -S | FileCheck --check-prefix=SKIP1-COUNT1 %s
 
 ; Eliminates both stores in the entry block.
-; RUN: opt < %s -basicaa -dse -enable-dse-memoryssa -debug-counter=dse-memoryssa-skip=0,dse-memoryssa-count=2 -S | FileCheck --check-prefix=SKIP0-COUNT2 %s
+; RUN: opt < %s -basic-aa -dse -enable-dse-memoryssa -debug-counter=dse-memoryssa-skip=0,dse-memoryssa-count=2 -S | FileCheck --check-prefix=SKIP0-COUNT2 %s
 
 ; Eliminates no stores.
-; RUN: opt < %s -basicaa -dse -enable-dse-memoryssa -debug-counter=dse-memoryssa-skip=2,dse-memoryssa-count=1 -S | FileCheck --check-prefix=SKIP2-COUNT1 %s
+; RUN: opt < %s -basic-aa -dse -enable-dse-memoryssa -debug-counter=dse-memoryssa-skip=2,dse-memoryssa-count=1 -S | FileCheck --check-prefix=SKIP2-COUNT1 %s
 
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"

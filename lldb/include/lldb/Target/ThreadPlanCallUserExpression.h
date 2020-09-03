@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlanCallUserExpression_h_
-#define liblldb_ThreadPlanCallUserExpression_h_
+#ifndef LLDB_TARGET_THREADPLANCALLUSEREXPRESSION_H
+#define LLDB_TARGET_THREADPLANCALLUSEREXPRESSION_H
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
@@ -56,9 +56,11 @@ private:
       m_result_var_sp; // If we are left to manage the materialization,
                        // then stuff the result expression variable here.
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanCallUserExpression);
+  ThreadPlanCallUserExpression(const ThreadPlanCallUserExpression &) = delete;
+  const ThreadPlanCallUserExpression &
+  operator=(const ThreadPlanCallUserExpression &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlanCallUserExpression_h_
+#endif // LLDB_TARGET_THREADPLANCALLUSEREXPRESSION_H

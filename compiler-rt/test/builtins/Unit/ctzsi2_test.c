@@ -1,16 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_ctzsi2
-//===-- ctzsi2_test.c - Test __ctzsi2 -------------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __ctzsi2 for the compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
 
 #include "int_lib.h"
 #include <stdio.h>
@@ -19,11 +8,11 @@
 
 // Precondition: a != 0
 
-COMPILER_RT_ABI si_int __ctzsi2(si_int a);
+COMPILER_RT_ABI int __ctzsi2(si_int a);
 
-int test__ctzsi2(si_int a, si_int expected)
+int test__ctzsi2(si_int a, int expected)
 {
-    si_int x = __ctzsi2(a);
+    int x = __ctzsi2(a);
     if (x != expected)
         printf("error in __ctzsi2(0x%X) = %d, expected %d\n", a, x, expected);
     return x != expected;

@@ -185,7 +185,7 @@ ldr r2, [r2]
 
 These instructions preserve the condition code which is important if the spill
 is between a cmp and a bcc instruction. However, we can use the (potentially)
-cheaper sequnce if we know it's ok to clobber the condition register.
+cheaper sequence if we know it's ok to clobber the condition register.
 
 add r2, sp, #255 * 4
 add r2, #132

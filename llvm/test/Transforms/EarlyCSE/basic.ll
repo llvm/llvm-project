@@ -1,5 +1,5 @@
 ; RUN: opt < %s -S -early-cse | FileCheck %s
-; RUN: opt < %s -S -basicaa -early-cse-memssa | FileCheck %s
+; RUN: opt < %s -S -basic-aa -early-cse-memssa | FileCheck %s
 ; RUN: opt < %s -S -passes=early-cse | FileCheck %s
 
 declare void @llvm.assume(i1) nounwind
@@ -290,4 +290,15 @@ entry:
   %call = call i32 @reads_c(i32 0)
   store i32 2, i32* @c, align 4
   ret void
+}
+
+define i1 @cse_freeze(i1 %a) {
+entry:
+; CHECK-LABEL: @cse_freeze(
+; CHECK: %b = freeze i1 %a
+; CHECK: ret i1 %b
+  %b = freeze i1 %a
+  %c = freeze i1 %a
+  %and = and i1 %b, %c
+  ret i1 %and
 }

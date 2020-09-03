@@ -71,7 +71,7 @@ https://github.com/llvm/llvm-project/tree/master/llvm/utils/lit
     packages = find_packages(),
     entry_points = {
         'console_scripts': [
-            'lit = lit:main',
+            'lit = lit.main:main',
             ],
         }
 )

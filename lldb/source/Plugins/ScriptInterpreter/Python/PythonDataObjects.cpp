@@ -1,4 +1,4 @@
-//===-- PythonDataObjects.cpp -----------------------------------*- C++ -*-===//
+//===-- PythonDataObjects.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -44,7 +44,15 @@ template <>
 Expected<long long> python::As<long long>(Expected<PythonObject> &&obj) {
   if (!obj)
     return obj.takeError();
-  return obj.get().AsLongLong();
+  return obj->AsLongLong();
+}
+
+template <>
+Expected<unsigned long long>
+python::As<unsigned long long>(Expected<PythonObject> &&obj) {
+  if (!obj)
+    return obj.takeError();
+  return obj->AsUnsignedLongLong();
 }
 
 template <>
@@ -58,7 +66,56 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
   auto utf8 = str.AsUTF8();
   if (!utf8)
     return utf8.takeError();
-  return utf8.get();
+  return std::string(utf8.get());
+}
+
+Expected<long long> PythonObject::AsLongLong() const {
+  if (!m_py_obj)
+    return nullDeref();
+#if PY_MAJOR_VERSION < 3
+  if (!PyLong_Check(m_py_obj)) {
+    PythonInteger i(PyRefType::Borrowed, m_py_obj);
+    return i.AsLongLong();
+  }
+#endif
+  assert(!PyErr_Occurred());
+  long long r = PyLong_AsLongLong(m_py_obj);
+  if (PyErr_Occurred())
+    return exception();
+  return r;
+}
+
+Expected<long long> PythonObject::AsUnsignedLongLong() const {
+  if (!m_py_obj)
+    return nullDeref();
+#if PY_MAJOR_VERSION < 3
+  if (!PyLong_Check(m_py_obj)) {
+    PythonInteger i(PyRefType::Borrowed, m_py_obj);
+    return i.AsUnsignedLongLong();
+  }
+#endif
+  assert(!PyErr_Occurred());
+  long long r = PyLong_AsUnsignedLongLong(m_py_obj);
+  if (PyErr_Occurred())
+    return exception();
+  return r;
+}
+
+// wraps on overflow, instead of raising an error.
+Expected<unsigned long long> PythonObject::AsModuloUnsignedLongLong() const {
+  if (!m_py_obj)
+    return nullDeref();
+#if PY_MAJOR_VERSION < 3
+  if (!PyLong_Check(m_py_obj)) {
+    PythonInteger i(PyRefType::Borrowed, m_py_obj);
+    return i.AsModuloUnsignedLongLong();
+  }
+#endif
+  assert(!PyErr_Occurred());
+  unsigned long long r = PyLong_AsUnsignedLongLongMask(m_py_obj);
+  if (PyErr_Occurred())
+    return exception();
+  return r;
 }
 
 void StructuredPythonObject::Serialize(llvm::json::OStream &s) const {
@@ -463,32 +520,22 @@ void PythonInteger::Convert(PyRefType &type, PyObject *&py_obj) {
 #endif
 }
 
-int64_t PythonInteger::GetInteger() const {
-  if (m_py_obj) {
-    assert(PyLong_Check(m_py_obj) &&
-           "PythonInteger::GetInteger has a PyObject that isn't a PyLong");
-
-    int overflow = 0;
-    int64_t result = PyLong_AsLongLongAndOverflow(m_py_obj, &overflow);
-    if (overflow != 0) {
-      // We got an integer that overflows, like 18446744072853913392L we can't
-      // use PyLong_AsLongLong() as it will return 0xffffffffffffffff. If we
-      // use the unsigned long long it will work as expected.
-      const uint64_t uval = PyLong_AsUnsignedLongLong(m_py_obj);
-      result = static_cast<int64_t>(uval);
-    }
-    return result;
-  }
-  return UINT64_MAX;
-}
-
 void PythonInteger::SetInteger(int64_t value) {
   *this = Take<PythonInteger>(PyLong_FromLongLong(value));
 }
 
 StructuredData::IntegerSP PythonInteger::CreateStructuredInteger() const {
   StructuredData::IntegerSP result(new StructuredData::Integer);
-  result->SetValue(GetInteger());
+  // FIXME this is really not ideal.   Errors are silently converted to 0
+  // and overflows are silently wrapped.   But we'd need larger changes
+  // to StructuredData to fix it, so that's how it is for now.
+  llvm::Expected<unsigned long long> value = AsModuloUnsignedLongLong();
+  if (!value) {
+    llvm::consumeError(value.takeError());
+    result->SetValue(0);
+  } else {
+    result->SetValue(value.get());
+  }
   return result;
 }
 
@@ -1044,7 +1091,7 @@ std::string PythonException::ReadBacktrace() const {
   if (!backtrace) {
     std::string message =
         std::string(toCString()) + "\n" +
-        "Traceback unavailble, an error occurred while reading it:\n";
+        "Traceback unavailable, an error occurred while reading it:\n";
     return (message + llvm::toString(backtrace.takeError()));
   }
 

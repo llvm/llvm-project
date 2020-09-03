@@ -1,4 +1,4 @@
-//===-- ObjCLanguage.cpp ----------------------------------------*- C++ -*-===//
+//===-- ObjCLanguage.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,6 +36,8 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
+
+LLDB_PLUGIN_DEFINE(ObjCLanguage)
 
 void ObjCLanguage::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "Objective-C Language",
@@ -446,6 +448,10 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                 appkit_flags);
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::NSDictionarySummaryProvider<true>,
+                "NSDictionary summary provider", ConstString("__CFDictionary"),
+                appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSDictionarySummaryProvider<true>,
                 "NSDictionary summary provider",
                 ConstString("CFMutableDictionaryRef"), appkit_flags);
 
@@ -464,6 +470,9 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::NSSetSummaryProvider<false>,
                 "__NSCFSet summary", ConstString("__NSCFSet"), appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSSetSummaryProvider<false>,
+                "__CFSet summary", ConstString("__CFSet"), appkit_flags);
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::NSSetSummaryProvider<false>,
                 "__NSSetI summary", ConstString("__NSSetI"), appkit_flags);
@@ -582,6 +591,11 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
       lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,
       "NSDictionary synthetic children", ConstString("CFMutableDictionaryRef"),
       ScriptedSyntheticChildren::Flags());
+  AddCXXSynthetic(
+      objc_category_sp,
+      lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,
+      "NSDictionary synthetic children", ConstString("__CFDictionary"),
+      ScriptedSyntheticChildren::Flags());
 
   AddCXXSynthetic(objc_category_sp,
                   lldb_private::formatters::NSErrorSyntheticFrontEndCreator,
@@ -608,6 +622,10 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                   lldb_private::formatters::NSSetSyntheticFrontEndCreator,
                   "__NSCFSet synthetic children", ConstString("__NSCFSet"),
                   ScriptedSyntheticChildren::Flags());
+  AddCXXSynthetic(objc_category_sp,
+                  lldb_private::formatters::NSSetSyntheticFrontEndCreator,
+                  "CFSetRef synthetic children", ConstString("CFSetRef"),
+                  ScriptedSyntheticChildren::Flags());
 
   AddCXXSynthetic(
       objc_category_sp, lldb_private::formatters::NSSetSyntheticFrontEndCreator,
@@ -625,6 +643,10 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
       objc_category_sp, lldb_private::formatters::NSSetSyntheticFrontEndCreator,
       "__NSOrderedSetM synthetic children", ConstString("__NSOrderedSetM"),
       ScriptedSyntheticChildren::Flags());
+  AddCXXSynthetic(objc_category_sp,
+                  lldb_private::formatters::NSSetSyntheticFrontEndCreator,
+                  "__CFSet synthetic children", ConstString("__CFSet"),
+                  ScriptedSyntheticChildren::Flags());
 
   AddCXXSynthetic(objc_category_sp,
                   lldb_private::formatters::NSIndexPathSyntheticFrontEndCreator,
@@ -987,7 +1009,7 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
 
     friend class lldb_private::ObjCLanguage;
   };
-
+  
   class ObjCDebugInfoScavenger : public Language::ImageListTypeScavenger {
   public:
     CompilerType AdjustForInclusion(CompilerType &candidate) override {

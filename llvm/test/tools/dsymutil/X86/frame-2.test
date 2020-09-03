@@ -1,4 +1,3 @@
-# REQUIRES: object-emission
 # RUN: rm -rf %t
 # RUN: mkdir -p %t
 # RUN: llc -filetype=obj %p/../Inputs/frame-dw2.ll -o %t/frame-dw2.o
@@ -28,6 +27,7 @@ objects:
 
 # CHECK: .debug_frame contents:
 # CHECK: 00000000 {{[0-9a-f]*}} ffffffff CIE
+# CHECK-NEXT: Format: DWARF32
 # CHECK-NEXT: Version:{{.*}}1
 # CHECK-NOT: FDE
 # CHECK:  FDE cie=00000000 pc=00001000...00001
@@ -35,11 +35,13 @@ objects:
 # CHECK:  FDE cie=00000000 pc=00002000...00002
 # CHECK-NOT: FDE
 # CHECK: [[CIEDW4:[0-9a-f]*]] 00000010 ffffffff CIE
+# CHECK-NEXT: Format: DWARF32
 # CHECK-NEXT: Version:{{.*}}4
 # CHECK-NOT: FDE
 # CHECK:  FDE cie=[[CIEDW4]] pc=00003000...00003
 # CHECK-NOT: FDE
 # CHECK: [[CIEDW2:[0-9a-f]*]] {{[0-9a-f]*}} ffffffff CIE
+# CHECK-NEXT: Format: DWARF32
 # CHECK-NEXT: Version:{{.*}}1
 # CHECK-NOT: FDE
 # CHECK:  FDE cie=[[CIEDW2]] pc=00004000...00004

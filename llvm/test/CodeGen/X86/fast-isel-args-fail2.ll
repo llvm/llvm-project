@@ -1,5 +1,4 @@
-; RUN: not llc < %s -fast-isel -fast-isel-abort=2 -mtriple=x86_64-apple-darwin10
-; REQUIRES: asserts
+; RUN: not --crash llc < %s -fast-isel -fast-isel-abort=2 -mtriple=x86_64-apple-darwin10
 
 %struct.s0 = type { x86_fp80, x86_fp80 }
 

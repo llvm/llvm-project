@@ -1900,6 +1900,13 @@ TARGET_BUILTIN(__builtin_ia32_invpcid, "vUiv*", "nc", "invpcid")
 TARGET_BUILTIN(__builtin_ia32_enqcmd, "Ucv*vC*", "n", "enqcmd")
 TARGET_BUILTIN(__builtin_ia32_enqcmds, "Ucv*vC*", "n", "enqcmd")
 
+// SERIALIZE
+TARGET_BUILTIN(__builtin_ia32_serialize, "v", "n", "serialize")
+
+// TSXLDTRK
+TARGET_BUILTIN(__builtin_ia32_xsusldtrk, "v", "n", "tsxldtrk")
+TARGET_BUILTIN(__builtin_ia32_xresldtrk, "v", "n", "tsxldtrk")
+
 // MSVC
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
@@ -1926,6 +1933,15 @@ TARGET_HEADER_BUILTIN(__readgsbyte,  "UcUNi", "nh", "intrin.h", ALL_MS_LANGUAGES
 TARGET_HEADER_BUILTIN(__readgsword,  "UsUNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(__readgsdword, "UNiUNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(__readgsqword, "ULLiUNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(_InterlockedAnd64,         "WiWiD*Wi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedDecrement64,   "WiWiD*",   "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchange64,    "WiWiD*Wi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangeAdd64, "WiWiD*Wi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangeSub64, "WiWiD*Wi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedIncrement64,   "WiWiD*",   "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedOr64,          "WiWiD*Wi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedXor64,         "WiWiD*Wi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

@@ -34,40 +34,6 @@ STATISTIC(NumVFDeclAdded,
 STATISTIC(NumCompUsedAdded,
           "Number of `@llvm.compiler.used` operands that have been added.");
 
-/// Helper function to map the TLI name to a strings that holds
-/// scalar-to-vector mapping.
-///
-///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
-///
-/// where:
-///
-/// <isa> = "_LLVM_"
-/// <mask> = "N". Note: TLI does not support masked interfaces.
-/// <vlen> = Number of concurrent lanes, stored in the `VectorizationFactor`
-///          field of the `VecDesc` struct.
-/// <vparams> = "v", as many as are the number of parameters of CI.
-/// <scalarname> = the name of the scalar function called by CI.
-/// <vectorname> = the name of the vector function mapped by the TLI.
-static std::string mangleTLIName(StringRef VectorName, const CallInst &CI,
-                                 unsigned VF) {
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  Out << "_ZGV" << VFABI::_LLVM_ << "N" << VF;
-  for (unsigned I = 0; I < CI.getNumArgOperands(); ++I)
-    Out << "v";
-  Out << "_" << CI.getCalledFunction()->getName() << "(" << VectorName << ")";
-  return Out.str();
-}
-
-/// A helper function for converting Scalar types to vector types.
-/// If the incoming type is void, we return void. If the VF is 1, we return
-/// the scalar type.
-static Type *ToVectorTy(Type *Scalar, unsigned VF, bool isScalable = false) {
-  if (Scalar->isVoidTy() || VF == 1)
-    return Scalar;
-  return VectorType::get(Scalar, {VF, isScalable});
-}
-
 /// A helper function that adds the vector function declaration that
 /// vectorizes the CallInst CI with a vectorization factor of VF
 /// lanes. The TLI assumes that all parameters and the return type of
@@ -111,7 +77,7 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
   if (CI.isNoBuiltin() || !CI.getCalledFunction())
     return;
 
-  const std::string ScalarName = CI.getCalledFunction()->getName();
+  const std::string ScalarName = std::string(CI.getCalledFunction()->getName());
   // Nothing to be done if the TLI thinks the function is not
   // vectorizable.
   if (!TLI.isFunctionVectorizable(ScalarName))
@@ -124,9 +90,11 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
   //  All VFs in the TLI are powers of 2.
   for (unsigned VF = 2, WidestVF = TLI.getWidestVF(ScalarName); VF <= WidestVF;
        VF *= 2) {
-    const std::string TLIName = TLI.getVectorizedFunction(ScalarName, VF);
+    const std::string TLIName =
+        std::string(TLI.getVectorizedFunction(ScalarName, VF));
     if (!TLIName.empty()) {
-      std::string MangledName = mangleTLIName(TLIName, CI, VF);
+      std::string MangledName = VFABI::mangleTLIVectorName(
+          TLIName, ScalarName, CI.getNumArgOperands(), VF);
       if (!OriginalSetOfMappings.count(MangledName)) {
         Mappings.push_back(MangledName);
         ++NumCallInjected;

@@ -1,0 +1,95 @@
+add_libc_testsuite(libc_signal_unittests)
+
+add_libc_unittest(
+  raise_test
+  SUITE
+    libc_signal_unittests
+  SRCS
+    raise_test.cpp
+  DEPENDS
+    libc.include.signal
+    libc.src.signal.raise
+)
+
+add_libc_unittest(
+  sigaction_test
+  SUITE
+    libc_signal_unittests
+  SRCS
+    sigaction_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.signal
+    libc.src.signal.raise
+    libc.src.signal.sigaction
+)
+
+add_libc_unittest(
+  sigprocmask_test
+  SUITE
+    libc_signal_unittests
+  SRCS
+    sigprocmask_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.src.errno.__errno_location
+    libc.src.signal.raise
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigprocmask
+)
+
+add_libc_unittest(
+  sigaddset_test
+  SUITE
+    libc_signal_unittests
+  SRCS
+    sigaddset_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.signal
+    libc.src.signal.sigaddset
+)
+
+add_libc_unittest(
+  signal_test
+  SUITE
+    libc_signal_unittests
+  SRCS
+    signal_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.signal
+    libc.src.errno.__errno_location
+    libc.src.signal.raise
+    libc.src.signal.signal
+)
+
+add_libc_unittest(
+  sigfillset_test
+  SUITE
+    libc_signal_unittests
+  SRCS
+    sigfillset_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.signal
+    libc.src.signal.raise
+    libc.src.signal.sigfillset
+    libc.src.signal.sigprocmask
+)
+
+add_libc_unittest(
+  sigdelset_test
+  SUITE
+    libc_signal_unittests
+  SRCS
+    sigdelset_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.signal
+    libc.src.signal.raise
+    libc.src.signal.sigdelset
+    libc.src.signal.sigfillset
+    libc.src.signal.sigprocmask
+)

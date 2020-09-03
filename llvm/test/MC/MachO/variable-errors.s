@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple x86_64-apple-darwin10 %s -filetype=obj -o %t.o 2> %t.err
+// RUN: not --crash llvm-mc -triple x86_64-apple-darwin10 %s -filetype=obj -o %t.o 2> %t.err
 // RUN: FileCheck < %t.err %s
 
         .data

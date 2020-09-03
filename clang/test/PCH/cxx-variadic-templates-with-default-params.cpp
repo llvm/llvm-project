@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -std=c++11 -x c++-header -emit-pch -o %t %s
 // RUN: %clang_cc1 -std=c++11 -include-pch %t -fsyntax-only -verify %s
 
+// RUN: %clang_cc1 -std=c++11 -x c++-header -emit-pch -fpch-instantiate-templates -o %t %s
+// RUN: %clang_cc1 -std=c++11 -include-pch %t -fsyntax-only -verify %s
+
 // expected-no-diagnostics
 
 // PR25271: Ensure that default template arguments prior to a parameter pack

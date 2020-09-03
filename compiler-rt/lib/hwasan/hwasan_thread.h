@@ -38,14 +38,6 @@ class Thread {
     return addr >= stack_bottom_ && addr < stack_top_;
   }
 
-  bool InSignalHandler() { return in_signal_handler_; }
-  void EnterSignalHandler() { in_signal_handler_++; }
-  void LeaveSignalHandler() { in_signal_handler_--; }
-
-  bool InSymbolizer() { return in_symbolizer_; }
-  void EnterSymbolizer() { in_symbolizer_++; }
-  void LeaveSymbolizer() { in_symbolizer_--; }
-
   AllocatorCache *allocator_cache() { return &allocator_cache_; }
   HeapAllocationsRingBuffer *heap_allocations() { return heap_allocations_; }
   StackAllocationsRingBuffer *stack_allocations() { return stack_allocations_; }
@@ -54,7 +46,6 @@ class Thread {
 
   void DisableTagging() { tagging_disabled_++; }
   void EnableTagging() { tagging_disabled_--; }
-  bool TaggingIsDisabled() const { return tagging_disabled_; }
 
   u64 unique_id() const { return unique_id_; }
   void Announce() {
@@ -76,9 +67,6 @@ class Thread {
   uptr tls_begin_;
   uptr tls_end_;
 
-  unsigned in_signal_handler_;
-  unsigned in_symbolizer_;
-
   u32 random_state_;
   u32 random_buffer_;
 
@@ -86,8 +74,6 @@ class Thread {
   HeapAllocationsRingBuffer *heap_allocations_;
   StackAllocationsRingBuffer *stack_allocations_;
 
-  static void InsertIntoThreadList(Thread *t);
-  static void RemoveFromThreadList(Thread *t);
   Thread *next_;  // All live threads form a linked list.
 
   u64 unique_id_;  // counting from zero.

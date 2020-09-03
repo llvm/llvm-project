@@ -54,9 +54,10 @@ private:
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
   MangleAndInterner Mangle{ES, DL};
-  JITDylib &MainJD{ES.createJITDylib("<main>")};
+  JITDylib &MainJD{ES.createBareJITDylib("<main>")};
   RTDyldObjectLinkingLayer ObjectLayer{ES, createMemMgr};
-  IRCompileLayer CompileLayer{ES, ObjectLayer, SimpleCompiler(*TM)};
+  IRCompileLayer CompileLayer{ES, ObjectLayer,
+                              std::make_unique<SimpleCompiler>(*TM)};
 
   static std::unique_ptr<SectionMemoryManager> createMemMgr() {
     return std::make_unique<SectionMemoryManager>();

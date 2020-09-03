@@ -78,7 +78,7 @@ define double @test_NaN_2()  {
 
 define double @test_NaN_3()  {
 ; CHECK-LABEL: @test_NaN_3(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double 0xFFF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double 0xFFF8000000000000, double 8.0, double 0.0)
   ret double %1
@@ -86,7 +86,7 @@ define double @test_NaN_3()  {
 
 define double @test_NaN_4()  {
 ; CHECK-LABEL: @test_NaN_4(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double 0xFFF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double 7.0, double 0xFFF8000000000000, double 0.0)
   ret double %1

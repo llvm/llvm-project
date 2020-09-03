@@ -15,7 +15,7 @@
 # If <opname> is missing, this script updates existing ones in <filename>.
 
 # For example:
-# ./define_inst.sh SPIRVArithmeticOps.td ArithmeticBianryOp OpIAdd
+# ./define_inst.sh SPIRVArithmeticOps.td ArithmeticBinaryOp OpIAdd
 # ./define_inst.sh SPIRVLogicalOps.td LogicalOp OpFOrdEqual
 set -e
 

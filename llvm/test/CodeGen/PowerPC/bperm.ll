@@ -9,7 +9,7 @@ entry:
   ret i32 %0
 
 ; CHECK-LABEL: @bs4
-; CHECK: rlwinm [[REG1:[0-9]+]], 3, 8, 0, 31
+; CHECK: rotlwi [[REG1:[0-9]+]], 3, 8
 ; CHECK: rlwimi [[REG1]], 3, 24, 16, 23
 ; CHECK: rlwimi [[REG1]], 3, 24, 0, 7
 ; CHECK: mr 3, [[REG1]]

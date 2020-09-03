@@ -14,5 +14,5 @@ check_cxx_compiler_flag(-Wno-extra OPENMP_HAVE_WNO_EXTRA_FLAG)
 check_cxx_compiler_flag(-Wno-pedantic OPENMP_HAVE_WNO_PEDANTIC_FLAG)
 check_cxx_compiler_flag(-Wno-maybe-uninitialized OPENMP_HAVE_WNO_MAYBE_UNINITIALIZED_FLAG)
 
-check_cxx_compiler_flag(-std=gnu++11 OPENMP_HAVE_STD_GNUPP11_FLAG)
-check_cxx_compiler_flag(-std=c++11 OPENMP_HAVE_STD_CPP11_FLAG)
+check_cxx_compiler_flag(-std=gnu++14 OPENMP_HAVE_STD_GNUPP14_FLAG)
+check_cxx_compiler_flag(-std=c++14 OPENMP_HAVE_STD_CPP14_FLAG)

@@ -29,7 +29,7 @@ using namespace llvm;
 static cl::opt<bool> EnableDiscriminateMemops(
     DEBUG_TYPE, cl::init(false),
     cl::desc("Generate unique debug info for each instruction with a memory "
-             "operand. Should be enabled for profile-drived cache prefetching, "
+             "operand. Should be enabled for profile-driven cache prefetching, "
              "both in the build of the binary being profiled, as well as in "
              "the build of the binary consuming the profile."),
     cl::Hidden);

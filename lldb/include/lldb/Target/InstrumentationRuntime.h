@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_InstrumentationRuntime_h_
-#define liblldb_InstrumentationRuntime_h_
+#ifndef LLDB_TARGET_INSTRUMENTATIONRUNTIME_H
+#define LLDB_TARGET_INSTRUMENTATIONRUNTIME_H
 
 #include <map>
 #include <vector>
@@ -92,4 +92,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_InstrumentationRuntime_h_
+#endif // LLDB_TARGET_INSTRUMENTATIONRUNTIME_H

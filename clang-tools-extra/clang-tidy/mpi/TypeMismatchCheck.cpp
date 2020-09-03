@@ -128,7 +128,7 @@ static bool isBuiltinTypeMatching(const BuiltinType *Builtin,
       {BuiltinType::LongDouble, "MPI_LONG_DOUBLE"}};
 
   if (!isMPITypeMatching(BuiltinMatches, Builtin->getKind(), MPIDatatype)) {
-    BufferTypeName = Builtin->getName(LO);
+    BufferTypeName = std::string(Builtin->getName(LO));
     return false;
   }
 
@@ -219,7 +219,7 @@ static bool isTypedefTypeMatching(const TypedefType *const Typedef,
   const auto it = FixedWidthMatches.find(Typedef->getDecl()->getName());
   // Check if the typedef is known and not matching the MPI datatype.
   if (it != FixedWidthMatches.end() && it->getValue() != MPIDatatype) {
-    BufferTypeName = Typedef->getDecl()->getName();
+    BufferTypeName = std::string(Typedef->getDecl()->getName());
     return false;
   }
   return true;
@@ -271,7 +271,8 @@ void TypeMismatchCheck::check(const MatchFinder::MatchResult &Result) {
 
     const Type *ArgType = argumentType(CE, BufferIdx);
     // Skip unknown MPI datatypes and void pointers.
-    if (!isStandardMPIDatatype(MPIDatatype) || ArgType->isVoidType())
+    if (!isStandardMPIDatatype(std::string(MPIDatatype)) ||
+        ArgType->isVoidType())
       return;
 
     BufferTypes.push_back(ArgType);
@@ -309,16 +310,17 @@ void TypeMismatchCheck::checkArguments(ArrayRef<const Type *> BufferTypes,
     bool Error = false;
 
     if (const auto *Typedef = BT->getAs<TypedefType>()) {
-      Error = !isTypedefTypeMatching(Typedef, BufferTypeName, MPIDatatypes[i]);
+      Error = !isTypedefTypeMatching(Typedef, BufferTypeName,
+                                     std::string(MPIDatatypes[i]));
     } else if (const auto *Complex = BT->getAs<ComplexType>()) {
-      Error =
-          !isCComplexTypeMatching(Complex, BufferTypeName, MPIDatatypes[i], LO);
+      Error = !isCComplexTypeMatching(Complex, BufferTypeName,
+                                      std::string(MPIDatatypes[i]), LO);
     } else if (const auto *Template = BT->getAs<TemplateSpecializationType>()) {
       Error = !isCXXComplexTypeMatching(Template, BufferTypeName,
-                                        MPIDatatypes[i], LO);
+                                        std::string(MPIDatatypes[i]), LO);
     } else if (const auto *Builtin = BT->getAs<BuiltinType>()) {
-      Error =
-          !isBuiltinTypeMatching(Builtin, BufferTypeName, MPIDatatypes[i], LO);
+      Error = !isBuiltinTypeMatching(Builtin, BufferTypeName,
+                                     std::string(MPIDatatypes[i]), LO);
     }
 
     if (Error) {

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <compare>
 
@@ -149,6 +149,42 @@ constexpr bool test_constexpr() {
       assert((Res == 0) == false);
       break;
     }
+  }
+  {
+    static_assert(std::partial_ordering::less == std::partial_ordering::less);
+    static_assert(std::partial_ordering::less !=
+                  std::partial_ordering::equivalent);
+    static_assert(std::partial_ordering::less !=
+                  std::partial_ordering::greater);
+    static_assert(std::partial_ordering::less !=
+                  std::partial_ordering::unordered);
+
+    static_assert(std::partial_ordering::equivalent !=
+                  std::partial_ordering::less);
+    static_assert(std::partial_ordering::equivalent ==
+                  std::partial_ordering::equivalent);
+    static_assert(std::partial_ordering::equivalent !=
+                  std::partial_ordering::greater);
+    static_assert(std::partial_ordering::equivalent !=
+                  std::partial_ordering::unordered);
+
+    static_assert(std::partial_ordering::greater !=
+                  std::partial_ordering::less);
+    static_assert(std::partial_ordering::greater !=
+                  std::partial_ordering::equivalent);
+    static_assert(std::partial_ordering::greater ==
+                  std::partial_ordering::greater);
+    static_assert(std::partial_ordering::greater !=
+                  std::partial_ordering::unordered);
+
+    static_assert(std::partial_ordering::unordered !=
+                  std::partial_ordering::less);
+    static_assert(std::partial_ordering::unordered !=
+                  std::partial_ordering::equivalent);
+    static_assert(std::partial_ordering::unordered !=
+                  std::partial_ordering::greater);
+    static_assert(std::partial_ordering::unordered ==
+                  std::partial_ordering::unordered);
   }
 #endif
 

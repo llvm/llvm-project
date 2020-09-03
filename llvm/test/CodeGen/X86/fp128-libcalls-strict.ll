@@ -42,10 +42,10 @@ define fp128 @add(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -87,10 +87,10 @@ define fp128 @sub(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -132,10 +132,10 @@ define fp128 @mul(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -177,10 +177,10 @@ define fp128 @div(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -226,10 +226,10 @@ define fp128 @fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -271,10 +271,10 @@ define fp128 @frem(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -312,10 +312,10 @@ define fp128 @ceil(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -353,10 +353,10 @@ define fp128 @cos(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -394,10 +394,10 @@ define fp128 @exp(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -435,10 +435,10 @@ define fp128 @exp2(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -476,10 +476,10 @@ define fp128 @floor(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -517,10 +517,10 @@ define fp128 @log(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -558,10 +558,10 @@ define fp128 @log10(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -599,10 +599,10 @@ define fp128 @log2(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -644,10 +644,10 @@ define fp128 @maxnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -689,10 +689,10 @@ define fp128 @minnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -730,10 +730,10 @@ define fp128 @nearbyint(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -775,10 +775,10 @@ define fp128 @pow(fp128 %x, fp128 %y) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -817,10 +817,10 @@ define fp128 @powi(fp128 %x, i32 %y) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -858,10 +858,10 @@ define fp128 @rint(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -899,10 +899,10 @@ define fp128 @round(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -940,10 +940,10 @@ define fp128 @sin(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -981,10 +981,10 @@ define fp128 @sqrt(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -1022,10 +1022,10 @@ define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -1215,6 +1215,172 @@ define i64 @cmps(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
   %cond = call i1 @llvm.experimental.constrained.fcmps.f128(
                                                fp128 %x, fp128 %y,
                                                metadata !"oeq",
+                                               metadata !"fpexcept.strict") #0
+  %res = select i1 %cond, i64 %a, i64 %b
+  ret i64 %res
+}
+
+define i64 @cmp_ueq_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
+; CHECK-LABEL: cmp_ueq_q:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    subq $32, %rsp
+; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    movq %rsi, %r14
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    callq __eqtf2
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    sete %bpl
+; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    callq __unordtf2
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    orb %bpl, %al
+; CHECK-NEXT:    cmoveq %r14, %rbx
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    addq $32, %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    retq
+;
+; X86-LABEL: cmp_ueq_q:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    movl %ebx, %esi
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __eqtf2
+; X86-NEXT:    addl $32, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    sete %bl
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __unordtf2
+; X86-NEXT:    addl $32, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    setne %al
+; X86-NEXT:    orb %bl, %al
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmovnel %eax, %ecx
+; X86-NEXT:    movl (%ecx), %eax
+; X86-NEXT:    movl 4(%ecx), %edx
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f128(
+                                               fp128 %x, fp128 %y,
+                                               metadata !"ueq",
+                                               metadata !"fpexcept.strict") #0
+  %res = select i1 %cond, i64 %a, i64 %b
+  ret i64 %res
+}
+
+define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
+; CHECK-LABEL: cmp_one_q:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    subq $32, %rsp
+; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    movq %rsi, %r14
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    callq __eqtf2
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    setne %bpl
+; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    callq __unordtf2
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    testb %bpl, %al
+; CHECK-NEXT:    cmoveq %r14, %rbx
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    addq $32, %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    retq
+;
+; X86-LABEL: cmp_one_q:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    movl %ebx, %esi
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __eqtf2
+; X86-NEXT:    addl $32, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    setne %bl
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __unordtf2
+; X86-NEXT:    addl $32, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    sete %al
+; X86-NEXT:    testb %bl, %al
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmovnel %eax, %ecx
+; X86-NEXT:    movl (%ecx), %eax
+; X86-NEXT:    movl 4(%ecx), %edx
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f128(
+                                               fp128 %x, fp128 %y,
+                                               metadata !"one",
                                                metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i64 %a, i64 %b
   ret i64 %res

@@ -10,6 +10,7 @@
 #include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -48,8 +49,7 @@ void PosixReturnCheck::registerMatchers(MatchFinder *Finder) {
       this);
   Finder->addMatcher(
       binaryOperator(
-          anyOf(hasOperatorName("=="), hasOperatorName("!="),
-                hasOperatorName("<="), hasOperatorName("<")),
+          hasAnyOperatorName("==", "!=", "<=", "<"),
           hasLHS(callExpr(callee(functionDecl(
               anyOf(matchesName("^::posix_"), matchesName("^::pthread_")),
               unless(hasName("::posix_openpt")))))),

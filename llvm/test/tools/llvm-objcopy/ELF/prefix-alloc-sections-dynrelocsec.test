@@ -1,7 +1,7 @@
 ## Check that llvm-objcopy can correctly add a prefix to
 ## a dynamic relocation section and its target section.
 
-# RUN: yaml2obj %s > %t1
+# RUN: yaml2obj %s -o %t1
 # RUN: llvm-objcopy --prefix-alloc-sections=.prefix %t1 %t2
 # RUN: llvm-readobj --sections %t2 | FileCheck %s
 

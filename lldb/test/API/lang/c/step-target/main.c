@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 void
 lotsOfArgs
 (
@@ -9,11 +7,7 @@ lotsOfArgs
   int fourthArg
 )
 {
-  printf ("First: %d Second: %d Third: %d Fourth: %d.\n",
-          firstArg,
-          secondArg,
-          thirdArg,
-          fourthArg);
+  int x = firstArg + secondArg + thirdArg + fourthArg;
 }
 
 int
@@ -28,13 +22,12 @@ main (int argc, char **argv)
   if (argc > 0)
     {
       int var_makes_block = argc + 1;
-      printf ("Break here to try targetted stepping.\n");
+      int dummy = 0; // Break here to try targetted stepping.
       lotsOfArgs(var_makes_block,
                  modifyInt(20),
                  30,
                  modifyInt(40));
-      printf ("Done calling lotsOfArgs.");
+      int abc = 0; // Done calling lotsOfArgs.
     }
-  printf ("All done.\n");
-  return 0;
+  return 0; // All done.
 }

@@ -11,6 +11,17 @@ declare_args() {
   #        out/gn/bin/llvm-undname ...`
   # to generate a HTML report for the binaries passed in the last line.
   llvm_build_instrumented_coverage = false
+
+  # If set, puts relative paths in debug info.
+  # Makes the build output independent of the build directory, but makes
+  # most debuggers harder to use. See "Getting to local determinism" and
+  # "Getting debuggers to work well with locally deterministic builds" in
+  # http://blog.llvm.org/2019/11/deterministic-builds-with-clang-and-lld.html
+  # for more information.
+  use_relative_paths_in_debug_info = false
+
+  # The version of host gcc. Ignored if is_clang is true.
+  gcc_version = 9
 }
 
 assert(!llvm_build_instrumented_coverage || is_clang,
@@ -29,6 +40,10 @@ config("compiler_defaults") {
 
   if (host_os == "mac" && clang_base_path != "") {
     cflags += [
+      "-isysroot",
+      mac_sdk_path,
+    ]
+    ldflags += [
       "-isysroot",
       mac_sdk_path,
     ]
@@ -56,10 +71,17 @@ config("compiler_defaults") {
         "/FS",
       ]
       ldflags += [ "/DEBUG" ]
+
+      # Speed up links with ghash on windows.
+      if (use_lld && is_clang) {
+        cflags += [ "-gcodeview-ghash" ]
+        ldflags += [ "/DEBUG:GHASH" ]
+      }
     }
     if (is_optimized) {
       cflags += [
         "/O2",
+        "/Gw",
         "/Zc:inline",
       ]
       ldflags += [
@@ -140,6 +162,23 @@ config("compiler_defaults") {
         # useful.
         "-Wno-noexcept-type",
       ]
+      if (gcc_version >= 8) {
+        cflags_cc += [
+          # Disable -Wclass-memaccess, a C++-only warning from GCC 8 that fires
+          # on LLVM's ADT classes.
+          "-Wno-class-memaccess",
+        ]
+      }
+      if (gcc_version >= 9) {
+        cflags_cc += [
+          # Disable -Wredundant-move on GCC>=9. GCC wants to remove std::move
+          # in code like "A foo(ConvertibleToA a) { return std::move(a); }",
+          # but this code does not compile (or uses the copy constructor
+          # instead) on clang<=3.8. Clang also has a -Wredundant-move, but it
+          # only fires when the types match exactly, so we can keep it here.
+          "-Wno-redundant-move",
+        ]
+      }
     }
     if (is_clang && use_goma) {
       # goma converts all paths to lowercase on the server, breaking this
@@ -166,6 +205,31 @@ config("compiler_defaults") {
           rebase_path("$root_build_dir/profiles/%4m.profraw"),
     ]
     ldflags += [ "-fprofile-instr-generate" ]
+  }
+
+  # Deterministic build setup, see
+  # http://blog.llvm.org/2019/11/deterministic-builds-with-clang-and-lld.html
+  if (current_os == "win") {
+    ldflags += [ "/pdbaltpath:%_PDB%" ]
+  }
+  if (is_clang) {
+    cflags += [
+      "-no-canonical-prefixes",
+      "-Werror=date-time",
+    ]
+    if (current_os == "win") {
+      cflags += [ "-fmsc-version=1916" ]
+      if (use_lld) {
+        cflags += [ "/Brepro" ]
+        ldflags += [ "/Brepro" ]
+      }
+    }
+    if (use_relative_paths_in_debug_info) {
+      cflags += [
+        "-fdebug-compilation-dir",
+        ".",
+      ]
+    }
   }
 }
 

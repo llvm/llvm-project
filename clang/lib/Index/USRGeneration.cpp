@@ -11,6 +11,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -388,7 +389,7 @@ static const ObjCCategoryDecl *getCategoryContext(const NamedDecl *D) {
   if (auto *ICD = dyn_cast<ObjCCategoryImplDecl>(D->getDeclContext()))
     return ICD->getCategoryDecl();
   return nullptr;
-};
+}
 
 void USRGenerator::VisitObjCMethodDecl(const ObjCMethodDecl *D) {
   const DeclContext *container = D->getDeclContext();
@@ -752,6 +753,7 @@ void USRGenerator::VisitType(QualType T) {
         case BuiltinType::SatUShortFract:
         case BuiltinType::SatUFract:
         case BuiltinType::SatULongFract:
+        case BuiltinType::BFloat16:
           IgnoreResults = true;
           return;
         case BuiltinType::ObjCId:

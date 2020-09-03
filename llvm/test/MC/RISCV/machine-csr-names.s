@@ -397,19 +397,47 @@ csrrs t1, dpc, zero
 # uimm12
 csrrs t2, 0x7B1, zero
 
+# dscratch0
+# name
+# CHECK-INST: csrrs t1, dscratch0, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x7b]
+# CHECK-INST-ALIAS: csrr t1, dscratch0
+# uimm12
+# CHECK-INST: csrrs t2, dscratch0, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x7b]
+# CHECK-INST-ALIAS: csrr t2, dscratch0
+# name
+csrrs t1, dscratch0, zero
+# uimm12
+csrrs t2, 0x7B2, zero
+
 # dscratch
 # name
-# CHECK-INST: csrrs t1, dscratch, zero
+# CHECK-INST: csrrs t1, dscratch0, zero
 # CHECK-ENC: encoding: [0x73,0x23,0x20,0x7b]
-# CHECK-INST-ALIAS: csrr t1, dscratch
+# CHECK-INST-ALIAS: csrr t1, dscratch0
 # uimm12
-# CHECK-INST: csrrs t2, dscratch, zero
+# CHECK-INST: csrrs t2, dscratch0, zero
 # CHECK-ENC: encoding: [0xf3,0x23,0x20,0x7b]
-# CHECK-INST-ALIAS: csrr t2, dscratch
+# CHECK-INST-ALIAS: csrr t2, dscratch0
 # name
 csrrs t1, dscratch, zero
 # uimm12
 csrrs t2, 0x7B2, zero
+
+# dscratch1
+# name
+# CHECK-INST: csrrs t1, dscratch1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x7b]
+# CHECK-INST-ALIAS: csrr t1, dscratch1
+# uimm12
+# CHECK-INST: csrrs t2, dscratch1, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x30,0x7b]
+# CHECK-INST-ALIAS: csrr t2, dscratch1
+# name
+csrrs t1, dscratch1, zero
+# uimm12
+csrrs t2, 0x7B3, zero
 
 # mhpmcounter3
 # name
@@ -821,6 +849,20 @@ csrrs t2, 0xB1F, zero
 ######################################
 # Machine Counter Setup
 ######################################
+# mcountinhibit
+# name
+# CHECK-INST: csrrs t1, mcountinhibit, zero
+# CHECK-ENC:  encoding: [0x73,0x23,0x00,0x32]
+# CHECK-INST-ALIAS: csrr t1, mcountinhibit
+# uimm12
+# CHECK-INST: csrrs t2, mcountinhibit, zero
+# CHECK-ENC:  encoding: [0xf3,0x23,0x00,0x32]
+# CHECK-INST-ALIAS: csrr t2, mcountinhibit
+# name
+csrrs t1, mcountinhibit, zero
+# uimm12
+csrrs t2, 0x320, zero
+
 # mhpmevent3
 # name
 # CHECK-INST: csrrs t1, mhpmevent3, zero

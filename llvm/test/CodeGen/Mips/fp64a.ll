@@ -7,16 +7,16 @@
 ; We don't test MIPS32r1 since support for 64-bit coprocessors (such as a 64-bit
 ; FPU) on a 32-bit architecture was added in MIPS32r2.
 
-; RUN: not llc -march=mips -mcpu=mips32 -mattr=fp64 < %s 2>&1 | FileCheck %s -check-prefix=32R1-FP64
+; RUN: not --crash llc -march=mips -mcpu=mips32 -mattr=fp64 < %s 2>&1 | FileCheck %s -check-prefix=32R1-FP64
 ; RUN: llc -march=mips -mcpu=mips32r2 -mattr=fp64 < %s | FileCheck %s -check-prefixes=ALL,32R2-NO-FP64A-BE
 ; RUN: llc -march=mips -mcpu=mips32r2 -mattr=fp64,nooddspreg < %s | FileCheck %s -check-prefixes=ALL,32R2-FP64A
 ; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=fp64 < %s | FileCheck %s -check-prefixes=ALL,32R2-NO-FP64A-LE
 ; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=fp64,nooddspreg < %s | FileCheck %s -check-prefixes=ALL,32R2-FP64A
 
 ; RUN: llc -march=mips64 -mcpu=mips64 -mattr=fp64 < %s | FileCheck %s -check-prefixes=ALL,64-NO-FP64A
-; RUN: not llc -march=mips64 -mcpu=mips64 -mattr=fp64,nooddspreg < %s 2>&1 | FileCheck %s -check-prefix=64-FP64A
+; RUN: not --crash llc -march=mips64 -mcpu=mips64 -mattr=fp64,nooddspreg < %s 2>&1 | FileCheck %s -check-prefix=64-FP64A
 ; RUN: llc -march=mips64el -mcpu=mips64 -mattr=fp64 < %s | FileCheck %s -check-prefixes=ALL,64-NO-FP64A
-; RUN: not llc -march=mips64el -mcpu=mips64 -mattr=fp64,nooddspreg < %s 2>&1 | FileCheck %s -check-prefix=64-FP64A
+; RUN: not --crash llc -march=mips64el -mcpu=mips64 -mattr=fp64,nooddspreg < %s 2>&1 | FileCheck %s -check-prefix=64-FP64A
 
 ; 32R1-FP64: LLVM ERROR: FPU with 64-bit registers is not available on MIPS32 pre revision 2. Use -mcpu=mips32r2 or greater.
 ; 64-FP64A: LLVM ERROR: -mattr=+nooddspreg requires the O32 ABI.

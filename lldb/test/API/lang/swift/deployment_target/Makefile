@@ -2,12 +2,10 @@ all: a.out dlopen_module
 
 include Makefile.rules
 
-ARCH := x86_64
-
 # This test only works on macOS 10.11+.
 
 a.out: main.swift libNewerTarget.dylib
-	$(SWIFTC) -target $(ARCH)-apple-macosx10.10 -g -Onone $^ -lNewerTarget -L$(shell pwd) -o $@ $(SWIFTFLAGS) -I$(shell pwd) -Xfrontend -disable-target-os-checking
+	$(SWIFTC) -sdk "$(SWIFTSDKROOT)" -target x86_64-apple-macosx10.10 -g -Onone $^ -lNewerTarget -L$(shell pwd) -o $@ $(SWIFTFLAGS) -I$(shell pwd) -Xfrontend -disable-target-os-checking
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
@@ -19,7 +17,7 @@ ifneq "$(CODESIGN)" ""
 endif
 
 lib%.dylib: %.swift
-	$(SWIFTC) -target $(ARCH)-apple-macosx10.11 -g -Onone $^ -emit-library -module-name $(shell basename $< .swift) -emit-module -Xlinker -install_name -Xlinker @executable_path/$@
+	$(SWIFTC) -sdk "$(SWIFTSDKROOT)" -target x86_64-apple-macosx10.11 -g -Onone $^ -emit-library -module-name $(shell basename $< .swift) -emit-module -Xlinker -install_name -Xlinker @executable_path/$@
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif

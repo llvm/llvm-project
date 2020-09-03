@@ -75,6 +75,7 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   unsigned DSP : 1;
   unsigned Unaligned : 1;
   unsigned DotProd : 1;
+  unsigned HasMatMul : 1;
 
   enum {
     LDREX_B = (1 << 0), /// byte (8-bit)
@@ -108,6 +109,7 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   bool supportsThumb2() const;
   bool hasMVE() const;
   bool hasMVEFloat() const;
+  bool hasCDE() const;
 
   StringRef getCPUAttr() const;
   StringRef getCPUProfile() const;
@@ -134,6 +136,8 @@ public:
                             DiagnosticsEngine &Diags) override;
 
   bool hasFeature(StringRef Feature) const override;
+
+  bool hasBFloat16Type() const override;
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
@@ -180,6 +184,10 @@ public:
   int getEHDataRegisterNumber(unsigned RegNo) const override;
 
   bool hasSjLjLowering() const override;
+
+  bool hasExtIntType() const override { return true; }
+  
+  const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMleTargetInfo : public ARMTargetInfo {

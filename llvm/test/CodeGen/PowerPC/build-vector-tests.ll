@@ -832,8 +832,8 @@ define <4 x i32> @fromRegsi(i32 signext %a, i32 signext %b, i32 signext %c, i32 
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    rldimi r6, r5, 32, 0
 ; P8BE-NEXT:    rldimi r4, r3, 32, 0
-; P8BE-NEXT:    mtvsrd f0, r6
-; P8BE-NEXT:    mtvsrd f1, r4
+; P8BE-NEXT:    mtfprd f0, r6
+; P8BE-NEXT:    mtfprd f1, r4
 ; P8BE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8BE-NEXT:    blr
 ;
@@ -841,8 +841,8 @@ define <4 x i32> @fromRegsi(i32 signext %a, i32 signext %b, i32 signext %c, i32 
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    rldimi r3, r4, 32, 0
 ; P8LE-NEXT:    rldimi r5, r6, 32, 0
-; P8LE-NEXT:    mtvsrd f0, r3
-; P8LE-NEXT:    mtvsrd f1, r5
+; P8LE-NEXT:    mtfprd f0, r3
+; P8LE-NEXT:    mtfprd f1, r5
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
@@ -1120,8 +1120,8 @@ define <4 x i32> @fromRandMemConsi(i32* nocapture readonly %arr) {
 ; P8BE-NEXT:    lwz r3, 72(r3)
 ; P8BE-NEXT:    rldimi r5, r4, 32, 0
 ; P8BE-NEXT:    rldimi r3, r6, 32, 0
-; P8BE-NEXT:    mtvsrd f0, r5
-; P8BE-NEXT:    mtvsrd f1, r3
+; P8BE-NEXT:    mtfprd f0, r5
+; P8BE-NEXT:    mtfprd f1, r3
 ; P8BE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8BE-NEXT:    blr
 ;
@@ -1133,8 +1133,8 @@ define <4 x i32> @fromRandMemConsi(i32* nocapture readonly %arr) {
 ; P8LE-NEXT:    lwz r3, 352(r3)
 ; P8LE-NEXT:    rldimi r4, r5, 32, 0
 ; P8LE-NEXT:    rldimi r6, r3, 32, 0
-; P8LE-NEXT:    mtvsrd f0, r4
-; P8LE-NEXT:    mtvsrd f1, r6
+; P8LE-NEXT:    mtfprd f0, r4
+; P8LE-NEXT:    mtfprd f1, r6
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
@@ -1190,8 +1190,8 @@ define <4 x i32> @fromRandMemVari(i32* nocapture readonly %arr, i32 signext %ele
 ; P8BE-NEXT:    lwz r3, 4(r3)
 ; P8BE-NEXT:    rldimi r5, r4, 32, 0
 ; P8BE-NEXT:    rldimi r3, r6, 32, 0
-; P8BE-NEXT:    mtvsrd f0, r5
-; P8BE-NEXT:    mtvsrd f1, r3
+; P8BE-NEXT:    mtfprd f0, r5
+; P8BE-NEXT:    mtfprd f1, r3
 ; P8BE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8BE-NEXT:    blr
 ;
@@ -1205,8 +1205,8 @@ define <4 x i32> @fromRandMemVari(i32* nocapture readonly %arr, i32 signext %ele
 ; P8LE-NEXT:    lwz r3, 32(r3)
 ; P8LE-NEXT:    rldimi r4, r5, 32, 0
 ; P8LE-NEXT:    rldimi r6, r3, 32, 0
-; P8LE-NEXT:    mtvsrd f0, r4
-; P8LE-NEXT:    mtvsrd f1, r6
+; P8LE-NEXT:    mtfprd f0, r4
+; P8LE-NEXT:    mtfprd f1, r6
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
@@ -1246,13 +1246,13 @@ define <4 x i32> @spltRegVali(i32 signext %val) {
 ;
 ; P8BE-LABEL: spltRegVali:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    mtvsrwz f0, r3
+; P8BE-NEXT:    mtfprwz f0, r3
 ; P8BE-NEXT:    xxspltw v2, vs0, 1
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: spltRegVali:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    mtvsrwz f0, r3
+; P8LE-NEXT:    mtfprwz f0, r3
 ; P8LE-NEXT:    xxspltw v2, vs0, 1
 ; P8LE-NEXT:    blr
 entry:
@@ -1282,8 +1282,7 @@ define <4 x i32> @spltMemVali(i32* nocapture readonly %ptr) {
 ; P8LE-LABEL: spltMemVali:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lfiwzx f0, 0, r3
-; P8LE-NEXT:    xxpermdi vs0, f0, f0, 2
-; P8LE-NEXT:    xxspltw v2, vs0, 3
+; P8LE-NEXT:    xxspltw v2, vs0, 1
 ; P8LE-NEXT:    blr
 entry:
   %0 = load i32, i32* %ptr, align 4
@@ -2351,8 +2350,8 @@ define <4 x i32> @fromRegsui(i32 zeroext %a, i32 zeroext %b, i32 zeroext %c, i32
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    rldimi r6, r5, 32, 0
 ; P8BE-NEXT:    rldimi r4, r3, 32, 0
-; P8BE-NEXT:    mtvsrd f0, r6
-; P8BE-NEXT:    mtvsrd f1, r4
+; P8BE-NEXT:    mtfprd f0, r6
+; P8BE-NEXT:    mtfprd f1, r4
 ; P8BE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8BE-NEXT:    blr
 ;
@@ -2360,8 +2359,8 @@ define <4 x i32> @fromRegsui(i32 zeroext %a, i32 zeroext %b, i32 zeroext %c, i32
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    rldimi r3, r4, 32, 0
 ; P8LE-NEXT:    rldimi r5, r6, 32, 0
-; P8LE-NEXT:    mtvsrd f0, r3
-; P8LE-NEXT:    mtvsrd f1, r5
+; P8LE-NEXT:    mtfprd f0, r3
+; P8LE-NEXT:    mtfprd f1, r5
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
@@ -2639,8 +2638,8 @@ define <4 x i32> @fromRandMemConsui(i32* nocapture readonly %arr) {
 ; P8BE-NEXT:    lwz r3, 72(r3)
 ; P8BE-NEXT:    rldimi r5, r4, 32, 0
 ; P8BE-NEXT:    rldimi r3, r6, 32, 0
-; P8BE-NEXT:    mtvsrd f0, r5
-; P8BE-NEXT:    mtvsrd f1, r3
+; P8BE-NEXT:    mtfprd f0, r5
+; P8BE-NEXT:    mtfprd f1, r3
 ; P8BE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8BE-NEXT:    blr
 ;
@@ -2652,8 +2651,8 @@ define <4 x i32> @fromRandMemConsui(i32* nocapture readonly %arr) {
 ; P8LE-NEXT:    lwz r3, 352(r3)
 ; P8LE-NEXT:    rldimi r4, r5, 32, 0
 ; P8LE-NEXT:    rldimi r6, r3, 32, 0
-; P8LE-NEXT:    mtvsrd f0, r4
-; P8LE-NEXT:    mtvsrd f1, r6
+; P8LE-NEXT:    mtfprd f0, r4
+; P8LE-NEXT:    mtfprd f1, r6
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
@@ -2709,8 +2708,8 @@ define <4 x i32> @fromRandMemVarui(i32* nocapture readonly %arr, i32 signext %el
 ; P8BE-NEXT:    lwz r3, 4(r3)
 ; P8BE-NEXT:    rldimi r5, r4, 32, 0
 ; P8BE-NEXT:    rldimi r3, r6, 32, 0
-; P8BE-NEXT:    mtvsrd f0, r5
-; P8BE-NEXT:    mtvsrd f1, r3
+; P8BE-NEXT:    mtfprd f0, r5
+; P8BE-NEXT:    mtfprd f1, r3
 ; P8BE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8BE-NEXT:    blr
 ;
@@ -2724,8 +2723,8 @@ define <4 x i32> @fromRandMemVarui(i32* nocapture readonly %arr, i32 signext %el
 ; P8LE-NEXT:    lwz r3, 32(r3)
 ; P8LE-NEXT:    rldimi r4, r5, 32, 0
 ; P8LE-NEXT:    rldimi r6, r3, 32, 0
-; P8LE-NEXT:    mtvsrd f0, r4
-; P8LE-NEXT:    mtvsrd f1, r6
+; P8LE-NEXT:    mtfprd f0, r4
+; P8LE-NEXT:    mtfprd f1, r6
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
@@ -2765,13 +2764,13 @@ define <4 x i32> @spltRegValui(i32 zeroext %val) {
 ;
 ; P8BE-LABEL: spltRegValui:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    mtvsrwz f0, r3
+; P8BE-NEXT:    mtfprwz f0, r3
 ; P8BE-NEXT:    xxspltw v2, vs0, 1
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: spltRegValui:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    mtvsrwz f0, r3
+; P8LE-NEXT:    mtfprwz f0, r3
 ; P8LE-NEXT:    xxspltw v2, vs0, 1
 ; P8LE-NEXT:    blr
 entry:
@@ -2801,8 +2800,7 @@ define <4 x i32> @spltMemValui(i32* nocapture readonly %ptr) {
 ; P8LE-LABEL: spltMemValui:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lfiwzx f0, 0, r3
-; P8LE-NEXT:    xxpermdi vs0, f0, f0, 2
-; P8LE-NEXT:    xxspltw v2, vs0, 3
+; P8LE-NEXT:    xxspltw v2, vs0, 1
 ; P8LE-NEXT:    blr
 entry:
   %0 = load i32, i32* %ptr, align 4
@@ -3884,15 +3882,15 @@ define <2 x i64> @fromRegsll(i64 %a, i64 %b) {
 ;
 ; P8BE-LABEL: fromRegsll:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    mtvsrd f0, r4
-; P8BE-NEXT:    mtvsrd f1, r3
+; P8BE-NEXT:    mtfprd f0, r4
+; P8BE-NEXT:    mtfprd f1, r3
 ; P8BE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: fromRegsll:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    mtvsrd f0, r3
-; P8LE-NEXT:    mtvsrd f1, r4
+; P8LE-NEXT:    mtfprd f0, r3
+; P8LE-NEXT:    mtfprd f1, r4
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
@@ -4103,8 +4101,8 @@ define <2 x i64> @fromRandMemConsll(i64* nocapture readonly %arr) {
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    ld r4, 144(r3)
 ; P8BE-NEXT:    ld r3, 32(r3)
-; P8BE-NEXT:    mtvsrd f0, r4
-; P8BE-NEXT:    mtvsrd f1, r3
+; P8BE-NEXT:    mtfprd f0, r4
+; P8BE-NEXT:    mtfprd f1, r3
 ; P8BE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8BE-NEXT:    blr
 ;
@@ -4112,8 +4110,8 @@ define <2 x i64> @fromRandMemConsll(i64* nocapture readonly %arr) {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    ld r4, 32(r3)
 ; P8LE-NEXT:    ld r3, 144(r3)
-; P8LE-NEXT:    mtvsrd f0, r4
-; P8LE-NEXT:    mtvsrd f1, r3
+; P8LE-NEXT:    mtfprd f0, r4
+; P8LE-NEXT:    mtfprd f1, r3
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
@@ -4151,8 +4149,8 @@ define <2 x i64> @fromRandMemVarll(i64* nocapture readonly %arr, i32 signext %el
 ; P8BE-NEXT:    add r3, r3, r4
 ; P8BE-NEXT:    ld r4, 8(r3)
 ; P8BE-NEXT:    ld r3, 32(r3)
-; P8BE-NEXT:    mtvsrd f0, r4
-; P8BE-NEXT:    mtvsrd f1, r3
+; P8BE-NEXT:    mtfprd f0, r4
+; P8BE-NEXT:    mtfprd f1, r3
 ; P8BE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8BE-NEXT:    blr
 ;
@@ -4162,8 +4160,8 @@ define <2 x i64> @fromRandMemVarll(i64* nocapture readonly %arr, i32 signext %el
 ; P8LE-NEXT:    add r3, r3, r4
 ; P8LE-NEXT:    ld r4, 32(r3)
 ; P8LE-NEXT:    ld r3, 8(r3)
-; P8LE-NEXT:    mtvsrd f0, r4
-; P8LE-NEXT:    mtvsrd f1, r3
+; P8LE-NEXT:    mtfprd f0, r4
+; P8LE-NEXT:    mtfprd f1, r3
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
@@ -4193,13 +4191,13 @@ define <2 x i64> @spltRegValll(i64 %val) {
 ;
 ; P8BE-LABEL: spltRegValll:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    mtvsrd f0, r3
+; P8BE-NEXT:    mtfprd f0, r3
 ; P8BE-NEXT:    xxspltd v2, vs0, 0
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: spltRegValll:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    mtvsrd f0, r3
+; P8LE-NEXT:    mtfprd f0, r3
 ; P8LE-NEXT:    xxspltd v2, vs0, 0
 ; P8LE-NEXT:    blr
 entry:
@@ -4573,7 +4571,7 @@ define <2 x i64> @spltMemValConvftoll(float* nocapture readonly %ptr) {
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfs f0, 0(r3)
 ; P9LE-NEXT:    xscvdpsxds f0, f0
-; P9LE-NEXT:    xxspltd v2, f0, 0
+; P9LE-NEXT:    xxspltd v2, vs0, 0
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltMemValConvftoll:
@@ -4587,7 +4585,7 @@ define <2 x i64> @spltMemValConvftoll(float* nocapture readonly %ptr) {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lfsx f0, 0, r3
 ; P8LE-NEXT:    xscvdpsxds f0, f0
-; P8LE-NEXT:    xxspltd v2, f0, 0
+; P8LE-NEXT:    xxspltd v2, vs0, 0
 ; P8LE-NEXT:    blr
 entry:
   %0 = load float, float* %ptr, align 4
@@ -5072,15 +5070,15 @@ define <2 x i64> @fromRegsull(i64 %a, i64 %b) {
 ;
 ; P8BE-LABEL: fromRegsull:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    mtvsrd f0, r4
-; P8BE-NEXT:    mtvsrd f1, r3
+; P8BE-NEXT:    mtfprd f0, r4
+; P8BE-NEXT:    mtfprd f1, r3
 ; P8BE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: fromRegsull:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    mtvsrd f0, r3
-; P8LE-NEXT:    mtvsrd f1, r4
+; P8LE-NEXT:    mtfprd f0, r3
+; P8LE-NEXT:    mtfprd f1, r4
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
@@ -5291,8 +5289,8 @@ define <2 x i64> @fromRandMemConsull(i64* nocapture readonly %arr) {
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    ld r4, 144(r3)
 ; P8BE-NEXT:    ld r3, 32(r3)
-; P8BE-NEXT:    mtvsrd f0, r4
-; P8BE-NEXT:    mtvsrd f1, r3
+; P8BE-NEXT:    mtfprd f0, r4
+; P8BE-NEXT:    mtfprd f1, r3
 ; P8BE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8BE-NEXT:    blr
 ;
@@ -5300,8 +5298,8 @@ define <2 x i64> @fromRandMemConsull(i64* nocapture readonly %arr) {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    ld r4, 32(r3)
 ; P8LE-NEXT:    ld r3, 144(r3)
-; P8LE-NEXT:    mtvsrd f0, r4
-; P8LE-NEXT:    mtvsrd f1, r3
+; P8LE-NEXT:    mtfprd f0, r4
+; P8LE-NEXT:    mtfprd f1, r3
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
@@ -5339,8 +5337,8 @@ define <2 x i64> @fromRandMemVarull(i64* nocapture readonly %arr, i32 signext %e
 ; P8BE-NEXT:    add r3, r3, r4
 ; P8BE-NEXT:    ld r4, 8(r3)
 ; P8BE-NEXT:    ld r3, 32(r3)
-; P8BE-NEXT:    mtvsrd f0, r4
-; P8BE-NEXT:    mtvsrd f1, r3
+; P8BE-NEXT:    mtfprd f0, r4
+; P8BE-NEXT:    mtfprd f1, r3
 ; P8BE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8BE-NEXT:    blr
 ;
@@ -5350,8 +5348,8 @@ define <2 x i64> @fromRandMemVarull(i64* nocapture readonly %arr, i32 signext %e
 ; P8LE-NEXT:    add r3, r3, r4
 ; P8LE-NEXT:    ld r4, 32(r3)
 ; P8LE-NEXT:    ld r3, 8(r3)
-; P8LE-NEXT:    mtvsrd f0, r4
-; P8LE-NEXT:    mtvsrd f1, r3
+; P8LE-NEXT:    mtfprd f0, r4
+; P8LE-NEXT:    mtfprd f1, r3
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P8LE-NEXT:    blr
 entry:
@@ -5381,13 +5379,13 @@ define <2 x i64> @spltRegValull(i64 %val) {
 ;
 ; P8BE-LABEL: spltRegValull:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    mtvsrd f0, r3
+; P8BE-NEXT:    mtfprd f0, r3
 ; P8BE-NEXT:    xxspltd v2, vs0, 0
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: spltRegValull:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    mtvsrd f0, r3
+; P8LE-NEXT:    mtfprd f0, r3
 ; P8LE-NEXT:    xxspltd v2, vs0, 0
 ; P8LE-NEXT:    blr
 entry:
@@ -5761,7 +5759,7 @@ define <2 x i64> @spltMemValConvftoull(float* nocapture readonly %ptr) {
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfs f0, 0(r3)
 ; P9LE-NEXT:    xscvdpuxds f0, f0
-; P9LE-NEXT:    xxspltd v2, f0, 0
+; P9LE-NEXT:    xxspltd v2, vs0, 0
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltMemValConvftoull:
@@ -5775,7 +5773,7 @@ define <2 x i64> @spltMemValConvftoull(float* nocapture readonly %ptr) {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lfsx f0, 0, r3
 ; P8LE-NEXT:    xscvdpuxds f0, f0
-; P8LE-NEXT:    xxspltd v2, f0, 0
+; P8LE-NEXT:    xxspltd v2, vs0, 0
 ; P8LE-NEXT:    blr
 entry:
   %0 = load float, float* %ptr, align 4
@@ -6122,4 +6120,413 @@ entry:
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %splat.splat
+}
+
+; Some additional patterns that come up in real code.
+define dso_local <2 x double> @sint_to_fp_widen02(<4 x i32> %a) {
+; P9BE-LABEL: sint_to_fp_widen02:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xvcvsxwdp v2, v2
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: sint_to_fp_widen02:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P9LE-NEXT:    xvcvsxwdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: sint_to_fp_widen02:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xvcvsxwdp v2, v2
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: sint_to_fp_widen02:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P8LE-NEXT:    xvcvsxwdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x i32> %a, i32 0
+  %conv = sitofp i32 %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x i32> %a, i32 2
+  %conv2 = sitofp i32 %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @sint_to_fp_widen13(<4 x i32> %a) {
+; P9BE-LABEL: sint_to_fp_widen13:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P9BE-NEXT:    xvcvsxwdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: sint_to_fp_widen13:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xvcvsxwdp v2, v2
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: sint_to_fp_widen13:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P8BE-NEXT:    xvcvsxwdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: sint_to_fp_widen13:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xvcvsxwdp v2, v2
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x i32> %a, i32 1
+  %conv = sitofp i32 %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x i32> %a, i32 3
+  %conv2 = sitofp i32 %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @uint_to_fp_widen02(<4 x i32> %a) {
+; P9BE-LABEL: uint_to_fp_widen02:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xvcvuxwdp v2, v2
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: uint_to_fp_widen02:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P9LE-NEXT:    xvcvuxwdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: uint_to_fp_widen02:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xvcvuxwdp v2, v2
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: uint_to_fp_widen02:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P8LE-NEXT:    xvcvuxwdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x i32> %a, i32 0
+  %conv = uitofp i32 %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x i32> %a, i32 2
+  %conv2 = uitofp i32 %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @uint_to_fp_widen13(<4 x i32> %a) {
+; P9BE-LABEL: uint_to_fp_widen13:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P9BE-NEXT:    xvcvuxwdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: uint_to_fp_widen13:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xvcvuxwdp v2, v2
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: uint_to_fp_widen13:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P8BE-NEXT:    xvcvuxwdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: uint_to_fp_widen13:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xvcvuxwdp v2, v2
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x i32> %a, i32 1
+  %conv = uitofp i32 %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x i32> %a, i32 3
+  %conv2 = uitofp i32 %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend01(<4 x float> %a) {
+; P9BE-LABEL: fp_extend01:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxmrghw vs0, v2, v2
+; P9BE-NEXT:    xvcvspdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend01:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxmrglw vs0, v2, v2
+; P9LE-NEXT:    xvcvspdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend01:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxmrghw vs0, v2, v2
+; P8BE-NEXT:    xvcvspdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend01:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxmrglw vs0, v2, v2
+; P8LE-NEXT:    xvcvspdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 0
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 1
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend10(<4 x float> %a) {
+; P9BE-LABEL: fp_extend10:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxmrghw vs0, v2, v2
+; P9BE-NEXT:    xvcvspdp vs0, vs0
+; P9BE-NEXT:    xxswapd v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend10:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxmrglw vs0, v2, v2
+; P9LE-NEXT:    xvcvspdp vs0, vs0
+; P9LE-NEXT:    xxswapd v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend10:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxmrghw vs0, v2, v2
+; P8BE-NEXT:    xvcvspdp vs0, vs0
+; P8BE-NEXT:    xxswapd v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend10:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxmrglw vs0, v2, v2
+; P8LE-NEXT:    xvcvspdp vs0, vs0
+; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 1
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 0
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend02(<4 x float> %a) {
+; P9BE-LABEL: fp_extend02:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xvcvspdp v2, v2
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend02:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P9LE-NEXT:    xvcvspdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend02:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xvcvspdp v2, v2
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend02:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P8LE-NEXT:    xvcvspdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 0
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 2
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend13(<4 x float> %a) {
+; P9BE-LABEL: fp_extend13:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P9BE-NEXT:    xvcvspdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend13:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xvcvspdp v2, v2
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend13:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P8BE-NEXT:    xvcvspdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend13:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xvcvspdp v2, v2
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 1
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 3
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend23(<4 x float> %a) {
+; P9BE-LABEL: fp_extend23:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxmrglw vs0, v2, v2
+; P9BE-NEXT:    xvcvspdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend23:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxmrghw vs0, v2, v2
+; P9LE-NEXT:    xvcvspdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend23:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxmrglw vs0, v2, v2
+; P8BE-NEXT:    xvcvspdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend23:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxmrghw vs0, v2, v2
+; P8LE-NEXT:    xvcvspdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 2
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 3
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend32(<4 x float> %a) {
+; P9BE-LABEL: fp_extend32:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxmrglw vs0, v2, v2
+; P9BE-NEXT:    xvcvspdp vs0, vs0
+; P9BE-NEXT:    xxswapd v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend32:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxmrghw vs0, v2, v2
+; P9LE-NEXT:    xvcvspdp vs0, vs0
+; P9LE-NEXT:    xxswapd v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend32:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxmrglw vs0, v2, v2
+; P8BE-NEXT:    xvcvspdp vs0, vs0
+; P8BE-NEXT:    xxswapd v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend32:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxmrghw vs0, v2, v2
+; P8LE-NEXT:    xvcvspdp vs0, vs0
+; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 3
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 2
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend_two00(<4 x float> %a, <4 x float> %b) {
+; P9BE-LABEL: fp_extend_two00:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxmrghd vs0, v2, v3
+; P9BE-NEXT:    xvcvspdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend_two00:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxmrgld vs0, v3, v2
+; P9LE-NEXT:    xxsldwi vs0, vs0, vs0, 1
+; P9LE-NEXT:    xvcvspdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend_two00:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxmrghd vs0, v2, v3
+; P8BE-NEXT:    xvcvspdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend_two00:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxmrgld vs0, v3, v2
+; P8LE-NEXT:    xxsldwi vs0, vs0, vs0, 1
+; P8LE-NEXT:    xvcvspdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 0
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %b, i32 0
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend_two33(<4 x float> %a, <4 x float> %b) {
+; P9BE-LABEL: fp_extend_two33:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxmrgld vs0, v2, v3
+; P9BE-NEXT:    xxsldwi vs0, vs0, vs0, 1
+; P9BE-NEXT:    xvcvspdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend_two33:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxmrghd vs0, v3, v2
+; P9LE-NEXT:    xvcvspdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend_two33:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxmrgld vs0, v2, v3
+; P8BE-NEXT:    xxsldwi vs0, vs0, vs0, 1
+; P8BE-NEXT:    xvcvspdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend_two33:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxmrghd vs0, v3, v2
+; P8LE-NEXT:    xvcvspdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 3
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %b, i32 3
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
 }

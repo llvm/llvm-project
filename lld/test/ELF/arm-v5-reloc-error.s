@@ -5,7 +5,7 @@
 // RUN:       .text_low : { *(.text_low) *(.text_low2) } \
 // RUN:       .text_high 0x2000000 : { *(.text_high) *(.text_high2) } \
 // RUN:       } " > %t.script
-// RUN: not ld.lld --script %t.script %t -o %t2 2>&1 | FileCheck %s
+// RUN: not ld.lld --script %t.script %t -o /dev/null 2>&1 | FileCheck %s
 
 // CHECK: error: relocation R_ARM_THM_JUMP24 to far not supported for Armv5 or Armv6 targets
 

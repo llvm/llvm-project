@@ -108,8 +108,10 @@ public:
   /// \param LockName -- A StringRef name for the lock expression, to be printed
   /// in the error message.
   /// \param Loc -- The SourceLocation of the Unlock
+  /// \param LocPreviousUnlock -- If valid, the location of a previous Unlock.
   virtual void handleUnmatchedUnlock(StringRef Kind, Name LockName,
-                                     SourceLocation Loc) {}
+                                     SourceLocation Loc,
+                                     SourceLocation LocPreviousUnlock) {}
 
   /// Warn about an unlock function call that attempts to unlock a lock with
   /// the incorrect lock kind. For instance, a shared lock being unlocked

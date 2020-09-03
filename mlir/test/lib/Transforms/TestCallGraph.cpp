@@ -1,6 +1,6 @@
 //===- TestCallGraph.cpp - Test callgraph construction and iteration ------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -17,14 +17,18 @@
 using namespace mlir;
 
 namespace {
-struct TestCallGraphPass : public ModulePass<TestCallGraphPass> {
-  void runOnModule() {
-    llvm::errs() << "Testing : " << getModule().getAttr("test.name") << "\n";
+struct TestCallGraphPass
+    : public PassWrapper<TestCallGraphPass, OperationPass<ModuleOp>> {
+  void runOnOperation() override {
+    llvm::errs() << "Testing : " << getOperation().getAttr("test.name") << "\n";
     getAnalysis<CallGraph>().print(llvm::errs());
   }
 };
 } // end anonymous namespace
 
-static PassRegistration<TestCallGraphPass>
-    pass("test-print-callgraph",
-         "Print the contents of a constructed callgraph.");
+namespace mlir {
+void registerTestCallGraphPass() {
+  PassRegistration<TestCallGraphPass> pass(
+      "test-print-callgraph", "Print the contents of a constructed callgraph.");
+}
+} // namespace mlir

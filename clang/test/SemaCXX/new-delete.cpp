@@ -27,7 +27,7 @@ inline void operator delete(void *); // expected-warning {{replacement function 
 
 __attribute__((used))
 inline void *operator new(size_t) { // no warning, due to __attribute__((used))
-  return 0;
+  return 0; // expected-warning {{null returned from function that requires a non-null return value}}
 }
 
 // PR5823
@@ -53,9 +53,9 @@ void good_news()
   pi = ::new int;
   U *pu = new (ps) U;
   V *pv = new (ps) V;
-  
+
   pi = new (S(1.0f, 2)) int;
-  
+
   (void)new int[true];
 
   // PR7147
@@ -329,7 +329,7 @@ namespace Test1 {
 
 void f() {
   (void)new int[10](1, 2); // expected-error {{array 'new' cannot have initialization arguments}}
-  
+
   typedef int T[10];
   (void)new T(1, 2); // expected-error {{array 'new' cannot have initialization arguments}}
 }
@@ -363,7 +363,7 @@ class S2 {
   void operator delete(void* p); // expected-note {{declared private here}}
 };
 
-void test(S1* s1, S2* s2) { 
+void test(S1* s1, S2* s2) {
   delete s1;
   delete s2; // expected-error {{is a private member}}
   (void)new S1();
@@ -397,7 +397,7 @@ namespace rdar8018245 {
 
 // <rdar://problem/8248780>
 namespace Instantiate {
-  template<typename T> struct X { 
+  template<typename T> struct X {
     operator T*();
   };
 

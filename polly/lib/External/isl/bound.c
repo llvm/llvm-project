@@ -25,12 +25,14 @@ ISL_ARG_DEF(bound_options, struct bound_options, bound_options_args)
 
 static __isl_give isl_set *set_bounds(__isl_take isl_set *set)
 {
-	unsigned nparam;
+	isl_size nparam;
 	int i, r;
 	isl_point *pt, *pt2;
 	isl_set *box;
 
 	nparam = isl_set_dim(set, isl_dim_param);
+	if (nparam < 0)
+		return isl_set_free(set);
 	r = nparam >= 8 ? 5 : nparam >= 5 ? 15 : 50;
 
 	pt = isl_set_sample_point(isl_set_copy(set));
@@ -60,7 +62,7 @@ struct verify_point_bound {
 static isl_stat verify_point(__isl_take isl_point *pnt, void *user)
 {
 	int i;
-	unsigned nparam;
+	isl_size nparam;
 	struct verify_point_bound *vpb = (struct verify_point_bound *) user;
 	isl_val *v;
 	isl_ctx *ctx;
@@ -91,6 +93,8 @@ static isl_stat verify_point(__isl_take isl_point *pnt, void *user)
 	pwf = isl_pw_qpolynomial_fold_copy(vpb->pwf);
 
 	nparam = isl_pw_qpolynomial_fold_dim(pwf, isl_dim_param);
+	if (nparam < 0)
+		pwf = isl_pw_qpolynomial_fold_free(pwf);
 	for (i = 0; i < nparam; ++i) {
 		v = isl_point_get_coordinate_val(pnt, isl_dim_param, i);
 		pwf = isl_pw_qpolynomial_fold_fix_val(pwf, isl_dim_param, i, v);
@@ -239,7 +243,7 @@ int main(int argc, char **argv)
 	isl_stream *s;
 	struct isl_obj obj;
 	struct bound_options *options;
-	int exact;
+	isl_bool exact;
 	int r = 0;
 
 	options = bound_options_new_with_defaults();

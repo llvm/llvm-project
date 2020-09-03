@@ -634,25 +634,19 @@
 #CHECK: vlrl	%v0, -1, 0
 #CHECK: error: invalid operand
 #CHECK: vlrl	%v0, 4096, 0
-#CHECK: error: %r0 used in an address
-#CHECK: vlrl	%v0, 0(%r0), 0
 
 	vlrl	%v0, 0, -1
 	vlrl	%v0, 0, 256
 	vlrl	%v0, -1, 0
 	vlrl	%v0, 4096, 0
-	vlrl	%v0, 0(%r0), 0
 
 #CHECK: error: invalid operand
 #CHECK: vlrlr	%v0, %r0, -1
 #CHECK: error: invalid operand
 #CHECK: vlrlr	%v0, %r0, 4096
-#CHECK: error: %r0 used in an address
-#CHECK: vlrlr	%v0, %r0, 0(%r0)
 
 	vlrlr	%v0, %r0, -1
 	vlrlr	%v0, %r0, 4096
-	vlrlr	%v0, %r0, 0(%r0)
 
 #CHECK: error: invalid operand
 #CHECK: vmp	%v0, %v0, %v0, 0, -1
@@ -712,14 +706,11 @@
 #CHECK: vpkz	%v0, -1, 0
 #CHECK: error: invalid operand
 #CHECK: vpkz	%v0, 4096, 0
-#CHECK: error: %r0 used in an address
-#CHECK: vpkz	%v0, 0(%r0), 0
 
 	vpkz	%v0, 0, -1
 	vpkz	%v0, 0, 256
 	vpkz	%v0, -1, 0
 	vpkz	%v0, 4096, 0
-	vpkz	%v0, 0(%r0), 0
 
 #CHECK: error: invalid operand
 #CHECK: vpsop	%v0, %v0, 0, 0, -1
@@ -863,25 +854,19 @@
 #CHECK: vstrl	%v0, -1, 0
 #CHECK: error: invalid operand
 #CHECK: vstrl	%v0, 4096, 0
-#CHECK: error: %r0 used in an address
-#CHECK: vstrl	%v0, 0(%r0), 0
 
 	vstrl	%v0, 0, -1
 	vstrl	%v0, 0, 256
 	vstrl	%v0, -1, 0
 	vstrl	%v0, 4096, 0
-	vstrl	%v0, 0(%r0), 0
 
 #CHECK: error: invalid operand
 #CHECK: vstrlr	%v0, %r0, -1
 #CHECK: error: invalid operand
 #CHECK: vstrlr	%v0, %r0, 4096
-#CHECK: error: %r0 used in an address
-#CHECK: vstrlr	%v0, %r0, 0(%r0)
 
 	vstrlr	%v0, %r0, -1
 	vstrlr	%v0, %r0, 4096
-	vstrlr	%v0, %r0, 0(%r0)
 
 #CHECK: error: instruction requires: vector-enhancements-2
 #CHECK: vstrs	%v0, %v0, %v0, %v0, 0
@@ -914,14 +899,11 @@
 #CHECK: vupkz	%v0, -1, 0
 #CHECK: error: invalid operand
 #CHECK: vupkz	%v0, 4096, 0
-#CHECK: error: %r0 used in an address
-#CHECK: vupkz	%v0, 0(%r0), 0
 
 	vupkz	%v0, 0, -1
 	vupkz	%v0, 0, 256
 	vupkz	%v0, -1, 0
 	vupkz	%v0, 4096, 0
-	vupkz	%v0, 0(%r0), 0
 
 #CHECK: error: instruction requires: vector-enhancements-2
 #CHECK: wcefb	%v0, %v0, 0, 0

@@ -5,13 +5,24 @@
 // RUN: %clang_cc1 %s -emit-llvm -cl-mad-enable -o - | FileCheck %s -check-prefix=MAD
 // RUN: %clang_cc1 %s -emit-llvm -cl-no-signed-zeros -o - | FileCheck %s -check-prefix=NOSIGNED
 
+// Check the fp options are correct with PCH.
+// RUN: %clang_cc1 %s -DGEN_PCH=1 -finclude-default-header -triple spir-unknown-unknown -emit-pch -o %t.pch
+// RUN: %clang_cc1 %s -include-pch %t.pch -fno-validate-pch -emit-llvm -o - | FileCheck %s -check-prefix=NORMAL
+// RUN: %clang_cc1 %s -include-pch %t.pch -fno-validate-pch -emit-llvm -cl-fast-relaxed-math -o - | FileCheck %s -check-prefix=FAST
+// RUN: %clang_cc1 %s -include-pch %t.pch -fno-validate-pch -emit-llvm -cl-finite-math-only -o - | FileCheck %s -check-prefix=FINITE
+// RUN: %clang_cc1 %s -include-pch %t.pch -fno-validate-pch -emit-llvm -cl-unsafe-math-optimizations -o - | FileCheck %s -check-prefix=UNSAFE
+// RUN: %clang_cc1 %s -include-pch %t.pch -fno-validate-pch -emit-llvm -cl-mad-enable -o - | FileCheck %s -check-prefix=MAD
+// RUN: %clang_cc1 %s -include-pch %t.pch -fno-validate-pch -emit-llvm -cl-no-signed-zeros -o - | FileCheck %s -check-prefix=NOSIGNED
+
+#if !GEN_PCH
+
 float spscalardiv(float a, float b) {
   // CHECK: @spscalardiv(
 
   // NORMAL: fdiv float
   // FAST: fdiv fast float
   // FINITE: fdiv nnan ninf float
-  // UNSAFE: fdiv nnan nsz float
+  // UNSAFE: fdiv reassoc nsz arcp afn float
   // MAD: fdiv float
   // NOSIGNED: fdiv nsz float
   return a / b;
@@ -38,7 +49,7 @@ float spscalardiv(float a, float b) {
 
 // UNSAFE: "less-precise-fpmad"="true"
 // UNSAFE: "no-infs-fp-math"="false"
-// UNSAFE: "no-nans-fp-math"="true"
+// UNSAFE: "no-nans-fp-math"="false"
 // UNSAFE: "no-signed-zeros-fp-math"="true"
 // UNSAFE: "unsafe-fp-math"="true"
 
@@ -53,3 +64,8 @@ float spscalardiv(float a, float b) {
 // NOSIGNED: "no-nans-fp-math"="false"
 // NOSIGNED: "no-signed-zeros-fp-math"="true"
 // NOSIGNED: "unsafe-fp-math"="false"
+
+#else
+// Undefine this to avoid putting it in the PCH.
+#undef GEN_PCH
+#endif

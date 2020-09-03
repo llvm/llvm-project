@@ -20,6 +20,7 @@ class ReproducerAttachTestCase(TestBase):
     @skipIfWindows
     @skipIfRemote
     @skipIfiOSSimulator
+    @skipIfReproducer
     def test_reproducer_attach(self):
         """Test thread creation after process attach."""
         exe = '%s_%d' % (self.testMethodName, os.getpid())
@@ -36,7 +37,6 @@ class ReproducerAttachTestCase(TestBase):
                 pass
 
         self.build(dictionary={'EXE': exe})
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         inferior = self.spawnSubprocess(self.getBuildArtifact(exe), [token])
         pid = inferior.pid
@@ -46,9 +46,10 @@ class ReproducerAttachTestCase(TestBase):
         # Use Popen because pexpect is overkill and spawnSubprocess is
         # asynchronous.
         capture = subprocess.Popen([
-            lldbtest_config.lldbExec, '-b', '--capture', '--capture-path',
-            reproducer, '-o', 'proc att -n {}'.format(exe), '-o',
-            'reproducer generate'
+            lldbtest_config.lldbExec, '-b', '--no-lldbinit', '--no-use-colors']
+            + sum(map(lambda x: ['-O', x], self.setUpCommands()), [])
+            + ['--capture', '--capture-path', reproducer,
+            '-o', 'proc att -n {}'.format(exe), '-o', 'reproducer generate'
         ],
                                    stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE,

@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextLinux_ppc64le.cpp ------------------*- C++ -*-===//
+//===-- NativeRegisterContextLinux_ppc64le.cpp ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -552,7 +552,7 @@ uint32_t NativeRegisterContextLinux_ppc64le::SetHardwareWatchpoint(
 
   // Check 8-byte alignment for hardware watchpoint target address. Below is a
   // hack to recalculate address and size in order to make sure we can watch
-  // non 8-byte alligned addresses as well.
+  // non 8-byte aligned addresses as well.
   if (addr & 0x07) {
 
     addr_t begin = llvm::alignDown(addr, 8);

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlan_h_
-#define liblldb_ThreadPlan_h_
+#ifndef LLDB_TARGET_THREADPLAN_H
+#define LLDB_TARGET_THREADPLAN_H
 
 #include <mutex>
 #include <string>
@@ -251,7 +251,7 @@ namespace lldb_private {
 //  However, if the plan doesn't want to be
 //  the stop reason, then it can call SetPlanComplete and pass in "false" for
 //  the "success" parameter.  In that case,
-//  the real stop reason will be used instead.  One exapmle of this is the
+//  the real stop reason will be used instead.  One example of this is the
 //  "StepRangeStepIn" thread plan.  If it stops
 //  because of a crash or breakpoint hit, it wants to unship itself, because it
 //  isn't so useful to have step in keep going
@@ -617,8 +617,8 @@ private:
 
   lldb::ThreadPlanTracerSP m_tracer_sp;
 
-private:
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlan);
+  ThreadPlan(const ThreadPlan &) = delete;
+  const ThreadPlan &operator=(const ThreadPlan &) = delete;
 };
 
 // ThreadPlanNull:
@@ -653,9 +653,10 @@ protected:
 
   lldb::StateType GetPlanRunState() override;
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanNull);
+  ThreadPlanNull(const ThreadPlanNull &) = delete;
+  const ThreadPlanNull &operator=(const ThreadPlanNull &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlan_h_
+#endif // LLDB_TARGET_THREADPLAN_H

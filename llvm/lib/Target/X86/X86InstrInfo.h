@@ -24,8 +24,6 @@
 #include "X86GenInstrInfo.inc"
 
 namespace llvm {
-class MachineInstrBuilder;
-class X86RegisterInfo;
 class X86Subtarget;
 
 namespace X86 {
@@ -180,8 +178,37 @@ public:
   /// true, then it's expected the pre-extension value is available as a subreg
   /// of the result register. This also returns the sub-register index in
   /// SubIdx.
-  bool isCoalescableExtInstr(const MachineInstr &MI, unsigned &SrcReg,
-                             unsigned &DstReg, unsigned &SubIdx) const override;
+  bool isCoalescableExtInstr(const MachineInstr &MI, Register &SrcReg,
+                             Register &DstReg, unsigned &SubIdx) const override;
+
+  /// Returns true if the instruction has no behavior (specified or otherwise)
+  /// that is based on the value of any of its register operands
+  ///
+  /// Instructions are considered data invariant even if they set EFLAGS.
+  ///
+  /// A classical example of something that is inherently not data invariant is
+  /// an indirect jump -- the destination is loaded into icache based on the
+  /// bits set in the jump destination register.
+  ///
+  /// FIXME: This should become part of our instruction tables.
+  static bool isDataInvariant(MachineInstr &MI);
+
+  /// Returns true if the instruction has no behavior (specified or otherwise)
+  /// that is based on the value loaded from memory or the value of any
+  /// non-address register operands.
+  ///
+  /// For example, if the latency of the instruction is dependent on the
+  /// particular bits set in any of the registers *or* any of the bits loaded
+  /// from memory.
+  ///
+  /// Instructions are considered data invariant even if they set EFLAGS.
+  ///
+  /// A classical example of something that is inherently not data invariant is
+  /// an indirect jump -- the destination is loaded into icache based on the
+  /// bits set in the jump destination register.
+  ///
+  /// FIXME: This should become part of our instruction tables.
+  static bool isDataInvariantLoad(MachineInstr &MI);
 
   unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
@@ -208,7 +235,7 @@ public:
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
                                          AAResults *AA) const override;
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                     unsigned DestReg, unsigned SubIdx,
+                     Register DestReg, unsigned SubIdx,
                      const MachineInstr &Orig,
                      const TargetRegisterInfo &TRI) const override;
 
@@ -278,7 +305,6 @@ public:
                                  const X86InstrFMA3Group &FMA3Group) const;
 
   // Branch analysis.
-  bool isUnpredicatedTerminator(const MachineInstr &MI) const override;
   bool isUnconditionalTailCall(const MachineInstr &MI) const override;
   bool canMakeTailCallConditional(SmallVectorImpl<MachineOperand> &Cond,
                                   const MachineInstr &TailCall) const override;
@@ -291,10 +317,11 @@ public:
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify) const override;
 
-  bool getMemOperandWithOffset(const MachineInstr &LdSt,
-                               const MachineOperand *&BaseOp,
-                               int64_t &Offset,
-                               const TargetRegisterInfo *TRI) const override;
+  bool getMemOperandsWithOffsetWidth(
+      const MachineInstr &LdSt,
+      SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
+      bool &OffsetIsScalable, unsigned &Width,
+      const TargetRegisterInfo *TRI) const override;
   bool analyzeBranchPredicate(MachineBasicBlock &MBB,
                               TargetInstrInfo::MachineBranchPredicate &MBP,
                               bool AllowModify = false) const override;
@@ -306,23 +333,23 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
-                       unsigned, unsigned, unsigned, int &, int &,
+                       Register, Register, Register, int &, int &,
                        int &) const override;
   void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                    const DebugLoc &DL, unsigned DstReg,
-                    ArrayRef<MachineOperand> Cond, unsigned TrueReg,
-                    unsigned FalseReg) const override;
+                    const DebugLoc &DL, Register DstReg,
+                    ArrayRef<MachineOperand> Cond, Register TrueReg,
+                    Register FalseReg) const override;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
                    bool KillSrc) const override;
   void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI, unsigned SrcReg,
+                           MachineBasicBlock::iterator MI, Register SrcReg,
                            bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) const override;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI, unsigned DestReg,
+                            MachineBasicBlock::iterator MI, Register DestReg,
                             int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
@@ -444,7 +471,7 @@ public:
                                       unsigned OpNum,
                                       ArrayRef<MachineOperand> MOs,
                                       MachineBasicBlock::iterator InsertPt,
-                                      unsigned Size, unsigned Alignment,
+                                      unsigned Size, Align Alignment,
                                       bool AllowCommute) const;
 
   bool isHighLatencyDef(int opc) const override;
@@ -470,15 +497,15 @@ public:
   /// in SrcReg and SrcReg2 if having two register operands, and the value it
   /// compares against in CmpValue. Return true if the comparison instruction
   /// can be analyzed.
-  bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
-                      unsigned &SrcReg2, int &CmpMask,
+  bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                      Register &SrcReg2, int &CmpMask,
                       int &CmpValue) const override;
 
   /// optimizeCompareInstr - Check if there exists an earlier instruction that
   /// operates on the same source operands and sets flags in the same way as
   /// Compare; remove Compare if possible.
-  bool optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
-                            unsigned SrcReg2, int CmpMask, int CmpValue,
+  bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
+                            Register SrcReg2, int CmpMask, int CmpValue,
                             const MachineRegisterInfo *MRI) const override;
 
   /// optimizeLoadInstr - Try to remove the load by folding it to a register
@@ -564,7 +591,7 @@ private:
                                         unsigned OpNum,
                                         ArrayRef<MachineOperand> MOs,
                                         MachineBasicBlock::iterator InsertPt,
-                                        unsigned Size, unsigned Align) const;
+                                        unsigned Size, Align Alignment) const;
 
   /// isFrameOperand - Return true and the FrameIndex if the specified
   /// operand and follow operands form a reference to the stack frame.

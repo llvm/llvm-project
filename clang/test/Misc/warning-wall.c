@@ -15,14 +15,13 @@ CHECK-NEXT:      -Wnonnull
 CHECK-NEXT:      -Wformat-security
 CHECK-NEXT:      -Wformat-y2k
 CHECK-NEXT:      -Wformat-invalid-specifier
+CHECK-NEXT:    -Wfor-loop-analysis
+CHECK-NEXT:    -Wframe-address
 CHECK-NEXT:    -Wimplicit
 CHECK-NEXT:      -Wimplicit-function-declaration
 CHECK-NEXT:      -Wimplicit-int
 CHECK-NEXT:    -Winfinite-recursion
 CHECK-NEXT:    -Wint-in-bool-context
-CHECK-NEXT:    -Wloop-analysis
-CHECK-NEXT:      -Wfor-loop-analysis
-CHECK-NEXT:      -Wrange-loop-analysis
 CHECK-NEXT:    -Wmismatched-tags
 CHECK-NEXT:    -Wmissing-braces
 CHECK-NEXT:    -Wmove
@@ -31,6 +30,7 @@ CHECK-NEXT:      -Wredundant-move
 CHECK-NEXT:      -Wreturn-std-move
 CHECK-NEXT:      -Wself-move
 CHECK-NEXT:    -Wmultichar
+CHECK-NEXT:    -Wrange-loop-construct
 CHECK-NEXT:    -Wreorder
 CHECK-NEXT:      -Wreorder-ctor
 CHECK-NEXT:      -Wreorder-init-list
@@ -55,6 +55,7 @@ CHECK-NEXT:    -Wtrigraphs
 CHECK-NEXT:    -Wuninitialized
 CHECK-NEXT:      -Wsometimes-uninitialized
 CHECK-NEXT:      -Wstatic-self-init
+CHECK-NEXT:      -Wuninitialized-const-reference
 CHECK-NEXT:    -Wunknown-pragmas
 CHECK-NEXT:    -Wunused
 CHECK-NEXT:      -Wunused-argument

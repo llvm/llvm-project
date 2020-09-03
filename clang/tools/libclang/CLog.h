@@ -61,7 +61,7 @@ public:
   }
 
   explicit Logger(llvm::StringRef name, bool trace)
-    : Name(name), Trace(trace), LogOS(Msg) { }
+      : Name(std::string(name)), Trace(trace), LogOS(Msg) {}
   ~Logger();
 
   Logger &operator<<(CXTranslationUnit);

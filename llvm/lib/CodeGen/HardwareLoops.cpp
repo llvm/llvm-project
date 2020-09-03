@@ -20,7 +20,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -35,7 +35,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
-#include "llvm/PassSupport.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
@@ -43,6 +42,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 #define DEBUG_TYPE "hardware-loops"
 
@@ -245,13 +245,16 @@ bool HardwareLoops::runOnFunction(Function &F) {
 // converted and the parent loop doesn't support containing a hardware loop.
 bool HardwareLoops::TryConvertLoop(Loop *L) {
   // Process nested loops first.
-  for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I) {
-    if (TryConvertLoop(*I)) {
-      reportHWLoopFailure("nested hardware-loops not supported", "HWLoopNested",
-                          ORE, L);
-      return true; // Stop search.
-    }
+  bool AnyChanged = false;
+  for (Loop *SL : *L)
+    AnyChanged |= TryConvertLoop(SL);
+  if (AnyChanged) {
+    reportHWLoopFailure("nested hardware-loops not supported", "HWLoopNested",
+                        ORE, L);
+    return true; // Stop search.
   }
+
+  LLVM_DEBUG(dbgs() << "HWLoops: Loop " << L->getHeader()->getName() << "\n");
 
   HardwareLoopInfo HWLoopInfo(L);
   if (!HWLoopInfo.canAnalyze(*LI)) {
@@ -476,9 +479,7 @@ Instruction* HardwareLoop::InsertLoopRegDec(Value *EltsRem) {
 
   Function *DecFunc =
       Intrinsic::getDeclaration(M, Intrinsic::loop_decrement_reg,
-                                { EltsRem->getType(), EltsRem->getType(),
-                                  LoopDecrement->getType()
-                                });
+                                { EltsRem->getType() });
   Value *Ops[] = { EltsRem, LoopDecrement };
   Value *Call = CondBuilder.CreateCall(DecFunc, Ops);
 

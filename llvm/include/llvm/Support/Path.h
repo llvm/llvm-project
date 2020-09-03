@@ -47,7 +47,7 @@ enum class Style { windows, posix, native };
 ///   foo/       => foo,.
 ///   /foo/bar   => /,foo,bar
 ///   ../        => ..,.
-///   C:\foo\bar => C:,/,foo,bar
+///   C:\foo\bar => C:,\,foo,bar
 /// @endcode
 class const_iterator
     : public iterator_facade_base<const_iterator, std::input_iterator_tag,
@@ -153,32 +153,26 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
 /// @code
 ///   /foo, /old, /new => /foo
 ///   /old, /old, /new => /new
-///   /old, /old/, /new, false => /old
-///   /old, /old/, /new, true => /new
+///   /old, /old/, /new => /old
 ///   /old/foo, /old, /new => /new/foo
 ///   /old/foo, /old/, /new => /new/foo
 ///   /old/foo, /old/, /new/ => /new/foo
 ///   /oldfoo, /old, /new => /oldfoo
 ///   /foo, <empty>, /new => /new/foo
 ///   /foo, <empty>, new => new/foo
-///   /old/foo, /old, <empty>, false => /foo
-///   /old/foo, /old, <empty>, true => foo
+///   /old/foo, /old, <empty> => /foo
 /// @endcode
 ///
 /// @param Path If \a Path starts with \a OldPrefix modify to instead
 ///        start with \a NewPrefix.
-/// @param OldPrefix The path prefix to strip from \a Path. Any trailing
-///        path separator is ignored if strict is true.
+/// @param OldPrefix The path prefix to strip from \a Path.
 /// @param NewPrefix The path prefix to replace \a NewPrefix with.
-/// @param style The path separator style
-/// @param strict If strict is true, a directory separator following
-///        \a OldPrefix will also be stripped. Otherwise, directory
-///        separators will only be matched and stripped when present
-///        in \a OldPrefix.
+/// @param style The style used to match the prefix. Exact match using
+/// Posix style, case/separator insensitive match for Windows style.
 /// @result true if \a Path begins with OldPrefix
-bool replace_path_prefix(SmallVectorImpl<char> &Path,
-                         const StringRef &OldPrefix, const StringRef &NewPrefix,
-                         Style style = Style::native, bool strict = false);
+bool replace_path_prefix(SmallVectorImpl<char> &Path, StringRef OldPrefix,
+                         StringRef NewPrefix,
+                         Style style = Style::native);
 
 /// Append to path.
 ///
@@ -377,6 +371,20 @@ void system_temp_directory(bool erasedOnReboot, SmallVectorImpl<char> &result);
 /// @result True if a home directory is set, false otherwise.
 bool home_directory(SmallVectorImpl<char> &result);
 
+/// Get the directory where packages should read user-specific configurations.
+/// e.g. $XDG_CONFIG_HOME.
+///
+/// @param result Holds the resulting path name.
+/// @result True if the appropriate path was determined, it need not exist.
+bool user_config_directory(SmallVectorImpl<char> &result);
+
+/// Get the directory where installed packages should put their
+/// machine-local cache, e.g. $XDG_CACHE_HOME.
+///
+/// @param result Holds the resulting path name.
+/// @result True if the appropriate path was determined, it need not exist.
+bool cache_directory(SmallVectorImpl<char> &result);
+
 /// Has root name?
 ///
 /// root_name != ""
@@ -467,10 +475,6 @@ StringRef remove_leading_dotslash(StringRef path, Style style = Style::native);
 /// @result True if path was changed
 bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot = false,
                  Style style = Style::native);
-
-#if defined(_WIN32)
-std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16);
-#endif
 
 } // end namespace path
 } // end namespace sys

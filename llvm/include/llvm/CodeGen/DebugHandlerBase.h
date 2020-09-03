@@ -18,8 +18,8 @@
 #include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
 #include "llvm/CodeGen/LexicalScopes.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 
 namespace llvm {
 
@@ -117,6 +117,9 @@ public:
 
   void beginFunction(const MachineFunction *MF) override;
   void endFunction(const MachineFunction *MF) override;
+
+  void beginBasicBlock(const MachineBasicBlock &MBB) override;
+  void endBasicBlock(const MachineBasicBlock &MBB) override;
 
   /// Return Label preceding the instruction.
   MCSymbol *getLabelBeforeInsn(const MachineInstr *MI);

@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
@@ -28,6 +27,7 @@
 namespace llvm {
 
 class CCState;
+class CallBase;
 class DataLayout;
 class Function;
 class MachineIRBuilder;
@@ -61,7 +61,8 @@ public:
       if (!Regs.empty() && Flags.empty())
         this->Flags.push_back(ISD::ArgFlagsTy());
       // FIXME: We should have just one way of saying "no register".
-      assert((Ty->isVoidTy() == (Regs.empty() || Regs[0] == 0)) &&
+      assert(((Ty->isVoidTy() || Ty->isEmptyTy()) ==
+              (Regs.empty() || Regs[0] == 0)) &&
              "only void types should have no register");
     }
 
@@ -84,7 +85,7 @@ public:
 
     /// Valid if the call has a swifterror inout parameter, and contains the
     /// vreg that the swifterror should be copied into after the call.
-    Register SwiftErrorVReg = 0;
+    Register SwiftErrorVReg;
 
     MDNode *KnownCallees = nullptr;
 
@@ -289,6 +290,8 @@ public:
     return false;
   }
 
+  virtual bool fallBackToDAGISel(const Function &F) const { return false; }
+
   /// This hook must be implemented to lower the incoming (formal)
   /// arguments, described by \p VRegs, for GlobalISel. Each argument
   /// must end up in the related virtual registers described by \p VRegs.
@@ -339,7 +342,7 @@ public:
   /// range of an immediate jump.
   ///
   /// \return true if the lowering succeeded, false otherwise.
-  bool lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
+  bool lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &Call,
                  ArrayRef<Register> ResRegs,
                  ArrayRef<ArrayRef<Register>> ArgRegs, Register SwiftErrorVReg,
                  std::function<unsigned()> GetCalleeReg) const;

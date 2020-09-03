@@ -21,8 +21,8 @@ entry:
 ; CHECK: sldi r3, r3, 56
 ; CHECK: mtvsrd v2, r3
 ; CHECK-LE-LABEL: buildc
-; CHECK-LE: mtvsrd f0, r3
-; CHECK-LE: xxswapd v2, vs0
+; CHECK-LE: mtvsrd v2, r3
+; CHECK-LE: vspltb v2, v2, 7
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -35,8 +35,8 @@ entry:
 ; CHECK: sldi r3, r3, 48
 ; CHECK: mtvsrd v2, r3
 ; CHECK-LE-LABEL: builds
-; CHECK-LE: mtvsrd f0, r3
-; CHECK-LE: xxswapd v2, vs0
+; CHECK-LE: mtvsrd v2, r3
+; CHECK-LE: vsplth v2, v2, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -46,10 +46,10 @@ entry:
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %splat.splat
 ; CHECK-LABEL: buildi
-; CHECK: mtvsrwz f0, r3
+; CHECK: mtfprwz f0, r3
 ; CHECK: xxspltw v2, vs0, 1
 ; CHECK-LE-LABEL: buildi
-; CHECK-LE: mtvsrwz f0, r3
+; CHECK-LE: mtfprwz f0, r3
 ; CHECK-LE: xxspltw v2, vs0, 1
 }
 
@@ -60,9 +60,9 @@ entry:
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %splat.splat
 ; CHECK-LABEL: buildl
-; CHECK: mtvsrd f0, r3
+; CHECK: mtfprd f0, r3
 ; CHECK-LE-LABEL: buildl
-; CHECK-LE: mtvsrd f0, r3
+; CHECK-LE: mtfprd f0, r3
 ; CHECK-LE: xxspltd v2, vs0, 0
 }
 
@@ -107,7 +107,7 @@ entry:
 ; CHECK: rldicl r3, r3, 8, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc0
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: clrldi r3, r3, 56
 ; CHECK-LE: extsb r3, r3
 }
@@ -122,7 +122,7 @@ entry:
 ; CHECK: rldicl r3, r3, 16, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc1
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 56, 56
 ; CHECK-LE: extsb r3, r3
 }
@@ -137,7 +137,7 @@ entry:
 ; CHECK: rldicl r3, r3, 24, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc2
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 48, 56
 ; CHECK-LE: extsb r3, r3
 }
@@ -152,7 +152,7 @@ entry:
 ; CHECK: rldicl r3, r3, 32, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc3
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 40, 56
 ; CHECK-LE: extsb r3, r3
 }
@@ -167,7 +167,7 @@ entry:
 ; CHECK: rldicl r3, r3, 40, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc4
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 32, 56
 ; CHECK-LE: extsb r3, r3
 }
@@ -182,7 +182,7 @@ entry:
 ; CHECK: rldicl r3, r3, 48, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc5
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 24, 56
 ; CHECK-LE: extsb r3, r3
 }
@@ -197,7 +197,7 @@ entry:
 ; CHECK: rldicl r3, r3, 56, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc6
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 16, 56
 ; CHECK-LE: extsb r3, r3
 }
@@ -212,7 +212,7 @@ entry:
 ; CHECK: clrldi r3, r3, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc7
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 8, 56
 ; CHECK-LE: extsb r3, r3
 }
@@ -223,7 +223,7 @@ entry:
   %vecext = extractelement <16 x i8> %vsc, i32 8
   ret i8 %vecext
 ; CHECK-LABEL: @getsc8
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 8, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc8
@@ -238,7 +238,7 @@ entry:
   %vecext = extractelement <16 x i8> %vsc, i32 9
   ret i8 %vecext
 ; CHECK-LABEL: @getsc9
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 16, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc9
@@ -253,7 +253,7 @@ entry:
   %vecext = extractelement <16 x i8> %vsc, i32 10
   ret i8 %vecext
 ; CHECK-LABEL: @getsc10
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 24, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc10
@@ -268,7 +268,7 @@ entry:
   %vecext = extractelement <16 x i8> %vsc, i32 11
   ret i8 %vecext
 ; CHECK-LABEL: @getsc11
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 32, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc11
@@ -283,7 +283,7 @@ entry:
   %vecext = extractelement <16 x i8> %vsc, i32 12
   ret i8 %vecext
 ; CHECK-LABEL: @getsc12
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 40, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc12
@@ -298,7 +298,7 @@ entry:
   %vecext = extractelement <16 x i8> %vsc, i32 13
   ret i8 %vecext
 ; CHECK-LABEL: @getsc13
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 48, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc13
@@ -313,7 +313,7 @@ entry:
   %vecext = extractelement <16 x i8> %vsc, i32 14
   ret i8 %vecext
 ; CHECK-LABEL: @getsc14
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 56, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc14
@@ -328,7 +328,7 @@ entry:
   %vecext = extractelement <16 x i8> %vsc, i32 15
   ret i8 %vecext
 ; CHECK-LABEL: @getsc15
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: clrldi  r3, r3, 56
 ; CHECK: extsb r3, r3
 ; CHECK-LE-LABEL: @getsc15
@@ -346,7 +346,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 8, 56
 ; CHECK-LE-LABEL: @getuc0
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: clrldi r3, r3, 56
 }
 
@@ -359,7 +359,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 16, 56
 ; CHECK-LE-LABEL: @getuc1
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 56, 56
 }
 
@@ -372,7 +372,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 24, 56
 ; CHECK-LE-LABEL: @getuc2
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 48, 56
 }
 
@@ -385,7 +385,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 32, 56
 ; CHECK-LE-LABEL: @getuc3
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 40, 56
 }
 
@@ -398,7 +398,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 40, 56
 ; CHECK-LE-LABEL: @getuc4
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 32, 56
 }
 
@@ -411,7 +411,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 48, 56
 ; CHECK-LE-LABEL: @getuc5
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 24, 56
 }
 
@@ -424,7 +424,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 56, 56
 ; CHECK-LE-LABEL: @getuc6
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 16, 56
 }
 
@@ -437,7 +437,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: clrldi   r3, r3, 56
 ; CHECK-LE-LABEL: @getuc7
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 8, 56
 }
 
@@ -447,7 +447,7 @@ entry:
   %vecext = extractelement <16 x i8> %vuc, i32 8
   ret i8 %vecext
 ; CHECK-LABEL: @getuc8
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 8, 56
 ; CHECK-LE-LABEL: @getuc8
 ; CHECK-LE: mfvsrd r3, v2
@@ -460,7 +460,7 @@ entry:
   %vecext = extractelement <16 x i8> %vuc, i32 9
   ret i8 %vecext
 ; CHECK-LABEL: @getuc9
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 16, 56
 ; CHECK-LE-LABEL: @getuc9
 ; CHECK-LE: mfvsrd r3, v2
@@ -473,7 +473,7 @@ entry:
   %vecext = extractelement <16 x i8> %vuc, i32 10
   ret i8 %vecext
 ; CHECK-LABEL: @getuc10
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 24, 56
 ; CHECK-LE-LABEL: @getuc10
 ; CHECK-LE: mfvsrd r3, v2
@@ -486,7 +486,7 @@ entry:
   %vecext = extractelement <16 x i8> %vuc, i32 11
   ret i8 %vecext
 ; CHECK-LABEL: @getuc11
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 32, 56
 ; CHECK-LE-LABEL: @getuc11
 ; CHECK-LE: mfvsrd r3, v2
@@ -499,7 +499,7 @@ entry:
   %vecext = extractelement <16 x i8> %vuc, i32 12
   ret i8 %vecext
 ; CHECK-LABEL: @getuc12
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 40, 56
 ; CHECK-LE-LABEL: @getuc12
 ; CHECK-LE: mfvsrd r3, v2
@@ -512,7 +512,7 @@ entry:
   %vecext = extractelement <16 x i8> %vuc, i32 13
   ret i8 %vecext
 ; CHECK-LABEL: @getuc13
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 48, 56
 ; CHECK-LE-LABEL: @getuc13
 ; CHECK-LE: mfvsrd r3, v2
@@ -525,7 +525,7 @@ entry:
   %vecext = extractelement <16 x i8> %vuc, i32 14
   ret i8 %vecext
 ; CHECK-LABEL: @getuc14
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 56, 56
 ; CHECK-LE-LABEL: @getuc14
 ; CHECK-LE: mfvsrd r3, v2
@@ -538,7 +538,7 @@ entry:
   %vecext = extractelement <16 x i8> %vuc, i32 15
   ret i8 %vecext
 ; CHECK-LABEL: @getuc15
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: clrldi   r3, r3, 56
 ; CHECK-LE-LABEL: @getuc15
 ; CHECK-LE: mfvsrd r3, v2
@@ -611,7 +611,7 @@ entry:
 ; CHECK: rldicl r3, r3, 16, 48
 ; CHECK: extsh r3, r3
 ; CHECK-LE-LABEL: @getss0
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: clrldi r3, r3, 48
 ; CHECK-LE: extsh r3, r3
 }
@@ -626,7 +626,7 @@ entry:
 ; CHECK: rldicl r3, r3, 32, 48
 ; CHECK: extsh r3, r3
 ; CHECK-LE-LABEL: @getss1
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 48, 48
 ; CHECK-LE: extsh r3, r3
 }
@@ -641,7 +641,7 @@ entry:
 ; CHECK: rldicl r3, r3, 48, 48
 ; CHECK: extsh r3, r3
 ; CHECK-LE-LABEL: @getss2
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 32, 48
 ; CHECK-LE: extsh r3, r3
 }
@@ -656,7 +656,7 @@ entry:
 ; CHECK: clrldi r3, r3, 48
 ; CHECK: extsh r3, r3
 ; CHECK-LE-LABEL: @getss3
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 16, 48
 ; CHECK-LE: extsh r3, r3
 }
@@ -667,7 +667,7 @@ entry:
   %vecext = extractelement <8 x i16> %vss, i32 4
   ret i16 %vecext
 ; CHECK-LABEL: @getss4
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 16, 48
 ; CHECK: extsh r3, r3
 ; CHECK-LE-LABEL: @getss4
@@ -682,7 +682,7 @@ entry:
   %vecext = extractelement <8 x i16> %vss, i32 5
   ret i16 %vecext
 ; CHECK-LABEL: @getss5
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 32, 48
 ; CHECK: extsh r3, r3
 ; CHECK-LE-LABEL: @getss5
@@ -697,7 +697,7 @@ entry:
   %vecext = extractelement <8 x i16> %vss, i32 6
   ret i16 %vecext
 ; CHECK-LABEL: @getss6
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 48, 48
 ; CHECK: extsh r3, r3
 ; CHECK-LE-LABEL: @getss6
@@ -712,7 +712,7 @@ entry:
   %vecext = extractelement <8 x i16> %vss, i32 7
   ret i16 %vecext
 ; CHECK-LABEL: @getss7
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: clrldi  r3, r3, 48
 ; CHECK: extsh r3, r3
 ; CHECK-LE-LABEL: @getss7
@@ -730,7 +730,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 16, 48
 ; CHECK-LE-LABEL: @getus0
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: clrldi r3, r3, 48
 }
 
@@ -743,7 +743,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 32, 48
 ; CHECK-LE-LABEL: @getus1
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 48, 48
 }
 
@@ -756,7 +756,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 48, 48
 ; CHECK-LE-LABEL: @getus2
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 32, 48
 }
 
@@ -769,7 +769,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: clrldi   r3, r3, 48
 ; CHECK-LE-LABEL: @getus3
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 16, 48
 }
 
@@ -779,7 +779,7 @@ entry:
   %vecext = extractelement <8 x i16> %vus, i32 4
   ret i16 %vecext
 ; CHECK-LABEL: @getus4
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 16, 48
 ; CHECK-LE-LABEL: @getus4
 ; CHECK-LE: mfvsrd r3, v2
@@ -792,7 +792,7 @@ entry:
   %vecext = extractelement <8 x i16> %vus, i32 5
   ret i16 %vecext
 ; CHECK-LABEL: @getus5
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 32, 48
 ; CHECK-LE-LABEL: @getus5
 ; CHECK-LE: mfvsrd r3, v2
@@ -805,7 +805,7 @@ entry:
   %vecext = extractelement <8 x i16> %vus, i32 6
   ret i16 %vecext
 ; CHECK-LABEL: @getus6
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 48, 48
 ; CHECK-LE-LABEL: @getus6
 ; CHECK-LE: mfvsrd r3, v2
@@ -818,7 +818,7 @@ entry:
   %vecext = extractelement <8 x i16> %vus, i32 7
   ret i16 %vecext
 ; CHECK-LABEL: @getus7
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK: clrldi   r3, r3, 48
 ; CHECK-LE-LABEL: @getus7
 ; CHECK-LE: mfvsrd r3, v2
@@ -892,11 +892,11 @@ entry:
   ret i32 %vecext
 ; CHECK-LABEL: @getsi0
 ; CHECK: xxsldwi vs0, v2, v2, 3
-; CHECK: mfvsrwz r3, f0
+; CHECK: mffprwz r3, f0
 ; CHECK: extsw r3, r3
 ; CHECK-LE-LABEL: @getsi0
 ; CHECK-LE: xxswapd vs0, v2
-; CHECK-LE: mfvsrwz r3, f0
+; CHECK-LE: mffprwz r3, f0
 ; CHECK-LE: extsw r3, r3
 }
 
@@ -910,7 +910,7 @@ entry:
 ; CHECK: extsw r3, r3
 ; CHECK-LE-LABEL: @getsi1
 ; CHECK-LE: xxsldwi vs0, v2, v2, 1
-; CHECK-LE: mfvsrwz r3, f0
+; CHECK-LE: mffprwz r3, f0
 ; CHECK-LE: extsw r3, r3
 }
 
@@ -921,7 +921,7 @@ entry:
   ret i32 %vecext
 ; CHECK-LABEL: @getsi2
 ; CHECK: xxsldwi vs0, v2, v2, 1
-; CHECK: mfvsrwz r3, f0
+; CHECK: mffprwz r3, f0
 ; CHECK: extsw r3, r3
 ; CHECK-LE-LABEL: @getsi2
 ; CHECK-LE: mfvsrwz r3, v2
@@ -935,11 +935,11 @@ entry:
   ret i32 %vecext
 ; CHECK-LABEL: @getsi3
 ; CHECK: xxswapd vs0, v2
-; CHECK: mfvsrwz r3, f0
+; CHECK: mffprwz r3, f0
 ; CHECK: extsw r3, r3
 ; CHECK-LE-LABEL: @getsi3
 ; CHECK-LE: xxsldwi vs0, v2, v2, 3
-; CHECK-LE: mfvsrwz r3, f0
+; CHECK-LE: mffprwz r3, f0
 ; CHECK-LE: extsw r3, r3
 }
 
@@ -950,10 +950,10 @@ entry:
   ret i32 %vecext
 ; CHECK-LABEL: @getui0
 ; CHECK: xxsldwi vs0, v2, v2, 3
-; CHECK: mfvsrwz r3, f0
+; CHECK: mffprwz r3, f0
 ; CHECK-LE-LABEL: @getui0
 ; CHECK-LE: xxswapd vs0, v2
-; CHECK-LE: mfvsrwz r3, f0
+; CHECK-LE: mffprwz r3, f0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -965,7 +965,7 @@ entry:
 ; CHECK: mfvsrwz r3, v2
 ; CHECK-LE-LABEL: @getui1
 ; CHECK-LE: xxsldwi vs0, v2, v2, 1
-; CHECK-LE: mfvsrwz r3, f0
+; CHECK-LE: mffprwz r3, f0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -975,7 +975,7 @@ entry:
   ret i32 %vecext
 ; CHECK-LABEL: @getui2
 ; CHECK: xxsldwi vs0, v2, v2, 1
-; CHECK: mfvsrwz r3, f0
+; CHECK: mffprwz r3, f0
 ; CHECK-LE-LABEL: @getui2
 ; CHECK-LE: mfvsrwz r3, v2
 }
@@ -987,10 +987,10 @@ entry:
   ret i32 %vecext
 ; CHECK-LABEL: @getui3
 ; CHECK: xxswapd vs0, v2
-; CHECK: mfvsrwz r3, f0
+; CHECK: mffprwz r3, f0
 ; CHECK-LE-LABEL: @getui3
 ; CHECK-LE: xxsldwi vs0, v2, v2, 3
-; CHECK-LE: mfvsrwz r3, f0
+; CHECK-LE: mffprwz r3, f0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1022,7 +1022,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK-LE-LABEL: @getsl0
 ; CHECK-LE: xxswapd vs0, v2
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1032,7 +1032,7 @@ entry:
   ret i64 %vecext
 ; CHECK-LABEL: @getsl1
 ; CHECK: xxswapd vs0, v2
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK-LE-LABEL: @getsl1
 ; CHECK-LE: mfvsrd r3, v2
 }
@@ -1046,7 +1046,7 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK-LE-LABEL: @getul0
 ; CHECK-LE: xxswapd  vs0, v2
-; CHECK-LE: mfvsrd r3, f0
+; CHECK-LE: mffprd r3, f0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1056,7 +1056,7 @@ entry:
   ret i64 %vecext
 ; CHECK-LABEL: @getul1
 ; CHECK: xxswapd vs0, v2
-; CHECK: mfvsrd r3, f0
+; CHECK: mffprd r3, f0
 ; CHECK-LE-LABEL: @getul1
 ; CHECK-LE: mfvsrd r3, v2
 }

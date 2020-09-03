@@ -3,8 +3,8 @@
 # RUN: llvm-objdump -r %p/Inputs/trivial-object-test.coff-x86-64 \
 # RUN:              | FileCheck %s -check-prefix COFF-x86-64
 
-# RUN: yaml2obj -docnum=1 %s > %t-i386
-# RUN: llvm-objdump -r %t-i386 | FileCheck %s -check-prefix ELF-i386
+# RUN: yaml2obj --docnum=1 %s -o %t-i386
+# RUN: llvm-objdump -r %t-i386 | FileCheck %s --check-prefix=ELF-i386
 
 # ELF-i386: .text
 # ELF-i386: R_386_32 .section
@@ -26,8 +26,7 @@ Sections:
     Link: .symtab
     Info: .text
     Relocations:
-      - Offset: 0x0
-        Symbol: .section
+      - Symbol: .section
         Type:   R_386_32
       - Offset: 0x1
         Symbol: symbol
@@ -39,8 +38,8 @@ Symbols:
   - Name:    symbol
     Binding: STB_GLOBAL
 
-# RUN: yaml2obj -docnum=2 %s > %t-x86-64
-# RUN: llvm-objdump -r %t-x86-64 | FileCheck %s -check-prefix ELF-x86-64
+# RUN: yaml2obj --docnum=2 %s -o %t-x86-64
+# RUN: llvm-objdump -r %t-x86-64 | FileCheck %s --check-prefix=ELF-x86-64
 
 # ELF-x86-64: .text
 # ELF-x86-64: R_X86_64_32S .section
@@ -62,8 +61,7 @@ Sections:
     Link: .symtab
     Info: .text
     Relocations:
-      - Offset: 0x0
-        Symbol: .section
+      - Symbol: .section
         Type:   R_X86_64_32S
       - Offset: 0x1
         Symbol: symbol
@@ -119,12 +117,14 @@ Symbols:
 # ELF-MIPSEL: R_MIPS_CALL16 SomeOtherFunction
 
 # WASM:      CODE
+# WASM-NEXT: OFFSET TYPE VALUE
 # WASM-NEXT: R_WASM_MEMORY_ADDR_SLEB .L.str
 # WASM-NEXT: R_WASM_FUNCTION_INDEX_LEB puts
 # WASM-NEXT: R_WASM_FUNCTION_INDEX_LEB .LSomeOtherFunction_bitcast
 # WASM-NEXT: R_WASM_FUNCTION_INDEX_LEB SomeOtherFunction
 
 # ELF-complex-x86-64: .text
+# ELF-complex-x86-64-NEXT: OFFSET TYPE VALUE
 # ELF-complex-x86-64-NEXT: R_X86_64_8 .data-0x4
 # ELF-complex-x86-64-NEXT: R_X86_64_16 .data-0x4
 # ELF-complex-x86-64-NEXT: R_X86_64_32 .data-0x4

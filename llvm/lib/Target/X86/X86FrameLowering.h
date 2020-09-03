@@ -58,9 +58,14 @@ public:
   void inlineStackProbe(MachineFunction &MF,
                         MachineBasicBlock &PrologMBB) const override;
 
+  void
+  emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI) const override;
+
   void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI,
-                                 const DebugLoc &DL) const;
+                                 const DebugLoc &DL,
+                                 bool IsPrologue) const override;
 
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.
@@ -83,13 +88,14 @@ public:
 
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
-                                 const std::vector<CalleeSavedInfo> &CSI,
+                                 ArrayRef<CalleeSavedInfo> CSI,
                                  const TargetRegisterInfo *TRI) const override;
 
-  bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator MI,
-                                  std::vector<CalleeSavedInfo> &CSI,
-                                  const TargetRegisterInfo *TRI) const override;
+  bool
+  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              MutableArrayRef<CalleeSavedInfo> CSI,
+                              const TargetRegisterInfo *TRI) const override;
 
   bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
@@ -97,14 +103,14 @@ public:
   bool needsFrameIndexResolution(const MachineFunction &MF) const override;
 
   int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             unsigned &FrameReg) const override;
+                             Register &FrameReg) const override;
 
-  int getWin64EHFrameIndexRef(const MachineFunction &MF,
-                              int FI, unsigned &SPReg) const;
-  int getFrameIndexReferenceSP(const MachineFunction &MF,
-                               int FI, unsigned &SPReg, int Adjustment) const;
+  int getWin64EHFrameIndexRef(const MachineFunction &MF, int FI,
+                              Register &SPReg) const;
+  int getFrameIndexReferenceSP(const MachineFunction &MF, int FI,
+                               Register &SPReg, int Adjustment) const;
   int getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
-                                     unsigned &FrameReg,
+                                     Register &FrameReg,
                                      bool IgnoreSPUpdates) const override;
 
   MachineBasicBlock::iterator
@@ -115,6 +121,10 @@ public:
 
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                            RegScavenger *RS) const override;
+
+  void
+  processFunctionBeforeFrameIndicesReplaced(MachineFunction &MF,
+                                            RegScavenger *RS) const override;
 
   /// Check the instruction before/after the passed instruction. If
   /// it is an ADD/SUB/LEA instruction it is deleted argument and the
@@ -169,12 +179,14 @@ public:
                               MachineBasicBlock::iterator MBBI,
                               const DebugLoc &DL, bool RestoreSP = false) const;
 
+  void restoreWinEHStackPointersInParent(MachineFunction &MF) const;
+
   int getInitialCFAOffset(const MachineFunction &MF) const override;
 
-  unsigned getInitialCFARegister(const MachineFunction &MF) const override;
+  Register getInitialCFARegister(const MachineFunction &MF) const override;
 
   /// Return true if the function has a redzone (accessible bytes past the
-  /// frame of the top of stack function) as part of it's ABI.  
+  /// frame of the top of stack function) as part of it's ABI.
   bool has128ByteRedZone(const MachineFunction& MF) const;
 
 private:
@@ -189,11 +201,33 @@ private:
   void emitStackProbeInline(MachineFunction &MF, MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
                             const DebugLoc &DL, bool InProlog) const;
+  void emitStackProbeInlineWindowsCoreCLR64(MachineFunction &MF,
+                                            MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator MBBI,
+                                            const DebugLoc &DL,
+                                            bool InProlog) const;
+  void emitStackProbeInlineGeneric(MachineFunction &MF, MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   const DebugLoc &DL, bool InProlog) const;
+
+  void emitStackProbeInlineGenericBlock(MachineFunction &MF,
+                                        MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI,
+                                        const DebugLoc &DL,
+                                        uint64_t Offset) const;
+
+  void emitStackProbeInlineGenericLoop(MachineFunction &MF,
+                                       MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator MBBI,
+                                       const DebugLoc &DL,
+                                       uint64_t Offset) const;
 
   /// Emit a stub to later inline the target stack probe.
-  void emitStackProbeInlineStub(MachineFunction &MF, MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MBBI,
-                                const DebugLoc &DL, bool InProlog) const;
+  MachineInstr *emitStackProbeInlineStub(MachineFunction &MF,
+                                         MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI,
+                                         const DebugLoc &DL,
+                                         bool InProlog) const;
 
   /// Aligns the stack pointer by ANDing it with -MaxAlign.
   void BuildStackAlignAND(MachineBasicBlock &MBB,

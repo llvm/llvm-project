@@ -17,7 +17,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/PseudoSourceValue.h"
 
 namespace llvm {
 
@@ -36,7 +35,7 @@ addFrameReference(const MachineInstrBuilder &MIB, int FI) {
   int64_t Offset = 0;
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI, Offset), Flags,
-      MFFrame.getObjectSize(FI), MFFrame.getObjectAlignment(FI));
+      MFFrame.getObjectSize(FI), MFFrame.getObjectAlign(FI));
   return MIB.addFrameIndex(FI).addImm(Offset).addReg(0).addMemOperand(MMO);
 }
 

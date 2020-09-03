@@ -2,12 +2,12 @@
 
 # RUN: yaml2obj < %s > %t.obj
 # RUN: lld-link /entry:main /subsystem:console /out:%t.exe %t.obj %p/Inputs/library-arm64.lib /alternatename:__delayLoadHelper2=main /delayload:library.dll
-# RUN: llvm-objdump -d %t.exe | FileCheck %s -check-prefix DISASM
+# RUN: llvm-objdump -d %t.exe | FileCheck %s --check-prefix DISASM
 # RUN: llvm-readobj --coff-imports %t.exe | FileCheck %s -check-prefix IMPORTS
 
 # DISASM:  140001014:      11 00 00 d0     adrp    x17, #8192
 # DISASM:  140001018:      31 22 00 91     add     x17, x17, #8
-# DISASM:  14000101c:      01 00 00 14     b       #4 <.text+0x20>
+# DISASM:  14000101c:      01 00 00 14     b       0x140001020 <.text+0x20>
 # DISASM:  140001020:      fd 7b b3 a9     stp     x29, x30, [sp, #-208]!
 # DISASM:  140001024:      fd 03 00 91     mov     x29, sp
 # DISASM:  140001028:      e0 07 01 a9     stp     x0, x1, [sp, #16]
@@ -21,7 +21,7 @@
 # DISASM:  140001048:      e1 03 11 aa     mov     x1, x17
 # DISASM:  14000104c:      00 00 00 b0     adrp    x0, #4096
 # DISASM:  140001050:      00 00 00 91     add     x0, x0, #0
-# DISASM:  140001054:      eb ff ff 97     bl      #-84 <.text>
+# DISASM:  140001054:      eb ff ff 97     bl      0x140001000 <.text>
 # DISASM:  140001058:      f0 03 00 aa     mov     x16, x0
 # DISASM:  14000105c:      e6 9f 45 ad     ldp     q6, q7, [sp, #176]
 # DISASM:  140001060:      e4 97 44 ad     ldp     q4, q5, [sp, #144]

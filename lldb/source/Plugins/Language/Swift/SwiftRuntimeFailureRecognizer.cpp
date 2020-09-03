@@ -18,7 +18,7 @@ SwiftRuntimeFailureRecognizedStackFrame::
     SwiftRuntimeFailureRecognizedStackFrame(StackFrameSP most_relevant_frame_sp,
                                             StringRef stop_desc)
     : m_most_relevant_frame(most_relevant_frame_sp) {
-  m_stop_desc = stop_desc;
+  m_stop_desc = std::string(stop_desc);
 }
 
 lldb::RecognizedStackFrameSP SwiftRuntimeFailureFrameRecognizer::RecognizeFrame(
@@ -57,8 +57,7 @@ lldb::RecognizedStackFrameSP SwiftRuntimeFailureFrameRecognizer::RecognizeFrame(
   if (!inline_info)
     return {};
 
-  StringRef runtime_error =
-      inline_info->GetName(sc.function->GetLanguage()).AsCString();
+  StringRef runtime_error = inline_info->GetName().AsCString();
 
   if (runtime_error.empty())
     return {};
@@ -75,10 +74,7 @@ SwiftRuntimeFailureRecognizedStackFrame::GetMostRelevantFrame() {
 
 namespace lldb_private {
 
-void RegisterSwiftRuntimeFailureRecognizer() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
+void RegisterSwiftRuntimeFailureRecognizer(Process &process) {
     RegularExpressionSP module_regex_sp = nullptr;
     RegularExpressionSP symbol_regex_sp(
         new RegularExpression("Swift runtime failure"));
@@ -86,9 +82,8 @@ void RegisterSwiftRuntimeFailureRecognizer() {
     StackFrameRecognizerSP srf_recognizer_sp =
         std::make_shared<SwiftRuntimeFailureFrameRecognizer>();
 
-    StackFrameRecognizerManager::AddRecognizer(
+    process.GetTarget().GetFrameRecognizerManager().AddRecognizer(
         srf_recognizer_sp, module_regex_sp, symbol_regex_sp, false);
-  });
 }
 
 } // namespace lldb_private

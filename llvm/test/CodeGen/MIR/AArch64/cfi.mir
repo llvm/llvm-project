@@ -42,7 +42,7 @@ body: |
     CFI_INSTRUCTION restore_state
     ; CHECK: CFI_INSTRUCTION restore_state
     CFI_INSTRUCTION escape 0x61, 0x62, 0x63
-    ; CHECK: CFI_INSTRUCTION escape 0x61, 0x62, 0x63
+    ; CHECK: CFI_INSTRUCTION escape 0x61, 0x62, 0x63{{$}}
     CFI_INSTRUCTION window_save
     ; CHECK: CFI_INSTRUCTION window_save
     CFI_INSTRUCTION negate_ra_sign_state

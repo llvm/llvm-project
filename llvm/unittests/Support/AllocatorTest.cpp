@@ -134,6 +134,54 @@ TEST(AllocatorTest, TestAlignmentPastSlab) {
   EXPECT_EQ(2U, Alloc.GetNumSlabs());
 }
 
+// Test allocating with a decreased growth delay.
+TEST(AllocatorTest, TestFasterSlabGrowthDelay) {
+  const size_t SlabSize = 4096;
+  // Decrease the growth delay to double the slab size every slab.
+  const size_t GrowthDelay = 1;
+  BumpPtrAllocatorImpl<MallocAllocator, SlabSize, SlabSize, GrowthDelay> Alloc;
+  // Disable the red zone for this test. The additional bytes allocated for the
+  // red zone would change the allocation numbers we check below.
+  Alloc.setRedZoneSize(0);
+
+  Alloc.Allocate(SlabSize, 1);
+  EXPECT_EQ(SlabSize, Alloc.getTotalMemory());
+  // We hit our growth delay with the previous allocation so the next
+  // allocation should get a twice as large slab.
+  Alloc.Allocate(SlabSize, 1);
+  EXPECT_EQ(SlabSize * 3, Alloc.getTotalMemory());
+  Alloc.Allocate(SlabSize, 1);
+  EXPECT_EQ(SlabSize * 3, Alloc.getTotalMemory());
+
+  // Both slabs are full again and hit the growth delay again, so the
+  // next allocation should again get a slab with four times the size of the
+  // original slab size. In total we now should have a memory size of:
+  // 1 + 2 + 4 * SlabSize.
+  Alloc.Allocate(SlabSize, 1);
+  EXPECT_EQ(SlabSize * 7, Alloc.getTotalMemory());
+}
+
+// Test allocating with a increased growth delay.
+TEST(AllocatorTest, TestSlowerSlabGrowthDelay) {
+  const size_t SlabSize = 16;
+  // Increase the growth delay to only double the slab size every 256 slabs.
+  const size_t GrowthDelay = 256;
+  BumpPtrAllocatorImpl<MallocAllocator, SlabSize, SlabSize, GrowthDelay> Alloc;
+  // Disable the red zone for this test. The additional bytes allocated for the
+  // red zone would change the allocation numbers we check below.
+  Alloc.setRedZoneSize(0);
+
+  // Allocate 256 slabs. We should keep getting slabs with the original size
+  // as we haven't hit our growth delay on the last allocation.
+  for (std::size_t i = 0; i < GrowthDelay; ++i)
+    Alloc.Allocate(SlabSize, 1);
+  EXPECT_EQ(SlabSize * GrowthDelay, Alloc.getTotalMemory());
+  // Allocate another slab. This time we should get another slab allocated
+  // that is twice as large as the normal slab size.
+  Alloc.Allocate(SlabSize, 1);
+  EXPECT_EQ(SlabSize * GrowthDelay + SlabSize * 2, Alloc.getTotalMemory());
+}
+
 // Mock slab allocator that returns slabs aligned on 4096 bytes.  There is no
 // easy portable way to do this, so this is kind of a hack.
 class MockSlabAllocator {
@@ -158,7 +206,7 @@ public:
     return Slab;
   }
 
-  void Deallocate(void *Slab, size_t Size) {
+  void Deallocate(void *Slab, size_t /*Size*/, size_t /*Alignment*/) {
     free(((void**)Slab)[-1]);
   }
 

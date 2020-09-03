@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # RUN: llvm-nm %t.o | FileCheck %s --check-prefix=DEFAULT
 # RUN: llvm-nm --numeric-sort %t.o | FileCheck %s --check-prefix=NUMERIC
 # RUN: llvm-nm -n %t.o | FileCheck %s --check-prefix=NUMERIC

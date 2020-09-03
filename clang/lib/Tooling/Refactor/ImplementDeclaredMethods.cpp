@@ -166,11 +166,26 @@ clang::tooling::initiateImplementDeclaredMethodsOperation(
       Container, SelectedMethods, CreateOperation);
 }
 
+static bool isInLocalScope(const Decl *D) {
+  const DeclContext *LDC = D->getLexicalDeclContext();
+  while (true) {
+    if (LDC->isFunctionOrMethod())
+      return true;
+    if (!isa<TagDecl>(LDC))
+      return false;
+    if (const auto *CRD = dyn_cast<CXXRecordDecl>(LDC))
+      if (CRD->isLambda())
+        return true;
+    LDC = LDC->getLexicalParent();
+  }
+  return false;
+}
+
 llvm::Expected<RefactoringResult>
 ImplementDeclaredCXXMethodsOperation::perform(
     ASTContext &Context, const Preprocessor &ThePreprocessor,
     const RefactoringOptionSet &Options, unsigned SelectedCandidateIndex) {
-  if (Container->isLexicallyWithinFunctionOrMethod()) {
+  if (isInLocalScope(Container)) {
     // Local methods can be implemented inline.
     std::vector<RefactoringReplacement> Replacements;
     for (const CXXMethodDecl *MD : SelectedMethods)

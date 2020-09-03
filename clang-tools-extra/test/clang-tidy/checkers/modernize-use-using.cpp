@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-using %t
+// RUN: %check_clang_tidy %s modernize-use-using %t -- -- -I %S/Inputs/modernize-use-using/
 
 typedef int Type;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
@@ -247,19 +247,30 @@ typedef Q<T{0 < 0}.b> Q3_t;
 
 typedef TwoArgTemplate<TwoArgTemplate<int, Q<T{0 < 0}.b> >, S<(0 < 0), Q<b[0 < 0]> > > Nested_t;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Nested_t = TwoArgTemplate<TwoArgTemplate<int, Q<T{0 < 0}.b> >, S<(0 < 0), Q<b[0 < 0]> > >;
+// CHECK-FIXES: using Nested_t = TwoArgTemplate<TwoArgTemplate<int, Q<T{0 < 0}.b>>, S<(0 < 0), Q<b[0 < 0]>>>;
+
+template <typename a>
+class TemplateKeyword {
+  typedef typename a::template b<> d;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
+  // CHECK-FIXES: using d = typename a::template b<>;
+
+  typedef typename a::template b<>::c d2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
+  // CHECK-FIXES: using d2 = typename a::template b<>::c;
+};
 
 template <typename... Args>
 class Variadic {};
 
 typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > > Variadic_t;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > >
+// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b>>, S<(0 < 0), Variadic<Q<b[0 < 0]>>>>
 
 typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > > Variadic_t, *Variadic_p;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-2]]:103: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > >;
+// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b>>, S<(0 < 0), Variadic<Q<b[0 < 0]>>>>;
 // CHECK-FIXES-NEXT: using Variadic_p = Variadic_t*;
 
 typedef struct { int a; } R_t, *R_p;
@@ -267,3 +278,27 @@ typedef struct { int a; } R_t, *R_p;
 // CHECK-MESSAGES: :[[@LINE-2]]:30: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using R_t = struct { int a; };
 // CHECK-FIXES-NEXT: using R_p = R_t*;
+
+typedef enum { ea1, eb1 } EnumT1;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using EnumT1 = enum { ea1, eb1 };
+
+#include "modernize-use-using.h"
+
+typedef enum { ea2, eb2 } EnumT2_CheckTypedefImpactFromAnotherFile;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using EnumT2_CheckTypedefImpactFromAnotherFile = enum { ea2, eb2 };
+
+template <int A>
+struct InjectedClassName {
+  typedef InjectedClassName b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
+  // CHECK-FIXES: using b = InjectedClassName;
+};
+
+template <int>
+struct InjectedClassNameWithUnnamedArgument {
+  typedef InjectedClassNameWithUnnamedArgument b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
+  // CHECK-FIXES: using b = InjectedClassNameWithUnnamedArgument;
+};

@@ -190,6 +190,9 @@ private:
   /// if any offsets were adjusted.
   bool layoutSectionOnce(MCAsmLayout &Layout, MCSection &Sec);
 
+  /// Perform relaxation on a single fragment - returns true if the fragment
+  /// changes as a result of relaxation.
+  bool relaxFragment(MCAsmLayout &Layout, MCFragment &F);
   bool relaxInstruction(MCAsmLayout &Layout, MCRelaxableFragment &IF);
   bool relaxLEB(MCAsmLayout &Layout, MCLEBFragment &IF);
   bool relaxBoundaryAlign(MCAsmLayout &Layout, MCBoundaryAlignFragment &BF);
@@ -440,7 +443,7 @@ public:
 
   void addFileName(StringRef FileName) {
     if (!is_contained(FileNames, FileName))
-      FileNames.push_back(FileName);
+      FileNames.push_back(std::string(FileName));
   }
 
   /// Write the necessary bundle padding to \p OS.

@@ -1,12 +1,12 @@
 ## Check that when BSS is larger than the file llvm-objdump doesn't
 ## assert with an unexpected end of file error.
-# RUN: yaml2obj --docnum=1 %s > %t
-# RUN: yaml2obj --docnum=2 %s > %t.2
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: yaml2obj --docnum=2 %s -o %t.2
 # RUN: llvm-objdump -D %t | FileCheck %s
 # RUN: llvm-objdump -D %t.2 | FileCheck %s
 
 # CHECK: Disassembly of section .bss:
-# CHECK: .bss:
+# CHECK: <.bss>:
 # CHECK-NEXT: ...
 
 --- !ELF

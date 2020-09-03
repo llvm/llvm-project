@@ -1,4 +1,4 @@
-//===-- ProcessElfCore.cpp --------------------------------------*- C++ -*-===//
+//===-- ProcessElfCore.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,6 +34,8 @@
 
 using namespace lldb_private;
 namespace ELF = llvm::ELF;
+
+LLDB_PLUGIN_DEFINE(ProcessElfCore)
 
 ConstString ProcessElfCore::GetPluginNameStatic() {
   static ConstString g_name("elf-core");

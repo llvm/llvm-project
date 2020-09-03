@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_AppleGetPendingItemsHandler_h_
-#define lldb_AppleGetPendingItemsHandler_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_APPLEGETPENDINGITEMSHANDLER_H
+#define LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_APPLEGETPENDINGITEMSHANDLER_H
 
 #include <map>
 #include <mutex>
@@ -114,4 +114,4 @@ private:
 
 } // using namespace lldb_private
 
-#endif // lldb_AppleGetPendingItemsHandler_h_
+#endif // LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_APPLEGETPENDINGITEMSHANDLER_H

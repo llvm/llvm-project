@@ -14,10 +14,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SafeStackColoring.h"
 #include "SafeStackLayout.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -27,13 +27,13 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/StackLifetime.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
@@ -96,6 +96,10 @@ static cl::opt<bool>
     SafeStackUsePointerAddress("safestack-use-pointer-address",
                                   cl::init(false), cl::Hidden);
 
+// Disabled by default due to PR32143.
+static cl::opt<bool> ClColoring("safe-stack-coloring",
+                                cl::desc("enable safe stack coloring"),
+                                cl::Hidden, cl::init(false));
 
 namespace {
 
@@ -200,7 +204,7 @@ class SafeStack {
   bool IsAccessSafe(Value *Addr, uint64_t Size, const Value *AllocaPtr,
                     uint64_t AllocaSize);
 
-  bool ShouldInlinePointerAddress(CallSite &CS);
+  bool ShouldInlinePointerAddress(CallInst &CI);
   void TryInlinePointerAddress();
 
 public:
@@ -322,7 +326,7 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
 
       case Instruction::Call:
       case Instruction::Invoke: {
-        ImmutableCallSite CS(I);
+        const CallBase &CS = *cast<CallBase>(I);
 
         if (I->isLifetimeStartOrEnd())
           continue;
@@ -344,8 +348,8 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
         // FIXME: a more precise solution would require an interprocedural
         // analysis here, which would look at all uses of an argument inside
         // the function being called.
-        ImmutableCallSite::arg_iterator B = CS.arg_begin(), E = CS.arg_end();
-        for (ImmutableCallSite::arg_iterator A = B; A != E; ++A)
+        auto B = CS.arg_begin(), E = CS.arg_end();
+        for (auto A = B; A != E; ++A)
           if (A->get() == V)
             if (!(CS.doesNotCapture(A - B) && (CS.doesNotAccessMemory(A - B) ||
                                                CS.doesNotAccessMemory()))) {
@@ -493,9 +497,18 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
 
   DIBuilder DIB(*F.getParent());
 
-  StackColoring SSC(F, StaticAllocas);
-  SSC.run();
-  SSC.removeAllMarkers();
+  StackLifetime SSC(F, StaticAllocas, StackLifetime::LivenessType::May);
+  static const StackLifetime::LiveRange NoColoringRange(1, true);
+  if (ClColoring)
+    SSC.run();
+
+  for (auto *I : SSC.getMarkers()) {
+    auto *Op = dyn_cast<Instruction>(I->getOperand(1));
+    const_cast<IntrinsicInst *>(I)->eraseFromParent();
+    // Remove the operand bitcast, too, if it has no more uses left.
+    if (Op && Op->use_empty())
+      Op->eraseFromParent();
+  }
 
   // Unsafe stack always grows down.
   StackLayout SSL(StackAlignment);
@@ -529,7 +542,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     unsigned Align =
         std::max((unsigned)DL.getPrefTypeAlignment(Ty), AI->getAlignment());
 
-    SSL.addObject(AI, Size, Align, SSC.getLiveRange(AI));
+    SSL.addObject(AI, Size, Align,
+                  ClColoring ? SSC.getLiveRange(AI) : NoColoringRange);
   }
 
   SSL.computeLayout();
@@ -705,33 +719,34 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
   }
 }
 
-bool SafeStack::ShouldInlinePointerAddress(CallSite &CS) {
-  Function *Callee = CS.getCalledFunction();
-  if (CS.hasFnAttr(Attribute::AlwaysInline) && isInlineViable(*Callee))
+bool SafeStack::ShouldInlinePointerAddress(CallInst &CI) {
+  Function *Callee = CI.getCalledFunction();
+  if (CI.hasFnAttr(Attribute::AlwaysInline) &&
+      isInlineViable(*Callee).isSuccess())
     return true;
   if (Callee->isInterposable() || Callee->hasFnAttribute(Attribute::NoInline) ||
-      CS.isNoInline())
+      CI.isNoInline())
     return false;
   return true;
 }
 
 void SafeStack::TryInlinePointerAddress() {
-  if (!isa<CallInst>(UnsafeStackPtr))
+  auto *CI = dyn_cast<CallInst>(UnsafeStackPtr);
+  if (!CI)
     return;
 
   if(F.hasOptNone())
     return;
 
-  CallSite CS(UnsafeStackPtr);
-  Function *Callee = CS.getCalledFunction();
+  Function *Callee = CI->getCalledFunction();
   if (!Callee || Callee->isDeclaration())
     return;
 
-  if (!ShouldInlinePointerAddress(CS))
+  if (!ShouldInlinePointerAddress(*CI))
     return;
 
   InlineFunctionInfo IFI;
-  InlineFunction(CS, IFI);
+  InlineFunction(*CI, IFI);
 }
 
 bool SafeStack::run() {

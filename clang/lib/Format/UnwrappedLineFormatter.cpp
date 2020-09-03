@@ -64,6 +64,8 @@ public:
     }
     if (static_cast<int>(Indent) + Offset >= 0)
       Indent += Offset;
+    if (Line.First->is(TT_CSharpGenericTypeConstraint))
+      Indent = Line.Level * Style.IndentWidth + Style.ContinuationIndentWidth;
   }
 
   /// Update the indent state given that \p Line indent should be
@@ -340,21 +342,6 @@ private:
                  ? 1
                  : 0;
     }
-    // Try to merge either empty or one-line block if is precedeed by control
-    // statement token
-    if (TheLine->First->is(tok::l_brace) && TheLine->First == TheLine->Last &&
-        I != AnnotatedLines.begin() &&
-        I[-1]->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for)) {
-      unsigned MergedLines = 0;
-      if (Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never) {
-        MergedLines = tryMergeSimpleBlock(I - 1, E, Limit);
-        // If we managed to merge the block, discard the first merged line
-        // since we are merging starting from I.
-        if (MergedLines > 0)
-          --MergedLines;
-      }
-      return MergedLines;
-    }
     // Don't merge block with left brace wrapped after ObjC special blocks
     if (TheLine->First->is(tok::l_brace) && I != AnnotatedLines.begin() &&
         I[-1]->First->is(tok::at) && I[-1]->First->Next) {
@@ -404,7 +391,7 @@ private:
                  ? tryMergeSimpleControlStatement(I, E, Limit)
                  : 0;
     }
-    if (TheLine->First->isOneOf(tok::kw_for, tok::kw_while)) {
+    if (TheLine->First->isOneOf(tok::kw_for, tok::kw_while, tok::kw_do)) {
       return Style.AllowShortLoopsOnASingleLine
                  ? tryMergeSimpleControlStatement(I, E, Limit)
                  : 0;
@@ -449,7 +436,10 @@ private:
       return 0;
     Limit = limitConsideringMacros(I + 1, E, Limit);
     AnnotatedLine &Line = **I;
-    if (Line.Last->isNot(tok::r_paren))
+    if (!Line.First->is(tok::kw_do) && Line.Last->isNot(tok::r_paren))
+      return 0;
+    // Only merge do while if do is the only statement on the line.
+    if (Line.First->is(tok::kw_do) && !Line.Last->is(tok::kw_do))
       return 0;
     if (1 + I[1]->Last->TotalLength > Limit)
       return 0;
@@ -593,9 +583,10 @@ private:
         FormatToken *RecordTok = Line.First;
         // Skip record modifiers.
         while (RecordTok->Next &&
-               RecordTok->isOneOf(tok::kw_typedef, tok::kw_export,
-                                  Keywords.kw_declare, Keywords.kw_abstract,
-                                  tok::kw_default))
+               RecordTok->isOneOf(
+                   tok::kw_typedef, tok::kw_export, Keywords.kw_declare,
+                   Keywords.kw_abstract, tok::kw_default, tok::kw_public,
+                   tok::kw_private, tok::kw_protected, Keywords.kw_internal))
           RecordTok = RecordTok->Next;
         if (RecordTok &&
             RecordTok->isOneOf(tok::kw_class, tok::kw_union, tok::kw_struct,
@@ -817,7 +808,8 @@ protected:
     if (!DryRun) {
       Whitespaces->replaceWhitespace(
           *Child->First, /*Newlines=*/0, /*Spaces=*/1,
-          /*StartOfTokenColumn=*/State.Column, State.Line->InPPDirective);
+          /*StartOfTokenColumn=*/State.Column, /*IsAligned=*/false,
+          State.Line->InPPDirective);
     }
     Penalty +=
         formatLine(*Child, State.Column + 1, /*FirstStartColumn=*/0, DryRun);
@@ -1238,7 +1230,8 @@ void UnwrappedLineFormatter::formatFirstToken(
 
   // If in Whitemsmiths mode, indent start and end of blocks
   if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
-    if (RootToken.isOneOf(tok::l_brace, tok::r_brace, tok::kw_case))
+    if (RootToken.isOneOf(tok::l_brace, tok::r_brace, tok::kw_case,
+                          tok::kw_default))
       Indent += Style.IndentWidth;
   }
 
@@ -1249,6 +1242,7 @@ void UnwrappedLineFormatter::formatFirstToken(
     Indent = 0;
 
   Whitespaces->replaceWhitespace(RootToken, Newlines, Indent, Indent,
+                                 /*IsAligned=*/false,
                                  Line.InPPDirective &&
                                      !RootToken.HasUnescapedNewline);
 }

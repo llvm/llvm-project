@@ -56,7 +56,6 @@ class CreateAfterAttachTestCase(TestBase):
         else:
             popen = self.spawnSubprocess(exe)
             pid = popen.pid
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         # Attach to the spawned process
         self.runCmd("process attach -p " + str(pid))

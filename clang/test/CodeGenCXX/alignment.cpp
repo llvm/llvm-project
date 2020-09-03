@@ -308,4 +308,20 @@ namespace test1 {
     D d;
     AlignedArray result = d.bArray;
   }
+
+  // CHECK-LABEL: @_ZN5test11hEPA_NS_1BE
+  void h(B (*b)[]) {
+    // CHECK: [[RESULT:%.*]] = alloca [[ARRAY]], align 64
+    // CHECK: [[B_P:%.*]] = load [0 x [[B]]]*, [0 x [[B]]]**
+    // CHECK: [[ELEMENT_P:%.*]] = getelementptr inbounds [0 x [[B]]], [0 x [[B]]]* [[B_P]], i64 0
+    // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B]], [[B]]* [[ELEMENT_P]], i32 0, i32 2
+    // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
+    // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 16 [[T1]], i64 16, i1 false)
+    AlignedArray result = (*b)->bArray;
+  }
 }
+
+// CHECK-LABEL: @_Z22incomplete_array_derefPA_i
+// CHECK: load i32, i32* {{%.*}}, align 4
+int incomplete_array_deref(int (*p)[]) { return (*p)[2]; }

@@ -16,9 +16,8 @@
 using namespace llvm;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 namespace {
 class X86 : public TargetInfo {
@@ -35,14 +34,19 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
-  void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relocate(uint8_t *loc, const Relocation &rel,
+                uint64_t val) const override;
 
   RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
                           RelExpr expr) const override;
-  void relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
 };
 } // namespace
 
@@ -262,21 +266,21 @@ int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
-void X86::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
-  switch (type) {
+void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  switch (rel.type) {
   case R_386_8:
     // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
     // being used for some 16-bit programs such as boot loaders, so
     // we want to support them.
-    checkIntUInt(loc, val, 8, type);
+    checkIntUInt(loc, val, 8, rel);
     *loc = val;
     break;
   case R_386_PC8:
-    checkInt(loc, val, 8, type);
+    checkInt(loc, val, 8, rel);
     *loc = val;
     break;
   case R_386_16:
-    checkIntUInt(loc, val, 16, type);
+    checkIntUInt(loc, val, 16, rel);
     write16le(loc, val);
     break;
   case R_386_PC16:
@@ -290,7 +294,7 @@ void X86::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     // current location subtracted from it.
     // We just check that Val fits in 17 bits. This misses some cases, but
     // should have no false positives.
-    checkInt(loc, val, 17, type);
+    checkInt(loc, val, 17, rel);
     write16le(loc, val);
     break;
   case R_386_32:
@@ -312,7 +316,7 @@ void X86::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   case R_386_TLS_LE_32:
   case R_386_TLS_TPOFF:
   case R_386_TLS_TPOFF32:
-    checkInt(loc, val, 32, type);
+    checkInt(loc, val, 32, rel);
     write32le(loc, val);
     break;
   default:
@@ -320,7 +324,7 @@ void X86::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   }
 }
 
-void X86::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
+void X86::relaxTlsGdToLe(uint8_t *loc, const Relocation &, uint64_t val) const {
   // Convert
   //   leal x@tlsgd(, %ebx, 1),
   //   call __tls_get_addr@plt
@@ -335,7 +339,7 @@ void X86::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
   write32le(loc + 5, val);
 }
 
-void X86::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
+void X86::relaxTlsGdToIe(uint8_t *loc, const Relocation &, uint64_t val) const {
   // Convert
   //   leal x@tlsgd(, %ebx, 1),
   //   call __tls_get_addr@plt
@@ -352,14 +356,15 @@ void X86::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
 
 // In some conditions, relocations can be optimized to avoid using GOT.
 // This function does that for Initial Exec to Local Exec case.
-void X86::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
+void X86::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                         uint64_t val) const {
   // Ulrich's document section 6.2 says that @gotntpoff can
   // be used with MOVL or ADDL instructions.
   // @indntpoff is similar to @gotntpoff, but for use in
   // position dependent code.
   uint8_t reg = (loc[-1] >> 3) & 7;
 
-  if (type == R_386_TLS_IE) {
+  if (rel.type == R_386_TLS_IE) {
     if (loc[-1] == 0xa1) {
       // "movl foo@indntpoff,%eax" -> "movl $foo,%eax"
       // This case is different from the generic case below because
@@ -375,7 +380,7 @@ void X86::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
       loc[-1] = 0xc0 | reg;
     }
   } else {
-    assert(type == R_386_TLS_GOTIE);
+    assert(rel.type == R_386_TLS_GOTIE);
     if (loc[-2] == 0x8b) {
       // "movl foo@gottpoff(%rip),%reg" -> "movl $foo,%reg"
       loc[-2] = 0xc7;
@@ -389,8 +394,9 @@ void X86::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
   write32le(loc, val);
 }
 
-void X86::relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const {
-  if (type == R_386_TLS_LDO_32) {
+void X86::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                         uint64_t val) const {
+  if (rel.type == R_386_TLS_LDO_32) {
     write32le(loc, val);
     return;
   }
@@ -408,6 +414,71 @@ void X86::relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const {
       0x8d, 0x74, 0x26, 0x00,             // leal 0(%esi,1),%esi
   };
   memcpy(loc - 2, inst, sizeof(inst));
+}
+
+// If Intel Indirect Branch Tracking is enabled, we have to emit special PLT
+// entries containing endbr32 instructions. A PLT entry will be split into two
+// parts, one in .plt.sec (writePlt), and the other in .plt (writeIBTPlt).
+namespace {
+class IntelIBT : public X86 {
+public:
+  IntelIBT();
+  void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
+  void writePlt(uint8_t *buf, const Symbol &sym,
+                uint64_t pltEntryAddr) const override;
+  void writeIBTPlt(uint8_t *buf, size_t numEntries) const override;
+
+  static const unsigned IBTPltHeaderSize = 16;
+};
+} // namespace
+
+IntelIBT::IntelIBT() { pltHeaderSize = 0; }
+
+void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
+  uint64_t va =
+      in.ibtPlt->getVA() + IBTPltHeaderSize + s.pltIndex * pltEntrySize;
+  write32le(buf, va);
+}
+
+void IntelIBT::writePlt(uint8_t *buf, const Symbol &sym,
+                        uint64_t /*pltEntryAddr*/) const {
+  if (config->isPic) {
+    const uint8_t inst[] = {
+        0xf3, 0x0f, 0x1e, 0xfb,       // endbr32
+        0xff, 0xa3, 0,    0,    0, 0, // jmp *name@GOT(%ebx)
+        0x66, 0x0f, 0x1f, 0x44, 0, 0, // nop
+    };
+    memcpy(buf, inst, sizeof(inst));
+    write32le(buf + 6, sym.getGotPltVA() - in.gotPlt->getVA());
+    return;
+  }
+
+  const uint8_t inst[] = {
+      0xf3, 0x0f, 0x1e, 0xfb,       // endbr32
+      0xff, 0x25, 0,    0,    0, 0, // jmp *foo@GOT
+      0x66, 0x0f, 0x1f, 0x44, 0, 0, // nop
+  };
+  memcpy(buf, inst, sizeof(inst));
+  write32le(buf + 6, sym.getGotPltVA());
+}
+
+void IntelIBT::writeIBTPlt(uint8_t *buf, size_t numEntries) const {
+  writePltHeader(buf);
+  buf += IBTPltHeaderSize;
+
+  const uint8_t inst[] = {
+      0xf3, 0x0f, 0x1e, 0xfb,    // endbr32
+      0x68, 0,    0,    0,    0, // pushl $reloc_offset
+      0xe9, 0,    0,    0,    0, // jmpq .PLT0@PC
+      0x66, 0x90,                // nop
+  };
+
+  for (size_t i = 0; i < numEntries; ++i) {
+    memcpy(buf, inst, sizeof(inst));
+    write32le(buf + 5, i * sizeof(object::ELF32LE::Rel));
+    write32le(buf + 10, -pltHeaderSize - sizeof(inst) * i - 30);
+    buf += sizeof(inst);
+  }
 }
 
 namespace {
@@ -543,7 +614,7 @@ void RetpolineNoPic::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 22, -off - 26);
 }
 
-TargetInfo *getX86TargetInfo() {
+TargetInfo *elf::getX86TargetInfo() {
   if (config->zRetpolineplt) {
     if (config->isPic) {
       static RetpolinePic t;
@@ -553,9 +624,11 @@ TargetInfo *getX86TargetInfo() {
     return &t;
   }
 
+  if (config->andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+    static IntelIBT t;
+    return &t;
+  }
+
   static X86 t;
   return &t;
 }
-
-} // namespace elf
-} // namespace lld

@@ -1,4 +1,4 @@
-//===-- GDBRemoteCommunicationClientTest.cpp --------------------*- C++ -*-===//
+//===-- GDBRemoteCommunicationClientTest.cpp ------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -47,7 +47,7 @@ void HandlePacket(MockServer &server,
                   StringRef response) {
   StringExtractorGDBRemote request;
   ASSERT_EQ(PacketResult::Success, server.GetPacket(request));
-  ASSERT_THAT(request.GetStringRef(), expected);
+  ASSERT_THAT(std::string(request.GetStringRef()), expected);
   ASSERT_EQ(PacketResult::Success, server.SendPacket(response));
 }
 
@@ -288,7 +288,7 @@ TEST_F(GDBRemoteCommunicationClientTest, TestPacketSpeedJSON) {
   server_thread.join();
 
   GTEST_LOG_(INFO) << "Formatted output: " << ss.GetData();
-  auto object_sp = StructuredData::ParseJSON(ss.GetString());
+  auto object_sp = StructuredData::ParseJSON(std::string(ss.GetString()));
   ASSERT_TRUE(bool(object_sp));
   auto dict_sp = object_sp->GetAsDictionary();
   ASSERT_TRUE(bool(dict_sp));
@@ -551,4 +551,30 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetTraceConfigPacket) {
   HandlePacket(server, expected_packet, incorrect_custom_params1+
       incorrect_custom_params2);
   ASSERT_FALSE(result4.get().Success());
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetQOffsets) {
+  const auto &GetQOffsets = [&](llvm::StringRef response) {
+    std::future<Optional<QOffsets>> result = std::async(
+        std::launch::async, [&] { return client.GetQOffsets(); });
+
+    HandlePacket(server, "qOffsets", response);
+    return result.get();
+  };
+  EXPECT_EQ((QOffsets{false, {0x1234, 0x1234}}),
+            GetQOffsets("Text=1234;Data=1234"));
+  EXPECT_EQ((QOffsets{false, {0x1234, 0x1234, 0x1234}}),
+            GetQOffsets("Text=1234;Data=1234;Bss=1234"));
+  EXPECT_EQ((QOffsets{true, {0x1234}}), GetQOffsets("TextSeg=1234"));
+  EXPECT_EQ((QOffsets{true, {0x1234, 0x2345}}),
+            GetQOffsets("TextSeg=1234;DataSeg=2345"));
+
+  EXPECT_EQ(llvm::None, GetQOffsets("E05"));
+  EXPECT_EQ(llvm::None, GetQOffsets("Text=bogus"));
+  EXPECT_EQ(llvm::None, GetQOffsets("Text=1234"));
+  EXPECT_EQ(llvm::None, GetQOffsets("Text=1234;Data=1234;"));
+  EXPECT_EQ(llvm::None, GetQOffsets("Text=1234;Data=1234;Bss=1234;"));
+  EXPECT_EQ(llvm::None, GetQOffsets("TEXTSEG=1234"));
+  EXPECT_EQ(llvm::None, GetQOffsets("TextSeg=0x1234"));
+  EXPECT_EQ(llvm::None, GetQOffsets("TextSeg=12345678123456789"));
 }

@@ -21,7 +21,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/PassSupport.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -212,7 +212,7 @@ static bool areCombinableOperations(const TargetRegisterInfo *TRI,
   // There is a combine of two constant extended values into CONST64,
   // provided both constants are true immediates.
   if (isGreaterThanNBitTFRI<16>(HighRegInst) &&
-      isGreaterThanNBitTFRI<16>(LowRegInst))
+      isGreaterThanNBitTFRI<16>(LowRegInst) && !IsConst64Disabled)
     return (HighRegInst.getOperand(1).isImm() &&
             LowRegInst.getOperand(1).isImm());
 
@@ -279,11 +279,11 @@ bool HexagonCopyToCombine::isSafeToMoveTogether(MachineInstr &I1,
     // A reverse_iterator instantiated like below starts before I2, and I1
     // respectively.
     // Look at instructions I in between I2 and (excluding) I1.
-    MachineBasicBlock::reverse_iterator I(I2),
-      End = --(MachineBasicBlock::reverse_iterator(I1));
+    MachineBasicBlock::reverse_iterator I = ++I2.getIterator().getReverse();
+    MachineBasicBlock::reverse_iterator End = I1.getIterator().getReverse();
     // At 03 we got better results (dhrystone!) by being more conservative.
     if (!ShouldCombineAggressively)
-      End = MachineBasicBlock::reverse_iterator(I1);
+      End = ++I1.getIterator().getReverse();
     // If I2 kills its operand and we move I2 over an instruction that also
     // uses I2's use reg we need to modify that (first) instruction to now kill
     // this reg.
@@ -476,6 +476,10 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
   // Combine aggressively (for code size)
   ShouldCombineAggressively =
     MF.getTarget().getOptLevel() <= CodeGenOpt::Default;
+
+  // Disable CONST64 for tiny core since it takes a LD resource.
+  if (!OptForSize && ST->isTinyCore())
+    IsConst64Disabled = true;
 
   // Traverse basic blocks.
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end(); BI != BE;

@@ -2,9 +2,9 @@
 
 namespace nodiag {
 
-template <typename T> requires bool(T())
+template <typename T> requires (bool(T()))
 int A();
-template <typename U> requires bool(U())
+template <typename U> requires (bool(U()))
 int A();
 
 } // end namespace nodiag
@@ -26,7 +26,7 @@ int orig::A();
 template <typename T> requires true
 int orig::B();
 // expected-error@-1{{out-of-line declaration of 'B' does not match any declaration in namespace 'diag::orig'}}
-template <typename T> requires !0
+template <typename T> requires (!0)
 int orig::C();
 // expected-error@-1{{out-of-line declaration of 'C' does not match any declaration in namespace 'diag::orig'}}
 
@@ -35,11 +35,11 @@ int orig::C();
 namespace nodiag {
 
 struct AA {
-  template <typename T> requires someFunc(T())
+  template <typename T> requires (someFunc(T()))
   int A();
 };
 
-template <typename T> requires someFunc(T())
+template <typename T> requires (someFunc(T()))
 int AA::A() { return sizeof(T); }
 
 } // end namespace nodiag

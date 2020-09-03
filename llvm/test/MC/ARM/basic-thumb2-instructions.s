@@ -79,7 +79,6 @@ _func:
         adds r2, r2, #56
         adds r2, #56
         add r1, r7, #0xcbcbcbcb
-        add sp, sp, #0x1fe0000
 
         adds.w r2, #-16
         adds.w r2, r2, #-16
@@ -103,7 +102,6 @@ _func:
 @ CHECK: adds	r2, #56                 @ encoding: [0x38,0x32]
 @ CHECK: adds	r2, #56                 @ encoding: [0x38,0x32]
 @ CHECK: add.w  r1, r7, #3419130827     @ encoding: [0x07,0xf1,0xcb,0x31]
-@ CHECK: add.w	sp, sp, #33423360       @ encoding: [0x0d,0xf1,0xff,0x7d]
 
 @ CHECK: subs.w	r2, r2, #16             @ encoding: [0xb2,0xf1,0x10,0x02]
 @ CHECK: subs.w	r2, r2, #16             @ encoding: [0xb2,0xf1,0x10,0x02]
@@ -182,7 +180,102 @@ _func:
 @ CHECK: addw	r6, sp, #1020           @ encoding: [0x0d,0xf2,0xfc,0x36]
         add r6, sp, #1019            // T4
 @ CHECK: addw	r6, sp, #1019           @ encoding: [0x0d,0xf2,0xfb,0x36]
-
+        addw    r0, r0, #4095
+        addw    r0, #4095
+        add     r0, r0, #4095
+        add     r0, #4095
+@ CHECK-NEXT: addw    r0, r0, #4095           @ encoding: [0x00,0xf6,0xff,0x70]
+@ CHECK-NEXT: addw    r0, r0, #4095           @ encoding: [0x00,0xf6,0xff,0x70]
+@ CHECK-NEXT: addw    r0, r0, #4095           @ encoding: [0x00,0xf6,0xff,0x70]
+@ CHECK-NEXT: addw    r0, r0, #4095           @ encoding: [0x00,0xf6,0xff,0x70]
+add.w r0, r0, #-4096
+add r0, r0, #-4096
+add.w r0, #-4096
+add r0, #-4096
+@ CHECK-NEXT: sub.w   r0, r0, #4096           @ encoding: [0xa0,0xf5,0x80,0x50]
+@ CHECK-NEXT: sub.w   r0, r0, #4096           @ encoding: [0xa0,0xf5,0x80,0x50]
+@ CHECK-NEXT: sub.w   r0, r0, #4096           @ encoding: [0xa0,0xf5,0x80,0x50]
+@ CHECK-NEXT: sub.w   r0, r0, #4096           @ encoding: [0xa0,0xf5,0x80,0x50]
+adds.w r0, r0, #-4096
+adds r0, r0, #-4096
+adds.w r0, #-4096
+adds r0, #-4096
+@ CHECK-NEXT: subs.w   r0, r0, #4096           @ encoding: [0xb0,0xf5,0x80,0x50]
+@ CHECK-NEXT: subs.w   r0, r0, #4096           @ encoding: [0xb0,0xf5,0x80,0x50]
+@ CHECK-NEXT: subs.w   r0, r0, #4096           @ encoding: [0xb0,0xf5,0x80,0x50]
+@ CHECK-NEXT: subs.w   r0, r0, #4096           @ encoding: [0xb0,0xf5,0x80,0x50]
+@------------------------------------------------------------------------------
+@ ADD (SP plus immediate, writing to SP)
+@------------------------------------------------------------------------------
+        add.w sp, sp, #0x1fe0000 //T3
+        add.w sp, #0x1fe0000
+        add sp, sp, #0x1fe0000
+        add sp, #0x1fe0000
+@ CHECK-NEXT: add.w	sp, sp, #33423360       @ encoding: [0x0d,0xf1,0xff,0x7d]
+@ CHECK-NEXT: add.w	sp, sp, #33423360       @ encoding: [0x0d,0xf1,0xff,0x7d]
+@ CHECK-NEXT: add.w	sp, sp, #33423360       @ encoding: [0x0d,0xf1,0xff,0x7d]
+@ CHECK-NEXT: add.w	sp, sp, #33423360       @ encoding: [0x0d,0xf1,0xff,0x7d]
+        adds.w sp, sp, #0x1fe0000 //T3
+        adds.w sp, #0x1fe0000
+        adds sp, sp, #0x1fe0000
+        adds sp, #0x1fe0000
+@ CHECK-NEXT: adds.w	sp, sp, #33423360       @ encoding: [0x1d,0xf1,0xff,0x7d]
+@ CHECK-NEXT: adds.w	sp, sp, #33423360       @ encoding: [0x1d,0xf1,0xff,0x7d]
+@ CHECK-NEXT: adds.w	sp, sp, #33423360       @ encoding: [0x1d,0xf1,0xff,0x7d]
+@ CHECK-NEXT: adds.w	sp, sp, #33423360       @ encoding: [0x1d,0xf1,0xff,0x7d]
+        addw sp, sp, #4095 //T4
+        add  sp, sp, #4095
+        addw sp, #4095
+        add sp, #4095
+@ CHECK-NEXT:        addw    sp, sp, #4095           @ encoding: [0x0d,0xf6,0xff,0x7d]
+@ CHECK-NEXT:        addw    sp, sp, #4095           @ encoding: [0x0d,0xf6,0xff,0x7d]
+@ CHECK-NEXT:        addw    sp, sp, #4095           @ encoding: [0x0d,0xf6,0xff,0x7d]
+@ CHECK-NEXT:        addw    sp, sp, #4095           @ encoding: [0x0d,0xf6,0xff,0x7d]
+        add     sp, sp, #128 //T2
+        add     sp, #128
+@ CHECK-NEXT: add     sp, #128                @ encoding: [0x20,0xb0]
+@ CHECK-NEXT: add     sp, #128                @ encoding: [0x20,0xb0]
+        adds     sp, sp, #128 //T3
+        adds     sp, #128
+@ CHECK-NEXT: adds.w  sp, sp, #128            @ encoding: [0x1d,0xf1,0x80,0x0d]
+@ CHECK-NEXT: adds.w  sp, sp, #128            @ encoding: [0x1d,0xf1,0x80,0x0d]
+        add     r0, sp, #128 //T1
+@ CHECK-NEXT: add     r0, sp, #128            @ encoding: [0x20,0xa8]
+        adds     r0, sp, #128 //T3
+@ CHECK-NEXT: adds.w  r0, sp, #128            @ encoding: [0x1d,0xf1,0x80,0x00]
+        addw r0, sp, #128
+@ CHECK-NEXT: addw    r0, sp, #128            @ encoding: [0x0d,0xf2,0x80,0x00]
+@------------------------------------------------------------------------------
+@ ADD (SP plus negative immediate, writing to SP)
+@------------------------------------------------------------------------------
+add sp, sp, #-508
+add sp, #-508
+@ CHECK-NEXT: sub     sp, #508                @ encoding: [0xff,0xb0]
+@ CHECK-NEXT: sub     sp, #508                @ encoding: [0xff,0xb0]
+addw sp, sp, #-4095
+add sp, sp, #-4095
+addw sp, #-4095
+add sp, #-4095
+@ CHECK-NEXT: subw    sp, sp, #4095           @ encoding: [0xad,0xf6,0xff,0x7d]
+@ CHECK-NEXT: subw    sp, sp, #4095           @ encoding: [0xad,0xf6,0xff,0x7d]
+@ CHECK-NEXT: subw    sp, sp, #4095           @ encoding: [0xad,0xf6,0xff,0x7d]
+@ CHECK-NEXT: subw    sp, sp, #4095           @ encoding: [0xad,0xf6,0xff,0x7d]
+add.w sp, sp, #-4096
+add sp, sp, #-4096
+add.w sp, #-4096
+add sp, #-4096
+@ CHECK-NEXT: sub.w   sp, sp, #4096           @ encoding: [0xad,0xf5,0x80,0x5d]
+@ CHECK-NEXT: sub.w   sp, sp, #4096           @ encoding: [0xad,0xf5,0x80,0x5d]
+@ CHECK-NEXT: sub.w   sp, sp, #4096           @ encoding: [0xad,0xf5,0x80,0x5d]
+@ CHECK-NEXT: sub.w   sp, sp, #4096           @ encoding: [0xad,0xf5,0x80,0x5d]
+adds.w sp, sp, #-4096
+adds sp, sp, #-4096
+adds.w sp, #-4096
+adds sp, #-4096
+@ CHECK-NEXT: subs.w  sp, sp, #4096           @ encoding: [0xbd,0xf5,0x80,0x5d]
+@ CHECK-NEXT: subs.w  sp, sp, #4096           @ encoding: [0xbd,0xf5,0x80,0x5d]
+@ CHECK-NEXT: subs.w  sp, sp, #4096           @ encoding: [0xbd,0xf5,0x80,0x5d]
+@ CHECK-NEXT: subs.w  sp, sp, #4096           @ encoding: [0xbd,0xf5,0x80,0x5d]
 @------------------------------------------------------------------------------
 @ ADD (SP plus register) A8.8.10
 @------------------------------------------------------------------------------
@@ -206,8 +299,22 @@ _func:
 @ CHECK: it eq                          @ encoding: [0x08,0xbf]
         addeq r2, sp, ip             // T3
 @ CHECK: addeq.w r2, sp, r12            @ encoding: [0x0d,0xeb,0x0c,0x02]
-
-
+         add.w r0, sp, r0, ror #2
+         add r0, sp, r0, ror #2
+         add sp, r1, lsl #15
+         adds.w r0, sp, r0, ror #2
+         adds r0, sp, r0, ror #2
+         adds.w sp, sp, r0, ror #31
+         adds sp, sp, r0, ror #31
+         adds sp, r0, ror #31
+@ CHECK-NEXT: add.w   r0, sp, r0, ror #2      @ encoding: [0x0d,0xeb,0xb0,0x00]
+@ CHECK-NEXT: add.w   r0, sp, r0, ror #2      @ encoding: [0x0d,0xeb,0xb0,0x00]
+@ CHECK-NEXT: add.w   sp, sp, r1, lsl #15     @ encoding: [0x0d,0xeb,0xc1,0x3d]
+@ CHECK-NEXT: adds.w  r0, sp, r0, ror #2      @ encoding: [0x1d,0xeb,0xb0,0x00]
+@ CHECK-NEXT: adds.w  r0, sp, r0, ror #2      @ encoding: [0x1d,0xeb,0xb0,0x00]
+@ CHECK-NEXT: adds.w  sp, sp, r0, ror #31     @ encoding: [0x1d,0xeb,0xf0,0x7d]
+@ CHECK-NEXT: adds.w  sp, sp, r0, ror #31     @ encoding: [0x1d,0xeb,0xf0,0x7d]
+@ CHECK-NEXT: adds.w  sp, sp, r0, ror #31     @ encoding: [0x1d,0xeb,0xf0,0x7d]
 @------------------------------------------------------------------------------
 @ FIXME: ADR
 @------------------------------------------------------------------------------
@@ -567,6 +674,7 @@ _func:
         dmb #0x0
 
         dmb sy
+        dmb.w sy
         dmb st
         dmb sh
         dmb ish
@@ -579,6 +687,7 @@ _func:
         dmb osh
         dmb oshst
         dmb
+        dmb.w
 
 @ CHECK: dmb	sy                      @ encoding: [0xbf,0xf3,0x5f,0x8f]
 @ CHECK: dmb	st                      @ encoding: [0xbf,0xf3,0x5e,0x8f]
@@ -598,6 +707,7 @@ _func:
 @ CHECK: dmb	#0x0                    @ encoding: [0xbf,0xf3,0x50,0x8f]
 
 @ CHECK: dmb	sy                      @ encoding: [0xbf,0xf3,0x5f,0x8f]
+@ CHECK: dmb	sy                      @ encoding: [0xbf,0xf3,0x5f,0x8f]
 @ CHECK: dmb	st                      @ encoding: [0xbf,0xf3,0x5e,0x8f]
 @ CHECK: dmb	ish                     @ encoding: [0xbf,0xf3,0x5b,0x8f]
 @ CHECK: dmb	ish                     @ encoding: [0xbf,0xf3,0x5b,0x8f]
@@ -609,6 +719,7 @@ _func:
 @ CHECK: dmb	nshst                   @ encoding: [0xbf,0xf3,0x56,0x8f]
 @ CHECK: dmb	osh                     @ encoding: [0xbf,0xf3,0x53,0x8f]
 @ CHECK: dmb	oshst                   @ encoding: [0xbf,0xf3,0x52,0x8f]
+@ CHECK: dmb	sy                      @ encoding: [0xbf,0xf3,0x5f,0x8f]
 @ CHECK: dmb	sy                      @ encoding: [0xbf,0xf3,0x5f,0x8f]
 
 
@@ -633,6 +744,7 @@ _func:
         dsb #0x0
 
         dsb sy
+        dsb.w sy
         dsb st
         dsb sh
         dsb ish
@@ -645,6 +757,7 @@ _func:
         dsb osh
         dsb oshst
         dsb
+        dsb.w
 
 @ CHECK: dsb	sy                      @ encoding: [0xbf,0xf3,0x4f,0x8f]
 @ CHECK: dsb	st                      @ encoding: [0xbf,0xf3,0x4e,0x8f]
@@ -664,6 +777,7 @@ _func:
 @ CHECK: ssbb                           @ encoding: [0xbf,0xf3,0x40,0x8f]
 
 @ CHECK: dsb	sy                      @ encoding: [0xbf,0xf3,0x4f,0x8f]
+@ CHECK: dsb	sy                      @ encoding: [0xbf,0xf3,0x4f,0x8f]
 @ CHECK: dsb	st                      @ encoding: [0xbf,0xf3,0x4e,0x8f]
 @ CHECK: dsb	ish                     @ encoding: [0xbf,0xf3,0x4b,0x8f]
 @ CHECK: dsb	ish                     @ encoding: [0xbf,0xf3,0x4b,0x8f]
@@ -675,6 +789,7 @@ _func:
 @ CHECK: dsb	nshst                   @ encoding: [0xbf,0xf3,0x46,0x8f]
 @ CHECK: dsb	osh                     @ encoding: [0xbf,0xf3,0x43,0x8f]
 @ CHECK: dsb	oshst                   @ encoding: [0xbf,0xf3,0x42,0x8f]
+@ CHECK: dsb	sy                      @ encoding: [0xbf,0xf3,0x4f,0x8f]
 @ CHECK: dsb	sy                      @ encoding: [0xbf,0xf3,0x4f,0x8f]
 
 
@@ -702,10 +817,14 @@ _func:
 @ ISB
 @------------------------------------------------------------------------------
         isb sy
+        isb.w sy
         isb
+        isb.w
         isb #15
         isb #1
 
+@ CHECK: isb	sy                      @ encoding: [0xbf,0xf3,0x6f,0x8f]
+@ CHECK: isb	sy                      @ encoding: [0xbf,0xf3,0x6f,0x8f]
 @ CHECK: isb	sy                      @ encoding: [0xbf,0xf3,0x6f,0x8f]
 @ CHECK: isb	sy                      @ encoding: [0xbf,0xf3,0x6f,0x8f]
 @ CHECK: isb	sy                      @ encoding: [0xbf,0xf3,0x6f,0x8f]
@@ -1822,6 +1941,7 @@ _func:
         pld [r7, #257]
         pld [r1, #0]
         pld [r1, #-0]
+        pld.w [r1, #-0]
 
 @ CHECK: pld	[r5, #-4]               @ encoding: [0x15,0xf8,0x04,0xfc]
 @ CHECK: pld	[r6, #32]               @ encoding: [0x96,0xf8,0x20,0xf0]
@@ -1829,6 +1949,7 @@ _func:
 @ CHECK: pld	[r6, #257]              @ encoding: [0x96,0xf8,0x01,0xf1]
 @ CHECK: pld	[r7, #257]              @ encoding: [0x97,0xf8,0x01,0xf1]
 @ CHECK: pld	[r1]                    @ encoding: [0x91,0xf8,0x00,0xf0]
+@ CHECK: pld	[r1, #-0]               @ encoding: [0x11,0xf8,0x00,0xfc]
 @ CHECK: pld	[r1, #-0]               @ encoding: [0x11,0xf8,0x00,0xfc]
 
 
@@ -1841,6 +1962,8 @@ _func:
             @   fixup A - offset: 0, value: _foo, kind: fixup_t2_ldst_pcrel_12
 
         pld [pc,#-4095]
+        pld.w [pc,#-4095]
+@ CHECK: pld [pc, #-4095]            @ encoding: [0x1f,0xf8,0xff,0xff]
 @ CHECK: pld [pc, #-4095]            @ encoding: [0x1f,0xf8,0xff,0xff]
 
 
@@ -1849,17 +1972,21 @@ _func:
 @------------------------------------------------------------------------------
         pld [r8, r1]
         pld [r5, r2]
+        pld.w [r5, r2]
         pld [r0, r2, lsl #3]
         pld [r8, r2, lsl #2]
         pld [sp, r2, lsl #1]
         pld [sp, r2, lsl #0]
+        pld.w [sp, r2, lsl #1]
 
 @ CHECK: pld	[r8, r1]                @ encoding: [0x18,0xf8,0x01,0xf0]
+@ CHECK: pld	[r5, r2]                @ encoding: [0x15,0xf8,0x02,0xf0]
 @ CHECK: pld	[r5, r2]                @ encoding: [0x15,0xf8,0x02,0xf0]
 @ CHECK: pld	[r0, r2, lsl #3]        @ encoding: [0x10,0xf8,0x32,0xf0]
 @ CHECK: pld	[r8, r2, lsl #2]        @ encoding: [0x18,0xf8,0x22,0xf0]
 @ CHECK: pld	[sp, r2, lsl #1]        @ encoding: [0x1d,0xf8,0x12,0xf0]
 @ CHECK: pld	[sp, r2]                @ encoding: [0x1d,0xf8,0x02,0xf0]
+@ CHECK: pld	[sp, r2, lsl #1]        @ encoding: [0x1d,0xf8,0x12,0xf0]
 
 @------------------------------------------------------------------------------
 @ PLI(immediate)
@@ -1871,6 +1998,7 @@ _func:
         pli [r7, #257]
         pli [pc, #+4095]
         pli [pc, #-4095]
+        pli.w [pc, #-4095]
 
 @ CHECK: pli	[r5, #-4]               @ encoding: [0x15,0xf9,0x04,0xfc]
 @ CHECK: pli	[r6, #32]               @ encoding: [0x96,0xf9,0x20,0xf0]
@@ -1878,6 +2006,7 @@ _func:
 @ CHECK: pli	[r6, #257]              @ encoding: [0x96,0xf9,0x01,0xf1]
 @ CHECK: pli	[r7, #257]              @ encoding: [0x97,0xf9,0x01,0xf1]
 @ CHECK: pli    [pc, #4095]             @ encoding: [0x9f,0xf9,0xff,0xff]
+@ CHECK: pli    [pc, #-4095]            @ encoding: [0x1f,0xf9,0xff,0xff]
 @ CHECK: pli    [pc, #-4095]            @ encoding: [0x1f,0xf9,0xff,0xff]
 
 
@@ -1896,17 +2025,21 @@ _func:
 @------------------------------------------------------------------------------
         pli [r8, r1]
         pli [r5, r2]
+        pli.w [r5, r2]
         pli [r0, r2, lsl #3]
         pli [r8, r2, lsl #2]
         pli [sp, r2, lsl #1]
         pli [sp, r2, lsl #0]
+        pli.w [sp, r2, lsl #1]
 
 @ CHECK: pli	[r8, r1]                @ encoding: [0x18,0xf9,0x01,0xf0]
+@ CHECK: pli	[r5, r2]                @ encoding: [0x15,0xf9,0x02,0xf0]
 @ CHECK: pli	[r5, r2]                @ encoding: [0x15,0xf9,0x02,0xf0]
 @ CHECK: pli	[r0, r2, lsl #3]        @ encoding: [0x10,0xf9,0x32,0xf0]
 @ CHECK: pli	[r8, r2, lsl #2]        @ encoding: [0x18,0xf9,0x22,0xf0]
 @ CHECK: pli	[sp, r2, lsl #1]        @ encoding: [0x1d,0xf9,0x12,0xf0]
 @ CHECK: pli	[sp, r2]                @ encoding: [0x1d,0xf9,0x02,0xf0]
+@ CHECK: pli	[sp, r2, lsl #1]        @ encoding: [0x1d,0xf9,0x12,0xf0]
 
 @------------------------------------------------------------------------------
 @ POP (alias)
@@ -3083,7 +3216,10 @@ _func:
         sub r0, r0, #32
         subs r2, r2, #56
         subs r2, #56
-
+        subw    r0, r0, #4095
+        subw    r0, #4095
+        sub    r0, r0, #4095
+        sub    r0, #4095
 @ CHECK: itet	eq                      @ encoding: [0x0a,0xbf]
 @ CHECK: subeq	r1, r2, #4              @ encoding: [0x11,0x1f]
 @ CHECK: subwne	r5, r3, #1023           @ encoding: [0xa3,0xf2,0xff,0x35]
@@ -3099,8 +3235,47 @@ _func:
 @ CHECK: sub.w	r0, r0, #32             @ encoding: [0xa0,0xf1,0x20,0x00]
 @ CHECK: subs	r2, #56                 @ encoding: [0x38,0x3a]
 @ CHECK: subs	r2, #56                 @ encoding: [0x38,0x3a]
-
-
+@ CHECK-NEXT: subw    r0, r0, #4095           @ encoding: [0xa0,0xf6,0xff,0x70]
+@ CHECK-NEXT: subw    r0, r0, #4095           @ encoding: [0xa0,0xf6,0xff,0x70]
+@ CHECK-NEXT: subw    r0, r0, #4095           @ encoding: [0xa0,0xf6,0xff,0x70]
+@ CHECK-NEXT: subw    r0, r0, #4095           @ encoding: [0xa0,0xf6,0xff,0x70]
+@------------------------------------------------------------------------------
+@ SUB (immediate, writting to SP)
+@------------------------------------------------------------------------------
+        sub.w sp, sp, #0x1fe0000 //T2
+        sub sp, sp, #0x1fe0000
+        sub.w sp, #0x1fe0000
+        sub sp, #0x1fe0000
+@ CHECK-NEXT: sub.w	sp, sp, #33423360       @ encoding: [0xad,0xf1,0xff,0x7d]
+@ CHECK-NEXT: sub.w	sp, sp, #33423360       @ encoding: [0xad,0xf1,0xff,0x7d]
+@ CHECK-NEXT: sub.w	sp, sp, #33423360       @ encoding: [0xad,0xf1,0xff,0x7d]
+@ CHECK-NEXT: sub.w	sp, sp, #33423360       @ encoding: [0xad,0xf1,0xff,0x7d]
+        subs.w sp, sp, #0x1fe0000 //T2
+        subs sp, sp, #0x1fe0000
+        subs.w sp, #0x1fe0000
+        subs sp, #0x1fe0000
+@ CHECK-NEXT: subs.w	sp, sp, #33423360       @ encoding: [0xbd,0xf1,0xff,0x7d]
+@ CHECK-NEXT: subs.w	sp, sp, #33423360       @ encoding: [0xbd,0xf1,0xff,0x7d]
+@ CHECK-NEXT: subs.w	sp, sp, #33423360       @ encoding: [0xbd,0xf1,0xff,0x7d]
+@ CHECK-NEXT: subs.w	sp, sp, #33423360       @ encoding: [0xbd,0xf1,0xff,0x7d]
+        subw sp, sp, #4095 //T3
+        sub sp, sp, #4095
+        subw sp, #4095
+        sub sp, #4095
+@ CHECK-NEXT: subw    sp, sp, #4095           @ encoding: [0xad,0xf6,0xff,0x7d]
+@ CHECK-NEXT: subw    sp, sp, #4095           @ encoding: [0xad,0xf6,0xff,0x7d]
+@ CHECK-NEXT: subw    sp, sp, #4095           @ encoding: [0xad,0xf6,0xff,0x7d]
+@ CHECK-NEXT: subw    sp, sp, #4095           @ encoding: [0xad,0xf6,0xff,0x7d]
+         sub sp, #128 //T1
+@ CHECK-NEXT: sub     sp, #128                @ encoding: [0xa0,0xb0]
+         subs.w sp, #128 //T2
+         subs sp, #128 //T2
+@ CHECK-NEXT:  subs.w  sp, sp, #128            @ encoding: [0xbd,0xf1,0x80,0x0d]
+@ CHECK-NEXT:  subs.w  sp, sp, #128            @ encoding: [0xbd,0xf1,0x80,0x0d]
+        sub.w sp, #128 //T2
+@ CHECK-NEXT:  sub.w  sp, sp, #128            @ encoding: [0xad,0xf1,0x80,0x0d]
+        subw sp, #128 //T4
+@ CHECK-NEXT: subw    sp, sp, #128            @ encoding: [0xad,0xf2,0x80,0x0d]
 @------------------------------------------------------------------------------
 @ SUB (register)
 @------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-//===-- IRDynamicChecks.cpp -------------------------------------*- C++ -*-===//
+//===-- IRDynamicChecks.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -181,8 +181,8 @@ protected:
   ///
   /// \param[in] inst
   ///     The instruction to be instrumented.
-  void RegisterInstruction(llvm::Instruction &i) {
-    m_to_instrument.push_back(&i);
+  void RegisterInstruction(llvm::Instruction &inst) {
+    m_to_instrument.push_back(&inst);
   }
 
   /// Determine whether a single instruction is interesting to instrument,
@@ -465,7 +465,7 @@ protected:
   }
 
   static llvm::Function *GetCalledFunction(llvm::CallInst *inst) {
-    return GetFunction(inst->getCalledValue());
+    return GetFunction(inst->getCalledOperand());
   }
 
   bool InspectInstruction(llvm::Instruction &i) override {

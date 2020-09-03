@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OPENMP_EXCEPTIONESCAPECHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OPENMP_EXCEPTIONESCAPECHECK_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 #include "../utils/ExceptionAnalyzer.h"
 
 namespace clang {
@@ -24,6 +24,9 @@ namespace openmp {
 class ExceptionEscapeCheck : public ClangTidyCheck {
 public:
   ExceptionEscapeCheck(StringRef Name, ClangTidyContext *Context);
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.OpenMP && LangOpts.CPlusPlus && LangOpts.CXXExceptions;
+  }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;

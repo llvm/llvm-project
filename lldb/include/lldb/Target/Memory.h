@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Memory_h_
-#define liblldb_Memory_h_
+#ifndef LLDB_TARGET_MEMORY_H
+#define LLDB_TARGET_MEMORY_H
 
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
@@ -45,7 +45,7 @@ public:
 
 protected:
   typedef std::map<lldb::addr_t, lldb::DataBufferSP> BlockMap;
-  typedef RangeArray<lldb::addr_t, lldb::addr_t, 4> InvalidRanges;
+  typedef RangeVector<lldb::addr_t, lldb::addr_t, 4> InvalidRanges;
   typedef Range<lldb::addr_t, lldb::addr_t> AddrRange;
   // Classes that inherit from MemoryCache can see and modify these
   std::recursive_mutex m_mutex;
@@ -59,7 +59,8 @@ protected:
   uint32_t m_L2_cache_line_byte_size;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(MemoryCache);
+  MemoryCache(const MemoryCache &) = delete;
+  const MemoryCache &operator=(const MemoryCache &) = delete;
 };
 
     
@@ -135,9 +136,10 @@ protected:
   PermissionsToBlockMap m_memory_map;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(AllocatedMemoryCache);
+  AllocatedMemoryCache(const AllocatedMemoryCache &) = delete;
+  const AllocatedMemoryCache &operator=(const AllocatedMemoryCache &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_Memory_h_
+#endif // LLDB_TARGET_MEMORY_H

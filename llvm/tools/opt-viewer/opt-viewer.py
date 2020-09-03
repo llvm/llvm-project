@@ -3,10 +3,10 @@
 from __future__ import print_function
 
 import argparse
-import cgi
-import codecs
 import errno
 import functools
+import html
+import io
 from multiprocessing import cpu_count
 import os.path
 import re
@@ -54,12 +54,12 @@ class SourceFileRenderer:
                 existing_filename = fn
 
         self.no_highlight = no_highlight
-        self.stream = codecs.open(os.path.join(output_dir, optrecord.html_file_name(filename)), 'w', encoding='utf-8')
+        self.stream = io.open(os.path.join(output_dir, optrecord.html_file_name(filename)), 'w', encoding='utf-8')
         if existing_filename:
-            self.source_stream = open(existing_filename)
+            self.source_stream = io.open(existing_filename, encoding='utf-8')
         else:
             self.source_stream = None
-            print('''
+            print(u'''
 <html>
 <h1>Unable to locate file {}</h1>
 </html>
@@ -72,10 +72,7 @@ class SourceFileRenderer:
         file_text = stream.read()
 
         if self.no_highlight:
-            if sys.version_info.major >= 3:
-                html_highlighted = file_text
-            else:
-                html_highlighted = file_text.decode('utf-8')
+            html_highlighted = file_text
         else:
             html_highlighted = highlight(
             file_text,
@@ -147,7 +144,7 @@ class SourceFileRenderer:
         if not self.source_stream:
             return
 
-        print('''
+        print(u'''
 <html>
 <title>{}</title>
 <meta charset="utf-8" />
@@ -186,7 +183,7 @@ function toggleExpandedMessage(e) {{
 <tbody>'''.format(os.path.basename(self.filename)), file=self.stream)
         self.render_source_lines(self.source_stream, line_remarks)
 
-        print('''
+        print(u'''
 </tbody>
 </table>
 </body>
@@ -195,12 +192,12 @@ function toggleExpandedMessage(e) {{
 
 class IndexRenderer:
     def __init__(self, output_dir, should_display_hotness, max_hottest_remarks_on_index):
-        self.stream = codecs.open(os.path.join(output_dir, 'index.html'), 'w', encoding='utf-8')
+        self.stream = io.open(os.path.join(output_dir, 'index.html'), 'w', encoding='utf-8')
         self.should_display_hotness = should_display_hotness
         self.max_hottest_remarks_on_index = max_hottest_remarks_on_index
 
     def render_entry(self, r, odd):
-        escaped_name = cgi.escape(r.DemangledFunctionName)
+        escaped_name = html.escape(r.DemangledFunctionName)
         print(u'''
 <tr>
 <td class=\"column-entry-{odd}\"><a href={r.Link}>{r.DebugLocString}</a></td>
@@ -210,7 +207,7 @@ class IndexRenderer:
 </tr>'''.format(**locals()), file=self.stream)
 
     def render(self, all_remarks):
-        print('''
+        print(u'''
 <html>
 <meta charset="utf-8" />
 <head>
@@ -233,7 +230,7 @@ class IndexRenderer:
         for i, remark in enumerate(all_remarks[:max_entries]):
             if not suppress(remark):
                 self.render_entry(remark, i % 2)
-        print('''
+        print(u'''
 </table>
 </body>
 </html>''', file=self.stream)

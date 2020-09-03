@@ -163,7 +163,8 @@ private:
   MachineInstr *ParentMI;
 
   /// Contents union - This contains the payload for the various operand types.
-  union {
+  union ContentsUnion {
+    ContentsUnion() {}
     MachineBasicBlock *MBB;  // For MO_MachineBasicBlock.
     const ConstantFP *CFP;   // For MO_FPImmediate.
     const ConstantInt *CI;   // For MO_CImmediate. Integers > 64bit.
@@ -174,7 +175,7 @@ private:
     unsigned CFIIndex;       // For MO_CFI.
     Intrinsic::ID IntrinsicID; // For MO_IntrinsicID.
     unsigned Pred;           // For MO_Predicate
-    const Constant *ShuffleMask; // For MO_ShuffleMask
+    ArrayRef<int> ShuffleMask; // For MO_ShuffleMask
 
     struct {                  // For MO_Register.
       // Register number is in SmallContents.RegNo.
@@ -278,6 +279,9 @@ public:
   /// More complex way of printing a MachineOperand.
   /// \param TypeToPrint specifies the generic type to be printed on uses and
   /// defs. It can be determined using MachineInstr::getTypeToPrint.
+  /// \param OpIdx - specifies the index of the operand in machine instruction.
+  /// This will be used by target dependent MIR formatter. Could be None if the
+  /// index is unknown, e.g. called by dump().
   /// \param PrintDef - whether we want to print `def` on an operand which
   /// isDef. Sometimes, if the operand is printed before '=', we don't print
   /// `def`.
@@ -294,8 +298,9 @@ public:
   /// information from it's parent.
   /// \param IntrinsicInfo - same as \p TRI.
   void print(raw_ostream &os, ModuleSlotTracker &MST, LLT TypeToPrint,
-             bool PrintDef, bool IsStandalone, bool ShouldPrintRegisterTies,
-             unsigned TiedOperandIdx, const TargetRegisterInfo *TRI,
+             Optional<unsigned> OpIdx, bool PrintDef, bool IsStandalone,
+             bool ShouldPrintRegisterTies, unsigned TiedOperandIdx,
+             const TargetRegisterInfo *TRI,
              const TargetIntrinsicInfo *IntrinsicInfo) const;
 
   /// Same as print(os, TRI, IntrinsicInfo), but allows to specify the low-level
@@ -583,7 +588,7 @@ public:
     return Contents.Pred;
   }
 
-  const Constant *getShuffleMask() const {
+  ArrayRef<int> getShuffleMask() const {
     assert(isShuffleMask() && "Wrong MachineOperand accessor");
     return Contents.ShuffleMask;
   }
@@ -607,14 +612,14 @@ public:
   /// It is sometimes necessary to detach the register mask pointer from its
   /// machine operand. This static method can be used for such detached bit
   /// mask pointers.
-  static bool clobbersPhysReg(const uint32_t *RegMask, unsigned PhysReg) {
+  static bool clobbersPhysReg(const uint32_t *RegMask, MCRegister PhysReg) {
     // See TargetRegisterInfo.h.
     assert(PhysReg < (1u << 30) && "Not a physical register");
     return !(RegMask[PhysReg / 32] & (1u << PhysReg % 32));
   }
 
   /// clobbersPhysReg - Returns true if this RegMask operand clobbers PhysReg.
-  bool clobbersPhysReg(unsigned PhysReg) const {
+  bool clobbersPhysReg(MCRegister PhysReg) const {
      return clobbersPhysReg(getRegMask(), PhysReg);
   }
 
@@ -691,6 +696,11 @@ public:
   void setRegMask(const uint32_t *RegMaskPtr) {
     assert(isRegMask() && "Wrong MachineOperand mutator");
     Contents.RegMask = RegMaskPtr;
+  }
+
+  void setIntrinsicID(Intrinsic::ID IID) {
+    assert(isIntrinsicID() && "Wrong MachineOperand mutator");
+    Contents.IntrinsicID = IID;
   }
 
   void setPredicate(unsigned Predicate) {
@@ -911,9 +921,9 @@ public:
     return Op;
   }
 
-  static MachineOperand CreateShuffleMask(const Constant *C) {
+  static MachineOperand CreateShuffleMask(ArrayRef<int> Mask) {
     MachineOperand Op(MachineOperand::MO_ShuffleMask);
-    Op.Contents.ShuffleMask = C;
+    Op.Contents.ShuffleMask = Mask;
     return Op;
   }
 

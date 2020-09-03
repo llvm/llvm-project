@@ -1,4 +1,4 @@
-//===-- VOP3PInstructions.td - Vector Instruction Defintions --------------===//
+//===-- VOP3PInstructions.td - Vector Instruction Definitions -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,9 +10,11 @@
 // VOP3P Classes
 //===----------------------------------------------------------------------===//
 
-class VOP3PInst<string OpName, VOPProfile P, SDPatternOperator node = null_frag> :
+class VOP3PInst<string OpName, VOPProfile P,
+                SDPatternOperator node = null_frag,
+                bit HasExplicitClamp = 0> :
   VOP3P_Pseudo<OpName, P,
-    !if(P.HasModifiers, getVOP3PModPat<P, node>.ret, getVOP3Pat<P, node>.ret)
+    !if(P.HasModifiers, getVOP3PModPat<P, node, HasExplicitClamp>.ret, getVOP3Pat<P, node>.ret)
 >;
 
 // Non-packed instructions that use the VOP3P encoding.
@@ -29,9 +31,14 @@ class VOP3_VOP3PInst<string OpName, VOPProfile P, bit UseTiedOutput = 0,
       !con(
         (ins FP16InputMods:$src0_modifiers, VCSrc_f16:$src0,
              FP16InputMods:$src1_modifiers, VCSrc_f16:$src1,
-             FP16InputMods:$src2_modifiers, VCSrc_f16:$src2,
-             clampmod:$clamp),
-         !if(UseTiedOutput, (ins VGPR_32:$vdst_in), (ins))),
+             FP16InputMods:$src2_modifiers, VCSrc_f16:$src2),
+         // FIXME: clampmod0 misbehaves with the non-default vdst_in
+         // following it. For now workaround this by requiring clamp
+         // in tied patterns. This should use undef_tied_input, but it
+         // seems underdeveloped and doesn't apply the right register
+         // class constraints.
+         !if(UseTiedOutput, (ins clampmod:$clamp, VGPR_32:$vdst_in),
+                            (ins clampmod0:$clamp))),
          (ins op_sel:$op_sel, op_sel_hi:$op_sel_hi));
 
   let Constraints = !if(UseTiedOutput, "$vdst = $vdst_in", "");
@@ -45,9 +52,9 @@ def V_PK_MAD_I16 : VOP3PInst<"v_pk_mad_i16", VOP3_Profile<VOP_V2I16_V2I16_V2I16_
 def V_PK_MAD_U16 : VOP3PInst<"v_pk_mad_u16", VOP3_Profile<VOP_V2I16_V2I16_V2I16_V2I16>>;
 
 let FPDPRounding = 1 in {
-def V_PK_FMA_F16 : VOP3PInst<"v_pk_fma_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, fma>;
-def V_PK_ADD_F16 : VOP3PInst<"v_pk_add_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16>, fadd>;
-def V_PK_MUL_F16 : VOP3PInst<"v_pk_mul_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16>, fmul>;
+def V_PK_FMA_F16 : VOP3PInst<"v_pk_fma_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, any_fma>;
+def V_PK_ADD_F16 : VOP3PInst<"v_pk_add_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16>, any_fadd>;
+def V_PK_MUL_F16 : VOP3PInst<"v_pk_mul_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16>, any_fmul>;
 } // End FPDPRounding = 1
 def V_PK_MAX_F16 : VOP3PInst<"v_pk_max_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16>, fmaxnum_like>;
 def V_PK_MIN_F16 : VOP3PInst<"v_pk_min_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16>, fminnum_like>;
@@ -75,8 +82,8 @@ def V_PK_LSHRREV_B16 : VOP3PInst<"v_pk_lshrrev_b16", VOP3_Profile<VOP_V2I16_V2I1
 // The constant will be emitted as a mov, and folded later.
 // TODO: We could directly encode the immediate now
 def : GCNPat<
-  (add (v2i16 (VOP3PMods0 v2i16:$src0, i32:$src0_modifiers, i1:$clamp)), NegSubInlineConstV216:$src1),
-  (V_PK_SUB_U16 $src0_modifiers, $src0, SRCMODS.OP_SEL_1, NegSubInlineConstV216:$src1, $clamp)
+  (add (v2i16 (VOP3PMods v2i16:$src0, i32:$src0_modifiers)), NegSubInlineConstV216:$src1),
+  (V_PK_SUB_U16 $src0_modifiers, $src0, SRCMODS.OP_SEL_1, NegSubInlineConstV216:$src1)
 >;
 
 multiclass MadFmaMixPats<SDPatternOperator fma_like,
@@ -142,10 +149,11 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
 }
 
 let SubtargetPredicate = HasMadMixInsts in {
+
 // These are VOP3a-like opcodes which accept no omod.
 // Size of src arguments (16/32) is controlled by op_sel.
 // For 16-bit src arguments their location (hi/lo) are controlled by op_sel_hi.
-let isCommutable = 1 in {
+let isCommutable = 1, mayRaiseFPException = 0 in {
 def V_MAD_MIX_F32 : VOP3_VOP3PInst<"v_mad_mix_f32", VOP3_Profile<VOP_F32_F16_F16_F16, VOP3_OPSEL>>;
 
 let FPDPRounding = 1 in {
@@ -203,7 +211,7 @@ foreach Type = ["I", "U"] in
   foreach Index = 0-3 in {
     // Defines patterns that extract each Index'ed 8bit from an unsigned
     // 32bit scalar value;
-    def #Type#Index#"_8bit" : Extract<!shl(Index, 3), 255, !if (!eq (Type, "U"), 1, 0)>;
+    def Type#Index#"_8bit" : Extract<!shl(Index, 3), 255, !if (!eq (Type, "U"), 1, 0)>;
 
     // Defines multiplication patterns where the multiplication is happening on each
     // Index'ed 8bit of a 32bit scalar value.
@@ -211,8 +219,8 @@ foreach Type = ["I", "U"] in
     def Mul#Type#_Elt#Index : PatFrag<
       (ops node:$src0, node:$src1),
       (!cast<HasOneUseBinOp>(!if (!eq (Type, "I"), AMDGPUmul_i24_oneuse, AMDGPUmul_u24_oneuse))
-                            (!cast<Extract>(#Type#Index#"_8bit") node:$src0),
-                            (!cast<Extract>(#Type#Index#"_8bit") node:$src1))>;
+                            (!cast<Extract>(Type#Index#"_8bit") node:$src0),
+                            (!cast<Extract>(Type#Index#"_8bit") node:$src1))>;
   }
 
 // Different variants of dot8 patterns cause a huge increase in the compile time.
@@ -231,15 +239,15 @@ foreach Type = ["I", "U"] in
   foreach Index = 0-7 in {
     // Defines patterns that extract each Index'ed 4bit from an unsigned
     // 32bit scalar value;
-    def #Type#Index#"_4bit" : Extract<!shl(Index, 2), 15, !if (!eq (Type, "U"), 1, 0)>;
+    def Type#Index#"_4bit" : Extract<!shl(Index, 2), 15, !if (!eq (Type, "U"), 1, 0)>;
 
     // Defines multiplication patterns where the multiplication is happening on each
     // Index'ed 8bit of a 32bit scalar value.
     def Mul#Type#Index#"_4bit" : PatFrag<
       (ops node:$src0, node:$src1),
       (!cast<HasOneUseBinOp>(!if (!eq (Type, "I"), NonACAMDGPUmul_i24_oneuse, NonACAMDGPUmul_u24_oneuse))
-                             (!cast<Extract>(#Type#Index#"_4bit") node:$src0),
-                             (!cast<Extract>(#Type#Index#"_4bit") node:$src1))>;
+                             (!cast<Extract>(Type#Index#"_4bit") node:$src0),
+                             (!cast<Extract>(Type#Index#"_4bit") node:$src1))>;
   }
 
 class UDot2Pat<Instruction Inst> : GCNPat <
@@ -264,39 +272,29 @@ class SDot2Pat<Instruction Inst> : GCNPat <
 let IsDOT = 1 in {
 let SubtargetPredicate = HasDot2Insts in {
 
-def V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16", VOP3_Profile<VOP_F32_V2F16_V2F16_F32>>;
-def V_DOT2_I32_I16 : VOP3PInst<"v_dot2_i32_i16", VOP3_Profile<VOP_I32_V2I16_V2I16_I32>>;
-def V_DOT2_U32_U16 : VOP3PInst<"v_dot2_u32_u16", VOP3_Profile<VOP_I32_V2I16_V2I16_I32>>;
-def V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>>;
-def V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>>;
+def V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16",
+  VOP3_Profile<VOP_F32_V2F16_V2F16_F32>,
+  AMDGPUfdot2, 1/*ExplicitClamp*/>;
+def V_DOT2_I32_I16 : VOP3PInst<"v_dot2_i32_i16",
+  VOP3_Profile<VOP_I32_V2I16_V2I16_I32>, int_amdgcn_sdot2, 1>;
+def V_DOT2_U32_U16 : VOP3PInst<"v_dot2_u32_u16",
+  VOP3_Profile<VOP_I32_V2I16_V2I16_I32>, int_amdgcn_udot2, 1>;
+def V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
+  VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot4, 1>;
+def V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4",
+  VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot8, 1>;
 
 } // End SubtargetPredicate = HasDot2Insts
 
 let SubtargetPredicate = HasDot1Insts in {
 
-def V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>>;
-def V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>>;
+def V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
+  VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot4, 1>;
+def V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
+  VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot8, 1>;
 
 } // End SubtargetPredicate = HasDot1Insts
 } // End let IsDOT = 1
-
-multiclass DotPats<SDPatternOperator dot_op,
-                   VOP3PInst dot_inst> {
-  let SubtargetPredicate = dot_inst.SubtargetPredicate in
-  def : GCNPat <
-    (dot_op (dot_inst.Pfl.Src0VT (VOP3PMods0 dot_inst.Pfl.Src0VT:$src0, i32:$src0_modifiers)),
-            (dot_inst.Pfl.Src1VT (VOP3PMods dot_inst.Pfl.Src1VT:$src1, i32:$src1_modifiers)),
-            (dot_inst.Pfl.Src2VT (VOP3PMods dot_inst.Pfl.Src2VT:$src2, i32:$src2_modifiers)), i1:$clamp),
-    (dot_inst $src0_modifiers, $src0, $src1_modifiers, $src1, $src2_modifiers, $src2, (as_i1imm $clamp))>;
-}
-
-defm : DotPats<AMDGPUfdot2, V_DOT2_F32_F16>;
-defm : DotPats<int_amdgcn_sdot2, V_DOT2_I32_I16>;
-defm : DotPats<int_amdgcn_udot2, V_DOT2_U32_U16>;
-defm : DotPats<int_amdgcn_sdot4, V_DOT4_I32_I8>;
-defm : DotPats<int_amdgcn_udot4, V_DOT4_U32_U8>;
-defm : DotPats<int_amdgcn_sdot8, V_DOT8_I32_I4>;
-defm : DotPats<int_amdgcn_udot8, V_DOT8_U32_U4>;
 
 def : UDot2Pat<V_DOT2_U32_U16>;
 def : SDot2Pat<V_DOT2_I32_I16>;
@@ -368,12 +366,16 @@ def VOPProfileMAI_F32_V4F16_X16 : VOPProfileMAI<VOP_V16F32_V4F16_V4F16_V16F32, A
 def VOPProfileMAI_F32_V4F16_X32 : VOPProfileMAI<VOP_V32F32_V4F16_V4F16_V32F32, AISrc_1024_b32, ADst_1024, AVSrc_64>;
 
 let Predicates = [HasMAIInsts] in {
+
+let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
 def V_ACCVGPR_READ_B32  : VOP3Inst<"v_accvgpr_read_b32",  VOPProfileAccRead>;
 def V_ACCVGPR_WRITE_B32 : VOP3Inst<"v_accvgpr_write_b32", VOPProfileAccWrite> {
   let isMoveImm = 1;
 }
+}
 
-let isConvergent = 1 in {
+// FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
+let isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1 in {
 def V_MFMA_F32_4X4X1F32    : VOP3Inst<"v_mfma_f32_4x4x1f32",    VOPProfileMAI_F32_F32_X4,    int_amdgcn_mfma_f32_4x4x1f32>;
 def V_MFMA_F32_4X4X4F16    : VOP3Inst<"v_mfma_f32_4x4x4f16",    VOPProfileMAI_F32_V4F16_X4,  int_amdgcn_mfma_f32_4x4x4f16>;
 def V_MFMA_I32_4X4X4I8     : VOP3Inst<"v_mfma_i32_4x4x4i8",     VOPProfileMAI_I32_I32_X4,    int_amdgcn_mfma_i32_4x4x4i8>;
@@ -394,7 +396,7 @@ def V_MFMA_I32_32X32X4I8   : VOP3Inst<"v_mfma_i32_32x32x4i8",   VOPProfileMAI_I3
 def V_MFMA_I32_32X32X8I8   : VOP3Inst<"v_mfma_i32_32x32x8i8",   VOPProfileMAI_I32_I32_X16,   int_amdgcn_mfma_i32_32x32x8i8>;
 def V_MFMA_F32_32X32X2BF16 : VOP3Inst<"v_mfma_f32_32x32x2bf16", VOPProfileMAI_F32_V2I16_X32, int_amdgcn_mfma_f32_32x32x2bf16>;
 def V_MFMA_F32_32X32X4BF16 : VOP3Inst<"v_mfma_f32_32x32x4bf16", VOPProfileMAI_F32_V2I16_X16, int_amdgcn_mfma_f32_32x32x4bf16>;
-} // End isConvergent = 1
+} // End isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1
 
 } // End SubtargetPredicate = HasMAIInsts
 

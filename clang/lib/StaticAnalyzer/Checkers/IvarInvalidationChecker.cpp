@@ -739,7 +739,7 @@ void ento::registerIvarInvalidationModeling(CheckerManager &mgr) {
   mgr.registerChecker<IvarInvalidationChecker>();
 }
 
-bool ento::shouldRegisterIvarInvalidationModeling(const LangOptions &LO) {
+bool ento::shouldRegisterIvarInvalidationModeling(const CheckerManager &mgr) {
   return true;
 }
 
@@ -751,7 +751,7 @@ bool ento::shouldRegisterIvarInvalidationModeling(const LangOptions &LO) {
     checker->Filter.checkName_##name = mgr.getCurrentCheckerName();            \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const LangOptions &LO) { return true; }
+  bool ento::shouldRegister##name(const CheckerManager &mgr) { return true; }
 
 REGISTER_CHECKER(InstanceVariableInvalidation)
 REGISTER_CHECKER(MissingInvalidationMethod)

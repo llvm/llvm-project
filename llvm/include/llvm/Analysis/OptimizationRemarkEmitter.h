@@ -17,15 +17,11 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
-class DebugLoc;
-class Loop;
-class Pass;
-class Twine;
+class Function;
 class Value;
 
 /// The optimization diagnostic interface.

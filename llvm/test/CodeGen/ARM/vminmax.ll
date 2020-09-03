@@ -297,14 +297,18 @@ declare float @llvm.minnum.f32(float %a, float %b)
 
 define float @maxnum(float %a, float %b) {
 ;CHECK-LABEL: maxnum:
-;CHECK: vmax.f32
+;CHECK: vcmp.f32
+;CHECK-NEXT: vmrs
+;CHECK-NEXT: vmovgt.f32
   %r = call nnan float @llvm.maxnum.f32(float %a, float %b)
   ret float %r
 }
 
 define float @minnum(float %a, float %b) {
 ;CHECK-LABEL: minnum:
-;CHECK: vmin.f32
+;CHECK: vcmp.f32
+;CHECK-NEXT: vmrs
+;CHECK-NEXT: vmovlt.f32
   %r = call nnan float @llvm.minnum.f32(float %a, float %b)
   ret float %r
 }

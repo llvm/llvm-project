@@ -404,7 +404,7 @@ void ento::registerValistBase(CheckerManager &mgr) {
   mgr.registerChecker<ValistChecker>();
 }
 
-bool ento::shouldRegisterValistBase(const LangOptions &LO) {
+bool ento::shouldRegisterValistBase(const CheckerManager &mgr) {
   return true;
 }
 
@@ -416,7 +416,7 @@ bool ento::shouldRegisterValistBase(const LangOptions &LO) {
         mgr.getCurrentCheckerName();                                           \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name##Checker(const LangOptions &LO) {            \
+  bool ento::shouldRegister##name##Checker(const CheckerManager &mgr) {            \
     return true;                                                               \
   }
 

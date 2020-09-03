@@ -54,8 +54,8 @@ class FormatPropagationTestCase(TestBase):
         Y = parent.GetChildMemberWithName("Y")
         self.assertTrue(Y is not None and Y.IsValid(), "could not find Y")
         # check their values now
-        self.assertTrue(X.GetValue() == "1", "X has an invalid value")
-        self.assertTrue(Y.GetValue() == "2", "Y has an invalid value")
+        self.assertEquals(X.GetValue(), "1", "X has an invalid value")
+        self.assertEquals(Y.GetValue(), "2", "Y has an invalid value")
         # set the format on the parent
         parent.SetFormat(lldb.eFormatHex)
         self.assertTrue(
@@ -66,12 +66,12 @@ class FormatPropagationTestCase(TestBase):
             "Y has not changed format")
         # Step and check if the values make sense still
         self.runCmd("next")
-        self.assertTrue(X.GetValue() == "0x00000004", "X has not become 4")
-        self.assertTrue(Y.GetValue() == "0x00000002", "Y has not stuck as hex")
+        self.assertEquals(X.GetValue(), "0x00000004", "X has not become 4")
+        self.assertEquals(Y.GetValue(), "0x00000002", "Y has not stuck as hex")
         # Check that children can still make their own choices
         Y.SetFormat(lldb.eFormatDecimal)
-        self.assertTrue(X.GetValue() == "0x00000004", "X is still hex")
-        self.assertTrue(Y.GetValue() == "2", "Y has not been reset")
+        self.assertEquals(X.GetValue(), "0x00000004", "X is still hex")
+        self.assertEquals(Y.GetValue(), "2", "Y has not been reset")
         # Make a few more changes
         parent.SetFormat(lldb.eFormatDefault)
         X.SetFormat(lldb.eFormatHex)
@@ -79,4 +79,4 @@ class FormatPropagationTestCase(TestBase):
         self.assertTrue(
             X.GetValue() == "0x00000004",
             "X is not hex as it asked")
-        self.assertTrue(Y.GetValue() == "2", "Y is not defaulted")
+        self.assertEquals(Y.GetValue(), "2", "Y is not defaulted")

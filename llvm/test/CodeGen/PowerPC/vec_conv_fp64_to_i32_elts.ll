@@ -15,15 +15,13 @@ define i64 @test2elt(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    xscvdpuxws f1, v2
 ; CHECK-P8-NEXT:    xscvdpuxws f0, f0
-; CHECK-P8-NEXT:    mfvsrwz r3, f1
-; CHECK-P8-NEXT:    mfvsrwz r4, f0
-; CHECK-P8-NEXT:    mtvsrd f0, r3
-; CHECK-P8-NEXT:    mtvsrd f1, r4
-; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
-; CHECK-P8-NEXT:    vmrglw v2, v2, v3
+; CHECK-P8-NEXT:    mffprwz r3, f1
+; CHECK-P8-NEXT:    mtvsrwz v2, r3
+; CHECK-P8-NEXT:    mffprwz r4, f0
+; CHECK-P8-NEXT:    mtvsrwz v3, r4
+; CHECK-P8-NEXT:    vmrghw v2, v2, v3
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
-; CHECK-P8-NEXT:    mfvsrd r3, f0
+; CHECK-P8-NEXT:    mffprd r3, f0
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test2elt:
@@ -35,7 +33,7 @@ define i64 @test2elt(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-P9-NEXT:    xscvdpuxws f0, f0
 ; CHECK-P9-NEXT:    mffprwz r3, f0
 ; CHECK-P9-NEXT:    mtvsrws v2, r3
-; CHECK-P9-NEXT:    vmrglw v2, v3, v2
+; CHECK-P9-NEXT:    vmrghw v2, v3, v2
 ; CHECK-P9-NEXT:    mfvsrld r3, v2
 ; CHECK-P9-NEXT:    blr
 ;
@@ -309,15 +307,13 @@ define i64 @test2elt_signed(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    xscvdpsxws f1, v2
 ; CHECK-P8-NEXT:    xscvdpsxws f0, f0
-; CHECK-P8-NEXT:    mfvsrwz r3, f1
-; CHECK-P8-NEXT:    mfvsrwz r4, f0
-; CHECK-P8-NEXT:    mtvsrd f0, r3
-; CHECK-P8-NEXT:    mtvsrd f1, r4
-; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
-; CHECK-P8-NEXT:    vmrglw v2, v2, v3
+; CHECK-P8-NEXT:    mffprwz r3, f1
+; CHECK-P8-NEXT:    mtvsrwz v2, r3
+; CHECK-P8-NEXT:    mffprwz r4, f0
+; CHECK-P8-NEXT:    mtvsrwz v3, r4
+; CHECK-P8-NEXT:    vmrghw v2, v2, v3
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
-; CHECK-P8-NEXT:    mfvsrd r3, f0
+; CHECK-P8-NEXT:    mffprd r3, f0
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test2elt_signed:
@@ -329,7 +325,7 @@ define i64 @test2elt_signed(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-P9-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P9-NEXT:    mffprwz r3, f0
 ; CHECK-P9-NEXT:    mtvsrws v2, r3
-; CHECK-P9-NEXT:    vmrglw v2, v3, v2
+; CHECK-P9-NEXT:    vmrghw v2, v3, v2
 ; CHECK-P9-NEXT:    mfvsrld r3, v2
 ; CHECK-P9-NEXT:    blr
 ;

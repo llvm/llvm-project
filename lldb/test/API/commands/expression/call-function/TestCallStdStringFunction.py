@@ -2,25 +2,14 @@
 Test calling std::String member functions.
 """
 
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
 class ExprCommandCallFunctionTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-        # Find the line number to break for main.c.
-        self.line = line_number(
-            'main.cpp',
-            '// Please test these expressions while stopped at this line:')
 
     @expectedFailureAll(
         compiler="icc",
@@ -29,15 +18,7 @@ class ExprCommandCallFunctionTestCase(TestBase):
     def test_with(self):
         """Test calling std::String member function."""
         self.build()
-        self.runCmd("file " + self.getBuildArtifact("a.out"),
-                    CURRENT_EXECUTABLE_SET)
-
-        # Some versions of GCC encode two locations for the 'return' statement
-        # in main.cpp
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.line, num_expected_locations=-1, loc_exact=True)
-
-        self.runCmd("run", RUN_SUCCEEDED)
+        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
 
         self.expect("print str",
                     substrs=['Hello world'])

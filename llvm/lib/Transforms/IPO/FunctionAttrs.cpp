@@ -33,7 +33,6 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -160,8 +159,7 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
 
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
-      for (CallSite::arg_iterator CI = Call->arg_begin(), CE = Call->arg_end();
-           CI != CE; ++CI) {
+      for (auto CI = Call->arg_begin(), CE = Call->arg_end(); CI != CE; ++CI) {
         Value *Arg = *CI;
         if (!Arg->getType()->isPtrOrPtrVectorTy())
           continue;
@@ -362,13 +360,13 @@ struct ArgumentUsesTracker : public CaptureTracker {
   void tooManyUses() override { Captured = true; }
 
   bool captured(const Use *U) override {
-    CallSite CS(U->getUser());
-    if (!CS.getInstruction()) {
+    CallBase *CB = dyn_cast<CallBase>(U->getUser());
+    if (!CB) {
       Captured = true;
       return true;
     }
 
-    Function *F = CS.getCalledFunction();
+    Function *F = CB->getCalledFunction();
     if (!F || !F->hasExactDefinition() || !SCCNodes.count(F)) {
       Captured = true;
       return true;
@@ -379,14 +377,14 @@ struct ArgumentUsesTracker : public CaptureTracker {
     // these.
 
     unsigned UseIndex =
-        std::distance(const_cast<const Use *>(CS.arg_begin()), U);
+        std::distance(const_cast<const Use *>(CB->arg_begin()), U);
 
-    assert(UseIndex < CS.data_operands_size() &&
+    assert(UseIndex < CB->data_operands_size() &&
            "Indirect function calls should have been filtered above!");
 
-    if (UseIndex >= CS.getNumArgOperands()) {
+    if (UseIndex >= CB->getNumArgOperands()) {
       // Data operand, but not a argument operand -- must be a bundle operand
-      assert(CS.hasOperandBundles() && "Must be!");
+      assert(CB->hasOperandBundles() && "Must be!");
 
       // CaptureTracking told us that we're being captured by an operand bundle
       // use.  In this case it does not matter if the callee is within our SCC
@@ -449,7 +447,7 @@ determinePointerReadAttrs(Argument *A,
   SmallPtrSet<Use *, 32> Visited;
 
   // inalloca arguments are always clobbered by the call.
-  if (A->hasInAllocaAttr())
+  if (A->hasInAllocaAttr() || A->hasPreallocatedAttr())
     return Attribute::None;
 
   bool IsRead = false;
@@ -490,15 +488,15 @@ determinePointerReadAttrs(Argument *A,
               Worklist.push_back(&UU);
       };
 
-      CallSite CS(I);
-      if (CS.doesNotAccessMemory()) {
+      CallBase &CB = cast<CallBase>(*I);
+      if (CB.doesNotAccessMemory()) {
         AddUsersToWorklistIfCapturing();
         continue;
       }
 
-      Function *F = CS.getCalledFunction();
+      Function *F = CB.getCalledFunction();
       if (!F) {
-        if (CS.onlyReadsMemory()) {
+        if (CB.onlyReadsMemory()) {
           IsRead = true;
           AddUsersToWorklistIfCapturing();
           continue;
@@ -510,23 +508,23 @@ determinePointerReadAttrs(Argument *A,
       // operands.  This means there is no need to adjust UseIndex to account
       // for these.
 
-      unsigned UseIndex = std::distance(CS.arg_begin(), U);
+      unsigned UseIndex = std::distance(CB.arg_begin(), U);
 
       // U cannot be the callee operand use: since we're exploring the
       // transitive uses of an Argument, having such a use be a callee would
-      // imply the CallSite is an indirect call or invoke; and we'd take the
+      // imply the call site is an indirect call or invoke; and we'd take the
       // early exit above.
-      assert(UseIndex < CS.data_operands_size() &&
+      assert(UseIndex < CB.data_operands_size() &&
              "Data operand use expected!");
 
-      bool IsOperandBundleUse = UseIndex >= CS.getNumArgOperands();
+      bool IsOperandBundleUse = UseIndex >= CB.getNumArgOperands();
 
       if (UseIndex >= F->arg_size() && !IsOperandBundleUse) {
         assert(F->isVarArg() && "More params than args in non-varargs call");
         return Attribute::None;
       }
 
-      Captures &= !CS.doesNotCapture(UseIndex);
+      Captures &= !CB.doesNotCapture(UseIndex);
 
       // Since the optimizer (by design) cannot see the data flow corresponding
       // to a operand bundle use, these cannot participate in the optimistic SCC
@@ -535,12 +533,12 @@ determinePointerReadAttrs(Argument *A,
       if (IsOperandBundleUse ||
           !SCCNodes.count(&*std::next(F->arg_begin(), UseIndex))) {
 
-        // The accessors used on CallSite here do the right thing for calls and
+        // The accessors used on call site here do the right thing for calls and
         // invokes with operand bundles.
 
-        if (!CS.onlyReadsMemory() && !CS.onlyReadsMemory(UseIndex))
+        if (!CB.onlyReadsMemory() && !CB.onlyReadsMemory(UseIndex))
           return Attribute::None;
-        if (!CS.doesNotAccessMemory(UseIndex))
+        if (!CB.doesNotAccessMemory(UseIndex))
           IsRead = true;
       }
 
@@ -638,8 +636,8 @@ static bool addArgumentAttrsFromCallsites(Function &F) {
   // callsite.
   BasicBlock &Entry = F.getEntryBlock();
   for (Instruction &I : Entry) {
-    if (auto CS = CallSite(&I)) {
-      if (auto *CalledFunc = CS.getCalledFunction()) {
+    if (auto *CB = dyn_cast<CallBase>(&I)) {
+      if (auto *CalledFunc = CB->getCalledFunction()) {
         for (auto &CSArg : CalledFunc->args()) {
           if (!CSArg.hasNonNullAttr())
             continue;
@@ -647,7 +645,7 @@ static bool addArgumentAttrsFromCallsites(Function &F) {
           // If the non-null callsite argument operand is an argument to 'F'
           // (the caller) and the call is guaranteed to execute, then the value
           // must be non-null throughout 'F'.
-          auto *FArg = dyn_cast<Argument>(CS.getArgOperand(CSArg.getArgNo()));
+          auto *FArg = dyn_cast<Argument>(CB->getArgOperand(CSArg.getArgNo()));
           if (FArg && !FArg->hasNonNullAttr()) {
             FArg->addAttr(Attribute::NonNull);
             Changed = true;
@@ -904,10 +902,10 @@ static bool isFunctionMallocLike(Function *F, const SCCNodeSet &SCCNodes) {
         break;
       case Instruction::Call:
       case Instruction::Invoke: {
-        CallSite CS(RVI);
-        if (CS.hasRetAttr(Attribute::NoAlias))
+        CallBase &CB = cast<CallBase>(*RVI);
+        if (CB.hasRetAttr(Attribute::NoAlias))
           break;
-        if (CS.getCalledFunction() && SCCNodes.count(CS.getCalledFunction()))
+        if (CB.getCalledFunction() && SCCNodes.count(CB.getCalledFunction()))
           break;
         LLVM_FALLTHROUGH;
       }
@@ -1013,8 +1011,8 @@ static bool isReturnNonNull(Function *F, const SCCNodeSet &SCCNodes,
     }
     case Instruction::Call:
     case Instruction::Invoke: {
-      CallSite CS(RVI);
-      Function *Callee = CS.getCalledFunction();
+      CallBase &CB = cast<CallBase>(*RVI);
+      Function *Callee = CB.getCalledFunction();
       // A call to a node within the SCC is assumed to return null until
       // proven otherwise
       if (Callee && SCCNodes.count(Callee)) {
@@ -1223,10 +1221,11 @@ bool AttributeInferer::run(const SCCNodeSet &SCCNodes) {
 /// Helper for non-Convergent inference predicate InstrBreaksAttribute.
 static bool InstrBreaksNonConvergent(Instruction &I,
                                      const SCCNodeSet &SCCNodes) {
-  const CallSite CS(&I);
+  const CallBase *CB = dyn_cast<CallBase>(&I);
   // Breaks non-convergent assumption if CS is a convergent call to a function
   // not in the SCC.
-  return CS && CS.isConvergent() && SCCNodes.count(CS.getCalledFunction()) == 0;
+  return CB && CB->isConvergent() &&
+         SCCNodes.count(CB->getCalledFunction()) == 0;
 }
 
 /// Helper for NoUnwind inference predicate InstrBreaksAttribute.
@@ -1247,11 +1246,11 @@ static bool InstrBreaksNonThrowing(Instruction &I, const SCCNodeSet &SCCNodes) {
 
 /// Helper for NoFree inference predicate InstrBreaksAttribute.
 static bool InstrBreaksNoFree(Instruction &I, const SCCNodeSet &SCCNodes) {
-  CallSite CS(&I);
-  if (!CS)
+  CallBase *CB = dyn_cast<CallBase>(&I);
+  if (!CB)
     return false;
 
-  Function *Callee = CS.getCalledFunction();
+  Function *Callee = CB->getCalledFunction();
   if (!Callee)
     return true;
 
@@ -1306,7 +1305,7 @@ static bool inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes) {
         // Skip non-throwing functions.
         [](const Function &F) { return F.doesNotThrow(); },
         // Instructions that break non-throwing assumption.
-        [SCCNodes](Instruction &I) {
+        [&SCCNodes](Instruction &I) {
           return InstrBreaksNonThrowing(I, SCCNodes);
         },
         [](Function &F) {
@@ -1329,7 +1328,7 @@ static bool inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes) {
         // Skip functions known not to free memory.
         [](const Function &F) { return F.doesNotFreeMemory(); },
         // Instructions that break non-deallocating assumption.
-        [SCCNodes](Instruction &I) {
+        [&SCCNodes](Instruction &I) {
           return InstrBreaksNoFree(I, SCCNodes);
         },
         [](Function &F) {
@@ -1368,8 +1367,8 @@ static bool addNoRecurseAttrs(const SCCNodeSet &SCCNodes) {
   // marked norecurse, so any called from F to F will not be marked norecurse.
   for (auto &BB : *F)
     for (auto &I : BB.instructionsWithoutDebug())
-      if (auto CS = CallSite(&I)) {
-        Function *Callee = CS.getCalledFunction();
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        Function *Callee = CB->getCalledFunction();
         if (!Callee || Callee == F || !Callee->doesNotRecurse())
           // Function calls a potentially recursive function.
           return false;
@@ -1439,8 +1438,8 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
     // function.
     if (!HasUnknownCall)
       for (Instruction &I : instructions(F))
-        if (auto CS = CallSite(&I))
-          if (!CS.getCalledFunction()) {
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          if (!CB->getCalledFunction()) {
             HasUnknownCall = true;
             break;
           }
@@ -1575,8 +1574,8 @@ static bool addNoRecurseAttrsTopDown(Function &F) {
     auto *I = dyn_cast<Instruction>(U);
     if (!I)
       return false;
-    CallSite CS(I);
-    if (!CS || !CS.getParent()->getParent()->doesNotRecurse())
+    CallBase *CB = dyn_cast<CallBase>(I);
+    if (!CB || !CB->getParent()->getParent()->doesNotRecurse())
       return false;
   }
   return setDoesNotRecurse(F);

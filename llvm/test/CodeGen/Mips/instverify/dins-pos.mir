@@ -1,4 +1,4 @@
-# RUN: not llc -march=mips64 -mcpu=mips64r2 -start-after=finalize-isel -stop-after=finalize-isel \
+# RUN: not --crash llc -march=mips64 -mcpu=mips64r2 -start-after=finalize-isel -stop-after=finalize-isel \
 # RUN:         -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
 
 # CHECK: Position operand is out of range!

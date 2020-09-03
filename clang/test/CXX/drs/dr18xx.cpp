@@ -31,6 +31,14 @@ namespace dr1813 { // dr1813: 7
   static_assert(!__is_standard_layout(U), "");
 }
 
+namespace dr1814 { // dr1814: yes
+#if __cplusplus >= 201103L
+  void test() {
+    auto lam = [](int x = 42) { return x; };
+  }
+#endif
+}
+
 namespace dr1815 { // dr1815: no
 #if __cplusplus >= 201402L
   // FIXME: needs codegen test

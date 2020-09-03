@@ -72,6 +72,8 @@ struct TypeCloner {
         return LLVMVoidTypeInContext(Ctx);
       case LLVMHalfTypeKind:
         return LLVMHalfTypeInContext(Ctx);
+      case LLVMBFloatTypeKind:
+        return LLVMHalfTypeInContext(Ctx);
       case LLVMFloatTypeKind:
         return LLVMFloatTypeInContext(Ctx);
       case LLVMDoubleTypeKind:
@@ -137,6 +139,9 @@ struct TypeCloner {
           Clone(LLVMGetElementType(Src)),
           LLVMGetPointerAddressSpace(Src)
         );
+      case LLVMScalableVectorTypeKind:
+        // FIXME: scalable vectors unsupported
+        break;
       case LLVMVectorTypeKind:
         return LLVMVectorType(
           Clone(LLVMGetElementType(Src)),
@@ -577,6 +582,7 @@ struct FunCloner {
       case LLVMAlloca: {
         LLVMTypeRef Ty = CloneType(LLVMGetAllocatedType(Src));
         Dst = LLVMBuildAlloca(Builder, Ty, Name);
+        LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
         break;
       }
       case LLVMLoad: {

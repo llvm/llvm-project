@@ -45,7 +45,7 @@ class CPPStaticMembersTestCase(TestBase):
 
         # should not be available in global scope
         self.expect("expression s_d",
-                    startstr="error: cannot find 's_d' in scope")
+                    startstr="error: use of undeclared identifier 's_d'")
 
         self.runCmd("process continue")
         self.expect("expression m_c",

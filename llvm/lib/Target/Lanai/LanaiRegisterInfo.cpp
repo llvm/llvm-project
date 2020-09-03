@@ -66,11 +66,6 @@ bool LanaiRegisterInfo::requiresRegisterScavenging(
   return true;
 }
 
-bool LanaiRegisterInfo::trackLivenessAfterRegAlloc(
-    const MachineFunction & /*MF*/) const {
-  return true;
-}
-
 static bool isALUArithLoOpcode(unsigned Opcode) {
   switch (Opcode) {
   case Lanai::ADD_I_LO:

@@ -18,11 +18,17 @@
 #include "sanitizer_common.h"
 
 #include <zircon/sanitizer.h>
+#include <zircon/syscalls/object.h>
 
 namespace __sanitizer {
 
 extern uptr MainThreadStackBase, MainThreadStackSize;
 extern sanitizer_shadow_bounds_t ShadowBounds;
+
+struct MemoryMappingLayoutData {
+  InternalMmapVector<zx_info_maps_t> data;
+  size_t current;  // Current index into the vector.
+};
 
 }  // namespace __sanitizer
 

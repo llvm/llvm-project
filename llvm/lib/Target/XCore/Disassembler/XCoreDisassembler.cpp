@@ -37,7 +37,6 @@ public:
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 };
 }
@@ -735,9 +734,10 @@ DecodeL4RSrcDstSrcDstInstruction(MCInst &Inst, unsigned Insn, uint64_t Address,
   return S;
 }
 
-MCDisassembler::DecodeStatus XCoreDisassembler::getInstruction(
-    MCInst &instr, uint64_t &Size, ArrayRef<uint8_t> Bytes, uint64_t Address,
-    raw_ostream &vStream, raw_ostream &cStream) const {
+MCDisassembler::DecodeStatus
+XCoreDisassembler::getInstruction(MCInst &instr, uint64_t &Size,
+                                  ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                  raw_ostream &cStream) const {
   uint16_t insn16;
 
   if (!readInstruction16(Bytes, Address, Size, insn16)) {
@@ -774,7 +774,7 @@ static MCDisassembler *createXCoreDisassembler(const Target &T,
   return new XCoreDisassembler(STI, Ctx);
 }
 
-extern "C" void LLVMInitializeXCoreDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheXCoreTarget(),
                                          createXCoreDisassembler);

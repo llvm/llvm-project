@@ -20,6 +20,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -503,7 +504,7 @@ void UnixAPIPortabilityChecker::checkPreStmt(const CallExpr *CE,
     mgr.registerChecker<CHECKERNAME>();                                        \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##CHECKERNAME(const LangOptions &LO) {              \
+  bool ento::shouldRegister##CHECKERNAME(const CheckerManager &mgr) {              \
     return true;                                                               \
   }
 

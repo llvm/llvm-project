@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // <numeric>
-// UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14
 
 // template<class InputIterator, class T>
 //   T reduce(InputIterator first, InputIterator last, T init);

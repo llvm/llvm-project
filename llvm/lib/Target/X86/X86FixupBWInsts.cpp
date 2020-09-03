@@ -350,7 +350,7 @@ MachineInstr *FixupBWInstPass::tryReplaceExtend(unsigned New32BitOpcode,
     return nullptr;
 
   // Don't interfere with formation of CBW instructions which should be a
-  // shorter encoding than even the MOVSX32rr8. It's also immunte to partial
+  // shorter encoding than even the MOVSX32rr8. It's also immune to partial
   // merge issues on Intel CPUs.
   if (MI->getOpcode() == X86::MOVSX16rr8 &&
       MI->getOperand(0).getReg() == X86::AX &&

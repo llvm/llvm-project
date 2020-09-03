@@ -1,5 +1,4 @@
-//===-- AppleObjCRuntime.cpp -------------------------------------*- C++
-//-*-===//
+//===-- AppleObjCRuntime.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "AppleObjCRuntime.h"
+#include "AppleObjCRuntimeV1.h"
+#include "AppleObjCRuntimeV2.h"
 #include "AppleObjCTrampolineHandler.h"
-
-#include "clang/AST/Type.h"
-
+#include "Plugins/Language/ObjC/NSString.h"
+#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
+#include "Plugins/Process/Utility/HistoryThread.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
@@ -34,10 +35,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
-
-#include "Plugins/Process/Utility/HistoryThread.h"
-#include "Plugins/Language/ObjC/NSString.h"
-#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
+#include "clang/AST/Type.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
@@ -45,6 +43,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(AppleObjCRuntime)
 
 char AppleObjCRuntime::ID = 0;
 
@@ -54,6 +54,16 @@ AppleObjCRuntime::AppleObjCRuntime(Process *process)
     : ObjCLanguageRuntime(process), m_read_objc_library(false),
       m_objc_trampoline_handler_up(), m_Foundation_major() {
   ReadObjCLibraryIfNeeded(process->GetTarget().GetImages());
+}
+
+void AppleObjCRuntime::Initialize() {
+  AppleObjCRuntimeV2::Initialize();
+  AppleObjCRuntimeV1::Initialize();
+}
+
+void AppleObjCRuntime::Terminate() {
+  AppleObjCRuntimeV2::Terminate();
+  AppleObjCRuntimeV1::Terminate();
 }
 
 bool AppleObjCRuntime::GetObjectDescription(Stream &str, ValueObject &valobj) {
@@ -240,7 +250,8 @@ Address *AppleObjCRuntime::GetPrintForDebuggerAddr() {
 
     contexts.GetContextAtIndex(0, context);
 
-    m_PrintForDebugger_addr.reset(new Address(context.symbol->GetAddress()));
+    m_PrintForDebugger_addr =
+        std::make_unique<Address>(context.symbol->GetAddress());
   }
 
   return m_PrintForDebugger_addr.get();
@@ -336,8 +347,8 @@ bool AppleObjCRuntime::ReadObjCLibrary(const ModuleSP &module_sp) {
   // Maybe check here and if we have a handler already, and the UUID of this
   // module is the same as the one in the current module, then we don't have to
   // reread it?
-  m_objc_trampoline_handler_up.reset(
-      new AppleObjCTrampolineHandler(m_process->shared_from_this(), module_sp));
+  m_objc_trampoline_handler_up = std::make_unique<AppleObjCTrampolineHandler>(
+      m_process->shared_from_this(), module_sp);
   if (m_objc_trampoline_handler_up != nullptr) {
     m_read_objc_library = true;
     return true;
@@ -480,7 +491,7 @@ ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(
 
   auto descriptor = GetClassDescriptor(*cpp_exception);
   if (!descriptor || !descriptor->IsValid()) return ValueObjectSP();
-  
+
   while (descriptor) {
     ConstString class_name(descriptor->GetClassName());
     if (class_name == "NSException")
@@ -541,8 +552,8 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
     if (error.Fail()) return ThreadSP();
 
     lldb::offset_t data_offset = 0;
-    auto dict_entry_key = data.GetPointer(&data_offset);
-    auto dict_entry_value = data.GetPointer(&data_offset);
+    auto dict_entry_key = data.GetAddress(&data_offset);
+    auto dict_entry_value = data.GetAddress(&data_offset);
 
     auto key_nsstring = objc_object_from_address(dict_entry_key, "key");
     StreamString key_summary;

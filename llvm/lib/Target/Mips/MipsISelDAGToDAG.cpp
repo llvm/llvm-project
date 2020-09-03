@@ -65,7 +65,7 @@ bool MipsDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
 /// getGlobalBaseReg - Output the instructions required to put the
 /// GOT address into a register.
 SDNode *MipsDAGToDAGISel::getGlobalBaseReg() {
-  Register GlobalBaseReg = MF->getInfo<MipsFunctionInfo>()->getGlobalBaseReg();
+  Register GlobalBaseReg = MF->getInfo<MipsFunctionInfo>()->getGlobalBaseReg(*MF);
   return CurDAG->getRegister(GlobalBaseReg, getTargetLowering()->getPointerTy(
                                                 CurDAG->getDataLayout()))
       .getNode();
@@ -253,7 +253,7 @@ bool MipsDAGToDAGISel::selectVecAddAsVecSubIfProfitable(SDNode *Node) {
   SDLoc DL(Node);
 
   SDValue NegC = CurDAG->FoldConstantArithmetic(
-      ISD::SUB, DL, VT, CurDAG->getConstant(0, DL, VT).getNode(), C.getNode());
+      ISD::SUB, DL, VT, {CurDAG->getConstant(0, DL, VT), C});
   assert(NegC && "Constant-folding failed!");
   SDValue NewNode = CurDAG->getNode(ISD::SUB, DL, VT, X, NegC);
 

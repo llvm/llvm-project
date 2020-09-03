@@ -38,13 +38,13 @@ public:
                    bool KillSrc) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, unsigned SrcReg,
+                           MachineBasicBlock::iterator MBBI, Register SrcReg,
                            bool IsKill, int FrameIndex,
                            const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) const override;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, unsigned DstReg,
+                            MachineBasicBlock::iterator MBBI, Register DstReg,
                             int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
@@ -133,5 +133,24 @@ public:
 protected:
   const RISCVSubtarget &STI;
 };
-}
+
+namespace RISCV {
+// Match with the definitions in RISCVInstrFormatsV.td
+enum RVVConstraintType {
+  NoConstraint = 0,
+  WidenV = 1,
+  WidenW = 2,
+  WidenCvt = 3,
+  Narrow = 4,
+  Iota = 5,
+  SlideUp = 6,
+  Vrgather = 7,
+  Vcompress = 8,
+
+  ConstraintOffset = 5,
+  ConstraintMask = 0b1111
+};
+} // end namespace RISCV
+
+} // end namespace llvm
 #endif

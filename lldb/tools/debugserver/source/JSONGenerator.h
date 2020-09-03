@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __JSONGenerator_h_
-#define __JSONGenerator_h_
-
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_JSONGENERATOR_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_JSONGENERATOR_H
 
 #include <iomanip>
 #include <sstream>
@@ -311,4 +310,4 @@ public:
 
 }; // class JSONGenerator
 
-#endif // __JSONGenerator_h_
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_JSONGENERATOR_H

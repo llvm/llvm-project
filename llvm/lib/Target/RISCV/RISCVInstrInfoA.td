@@ -20,7 +20,7 @@
 def AtomicMemOpOperand : AsmOperandClass {
   let Name = "AtomicMemOpOperand";
   let RenderMethod = "addRegOperands";
-  let PredicateMethod = "isReg";
+  let PredicateMethod = "isGPR";
   let ParserMethod = "parseAtomicMemOp";
 }
 
@@ -77,31 +77,51 @@ multiclass AtomicStPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy> {
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtA] in {
-defm LR_W       : LR_r_aq_rl<0b010, "lr.w">;
-defm SC_W       : AMO_rr_aq_rl<0b00011, 0b010, "sc.w">;
-defm AMOSWAP_W  : AMO_rr_aq_rl<0b00001, 0b010, "amoswap.w">;
-defm AMOADD_W   : AMO_rr_aq_rl<0b00000, 0b010, "amoadd.w">;
-defm AMOXOR_W   : AMO_rr_aq_rl<0b00100, 0b010, "amoxor.w">;
-defm AMOAND_W   : AMO_rr_aq_rl<0b01100, 0b010, "amoand.w">;
-defm AMOOR_W    : AMO_rr_aq_rl<0b01000, 0b010, "amoor.w">;
-defm AMOMIN_W   : AMO_rr_aq_rl<0b10000, 0b010, "amomin.w">;
-defm AMOMAX_W   : AMO_rr_aq_rl<0b10100, 0b010, "amomax.w">;
-defm AMOMINU_W  : AMO_rr_aq_rl<0b11000, 0b010, "amominu.w">;
-defm AMOMAXU_W  : AMO_rr_aq_rl<0b11100, 0b010, "amomaxu.w">;
+defm LR_W       : LR_r_aq_rl<0b010, "lr.w">, Sched<[WriteAtomicLDW, ReadAtomicLDW]>;
+defm SC_W       : AMO_rr_aq_rl<0b00011, 0b010, "sc.w">,
+                  Sched<[WriteAtomicSTW, ReadAtomicSTW, ReadAtomicSTW]>;
+defm AMOSWAP_W  : AMO_rr_aq_rl<0b00001, 0b010, "amoswap.w">,
+                  Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
+defm AMOADD_W   : AMO_rr_aq_rl<0b00000, 0b010, "amoadd.w">,
+                  Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
+defm AMOXOR_W   : AMO_rr_aq_rl<0b00100, 0b010, "amoxor.w">,
+                  Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
+defm AMOAND_W   : AMO_rr_aq_rl<0b01100, 0b010, "amoand.w">,
+                  Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
+defm AMOOR_W    : AMO_rr_aq_rl<0b01000, 0b010, "amoor.w">,
+                  Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
+defm AMOMIN_W   : AMO_rr_aq_rl<0b10000, 0b010, "amomin.w">,
+                  Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
+defm AMOMAX_W   : AMO_rr_aq_rl<0b10100, 0b010, "amomax.w">,
+                  Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
+defm AMOMINU_W  : AMO_rr_aq_rl<0b11000, 0b010, "amominu.w">,
+                  Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
+defm AMOMAXU_W  : AMO_rr_aq_rl<0b11100, 0b010, "amomaxu.w">,
+                  Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
 } // Predicates = [HasStdExtA]
 
 let Predicates = [HasStdExtA, IsRV64] in {
-defm LR_D       : LR_r_aq_rl<0b011, "lr.d">;
-defm SC_D       : AMO_rr_aq_rl<0b00011, 0b011, "sc.d">;
-defm AMOSWAP_D  : AMO_rr_aq_rl<0b00001, 0b011, "amoswap.d">;
-defm AMOADD_D   : AMO_rr_aq_rl<0b00000, 0b011, "amoadd.d">;
-defm AMOXOR_D   : AMO_rr_aq_rl<0b00100, 0b011, "amoxor.d">;
-defm AMOAND_D   : AMO_rr_aq_rl<0b01100, 0b011, "amoand.d">;
-defm AMOOR_D    : AMO_rr_aq_rl<0b01000, 0b011, "amoor.d">;
-defm AMOMIN_D   : AMO_rr_aq_rl<0b10000, 0b011, "amomin.d">;
-defm AMOMAX_D   : AMO_rr_aq_rl<0b10100, 0b011, "amomax.d">;
-defm AMOMINU_D  : AMO_rr_aq_rl<0b11000, 0b011, "amominu.d">;
-defm AMOMAXU_D  : AMO_rr_aq_rl<0b11100, 0b011, "amomaxu.d">;
+defm LR_D       : LR_r_aq_rl<0b011, "lr.d">, Sched<[WriteAtomicLDD, ReadAtomicLDD]>;
+defm SC_D       : AMO_rr_aq_rl<0b00011, 0b011, "sc.d">,
+                  Sched<[WriteAtomicSTD, ReadAtomicSTD, ReadAtomicSTD]>;
+defm AMOSWAP_D  : AMO_rr_aq_rl<0b00001, 0b011, "amoswap.d">,
+                  Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
+defm AMOADD_D   : AMO_rr_aq_rl<0b00000, 0b011, "amoadd.d">,
+                  Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
+defm AMOXOR_D   : AMO_rr_aq_rl<0b00100, 0b011, "amoxor.d">,
+                  Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
+defm AMOAND_D   : AMO_rr_aq_rl<0b01100, 0b011, "amoand.d">,
+                  Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
+defm AMOOR_D    : AMO_rr_aq_rl<0b01000, 0b011, "amoor.d">,
+                  Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
+defm AMOMIN_D   : AMO_rr_aq_rl<0b10000, 0b011, "amomin.d">,
+                  Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
+defm AMOMAX_D   : AMO_rr_aq_rl<0b10100, 0b011, "amomax.d">,
+                  Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
+defm AMOMINU_D  : AMO_rr_aq_rl<0b11000, 0b011, "amominu.d">,
+                  Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
+defm AMOMAXU_D  : AMO_rr_aq_rl<0b11100, 0b011, "amomaxu.d">,
+                  Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
 } // Predicates = [HasStdExtA, IsRV64]
 
 //===----------------------------------------------------------------------===//
@@ -215,13 +235,13 @@ class PseudoMaskedAMOUMinUMax
 
 class PseudoMaskedAMOPat<Intrinsic intrin, Pseudo AMOInst>
     : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering),
-          (AMOInst GPR:$addr, GPR:$incr, GPR:$mask, imm:$ordering)>;
+          (AMOInst GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering)>;
 
 class PseudoMaskedAMOMinMaxPat<Intrinsic intrin, Pseudo AMOInst>
     : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, GPR:$shiftamt,
            timm:$ordering),
           (AMOInst GPR:$addr, GPR:$incr, GPR:$mask, GPR:$shiftamt,
-           imm:$ordering)>;
+           timm:$ordering)>;
 
 def PseudoMaskedAtomicSwap32 : PseudoMaskedAMO;
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_xchg_i32,
@@ -290,7 +310,7 @@ def PseudoMaskedCmpXchg32
 def : Pat<(int_riscv_masked_cmpxchg_i32
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering),
           (PseudoMaskedCmpXchg32
-            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, imm:$ordering)>;
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
 
 } // Predicates = [HasStdExtA]
 
@@ -367,5 +387,5 @@ defm : PseudoCmpXchgPat<"atomic_cmp_swap_64", PseudoCmpXchg64>;
 def : Pat<(int_riscv_masked_cmpxchg_i64
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering),
           (PseudoMaskedCmpXchg32
-            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, imm:$ordering)>;
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
 } // Predicates = [HasStdExtA, IsRV64]

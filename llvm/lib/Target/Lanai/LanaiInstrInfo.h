@@ -54,23 +54,24 @@ public:
   void
   storeRegToStackSlot(MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator Position,
-                      unsigned SourceRegister, bool IsKill, int FrameIndex,
+                      Register SourceRegister, bool IsKill, int FrameIndex,
                       const TargetRegisterClass *RegisterClass,
                       const TargetRegisterInfo *RegisterInfo) const override;
 
   void
   loadRegFromStackSlot(MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator Position,
-                       unsigned DestinationRegister, int FrameIndex,
+                       Register DestinationRegister, int FrameIndex,
                        const TargetRegisterClass *RegisterClass,
                        const TargetRegisterInfo *RegisterInfo) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  bool getMemOperandWithOffset(const MachineInstr &LdSt,
-                               const MachineOperand *&BaseOp,
-                               int64_t &Offset,
-                               const TargetRegisterInfo *TRI) const override;
+  bool getMemOperandsWithOffsetWidth(
+      const MachineInstr &LdSt,
+      SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
+      bool &OffsetIsScalable, unsigned &Width,
+      const TargetRegisterInfo *TRI) const override;
 
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
@@ -94,15 +95,15 @@ public:
   // For a comparison instruction, return the source registers in SrcReg and
   // SrcReg2 if having two register operands, and the value it compares against
   // in CmpValue. Return true if the comparison instruction can be analyzed.
-  bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
-                      unsigned &SrcReg2, int &CmpMask,
+  bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                      Register &SrcReg2, int &CmpMask,
                       int &CmpValue) const override;
 
   // See if the comparison instruction can be converted into something more
   // efficient. E.g., on Lanai register-register instructions can set the flag
   // register, obviating the need for a separate compare.
-  bool optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
-                            unsigned SrcReg2, int CmpMask, int CmpValue,
+  bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
+                            Register SrcReg2, int CmpMask, int CmpValue,
                             const MachineRegisterInfo *MRI) const override;
 
   // Analyze the given select instruction, returning true if it cannot be

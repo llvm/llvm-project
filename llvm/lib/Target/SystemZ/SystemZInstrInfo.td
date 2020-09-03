@@ -29,6 +29,15 @@ let hasNoSchedulingInfo = 1, hasSideEffects = 1 in {
 def ADJDYNALLOC : Pseudo<(outs GR64:$dst), (ins dynalloc12only:$src),
                          [(set GR64:$dst, dynalloc12only:$src)]>;
 
+let Defs = [R15D, CC], Uses = [R15D], hasNoSchedulingInfo = 1,
+    usesCustomInserter = 1 in
+  def PROBED_ALLOCA : Pseudo<(outs GR64:$dst),
+                             (ins GR64:$oldSP, GR64:$space),
+           [(set GR64:$dst, (z_probed_alloca GR64:$oldSP, GR64:$space))]>;
+
+let Defs = [R1D, R15D, CC], Uses = [R15D], hasNoSchedulingInfo = 1,
+    hasSideEffects = 1 in
+  def PROBED_STACKALLOC : Pseudo<(outs), (ins i64imm:$stacksize), []>;
 
 //===----------------------------------------------------------------------===//
 // Branch instructions
@@ -492,7 +501,7 @@ let Predicates = [FeatureMiscellaneousExtensions3], Uses = [CC] in {
   let isCommutable = 1 in {
     // Expands to SELR or SELFHR or a branch-and-move sequence,
     // depending on the choice of registers.
-    def  SELRMux : CondBinaryRRFaPseudo<"selrmux", GRX32, GRX32, GRX32>;
+    def  SELRMux : CondBinaryRRFaPseudo<"MUXselr", GRX32, GRX32, GRX32>;
     defm SELFHR  : CondBinaryRRFaPair<"selfhr", 0xB9C0, GRH32, GRH32, GRH32>;
     defm SELR    : CondBinaryRRFaPair<"selr",   0xB9F0, GR32, GR32, GR32>;
     defm SELGR   : CondBinaryRRFaPair<"selgr",  0xB9E3, GR64, GR64, GR64>;
@@ -525,13 +534,13 @@ let Predicates = [FeatureLoadStoreOnCond2], Uses = [CC] in {
   let isCommutable = 1 in {
     // Expands to LOCR or LOCFHR or a branch-and-move sequence,
     // depending on the choice of registers.
-    def LOCRMux : CondBinaryRRFPseudo<"locrmux", GRX32, GRX32>;
+    def LOCRMux : CondBinaryRRFPseudo<"MUXlocr", GRX32, GRX32>;
     defm LOCFHR : CondBinaryRRFPair<"locfhr", 0xB9E0, GRH32, GRH32>;
   }
 
   // Load on condition.  Matched via DAG pattern.
   // Expands to LOC or LOCFH, depending on the choice of register.
-  def LOCMux : CondUnaryRSYPseudo<simple_load, GRX32, 4>;
+  defm LOCMux : CondUnaryRSYPseudoAndMemFold<"MUXloc", simple_load, GRX32, 4>;
   defm LOCFH : CondUnaryRSYPair<"locfh", 0xEBE0, simple_load, GRH32, 4>;
 
   // Store on condition.  Expanded from CondStore* pseudos.
@@ -564,7 +573,7 @@ let Predicates = [FeatureLoadStoreOnCond], Uses = [CC] in {
 
   // Load on condition.  Matched via DAG pattern.
   defm LOC  : CondUnaryRSYPair<"loc",  0xEBF2, simple_load, GR32, 4>;
-  defm LOCG : CondUnaryRSYPair<"locg", 0xEBE2, simple_load, GR64, 8>;
+  defm LOCG : CondUnaryRSYPairAndMemFold<"locg", 0xEBE2, simple_load, GR64, 8>;
 
   // Store on condition.  Expanded from CondStore* pseudos.
   defm STOC  : CondStoreRSYPair<"stoc",  0xEBF3, GR32, 4>;
@@ -1348,8 +1357,8 @@ def  MSG  : BinaryRXY<"msg",  0xE30C, mul, GR64, load, 8>;
 
 // Multiplication of memory, setting the condition code.
 let Predicates = [FeatureMiscellaneousExtensions2], Defs = [CC] in {
-  def MSC  : BinaryRXY<"msc",  0xE353, null_frag, GR32, load, 4>;
-  def MSGC : BinaryRXY<"msgc", 0xE383, null_frag, GR64, load, 8>;
+  defm MSC  : BinaryRXYAndPseudo<"msc",  0xE353, null_frag, GR32, load, 4>;
+  defm MSGC : BinaryRXYAndPseudo<"msgc", 0xE383, null_frag, GR64, load, 8>;
 }
 
 // Multiplication of a register, producing two results.

@@ -232,7 +232,7 @@ int main(int argc, const char **argv) {
     llvm::sys::path::native(AssetsPath, IndexJS);
     llvm::sys::path::append(IndexJS, "index.js");
     CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
-                                 DefaultStylesheet.str());
+                                 std::string(DefaultStylesheet.str()));
     CDCtx.FilesToCopy.emplace_back(IndexJS.str());
   }
 
@@ -268,8 +268,7 @@ int main(int argc, const char **argv) {
   Error = false;
   llvm::sys::Mutex IndexMutex;
   // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
-  llvm::ThreadPool Pool(ExecutorConcurrency == 0 ? llvm::hardware_concurrency()
-                                                 : ExecutorConcurrency);
+  llvm::ThreadPool Pool(llvm::hardware_concurrency(ExecutorConcurrency));
   for (auto &Group : USRToBitcode) {
     Pool.async([&]() {
       std::vector<std::unique_ptr<doc::Info>> Infos;
@@ -294,8 +293,9 @@ int main(int argc, const char **argv) {
       }
 
       doc::Info *I = Reduced.get().get();
-      auto InfoPath = getInfoOutputFile(OutDirectory, I->Path, I->extractName(),
-                                        "." + Format);
+      auto InfoPath =
+          getInfoOutputFile(OutDirectory, I->getRelativeFilePath(""),
+                            I->getFileBaseName(), "." + Format);
       if (!InfoPath) {
         llvm::errs() << toString(InfoPath.takeError()) << "\n";
         Error = true;
@@ -304,9 +304,9 @@ int main(int argc, const char **argv) {
       std::error_code FileErr;
       llvm::raw_fd_ostream InfoOS(InfoPath.get(), FileErr,
                                   llvm::sys::fs::OF_None);
-      if (FileErr != OK) {
-        llvm::errs() << "Error opening info file: " << FileErr.message()
-                     << "\n";
+      if (FileErr) {
+        llvm::errs() << "Error opening info file " << InfoPath.get() << ": "
+                     << FileErr.message() << "\n";
         return;
       }
 

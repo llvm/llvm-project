@@ -368,8 +368,7 @@ class ExplodedGraph:
                 self.root_id = node_id
             # Note: when writing tests you don't need to escape everything,
             # even though in a valid dot file everything is escaped.
-            node_label = result.group(2).replace('\\l', '') \
-                                        .replace('&nbsp;', '') \
+            node_label = result.group(2).replace('&nbsp;', '') \
                                         .replace('\\"', '"') \
                                         .replace('\\{', '{') \
                                         .replace('\\}', '}') \
@@ -378,6 +377,13 @@ class ExplodedGraph:
                                         .replace('\\<', '\\\\<') \
                                         .replace('\\>', '\\\\>') \
                                         .rstrip(',')
+            # Handle `\l` separately because a string literal can be in code
+            # like "string\\literal" with the `\l` inside.
+            # Also on Windows macros __FILE__ produces specific delimiters `\`
+            # and a directory or file may starts with the letter `l`.
+            # Find all `\l` (like `,\l`, `}\l`, `[\l`) except `\\l`,
+            # because the literal as a rule containes multiple `\` before `\l`.
+            node_label = re.sub(r'(?<!\\)\\l', '', node_label)
             logging.debug(node_label)
             json_node = json.loads(node_label)
             self.nodes[node_id].construct(node_id, json_node)
@@ -422,8 +428,8 @@ class DotDumpVisitor:
              .replace('}', '\\}') \
              .replace('\\<', '&lt;') \
              .replace('\\>', '&gt;') \
-             .replace('\\l', '<br />') \
              .replace('|', '\\|')
+        s = re.sub(r'(?<!\\)\\l', '<br />', s)
         if self._gray_mode:
             s = re.sub(r'<font color="[a-z0-9]*">', '', s)
             s = re.sub(r'</font>', '', s)

@@ -51,13 +51,13 @@ hook into.
 The first thing we need to do is to define the constraints on inlining
 operations in the Toy dialect. This information is provided through a
 [dialect interface](../../Interfaces.md#dialect-interfaces). This is essentially
-a class containing a set of virtual hooks for which a dialect may provide a
-specialization. In this case, the interface is `DialectInlinerInterface`.
+a class containing a set of virtual hooks which the dialect can override.
+In this case, the interface is `DialectInlinerInterface`.
 
 ```c++
 /// This class defines the interface for handling inlining with Toy operations.
-/// We simplify inherit from the base interface class and provide a
-/// specialization of the necessary methods.
+/// We simplify inherit from the base interface class and override
+/// the necessary methods.
 struct ToyInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
@@ -82,7 +82,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
     // Replace the values directly with the return operands.
     assert(returnOp.getNumOperands() == valuesToRepl.size());
     for (const auto &it : llvm::enumerate(returnOp.getOperands()))
-      valuesToRepl[it.index()]->replaceAllUsesWith(it.value());
+      valuesToRepl[it.index()].replaceAllUsesWith(it.value());
   }
 };
 ```
@@ -108,10 +108,7 @@ To add this interface we just need to include the definition into our operation
 specification file (`Ops.td`):
 
 ```tablegen
-#ifdef MLIR_CALLINTERFACES
-#else
-include "mlir/Analysis/CallInterfaces.td"
-#endif // MLIR_CALLINTERFACES
+include "mlir/Interfaces/CallInterfaces.td"
 ```
 
 and add it to the traits list of `GenericCallOp`:
@@ -150,20 +147,20 @@ Now let's look at a working example:
 
 ```mlir
 func @multiply_transpose(%arg0: tensor<*xf64>, %arg1: tensor<*xf64>) -> tensor<*xf64> {
-  %0 = "toy.transpose"(%arg0) : (tensor<*xf64>) -> tensor<*xf64>
-  %1 = "toy.transpose"(%arg1) : (tensor<*xf64>) -> tensor<*xf64>
-  %2 = "toy.mul"(%0, %1) : (tensor<*xf64>, tensor<*xf64>) -> tensor<*xf64>
-  "toy.return"(%2) : (tensor<*xf64>) -> ()
+  %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64>
+  %1 = toy.transpose(%arg1 : tensor<*xf64>) to tensor<*xf64>
+  %2 = toy.mul %0, %1 : tensor<*xf64>
+  toy.return %2 : tensor<*xf64>
 }
 func @main() {
-  %0 = "toy.constant"() {value = dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>} : () -> tensor<2x3xf64>
-  %1 = "toy.reshape"(%0) : (tensor<2x3xf64>) -> tensor<2x3xf64>
-  %2 = "toy.constant"() {value = dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64>} : () -> tensor<6xf64>
-  %3 = "toy.reshape"(%2) : (tensor<6xf64>) -> tensor<2x3xf64>
-  %4 = "toy.generic_call"(%1, %3) {callee = @multiply_transpose} : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64>
-  %5 = "toy.generic_call"(%3, %1) {callee = @multiply_transpose} : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64>
-  "toy.print"(%5) : (tensor<*xf64>) -> ()
-  "toy.return"() : () -> ()
+  %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
+  %1 = toy.reshape(%0 : tensor<2x3xf64>) to tensor<2x3xf64>
+  %2 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64>
+  %3 = toy.reshape(%2 : tensor<6xf64>) to tensor<2x3xf64>
+  %4 = toy.generic_call @multiply_transpose(%1, %3) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64>
+  %5 = toy.generic_call @multiply_transpose(%3, %1) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64>
+  toy.print %5 : tensor<*xf64>
+  toy.return
 }
 ```
 
@@ -226,8 +223,8 @@ func @main() {
   %4 = "toy.transpose"(%2) : (tensor<*xf64>) -> tensor<*xf64>
   %5 = "toy.transpose"(%3) : (tensor<*xf64>) -> tensor<*xf64>
   %6 = "toy.mul"(%4, %5) : (tensor<*xf64>, tensor<*xf64>) -> tensor<*xf64>
-  "toy.print"(%6) : (tensor<*xf64>) -> ()
-  "toy.return"() : () -> ()
+  toy.print %6 : tensor<*xf64>
+  toy.return
 }
 ```
 
@@ -260,7 +257,7 @@ the operation definition specification (ODS) framework.
 
 The interface is defined by inheriting from `OpInterface`, which takes the name
 to be given to the generated C++ interface class as a template argument. For our
-purposes, we will name the generated class a simpler `ShapeInference`. We also
+purposes, we will simply name the generated class `ShapeInference`. We also
 provide a description for the interface.
 
 ```tablegen
@@ -281,10 +278,7 @@ information.
 
 ```tablegen
 def ShapeInferenceOpInterface : OpInterface<"ShapeInference"> {
-  let description = [{
-    Interface to access a registered method to infer the return types for an
-    operation that can be used during type inference.
-  }];
+  ...
 
   let methods = [
     InterfaceMethod<"Infer and set the output shape for the current operation.",
@@ -310,21 +304,22 @@ inferred as the shape of the inputs.
 ```c++
 /// Infer the output shape of the MulOp, this is required by the shape inference
 /// interface.
-void MulOp::inferShapes() { getResult()->setType(getOperand(0)->getType()); }
+void MulOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
 ```
 
 At this point, each of the necessary Toy operations provide a mechanism by which
 to infer their output shapes. The ShapeInferencePass is a FunctionPass: it will
-runs on each Function in isolation. MLIR also supports general
-[OperationPasses](../../WritingAPass.md#operation-pass) that run on any isolated
+run on each Function in isolation. MLIR also supports general
+[OperationPasses](../../PassManagement.md#operation-pass) that run on any isolated
 operation (i.e. other function-like operations), but here our module only
 contains functions, so there is no need to generalize to all operations.
 
 Implementing such a pass is done by creating a class inheriting from
-`mlir::FunctionPass` and overriding the `runOnFunction()` method:
+`mlir::FunctionPass` and overriding the `runOnFunction()` method.
 
 ```c++
-class ShapeInferencePass : public mlir::FunctionPass<ShapeInferencePass> {
+class ShapeInferencePass
+    : public mlir::PassWrapper<ShapeInferencePass, FunctionPass> {
   void runOnFunction() override {
     FuncOp function = getFunction();
     ...
@@ -332,7 +327,15 @@ class ShapeInferencePass : public mlir::FunctionPass<ShapeInferencePass> {
 };
 ```
 
-The algorithm operates as follows:
+While at it, let's also create a helper method for instantiating the pass:
+
+```c++
+std::unique_ptr<mlir::Pass> mlir::toy::createShapeInferencePass() {
+  return std::make_unique<ShapeInferencePass>();
+}
+```
+
+The shape inference algorithm operates as follows:
 
 1.  Build a worklist containing all the operations that return a dynamically
     shaped tensor: these are the operations that need shape inference.
@@ -344,8 +347,8 @@ The algorithm operates as follows:
     -   infer the shape of its output from the argument types.
 3.  If the worklist is empty, the algorithm succeeded.
 
-When processing an operation, we query if it registered the `ShapeInference`
-interface.
+When processing an operation like described, we query if it registered the
+`ShapeInference` interface, using this code snippet:
 
 ```c++
   // Ask the operation to infer its output shapes.
@@ -374,8 +377,8 @@ func @main() {
   %0 = "toy.constant"() {value = dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>} : () -> tensor<2x3xf64>
   %1 = "toy.transpose"(%0) : (tensor<2x3xf64>) -> tensor<3x2xf64>
   %2 = "toy.mul"(%1, %1) : (tensor<3x2xf64>, tensor<3x2xf64>) -> tensor<3x2xf64>
-  "toy.print"(%2) : (tensor<3x2xf64>) -> ()
-  "toy.return"() : () -> ()
+  toy.print %2 : tensor<3x2xf64>
+  toy.return
 }
 ```
 

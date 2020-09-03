@@ -1,4 +1,4 @@
-//===-- TypeSystem.cpp ------------------------------------------*- C++ -*-===//
+//===-- TypeSystem.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -168,11 +168,6 @@ Status TypeSystem::IsCompatible() {
   // Assume a language is compatible. Override this virtual function
   // in your TypeSystem plug-in if version checking is desired.
   return Status();
-}
-
-ConstString TypeSystem::GetDisplayTypeName(void *type,
-                                           const SymbolContext *sc) {
-  return GetTypeName(type);
 }
 
 ConstString TypeSystem::GetMangledTypeName(void *type) {

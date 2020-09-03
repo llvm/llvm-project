@@ -33,7 +33,7 @@
 ## 0x2200B0 & 0xff8 = 0xB0 = 176
 ## Page(0x2200B8) - Page(0x210000) = 0x10000 = 65536
 ## 0x2200B8 & 0xff8 = 0xB8 = 184
-# CHECK:     _start:
+# CHECK:     <_start>:
 # CHECK-NEXT: 210278: adrp x0, #65536
 # CHECK-NEXT: 21027c: ldr  x0, [x0, #824]
 # CHECK-NEXT: 210280: adrp x0, #65536

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformWindows_h_
-#define liblldb_PlatformWindows_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_WINDOWS_PLATFORMWINDOWS_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_WINDOWS_PLATFORMWINDOWS_H
 
 #include "lldb/Target/RemoteAwarePlatform.h"
 
@@ -36,11 +36,6 @@ public:
   uint32_t GetPluginVersion() override { return 1; }
 
   // lldb_private::Platform functions
-  Status
-  ResolveExecutable(const lldb_private::ModuleSpec &module_spec,
-                    lldb::ModuleSP &module_sp,
-                    const FileSpecList *module_search_paths_ptr) override;
-
   const char *GetDescription() override {
     return GetPluginDescriptionStatic(IsHost());
   }
@@ -81,7 +76,8 @@ public:
   ConstString GetFullNameForDylib(ConstString basename) override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformWindows);
+  PlatformWindows(const PlatformWindows &) = delete;
+  const PlatformWindows &operator=(const PlatformWindows &) = delete;
 
   lldb_private::Status EvaluateLoaderExpression(lldb_private::Process *process,
                                                 const char *expression,
@@ -90,4 +86,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_PlatformWindows_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_WINDOWS_PLATFORMWINDOWS_H

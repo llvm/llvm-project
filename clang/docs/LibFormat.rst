@@ -40,7 +40,7 @@ Style Options
 
 The style options describe specific formatting options that can be used in
 order to make `ClangFormat` comply with different style guides. Currently,
-two style guides are hard-coded:
+several style guides are hard-coded:
 
 .. code-block:: c++
 
@@ -51,6 +51,26 @@ two style guides are hard-coded:
   /// Returns a format style complying with Google's C++ style guide:
   /// http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml.
   FormatStyle getGoogleStyle();
+
+  /// Returns a format style complying with Chromium's style guide:
+  /// https://chromium.googlesource.com/chromium/src/+/master/styleguide/styleguide.md
+  FormatStyle getChromiumStyle();
+
+  /// Returns a format style complying with the GNU coding standards:
+  /// https://www.gnu.org/prep/standards/standards.html
+  FormatStyle getGNUStyle();
+
+  /// Returns a format style complying with Mozilla's style guide
+  /// https://firefox-source-docs.mozilla.org/code-quality/coding-style/index.html
+  FormatStyle getMozillaStyle();
+
+  /// Returns a format style complying with Webkit's style guide:
+  /// https://webkit.org/code-style-guidelines/
+  FormatStyle getWebkitStyle();
+
+  /// Returns a format style complying with Microsoft's style guide:
+  /// https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference
+  FormatStyle getMicrosoftStyle();
 
 These options are also exposed in the :doc:`standalone tools <ClangFormat>`
 through the `-style` option.

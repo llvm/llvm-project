@@ -172,6 +172,13 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::C8);
   Reserved.set(Hexagon::USR_OVF);
 
+  // Leveraging these registers will require more work to recognize
+  // the new semantics posed, Hi/LoVec patterns, etc.
+  // Note well: if enabled, they should be restricted to only
+  // where `HST.useHVXOps() && HST.hasV67Ops()` is true.
+  for (auto Reg : Hexagon_MC::GetVectRegRev())
+    Reserved.set(Reg);
+
   if (MF.getSubtarget<HexagonSubtarget>().hasReservedR19())
     Reserved.set(Hexagon::R19);
 
@@ -196,7 +203,7 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   auto &HII = *HST.getInstrInfo();
   auto &HFI = *HST.getFrameLowering();
 
-  unsigned BP = 0;
+  Register BP;
   int FI = MI.getOperand(FIOp).getIndex();
   // Select the base pointer (BP) and calculate the actual offset from BP
   // to the beginning of the object at index FI.

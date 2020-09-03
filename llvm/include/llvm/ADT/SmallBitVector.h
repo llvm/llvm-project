@@ -287,11 +287,11 @@ public:
   /// Returns -1 if the next unset bit is not found.
   int find_next_unset(unsigned Prev) const {
     if (isSmall()) {
-      ++Prev;
       uintptr_t Bits = getSmallBits();
       // Mask in previous bits.
-      uintptr_t Mask = (uintptr_t(1) << Prev) - 1;
-      Bits |= Mask;
+      Bits |= (uintptr_t(1) << (Prev + 1)) - 1;
+      // Mask in unused bits.
+      Bits |= ~uintptr_t(0) << getSmallSize();
 
       if (Bits == ~uintptr_t(0) || Prev + 1 >= getSmallSize())
         return -1;
@@ -662,6 +662,19 @@ public:
       getPointer()->clearBitsNotInMask(Mask, MaskWords);
   }
 
+  void invalid() {
+    assert(empty());
+    X = (uintptr_t)-1;
+  }
+  bool isInvalid() const { return X == (uintptr_t)-1; }
+
+  ArrayRef<uintptr_t> getData(uintptr_t &Store) const {
+    if (!isSmall())
+      return getPointer()->getData();
+    Store = getSmallBits();
+    return makeArrayRef(Store);
+  }
+
 private:
   template <bool AddBits, bool InvertMask>
   void applyMask(const uint32_t *Mask, unsigned MaskWords) {
@@ -699,6 +712,24 @@ operator^(const SmallBitVector &LHS, const SmallBitVector &RHS) {
   return Result;
 }
 
+template <> struct DenseMapInfo<SmallBitVector> {
+  static inline SmallBitVector getEmptyKey() { return SmallBitVector(); }
+  static inline SmallBitVector getTombstoneKey() {
+    SmallBitVector V;
+    V.invalid();
+    return V;
+  }
+  static unsigned getHashValue(const SmallBitVector &V) {
+    uintptr_t Store;
+    return DenseMapInfo<std::pair<unsigned, ArrayRef<uintptr_t>>>::getHashValue(
+        std::make_pair(V.size(), V.getData(Store)));
+  }
+  static bool isEqual(const SmallBitVector &LHS, const SmallBitVector &RHS) {
+    if (LHS.isInvalid() || RHS.isInvalid())
+      return LHS.isInvalid() == RHS.isInvalid();
+    return LHS == RHS;
+  }
+};
 } // end namespace llvm
 
 namespace std {

@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 
 # Tests --keep-global-symbol when used in combination with --globalize-symbol on
 # a different symbol.

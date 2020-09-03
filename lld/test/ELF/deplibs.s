@@ -1,56 +1,74 @@
 # REQUIRES: x86
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/deplibs-lib_foo.s -o %tfoo.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/deplibs-lib_bar.s -o %tbar.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: echo ".global foo; foo:" | \
+# RUN:   llvm-mc -filetype=obj -triple=x86_64 - -o %tfoo.o
 # RUN: rm -rf %t.dir %t.cwd
 # RUN: mkdir -p %t.dir
 
-# error if dependent libraries cannot be found
+## Error if dependent libraries cannot be found.
 # RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s -DOBJ=%t.o --check-prefix MISSING
-# MISSING: error: [[OBJ]]: unable to find library from dependent library specifier: foo.a
+# MISSING:      error: [[OBJ]]: unable to find library from dependent library specifier: foo.a
 # MISSING-NEXT: error: [[OBJ]]: unable to find library from dependent library specifier: bar
 
-# can ignore dependent libraries
+## Can ignore dependent libraries.
 # RUN: not ld.lld %t.o -o /dev/null --no-dependent-libraries 2>&1 | FileCheck %s --check-prefix IGNORE
 # IGNORE: error: undefined symbol: foo
-# IGNORE: error: undefined symbol: bar
 
-# -r links preserve dependent libraries
+## -r links preserve dependent libraries.
 # RUN: ld.lld %t.o %t.o -r -o %t-r.o
 # RUN: not ld.lld %t-r.o -o /dev/null 2>&1 | sort | FileCheck %s -DOBJ=%t-r.o --check-prefixes MINUSR
-# MINUSR: error: [[OBJ]]: unable to find library from dependent library specifier: bar
+# MINUSR:      error: [[OBJ]]: unable to find library from dependent library specifier: bar
 # MINUSR-NEXT: error: [[OBJ]]: unable to find library from dependent library specifier: foo.a
-# MINUSR-NOT: unable to find library from dependent library specifier
+# MINUSR-NOT:  unable to find library from dependent library specifier
 
-# static archives located relative to library search paths
-# RUN: llvm-ar rc %t.dir/foo.a %tfoo.o
-# RUN: llvm-ar rc %t.dir/libbar.a %tbar.o
-# RUN: ld.lld %t.o -o /dev/null -L %t.dir
-
-# shared objects located relative to library search paths
-# RUN: rm %t.dir/libbar.a
-# RUN: ld.lld -shared -o %t.dir/libbar.so %tbar.o
-# RUN: ld.lld -Bdynamic %t.o -o /dev/null -L %t.dir
-
-# dependent libraries searched for symbols after libraries on the command line
+## Dependent libraries searched for symbols after libraries on the command line.
 # RUN: mkdir -p %t.cwd
 # RUN: cd %t.cwd
+# RUN: llvm-ar rc %t.dir/foo.a %tfoo.o
+# RUN: touch %t.dir/libbar.so
 # RUN: cp %t.dir/foo.a %t.cwd/libcmdline.a
-# RUN: ld.lld %t.o libcmdline.a -o /dev/null -L %t.dir --trace 2>&1 | FileCheck %s -DOBJ=%t.o -DSO=%t.dir --check-prefix CMDLINE --implicit-check-not foo.a
-# CMDLINE: [[OBJ]]
+# RUN: ld.lld %t.o libcmdline.a -o /dev/null -L %t.dir --trace 2>&1 | \
+# RUN:   FileCheck %s -DOBJ=%t.o -DSO=%t.dir --check-prefix CMDLINE \
+# RUN:                --implicit-check-not=foo.a --implicit-check-not=libbar.so
+# CMDLINE:      [[OBJ]]
 # CMDLINE-NEXT: {{^libcmdline\.a}}
-# CMDLINE-NEXT: [[SO]]{{[\\/]}}libbar.so
 
-# libraries can be found from specifiers as if the specifiers were listed on on the command-line.
+## LLD tries to resolve dependent library specifiers in the following order:
+##   1) The literal name in the current working directory.
+##   2) The literal name in a library search path.
+##   3) The name, prefixed with "lib" and suffixed with ".so" or ".a" in a
+##      library search path. This means that a directive of "foo.a" could lead
+##      to a library named "libfoo.a.a" being linked in.
+## When using library search paths for dependent libraries, LLD follows the same
+## rules as for libraries specified on the command line.
 # RUN: cp %t.dir/foo.a %t.cwd/foo.a
-# RUN: ld.lld %t.o -o /dev/null -L %t.dir --trace 2>&1 | FileCheck %s -DOBJ=%t.o -DSO=%t.dir --check-prefix ASIFCMDLINE --implicit-check-not foo.a
-# ASIFCMDLINE: [[OBJ]]
-# ASIFCMDLINE-NEXT: {{^foo\.a}}
-# ASIFCMDLINE-NEXT: [[SO]]{{[\\/]}}libbar.so
+# RUN: cp %t.dir/foo.a %t.dir/libfoo.a.a
+# RUN: ld.lld %t.o -o /dev/null -L %t.dir --trace 2>&1 | \
+# RUN:   FileCheck %s -DOBJ=%t.o -DDIR=%t.dir --check-prefix=CWD \
+# RUN:                --implicit-check-not=foo.a --implicit-check-not=libbar.so
+
+# CWD:      [[OBJ]]
+# CWD-NEXT: {{^foo\.a}}
+
+# RUN: rm %t.cwd/foo.a
+# RUN: ld.lld %t.o -o /dev/null -L %t.dir --trace 2>&1 | \
+# RUN:   FileCheck %s -DOBJ=%t.o -DDIR=%t.dir --check-prefix=PLAIN-DIR \
+# RUN:                --implicit-check-not=foo.a --implicit-check-not=libbar.so
+
+# PLAIN-DIR:      [[OBJ]]
+# PLAIN-DIR-NEXT: [[DIR]]{{[\\/]}}foo.a
+
+# RUN: rm %t.dir/foo.a
+# RUN: ld.lld %t.o -o /dev/null -L %t.dir --trace 2>&1 | \
+# RUN:   FileCheck %s -DOBJ=%t.o -DDIR=%t.dir --check-prefix=LIBA-DIR \
+# RUN:                --implicit-check-not=foo.a --implicit-check-not=libbar.so
+
+# LIBA-DIR:      [[OBJ]]
+# LIBA-DIR-NEXT: [[DIR]]{{[\\/]}}libfoo.a.a
 
     call foo
-    call bar
 .section ".deplibs","MS",@llvm_dependent_libraries,1
-    .asciz  "foo.a"
-    .asciz  "bar"
+    .asciz "foo.a"
+    ## Show that an unneeded archive must be present but may not be linked in.
+    .asciz "bar"

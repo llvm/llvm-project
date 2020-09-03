@@ -96,7 +96,7 @@ static cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
     cl::values(clEnumValN(CB_Never, "never",
                           "Do not use compact branches if possible."),
                clEnumValN(CB_Optimal, "optimal",
-                          "Use compact branches where appropiate (default)."),
+                          "Use compact branches where appropriate (default)."),
                clEnumValN(CB_Always, "always",
                           "Always use compact branches if possible.")));
 
@@ -416,8 +416,14 @@ bool RegDefsUses::update(const MachineInstr &MI, unsigned Begin, unsigned End) {
   for (unsigned I = Begin; I != End; ++I) {
     const MachineOperand &MO = MI.getOperand(I);
 
-    if (MO.isReg() && MO.getReg())
-      HasHazard |= checkRegDefsUses(NewDefs, NewUses, MO.getReg(), MO.isDef());
+    if (MO.isReg() && MO.getReg()) {
+      if (checkRegDefsUses(NewDefs, NewUses, MO.getReg(), MO.isDef())) {
+        LLVM_DEBUG(dbgs() << DEBUG_TYPE ": found register hazard for operand "
+                          << I << ": ";
+                   MO.dump());
+        HasHazard = true;
+      }
+    }
   }
 
   Defs |= NewDefs;
@@ -698,6 +704,8 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
     if (CurrI->isBundle()) {
       LLVM_DEBUG(dbgs() << DEBUG_TYPE ": ignoring BUNDLE instruction: ";
                  CurrI->dump());
+      // However, we still need to update the register def-use information.
+      RegDU.update(*CurrI, 0, CurrI->getNumOperands());
       continue;
     }
 

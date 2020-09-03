@@ -4,7 +4,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/dynamic-reloc.s -o %t3.o
 // RUN: ld.lld -shared %t2.o -soname=so -o %t2.so
 // RUN: ld.lld %t.o %t3.o %t2.so -o %t
-// RUN: llvm-readobj --dynamic-table -r --expand-relocs -S %t | FileCheck %s
+// RUN: llvm-readobj --dynamic-table -r -S %t | FileCheck %s
 
 // CHECK:      Index: 1
 // CHECK-NEXT: Name: .dynsym
@@ -29,17 +29,6 @@
 // CHECK-NEXT:   SHF_EXECINSTR
 // CHECK-NEXT: ]
 
-// CHECK:      Relocations [
-// CHECK-NEXT:   Section ({{.*}}) .rela.plt {
-// CHECK-NEXT:     Relocation {
-// CHECK-NEXT:       Offset:
-// CHECK-NEXT:       Type: R_X86_64_JUMP_SLOT
-// CHECK-NEXT:       Symbol: bar
-// CHECK-NEXT:       Addend: 0x0
-// CHECK-NEXT:     }
-// CHECK-NEXT:   }
-// CHECK-NEXT: ]
-
 // CHECK: DynamicSection [
 // CHECK-NEXT:  Tag                Type                 Name/Value
 // CHECK-NEXT:  0x0000000000000001 NEEDED               Shared library: [so]
@@ -55,6 +44,12 @@
 // CHECK-NEXT:  0x000000006FFFFEF5 GNU_HASH
 // CHECK-NEXT:  0x0000000000000004 HASH
 // CHECK-NEXT:  0x0000000000000000 NULL                 0x0
+// CHECK-NEXT: ]
+
+// CHECK:      Relocations [
+// CHECK-NEXT:   Section ({{.*}}) .rela.plt {
+// CHECK-NEXT:     R_X86_64_JUMP_SLOT bar 0x0
+// CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
 .global _start

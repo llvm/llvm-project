@@ -37,7 +37,7 @@ test0:
     loop        i32      # label1:
     call        something1
     i64.const   1234
-    i32.call    something2
+    call        something2
     i32.const   0
     call_indirect (i32, f64) -> ()
     i32.const   1
@@ -150,7 +150,7 @@ test0:
 # CHECK-NEXT:      loop        i32     # label1:
 # CHECK-NEXT:      call        something1
 # CHECK-NEXT:      i64.const   1234
-# CHECK-NEXT:      i32.call    something2
+# CHECK-NEXT:      call        something2
 # CHECK-NEXT:      i32.const   0
 # CHECK-NEXT:      call_indirect (i32, f64) -> ()
 # CHECK-NEXT:      i32.const   1

@@ -65,7 +65,7 @@ public:
     // FIXME: This is very limited at the moment.
     for (StringRef Arg : Args)
       if (Arg.startswith("-checks="))
-        OverrideOptions.Checks = Arg.substr(strlen("-checks="));
+        OverrideOptions.Checks = std::string(Arg.substr(strlen("-checks=")));
 
     auto Options = std::make_unique<FileOptionsProvider>(
         GlobalOptions, DefaultOptions, OverrideOptions);

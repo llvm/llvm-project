@@ -27,14 +27,14 @@
 
 #include "sanitizer_platform.h"
 #if SANITIZER_FUCHSIA
+#include <zircon/process.h>
+#include <zircon/sanitizer.h>
+#include <zircon/syscalls.h>
+
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_symbolizer_fuchsia.h"
-
-#include <zircon/process.h>
-#include <zircon/sanitizer.h>
-#include <zircon/syscalls.h>
 
 using namespace __sanitizer;
 
@@ -82,7 +82,8 @@ class TracePcGuardController final {
   void TracePcGuard(u32 *guard, uptr pc) {
     atomic_uint32_t *guard_ptr = reinterpret_cast<atomic_uint32_t *>(guard);
     u32 idx = atomic_exchange(guard_ptr, 0, memory_order_relaxed);
-    if (idx > 0) array_[idx] = pc;
+    if (idx > 0)
+      array_[idx] = pc;
   }
 
   void Dump() {
@@ -140,6 +141,10 @@ class TracePcGuardController final {
                         internal_getpid());
       _zx_object_set_property(vmo_, ZX_PROP_NAME, vmo_name_,
                               internal_strlen(vmo_name_));
+      uint64_t size = DataSize();
+      status = _zx_object_set_property(vmo_, ZX_PROP_VMO_CONTENT_SIZE, &size,
+                                       sizeof(size));
+      CHECK_EQ(status, ZX_OK);
 
       // Map the largest possible view we might need into the VMO.  Later
       // we might need to increase the VMO's size before we can use larger
@@ -171,6 +176,10 @@ class TracePcGuardController final {
       next_index_ += num_guards;
 
       zx_status_t status = _zx_vmo_set_size(vmo_, DataSize());
+      CHECK_EQ(status, ZX_OK);
+      uint64_t size = DataSize();
+      status = _zx_object_set_property(vmo_, ZX_PROP_VMO_CONTENT_SIZE, &size,
+                                       sizeof(size));
       CHECK_EQ(status, ZX_OK);
 
       return first_index;
@@ -204,13 +213,15 @@ SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_coverage(const uptr *pcs,
 }
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_guard, u32 *guard) {
-  if (!*guard) return;
+  if (!*guard)
+    return;
   __sancov::pc_guard_controller.TracePcGuard(guard, GET_CALLER_PC() - 1);
 }
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_guard_init,
                              u32 *start, u32 *end) {
-  if (start == end || *start) return;
+  if (start == end || *start)
+    return;
   __sancov::pc_guard_controller.InitTracePcGuard(start, end);
 }
 

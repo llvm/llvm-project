@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SelectHelper_h_
-#define liblldb_SelectHelper_h_
+#ifndef LLDB_UTILITY_SELECTHELPER_H
+#define LLDB_UTILITY_SELECTHELPER_H
 
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
@@ -68,4 +68,4 @@ protected:
   llvm::Optional<std::chrono::steady_clock::time_point> m_end_time;
 };
 
-#endif // liblldb_SelectHelper_h_
+#endif // LLDB_UTILITY_SELECTHELPER_H

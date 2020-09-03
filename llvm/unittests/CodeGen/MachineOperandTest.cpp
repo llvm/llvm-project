@@ -310,7 +310,7 @@ TEST(MachineOperandTest, PrintMetadata) {
   std::string str;
   // Print a MachineOperand containing a metadata node.
   raw_string_ostream OS(str);
-  MO.print(OS, MST, LLT{}, /*PrintDef=*/false, /*IsStandalone=*/false,
+  MO.print(OS, MST, LLT{}, /*OpIdx*/~0U, /*PrintDef=*/false, /*IsStandalone=*/false,
            /*ShouldPrintRegisterTies=*/false, 0, /*TRI=*/nullptr,
            /*IntrinsicInfo=*/nullptr);
   ASSERT_TRUE(OS.str() == "!0");

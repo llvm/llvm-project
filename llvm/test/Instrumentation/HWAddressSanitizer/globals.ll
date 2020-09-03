@@ -7,9 +7,9 @@
 ; CHECK30: @__start_hwasan_globals = external hidden constant [0 x i8]
 ; CHECK30: @__stop_hwasan_globals = external hidden constant [0 x i8]
 
-; CHECK30: @hwasan.note = private constant { i32, i32, i32, [8 x i8], i32, i32 } { i32 8, i32 8, i32 3, [8 x i8] c"LLVM\00\00\00\00", i32 trunc (i64 sub (i64 ptrtoint ([0 x i8]* @__start_hwasan_globals to i64), i64 ptrtoint ({ i32, i32, i32, [8 x i8], i32, i32 }* @hwasan.note to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint ([0 x i8]* @__stop_hwasan_globals to i64), i64 ptrtoint ({ i32, i32, i32, [8 x i8], i32, i32 }* @hwasan.note to i64)) to i32) }, section ".note.hwasan.globals", comdat, align 4
+; CHECK30: @hwasan.note = private constant { i32, i32, i32, [8 x i8], i32, i32 } { i32 8, i32 8, i32 3, [8 x i8] c"LLVM\00\00\00\00", i32 trunc (i64 sub (i64 ptrtoint ([0 x i8]* @__start_hwasan_globals to i64), i64 ptrtoint ({ i32, i32, i32, [8 x i8], i32, i32 }* @hwasan.note to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint ([0 x i8]* @__stop_hwasan_globals to i64), i64 ptrtoint ({ i32, i32, i32, [8 x i8], i32, i32 }* @hwasan.note to i64)) to i32) }, section ".note.hwasan.globals", comdat($hwasan.module_ctor), align 4
 
-; CHECK30: @hwasan.dummy.global = private constant [0 x i8] zeroinitializer, section "hwasan_globals", comdat($hwasan.note), !associated [[NOTE:![0-9]+]]
+; CHECK30: @hwasan.dummy.global = private constant [0 x i8] zeroinitializer, section "hwasan_globals", comdat($hwasan.module_ctor), !associated [[NOTE:![0-9]+]]
 
 ; CHECK30: @four.hwasan = private global { i32, [12 x i8] } { i32 1, [12 x i8] c"\00\00\00\00\00\00\00\00\00\00\00\AC" }, align 16
 ; CHECK30: @four.hwasan.descriptor = private constant { i32, i32 } { i32 trunc (i64 sub (i64 ptrtoint ({ i32, [12 x i8] }* @four.hwasan to i64), i64 ptrtoint ({ i32, i32 }* @four.hwasan.descriptor to i64)) to i32), i32 -1409286140 }, section "hwasan_globals", !associated [[FOUR:![0-9]+]]

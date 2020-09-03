@@ -167,16 +167,17 @@ struct DepCollectorASTListener : public ASTReaderListener {
 };
 } // end anonymous namespace
 
-void DependencyCollector::maybeAddDependency(StringRef Filename, bool FromModule,
-                                            bool IsSystem, bool IsModuleFile,
-                                            bool IsMissing) {
+void DependencyCollector::maybeAddDependency(StringRef Filename,
+                                             bool FromModule, bool IsSystem,
+                                             bool IsModuleFile,
+                                             bool IsMissing) {
   if (sawDependency(Filename, FromModule, IsSystem, IsModuleFile, IsMissing))
     addDependency(Filename);
 }
 
 bool DependencyCollector::addDependency(StringRef Filename) {
   if (Seen.insert(Filename).second) {
-    Dependencies.push_back(Filename);
+    Dependencies.push_back(std::string(Filename));
     return true;
   }
   return false;
@@ -190,8 +191,8 @@ static bool isSpecialFilename(StringRef Filename) {
 }
 
 bool DependencyCollector::sawDependency(StringRef Filename, bool FromModule,
-                                       bool IsSystem, bool IsModuleFile,
-                                       bool IsMissing) {
+                                        bool IsSystem, bool IsModuleFile,
+                                        bool IsMissing) {
   return !isSpecialFilename(Filename) &&
          (needSystemDependencies() || !IsSystem);
 }

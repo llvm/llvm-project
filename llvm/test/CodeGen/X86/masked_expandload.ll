@@ -296,7 +296,7 @@ define <8 x double> @expandload_v8f64_v8i1(double* %base, <8 x double> %src0, <8
 ; SSE-LABEL: expandload_v8f64_v8i1:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    psllw $15, %xmm4
-; SSE-NEXT:    packsswb %xmm0, %xmm4
+; SSE-NEXT:    packsswb %xmm4, %xmm4
 ; SSE-NEXT:    pmovmskb %xmm4, %eax
 ; SSE-NEXT:    testb $1, %al
 ; SSE-NEXT:    jne LBB2_1
@@ -365,7 +365,7 @@ define <8 x double> @expandload_v8f64_v8i1(double* %base, <8 x double> %src0, <8
 ; AVX1-LABEL: expandload_v8f64_v8i1:
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vpsllw $15, %xmm2, %xmm2
-; AVX1-NEXT:    vpacksswb %xmm0, %xmm2, %xmm2
+; AVX1-NEXT:    vpacksswb %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpmovmskb %xmm2, %eax
 ; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    jne LBB2_1
@@ -446,7 +446,7 @@ define <8 x double> @expandload_v8f64_v8i1(double* %base, <8 x double> %src0, <8
 ; AVX2-LABEL: expandload_v8f64_v8i1:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vpsllw $15, %xmm2, %xmm2
-; AVX2-NEXT:    vpacksswb %xmm0, %xmm2, %xmm2
+; AVX2-NEXT:    vpacksswb %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpmovmskb %xmm2, %eax
 ; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    jne LBB2_1
@@ -873,9 +873,9 @@ define <16 x double> @expandload_v16f64_v16i32(double* %base, <16 x double> %src
 ; AVX2-NEXT:    vpcmpeqd %ymm6, %ymm5, %ymm5
 ; AVX2-NEXT:    vpcmpeqd %ymm6, %ymm4, %ymm4
 ; AVX2-NEXT:    vpackssdw %ymm5, %ymm4, %ymm4
-; AVX2-NEXT:    vpermq {{.*#+}} ymm4 = ymm4[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm4, %xmm5
 ; AVX2-NEXT:    vpacksswb %xmm5, %xmm4, %xmm4
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %xmm4, %eax
 ; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    jne LBB3_1
@@ -1311,21 +1311,17 @@ define <16 x float> @expandload_v16f32_const(float* %base, <16 x float> %src0) {
 ;
 ; AVX1OR2-LABEL: expandload_v16f32_const:
 ; AVX1OR2:       ## %bb.0:
-; AVX1OR2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX1OR2-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0],ymm0[1,2,3,4,5,6,7]
-; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
-; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; AVX1OR2-NEXT:    vmovups (%rdi), %xmm0
 ; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
 ; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX1OR2-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0],ymm1[1,2,3,4,5,6,7]
-; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm1[0],mem[0],xmm1[2,3]
+; AVX1OR2-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0],xmm1[1,2,3]
+; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
 ; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; AVX1OR2-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1OR2-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; AVX1OR2-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1OR2-NEXT:    vblendps {{.*#+}} xmm1 = xmm3[0],xmm1[1,2,3]
 ; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
 ; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
@@ -2954,7 +2950,7 @@ define <8 x i16> @expandload_v8i16_v8i16(i16* %base, <8 x i16> %src0, <8 x i16> 
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    pxor %xmm2, %xmm2
 ; SSE-NEXT:    pcmpeqw %xmm1, %xmm2
-; SSE-NEXT:    packsswb %xmm0, %xmm2
+; SSE-NEXT:    packsswb %xmm2, %xmm2
 ; SSE-NEXT:    pmovmskb %xmm2, %eax
 ; SSE-NEXT:    testb $1, %al
 ; SSE-NEXT:    jne LBB11_1
@@ -3024,7 +3020,7 @@ define <8 x i16> @expandload_v8i16_v8i16(i16* %base, <8 x i16> %src0, <8 x i16> 
 ; AVX1OR2:       ## %bb.0:
 ; AVX1OR2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1OR2-NEXT:    vpcmpeqw %xmm2, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpacksswb %xmm0, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vpacksswb %xmm1, %xmm1, %xmm1
 ; AVX1OR2-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    jne LBB11_1

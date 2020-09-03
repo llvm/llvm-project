@@ -112,7 +112,7 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
 ///
 /// \p GetTrapBB is a callable that returns the trap BB to use on failure.
 template <typename GetTrapBBT>
-static void insertBoundsCheck(Value *Or, BuilderTy IRB, GetTrapBBT GetTrapBB) {
+static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
   // check if the comparison is always false
   ConstantInt *C = dyn_cast_or_null<ConstantInt>(Or);
   if (C) {
@@ -154,17 +154,22 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     Value *Or = nullptr;
     BuilderTy IRB(I.getParent(), BasicBlock::iterator(&I), TargetFolder(DL));
     if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-      Or = getBoundsCheckCond(LI->getPointerOperand(), LI, DL, TLI,
-                              ObjSizeEval, IRB, SE);
+      if (!LI->isVolatile())
+        Or = getBoundsCheckCond(LI->getPointerOperand(), LI, DL, TLI,
+                                ObjSizeEval, IRB, SE);
     } else if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-      Or = getBoundsCheckCond(SI->getPointerOperand(), SI->getValueOperand(),
-                              DL, TLI, ObjSizeEval, IRB, SE);
+      if (!SI->isVolatile())
+        Or = getBoundsCheckCond(SI->getPointerOperand(), SI->getValueOperand(),
+                                DL, TLI, ObjSizeEval, IRB, SE);
     } else if (AtomicCmpXchgInst *AI = dyn_cast<AtomicCmpXchgInst>(&I)) {
-      Or = getBoundsCheckCond(AI->getPointerOperand(), AI->getCompareOperand(),
-                              DL, TLI, ObjSizeEval, IRB, SE);
+      if (!AI->isVolatile())
+        Or =
+            getBoundsCheckCond(AI->getPointerOperand(), AI->getCompareOperand(),
+                               DL, TLI, ObjSizeEval, IRB, SE);
     } else if (AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(&I)) {
-      Or = getBoundsCheckCond(AI->getPointerOperand(), AI->getValOperand(), DL,
-                              TLI, ObjSizeEval, IRB, SE);
+      if (!AI->isVolatile())
+        Or = getBoundsCheckCond(AI->getPointerOperand(), AI->getValOperand(),
+                                DL, TLI, ObjSizeEval, IRB, SE);
     }
     if (Or)
       TrapInfo.push_back(std::make_pair(&I, Or));

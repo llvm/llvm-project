@@ -221,7 +221,7 @@ public:
      * When it is we'll want to look at them somewhere here and use that
      * information to add to our schedule choice. We shouldn't need to pass
      * them on, they merely affect which schedule we can legally choose for
-     * various dynamic cases. (In paritcular, whether or not a stealing scheme
+     * various dynamic cases. (In particular, whether or not a stealing scheme
      * is legal).
      */
     schedule = SCHEDULE_WITHOUT_MODIFIERS(schedule);
@@ -753,56 +753,4 @@ void __kmpc_for_static_init_8u_simple_generic(
 
 EXTERN void __kmpc_for_static_fini(kmp_Ident *loc, int32_t global_tid) {
   PRINT0(LD_IO, "call kmpc_for_static_fini\n");
-}
-
-namespace {
-INLINE void syncWorkersInGenericMode(uint32_t NumThreads) {
-  int NumWarps = ((NumThreads + WARPSIZE - 1) / WARPSIZE);
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-  // On Volta and newer architectures we require that all lanes in
-  // a warp (at least, all present for the kernel launch) participate in the
-  // barrier.  This is enforced when launching the parallel region.  An
-  // exception is when there are < WARPSIZE workers.  In this case only 1 worker
-  // is started, so we don't need a barrier.
-  if (NumThreads > 1) {
-#endif
-    __kmpc_impl_named_sync(L1_BARRIER, WARPSIZE * NumWarps);
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-  }
-#endif
-}
-}; // namespace
-
-EXTERN void __kmpc_reduce_conditional_lastprivate(kmp_Ident *loc, int32_t gtid,
-                                                  int32_t varNum, void *array) {
-  PRINT0(LD_IO, "call to __kmpc_reduce_conditional_lastprivate(...)\n");
-  ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc),
-          "Expected non-SPMD mode + initialized runtime.");
-
-  omptarget_nvptx_TeamDescr &teamDescr = getMyTeamDescriptor();
-  uint32_t NumThreads = GetNumberOfOmpThreads(checkSPMDMode(loc));
-  uint64_t *Buffer = teamDescr.getLastprivateIterBuffer();
-  for (unsigned i = 0; i < varNum; i++) {
-    // Reset buffer.
-    if (gtid == 0)
-      *Buffer = 0; // Reset to minimum loop iteration value.
-
-    // Barrier.
-    syncWorkersInGenericMode(NumThreads);
-
-    // Atomic max of iterations.
-    uint64_t *varArray = (uint64_t *)array;
-    uint64_t elem = varArray[i];
-    (void)__kmpc_atomic_max((unsigned long long int *)Buffer,
-                            (unsigned long long int)elem);
-
-    // Barrier.
-    syncWorkersInGenericMode(NumThreads);
-
-    // Read max value and update thread private array.
-    varArray[i] = *Buffer;
-
-    // Barrier.
-    syncWorkersInGenericMode(NumThreads);
-  }
 }

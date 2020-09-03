@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -basicaa -polly-stmt-granularity=bb -polly-scops -analyze -polly-allow-modref-calls \
+; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-scops -analyze -polly-allow-modref-calls \
 ; RUN:  < %s | FileCheck %s
-; RUN: opt %loadPolly -basicaa -polly-stmt-granularity=bb -polly-codegen -polly-allow-modref-calls \
+; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-codegen -polly-allow-modref-calls \
 ; RUN: -disable-output < %s
 ;
 ; Verify that we model the may-write access of the prefetch intrinsic

@@ -32,3 +32,31 @@ define void @baz({ float, double }* byval %arg)
     call void @foo({ float, double }* byval %arg)
     ret void
 }
+
+declare void @foo2({ float, double }* byval, { float, double }* byval, { float, double }* byval, { float, double }* byval, { float, double }* byval, i64 %f)
+@data = external constant { float, double }
+
+define void @test() {
+; CHECK-LABEL: @test
+; CHECK:      movq    (%rax), %rcx
+; CHECK-NEXT: movq    8(%rax), %rax
+; CHECK-NEXT: movq    %rax, 120(%rsp)
+; CHECK-NEXT: movq    %rcx, 112(%rsp)
+; CHECK-NEXT: movq    %rcx, 96(%rsp)
+; CHECK-NEXT: movq    %rax, 104(%rsp)
+; CHECK-NEXT: movq    %rcx, 80(%rsp)
+; CHECK-NEXT: movq    %rax, 88(%rsp)
+; CHECK-NEXT: movq    %rcx, 64(%rsp)
+; CHECK-NEXT: movq    %rax, 72(%rsp)
+; CHECK-NEXT: movq    %rax, 56(%rsp)
+; CHECK-NEXT: movq    %rcx, 48(%rsp)
+; CHECK-NEXT: leaq    48(%rsp), %rax
+; CHECK-NEXT: movq    %rax, 32(%rsp)
+; CHECK-NEXT: movq    $10, 40(%rsp)
+; CHECK-NEXT: leaq    112(%rsp), %rcx
+; CHECK-NEXT: leaq    96(%rsp), %rdx
+; CHECK-NEXT: leaq    80(%rsp), %r8
+; CHECK-NEXT: leaq    64(%rsp), %r9
+  call void @foo2({ float, double }* byval @G, { float, double }* byval @G, { float, double }* byval @G, { float, double }* byval @G, { float, double }* byval @G, i64 10)
+  ret void
+}

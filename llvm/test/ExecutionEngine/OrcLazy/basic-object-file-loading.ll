@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -o %t %p/Inputs/basic-object-source.ll
+; RUN: llc -filetype=obj -o %t %p/Inputs/foo-return-i32-0.ll
 ; RUN: lli -jit-kind=orc-lazy -extra-object %t %s
 ;
 ; Check that we can load an object file and call a function in it.

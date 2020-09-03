@@ -14,7 +14,6 @@ stack:
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg:  $sgpr0_sgpr1_sgpr2_sgpr3
-  scratchWaveOffsetReg: $sgpr34
   frameOffsetReg:  $sgpr33
   stackPtrOffsetReg:  $sgpr32
 
@@ -23,15 +22,13 @@ body:             |
     liveins: $vgpr1
 
     ; CHECK-LABEL: name: scavenge_sgpr_pei
-    ; CHECK: liveins: $vgpr1
+    ; CHECK: liveins: $sgpr27, $vgpr1
     ; CHECK: $sgpr27 = frame-setup COPY $sgpr33
     ; CHECK: $sgpr4 = frame-setup S_ADD_U32 $sgpr32, 262080, implicit-def $scc
     ; CHECK: $sgpr33 = frame-setup S_AND_B32 killed $sgpr4, 4294705152, implicit-def $scc
     ; CHECK: $sgpr32 = frame-setup S_ADD_U32 $sgpr32, 524288, implicit-def $scc
     ; CHECK: S_NOP 0, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $sgpr8, implicit-def $sgpr9, implicit-def $sgpr10, implicit-def $sgpr11, implicit-def $sgpr12, implicit-def $sgpr13, implicit-def $sgpr14, implicit-def $sgpr15, implicit-def $sgpr16, implicit-def $sgpr17, implicit-def $sgpr18, implicit-def $sgpr19, implicit-def $sgpr20, implicit-def $sgpr21, implicit-def $sgpr22, implicit-def $sgpr23, implicit-def $sgpr24, implicit-def $sgpr25, implicit-def $sgpr26, implicit-def $sgpr17, implicit-def $sgpr28, implicit-def $sgpr29, implicit-def $sgpr30, implicit-def $sgpr31, implicit-def $vcc
-    ; CHECK: $sgpr33 = S_SUB_U32 $sgpr33, $sgpr34, implicit-def $scc
     ; CHECK: $vgpr2 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
-    ; CHECK: $sgpr33 = S_ADD_U32 $sgpr33, $sgpr34, implicit-def $scc
     ; CHECK: $vgpr0 = V_OR_B32_e32 killed $vgpr2, $vgpr1, implicit $exec, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19, implicit $sgpr20, implicit $sgpr21, implicit $sgpr22, implicit $sgpr23, implicit $sgpr24, implicit $sgpr25, implicit $sgpr26, implicit $sgpr17, implicit $sgpr28, implicit $sgpr29, implicit $sgpr30, implicit $sgpr31
     ; CHECK: $sgpr32 = frame-destroy S_SUB_U32 $sgpr32, 524288, implicit-def $scc
     ; CHECK: $sgpr33 = frame-setup COPY $sgpr27

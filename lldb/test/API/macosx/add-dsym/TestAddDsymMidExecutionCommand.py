@@ -36,7 +36,7 @@ class AddDsymMidExecutionCommandCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
 
         # The stop reason of the thread should be breakpoint.
-        self.assertTrue(self.process.GetState() == lldb.eStateStopped,
+        self.assertEquals(self.process.GetState(), lldb.eStateStopped,
                         STOPPED_DUE_TO_BREAKPOINT)
 
         self.runCmd("add-dsym " +

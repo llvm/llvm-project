@@ -17,18 +17,18 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @main() nounwind uwtable {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    pextrb $1, %xmm0, %ecx
-; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    pextrb $1, %xmm1, %eax
+; CHECK-NEXT:    movq {{.*}}(%rip), %rsi
+; CHECK-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-NEXT:    movq %rsi, %rdx
+; CHECK-NEXT:    shrq $8, %rdx
+; CHECK-NEXT:    movsbl %al, %ecx
+; CHECK-NEXT:    shrq $8, %rax
 ; CHECK-NEXT:    cbtw
-; CHECK-NEXT:    pextrb $0, %xmm0, %edx
-; CHECK-NEXT:    pextrb $0, %xmm1, %esi
-; CHECK-NEXT:    idivb %cl
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    movsbl %sil, %eax
 ; CHECK-NEXT:    idivb %dl
-; CHECK-NEXT:    movzbl %cl, %ecx
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    idivb %sil
+; CHECK-NEXT:    movzbl %dl, %ecx
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    pinsrb $1, %ecx, %xmm0

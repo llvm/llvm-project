@@ -2,6 +2,14 @@
 # RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GFX9,GFX9_10 %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GFX10,GFX9_10 %s
 
+--- |
+    define amdgpu_kernel void @max-counter-lgkmcnt() #0 { ret void }
+    define amdgpu_kernel void @max-counter-vmcnt() #0 { ret void }
+    define amdgpu_kernel void @max-counter-expcnt() #0 { ret void }
+
+    attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
+...
+
 # Check that we handle cases where a counter has overflowed.
 
 # Overflows lgkmcnt with gfx9 but not with gfx10.
@@ -16,21 +24,21 @@ body:             |
     ; GFX9: $vgpr34_vgpr35 = DS_READ2_B32_gfx9 renamable $vgpr99, 34, 35, 0, implicit $exec
     ; GFX9-NOT: S_WAITCNT 53119
     ; GFX9-NEXT: S_WAITCNT 52863
-    ; GFX9-NEXT: $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $exec
-    ; GFX9-NEXT: $vgpr2 = V_MAC_F32_e32 0, $vgpr3, $vgpr2, implicit $exec
-    ; GFX9-NEXT: $vgpr4 = V_MAC_F32_e32 0, $vgpr5, $vgpr4, implicit $exec
-    ; GFX9-NEXT: $vgpr6 = V_MAC_F32_e32 0, $vgpr7, $vgpr6, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr2 = V_MAC_F32_e32 0, $vgpr3, $vgpr2, implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr4 = V_MAC_F32_e32 0, $vgpr5, $vgpr4, implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr6 = V_MAC_F32_e32 0, $vgpr7, $vgpr6, implicit $mode, implicit $exec
     ; GFX9-NEXT: S_ENDPGM 0
     ; GFX10-LABEL: name: max-counter-lgkmcnt
     ; GFX10: $vgpr34_vgpr35 = DS_READ2_B32_gfx9 renamable $vgpr99, 34, 35, 0, implicit $exec
     ; GFX10-NEXT: S_WAITCNT 53631
-    ; GFX10-NEXT: $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $exec
+    ; GFX10-NEXT: $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_WAITCNT 53375
-    ; GFX10-NEXT: $vgpr2 = V_MAC_F32_e32 0, $vgpr3, $vgpr2, implicit $exec
+    ; GFX10-NEXT: $vgpr2 = V_MAC_F32_e32 0, $vgpr3, $vgpr2, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_WAITCNT 53119
-    ; GFX10-NEXT: $vgpr4 = V_MAC_F32_e32 0, $vgpr5, $vgpr4, implicit $exec
+    ; GFX10-NEXT: $vgpr4 = V_MAC_F32_e32 0, $vgpr5, $vgpr4, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_WAITCNT 52863
-    ; GFX10-NEXT: $vgpr6 = V_MAC_F32_e32 0, $vgpr7, $vgpr6, implicit $exec
+    ; GFX10-NEXT: $vgpr6 = V_MAC_F32_e32 0, $vgpr7, $vgpr6, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1 = DS_READ2_B32_gfx9 renamable $vgpr99, 0, 1, 0, implicit $exec
     $vgpr2_vgpr3 = DS_READ2_B32_gfx9 renamable $vgpr99, 2, 3, 0, implicit $exec
@@ -50,10 +58,10 @@ body:             |
     $vgpr30_vgpr31 = DS_READ2_B32_gfx9 renamable $vgpr99, 30, 31, 0, implicit $exec
     $vgpr32_vgpr33 = DS_READ2_B32_gfx9 renamable $vgpr99, 32, 33, 0, implicit $exec
     $vgpr34_vgpr35 = DS_READ2_B32_gfx9 renamable $vgpr99, 34, 35, 0, implicit $exec
-    $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $exec
-    $vgpr2 = V_MAC_F32_e32 0, $vgpr3, $vgpr2, implicit $exec
-    $vgpr4 = V_MAC_F32_e32 0, $vgpr5, $vgpr4, implicit $exec
-    $vgpr6 = V_MAC_F32_e32 0, $vgpr7, $vgpr6, implicit $exec
+    $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $mode, implicit $exec
+    $vgpr2 = V_MAC_F32_e32 0, $vgpr3, $vgpr2, implicit $mode, implicit $exec
+    $vgpr4 = V_MAC_F32_e32 0, $vgpr5, $vgpr4, implicit $mode, implicit $exec
+    $vgpr6 = V_MAC_F32_e32 0, $vgpr7, $vgpr6, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -70,10 +78,10 @@ body:             |
     ; GFX10-NOT: S_WAITCNT 65407
     ; GFX9-NEXT: S_WAITCNT 53118
     ; GFX10-NEXT: S_WAITCNT 65406
-    ; GFX9_10-NEXT: $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $exec
-    ; GFX9_10-NEXT: $vgpr1 = V_MAC_F32_e32 0, $vgpr2, $vgpr1, implicit $exec
-    ; GFX9_10-NEXT: $vgpr2 = V_MAC_F32_e32 0, $vgpr3, $vgpr2, implicit $exec
-    ; GFX9_10-NEXT: $vgpr3 = V_MAC_F32_e32 0, $vgpr4, $vgpr3, implicit $exec
+    ; GFX9_10-NEXT: $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $mode, implicit $exec
+    ; GFX9_10-NEXT: $vgpr1 = V_MAC_F32_e32 0, $vgpr2, $vgpr1, implicit $mode, implicit $exec
+    ; GFX9_10-NEXT: $vgpr2 = V_MAC_F32_e32 0, $vgpr3, $vgpr2, implicit $mode, implicit $exec
+    ; GFX9_10-NEXT: $vgpr3 = V_MAC_F32_e32 0, $vgpr4, $vgpr3, implicit $mode, implicit $exec
     ; GFX9_10-NEXT: S_ENDPGM 0
     $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
     $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, 0, 0, 0, implicit $exec
@@ -142,10 +150,10 @@ body:             |
     $vgpr64 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 256, 0, 0, 0, 0, 0, implicit $exec
     $vgpr65 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 260, 0, 0, 0, 0, 0, implicit $exec
     $vgpr66 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 264, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $exec
-    $vgpr1 = V_MAC_F32_e32 0, $vgpr2, $vgpr1, implicit $exec
-    $vgpr2 = V_MAC_F32_e32 0, $vgpr3, $vgpr2, implicit $exec
-    $vgpr3 = V_MAC_F32_e32 0, $vgpr4, $vgpr3, implicit $exec
+    $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $mode, implicit $exec
+    $vgpr1 = V_MAC_F32_e32 0, $vgpr2, $vgpr1, implicit $mode, implicit $exec
+    $vgpr2 = V_MAC_F32_e32 0, $vgpr3, $vgpr2, implicit $mode, implicit $exec
+    $vgpr3 = V_MAC_F32_e32 0, $vgpr4, $vgpr3, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -167,6 +175,6 @@ body:             |
     EXP 0, $vgpr1, $vgpr1, $vgpr1, $vgpr1, -1, -1, 15, implicit $exec
     EXP 0, $vgpr1, $vgpr1, $vgpr1, $vgpr1, -1, -1, 15, implicit $exec
     EXP 0, $vgpr1, $vgpr1, $vgpr1, $vgpr1, -1, -1, 15, implicit $exec
-    $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $exec
+    $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...

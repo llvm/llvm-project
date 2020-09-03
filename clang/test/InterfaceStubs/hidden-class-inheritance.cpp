@@ -14,7 +14,7 @@
 // RUN: -DPARENT_METHOD_VISIBILITY="" -DCHILD_METHOD_VISIBILITY="" %s | \
 // RUN: FileCheck -check-prefix=CHECK-HP %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-ifs-v1 \
+// RUN: -interface-stub-version=experimental-ifs-v2 \
 // RUN: -DPARENT_CLASS_VISIBILITY=HIDDEN -DCHILD_CLASS_VISIBILITY="" \
 // RUN: -DPARENT_METHOD_VISIBILITY="" -DCHILD_METHOD_VISIBILITY="" %s | \
 // RUN: FileCheck -check-prefix=CHECK-HP2 %s

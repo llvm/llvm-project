@@ -1,4 +1,4 @@
-//===-- ClangExternalASTSourceCallbacks.cpp ---------------------*- C++ -*-===//
+//===-- ClangExternalASTSourceCallbacks.cpp -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -69,7 +69,7 @@ ClangExternalASTSourceCallbacks::RegisterModule(clang::Module *module) {
   return OptionalClangModuleID(id);
 }
 
-llvm::Optional<clang::ExternalASTSource::ASTSourceDescriptor>
+llvm::Optional<clang::ASTSourceDescriptor>
 ClangExternalASTSourceCallbacks::getSourceDescriptor(unsigned id) {
   if (clang::Module *module = getModule(id))
     return {*module};

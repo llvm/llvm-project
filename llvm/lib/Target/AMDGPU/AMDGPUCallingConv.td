@@ -18,7 +18,7 @@ class CCIfExtend<CCAction A>
 // Calling convention for SI
 def CC_SI : CallingConv<[
 
-  CCIfInReg<CCIfType<[f32, i32, f16, v2i16, v2f16] , CCAssignToReg<[
+  CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16] , CCAssignToReg<[
     SGPR0, SGPR1, SGPR2, SGPR3, SGPR4, SGPR5, SGPR6, SGPR7,
     SGPR8, SGPR9, SGPR10, SGPR11, SGPR12, SGPR13, SGPR14, SGPR15,
     SGPR16, SGPR17, SGPR18, SGPR19, SGPR20, SGPR21, SGPR22, SGPR23,
@@ -28,7 +28,7 @@ def CC_SI : CallingConv<[
   ]>>>,
 
   // 32*4 + 4 is the minimum for a fetch shader consumer with 32 inputs.
-  CCIfNotInReg<CCIfType<[f32, i32, f16, v2i16, v2f16] , CCAssignToReg<[
+  CCIfNotInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16] , CCAssignToReg<[
     VGPR0, VGPR1, VGPR2, VGPR3, VGPR4, VGPR5, VGPR6, VGPR7,
     VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,
     VGPR16, VGPR17, VGPR18, VGPR19, VGPR20, VGPR21, VGPR22, VGPR23,
@@ -50,7 +50,7 @@ def CC_SI : CallingConv<[
 ]>;
 
 def RetCC_SI_Shader : CallingConv<[
-  CCIfType<[i32] , CCAssignToReg<[
+  CCIfType<[i32, i16] , CCAssignToReg<[
     SGPR0, SGPR1, SGPR2, SGPR3, SGPR4, SGPR5, SGPR6, SGPR7,
     SGPR8, SGPR9, SGPR10, SGPR11, SGPR12, SGPR13, SGPR14, SGPR15,
     SGPR16, SGPR17, SGPR18, SGPR19, SGPR20, SGPR21, SGPR22, SGPR23,
@@ -89,6 +89,24 @@ def CSR_AMDGPU_VGPRs_32_255 : CalleeSavedRegs<
   (sequence "VGPR%u", 32, 255)
 >;
 
+def CSR_AMDGPU_VGPRs : CalleeSavedRegs<
+  // The CSRs & scratch-registers are interleaved at a split boundary of 8.
+  (add (sequence "VGPR%u", 40, 47),
+    (sequence "VGPR%u", 56, 63),
+    (sequence "VGPR%u", 72, 79),
+    (sequence "VGPR%u", 88, 95),
+    (sequence "VGPR%u", 104, 111),
+    (sequence "VGPR%u", 120, 127),
+    (sequence "VGPR%u", 136, 143),
+    (sequence "VGPR%u", 152, 159),
+    (sequence "VGPR%u", 168, 175),
+    (sequence "VGPR%u", 184, 191),
+    (sequence "VGPR%u", 200, 207),
+    (sequence "VGPR%u", 216, 223),
+    (sequence "VGPR%u", 232, 239),
+    (sequence "VGPR%u", 248, 255))
+>;
+
 def CSR_AMDGPU_SGPRs_32_105 : CalleeSavedRegs<
   (sequence "SGPR%u", 32, 105)
 >;
@@ -104,7 +122,7 @@ def CSR_AMDGPU_AllAllocatableSRegs : CalleeSavedRegs<
 >;
 
 def CSR_AMDGPU_HighRegs : CalleeSavedRegs<
-  (add CSR_AMDGPU_VGPRs_32_255, CSR_AMDGPU_SGPRs_32_105)
+  (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SGPRs_32_105)
 >;
 
 // Calling convention for leaf functions

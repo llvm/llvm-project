@@ -8,7 +8,7 @@
 
 // NOTE: nullptr_t emulation cannot handle a reinterpret_cast to an
 // integral type
-// XFAIL: c++98, c++03
+// XFAIL: c++03
 
 // typedef decltype(nullptr) nullptr_t;
 

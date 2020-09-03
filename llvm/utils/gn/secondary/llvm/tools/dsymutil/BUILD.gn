@@ -9,6 +9,7 @@ executable("dsymutil") {
   deps = [
     ":Options",
     "//llvm/lib/CodeGen/AsmPrinter",
+    "//llvm/lib/DWARFLinker",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
@@ -20,13 +21,11 @@ executable("dsymutil") {
   sources = [
     "BinaryHolder.cpp",
     "CFBundle.cpp",
-    "CompileUnit.cpp",
     "DebugMap.cpp",
-    "DeclContext.cpp",
-    "DwarfLinker.cpp",
-    "DwarfStreamer.cpp",
+    "DwarfLinkerForBinary.cpp",
     "MachODebugMapParser.cpp",
     "MachOUtils.cpp",
+    "Reproducer.cpp",
     "SymbolMap.cpp",
     "dsymutil.cpp",
   ]

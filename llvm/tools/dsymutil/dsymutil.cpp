@@ -16,6 +16,7 @@
 #include "DebugMap.h"
 #include "LinkUtils.h"
 #include "MachOUtils.h"
+#include "Reproducer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -31,6 +32,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileCollector.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -92,9 +94,11 @@ struct DsymutilOptions {
   std::string SymbolMap;
   std::string OutputFile;
   std::string Toolchain;
+  std::string ReproducerPath;
   std::vector<std::string> Archs;
   std::vector<std::string> InputFiles;
   unsigned NumThreads;
+  ReproducerMode ReproMode = ReproducerMode::Off;
   dsymutil::LinkOptions LinkOpts;
 };
 
@@ -182,6 +186,12 @@ static Error verifyOptions(const DsymutilOptions &Options) {
         "paper trail warnings are not supported for YAML input.",
         errc::invalid_argument);
 
+  if (!Options.ReproducerPath.empty() &&
+      Options.ReproMode != ReproducerMode::Use)
+    return make_error<StringError>(
+        "cannot combine --gen-reproducer and --use-reproducer.",
+        errc::invalid_argument);
+
   return Error::success();
 }
 
@@ -220,6 +230,15 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.NoTimestamp = Args.hasArg(OPT_no_swiftmodule_timestamp);
   Options.LinkOpts.Update = Args.hasArg(OPT_update);
   Options.LinkOpts.Verbose = Args.hasArg(OPT_verbose);
+  Options.LinkOpts.Statistics = Args.hasArg(OPT_statistics);
+
+  if (opt::Arg *ReproducerPath = Args.getLastArg(OPT_use_reproducer)) {
+    Options.ReproMode = ReproducerMode::Use;
+    Options.ReproducerPath = ReproducerPath->getValue();
+  }
+
+  if (Args.hasArg(OPT_gen_reproducer))
+    Options.ReproMode = ReproducerMode::Generate;
 
   if (Expected<AccelTableKind> AccelKind = getAccelTableKind(Args)) {
     Options.LinkOpts.TheAccelTableKind = *AccelKind;
@@ -264,7 +283,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   if (opt::Arg *NumThreads = Args.getLastArg(OPT_threads))
     Options.LinkOpts.Threads = atoi(NumThreads->getValue());
   else
-    Options.LinkOpts.Threads = thread::hardware_concurrency();
+    Options.LinkOpts.Threads = 0; // Use all available hardware threads
 
   if (Options.DumpDebugMap || Options.LinkOpts.Verbose)
     Options.LinkOpts.Threads = 1;
@@ -305,9 +324,9 @@ static Error createPlistFile(StringRef Bin, StringRef BundleRoot,
   if (BI.IDStr.empty()) {
     StringRef BundleID = *sys::path::rbegin(BundleRoot);
     if (sys::path::extension(BundleRoot) == ".dSYM")
-      BI.IDStr = sys::path::stem(BundleID);
+      BI.IDStr = std::string(sys::path::stem(BundleID));
     else
-      BI.IDStr = BundleID;
+      BI.IDStr = std::string(BundleID);
   }
 
   // Print out information to the plist file.
@@ -319,7 +338,9 @@ static Error createPlistFile(StringRef Bin, StringRef BundleRoot,
      << "\t\t<key>CFBundleDevelopmentRegion</key>\n"
      << "\t\t<string>English</string>\n"
      << "\t\t<key>CFBundleIdentifier</key>\n"
-     << "\t\t<string>com.apple.xcode.dsym." << BI.IDStr << "</string>\n"
+     << "\t\t<string>com.apple.xcode.dsym.";
+  printHTMLEscaped(BI.IDStr, PL);
+  PL << "</string>\n"
      << "\t\t<key>CFBundleInfoDictionaryVersion</key>\n"
      << "\t\t<string>6.0</string>\n"
      << "\t\t<key>CFBundlePackageType</key>\n"
@@ -411,7 +432,7 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   // When updating, do in place replacement.
   if (Options.OutputFile.empty() &&
       (Options.LinkOpts.Update || !Options.SymbolMap.empty()))
-    return OutputLocation(InputFile);
+    return OutputLocation(std::string(InputFile));
 
   // If a flat dSYM has been requested, things are pretty simple.
   if (Options.Flat) {
@@ -432,7 +453,8 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   //          Resources/
   //             DWARF/
   //                <DWARF file(s)>
-  std::string DwarfFile = InputFile == "-" ? StringRef("a.out") : InputFile;
+  std::string DwarfFile =
+      std::string(InputFile == "-" ? StringRef("a.out") : InputFile);
   SmallString<128> Path(Options.OutputFile);
   if (Path.empty())
     Path = DwarfFile + ".dSYM";
@@ -444,9 +466,9 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   }
 
   sys::path::append(Path, "Contents", "Resources");
-  std::string ResourceDir = Path.str();
+  std::string ResourceDir = std::string(Path.str());
   sys::path::append(Path, "DWARF", sys::path::filename(DwarfFile));
-  return OutputLocation(Path.str(), ResourceDir);
+  return OutputLocation(std::string(Path.str()), ResourceDir);
 }
 
 int main(int argc, char **argv) {
@@ -461,7 +483,7 @@ int main(int argc, char **argv) {
 
   void *P = (void *)(intptr_t)getOutputFileName;
   std::string SDKPath = sys::fs::getMainExecutable(argv[0], P);
-  SDKPath = sys::path::parent_path(SDKPath);
+  SDKPath = std::string(sys::path::parent_path(SDKPath));
 
   for (auto *Arg : Args.filtered(OPT_UNKNOWN)) {
     WithColor::warning() << "ignoring unknown option: " << Arg->getSpelling()
@@ -497,6 +519,15 @@ int main(int argc, char **argv) {
   InitializeAllTargets();
   InitializeAllAsmPrinters();
 
+  auto Repro =
+      Reproducer::createReproducer(Options.ReproMode, Options.ReproducerPath);
+  if (!Repro) {
+    WithColor::error() << toString(Repro.takeError());
+    return 1;
+  }
+
+  Options.LinkOpts.VFS = (*Repro)->getVFS();
+
   for (const auto &Arch : Options.Archs)
     if (Arch != "*" && Arch != "all" &&
         !object::MachOObjectFile::isValidArch(Arch)) {
@@ -509,15 +540,16 @@ int main(int argc, char **argv) {
   for (auto &InputFile : Options.InputFiles) {
     // Dump the symbol table for each input file and requested arch
     if (Options.DumpStab) {
-      if (!dumpStab(InputFile, Options.Archs, Options.LinkOpts.PrependPath))
+      if (!dumpStab(Options.LinkOpts.VFS, InputFile, Options.Archs,
+                    Options.LinkOpts.PrependPath))
         return 1;
       continue;
     }
 
     auto DebugMapPtrsOrErr =
-        parseDebugMap(InputFile, Options.Archs, Options.LinkOpts.PrependPath,
-                      Options.PaperTrailWarnings, Options.LinkOpts.Verbose,
-                      Options.InputIsYAMLDebugMap);
+        parseDebugMap(Options.LinkOpts.VFS, InputFile, Options.Archs,
+                      Options.LinkOpts.PrependPath, Options.PaperTrailWarnings,
+                      Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile
@@ -544,11 +576,20 @@ int main(int argc, char **argv) {
     }
 
     // Shared a single binary holder for all the link steps.
-    BinaryHolder BinHolder;
+    BinaryHolder BinHolder(Options.LinkOpts.VFS);
 
-    unsigned ThreadCount =
-        std::min<unsigned>(Options.LinkOpts.Threads, DebugMapPtrsOrErr->size());
-    ThreadPool Threads(ThreadCount);
+    // Statistics only require different architectures to be processed
+    // sequentially, the link itself can still happen in parallel. Change the
+    // thread pool strategy here instead of modifying LinkOpts.Threads.
+    ThreadPoolStrategy S = hardware_concurrency(
+        Options.LinkOpts.Statistics ? 1 : Options.LinkOpts.Threads);
+    if (Options.LinkOpts.Threads == 0) {
+      // If NumThreads is not specified, create one thread for each input, up to
+      // the number of hardware threads.
+      S.ThreadsRequested = DebugMapPtrsOrErr->size();
+      S.Limit = true;
+    }
+    ThreadPool Threads(S);
 
     // If there is more than one link to execute, we need to generate
     // temporary files.
@@ -623,7 +664,7 @@ int main(int argc, char **argv) {
       // FIXME: The DwarfLinker can have some very deep recursion that can max
       // out the (significantly smaller) stack when using threads. We don't
       // want this limitation when we only have a single thread.
-      if (ThreadCount == 1)
+      if (S.ThreadsRequested == 1)
         LinkLambda(OS, Options.LinkOpts);
       else
         Threads.async(LinkLambda, OS, Options.LinkOpts);

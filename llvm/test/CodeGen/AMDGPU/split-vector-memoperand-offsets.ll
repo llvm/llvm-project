@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=hawaii -enable-amdgpu-aa=0 -verify-machineinstrs -mattr=-promote-alloca,-load-store-opt < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=hawaii -enable-amdgpu-aa=0 -verify-machineinstrs -mattr=-promote-alloca,-load-store-opt,-enable-ds128 < %s | FileCheck -check-prefix=GCN %s
 
 @sPrivateStorage = internal addrspace(3) global [256 x [8 x <4 x i64>]] undef
 
@@ -29,10 +29,8 @@
 ; GCN-DAG: buffer_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24
 
 ; GCN: s_endpgm
-define amdgpu_kernel void @ds_reorder_vector_split(<4 x i64> addrspace(1)* nocapture readonly %srcValues, i32 addrspace(1)* nocapture readonly %offsets, <4 x i64> addrspace(1)* nocapture %destBuffer, i32 %alignmentOffset) #0 {
+define amdgpu_kernel void @ds_reorder_vector_split(<4 x i64> addrspace(1)* nocapture readonly %srcValues, i32 addrspace(1)* nocapture readonly %offsets, <4 x i64> addrspace(1)* nocapture %destBuffer, i32 %alignmentOffset, i32 %tmp, i32 %tmp1, i32 %x.i.12.i) #0 {
 entry:
-  %tmp = tail call i32 @llvm.r600.read.local.size.y()
-  %tmp1 = tail call i32 @llvm.r600.read.local.size.z()
   %tmp2 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp3 = tail call i32 @llvm.amdgcn.workitem.id.y()
   %tmp4 = tail call i32 @llvm.amdgcn.workitem.id.z()
@@ -41,7 +39,6 @@ entry:
   %tmp11 = mul i32 %tmp10, %tmp1
   %tmp9 = add i32 %tmp11, %tmp4
   %x.i.i = tail call i32 @llvm.amdgcn.workgroup.id.x() #1
-  %x.i.12.i = tail call i32 @llvm.r600.read.local.size.x() #1
   %mul.26.i = mul i32 %x.i.12.i, %x.i.i
   %add.i = add i32 %tmp2, %mul.26.i
   %arrayidx = getelementptr [256 x [8 x <4 x i64>]], [256 x [8 x <4 x i64>]] addrspace(3)* @sPrivateStorage, i32 0, i32 %tmp9, i32 %add.i
@@ -78,25 +75,9 @@ entry:
   ret void
 }
 
-; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workgroup.id.x() #1
-
-; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.local.size.x() #1
-
-; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.local.size.y() #1
-
-; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.local.size.z() #1
-
-; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.y() #1
-
-; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.z() #1
 
 attributes #0 = { norecurse nounwind }

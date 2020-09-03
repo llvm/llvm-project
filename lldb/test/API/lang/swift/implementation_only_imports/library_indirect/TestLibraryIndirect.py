@@ -26,7 +26,7 @@ class TestLibraryIndirect(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def launch_info(self):
-        info = lldb.SBLaunchInfo([])
+        info = self.target.GetLaunchInfo()
 
         if self.getPlatform() == "freebsd" or self.getPlatform() == "linux":
             # LD_LIBRARY_PATH must be set so the shared libraries are found on
@@ -41,9 +41,10 @@ class TestLibraryIndirect(TestBase):
         return info
 
     @swiftTest
+    @skipIfLinux # rdar://problem/67348151
     def test_implementation_only_import_library(self):
         """Test `@_implementationOnly import` behind some indirection in a library used by the main executable
-        
+
         See the ReadMe.md in the parent directory for more information.
         """
         self.build()
@@ -51,9 +52,9 @@ class TestLibraryIndirect(TestBase):
             lldbutil.execute_command("make cleanup")
         self.addTearDownHook(cleanup)
 
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target, VALID_TARGET)
-        self.registerSharedLibrariesWithTarget(target, ['SomeLibrary'])
+        self.target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(self.target, VALID_TARGET)
+        self.registerSharedLibrariesWithTarget(self.target, ['SomeLibrary'])
 
         if lldb.remote_platform:
             ext = 'so'
@@ -79,9 +80,10 @@ class TestLibraryIndirect(TestBase):
         self.expect("e container.wrapped.value", substrs=["(SomeLibraryCore.TwoInts)", "(first = 2, second = 3)"])
 
     @swiftTest
+    @skipIfLinux # rdar://problem/67348151
     def test_implementation_only_import_library_no_library_module(self):
         """Test `@_implementationOnly import` behind some indirection in a library used by the main executable, after removing the implementation-only library's swiftmodule
-        
+
         See the ReadMe.md in the parent directory for more information.
         """
 
@@ -92,9 +94,9 @@ class TestLibraryIndirect(TestBase):
             lldbutil.execute_command("make cleanup")
         self.addTearDownHook(cleanup)
 
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target, VALID_TARGET)
-        self.registerSharedLibrariesWithTarget(target, ['SomeLibrary'])
+        self.target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(self.target, VALID_TARGET)
+        self.registerSharedLibrariesWithTarget(self.target, ['SomeLibrary'])
 
         if lldb.remote_platform:
             ext = 'so'

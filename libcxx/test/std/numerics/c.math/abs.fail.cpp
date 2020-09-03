@@ -16,10 +16,10 @@ int main(int, char**)
     ui = std::abs(ui); // expected-error {{call to 'abs' is ambiguous}}
 
     unsigned char uc = -5;
-    uc = std::abs(uc); // expected-error {{taking the absolute value of unsigned type 'unsigned char' has no effect}}
+    uc = std::abs(uc); // expected-warning {{taking the absolute value of unsigned type 'unsigned char' has no effect}}
 
     unsigned short us = -5;
-    us = std::abs(us); // expected-error {{taking the absolute value of unsigned type 'unsigned short' has no effect}}
+    us = std::abs(us); // expected-warning {{taking the absolute value of unsigned type 'unsigned short' has no effect}}
 
     unsigned long ul = -5;
     ul = std::abs(ul); // expected-error {{call to 'abs' is ambiguous}}

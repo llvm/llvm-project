@@ -28,7 +28,7 @@ entry:
 ; CHECK-V4T-NEXT:    ldr [[POP:r[4567]]], [sp, #16]
 ; CHECK-V4T-NEXT:    mov lr, [[POP]]
 ; CHECK-V4T-NEXT:    pop {[[SAVED]]}
-; CHECK-V4T-NEXT     add sp, sp, #4
+; CHECK-V4T-NEXT:    add sp, #4
 ; The ISA for v4 does not support pop pc, so make sure we do not emit
 ; one even when we do not need to update SP.
 ; CHECK-V4T-NOT:     pop {pc}

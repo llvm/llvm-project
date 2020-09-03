@@ -30,13 +30,13 @@
 #include "llvm/IR/BasicBlock.h"
 
 namespace llvm {
-  class AttrBuilder;
-  class Constant;
-  class DataLayout;
-  class Module;
-  class Function;
-  class FunctionType;
-  class Type;
+class AttrBuilder;
+class Constant;
+class DataLayout;
+class Module;
+class Function;
+class FunctionType;
+class Type;
 }
 
 namespace clang {
@@ -51,6 +51,7 @@ class DiagnosticsEngine;
 class GlobalDecl;
 class HeaderSearchOptions;
 class ObjCMethodDecl;
+class ObjCProtocolDecl;
 class PreprocessorOptions;
 
 namespace CodeGen {
@@ -112,25 +113,6 @@ llvm::Type *convertTypeForMemory(CodeGenModule &CGM, QualType T);
 unsigned getLLVMFieldNumber(CodeGenModule &CGM,
                             const RecordDecl *RD, const FieldDecl *FD);
 
-/// Given the language and code-generation options that Clang was configured
-/// with, set the default LLVM IR attributes for a function definition.
-/// The attributes set here are mostly global target-configuration and
-/// pipeline-configuration options like the target CPU, variant stack
-/// rules, whether to optimize for size, and so on.  This is useful for
-/// frontends (such as Swift) that generally intend to interoperate with
-/// C code and rely on Clang's target configuration logic.
-///
-/// As a general rule, this function assumes that meaningful attributes
-/// haven't already been added to the builder.  It won't intentionally
-/// displace any existing attributes, but it also won't check to avoid
-/// overwriting them.  Callers should generally apply customizations after
-/// making this call.
-///
-/// This function assumes that the caller is not defining a function that
-/// requires special no-builtin treatment.
-void addDefaultFunctionDefinitionAttributes(CodeGenModule &CGM,
-                                            llvm::AttrBuilder &attrs);
-
 /// Compute a stable hash of the given string.
 ///
 /// The exact algorithm is the little-endian interpretation of the
@@ -150,6 +132,24 @@ llvm::Constant *getConstantSignedPointer(CodeGenModule &CGM,
                                          unsigned key,
                                          llvm::Constant *storageAddress,
                                          llvm::Constant *otherDiscriminator);
+/// Given the language and code-generation options that Clang was configured
+/// with, set the default LLVM IR attributes for a function definition.
+/// The attributes set here are mostly global target-configuration and
+/// pipeline-configuration options like the target CPU, variant stack
+/// rules, whether to optimize for size, and so on.  This is useful for
+/// frontends (such as Swift) that generally intend to interoperate with
+/// C code and rely on Clang's target configuration logic.
+///
+/// As a general rule, this function assumes that meaningful attributes
+/// haven't already been added to the builder.  It won't intentionally
+/// displace any existing attributes, but it also won't check to avoid
+/// overwriting them.  Callers should generally apply customizations after
+/// making this call.
+///
+/// This function assumes that the caller is not defining a function that
+/// requires special no-builtin treatment.
+void addDefaultFunctionDefinitionAttributes(CodeGenModule &CGM,
+                                            llvm::AttrBuilder &attrs);
 
 /// Returns the default constructor for a C struct with non-trivially copyable
 /// fields, generating it if necessary. The returned function uses the `cdecl`
@@ -204,6 +204,13 @@ llvm::Function *getNonTrivialCStructDestructor(CodeGenModule &CGM,
                                                CharUnits DstAlignment,
                                                bool IsVolatile, QualType QT);
 
+/// Get a pointer to a protocol object for the given declaration, emitting it if
+/// it hasn't already been emitted in this translation unit. Note that the ABI
+/// for emitting a protocol reference in code (e.g. for a protocol expression)
+/// in most runtimes is not as simple as just materializing a pointer to this
+/// object.
+llvm::Constant *emitObjCProtocolObject(CodeGenModule &CGM,
+                                       const ObjCProtocolDecl *p);
 }  // end namespace CodeGen
 }  // end namespace clang
 

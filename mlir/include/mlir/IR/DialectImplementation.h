@@ -1,6 +1,6 @@
 //===- DialectImplementation.h ----------------------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -200,6 +200,9 @@ public:
   /// Parse a `=` token.
   virtual ParseResult parseEqual() = 0;
 
+  /// Parse a `=` token if present.
+  virtual ParseResult parseOptionalEqual() = 0;
+
   /// Parse a given keyword.
   ParseResult parseKeyword(StringRef keyword, const Twine &msg = "") {
     auto loc = getCurrentLocation();
@@ -290,6 +293,12 @@ public:
       return emitError(loc, "invalid kind of attribute specified");
     return success();
   }
+
+  /// Parse an affine map instance into 'map'.
+  virtual ParseResult parseAffineMap(AffineMap &map) = 0;
+
+  /// Parse an integer set instance into 'set'.
+  virtual ParseResult printIntegerSet(IntegerSet &set) = 0;
 
   //===--------------------------------------------------------------------===//
   // Type Parsing

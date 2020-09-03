@@ -1,0 +1,24 @@
+//===- x86_64 implementation of the get_start_args_addr function -*- C++ -*===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+%%begin()
+
+namespace __llvm_libc {
+
+__attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
+  // NOTE: For __builtin_frame_address to work reliably across compilers,
+  // architectures and various optimization levels, the TU including this file
+  // should be compiled with -fno-omit-frame-pointer.
+  return reinterpret_cast<uintptr_t>(__builtin_frame_address(0)) +
+         // The x86_64 call instruction pushes resume address on to the stack.
+         // Next, The x86_64 SysV ABI also pushes the frame pointer on the
+         // stack. Hence, we look past these items to get to the start args.
+         sizeof(uintptr_t) * 2;
+}
+
+} // namespace __llvm_libc

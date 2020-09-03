@@ -86,7 +86,8 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfigVersion.cmake"
         DESTINATION lib/cmake/ParallelSTL)
 install(DIRECTORY include/
-        DESTINATION include)
+        DESTINATION include
+        PATTERN "*.in" EXCLUDE)
 install(FILES "${PSTL_CONFIG_SITE_PATH}"
         DESTINATION include)
 

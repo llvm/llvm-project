@@ -22,8 +22,8 @@ implementation header file will be ``src/math/round/round.h``. The rest of this
 document explains the structure of implementation header files and ``.cpp``
 files.
 
-Implementaion Header File Structure
------------------------------------
+Implementation Header File Structure
+------------------------------------
 
 We will use the ``round`` function from the public ``math.h`` header file as an
 example. The ``round`` function will be declared in an internal header file
@@ -82,4 +82,4 @@ a post build step. For example, for the ``round`` function, one can use
 NOTE: We use a post build ``objcopy`` step to add an alias instead of using
 the ``__attribute__((alias))``. For C++, this ``alias`` attribute requires
 mangled names of the referees. Using the post build ``objcopy`` step helps
-us avoid putting mangled names with ``alias`` atttributes.
+us avoid putting mangled names with ``alias`` attributes.

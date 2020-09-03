@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %s -o %t.o
 // RUN: ld.lld -fix-cortex-a53-843419 %t.o -o %t2
-// RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t2 | FileCheck %s
+// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 | FileCheck %s
 
 // The following code sequence is covered by the TLS IE to LE relaxation. It
 // transforms the ADRP, LDR to MOVZ, MOVK. The former can trigger a
@@ -23,7 +23,7 @@ _start:
  ldr    x1, [x0, #:gottprel_lo12:v]
  ret
 
-// CHECK: _start:
+// CHECK: <_start>:
 // CHECK-NEXT:   211ff8:        41 d0 3b d5     mrs     x1, TPIDR_EL0
 // CHECK-NEXT:   211ffc:        00 00 a0 d2     movz    x0, #0, lsl #16
 // CHECK-NEXT:   212000:        01 02 80 f2     movk    x1, #16

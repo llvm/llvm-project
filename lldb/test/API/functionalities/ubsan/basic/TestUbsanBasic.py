@@ -27,9 +27,9 @@ class UbsanBasicTestCase(TestBase):
     def ubsan_tests(self):
         # Load the test
         exe = self.getBuildArtifact("a.out")
-        self.expect(
-            "file " + exe,
-            patterns=["Current executable set to .*a.out"])
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+        self.registerSanitizerLibrariesWithTarget(target)
 
         self.runCmd("run")
 
@@ -64,18 +64,19 @@ class UbsanBasicTestCase(TestBase):
 
         backtraces = thread.GetStopReasonExtendedBacktraces(
             lldb.eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer)
-        self.assertTrue(backtraces.GetSize() == 1)
+        self.assertEquals(backtraces.GetSize(), 1)
 
         self.expect(
             "thread info -s",
             "The extended stop info should contain the UBSan provided fields",
             substrs=[
-                "instrumentation_class",
-                "memory_address",
+                "col",
                 "description",
                 "filename",
+                "instrumentation_class",
                 "line",
-                "col"])
+                "memory_address",
+            ])
 
         output_lines = self.res.GetOutput().split('\n')
         json_line = '\n'.join(output_lines[2:])

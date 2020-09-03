@@ -129,9 +129,6 @@ bool hasCorrespondingOverloadInBaseClass(const CXXMethodDecl *MD,
 } // anonymous namespace
 
 void NewDeleteOverloadsCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // Match all operator new and operator delete overloads (including the array
   // forms). Do not match implicit operators, placement operators, or
   // deleted/private operators.

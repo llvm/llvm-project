@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %p/Inputs/ret32.ll -o %t.ret32.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret32.s -o %t.ret32.o
 ; RUN: llc -filetype=obj %s -o %t.main.o
 ; RUN: wasm-ld --export=ret32 -o %t.wasm %t.main.o %t.ret32.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
@@ -22,7 +22,7 @@ entry:
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            'unreachable:ret32'
+; CHECK-NEXT:         Name:            'signature_mismatch:ret32'
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            _start
 ; CHECK-NEXT:       - Index:           2

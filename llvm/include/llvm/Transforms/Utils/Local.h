@@ -19,35 +19,37 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include <cstdint>
 #include <limits>
 
 namespace llvm {
 
+class AAResults;
 class AllocaInst;
 class AssumptionCache;
 class BasicBlock;
 class BranchInst;
+class CallBase;
 class CallInst;
+class DbgDeclareInst;
 class DbgVariableIntrinsic;
 class DbgValueInst;
 class DIBuilder;
+class DomTreeUpdater;
 class Function;
 class Instruction;
-class LazyValueInfo;
+class InvokeInst;
 class LoadInst;
 class MDNode;
 class MemorySSAUpdater;
@@ -66,18 +68,25 @@ struct SimplifyCFGOptions {
   bool ConvertSwitchToLookupTable;
   bool NeedCanonicalLoop;
   bool SinkCommonInsts;
+  bool SimplifyCondBranch;
+  bool FoldTwoEntryPHINode;
+
   AssumptionCache *AC;
 
   SimplifyCFGOptions(unsigned BonusThreshold = 1,
                      bool ForwardSwitchCond = false,
                      bool SwitchToLookup = false, bool CanonicalLoops = true,
                      bool SinkCommon = false,
-                     AssumptionCache *AssumpCache = nullptr)
+                     AssumptionCache *AssumpCache = nullptr,
+                     bool SimplifyCondBranch = true,
+                     bool FoldTwoEntryPHINode = true)
       : BonusInstThreshold(BonusThreshold),
         ForwardSwitchCondToPhi(ForwardSwitchCond),
         ConvertSwitchToLookupTable(SwitchToLookup),
         NeedCanonicalLoop(CanonicalLoops),
         SinkCommonInsts(SinkCommon),
+        SimplifyCondBranch(SimplifyCondBranch),
+        FoldTwoEntryPHINode(FoldTwoEntryPHINode),
         AC(AssumpCache) {}
 
   // Support 'builder' pattern to set members by name at construction time.
@@ -103,6 +112,15 @@ struct SimplifyCFGOptions {
   }
   SimplifyCFGOptions &setAssumptionCache(AssumptionCache *Cache) {
     AC = Cache;
+    return *this;
+  }
+  SimplifyCFGOptions &setSimplifyCondBranch(bool B) {
+    SimplifyCondBranch = B;
+    return *this;
+  }
+
+  SimplifyCFGOptions &setFoldTwoEntryPHINode(bool B) {
+    FoldTwoEntryPHINode = B;
     return *this;
   }
 };
@@ -153,7 +171,15 @@ bool RecursivelyDeleteTriviallyDeadInstructions(
 /// `DeadInsts` will be used as scratch storage for this routine and will be
 /// empty afterward.
 void RecursivelyDeleteTriviallyDeadInstructions(
-    SmallVectorImpl<Instruction *> &DeadInsts,
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts,
+    const TargetLibraryInfo *TLI = nullptr, MemorySSAUpdater *MSSAU = nullptr);
+
+/// Same functionality as RecursivelyDeleteTriviallyDeadInstructions, but allow
+/// instructions that are not trivially dead. These will be ignored.
+/// Returns true if any changes were made, i.e. any instructions trivially dead
+/// were found and deleted.
+bool RecursivelyDeleteTriviallyDeadInstructionsPermissive(
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts,
     const TargetLibraryInfo *TLI = nullptr, MemorySSAUpdater *MSSAU = nullptr);
 
 /// If the specified value is an effectively dead PHI node, due to being a
@@ -162,7 +188,8 @@ void RecursivelyDeleteTriviallyDeadInstructions(
 /// operands trivially dead, delete them too, recursively. Return true if a
 /// change was made.
 bool RecursivelyDeleteDeadPHINode(PHINode *PN,
-                                  const TargetLibraryInfo *TLI = nullptr);
+                                  const TargetLibraryInfo *TLI = nullptr,
+                                  MemorySSAUpdater *MSSAU = nullptr);
 
 /// Scan the specified basic block and try to simplify any instructions in it
 /// and recursively delete dead instructions.
@@ -226,7 +253,7 @@ bool simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
 /// This function is used to flatten a CFG. For example, it uses parallel-and
 /// and parallel-or mode to collapse if-conditions and merge if-regions with
 /// identical statements.
-bool FlattenCFG(BasicBlock *BB, AliasAnalysis *AA = nullptr);
+bool FlattenCFG(BasicBlock *BB, AAResults *AA = nullptr);
 
 /// If this basic block is ONLY a setcc and a branch, and if a predecessor
 /// branches to us and one of our successors, fold the setcc into the
@@ -257,18 +284,18 @@ AllocaInst *DemotePHIToStack(PHINode *P, Instruction *AllocaPoint = nullptr);
 /// so if alignment is important, a more reliable approach is to simply align
 /// all global variables and allocation instructions to their preferred
 /// alignment from the beginning.
-unsigned getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
-                                    const DataLayout &DL,
-                                    const Instruction *CxtI = nullptr,
-                                    AssumptionCache *AC = nullptr,
-                                    const DominatorTree *DT = nullptr);
+Align getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
+                                 const DataLayout &DL,
+                                 const Instruction *CxtI = nullptr,
+                                 AssumptionCache *AC = nullptr,
+                                 const DominatorTree *DT = nullptr);
 
 /// Try to infer an alignment for the specified pointer.
-inline unsigned getKnownAlignment(Value *V, const DataLayout &DL,
-                                  const Instruction *CxtI = nullptr,
-                                  AssumptionCache *AC = nullptr,
-                                  const DominatorTree *DT = nullptr) {
-  return getOrEnforceKnownAlignment(V, 0, DL, CxtI, AC, DT);
+inline Align getKnownAlignment(Value *V, const DataLayout &DL,
+                               const Instruction *CxtI = nullptr,
+                               AssumptionCache *AC = nullptr,
+                               const DominatorTree *DT = nullptr) {
+  return getOrEnforceKnownAlignment(V, MaybeAlign(), DL, CxtI, AC, DT);
 }
 
 /// Create a call that matches the invoke \p II in terms of arguments,
@@ -312,6 +339,10 @@ void insertDebugValuesForPHIs(BasicBlock *BB,
 /// dbg.addr intrinsics.
 TinyPtrVector<DbgVariableIntrinsic *> FindDbgAddrUses(Value *V);
 
+/// Like \c FindDbgAddrUses, but only returns dbg.declare intrinsics, not
+/// dbg.addr.
+TinyPtrVector<DbgDeclareInst *> FindDbgDeclareUses(Value *V);
+
 /// Finds the llvm.dbg.value intrinsics describing a value.
 void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V);
 
@@ -339,17 +370,16 @@ AllocaInst *findAllocaForValue(Value *V,
                                DenseMap<Value *, AllocaInst *> &AllocaForValue);
 
 /// Assuming the instruction \p I is going to be deleted, attempt to salvage
-/// debug users of \p I by writing the effect of \p I in a DIExpression.
-/// Returns true if any debug users were updated.
-bool salvageDebugInfo(Instruction &I);
+/// debug users of \p I by writing the effect of \p I in a DIExpression. If it
+/// cannot be salvaged changes its debug uses to undef.
+void salvageDebugInfo(Instruction &I);
 
-/// Salvage all debug users of the instruction \p I or mark it as undef if it
-/// cannot be salvaged.
-void salvageDebugInfoOrMarkUndef(Instruction &I);
 
 /// Implementation of salvageDebugInfo, applying only to instructions in
-/// \p Insns, rather than all debug users of \p I.
-bool salvageDebugInfoForDbgValues(Instruction &I,
+/// \p Insns, rather than all debug users from findDbgUsers( \p I).
+/// Returns true if any debug users were updated.
+/// Mark undef if salvaging cannot be completed.
+void salvageDebugInfoForDbgValues(Instruction &I,
                                   ArrayRef<DbgVariableIntrinsic *> Insns);
 
 /// Given an instruction \p I and DIExpression \p DIExpr operating on it, write
@@ -518,6 +548,13 @@ void maybeMarkSanitizerLibraryCallNoBuiltin(CallInst *CI,
 /// Given an instruction, is it legal to set operand OpIdx to a non-constant
 /// value?
 bool canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx);
+
+//===----------------------------------------------------------------------===//
+//  Value helper functions
+//
+
+/// Invert the given true/false value, possibly reusing an existing copy.
+Value *invertCondition(Value *Condition);
 
 } // end namespace llvm
 

@@ -82,6 +82,9 @@ private:
   /// Register-promote counter loads and stores in loops.
   void promoteCounterLoadStores(Function *F);
 
+  /// Returns true if relocating counters at runtime is enabled.
+  bool isRuntimeCounterRelocationEnabled() const;
+
   /// Returns true if profile counter update register promotion is enabled.
   bool isCounterPromotionEnabled() const;
 

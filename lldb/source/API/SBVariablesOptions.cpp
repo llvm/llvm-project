@@ -1,5 +1,4 @@
-//===-- SBVariablesOptions.cpp --------------------------------------*- C++
-//-*-===//
+//===-- SBVariablesOptions.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -98,7 +97,7 @@ operator=(const SBVariablesOptions &options) {
       SBVariablesOptions, operator=,(const lldb::SBVariablesOptions &),
       options);
 
-  m_opaque_up.reset(new VariablesOptionsImpl(options.ref()));
+  m_opaque_up = std::make_unique<VariablesOptionsImpl>(options.ref());
   return LLDB_RECORD_RESULT(*this);
 }
 

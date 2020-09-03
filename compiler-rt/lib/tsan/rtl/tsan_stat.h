@@ -68,6 +68,7 @@ enum StatType {
   StatSyncDestroyed,
   StatSyncAcquire,
   StatSyncRelease,
+  StatSyncReleaseStoreAcquire,
 
   // Clocks - acquire.
   StatClockAcquire,

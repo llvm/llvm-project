@@ -96,7 +96,7 @@ SymbolMapTranslator SymbolMapLoader::Load(StringRef InputFile,
           StringRef UUID(CFStringGetCStringPtr(OldUUID, kCFStringEncodingUTF8));
           SmallString<256> BCSymbolMapPath(SymbolMapPath);
           sys::path::append(BCSymbolMapPath, UUID.str() + ".bcsymbolmap");
-          SymbolMapPath = BCSymbolMapPath.str();
+          SymbolMapPath = std::string(BCSymbolMapPath);
         }
         CFRelease(plist);
       }

@@ -51,7 +51,7 @@
 .thumb
 
 	ADD r0, r1, #0xFFFFFF00
-# CHECK: subw r0, r1, #256
+# CHECK: sub.w r0, r1, #256
 # CHECK-DISABLED: note: instruction requires: NegativeImmediates
 # CHECK-DISABLED: ADD
 	ADDS r0, r1, #0xFFFFFF00
@@ -175,7 +175,7 @@
 # CHECK-DISABLED: note: instruction requires: NegativeImmediates
 # CHECK-DISABLED: SUB.W
 	SUB r0, r1, #0xFFFFFF00
-# CHECK: addw r0, r1, #256
+# CHECK: add.w r0, r1, #256
 # CHECK-DISABLED: note: instruction requires: NegativeImmediates
 # CHECK-DISABLED: SUB
 	SUBS r0, r1, #0xFFFFFF00
@@ -188,6 +188,6 @@
 # CHECK-DISABLED: SUBS.W
 
 	ADD r0, r1, #-13
-# CHECK: subw r0, r1, #13
+# CHECK: sub.w r0, r1, #13
 # CHECK-DISABLED: note: instruction requires: NegativeImmediates
 # CHECK-DISABLED: ADD

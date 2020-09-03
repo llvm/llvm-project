@@ -80,7 +80,7 @@ bool IndexDataStoreImpl::foreachUnitName(bool sorted,
       if (!receiver(unitName))
         return false;
     } else {
-      filenames.push_back(unitName);
+      filenames.push_back(std::string(unitName));
     }
   }
 

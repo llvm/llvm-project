@@ -238,7 +238,8 @@ namespace PR18653 {
   template void f2<int>();
 
   template<typename T> void f3() {
-    void g3(enum class x3);
+    enum class x3;
+    void g3(enum x3);
     enum class x3 { nothing };
   }
   template void f3<int>();
@@ -273,7 +274,8 @@ namespace PR18653 {
 
   template <class T> struct S3 {
     void m() {
-      f<enum class new_enum>();
+      enum class new_enum;
+      f<enum new_enum>();
     }
   };
   template struct S3<int>;
@@ -460,18 +462,15 @@ namespace rdar23721638 {
     struct Inner { // expected-note {{in instantiation}}
       void operator()(T a = "") {} // expected-error {{conversion function from 'const char [1]' to 'rdar23721638::A' invokes a deleted function}}
       // expected-note@-1 {{passing argument to parameter 'a' here}}
-      // expected-note@-2 {{candidate function not viable}}
     };
-    Inner()(); // expected-error {{no matching function}}
+    Inner()(); // expected-error {{type 'Inner' does not provide a call operator}}
   }
   template void foo<A>(); // expected-note 2 {{in instantiation}}
 
   template <typename T> void bar() {
     auto lambda = [](T a = "") {}; // expected-error {{conversion function from 'const char [1]' to 'rdar23721638::A' invokes a deleted function}}
       // expected-note@-1 {{passing argument to parameter 'a' here}}
-      // expected-note@-2 {{candidate function not viable}}
-      // expected-note@-3 {{conversion candidate of type}}
-    lambda(); // expected-error {{no matching function}}
+    lambda();
   }
   template void bar<A>(); // expected-note {{in instantiation}}
 }
@@ -485,4 +484,14 @@ namespace anon_union_default_member_init {
     };
   }
   void g() { f<int>(); }
+}
+
+namespace PR45000 {
+  template <typename T>
+  void f(int x = [](T x = nullptr) -> int { return x; }());
+  // expected-error@-1 {{cannot initialize a parameter of type 'int' with an rvalue of type 'nullptr_t'}}
+  // expected-note@-2 {{passing argument to parameter 'x' here}}
+
+  void g() { f<int>(); }
+  // expected-note@-1 {{in instantiation of default function argument expression for 'f<int>' required here}}
 }

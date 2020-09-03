@@ -3,7 +3,7 @@
 # RUN:   | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t.o
 
 # RUN: ld.lld -o %t1 --script %s %t.o -shared
-# RUN: llvm-objdump -section-headers %t1 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t1 | FileCheck %s
 
 SECTIONS {
   . = SIZEOF_HEADERS;
@@ -15,8 +15,8 @@ SECTIONS {
 # CHECK:      Sections:
 # CHECK-NEXT: Idx Name          Size     VMA
 # CHECK-NEXT:   0               00000000 0000000000000000
-# CHECK-NEXT:   1 .dynsym       00000018 0000000000000190
-# CHECK-NEXT:   2 .gnu.hash     0000001c 00000000000001a8
-# CHECK-NEXT:   3 .hash         00000010 00000000000001c4
-# CHECK-NEXT:   4 .dynstr       00000001 00000000000001d4
+# CHECK-NEXT:   1 .dynsym       00000018 00000000000001c8
+# CHECK-NEXT:   2 .gnu.hash     0000001c 00000000000001e0
+# CHECK-NEXT:   3 .hash         00000010 00000000000001fc
+# CHECK-NEXT:   4 .dynstr       00000001 000000000000020c
 # CHECK-NEXT:   5 foo           00000001 0000000000001000

@@ -950,6 +950,20 @@ namespace dynamic_alloc {
     p = new ((std::align_val_t)n) char[n];
     p = new char(n);
   }
+
+  namespace PR47143 {
+    constexpr char *f(int n) {
+      return new char[n]();
+    }
+    const char *p = f(3);
+    constexpr bool test() {
+      char *p = f(3);
+      bool result = !p[0] && !p[1] && !p[2];
+      delete [] p;
+      return result;
+    }
+    static_assert(test());
+  }
 }
 
 struct placement_new_arg {};
@@ -1047,6 +1061,11 @@ namespace memory_leaks {
   static_assert(h({new bool(true)})); // ok
 }
 
+void *operator new(std::size_t, void*);
+namespace std {
+  template<typename T> constexpr T *construct(T *p) { return new (p) T; }
+}
+
 namespace dtor_call {
   struct A { int n; };
   constexpr void f() { // expected-error {{never produces a constant expression}}
@@ -1065,15 +1084,22 @@ namespace dtor_call {
   }
   static_assert((g(), true));
 
-  constexpr bool pseudo() {
+  constexpr bool pseudo(bool read, bool recreate) {
     using T = bool;
-    bool b = false;
-    // This does evaluate the store to 'b'...
+    bool b = false; // expected-note {{lifetime has already ended}}
+    // This evaluates the store to 'b'...
     (b = true).~T();
-    // ... but does not end the lifetime of the object.
-    return b;
+    // ... and ends the lifetime of the object.
+    return (read
+            ? b // expected-note {{read of object outside its lifetime}}
+            : true) +
+           (recreate
+            ? (std::construct(&b), true)
+            : true);
   }
-  static_assert(pseudo());
+  static_assert(pseudo(false, false)); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(pseudo(true, false)); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(pseudo(false, true));
 
   constexpr void use_after_destroy() {
     A a;
@@ -1248,6 +1274,8 @@ namespace dtor_call {
     // We used to think this was an -> member access because its left-hand side
     // is a pointer. Ensure we don't crash.
     p.~T();
+    // Put a T back so we can destroy it again.
+    std::construct(&p);
   }
   static_assert((destroy_pointer(), true));
 }
@@ -1301,13 +1329,12 @@ namespace mutable_subobjects {
   constexpr void destroy1() { // expected-error {{constexpr}}
     a.~A(); // expected-note {{cannot modify an object that is visible outside}}
   }
-  // FIXME: These should both be rejected once P0593 is implemented.
   using T = int;
-  constexpr void destroy2() {
-    a.m.~T();
+  constexpr void destroy2() { // expected-error {{constexpr}}
+    a.m.~T(); // expected-note {{cannot modify an object that is visible outside}}
   }
-  constexpr void destroy3() {
-    a.n.~T();
+  constexpr void destroy3() { // expected-error {{constexpr}}
+    a.n.~T(); // expected-note {{cannot modify an object that is visible outside}}
   }
 
   struct X {
@@ -1332,6 +1359,41 @@ namespace mutable_subobjects {
   constexpr const Y *qz = dynamic_cast<const Y*>(pz);
   auto &zti = typeid(z.y);
   static_assert(&zti == &typeid(Y));
+}
+
+namespace PR45133 {
+  struct A { long x; };
+
+  union U;
+  constexpr A foo(U *up);
+
+  union U {
+    A a = foo(this); // expected-note {{in call to 'foo(&u)'}}
+    int y;
+  };
+
+  constexpr A foo(U *up) {
+    up->y = 11; // expected-note {{assignment would change active union member during the initialization of a different member}}
+    return {42};
+  }
+
+  constinit U u = {}; // expected-error {{constant init}} expected-note {{constinit}}
+
+  template<int> struct X {};
+
+  union V {
+    int a, b;
+    constexpr V(X<0>) : a(a = 1) {} // ok
+    constexpr V(X<1>) : a(b = 1) {} // expected-note {{assignment would change active union member during the initialization of a different member}}
+    constexpr V(X<2>) : a() { b = 1; } // ok
+    // This case (changing the active member then changing it back) is debatable,
+    // but it seems appropriate to reject.
+    constexpr V(X<3>) : a((b = 1, a = 1)) {} // expected-note {{assignment would change active union member during the initialization of a different member}}
+  };
+  constinit V v0 = X<0>();
+  constinit V v1 = X<1>(); // expected-error {{constant init}} expected-note {{constinit}} expected-note {{in call}}
+  constinit V v2 = X<2>();
+  constinit V v3 = X<3>(); // expected-error {{constant init}} expected-note {{constinit}} expected-note {{in call}}
 }
 
 namespace PR45350 {

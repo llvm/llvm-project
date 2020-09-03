@@ -29,6 +29,7 @@ public:
   bool contains(TypeIndex Index) override;
   uint32_t size() override;
   uint32_t capacity() override;
+  bool replaceType(TypeIndex &Index, CVType Data, bool Stabilize) override;
 
 private:
   BumpPtrAllocator Allocator;

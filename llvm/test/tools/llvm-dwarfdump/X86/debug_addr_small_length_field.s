@@ -1,10 +1,10 @@
 # RUN: llvm-mc %s -filetype obj -triple i386-pc-linux -o - | \
-# RUN: llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
+# RUN: not llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
 # RUN: FileCheck %s -input-file %t.err -check-prefix=ERR
 
 # CHECK: .debug_addr contents:
 # CHECK-NOT: {{.}}
-# ERR: .debug_addr table at offset 0x0 has too small length (0x5) to contain a complete header
+# ERR: address table at offset 0x0 has a unit_length value of 0x1, which is too small to contain a complete header
 # ERR-NOT: {{.}}
 
 # too small length value

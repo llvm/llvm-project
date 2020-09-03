@@ -323,7 +323,6 @@ public:
 class LoadExpression final : public MemoryExpression {
 private:
   LoadInst *Load;
-  MaybeAlign Alignment;
 
 public:
   LoadExpression(unsigned NumOperands, LoadInst *L,
@@ -332,10 +331,7 @@ public:
 
   LoadExpression(enum ExpressionType EType, unsigned NumOperands, LoadInst *L,
                  const MemoryAccess *MemoryLeader)
-      : MemoryExpression(NumOperands, EType, MemoryLeader), Load(L) {
-    if (L)
-      Alignment = MaybeAlign(L->getAlignment());
-  }
+      : MemoryExpression(NumOperands, EType, MemoryLeader), Load(L) {}
 
   LoadExpression() = delete;
   LoadExpression(const LoadExpression &) = delete;
@@ -348,9 +344,6 @@ public:
 
   LoadInst *getLoadInst() const { return Load; }
   void setLoadInst(LoadInst *L) { Load = L; }
-
-  MaybeAlign getAlignment() const { return Alignment; }
-  void setAlignment(MaybeAlign Align) { Alignment = Align; }
 
   bool equals(const Expression &Other) const override;
   bool exactlyEquals(const Expression &Other) const override {

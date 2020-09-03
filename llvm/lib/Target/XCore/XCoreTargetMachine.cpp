@@ -54,7 +54,7 @@ XCoreTargetMachine::XCoreTargetMachine(const Target &T, const Triple &TT,
           TT, CPU, FS, Options, getEffectiveRelocModel(RM),
           getEffectiveXCoreCodeModel(CM), OL),
       TLOF(std::make_unique<XCoreTargetObjectFile>()),
-      Subtarget(TT, CPU, FS, *this) {
+      Subtarget(TT, std::string(CPU), std::string(FS), *this) {
   initAsmInfo();
 }
 
@@ -105,7 +105,7 @@ void XCorePassConfig::addPreEmitPass() {
 }
 
 // Force static initialization.
-extern "C" void LLVMInitializeXCoreTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreTarget() {
   RegisterTargetMachine<XCoreTargetMachine> X(getTheXCoreTarget());
 }
 

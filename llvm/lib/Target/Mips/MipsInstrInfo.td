@@ -156,69 +156,69 @@ def MipsSDR : SDNode<"MipsISD::SDR", SDTStore,
 // Mips Instruction Predicate Definitions.
 //===----------------------------------------------------------------------===//
 def HasMips2     :    Predicate<"Subtarget->hasMips2()">,
-                      AssemblerPredicate<"FeatureMips2">;
+                      AssemblerPredicate<(all_of FeatureMips2)>;
 def HasMips3_32  :    Predicate<"Subtarget->hasMips3_32()">,
-                      AssemblerPredicate<"FeatureMips3_32">;
+                      AssemblerPredicate<(all_of FeatureMips3_32)>;
 def HasMips3_32r2 :   Predicate<"Subtarget->hasMips3_32r2()">,
-                      AssemblerPredicate<"FeatureMips3_32r2">;
+                      AssemblerPredicate<(all_of FeatureMips3_32r2)>;
 def HasMips3     :    Predicate<"Subtarget->hasMips3()">,
-                      AssemblerPredicate<"FeatureMips3">;
+                      AssemblerPredicate<(all_of FeatureMips3)>;
 def NotMips3     :    Predicate<"!Subtarget->hasMips3()">,
-                      AssemblerPredicate<"!FeatureMips3">;
+                      AssemblerPredicate<(all_of (not FeatureMips3))>;
 def HasMips4_32  :    Predicate<"Subtarget->hasMips4_32()">,
-                      AssemblerPredicate<"FeatureMips4_32">;
+                      AssemblerPredicate<(all_of FeatureMips4_32)>;
 def NotMips4_32  :    Predicate<"!Subtarget->hasMips4_32()">,
-                      AssemblerPredicate<"!FeatureMips4_32">;
+                      AssemblerPredicate<(all_of (not FeatureMips4_32))>;
 def HasMips4_32r2 :   Predicate<"Subtarget->hasMips4_32r2()">,
-                      AssemblerPredicate<"FeatureMips4_32r2">;
+                      AssemblerPredicate<(all_of FeatureMips4_32r2)>;
 def HasMips5_32r2 :   Predicate<"Subtarget->hasMips5_32r2()">,
-                      AssemblerPredicate<"FeatureMips5_32r2">;
+                      AssemblerPredicate<(all_of FeatureMips5_32r2)>;
 def HasMips32    :    Predicate<"Subtarget->hasMips32()">,
-                      AssemblerPredicate<"FeatureMips32">;
+                      AssemblerPredicate<(all_of FeatureMips32)>;
 def HasMips32r2  :    Predicate<"Subtarget->hasMips32r2()">,
-                      AssemblerPredicate<"FeatureMips32r2">;
+                      AssemblerPredicate<(all_of FeatureMips32r2)>;
 def HasMips32r5  :    Predicate<"Subtarget->hasMips32r5()">,
-                      AssemblerPredicate<"FeatureMips32r5">;
+                      AssemblerPredicate<(all_of FeatureMips32r5)>;
 def HasMips32r6  :    Predicate<"Subtarget->hasMips32r6()">,
-                      AssemblerPredicate<"FeatureMips32r6">;
+                      AssemblerPredicate<(all_of FeatureMips32r6)>;
 def NotMips32r6  :    Predicate<"!Subtarget->hasMips32r6()">,
-                      AssemblerPredicate<"!FeatureMips32r6">;
+                      AssemblerPredicate<(all_of (not FeatureMips32r6))>;
 def IsGP64bit    :    Predicate<"Subtarget->isGP64bit()">,
-                      AssemblerPredicate<"FeatureGP64Bit">;
+                      AssemblerPredicate<(all_of FeatureGP64Bit)>;
 def IsGP32bit    :    Predicate<"!Subtarget->isGP64bit()">,
-                      AssemblerPredicate<"!FeatureGP64Bit">;
+                      AssemblerPredicate<(all_of (not FeatureGP64Bit))>;
 def IsPTR64bit    :   Predicate<"Subtarget->isABI_N64()">,
-                      AssemblerPredicate<"FeaturePTR64Bit">;
+                      AssemblerPredicate<(all_of FeaturePTR64Bit)>;
 def IsPTR32bit    :   Predicate<"!Subtarget->isABI_N64()">,
-                      AssemblerPredicate<"!FeaturePTR64Bit">;
+                      AssemblerPredicate<(all_of (not FeaturePTR64Bit))>;
 def HasMips64    :    Predicate<"Subtarget->hasMips64()">,
-                      AssemblerPredicate<"FeatureMips64">;
+                      AssemblerPredicate<(all_of FeatureMips64)>;
 def NotMips64    :    Predicate<"!Subtarget->hasMips64()">,
-                      AssemblerPredicate<"!FeatureMips64">;
+                      AssemblerPredicate<(all_of (not FeatureMips64))>;
 def HasMips64r2  :    Predicate<"Subtarget->hasMips64r2()">,
-                      AssemblerPredicate<"FeatureMips64r2">;
+                      AssemblerPredicate<(all_of FeatureMips64r2)>;
 def HasMips64r5  :    Predicate<"Subtarget->hasMips64r5()">,
-                      AssemblerPredicate<"FeatureMips64r5">;
+                      AssemblerPredicate<(all_of FeatureMips64r5)>;
 def HasMips64r6  :    Predicate<"Subtarget->hasMips64r6()">,
-                      AssemblerPredicate<"FeatureMips64r6">;
+                      AssemblerPredicate<(all_of FeatureMips64r6)>;
 def NotMips64r6  :    Predicate<"!Subtarget->hasMips64r6()">,
-                      AssemblerPredicate<"!FeatureMips64r6">;
+                      AssemblerPredicate<(all_of (not FeatureMips64r6))>;
 def InMips16Mode :    Predicate<"Subtarget->inMips16Mode()">,
-                      AssemblerPredicate<"FeatureMips16">;
+                      AssemblerPredicate<(all_of FeatureMips16)>;
 def NotInMips16Mode : Predicate<"!Subtarget->inMips16Mode()">,
-                      AssemblerPredicate<"!FeatureMips16">;
+                      AssemblerPredicate<(all_of (not FeatureMips16))>;
 def HasCnMips    :    Predicate<"Subtarget->hasCnMips()">,
-                      AssemblerPredicate<"FeatureCnMips">;
+                      AssemblerPredicate<(all_of FeatureCnMips)>;
 def NotCnMips    :    Predicate<"!Subtarget->hasCnMips()">,
-                      AssemblerPredicate<"!FeatureCnMips">;
+                      AssemblerPredicate<(all_of (not FeatureCnMips))>;
 def HasCnMipsP   :    Predicate<"Subtarget->hasCnMipsP()">,
-                      AssemblerPredicate<"FeatureCnMipsP">;
+                      AssemblerPredicate<(all_of FeatureCnMipsP)>;
 def NotCnMipsP   :    Predicate<"!Subtarget->hasCnMipsP()">,
-                      AssemblerPredicate<"!FeatureCnMipsP">;
+                      AssemblerPredicate<(all_of (not FeatureCnMipsP))>;
 def IsSym32     :     Predicate<"Subtarget->hasSym32()">,
-                      AssemblerPredicate<"FeatureSym32">;
+                      AssemblerPredicate<(all_of FeatureSym32)>;
 def IsSym64     :     Predicate<"!Subtarget->hasSym32()">,
-                      AssemblerPredicate<"!FeatureSym32">;
+                      AssemblerPredicate<(all_of (not FeatureSym32))>;
 def IsN64       :     Predicate<"Subtarget->isABI_N64()">;
 def IsNotN64    :     Predicate<"!Subtarget->isABI_N64()">;
 def RelocNotPIC :     Predicate<"!TM.isPositionIndependent()">;
@@ -227,34 +227,34 @@ def NoNaNsFPMath :    Predicate<"TM.Options.NoNaNsFPMath">;
 def UseAbs :          Predicate<"Subtarget->inAbs2008Mode() ||"
                                 "TM.Options.NoNaNsFPMath">;
 def HasStdEnc :       Predicate<"Subtarget->hasStandardEncoding()">,
-                      AssemblerPredicate<"!FeatureMips16">;
+                      AssemblerPredicate<(all_of (not FeatureMips16))>;
 def NotDSP :          Predicate<"!Subtarget->hasDSP()">;
 def InMicroMips    :  Predicate<"Subtarget->inMicroMipsMode()">,
-                      AssemblerPredicate<"FeatureMicroMips">;
+                      AssemblerPredicate<(all_of FeatureMicroMips)>;
 def NotInMicroMips :  Predicate<"!Subtarget->inMicroMipsMode()">,
-                      AssemblerPredicate<"!FeatureMicroMips">;
+                      AssemblerPredicate<(all_of (not FeatureMicroMips))>;
 def IsLE           :  Predicate<"Subtarget->isLittle()">;
 def IsBE           :  Predicate<"!Subtarget->isLittle()">;
 def IsNotNaCl    :    Predicate<"!Subtarget->isTargetNaCl()">;
-def UseTCCInDIV    :  AssemblerPredicate<"FeatureUseTCCInDIV">;
+def UseTCCInDIV    :  AssemblerPredicate<(all_of FeatureUseTCCInDIV)>;
 def HasEVA       :    Predicate<"Subtarget->hasEVA()">,
-                      AssemblerPredicate<"FeatureEVA">;
+                      AssemblerPredicate<(all_of FeatureEVA)>;
 def HasMSA : Predicate<"Subtarget->hasMSA()">,
-             AssemblerPredicate<"FeatureMSA">;
+             AssemblerPredicate<(all_of FeatureMSA)>;
 def HasMadd4 : Predicate<"!Subtarget->disableMadd4()">,
-               AssemblerPredicate<"!FeatureMadd4">;
+               AssemblerPredicate<(all_of (not FeatureMadd4))>;
 def HasMT  : Predicate<"Subtarget->hasMT()">,
-             AssemblerPredicate<"FeatureMT">;
+             AssemblerPredicate<(all_of FeatureMT)>;
 def UseIndirectJumpsHazard : Predicate<"Subtarget->useIndirectJumpsHazard()">,
-                            AssemblerPredicate<"FeatureUseIndirectJumpsHazard">;
+                            AssemblerPredicate<(all_of FeatureUseIndirectJumpsHazard)>;
 def NoIndirectJumpGuards : Predicate<"!Subtarget->useIndirectJumpsHazard()">,
-                           AssemblerPredicate<"!FeatureUseIndirectJumpsHazard">;
+                           AssemblerPredicate<(all_of (not FeatureUseIndirectJumpsHazard))>;
 def HasCRC   : Predicate<"Subtarget->hasCRC()">,
-               AssemblerPredicate<"FeatureCRC">;
+               AssemblerPredicate<(all_of FeatureCRC)>;
 def HasVirt  : Predicate<"Subtarget->hasVirt()">,
-               AssemblerPredicate<"FeatureVirt">;
+               AssemblerPredicate<(all_of FeatureVirt)>;
 def HasGINV  : Predicate<"Subtarget->hasGINV()">,
-               AssemblerPredicate<"FeatureGINV">;
+               AssemblerPredicate<(all_of FeatureGINV)>;
 // TODO: Add support for FPOpFusion::Standard
 def AllowFPOpFusion : Predicate<"TM.Options.AllowFPOpFusion =="
                                 " FPOpFusion::Fast">;
@@ -498,7 +498,7 @@ class MADD4 {
   list<Predicate> AdditionalPredicates = [HasMadd4];
 }
 
-// Classses used for separating expansions that differ based on the ABI in
+// Classes used for separating expansions that differ based on the ABI in
 // use.
 class ABI_N64 {
   list<Predicate> AdditionalPredicates = [IsN64];
@@ -1286,7 +1286,7 @@ def LUiORiPred  : PatLeaf<(imm), [{
   return isInt<32>(SVal) && (SVal & 0xffff);
 }]>;
 
-// Mips Address Mode! SDNode frameindex could possibily be a match
+// Mips Address Mode! SDNode frameindex could possibly be a match
 // since load and store instructions from stack used it.
 def addr :
   ComplexPattern<iPTR, 2, "selectIntAddr", [frameindex]>;
@@ -1871,10 +1871,11 @@ class MTC3OP<string asmstr, RegisterOperand RO, RegisterOperand RD,
 class TrapBase<Instruction RealInst>
   : PseudoSE<(outs), (ins), [(trap)], II_TRAP>,
     PseudoInstExpansion<(RealInst 0, 0)> {
-  let isBarrier = 1;
-  let isTerminator = 1;
+  let mayStore = 0;
+  let mayLoad = 0;
+  let hasSideEffects = 1;
+  let isTrap = 1;
   let isCodeGenOnly = 1;
-  let isCTI = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2588,6 +2589,22 @@ def : MipsInstAlias<"seq $rd, $imm",
                     (SEQIMacro GPR32Opnd:$rd, GPR32Opnd:$rd, simm32:$imm), 0>,
                     NOT_ASE_CNMIPS;
 
+def SNEMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                 (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
+                                 "sne $rd, $rs, $rt">, NOT_ASE_CNMIPS;
+
+def : MipsInstAlias<"sne $rd, $rs",
+                    (SNEMacro GPR32Opnd:$rd, GPR32Opnd:$rd, GPR32Opnd:$rs), 0>,
+                    NOT_ASE_CNMIPS;
+
+def SNEIMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                  (ins GPR32Opnd:$rs, simm32_relaxed:$imm),
+                                  "sne $rd, $rs, $imm">, NOT_ASE_CNMIPS;
+
+def : MipsInstAlias<"sne $rd, $imm",
+                    (SNEIMacro GPR32Opnd:$rd, GPR32Opnd:$rd, simm32:$imm), 0>,
+                    NOT_ASE_CNMIPS;
+
 def MULImmMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
                                                  simm32_relaxed:$imm),
                                     "mul\t$rd, $rs, $imm">,
@@ -2731,6 +2748,34 @@ let AdditionalPredicates = [NotInMicroMips] in {
                                   (ins GPR32Opnd:$rs, uimm32_coerced:$imm),
                                   "sgtu\t$rd, $rs, $imm">, GPR_32;
   def : MipsInstAlias<"sgtu $rs, $imm", (SGTUImm GPR32Opnd:$rs,
+                                                 GPR32Opnd:$rs,
+                                                 uimm32_coerced:$imm), 0>,
+        GPR_32;
+
+  def SLE : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                              (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
+                              "sle\t$rd, $rs, $rt">, ISA_MIPS1;
+  def : MipsInstAlias<"sle $rs, $rt",
+                      (SLE GPR32Opnd:$rs, GPR32Opnd:$rs, GPR32Opnd:$rt), 0>,
+        ISA_MIPS1;
+  def SLEImm : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                 (ins GPR32Opnd:$rs, simm32:$imm),
+                                 "sle\t$rd, $rs, $imm">, GPR_32;
+  def : MipsInstAlias<"sle $rs, $imm", (SLEImm GPR32Opnd:$rs,
+                                               GPR32Opnd:$rs,
+                                               simm32:$imm), 0>,
+        GPR_32;
+
+  def SLEU : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                               (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
+                               "sleu\t$rd, $rs, $rt">, ISA_MIPS1;
+  def : MipsInstAlias<"sleu $rs, $rt",
+                      (SLEU GPR32Opnd:$rs, GPR32Opnd:$rs, GPR32Opnd:$rt), 0>,
+        ISA_MIPS1;
+  def SLEUImm : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                  (ins GPR32Opnd:$rs, uimm32_coerced:$imm),
+                                  "sleu\t$rd, $rs, $imm">, GPR_32;
+  def : MipsInstAlias<"sleu $rs, $imm", (SLEUImm GPR32Opnd:$rs,
                                                  GPR32Opnd:$rs,
                                                  uimm32_coerced:$imm), 0>,
         GPR_32;

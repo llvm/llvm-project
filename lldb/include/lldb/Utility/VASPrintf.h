@@ -17,4 +17,4 @@ namespace lldb_private {
 bool VASprintf(llvm::SmallVectorImpl<char> &buf, const char *fmt, va_list args);
 }
 
-#endif // #ifdef LLDB_UTILITY_VASPRINTF_H
+#endif // LLDB_UTILITY_VASPRINTF_H

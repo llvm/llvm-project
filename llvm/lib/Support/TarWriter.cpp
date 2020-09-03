@@ -131,7 +131,17 @@ static bool splitUstar(StringRef Path, StringRef &Prefix, StringRef &Name) {
     return true;
   }
 
-  size_t Sep = Path.rfind('/', sizeof(UstarHeader::Prefix) + 1);
+  // tar 1.13 and earlier unconditionally look at the tar header interpreted
+  // as an 'oldgnu_header', which has an 'isextended' byte at offset 482 in the
+  // header, corresponding to offset 137 in the prefix. That's the version of
+  // tar in gnuwin, so only use 137 of the 155 bytes in the prefix. This means
+  // we'll need a pax header after 237 bytes of path instead of after 255,
+  // but in return paths up to 237 bytes work with gnuwin, instead of just
+  // 137 bytes of directory + 100 bytes of basename previously.
+  // (tar-1.13 also doesn't support pax headers, but in practice all paths in
+  // llvm's test suite are short enough for that to not matter.)
+  const int MaxPrefix = 137;
+  size_t Sep = Path.rfind('/', MaxPrefix + 1);
   if (Sep == StringRef::npos)
     return false;
   if (Path.size() - Sep - 1 >= sizeof(UstarHeader::Name))
@@ -167,7 +177,8 @@ Expected<std::unique_ptr<TarWriter>> TarWriter::create(StringRef OutputPath,
 }
 
 TarWriter::TarWriter(int FD, StringRef BaseDir)
-    : OS(FD, /*shouldClose=*/true, /*unbuffered=*/false), BaseDir(BaseDir) {}
+    : OS(FD, /*shouldClose=*/true, /*unbuffered=*/false),
+      BaseDir(std::string(BaseDir)) {}
 
 // Append a given file to an archive.
 void TarWriter::append(StringRef Path, StringRef Data) {

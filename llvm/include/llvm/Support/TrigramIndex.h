@@ -27,7 +27,6 @@
 #define LLVM_SUPPORT_TRIGRAMINDEX_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 
 #include <string>
 #include <unordered_map>

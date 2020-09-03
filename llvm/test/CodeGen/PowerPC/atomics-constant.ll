@@ -8,11 +8,10 @@ target triple = "powerpc64le-unknown-linux-gnu"
 define i64 @foo() {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, a@toc@ha
 ; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:    addi 3, 3, a@toc@l
+; CHECK-NEXT:    addis 3, 2, a@toc@ha
+; CHECK-NEXT:    ld 3, a@toc@l(3)
 ; CHECK-NEXT:    cmpd 7, 4, 4
-; CHECK-NEXT:    ld 3, 0(3)
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    bne- 7, .+4
 ; CHECK-NEXT:    isync

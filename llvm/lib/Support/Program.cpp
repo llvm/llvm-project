@@ -13,6 +13,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/raw_ostream.h"
 #include <system_error>
 using namespace llvm;
 using namespace sys;
@@ -31,14 +32,16 @@ int sys::ExecuteAndWait(StringRef Program, ArrayRef<StringRef> Args,
                         Optional<ArrayRef<StringRef>> Env,
                         ArrayRef<Optional<StringRef>> Redirects,
                         unsigned SecondsToWait, unsigned MemoryLimit,
-                        std::string *ErrMsg, bool *ExecutionFailed) {
+                        std::string *ErrMsg, bool *ExecutionFailed,
+                        Optional<ProcessStatistics> *ProcStat) {
   assert(Redirects.empty() || Redirects.size() == 3);
   ProcessInfo PI;
   if (Execute(PI, Program, Args, Env, Redirects, MemoryLimit, ErrMsg)) {
     if (ExecutionFailed)
       *ExecutionFailed = false;
-    ProcessInfo Result = Wait(
-        PI, SecondsToWait, /*WaitUntilTerminates=*/SecondsToWait == 0, ErrMsg);
+    ProcessInfo Result =
+        Wait(PI, SecondsToWait, /*WaitUntilTerminates=*/SecondsToWait == 0,
+             ErrMsg, ProcStat);
     return Result.ReturnCode;
   }
 
@@ -71,6 +74,24 @@ bool sys::commandLineFitsWithinSystemLimits(StringRef Program,
   for (const char *A : Args)
     StringRefArgs.emplace_back(A);
   return commandLineFitsWithinSystemLimits(Program, StringRefArgs);
+}
+
+void sys::printArg(raw_ostream &OS, StringRef Arg, bool Quote) {
+  const bool Escape = Arg.find_first_of(" \"\\$") != StringRef::npos;
+
+  if (!Quote && !Escape) {
+    OS << Arg;
+    return;
+  }
+
+  // Quote and escape. This isn't really complete, but good enough.
+  OS << '"';
+  for (const auto c : Arg) {
+    if (c == '"' || c == '\\' || c == '$')
+      OS << '\\';
+    OS << c;
+  }
+  OS << '"';
 }
 
 // Include the platform-specific parts of this class.

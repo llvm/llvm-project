@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlanStepInRange_h_
-#define liblldb_ThreadPlanStepInRange_h_
+#ifndef LLDB_TARGET_THREADPLANSTEPINRANGE_H
+#define LLDB_TARGET_THREADPLANSTEPINRANGE_H
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Target/StackID.h"
@@ -117,9 +117,11 @@ private:
   std::vector<lldb::break_id_t> m_step_in_deep_bps; // Places where we might
                                                     // want to stop when we do a
                                                     // step out.
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepInRange);
+  ThreadPlanStepInRange(const ThreadPlanStepInRange &) = delete;
+  const ThreadPlanStepInRange &
+  operator=(const ThreadPlanStepInRange &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlanStepInRange_h_
+#endif // LLDB_TARGET_THREADPLANSTEPINRANGE_H

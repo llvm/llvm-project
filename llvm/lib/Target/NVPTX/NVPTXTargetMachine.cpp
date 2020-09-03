@@ -72,7 +72,7 @@ void initializeNVPTXProxyRegErasurePass(PassRegistry &);
 
 } // end namespace llvm
 
-extern "C" void LLVMInitializeNVPTXTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   // Register the target.
   RegisterTargetMachine<NVPTXTargetMachine32> X(getTheNVPTXTarget32());
   RegisterTargetMachine<NVPTXTargetMachine64> Y(getTheNVPTXTarget64());
@@ -117,7 +117,7 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
       is64bit(is64bit), UseShortPointers(UseShortPointersOpt),
       TLOF(std::make_unique<NVPTXTargetObjectFile>()),
-      Subtarget(TT, CPU, FS, *this) {
+      Subtarget(TT, std::string(CPU), std::string(FS), *this) {
   if (TT.getOS() == Triple::NVCL)
     drvInterface = NVPTX::NVCL;
   else
@@ -276,8 +276,6 @@ void NVPTXPassConfig::addIRPasses() {
   addPass(createNVPTXLowerArgsPass(&getNVPTXTargetMachine()));
   if (getOptLevel() != CodeGenOpt::None) {
     addAddressSpaceInferencePasses();
-    if (!DisableLoadStoreVectorizer)
-      addPass(createLoadStoreVectorizerPass());
     addStraightLineScalarOptimizationPasses();
   }
 
@@ -295,8 +293,11 @@ void NVPTXPassConfig::addIRPasses() {
   //   %1 = shl %a, 2
   //
   // but EarlyCSE can do neither of them.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOpt::None) {
     addEarlyCSEOrGVNPass();
+    if (!DisableLoadStoreVectorizer)
+      addPass(createLoadStoreVectorizerPass());
+  }
 }
 
 bool NVPTXPassConfig::addInstSelector() {

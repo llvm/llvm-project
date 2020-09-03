@@ -5,9 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This pass lowers all remaining coroutine intrinsics.
-//===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Coroutines/CoroCleanup.h"
 #include "CoroInternal.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -90,12 +89,26 @@ bool Lowerer::lowerRemainingCoroIntrinsics(Function &F) {
     // After replacement were made we can cleanup the function body a little.
     simplifyCFG(F);
   }
+
   return Changed;
 }
 
-//===----------------------------------------------------------------------===//
-//                              Top Level Driver
-//===----------------------------------------------------------------------===//
+static bool declaresCoroCleanupIntrinsics(const Module &M) {
+  return coro::declaresIntrinsics(M, {"llvm.coro.alloc", "llvm.coro.begin",
+                                      "llvm.coro.subfn.addr", "llvm.coro.free",
+                                      "llvm.coro.id", "llvm.coro.id.retcon",
+                                      "llvm.coro.id.retcon.once"});
+}
+
+PreservedAnalyses CoroCleanupPass::run(Function &F,
+                                       FunctionAnalysisManager &AM) {
+  auto &M = *F.getParent();
+  if (!declaresCoroCleanupIntrinsics(M) ||
+      !Lowerer(M).lowerRemainingCoroIntrinsics(F))
+    return PreservedAnalyses::all();
+
+  return PreservedAnalyses::none();
+}
 
 namespace {
 
@@ -111,10 +124,7 @@ struct CoroCleanupLegacy : FunctionPass {
   // This pass has work to do only if we find intrinsics we are going to lower
   // in the module.
   bool doInitialization(Module &M) override {
-    if (coro::declaresIntrinsics(M, {"llvm.coro.alloc", "llvm.coro.begin",
-                                     "llvm.coro.subfn.addr", "llvm.coro.free",
-                                     "llvm.coro.id", "llvm.coro.id.retcon",
-                                     "llvm.coro.id.retcon.once"}))
+    if (declaresCoroCleanupIntrinsics(M))
       L = std::make_unique<Lowerer>(M);
     return false;
   }

@@ -164,6 +164,7 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
 
   // Much like WebAssemblyAsmPrinter in the backend, we have to own these.
   std::vector<std::unique_ptr<wasm::WasmSignature>> Signatures;
+  std::vector<std::unique_ptr<std::string>> Names;
 
   // Order of labels, directives and instructions in a .s file have no
   // syntactical enforcement. This class is a callback from the actual parser,
@@ -214,6 +215,11 @@ public:
                      SMLoc & /*EndLoc*/) override {
     llvm_unreachable("ParseRegister is not implemented.");
   }
+  OperandMatchResultTy tryParseRegister(unsigned & /*RegNo*/,
+                                        SMLoc & /*StartLoc*/,
+                                        SMLoc & /*EndLoc*/) override {
+    llvm_unreachable("tryParseRegister is not implemented.");
+  }
 
   bool error(const Twine &Msg, const AsmToken &Tok) {
     return Parser.Error(Tok.getLoc(), Msg + Tok.getString());
@@ -225,6 +231,12 @@ public:
 
   void addSignature(std::unique_ptr<wasm::WasmSignature> &&Sig) {
     Signatures.push_back(std::move(Sig));
+  }
+
+  StringRef storeName(StringRef Name) {
+    std::unique_ptr<std::string> N = std::make_unique<std::string>(Name);
+    Names.push_back(std::move(N));
+    return *Names.back();
   }
 
   std::pair<StringRef, StringRef> nestingString(NestingType NT) {
@@ -310,6 +322,8 @@ public:
       return wasm::ValType::V128;
     if (Type == "exnref")
       return wasm::ValType::EXNREF;
+    if (Type == "externref")
+      return wasm::ValType::EXTERNREF;
     return Optional<wasm::ValType>();
   }
 
@@ -430,7 +444,7 @@ public:
     Name = StringRef(NameLoc.getPointer(), Name.size());
 
     // WebAssembly has instructions with / in them, which AsmLexer parses
-    // as seperate tokens, so if we find such tokens immediately adjacent (no
+    // as separate tokens, so if we find such tokens immediately adjacent (no
     // whitespace), expand the name to include them:
     for (;;) {
       auto &Sep = Lexer.getTok();
@@ -688,7 +702,7 @@ public:
       // WebAssemblyAsmPrinter::EmitFunctionBodyStart.
       // TODO: would be good to factor this into a common function, but the
       // assembler and backend really don't share any common code, and this code
-      // parses the locals seperately.
+      // parses the locals separately.
       auto SymName = expectIdent();
       if (SymName.empty())
         return true;
@@ -720,7 +734,7 @@ public:
         return true;
       auto ExportName = expectIdent();
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      WasmSym->setExportName(ExportName);
+      WasmSym->setExportName(storeName(ExportName));
       TOut.emitExportName(WasmSym, ExportName);
     }
 
@@ -732,7 +746,7 @@ public:
         return true;
       auto ImportModule = expectIdent();
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      WasmSym->setImportModule(ImportModule);
+      WasmSym->setImportModule(storeName(ImportModule));
       TOut.emitImportModule(WasmSym, ImportModule);
     }
 
@@ -744,7 +758,7 @@ public:
         return true;
       auto ImportName = expectIdent();
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      WasmSym->setImportName(ImportName);
+      WasmSym->setImportName(storeName(ImportName));
       TOut.emitImportName(WasmSym, ImportName);
     }
 
@@ -787,7 +801,7 @@ public:
         return error("Cannot parse .int expression: ", Lexer.getTok());
       size_t NumBits = 0;
       DirectiveID.getString().drop_front(4).getAsInteger(10, NumBits);
-      Out.EmitValue(Val, NumBits / 8, End);
+      Out.emitValue(Val, NumBits / 8, End);
       return expect(AsmToken::EndOfStatement, "EOL");
     }
 
@@ -796,7 +810,7 @@ public:
       std::string S;
       if (Parser.parseEscapedString(S))
         return error("Cannot parse string constant: ", Lexer.getTok());
-      Out.EmitBytes(StringRef(S.c_str(), S.length() + 1));
+      Out.emitBytes(StringRef(S.c_str(), S.length() + 1));
       return expect(AsmToken::EndOfStatement, "EOL");
     }
 
@@ -834,7 +848,17 @@ public:
         if (Op0.getImm() == -1)
           Op0.setImm(Align);
       }
-      Out.EmitInstruction(Inst, getSTI());
+      if (getSTI().getTargetTriple().isArch64Bit()) {
+        // Upgrade 32-bit loads/stores to 64-bit. These mostly differ by having
+        // an offset64 arg instead of offset32, but to the assembler matcher
+        // they're both immediates so don't get selected for.
+        auto Opc64 = WebAssembly::getWasm64Opcode(
+            static_cast<uint16_t>(Inst.getOpcode()));
+        if (Opc64 >= 0) {
+          Inst.setOpcode(Opc64);
+        }
+      }
+      Out.emitInstruction(Inst, getSTI());
       if (CurrentState == EndFunction) {
         onEndOfFunction();
       } else {
@@ -879,6 +903,9 @@ public:
     auto SecName = ".text." + SymName;
     auto WS = getContext().getWasmSection(SecName, SectionKind::getText());
     getStreamer().SwitchSection(WS);
+    // Also generate DWARF for this section if requested.
+    if (getContext().getGenDwarfForAssembly())
+      getContext().addGenDwarfSection(WS);
   }
 
   void onEndOfFunction() {
@@ -886,7 +913,7 @@ public:
     // user.
     if (!LastFunctionLabel) return;
     auto TempSym = getContext().createLinkerPrivateTempSymbol();
-    getStreamer().EmitLabel(TempSym);
+    getStreamer().emitLabel(TempSym);
     auto Start = MCSymbolRefExpr::create(LastFunctionLabel, getContext());
     auto End = MCSymbolRefExpr::create(TempSym, getContext());
     auto Expr =
@@ -899,7 +926,7 @@ public:
 } // end anonymous namespace
 
 // Force static initialization.
-extern "C" void LLVMInitializeWebAssemblyAsmParser() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyAsmParser() {
   RegisterMCAsmParser<WebAssemblyAsmParser> X(getTheWebAssemblyTarget32());
   RegisterMCAsmParser<WebAssemblyAsmParser> Y(getTheWebAssemblyTarget64());
 }

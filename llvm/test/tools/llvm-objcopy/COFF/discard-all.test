@@ -1,4 +1,4 @@
-RUN: yaml2obj %p/Inputs/discard-locals.yaml > %t.in.o
+RUN: yaml2obj %p/Inputs/discard-locals.yaml -o %t.in.o
 
 RUN: llvm-objdump -t %t.in.o | FileCheck %s --check-prefixes=SYMBOLS,SYMBOLS-PRE
 

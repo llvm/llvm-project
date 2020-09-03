@@ -45,9 +45,9 @@ struct DirectoryWatcherTestFixture {
 #endif
     createUniqueDirectory("dirwatcher", pathBuf);
     assert(!UniqDirRes);
-    TestRootDir = pathBuf.str();
+    TestRootDir = std::string(pathBuf.str());
     path::append(pathBuf, "watch");
-    TestWatchedDir = pathBuf.str();
+    TestWatchedDir = std::string(pathBuf.str());
 #ifndef NDEBUG
     std::error_code CreateDirRes =
 #endif

@@ -1,9 +1,10 @@
-add_gen_header(
-  syscall_impl_h
-  DEF_FILE syscall.h.def
-  GEN_HDR syscall.h
-  PARAMS
-    inline_syscalls=../../config/${LIBC_TARGET_OS}/${LIBC_TARGET_MACHINE}/syscall.h.inc
-  DATA_FILES
-    ../../config/${LIBC_TARGET_OS}/${LIBC_TARGET_MACHINE}/syscall.h.inc
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+endif()
+
+add_entrypoint_object(
+  write
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.write
 )

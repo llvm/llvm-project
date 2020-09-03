@@ -126,11 +126,14 @@ inline uptr getPageSizeCached() {
   return getPageSizeSlow();
 }
 
+// Returns 0 if the number of CPUs could not be determined.
 u32 getNumberOfCPUs();
 
 const char *getEnv(const char *Name);
 
 u64 getMonotonicTime();
+
+u32 getThreadID();
 
 // Our randomness gathering function is limited to 256 bytes to ensure we get
 // as many bytes as requested, and avoid interruptions (on Linux).
@@ -142,6 +145,7 @@ bool getRandom(void *Buffer, uptr Length, bool Blocking = false);
 #define MAP_ALLOWNOMEM (1U << 0)
 #define MAP_NOACCESS (1U << 1)
 #define MAP_RESIZABLE (1U << 2)
+#define MAP_MEMTAG (1U << 3)
 
 // Our platform memory mapping use is restricted to 3 scenarios:
 // - reserve memory at a random address (MAP_NOACCESS);
@@ -170,6 +174,22 @@ void NORETURN dieOnMapUnmapError(bool OutOfMemory = false);
 // Logging related functions.
 
 void setAbortMessage(const char *Message);
+
+struct BlockInfo {
+  uptr BlockBegin;
+  uptr BlockSize;
+  uptr RegionBegin;
+  uptr RegionEnd;
+};
+
+constexpr unsigned char PatternFillByte = 0xAB;
+
+enum FillContentsMode {
+  NoFill = 0,
+  ZeroFill = 1,
+  PatternOrZeroFill = 2 // Pattern fill unless the memory is known to be
+                        // zero-initialized already.
+};
 
 } // namespace scudo
 

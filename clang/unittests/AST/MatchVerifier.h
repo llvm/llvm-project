@@ -21,8 +21,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/Tooling.h"
-#include "Language.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -36,22 +36,20 @@ public:
   testing::AssertionResult match(const std::string &Code,
                                  const MatcherType &AMatcher) {
     std::vector<std::string> Args;
-    return match(Code, AMatcher, Args, Lang_CXX);
+    return match(Code, AMatcher, Args, Lang_CXX03);
   }
 
   template <typename MatcherType>
   testing::AssertionResult match(const std::string &Code,
-                                 const MatcherType &AMatcher,
-                                 Language L) {
+                                 const MatcherType &AMatcher, TestLanguage L) {
     std::vector<std::string> Args;
     return match(Code, AMatcher, Args, L);
   }
 
   template <typename MatcherType>
-  testing::AssertionResult match(const std::string &Code,
-                                 const MatcherType &AMatcher,
-                                 std::vector<std::string>& Args,
-                                 Language L);
+  testing::AssertionResult
+  match(const std::string &Code, const MatcherType &AMatcher,
+        std::vector<std::string> &Args, TestLanguage L);
 
   template <typename MatcherType>
   testing::AssertionResult match(const Decl *D, const MatcherType &AMatcher);
@@ -77,10 +75,12 @@ private:
 
 /// \brief Runs a matcher over some code, and returns the result of the
 /// verifier for the matched node.
-template <typename NodeType> template <typename MatcherType>
-testing::AssertionResult MatchVerifier<NodeType>::match(
-    const std::string &Code, const MatcherType &AMatcher,
-    std::vector<std::string>& Args, Language L) {
+template <typename NodeType>
+template <typename MatcherType>
+testing::AssertionResult
+MatchVerifier<NodeType>::match(const std::string &Code,
+                               const MatcherType &AMatcher,
+                               std::vector<std::string> &Args, TestLanguage L) {
   MatchFinder Finder;
   Finder.addMatcher(AMatcher.bind(""), this);
   std::unique_ptr<tooling::FrontendActionFactory> Factory(
@@ -88,16 +88,16 @@ testing::AssertionResult MatchVerifier<NodeType>::match(
 
   StringRef FileName;
   switch (L) {
-  case Lang_C:
-    Args.push_back("-std=c99");
-    FileName = "input.c";
-    break;
   case Lang_C89:
     Args.push_back("-std=c89");
     FileName = "input.c";
     break;
-  case Lang_CXX:
-    Args.push_back("-std=c++98");
+  case Lang_C99:
+    Args.push_back("-std=c99");
+    FileName = "input.c";
+    break;
+  case Lang_CXX03:
+    Args.push_back("-std=c++03");
     FileName = "input.cc";
     break;
   case Lang_CXX11:
@@ -112,8 +112,8 @@ testing::AssertionResult MatchVerifier<NodeType>::match(
     Args.push_back("-std=c++17");
     FileName = "input.cc";
     break;
-  case Lang_CXX2a:
-    Args.push_back("-std=c++2a");
+  case Lang_CXX20:
+    Args.push_back("-std=c++20");
     FileName = "input.cc";
     break;
   case Lang_OpenCL:
@@ -162,8 +162,8 @@ void MatchVerifier<NodeType>::run(const MatchFinder::MatchResult &Result) {
 }
 
 template <>
-inline void MatchVerifier<ast_type_traits::DynTypedNode>::run(
-    const MatchFinder::MatchResult &Result) {
+inline void
+MatchVerifier<DynTypedNode>::run(const MatchFinder::MatchResult &Result) {
   BoundNodes::IDToNodeMap M = Result.Nodes.getMap();
   BoundNodes::IDToNodeMap::const_iterator I = M.find("");
   if (I == M.end()) {
@@ -260,7 +260,7 @@ private:
 };
 
 /// \brief Verify whether a node's dump contains a given substring.
-class DumpVerifier : public MatchVerifier<ast_type_traits::DynTypedNode> {
+class DumpVerifier : public MatchVerifier<DynTypedNode> {
 public:
   void expectSubstring(const std::string &Str) {
     ExpectSubstring = Str;
@@ -268,10 +268,10 @@ public:
 
 protected:
   void verify(const MatchFinder::MatchResult &Result,
-              const ast_type_traits::DynTypedNode &Node) override {
+              const DynTypedNode &Node) override {
     std::string DumpStr;
     llvm::raw_string_ostream Dump(DumpStr);
-    Node.dump(Dump, *Result.SourceManager);
+    Node.dump(Dump, *Result.Context);
 
     if (Dump.str().find(ExpectSubstring) == std::string::npos) {
       std::string MsgStr;
@@ -287,7 +287,7 @@ private:
 };
 
 /// \brief Verify whether a node's pretty print matches a given string.
-class PrintVerifier : public MatchVerifier<ast_type_traits::DynTypedNode> {
+class PrintVerifier : public MatchVerifier<DynTypedNode> {
 public:
   void expectString(const std::string &Str) {
     ExpectString = Str;
@@ -295,7 +295,7 @@ public:
 
 protected:
   void verify(const MatchFinder::MatchResult &Result,
-              const ast_type_traits::DynTypedNode &Node) override {
+              const DynTypedNode &Node) override {
     std::string PrintStr;
     llvm::raw_string_ostream Print(PrintStr);
     Node.print(Print, Result.Context->getPrintingPolicy());

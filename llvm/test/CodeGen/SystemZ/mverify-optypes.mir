@@ -1,6 +1,5 @@
-# RUN: not llc -mtriple=s390x-linux-gnu -mcpu=z14 -run-pass=none -o - %s \
+# RUN: not --crash llc -mtriple=s390x-linux-gnu -mcpu=z14 -run-pass=none -o - %s \
 # RUN:  2>&1 | FileCheck %s
-# REQUIRES: asserts
 #
 # Test that the machine verifier catches wrong operand types.
 

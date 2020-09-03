@@ -119,7 +119,7 @@ class CXXBasePaths {
   friend class CXXRecordDecl;
 
   /// The type from which this search originated.
-  CXXRecordDecl *Origin = nullptr;
+  const CXXRecordDecl *Origin = nullptr;
 
   /// Paths - The actual set of paths that can be taken from the
   /// derived class to the same base class.
@@ -225,8 +225,8 @@ public:
 
   /// Retrieve the type from which this base-paths search
   /// began
-  CXXRecordDecl *getOrigin() const { return Origin; }
-  void setOrigin(CXXRecordDecl *Rec) { Origin = Rec; }
+  const CXXRecordDecl *getOrigin() const { return Origin; }
+  void setOrigin(const CXXRecordDecl *Rec) { Origin = Rec; }
 
   /// Clear the base-paths results.
   void clear();

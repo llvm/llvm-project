@@ -2,10 +2,6 @@
 # Extra parameters for `tblgen' may come after `ofn' parameter.
 # Adds the name of the generated file to TABLEGEN_OUTPUT.
 
-if(LLVM_MAIN_INCLUDE_DIR)
-  set(LLVM_TABLEGEN_FLAGS -I ${LLVM_MAIN_INCLUDE_DIR})
-endif()
-
 function(tablegen project ofn)
   # Validate calling context.
   if(NOT ${project}_TABLEGEN_EXE)
@@ -57,7 +53,24 @@ function(tablegen project ofn)
       list(APPEND LLVM_TABLEGEN_FLAGS "-gisel-coverage-file=${LLVM_GISEL_COV_PREFIX}all")
     endif()
   endif()
+  # Comments are only useful for Debug builds. Omit them if the backend
+  # supports it.
+  if (NOT (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" OR
+           uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO"))
+    list(FIND ARGN "-gen-dag-isel" idx)
+    if (NOT idx EQUAL -1)
+      list(APPEND LLVM_TABLEGEN_FLAGS "-omit-comments")
+    endif()
+  endif()
 
+  # MSVC can't support long string literals ("long" > 65534 bytes)[1], so if there's
+  # a possibility of generated tables being consumed by MSVC, generate arrays of
+  # char literals, instead. If we're cross-compiling, then conservatively assume
+  # that the source might be consumed by MSVC.
+  # [1] https://docs.microsoft.com/en-us/cpp/cpp/compiler-limits?view=vs-2017
+  if (MSVC AND project STREQUAL LLVM)
+    list(APPEND LLVM_TABLEGEN_FLAGS "--long-string-literals=0")
+  endif()
   if (CMAKE_GENERATOR MATCHES "Visual Studio")
     # Visual Studio has problems with llvm-tblgen's native --write-if-changed
     # behavior. Since it doesn't do restat optimizations anyway, just don't
@@ -67,6 +80,14 @@ function(tablegen project ofn)
     set(tblgen_change_flag "--write-if-changed")
   endif()
 
+  # With CMake 3.12 this can be reduced to:
+  # get_directory_property(tblgen_includes "INCLUDE_DIRECTORIES")
+  # list(TRANSFORM tblgen_includes PREPEND -I)
+  set(tblgen_includes)
+  get_directory_property(includes "INCLUDE_DIRECTORIES")
+  foreach(include ${includes})
+    list(APPEND tblgen_includes -I ${include})
+  endforeach()
   # We need both _TABLEGEN_TARGET and _TABLEGEN_EXE in the  DEPENDS list
   # (both the target and the file) to have .inc files rebuilt on
   # a tablegen change, as cmake does not propagate file-level dependencies
@@ -78,6 +99,7 @@ function(tablegen project ofn)
   # but lets us having smaller and cleaner code here.
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
     COMMAND ${${project}_TABLEGEN_EXE} ${ARGN} -I ${CMAKE_CURRENT_SOURCE_DIR}
+    ${tblgen_includes}
     ${LLVM_TABLEGEN_FLAGS}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
     ${tblgen_change_flag}

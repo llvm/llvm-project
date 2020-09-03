@@ -1,6 +1,10 @@
 #include <iostream>
 #include <string>
 
+int *new_int(int val) {
+  return new int(val);
+}
+
 struct baz
     {
         int h;
@@ -24,16 +28,22 @@ struct foo
 		bar b;
 		
 		foo(int x) : a(x),
-		a_ptr(new int(x+1)),
+		a_ptr(new_int(x+1)),
 		b(2*x) {}
 		
 	};
+
+foo *new_foo(int x) {
+  return new foo(x);
+}
+
 	
 int main(int argc, char** argv)
 {
 	foo foo1(12);
 	foo foo2(121);
-	
+	foo * newd_foo = new_foo(1);
+	delete newd_foo;
 	foo2.a = 7777; // Stop here
 	*(foo2.b.i_ptr) = 8888;
     foo2.b.b.h = 9999;

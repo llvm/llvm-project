@@ -1,5 +1,5 @@
-RUN: yaml2obj %p/Inputs/obj-hashes-1.yaml > %T/obj-hashes-1.obj
-RUN: yaml2obj %p/Inputs/obj-hashes-2.yaml > %T/obj-hashes-2.obj
+RUN: yaml2obj %p/Inputs/obj-hashes-1.yaml -o %T/obj-hashes-1.obj
+RUN: yaml2obj %p/Inputs/obj-hashes-2.yaml -o %T/obj-hashes-2.obj
 RUN: echo obj-hashes-1 > %T/hashes-combined.out
 RUN: llvm-pdbutil dump -type-extras %T/obj-hashes-1.obj >> %T/hashes-combined.out
 RUN: echo obj-hashes-2 >> %T/hashes-combined.out

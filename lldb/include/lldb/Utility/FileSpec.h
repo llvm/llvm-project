@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_FileSpec_h_
-#define liblldb_FileSpec_h_
+#ifndef LLDB_UTILITY_FILESPEC_H
+#define LLDB_UTILITY_FILESPEC_H
 
 #include <functional>
 #include <string>
@@ -453,4 +453,4 @@ template <> struct MappingTraits<lldb_private::FileSpec> {
 } // namespace yaml
 } // namespace llvm
 
-#endif // liblldb_FileSpec_h_
+#endif // LLDB_UTILITY_FILESPEC_H

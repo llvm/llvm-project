@@ -38,6 +38,8 @@ template <> struct ilist_alloc_traits<MCFragment> {
 /// current translation unit.  The MCContext class uniques and creates these.
 class MCSection {
 public:
+  static constexpr unsigned NonUniqueID = ~0U;
+
   enum SectionVariant { SV_COFF = 0, SV_ELF, SV_MachO, SV_Wasm, SV_XCOFF };
 
   /// Express the state of bundle locked groups while emitting code.
@@ -98,16 +100,19 @@ private:
   SmallVector<PendingLabel, 2> PendingLabels;
 
 protected:
+  // TODO Make Name private when possible.
+  StringRef Name;
   SectionVariant Variant;
   SectionKind Kind;
 
-  MCSection(SectionVariant V, SectionKind K, MCSymbol *Begin);
+  MCSection(SectionVariant V, StringRef Name, SectionKind K, MCSymbol *Begin);
   ~MCSection();
 
 public:
   MCSection(const MCSection &) = delete;
   MCSection &operator=(const MCSection &) = delete;
 
+  StringRef getName() const { return Name; }
   SectionKind getKind() const { return Kind; }
 
   SectionVariant getVariant() const { return Variant; }
@@ -183,6 +188,8 @@ public:
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.
   virtual bool isVirtualSection() const = 0;
+
+  virtual StringRef getVirtualSectionKind() const;
 
   /// Add a pending label for the requested subsection. This label will be
   /// associated with a fragment in flushPendingLabels()

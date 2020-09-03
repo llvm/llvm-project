@@ -72,9 +72,9 @@ struct suspend_always {
   void await_resume() {}
 };
 struct suspend_never {
-  bool await_ready() { return true; }
-  void await_suspend(coroutine_handle<>) {}
-  void await_resume() {}
+  bool await_ready() noexcept { return true; }
+  void await_suspend(coroutine_handle<>) noexcept {}
+  void await_resume() noexcept {}
 };
 
 }}}

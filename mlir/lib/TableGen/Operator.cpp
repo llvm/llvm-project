@@ -1,6 +1,6 @@
 //===- Operator.cpp - Operator class --------------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -14,7 +14,12 @@
 #include "mlir/TableGen/OpTrait.h"
 #include "mlir/TableGen/Predicate.h"
 #include "mlir/TableGen/Type.h"
+#include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -50,8 +55,12 @@ std::string tblgen::Operator::getOperationName() const {
   auto prefix = dialect.getName();
   auto opName = def.getValueAsString("opName");
   if (prefix.empty())
-    return opName;
-  return llvm::formatv("{0}.{1}", prefix, opName);
+    return std::string(opName);
+  return std::string(llvm::formatv("{0}.{1}", prefix, opName));
+}
+
+std::string tblgen::Operator::getAdaptorName() const {
+  return std::string(llvm::formatv("{0}Adaptor", getCppClassName()));
 }
 
 StringRef tblgen::Operator::getDialectName() const { return dialect.getName(); }
@@ -61,8 +70,8 @@ StringRef tblgen::Operator::getCppClassName() const { return cppClassName; }
 std::string tblgen::Operator::getQualCppClassName() const {
   auto prefix = dialect.getCppNamespace();
   if (prefix.empty())
-    return cppClassName;
-  return llvm::formatv("{0}::{1}", prefix, cppClassName);
+    return std::string(cppClassName);
+  return std::string(llvm::formatv("{0}::{1}", prefix, cppClassName));
 }
 
 int tblgen::Operator::getNumResults() const {
@@ -78,10 +87,6 @@ StringRef tblgen::Operator::getExtraClassDeclaration() const {
 }
 
 const llvm::Record &tblgen::Operator::getDef() const { return def; }
-
-bool tblgen::Operator::isVariadic() const {
-  return getNumVariadicOperands() != 0 || getNumVariadicResults() != 0;
-}
 
 bool tblgen::Operator::skipDefaultBuilders() const {
   return def.getValueAsBit("skipDefaultBuilders");
@@ -108,16 +113,25 @@ StringRef tblgen::Operator::getResultName(int index) const {
   return results->getArgNameStr(index);
 }
 
-unsigned tblgen::Operator::getNumVariadicResults() const {
-  return std::count_if(
-      results.begin(), results.end(),
-      [](const NamedTypeConstraint &c) { return c.constraint.isVariadic(); });
+auto tblgen::Operator::getResultDecorators(int index) const
+    -> var_decorator_range {
+  Record *result =
+      cast<DefInit>(def.getValueAsDag("results")->getArg(index))->getDef();
+  if (!result->isSubClassOf("OpVariable"))
+    return var_decorator_range(nullptr, nullptr);
+  return *result->getValueAsListInit("decorators");
 }
 
-unsigned tblgen::Operator::getNumVariadicOperands() const {
-  return std::count_if(
-      operands.begin(), operands.end(),
-      [](const NamedTypeConstraint &c) { return c.constraint.isVariadic(); });
+unsigned tblgen::Operator::getNumVariableLengthResults() const {
+  return llvm::count_if(results, [](const NamedTypeConstraint &c) {
+    return c.constraint.isVariableLength();
+  });
+}
+
+unsigned tblgen::Operator::getNumVariableLengthOperands() const {
+  return llvm::count_if(operands, [](const NamedTypeConstraint &c) {
+    return c.constraint.isVariableLength();
+  });
 }
 
 tblgen::Operator::arg_iterator tblgen::Operator::arg_begin() const {
@@ -137,15 +151,24 @@ StringRef tblgen::Operator::getArgName(int index) const {
   return argumentValues->getArgName(index)->getValue();
 }
 
+auto tblgen::Operator::getArgDecorators(int index) const
+    -> var_decorator_range {
+  Record *arg =
+      cast<DefInit>(def.getValueAsDag("arguments")->getArg(index))->getDef();
+  if (!arg->isSubClassOf("OpVariable"))
+    return var_decorator_range(nullptr, nullptr);
+  return *arg->getValueAsListInit("decorators");
+}
+
 const tblgen::OpTrait *tblgen::Operator::getTrait(StringRef trait) const {
   for (const auto &t : traits) {
-    if (auto opTrait = dyn_cast<tblgen::NativeOpTrait>(&t)) {
+    if (const auto *opTrait = dyn_cast<tblgen::NativeOpTrait>(&t)) {
       if (opTrait->getTrait() == trait)
         return opTrait;
-    } else if (auto opTrait = dyn_cast<tblgen::InternalOpTrait>(&t)) {
+    } else if (const auto *opTrait = dyn_cast<tblgen::InternalOpTrait>(&t)) {
       if (opTrait->getTrait() == trait)
         return opTrait;
-    } else if (auto opTrait = dyn_cast<tblgen::InterfaceOpTrait>(&t)) {
+    } else if (const auto *opTrait = dyn_cast<tblgen::InterfaceOpTrait>(&t)) {
       if (opTrait->getTrait() == trait)
         return opTrait;
     }
@@ -153,10 +176,51 @@ const tblgen::OpTrait *tblgen::Operator::getTrait(StringRef trait) const {
   return nullptr;
 }
 
+auto tblgen::Operator::region_begin() const -> const_region_iterator {
+  return regions.begin();
+}
+auto tblgen::Operator::region_end() const -> const_region_iterator {
+  return regions.end();
+}
+auto tblgen::Operator::getRegions() const
+    -> llvm::iterator_range<const_region_iterator> {
+  return {region_begin(), region_end()};
+}
+
 unsigned tblgen::Operator::getNumRegions() const { return regions.size(); }
 
 const tblgen::NamedRegion &tblgen::Operator::getRegion(unsigned index) const {
   return regions[index];
+}
+
+unsigned tblgen::Operator::getNumVariadicRegions() const {
+  return llvm::count_if(regions,
+                        [](const NamedRegion &c) { return c.isVariadic(); });
+}
+
+auto tblgen::Operator::successor_begin() const -> const_successor_iterator {
+  return successors.begin();
+}
+auto tblgen::Operator::successor_end() const -> const_successor_iterator {
+  return successors.end();
+}
+auto tblgen::Operator::getSuccessors() const
+    -> llvm::iterator_range<const_successor_iterator> {
+  return {successor_begin(), successor_end()};
+}
+
+unsigned tblgen::Operator::getNumSuccessors() const {
+  return successors.size();
+}
+
+const tblgen::NamedSuccessor &
+tblgen::Operator::getSuccessor(unsigned index) const {
+  return successors[index];
+}
+
+unsigned tblgen::Operator::getNumVariadicSuccessors() const {
+  return llvm::count_if(successors,
+                        [](const NamedSuccessor &c) { return c.isVariadic(); });
 }
 
 auto tblgen::Operator::trait_begin() const -> const_trait_iterator {
@@ -195,29 +259,136 @@ auto tblgen::Operator::getArg(int index) const -> Argument {
   return arguments[index];
 }
 
+// Mapping from result index to combined argument and result index. Arguments
+// are indexed to match getArg index, while the result indexes are mapped to
+// avoid overlap.
+static int resultIndex(int i) { return -1 - i; }
+
+bool tblgen::Operator::isVariadic() const {
+  return any_of(llvm::concat<const NamedTypeConstraint>(operands, results),
+                [](const NamedTypeConstraint &op) { return op.isVariadic(); });
+}
+
+void tblgen::Operator::populateTypeInferenceInfo(
+    const llvm::StringMap<int> &argumentsAndResultsIndex) {
+  // If the type inference op interface is not registered, then do not attempt
+  // to determine if the result types an be inferred.
+  auto &recordKeeper = def.getRecords();
+  auto *inferTrait = recordKeeper.getDef(inferTypeOpInterface);
+  allResultsHaveKnownTypes = false;
+  if (!inferTrait)
+    return;
+
+  // If there are no results, the skip this else the build method generated
+  // overlaps with another autogenerated builder.
+  if (getNumResults() == 0)
+    return;
+
+  // Skip for ops with variadic operands/results.
+  // TODO: This can be relaxed.
+  if (isVariadic())
+    return;
+
+  // Skip cases currently being custom generated.
+  // TODO: Remove special cases.
+  if (getTrait("OpTrait::SameOperandsAndResultType"))
+    return;
+
+  // We create equivalence classes of argument/result types where arguments
+  // and results are mapped into the same index space and indices corresponding
+  // to the same type are in the same equivalence class.
+  llvm::EquivalenceClasses<int> ecs;
+  resultTypeMapping.resize(getNumResults());
+  // Captures the argument whose type matches a given result type. Preference
+  // towards capturing operands first before attributes.
+  auto captureMapping = [&](int i) {
+    bool found = false;
+    ecs.insert(resultIndex(i));
+    auto mi = ecs.findLeader(resultIndex(i));
+    for (auto me = ecs.member_end(); mi != me; ++mi) {
+      if (*mi < 0) {
+        auto tc = getResultTypeConstraint(i);
+        if (tc.getBuilderCall().hasValue()) {
+          resultTypeMapping[i].emplace_back(tc);
+          found = true;
+        }
+        continue;
+      }
+
+      if (getArg(*mi).is<NamedAttribute *>()) {
+        // TODO: Handle attributes.
+        continue;
+      } else {
+        resultTypeMapping[i].emplace_back(*mi);
+        found = true;
+      }
+    }
+    return found;
+  };
+
+  for (const OpTrait &trait : traits) {
+    const llvm::Record &def = trait.getDef();
+    // If the infer type op interface was manually added, then treat it as
+    // intention that the op needs special handling.
+    // TODO: Reconsider whether to always generate, this is more conservative
+    // and keeps existing behavior so starting that way for now.
+    if (def.isSubClassOf(
+            llvm::formatv("{0}::Trait", inferTypeOpInterface).str()))
+      return;
+    if (const auto *opTrait = dyn_cast<tblgen::InterfaceOpTrait>(&trait))
+      if (&opTrait->getDef() == inferTrait)
+        return;
+
+    if (!def.isSubClassOf("AllTypesMatch"))
+      continue;
+
+    auto values = def.getValueAsListOfStrings("values");
+    auto root = argumentsAndResultsIndex.lookup(values.front());
+    for (StringRef str : values)
+      ecs.unionSets(argumentsAndResultsIndex.lookup(str), root);
+  }
+
+  // Verifies that all output types have a corresponding known input type
+  // and chooses matching operand or attribute (in that order) that
+  // matches it.
+  allResultsHaveKnownTypes =
+      all_of(llvm::seq<int>(0, getNumResults()), captureMapping);
+
+  // If the types could be computed, then add type inference trait.
+  if (allResultsHaveKnownTypes)
+    traits.push_back(OpTrait::create(inferTrait->getDefInit()));
+}
+
 void tblgen::Operator::populateOpStructure() {
   auto &recordKeeper = def.getRecords();
-  auto typeConstraintClass = recordKeeper.getClass("TypeConstraint");
-  auto attrClass = recordKeeper.getClass("Attr");
-  auto derivedAttrClass = recordKeeper.getClass("DerivedAttr");
+  auto *typeConstraintClass = recordKeeper.getClass("TypeConstraint");
+  auto *attrClass = recordKeeper.getClass("Attr");
+  auto *derivedAttrClass = recordKeeper.getClass("DerivedAttr");
+  auto *opVarClass = recordKeeper.getClass("OpVariable");
   numNativeAttributes = 0;
 
   DagInit *argumentValues = def.getValueAsDag("arguments");
   unsigned numArgs = argumentValues->getNumArgs();
 
+  // Mapping from name of to argument or result index. Arguments are indexed
+  // to match getArg index, while the results are negatively indexed.
+  llvm::StringMap<int> argumentsAndResultsIndex;
+
   // Handle operands and native attributes.
   for (unsigned i = 0; i != numArgs; ++i) {
-    auto arg = argumentValues->getArg(i);
+    auto *arg = argumentValues->getArg(i);
     auto givenName = argumentValues->getArgNameStr(i);
-    auto argDefInit = dyn_cast<DefInit>(arg);
+    auto *argDefInit = dyn_cast<DefInit>(arg);
     if (!argDefInit)
       PrintFatalError(def.getLoc(),
                       Twine("undefined type for argument #") + Twine(i));
     Record *argDef = argDefInit->getDef();
+    if (argDef->isSubClassOf(opVarClass))
+      argDef = argDef->getValueAsDef("constraint");
 
     if (argDef->isSubClassOf(typeConstraintClass)) {
       operands.push_back(
-          NamedTypeConstraint{givenName, TypeConstraint(argDefInit)});
+          NamedTypeConstraint{givenName, TypeConstraint(argDef)});
     } else if (argDef->isSubClassOf(attrClass)) {
       if (givenName.empty())
         PrintFatalError(argDef->getLoc(), "attributes must be named");
@@ -230,6 +401,8 @@ void tblgen::Operator::populateOpStructure() {
       PrintFatalError(def.getLoc(), "unexpected def type; only defs deriving "
                                     "from TypeConstraint or Attr are allowed");
     }
+    if (!givenName.empty())
+      argumentsAndResultsIndex[givenName] = i;
   }
 
   // Handle derived attributes.
@@ -259,11 +432,17 @@ void tblgen::Operator::populateOpStructure() {
   int operandIndex = 0, attrIndex = 0;
   for (unsigned i = 0; i != numArgs; ++i) {
     Record *argDef = dyn_cast<DefInit>(argumentValues->getArg(i))->getDef();
+    if (argDef->isSubClassOf(opVarClass))
+      argDef = argDef->getValueAsDef("constraint");
 
     if (argDef->isSubClassOf(typeConstraintClass)) {
+      attrOrOperandMapping.push_back(
+          {OperandOrAttribute::Kind::Operand, operandIndex});
       arguments.emplace_back(&operands[operandIndex++]);
     } else {
       assert(argDef->isSubClassOf(attrClass));
+      attrOrOperandMapping.push_back(
+          {OperandOrAttribute::Kind::Attribute, attrIndex});
       arguments.emplace_back(&attributes[attrIndex++]);
     }
   }
@@ -277,26 +456,56 @@ void tblgen::Operator::populateOpStructure() {
   // Handle results.
   for (unsigned i = 0, e = resultsDag->getNumArgs(); i < e; ++i) {
     auto name = resultsDag->getArgNameStr(i);
-    auto *resultDef = dyn_cast<DefInit>(resultsDag->getArg(i));
-    if (!resultDef) {
+    auto *resultInit = dyn_cast<DefInit>(resultsDag->getArg(i));
+    if (!resultInit) {
       PrintFatalError(def.getLoc(),
                       Twine("undefined type for result #") + Twine(i));
     }
+    auto *resultDef = resultInit->getDef();
+    if (resultDef->isSubClassOf(opVarClass))
+      resultDef = resultDef->getValueAsDef("constraint");
     results.push_back({name, TypeConstraint(resultDef)});
+    if (!name.empty())
+      argumentsAndResultsIndex[name] = resultIndex(i);
+  }
+
+  // Handle successors
+  auto *successorsDag = def.getValueAsDag("successors");
+  auto *successorsOp = dyn_cast<DefInit>(successorsDag->getOperator());
+  if (!successorsOp || successorsOp->getDef()->getName() != "successor") {
+    PrintFatalError(def.getLoc(),
+                    "'successors' must have 'successor' directive");
+  }
+
+  for (unsigned i = 0, e = successorsDag->getNumArgs(); i < e; ++i) {
+    auto name = successorsDag->getArgNameStr(i);
+    auto *successorInit = dyn_cast<DefInit>(successorsDag->getArg(i));
+    if (!successorInit) {
+      PrintFatalError(def.getLoc(),
+                      Twine("undefined kind for successor #") + Twine(i));
+    }
+    Successor successor(successorInit->getDef());
+
+    // Only support variadic successors if it is the last one for now.
+    if (i != e - 1 && successor.isVariadic())
+      PrintFatalError(def.getLoc(), "only the last successor can be variadic");
+    successors.push_back({name, successor});
   }
 
   // Create list of traits, skipping over duplicates: appending to lists in
   // tablegen is easy, making them unique less so, so dedupe here.
-  if (auto traitList = def.getValueAsListInit("traits")) {
+  if (auto *traitList = def.getValueAsListInit("traits")) {
     // This is uniquing based on pointers of the trait.
     SmallPtrSet<const llvm::Init *, 32> traitSet;
     traits.reserve(traitSet.size());
-    for (auto traitInit : *traitList) {
+    for (auto *traitInit : *traitList) {
       // Keep traits in the same order while skipping over duplicates.
       if (traitSet.insert(traitInit).second)
         traits.push_back(OpTrait::create(traitInit));
     }
   }
+
+  populateTypeInferenceInfo(argumentsAndResultsIndex);
 
   // Handle regions
   auto *regionsDag = def.getValueAsDag("regions");
@@ -312,10 +521,25 @@ void tblgen::Operator::populateOpStructure() {
       PrintFatalError(def.getLoc(),
                       Twine("undefined kind for region #") + Twine(i));
     }
-    regions.push_back({name, Region(regionInit->getDef())});
+    Region region(regionInit->getDef());
+    if (region.isVariadic()) {
+      // Only support variadic regions if it is the last one for now.
+      if (i != e - 1)
+        PrintFatalError(def.getLoc(), "only the last region can be variadic");
+      if (name.empty())
+        PrintFatalError(def.getLoc(), "variadic regions must be named");
+    }
+
+    regions.push_back({name, region});
   }
 
   LLVM_DEBUG(print(llvm::dbgs()));
+}
+
+auto tblgen::Operator::getSameTypeAsResult(int index) const
+    -> ArrayRef<ArgOrType> {
+  assert(allResultTypesKnown());
+  return resultTypeMapping[index];
 }
 
 ArrayRef<llvm::SMLoc> tblgen::Operator::getLoc() const { return def.getLoc(); }
@@ -336,6 +560,17 @@ StringRef tblgen::Operator::getSummary() const {
   return def.getValueAsString("summary");
 }
 
+bool tblgen::Operator::hasAssemblyFormat() const {
+  auto *valueInit = def.getValueInit("assemblyFormat");
+  return isa<llvm::CodeInit, llvm::StringInit>(valueInit);
+}
+
+StringRef tblgen::Operator::getAssemblyFormat() const {
+  return TypeSwitch<llvm::Init *, StringRef>(def.getValueInit("assemblyFormat"))
+      .Case<llvm::StringInit, llvm::CodeInit>(
+          [&](auto *init) { return init->getValue(); });
+}
+
 void tblgen::Operator::print(llvm::raw_ostream &os) const {
   os << "op '" << getOperationName() << "'\n";
   for (Argument arg : arguments) {
@@ -344,4 +579,14 @@ void tblgen::Operator::print(llvm::raw_ostream &os) const {
     else
       os << "[operand] " << arg.get<NamedTypeConstraint *>()->name << '\n';
   }
+}
+
+auto tblgen::Operator::VariableDecoratorIterator::unwrap(llvm::Init *init)
+    -> VariableDecorator {
+  return VariableDecorator(cast<llvm::DefInit>(init)->getDef());
+}
+
+auto tblgen::Operator::getArgToOperandOrAttribute(int index) const
+    -> OperandOrAttribute {
+  return attrOrOperandMapping[index];
 }

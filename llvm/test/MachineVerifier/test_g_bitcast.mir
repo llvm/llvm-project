@@ -1,4 +1,4 @@
-#RUN: not llc -mtriple=amdgcn-amd-amdhsa -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+#RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
 # REQUIRES: global-isel, amdgpu-registered-target
 
 ---
@@ -34,4 +34,6 @@ body:             |
     %10:_(p1) = G_IMPLICIT_DEF
     %11:_(p3) = G_BITCAST %8
 
+    ; CHECK: Bad machine code: bitcast must change the type
+    %12:_(s64) = G_BITCAST %0
 ...

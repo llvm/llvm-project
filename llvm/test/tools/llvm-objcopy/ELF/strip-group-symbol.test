@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: not llvm-objcopy -N foo %t %t2 2>&1 | FileCheck %s
 
 --- !ELF

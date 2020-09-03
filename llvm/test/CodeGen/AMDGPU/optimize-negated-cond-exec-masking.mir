@@ -2,7 +2,7 @@
 
 # GCN: name: negated_cond_vop2
 # GCN:      %0:sreg_64_xexec = IMPLICIT_DEF
-# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0, implicit-def $scc
+# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0, implicit-def dead $scc
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc
 ---
 name:            negated_cond_vop2
@@ -24,7 +24,7 @@ body:             |
 
 # GCN: name: negated_cond_vop3
 # GCN:      %0:sreg_64_xexec = IMPLICIT_DEF
-# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0, implicit-def $scc
+# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0, implicit-def dead $scc
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc
 ---
 name:            negated_cond_vop3
@@ -142,7 +142,7 @@ body:             |
 
 # GCN: name: negated_cond_vop3_imp_vcc
 # GCN:      $vcc = IMPLICIT_DEF
-# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, $vcc, implicit-def $scc
+# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, $vcc, implicit-def dead $scc
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc
 ---
 name:            negated_cond_vop3_imp_vcc
@@ -164,7 +164,7 @@ body:             |
 
 # GCN: name: negated_cond_vop2_imp_vcc
 # GCN:      $vcc = IMPLICIT_DEF
-# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, $vcc, implicit-def $scc
+# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, $vcc, implicit-def dead $scc
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc
 ---
 name:            negated_cond_vop2_imp_vcc
@@ -213,7 +213,7 @@ body:             |
 # GCN: name: negated_cond_vop2_used_sel
 # GCN:      %0:sreg_64_xexec = IMPLICIT_DEF
 # GCN-NEXT: %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
-# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0, implicit-def $scc
+# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0, implicit-def dead $scc
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc
 ---
 name:            negated_cond_vop2_used_sel
@@ -239,7 +239,7 @@ body:             |
 # GCN-NEXT: %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
 # GCN-NEXT: V_CMP_NE_U32_e32 1, %1, implicit-def $vcc, implicit $exec
 # GCN-NEXT: $sgpr0_sgpr1 = COPY $vcc
-# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0, implicit-def $scc
+# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0, implicit-def dead $scc
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc
 ---
 name:            negated_cond_vop2_used_vcc
@@ -315,7 +315,7 @@ body:             |
 # GCN: name: negated_cond_vop3_sel_right_subreg1
 # GCN:      %0:sreg_64_xexec = IMPLICIT_DEF
 # GCN-NEXT: %1.sub1:vreg_64 = IMPLICIT_DEF
-# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0, implicit-def $scc
+# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0, implicit-def dead $scc
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc
 ---
 name:            negated_cond_vop3_sel_right_subreg1
@@ -339,7 +339,7 @@ body:             |
 # GCN: name: negated_cond_vop3_sel_right_subreg2
 # GCN:      %0:sreg_64_xexec = IMPLICIT_DEF
 # GCN-NEXT: %1.sub1:vreg_64 = IMPLICIT_DEF
-# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0, implicit-def $scc
+# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0, implicit-def dead $scc
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc
 ---
 name:            negated_cond_vop3_sel_right_subreg2
@@ -388,7 +388,7 @@ body:             |
 
 # GCN: name: negated_cond_vop2_dominated_blocks
 # GCN:      %0:sreg_64_xexec = IMPLICIT_DEF
-# GCN:      $vcc = S_ANDN2_B64 $exec, %0, implicit-def $scc
+# GCN:      $vcc = S_ANDN2_B64 $exec, %0, implicit-def dead $scc
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.3, implicit $vcc
 ---
 name:            negated_cond_vop2_dominated_blocks
@@ -466,7 +466,7 @@ body:             |
 
 # GCN: name: negated_cond_subreg
 # GCN:      %0.sub0_sub1:sgpr_128 = IMPLICIT_DEF
-# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0.sub0_sub1, implicit-def $scc
+# GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0.sub0_sub1, implicit-def dead $scc
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc
 ---
 name:            negated_cond_subreg

@@ -21,8 +21,8 @@ define <16 x float> @test_16f32_fmadd(<16 x float> %a0, <16 x float> %a1, <16 x 
 ;
 ; FMA4-LABEL: test_16f32_fmadd:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfmaddps %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfmaddps %ymm5, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfmaddps {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm4
+; FMA4-NEXT:    vfmaddps {{.*#+}} ymm1 = (ymm1 * ymm3) + ymm5
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_16f32_fmadd:
@@ -43,8 +43,8 @@ define <8 x double> @test_8f64_fmadd(<8 x double> %a0, <8 x double> %a1, <8 x do
 ;
 ; FMA4-LABEL: test_8f64_fmadd:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfmaddpd %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfmaddpd %ymm5, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm4
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm1 = (ymm1 * ymm3) + ymm5
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_8f64_fmadd:
@@ -69,8 +69,8 @@ define <16 x float> @test_16f32_fmsub(<16 x float> %a0, <16 x float> %a1, <16 x 
 ;
 ; FMA4-LABEL: test_16f32_fmsub:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfmsubps %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfmsubps %ymm5, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfmsubps {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm4
+; FMA4-NEXT:    vfmsubps {{.*#+}} ymm1 = (ymm1 * ymm3) - ymm5
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_16f32_fmsub:
@@ -91,8 +91,8 @@ define <8 x double> @test_8f64_fmsub(<8 x double> %a0, <8 x double> %a1, <8 x do
 ;
 ; FMA4-LABEL: test_8f64_fmsub:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfmsubpd %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfmsubpd %ymm5, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfmsubpd {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm4
+; FMA4-NEXT:    vfmsubpd {{.*#+}} ymm1 = (ymm1 * ymm3) - ymm5
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_8f64_fmsub:
@@ -117,8 +117,8 @@ define <16 x float> @test_16f32_fnmadd(<16 x float> %a0, <16 x float> %a1, <16 x
 ;
 ; FMA4-LABEL: test_16f32_fnmadd:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfnmaddps %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfnmaddps %ymm5, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfnmaddps {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm4
+; FMA4-NEXT:    vfnmaddps {{.*#+}} ymm1 = -(ymm1 * ymm3) + ymm5
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_16f32_fnmadd:
@@ -139,8 +139,8 @@ define <8 x double> @test_8f64_fnmadd(<8 x double> %a0, <8 x double> %a1, <8 x d
 ;
 ; FMA4-LABEL: test_8f64_fnmadd:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfnmaddpd %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfnmaddpd %ymm5, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfnmaddpd {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm4
+; FMA4-NEXT:    vfnmaddpd {{.*#+}} ymm1 = -(ymm1 * ymm3) + ymm5
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_8f64_fnmadd:
@@ -165,8 +165,8 @@ define <16 x float> @test_16f32_fnmsub(<16 x float> %a0, <16 x float> %a1, <16 x
 ;
 ; FMA4-LABEL: test_16f32_fnmsub:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfnmsubps %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfnmsubps %ymm5, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfnmsubps {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm4
+; FMA4-NEXT:    vfnmsubps {{.*#+}} ymm1 = -(ymm1 * ymm3) - ymm5
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_16f32_fnmsub:
@@ -188,8 +188,8 @@ define <8 x double> @test_8f64_fnmsub(<8 x double> %a0, <8 x double> %a1, <8 x d
 ;
 ; FMA4-LABEL: test_8f64_fnmsub:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfnmsubpd %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfnmsubpd %ymm5, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfnmsubpd {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm4
+; FMA4-NEXT:    vfnmsubpd {{.*#+}} ymm1 = -(ymm1 * ymm3) - ymm5
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_8f64_fnmsub:
@@ -215,8 +215,8 @@ define <16 x float> @test_16f32_fmadd_load(<16 x float>* %a0, <16 x float> %a1, 
 ;
 ; FMA4-LABEL: test_16f32_fmadd_load:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfmaddps %ymm2, (%rdi), %ymm0, %ymm0
-; FMA4-NEXT:    vfmaddps %ymm3, 32(%rdi), %ymm1, %ymm1
+; FMA4-NEXT:    vfmaddps {{.*#+}} ymm0 = (ymm0 * mem) + ymm2
+; FMA4-NEXT:    vfmaddps {{.*#+}} ymm1 = (ymm1 * mem) + ymm3
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_16f32_fmadd_load:
@@ -238,8 +238,8 @@ define <8 x double> @test_8f64_fmsub_load(<8 x double>* %a0, <8 x double> %a1, <
 ;
 ; FMA4-LABEL: test_8f64_fmsub_load:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfmsubpd %ymm2, (%rdi), %ymm0, %ymm0
-; FMA4-NEXT:    vfmsubpd %ymm3, 32(%rdi), %ymm1, %ymm1
+; FMA4-NEXT:    vfmsubpd {{.*#+}} ymm0 = (ymm0 * mem) - ymm2
+; FMA4-NEXT:    vfmsubpd {{.*#+}} ymm1 = (ymm1 * mem) - ymm3
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_8f64_fmsub_load:
@@ -289,8 +289,8 @@ define <16 x float> @test_v16f32_mul_add_x_one_y(<16 x float> %x, <16 x float> %
 ;
 ; FMA4-NOINFS-LABEL: test_v16f32_mul_add_x_one_y:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfmaddps %ymm2, %ymm2, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfmaddps %ymm3, %ymm3, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfmaddps {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm2
+; FMA4-NOINFS-NEXT:    vfmaddps {{.*#+}} ymm1 = (ymm1 * ymm3) + ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v16f32_mul_add_x_one_y:
@@ -335,8 +335,8 @@ define <8 x double> @test_v8f64_mul_y_add_x_one(<8 x double> %x, <8 x double> %y
 ;
 ; FMA4-NOINFS-LABEL: test_v8f64_mul_y_add_x_one:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfmaddpd %ymm2, %ymm2, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfmaddpd %ymm3, %ymm3, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfmaddpd {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm2
+; FMA4-NOINFS-NEXT:    vfmaddpd {{.*#+}} ymm1 = (ymm1 * ymm3) + ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v8f64_mul_y_add_x_one:
@@ -381,8 +381,8 @@ define <16 x float> @test_v16f32_mul_add_x_negone_y(<16 x float> %x, <16 x float
 ;
 ; FMA4-NOINFS-LABEL: test_v16f32_mul_add_x_negone_y:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfmsubps %ymm2, %ymm2, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfmsubps %ymm3, %ymm3, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfmsubps {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm2
+; FMA4-NOINFS-NEXT:    vfmsubps {{.*#+}} ymm1 = (ymm1 * ymm3) - ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v16f32_mul_add_x_negone_y:
@@ -427,8 +427,8 @@ define <8 x double> @test_v8f64_mul_y_add_x_negone(<8 x double> %x, <8 x double>
 ;
 ; FMA4-NOINFS-LABEL: test_v8f64_mul_y_add_x_negone:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfmsubpd %ymm2, %ymm2, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfmsubpd %ymm3, %ymm3, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfmsubpd {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm2
+; FMA4-NOINFS-NEXT:    vfmsubpd {{.*#+}} ymm1 = (ymm1 * ymm3) - ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v8f64_mul_y_add_x_negone:
@@ -474,8 +474,8 @@ define <16 x float> @test_v16f32_mul_sub_one_x_y(<16 x float> %x, <16 x float> %
 ;
 ; FMA4-NOINFS-LABEL: test_v16f32_mul_sub_one_x_y:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfnmaddps %ymm2, %ymm2, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfnmaddps %ymm3, %ymm3, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfnmaddps {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm2
+; FMA4-NOINFS-NEXT:    vfnmaddps {{.*#+}} ymm1 = -(ymm1 * ymm3) + ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v16f32_mul_sub_one_x_y:
@@ -521,8 +521,8 @@ define <8 x double> @test_v8f64_mul_y_sub_one_x(<8 x double> %x, <8 x double> %y
 ;
 ; FMA4-NOINFS-LABEL: test_v8f64_mul_y_sub_one_x:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfnmaddpd %ymm2, %ymm2, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfnmaddpd %ymm3, %ymm3, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfnmaddpd {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm2
+; FMA4-NOINFS-NEXT:    vfnmaddpd {{.*#+}} ymm1 = -(ymm1 * ymm3) + ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v8f64_mul_y_sub_one_x:
@@ -568,8 +568,8 @@ define <16 x float> @test_v16f32_mul_sub_negone_x_y(<16 x float> %x, <16 x float
 ;
 ; FMA4-NOINFS-LABEL: test_v16f32_mul_sub_negone_x_y:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfnmsubps %ymm2, %ymm2, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfnmsubps %ymm3, %ymm3, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfnmsubps {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm2
+; FMA4-NOINFS-NEXT:    vfnmsubps {{.*#+}} ymm1 = -(ymm1 * ymm3) - ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v16f32_mul_sub_negone_x_y:
@@ -615,8 +615,8 @@ define <8 x double> @test_v8f64_mul_y_sub_negone_x(<8 x double> %x, <8 x double>
 ;
 ; FMA4-NOINFS-LABEL: test_v8f64_mul_y_sub_negone_x:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfnmsubpd %ymm2, %ymm2, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfnmsubpd %ymm3, %ymm3, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfnmsubpd {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm2
+; FMA4-NOINFS-NEXT:    vfnmsubpd {{.*#+}} ymm1 = -(ymm1 * ymm3) - ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v8f64_mul_y_sub_negone_x:
@@ -661,8 +661,8 @@ define <16 x float> @test_v16f32_mul_sub_x_one_y(<16 x float> %x, <16 x float> %
 ;
 ; FMA4-NOINFS-LABEL: test_v16f32_mul_sub_x_one_y:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfmsubps %ymm2, %ymm2, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfmsubps %ymm3, %ymm3, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfmsubps {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm2
+; FMA4-NOINFS-NEXT:    vfmsubps {{.*#+}} ymm1 = (ymm1 * ymm3) - ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v16f32_mul_sub_x_one_y:
@@ -707,8 +707,8 @@ define <8 x double> @test_v8f64_mul_y_sub_x_one(<8 x double> %x, <8 x double> %y
 ;
 ; FMA4-NOINFS-LABEL: test_v8f64_mul_y_sub_x_one:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfmsubpd %ymm2, %ymm2, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfmsubpd %ymm3, %ymm3, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfmsubpd {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm2
+; FMA4-NOINFS-NEXT:    vfmsubpd {{.*#+}} ymm1 = (ymm1 * ymm3) - ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v8f64_mul_y_sub_x_one:
@@ -753,8 +753,8 @@ define <16 x float> @test_v16f32_mul_sub_x_negone_y(<16 x float> %x, <16 x float
 ;
 ; FMA4-NOINFS-LABEL: test_v16f32_mul_sub_x_negone_y:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfmaddps %ymm2, %ymm2, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfmaddps %ymm3, %ymm3, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfmaddps {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm2
+; FMA4-NOINFS-NEXT:    vfmaddps {{.*#+}} ymm1 = (ymm1 * ymm3) + ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v16f32_mul_sub_x_negone_y:
@@ -799,8 +799,8 @@ define <8 x double> @test_v8f64_mul_y_sub_x_negone(<8 x double> %x, <8 x double>
 ;
 ; FMA4-NOINFS-LABEL: test_v8f64_mul_y_sub_x_negone:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfmaddpd %ymm2, %ymm2, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfmaddpd %ymm3, %ymm3, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfmaddpd {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm2
+; FMA4-NOINFS-NEXT:    vfmaddpd {{.*#+}} ymm1 = (ymm1 * ymm3) + ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v8f64_mul_y_sub_x_negone:
@@ -835,8 +835,8 @@ define <16 x float> @test_v16f32_interp(<16 x float> %x, <16 x float> %y, <16 x 
 ; FMA4-INFS-NEXT:    vsubps %ymm5, %ymm6, %ymm6
 ; FMA4-INFS-NEXT:    vmulps %ymm6, %ymm3, %ymm3
 ; FMA4-INFS-NEXT:    vmulps %ymm7, %ymm2, %ymm2
-; FMA4-INFS-NEXT:    vfmaddps %ymm2, %ymm4, %ymm0, %ymm0
-; FMA4-INFS-NEXT:    vfmaddps %ymm3, %ymm5, %ymm1, %ymm1
+; FMA4-INFS-NEXT:    vfmaddps {{.*#+}} ymm0 = (ymm0 * ymm4) + ymm2
+; FMA4-INFS-NEXT:    vfmaddps {{.*#+}} ymm1 = (ymm1 * ymm5) + ymm3
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v16f32_interp:
@@ -849,24 +849,24 @@ define <16 x float> @test_v16f32_interp(<16 x float> %x, <16 x float> %y, <16 x 
 ;
 ; FMA-NOINFS-LABEL: test_v16f32_interp:
 ; FMA-NOINFS:       # %bb.0:
-; FMA-NOINFS-NEXT:    vfnmadd213ps {{.*#+}} ymm3 = -(ymm5 * ymm3) + ymm3
-; FMA-NOINFS-NEXT:    vfnmadd213ps {{.*#+}} ymm2 = -(ymm4 * ymm2) + ymm2
-; FMA-NOINFS-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm4 * ymm0) + ymm2
-; FMA-NOINFS-NEXT:    vfmadd213ps {{.*#+}} ymm1 = (ymm5 * ymm1) + ymm3
+; FMA-NOINFS-NEXT:    vfmsub213ps {{.*#+}} ymm3 = (ymm5 * ymm3) - ymm3
+; FMA-NOINFS-NEXT:    vfmsub213ps {{.*#+}} ymm2 = (ymm4 * ymm2) - ymm2
+; FMA-NOINFS-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm4 * ymm0) - ymm2
+; FMA-NOINFS-NEXT:    vfmsub213ps {{.*#+}} ymm1 = (ymm5 * ymm1) - ymm3
 ; FMA-NOINFS-NEXT:    retq
 ;
 ; FMA4-NOINFS-LABEL: test_v16f32_interp:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfnmaddps %ymm3, %ymm3, %ymm5, %ymm3
-; FMA4-NOINFS-NEXT:    vfnmaddps %ymm2, %ymm2, %ymm4, %ymm2
-; FMA4-NOINFS-NEXT:    vfmaddps %ymm2, %ymm4, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfmaddps %ymm3, %ymm5, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfmsubps {{.*#+}} ymm3 = (ymm5 * ymm3) - ymm3
+; FMA4-NOINFS-NEXT:    vfmsubps {{.*#+}} ymm2 = (ymm4 * ymm2) - ymm2
+; FMA4-NOINFS-NEXT:    vfmsubps {{.*#+}} ymm0 = (ymm0 * ymm4) - ymm2
+; FMA4-NOINFS-NEXT:    vfmsubps {{.*#+}} ymm1 = (ymm1 * ymm5) - ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v16f32_interp:
 ; AVX512-NOINFS:       # %bb.0:
-; AVX512-NOINFS-NEXT:    vfnmadd213ps {{.*#+}} zmm1 = -(zmm2 * zmm1) + zmm1
-; AVX512-NOINFS-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm2 * zmm0) + zmm1
+; AVX512-NOINFS-NEXT:    vfmsub213ps {{.*#+}} zmm1 = (zmm2 * zmm1) - zmm1
+; AVX512-NOINFS-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm2 * zmm0) - zmm1
 ; AVX512-NOINFS-NEXT:    retq
   %t1 = fsub <16 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %t
   %tx = fmul <16 x float> %x, %t
@@ -894,8 +894,8 @@ define <8 x double> @test_v8f64_interp(<8 x double> %x, <8 x double> %y, <8 x do
 ; FMA4-INFS-NEXT:    vsubpd %ymm5, %ymm6, %ymm6
 ; FMA4-INFS-NEXT:    vmulpd %ymm6, %ymm3, %ymm3
 ; FMA4-INFS-NEXT:    vmulpd %ymm7, %ymm2, %ymm2
-; FMA4-INFS-NEXT:    vfmaddpd %ymm2, %ymm4, %ymm0, %ymm0
-; FMA4-INFS-NEXT:    vfmaddpd %ymm3, %ymm5, %ymm1, %ymm1
+; FMA4-INFS-NEXT:    vfmaddpd {{.*#+}} ymm0 = (ymm0 * ymm4) + ymm2
+; FMA4-INFS-NEXT:    vfmaddpd {{.*#+}} ymm1 = (ymm1 * ymm5) + ymm3
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v8f64_interp:
@@ -908,24 +908,24 @@ define <8 x double> @test_v8f64_interp(<8 x double> %x, <8 x double> %y, <8 x do
 ;
 ; FMA-NOINFS-LABEL: test_v8f64_interp:
 ; FMA-NOINFS:       # %bb.0:
-; FMA-NOINFS-NEXT:    vfnmadd213pd {{.*#+}} ymm3 = -(ymm5 * ymm3) + ymm3
-; FMA-NOINFS-NEXT:    vfnmadd213pd {{.*#+}} ymm2 = -(ymm4 * ymm2) + ymm2
-; FMA-NOINFS-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm4 * ymm0) + ymm2
-; FMA-NOINFS-NEXT:    vfmadd213pd {{.*#+}} ymm1 = (ymm5 * ymm1) + ymm3
+; FMA-NOINFS-NEXT:    vfmsub213pd {{.*#+}} ymm3 = (ymm5 * ymm3) - ymm3
+; FMA-NOINFS-NEXT:    vfmsub213pd {{.*#+}} ymm2 = (ymm4 * ymm2) - ymm2
+; FMA-NOINFS-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm4 * ymm0) - ymm2
+; FMA-NOINFS-NEXT:    vfmsub213pd {{.*#+}} ymm1 = (ymm5 * ymm1) - ymm3
 ; FMA-NOINFS-NEXT:    retq
 ;
 ; FMA4-NOINFS-LABEL: test_v8f64_interp:
 ; FMA4-NOINFS:       # %bb.0:
-; FMA4-NOINFS-NEXT:    vfnmaddpd %ymm3, %ymm3, %ymm5, %ymm3
-; FMA4-NOINFS-NEXT:    vfnmaddpd %ymm2, %ymm2, %ymm4, %ymm2
-; FMA4-NOINFS-NEXT:    vfmaddpd %ymm2, %ymm4, %ymm0, %ymm0
-; FMA4-NOINFS-NEXT:    vfmaddpd %ymm3, %ymm5, %ymm1, %ymm1
+; FMA4-NOINFS-NEXT:    vfmsubpd {{.*#+}} ymm3 = (ymm5 * ymm3) - ymm3
+; FMA4-NOINFS-NEXT:    vfmsubpd {{.*#+}} ymm2 = (ymm4 * ymm2) - ymm2
+; FMA4-NOINFS-NEXT:    vfmsubpd {{.*#+}} ymm0 = (ymm0 * ymm4) - ymm2
+; FMA4-NOINFS-NEXT:    vfmsubpd {{.*#+}} ymm1 = (ymm1 * ymm5) - ymm3
 ; FMA4-NOINFS-NEXT:    retq
 ;
 ; AVX512-NOINFS-LABEL: test_v8f64_interp:
 ; AVX512-NOINFS:       # %bb.0:
-; AVX512-NOINFS-NEXT:    vfnmadd213pd {{.*#+}} zmm1 = -(zmm2 * zmm1) + zmm1
-; AVX512-NOINFS-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm2 * zmm0) + zmm1
+; AVX512-NOINFS-NEXT:    vfmsub213pd {{.*#+}} zmm1 = (zmm2 * zmm1) - zmm1
+; AVX512-NOINFS-NEXT:    vfmsub213pd {{.*#+}} zmm0 = (zmm2 * zmm0) - zmm1
 ; AVX512-NOINFS-NEXT:    retq
   %t1 = fsub <8 x double> <double 1.0, double 1.0, double 1.0, double 1.0, double 1.0, double 1.0, double 1.0, double 1.0>, %t
   %tx = fmul <8 x double> %x, %t
@@ -947,8 +947,8 @@ define <16 x float> @test_v16f32_fneg_fmadd(<16 x float> %a0, <16 x float> %a1, 
 ;
 ; FMA4-LABEL: test_v16f32_fneg_fmadd:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfnmsubps %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfnmsubps %ymm5, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfnmsubps {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm4
+; FMA4-NEXT:    vfnmsubps {{.*#+}} ymm1 = -(ymm1 * ymm3) - ymm5
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v16f32_fneg_fmadd:
@@ -970,8 +970,8 @@ define <8 x double> @test_v8f64_fneg_fmsub(<8 x double> %a0, <8 x double> %a1, <
 ;
 ; FMA4-LABEL: test_v8f64_fneg_fmsub:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfnmaddpd %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfnmaddpd %ymm5, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfnmaddpd {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm4
+; FMA4-NEXT:    vfnmaddpd {{.*#+}} ymm1 = -(ymm1 * ymm3) + ymm5
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v8f64_fneg_fmsub:
@@ -993,8 +993,8 @@ define <16 x float> @test_v16f32_fneg_fnmadd(<16 x float> %a0, <16 x float> %a1,
 ;
 ; FMA4-LABEL: test_v16f32_fneg_fnmadd:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfmsubps %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfmsubps %ymm5, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfmsubps {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm4
+; FMA4-NEXT:    vfmsubps {{.*#+}} ymm1 = (ymm1 * ymm3) - ymm5
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v16f32_fneg_fnmadd:
@@ -1017,8 +1017,8 @@ define <8 x double> @test_v8f64_fneg_fnmsub(<8 x double> %a0, <8 x double> %a1, 
 ;
 ; FMA4-LABEL: test_v8f64_fneg_fnmsub:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfmaddpd %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfmaddpd %ymm5, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm4
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm1 = (ymm1 * ymm3) + ymm5
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v8f64_fneg_fnmsub:
@@ -1072,8 +1072,8 @@ define <16 x float> @test_v16f32_fma_fmul_x_c1_c2_y(<16 x float> %x, <16 x float
 ;
 ; FMA4-LABEL: test_v16f32_fma_fmul_x_c1_c2_y:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfmaddps %ymm2, {{.*}}(%rip), %ymm0, %ymm0
-; FMA4-NEXT:    vfmaddps %ymm3, {{.*}}(%rip), %ymm1, %ymm1
+; FMA4-NEXT:    vfmaddps {{.*#+}} ymm0 = (ymm0 * mem) + ymm2
+; FMA4-NEXT:    vfmaddps {{.*#+}} ymm1 = (ymm1 * mem) + ymm3
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v16f32_fma_fmul_x_c1_c2_y:
@@ -1099,8 +1099,8 @@ define <16 x float> @test_v16f32_fneg_fmul(<16 x float> %x, <16 x float> %y) #0 
 ; FMA4-LABEL: test_v16f32_fneg_fmul:
 ; FMA4:       # %bb.0:
 ; FMA4-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; FMA4-NEXT:    vfnmsubps %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfnmsubps %ymm4, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfnmsubps {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm4
+; FMA4-NEXT:    vfnmsubps {{.*#+}} ymm1 = -(ymm1 * ymm3) - ymm4
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v16f32_fneg_fmul:
@@ -1124,8 +1124,8 @@ define <8 x double> @test_v8f64_fneg_fmul(<8 x double> %x, <8 x double> %y) #0 {
 ; FMA4-LABEL: test_v8f64_fneg_fmul:
 ; FMA4:       # %bb.0:
 ; FMA4-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
-; FMA4-NEXT:    vfnmsubpd %ymm4, %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vfnmsubpd %ymm4, %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfnmsubpd {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm4
+; FMA4-NEXT:    vfnmsubpd {{.*#+}} ymm1 = -(ymm1 * ymm3) - ymm4
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v8f64_fneg_fmul:

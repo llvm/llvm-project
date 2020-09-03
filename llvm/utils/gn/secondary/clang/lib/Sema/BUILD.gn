@@ -9,8 +9,11 @@ static_library("Sema") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     ":OpenCLBuiltins",
+    "//clang/include/clang/Basic:arm_cde_builtin_aliases",
+    "//clang/include/clang/Basic:arm_cde_builtin_sema",
     "//clang/include/clang/Basic:arm_mve_builtin_aliases",
     "//clang/include/clang/Basic:arm_mve_builtin_sema",
+    "//clang/include/clang/Basic:arm_sve_sema_rangechecks",
     "//clang/include/clang/Sema:AttrParsedAttrImpl",
     "//clang/include/clang/Sema:AttrParsedAttrKinds",
     "//clang/include/clang/Sema:AttrParsedAttrList",
@@ -38,6 +41,7 @@ static_library("Sema") {
     "Sema.cpp",
     "SemaAccess.cpp",
     "SemaAttr.cpp",
+    "SemaAvailability.cpp",
     "SemaCUDA.cpp",
     "SemaCXXScopeSpec.cpp",
     "SemaCast.cpp",
@@ -64,6 +68,7 @@ static_library("Sema") {
     "SemaOpenMP.cpp",
     "SemaOverload.cpp",
     "SemaPseudoObject.cpp",
+    "SemaSYCL.cpp",
     "SemaStmt.cpp",
     "SemaStmtAsm.cpp",
     "SemaStmtAttr.cpp",

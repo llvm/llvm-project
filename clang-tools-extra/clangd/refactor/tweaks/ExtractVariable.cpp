@@ -5,12 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "Logger.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "refactor/Tweak.h"
+#include "support/Logger.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -339,7 +339,7 @@ const SelectionTree::Node *getCallExpr(const SelectionTree::Node *DeclRef) {
 bool childExprIsStmt(const Stmt *Outer, const Expr *Inner) {
   if (!Outer || !Inner)
     return false;
-  // Blacklist the most common places where an expr can appear but be unused.
+  // Exclude the most common places where an expr can appear but be unused.
   if (llvm::isa<CompoundStmt>(Outer))
     return true;
   if (llvm::isa<SwitchCase>(Outer))
@@ -450,6 +450,10 @@ bool ExtractVariable::prepare(const Selection &Inputs) {
   if (Inputs.SelectionBegin == Inputs.SelectionEnd)
     return false;
   const ASTContext &Ctx = Inputs.AST->getASTContext();
+  // FIXME: Enable non-C++ cases once we start spelling types explicitly instead
+  // of making use of auto.
+  if (!Ctx.getLangOpts().CPlusPlus)
+    return false;
   const SourceManager &SM = Inputs.AST->getSourceManager();
   if (const SelectionTree::Node *N =
           computeExtractedExpr(Inputs.ASTSelection.commonAncestor()))

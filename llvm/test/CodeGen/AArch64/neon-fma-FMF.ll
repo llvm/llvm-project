@@ -1,4 +1,5 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mattr=+neon | FileCheck %s
+; RUN: llc < %s -O3 -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mattr=+neon | FileCheck %s
 
 define <2 x float> @fma_1(<2 x float> %A, <2 x float> %B, <2 x float> %C) {
 ; CHECK-LABEL: fma_1:

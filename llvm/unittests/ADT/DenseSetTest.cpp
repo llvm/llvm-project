@@ -52,7 +52,7 @@ protected:
 
 private:
   static T GetTestSet() {
-    typename std::remove_const<T>::type Set;
+    std::remove_const_t<T> Set;
     Set.insert(0);
     Set.insert(1);
     Set.insert(2);
@@ -69,6 +69,15 @@ typedef ::testing::Types<DenseSet<unsigned, TestDenseSetInfo>,
                          SmallDenseSet<unsigned, 64, TestDenseSetInfo>>
     DenseSetTestTypes;
 TYPED_TEST_CASE(DenseSetTest, DenseSetTestTypes);
+
+TYPED_TEST(DenseSetTest, Constructor) {
+  constexpr unsigned a[] = {1, 2, 4};
+  TypeParam set(std::begin(a), std::end(a));
+  EXPECT_EQ(3u, set.size());
+  EXPECT_EQ(1u, set.count(1));
+  EXPECT_EQ(1u, set.count(2));
+  EXPECT_EQ(1u, set.count(4));
+}
 
 TYPED_TEST(DenseSetTest, InitializerList) {
   TypeParam set({1, 2, 1, 4});

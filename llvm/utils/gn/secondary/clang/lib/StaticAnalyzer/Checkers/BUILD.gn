@@ -11,6 +11,7 @@ static_library("Checkers") {
     "//clang/lib/StaticAnalyzer/Core",
     "//llvm/lib/Support",
   ]
+  include_dirs = [ "." ]
   sources = [
     "AnalysisOrderChecker.cpp",
     "AnalyzerStatsChecker.cpp",
@@ -29,14 +30,17 @@ static_library("Checkers") {
     "CastValueChecker.cpp",
     "CheckObjCDealloc.cpp",
     "CheckObjCInstMethSignature.cpp",
+    "CheckPlacementNew.cpp",
     "CheckSecuritySyntaxOnly.cpp",
     "CheckSizeofPointer.cpp",
     "CheckerDocumentation.cpp",
     "ChrootChecker.cpp",
     "CloneChecker.cpp",
+    "ContainerModeling.cpp",
     "ConversionChecker.cpp",
     "DeadStoresChecker.cpp",
     "DebugCheckers.cpp",
+    "DebugContainerModeling.cpp",
     "DebugIteratorModeling.cpp",
     "DeleteWithNonVirtualDtorChecker.cpp",
     "DereferenceChecker.cpp",
@@ -101,7 +105,9 @@ static_library("Checkers") {
     "ReturnUndefChecker.cpp",
     "ReturnValueChecker.cpp",
     "RunLoopAutoreleaseLeakChecker.cpp",
+    "STLAlgorithmModeling.cpp",
     "SimpleStreamChecker.cpp",
+    "SmartPtrChecker.cpp",
     "SmartPtrModeling.cpp",
     "StackAddrEscapeChecker.cpp",
     "StdLibraryFunctionsChecker.cpp",
@@ -124,5 +130,11 @@ static_library("Checkers") {
     "ValistChecker.cpp",
     "VforkChecker.cpp",
     "VirtualCallChecker.cpp",
+    "WebKit/ASTUtils.cpp",
+    "WebKit/NoUncountedMembersChecker.cpp",
+    "WebKit/PtrTypesSemantics.cpp",
+    "WebKit/RefCntblBaseVirtualDtorChecker.cpp",
+    "WebKit/UncountedCallArgsChecker.cpp",
+    "cert/PutenvWithAutoChecker.cpp",
   ]
 }

@@ -1,6 +1,6 @@
 # Executable testing is not supported on Windows, since all files are considered executable
 # UNSUPPORTED: system-windows
-# RUN: yaml2obj %s > %t-universal.o
+# RUN: yaml2obj %s -o %t-universal.o
 
 # RUN: chmod a-x %t-universal.o
 # RUN: llvm-lipo %t-universal.o -thin i386 -output %t32.o

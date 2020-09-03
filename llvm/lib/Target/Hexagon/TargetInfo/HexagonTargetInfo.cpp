@@ -15,7 +15,7 @@ Target &llvm::getTheHexagonTarget() {
   return TheHexagonTarget;
 }
 
-extern "C" void LLVMInitializeHexagonTargetInfo() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTargetInfo() {
   RegisterTarget<Triple::hexagon, /*HasJIT=*/true> X(
       getTheHexagonTarget(), "hexagon", "Hexagon", "Hexagon");
 }

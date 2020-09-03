@@ -66,6 +66,9 @@ public:
 
   void beginFragment(const MachineBasicBlock *MBB,
                      ExceptionSymbolProvider ESP) override;
+
+  void beginBasicBlock(const MachineBasicBlock &MBB) override;
+  void endBasicBlock(const MachineBasicBlock &MBB) override;
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMException : public DwarfCFIExceptionBase {

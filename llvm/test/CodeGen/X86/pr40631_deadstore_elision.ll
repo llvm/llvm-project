@@ -12,12 +12,13 @@ define i32 @ipt_do_table(%struct.sk_buff* noalias nocapture readonly) {
 ; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq $170, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [12297829382473034410,12297829382473034410]
 ; CHECK-NEXT:    movaps %xmm0, (%rsp)
 ; CHECK-NEXT:    movabsq $-6148914691236517206, %rcx # imm = 0xAAAAAAAAAAAAAAAA
 ; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $-86, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movzwl 2(%rax), %ecx
 ; CHECK-NEXT:    andl $8191, %ecx # imm = 0x1FFF
 ; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%rsp)

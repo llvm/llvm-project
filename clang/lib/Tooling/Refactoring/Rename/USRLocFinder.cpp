@@ -15,6 +15,7 @@
 
 #include "clang/Tooling/Refactoring/Rename/USRLocFinder.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -426,8 +427,7 @@ public:
               StartLoc,
               EndLoc,
               TemplateSpecType->getTemplateName().getAsTemplateDecl(),
-              getClosestAncestorDecl(
-                  ast_type_traits::DynTypedNode::create(TargetLoc)),
+              getClosestAncestorDecl(DynTypedNode::create(TargetLoc)),
               GetNestedNameForType(TargetLoc),
               /*IgnorePrefixQualifers=*/false};
           RenameInfos.push_back(Info);
@@ -466,8 +466,7 @@ private:
     // FIXME: figure out how to handle it when there are multiple parents.
     if (Parents.size() != 1)
       return nullptr;
-    if (ast_type_traits::ASTNodeKind::getFromNodeKind<Decl>().isBaseOf(
-            Parents[0].getNodeKind()))
+    if (ASTNodeKind::getFromNodeKind<Decl>().isBaseOf(Parents[0].getNodeKind()))
       return Parents[0].template get<Decl>();
     return getClosestAncestorDecl(Parents[0]);
   }
@@ -536,7 +535,7 @@ createRenameAtomicChanges(llvm::ArrayRef<std::string> USRs,
       // Get the name without prefix qualifiers from NewName.
       size_t LastColonPos = NewName.find_last_of(':');
       if (LastColonPos != std::string::npos)
-        ReplacedName = NewName.substr(LastColonPos + 1);
+        ReplacedName = std::string(NewName.substr(LastColonPos + 1));
     } else {
       if (RenameInfo.FromDecl && RenameInfo.Context) {
         if (!llvm::isa<clang::TranslationUnitDecl>(

@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - 2>&1 | FileCheck %s
+# RUN: not --crash llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - 2>&1 | FileCheck %s
 
 # This test invokes .bundle_lock and then switches to a different section
 # w/o the appropriate unlock.

@@ -10,6 +10,7 @@
 #include "DurationRewriter.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -18,9 +19,6 @@ namespace tidy {
 namespace abseil {
 
 void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // For the arithmetic calls, we match only the uses of the templated operators
   // where the template parameter is not a built-in type. This means the
   // instantiation makes use of an available user defined conversion to
@@ -102,14 +100,17 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
   //   `absl::Hours(x)`
   // where `x` is not of a built-in type.
   Finder->addMatcher(
-      implicitCastExpr(
-          anyOf(hasCastKind(CK_UserDefinedConversion),
-                has(implicitCastExpr(hasCastKind(CK_UserDefinedConversion)))),
-          hasParent(callExpr(
-              callee(functionDecl(DurationFactoryFunction(),
-                                  unless(hasParent(functionTemplateDecl())))),
-              hasArgument(0, expr().bind("arg")))))
-          .bind("OuterExpr"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          implicitCastExpr(anyOf(hasCastKind(CK_UserDefinedConversion),
+                                 has(implicitCastExpr(
+                                     hasCastKind(CK_UserDefinedConversion)))),
+                           hasParent(callExpr(
+                               callee(functionDecl(
+                                   DurationFactoryFunction(),
+                                   unless(hasParent(functionTemplateDecl())))),
+                               hasArgument(0, expr().bind("arg")))))
+              .bind("OuterExpr")),
       this);
 }
 
@@ -118,6 +119,8 @@ void UpgradeDurationConversionsCheck::check(
   const llvm::StringRef Message =
       "implicit conversion to 'int64_t' is deprecated in this context; use an "
       "explicit cast instead";
+
+  TraversalKindScope RAII(*Result.Context, ast_type_traits::TK_AsIs);
 
   const auto *ArgExpr = Result.Nodes.getNodeAs<Expr>("arg");
   SourceLocation Loc = ArgExpr->getBeginLoc();

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -Wno-pointer-to-int-cast -fsyntax-only -verify %s
 
 #define offsetof(TYPE, MEMBER) __builtin_offsetof (TYPE, MEMBER)
 

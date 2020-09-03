@@ -113,10 +113,10 @@ body:             |
 
   bb.1:
     %30 = V_MOV_B32_e32 1036831949, implicit $exec
-    %31 = V_ADD_F32_e32 %30, %1.sub3, implicit $exec
-    %33 = V_ADD_F32_e32 %30, %1.sub2, implicit $exec
-    %35 = V_ADD_F32_e32 %30, %1.sub1, implicit $exec
-    %37 = V_ADD_F32_e32 killed %30, killed %1.sub0, implicit $exec
+    %31 = nofpexcept V_ADD_F32_e32 %30, %1.sub3, implicit $mode, implicit $exec
+    %33 = nofpexcept V_ADD_F32_e32 %30, %1.sub2, implicit $mode, implicit $exec
+    %35 = nofpexcept V_ADD_F32_e32 %30, %1.sub1, implicit $mode, implicit $exec
+    %37 = nofpexcept V_ADD_F32_e32 killed %30, killed %1.sub0, implicit $mode, implicit $exec
     undef %56.sub0 = COPY killed %37
     %56.sub1 = COPY killed %35
     %56.sub2 = COPY killed %33
@@ -141,10 +141,10 @@ body:             |
     %7 = COPY killed %61
     %6 = COPY killed %60
     %8 = S_ADD_I32 killed %6, 1, implicit-def dead $scc
-    %44 = V_ADD_F32_e32 %43, %7.sub3, implicit $exec
-    %46 = V_ADD_F32_e32 %43, %7.sub2, implicit $exec
-    %48 = V_ADD_F32_e32 %43, %7.sub1, implicit $exec
-    %50 = V_ADD_F32_e32 %43, killed %7.sub0, implicit $exec
+    %44 = nofpexcept V_ADD_F32_e32 %43, %7.sub3, implicit $mode, implicit $exec
+    %46 = nofpexcept V_ADD_F32_e32 %43, %7.sub2, implicit $mode, implicit $exec
+    %48 = nofpexcept V_ADD_F32_e32 %43, %7.sub1, implicit $mode, implicit $exec
+    %50 = nofpexcept V_ADD_F32_e32 %43, killed %7.sub0, implicit $mode, implicit $exec
     undef %57.sub0 = COPY killed %50
     %57.sub1 = COPY killed %48
     %57.sub2 = COPY %46

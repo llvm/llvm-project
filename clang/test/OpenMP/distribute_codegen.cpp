@@ -55,8 +55,8 @@
 
 // CHECK-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CHECK-DAG: [[DEF_LOC_0:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
-// CHECK-DAG: [[DEF_LOC_DISTRIBUTE_0:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2050, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DAG: [[DEF_LOC_0:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DAG: [[DEF_LOC_DISTRIBUTE_0:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2050, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 // CHECK-LABEL: define {{.*void}} @{{.*}}without_schedule_clause{{.*}}(float* {{.+}}, float* {{.+}}, float* {{.+}}, float* {{.+}})
 void without_schedule_clause(float *a, float *b, float *c, float *d) {
@@ -68,7 +68,7 @@ void without_schedule_clause(float *a, float *b, float *c, float *d) {
   }
 }
 
-// CHECK: define {{.*}}void @{{.+}}(i32* noalias [[GBL_TIDP:%.+]], i32* noalias [[BND_TID:%.+]], float** dereferenceable({{[0-9]+}}) [[APTR:%.+]], float** dereferenceable({{[0-9]+}}) [[BPTR:%.+]], float** dereferenceable({{[0-9]+}}) [[CPTR:%.+]], float** dereferenceable({{[0-9]+}}) [[DPTR:%.+]])
+// CHECK: define {{.*}}void @{{.+}}(i32* noalias [[GBL_TIDP:%.+]], i32* noalias [[BND_TID:%.+]], float** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[APTR:%.+]], float** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[BPTR:%.+]], float** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[CPTR:%.+]], float** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[DPTR:%.+]])
 // CHECK:  [[TID_ADDR:%.+]] = alloca i32*
 // CHECK:  [[IV:%.+iv]] = alloca i32
 // CHECK:  [[LB:%.+lb]] = alloca i32
@@ -130,7 +130,7 @@ void static_not_chunked(float *a, float *b, float *c, float *d) {
   }
 }
 
-// CHECK: define {{.*}}void @.omp_outlined.{{.*}}(i32* noalias [[GBL_TIDP:%.+]], i32* noalias [[BND_TID:%.+]], float** dereferenceable({{[0-9]+}}) [[APTR:%.+]], float** dereferenceable({{[0-9]+}}) [[BPTR:%.+]], float** dereferenceable({{[0-9]+}}) [[CPTR:%.+]], float** dereferenceable({{[0-9]+}}) [[DPTR:%.+]])
+// CHECK: define {{.*}}void @.omp_outlined.{{.*}}(i32* noalias [[GBL_TIDP:%.+]], i32* noalias [[BND_TID:%.+]], float** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[APTR:%.+]], float** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[BPTR:%.+]], float** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[CPTR:%.+]], float** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[DPTR:%.+]])
 // CHECK:  [[TID_ADDR:%.+]] = alloca i32*
 // CHECK:  [[IV:%.+iv]] = alloca i32
 // CHECK:  [[LB:%.+lb]] = alloca i32
@@ -192,7 +192,7 @@ void static_chunked(float *a, float *b, float *c, float *d) {
   }
 }
 
-// CHECK: define {{.*}}void @.omp_outlined.{{.*}}(i32* noalias [[GBL_TIDP:%.+]], i32* noalias [[BND_TID:%.+]], float** dereferenceable({{[0-9]+}}) [[APTR:%.+]], float** dereferenceable({{[0-9]+}}) [[BPTR:%.+]], float** dereferenceable({{[0-9]+}}) [[CPTR:%.+]], float** dereferenceable({{[0-9]+}}) [[DPTR:%.+]])
+// CHECK: define {{.*}}void @.omp_outlined.{{.*}}(i32* noalias [[GBL_TIDP:%.+]], i32* noalias [[BND_TID:%.+]], float** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[APTR:%.+]], float** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[BPTR:%.+]], float** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[CPTR:%.+]], float** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[DPTR:%.+]])
 // CHECK:  [[TID_ADDR:%.+]] = alloca i32*
 // CHECK:  [[IV:%.+iv]] = alloca i32
 // CHECK:  [[LB:%.+lb]] = alloca i32
@@ -253,7 +253,7 @@ void test_precond() {
 }
 
 // a is passed as a parameter to the outlined functions
-// CHECK:  define {{.*}}void @.omp_outlined.{{.*}}(i32* noalias [[GBL_TIDP:%.+]], i32* noalias [[BND_TID:%.+]], i8* dereferenceable({{[0-9]+}}) [[APARM:%.+]])
+// CHECK:  define {{.*}}void @.omp_outlined.{{.*}}(i32* noalias [[GBL_TIDP:%.+]], i32* noalias [[BND_TID:%.+]], i8* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[APARM:%.+]])
 // CHECK:  store i8* [[APARM]], i8** [[APTRADDR:%.+]]
 // ..many loads of %0..
 // CHECK:  [[A2:%.+]] = load i8*, i8** [[APTRADDR]]

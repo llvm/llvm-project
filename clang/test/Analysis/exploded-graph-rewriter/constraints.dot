@@ -1,8 +1,5 @@
 // RUN: %exploded_graph_rewriter %s | FileCheck %s
 
-// FIXME: Substitution doesn't seem to work on Windows.
-// UNSUPPORTED: system-windows
-
 // CHECK: <tr><td align="left"><b>Ranges: </b></td></tr>
 // CHECK-SAME: <tr><td align="left"><table border="0">
 // CHECK-SAME:   <tr>

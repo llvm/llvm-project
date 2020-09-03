@@ -25,7 +25,7 @@ struct elem {
 // CHECK-DAG: %struct.elem = type { %struct.ptr }
 
 struct ptr object;
-// CHECK-DAG: @object = common global %struct.ptr zeroinitializer
+// CHECK-DAG: @object = global %struct.ptr zeroinitializer
 
 // CHECK-DAG: @testStructGlobal = global {{.*}} { i16 1, i16 2, i16 3, i16 4 }
 // CHECK-DAG: @testPromotedStructGlobal = global {{.*}} { %{{.*}} { i16 1, i16 2, i16 3 }, [2 x i8] zeroinitializer }

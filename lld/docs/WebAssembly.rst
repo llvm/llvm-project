@@ -59,11 +59,11 @@ WebAssembly-specific options:
 
 .. option:: --compress-relocations
 
-  Relocation targets in the code section 5-bytes wide in order to potentially
-  occomate the largest LEB128 value.  This option will cause the linker to
-  shirnk the code section to remove any padding from the final output.  However
-  because it effects code offset, this option is not compatible with outputing
-  debug information.
+  Relocation targets in the code section are 5-bytes wide in order to
+  potentially accommodate the largest LEB128 value.  This option will cause the
+  linker to shrink the code section to remove any padding from the final
+  output.  However because it affects code offset, this option is not
+  compatible with outputting debug information.
 
 .. option:: --allow-undefined
 
@@ -112,8 +112,8 @@ The default behaviour is to generate these stub function and to produce
 a warning.  The ``--fatal-warnings`` flag can be used to disable this behaviour
 and error out if mismatched are found.
 
-Imports and Exports
-~~~~~~~~~~~~~~~~~~~
+Exports
+~~~~~~~
 
 When building a shared library any symbols marked as ``visibility=default`` will
 be exported.
@@ -129,6 +129,17 @@ In addition, symbols can be exported via the linker command line using
 Finally, just like with native ELF linker the ``--export-dynamic`` flag can be
 used to export symbols in the executable which are marked as
 ``visibility=default``.
+
+Imports
+~~~~~~~
+
+By default no undefined symbols are allowed in the final binary.  The flag
+``--allow-undefined`` results in a WebAssembly import being defined for each
+undefined symbol.  It is then up to the runtime to provide such symbols.
+
+Alternatively symbols can be marked in the source code as with the
+``import_name`` and/or ``import_module`` clang attributes which signals that
+they are expected to be undefined at static link time.
 
 Garbage Collection
 ~~~~~~~~~~~~~~~~~~

@@ -43,7 +43,7 @@ namespace N {
 export struct T {} t;
 #elif TEST == 3
 int use_a = a; // expected-error {{declaration of 'a' must be imported from module 'foo' before it is required}}
-// expected-note@-13 {{previous}}
+// expected-note@-13 {{declaration here is not visible}}
 
 #undef foo
 import foo;

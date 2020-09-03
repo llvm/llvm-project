@@ -1,16 +1,16 @@
 ; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=EPILOG,COMMON
 ; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=PROLOG,COMMON
 ;
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,unroll' -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=EPILOG,COMMON
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,unroll' -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=PROLOG,COMMON
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll' -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=EPILOG,COMMON
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll' -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=PROLOG,COMMON
 ;
 ; Restricted versions of unroll (unroll<peeling;noruntime>, unroll-full) should not be doing runtime unrolling
 ; even if it is globally enabled through -unroll-runtime option
 ;
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,unroll<peeling;no-runtime>' -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=NOEPILOG,COMMON
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,unroll<peeling;no-runtime>' -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=NOPROLOG,COMMON
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(unroll-full)' -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=NOEPILOG,COMMON
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(unroll-full)' -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=NOPROLOG,COMMON
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll<peeling;no-runtime>' -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=NOEPILOG,COMMON
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll<peeling;no-runtime>' -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=NOPROLOG,COMMON
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=NOEPILOG,COMMON
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=NOPROLOG,COMMON
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 

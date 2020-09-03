@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXProcessMonitor_arm64.cpp -----------*- C++ -*-===//
+//===-- RegisterContextPOSIXProcessMonitor_arm64.cpp ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,9 +22,9 @@ using namespace lldb_private;
 
 RegisterContextPOSIXProcessMonitor_arm64::
     RegisterContextPOSIXProcessMonitor_arm64(
-        lldb_private::Thread &thread, uint32_t concrete_frame_idx,
-        lldb_private::RegisterInfoInterface *register_info)
-    : RegisterContextPOSIX_arm64(thread, concrete_frame_idx, register_info) {}
+        lldb_private::Thread &thread,
+        std::unique_ptr<RegisterInfoPOSIX_arm64> register_info)
+    : RegisterContextPOSIX_arm64(thread, std::move(register_info)) {}
 
 ProcessMonitor &RegisterContextPOSIXProcessMonitor_arm64::GetMonitor() {
   lldb::ProcessSP base = CalculateProcess();

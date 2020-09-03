@@ -40,7 +40,7 @@
 
 // CHECK-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 // CHECK-DAG: [[TT:%.+]] = type { i64, i8 }
 // CHECK-DAG: [[S1:%.+]] = type { double }
@@ -480,7 +480,7 @@ int foo(int n) {
 // CHECK: define {{.*}}void @__omp_offloading_{{.*}}foo{{.*}}_l334(i[[SZ]] %{{.+}})
 // CHECK: define internal void {{@.+}}(i32* {{.+}}, i32* {{.+}}, i[[SZ]] %{{.+}})
 // CHECK: define {{.*}}void @__omp_offloading_{{.*}}foo{{.*}}_l337(i[[SZ]] %{{.+}})
-// CHECK: define internal void {{@.+}}(i32* {{.+}}, i32* {{.+}}, i32* dereferenceable{{.+}})
+// CHECK: define internal void {{@.+}}(i32* {{.+}}, i32* {{.+}}, i32* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %{{.+}})
 
 void bazzzz(int n, int f[n]) {
 // CHECK: define internal void @__omp_offloading_{{.+}}bazzzz{{.+}}_l489(i[[SZ]] %{{[^,]+}})

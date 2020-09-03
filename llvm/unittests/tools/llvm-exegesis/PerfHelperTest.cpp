@@ -22,21 +22,14 @@ using ::testing::Not;
 TEST(PerfHelperTest, FunctionalTest) {
 #ifdef HAVE_LIBPFM
   ASSERT_FALSE(pfmInitialize());
-  const PerfEvent SingleEvent("CYCLES:u");
-  const auto &EmptyFn = []() {};
-  std::string CallbackEventName;
-  std::string CallbackEventNameFullyQualifed;
-  int64_t CallbackEventCycles;
-  Measure(
-      makeArrayRef(SingleEvent),
-      [&](const PerfEvent &Event, int64_t Value) {
-        CallbackEventName = Event.name();
-        CallbackEventNameFullyQualifed = Event.getPfmEventString();
-        CallbackEventCycles = Value;
-      },
-      EmptyFn);
-  EXPECT_EQ(CallbackEventName, "CYCLES:u");
-  EXPECT_THAT(CallbackEventNameFullyQualifed, Not(IsEmpty()));
+  PerfEvent Event("CYCLES:u");
+  ASSERT_TRUE(Event.valid());
+  EXPECT_EQ(Event.name(), "CYCLES:u");
+  EXPECT_THAT(Event.getPfmEventString(), Not(IsEmpty()));
+  Counter Cnt(std::move(Event));
+  Cnt.start();
+  Cnt.stop();
+  Cnt.read();
   pfmTerminate();
 #else
   ASSERT_TRUE(pfmInitialize());

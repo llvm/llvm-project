@@ -45,7 +45,17 @@ static cl::opt<bool> EnableEmSjLj(
     cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
     cl::init(false));
 
-extern "C" void LLVMInitializeWebAssemblyTarget() {
+// A command-line option to keep implicit locals
+// for the purpose of testing with lit/llc ONLY.
+// This produces output which is not valid WebAssembly, and is not supported
+// by assemblers/disassemblers and other MC based tools.
+static cl::opt<bool> WasmDisableExplicitLocals(
+    "wasm-disable-explicit-locals", cl::Hidden,
+    cl::desc("WebAssembly: output implicit locals in"
+             " instruction output for test purposes only."),
+    cl::init(false));
+
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   // Register the target.
   RegisterTargetMachine<WebAssemblyTargetMachine> X(
       getTheWebAssemblyTarget32());
@@ -75,8 +85,8 @@ extern "C" void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyExplicitLocalsPass(PR);
   initializeWebAssemblyLowerBrUnlessPass(PR);
   initializeWebAssemblyRegNumberingPass(PR);
+  initializeWebAssemblyDebugFixupPass(PR);
   initializeWebAssemblyPeepholePass(PR);
-  initializeWebAssemblyCallIndirectFixupPass(PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -210,8 +220,8 @@ private:
   FeatureBitset coalesceFeatures(const Module &M) {
     FeatureBitset Features =
         WasmTM
-            ->getSubtargetImpl(WasmTM->getTargetCPU(),
-                               WasmTM->getTargetFeatureString())
+            ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
+                               std::string(WasmTM->getTargetFeatureString()))
             ->getFeatureBits();
     for (auto &F : M)
       Features |= WasmTM->getSubtargetImpl(F)->getFeatureBits();
@@ -274,20 +284,21 @@ private:
 
   void recordFeatures(Module &M, const FeatureBitset &Features, bool Stripped) {
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
-      std::string MDKey = (StringRef("wasm-feature-") + KV.Key).str();
-      if (KV.Value == WebAssembly::FeatureAtomics && Stripped) {
-        // "atomics" is special: code compiled without atomics may have had its
-        // atomics lowered to nonatomic operations. In that case, atomics is
-        // disallowed to prevent unsafe linking with atomics-enabled objects.
-        assert(!Features[WebAssembly::FeatureAtomics] ||
-               !Features[WebAssembly::FeatureBulkMemory]);
-        M.addModuleFlag(Module::ModFlagBehavior::Error, MDKey,
-                        wasm::WASM_FEATURE_PREFIX_DISALLOWED);
-      } else if (Features[KV.Value]) {
-        // Otherwise features are marked Used or not mentioned
+      if (Features[KV.Value]) {
+        // Mark features as used
+        std::string MDKey = (StringRef("wasm-feature-") + KV.Key).str();
         M.addModuleFlag(Module::ModFlagBehavior::Error, MDKey,
                         wasm::WASM_FEATURE_PREFIX_USED);
       }
+    }
+    // Code compiled without atomics or bulk-memory may have had its atomics or
+    // thread-local data lowered to nonatomic operations or non-thread-local
+    // data. In that case, we mark the pseudo-feature "shared-mem" as disallowed
+    // to tell the linker that it would be unsafe to allow this code ot be used
+    // in a module with shared memory.
+    if (Stripped) {
+      M.addModuleFlag(Module::ModFlagBehavior::Error, "wasm-feature-shared-mem",
+                      wasm::WASM_FEATURE_PREFIX_DISALLOWED);
     }
   }
 };
@@ -395,6 +406,10 @@ bool WebAssemblyPassConfig::addInstSelector() {
   // it's inconvenient to collect. Collect it now, and update the immediate
   // operands.
   addPass(createWebAssemblySetP2AlignOperands());
+
+  // Eliminate range checks and add default targets to br_table instructions.
+  addPass(createWebAssemblyFixBrTableDefaults());
+
   return false;
 }
 
@@ -422,11 +437,6 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
 
 void WebAssemblyPassConfig::addPreEmitPass() {
   TargetPassConfig::addPreEmitPass();
-
-  // Rewrite pseudo call_indirect instructions as real instructions.
-  // This needs to run before register stackification, because we change the
-  // order of the arguments.
-  addPass(createWebAssemblyCallIndirectFixup());
 
   // Eliminate multiple-entry loops.
   addPass(createWebAssemblyFixIrreducibleControlFlow());
@@ -472,7 +482,8 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyCFGStackify());
 
   // Insert explicit local.get and local.set operators.
-  addPass(createWebAssemblyExplicitLocals());
+  if (!WasmDisableExplicitLocals)
+    addPass(createWebAssemblyExplicitLocals());
 
   // Lower br_unless into br_if.
   addPass(createWebAssemblyLowerBrUnless());
@@ -483,6 +494,10 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 
   // Create a mapping from LLVM CodeGen virtual registers to wasm registers.
   addPass(createWebAssemblyRegNumbering());
+
+  // Fix debug_values whose defs have been stackified.
+  if (!WasmDisableExplicitLocals)
+    addPass(createWebAssemblyDebugFixup());
 }
 
 yaml::MachineFunctionInfo *

@@ -1,6 +1,6 @@
 //===- Argument.h - Argument definitions ------------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -43,8 +43,14 @@ struct NamedAttribute {
 struct NamedTypeConstraint {
   // Returns true if this operand/result has constraint to be satisfied.
   bool hasPredicate() const;
+  // Returns true if this is an optional type constraint. This is a special case
+  // of variadic for 0 or 1 type.
+  bool isOptional() const;
   // Returns true if this operand/result is variadic.
   bool isVariadic() const;
+  // Returns true if this is a variable length type constraint. This is either
+  // variadic or optional.
+  bool isVariableLength() const { return isOptional() || isVariadic(); }
 
   llvm::StringRef name;
   TypeConstraint constraint;

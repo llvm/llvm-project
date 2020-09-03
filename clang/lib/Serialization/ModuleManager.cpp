@@ -132,38 +132,15 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     return Missing;
   }
 
-  // The ModuleManager's use of FileEntry nodes as the keys for its map of
-  // loaded modules is less than ideal. Uniqueness for FileEntry nodes is
-  // maintained by FileManager, which in turn uses inode numbers on hosts
-  // that support that. When coupled with the module cache's proclivity for
-  // turning over and deleting stale PCMs, this means entries for different
-  // module files can wind up reusing the same underlying inode. When this
-  // happens, subsequent accesses to the Modules map will disagree on the
-  // ModuleFile associated with a given file. In general, it is not sufficient
-  // to resolve this conundrum with a type like FileEntryRef that stores the
-  // name of the FileEntry node on first access because of path canonicalization
-  // issues. However, the paths constructed for implicit module builds are
-  // fully under Clang's control. We *can*, therefore, rely on their structure
-  // being consistent across operating systems and across subsequent accesses
-  // to the Modules map.
-  auto implicitModuleNamesMatch = [](ModuleKind Kind, const ModuleFile *MF,
-                                     const FileEntry *Entry) -> bool {
-    if (Kind != MK_ImplicitModule)
-      return true;
-    return Entry->getName() == MF->FileName;
-  };
-
   // Check whether we already loaded this module, before
   if (ModuleFile *ModuleEntry = Modules.lookup(Entry)) {
-    if (implicitModuleNamesMatch(Type, ModuleEntry, Entry)) {
-      // Check the stored signature.
-      if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
-        return OutOfDate;
+    // Check the stored signature.
+    if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
+      return OutOfDate;
 
-      Module = ModuleEntry;
-      updateModuleImports(*ModuleEntry, ImportedBy, ImportLoc);
-      return AlreadyLoaded;
-    }
+    Module = ModuleEntry;
+    updateModuleImports(*ModuleEntry, ImportedBy, ImportLoc);
+    return AlreadyLoaded;
   }
 
   // Allocate a new module.
@@ -186,7 +163,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Load the contents of the module
   if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
     // The buffer was already provided for us.
-    NewModule->Buffer = &ModuleCache->addFinalPCM(FileName, std::move(Buffer));
+    NewModule->Buffer = &ModuleCache->addBuiltPCM(FileName, std::move(Buffer));
     // Since the cached buffer is reused, it is safe to close the file
     // descriptor that was opened while stat()ing the PCM in
     // lookupModuleFile() above, it won't be needed any longer.
@@ -196,6 +173,11 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     NewModule->Buffer = Buffer;
     // As above, the file descriptor is no longer needed.
     Entry->closeFile();
+  } else if (getModuleCache().shouldBuildPCM(FileName)) {
+    // Report that the module is out of date, since we tried (and failed) to
+    // import it earlier.
+    Entry->closeFile();
+    return OutOfDate;
   } else {
     // Open the AST file.
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf((std::error_code()));
@@ -464,7 +446,7 @@ bool ModuleManager::lookupModuleFile(StringRef FileName,
 
   // Open the file immediately to ensure there is no race between stat'ing and
   // opening the file.
-  auto FileOrErr = FileMgr.getFile(FileName, /*OpenFile=*/true, 
+  auto FileOrErr = FileMgr.getFile(FileName, /*OpenFile=*/true,
                                    /*CacheFailure=*/false);
   if (!FileOrErr) {
     File = nullptr;

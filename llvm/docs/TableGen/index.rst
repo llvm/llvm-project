@@ -28,7 +28,7 @@ hands the result off to a domain-specific `backend`_ for processing.
 
 The current major users of TableGen are :doc:`../CodeGenerator`
 and the
-`Clang diagnostics and attributes <http://clang.llvm.org/docs/UsersManual.html#controlling-errors-and-warnings>`_.
+`Clang diagnostics and attributes <https://clang.llvm.org/docs/UsersManual.html#controlling-errors-and-warnings>`_.
 
 Note that if you work on TableGen much, and use emacs or vim, that you can find
 an emacs "TableGen mode" and a vim language file in the ``llvm/utils/emacs`` and

@@ -94,8 +94,7 @@
   </li>
   <li><code>cd llvm-project</code></li>
   <li><code>mkdir build-libcxxabi &amp;&amp; cd build-libcxxabi</code></li>
-  <li><code>cmake -DLIBCXXABI_LIBCXX_PATH=path/to/libcxx ../libcxxabi # on
-    linux you may need -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++</code></li>
+  <li><code>cmake ../libcxxabi # on linux you may need -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++</code></li>
   <li><code>make</code></li>
   </ul>
   <p> By default CMake uses <code>llvm-config</code> to locate the required

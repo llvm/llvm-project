@@ -30,10 +30,10 @@ define [1 x <4 x float>] @test1() {
 define [1 x <4 x float>] @test2() {
 ; CHECK-LABEL:    .p2align    4               ; -- Begin function test2
 ; CHECK-NEXT: lCPI1_0:
-; CHECK-NEXT:     .long   0 ; float 0
-; CHECK-NEXT:     .long   0 ; float 0
-; CHECK-NEXT:     .long   0 ; float 0
-; CHECK-NEXT:     .long   1065353216 ; float 1
+; CHECK-NEXT:     .long   0x00000000              ; float 0
+; CHECK-NEXT:     .long   0x00000000              ; float 0
+; CHECK-NEXT:     .long   0x00000000              ; float 0
+; CHECK-NEXT:     .long   0x3f800000              ; float 1
 ; CHECK-NEXT:     .section    __TEXT,__text,regular,pure_instructions
 ; CHECK-NEXT:     .globl  _test2
 ; CHECK-NEXT:     .p2align    2

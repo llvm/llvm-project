@@ -44,6 +44,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -52,6 +53,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 
 namespace llvm {
 
@@ -100,40 +102,6 @@ template <typename AnalysisT>
 using RequireAnalysisLoopPass =
     RequireAnalysisPass<AnalysisT, Loop, LoopAnalysisManager,
                         LoopStandardAnalysisResults &, LPMUpdater &>;
-
-namespace internal {
-/// Helper to implement appending of loops onto a worklist.
-///
-/// We want to process loops in postorder, but the worklist is a LIFO data
-/// structure, so we append to it in *reverse* postorder.
-///
-/// For trees, a preorder traversal is a viable reverse postorder, so we
-/// actually append using a preorder walk algorithm.
-template <typename RangeT>
-inline void appendLoopsToWorklist(RangeT &&Loops,
-                                  SmallPriorityWorklist<Loop *, 4> &Worklist) {
-  // We use an internal worklist to build up the preorder traversal without
-  // recursion.
-  SmallVector<Loop *, 4> PreOrderLoops, PreOrderWorklist;
-
-  // We walk the initial sequence of loops in reverse because we generally want
-  // to visit defs before uses and the worklist is LIFO.
-  for (Loop *RootL : reverse(Loops)) {
-    assert(PreOrderLoops.empty() && "Must start with an empty preorder walk.");
-    assert(PreOrderWorklist.empty() &&
-           "Must start with an empty preorder walk worklist.");
-    PreOrderWorklist.push_back(RootL);
-    do {
-      Loop *L = PreOrderWorklist.pop_back_val();
-      PreOrderWorklist.append(L->begin(), L->end());
-      PreOrderLoops.push_back(L);
-    } while (!PreOrderWorklist.empty());
-
-    Worklist.insert(std::move(PreOrderLoops));
-    PreOrderLoops.clear();
-  }
-}
-}
 
 template <typename LoopPassT> class FunctionToLoopPassAdaptor;
 
@@ -190,7 +158,7 @@ public:
                                                   "the current loop!");
 #endif
 
-    internal::appendLoopsToWorklist(NewChildLoops, Worklist);
+    appendLoopsToWorklist(NewChildLoops, Worklist);
 
     // Also skip further processing of the current loop--it will be revisited
     // after all of its newly added children are accounted for.
@@ -210,7 +178,7 @@ public:
              "All of the new loops must be siblings of the current loop!");
 #endif
 
-    internal::appendLoopsToWorklist(NewSibLoops, Worklist);
+    appendLoopsToWorklist(NewSibLoops, Worklist);
 
     // No need to skip the current loop or revisit it, as sibling loops
     // shouldn't impact anything.
@@ -324,13 +292,9 @@ public:
     // update them when they mutate the loop nest structure.
     LPMUpdater Updater(Worklist, LAM);
 
-    // Add the loop nests in the reverse order of LoopInfo. For some reason,
-    // they are stored in RPO w.r.t. the control flow graph in LoopInfo. For
-    // the purpose of unrolling, loop deletion, and LICM, we largely want to
-    // work forward across the CFG so that we visit defs before uses and can
-    // propagate simplifications from one loop nest into the next.
-    // FIXME: Consider changing the order in LoopInfo.
-    internal::appendLoopsToWorklist(reverse(LI), Worklist);
+    // Add the loop nests in the reverse order of LoopInfo. See method
+    // declaration.
+    appendLoopsToWorklist(LI, Worklist);
 
     do {
       Loop *L = Worklist.pop_back_val();
@@ -353,7 +317,12 @@ public:
       // false).
       if (!PI.runBeforePass<Loop>(Pass, *L))
         continue;
-      PreservedAnalyses PassPA = Pass.run(*L, LAM, LAR, Updater);
+
+      PreservedAnalyses PassPA;
+      {
+        TimeTraceScope TimeScope(Pass.name());
+        PassPA = Pass.run(*L, LAM, LAR, Updater);
+      }
 
       // Do not pass deleted Loop into the instrumentation.
       if (Updater.skipCurrentLoop())

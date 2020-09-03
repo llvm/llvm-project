@@ -87,8 +87,8 @@ class WatchpointPythonCommandTestCase(TestBase):
 
         # Check that the watchpoint snapshoting mechanism is working.
         self.expect("watchpoint list -v",
-                    substrs=['old value:', ' = 0',
-                             'new value:', ' = 1'])
+                    substrs=['old value: 0',
+                             'new value: 1'])
 
         # The watchpoint command "forced" our global variable 'cookie' to
         # become 777.
@@ -96,6 +96,7 @@ class WatchpointPythonCommandTestCase(TestBase):
                     substrs=['(int32_t)', 'cookie = 777'])
 
     @skipIfFreeBSD  # timing out on buildbot
+    @skipIfReproducer
     def test_continue_in_watchpoint_command(self):
         """Test continue in a watchpoint command."""
         self.build(dictionary=self.d)

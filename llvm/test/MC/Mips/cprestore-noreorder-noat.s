@@ -11,10 +11,10 @@
 # RUN:   | FileCheck %s -allow-empty -check-prefix=N32
 
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -filetype=obj -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s -check-prefix=NO-STORE
+# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=NO-STORE
 
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnu -filetype=obj -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s -check-prefix=NO-STORE
+# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=NO-STORE
 
   .text
   .ent foo

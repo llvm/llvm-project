@@ -13,14 +13,14 @@
 # HEX: 0x10020110 10010100
 
 # CHECK:      Disassembly of section .text:
-# CHECK:      .text:
+# CHECK:      <.text>:
 # CHECK-NEXT: 100100e0: blr
-# CHECK:      _start:
-# CHECK-NEXT:   bl .+12
+# CHECK:      <_start>:
+# CHECK-NEXT:   bl 0x100100f0
 # CHECK-NEXT:   lis 9, 4097
 # CHECK-NEXT:   addi 9, 9, 256
 # CHECK-EMPTY:
-# CHECK-NEXT: 00000000.plt_call32.func:
+# CHECK-NEXT: <00000000.plt_call32.func>:
 ## 0x10020110 = 65536*4098+272
 # CHECK-NEXT:   lis 11, 4098
 # CHECK-NEXT:   lwz 11, 272(11)

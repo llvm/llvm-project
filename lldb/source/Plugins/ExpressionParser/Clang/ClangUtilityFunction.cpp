@@ -1,4 +1,4 @@
-//===-- ClangUtilityFunction.cpp ---------------------------------*- C++-*-===//
+//===-- ClangUtilityFunction.cpp ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionParser.h"
 #include "ClangExpressionSourceCode.h"
+#include "ClangPersistentVariables.h"
 
 #include <stdio.h>
 #if HAVE_SYS_TYPES_H
@@ -159,7 +160,14 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
 
 void ClangUtilityFunction::ClangUtilityFunctionHelper::ResetDeclMap(
     ExecutionContext &exe_ctx, bool keep_result_in_memory) {
-  m_expr_decl_map_up.reset(new ClangExpressionDeclMap(
-      keep_result_in_memory, nullptr, exe_ctx.GetTargetSP(),
-      exe_ctx.GetTargetRef().GetClangASTImporter(), nullptr));
+  std::shared_ptr<ClangASTImporter> ast_importer;
+  auto *state = exe_ctx.GetTargetSP()->GetPersistentExpressionStateForLanguage(
+      lldb::eLanguageTypeC);
+  if (state) {
+    auto *persistent_vars = llvm::cast<ClangPersistentVariables>(state);
+    ast_importer = persistent_vars->GetClangASTImporter();
+  }
+  m_expr_decl_map_up = std::make_unique<ClangExpressionDeclMap>(
+      keep_result_in_memory, nullptr, exe_ctx.GetTargetSP(), ast_importer,
+      nullptr);
 }

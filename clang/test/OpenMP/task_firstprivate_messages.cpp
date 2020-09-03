@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;

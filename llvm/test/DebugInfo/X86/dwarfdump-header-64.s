@@ -76,7 +76,7 @@ CU_5_version:
 CU_5_end:
 
 # CHECK-LABEL: .debug_info contents:
-# CHECK: 0x00000000: Compile Unit: length = 0x00000016 version = 0x0005 unit_type = DW_UT_compile abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x0000001a)
+# CHECK: 0x00000000: Compile Unit: length = 0x00000016, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x0000001a)
 # CHECK: 0x0000000c: DW_TAG_compile_unit
 # CHECK-NEXT: DW_AT_producer {{.*}} "Handmade DWARF producer"
 # CHECK-NEXT: DW_AT_name {{.*}} "V5_compile_unit"
@@ -153,14 +153,14 @@ LH_5_end:
 
 # CHECK-LABEL: .debug_line contents:
 # CHECK: Line table prologue:
-# CHECK: total_length: 0x00000050
+# CHECK: total_length: 0x0000000000000050
 # CHECK: version: 5
 # CHECK: address_size: 8
 # CHECK: seg_select_size: 0
-# CHECK: prologue_length: 0x00000044
+# CHECK: prologue_length: 0x0000000000000044
 # CHECK: max_ops_per_inst: 1
-# CHECK: include_directories[  0] = .debug_str[0x00000028] = "Directory5a"
-# CHECK: include_directories[  1] = .debug_str[0x00000034] = "Directory5b"
+# CHECK: include_directories[  0] = .debug_str[0x0000000000000028] = "Directory5a"
+# CHECK: include_directories[  1] = .debug_str[0x0000000000000034] = "Directory5b"
 # CHECK-NOT: include_directories
 # CHECK: file_names[  0]:
 # CHECK-NEXT: name: "File5a"

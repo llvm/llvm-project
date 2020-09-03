@@ -19,6 +19,7 @@
 
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/Support/Alignment.h"
 
 namespace llvm {
 
@@ -29,6 +30,7 @@ class MachineInstr;
 class MachineOperand;
 class GISelKnownBits;
 class MachineDominatorTree;
+class LegalizerInfo;
 
 struct PreferredTuple {
   LLT Ty;                // The result type of the extend.
@@ -55,11 +57,17 @@ protected:
   GISelChangeObserver &Observer;
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
+  const LegalizerInfo *LI;
 
 public:
   CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
                  GISelKnownBits *KB = nullptr,
-                 MachineDominatorTree *MDT = nullptr);
+                 MachineDominatorTree *MDT = nullptr,
+                 const LegalizerInfo *LI = nullptr);
+
+  GISelKnownBits *getKnownBits() const {
+    return KB;
+  }
 
   /// MachineRegisterInfo::replaceRegWith() and inform the observer of the changes
   void replaceRegWith(MachineRegisterInfo &MRI, Register FromReg, Register ToReg) const;
@@ -77,7 +85,7 @@ public:
 
   /// Returns true if \p DefMI precedes \p UseMI or they are the same
   /// instruction. Both must be in the same basic block.
-  bool isPredecessor(MachineInstr &DefMI, MachineInstr &UseMI);
+  bool isPredecessor(const MachineInstr &DefMI, const MachineInstr &UseMI);
 
   /// Returns true if \p DefMI dominates \p UseMI. By definition an
   /// instruction dominates itself.
@@ -85,7 +93,7 @@ public:
   /// If we haven't been provided with a MachineDominatorTree during
   /// construction, this function returns a conservative result that tracks just
   /// a single basic block.
-  bool dominates(MachineInstr &DefMI, MachineInstr &UseMI);
+  bool dominates(const MachineInstr &DefMI, const MachineInstr &UseMI);
 
   /// If \p MI is extend that consumes the result of a load, try to combine it.
   /// Returns true if MI changed.
@@ -98,6 +106,9 @@ public:
   bool tryCombineIndexedLoadStore(MachineInstr &MI);
   bool matchCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
   void applyCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
+
+  bool matchSextTruncSextLoad(MachineInstr &MI);
+  bool applySextTruncSextLoad(MachineInstr &MI);
 
   bool matchElideBrByInvertingCond(MachineInstr &MI);
   void applyElideBrByInvertingCond(MachineInstr &MI);
@@ -182,6 +193,65 @@ public:
   bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);
   bool applyCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);
 
+  /// Reduce a shift by a constant to an unmerge and a shift on a half sized
+  /// type. This will not produce a shift smaller than \p TargetShiftSize.
+  bool matchCombineShiftToUnmerge(MachineInstr &MI, unsigned TargetShiftSize,
+                                 unsigned &ShiftVal);
+  bool applyCombineShiftToUnmerge(MachineInstr &MI, const unsigned &ShiftVal);
+  bool tryCombineShiftToUnmerge(MachineInstr &MI, unsigned TargetShiftAmount);
+
+  /// Return true if any explicit use operand on \p MI is defined by a
+  /// G_IMPLICIT_DEF.
+  bool matchAnyExplicitUseIsUndef(MachineInstr &MI);
+
+  /// Return true if all register explicit use operands on \p MI are defined by
+  /// a G_IMPLICIT_DEF.
+  bool matchAllExplicitUsesAreUndef(MachineInstr &MI);
+
+  /// Return true if a G_SHUFFLE_VECTOR instruction \p MI has an undef mask.
+  bool matchUndefShuffleVectorMask(MachineInstr &MI);
+
+  /// Return true if a G_STORE instruction \p MI is storing an undef value.
+  bool matchUndefStore(MachineInstr &MI);
+
+  /// Replace an instruction with a G_FCONSTANT with value \p C.
+  bool replaceInstWithFConstant(MachineInstr &MI, double C);
+
+  /// Replace an instruction with a G_CONSTANT with value \p C.
+  bool replaceInstWithConstant(MachineInstr &MI, int64_t C);
+
+  /// Replace an instruction with a G_IMPLICIT_DEF.
+  bool replaceInstWithUndef(MachineInstr &MI);
+
+  /// Delete \p MI and replace all of its uses with its \p OpIdx-th operand.
+  bool replaceSingleDefInstWithOperand(MachineInstr &MI, unsigned OpIdx);
+
+  /// Return true if \p MOP1 and \p MOP2 are register operands are defined by
+  /// equivalent instructions.
+  bool matchEqualDefs(const MachineOperand &MOP1, const MachineOperand &MOP2);
+
+  /// Return true if \p MOP is defined by a G_CONSTANT with a value equal to
+  /// \p C.
+  bool matchConstantOp(const MachineOperand &MOP, int64_t C);
+
+  /// Optimize (cond ? x : x) -> x
+  bool matchSelectSameVal(MachineInstr &MI);
+
+  /// Optimize (x op x) -> x
+  bool matchBinOpSameVal(MachineInstr &MI);
+
+  /// Check if operand \p OpIdx is zero.
+  bool matchOperandIsZero(MachineInstr &MI, unsigned OpIdx);
+
+  /// Erase \p MI
+  bool eraseInst(MachineInstr &MI);
+
+  /// Return true if MI is a G_ADD which can be simplified to a G_SUB.
+  bool matchSimplifyAddToSub(MachineInstr &MI,
+                             std::tuple<Register, Register> &MatchInfo);
+  bool applySimplifyAddToSub(MachineInstr &MI,
+                             std::tuple<Register, Register> &MatchInfo);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);
@@ -189,13 +259,13 @@ public:
 private:
   // Memcpy family optimization helpers.
   bool optimizeMemcpy(MachineInstr &MI, Register Dst, Register Src,
-                      unsigned KnownLen, unsigned DstAlign, unsigned SrcAlign,
+                      unsigned KnownLen, Align DstAlign, Align SrcAlign,
                       bool IsVolatile);
   bool optimizeMemmove(MachineInstr &MI, Register Dst, Register Src,
-                      unsigned KnownLen, unsigned DstAlign, unsigned SrcAlign,
-                      bool IsVolatile);
+                       unsigned KnownLen, Align DstAlign, Align SrcAlign,
+                       bool IsVolatile);
   bool optimizeMemset(MachineInstr &MI, Register Dst, Register Val,
-                      unsigned KnownLen, unsigned DstAlign, bool IsVolatile);
+                      unsigned KnownLen, Align DstAlign, bool IsVolatile);
 
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.

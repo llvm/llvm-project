@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -objc-arc -S < %s | FileCheck %s
+; RUN: opt -basic-aa -objc-arc -S < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64"
 

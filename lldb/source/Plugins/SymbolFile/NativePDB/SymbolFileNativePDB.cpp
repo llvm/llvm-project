@@ -1,4 +1,4 @@
-//===-- SymbolFileNativePDB.cpp ---------------------------------*- C++ -*-===//
+//===-- SymbolFileNativePDB.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -129,17 +129,18 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
 
   // If it doesn't have a debug directory, fail.
   llvm::StringRef pdb_file;
-  auto ec = obj->getDebugPDBInfo(pdb_info, pdb_file);
-  if (ec)
+  if (llvm::Error e = obj->getDebugPDBInfo(pdb_info, pdb_file)) {
+    consumeError(std::move(e));
     return nullptr;
+  }
 
   // if the file doesn't exist, is not a pdb, or doesn't have a matching guid,
   // fail.
   llvm::file_magic magic;
-  ec = llvm::identify_magic(pdb_file, magic);
+  auto ec = llvm::identify_magic(pdb_file, magic);
   if (ec || magic != llvm::file_magic::pdb)
     return nullptr;
-  std::unique_ptr<PDBFile> pdb = loadPDBFile(pdb_file, allocator);
+  std::unique_ptr<PDBFile> pdb = loadPDBFile(std::string(pdb_file), allocator);
   if (!pdb)
     return nullptr;
 
@@ -452,14 +453,14 @@ lldb::TypeSP SymbolFileNativePDB::CreateModifierType(PdbTypeSymId type_id,
 
   std::string name;
   if (mr.ModifiedType.isSimple())
-    name = GetSimpleTypeName(mr.ModifiedType.getSimpleKind());
+    name = std::string(GetSimpleTypeName(mr.ModifiedType.getSimpleKind()));
   else
     name = computeTypeName(stream.typeCollection(), mr.ModifiedType);
   Declaration decl;
   lldb::TypeSP modified_type = GetOrCreateType(mr.ModifiedType);
 
   return std::make_shared<Type>(toOpaqueUid(type_id), this, ConstString(name),
-                                modified_type->GetByteSize(), nullptr,
+                                modified_type->GetByteSize(nullptr), nullptr,
                                 LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
                                 ct, Type::ResolveState::Full);
 }
@@ -532,14 +533,14 @@ static std::string GetUnqualifiedTypeName(const TagRecord &record) {
     MSVCUndecoratedNameParser parser(record.Name);
     llvm::ArrayRef<MSVCUndecoratedNameSpecifier> specs = parser.GetSpecifiers();
 
-    return specs.back().GetBaseName();
+    return std::string(specs.back().GetBaseName());
   }
 
   llvm::ms_demangle::Demangler demangler;
   StringView sv(record.UniqueName.begin(), record.UniqueName.size());
   llvm::ms_demangle::TagTypeNode *ttn = demangler.parseTagUniqueName(sv);
   if (demangler.Error)
-    return record.Name;
+    return std::string(record.Name);
 
   llvm::ms_demangle::IdentifierNode *idn =
       ttn->QualifiedName->getUnqualifiedIdentifier();
@@ -583,7 +584,7 @@ lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbTypeSymId type_id,
 
   return std::make_shared<lldb_private::Type>(
       toOpaqueUid(type_id), this, ConstString(uname),
-      underlying_type->GetByteSize(), nullptr, LLDB_INVALID_UID,
+      underlying_type->GetByteSize(nullptr), nullptr, LLDB_INVALID_UID,
       lldb_private::Type::eEncodingIsUID, decl, ct,
       lldb_private::Type::ResolveState::Forward);
 }
@@ -1171,7 +1172,7 @@ size_t SymbolFileNativePDB::ParseBlocksRecursive(Function &func) {
 void SymbolFileNativePDB::DumpClangAST(Stream &s) { m_ast->Dump(s); }
 
 void SymbolFileNativePDB::FindGlobalVariables(
-    ConstString name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
     uint32_t max_matches, VariableList &variables) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   using SymbolAndOffset = std::pair<uint32_t, llvm::codeview::CVSymbol>;
@@ -1198,7 +1199,7 @@ void SymbolFileNativePDB::FindGlobalVariables(
 }
 
 void SymbolFileNativePDB::FindFunctions(
-    ConstString name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
     FunctionNameType name_type_mask, bool include_inlines,
     SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
@@ -1236,7 +1237,7 @@ void SymbolFileNativePDB::FindFunctions(const RegularExpression &regex,
                                         SymbolContextList &sc_list) {}
 
 void SymbolFileNativePDB::FindTypes(
-    ConstString name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
     uint32_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
@@ -1375,9 +1376,10 @@ TypeSP SymbolFileNativePDB::CreateTypedef(PdbGlobalSymId id) {
 
   Declaration decl;
   return std::make_shared<lldb_private::Type>(
-      toOpaqueUid(id), this, ConstString(udt.Name), target_type->GetByteSize(),
-      nullptr, target_type->GetID(), lldb_private::Type::eEncodingIsTypedefUID,
-      decl, target_type->GetForwardCompilerType(),
+      toOpaqueUid(id), this, ConstString(udt.Name),
+      target_type->GetByteSize(nullptr), nullptr, target_type->GetID(),
+      lldb_private::Type::eEncodingIsTypedefUID, decl,
+      target_type->GetForwardCompilerType(),
       lldb_private::Type::ResolveState::Forward);
 }
 
@@ -1563,7 +1565,7 @@ void SymbolFileNativePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
 
 CompilerDeclContext
 SymbolFileNativePDB::FindNamespace(ConstString name,
-                                   const CompilerDeclContext *parent_decl_ctx) {
+                                   const CompilerDeclContext &parent_decl_ctx) {
   return {};
 }
 

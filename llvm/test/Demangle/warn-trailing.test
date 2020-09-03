@@ -1,0 +1,6 @@
+; RUN: llvm-undname -warn-trailing 2>&1 < %s | FileCheck %s
+
+?x@@3HAasdf
+; CHECK: ?x@@3HAasdf
+; CHECK-NEXT: int x
+; CHECK-NEXT: warning: trailing characters: asdf

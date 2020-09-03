@@ -27,15 +27,15 @@ R_386_PC32_2:
 
 // CHECK: Disassembly of section .R_386_32:
 // CHECK-EMPTY:
-// CHECK-NEXT: R_386_32:
+// CHECK-NEXT: <R_386_32>:
 // CHECK-NEXT:   movl $4198829, %edx
 
 // CHECK: Disassembly of section .R_386_PC32:
 // CHECK-EMPTY:
-// CHECK-NEXT: R_386_PC32:
-// CHECK-NEXT:   calll 4
+// CHECK-NEXT: <R_386_PC32>:
+// CHECK-NEXT:   calll 0x4011ba
 
-// CHECK:      R_386_PC32_2:
+// CHECK:      <R_386_PC32_2>:
 // CHECK-NEXT:   nop
 
 // Create a .got
@@ -68,7 +68,7 @@ R_386_GOTPC:
 // .got.plt - 0x4011c0 = 0x403280 - 0x4011c0 = 8384
 // CHECK:      Disassembly of section .R_386_GOTPC:
 // CHECK-EMPTY:
-// CHECK-NEXT: R_386_GOTPC:
+// CHECK-NEXT: <R_386_GOTPC>:
 // CHECK-NEXT:   4011c0:       movl  $8384, %eax
 
 .section .dynamic_reloc, "ax",@progbits
@@ -76,8 +76,8 @@ R_386_GOTPC:
 // .plt + 16 - (0x4011c5 + 5) = 0x4011e0 + 16 - 0x4011ca = 38
 // CHECK:      Disassembly of section .dynamic_reloc:
 // CHECK-EMPTY:
-// CHECK-NEXT: .dynamic_reloc:
-// CHECK-NEXT:   4011c5:       calll 38 <bar@plt>
+// CHECK-NEXT: <.dynamic_reloc>:
+// CHECK-NEXT:   4011c5:       calll 0x4011f0 <bar@plt>
 
 .section .R_386_GOT32,"ax",@progbits
 .global R_386_GOT32
@@ -92,7 +92,7 @@ R_386_GOT32:
 // &.got[2] - .got.plt = 0x402278 + 8 - 0x403280 = 4294963200
 // CHECK:      Disassembly of section .R_386_GOT32:
 // CHECK-EMPTY:
-// CHECK-NEXT: R_386_GOT32:
+// CHECK-NEXT: <R_386_GOT32>:
 // CHECK-NEXT: 4011ca:       movl 4294963192, %eax
 // CHECK-NEXT:               movl 4294963196, %eax
 // CHECK-NEXT:               movl 4294963200, %eax

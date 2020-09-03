@@ -1,7 +1,8 @@
-// RUN: %check_clang_tidy %s readability-misleading-indentation %t
+// RUN: %check_clang_tidy %s readability-misleading-indentation %t -- -- -fno-delayed-template-parsing
 
 void foo1();
 void foo2();
+void foo3();
 
 #define BLOCK \
   if (cond1)  \
@@ -117,4 +118,80 @@ void g(bool x) {
 
   #pragma unroll
   for (int k = 0; k < 1; ++k) {}
+}
+
+template<bool b>
+void mustPass() {
+  if constexpr (b) {
+    foo1();
+  } else {
+    foo2();
+  }
+}
+
+void mustPassNonTemplate() {
+  constexpr unsigned Value = 1;
+  if constexpr (Value == 0) {
+    foo1();
+  } else if constexpr (Value == 1) {
+    foo2();
+  } else {
+    foo3();
+  }
+}
+
+template<bool b>
+void mustFail() {
+  if constexpr (b) {
+    foo1();
+  }
+    else {
+      foo2();
+      // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: different indentation for 'if' and corresponding 'else' [readability-misleading-indentation]
+  }
+}
+
+void mustFailNonTemplate() {
+  constexpr unsigned Value = 1;
+  if constexpr (Value == 0) {
+    foo1();
+  }
+    else {
+  foo2();
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: different indentation for 'if' and corresponding 'else' [readability-misleading-indentation]
+  }
+
+  if constexpr (Value == 0)
+    foo1();
+    else
+  foo2();
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: different indentation for 'if' and corresponding 'else' [readability-misleading-indentation]
+}
+
+template<bool b>
+void mustFailNoInsta() {
+  if constexpr (b) {
+    foo1();
+  }
+    else {
+      foo2();
+      // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: different indentation for 'if' and corresponding 'else' [readability-misleading-indentation]
+  }
+}
+
+template<bool b>
+void mustPassNoInsta() {
+  if constexpr (b) {
+    foo1();
+  }
+  else {
+    foo2();
+  }
+}
+
+void call() {
+  mustPass<true>();
+  mustPass<false>();
+  mustFail<true>();
+  mustFail<false>();
 }

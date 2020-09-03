@@ -17,7 +17,7 @@ CodeGenOptions::CodeGenOptions() {
 #include "clang/Basic/CodeGenOptions.def"
 
   RelocationModel = llvm::Reloc::PIC_;
-  memcpy(CoverageVersion, "402*", 4);
+  memcpy(CoverageVersion, "408*", 4);
 }
 
 bool CodeGenOptions::isNoBuiltinFunc(const char *Name) const {

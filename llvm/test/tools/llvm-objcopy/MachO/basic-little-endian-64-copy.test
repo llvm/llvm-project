@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy %t %t2
 # RUN: cmp %t %t2
 
@@ -32,8 +32,8 @@ LoadCommands:
         size:            93
         offset:          0x00000220
         align:           4
-        reloff:          0x00000310
-        nreloc:          3
+        reloff:          0x0
+        nreloc:          0
         flags:           0x80000400
         reserved1:       0x00000000
         reserved2:       0x00000000
@@ -56,8 +56,8 @@ LoadCommands:
         size:            32
         offset:          0x000002B0
         align:           3
-        reloff:          0x00000328
-        nreloc:          1
+        reloff:          0x0
+        nreloc:          0
         flags:           0x02000000
         reserved1:       0x00000000
         reserved2:       0x00000000
@@ -80,9 +80,9 @@ LoadCommands:
     sdk:             0
   - cmd:             LC_SYMTAB
     cmdsize:         24
-    symoff:          816
+    symoff:          784
     nsyms:           2
-    stroff:          848
+    stroff:          816
     strsize:         36
   - cmd:             LC_DYSYMTAB
     cmdsize:         80

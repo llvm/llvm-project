@@ -42,7 +42,6 @@ public:
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 };
 
@@ -297,7 +296,6 @@ static DecodeStatus DecodeMoveHRegInstruction(MCInst &Inst, uint64_t Insn,
 DecodeStatus ARCDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
-                                             raw_ostream &vStream,
                                              raw_ostream &cStream) const {
   MCDisassembler::DecodeStatus Result;
   if (Bytes.size() < 2) {
@@ -365,7 +363,7 @@ static MCDisassembler *createARCDisassembler(const Target &T,
   return new ARCDisassembler(STI, Ctx, T.createMCInstrInfo());
 }
 
-extern "C" void LLVMInitializeARCDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheARCTarget(),
                                          createARCDisassembler);

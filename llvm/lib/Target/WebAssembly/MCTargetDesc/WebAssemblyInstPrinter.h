@@ -41,7 +41,8 @@ public:
                  const MCSubtargetInfo &STI, raw_ostream &OS) override;
 
   // Used by tblegen code.
-  void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O,
+                    bool IsVariadicDef = false);
   void printBrList(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printWebAssemblyP2AlignOperand(const MCInst *MI, unsigned OpNo,
                                       raw_ostream &O);

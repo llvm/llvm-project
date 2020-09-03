@@ -1,4 +1,3 @@
-; REQUIRES: object-emission
 
 ; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj < %s \
 ; RUN:     | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-V4 %s

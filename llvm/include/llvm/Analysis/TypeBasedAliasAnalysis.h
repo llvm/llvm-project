@@ -16,13 +16,13 @@
 #define LLVM_ANALYSIS_TYPEBASEDALIASANALYSIS_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include <memory>
 
 namespace llvm {
 
+class CallBase;
 class Function;
 class MDNode;
 class MemoryLocation;
@@ -53,7 +53,6 @@ public:
 
 private:
   bool Aliases(const MDNode *A, const MDNode *B) const;
-  bool PathAliases(const MDNode *A, const MDNode *B) const;
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.

@@ -1,4 +1,8 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
+; WARN-NOT: warning
 
 ;
 ; ASR
@@ -160,6 +164,14 @@ define <vscale x 8 x half> @insr_f16(<vscale x 8 x half> %a, half %b) {
 ; CHECK-NEXT: ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.insr.nxv8f16(<vscale x 8 x half> %a, half %b)
   ret <vscale x 8 x half> %out
+}
+
+define <vscale x 8 x bfloat> @insr_bf16(<vscale x 8 x bfloat> %a, bfloat %b) #0 {
+; CHECK-LABEL: insr_bf16:
+; CHECK: insr z0.h, h1
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.insr.nxv8bf16(<vscale x 8 x bfloat> %a, bfloat %b)
+  ret <vscale x 8 x bfloat> %out
 }
 
 define <vscale x 4 x float> @insr_f32(<vscale x 4 x float> %a, float %b) {
@@ -345,6 +357,7 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.insr.nxv8i16(<vscale x 8 x i16>, i1
 declare <vscale x 4 x i32> @llvm.aarch64.sve.insr.nxv4i32(<vscale x 4 x i32>, i32)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.insr.nxv2i64(<vscale x 2 x i64>, i64)
 declare <vscale x 8 x half> @llvm.aarch64.sve.insr.nxv8f16(<vscale x 8 x half>, half)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.insr.nxv8bf16(<vscale x 8 x bfloat>, bfloat)
 declare <vscale x 4 x float> @llvm.aarch64.sve.insr.nxv4f32(<vscale x 4 x float>, float)
 declare <vscale x 2 x double> @llvm.aarch64.sve.insr.nxv2f64(<vscale x 2 x double>, double)
 
@@ -365,3 +378,6 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.lsr.nxv2i64(<vscale x 2 x i1>, <vsc
 declare <vscale x 16 x i8> @llvm.aarch64.sve.lsr.wide.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 2 x i64>)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.lsr.wide.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 2 x i64>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.lsr.wide.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 2 x i64>)
+
+; +bf16 is required for the bfloat version.
+attributes #0 = { "target-features"="+sve,+bf16" }

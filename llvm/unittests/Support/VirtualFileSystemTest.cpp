@@ -107,8 +107,8 @@ public:
           Path(_Path.str()) {
       for (; I != FilesAndDirs.end(); ++I) {
         if (isInPath(I->first)) {
-          CurrentEntry =
-              vfs::directory_entry(I->second.getName(), I->second.getType());
+          CurrentEntry = vfs::directory_entry(std::string(I->second.getName()),
+                                              I->second.getType());
           break;
         }
       }
@@ -117,8 +117,8 @@ public:
       ++I;
       for (; I != FilesAndDirs.end(); ++I) {
         if (isInPath(I->first)) {
-          CurrentEntry =
-              vfs::directory_entry(I->second.getName(), I->second.getType());
+          CurrentEntry = vfs::directory_entry(std::string(I->second.getName()),
+                                              I->second.getType());
           break;
         }
       }
@@ -135,7 +135,7 @@ public:
   }
 
   void addEntry(StringRef Path, const vfs::Status &Status) {
-    FilesAndDirs[Path] = Status;
+    FilesAndDirs[std::string(Path)] = Status;
   }
 
   const_iterator findEntry(const Twine &Path) const {
@@ -144,7 +144,7 @@ public:
     std::error_code EC = makeAbsolute(P);
     assert(!EC);
     (void)EC;
-    return FilesAndDirs.find(P.str());
+    return FilesAndDirs.find(std::string(P.str()));
   }
 
   void addRegularFile(StringRef Path, sys::fs::perms Perms = sys::fs::all_all) {
@@ -179,7 +179,7 @@ class ErrorDummyFileSystem : public DummyFileSystem {
 std::string getPosixPath(std::string S) {
   SmallString<128> Result;
   llvm::sys::path::native(S, Result, llvm::sys::path::Style::posix);
-  return Result.str();
+  return std::string(Result.str());
 }
 } // end anonymous namespace
 
@@ -419,7 +419,7 @@ struct ScopedDir {
       EC = llvm::sys::fs::createUniqueDirectory(Name, Path);
       if (!EC) {
         // Resolve any symlinks in the new directory.
-        std::string UnresolvedPath = Path.str();
+        std::string UnresolvedPath = std::string(Path.str());
         EC = llvm::sys::fs::real_path(UnresolvedPath, Path);
       }
     } else {
@@ -579,7 +579,7 @@ TEST(VirtualFileSystemTest, BrokenSymlinkRealFSIteration) {
   for (vfs::directory_iterator I = FS->dir_begin(Twine(TestDirectory), EC), E;
        I != E; I.increment(EC)) {
     EXPECT_FALSE(EC);
-    StatResults[sys::path::filename(I->path())] =
+    StatResults[std::string(sys::path::filename(I->path()))] =
         FS->status(I->path()).getError();
   }
   EXPECT_THAT(
@@ -613,7 +613,7 @@ TEST(VirtualFileSystemTest, BasicRealFSRecursiveIteration) {
   std::vector<std::string> Contents;
   for (auto E = vfs::recursive_directory_iterator(); !EC && I != E;
        I.increment(EC)) {
-    Contents.push_back(I->path());
+    Contents.push_back(std::string(I->path()));
   }
 
   // Check contents, which may be in any order
@@ -653,7 +653,7 @@ TEST(VirtualFileSystemTest, BasicRealFSRecursiveIterationNoPush) {
     std::vector<std::string> Contents;
     for (auto E = vfs::recursive_directory_iterator(); !EC && I != E;
          I.increment(EC)) {
-      Contents.push_back(I->path());
+      Contents.push_back(std::string(I->path()));
       char last = I->path().back();
       switch (last) {
       case 'b':
@@ -678,7 +678,7 @@ TEST(VirtualFileSystemTest, BasicRealFSRecursiveIterationNoPush) {
     std::vector<std::string> Contents;
     for (auto E = vfs::recursive_directory_iterator(); !EC && I != E;
          I.increment(EC)) {
-      Contents.push_back(I->path());
+      Contents.push_back(std::string(I->path()));
       char last = I->path().back();
       switch (last) {
       case 'a':
@@ -733,17 +733,18 @@ TEST(VirtualFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
        I != E; I.increment(EC)) {
     EXPECT_FALSE(EC);
     (FS->status(I->path()) ? VisitedNonBrokenSymlinks : VisitedBrokenSymlinks)
-        .push_back(I->path());
+        .push_back(std::string(I->path()));
   }
 
   // Check visited file names.
   EXPECT_THAT(VisitedBrokenSymlinks,
-              UnorderedElementsAre(StringRef(_a), StringRef(_ba),
-                                   StringRef(_bc), StringRef(_c),
-                                   StringRef(_e)));
+              UnorderedElementsAre(StringRef(_a).str(), StringRef(_ba).str(),
+                                   StringRef(_bc).str(), StringRef(_c).str(),
+                                   StringRef(_e).str()));
   EXPECT_THAT(VisitedNonBrokenSymlinks,
-              UnorderedElementsAre(StringRef(_b), StringRef(_bb), StringRef(_d),
-                                   StringRef(_dd), StringRef(_ddd)));
+              UnorderedElementsAre(StringRef(_b).str(), StringRef(_bb).str(),
+                                   StringRef(_d).str(), StringRef(_dd).str(),
+                                   StringRef(_ddd).str()));
 }
 #endif
 
@@ -756,7 +757,7 @@ static void checkContents(DirIter I, ArrayRef<StringRef> ExpectedOut) {
   // Do not rely on iteration order to check for contents, sort both
   // content vectors before comparison.
   for (DirIter E; !EC && I != E; I.increment(EC))
-    InputToCheck.push_back(I->path());
+    InputToCheck.push_back(std::string(I->path()));
 
   llvm::sort(InputToCheck);
   llvm::sort(Expected);
@@ -1048,7 +1049,7 @@ TEST_F(InMemoryFileSystemTest, DirectoryIteration) {
   ASSERT_FALSE(EC);
   // When on Windows, we end up with "/b\\c" as the name.  Convert to Posix
   // path for the sake of the comparison.
-  ASSERT_EQ("/b/c", getPosixPath(I->path()));
+  ASSERT_EQ("/b/c", getPosixPath(std::string(I->path())));
   I.increment(EC);
   ASSERT_FALSE(EC);
   ASSERT_EQ(vfs::directory_iterator(), I);
@@ -1095,7 +1096,7 @@ TEST_F(InMemoryFileSystemTest, GetRealPath) {
     SmallString<16> Output;
     auto EC = FS.getRealPath(P, Output);
     EXPECT_FALSE(EC);
-    return Output.str().str();
+    return std::string(Output);
   };
 
   FS.setCurrentWorkingDirectory("a");
@@ -1224,7 +1225,7 @@ TEST_F(InMemoryFileSystemTest, StatusName) {
   llvm::vfs::directory_iterator It = NormalizedFS.dir_begin("../b", EC);
   // When on Windows, we end up with "../b\\c" as the name.  Convert to Posix
   // path for the sake of the comparison.
-  ASSERT_EQ("../b/c", getPosixPath(It->path()));
+  ASSERT_EQ("../b/c", getPosixPath(std::string(It->path())));
 }
 
 TEST_F(InMemoryFileSystemTest, AddHardLinkToFile) {
@@ -1324,7 +1325,7 @@ TEST_F(InMemoryFileSystemTest, RecursiveIterationWithHardLink) {
   std::vector<std::string> Nodes;
   for (auto E = vfs::recursive_directory_iterator(); !EC && I != E;
        I.increment(EC)) {
-    Nodes.push_back(getPosixPath(I->path()));
+    Nodes.push_back(getPosixPath(std::string(I->path())));
   }
   EXPECT_THAT(Nodes, testing::UnorderedElementsAre("/a", "/a/b", "/c", "/c/d"));
 }
@@ -2147,11 +2148,9 @@ TEST_F(VFSFromYAMLTest, WorkingDirectoryFallthrough) {
   ASSERT_FALSE(Status.getError());
   EXPECT_TRUE(Status->exists());
 
-#if !defined(_WIN32)
   Status = FS->status("../bar/baz/a");
   ASSERT_FALSE(Status.getError());
   EXPECT_TRUE(Status->exists());
-#endif
 }
 
 TEST_F(VFSFromYAMLTest, WorkingDirectoryFallthroughInvalid) {
@@ -2198,8 +2197,8 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   ScopedFile _cd(TestDirectory + "/c/d", "");
   ScopedDir _e(TestDirectory + "/e");
   ScopedDir _ef(TestDirectory + "/e/f");
-  ScopedDir _g(TestDirectory + "/g");
-  ScopedFile _h(TestDirectory + "/h", "");
+  ScopedFile _g(TestDirectory + "/g", "");
+  ScopedDir _h(TestDirectory + "/h");
 
   vfs::YAMLVFSWriter VFSWriter;
   VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
@@ -2224,8 +2223,8 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   Lower->addRegularFile("//root/c/d");
   Lower->addDirectory("//root/e");
   Lower->addDirectory("//root/e/f");
-  Lower->addDirectory("//root/g");
-  Lower->addRegularFile("//root/h");
+  Lower->addRegularFile("//root/g");
+  Lower->addDirectory("//root/h");
 
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
   ASSERT_TRUE(FS.get() != nullptr);
@@ -2238,4 +2237,104 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   EXPECT_TRUE(FS->exists(_ef.Path));
   EXPECT_TRUE(FS->exists(_g.Path));
   EXPECT_TRUE(FS->exists(_h.Path));
+}
+
+TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest2) {
+  ScopedDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  ScopedDir _a(TestDirectory + "/a");
+  ScopedFile _ab(TestDirectory + "/a/b", "");
+  ScopedDir _ac(TestDirectory + "/a/c");
+  ScopedFile _acd(TestDirectory + "/a/c/d", "");
+  ScopedFile _ace(TestDirectory + "/a/c/e", "");
+  ScopedFile _acf(TestDirectory + "/a/c/f", "");
+  ScopedDir _ag(TestDirectory + "/a/g");
+  ScopedFile _agh(TestDirectory + "/a/g/h", "");
+
+  vfs::YAMLVFSWriter VFSWriter;
+  VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
+  VFSWriter.addFileMapping(_ab.Path, "//root/a/b");
+  VFSWriter.addDirectoryMapping(_ac.Path, "//root/a/c");
+  VFSWriter.addFileMapping(_acd.Path, "//root/a/c/d");
+  VFSWriter.addFileMapping(_ace.Path, "//root/a/c/e");
+  VFSWriter.addFileMapping(_acf.Path, "//root/a/c/f");
+  VFSWriter.addDirectoryMapping(_ag.Path, "//root/a/g");
+  VFSWriter.addFileMapping(_agh.Path, "//root/a/g/h");
+
+  std::string Buffer;
+  raw_string_ostream OS(Buffer);
+  VFSWriter.write(OS);
+  OS.flush();
+
+  IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
+  EXPECT_TRUE(FS.get() != nullptr);
+}
+
+TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest3) {
+  ScopedDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  ScopedDir _a(TestDirectory + "/a");
+  ScopedFile _ab(TestDirectory + "/a/b", "");
+  ScopedDir _ac(TestDirectory + "/a/c");
+  ScopedDir _acd(TestDirectory + "/a/c/d");
+  ScopedDir _acde(TestDirectory + "/a/c/d/e");
+  ScopedFile _acdef(TestDirectory + "/a/c/d/e/f", "");
+  ScopedFile _acdeg(TestDirectory + "/a/c/d/e/g", "");
+  ScopedDir _ah(TestDirectory + "/a/h");
+  ScopedFile _ahi(TestDirectory + "/a/h/i", "");
+
+  vfs::YAMLVFSWriter VFSWriter;
+  VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
+  VFSWriter.addFileMapping(_ab.Path, "//root/a/b");
+  VFSWriter.addDirectoryMapping(_ac.Path, "//root/a/c");
+  VFSWriter.addDirectoryMapping(_acd.Path, "//root/a/c/d");
+  VFSWriter.addDirectoryMapping(_acde.Path, "//root/a/c/d/e");
+  VFSWriter.addFileMapping(_acdef.Path, "//root/a/c/d/e/f");
+  VFSWriter.addFileMapping(_acdeg.Path, "//root/a/c/d/e/g");
+  VFSWriter.addDirectoryMapping(_ahi.Path, "//root/a/h");
+  VFSWriter.addFileMapping(_ahi.Path, "//root/a/h/i");
+
+  std::string Buffer;
+  raw_string_ostream OS(Buffer);
+  VFSWriter.write(OS);
+  OS.flush();
+
+  IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
+  EXPECT_TRUE(FS.get() != nullptr);
+}
+
+TEST_F(VFSFromYAMLTest, YAMLVFSWriterTestHandleDirs) {
+  ScopedDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  ScopedDir _a(TestDirectory + "/a");
+  ScopedDir _b(TestDirectory + "/b");
+  ScopedDir _c(TestDirectory + "/c");
+
+  vfs::YAMLVFSWriter VFSWriter;
+  VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
+  VFSWriter.addDirectoryMapping(_b.Path, "//root/b");
+  VFSWriter.addDirectoryMapping(_c.Path, "//root/c");
+
+  std::string Buffer;
+  raw_string_ostream OS(Buffer);
+  VFSWriter.write(OS);
+  OS.flush();
+
+  // We didn't add a single file - only directories.
+  EXPECT_TRUE(Buffer.find("'type': 'file'") == std::string::npos);
+
+  IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
+  Lower->addDirectory("//root/a");
+  Lower->addDirectory("//root/b");
+  Lower->addDirectory("//root/c");
+  // canaries
+  Lower->addRegularFile("//root/a/a");
+  Lower->addRegularFile("//root/b/b");
+  Lower->addRegularFile("//root/c/c");
+
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
+  ASSERT_TRUE(FS.get() != nullptr);
+
+  EXPECT_FALSE(FS->exists(_a.Path + "/a"));
+  EXPECT_FALSE(FS->exists(_b.Path + "/b"));
+  EXPECT_FALSE(FS->exists(_c.Path + "/c"));
 }

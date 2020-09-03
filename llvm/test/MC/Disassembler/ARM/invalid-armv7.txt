@@ -146,7 +146,30 @@
 # CHECK: potentially undefined instruction encoding
 # CHECK-NEXT: [0x05 0x70 0xd7 0xe6]
 
+#------------------------------------------------------------------------------
+# Undefined encodings for ldrexd
+#------------------------------------------------------------------------------
 
+# Opcode=242 Name=LDREXD Format=ARM_FORMAT_LDSTEX(6)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 0| 0: 0: 0: 1| 1: 0: 1: 1| 0: 0: 1: 1| 0: 0: 0: 1| 1: 1: 1: 1| 1: 0: 0: 1| 1: 1: 1: 1|
+# -------------------------------------------------------------------------------------------------
+#
+
+# ARM v8 Architecture Reference Manual F5.1.84 LDREXD
+# t = UInt(Rt); t2 = t + 1; n = UInt(Rn);
+# if Rt<0> == '1' || t2 == 15 || n == 15 then UNPREDICTABLE;
+
+[0x9f 0x1f 0xb3 0xe1]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0x9f 0x1f 0xb3 0xe1]
+
+# FIXME: should be potentially undefined but no register pair R14_R15 defined to
+# to return.
+[0x9f 0xef 0xb3 0xe1]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x9f 0xef 0xb3 0xe1]
 
 #------------------------------------------------------------------------------
 # Undefined encodings for mcr

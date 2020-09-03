@@ -1,0 +1,9 @@
+RUN: llvm-objdump -d -m --no-show-raw-insn %p/Inputs/kextbundle.macho-aarch64 | FileCheck %s
+
+CHECK: (__TEXT_EXEC,__text) section
+CHECK: _foo:
+CHECK:     4000:	stp	x29, x30, [sp, #-16]!
+CHECK:     4004:	mov	 x29, sp
+CHECK:     4008:	bl	_bar.stub
+CHECK:     400c:	ldp	x29, x30, [sp], #16
+CHECK:     4010:	ret

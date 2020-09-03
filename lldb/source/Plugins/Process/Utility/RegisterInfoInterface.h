@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_RegisterInfoInterface_h
-#define lldb_RegisterInfoInterface_h
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOINTERFACE_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOINTERFACE_H
 
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/lldb-private-types.h"
@@ -61,7 +61,6 @@ public:
     return nullptr;
   }
 
-public:
   // FIXME make private.
   lldb_private::ArchSpec m_target_arch;
 };

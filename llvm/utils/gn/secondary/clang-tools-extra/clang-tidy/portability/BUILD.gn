@@ -13,6 +13,7 @@ static_library("portability") {
   ]
   sources = [
     "PortabilityTidyModule.cpp",
+    "RestrictSystemIncludesCheck.cpp",
     "SIMDIntrinsicsCheck.cpp",
   ]
 }

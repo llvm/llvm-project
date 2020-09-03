@@ -186,6 +186,7 @@ unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
       NumRCUnits = NUnits;
     }
   }
+  assert(RC && "Failed to find register class");
   compute(RC);
   unsigned NReserved = RC->getNumRegs() - getNumAllocatableRegs(RC);
   return TRI->getRegPressureSetLimit(*MF, Idx) -

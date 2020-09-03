@@ -15,6 +15,7 @@ class ProcessIOTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfReproducer
     def setup_test(self):
         # Get the full path to our executable to be debugged.
         self.exe = self.getBuildArtifact("process_io")
@@ -134,7 +135,7 @@ class ProcessIOTestCase(TestBase):
     def create_target(self):
         '''Create the target and launch info that will be used by all tests'''
         self.target = self.dbg.CreateTarget(self.exe)
-        self.launch_info = lldb.SBLaunchInfo([self.exe])
+        self.launch_info = self.target.GetLaunchInfo()
         self.launch_info.SetWorkingDirectory(
             self.get_process_working_directory())
 

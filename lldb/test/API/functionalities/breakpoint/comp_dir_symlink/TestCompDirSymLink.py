@@ -12,7 +12,7 @@ from lldbsuite.test import lldbutil
 
 _EXE_NAME = 'CompDirSymLink'  # Must match Makefile
 _SRC_FILE = 'relative.cpp'
-_COMP_DIR_SYM_LINK_PROP = 'plugin.symbol-file.dwarf.comp-dir-symlink-paths'
+_COMP_DIR_SYM_LINK_PROP = 'symbols.debug-info-symlink-paths'
 
 
 class CompDirSymLinkTestCase(TestBase):
@@ -30,10 +30,7 @@ class CompDirSymLinkTestCase(TestBase):
     @skipIf(hostoslist=["windows"])
     def test_symlink_paths_set(self):
         pwd_symlink = self.create_src_symlink()
-        self.doBuild(pwd_symlink)
-        self.runCmd(
-            "settings set %s %s" %
-            (_COMP_DIR_SYM_LINK_PROP, pwd_symlink))
+        self.doBuild(pwd_symlink, pwd_symlink)
         src_path = self.getBuildArtifact(_SRC_FILE)
         lldbutil.run_break_set_by_file_and_line(self, src_path, self.line)
 
@@ -41,10 +38,7 @@ class CompDirSymLinkTestCase(TestBase):
     def test_symlink_paths_set_procselfcwd(self):
         os.chdir(self.getBuildDir())
         pwd_symlink = '/proc/self/cwd'
-        self.doBuild(pwd_symlink)
-        self.runCmd(
-            "settings set %s %s" %
-            (_COMP_DIR_SYM_LINK_PROP, pwd_symlink))
+        self.doBuild(pwd_symlink, pwd_symlink)
         src_path = self.getBuildArtifact(_SRC_FILE)
         # /proc/self/cwd points to a realpath form of current directory.
         src_path = os.path.realpath(src_path)
@@ -53,8 +47,19 @@ class CompDirSymLinkTestCase(TestBase):
     @skipIf(hostoslist=["windows"])
     def test_symlink_paths_unset(self):
         pwd_symlink = self.create_src_symlink()
-        self.doBuild(pwd_symlink)
-        self.runCmd('settings clear ' + _COMP_DIR_SYM_LINK_PROP)
+        self.doBuild(pwd_symlink, None)
+        src_path = self.getBuildArtifact(_SRC_FILE)
+        self.assertRaises(
+            AssertionError,
+            lldbutil.run_break_set_by_file_and_line,
+            self,
+            src_path,
+            self.line)
+
+    @skipIf(hostoslist=["windows"])
+    def test_symlink_paths_empty(self):
+        pwd_symlink = self.create_src_symlink()
+        self.doBuild(pwd_symlink, "")
         src_path = self.getBuildArtifact(_SRC_FILE)
         self.assertRaises(
             AssertionError,
@@ -71,8 +76,14 @@ class CompDirSymLinkTestCase(TestBase):
         self.addTearDownHook(lambda: os.remove(pwd_symlink))
         return pwd_symlink
 
-    def doBuild(self, pwd_symlink):
+    def doBuild(self, pwd_symlink, setting_value):
         self.build(None, None, {'PWD': pwd_symlink})
+
+        if setting_value:
+            cmd = "settings set %s '%s'" % (_COMP_DIR_SYM_LINK_PROP, setting_value)
+        else:
+            cmd = "settings clear %s"%_COMP_DIR_SYM_LINK_PROP
+        self.runCmd(cmd)
 
         exe = self.getBuildArtifact(_EXE_NAME)
         self.runCmd('file ' + exe, CURRENT_EXECUTABLE_SET)

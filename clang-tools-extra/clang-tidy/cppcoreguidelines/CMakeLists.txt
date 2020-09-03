@@ -1,7 +1,11 @@
-set(LLVM_LINK_COMPONENTS support)
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
 
 add_clang_library(clangTidyCppCoreGuidelinesModule
   AvoidGotoCheck.cpp
+  AvoidNonConstGlobalVariablesCheck.cpp
   CppCoreGuidelinesTidyModule.cpp
   InitVariablesCheck.cpp
   InterfacesGlobalInitCheck.cpp
@@ -23,15 +27,22 @@ add_clang_library(clangTidyCppCoreGuidelinesModule
   SpecialMemberFunctionsCheck.cpp
 
   LINK_LIBS
-  clangAST
-  clangASTMatchers
-  clangBasic
-  clangLex
-  clangSerialization
   clangTidy
   clangTidyMiscModule
   clangTidyModernizeModule
   clangTidyReadabilityModule
   clangTidyUtils
+
+  DEPENDS
+  omp_gen
+  )
+
+clang_target_link_libraries(clangTidyCppCoreGuidelinesModule
+  PRIVATE
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangLex
+  clangSerialization
   clangTooling
   )

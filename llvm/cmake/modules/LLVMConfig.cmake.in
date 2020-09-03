@@ -7,6 +7,7 @@ set(LLVM_VERSION_MINOR @LLVM_VERSION_MINOR@)
 set(LLVM_VERSION_PATCH @LLVM_VERSION_PATCH@)
 set(LLVM_VERSION_SUFFIX @LLVM_VERSION_SUFFIX@)
 set(LLVM_PACKAGE_VERSION @PACKAGE_VERSION@)
+set(LLVM_PACKAGE_BUGREPORT @PACKAGE_BUGREPORT@)
 
 set(LLVM_BUILD_TYPE @CMAKE_BUILD_TYPE@)
 
@@ -78,6 +79,8 @@ set(LLVM_LIBDIR_SUFFIX @LLVM_LIBDIR_SUFFIX@)
 set(LLVM_INCLUDE_DIRS "@LLVM_CONFIG_INCLUDE_DIRS@")
 set(LLVM_LIBRARY_DIRS "@LLVM_CONFIG_LIBRARY_DIRS@")
 
+set(LLVM_APPEND_VC_REV "@LLVM_APPEND_VC_REV@")
+
 # These variables are duplicated for install tree but they have different
 # values for build tree.  LLVM_INCLUDE_DIRS contains both source
 # and generated include directories while the following variables have
@@ -91,6 +94,7 @@ set(LLVM_CMAKE_DIR "@LLVM_CONFIG_CMAKE_DIR@")
 set(LLVM_BINARY_DIR "@LLVM_CONFIG_BINARY_DIR@")
 set(LLVM_TOOLS_BINARY_DIR "@LLVM_CONFIG_TOOLS_BINARY_DIR@")
 set(LLVM_TOOLS_INSTALL_DIR "@LLVM_TOOLS_INSTALL_DIR@")
+set(LLVM_DEFAULT_EXTERNAL_LIT "@LLVM_CONFIG_DEFAULT_EXTERNAL_LIT@")
 set(LLVM_HAVE_OPT_VIEWER_MODULES @LLVM_HAVE_OPT_VIEWER_MODULES@)
 set(LLVM_CONFIGURATION_TYPES @CMAKE_CONFIGURATION_TYPES@)
 set(LLVM_ENABLE_SHARED_LIBS @BUILD_SHARED_LIBS@)
@@ -101,11 +105,17 @@ if(NOT TARGET LLVMSupport)
   @llvm_config_include_buildtree_only_exports@
 endif()
 
-# By creating intrinsics_gen here, subprojects that depend on LLVM's
-# tablegen-generated headers can always depend on this target whether building
-# in-tree with LLVM or not.
+# By creating intrinsics_gen, omp_gen and acc_gen here, subprojects that depend
+# on LLVM's tablegen-generated headers can always depend on this target whether
+# building in-tree with LLVM or not.
 if(NOT TARGET intrinsics_gen)
   add_custom_target(intrinsics_gen)
+endif()
+if(NOT TARGET omp_gen)
+  add_custom_target(omp_gen)
+endif()
+if(NOT TARGET acc_gen)
+  add_custom_target(acc_gen)
 endif()
 
 set_property(GLOBAL PROPERTY LLVM_TARGETS_CONFIGURED On)

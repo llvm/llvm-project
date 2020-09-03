@@ -38,14 +38,14 @@ class SaveJITObjectsTestCase(TestBase):
 
         self.cleanJITFiles()
         frame.EvaluateExpression("(void*)malloc(0x1)")
-        self.assertTrue(self.countJITFiles() == 0,
+        self.assertEquals(self.countJITFiles(), 0,
                         "No files emitted with save-jit-objects=false")
 
         self.runCmd("settings set target.save-jit-objects true")
         frame.EvaluateExpression("(void*)malloc(0x1)")
         jit_files_count = self.countJITFiles()
         self.cleanJITFiles()
-        self.assertTrue(jit_files_count != 0,
+        self.assertNotEqual(jit_files_count, 0,
                         "At least one file emitted with save-jit-objects=true")
 
         process.Kill()

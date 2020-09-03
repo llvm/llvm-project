@@ -7,7 +7,7 @@
 # RUN:         . = 0x20000; .text :  { *(.text) } \
 # RUN:       }" > %t.script
 # RUN: ld.lld -shared --script %t.script -o %t.so %t.o
-# RUN: llvm-objdump -s -section=.rodata -t %t.so | FileCheck %s
+# RUN: llvm-objdump -s --section=.rodata -t %t.so | FileCheck %s
 
   .text
   .globl  __start
@@ -24,9 +24,9 @@ v1:
   .gpword bar
 
 # CHECK: SYMBOL TABLE:
-# CHECK: 00020008         .text           00000000 bar
-# CHECK: 00020004         .text           00000000 foo
-# CHECK: 00028000         .got            00000000 .hidden _gp
+# CHECK: 00020008 l       .text           00000000 bar
+# CHECK: 00020004 l       .text           00000000 foo
+# CHECK: 00028000 l       .got            00000000 .hidden _gp
 
 # CHECK: Contents of section .rodata:
 # CHECK:  1000 ffff8004 ffff8008

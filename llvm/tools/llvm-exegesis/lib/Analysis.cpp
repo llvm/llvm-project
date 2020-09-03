@@ -106,7 +106,7 @@ void Analysis::writeSnippet(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
   while (!Bytes.empty()) {
     MCInst MI;
     uint64_t MISize = 0;
-    if (!Disasm_->getInstruction(MI, MISize, Bytes, 0, nulls(), nulls())) {
+    if (!Disasm_->getInstruction(MI, MISize, Bytes, 0, nulls())) {
       writeEscaped<Tag>(OS, join(Lines, Separator));
       writeEscaped<Tag>(OS, Separator);
       writeEscaped<Tag>(OS, "[error decoding asm snippet]");
@@ -244,9 +244,9 @@ Analysis::makePointsPerSchedClass() const {
   return Entries;
 }
 
-// Uops repeat the same opcode over again. Just show this opcode and show the
-// whole snippet only on hover.
-static void writeUopsSnippetHtml(raw_ostream &OS,
+// Parallel benchmarks repeat the same opcode multiple times. Just show this
+// opcode and show the whole snippet only on hover.
+static void writeParallelSnippetHtml(raw_ostream &OS,
                                  const std::vector<MCInst> &Instructions,
                                  const MCInstrInfo &InstrInfo) {
   if (Instructions.empty())
@@ -282,7 +282,7 @@ void Analysis::printPointHtml(const InstructionBenchmark &Point,
     break;
   case InstructionBenchmark::Uops:
   case InstructionBenchmark::InverseThroughput:
-    writeUopsSnippetHtml(OS, Point.Key.Instructions, *InstrInfo_);
+    writeParallelSnippetHtml(OS, Point.Key.Instructions, *InstrInfo_);
     break;
   default:
     llvm_unreachable("invalid mode");

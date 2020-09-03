@@ -1,4 +1,4 @@
-; RUN: opt < %s -tbaa -basicaa -functionattrs -S | FileCheck %s
+; RUN: opt < %s -tbaa -basic-aa -functionattrs -S | FileCheck %s
 
 ; FunctionAttrs should make use of TBAA.
 

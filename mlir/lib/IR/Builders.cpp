@@ -1,6 +1,6 @@
 //===- Builders.cpp - Helpers for constructing MLIR Classes ---------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -14,7 +14,6 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/Support/Functional.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace mlir;
 
@@ -55,8 +54,17 @@ IndexType Builder::getIndexType() { return IndexType::get(context); }
 
 IntegerType Builder::getI1Type() { return IntegerType::get(1, context); }
 
+IntegerType Builder::getI32Type() { return IntegerType::get(32, context); }
+
+IntegerType Builder::getI64Type() { return IntegerType::get(64, context); }
+
 IntegerType Builder::getIntegerType(unsigned width) {
   return IntegerType::get(width, context);
+}
+
+IntegerType Builder::getIntegerType(unsigned width, bool isSigned) {
+  return IntegerType::get(
+      width, isSigned ? IntegerType::Signed : IntegerType::Unsigned, context);
 }
 
 FunctionType Builder::getFunctionType(ArrayRef<Type> inputs,
@@ -88,20 +96,65 @@ DictionaryAttr Builder::getDictionaryAttr(ArrayRef<NamedAttribute> value) {
   return DictionaryAttr::get(value, context);
 }
 
+IntegerAttr Builder::getIndexAttr(int64_t value) {
+  return IntegerAttr::get(getIndexType(), APInt(64, value));
+}
+
 IntegerAttr Builder::getI64IntegerAttr(int64_t value) {
   return IntegerAttr::get(getIntegerType(64), APInt(64, value));
 }
 
+DenseIntElementsAttr Builder::getBoolVectorAttr(ArrayRef<bool> values) {
+  return DenseIntElementsAttr::get(
+      VectorType::get(static_cast<int64_t>(values.size()), getI1Type()),
+      values);
+}
+
 DenseIntElementsAttr Builder::getI32VectorAttr(ArrayRef<int32_t> values) {
-  return DenseElementsAttr::get(
-             VectorType::get(static_cast<int64_t>(values.size()),
-                             getIntegerType(32)),
-             values)
-      .cast<DenseIntElementsAttr>();
+  return DenseIntElementsAttr::get(
+      VectorType::get(static_cast<int64_t>(values.size()), getIntegerType(32)),
+      values);
+}
+
+DenseIntElementsAttr Builder::getI64VectorAttr(ArrayRef<int64_t> values) {
+  return DenseIntElementsAttr::get(
+      VectorType::get(static_cast<int64_t>(values.size()), getIntegerType(64)),
+      values);
+}
+
+DenseIntElementsAttr Builder::getI32TensorAttr(ArrayRef<int32_t> values) {
+  return DenseIntElementsAttr::get(
+      RankedTensorType::get(static_cast<int64_t>(values.size()),
+                            getIntegerType(32)),
+      values);
+}
+
+DenseIntElementsAttr Builder::getI64TensorAttr(ArrayRef<int64_t> values) {
+  return DenseIntElementsAttr::get(
+      RankedTensorType::get(static_cast<int64_t>(values.size()),
+                            getIntegerType(64)),
+      values);
+}
+
+DenseIntElementsAttr Builder::getIndexTensorAttr(ArrayRef<int64_t> values) {
+  return DenseIntElementsAttr::get(
+      RankedTensorType::get(static_cast<int64_t>(values.size()),
+                            getIndexType()),
+      values);
 }
 
 IntegerAttr Builder::getI32IntegerAttr(int32_t value) {
   return IntegerAttr::get(getIntegerType(32), APInt(32, value));
+}
+
+IntegerAttr Builder::getSI32IntegerAttr(int32_t value) {
+  return IntegerAttr::get(getIntegerType(32, /*isSigned=*/true),
+                          APInt(32, value, /*isSigned=*/true));
+}
+
+IntegerAttr Builder::getUI32IntegerAttr(uint32_t value) {
+  return IntegerAttr::get(getIntegerType(32, /*isSigned=*/false),
+                          APInt(32, (uint64_t)value, /*isSigned=*/false));
 }
 
 IntegerAttr Builder::getI16IntegerAttr(int16_t value) {
@@ -115,7 +168,8 @@ IntegerAttr Builder::getI8IntegerAttr(int8_t value) {
 IntegerAttr Builder::getIntegerAttr(Type type, int64_t value) {
   if (type.isIndex())
     return IntegerAttr::get(type, APInt(64, value));
-  return IntegerAttr::get(type, APInt(type.getIntOrFloatBitWidth(), value));
+  return IntegerAttr::get(
+      type, APInt(type.getIntOrFloatBitWidth(), value, type.isSignedInteger()));
 }
 
 IntegerAttr Builder::getIntegerAttr(Type type, const APInt &value) {
@@ -165,48 +219,52 @@ Builder::getSymbolRefAttr(StringRef value,
   return SymbolRefAttr::get(value, nestedReferences, getContext());
 }
 
-ArrayAttr Builder::getI32ArrayAttr(ArrayRef<int32_t> values) {
-  auto attrs = functional::map(
-      [this](int32_t v) -> Attribute { return getI32IntegerAttr(v); }, values);
+ArrayAttr Builder::getBoolArrayAttr(ArrayRef<bool> values) {
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [this](bool v) -> Attribute { return getBoolAttr(v); }));
   return getArrayAttr(attrs);
 }
 
+ArrayAttr Builder::getI32ArrayAttr(ArrayRef<int32_t> values) {
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [this](int32_t v) -> Attribute { return getI32IntegerAttr(v); }));
+  return getArrayAttr(attrs);
+}
 ArrayAttr Builder::getI64ArrayAttr(ArrayRef<int64_t> values) {
-  auto attrs = functional::map(
-      [this](int64_t v) -> Attribute { return getI64IntegerAttr(v); }, values);
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [this](int64_t v) -> Attribute { return getI64IntegerAttr(v); }));
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getIndexArrayAttr(ArrayRef<int64_t> values) {
-  auto attrs = functional::map(
-      [this](int64_t v) -> Attribute {
+  auto attrs = llvm::to_vector<8>(
+      llvm::map_range(values, [this](int64_t v) -> Attribute {
         return getIntegerAttr(IndexType::get(getContext()), v);
-      },
-      values);
+      }));
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getF32ArrayAttr(ArrayRef<float> values) {
-  auto attrs = functional::map(
-      [this](float v) -> Attribute { return getF32FloatAttr(v); }, values);
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [this](float v) -> Attribute { return getF32FloatAttr(v); }));
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getF64ArrayAttr(ArrayRef<double> values) {
-  auto attrs = functional::map(
-      [this](double v) -> Attribute { return getF64FloatAttr(v); }, values);
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [this](double v) -> Attribute { return getF64FloatAttr(v); }));
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getStrArrayAttr(ArrayRef<StringRef> values) {
-  auto attrs = functional::map(
-      [this](StringRef v) -> Attribute { return getStringAttr(v); }, values);
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [this](StringRef v) -> Attribute { return getStringAttr(v); }));
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getAffineMapArrayAttr(ArrayRef<AffineMap> values) {
-  auto attrs = functional::map(
-      [](AffineMap v) -> Attribute { return AffineMapAttr::get(v); }, values);
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [](AffineMap v) -> Attribute { return AffineMapAttr::get(v); }));
   return getArrayAttr(attrs);
 }
 
@@ -217,12 +275,8 @@ Attribute Builder::getZeroAttr(Type type) {
   case StandardTypes::F32:
   case StandardTypes::F64:
     return getFloatAttr(type, 0.0);
-  case StandardTypes::Integer: {
-    auto width = type.cast<IntegerType>().getWidth();
-    if (width == 1)
-      return getBoolAttr(false);
-    return getIntegerAttr(type, APInt(width, 0));
-  }
+  case StandardTypes::Integer:
+    return getIntegerAttr(type, APInt(type.cast<IntegerType>().getWidth(), 0));
   case StandardTypes::Vector:
   case StandardTypes::RankedTensor: {
     auto vtType = type.cast<ShapedType>();
@@ -257,12 +311,11 @@ AffineMap Builder::getEmptyAffineMap() { return AffineMap::get(context); }
 
 AffineMap Builder::getConstantAffineMap(int64_t val) {
   return AffineMap::get(/*dimCount=*/0, /*symbolCount=*/0,
-                        {getAffineConstantExpr(val)});
+                        getAffineConstantExpr(val));
 }
 
 AffineMap Builder::getDimIdentityMap() {
-  return AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0,
-                        {getAffineDimExpr(0)});
+  return AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, getAffineDimExpr(0));
 }
 
 AffineMap Builder::getMultiDimIdentityMap(unsigned rank) {
@@ -270,18 +323,19 @@ AffineMap Builder::getMultiDimIdentityMap(unsigned rank) {
   dimExprs.reserve(rank);
   for (unsigned i = 0; i < rank; ++i)
     dimExprs.push_back(getAffineDimExpr(i));
-  return AffineMap::get(/*dimCount=*/rank, /*symbolCount=*/0, dimExprs);
+  return AffineMap::get(/*dimCount=*/rank, /*symbolCount=*/0, dimExprs,
+                        context);
 }
 
 AffineMap Builder::getSymbolIdentityMap() {
   return AffineMap::get(/*dimCount=*/0, /*symbolCount=*/1,
-                        {getAffineSymbolExpr(0)});
+                        getAffineSymbolExpr(0));
 }
 
 AffineMap Builder::getSingleDimShiftAffineMap(int64_t shift) {
   // expr = d0 + shift.
   auto expr = getAffineDimExpr(0) + shift;
-  return AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, {expr});
+  return AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, expr);
 }
 
 AffineMap Builder::getShiftedAffineMap(AffineMap map, int64_t shift) {
@@ -289,40 +343,51 @@ AffineMap Builder::getShiftedAffineMap(AffineMap map, int64_t shift) {
   shiftedResults.reserve(map.getNumResults());
   for (auto resultExpr : map.getResults())
     shiftedResults.push_back(resultExpr + shift);
-  return AffineMap::get(map.getNumDims(), map.getNumSymbols(), shiftedResults);
+  return AffineMap::get(map.getNumDims(), map.getNumSymbols(), shiftedResults,
+                        context);
 }
 
 //===----------------------------------------------------------------------===//
-// OpBuilder.
+// OpBuilder
 //===----------------------------------------------------------------------===//
 
-OpBuilder::~OpBuilder() {}
+OpBuilder::Listener::~Listener() {}
 
 /// Insert the given operation at the current insertion point and return it.
 Operation *OpBuilder::insert(Operation *op) {
   if (block)
     block->getOperations().insert(insertPoint, op);
+
+  if (listener)
+    listener->notifyOperationInserted(op);
   return op;
 }
 
-/// Add new block and set the insertion point to the end of it. The block is
-/// inserted at the provided insertion point of 'parent'.
-Block *OpBuilder::createBlock(Region *parent, Region::iterator insertPt) {
+/// Add new block with 'argTypes' arguments and set the insertion point to the
+/// end of it. The block is inserted at the provided insertion point of
+/// 'parent'.
+Block *OpBuilder::createBlock(Region *parent, Region::iterator insertPt,
+                              TypeRange argTypes) {
   assert(parent && "expected valid parent region");
   if (insertPt == Region::iterator())
     insertPt = parent->end();
 
   Block *b = new Block();
+  b->addArguments(argTypes);
   parent->getBlocks().insert(insertPt, b);
   setInsertionPointToEnd(b);
+
+  if (listener)
+    listener->notifyBlockCreated(b);
   return b;
 }
 
-/// Add new block and set the insertion point to the end of it.  The block is
-/// placed before 'insertBefore'.
-Block *OpBuilder::createBlock(Block *insertBefore) {
+/// Add new block with 'argTypes' arguments and set the insertion point to the
+/// end of it.  The block is placed before 'insertBefore'.
+Block *OpBuilder::createBlock(Block *insertBefore, TypeRange argTypes) {
   assert(insertBefore && "expected valid insertion block");
-  return createBlock(insertBefore->getParent(), Region::iterator(insertBefore));
+  return createBlock(insertBefore->getParent(), Region::iterator(insertBefore),
+                     argTypes);
 }
 
 /// Create an operation given the fields represented as an OperationState.
@@ -342,8 +407,7 @@ LogicalResult OpBuilder::tryFold(Operation *op,
   };
 
   // If this operation is already a constant, there is nothing to do.
-  Attribute unused;
-  if (matchPattern(op, m_Constant(&unused)))
+  if (matchPattern(op, m_Constant()))
     return cleanupFailure();
 
   // Check to see if any operands to the operation is constant and whether
@@ -377,14 +441,14 @@ LogicalResult OpBuilder::tryFold(Operation *op,
     // Ask the dialect to materialize a constant operation for this value.
     Attribute attr = it.value().get<Attribute>();
     auto *constOp = dialect->materializeConstant(
-        cstBuilder, attr, op->getResult(it.index())->getType(), op->getLoc());
+        cstBuilder, attr, op->getResult(it.index()).getType(), op->getLoc());
     if (!constOp) {
       // Erase any generated constants.
       for (Operation *cst : generatedConstants)
         cst->erase();
       return cleanupFailure();
     }
-    assert(matchPattern(constOp, m_Constant(&attr)));
+    assert(matchPattern(constOp, m_Constant()));
 
     generatedConstants.push_back(constOp);
     results.push_back(constOp->getResult(0));

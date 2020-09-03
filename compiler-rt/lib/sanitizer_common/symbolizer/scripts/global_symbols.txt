@@ -30,6 +30,7 @@ __interceptor_pthread_once w
 __interceptor_pthread_setspecific w
 __interceptor_read w
 __interceptor_realpath w
+__isinf U
 __moddi3 U
 __sanitizer_symbolize_code T
 __sanitizer_symbolize_data T
@@ -47,6 +48,7 @@ catclose U
 catgets U
 catopen U
 ceil U
+ceilf U
 clock_gettime U
 cfgetospeed U
 dl_iterate_phdr U
@@ -151,6 +153,7 @@ vasprintf U
 vfprintf U
 vsnprintf U
 vsscanf U
+wait4 U
 waitpid U
 wcrtomb U
 wcslen U

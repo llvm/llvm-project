@@ -1,10 +1,10 @@
-# RUN: yaml2obj -docnum=1 %s > %t.o.1
+# RUN: yaml2obj --docnum=1 %s -o %t.o.1
 # RUN: llvm-readobj -S --file-headers %t.o.1 | FileCheck --check-prefixes=ELF-ALL,ELF-SRAM-ECC-NONE %s
 # RUN: obj2yaml %t.o.1 | FileCheck --check-prefixes=YAML-SRAM-ECC-NONE %s
-# RUN: yaml2obj -docnum=2 %s > %t.o.2
+# RUN: yaml2obj --docnum=2 %s -o %t.o.2
 # RUN: llvm-readobj -S --file-headers %t.o.2 | FileCheck --check-prefixes=ELF-ALL,ELF-SRAM-ECC-GFX900 %s
 # RUN: obj2yaml %t.o.2 | FileCheck --check-prefixes=YAML-SRAM-ECC-GFX900 %s
-# RUN: yaml2obj -docnum=3 %s > %t.o.3
+# RUN: yaml2obj --docnum=3 %s -o %t.o.3
 # RUN: llvm-readobj -S --file-headers %t.o.3 | FileCheck --check-prefixes=ELF-ALL,ELF-SRAM-ECC-XNACK-GFX900 %s
 # RUN: obj2yaml %t.o.3 | FileCheck --check-prefixes=YAML-SRAM-ECC-XNACK-GFX900 %s
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -debug-info-kind=limited -std=c++11 -emit-llvm %s -o -| FileCheck %s
+// RUN: %clang_cc1 -debug-info-kind=limited -gno-column-info -std=c++11 -emit-llvm %s -o -| FileCheck %s
 //
 // Two variables with the same name in subsequent if staments need to be in separate scopes.
 //

@@ -57,34 +57,34 @@
 # CHECK: mtspr 275, 4                    
 0x7c 0x93 0x43 0xa6
 
-# CHECK: mtspr 280, 4                    
+# CHECK: mtasr 4                         
 0x7c 0x98 0x43 0xa6
 
-# CHECK: mfspr 4, 22                     
+# CHECK: mfdec 4                         
 0x7c 0x96 0x02 0xa6
 
-# CHECK: mtspr 22, 4                     
+# CHECK: mtdec 4                         
 0x7c 0x96 0x03 0xa6
 
 # CHECK: mfpvr 4
 0x7c 0x9f 0x42 0xa6
 
-# CHECK: mfspr 4, 25                     
+# CHECK: mfsdr1 4                        
 0x7c 0x99 0x02 0xa6
 
-# CHECK: mtspr 25, 4                     
+# CHECK: mtsdr1 4                        
 0x7c 0x99 0x03 0xa6
 
-# CHECK: mfspr 4, 26                     
+# CHECK: mfsrr0 4                        
 0x7c 0x9a 0x02 0xa6
 
-# CHECK: mtspr 26, 4                     
+# CHECK: mtsrr0 4                        
 0x7c 0x9a 0x03 0xa6
 
-# CHECK: mfspr 4, 27                     
+# CHECK: mfsrr1 4                        
 0x7c 0x9b 0x02 0xa6
 
-# CHECK: mtspr 27, 4                     
+# CHECK: mtsrr1 4                        
 0x7c 0x9b 0x03 0xa6
 
 # CHECK: slbie 4                         

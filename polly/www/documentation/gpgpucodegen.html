@@ -80,7 +80,7 @@ parfor(int i=0 to M)
    text.</p>
 <p>In this project, we assume that the device driver library has provided an
    interface to launch kernels in the form of assembly text. Fortunately, most
-   of the mainstream GPU vendors provide such a feature in thier products (see
+   of the mainstream GPU vendors provide such a feature in their products (see
    ptxjit of NVIDIA GPUs and CAL of AMD GPUs). Generally speaking, what we
    are going to do in Polly is:</p>
 <li>Find a way to tile the parallel loops.</li>
@@ -121,7 +121,7 @@ The jscop file describing the tiling transformation is:
 </pre>
 We can test the schedule with the following command line.
 <pre>
-opt -load /path/to/polly/build/LLVMPolly.so -basicaa -polly-import-jscop
+opt -load /path/to/polly/build/LLVMPolly.so -basic-aa -polly-import-jscop
     -polly-ast -analyze -q ./test.ll
     -polly-import-jscop-postfix=transformed+gpu
 </pre>
@@ -157,7 +157,7 @@ git am /path/to/polly/source/utils/0001-Add-llvm.codegen-intrinsic.patch</pre>
 <pre>/path/to/polly/source/test/create_ll.sh test.c</pre>
 <p>3. Get and edit the jscop file (take function "gpu_codegen" as an example).
 </p>
-<pre>opt -load /path/to/polly/build/lib/LLVMPolly.so -basicaa
+<pre>opt -load /path/to/polly/build/lib/LLVMPolly.so -basic-aa
     -polly-export-jscop ./test.ll
 cp gpu_codegen___%for.cond---%for.end8.jscop
    gpu_codegen___%for.cond---%for.end8.jscop.transformed+gpu
@@ -165,7 +165,7 @@ vi gpu_codegen___%for.cond---%for.end8.jscop.transformed+gpu</pre>
 <p><em>(Please refer to section "The Work Flow" on how to edit the "schedule"
        part of a statement)</em></p>
 <p>4. Optimize the code with GPGPU code generation.</p>
-<pre>opt -load /path/to/polly/build/lib/LLVMPolly.so -basicaa
+<pre>opt -load /path/to/polly/build/lib/LLVMPolly.so -basic-aa
     -polly-import-jscop-postfix=transformed+gpu -enable-polly-gpgpu
     -polly-gpgpu-triple=nvptx64-unknown-unknown -polly-codegen ./test.ll -S
     -o test.gpued.ll</pre>

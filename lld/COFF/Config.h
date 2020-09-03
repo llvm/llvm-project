@@ -110,6 +110,7 @@ struct Configuration {
   bool showSummary = false;
   unsigned debugTypes = static_cast<unsigned>(DebugType::None);
   std::vector<std::string> natvisFiles;
+  llvm::StringMap<std::string> namedStreams;
   llvm::SmallString<128> pdbAltPath;
   llvm::SmallString<128> pdbPath;
   llvm::SmallString<128> pdbSourcePath;
@@ -139,12 +140,13 @@ struct Configuration {
   bool safeSEH = false;
   Symbol *sehTable = nullptr;
   Symbol *sehCount = nullptr;
+  bool noSEH = false;
 
   // Used for /opt:lldlto=N
   unsigned ltoo = 2;
 
   // Used for /opt:lldltojobs=N
-  unsigned thinLTOJobs = 0;
+  std::string thinLTOJobs;
   // Used for /opt:lldltopartitions=N
   unsigned ltoPartitions = 1;
 
@@ -182,6 +184,9 @@ struct Configuration {
   llvm::StringMap<int> order;
 
   // Used for /lldmap.
+  std::string lldmapFile;
+
+  // Used for /map.
   std::string mapFile;
 
   // Used for /thinlto-index-only:
@@ -211,6 +216,7 @@ struct Configuration {
   uint32_t functionPadMin = 0;
   bool dynamicBase = true;
   bool allowBind = true;
+  bool cetCompat = false;
   bool nxCompat = true;
   bool allowIsolation = true;
   bool terminalServerAware = true;
@@ -230,6 +236,8 @@ struct Configuration {
   bool swaprunNet = false;
   bool thinLTOEmitImportsFiles;
   bool thinLTOIndexOnly;
+  bool autoImport = false;
+  bool pseudoRelocs = false;
 };
 
 extern Configuration *config;

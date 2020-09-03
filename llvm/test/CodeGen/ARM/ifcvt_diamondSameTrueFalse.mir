@@ -1,0 +1,40 @@
+# RUN: llc -mtriple=thumbv7-apple-ios -o - %s -run-pass if-converter -verify-machineinstrs | FileCheck %s
+
+# Don't treat bb.1 as a valid diamond since IfConverter::IfConvertDiamond can't
+# handle it and used to hit an assertion instead.
+
+--- |
+  define void @func() minsize {
+    ret void
+  }
+...
+---
+name:            func
+body:             |
+  bb.0:
+
+    tBcc %bb.3, 1, $cpsr
+
+  bb.1:
+
+    tBcc %bb.2, 1, $cpsr
+    tB %bb.2, 14, $noreg
+
+  bb.2:
+
+  bb.3:
+  successors:
+    tBX_RET 14, _
+...
+
+# CHECK-LABEL: bb.0:
+# CHECK:         tBcc %bb.3, 1
+
+# CHECK-LABEL: bb.1:
+# CHECK:         tBcc %bb.2, 1
+# CHECK-NEXT:    tB %bb.2, 14
+
+# CHECK-LABEL: bb.2:
+
+# CHECK-LABEL: bb.3:
+# CHECK:         tBX_RET 14

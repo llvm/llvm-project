@@ -1,7 +1,7 @@
 # RUN: yaml2obj < %s > %t.obj
 #
 # RUN: lld-link /out:%t.exe /entry:func1 /subsystem:console %t.obj
-# RUN: llvm-objdump -s -section=.pdata %t.exe | FileCheck -check-prefix=PDATA %s
+# RUN: llvm-objdump -s --section=.pdata %t.exe | FileCheck --check-prefix=PDATA %s
 
 # PDATA: 00100000 2500a100 24100000 31002201
 

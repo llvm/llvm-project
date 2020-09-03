@@ -30,7 +30,7 @@ SANITIZER_WEAK_ATTRIBUTE StackDepotStats *StackDepotGetStats() {
   return nullptr;
 }
 
-void BackgroundThread(void *arg) {
+void *BackgroundThread(void *arg) {
   const uptr hard_rss_limit_mb = common_flags()->hard_rss_limit_mb;
   const uptr soft_rss_limit_mb = common_flags()->soft_rss_limit_mb;
   const bool heap_profile = common_flags()->heap_profile;
@@ -127,6 +127,16 @@ void MaybeStartBackgroudThread() {
 static void (*sandboxing_callback)();
 void SetSandboxingCallback(void (*f)()) {
   sandboxing_callback = f;
+}
+
+uptr ReservedAddressRange::InitAligned(uptr size, uptr align,
+                                       const char *name) {
+  CHECK(IsPowerOfTwo(align));
+  if (align <= GetPageSizeCached())
+    return Init(size, name);
+  uptr start = Init(size + align, name);
+  start += align - (start & (align - 1));
+  return start;
 }
 
 }  // namespace __sanitizer

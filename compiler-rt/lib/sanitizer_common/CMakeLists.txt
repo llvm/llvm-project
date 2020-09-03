@@ -29,11 +29,13 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_printf.cpp
   sanitizer_procmaps_common.cpp
   sanitizer_procmaps_bsd.cpp
+  sanitizer_procmaps_fuchsia.cpp
   sanitizer_procmaps_linux.cpp
   sanitizer_procmaps_mac.cpp
   sanitizer_procmaps_solaris.cpp
   sanitizer_rtems.cpp
   sanitizer_solaris.cpp
+  sanitizer_stoptheworld_fuchsia.cpp
   sanitizer_stoptheworld_mac.cpp
   sanitizer_suppressions.cpp
   sanitizer_tls_get_addr.cpp
@@ -162,6 +164,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_platform_limits_solaris.h
   sanitizer_posix.h
   sanitizer_procmaps.h
+  sanitizer_ptrauth.h
   sanitizer_quarantine.h
   sanitizer_report_decorator.h
   sanitizer_ring_buffer.h

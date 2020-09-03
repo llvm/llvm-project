@@ -3,10 +3,10 @@
 # RUN: llvm-mc -triple riscv32 -mattr=+c,+f -show-encoding \
 # RUN: -riscv-no-aliases <%s | FileCheck -check-prefixes=CHECK,CHECK-INST %s
 # RUN: llvm-mc -triple riscv32 -mattr=+c,+f -filetype=obj < %s \
-# RUN: | llvm-objdump  -triple riscv32 -mattr=+c,+f -d - \
+# RUN: | llvm-objdump  --triple=riscv32 --mattr=+c,+f -d - \
 # RUN: | FileCheck -check-prefixes=CHECK-BYTES,CHECK-ALIAS %s
 # RUN: llvm-mc -triple riscv32 -mattr=+c,+f -filetype=obj < %s \
-# RUN: | llvm-objdump  -triple riscv32 -mattr=+c,+f -d -M no-aliases - \
+# RUN: | llvm-objdump  --triple=riscv32 --mattr=+c,+f -d -M no-aliases - \
 # RUN: | FileCheck -check-prefixes=CHECK-BYTES,CHECK-INST %s
 
 # Instructions that are 32 bit only.

@@ -1,5 +1,5 @@
 ; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -irce-allow-narrow-latch=true -S < %s 2>&1 | FileCheck %s
-; RUN: opt -verify-loop-info -irce-print-changed-loops -passes='require<branch-prob>,loop(irce)' -irce-allow-narrow-latch=true -S < %s 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -irce-print-changed-loops -passes='require<branch-prob>,irce' -irce-allow-narrow-latch=true -S < %s 2>&1 | FileCheck %s
 
 ; Check that we can remove trivially non-failing range check.
 define i32 @test_increasing_slt_slt_wide_simple_no_postloop() {

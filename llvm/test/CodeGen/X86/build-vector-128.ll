@@ -540,17 +540,11 @@ define <4 x float> @PR37502(float %x, float %y) {
 ; AVX-32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX-32-NEXT:    retl
 ;
-; AVX1-64-LABEL: PR37502:
-; AVX1-64:       # %bb.0:
-; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; AVX1-64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX1-64-NEXT:    retq
-;
-; AVX2-64-LABEL: PR37502:
-; AVX2-64:       # %bb.0:
-; AVX2-64-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX2-64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX2-64-NEXT:    retq
+; AVX-64-LABEL: PR37502:
+; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX-64-NEXT:    retq
   %i0 = insertelement <4 x float> undef, float %x, i32 0
   %i1 = insertelement <4 x float> %i0, float %y, i32 1
   %i2 = insertelement <4 x float> %i1, float %x, i32 2

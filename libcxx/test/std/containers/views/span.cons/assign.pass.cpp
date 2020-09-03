@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <span>
 
@@ -185,13 +185,14 @@ int main(int, char**)
 
 //  constexpr statically sized assignment
     {
-        constexpr std::span<const int,2> spans[] = {
-            {carr1, 2},
-            {carr1 + 1, 2},
-            {carr1 + 2, 2},
-            {carr2, 2},
-            {carr2 + 1, 2},
-            {carr3, 2}
+        using spanType = std::span<const int,2>;
+        constexpr spanType spans[] = {
+            spanType{carr1, 2},
+            spanType{carr1 + 1, 2},
+            spanType{carr1 + 2, 2},
+            spanType{carr2, 2},
+            spanType{carr2 + 1, 2},
+            spanType{carr3, 2}
             };
 
         static_assert(std::size(spans) == 6, "" );
@@ -247,10 +248,11 @@ int main(int, char**)
 
 //  statically sized assignment
     {
-        std::span<int,2> spans[] = {
-            {arr,     arr + 2},
-            {arr + 1, arr + 3},
-            {arr + 2, arr + 4}
+        using spanType = std::span<int,2>;
+        spanType spans[] = {
+            spanType{arr,     arr + 2},
+            spanType{arr + 1, arr + 3},
+            spanType{arr + 2, arr + 4}
             };
 
         for (size_t i = 0; i < std::size(spans); ++i)
@@ -279,10 +281,11 @@ int main(int, char**)
     }
 
     {
-    std::span<std::string, 1> spans[] = {
-            {strs,     strs + 1},
-            {strs + 1, strs + 2},
-            {strs + 2, strs + 3}
+    using spanType = std::span<std::string, 1>;
+    spanType spans[] = {
+            spanType{strs,     strs + 1},
+            spanType{strs + 1, strs + 2},
+            spanType{strs + 2, strs + 3}
             };
 
         for (size_t i = 0; i < std::size(spans); ++i)

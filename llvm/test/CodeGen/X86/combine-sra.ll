@@ -177,7 +177,7 @@ define <4 x i32> @combine_vec_ashr_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 ;
 ; AVX2-FAST-LABEL: combine_vec_ashr_trunc_and:
 ; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
 ; AVX2-FAST-NEXT:    vpsravd %xmm1, %xmm0, %xmm0
@@ -217,8 +217,7 @@ define <4 x i32> @combine_vec_ashr_trunc_lshr(<4 x i64> %x) {
 ;
 ; AVX2-FAST-LABEL: combine_vec_ashr_trunc_lshr:
 ; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vpsrlq $32, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,3,5,7]
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -256,7 +255,7 @@ define <4 x i32> @combine_vec_ashr_trunc_ashr(<4 x i64> %x) {
 ;
 ; AVX2-FAST-LABEL: combine_vec_ashr_trunc_ashr:
 ; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,3,5,7,5,7,6,7]
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <1,3,5,7,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper

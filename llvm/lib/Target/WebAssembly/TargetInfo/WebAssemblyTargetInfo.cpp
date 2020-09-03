@@ -26,9 +26,15 @@ Target &llvm::getTheWebAssemblyTarget64() {
   return TheWebAssemblyTarget64;
 }
 
-extern "C" void LLVMInitializeWebAssemblyTargetInfo() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTargetInfo() {
   RegisterTarget<Triple::wasm32> X(getTheWebAssemblyTarget32(), "wasm32",
                                    "WebAssembly 32-bit", "WebAssembly");
   RegisterTarget<Triple::wasm64> Y(getTheWebAssemblyTarget64(), "wasm64",
                                    "WebAssembly 64-bit", "WebAssembly");
 }
+
+// Defines llvm::WebAssembly::getWasm64Opcode llvm::WebAssembly::getStackOpcode
+// which have to be in a shared location between CodeGen and MC.
+#define GET_INSTRMAP_INFO 1
+#define GET_INSTRINFO_ENUM 1
+#include "WebAssemblyGenInstrInfo.inc"

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_MinidumpParser_h_
-#define liblldb_MinidumpParser_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_MINIDUMPPARSER_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_MINIDUMPPARSER_H
 
 #include "MinidumpTypes.h"
 
@@ -100,7 +100,6 @@ private:
   MinidumpParser(lldb::DataBufferSP data_sp,
                  std::unique_ptr<llvm::object::MinidumpFile> file);
 
-private:
   lldb::DataBufferSP m_data_sp;
   std::unique_ptr<llvm::object::MinidumpFile> m_file;
   ArchSpec m_arch;
@@ -108,4 +107,4 @@ private:
 
 } // end namespace minidump
 } // end namespace lldb_private
-#endif // liblldb_MinidumpParser_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_MINIDUMPPARSER_H

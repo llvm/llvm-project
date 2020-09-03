@@ -219,4 +219,4 @@ define i64 @test_no_simplify4() {
   ret i64 %l
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }

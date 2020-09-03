@@ -48,6 +48,7 @@ def MipsFPBrcond : SDNode<"MipsISD::FPBrcond", SDT_MipsFPBrcond,
                           [SDNPHasChain, SDNPOptInGlue]>;
 def MipsTruncIntFP : SDNode<"MipsISD::TruncIntFP", SDT_MipsTruncIntFP>;
 def MipsBuildPairF64 : SDNode<"MipsISD::BuildPairF64", SDT_MipsBuildPairF64>;
+def : GINodeEquiv<G_MERGE_VALUES, MipsBuildPairF64>;
 def MipsExtractElementF64 : SDNode<"MipsISD::ExtractElementF64",
                                    SDT_MipsExtractElementF64>;
 
@@ -62,15 +63,17 @@ let PrintMethod = "printFCCOperand", DecoderMethod = "DecodeCondCode" in
 //===----------------------------------------------------------------------===//
 
 def IsFP64bit        : Predicate<"Subtarget->isFP64bit()">,
-                       AssemblerPredicate<"FeatureFP64Bit">;
+                       AssemblerPredicate<(all_of FeatureFP64Bit)>;
 def NotFP64bit       : Predicate<"!Subtarget->isFP64bit()">,
-                       AssemblerPredicate<"!FeatureFP64Bit">;
+                       AssemblerPredicate<(all_of (not FeatureFP64Bit))>;
 def IsSingleFloat    : Predicate<"Subtarget->isSingleFloat()">,
-                       AssemblerPredicate<"FeatureSingleFloat">;
+                       AssemblerPredicate<(all_of FeatureSingleFloat)>;
 def IsNotSingleFloat : Predicate<"!Subtarget->isSingleFloat()">,
-                       AssemblerPredicate<"!FeatureSingleFloat">;
+                       AssemblerPredicate<(all_of (not FeatureSingleFloat))>;
 def IsNotSoftFloat   : Predicate<"!Subtarget->useSoftFloat()">,
-                       AssemblerPredicate<"!FeatureSoftFloat">;
+                       AssemblerPredicate<(all_of (not FeatureSoftFloat))>;
+def HasMips3D        : Predicate<"Subtarget->has3D()">,
+                       AssemblerPredicate<(all_of FeatureMips3D)>;
 
 //===----------------------------------------------------------------------===//
 // Mips FGR size adjectives.
@@ -455,6 +458,12 @@ let DecoderNamespace = "MipsFP64" in {
     def PLU_PS64    : ADDS_FT<"plu.ps", FGR64Opnd, II_CVT, 0>,
                       ADDS_FM<0x2D, 22>,
                       ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+    def PUL_PS64    : ADDS_FT<"pul.ps", FGR64Opnd, II_CVT, 0>,
+                      ADDS_FM<0x2E, 22>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+    def PUU_PS64    : ADDS_FT<"puu.ps", FGR64Opnd, II_CVT, 0>,
+                      ADDS_FM<0x2F, 22>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
 
     def CVT_S_PU64  : ABSS_FT<"cvt.s.pu", FGR32Opnd, FGR64Opnd, II_CVT>,
                       ABSS_FM<0x20, 22>,
@@ -465,6 +474,21 @@ let DecoderNamespace = "MipsFP64" in {
 
     def CVT_PS_S64  : CVT_PS_S_FT<"cvt.ps.s", FGR64Opnd, FGR32Opnd, II_CVT, 0>,
                       ADDS_FM<0x26, 16>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+  }
+}
+
+let DecoderNamespace = "MipsFP64" in {
+  let AdditionalPredicates = [HasMips3D] in {
+    def ADDR_PS64   : ADDS_FT<"addr.ps", FGR64Opnd, II_ADDR_PS, 0>,
+                      ADDS_FM<0x18, 22>, ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+    def MULR_PS64   : ADDS_FT<"mulr.ps", FGR64Opnd, II_MULR_PS, 0>,
+                      ADDS_FM<0x1a, 22>, ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+    def CVT_PS_PW64 : ABSS_FT<"cvt.ps.pw", FGR64Opnd, FGR64Opnd, II_CVT>,
+                      ABSS_FM<0x26, 20>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+    def CVT_PW_PS64 : ABSS_FT<"cvt.pw.ps", FGR64Opnd, FGR64Opnd, II_CVT>,
+                      ABSS_FM<0x24, 22>,
                       ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
   }
 }

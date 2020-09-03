@@ -1,4 +1,4 @@
-//===-- ArgsTest.cpp --------------------------------------------*- C++ -*-===//
+//===-- ArgsTest.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -281,4 +281,35 @@ TEST(ArgsTest, ReplaceArgumentAtIndexFarOutOfRange) {
   args.ReplaceArgumentAtIndex(4, "baar");
   EXPECT_EQ(3u, args.GetArgumentCount());
   EXPECT_STREQ(args.GetArgumentAtIndex(2), "b");
+}
+
+TEST(ArgsTest, Yaml) {
+  std::string buffer;
+  llvm::raw_string_ostream os(buffer);
+
+  // Serialize.
+  Args args;
+  args.SetCommandString("this 'has' \"multiple\" args");
+  llvm::yaml::Output yout(os);
+  yout << args;
+  os.flush();
+
+  llvm::outs() << buffer;
+
+  // Deserialize.
+  Args deserialized;
+  llvm::yaml::Input yin(buffer);
+  yin >> deserialized;
+
+  EXPECT_EQ(4u, deserialized.GetArgumentCount());
+  EXPECT_STREQ(deserialized.GetArgumentAtIndex(0), "this");
+  EXPECT_STREQ(deserialized.GetArgumentAtIndex(1), "has");
+  EXPECT_STREQ(deserialized.GetArgumentAtIndex(2), "multiple");
+  EXPECT_STREQ(deserialized.GetArgumentAtIndex(3), "args");
+
+  llvm::ArrayRef<Args::ArgEntry> entries = deserialized.entries();
+  EXPECT_EQ(entries[0].GetQuoteChar(), '\0');
+  EXPECT_EQ(entries[1].GetQuoteChar(), '\'');
+  EXPECT_EQ(entries[2].GetQuoteChar(), '"');
+  EXPECT_EQ(entries[3].GetQuoteChar(), '\0');
 }

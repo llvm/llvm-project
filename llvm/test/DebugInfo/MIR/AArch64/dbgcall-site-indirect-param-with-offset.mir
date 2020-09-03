@@ -1,4 +1,4 @@
-# RUN: llc -start-before=livedebugvalues -stop-after=machineverifier -o - %s \
+# RUN: llc -emit-call-site-info -start-before=livedebugvalues -stop-after=machineverifier -o - %s \
 # RUN:   | FileCheck %s -check-prefix=MIR
 
 # Copied from dbgcall-site-indirect-param.mir, with hand modifications:

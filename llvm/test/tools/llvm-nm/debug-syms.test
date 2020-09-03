@@ -1,6 +1,17 @@
-# RUN: yaml2obj %s > %t.o
-# RUN: llvm-nm --debug-syms %t.o | FileCheck %s --implicit-check-not U
-# RUN: llvm-nm -a %t.o | FileCheck %s --implicit-check-not U
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-nm --special-syms --debug-syms %t.o | FileCheck %s --implicit-check-not {{.}} --check-prefix SYMBOL
+# RUN: llvm-nm --special-syms -a %t.o | FileCheck %s --implicit-check-not {{.}} --check-prefix SYMBOL
+
+# SYMBOL:      0000000000000000 n $a
+# SYMBOL-NEXT: 0000000000000000 n $d
+# SYMBOL-NEXT: 0000000000000000 n $t
+# SYMBOL-NEXT: 0000000000000000 a file_sym
+# SYMBOL-NEXT: 0000000000000000 n section
+
+# RUN: llvm-nm --debug-syms --dynamic %t.o | FileCheck %s --implicit-check-not {{.}} --check-prefix DYNSYM
+
+# DYNSYM:      0000000000000000 N dynglobal
+# DYNSYM-NEXT: 0000000000000000 n dynlocal
 
 !ELF
 FileHeader:
@@ -24,9 +35,11 @@ Symbols:
     Section: section
   - Name:    $a
     Section: section
-
-# CHECK:      $a
-# CHECK-NEXT: $d
-# CHECK-NEXT: $t
-# CHECK-NEXT: file_sym
-# CHECK-NEXT: section
+DynamicSymbols:
+  - Name:    dynlocal
+    Type:    STT_OBJECT
+    Section: section
+  - Name:    dynglobal
+    Type:    STT_OBJECT
+    Binding: STB_GLOBAL
+    Section: section    

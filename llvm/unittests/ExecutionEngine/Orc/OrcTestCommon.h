@@ -47,7 +47,7 @@ class CoreAPIsBasedStandardTest : public testing::Test {
 protected:
   std::shared_ptr<SymbolStringPool> SSP = std::make_shared<SymbolStringPool>();
   ExecutionSession ES{SSP};
-  JITDylib &JD = ES.createJITDylib("JD");
+  JITDylib &JD = ES.createBareJITDylib("JD");
   SymbolStringPtr Foo = ES.intern("foo");
   SymbolStringPtr Bar = ES.intern("bar");
   SymbolStringPtr Baz = ES.intern("baz");
@@ -93,9 +93,11 @@ public:
 
   SimpleMaterializationUnit(
       orc::SymbolFlagsMap SymbolFlags, MaterializeFunction Materialize,
+      orc::SymbolStringPtr InitSym = nullptr,
       DiscardFunction Discard = DiscardFunction(),
       DestructorFunction Destructor = DestructorFunction())
-      : MaterializationUnit(std::move(SymbolFlags), orc::VModuleKey()),
+      : MaterializationUnit(std::move(SymbolFlags), std::move(InitSym),
+                            orc::VModuleKey()),
         Materialize(std::move(Materialize)), Discard(std::move(Discard)),
         Destructor(std::move(Destructor)) {}
 

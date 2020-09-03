@@ -206,10 +206,10 @@ static MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
 
     Sym = AP.OutContext.getOrCreateSymbol(Twine(symbolName));
     if (Sym->isUndefined()) {
-      OutStreamer.EmitLabel(Sym);
-      OutStreamer.EmitSymbolAttribute(Sym, MCSA_Global);
-      OutStreamer.EmitIntValue(Value, AlignSize);
-      OutStreamer.EmitCodeAlignment(AlignSize);
+      OutStreamer.emitLabel(Sym);
+      OutStreamer.emitSymbolAttribute(Sym, MCSA_Global);
+      OutStreamer.emitIntValue(Value, AlignSize);
+      OutStreamer.emitCodeAlignment(AlignSize);
     }
   } else {
     assert(Imm.isExpr() && "Expected expression and found none");
@@ -234,10 +234,10 @@ static MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
     OutStreamer.SwitchSection(Section);
     Sym = AP.OutContext.getOrCreateSymbol(Twine(LitaName));
     if (Sym->isUndefined()) {
-      OutStreamer.EmitLabel(Sym);
-      OutStreamer.EmitSymbolAttribute(Sym, MCSA_Local);
-      OutStreamer.EmitValue(Imm.getExpr(), AlignSize);
-      OutStreamer.EmitCodeAlignment(AlignSize);
+      OutStreamer.emitLabel(Sym);
+      OutStreamer.emitSymbolAttribute(Sym, MCSA_Local);
+      OutStreamer.emitValue(Imm.getExpr(), AlignSize);
+      OutStreamer.emitCodeAlignment(AlignSize);
     }
   }
   return Sym;
@@ -740,7 +740,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
 }
 
 /// Print out a single Hexagon MI to the current output stream.
-void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void HexagonAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst MCB;
   MCB.setOpcode(Hexagon::BUNDLE);
   MCB.addOperand(MCOperand::createImm(0));
@@ -768,9 +768,9 @@ void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   assert(Ok); (void)Ok;
   if (HexagonMCInstrInfo::bundleSize(MCB) == 0)
     return;
-  OutStreamer->EmitInstruction(MCB, getSubtargetInfo());
+  OutStreamer->emitInstruction(MCB, getSubtargetInfo());
 }
 
-extern "C" void LLVMInitializeHexagonAsmPrinter() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonAsmPrinter() {
   RegisterAsmPrinter<HexagonAsmPrinter> X(getTheHexagonTarget());
 }

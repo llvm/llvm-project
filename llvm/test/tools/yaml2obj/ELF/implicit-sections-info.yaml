@@ -51,7 +51,20 @@ DynamicSymbols:
 ## behavior is the same as when we define them, but do not set the Info.
 
 # RUN: yaml2obj --docnum=2 %s -o %t
-# RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix=CASE1
+# RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix=CASE2
+
+# CASE2:     Name: .dynsym
+# CASE2-NOT: Info:
+# CASE2:     Info: 1{{$}}
+# CASE2:     Name: .dynstr
+# CASE2-NOT: Info:
+# CASE2:     Info: 0{{$}}
+# CASE2:     Name: .symtab
+# CASE2-NOT: Info:
+# CASE2:     Info: 2{{$}}
+# CASE2:     Name: .strtab
+# CASE2-NOT: Info:
+# CASE2:     Info: 0{{$}}
 
 --- !ELF
 FileHeader:
@@ -70,20 +83,20 @@ DynamicSymbols:
 ## Check we are able to set any sh_info explicitly.
 
 # RUN: yaml2obj --docnum=3 %s -o %t
-# RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix=CASE2
+# RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix=CASE3
 
-# CASE2:      Name: .dynstr
-# CASE2:      Info:
-# CASE2-SAME: 10
-# CASE2:      Name: .dynsym
-# CASE2:      Info:
-# CASE2-SAME: 11
-# CASE2:      Name: .strtab
-# CASE2:      Info:
-# CASE2-SAME: 12
-# CASE2:      Name: .symtab
-# CASE2:      Info:
-# CASE2-SAME: 13
+# CASE3:      Name: .dynstr
+# CASE3:      Info:
+# CASE3-SAME: 10
+# CASE3:      Name: .dynsym
+# CASE3:      Info:
+# CASE3-SAME: 11
+# CASE3:      Name: .strtab
+# CASE3:      Info:
+# CASE3-SAME: 12
+# CASE3:      Name: .symtab
+# CASE3:      Info:
+# CASE3-SAME: 13
 
 --- !ELF
 FileHeader:

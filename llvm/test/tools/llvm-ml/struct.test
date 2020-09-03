@@ -1,0 +1,198 @@
+# RUN: llvm-ml -filetype=asm %s | FileCheck %s
+
+.data
+BAZ STRUCT
+  a BYTE 1
+  b BYTE 2
+BAZ ENDS
+
+FOOBAR struct 2
+  c BYTE 3 DUP (4)
+  d DWORD 5
+  e BAZ <>
+  STRUCT f
+    g BYTE 6
+    h BYTE 7
+  ends
+  h BYTE "abcde"
+foobar ENDS
+
+t1 foobar <>
+
+; CHECK: t1:
+;
+; BYTE 3 DUP (4), plus alignment padding
+; CHECK-NEXT: .byte 4
+; CHECK-NEXT: .byte 4
+; CHECK-NEXT: .byte 4
+; CHECK-NEXT: .zero 1
+;
+; DWORD 5
+; CHECK-NEXT: .long 5
+;
+; BAZ <>
+; CHECK-NEXT: .byte 1
+; CHECK-NEXT: .byte 2
+;
+; <BYTE 6, BYTE 7>, with internal alignment padding
+; CHECK-NEXT: .byte 6
+; CHECK-NEXT: .zero 1
+; CHECK-NEXT: .byte 7
+; CHECK-NEXT: .zero 1
+;
+; BYTE "abcde", plus alignment padding
+; CHECK-NEXT: .byte 97
+; CHECK-NEXT: .byte 98
+; CHECK-NEXT: .byte 99
+; CHECK-NEXT: .byte 100
+; CHECK-NEXT: .byte 101
+; CHECK-NEXT: .zero 1
+
+t2 FOOBAR <"gh",,<10,11>,<12>,"ijk">
+
+; CHECK: t2:
+;
+; BYTE "gh", padded with " ", plus alignment padding
+; CHECK-NEXT: .byte 103
+; CHECK-NEXT: .byte 104
+; CHECK-NEXT: .byte 32
+; CHECK-NEXT: .zero 1
+;
+; DWORD 5 (default-initialized when omitted)
+; CHECK-NEXT: .long 5
+;
+; BAZ <10, 11>
+; CHECK-NEXT: .byte 10
+; CHECK-NEXT: .byte 11
+;
+; <BYTE 6, BYTE 7>, with internal alignment padding
+; CHECK-NEXT: .byte 12
+; CHECK-NEXT: .zero 1
+; CHECK-NEXT: .byte 7
+; CHECK-NEXT: .zero 1
+;
+; BYTE "ijk", padded with " ", plus alignment padding
+; CHECK-NEXT: .byte 105
+; CHECK-NEXT: .byte 106
+; CHECK-NEXT: .byte 107
+; CHECK-NEXT: .byte 32
+; CHECK-NEXT: .byte 32
+; CHECK-NEXT: .zero 1
+
+.code
+
+t3:
+mov eax, t2.f.h
+mov eax, [t2].f.h
+mov eax, [t2.f.h]
+
+; CHECK: t3:
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+
+t4:
+mov eax, j.FOOBAR.f.h
+mov eax, j.baz.b
+
+; CHECK: t4:
+; CHECK-NEXT: mov eax, dword ptr [rip + j+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + j+1]
+
+t5:
+mov eax, [ebx].FOOBAR.f.h
+mov eax, [ebx.FOOBAR].f.h
+mov eax, [ebx.FOOBAR.f.h]
+
+; CHECK: t5:
+; CHECK-NEXT: mov eax, dword ptr [ebx + 12]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 12]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 12]
+
+t6:
+mov eax, t2.FOOBAR.f.h
+mov eax, [t2].FOOBAR.f.h
+mov eax, [t2.FOOBAR].f.h
+mov eax, [t2.FOOBAR.f.h]
+
+; CHECK: t6:
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+
+t7:
+mov eax, [ebx].FOOBAR.e.b
+mov eax, [ebx.FOOBAR].e.b
+mov eax, [ebx.FOOBAR.e].b
+mov eax, [ebx.FOOBAR.e.b]
+
+; CHECK: t7:
+; CHECK-NEXT: mov eax, dword ptr [ebx + 9]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 9]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 9]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 9]
+
+t8:
+mov eax, t2.FOOBAR.e.b
+mov eax, [t2].FOOBAR.e.b
+mov eax, [t2.FOOBAR].e.b
+mov eax, [t2.FOOBAR.e].b
+mov eax, [t2.FOOBAR.e.b]
+
+; CHECK: t8:
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+9]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+9]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+9]
+; CHECK-NEXT: mov eax, dword ptr [rip + (t2+8)+1]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+9]
+
+QUUX STRUCT
+  u DWORD ?
+  UNION
+    v WORD ?
+    w DWORD ?
+    STRUCT
+      x BYTE ?
+      y BYTE ?
+    ENDS
+    after_struct BYTE ?
+  ENDS
+  z DWORD ?
+QUUX ENDS
+
+t9:
+mov eax, [ebx].QUUX.u
+mov eax, [ebx].QUUX.v
+mov eax, [ebx].QUUX.w
+mov eax, [ebx].QUUX.x
+mov eax, [ebx].QUUX.y
+mov eax, [ebx].QUUX.after_struct
+mov eax, [ebx].QUUX.z
+
+; CHECK: t9:
+; CHECK-NEXT: mov eax, dword ptr [ebx]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 5]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 8]
+
+t10:
+mov eax, FOOBAR.f
+mov eax, FOOBAR.f.h
+
+; CHECK: t10:
+; CHECK-NEXT: mov eax, 10
+; CHECK-NEXT: mov eax, 12
+
+t11:
+mov eax, (FOOBAR PTR [ebx]).f
+mov eax, (FOOBAR PTR t1).f
+
+; CHECK: t11:
+; CHECK-NEXT: mov eax, dword ptr [ebx + 10]
+; CHECK-NEXT: mov eax, dword ptr [rip + t1+10]
+
+END

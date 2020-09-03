@@ -33,9 +33,7 @@ void bazz();
 #endif // _OPENMP
 
 int out_decl_target = 0;
-#if _OPENMP == 201811
 #pragma omp declare target (out_decl_target)
-#endif // _OPENMP
 
 // CHECK: #pragma omp declare target{{$}}
 // CHECK: int out_decl_target = 0;

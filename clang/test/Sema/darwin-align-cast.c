@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-pointer-to-int-cast -verify %s
 // expected-no-diagnostics
 typedef long unsigned int __darwin_size_t;
 typedef long __darwin_ssize_t;

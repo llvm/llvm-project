@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CxxStringTypes_h_
-#define liblldb_CxxStringTypes_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CXXSTRINGTYPES_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CXXSTRINGTYPES_H
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -46,4 +46,4 @@ bool WCharSummaryProvider(ValueObject &valobj, Stream &stream,
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // liblldb_CxxStringTypes_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CXXSTRINGTYPES_H

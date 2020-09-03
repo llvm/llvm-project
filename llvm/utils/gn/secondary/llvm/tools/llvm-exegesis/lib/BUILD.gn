@@ -21,18 +21,21 @@ static_library("lib") {
     "BenchmarkRunner.cpp",
     "Clustering.cpp",
     "CodeTemplate.cpp",
-    "Latency.cpp",
+    "Error.cpp",
+    "LatencyBenchmarkRunner.cpp",
     "LlvmState.cpp",
     "MCInstrDescView.cpp",
+    "ParallelSnippetGenerator.cpp",
     "PerfHelper.cpp",
     "RegisterAliasing.cpp",
     "RegisterValue.cpp",
     "SchedClassResolution.cpp",
+    "SerialSnippetGenerator.cpp",
     "SnippetFile.cpp",
     "SnippetGenerator.cpp",
     "SnippetRepetitor.cpp",
     "Target.cpp",
-    "Uops.cpp",
+    "UopsBenchmarkRunner.cpp",
   ]
 
   if (llvm_build_AArch64) {

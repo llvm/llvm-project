@@ -6,13 +6,18 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Test tool."""
 
+import math
 import os
 import csv
 import pickle
 import shutil
 
 from dex.builder import run_external_build_script
-from dex.debugger.Debuggers import get_debugger_steps
+from dex.command.ParseCommand import get_command_infos
+from dex.debugger.Debuggers import run_debugger_subprocess
+from dex.debugger.DebuggerControllers.DefaultController import DefaultController
+from dex.debugger.DebuggerControllers.ConditionalController import ConditionalController
+from dex.dextIR.DextIR import DextIR
 from dex.heuristic import Heuristic
 from dex.tools import TestToolBase
 from dex.utils.Exceptions import DebuggerException
@@ -58,7 +63,7 @@ class TestCase(object):
 
         if self.error:
             script_error = (' : {}'.format(
-                self.error.script_error.splitlines()[0].decode()) if getattr(
+                self.error.script_error.splitlines()[0]) if getattr(
                     self.error, 'script_error', None) else '')
 
             error = ' [{}{}]'.format(
@@ -94,6 +99,9 @@ class Tool(TestToolBase):
                             help='exit with status FAIL(2) if the test result'
                                 ' is less than this value.',
                             metavar='<float>')
+        parser.add_argument('--calculate-average',
+                            action="store_true",
+                            help='calculate the average score of every test run')
         super(Tool, self).add_tool_arguments(parser, defaults)
 
     def _build_test_case(self):
@@ -124,10 +132,29 @@ class Tool(TestToolBase):
                 executable_file=options.executable)
         return builderIR
 
+    def _init_debugger_controller(self):
+        step_collection = DextIR(
+            executable_path=self.context.options.executable,
+            source_paths=self.context.options.source_files,
+            dexter_version=self.context.version)
+
+        step_collection.commands = get_command_infos(
+            self.context.options.source_files)
+
+        if 'DexLimitSteps' in step_collection.commands:
+            debugger_controller = ConditionalController(self.context, step_collection)
+        else:
+            debugger_controller = DefaultController(self.context, step_collection)
+
+        return debugger_controller
+
     def _get_steps(self, builderIR):
         """Generate a list of debugger steps from a test case.
         """
-        steps = get_debugger_steps(self.context)
+        debugger_controller = self._init_debugger_controller()
+        debugger_controller = run_debugger_subprocess(
+            debugger_controller, self.context.working_directory.path)
+        steps = debugger_controller.step_collection
         steps.builder = builderIR
         return steps
 
@@ -225,6 +252,19 @@ class Tool(TestToolBase):
 
         if not options.verbose:
             self.context.o.auto('\n')
+
+        if options.calculate_average:
+            # Calculate and print the average score
+            score_sum = 0.0
+            num_tests = 0
+            for test_case in self._test_cases:
+                score = test_case.score
+                if not test_case.error and not math.isnan(score):
+                    score_sum += test_case.score
+                    num_tests += 1
+
+            if num_tests != 0:
+                print("@avg: ({:.4f})".format(score_sum/num_tests))
 
         summary_path = os.path.join(options.results_directory, 'summary.csv')
         with open(summary_path, mode='w', newline='') as fp:

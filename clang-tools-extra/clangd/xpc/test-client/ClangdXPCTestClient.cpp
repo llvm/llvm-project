@@ -23,7 +23,7 @@ typedef const char *(*clangd_xpc_get_bundle_identifier_t)(void);
 using namespace llvm;
 using namespace clang;
 
-std::string getLibraryPath() {
+static std::string getLibraryPath() {
   Dl_info info;
   if (dladdr((void *)(uintptr_t)getLibraryPath, &info) == 0)
     llvm_unreachable("Call to dladdr() failed");
@@ -32,7 +32,7 @@ std::string getLibraryPath() {
       llvm::sys::path::parent_path(info.dli_fname));
   llvm::sys::path::append(LibClangPath, "lib", "ClangdXPC.framework",
                           "ClangdXPC");
-  return LibClangPath.str();
+  return std::string(LibClangPath.str());
 }
 
 static void dumpXPCObject(xpc_object_t Object, llvm::raw_ostream &OS) {

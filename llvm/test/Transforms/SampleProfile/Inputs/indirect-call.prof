@@ -29,3 +29,8 @@ return_arg_caller:3000:0
   11: 3000
  2: return_arg:3000
   1: 3000
+branch_prof_valid:4000:0
+ 1: 1000
+ 2: foo_inline3:3000
+  1: 0
+  2: 3000

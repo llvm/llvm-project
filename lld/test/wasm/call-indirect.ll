@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj %p/Inputs/call-indirect.ll -o %t2.o
 ; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/call-indirect.s -o %t2.o
 ; RUN: wasm-ld --export-dynamic -o %t.wasm %t2.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
@@ -121,9 +121,7 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:         Body:            42010B
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:            - Type:            I32
-; CHECK-NEXT:              Count:           1
-; CHECK-NEXT:          Body:            4100280284888080002100410028028088808000118080808000001A2000118180808000001A0B
+; CHECK-NEXT:         Body:            28028088808000118080808000001A28028488808000118180808000001A0B
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41020B

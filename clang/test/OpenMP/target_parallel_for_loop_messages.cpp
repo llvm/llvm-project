@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wno-openmp-mapping -Wuninitialized
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5 %s -Wno-openmp-mapping -Wuninitialized
 
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wno-openmp-mapping -Wuninitialized
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5 %s -Wno-openmp-mapping -Wuninitialized
 
 class S {

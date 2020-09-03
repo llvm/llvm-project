@@ -18,7 +18,7 @@ def CC_HexagonStack: CallingConv<[
     CCAssignToStack<8,8>>
 ]>;
 
-def CC_Hexagon: CallingConv<[
+def CC_Hexagon_Legacy: CallingConv<[
   CCIfType<[i1,i8,i16],
     CCPromoteToType<i32>>,
   CCIfType<[f32],
@@ -28,6 +28,36 @@ def CC_Hexagon: CallingConv<[
 
   CCIfByVal<
     CCPassByVal<8,8>>,
+  CCIfArgIsVarArg<
+    CCDelegateTo<CC_HexagonStack>>,
+
+  // Pass split values in pairs, allocate odd register if necessary.
+  CCIfType<[i32],
+    CCIfSplit<
+      CCCustom<"CC_SkipOdd">>>,
+
+  CCIfType<[i32,v2i16,v4i8],
+    CCAssignToReg<[R0,R1,R2,R3,R4,R5]>>,
+  // Make sure to allocate any skipped 32-bit register, so it does not get
+  // allocated to a subsequent 32-bit value.
+  CCIfType<[i64,v2i32,v4i16,v8i8],
+    CCCustom<"CC_SkipOdd">>,
+  CCIfType<[i64,v2i32,v4i16,v8i8],
+    CCAssignToReg<[D0,D1,D2]>>,
+
+  CCDelegateTo<CC_HexagonStack>
+]>;
+
+def CC_Hexagon: CallingConv<[
+  CCIfType<[i1,i8,i16],
+    CCPromoteToType<i32>>,
+  CCIfType<[f32],
+    CCBitConvertToType<i32>>,
+  CCIfType<[f64],
+    CCBitConvertToType<i64>>,
+
+  CCIfByVal<
+    CCPassByVal<8,1>>,
   CCIfArgIsVarArg<
     CCDelegateTo<CC_HexagonStack>>,
 

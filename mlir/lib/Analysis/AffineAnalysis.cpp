@@ -1,6 +1,6 @@
 //===- AffineAnalysis.cpp - Affine structures analysis routines -----------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -12,17 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/AffineAnalysis.h"
-#include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/Utils.h"
-#include "mlir/Dialect/AffineOps/AffineOps.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExprVisitor.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/IR/Operation.h"
 #include "mlir/Support/MathExtras.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -36,8 +33,8 @@ using llvm::dbgs;
 /// Returns the sequence of AffineApplyOp Operations operation in
 /// 'affineApplyOps', which are reachable via a search starting from 'operands',
 /// and ending at operands which are not defined by AffineApplyOps.
-// TODO(andydavis) Add a method to AffineApplyOp which forward substitutes
-// the AffineApplyOp into any user AffineApplyOps.
+// TODO: Add a method to AffineApplyOp which forward substitutes the
+// AffineApplyOp into any user AffineApplyOps.
 void mlir::getReachableAffineApplyOps(
     ArrayRef<Value> operands, SmallVectorImpl<Operation *> &affineApplyOps) {
   struct State {
@@ -53,7 +50,7 @@ void mlir::getReachableAffineApplyOps(
 
   while (!worklist.empty()) {
     State &state = worklist.back();
-    auto *opInst = state.value->getDefiningOp();
+    auto *opInst = state.value.getDefiningOp();
     // Note: getDefiningOp will return nullptr if the operand is not an
     // Operation (i.e. block argument), which is a terminator for the search.
     if (!isa_and_nonnull<AffineApplyOp>(opInst)) {
@@ -84,10 +81,10 @@ void mlir::getReachableAffineApplyOps(
 // the loop IVs of the forOps appearing in that order. Any symbols founds in
 // the bound operands are added as symbols in the system. Returns failure for
 // the yet unimplemented cases.
-// TODO(andydavis,bondhugula) Handle non-unit steps through local variables or
-// stride information in FlatAffineConstraints. (For eg., by using iv - lb %
-// step = 0 and/or by introducing a method in FlatAffineConstraints
-// setExprStride(ArrayRef<int64_t> expr, int64_t stride)
+// TODO: Handle non-unit steps through local variables or stride information in
+// FlatAffineConstraints. (For eg., by using iv - lb % step = 0 and/or by
+// introducing a method in FlatAffineConstraints setExprStride(ArrayRef<int64_t>
+// expr, int64_t stride)
 LogicalResult mlir::getIndexSet(MutableArrayRef<AffineForOp> forOps,
                                 FlatAffineConstraints *domain) {
   SmallVector<Value, 4> indices;
@@ -107,16 +104,17 @@ LogicalResult mlir::getIndexSet(MutableArrayRef<AffineForOp> forOps,
 // potentially involving any Function symbols. The dimensional identifiers in
 // 'indexSet' correspond to the loops surrounding 'op' from outermost to
 // innermost.
-// TODO(andydavis) Add support to handle IfInsts surrounding 'op'.
+// TODO: Add support to handle IfInsts surrounding 'op'.
 static LogicalResult getInstIndexSet(Operation *op,
                                      FlatAffineConstraints *indexSet) {
-  // TODO(andydavis) Extend this to gather enclosing IfInsts and consider
+  // TODO: Extend this to gather enclosing IfInsts and consider
   // factoring it out into a utility function.
   SmallVector<AffineForOp, 4> loops;
   getLoopIVs(*op, &loops);
   return getIndexSet(loops, indexSet);
 }
 
+namespace {
 // ValuePositionMap manages the mapping from Values which represent dimension
 // and symbol identifiers from 'src' and 'dst' access functions to positions
 // in new space where some Values are kept separate (using addSrc/DstValue)
@@ -132,9 +130,9 @@ static LogicalResult getInstIndexSet(Operation *op,
 // an Value in multiple maps are provided (i.e. getSrcDimOrSymPos) to handle
 // the common case of resolving positions for all access function operands.
 //
-// TODO(andydavis) Generalize this: could take a template parameter for
-// the number of maps (3 in the current case), and lookups could take indices
-// of maps to check. So getSrcDimOrSymPos would be "getPos(value, {0, 2})".
+// TODO: Generalize this: could take a template parameter for the number of maps
+// (3 in the current case), and lookups could take indices of maps to check. So
+// getSrcDimOrSymPos would be "getPos(value, {0, 2})".
 class ValuePositionMap {
 public:
   void addSrcValue(Value value) {
@@ -195,6 +193,7 @@ private:
   DenseMap<Value, unsigned> dstDimPosMap;
   DenseMap<Value, unsigned> symbolPosMap;
 };
+} // namespace
 
 // Builds a map from Value to identifier position in a new merged identifier
 // list, which is the result of merging dim/symbol lists from src/dst
@@ -240,12 +239,11 @@ static void buildDimAndSymbolPositionMaps(
 
 // Sets up dependence constraints columns appropriately, in the format:
 // [src-dim-ids, dst-dim-ids, symbol-ids, local-ids, const_term]
-void initDependenceConstraints(const FlatAffineConstraints &srcDomain,
-                               const FlatAffineConstraints &dstDomain,
-                               const AffineValueMap &srcAccessMap,
-                               const AffineValueMap &dstAccessMap,
-                               const ValuePositionMap &valuePosMap,
-                               FlatAffineConstraints *dependenceConstraints) {
+static void initDependenceConstraints(
+    const FlatAffineConstraints &srcDomain,
+    const FlatAffineConstraints &dstDomain, const AffineValueMap &srcAccessMap,
+    const AffineValueMap &dstAccessMap, const ValuePositionMap &valuePosMap,
+    FlatAffineConstraints *dependenceConstraints) {
   // Calculate number of equalities/inequalities and columns required to
   // initialize FlatAffineConstraints for 'dependenceDomain'.
   unsigned numIneq =
@@ -455,7 +453,7 @@ addMemRefAccessConstraints(const AffineValueMap &srcAccessMap,
       auto symbol = operands[i];
       assert(isValidSymbol(symbol));
       // Check if the symbol is a constant.
-      if (auto cOp = dyn_cast_or_null<ConstantIndexOp>(symbol->getDefiningOp()))
+      if (auto cOp = symbol.getDefiningOp<ConstantIndexOp>())
         dependenceDomain->setIdToConstant(valuePosMap.getSymPos(symbol),
                                           cOp.getValue());
     }
@@ -662,10 +660,11 @@ static void computeDirectionVector(
 void MemRefAccess::getAccessMap(AffineValueMap *accessMap) const {
   // Get affine map from AffineLoad/Store.
   AffineMap map;
-  if (auto loadOp = dyn_cast<AffineLoadOp>(opInst))
+  if (auto loadOp = dyn_cast<AffineReadOpInterface>(opInst))
     map = loadOp.getAffineMap();
-  else if (auto storeOp = dyn_cast<AffineStoreOp>(opInst))
-    map = storeOp.getAffineMap();
+  else
+    map = cast<AffineWriteOpInterface>(opInst).getAffineMap();
+
   SmallVector<Value, 8> operands(indices.begin(), indices.end());
   fullyComposeAffineMapAndOperands(&map, &operands);
   map = simplifyAffineMap(map);
@@ -759,7 +758,7 @@ void MemRefAccess::getAccessMap(AffineValueMap *accessMap) const {
 //       0         0         0        -1        0     0     0     50   >= 0
 //
 //
-// TODO(andydavis) Support AffineExprs mod/floordiv/ceildiv.
+// TODO: Support AffineExprs mod/floordiv/ceildiv.
 DependenceResult mlir::checkMemrefAccessDependence(
     const MemRefAccess &srcAccess, const MemRefAccess &dstAccess,
     unsigned loopDepth, FlatAffineConstraints *dependenceConstraints,
@@ -773,9 +772,10 @@ DependenceResult mlir::checkMemrefAccessDependence(
   if (srcAccess.memref != dstAccess.memref)
     return DependenceResult::NoDependence;
 
-  // Return 'NoDependence' if one of these accesses is not an AffineStoreOp.
-  if (!allowRAR && !isa<AffineStoreOp>(srcAccess.opInst) &&
-      !isa<AffineStoreOp>(dstAccess.opInst))
+  // Return 'NoDependence' if one of these accesses is not an
+  // AffineWriteOpInterface.
+  if (!allowRAR && !isa<AffineWriteOpInterface>(srcAccess.opInst) &&
+      !isa<AffineWriteOpInterface>(dstAccess.opInst))
     return DependenceResult::NoDependence;
 
   // Get composed access function for 'srcAccess'.
@@ -859,7 +859,7 @@ void mlir::getDependenceComponents(
   // Collect all load and store ops in loop nest rooted at 'forOp'.
   SmallVector<Operation *, 8> loadAndStoreOpInsts;
   forOp.getOperation()->walk([&](Operation *opInst) {
-    if (isa<AffineLoadOp>(opInst) || isa<AffineStoreOp>(opInst))
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(opInst))
       loadAndStoreOpInsts.push_back(opInst);
   });
 
@@ -874,8 +874,8 @@ void mlir::getDependenceComponents(
 
         FlatAffineConstraints dependenceConstraints;
         SmallVector<DependenceComponent, 2> depComps;
-        // TODO(andydavis,bondhugula) Explore whether it would be profitable
-        // to pre-compute and store deps instead of repeatedly checking.
+        // TODO: Explore whether it would be profitable to pre-compute and store
+        // deps instead of repeatedly checking.
         DependenceResult result = checkMemrefAccessDependence(
             srcAccess, dstAccess, d, &dependenceConstraints, &depComps);
         if (hasDependence(result))

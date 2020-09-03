@@ -6,7 +6,8 @@
 # RUN: llvm-objdump -r %t | FileCheck %s
 
 # CHECK:      RELOCATION RECORDS FOR [.text]:
-# CHECK-NEXT: 0000000000000000 R_X86_64_32 bar
+# CHECK-NEXT: OFFSET           TYPE                     VALUE
+# CHECK-NEXT: 0000000000000000 R_X86_64_32              bar
 
 --- !ELF
 FileHeader:

@@ -757,6 +757,6 @@ void ento::registerMoveChecker(CheckerManager &mgr) {
       mgr.getAnalyzerOptions().getCheckerStringOption(chk, "WarnOn"), mgr);
 }
 
-bool ento::shouldRegisterMoveChecker(const LangOptions &LO) {
+bool ento::shouldRegisterMoveChecker(const CheckerManager &mgr) {
   return true;
 }

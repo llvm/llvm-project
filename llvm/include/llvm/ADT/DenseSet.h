@@ -66,6 +66,12 @@ public:
 
   explicit DenseSetImpl(unsigned InitialReserve = 0) : TheMap(InitialReserve) {}
 
+  template <typename InputIt>
+  DenseSetImpl(const InputIt &I, const InputIt &E)
+      : DenseSetImpl(PowerOf2Ceil(std::distance(I, E))) {
+    insert(I, E);
+  }
+
   DenseSetImpl(std::initializer_list<ValueT> Elems)
       : DenseSetImpl(PowerOf2Ceil(Elems.size())) {
     insert(Elems.begin(), Elems.end());

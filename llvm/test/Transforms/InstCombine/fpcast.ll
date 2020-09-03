@@ -32,7 +32,7 @@ define half @test3(float %a) {
 define half @fneg_fptrunc(float %a) {
 ; CHECK-LABEL: @fneg_fptrunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
-; CHECK-NEXT:    [[C:%.*]] = fsub half 0xH8000, [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = fneg half [[TMP1]]
 ; CHECK-NEXT:    ret half [[C]]
 ;
   %b = fsub float -0.0, %a
@@ -54,7 +54,7 @@ define half @unary_fneg_fptrunc(float %a) {
 define <2 x half> @fneg_fptrunc_vec_undef(<2 x float> %a) {
 ; CHECK-LABEL: @fneg_fptrunc_vec_undef(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x float> [[A:%.*]] to <2 x half>
-; CHECK-NEXT:    [[C:%.*]] = fsub <2 x half> <half 0xH8000, half 0xH8000>, [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = fneg <2 x half> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x half> [[C]]
 ;
   %b = fsub <2 x float> <float -0.0, float undef>, %a
@@ -76,7 +76,7 @@ define <2 x half> @unary_fneg_fptrunc_vec(<2 x float> %a) {
 define half @test4-fast(float %a) {
 ; CHECK-LABEL: @test4-fast(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
-; CHECK-NEXT:    [[C:%.*]] = fsub fast half 0xH8000, [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = fneg fast half [[TMP1]]
 ; CHECK-NEXT:    ret half [[C]]
 ;
   %b = fsub fast float -0.0, %a

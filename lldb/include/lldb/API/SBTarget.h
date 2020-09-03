@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBTarget_h_
-#define LLDB_SBTarget_h_
+#ifndef LLDB_API_SBTARGET_H
+#define LLDB_API_SBTARGET_H
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBAttachInfo.h"
@@ -93,6 +93,15 @@ public:
   /// \return
   ///     A platform object.
   lldb::SBPlatform GetPlatform();
+
+  /// Return the environment variables that would be used to launch a new
+  /// process.
+  ///
+  /// \return
+  ///     An lldb::SBEnvironment object which is a copy of the target's
+  ///     environment.
+
+  SBEnvironment GetEnvironment();
 
   /// Install any binaries that need to be installed.
   ///
@@ -865,4 +874,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_SBTarget_h_
+#endif // LLDB_API_SBTARGET_H

@@ -9,17 +9,26 @@
 #include "clang/Tooling/Transformer/SourceCode.h"
 #include "TestVisitor.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 using namespace clang;
 
+using llvm::Failed;
+using llvm::Succeeded;
 using llvm::ValueIs;
+using tooling::getAssociatedRange;
+using tooling::getExtendedRange;
 using tooling::getExtendedText;
 using tooling::getRangeForEdit;
 using tooling::getText;
+using tooling::maybeExtendRange;
+using tooling::validateEditRange;
 
 namespace {
 
@@ -47,12 +56,67 @@ MATCHER_P(EqualsRange, R, "") {
          arg.getBegin() == R.getBegin() && arg.getEnd() == R.getEnd();
 }
 
+MATCHER_P2(EqualsAnnotatedRange, Context, R, "") {
+  if (arg.getBegin().isMacroID()) {
+    *result_listener << "which starts in a macro";
+    return false;
+  }
+  if (arg.getEnd().isMacroID()) {
+    *result_listener << "which ends in a macro";
+    return false;
+  }
+
+  CharSourceRange Range = Lexer::getAsCharRange(
+      arg, Context->getSourceManager(), Context->getLangOpts());
+  unsigned Begin = Context->getSourceManager().getFileOffset(Range.getBegin());
+  unsigned End = Context->getSourceManager().getFileOffset(Range.getEnd());
+
+  *result_listener << "which is a " << (arg.isTokenRange() ? "Token" : "Char")
+                   << " range [" << Begin << "," << End << ")";
+  return Begin == R.Begin && End == R.End;
+}
+
 static ::testing::Matcher<CharSourceRange> AsRange(const SourceManager &SM,
                                                    llvm::Annotations::Range R) {
   return EqualsRange(CharSourceRange::getCharRange(
       SM.getLocForStartOfFile(SM.getMainFileID()).getLocWithOffset(R.Begin),
       SM.getLocForStartOfFile(SM.getMainFileID()).getLocWithOffset(R.End)));
 }
+
+// Base class for visitors that expect a single match corresponding to a
+// specific annotated range.
+template <typename T> class AnnotatedCodeVisitor : public TestVisitor<T> {
+protected:
+  int MatchCount = 0;
+  llvm::Annotations Code;
+
+public:
+  AnnotatedCodeVisitor() : Code("$r[[]]") {}
+  // Helper for tests of `getAssociatedRange`.
+  bool VisitDeclHelper(Decl *Decl) {
+    // Only consider explicit declarations.
+    if (Decl->isImplicit())
+      return true;
+
+    ++MatchCount;
+    EXPECT_THAT(getAssociatedRange(*Decl, *this->Context),
+                EqualsAnnotatedRange(this->Context, Code.range("r")))
+        << Code.code();
+    return true;
+  }
+
+  bool runOverAnnotated(llvm::StringRef AnnotatedCode,
+                        std::vector<std::string> Args = {}) {
+    Code = llvm::Annotations(AnnotatedCode);
+    MatchCount = 0;
+    Args.push_back("-std=c++11");
+    Args.push_back("-fno-delayed-template-parsing");
+    bool result = tooling::runToolOnCodeWithArgs(this->CreateTestAction(),
+                                                 Code.code(), Args);
+    EXPECT_EQ(MatchCount, 1) << AnnotatedCode;
+    return result;
+  }
+};
 
 TEST(SourceCodeTest, getText) {
   CallsVisitor Visitor;
@@ -120,6 +184,251 @@ TEST(SourceCodeTest, getExtendedText) {
   Visitor.runOver("bool foo() { if (foo()) return true; return false; }");
   Visitor.runOver("void foo() { int x; for (;; foo()) ++x; }");
   Visitor.runOver("int foo() { return foo() + 3; }");
+}
+
+TEST(SourceCodeTest, maybeExtendRange_TokenRange) {
+  struct ExtendTokenRangeVisitor
+      : AnnotatedCodeVisitor<ExtendTokenRangeVisitor> {
+    bool VisitCallExpr(CallExpr *CE) {
+      ++MatchCount;
+      EXPECT_THAT(getExtendedRange(*CE, tok::TokenKind::semi, *Context),
+                  EqualsAnnotatedRange(Context, Code.range("r")));
+      return true;
+    }
+  };
+
+  ExtendTokenRangeVisitor Visitor;
+  // Extends to include semicolon.
+  Visitor.runOverAnnotated("void f(int x, int y) { $r[[f(x, y);]] }");
+  // Does not extend to include semicolon.
+  Visitor.runOverAnnotated(
+      "int f(int x, int y) { if (0) return $r[[f(x, y)]] + 3; }");
+}
+
+TEST(SourceCodeTest, maybeExtendRange_CharRange) {
+  struct ExtendCharRangeVisitor : AnnotatedCodeVisitor<ExtendCharRangeVisitor> {
+    bool VisitCallExpr(CallExpr *CE) {
+      ++MatchCount;
+      CharSourceRange Call = Lexer::getAsCharRange(CE->getSourceRange(),
+                                                   Context->getSourceManager(),
+                                                   Context->getLangOpts());
+      EXPECT_THAT(maybeExtendRange(Call, tok::TokenKind::semi, *Context),
+                  EqualsAnnotatedRange(Context, Code.range("r")));
+      return true;
+    }
+  };
+  ExtendCharRangeVisitor Visitor;
+  // Extends to include semicolon.
+  Visitor.runOverAnnotated("void f(int x, int y) { $r[[f(x, y);]] }");
+  // Does not extend to include semicolon.
+  Visitor.runOverAnnotated(
+      "int f(int x, int y) { if (0) return $r[[f(x, y)]] + 3; }");
+}
+
+TEST(SourceCodeTest, getAssociatedRange) {
+  struct VarDeclsVisitor : AnnotatedCodeVisitor<VarDeclsVisitor> {
+    bool VisitVarDecl(VarDecl *Decl) { return VisitDeclHelper(Decl); }
+  };
+  VarDeclsVisitor Visitor;
+
+  // Includes semicolon.
+  Visitor.runOverAnnotated("$r[[int x = 4;]]");
+
+  // Includes newline and semicolon.
+  Visitor.runOverAnnotated("$r[[int x = 4;\n]]");
+
+  // Includes trailing comments.
+  Visitor.runOverAnnotated("$r[[int x = 4; // Comment\n]]");
+  Visitor.runOverAnnotated("$r[[int x = 4; /* Comment */\n]]");
+
+  // Does *not* include trailing comments when another entity appears between
+  // the decl and the comment.
+  Visitor.runOverAnnotated("$r[[int x = 4;]] class C {}; // Comment\n");
+
+  // Includes attributes.
+  Visitor.runOverAnnotated(R"cpp(
+      #define ATTR __attribute__((deprecated("message")))
+      $r[[ATTR
+      int x;]])cpp");
+
+  // Includes attributes and comments together.
+  Visitor.runOverAnnotated(R"cpp(
+      #define ATTR __attribute__((deprecated("message")))
+      $r[[ATTR
+      // Commment.
+      int x;]])cpp");
+}
+
+TEST(SourceCodeTest, getAssociatedRangeClasses) {
+  struct RecordDeclsVisitor : AnnotatedCodeVisitor<RecordDeclsVisitor> {
+    bool VisitRecordDecl(RecordDecl *Decl) { return VisitDeclHelper(Decl); }
+  };
+  RecordDeclsVisitor Visitor;
+
+  Visitor.runOverAnnotated("$r[[class A;]]");
+  Visitor.runOverAnnotated("$r[[class A {};]]");
+
+  // Includes leading template annotation.
+  Visitor.runOverAnnotated("$r[[template <typename T> class A;]]");
+  Visitor.runOverAnnotated("$r[[template <typename T> class A {};]]");
+}
+
+TEST(SourceCodeTest, getAssociatedRangeClassTemplateSpecializations) {
+  struct CXXRecordDeclsVisitor : AnnotatedCodeVisitor<CXXRecordDeclsVisitor> {
+    bool VisitCXXRecordDecl(CXXRecordDecl *Decl) {
+      return Decl->getTemplateSpecializationKind() !=
+                 TSK_ExplicitSpecialization ||
+             VisitDeclHelper(Decl);
+    }
+  };
+  CXXRecordDeclsVisitor Visitor;
+
+  Visitor.runOverAnnotated(R"cpp(
+      template <typename T> class A{};
+      $r[[template <> class A<int>;]])cpp");
+  Visitor.runOverAnnotated(R"cpp(
+      template <typename T> class A{};
+      $r[[template <> class A<int> {};]])cpp");
+}
+
+TEST(SourceCodeTest, getAssociatedRangeFunctions) {
+  struct FunctionDeclsVisitor : AnnotatedCodeVisitor<FunctionDeclsVisitor> {
+    bool VisitFunctionDecl(FunctionDecl *Decl) { return VisitDeclHelper(Decl); }
+  };
+  FunctionDeclsVisitor Visitor;
+
+  Visitor.runOverAnnotated("$r[[int f();]]");
+  Visitor.runOverAnnotated("$r[[int f() { return 0; }]]");
+  // Includes leading template annotation.
+  Visitor.runOverAnnotated("$r[[template <typename T> int f();]]");
+  Visitor.runOverAnnotated("$r[[template <typename T> int f() { return 0; }]]");
+}
+
+TEST(SourceCodeTest, getAssociatedRangeMemberTemplates) {
+  struct CXXMethodDeclsVisitor : AnnotatedCodeVisitor<CXXMethodDeclsVisitor> {
+    bool VisitCXXMethodDecl(CXXMethodDecl *Decl) {
+      // Only consider the definition of the template.
+      return !Decl->doesThisDeclarationHaveABody() || VisitDeclHelper(Decl);
+    }
+  };
+  CXXMethodDeclsVisitor Visitor;
+
+  Visitor.runOverAnnotated(R"cpp(
+      template <typename C>
+      struct A { template <typename T> int member(T v); };
+
+      $r[[template <typename C>
+      template  <typename T>
+      int A<C>::member(T v) { return 0; }]])cpp");
+}
+
+TEST(SourceCodeTest, getAssociatedRangeWithComments) {
+  struct VarDeclsVisitor : AnnotatedCodeVisitor<VarDeclsVisitor> {
+    bool VisitVarDecl(VarDecl *Decl) { return VisitDeclHelper(Decl); }
+  };
+
+  VarDeclsVisitor Visitor;
+  auto Visit = [&](llvm::StringRef AnnotatedCode) {
+    Visitor.runOverAnnotated(AnnotatedCode, {"-fparse-all-comments"});
+  };
+
+  // Includes leading comments.
+  Visit("$r[[// Comment.\nint x = 4;]]");
+  Visit("$r[[// Comment.\nint x = 4;\n]]");
+  Visit("$r[[/* Comment.*/\nint x = 4;\n]]");
+  // ... even if separated by (extra) horizontal whitespace.
+  Visit("$r[[/* Comment.*/  \nint x = 4;\n]]");
+
+  // Includes comments even in the presence of trailing whitespace.
+  Visit("$r[[// Comment.\nint x = 4;]]  ");
+
+  // Includes comments when the declaration is followed by the beginning or end
+  // of a compound statement.
+  Visit(R"cpp(
+  void foo() {
+    $r[[/* C */
+    int x = 4;
+  ]]};)cpp");
+  Visit(R"cpp(
+  void foo() {
+    $r[[/* C */
+    int x = 4;
+   ]]{ class Foo {}; }
+   })cpp");
+
+  // Includes comments inside macros (when decl is in the same macro).
+  Visit(R"cpp(
+      #define DECL /* Comment */ int x
+      $r[[DECL;]])cpp");
+
+  // Does not include comments when only the decl or the comment come from a
+  // macro.
+  // FIXME: Change code to allow this.
+  Visit(R"cpp(
+      #define DECL int x
+      // Comment
+      $r[[DECL;]])cpp");
+  Visit(R"cpp(
+      #define COMMENT /* Comment */
+      COMMENT
+      $r[[int x;]])cpp");
+
+  // Includes multi-line comments.
+  Visit(R"cpp(
+      $r[[/* multi
+       * line
+       * comment
+       */
+      int x;]])cpp");
+  Visit(R"cpp(
+      $r[[// multi
+      // line
+      // comment
+      int x;]])cpp");
+
+  // Does not include comments separated by multiple empty lines.
+  Visit("// Comment.\n\n\n$r[[int x = 4;\n]]");
+  Visit("/* Comment.*/\n\n\n$r[[int x = 4;\n]]");
+
+  // Does not include comments before a *series* of declarations.
+  Visit(R"cpp(
+      // Comment.
+      $r[[int x = 4;
+      ]]class foo {};)cpp");
+
+  // Does not include IfThisThenThat comments
+  Visit("// LINT.IfChange.\n$r[[int x = 4;]]");
+  Visit("// LINT.ThenChange.\n$r[[int x = 4;]]");
+
+  // Includes attributes.
+  Visit(R"cpp(
+      #define ATTR __attribute__((deprecated("message")))
+      $r[[ATTR
+      int x;]])cpp");
+
+  // Includes attributes and comments together.
+  Visit(R"cpp(
+      #define ATTR __attribute__((deprecated("message")))
+      $r[[ATTR
+      // Commment.
+      int x;]])cpp");
+}
+
+TEST(SourceCodeTest, getAssociatedRangeInvalidForPartialExpansions) {
+  struct FailingVarDeclsVisitor : TestVisitor<FailingVarDeclsVisitor> {
+    FailingVarDeclsVisitor() {}
+    bool VisitVarDecl(VarDecl *Decl) {
+      EXPECT_TRUE(getAssociatedRange(*Decl, *Context).isInvalid());
+      return true;
+    }
+  };
+
+  FailingVarDeclsVisitor Visitor;
+  // Should fail because it only includes a part of the expansion.
+  std::string Code = R"cpp(
+      #define DECL class foo { }; int x
+      DECL;)cpp";
+  Visitor.runOver(Code);
 }
 
 TEST(SourceCodeTest, EditRangeWithMacroExpansionsShouldSucceed) {
@@ -200,4 +509,116 @@ int a = FOO($r[[10]] + 10.0);
   Visitor.runOver(Code.code());
 }
 
+TEST(SourceCodeTest, EditRangeWithMacroExpansionsIsValid) {
+  // The call expression, whose range we are extracting, includes two macro
+  // expansions.
+  llvm::StringRef Code = R"cpp(
+#define M(a) a * 13
+int foo(int x, int y);
+int a = foo(M(1), M(2));
+)cpp";
+
+  CallsVisitor Visitor;
+
+  Visitor.OnCall = [](CallExpr *CE, ASTContext *Context) {
+    auto Range = CharSourceRange::getTokenRange(CE->getSourceRange());
+    EXPECT_THAT_ERROR(validateEditRange(Range, Context->getSourceManager()),
+                      Succeeded());
+  };
+  Visitor.runOver(Code);
+}
+
+TEST(SourceCodeTest, SpellingRangeOfMacroArgIsValid) {
+  llvm::StringRef Code = R"cpp(
+#define FOO(a) a + 7.0;
+int a = FOO(10);
+)cpp";
+
+  IntLitVisitor Visitor;
+  Visitor.OnIntLit = [](IntegerLiteral *Expr, ASTContext *Context) {
+    SourceLocation ArgLoc =
+        Context->getSourceManager().getSpellingLoc(Expr->getBeginLoc());
+    // The integer literal is a single token.
+    auto ArgRange = CharSourceRange::getTokenRange(ArgLoc);
+    EXPECT_THAT_ERROR(validateEditRange(ArgRange, Context->getSourceManager()),
+                      Succeeded());
+  };
+  Visitor.runOver(Code);
+}
+
+TEST(SourceCodeTest, InvalidEditRangeIsInvalid) {
+  llvm::StringRef Code = "int c = 10;";
+
+  // We use the visitor just to get a valid context.
+  IntLitVisitor Visitor;
+  Visitor.OnIntLit = [](IntegerLiteral *, ASTContext *Context) {
+    CharSourceRange Invalid;
+    EXPECT_THAT_ERROR(validateEditRange(Invalid, Context->getSourceManager()),
+                      Failed());
+  };
+  Visitor.runOver(Code);
+}
+
+TEST(SourceCodeTest, InvertedEditRangeIsInvalid) {
+  llvm::StringRef Code = R"cpp(
+int foo(int x);
+int a = foo(2);
+)cpp";
+
+  CallsVisitor Visitor;
+  Visitor.OnCall = [](CallExpr *Expr, ASTContext *Context) {
+    auto InvertedRange = CharSourceRange::getTokenRange(
+        SourceRange(Expr->getEndLoc(), Expr->getBeginLoc()));
+    EXPECT_THAT_ERROR(
+        validateEditRange(InvertedRange, Context->getSourceManager()),
+        Failed());
+  };
+  Visitor.runOver(Code);
+}
+
+TEST(SourceCodeTest, MacroArgIsInvalid) {
+  llvm::StringRef Code = R"cpp(
+#define FOO(a) a + 7.0;
+int a = FOO(10);
+)cpp";
+
+  IntLitVisitor Visitor;
+  Visitor.OnIntLit = [](IntegerLiteral *Expr, ASTContext *Context) {
+    auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
+    EXPECT_THAT_ERROR(validateEditRange(Range, Context->getSourceManager()),
+                      Failed());
+  };
+  Visitor.runOver(Code);
+}
+
+TEST(SourceCodeTest, EditWholeMacroExpansionIsInvalid) {
+  llvm::StringRef Code = R"cpp(
+#define FOO 10
+int a = FOO;
+)cpp";
+
+  IntLitVisitor Visitor;
+  Visitor.OnIntLit = [](IntegerLiteral *Expr, ASTContext *Context) {
+    auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
+    EXPECT_THAT_ERROR(validateEditRange(Range, Context->getSourceManager()),
+                      Failed());
+
+  };
+  Visitor.runOver(Code);
+}
+
+TEST(SourceCodeTest, EditPartialMacroExpansionIsInvalid) {
+  llvm::StringRef Code = R"cpp(
+#define BAR 10+
+int c = BAR 3.0;
+)cpp";
+
+  IntLitVisitor Visitor;
+  Visitor.OnIntLit = [](IntegerLiteral *Expr, ASTContext *Context) {
+    auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
+    EXPECT_THAT_ERROR(validateEditRange(Range, Context->getSourceManager()),
+                      Failed());
+  };
+  Visitor.runOver(Code);
+}
 } // end anonymous namespace

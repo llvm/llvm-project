@@ -69,9 +69,10 @@ class AsanTestReportDataCase(TestBase):
                 "access_size",
                 "access_type",
                 "address",
-                "pc",
                 "description",
-                "heap-use-after-free"])
+                "heap-use-after-free",
+                "pc",
+            ])
 
         output_lines = self.res.GetOutput().split('\n')
         json_line = '\n'.join(output_lines[2:])

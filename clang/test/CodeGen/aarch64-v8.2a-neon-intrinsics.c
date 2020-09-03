@@ -1086,32 +1086,40 @@ float16_t test_vfmsh_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
 }
 
 // CHECK-LABEL: test_vmul_lane_f16
-// CHECK: [[TMP0:%.*]] = shufflevector <4 x half> %b, <4 x half> %b, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-// CHECK: [[MUL:%.*]]  = fmul <4 x half> %a, [[TMP0]]
+// CHECK: [[TMP0:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
+// CHECK: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x half>
+// CHECK: [[LANE:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+// CHECK: [[MUL:%.*]] = fmul <4 x half> [[A:%.*]], [[LANE]]
 // CHECK: ret <4 x half> [[MUL]]
 float16x4_t test_vmul_lane_f16(float16x4_t a, float16x4_t b) {
   return vmul_lane_f16(a, b, 3);
 }
 
 // CHECK-LABEL: test_vmulq_lane_f16
-// CHECK: [[TMP0:%.*]] = shufflevector <4 x half> %b, <4 x half> %b, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-// CHECK: [[MUL:%.*]]  = fmul <8 x half> %a, [[TMP0]]
+// CHECK: [[TMP0:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
+// CHECK: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x half>
+// CHECK: [[LANE:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> [[TMP1]], <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+// CHECK: [[MUL:%.*]] = fmul <8 x half> [[A:%.*]], [[LANE]]
 // CHECK: ret <8 x half> [[MUL]]
 float16x8_t test_vmulq_lane_f16(float16x8_t a, float16x4_t b) {
-  return vmulq_lane_f16(a, b, 7);
+  return vmulq_lane_f16(a, b, 3);
 }
 
 // CHECK-LABEL: test_vmul_laneq_f16
-// CHECK: [[TMP0:%.*]] = shufflevector <8 x half> %b, <8 x half> %b, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
-// CHECK: [[MUL:%.*]]  = fmul <4 x half> %a, [[TMP0]]
+// CHECK: [[TMP0:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
+// CHECK: [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x half>
+// CHECK: [[LANE:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> [[TMP1]], <4 x i32> <i32 7, i32 7, i32 7, i32 7>
+// CHECK: [[MUL:%.*]] = fmul <4 x half> [[A:%.*]], [[LANE]]
 // CHECK: ret <4 x half> [[MUL]]
 float16x4_t test_vmul_laneq_f16(float16x4_t a, float16x8_t b) {
   return vmul_laneq_f16(a, b, 7);
 }
 
 // CHECK-LABEL: test_vmulq_laneq_f16
-// CHECK: [[TMP0:%.*]] = shufflevector <8 x half> %b, <8 x half> %b, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-// CHECK: [[MUL:%.*]]  = fmul <8 x half> %a, [[TMP0]]
+// CHECK: [[TMP0:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
+// CHECK: [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x half>
+// CHECK: [[LANE:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> [[TMP1]], <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+// CHECK: [[MUL:%.*]] = fmul <8 x half> [[A:%.*]], [[LANE]]
 // CHECK: ret <8 x half> [[MUL]]
 float16x8_t test_vmulq_laneq_f16(float16x8_t a, float16x8_t b) {
   return vmulq_laneq_f16(a, b, 7);
@@ -1165,33 +1173,49 @@ float16_t test_vmulh_laneq_f16(float16_t a, float16x8_t b) {
 }
 
 // CHECK-LABEL: test_vmulx_lane_f16
-// CHECK: [[TMP0:%.*]] = shufflevector <4 x half> %b, <4 x half> %b, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-// CHECK: [[MUL:%.*]] = call <4 x half> @llvm.aarch64.neon.fmulx.v4f16(<4 x half> %a, <4 x half> [[TMP0]])
-// CHECK: ret <4 x half> [[MUL]]
+// CHECK: [[TMP0:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
+// CHECK: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x half>
+// CHECK: [[LANE:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+// CHECK: [[TMP2:%.*]] = bitcast <4 x half> [[A:%.*]] to <8 x i8>
+// CHECK: [[TMP3:%.*]] = bitcast <4 x half> [[LANE]] to <8 x i8>
+// CHECK: [[VMULX2_I:%.*]] = call <4 x half> @llvm.aarch64.neon.fmulx.v4f16(<4 x half> [[A]], <4 x half> [[LANE]]) #4
+// CHECK: ret <4 x half> [[VMULX2_I]]
 float16x4_t test_vmulx_lane_f16(float16x4_t a, float16x4_t b) {
   return vmulx_lane_f16(a, b, 3);
 }
 
 // CHECK-LABEL: test_vmulxq_lane_f16
-// CHECK: [[TMP0:%.*]] = shufflevector <4 x half> %b, <4 x half> %b, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-// CHECK: [[MUL:%.*]] = call <8 x half> @llvm.aarch64.neon.fmulx.v8f16(<8 x half> %a, <8 x half> [[TMP0]])
-// CHECK: ret <8 x half> [[MUL]]
+// CHECK: [[TMP0:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
+// CHECK: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x half>
+// CHECK: [[LANE:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> [[TMP1]], <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+// CHECK: [[TMP2:%.*]] = bitcast <8 x half> [[A:%.*]] to <16 x i8>
+// CHECK: [[TMP3:%.*]] = bitcast <8 x half> [[LANE]] to <16 x i8>
+// CHECK: [[VMULX2_I:%.*]] = call <8 x half> @llvm.aarch64.neon.fmulx.v8f16(<8 x half> [[A]], <8 x half> [[LANE]]) #4
+// CHECK: ret <8 x half> [[VMULX2_I]]
 float16x8_t test_vmulxq_lane_f16(float16x8_t a, float16x4_t b) {
-  return vmulxq_lane_f16(a, b, 7);
+  return vmulxq_lane_f16(a, b, 3);
 }
 
 // CHECK-LABEL: test_vmulx_laneq_f16
-// CHECK: [[TMP0:%.*]] = shufflevector <8 x half> %b, <8 x half> %b, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
-// CHECK: [[MUL:%.*]]  = call <4 x half> @llvm.aarch64.neon.fmulx.v4f16(<4 x half> %a, <4 x half> [[TMP0]])
-// CHECK: ret <4 x half> [[MUL]]
+// CHECK: [[TMP0:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
+// CHECK: [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x half>
+// CHECK: [[LANE:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> [[TMP1]], <4 x i32> <i32 7, i32 7, i32 7, i32 7>
+// CHECK: [[TMP2:%.*]] = bitcast <4 x half> [[A:%.*]] to <8 x i8>
+// CHECK: [[TMP3:%.*]] = bitcast <4 x half> [[LANE]] to <8 x i8>
+// CHECK: [[VMULX2_I:%.*]] = call <4 x half> @llvm.aarch64.neon.fmulx.v4f16(<4 x half> [[A]], <4 x half> [[LANE]]) #4
+// CHECK: ret <4 x half> [[VMULX2_I]]
 float16x4_t test_vmulx_laneq_f16(float16x4_t a, float16x8_t b) {
   return vmulx_laneq_f16(a, b, 7);
 }
 
 // CHECK-LABEL: test_vmulxq_laneq_f16
-// CHECK: [[TMP0:%.*]] = shufflevector <8 x half> %b, <8 x half> %b, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-// CHECK: [[MUL:%.*]]  = call <8 x half> @llvm.aarch64.neon.fmulx.v8f16(<8 x half> %a, <8 x half> [[TMP0]])
-// CHECK: ret <8 x half> [[MUL]]
+// CHECK: [[TMP0:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
+// CHECK: [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x half>
+// CHECK: [[LANE:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> [[TMP1]], <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+// CHECK: [[TMP2:%.*]] = bitcast <8 x half> [[A:%.*]] to <16 x i8>
+// CHECK: [[TMP3:%.*]] = bitcast <8 x half> [[LANE]] to <16 x i8>
+// CHECK: [[VMULX2_I:%.*]] = call <8 x half> @llvm.aarch64.neon.fmulx.v8f16(<8 x half> [[A]], <8 x half> [[LANE]]) #4
+// CHECK: ret <8 x half> [[VMULX2_I]]
 float16x8_t test_vmulxq_laneq_f16(float16x8_t a, float16x8_t b) {
   return vmulxq_laneq_f16(a, b, 7);
 }
@@ -1473,17 +1497,21 @@ float16x8_t test_vdupq_n_f16(float16_t a) {
 }
 
 // CHECK-LABEL: test_vdup_lane_f16
-// CHECK:   [[SHFL:%.*]] = shufflevector <4 x half> %a, <4 x half> %a, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-// CHECK:   ret <4 x half> [[SHFL]]
+// CHECK:   [[TMP0:%.*]] = bitcast <4 x half> [[A:%.*]] to <8 x i8>
+// CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x half>
+// CHECK:   [[LANE:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+// CHECK:   ret <4 x half> [[LANE]]
 float16x4_t test_vdup_lane_f16(float16x4_t a) {
   return vdup_lane_f16(a, 3);
 }
 
 // CHECK-LABEL: test_vdupq_lane_f16
-// CHECK:   [[SHFL:%.*]] = shufflevector <4 x half> %a, <4 x half> %a, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-// CHECK:   ret <8 x half> [[SHFL]]
+// CHECK:   [[TMP0:%.*]] = bitcast <4 x half> [[A:%.*]] to <8 x i8>
+// CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x half>
+// CHECK:   [[LANE:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> [[TMP1]], <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+// CHECK:   ret <8 x half> [[LANE]]
 float16x8_t test_vdupq_lane_f16(float16x4_t a) {
-  return vdupq_lane_f16(a, 7);
+  return vdupq_lane_f16(a, 3);
 }
 
 // CHECK-LABEL: @test_vext_f16(

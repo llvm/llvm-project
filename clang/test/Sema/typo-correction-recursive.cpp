@@ -118,3 +118,15 @@ int testDeepAmbiguity() {
       asDeepASItGet().
       functionE();
 }
+
+struct Dog {
+  int age;  //expected-note{{'age' declared here}}
+  int size; //expected-note{{'size' declared here}}
+};
+
+int from_dog_years(int DogYears, int DogSize);
+int get_dog_years() {
+  struct Dog doggo;
+  return from_dog_years(doggo.agee,   //expected-error{{no member named 'agee' in 'Dog'; did you mean 'age'}}
+                        doggo.sizee); //expected-error{{no member named 'sizee' in 'Dog'; did you mean 'size'}}
+}

@@ -62,6 +62,8 @@ void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   UNIMPLEMENTED();
 }
 
+bool PlatformUnpoisonStacks() { return false; }
+
 // We can use a plain thread_local variable for TSD.
 static thread_local void *per_thread;
 

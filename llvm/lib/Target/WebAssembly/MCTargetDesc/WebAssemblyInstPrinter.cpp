@@ -54,17 +54,28 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   // Print any additional variadic operands.
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
   if (Desc.isVariadic()) {
-    if (Desc.getNumOperands() == 0 && MI->getNumOperands() > 0)
+    if ((Desc.getNumOperands() == 0 && MI->getNumOperands() > 0) ||
+        Desc.variadicOpsAreDefs())
       OS << "\t";
-    for (auto I = Desc.getNumOperands(), E = MI->getNumOperands(); I < E; ++I) {
-      // FIXME: For CALL_INDIRECT_VOID, don't print a leading comma, because
-      // we have an extra flags operand which is not currently printed, for
-      // compatiblity reasons.
-      if (I != 0 && ((MI->getOpcode() != WebAssembly::CALL_INDIRECT_VOID &&
-                      MI->getOpcode() != WebAssembly::CALL_INDIRECT_VOID_S) ||
-                     I != Desc.getNumOperands()))
+    unsigned Start = Desc.getNumOperands();
+    unsigned NumVariadicDefs = 0;
+    if (Desc.variadicOpsAreDefs()) {
+      // The number of variadic defs is encoded in an immediate by MCInstLower
+      NumVariadicDefs = MI->getOperand(0).getImm();
+      Start = 1;
+    }
+    bool NeedsComma = Desc.getNumOperands() > 0 && !Desc.variadicOpsAreDefs();
+    for (auto I = Start, E = MI->getNumOperands(); I < E; ++I) {
+      if (MI->getOpcode() == WebAssembly::CALL_INDIRECT &&
+          I - Start == NumVariadicDefs) {
+        // Skip type and flags arguments when printing for tests
+        ++I;
+        continue;
+      }
+      if (NeedsComma)
         OS << ", ";
-      printOperand(MI, I, OS);
+      printOperand(MI, I, OS, I - Start < NumVariadicDefs);
+      NeedsComma = true;
     }
   }
 
@@ -207,20 +218,21 @@ static std::string toString(const APFloat &FP) {
 }
 
 void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                          raw_ostream &O) {
+                                          raw_ostream &O, bool IsVariadicDef) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
+    const MCInstrDesc &Desc = MII.get(MI->getOpcode());
     unsigned WAReg = Op.getReg();
     if (int(WAReg) >= 0)
       printRegName(O, WAReg);
-    else if (OpNo >= MII.get(MI->getOpcode()).getNumDefs())
+    else if (OpNo >= Desc.getNumDefs() && !IsVariadicDef)
       O << "$pop" << WebAssemblyFunctionInfo::getWARegStackId(WAReg);
     else if (WAReg != WebAssemblyFunctionInfo::UnusedReg)
       O << "$push" << WebAssemblyFunctionInfo::getWARegStackId(WAReg);
     else
       O << "$drop";
     // Add a '=' suffix if this is a def.
-    if (OpNo < MII.get(MI->getOpcode()).getNumDefs())
+    if (OpNo < MII.get(MI->getOpcode()).getNumDefs() || IsVariadicDef)
       O << '=';
   } else if (Op.isImm()) {
     O << Op.getImm();

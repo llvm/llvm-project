@@ -15,8 +15,8 @@ class MultiwordCommandsTestCase(TestBase):
         self.expect("platform s", error=True,
                     substrs=["ambiguous command 'platform s'. Possible completions:",
                              "\tselect\n",
-                             "\tshell\n",
-                             "\tsettings\n"])
+                             "\tsettings\n",
+                             "\tshell\n"])
 
     @no_debug_info_test
     def test_empty_subcommand(self):

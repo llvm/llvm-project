@@ -91,7 +91,7 @@ def TestTarget : Target;
 // CHECK-LABEL: SubRegIndex sub0:
 // CHECK-LABEL: SubRegIndex sub1:
 // CHECK-LABEL: SubRegIndex sub2:
-// Check infered indexes:
+// Check inferred indexes:
 // CHECK: SubRegIndex ssub1_ssub2:
 // CHECK: SubRegIndex ssub3_ssub4:
 // CHECK: SubRegIndex ssub0_ssub1_ssub2_ssub3:

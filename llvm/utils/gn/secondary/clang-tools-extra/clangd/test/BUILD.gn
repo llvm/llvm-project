@@ -91,21 +91,22 @@ action("check-clangd") {
   }
   args = [
     "-sv",
+
+    # clangd doesn't put unittest configs in test/unit like every other project.
+    # Because of that, this needs to pass two folders here, while every other
+    # project only needs to pass CMAKE_CURRENT_BINARY_DIR.
     rebase_path(get_path_info(clangd_lit_site_cfg_file, "dir"), root_out_dir),
     rebase_path(get_path_info(clangd_lit_unit_site_cfg_file, "dir"),
                 root_out_dir),
   ]
-  outputs = [
-    "$target_gen_dir/run-lit",  # Non-existing, so that ninja runs it each time.
-  ]
+  outputs = [ "$target_gen_dir/run-lit" ]  # Non-existing, so that ninja runs it
+                                           # each time.
 
   # Since check-clangd is always dirty, //:default doesn't depend on it so
   # that it's not part of the default ninja target.  Hence, check-clangd
   # shouldn't have any deps except :test. so that the default target is sure to
   # build all the deps.
-  deps = [
-    ":test",
-  ]
+  deps = [ ":test" ]
   testonly = true
 
   pool = "//:console"

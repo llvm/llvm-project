@@ -239,7 +239,7 @@ namespace test8 {
   template <typename T>
   struct S {
     void f(T t) { // expected-note {{previous declaration is here}}
-      t = 42; // expected-error {{assigning to 'void *' from incompatible type 'int'}}
+      t = 42; // expected-error {{incompatible integer to pointer conversion assigning to 'void *' from 'int'}}
     }
   };
   template<> void __cdecl S<void*>::f(void*); // expected-error {{function declared 'cdecl' here was previously declared without calling convention}}

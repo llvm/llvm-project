@@ -60,10 +60,12 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -78,7 +80,7 @@ using namespace llvm;
 
 namespace {
 
-class MveEmitter;
+class EmitterBase;
 class Result;
 
 // -----------------------------------------------------------------------------
@@ -138,6 +140,7 @@ public:
   TypeKind typeKind() const { return TKind; }
   virtual ~Type() = default;
   virtual bool requiresFloat() const = 0;
+  virtual bool requiresMVE() const = 0;
   virtual unsigned sizeInBits() const = 0;
   virtual std::string cName() const = 0;
   virtual std::string llvmName() const {
@@ -177,6 +180,7 @@ public:
   VoidType() : Type(TypeKind::Void) {}
   unsigned sizeInBits() const override { return 0; }
   bool requiresFloat() const override { return false; }
+  bool requiresMVE() const override { return false; }
   std::string cName() const override { return "void"; }
 
   static bool classof(const Type *T) { return T->typeKind() == TypeKind::Void; }
@@ -192,6 +196,7 @@ public:
       : Type(TypeKind::Pointer), Pointee(Pointee), Const(Const) {}
   unsigned sizeInBits() const override { return 32; }
   bool requiresFloat() const override { return Pointee->requiresFloat(); }
+  bool requiresMVE() const override { return Pointee->requiresMVE(); }
   std::string cName() const override {
     std::string Name = Pointee->cName();
 
@@ -241,7 +246,7 @@ public:
                .Case("u", ScalarTypeKind::UnsignedInt)
                .Case("f", ScalarTypeKind::Float);
     Bits = Record->getValueAsInt("size");
-    NameOverride = Record->getValueAsString("nameOverride");
+    NameOverride = std::string(Record->getValueAsString("nameOverride"));
   }
   unsigned sizeInBits() const override { return Bits; }
   ScalarTypeKind kind() const { return Kind; }
@@ -272,6 +277,7 @@ public:
   }
   bool isInteger() const { return Kind != ScalarTypeKind::Float; }
   bool requiresFloat() const override { return !isInteger(); }
+  bool requiresMVE() const override { return false; }
   bool hasNonstandardName() const { return !NameOverride.empty(); }
 
   static bool classof(const Type *T) {
@@ -289,11 +295,12 @@ public:
   unsigned sizeInBits() const override { return Lanes * Element->sizeInBits(); }
   unsigned lanes() const { return Lanes; }
   bool requiresFloat() const override { return Element->requiresFloat(); }
+  bool requiresMVE() const override { return true; }
   std::string cNameBase() const override {
     return Element->cNameBase() + "x" + utostr(Lanes);
   }
   std::string llvmName() const override {
-    return "llvm::VectorType::get(" + Element->llvmName() + ", " +
+    return "llvm::FixedVectorType::get(" + Element->llvmName() + ", " +
            utostr(Lanes) + ")";
   }
 
@@ -315,6 +322,7 @@ public:
   }
   unsigned registers() const { return Registers; }
   bool requiresFloat() const override { return Element->requiresFloat(); }
+  bool requiresMVE() const override { return true; }
   std::string cNameBase() const override {
     return Element->cNameBase() + "x" + utostr(Registers);
   }
@@ -339,13 +347,14 @@ public:
   unsigned sizeInBits() const override { return 16; }
   std::string cNameBase() const override { return "mve_pred16"; }
   bool requiresFloat() const override { return false; };
+  bool requiresMVE() const override { return true; }
   std::string llvmName() const override {
     // Use <4 x i1> instead of <2 x i1> for two-lane vector types. See
     // the comment in llvm/lib/Target/ARM/ARMInstrMVE.td for further
     // explanation.
     unsigned ModifiedLanes = (Lanes == 2 ? 4 : Lanes);
 
-    return "llvm::VectorType::get(Builder.getInt1Ty(), " +
+    return "llvm::FixedVectorType::get(Builder.getInt1Ty(), " +
            utostr(ModifiedLanes) + ")";
   }
 
@@ -403,7 +412,7 @@ struct CodeGenParamAllocator {
   // We rely on the recursive code generation working identically in passes 1
   // and 2, so that the same list of calls to allocParam happen in the same
   // order. That guarantees that the parameter numbers recorded in pass 1 will
-  // match the entries in this vector that store what MveEmitter::EmitBuiltinCG
+  // match the entries in this vector that store what EmitterBase::EmitBuiltinCG
   // decided to do about each one in pass 2.
   std::vector<int> *ParamNumberMap = nullptr;
 
@@ -422,16 +431,16 @@ struct CodeGenParamAllocator {
       // variable we should be keeping things in.
       int MapValue = (*ParamNumberMap)[nparams++];
       if (MapValue < 0)
-        return Value;
+        return std::string(Value);
       ParamNumber = MapValue;
     }
 
     // If we've allocated a new parameter variable for the first time, store
     // its type and value to be retrieved after codegen.
     if (ParamTypes && ParamTypes->size() == ParamNumber)
-      ParamTypes->push_back(Type);
+      ParamTypes->push_back(std::string(Type));
     if (ParamValues && ParamValues->size() == ParamNumber)
-      ParamValues->push_back(Value);
+      ParamValues->push_back(std::string(Value));
 
     // Unimaginative naming scheme for parameter variables.
     return "Param" + utostr(ParamNumber);
@@ -500,8 +509,17 @@ public:
   }
 
   void setPredecessor(Ptr p) {
-    assert(!Predecessor);
-    Predecessor = p;
+    // If the user has nested one 'seq' node inside another, and this
+    // method is called on the return value of the inner 'seq' (i.e.
+    // the final item inside it), then we can't link _this_ node to p,
+    // because it already has a predecessor. Instead, walk the chain
+    // until we find the first item in the inner seq, and link that to
+    // p, so that nesting seqs has the obvious effect of linking
+    // everything together into one long sequential chain.
+    Result *r = this;
+    while (r->Predecessor)
+      r = r->Predecessor.get();
+    r->Predecessor = p;
   }
 
   // Each Result will be assigned a variable name in the output code, but not
@@ -514,7 +532,7 @@ public:
     VarNameUsed = true;
     return VarName;
   }
-  void setVarname(const StringRef s) { VarName = s; }
+  void setVarname(const StringRef s) { VarName = std::string(s); }
   bool varnameUsed() const { return VarNameUsed; }
 
   // Emit code to generate this result as a Value *.
@@ -713,14 +731,15 @@ public:
   std::vector<Ptr> Args;
   IRIntrinsicResult(StringRef IntrinsicID, std::vector<const Type *> ParamTypes,
                     std::vector<Ptr> Args)
-      : IntrinsicID(IntrinsicID), ParamTypes(ParamTypes), Args(Args) {}
+      : IntrinsicID(std::string(IntrinsicID)), ParamTypes(ParamTypes),
+        Args(Args) {}
   void genCode(raw_ostream &OS,
                CodeGenParamAllocator &ParamAlloc) const override {
     std::string IntNo = ParamAlloc.allocParam(
         "Intrinsic::ID", "Intrinsic::" + IntrinsicID);
     OS << "Builder.CreateCall(CGM.getIntrinsic(" << IntNo;
     if (!ParamTypes.empty()) {
-      OS << ", llvm::SmallVector<llvm::Type *, " << ParamTypes.size() << "> {";
+      OS << ", {";
       const char *Sep = "";
       for (auto T : ParamTypes) {
         OS << Sep << ParamAlloc.allocParam("llvm::Type *", T->llvmName());
@@ -728,7 +747,7 @@ public:
       }
       OS << "}";
     }
-    OS << "), llvm::SmallVector<Value *, " << Args.size() << "> {";
+    OS << "), {";
     const char *Sep = "";
     for (auto Arg : Args) {
       OS << Sep << Arg->asValue();
@@ -782,6 +801,9 @@ class ACLEIntrinsic {
   // shares with at least one other intrinsic.
   std::string ShortName, FullName;
 
+  // Name of the architecture extension, used in the Clang builtin name
+  StringRef BuiltinExtension;
+
   // A very small number of intrinsics _only_ have a polymorphic
   // variant (vuninitializedq taking an unevaluated argument).
   bool PolymorphicOnly;
@@ -789,6 +811,10 @@ class ACLEIntrinsic {
   // Another rarely-used flag indicating that the builtin doesn't
   // evaluate its argument(s) at all.
   bool NonEvaluating;
+
+  // True if the intrinsic needs only the C header part (no codegen, semantic
+  // checks, etc). Used for redeclaring MVE intrinsics in the arm_cde.h header.
+  bool HeaderOnly;
 
   const Type *ReturnType;
   std::vector<const Type *> ArgTypes;
@@ -812,6 +838,7 @@ class ACLEIntrinsic {
 public:
   const std::string &shortName() const { return ShortName; }
   const std::string &fullName() const { return FullName; }
+  StringRef builtinExtension() const { return BuiltinExtension; }
   const Type *returnType() const { return ReturnType; }
   const std::vector<const Type *> &argTypes() const { return ArgTypes; }
   bool requiresFloat() const {
@@ -822,13 +849,19 @@ public:
         return true;
     return false;
   }
+  bool requiresMVE() const {
+    return ReturnType->requiresMVE() ||
+           any_of(ArgTypes, [](const Type *T) { return T->requiresMVE(); });
+  }
   bool polymorphic() const { return ShortName != FullName; }
   bool polymorphicOnly() const { return PolymorphicOnly; }
   bool nonEvaluating() const { return NonEvaluating; }
+  bool headerOnly() const { return HeaderOnly; }
 
-  // External entry point for code generation, called from MveEmitter.
+  // External entry point for code generation, called from EmitterBase.
   void genCode(raw_ostream &OS, CodeGenParamAllocator &ParamAlloc,
                unsigned Pass) const {
+    assert(!headerOnly() && "Called genCode for header-only intrinsic");
     if (!hasCode()) {
       for (auto kv : CustomCodeGenArgs)
         OS << "  " << kv.first << " = " << kv.second << ";\n";
@@ -865,10 +898,11 @@ public:
     llvm::APInt i = iOrig.trunc(64);
     SmallString<40> s;
     i.toString(s, 16, true, true);
-    return s.str();
+    return std::string(s.str());
   }
 
   std::string genSema() const {
+    assert(!headerOnly() && "Called genSema for header-only intrinsic");
     std::vector<std::string> SemaChecks;
 
     for (const auto &kv : ImmediateArgs) {
@@ -882,57 +916,59 @@ public:
         break;
       case ImmediateArg::BoundsType::UInt:
         lo = 0;
-        hi = IA.i1;
+        hi = llvm::APInt::getMaxValue(IA.i1).zext(128);
         break;
-      }
-
-      llvm::APInt typelo, typehi;
-      unsigned Bits = IA.ArgType->sizeInBits();
-      if (cast<ScalarType>(IA.ArgType)->kind() == ScalarTypeKind::SignedInt) {
-        typelo = llvm::APInt::getSignedMinValue(Bits).sext(128);
-        typehi = llvm::APInt::getSignedMaxValue(Bits).sext(128);
-      } else {
-        typelo = llvm::APInt::getMinValue(Bits).zext(128);
-        typehi = llvm::APInt::getMaxValue(Bits).zext(128);
       }
 
       std::string Index = utostr(kv.first);
 
-      if (lo.sle(typelo) && hi.sge(typehi))
-        SemaChecks.push_back("SemaBuiltinConstantArg(TheCall, " + Index + ")");
-      else
+      // Emit a range check if the legal range of values for the
+      // immediate is smaller than the _possible_ range of values for
+      // its type.
+      unsigned ArgTypeBits = IA.ArgType->sizeInBits();
+      llvm::APInt ArgTypeRange = llvm::APInt::getMaxValue(ArgTypeBits).zext(128);
+      llvm::APInt ActualRange = (hi-lo).trunc(64).sext(128);
+      if (ActualRange.ult(ArgTypeRange))
         SemaChecks.push_back("SemaBuiltinConstantArgRange(TheCall, " + Index +
                              ", " + signedHexLiteral(lo) + ", " +
                              signedHexLiteral(hi) + ")");
 
       if (!IA.ExtraCheckType.empty()) {
         std::string Suffix;
-        if (!IA.ExtraCheckArgs.empty())
-          Suffix = (Twine(", ") + IA.ExtraCheckArgs).str();
+        if (!IA.ExtraCheckArgs.empty()) {
+          std::string tmp;
+          StringRef Arg = IA.ExtraCheckArgs;
+          if (Arg == "!lanesize") {
+            tmp = utostr(IA.ArgType->sizeInBits());
+            Arg = tmp;
+          }
+          Suffix = (Twine(", ") + Arg).str();
+        }
         SemaChecks.push_back((Twine("SemaBuiltinConstantArg") +
                               IA.ExtraCheckType + "(TheCall, " + Index +
                               Suffix + ")")
                                  .str());
       }
+
+      assert(!SemaChecks.empty());
     }
     if (SemaChecks.empty())
       return "";
-    return (Twine("  return ") +
-            join(std::begin(SemaChecks), std::end(SemaChecks),
-                 " ||\n         ") +
-            ";\n")
-        .str();
+    return join(std::begin(SemaChecks), std::end(SemaChecks),
+                " ||\n         ") +
+           ";\n";
   }
 
-  ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param);
+  ACLEIntrinsic(EmitterBase &ME, Record *R, const Type *Param);
 };
 
 // -----------------------------------------------------------------------------
 // The top-level class that holds all the state from analyzing the entire
 // Tablegen input.
 
-class MveEmitter {
-  // MveEmitter holds a collection of all the types we've instantiated.
+class EmitterBase {
+protected:
+  // EmitterBase holds a collection of all the types we've instantiated.
   VoidType Void;
   std::map<std::string, std::unique_ptr<ScalarType>> ScalarTypes;
   std::map<std::tuple<ScalarTypeKind, unsigned, unsigned>,
@@ -951,7 +987,7 @@ public:
   // maps stored in this object.
   const VoidType *getVoidType() { return &Void; }
   const ScalarType *getScalarType(StringRef Name) {
-    return ScalarTypes[Name].get();
+    return ScalarTypes[std::string(Name)].get();
   }
   const ScalarType *getScalarType(Record *R) {
     return getScalarType(R->getName());
@@ -1007,18 +1043,21 @@ public:
   Result::Ptr getCodeForArg(unsigned ArgNum, const Type *ArgType, bool Promote,
                             bool Immediate);
 
+  void GroupSemaChecks(std::map<std::string, std::set<std::string>> &Checks);
+
   // Constructor and top-level functions.
 
-  MveEmitter(RecordKeeper &Records);
+  EmitterBase(RecordKeeper &Records);
+  virtual ~EmitterBase() = default;
 
-  void EmitHeader(raw_ostream &OS);
-  void EmitBuiltinDef(raw_ostream &OS);
-  void EmitBuiltinSema(raw_ostream &OS);
+  virtual void EmitHeader(raw_ostream &OS) = 0;
+  virtual void EmitBuiltinDef(raw_ostream &OS) = 0;
+  virtual void EmitBuiltinSema(raw_ostream &OS) = 0;
   void EmitBuiltinCG(raw_ostream &OS);
   void EmitBuiltinAliases(raw_ostream &OS);
 };
 
-const Type *MveEmitter::getType(Init *I, const Type *Param) {
+const Type *EmitterBase::getType(Init *I, const Type *Param) {
   if (auto Dag = dyn_cast<DagInit>(I))
     return getType(Dag, Param);
   if (auto Def = dyn_cast<DefInit>(I))
@@ -1027,7 +1066,7 @@ const Type *MveEmitter::getType(Init *I, const Type *Param) {
   PrintFatalError("Could not convert this value into a type");
 }
 
-const Type *MveEmitter::getType(Record *R, const Type *Param) {
+const Type *EmitterBase::getType(Record *R, const Type *Param) {
   // Pass to a subfield of any wrapper records. We don't expect more than one
   // of these: immediate operands are used as plain numbers rather than as
   // llvm::Value, so it's meaningless to promote their type anyway.
@@ -1046,7 +1085,7 @@ const Type *MveEmitter::getType(Record *R, const Type *Param) {
   PrintFatalError(R->getLoc(), "Could not convert this record into a type");
 }
 
-const Type *MveEmitter::getType(DagInit *D, const Type *Param) {
+const Type *EmitterBase::getType(DagInit *D, const Type *Param) {
   // The meat of the getType system: types in the Tablegen are represented by a
   // dag whose operators select sub-cases of this function.
 
@@ -1099,21 +1138,23 @@ const Type *MveEmitter::getType(DagInit *D, const Type *Param) {
     PrintFatalError("Cannot find a type to satisfy CopyKind");
   }
 
-  if (Op->getName() == "CTO_DoubleSize") {
+  if (Op->isSubClassOf("CTO_ScaleSize")) {
     const ScalarType *STKind = cast<ScalarType>(getType(D->getArg(0), Param));
+    int Num = Op->getValueAsInt("num"), Denom = Op->getValueAsInt("denom");
+    unsigned DesiredSize = STKind->sizeInBits() * Num / Denom;
     for (const auto &kv : ScalarTypes) {
       const ScalarType *RT = kv.second.get();
-      if (RT->kind() == STKind->kind() && RT->sizeInBits() == 2*STKind->sizeInBits())
+      if (RT->kind() == STKind->kind() && RT->sizeInBits() == DesiredSize)
         return RT;
     }
-    PrintFatalError("Cannot find a type to satisfy DoubleSize");
+    PrintFatalError("Cannot find a type to satisfy ScaleSize");
   }
 
   PrintFatalError("Bad operator in type dag expression");
 }
 
-Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
-                                      const Type *Param) {
+Result::Ptr EmitterBase::getCodeForDag(DagInit *D, const Result::Scope &Scope,
+                                       const Type *Param) {
   Record *Op = cast<DefInit>(D->getOperator())->getDef();
 
   if (Op->getName() == "seq") {
@@ -1126,7 +1167,7 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
           getCodeForDag(cast<DagInit>(D->getArg(i)), SubScope, Param);
       StringRef ArgName = D->getArgNameStr(i);
       if (!ArgName.empty())
-        SubScope[ArgName] = V;
+        SubScope[std::string(ArgName)] = V;
       if (PrevV)
         V->setPredecessor(PrevV);
       PrevV = V;
@@ -1172,6 +1213,18 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
     } else {
       PrintFatalError("unsignedflag's argument should be a scalar type");
     }
+  } else if (Op->getName() == "bitsize") {
+    if (D->getNumArgs() != 1)
+      PrintFatalError("bitsize should have exactly one argument");
+    Record *TypeRec = cast<DefInit>(D->getArg(0))->getDef();
+    if (!TypeRec->isSubClassOf("Type"))
+      PrintFatalError("bitsize's argument should be a type");
+    if (const auto *ST = dyn_cast<ScalarType>(getType(TypeRec, Param))) {
+      return std::make_shared<IntLiteralResult>(getScalarType("u32"),
+                                                ST->sizeInBits());
+    } else {
+      PrintFatalError("bitsize's argument should be a scalar type");
+    }
   } else {
     std::vector<Result::Ptr> Args;
     for (unsigned i = 0, e = D->getNumArgs(); i < e; ++i)
@@ -1184,7 +1237,7 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
         if (sp->isSubClassOf("IRBuilderAddrParam")) {
           AddressArgs.insert(Index);
         } else if (sp->isSubClassOf("IRBuilderIntParam")) {
-          IntegerArgs[Index] = sp->getValueAsString("type");
+          IntegerArgs[Index] = std::string(sp->getValueAsString("type"));
         }
       }
       return std::make_shared<IRBuilderResult>(Op->getValueAsString("prefix"),
@@ -1193,7 +1246,7 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
       std::vector<const Type *> ParamTypes;
       for (Record *RParam : Op->getValueAsListOfDefs("params"))
         ParamTypes.push_back(getType(RParam, Param));
-      std::string IntName = Op->getValueAsString("intname");
+      std::string IntName = std::string(Op->getValueAsString("intname"));
       if (Op->getValueAsBit("appendKind"))
         IntName += "_" + toLetter(cast<ScalarType>(Param)->kind());
       return std::make_shared<IRIntrinsicResult>(IntName, ParamTypes, Args);
@@ -1203,9 +1256,9 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
   }
 }
 
-Result::Ptr MveEmitter::getCodeForDagArg(DagInit *D, unsigned ArgNum,
-                                         const Result::Scope &Scope,
-                                         const Type *Param) {
+Result::Ptr EmitterBase::getCodeForDagArg(DagInit *D, unsigned ArgNum,
+                                          const Result::Scope &Scope,
+                                          const Type *Param) {
   Init *Arg = D->getArg(ArgNum);
   StringRef Name = D->getArgNameStr(ArgNum);
 
@@ -1213,7 +1266,7 @@ Result::Ptr MveEmitter::getCodeForDagArg(DagInit *D, unsigned ArgNum,
     if (!isa<UnsetInit>(Arg))
       PrintFatalError(
           "dag operator argument should not have both a value and a name");
-    auto it = Scope.find(Name);
+    auto it = Scope.find(std::string(Name));
     if (it == Scope.end())
       PrintFatalError("unrecognized variable name '" + Name + "'");
     return it->second;
@@ -1237,8 +1290,8 @@ Result::Ptr MveEmitter::getCodeForDagArg(DagInit *D, unsigned ArgNum,
   PrintFatalError("bad dag argument type for code generation");
 }
 
-Result::Ptr MveEmitter::getCodeForArg(unsigned ArgNum, const Type *ArgType,
-                                      bool Promote, bool Immediate) {
+Result::Ptr EmitterBase::getCodeForArg(unsigned ArgNum, const Type *ArgType,
+                                       bool Promote, bool Immediate) {
   Result::Ptr V = std::make_shared<BuiltinArgResult>(
       ArgNum, isa<PointerType>(ArgType), Immediate);
 
@@ -1257,7 +1310,7 @@ Result::Ptr MveEmitter::getCodeForArg(unsigned ArgNum, const Type *ArgType,
   return V;
 }
 
-ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
+ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, Record *R, const Type *Param)
     : ReturnType(ME.getType(R->getValueAsDef("ret"), Param)) {
   // Derive the intrinsic's full name, by taking the name of the
   // Tablegen record (or override) and appending the suffix from its
@@ -1268,7 +1321,8 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
       (R->isSubClassOf("NameOverride") ? R->getValueAsString("basename")
                                        : R->getName());
   StringRef overrideLetter = R->getValueAsString("overrideKindLetter");
-  FullName = (Twine(BaseName) + Param->acleSuffix(overrideLetter)).str();
+  FullName =
+      (Twine(BaseName) + Param->acleSuffix(std::string(overrideLetter))).str();
 
   // Derive the intrinsic's polymorphic name, by removing components from the
   // full name as specified by its 'pnt' member ('polymorphic name type'),
@@ -1295,8 +1349,11 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
   }
   ShortName = join(std::begin(NameParts), std::end(NameParts), "_");
 
+  BuiltinExtension = R->getValueAsString("builtinExtension");
+
   PolymorphicOnly = R->getValueAsBit("polymorphicOnly");
   NonEvaluating = R->getValueAsBit("nonEvaluating");
+  HeaderOnly = R->getValueAsBit("headerOnly");
 
   // Process the intrinsic's argument list.
   DagInit *ArgsDag = R->getValueAsDag("args");
@@ -1338,7 +1395,8 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
         } else if (Bounds->isSubClassOf("IB_EltBit")) {
           IA.boundsType = ImmediateArg::BoundsType::ExplicitRange;
           IA.i1 = Bounds->getValueAsInt("base");
-          IA.i2 = IA.i1 + Param->sizeInBits() - 1;
+          const Type *T = ME.getType(Bounds->getValueAsDef("type"), Param);
+          IA.i2 = IA.i1 + T->sizeInBits() - 1;
         } else {
           PrintFatalError("unrecognised ImmediateBounds subclass");
         }
@@ -1357,7 +1415,8 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
     // into the variable-name scope that the code gen will refer to.
     StringRef ArgName = ArgsDag->getArgNameStr(i);
     if (!ArgName.empty())
-      Scope[ArgName] = ME.getCodeForArg(i, ArgType, Promote, Immediate);
+      Scope[std::string(ArgName)] =
+          ME.getCodeForArg(i, ArgType, Promote, Immediate);
   }
 
   // Finally, go through the codegen dag and translate it into a Result object
@@ -1375,9 +1434,9 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
       if (Name.empty()) {
         PrintFatalError("Operands to CustomCodegen should have names");
       } else if (auto *II = dyn_cast<IntInit>(CodeDag->getArg(i))) {
-        CustomCodeGenArgs[Name] = itostr(II->getValue());
+        CustomCodeGenArgs[std::string(Name)] = itostr(II->getValue());
       } else if (auto *SI = dyn_cast<StringInit>(CodeDag->getArg(i))) {
-        CustomCodeGenArgs[Name] = SI->getValue();
+        CustomCodeGenArgs[std::string(Name)] = std::string(SI->getValue());
       } else {
         PrintFatalError("Operands to CustomCodegen should be integers");
       }
@@ -1387,8 +1446,8 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
   }
 }
 
-MveEmitter::MveEmitter(RecordKeeper &Records) {
-  // Construct the whole MveEmitter.
+EmitterBase::EmitterBase(RecordKeeper &Records) {
+  // Construct the whole EmitterBase.
 
   // First, look up all the instances of PrimitiveType. This gives us the list
   // of vector typedefs we have to put in arm_mve.h, and also allows us to
@@ -1396,7 +1455,7 @@ MveEmitter::MveEmitter(RecordKeeper &Records) {
   // use it for operations such as 'find the unsigned version of this signed
   // integer type'.
   for (Record *R : Records.getAllDerivedDefinitions("PrimitiveType"))
-    ScalarTypes[R->getName()] = std::make_unique<ScalarType>(R);
+    ScalarTypes[std::string(R->getName())] = std::make_unique<ScalarType>(R);
 
   // Now go through the instances of Intrinsic, and for each one, iterate
   // through its list of type parameters making an ACLEIntrinsic for each one.
@@ -1428,234 +1487,18 @@ public:
       : string_holder(), raw_string_ostream(S) {}
 };
 
-void MveEmitter::EmitHeader(raw_ostream &OS) {
-  // Accumulate pieces of the header file that will be enabled under various
-  // different combinations of #ifdef. The index into parts[] is made up of
-  // the following bit flags.
-  constexpr unsigned Float = 1;
-  constexpr unsigned UseUserNamespace = 2;
-
-  constexpr unsigned NumParts = 4;
-  raw_self_contained_string_ostream parts[NumParts];
-
-  // Write typedefs for all the required vector types, and a few scalar
-  // types that don't already have the name we want them to have.
-
-  parts[0] << "typedef uint16_t mve_pred16_t;\n";
-  parts[Float] << "typedef __fp16 float16_t;\n"
-                  "typedef float float32_t;\n";
-  for (const auto &kv : ScalarTypes) {
-    const ScalarType *ST = kv.second.get();
-    if (ST->hasNonstandardName())
-      continue;
-    raw_ostream &OS = parts[ST->requiresFloat() ? Float : 0];
-    const VectorType *VT = getVectorType(ST);
-
-    OS << "typedef __attribute__((neon_vector_type(" << VT->lanes() << "))) "
-       << ST->cName() << " " << VT->cName() << ";\n";
-
-    // Every vector type also comes with a pair of multi-vector types for
-    // the VLD2 and VLD4 instructions.
-    for (unsigned n = 2; n <= 4; n += 2) {
-      const MultiVectorType *MT = getMultiVectorType(n, VT);
-      OS << "typedef struct { " << VT->cName() << " val[" << n << "]; } "
-         << MT->cName() << ";\n";
-    }
-  }
-  parts[0] << "\n";
-  parts[Float] << "\n";
-
-  // Write declarations for all the intrinsics.
-
-  for (const auto &kv : ACLEIntrinsics) {
-    const ACLEIntrinsic &Int = *kv.second;
-
-    // We generate each intrinsic twice, under its full unambiguous
-    // name and its shorter polymorphic name (if the latter exists).
-    for (bool Polymorphic : {false, true}) {
-      if (Polymorphic && !Int.polymorphic())
-        continue;
-      if (!Polymorphic && Int.polymorphicOnly())
-        continue;
-
-      // We also generate each intrinsic under a name like __arm_vfooq
-      // (which is in C language implementation namespace, so it's
-      // safe to define in any conforming user program) and a shorter
-      // one like vfooq (which is in user namespace, so a user might
-      // reasonably have used it for something already). If so, they
-      // can #define __ARM_MVE_PRESERVE_USER_NAMESPACE before
-      // including the header, which will suppress the shorter names
-      // and leave only the implementation-namespace ones. Then they
-      // have to write __arm_vfooq everywhere, of course.
-
-      for (bool UserNamespace : {false, true}) {
-        raw_ostream &OS = parts[(Int.requiresFloat() ? Float : 0) |
-                                (UserNamespace ? UseUserNamespace : 0)];
-
-        // Make the name of the function in this declaration.
-
-        std::string FunctionName =
-            Polymorphic ? Int.shortName() : Int.fullName();
-        if (!UserNamespace)
-          FunctionName = "__arm_" + FunctionName;
-
-        // Make strings for the types involved in the function's
-        // prototype.
-
-        std::string RetTypeName = Int.returnType()->cName();
-        if (!StringRef(RetTypeName).endswith("*"))
-          RetTypeName += " ";
-
-        std::vector<std::string> ArgTypeNames;
-        for (const Type *ArgTypePtr : Int.argTypes())
-          ArgTypeNames.push_back(ArgTypePtr->cName());
-        std::string ArgTypesString =
-            join(std::begin(ArgTypeNames), std::end(ArgTypeNames), ", ");
-
-        // Emit the actual declaration. All these functions are
-        // declared 'static inline' without a body, which is fine
-        // provided clang recognizes them as builtins, and has the
-        // effect that this type signature is used in place of the one
-        // that Builtins.def didn't provide. That's how we can get
-        // structure types that weren't defined until this header was
-        // included to be part of the type signature of a builtin that
-        // was known to clang already.
-        //
-        // The declarations use __attribute__(__clang_arm_mve_alias),
-        // so that each function declared will be recognized as the
-        // appropriate MVE builtin in spite of its user-facing name.
-        //
-        // (That's better than making them all wrapper functions,
-        // partly because it avoids any compiler error message citing
-        // the wrapper function definition instead of the user's code,
-        // and mostly because some MVE intrinsics have arguments
-        // required to be compile-time constants, and that property
-        // can't be propagated through a wrapper function. It can be
-        // propagated through a macro, but macros can't be overloaded
-        // on argument types very easily - you have to use _Generic,
-        // which makes error messages very confusing when the user
-        // gets it wrong.)
-        //
-        // Finally, the polymorphic versions of the intrinsics are
-        // also defined with __attribute__(overloadable), so that when
-        // the same name is defined with several type signatures, the
-        // right thing happens. Each one of the overloaded
-        // declarations is given a different builtin id, which
-        // has exactly the effect we want: first clang resolves the
-        // overload to the right function, then it knows which builtin
-        // it's referring to, and then the Sema checking for that
-        // builtin can check further things like the constant
-        // arguments.
-        //
-        // One more subtlety is the newline just before the return
-        // type name. That's a cosmetic tweak to make the error
-        // messages legible if the user gets the types wrong in a call
-        // to a polymorphic function: this way, clang will print just
-        // the _final_ line of each declaration in the header, to show
-        // the type signatures that would have been legal. So all the
-        // confusing machinery with __attribute__ is left out of the
-        // error message, and the user sees something that's more or
-        // less self-documenting: "here's a list of actually readable
-        // type signatures for vfooq(), and here's why each one didn't
-        // match your call".
-
-        OS << "static __inline__ __attribute__(("
-           << (Polymorphic ? "overloadable, " : "")
-           << "__clang_arm_mve_alias(__builtin_arm_mve_" << Int.fullName()
-           << ")))\n"
-           << RetTypeName << FunctionName << "(" << ArgTypesString << ");\n";
-      }
-    }
-  }
-  for (auto &part : parts)
-    part << "\n";
-
-  // Now we've finished accumulating bits and pieces into the parts[] array.
-  // Put it all together to write the final output file.
-
-  OS << "/*===---- arm_mve.h - ARM MVE intrinsics "
-        "-----------------------------------===\n"
-        " *\n"
-        " *\n"
-        " * Part of the LLVM Project, under the Apache License v2.0 with LLVM "
-        "Exceptions.\n"
-        " * See https://llvm.org/LICENSE.txt for license information.\n"
-        " * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception\n"
-        " *\n"
-        " *===-------------------------------------------------------------"
-        "----"
-        "------===\n"
-        " */\n"
-        "\n"
-        "#ifndef __ARM_MVE_H\n"
-        "#define __ARM_MVE_H\n"
-        "\n"
-        "#if !__ARM_FEATURE_MVE\n"
-        "#error \"MVE support not enabled\"\n"
-        "#endif\n"
-        "\n"
-        "#include <stdint.h>\n"
-        "\n";
-
-  for (size_t i = 0; i < NumParts; ++i) {
-    std::vector<std::string> conditions;
-    if (i & Float)
-      conditions.push_back("(__ARM_FEATURE_MVE & 2)");
-    if (i & UseUserNamespace)
-      conditions.push_back("(!defined __ARM_MVE_PRESERVE_USER_NAMESPACE)");
-
-    std::string condition =
-        join(std::begin(conditions), std::end(conditions), " && ");
-    if (!condition.empty())
-      OS << "#if " << condition << "\n\n";
-    OS << parts[i].str();
-    if (!condition.empty())
-      OS << "#endif /* " << condition << " */\n\n";
-  }
-
-  OS << "#endif /* __ARM_MVE_H */\n";
-}
-
-void MveEmitter::EmitBuiltinDef(raw_ostream &OS) {
-  for (const auto &kv : ACLEIntrinsics) {
-    const ACLEIntrinsic &Int = *kv.second;
-    OS << "TARGET_HEADER_BUILTIN(__builtin_arm_mve_" << Int.fullName()
-       << ", \"\", \"n\", \"arm_mve.h\", ALL_LANGUAGES, \"\")\n";
-  }
-
-  std::set<std::string> ShortNamesSeen;
-
-  for (const auto &kv : ACLEIntrinsics) {
-    const ACLEIntrinsic &Int = *kv.second;
-    if (Int.polymorphic()) {
-      StringRef Name = Int.shortName();
-      if (ShortNamesSeen.find(Name) == ShortNamesSeen.end()) {
-        OS << "BUILTIN(__builtin_arm_mve_" << Name << ", \"vi.\", \"nt";
-        if (Int.nonEvaluating())
-          OS << "u"; // indicate that this builtin doesn't evaluate its args
-        OS << "\")\n";
-        ShortNamesSeen.insert(Name);
-      }
-    }
-  }
-}
-
-void MveEmitter::EmitBuiltinSema(raw_ostream &OS) {
-  std::map<std::string, std::set<std::string>> Checks;
-
-  for (const auto &kv : ACLEIntrinsics) {
-    const ACLEIntrinsic &Int = *kv.second;
-    std::string Check = Int.genSema();
-    if (!Check.empty())
-      Checks[Check].insert(Int.fullName());
-  }
-
-  for (const auto &kv : Checks) {
-    for (StringRef Name : kv.second)
-      OS << "case ARM::BI__builtin_arm_mve_" << Name << ":\n";
-    OS << kv.first;
-  }
-}
+const char LLVMLicenseHeader[] =
+    " *\n"
+    " *\n"
+    " * Part of the LLVM Project, under the Apache License v2.0 with LLVM"
+    " Exceptions.\n"
+    " * See https://llvm.org/LICENSE.txt for license information.\n"
+    " * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception\n"
+    " *\n"
+    " *===-----------------------------------------------------------------"
+    "------===\n"
+    " */\n"
+    "\n";
 
 // Machinery for the grouping of intrinsics by similar codegen.
 //
@@ -1701,7 +1544,7 @@ struct MergeableGroup {
   }
 };
 
-void MveEmitter::EmitBuiltinCG(raw_ostream &OS) {
+void EmitterBase::EmitBuiltinCG(raw_ostream &OS) {
   // Pass 1: generate code for all the intrinsics as if every type or constant
   // that can possibly be abstracted out into a parameter variable will be.
   // This identifies the sets of intrinsics we'll group together into a single
@@ -1711,6 +1554,8 @@ void MveEmitter::EmitBuiltinCG(raw_ostream &OS) {
 
   for (const auto &kv : ACLEIntrinsics) {
     const ACLEIntrinsic &Int = *kv.second;
+    if (Int.headerOnly())
+      continue;
 
     MergeableGroup MG;
     OutputIntrinsic OI;
@@ -1807,7 +1652,9 @@ void MveEmitter::EmitBuiltinCG(raw_ostream &OS) {
     // brace.
     const char *prefix = "";
     for (const auto &OI : kv.second) {
-      OS << prefix << "case ARM::BI__builtin_arm_mve_" << OI.Name << ":";
+      OS << prefix << "case ARM::BI__builtin_arm_" << OI.Int->builtinExtension()
+         << "_" << OI.Name << ":";
+
       prefix = "\n";
     }
     OS << " {\n";
@@ -1826,7 +1673,8 @@ void MveEmitter::EmitBuiltinCG(raw_ostream &OS) {
       // individual intrinsic's values.
       OS << "  switch (BuiltinID) {\n";
       for (const auto &OI : kv.second) {
-        OS << "  case ARM::BI__builtin_arm_mve_" << OI.Name << ":\n";
+        OS << "  case ARM::BI__builtin_arm_" << OI.Int->builtinExtension()
+           << "_" << OI.Name << ":\n";
         for (size_t i = 0, e = MG.ParamTypes.size(); i < e; ++i)
           OS << "    Param" << utostr(i) << " = " << OI.ParamValues[i] << ";\n";
         OS << "    break;\n";
@@ -1841,20 +1689,478 @@ void MveEmitter::EmitBuiltinCG(raw_ostream &OS) {
   }
 }
 
-void MveEmitter::EmitBuiltinAliases(raw_ostream &OS) {
+void EmitterBase::EmitBuiltinAliases(raw_ostream &OS) {
+  // Build a sorted table of:
+  // - intrinsic id number
+  // - full name
+  // - polymorphic name or -1
+  StringToOffsetTable StringTable;
+  OS << "static const IntrinToName MapData[] = {\n";
   for (const auto &kv : ACLEIntrinsics) {
     const ACLEIntrinsic &Int = *kv.second;
-    OS << "case ARM::BI__builtin_arm_mve_" << Int.fullName() << ":\n"
-       << "  return AliasName == \"" << Int.fullName() << "\"";
-    if (Int.polymorphic())
-      OS << " || AliasName == \"" << Int.shortName() << "\"";
-    OS << ";\n";
+    if (Int.headerOnly())
+      continue;
+    int32_t ShortNameOffset =
+        Int.polymorphic() ? StringTable.GetOrAddStringOffset(Int.shortName())
+                          : -1;
+    OS << "  { ARM::BI__builtin_arm_" << Int.builtinExtension() << "_"
+       << Int.fullName() << ", "
+       << StringTable.GetOrAddStringOffset(Int.fullName()) << ", "
+       << ShortNameOffset << "},\n";
+  }
+  OS << "};\n\n";
+
+  OS << "ArrayRef<IntrinToName> Map(MapData);\n\n";
+
+  OS << "static const char IntrinNames[] = {\n";
+  StringTable.EmitString(OS);
+  OS << "};\n\n";
+}
+
+void EmitterBase::GroupSemaChecks(
+    std::map<std::string, std::set<std::string>> &Checks) {
+  for (const auto &kv : ACLEIntrinsics) {
+    const ACLEIntrinsic &Int = *kv.second;
+    if (Int.headerOnly())
+      continue;
+    std::string Check = Int.genSema();
+    if (!Check.empty())
+      Checks[Check].insert(Int.fullName());
+  }
+}
+
+// -----------------------------------------------------------------------------
+// The class used for generating arm_mve.h and related Clang bits
+//
+
+class MveEmitter : public EmitterBase {
+public:
+  MveEmitter(RecordKeeper &Records) : EmitterBase(Records){};
+  void EmitHeader(raw_ostream &OS) override;
+  void EmitBuiltinDef(raw_ostream &OS) override;
+  void EmitBuiltinSema(raw_ostream &OS) override;
+};
+
+void MveEmitter::EmitHeader(raw_ostream &OS) {
+  // Accumulate pieces of the header file that will be enabled under various
+  // different combinations of #ifdef. The index into parts[] is made up of
+  // the following bit flags.
+  constexpr unsigned Float = 1;
+  constexpr unsigned UseUserNamespace = 2;
+
+  constexpr unsigned NumParts = 4;
+  raw_self_contained_string_ostream parts[NumParts];
+
+  // Write typedefs for all the required vector types, and a few scalar
+  // types that don't already have the name we want them to have.
+
+  parts[0] << "typedef uint16_t mve_pred16_t;\n";
+  parts[Float] << "typedef __fp16 float16_t;\n"
+                  "typedef float float32_t;\n";
+  for (const auto &kv : ScalarTypes) {
+    const ScalarType *ST = kv.second.get();
+    if (ST->hasNonstandardName())
+      continue;
+    raw_ostream &OS = parts[ST->requiresFloat() ? Float : 0];
+    const VectorType *VT = getVectorType(ST);
+
+    OS << "typedef __attribute__((__neon_vector_type__(" << VT->lanes()
+       << "), __clang_arm_mve_strict_polymorphism)) " << ST->cName() << " "
+       << VT->cName() << ";\n";
+
+    // Every vector type also comes with a pair of multi-vector types for
+    // the VLD2 and VLD4 instructions.
+    for (unsigned n = 2; n <= 4; n += 2) {
+      const MultiVectorType *MT = getMultiVectorType(n, VT);
+      OS << "typedef struct { " << VT->cName() << " val[" << n << "]; } "
+         << MT->cName() << ";\n";
+    }
+  }
+  parts[0] << "\n";
+  parts[Float] << "\n";
+
+  // Write declarations for all the intrinsics.
+
+  for (const auto &kv : ACLEIntrinsics) {
+    const ACLEIntrinsic &Int = *kv.second;
+
+    // We generate each intrinsic twice, under its full unambiguous
+    // name and its shorter polymorphic name (if the latter exists).
+    for (bool Polymorphic : {false, true}) {
+      if (Polymorphic && !Int.polymorphic())
+        continue;
+      if (!Polymorphic && Int.polymorphicOnly())
+        continue;
+
+      // We also generate each intrinsic under a name like __arm_vfooq
+      // (which is in C language implementation namespace, so it's
+      // safe to define in any conforming user program) and a shorter
+      // one like vfooq (which is in user namespace, so a user might
+      // reasonably have used it for something already). If so, they
+      // can #define __ARM_MVE_PRESERVE_USER_NAMESPACE before
+      // including the header, which will suppress the shorter names
+      // and leave only the implementation-namespace ones. Then they
+      // have to write __arm_vfooq everywhere, of course.
+
+      for (bool UserNamespace : {false, true}) {
+        raw_ostream &OS = parts[(Int.requiresFloat() ? Float : 0) |
+                                (UserNamespace ? UseUserNamespace : 0)];
+
+        // Make the name of the function in this declaration.
+
+        std::string FunctionName =
+            Polymorphic ? Int.shortName() : Int.fullName();
+        if (!UserNamespace)
+          FunctionName = "__arm_" + FunctionName;
+
+        // Make strings for the types involved in the function's
+        // prototype.
+
+        std::string RetTypeName = Int.returnType()->cName();
+        if (!StringRef(RetTypeName).endswith("*"))
+          RetTypeName += " ";
+
+        std::vector<std::string> ArgTypeNames;
+        for (const Type *ArgTypePtr : Int.argTypes())
+          ArgTypeNames.push_back(ArgTypePtr->cName());
+        std::string ArgTypesString =
+            join(std::begin(ArgTypeNames), std::end(ArgTypeNames), ", ");
+
+        // Emit the actual declaration. All these functions are
+        // declared 'static inline' without a body, which is fine
+        // provided clang recognizes them as builtins, and has the
+        // effect that this type signature is used in place of the one
+        // that Builtins.def didn't provide. That's how we can get
+        // structure types that weren't defined until this header was
+        // included to be part of the type signature of a builtin that
+        // was known to clang already.
+        //
+        // The declarations use __attribute__(__clang_arm_builtin_alias),
+        // so that each function declared will be recognized as the
+        // appropriate MVE builtin in spite of its user-facing name.
+        //
+        // (That's better than making them all wrapper functions,
+        // partly because it avoids any compiler error message citing
+        // the wrapper function definition instead of the user's code,
+        // and mostly because some MVE intrinsics have arguments
+        // required to be compile-time constants, and that property
+        // can't be propagated through a wrapper function. It can be
+        // propagated through a macro, but macros can't be overloaded
+        // on argument types very easily - you have to use _Generic,
+        // which makes error messages very confusing when the user
+        // gets it wrong.)
+        //
+        // Finally, the polymorphic versions of the intrinsics are
+        // also defined with __attribute__(overloadable), so that when
+        // the same name is defined with several type signatures, the
+        // right thing happens. Each one of the overloaded
+        // declarations is given a different builtin id, which
+        // has exactly the effect we want: first clang resolves the
+        // overload to the right function, then it knows which builtin
+        // it's referring to, and then the Sema checking for that
+        // builtin can check further things like the constant
+        // arguments.
+        //
+        // One more subtlety is the newline just before the return
+        // type name. That's a cosmetic tweak to make the error
+        // messages legible if the user gets the types wrong in a call
+        // to a polymorphic function: this way, clang will print just
+        // the _final_ line of each declaration in the header, to show
+        // the type signatures that would have been legal. So all the
+        // confusing machinery with __attribute__ is left out of the
+        // error message, and the user sees something that's more or
+        // less self-documenting: "here's a list of actually readable
+        // type signatures for vfooq(), and here's why each one didn't
+        // match your call".
+
+        OS << "static __inline__ __attribute__(("
+           << (Polymorphic ? "__overloadable__, " : "")
+           << "__clang_arm_builtin_alias(__builtin_arm_mve_" << Int.fullName()
+           << ")))\n"
+           << RetTypeName << FunctionName << "(" << ArgTypesString << ");\n";
+      }
+    }
+  }
+  for (auto &part : parts)
+    part << "\n";
+
+  // Now we've finished accumulating bits and pieces into the parts[] array.
+  // Put it all together to write the final output file.
+
+  OS << "/*===---- arm_mve.h - ARM MVE intrinsics "
+        "-----------------------------------===\n"
+     << LLVMLicenseHeader
+     << "#ifndef __ARM_MVE_H\n"
+        "#define __ARM_MVE_H\n"
+        "\n"
+        "#if !__ARM_FEATURE_MVE\n"
+        "#error \"MVE support not enabled\"\n"
+        "#endif\n"
+        "\n"
+        "#include <stdint.h>\n"
+        "\n"
+        "#ifdef __cplusplus\n"
+        "extern \"C\" {\n"
+        "#endif\n"
+        "\n";
+
+  for (size_t i = 0; i < NumParts; ++i) {
+    std::vector<std::string> conditions;
+    if (i & Float)
+      conditions.push_back("(__ARM_FEATURE_MVE & 2)");
+    if (i & UseUserNamespace)
+      conditions.push_back("(!defined __ARM_MVE_PRESERVE_USER_NAMESPACE)");
+
+    std::string condition =
+        join(std::begin(conditions), std::end(conditions), " && ");
+    if (!condition.empty())
+      OS << "#if " << condition << "\n\n";
+    OS << parts[i].str();
+    if (!condition.empty())
+      OS << "#endif /* " << condition << " */\n\n";
+  }
+
+  OS << "#ifdef __cplusplus\n"
+        "} /* extern \"C\" */\n"
+        "#endif\n"
+        "\n"
+        "#endif /* __ARM_MVE_H */\n";
+}
+
+void MveEmitter::EmitBuiltinDef(raw_ostream &OS) {
+  for (const auto &kv : ACLEIntrinsics) {
+    const ACLEIntrinsic &Int = *kv.second;
+    OS << "TARGET_HEADER_BUILTIN(__builtin_arm_mve_" << Int.fullName()
+       << ", \"\", \"n\", \"arm_mve.h\", ALL_LANGUAGES, \"\")\n";
+  }
+
+  std::set<std::string> ShortNamesSeen;
+
+  for (const auto &kv : ACLEIntrinsics) {
+    const ACLEIntrinsic &Int = *kv.second;
+    if (Int.polymorphic()) {
+      StringRef Name = Int.shortName();
+      if (ShortNamesSeen.find(std::string(Name)) == ShortNamesSeen.end()) {
+        OS << "BUILTIN(__builtin_arm_mve_" << Name << ", \"vi.\", \"nt";
+        if (Int.nonEvaluating())
+          OS << "u"; // indicate that this builtin doesn't evaluate its args
+        OS << "\")\n";
+        ShortNamesSeen.insert(std::string(Name));
+      }
+    }
+  }
+}
+
+void MveEmitter::EmitBuiltinSema(raw_ostream &OS) {
+  std::map<std::string, std::set<std::string>> Checks;
+  GroupSemaChecks(Checks);
+
+  for (const auto &kv : Checks) {
+    for (StringRef Name : kv.second)
+      OS << "case ARM::BI__builtin_arm_mve_" << Name << ":\n";
+    OS << "  return " << kv.first;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Class that describes an ACLE intrinsic implemented as a macro.
+//
+// This class is used when the intrinsic is polymorphic in 2 or 3 types, but we
+// want to avoid a combinatorial explosion by reinterpreting the arguments to
+// fixed types.
+
+class FunctionMacro {
+  std::vector<StringRef> Params;
+  StringRef Definition;
+
+public:
+  FunctionMacro(const Record &R);
+
+  const std::vector<StringRef> &getParams() const { return Params; }
+  StringRef getDefinition() const { return Definition; }
+};
+
+FunctionMacro::FunctionMacro(const Record &R) {
+  Params = R.getValueAsListOfStrings("params");
+  Definition = R.getValueAsString("definition");
+}
+
+// -----------------------------------------------------------------------------
+// The class used for generating arm_cde.h and related Clang bits
+//
+
+class CdeEmitter : public EmitterBase {
+  std::map<StringRef, FunctionMacro> FunctionMacros;
+
+public:
+  CdeEmitter(RecordKeeper &Records);
+  void EmitHeader(raw_ostream &OS) override;
+  void EmitBuiltinDef(raw_ostream &OS) override;
+  void EmitBuiltinSema(raw_ostream &OS) override;
+};
+
+CdeEmitter::CdeEmitter(RecordKeeper &Records) : EmitterBase(Records) {
+  for (Record *R : Records.getAllDerivedDefinitions("FunctionMacro"))
+    FunctionMacros.emplace(R->getName(), FunctionMacro(*R));
+}
+
+void CdeEmitter::EmitHeader(raw_ostream &OS) {
+  // Accumulate pieces of the header file that will be enabled under various
+  // different combinations of #ifdef. The index into parts[] is one of the
+  // following:
+  constexpr unsigned None = 0;
+  constexpr unsigned MVE = 1;
+  constexpr unsigned MVEFloat = 2;
+
+  constexpr unsigned NumParts = 3;
+  raw_self_contained_string_ostream parts[NumParts];
+
+  // Write typedefs for all the required vector types, and a few scalar
+  // types that don't already have the name we want them to have.
+
+  parts[MVE] << "typedef uint16_t mve_pred16_t;\n";
+  parts[MVEFloat] << "typedef __fp16 float16_t;\n"
+                     "typedef float float32_t;\n";
+  for (const auto &kv : ScalarTypes) {
+    const ScalarType *ST = kv.second.get();
+    if (ST->hasNonstandardName())
+      continue;
+    // We don't have float64x2_t
+    if (ST->kind() == ScalarTypeKind::Float && ST->sizeInBits() == 64)
+      continue;
+    raw_ostream &OS = parts[ST->requiresFloat() ? MVEFloat : MVE];
+    const VectorType *VT = getVectorType(ST);
+
+    OS << "typedef __attribute__((__neon_vector_type__(" << VT->lanes()
+       << "), __clang_arm_mve_strict_polymorphism)) " << ST->cName() << " "
+       << VT->cName() << ";\n";
+  }
+  parts[MVE] << "\n";
+  parts[MVEFloat] << "\n";
+
+  // Write declarations for all the intrinsics.
+
+  for (const auto &kv : ACLEIntrinsics) {
+    const ACLEIntrinsic &Int = *kv.second;
+
+    // We generate each intrinsic twice, under its full unambiguous
+    // name and its shorter polymorphic name (if the latter exists).
+    for (bool Polymorphic : {false, true}) {
+      if (Polymorphic && !Int.polymorphic())
+        continue;
+      if (!Polymorphic && Int.polymorphicOnly())
+        continue;
+
+      raw_ostream &OS =
+          parts[Int.requiresFloat() ? MVEFloat
+                                    : Int.requiresMVE() ? MVE : None];
+
+      // Make the name of the function in this declaration.
+      std::string FunctionName =
+          "__arm_" + (Polymorphic ? Int.shortName() : Int.fullName());
+
+      // Make strings for the types involved in the function's
+      // prototype.
+      std::string RetTypeName = Int.returnType()->cName();
+      if (!StringRef(RetTypeName).endswith("*"))
+        RetTypeName += " ";
+
+      std::vector<std::string> ArgTypeNames;
+      for (const Type *ArgTypePtr : Int.argTypes())
+        ArgTypeNames.push_back(ArgTypePtr->cName());
+      std::string ArgTypesString =
+          join(std::begin(ArgTypeNames), std::end(ArgTypeNames), ", ");
+
+      // Emit the actual declaration. See MveEmitter::EmitHeader for detailed
+      // comments
+      OS << "static __inline__ __attribute__(("
+         << (Polymorphic ? "__overloadable__, " : "")
+         << "__clang_arm_builtin_alias(__builtin_arm_" << Int.builtinExtension()
+         << "_" << Int.fullName() << ")))\n"
+         << RetTypeName << FunctionName << "(" << ArgTypesString << ");\n";
+    }
+  }
+
+  for (const auto &kv : FunctionMacros) {
+    StringRef Name = kv.first;
+    const FunctionMacro &FM = kv.second;
+
+    raw_ostream &OS = parts[MVE];
+    OS << "#define "
+       << "__arm_" << Name << "(" << join(FM.getParams(), ", ") << ") "
+       << FM.getDefinition() << "\n";
+  }
+
+  for (auto &part : parts)
+    part << "\n";
+
+  // Now we've finished accumulating bits and pieces into the parts[] array.
+  // Put it all together to write the final output file.
+
+  OS << "/*===---- arm_cde.h - ARM CDE intrinsics "
+        "-----------------------------------===\n"
+     << LLVMLicenseHeader
+     << "#ifndef __ARM_CDE_H\n"
+        "#define __ARM_CDE_H\n"
+        "\n"
+        "#if !__ARM_FEATURE_CDE\n"
+        "#error \"CDE support not enabled\"\n"
+        "#endif\n"
+        "\n"
+        "#include <stdint.h>\n"
+        "\n"
+        "#ifdef __cplusplus\n"
+        "extern \"C\" {\n"
+        "#endif\n"
+        "\n";
+
+  for (size_t i = 0; i < NumParts; ++i) {
+    std::string condition;
+    if (i == MVEFloat)
+      condition = "__ARM_FEATURE_MVE & 2";
+    else if (i == MVE)
+      condition = "__ARM_FEATURE_MVE";
+
+    if (!condition.empty())
+      OS << "#if " << condition << "\n\n";
+    OS << parts[i].str();
+    if (!condition.empty())
+      OS << "#endif /* " << condition << " */\n\n";
+  }
+
+  OS << "#ifdef __cplusplus\n"
+        "} /* extern \"C\" */\n"
+        "#endif\n"
+        "\n"
+        "#endif /* __ARM_CDE_H */\n";
+}
+
+void CdeEmitter::EmitBuiltinDef(raw_ostream &OS) {
+  for (const auto &kv : ACLEIntrinsics) {
+    if (kv.second->headerOnly())
+      continue;
+    const ACLEIntrinsic &Int = *kv.second;
+    OS << "TARGET_HEADER_BUILTIN(__builtin_arm_cde_" << Int.fullName()
+       << ", \"\", \"ncU\", \"arm_cde.h\", ALL_LANGUAGES, \"\")\n";
+  }
+}
+
+void CdeEmitter::EmitBuiltinSema(raw_ostream &OS) {
+  std::map<std::string, std::set<std::string>> Checks;
+  GroupSemaChecks(Checks);
+
+  for (const auto &kv : Checks) {
+    for (StringRef Name : kv.second)
+      OS << "case ARM::BI__builtin_arm_cde_" << Name << ":\n";
+    OS << "  Err = " << kv.first << "  break;\n";
   }
 }
 
 } // namespace
 
 namespace clang {
+
+// MVE
 
 void EmitMveHeader(RecordKeeper &Records, raw_ostream &OS) {
   MveEmitter(Records).EmitHeader(OS);
@@ -1874,6 +2180,28 @@ void EmitMveBuiltinCG(RecordKeeper &Records, raw_ostream &OS) {
 
 void EmitMveBuiltinAliases(RecordKeeper &Records, raw_ostream &OS) {
   MveEmitter(Records).EmitBuiltinAliases(OS);
+}
+
+// CDE
+
+void EmitCdeHeader(RecordKeeper &Records, raw_ostream &OS) {
+  CdeEmitter(Records).EmitHeader(OS);
+}
+
+void EmitCdeBuiltinDef(RecordKeeper &Records, raw_ostream &OS) {
+  CdeEmitter(Records).EmitBuiltinDef(OS);
+}
+
+void EmitCdeBuiltinSema(RecordKeeper &Records, raw_ostream &OS) {
+  CdeEmitter(Records).EmitBuiltinSema(OS);
+}
+
+void EmitCdeBuiltinCG(RecordKeeper &Records, raw_ostream &OS) {
+  CdeEmitter(Records).EmitBuiltinCG(OS);
+}
+
+void EmitCdeBuiltinAliases(RecordKeeper &Records, raw_ostream &OS) {
+  CdeEmitter(Records).EmitBuiltinAliases(OS);
 }
 
 } // end namespace clang

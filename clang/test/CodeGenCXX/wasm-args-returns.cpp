@@ -48,7 +48,7 @@ struct copy_ctor {
 test(copy_ctor);
 // CHECK: define void @_Z7forward9copy_ctor(%struct.copy_ctor* noalias sret align 8 %{{.*}}, %struct.copy_ctor* nonnull %{{.*}})
 //
-// CHECK: declare %struct.copy_ctor* @_ZN9copy_ctorC1ERKS_(%struct.copy_ctor* returned, %struct.copy_ctor* dereferenceable(8))
+// CHECK: declare %struct.copy_ctor* @_ZN9copy_ctorC1ERKS_(%struct.copy_ctor* returned, %struct.copy_ctor* nonnull align 8 dereferenceable(8))
 //
 // CHECK: define void @_Z14test_copy_ctorv()
 // CHECK: %[[tmp:.*]] = alloca %struct.copy_ctor, align 8
@@ -66,7 +66,7 @@ struct __attribute__((aligned(16))) aligned_copy_ctor {
 test(aligned_copy_ctor);
 // CHECK: define void @_Z7forward17aligned_copy_ctor(%struct.aligned_copy_ctor* noalias sret align 16 %{{.*}}, %struct.aligned_copy_ctor* nonnull %{{.*}})
 //
-// CHECK: declare %struct.aligned_copy_ctor* @_ZN17aligned_copy_ctorC1ERKS_(%struct.aligned_copy_ctor* returned, %struct.aligned_copy_ctor* dereferenceable(16))
+// CHECK: declare %struct.aligned_copy_ctor* @_ZN17aligned_copy_ctorC1ERKS_(%struct.aligned_copy_ctor* returned, %struct.aligned_copy_ctor* nonnull align 16 dereferenceable(16))
 //
 // CHECK: define void @_Z22test_aligned_copy_ctorv()
 // CHECK: %[[tmp:.*]] = alloca %struct.aligned_copy_ctor, align 16

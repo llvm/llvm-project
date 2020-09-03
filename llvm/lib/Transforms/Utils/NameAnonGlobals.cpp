@@ -55,7 +55,7 @@ public:
     Hasher.final(Hash);
     SmallString<32> Result;
     MD5::stringifyResult(Hash, Result);
-    TheHash = Result.str();
+    TheHash = std::string(Result.str());
     return TheHash;
   }
 };

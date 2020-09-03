@@ -1,6 +1,7 @@
 ; RUN: llvm-dlltool -m i386:x86-64 --input-def %s --output-lib %t.a
 ; RUN: llvm-nm %t.a | FileCheck %s
 ; RUN: llvm-readobj %t.a | FileCheck -check-prefix=ARCH %s
+; RUN: llvm-readobj --symbols %t.a | FileCheck -check-prefix=SYMBOLS %s
 
 LIBRARY test.dll
 EXPORTS
@@ -29,3 +30,17 @@ ImpLibName3 = kernel32.Sleep
 ; CHECK-NEXT: T __imp_ImpLibName3
 
 ; ARCH-NOT: unknown arch
+
+; SYMBOLS:        Symbol {
+; SYMBOLS:          Name: TestFunction
+; SYMBOLS-NEXT:     Value: 0
+; SYMBOLS-NEXT:     Section: IMAGE_SYM_UNDEFINED (0)
+; SYMBOLS-NEXT:     BaseType: Null (0x0)
+; SYMBOLS-NEXT:     ComplexType: Null (0x0)
+; SYMBOLS-NEXT:     StorageClass: WeakExternal (0x69)
+; SYMBOLS-NEXT:     AuxSymbolCount: 1
+; SYMBOLS-NEXT:     AuxWeakExternal {
+; SYMBOLS-NEXT:       Linked: AltTestFunction (2)
+; SYMBOLS-NEXT:       Search: Alias (0x3)
+; SYMBOLS-NEXT:     }
+; SYMBOLS-NEXT:   }

@@ -3,7 +3,7 @@
 // RUN: cd %T/used-helper-decls
 
 // ----------------------------------------------------------------------------
-// Test moving used helper function and its transively used functions.
+// Test moving used helper function and its transitively used functions.
 // ----------------------------------------------------------------------------
 // RUN: clang-move -names="a::Class1" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
 // RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS1-CPP %s
@@ -29,7 +29,7 @@
 
 
 // ----------------------------------------------------------------------------
-// Test moving used helper function and its transively used static variables.
+// Test moving used helper function and its transitively used static variables.
 // ----------------------------------------------------------------------------
 // RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
 // RUN: clang-move -names="a::Class2" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
@@ -151,7 +151,7 @@
 
 
 // ----------------------------------------------------------------------------
-// Test moving helper variables and their transively used helper classes.
+// Test moving helper variables and their transitively used helper classes.
 // ----------------------------------------------------------------------------
 // RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
 // RUN: clang-move -names="a::Class6" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
@@ -216,7 +216,7 @@
 
 
 // ----------------------------------------------------------------------------
-// Test moving helper function and its transively used helper variables.
+// Test moving helper function and its transitively used helper variables.
 // ----------------------------------------------------------------------------
 // RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
 // RUN: clang-move -names="a::Fun1" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
@@ -260,7 +260,7 @@
 // CHECK-OLD-FUN2-H-NOT: inline void Fun2() {}
 
 // ----------------------------------------------------------------------------
-// Test moving used helper function and its transively used functions.
+// Test moving used helper function and its transitively used functions.
 // ----------------------------------------------------------------------------
 // RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
 // RUN: clang-move -names="b::Fun3" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11

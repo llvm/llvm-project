@@ -1,6 +1,6 @@
 //===- Types.cpp - MLIR Type Classes --------------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -21,8 +21,9 @@ using namespace mlir::detail;
 
 unsigned Type::getKind() const { return impl->getKind(); }
 
-/// Get the dialect this type is registered to.
-Dialect &Type::getDialect() const { return impl->getDialect(); }
+Dialect &Type::getDialect() const {
+  return impl->getAbstractType().getDialect();
+}
 
 MLIRContext *Type::getContext() const { return getDialect().getContext(); }
 
@@ -59,7 +60,7 @@ OpaqueType OpaqueType::get(Identifier dialect, StringRef typeData,
 
 OpaqueType OpaqueType::getChecked(Identifier dialect, StringRef typeData,
                                   MLIRContext *context, Location location) {
-  return Base::getChecked(location, context, Kind::Opaque, dialect, typeData);
+  return Base::getChecked(location, Kind::Opaque, dialect, typeData);
 }
 
 /// Returns the dialect namespace of the opaque type.
@@ -71,11 +72,10 @@ Identifier OpaqueType::getDialectNamespace() const {
 StringRef OpaqueType::getTypeData() const { return getImpl()->typeData; }
 
 /// Verify the construction of an opaque type.
-LogicalResult OpaqueType::verifyConstructionInvariants(Optional<Location> loc,
-                                                       MLIRContext *context,
+LogicalResult OpaqueType::verifyConstructionInvariants(Location loc,
                                                        Identifier dialect,
                                                        StringRef typeData) {
   if (!Dialect::isValidNamespace(dialect.strref()))
-    return emitOptionalError(loc, "invalid dialect namespace '", dialect, "'");
+    return emitError(loc, "invalid dialect namespace '") << dialect << "'";
   return success();
 }

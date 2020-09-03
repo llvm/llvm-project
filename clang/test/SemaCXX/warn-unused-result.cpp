@@ -246,3 +246,11 @@ void g() {
     f(b); // expected-warning {{ignoring return value}}
 }
 } // namespace PR39837
+
+namespace PR45520 {
+[[nodiscard]] bool (*f)(); // expected-warning {{'nodiscard' attribute only applies to functions, classes, or enumerations}}
+[[clang::warn_unused_result]] bool (*g)();
+__attribute__((warn_unused_result)) bool (*h)();
+
+void i([[nodiscard]] bool (*fp)()); // expected-warning {{'nodiscard' attribute only applies to functions, classes, or enumerations}}
+}

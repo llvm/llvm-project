@@ -1,6 +1,6 @@
 //===- IntegerSet.h - MLIR Integer Set Class --------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -43,10 +43,8 @@ class IntegerSet {
 public:
   using ImplType = detail::IntegerSetStorage;
 
-  IntegerSet() : set(nullptr) {}
+  constexpr IntegerSet() : set(nullptr) {}
   explicit IntegerSet(ImplType *set) : set(set) {}
-  IntegerSet(const IntegerSet &other) : set(other.set) {}
-  IntegerSet &operator=(const IntegerSet &other) = default;
 
   static IntegerSet get(unsigned dimCount, unsigned symbolCount,
                         ArrayRef<AffineExpr> constraints,

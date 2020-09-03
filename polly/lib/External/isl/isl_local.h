@@ -6,6 +6,8 @@
 
 typedef isl_mat isl_local;
 
+__isl_null isl_local *isl_local_free(__isl_take isl_local *local);
+
 isl_bool isl_local_div_is_marked_unknown(__isl_keep isl_local *local, int pos);
 isl_bool isl_local_div_is_known(__isl_keep isl_local *local, int pos);
 isl_bool isl_local_divs_known(__isl_keep isl_local *local);

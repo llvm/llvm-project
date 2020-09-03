@@ -265,9 +265,6 @@ Valid v;
   T2 x;
 }
 @end
-#else
-// expected-error@second.h:* {{'Interface6' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type '__strong T2' (aka 'I2 *__strong')}}
-// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type '__strong T1' (aka 'I1 *__strong')}}
 #endif
 
 namespace Types {

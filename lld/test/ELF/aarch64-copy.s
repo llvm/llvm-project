@@ -4,8 +4,8 @@
 // RUN: ld.lld -shared %t2.o -soname fixed-length-string.so -o %t2.so
 // RUN: ld.lld %t.o %t2.so -o %t
 // RUN: llvm-readobj -S -r --symbols %t | FileCheck %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck -check-prefix=CODE %s
-// RUN: llvm-objdump -s -section=.rodata %t | FileCheck -check-prefix=RODATA %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=CODE %s
+// RUN: llvm-objdump -s --section=.rodata %t | FileCheck --check-prefix=RODATA %s
 
 .text
 .globl _start
@@ -63,7 +63,7 @@ _start:
 
 // CODE: Disassembly of section .text:
 // CODE-EMPTY:
-// CODE-NEXT: _start:
+// CODE-NEXT: <_start>:
 // S + A - P = 0x2303f0 + 0 - 0x21031c = 131284
 // CODE-NEXT:  21031c: adr  x1, #131284
 // Page(S + A) - Page(P) = Page(0x230400) - Page(0x210320) = 131072

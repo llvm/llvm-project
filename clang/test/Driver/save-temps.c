@@ -1,3 +1,6 @@
+// REQUIRES: x86-registered-target
+// REQUIRES: arm-registered-target
+
 // RUN: %clang -target x86_64-apple-darwin -save-temps -arch x86_64 %s -### 2>&1 \
 // RUN:   | FileCheck %s
 // CHECK: "-o" "save-temps.i"
@@ -82,3 +85,11 @@
 // RUN:   | FileCheck %s -check-prefix=CHECK-SAVE-TEMPS
 // CHECK-SAVE-TEMPS: "-cc1as"
 // CHECK-SAVE-TEMPS: "-dwarf-version={{.}}"
+
+// RUN: %clang --target=arm-arm-none-eabi -march=armv8-m.main -mcmse -save-temps -c -v %s -### 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK-SAVE-TEMPS-CMSE
+// RUN: %clang --target=arm-arm-none-eabi -march=armv8-m.main -mcmse -x assembler -c -v %s -### 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK-SAVE-TEMPS-CMSE
+// CHECK-SAVE-TEMPS-CMSE: -cc1as
+// CHECK-SAVE-TEMPS-CMSE: +8msecext
+// CHECK-SAVE-TEMPS-CMSE-NOT: '+cmse' is not a recognized feature for this target (ignoring feature)

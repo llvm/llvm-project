@@ -9,13 +9,11 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_TRANSFORMER_CLANG_TIDY_CHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_TRANSFORMER_CLANG_TIDY_CHECK_H
 
-#include "../ClangTidy.h"
-#include "../utils/IncludeInserter.h"
+#include "../ClangTidyCheck.h"
+#include "IncludeInserter.h"
+#include "IncludeSorter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/Transformer/Transformer.h"
-#include <deque>
-#include <vector>
 
 namespace clang {
 namespace tidy {
@@ -31,6 +29,13 @@ namespace utils {
 //   MyCheck(StringRef Name, ClangTidyContext *Context)
 //       : TransformerClangTidyCheck(MyCheckAsRewriteRule, Name, Context) {}
 // };
+//
+// `TransformerClangTidyCheck` recognizes this clang-tidy option:
+//
+//  * IncludeStyle. A string specifying which file naming convention is used by
+//      the source code, 'llvm' or 'google'.  Default is 'llvm'. The naming
+//      convention influences how canonical headers are distinguished from other
+//      includes.
 class TransformerClangTidyCheck : public ClangTidyCheck {
 public:
   // \p MakeRule generates the rewrite rule to be used by the check, based on
@@ -59,9 +64,14 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) final;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) final;
 
+  /// Derived classes that override this function should call this method from
+  /// the overridden method.
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
 private:
   Optional<transformer::RewriteRule> Rule;
-  std::unique_ptr<clang::tidy::utils::IncludeInserter> Inserter;
+  const IncludeSorter::IncludeStyle IncludeStyle;
+  std::unique_ptr<IncludeInserter> Inserter;
 };
 
 } // namespace utils

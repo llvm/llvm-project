@@ -45,8 +45,8 @@
 ; HSA-ALLOCA: s_add_u32 s6, s6, s9
 ; HSA-ALLOCA: s_lshr_b32 flat_scratch_hi, s6, 8
 
-; SI-ALLOCA: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ; encoding: [0x00,0x10,0x70,0xe0
-; SI-ALLOCA: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ; encoding: [0x00,0x10,0x70,0xe0
+; SI-ALLOCA: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen ; encoding: [0x00,0x10,0x70,0xe0
+; SI-ALLOCA: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen ; encoding: [0x00,0x10,0x70,0xe0
 
 
 ; HSAOPT: [[DISPATCH_PTR:%[0-9]+]] = call noalias nonnull dereferenceable(64) i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
@@ -226,10 +226,10 @@ for.end:
 
 ; R600-VECT: MOVA_INT
 
-; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:6 ; encoding: [0x06,0x00,0x68,0xe0
-; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:4 ; encoding: [0x04,0x00,0x68,0xe0
+; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:6 ; encoding: [0x06,0x00,0x68,0xe0
+; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 ; encoding: [0x04,0x00,0x68,0xe0
 ; Loaded value is 0 or 1, so sext will become zext, so we get buffer_load_ushort instead of buffer_load_sshort.
-; SI-ALLOCA: buffer_load_sshort v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}
+; SI-ALLOCA: buffer_load_sshort v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0
 
 ; SI-PROMOTE-VECT: s_load_dword [[IDX:s[0-9]+]]
 ; SI-PROMOTE-VECT: s_mov_b32 [[SREG:s[0-9]+]], 0x10000
@@ -257,8 +257,8 @@ entry:
 ; SI-PROMOTE-VECT-DAG: s_lshl_b32
 ; SI-PROMOTE-VECT-DAG: v_lshrrev
 
-; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:4 ; encoding: [0x04,0x00,0x60,0xe0
-; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:5 ; encoding: [0x05,0x00,0x60,0xe0
+; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 ; encoding: [0x04,0x00,0x60,0xe0
+; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:5 ; encoding: [0x05,0x00,0x60,0xe0
 define amdgpu_kernel void @char_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %0 = alloca [2 x i8], addrspace(5)
@@ -281,7 +281,7 @@ entry:
 ; R600-NOT: [[CHAN]]+
 ;
 ; A total of 5 bytes should be allocated and used.
-; SI: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:4 ;
+; SI: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 ;
 define amdgpu_kernel void @no_overlap(i32 addrspace(1)* %out, i32 %in) #0 {
 entry:
   %0 = alloca [3 x i8], align 1, addrspace(5)
@@ -393,9 +393,9 @@ entry:
 
 ; FUNC-LABEL: ptrtoint:
 ; SI-NOT: ds_write
-; SI: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen
+; SI: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
 ; SI: v_add_{{[iu]}}32_e32 [[ADD_OFFSET:v[0-9]+]], vcc, 5,
-; SI: buffer_load_dword v{{[0-9]+}}, [[ADD_OFFSET:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ;
+; SI: buffer_load_dword v{{[0-9]+}}, [[ADD_OFFSET:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0 offen ;
 define amdgpu_kernel void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
   %alloca = alloca [16 x i32], addrspace(5)
   %tmp0 = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 %a

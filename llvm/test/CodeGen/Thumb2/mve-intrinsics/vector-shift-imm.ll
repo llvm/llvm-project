@@ -998,8 +998,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshllbq_m_n_s8(<8 x i16> %inactive, <16 x
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 6, i32 0, i32 0, <16 x i1> %1, <8 x i16> %inactive)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 6, i32 0, i32 0, <8 x i1> %1, <8 x i16> %inactive)
   ret <8 x i16> %2
 }
 
@@ -1012,8 +1012,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshllbq_m_n_s8_lanewidth(<8 x i16> %inact
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 8, i32 0, i32 0, <16 x i1> %1, <8 x i16> %inactive)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 8, i32 0, i32 0, <8 x i1> %1, <8 x i16> %inactive)
   ret <8 x i16> %2
 }
 
@@ -1026,8 +1026,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshllbq_m_n_s16(<4 x i32> %inactive, <8 x
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 10, i32 0, i32 0, <8 x i1> %1, <4 x i32> %inactive)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 10, i32 0, i32 0, <4 x i1> %1, <4 x i32> %inactive)
   ret <4 x i32> %2
 }
 
@@ -1040,8 +1040,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshllbq_m_n_s16_lanewidth(<4 x i32> %inac
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 16, i32 0, i32 0, <8 x i1> %1, <4 x i32> %inactive)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 16, i32 0, i32 0, <4 x i1> %1, <4 x i32> %inactive)
   ret <4 x i32> %2
 }
 
@@ -1054,8 +1054,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshllbq_m_n_u8(<8 x i16> %inactive, <16 x
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 3, i32 1, i32 0, <16 x i1> %1, <8 x i16> %inactive)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 3, i32 1, i32 0, <8 x i1> %1, <8 x i16> %inactive)
   ret <8 x i16> %2
 }
 
@@ -1068,8 +1068,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshllbq_m_n_u8_lanewidth(<8 x i16> %inact
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 8, i32 1, i32 0, <16 x i1> %1, <8 x i16> %inactive)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 8, i32 1, i32 0, <8 x i1> %1, <8 x i16> %inactive)
   ret <8 x i16> %2
 }
 
@@ -1082,8 +1082,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshllbq_m_n_u16(<4 x i32> %inactive, <8 x
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 14, i32 1, i32 0, <8 x i1> %1, <4 x i32> %inactive)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 14, i32 1, i32 0, <4 x i1> %1, <4 x i32> %inactive)
   ret <4 x i32> %2
 }
 
@@ -1096,8 +1096,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshllbq_m_n_u16_lanewidth(<4 x i32> %inac
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 16, i32 1, i32 0, <8 x i1> %1, <4 x i32> %inactive)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 16, i32 1, i32 0, <4 x i1> %1, <4 x i32> %inactive)
   ret <4 x i32> %2
 }
 
@@ -1110,8 +1110,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshlltq_m_n_s8(<8 x i16> %inactive, <16 x
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 4, i32 0, i32 1, <16 x i1> %1, <8 x i16> %inactive)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 4, i32 0, i32 1, <8 x i1> %1, <8 x i16> %inactive)
   ret <8 x i16> %2
 }
 
@@ -1124,8 +1124,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshlltq_m_n_s8_lanewidth(<8 x i16> %inact
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 8, i32 0, i32 1, <16 x i1> %1, <8 x i16> %inactive)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 8, i32 0, i32 1, <8 x i1> %1, <8 x i16> %inactive)
   ret <8 x i16> %2
 }
 
@@ -1138,8 +1138,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshlltq_m_n_s16(<4 x i32> %inactive, <8 x
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 12, i32 0, i32 1, <8 x i1> %1, <4 x i32> %inactive)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 12, i32 0, i32 1, <4 x i1> %1, <4 x i32> %inactive)
   ret <4 x i32> %2
 }
 
@@ -1152,8 +1152,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshlltq_m_n_s16_lanewidth(<4 x i32> %inac
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 16, i32 0, i32 1, <8 x i1> %1, <4 x i32> %inactive)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 16, i32 0, i32 1, <4 x i1> %1, <4 x i32> %inactive)
   ret <4 x i32> %2
 }
 
@@ -1166,8 +1166,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshlltq_m_n_u8(<8 x i16> %inactive, <16 x
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 2, i32 1, i32 1, <16 x i1> %1, <8 x i16> %inactive)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 2, i32 1, i32 1, <8 x i1> %1, <8 x i16> %inactive)
   ret <8 x i16> %2
 }
 
@@ -1180,8 +1180,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshlltq_m_n_u8_lanewidth(<8 x i16> %inact
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 8, i32 1, i32 1, <16 x i1> %1, <8 x i16> %inactive)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 8, i32 1, i32 1, <8 x i1> %1, <8 x i16> %inactive)
   ret <8 x i16> %2
 }
 
@@ -1194,8 +1194,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshlltq_m_n_u16(<4 x i32> %inactive, <8 x
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 9, i32 1, i32 1, <8 x i1> %1, <4 x i32> %inactive)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 9, i32 1, i32 1, <4 x i1> %1, <4 x i32> %inactive)
   ret <4 x i32> %2
 }
 
@@ -1208,8 +1208,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshlltq_m_n_u16_lanewidth(<4 x i32> %inac
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 16, i32 1, i32 1, <8 x i1> %1, <4 x i32> %inactive)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 16, i32 1, i32 1, <4 x i1> %1, <4 x i32> %inactive)
   ret <4 x i32> %2
 }
 
@@ -1222,8 +1222,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshllbq_x_n_s8(<16 x i8> %a, i16 zeroext 
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 1, i32 0, i32 0, <16 x i1> %1, <8 x i16> undef)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 1, i32 0, i32 0, <8 x i1> %1, <8 x i16> undef)
   ret <8 x i16> %2
 }
 
@@ -1236,8 +1236,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshllbq_x_n_s8_lanewidth(<16 x i8> %a, i1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 8, i32 0, i32 0, <16 x i1> %1, <8 x i16> undef)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 8, i32 0, i32 0, <8 x i1> %1, <8 x i16> undef)
   ret <8 x i16> %2
 }
 
@@ -1250,8 +1250,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshllbq_x_n_s16(<8 x i16> %a, i16 zeroext
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 10, i32 0, i32 0, <8 x i1> %1, <4 x i32> undef)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 10, i32 0, i32 0, <4 x i1> %1, <4 x i32> undef)
   ret <4 x i32> %2
 }
 
@@ -1264,8 +1264,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshllbq_x_n_s16_lanewidth(<8 x i16> %a, i
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 16, i32 0, i32 0, <8 x i1> %1, <4 x i32> undef)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 16, i32 0, i32 0, <4 x i1> %1, <4 x i32> undef)
   ret <4 x i32> %2
 }
 
@@ -1278,8 +1278,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshllbq_x_n_u8(<16 x i8> %a, i16 zeroext 
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 6, i32 1, i32 0, <16 x i1> %1, <8 x i16> undef)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 6, i32 1, i32 0, <8 x i1> %1, <8 x i16> undef)
   ret <8 x i16> %2
 }
 
@@ -1292,8 +1292,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshllbq_x_n_u8_lanewidth(<16 x i8> %a, i1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 8, i32 1, i32 0, <16 x i1> %1, <8 x i16> undef)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 8, i32 1, i32 0, <8 x i1> %1, <8 x i16> undef)
   ret <8 x i16> %2
 }
 
@@ -1306,8 +1306,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshllbq_x_n_u16(<8 x i16> %a, i16 zeroext
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 10, i32 1, i32 0, <8 x i1> %1, <4 x i32> undef)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 10, i32 1, i32 0, <4 x i1> %1, <4 x i32> undef)
   ret <4 x i32> %2
 }
 
@@ -1320,8 +1320,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshllbq_x_n_u16_lanewidth(<8 x i16> %a, i
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 16, i32 1, i32 0, <8 x i1> %1, <4 x i32> undef)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 16, i32 1, i32 0, <4 x i1> %1, <4 x i32> undef)
   ret <4 x i32> %2
 }
 
@@ -1334,8 +1334,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshlltq_x_n_s8(<16 x i8> %a, i16 zeroext 
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 2, i32 0, i32 1, <16 x i1> %1, <8 x i16> undef)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 2, i32 0, i32 1, <8 x i1> %1, <8 x i16> undef)
   ret <8 x i16> %2
 }
 
@@ -1348,8 +1348,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshlltq_x_n_s8_lanewidth(<16 x i8> %a, i1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 8, i32 0, i32 1, <16 x i1> %1, <8 x i16> undef)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 8, i32 0, i32 1, <8 x i1> %1, <8 x i16> undef)
   ret <8 x i16> %2
 }
 
@@ -1362,8 +1362,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshlltq_x_n_s16(<8 x i16> %a, i16 zeroext
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 6, i32 0, i32 1, <8 x i1> %1, <4 x i32> undef)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 6, i32 0, i32 1, <4 x i1> %1, <4 x i32> undef)
   ret <4 x i32> %2
 }
 
@@ -1376,8 +1376,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshlltq_x_n_s16_lanewidth(<8 x i16> %a, i
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 16, i32 0, i32 1, <8 x i1> %1, <4 x i32> undef)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 16, i32 0, i32 1, <4 x i1> %1, <4 x i32> undef)
   ret <4 x i32> %2
 }
 
@@ -1390,8 +1390,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshlltq_x_n_u8(<16 x i8> %a, i16 zeroext 
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 5, i32 1, i32 1, <16 x i1> %1, <8 x i16> undef)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 5, i32 1, i32 1, <8 x i1> %1, <8 x i16> undef)
   ret <8 x i16> %2
 }
 
@@ -1404,8 +1404,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vshlltq_x_n_u8_lanewidth(<16 x i8> %a, i1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
-  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8> %a, i32 8, i32 1, i32 1, <16 x i1> %1, <8 x i16> undef)
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8> %a, i32 8, i32 1, i32 1, <8 x i1> %1, <8 x i16> undef)
   ret <8 x i16> %2
 }
 
@@ -1418,8 +1418,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshlltq_x_n_u16(<8 x i16> %a, i16 zeroext
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 3, i32 1, i32 1, <8 x i1> %1, <4 x i32> undef)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 3, i32 1, i32 1, <4 x i1> %1, <4 x i32> undef)
   ret <4 x i32> %2
 }
 
@@ -1432,8 +1432,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vshlltq_x_n_u16_lanewidth(<8 x i16> %a, i
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
-  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
-  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16> %a, i32 16, i32 1, i32 1, <8 x i1> %1, <4 x i32> undef)
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16> %a, i32 16, i32 1, i32 1, <4 x i1> %1, <4 x i32> undef)
   ret <4 x i32> %2
 }
 
@@ -1472,5 +1472,5 @@ declare <4 x i32> @llvm.arm.mve.vrshr.imm.predicated.v4i32.v4i1(<4 x i32>, i32, 
 
 declare <8 x i16> @llvm.arm.mve.vshll.imm.v8i16.v16i8(<16 x i8>, i32, i32, i32)
 declare <4 x i32> @llvm.arm.mve.vshll.imm.v4i32.v8i16(<8 x i16>, i32, i32, i32)
-declare <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v16i1(<16 x i8>, i32, i32, i32, <16 x i1>, <8 x i16>)
-declare <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v8i1(<8 x i16>, i32, i32, i32, <8 x i1>, <4 x i32>)
+declare <8 x i16> @llvm.arm.mve.vshll.imm.predicated.v8i16.v16i8.v8i1(<16 x i8>, i32, i32, i32, <8 x i1>, <8 x i16>)
+declare <4 x i32> @llvm.arm.mve.vshll.imm.predicated.v4i32.v8i16.v4i1(<8 x i16>, i32, i32, i32, <4 x i1>, <4 x i32>)

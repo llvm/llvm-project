@@ -1,16 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_ctzdi2
-//===-- ctzdi2_test.c - Test __ctzdi2 -------------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __ctzdi2 for the compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
 
 #include "int_lib.h"
 #include <stdio.h>
@@ -19,11 +8,11 @@
 
 // Precondition: a != 0
 
-COMPILER_RT_ABI si_int __ctzdi2(di_int a);
+COMPILER_RT_ABI int __ctzdi2(di_int a);
 
-int test__ctzdi2(di_int a, si_int expected)
+int test__ctzdi2(di_int a, int expected)
 {
-    si_int x = __ctzdi2(a);
+    int x = __ctzdi2(a);
     if (x != expected)
         printf("error in __ctzdi2(0x%llX) = %d, expected %d\n", a, x, expected);
     return x != expected;

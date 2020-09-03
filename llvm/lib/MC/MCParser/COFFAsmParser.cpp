@@ -70,6 +70,7 @@ class COFFAsmParser : public MCAsmParserExtension {
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveLinkOnce>(".linkonce");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveRVA>(".rva");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveSymbolAttribute>(".weak");
+    addDirectiveHandler<&COFFAsmParser::ParseDirectiveCGProfile>(".cg_profile");
 
     // Win64 EH directives.
     addDirectiveHandler<&COFFAsmParser::ParseSEHDirectiveStartProc>(
@@ -125,6 +126,7 @@ class COFFAsmParser : public MCAsmParserExtension {
   bool parseCOMDATType(COFF::COMDATType &Type);
   bool ParseDirectiveLinkOnce(StringRef, SMLoc);
   bool ParseDirectiveRVA(StringRef, SMLoc);
+  bool ParseDirectiveCGProfile(StringRef, SMLoc);
 
   // Win64 EH directives.
   bool ParseSEHDirectiveStartProc(StringRef, SMLoc);
@@ -284,7 +286,7 @@ bool COFFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
 
       MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
-      getStreamer().EmitSymbolAttribute(Sym, Attr);
+      getStreamer().emitSymbolAttribute(Sym, Attr);
 
       if (getLexer().is(AsmToken::EndOfStatement))
         break;
@@ -297,6 +299,10 @@ bool COFFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
 
   Lex();
   return false;
+}
+
+bool COFFAsmParser::ParseDirectiveCGProfile(StringRef S, SMLoc Loc) {
+  return MCAsmParserExtension::ParseDirectiveCGProfile(S, Loc);
 }
 
 bool COFFAsmParser::ParseSectionSwitch(StringRef Section,
@@ -321,7 +327,7 @@ bool COFFAsmParser::ParseSectionSwitch(StringRef Section,
 }
 
 bool COFFAsmParser::ParseSectionName(StringRef &SectionName) {
-  if (!getLexer().is(AsmToken::Identifier))
+  if (!getLexer().is(AsmToken::Identifier) && !getLexer().is(AsmToken::String))
     return true;
 
   SectionName = getTok().getIdentifier();
@@ -591,8 +597,8 @@ bool COFFAsmParser::ParseDirectiveLinkOnce(StringRef, SMLoc Loc) {
     return Error(Loc, "cannot make section associative with .linkonce");
 
   if (Current->getCharacteristics() & COFF::IMAGE_SCN_LNK_COMDAT)
-    return Error(Loc, Twine("section '") + Current->getSectionName() +
-                                                       "' is already linkonce");
+    return Error(Loc, Twine("section '") + Current->getName() +
+                          "' is already linkonce");
 
   Current->setSelection(Type);
 

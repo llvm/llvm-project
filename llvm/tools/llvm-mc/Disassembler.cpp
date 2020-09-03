@@ -46,8 +46,7 @@ static bool PrintInsts(const MCDisassembler &DisAsm,
     MCInst Inst;
 
     MCDisassembler::DecodeStatus S;
-    S = DisAsm.getInstruction(Inst, Size, Data.slice(Index), Index,
-                              /*REMOVE*/ nulls(), nulls());
+    S = DisAsm.getInstruction(Inst, Size, Data.slice(Index), Index, nulls());
     switch (S) {
     case MCDisassembler::Fail:
       SM.PrintMessage(SMLoc::getFromPointer(Bytes.second[Index]),
@@ -69,7 +68,7 @@ static bool PrintInsts(const MCDisassembler &DisAsm,
       LLVM_FALLTHROUGH;
 
     case MCDisassembler::Success:
-      Streamer.EmitInstruction(Inst, STI);
+      Streamer.emitInstruction(Inst, STI);
       break;
     }
   }

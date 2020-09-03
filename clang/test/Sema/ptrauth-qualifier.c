@@ -28,8 +28,8 @@ int * (__ptrauth(VALID_DATA_KEY) invalid5); // expected-error{{expected identifi
 int * __ptrauth(VALID_DATA_KEY) __ptrauth(VALID_DATA_KEY) invalid6; // expected-error{{type 'int *__ptrauth(2,0,0)' is already __ptrauth-qualified}}
 int * __ptrauth(VALID_DATA_KEY, 2) invalid7; // expected-error{{address discrimination flag for __ptrauth must be 0 or 1; value is 2}}
 int * __ptrauth(VALID_DATA_KEY, -1) invalid8; // expected-error{{address discrimination flag for __ptrauth must be 0 or 1; value is -1}}
-int * __ptrauth(VALID_DATA_KEY, 1, -1) invalid9; // expected-error{{extra discriminator for __ptrauth must between 0 and 65535; value is -1}}
-int * __ptrauth(VALID_DATA_KEY, 1, 100000) invalid10; // expected-error{{extra discriminator for __ptrauth must between 0 and 65535; value is 100000}}
+int * __ptrauth(VALID_DATA_KEY, 1, -1) invalid9; // expected-error{{extra discriminator for __ptrauth must be between 0 and 65535; value is -1}}
+int * __ptrauth(VALID_DATA_KEY, 1, 100000) invalid10; // expected-error{{extra discriminator for __ptrauth must be between 0 and 65535; value is 100000}}
 int * __ptrauth(VALID_DATA_KEY, 1, 65535, 41) invalid11; // expected-error{{__ptrauth qualifier must take between 1 and 3 arguments}}
 int * __ptrauth(VALID_DATA_KEY, 1, nonConstantGlobal) invalid12; // expected-error{{argument to __ptrauth must be an integer constant expression}}
 

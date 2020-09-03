@@ -19,7 +19,7 @@ indicating that two pointers always point to the same object, might point to the
 same object, or are known to never point to the same object.
 
 The LLVM `AliasAnalysis
-<http://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`__ class is the
+<https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`__ class is the
 primary interface used by clients and implementations of alias analyses in the
 LLVM system.  This class is the common interface between clients of alias
 analysis information and the implementations providing it, and is designed to
@@ -36,7 +36,7 @@ points about what exactly results mean.
 ``AliasAnalysis`` Class Overview
 ================================
 
-The `AliasAnalysis <http://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`__
+The `AliasAnalysis <https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`__
 class defines the interface that the various alias analysis implementations
 should support.  This class exports two important enums: ``AliasResult`` and
 ``ModRefResult`` which represent the result of an alias query or a mod/ref
@@ -77,7 +77,7 @@ possible) C code:
     C[1] = A[9-i];        /* One byte store */
   }
 
-In this case, the ``basicaa`` pass will disambiguate the stores to ``C[0]`` and
+In this case, the ``basic-aa`` pass will disambiguate the stores to ``C[0]`` and
 ``C[1]`` because they are accesses to two distinct locations one byte apart, and
 the accesses are each one byte.  In this case, the Loop Invariant Code Motion
 (LICM) pass can use store motion to remove the stores from the loop.  In
@@ -264,7 +264,7 @@ Interfaces which may be specified
 ---------------------------------
 
 All of the `AliasAnalysis
-<http://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`__ virtual methods
+<https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`__ virtual methods
 default to providing :ref:`chaining <aliasanalysis-chaining>` to another alias
 analysis implementation, which ends up returning conservatively correct
 information (returning "May" Alias and "Mod/Ref" for alias and mod/ref queries
@@ -278,7 +278,7 @@ implementing, you just override the interfaces you can improve.
 
 With only one special exception (the :ref:`-no-aa <aliasanalysis-no-aa>` pass)
 every alias analysis pass chains to another alias analysis implementation (for
-example, the user can specify "``-basicaa -ds-aa -licm``" to get the maximum
+example, the user can specify "``-basic-aa -ds-aa -licm``" to get the maximum
 benefit from both alias analyses).  The alias analysis class automatically
 takes care of most of this for methods that you don't override.  For methods
 that you do override, in code paths that return a conservative MayAlias or
@@ -435,7 +435,7 @@ Using the ``AliasSetTracker`` class
 
 Many transformations need information about alias **sets** that are active in
 some scope, rather than information about pairwise aliasing.  The
-`AliasSetTracker <http://llvm.org/doxygen/classllvm_1_1AliasSetTracker.html>`__
+`AliasSetTracker <https://llvm.org/doxygen/classllvm_1_1AliasSetTracker.html>`__
 class is used to efficiently build these Alias Sets from the pairwise alias
 analysis information provided by the ``AliasAnalysis`` interface.
 
@@ -515,10 +515,10 @@ The ``-no-aa`` pass is just like what it sounds: an alias analysis that never
 returns any useful information.  This pass can be useful if you think that alias
 analysis is doing something wrong and are trying to narrow down a problem.
 
-The ``-basicaa`` pass
-^^^^^^^^^^^^^^^^^^^^^
+The ``-basic-aa`` pass
+^^^^^^^^^^^^^^^^^^^^^^
 
-The ``-basicaa`` pass is an aggressive local analysis that *knows* many
+The ``-basic-aa`` pass is an aggressive local analysis that *knows* many
 important facts:
 
 * Distinct globals, stack allocations, and heap allocations can never alias.

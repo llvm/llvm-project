@@ -44,7 +44,9 @@ struct SwiftOptionSetSummaryProvider : public TypeSummaryImpl {
   virtual bool DoesPrintChildren(ValueObject *valobj) const;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(SwiftOptionSetSummaryProvider);
+  SwiftOptionSetSummaryProvider(const SwiftOptionSetSummaryProvider &) = delete;
+  const SwiftOptionSetSummaryProvider &
+  operator=(const SwiftOptionSetSummaryProvider &) = delete;
 
   void FillCasesIfNeeded();
 

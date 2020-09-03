@@ -39,6 +39,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-vzeroupper"
 
+static cl::opt<bool>
+UseVZeroUpper("x86-use-vzeroupper", cl::Hidden,
+  cl::desc("Minimize AVX to SSE transition penalty"),
+  cl::init(true));
+
 STATISTIC(NumVZU, "Number of vzeroupper instructions inserted");
 
 namespace {
@@ -278,6 +283,9 @@ void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
 /// Loop over all of the basic blocks, inserting vzeroupper instructions before
 /// function calls.
 bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
+  if (!UseVZeroUpper)
+    return false;
+
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   if (!ST.hasAVX() || !ST.insertVZEROUPPER())
     return false;

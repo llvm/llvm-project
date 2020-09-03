@@ -246,7 +246,7 @@ void llvm::PrintStatistics() {
     // Get the stream to write to.
     std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
     (*OutStream) << "Statistics are disabled.  "
-                 << "Build with asserts or with -DLLVM_ENABLE_STATS\n";
+                 << "Build with asserts or with -DLLVM_FORCE_ENABLE_STATS\n";
   }
 #endif
 }

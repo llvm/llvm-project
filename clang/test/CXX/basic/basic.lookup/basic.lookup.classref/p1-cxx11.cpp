@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fdiagnostics-show-option -verify %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
 
 template<typename T>
 struct set{};

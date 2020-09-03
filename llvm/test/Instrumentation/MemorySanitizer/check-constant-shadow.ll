@@ -14,7 +14,7 @@ entry:
 }
 
 ; CHECK-LABEL: @main
-; CHECK: call void @__msan_warning_noreturn
+; CHECK: call void @__msan_warning_with_origin_noreturn
 ; CHECK: ret i32 undef
 
 

@@ -1,0 +1,26 @@
+# REQUIRES: asserts
+# RUN: not --crash llc -o - %s -mtriple=x86_64-- \
+# RUN:     -run-pass=cfi-instr-inserter 2>&1 | FileCheck %s
+# Test that CSR being saved in multiple locations can be caught by
+# an assertion.
+--- |
+  define void @inconsistentlocs() {
+    bb.end:
+      ret void
+  }
+...
+---
+# CHECK: Different saved locations for the same CSR
+# CHECK-NEXT: UNREACHABLE executed 
+name: inconsistentlocs
+body: |
+  bb.0:
+    CFI_INSTRUCTION offset $r12, -8
+    JCC_1 %bb.2, 5, implicit undef $eflags
+
+  bb.1:
+    CFI_INSTRUCTION offset $r12, -16
+
+  bb.2.bb.end:
+    RET 0
+...

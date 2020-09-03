@@ -150,13 +150,16 @@ def AR_X : R600Reg<"AR.x", 0>;
 def INDIRECT_BASE_ADDR : R600Reg <"INDIRECT_BASE_ADDR", 0>;
 
 def R600_ArrayBase : RegisterClass <"AMDGPU", [f32, i32], 32,
-                          (add (sequence "ArrayBase%u", 448, 480))>;
+                          (add (sequence "ArrayBase%u", 448, 480))> {
+  let Weight = 0;
+}
 // special registers for ALU src operands
 // const buffer reference, SRCx_SEL contains index
 def ALU_CONST : R600Reg<"CBuf", 0>;
 // interpolation param reference, SRCx_SEL contains index
 def ALU_PARAM : R600Reg<"Param", 0>;
 
+let Weight = 0 in {
 let isAllocatable = 0 in {
 
 def R600_Addr : RegisterClass <"AMDGPU", [i32], 32, (add (sequence "Addr%u_X", 0, 127))>;
@@ -251,3 +254,4 @@ def R600_Reg64 : RegisterClass<"AMDGPU", [v2f32, v2i32, i64, f64], 64,
 def R600_Reg64Vertical : RegisterClass<"AMDGPU", [v2f32, v2i32], 64,
                                       (add V01_X, V01_Y, V01_Z, V01_W,
                                            V23_X, V23_Y, V23_Z, V23_W)>;
+} // End let Weight = 0

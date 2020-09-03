@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DarwinLogCollector_h
-#define DarwinLogCollector_h
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_DARWINLOGCOLLECTOR_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_DARWINLOGCOLLECTOR_H
 
 #include <sys/types.h>
 
@@ -104,4 +104,4 @@ private:
   ActivityMap m_activity_map;
 };
 
-#endif /* LogStreamCollector_h */
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_DARWINLOG_DARWINLOGCOLLECTOR_H

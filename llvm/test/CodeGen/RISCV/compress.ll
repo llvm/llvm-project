@@ -1,6 +1,18 @@
+; This test is designed to run twice, once with function attributes and once
+; with target attributes added on the command line.
+;
+; RUN: cat %s > %t.tgtattr
+; RUN: echo 'attributes #0 = { nounwind }' >> %t.tgtattr
 ; RUN: llc -mtriple=riscv32 -mattr=+c -filetype=obj \
-; RUN:   -disable-block-placement < %s \
-; RUN:   | llvm-objdump -d -triple=riscv32 -mattr=+c -M no-aliases - \
+; RUN:   -disable-block-placement < %t.tgtattr \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c -M no-aliases - \
+; RUN:   | FileCheck -check-prefix=RV32IC %s
+;
+; RUN: cat %s > %t.fnattr
+; RUN: echo 'attributes #0 = { nounwind "target-features"="+c" }' >> %t.fnattr
+; RUN: llc -mtriple=riscv32 -filetype=obj \
+; RUN:   -disable-block-placement < %t.fnattr \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c -M no-aliases - \
 ; RUN:   | FileCheck -check-prefix=RV32IC %s
 
 ; This acts as a sanity check for the codegen instruction compression path,
@@ -17,8 +29,8 @@
 ; possible if alternative codegen choices were made, but they belong in a
 ; different test file.
 
-define i32 @simple_arith(i32 %a, i32 %b) nounwind {
-; RV32IC-LABEL: simple_arith:
+define i32 @simple_arith(i32 %a, i32 %b) #0 {
+; RV32IC-LABEL: <simple_arith>:
 ; RV32IC:         addi a2, a0, 1
 ; RV32IC-NEXT:    c.andi a2, 11
 ; RV32IC-NEXT:    c.slli a2, 7
@@ -35,8 +47,8 @@ define i32 @simple_arith(i32 %a, i32 %b) nounwind {
   ret i32 %6
 }
 
-define i32 @select(i32 %a, i32 *%b) nounwind {
-; RV32IC-LABEL: select:
+define i32 @select(i32 %a, i32 *%b) #0 {
+; RV32IC-LABEL: <select>:
 ; RV32IC:         c.lw a2, 0(a1)
 ; RV32IC-NEXT:    c.beqz a2, 4
 ; RV32IC-NEXT:    c.mv a0, a2
@@ -111,54 +123,53 @@ define i32 @select(i32 %a, i32 *%b) nounwind {
   ret i32 %val20
 }
 
-define i32 @pos_tiny() nounwind {
-; RV32IC-LABEL: pos_tiny:
+define i32 @pos_tiny() #0 {
+; RV32IC-LABEL: <pos_tiny>:
 ; RV32IC:         c.li a0, 18
 ; RV32IC-NEXT:    c.jr ra
   ret i32 18
 }
 
-define i32 @pos_i32() nounwind {
-; RV32IC-LABEL: pos_i32:
+define i32 @pos_i32() #0 {
+; RV32IC-LABEL: <pos_i32>:
 ; RV32IC:         lui a0, 423811
 ; RV32IC-NEXT:    addi a0, a0, -1297
 ; RV32IC-NEXT:    c.jr ra
   ret i32 1735928559
 }
 
-define i32 @pos_i32_half_compressible() nounwind {
-; RV32IC-LABEL: pos_i32_half_compressible:
+define i32 @pos_i32_half_compressible() #0 {
+; RV32IC-LABEL: <pos_i32_half_compressible>:
 ; RV32IC:         lui a0, 423810
 ; RV32IC-NEXT:    c.addi  a0, 28
 ; RV32IC-NEXT:    c.jr    ra
   ret i32 1735925788
 }
 
-
-define i32 @neg_tiny() nounwind {
-; RV32IC-LABEL: neg_tiny:
+define i32 @neg_tiny() #0 {
+; RV32IC-LABEL: <neg_tiny>:
 ; RV32IC:       c.li a0, -19
 ; RV32IC-NEXT:  c.jr ra
   ret i32 -19
 }
 
-define i32 @neg_i32() nounwind {
-; RV32IC-LABEL: neg_i32:
+define i32 @neg_i32() #0 {
+; RV32IC-LABEL: <neg_i32>:
 ; RV32IC:       lui a0, 912092
 ; RV32IC-NEXT:  addi a0, a0, -273
 ; RV32IC-NEXT:  c.jr ra
   ret i32 -559038737
 }
 
-define i32 @pos_i32_hi20_only() nounwind {
-; RV32IC-LABEL: pos_i32_hi20_only:
+define i32 @pos_i32_hi20_only() #0 {
+; RV32IC-LABEL: <pos_i32_hi20_only>:
 ; RV32IC:       c.lui a0, 16
 ; RV32IC-NEXT:  c.jr ra
   ret i32 65536
 }
 
-define i32 @neg_i32_hi20_only() nounwind {
-; RV32IC-LABEL: neg_i32_hi20_only:
+define i32 @neg_i32_hi20_only() #0 {
+; RV32IC-LABEL: <neg_i32_hi20_only>:
 ; RV32IC:       c.lui a0, 1048560
 ; RV32IC-NEXT:  c.jr ra
   ret i32 -65536

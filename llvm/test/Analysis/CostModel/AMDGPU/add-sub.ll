@@ -90,7 +90,7 @@ define amdgpu_kernel void @add_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> add
 }
 
 ; ALL: 'add_v16i64'
-; ALL: estimated cost of 32 for {{.*}} add <16 x i64>
+; ALL: estimated cost of 128 for {{.*}} add <16 x i64>
 define amdgpu_kernel void @add_v16i64(<16 x i64> addrspace(1)* %out, <16 x i64> addrspace(1)* %vaddr, <16 x i64> %b) #0 {
   %vec = load <16 x i64>, <16 x i64> addrspace(1)* %vaddr
   %add = add <16 x i64> %vec, %b

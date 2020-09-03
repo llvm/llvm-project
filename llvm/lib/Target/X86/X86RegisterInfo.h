@@ -54,10 +54,6 @@ public:
   // FIXME: This should be tablegen'd like getDwarfRegNum is
   int getSEHRegNum(unsigned i) const;
 
-  /// Code Generation virtual methods...
-  ///
-  bool trackLivenessAfterRegAlloc(const MachineFunction &MF) const override;
-
   /// getMatchingSuperRegClass - Return a subclass of the specified register
   /// class A so that each register in it has a sub-register of the
   /// specified sub-register index which is in the specified register class B.
@@ -125,7 +121,7 @@ public:
 
   bool canRealignStack(const MachineFunction &MF) const override;
 
-  bool hasReservedSpillSlot(const MachineFunction &MF, unsigned Reg,
+  bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
                             int &FrameIdx) const override;
 
   void eliminateFrameIndex(MachineBasicBlock::iterator MI,

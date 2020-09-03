@@ -45,7 +45,7 @@ public:
     // Escape the string.
     SmallString<256> Str;
     raw_svector_ostream(Str).write_escaped(AggregateString);
-    AggregateString = Str.str();
+    AggregateString = std::string(Str.str());
 
     O << "    \"";
     unsigned CharsPrinted = 0;

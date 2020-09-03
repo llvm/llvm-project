@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Internals.h"
+#include "clang/ARCMigrate/ARCMT.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/DiagnosticCategories.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -189,7 +190,7 @@ createInvocationForMigration(CompilerInvocation &origCI,
       PPOpts.Includes.insert(PPOpts.Includes.begin(), OriginalFile);
     PPOpts.ImplicitPCHInclude.clear();
   }
-  std::string define = getARCMTMacroName();
+  std::string define = std::string(getARCMTMacroName());
   define += '=';
   CInvok->getPreprocessorOpts().addMacroDef(define);
   CInvok->getLangOpts()->ObjCAutoRefCount = true;
@@ -296,7 +297,7 @@ bool arcmt::checkForManualIssues(
     for (CapturedDiagList::iterator
            I = capturedDiags.begin(), E = capturedDiags.end(); I != E; ++I)
       arcDiags.push_back(*I);
-    writeARCDiagsToPlist(plistOut, arcDiags,
+    writeARCDiagsToPlist(std::string(plistOut), arcDiags,
                          Ctx.getSourceManager(), Ctx.getLangOpts());
   }
 
@@ -598,7 +599,7 @@ bool MigrationProcess::applyTransform(TransformFn trans,
     RewriteBuffer &buf = I->second;
     const FileEntry *file = Ctx.getSourceManager().getFileEntryForID(FID);
     assert(file);
-    std::string newFname = file->getName();
+    std::string newFname = std::string(file->getName());
     newFname += "-trans";
     SmallString<512> newText;
     llvm::raw_svector_ostream vecOS(newText);

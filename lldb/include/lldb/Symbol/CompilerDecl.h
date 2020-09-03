@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CompilerDecl_h_
-#define liblldb_CompilerDecl_h_
+#ifndef LLDB_SYMBOL_COMPILERDECL_H
+#define LLDB_SYMBOL_COMPILERDECL_H
 
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
@@ -94,4 +94,4 @@ bool operator!=(const CompilerDecl &lhs, const CompilerDecl &rhs);
 
 } // namespace lldb_private
 
-#endif // #ifndef liblldb_CompilerDecl_h_
+#endif // LLDB_SYMBOL_COMPILERDECL_H

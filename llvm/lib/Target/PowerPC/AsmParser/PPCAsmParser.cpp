@@ -109,6 +109,8 @@ class PPCAsmParser : public MCTargetAsmParser {
   bool MatchRegisterName(unsigned &RegNo, int64_t &IntVal);
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                        SMLoc &EndLoc) override;
 
   const MCExpr *ExtractModifierFromExpr(const MCExpr *E,
                                         PPCMCExpr::VariantKind &Variant);
@@ -356,6 +358,16 @@ public:
   bool isS16ImmX16() const { return Kind == Expression ||
                                     (Kind == Immediate && isInt<16>(getImm()) &&
                                      (getImm() & 15) == 0); }
+  bool isS34ImmX16() const {
+    return Kind == Expression ||
+           (Kind == Immediate && isInt<34>(getImm()) && (getImm() & 15) == 0);
+  }
+  bool isS34Imm() const {
+    // Once the PC-Rel ABI is finalized, evaluate whether a 34-bit
+    // ContextImmediate is needed.
+    return Kind == Expression || (Kind == Immediate && isInt<34>(getImm()));
+  }
+
   bool isS17Imm() const {
     switch (Kind) {
       case Expression:
@@ -388,6 +400,7 @@ public:
   bool isCondBr() const { return Kind == Expression ||
                                  (Kind == Immediate && isInt<16>(getImm()) &&
                                   (getImm() & 3) == 0); }
+  bool isImmZero() const { return Kind == Immediate && getImm() == 0; }
   bool isRegNumber() const { return Kind == Immediate && isUInt<5>(getImm()); }
   bool isVSRegNumber() const {
     return Kind == Immediate && isUInt<6>(getImm());
@@ -1142,7 +1155,7 @@ bool PPCAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     // Post-process instructions (typically extended mnemonics)
     ProcessInstruction(Inst, Operands);
     Inst.setLoc(IDLoc);
-    Out.EmitInstruction(Inst, getSTI());
+    Out.emitInstruction(Inst, getSTI());
     return false;
   case Match_MissingFeature:
     return Error(IDLoc, "instruction use requires an option to be enabled");
@@ -1210,14 +1223,22 @@ bool PPCAsmParser::MatchRegisterName(unsigned &RegNo, int64_t &IntVal) {
 
 bool PPCAsmParser::
 ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) {
+  if (tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success)
+    return TokError("invalid register name");
+  return false;
+}
+
+OperandMatchResultTy PPCAsmParser::tryParseRegister(unsigned &RegNo,
+                                                    SMLoc &StartLoc,
+                                                    SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
   RegNo = 0;
   int64_t IntVal;
   if (MatchRegisterName(RegNo, IntVal))
-    return TokError("invalid register name");
-  return false;
+    return MatchOperand_NoMatch;
+  return MatchOperand_Success;
 }
 
 /// Extract \code @l/@ha \endcode modifier from expression.  Recursively scan
@@ -1380,7 +1401,7 @@ ParseExpression(const MCExpr *&EVal) {
   PPCMCExpr::VariantKind Variant;
   const MCExpr *E = ExtractModifierFromExpr(EVal, Variant);
   if (E)
-    EVal = PPCMCExpr::create(Variant, E, false, getParser().getContext());
+    EVal = PPCMCExpr::create(Variant, E, getParser().getContext());
 
   return false;
 }
@@ -1427,7 +1448,7 @@ ParseDarwinExpression(const MCExpr *&EVal) {
     if (getLexer().isNot(AsmToken::RParen))
       return Error(Parser.getTok().getLoc(), "expected ')'");
     Parser.Lex(); // Eat the ')'
-    EVal = PPCMCExpr::create(Variant, EVal, false, getParser().getContext());
+    EVal = PPCMCExpr::create(Variant, EVal, getParser().getContext());
   }
   return false;
 }
@@ -1560,12 +1581,12 @@ bool PPCAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // instruction name, to match what TableGen is doing.
   std::string NewOpcode;
   if (parseOptionalToken(AsmToken::Plus)) {
-    NewOpcode = Name;
+    NewOpcode = std::string(Name);
     NewOpcode += '+';
     Name = NewOpcode;
   }
   if (parseOptionalToken(AsmToken::Minus)) {
-    NewOpcode = Name;
+    NewOpcode = std::string(Name);
     NewOpcode += '-';
     Name = NewOpcode;
   }
@@ -1658,9 +1679,9 @@ bool PPCAsmParser::ParseDirectiveWord(unsigned Size, AsmToken ID) {
       if (!isUIntN(8 * Size, IntValue) && !isIntN(8 * Size, IntValue))
         return Error(ExprLoc, "literal value out of range for '" +
                                   ID.getIdentifier() + "' directive");
-      getStreamer().EmitIntValue(IntValue, Size);
+      getStreamer().emitIntValue(IntValue, Size);
     } else
-      getStreamer().EmitValue(Value, Size, ExprLoc);
+      getStreamer().emitValue(Value, Size, ExprLoc);
     return false;
   };
 
@@ -1681,7 +1702,7 @@ bool PPCAsmParser::ParseDirectiveTC(unsigned Size, AsmToken ID) {
     return addErrorSuffix(" in '.tc' directive");
 
   // Align to word size.
-  getParser().getStreamer().EmitValueToAlignment(Size);
+  getParser().getStreamer().emitValueToAlignment(Size);
 
   // Emit expressions.
   return ParseDirectiveWord(Size, ID);
@@ -1710,10 +1731,10 @@ bool PPCAsmParser::ParseDirectiveMachine(SMLoc L) {
   if (parseToken(AsmToken::EndOfStatement))
     return addErrorSuffix(" in '.machine' directive");
 
-  PPCTargetStreamer &TStreamer =
-      *static_cast<PPCTargetStreamer *>(
-           getParser().getStreamer().getTargetStreamer());
-  TStreamer.emitMachine(CPU);
+  PPCTargetStreamer *TStreamer = static_cast<PPCTargetStreamer *>(
+      getParser().getStreamer().getTargetStreamer());
+  if (TStreamer != nullptr)
+    TStreamer->emitMachine(CPU);
 
   return false;
 }
@@ -1752,10 +1773,10 @@ bool PPCAsmParser::ParseDirectiveAbiVersion(SMLoc L) {
       parseToken(AsmToken::EndOfStatement))
     return addErrorSuffix(" in '.abiversion' directive");
 
-  PPCTargetStreamer &TStreamer =
-      *static_cast<PPCTargetStreamer *>(
-           getParser().getStreamer().getTargetStreamer());
-  TStreamer.emitAbiVersion(AbiVersion);
+  PPCTargetStreamer *TStreamer = static_cast<PPCTargetStreamer *>(
+      getParser().getStreamer().getTargetStreamer());
+  if (TStreamer != nullptr)
+    TStreamer->emitAbiVersion(AbiVersion);
 
   return false;
 }
@@ -1775,10 +1796,10 @@ bool PPCAsmParser::ParseDirectiveLocalEntry(SMLoc L) {
       parseToken(AsmToken::EndOfStatement))
     return addErrorSuffix(" in '.localentry' directive");
 
-  PPCTargetStreamer &TStreamer =
-      *static_cast<PPCTargetStreamer *>(
-           getParser().getStreamer().getTargetStreamer());
-  TStreamer.emitLocalEntry(Sym, Expr);
+  PPCTargetStreamer *TStreamer = static_cast<PPCTargetStreamer *>(
+      getParser().getStreamer().getTargetStreamer());
+  if (TStreamer != nullptr)
+    TStreamer->emitLocalEntry(Sym, Expr);
 
   return false;
 }
@@ -1786,7 +1807,7 @@ bool PPCAsmParser::ParseDirectiveLocalEntry(SMLoc L) {
 
 
 /// Force static initialization.
-extern "C" void LLVMInitializePowerPCAsmParser() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCAsmParser() {
   RegisterMCAsmParser<PPCAsmParser> A(getThePPC32Target());
   RegisterMCAsmParser<PPCAsmParser> B(getThePPC64Target());
   RegisterMCAsmParser<PPCAsmParser> C(getThePPC64LETarget());
@@ -1830,23 +1851,23 @@ PPCAsmParser::applyModifierToExpr(const MCExpr *E,
                                   MCContext &Ctx) {
   switch (Variant) {
   case MCSymbolRefExpr::VK_PPC_LO:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_LO, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_LO, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HI:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HI, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HI, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HA, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HA, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGH:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGH, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGH, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHA, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHA, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHER:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHER, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHER, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHERA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHERA, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHERA, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHEST:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHEST, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHEST, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHESTA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHESTA, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHESTA, E, Ctx);
   default:
     return nullptr;
   }

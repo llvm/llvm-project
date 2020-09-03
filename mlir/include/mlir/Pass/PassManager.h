@@ -1,6 +1,6 @@
 //===- PassManager.h - Pass Management Interface ----------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -13,7 +13,9 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Support/raw_ostream.h"
 
+#include <functional>
 #include <vector>
 
 namespace llvm {
@@ -98,13 +100,16 @@ public:
   void mergeStatisticsInto(OpPassManager &other);
 
 private:
-  OpPassManager(OperationName name, bool disableThreads, bool verifyPasses);
+  OpPassManager(OperationName name, bool verifyPasses);
 
   /// A pointer to an internal implementation instance.
   std::unique_ptr<detail::OpPassManagerImpl> impl;
 
   /// Allow access to the constructor.
   friend class PassManager;
+
+  /// Allow access.
+  friend detail::OpPassManagerImpl;
 };
 
 //===----------------------------------------------------------------------===//
@@ -135,13 +140,13 @@ public:
   LLVM_NODISCARD
   LogicalResult run(ModuleOp module);
 
-  /// Disable support for multi-threading within the pass manager.
-  void disableMultithreading(bool disable = true);
-
   /// Enable support for the pass manager to generate a reproducer on the event
   /// of a crash or a pass failure. `outputFile` is a .mlir filename used to
-  /// write the generated reproducer.
-  void enableCrashReproducerGeneration(StringRef outputFile);
+  /// write the generated reproducer. If `genLocalReproducer` is true, the pass
+  /// manager will attempt to generate a local reproducer that contains the
+  /// smallest pipeline.
+  void enableCrashReproducerGeneration(StringRef outputFile,
+                                       bool genLocalReproducer = false);
 
   //===--------------------------------------------------------------------===//
   // Instrumentations
@@ -217,19 +222,48 @@ public:
   ///   potential mutations were made.
   /// * 'out' corresponds to the stream to output the printed IR to.
   void enableIRPrinting(
-      std::function<bool(Pass *, Operation *)> shouldPrintBeforePass,
-      std::function<bool(Pass *, Operation *)> shouldPrintAfterPass,
-      bool printModuleScope, bool printAfterOnlyOnChange, raw_ostream &out);
+      std::function<bool(Pass *, Operation *)> shouldPrintBeforePass =
+          [](Pass *, Operation *) { return true; },
+      std::function<bool(Pass *, Operation *)> shouldPrintAfterPass =
+          [](Pass *, Operation *) { return true; },
+      bool printModuleScope = true, bool printAfterOnlyOnChange = true,
+      raw_ostream &out = llvm::errs());
 
   //===--------------------------------------------------------------------===//
   // Pass Timing
+
+  /// A configuration struct provided to the pass timing feature.
+  class PassTimingConfig {
+  public:
+    using PrintCallbackFn = function_ref<void(raw_ostream &)>;
+
+    /// Initialize the configuration.
+    /// * 'displayMode' switch between list or pipeline display (see the
+    /// `PassDisplayMode` enum documentation).
+    explicit PassTimingConfig(
+        PassDisplayMode displayMode = PassDisplayMode::Pipeline)
+        : displayMode(displayMode) {}
+
+    virtual ~PassTimingConfig();
+
+    /// A hook that may be overridden by a derived config to control the
+    /// printing. The callback is supplied by the framework and the config is
+    /// responsible to call it back with a stream for the output.
+    virtual void printTiming(PrintCallbackFn printCallback);
+
+    /// Return the `PassDisplayMode` this config was created with.
+    PassDisplayMode getDisplayMode() { return displayMode; }
+
+  private:
+    PassDisplayMode displayMode;
+  };
 
   /// Add an instrumentation to time the execution of passes and the computation
   /// of analyses.
   /// Note: Timing should be enabled after all other instrumentations to avoid
   /// any potential "ghost" timing from other instrumentations being
   /// unintentionally included in the timing results.
-  void enableTiming(PassDisplayMode displayMode = PassDisplayMode::Pipeline);
+  void enableTiming(std::unique_ptr<PassTimingConfig> config = nullptr);
 
   /// Prompts the pass manager to print the statistics collected for each of the
   /// held passes after each call to 'run'.
@@ -240,8 +274,12 @@ private:
   /// Dump the statistics of the passes within this pass manager.
   void dumpStatistics();
 
-  /// Flag that specifies if pass timing is enabled.
-  bool passTiming : 1;
+  /// Run the pass manager with crash recover enabled.
+  LogicalResult runWithCrashRecovery(ModuleOp module, AnalysisManager am);
+  /// Run the given passes with crash recover enabled.
+  LogicalResult
+  runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
+                       ModuleOp module, AnalysisManager am);
 
   /// Flag that specifies if pass statistics should be dumped.
   Optional<PassDisplayMode> passStatisticsMode;
@@ -251,6 +289,12 @@ private:
 
   /// An optional filename to use when generating a crash reproducer if valid.
   Optional<std::string> crashReproducerFileName;
+
+  /// Flag that specifies if pass timing is enabled.
+  bool passTiming : 1;
+
+  /// Flag that specifies if the generated crash reproducer should be local.
+  bool localReproducer : 1;
 };
 
 /// Register a set of useful command-line options that can be used to configure

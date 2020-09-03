@@ -18,6 +18,12 @@ let Namespace = "Hexagon" in {
     let HWEncoding{4-0} = num;
   }
 
+  // These registers are used to preserve a distinction between
+  // vector register pairs of differing order.
+  class HexagonFakeReg<string n> : Register<n> {
+    let isArtificial = 1;
+  }
+
   class HexagonDoubleReg<bits<5> num, string n, list<Register> subregs,
                          list<string> alt = []> :
         RegisterWithSubRegs<n, subregs> {
@@ -29,6 +35,13 @@ let Namespace = "Hexagon" in {
   // Ri - 32-bit integer registers.
   class Ri<bits<5> num, string n, list<string> alt = []> :
         HexagonReg<num, n, alt>;
+
+  // Rp - false/pseudo registers.  These registers are used
+  // to provide a distinct set of aliases for both styles of vector
+  // register pairs without encountering subregister indexing constraints.
+  class R_fake<string n> :
+        HexagonFakeReg<n>;
+
 
   // Rf - 32-bit floating-point registers.
   class Rf<bits<5> num, string n> : HexagonReg<num, n>;
@@ -81,6 +94,7 @@ let Namespace = "Hexagon" in {
   def isub_hi  : SubRegIndex<32, 32>;
   def vsub_lo  : SubRegIndex<512>;
   def vsub_hi  : SubRegIndex<512, 512>;
+  def vsub_fake: SubRegIndex<512>;
   def wsub_lo  : SubRegIndex<1024>;
   def wsub_hi  : SubRegIndex<1024, 1024>;
   def subreg_overflow : SubRegIndex<1, 0>;
@@ -183,27 +197,49 @@ let Namespace = "Hexagon" in {
 
   foreach i = 0-31 in {
     def V#i  : Ri<i, "v"#i>,  DwarfRegNum<[!add(i, 99)]>;
+    def VF#i : R_fake<"__"#!add(i,999999)>,  DwarfRegNum<[!add(i, 999999)]>;
+    def VFR#i : R_fake<"__"#!add(i,9999999)>,  DwarfRegNum<[!add(i, 9999999)]>;
   }
   def VTMP : Ri<0, "vtmp">, DwarfRegNum<[131]>;
 
   // Aliases of the V* registers used to hold double vec values.
-  let SubRegIndices = [vsub_lo, vsub_hi], CoveredBySubRegs = 1 in {
-  def W0  : Rd< 0,  "v1:0",  [V0,  V1]>,  DwarfRegNum<[99]>;
-  def W1  : Rd< 2,  "v3:2",  [V2,  V3]>,  DwarfRegNum<[101]>;
-  def W2  : Rd< 4,  "v5:4",  [V4,  V5]>,  DwarfRegNum<[103]>;
-  def W3  : Rd< 6,  "v7:6",  [V6,  V7]>,  DwarfRegNum<[105]>;
-  def W4  : Rd< 8,  "v9:8",  [V8,  V9]>,  DwarfRegNum<[107]>;
-  def W5  : Rd<10, "v11:10", [V10, V11]>, DwarfRegNum<[109]>;
-  def W6  : Rd<12, "v13:12", [V12, V13]>, DwarfRegNum<[111]>;
-  def W7  : Rd<14, "v15:14", [V14, V15]>, DwarfRegNum<[113]>;
-  def W8  : Rd<16, "v17:16", [V16, V17]>, DwarfRegNum<[115]>;
-  def W9  : Rd<18, "v19:18", [V18, V19]>, DwarfRegNum<[117]>;
-  def W10 : Rd<20, "v21:20", [V20, V21]>, DwarfRegNum<[119]>;
-  def W11 : Rd<22, "v23:22", [V22, V23]>, DwarfRegNum<[121]>;
-  def W12 : Rd<24, "v25:24", [V24, V25]>, DwarfRegNum<[123]>;
-  def W13 : Rd<26, "v27:26", [V26, V27]>, DwarfRegNum<[125]>;
-  def W14 : Rd<28, "v29:28", [V28, V29]>, DwarfRegNum<[127]>;
-  def W15 : Rd<30, "v31:30", [V30, V31]>, DwarfRegNum<[129]>;
+  let SubRegIndices = [vsub_lo, vsub_hi, vsub_fake], CoveredBySubRegs = 1 in {
+  def W0  : Rd< 0,  "v1:0",  [V0,  V1, VF0]>,  DwarfRegNum<[99]>;
+  def W1  : Rd< 2,  "v3:2",  [V2,  V3, VF1]>,  DwarfRegNum<[101]>;
+  def W2  : Rd< 4,  "v5:4",  [V4,  V5, VF2]>,  DwarfRegNum<[103]>;
+  def W3  : Rd< 6,  "v7:6",  [V6,  V7, VF3]>,  DwarfRegNum<[105]>;
+  def W4  : Rd< 8,  "v9:8",  [V8,  V9, VF4]>,  DwarfRegNum<[107]>;
+  def W5  : Rd<10, "v11:10", [V10, V11, VF5]>, DwarfRegNum<[109]>;
+  def W6  : Rd<12, "v13:12", [V12, V13, VF6]>, DwarfRegNum<[111]>;
+  def W7  : Rd<14, "v15:14", [V14, V15, VF7]>, DwarfRegNum<[113]>;
+  def W8  : Rd<16, "v17:16", [V16, V17, VF8]>, DwarfRegNum<[115]>;
+  def W9  : Rd<18, "v19:18", [V18, V19, VF9]>, DwarfRegNum<[117]>;
+  def W10 : Rd<20, "v21:20", [V20, V21, VF10]>, DwarfRegNum<[119]>;
+  def W11 : Rd<22, "v23:22", [V22, V23, VF11]>, DwarfRegNum<[121]>;
+  def W12 : Rd<24, "v25:24", [V24, V25, VF12]>, DwarfRegNum<[123]>;
+  def W13 : Rd<26, "v27:26", [V26, V27, VF13]>, DwarfRegNum<[125]>;
+  def W14 : Rd<28, "v29:28", [V28, V29, VF14]>, DwarfRegNum<[127]>;
+  def W15 : Rd<30, "v31:30", [V30, V31, VF15]>, DwarfRegNum<[129]>;
+  }
+
+  // Reverse Aliases of the V* registers used to hold double vec values.
+  let SubRegIndices = [vsub_lo, vsub_hi, vsub_fake], CoveredBySubRegs = 1 in {
+  def WR0 : Rd< 1,  "v0:1",  [V0, V1, VFR0]>,  DwarfRegNum<[161]>;
+  def WR1 : Rd< 3,  "v2:3",  [V2, V3, VFR1]>,  DwarfRegNum<[162]>;
+  def WR2 : Rd< 5,  "v4:5",  [V4, V5, VFR2]>,  DwarfRegNum<[163]>;
+  def WR3 : Rd< 7,  "v6:7",  [V6, V7, VFR3]>,  DwarfRegNum<[164]>;
+  def WR4 : Rd< 9,  "v8:9",  [V8, V9, VFR4]>,  DwarfRegNum<[165]>;
+  def WR5 : Rd<11, "v10:11", [V10, V11, VFR5]>,  DwarfRegNum<[166]>;
+  def WR6 : Rd<13, "v12:13", [V12, V13, VFR6]>,  DwarfRegNum<[167]>;
+  def WR7 : Rd<15, "v14:15", [V14, V15, VFR7]>,  DwarfRegNum<[168]>;
+  def WR8 : Rd<17, "v16:17", [V16, V17, VFR8]>,  DwarfRegNum<[169]>;
+  def WR9 : Rd<19, "v18:19", [V18, V19, VFR9]>,  DwarfRegNum<[170]>;
+  def WR10: Rd<21, "v20:21", [V20, V21, VFR10]>,  DwarfRegNum<[171]>;
+  def WR11: Rd<23, "v22:23", [V22, V23, VFR11]>,  DwarfRegNum<[172]>;
+  def WR12: Rd<25, "v24:25", [V24, V25, VFR12]>,  DwarfRegNum<[173]>;
+  def WR13: Rd<27, "v26:27", [V26, V27, VFR13]>,  DwarfRegNum<[174]>;
+  def WR14: Rd<29, "v28:29", [V28, V29, VFR14]>,  DwarfRegNum<[175]>;
+  def WR15: Rd<31, "v30:31", [V30, V31, VFR15]>,  DwarfRegNum<[176]>;
   }
 
   // Aliases of the V* registers used to hold quad vec values.
@@ -283,7 +319,7 @@ let Namespace = "Hexagon" in {
 // HVX types
 
 def VecI1:   ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
-                               [v512i1, v1024i1, v512i1]>;
+                               [v64i1,  v128i1,  v64i1]>;
 def VecI8:   ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v64i8,  v128i8,  v64i8]>;
 def VecI16:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
@@ -314,15 +350,15 @@ def HvxVR : RegisterClass<"Hexagon", [VecI8, VecI16, VecI32], 512,
 }
 
 def HvxWR : RegisterClass<"Hexagon", [VecPI8, VecPI16, VecPI32], 1024,
-  (add (sequence "W%u", 0, 15))> {
+  (add (sequence "W%u", 0, 15), (sequence "WR%u", 0, 15))> {
   let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
     [RegInfo<1024,1024,1024>, RegInfo<2048,2048,2048>, RegInfo<1024,1024,1024>]>;
 }
 
-def HvxQR : RegisterClass<"Hexagon", [VecI1, VecQ8, VecQ16, VecQ32], 512,
+def HvxQR : RegisterClass<"Hexagon", [VecI1, VecQ8, VecQ16, VecQ32], 128,
   (add Q0, Q1, Q2, Q3)> {
   let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
-    [RegInfo<512,512,512>, RegInfo<1024,1024,1024>, RegInfo<512,512,512>]>;
+    [RegInfo<64,512,512>, RegInfo<128,1024,1024>, RegInfo<64,512,512>]>;
 }
 
 def HvxVQR : RegisterClass<"Hexagon", [untyped], 2048,
@@ -364,6 +400,10 @@ def CtrRegs : RegisterClass<"Hexagon", [i32], 32,
        UPCYCLELO, UPCYCLEHI,
        FRAMELIMIT, FRAMEKEY, PKTCOUNTLO, PKTCOUNTHI, UTIMERLO, UTIMERHI,
        M0, M1, USR)>;
+
+let Size = 64 in
+def VectRegRev : RegisterClass<"Hexagon", [i64], 64,
+  (add (sequence "WR%u", 0, 15))>;
 
 let isAllocatable = 0 in
 def UsrBits : RegisterClass<"Hexagon", [i1], 0, (add USR_OVF)>;

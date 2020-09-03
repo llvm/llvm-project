@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
   Support
   )
 
@@ -34,6 +35,9 @@ add_clang_library(clangAnalysis
   clangASTMatchers
   clangBasic
   clangLex
+
+  DEPENDS
+  omp_gen
   )
 
 add_subdirectory(plugins)

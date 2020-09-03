@@ -3,9 +3,9 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/ppc64-no-split-stack.s -o %t2.o
 
-# RUN: not ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 2>&1 | \
+# RUN: not ld.lld %t1.o %t2.o -o /dev/null --defsym __morestack=0x10010000 2>&1 | \
 # RUN: FileCheck -check-prefix=OVERFLOW %s
-# RUN: not ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 \
+# RUN: not ld.lld %t1.o %t2.o -o /dev/null --defsym __morestack=0x10010000 \
 # RUN: -split-stack-adjust-size 4097 2>&1 | FileCheck -check-prefix=OVERFLOW %s
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 4096
 # RUN: llvm-objdump -d %t | FileCheck %s
@@ -13,9 +13,9 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/ppc64-no-split-stack.s -o %t2.o
 
-# RUN: not ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 2>&1 | \
+# RUN: not ld.lld %t1.o %t2.o -o /dev/null --defsym __morestack=0x10010000 2>&1 | \
 # RUN: FileCheck -check-prefix=OVERFLOW %s
-# RUN: not ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 \
+# RUN: not ld.lld %t1.o %t2.o -o /dev/null --defsym __morestack=0x10010000 \
 # RUN: -split-stack-adjust-size 4097 2>&1 | FileCheck -check-prefix=OVERFLOW %s
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 4096
 # RUN: llvm-objdump -d %t | FileCheck %s
@@ -59,6 +59,6 @@ caller:
 # CHECK-NEXT: addis 12, 1, -32768
 # CHECK-NEXT: nop
 # CHECK-NEXT: cmpld 7, 12, 0
-# CHECK-NEXT: bt- 28, .+36
+# CHECK-NEXT: bt- 28, 0x10010204
 
 .section        .note.GNU-split-stack,"",@progbits

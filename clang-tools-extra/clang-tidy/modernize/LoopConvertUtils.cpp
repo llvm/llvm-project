@@ -500,7 +500,7 @@ void ForLoopIndexUseVisitor::addUsage(const Usage &U) {
 ///     int k = *i + 2;
 ///   }
 /// \endcode
-bool ForLoopIndexUseVisitor::TraverseUnaryDeref(UnaryOperator *Uop) {
+bool ForLoopIndexUseVisitor::TraverseUnaryOperator(UnaryOperator *Uop) {
   // If we dereference an iterator that's actually a pointer, count the
   // occurrence.
   if (isDereferenceOfUop(Uop, IndexVar)) {
@@ -668,7 +668,7 @@ bool ForLoopIndexUseVisitor::TraverseCXXOperatorCallExpr(
 }
 
 /// If we encounter an array with IndexVar as the index of an
-/// ArraySubsriptExpression, note it as a consistent usage and prune the
+/// ArraySubscriptExpression, note it as a consistent usage and prune the
 /// AST traversal.
 ///
 /// For example, given
@@ -712,7 +712,7 @@ bool ForLoopIndexUseVisitor::TraverseArraySubscriptExpr(ArraySubscriptExpr *E) {
 /// If we encounter a reference to IndexVar in an unpruned branch of the
 /// traversal, mark this loop as unconvertible.
 ///
-/// This implements the whitelist for convertible loops: any usages of IndexVar
+/// This determines the set of convertible loops: any usages of IndexVar
 /// not explicitly considered convertible by this traversal will be caught by
 /// this function.
 ///
@@ -851,20 +851,20 @@ std::string VariableNamer::createIndexName() {
 
   size_t Len = ContainerName.size();
   if (Len > 1 && ContainerName.endswith(Style == NS_UpperCase ? "S" : "s")) {
-    IteratorName = ContainerName.substr(0, Len - 1);
+    IteratorName = std::string(ContainerName.substr(0, Len - 1));
     // E.g.: (auto thing : things)
     if (!declarationExists(IteratorName) || IteratorName == OldIndex->getName())
       return IteratorName;
   }
 
   if (Len > 2 && ContainerName.endswith(Style == NS_UpperCase ? "S_" : "s_")) {
-    IteratorName = ContainerName.substr(0, Len - 2);
+    IteratorName = std::string(ContainerName.substr(0, Len - 2));
     // E.g.: (auto thing : things_)
     if (!declarationExists(IteratorName) || IteratorName == OldIndex->getName())
       return IteratorName;
   }
 
-  return OldIndex->getName();
+  return std::string(OldIndex->getName());
 }
 
 /// Determines whether or not the name \a Symbol conflicts with
@@ -899,7 +899,7 @@ bool VariableNamer::declarationExists(StringRef Symbol) {
   // of DeclContext::lookup()). Why is this?
 
   // Finally, determine if the symbol was used in the loop or a child context.
-  DeclFinderASTVisitor DeclFinder(Symbol, GeneratedDecls);
+  DeclFinderASTVisitor DeclFinder(std::string(Symbol), GeneratedDecls);
   return DeclFinder.findUsages(SourceStmt);
 }
 

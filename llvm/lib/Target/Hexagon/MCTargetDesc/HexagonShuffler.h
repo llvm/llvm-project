@@ -17,11 +17,13 @@
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
+#include <functional>
 #include <utility>
 
 namespace llvm {
@@ -45,6 +47,9 @@ public:
     setWeight(s);
   }
 
+  void setAllUnits() {
+    setUnits(((1u << HEXAGON_PACKET_SIZE) - 1));
+  }
   unsigned setWeight(unsigned s);
 
   unsigned getUnits() const { return (Slots); }
@@ -65,7 +70,6 @@ public:
 class HexagonCVIResource : public HexagonResource {
 public:
   using UnitsAndLanes = std::pair<unsigned, unsigned>;
-  using TypeUnitsAndLanes = DenseMap<unsigned, UnitsAndLanes>;
 
 private:
   // Available HVX slots.
@@ -90,10 +94,9 @@ private:
   void setStore(bool f = true) { Store = f; }
 
 public:
-  HexagonCVIResource(TypeUnitsAndLanes *TUL, MCInstrInfo const &MCII,
+  HexagonCVIResource(MCInstrInfo const &MCII,
+                     MCSubtargetInfo const &STI,
                      unsigned s, MCInst const *id);
-
-  static void SetupTUL(TypeUnitsAndLanes *TUL, StringRef CPU);
 
   bool isValid() const { return Valid; }
   unsigned getLanes() const { return Lanes; }
@@ -111,10 +114,10 @@ class HexagonInstr {
   HexagonCVIResource CVI;
 
 public:
-  HexagonInstr(HexagonCVIResource::TypeUnitsAndLanes *T,
-               MCInstrInfo const &MCII, MCInst const *id,
+  HexagonInstr(MCInstrInfo const &MCII,
+               MCSubtargetInfo const &STI, MCInst const *id,
                MCInst const *Extender, unsigned s)
-      : ID(id), Extender(Extender), Core(s), CVI(T, MCII, s, id) {}
+      : ID(id), Extender(Extender), Core(s), CVI(MCII, STI, s, id){};
 
   MCInst const &getDesc() const { return *ID; }
   MCInst const *getExtender() const { return Extender; }
@@ -140,11 +143,30 @@ class HexagonShuffler {
   using HexagonPacket =
       SmallVector<HexagonInstr, HEXAGON_PRESHUFFLE_PACKET_SIZE>;
 
+  struct HexagonPacketSummary {
+    // Number of memory operations, loads, solo loads, stores, solo stores,
+    // single stores.
+    unsigned memory;
+    unsigned loads;
+    unsigned load0;
+    unsigned stores;
+    unsigned store0;
+    unsigned store1;
+    unsigned NonZCVIloads;
+    unsigned AllCVIloads;
+    unsigned CVIstores;
+    // Number of duplex insns
+    unsigned duplex;
+    unsigned pSlot3Cnt;
+    Optional<HexagonInstr *> PrefSlot3Inst;
+    unsigned memops;
+    unsigned ReservedSlotMask;
+    SmallVector<HexagonInstr *, HEXAGON_PRESHUFFLE_PACKET_SIZE> branchInsts;
+    Optional<SMLoc> Slot1AOKLoc;
+    Optional<SMLoc> NoSlot1StoreLoc;
+  };
   // Insn handles in a bundle.
   HexagonPacket Packet;
-  HexagonPacket PacketSave;
-
-  HexagonCVIResource::TypeUnitsAndLanes TUL;
 
 protected:
   MCContext &Context;
@@ -153,13 +175,29 @@ protected:
   MCSubtargetInfo const &STI;
   SMLoc Loc;
   bool ReportErrors;
+  bool CheckFailure;
   std::vector<std::pair<SMLoc, std::string>> AppliedRestrictions;
-  void applySlotRestrictions();
-  void restrictSlot1AOK();
-  void restrictNoSlot1Store();
+  bool applySlotRestrictions(HexagonPacketSummary const &Summary);
+  void restrictSlot1AOK(HexagonPacketSummary const &Summary);
+  void restrictNoSlot1Store(HexagonPacketSummary const &Summary);
+  void restrictNoSlot1();
+  bool restrictStoreLoadOrder(HexagonPacketSummary const &Summary);
+  void restrictBranchOrder(HexagonPacketSummary const &Summary);
+  void restrictPreferSlot3(HexagonPacketSummary const &Summary);
+  void permitNonSlot();
+
+  Optional<HexagonPacket> tryAuction(HexagonPacketSummary const &Summary) const;
+
+  HexagonPacketSummary GetPacketSummary();
+  bool ValidPacketMemoryOps(HexagonPacketSummary const &Summary) const;
+  bool ValidResourceUsage(HexagonPacketSummary const &Summary);
+  bool validPacketInsts() const;
 
 public:
   using iterator = HexagonPacket::iterator;
+  using const_iterator = HexagonPacket::const_iterator;
+  using packet_range = iterator_range<HexagonPacket::iterator>;
+  using const_packet_range = iterator_range<HexagonPacket::const_iterator>;
 
   HexagonShuffler(MCContext &Context, bool ReportErrors,
                   MCInstrInfo const &MCII, MCSubtargetInfo const &STI);
@@ -179,6 +217,25 @@ public:
 
   iterator begin() { return (Packet.begin()); }
   iterator end() { return (Packet.end()); }
+  const_iterator cbegin() const { return (Packet.begin()); }
+  const_iterator cend() const { return (Packet.end()); }
+  packet_range insts(HexagonPacket &P) {
+    return make_range(P.begin(), P.end());
+  }
+  const_packet_range insts(HexagonPacket const &P) const {
+    return make_range(P.begin(), P.end());
+  }
+  packet_range insts() { return make_range(begin(), end()); }
+  const_packet_range insts() const { return make_range(cbegin(), cend()); }
+
+  using InstPredicate = bool (*)(MCInstrInfo const &, MCInst const &);
+
+  bool HasInstWith(InstPredicate Pred) const {
+    return llvm::any_of(insts(), [&](HexagonInstr const &I) {
+      MCInst const &Inst = I.getDesc();
+      return (*Pred)(MCII, Inst);
+    });
+  }
 
   // Add insn handle to the bundle .
   void append(MCInst const &ID, MCInst const *Extender, unsigned S);

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CompilerDeclContext_h_
-#define liblldb_CompilerDeclContext_h_
+#ifndef LLDB_SYMBOL_COMPILERDECLCONTEXT_H
+#define LLDB_SYMBOL_COMPILERDECLCONTEXT_H
 
 #include <vector>
 
@@ -126,4 +126,4 @@ bool operator!=(const CompilerDeclContext &lhs, const CompilerDeclContext &rhs);
 
 } // namespace lldb_private
 
-#endif // #ifndef liblldb_CompilerDeclContext_h_
+#endif // LLDB_SYMBOL_COMPILERDECLCONTEXT_H

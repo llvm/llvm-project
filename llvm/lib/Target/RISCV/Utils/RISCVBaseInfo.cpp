@@ -12,16 +12,7 @@ namespace RISCVSysReg {
 namespace RISCVABI {
 ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
                      StringRef ABIName) {
-  auto TargetABI = StringSwitch<ABI>(ABIName)
-                       .Case("ilp32", ABI_ILP32)
-                       .Case("ilp32f", ABI_ILP32F)
-                       .Case("ilp32d", ABI_ILP32D)
-                       .Case("ilp32e", ABI_ILP32E)
-                       .Case("lp64", ABI_LP64)
-                       .Case("lp64f", ABI_LP64F)
-                       .Case("lp64d", ABI_LP64D)
-                       .Default(ABI_Unknown);
-
+  auto TargetABI = getTargetABI(ABIName);
   bool IsRV64 = TT.isArch64Bit();
   bool IsRV32E = FeatureBits[RISCV::FeatureRV32E];
 
@@ -37,17 +28,8 @@ ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
     errs() << "64-bit ABIs are not supported for 32-bit targets (ignoring "
               "target-abi)\n";
     TargetABI = ABI_Unknown;
-  } else if (ABIName.endswith("f") && !FeatureBits[RISCV::FeatureStdExtF]) {
-    errs() << "Hard-float 'f' ABI can't be used for a target that "
-              "doesn't support the F instruction set extension (ignoring "
-              "target-abi)\n";
-    TargetABI = ABI_Unknown;
-  } else if (ABIName.endswith("d") && !FeatureBits[RISCV::FeatureStdExtD]) {
-    errs() << "Hard-float 'd' ABI can't be used for a target that "
-              "doesn't support the D instruction set extension (ignoring "
-              "target-abi)\n";
-    TargetABI = ABI_Unknown;
   } else if (IsRV32E && TargetABI != ABI_ILP32E && TargetABI != ABI_Unknown) {
+    // TODO: move this checking to RISCVTargetLowering and RISCVAsmParser
     errs()
         << "Only the ilp32e ABI is supported for RV32E (ignoring target-abi)\n";
     TargetABI = ABI_Unknown;
@@ -65,6 +47,19 @@ ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
   if (IsRV64)
     return ABI_LP64;
   return ABI_ILP32;
+}
+
+ABI getTargetABI(StringRef ABIName) {
+  auto TargetABI = StringSwitch<ABI>(ABIName)
+                       .Case("ilp32", ABI_ILP32)
+                       .Case("ilp32f", ABI_ILP32F)
+                       .Case("ilp32d", ABI_ILP32D)
+                       .Case("ilp32e", ABI_ILP32E)
+                       .Case("lp64", ABI_LP64)
+                       .Case("lp64f", ABI_LP64F)
+                       .Case("lp64d", ABI_LP64D)
+                       .Default(ABI_Unknown);
+  return TargetABI;
 }
 
 // To avoid the BP value clobbered by a function call, we need to choose a

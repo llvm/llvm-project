@@ -227,7 +227,8 @@ error:
 static isl_stat detect_stride(__isl_take isl_constraint *c, void *user)
 {
 	struct isl_detect_stride_data *data = user;
-	int i, n_div;
+	int i;
+	isl_size n_div;
 	isl_ctx *ctx;
 	isl_stat r = isl_stat_ok;
 	isl_val *v, *stride, *m;
@@ -242,9 +243,11 @@ static isl_stat detect_stride(__isl_take isl_constraint *c, void *user)
 		return isl_stat_ok;
 	}
 
+	n_div = isl_constraint_dim(c, isl_dim_div);
+	if (n_div < 0)
+		goto error;
 	ctx = isl_constraint_get_ctx(c);
 	stride = isl_val_zero(ctx);
-	n_div = isl_constraint_dim(c, isl_dim_div);
 	for (i = 0; i < n_div; ++i) {
 		v = isl_constraint_get_coefficient_val(c, isl_dim_div, i);
 		stride = isl_val_gcd(stride, v);
@@ -371,12 +374,15 @@ __isl_give isl_stride_info *isl_map_get_range_stride_info(
 {
 	isl_stride_info *si;
 	isl_set *set;
+	isl_size n_in;
 
+	n_in = isl_map_dim(map, isl_dim_in);
+	if (n_in < 0)
+		return NULL;
 	map = isl_map_copy(map);
 	map = isl_map_project_onto(map, isl_dim_out, pos, 1);
-	pos = isl_map_dim(map, isl_dim_in);
 	set = isl_map_wrap(map);
-	si = isl_set_get_stride_info(set, pos);
+	si = isl_set_get_stride_info(set, n_in);
 	isl_set_free(set);
 	if (!si)
 		return NULL;

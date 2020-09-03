@@ -16,8 +16,7 @@ entry:
 define i64 @sext(i32 %x) {
 ; MIPS32-LABEL: sext:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    ori $1, $zero, 31
-; MIPS32-NEXT:    srav $3, $4, $1
+; MIPS32-NEXT:    sra $3, $4, 31
 ; MIPS32-NEXT:    move $2, $4
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop

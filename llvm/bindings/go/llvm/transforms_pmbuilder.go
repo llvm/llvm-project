@@ -14,6 +14,7 @@ package llvm
 
 /*
 #include "llvm-c/Transforms/PassManagerBuilder.h"
+#include "llvm-c/Transforms/Coroutines.h"
 */
 import "C"
 
@@ -64,4 +65,8 @@ func (pmb PassManagerBuilder) SetDisableSimplifyLibCalls(val bool) {
 
 func (pmb PassManagerBuilder) UseInlinerWithThreshold(threshold uint) {
 	C.LLVMPassManagerBuilderUseInlinerWithThreshold(pmb.C, C.uint(threshold))
+}
+
+func (pmb PassManagerBuilder) AddCoroutinePassesToExtensionPoints() {
+	C.LLVMPassManagerBuilderAddCoroutinePassesToExtensionPoints(pmb.C);
 }

@@ -6,7 +6,7 @@
 // Make sure we don't match the -NOT lines with the linker invocation.
 // Delimiters match the start of the cc1 and the start of the linker lines
 // for fragile tests.
-// DELIMITERS: {{^ *"}}
+// DELIMITERS: {{^ (\(in-process\)|")}}
 
 // RUN: echo "fun:foo" > %t.good
 // RUN: echo "fun:bar" > %t.second
@@ -59,8 +59,16 @@
 // CHECK-ONLY-FIRST-DISABLED: -fsanitize-blacklist={{.*}}.second
 // CHECK-ONLY_FIRST-DISABLED-NOT: good
 
+// -fno-sanitize-blacklist disables the system blacklists.
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fno-sanitize-blacklist %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED-SYSTEM --check-prefix=DELIMITERS
+// CHECK-DISABLED-SYSTEM-NOT: -fsanitize-system-blacklist
+
 // If cfi_blacklist.txt cannot be found in the resource dir, driver should fail.
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=cfi -resource-dir=/dev/null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-CFI-BLACKLIST
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=default -resource-dir=/dev/null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-CFI-BLACKLIST
 // CHECK-MISSING-CFI-BLACKLIST: error: no such file or directory: '{{.*}}cfi_blacklist.txt'
+
+// -fno-sanitize-blacklist disables checking for cfi_blacklist.txt in the resource dir.
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=default -fno-sanitize-blacklist -resource-dir=/dev/null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-CFI-NO-BLACKLIST
+// CHECK-MISSING-CFI-NO-BLACKLIST-NOT: error: no such file or directory: '{{.*}}cfi_blacklist.txt'
 
 // DELIMITERS: {{^ *"}}

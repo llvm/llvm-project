@@ -52,7 +52,8 @@ void tools::XCore::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(II.getFilename());
 
   const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("xcc"));
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Exec, CmdArgs, Inputs));
 }
 
 void tools::XCore::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -80,7 +81,8 @@ void tools::XCore::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("xcc"));
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Exec, CmdArgs, Inputs));
 }
 
 /// XCore tool chain

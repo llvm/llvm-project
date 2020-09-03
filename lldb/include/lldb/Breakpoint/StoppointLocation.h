@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_StoppointLocation_h_
-#define liblldb_StoppointLocation_h_
+#ifndef LLDB_BREAKPOINT_STOPPOINTLOCATION_H
+#define LLDB_BREAKPOINT_STOPPOINTLOCATION_H
 
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
@@ -77,10 +77,11 @@ protected:
 
 private:
   // For StoppointLocation only
-  DISALLOW_COPY_AND_ASSIGN(StoppointLocation);
+  StoppointLocation(const StoppointLocation &) = delete;
+  const StoppointLocation &operator=(const StoppointLocation &) = delete;
   StoppointLocation() = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_StoppointLocation_h_
+#endif // LLDB_BREAKPOINT_STOPPOINTLOCATION_H

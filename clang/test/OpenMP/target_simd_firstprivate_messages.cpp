@@ -1,8 +1,9 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -125,7 +126,7 @@ int foomain(int argc, char **argv) {
   {
     int v = 0;
     int i;
-#pragma omp target simd allocate(omp_thread_mem_alloc: i) firstprivate(i) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target simd' directive}}
+#pragma omp target simd allocate(omp_thread_mem_alloc: i) firstprivate(i) uses_allocators(omp_thread_mem_alloc) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target simd' directive}}
     for (int k = 0; k < argc; ++k) {
       i = k;
       v += i;

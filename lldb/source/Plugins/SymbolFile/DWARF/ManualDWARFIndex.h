@@ -6,42 +6,53 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_MANUALDWARFINDEX_H
-#define LLDB_MANUALDWARFINDEX_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_MANUALDWARFINDEX_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_MANUALDWARFINDEX_H
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/NameToDIE.h"
 #include "llvm/ADT/DenseSet.h"
 
 class DWARFDebugInfo;
+class SymbolFileDWARFDwo;
 
 namespace lldb_private {
 class ManualDWARFIndex : public DWARFIndex {
 public:
-  ManualDWARFIndex(Module &module, DWARFDebugInfo *debug_info,
+  ManualDWARFIndex(Module &module, SymbolFileDWARF &dwarf,
                    llvm::DenseSet<dw_offset_t> units_to_avoid = {})
-      : DWARFIndex(module), m_debug_info(debug_info),
+      : DWARFIndex(module), m_dwarf(&dwarf),
         m_units_to_avoid(std::move(units_to_avoid)) {}
 
   void Preload() override { Index(); }
 
-  void GetGlobalVariables(ConstString basename, DIEArray &offsets) override;
-  void GetGlobalVariables(const RegularExpression &regex,
-                          DIEArray &offsets) override;
-  void GetGlobalVariables(const DWARFUnit &unit, DIEArray &offsets) override;
-  void GetObjCMethods(ConstString class_name, DIEArray &offsets) override;
-  void GetCompleteObjCClass(ConstString class_name, bool must_be_implementation,
-                            DIEArray &offsets) override;
-  void GetTypes(ConstString name, DIEArray &offsets) override;
-  void GetTypes(const DWARFDeclContext &context, DIEArray &offsets) override;
-  void GetNamespaces(ConstString name, DIEArray &offsets) override;
+  void
+  GetGlobalVariables(ConstString basename,
+                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void
+  GetGlobalVariables(const RegularExpression &regex,
+                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void
+  GetGlobalVariables(const DWARFUnit &unit,
+                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetObjCMethods(ConstString class_name,
+                      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetCompleteObjCClass(
+      ConstString class_name, bool must_be_implementation,
+      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetTypes(ConstString name,
+                llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetTypes(const DWARFDeclContext &context,
+                llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetNamespaces(ConstString name,
+                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                     const CompilerDeclContext &parent_decl_ctx,
                     uint32_t name_type_mask,
-                    std::vector<DWARFDIE> &dies) override;
-  void GetFunctions(const RegularExpression &regex, DIEArray &offsets) override;
+                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetFunctions(const RegularExpression &regex,
+                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
 
-  void ReportInvalidDIERef(const DIERef &ref, llvm::StringRef name) override {}
   void Dump(Stream &s) override;
 
 private:
@@ -56,14 +67,15 @@ private:
     NameToDIE namespaces;
   };
   void Index();
-  void IndexUnit(DWARFUnit &unit, IndexSet &set);
+  void IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, IndexSet &set);
 
   static void IndexUnitImpl(DWARFUnit &unit,
                             const lldb::LanguageType cu_language,
                             IndexSet &set);
 
-  /// Non-null value means we haven't built the index yet.
-  DWARFDebugInfo *m_debug_info;
+  /// The DWARF file which we are indexing. Set to nullptr after the index is
+  /// built.
+  SymbolFileDWARF *m_dwarf;
   /// Which dwarf units should we skip while building the index.
   llvm::DenseSet<dw_offset_t> m_units_to_avoid;
 
@@ -71,4 +83,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // LLDB_MANUALDWARFINDEX_H
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_MANUALDWARFINDEX_H

@@ -1,5 +1,4 @@
-//===-- TestArm64InstEmulation.cpp ------------------------------------*- C++
-//-*-===//
+//===-- TestArm64InstEmulation.cpp ----------------------------------------===//
 
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -20,7 +19,7 @@
 #include "lldb/Target/UnwindAssembly.h"
 #include "lldb/Utility/ArchSpec.h"
 
-#include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
+#include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
 #include "llvm/Support/TargetSelect.h"

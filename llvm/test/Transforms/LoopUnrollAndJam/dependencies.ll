@@ -1,4 +1,5 @@
-; RUN: opt -basicaa -loop-unroll-and-jam -allow-unroll-and-jam -unroll-and-jam-count=4 < %s -S | FileCheck %s
+; RUN: opt -basic-aa -loop-unroll-and-jam -allow-unroll-and-jam -unroll-and-jam-count=4 < %s -S | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='loop-unroll-and-jam' -allow-unroll-and-jam -unroll-and-jam-count=4 < %s -S | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
@@ -397,6 +398,8 @@ cleanup:
 ; CHECK-LABEL: sub_sub_eq
 ; CHECK: %j = phi
 ; CHECK: %j.1 = phi
+; CHECK: %j.2 = phi
+; CHECK: %j.3 = phi
 define void @sub_sub_eq(i32* noalias nocapture %A, i32 %N, i32* noalias nocapture readonly %B) {
 entry:
   %cmp = icmp sgt i32 %N, 0

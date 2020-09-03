@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -disable-pass-threading=true -test-matchers -o /dev/null 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -test-matchers -o /dev/null 2>&1 | FileCheck %s
 
 func @test1(%a: f32, %b: f32, %c: f32) {
   %0 = addf %a, %b: f32
@@ -40,3 +40,4 @@ func @test2(%a: f32) -> f32 {
 
 // CHECK-LABEL: test2
 //       CHECK:   Pattern add(add(a, constant), a) matched and bound constant to: 1.000000e+00
+//       CHECK:   Pattern add(add(a, constant), a) matched

@@ -49,6 +49,21 @@
 ; CHECK: llvm.mlir.global external @external() : !llvm.i32
 @external = external global i32
 
+;
+; Sequential constants.
+;
+
+; CHECK: llvm.mlir.global internal constant @vector_constant(dense<[1, 2]> : vector<2xi32>) : !llvm<"<2 x i32>">
+@vector_constant = internal constant <2 x i32> <i32 1, i32 2>
+; CHECK: llvm.mlir.global internal constant @array_constant(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) : !llvm<"[2 x float]">
+@array_constant = internal constant [2 x float] [float 1., float 2.]
+; CHECK: llvm.mlir.global internal constant @nested_array_constant(dense<[{{\[}}1, 2], [3, 4]]> : tensor<2x2xi32>) : !llvm<"[2 x [2 x i32]]">
+@nested_array_constant = internal constant [2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]]
+; CHECK: llvm.mlir.global internal constant @nested_array_constant3(dense<[{{\[}}[1, 2], [3, 4]]]> : tensor<1x2x2xi32>) : !llvm<"[1 x [2 x [2 x i32]]]">
+@nested_array_constant3 = internal constant [1 x [2 x [2 x i32]]] [[2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]]]
+; CHECK: llvm.mlir.global internal constant @nested_array_vector(dense<[{{\[}}[1, 2], [3, 4]]]> : vector<1x2x2xi32>) : !llvm<"[1 x [2 x <2 x i32>]]">
+@nested_array_vector = internal constant [1 x [2 x <2 x i32>]] [[2 x <2 x i32>] [<2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>]]
+
 ; CHECK: llvm.func @fe(!llvm.i32) -> !llvm.float
 declare float @fe(i32)
 
@@ -56,17 +71,18 @@ declare float @fe(i32)
 ; CHECK-LABEL: llvm.func @f1(%arg0: !llvm.i64) -> !llvm.i32 {
 ; CHECK-DAG: %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : !llvm.i32
 ; CHECK-DAG: %[[c42:[0-9]+]] = llvm.mlir.constant(42 : i32) : !llvm.i32
-; CHECK-DAG: %[[c1:[0-9]+]] = llvm.mlir.constant(1 : i1) : !llvm.i1
+; CHECK-DAG: %[[c1:[0-9]+]] = llvm.mlir.constant(true) : !llvm.i1
 ; CHECK-DAG: %[[c43:[0-9]+]] = llvm.mlir.constant(43 : i32) : !llvm.i32
 define internal dso_local i32 @f1(i64 %a) norecurse {
 entry:
 ; CHECK: %{{[0-9]+}} = llvm.inttoptr %arg0 : !llvm.i64 to !llvm<"i64*">
   %aa = inttoptr i64 %a to i64*
-; CHECK: %[[addrof:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm<"double*">
-; CHECK: %{{[0-9]+}} = llvm.ptrtoint %[[addrof]] : !llvm<"double*"> to !llvm.i64
+; %[[addrof:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm<"double*">
+; %[[addrof2:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm<"double*">
+; %{{[0-9]+}} = llvm.inttoptr %arg0 : !llvm.i64 to !llvm<"i64*">
+; %{{[0-9]+}} = llvm.ptrtoint %[[addrof2]] : !llvm<"double*"> to !llvm.i64
+; %{{[0-9]+}} = llvm.getelementptr %[[addrof]][%3] : (!llvm<"double*">, !llvm.i32) -> !llvm<"double*">
   %bb = ptrtoint double* @g2 to i64
-; CHECK-DAG: %[[addrof2:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm<"double*">
-; CHECK: %{{[0-9]+}} = llvm.getelementptr %[[addrof2]][%[[c2]]] : (!llvm<"double*">, !llvm.i32) -> !llvm<"double*">
   %cc = getelementptr double, double* @g2, i32 2
 ; CHECK: %[[b:[0-9]+]] = llvm.trunc %arg0 : !llvm.i64 to !llvm.i32
   %b = trunc i64 %a to i32
@@ -208,4 +224,97 @@ define void @FPArithmetic(float %a, float %b, double %c, double %d) {
   ; CHECK: %[[a13:[0-9]+]] = llvm.frem %arg2, %arg3 : !llvm.double
   %11 = frem double %c, %d
   ret void
+}
+
+;
+; Functions as constants.
+;
+
+; Calling the function that has not been defined yet.
+; CHECK-LABEL: @precaller
+define i32 @precaller() {
+  %1 = alloca i32 ()*
+  ; CHECK: %[[func:.*]] = llvm.mlir.addressof @callee : !llvm<"i32 ()*">
+  ; CHECK: llvm.store %[[func]], %[[loc:.*]]
+  store i32 ()* @callee, i32 ()** %1
+  ; CHECK: %[[indir:.*]] = llvm.load %[[loc]]
+  %2 = load i32 ()*, i32 ()** %1
+  ; CHECK: llvm.call %[[indir]]()
+  %3 = call i32 %2()
+  ret i32 %3
+}
+
+define i32 @callee() {
+  ret i32 42
+}
+
+; Calling the function that has been defined.
+; CHECK-LABEL: @postcaller
+define i32 @postcaller() {
+  %1 = alloca i32 ()*
+  ; CHECK: %[[func:.*]] = llvm.mlir.addressof @callee : !llvm<"i32 ()*">
+  ; CHECK: llvm.store %[[func]], %[[loc:.*]]
+  store i32 ()* @callee, i32 ()** %1
+  ; CHECK: %[[indir:.*]] = llvm.load %[[loc]]
+  %2 = load i32 ()*, i32 ()** %1
+  ; CHECK: llvm.call %[[indir]]()
+  %3 = call i32 %2()
+  ret i32 %3
+}
+
+@_ZTIi = external dso_local constant i8*
+@_ZTIii= external dso_local constant i8**
+declare void @foo(i8*)
+declare i8* @bar(i8*)
+declare i32 @__gxx_personality_v0(...)
+
+; CHECK-LABEL: @invokeLandingpad
+define i32 @invokeLandingpad() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+  ; CHECK: %[[a1:[0-9]+]] = llvm.bitcast %{{[0-9]+}} : !llvm<"i8***"> to !llvm<"i8*">
+  ; CHECK: %[[a3:[0-9]+]] = llvm.alloca %{{[0-9]+}} x !llvm.i8 : (!llvm.i32) -> !llvm<"i8*">
+  %1 = alloca i8
+  ; CHECK: llvm.invoke @foo(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm<"i8*">) -> ()
+  invoke void @foo(i8* %1) to label %4 unwind label %2
+
+; CHECK: ^bb1:
+  ; CHECK: %{{[0-9]+}} = llvm.landingpad (catch %{{[0-9]+}} : !llvm<"i8**">) (catch %[[a1]] : !llvm<"i8*">) (filter %{{[0-9]+}} : !llvm<"[1 x i8]">) : !llvm<"{ i8*, i32 }">
+  %3 = landingpad { i8*, i32 } catch i8** @_ZTIi catch i8* bitcast (i8*** @_ZTIii to i8*)
+  ; FIXME: Change filter to a constant array once they are handled. 
+  ; Currently, even though it parses this, LLVM module is broken
+          filter [1 x i8] [i8 1]
+  resume { i8*, i32 } %3
+
+; CHECK: ^bb2:
+  ; CHECK: llvm.return %{{[0-9]+}} : !llvm.i32
+  ret i32 1
+
+; CHECK: ^bb3:
+  ; CHECK: %{{[0-9]+}} = llvm.invoke @bar(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm<"i8*">) -> !llvm<"i8*">
+  %6 = invoke i8* @bar(i8* %1) to label %4 unwind label %2
+
+; CHECK: ^bb4:
+  ; CHECK: llvm.return %{{[0-9]+}} : !llvm.i32
+  ret i32 0
+}
+
+;CHECK-LABEL: @useFreezeOp
+define i32 @useFreezeOp(i32 %x) {
+  ;CHECK: %{{[0-9]+}} = llvm.freeze %{{[0-9a-z]+}} : !llvm.i32
+  %1 = freeze i32 %x
+  %2 = add i8 10, 10
+  ;CHECK: %{{[0-9]+}} = llvm.freeze %{{[0-9]+}} : !llvm.i8
+  %3 = freeze i8 %2
+  %poison = add nsw i1 0, undef
+  ret i32 0
+}
+
+;CHECK-LABEL: @useFenceInst
+define i32 @useFenceInst() {
+  ;CHECK: llvm.fence syncscope("agent") seq_cst
+  fence syncscope("agent") seq_cst
+  ;CHECK: llvm.fence release
+  fence release
+  ;CHECK: llvm.fence seq_cst
+  fence syncscope("") seq_cst
+  ret i32 0
 }

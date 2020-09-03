@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CppModuleConfiguration_h_
-#define liblldb_CppModuleConfiguration_h_
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CPPMODULECONFIGURATION_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CPPMODULECONFIGURATION_H
 
 #include <lldb/Core/FileSpecList.h>
 #include <llvm/Support/Regex.h>
@@ -56,7 +56,7 @@ class CppModuleConfiguration {
   bool analyzeFile(const FileSpec &f);
 
 public:
-  /// Creates a configuraiton by analyzing the given list of used source files.
+  /// Creates a configuration by analyzing the given list of used source files.
   ///
   /// Currently only looks at the used paths and doesn't actually access the
   /// files on the disk.

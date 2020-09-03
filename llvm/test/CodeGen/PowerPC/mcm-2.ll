@@ -30,8 +30,9 @@ entry:
 ; LARGE: ld [[REG2:[0-9]+]], [[VAR]]@toc@l([[REG1]])
 ; LARGE: lwz {{[0-9]+}}, 0([[REG2]])
 ; LARGE: stw {{[0-9]+}}, 0([[REG2]])
-; LARGE: [[VAR]]:
-; LARGE: .tc [[VAR2:[a-z0-9A-Z_.]+]][TC],[[VAR2]]
-; LARGE: .type [[VAR2]],@object
-; LARGE: .lcomm [[VAR2]],4,4
+; LARGE:      .type test_fn_static.si,@object
+; LARGE-NEXT: .lcomm test_fn_static.si,4,4
 
+; LARGE:      .section .toc,"aw",@progbits
+; LARGE-NEXT: [[VAR]]:
+; LARGE-NEXT: .tc test_fn_static.si[TC],test_fn_static.si

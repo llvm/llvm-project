@@ -37,7 +37,7 @@ define amdgpu_kernel void @rcp_10_f32(float addrspace(1)* %out) #1 {
 ; SI-NOT: [[RESULT]]
 ; SI: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @safe_no_fp32_denormals_rcp_f32(float addrspace(1)* %out, float %src) #1 {
-  %rcp = fdiv float 1.0, %src
+  %rcp = fdiv float 1.0, %src, !fpmath !0
   store float %rcp, float addrspace(1)* %out, align 4
   ret void
 }
@@ -47,7 +47,7 @@ define amdgpu_kernel void @safe_no_fp32_denormals_rcp_f32(float addrspace(1)* %o
 ; SI-NOT: [[RESULT]]
 ; SI: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @safe_f32_denormals_rcp_pat_f32(float addrspace(1)* %out, float %src) #4 {
-  %rcp = fdiv float 1.0, %src
+  %rcp = fdiv float 1.0, %src, !fpmath !0
   store float %rcp, float addrspace(1)* %out, align 4
   ret void
 }
@@ -61,8 +61,7 @@ define amdgpu_kernel void @unsafe_f32_denormals_rcp_pat_f32(float addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}safe_rsq_rcp_pat_f32:
-; SI: v_sqrt_f32_e32
-; SI: v_rcp_f32_e32
+; SI: v_rsq_f32_e32
 define amdgpu_kernel void @safe_rsq_rcp_pat_f32(float addrspace(1)* %out, float %src) #1 {
   %sqrt = call float @llvm.sqrt.f32(float %src)
   %rcp = call float @llvm.amdgcn.rcp.f32(float %sqrt)
@@ -140,7 +139,9 @@ define amdgpu_kernel void @unsafe_rsq_rcp_pat_f64(double addrspace(1)* %out, dou
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "unsafe-fp-math"="false" "target-features"="-fp32-denormals" }
-attributes #2 = { nounwind "unsafe-fp-math"="true" "target-features"="-fp32-denormals" }
-attributes #3 = { nounwind "unsafe-fp-math"="false" "target-features"="+fp32-denormals" }
-attributes #4 = { nounwind "unsafe-fp-math"="true" "target-features"="+fp32-denormals" }
+attributes #1 = { nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #2 = { nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #3 = { nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="ieee,ieee" }
+attributes #4 = { nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="ieee,ieee" }
+
+!0 = !{float 2.500000e+00}

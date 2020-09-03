@@ -55,8 +55,8 @@ public:
 
   enum class ExportMode {
     globals,    // Default, all global symbols exported.
-    whiteList,  // -exported_symbol[s_list], only listed symbols exported.
-    blackList   // -unexported_symbol[s_list], no listed symbol exported.
+    exported,   // -exported_symbol[s_list], only listed symbols exported.
+    unexported  // -unexported_symbol[s_list], no listed symbol exported.
   };
 
   enum class DebugInfoMode {
@@ -423,8 +423,6 @@ public:
 private:
   Writer &writer() const override;
   mach_o::MachODylibFile* loadIndirectDylib(StringRef path);
-  void checkExportWhiteList(const DefinedAtom *atom) const;
-  void checkExportBlackList(const DefinedAtom *atom) const;
   struct ArchInfo {
     StringRef                 archName;
     MachOLinkingContext::Arch arch;

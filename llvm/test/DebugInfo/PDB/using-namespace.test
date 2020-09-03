@@ -1,4 +1,4 @@
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 # RUN: llvm-readobj --codeview %t.obj | FileCheck %s
 
 # CHECK:         Kind: S_UNAMESPACE (0x1124)

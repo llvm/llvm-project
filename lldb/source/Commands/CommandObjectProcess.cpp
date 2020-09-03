@@ -1,4 +1,4 @@
-//===-- CommandObjectProcess.cpp --------------------------------*- C++ -*-===//
+//===-- CommandObjectProcess.cpp ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
@@ -185,6 +184,9 @@ protected:
     else
       m_options.launch_info.GetFlags().Clear(eLaunchFlagDisableASLR);
 
+    if (target->GetInheritTCC())
+      m_options.launch_info.GetFlags().Set(eLaunchFlagInheritTCCFromParent);
+
     if (target->GetDetachOnError())
       m_options.launch_info.GetFlags().Set(eLaunchFlagDetachOnError);
 
@@ -249,7 +251,6 @@ protected:
     return result.Succeeded();
   }
 
-protected:
   ProcessLaunchCommandOptions m_options;
 };
 
@@ -325,34 +326,38 @@ public:
       int opt_arg_pos = opt_element_vector[opt_element_index].opt_arg_pos;
       int opt_defs_index = opt_element_vector[opt_element_index].opt_defs_index;
 
-      // We are only completing the name option for now...
+      switch (GetDefinitions()[opt_defs_index].short_option) {
+      case 'n': {
+        // Look to see if there is a -P argument provided, and if so use that
+        // plugin, otherwise use the default plugin.
 
-      // Are we in the name?
-      if (GetDefinitions()[opt_defs_index].short_option != 'n')
-        return;
+        const char *partial_name = nullptr;
+        partial_name = request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos);
 
-      // Look to see if there is a -P argument provided, and if so use that
-      // plugin, otherwise use the default plugin.
+        PlatformSP platform_sp(interpreter.GetPlatform(true));
+        if (!platform_sp)
+          return;
+        ProcessInstanceInfoList process_infos;
+        ProcessInstanceInfoMatch match_info;
+        if (partial_name) {
+          match_info.GetProcessInfo().GetExecutableFile().SetFile(
+              partial_name, FileSpec::Style::native);
+          match_info.SetNameMatchType(NameMatch::StartsWith);
+        }
+        platform_sp->FindProcesses(match_info, process_infos);
+        const size_t num_matches = process_infos.size();
+        if (num_matches == 0)
+          return;
+        for (size_t i = 0; i < num_matches; ++i) {
+          request.AddCompletion(process_infos[i].GetNameAsStringRef());
+        }
+      } break;
 
-      const char *partial_name = nullptr;
-      partial_name = request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos);
-
-      PlatformSP platform_sp(interpreter.GetPlatform(true));
-      if (!platform_sp)
-        return;
-      ProcessInstanceInfoList process_infos;
-      ProcessInstanceInfoMatch match_info;
-      if (partial_name) {
-        match_info.GetProcessInfo().GetExecutableFile().SetFile(
-            partial_name, FileSpec::Style::native);
-        match_info.SetNameMatchType(NameMatch::StartsWith);
-      }
-      platform_sp->FindProcesses(match_info, process_infos);
-      const size_t num_matches = process_infos.size();
-      if (num_matches == 0)
-        return;
-      for (size_t i = 0; i < num_matches; ++i) {
-        request.AddCompletion(process_infos[i].GetNameAsStringRef());
+      case 'P':
+        CommandCompletions::InvokeCommonCompletionCallbacks(
+            interpreter, CommandCompletions::eProcessPluginCompletion, request,
+            nullptr);
+        break;
       }
     }
 
@@ -759,7 +764,7 @@ public:
 
       switch (short_option) {
       case 'p':
-        plugin_name.assign(option_arg);
+        plugin_name.assign(std::string(option_arg));
         break;
 
       default:
@@ -818,9 +823,15 @@ protected:
     Status error;
     Debugger &debugger = GetDebugger();
     PlatformSP platform_sp = m_interpreter.GetPlatform(true);
-    ProcessSP process_sp = platform_sp->ConnectProcess(
-        command.GetArgumentAtIndex(0), plugin_name, debugger,
-        debugger.GetSelectedTarget().get(), error);
+    ProcessSP process_sp =
+        debugger.GetAsyncExecution()
+            ? platform_sp->ConnectProcess(
+                  command.GetArgumentAtIndex(0), plugin_name, debugger,
+                  debugger.GetSelectedTarget().get(), error)
+            : platform_sp->ConnectProcessSynchronous(
+                  command.GetArgumentAtIndex(0), plugin_name, debugger,
+                  result.GetOutputStream(), debugger.GetSelectedTarget().get(),
+                  error);
     if (error.Fail() || process_sp == nullptr) {
       result.AppendError(error.AsCString("Error connecting to the process"));
       result.SetStatus(eReturnStatusFailed);
@@ -1034,6 +1045,20 @@ public:
 
   ~CommandObjectProcessSignal() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
+      return;
+
+    UnixSignalsSP signals = m_exe_ctx.GetProcessPtr()->GetUnixSignals();
+    int signo = signals->GetFirstSignalNumber();
+    while (signo != LLDB_INVALID_SIGNAL_NUMBER) {
+      request.AddCompletion(signals->GetSignalAsCString(signo), "");
+      signo = signals->GetNextSignalNumber(signo);
+    }
+  }
+
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Process *process = m_exe_ctx.GetProcessPtr();
@@ -1042,10 +1067,10 @@ protected:
       int signo = LLDB_INVALID_SIGNAL_NUMBER;
 
       const char *signal_name = command.GetArgumentAtIndex(0);
-      if (::isxdigit(signal_name[0]))
-        signo =
-            StringConvert::ToSInt32(signal_name, LLDB_INVALID_SIGNAL_NUMBER, 0);
-      else
+      if (::isxdigit(signal_name[0])) {
+        if (!llvm::to_integer(signal_name, signo))
+          signo = LLDB_INVALID_SIGNAL_NUMBER;
+      } else
         signo = process->GetUnixSignals()->GetSignalNumberFromName(signal_name);
 
       if (signo == LLDB_INVALID_SIGNAL_NUMBER) {
@@ -1327,13 +1352,13 @@ public:
 
       switch (short_option) {
       case 's':
-        stop = option_arg;
+        stop = std::string(option_arg);
         break;
       case 'n':
-        notify = option_arg;
+        notify = std::string(option_arg);
         break;
       case 'p':
-        pass = option_arg;
+        pass = std::string(option_arg);
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -1393,7 +1418,8 @@ public:
       real_value = 0;
     else {
       // If the value isn't 'true' or 'false', it had better be 0 or 1.
-      real_value = StringConvert::ToUInt32(option.c_str(), 3);
+      if (!llvm::to_integer(option, real_value))
+        real_value = 3;
       if (real_value != 0 && real_value != 1)
         okay = false;
     }

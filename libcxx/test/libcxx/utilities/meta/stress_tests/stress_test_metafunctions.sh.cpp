@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This is a dummy feature that prevents this test from running by default.
-// REQUIRES: template-const-testing
+// REQUIRES: template-cost-testing
 
 // The table below compares the compile time and object size for each of the
 // variants listed in the RUN script.
@@ -19,9 +19,9 @@
 // __and_:      14,181.851 ms     648 M
 //
 
-// RUN: %cxx %flags %compile_flags -c %s -o %S/new.o -ggdb  -ggnu-pubnames -ftemplate-depth=5000 -ftime-trace -std=c++17
-// RUN: %cxx %flags %compile_flags -c %s -o %S/lazy.o -ggdb  -ggnu-pubnames -ftemplate-depth=5000 -ftime-trace  -std=c++17 -DTEST_LAZY_AND
-// RUN: %cxx %flags %compile_flags -c %s -o %S/std.o -ggdb  -ggnu-pubnames -ftemplate-depth=5000 -ftime-trace   -std=c++17 -DTEST_STD_AND
+// RUN: %{cxx} %{flags} %{compile_flags} -c %s -o %S/new.o -ggdb  -ggnu-pubnames -ftemplate-depth=5000 -ftime-trace -std=c++17
+// RUN: %{cxx} %{flags} %{compile_flags} -c %s -o %S/lazy.o -ggdb  -ggnu-pubnames -ftemplate-depth=5000 -ftime-trace  -std=c++17 -DTEST_LAZY_AND
+// RUN: %{cxx} %{flags} %{compile_flags} -c %s -o %S/std.o -ggdb  -ggnu-pubnames -ftemplate-depth=5000 -ftime-trace   -std=c++17 -DTEST_STD_AND
 
 #include <type_traits>
 #include <cassert>

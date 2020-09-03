@@ -1,7 +1,7 @@
 # REQUIRES: mips
 # In case of linking PIC and non-PIC code together and generation
 # of a relocatable object, all PIC symbols should have STO_MIPS_PIC
-# flag in the symbol table of the ouput file.
+# flag in the symbol table of the output file.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t-npic.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \

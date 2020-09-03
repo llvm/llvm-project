@@ -82,8 +82,8 @@ template <typename T> void COFFDumper::dumpOptionalHeader(T OptionalHeader) {
       OptionalHeader->SizeOfHeapCommit;
   unsigned I = 0;
   for (auto &DestDD : YAMLObj.OptionalHeader->DataDirectories) {
-    const object::data_directory *DD;
-    if (Obj.getDataDirectory(I++, DD))
+    const object::data_directory *DD = Obj.getDataDirectory(I++);
+    if (!DD)
       continue;
     DestDD = COFF::DataDirectory();
     DestDD->RelativeVirtualAddress = DD->RelativeVirtualAddress;
@@ -100,7 +100,7 @@ static void
 initializeFileAndStringTable(const llvm::object::COFFObjectFile &Obj,
                              codeview::StringsAndChecksumsRef &SC) {
 
-  ExitOnError Err("Invalid .debug$S section!");
+  ExitOnError Err("invalid .debug$S section");
   // Iterate all .debug$S sections looking for the checksums and string table.
   // Exit as soon as both sections are found.
   for (const auto &S : Obj.sections()) {
@@ -139,11 +139,10 @@ void COFFDumper::dumpSections(unsigned NumSections) {
   codeview::StringsAndChecksumsRef SC;
   initializeFileAndStringTable(Obj, SC);
 
+  ExitOnError Err("invalid section table");
   StringMap<bool> SymbolUnique;
   for (const auto &S : Obj.symbols()) {
-    object::COFFSymbolRef Symbol = Obj.getCOFFSymbol(S);
-    StringRef Name;
-    Obj.getSymbolName(Symbol, Name);
+    StringRef Name = Err(Obj.getSymbolName(Obj.getCOFFSymbol(S)));
     StringMap<bool>::iterator It;
     bool Inserted;
     std::tie(It, Inserted) = SymbolUnique.insert(std::make_pair(Name, true));
@@ -277,11 +276,13 @@ dumpCLRTokenDefinition(COFFYAML::Symbol *Sym,
 }
 
 void COFFDumper::dumpSymbols(unsigned NumSymbols) {
+  ExitOnError Err("invalid symbol table");
+
   std::vector<COFFYAML::Symbol> &Symbols = YAMLObj.Symbols;
   for (const auto &S : Obj.symbols()) {
     object::COFFSymbolRef Symbol = Obj.getCOFFSymbol(S);
     COFFYAML::Symbol Sym;
-    Obj.getSymbolName(Symbol, Sym.Name);
+    Sym.Name = Err(Obj.getSymbolName(Symbol));
     Sym.SimpleType = COFF::SymbolBaseType(Symbol.getBaseType());
     Sym.ComplexType = COFF::SymbolComplexType(Symbol.getComplexType());
     Sym.Header.StorageClass = Symbol.getStorageClass();

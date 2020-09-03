@@ -72,7 +72,7 @@ void Mips16DAGToDAGISel::initGlobalBaseReg(MachineFunction &MF) {
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
   DebugLoc DL;
-  Register V0, V1, V2, GlobalBaseReg = MipsFI->getGlobalBaseReg();
+  Register V0, V1, V2, GlobalBaseReg = MipsFI->getGlobalBaseReg(MF);
   const TargetRegisterClass *RC = &Mips::CPU16RegsRegClass;
 
   V0 = RegInfo.createVirtualRegister(RC);

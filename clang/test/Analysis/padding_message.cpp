@@ -265,13 +265,13 @@ class LotsOfSpace {
 };
 
 // expected-warning@+7{{\
-Excessive padding in 'TypedefSandwich2' (6 padding bytes, where 2 is optimal). \
+Excessive padding in 'struct TypedefSandwich2' (6 padding bytes, where 2 is optimal). \
 Optimal fields order: \
 t, \
 c1, \
 c2, \
 }}
-typedef struct {
+typedef struct TypedefSandwich2 {
   char c1;
   // expected-warning@+7{{\
 Excessive padding in 'TypedefSandwich2::NestedTypedef' (6 padding bytes, where 2 is optimal). \

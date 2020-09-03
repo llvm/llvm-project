@@ -1,7 +1,7 @@
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu -wholeprogramdevirt -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -S -o - %s | FileCheck --check-prefixes=CHECK,X86 %s
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -S -o - %s | FileCheck --check-prefixes=CHECK,X86 %s
 ; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-X86 %s < %t
 
-; RUN: opt -mtriple=armv7-unknown-linux-gnu -wholeprogramdevirt -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -S -o - %s | FileCheck --check-prefixes=CHECK,ARM %s
+; RUN: opt -mtriple=armv7-unknown-linux-gnu -wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -S -o - %s | FileCheck --check-prefixes=CHECK,ARM %s
 ; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-ARM %s < %t
 
 target datalayout = "e-p:64:64"
@@ -9,7 +9,7 @@ target datalayout = "e-p:64:64"
 ; SUMMARY:      TypeIdMap:
 ; SUMMARY-NEXT:   typeid3:
 ; SUMMARY-NEXT:     TTRes:
-; SUMMARY-NEXT:       Kind:            Unsat
+; SUMMARY-NEXT:       Kind:            Unknown
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
 ; SUMMARY-NEXT:       AlignLog2:       0
 ; SUMMARY-NEXT:       SizeM1:          0
@@ -29,7 +29,7 @@ target datalayout = "e-p:64:64"
 ; SUMMARY-ARM-NEXT:         Bit:             1
 ; SUMMARY-NEXT:   typeid4:
 ; SUMMARY-NEXT:     TTRes:
-; SUMMARY-NEXT:       Kind:            Unsat
+; SUMMARY-NEXT:       Kind:            Unknown
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
 ; SUMMARY-NEXT:       AlignLog2:       0
 ; SUMMARY-NEXT:       SizeM1:          0

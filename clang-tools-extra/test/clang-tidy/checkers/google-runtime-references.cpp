@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s google-runtime-references %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:             [{key: google-runtime-references.WhiteListTypes, \
-// RUN:               value: 'whitelist::A; whitelist::B'}]}"
+// RUN:             [{key: google-runtime-references.IncludedTypes, \
+// RUN:               value: 'included::A; included::B'}]}"
 
 int a;
 int &b = a;
@@ -141,14 +141,14 @@ A& operator|=(A& a, const A& b) { return a; }
 A& operator^=(A& a, const A& b) { return a; }
 A& operator&=(A& a, const A& b) { return a; }
 
-namespace whitelist {
+namespace included {
 class A {};
 class B {};
 void f7(A &);
 void f8(B &);
 }
-void f9(whitelist::A &);
-void f10(whitelist::B &);
+void f9(included::A &);
+void f10(included::B &);
 
 #define DEFINE_F(name) void name(int& a)
 

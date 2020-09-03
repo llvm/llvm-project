@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++2a -verify -Wc++2a-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify -Wc++20-extensions %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify -Wc++17-extensions %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify -DEXT -Wc++17-extensions -Wc++2a-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify -DEXT -Wc++17-extensions -Wc++20-extensions %s
 
 struct [[nodiscard]] S {};
 S get_s();
@@ -26,7 +26,7 @@ void f() {
   (void)get_e();
 }
 
-[[nodiscard]] volatile char &(*fp)();
+[[nodiscard]] volatile char &(*fp)(); // expected-warning {{'nodiscard' attribute only applies to functions, classes, or enumerations}}
 void g() {
   fp(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
@@ -73,7 +73,7 @@ LaterReason get_later_reason();
 [[nodiscard("conflicting reason")]] int conflicting_reason();
 [[nodiscard("special reason")]] int conflicting_reason();
 
-void cxx2a_use() {
+void cxx20_use() {
   get_reason(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: reason}}
   get_later_reason(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: later reason}}
   another_reason(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: another reason}}
@@ -130,15 +130,15 @@ void usage() {
 // expected-warning@12 {{use of the 'nodiscard' attribute is a C++17 extension}}
 // expected-warning@13 {{use of the 'nodiscard' attribute is a C++17 extension}}
 // expected-warning@29 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// expected-warning@65 {{use of the 'nodiscard' attribute is a C++2a extension}}
-// expected-warning@67 {{use of the 'nodiscard' attribute is a C++2a extension}}
-// expected-warning@71 {{use of the 'nodiscard' attribute is a C++2a extension}}
-// expected-warning@73 {{use of the 'nodiscard' attribute is a C++2a extension}}
-// expected-warning@74 {{use of the 'nodiscard' attribute is a C++2a extension}}
-// expected-warning@84 {{use of the 'nodiscard' attribute is a C++2a extension}}
+// expected-warning@65 {{use of the 'nodiscard' attribute is a C++20 extension}}
+// expected-warning@67 {{use of the 'nodiscard' attribute is a C++20 extension}}
+// expected-warning@71 {{use of the 'nodiscard' attribute is a C++20 extension}}
+// expected-warning@73 {{use of the 'nodiscard' attribute is a C++20 extension}}
+// expected-warning@74 {{use of the 'nodiscard' attribute is a C++20 extension}}
+// expected-warning@84 {{use of the 'nodiscard' attribute is a C++20 extension}}
 // expected-warning@86 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// expected-warning@87 {{use of the 'nodiscard' attribute is a C++2a extension}}
+// expected-warning@87 {{use of the 'nodiscard' attribute is a C++20 extension}}
 // expected-warning@91 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// expected-warning@92 {{use of the 'nodiscard' attribute is a C++2a extension}}
-// expected-warning@95 {{use of the 'nodiscard' attribute is a C++2a extension}}
+// expected-warning@92 {{use of the 'nodiscard' attribute is a C++20 extension}}
+// expected-warning@95 {{use of the 'nodiscard' attribute is a C++20 extension}}
 #endif

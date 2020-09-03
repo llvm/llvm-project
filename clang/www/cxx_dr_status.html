@@ -10,7 +10,7 @@
   <style type="text/css">
     .none { background-color: #FFCCCC }
     .partial { background-color: #FFE0B0 }
-    .svn  { background-color: #FFFF99 }
+    .unreleased { background-color: #FFFF99 }
     .full { background-color: #CCFF99 }
     .na { background-color: #DDDDDD }
     .open * { color: #AAAAAA }
@@ -1504,7 +1504,7 @@ accessible?</td>
     <td><a href="https://wg21.link/cwg244">244</a></td>
     <td>CD1</td>
     <td>Destructor lookup</td>
-    <td class="partial" align="center">Partial</td>
+    <td class="unreleased" align="center">Clang 11</td>
   </tr>
   <tr id="245">
     <td><a href="https://wg21.link/cwg245">245</a></td>
@@ -2645,7 +2645,7 @@ of class templates</td>
     <td><a href="https://wg21.link/cwg434">434</a></td>
     <td>NAD</td>
     <td>Unclear suppression of standard conversions while binding reference to lvalue</td>
-    <td class="full" align="center">Yes</td>
+    <td class="full" align="center">Superseded by <a href="#2352">2352</a></td>
   </tr>
   <tr id="435">
     <td><a href="https://wg21.link/cwg435">435</a></td>
@@ -2789,7 +2789,7 @@ of class templates</td>
     <td><a href="https://wg21.link/cwg458">458</a></td>
     <td>C++11</td>
     <td>Hiding of member template parameters by other members</td>
-    <td class="none" align="center">No</td>
+    <td class="unreleased" align="center">Clang 11</td>
   </tr>
   <tr class="open" id="459">
     <td><a href="https://wg21.link/cwg459">459</a></td>
@@ -3527,7 +3527,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="581">
     <td><a href="https://wg21.link/cwg581">581</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Can a templated constructor be explicitly instantiated or specialized?</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -3967,7 +3967,7 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg654">654</a></td>
     <td>CD1</td>
     <td>Conversions to and from <TT>nullptr_t</TT></td>
-    <td class="full" align="center">Yes</td>
+    <td class="unreleased" align="center">Superseded by <a href="#1423">1423</a></td>
   </tr>
   <tr id="655">
     <td><a href="https://wg21.link/cwg655">655</a></td>
@@ -4133,7 +4133,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="682">
     <td><a href="https://wg21.link/cwg682">682</a></td>
-    <td>tentatively ready</td>
+    <td>DRWP</td>
     <td>Missing description of lookup of template aliases</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -5659,7 +5659,7 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg974">974</a></td>
     <td>CD3</td>
     <td>Default arguments for lambdas</td>
-    <td class="none" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="975">
     <td><a href="https://wg21.link/cwg975">975</a></td>
@@ -8353,7 +8353,7 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg1423">1423</a></td>
     <td>CD3</td>
     <td>Convertibility of <TT>nullptr</TT> to <TT>bool</TT></td>
-    <td class="none" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 11</td>
   </tr>
   <tr id="1424">
     <td><a href="https://wg21.link/cwg1424">1424</a></td>
@@ -8473,7 +8473,7 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg1443">1443</a></td>
     <td>NAD</td>
     <td>Default arguments and non-static data members</td>
-    <td class="none" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr class="open" id="1444">
     <td><a href="https://wg21.link/cwg1444">1444</a></td>
@@ -8899,7 +8899,7 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg1514">1514</a></td>
     <td>C++14</td>
     <td>Ambiguity between enumeration definition and zero-length bit-field</td>
-    <td class="none" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 11</td>
   </tr>
   <tr id="1515">
     <td><a href="https://wg21.link/cwg1515">1515</a></td>
@@ -9421,7 +9421,7 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg1601">1601</a></td>
     <td>C++14</td>
     <td>Promotion of enumeration with fixed underlying type</td>
-    <td class="svn" align="center">SVN</td>
+    <td class="full" align="center">Clang 10</td>
   </tr>
   <tr class="open" id="1602">
     <td><a href="https://wg21.link/cwg1602">1602</a></td>
@@ -9537,11 +9537,11 @@ and <I>POD class</I></td>
     <td>User-defined literals and extended integer types</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="1621">
+  <tr id="1621">
     <td><a href="https://wg21.link/cwg1621">1621</a></td>
-    <td>drafting</td>
+    <td>DRWP</td>
     <td>Member initializers in anonymous unions</td>
-    <td align="center">Not resolved</td>
+    <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="1622">
     <td><a href="https://wg21.link/cwg1622">1622</a></td>
@@ -10333,7 +10333,7 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg1753">1753</a></td>
     <td>CD4</td>
     <td><I>decltype-specifier</I> in <I>nested-name-specifier</I> of destructor</td>
-    <td class="none" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 11</td>
   </tr>
   <tr id="1754">
     <td><a href="https://wg21.link/cwg1754">1754</a></td>
@@ -10699,7 +10699,7 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg1814">1814</a></td>
     <td>CD4</td>
     <td>Default arguments in <I>lambda-expression</I>s</td>
-    <td class="none" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="1815">
     <td><a href="https://wg21.link/cwg1815">1815</a></td>
@@ -11243,7 +11243,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="1905">
     <td><a href="https://wg21.link/cwg1905">1905</a></td>
-    <td>MAD</td>
+    <td>NAD</td>
     <td>Dependent types and injected-class-names</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -11435,13 +11435,13 @@ and <I>POD class</I></td>
   </tr>
   <tr id="1937">
     <td><a href="https://wg21.link/cwg1937">1937</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Incomplete specification of function pointer from lambda</td>
     <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="1938">
     <td><a href="https://wg21.link/cwg1938">1938</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Should hosted/freestanding be implementation-defined?</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -11611,7 +11611,7 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg1966">1966</a></td>
     <td>CD4</td>
     <td>Colon following enumeration <I>elaborated-type-specifier</I></td>
-    <td class="none" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 11</td>
   </tr>
   <tr id="1967">
     <td><a href="https://wg21.link/cwg1967">1967</a></td>
@@ -11933,7 +11933,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2020">
     <td><a href="https://wg21.link/cwg2020">2020</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Inadequate description of odr-use of implicitly-invoked functions</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -11971,7 +11971,7 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg2026">2026</a></td>
     <td>CD4</td>
     <td>Zero-initialization and <TT>constexpr</TT></td>
-    <td class="none" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 11</td>
   </tr>
   <tr id="2027">
     <td><a href="https://wg21.link/cwg2027">2027</a></td>
@@ -12119,7 +12119,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2051">
     <td><a href="https://wg21.link/cwg2051">2051</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Simplifying alias rules</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -12129,11 +12129,11 @@ and <I>POD class</I></td>
     <td>Template argument deduction vs overloaded operators</td>
     <td class="none" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2053">
+  <tr id="2053">
     <td><a href="https://wg21.link/cwg2053">2053</a></td>
-    <td>drafting</td>
+    <td>DR</td>
     <td><TT>auto</TT> in non-generic lambdas</td>
-    <td align="center">Not resolved</td>
+    <td class="none" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2054">
     <td><a href="https://wg21.link/cwg2054">2054</a></td>
@@ -12307,11 +12307,11 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg2082">2082</a></td>
     <td>CD4</td>
     <td>Referring to parameters in unevaluated operands of default arguments</td>
-    <td class="none" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 11</td>
   </tr>
   <tr id="2083">
     <td><a href="https://wg21.link/cwg2083">2083</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Incorrect cases of odr-use</td>
     <td class="partial" align="center">Partial</td>
   </tr>
@@ -12431,7 +12431,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2103">
     <td><a href="https://wg21.link/cwg2103">2103</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Lvalue-to-rvalue conversion is irrelevant in odr-use of a reference</td>
     <td class="full" align="center">Yes</td>
   </tr>
@@ -12567,11 +12567,11 @@ and <I>POD class</I></td>
     <td>Copy elision and comma operator</td>
     <td align="center">Extension</td>
   </tr>
-  <tr class="open" id="2126">
+  <tr id="2126">
     <td><a href="https://wg21.link/cwg2126">2126</a></td>
-    <td>drafting</td>
+    <td>DRWP</td>
     <td>Lifetime-extended temporaries in constant expressions</td>
-    <td align="center">Not resolved</td>
+    <td class="none" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2127">
     <td><a href="https://wg21.link/cwg2127">2127</a></td>
@@ -12757,7 +12757,7 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg2157">2157</a></td>
     <td>CD4</td>
     <td>Further disambiguation of enumeration <I>elaborated-type-specifier</I></td>
-    <td class="none" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 11</td>
   </tr>
   <tr class="open" id="2158">
     <td><a href="https://wg21.link/cwg2158">2158</a></td>
@@ -12833,7 +12833,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2170">
     <td><a href="https://wg21.link/cwg2170">2170</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Unclear definition of odr-use for arrays</td>
     <td class="full" align="center">Clang 9</td>
   </tr>
@@ -13055,7 +13055,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2207">
     <td><a href="https://wg21.link/cwg2207">2207</a></td>
-    <td>tentatively ready</td>
+    <td>DRWP</td>
     <td>Alignment of allocation function return value</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13213,7 +13213,7 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg2233">2233</a></td>
     <td>DRWP</td>
     <td>Function parameter packs following default arguments</td>
-    <td class="none" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 11</td>
   </tr>
   <tr id="2234">
     <td><a href="https://wg21.link/cwg2234">2234</a></td>
@@ -13349,13 +13349,13 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2256">
     <td><a href="https://wg21.link/cwg2256">2256</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Lifetime of trivially-destructible objects</td>
     <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2257">
     <td><a href="https://wg21.link/cwg2257">2257</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Lifetime extension of references vs exceptions</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13409,13 +13409,13 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2266">
     <td><a href="https://wg21.link/cwg2266">2266</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Has dependent type vs is type-dependent</td>
     <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2267">
     <td><a href="https://wg21.link/cwg2267">2267</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Copy-initialization of temporary in reference direct-initialization</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13481,7 +13481,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2278">
     <td><a href="https://wg21.link/cwg2278">2278</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Copy elision in constant expressions reconsidered</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13491,11 +13491,11 @@ and <I>POD class</I></td>
     <td>Multiple <I>attribute-specifier</I>s in one <I>attribute-list</I></td>
     <td class="none" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2280">
+  <tr id="2280">
     <td><a href="https://wg21.link/cwg2280">2280</a></td>
-    <td>review</td>
+    <td>DRWP</td>
     <td>Matching a usual deallocation function with placement new</td>
-    <td align="center">Not resolved</td>
+    <td class="none" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2281">
     <td><a href="https://wg21.link/cwg2281">2281</a></td>
@@ -13503,11 +13503,11 @@ and <I>POD class</I></td>
     <td>Consistency of aligned <TT>operator delete</TT> replacement</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2282">
+  <tr id="2282">
     <td><a href="https://wg21.link/cwg2282">2282</a></td>
-    <td>drafting</td>
+    <td>DRWP</td>
     <td>Consistency with mismatched aligned/non-over-aligned allocation/deallocation functions</td>
-    <td align="center">Not resolved</td>
+    <td class="none" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2283">
     <td><a href="https://wg21.link/cwg2283">2283</a></td>
@@ -13547,7 +13547,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2289">
     <td><a href="https://wg21.link/cwg2289">2289</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Uniqueness of structured binding names</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13613,7 +13613,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2300">
     <td><a href="https://wg21.link/cwg2300">2300</a></td>
-    <td>tentatively ready</td>
+    <td>DRWP</td>
     <td>Lambdas in multiple definitions</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13631,7 +13631,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2303">
     <td><a href="https://wg21.link/cwg2303">2303</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Partial ordering and recursive variadic inheritance</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13667,13 +13667,13 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2309">
     <td><a href="https://wg21.link/cwg2309">2309</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Restrictions on nested statements within <TT>constexpr</TT> functions</td>
     <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2310">
     <td><a href="https://wg21.link/cwg2310">2310</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Type completeness and derived-to-base pointer conversions</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13715,13 +13715,13 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2317">
     <td><a href="https://wg21.link/cwg2317">2317</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Self-referential default member initializers</td>
     <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2318">
     <td><a href="https://wg21.link/cwg2318">2318</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Nondeduced contexts in deduction from a <I>braced-init-list</I></td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13793,7 +13793,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2330">
     <td><a href="https://wg21.link/cwg2330">2330</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Missing references to variable templates</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13805,7 +13805,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2332">
     <td><a href="https://wg21.link/cwg2332">2332</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td><I>template-name</I> as <I>simple-type-name</I> vs injected-class-name</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13829,7 +13829,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2336">
     <td><a href="https://wg21.link/cwg2336">2336</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Destructor characteristics vs potentially-constructed subobjects</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13891,13 +13891,13 @@ and <I>POD class</I></td>
     <td><a href="https://wg21.link/cwg2346">2346</a></td>
     <td>DRWP</td>
     <td>Local variables in default arguments</td>
-    <td class="none" align="center">Unknown</td>
+    <td class="unreleased" align="center">Clang 11</td>
   </tr>
-  <tr class="open" id="2347">
+  <tr id="2347">
     <td><a href="https://wg21.link/cwg2347">2347</a></td>
-    <td>review</td>
+    <td>DRWP</td>
     <td>Passing short scoped enumerations to ellipsis</td>
-    <td align="center">Not resolved</td>
+    <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2348">
     <td><a href="https://wg21.link/cwg2348">2348</a></td>
@@ -13925,19 +13925,19 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2352">
     <td><a href="https://wg21.link/cwg2352">2352</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Similar types and reference binding</td>
-    <td class="none" align="center">Unknown</td>
+    <td class="full" align="center">Clang 10</td>
   </tr>
   <tr id="2353">
     <td><a href="https://wg21.link/cwg2353">2353</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Potential results of a member access expression for a static data member</td>
     <td class="full" align="center">Clang 9</td>
   </tr>
   <tr id="2354">
     <td><a href="https://wg21.link/cwg2354">2354</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Extended alignment and object representation</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13961,7 +13961,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2358">
     <td><a href="https://wg21.link/cwg2358">2358</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Explicit capture of value</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -13973,7 +13973,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2360">
     <td><a href="https://wg21.link/cwg2360">2360</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td><TT>[[maybe_unused]]</TT> and structured bindings</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -14003,13 +14003,13 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2365">
     <td><a href="https://wg21.link/cwg2365">2365</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Confusing specification for <TT>dynamic_cast</TT></td>
     <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2366">
     <td><a href="https://wg21.link/cwg2366">2366</a></td>
-    <td>tentatively ready</td>
+    <td>DRWP</td>
     <td>Can default initialization be constant initialization?</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -14021,7 +14021,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2368">
     <td><a href="https://wg21.link/cwg2368">2368</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Differences in relational and three-way constant comparisons</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -14045,7 +14045,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2372">
     <td><a href="https://wg21.link/cwg2372">2372</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Incorrect matching rules for block-scope <TT>extern</TT> declarations</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -14055,11 +14055,11 @@ and <I>POD class</I></td>
     <td>Incorrect handling of static member function templates in partial ordering</td>
     <td class="none" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2374">
+  <tr id="2374">
     <td><a href="https://wg21.link/cwg2374">2374</a></td>
-    <td>review</td>
+    <td>DRWP</td>
     <td>Overly permissive specification of <TT>enum</TT> direct-list-initialization</td>
-    <td align="center">Not resolved</td>
+    <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2375">
     <td><a href="https://wg21.link/cwg2375">2375</a></td>
@@ -14069,7 +14069,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2376">
     <td><a href="https://wg21.link/cwg2376">2376</a></td>
-    <td>tentatively ready</td>
+    <td>DRWP</td>
     <td>Class template argument deduction with array declarator</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -14079,35 +14079,35 @@ and <I>POD class</I></td>
     <td>Explicit copy constructor vs function viability</td>
     <td class="none" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2378">
+  <tr id="2378">
     <td><a href="https://wg21.link/cwg2378">2378</a></td>
-    <td>drafting</td>
+    <td>accepted</td>
     <td>Inconsistent grammar for reference <I>init-capture</I> of pack</td>
-    <td align="center">Not resolved</td>
+    <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2379">
     <td><a href="https://wg21.link/cwg2379">2379</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Missing prohibition against <TT>constexpr</TT> in <TT>friend</TT> declaration</td>
     <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2380">
     <td><a href="https://wg21.link/cwg2380">2380</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td><I>capture-default</I> makes too many references odr-usable</td>
     <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2381">
     <td><a href="https://wg21.link/cwg2381">2381</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Composite pointer type of pointers to plain and noexcept member functions</td>
     <td class="none" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2382">
+  <tr id="2382">
     <td><a href="https://wg21.link/cwg2382">2382</a></td>
-    <td>review</td>
+    <td>DRWP</td>
     <td>Array allocation overhead for non-allocating placement <TT>new</TT></td>
-    <td align="center">Not resolved</td>
+    <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2383">
     <td><a href="https://wg21.link/cwg2383">2383</a></td>
@@ -14117,25 +14117,25 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2384">
     <td><a href="https://wg21.link/cwg2384">2384</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Conversion function templates and qualification conversions</td>
     <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2385">
     <td><a href="https://wg21.link/cwg2385">2385</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Lookup for <I>conversion-function-id</I>s</td>
     <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2386">
     <td><a href="https://wg21.link/cwg2386">2386</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td><T>tuple_size</T> requirements for structured binding</td>
     <td class="full" align="center">Clang 9</td>
   </tr>
   <tr id="2387">
     <td><a href="https://wg21.link/cwg2387">2387</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Linkage of const-qualified variable template</td>
     <td class="full" align="center">Clang 9</td>
   </tr>
@@ -14153,7 +14153,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2390">
     <td><a href="https://wg21.link/cwg2390">2390</a></td>
-    <td>tentatively ready</td>
+    <td>DRWP</td>
     <td>Is the argument of <TT>__has_cpp_attribute</TT> macro-expanded?</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -14177,7 +14177,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2394">
     <td><a href="https://wg21.link/cwg2394">2394</a></td>
-    <td>DR</td>
+    <td>DRWP</td>
     <td>Const-default-constructible for members</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -14205,15 +14205,15 @@ and <I>POD class</I></td>
     <td>Template template parameter matching and deduction</td>
     <td align="center">Not resolved</td>
   </tr>
-  <tr class="open" id="2399">
+  <tr id="2399">
     <td><a href="https://wg21.link/cwg2399">2399</a></td>
-    <td>review</td>
+    <td>DRWP</td>
     <td>Unclear referent of &#8220;expression&#8221; in <I>assignment-expression</I></td>
-    <td align="center">Not resolved</td>
+    <td class="none" align="center">Unknown</td>
   </tr>
   <tr id="2400">
     <td><a href="https://wg21.link/cwg2400">2400</a></td>
-    <td>tentatively ready</td>
+    <td>DRWP</td>
     <td>Constexpr virtual functions and temporary objects</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -14237,7 +14237,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2404">
     <td><a href="https://wg21.link/cwg2404">2404</a></td>
-    <td>tentatively ready</td>
+    <td>DRWP</td>
     <td><TT>[[no_unique_address]]</TT> and allocation order</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -14249,7 +14249,7 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2406">
     <td><a href="https://wg21.link/cwg2406">2406</a></td>
-    <td>tentatively ready</td>
+    <td>DRWP</td>
     <td><TT>[[fallthrough]]</TT> attribute and iteration statements</td>
     <td class="none" align="center">Unknown</td>
   </tr>
@@ -14307,11 +14307,11 @@ and <I>POD class</I></td>
     <td><I>using-declaration</I>s vs copy assignment operators</td>
     <td class="none" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2416">
+  <tr id="2416">
     <td><a href="https://wg21.link/cwg2416">2416</a></td>
-    <td>open</td>
+    <td>DRWP</td>
     <td>Explicit specializations vs <TT>constexpr</TT> and <TT>consteval</TT></td>
-    <td align="center">Not resolved</td>
+    <td class="none" align="center">Unknown</td>
   </tr>
   <tr class="open" id="2417">
     <td><a href="https://wg21.link/cwg2417">2417</a></td>
@@ -14321,15 +14321,183 @@ and <I>POD class</I></td>
   </tr>
   <tr id="2418">
     <td><a href="https://wg21.link/cwg2418">2418</a></td>
-    <td>tentatively ready</td>
+    <td>DRWP</td>
     <td>Missing cases in definition of &#8220;usable in constant expressions&#8221;</td>
     <td class="none" align="center">Unknown</td>
   </tr>
-  <tr class="open" id="2419">
+  <tr id="2419">
     <td><a href="https://wg21.link/cwg2419">2419</a></td>
-    <td>open</td>
+    <td>DRWP</td>
     <td>Loss of generality treating pointers to objects as one-element arrays</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr class="open" id="2420">
+    <td><a href="https://wg21.link/cwg2420">2420</a></td>
+    <td>open</td>
+    <td>Exception specifications in explicit instantiation</td>
     <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2421">
+    <td><a href="https://wg21.link/cwg2421">2421</a></td>
+    <td>open</td>
+    <td>Explicit instantiation of constrained member functions</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr id="2422">
+    <td><a href="https://wg21.link/cwg2422">2422</a></td>
+    <td>DRWP</td>
+    <td>Incorrect grammar for <I>deduction-guide</I></td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr id="2423">
+    <td><a href="https://wg21.link/cwg2423">2423</a></td>
+    <td>NAD</td>
+    <td>Typedefs, names, and entities</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr id="2424">
+    <td><a href="https://wg21.link/cwg2424">2424</a></td>
+    <td>DRWP</td>
+    <td><TT>constexpr</TT> initialization requirements for variant members</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr class="open" id="2425">
+    <td><a href="https://wg21.link/cwg2425">2425</a></td>
+    <td>open</td>
+    <td>Confusing wording for deduction from a type</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr id="2426">
+    <td><a href="https://wg21.link/cwg2426">2426</a></td>
+    <td>DRWP</td>
+    <td>Reference to destructor that cannot be invoked</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr id="2427">
+    <td><a href="https://wg21.link/cwg2427">2427</a></td>
+    <td>DRWP</td>
+    <td>Deprecation of volatile operands and unevaluated contexts</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr class="open" id="2428">
+    <td><a href="https://wg21.link/cwg2428">2428</a></td>
+    <td>open</td>
+    <td>Deprecating a concept</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr id="2429">
+    <td><a href="https://wg21.link/cwg2429">2429</a></td>
+    <td>DRWP</td>
+    <td>Initialization of <TT>thread_local</TT> variables referenced by lambdas</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr id="2430">
+    <td><a href="https://wg21.link/cwg2430">2430</a></td>
+    <td>DRWP</td>
+    <td>Completeness of return and parameter types of member functions</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr id="2431">
+    <td><a href="https://wg21.link/cwg2431">2431</a></td>
+    <td>DRWP</td>
+    <td>Full-expressions and temporaries bound to references</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr id="2432">
+    <td><a href="https://wg21.link/cwg2432">2432</a></td>
+    <td>DRWP</td>
+    <td>Return types for defaulted <TT>&lt;=&gt;</TT></td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr id="2433">
+    <td><a href="https://wg21.link/cwg2433">2433</a></td>
+    <td>DRWP</td>
+    <td>Variable templates in the ODR</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr class="open" id="2434">
+    <td><a href="https://wg21.link/cwg2434">2434</a></td>
+    <td>open</td>
+    <td>Mandatory copy elision vs non-class objects</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2435">
+    <td><a href="https://wg21.link/cwg2435">2435</a></td>
+    <td>open</td>
+    <td>Alias template specializations</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr id="2436">
+    <td><a href="https://wg21.link/cwg2436">2436</a></td>
+    <td>accepted</td>
+    <td>Copy semantics of coroutine parameters</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr id="2437">
+    <td><a href="https://wg21.link/cwg2437">2437</a></td>
+    <td>DRWP</td>
+    <td>Conversion of <TT>std::strong_ordering</TT> in a defaulted <TT>operator&lt;=&gt;</TT></td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr class="open" id="2438">
+    <td><a href="https://wg21.link/cwg2438">2438</a></td>
+    <td>open</td>
+    <td>Problems in the specification of qualification conversions</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr id="2439">
+    <td><a href="https://wg21.link/cwg2439">2439</a></td>
+    <td>DRWP</td>
+    <td>Undefined term in definition of &#8220;usable in constant expressions&#8221;</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr class="open" id="2440">
+    <td><a href="https://wg21.link/cwg2440">2440</a></td>
+    <td>open</td>
+    <td>Allocation in core constant expressions</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr id="2441">
+    <td><a href="https://wg21.link/cwg2441">2441</a></td>
+    <td>DRWP</td>
+    <td>Inline function parameters</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr id="2442">
+    <td><a href="https://wg21.link/cwg2442">2442</a></td>
+    <td>DRWP</td>
+    <td>Incorrect requirement for default arguments</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr class="open" id="2443">
+    <td><a href="https://wg21.link/cwg2443">2443</a></td>
+    <td>open</td>
+    <td>Meaningless template exports</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr class="open" id="2444">
+    <td><a href="https://wg21.link/cwg2444">2444</a></td>
+    <td>open</td>
+    <td>Constant expressions in initialization odr-use</td>
+    <td align="center">Not resolved</td>
+  </tr>
+  <tr id="2445">
+    <td><a href="https://wg21.link/cwg2445">2445</a></td>
+    <td></td>
+    <td>Partial ordering with rewritten candidates</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr id="2446">
+    <td><a href="https://wg21.link/cwg2446">2446</a></td>
+    <td>accepted</td>
+    <td>Questionable type-dependency of <I>concept-id</I>s</td>
+    <td class="none" align="center">Unknown</td>
+  </tr>
+  <tr id="2447">
+    <td><a href="https://wg21.link/cwg2447">2447</a></td>
+    <td>accepted</td>
+    <td>Unintended description of abbreviated function templates</td>
+    <td class="none" align="center">Unknown</td>
   </tr>
 </table>
 

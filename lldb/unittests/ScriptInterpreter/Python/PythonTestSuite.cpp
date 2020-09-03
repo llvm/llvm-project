@@ -1,4 +1,4 @@
-//===-- PythonTestSuite.cpp -------------------------------------*- C++ -*-===//
+//===-- PythonTestSuite.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,9 +8,10 @@
 
 #include "gtest/gtest.h"
 
+#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
+
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPythonImpl.h"
-#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 

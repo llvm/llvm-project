@@ -25,11 +25,12 @@ InputKind FrontendOptions::getInputKindForExtension(StringRef Extension) {
       .Cases("mm", "M", Language::ObjCXX)
       .Case("mii", InputKind(Language::ObjCXX).getPreprocessed())
       .Cases("C", "cc", "cp", Language::CXX)
-      .Cases("cpp", "CPP", "c++", "cxx", "hpp", Language::CXX)
+      .Cases("cpp", "CPP", "c++", "cxx", "hpp", "hxx", Language::CXX)
       .Case("cppm", Language::CXX)
       .Case("iim", InputKind(Language::CXX).getPreprocessed())
       .Case("cl", Language::OpenCL)
       .Case("cu", Language::CUDA)
+      .Case("hip", Language::HIP)
       .Cases("ll", "bc", Language::LLVM_IR)
       .Default(Language::Unknown);
 }

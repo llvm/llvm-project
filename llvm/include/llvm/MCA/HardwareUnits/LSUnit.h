@@ -24,8 +24,6 @@
 namespace llvm {
 namespace mca {
 
-class Scheduler;
-
 /// A node of a memory dependency graph. A MemoryGroup describes a set of
 /// instructions with same memory dependencies.
 ///
@@ -42,7 +40,10 @@ class MemoryGroup {
   unsigned NumInstructions;
   unsigned NumExecuting;
   unsigned NumExecuted;
-  SmallVector<MemoryGroup *, 4> Succ;
+  // Successors that are in a order dependency with this group.
+  SmallVector<MemoryGroup *, 4> OrderSucc;
+  // Successors that are in a data dependency with this group.
+  SmallVector<MemoryGroup *, 4> DataSucc;
 
   CriticalDependency CriticalPredecessor;
   InstRef CriticalMemoryInstruction;
@@ -57,8 +58,9 @@ public:
         NumExecuted(0), CriticalPredecessor(), CriticalMemoryInstruction() {}
   MemoryGroup(MemoryGroup &&) = default;
 
-  ArrayRef<MemoryGroup *> getSuccessors() const { return Succ; }
-  unsigned getNumSuccessors() const { return Succ.size(); }
+  size_t getNumSuccessors() const {
+    return OrderSucc.size() + DataSucc.size();
+  }
   unsigned getNumPredecessors() const { return NumPredecessors; }
   unsigned getNumExecutingPredecessors() const {
     return NumExecutingPredecessors;
@@ -77,12 +79,22 @@ public:
     return CriticalPredecessor;
   }
 
-  void addSuccessor(MemoryGroup *Group) {
+  void addSuccessor(MemoryGroup *Group, bool IsDataDependent) {
+    // Do not need to add a dependency if there is no data
+    // dependency and all instructions from this group have been
+    // issued already.
+    if (!IsDataDependent && isExecuting())
+      return;
+
     Group->NumPredecessors++;
     assert(!isExecuted() && "Should have been removed!");
     if (isExecuting())
-      Group->onGroupIssued(CriticalMemoryInstruction);
-    Succ.emplace_back(Group);
+      Group->onGroupIssued(CriticalMemoryInstruction, IsDataDependent);
+
+    if (IsDataDependent)
+      DataSucc.emplace_back(Group);
+    else
+      OrderSucc.emplace_back(Group);
   }
 
   bool isWaiting() const {
@@ -100,9 +112,12 @@ public:
   }
   bool isExecuted() const { return NumInstructions == NumExecuted; }
 
-  void onGroupIssued(const InstRef &IR) {
+  void onGroupIssued(const InstRef &IR, bool ShouldUpdateCriticalDep) {
     assert(!isReady() && "Unexpected group-start event!");
     NumExecutingPredecessors++;
+
+    if (!ShouldUpdateCriticalDep)
+      return;
 
     unsigned Cycles = IR.getInstruction()->getCyclesLeft();
     if (CriticalPredecessor.Cycles < Cycles) {
@@ -135,8 +150,14 @@ public:
       return;
 
     // Notify successors that this group started execution.
-    for (MemoryGroup *MG : Succ)
-      MG->onGroupIssued(CriticalMemoryInstruction);
+    for (MemoryGroup *MG : OrderSucc) {
+      MG->onGroupIssued(CriticalMemoryInstruction, false);
+      // Release the order dependency with this group.
+      MG->onGroupExecuted();
+    }
+
+    for (MemoryGroup *MG : DataSucc)
+      MG->onGroupIssued(CriticalMemoryInstruction, true);
   }
 
   void onInstructionExecuted() {
@@ -147,8 +168,8 @@ public:
     if (!isExecuted())
       return;
 
-    // Notify successors that this group has finished execution.
-    for (MemoryGroup *MG : Succ)
+    // Notify data dependent successors that this group has finished execution.
+    for (MemoryGroup *MG : DataSucc)
       MG->onGroupExecuted();
   }
 
@@ -414,6 +435,7 @@ class LSUnit : public LSUnitBase {
   unsigned CurrentLoadGroupID;
   unsigned CurrentLoadBarrierGroupID;
   unsigned CurrentStoreGroupID;
+  unsigned CurrentStoreBarrierGroupID;
 
 public:
   LSUnit(const MCSchedModel &SM)
@@ -422,7 +444,8 @@ public:
       : LSUnit(SM, LQ, SQ, /* NoAlias */ false) {}
   LSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ, bool AssumeNoAlias)
       : LSUnitBase(SM, LQ, SQ, AssumeNoAlias), CurrentLoadGroupID(0),
-        CurrentLoadBarrierGroupID(0), CurrentStoreGroupID(0) {}
+        CurrentLoadBarrierGroupID(0), CurrentStoreGroupID(0),
+        CurrentStoreBarrierGroupID(0) {}
 
   /// Returns LSU_AVAILABLE if there are enough load/store queue entries to
   /// accomodate instruction IR.

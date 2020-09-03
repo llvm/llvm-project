@@ -3,6 +3,7 @@
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=bdver2 -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,BDVER2 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,BTVER2 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=znver1 -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,ZNVER1 %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=znver2 -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,ZNVER2 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=sandybridge -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,SNB %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=ivybridge -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,IVB %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=haswell -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,HSW %s
@@ -88,6 +89,12 @@ xor %eax, %ebx
 # ZNVER1-NEXT:     [3] Maximum number of used buffer entries.
 # ZNVER1-NEXT:     [4] Total number of buffer entries.
 
+# ZNVER2:          Scheduler's queue usage:
+# ZNVER2-NEXT:     [1] Resource name.
+# ZNVER2-NEXT:     [2] Average number of used buffer entries.
+# ZNVER2-NEXT:     [3] Maximum number of used buffer entries.
+# ZNVER2-NEXT:     [4] Total number of buffer entries.
+
 # BARCELONA:        [1]            [2]        [3]        [4]
 # BARCELONA-NEXT:  SBPortAny        0          1          54
 
@@ -127,3 +134,8 @@ xor %eax, %ebx
 # ZNVER1-NEXT:     ZnAGU            0          0          28
 # ZNVER1-NEXT:     ZnALU            0          1          56
 # ZNVER1-NEXT:     ZnFPU            0          0          36
+
+# ZNVER2:           [1]            [2]        [3]        [4]
+# ZNVER2-NEXT:     Zn2AGU           0          0          28
+# ZNVER2-NEXT:     Zn2ALU           0          1          64
+# ZNVER2-NEXT:     Zn2FPU           0          0          36

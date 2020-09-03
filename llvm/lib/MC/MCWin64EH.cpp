@@ -55,7 +55,7 @@ static void EmitAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
   const MCExpr *Diff =
       MCBinaryExpr::createSub(MCSymbolRefExpr::create(LHS, Context),
                               MCSymbolRefExpr::create(RHS, Context), Context);
-  Streamer.EmitValue(Diff, 1);
+  Streamer.emitValue(Diff, 1);
 }
 
 static void EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
@@ -69,59 +69,59 @@ static void EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
   case Win64EH::UOP_PushNonVol:
     EmitAbsDifference(streamer, inst.Label, begin);
     b2 |= (inst.Register & 0x0F) << 4;
-    streamer.EmitIntValue(b2, 1);
+    streamer.emitInt8(b2);
     break;
   case Win64EH::UOP_AllocLarge:
     EmitAbsDifference(streamer, inst.Label, begin);
     if (inst.Offset > 512 * 1024 - 8) {
       b2 |= 0x10;
-      streamer.EmitIntValue(b2, 1);
+      streamer.emitInt8(b2);
       w = inst.Offset & 0xFFF8;
-      streamer.EmitIntValue(w, 2);
+      streamer.emitInt16(w);
       w = inst.Offset >> 16;
     } else {
-      streamer.EmitIntValue(b2, 1);
+      streamer.emitInt8(b2);
       w = inst.Offset >> 3;
     }
-    streamer.EmitIntValue(w, 2);
+    streamer.emitInt16(w);
     break;
   case Win64EH::UOP_AllocSmall:
     b2 |= (((inst.Offset - 8) >> 3) & 0x0F) << 4;
     EmitAbsDifference(streamer, inst.Label, begin);
-    streamer.EmitIntValue(b2, 1);
+    streamer.emitInt8(b2);
     break;
   case Win64EH::UOP_SetFPReg:
     EmitAbsDifference(streamer, inst.Label, begin);
-    streamer.EmitIntValue(b2, 1);
+    streamer.emitInt8(b2);
     break;
   case Win64EH::UOP_SaveNonVol:
   case Win64EH::UOP_SaveXMM128:
     b2 |= (inst.Register & 0x0F) << 4;
     EmitAbsDifference(streamer, inst.Label, begin);
-    streamer.EmitIntValue(b2, 1);
+    streamer.emitInt8(b2);
     w = inst.Offset >> 3;
     if (inst.Operation == Win64EH::UOP_SaveXMM128)
       w >>= 1;
-    streamer.EmitIntValue(w, 2);
+    streamer.emitInt16(w);
     break;
   case Win64EH::UOP_SaveNonVolBig:
   case Win64EH::UOP_SaveXMM128Big:
     b2 |= (inst.Register & 0x0F) << 4;
     EmitAbsDifference(streamer, inst.Label, begin);
-    streamer.EmitIntValue(b2, 1);
+    streamer.emitInt8(b2);
     if (inst.Operation == Win64EH::UOP_SaveXMM128Big)
       w = inst.Offset & 0xFFF0;
     else
       w = inst.Offset & 0xFFF8;
-    streamer.EmitIntValue(w, 2);
+    streamer.emitInt16(w);
     w = inst.Offset >> 16;
-    streamer.EmitIntValue(w, 2);
+    streamer.emitInt16(w);
     break;
   case Win64EH::UOP_PushMachFrame:
     if (inst.Offset == 1)
       b2 |= 0x10;
     EmitAbsDifference(streamer, inst.Label, begin);
-    streamer.EmitIntValue(b2, 1);
+    streamer.emitInt8(b2);
     break;
   }
 }
@@ -136,17 +136,17 @@ static void EmitSymbolRefWithOfs(MCStreamer &streamer,
   const MCSymbolRefExpr *BaseRefRel = MCSymbolRefExpr::create(Base,
                                               MCSymbolRefExpr::VK_COFF_IMGREL32,
                                               Context);
-  streamer.EmitValue(MCBinaryExpr::createAdd(BaseRefRel, Ofs, Context), 4);
+  streamer.emitValue(MCBinaryExpr::createAdd(BaseRefRel, Ofs, Context), 4);
 }
 
 static void EmitRuntimeFunction(MCStreamer &streamer,
                                 const WinEH::FrameInfo *info) {
   MCContext &context = streamer.getContext();
 
-  streamer.EmitValueToAlignment(4);
+  streamer.emitValueToAlignment(4);
   EmitSymbolRefWithOfs(streamer, info->Function, info->Begin);
   EmitSymbolRefWithOfs(streamer, info->Function, info->End);
-  streamer.EmitValue(MCSymbolRefExpr::create(info->Symbol,
+  streamer.emitValue(MCSymbolRefExpr::create(info->Symbol,
                                              MCSymbolRefExpr::VK_COFF_IMGREL32,
                                              context), 4);
 }
@@ -159,8 +159,8 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   MCContext &context = streamer.getContext();
   MCSymbol *Label = context.createTempSymbol();
 
-  streamer.EmitValueToAlignment(4);
-  streamer.EmitLabel(Label);
+  streamer.emitValueToAlignment(4);
+  streamer.emitLabel(Label);
   info->Symbol = Label;
 
   // Upper 3 bits are the version number (currently 1).
@@ -173,15 +173,15 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
     if (info->HandlesExceptions)
       flags |= Win64EH::UNW_ExceptionHandler << 3;
   }
-  streamer.EmitIntValue(flags, 1);
+  streamer.emitInt8(flags);
 
   if (info->PrologEnd)
     EmitAbsDifference(streamer, info->PrologEnd, info->Begin);
   else
-    streamer.EmitIntValue(0, 1);
+    streamer.emitInt8(0);
 
   uint8_t numCodes = CountOfUnwindCodes(info->Instructions);
-  streamer.EmitIntValue(numCodes, 1);
+  streamer.emitInt8(numCodes);
 
   uint8_t frame = 0;
   if (info->LastFrameInst >= 0) {
@@ -189,7 +189,7 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
     assert(frameInst.Operation == Win64EH::UOP_SetFPReg);
     frame = (frameInst.Register & 0x0F) | (frameInst.Offset & 0xF0);
   }
-  streamer.EmitIntValue(frame, 1);
+  streamer.emitInt8(frame);
 
   // Emit unwind instructions (in reverse order).
   uint8_t numInst = info->Instructions.size();
@@ -204,21 +204,21 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   // the array will be one longer than indicated by the count of unwind codes
   // field).
   if (numCodes & 1) {
-    streamer.EmitIntValue(0, 2);
+    streamer.emitInt16(0);
   }
 
   if (flags & (Win64EH::UNW_ChainInfo << 3))
     EmitRuntimeFunction(streamer, info->ChainedParent);
   else if (flags &
            ((Win64EH::UNW_TerminateHandler|Win64EH::UNW_ExceptionHandler) << 3))
-    streamer.EmitValue(MCSymbolRefExpr::create(info->ExceptionHandler,
+    streamer.emitValue(MCSymbolRefExpr::create(info->ExceptionHandler,
                                               MCSymbolRefExpr::VK_COFF_IMGREL32,
                                               context), 4);
   else if (numCodes == 0) {
     // The minimum size of an UNWIND_INFO struct is 8 bytes. If we're not
     // a chained unwind info, if there is no handler, and if there are fewer
     // than 2 slots used in the unwind code array, we have to pad to 8 bytes.
-    streamer.EmitIntValue(0, 4);
+    streamer.emitInt32(0);
   }
 }
 
@@ -337,121 +337,121 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
     llvm_unreachable("Unsupported ARM64 unwind code");
   case Win64EH::UOP_AllocSmall:
     b = (inst.Offset >> 4) & 0x1F;
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_AllocMedium: {
     uint16_t hw = (inst.Offset >> 4) & 0x7FF;
     b = 0xC0;
     b |= (hw >> 8);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     b = hw & 0xFF;
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   }
   case Win64EH::UOP_AllocLarge: {
     uint32_t w;
     b = 0xE0;
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     w = inst.Offset >> 4;
     b = (w & 0x00FF0000) >> 16;
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     b = (w & 0x0000FF00) >> 8;
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     b = w & 0x000000FF;
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   }
   case Win64EH::UOP_SetFP:
     b = 0xE1;
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_AddFP:
     b = 0xE2;
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     b = (inst.Offset >> 3);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_Nop:
     b = 0xE3;
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_SaveFPLRX:
     b = 0x80;
     b |= ((inst.Offset - 1) >> 3) & 0x3F;
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_SaveFPLR:
     b = 0x40;
     b |= (inst.Offset >> 3) & 0x3F;
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_SaveReg:
     assert(inst.Register >= 19 && "Saved reg must be >= 19");
     reg = inst.Register - 19;
     b = 0xD0 | ((reg & 0xC) >> 2);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     b = ((reg & 0x3) << 6) | (inst.Offset >> 3);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_SaveRegX:
     assert(inst.Register >= 19 && "Saved reg must be >= 19");
     reg = inst.Register - 19;
     b = 0xD4 | ((reg & 0x8) >> 3);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     b = ((reg & 0x7) << 5) | ((inst.Offset >> 3) - 1);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_SaveRegP:
     assert(inst.Register >= 19 && "Saved registers must be >= 19");
     reg = inst.Register - 19;
     b = 0xC8 | ((reg & 0xC) >> 2);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     b = ((reg & 0x3) << 6) | (inst.Offset >> 3);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_SaveRegPX:
     assert(inst.Register >= 19 && "Saved registers must be >= 19");
     reg = inst.Register - 19;
     b = 0xCC | ((reg & 0xC) >> 2);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     b = ((reg & 0x3) << 6) | ((inst.Offset >> 3) - 1);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_SaveFReg:
     assert(inst.Register >= 8 && "Saved dreg must be >= 8");
     reg = inst.Register - 8;
     b = 0xDC | ((reg & 0x4) >> 2);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     b = ((reg & 0x3) << 6) | (inst.Offset >> 3);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_SaveFRegX:
     assert(inst.Register >= 8 && "Saved dreg must be >= 8");
     reg = inst.Register - 8;
     b = 0xDE;
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     b = ((reg & 0x7) << 5) | ((inst.Offset >> 3) - 1);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_SaveFRegP:
     assert(inst.Register >= 8 && "Saved dregs must be >= 8");
     reg = inst.Register - 8;
     b = 0xD8 | ((reg & 0x4) >> 2);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     b = ((reg & 0x3) << 6) | (inst.Offset >> 3);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_SaveFRegPX:
     assert(inst.Register >= 8 && "Saved dregs must be >= 8");
     reg = inst.Register - 8;
     b = 0xDA | ((reg & 0x4) >> 2);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     b = ((reg & 0x3) << 6) | ((inst.Offset >> 3) - 1);
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   case Win64EH::UOP_End:
     b = 0xE4;
-    streamer.EmitIntValue(b, 1);
+    streamer.emitInt8(b);
     break;
   }
 }
@@ -498,8 +498,8 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   MCContext &context = streamer.getContext();
   MCSymbol *Label = context.createTempSymbol();
 
-  streamer.EmitValueToAlignment(4);
-  streamer.EmitLabel(Label);
+  streamer.emitValueToAlignment(4);
+  streamer.emitLabel(Label);
   info->Symbol = Label;
 
   int64_t RawFuncLength;
@@ -585,7 +585,7 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   if (info->HandlesExceptions) // X
     row1 |= 1 << 20;
   row1 |= FuncLength & 0x3FFFF;
-  streamer.EmitIntValue(row1, 4);
+  streamer.emitInt32(row1);
 
   // Extended Code Words, Extended Epilog Count
   if (ExtensionWord) {
@@ -597,7 +597,7 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
     uint32_t row2 = 0x0;
     row2 |= (CodeWords & 0xFF) << 16;
     row2 |= (EpilogCount & 0xFFFF);
-    streamer.EmitIntValue(row2, 4);
+    streamer.emitInt32(row2);
   }
 
   // Epilog Start Index, Epilog Start Offset
@@ -610,7 +610,7 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
       EpilogOffset /= 4;
     uint32_t row3 = EpilogOffset;
     row3 |= (EpilogIndex & 0x3FF) << 22;
-    streamer.EmitIntValue(row3, 4);
+    streamer.emitInt32(row3);
   }
 
   // Emit prolog unwind instructions (in reverse order).
@@ -633,10 +633,10 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   int32_t BytesMod = CodeWords * 4 - TotalCodeBytes;
   assert(BytesMod >= 0);
   for (int i = 0; i < BytesMod; i++)
-    streamer.EmitIntValue(0xE3, 1);
+    streamer.emitInt8(0xE3);
 
   if (info->HandlesExceptions)
-    streamer.EmitValue(
+    streamer.emitValue(
         MCSymbolRefExpr::create(info->ExceptionHandler,
                                 MCSymbolRefExpr::VK_COFF_IMGREL32, context),
         4);
@@ -646,9 +646,9 @@ static void ARM64EmitRuntimeFunction(MCStreamer &streamer,
                                      const WinEH::FrameInfo *info) {
   MCContext &context = streamer.getContext();
 
-  streamer.EmitValueToAlignment(4);
+  streamer.emitValueToAlignment(4);
   EmitSymbolRefWithOfs(streamer, info->Function, info->Begin);
-  streamer.EmitValue(MCSymbolRefExpr::create(info->Symbol,
+  streamer.emitValue(MCSymbolRefExpr::create(info->Symbol,
                                              MCSymbolRefExpr::VK_COFF_IMGREL32,
                                              context),
                      4);

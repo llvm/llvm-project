@@ -27,10 +27,10 @@ namespace std { enum class align_val_t : size_t {}; }
 struct OVERALIGNED A { A(); int n[128]; };
 
 // CHECK-LABEL: define {{.*}} @_Z2a0v()
-// CHECK: %[[ALLOC:.*]] = call i8* @_ZnwmSt11align_val_t(i64 512, i64 32)
+// CHECK: %[[ALLOC:.*]] = call noalias nonnull align 32 i8* @_ZnwmSt11align_val_t(i64 512, i64 32)
 // CHECK: call void @_ZdlPvSt11align_val_t(i8* %[[ALLOC]], i64 32)
 // CHECK-MS-LABEL: define {{.*}} @"?a0@@YAPEAXXZ"()
-// CHECK-MS: %[[ALLOC:.*]] = call i8* @"??2@YAPEAX_KW4align_val_t@std@@@Z"(i64 512, i64 32)
+// CHECK-MS: %[[ALLOC:.*]] = call noalias nonnull align 32 i8* @"??2@YAPEAX_KW4align_val_t@std@@@Z"(i64 512, i64 32)
 // CHECK-MS: cleanuppad
 // CHECK-MS: call void @"??3@YAXPEAXW4align_val_t@std@@@Z"(i8* %[[ALLOC]], i64 32)
 void *a0() { return new A; }
@@ -39,13 +39,13 @@ void *a0() { return new A; }
 // The size is known.
 //
 // CHECK-LABEL: define {{.*}} @_Z2a1l(
-// CHECK: %[[ALLOC:.*]] = call i8* @_ZnamSt11align_val_t(i64 %{{.*}}, i64 32)
+// CHECK: %[[ALLOC:.*]] = call noalias nonnull align 32 i8* @_ZnamSt11align_val_t(i64 %{{.*}}, i64 32)
 // No array cookie.
 // CHECK-NOT: store
 // CHECK: invoke void @_ZN1AC1Ev(
 // CHECK: call void @_ZdaPvSt11align_val_t(i8* %[[ALLOC]], i64 32)
 // CHECK-MS-LABEL: define {{.*}} @"?a1@@YAPEAXJ@Z"(
-// CHECK-MS: %[[ALLOC:.*]] = call i8* @"??_U@YAPEAX_KW4align_val_t@std@@@Z"(i64 %{{.*}}, i64 32)
+// CHECK-MS: %[[ALLOC:.*]] = call noalias nonnull align 32 i8* @"??_U@YAPEAX_KW4align_val_t@std@@@Z"(i64 %{{.*}}, i64 32)
 // No array cookie.
 // CHECK-MS-NOT: store
 // CHECK-MS: invoke %struct.A* @"??0A@@QEAA@XZ"(
@@ -84,7 +84,7 @@ struct OVERALIGNED B {
 void *b0() { return new B; }
 
 // CHECK-LABEL: define {{.*}} @_Z2b1l(
-// CHECK: %[[ALLOC:.*]] = call i8* @_ZnamSt11align_val_t(i64 %{{.*}}, i64 32)
+// CHECK: %[[ALLOC:.*]] = call noalias nonnull align 32 i8* @_ZnamSt11align_val_t(i64 %{{.*}}, i64 32)
 // No array cookie.
 // CHECK-NOT: store
 // CHECK: invoke void @_ZN1BC1Ev(
@@ -169,14 +169,14 @@ void *d0() { return new (q) D; }
 
 #ifndef UNALIGNED
 // CHECK-LABEL: define {{.*}} @_Z2e0v(
-// CHECK: %[[ALLOC:.*]] = call i8* @_ZnwmSt11align_val_t(i64 512, i64 5)
-// CHECK: call void @_ZdlPvSt11align_val_t(i8* %[[ALLOC]], i64 5)
-void *e0() { return new (std::align_val_t(5)) A; }
+// CHECK: %[[ALLOC:.*]] = call noalias nonnull align 4 i8* @_ZnwmSt11align_val_t(i64 512, i64 4)
+// CHECK: call void @_ZdlPvSt11align_val_t(i8* %[[ALLOC]], i64 4)
+void *e0() { return new (std::align_val_t(4)) A; }
 
 // CHECK-LABEL: define {{.*}} @_Z2e1v(
-// CHECK: %[[ALLOC:.*]] = call i8* @_ZN1BnwEmSt11align_val_t(i64 512, i64 5)
-// CHECK: call void @_ZN1BdlEPvSt11align_val_t(i8* %[[ALLOC]], i64 5)
-void *e1() { return new (std::align_val_t(5)) B; }
+// CHECK: %[[ALLOC:.*]] = call i8* @_ZN1BnwEmSt11align_val_t(i64 512, i64 4)
+// CHECK: call void @_ZN1BdlEPvSt11align_val_t(i8* %[[ALLOC]], i64 4)
+void *e1() { return new (std::align_val_t(4)) B; }
 #endif
 
 // Variadic placement/non-placement allocation functions.

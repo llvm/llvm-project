@@ -9,7 +9,6 @@ to see a description of the supported command line arguments.
 
 # Python modules:
 import io
-import sys
 
 # Third party modules
 import six

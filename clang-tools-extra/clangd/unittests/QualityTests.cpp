@@ -112,7 +112,7 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
   int deprecated() { return 0; }
 
   namespace { struct X { void y() { int z; } }; }
-  struct S{}
+  struct S{};
   )cpp";
   auto AST = Test.build();
 

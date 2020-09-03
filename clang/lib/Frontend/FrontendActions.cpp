@@ -9,6 +9,7 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -78,7 +79,8 @@ ASTDumpAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   const FrontendOptions &Opts = CI.getFrontendOpts();
   return CreateASTDumper(nullptr /*Dump to stdout.*/, Opts.ASTDumpFilter,
                          Opts.ASTDumpDecls, Opts.ASTDumpAll,
-                         Opts.ASTDumpLookups, Opts.ASTDumpFormat);
+                         Opts.ASTDumpLookups, Opts.ASTDumpDeclTypes,
+                         Opts.ASTDumpFormat);
 }
 
 std::unique_ptr<ASTConsumer>
@@ -115,7 +117,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
       CI.getPreprocessorOpts().AllowPCHWithCompilerErrors,
       FrontendOpts.IncludeTimestamps, +CI.getLangOpts().CacheGeneratedPCH));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
-      CI, InFile, OutputFile, std::move(OS), Buffer));
+      CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
 
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
@@ -181,7 +183,7 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
       /*ShouldCacheASTInMemory=*/
       +CI.getFrontendOpts().BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
-      CI, InFile, OutputFile, std::move(OS), Buffer));
+      CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
@@ -266,7 +268,7 @@ bool GenerateHeaderModuleAction::PrepareToExecuteAction(
     HeaderContents += "#include \"";
     HeaderContents += FIF.getFile();
     HeaderContents += "\"\n";
-    ModuleHeaders.push_back(FIF.getFile());
+    ModuleHeaders.push_back(std::string(FIF.getFile()));
   }
   Buffer = llvm::MemoryBuffer::getMemBufferCopy(
       HeaderContents, Module::getModuleInputBufferName());
@@ -429,6 +431,14 @@ private:
       return "ConstraintNormalization";
     case CodeSynthesisContext::ParameterMappingSubstitution:
       return "ParameterMappingSubstitution";
+    case CodeSynthesisContext::RequirementInstantiation:
+      return "RequirementInstantiation";
+    case CodeSynthesisContext::NestedRequirementConstraintsCheck:
+      return "NestedRequirementConstraintsCheck";
+    case CodeSynthesisContext::InitializingStructuredBinding:
+      return "InitializingStructuredBinding";
+    case CodeSynthesisContext::MarkingClassDllexported:
+      return "MarkingClassDllexported";
     }
     return "";
   }

@@ -1,4 +1,4 @@
-//===-- Symtab.cpp ----------------------------------------------*- C++ -*-===//
+//===-- Symtab.cpp --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,13 +24,15 @@
 
 #include "llvm/ADT/StringRef.h"
 
+#ifdef LLDB_ENABLE_SWIFT
 #include "lldb/Target/SwiftLanguageRuntime.h"
+#endif // LLDB_ENABLE_SWIFT
 
 using namespace lldb;
 using namespace lldb_private;
 
 Symtab::Symtab(ObjectFile *objfile)
-    : m_objfile(objfile), m_symbols(), m_file_addr_to_index(),
+    : m_objfile(objfile), m_symbols(), m_file_addr_to_index(*this),
       m_name_to_index(), m_mutex(), m_file_addr_to_index_computed(false),
       m_name_indexes_computed(false) {}
 
@@ -299,7 +301,8 @@ void Symtab::InitNameIndexes() {
         if (type == eSymbolTypeCode || type == eSymbolTypeResolver) {
           if (mangled.DemangleWithRichManglingInfo(rmc, lldb_skip_name))
             RegisterMangledNameEntry(value, class_contexts, backlog, rmc);
-	  else if (SwiftLanguageRuntime::IsSwiftMangledName(name.AsCString())) {
+#ifdef LLDB_ENABLE_SWIFT
+	  else if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetStringRef())) {
             lldb_private::ConstString basename;
             bool is_method = false;
             ConstString mangled_name = mangled.GetMangledName();
@@ -314,15 +317,17 @@ void Symtab::InitNameIndexes() {
               }
             }
           }
+#endif // LLDB_ENABLE_SWIFT
         }
       }
 
       // Symbol name strings that didn't match a Mangled::ManglingScheme, are
       // stored in the demangled field.
+
       SymbolContext sc;
       symbol->CalculateSymbolContext(&sc);
       sc.module_sp = m_objfile->GetModule();
-      if (ConstString name = mangled.GetDemangledName(symbol->GetLanguage(), &sc)) {
+      if (ConstString name = mangled.GetDemangledName(&sc)) {
         m_name_to_index.Append(name, value);
 
         if (symbol->ContainsLinkerAnnotations()) {
@@ -448,7 +453,7 @@ void Symtab::AppendSymbolNamesToMap(const IndexCollection &indexes,
 
       const Mangled &mangled = symbol->GetMangled();
       if (add_demangled) {
-        if (ConstString name = mangled.GetDemangledName(symbol->GetLanguage()))
+        if (ConstString name = mangled.GetDemangledName())
           name_to_index_map.Append(name, value);
       }
 

@@ -34,7 +34,7 @@
 
 # ERROR: File format has no dynamic symbol table.
 
-# RUN: yaml2obj %s > %t.elf-i386
+# RUN: yaml2obj %s -o %t.elf-i386
 # RUN: llvm-nm -D %t.elf-i386 2>&1 | FileCheck %s -check-prefix=NO-SYMBOLS
 
 # NO-SYMBOLS: no symbols

@@ -9,7 +9,7 @@ declare i32 @llvm.amdgcn.workgroup.id.x() #0
 declare i32 @llvm.amdgcn.workgroup.id.y() #0
 declare i32 @llvm.amdgcn.workgroup.id.z() #0
 
-; ALL-LABEL {{^}}test_workgroup_id_x:
+; ALL-LABEL: {{^}}test_workgroup_id_x:
 
 ; CO-V2: .amd_kernel_code_t
 ; CO-V2: user_sgpr_count = 6
@@ -40,7 +40,7 @@ define amdgpu_kernel void @test_workgroup_id_x(i32 addrspace(1)* %out) #1 {
   ret void
 }
 
-; ALL-LABEL {{^}}test_workgroup_id_y:
+; ALL-LABEL: {{^}}test_workgroup_id_y:
 ; CO-V2: user_sgpr_count = 6
 ; CO-V2: enable_sgpr_workgroup_id_x = 1
 ; CO-V2: enable_sgpr_workgroup_id_y = 1
@@ -67,7 +67,7 @@ define amdgpu_kernel void @test_workgroup_id_y(i32 addrspace(1)* %out) #1 {
   ret void
 }
 
-; ALL-LABEL {{^}}test_workgroup_id_z:
+; ALL-LABEL: {{^}}test_workgroup_id_z:
 ; CO-V2: user_sgpr_count = 6
 ; CO-V2: enable_sgpr_workgroup_id_x = 1
 ; CO-V2: enable_sgpr_workgroup_id_y = 0

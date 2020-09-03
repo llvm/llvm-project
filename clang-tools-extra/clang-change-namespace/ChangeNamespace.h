@@ -27,7 +27,7 @@ namespace change_namespace {
 // reference needs to be fully-qualified, this adds a "::" prefix to the
 // namespace specifiers unless the new namespace is the global namespace.
 // For classes, only classes that are declared/defined in the given namespace in
-// speficifed files will be moved: forward declarations will remain in the old
+// specified files will be moved: forward declarations will remain in the old
 // namespace.
 // For example, changing "a" to "x":
 // Old code:
@@ -49,7 +49,7 @@ public:
   // files matching `FilePattern`.
   ChangeNamespaceTool(
       llvm::StringRef OldNs, llvm::StringRef NewNs, llvm::StringRef FilePattern,
-      llvm::ArrayRef<std::string> WhiteListedSymbolPatterns,
+      llvm::ArrayRef<std::string> AllowedSymbolPatterns,
       std::map<std::string, tooling::Replacements> *FileToReplacements,
       llvm::StringRef FallbackStyle = "LLVM");
 
@@ -138,7 +138,7 @@ private:
   llvm::Regex FilePatternRE;
   // Information about moved namespaces grouped by file.
   // Since we are modifying code in old namespaces (e.g. add namespace
-  // spedifiers) as well as moving them, we store information about namespaces
+  // specifiers) as well as moving them, we store information about namespaces
   // to be moved and only move them after all modifications are finished (i.e.
   // in `onEndOfTranslationUnit`).
   std::map<std::string, std::vector<MoveNamespace>> MoveNamespaces;
@@ -166,7 +166,7 @@ private:
   llvm::SmallPtrSet<const clang::DeclRefExpr*, 16> ProcessedFuncRefs;
   // Patterns of symbol names whose references are not expected to be updated
   // when changing namespaces around them.
-  std::vector<llvm::Regex> WhiteListedSymbolRegexes;
+  std::vector<llvm::Regex> AllowedSymbolRegexes;
 };
 
 } // namespace change_namespace

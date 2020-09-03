@@ -57,6 +57,17 @@ namespace sys {
       MF_WRITE = 0x2000000,
       MF_EXEC = 0x4000000,
       MF_RWE_MASK = 0x7000000,
+
+      /// The \p MF_HUGE_HINT flag is used to indicate that the request for
+      /// a memory block should be satisfied with large pages if possible.
+      /// This is only a hint and small pages will be used as fallback.
+      ///
+      /// The presence or absence of this flag in the returned memory block
+      /// is (at least currently) *not* a reliable indicator that the memory
+      /// block will use or will not use large pages. On some systems a request
+      /// without this flag can be backed by large pages without this flag being
+      /// set, and on some other systems a request with this flag can fallback
+      /// to small pages without this flag being cleared.
       MF_HUGE_HINT = 0x0000001
     };
 

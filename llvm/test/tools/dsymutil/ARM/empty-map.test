@@ -1,4 +1,3 @@
-# REQUIRES: object-emission
 # RUN: dsymutil -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s
 
 ---

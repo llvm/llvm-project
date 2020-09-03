@@ -68,8 +68,8 @@ GlobalVariable *llvm::createPrivateGlobalForString(Module &M, StringRef Str,
                          GlobalValue::PrivateLinkage, StrConst, NamePrefix);
   if (AllowMerging)
     GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(Align::None()); // Strings may not be merged w/o setting
-                                   // alignment explicitly.
+  GV->setAlignment(Align(1)); // Strings may not be merged w/o setting
+                              // alignment explicitly.
   return GV;
 }
 
@@ -78,7 +78,7 @@ Comdat *llvm::GetOrCreateFunctionComdat(Function &F, Triple &T,
   if (auto Comdat = F.getComdat()) return Comdat;
   assert(F.hasName());
   Module *M = F.getParent();
-  std::string Name = F.getName();
+  std::string Name = std::string(F.getName());
 
   // Make a unique comdat name for internal linkage things on ELF. On COFF, the
   // name of the comdat group identifies the leader symbol of the comdat group.
@@ -112,6 +112,7 @@ void llvm::initializeInstrumentation(PassRegistry &Registry) {
   initializePGOInstrumentationUseLegacyPassPass(Registry);
   initializePGOIndirectCallPromotionLegacyPassPass(Registry);
   initializePGOMemOPSizeOptLegacyPassPass(Registry);
+  initializeCGProfileLegacyPassPass(Registry);
   initializeInstrOrderFileLegacyPassPass(Registry);
   initializeInstrProfilingLegacyPassPass(Registry);
   initializeMemorySanitizerLegacyPassPass(Registry);

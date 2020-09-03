@@ -233,12 +233,12 @@ namespace broken_baseclause {
 template<typename T>
 struct base { };
 
-struct t1 : base<int,
-  public:  // expected-error {{expected expression}}
+struct t1 : base<int, // expected-note {{to match this '<'}}
+  public:  // expected-error {{expected expression}} expected-error {{expected '>'}}
 };
 // expected-error@-1 {{expected '{' after base class list}}
-struct t2 : base<int,
-  public  // expected-error {{expected expression}}
+struct t2 : base<int, // expected-note {{to match this '<'}}
+  public  // expected-error {{expected expression}} expected-error {{expected '>'}}
 };
 // expected-error@-1 {{expected '{' after base class list}}
 
@@ -268,4 +268,21 @@ namespace AnnotateAfterInvalidTemplateId {
   template<int I> struct A<I, 0> { }; // expected-note {{I = 0}}
 
   void f() { A<0, 0>::f(); } // expected-error {{ambiguous partial specializations}}
+}
+
+namespace PR45063 {
+  template<class=class a::template b<>> struct X {}; // expected-error {{undeclared identifier 'a'}}
+}
+
+namespace NoCrashOnEmptyNestedNameSpecifier {
+  template <typename FnT,
+            typename T = typename ABC<FnT>::template arg_t<0>> // expected-error {{no template named 'ABC'}}
+  void foo(FnT) {}
+}
+
+namespace PR45239 {
+  // Ensure we don't crash here. We used to deallocate the TemplateIdAnnotation
+  // before we'd parsed it.
+  template<int> int b;
+  template<int> auto f() -> b<0>; // expected-error +{{}}
 }

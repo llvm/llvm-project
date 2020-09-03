@@ -8,3 +8,5 @@
 int main() {
   test1_func();
 }
+
+// REQUIRES: shell

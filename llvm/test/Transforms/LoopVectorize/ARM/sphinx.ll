@@ -44,9 +44,6 @@ define i32 @test(float* nocapture readonly %x) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ [[TMP0]], [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> undef, i32 [[INDEX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, float* [[X:%.*]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, float* [[TMP2]], i32 0

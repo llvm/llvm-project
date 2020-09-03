@@ -54,4 +54,4 @@ class TestObjCGlobalVar(TestBase):
         self.assertTrue(
             dyn_value.GetError().Success(),
             "Dynamic value is valid")
-        self.assertTrue(dyn_value.GetObjectDescription() == "Some NSString")
+        self.assertEquals(dyn_value.GetObjectDescription(), "Some NSString")

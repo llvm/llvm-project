@@ -6,7 +6,7 @@
 # CHECK:      error: corrupted .eh_frame: unexpected end of CIE
 # CHECK-NEXT: >>> defined in {{.*}}:(.eh_frame+0x8)
 
-.section .eh_frame
+.section .eh_frame,"a",@unwind
   .byte 0x04
   .byte 0x00
   .byte 0x00

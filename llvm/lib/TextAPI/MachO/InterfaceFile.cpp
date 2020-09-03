@@ -14,9 +14,10 @@
 #include <iomanip>
 #include <sstream>
 
-namespace llvm {
-namespace MachO {
-namespace detail {
+using namespace llvm;
+using namespace llvm::MachO;
+
+namespace {
 template <typename C>
 typename C::iterator addEntry(C &Container, StringRef InstallName) {
   auto I = partition_point(Container, [=](const InterfaceFileRef &O) {
@@ -39,21 +40,21 @@ typename C::iterator addEntry(C &Container, const Target &Target_) {
 
   return Container.insert(Iter, Target_);
 }
-} // end namespace detail.
+} // end namespace
 
 void InterfaceFileRef::addTarget(const Target &Target) {
-  detail::addEntry(Targets, Target);
+  addEntry(Targets, Target);
 }
 
 void InterfaceFile::addAllowableClient(StringRef InstallName,
                                        const Target &Target) {
-  auto Client = detail::addEntry(AllowableClients, InstallName);
+  auto Client = addEntry(AllowableClients, InstallName);
   Client->addTarget(Target);
 }
 
 void InterfaceFile::addReexportedLibrary(StringRef InstallName,
                                          const Target &Target) {
-  auto Lib = detail::addEntry(ReexportedLibraries, InstallName);
+  auto Lib = addEntry(ReexportedLibraries, InstallName);
   Lib->addTarget(Target);
 }
 
@@ -63,11 +64,11 @@ void InterfaceFile::addParentUmbrella(const Target &Target_, StringRef Parent) {
                              Target RHS) { return LHS.first < RHS; });
 
   if ((Iter != ParentUmbrellas.end()) && !(Target_ < Iter->first)) {
-    Iter->second = Parent;
+    Iter->second = std::string(Parent);
     return;
   }
 
-  ParentUmbrellas.emplace(Iter, Target_, Parent);
+  ParentUmbrellas.emplace(Iter, Target_, std::string(Parent));
   return;
 }
 
@@ -77,11 +78,11 @@ void InterfaceFile::addUUID(const Target &Target_, StringRef UUID) {
                              Target RHS) { return LHS.first < RHS; });
 
   if ((Iter != UUIDs.end()) && !(Target_ < Iter->first)) {
-    Iter->second = UUID;
+    Iter->second = std::string(UUID);
     return;
   }
 
-  UUIDs.emplace(Iter, Target_, UUID);
+  UUIDs.emplace(Iter, Target_, std::string(UUID));
   return;
 }
 
@@ -97,7 +98,7 @@ void InterfaceFile::addUUID(const Target &Target, uint8_t UUID[16]) {
 }
 
 void InterfaceFile::addTarget(const Target &Target) {
-  detail::addEntry(Targets, Target);
+  addEntry(Targets, Target);
 }
 
 InterfaceFile::const_filtered_target_range
@@ -118,6 +119,3 @@ void InterfaceFile::addSymbol(SymbolKind Kind, StringRef Name,
     for (const auto &Target : Targets)
       result.first->second->addTarget(Target);
 }
-
-} // end namespace MachO.
-} // end namespace llvm.

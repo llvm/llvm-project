@@ -1,3 +1,4 @@
+// RUN: rm -rf %t
 // RUN: not %clang_cc1 -fmodules -fmodules-cache-path=%t -fmodule-map-file=%S/Inputs/diagnostics-aux.modulemap -fmodule-map-file=%s -fsyntax-only -x c++ /dev/null 2>&1 | FileCheck %s --implicit-check-not error:
 
 // CHECK: In file included from {{.*}}diagnostics-aux.modulemap:3:

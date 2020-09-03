@@ -2,12 +2,16 @@
 ## containing sections with duplicate names (but different name suffixes).
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: llvm-readobj -s %t1 | FileCheck %s --check-prefix=CASE1
+# RUN: llvm-readelf -sections %t1 | FileCheck %s --check-prefix=CASE1
 
-# CASE1: Name: .foo1 (
-# CASE1: Name: .foo (
-# CASE1: Name: .foo (
-# CASE1: Name: .foo2 (
+# CASE1:      [Nr] Name    Type
+# CASE1:      [ 1] .foo1   PROGBITS
+# CASE1-NEXT: [ 2] .foo    PROGBITS
+# CASE1-NEXT: [ 3] .foo    PROGBITS
+# CASE1-NEXT: [ 4] .foo2   PROGBITS
+# CASE1-NEXT: [ 5] .foo2 ( PROGBITS
+# CASE1-NEXT: [ 6] .foo2 ) PROGBITS
+# CASE1-NEXT: [ 7] .foo2   PROGBITS
 
 --- !ELF
 FileHeader:
@@ -20,17 +24,23 @@ Sections:
     Type: SHT_PROGBITS
   - Name: .foo
     Type: SHT_PROGBITS
-  - Name: '.foo [1]'
+  - Name: '.foo (1)'
     Type: SHT_PROGBITS
   - Name: .foo2
+    Type: SHT_PROGBITS
+  - Name: '.foo2 ('
+    Type: SHT_PROGBITS
+  - Name: '.foo2 )'
+    Type: SHT_PROGBITS
+  - Name: '.foo2 ()'
     Type: SHT_PROGBITS
 
 ## Check that yaml2obj reports an error in case we have
 ## sections with equal names and suffixes.
 
 # RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --check-prefix=CASE2
-# CASE2: error: repeated section/fill name: '.foo [1]' at YAML section/fill number 2
-# CASE2: error: repeated section/fill name: '.foo [1]' at YAML section/fill number 3
+# CASE2: error: repeated section/fill name: '.foo (1)' at YAML section/fill number 2
+# CASE2: error: repeated section/fill name: '.foo (1)' at YAML section/fill number 3
 
 --- !ELF
 FileHeader:
@@ -39,11 +49,11 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
 Sections:
-  - Name: '.foo [1]'
+  - Name: '.foo (1)'
     Type: SHT_PROGBITS
-  - Name: '.foo [1]'
+  - Name: '.foo (1)'
     Type: SHT_PROGBITS
-  - Name: '.foo [1]'
+  - Name: '.foo (1)'
     Type: SHT_PROGBITS
 
 ## Check that yaml2obj reports an error in case we have
@@ -102,13 +112,13 @@ FileHeader:
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
-  - Name: '.foo [1]'
+  - Name: '.foo (1)'
     Type: SHT_PROGBITS
 Symbols:
   - Name:    foo
     Section: .foo
   - Name:    bar
-    Section: '.foo [1]'
+    Section: '.foo (1)'
 
 ## Check that yaml2obj can produce SHT_GROUP sections that
 ## reference sections and symbols with name suffixes.
@@ -156,16 +166,16 @@ Sections:
       - SectionOrType: .text.foo
   - Name: .text.foo
     Type: SHT_PROGBITS
-  - Name: '.group [1]'
+  - Name: '.group (1)'
     Type: SHT_GROUP
-    Info: 'foo [1]'
+    Info: 'foo (1)'
     Members:
       - SectionOrType: GRP_COMDAT
-      - SectionOrType: '.text.foo [1]'
-  - Name: '.text.foo [1]'
+      - SectionOrType: '.text.foo (1)'
+  - Name: '.text.foo (1)'
     Type: SHT_PROGBITS
 Symbols:
   - Name:    foo
     Section: .text.foo
-  - Name:    'foo [1]'
-    Section: '.text.foo [1]'
+  - Name:    'foo (1)'
+    Section: '.text.foo (1)'

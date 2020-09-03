@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++1z %s -verify -fcxx-exceptions
-// RUN: not %clang_cc1 -std=c++1z %s -emit-llvm-only -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++17 %s -verify -fcxx-exceptions
+// RUN: not %clang_cc1 -std=c++17 %s -emit-llvm-only -fcxx-exceptions
 
 struct S { int a, b, c; };
 
@@ -67,8 +67,8 @@ namespace BadSpecifiers {
   struct S { int n; } s;
   void f() {
     // storage-class-specifiers
-    static auto &[a] = n; // expected-warning {{declared 'static' is a C++2a extension}}
-    thread_local auto &[b] = n; // expected-warning {{declared 'thread_local' is a C++2a extension}}
+    static auto &[a] = n; // expected-warning {{declared 'static' is a C++20 extension}}
+    thread_local auto &[b] = n; // expected-warning {{declared 'thread_local' is a C++20 extension}}
     extern auto &[c] = n; // expected-error {{cannot be declared 'extern'}} expected-error {{cannot have an initializer}}
     struct S {
       mutable auto &[d] = n; // expected-error {{not permitted in this context}}
@@ -85,7 +85,7 @@ namespace BadSpecifiers {
   }
 
   static constexpr inline thread_local auto &[j1] = n; // expected-error {{cannot be declared with 'constexpr inline' specifiers}}
-  static thread_local auto &[j2] = n; // expected-warning {{declared with 'static thread_local' specifiers is a C++2a extension}}
+  static thread_local auto &[j2] = n; // expected-warning {{declared with 'static thread_local' specifiers is a C++20 extension}}
 
   inline auto &[k] = n; // expected-error {{cannot be declared 'inline'}}
 

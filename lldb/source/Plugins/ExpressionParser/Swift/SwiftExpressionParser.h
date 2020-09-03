@@ -15,7 +15,6 @@
 
 #include "Plugins/ExpressionParser/Clang/IRForTarget.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Expression/ExpressionParser.h"
 #include "lldb/Expression/Materializer.h"
@@ -156,8 +155,6 @@ public:
 private:
   /// The expression to be parsed.
   Expression &m_expr;
-  /// The triple to use when compiling.
-  std::string m_triple;
   /// The context to use for IR generation.
   std::unique_ptr<llvm::LLVMContext> m_llvm_context;
   /// The module to build IR into.

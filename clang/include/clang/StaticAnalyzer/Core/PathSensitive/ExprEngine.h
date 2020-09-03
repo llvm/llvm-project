@@ -21,6 +21,7 @@
 #include "clang/Analysis/DomainSpecific/ObjCNoReturn.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
@@ -29,9 +30,9 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/WorkList.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cassert>
@@ -42,6 +43,8 @@ namespace clang {
 class AnalysisDeclContextManager;
 class AnalyzerOptions;
 class ASTContext;
+class CFGBlock;
+class CFGElement;
 class ConstructionContext;
 class CXXBindTemporaryExpr;
 class CXXCatchStmt;
@@ -72,16 +75,58 @@ class CrossTranslationUnitContext;
 
 namespace ento {
 
+class AnalysisManager;
 class BasicValueFactory;
+class BlockCounter;
+class BranchNodeBuilder;
 class CallEvent;
 class CheckerManager;
 class ConstraintManager;
 class CXXTempObjectRegion;
+class EndOfFunctionNodeBuilder;
+class ExplodedNodeSet;
+class ExplodedNode;
+class IndirectGotoNodeBuilder;
 class MemRegion;
+struct NodeBuilderContext;
+class NodeBuilderWithSinks;
+class ProgramState;
+class ProgramStateManager;
 class RegionAndSymbolInvalidationTraits;
 class SymbolManager;
+class SwitchNodeBuilder;
 
-class ExprEngine : public SubEngine {
+/// Hints for figuring out of a call should be inlined during evalCall().
+struct EvalCallOptions {
+  /// This call is a constructor or a destructor for which we do not currently
+  /// compute the this-region correctly.
+  bool IsCtorOrDtorWithImproperlyModeledTargetRegion = false;
+
+  /// This call is a constructor or a destructor for a single element within
+  /// an array, a part of array construction or destruction.
+  bool IsArrayCtorOrDtor = false;
+
+  /// This call is a constructor or a destructor of a temporary value.
+  bool IsTemporaryCtorOrDtor = false;
+
+  /// This call is a constructor for a temporary that is lifetime-extended
+  /// by binding it to a reference-type field within an aggregate,
+  /// for example 'A { const C &c; }; A a = { C() };'
+  bool IsTemporaryLifetimeExtendedViaAggregate = false;
+
+  /// This call is a pre-C++17 elidable constructor that we failed to elide
+  /// because we failed to compute the target region into which
+  /// this constructor would have been ultimately elided. Analysis that
+  /// we perform in this case is still correct but it behaves differently,
+  /// as if copy elision is disabled.
+  bool IsElidableCtorThatHasNotBeenElided = false;
+
+  EvalCallOptions() {}
+};
+
+class ExprEngine {
+  void anchor();
+
 public:
   /// The modes of inlining, which override the default analysis-wide settings.
   enum InliningModes {
@@ -90,27 +135,6 @@ public:
 
     /// Do minimal inlining of callees.
     Inline_Minimal = 0x1
-  };
-
-  /// Hints for figuring out of a call should be inlined during evalCall().
-  struct EvalCallOptions {
-    /// This call is a constructor or a destructor for which we do not currently
-    /// compute the this-region correctly.
-    bool IsCtorOrDtorWithImproperlyModeledTargetRegion = false;
-
-    /// This call is a constructor or a destructor for a single element within
-    /// an array, a part of array construction or destruction.
-    bool IsArrayCtorOrDtor = false;
-
-    /// This call is a constructor or a destructor of a temporary value.
-    bool IsTemporaryCtorOrDtor = false;
-
-    /// This call is a constructor for a temporary that is lifetime-extended
-    /// by binding it to a reference-type field within an aggregate,
-    /// for example 'A { const C &c; }; A a = { C() };'
-    bool IsTemporaryLifetimeExtendedViaAggregate = false;
-
-    EvalCallOptions() {}
   };
 
 private:
@@ -161,7 +185,7 @@ public:
              SetOfConstDecls *VisitedCalleesIn,
              FunctionSummariesTy *FS, InliningModes HowToInlineIn);
 
-  ~ExprEngine() override = default;
+  virtual ~ExprEngine() = default;
 
   /// Returns true if there is still simulation state on the worklist.
   bool ExecuteWorkList(const LocationContext *L, unsigned Steps = 150000) {
@@ -181,7 +205,7 @@ public:
   /// getContext - Return the ASTContext associated with this analysis.
   ASTContext &getContext() const { return AMgr.getASTContext(); }
 
-  AnalysisManager &getAnalysisManager() override { return AMgr; }
+  AnalysisManager &getAnalysisManager() { return AMgr; }
 
   AnalysisDeclContextManager &getAnalysisDeclContextManager() {
     return AMgr.getAnalysisDeclContextManager();
@@ -196,7 +220,7 @@ public:
   BugReporter &getBugReporter() { return BR; }
 
   cross_tu::CrossTranslationUnitContext *
-  getCrossTranslationUnitContext() override {
+  getCrossTranslationUnitContext() {
     return &CTU;
   }
 
@@ -232,7 +256,7 @@ public:
 
   /// getInitialState - Return the initial state used for the root vertex
   ///  in the ExplodedGraph.
-  ProgramStateRef getInitialState(const LocationContext *InitLoc) override;
+  ProgramStateRef getInitialState(const LocationContext *InitLoc);
 
   ExplodedGraph &getGraph() { return G; }
   const ExplodedGraph &getGraph() const { return G; }
@@ -270,7 +294,7 @@ public:
   /// processCFGElement - Called by CoreEngine. Used to generate new successor
   ///  nodes by processing the 'effects' of a CFG element.
   void processCFGElement(const CFGElement E, ExplodedNode *Pred,
-                         unsigned StmtIdx, NodeBuilderContext *Ctx) override;
+                         unsigned StmtIdx, NodeBuilderContext *Ctx);
 
   void ProcessStmt(const Stmt *S, ExplodedNode *Pred);
 
@@ -296,7 +320,7 @@ public:
   /// Called by CoreEngine when processing the entrance of a CFGBlock.
   void processCFGBlockEntrance(const BlockEdge &L,
                                NodeBuilderWithSinks &nodeBuilder,
-                               ExplodedNode *Pred) override;
+                               ExplodedNode *Pred);
 
   /// ProcessBranch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a branch condition.
@@ -305,7 +329,7 @@ public:
                      ExplodedNode *Pred,
                      ExplodedNodeSet &Dst,
                      const CFGBlock *DstT,
-                     const CFGBlock *DstF) override;
+                     const CFGBlock *DstF);
 
   /// Called by CoreEngine.
   /// Used to generate successor nodes for temporary destructors depending
@@ -314,7 +338,7 @@ public:
                                      NodeBuilderContext &BldCtx,
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst,
                                      const CFGBlock *DstT,
-                                     const CFGBlock *DstF) override;
+                                     const CFGBlock *DstF);
 
   /// Called by CoreEngine.  Used to processing branching behavior
   /// at static initializers.
@@ -323,27 +347,27 @@ public:
                                 ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst,
                                 const CFGBlock *DstT,
-                                const CFGBlock *DstF) override;
+                                const CFGBlock *DstF);
 
   /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a computed goto jump.
-  void processIndirectGoto(IndirectGotoNodeBuilder& builder) override;
+  void processIndirectGoto(IndirectGotoNodeBuilder& builder);
 
   /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a switch statement.
-  void processSwitch(SwitchNodeBuilder& builder) override;
+  void processSwitch(SwitchNodeBuilder& builder);
 
   /// Called by CoreEngine.  Used to notify checkers that processing a
   /// function has begun. Called for both inlined and and top-level functions.
   void processBeginOfFunction(NodeBuilderContext &BC,
                               ExplodedNode *Pred, ExplodedNodeSet &Dst,
-                              const BlockEdge &L) override;
+                              const BlockEdge &L);
 
   /// Called by CoreEngine.  Used to notify checkers that processing a
   /// function has ended. Called for both inlined and and top-level functions.
   void processEndOfFunction(NodeBuilderContext& BC,
                             ExplodedNode *Pred,
-                            const ReturnStmt *RS = nullptr) override;
+                            const ReturnStmt *RS = nullptr);
 
   /// Remove dead bindings/symbols before exiting a function.
   void removeDeadOnEndOfFunction(NodeBuilderContext& BC,
@@ -352,19 +376,19 @@ public:
 
   /// Generate the entry node of the callee.
   void processCallEnter(NodeBuilderContext& BC, CallEnter CE,
-                        ExplodedNode *Pred) override;
+                        ExplodedNode *Pred);
 
   /// Generate the sequence of nodes that simulate the call exit and the post
   /// visit for CallExpr.
-  void processCallExit(ExplodedNode *Pred) override;
+  void processCallExit(ExplodedNode *Pred);
 
   /// Called by CoreEngine when the analysis worklist has terminated.
-  void processEndWorklist() override;
+  void processEndWorklist();
 
   /// evalAssume - Callback function invoked by the ConstraintManager when
   ///  making assumptions about state values.
   ProgramStateRef processAssume(ProgramStateRef state, SVal cond,
-                                bool assumption) override;
+                                bool assumption);
 
   /// processRegionChanges - Called by ProgramStateManager whenever a change is made
   ///  to the store. Used to update checkers that track region values.
@@ -374,14 +398,21 @@ public:
                        ArrayRef<const MemRegion *> ExplicitRegions,
                        ArrayRef<const MemRegion *> Regions,
                        const LocationContext *LCtx,
-                       const CallEvent *Call) override;
+                       const CallEvent *Call);
+
+  inline ProgramStateRef
+  processRegionChange(ProgramStateRef state,
+                      const MemRegion* MR,
+                      const LocationContext *LCtx) {
+    return processRegionChanges(state, nullptr, MR, MR, LCtx, nullptr);
+  }
 
   /// printJson - Called by ProgramStateManager to print checker-specific data.
   void printJson(raw_ostream &Out, ProgramStateRef State,
                  const LocationContext *LCtx, const char *NL,
-                 unsigned int Space, bool IsDot) const override;
+                 unsigned int Space, bool IsDot) const;
 
-  ProgramStateManager &getStateManager() override { return StateMgr; }
+  ProgramStateManager &getStateManager() { return StateMgr; }
 
   StoreManager &getStoreManager() { return StateMgr.getStoreManager(); }
 
@@ -608,23 +639,11 @@ public:
                              const ConstructionContextItem &Item,
                              const LocationContext *LC);
 
-protected:
-  /// evalBind - Handle the semantics of binding a value to a specific location.
-  ///  This method is used by evalStore, VisitDeclStmt, and others.
-  void evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE, ExplodedNode *Pred,
-                SVal location, SVal Val, bool atDeclInit = false,
-                const ProgramPoint *PP = nullptr);
-
   /// Call PointerEscape callback when a value escapes as a result of bind.
   ProgramStateRef processPointerEscapedOnBind(
       ProgramStateRef State, ArrayRef<std::pair<SVal, SVal>> LocAndVals,
       const LocationContext *LCtx, PointerEscapeKind Kind,
-      const CallEvent *Call) override;
-
-  ProgramStateRef
-  processPointerEscapedOnBind(ProgramStateRef State,
-                              SVal Loc, SVal Val,
-                              const LocationContext *LCtx);
+      const CallEvent *Call);
 
   /// Call PointerEscape callback when a value escapes as a result of
   /// region invalidation.
@@ -634,7 +653,19 @@ protected:
                            const InvalidatedSymbols *Invalidated,
                            ArrayRef<const MemRegion *> ExplicitRegions,
                            const CallEvent *Call,
-                           RegionAndSymbolInvalidationTraits &ITraits) override;
+                           RegionAndSymbolInvalidationTraits &ITraits);
+
+private:
+  /// evalBind - Handle the semantics of binding a value to a specific location.
+  ///  This method is used by evalStore, VisitDeclStmt, and others.
+  void evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE, ExplodedNode *Pred,
+                SVal location, SVal Val, bool atDeclInit = false,
+                const ProgramPoint *PP = nullptr);
+
+  ProgramStateRef
+  processPointerEscapedOnBind(ProgramStateRef State,
+                              SVal Loc, SVal Val,
+                              const LocationContext *LCtx);
 
   /// A simple wrapper when you only need to notify checkers of pointer-escape
   /// of some values.
@@ -685,6 +716,35 @@ public:
   void defaultEvalCall(NodeBuilder &B, ExplodedNode *Pred,
                        const CallEvent &Call,
                        const EvalCallOptions &CallOpts = {});
+
+  /// Find location of the object that is being constructed by a given
+  /// constructor. This should ideally always succeed but due to not being
+  /// fully implemented it sometimes indicates that it failed via its
+  /// out-parameter CallOpts; in such cases a fake temporary region is
+  /// returned, which is better than nothing but does not represent
+  /// the actual behavior of the program.
+  SVal computeObjectUnderConstruction(
+      const Expr *E, ProgramStateRef State, const LocationContext *LCtx,
+      const ConstructionContext *CC, EvalCallOptions &CallOpts);
+
+  /// Update the program state with all the path-sensitive information
+  /// that's necessary to perform construction of an object with a given
+  /// syntactic construction context. V and CallOpts have to be obtained from
+  /// computeObjectUnderConstruction() invoked with the same set of
+  /// the remaining arguments (E, State, LCtx, CC).
+  ProgramStateRef updateObjectsUnderConstruction(
+      SVal V, const Expr *E, ProgramStateRef State, const LocationContext *LCtx,
+      const ConstructionContext *CC, const EvalCallOptions &CallOpts);
+
+  /// A convenient wrapper around computeObjectUnderConstruction
+  /// and updateObjectsUnderConstruction.
+  std::pair<ProgramStateRef, SVal> handleConstructionContext(
+      const Expr *E, ProgramStateRef State, const LocationContext *LCtx,
+      const ConstructionContext *CC, EvalCallOptions &CallOpts) {
+    SVal V = computeObjectUnderConstruction(E, State, LCtx, CC, CallOpts);
+    return std::make_pair(
+        updateObjectsUnderConstruction(V, E, State, LCtx, CC, CallOpts), V);
+  }
 
 private:
   ProgramStateRef finishArgumentConstruction(ProgramStateRef State,
@@ -803,16 +863,6 @@ private:
   /// statement created a temporary object region rather than directly
   /// constructing into an existing region.
   const CXXConstructExpr *findDirectConstructorForCurrentCFGElement();
-
-  /// Update the program state with all the path-sensitive information
-  /// that's necessary to perform construction of an object with a given
-  /// syntactic construction context. If the construction context is unavailable
-  /// or unusable for any reason, a dummy temporary region is returned, and the
-  /// IsConstructorWithImproperlyModeledTargetRegion flag is set in \p CallOpts.
-  /// Returns the updated program state and the new object's this-region.
-  std::pair<ProgramStateRef, SVal> handleConstructionContext(
-      const Expr *E, ProgramStateRef State, const LocationContext *LCtx,
-      const ConstructionContext *CC, EvalCallOptions &CallOpts);
 
   /// Common code that handles either a CXXConstructExpr or a
   /// CXXInheritedCtorInitExpr.

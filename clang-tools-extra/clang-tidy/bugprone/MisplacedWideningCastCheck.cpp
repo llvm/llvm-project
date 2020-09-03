@@ -29,9 +29,7 @@ void MisplacedWideningCastCheck::storeOptions(
 
 void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
   const auto Calc =
-      expr(anyOf(binaryOperator(
-                     anyOf(hasOperatorName("+"), hasOperatorName("-"),
-                           hasOperatorName("*"), hasOperatorName("<<"))),
+      expr(anyOf(binaryOperator(hasAnyOperatorName("+", "-", "*", "<<")),
                  unaryOperator(hasOperatorName("~"))),
            hasType(isInteger()))
           .bind("Calc");
@@ -41,15 +39,16 @@ void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
   const auto ImplicitCast =
       implicitCastExpr(hasImplicitDestinationType(isInteger()),
                        has(ignoringParenImpCasts(Calc)));
-  const auto Cast = expr(anyOf(ExplicitCast, ImplicitCast)).bind("Cast");
+  const auto Cast =
+      traverse(ast_type_traits::TK_AsIs,
+               expr(anyOf(ExplicitCast, ImplicitCast)).bind("Cast"));
 
   Finder->addMatcher(varDecl(hasInitializer(Cast)), this);
   Finder->addMatcher(returnStmt(hasReturnValue(Cast)), this);
   Finder->addMatcher(callExpr(hasAnyArgument(Cast)), this);
   Finder->addMatcher(binaryOperator(hasOperatorName("="), hasRHS(Cast)), this);
   Finder->addMatcher(
-      binaryOperator(matchers::isComparisonOperator(), hasEitherOperand(Cast)),
-      this);
+      binaryOperator(isComparisonOperator(), hasEitherOperand(Cast)), this);
 }
 
 static unsigned getMaxCalculationWidth(const ASTContext &Context,

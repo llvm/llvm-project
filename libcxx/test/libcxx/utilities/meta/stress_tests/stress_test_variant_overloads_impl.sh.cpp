@@ -24,13 +24,13 @@
 // variant_new:     1,105 ms        828 KiB
 
 
-// RUN: %cxx %flags %compile_flags -std=c++17 -c %s \
+// RUN: %{cxx} %{flags} %{compile_flags} -std=c++17 -c %s \
 // RUN:    -ggdb  -ggnu-pubnames -ftemplate-depth=5000 -ftime-trace -g \
 // RUN:    -DTEST_NS=flat_impl -o %S/flat.o
-// RUN: %cxx %flags %compile_flags -std=c++17 -c %s \
+// RUN: %{cxx} %{flags} %{compile_flags} -std=c++17 -c %s \
 // RUN:    -ggdb  -ggnu-pubnames -ftemplate-depth=5000 -ftime-trace -g \
 // RUN:    -DTEST_NS=rec_impl -o %S/rec.o
-// RUN: %cxx %flags %compile_flags -std=c++17 -c %s \
+// RUN: %{cxx} %{flags} %{compile_flags} -std=c++17 -c %s \
 // RUN:    -ggdb  -ggnu-pubnames -ftemplate-depth=5000 -ftime-trace -g \
 // RUN:    -DTEST_NS=variant_impl -o %S/variant.o
 

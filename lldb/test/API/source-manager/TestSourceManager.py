@@ -172,6 +172,7 @@ class SourceManagerTestCase(TestBase):
                     substrs=['Hello world'])
 
     @skipIf(oslist=["windows"], bugnumber="llvm.org/pr44431")
+    @skipIfReproducer # VFS is a snapshot.
     def test_modify_source_file_while_debugging(self):
         """Modify a source file while debugging the executable."""
         self.build()
@@ -237,7 +238,6 @@ class SourceManagerTestCase(TestBase):
             SOURCE_DISPLAYED_CORRECTLY,
             substrs=['Hello lldb'])
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr44432")
     def test_set_breakpoint_with_absolute_path(self):
         self.build()
         hidden = self.getBuildArtifact("hidden")

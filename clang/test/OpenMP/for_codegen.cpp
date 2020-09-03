@@ -1,9 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fsanitize-address-use-after-scope | FileCheck %s --check-prefix=CHECK --check-prefix=LIFETIME --check-prefix=OMP45
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fsanitize-address-use-after-scope | FileCheck %s --check-prefix=CHECK --check-prefix=LIFETIME --check-prefix=OMP45
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fsanitize-address-use-after-scope | FileCheck %s --check-prefix=CHECK --check-prefix=LIFETIME --check-prefix=OMP5
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t -fopenmp-version=50 %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=50 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP5
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -fopenmp-version=45 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -gno-column-info -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
 // RUN: %clang_cc1 -main-file-name for_codegen.cpp %s -o - -emit-llvm -fprofile-instrument=clang -fprofile-instrument-path=for_codegen-test.profraw | FileCheck %s --check-prefix=PROF-INSTR-PATH
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
@@ -21,8 +22,8 @@
 // PROF-INSTR-PATH: constant [25 x i8] c"for_codegen-test.profraw\00"
 
 // CHECK: [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
-// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
-// CHECK-DAG: [[LOOP_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 514, i32 0, i32 0, i8*
+// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
+// CHECK-DAG: [[LOOP_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 514, i32 0, i32 0, i8*
 // CHECK-DAG: [[I:@.+]] = global i8 1,
 // CHECK-DAG: [[J:@.+]] = global i8 2,
 // CHECK-DAG: [[K:@.+]] = global i8 3,
@@ -80,11 +81,11 @@ void loop_with_counter_collapse() {
   // CHECK: store i32 [[J_LB_VAL]], i32* [[J_LB:%.+]],
   // CHECK: [[J_UB_VAL:%.+]] = load i32, i32* [[J_UB]],
   // CHECK: [[J_LB_VAL:%.+]] = load i32, i32* [[J_LB]],
-  // CHECK: [[SUB:%.+]] = sub nsw i32 [[J_UB_VAL]], [[J_LB_VAL]]
-  // CHECK: [[SUB_ST:%.+]] = sub nsw i32 [[SUB]], 1
-  // CHECK: [[ADD_ST:%.+]] = add nsw i32 [[SUB_ST]], 1
-  // CHECK: [[DIV_ST:%.+]] = sdiv i32 [[ADD_ST]], 1
-  // CHECK: [[CAST:%.+]] = sext i32 [[DIV_ST]] to i64
+  // CHECK: [[SUB:%.+]] = sub i32 [[J_UB_VAL]], [[J_LB_VAL]]
+  // CHECK: [[SUB_ST:%.+]] = sub i32 [[SUB]], 1
+  // CHECK: [[ADD_ST:%.+]] = add i32 [[SUB_ST]], 1
+  // CHECK: [[DIV_ST:%.+]] = udiv i32 [[ADD_ST]], 1
+  // CHECK: [[CAST:%.+]] = zext i32 [[DIV_ST]] to i64
   // CHECK: [[MUL:%.+]] = mul nsw i64 4, [[CAST]]
   // CHECK: [[NUM_ITERS_VAL:%.+]] = sub nsw i64 [[MUL]], 1
   // CHECK: store i64 [[NUM_ITERS_VAL]], i64* [[NUM_ITERS:%.+]],
@@ -122,12 +123,12 @@ void loop_with_counter_collapse() {
   // CHECK: [[IV_VAL:%.+]] = load i64, i64* [[IV]],
   // CHECK: [[J_UB_VAL:%.+]] = load i32, i32* [[J_UB]],
   // CHECK: [[J_LB_VAL:%.+]] = load i32, i32* [[J_LB]],
-  // CHECK: [[SUB:%.+]] = sub nsw i32 [[J_UB_VAL]], [[J_LB_VAL]]
-  // CHECK: [[SUB_ST:%.+]] = sub nsw i32 [[SUB]], 1
-  // CHECK: [[ADD_ST:%.+]] = add nsw i32 [[SUB_ST]], 1
-  // CHECK: [[DIV_ST:%.+]] = sdiv i32 [[ADD_ST]], 1
-  // CHECK: [[MUL:%.+]] = mul nsw i32 1, [[DIV_ST]]
-  // CHECK: [[CAST:%.+]] = sext i32 [[MUL]] to i64
+  // CHECK: [[SUB:%.+]] = sub i32 [[J_UB_VAL]], [[J_LB_VAL]]
+  // CHECK: [[SUB_ST:%.+]] = sub i32 [[SUB]], 1
+  // CHECK: [[ADD_ST:%.+]] = add i32 [[SUB_ST]], 1
+  // CHECK: [[DIV_ST:%.+]] = udiv i32 [[ADD_ST]], 1
+  // CHECK: [[MUL:%.+]] = mul i32 1, [[DIV_ST]]
+  // CHECK: [[CAST:%.+]] = zext i32 [[MUL]] to i64
   // CHECK: [[DIV:%.+]] = sdiv i64 [[IV_VAL]], [[CAST]]
   // CHECK: [[MUL:%.+]] = mul nsw i64 [[DIV]], 1
   // CHECK: [[ADD:%.+]] = add nsw i64 0, [[MUL]]
@@ -139,21 +140,21 @@ void loop_with_counter_collapse() {
   // CHECK: [[IV_VAL1:%.+]] = load i64, i64* [[IV]],
   // CHECK: [[J_UB_VAL:%.+]] = load i32, i32* [[J_UB]],
   // CHECK: [[J_LB_VAL:%.+]] = load i32, i32* [[J_LB]],
-  // CHECK: [[SUB:%.+]] = sub nsw i32 [[J_UB_VAL]], [[J_LB_VAL]]
-  // CHECK: [[SUB_ST:%.+]] = sub nsw i32 [[SUB]], 1
-  // CHECK: [[ADD_ST:%.+]] = add nsw i32 [[SUB_ST]], 1
-  // CHECK: [[DIV_ST:%.+]] = sdiv i32 [[ADD_ST]], 1
-  // CHECK: [[MUL:%.+]] = mul nsw i32 1, [[DIV_ST]]
-  // CHECK: [[CAST:%.+]] = sext i32 [[MUL]] to i64
+  // CHECK: [[SUB:%.+]] = sub i32 [[J_UB_VAL]], [[J_LB_VAL]]
+  // CHECK: [[SUB_ST:%.+]] = sub i32 [[SUB]], 1
+  // CHECK: [[ADD_ST:%.+]] = add i32 [[SUB_ST]], 1
+  // CHECK: [[DIV_ST:%.+]] = udiv i32 [[ADD_ST]], 1
+  // CHECK: [[MUL:%.+]] = mul i32 1, [[DIV_ST]]
+  // CHECK: [[CAST:%.+]] = zext i32 [[MUL]] to i64
   // CHECK: [[DIV:%.+]] = sdiv i64 [[IV_VAL1]], [[CAST]]
   // CHECK: [[J_UB_VAL:%.+]] = load i32, i32* [[J_UB]],
   // CHECK: [[J_LB_VAL:%.+]] = load i32, i32* [[J_LB]],
-  // CHECK: [[SUB:%.+]] = sub nsw i32 [[J_UB_VAL]], [[J_LB_VAL]]
-  // CHECK: [[SUB_ST:%.+]] = sub nsw i32 [[SUB]], 1
-  // CHECK: [[ADD_ST:%.+]] = add nsw i32 [[SUB_ST]], 1
-  // CHECK: [[DIV_ST:%.+]] = sdiv i32 [[ADD_ST]], 1
-  // CHECK: [[MUL:%.+]] = mul nsw i32 1, [[DIV_ST]]
-  // CHECK: [[CAST:%.+]] = sext i32 [[MUL]] to i64
+  // CHECK: [[SUB:%.+]] = sub i32 [[J_UB_VAL]], [[J_LB_VAL]]
+  // CHECK: [[SUB_ST:%.+]] = sub i32 [[SUB]], 1
+  // CHECK: [[ADD_ST:%.+]] = add i32 [[SUB_ST]], 1
+  // CHECK: [[DIV_ST:%.+]] = udiv i32 [[ADD_ST]], 1
+  // CHECK: [[MUL:%.+]] = mul i32 1, [[DIV_ST]]
+  // CHECK: [[CAST:%.+]] = zext i32 [[MUL]] to i64
   // CHECK: [[MUL:%.+]] = mul nsw i64 [[DIV]], [[CAST]]
   // CHECK: [[SUB:%.+]] = sub nsw i64 [[IV_VAL]], [[MUL]]
   // CHECK: [[MUL:%.+]] = mul nsw i64 [[SUB:%.+]], 1
@@ -535,7 +536,7 @@ void test_precond() {
 }
 
 // TERM_DEBUG-LABEL: foo
-int foo() {return 0;};
+int foo() { extern void mayThrow(); mayThrow(); return 0;};
 
 // TERM_DEBUG-LABEL: parallel_for
 void parallel_for(float *a) {
@@ -743,28 +744,28 @@ void body_f();
 // OMP5-LABEL: imperfectly_nested_loop
 void imperfectly_nested_loop() {
   // OMP5: call void @__kmpc_for_static_init_4(
-#pragma omp for collapse(3)
+#pragma omp for collapse(3) order(concurrent)
   for (int i = 0; i < 10; ++i) {
     {
       int a, d;
       // OMP5: invoke void @{{.+}}first{{.+}}()
       first();
-      // OMP5: load i32
-      // OMP5: store i32
+      // OMP5: load i32{{.*}}!llvm.access.group ![[AG:[0-9]+]]
+      // OMP5: store i32{{.*}}!llvm.access.group ![[AG]]
       a = d;
       for (int j = 0; j < 10; ++j) {
         int a, d;
         // OMP5: invoke void @{{.+}}inner_f{{.+}}()
         inner_f();
-        // OMP5: load i32
-        // OMP5: store i32
+        // OMP5: load i32{{.*}}!llvm.access.group ![[AG]]
+        // OMP5: store i32{{.*}}!llvm.access.group ![[AG]]
         a = d;
         for (int k = 0; k < 10; ++k) {
           int a, d;
           // OMP5: invoke void @{{.+}}body_f{{.+}}()
           body_f();
-          // OMP5: load i32
-          // OMP5: store i32
+          // OMP5: load i32{{.*}}!llvm.access.group ![[AG]]
+          // OMP5: store i32{{.*}}!llvm.access.group ![[AG]]
           a = d;
         }
         // OMP5: invoke void @{{.+}}inner_l{{.+}}()
@@ -776,6 +777,10 @@ void imperfectly_nested_loop() {
   }
   // OMP5: call void @__kmpc_for_static_fini(
 }
+
+// OMP5: ![[AG]] = distinct !{}
+// OMP5: !{!"llvm.loop.parallel_accesses", ![[AG]]}
+
 #endif
 
 #endif // HEADER

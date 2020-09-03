@@ -1,11 +1,11 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -S -debug-only=loop-unroll -loop-unroll -unroll-runtime -unroll-peel-multi-deopt-exit 2>&1 | FileCheck %s
-; RUN: opt < %s -S -debug-only=loop-unroll -unroll-peel-multi-deopt-exit -passes='require<profile-summary>,function(require<opt-remark-emit>,unroll)' 2>&1 | FileCheck %s
+; RUN: opt < %s -S -debug-only=loop-unroll -unroll-peel-multi-deopt-exit -passes='require<profile-summary>,function(require<opt-remark-emit>,loop-unroll)' 2>&1 | FileCheck %s
 
 ; Regression test for setting the correct idom for exit blocks.
 
 ; CHECK: Loop Unroll: F[basic]
-; CHECK: PEELING loop %for.body with iteration count 1!
+; CHECK: PEELING loop %for.body with iteration count 2!
 
 define i32 @basic(i32* %p, i32 %k, i1 %c1, i1 %c2) #0 !prof !3 {
 entry:

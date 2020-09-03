@@ -204,8 +204,8 @@ bb:
 ; GCN: ds_read_u16 [[SCALAR1:v[0-9]+]]
 
 ; FIXME: Remove and
-; GCN: v_and_b32_e32 [[SCALAR0]], 0xffff, [[SCALAR0]]
-; GCN: v_xor_b32_e32 [[SCALAR1]], 0x8000, [[SCALAR1]]
+; GCN-DAG: v_and_b32_e32 [[SCALAR0]], 0xffff, [[SCALAR0]]
+; GCN-DAG: v_xor_b32_e32 [[SCALAR1]], 0x8000, [[SCALAR1]]
 ; GCN: v_lshl_or_b32 [[PACKED:v[0-9]+]], [[SCALAR1]], 16, [[SCALAR0]]
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[PACKED]]{{$}}
@@ -660,7 +660,7 @@ bb:
 ; GCN-NOT: _or
 
 ; GCN: v_pk_add_f16 [[FADD:v[0-9]+]]
-; GCN-NEXT: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[FADD]] op_sel:[0,0,1] op_sel_hi:[1,1,0]{{$}}
+; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[FADD]] op_sel:[0,0,1] op_sel_hi:[1,1,0]{{$}}
 define amdgpu_kernel void @mix_elt_types_op_sel(<2 x half> addrspace(1)* %out, <2 x half> addrspace(3)* %lds) #0 {
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, <2 x half> addrspace(3)* %lds, i32 1

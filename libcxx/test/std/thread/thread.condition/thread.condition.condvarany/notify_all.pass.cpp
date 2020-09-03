@@ -17,6 +17,8 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include <vector>
+#include <atomic>
 #include <cassert>
 
 #include "test_macros.h"
@@ -28,49 +30,37 @@ typedef std::unique_lock<L0> L1;
 
 L0 m0;
 
-int test0 = 0;
-int test1 = 0;
-int test2 = 0;
+const unsigned threadCount = 2;
+bool pleaseExit = false;
+std::atomic<unsigned> notReady;
 
-void f1()
-{
-    L1 lk(m0);
-    assert(test1 == 0);
-    while (test1 == 0)
-        cv.wait(lk);
-    assert(test1 == 1);
-    test1 = 2;
-}
-
-void f2()
-{
-    L1 lk(m0);
-    assert(test2 == 0);
-    while (test2 == 0)
-        cv.wait(lk);
-    assert(test2 == 1);
-    test2 = 2;
+void helper() {
+  L1 lk(m0);
+  --notReady;
+  while (pleaseExit == false)
+    cv.wait(lk);
 }
 
 int main(int, char**)
 {
-    std::thread t1(f1);
-    std::thread t2(f2);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    {
-        L1 lk(m0);
-        test1 = 1;
-        test2 = 1;
-    }
+  notReady = threadCount;
+  std::vector<std::thread> threads(threadCount);
+  for (unsigned i = 0; i < threadCount; i++)
+    threads[i] = std::thread(helper);
+  {
+    while (notReady > 0)
+      std::this_thread::yield();
+    // At this point, both threads have had a chance to acquire the lock and are
+    // either waiting on the condition variable or about to wait.
+    L1 lk(m0);
+    pleaseExit = true;
+    // POSIX does not guarantee reliable scheduling if notify_all is called
+    // without the lock being held.
     cv.notify_all();
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        L1 lk(m0);
-    }
-    t1.join();
-    t2.join();
-    assert(test1 == 2);
-    assert(test2 == 2);
+  }
+  // The test will hang if not all of the threads were woken.
+  for (unsigned i = 0; i < threadCount; i++)
+    threads[i].join();
 
   return 0;
 }

@@ -4,8 +4,8 @@
 void (__attribute__((regparm(3), stdcall)) *pf) ();
 void (__attribute__((regparm(2), stdcall)) foo)(int a) {
 }
-// CHECK: @pf = common global void (...)* null
+// CHECK: @pf = global void (...)* null
 // CHECK: define void @foo(i32 %a)
 
-// CHECK-OK: @pf = common global void (...)* null
+// CHECK-OK: @pf = global void (...)* null
 // CHECK-OK: define x86_stdcallcc void @foo(i32 inreg %a)

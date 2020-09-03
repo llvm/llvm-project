@@ -14,7 +14,7 @@ define i64 @test_llgtsll(i64 %a, i64 %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sradi r5, r4, 63
 ; CHECK-NEXT:    rldicl r6, r3, 1, 63
-; CHECK-NEXT:    subfc r3, r3, r4
+; CHECK-NEXT:    subc r3, r4, r3
 ; CHECK-NEXT:    adde r3, r6, r5
 ; CHECK-NEXT:    xori r3, r3, 1
 ; CHECK-NEXT:    blr
@@ -30,7 +30,7 @@ define i64 @test_llgtsll_sext(i64 %a, i64 %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sradi r5, r4, 63
 ; CHECK-NEXT:    rldicl r6, r3, 1, 63
-; CHECK-NEXT:    subfc r3, r3, r4
+; CHECK-NEXT:    subc r3, r4, r3
 ; CHECK-NEXT:    adde r3, r6, r5
 ; CHECK-NEXT:    xori r3, r3, 1
 ; CHECK-NEXT:    neg r3, r3
@@ -76,7 +76,7 @@ define void @test_llgtsll_store(i64 %a, i64 %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sradi r6, r4, 63
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
-; CHECK-NEXT:    subfc r4, r3, r4
+; CHECK-NEXT:    subc r4, r4, r3
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r5)
 ; CHECK-NEXT:    adde r3, r3, r6
@@ -97,7 +97,7 @@ define void @test_llgtsll_sext_store(i64 %a, i64 %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sradi r6, r4, 63
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
-; CHECK-NEXT:    subfc r4, r3, r4
+; CHECK-NEXT:    subc r4, r4, r3
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-NEXT:    adde r3, r3, r6
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r5)

@@ -1,6 +1,6 @@
 //===- ModuleTranslation.h - MLIR to LLVM conversion ------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -15,13 +15,16 @@
 #define MLIR_TARGET_LLVMIR_MODULETRANSLATION_H
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Value.h"
 
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/Value.h"
 
 namespace mlir {
@@ -32,13 +35,17 @@ class Operation;
 
 namespace LLVM {
 
+namespace detail {
+class DebugTranslation;
+} // end namespace detail
+
 class LLVMFuncOp;
 
-// Implementation class for module translation.  Holds a reference to the module
-// being translated, and the mappings between the original and the translated
-// functions, basic blocks and values.  It is practically easier to hold these
-// mappings in one class since the conversion of control flow operations
-// needs to look up block and function mappings.
+/// Implementation class for module translation. Holds a reference to the module
+/// being translated, and the mappings between the original and the translated
+/// functions, basic blocks and values. It is practically easier to hold these
+/// mappings in one class since the conversion of control flow operations
+/// needs to look up block and function mappings.
 class ModuleTranslation {
 public:
   template <typename T = ModuleTranslation>
@@ -51,9 +58,13 @@ public:
     if (!llvmModule)
       return nullptr;
 
-    T translator(m);
-    translator.llvmModule = std::move(llvmModule);
-    translator.convertGlobals();
+    LLVM::ensureDistinctSuccessors(m);
+
+    T translator(m, std::move(llvmModule));
+    if (failed(translator.convertFunctionSignatures()))
+      return nullptr;
+    if (failed(translator.convertGlobals()))
+      return nullptr;
     if (failed(translator.convertFunctions()))
       return nullptr;
 
@@ -65,17 +76,19 @@ public:
   static Block &getModuleBody(Operation *m) { return m->getRegion(0).front(); }
 
 protected:
-  // Translate the given MLIR module expressed in MLIR LLVM IR dialect into an
-  // LLVM IR module.  The MLIR LLVM IR dialect holds a pointer to an
-  // LLVMContext, the LLVM IR module will be created in that context.
-  explicit ModuleTranslation(Operation *module) : mlirModule(module) {
-    assert(satisfiesLLVMModule(mlirModule) &&
-           "mlirModule should honor LLVM's module semantics.");
-  }
-  virtual ~ModuleTranslation() {}
+  /// Translate the given MLIR module expressed in MLIR LLVM IR dialect into an
+  /// LLVM IR module. The MLIR LLVM IR dialect holds a pointer to an
+  /// LLVMContext, the LLVM IR module will be created in that context.
+  ModuleTranslation(Operation *module,
+                    std::unique_ptr<llvm::Module> llvmModule);
+  virtual ~ModuleTranslation();
 
   virtual LogicalResult convertOperation(Operation &op,
                                          llvm::IRBuilder<> &builder);
+  virtual LogicalResult convertOmpOperation(Operation &op,
+                                            llvm::IRBuilder<> &builder);
+  virtual LogicalResult convertOmpParallel(Operation &op,
+                                           llvm::IRBuilder<> &builder);
   static std::unique_ptr<llvm::Module> prepareLLVMModule(Operation *m);
 
   /// A helper to look up remapped operands in the value remapping table.
@@ -85,24 +98,33 @@ private:
   /// Check whether the module contains only supported ops directly in its body.
   static LogicalResult checkSupportedModuleOps(Operation *m);
 
+  LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
-  void convertGlobals();
+  LogicalResult convertGlobals();
   LogicalResult convertOneFunction(LLVMFuncOp func);
-  void connectPHINodes(LLVMFuncOp func);
   LogicalResult convertBlock(Block &bb, bool ignoreArguments);
 
   llvm::Constant *getLLVMConstant(llvm::Type *llvmType, Attribute attr,
                                   Location loc);
 
-  // Original and translated module.
+  /// Original and translated module.
   Operation *mlirModule;
   std::unique_ptr<llvm::Module> llvmModule;
+  /// A converter for translating debug information.
+  std::unique_ptr<detail::DebugTranslation> debugTranslation;
 
-  // Mappings between llvm.mlir.global definitions and corresponding globals.
+  /// Builder for LLVM IR generation of OpenMP constructs.
+  std::unique_ptr<llvm::OpenMPIRBuilder> ompBuilder;
+  /// Precomputed pointer to OpenMP dialect.
+  const Dialect *ompDialect;
+  /// Pointer to the llvmDialect;
+  LLVMDialect *llvmDialect;
+
+  /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;
 
 protected:
-  // Mappings between original and translated values, used for lookups.
+  /// Mappings between original and translated values, used for lookups.
   llvm::StringMap<llvm::Function *> functionMapping;
   DenseMap<Value, llvm::Value *> valueMapping;
   DenseMap<Block *, llvm::BasicBlock *> blockMapping;

@@ -11,7 +11,7 @@ body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
 ...
 ---
 
@@ -34,8 +34,8 @@ body:             |
 name:            mfma_write_agpr_mfma_read_same_agpr
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
 ...
 ---
 
@@ -47,8 +47,8 @@ body:             |
 name:            mfma_write_agpr_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr1_agpr2_agpr3_agpr4 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr1_agpr2_agpr3_agpr4 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
 ...
 ---
 
@@ -60,8 +60,8 @@ body:             |
 name:            mfma_write_agpr_mfma_read_partial
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
 ...
 ---
 
@@ -75,8 +75,8 @@ body:             |
 name:            mfma_write_agpr_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $agpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $agpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
 ...
 ---
 
@@ -90,8 +90,8 @@ body:             |
 name:            mfma_write_agpr_mfma_srcb_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $agpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $agpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
 ...
 ---
 
@@ -105,7 +105,7 @@ body:             |
 name:            mfma_4x4_write_agpr_accvgpr_read
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr0 = V_ACCVGPR_READ_B32 killed $agpr0, implicit $exec
 ...
 ---
@@ -126,7 +126,7 @@ body:             |
 name:            mfma_16x16_write_agpr_accvgpr_read
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr0 = V_ACCVGPR_READ_B32 killed $agpr0, implicit $exec
 ...
 ---
@@ -155,7 +155,7 @@ body:             |
 name:            mfma_32x32_write_agpr_accvgpr_read
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr0 = V_ACCVGPR_READ_B32 killed $agpr0, implicit $exec
 ...
 ---
@@ -167,7 +167,7 @@ body:             |
 name:            mfma_4x4_write_agpr_accvgpr_write
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr0, implicit $exec
 ...
 ---
@@ -185,7 +185,7 @@ body:             |
 name:            mfma_16x16_write_agpr_accvgpr_write
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr0, implicit $exec
 ...
 ---
@@ -211,7 +211,7 @@ body:             |
 name:            mfma_32x32_write_agpr_accvgpr_write
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr0, implicit $exec
 ...
 ---
@@ -222,7 +222,7 @@ body:             |
 name:            mfma_4x4_read_srcc_accvgpr_write
 body:             |
   bb.0:
-    $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr2, implicit $exec
 ...
 ---
@@ -238,7 +238,7 @@ body:             |
 name:            mfma_16x16_read_srcc_accvgpr_write
 body:             |
   bb.0:
-    $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_16X16X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $exec
+    $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_16X16X1F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr2, implicit $exec
 ...
 ---
@@ -262,7 +262,7 @@ body:             |
 name:            mfma_32x32_read_srcc_accvgpr_write
 body:             |
   bb.0:
-    $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X2F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $exec
+    $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X2F32 killed $vgpr1, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr2, implicit $exec
 ...
 ---
@@ -274,7 +274,7 @@ name:            accvgpr_read_write_vgpr_valu_read
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32 killed $agpr4, implicit $exec
-    $vgpr1 = V_ADD_F32_e32 0, killed $vgpr0, implicit $exec
+    $vgpr1 = V_ADD_F32_e32 0, killed $vgpr0, implicit $mode, implicit $exec
 ...
 ---
 
@@ -287,7 +287,7 @@ name:            accvgpr_read_write_vgpr_mfma_read
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32 killed $agpr4, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr0, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32 killed $vgpr0, killed $vgpr0, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
 ...
 ---
 
@@ -312,7 +312,7 @@ name:            accvgpr_write_agpr_mfma_read_srcc
 body:             |
   bb.0:
     $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr0, implicit $exec
-    $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr2, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $vgpr2, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
 ...
 ---
 
@@ -326,7 +326,7 @@ name:            accvgpr_write_agpr_mfma_read_srca
 body:             |
   bb.0:
     $agpr8 = V_ACCVGPR_WRITE_B32 killed $vgpr0, implicit $exec
-    $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_4X4X1F32 killed $agpr8, killed $vgpr1, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_4X4X1F32 killed $agpr8, killed $vgpr1, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
 ...
 ---
 
@@ -340,7 +340,7 @@ name:            accvgpr_write_agpr_mfma_read_srcb
 body:             |
   bb.0:
     $agpr8 = V_ACCVGPR_WRITE_B32 killed $vgpr0, implicit $exec
-    $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $agpr8, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_4X4X1F32 killed $vgpr1, killed $agpr8, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
 ...
 ---
 
@@ -369,7 +369,7 @@ name:            vcmpx_write_exec_mfma
 body:             |
   bb.0:
     implicit $exec, implicit $vcc = V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
-    $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_4X4X1F32 killed $agpr8, killed $vgpr1, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $exec
+    $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_4X4X1F32 killed $agpr8, killed $vgpr1, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
 ...
 ---
 

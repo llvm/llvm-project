@@ -361,6 +361,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
     return nullptr;
   }
 
+  ExecutionContext exe_ctx(valobj.GetExecutionContextRef());
+  ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
   if (valobj_typename.startswith("Swift.NativeArray<")) {
     // Swift.NativeArray
     static ConstString g_buffer("_buffer");
@@ -374,7 +376,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
     if (!some_sp)
       return nullptr;
 
-    CompilerType elem_type(valobj.GetCompilerType().GetArrayElementType());
+    CompilerType elem_type(
+        valobj.GetCompilerType().GetArrayElementType(exe_scope));
 
     auto handler = std::unique_ptr<SwiftArrayBufferHandler>(
         new SwiftArrayNativeBufferHandler(
@@ -392,7 +395,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
     if (!buffer_sp)
       return nullptr;
 
-    CompilerType elem_type(valobj.GetCompilerType().GetArrayElementType());
+    CompilerType elem_type(
+        valobj.GetCompilerType().GetArrayElementType(exe_scope));
 
     auto handler = std::unique_ptr<SwiftArrayBufferHandler>(
         new SwiftArraySliceBufferHandler(*buffer_sp, elem_type));
@@ -431,7 +435,7 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
 
       std::unique_ptr<SwiftArrayBufferHandler> handler;
       if (masked_storage_location == storage_location) {
-        CompilerType elem_type(valobj.GetCompilerType().GetArrayElementType());
+        CompilerType elem_type(valobj.GetCompilerType().GetArrayElementType(exe_scope));
         handler.reset(new SwiftArrayNativeBufferHandler(
             valobj, storage_location, elem_type));
       } else {
@@ -443,7 +447,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
         return handler;
       return nullptr;
     } else {
-      CompilerType elem_type(valobj.GetCompilerType().GetArrayElementType());
+      CompilerType elem_type(
+          valobj.GetCompilerType().GetArrayElementType(exe_scope));
       return std::unique_ptr<SwiftArrayBufferHandler>(
           new SwiftArrayEmptyBufferHandler(elem_type));
     }

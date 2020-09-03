@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.in.exe
+# RUN: yaml2obj %s -o %t.in.exe
 
 # RUN: llvm-objdump -s %t.in.exe | FileCheck %s --check-prefixes=CONTENTS,CONTENTS-PRE
 # RUN: llvm-readobj --sections %t.in.exe | FileCheck %s --check-prefixes=SECTIONS,SECTIONS-PRE
@@ -17,8 +17,8 @@
 # SECTIONS-NEXT:      VirtualSize:
 # SECTIONS-NEXT:      VirtualAddress:
 # SECTIONS-NEXT:      RawDataSize:
-# SECTIONS-NEXT-PRE:  PointerToRawData: 0x800
-# SECTIONS-NEXT-POST: PointerToRawData: 0x400
+# SECTIONS-PRE-NEXT:  PointerToRawData: 0x600
+# SECTIONS-POST-NEXT: PointerToRawData: 0x400
 
 --- !COFF
 OptionalHeader:  

@@ -46,7 +46,7 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
   if (BB->hasName())
     NewBB->setName(BB->getName() + NameSuffix);
 
-  bool hasCalls = false, hasDynamicAllocas = false, hasStaticAllocas = false;
+  bool hasCalls = false, hasDynamicAllocas = false;
   Module *TheModule = F ? F->getParent() : nullptr;
 
   // Loop over all instructions, and copy them over.
@@ -62,18 +62,15 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
 
     hasCalls |= (isa<CallInst>(I) && !isa<DbgInfoIntrinsic>(I));
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
-      if (isa<ConstantInt>(AI->getArraySize()))
-        hasStaticAllocas = true;
-      else
+      if (!AI->isStaticAlloca()) {
         hasDynamicAllocas = true;
+      }
     }
   }
 
   if (CodeInfo) {
     CodeInfo->ContainsCalls          |= hasCalls;
     CodeInfo->ContainsDynamicAllocas |= hasDynamicAllocas;
-    CodeInfo->ContainsDynamicAllocas |= hasStaticAllocas &&
-                                        BB != &BB->getParent()->getEntryBlock();
   }
   return NewBB;
 }
@@ -367,8 +364,8 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
     hasCalls |= (isa<CallInst>(II) && !isa<DbgInfoIntrinsic>(II));
 
     if (CodeInfo)
-      if (auto CS = ImmutableCallSite(&*II))
-        if (CS.hasOperandBundles())
+      if (auto *CB = dyn_cast<CallBase>(&*II))
+        if (CB->hasOperandBundles())
           CodeInfo->OperandBundleCallSites.push_back(NewInst);
 
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(II)) {
@@ -424,8 +421,8 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
     VMap[OldTI] = NewInst;             // Add instruction map to value.
 
     if (CodeInfo)
-      if (auto CS = ImmutableCallSite(OldTI))
-        if (CS.hasOperandBundles())
+      if (auto *CB = dyn_cast<CallBase>(OldTI))
+        if (CB->hasOperandBundles())
           CodeInfo->OperandBundleCallSites.push_back(NewInst);
 
     // Recursively clone any reachable successor blocks.
@@ -619,8 +616,9 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 
     // Skip over non-intrinsic callsites, we don't want to remove any nodes from
     // the CGSCC.
-    CallSite CS = CallSite(I);
-    if (CS && CS.getCalledFunction() && !CS.getCalledFunction()->isIntrinsic())
+    CallBase *CB = dyn_cast<CallBase>(I);
+    if (CB && CB->getCalledFunction() &&
+        !CB->getCalledFunction()->isIntrinsic())
       continue;
 
     // See if this instruction simplifies.
@@ -804,8 +802,6 @@ Loop *llvm::cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
 
     // Update LoopInfo.
     NewLoop->addBasicBlockToLoop(NewBB, *LI);
-    if (BB == CurLoop->getHeader())
-      NewLoop->moveToHeader(NewBB);
 
     // Add DominatorTree node. After seeing all blocks, update to correct
     // IDom.
@@ -815,6 +811,11 @@ Loop *llvm::cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
   }
 
   for (BasicBlock *BB : OrigLoop->getBlocks()) {
+    // Update loop headers.
+    Loop *CurLoop = LI->getLoopFor(BB);
+    if (BB == CurLoop->getHeader())
+      LMap[CurLoop]->moveToHeader(cast<BasicBlock>(VMap[BB]));
+
     // Update DominatorTree.
     BasicBlock *IDomBB = DT->getNode(BB)->getIDom()->getBlock();
     DT->changeImmediateDominator(cast<BasicBlock>(VMap[BB]),

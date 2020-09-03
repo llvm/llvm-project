@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 
 # RUN: echo "SECTIONS { /DISCARD/ : { *(.shstrtab) } }" > %t.script
-# RUN: not ld.lld -o %t --script %t.script %t.o 2>&1 | \
+# RUN: not ld.lld -o /dev/null --script %t.script %t.o 2>&1 | \
 # RUN:   FileCheck -check-prefix=SHSTRTAB %s
 # SHSTRTAB: discarding .shstrtab section is not allowed
 
@@ -27,7 +27,7 @@
 # RUN: llvm-readobj -S %t | FileCheck /dev/null --implicit-check-not='Name: .rela.dyn'
 
 # RUN: echo "SECTIONS { /DISCARD/ : { *(.relr.dyn) } }" > %t.script
-# RUN: not ld.lld -pie --pack-dyn-relocs=relr -o %t --script %t.script %t.o 2>&1 | \
+# RUN: not ld.lld -pie --pack-dyn-relocs=relr -o /dev/null --script %t.script %t.o 2>&1 | \
 # RUN:   FileCheck -check-prefix=RELRDYN %s
 # RELRDYN: discarding .relr.dyn section is not allowed
 

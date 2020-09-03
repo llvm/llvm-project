@@ -1,4 +1,4 @@
-//===-- SystemRuntimeMacOSX.cpp ---------------------------------*- C++ -*-===//
+//===-- SystemRuntimeMacOSX.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,6 +33,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(SystemRuntimeMacOSX)
 
 // Create an instance of this class. This function is filled into the plugin
 // info class that gets handed out by the plugin factory and allows the lldb to
@@ -794,8 +796,8 @@ SystemRuntimeMacOSX::GetPendingItemRefsForQueue(lldb::addr_t queue) {
                    static_cast<size_t>(i) < pending_items_pointer.count) {
               offset = start_of_array_offset + (i * item_size);
               ItemRefAndCodeAddress item;
-              item.item_ref = extractor.GetPointer(&offset);
-              item.code_address = extractor.GetPointer(&offset);
+              item.item_ref = extractor.GetAddress(&offset);
+              item.code_address = extractor.GetAddress(&offset);
               pending_item_refs.item_refs_and_code_addresses.push_back(item);
               i++;
             }
@@ -805,7 +807,7 @@ SystemRuntimeMacOSX::GetPendingItemRefsForQueue(lldb::addr_t queue) {
             while (offset < pending_items_pointer.items_buffer_size &&
                    static_cast<size_t>(i) < pending_items_pointer.count) {
               ItemRefAndCodeAddress item;
-              item.item_ref = extractor.GetPointer(&offset);
+              item.item_ref = extractor.GetAddress(&offset);
               item.code_address = LLDB_INVALID_ADDRESS;
               pending_item_refs.item_refs_and_code_addresses.push_back(item);
               i++;
@@ -912,7 +914,7 @@ void SystemRuntimeMacOSX::PopulateQueuesUsingLibBTR(
       uint32_t offset_to_next = extractor.GetU32(&offset);
 
       offset += 4; // Skip over the 4 bytes of reserved space
-      addr_t queue = extractor.GetPointer(&offset);
+      addr_t queue = extractor.GetAddress(&offset);
       uint64_t serialnum = extractor.GetU64(&offset);
       uint32_t running_work_items_count = extractor.GetU32(&offset);
       uint32_t pending_work_items_count = extractor.GetU32(&offset);
@@ -953,8 +955,8 @@ SystemRuntimeMacOSX::ItemInfo SystemRuntimeMacOSX::ExtractItemInfoFromBuffer(
 
   offset_t offset = 0;
 
-  item.item_that_enqueued_this = extractor.GetPointer(&offset);
-  item.function_or_block = extractor.GetPointer(&offset);
+  item.item_that_enqueued_this = extractor.GetAddress(&offset);
+  item.function_or_block = extractor.GetAddress(&offset);
   item.enqueuing_thread_id = extractor.GetU64(&offset);
   item.enqueuing_queue_serialnum = extractor.GetU64(&offset);
   item.target_queue_serialnum = extractor.GetU64(&offset);
@@ -964,7 +966,7 @@ SystemRuntimeMacOSX::ItemInfo SystemRuntimeMacOSX::ExtractItemInfoFromBuffer(
   offset = m_lib_backtrace_recording_info.item_info_data_offset;
 
   for (uint32_t i = 0; i < item.enqueuing_callstack_frame_count; i++) {
-    item.enqueuing_callstack.push_back(extractor.GetPointer(&offset));
+    item.enqueuing_callstack.push_back(extractor.GetAddress(&offset));
   }
   item.enqueuing_thread_label = extractor.GetCStr(&offset);
   item.enqueuing_queue_label = extractor.GetCStr(&offset);

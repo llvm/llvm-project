@@ -3,11 +3,11 @@
 # CHECK: body:
 # CHECK: dead %3:i32 = I32_WRAP_I64 %0,
 # CHECK-NEXT: DBG_VALUE %1:i32
-# CHECK-NEXT: dead %2:i32 = CALL_i32 @bar,
+# CHECK-NEXT: dead %2:i32 = CALL @bar,
 # CHECK-NEXT: DBG_VALUE %1:i32,
-# CHECK-NEXT: %[[NEWREG:.*]]:i32 = CALL_i32 @bar,
+# CHECK-NEXT: %[[NEWREG:.*]]:i32 = CALL @bar,
 # CHECK-NEXT: DBG_VALUE %[[NEWREG]],
-# CHECK-NEXT: CALL_VOID @foo, %[[NEWREG]],
+# CHECK-NEXT: CALL @foo, %[[NEWREG]],
 
 --- |
   target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
@@ -50,11 +50,11 @@ body: |
     %0:i64 = ARGUMENT_i64 0, implicit $arguments
     %1:i32 = I32_WRAP_I64 %0:i64, implicit-def dead $arguments
     DBG_VALUE %1:i32, $noreg, !10, !DIExpression(), debug-location !13; <unknown>:357:12 line no:357
-    %1:i32 = CALL_i32 @bar, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    %1:i32 = CALL @bar, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     DBG_VALUE %1:i32, $noreg, !11, !DIExpression(), debug-location !14; <unknown>:357:12 line no:357
-    %1:i32 = CALL_i32 @bar, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    %1:i32 = CALL @bar, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     DBG_VALUE %1:i32, $noreg, !12, !DIExpression(), debug-location !15; <unknown>:357:12 line no:357
-    CALL_VOID @foo, %1:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    CALL @foo, %1:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     RETURN implicit-def dead $arguments
 
 ...

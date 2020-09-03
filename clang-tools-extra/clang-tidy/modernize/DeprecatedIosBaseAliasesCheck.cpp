@@ -16,24 +16,20 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
-static const llvm::SmallVector<StringRef, 5> DeprecatedTypes = {
-    {"::std::ios_base::io_state"},
-    {"::std::ios_base::open_mode"},
-    {"::std::ios_base::seek_dir"},
-    {"::std::ios_base::streamoff"},
-    {"::std::ios_base::streampos"}};
+static constexpr std::array<StringRef, 5> DeprecatedTypes = {
+    "::std::ios_base::io_state", "::std::ios_base::open_mode",
+    "::std::ios_base::seek_dir", "::std::ios_base::streamoff",
+    "::std::ios_base::streampos"};
 
-static const llvm::StringMap<StringRef> ReplacementTypes = {
-    {"io_state", "iostate"},
-    {"open_mode", "openmode"},
-    {"seek_dir", "seekdir"}};
+static llvm::Optional<const char *> getReplacementType(StringRef Type) {
+  return llvm::StringSwitch<llvm::Optional<const char *>>(Type)
+      .Case("io_state", "iostate")
+      .Case("open_mode", "openmode")
+      .Case("seek_dir", "seekdir")
+      .Default(llvm::None);
+}
 
 void DeprecatedIosBaseAliasesCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   auto IoStateDecl = typedefDecl(hasAnyName(DeprecatedTypes)).bind("TypeDecl");
   auto IoStateType =
       qualType(hasDeclaration(IoStateDecl), unless(elaboratedType()));
@@ -47,14 +43,14 @@ void DeprecatedIosBaseAliasesCheck::check(
 
   const auto *Typedef = Result.Nodes.getNodeAs<TypedefDecl>("TypeDecl");
   StringRef TypeName = Typedef->getName();
-  bool HasReplacement = ReplacementTypes.count(TypeName);
+  auto Replacement = getReplacementType(TypeName);
 
   const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("TypeLoc");
   SourceLocation IoStateLoc = TL->getBeginLoc();
 
   // Do not generate fixits for matches depending on template arguments and
   // macro expansions.
-  bool Fix = HasReplacement && !TL->getType()->isDependentType();
+  bool Fix = Replacement && !TL->getType()->isDependentType();
   if (IoStateLoc.isMacroID()) {
     IoStateLoc = SM.getSpellingLoc(IoStateLoc);
     Fix = false;
@@ -62,8 +58,8 @@ void DeprecatedIosBaseAliasesCheck::check(
 
   SourceLocation EndLoc = IoStateLoc.getLocWithOffset(TypeName.size() - 1);
 
-  if (HasReplacement) {
-    auto FixName = ReplacementTypes.lookup(TypeName);
+  if (Replacement) {
+    auto FixName = *Replacement;
     auto Builder = diag(IoStateLoc, "'std::ios_base::%0' is deprecated; use "
                                     "'std::ios_base::%1' instead")
                    << TypeName << FixName;

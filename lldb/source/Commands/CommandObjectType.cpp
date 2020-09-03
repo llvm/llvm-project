@@ -1,4 +1,4 @@
-//===-- CommandObjectType.cpp -----------------------------------*- C++ -*-===//
+//===-- CommandObjectType.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -531,7 +531,7 @@ private:
         m_skip_pointers = true;
         break;
       case 'w':
-        m_category.assign(option_value);
+        m_category.assign(std::string(option_value));
         break;
       case 'r':
         m_skip_references = true;
@@ -540,7 +540,7 @@ private:
         m_regex = true;
         break;
       case 't':
-        m_custom_type_name.assign(option_value);
+        m_custom_type_name.assign(std::string(option_value));
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -1031,8 +1031,8 @@ protected:
     std::unique_ptr<RegularExpression> formatter_regex;
 
     if (m_options.m_category_regex.OptionWasSet()) {
-      category_regex.reset(new RegularExpression(
-          m_options.m_category_regex.GetCurrentValueAsRef()));
+      category_regex = std::make_unique<RegularExpression>(
+          m_options.m_category_regex.GetCurrentValueAsRef());
       if (!category_regex->IsValid()) {
         result.AppendErrorWithFormat(
             "syntax error in category regular expression '%s'",
@@ -1044,8 +1044,8 @@ protected:
 
     if (argc == 1) {
       const char *arg = command.GetArgumentAtIndex(0);
-      formatter_regex.reset(
-          new RegularExpression(llvm::StringRef::withNullAsEmpty(arg)));
+      formatter_regex = std::make_unique<RegularExpression>(
+          llvm::StringRef::withNullAsEmpty(arg));
       if (!formatter_regex->IsValid()) {
         result.AppendErrorWithFormat("syntax error in regular expression '%s'",
                                      arg);
@@ -1206,11 +1206,11 @@ Status CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
     m_name.SetString(option_arg);
     break;
   case 'o':
-    m_python_script = option_arg;
+    m_python_script = std::string(option_arg);
     m_is_add_script = true;
     break;
   case 'F':
-    m_python_function = option_arg;
+    m_python_function = std::string(option_arg);
     m_is_add_script = true;
     break;
   case 'P':
@@ -1326,13 +1326,12 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
         return false;
       }
 
-      options->m_target_types << entry.ref();
+      options->m_target_types << std::string(entry.ref());
     }
 
     m_interpreter.GetPythonCommandsFromIOHandler(
         "    ",   // Prompt
         *this,    // IOHandlerDelegate
-        true,     // Run IOHandler in async mode
         options); // Baton for the "io_handler" that will be passed back into
                   // our IOHandlerDelegate functions
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -2093,7 +2092,8 @@ protected:
 
     if (argc == 1) {
       const char *arg = command.GetArgumentAtIndex(0);
-      regex.reset(new RegularExpression(llvm::StringRef::withNullAsEmpty(arg)));
+      regex = std::make_unique<RegularExpression>(
+          llvm::StringRef::withNullAsEmpty(arg));
       if (!regex->IsValid()) {
         result.AppendErrorWithFormat(
             "syntax error in category regular expression '%s'", arg);
@@ -2226,13 +2226,12 @@ bool CommandObjectTypeSynthAdd::Execute_HandwritePython(
       return false;
     }
 
-    options->m_target_types << entry.ref();
+    options->m_target_types << std::string(entry.ref());
   }
 
   m_interpreter.GetPythonCommandsFromIOHandler(
       "    ",   // Prompt
       *this,    // IOHandlerDelegate
-      true,     // Run IOHandler in async mode
       options); // Baton for the "io_handler" that will be passed back into our
                 // IOHandlerDelegate functions
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -2392,7 +2391,7 @@ private:
                                          option_arg.str().c_str());
         break;
       case 'c':
-        m_expr_paths.push_back(option_arg);
+        m_expr_paths.push_back(std::string(option_arg));
         has_child_list = true;
         break;
       case 'p':
@@ -2707,7 +2706,7 @@ public:
       return true;
     });
 
-    m_cmd_help_long = stream.GetString();
+    m_cmd_help_long = std::string(stream.GetString());
     return m_cmd_help_long;
   }
 

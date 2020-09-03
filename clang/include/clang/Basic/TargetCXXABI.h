@@ -109,6 +109,13 @@ public:
     ///   - constructors and destructors return 'this', as in ARM.
     Fuchsia,
 
+    /// The XL ABI is the ABI used by IBM xlclang compiler and is a modified
+    /// version of the Itanium ABI.
+    ///
+    /// The relevant changes from the Itanium ABI are:
+    ///   - static initialization is adjusted to use sinit and sterm functions;
+    XL,
+
     /// The Microsoft ABI is the ABI used by Microsoft Visual Studio (and
     /// compatible compilers).
     ///
@@ -148,6 +155,7 @@ public:
     case WatchOS:
     case GenericMIPS:
     case WebAssembly:
+    case XL:
       return true;
 
     case Microsoft:
@@ -168,6 +176,7 @@ public:
     case WatchOS:
     case GenericMIPS:
     case WebAssembly:
+    case XL:
       return false;
 
     case Microsoft:
@@ -202,6 +211,7 @@ public:
     case iOS64:
     case WatchOS:
     case Microsoft:
+    case XL:
       return true;
     }
     llvm_unreachable("bad ABI kind");
@@ -278,6 +288,7 @@ public:
     case iOS:   // old iOS compilers did not follow this rule
     case Microsoft:
     case GenericMIPS:
+    case XL:
       return true;
     }
     llvm_unreachable("bad ABI kind");
@@ -315,6 +326,7 @@ public:
     case GenericARM:
     case iOS:
     case GenericMIPS:
+    case XL:
       return UseTailPaddingUnlessPOD03;
 
     // iOS on ARM64 and WebAssembly use the C++11 POD rules.  They do not honor

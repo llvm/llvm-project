@@ -110,7 +110,7 @@ Error DumpOutputStyle::dump() {
     P.NewLine();
   }
 
-  if (opts::dump::DumpTypeStats) {
+  if (opts::dump::DumpTypeStats || opts::dump::DumpIDStats) {
     if (auto EC = dumpTypeStats())
       return EC;
     P.NewLine();
@@ -701,7 +701,8 @@ Error DumpOutputStyle::dumpTypeStats() {
 
   // Iterate the types, categorize by kind, accumulate size stats.
   StatCollection TypeStats;
-  LazyRandomTypeCollection &Types = File.types();
+  LazyRandomTypeCollection &Types =
+      opts::dump::DumpTypeStats ? File.types() : File.ids();
   for (Optional<TypeIndex> TI = Types.getFirst(); TI; TI = Types.getNext(*TI)) {
     CVType Type = Types.getType(*TI);
     TypeStats.update(uint32_t(Type.kind()), Type.length());
@@ -710,18 +711,16 @@ Error DumpOutputStyle::dumpTypeStats() {
   P.NewLine();
   P.formatLine("  Types");
   AutoIndent Indent(P);
-  P.formatLine("{0,14}: {1,7} entries ({2,12:N} bytes, {3,7} avg)", "Total",
+  P.formatLine("{0,16}: {1,7} entries ({2,12:N} bytes, {3,7} avg)", "Total",
                TypeStats.Totals.Count, TypeStats.Totals.Size,
                (double)TypeStats.Totals.Size / TypeStats.Totals.Count);
   P.formatLine("{0}", fmt_repeat('-', 74));
 
   for (const auto &K : TypeStats.getStatsSortedBySize()) {
-    P.formatLine("{0,14}: {1,7} entries ({2,12:N} bytes, {3,7} avg)",
+    P.formatLine("{0,16}: {1,7} entries ({2,12:N} bytes, {3,7} avg)",
                  formatTypeLeafKind(TypeLeafKind(K.first)), K.second.Count,
                  K.second.Size, (double)K.second.Size / K.second.Count);
   }
-
-
   return Error::success();
 }
 
@@ -896,7 +895,7 @@ Error DumpOutputStyle::dumpUdtStats() {
                       return L.Stat.Size > R.Stat.Size;
                     });
   for (const auto &Stat : NamespacedStatsSorted) {
-    std::string Label = formatv("namespace '{0}'", Stat.Key);
+    std::string Label = std::string(formatv("namespace '{0}'", Stat.Key));
     P.formatLine("{0} | {1:N}  {2:N}",
                  fmt_align(Label, AlignStyle::Right, FieldWidth),
                  fmt_align(Stat.Stat.Count, AlignStyle::Right, CD),
@@ -1039,7 +1038,7 @@ Error DumpOutputStyle::dumpXmi() {
           }
           std::vector<std::string> TIs;
           for (const auto I : Xmi.Imports)
-            TIs.push_back(formatv("{0,+10:X+}", fmtle(I)));
+            TIs.push_back(std::string(formatv("{0,+10:X+}", fmtle(I))));
           std::string Result =
               typesetItemList(TIs, P.getIndentLevel() + 35, 12, " ");
           P.formatLine("{0,+32} | {1}", Module, Result);

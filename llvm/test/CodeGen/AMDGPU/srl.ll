@@ -2,7 +2,7 @@
 ; XUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=EG -check-prefix=FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 ; FUNC-LABEL: {{^}}lshr_i32:
 ; SI: v_lshrrev_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
@@ -205,7 +205,7 @@ define amdgpu_kernel void @s_lshr_32_i64(i64 addrspace(1)* %out, [8 x i32], i64 
 ; GCN-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], v[[VHI1]]{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[HI_A]]:[[VHI]]{{\]}}
 define amdgpu_kernel void @v_lshr_32_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.in = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
   %a = load i64, i64 addrspace(1)* %gep.in

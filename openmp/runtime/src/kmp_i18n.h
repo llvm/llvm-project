@@ -32,7 +32,7 @@ extern "C" {
 
    __kmp_i18n_catgets() returns read-only string. It should not be freed.
 
-   KMP_I18N_STR macro simplifies acces to strings in message catalog a bit.
+   KMP_I18N_STR macro simplifies access to strings in message catalog a bit.
    Following two lines are equivalent:
 
    __kmp_i18n_catgets( kmp_i18n_str_Warning )

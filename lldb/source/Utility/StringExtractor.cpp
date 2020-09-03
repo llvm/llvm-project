@@ -1,4 +1,4 @@
-//===-- StringExtractor.cpp -------------------------------------*- C++ -*-===//
+//===-- StringExtractor.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/StringExtractor.h"
+#include "llvm/ADT/StringExtras.h"
 
 #include <tuple>
 
@@ -365,6 +366,6 @@ bool StringExtractor::GetNameColonValue(llvm::StringRef &name,
 
 void StringExtractor::SkipSpaces() {
   const size_t n = m_packet.size();
-  while (m_index < n && isspace(m_packet[m_index]))
+  while (m_index < n && llvm::isSpace(m_packet[m_index]))
     ++m_index;
 }

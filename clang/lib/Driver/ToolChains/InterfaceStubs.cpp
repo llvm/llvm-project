@@ -54,8 +54,9 @@ void Merger::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(InputFilename.c_str()));
   }
 
-  C.addCommand(std::make_unique<Command>(JA, *this, Args.MakeArgString(Merger),
-                                         CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Args.MakeArgString(Merger), CmdArgs,
+                                         Inputs));
 }
 } // namespace ifstool
 } // namespace tools

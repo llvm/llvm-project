@@ -124,6 +124,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::ObjCPropertyRefExprClass:
     // C++ [expr.typeid]p1: The result of a typeid expression is an lvalue of...
   case Expr::CXXTypeidExprClass:
+  case Expr::CXXUuidofExprClass:
     // Unresolved lookups and uncorrected typos get classified as lvalues.
     // FIXME: Is this wise? Should they get their own kind?
   case Expr::UnresolvedLookupExprClass:
@@ -139,6 +140,8 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::MSPropertyRefExprClass:
   case Expr::MSPropertySubscriptExprClass:
   case Expr::OMPArraySectionExprClass:
+  case Expr::OMPArrayShapingExprClass:
+  case Expr::OMPIteratorExprClass:
     return Cl::CL_LValue;
 
     // C99 6.5.2.5p5 says that compound literals are lvalues.
@@ -193,6 +196,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::DesignatedInitUpdateExprClass:
   case Expr::SourceLocExprClass:
   case Expr::ConceptSpecializationExprClass:
+  case Expr::RequiresExprClass:
     return Cl::CL_PRValue;
 
   case Expr::ConstantExprClass:
@@ -218,6 +222,10 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
         return ClassifyInternal(Ctx, Base);
     }
     return Cl::CL_LValue;
+
+  // Subscripting matrix types behaves like member accesses.
+  case Expr::MatrixSubscriptExprClass:
+    return ClassifyInternal(Ctx, cast<MatrixSubscriptExpr>(E)->getBase());
 
     // C++ [expr.prim.general]p3: The result is an lvalue if the entity is a
     //   function or variable and a prvalue otherwise.
@@ -267,6 +275,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
       return Cl::CL_PRValue;
     }
 
+  case Expr::RecoveryExprClass:
   case Expr::OpaqueValueExprClass:
     return ClassifyExprValueKind(Lang, E, E->getValueKind());
 
@@ -347,6 +356,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::CXXDynamicCastExprClass:
   case Expr::CXXReinterpretCastExprClass:
   case Expr::CXXConstCastExprClass:
+  case Expr::CXXAddrspaceCastExprClass:
   case Expr::ObjCBridgedCastExprClass:
   case Expr::BuiltinBitCastExprClass:
     // Only in C++ can casts be interesting at all.
@@ -401,9 +411,6 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     return Cl::CL_PRValue;
   }
 
-  case Expr::CXXUuidofExprClass:
-    return Cl::CL_LValue;
-
   case Expr::PackExpansionExprClass:
     return ClassifyInternal(Ctx, cast<PackExpansionExpr>(E)->getPattern());
 
@@ -451,6 +458,7 @@ static Cl::Kinds ClassifyDecl(ASTContext &Ctx, const Decl *D) {
     islvalue = isa<VarDecl>(D) || isa<FieldDecl>(D) ||
                isa<IndirectFieldDecl>(D) ||
                isa<BindingDecl>(D) ||
+               isa<MSGuidDecl>(D) ||
                (Ctx.getLangOpts().CPlusPlus &&
                 (isa<FunctionDecl>(D) || isa<MSPropertyDecl>(D) ||
                  isa<FunctionTemplateDecl>(D)));

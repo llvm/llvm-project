@@ -20,7 +20,7 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-extern "C" void LLVMInitializeSparcTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
   // Register the target.
   RegisterTargetMachine<SparcV8TargetMachine> X(getTheSparcTarget());
   RegisterTargetMachine<SparcV9TargetMachine> Y(getTheSparcV9Target());
@@ -99,7 +99,8 @@ SparcTargetMachine::SparcTargetMachine(
                             CM, getEffectiveRelocModel(RM), is64bit, JIT),
                         OL),
       TLOF(std::make_unique<SparcELFTargetObjectFile>()),
-      Subtarget(TT, CPU, FS, *this, is64bit), is64Bit(is64bit) {
+      Subtarget(TT, std::string(CPU), std::string(FS), *this, is64bit),
+      is64Bit(is64bit) {
   initAsmInfo();
 }
 

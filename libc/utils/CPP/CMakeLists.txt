@@ -1,0 +1,9 @@
+add_header_library(
+  standalone_cpp
+  HDRS
+    Array.h
+    ArrayRef.h
+    Functional.h
+    StringRef.h
+    TypeTraits.h
+)

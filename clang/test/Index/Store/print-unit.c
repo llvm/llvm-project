@@ -17,23 +17,23 @@ void foo(int i);
 // CHECK: provider: clang-
 // CHECK: is-system: 0
 // CHECK: has-main: 1
-// CHECK: main-path: {{.*}}/print-unit.c
-// CHECK: out-file: {{.*}}/print-unit.c.o
+// CHECK: main-path: {{.*}}{{/|\\}}print-unit.c
+// CHECK: out-file: {{.*}}{{/|\\}}print-unit.c.o
 // CHECK: target: x86_64-apple-macosx10.8
 // CHECK: is-debug: 1
 // CHECK: DEPEND START
-// CHECK: Record | user | {{.*}}/print-unit.c | print-unit.c-
-// CHECK: Record | user | {{.*}}/Inputs/head.h | head.h-
-// CHECK: Record | user | {{.*}}/Inputs/using-overlay.h | using-overlay.h-
-// CHECK: Record | system | {{.*}}/Inputs/sys/syshead.h | syshead.h-
-// CHECK: Record | system | {{.*}}/Inputs/sys/another.h | another.h-
-// CHECK: File | user | {{.*}}/Inputs/print-unit.h{{$}}
+// CHECK: Record | user | {{.*}}{{/|\\}}print-unit.c | print-unit.c-
+// CHECK: Record | user | {{.*}}{{/|\\}}Inputs{{/|\\}}head.h | head.h-
+// CHECK: Record | user | {{.*}}{{/|\\}}Inputs{{/|\\}}using-overlay.h | using-overlay.h-
+// CHECK: Record | system | {{.*}}{{/|\\}}Inputs{{/|\\}}sys{{/|\\}}syshead.h | syshead.h-
+// CHECK: Record | system | {{.*}}{{/|\\}}Inputs{{/|\\}}sys{{/|\\}}another.h | another.h-
+// CHECK: File | user | {{.*}}{{/|\\}}Inputs{{/|\\}}print-unit.h{{$}}
 // CHECK: DEPEND END (6)
 // CHECK: INCLUDE START
-// CHECK: {{.*}}/print-unit.c:3 | {{.*}}/Inputs/print-unit.h
-// CHECK: {{.*}}/print-unit.c:4 | {{.*}}/Inputs/sys/syshead.h
-// CHECK: {{.*}}/Inputs/print-unit.h:1 | {{.*}}/Inputs/head.h
-// CHECK: {{.*}}/Inputs/print-unit.h:2 | {{.*}}/Inputs/using-overlay.h
+// CHECK: {{.*}}{{/|\\}}print-unit.c:3 | {{.*}}{{/|\\}}Inputs{{/|\\}}print-unit.h
+// CHECK: {{.*}}{{/|\\}}print-unit.c:4 | {{.*}}{{/|\\}}Inputs{{/|\\}}sys{{/|\\}}syshead.h
+// CHECK: {{.*}}{{/|\\}}Inputs{{/|\\}}print-unit.h:1 | {{.*}}{{/|\\}}Inputs{{/|\\}}head.h
+// CHECK: {{.*}}{{/|\\}}Inputs{{/|\\}}print-unit.h:2 | {{.*}}{{/|\\}}Inputs{{/|\\}}using-overlay.h
 // CHECK: INCLUDE END (4)
 
 // OPT: is-debug: 0

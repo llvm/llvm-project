@@ -11,8 +11,10 @@
 
 #include "Cuda.h"
 #include "Gnu.h"
+#include "ROCm.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "llvm/Support/ErrorOr.h"
 
 namespace clang {
 namespace driver {
@@ -34,8 +36,7 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
-  Linker(const ToolChain &TC)
-      : Tool("MinGW::Linker", "linker", TC, Tool::RF_Full) {}
+  Linker(const ToolChain &TC) : Tool("MinGW::Linker", "linker", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
@@ -81,6 +82,8 @@ public:
 
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const override;
+  void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                         llvm::opt::ArgStringList &CC1Args) const override;
 
   void printVerboseInfo(raw_ostream &OS) const override;
 
@@ -91,6 +94,7 @@ protected:
 
 private:
   CudaInstallationDetector CudaInstallation;
+  RocmInstallationDetector RocmInstallation;
 
   std::string Base;
   std::string GccLibDir;

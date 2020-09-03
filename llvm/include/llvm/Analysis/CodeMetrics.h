@@ -15,15 +15,13 @@
 #define LLVM_ANALYSIS_CODEMETRICS_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 namespace llvm {
 class AssumptionCache;
 class BasicBlock;
 class Loop;
 class Function;
-class Instruction;
-class DataLayout;
+template <class T> class SmallPtrSetImpl;
 class TargetTransformInfo;
 class Value;
 

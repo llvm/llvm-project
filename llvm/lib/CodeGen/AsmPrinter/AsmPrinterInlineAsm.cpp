@@ -106,7 +106,7 @@ unsigned AsmPrinter::addInlineAsmDiagBuffer(StringRef AsmStr,
 
 
 /// EmitInlineAsm - Emit a blob of inline asm to the output streamer.
-void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
+void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
                                const MCTargetOptions &MCOptions,
                                const MDNode *LocMDNode,
                                InlineAsm::AsmDialect Dialect) const {
@@ -127,7 +127,7 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   if (!MCAI->useIntegratedAssembler() &&
       !OutStreamer->isIntegratedAssemblerRequired()) {
     emitInlineAsmStart();
-    OutStreamer->EmitRawText(Str);
+    OutStreamer->emitRawText(Str);
     emitInlineAsmEnd(STI, nullptr);
     return;
   }
@@ -489,9 +489,9 @@ static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
   OS << '\n' << (char)0;  // null terminate string.
 }
 
-/// EmitInlineAsm - This method formats and emits the specified machine
-/// instruction that is an inline asm.
-void AsmPrinter::EmitInlineAsm(const MachineInstr *MI) const {
+/// This method formats and emits the specified machine instruction that is an
+/// inline asm.
+void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
   assert(MI->isInlineAsm() && "printInlineAsm only works on inline asms");
 
   // Count the number of register definitions to find the asm string.
@@ -584,14 +584,13 @@ void AsmPrinter::EmitInlineAsm(const MachineInstr *MI) const {
     SrcMgr.PrintMessage(Loc, SourceMgr::DK_Note, Note);
   }
 
-  EmitInlineAsm(OS.str(), getSubtargetInfo(), TM.Options.MCOptions, LocMD,
+  emitInlineAsm(OS.str(), getSubtargetInfo(), TM.Options.MCOptions, LocMD,
                 MI->getInlineAsmDialect());
 
   // Emit the #NOAPP end marker.  This has to happen even if verbose-asm isn't
   // enabled, so we use emitRawComment.
   OutStreamer->emitRawComment(MAI->getInlineAsmEnd());
 }
-
 
 /// PrintSpecial - Print information related to the specified machine instr
 /// that is independent of the operand, and may be independent of the instr

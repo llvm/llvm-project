@@ -9,20 +9,36 @@ declare <4 x float> @llvm.aarch64.neon.fmulx.v4f32(<4 x float>, <4 x float>)
 declare <2 x float> @llvm.aarch64.neon.fmulx.v2f32(<2 x float>, <2 x float>)
 
 declare <4 x i32> @llvm.aarch64.neon.sqrdmulh.v4i32(<4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.aarch64.neon.sqrdmulh.lane.v4i32.v2i32(<4 x i32>, <2 x i32>, i32)
+declare <4 x i32> @llvm.aarch64.neon.sqrdmulh.laneq.v4i32.v4i32(<4 x i32>, <4 x i32>, i32)
 
 declare <2 x i32> @llvm.aarch64.neon.sqrdmulh.v2i32(<2 x i32>, <2 x i32>)
+declare <2 x i32> @llvm.aarch64.neon.sqrdmulh.lane.v2i32.v2i32(<2 x i32>, <2 x i32>, i32)
+declare <2 x i32> @llvm.aarch64.neon.sqrdmulh.laneq.v2i32.v4i32(<2 x i32>, <4 x i32>, i32)
 
 declare <8 x i16> @llvm.aarch64.neon.sqrdmulh.v8i16(<8 x i16>, <8 x i16>)
+declare <8 x i16> @llvm.aarch64.neon.sqrdmulh.lane.v8i16.v4i16(<8 x i16>, <4 x i16>, i32)
+declare <8 x i16> @llvm.aarch64.neon.sqrdmulh.laneq.v8i16.v8i16(<8 x i16>, <8 x i16>, i32)
 
 declare <4 x i16> @llvm.aarch64.neon.sqrdmulh.v4i16(<4 x i16>, <4 x i16>)
+declare <4 x i16> @llvm.aarch64.neon.sqrdmulh.lane.v4i16.v4i16(<4 x i16>, <4 x i16>, i32)
+declare <4 x i16> @llvm.aarch64.neon.sqrdmulh.laneq.v4i16.v8i16(<4 x i16>, <8 x i16>, i32)
 
 declare <4 x i32> @llvm.aarch64.neon.sqdmulh.v4i32(<4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.aarch64.neon.sqdmulh.lane.v4i32.v2i32(<4 x i32>, <2 x i32>, i32)
+declare <4 x i32> @llvm.aarch64.neon.sqdmulh.laneq.v4i32.v4i32(<4 x i32>, <4 x i32>, i32)
 
 declare <2 x i32> @llvm.aarch64.neon.sqdmulh.v2i32(<2 x i32>, <2 x i32>)
+declare <2 x i32> @llvm.aarch64.neon.sqdmulh.lane.v2i32.v2i32(<2 x i32>, <2 x i32>, i32)
+declare <2 x i32> @llvm.aarch64.neon.sqdmulh.laneq.v2i32.v4i32(<2 x i32>, <4 x i32>, i32)
 
 declare <8 x i16> @llvm.aarch64.neon.sqdmulh.v8i16(<8 x i16>, <8 x i16>)
+declare <8 x i16> @llvm.aarch64.neon.sqdmulh.lane.v8i16.v4i16(<8 x i16>, <4 x i16>, i32)
+declare <8 x i16> @llvm.aarch64.neon.sqdmulh.laneq.v8i16.v8i16(<8 x i16>, <8 x i16>, i32)
 
 declare <4 x i16> @llvm.aarch64.neon.sqdmulh.v4i16(<4 x i16>, <4 x i16>)
+declare <4 x i16> @llvm.aarch64.neon.sqdmulh.lane.v4i16.v4i16(<4 x i16>, <4 x i16>, i32)
+declare <4 x i16> @llvm.aarch64.neon.sqdmulh.laneq.v4i16.v8i16(<4 x i16>, <8 x i16>, i32)
 
 declare <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32>, <2 x i32>)
 
@@ -1515,6 +1531,37 @@ entry:
   ret <4 x i16> %vqdmulh2.i
 }
 
+define <4 x i16> @test_vqdmulh_lane_s16_intrinsic(<4 x i16> %a, <4 x i16> %v) {
+; CHECK-LABEL: test_vqdmulh_lane_s16_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    sqdmulh v0.4h, v0.4h, v1.h[3]
+; CHECK-NEXT:    ret
+entry:
+  %vqdmulh2.i = tail call <4 x i16> @llvm.aarch64.neon.sqdmulh.lane.v4i16.v4i16(<4 x i16> %a, <4 x i16> %v, i32 3)
+  ret <4 x i16> %vqdmulh2.i
+}
+
+define <4 x i16> @test_vqdmulh_laneq_s16_intrinsic_lo(<4 x i16> %a, <8 x i16> %v) {
+; CHECK-LABEL: test_vqdmulh_laneq_s16_intrinsic_lo:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqdmulh v0.4h, v0.4h, v1.h[3]
+; CHECK-NEXT:    ret
+entry:
+  %vqdmulh2.i = tail call <4 x i16> @llvm.aarch64.neon.sqdmulh.laneq.v4i16.v8i16(<4 x i16> %a, <8 x i16> %v, i32 3)
+  ret <4 x i16> %vqdmulh2.i
+}
+
+define <4 x i16> @test_vqdmulh_laneq_s16_intrinsic_hi(<4 x i16> %a, <8 x i16> %v) {
+; CHECK-LABEL: test_vqdmulh_laneq_s16_intrinsic_hi:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqdmulh v0.4h, v0.4h, v1.h[7]
+; CHECK-NEXT:    ret
+entry:
+  %vqdmulh2.i = tail call <4 x i16> @llvm.aarch64.neon.sqdmulh.laneq.v4i16.v8i16(<4 x i16> %a, <8 x i16> %v, i32 7)
+  ret <4 x i16> %vqdmulh2.i
+}
+
 define <8 x i16> @test_vqdmulhq_lane_s16(<8 x i16> %a, <4 x i16> %v) {
 ; CHECK-LABEL: test_vqdmulhq_lane_s16:
 ; CHECK:       // %bb.0: // %entry
@@ -1524,6 +1571,37 @@ define <8 x i16> @test_vqdmulhq_lane_s16(<8 x i16> %a, <4 x i16> %v) {
 entry:
   %shuffle = shufflevector <4 x i16> %v, <4 x i16> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   %vqdmulh2.i = tail call <8 x i16> @llvm.aarch64.neon.sqdmulh.v8i16(<8 x i16> %a, <8 x i16> %shuffle)
+  ret <8 x i16> %vqdmulh2.i
+}
+
+define <8 x i16> @test_vqdmulhq_lane_s16_intrinsic(<8 x i16> %a, <4 x i16> %v) {
+; CHECK-LABEL: test_vqdmulhq_lane_s16_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    sqdmulh v0.8h, v0.8h, v1.h[3]
+; CHECK-NEXT:    ret
+entry:
+  %vqdmulh2.i = tail call <8 x i16> @llvm.aarch64.neon.sqdmulh.lane.v8i16.v4i16(<8 x i16> %a, <4 x i16> %v, i32 3)
+  ret <8 x i16> %vqdmulh2.i
+}
+
+define <8 x i16> @test_vqdmulhq_laneq_s16_intrinsic_lo(<8 x i16> %a, <8 x i16> %v) {
+; CHECK-LABEL: test_vqdmulhq_laneq_s16_intrinsic_lo:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqdmulh v0.8h, v0.8h, v1.h[3]
+; CHECK-NEXT:    ret
+entry:
+  %vqdmulh2.i = tail call <8 x i16> @llvm.aarch64.neon.sqdmulh.laneq.v8i16.v8i16(<8 x i16> %a, <8 x i16> %v, i32 3)
+  ret <8 x i16> %vqdmulh2.i
+}
+
+define <8 x i16> @test_vqdmulhq_laneq_s16_intrinsic_hi(<8 x i16> %a, <8 x i16> %v) {
+; CHECK-LABEL: test_vqdmulhq_laneq_s16_intrinsic_hi:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqdmulh v0.8h, v0.8h, v1.h[7]
+; CHECK-NEXT:    ret
+entry:
+  %vqdmulh2.i = tail call <8 x i16> @llvm.aarch64.neon.sqdmulh.laneq.v8i16.v8i16(<8 x i16> %a, <8 x i16> %v, i32 7)
   ret <8 x i16> %vqdmulh2.i
 }
 
@@ -1539,6 +1617,37 @@ entry:
   ret <2 x i32> %vqdmulh2.i
 }
 
+define <2 x i32> @test_vqdmulh_lane_s32_intrinsic(<2 x i32> %a, <2 x i32> %v) {
+; CHECK-LABEL: test_vqdmulh_lane_s32_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    sqdmulh v0.2s, v0.2s, v1.s[1]
+; CHECK-NEXT:    ret
+entry:
+  %vqdmulh2.i = tail call <2 x i32> @llvm.aarch64.neon.sqdmulh.lane.v2i32.v2i32(<2 x i32> %a, <2 x i32> %v, i32 1)
+  ret <2 x i32> %vqdmulh2.i
+}
+
+define <2 x i32> @test_vqdmulh_laneq_s32_intrinsic_lo(<2 x i32> %a, <4 x i32> %v) {
+; CHECK-LABEL: test_vqdmulh_laneq_s32_intrinsic_lo:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqdmulh v0.2s, v0.2s, v1.s[1]
+; CHECK-NEXT:    ret
+entry:
+  %vqdmulh2.i = tail call <2 x i32> @llvm.aarch64.neon.sqdmulh.laneq.v2i32.v4i32(<2 x i32> %a, <4 x i32> %v, i32 1)
+  ret <2 x i32> %vqdmulh2.i
+}
+
+define <2 x i32> @test_vqdmulh_laneq_s32_intrinsic_hi(<2 x i32> %a, <4 x i32> %v) {
+; CHECK-LABEL: test_vqdmulh_laneq_s32_intrinsic_hi:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqdmulh v0.2s, v0.2s, v1.s[3]
+; CHECK-NEXT:    ret
+entry:
+  %vqdmulh2.i = tail call <2 x i32> @llvm.aarch64.neon.sqdmulh.laneq.v2i32.v4i32(<2 x i32> %a, <4 x i32> %v, i32 3)
+  ret <2 x i32> %vqdmulh2.i
+}
+
 define <4 x i32> @test_vqdmulhq_lane_s32(<4 x i32> %a, <2 x i32> %v) {
 ; CHECK-LABEL: test_vqdmulhq_lane_s32:
 ; CHECK:       // %bb.0: // %entry
@@ -1548,6 +1657,37 @@ define <4 x i32> @test_vqdmulhq_lane_s32(<4 x i32> %a, <2 x i32> %v) {
 entry:
   %shuffle = shufflevector <2 x i32> %v, <2 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %vqdmulh2.i = tail call <4 x i32> @llvm.aarch64.neon.sqdmulh.v4i32(<4 x i32> %a, <4 x i32> %shuffle)
+  ret <4 x i32> %vqdmulh2.i
+}
+
+define <4 x i32> @test_vqdmulhq_lane_s32_intrinsic(<4 x i32> %a, <2 x i32> %v) {
+; CHECK-LABEL: test_vqdmulhq_lane_s32_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    sqdmulh v0.4s, v0.4s, v1.s[1]
+; CHECK-NEXT:    ret
+entry:
+  %vqdmulh2.i = tail call <4 x i32> @llvm.aarch64.neon.sqdmulh.lane.v4i32.v2i32(<4 x i32> %a, <2 x i32> %v, i32 1)
+  ret <4 x i32> %vqdmulh2.i
+}
+
+define <4 x i32> @test_vqdmulhq_laneq_s32_intrinsic_lo(<4 x i32> %a, <4 x i32> %v) {
+; CHECK-LABEL: test_vqdmulhq_laneq_s32_intrinsic_lo:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqdmulh v0.4s, v0.4s, v1.s[1]
+; CHECK-NEXT:    ret
+entry:
+  %vqdmulh2.i = tail call <4 x i32> @llvm.aarch64.neon.sqdmulh.laneq.v4i32.v4i32(<4 x i32> %a, <4 x i32> %v, i32 1)
+  ret <4 x i32> %vqdmulh2.i
+}
+
+define <4 x i32> @test_vqdmulhq_laneq_s32_intrinsic_hi(<4 x i32> %a, <4 x i32> %v) {
+; CHECK-LABEL: test_vqdmulhq_laneq_s32_intrinsic_hi:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqdmulh v0.4s, v0.4s, v1.s[3]
+; CHECK-NEXT:    ret
+entry:
+  %vqdmulh2.i = tail call <4 x i32> @llvm.aarch64.neon.sqdmulh.laneq.v4i32.v4i32(<4 x i32> %a, <4 x i32> %v, i32 3)
   ret <4 x i32> %vqdmulh2.i
 }
 
@@ -1563,6 +1703,37 @@ entry:
   ret <4 x i16> %vqrdmulh2.i
 }
 
+define <4 x i16> @test_vqrdmulh_lane_s16_intrinsic(<4 x i16> %a, <4 x i16> %v) {
+; CHECK-LABEL: test_vqrdmulh_lane_s16_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    sqrdmulh v0.4h, v0.4h, v1.h[3]
+; CHECK-NEXT:    ret
+entry:
+  %vqrdmulh2.i = tail call <4 x i16> @llvm.aarch64.neon.sqrdmulh.lane.v4i16.v4i16(<4 x i16> %a, <4 x i16> %v, i32 3)
+  ret <4 x i16> %vqrdmulh2.i
+}
+
+define <4 x i16> @test_vqrdmulh_laneq_s16_intrinsic_lo(<4 x i16> %a, <8 x i16> %v) {
+; CHECK-LABEL: test_vqrdmulh_laneq_s16_intrinsic_lo:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqrdmulh v0.4h, v0.4h, v1.h[3]
+; CHECK-NEXT:    ret
+entry:
+  %vqrdmulh2.i = tail call <4 x i16> @llvm.aarch64.neon.sqrdmulh.laneq.v4i16.v8i16(<4 x i16> %a, <8 x i16> %v, i32 3)
+  ret <4 x i16> %vqrdmulh2.i
+}
+
+define <4 x i16> @test_vqrdmulh_laneq_s16_intrinsic_hi(<4 x i16> %a, <8 x i16> %v) {
+; CHECK-LABEL: test_vqrdmulh_laneq_s16_intrinsic_hi:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqrdmulh v0.4h, v0.4h, v1.h[7]
+; CHECK-NEXT:    ret
+entry:
+  %vqrdmulh2.i = tail call <4 x i16> @llvm.aarch64.neon.sqrdmulh.laneq.v4i16.v8i16(<4 x i16> %a, <8 x i16> %v, i32 7)
+  ret <4 x i16> %vqrdmulh2.i
+}
+
 define <8 x i16> @test_vqrdmulhq_lane_s16(<8 x i16> %a, <4 x i16> %v) {
 ; CHECK-LABEL: test_vqrdmulhq_lane_s16:
 ; CHECK:       // %bb.0: // %entry
@@ -1572,6 +1743,37 @@ define <8 x i16> @test_vqrdmulhq_lane_s16(<8 x i16> %a, <4 x i16> %v) {
 entry:
   %shuffle = shufflevector <4 x i16> %v, <4 x i16> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   %vqrdmulh2.i = tail call <8 x i16> @llvm.aarch64.neon.sqrdmulh.v8i16(<8 x i16> %a, <8 x i16> %shuffle)
+  ret <8 x i16> %vqrdmulh2.i
+}
+
+define <8 x i16> @test_vqrdmulhq_lane_s16_intrinsic(<8 x i16> %a, <4 x i16> %v) {
+; CHECK-LABEL: test_vqrdmulhq_lane_s16_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    sqrdmulh v0.8h, v0.8h, v1.h[3]
+; CHECK-NEXT:    ret
+entry:
+  %vqrdmulh2.i = tail call <8 x i16> @llvm.aarch64.neon.sqrdmulh.lane.v8i16.v4i16(<8 x i16> %a, <4 x i16> %v, i32 3)
+  ret <8 x i16> %vqrdmulh2.i
+}
+
+define <8 x i16> @test_vqrdmulhq_laneq_s16_intrinsic_lo(<8 x i16> %a, <8 x i16> %v) {
+; CHECK-LABEL: test_vqrdmulhq_laneq_s16_intrinsic_lo:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqrdmulh v0.8h, v0.8h, v1.h[3]
+; CHECK-NEXT:    ret
+entry:
+  %vqrdmulh2.i = tail call <8 x i16> @llvm.aarch64.neon.sqrdmulh.laneq.v8i16.v8i16(<8 x i16> %a, <8 x i16> %v, i32 3)
+  ret <8 x i16> %vqrdmulh2.i
+}
+
+define <8 x i16> @test_vqrdmulhq_laneq_s16_intrinsic_hi(<8 x i16> %a, <8 x i16> %v) {
+; CHECK-LABEL: test_vqrdmulhq_laneq_s16_intrinsic_hi:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqrdmulh v0.8h, v0.8h, v1.h[7]
+; CHECK-NEXT:    ret
+entry:
+  %vqrdmulh2.i = tail call <8 x i16> @llvm.aarch64.neon.sqrdmulh.laneq.v8i16.v8i16(<8 x i16> %a, <8 x i16> %v, i32 7)
   ret <8 x i16> %vqrdmulh2.i
 }
 
@@ -1587,6 +1789,37 @@ entry:
   ret <2 x i32> %vqrdmulh2.i
 }
 
+define <2 x i32> @test_vqrdmulh_lane_s32_intrinsic(<2 x i32> %a, <2 x i32> %v) {
+; CHECK-LABEL: test_vqrdmulh_lane_s32_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    sqrdmulh v0.2s, v0.2s, v1.s[1]
+; CHECK-NEXT:    ret
+entry:
+  %vqrdmulh2.i = tail call <2 x i32> @llvm.aarch64.neon.sqrdmulh.lane.v2i32.v2i32(<2 x i32> %a, <2 x i32> %v, i32 1)
+  ret <2 x i32> %vqrdmulh2.i
+}
+
+define <2 x i32> @test_vqrdmulh_laneq_s32_intrinsic_lo(<2 x i32> %a, <4 x i32> %v) {
+; CHECK-LABEL: test_vqrdmulh_laneq_s32_intrinsic_lo:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqrdmulh v0.2s, v0.2s, v1.s[1]
+; CHECK-NEXT:    ret
+entry:
+  %vqrdmulh2.i = tail call <2 x i32> @llvm.aarch64.neon.sqrdmulh.laneq.v2i32.v4i32(<2 x i32> %a, <4 x i32> %v, i32 1)
+  ret <2 x i32> %vqrdmulh2.i
+}
+
+define <2 x i32> @test_vqrdmulh_laneq_s32_intrinsic_hi(<2 x i32> %a, <4 x i32> %v) {
+; CHECK-LABEL: test_vqrdmulh_laneq_s32_intrinsic_hi:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqrdmulh v0.2s, v0.2s, v1.s[3]
+; CHECK-NEXT:    ret
+entry:
+  %vqrdmulh2.i = tail call <2 x i32> @llvm.aarch64.neon.sqrdmulh.laneq.v2i32.v4i32(<2 x i32> %a, <4 x i32> %v, i32 3)
+  ret <2 x i32> %vqrdmulh2.i
+}
+
 define <4 x i32> @test_vqrdmulhq_lane_s32(<4 x i32> %a, <2 x i32> %v) {
 ; CHECK-LABEL: test_vqrdmulhq_lane_s32:
 ; CHECK:       // %bb.0: // %entry
@@ -1596,6 +1829,37 @@ define <4 x i32> @test_vqrdmulhq_lane_s32(<4 x i32> %a, <2 x i32> %v) {
 entry:
   %shuffle = shufflevector <2 x i32> %v, <2 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %vqrdmulh2.i = tail call <4 x i32> @llvm.aarch64.neon.sqrdmulh.v4i32(<4 x i32> %a, <4 x i32> %shuffle)
+  ret <4 x i32> %vqrdmulh2.i
+}
+
+define <4 x i32> @test_vqrdmulhq_lane_s32_intrinsic(<4 x i32> %a, <2 x i32> %v) {
+; CHECK-LABEL: test_vqrdmulhq_lane_s32_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    sqrdmulh v0.4s, v0.4s, v1.s[1]
+; CHECK-NEXT:    ret
+entry:
+  %vqrdmulh2.i = tail call <4 x i32> @llvm.aarch64.neon.sqrdmulh.lane.v4i32.v2i32(<4 x i32> %a, <2 x i32> %v, i32 1)
+  ret <4 x i32> %vqrdmulh2.i
+}
+
+define <4 x i32> @test_vqrdmulhq_laneq_s32_intrinsic_lo(<4 x i32> %a, <4 x i32> %v) {
+; CHECK-LABEL: test_vqrdmulhq_laneq_s32_intrinsic_lo:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqrdmulh v0.4s, v0.4s, v1.s[1]
+; CHECK-NEXT:    ret
+entry:
+  %vqrdmulh2.i = tail call <4 x i32> @llvm.aarch64.neon.sqrdmulh.laneq.v4i32.v4i32(<4 x i32> %a, <4 x i32> %v, i32 1)
+  ret <4 x i32> %vqrdmulh2.i
+}
+
+define <4 x i32> @test_vqrdmulhq_laneq_s32_intrinsic_hi(<4 x i32> %a, <4 x i32> %v) {
+; CHECK-LABEL: test_vqrdmulhq_laneq_s32_intrinsic_hi:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqrdmulh v0.4s, v0.4s, v1.s[3]
+; CHECK-NEXT:    ret
+entry:
+  %vqrdmulh2.i = tail call <4 x i32> @llvm.aarch64.neon.sqrdmulh.laneq.v4i32.v4i32(<4 x i32> %a, <4 x i32> %v, i32 3)
   ret <4 x i32> %vqrdmulh2.i
 }
 

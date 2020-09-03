@@ -4,13 +4,9 @@
 
 // The workaround attribute is not applied by default.
 
-// RUN: %clang_cc1 -S %s -fstrict-float-cast-overflow -emit-llvm -o - | FileCheck %s --check-prefix=STRICT
+// RUN: %clang_cc1 -S %s -emit-llvm -o - | FileCheck %s --check-prefix=STRICT
 // STRICT-LABEL: main
 // STRICT-NOT: strict-float-cast-overflow
-
-// RUN: %clang_cc1 -S %s -emit-llvm -o - | FileCheck %s --check-prefix=DEFAULT
-// DEFAULT-LABEL: main
-// DEFAULT-NOT: strict-float-cast-overflow
 
 int main() {
   return 0;

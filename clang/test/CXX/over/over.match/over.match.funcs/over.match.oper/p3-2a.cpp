@@ -113,6 +113,18 @@ namespace bullet4 {
   X<3> reversed_add = x2 + x1; // expected-error {{invalid operands}}
 }
 
+namespace PR44627 {
+  namespace ADL {
+    struct type {};
+    bool operator==(type lhs, int rhs) {
+      return true;
+    }
+  }
+
+  bool b1 = ADL::type() == 0;
+  bool b2 = 0 == ADL::type();
+}
+
 // Various C++17 cases that are known to be broken by the C++20 rules.
 namespace problem_cases {
   // We can have an ambiguity between an operator and its reversed form. This
@@ -132,24 +144,26 @@ namespace problem_cases {
   bool cmp_base_derived = D() == D(); // expected-warning {{ambiguous}}
 
   template<typename T> struct CRTPBase {
-    bool operator==(const T&) const; // expected-note {{operator}}
+    bool operator==(const T&) const; // expected-note {{operator}} expected-note {{reversed}}
+    bool operator!=(const T&) const; // expected-note {{non-reversed}}
   };
   struct CRTP : CRTPBase<CRTP> {};
-  bool cmp_crtp = CRTP() == CRTP(); // expected-warning {{ambiguous}}
+  bool cmp_crtp = CRTP() == CRTP(); // expected-warning-re {{ambiguous despite there being a unique best viable function{{$}}}}}}
+  bool cmp_crtp2 = CRTP() != CRTP(); // expected-warning {{ambiguous despite there being a unique best viable function with non-reversed arguments}}
 
-  // We can select a non-rewriteable operator== for a != comparison, when there
-  // was a viable operator!= candidate we could have used instead.
-  //
-  // Rejecting this seems OK on balance.
+  // Given a choice between a rewritten and non-rewritten function with the
+  // same parameter types, where the rewritten function is reversed and each
+  // has a better conversion for one of the two arguments, prefer the
+  // non-rewritten one.
   using UBool = signed char; // ICU uses this.
   struct ICUBase {
     virtual UBool operator==(const ICUBase&) const;
     UBool operator!=(const ICUBase &arg) const { return !operator==(arg); }
   };
   struct ICUDerived : ICUBase {
-    UBool operator==(const ICUBase&) const override; // expected-note {{declared here}}
+    UBool operator==(const ICUBase&) const override; // expected-note {{declared here}} expected-note {{ambiguity is between}}
   };
-  bool cmp_icu = ICUDerived() != ICUDerived(); // expected-error {{not 'bool'}}
+  bool cmp_icu = ICUDerived() != ICUDerived(); // expected-warning {{ambiguous}} expected-warning {{'bool', not 'problem_cases::UBool'}}
 }
 
 #else // NO_ERRORS

@@ -66,7 +66,7 @@ static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
 }
 
 // Force static initialization.
-extern "C" void LLVMInitializeNVPTXTargetMC() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTargetMC() {
   for (Target *T : {&getTheNVPTXTarget32(), &getTheNVPTXTarget64()}) {
     // Register the MC asm info.
     RegisterMCAsmInfo<NVPTXMCAsmInfo> X(*T);

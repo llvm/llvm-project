@@ -128,6 +128,7 @@ exit:
 ; Force SCEVExpander to look for an existing well-formed phi.
 ; Perform LFTR without generating extra preheader code.
 define void @guardedloop([0 x double]* %matrix, [0 x double]* %vector,
+;
 ; CHECK-LABEL: @guardedloop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 1, [[IROW:%.*]]
@@ -183,15 +184,18 @@ return:
 
 ; Avoid generating extra code to materialize a trip count. Skip LFTR.
 define void @unguardedloop([0 x double]* %matrix, [0 x double]* %vector,
+;
 ; CHECK-LABEL: @unguardedloop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[IROW:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[IROW:%.*]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[IROW]], i32 1
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV2:%.*]] = phi i64 [ [[INDVARS_IV_NEXT3:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
-; CHECK-NEXT:    [[CMP196:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT3]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[CMP196]], label [[LOOP]], label [[RETURN:%.*]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT3]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
 ;

@@ -34,6 +34,10 @@ REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(CastSet, clang::ento::DynamicCastInfo)
 REGISTER_MAP_WITH_PROGRAMSTATE(DynamicCastMap, const clang::ento::MemRegion *,
                                CastSet)
 
+// A map from Class object symbols to the most likely pointed-to type.
+REGISTER_MAP_WITH_PROGRAMSTATE(DynamicClassObjectMap, clang::ento::SymbolRef,
+                               clang::ento::DynamicTypeInfo)
+
 namespace clang {
 namespace ento {
 
@@ -61,6 +65,13 @@ const DynamicTypeInfo *getRawDynamicTypeInfo(ProgramStateRef State,
   return State->get<DynamicTypeMap>(MR);
 }
 
+static void unbox(QualType &Ty) {
+  // FIXME: Why are we being fed references to pointers in the first place?
+  while (Ty->isReferenceType() || Ty->isPointerType())
+    Ty = Ty->getPointeeType();
+  Ty = Ty.getCanonicalType().getUnqualifiedType();
+}
+
 const DynamicCastInfo *getDynamicCastInfo(ProgramStateRef State,
                                           const MemRegion *MR,
                                           QualType CastFromTy,
@@ -69,11 +80,20 @@ const DynamicCastInfo *getDynamicCastInfo(ProgramStateRef State,
   if (!Lookup)
     return nullptr;
 
+  unbox(CastFromTy);
+  unbox(CastToTy);
+
   for (const DynamicCastInfo &Cast : *Lookup)
     if (Cast.equals(CastFromTy, CastToTy))
       return &Cast;
 
   return nullptr;
+}
+
+DynamicTypeInfo getClassObjectDynamicTypeInfo(ProgramStateRef State,
+                                              SymbolRef Sym) {
+  const DynamicTypeInfo *DTI = State->get<DynamicClassObjectMap>(Sym);
+  return DTI ? *DTI : DynamicTypeInfo{};
 }
 
 ProgramStateRef setDynamicTypeInfo(ProgramStateRef State, const MemRegion *MR,
@@ -102,6 +122,9 @@ ProgramStateRef setDynamicTypeAndCastInfo(ProgramStateRef State,
     State = State->set<DynamicTypeMap>(MR, CastToTy);
   }
 
+  unbox(CastFromTy);
+  unbox(CastToTy);
+
   DynamicCastInfo::CastResult ResultKind =
       CastSucceeds ? DynamicCastInfo::CastResult::Success
                    : DynamicCastInfo::CastResult::Failure;
@@ -118,111 +141,165 @@ ProgramStateRef setDynamicTypeAndCastInfo(ProgramStateRef State,
   return State;
 }
 
+ProgramStateRef setClassObjectDynamicTypeInfo(ProgramStateRef State,
+                                              SymbolRef Sym,
+                                              DynamicTypeInfo NewTy) {
+  State = State->set<DynamicClassObjectMap>(Sym, NewTy);
+  return State;
+}
+
+ProgramStateRef setClassObjectDynamicTypeInfo(ProgramStateRef State,
+                                              SymbolRef Sym, QualType NewTy,
+                                              bool CanBeSubClassed) {
+  return setClassObjectDynamicTypeInfo(State, Sym,
+                                       DynamicTypeInfo(NewTy, CanBeSubClassed));
+}
+
+static bool isLive(SymbolReaper &SR, const MemRegion *MR) {
+  return SR.isLiveRegion(MR);
+}
+
+static bool isLive(SymbolReaper &SR, SymbolRef Sym) { return SR.isLive(Sym); }
+
 template <typename MapTy>
-ProgramStateRef removeDead(ProgramStateRef State, const MapTy &Map,
-                           SymbolReaper &SR) {
+static ProgramStateRef removeDeadImpl(ProgramStateRef State, SymbolReaper &SR) {
+  const auto &Map = State->get<MapTy>();
+
   for (const auto &Elem : Map)
-    if (!SR.isLiveRegion(Elem.first))
-      State = State->remove<DynamicCastMap>(Elem.first);
+    if (!isLive(SR, Elem.first))
+      State = State->remove<MapTy>(Elem.first);
 
   return State;
 }
 
 ProgramStateRef removeDeadTypes(ProgramStateRef State, SymbolReaper &SR) {
-  return removeDead(State, State->get<DynamicTypeMap>(), SR);
+  return removeDeadImpl<DynamicTypeMap>(State, SR);
 }
 
 ProgramStateRef removeDeadCasts(ProgramStateRef State, SymbolReaper &SR) {
-  return removeDead(State, State->get<DynamicCastMap>(), SR);
+  return removeDeadImpl<DynamicCastMap>(State, SR);
+}
+
+ProgramStateRef removeDeadClassObjectTypes(ProgramStateRef State,
+                                           SymbolReaper &SR) {
+  return removeDeadImpl<DynamicClassObjectMap>(State, SR);
+}
+
+//===----------------------------------------------------------------------===//
+//               Implementation of the 'printer-to-JSON' function
+//===----------------------------------------------------------------------===//
+
+static raw_ostream &printJson(const MemRegion *Region, raw_ostream &Out,
+                              const char *NL, unsigned int Space, bool IsDot) {
+  return Out << "\"region\": \"" << Region << "\"";
+}
+
+static raw_ostream &printJson(const SymExpr *Symbol, raw_ostream &Out,
+                              const char *NL, unsigned int Space, bool IsDot) {
+  return Out << "\"symbol\": \"" << Symbol << "\"";
+}
+
+static raw_ostream &printJson(const DynamicTypeInfo &DTI, raw_ostream &Out,
+                              const char *NL, unsigned int Space, bool IsDot) {
+  Out << "\"dyn_type\": ";
+  if (!DTI.isValid()) {
+    Out << "null";
+  } else {
+    QualType ToPrint = DTI.getType();
+    if (ToPrint->isAnyPointerType())
+      ToPrint = ToPrint->getPointeeType();
+
+    Out << '\"' << ToPrint.getAsString() << "\", \"sub_classable\": "
+        << (DTI.canBeASubClass() ? "true" : "false");
+  }
+  return Out;
+}
+
+static raw_ostream &printJson(const DynamicCastInfo &DCI, raw_ostream &Out,
+                              const char *NL, unsigned int Space, bool IsDot) {
+  return Out << "\"from\": \"" << DCI.from().getAsString() << "\", \"to\": \""
+             << DCI.to().getAsString() << "\", \"kind\": \""
+             << (DCI.succeeds() ? "success" : "fail") << "\"";
+}
+
+template <class T, class U>
+static raw_ostream &printJson(const std::pair<T, U> &Pair, raw_ostream &Out,
+                              const char *NL, unsigned int Space, bool IsDot) {
+  printJson(Pair.first, Out, NL, Space, IsDot) << ", ";
+  return printJson(Pair.second, Out, NL, Space, IsDot);
+}
+
+template <class ContainerTy>
+static raw_ostream &printJsonContainer(const ContainerTy &Container,
+                                       raw_ostream &Out, const char *NL,
+                                       unsigned int Space, bool IsDot) {
+  if (Container.isEmpty()) {
+    return Out << "null";
+  }
+
+  ++Space;
+  Out << '[' << NL;
+  for (auto I = Container.begin(); I != Container.end(); ++I) {
+    const auto &Element = *I;
+
+    Indent(Out, Space, IsDot) << "{ ";
+    printJson(Element, Out, NL, Space, IsDot) << " }";
+
+    if (std::next(I) != Container.end())
+      Out << ',';
+    Out << NL;
+  }
+
+  --Space;
+  return Indent(Out, Space, IsDot) << "]";
+}
+
+static raw_ostream &printJson(const CastSet &Set, raw_ostream &Out,
+                              const char *NL, unsigned int Space, bool IsDot) {
+  Out << "\"casts\": ";
+  return printJsonContainer(Set, Out, NL, Space, IsDot);
+}
+
+template <class MapTy>
+static void printJsonImpl(raw_ostream &Out, ProgramStateRef State,
+                          const char *Name, const char *NL, unsigned int Space,
+                          bool IsDot, bool PrintEvenIfEmpty = true) {
+  const auto &Map = State->get<MapTy>();
+  if (Map.isEmpty() && !PrintEvenIfEmpty)
+    return;
+
+  Indent(Out, Space, IsDot) << "\"" << Name << "\": ";
+  printJsonContainer(Map, Out, NL, Space, IsDot) << "," << NL;
 }
 
 static void printDynamicTypesJson(raw_ostream &Out, ProgramStateRef State,
                                   const char *NL, unsigned int Space,
                                   bool IsDot) {
-  Indent(Out, Space, IsDot) << "\"dynamic_types\": ";
-
-  const DynamicTypeMapTy &Map = State->get<DynamicTypeMap>();
-  if (Map.isEmpty()) {
-    Out << "null," << NL;
-    return;
-  }
-
-  ++Space;
-  Out << '[' << NL;
-  for (DynamicTypeMapTy::iterator I = Map.begin(); I != Map.end(); ++I) {
-    const MemRegion *MR = I->first;
-    const DynamicTypeInfo &DTI = I->second;
-    Indent(Out, Space, IsDot)
-        << "{ \"region\": \"" << MR << "\", \"dyn_type\": ";
-    if (!DTI.isValid()) {
-      Out << "null";
-    } else {
-      Out << '\"' << DTI.getType()->getPointeeType().getAsString()
-          << "\", \"sub_classable\": "
-          << (DTI.canBeASubClass() ? "true" : "false");
-    }
-    Out << " }";
-
-    if (std::next(I) != Map.end())
-      Out << ',';
-    Out << NL;
-  }
-
-  --Space;
-  Indent(Out, Space, IsDot) << "]," << NL;
+  printJsonImpl<DynamicTypeMap>(Out, State, "dynamic_types", NL, Space, IsDot);
 }
 
 static void printDynamicCastsJson(raw_ostream &Out, ProgramStateRef State,
                                   const char *NL, unsigned int Space,
                                   bool IsDot) {
-  Indent(Out, Space, IsDot) << "\"dynamic_casts\": ";
+  printJsonImpl<DynamicCastMap>(Out, State, "dynamic_casts", NL, Space, IsDot);
+}
 
-  const DynamicCastMapTy &Map = State->get<DynamicCastMap>();
-  if (Map.isEmpty()) {
-    Out << "null," << NL;
-    return;
-  }
-
-  ++Space;
-  Out << '[' << NL;
-  for (DynamicCastMapTy::iterator I = Map.begin(); I != Map.end(); ++I) {
-    const MemRegion *MR = I->first;
-    const CastSet &Set = I->second;
-
-    Indent(Out, Space, IsDot) << "{ \"region\": \"" << MR << "\", \"casts\": ";
-    if (Set.isEmpty()) {
-      Out << "null ";
-    } else {
-      ++Space;
-      Out << '[' << NL;
-      for (CastSet::iterator SI = Set.begin(); SI != Set.end(); ++SI) {
-        Indent(Out, Space, IsDot)
-            << "{ \"from\": \"" << SI->from().getAsString() << "\", \"to\": \""
-            << SI->to().getAsString() << "\", \"kind\": \""
-            << (SI->succeeds() ? "success" : "fail") << "\" }";
-
-        if (std::next(SI) != Set.end())
-          Out << ',';
-        Out << NL;
-      }
-      --Space;
-      Indent(Out, Space, IsDot) << ']';
-    }
-    Out << '}';
-
-    if (std::next(I) != Map.end())
-      Out << ',';
-    Out << NL;
-  }
-
-  --Space;
-  Indent(Out, Space, IsDot) << "]," << NL;
+static void printClassObjectDynamicTypesJson(raw_ostream &Out,
+                                             ProgramStateRef State,
+                                             const char *NL, unsigned int Space,
+                                             bool IsDot) {
+  // Let's print Class object type information only if we have something
+  // meaningful to print.
+  printJsonImpl<DynamicClassObjectMap>(Out, State, "class_object_types", NL,
+                                       Space, IsDot,
+                                       /*PrintEvenIfEmpty=*/false);
 }
 
 void printDynamicTypeInfoJson(raw_ostream &Out, ProgramStateRef State,
                               const char *NL, unsigned int Space, bool IsDot) {
   printDynamicTypesJson(Out, State, NL, Space, IsDot);
   printDynamicCastsJson(Out, State, NL, Space, IsDot);
+  printClassObjectDynamicTypesJson(Out, State, NL, Space, IsDot);
 }
 
 } // namespace ento

@@ -1,12 +1,13 @@
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=40 -fopenmp %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=45 -fopenmp %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected -fopenmp-version=50 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp-version=50 -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected -fopenmp-version=50 -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp-version=50 -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -124,7 +125,7 @@ int foomain(int argc, char **argv) {
   for (int k = 0; k < argc; ++k) ++k;
 
   int v = 0;
-#pragma omp target teams distribute simd allocate(omp_thread_mem_alloc: i) lastprivate(i) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute simd' directive}}
+#pragma omp target teams distribute simd allocate(omp_thread_mem_alloc: i) lastprivate(i) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute simd' directive}} le50-error {{allocator must be specified in the 'uses_allocators' clause}}
   for (int k = 0; k < argc; ++k) {
     i = k;
     v += i;

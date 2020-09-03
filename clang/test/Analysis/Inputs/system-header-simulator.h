@@ -9,7 +9,16 @@
 #define restrict /*restrict*/
 #endif
 
+typedef __typeof(sizeof(int)) size_t;
+typedef long long __int64_t;
+typedef __int64_t __darwin_off_t;
+typedef __darwin_off_t fpos_t;
+
 typedef struct _FILE FILE;
+#define SEEK_SET 0 /* Seek from beginning of file. */
+#define SEEK_CUR 1 /* Seek from current position. */
+#define SEEK_END 2 /* Seek from end of file. */
+
 extern FILE *stdin;
 extern FILE *stdout;
 extern FILE *stderr;
@@ -24,10 +33,34 @@ int printf(const char *restrict format, ...);
 int fprintf(FILE *restrict, const char *restrict, ...);
 int getchar(void);
 
+void setbuf(FILE *restrict, char *restrict);
+int setvbuf(FILE *restrict, char *restrict, int, size_t);
+
+FILE *funopen(const void *,
+              int (*)(void *, char *, int),
+              int (*)(void *, const char *, int),
+              fpos_t (*)(void *, fpos_t, int),
+              int (*)(void *));
+
+FILE *fopen(const char *path, const char *mode);
+FILE *tmpfile(void);
+FILE *freopen(const char *pathname, const char *mode, FILE *stream);
+int fclose(FILE *fp);
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+int fputc(int ch, FILE *stream);
+int fseek(FILE *__stream, long int __off, int __whence);
+long int ftell(FILE *__stream);
+void rewind(FILE *__stream);
+int fgetpos(FILE *stream, fpos_t *pos);
+int fsetpos(FILE *stream, const fpos_t *pos);
+void clearerr(FILE *stream);
+int feof(FILE *stream);
+int ferror(FILE *stream);
+int fileno(FILE *stream);
+
 // Note, on some platforms errno macro gets replaced with a function call.
 extern int errno;
-
-typedef __typeof(sizeof(int)) size_t;
 
 size_t strlen(const char *);
 
@@ -38,21 +71,6 @@ void *memcpy(void *dst, const void *src, size_t n);
 typedef unsigned long __darwin_pthread_key_t;
 typedef __darwin_pthread_key_t pthread_key_t;
 int pthread_setspecific(pthread_key_t, const void *);
-
-typedef long long __int64_t;
-typedef __int64_t __darwin_off_t;
-typedef __darwin_off_t fpos_t;
-
-void setbuf(FILE * restrict, char * restrict);
-int setvbuf(FILE * restrict, char * restrict, int, size_t);
-
-FILE *fopen(const char * restrict, const char * restrict);
-int fclose(FILE *);
-FILE *funopen(const void *,
-                 int (*)(void *, char *, int),
-                 int (*)(void *, const char *, int),
-                 fpos_t (*)(void *, fpos_t, int),
-                 int (*)(void *));
 
 int sqlite3_bind_text_my(int, const char*, int n, void(*)(void*));
 
@@ -98,6 +116,12 @@ typedef int pid_t;
 pid_t fork(void);
 pid_t vfork(void);
 int execl(const char *path, const char *arg, ...);
+int execle(const char *path, const char *arg, ...);
+int execlp(const char *file, const char *arg, ...);
+int execv(const char *path, char *const argv[]);
+int execve(const char *path, char *const argv[], char *const envp[]);
+int execvp(const char *file, char *const argv[]);
+int execvpe(const char *file, char *const argv[], char *const envp[]);
 
 void exit(int status) __attribute__ ((__noreturn__));
 void _exit(int status) __attribute__ ((__noreturn__));
@@ -111,5 +135,6 @@ void _Exit(int status) __attribute__ ((__noreturn__));
 #define __DARWIN_NULL 0
 #define NULL __DARWIN_NULL
 #endif
+#define EOF (-1)
 
 #define offsetof(t, d) __builtin_offsetof(t, d)

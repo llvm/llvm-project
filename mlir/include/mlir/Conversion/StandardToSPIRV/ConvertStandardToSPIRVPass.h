@@ -1,6 +1,6 @@
 //===- ConvertStandardToSPIRVPass.h - StdOps to SPIR-V pass -----*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -18,7 +18,7 @@
 namespace mlir {
 
 /// Pass to convert StandardOps to SPIR-V ops.
-std::unique_ptr<OpPassBase<ModuleOp>> createConvertStandardToSPIRVPass();
+std::unique_ptr<OperationPass<ModuleOp>> createConvertStandardToSPIRVPass();
 
 /// Pass to legalize ops that are not directly lowered to SPIR-V.
 std::unique_ptr<Pass> createLegalizeStdOpsForSPIRVLoweringPass();

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z -verify %s
+// RUN: %clang_cc1 -std=c++17 -verify %s
 
 void use_from_own_init() {
   auto [a] = a; // expected-error {{binding 'a' cannot appear in the initializer of its own decomposition declaration}}
@@ -83,7 +83,7 @@ template <class T> void dependent_foreach(T t) {
 
 struct PR37352 {
   int n;
-  void f() { static auto [a] = *this; } // expected-warning {{C++2a extension}}
+  void f() { static auto [a] = *this; } // expected-warning {{C++20 extension}}
 };
 
 namespace instantiate_template {

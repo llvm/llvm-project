@@ -294,10 +294,16 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
   TrivialModuleLoader ModLoader;
   HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                           Diags, LangOpts, &*Target);
+
   Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
                   SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
+  // Ensure we can get expanded locations in presence of implicit includes.
+  // These are different than normal includes since predefines buffer doesn't
+  // have a valid insertion location.
+  PP.setPredefines("#include \"/implicit-header.h\"");
+  FileMgr.getVirtualFile("/implicit-header.h", 0, 0);
   PP.Initialize(*Target);
   PP.EnterMainSourceFile();
 
@@ -347,7 +353,7 @@ struct MacroAction {
   unsigned MAKind : 3;
 
   MacroAction(SourceLocation Loc, StringRef Name, unsigned K)
-    : Loc(Loc), Name(Name), MAKind(K) { }
+      : Loc(Loc), Name(std::string(Name)), MAKind(K) {}
 
   bool isExpansion() const { return MAKind == kExpansion; }
   bool isDefinition() const { return MAKind & kDefinition; }

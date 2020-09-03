@@ -622,4 +622,28 @@ TEST(DenseMapCustomTest, ConstTest) {
   EXPECT_NE(Map.find(B), Map.end());
   EXPECT_NE(Map.find(C), Map.end());
 }
+
+struct IncompleteStruct;
+
+TEST(DenseMapCustomTest, OpaquePointerKey) {
+  // Test that we can use a pointer to an incomplete type as a DenseMap key.
+  // This is an important build time optimization, since many classes have
+  // DenseMap members.
+  DenseMap<IncompleteStruct *, int> Map;
+  int Keys[3] = {0, 0, 0};
+  IncompleteStruct *K1 = reinterpret_cast<IncompleteStruct *>(&Keys[0]);
+  IncompleteStruct *K2 = reinterpret_cast<IncompleteStruct *>(&Keys[1]);
+  IncompleteStruct *K3 = reinterpret_cast<IncompleteStruct *>(&Keys[2]);
+  Map.insert({K1, 1});
+  Map.insert({K2, 2});
+  Map.insert({K3, 3});
+  EXPECT_EQ(Map.count(K1), 1u);
+  EXPECT_EQ(Map[K1], 1);
+  EXPECT_EQ(Map[K2], 2);
+  EXPECT_EQ(Map[K3], 3);
+  Map.clear();
+  EXPECT_EQ(Map.find(K1), Map.end());
+  EXPECT_EQ(Map.find(K2), Map.end());
+  EXPECT_EQ(Map.find(K3), Map.end());
+}
 }

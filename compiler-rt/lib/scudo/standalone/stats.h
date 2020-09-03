@@ -58,7 +58,9 @@ class GlobalStats : public LocalStats {
 public:
   void initLinkerInitialized() {}
   void init() {
-    memset(this, 0, sizeof(*this));
+    LocalStats::init();
+    Mutex.init();
+    StatsList = {};
     initLinkerInitialized();
   }
 
@@ -86,6 +88,9 @@ public:
     for (uptr I = 0; I < StatCount; I++)
       S[I] = static_cast<sptr>(S[I]) >= 0 ? S[I] : 0;
   }
+
+  void disable() { Mutex.lock(); }
+  void enable() { Mutex.unlock(); }
 
 private:
   mutable HybridMutex Mutex;

@@ -1,4 +1,4 @@
-//===-- UnixSignals.cpp -----------------------------------------*- C++ -*-===//
+//===-- UnixSignals.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -145,10 +145,8 @@ bool UnixSignals::SignalIsValid(int32_t signo) const {
 }
 
 ConstString UnixSignals::GetShortName(ConstString name) const {
-  if (name) {
-    const char *signame = name.AsCString();
-    return ConstString(signame + 3); // Remove "SIG" from name
-  }
+  if (name)
+    return ConstString(name.GetStringRef().substr(3)); // Remove "SIG" from name
   return name;
 }
 

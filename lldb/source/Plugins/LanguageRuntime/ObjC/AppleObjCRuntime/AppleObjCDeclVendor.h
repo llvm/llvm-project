@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_AppleObjCDeclVendor_h_
-#define liblldb_AppleObjCDeclVendor_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCDECLVENDOR_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCDECLVENDOR_H
 
 #include "lldb/lldb-private.h"
 
@@ -50,4 +50,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_AppleObjCDeclVendor_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCDECLVENDOR_H

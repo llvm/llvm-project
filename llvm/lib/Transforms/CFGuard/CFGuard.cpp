@@ -204,14 +204,9 @@ void CFGuard::insertCFGuardDispatch(CallBase *CB) {
   Bundles.emplace_back("cfguardtarget", CalledOperand);
 
   // Create a copy of the call/invoke instruction and add the new bundle.
-  CallBase *NewCB;
-  if (CallInst *CI = dyn_cast<CallInst>(CB)) {
-    NewCB = CallInst::Create(CI, Bundles, CB);
-  } else {
-    assert(isa<InvokeInst>(CB) && "Unknown indirect call type");
-    InvokeInst *II = cast<InvokeInst>(CB);
-    NewCB = llvm::InvokeInst::Create(II, Bundles, CB);
-  }
+  assert((isa<CallInst>(CB) || isa<InvokeInst>(CB)) &&
+         "Unknown indirect call type");
+  CallBase *NewCB = CallBase::Create(CB, Bundles, CB);
 
   // Change the target of the call to be the guard dispatch function.
   NewCB->setCalledOperand(GuardDispatchLoad);
@@ -254,8 +249,8 @@ bool CFGuard::doInitialization(Module &M) {
 
 bool CFGuard::runOnFunction(Function &F) {
 
-  // Skip modules and functions for which CFGuard checks have been disabled.
-  if (cfguard_module_flag != 2 || F.hasFnAttribute(Attribute::NoCfCheck))
+  // Skip modules for which CFGuard checks have been disabled.
+  if (cfguard_module_flag != 2)
     return false;
 
   SmallVector<CallBase *, 8> IndirectCalls;
@@ -267,17 +262,15 @@ bool CFGuard::runOnFunction(Function &F) {
   for (BasicBlock &BB : F.getBasicBlockList()) {
     for (Instruction &I : BB.getInstList()) {
       auto *CB = dyn_cast<CallBase>(&I);
-      if (CB && CB->isIndirectCall()) {
+      if (CB && CB->isIndirectCall() && !CB->hasFnAttr("guard_nocf")) {
         IndirectCalls.push_back(CB);
         CFGuardCounter++;
       }
     }
   }
 
-  // If no checks are needed, return early and add this attribute to indicate
-  // that subsequent CFGuard passes can skip this function.
+  // If no checks are needed, return early.
   if (IndirectCalls.empty()) {
-    F.addFnAttr(Attribute::NoCfCheck);
     return false;
   }
 

@@ -44,13 +44,13 @@ public:
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI,
-                           unsigned SrcReg, bool isKill, int FrameIndex,
+                           Register SrcReg, bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) const override;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
-                            unsigned DestReg, int FrameIndex,
+                            Register DestReg, int FrameIndex,
                             const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
@@ -67,13 +67,24 @@ private:
 /// getITInstrPredicate - Valid only in Thumb2 mode. This function is identical
 /// to llvm::getInstrPredicate except it returns AL for conditional branch
 /// instructions which are "predicated", but are not in IT blocks.
-ARMCC::CondCodes getITInstrPredicate(const MachineInstr &MI, unsigned &PredReg);
+ARMCC::CondCodes getITInstrPredicate(const MachineInstr &MI, Register &PredReg);
 
 // getVPTInstrPredicate: VPT analogue of that, plus a helper function
 // corresponding to MachineInstr::findFirstPredOperandIdx.
 int findFirstVPTPredOperandIdx(const MachineInstr &MI);
 ARMVCC::VPTCodes getVPTInstrPredicate(const MachineInstr &MI,
-                                      unsigned &PredReg);
+                                      Register &PredReg);
+inline ARMVCC::VPTCodes getVPTInstrPredicate(const MachineInstr &MI) {
+  Register PredReg;
+  return getVPTInstrPredicate(MI, PredReg);
 }
+
+// Recomputes the Block Mask of Instr, a VPT or VPST instruction.
+// This rebuilds the block mask of the instruction depending on the predicates
+// of the instructions following it. This should only be used after the
+// MVEVPTBlockInsertion pass has run, and should be used whenever a predicated
+// instruction is added to/removed from the block.
+void recomputeVPTBlockMask(MachineInstr &Instr);
+} // namespace llvm
 
 #endif

@@ -56,7 +56,7 @@ public:
   ToolResults *getToolResults() override { return Results.get(); }
 
   void mapVirtualFile(StringRef FilePath, StringRef Content) override {
-    OverlayFiles[FilePath] = Content;
+    OverlayFiles[FilePath] = std::string(Content);
   }
 
 private:

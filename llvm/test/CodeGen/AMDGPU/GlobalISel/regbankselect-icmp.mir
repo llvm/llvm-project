@@ -36,11 +36,13 @@ body: |
     ; GFX7-LABEL: name: icmp_eq_s32_sv
     ; GFX7: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; GFX7: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[COPY1]]
     ; GFX8-LABEL: name: icmp_eq_s32_sv
     ; GFX8: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; GFX8: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s1) = G_ICMP intpred(eq), %0, %1
@@ -56,11 +58,13 @@ body: |
     ; GFX7-LABEL: name: icmp_eq_s32_vs
     ; GFX7: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY]]
+    ; GFX7: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY2]]
     ; GFX8-LABEL: name: icmp_eq_s32_vs
     ; GFX8: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY]]
+    ; GFX8: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY2]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s1) = G_ICMP intpred(eq), %1, %0
@@ -96,7 +100,9 @@ body: |
     ; GFX7-LABEL: name: icmp_eq_s64_ss
     ; GFX7: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX7: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
-    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s64), [[COPY1]]
+    ; GFX7: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX7: [[COPY3:%[0-9]+]]:vgpr(s64) = COPY [[COPY1]](s64)
+    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY2]](s64), [[COPY3]]
     ; GFX8-LABEL: name: icmp_eq_s64_ss
     ; GFX8: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX8: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
@@ -117,11 +123,13 @@ body: |
     ; GFX7-LABEL: name: icmp_eq_s64_sv
     ; GFX7: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s64), [[COPY1]]
+    ; GFX7: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY2]](s64), [[COPY1]]
     ; GFX8-LABEL: name: icmp_eq_s64_sv
     ; GFX8: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s64), [[COPY1]]
+    ; GFX8: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY2]](s64), [[COPY1]]
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s64) = COPY $vgpr0_vgpr1
     %2:_(s1) = G_ICMP intpred(eq), %0, %1
@@ -137,11 +145,13 @@ body: |
     ; GFX7-LABEL: name: icmp_eq_s64_vs
     ; GFX7: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s64), [[COPY]]
+    ; GFX7: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s64), [[COPY2]]
     ; GFX8-LABEL: name: icmp_eq_s64_vs
     ; GFX8: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s64), [[COPY]]
+    ; GFX8: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s64), [[COPY2]]
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s64) = COPY $vgpr0_vgpr1
     %2:_(s1) = G_ICMP intpred(eq), %1, %0
@@ -177,7 +187,9 @@ body: |
     ; GFX7-LABEL: name: icmp_ne_s64_ss
     ; GFX7: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX7: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
-    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY]](s64), [[COPY1]]
+    ; GFX7: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX7: [[COPY3:%[0-9]+]]:vgpr(s64) = COPY [[COPY1]](s64)
+    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY2]](s64), [[COPY3]]
     ; GFX8-LABEL: name: icmp_ne_s64_ss
     ; GFX8: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX8: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
@@ -198,11 +210,13 @@ body: |
     ; GFX7-LABEL: name: icmp_ne_s64_sv
     ; GFX7: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY]](s64), [[COPY1]]
+    ; GFX7: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY2]](s64), [[COPY1]]
     ; GFX8-LABEL: name: icmp_ne_s64_sv
     ; GFX8: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY]](s64), [[COPY1]]
+    ; GFX8: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY2]](s64), [[COPY1]]
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s64) = COPY $vgpr0_vgpr1
     %2:_(s1) = G_ICMP intpred(ne), %0, %1
@@ -218,11 +232,13 @@ body: |
     ; GFX7-LABEL: name: icmp_ne_s64_vs
     ; GFX7: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY1]](s64), [[COPY]]
+    ; GFX7: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY1]](s64), [[COPY2]]
     ; GFX8-LABEL: name: icmp_ne_s64_vs
     ; GFX8: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY1]](s64), [[COPY]]
+    ; GFX8: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY1]](s64), [[COPY2]]
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s64) = COPY $vgpr0_vgpr1
     %2:_(s1) = G_ICMP intpred(ne), %1, %0
@@ -258,11 +274,15 @@ body: |
     ; GFX7-LABEL: name: icmp_slt_s64_ss
     ; GFX7: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX7: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
-    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(slt), [[COPY]](s64), [[COPY1]]
+    ; GFX7: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX7: [[COPY3:%[0-9]+]]:vgpr(s64) = COPY [[COPY1]](s64)
+    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(slt), [[COPY2]](s64), [[COPY3]]
     ; GFX8-LABEL: name: icmp_slt_s64_ss
     ; GFX8: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX8: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
-    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(slt), [[COPY]](s64), [[COPY1]]
+    ; GFX8: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX8: [[COPY3:%[0-9]+]]:vgpr(s64) = COPY [[COPY1]](s64)
+    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(slt), [[COPY2]](s64), [[COPY3]]
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s64) = COPY $sgpr2_sgpr3
     %2:_(s1) = G_ICMP intpred(slt), %0, %1
@@ -278,11 +298,13 @@ body: |
     ; GFX7-LABEL: name: icmp_slt_s64_sv
     ; GFX7: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(slt), [[COPY]](s64), [[COPY1]]
+    ; GFX7: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(slt), [[COPY2]](s64), [[COPY1]]
     ; GFX8-LABEL: name: icmp_slt_s64_sv
     ; GFX8: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(slt), [[COPY]](s64), [[COPY1]]
+    ; GFX8: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(slt), [[COPY2]](s64), [[COPY1]]
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s64) = COPY $vgpr0_vgpr1
     %2:_(s1) = G_ICMP intpred(slt), %0, %1
@@ -298,11 +320,13 @@ body: |
     ; GFX7-LABEL: name: icmp_slt_s64_vs
     ; GFX7: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(slt), [[COPY1]](s64), [[COPY]]
+    ; GFX7: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(slt), [[COPY1]](s64), [[COPY2]]
     ; GFX8-LABEL: name: icmp_slt_s64_vs
     ; GFX8: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(slt), [[COPY1]](s64), [[COPY]]
+    ; GFX8: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(slt), [[COPY1]](s64), [[COPY2]]
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s64) = COPY $vgpr0_vgpr1
     %2:_(s1) = G_ICMP intpred(slt), %1, %0
@@ -326,4 +350,67 @@ body: |
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(s1) = G_ICMP intpred(slt), %0, %1
+...
+
+# Result is already constrained to be VCC bank, despite scalar inputs.
+---
+name:            map_icmp_already_vcc_bank_sgpr_inputs
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+
+    ; GFX7-LABEL: name: map_icmp_already_vcc_bank_sgpr_inputs
+    ; GFX7: liveins: $sgpr0, $sgpr1
+    ; GFX7: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GFX7: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; GFX7: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; GFX7: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; GFX7: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[COPY3]]
+    ; GFX7: S_ENDPGM 0, implicit [[ICMP]](s1)
+    ; GFX8-LABEL: name: map_icmp_already_vcc_bank_sgpr_inputs
+    ; GFX8: liveins: $sgpr0, $sgpr1
+    ; GFX8: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GFX8: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; GFX8: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; GFX8: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; GFX8: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[COPY3]]
+    ; GFX8: S_ENDPGM 0, implicit [[ICMP]](s1)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:vcc(s1) = G_ICMP intpred(eq), %0, %1
+    S_ENDPGM 0, implicit %2
+...
+
+# Result is already con strained to be VCC bank, despite scalar inputs
+# and also has a register class.
+---
+name:            map_icmp_already_vcc_regclass_sgpr_inputs
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+
+    ; GFX7-LABEL: name: map_icmp_already_vcc_regclass_sgpr_inputs
+    ; GFX7: liveins: $sgpr0, $sgpr1
+    ; GFX7: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GFX7: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; GFX7: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; GFX7: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; GFX7: [[ICMP:%[0-9]+]]:sreg_64_xexec(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[COPY3]]
+    ; GFX7: S_ENDPGM 0, implicit [[ICMP]](s1)
+    ; GFX8-LABEL: name: map_icmp_already_vcc_regclass_sgpr_inputs
+    ; GFX8: liveins: $sgpr0, $sgpr1
+    ; GFX8: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GFX8: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; GFX8: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; GFX8: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; GFX8: [[ICMP:%[0-9]+]]:sreg_64_xexec(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[COPY3]]
+    ; GFX8: S_ENDPGM 0, implicit [[ICMP]](s1)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:sreg_64_xexec(s1) = G_ICMP intpred(eq), %0, %1
+    S_ENDPGM 0, implicit %2
 ...

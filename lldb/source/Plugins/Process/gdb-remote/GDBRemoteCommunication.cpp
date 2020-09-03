@@ -1,4 +1,4 @@
-//===-- GDBRemoteCommunication.cpp ------------------------------*- C++ -*-===//
+//===-- GDBRemoteCommunication.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -50,7 +50,7 @@
 #include <compression.h>
 #endif
 
-#if LLVM_ENABLE_ZLIB
+#if defined(HAVE_LIBZ)
 #include <zlib.h>
 #endif
 
@@ -125,7 +125,7 @@ GDBRemoteCommunication::SendPacketNoLock(llvm::StringRef payload) {
   packet.Write(payload.data(), payload.size());
   packet.PutChar('#');
   packet.PutHex8(CalculcateChecksum(payload));
-  std::string packet_str = packet.GetString();
+  std::string packet_str = std::string(packet.GetString());
 
   return SendRawPacketNoLock(packet_str);
 }
@@ -582,7 +582,7 @@ bool GDBRemoteCommunication::DecompressPacket() {
   }
 #endif
 
-#if LLVM_ENABLE_ZLIB
+#if defined(HAVE_LIBZ)
   if (decompressed_bytes == 0 && decompressed_bufsize != ULONG_MAX &&
       decompressed_buffer != nullptr &&
       m_compression_type == CompressionType::ZlibDeflate) {
@@ -763,7 +763,7 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
         if (m_bytes[0] == '$' && total_length > 4) {
           for (size_t i = 0; !binary && i < total_length; ++i) {
             unsigned char c = m_bytes[i];
-            if (isprint(c) == 0 && isspace(c) == 0) {
+            if (!llvm::isPrint(c) && !llvm::isSpace(c)) {
               binary = true;
             }
           }

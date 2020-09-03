@@ -1,4 +1,4 @@
-//===-- NSSet.cpp -----------------------------------------------*- C++ -*-===//
+//===-- NSSet.cpp ---------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -282,6 +282,7 @@ bool lldb_private::formatters::NSSetSummaryProvider(
   static const ConstString g_OrderedSetI("__NSOrderedSetI");
   static const ConstString g_SetM("__NSSetM");
   static const ConstString g_SetCF("__NSCFSet");
+  static const ConstString g_SetCFRef("CFSetRef");
 
   if (class_name.IsEmpty())
     return false;
@@ -306,7 +307,7 @@ bool lldb_private::formatters::NSSetSummaryProvider(
     }
     if (error.Fail())
       return false;
-  } else if (class_name == g_SetCF) {
+  } else if (class_name == g_SetCF || class_name == g_SetCFRef) {
     ExecutionContext exe_ctx(process_sp);
     CFBasicHash cfbh;
     if (!cfbh.Update(valobj_addr, exe_ctx))
@@ -367,6 +368,7 @@ lldb_private::formatters::NSSetSyntheticFrontEndCreator(
   static const ConstString g_OrderedSetI("__NSOrderedSetI");
   static const ConstString g_SetM("__NSSetM");
   static const ConstString g_SetCF("__NSCFSet");
+  static const ConstString g_SetCFRef("CFSetRef");
 
   if (class_name.IsEmpty())
     return nullptr;
@@ -386,7 +388,7 @@ lldb_private::formatters::NSSetSyntheticFrontEndCreator(
     } else {
       return (new Foundation1300::NSSetMSyntheticFrontEnd(valobj_sp));
     }
-  } else if (class_name == g_SetCF) {
+  } else if (class_name == g_SetCF || class_name == g_SetCFRef) {
     return (new NSCFSetSyntheticFrontEnd(valobj_sp));
   } else {
     auto &map(NSSet_Additionals::GetAdditionalSynthetics());
@@ -682,7 +684,7 @@ lldb_private::formatters::
 
 template <typename D32, typename D64>
 lldb_private::formatters::
-  GenericNSSetMSyntheticFrontEnd<D32, D64>::~GenericNSSetMSyntheticFrontEnd() {
+  GenericNSSetMSyntheticFrontEnd<D32, D64>::~GenericNSSetMSyntheticFrontEnd<D32, D64>() {
   delete m_data_32;
   m_data_32 = nullptr;
   delete m_data_64;

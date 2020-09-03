@@ -8,7 +8,7 @@
 # RUN: llvm-mc -triple=x86_64-windows-gnu %s -filetype=obj -o %t.obj
 # RUN: lld-link -out:%t.exe -entry:main -subsystem:console \
 # RUN:   %t.obj %t-implib.a
-# RUN: llvm-objdump -s %t.exe | FileCheck -check-prefix=DATA %s
+# RUN: llvm-objdump -s %t.exe | FileCheck --check-prefix=DATA %s
 
         .text
         .global main

@@ -57,6 +57,13 @@ class HexagonPacketizerList : public VLIWPacketizerList {
   // instruction from the previous packet.
   bool PacketStalls = false;
 
+  // Set to true if the packet has a duplex pair of sub-instructions.
+  bool PacketHasDuplex = false;
+
+  // Set to true if the packet has a instruction that can only be executed
+  // in SLOT0.
+  bool PacketHasSLOT0OnlyInsn = false;
+
 protected:
   /// A handle to the branch probability pass.
   const MachineBranchProbabilityInfo *MBPI;
@@ -149,6 +156,7 @@ protected:
   bool hasRegMaskDependence(const MachineInstr &I, const MachineInstr &J);
   bool hasDualStoreDependence(const MachineInstr &I, const MachineInstr &J);
   bool producesStall(const MachineInstr &MI);
+  bool isPureSlot0InsnWithNoSlot1Store(const MachineInstr &MI);
 };
 
 } // end namespace llvm

@@ -1,4 +1,4 @@
-//===-- DWARFDIE.cpp --------------------------------------------*- C++ -*-===//
+//===-- DWARFDIE.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,7 +32,7 @@ class ElaboratingDIEIterator
   // Container sizes are optimized for the case of following DW_AT_specification
   // and DW_AT_abstract_origin just once.
   llvm::SmallVector<DWARFDIE, 2> m_worklist;
-  llvm::SmallSet<lldb::user_id_t, 3> m_seen;
+  llvm::SmallSet<DWARFDebugInfoEntry *, 3> m_seen;
 
   void Next() {
     assert(!m_worklist.empty() && "Incrementing end iterator?");
@@ -44,7 +44,7 @@ class ElaboratingDIEIterator
     // And add back any items that elaborate it.
     for (dw_attr_t attr : {DW_AT_specification, DW_AT_abstract_origin}) {
       if (DWARFDIE d = die.GetReferencedDIE(attr))
-        if (m_seen.insert(die.GetID()).second)
+        if (m_seen.insert(die.GetDIE()).second)
           m_worklist.push_back(d);
     }
   }
@@ -140,25 +140,64 @@ DWARFDIE::GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const {
 }
 
 DWARFDIE
-DWARFDIE::LookupDeepestBlock(lldb::addr_t file_addr) const {
-  if (IsValid()) {
-    SymbolFileDWARF *dwarf = GetDWARF();
-    DWARFUnit *cu = GetCU();
-    DWARFDebugInfoEntry *function_die = nullptr;
-    DWARFDebugInfoEntry *block_die = nullptr;
-    if (m_die->LookupAddress(file_addr, cu, &function_die, &block_die)) {
-      if (block_die && block_die != function_die) {
-        if (cu->ContainsDIEOffset(block_die->GetOffset()))
-          return DWARFDIE(cu, block_die);
-        else
-          return DWARFDIE(dwarf->DebugInfo()->GetUnit(DIERef(
-                              cu->GetSymbolFileDWARF().GetDwoNum(),
-                              cu->GetDebugSection(), block_die->GetOffset())),
-                          block_die);
+DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
+  if (!IsValid())
+    return DWARFDIE();
+
+  DWARFDIE result;
+  bool check_children = false;
+  bool match_addr_range = false;
+  switch (Tag()) {
+  case DW_TAG_class_type:
+  case DW_TAG_namespace:
+  case DW_TAG_structure_type:
+  case DW_TAG_common_block:
+    check_children = true;
+    break;
+  case DW_TAG_compile_unit:
+  case DW_TAG_module:
+  case DW_TAG_catch_block:
+  case DW_TAG_subprogram:
+  case DW_TAG_try_block:
+  case DW_TAG_partial_unit:
+    match_addr_range = true;
+    break;
+  case DW_TAG_lexical_block:
+  case DW_TAG_inlined_subroutine:
+    check_children = true;
+    match_addr_range = true;
+    break;
+  default:
+    break;
+  }
+
+  if (match_addr_range) {
+    DWARFRangeList ranges;
+    if (m_die->GetAttributeAddressRanges(m_cu, ranges,
+                                         /*check_hi_lo_pc=*/true) &&
+        ranges.FindEntryThatContains(address)) {
+      check_children = true;
+      switch (Tag()) {
+      default:
+        break;
+
+      case DW_TAG_inlined_subroutine: // Inlined Function
+      case DW_TAG_lexical_block:      // Block { } in code
+        result = *this;
+        break;
       }
+    } else {
+      check_children = false;
     }
   }
-  return DWARFDIE();
+
+  if (check_children) {
+    for (DWARFDIE child = GetFirstChild(); child; child = child.GetSibling()) {
+      if (DWARFDIE child_result = child.LookupDeepestBlock(address))
+        return child_result;
+    }
+  }
+  return result;
 }
 
 const char *DWARFDIE::GetMangledName() const {
@@ -333,15 +372,6 @@ std::vector<DWARFDIE> DWARFDIE::GetDeclContextDIEs() const {
   return result;
 }
 
-void DWARFDIE::GetDWARFDeclContext(DWARFDeclContext &dwarf_decl_ctx) const {
-  if (IsValid()) {
-    dwarf_decl_ctx.SetLanguage(GetLanguage());
-    m_die->GetDWARFDeclContext(GetCU(), dwarf_decl_ctx);
-  } else {
-    dwarf_decl_ctx.Clear();
-  }
-}
-
 void DWARFDIE::GetDeclContext(
     llvm::SmallVectorImpl<lldb_private::CompilerContext> &context) const {
   const dw_tag_t tag = Tag();
@@ -417,28 +447,4 @@ bool DWARFDIE::GetDIENamesAndRanges(
         call_file, call_line, call_column, frame_base);
   } else
     return false;
-}
-
-CompilerDecl DWARFDIE::GetDecl() const {
-  DWARFASTParser *dwarf_ast = GetDWARFParser();
-  if (dwarf_ast)
-    return dwarf_ast->GetDeclForUIDFromDWARF(*this);
-  else
-    return CompilerDecl();
-}
-
-CompilerDeclContext DWARFDIE::GetDeclContext() const {
-  DWARFASTParser *dwarf_ast = GetDWARFParser();
-  if (dwarf_ast)
-    return dwarf_ast->GetDeclContextForUIDFromDWARF(*this);
-  else
-    return CompilerDeclContext();
-}
-
-CompilerDeclContext DWARFDIE::GetContainingDeclContext() const {
-  DWARFASTParser *dwarf_ast = GetDWARFParser();
-  if (dwarf_ast)
-    return dwarf_ast->GetDeclContextContainingUIDFromDWARF(*this);
-  else
-    return CompilerDeclContext();
 }

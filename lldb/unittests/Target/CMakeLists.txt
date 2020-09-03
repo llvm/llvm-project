@@ -1,8 +1,10 @@
 add_lldb_unittest(TargetTests
+  ABITest.cpp
   ExecutionContextTest.cpp
   MemoryRegionInfoTest.cpp
   ModuleCacheTest.cpp
   PathMappingListTest.cpp
+  RemoteAwarePlatformTest.cpp
   StackFrameRecognizerTest.cpp
 
   LINK_LIBS
@@ -15,7 +17,6 @@ add_lldb_unittest(TargetTests
       lldbSymbol
       lldbUtility
       lldbUtilityHelpers
-      lldbPluginPlatformMacOSX
     LINK_COMPONENTS
       Support
   )

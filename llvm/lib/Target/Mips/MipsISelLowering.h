@@ -306,7 +306,7 @@ class TargetRegisterClass;
     /// Return the correct alignment for the current calling convention.
     Align getABIAlignmentForCallingConv(Type *ArgTy,
                                         DataLayout DL) const override {
-      const Align ABIAlign(DL.getABITypeAlignment(ArgTy));
+      const Align ABIAlign = DL.getABITypeAlign(ArgTy);
       if (ArgTy->isVectorTy())
         return std::min(ABIAlign, Align(8));
       return ABIAlign;
@@ -346,21 +346,21 @@ class TargetRegisterClass;
     void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                        SDNode *Node) const override;
 
-    void HandleByVal(CCState *, unsigned &, unsigned) const override;
+    void HandleByVal(CCState *, unsigned &, Align) const override;
 
-    Register getRegisterByName(const char* RegName, EVT VT,
+    Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
-    unsigned
+    Register
     getExceptionPointerRegister(const Constant *PersonalityFn) const override {
       return ABI.IsN64() ? Mips::A0_64 : Mips::A0;
     }
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
-    unsigned
+    Register
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
       return ABI.IsN64() ? Mips::A1_64 : Mips::A1;
     }
@@ -669,10 +669,7 @@ class TargetRegisterClass;
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    EVT getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
-                            unsigned SrcAlign,
-                            bool IsMemset, bool ZeroMemset,
-                            bool MemcpyStrSrc,
+    EVT getOptimalMemOpType(const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     /// isFPImmLegal - Returns true if the target can instruction select the
@@ -709,6 +706,10 @@ class TargetRegisterClass;
                                         bool isFPCmp, unsigned Opc) const;
     MachineBasicBlock *emitPseudoD_SELECT(MachineInstr &MI,
                                           MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitLDR_W(MachineInstr &MI, MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitLDR_D(MachineInstr &MI, MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitSTR_W(MachineInstr &MI, MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitSTR_D(MachineInstr &MI, MachineBasicBlock *BB) const;
   };
 
   /// Create MipsTargetLowering objects.

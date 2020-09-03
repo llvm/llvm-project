@@ -64,6 +64,8 @@ void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   UNIMPLEMENTED();
 }
 
+bool PlatformUnpoisonStacks() { return false; }
+
 void EarlyInit() {
   // Provide early initialization of shadow memory so that
   // instrumented code running before full initialzation will not

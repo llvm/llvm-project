@@ -2,7 +2,7 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=VI -check-prefix=FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mtriple=r600-- -mcpu=redwood -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=EG -check-prefix=FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 ; FUNC-LABEL: {{^}}ashr_v2i32:
 ; SI: v_ashr_i32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
@@ -248,7 +248,7 @@ define amdgpu_kernel void @s_ashr_32_i64(i64 addrspace(1)* %out, [8 x i32], i64 
 ; GCN: v_ashrrev_i32_e32 v[[SHIFT:[0-9]+]], 31, v[[HI]]
 ; GCN: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[HI]]:[[SHIFT]]{{\]}}
 define amdgpu_kernel void @v_ashr_32_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.in = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
   %a = load i64, i64 addrspace(1)* %gep.in
@@ -276,7 +276,7 @@ define amdgpu_kernel void @s_ashr_63_i64(i64 addrspace(1)* %out, [8 x i32], i64 
 ; GCN: v_mov_b32_e32 v[[COPY:[0-9]+]], v[[SHIFT]]
 ; GCN: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[SHIFT]]:[[COPY]]{{\]}}
 define amdgpu_kernel void @v_ashr_63_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.in = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
   %a = load i64, i64 addrspace(1)* %gep.in

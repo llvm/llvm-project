@@ -81,8 +81,16 @@ ExprResult Sema::ActOnNoexceptSpec(SourceLocation NoexceptLoc,
                                    ExceptionSpecificationType &EST) {
   // FIXME: This is bogus, a noexcept expression is not a condition.
   ExprResult Converted = CheckBooleanCondition(NoexceptLoc, NoexceptExpr);
-  if (Converted.isInvalid())
-    return Converted;
+  if (Converted.isInvalid()) {
+    EST = EST_NoexceptFalse;
+
+    // Fill in an expression of 'false' as a fixup.
+    auto *BoolExpr = new (Context)
+        CXXBoolLiteralExpr(false, Context.BoolTy, NoexceptExpr->getBeginLoc());
+    llvm::APSInt Value{1};
+    Value = 0;
+    return ConstantExpr::Create(Context, BoolExpr, APValue{Value});
+  }
 
   if (Converted.get()->isValueDependent()) {
     EST = EST_DependentNoexcept;
@@ -158,6 +166,14 @@ bool Sema::CheckSpecifiedExceptionType(QualType &T, SourceRange Range) {
         PointeeT->castAs<RecordType>()->isBeingDefined()) &&
       RequireCompleteType(Range.getBegin(), PointeeT, DiagID, Kind, Range))
     return ReturnValueOnError;
+
+  // The MSVC compatibility mode doesn't extend to sizeless types,
+  // so diagnose them separately.
+  if (PointeeT->isSizelessType() && Kind != 1) {
+    Diag(Range.getBegin(), diag::err_sizeless_in_exception_spec)
+        << (Kind == 2 ? 1 : 0) << PointeeT << Range;
+    return true;
+  }
 
   return false;
 }
@@ -983,10 +999,8 @@ static CanThrowResult canSubStmtsThrow(Sema &Self, const Stmt *S) {
   return R;
 }
 
-/// Determine whether the callee of a particular function call can throw.
-/// E and D are both optional, but at least one of E and Loc must be specified.
-static CanThrowResult canCalleeThrow(Sema &S, const Expr *E, const Decl *D,
-                                     SourceLocation Loc = SourceLocation()) {
+CanThrowResult Sema::canCalleeThrow(Sema &S, const Expr *E, const Decl *D,
+                                    SourceLocation Loc) {
   // As an extension, we assume that __attribute__((nothrow)) functions don't
   // throw.
   if (D && isa<FunctionDecl>(D) && D->hasAttr<NoThrowAttr>())
@@ -1032,7 +1046,8 @@ static CanThrowResult canCalleeThrow(Sema &S, const Expr *E, const Decl *D,
   if (!FT)
     return CT_Can;
 
-  FT = S.ResolveExceptionSpec(Loc.isInvalid() ? E->getBeginLoc() : Loc, FT);
+  if (Loc.isValid() || (Loc.isInvalid() && E))
+    FT = S.ResolveExceptionSpec(Loc.isInvalid() ? E->getBeginLoc() : Loc, FT);
   if (!FT)
     return CT_Can;
 
@@ -1053,7 +1068,7 @@ static CanThrowResult canVarDeclThrow(Sema &Self, const VarDecl *VD) {
             VD->getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl()) {
       if (auto *Dtor = RD->getDestructor()) {
         CT = mergeCanThrow(
-            CT, canCalleeThrow(Self, nullptr, Dtor, VD->getLocation()));
+            CT, Sema::canCalleeThrow(Self, nullptr, Dtor, VD->getLocation()));
       }
     }
   }
@@ -1273,6 +1288,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
 
   case Expr::CompoundLiteralExprClass:
   case Expr::CXXConstCastExprClass:
+  case Expr::CXXAddrspaceCastExprClass:
   case Expr::CXXReinterpretCastExprClass:
   case Expr::BuiltinBitCastExprClass:
       // FIXME: Properly determine whether a variably-modified type can throw.
@@ -1282,7 +1298,10 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
 
     // Some might be dependent for other reasons.
   case Expr::ArraySubscriptExprClass:
+  case Expr::MatrixSubscriptExprClass:
   case Expr::OMPArraySectionExprClass:
+  case Expr::OMPArrayShapingExprClass:
+  case Expr::OMPIteratorExprClass:
   case Expr::BinaryOperatorClass:
   case Expr::DependentCoawaitExprClass:
   case Expr::CompoundAssignOperatorClass:
@@ -1324,6 +1343,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::CXXUnresolvedConstructExprClass:
   case Expr::DependentScopeDeclRefExprClass:
   case Expr::CXXFoldExprClass:
+  case Expr::RecoveryExprClass:
     return CT_Dependent;
 
   case Expr::AsTypeExprClass:
@@ -1378,6 +1398,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::StringLiteralClass:
   case Expr::SourceLocExprClass:
   case Expr::ConceptSpecializationExprClass:
+  case Expr::RequiresExprClass:
     // These expressions can never throw.
     return CT_Cannot;
 
@@ -1421,6 +1442,8 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OMPDistributeParallelForSimdDirectiveClass:
   case Stmt::OMPDistributeSimdDirectiveClass:
   case Stmt::OMPFlushDirectiveClass:
+  case Stmt::OMPDepobjDirectiveClass:
+  case Stmt::OMPScanDirectiveClass:
   case Stmt::OMPForDirectiveClass:
   case Stmt::OMPForSimdDirectiveClass:
   case Stmt::OMPMasterDirectiveClass:

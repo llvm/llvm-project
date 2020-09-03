@@ -58,7 +58,7 @@ body: |
     ; SI: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; SI: $m0 = S_MOV_B32 -1
     ; SI: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
-    $vgpr0  = V_MOV_B32_e32 0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $m0 = S_MOV_B32 -1
     DS_GWS_INIT  $vgpr0, 0, 1, implicit $m0, implicit $exec
 

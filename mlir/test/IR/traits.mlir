@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK: succeededSameOperandsElementType
 func @succeededSameOperandsElementType(%t10x10 : tensor<10x10xf32>, %t1f: tensor<1xf32>, %v1: vector<1xf32>, %t1i: tensor<1xi32>, %sf: f32) {
@@ -24,7 +24,7 @@ func @failedSameOperandElementType(%t1f: tensor<1xf32>, %t1i: tensor<1xi32>) {
 // -----
 
 func @failedSameOperandAndResultElementType_no_operands() {
-  // expected-error@+1 {{expected 1 or more operands}}
+  // expected-error@+1 {{expected 2 operands, but found 0}}
   "test.same_operand_element_type"() : () -> tensor<1xf32>
 }
 
@@ -175,6 +175,39 @@ func @failedHasParent_wrong_parent() {
 
 // -----
 
+// CHECK: succeededParentOneOf
+func @succeededParentOneOf() {
+  "test.parent"() ({
+    "test.child_with_parent_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+   }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededParent1OneOf
+func @succeededParent1OneOf() {
+  "test.parent1"() ({
+    "test.child_with_parent_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+   }) : () -> ()
+  return
+}
+
+// -----
+
+func @failedParentOneOf_wrong_parent1() {
+  "some.otherop"() ({
+    // expected-error@+1 {{'test.child_with_parent_one_of' op expects parent op to be one of 'test.parent, test.parent1'}}
+    "test.child_with_parent_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+   }) : () -> ()
+}
+
+
+// -----
+
 func @failedSingleBlockImplicitTerminator_empty_block() {
    // expected-error@+1 {{'test.SingleBlockImplicitTerminator' op expects a non-empty block}}
   "test.SingleBlockImplicitTerminator"() ({
@@ -204,6 +237,30 @@ func @failedSingleBlockImplicitTerminator_missing_terminator() {
     "test.non_existent_op"() : () -> ()
   }) : () -> ()
 }
+
+// -----
+
+// Test the invariants of operations with the Symbol Trait.
+
+// expected-error@+1 {{requires string attribute 'sym_name'}}
+"test.symbol"() {} : () -> ()
+
+// -----
+
+// expected-error@+1 {{requires visibility attribute 'sym_visibility' to be a string attribute}}
+"test.symbol"() {sym_name = "foo_2", sym_visibility} : () -> ()
+
+// -----
+
+// expected-error@+1 {{visibility expected to be one of ["public", "private", "nested"]}}
+"test.symbol"() {sym_name = "foo_2", sym_visibility = "foo"} : () -> ()
+
+// -----
+
+"test.symbol"() {sym_name = "foo_3", sym_visibility = "nested"} : () -> ()
+"test.symbol"() {sym_name = "foo_4", sym_visibility = "private"} : () -> ()
+"test.symbol"() {sym_name = "foo_5", sym_visibility = "public"} : () -> ()
+"test.symbol"() {sym_name = "foo_6"} : () -> ()
 
 // -----
 

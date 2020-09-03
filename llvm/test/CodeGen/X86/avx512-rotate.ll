@@ -15,26 +15,26 @@ declare <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32>, <16 x i32
 define <16 x i32> @test_splat_rol_v16i32(<16 x i32> %x0, <16 x i32> %x1, i16 %x2) {
 ; KNL-LABEL: test_splat_rol_v16i32:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vprold $5, %zmm0, %zmm2
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vprold $5, %zmm0, %zmm1 {%k1}
-; KNL-NEXT:    vprold $5, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vprold $6, %zmm0, %zmm2 {%k1} {z}
+; KNL-NEXT:    vpaddd %zmm2, %zmm1, %zmm1
+; KNL-NEXT:    vprold $7, %zmm0, %zmm0
 ; KNL-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
-; KNL-NEXT:    vpaddd %zmm2, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_splat_rol_v16i32:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vprold $5, %zmm0, %zmm2
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vprold $5, %zmm0, %zmm1 {%k1}
-; SKX-NEXT:    vprold $5, %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    vprold $6, %zmm0, %zmm2 {%k1} {z}
+; SKX-NEXT:    vpaddd %zmm2, %zmm1, %zmm1
+; SKX-NEXT:    vprold $7, %zmm0, %zmm0
 ; SKX-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
-; SKX-NEXT:    vpaddd %zmm2, %zmm0, %zmm0
 ; SKX-NEXT:    retq
   %res = call <16 x i32> @llvm.x86.avx512.mask.prolv.d.512(<16 x i32> %x0, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>, <16 x i32> %x1, i16 %x2)
-  %res1 = call <16 x i32> @llvm.x86.avx512.mask.prolv.d.512(<16 x i32> %x0, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>, <16 x i32> zeroinitializer, i16 %x2)
-  %res2 = call <16 x i32> @llvm.x86.avx512.mask.prolv.d.512(<16 x i32> %x0, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>, <16 x i32> %x1, i16 -1)
+  %res1 = call <16 x i32> @llvm.x86.avx512.mask.prolv.d.512(<16 x i32> %x0, <16 x i32> <i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6>, <16 x i32> zeroinitializer, i16 %x2)
+  %res2 = call <16 x i32> @llvm.x86.avx512.mask.prolv.d.512(<16 x i32> %x0, <16 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>, <16 x i32> %x1, i16 -1)
   %res3 = add <16 x i32> %res, %res1
   %res4 = add <16 x i32> %res3, %res2
   ret <16 x i32> %res4
@@ -43,26 +43,26 @@ define <16 x i32> @test_splat_rol_v16i32(<16 x i32> %x0, <16 x i32> %x1, i16 %x2
 define <8 x i64>@test_splat_rol_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x2) {
 ; KNL-LABEL: test_splat_rol_v8i64:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vprolq $5, %zmm0, %zmm2
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vprolq $5, %zmm0, %zmm1 {%k1}
-; KNL-NEXT:    vprolq $5, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vprolq $6, %zmm0, %zmm2 {%k1} {z}
+; KNL-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
+; KNL-NEXT:    vprolq $7, %zmm0, %zmm0
 ; KNL-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
-; KNL-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_splat_rol_v8i64:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vprolq $5, %zmm0, %zmm2
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vprolq $5, %zmm0, %zmm1 {%k1}
-; SKX-NEXT:    vprolq $5, %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    vprolq $6, %zmm0, %zmm2 {%k1} {z}
+; SKX-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
+; SKX-NEXT:    vprolq $7, %zmm0, %zmm0
 ; SKX-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
-; SKX-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
 ; SKX-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.prolv.q.512(<8 x i64> %x0, <8 x i64> <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>, <8 x i64> %x1, i8 %x2)
-  %res1 = call <8 x i64> @llvm.x86.avx512.mask.prolv.q.512(<8 x i64> %x0, <8 x i64> <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>, <8 x i64> zeroinitializer, i8 %x2)
-  %res2 = call <8 x i64> @llvm.x86.avx512.mask.prolv.q.512(<8 x i64> %x0, <8 x i64> <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>, <8 x i64> %x1, i8 -1)
+  %res1 = call <8 x i64> @llvm.x86.avx512.mask.prolv.q.512(<8 x i64> %x0, <8 x i64> <i64 6, i64 6, i64 6, i64 6, i64 6, i64 6, i64 6, i64 6>, <8 x i64> zeroinitializer, i8 %x2)
+  %res2 = call <8 x i64> @llvm.x86.avx512.mask.prolv.q.512(<8 x i64> %x0, <8 x i64> <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>, <8 x i64> %x1, i8 -1)
   %res3 = add <8 x i64> %res, %res1
   %res4 = add <8 x i64> %res3, %res2
   ret <8 x i64> %res4
@@ -71,26 +71,26 @@ define <8 x i64>@test_splat_rol_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x2) {
 define <16 x i32> @test_splat_ror_v16i32(<16 x i32> %x0, <16 x i32> %x1, i16 %x2) {
 ; KNL-LABEL: test_splat_ror_v16i32:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vprord $5, %zmm0, %zmm2
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vprord $5, %zmm0, %zmm1 {%k1}
-; KNL-NEXT:    vprord $5, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vprord $6, %zmm0, %zmm2 {%k1} {z}
+; KNL-NEXT:    vpaddd %zmm2, %zmm1, %zmm1
+; KNL-NEXT:    vprord $7, %zmm0, %zmm0
 ; KNL-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
-; KNL-NEXT:    vpaddd %zmm2, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_splat_ror_v16i32:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vprord $5, %zmm0, %zmm2
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vprord $5, %zmm0, %zmm1 {%k1}
-; SKX-NEXT:    vprord $5, %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    vprord $6, %zmm0, %zmm2 {%k1} {z}
+; SKX-NEXT:    vpaddd %zmm2, %zmm1, %zmm1
+; SKX-NEXT:    vprord $7, %zmm0, %zmm0
 ; SKX-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
-; SKX-NEXT:    vpaddd %zmm2, %zmm0, %zmm0
 ; SKX-NEXT:    retq
   %res = call <16 x i32> @llvm.x86.avx512.mask.prorv.d.512(<16 x i32> %x0, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>, <16 x i32> %x1, i16 %x2)
-  %res1 = call <16 x i32> @llvm.x86.avx512.mask.prorv.d.512(<16 x i32> %x0, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>, <16 x i32> zeroinitializer, i16 %x2)
-  %res2 = call <16 x i32> @llvm.x86.avx512.mask.prorv.d.512(<16 x i32> %x0, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>, <16 x i32> %x1, i16 -1)
+  %res1 = call <16 x i32> @llvm.x86.avx512.mask.prorv.d.512(<16 x i32> %x0, <16 x i32> <i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6>, <16 x i32> zeroinitializer, i16 %x2)
+  %res2 = call <16 x i32> @llvm.x86.avx512.mask.prorv.d.512(<16 x i32> %x0, <16 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>, <16 x i32> %x1, i16 -1)
   %res3 = add <16 x i32> %res, %res1
   %res4 = add <16 x i32> %res3, %res2
   ret <16 x i32> %res4
@@ -99,26 +99,26 @@ define <16 x i32> @test_splat_ror_v16i32(<16 x i32> %x0, <16 x i32> %x1, i16 %x2
 define <8 x i64>@test_splat_ror_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x2) {
 ; KNL-LABEL: test_splat_ror_v8i64:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vprorq $5, %zmm0, %zmm2
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vprorq $5, %zmm0, %zmm1 {%k1}
-; KNL-NEXT:    vprorq $5, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vprorq $6, %zmm0, %zmm2 {%k1} {z}
+; KNL-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
+; KNL-NEXT:    vprorq $7, %zmm0, %zmm0
 ; KNL-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
-; KNL-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_splat_ror_v8i64:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vprorq $5, %zmm0, %zmm2
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vprorq $5, %zmm0, %zmm1 {%k1}
-; SKX-NEXT:    vprorq $5, %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    vprorq $6, %zmm0, %zmm2 {%k1} {z}
+; SKX-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
+; SKX-NEXT:    vprorq $7, %zmm0, %zmm0
 ; SKX-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
-; SKX-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
 ; SKX-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.prorv.q.512(<8 x i64> %x0, <8 x i64> <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>, <8 x i64> %x1, i8 %x2)
-  %res1 = call <8 x i64> @llvm.x86.avx512.mask.prorv.q.512(<8 x i64> %x0, <8 x i64> <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>, <8 x i64> zeroinitializer, i8 %x2)
-  %res2 = call <8 x i64> @llvm.x86.avx512.mask.prorv.q.512(<8 x i64> %x0, <8 x i64> <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>, <8 x i64> %x1, i8 -1)
+  %res1 = call <8 x i64> @llvm.x86.avx512.mask.prorv.q.512(<8 x i64> %x0, <8 x i64> <i64 6, i64 6, i64 6, i64 6, i64 6, i64 6, i64 6, i64 6>, <8 x i64> zeroinitializer, i8 %x2)
+  %res2 = call <8 x i64> @llvm.x86.avx512.mask.prorv.q.512(<8 x i64> %x0, <8 x i64> <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>, <8 x i64> %x1, i8 -1)
   %res3 = add <8 x i64> %res, %res1
   %res4 = add <8 x i64> %res3, %res2
   ret <8 x i64> %res4

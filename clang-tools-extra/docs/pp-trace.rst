@@ -123,7 +123,7 @@ name as the argument in the corresponding PPCallbacks callback function.
 Callback Details
 ----------------
 
-The following sections describe the pupose and output format for each callback.
+The following sections describe the purpose and output format for each callback.
 
 Click on the callback name in the section heading to see the Doxygen
 documentation for the callback.

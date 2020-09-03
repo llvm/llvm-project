@@ -1,5 +1,6 @@
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/ELFAttributes.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -34,14 +35,27 @@ bool testBuildAttr(unsigned Tag, unsigned Value,
     reinterpret_cast<const uint8_t*>(OS.str().c_str()), OS.str().size());
 
   ARMAttributeParser Parser;
-  Parser.Parse(Bytes, true);
+  cantFail(Parser.parse(Bytes, support::little));
 
-  return (Parser.hasAttribute(ExpectedTag) &&
-    Parser.getAttributeValue(ExpectedTag) == ExpectedValue);
+  Optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
+  return Attr.hasValue() && Attr.getValue() == ExpectedValue;
+}
+
+void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {
+  ARMAttributeParser parser;
+  Error e = parser.parse(bytes, support::little);
+  EXPECT_STREQ(toString(std::move(e)).c_str(), msg);
 }
 
 bool testTagString(unsigned Tag, const char *name) {
-  return ARMBuildAttrs::AttrTypeAsString(Tag).str() == name;
+  return ELFAttrs::attrTypeAsString(Tag, ARMBuildAttrs::ARMAttributeTags)
+             .str() == name;
+}
+
+TEST(ARMAttributeParser, UnknownCPU_arch) {
+  static const uint8_t bytes[] = {'A', 15, 0, 0, 0, 'a', 'e', 'a', 'b',
+                                  'i', 0,  1, 7, 0, 0,   0,   6,   22};
+  testParseError(bytes, "unknown CPU_arch value: 22");
 }
 
 TEST(CPUArchBuildAttr, testBuildAttr) {

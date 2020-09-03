@@ -1,6 +1,6 @@
 //===- Function.cpp - MLIR Function Classes -------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -9,12 +9,7 @@
 #include "mlir/IR/Function.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/FunctionImplementation.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/Module.h"
-#include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
@@ -29,8 +24,8 @@ using namespace mlir;
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       ArrayRef<NamedAttribute> attrs) {
   OperationState state(location, "func");
-  Builder builder(location->getContext());
-  FuncOp::build(&builder, state, name, type, attrs);
+  OpBuilder builder(location->getContext());
+  FuncOp::build(builder, state, name, type, attrs);
   return cast<FuncOp>(Operation::create(state));
 }
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
@@ -40,29 +35,27 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
 }
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       ArrayRef<NamedAttribute> attrs,
-                      ArrayRef<NamedAttributeList> argAttrs) {
+                      ArrayRef<MutableDictionaryAttr> argAttrs) {
   FuncOp func = create(location, name, type, attrs);
   func.setAllArgAttrs(argAttrs);
   return func;
 }
 
-void FuncOp::build(Builder *builder, OperationState &result, StringRef name,
-                   FunctionType type, ArrayRef<NamedAttribute> attrs) {
+void FuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
+                   FunctionType type, ArrayRef<NamedAttribute> attrs,
+                   ArrayRef<MutableDictionaryAttr> argAttrs) {
   result.addAttribute(SymbolTable::getSymbolAttrName(),
-                      builder->getStringAttr(name));
+                      builder.getStringAttr(name));
   result.addAttribute(getTypeAttrName(), TypeAttr::get(type));
   result.attributes.append(attrs.begin(), attrs.end());
   result.addRegion();
-}
 
-void FuncOp::build(Builder *builder, OperationState &result, StringRef name,
-                   FunctionType type, ArrayRef<NamedAttribute> attrs,
-                   ArrayRef<NamedAttributeList> argAttrs) {
-  build(builder, result, name, type, attrs);
+  if (argAttrs.empty())
+    return;
   assert(type.getNumInputs() == argAttrs.size());
   SmallString<8> argAttrName;
   for (unsigned i = 0, e = type.getNumInputs(); i != e; ++i)
-    if (auto argDict = argAttrs[i].getDictionary())
+    if (auto argDict = argAttrs[i].getDictionary(builder.getContext()))
       result.addAttribute(getArgAttrName(i, argAttrName), argDict);
 }
 
@@ -96,9 +89,9 @@ LogicalResult FuncOp::verify() {
   auto fnInputTypes = getType().getInputs();
   Block &entryBlock = front();
   for (unsigned i = 0, e = entryBlock.getNumArguments(); i != e; ++i)
-    if (fnInputTypes[i] != entryBlock.getArgument(i)->getType())
+    if (fnInputTypes[i] != entryBlock.getArgument(i).getType())
       return emitOpError("type of entry block argument #")
-             << i << '(' << entryBlock.getArgument(i)->getType()
+             << i << '(' << entryBlock.getArgument(i).getType()
              << ") must match the type of the corresponding argument in "
              << "function signature(" << fnInputTypes[i] << ')';
 
@@ -120,7 +113,7 @@ void FuncOp::eraseArguments(ArrayRef<unsigned> argIndices) {
 
   // Update the function type and arg attrs.
   SmallVector<Type, 4> newInputTypes;
-  SmallVector<NamedAttributeList, 4> newArgAttrs;
+  SmallVector<MutableDictionaryAttr, 4> newArgAttrs;
   for (int i = 0; i < originalNumArgs; i++) {
     if (shouldEraseArg(i))
       continue;
@@ -137,24 +130,6 @@ void FuncOp::eraseArguments(ArrayRef<unsigned> argIndices) {
   for (int i = 0; i < originalNumArgs; i++)
     if (shouldEraseArg(originalNumArgs - i - 1))
       entry.eraseArgument(originalNumArgs - i - 1);
-}
-
-/// Add an entry block to an empty function, and set up the block arguments
-/// to match the signature of the function.
-Block *FuncOp::addEntryBlock() {
-  assert(empty() && "function already has an entry block");
-  auto *entry = new Block();
-  push_back(entry);
-  entry->addArguments(getType().getInputs());
-  return entry;
-}
-
-/// Add a normal block to the end of the function's block list. The function
-/// should at least already have an entry block.
-Block *FuncOp::addBlock() {
-  assert(!empty() && "function should at least have an entry block");
-  push_back(new Block());
-  return &back();
 }
 
 /// Clone the internal blocks from this function into dest and all attributes

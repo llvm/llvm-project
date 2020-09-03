@@ -37,7 +37,7 @@ define i64 @const_i64() {
 define i64 @const_i64_u32() {
 ; ALL-LABEL: const_i64_u32:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movq $1879048192, %rax # imm = 0x70000000
+; ALL-NEXT:    movl $1879048192, %eax # imm = 0x70000000
 ; ALL-NEXT:    retq
   ret i64 1879048192
 }

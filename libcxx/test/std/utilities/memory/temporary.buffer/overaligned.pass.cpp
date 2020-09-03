@@ -6,7 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
+
+// Aligned allocations are not supported on macOS < 10.13
+// Note: use 'unsupported' instead of 'xfail' to ensure
+// we won't pass prior to c++17.
+// UNSUPPORTED: with_system_cxx_lib=macosx10.12
+// UNSUPPORTED: with_system_cxx_lib=macosx10.11
+// UNSUPPORTED: with_system_cxx_lib=macosx10.10
+// UNSUPPORTED: with_system_cxx_lib=macosx10.9
+
 
 // <memory>
 

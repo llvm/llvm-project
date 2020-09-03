@@ -183,7 +183,7 @@ FSEventStreamRef createFSEventStream(
       if (::realpath(P.begin(), Buffer) != nullptr)
         RealPath = Buffer;
       else
-        RealPath = Path;
+        RealPath = Path.str();
     }
 
     FSEventStreamContext Context;
@@ -231,7 +231,7 @@ llvm::Expected<std::unique_ptr<DirectoryWatcher>> clang::DirectoryWatcher::creat
 
   // We need to copy the data so the lifetime is ok after a const copy is made
   // for the block.
-  const std::string CopiedPath = Path;
+  const std::string CopiedPath = Path.str();
 
   auto InitWork = ^{
     // We need to start watching the directory before we start scanning in order

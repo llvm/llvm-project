@@ -11,7 +11,7 @@ Nothrow S::*c;
 Throw S::*d;
 
 void test() {
-  a = b; // expected-error {{assigning to 'Nothrow *' (aka 'void (*)() noexcept') from incompatible type 'Throw *' (aka 'void (*)()'): different exception specifications}}
+  a = b; // expected-error {{incompatible function pointer types assigning to 'Nothrow *' (aka 'void (*)() noexcept') from 'Throw *' (aka 'void (*)()')}}
   b = a;
   c = d; // expected-error {{assigning to 'Nothrow S::*' from incompatible type 'Throw S::*': different exception specifications}}
   d = c;

@@ -10,5 +10,5 @@ SECTIONS {
   PROVIDE_HIDDEN(_end_sec = ADDR(.text) + SIZEOF(.text));
 }
 
-# CHECK:       0000000000201054         .text     00000000 .hidden _begin_sec
-# CHECK-NEXT:  0000000000201055         .text     00000000 .hidden _end_sec
+# CHECK:       0000000000201054 l       .text  0000000000000000 .hidden _begin_sec
+# CHECK-NEXT:  0000000000201055 l       .text  0000000000000000 .hidden _end_sec

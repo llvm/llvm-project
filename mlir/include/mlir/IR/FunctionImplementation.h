@@ -1,6 +1,6 @@
 //===- FunctionImplementation.h - Function-like Op utilities ----*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -38,8 +38,8 @@ private:
 /// Internally, argument and result attributes are stored as dict attributes
 /// with special names given by getResultAttrName, getArgumentAttrName.
 void addArgAndResultAttrs(Builder &builder, OperationState &result,
-                          ArrayRef<SmallVector<NamedAttribute, 2>> argAttrs,
-                          ArrayRef<SmallVector<NamedAttribute, 2>> resultAttrs);
+                          ArrayRef<NamedAttrList> argAttrs,
+                          ArrayRef<NamedAttrList> resultAttrs);
 
 /// Callback type for `parseFunctionLikeOp`, the callback should produce the
 /// type that will be associated with a function-like operation from lists of
@@ -53,13 +53,13 @@ using FuncTypeBuilder = function_ref<Type(
 /// indicates whether functions with variadic arguments are supported. The
 /// trailing arguments are populated by this function with names, types and
 /// attributes of the arguments and those of the results.
-ParseResult parseFunctionSignature(
-    OpAsmParser &parser, bool allowVariadic,
-    SmallVectorImpl<OpAsmParser::OperandType> &argNames,
-    SmallVectorImpl<Type> &argTypes,
-    SmallVectorImpl<SmallVector<NamedAttribute, 2>> &argAttrs, bool &isVariadic,
-    SmallVectorImpl<Type> &resultTypes,
-    SmallVectorImpl<SmallVector<NamedAttribute, 2>> &resultAttrs);
+ParseResult
+parseFunctionSignature(OpAsmParser &parser, bool allowVariadic,
+                       SmallVectorImpl<OpAsmParser::OperandType> &argNames,
+                       SmallVectorImpl<Type> &argTypes,
+                       SmallVectorImpl<NamedAttrList> &argAttrs,
+                       bool &isVariadic, SmallVectorImpl<Type> &resultTypes,
+                       SmallVectorImpl<NamedAttrList> &resultAttrs);
 
 /// Parser implementation for function-like operations.  Uses
 /// `funcTypeBuilder` to construct the custom function type given lists of

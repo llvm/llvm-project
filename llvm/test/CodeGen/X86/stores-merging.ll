@@ -26,8 +26,9 @@ define void @redundant_stores_merging() {
 define void @redundant_stores_merging_reverse() {
 ; CHECK-LABEL: redundant_stores_merging_reverse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $1958505086977, %rax # imm = 0x1C800000001
+; CHECK-NEXT:    movabsq $528280977409, %rax # imm = 0x7B00000001
 ; CHECK-NEXT:    movq %rax, e+{{.*}}(%rip)
+; CHECK-NEXT:    movl $456, e+{{.*}}(%rip) # imm = 0x1C8
 ; CHECK-NEXT:    retq
   store i32 123, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
   store i32 456, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
@@ -219,3 +220,211 @@ define void @extract_vector_store_32_consecutive_bytes(<4 x i64> %v, i8* %ptr) #
   ret void
 }
 
+; https://bugs.llvm.org/show_bug.cgi?id=43446
+define void @pr43446_0(i64 %x) {
+; CHECK-LABEL: pr43446_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb $1, (%rdi)
+; CHECK-NEXT:    retq
+  %a = inttoptr i64 %x to i8*
+  store i8 -2, i8* %a, align 1
+  %b = inttoptr i64 %x to i1*
+  store i1 true, i1* %b, align 1
+  ret void
+}
+define void @pr43446_1(i8* %a) {
+; CHECK-LABEL: pr43446_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb $1, (%rdi)
+; CHECK-NEXT:    retq
+  store i8 -2, i8* %a, align 1
+  %b = bitcast i8* %a to i1*
+  store i1 true, i1* %b, align 1
+  ret void
+}
+
+define void @rotate16_in_place(i8* %p) {
+; CHECK-LABEL: rotate16_in_place:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rolw $8, (%rdi)
+; CHECK-NEXT:    retq
+  %p0 = getelementptr i8, i8* %p, i64 0
+  %p1 = getelementptr i8, i8* %p, i64 1
+  %i0 = load i8, i8* %p0, align 1
+  %i1 = load i8, i8* %p1, align 1
+  store i8 %i1, i8* %p0, align 1
+  store i8 %i0, i8* %p1, align 1
+  ret void
+}
+
+define void @rotate16(i8* %p, i8* %q) {
+; CHECK-LABEL: rotate16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    rolw $8, %ax
+; CHECK-NEXT:    movw %ax, (%rsi)
+; CHECK-NEXT:    retq
+  %p0 = getelementptr i8, i8* %p, i64 0
+  %p1 = getelementptr i8, i8* %p, i64 1
+  %q0 = getelementptr i8, i8* %q, i64 0
+  %q1 = getelementptr i8, i8* %q, i64 1
+  %i0 = load i8, i8* %p0, align 1
+  %i1 = load i8, i8* %p1, align 1
+  store i8 %i1, i8* %q0, align 1
+  store i8 %i0, i8* %q1, align 1
+  ret void
+}
+
+define void @rotate32_in_place(i16* %p) {
+; CHECK-LABEL: rotate32_in_place:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    roll $16, (%rdi)
+; CHECK-NEXT:    retq
+  %p0 = getelementptr i16, i16* %p, i64 0
+  %p1 = getelementptr i16, i16* %p, i64 1
+  %i0 = load i16, i16* %p0, align 2
+  %i1 = load i16, i16* %p1, align 2
+  store i16 %i1, i16* %p0, align 2
+  store i16 %i0, i16* %p1, align 2
+  ret void
+}
+
+define void @rotate32(i16* %p) {
+; CHECK-LABEL: rotate32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    roll $16, %eax
+; CHECK-NEXT:    movl %eax, 84(%rdi)
+; CHECK-NEXT:    retq
+  %p0 = getelementptr i16, i16* %p, i64 0
+  %p1 = getelementptr i16, i16* %p, i64 1
+  %p42 = getelementptr i16, i16* %p, i64 42
+  %p43 = getelementptr i16, i16* %p, i64 43
+  %i0 = load i16, i16* %p0, align 2
+  %i1 = load i16, i16* %p1, align 2
+  store i16 %i1, i16* %p42, align 2
+  store i16 %i0, i16* %p43, align 2
+  ret void
+}
+
+define void @rotate64_in_place(i32* %p) {
+; CHECK-LABEL: rotate64_in_place:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rolq $32, (%rdi)
+; CHECK-NEXT:    retq
+  %p0 = getelementptr i32, i32* %p, i64 0
+  %p1 = getelementptr i32, i32* %p, i64 1
+  %i0 = load i32, i32* %p0, align 4
+  %i1 = load i32, i32* %p1, align 4
+  store i32 %i1, i32* %p0, align 4
+  store i32 %i0, i32* %p1, align 4
+  ret void
+}
+
+define void @rotate64(i32* %p) {
+; CHECK-LABEL: rotate64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    rolq $32, %rax
+; CHECK-NEXT:    movq %rax, 8(%rdi)
+; CHECK-NEXT:    retq
+  %p0 = getelementptr i32, i32* %p, i64 0
+  %p1 = getelementptr i32, i32* %p, i64 1
+  %p2 = getelementptr i32, i32* %p, i64 2
+  %p3 = getelementptr i32, i32* %p, i64 3
+  %i0 = load i32, i32* %p0, align 4
+  %i1 = load i32, i32* %p1, align 4
+  store i32 %i1, i32* %p2, align 4
+  store i32 %i0, i32* %p3, align 4
+  ret void
+}
+
+define void @rotate64_iterate(i16* %p) {
+; CHECK-LABEL: rotate64_iterate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    rolq $32, %rax
+; CHECK-NEXT:    movq %rax, 84(%rdi)
+; CHECK-NEXT:    retq
+  %p0 = getelementptr i16, i16* %p, i64 0
+  %p1 = getelementptr i16, i16* %p, i64 1
+  %p2 = getelementptr i16, i16* %p, i64 2
+  %p3 = getelementptr i16, i16* %p, i64 3
+  %p42 = getelementptr i16, i16* %p, i64 42
+  %p43 = getelementptr i16, i16* %p, i64 43
+  %p44 = getelementptr i16, i16* %p, i64 44
+  %p45 = getelementptr i16, i16* %p, i64 45
+  %i0 = load i16, i16* %p0, align 2
+  %i1 = load i16, i16* %p1, align 2
+  %i2 = load i16, i16* %p2, align 2
+  %i3 = load i16, i16* %p3, align 2
+  store i16 %i2, i16* %p42, align 2
+  store i16 %i3, i16* %p43, align 2
+  store i16 %i0, i16* %p44, align 2
+  store i16 %i1, i16* %p45, align 2
+  ret void
+}
+
+; TODO: recognize this as 2 rotates?
+
+define void @rotate32_consecutive(i16* %p) {
+; CHECK-LABEL: rotate32_consecutive:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    movzwl 2(%rdi), %ecx
+; CHECK-NEXT:    movzwl 4(%rdi), %edx
+; CHECK-NEXT:    movzwl 6(%rdi), %esi
+; CHECK-NEXT:    movw %cx, 84(%rdi)
+; CHECK-NEXT:    movw %ax, 86(%rdi)
+; CHECK-NEXT:    movw %si, 88(%rdi)
+; CHECK-NEXT:    movw %dx, 90(%rdi)
+; CHECK-NEXT:    retq
+  %p0 = getelementptr i16, i16* %p, i64 0
+  %p1 = getelementptr i16, i16* %p, i64 1
+  %p2 = getelementptr i16, i16* %p, i64 2
+  %p3 = getelementptr i16, i16* %p, i64 3
+  %p42 = getelementptr i16, i16* %p, i64 42
+  %p43 = getelementptr i16, i16* %p, i64 43
+  %p44 = getelementptr i16, i16* %p, i64 44
+  %p45 = getelementptr i16, i16* %p, i64 45
+  %i0 = load i16, i16* %p0, align 2
+  %i1 = load i16, i16* %p1, align 2
+  %i2 = load i16, i16* %p2, align 2
+  %i3 = load i16, i16* %p3, align 2
+  store i16 %i1, i16* %p42, align 2
+  store i16 %i0, i16* %p43, align 2
+  store i16 %i3, i16* %p44, align 2
+  store i16 %i2, i16* %p45, align 2
+  ret void
+}
+
+; Same as above, but now the stores are not all consecutive.
+
+define void @rotate32_twice(i16* %p) {
+; CHECK-LABEL: rotate32_twice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    movl 4(%rdi), %ecx
+; CHECK-NEXT:    roll $16, %eax
+; CHECK-NEXT:    roll $16, %ecx
+; CHECK-NEXT:    movl %eax, 84(%rdi)
+; CHECK-NEXT:    movl %ecx, 108(%rdi)
+; CHECK-NEXT:    retq
+  %p0 = getelementptr i16, i16* %p, i64 0
+  %p1 = getelementptr i16, i16* %p, i64 1
+  %p2 = getelementptr i16, i16* %p, i64 2
+  %p3 = getelementptr i16, i16* %p, i64 3
+  %p42 = getelementptr i16, i16* %p, i64 42
+  %p43 = getelementptr i16, i16* %p, i64 43
+  %p54 = getelementptr i16, i16* %p, i64 54
+  %p55 = getelementptr i16, i16* %p, i64 55
+  %i0 = load i16, i16* %p0, align 2
+  %i1 = load i16, i16* %p1, align 2
+  %i2 = load i16, i16* %p2, align 2
+  %i3 = load i16, i16* %p3, align 2
+  store i16 %i1, i16* %p42, align 2
+  store i16 %i0, i16* %p43, align 2
+  store i16 %i3, i16* %p54, align 2
+  store i16 %i2, i16* %p55, align 2
+  ret void
+}

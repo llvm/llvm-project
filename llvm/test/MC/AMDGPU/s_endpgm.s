@@ -1,6 +1,6 @@
 // RUN: llvm-mc -arch=amdgcn %s | FileCheck -strict-whitespace %s -check-prefix=WHITESPACE
 // RUN: llvm-mc -arch=amdgcn -show-encoding %s | FileCheck %s --check-prefix=GCN
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -filetype=obj %s | llvm-objcopy -S -K keep_symbol - | llvm-objdump -disassemble -mcpu=gfx900 - | FileCheck %s --check-prefix=BIN
+// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -filetype=obj %s | llvm-objcopy -S -K keep_symbol - | llvm-objdump -d --mcpu=gfx900 - | FileCheck %s --check-prefix=BIN
 
 // WHITESPACE: s_endpgm{{$}}
 // GCN: s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]

@@ -1,6 +1,6 @@
 //===- LinalgOps.h - Linalg Operations --------------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgTraits.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -21,10 +22,21 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Interfaces/CopyOpInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {
 namespace linalg {
+
+class ConvOp;
+class PoolingMaxOp;
+class PoolingMinOp;
+class PoolingSumOp;
+
+using ReassociationIndices = SmallVector<int64_t, 2>;
+using ReassociationExprs = SmallVector<AffineExpr, 2>;
 
 /// Returns the name mangled library call name to disambiguate between different
 /// overloads at the C level. The name mangling scheme is basic and uses MLIR
@@ -51,23 +63,27 @@ namespace linalg {
 ///   name mangles into `linalg_matmul_viewxxf32_viewxxf32_viewxxf32_impl`
 std::string generateLibraryCallName(Operation *op);
 
-/// Returns the list of maps that map loops to operands of a Linalg op.
-/// The i-th affine map identifies loop indices to subscripts that are used when
-/// accessing the i-th operand.
-/// For instance, a matmul that can be written in index notation as:
-/// `A(i, k) * B(k, j) -> C(i, j)` will have the following, ordered, list of
-/// affine maps:
-///
-/// ```mlir
-///    (
-///      (i, j, k) -> (i, k),
-///      (i, j, k) -> (k, j),
-///      (i, j, k) -> (i, j)
-///    )
-/// ```
-///
-/// Only permutation maps are currently supported.
-SmallVector<AffineMap, 4> loopToOperandRangesMaps(Operation *op);
+/// Returns `num` AffineDimExpr dimensions at positions
+///   [startIdx, startIdx + num) and increments `startIdx` to `startIdx + num`.
+SmallVector<AffineExpr, 4> makeAffineDimExprs(unsigned num, unsigned &startIdx,
+                                              MLIRContext *context);
+
+/// Builds the indexing expressions for a ConvOp/PoolingOp `op`. Returns the
+/// vector of AffineMaps representing:
+///   `stride[i] * outputDims[i] + dilation[i] * windowDims[i] - pad_low[i]`
+template <typename PoolingOp>
+extern SmallVector<AffineExpr, 4>
+weightedPoolingInputIndex(PoolingOp op, ArrayRef<AffineExpr> outputDims,
+                          ArrayRef<AffineExpr> windowDims);
+
+/// Returns `maybeMap.get()` if `maybeMap` is set, otherwise returns the
+/// symbol-less identity map of `rank`.
+AffineMap extractOrIdentityMap(Optional<AffineMap> maybeMap, unsigned rank,
+                               MLIRContext *context);
+
+/// Return the vector that is the concatenation of `a` and `b`.
+SmallVector<AffineExpr, 4> concat(ArrayRef<AffineExpr> a,
+                                  ArrayRef<AffineExpr> b);
 
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOpsInterfaces.h.inc"
 

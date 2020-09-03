@@ -57,14 +57,14 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.expect('frame variable ii',
-                    substrs=[multimap, 'size=2',
-                             '[0] = ',
-                             'first = 0',
-                             'second = 0',
-                             '[1] = ',
-                             'first = 1',
-                             'second = 1'])
+        self.expect(
+            'frame variable ii',
+            substrs=[
+                multimap,
+                'size=2',
+                '[0] = (first = 0, second = 0)',
+                '[1] = (first = 1, second = 1)',
+            ])
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
@@ -138,35 +138,24 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.expect("frame variable si",
-                    substrs=[multimap, 'size=4',
-                             '[0] = ',
-                             'first = \"zero\"',
-                             'second = 0',
-                             '[1] = ',
-                             'first = \"one\"',
-                             'second = 1',
-                             '[2] = ',
-                             'first = \"two\"',
-                             'second = 2',
-                             '[3] = ',
-                             'first = \"three\"',
-                             'second = 3'])
+        self.expect(
+            "frame variable si",
+            substrs=[
+                multimap,
+                'size=4',
+                '[0] = (first = "one", second = 1)',
+                '[1] = (first = "three", second = 3)',
+                '[2] = (first = "two", second = 2)',
+                '[3] = (first = "zero", second = 0)',
+            ])
 
         self.expect("p si",
                     substrs=[multimap, 'size=4',
-                             '[0] = ',
-                             'first = \"zero\"',
-                             'second = 0',
-                             '[1] = ',
-                             'first = \"one\"',
-                             'second = 1',
-                             '[2] = ',
-                             'first = \"two\"',
-                             'second = 2',
-                             '[3] = ',
-                             'first = \"three\"',
-                             'second = 3'])
+                '[0] = (first = "one", second = 1)',
+                '[1] = (first = "three", second = 3)',
+                '[2] = (first = "two", second = 2)',
+                '[3] = (first = "zero", second = 0)',
+            ])
 
         # check that MightHaveChildren() gets it right
         self.assertTrue(
@@ -200,35 +189,27 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.expect("frame variable is",
-                    substrs=[multimap, 'size=4',
-                             '[0] = ',
-                             'second = \"goofy\"',
-                             'first = 85',
-                             '[1] = ',
-                             'second = \"is\"',
-                             'first = 1',
-                             '[2] = ',
-                             'second = \"smart\"',
-                             'first = 2',
-                             '[3] = ',
-                             'second = \"!!!\"',
-                             'first = 3'])
+        self.expect(
+            "frame variable is",
+            substrs=[
+                multimap,
+                'size=4',
+                '[0] = (first = 1, second = "is")',
+                '[1] = (first = 2, second = "smart")',
+                '[2] = (first = 3, second = "!!!")',
+                '[3] = (first = 85, second = "goofy")',
+            ])
 
-        self.expect("p is",
-                    substrs=[multimap, 'size=4',
-                             '[0] = ',
-                             'second = \"goofy\"',
-                             'first = 85',
-                             '[1] = ',
-                             'second = \"is\"',
-                             'first = 1',
-                             '[2] = ',
-                             'second = \"smart\"',
-                             'first = 2',
-                             '[3] = ',
-                             'second = \"!!!\"',
-                             'first = 3'])
+        self.expect(
+            "p is",
+            substrs=[
+                multimap,
+                'size=4',
+                '[0] = (first = 1, second = "is")',
+                '[1] = (first = 2, second = "smart")',
+                '[2] = (first = 3, second = "!!!")',
+                '[3] = (first = 85, second = "goofy")',
+            ])
 
         # check that MightHaveChildren() gets it right
         self.assertTrue(
@@ -262,29 +243,25 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.expect("frame variable ss",
-                    substrs=[multimap, 'size=3',
-                             '[0] = ',
-                             'second = \"hello\"',
-                             'first = \"ciao\"',
-                             '[1] = ',
-                             'second = \"house\"',
-                             'first = \"casa\"',
-                             '[2] = ',
-                             'second = \"cat\"',
-                             'first = \"gatto\"'])
+        self.expect(
+            "frame variable ss",
+            substrs=[
+                multimap,
+                'size=3',
+                '[0] = (first = "casa", second = "house")',
+                '[1] = (first = "ciao", second = "hello")',
+                '[2] = (first = "gatto", second = "cat")',
+            ])
 
-        self.expect("p ss",
-                    substrs=[multimap, 'size=3',
-                             '[0] = ',
-                             'second = \"hello\"',
-                             'first = \"ciao\"',
-                             '[1] = ',
-                             'second = \"house\"',
-                             'first = \"casa\"',
-                             '[2] = ',
-                             'second = \"cat\"',
-                             'first = \"gatto\"'])
+        self.expect(
+            "p ss",
+            substrs=[
+                multimap,
+                'size=3',
+                '[0] = (first = "casa", second = "house")',
+                '[1] = (first = "ciao", second = "hello")',
+                '[2] = (first = "gatto", second = "cat")',
+            ])
 
         # check that MightHaveChildren() gets it right
         self.assertTrue(

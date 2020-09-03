@@ -14,7 +14,7 @@
 
 ; Check that 'barAlias' and 'varAlias' were not inlined.
 ; RUN: llvm-objdump -d %t2.o.1 | FileCheck %s
-; CHECK:      zed:
+; CHECK:      <zed>:
 ; CHECK-NEXT:  {{.*}}  pushq
 ; CHECK-NEXT:  {{.*}}  callq   0
 ; CHECK-NEXT:   movq  (%rip), %rax

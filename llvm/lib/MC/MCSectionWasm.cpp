@@ -10,6 +10,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -48,8 +49,8 @@ void MCSectionWasm::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                          raw_ostream &OS,
                                          const MCExpr *Subsection) const {
 
-  if (shouldOmitSectionDirective(SectionName, MAI)) {
-    OS << '\t' << getSectionName();
+  if (shouldOmitSectionDirective(getName(), MAI)) {
+    OS << '\t' << getName();
     if (Subsection) {
       OS << '\t';
       Subsection->print(OS, &MAI);
@@ -59,7 +60,7 @@ void MCSectionWasm::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
 
   OS << "\t.section\t";
-  printName(OS, getSectionName());
+  printName(OS, getName());
   OS << ",\"";
 
   if (IsPassive)

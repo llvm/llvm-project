@@ -300,8 +300,7 @@ ConvertTypeToDiagnosticString(ASTContext &Context, QualType Ty,
     // Give some additional info on vector types. These are either not desugared
     // or displaying complex __attribute__ expressions so add details of the
     // type and element count.
-    if (Ty->isVectorType()) {
-      const VectorType *VTy = Ty->getAs<VectorType>();
+    if (const auto *VTy = Ty->getAs<VectorType>()) {
       std::string DecoratedString;
       llvm::raw_string_ostream OS(DecoratedString);
       const char *Values = VTy->getNumElements() > 1 ? "values" : "value";
@@ -604,8 +603,7 @@ class TemplateDiff {
     unsigned ReadNode;
 
   public:
-    DiffTree() :
-        CurrentNode(0), NextFreeNode(1) {
+    DiffTree() : CurrentNode(0), NextFreeNode(1), ReadNode(0) {
       FlatTree.push_back(DiffNode());
     }
 
@@ -1717,8 +1715,9 @@ class TemplateDiff {
                              bool FromDefault, bool ToDefault, bool Same) {
     assert((FromTD || ToTD) && "Only one template argument may be missing.");
 
-    std::string FromName = FromTD ? FromTD->getName() : "(no argument)";
-    std::string ToName = ToTD ? ToTD->getName() : "(no argument)";
+    std::string FromName =
+        std::string(FromTD ? FromTD->getName() : "(no argument)");
+    std::string ToName = std::string(ToTD ? ToTD->getName() : "(no argument)");
     if (FromTD && ToTD && FromName == ToName) {
       FromName = FromTD->getQualifiedNameAsString();
       ToName = ToTD->getQualifiedNameAsString();

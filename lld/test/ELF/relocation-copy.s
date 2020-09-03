@@ -4,7 +4,7 @@
 // RUN: ld.lld -shared %t2.o -soname=so -o %t.so
 // RUN: ld.lld %t.o %t.so -o %t3
 // RUN: llvm-readobj -S -r --expand-relocs %t3 | FileCheck %s
-// RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t3 | FileCheck -check-prefix=CODE %s
+// RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t3 | FileCheck --check-prefix=CODE %s
 
 .text
 .global _start
@@ -56,7 +56,7 @@ movl $z, %edx
 // 16 is alignment here
 // CODE: Disassembly of section .text:
 // CODE-EMPTY:
-// CODE-NEXT: _start:
+// CODE-NEXT: <_start>:
 // CODE-NEXT:   movl $0x5, 0x203400
 // CODE-NEXT:   movl $0x7, 0x203410
 // CODE-NEXT:   movl $0x9, 0x203414

@@ -47,7 +47,7 @@
 # CHECK_SWIFT: Latency    : 3
 # CHECK_R52:   Latency    : 4
 #
-# CHECK :      SU(6):   %6 = t2ADDrr %3:rgpr, %3:rgpr, 14, $noreg, $noreg
+# CHECK:       SU(6):   %6:rgpr = t2ADDrr %3:rgpr, %3:rgpr, 14, $noreg, $noreg
 # CHECK_A9:    Latency    : 1
 # CHECK_SWIFT: Latency    : 1
 # CHECK_R52:   Latency    : 3

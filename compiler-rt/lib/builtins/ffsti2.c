@@ -17,7 +17,7 @@
 // Returns: the index of the least significant 1-bit in a, or
 // the value zero if a is zero. The least significant bit is index one.
 
-COMPILER_RT_ABI si_int __ffsti2(ti_int a) {
+COMPILER_RT_ABI int __ffsti2(ti_int a) {
   twords x;
   x.all = a;
   if (x.s.low == 0) {

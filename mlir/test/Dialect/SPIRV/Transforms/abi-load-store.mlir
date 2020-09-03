@@ -1,7 +1,14 @@
 // RUN: mlir-opt -spirv-lower-abi-attrs -verify-diagnostics %s -o - | FileCheck %s
 
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
 // CHECK-LABEL: spv.module
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // CHECK-DAG: spv.globalVariable [[WORKGROUPSIZE:@.*]] built_in("WorkgroupSize")
   spv.globalVariable @__builtin_var_WorkgroupSize__ built_in("WorkgroupSize") : !spv.ptr<vector<3xi32>, Input>
   // CHECK-DAG: spv.globalVariable [[NUMWORKGROUPS:@.*]] built_in("NumWorkgroups")
@@ -10,42 +17,29 @@ spv.module "Logical" "GLSL450" {
   spv.globalVariable @__builtin_var_LocalInvocationId__ built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>
   // CHECK-DAG: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
   spv.globalVariable @__builtin_var_WorkgroupId__ built_in("WorkgroupId") : !spv.ptr<vector<3xi32>, Input>
-  // CHECK-DAG: spv.globalVariable [[VAR0:@.*]] bind(0, 0) : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32 [4]> [16]> [0]>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR1:@.*]] bind(0, 1) : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32 [4]> [16]> [0]>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR2:@.*]] bind(0, 2) : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32 [4]> [16]> [0]>, StorageBuffer>
+  // CHECK-DAG: spv.globalVariable [[VAR0:@.*]] bind(0, 0) : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0]>, StorageBuffer>
+  // CHECK-DAG: spv.globalVariable [[VAR1:@.*]] bind(0, 1) : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0]>, StorageBuffer>
+  // CHECK-DAG: spv.globalVariable [[VAR2:@.*]] bind(0, 2) : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0]>, StorageBuffer>
   // CHECK-DAG: spv.globalVariable [[VAR3:@.*]] bind(0, 3) : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
   // CHECK-DAG: spv.globalVariable [[VAR4:@.*]] bind(0, 4) : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
   // CHECK-DAG: spv.globalVariable [[VAR5:@.*]] bind(0, 5) : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
   // CHECK-DAG: spv.globalVariable [[VAR6:@.*]] bind(0, 6) : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
-  // CHECK: func [[FN:@.*]]()
-  func @load_store_kernel(%arg0: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
-                          {spv.interface_var_abi = {binding = 0 : i32,
-                                                    descriptor_set = 0 : i32,
-                                                    storage_class = 12 : i32}},
-                          %arg1: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
-                          {spv.interface_var_abi = {binding = 1 : i32,
-                                                    descriptor_set = 0 : i32,
-                                                    storage_class = 12 : i32}},
-                          %arg2: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
-                          {spv.interface_var_abi = {binding = 2 : i32,
-                                                    descriptor_set = 0 : i32,
-                                                    storage_class = 12 : i32}},
-                          %arg3: i32
-                          {spv.interface_var_abi = {binding = 3 : i32,
-                                                    descriptor_set = 0 : i32,
-                                                    storage_class = 12 : i32}},
-                          %arg4: i32
-                          {spv.interface_var_abi = {binding = 4 : i32,
-                                                    descriptor_set = 0 : i32,
-                                                    storage_class = 12 : i32}},
-                          %arg5: i32
-                          {spv.interface_var_abi = {binding = 5 : i32,
-                                                    descriptor_set = 0 : i32,
-                                                    storage_class = 12 : i32}},
-                          %arg6: i32
-                          {spv.interface_var_abi = {binding = 6 : i32,
-                                                    descriptor_set = 0 : i32,
-                                                    storage_class = 12 : i32}})
+  // CHECK: spv.func [[FN:@.*]]()
+  spv.func @load_store_kernel(
+    %arg0: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 0)>},
+    %arg1: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 1)>},
+    %arg2: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 2)>},
+    %arg3: i32
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 3), StorageBuffer>},
+    %arg4: i32
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 4), StorageBuffer>},
+    %arg5: i32
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 5), StorageBuffer>},
+    %arg6: i32
+    {spv.interface_var_abi = #spv.interface_var_abi<(0, 6), StorageBuffer>}) "None"
   attributes  {spv.entry_point_abi = {local_size = dense<[32, 1, 1]> : vector<3xi32>}} {
     // CHECK: [[ADDRESSARG6:%.*]] = spv._address_of [[VAR6]]
     // CHECK: [[CONST6:%.*]] = spv.constant 0 : i32
@@ -108,17 +102,19 @@ spv.module "Logical" "GLSL450" {
     %37 = spv.IAdd %arg4, %11 : i32
     // CHECK: spv.AccessChain [[ARG0]]
     %c0 = spv.constant 0 : i32
-    %38 = spv.AccessChain %arg0[%c0, %36, %37] : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
+    %38 = spv.AccessChain %arg0[%c0, %36, %37] : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>, i32, i32, i32
     %39 = spv.Load "StorageBuffer" %38 : f32
     // CHECK: spv.AccessChain [[ARG1]]
-    %40 = spv.AccessChain %arg1[%c0, %36, %37] : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
+    %40 = spv.AccessChain %arg1[%c0, %36, %37] : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>, i32, i32, i32
     %41 = spv.Load "StorageBuffer" %40 : f32
     %42 = spv.FAdd %39, %41 : f32
     // CHECK: spv.AccessChain [[ARG2]]
-    %43 = spv.AccessChain %arg2[%c0, %36, %37] : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
+    %43 = spv.AccessChain %arg2[%c0, %36, %37] : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>, i32, i32, i32
     spv.Store "StorageBuffer" %43, %42 : f32
     spv.Return
   }
   // CHECK: spv.EntryPoint "GLCompute" [[FN]], [[WORKGROUPID]], [[LOCALINVOCATIONID]], [[NUMWORKGROUPS]], [[WORKGROUPSIZE]]
   // CHECK-NEXT: spv.ExecutionMode [[FN]] "LocalSize", 32, 1, 1
-} attributes {capabilities = ["Shader"], extensions = ["SPV_KHR_storage_buffer_storage_class"]}
+} // end spv.module
+
+} // end module

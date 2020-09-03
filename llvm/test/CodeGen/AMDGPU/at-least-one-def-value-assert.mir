@@ -1,11 +1,11 @@
-# RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -verify-machineinstrs  -run-pass=machine-scheduler -verify-misched -o /dev/null %s  2>&1  | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -verify-machineinstrs  -run-pass=machine-scheduler -verify-misched -o /dev/null %s  2>&1  | FileCheck %s
 
 # CHECK: *** Bad machine code: No live subrange at use ***
 # CHECK-NEXT: - function:    at_least_one_value_should_be_defined_by_this_mask
 # CHECK-NEXT: - basic block: %bb.0
 # CHECK-NEXT: - instruction: 48B	dead undef %2.sub0:vreg_128 = COPY %0.sub0:vreg_128
 # CHECK-NEXT: - operand 1:   %0.sub0:vreg_128
-# CHECK-NEXT: - interval:    %0 [16r,48r:0)  0@16r L00000002 [16r,32r:0)  0@16r weight:0.000000e+00
+# CHECK-NEXT: - interval:    %0 [16r,48r:0)  0@16r L000000000000000C [16r,32r:0)  0@16r weight:0.000000e+00
 
 # This used to assert with: !SR.empty() && "At least one value should be defined by this mask"
 

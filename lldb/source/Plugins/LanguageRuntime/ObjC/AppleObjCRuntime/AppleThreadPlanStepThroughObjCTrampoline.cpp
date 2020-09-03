@@ -1,4 +1,4 @@
-//===-- AppleThreadPlanStepThroughObjCTrampoline.cpp
+//===-- AppleThreadPlanStepThroughObjCTrampoline.cpp-----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -219,22 +219,22 @@ bool AppleThreadPlanStepThroughObjCTrampoline::WillStop() { return true; }
 // since we can't just return control to the plan that's controlling us on the
 // first step.
 
-AppleThreadPlanStepThroughDirectDispatch
-    ::AppleThreadPlanStepThroughDirectDispatch(
-          Thread &thread, AppleObjCTrampolineHandler &handler,
-          llvm::StringRef dispatch_func_name, bool stop_others,
-          LazyBool step_in_avoids_code_without_debug_info)
-            : ThreadPlanStepOut(thread, nullptr, true /* first instruction */,
-                                stop_others,
-                                eVoteNoOpinion, eVoteNoOpinion,
-                                0 /* Step out of zeroth frame */,
-                                eLazyBoolNo /* Our parent plan will decide this
-                                               when we are done */,
-                                true /* Run to branch for inline step out */,
-                                false /* Don't gather the return value */),
-            m_trampoline_handler(handler),
-            m_dispatch_func_name(dispatch_func_name), m_at_msg_send(false),
-            m_stop_others(stop_others) {
+AppleThreadPlanStepThroughDirectDispatch ::
+    AppleThreadPlanStepThroughDirectDispatch(
+        Thread &thread, AppleObjCTrampolineHandler &handler,
+        llvm::StringRef dispatch_func_name, bool stop_others,
+        LazyBool step_in_avoids_code_without_debug_info)
+    : ThreadPlanStepOut(thread, nullptr, true /* first instruction */,
+                        stop_others, eVoteNoOpinion, eVoteNoOpinion,
+                        0 /* Step out of zeroth frame */,
+                        eLazyBoolNo /* Our parent plan will decide this
+                               when we are done */
+                        ,
+                        true /* Run to branch for inline step out */,
+                        false /* Don't gather the return value */),
+      m_trampoline_handler(handler),
+      m_dispatch_func_name(std::string(dispatch_func_name)),
+      m_at_msg_send(false), m_stop_others(stop_others) {
   // Set breakpoints on the dispatch functions:
   auto bkpt_callback = [&] (lldb::addr_t addr, 
                             const AppleObjCTrampolineHandler

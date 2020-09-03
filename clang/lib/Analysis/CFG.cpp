@@ -223,8 +223,6 @@ private:
 ///
 class LocalScope {
 public:
-  friend class const_iterator;
-
   using AutomaticVarsTy = BumpVector<VarDecl *>;
 
   /// const_iterator - Iterates local scope backwards and jumps to previous
@@ -720,10 +718,10 @@ private:
   // These sorts of call expressions don't have a common superclass,
   // hence strict duck-typing.
   template <typename CallLikeExpr,
-            typename = typename std::enable_if<
-                std::is_same<CallLikeExpr, CallExpr>::value ||
-                std::is_same<CallLikeExpr, CXXConstructExpr>::value ||
-                std::is_same<CallLikeExpr, ObjCMessageExpr>::value>>
+            typename = std::enable_if_t<
+                std::is_base_of<CallExpr, CallLikeExpr>::value ||
+                std::is_base_of<CXXConstructExpr, CallLikeExpr>::value ||
+                std::is_base_of<ObjCMessageExpr, CallLikeExpr>::value>>
   void findConstructionContextsForArguments(CallLikeExpr *E) {
     for (unsigned i = 0, e = E->getNumArgs(); i != e; ++i) {
       Expr *Arg = E->getArg(i);
@@ -2839,11 +2837,30 @@ CFGBlock *CFGBuilder::VisitDeclStmt(DeclStmt *DS) {
 /// DeclStmts and initializers in them.
 CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
   assert(DS->isSingleDecl() && "Can handle single declarations only.");
+
+  if (const auto *TND = dyn_cast<TypedefNameDecl>(DS->getSingleDecl())) {
+    // If we encounter a VLA, process its size expressions.
+    const Type *T = TND->getUnderlyingType().getTypePtr();
+    if (!T->isVariablyModifiedType())
+      return Block;
+
+    autoCreateBlock();
+    appendStmt(Block, DS);
+
+    CFGBlock *LastBlock = Block;
+    for (const VariableArrayType *VA = FindVA(T); VA != nullptr;
+         VA = FindVA(VA->getElementType().getTypePtr())) {
+      if (CFGBlock *NewBlock = addStmt(VA->getSizeExpr()))
+        LastBlock = NewBlock;
+    }
+    return LastBlock;
+  }
+
   VarDecl *VD = dyn_cast<VarDecl>(DS->getSingleDecl());
 
   if (!VD) {
-    // Of everything that can be declared in a DeclStmt, only VarDecls impact
-    // runtime semantics.
+    // Of everything that can be declared in a DeclStmt, only VarDecls and the
+    // exceptions above impact runtime semantics.
     return Block;
   }
 
@@ -2905,6 +2922,8 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
   }
 
   // If the type of VD is a VLA, then we must process its size expressions.
+  // FIXME: This does not find the VLA if it is embedded in other types,
+  // like here: `int (*p_vla)[x];`
   for (const VariableArrayType* VA = FindVA(VD->getType().getTypePtr());
        VA != nullptr; VA = FindVA(VA->getElementType().getTypePtr())) {
     if (CFGBlock *newBlock = addStmt(VA->getSizeExpr()))
@@ -3997,6 +4016,11 @@ CFGBlock *CFGBuilder::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E,
   }
 
   // VLA types have expressions that must be evaluated.
+  // Evaluation is done only for `sizeof`.
+
+  if (E->getKind() != UETT_SizeOf)
+    return Block;
+
   CFGBlock *lastBlock = Block;
 
   if (E->isArgumentType()) {

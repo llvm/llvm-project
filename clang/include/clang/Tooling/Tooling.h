@@ -225,7 +225,8 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps =
         std::make_shared<PCHContainerOperations>(),
     ArgumentsAdjuster Adjuster = getClangStripDependencyFileAdjuster(),
-    const FileContentMappings &VirtualMappedFiles = FileContentMappings());
+    const FileContentMappings &VirtualMappedFiles = FileContentMappings(),
+    DiagnosticConsumer *DiagConsumer = nullptr);
 
 /// Utility to run a FrontendAction in a single clang invocation.
 class ToolInvocation {
@@ -504,7 +505,8 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
 
 /// Creates a \c CompilerInvocation.
 CompilerInvocation *newInvocation(DiagnosticsEngine *Diagnostics,
-                                  const llvm::opt::ArgStringList &CC1Args);
+                                  const llvm::opt::ArgStringList &CC1Args,
+                                  const char *const BinaryName);
 
 } // namespace tooling
 

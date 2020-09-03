@@ -14,7 +14,7 @@ foo:
 	.code64
 	retq
 
-# CHECK: foo:
+# CHECK: <foo>:
 # CHECK-NEXT: 67 8b 00                      movl    (%eax), %eax
 # CHECK-NEXT: 8b 00                         movl    (%rax), %eax
 # CHECK-NEXT: 67 66 8b 00                   movw    (%eax), %ax

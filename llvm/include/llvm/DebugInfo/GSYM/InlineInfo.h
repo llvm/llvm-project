@@ -46,7 +46,7 @@ class GsymReader;
 /// also makes any encoded addresses easy to relocate as we just need to
 /// relocate the FunctionInfo's start address.
 ///
-/// - The AddressRanges member "Ranges" is encoded using an approriate base
+/// - The AddressRanges member "Ranges" is encoded using an appropriate base
 ///   address as described above.
 /// - UINT8 boolean value that specifies if the InlineInfo object has children.
 /// - UINT32 string table offset that points to the name of the inline

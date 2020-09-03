@@ -34,7 +34,7 @@ define amdgpu_kernel void @illegal_vgpr_to_sgpr_copy_v8i32() #0 {
   ret void
 }
 
-; ERR error: <unknown>:0:0: in function illegal_vgpr_to_sgpr_copy_v16i32 void (): illegal SGPR to VGPR copy
+; ERR: error: <unknown>:0:0: in function illegal_vgpr_to_sgpr_copy_v16i32 void (): illegal SGPR to VGPR copy
 ; GCN: ; illegal copy v[0:15] to s[16:31]
 define amdgpu_kernel void @illegal_vgpr_to_sgpr_copy_v16i32() #0 {
   %vgpr = call <16 x i32> asm sideeffect "; def $0", "=${v[0:15]}"()

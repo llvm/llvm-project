@@ -71,4 +71,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // utility_ModuleCache_h_
+#endif // LLDB_TARGET_MODULECACHE_H

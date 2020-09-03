@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass si-insert-skips -amdgpu-skip-threshold=2 %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass si-insert-skips -amdgpu-skip-threshold-legacy=2 %s -o - | FileCheck %s
 
 ---
 

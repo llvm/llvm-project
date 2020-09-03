@@ -1,5 +1,3 @@
-; REQUIRES: object-emission
-
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; Build from the following source with clang -O2.

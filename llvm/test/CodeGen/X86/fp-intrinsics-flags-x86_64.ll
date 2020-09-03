@@ -4,7 +4,7 @@ define i32 @f20u(double %x) #0 {
 ; CHECK-LABEL: name: f20u
 ; CHECK: liveins: $xmm0
 ; CHECK: [[COPY:%[0-9]+]]:fr64 = COPY $xmm0
-; CHECK: [[CVTTSD2SI64rr:%[0-9]+]]:gr64 = fpexcept CVTTSD2SI64rr [[COPY]], implicit $mxcsr
+; CHECK: [[CVTTSD2SI64rr:%[0-9]+]]:gr64 = CVTTSD2SI64rr [[COPY]], implicit $mxcsr
 ; CHECK: [[COPY1:%[0-9]+]]:gr32 = COPY [[CVTTSD2SI64rr]].sub_32bit
 ; CHECK: $eax = COPY [[COPY1]]
 ; CHECK: RET 0, $eax

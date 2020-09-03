@@ -187,7 +187,12 @@ public:
     Cache.initLinkerInitialized();
   }
   void init(uptr Size, uptr CacheSize) {
-    memset(this, 0, sizeof(*this));
+    CacheMutex.init();
+    Cache.init();
+    RecycleMutex.init();
+    MinSize = {};
+    MaxSize = {};
+    MaxCacheSize = {};
     initLinkerInitialized(Size, CacheSize);
   }
 
@@ -205,7 +210,7 @@ public:
       ScopedLock L(CacheMutex);
       Cache.transfer(C);
     }
-    if (Cache.getSize() > getMaxSize() && RecyleMutex.tryLock())
+    if (Cache.getSize() > getMaxSize() && RecycleMutex.tryLock())
       recycle(atomic_load_relaxed(&MinSize), Cb);
   }
 
@@ -214,7 +219,7 @@ public:
       ScopedLock L(CacheMutex);
       Cache.transfer(C);
     }
-    RecyleMutex.lock();
+    RecycleMutex.lock();
     recycle(0, Cb);
   }
 
@@ -225,11 +230,22 @@ public:
                 getMaxSize() >> 10, getCacheSize() >> 10);
   }
 
+  void disable() {
+    // RecycleMutex must be locked 1st since we grab CacheMutex within recycle.
+    RecycleMutex.lock();
+    CacheMutex.lock();
+  }
+
+  void enable() {
+    CacheMutex.unlock();
+    RecycleMutex.unlock();
+  }
+
 private:
   // Read-only data.
   alignas(SCUDO_CACHE_LINE_SIZE) HybridMutex CacheMutex;
   CacheT Cache;
-  alignas(SCUDO_CACHE_LINE_SIZE) HybridMutex RecyleMutex;
+  alignas(SCUDO_CACHE_LINE_SIZE) HybridMutex RecycleMutex;
   atomic_uptr MinSize;
   atomic_uptr MaxSize;
   alignas(SCUDO_CACHE_LINE_SIZE) atomic_uptr MaxCacheSize;
@@ -261,7 +277,7 @@ private:
       while (Cache.getSize() > MinSize)
         Tmp.enqueueBatch(Cache.dequeueBatch());
     }
-    RecyleMutex.unlock();
+    RecycleMutex.unlock();
     doRecycle(&Tmp, Cb);
   }
 

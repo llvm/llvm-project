@@ -8,9 +8,7 @@ tablegen("AMDGPUGenSearchableTables") {
 
 static_library("Utils") {
   output_name = "LLVMAMDGPUUtils"
-  public_deps = [
-    ":AMDGPUGenSearchableTables",
-  ]
+  public_deps = [ ":AMDGPUGenSearchableTables" ]
   deps = [
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/IR",

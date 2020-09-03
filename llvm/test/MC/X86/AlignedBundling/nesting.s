@@ -1,12 +1,12 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - \
-# RUN:   | llvm-objdump -disassemble -no-show-raw-insn - | FileCheck %s
+# RUN:   | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -mc-relax-all %s -o - \
-# RUN:   | llvm-objdump -disassemble -no-show-raw-insn - | FileCheck %s
+# RUN:   | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 
 # Will be bundle-aligning to 16 byte boundaries
   .bundle_align_mode 4
   .text
-# CHECK-LABEL: foo:
+# CHECK-LABEL: <foo>:
 .type   foo,@function
 foo:
 # Test that bundle alignment mode can be set more than once.
@@ -24,7 +24,7 @@ foo:
 # CHECK-NEXT: 15: callq {{.*}} <bar>
 
   .p2align 4
-# CHECK-LABEL: bar:
+# CHECK-LABEL: <bar>:
 .type   bar,@function
 bar:
   callq foo
@@ -40,7 +40,7 @@ bar:
 # CHECK:      36: callq {{.*}} <bar>
 # CHECK-NEXT: 3b: callq {{.*}} <bar>
 
-# CHECK-LABEL: baz:
+# CHECK-LABEL: <baz>:
 .type   baz,@function
 baz:
   callq foo

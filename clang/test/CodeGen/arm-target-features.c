@@ -1,23 +1,23 @@
 // REQUIRES: arm-registered-target
 
 // RUN: %clang_cc1 -triple thumbv7-linux-gnueabihf -target-cpu cortex-a8 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP3
-// CHECK-VFP3: "target-features"="+armv7-a,+d32,+dsp,+fp64,+fpregs,+neon,+thumb-mode,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp"
+// CHECK-VFP3: "target-features"="+armv7-a,+d32,+dsp,+fp64,+neon,+thumb-mode,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp"
 
 
 // RUN: %clang_cc1 -triple thumbv7-linux-gnueabihf -target-cpu cortex-a5 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP4
-// CHECK-VFP4: "target-features"="+armv7-a,+d32,+dsp,+fp16,+fp64,+fpregs,+neon,+thumb-mode,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp"
+// CHECK-VFP4: "target-features"="+armv7-a,+d32,+dsp,+fp16,+fp64,+neon,+thumb-mode,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp"
 
 
 // RUN: %clang_cc1 -triple thumbv7-linux-gnueabihf -target-cpu cortex-a7 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP4-DIV
 // RUN: %clang_cc1 -triple thumbv7-linux-gnueabi -target-cpu cortex-a12 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP4-DIV
 // RUN: %clang_cc1 -triple thumbv7s-linux-gnueabi -target-cpu swift -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP4-DIV-2
 // RUN: %clang_cc1 -triple thumbv7-linux-gnueabihf -target-cpu krait -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP4-DIV
-// CHECK-VFP4-DIV: "target-features"="+armv7-a,+d32,+dsp,+fp16,+fp64,+fpregs,+hwdiv,+hwdiv-arm,+neon,+thumb-mode,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp"
-// CHECK-VFP4-DIV-2: "target-features"="+armv7s,+d32,+dsp,+fp16,+fp64,+fpregs,+hwdiv,+hwdiv-arm,+neon,+thumb-mode,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp"
+// CHECK-VFP4-DIV: "target-features"="+armv7-a,+d32,+dsp,+fp16,+fp64,+hwdiv,+hwdiv-arm,+neon,+thumb-mode,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp"
+// CHECK-VFP4-DIV-2: "target-features"="+armv7s,+d32,+dsp,+fp16,+fp64,+hwdiv,+hwdiv-arm,+neon,+thumb-mode,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp"
 
 // RUN: %clang_cc1 -triple armv7-linux-gnueabihf -target-cpu cortex-a15 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP4-DIV-ARM
 // RUN: %clang_cc1 -triple armv7-linux-gnueabihf -target-cpu cortex-a17 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP4-DIV-ARM
-// CHECK-VFP4-DIV-ARM: "target-features"="+armv7-a,+d32,+dsp,+fp16,+fp64,+fpregs,+hwdiv,+hwdiv-arm,+neon,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp,-thumb-mode"
+// CHECK-VFP4-DIV-ARM: "target-features"="+armv7-a,+d32,+dsp,+fp16,+fp64,+hwdiv,+hwdiv-arm,+neon,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp,-thumb-mode"
 
 // RUN: %clang_cc1 -triple thumbv7s-apple-ios7.0 -target-cpu cyclone -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V8
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu cortex-a32 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V8
@@ -26,34 +26,34 @@
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu cortex-a72 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V8
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu cortex-a73 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V8
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu exynos-m3 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V8
-// CHECK-BASIC-V8: "target-features"="+armv8-a,+crc,+crypto,+d32,+dsp,+fp-armv8,+fp-armv8d16,+fp-armv8d16sp,+fp-armv8sp,+fp16,+fp64,+fpregs,+hwdiv,+hwdiv-arm,+neon,+thumb-mode,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp"
+// CHECK-BASIC-V8: "target-features"="+armv8-a,+crc,+crypto,+d32,+dsp,+fp-armv8,+fp-armv8d16,+fp-armv8d16sp,+fp-armv8sp,+fp16,+fp64,+hwdiv,+hwdiv-arm,+neon,+thumb-mode,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp"
 
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu exynos-m4 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V82
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu exynos-m5 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V82
-// CHECK-BASIC-V82: "target-features"="+armv8.2-a,+crc,+crypto,+d32,+dotprod,+dsp,+fp-armv8,+fp-armv8d16,+fp-armv8d16sp,+fp-armv8sp,+fp16,+fp64,+fpregs,+fullfp16,+hwdiv,+hwdiv-arm,+neon,+ras,+thumb-mode,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp"
+// CHECK-BASIC-V82: "target-features"="+armv8.2-a,+crc,+crypto,+d32,+dotprod,+dsp,+fp-armv8,+fp-armv8d16,+fp-armv8d16sp,+fp-armv8sp,+fp16,+fp64,+fullfp16,+hwdiv,+hwdiv-arm,+neon,+ras,+thumb-mode,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp"
 
 // RUN: %clang_cc1 -triple armv8-linux-gnueabi -target-cpu cortex-a53 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V8-ARM
-// CHECK-BASIC-V8-ARM: "target-features"="+armv8-a,+crc,+crypto,+d32,+dsp,+fp-armv8,+fp-armv8d16,+fp-armv8d16sp,+fp-armv8sp,+fp16,+fp64,+fpregs,+hwdiv,+hwdiv-arm,+neon,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp,-thumb-mode"
+// CHECK-BASIC-V8-ARM: "target-features"="+armv8-a,+crc,+crypto,+d32,+dsp,+fp-armv8,+fp-armv8d16,+fp-armv8d16sp,+fp-armv8sp,+fp16,+fp64,+hwdiv,+hwdiv-arm,+neon,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp,-thumb-mode"
 
 // RUN: %clang_cc1 -triple thumbv7-linux-gnueabi -target-cpu cortex-r5 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP3-D16-DIV
-// CHECK-VFP3-D16-DIV: "target-features"="+armv7-r,+dsp,+fp64,+fpregs,+hwdiv,+hwdiv-arm,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp"
+// CHECK-VFP3-D16-DIV: "target-features"="+armv7-r,+dsp,+fp64,+hwdiv,+hwdiv-arm,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp"
 
 
 // RUN: %clang_cc1 -triple armv7-linux-gnueabi -target-cpu cortex-r4f -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP3-D16-THUMB-DIV
-// CHECK-VFP3-D16-THUMB-DIV: "target-features"="+armv7-r,+dsp,+fp64,+fpregs,+hwdiv,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,-thumb-mode"
+// CHECK-VFP3-D16-THUMB-DIV: "target-features"="+armv7-r,+dsp,+fp64,+hwdiv,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,-thumb-mode"
 
 
 // RUN: %clang_cc1 -triple thumbv7-linux-gnueabi -target-cpu cortex-r7 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP3-D16-FP16-DIV
 // RUN: %clang_cc1 -triple thumbv7-linux-gnueabi -target-cpu cortex-r8 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP3-D16-FP16-DIV
-// CHECK-VFP3-D16-FP16-DIV: "target-features"="+armv7-r,+dsp,+fp16,+fp64,+fpregs,+hwdiv,+hwdiv-arm,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp"
+// CHECK-VFP3-D16-FP16-DIV: "target-features"="+armv7-r,+dsp,+fp16,+fp64,+hwdiv,+hwdiv-arm,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp"
 
 
 // RUN: %clang_cc1 -triple thumbv7-linux-gnueabi -target-cpu cortex-m4 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP4-D16-SP-THUMB-DIV
-// CHECK-VFP4-D16-SP-THUMB-DIV: "target-features"="+armv7e-m,+dsp,+fp16,+fpregs,+hwdiv,+thumb-mode,+vfp2sp,+vfp3d16sp,+vfp4d16sp"
+// CHECK-VFP4-D16-SP-THUMB-DIV: "target-features"="+armv7e-m,+dsp,+fp16,+hwdiv,+thumb-mode,+vfp2sp,+vfp3d16sp,+vfp4d16sp"
 
 
 // RUN: %clang_cc1 -triple thumbv7-linux-gnueabi -target-cpu cortex-m7 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-VFP5-D16-THUMB-DIV
-// CHECK-VFP5-D16-THUMB-DIV: "target-features"="+armv7e-m,+dsp,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fpregs,+hwdiv,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp"
+// CHECK-VFP5-D16-THUMB-DIV: "target-features"="+armv7e-m,+dsp,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+hwdiv,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp"
 
 
 // RUN: %clang_cc1 -triple armv7-linux-gnueabi -target-cpu cortex-r4 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-THUMB-DIV
@@ -105,6 +105,9 @@
 // CHECK-ARMV8M-M23-LINUX: "target-features"="+armv8-m.base,+hwdiv,+thumb-mode"
 
 // RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m33 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV8M-MAIN-LINUX 
-// CHECK-ARMV8M-MAIN-LINUX: "target-features"="+armv8-m.main,+dsp,+fp-armv8d16sp,+fp16,+fpregs,+hwdiv,+thumb-mode,+vfp2sp,+vfp3d16sp,+vfp4d16sp"
+// CHECK-ARMV8M-MAIN-LINUX: "target-features"="+armv8-m.main,+dsp,+fp-armv8d16sp,+fp16,+hwdiv,+thumb-mode,+vfp2sp,+vfp3d16sp,+vfp4d16sp"
+
+// RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m55 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV81M-MAIN-LINUX
+// CHECK-ARMV81M-MAIN-LINUX: "target-features"="+armv8.1-m.main,+dsp,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fullfp16,+hwdiv,+lob,+mve,+mve.fp,+ras,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp"
 
 void foo() {}

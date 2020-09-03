@@ -6,7 +6,7 @@
 # CHECK:      error: corrupted .eh_frame: corrupted CIE (failed to read LEB128)
 # CHECK-NEXT: >>> defined in {{.*}}:(.eh_frame+0xC)
 
-.section .eh_frame
+.section .eh_frame,"a",@unwind
   .byte 0x08
   .byte 0x00
   .byte 0x00

@@ -1,11 +1,11 @@
 
 CHECK_CXX_SOURCE_COMPILES("
-#ifdef _MSC_VER
-#include <Intrin.h> /* Workaround for PR19898. */
+#ifdef _WIN32
+#include <intrin.h> /* Workaround for PR19898. */
 #include <windows.h>
 #endif
 int main() {
-#ifdef _MSC_VER
+#ifdef _WIN32
         volatile LONG val = 1;
         MemoryBarrier();
         InterlockedCompareExchange(&val, 0, 1);
@@ -51,7 +51,9 @@ add_compiler_rt_component(profile)
 set(PROFILE_SOURCES
   GCDAProfiling.c
   InstrProfiling.c
+  InstrProfilingInternal.c
   InstrProfilingValue.c
+  InstrProfilingBiasVar.c
   InstrProfilingBuffer.c
   InstrProfilingFile.c
   InstrProfilingMerge.c
@@ -94,7 +96,7 @@ if(COMPILER_RT_TARGET_HAS_ATOMICS)
  set(EXTRA_FLAGS
      ${EXTRA_FLAGS}
      -DCOMPILER_RT_HAS_ATOMICS=1)
-endif()
+endif() 
 
 if(COMPILER_RT_TARGET_HAS_FCNTL_LCK)
  set(EXTRA_FLAGS
@@ -107,9 +109,6 @@ if(COMPILER_RT_TARGET_HAS_UNAME)
      ${EXTRA_FLAGS}
      -DCOMPILER_RT_HAS_UNAME=1)
 endif()
-
-# We don't use the C++ Standard Library here, so avoid including it by mistake.
-append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ EXTRA_FLAGS)
 
 # This appears to be a C-only warning banning the use of locals in aggregate
 # initializers. All other compilers accept this, though.

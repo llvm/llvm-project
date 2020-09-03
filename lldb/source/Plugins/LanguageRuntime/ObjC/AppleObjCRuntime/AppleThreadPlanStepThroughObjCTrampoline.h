@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_AppleThreadPlanStepThroughObjCTrampoline_h_
-#define lldb_AppleThreadPlanStepThroughObjCTrampoline_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLETHREADPLANSTEPTHROUGHOBJCTRAMPOLINE_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLETHREADPLANSTEPTHROUGHOBJCTRAMPOLINE_H
 
 #include "AppleObjCTrampolineHandler.h"
 #include "lldb/Core/Value.h"
@@ -113,4 +113,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // lldb_AppleThreadPlanStepThroughObjCTrampoline_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLETHREADPLANSTEPTHROUGHOBJCTRAMPOLINE_H

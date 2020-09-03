@@ -514,7 +514,7 @@ static void AnalyzeArguments(CCState &State,
 
     // Handle byval arguments
     if (ArgFlags.isByVal()) {
-      State.HandleByVal(ValNo++, ArgVT, LocVT, LocInfo, 2, 2, ArgFlags);
+      State.HandleByVal(ValNo++, ArgVT, LocVT, LocInfo, 2, Align(2), ArgFlags);
       continue;
     }
 
@@ -863,13 +863,11 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
 
       if (Flags.isByVal()) {
         SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i16);
-        MemOp = DAG.getMemcpy(Chain, dl, PtrOff, Arg, SizeNode,
-                              Flags.getByValAlign(),
-                              /*isVolatile*/false,
-                              /*AlwaysInline=*/true,
-                              /*isTailCall=*/false,
-                              MachinePointerInfo(),
-                              MachinePointerInfo());
+        MemOp = DAG.getMemcpy(
+            Chain, dl, PtrOff, Arg, SizeNode, Flags.getNonZeroByValAlign(),
+            /*isVolatile*/ false,
+            /*AlwaysInline=*/true,
+            /*isTailCall=*/false, MachinePointerInfo(), MachinePointerInfo());
       } else {
         MemOp = DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo());
       }
@@ -1302,7 +1300,7 @@ SDValue MSP430TargetLowering::LowerFRAMEADDR(SDValue Op,
   SDLoc dl(Op);  // FIXME probably not meaningful
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
   SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl,
-                                         MSP430::FP, VT);
+                                         MSP430::R4, VT);
   while (Depth--)
     FrameAddr = DAG.getLoad(VT, dl, DAG.getEntryNode(), FrameAddr,
                             MachinePointerInfo());

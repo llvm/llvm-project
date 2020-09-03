@@ -13,7 +13,7 @@ define i8* @test_simple_alloca(i32 %numelts) {
   ; CHECK:   [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C1]]
   ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
   ; CHECK:   [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
-  ; CHECK:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 0
+  ; CHECK:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 1
   ; CHECK:   $x0 = COPY [[DYN_STACKALLOC]](p0)
   ; CHECK:   RET_ReallyLR implicit $x0
   %addr = alloca i8, i32 %numelts
@@ -51,7 +51,7 @@ define i128* @test_natural_alloca(i32 %numelts) {
   ; CHECK:   [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C1]]
   ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
   ; CHECK:   [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
-  ; CHECK:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 0
+  ; CHECK:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 1
   ; CHECK:   $x0 = COPY [[DYN_STACKALLOC]](p0)
   ; CHECK:   RET_ReallyLR implicit $x0
   %addr = alloca i128, i32 %numelts

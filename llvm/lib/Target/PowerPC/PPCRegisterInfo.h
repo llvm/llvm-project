@@ -84,7 +84,6 @@ public:
 
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
-  const MCPhysReg *getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID CC) const override;
   const uint32_t *getNoPreservedMask() const override;
@@ -92,7 +91,8 @@ public:
   void adjustStackMapLiveOutMask(uint32_t *Mask) const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
-  bool isCallerPreservedPhysReg(unsigned PhysReg, const MachineFunction &MF) const override;
+  bool isCallerPreservedPhysReg(MCRegister PhysReg,
+                                const MachineFunction &MF) const override;
 
   /// We require the register scavenger.
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
@@ -101,16 +101,16 @@ public:
 
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;
 
-  bool trackLivenessAfterRegAlloc(const MachineFunction &MF) const override {
-    return true;
-  }
-
   bool requiresVirtualBaseRegisters(const MachineFunction &MF) const override {
     return true;
   }
 
   void lowerDynamicAlloc(MachineBasicBlock::iterator II) const;
   void lowerDynamicAreaOffset(MachineBasicBlock::iterator II) const;
+  void prepareDynamicAlloca(MachineBasicBlock::iterator II,
+                            Register &NegSizeReg, bool &KillNegSizeReg,
+                            Register &FramePointer) const;
+  void lowerPrepareProbedAlloca(MachineBasicBlock::iterator II) const;
   void lowerCRSpilling(MachineBasicBlock::iterator II,
                        unsigned FrameIndex) const;
   void lowerCRRestore(MachineBasicBlock::iterator II,
@@ -124,7 +124,7 @@ public:
   void lowerVRSAVERestore(MachineBasicBlock::iterator II,
                           unsigned FrameIndex) const;
 
-  bool hasReservedSpillSlot(const MachineFunction &MF, unsigned Reg,
+  bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
                             int &FrameIdx) const override;
   void eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
                            unsigned FIOperandNum,
@@ -132,12 +132,12 @@ public:
 
   // Support for virtual base registers.
   bool needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const override;
-  void materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                                    unsigned BaseReg, int FrameIdx,
+  void materializeFrameBaseRegister(MachineBasicBlock *MBB, Register BaseReg,
+                                    int FrameIdx,
                                     int64_t Offset) const override;
-  void resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
+  void resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                          int64_t Offset) const override;
-  bool isFrameOffsetLegal(const MachineInstr *MI, unsigned BaseReg,
+  bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
                           int64_t Offset) const override;
 
   // Debug information queries.

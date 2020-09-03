@@ -13,6 +13,8 @@ using namespace clang;
 /// Should not be used for anything else.
 class syntax::FactoryImpl {
 public:
+  static void setCanModify(syntax::Node *N) { N->CanModify = true; }
+
   static void prependChildLowLevel(syntax::Tree *T, syntax::Node *Child,
                                    syntax::NodeRole R) {
     T->prependChildLowLevel(Child, R);
@@ -26,13 +28,18 @@ clang::syntax::Leaf *syntax::createPunctuation(clang::syntax::Arena &A,
                     .second;
   assert(Tokens.size() == 1);
   assert(Tokens.front().kind() == K);
-  return new (A.allocator()) clang::syntax::Leaf(Tokens.begin());
+  auto *L = new (A.allocator()) clang::syntax::Leaf(Tokens.begin());
+  FactoryImpl::setCanModify(L);
+  L->assertInvariants();
+  return L;
 }
 
 clang::syntax::EmptyStatement *
 syntax::createEmptyStatement(clang::syntax::Arena &A) {
   auto *S = new (A.allocator()) clang::syntax::EmptyStatement;
+  FactoryImpl::setCanModify(S);
   FactoryImpl::prependChildLowLevel(S, createPunctuation(A, clang::tok::semi),
                                     NodeRole::Unknown);
+  S->assertInvariants();
   return S;
 }

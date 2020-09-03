@@ -1,4 +1,4 @@
-; RUN: opt -S -wholeprogramdevirt %s | FileCheck %s
+; RUN: opt -S -wholeprogramdevirt -whole-program-visibility %s | FileCheck %s
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
@@ -25,7 +25,7 @@ define i32 @call(i8* %obj) {
   %fptr = load i8*, i8** %fptrptr
   %fptr_casted = bitcast i8* %fptr to i32 (i8*)*
   %result = call i32 %fptr_casted(i8* %obj)
-  ; CHECK-NOT: call
+  ; CHECK-NOT: call i32 %
   ; CHECK: ret i32 123
   ret i32 %result
 }

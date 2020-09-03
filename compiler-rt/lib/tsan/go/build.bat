@@ -59,4 +59,4 @@ gcc ^
   -DSANITIZER_DEBUG=0 ^
   -O3 ^
   -fomit-frame-pointer ^
-  -std=c++11
+  -std=c++14

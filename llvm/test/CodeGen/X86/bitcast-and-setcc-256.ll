@@ -234,7 +234,7 @@ define i8 @v8i32_and(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm6, %xmm4
 ; SSE2-SSSE3-NEXT:    packssdw %xmm5, %xmm4
 ; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm4
-; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm4
+; SSE2-SSSE3-NEXT:    packsswb %xmm4, %xmm4
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm4, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
@@ -303,7 +303,7 @@ define i8 @v8i32_or(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm6, %xmm4
 ; SSE2-SSSE3-NEXT:    packssdw %xmm5, %xmm4
 ; SSE2-SSSE3-NEXT:    por %xmm0, %xmm4
-; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm4
+; SSE2-SSSE3-NEXT:    packsswb %xmm4, %xmm4
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm4, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
@@ -380,7 +380,7 @@ define i8 @v8i32_or_and(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d, 
 ; SSE2-SSSE3-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm8
 ; SSE2-SSSE3-NEXT:    packssdw %xmm9, %xmm8
 ; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm8
-; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm8
+; SSE2-SSSE3-NEXT:    packsswb %xmm8, %xmm8
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm8, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
@@ -461,7 +461,7 @@ define i8 @v8f32_and(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float>
 ; SSE2-SSSE3-NEXT:    cmpltps %xmm4, %xmm6
 ; SSE2-SSSE3-NEXT:    packssdw %xmm7, %xmm6
 ; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm6
-; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm6
+; SSE2-SSSE3-NEXT:    packsswb %xmm6, %xmm6
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm6, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
@@ -512,7 +512,7 @@ define i8 @v8f32_xor(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float>
 ; SSE2-SSSE3-NEXT:    cmpltps %xmm4, %xmm6
 ; SSE2-SSSE3-NEXT:    packssdw %xmm7, %xmm6
 ; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm6
-; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm6
+; SSE2-SSSE3-NEXT:    packsswb %xmm6, %xmm6
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm6, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
@@ -577,7 +577,7 @@ define i8 @v8f32_xor_and(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x fl
 ; SSE2-SSSE3-NEXT:    cmpltps {{[0-9]+}}(%rsp), %xmm8
 ; SSE2-SSSE3-NEXT:    packssdw %xmm9, %xmm8
 ; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm8
-; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm8
+; SSE2-SSSE3-NEXT:    packsswb %xmm8, %xmm8
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm8, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq

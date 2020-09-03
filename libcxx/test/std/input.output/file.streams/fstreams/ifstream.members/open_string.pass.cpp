@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FILE_DEPENDENCIES: test.dat
+
 // <fstream>
 
 // template <class charT, class traits = char_traits<charT> >

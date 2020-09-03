@@ -22,7 +22,7 @@ entry:
   %0 = tail call i32 @llvm.ppc.tend(i32 0)
   ret i32 %0
 ; CHECK-LABEL: @test2
-; CHECK: tend. 0
+; CHECK: tend.
 ; CHECK: mfocrf  {{[0-9]+}}, 128
 }
 
@@ -60,9 +60,9 @@ entry:
   %3 = tail call i64 @llvm.ppc.ttest()
   ret void
 ; CHECK-LABEL: @test4
-; CHECK: tend. 1
-; CHECK: tsr.  1
-; CHECK: tsr.  0
+; CHECK: tendall.
+; CHECK: tresume.
+; CHECK: tsuspend.
 ; CHECK: tabortwci. 0, {{[0-9]+}}, 0
 }
 
@@ -138,7 +138,7 @@ entry:
 ; CHECK: tcheck [[REG1:[0-9]+]] 
 ; CHECK: treclaim. [[REG2:[0-9]+]] 
 ; CHECK: trechkpt. 
-; CHECK: tsr.  1
+; CHECK: tresume.
 }
 
 declare i32 @llvm.ppc.tcheck()

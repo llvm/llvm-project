@@ -182,8 +182,7 @@ bb10:
   ret i1 %cmp
 }
 ; CHECK-LABEL: @test7(
-; CHECK:  %[[phi:.*]] = phi i64* [ @pr30402, %entry ], [ getelementptr inbounds (i64, i64* @pr30402, i32 1), %bb7 ]
-; CHECK:  %[[cmp:.*]] = icmp eq i64* %[[phi]], getelementptr inbounds (i64, i64* @pr30402, i32 1)
+; CHECK:  %[[cmp:.*]] = phi i1 [ true, %bb7 ], [ false, %entry ]
 ; CHECK: ret i1 %[[cmp]]
 
 

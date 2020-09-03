@@ -1,0 +1,18 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z196 -O0 -start-before=prologepilog \
+# RUN:   -o - %s | FileCheck %s
+#
+# Test that a COPY to CC gets implemented with a tmlh or tmhh depending on
+# the source register.
+
+---
+name:            fun0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $r3l, $r4h
+    ; CHECK-LABEL: fun0
+    ; CHECK: tmlh %r3, 12288
+    ; CHECK: tmhh %r4, 12288
+    $cc = COPY $r3l
+    $cc = COPY $r4h
+...

@@ -4,7 +4,6 @@ add_lldb_unittest(UnwindAssemblyx86Tests
       lldbCore
       lldbSymbol
       lldbPluginUnwindAssemblyX86
-      lldbPluginPlatformMacOSX
     LINK_COMPONENTS
       Support
       ${LLVM_TARGETS_TO_BUILD}

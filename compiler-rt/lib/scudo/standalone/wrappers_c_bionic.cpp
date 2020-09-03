@@ -18,32 +18,58 @@
 #include <stdint.h>
 #include <stdio.h>
 
-static scudo::Allocator<scudo::AndroidConfig> Allocator;
-static scudo::Allocator<scudo::AndroidSvelteConfig> SvelteAllocator;
-
-extern "C" {
-
 // Regular MallocDispatch definitions.
 #define SCUDO_PREFIX(name) CONCATENATE(scudo_, name)
 #define SCUDO_ALLOCATOR Allocator
+
+extern "C" void SCUDO_PREFIX(malloc_postinit)();
+static scudo::Allocator<scudo::AndroidConfig, SCUDO_PREFIX(malloc_postinit)>
+    SCUDO_ALLOCATOR;
+
 #include "wrappers_c.inc"
+
 #undef SCUDO_ALLOCATOR
 #undef SCUDO_PREFIX
 
 // Svelte MallocDispatch definitions.
 #define SCUDO_PREFIX(name) CONCATENATE(scudo_svelte_, name)
 #define SCUDO_ALLOCATOR SvelteAllocator
+
+extern "C" void SCUDO_PREFIX(malloc_postinit)();
+static scudo::Allocator<scudo::AndroidSvelteConfig,
+                        SCUDO_PREFIX(malloc_postinit)>
+    SCUDO_ALLOCATOR;
+
 #include "wrappers_c.inc"
+
 #undef SCUDO_ALLOCATOR
 #undef SCUDO_PREFIX
 
-// The following is the only function that will end up initializing both
-// allocators, which will result in a slight increase in memory footprint.
-INTERFACE void __scudo_print_stats(void) {
-  Allocator.printStats();
-  SvelteAllocator.printStats();
+// TODO(kostyak): support both allocators.
+INTERFACE void __scudo_print_stats(void) { Allocator.printStats(); }
+
+INTERFACE void __scudo_get_error_info(
+    struct scudo_error_info *error_info, uintptr_t fault_addr,
+    const char *stack_depot, const char *region_info, const char *memory,
+    const char *memory_tags, uintptr_t memory_addr, size_t memory_size) {
+  Allocator.getErrorInfo(error_info, fault_addr, stack_depot, region_info,
+                         memory, memory_tags, memory_addr, memory_size);
 }
 
-} // extern "C"
+INTERFACE const char *__scudo_get_stack_depot_addr() {
+  return Allocator.getStackDepotAddress();
+}
+
+INTERFACE size_t __scudo_get_stack_depot_size() {
+  return sizeof(scudo::StackDepot);
+}
+
+INTERFACE const char *__scudo_get_region_info_addr() {
+  return Allocator.getRegionInfoArrayAddress();
+}
+
+INTERFACE size_t __scudo_get_region_info_size() {
+  return Allocator.getRegionInfoArraySize();
+}
 
 #endif // SCUDO_ANDROID && _BIONIC

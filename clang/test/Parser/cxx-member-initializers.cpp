@@ -62,7 +62,7 @@ namespace PR16480 {
 
   // FIXME: This should be valid in the union of C99 and C++11.
   struct F : X<0> {
-    F() : X<A<T>().n + (T){}.n>{} {} // expected-error +{{}}
+    F() : X<A<T>().n + (T){}.n>{} {} // expected-error +{{}} expected-note {{to match}}
 
     struct T { int n; };
     template<typename> struct A { int n; };
@@ -70,7 +70,7 @@ namespace PR16480 {
 
   // FIXME: This is valid now, but may be made ill-formed by DR1607.
   struct G : X<0> {
-    G() : X<0 && [](){return 0;}()>{} // expected-error +{{}}
+    G() : X<0 && [](){return 0;}()>{} // expected-error +{{}} expected-note {{to match}}
   };
 
   struct Errs : X<0> {
@@ -103,5 +103,5 @@ class G {
   void l(int x = C<int, C<int, int>::C1>().f()) {}
 
   // This isn't, but it shouldn't crash. The diagnostics don't matter much.
-  void m(int x = C<int, union int>().f()) {} // expected-error {{declaration of anonymous union must be a definition}} expected-error {{expected a type}}
+  void m(int x = C<int, union int>().f()) {} // expected-error {{declaration of anonymous union must be a definition}} expected-error {{expected a type}} expected-error {{expected '>'}} expected-note {{to match}}
 };

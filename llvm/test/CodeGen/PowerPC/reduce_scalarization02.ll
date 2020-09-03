@@ -47,33 +47,23 @@ define dso_local void @test2(<16 x float>* nocapture readonly %a, <2 x double>* 
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs0, 0(r3)
-; CHECK-NEXT:    xxsldwi vs1, vs0, vs0, 1
-; CHECK-NEXT:    xscvspdpn f2, vs0
-; CHECK-NEXT:    xxsldwi vs3, vs0, vs0, 3
-; CHECK-NEXT:    xxswapd vs0, vs0
-; CHECK-NEXT:    xscvspdpn f1, vs1
-; CHECK-NEXT:    xscvspdpn f3, vs3
-; CHECK-NEXT:    xscvspdpn f0, vs0
-; CHECK-NEXT:    xxmrghd vs0, vs0, vs3
-; CHECK-NEXT:    xxmrghd vs1, vs2, vs1
-; CHECK-NEXT:    stxv vs0, 0(r4)
-; CHECK-NEXT:    stxv vs1, 0(r5)
+; CHECK-NEXT:    xxmrglw vs1, vs0, vs0
+; CHECK-NEXT:    xxmrghw vs0, vs0, vs0
+; CHECK-NEXT:    xvcvspdp vs1, vs1
+; CHECK-NEXT:    xvcvspdp vs0, vs0
+; CHECK-NEXT:    stxv vs1, 0(r4)
+; CHECK-NEXT:    stxv vs0, 0(r5)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test2:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
-; CHECK-BE-NEXT:    xxswapd vs1, vs0
-; CHECK-BE-NEXT:    xxsldwi vs2, vs0, vs0, 3
-; CHECK-BE-NEXT:    xscvspdpn f3, vs0
-; CHECK-BE-NEXT:    xxsldwi vs0, vs0, vs0, 1
-; CHECK-BE-NEXT:    xscvspdpn f1, vs1
-; CHECK-BE-NEXT:    xscvspdpn f2, vs2
-; CHECK-BE-NEXT:    xscvspdpn f0, vs0
-; CHECK-BE-NEXT:    xxmrghd vs0, vs3, vs0
-; CHECK-BE-NEXT:    xxmrghd vs1, vs1, vs2
-; CHECK-BE-NEXT:    stxv vs0, 0(r4)
-; CHECK-BE-NEXT:    stxv vs1, 0(r5)
+; CHECK-BE-NEXT:    xxmrghw vs1, vs0, vs0
+; CHECK-BE-NEXT:    xxmrglw vs0, vs0, vs0
+; CHECK-BE-NEXT:    xvcvspdp vs1, vs1
+; CHECK-BE-NEXT:    xvcvspdp vs0, vs0
+; CHECK-BE-NEXT:    stxv vs1, 0(r4)
+; CHECK-BE-NEXT:    stxv vs0, 0(r5)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = load <16 x float>, <16 x float>* %a, align 16

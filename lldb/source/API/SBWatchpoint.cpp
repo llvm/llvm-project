@@ -1,4 +1,4 @@
-//===-- SBWatchpoint.cpp --------------------------------*- C++ -*-===//
+//===-- SBWatchpoint.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -46,7 +46,7 @@ const SBWatchpoint &SBWatchpoint::operator=(const SBWatchpoint &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBWatchpoint::~SBWatchpoint() {}
+SBWatchpoint::~SBWatchpoint() = default;
 
 watch_id_t SBWatchpoint::GetID() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::watch_id_t, SBWatchpoint, GetID);

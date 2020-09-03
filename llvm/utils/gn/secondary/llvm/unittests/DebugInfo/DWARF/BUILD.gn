@@ -12,10 +12,16 @@ unittest("DebugInfoDWARFTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "DWARFAcceleratorTableTest.cpp",
+    "DWARFDataExtractorTest.cpp",
+    "DWARFDebugArangeSetTest.cpp",
+    "DWARFDebugFrameTest.cpp",
     "DWARFDebugInfoTest.cpp",
     "DWARFDebugLineTest.cpp",
     "DWARFDieTest.cpp",
+    "DWARFExpressionCompactPrinterTest.cpp",
     "DWARFFormValueTest.cpp",
+    "DWARFListTableTest.cpp",
     "DWARFLocationExpressionTest.cpp",
     "DwarfGenerator.cpp",
     "DwarfUtils.cpp",

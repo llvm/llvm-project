@@ -68,7 +68,7 @@ bb:
   ret void
 }
 
-; CHECK-LABEL define internal void @_Z3foo_unknown_calli.1_bb3
+; CHECK-LABEL: define internal void @_Z3foo_unknown_calli.1.bb3
 ; CHECK: newFuncRoot:
 ; CHECK-NEXT: br label %bb3
 

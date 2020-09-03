@@ -111,7 +111,7 @@ exit:
 }
 
 ; Subtraction also provides a zero-based CC value.
-define float @f5(float %a, float %b, float *%dest) {
+define float @f5(float %a, float %b, float *%dest) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: seb %f0, 0(%r2)
 ; CHECK-NEXT: bnher %r14
@@ -144,7 +144,7 @@ define float @f6(float %dummy, float %a, float *%dest) #0 {
 ; CHECK-NEXT: bhr %r14
 ; CHECK: br %r14
 entry:
-  %res = call float @llvm.fabs.f32(float %a)
+  %res = call float @llvm.fabs.f32(float %a) #0
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %res, float 0.0,
                                                metadata !"ogt",
@@ -167,7 +167,7 @@ define float @f7(float %dummy, float %a, float *%dest) #0 {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %abs = call float @llvm.fabs.f32(float %a)
+  %abs = call float @llvm.fabs.f32(float %a) #0
   %res = fneg float %abs
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %res, float 0.0,
@@ -308,7 +308,7 @@ define float @f12(float %dummy, float %val) #0 {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %ret = call float asm "blah $1", "=f,{f0}"(float %val)
+  %ret = call float asm "blah $1", "=f,{f0}"(float %val) #0
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %val, float 0.0,
                                                metadata !"olt",
@@ -316,7 +316,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  call void asm sideeffect "blah", ""()
+  call void asm sideeffect "blah", ""() #0
   br label %exit
 
 exit:
@@ -333,7 +333,7 @@ define double @f13(double %dummy, double %val) #0 {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %ret = call double asm "blah $1", "=f,{f0}"(double %val)
+  %ret = call double asm "blah $1", "=f,{f0}"(double %val) #0
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(
                                                double %val, double 0.0,
                                                metadata !"olt",
@@ -341,7 +341,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  call void asm sideeffect "blah", ""()
+  call void asm sideeffect "blah", ""() #0
   br label %exit
 
 exit:
@@ -374,7 +374,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  call void asm sideeffect "blah", ""()
+  call void asm sideeffect "blah", ""() #0
   br label %exit
 
 exit:
@@ -392,7 +392,7 @@ define float @f15(float %val, float %dummy) #0 {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %ret = call float asm "blah $1", "=f,{f2}"(float %val)
+  %ret = call float asm "blah $1", "=f,{f2}"(float %val) #0
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %val, float 0.0,
                                                metadata !"olt",
@@ -400,7 +400,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  call void asm sideeffect "blah", ""()
+  call void asm sideeffect "blah", ""() #0
   br label %exit
 
 exit:
@@ -418,7 +418,7 @@ define double @f16(double %val, double %dummy) #0 {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %ret = call double asm "blah $1", "=f,{f2}"(double %val)
+  %ret = call double asm "blah $1", "=f,{f2}"(double %val) #0
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(
                                                double %val, double 0.0,
                                                metadata !"olt",
@@ -426,7 +426,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  call void asm sideeffect "blah", ""()
+  call void asm sideeffect "blah", ""() #0
   br label %exit
 
 exit:
@@ -471,7 +471,7 @@ entry:
                         float %a, float %b,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  call void asm sideeffect "blah", ""()
+  call void asm sideeffect "blah", ""() #0
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %res, float 0.0,
                                                metadata !"oeq",
@@ -498,7 +498,7 @@ define float @f19(float %dummy, float %val) #0 {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %ret = call float asm sideeffect "blah $1", "=f,{f0}"(float %val)
+  %ret = call float asm sideeffect "blah $1", "=f,{f0}"(float %val) #0
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %val, float 0.0,
                                                metadata !"olt",
@@ -506,7 +506,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  call void asm sideeffect "blah", ""()
+  call void asm sideeffect "blah", ""() #0
   br label %exit
 
 exit:

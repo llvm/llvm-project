@@ -1,6 +1,6 @@
 # RUN: llc -O0 -verify-machineinstrs -mtriple aarch64-- -run-pass=legalizer %s -o - | FileCheck %s
 
-# Check that when we combine SEXT/ZEXT/ANYEXT we assign the correct location.
+# Check that when we combine ZEXT/ANYEXT we assign the correct location.
 # CHECK: !8 = !DILocation(line: 23, column: 5, scope: !4)
 # CHECK:  G_AND %16, %15, debug-location !8
 
@@ -54,7 +54,7 @@ registers:
 body:             |
   bb.1.entry:
     %0:_(s8) = G_IMPLICIT_DEF
-    %4:_(p0) = G_GLOBAL_VALUE @.str, debug-location !DILocation(line: 0, scope: !4)
+    %4:_(p0) = COPY $x0
     %10:_(p0) = G_IMPLICIT_DEF debug-location !DILocation(line: 0, scope: !4)
     %1:_(s1) = G_TRUNC %0(s8)
     %2:_(s32) = G_ZEXT %1(s1)

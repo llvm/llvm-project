@@ -2,7 +2,7 @@
 ## eliminate the static symbol table, because it's not used
 ## by the dynamic loader. 
 
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: cp %t %t1
 # RUN: llvm-objcopy --strip-unneeded %t %t2
 # RUN: llvm-readobj --section-headers %t2 | FileCheck %s

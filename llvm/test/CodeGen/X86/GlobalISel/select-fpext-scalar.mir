@@ -30,8 +30,8 @@ body:             |
     ; ALL-LABEL: name: test
     ; ALL: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
     ; ALL: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
-    ; ALL: [[CVTSS2SDrr:%[0-9]+]]:fr64 = CVTSS2SDrr [[COPY1]]
-    ; ALL: [[COPY2:%[0-9]+]]:vr128 = COPY [[CVTSS2SDrr]]
+    ; ALL: %2:fr64 = nofpexcept CVTSS2SDrr [[COPY1]], implicit $mxcsr
+    ; ALL: [[COPY2:%[0-9]+]]:vr128 = COPY %2
     ; ALL: $xmm0 = COPY [[COPY2]]
     ; ALL: RET 0, implicit $xmm0
     %1:vecr(s128) = COPY $xmm0

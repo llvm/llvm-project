@@ -262,6 +262,18 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       S = std::move(MemorySec);
       break;
     }
+    case wasm::WASM_SEC_EVENT: {
+      auto EventSec = std::make_unique<WasmYAML::EventSection>();
+      for (auto &Event : Obj.events()) {
+        WasmYAML::Event E;
+        E.Index = Event.Index;
+        E.Attribute = Event.Type.Attribute;
+        E.SigIndex = Event.Type.SigIndex;
+        EventSec->Events.push_back(E);
+      }
+      S = std::move(EventSec);
+      break;
+    }
     case wasm::WASM_SEC_GLOBAL: {
       auto GlobalSec = std::make_unique<WasmYAML::GlobalSection>();
       for (auto &Global : Obj.globals()) {
@@ -273,18 +285,6 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
         GlobalSec->Globals.push_back(G);
       }
       S = std::move(GlobalSec);
-      break;
-    }
-    case wasm::WASM_SEC_EVENT: {
-      auto EventSec = std::make_unique<WasmYAML::EventSection>();
-      for (auto &Event : Obj.events()) {
-        WasmYAML::Event E;
-        E.Index = Event.Index;
-        E.Attribute = Event.Type.Attribute;
-        E.SigIndex = Event.Type.SigIndex;
-        EventSec->Events.push_back(E);
-      }
-      S = std::move(EventSec);
       break;
     }
     case wasm::WASM_SEC_START: {

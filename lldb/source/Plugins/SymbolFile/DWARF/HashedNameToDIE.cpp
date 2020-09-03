@@ -1,4 +1,4 @@
-//===-- HashedNameToDIE.cpp -------------------------------------*- C++ -*-===//
+//===-- HashedNameToDIE.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,91 +9,99 @@
 #include "HashedNameToDIE.h"
 #include "llvm/ADT/StringRef.h"
 
-void DWARFMappedHash::ExtractDIEArray(const DIEInfoArray &die_info_array,
-                                      DIEArray &die_offsets) {
+bool DWARFMappedHash::ExtractDIEArray(
+    const DIEInfoArray &die_info_array,
+    llvm::function_ref<bool(DIERef ref)> callback) {
   const size_t count = die_info_array.size();
   for (size_t i = 0; i < count; ++i)
-    die_offsets.emplace_back(die_info_array[i]);
+    if (!callback(DIERef(die_info_array[i])))
+      return false;
+  return true;
 }
 
-void DWARFMappedHash::ExtractDIEArray(const DIEInfoArray &die_info_array,
-                                      const dw_tag_t tag,
-                                      DIEArray &die_offsets) {
+void DWARFMappedHash::ExtractDIEArray(
+    const DIEInfoArray &die_info_array, const dw_tag_t tag,
+    llvm::function_ref<bool(DIERef ref)> callback) {
   if (tag == 0) {
-    ExtractDIEArray(die_info_array, die_offsets);
-  } else {
-    const size_t count = die_info_array.size();
-    for (size_t i = 0; i < count; ++i) {
-      const dw_tag_t die_tag = die_info_array[i].tag;
-      bool tag_matches = die_tag == 0 || tag == die_tag;
-      if (!tag_matches) {
-        if (die_tag == DW_TAG_class_type || die_tag == DW_TAG_structure_type)
-          tag_matches =
-              tag == DW_TAG_structure_type || tag == DW_TAG_class_type;
-      }
-      if (tag_matches)
-        die_offsets.emplace_back(die_info_array[i]);
+    ExtractDIEArray(die_info_array, callback);
+    return;
+  }
+
+  const size_t count = die_info_array.size();
+  for (size_t i = 0; i < count; ++i) {
+    const dw_tag_t die_tag = die_info_array[i].tag;
+    bool tag_matches = die_tag == 0 || tag == die_tag;
+    if (!tag_matches) {
+      if (die_tag == DW_TAG_class_type || die_tag == DW_TAG_structure_type)
+        tag_matches = tag == DW_TAG_structure_type || tag == DW_TAG_class_type;
+    }
+    if (tag_matches) {
+      if (!callback(DIERef(die_info_array[i])))
+        return;
     }
   }
 }
 
-void DWARFMappedHash::ExtractDIEArray(const DIEInfoArray &die_info_array,
-                                      const dw_tag_t tag,
-                                      const uint32_t qualified_name_hash,
-                                      DIEArray &die_offsets) {
+void DWARFMappedHash::ExtractDIEArray(
+    const DIEInfoArray &die_info_array, const dw_tag_t tag,
+    const uint32_t qualified_name_hash,
+    llvm::function_ref<bool(DIERef ref)> callback) {
   if (tag == 0) {
-    ExtractDIEArray(die_info_array, die_offsets);
-  } else {
-    const size_t count = die_info_array.size();
-    for (size_t i = 0; i < count; ++i) {
-      if (qualified_name_hash != die_info_array[i].qualified_name_hash)
-        continue;
-      const dw_tag_t die_tag = die_info_array[i].tag;
-      bool tag_matches = die_tag == 0 || tag == die_tag;
-      if (!tag_matches) {
-        if (die_tag == DW_TAG_class_type || die_tag == DW_TAG_structure_type)
-          tag_matches =
-              tag == DW_TAG_structure_type || tag == DW_TAG_class_type;
-      }
-      if (tag_matches)
-        die_offsets.emplace_back(die_info_array[i]);
+    ExtractDIEArray(die_info_array, callback);
+    return;
+  }
+
+  const size_t count = die_info_array.size();
+  for (size_t i = 0; i < count; ++i) {
+    if (qualified_name_hash != die_info_array[i].qualified_name_hash)
+      continue;
+    const dw_tag_t die_tag = die_info_array[i].tag;
+    bool tag_matches = die_tag == 0 || tag == die_tag;
+    if (!tag_matches) {
+      if (die_tag == DW_TAG_class_type || die_tag == DW_TAG_structure_type)
+        tag_matches = tag == DW_TAG_structure_type || tag == DW_TAG_class_type;
+    }
+    if (tag_matches) {
+      if (!callback(DIERef(die_info_array[i])))
+        return;
     }
   }
 }
 
 void DWARFMappedHash::ExtractClassOrStructDIEArray(
     const DIEInfoArray &die_info_array,
-    bool return_implementation_only_if_available, DIEArray &die_offsets) {
+    bool return_implementation_only_if_available,
+    llvm::function_ref<bool(DIERef ref)> callback) {
   const size_t count = die_info_array.size();
   for (size_t i = 0; i < count; ++i) {
     const dw_tag_t die_tag = die_info_array[i].tag;
-    if (die_tag == 0 || die_tag == DW_TAG_class_type ||
-        die_tag == DW_TAG_structure_type) {
-      if (die_info_array[i].type_flags & eTypeFlagClassIsImplementation) {
-        if (return_implementation_only_if_available) {
-          // We found the one true definition for this class, so only return
-          // that
-          die_offsets.clear();
-          die_offsets.emplace_back(die_info_array[i]);
-          return;
-        } else {
-          // Put the one true definition as the first entry so it matches first
-          die_offsets.emplace(die_offsets.begin(), die_info_array[i]);
-        }
-      } else {
-        die_offsets.emplace_back(die_info_array[i]);
-      }
+    if (!(die_tag == 0 || die_tag == DW_TAG_class_type ||
+          die_tag == DW_TAG_structure_type))
+      continue;
+    bool is_implementation =
+        (die_info_array[i].type_flags & eTypeFlagClassIsImplementation) != 0;
+    if (is_implementation != return_implementation_only_if_available)
+      continue;
+    if (return_implementation_only_if_available) {
+      // We found the one true definition for this class, so only return
+      // that
+      callback(DIERef(die_info_array[i]));
+      return;
     }
+    if (!callback(DIERef(die_info_array[i])))
+      return;
   }
 }
 
 void DWARFMappedHash::ExtractTypesFromDIEArray(
     const DIEInfoArray &die_info_array, uint32_t type_flag_mask,
-    uint32_t type_flag_value, DIEArray &die_offsets) {
+    uint32_t type_flag_value, llvm::function_ref<bool(DIERef ref)> callback) {
   const size_t count = die_info_array.size();
   for (size_t i = 0; i < count; ++i) {
-    if ((die_info_array[i].type_flags & type_flag_mask) == type_flag_value)
-      die_offsets.emplace_back(die_info_array[i]);
+    if ((die_info_array[i].type_flags & type_flag_mask) == type_flag_value) {
+      if (!callback(DIERef(die_info_array[i])))
+        return;
+    }
   }
 }
 
@@ -453,7 +461,7 @@ DWARFMappedHash::MemoryTable::AppendHashDataForRegularExpression(
   }
 }
 
-size_t DWARFMappedHash::MemoryTable::AppendAllDIEsThatMatchingRegex(
+void DWARFMappedHash::MemoryTable::AppendAllDIEsThatMatchingRegex(
     const lldb_private::RegularExpression &regex,
     DIEInfoArray &die_info_array) const {
   const uint32_t hash_count = m_header.hashes_count;
@@ -482,10 +490,9 @@ size_t DWARFMappedHash::MemoryTable::AppendAllDIEsThatMatchingRegex(
     }
   }
   die_info_array.swap(pair.value);
-  return die_info_array.size();
 }
 
-size_t DWARFMappedHash::MemoryTable::AppendAllDIEsInRange(
+void DWARFMappedHash::MemoryTable::AppendAllDIEsInRange(
     const uint32_t die_offset_start, const uint32_t die_offset_end,
     DIEInfoArray &die_info_array) const {
   const uint32_t hash_count = m_header.hashes_count;
@@ -512,73 +519,74 @@ size_t DWARFMappedHash::MemoryTable::AppendAllDIEsInRange(
       }
     }
   }
-  return die_info_array.size();
 }
 
-size_t DWARFMappedHash::MemoryTable::FindByName(llvm::StringRef name,
-                                                DIEArray &die_offsets) {
+bool DWARFMappedHash::MemoryTable::FindByName(
+    llvm::StringRef name, llvm::function_ref<bool(DIERef ref)> callback) {
   if (name.empty())
-    return 0;
+    return true;
 
   DIEInfoArray die_info_array;
-  if (FindByName(name, die_info_array))
-    DWARFMappedHash::ExtractDIEArray(die_info_array, die_offsets);
-  return die_info_array.size();
+  FindByName(name, die_info_array);
+  return DWARFMappedHash::ExtractDIEArray(die_info_array, callback);
 }
 
-size_t DWARFMappedHash::MemoryTable::FindByNameAndTag(llvm::StringRef name,
-                                                      const dw_tag_t tag,
-                                                      DIEArray &die_offsets) {
-  DIEInfoArray die_info_array;
-  if (FindByName(name, die_info_array))
-    DWARFMappedHash::ExtractDIEArray(die_info_array, tag, die_offsets);
-  return die_info_array.size();
-}
-
-size_t DWARFMappedHash::MemoryTable::FindByNameAndTagAndQualifiedNameHash(
+void DWARFMappedHash::MemoryTable::FindByNameAndTag(
     llvm::StringRef name, const dw_tag_t tag,
-    const uint32_t qualified_name_hash, DIEArray &die_offsets) {
+    llvm::function_ref<bool(DIERef ref)> callback) {
   DIEInfoArray die_info_array;
-  if (FindByName(name, die_info_array))
-    DWARFMappedHash::ExtractDIEArray(die_info_array, tag, qualified_name_hash,
-                                     die_offsets);
-  return die_info_array.size();
+  FindByName(name, die_info_array);
+  DWARFMappedHash::ExtractDIEArray(die_info_array, tag, callback);
 }
 
-size_t DWARFMappedHash::MemoryTable::FindCompleteObjCClassByName(
-    llvm::StringRef name, DIEArray &die_offsets, bool must_be_implementation) {
+void DWARFMappedHash::MemoryTable::FindByNameAndTagAndQualifiedNameHash(
+    llvm::StringRef name, const dw_tag_t tag,
+    const uint32_t qualified_name_hash,
+    llvm::function_ref<bool(DIERef ref)> callback) {
   DIEInfoArray die_info_array;
-  if (FindByName(name, die_info_array)) {
-    if (must_be_implementation &&
-        GetHeader().header_data.ContainsAtom(eAtomTypeTypeFlags)) {
-      // If we have two atoms, then we have the DIE offset and the type flags
-      // so we can find the objective C class efficiently.
-      DWARFMappedHash::ExtractTypesFromDIEArray(die_info_array, UINT32_MAX,
-                                                eTypeFlagClassIsImplementation,
-                                                die_offsets);
-    } else {
-      // We don't only want the one true definition, so try and see what we can
-      // find, and only return class or struct DIEs. If we do have the full
-      // implementation, then return it alone, else return all possible
-      // matches.
-      const bool return_implementation_only_if_available = true;
-      DWARFMappedHash::ExtractClassOrStructDIEArray(
-          die_info_array, return_implementation_only_if_available, die_offsets);
-    }
+  FindByName(name, die_info_array);
+  DWARFMappedHash::ExtractDIEArray(die_info_array, tag, qualified_name_hash,
+                                   callback);
+}
+
+void DWARFMappedHash::MemoryTable::FindCompleteObjCClassByName(
+    llvm::StringRef name, llvm::function_ref<bool(DIERef ref)> callback,
+    bool must_be_implementation) {
+  DIEInfoArray die_info_array;
+  FindByName(name, die_info_array);
+  if (must_be_implementation &&
+      GetHeader().header_data.ContainsAtom(eAtomTypeTypeFlags)) {
+    // If we have two atoms, then we have the DIE offset and the type flags
+    // so we can find the objective C class efficiently.
+    DWARFMappedHash::ExtractTypesFromDIEArray(
+        die_info_array, UINT32_MAX, eTypeFlagClassIsImplementation, callback);
+    return;
   }
-  return die_offsets.size();
+  // We don't only want the one true definition, so try and see what we can
+  // find, and only return class or struct DIEs. If we do have the full
+  // implementation, then return it alone, else return all possible
+  // matches.
+  bool found_implementation = false;
+  DWARFMappedHash::ExtractClassOrStructDIEArray(
+      die_info_array, true /*return_implementation_only_if_available*/,
+      [&](DIERef ref) {
+        found_implementation = true;
+        // Here the return value does not matter as we are called at most once.
+        return callback(ref);
+      });
+  if (found_implementation)
+    return;
+  DWARFMappedHash::ExtractClassOrStructDIEArray(
+      die_info_array, false /*return_implementation_only_if_available*/,
+      callback);
 }
 
-size_t DWARFMappedHash::MemoryTable::FindByName(llvm::StringRef name,
-                                                DIEInfoArray &die_info_array) {
+void DWARFMappedHash::MemoryTable::FindByName(llvm::StringRef name,
+                                              DIEInfoArray &die_info_array) {
   if (name.empty())
-    return 0;
+    return;
 
   Pair kv_pair;
-  size_t old_size = die_info_array.size();
-  if (Find(name, kv_pair)) {
+  if (Find(name, kv_pair))
     die_info_array.swap(kv_pair.value);
-    return die_info_array.size() - old_size;
-  }
-  return 0;
 }

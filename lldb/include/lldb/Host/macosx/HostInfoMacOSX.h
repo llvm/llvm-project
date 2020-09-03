@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_macosx_HostInfoMacOSX_h_
-#define lldb_Host_macosx_HostInfoMacOSX_h_
+#ifndef LLDB_HOST_MACOSX_HOSTINFOMACOSX_H
+#define LLDB_HOST_MACOSX_HOSTINFOMACOSX_H
 
 #include "lldb/Host/posix/HostInfoPosix.h"
 #include "lldb/Utility/FileSpec.h"
@@ -37,6 +37,11 @@ public:
 
   /// Query xcrun to find an Xcode SDK directory.
   static llvm::StringRef GetXcodeSDKPath(XcodeSDK sdk);
+
+  /// Shared cache utilities
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(llvm::StringRef image_name);
+
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,

@@ -1,4 +1,4 @@
-//===-- ProcessDebugger.cpp -------------------------------------*- C++ -*-===//
+//===-- ProcessDebugger.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -127,7 +127,7 @@ Status ProcessDebugger::LaunchProcess(ProcessLaunchInfo &launch_info,
     stream.Printf("ProcessDebugger unable to launch '%s'.  ProcessDebugger can "
                   "only be used for debug launches.",
                   launch_info.GetExecutableFile().GetPath().c_str());
-    std::string message = stream.GetString();
+    std::string message = stream.GetString().str();
     result.SetErrorString(message.c_str());
 
     LLDB_LOG(log, "error: {0}", message);

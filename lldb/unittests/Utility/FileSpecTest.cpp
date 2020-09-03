@@ -1,4 +1,4 @@
-//===-- FileSpecTest.cpp ----------------------------------------*- C++ -*-===//
+//===-- FileSpecTest.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -246,13 +246,11 @@ TEST(FileSpecTest, GetPath) {
       {R"(\\net)", R"(\\net)"},
       {R"(c:\..)", R"(c:\)"},
       {R"(c:\.)", R"(c:\)"},
-      // TODO: fix llvm::sys::path::remove_dots() to return "\" below.
-      {R"(\..)", R"(\..)"},
+      {R"(\..)", R"(\)"},
       //      {R"(c:..)", R"(c:..)"},
       {R"(..)", R"(..)"},
       {R"(.)", R"(.)"},
-      // TODO: fix llvm::sys::path::remove_dots() to return "c:\" below.
-      {R"(c:..\..)", R"(c:\..\..)"},
+      {R"(c:..\..)", R"(c:)"},
       {R"(..\..)", R"(..\..)"},
       {R"(foo\..)", R"(.)"},
       {R"(foo\..\bar)", R"(bar)"},
@@ -440,4 +438,10 @@ TEST(FileSpecTest, Yaml) {
   EXPECT_EQ(deserialized.GetFilename(), fs_windows.GetFilename());
   EXPECT_EQ(deserialized.GetDirectory(), fs_windows.GetDirectory());
   EXPECT_EQ(deserialized, fs_windows);
+}
+
+TEST(FileSpecTest, OperatorBool) {
+  EXPECT_FALSE(FileSpec());
+  EXPECT_FALSE(FileSpec(""));
+  EXPECT_TRUE(FileSpec("/foo/bar"));
 }

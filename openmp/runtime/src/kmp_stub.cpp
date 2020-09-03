@@ -147,7 +147,7 @@ void *kmp_malloc(size_t size) {
   i;
   void *res;
 #if KMP_OS_WINDOWS
-  // If succesfull returns a pointer to the memory block, otherwise returns
+  // If successful returns a pointer to the memory block, otherwise returns
   // NULL.
   // Sets errno to ENOMEM or EINVAL if memory allocation failed or parameter
   // validation failed.

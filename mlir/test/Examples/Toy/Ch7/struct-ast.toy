@@ -27,7 +27,7 @@ def main() {
 # CHECK-NEXT:    VarDecl b<> @{{.*}}struct-ast.toy:5:3
 # CHECK-NEXT:  ]
 # CHECK-NEXT:Function
-# CHECK-NEXT:  Proto 'multiply_transpose' @{{.*}}struct-ast.toy:9:1'
+# CHECK-NEXT:  Proto 'multiply_transpose' @{{.*}}struct-ast.toy:9:1
 # CHECK-NEXT:  Params: [value]
 # CHECK-NEXT:  Block {
 # CHECK-NEXT:    Return
@@ -44,7 +44,7 @@ def main() {
 # CHECK-NEXT:        ]
 # CHECK-NEXT:  }
 # CHECK-NEXT:Function
-# CHECK-NEXT:  Proto 'main' @{{.*}}struct-ast.toy:14:1'
+# CHECK-NEXT:  Proto 'main' @{{.*}}struct-ast.toy:14:1
 # CHECK-NEXT:  Params: []
 # CHECK-NEXT:  Block {
 # CHECK-NEXT:    VarDecl value<Struct> @{{.*}}struct-ast.toy:16:3

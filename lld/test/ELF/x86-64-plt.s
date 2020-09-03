@@ -50,7 +50,7 @@
 // CHECK2-NEXT:   }
 // CHECK2-NEXT: ]
 
-// DISASM:      _start:
+// DISASM:      <_start>:
 // DISASM-NEXT:   jmp  {{.*}} <bar@plt>
 // DISASM-NEXT:   jmp  {{.*}} <bar@plt>
 // DISASM-NEXT:   jmp  {{.*}} <zed@plt>
@@ -62,56 +62,56 @@
 
 // DISASM:      Disassembly of section .plt:
 // DISASM-EMPTY:
-// DISASM-NEXT: .plt:
+// DISASM-NEXT: <.plt>:
 // DISASM-NEXT:   1320:       pushq 8450(%rip)
 // DISASM-NEXT:               jmpq *8452(%rip)
 // DISASM-NEXT:               nopl (%rax)
 // DISASM-EMPTY:
-// DISASM-NEXT:   bar@plt:
+// DISASM-NEXT:   <bar@plt>:
 // DISASM-NEXT:   1330:       jmpq *8450(%rip)
 // DISASM-NEXT:               pushq $0
-// DISASM-NEXT:               jmp -32 <.plt>
+// DISASM-NEXT:               jmp 0x1320 <.plt>
 // DISASM-EMPTY:
-// DISASM-NEXT:   zed@plt:
+// DISASM-NEXT:   <zed@plt>:
 // DISASM-NEXT:   1340:       jmpq *8442(%rip)
 // DISASM-NEXT:               pushq $1
-// DISASM-NEXT:               jmp -48 <.plt>
+// DISASM-NEXT:               jmp 0x1320 <.plt>
 // DISASM-EMPTY:
-// DISASM-NEXT:   _start@plt:
+// DISASM-NEXT:   <_start@plt>:
 // DISASM-NEXT:   1350:       jmpq *8434(%rip)
 // DISASM-NEXT:               pushq $2
-// DISASM-NEXT:               jmp -64 <.plt>
+// DISASM-NEXT:               jmp 0x1320 <.plt>
 
 // 0x201030 - (0x201000 + 1) - 4 = 43
 // 0x201030 - (0x201005 + 1) - 4 = 38
 // 0x201040 - (0x20100a + 1) - 4 = 49
 // 0x201000 - (0x20100f + 1) - 4 = -20
 
-// DISASM2:      _start:
-// DISASM2-NEXT:   jmp  43 <bar@plt>
-// DISASM2-NEXT:   jmp  38 <bar@plt>
-// DISASM2-NEXT:   jmp  49 <zed@plt>
-// DISASM2-NEXT:   jmp  -20 <_start>
+// DISASM2:      <_start>:
+// DISASM2-NEXT:   jmp  0x2012f0 <bar@plt>
+// DISASM2-NEXT:   jmp  0x2012f0 <bar@plt>
+// DISASM2-NEXT:   jmp  0x201300 <zed@plt>
+// DISASM2-NEXT:   jmp  0x2012c0 <_start>
 
 // 0x202018 - 0x201036  = 4066
 // 0x202020 - 0x201046  = 4058
 
 // DISASM2:      Disassembly of section .plt:
 // DISASM2-EMPTY:
-// DISASM2-NEXT: .plt:
+// DISASM2-NEXT: <.plt>:
 // DISASM2-NEXT:  2012e0:       pushq 8450(%rip)
 // DISASM2-NEXT:                jmpq *8452(%rip)
 // DISASM2-NEXT:                nopl  (%rax)
 // DISASM2-EMPTY:
-// DISASM2-NEXT: bar@plt:
+// DISASM2-NEXT: <bar@plt>:
 // DISASM2-NEXT:  2012f0:       jmpq *8450(%rip)
 // DISASM2-NEXT:                pushq $0
-// DISASM2-NEXT:                jmp -32 <.plt>
+// DISASM2-NEXT:                jmp 0x2012e0 <.plt>
 // DISASM2-EMPTY:
-// DISASM2-NEXT: zed@plt:
+// DISASM2-NEXT: <zed@plt>:
 // DISASM2-NEXT:  201300:       jmpq *8442(%rip)
 // DISASM2-NEXT:                pushq $1
-// DISASM2-NEXT:                jmp -48 <.plt>
+// DISASM2-NEXT:                jmp 0x2012e0 <.plt>
 // DISASM2-NOT:   {{.}}
 
 .global _start

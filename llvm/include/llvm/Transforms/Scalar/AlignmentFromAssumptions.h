@@ -17,12 +17,14 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_ALIGNMENTFROMASSUMPTIONS_H
 #define LLVM_TRANSFORMS_SCALAR_ALIGNMENTFROMASSUMPTIONS_H
 
-#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+
+class AssumptionCache;
+class DominatorTree;
+class ScalarEvolution;
+class SCEV;
 
 struct AlignmentFromAssumptionsPass
     : public PassInfoMixin<AlignmentFromAssumptionsPass> {

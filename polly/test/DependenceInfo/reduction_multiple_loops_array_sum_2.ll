@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-dependences -analyze -basicaa < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-dependences -analyze -basic-aa < %s | FileCheck %s
 ;
 ; CHECK:      RAW dependences:
 ; CHECK-NEXT:     {  }

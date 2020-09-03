@@ -318,7 +318,7 @@ static bool shouldConvertUse(const Constant *Cst, const Instruction *Instr,
 
   // Do not mess with inline asm.
   const CallInst *CI = dyn_cast<const CallInst>(Instr);
-  return !(CI && isa<const InlineAsm>(CI->getCalledValue()));
+  return !(CI && CI->isInlineAsm());
 }
 
 /// Check if the given Cst should be converted into

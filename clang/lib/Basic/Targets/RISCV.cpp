@@ -13,6 +13,7 @@
 #include "RISCV.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/TargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -125,6 +126,9 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasC)
     Builder.defineMacro("__riscv_compressed");
+
+  if (HasB)
+    Builder.defineMacro("__riscv_bitmanip");
 }
 
 /// Return true if has this feature, need to sync with handleTargetFeatures.
@@ -139,6 +143,7 @@ bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
       .Case("f", HasF)
       .Case("d", HasD)
       .Case("c", HasC)
+      .Case("experimental-b", HasB)
       .Default(false);
 }
 
@@ -156,7 +161,29 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasD = true;
     else if (Feature == "+c")
       HasC = true;
+    else if (Feature == "+experimental-b")
+      HasB = true;
   }
 
   return true;
+}
+
+bool RISCV32TargetInfo::isValidCPUName(StringRef Name) const {
+  return llvm::RISCV::checkCPUKind(llvm::RISCV::parseCPUKind(Name),
+                                   /*Is64Bit=*/false);
+}
+
+void RISCV32TargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  llvm::RISCV::fillValidCPUArchList(Values, false);
+}
+
+bool RISCV64TargetInfo::isValidCPUName(StringRef Name) const {
+  return llvm::RISCV::checkCPUKind(llvm::RISCV::parseCPUKind(Name),
+                                   /*Is64Bit=*/true);
+}
+
+void RISCV64TargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  llvm::RISCV::fillValidCPUArchList(Values, true);
 }

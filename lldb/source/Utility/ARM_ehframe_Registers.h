@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_ARM_ehframe_Registers_h_
-#define utility_ARM_ehframe_Registers_h_
+#ifndef LLDB_SOURCE_UTILITY_ARM_EHFRAME_REGISTERS_H
+#define LLDB_SOURCE_UTILITY_ARM_EHFRAME_REGISTERS_H
 
 // The register numbers used in the eh_frame unwind information.
 // Should be the same as DWARF register numbers.
@@ -33,4 +33,4 @@ enum {
   ehframe_cpsr
 };
 
-#endif // utility_ARM_ehframe_Registers_h_
+#endif // LLDB_SOURCE_UTILITY_ARM_EHFRAME_REGISTERS_H

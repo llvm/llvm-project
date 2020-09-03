@@ -1,4 +1,4 @@
-// RUN: llvm-mc --triple=thumbv7eb-linux-gnueabihf %s -filetype=obj | llvm-objdump -triple=thumbv7eb-linux-gnueabihf -s - | FileCheck %s
+// RUN: llvm-mc --triple=thumbv7eb-linux-gnueabihf %s -filetype=obj | llvm-objdump --triple=thumbv7eb-linux-gnueabihf -s - | FileCheck %s
 
 // CHECK: Contents of section .text
 // CHECK-NEXT: 0000 d000bf00 

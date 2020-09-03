@@ -673,9 +673,9 @@ public:
   ElementInfo *EI;
 
   /// Vector Type
-  VectorType *const VTy;
+  FixedVectorType *const VTy;
 
-  VectorInfo(VectorType *VTy)
+  VectorInfo(FixedVectorType *VTy)
       : BB(nullptr), PV(nullptr), LIs(), Is(), SVI(nullptr), VTy(VTy) {
     EI = new ElementInfo[VTy->getNumElements()];
   }
@@ -735,7 +735,7 @@ public:
     if (!Op)
       return false;
 
-    VectorType *VTy = dyn_cast<VectorType>(Op->getType());
+    FixedVectorType *VTy = dyn_cast<FixedVectorType>(Op->getType());
     if (!VTy)
       return false;
 
@@ -785,8 +785,8 @@ public:
   /// \returns false if no sensible information can be gathered.
   static bool computeFromSVI(ShuffleVectorInst *SVI, VectorInfo &Result,
                              const DataLayout &DL) {
-    VectorType *ArgTy = dyn_cast<VectorType>(SVI->getOperand(0)->getType());
-    assert(ArgTy && "ShuffleVector Operand is not a VectorType");
+    FixedVectorType *ArgTy =
+        cast<FixedVectorType>(SVI->getOperand(0)->getType());
 
     // Compute the left hand vector information.
     VectorInfo LHS(ArgTy);
@@ -1200,14 +1200,15 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   IRBuilder<> Builder(InsertionPoint);
   Type *ETy = InterleavedLoad.front().SVI->getType()->getElementType();
   unsigned ElementsPerSVI =
-      InterleavedLoad.front().SVI->getType()->getNumElements();
-  VectorType *ILTy = VectorType::get(ETy, Factor * ElementsPerSVI);
+      cast<FixedVectorType>(InterleavedLoad.front().SVI->getType())
+          ->getNumElements();
+  FixedVectorType *ILTy = FixedVectorType::get(ETy, Factor * ElementsPerSVI);
 
   SmallVector<unsigned, 4> Indices;
   for (unsigned i = 0; i < Factor; i++)
     Indices.push_back(i);
   InterleavedCost = TTI.getInterleavedMemoryOpCost(
-      Instruction::Load, ILTy, Factor, Indices, InsertionPoint->getAlignment(),
+      Instruction::Load, ILTy, Factor, Indices, InsertionPoint->getAlign(),
       InsertionPoint->getPointerAddressSpace());
 
   if (InterleavedCost >= InstructionCost) {
@@ -1220,7 +1221,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
                                       "interleaved.wide.ptrcast");
 
   // Create the wide load and update the MemorySSA.
-  auto LI = Builder.CreateAlignedLoad(ILTy, CI, InsertionPoint->getAlignment(),
+  auto LI = Builder.CreateAlignedLoad(ILTy, CI, InsertionPoint->getAlign(),
                                       "interleaved.wide.load");
   auto MSSAU = MemorySSAUpdater(&MSSA);
   MemoryUse *MSSALoad = cast<MemoryUse>(MSSAU.createMemoryAccessBefore(
@@ -1230,7 +1231,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   // Create the final SVIs and replace all uses.
   int i = 0;
   for (auto &VI : InterleavedLoad) {
-    SmallVector<uint32_t, 4> Mask;
+    SmallVector<int, 4> Mask;
     for (unsigned j = 0; j < ElementsPerSVI; j++)
       Mask.push_back(i + j * Factor);
 
@@ -1265,8 +1266,11 @@ bool InterleavedLoadCombineImpl::run() {
     for (BasicBlock &BB : F) {
       for (Instruction &I : BB) {
         if (auto SVI = dyn_cast<ShuffleVectorInst>(&I)) {
+          // We don't support scalable vectors in this pass.
+          if (isa<ScalableVectorType>(SVI->getType()))
+            continue;
 
-          Candidates.emplace_back(SVI->getType());
+          Candidates.emplace_back(cast<FixedVectorType>(SVI->getType()));
 
           if (!VectorInfo::computeFromSVI(SVI, Candidates.back(), DL)) {
             Candidates.pop_back();

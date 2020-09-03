@@ -2,13 +2,10 @@
 
 ; CHECK-LABEL: invert_bcc:
 ; CHECK:      fcmp s0, s1
-; CHECK-NEXT: b.eq [[JUMP_BB1:LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: b [[JUMP_BB2:LBB[0-9]+_[0-9]+]]
-
-; CHECK-NEXT: [[JUMP_BB1]]:
+; CHECK-NEXT: b.ne [[JUMP_BB1:LBB[0-9]+_[0-9]+]]
 ; CHECK-NEXT: b [[BB1:LBB[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: [[JUMP_BB2]]:
+; CHECK-NEXT: [[JUMP_BB1]]:
 ; CHECK-NEXT: b.vc [[BB2:LBB[0-9]+_[0-9]+]]
 ; CHECK-NEXT: b [[BB1]]
 
@@ -41,10 +38,7 @@ declare i32 @foo() #0
 
 ; CHECK-LABEL: _block_split:
 ; CHECK: cmp w0, #5
-; CHECK-NEXT: b.eq [[LONG_BR_BB:LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: b [[LOR_LHS_FALSE_BB:LBB[0-9]+_[0-9]+]]
-
-; CHECK: [[LONG_BR_BB]]:
+; CHECK-NEXT: b.ne [[LOR_LHS_FALSE_BB:LBB[0-9]+_[0-9]+]]
 ; CHECK-NEXT: b [[IF_THEN_BB:LBB[0-9]+_[0-9]+]]
 
 ; CHECK: [[LOR_LHS_FALSE_BB]]:

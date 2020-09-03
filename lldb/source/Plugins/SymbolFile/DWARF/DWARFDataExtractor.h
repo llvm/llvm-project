@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_DWARFDataExtractor_h_
-#define liblldb_DWARFDataExtractor_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDATAEXTRACTOR_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDATAEXTRACTOR_H
 
 #include "lldb/Core/dwarf.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -34,4 +34,4 @@ public:
 };
 }
 
-#endif // liblldb_DWARFDataExtractor_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDATAEXTRACTOR_H

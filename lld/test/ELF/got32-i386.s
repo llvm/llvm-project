@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-objdump -section-headers -d %t | FileCheck %s
+# RUN: llvm-objdump --section-headers -d %t | FileCheck %s
 
 ## We have R_386_GOT32 relocation here.
 .globl foo
@@ -16,8 +16,8 @@ _start:
 # CHECK: Sections:
 # CHECK:  Name Size     VMA
 # CHECK:  .got 00000004 004020fc
-# CHECK:       _start:
+# CHECK:       <_start>:
 # CHECK-NEXT:   4010f5: 8b 1d {{.*}}  movl 4202748, %ebx
 
-# RUN: not ld.lld %t.o -o %t -pie 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not ld.lld %t.o -o /dev/null -pie 2>&1 | FileCheck %s --check-prefix=ERR
 # ERR: error: symbol 'foo' cannot be preempted; recompile with -fPIE

@@ -67,8 +67,7 @@
 ; With save-temps we can confirm that the cached files were copied into temp
 ; files to avoid a race condition with the cached files being pruned, since the
 ; gold plugin-api only accepts native objects passed back as files.
-; RUN: ls %t4.o.o1
-; RUN: ls %t4.o.o2
+; RUN: ls %t4.o.lto.o1 %t4.o.lto.o2
 
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

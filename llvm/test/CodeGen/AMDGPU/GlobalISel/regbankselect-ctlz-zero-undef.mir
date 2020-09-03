@@ -3,29 +3,72 @@
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass=regbankselect %s -verify-machineinstrs -o - -regbankselect-greedy | FileCheck %s
 
 ---
-name: ctlz_zero_undef_i32_s
+name: ctlz_zero_undef_s32_s
 legalized: true
 
 body: |
   bb.0:
     liveins: $sgpr0
-    ; CHECK-LABEL: name: ctlz_zero_undef_i32_s
+    ; CHECK-LABEL: name: ctlz_zero_undef_s32_s
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:sgpr(s32) = G_CTLZ_ZERO_UNDEF [[COPY]]
+    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:sgpr(s32) = G_CTLZ_ZERO_UNDEF [[COPY]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[CTLZ_ZERO_UNDEF]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = G_CTLZ_ZERO_UNDEF %0
+    S_ENDPGM 0, implicit %1
 ...
 
 ---
-name: ctlz_zero_undef_i32_v
+name: ctlz_zero_undef_s32_v
 legalized: true
 
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
-    ; CHECK-LABEL: name: ctlz_zero_undef_i32_v
+    ; CHECK-LABEL: name: ctlz_zero_undef_s32_v
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:vgpr(s32) = G_CTLZ_ZERO_UNDEF [[COPY]]
+    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:vgpr(s32) = G_CTLZ_ZERO_UNDEF [[COPY]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[CTLZ_ZERO_UNDEF]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CTLZ_ZERO_UNDEF %0
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name: ctlz_zero_undef_s64_s
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: ctlz_zero_undef_s64_s
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:sgpr(s32) = G_CTLZ_ZERO_UNDEF [[COPY]](s64)
+    ; CHECK: S_ENDPGM 0, implicit [[CTLZ_ZERO_UNDEF]](s32)
+    %0:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s32) = G_CTLZ_ZERO_UNDEF %0
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name: ctlz_zero_undef_s64_v
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; CHECK-LABEL: name: ctlz_zero_undef_s64_v
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; CHECK: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV1]](s32), [[C]]
+    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:vgpr(s32) = G_CTLZ_ZERO_UNDEF [[UV]](s32)
+    ; CHECK: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 32
+    ; CHECK: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[CTLZ_ZERO_UNDEF]], [[C1]]
+    ; CHECK: [[CTLZ_ZERO_UNDEF1:%[0-9]+]]:vgpr(s32) = G_CTLZ_ZERO_UNDEF [[UV1]](s32)
+    ; CHECK: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[ADD]], [[CTLZ_ZERO_UNDEF1]]
+    ; CHECK: S_ENDPGM 0, implicit [[SELECT]](s32)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s32) = G_CTLZ_ZERO_UNDEF %0
+    S_ENDPGM 0, implicit %1
 ...

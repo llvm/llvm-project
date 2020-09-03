@@ -1,4 +1,3 @@
-; REQUIRES: object-emission
 ; REQUIRES: default_triple
 
 ; RUN: llvm-link %S/Inputs/type-unique-simple2-a.ll %S/Inputs/type-unique-simple2-b.ll -S -o %t

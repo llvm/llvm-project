@@ -53,22 +53,18 @@ entry:
 }
 
 ; CHECK-LABEL: _split_i64:
-; CHECK: pushl %ebp
-; CHECK: movl %esp, %ebp
 ; CHECK: pushl %[[csr2:[^ ]*]]
 ; CHECK: pushl %[[csr1:[^ ]*]]
-; CHECK: andl $-8, %esp
-; CHECK-DAG: movl 8(%ebp), %[[csr1]]
-; CHECK-DAG: movl 12(%ebp), %[[csr2]]
-; CHECK-DAG: leal 8(%ebp), %[[reg:[^ ]*]]
+; CHECK-DAG: movl 12(%esp), %[[csr1]]
+; CHECK-DAG: movl 16(%esp), %[[csr2]]
+; CHECK-DAG: leal 12(%esp), %[[reg:[^ ]*]]
 ; CHECK: pushl %[[reg]]
 ; CHECK: calll _addrof_i64
+; CHECK: addl $4, %esp
 ; CHECK-DAG: movl %[[csr1]], %eax
 ; CHECK-DAG: movl %[[csr2]], %edx
-; CHECK: leal -8(%ebp), %esp
 ; CHECK: popl %[[csr1]]
 ; CHECK: popl %[[csr2]]
-; CHECK: popl %ebp
 ; CHECK: retl
 
 define i1 @i1_arg(i1 %x) {
@@ -101,16 +97,13 @@ entry:
 }
 
 ; CHECK-LABEL: _fastcc_split_i64:
-; CHECK: pushl %ebp
-; CHECK: movl %esp, %ebp
 ; CHECK-DAG: movl %edx, %[[r1:[^ ]*]]
-; CHECK-DAG: movl 8(%ebp), %[[r2:[^ ]*]]
+; CHECK-DAG: movl 20(%esp), %[[r2:[^ ]*]]
 ; CHECK-DAG: movl %[[r2]], 4(%esp)
 ; CHECK-DAG: movl %edx, (%esp)
 ; CHECK: movl %esp, %[[reg:[^ ]*]]
 ; CHECK: pushl %[[reg]]
 ; CHECK: calll _addrof_i64
-; CHECK: popl %ebp
 ; CHECK: retl
 
 
@@ -248,6 +241,20 @@ entry:
 }
 
 ; CHECK-LABEL: _avoid_inalloca:
+; CHECK: leal {{[0-9]+}}(%esp), %[[reg:[^ ]*]]
+; CHECK: pushl %[[reg]]
+; CHECK: calll _addrof_i32
+; CHECK: retl
+
+define void @avoid_preallocated(i32* preallocated(i32) %x) {
+entry:
+  %x.p.p = alloca i32*
+  store i32* %x, i32** %x.p.p
+  call void @addrof_i32(i32* %x)
+  ret void
+}
+
+; CHECK-LABEL: _avoid_preallocated:
 ; CHECK: leal {{[0-9]+}}(%esp), %[[reg:[^ ]*]]
 ; CHECK: pushl %[[reg]]
 ; CHECK: calll _addrof_i32

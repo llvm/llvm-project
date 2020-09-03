@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SERVER_TESTS_TESTCLIENT_H
-#define LLDB_SERVER_TESTS_TESTCLIENT_H
+#ifndef LLDB_UNITTESTS_TOOLS_LLDB_SERVER_TESTS_TESTCLIENT_H
+#define LLDB_UNITTESTS_TOOLS_LLDB_SERVER_TESTS_TESTCLIENT_H
 
 #include "MessageObjects.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
@@ -109,4 +109,4 @@ TestClient::SendMessage(llvm::StringRef Message, CreateArgs &&... Args) {
 
 } // namespace llgs_tests
 
-#endif // LLDB_SERVER_TESTS_TESTCLIENT_H
+#endif // LLDB_UNITTESTS_TOOLS_LLDB_SERVER_TESTS_TESTCLIENT_H

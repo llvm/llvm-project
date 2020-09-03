@@ -11,7 +11,8 @@ body: |
     liveins: $sgpr0
     ; CHECK-LABEL: name: intrinsic_trunc_s
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[INTRINSIC_TRUNC:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_TRUNC [[COPY]]
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[INTRINSIC_TRUNC:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_TRUNC [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = G_INTRINSIC_TRUNC %0
 ...

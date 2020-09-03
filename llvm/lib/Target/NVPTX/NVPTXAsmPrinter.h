@@ -32,7 +32,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/PassAnalysisSupport.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -200,13 +200,14 @@ private:
   const Function *F;
   std::string CurrentFnName;
 
-  void EmitBasicBlockStart(const MachineBasicBlock &MBB) override;
-  void EmitFunctionEntryLabel() override;
-  void EmitFunctionBodyStart() override;
-  void EmitFunctionBodyEnd() override;
+  void emitStartOfAsmFile(Module &M) override;
+  void emitBasicBlockStart(const MachineBasicBlock &MBB) override;
+  void emitFunctionEntryLabel() override;
+  void emitFunctionBodyStart() override;
+  void emitFunctionBodyEnd() override;
   void emitImplicitDef(const MachineInstr *MI) const override;
 
-  void EmitInstruction(const MachineInstr *) override;
+  void emitInstruction(const MachineInstr *) override;
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
   MCOperand GetSymbolRef(const MCSymbol *Symbol);

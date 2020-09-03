@@ -21,14 +21,9 @@
 ; CHECK-NEXT:  [def-use] to [[N4:0x[0-9a-f]*]]
 ; CHECK-NEXT:  [def-use] to [[N5:0x[0-9a-f]*]]
 
-; CHECK: Node Address:[[N5]]:single-instruction
+; CHECK: Node Address:[[N5]]:multi-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %exitcond = icmp ne i64 %inc, %n
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N6:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N6]]:single-instruction
-; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    br i1 %exitcond, label %test1.for.body, label %for.end.loopexit
 ; CHECK-NEXT: Edges:none!
 
@@ -36,33 +31,28 @@
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds float, float* %a, i64 %i.02
 ; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N7:0x[0-9a-f]*]]
+; CHECK-NEXT:  [def-use] to [[N6:0x[0-9a-f]*]]
 
-; CHECK: Node Address:[[N3]]:single-instruction
+; CHECK: Node Address:[[N3]]:multi-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds float, float* %b, i64 %i.02
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N8:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N8]]:single-instruction
-; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %0 = load float, float* %arrayidx, align 4
 ; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N9:0x[0-9a-f]*]]
+; CHECK-NEXT:  [def-use] to [[N7:0x[0-9a-f]*]]
 
-; CHECK: Node Address:[[N10:0x[0-9a-f]*]]:single-instruction
+; CHECK: Node Address:[[N8:0x[0-9a-f]*]]:single-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %conv = uitofp i64 %n to float
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N9]]
-
-; CHECK: Node Address:[[N9]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %add = fadd float %0, %conv
 ; CHECK-NEXT: Edges:
 ; CHECK-NEXT:  [def-use] to [[N7]]
 
 ; CHECK: Node Address:[[N7]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    %add = fadd float %0, %conv
+; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N6]]
+
+; CHECK: Node Address:[[N6]]:single-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    store float %add, float* %arrayidx1, align 4
 ; CHECK-NEXT: Edges:none!
@@ -118,14 +108,9 @@ for.end:                                          ; preds = %test1.for.body, %en
 ; CHECK-NEXT:  [def-use] to [[N5:0x[0-9a-f]*]]
 ; CHECK-NEXT:  [def-use] to [[N6:0x[0-9a-f]*]]
 
-; CHECK: Node Address:[[N6]]:single-instruction
+; CHECK: Node Address:[[N6]]:multi-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %exitcond = icmp ne i64 %inc, %n
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N7:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N7]]:single-instruction
-; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    br i1 %exitcond, label %test2.for.body, label %for.end.loopexit
 ; CHECK-NEXT: Edges:none!
 
@@ -133,40 +118,30 @@ for.end:                                          ; preds = %test1.for.body, %en
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %arrayidx2 = getelementptr inbounds float, float* %a, i64 %i.02
 ; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N8:0x[0-9a-f]*]]
+; CHECK-NEXT:  [def-use] to [[N7:0x[0-9a-f]*]]
 
-; CHECK: Node Address:[[N4]]:single-instruction
+; CHECK: Node Address:[[N4]]:multi-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds float, float* %a, i64 %i.02
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N9:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N9]]:single-instruction
-; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %1 = load float, float* %arrayidx1, align 4
 ; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N20:0x[0-9a-f]*]]
-; CHECK-NEXT:  [memory] to [[N8]]
+; CHECK-NEXT:  [def-use] to [[N8:0x[0-9a-f]*]]
+; CHECK-NEXT:  [memory] to [[N7]]
 
-; CHECK: Node Address:[[N3]]:single-instruction
+; CHECK: Node Address:[[N3]]:multi-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds float, float* %b, i64 %i.02
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N10:0x[0-9a-f]*]]
-
-; CHECK: Node Address:[[N10]]:single-instruction
-; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %0 = load float, float* %arrayidx, align 4
-; CHECK-NEXT: Edges:
-; CHECK-NEXT:  [def-use] to [[N20]]
-
-; CHECK: Node Address:[[N20]]:single-instruction
-; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %add = fadd float %0, %1
 ; CHECK-NEXT: Edges:
 ; CHECK-NEXT:  [def-use] to [[N8]]
 
 ; CHECK: Node Address:[[N8]]:single-instruction
+; CHECK-NEXT: Instructions:
+; CHECK-NEXT:    %add = fadd float %0, %1
+; CHECK-NEXT: Edges:
+; CHECK-NEXT:  [def-use] to [[N7]]
+
+; CHECK: Node Address:[[N7]]:single-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    store float %add, float* %arrayidx2, align 4
 ; CHECK-NEXT: Edges:none!

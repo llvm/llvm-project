@@ -28,7 +28,7 @@ def parse(dr):
   _, url, issue = issue_link.split('"', 2)
   url = url.strip()
   issue = int(issue.split('>', 1)[1].split('<', 1)[0])
-  title = title.replace('<issue_title>', '').replace('</issue_title>', '').strip()
+  title = title.replace('<issue_title>', '').replace('</issue_title>', '').replace('\r\n', '\n').strip()
   return DR(section, issue, url, status, title)
 
 status_re = re.compile(r'\bdr([0-9]+): (.*)')
@@ -61,7 +61,7 @@ print >> out_file, '''\
   <style type="text/css">
     .none { background-color: #FFCCCC }
     .partial { background-color: #FFE0B0 }
-    .svn  { background-color: #FFFF99 }
+    .unreleased { background-color: #FFFF99 }
     .full { background-color: #CCFF99 }
     .na { background-color: #DDDDDD }
     .open * { color: #AAAAAA }
@@ -93,6 +93,8 @@ print >> out_file, '''\
     <th>Available in Clang?</th>
   </tr>'''
 
+latest_release = 10
+
 def availability(issue):
   status = status_map.get(issue, 'unknown')
   avail_suffix = ''
@@ -108,12 +110,12 @@ def availability(issue):
   if status == 'unknown':
     avail = 'Unknown'
     avail_style = ' class="none"'
-  elif status == '10':
-    avail = 'SVN'
-    avail_style = ' class="svn"'
   elif re.match('^[0-9]+\.?[0-9]*', status):
     avail = 'Clang %s' % status
-    avail_style = ' class="full"'
+    if float(status) > latest_release:
+      avail_style = ' class="unreleased"'
+    else:
+      avail_style = ' class="full"'
   elif status == 'yes':
     avail = 'Yes'
     avail_style = ' class="full"'
@@ -171,7 +173,7 @@ for dr in drs:
 
   print >> out_file, '''\
   <tr%s id="%s">
-    <td><a href="http://wg21.link/cwg%s">%s</a></td>
+    <td><a href="https://wg21.link/cwg%s">%s</a></td>
     <td>%s</td>
     <td>%s</td>
     <td%s align="center">%s</td>

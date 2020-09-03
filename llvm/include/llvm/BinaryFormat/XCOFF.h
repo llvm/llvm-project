@@ -13,16 +13,23 @@
 #ifndef LLVM_BINARYFORMAT_XCOFF_H
 #define LLVM_BINARYFORMAT_XCOFF_H
 
-#include "llvm/ADT/StringRef.h"
-#include <cstdint>
+#include <stddef.h>
+#include <stdint.h>
 
 namespace llvm {
+class StringRef;
+
 namespace XCOFF {
 
 // Constants used in the XCOFF definition.
-enum { FileNamePadSize = 6, NameSize = 8, SymbolTableEntrySize = 18 };
 
-enum ReservedSectionNum { N_DEBUG = -2, N_ABS = -1, N_UNDEF = 0 };
+constexpr size_t FileNamePadSize = 6;
+constexpr size_t NameSize = 8;
+constexpr size_t SymbolTableEntrySize = 18;
+constexpr size_t RelocationSerializationSize32 = 10;
+constexpr uint16_t RelocOverflow = 65535;
+
+enum ReservedSectionNum : int16_t { N_DEBUG = -2, N_ABS = -1, N_UNDEF = 0 };
 
 // x_smclas field of x_csect from system header: /usr/include/syms.h
 /// Storage Mapping Class definitions.
@@ -54,9 +61,10 @@ enum StorageMappingClass : uint8_t {
   XMC_TE = 22  ///< Symbol mapped at the end of TOC
 };
 
-// Flags for defining the section type. Used for the s_flags field of
-// the section header structure. Defined in the system header `scnhdr.h`.
-enum SectionTypeFlags {
+// Flags for defining the section type. Masks for use with the (signed, 32-bit)
+// s_flags field of the section header structure, selecting for values in the
+// lower 16 bits. Defined in the system header `scnhdr.h`.
+enum SectionTypeFlags : int32_t {
   STYP_PAD = 0x0008,
   STYP_DWARF = 0x0010,
   STYP_TEXT = 0x0020,
@@ -70,6 +78,24 @@ enum SectionTypeFlags {
   STYP_DEBUG = 0x2000,
   STYP_TYPCHK = 0x4000,
   STYP_OVRFLO = 0x8000
+};
+
+/// Values for defining the section subtype of sections of type STYP_DWARF as
+/// they would appear in the (signed, 32-bit) s_flags field of the section
+/// header structure, contributing to the 16 most significant bits. Defined in
+/// the system header `scnhdr.h`.
+enum DwarfSectionSubtypeFlags : int32_t {
+  SSUBTYP_DWINFO = 0x1'0000,  ///< DWARF info section
+  SSUBTYP_DWLINE = 0x2'0000,  ///< DWARF line section
+  SSUBTYP_DWPBNMS = 0x3'0000, ///< DWARF pubnames section
+  SSUBTYP_DWPBTYP = 0x4'0000, ///< DWARF pubtypes section
+  SSUBTYP_DWARNGE = 0x5'0000, ///< DWARF aranges section
+  SSUBTYP_DWABREV = 0x6'0000, ///< DWARF abbrev section
+  SSUBTYP_DWSTR = 0x7'0000,   ///< DWARF str section
+  SSUBTYP_DWRNGES = 0x8'0000, ///< DWARF ranges section
+  SSUBTYP_DWLOC = 0x9'0000,   ///< DWARF loc section
+  SSUBTYP_DWFRAME = 0xA'0000, ///< DWARF frame section
+  SSUBTYP_DWMAC = 0xB'0000    ///< DWARF macinfo section
 };
 
 // STORAGE CLASSES, n_sclass field of syment.
@@ -141,12 +167,26 @@ enum StorageClass : uint8_t {
   C_TCSYM = 134 // Reserved
 };
 
-enum SymbolType {
+// Flags for defining the symbol type. Values to be encoded into the lower 3
+// bits of the (unsigned, 8-bit) x_smtyp field of csect auxiliary symbol table
+// entries. Defined in the system header `syms.h`.
+enum SymbolType : uint8_t {
   XTY_ER = 0, ///< External reference.
   XTY_SD = 1, ///< Csect definition for initialized storage.
   XTY_LD = 2, ///< Label definition.
               ///< Defines an entry point to an initialized csect.
   XTY_CM = 3  ///< Common csect definition. For uninitialized storage.
+};
+
+/// Values for visibility as they would appear when encoded in the high 4 bits
+/// of the 16-bit unsigned n_type field of symbol table entries. Valid for
+/// 32-bit XCOFF only when the vstamp in the auxiliary header is greater than 1.
+enum VisibilityType : uint16_t {
+  SYM_V_UNSPECIFIED = 0x0000,
+  SYM_V_INTERNAL = 0x1000,
+  SYM_V_HIDDEN = 0x2000,
+  SYM_V_PROTECTED = 0x3000,
+  SYM_V_EXPORTED = 0x4000
 };
 
 // Relocation types, defined in `/usr/include/reloc.h`.
@@ -253,6 +293,7 @@ enum CFileCpuId : uint8_t {
 };
 
 StringRef getMappingClassString(XCOFF::StorageMappingClass SMC);
+StringRef getRelocationTypeString(XCOFF::RelocationType Type);
 
 } // end namespace XCOFF
 } // end namespace llvm

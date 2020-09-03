@@ -432,6 +432,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
     // Skip to the next '#endif' / '#else' / '#elif'.
     CurLexer->skipOver(*SkipLength);
   }
+  SourceLocation endLoc;
   while (true) {
     CurLexer->Lex(Tok);
 
@@ -538,7 +539,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           // Restore the value of LexingRawMode so that trailing comments
           // are handled correctly, if we've reached the outermost block.
           CurPPLexer->LexingRawMode = false;
-          CheckEndOfDirective("endif");
+          endLoc = CheckEndOfDirective("endif");
           CurPPLexer->LexingRawMode = true;
           if (Callbacks)
             Callbacks->Endif(Tok.getLocation(), CondInfo.IfLoc);
@@ -565,7 +566,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           // Restore the value of LexingRawMode so that trailing comments
           // are handled correctly.
           CurPPLexer->LexingRawMode = false;
-          CheckEndOfDirective("else");
+          endLoc = CheckEndOfDirective("else");
           CurPPLexer->LexingRawMode = true;
           if (Callbacks)
             Callbacks->Else(Tok.getLocation(), CondInfo.IfLoc);
@@ -619,7 +620,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
 
   if (Callbacks)
     Callbacks->SourceRangeSkipped(
-        SourceRange(HashTokenLoc, CurPPLexer->getSourceLocation()),
+        SourceRange(HashTokenLoc, endLoc.isValid()
+                                      ? endLoc
+                                      : CurPPLexer->getSourceLocation()),
         Tok.getLocation());
 }
 
@@ -644,24 +647,8 @@ Module *Preprocessor::getModuleForLocation(SourceLocation Loc) {
 }
 
 const FileEntry *
-Preprocessor::getModuleHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
-                                                     Module *M,
-                                                     SourceLocation Loc) {
-  assert(M && "no module to include");
-
-  // If the context is the global module fragment of some module, we never
-  // want to return that file; instead, we want the innermost include-guarded
-  // header that it included.
-  bool InGlobalModuleFragment = M->Kind == Module::GlobalModuleFragment;
-
-  // If we have a module import syntax, we shouldn't include a header to
-  // make a particular module visible.
-  if ((getLangOpts().ObjC || getLangOpts().CPlusPlusModules ||
-       getLangOpts().ModulesTS) &&
-      !InGlobalModuleFragment)
-    return nullptr;
-
-  Module *TopM = M->getTopLevelModule();
+Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
+                                               SourceLocation Loc) {
   Module *IncM = getModuleForLocation(IncLoc);
 
   // Walk up through the include stack, looking through textual headers of M
@@ -675,37 +662,50 @@ Preprocessor::getModuleHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
     if (!FE)
       break;
 
-    if (InGlobalModuleFragment) {
-      if (getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE))
-        return FE;
-      Loc = SM.getIncludeLoc(ID);
-      continue;
-    }
+    // We want to find all possible modules that might contain this header, so
+    // search all enclosing directories for module maps and load them.
+    HeaderInfo.hasModuleMap(FE->getName(), /*Root*/ nullptr,
+                            SourceMgr.isInSystemHeader(Loc));
 
-    bool InTextualHeader = false;
-    for (auto Header : HeaderInfo.getModuleMap().findAllModulesForHeader(FE)) {
-      if (!Header.getModule()->isSubModuleOf(TopM))
-        continue;
-
-      if (!(Header.getRole() & ModuleMap::TextualHeader)) {
-        // If this is an accessible, non-textual header of M's top-level module
-        // that transitively includes the given location and makes the
-        // corresponding module visible, this is the thing to #include.
-        if (Header.isAccessibleFrom(IncM))
-          return FE;
-
+    bool InPrivateHeader = false;
+    for (auto Header : HeaderInfo.findAllModulesForHeader(FE)) {
+      if (!Header.isAccessibleFrom(IncM)) {
         // It's in a private header; we can't #include it.
         // FIXME: If there's a public header in some module that re-exports it,
         // then we could suggest including that, but it's not clear that's the
         // expected way to make this entity visible.
+        InPrivateHeader = true;
         continue;
       }
 
-      InTextualHeader = true;
+      // We'll suggest including textual headers below if they're
+      // include-guarded.
+      if (Header.getRole() & ModuleMap::TextualHeader)
+        continue;
+
+      // If we have a module import syntax, we shouldn't include a header to
+      // make a particular module visible. Let the caller know they should
+      // suggest an import instead.
+      if (getLangOpts().ObjC || getLangOpts().CPlusPlusModules ||
+          getLangOpts().ModulesTS)
+        return nullptr;
+
+      // If this is an accessible, non-textual header of M's top-level module
+      // that transitively includes the given location and makes the
+      // corresponding module visible, this is the thing to #include.
+      return FE;
     }
 
-    if (!InTextualHeader)
-      break;
+    // FIXME: If we're bailing out due to a private header, we shouldn't suggest
+    // an import either.
+    if (InPrivateHeader)
+      return nullptr;
+
+    // If the header is includable and has an include guard, assume the
+    // intended way to expose its contents is by #include, not by importing a
+    // module that transitively includes it.
+    if (getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE))
+      return FE;
 
     Loc = SM.getIncludeLoc(ID);
   }
@@ -1706,15 +1706,22 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     EnterAnnotationToken(SourceRange(HashLoc, EndLoc),
                          tok::annot_module_include, Action.ModuleForHeader);
     break;
+  case ImportAction::Failure:
+    assert(TheModuleLoader.HadFatalFailure &&
+           "This should be an early exit only to a fatal error");
+    TheModuleLoader.HadFatalFailure = true;
+    IncludeTok.setKind(tok::eof);
+    CurLexer->cutOffLexing();
+    return;
   }
 }
 
 Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
-    const DirectoryLookup *&CurDir, StringRef Filename,
+    const DirectoryLookup *&CurDir, StringRef& Filename,
     SourceLocation FilenameLoc, CharSourceRange FilenameRange,
     const Token &FilenameTok, bool &IsFrameworkFound, bool IsImportDecl,
     bool &IsMapped, const DirectoryLookup *LookupFrom,
-    const FileEntry *LookupFromFile, StringRef LookupFilename,
+    const FileEntry *LookupFromFile, StringRef& LookupFilename,
     SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
     ModuleMap::KnownHeader &SuggestedModule, bool isAngled) {
   Optional<FileEntryRef> File = LookupFile(
@@ -1783,21 +1790,10 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
       return Filename;
     };
     StringRef TypoCorrectionName = CorrectTypoFilename(Filename);
-
-#ifndef _WIN32
-    // Normalize slashes when compiling with -fms-extensions on non-Windows.
-    // This is unnecessary on Windows since the filesystem there handles
-    // backslashes.
-    SmallString<128> NormalizedTypoCorrectionPath;
-    if (LangOpts.MicrosoftExt) {
-      NormalizedTypoCorrectionPath = TypoCorrectionName;
-      llvm::sys::path::native(NormalizedTypoCorrectionPath);
-      TypoCorrectionName = NormalizedTypoCorrectionPath;
-    }
-#endif
+    StringRef TypoCorrectionLookupName = CorrectTypoFilename(LookupFilename);
 
     Optional<FileEntryRef> File = LookupFile(
-        FilenameLoc, TypoCorrectionName, isAngled, LookupFrom, LookupFromFile,
+        FilenameLoc, TypoCorrectionLookupName, isAngled, LookupFrom, LookupFromFile,
         CurDir, Callbacks ? &SearchPath : nullptr,
         Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped,
         /*IsFrameworkFound=*/nullptr);
@@ -1812,6 +1808,7 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
       // We found the file, so set the Filename to the name after typo
       // correction.
       Filename = TypoCorrectionName;
+      LookupFilename = TypoCorrectionLookupName;
       return File;
     }
   }
@@ -1909,14 +1906,18 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   SourceLocation FilenameLoc = FilenameTok.getLocation();
   StringRef LookupFilename = Filename;
 
-#ifndef _WIN32
+#ifdef _WIN32
+  llvm::sys::path::Style BackslashStyle = llvm::sys::path::Style::windows;
+#else
   // Normalize slashes when compiling with -fms-extensions on non-Windows. This
   // is unnecessary on Windows since the filesystem there handles backslashes.
   SmallString<128> NormalizedPath;
+  llvm::sys::path::Style BackslashStyle = llvm::sys::path::Style::posix;
   if (LangOpts.MicrosoftExt) {
     NormalizedPath = Filename.str();
     llvm::sys::path::native(NormalizedPath);
     LookupFilename = NormalizedPath;
+    BackslashStyle = llvm::sys::path::Style::windows;
   }
 #endif
 
@@ -1928,18 +1929,6 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   if (usingPCHWithThroughHeader() && SkippingUntilPCHThroughHeader) {
     if (File && isPCHThroughHeader(&File->getFileEntry()))
       SkippingUntilPCHThroughHeader = false;
-    return {ImportAction::None};
-  }
-
-  // Check for circular inclusion of the main file.
-  // We can't generate a consistent preamble with regard to the conditional
-  // stack if the main file is included again as due to the preamble bounds
-  // some directives (e.g. #endif of a header guard) will never be seen.
-  // Since this will lead to confusing errors, avoid the inclusion.
-  if (File && PreambleConditionalStack.isRecording() &&
-      SourceMgr.isMainFile(*File)) {
-    Diag(FilenameTok.getLocation(),
-         diag::err_pp_including_mainfile_in_preamble);
     return {ImportAction::None};
   }
 
@@ -2060,6 +2049,18 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     Action = (SuggestedModule && !getLangOpts().CompilingPCH) ? Import : Skip;
   }
 
+  // Check for circular inclusion of the main file.
+  // We can't generate a consistent preamble with regard to the conditional
+  // stack if the main file is included again as due to the preamble bounds
+  // some directives (e.g. #endif of a header guard) will never be seen.
+  // Since this will lead to confusing errors, avoid the inclusion.
+  if (Action == Enter && File && PreambleConditionalStack.isRecording() &&
+      SourceMgr.isMainFile(*File)) {
+    Diag(FilenameTok.getLocation(),
+         diag::err_pp_including_mainfile_in_preamble);
+    return {ImportAction::None};
+  }
+
   if (Callbacks && !IsImportDecl) {
     // Notify the callback object that we've seen an inclusion directive.
     // FIXME: Use a different callback for a pp-import?
@@ -2090,29 +2091,90 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
 
   if (CheckIncludePathPortability) {
     StringRef Name = LookupFilename;
+    StringRef NameWithoriginalSlashes = Filename;
+#if defined(_WIN32)
+    // Skip UNC prefix if present. (tryGetRealPathName() always
+    // returns a path with the prefix skipped.)
+    bool NameWasUNC = Name.consume_front("\\\\?\\");
+    NameWithoriginalSlashes.consume_front("\\\\?\\");
+#endif
     StringRef RealPathName = File->getFileEntry().tryGetRealPathName();
     SmallVector<StringRef, 16> Components(llvm::sys::path::begin(Name),
                                           llvm::sys::path::end(Name));
+#if defined(_WIN32)
+    // -Wnonportable-include-path is designed to diagnose includes using
+    // case even on systems with a case-insensitive file system.
+    // On Windows, RealPathName always starts with an upper-case drive
+    // letter for absolute paths, but Name might start with either
+    // case depending on if `cd c:\foo` or `cd C:\foo` was used in the shell.
+    // ("foo" will always have on-disk case, no matter which case was
+    // used in the cd command). To not emit this warning solely for
+    // the drive letter, whose case is dependent on if `cd` is used
+    // with upper- or lower-case drive letters, always consider the
+    // given drive letter case as correct for the purpose of this warning.
+    SmallString<128> FixedDriveRealPath;
+    if (llvm::sys::path::is_absolute(Name) &&
+        llvm::sys::path::is_absolute(RealPathName) &&
+        toLowercase(Name[0]) == toLowercase(RealPathName[0]) &&
+        isLowercase(Name[0]) != isLowercase(RealPathName[0])) {
+      assert(Components.size() >= 3 && "should have drive, backslash, name");
+      assert(Components[0].size() == 2 && "should start with drive");
+      assert(Components[0][1] == ':' && "should have colon");
+      FixedDriveRealPath = (Name.substr(0, 1) + RealPathName.substr(1)).str();
+      RealPathName = FixedDriveRealPath;
+    }
+#endif
 
     if (trySimplifyPath(Components, RealPathName)) {
       SmallString<128> Path;
       Path.reserve(Name.size()+2);
       Path.push_back(isAngled ? '<' : '"');
-      bool isLeadingSeparator = llvm::sys::path::is_absolute(Name);
+
+      const auto IsSep = [BackslashStyle](char c) {
+        return llvm::sys::path::is_separator(c, BackslashStyle);
+      };
+
       for (auto Component : Components) {
-        if (isLeadingSeparator)
-          isLeadingSeparator = false;
-        else
+        // On POSIX, Components will contain a single '/' as first element
+        // exactly if Name is an absolute path.
+        // On Windows, it will contain "C:" followed by '\' for absolute paths.
+        // The drive letter is optional for absolute paths on Windows, but
+        // clang currently cannot process absolute paths in #include lines that
+        // don't have a drive.
+        // If the first entry in Components is a directory separator,
+        // then the code at the bottom of this loop that keeps the original
+        // directory separator style copies it. If the second entry is
+        // a directory separator (the C:\ case), then that separator already
+        // got copied when the C: was processed and we want to skip that entry.
+        if (!(Component.size() == 1 && IsSep(Component[0])))
           Path.append(Component);
-        // Append the separator the user used, or the close quote
-        Path.push_back(
-          Path.size() <= Filename.size() ? Filename[Path.size()-1] :
-            (isAngled ? '>' : '"'));
+        else if (!Path.empty())
+          continue;
+
+        // Append the separator(s) the user used, or the close quote
+        if (Path.size() > NameWithoriginalSlashes.size()) {
+          Path.push_back(isAngled ? '>' : '"');
+          continue;
+        }
+        assert(IsSep(NameWithoriginalSlashes[Path.size()-1]));
+        do
+          Path.push_back(NameWithoriginalSlashes[Path.size()-1]);
+        while (Path.size() <= NameWithoriginalSlashes.size() &&
+               IsSep(NameWithoriginalSlashes[Path.size()-1]));
       }
-      // For user files and known standard headers, by default we issue a diagnostic.
-      // For other system headers, we don't. They can be controlled separately.
-      auto DiagId = (FileCharacter == SrcMgr::C_User || warnByDefaultOnWrongCase(Name)) ?
-          diag::pp_nonportable_path : diag::pp_nonportable_system_path;
+
+#if defined(_WIN32)
+      // Restore UNC prefix if it was there.
+      if (NameWasUNC)
+        Path = (Path.substr(0, 1) + "\\\\?\\" + Path.substr(1)).str();
+#endif
+
+      // For user files and known standard headers, issue a diagnostic.
+      // For other system headers, don't. They can be controlled separately.
+      auto DiagId =
+          (FileCharacter == SrcMgr::C_User || warnByDefaultOnWrongCase(Name))
+              ? diag::pp_nonportable_path
+              : diag::pp_nonportable_system_path;
       Diag(FilenameTok, DiagId) << Path <<
         FixItHint::CreateReplacement(FilenameRange, Path);
     }
@@ -2162,7 +2224,10 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   if (IncludePos.isMacroID())
     IncludePos = SourceMgr.getExpansionRange(IncludePos).getEnd();
   FileID FID = SourceMgr.createFileID(*File, IncludePos, FileCharacter);
-  assert(FID.isValid() && "Expected valid file ID");
+  if (!FID.isValid()) {
+    TheModuleLoader.HadFatalFailure = true;
+    return ImportAction::Failure;
+  }
 
   // If all is good, enter the new file!
   if (EnterSourceFile(FID, CurDir, FilenameTok.getLocation()))
@@ -2724,7 +2789,9 @@ void Preprocessor::HandleDefineDirective(
                              /*Syntactic=*/LangOpts.MicrosoftExt))
       Diag(MI->getDefinitionLoc(), diag::warn_pp_macro_def_mismatch_with_pch)
           << MacroNameTok.getIdentifierInfo();
-    return;
+    // Issue the diagnostic but allow the change if msvc extensions are enabled
+    if (!LangOpts.MicrosoftExt)
+      return;
   }
 
   // Finally, if this identifier already had a macro defined for it, verify that
@@ -2787,7 +2854,9 @@ void Preprocessor::HandleDefineDirective(
   // warn-because-unused-macro set. If it gets used it will be removed from set.
   if (getSourceManager().isInMainFile(MI->getDefinitionLoc()) &&
       !Diags->isIgnored(diag::pp_macro_not_used, MI->getDefinitionLoc()) &&
-      !MacroExpansionInDirectivesOverride) {
+      !MacroExpansionInDirectivesOverride &&
+      getSourceManager().getFileID(MI->getDefinitionLoc()) !=
+          getPredefinesFileID()) {
     MI->setIsWarnIfUnused(true);
     WarnUnusedMacroLocs.insert(MI->getDefinitionLoc());
   }

@@ -1,6 +1,6 @@
 # Note: debugserver is a Darwin-only implementation of a remote debugging
 # server. It is not intended to be used on other platforms. The tests are here
-# because using the LLDB Host API is convienent and allows testing of both parts
+# because using the LLDB Host API is convenient and allows testing of both parts
 # of the debugserver communication path. If you are looking for a non-darwin
 # remote debugging server, please use lldb-server.
 
@@ -15,6 +15,7 @@ add_lldb_unittest(debugserverTests
   LINK_LIBS
     lldbDebugserverCommon
     lldbHost
+    LLVMTestingSupport
   LINK_COMPONENTS
     Support
   )

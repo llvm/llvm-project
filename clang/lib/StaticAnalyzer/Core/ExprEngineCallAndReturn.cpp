@@ -10,17 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/Decl.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "PrettyStackTraceLocationContext.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/ConstructionContext.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
@@ -324,17 +326,14 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     CallEventRef<> UpdatedCall = Call.cloneWithState(CEEState);
 
     ExplodedNodeSet DstPostCall;
-    if (const CXXNewExpr *CNE = dyn_cast_or_null<CXXNewExpr>(CE)) {
+    if (llvm::isa_and_nonnull<CXXNewExpr>(CE)) {
       ExplodedNodeSet DstPostPostCallCallback;
       getCheckerManager().runCheckersForPostCall(DstPostPostCallCallback,
                                                  CEENode, *UpdatedCall, *this,
                                                  /*wasInlined=*/true);
-      for (auto I : DstPostPostCallCallback) {
+      for (ExplodedNode *I : DstPostPostCallCallback) {
         getCheckerManager().runCheckersForNewAllocator(
-            CNE,
-            *getObjectUnderConstruction(I->getState(), CNE,
-                                        calleeCtx->getParent()),
-            DstPostCall, I, *this,
+            cast<CXXAllocatorCall>(*UpdatedCall), DstPostCall, I, *this,
             /*wasInlined=*/true);
       }
     } else {
@@ -585,12 +584,12 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
   // defaultEvalCall if all of them fail.
   ExplodedNodeSet dstCallEvaluated;
   getCheckerManager().runCheckersForEvalCall(dstCallEvaluated, dstPreVisit,
-                                             Call, *this);
+                                             Call, *this, EvalCallOptions());
 
   // If there were other constructors called for object-type arguments
   // of this call, clean them up.
   ExplodedNodeSet dstArgumentCleanup;
-  for (auto I : dstCallEvaluated)
+  for (ExplodedNode *I : dstCallEvaluated)
     finishArgumentConstruction(dstArgumentCleanup, I, Call);
 
   ExplodedNodeSet dstPostCall;
@@ -604,7 +603,7 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
 
   // Run pointerEscape callback with the newly conjured symbols.
   SmallVector<std::pair<SVal, SVal>, 8> Escaped;
-  for (auto I : dstPostCall) {
+  for (ExplodedNode *I : dstPostCall) {
     NodeBuilder B(I, Dst, *currBldrCtx);
     ProgramStateRef State = I->getState();
     Escaped.clear();
@@ -718,7 +717,7 @@ void ExprEngine::conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
 ExprEngine::CallInlinePolicy
 ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
                               AnalyzerOptions &Opts,
-                              const ExprEngine::EvalCallOptions &CallOpts) {
+                              const EvalCallOptions &CallOpts) {
   const LocationContext *CurLC = Pred->getLocationContext();
   const StackFrameContext *CallerSFC = CurLC->getStackFrame();
   switch (Call.getKind()) {
@@ -742,7 +741,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     const ConstructionContext *CC = CCE ? CCE->getConstructionContext()
                                         : nullptr;
 
-    if (CC && isa<NewAllocatedObjectConstructionContext>(CC) &&
+    if (llvm::isa_and_nonnull<NewAllocatedObjectConstructionContext>(CC) &&
         !Opts.MayInlineCXXAllocator)
       return CIP_DisallowedOnce;
 
@@ -819,6 +818,8 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
       return CIP_DisallowedOnce;
     break;
   }
+  case CE_CXXDeallocator:
+    LLVM_FALLTHROUGH;
   case CE_CXXAllocator:
     if (Opts.MayInlineCXXAllocator)
       break;

@@ -1,9 +1,12 @@
-// RUN: %clang_cc1 -std=c++2a -fconcepts-ts -x c++ -verify %s
+// RUN: %clang_cc1 -std=c++2a -x c++ -verify %s
 
-template<typename T> requires sizeof(T) >= 4
+template<typename T> requires (sizeof(T) >= 4)
+// expected-note@-1{{similar constraint expressions not considered equivalen}}
 class A{}; // expected-note{{template is declared here}}
 
-template<typename T> requires sizeof(T) >= 4 && sizeof(T) <= 10
+template<typename T> requires (sizeof(T) >= 4 && sizeof(T) <= 10)
+// expected-note@-1{{similar constraint expression here}}
+
 class A<T>{}; // expected-error{{class template partial specialization is not more specialized than the primary template}}
 
 template<typename T>
@@ -12,7 +15,7 @@ concept C1 = sizeof(T) >= 4;
 template<typename T> requires C1<T>
 class B{};
 
-template<typename T> requires C1<T> && sizeof(T) <= 10
+template<typename T> requires (C1<T> && sizeof(T) <= 10)
 class B<T>{};
 
 template<typename T>
@@ -48,3 +51,15 @@ struct F<T>{ enum{ value = 3 }; };
 static_assert(F<unsigned>::value == 2);
 static_assert(F<char[10]>::value == 3);
 static_assert(F<char>::value == 1);
+
+// Make sure atomic constraints subsume each other only if their parameter
+// mappings are identical.
+
+template<typename T, typename U> requires C2<T>
+struct I { }; // expected-note {{template is declared here}}
+
+template<typename T, typename U> requires C2<U>
+struct I<T, U> { }; // expected-error {{class template partial specialization is not more specialized than the primary template}}
+
+template<typename T, typename U> requires C2<T> && C2<U>
+struct I<T, U> { };

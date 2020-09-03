@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_UPGRADEDURATIONCONVERSIONSCHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_UPGRADEDURATIONCONVERSIONSCHECK_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 #include <unordered_set>
 
@@ -25,6 +25,9 @@ class UpgradeDurationConversionsCheck : public ClangTidyCheck {
 public:
   UpgradeDurationConversionsCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 

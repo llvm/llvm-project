@@ -26,7 +26,7 @@ define i128 @lshr(i128 %x, i128 %y) {
 ; CHECK-DAG: or [[R5:[0-9]+]], [[R2]], [[R3]]
 ; CHECK-DAG: cmpwi [[R1]], 1
 ; CHECK-DAG: srad 4, 4, 5
-; CHECK-DAG: isel 3, [[R5]], [[R4]], 0
+; CHECK-DAG: isellt 3, [[R5]], [[R4]]
 ; CHECK: blr
 define i128 @ashr(i128 %x, i128 %y) {
   %r = ashr i128 %x, %y

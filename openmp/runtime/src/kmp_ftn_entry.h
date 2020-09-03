@@ -939,7 +939,7 @@ void FTN_STDCALL KMP_EXPAND_NAME(FTN_SET_DEFAULT_DEVICE)(int KMP_DEREF arg) {
 
 // Get number of NON-HOST devices.
 // libomptarget, if loaded, provides this function in api.cpp.
-int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)(void) KMP_WEAK_ATTRIBUTE;
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)(void) KMP_WEAK_ATTRIBUTE_EXTERNAL;
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)(void) {
 #if KMP_MIC || KMP_OS_DARWIN || KMP_OS_WINDOWS || defined(KMP_STUB)
   return 0;
@@ -957,13 +957,13 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)(void) {
 
 // This function always returns true when called on host device.
 // Compiler/libomptarget should handle when it is called inside target region.
-int FTN_STDCALL KMP_EXPAND_NAME(FTN_IS_INITIAL_DEVICE)(void) KMP_WEAK_ATTRIBUTE;
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_IS_INITIAL_DEVICE)(void) KMP_WEAK_ATTRIBUTE_EXTERNAL;
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_IS_INITIAL_DEVICE)(void) {
   return 1; // This is the host
 }
 
 // libomptarget, if loaded, provides this function
-int FTN_STDCALL FTN_GET_INITIAL_DEVICE(void) KMP_WEAK_ATTRIBUTE;
+int FTN_STDCALL FTN_GET_INITIAL_DEVICE(void) KMP_WEAK_ATTRIBUTE_EXTERNAL;
 int FTN_STDCALL FTN_GET_INITIAL_DEVICE(void) {
 #if KMP_MIC || KMP_OS_DARWIN || KMP_OS_WINDOWS || defined(KMP_STUB)
   return KMP_HOST_DEVICE;
@@ -1318,7 +1318,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_MAX_TASK_PRIORITY)(void) {
 // This function will be defined in libomptarget. When libomptarget is not
 // loaded, we assume we are on the host and return KMP_HOST_DEVICE.
 // Compiler/libomptarget will handle this if called inside target.
-int FTN_STDCALL FTN_GET_DEVICE_NUM(void) KMP_WEAK_ATTRIBUTE;
+int FTN_STDCALL FTN_GET_DEVICE_NUM(void) KMP_WEAK_ATTRIBUTE_EXTERNAL;
 int FTN_STDCALL FTN_GET_DEVICE_NUM(void) { return KMP_HOST_DEVICE; }
 
 // Compiler will ensure that this is only called from host in sequential region
@@ -1368,6 +1368,13 @@ int FTN_STDCALL FTN_GET_SUPPORTED_ACTIVE_LEVELS(void) {
 void FTN_STDCALL FTN_FULFILL_EVENT(kmp_event_t *event) {
 #ifndef KMP_STUB
   __kmp_fulfill_event(event);
+#endif
+}
+
+// display environment variables when requested
+void FTN_STDCALL FTN_DISPLAY_ENV(int verbose) {
+#ifndef KMP_STUB
+  __kmp_omp_display_env(verbose);
 #endif
 }
 

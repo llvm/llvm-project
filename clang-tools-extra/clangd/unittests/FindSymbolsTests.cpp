@@ -10,6 +10,8 @@
 #include "FindSymbols.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
+#include "TestTU.h"
+#include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -25,11 +27,6 @@ using ::testing::Field;
 using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
 
-class IgnoreDiagnostics : public DiagnosticsConsumer {
-  void onDiagnosticsReady(PathRef File,
-                          std::vector<Diag> Diagnostics) override {}
-};
-
 // GMock helpers for matching SymbolInfos items.
 MATCHER_P(QName, Name, "") {
   if (arg.containerName.empty())
@@ -38,7 +35,7 @@ MATCHER_P(QName, Name, "") {
 }
 MATCHER_P(WithName, N, "") { return arg.name == N; }
 MATCHER_P(WithKind, Kind, "") { return arg.kind == Kind; }
-MATCHER_P(SymRange, Range, "") { return arg.location.range == Range; }
+MATCHER_P(SymRange, Range, "") { return arg.range == Range; }
 
 // GMock helpers for matching DocumentSymbol.
 MATCHER_P(SymNameRange, Range, "") { return arg.selectionRange == Range; }
@@ -47,164 +44,143 @@ template <class... ChildMatchers>
   return Field(&DocumentSymbol::children, ElementsAre(ChildrenM...));
 }
 
-ClangdServer::Options optsForTests() {
-  auto ServerOpts = ClangdServer::optsForTest();
-  ServerOpts.WorkspaceRoot = testRoot();
-  ServerOpts.BuildDynamicSymbolIndex = true;
-  return ServerOpts;
+std::vector<SymbolInformation> getSymbols(TestTU &TU, llvm::StringRef Query,
+                                          int Limit = 0) {
+  auto SymbolInfos = getWorkspaceSymbols(Query, Limit, TU.index().get(),
+                                         testPath(TU.Filename));
+  EXPECT_TRUE(bool(SymbolInfos)) << "workspaceSymbols returned an error";
+  return *SymbolInfos;
 }
 
-class WorkspaceSymbolsTest : public ::testing::Test {
-public:
-  WorkspaceSymbolsTest()
-      : Server(CDB, FSProvider, DiagConsumer, optsForTests()) {
-    // Make sure the test root directory is created.
-    FSProvider.Files[testPath("unused")] = "";
-    CDB.ExtraClangFlags = {"-xc++"};
-  }
-
-protected:
-  MockFSProvider FSProvider;
-  MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server;
-  int Limit = 0;
-
-  std::vector<SymbolInformation> getSymbols(llvm::StringRef Query) {
-    EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
-    auto SymbolInfos = runWorkspaceSymbols(Server, Query, Limit);
-    EXPECT_TRUE(bool(SymbolInfos)) << "workspaceSymbols returned an error";
-    return *SymbolInfos;
-  }
-
-  void addFile(llvm::StringRef FileName, llvm::StringRef Contents) {
-    auto Path = testPath(FileName);
-    FSProvider.Files[Path] = Contents;
-    Server.addDocument(Path, Contents);
-  }
-};
-
-} // namespace
-
-TEST_F(WorkspaceSymbolsTest, Macros) {
-  addFile("foo.cpp", R"cpp(
+TEST(WorkspaceSymbols, Macros) {
+  TestTU TU;
+  TU.Code = R"cpp(
        #define MACRO X
-       )cpp");
+       )cpp";
 
   // LSP's SymbolKind doesn't have a "Macro" kind, and
   // indexSymbolKindToSymbolKind() currently maps macros
   // to SymbolKind::String.
-  EXPECT_THAT(getSymbols("macro"),
+  EXPECT_THAT(getSymbols(TU, "macro"),
               ElementsAre(AllOf(QName("MACRO"), WithKind(SymbolKind::String))));
 }
 
-TEST_F(WorkspaceSymbolsTest, NoLocals) {
-  addFile("foo.cpp", R"cpp(
+TEST(WorkspaceSymbols, NoLocals) {
+  TestTU TU;
+  TU.Code = R"cpp(
       void test(int FirstParam, int SecondParam) {
         struct LocalClass {};
         int local_var;
-      })cpp");
-  EXPECT_THAT(getSymbols("l"), IsEmpty());
-  EXPECT_THAT(getSymbols("p"), IsEmpty());
+      })cpp";
+  EXPECT_THAT(getSymbols(TU, "l"), IsEmpty());
+  EXPECT_THAT(getSymbols(TU, "p"), IsEmpty());
 }
 
-TEST_F(WorkspaceSymbolsTest, Globals) {
-  addFile("foo.h", R"cpp(
+TEST(WorkspaceSymbols, Globals) {
+  TestTU TU;
+  TU.AdditionalFiles["foo.h"] = R"cpp(
       int global_var;
 
       int global_func();
 
-      struct GlobalStruct {};)cpp");
-  addFile("foo.cpp", R"cpp(
+      struct GlobalStruct {};)cpp";
+  TU.Code = R"cpp(
       #include "foo.h"
-      )cpp");
-  EXPECT_THAT(getSymbols("global"),
+      )cpp";
+  EXPECT_THAT(getSymbols(TU, "global"),
               UnorderedElementsAre(
                   AllOf(QName("GlobalStruct"), WithKind(SymbolKind::Struct)),
                   AllOf(QName("global_func"), WithKind(SymbolKind::Function)),
                   AllOf(QName("global_var"), WithKind(SymbolKind::Variable))));
 }
 
-TEST_F(WorkspaceSymbolsTest, Unnamed) {
-  addFile("foo.h", R"cpp(
+TEST(WorkspaceSymbols, Unnamed) {
+  TestTU TU;
+  TU.AdditionalFiles["foo.h"] = R"cpp(
       struct {
         int InUnnamed;
-      } UnnamedStruct;)cpp");
-  addFile("foo.cpp", R"cpp(
+      } UnnamedStruct;)cpp";
+  TU.Code = R"cpp(
       #include "foo.h"
-      )cpp");
-  EXPECT_THAT(getSymbols("UnnamedStruct"),
+      )cpp";
+  EXPECT_THAT(getSymbols(TU, "UnnamedStruct"),
               ElementsAre(AllOf(QName("UnnamedStruct"),
                                 WithKind(SymbolKind::Variable))));
-  EXPECT_THAT(getSymbols("InUnnamed"),
+  EXPECT_THAT(getSymbols(TU, "InUnnamed"),
               ElementsAre(AllOf(QName("(anonymous struct)::InUnnamed"),
                                 WithKind(SymbolKind::Field))));
 }
 
-TEST_F(WorkspaceSymbolsTest, InMainFile) {
-  addFile("foo.cpp", R"cpp(
+TEST(WorkspaceSymbols, InMainFile) {
+  TestTU TU;
+  TU.Code = R"cpp(
       int test() {}
-      static test2() {}
-      )cpp");
-  EXPECT_THAT(getSymbols("test"), ElementsAre(QName("test"), QName("test2")));
+      static void test2() {}
+      )cpp";
+  EXPECT_THAT(getSymbols(TU, "test"),
+              ElementsAre(QName("test"), QName("test2")));
 }
 
-TEST_F(WorkspaceSymbolsTest, Namespaces) {
-  addFile("foo.h", R"cpp(
+TEST(WorkspaceSymbols, Namespaces) {
+  TestTU TU;
+  TU.AdditionalFiles["foo.h"] = R"cpp(
       namespace ans1 {
         int ai1;
       namespace ans2 {
         int ai2;
       }
       }
-      )cpp");
-  addFile("foo.cpp", R"cpp(
+      )cpp";
+  TU.Code = R"cpp(
       #include "foo.h"
-      )cpp");
-  EXPECT_THAT(getSymbols("a"),
+      )cpp";
+  EXPECT_THAT(getSymbols(TU, "a"),
               UnorderedElementsAre(QName("ans1"), QName("ans1::ai1"),
                                    QName("ans1::ans2"),
                                    QName("ans1::ans2::ai2")));
-  EXPECT_THAT(getSymbols("::"), ElementsAre(QName("ans1")));
-  EXPECT_THAT(getSymbols("::a"), ElementsAre(QName("ans1")));
-  EXPECT_THAT(getSymbols("ans1::"),
+  EXPECT_THAT(getSymbols(TU, "::"), ElementsAre(QName("ans1")));
+  EXPECT_THAT(getSymbols(TU, "::a"), ElementsAre(QName("ans1")));
+  EXPECT_THAT(getSymbols(TU, "ans1::"),
               UnorderedElementsAre(QName("ans1::ai1"), QName("ans1::ans2")));
-  EXPECT_THAT(getSymbols("::ans1"), ElementsAre(QName("ans1")));
-  EXPECT_THAT(getSymbols("::ans1::"),
+  EXPECT_THAT(getSymbols(TU, "::ans1"), ElementsAre(QName("ans1")));
+  EXPECT_THAT(getSymbols(TU, "::ans1::"),
               UnorderedElementsAre(QName("ans1::ai1"), QName("ans1::ans2")));
-  EXPECT_THAT(getSymbols("::ans1::ans2"), ElementsAre(QName("ans1::ans2")));
-  EXPECT_THAT(getSymbols("::ans1::ans2::"),
+  EXPECT_THAT(getSymbols(TU, "::ans1::ans2"), ElementsAre(QName("ans1::ans2")));
+  EXPECT_THAT(getSymbols(TU, "::ans1::ans2::"),
               ElementsAre(QName("ans1::ans2::ai2")));
 }
 
-TEST_F(WorkspaceSymbolsTest, AnonymousNamespace) {
-  addFile("foo.cpp", R"cpp(
+TEST(WorkspaceSymbols, AnonymousNamespace) {
+  TestTU TU;
+  TU.Code = R"cpp(
       namespace {
       void test() {}
       }
-      )cpp");
-  EXPECT_THAT(getSymbols("test"), ElementsAre(QName("test")));
+      )cpp";
+  EXPECT_THAT(getSymbols(TU, "test"), ElementsAre(QName("test")));
 }
 
-TEST_F(WorkspaceSymbolsTest, MultiFile) {
-  addFile("foo.h", R"cpp(
+TEST(WorkspaceSymbols, MultiFile) {
+  TestTU TU;
+  TU.AdditionalFiles["foo.h"] = R"cpp(
       int foo() {
       }
-      )cpp");
-  addFile("foo2.h", R"cpp(
+      )cpp";
+  TU.AdditionalFiles["foo2.h"] = R"cpp(
       int foo2() {
       }
-      )cpp");
-  addFile("foo.cpp", R"cpp(
+      )cpp";
+  TU.Code = R"cpp(
       #include "foo.h"
       #include "foo2.h"
-      )cpp");
-  EXPECT_THAT(getSymbols("foo"),
+      )cpp";
+  EXPECT_THAT(getSymbols(TU, "foo"),
               UnorderedElementsAre(QName("foo"), QName("foo2")));
 }
 
-TEST_F(WorkspaceSymbolsTest, GlobalNamespaceQueries) {
-  addFile("foo.h", R"cpp(
+TEST(WorkspaceSymbols, GlobalNamespaceQueries) {
+  TestTU TU;
+  TU.AdditionalFiles["foo.h"] = R"cpp(
       int foo() {
       }
       class Foo {
@@ -214,21 +190,22 @@ TEST_F(WorkspaceSymbolsTest, GlobalNamespaceQueries) {
       int foo2() {
       }
       }
-      )cpp");
-  addFile("foo.cpp", R"cpp(
+      )cpp";
+  TU.Code = R"cpp(
       #include "foo.h"
-      )cpp");
-  EXPECT_THAT(getSymbols("::"),
+      )cpp";
+  EXPECT_THAT(getSymbols(TU, "::"),
               UnorderedElementsAre(
                   AllOf(QName("Foo"), WithKind(SymbolKind::Class)),
                   AllOf(QName("foo"), WithKind(SymbolKind::Function)),
                   AllOf(QName("ns"), WithKind(SymbolKind::Namespace))));
-  EXPECT_THAT(getSymbols(":"), IsEmpty());
-  EXPECT_THAT(getSymbols(""), IsEmpty());
+  EXPECT_THAT(getSymbols(TU, ":"), IsEmpty());
+  EXPECT_THAT(getSymbols(TU, ""), IsEmpty());
 }
 
-TEST_F(WorkspaceSymbolsTest, Enums) {
-  addFile("foo.h", R"cpp(
+TEST(WorkspaceSymbols, Enums) {
+  TestTU TU;
+  TU.AdditionalFiles["foo.h"] = R"cpp(
     enum {
       Red
     };
@@ -249,63 +226,66 @@ TEST_F(WorkspaceSymbolsTest, Enums) {
         White
       };
     }
-      )cpp");
-  addFile("foo.cpp", R"cpp(
+      )cpp";
+  TU.Code = R"cpp(
       #include "foo.h"
-      )cpp");
-  EXPECT_THAT(getSymbols("Red"), ElementsAre(QName("Red")));
-  EXPECT_THAT(getSymbols("::Red"), ElementsAre(QName("Red")));
-  EXPECT_THAT(getSymbols("Green"), ElementsAre(QName("Green")));
-  EXPECT_THAT(getSymbols("Green"), ElementsAre(QName("Green")));
-  EXPECT_THAT(getSymbols("Color2::Yellow"),
+      )cpp";
+  EXPECT_THAT(getSymbols(TU, "Red"), ElementsAre(QName("Red")));
+  EXPECT_THAT(getSymbols(TU, "::Red"), ElementsAre(QName("Red")));
+  EXPECT_THAT(getSymbols(TU, "Green"), ElementsAre(QName("Green")));
+  EXPECT_THAT(getSymbols(TU, "Green"), ElementsAre(QName("Green")));
+  EXPECT_THAT(getSymbols(TU, "Color2::Yellow"),
               ElementsAre(QName("Color2::Yellow")));
-  EXPECT_THAT(getSymbols("Yellow"), ElementsAre(QName("Color2::Yellow")));
+  EXPECT_THAT(getSymbols(TU, "Yellow"), ElementsAre(QName("Color2::Yellow")));
 
-  EXPECT_THAT(getSymbols("ns::Black"), ElementsAre(QName("ns::Black")));
-  EXPECT_THAT(getSymbols("ns::Blue"), ElementsAre(QName("ns::Blue")));
-  EXPECT_THAT(getSymbols("ns::Color4::White"),
+  EXPECT_THAT(getSymbols(TU, "ns::Black"), ElementsAre(QName("ns::Black")));
+  EXPECT_THAT(getSymbols(TU, "ns::Blue"), ElementsAre(QName("ns::Blue")));
+  EXPECT_THAT(getSymbols(TU, "ns::Color4::White"),
               ElementsAre(QName("ns::Color4::White")));
 }
 
-TEST_F(WorkspaceSymbolsTest, Ranking) {
-  addFile("foo.h", R"cpp(
+TEST(WorkspaceSymbols, Ranking) {
+  TestTU TU;
+  TU.AdditionalFiles["foo.h"] = R"cpp(
       namespace ns{}
       void func();
-      )cpp");
-  addFile("foo.cpp", R"cpp(
+      )cpp";
+  TU.Code = R"cpp(
       #include "foo.h"
-      )cpp");
-  EXPECT_THAT(getSymbols("::"), ElementsAre(QName("func"), QName("ns")));
+      )cpp";
+  EXPECT_THAT(getSymbols(TU, "::"), ElementsAre(QName("func"), QName("ns")));
 }
 
-TEST_F(WorkspaceSymbolsTest, WithLimit) {
-  addFile("foo.h", R"cpp(
+TEST(WorkspaceSymbols, WithLimit) {
+  TestTU TU;
+  TU.AdditionalFiles["foo.h"] = R"cpp(
       int foo;
       int foo2;
-      )cpp");
-  addFile("foo.cpp", R"cpp(
+      )cpp";
+  TU.Code = R"cpp(
       #include "foo.h"
-      )cpp");
+      )cpp";
   // Foo is higher ranked because of exact name match.
-  EXPECT_THAT(getSymbols("foo"),
+  EXPECT_THAT(getSymbols(TU, "foo"),
               UnorderedElementsAre(
                   AllOf(QName("foo"), WithKind(SymbolKind::Variable)),
                   AllOf(QName("foo2"), WithKind(SymbolKind::Variable))));
 
-  Limit = 1;
-  EXPECT_THAT(getSymbols("foo"), ElementsAre(QName("foo")));
+  EXPECT_THAT(getSymbols(TU, "foo", 1), ElementsAre(QName("foo")));
 }
 
-TEST_F(WorkspaceSymbolsTest, TempSpecs) {
-  addFile("foo.h", R"cpp(
+TEST(WorkspaceSymbols, TempSpecs) {
+  TestTU TU;
+  TU.ExtraArgs = {"-xc++"};
+  TU.Code = R"cpp(
       template <typename T, typename U, int X = 5> class Foo {};
       template <typename T> class Foo<int, T> {};
       template <> class Foo<bool, int> {};
       template <> class Foo<bool, int, 3> {};
-      )cpp");
+      )cpp";
   // Foo is higher ranked because of exact name match.
   EXPECT_THAT(
-      getSymbols("Foo"),
+      getSymbols(TU, "Foo"),
       UnorderedElementsAre(
           AllOf(QName("Foo"), WithKind(SymbolKind::Class)),
           AllOf(QName("Foo<int, T>"), WithKind(SymbolKind::Class)),
@@ -313,34 +293,14 @@ TEST_F(WorkspaceSymbolsTest, TempSpecs) {
           AllOf(QName("Foo<bool, int, 3>"), WithKind(SymbolKind::Class))));
 }
 
-namespace {
-class DocumentSymbolsTest : public ::testing::Test {
-public:
-  DocumentSymbolsTest()
-      : Server(CDB, FSProvider, DiagConsumer, optsForTests()) {}
+std::vector<DocumentSymbol> getSymbols(ParsedAST AST) {
+  auto SymbolInfos = getDocumentSymbols(AST);
+  EXPECT_TRUE(bool(SymbolInfos)) << "documentSymbols returned an error";
+  return *SymbolInfos;
+}
 
-protected:
-  MockFSProvider FSProvider;
-  MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server;
-
-  std::vector<DocumentSymbol> getSymbols(PathRef File) {
-    EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
-    auto SymbolInfos = runDocumentSymbols(Server, File);
-    EXPECT_TRUE(bool(SymbolInfos)) << "documentSymbols returned an error";
-    return *SymbolInfos;
-  }
-
-  void addFile(llvm::StringRef FilePath, llvm::StringRef Contents) {
-    FSProvider.Files[FilePath] = Contents;
-    Server.addDocument(FilePath, Contents);
-  }
-};
-} // namespace
-
-TEST_F(DocumentSymbolsTest, BasicSymbols) {
-  std::string FilePath = testPath("foo.cpp");
+TEST(DocumentSymbols, BasicSymbols) {
+  TestTU TU;
   Annotations Main(R"(
       class Foo;
       class Foo {
@@ -384,9 +344,9 @@ TEST_F(DocumentSymbolsTest, BasicSymbols) {
       } // namespace foo
     )");
 
-  addFile(FilePath, Main.code());
+  TU.Code = Main.code().str();
   EXPECT_THAT(
-      getSymbols(FilePath),
+      getSymbols(TU.build()),
       ElementsAreArray(
           {AllOf(WithName("Foo"), WithKind(SymbolKind::Class), Children()),
            AllOf(WithName("Foo"), WithKind(SymbolKind::Class),
@@ -428,8 +388,8 @@ TEST_F(DocumentSymbolsTest, BasicSymbols) {
                    AllOf(WithName("v2"), WithKind(SymbolKind::Namespace))))}));
 }
 
-TEST_F(DocumentSymbolsTest, DeclarationDefinition) {
-  std::string FilePath = testPath("foo.cpp");
+TEST(DocumentSymbols, DeclarationDefinition) {
+  TestTU TU;
   Annotations Main(R"(
       class Foo {
         void $decl[[f]]();
@@ -438,9 +398,9 @@ TEST_F(DocumentSymbolsTest, DeclarationDefinition) {
       }
     )");
 
-  addFile(FilePath, Main.code());
+  TU.Code = Main.code().str();
   EXPECT_THAT(
-      getSymbols(FilePath),
+      getSymbols(TU.build()),
       ElementsAre(
           AllOf(WithName("Foo"), WithKind(SymbolKind::Class),
                 Children(AllOf(WithName("f"), WithKind(SymbolKind::Method),
@@ -449,39 +409,45 @@ TEST_F(DocumentSymbolsTest, DeclarationDefinition) {
                 SymNameRange(Main.range("def")))));
 }
 
-TEST_F(DocumentSymbolsTest, ExternSymbol) {
-  std::string FilePath = testPath("foo.cpp");
-  addFile(testPath("foo.h"), R"cpp(
-      extern int var;
-      )cpp");
-  addFile(FilePath, R"cpp(
-      #include "foo.h"
-      )cpp");
+TEST(DocumentSymbols, Concepts) {
+  TestTU TU;
+  TU.ExtraArgs = {"-std=c++20"};
+  TU.Code = "template <typename T> concept C = requires(T t) { t.foo(); };";
 
-  EXPECT_THAT(getSymbols(FilePath), IsEmpty());
+  EXPECT_THAT(getSymbols(TU.build()), ElementsAre(WithName("C")));
 }
 
-TEST_F(DocumentSymbolsTest, NoLocals) {
-  std::string FilePath = testPath("foo.cpp");
-  addFile(FilePath,
-          R"cpp(
+TEST(DocumentSymbols, ExternSymbol) {
+  TestTU TU;
+  TU.AdditionalFiles["foo.h"] = R"cpp(
+      extern int var;
+      )cpp";
+  TU.Code = R"cpp(
+      #include "foo.h"
+      )cpp";
+
+  EXPECT_THAT(getSymbols(TU.build()), IsEmpty());
+}
+
+TEST(DocumentSymbols, NoLocals) {
+  TestTU TU;
+  TU.Code = R"cpp(
       void test(int FirstParam, int SecondParam) {
         struct LocalClass {};
         int local_var;
-      })cpp");
-  EXPECT_THAT(getSymbols(FilePath), ElementsAre(WithName("test")));
+      })cpp";
+  EXPECT_THAT(getSymbols(TU.build()), ElementsAre(WithName("test")));
 }
 
-TEST_F(DocumentSymbolsTest, Unnamed) {
-  std::string FilePath = testPath("foo.h");
-  addFile(FilePath,
-          R"cpp(
+TEST(DocumentSymbols, Unnamed) {
+  TestTU TU;
+  TU.Code = R"cpp(
       struct {
         int InUnnamed;
       } UnnamedStruct;
-      )cpp");
+      )cpp";
   EXPECT_THAT(
-      getSymbols(FilePath),
+      getSymbols(TU.build()),
       ElementsAre(
           AllOf(WithName("(anonymous struct)"), WithKind(SymbolKind::Struct),
                 Children(AllOf(WithName("InUnnamed"),
@@ -490,26 +456,23 @@ TEST_F(DocumentSymbolsTest, Unnamed) {
                 Children())));
 }
 
-TEST_F(DocumentSymbolsTest, InHeaderFile) {
-  addFile(testPath("bar.h"), R"cpp(
+TEST(DocumentSymbols, InHeaderFile) {
+  TestTU TU;
+  TU.AdditionalFiles["bar.h"] = R"cpp(
       int foo() {
       }
-      )cpp");
-  std::string FilePath = testPath("foo.h");
-  addFile(FilePath, R"cpp(
+      )cpp";
+  TU.Code = R"cpp(
       #include "bar.h"
       int test() {
       }
-      )cpp");
-  addFile(testPath("foo.cpp"), R"cpp(
-      #include "foo.h"
-      )cpp");
-  EXPECT_THAT(getSymbols(FilePath), ElementsAre(WithName("test")));
+      )cpp";
+  EXPECT_THAT(getSymbols(TU.build()), ElementsAre(WithName("test")));
 }
 
-TEST_F(DocumentSymbolsTest, Template) {
-  std::string FilePath = testPath("foo.cpp");
-  addFile(FilePath, R"(
+TEST(DocumentSymbols, Template) {
+  TestTU TU;
+  TU.Code = R"(
     template <class T> struct Tmpl {T x = 0;};
     template <> struct Tmpl<int> {
       int y = 0;
@@ -526,9 +489,9 @@ TEST_F(DocumentSymbolsTest, Template) {
     int varTmpl = T();
     template <>
     double varTmpl<int> = 10.0;
-  )");
+  )";
   EXPECT_THAT(
-      getSymbols(FilePath),
+      getSymbols(TU.build()),
       ElementsAre(
           AllOf(WithName("Tmpl"), WithKind(SymbolKind::Struct),
                 Children(AllOf(WithName("x"), WithKind(SymbolKind::Field)))),
@@ -544,9 +507,9 @@ TEST_F(DocumentSymbolsTest, Template) {
           AllOf(WithName("varTmpl<int>"), Children())));
 }
 
-TEST_F(DocumentSymbolsTest, Namespaces) {
-  std::string FilePath = testPath("foo.cpp");
-  addFile(FilePath, R"cpp(
+TEST(DocumentSymbols, Namespaces) {
+  TestTU TU;
+  TU.Code = R"cpp(
       namespace ans1 {
         int ai1;
       namespace ans2 {
@@ -568,9 +531,9 @@ TEST_F(DocumentSymbolsTest, Namespaces) {
       class Bar {};
       }
       }
-      )cpp");
+      )cpp";
   EXPECT_THAT(
-      getSymbols(FilePath),
+      getSymbols(TU.build()),
       ElementsAreArray<::testing::Matcher<DocumentSymbol>>(
           {AllOf(WithName("ans1"),
                  Children(AllOf(WithName("ai1"), Children()),
@@ -582,9 +545,9 @@ TEST_F(DocumentSymbolsTest, Namespaces) {
                  Children(AllOf(WithName("nb"), Children(WithName("Bar")))))}));
 }
 
-TEST_F(DocumentSymbolsTest, Enums) {
-  std::string FilePath = testPath("foo.cpp");
-  addFile(FilePath, R"(
+TEST(DocumentSymbols, Enums) {
+  TestTU TU;
+  TU.Code = R"(
       enum {
         Red
       };
@@ -599,9 +562,9 @@ TEST_F(DocumentSymbolsTest, Enums) {
         Black
       };
       }
-    )");
+    )";
   EXPECT_THAT(
-      getSymbols(FilePath),
+      getSymbols(TU.build()),
       ElementsAre(
           AllOf(WithName("(anonymous enum)"), Children(WithName("Red"))),
           AllOf(WithName("Color"), Children(WithName("Green"))),
@@ -610,8 +573,8 @@ TEST_F(DocumentSymbolsTest, Enums) {
                                                Children(WithName("Black")))))));
 }
 
-TEST_F(DocumentSymbolsTest, FromMacro) {
-  std::string FilePath = testPath("foo.cpp");
+TEST(DocumentSymbols, FromMacro) {
+  TestTU TU;
   Annotations Main(R"(
     #define FF(name) \
       class name##_Test {};
@@ -623,31 +586,31 @@ TEST_F(DocumentSymbolsTest, FromMacro) {
 
     FF2();
   )");
-  addFile(FilePath, Main.code());
+  TU.Code = Main.code().str();
   EXPECT_THAT(
-      getSymbols(FilePath),
+      getSymbols(TU.build()),
       ElementsAre(
           AllOf(WithName("abc_Test"), SymNameRange(Main.range("expansion"))),
           AllOf(WithName("Test"), SymNameRange(Main.range("spelling")))));
 }
 
-TEST_F(DocumentSymbolsTest, FuncTemplates) {
-  std::string FilePath = testPath("foo.cpp");
+TEST(DocumentSymbols, FuncTemplates) {
+  TestTU TU;
   Annotations Source(R"cpp(
     template <class T>
     T foo() {}
 
     auto x = foo<int>();
-    auto y = foo<double>()
+    auto y = foo<double>();
   )cpp");
-  addFile(FilePath, Source.code());
+  TU.Code = Source.code().str();
   // Make sure we only see the template declaration, not instantiations.
-  EXPECT_THAT(getSymbols(FilePath),
+  EXPECT_THAT(getSymbols(TU.build()),
               ElementsAre(WithName("foo"), WithName("x"), WithName("y")));
 }
 
-TEST_F(DocumentSymbolsTest, UsingDirectives) {
-  std::string FilePath = testPath("foo.cpp");
+TEST(DocumentSymbols, UsingDirectives) {
+  TestTU TU;
   Annotations Source(R"cpp(
     namespace ns {
       int foo;
@@ -658,23 +621,24 @@ TEST_F(DocumentSymbolsTest, UsingDirectives) {
     using namespace ::ns;     // check we don't loose qualifiers.
     using namespace ns_alias; // and namespace aliases.
   )cpp");
-  addFile(FilePath, Source.code());
-  EXPECT_THAT(getSymbols(FilePath),
+  TU.Code = Source.code().str();
+  EXPECT_THAT(getSymbols(TU.build()),
               ElementsAre(WithName("ns"), WithName("ns_alias"),
                           WithName("using namespace ::ns"),
                           WithName("using namespace ns_alias")));
 }
 
-TEST_F(DocumentSymbolsTest, TempSpecs) {
-  addFile("foo.cpp", R"cpp(
+TEST(DocumentSymbols, TempSpecs) {
+  TestTU TU;
+  TU.Code = R"cpp(
       template <typename T, typename U, int X = 5> class Foo {};
       template <typename T> class Foo<int, T> {};
       template <> class Foo<bool, int> {};
       template <> class Foo<bool, int, 3> {};
-      )cpp");
+      )cpp";
   // Foo is higher ranked because of exact name match.
   EXPECT_THAT(
-      getSymbols("foo.cpp"),
+      getSymbols(TU.build()),
       UnorderedElementsAre(
           AllOf(WithName("Foo"), WithKind(SymbolKind::Class)),
           AllOf(WithName("Foo<int, T>"), WithKind(SymbolKind::Class)),
@@ -682,8 +646,9 @@ TEST_F(DocumentSymbolsTest, TempSpecs) {
           AllOf(WithName("Foo<bool, int, 3>"), WithKind(SymbolKind::Class))));
 }
 
-TEST_F(DocumentSymbolsTest, Qualifiers) {
-  addFile("foo.cpp", R"cpp(
+TEST(DocumentSymbols, Qualifiers) {
+  TestTU TU;
+  TU.Code = R"cpp(
     namespace foo { namespace bar {
       struct Cls;
 
@@ -703,10 +668,10 @@ TEST_F(DocumentSymbolsTest, Qualifiers) {
 
     namespace alias = foo::bar;
     int ::alias::func4() { return 40; }
-  )cpp");
+  )cpp";
 
   // All the qualifiers should be preserved exactly as written.
-  EXPECT_THAT(getSymbols("foo.cpp"),
+  EXPECT_THAT(getSymbols(TU.build()),
               UnorderedElementsAre(
                   WithName("foo"), WithName("foo::bar::Cls"),
                   WithName("foo::bar::func1"), WithName("::foo::bar::func2"),
@@ -714,8 +679,9 @@ TEST_F(DocumentSymbolsTest, Qualifiers) {
                   WithName("alias"), WithName("::alias::func4")));
 }
 
-TEST_F(DocumentSymbolsTest, QualifiersWithTemplateArgs) {
-  addFile("foo.cpp", R"cpp(
+TEST(DocumentSymbols, QualifiersWithTemplateArgs) {
+  TestTU TU;
+  TU.Code = R"cpp(
       template <typename T, typename U = double> class Foo;
 
       template <>
@@ -736,9 +702,9 @@ TEST_F(DocumentSymbolsTest, QualifiersWithTemplateArgs) {
       using Foo_type = Foo<int>;
       // If the whole type is aliased, this should be preserved too!
       int Foo_type::method3() { return 30; }
-      )cpp");
+      )cpp";
   EXPECT_THAT(
-      getSymbols("foo.cpp"),
+      getSymbols(TU.build()),
       UnorderedElementsAre(WithName("Foo"), WithName("Foo<int, double>"),
                            WithName("int_type"),
                            WithName("Foo<int_type, double>::method1"),
@@ -746,5 +712,72 @@ TEST_F(DocumentSymbolsTest, QualifiersWithTemplateArgs) {
                            WithName("Foo_type::method3")));
 }
 
+TEST(DocumentSymbolsTest, Ranges) {
+  TestTU TU;
+  Annotations Main(R"(
+      $foo[[int foo(bool Argument) {
+        return 42;
+      }]]
+
+      $variable[[char GLOBAL_VARIABLE]];
+
+      $ns[[namespace ns {
+      $bar[[class Bar {
+      public:
+        $ctor[[Bar() {}]]
+        $dtor[[~Bar()]];
+
+      private:
+        $field[[unsigned Baz]];
+
+        $getbaz[[unsigned getBaz() { return Baz; }]]
+      }]];
+      }]] // namespace ns
+
+      $forwardclass[[class ForwardClassDecl]];
+
+      $struct[[struct StructDefinition {
+        $structfield[[int *Pointer = nullptr]];
+      }]];
+      $forwardstruct[[struct StructDeclaration]];
+
+      $forwardfunc[[void forwardFunctionDecl(int Something)]];
+    )");
+  TU.Code = Main.code().str();
+  EXPECT_THAT(
+      getSymbols(TU.build()),
+      UnorderedElementsAre(
+          AllOf(WithName("foo"), WithKind(SymbolKind::Function),
+                SymRange(Main.range("foo"))),
+          AllOf(WithName("GLOBAL_VARIABLE"), WithKind(SymbolKind::Variable),
+                SymRange(Main.range("variable"))),
+          AllOf(
+              WithName("ns"), WithKind(SymbolKind::Namespace),
+              SymRange(Main.range("ns")),
+              Children(AllOf(
+                  WithName("Bar"), WithKind(SymbolKind::Class),
+                  SymRange(Main.range("bar")),
+                  Children(
+                      AllOf(WithName("Bar"), WithKind(SymbolKind::Constructor),
+                            SymRange(Main.range("ctor"))),
+                      AllOf(WithName("~Bar"), WithKind(SymbolKind::Constructor),
+                            SymRange(Main.range("dtor"))),
+                      AllOf(WithName("Baz"), WithKind(SymbolKind::Field),
+                            SymRange(Main.range("field"))),
+                      AllOf(WithName("getBaz"), WithKind(SymbolKind::Method),
+                            SymRange(Main.range("getbaz"))))))),
+          AllOf(WithName("ForwardClassDecl"), WithKind(SymbolKind::Class),
+                SymRange(Main.range("forwardclass"))),
+          AllOf(WithName("StructDefinition"), WithKind(SymbolKind::Struct),
+                SymRange(Main.range("struct")),
+                Children(AllOf(WithName("Pointer"), WithKind(SymbolKind::Field),
+                               SymRange(Main.range("structfield"))))),
+          AllOf(WithName("StructDeclaration"), WithKind(SymbolKind::Struct),
+                SymRange(Main.range("forwardstruct"))),
+          AllOf(WithName("forwardFunctionDecl"), WithKind(SymbolKind::Function),
+                SymRange(Main.range("forwardfunc")))));
+}
+
+} // namespace
 } // namespace clangd
 } // namespace clang

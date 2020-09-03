@@ -393,7 +393,7 @@ void SparcInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
 void SparcInstrInfo::
 storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                    unsigned SrcReg, bool isKill, int FI,
+                    Register SrcReg, bool isKill, int FI,
                     const TargetRegisterClass *RC,
                     const TargetRegisterInfo *TRI) const {
   DebugLoc DL;
@@ -403,7 +403,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   MachineMemOperand *MMO = MF->getMachineMemOperand(
       MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
-      MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
+      MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
   // On the order of operands here: think "[FrameIdx + 0] = SrcReg".
   if (RC == &SP::I64RegsRegClass)
@@ -432,7 +432,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
 
 void SparcInstrInfo::
 loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                     unsigned DestReg, int FI,
+                     Register DestReg, int FI,
                      const TargetRegisterClass *RC,
                      const TargetRegisterInfo *TRI) const {
   DebugLoc DL;
@@ -442,7 +442,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   MachineMemOperand *MMO = MF->getMachineMemOperand(
       MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
-      MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
+      MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
   if (RC == &SP::I64RegsRegClass)
     BuildMI(MBB, I, DL, get(SP::LDXri), DestReg).addFrameIndex(FI).addImm(0)
@@ -468,11 +468,10 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     llvm_unreachable("Can't load this register from stack slot");
 }
 
-unsigned SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const
-{
+Register SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   SparcMachineFunctionInfo *SparcFI = MF->getInfo<SparcMachineFunctionInfo>();
-  unsigned GlobalBaseReg = SparcFI->getGlobalBaseReg();
-  if (GlobalBaseReg != 0)
+  Register GlobalBaseReg = SparcFI->getGlobalBaseReg();
+  if (GlobalBaseReg)
     return GlobalBaseReg;
 
   // Insert the set of GlobalBaseReg into the first MBB of the function

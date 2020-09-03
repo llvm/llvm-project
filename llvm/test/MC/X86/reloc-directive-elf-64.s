@@ -6,10 +6,16 @@
 # PRINT:      .reloc 2, R_X86_64_NONE, .data
 # PRINT-NEXT: .reloc 1, R_X86_64_NONE, foo+4
 # PRINT-NEXT: .reloc 0, R_X86_64_NONE, 8
+# PRINT-NEXT: .reloc 0, R_X86_64_64, .data+2
+# PRINT-NEXT: .reloc 0, R_X86_64_GOTPCRELX, foo+3
+# PRINT-NEXT: .reloc 0, R_X86_64_REX_GOTPCRELX, 5
 
 # CHECK:      0x2 R_X86_64_NONE .data 0x0
 # CHECK-NEXT: 0x1 R_X86_64_NONE foo 0x4
 # CHECK-NEXT: 0x0 R_X86_64_NONE - 0x8
+# CHECK-NEXT: 0x0 R_X86_64_64 .data 0x2
+# CHECK-NEXT: 0x0 R_X86_64_GOTPCRELX foo 0x3
+# CHECK-NEXT: 0x0 R_X86_64_REX_GOTPCRELX - 0x5
 
 .text
   ret
@@ -18,6 +24,9 @@
   .reloc 2, R_X86_64_NONE, .data
   .reloc 1, R_X86_64_NONE, foo+4
   .reloc 0, R_X86_64_NONE, 8
+  .reloc 0, R_X86_64_64, .data+2
+  .reloc 0, R_X86_64_GOTPCRELX, foo+3
+  .reloc 0, R_X86_64_REX_GOTPCRELX, 5
 
 .data
 .globl foo

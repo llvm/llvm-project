@@ -30,10 +30,6 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/TargetRegistry.h"
 
-#if _MSC_VER
-#include <intrin.h>
-#endif
-
 using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
@@ -294,7 +290,7 @@ MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,
   if (!FS.empty())
     ArchFS = (Twine(ArchFS) + "," + FS).str();
 
-  std::string CPUName = CPU;
+  std::string CPUName = std::string(CPU);
   if (CPUName.empty())
     CPUName = "generic";
 
@@ -335,7 +331,10 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
     MAI = new X86ELFMCAsmInfo(TheTriple);
   } else if (TheTriple.isWindowsMSVCEnvironment() ||
              TheTriple.isWindowsCoreCLREnvironment()) {
-    MAI = new X86MCAsmInfoMicrosoft(TheTriple);
+    if (Options.getAssemblyLanguage().equals_lower("masm"))
+      MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple);
+    else
+      MAI = new X86MCAsmInfoMicrosoft(TheTriple);
   } else if (TheTriple.isOSCygMing() ||
              TheTriple.isWindowsItaniumEnvironment()) {
     MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
@@ -350,7 +349,7 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
 
   // Initial state of the frame pointer is esp+stackGrowth.
   unsigned StackPtr = is64Bit ? X86::RSP : X86::ESP;
-  MCCFIInstruction Inst = MCCFIInstruction::createDefCfa(
+  MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(
       nullptr, MRI.getDwarfRegNum(StackPtr, true), -stackGrowth);
   MAI->addInitialFrameState(Inst);
 
@@ -401,6 +400,9 @@ public:
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
                  uint64_t GotSectionVA,
                  const Triple &TargetTriple) const override;
+
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override;
   Optional<uint64_t> evaluateMemoryOperandAddress(const MCInst &Inst,
                                                   uint64_t Addr,
                                                   uint64_t Size) const override;
@@ -519,6 +521,15 @@ std::vector<std::pair<uint64_t, uint64_t>> X86MCInstrAnalysis::findPltEntries(
     }
 }
 
+bool X86MCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
+                                        uint64_t Size, uint64_t &Target) const {
+  if (Inst.getNumOperands() == 0 ||
+      Info->get(Inst.getOpcode()).OpInfo[0].OperandType != MCOI::OPERAND_PCREL)
+    return false;
+  Target = Addr + Size + Inst.getOperand(0).getImm();
+  return true;
+}
+
 Optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
     const MCInst &Inst, uint64_t Addr, uint64_t Size) const {
   const MCInstrDesc &MCID = Info->get(Inst.getOpcode());
@@ -552,7 +563,7 @@ static MCInstrAnalysis *createX86MCInstrAnalysis(const MCInstrInfo *Info) {
 }
 
 // Force static initialization.
-extern "C" void LLVMInitializeX86TargetMC() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86TargetMC() {
   for (Target *T : {&getTheX86_32Target(), &getTheX86_64Target()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createX86MCAsmInfo);

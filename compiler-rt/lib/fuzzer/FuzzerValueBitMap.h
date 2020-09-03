@@ -11,7 +11,8 @@
 #ifndef LLVM_FUZZER_VALUE_BIT_MAP_H
 #define LLVM_FUZZER_VALUE_BIT_MAP_H
 
-#include "FuzzerDefs.h"
+#include "FuzzerPlatform.h"
+#include <cstdint>
 
 namespace fuzzer {
 

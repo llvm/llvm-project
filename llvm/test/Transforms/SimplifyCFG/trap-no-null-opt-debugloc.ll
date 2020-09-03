@@ -7,7 +7,7 @@ define void @foo() nounwind ssp #0 !dbg !0 {
   ret void, !dbg !7
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!10}

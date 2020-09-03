@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_LAYER_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -21,14 +22,61 @@
 namespace llvm {
 namespace orc {
 
+/// IRMaterializationUnit is a convenient base class for MaterializationUnits
+/// wrapping LLVM IR. Represents materialization responsibility for all symbols
+/// in the given module. If symbols are overridden by other definitions, then
+/// their linkage is changed to available-externally.
+class IRMaterializationUnit : public MaterializationUnit {
+public:
+  using SymbolNameToDefinitionMap = std::map<SymbolStringPtr, GlobalValue *>;
+
+  /// Create an IRMaterializationLayer. Scans the module to build the
+  /// SymbolFlags and SymbolToDefinition maps.
+  IRMaterializationUnit(ExecutionSession &ES,
+                        const IRSymbolMapper::ManglingOptions &MO,
+                        ThreadSafeModule TSM, VModuleKey K);
+
+  /// Create an IRMaterializationLayer from a module, and pre-existing
+  /// SymbolFlags and SymbolToDefinition maps. The maps must provide
+  /// entries for each definition in M.
+  /// This constructor is useful for delegating work from one
+  /// IRMaterializationUnit to another.
+  IRMaterializationUnit(ThreadSafeModule TSM, VModuleKey K,
+                        SymbolFlagsMap SymbolFlags, SymbolStringPtr InitSymbol,
+                        SymbolNameToDefinitionMap SymbolToDefinition);
+
+  /// Return the ModuleIdentifier as the name for this MaterializationUnit.
+  StringRef getName() const override;
+
+  /// Return a reference to the contained ThreadSafeModule.
+  const ThreadSafeModule &getModule() const { return TSM; }
+
+protected:
+  ThreadSafeModule TSM;
+  SymbolNameToDefinitionMap SymbolToDefinition;
+
+private:
+  static SymbolStringPtr getInitSymbol(ExecutionSession &ES,
+                                       const ThreadSafeModule &TSM);
+
+  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
+};
+
 /// Interface for layers that accept LLVM IR.
 class IRLayer {
 public:
-  IRLayer(ExecutionSession &ES);
+  IRLayer(ExecutionSession &ES, const IRSymbolMapper::ManglingOptions *&MO)
+      : ES(ES), MO(MO) {}
+
   virtual ~IRLayer();
 
   /// Returns the ExecutionSession for this layer.
   ExecutionSession &getExecutionSession() { return ES; }
+
+  /// Get the mangling options for this layer.
+  const IRSymbolMapper::ManglingOptions *&getManglingOptions() const {
+    return MO;
+  }
 
   /// Sets the CloneToNewContextOnEmit flag (false by default).
   ///
@@ -57,49 +105,16 @@ public:
 private:
   bool CloneToNewContextOnEmit = false;
   ExecutionSession &ES;
-};
-
-/// IRMaterializationUnit is a convenient base class for MaterializationUnits
-/// wrapping LLVM IR. Represents materialization responsibility for all symbols
-/// in the given module. If symbols are overridden by other definitions, then
-/// their linkage is changed to available-externally.
-class IRMaterializationUnit : public MaterializationUnit {
-public:
-  using SymbolNameToDefinitionMap = std::map<SymbolStringPtr, GlobalValue *>;
-
-  /// Create an IRMaterializationLayer. Scans the module to build the
-  /// SymbolFlags and SymbolToDefinition maps.
-  IRMaterializationUnit(ExecutionSession &ES, ThreadSafeModule TSM,
-                        VModuleKey K);
-
-  /// Create an IRMaterializationLayer from a module, and pre-existing
-  /// SymbolFlags and SymbolToDefinition maps. The maps must provide
-  /// entries for each definition in M.
-  /// This constructor is useful for delegating work from one
-  /// IRMaterializationUnit to another.
-  IRMaterializationUnit(ThreadSafeModule TSM, VModuleKey K,
-                        SymbolFlagsMap SymbolFlags,
-                        SymbolNameToDefinitionMap SymbolToDefinition);
-
-  /// Return the ModuleIdentifier as the name for this MaterializationUnit.
-  StringRef getName() const override;
-
-  const ThreadSafeModule &getModule() const { return TSM; }
-
-protected:
-  ThreadSafeModule TSM;
-  SymbolNameToDefinitionMap SymbolToDefinition;
-
-private:
-  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
+  const IRSymbolMapper::ManglingOptions *&MO;
 };
 
 /// MaterializationUnit that materializes modules by calling the 'emit' method
 /// on the given IRLayer.
 class BasicIRLayerMaterializationUnit : public IRMaterializationUnit {
 public:
-  BasicIRLayerMaterializationUnit(IRLayer &L, VModuleKey K,
-                                  ThreadSafeModule TSM);
+  BasicIRLayerMaterializationUnit(IRLayer &L,
+                                  const IRSymbolMapper::ManglingOptions &MO,
+                                  ThreadSafeModule TSM, VModuleKey K);
 
 private:
 
@@ -140,7 +155,8 @@ public:
 
   BasicObjectLayerMaterializationUnit(ObjectLayer &L, VModuleKey K,
                                       std::unique_ptr<MemoryBuffer> O,
-                                      SymbolFlagsMap SymbolFlags);
+                                      SymbolFlagsMap SymbolFlags,
+                                      SymbolStringPtr InitSymbol);
 
   /// Return the buffer's identifier as the name for this MaterializationUnit.
   StringRef getName() const override;
@@ -153,12 +169,6 @@ private:
   ObjectLayer &L;
   std::unique_ptr<MemoryBuffer> O;
 };
-
-/// Returns a SymbolFlagsMap for the object file represented by the given
-/// buffer, or an error if the buffer does not contain a valid object file.
-// FIXME: Maybe move to Core.h?
-Expected<SymbolFlagsMap> getObjectSymbolFlags(ExecutionSession &ES,
-                                              MemoryBufferRef ObjBuffer);
 
 } // End namespace orc
 } // End namespace llvm

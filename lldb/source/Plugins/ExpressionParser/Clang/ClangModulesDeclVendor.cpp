@@ -1,12 +1,10 @@
-//===-- ClangModulesDeclVendor.cpp ------------------------------*- C++ -*-===//
+//===-- ClangModulesDeclVendor.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#include <mutex>
 
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -37,6 +35,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/StreamString.h"
+
+#include <memory>
+#include <mutex>
 
 using namespace lldb_private;
 
@@ -130,8 +131,9 @@ StoringDiagnosticConsumer::StoringDiagnosticConsumer() {
   m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
 
   clang::DiagnosticOptions *m_options = new clang::DiagnosticOptions();
-  m_os.reset(new llvm::raw_string_ostream(m_output));
-  m_diag_printer.reset(new clang::TextDiagnosticPrinter(*m_os, m_options));
+  m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
+  m_diag_printer =
+      std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
 }
 
 void StoringDiagnosticConsumer::HandleDiagnostic(
@@ -185,7 +187,9 @@ ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
       m_parser(std::move(parser)) {
 
   // Initialize our TypeSystemClang.
-  m_ast_context.reset(new TypeSystemClang(m_compiler_instance->getASTContext()));
+  m_ast_context =
+      std::make_unique<TypeSystemClang>("ClangModulesDeclVendor ASTContext",
+                                        m_compiler_instance->getASTContext());
 }
 
 void ClangModulesDeclVendorImpl::ReportModuleExportsHelper(
@@ -407,7 +411,7 @@ ClangModulesDeclVendorImpl::FindDecls(ConstString name, bool append,
     if (num_matches >= max_matches)
       return num_matches;
 
-    decls.push_back(CompilerDecl(m_ast_context.get(), named_decl));
+    decls.push_back(m_ast_context->GetCompilerDecl(named_decl));
     ++num_matches;
   }
 
@@ -626,10 +630,10 @@ ClangModulesDeclVendor::Create(Target &target) {
 
   {
     llvm::SmallString<128> path;
-    auto props = ModuleList::GetGlobalModuleListProperties();
+    const auto &props = ModuleList::GetGlobalModuleListProperties();
     props.GetClangModulesCachePath().GetPath(path);
     std::string module_cache_argument("-fmodules-cache-path=");
-    module_cache_argument.append(path.str());
+    module_cache_argument.append(std::string(path.str()));
     compiler_invocation_arguments.push_back(module_cache_argument);
   }
 

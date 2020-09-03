@@ -306,12 +306,12 @@ RealFileSystem::openFileForRead(const Twine &Name) {
 
 llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {
   if (WD)
-    return WD->Specified.str();
+    return std::string(WD->Specified.str());
 
   SmallString<128> Dir;
   if (std::error_code EC = llvm::sys::fs::current_path(Dir))
     return EC;
-  return Dir.str();
+  return std::string(Dir.str());
 }
 
 std::error_code RealFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
@@ -535,7 +535,8 @@ class InMemoryNode {
 
 public:
   InMemoryNode(llvm::StringRef FileName, InMemoryNodeKind Kind)
-      : Kind(Kind), FileName(llvm::sys::path::filename(FileName)) {}
+      : Kind(Kind), FileName(std::string(llvm::sys::path::filename(FileName))) {
+  }
   virtual ~InMemoryNode() = default;
 
   /// Get the filename of this node (the name without the directory part).
@@ -904,7 +905,7 @@ class InMemoryDirIterator : public llvm::vfs::detail::DirIterImpl {
         Type = sys::fs::file_type::directory_file;
         break;
       }
-      CurrentEntry = directory_entry(Path.str(), Type);
+      CurrentEntry = directory_entry(std::string(Path.str()), Type);
     } else {
       // When we're at the end, make CurrentEntry invalid and DirIterImpl will
       // do the rest.
@@ -960,7 +961,7 @@ std::error_code InMemoryFileSystem::setCurrentWorkingDirectory(const Twine &P) {
     llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
 
   if (!Path.empty())
-    WorkingDirectory = Path.str();
+    WorkingDirectory = std::string(Path.str());
   return {};
 }
 
@@ -988,6 +989,28 @@ std::error_code InMemoryFileSystem::isLocal(const Twine &Path, bool &Result) {
 //===-----------------------------------------------------------------------===/
 // RedirectingFileSystem implementation
 //===-----------------------------------------------------------------------===/
+
+namespace {
+
+/// Removes leading "./" as well as path components like ".." and ".".
+static llvm::SmallString<256> canonicalize(llvm::StringRef Path) {
+  // First detect the path style in use by checking the first separator.
+  llvm::sys::path::Style style = llvm::sys::path::Style::native;
+  const size_t n = Path.find_first_of("/\\");
+  if (n != static_cast<size_t>(-1))
+    style = (Path[n] == '/') ? llvm::sys::path::Style::posix
+                             : llvm::sys::path::Style::windows;
+
+  // Now remove the dots.  Explicitly specifying the path style prevents the
+  // direction of the slashes from changing.
+  llvm::SmallString<256> result =
+      llvm::sys::path::remove_leading_dotslash(Path, style);
+  llvm::sys::path::remove_dots(result, /*remove_dot_dot=*/true, style);
+  return result;
+}
+
+} // anonymous namespace
+
 
 RedirectingFileSystem::RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> FS)
     : ExternalFS(std::move(FS)) {
@@ -1064,7 +1087,7 @@ RedirectingFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
   Path.toVector(AbsolutePath);
   if (std::error_code EC = makeAbsolute(AbsolutePath))
     return EC;
-  WorkingDirectory = AbsolutePath.str();
+  WorkingDirectory = std::string(AbsolutePath.str());
   return {};
 }
 
@@ -1082,7 +1105,23 @@ std::error_code RedirectingFileSystem::makeAbsolute(SmallVectorImpl<char> &Path)
   if (!WorkingDir)
     return WorkingDir.getError();
 
-  llvm::sys::fs::make_absolute(WorkingDir.get(), Path);
+  // We can't use sys::fs::make_absolute because that assumes the path style
+  // is native and there is no way to override that.  Since we know WorkingDir
+  // is absolute, we can use it to determine which style we actually have and
+  // append Path ourselves.
+  sys::path::Style style = sys::path::Style::windows;
+  if (sys::path::is_absolute(WorkingDir.get(), sys::path::Style::posix)) {
+    style = sys::path::Style::posix;
+  }
+
+  std::string Result = WorkingDir.get();
+  StringRef Dir(Result);
+  if (!Dir.endswith(sys::path::get_separator(style))) {
+    Result += sys::path::get_separator(style);
+  }
+  Result.append(Path.data(), Path.size());
+  Path.assign(Result.begin(), Result.end());
+
   return {};
 }
 
@@ -1317,8 +1356,8 @@ class llvm::vfs::RedirectingFileSystemParser {
     bool HasContents = false; // external or otherwise
     std::vector<std::unique_ptr<RedirectingFileSystem::Entry>>
         EntryArrayContents;
-    std::string ExternalContentsPath;
-    std::string Name;
+    SmallString<256> ExternalContentsPath;
+    SmallString<256> Name;
     yaml::Node *NameValueNode = nullptr;
     auto UseExternalName =
         RedirectingFileSystem::RedirectingFileEntry::NK_NotSet;
@@ -1341,16 +1380,9 @@ class llvm::vfs::RedirectingFileSystemParser {
           return nullptr;
 
         NameValueNode = I.getValue();
-        if (FS->UseCanonicalizedPaths) {
-          SmallString<256> Path(Value);
-          // Guarantee that old YAML files containing paths with ".." and "."
-          // are properly canonicalized before read into the VFS.
-          Path = sys::path::remove_leading_dotslash(Path);
-          sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
-          Name = Path.str();
-        } else {
-          Name = Value;
-        }
+        // Guarantee that old YAML files containing paths with ".." and "."
+        // are properly canonicalized before read into the VFS.
+        Name = canonicalize(Value).str();
       } else if (Key == "type") {
         if (!parseScalarString(I.getValue(), Value, Buffer))
           return nullptr;
@@ -1403,12 +1435,9 @@ class llvm::vfs::RedirectingFileSystemParser {
           FullPath = Value;
         }
 
-        if (FS->UseCanonicalizedPaths) {
-          // Guarantee that old YAML files containing paths with ".." and "."
-          // are properly canonicalized before read into the VFS.
-          FullPath = sys::path::remove_leading_dotslash(FullPath);
-          sys::path::remove_dots(FullPath, /*remove_dot_dot=*/true);
-        }
+        // Guarantee that old YAML files containing paths with ".." and "."
+        // are properly canonicalized before read into the VFS.
+        FullPath = canonicalize(FullPath);
         ExternalContentsPath = FullPath.str();
       } else if (Key == "use-external-name") {
         bool Val;
@@ -1653,14 +1682,10 @@ RedirectingFileSystem::lookupPath(const Twine &Path_) const {
   if (std::error_code EC = makeAbsolute(Path))
     return EC;
 
-  // Canonicalize path by removing ".", "..", "./", etc components. This is
-  // a VFS request, do bot bother about symlinks in the path components
+  // Canonicalize path by removing ".", "..", "./", components. This is
+  // a VFS request, do not bother about symlinks in the path components
   // but canonicalize in order to perform the correct entry search.
-  if (UseCanonicalizedPaths) {
-    Path = sys::path::remove_leading_dotslash(Path);
-    sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
-  }
-
+  Path = canonicalize(Path);
   if (Path.empty())
     return make_error_code(llvm::errc::invalid_argument);
 
@@ -1679,16 +1704,9 @@ ErrorOr<RedirectingFileSystem::Entry *>
 RedirectingFileSystem::lookupPath(sys::path::const_iterator Start,
                                   sys::path::const_iterator End,
                                   RedirectingFileSystem::Entry *From) const {
-#ifndef _WIN32
   assert(!isTraversalComponent(*Start) &&
          !isTraversalComponent(From->getName()) &&
          "Paths should not contain traversal components");
-#else
-  // FIXME: this is here to support windows, remove it once canonicalized
-  // paths become globally default.
-  if (Start->equals("."))
-    ++Start;
-#endif
 
   StringRef FromName = From->getName();
 
@@ -2009,10 +2027,10 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
 
   if (!Entries.empty()) {
     const YAMLVFSEntry &Entry = Entries.front();
-    bool first_entry_is_directory = Entry.IsDirectory;
-    StringRef Dir = first_entry_is_directory ? StringRef(Entry.VPath)
-                                             : path::parent_path(Entry.VPath);
-    startDirectory(Dir);
+
+    startDirectory(
+      Entry.IsDirectory ? Entry.VPath : path::parent_path(Entry.VPath)
+    );
 
     StringRef RPath = Entry.RPath;
     if (UseOverlayRelative) {
@@ -2022,24 +2040,31 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
       RPath = RPath.slice(OverlayDirLen, RPath.size());
     }
 
-    if (!first_entry_is_directory)
+    bool IsCurrentDirEmpty = true;
+    if (!Entry.IsDirectory) {
       writeEntry(path::filename(Entry.VPath), RPath);
+      IsCurrentDirEmpty = false;
+    }
 
     for (const auto &Entry : Entries.slice(1)) {
-      StringRef Dir = Entry.IsDirectory ? StringRef(Entry.VPath)
-                                        : path::parent_path(Entry.VPath);
+      StringRef Dir =
+          Entry.IsDirectory ? Entry.VPath : path::parent_path(Entry.VPath);
       if (Dir == DirStack.back()) {
-        if (!first_entry_is_directory) {
+        if (!IsCurrentDirEmpty) {
           OS << ",\n";
-          first_entry_is_directory = false;
         }
       } else {
+        bool IsDirPoppedFromStack = false;
         while (!DirStack.empty() && !containedIn(DirStack.back(), Dir)) {
           OS << "\n";
           endDirectory();
+          IsDirPoppedFromStack = true;
         }
-        OS << ",\n";
+        if (IsDirPoppedFromStack || !IsCurrentDirEmpty) {
+          OS << ",\n";
+        }
         startDirectory(Dir);
+        IsCurrentDirEmpty = true;
       }
       StringRef RPath = Entry.RPath;
       if (UseOverlayRelative) {
@@ -2048,7 +2073,10 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
                "Overlay dir must be contained in RPath");
         RPath = RPath.slice(OverlayDirLen, RPath.size());
       }
-      writeEntry(path::filename(Entry.VPath), RPath);
+      if (!Entry.IsDirectory) {
+        writeEntry(path::filename(Entry.VPath), RPath);
+        IsCurrentDirEmpty = false;
+      }
     }
 
     while (!DirStack.empty()) {
@@ -2122,7 +2150,7 @@ std::error_code VFSFromYamlDirIterImpl::incrementContent(bool IsFirstTime) {
       Type = sys::fs::file_type::regular_file;
       break;
     }
-    CurrentEntry = directory_entry(PathStr.str(), Type);
+    CurrentEntry = directory_entry(std::string(PathStr.str()), Type);
     return {};
   }
   return incrementExternal();

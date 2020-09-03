@@ -4,7 +4,7 @@
 # RUN: ld.lld %t1.o -o %t.out
 # RUN: llvm-objdump -s -t %t.out | FileCheck %s
 # CHECK: SYMBOL TABLE:
-# CHECK: 004010b7 .und
+# CHECK: 004010b7 l .und
 # CHECK:      Contents of section .text:
 # CHECK-NEXT:  4010b4 020000
 ## 0x4010b7 - 0x4010b4 + addend(-1) = 0x02

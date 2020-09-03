@@ -1,0 +1,60 @@
+# REQUIRES: xar
+# RUN: env ASAN_OPTIONS=detect_leaks=0 llvm-objdump --macho --archive-headers --section __LLVM,__bundle %p/Inputs/LLVM-bundle.macho-x86_64 | FileCheck %s
+
+# CHECK: For (__LLVM,__bundle) section: xar header
+# CHECK:                   magic XAR_HEADER_MAGIC
+# CHECK:                    size 28
+# CHECK:                 version 1
+# CHECK:   toc_length_compressed 542
+# CHECK: toc_length_uncompressed 1250
+# CHECK:               cksum_alg XAR_CKSUM_SHA1
+# CHECK: For (__LLVM,__bundle) section: xar archive files:
+# CHECK:    1664 1
+# CHECK: For (__LLVM,__bundle) section: xar table of contents:
+# CHECK: <?xml version="1.0" encoding="UTF-8"?>
+# CHECK: <xar>
+# CHECK:  <subdoc subdoc_name="Ld">
+# CHECK:   <version>1.0</version>
+# CHECK:   <architecture>x86_64</architecture>
+# CHECK:   <platform>MacOSX</platform>
+# CHECK:   <sdkversion>10.11.0</sdkversion>
+# CHECK:   <dylibs>
+# CHECK:    <lib>libSystem.dylib</lib>
+# CHECK:   </dylibs>
+# CHECK:   <link-options>
+# CHECK:    <option>-execute</option>
+# CHECK:    <option>-macosx_version_min</option>
+# CHECK:    <option>10.11.0</option>
+# CHECK:    <option>-e</option>
+# CHECK:    <option>_main</option>
+# CHECK:    <option>-executable_path</option>
+# CHECK:    <option>hello</option>
+# CHECK:   </link-options>
+# CHECK:  </subdoc>
+# CHECK:  <toc>
+# CHECK:   <checksum style="sha1">
+# CHECK:    <size>20</size>
+# CHECK:    <offset>0</offset>
+# CHECK:   </checksum>
+# CHECK:   <creation-time>2016-05-23T20:49:10</creation-time>
+# CHECK:   <file id="1">
+# CHECK:    <name>1</name>
+# CHECK:    <type>file</type>
+# CHECK:    <data>
+# CHECK:     <archived-checksum style="sha1">a319940ff5f5248ca8b44cf7b4b65e7dd49a47ab</archived-checksum>
+# CHECK:     <extracted-checksum style="sha1">a319940ff5f5248ca8b44cf7b4b65e7dd49a47ab</extracted-checksum>
+# CHECK:     <size>1664</size>
+# CHECK:     <offset>20</offset>
+# CHECK:     <encoding style="application/octet-stream"/>
+# CHECK:     <length>1664</length>
+# CHECK:    </data>
+# CHECK:    <file-type>Bitcode</file-type>
+# CHECK:    <clang>
+# CHECK:     <cmd>-triple</cmd>
+# CHECK:     <cmd>x86_64-apple-macosx10.11.0</cmd>
+# CHECK:     <cmd>-emit-obj</cmd>
+# CHECK:     <cmd>-disable-llvm-optzns</cmd>
+# CHECK:    </clang>
+# CHECK:   </file>
+# CHECK:  </toc>
+# CHECK: </xar>

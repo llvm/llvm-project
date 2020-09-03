@@ -1,4 +1,4 @@
-# RUN: yaml2obj --docnum=1 %s > %t1.o
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
 # RUN: llvm-nm %t1.o --format=sysv | FileCheck %s
 
 --- !ELF
@@ -38,7 +38,7 @@ Symbols:
 ## (sh_name offset goes past the end of the sections name string table).
 ## We test that we can still print a reasonable output and don't crash/assert.
 
-# RUN: yaml2obj --docnum=2 %s > %t2.o
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
 # RUN: llvm-nm %t2.o --format=sysv | FileCheck %s --check-prefix=ERR
 
 # ERR: foo |0000000000000000| ? | NOTYPE|0000000000000000| |

@@ -34,8 +34,9 @@ namespace adjust {
 
 using namespace llvm;
 
-void signed_width(unsigned Width, uint64_t Value, std::string Description,
-                  const MCFixup &Fixup, MCContext *Ctx = nullptr) {
+static void signed_width(unsigned Width, uint64_t Value,
+                         std::string Description, const MCFixup &Fixup,
+                         MCContext *Ctx = nullptr) {
   if (!isIntN(Width, Value)) {
     std::string Diagnostic = "out of range " + Description;
 
@@ -53,8 +54,9 @@ void signed_width(unsigned Width, uint64_t Value, std::string Description,
   }
 }
 
-void unsigned_width(unsigned Width, uint64_t Value, std::string Description,
-                    const MCFixup &Fixup, MCContext *Ctx = nullptr) {
+static void unsigned_width(unsigned Width, uint64_t Value,
+                           std::string Description, const MCFixup &Fixup,
+                           MCContext *Ctx = nullptr) {
   if (!isUIntN(Width, Value)) {
     std::string Diagnostic = "out of range " + Description;
 
@@ -72,8 +74,8 @@ void unsigned_width(unsigned Width, uint64_t Value, std::string Description,
 }
 
 /// Adjusts the value of a branch target before fixup application.
-void adjustBranch(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
-                  MCContext *Ctx = nullptr) {
+static void adjustBranch(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
+                         MCContext *Ctx = nullptr) {
   // We have one extra bit of precision because the value is rightshifted by
   // one.
   unsigned_width(Size + 1, Value, std::string("branch target"), Fixup, Ctx);
@@ -83,13 +85,11 @@ void adjustBranch(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
 }
 
 /// Adjusts the value of a relative branch target before fixup application.
-void adjustRelativeBranch(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
-                          MCContext *Ctx = nullptr) {
+static void adjustRelativeBranch(unsigned Size, const MCFixup &Fixup,
+                                 uint64_t &Value, MCContext *Ctx = nullptr) {
   // We have one extra bit of precision because the value is rightshifted by
   // one.
   signed_width(Size + 1, Value, std::string("branch target"), Fixup, Ctx);
-
-  Value -= 2;
 
   // Rightshifts the value by one.
   AVR::fixups::adjustBranchTarget(Value);
@@ -101,8 +101,8 @@ void adjustRelativeBranch(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
 /// 1001 kkkk 010k kkkk kkkk kkkk 111k kkkk
 ///
 /// Offset of 0 (so the result is left shifted by 3 bits before application).
-void fixup_call(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
-                MCContext *Ctx = nullptr) {
+static void fixup_call(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
+                       MCContext *Ctx = nullptr) {
   adjustBranch(Size, Fixup, Value, Ctx);
 
   auto top = Value & (0xf00000 << 6);   // the top four bits
@@ -117,8 +117,8 @@ void fixup_call(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
 /// Resolves to:
 /// 0000 00kk kkkk k000
 /// Offset of 0 (so the result is left shifted by 3 bits before application).
-void fixup_7_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
-                   MCContext *Ctx = nullptr) {
+static void fixup_7_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
+                          MCContext *Ctx = nullptr) {
   adjustRelativeBranch(Size, Fixup, Value, Ctx);
 
   // Because the value may be negative, we must mask out the sign bits
@@ -131,12 +131,24 @@ void fixup_7_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
 /// Resolves to:
 /// 0000 kkkk kkkk kkkk
 /// Offset of 0 (so the result isn't left-shifted before application).
-void fixup_13_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
-                    MCContext *Ctx = nullptr) {
+static void fixup_13_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
+                           MCContext *Ctx = nullptr) {
   adjustRelativeBranch(Size, Fixup, Value, Ctx);
 
   // Because the value may be negative, we must mask out the sign bits
   Value &= 0xfff;
+}
+
+/// 6-bit fixup for the immediate operand of the STD/LDD family of
+/// instructions.
+///
+/// Resolves to:
+/// 10q0 qq10 0000 1qqq
+static void fixup_6(const MCFixup &Fixup, uint64_t &Value,
+                    MCContext *Ctx = nullptr) {
+  unsigned_width(6, Value, std::string("immediate"), Fixup, Ctx);
+
+  Value = ((Value & 0x20) << 8) | ((Value & 0x18) << 7) | (Value & 0x07);
 }
 
 /// 6-bit fixup for the immediate operand of the ADIW family of
@@ -144,8 +156,8 @@ void fixup_13_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
 ///
 /// Resolves to:
 /// 0000 0000 kk00 kkkk
-void fixup_6_adiw(const MCFixup &Fixup, uint64_t &Value,
-                  MCContext *Ctx = nullptr) {
+static void fixup_6_adiw(const MCFixup &Fixup, uint64_t &Value,
+                         MCContext *Ctx = nullptr) {
   unsigned_width(6, Value, std::string("immediate"), Fixup, Ctx);
 
   Value = ((Value & 0x30) << 2) | (Value & 0x0f);
@@ -155,8 +167,8 @@ void fixup_6_adiw(const MCFixup &Fixup, uint64_t &Value,
 ///
 /// Resolves to:
 /// 0000 0000 AAAA A000
-void fixup_port5(const MCFixup &Fixup, uint64_t &Value,
-                 MCContext *Ctx = nullptr) {
+static void fixup_port5(const MCFixup &Fixup, uint64_t &Value,
+                        MCContext *Ctx = nullptr) {
   unsigned_width(5, Value, std::string("port number"), Fixup, Ctx);
 
   Value &= 0x1f;
@@ -168,8 +180,8 @@ void fixup_port5(const MCFixup &Fixup, uint64_t &Value,
 ///
 /// Resolves to:
 /// 1011 0AAd dddd AAAA
-void fixup_port6(const MCFixup &Fixup, uint64_t &Value,
-                 MCContext *Ctx = nullptr) {
+static void fixup_port6(const MCFixup &Fixup, uint64_t &Value,
+                        MCContext *Ctx = nullptr) {
   unsigned_width(6, Value, std::string("port number"), Fixup, Ctx);
 
   Value = ((Value & 0x30) << 5) | (Value & 0x0f);
@@ -177,9 +189,7 @@ void fixup_port6(const MCFixup &Fixup, uint64_t &Value,
 
 /// Adjusts a program memory address.
 /// This is a simple right-shift.
-void pm(uint64_t &Value) {
-  Value >>= 1;
-}
+static void pm(uint64_t &Value) { Value >>= 1; }
 
 /// Fixups relating to the LDI instruction.
 namespace ldi {
@@ -189,36 +199,36 @@ namespace ldi {
 /// Resolves to:
 /// 0000 KKKK 0000 KKKK
 /// Offset of 0 (so the result isn't left-shifted before application).
-void fixup(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
-           MCContext *Ctx = nullptr) {
+static void fixup(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
+                  MCContext *Ctx = nullptr) {
   uint64_t upper = Value & 0xf0;
   uint64_t lower = Value & 0x0f;
 
   Value = (upper << 4) | lower;
 }
 
-void neg(uint64_t &Value) { Value *= -1; }
+static void neg(uint64_t &Value) { Value *= -1; }
 
-void lo8(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
-         MCContext *Ctx = nullptr) {
+static void lo8(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
+                MCContext *Ctx = nullptr) {
   Value &= 0xff;
   ldi::fixup(Size, Fixup, Value, Ctx);
 }
 
-void hi8(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
-         MCContext *Ctx = nullptr) {
+static void hi8(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
+                MCContext *Ctx = nullptr) {
   Value = (Value & 0xff00) >> 8;
   ldi::fixup(Size, Fixup, Value, Ctx);
 }
 
-void hh8(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
-         MCContext *Ctx = nullptr) {
+static void hh8(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
+                MCContext *Ctx = nullptr) {
   Value = (Value & 0xff0000) >> 16;
   ldi::fixup(Size, Fixup, Value, Ctx);
 }
 
-void ms8(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
-         MCContext *Ctx = nullptr) {
+static void ms8(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
+                MCContext *Ctx = nullptr) {
   Value = (Value & 0xff000000) >> 24;
   ldi::fixup(Size, Fixup, Value, Ctx);
 }
@@ -237,17 +247,6 @@ void AVRAsmBackend::adjustFixupValue(const MCFixup &Fixup,
   uint64_t Size = AVRAsmBackend::getFixupKindInfo(Fixup.getKind()).TargetSize;
 
   unsigned Kind = Fixup.getKind();
-
-  // Parsed LLVM-generated temporary labels are already
-  // adjusted for instruction size, but normal labels aren't.
-  //
-  // To handle both cases, we simply un-adjust the temporary label
-  // case so it acts like all other labels.
-  if (const MCSymbolRefExpr *A = Target.getSymA()) {
-    if (A->getSymbol().isTemporary())
-      Value += 2;
-  }
-
   switch (Kind) {
   default:
     llvm_unreachable("unhandled fixup");
@@ -326,6 +325,9 @@ void AVRAsmBackend::adjustFixupValue(const MCFixup &Fixup,
     Value &= 0xffff;
     break;
 
+  case AVR::fixup_6:
+    adjust::fixup_6(Fixup, Value, Ctx);
+    break;
   case AVR::fixup_6_adiw:
     adjust::fixup_6_adiw(Fixup, Value, Ctx);
     break;

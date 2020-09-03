@@ -195,4 +195,4 @@ Otherwise, it exits with code 0.
 BUGS
 ----
 
-To report bugs, please visit <http://llvm.org/bugs/>.
+To report bugs, please visit <https://bugs.llvm.org/>.

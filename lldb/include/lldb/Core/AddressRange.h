@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_AddressRange_h_
-#define liblldb_AddressRange_h_
+#ifndef LLDB_CORE_ADDRESSRANGE_H
+#define LLDB_CORE_ADDRESSRANGE_H
 
 #include "lldb/Core/Address.h"
 #include "lldb/lldb-forward.h"
@@ -247,4 +247,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_AddressRange_h_
+#endif // LLDB_CORE_ADDRESSRANGE_H

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=OMP45
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s -check-prefix=CHECK -check-prefix=OMP45
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -DLAMBDA -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=LAMBDA %s
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -fblocks -DBLOCKS -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=BLOCKS %s
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=OMP50
@@ -44,9 +44,8 @@ volatile int g = 1212;
 
 // CHECK: [[S_FLOAT_TY:%.+]] = type { float }
 // CHECK: [[S_INT_TY:%.+]] = type { i32 }
-// CHECK-DAG: [[SECTIONS_BARRIER_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 194, i32 0, i32 0, i8*
+// CHECK-DAG: [[SECTIONS_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 194, i32 0, i32 0, i8*
 // CHECK-DAG: [[X:@.+]] = global double 0.0
-// OMP50-DAG: [[IV_REF:@.+]] = common global i32 0
 // OMP50-DAG: [[LAST_IV_X:@.+]] = {{.*}}common global i32 0
 // OMP50-DAG: [[LAST_X:@.+]] = {{.*}}common global double 0.000000e+00,
 template <typename T>
@@ -85,7 +84,7 @@ int main() {
 #pragma omp parallel
 #pragma omp sections lastprivate(g, sivar)
   {
-    // LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias [[GTID:%.+]], i32* noalias %{{.+}}, i32* dereferenceable(4) [[SIVAR_REF:%.+]])
+    // LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias [[GTID:%.+]], i32* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) [[SIVAR_REF:%.+]])
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: alloca i{{[0-9]+}},
@@ -157,7 +156,7 @@ int main() {
 #pragma omp parallel
 #pragma omp sections lastprivate(g, sivar)
   {
-    // BLOCKS: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias [[GTID:%.+]], i32* noalias %{{.+}}, i32* dereferenceable(4) [[SIVAR:%.+]])
+    // BLOCKS: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias [[GTID:%.+]], i32* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) [[SIVAR:%.+]])
     // BLOCKS: alloca i{{[0-9]+}},
     // BLOCKS: alloca i{{[0-9]+}},
     // BLOCKS: alloca i{{[0-9]+}},
@@ -284,8 +283,12 @@ int main() {
 
 //
 // CHECK: define internal void [[MAIN_MICROTASK1]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}})
-// CHECK: [[X_PRIV:%.+]] = alloca double,
+// OMP45: [[X_PRIV:%.+]] = alloca double,
+// OMP50: [[X_STRUCT:%.+]] = alloca [[STRUCT:%struct[.].*]],
 // CHECK-NOT: alloca double
+// OMP50: [[FIRED:%.+]] = getelementptr inbounds [[STRUCT]], [[STRUCT]]* [[X_STRUCT]], i{{.+}} 0, i{{.+}} 1
+// OMP50: store i8 0, i8* [[FIRED]],
+// OMP50: [[X_PRIV:%.+]] = getelementptr inbounds [[STRUCT]], [[STRUCT]]* [[X_STRUCT]], i{{.+}} 0, i{{.+}} 0
 
 // Check for default initialization.
 // CHECK-NOT: [[X_PRIV]]
@@ -294,15 +297,9 @@ int main() {
 // CHECK: [[GTID:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[GTID_REF]]
 // CHECK: call void @__kmpc_for_static_init_4(%{{.+}}* @{{.+}}, i32 [[GTID]], i32 34, i32* [[IS_LAST_ADDR:%.+]], i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32 1, i32 1)
 // <Skip loop body>
-// OMP50: [[IV_GLOB_REF:%.+]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* bitcast (i32* [[IV_REF]] to i8*), i64 4, i8*** @{{.+}})
-// OMP50: [[BC:%.+]] = bitcast i8* [[IV_GLOB_REF]] to i32*
-// OMP50: store i32 %{{.+}}, i32* [[BC]],
-// OMP50: [[LOCAL_IV_REF:%.+]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* bitcast (i32* [[IV_REF]] to i8*), i64 4, i8*** @{{.+}})
-// OMP50: [[BC:%.+]] = bitcast i8* [[LOCAL_IV_REF]] to i32*
-// OMP50: [[IV:%.+]] = load i32, i32* [[BC]],
 // OMP50: call void @__kmpc_critical(%struct.ident_t* @{{.+}}, i32 [[GTID]], [8 x i32]* [[X_REGION:@.+]])
 // OMP50: [[LAST_IV:%.+]] = load i32, i32* [[LAST_IV_X]],
-// OMP50: [[CMP:%.+]] = icmp sle i32 [[LAST_IV]], [[IV]]
+// OMP50: [[CMP:%.+]] = icmp sle i32 [[LAST_IV]], [[IV:%.+]]
 // OMP50: br i1 [[CMP]], label %[[LP_THEN:.+]], label %[[LP_DONE:[^,]+]]
 
 // OMP50: [[LP_THEN]]:

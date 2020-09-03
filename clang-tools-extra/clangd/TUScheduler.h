@@ -11,15 +11,16 @@
 
 #include "Compiler.h"
 #include "Diagnostics.h"
-#include "Function.h"
 #include "GlobalCompilationDatabase.h"
-#include "Path.h"
-#include "Threading.h"
 #include "index/CanonicalIncludes.h"
+#include "support/Function.h"
+#include "support/Path.h"
+#include "support/Threading.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include <chrono>
 
 namespace clang {
 namespace clangd {
@@ -60,18 +61,44 @@ struct ASTRetentionPolicy {
   unsigned MaxRetainedASTs = 3;
 };
 
-struct TUAction {
-  enum State {
-    Queued,           // The TU is pending in the thread task queue to be built.
-    RunningAction,    // Starting running actions on the TU.
-    BuildingPreamble, // The preamble of the TU is being built.
-    BuildingFile,     // The TU is being built. It is only emitted when building
-                      // the AST for diagnostics in write action (update).
+/// Clangd may wait after an update to see if another one comes along.
+/// This is so we rebuild once the user stops typing, not when they start.
+/// Debounce may be disabled/interrupted if we must build this version.
+/// The debounce time is responsive to user preferences and rebuild time.
+/// In the future, we could also consider different types of edits.
+struct DebouncePolicy {
+  using clock = std::chrono::steady_clock;
+
+  /// The minimum time that we always debounce for.
+  clock::duration Min = /*zero*/ {};
+  /// The maximum time we may debounce for.
+  clock::duration Max = /*zero*/ {};
+  /// Target debounce, as a fraction of file rebuild time.
+  /// e.g. RebuildRatio = 2, recent builds took 200ms => debounce for 400ms.
+  float RebuildRatio = 1;
+
+  /// Compute the time to debounce based on this policy and recent build times.
+  clock::duration compute(llvm::ArrayRef<clock::duration> History) const;
+  /// A policy that always returns the same duration, useful for tests.
+  static DebouncePolicy fixed(clock::duration);
+};
+
+enum class PreambleAction {
+  Idle,
+  Building,
+};
+
+struct ASTAction {
+  enum Kind {
+    Queued,        // The action is pending in the thread task queue to be run.
+    RunningAction, // Started running actions on the TU.
+    Building,      // The AST is being built.
     Idle, // Indicates the worker thread is idle, and ready to run any upcoming
           // actions.
   };
-  TUAction(State S, llvm::StringRef Name) : S(S), Name(Name) {}
-  State S;
+  ASTAction() = default;
+  ASTAction(Kind K, llvm::StringRef Name) : K(K), Name(Name) {}
+  Kind K = ASTAction::Idle;
   /// The name of the action currently running, e.g. Update, GoToDef, Hover.
   /// Empty if we are in the idle state.
   std::string Name;
@@ -88,7 +115,9 @@ struct TUStatus {
   /// Serialize this to an LSP file status item.
   FileStatus render(PathRef File) const;
 
-  TUAction Action;
+  PreambleAction PreambleActivity = PreambleAction::Idle;
+  ASTAction ASTActivity;
+  /// Stores status of the last build for the translation unit.
   BuildDetails Details;
 };
 
@@ -99,7 +128,8 @@ public:
   /// Called on the AST that was built for emitting the preamble. The built AST
   /// contains only AST nodes from the #include directives at the start of the
   /// file. AST node in the current file should be observed on onMainAST call.
-  virtual void onPreambleAST(PathRef Path, ASTContext &Ctx,
+  virtual void onPreambleAST(PathRef Path, llvm::StringRef Version,
+                             ASTContext &Ctx,
                              std::shared_ptr<clang::Preprocessor> PP,
                              const CanonicalIncludes &) {}
 
@@ -130,8 +160,8 @@ public:
 
   /// Called whenever the AST fails to build. \p Diags will have the diagnostics
   /// that led to failure.
-  virtual void onFailedAST(PathRef Path, std::vector<Diag> Diags,
-                           PublishFn Publish) {}
+  virtual void onFailedAST(PathRef Path, llvm::StringRef Version,
+                           std::vector<Diag> Diags, PublishFn Publish) {}
 
   /// Called whenever the TU status is updated.
   virtual void onFileUpdated(PathRef File, const TUStatus &Status) {}
@@ -143,19 +173,47 @@ public:
 /// and scheduling tasks.
 /// Callbacks are run on a threadpool and it's appropriate to do slow work in
 /// them. Each task has a name, used for tracing (should be UpperCamelCase).
-/// FIXME(sammccall): pull out a scheduler options struct.
 class TUScheduler {
 public:
-  TUScheduler(const GlobalCompilationDatabase &CDB, unsigned AsyncThreadsCount,
-              bool StorePreamblesInMemory,
-              std::unique_ptr<ParsingCallbacks> ASTCallbacks,
-              std::chrono::steady_clock::duration UpdateDebounce,
-              ASTRetentionPolicy RetentionPolicy);
+  struct Options {
+    /// Number of concurrent actions.
+    /// Governs per-file worker threads and threads spawned for other tasks.
+    /// (This does not prevent threads being spawned, but rather blocks them).
+    /// If 0, executes actions synchronously on the calling thread.
+    unsigned AsyncThreadsCount = getDefaultAsyncThreadsCount();
+
+    /// Cache (large) preamble data in RAM rather than temporary files on disk.
+    bool StorePreamblesInMemory = false;
+
+    /// Time to wait after an update to see if another one comes along.
+    /// This tries to ensure we rebuild once the user stops typing.
+    DebouncePolicy UpdateDebounce;
+
+    /// Determines when to keep idle ASTs in memory for future use.
+    ASTRetentionPolicy RetentionPolicy;
+
+    /// Whether to run PreamblePeer asynchronously.
+    /// No-op if AsyncThreadsCount is 0.
+    bool AsyncPreambleBuilds = true;
+
+    /// Used to create a context that wraps each single operation.
+    /// Typically to inject per-file configuration.
+    /// If the path is empty, context sholud be "generic".
+    std::function<Context(PathRef)> ContextProvider;
+  };
+
+  TUScheduler(const GlobalCompilationDatabase &CDB, const Options &Opts,
+              std::unique_ptr<ParsingCallbacks> ASTCallbacks = nullptr);
   ~TUScheduler();
 
-  /// Returns estimated memory usage for each of the currently open files.
-  /// The order of results is unspecified.
-  std::vector<std::pair<Path, std::size_t>> getUsedBytesPerFile() const;
+  struct FileStats {
+    std::size_t UsedBytes = 0;
+    unsigned PreambleBuilds = 0;
+    unsigned ASTBuilds = 0;
+  };
+  /// Returns resources used for each of the currently open files.
+  /// Results are inherently racy as they measure activity of other threads.
+  llvm::StringMap<FileStats> fileStats() const;
 
   /// Returns a list of files with ASTs currently stored in memory. This method
   /// is not very reliable and is only used for test. E.g., the results will not
@@ -176,15 +234,24 @@ public:
   /// if requested with WantDiags::Auto or WantDiags::Yes.
   void remove(PathRef File);
 
-  /// Returns the current contents of the buffer for File, per last update().
-  /// The returned StringRef may be invalidated by any write to TUScheduler.
-  llvm::StringRef getContents(PathRef File) const;
-
   /// Returns a snapshot of all file buffer contents, per last update().
   llvm::StringMap<std::string> getAllFileContents() const;
 
   /// Schedule an async task with no dependencies.
-  void run(llvm::StringRef Name, llvm::unique_function<void()> Action);
+  /// Path may be empty (it is used only to set the Context).
+  void run(llvm::StringRef Name, llvm::StringRef Path,
+           llvm::unique_function<void()> Action);
+
+  /// Defines how a runWithAST action is implicitly cancelled by other actions.
+  enum ASTActionInvalidation {
+    /// The request will run unless explicitly cancelled.
+    NoInvalidation,
+    /// The request will be implicitly cancelled by a subsequent update().
+    /// (Only if the request was not yet cancelled).
+    /// Useful for requests that are generated by clients, without any explicit
+    /// user action. These can otherwise e.g. force every version to be built.
+    InvalidateOnUpdate,
+  };
 
   /// Schedule an async read of the AST. \p Action will be called when AST is
   /// ready. The AST passed to \p Action refers to the version of \p File
@@ -192,18 +259,14 @@ public:
   /// \p Action is executed.
   /// If an error occurs during processing, it is forwarded to the \p Action
   /// callback.
-  /// If the context is cancelled before the AST is ready, the callback will
-  /// receive a CancelledError.
+  /// If the context is cancelled before the AST is ready, or the invalidation
+  /// policy is triggered, the callback will receive a CancelledError.
   void runWithAST(llvm::StringRef Name, PathRef File,
-                  Callback<InputsAndAST> Action);
+                  Callback<InputsAndAST> Action,
+                  ASTActionInvalidation = NoInvalidation);
 
   /// Controls whether preamble reads wait for the preamble to be up-to-date.
   enum PreambleConsistency {
-    /// The preamble is generated from the current version of the file.
-    /// If the content was recently updated, we will wait until we have a
-    /// preamble that reflects that update.
-    /// This is the slowest option, and may be delayed by other tasks.
-    Consistent,
     /// The preamble may be generated from an older version of the file.
     /// Reading from locations in the preamble may cause files to be re-read.
     /// This gives callers two options:
@@ -245,11 +308,12 @@ public:
   // this inside clangd.
   // FIXME: remove this when there is proper index support via build system
   // integration.
+  // FIXME: move to ClangdServer via createProcessingContext.
   static llvm::Optional<llvm::StringRef> getFileBeingProcessedInContext();
 
 private:
   const GlobalCompilationDatabase &CDB;
-  const bool StorePreamblesInMemory;
+  const Options Opts;
   std::unique_ptr<ParsingCallbacks> Callbacks; // not nullptr
   Semaphore Barrier;
   llvm::StringMap<std::unique_ptr<FileData>> Files;
@@ -258,7 +322,6 @@ private:
   // asynchronously.
   llvm::Optional<AsyncTaskRunner> PreambleTasks;
   llvm::Optional<AsyncTaskRunner> WorkerThreads;
-  std::chrono::steady_clock::duration UpdateDebounce;
 };
 
 } // namespace clangd

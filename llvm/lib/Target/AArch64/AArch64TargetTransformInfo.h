@@ -72,11 +72,11 @@ public:
 
   using BaseT::getIntImmCost;
   int getIntImmCost(int64_t Val);
-  int getIntImmCost(const APInt &Imm, Type *Ty);
+  int getIntImmCost(const APInt &Imm, Type *Ty, TTI::TargetCostKind CostKind);
   int getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm,
-                        Type *Ty);
+                        Type *Ty, TTI::TargetCostKind CostKind);
   int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                          Type *Ty);
+                          Type *Ty, TTI::TargetCostKind CostKind);
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
 
   /// @}
@@ -98,6 +98,8 @@ public:
 
   unsigned getRegisterBitWidth(bool Vector) const {
     if (Vector) {
+      if (ST->hasSVE())
+        return std::max(ST->getMinSVEVectorSizeInBits(), 128u);
       if (ST->hasNEON())
         return 128;
       return 0;
@@ -112,15 +114,19 @@ public:
   unsigned getMaxInterleaveFactor(unsigned VF);
 
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                       TTI::TargetCostKind CostKind,
                        const Instruction *I = nullptr);
 
   int getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
                                unsigned Index);
 
+  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind);
+
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
 
   int getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
       TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
       TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
@@ -131,30 +137,37 @@ public:
   int getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr);
 
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                         TTI::TargetCostKind CostKind,
                          const Instruction *I = nullptr);
 
   TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                     bool IsZeroCmp) const;
 
   int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                      unsigned AddressSpace, const Instruction *I = nullptr);
+                      unsigned AddressSpace,
+                      TTI::TargetCostKind CostKind,
+                      const Instruction *I = nullptr);
 
   int getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys);
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
 
+  void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                             TTI::PeelingPreferences &PP);
+
   Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
                                            Type *ExpectedType);
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info);
 
-  bool isLegalMaskedLoadStore(Type *DataType, MaybeAlign Alignment) {
-    if (!isa<VectorType>(DataType) || !ST->hasSVE())
+  bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) {
+    if (!isa<ScalableVectorType>(DataType) || !ST->hasSVE())
       return false;
 
-    Type *Ty = DataType->getVectorElementType();
-    if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
+    Type *Ty = cast<ScalableVectorType>(DataType)->getElementType();
+    if (Ty->isBFloatTy() || Ty->isHalfTy() ||
+        Ty->isFloatTy() || Ty->isDoubleTy())
       return true;
 
     if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
@@ -164,11 +177,11 @@ public:
     return false;
   }
 
-  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) {
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
-  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) {
+  bool isLegalMaskedStore(Type *DataType, Align Alignment) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
@@ -180,28 +193,42 @@ public:
     // can be halved so that each half fits into a register. That's the case if
     // the element type fits into a register and the number of elements is a
     // power of 2 > 1.
-    if (isa<VectorType>(DataType)) {
-      unsigned NumElements = DataType->getVectorNumElements();
-      unsigned EltSize =
-          DataType->getVectorElementType()->getScalarSizeInBits();
+    if (auto *DataTypeVTy = dyn_cast<VectorType>(DataType)) {
+      unsigned NumElements =
+          cast<FixedVectorType>(DataTypeVTy)->getNumElements();
+      unsigned EltSize = DataTypeVTy->getElementType()->getScalarSizeInBits();
       return NumElements > 1 && isPowerOf2_64(NumElements) && EltSize >= 8 &&
              EltSize <= 128 && isPowerOf2_64(EltSize);
     }
     return BaseT::isLegalNTStore(DataType, Alignment);
   }
 
-  int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy, unsigned Factor,
-                                 ArrayRef<unsigned> Indices, unsigned Alignment,
-                                 unsigned AddressSpace,
-                                 bool UseMaskForCond = false,
-                                 bool UseMaskForGaps = false);
+  int getInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false);
 
   bool
   shouldConsiderAddressTypePromotion(const Instruction &I,
                                      bool &AllowPromotionWithoutCommonHeader);
 
   bool shouldExpandReduction(const IntrinsicInst *II) const {
-    return false;
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::experimental_vector_reduce_v2_fadd:
+    case Intrinsic::experimental_vector_reduce_v2_fmul:
+      // We don't have legalization support for ordered FP reductions.
+      return !II->getFastMathFlags().allowReassoc();
+
+    case Intrinsic::experimental_vector_reduce_fmax:
+    case Intrinsic::experimental_vector_reduce_fmin:
+      // Lowering asserts that there are no NaNs.
+      return !II->getFastMathFlags().noNaNs();
+
+    default:
+      // Don't expand anything else, let legalization deal with it.
+      return false;
+    }
   }
 
   unsigned getGISelRematGlobalCost() const {
@@ -211,10 +238,12 @@ public:
   bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                              TTI::ReductionFlags Flags) const;
 
-  int getArithmeticReductionCost(unsigned Opcode, Type *Ty,
-                                 bool IsPairwiseForm);
+  int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
+                                 bool IsPairwiseForm,
+                                 TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
-  int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);
+  int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
+                     VectorType *SubTp);
   /// @}
 };
 

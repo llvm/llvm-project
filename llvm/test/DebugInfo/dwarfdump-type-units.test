@@ -18,7 +18,7 @@ CHECK: debug_types contents:
 LONG: 0x00000000: Type Unit: {{.*}} name =
 SHORT-NOT: Type Unit
 SHORT: name =
-CHECK-SAME: 'bar' type_signature = [[BAR_SIG]]
+CHECK-SAME: 'bar', type_signature = [[BAR_SIG]]
 SHORT-SAME: length =
 LONG-SAME: type_offset = 0x[[BAR_OFF:[0-9a-f]*]] (next unit at
 LONG: DW_TAG_type_unit
@@ -28,7 +28,7 @@ LONG-NEXT: DW_AT_name {{.*}}"bar"
 
 LONG: 0x00000000: Type Unit: {{.*}} name =
 SHORT: name =
-CHECK-SAME: 'foo' type_signature = [[FOO_SIG]]
+CHECK-SAME: 'foo', type_signature = [[FOO_SIG]]
 LONG-SAME: type_offset = 0x[[FOO_OFF:[0-9a-f]*]] (next unit at
 LONG: DW_TAG_type_unit
 LONG-NOT: NULL

@@ -203,7 +203,8 @@ protected:
   /// the start of the string.  The result of this function can be used anywhere
   /// where the C code specifies const char*.
   llvm::Constant *MakeConstantString(StringRef Str, const char *Name = "") {
-    ConstantAddress Array = CGM.GetAddrOfConstantCString(Str, Name);
+    ConstantAddress Array =
+        CGM.GetAddrOfConstantCString(std::string(Str), Name);
     return llvm::ConstantExpr::getGetElementPtr(Array.getElementType(),
                                                 Array.getPointer(), Zeros);
   }
@@ -254,11 +255,11 @@ protected:
       isDynamic=true) {
     int attrs = property->getPropertyAttributes();
     // For read-only properties, clear the copy and retain flags
-    if (attrs & ObjCPropertyDecl::OBJC_PR_readonly) {
-      attrs &= ~ObjCPropertyDecl::OBJC_PR_copy;
-      attrs &= ~ObjCPropertyDecl::OBJC_PR_retain;
-      attrs &= ~ObjCPropertyDecl::OBJC_PR_weak;
-      attrs &= ~ObjCPropertyDecl::OBJC_PR_strong;
+    if (attrs & ObjCPropertyAttribute::kind_readonly) {
+      attrs &= ~ObjCPropertyAttribute::kind_copy;
+      attrs &= ~ObjCPropertyAttribute::kind_retain;
+      attrs &= ~ObjCPropertyAttribute::kind_weak;
+      attrs &= ~ObjCPropertyAttribute::kind_strong;
     }
     // The first flags field has the same attribute values as clang uses internally
     Fields.addInt(Int8Ty, attrs & 0xff);
@@ -616,6 +617,13 @@ public:
   llvm::Value *GenerateProtocolRef(CodeGenFunction &CGF,
                                    const ObjCProtocolDecl *PD) override;
   void GenerateProtocol(const ObjCProtocolDecl *PD) override;
+
+  virtual llvm::Constant *GenerateProtocolRef(const ObjCProtocolDecl *PD);
+
+  llvm::Constant *GetOrEmitProtocol(const ObjCProtocolDecl *PD) override {
+    return GenerateProtocolRef(PD);
+  }
+
   llvm::Function *ModuleInitFunction() override;
   llvm::FunctionCallee GetPropertyGetFunction() override;
   llvm::FunctionCallee GetPropertySetFunction() override;
@@ -820,7 +828,7 @@ class CGObjCGNUstep : public CGObjCGNU {
       // Slot_t objc_slot_lookup_super(struct objc_super*, SEL);
       SlotLookupSuperFn.init(&CGM, "objc_slot_lookup_super", SlotTy,
                              PtrToObjCSuperTy, SelectorTy);
-      // If we're in ObjC++ mode, then we want to make 
+      // If we're in ObjC++ mode, then we want to make
       if (usesSEHExceptions) {
           llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
           // void objc_exception_rethrow(void)
@@ -1236,6 +1244,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         // The first Interface we find may be a @class,
         // which should only be treated as the source of
         // truth in the absence of a true declaration.
+        assert(OID && "Failed to find ObjCInterfaceDecl");
         const ObjCInterfaceDecl *OIDDef = OID->getDefinition();
         if (OIDDef != nullptr)
           OID = OIDDef;
@@ -1346,7 +1355,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   void GenerateProtocol(const ObjCProtocolDecl *PD) override {
     // Do nothing - we only emit referenced protocols.
   }
-  llvm::Constant *GenerateProtocolRef(const ObjCProtocolDecl *PD) {
+  llvm::Constant *GenerateProtocolRef(const ObjCProtocolDecl *PD) override {
     std::string ProtocolName = PD->getNameAsString();
     auto *&Protocol = ExistingProtocols[ProtocolName];
     if (Protocol)
@@ -1432,7 +1441,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   llvm::Constant  *GetTypeString(llvm::StringRef TypeEncoding) {
     if (TypeEncoding.empty())
       return NULLPtr;
-    std::string MangledTypes = TypeEncoding;
+    std::string MangledTypes = std::string(TypeEncoding);
     std::replace(MangledTypes.begin(), MangledTypes.end(),
       '@', '\1');
     std::string TypesVarName = ".objc_sel_types_" + MangledTypes;
@@ -1555,7 +1564,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // We have to do this by hand, rather than with @llvm.ctors, so that the
     // linker can remove the duplicate invocations.
     auto *InitVar = new llvm::GlobalVariable(TheModule, LoadFunction->getType(),
-        /*isConstant*/true, llvm::GlobalValue::LinkOnceAnyLinkage,
+        /*isConstant*/false, llvm::GlobalValue::LinkOnceAnyLinkage,
         LoadFunction, ".objc_ctor");
     // Check that this hasn't been renamed.  This shouldn't happen, because
     // this function should be called precisely once.
@@ -1646,14 +1655,16 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       for (const auto &lateInit : EarlyInitList) {
         auto *global = TheModule.getGlobalVariable(lateInit.first);
         if (global) {
-          b.CreateAlignedStore(global,
-              b.CreateStructGEP(lateInit.second.first, lateInit.second.second), CGM.getPointerAlign().getQuantity());
+          b.CreateAlignedStore(
+              global,
+              b.CreateStructGEP(lateInit.second.first, lateInit.second.second),
+              CGM.getPointerAlign().getAsAlign());
         }
       }
       b.CreateRetVoid();
       // We can't use the normal LLVM global initialisation array, because we
       // need to specify that this runs early in library initialisation.
-      auto *InitVar = new llvm::GlobalVariable(CGM.getModule(), Init->getType(), 
+      auto *InitVar = new llvm::GlobalVariable(CGM.getModule(), Init->getType(),
           /*isConstant*/true, llvm::GlobalValue::InternalLinkage,
           Init, ".objc_early_init_ptr");
       InitVar->setSection(".CRT$XCLb");
@@ -1942,7 +1953,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
 
       if (SuperClass) {
         std::pair<llvm::Constant*, int> v{classStruct, 1};
-        EarlyInitList.emplace_back(SuperClass->getName(), std::move(v));
+        EarlyInitList.emplace_back(std::string(SuperClass->getName()),
+                                   std::move(v));
       }
 
     }
@@ -2409,7 +2421,8 @@ llvm::Constant *CGObjCGNUstep::GetEHType(QualType T) {
   assert(PT && "Invalid @catch type.");
   const ObjCInterfaceType *IT = PT->getInterfaceType();
   assert(IT && "Invalid @catch type.");
-  std::string className = IT->getDecl()->getIdentifier()->getName();
+  std::string className =
+      std::string(IT->getDecl()->getIdentifier()->getName());
 
   std::string typeinfoName = "__objc_eh_typeinfo_" + className;
 
@@ -3035,12 +3048,18 @@ CGObjCGNU::GenerateProtocolList(ArrayRef<std::string> Protocols) {
 
 llvm::Value *CGObjCGNU::GenerateProtocolRef(CodeGenFunction &CGF,
                                             const ObjCProtocolDecl *PD) {
+  auto protocol = GenerateProtocolRef(PD);
+  llvm::Type *T =
+      CGM.getTypes().ConvertType(CGM.getContext().getObjCProtoType());
+  return CGF.Builder.CreateBitCast(protocol, llvm::PointerType::getUnqual(T));
+}
+
+llvm::Constant *CGObjCGNU::GenerateProtocolRef(const ObjCProtocolDecl *PD) {
   llvm::Constant *&protocol = ExistingProtocols[PD->getNameAsString()];
   if (!protocol)
     GenerateProtocol(PD);
-  llvm::Type *T =
-    CGM.getTypes().ConvertType(CGM.getContext().getObjCProtoType());
-  return CGF.Builder.CreateBitCast(protocol, llvm::PointerType::getUnqual(T));
+  assert(protocol && "Unknown protocol");
+  return protocol;
 }
 
 llvm::Constant *

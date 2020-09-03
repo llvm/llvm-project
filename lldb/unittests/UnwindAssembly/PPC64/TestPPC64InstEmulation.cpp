@@ -1,4 +1,4 @@
-//===-- TestPPC64InstEmulation.cpp ------------------------------*- C++ -*-===//
+//===-- TestPPC64InstEmulation.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@
 #include "lldb/Target/UnwindAssembly.h"
 #include "lldb/Utility/ArchSpec.h"
 
-#include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
+#include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 #include "Plugins/Instruction/PPC64/EmulateInstructionPPC64.h"
 #include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
 #include "llvm/Support/TargetSelect.h"

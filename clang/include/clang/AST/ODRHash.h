@@ -15,11 +15,9 @@
 #ifndef LLVM_CLANG_AST_ODRHASH_H
 #define LLVM_CLANG_AST_ODRHASH_H
 
-#include "clang/AST/Attr.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/DeclObjC.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -57,26 +55,6 @@ public:
   // more information than the AddDecl class.
   void AddCXXRecordDecl(const CXXRecordDecl *Record);
 
-  // Use this for ODR checking records in C/Objective-C between modules. This
-  // method compares more information than the AddDecl class.
-  void AddRecordDecl(const RecordDecl *Record);
-
-  // Use this for ODR checking ObjC interfaces. This
-  // method compares more information than the AddDecl class.
-  void AddObjCInterfaceDecl(const ObjCInterfaceDecl *Record);
-
-  // Use this for ODR checking ObjC protocols. This
-  // method compares more information than the AddDecl class.
-  void AddObjCProtocolDecl(const ObjCProtocolDecl *P);
-
-  // Use this for ODR checking ObjC interfaces. This
-  // method compares more information than the AddDecl class.
-  void AddObjCMethodDecl(const ObjCMethodDecl *Method);
-
-  // Use this for ODR checking ObjC interfaces. This
-  // method compares more information than the AddDecl class.
-  void AddObjCCategoryDecl(const ObjCCategoryDecl *Cat);
-
   // Use this for ODR checking functions between modules.  This method compares
   // more information than the AddDecl class.  SkipBody will process the
   // hash as if the function has no body.
@@ -89,10 +67,6 @@ public:
   // Process SubDecls of the main Decl.  This method calls the DeclVisitor
   // while AddDecl does not.
   void AddSubDecl(const Decl *D);
-
-  // Process attributes attached to a type that is being hashed.
-  void AddAttrs(const NamedDecl *D);
-  void AddAttr(const Attr *A);
 
   // Reset the object for reuse.
   void clear();
@@ -115,8 +89,7 @@ public:
   // Save booleans until the end to lower the size of data to process.
   void AddBoolean(bool value);
 
-  static bool isWhitelistedDecl(const Decl* D, const DeclContext *Parent);
-  static bool isWhitelistedAttr(const Attr *A);
+  static bool isDeclToBeProcessed(const Decl* D, const DeclContext *Parent);
 
 private:
   void AddDeclarationNameImpl(DeclarationName Name);

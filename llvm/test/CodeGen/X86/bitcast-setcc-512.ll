@@ -51,14 +51,14 @@ define i32 @v32i16(<32 x i16> %a, <32 x i16> %b) {
 ;
 ; AVX512F-LABEL: v32i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
-; AVX512F-NEXT:    vpcmpgtw %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpcmpgtw %ymm1, %ymm0, %ymm2
+; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm2
+; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k0
+; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
 ; AVX512F-NEXT:    vpcmpgtw %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kmovw %k0, %ecx
-; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    shll $16, %eax
@@ -114,9 +114,9 @@ define i16 @v16i32(<16 x i32> %a, <16 x i32> %b) {
 ; AVX2-NEXT:    vpcmpgtd %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX2-NEXT:    vzeroupper
@@ -175,9 +175,9 @@ define i16 @v16f32(<16 x float> %a, <16 x float> %b) {
 ; AVX2-NEXT:    vcmpltps %ymm1, %ymm3, %ymm1
 ; AVX2-NEXT:    vcmpltps %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX2-NEXT:    vzeroupper
@@ -354,7 +354,7 @@ define i8 @v8f64(<8 x double> %a, <8 x double> %b) {
 ; SSE-NEXT:    cmpltpd %xmm0, %xmm4
 ; SSE-NEXT:    packssdw %xmm5, %xmm4
 ; SSE-NEXT:    packssdw %xmm6, %xmm4
-; SSE-NEXT:    packsswb %xmm0, %xmm4
+; SSE-NEXT:    packsswb %xmm4, %xmm4
 ; SSE-NEXT:    pmovmskb %xmm4, %eax
 ; SSE-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE-NEXT:    retq
@@ -450,15 +450,15 @@ define void @bitcast_64i8_store(i64* %p, <64 x i8> %a0) {
 ;
 ; AVX512F-LABEL: bitcast_64i8_store:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm0
-; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm3
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vpcmpgtb %ymm0, %ymm1, %ymm2
+; AVX512F-NEXT:    vpmovsxbd %xmm2, %zmm3
 ; AVX512F-NEXT:    vptestmd %zmm3, %zmm3, %k0
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512F-NEXT:    vpcmpgtb %ymm1, %ymm2, %ymm0
+; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512F-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k1
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; AVX512F-NEXT:    vpcmpgtb %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm1
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k2
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
@@ -520,12 +520,12 @@ define void @bitcast_32i16_store(i32* %p, <32 x i16> %a0) {
 ;
 ; AVX512F-LABEL: bitcast_32i16_store:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm0
-; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    vpcmpgtw %ymm1, %ymm2, %ymm0
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vpcmpgtw %ymm0, %ymm1, %ymm2
+; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm2
+; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; AVX512F-NEXT:    vpcmpgtw %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    kmovw %k1, 2(%rdi)
@@ -573,9 +573,9 @@ define void @bitcast_16i32_store(i16* %p, <16 x i32> %a0) {
 ; AVX2-NEXT:    vpcmpgtd %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vpcmpgtd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX2-NEXT:    movw %ax, (%rdi)
 ; AVX2-NEXT:    vzeroupper
@@ -608,7 +608,7 @@ define void @bitcast_8i64_store(i8* %p, <8 x i64> %a0) {
 ; SSE-NEXT:    pcmpgtq %xmm0, %xmm4
 ; SSE-NEXT:    packssdw %xmm2, %xmm4
 ; SSE-NEXT:    packssdw %xmm3, %xmm4
-; SSE-NEXT:    packsswb %xmm0, %xmm4
+; SSE-NEXT:    packsswb %xmm4, %xmm4
 ; SSE-NEXT:    pmovmskb %xmm4, %eax
 ; SSE-NEXT:    movb %al, (%rdi)
 ; SSE-NEXT:    retq

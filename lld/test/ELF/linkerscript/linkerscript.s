@@ -36,14 +36,14 @@
 # RUN: rm -rf %t.dir && mkdir -p %t.dir
 # RUN: echo "INCLUDE \"foo.script\"" > %t.script
 # RUN: echo "OUTPUT(\"%t.out\")" > %t.dir/foo.script
-# RUN: not ld.lld %t.script -o %t.out > %t.log 2>&1
+# RUN: not ld.lld %t.script -o /dev/null > %t.log 2>&1
 # RUN: FileCheck -check-prefix=INCLUDE_ERR %s < %t.log
 # INCLUDE_ERR: error: {{.+}}.script:1: cannot find linker script foo.script
 # INCLUDE_ERR-NEXT: INCLUDE "foo.script"
 # RUN: ld.lld -L %t.dir %t.script %t
 
 # RUN: echo "FOO(BAR)" > %t.script
-# RUN: not ld.lld -o %t.out %t.script > %t.log 2>&1
+# RUN: not ld.lld -o /dev/null %t.script > %t.log 2>&1
 # RUN: FileCheck -check-prefix=ERR1 %s < %t.log
 
 # ERR1: unknown directive: FOO

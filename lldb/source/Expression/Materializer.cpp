@@ -1,4 +1,4 @@
-//===-- Materializer.cpp ----------------------------------------*- C++ -*-===//
+//===-- Materializer.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -402,7 +402,8 @@ uint32_t Materializer::AddPersistentVariable(
     lldb::ExpressionVariableSP &persistent_variable_sp,
     PersistentVariableDelegate *delegate, Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntityPersistentVariable(persistent_variable_sp, delegate));
+  *iter = std::make_unique<EntityPersistentVariable>(persistent_variable_sp,
+                                                     delegate);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
@@ -491,7 +492,7 @@ public:
       const bool scalar_is_load_address = false;
       lldb::addr_t addr_of_valobj =
           valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
-
+          
       // BEGIN Swift.
       if (lldb::ProcessSP process_sp =
           map.GetBestExecutionContextScope()->CalculateProcess())
@@ -550,9 +551,7 @@ public:
                 "size of variable %s (%" PRIu64
                 ") is larger than the ValueObject's size (%" PRIu64 ")",
                 m_variable_sp->GetName().AsCString(),
-                m_variable_sp->GetType()
-                    ->GetByteSize(map.GetBestExecutionContextScope())
-                    .getValueOr(0),
+                m_variable_sp->GetType()->GetByteSize(scope).getValueOr(0),
                 data.GetByteSize());
           }
           return;
@@ -650,9 +649,11 @@ public:
 
       CompilerType valobj_type = valobj_sp->GetCompilerType();
 
+#ifdef LLDB_ENABLE_SWIFT
       if (SwiftASTContext::IsGenericType(valobj_type)) {
         valobj_sp = valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
       }
+#endif // LLDB_ENABLE_SWIFT
 
       lldb_private::DataExtractor data;
 
@@ -744,7 +745,7 @@ public:
 
         lldb::offset_t offset;
 
-        ptr = extractor.GetPointer(&offset);
+        ptr = extractor.GetAddress(&offset);
 
         dump_stream.PutChar('\n');
       }
@@ -798,7 +799,7 @@ private:
 
 uint32_t Materializer::AddVariable(lldb::VariableSP &variable_sp, Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntityVariable(variable_sp));
+  *iter = std::make_unique<EntityVariable>(variable_sp);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
@@ -842,7 +843,7 @@ public:
 
       llvm::Optional<size_t> opt_bit_align = m_type.GetTypeBitAlign(exe_scope);
       if (!opt_bit_align) {
-        err.SetErrorStringWithFormat("can't get the type alignment");
+        err.SetErrorString("can't get the type alignment");
         return;
       }
 
@@ -914,6 +915,7 @@ public:
     PersistentExpressionState *persistent_state = nullptr;
 
     if (m_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
+#ifdef LLDB_ENABLE_SWIFT
       Status status;
       llvm::Optional<SwiftASTContextReader> maybe_type_system =
           target_sp->GetScratchSwiftASTContext(status, *exe_scope);
@@ -925,6 +927,7 @@ public:
       }
       persistent_state =
           target_sp->GetSwiftPersistentExpressionState(*exe_scope);
+#endif // LLDB_ENABLE_SWIFT
     } else {
       auto type_system_or_err =
           target_sp->GetScratchTypeSystemForLanguage(m_type.GetMinimumLanguage());
@@ -946,11 +949,9 @@ public:
       return;
     }
 
-    ConstString name =
-        m_delegate
-            ? m_delegate->GetName()
-            : persistent_state->GetNextPersistentVariableName(
-                  *target_sp, persistent_state->GetPersistentVariablePrefix());
+    ConstString name = m_delegate
+                           ? m_delegate->GetName()
+                           : persistent_state->GetNextPersistentVariableName();
 
     lldb::ExpressionVariableSP ret = persistent_state->CreatePersistentVariable(
         exe_scope, name, m_type, map.GetByteOrder(), map.GetAddressByteSize());
@@ -1037,7 +1038,7 @@ public:
 
         lldb::offset_t offset;
 
-        ptr = extractor.GetPointer(&offset);
+        ptr = extractor.GetAddress(&offset);
 
         dump_stream.PutChar('\n');
       }
@@ -1097,8 +1098,8 @@ uint32_t Materializer::AddResultVariable(const CompilerType &type,
                                          PersistentVariableDelegate *delegate,
                                          Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntityResultVariable(type, is_program_reference,
-                                       keep_in_memory, delegate));
+  *iter = std::make_unique<EntityResultVariable>(type, is_program_reference,
+                                                 keep_in_memory, delegate);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
@@ -1216,7 +1217,7 @@ private:
 
 uint32_t Materializer::AddSymbol(const Symbol &symbol_sp, Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntitySymbol(symbol_sp));
+  *iter = std::make_unique<EntitySymbol>(symbol_sp);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
@@ -1393,19 +1394,13 @@ private:
 uint32_t Materializer::AddRegister(const RegisterInfo &register_info,
                                    Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntityRegister(register_info));
+  *iter = std::make_unique<EntityRegister>(register_info);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
 }
 
-Materializer::Materializer(LLVMCastKind kind)
-    : m_kind(kind), m_dematerializer_wp(), m_current_offset(0),
-      m_struct_alignment(8) {}
-
-Materializer::Materializer()
-    : m_kind(eKindBasic), m_dematerializer_wp(), m_current_offset(0),
-      m_struct_alignment(8) {}
+Materializer::Materializer(LLVMCastKind kind) : m_kind(kind) {}
 
 Materializer::~Materializer() {
   DematerializerSP dematerializer_sp = m_dematerializer_wp.lock();

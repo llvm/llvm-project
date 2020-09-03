@@ -14,8 +14,8 @@
 // access to the compile unit's information.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SYMBOLFILENATIVEPDB_PDBSYMUID_H
-#define LLDB_PLUGINS_SYMBOLFILENATIVEPDB_PDBSYMUID_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBSYMUID_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBSYMUID_H
 
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"

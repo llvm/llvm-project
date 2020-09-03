@@ -1,4 +1,7 @@
-set(LLVM_LINK_COMPONENTS support)
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
 
 add_clang_library(clangTidyModernizeModule
   AvoidBindCheck.cpp
@@ -16,6 +19,7 @@ add_clang_library(clangTidyModernizeModule
   RawStringLiteralCheck.cpp
   RedundantVoidArgCheck.cpp
   ReplaceAutoPtrCheck.cpp
+  ReplaceDisallowCopyAndAssignMacroCheck.cpp
   ReplaceRandomShuffleCheck.cpp
   ReturnBracedInitListCheck.cpp
   ShrinkToFitCheck.cpp
@@ -36,12 +40,19 @@ add_clang_library(clangTidyModernizeModule
   UseUsingCheck.cpp
 
   LINK_LIBS
+  clangTidy
+  clangTidyReadabilityModule
+  clangTidyUtils
+
+  DEPENDS
+  omp_gen
+  )
+
+clang_target_link_libraries(clangTidyModernizeModule
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
   clangLex
-  clangTidy
-  clangTidyReadabilityModule
-  clangTidyUtils
   clangTooling
   )

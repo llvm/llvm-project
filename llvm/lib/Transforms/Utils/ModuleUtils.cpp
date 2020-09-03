@@ -119,6 +119,15 @@ llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
       AttributeList());
 }
 
+Function *llvm::createSanitizerCtor(Module &M, StringRef CtorName) {
+  Function *Ctor = Function::Create(
+      FunctionType::get(Type::getVoidTy(M.getContext()), false),
+      GlobalValue::InternalLinkage, CtorName, &M);
+  BasicBlock *CtorBB = BasicBlock::Create(M.getContext(), "", Ctor);
+  ReturnInst::Create(M.getContext(), CtorBB);
+  return Ctor;
+}
+
 std::pair<Function *, FunctionCallee> llvm::createSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
@@ -128,11 +137,8 @@ std::pair<Function *, FunctionCallee> llvm::createSanitizerCtorAndInitFunctions(
          "Sanitizer's init function expects different number of arguments");
   FunctionCallee InitFunction =
       declareSanitizerInitFunction(M, InitName, InitArgTypes);
-  Function *Ctor = Function::Create(
-      FunctionType::get(Type::getVoidTy(M.getContext()), false),
-      GlobalValue::InternalLinkage, CtorName, &M);
-  BasicBlock *CtorBB = BasicBlock::Create(M.getContext(), "", Ctor);
-  IRBuilder<> IRB(ReturnInst::Create(M.getContext(), CtorBB));
+  Function *Ctor = createSanitizerCtor(M, CtorName);
+  IRBuilder<> IRB(Ctor->getEntryBlock().getTerminator());
   IRB.CreateCall(InitFunction, InitArgs);
   if (!VersionCheckName.empty()) {
     FunctionCallee VersionCheckFunction = M.getOrInsertFunction(
@@ -301,7 +307,7 @@ void VFABI::setVectorVariantNames(
 #ifndef NDEBUG
   for (const std::string &VariantMapping : VariantMappings) {
     LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << VariantMapping << "'\n");
-    Optional<VFInfo> VI = VFABI::tryDemangleForVFABI(VariantMapping);
+    Optional<VFInfo> VI = VFABI::tryDemangleForVFABI(VariantMapping, *M);
     assert(VI.hasValue() && "Cannot add an invalid VFABI name.");
     assert(M->getNamedValue(VI.getValue().VectorName) &&
            "Cannot add variant to attribute: "

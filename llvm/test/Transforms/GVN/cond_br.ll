@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -gvn -S < %s | FileCheck %s
+; RUN: opt -basic-aa -gvn -S < %s | FileCheck %s
 @y = external global i32
 @z = external global i32
 

@@ -15,6 +15,7 @@
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Refactoring/RecursiveSymbolVisitor.h"

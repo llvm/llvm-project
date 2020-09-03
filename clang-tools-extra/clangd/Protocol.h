@@ -50,6 +50,7 @@ enum class ErrorCode {
 
   // Defined by the protocol.
   RequestCancelled = -32800,
+  ContentModified = -32801,
 };
 // Models an LSP error as an llvm::Error.
 class LSPError : public llvm::ErrorInfo<LSPError> {
@@ -123,6 +124,22 @@ struct TextDocumentIdentifier {
 };
 llvm::json::Value toJSON(const TextDocumentIdentifier &);
 bool fromJSON(const llvm::json::Value &, TextDocumentIdentifier &);
+
+struct VersionedTextDocumentIdentifier : public TextDocumentIdentifier {
+  /// The version number of this document. If a versioned text document
+  /// identifier is sent from the server to the client and the file is not open
+  /// in the editor (the server has not received an open notification before)
+  /// the server can send `null` to indicate that the version is known and the
+  /// content on disk is the master (as speced with document content ownership).
+  ///
+  /// The version number of a document will increase after each change,
+  /// including undo/redo. The number doesn't need to be consecutive.
+  ///
+  /// clangd extension: versions are optional, and synthesized if missing.
+  llvm::Optional<std::int64_t> version;
+};
+llvm::json::Value toJSON(const VersionedTextDocumentIdentifier &);
+bool fromJSON(const llvm::json::Value &, VersionedTextDocumentIdentifier &);
 
 struct Position {
   /// Line position in a document (zero-based).
@@ -223,7 +240,10 @@ struct TextDocumentItem {
   std::string languageId;
 
   /// The version number of this document (it will strictly increase after each
-  int version = 0;
+  /// change, including undo/redo.
+  ///
+  /// clangd extension: versions are optional, and synthesized if missing.
+  llvm::Optional<int64_t> version;
 
   /// The content of the opened text document.
   std::string text;
@@ -239,6 +259,7 @@ bool fromJSON(const llvm::json::Value &E, TraceLevel &Out);
 
 struct NoParams {};
 inline bool fromJSON(const llvm::json::Value &, NoParams &) { return true; }
+using InitializedParams = NoParams;
 using ShutdownParams = NoParams;
 using ExitParams = NoParams;
 
@@ -409,13 +430,24 @@ struct ClientCapabilities {
   /// textDocument.completion.completionItemKind.valueSet
   llvm::Optional<CompletionItemKindBitset> CompletionItemKinds;
 
+  /// The documentation format that should be used for textDocument/completion.
+  /// textDocument.completion.completionItem.documentationFormat
+  MarkupKind CompletionDocumentationFormat = MarkupKind::PlainText;
+
   /// Client supports CodeAction return value for textDocument/codeAction.
   /// textDocument.codeAction.codeActionLiteralSupport.
   bool CodeActionStructure = false;
 
-  /// Client supports semantic highlighting.
+  /// Client advertises support for the semanticTokens feature.
+  /// We support the textDocument/semanticTokens request in any case.
+  /// textDocument.semanticTokens
+  bool SemanticTokens = false;
+  /// Client supports Theia semantic highlighting extension.
+  /// https://github.com/microsoft/vscode-languageserver-node/pull/367
+  /// This will be ignored if the client also supports semanticTokens.
   /// textDocument.semanticHighlightingCapabilities.semanticHighlighting
-  bool SemanticHighlighting = false;
+  /// FIXME: drop this support once clients support LSP 3.16 Semantic Tokens.
+  bool TheiaSemanticHighlighting = false;
 
   /// Supported encodings for LSP character offsets. (clangd extension).
   llvm::Optional<std::vector<OffsetEncoding>> offsetEncoding;
@@ -427,6 +459,16 @@ struct ClientCapabilities {
   /// The client supports testing for validity of rename operations
   /// before execution.
   bool RenamePrepareSupport = false;
+
+  /// The client supports progress notifications.
+  /// window.workDoneProgress
+  bool WorkDoneProgress = false;
+
+  /// The client supports implicit $/progress work-done progress streams,
+  /// without a preceding window/workDoneProgress/create.
+  /// This is a clangd extension.
+  /// window.implicitWorkDoneProgressCreate
+  bool ImplicitProgressCreation = false;
 };
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &);
 
@@ -499,6 +541,89 @@ struct InitializeParams {
 };
 bool fromJSON(const llvm::json::Value &, InitializeParams &);
 
+struct WorkDoneProgressCreateParams {
+  /// The token to be used to report progress.
+  llvm::json::Value token = nullptr;
+};
+llvm::json::Value toJSON(const WorkDoneProgressCreateParams &P);
+
+template <typename T> struct ProgressParams {
+  /// The progress token provided by the client or server.
+  llvm::json::Value token = nullptr;
+
+  /// The progress data.
+  T value;
+};
+template <typename T> llvm::json::Value toJSON(const ProgressParams<T> &P) {
+  return llvm::json::Object{{"token", P.token}, {"value", P.value}};
+}
+/// To start progress reporting a $/progress notification with the following
+/// payload must be sent.
+struct WorkDoneProgressBegin {
+  /// Mandatory title of the progress operation. Used to briefly inform about
+  /// the kind of operation being performed.
+  ///
+  /// Examples: "Indexing" or "Linking dependencies".
+  std::string title;
+
+  /// Controls if a cancel button should show to allow the user to cancel the
+  /// long-running operation. Clients that don't support cancellation are
+  /// allowed to ignore the setting.
+  bool cancellable = false;
+
+  /// Optional progress percentage to display (value 100 is considered 100%).
+  /// If not provided infinite progress is assumed and clients are allowed
+  /// to ignore the `percentage` value in subsequent in report notifications.
+  ///
+  /// The value should be steadily rising. Clients are free to ignore values
+  /// that are not following this rule.
+  ///
+  /// Clangd implementation note: we only send nonzero percentages in
+  /// the WorkProgressReport. 'true' here means percentages will be used.
+  bool percentage = false;
+};
+llvm::json::Value toJSON(const WorkDoneProgressBegin &);
+
+/// Reporting progress is done using the following payload.
+struct WorkDoneProgressReport {
+  /// Mandatory title of the progress operation. Used to briefly inform about
+  /// the kind of operation being performed.
+  ///
+  /// Examples: "Indexing" or "Linking dependencies".
+  std::string title;
+
+  /// Controls enablement state of a cancel button. This property is only valid
+  /// if a cancel button got requested in the `WorkDoneProgressStart` payload.
+  ///
+  /// Clients that don't support cancellation or don't support control
+  /// the button's enablement state are allowed to ignore the setting.
+  llvm::Optional<bool> cancellable;
+
+  /// Optional, more detailed associated progress message. Contains
+  /// complementary information to the `title`.
+  ///
+  /// Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
+  /// If unset, the previous progress message (if any) is still valid.
+  llvm::Optional<std::string> message;
+
+  /// Optional progress percentage to display (value 100 is considered 100%).
+  /// If not provided infinite progress is assumed and clients are allowed
+  /// to ignore the `percentage` value in subsequent in report notifications.
+  ///
+  /// The value should be steadily rising. Clients are free to ignore values
+  /// that are not following this rule.
+  llvm::Optional<double> percentage;
+};
+llvm::json::Value toJSON(const WorkDoneProgressReport &);
+//
+/// Signals the end of progress reporting.
+struct WorkDoneProgressEnd {
+  /// Optional, a final message indicating to for example indicate the outcome
+  /// of the operation.
+  llvm::Optional<std::string> message;
+};
+llvm::json::Value toJSON(const WorkDoneProgressEnd &);
+
 enum class MessageType {
   /// An error message.
   Error = 1,
@@ -533,6 +658,12 @@ struct DidCloseTextDocumentParams {
 };
 bool fromJSON(const llvm::json::Value &, DidCloseTextDocumentParams &);
 
+struct DidSaveTextDocumentParams {
+  /// The document that was saved.
+  TextDocumentIdentifier textDocument;
+};
+bool fromJSON(const llvm::json::Value &, DidSaveTextDocumentParams &);
+
 struct TextDocumentContentChangeEvent {
   /// The range of the document that changed.
   llvm::Optional<Range> range;
@@ -549,7 +680,7 @@ struct DidChangeTextDocumentParams {
   /// The document that did change. The version number points
   /// to the version after all provided content changes have
   /// been applied.
-  TextDocumentIdentifier textDocument;
+  VersionedTextDocumentIdentifier textDocument;
 
   /// The actual content changes.
   std::vector<TextDocumentContentChangeEvent> contentChanges;
@@ -559,6 +690,12 @@ struct DidChangeTextDocumentParams {
   /// either they will be provided for this version or some subsequent one.
   /// This is a clangd extension.
   llvm::Optional<bool> wantDiagnostics;
+
+  /// Force a complete rebuild of the file, ignoring all cached state. Slow!
+  /// This is useful to defeat clangd's assumption that missing headers will
+  /// stay missing.
+  /// This is a clangd extension.
+  bool forceRebuild = false;
 };
 bool fromJSON(const llvm::json::Value &, DidChangeTextDocumentParams &);
 
@@ -691,6 +828,16 @@ struct LSPDiagnosticCompare {
 };
 bool fromJSON(const llvm::json::Value &, Diagnostic &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Diagnostic &);
+
+struct PublishDiagnosticsParams {
+  /// The URI for which diagnostic information is reported.
+  URIForFile uri;
+  /// An array of diagnostic information items.
+  std::vector<Diagnostic> diagnostics;
+  /// The version number of the document the diagnostics are published for.
+  llvm::Optional<int64_t> version;
+};
+llvm::json::Value toJSON(const PublishDiagnosticsParams &);
 
 struct CodeActionContext {
   /// An array of diagnostics.
@@ -962,7 +1109,7 @@ struct CompletionItem {
   std::string detail;
 
   /// A human-readable string that represents a doc-comment.
-  std::string documentation;
+  llvm::Optional<MarkupContent> documentation;
 
   /// A string that should be used when comparing this item with other items.
   /// When `falsy` the label is used.
@@ -995,6 +1142,15 @@ struct CompletionItem {
   /// Indicates if this item is deprecated.
   bool deprecated = false;
 
+  /// This is Clangd extension.
+  /// The score that Clangd calculates to rank completion items. This score can
+  /// be used to adjust the ranking on the client side.
+  /// NOTE: This excludes fuzzy matching score which is typically calculated on
+  /// the client side.
+  float score = 0.f;
+
+  // TODO: Add custom commitCharacters for some of the completion items. For
+  // example, it makes sense to use () only for the functions.
   // TODO(krasimir): The following optional fields defined by the language
   // server protocol are unsupported:
   //
@@ -1200,11 +1356,81 @@ struct FileStatus {
   std::string state;
   // FIXME: add detail messages.
 };
-llvm::json::Value toJSON(const FileStatus &FStatus);
+llvm::json::Value toJSON(const FileStatus &);
+
+/// Specifies a single semantic token in the document.
+/// This struct is not part of LSP, which just encodes lists of tokens as
+/// arrays of numbers directly.
+struct SemanticToken {
+  /// token line number, relative to the previous token
+  unsigned deltaLine = 0;
+  /// token start character, relative to the previous token
+  /// (relative to 0 or the previous token's start if they are on the same line)
+  unsigned deltaStart = 0;
+  /// the length of the token. A token cannot be multiline
+  unsigned length = 0;
+  /// will be looked up in `SemanticTokensLegend.tokenTypes`
+  unsigned tokenType = 0;
+  /// each set bit will be looked up in `SemanticTokensLegend.tokenModifiers`
+  unsigned tokenModifiers = 0;
+};
+bool operator==(const SemanticToken &, const SemanticToken &);
+
+/// A versioned set of tokens.
+struct SemanticTokens {
+  // An optional result id. If provided and clients support delta updating
+  // the client will include the result id in the next semantic token request.
+  // A server can then instead of computing all semantic tokens again simply
+  // send a delta.
+  std::string resultId;
+
+  /// The actual tokens.
+  std::vector<SemanticToken> tokens; // encoded as a flat integer array.
+};
+llvm::json::Value toJSON(const SemanticTokens &);
+
+/// Body of textDocument/semanticTokens/full request.
+struct SemanticTokensParams {
+  /// The text document.
+  TextDocumentIdentifier textDocument;
+};
+bool fromJSON(const llvm::json::Value &, SemanticTokensParams &);
+
+/// Body of textDocument/semanticTokens/full/delta request.
+/// Requests the changes in semantic tokens since a previous response.
+struct SemanticTokensDeltaParams {
+  /// The text document.
+  TextDocumentIdentifier textDocument;
+  /// The previous result id.
+  std::string previousResultId;
+};
+bool fromJSON(const llvm::json::Value &Params, SemanticTokensDeltaParams &R);
+
+/// Describes a a replacement of a contiguous range of semanticTokens.
+struct SemanticTokensEdit {
+  // LSP specifies `start` and `deleteCount` which are relative to the array
+  // encoding of the previous tokens.
+  // We use token counts instead, and translate when serializing this struct.
+  unsigned startToken = 0;
+  unsigned deleteTokens = 0;
+  std::vector<SemanticToken> tokens; // encoded as a flat integer array
+};
+llvm::json::Value toJSON(const SemanticTokensEdit &);
+
+/// This models LSP SemanticTokensDelta | SemanticTokens, which is the result of
+/// textDocument/semanticTokens/full/delta.
+struct SemanticTokensOrDelta {
+  std::string resultId;
+  /// Set if we computed edits relative to a previous set of tokens.
+  llvm::Optional<std::vector<SemanticTokensEdit>> edits;
+  /// Set if we computed a fresh set of tokens.
+  llvm::Optional<std::vector<SemanticToken>> tokens; // encoded as integer array
+};
+llvm::json::Value toJSON(const SemanticTokensOrDelta &);
 
 /// Represents a semantic highlighting information that has to be applied on a
 /// specific line of the text document.
-struct SemanticHighlightingInformation {
+struct TheiaSemanticHighlightingInformation {
   /// The line these highlightings belong to.
   int Line = 0;
   /// The base64 encoded string of highlighting tokens.
@@ -1215,18 +1441,19 @@ struct SemanticHighlightingInformation {
   /// clients should combine line style and token style if possible.
   bool IsInactive = false;
 };
-bool operator==(const SemanticHighlightingInformation &Lhs,
-                const SemanticHighlightingInformation &Rhs);
-llvm::json::Value toJSON(const SemanticHighlightingInformation &Highlighting);
+bool operator==(const TheiaSemanticHighlightingInformation &Lhs,
+                const TheiaSemanticHighlightingInformation &Rhs);
+llvm::json::Value
+toJSON(const TheiaSemanticHighlightingInformation &Highlighting);
 
 /// Parameters for the semantic highlighting (server-side) push notification.
-struct SemanticHighlightingParams {
+struct TheiaSemanticHighlightingParams {
   /// The textdocument these highlightings belong to.
-  TextDocumentIdentifier TextDocument;
+  VersionedTextDocumentIdentifier TextDocument;
   /// The lines of highlightings that should be sent.
-  std::vector<SemanticHighlightingInformation> Lines;
+  std::vector<TheiaSemanticHighlightingInformation> Lines;
 };
-llvm::json::Value toJSON(const SemanticHighlightingParams &Highlighting);
+llvm::json::Value toJSON(const TheiaSemanticHighlightingParams &Highlighting);
 
 struct SelectionRangeParams {
   /// The text document.
@@ -1282,6 +1509,23 @@ struct DocumentLink {
   }
 };
 llvm::json::Value toJSON(const DocumentLink &DocumentLink);
+
+// FIXME(kirillbobyrev): Add FoldingRangeClientCapabilities so we can support
+// per-line-folding editors.
+struct FoldingRangeParams {
+  TextDocumentIdentifier textDocument;
+};
+bool fromJSON(const llvm::json::Value &, FoldingRangeParams &);
+
+/// Stores information about a region of code that can be folded.
+struct FoldingRange {
+  unsigned startLine = 0;
+  unsigned startCharacter;
+  unsigned endLine = 0;
+  unsigned endCharacter;
+  llvm::Optional<std::string> kind;
+};
+llvm::json::Value toJSON(const FoldingRange &Range);
 
 } // namespace clangd
 } // namespace clang

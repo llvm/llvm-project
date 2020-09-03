@@ -1,4 +1,4 @@
-; RUN: opt -S -wholeprogramdevirt %s | FileCheck %s
+; RUN: opt -S -wholeprogramdevirt -whole-program-visibility %s | FileCheck %s
 
 ; Test that we correctly expand the llvm.type.checked.load intrinsic in cases
 ; where we cannot devirtualize.

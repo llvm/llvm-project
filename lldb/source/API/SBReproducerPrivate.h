@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBREPRODUCER_PRIVATE_H
-#define LLDB_API_SBREPRODUCER_PRIVATE_H
+#ifndef LLDB_SOURCE_API_SBREPRODUCERPRIVATE_H
+#define LLDB_SOURCE_API_SBREPRODUCERPRIVATE_H
 
 #include "lldb/API/SBReproducer.h"
 
@@ -20,7 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 
 #define LLDB_GET_INSTRUMENTATION_DATA()                                        \
-  lldb_private::repro::GetInstrumentationData()
+  lldb_private::repro::InstrumentationData::Instance()
 
 namespace lldb_private {
 namespace repro {
@@ -55,17 +55,19 @@ private:
   SBRegistry m_registry;
 };
 
-inline InstrumentationData GetInstrumentationData() {
-  if (!lldb_private::repro::Reproducer::Initialized())
-    return {};
+class ReplayData {
+public:
+  ReplayData(std::unique_ptr<llvm::MemoryBuffer> memory_buffer)
+      : m_memory_buffer(std::move(memory_buffer)), m_registry(),
+        m_deserializer(m_memory_buffer->getBuffer()) {}
+  Deserializer &GetDeserializer() { return m_deserializer; }
+  Registry &GetRegistry() { return m_registry; }
 
-  if (auto *g = lldb_private::repro::Reproducer::Instance().GetGenerator()) {
-    auto &p = g->GetOrCreate<SBProvider>();
-    return {p.GetSerializer(), p.GetRegistry()};
-  }
-
-  return {};
-}
+private:
+  std::unique_ptr<llvm::MemoryBuffer> m_memory_buffer;
+  SBRegistry m_registry;
+  Deserializer m_deserializer;
+};
 
 template <typename T> void RegisterMethods(Registry &R);
 

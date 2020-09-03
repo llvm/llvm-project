@@ -181,8 +181,12 @@ uint64_t lprofGetLoadModuleSignature();
  * Return non zero value if the profile data has already been
  * dumped to the file.
  */
-unsigned lprofProfileDumped();
-void lprofSetProfileDumped();
+unsigned lprofProfileDumped(void);
+void lprofSetProfileDumped(unsigned);
+
+/* Return non zero value if counters are being relocated at runtime. */
+unsigned lprofRuntimeCounterRelocation(void);
+void lprofSetRuntimeCounterRelocation(unsigned);
 
 COMPILER_RT_VISIBILITY extern void (*FreeHook)(void *);
 COMPILER_RT_VISIBILITY extern uint8_t *DynamicBufferIOBuffer;

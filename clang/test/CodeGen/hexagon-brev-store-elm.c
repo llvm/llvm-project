@@ -1,5 +1,5 @@
 // REQUIRES: hexagon-registered-target
-// RUN: %clang_cc1 -emit-llvm -O2 -o - -triple hexagon-unknown-elf %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -O2 -o - -triple hexagon-unknown-elf -target-cpu hexagonv60 %s | FileCheck %s
 // This unit test validates that the store to "dst" variable needs to be eliminated.
 
 // CHECK: @brev_store_elimination_test1

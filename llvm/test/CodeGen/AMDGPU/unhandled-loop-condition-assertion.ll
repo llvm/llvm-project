@@ -39,7 +39,6 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; COMMON-LABEL: {{^}}branch_false:
-; SI: s_cbranch_vccnz
 ; SI: s_cbranch_scc1
 ; SI: s_endpgm
 define amdgpu_kernel void @branch_false(i8 addrspace(1)* nocapture %main, i32 %main_stride) #0 {

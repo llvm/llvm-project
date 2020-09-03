@@ -72,16 +72,13 @@ extern int hwasan_inited;
 extern bool hwasan_init_is_running;
 extern int hwasan_report_count;
 
-bool ProtectRange(uptr beg, uptr end);
 bool InitShadow();
 void InitPrctl();
 void InitThreads();
 void MadviseShadow();
-char *GetProcSelfMaps();
 void InitializeInterceptors();
 
 void HwasanAllocatorInit();
-void HwasanAllocatorThreadFinish();
 
 void *hwasan_malloc(uptr size, StackTrace *stack);
 void *hwasan_calloc(uptr nmemb, uptr size, StackTrace *stack);
@@ -95,23 +92,7 @@ int hwasan_posix_memalign(void **memptr, uptr alignment, uptr size,
                         StackTrace *stack);
 void hwasan_free(void *ptr, StackTrace *stack);
 
-void InstallTrapHandler();
 void InstallAtExitHandler();
-
-void EnterSymbolizer();
-void ExitSymbolizer();
-bool IsInSymbolizer();
-
-struct SymbolizerScope {
-  SymbolizerScope() { EnterSymbolizer(); }
-  ~SymbolizerScope() { ExitSymbolizer(); }
-};
-
-// Returns a "chained" origin id, pointing to the given stack trace followed by
-// the previous origin id.
-u32 ChainOrigin(u32 id, StackTrace *stack);
-
-const int STACK_TRACE_TAG_POISON = StackTrace::TAG_CUSTOM + 1;
 
 #define GET_MALLOC_STACK_TRACE                                            \
   BufferedStackTrace stack;                                               \
@@ -133,16 +114,6 @@ const int STACK_TRACE_TAG_POISON = StackTrace::TAG_CUSTOM + 1;
     GET_FATAL_STACK_TRACE_HERE;     \
     stack.Print();                  \
   }
-
-class ScopedThreadLocalStateBackup {
- public:
-  ScopedThreadLocalStateBackup() { Backup(); }
-  ~ScopedThreadLocalStateBackup() { Restore(); }
-  void Backup();
-  void Restore();
- private:
-  u64 va_arg_overflow_size_tls;
-};
 
 void HwasanTSDInit();
 void HwasanTSDThreadInit();

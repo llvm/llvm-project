@@ -56,7 +56,7 @@ void SSAUpdater::Initialize(Type *Ty, StringRef Name) {
   else
     getAvailableVals(AV).clear();
   ProtoType = Ty;
-  ProtoName = Name;
+  ProtoName = std::string(Name);
 }
 
 bool SSAUpdater::HasValueForBlock(BasicBlock *BB) const {
@@ -194,11 +194,6 @@ void SSAUpdater::RewriteUse(Use &U) {
     V = GetValueAtEndOfBlock(UserPN->getIncomingBlock(U));
   else
     V = GetValueInMiddleOfBlock(User->getParent());
-
-  // Notify that users of the existing value that it is being replaced.
-  Value *OldVal = U.get();
-  if (OldVal != V && OldVal->hasValueHandle())
-    ValueHandleBase::ValueIsRAUWd(OldVal, V);
 
   U.set(V);
 }

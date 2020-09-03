@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple bpfel -filetype=obj -o %t %s
-# RUN: llvm-objdump -mattr=+alu32 -d -r %t | FileCheck --check-prefix=CHECK-32 %s
+# RUN: llvm-objdump --mattr=+alu32 -d -r %t | FileCheck --check-prefix=CHECK-32 %s
 # RUN: llvm-objdump -d -r %t | FileCheck %s
 
 // ======== BPF_LDX Class ========

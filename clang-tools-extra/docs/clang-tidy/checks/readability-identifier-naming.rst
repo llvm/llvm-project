@@ -36,6 +36,7 @@ Options
 The following options are describe below:
 
  - :option:`AbstractClassCase`, :option:`AbstractClassPrefix`, :option:`AbstractClassSuffix`
+ - :option:`AggressiveDependentMemberLookup`
  - :option:`ClassCase`, :option:`ClassPrefix`, :option:`ClassSuffix`
  - :option:`ClassConstantCase`, :option:`ClassConstantPrefix`, :option:`ClassConstantSuffix`
  - :option:`ClassMemberCase`, :option:`ClassMemberPrefix`, :option:`ClassMemberSuffix`
@@ -55,11 +56,13 @@ The following options are describe below:
  - :option:`GlobalFunctionCase`, :option:`GlobalFunctionPrefix`, :option:`GlobalFunctionSuffix`
  - :option:`GlobalPointerCase`, :option:`GlobalPointerPrefix`, :option:`GlobalPointerSuffix`
  - :option:`GlobalVariableCase`, :option:`GlobalVariablePrefix`, :option:`GlobalVariableSuffix`
+ - :option:`IgnoreMainLikeFunctions`
  - :option:`InlineNamespaceCase`, :option:`InlineNamespacePrefix`, :option:`InlineNamespaceSuffix`
  - :option:`LocalConstantCase`, :option:`LocalConstantPrefix`, :option:`LocalConstantSuffix`
  - :option:`LocalConstantPointerCase`, :option:`LocalConstantPointerPrefix`, :option:`LocalConstantPointerSuffix`
  - :option:`LocalPointerCase`, :option:`LocalPointerPrefix`, :option:`LocalPointerSuffix`
  - :option:`LocalVariableCase`, :option:`LocalVariablePrefix`, :option:`LocalVariableSuffix`
+ - :option:`MacroDefinitionCase`, :option:`MacroDefinitionPrefix`, :option:`MacroDefinitionSuffix`
  - :option:`MemberCase`, :option:`MemberPrefix`, :option:`MemberSuffix`
  - :option:`MethodCase`, :option:`MethodPrefix`, :option:`MethodSuffix`
  - :option:`NamespaceCase`, :option:`NamespacePrefix`, :option:`NamespaceSuffix`
@@ -124,6 +127,64 @@ After:
     class pre_abstract_class_post {
     public:
       pre_abstract_class_post();
+    };
+
+.. option:: AggressiveDependentMemberLookup
+
+    When set to `1` the check will look in dependent base classes for dependent
+    member references that need changing. This can lead to errors with template
+    specializations so the default value is `0`.
+
+For example using values of:
+
+   - ClassMemberCase of ``lower_case``
+
+Before:
+
+.. code-block:: c++
+
+    template <typename T>
+    struct Base {
+      T BadNamedMember;
+    };
+
+    template <typename T>
+    struct Derived : Base<T> {
+      void reset() {
+        this->BadNamedMember = 0;
+      }
+    };
+
+After if AggressiveDependentMemberLookup is ``0``:
+
+.. code-block:: c++
+
+    template <typename T>
+    struct Base {
+      T bad_named_member;
+    };
+
+    template <typename T>
+    struct Derived : Base<T> {
+      void reset() {
+        this->BadNamedMember = 0;
+      }
+    };
+
+After if AggressiveDependentMemberLookup is ``1``:
+
+.. code-block:: c++
+
+    template <typename T>
+    struct Base {
+      T bad_named_member;
+    };
+
+    template <typename T>
+    struct Derived : Base<T> {
+      void reset() {
+        this->bad_named_member = 0;
+      }
     };
 
 .. option:: ClassCase
@@ -827,6 +888,12 @@ After:
 
     int pre_global3_post;
 
+.. option:: IgnoreMainLikeFunctions
+
+    When set to `1` functions that have a similar signature to ``main`` or 
+    ``wmain`` won't enforce checks on the names of their parameters.
+    Default value is `0`.
+
 .. option:: InlineNamespaceCase
 
     When defined, the check will ensure inline namespaces names conform to the
@@ -1009,6 +1076,44 @@ After:
 .. code-block:: c++
 
     void foo() { int pre_local_constant_post; }
+
+.. option:: MacroDefinitionCase
+
+    When defined, the check will ensure macro definitions conform to the
+    selected casing.
+
+.. option:: MacroDefinitionPrefix
+
+    When defined, the check will ensure macro definitions will add the
+    prefixed with the given value (regardless of casing).
+
+.. option:: MacroDefinitionSuffix
+
+    When defined, the check will ensure macro definitions will add the
+    suffix with the given value (regardless of casing).
+
+For example using values of:
+
+   - MacroDefinitionCase of ``lower_case``
+   - MacroDefinitionPrefix of ``pre_``
+   - MacroDefinitionSuffix of ``_post``
+
+Identifies and/or transforms macro definitions as follows:
+
+Before:
+
+.. code-block:: c
+
+    #define MY_MacroDefinition
+
+After:
+
+.. code-block:: c
+
+    #define pre_my_macro_definition_post
+
+Note: This will not warn on builtin macros or macros defined on the command line
+using the ``-D`` flag.
 
 .. option:: MemberCase
 

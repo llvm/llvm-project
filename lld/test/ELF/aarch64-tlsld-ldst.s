@@ -24,7 +24,7 @@ _start:  mrs x8, TPIDR_EL0
         add x8, x8, :tprel_hi12:var4
         ldrb w0, [x8, :tprel_lo12_nc:var4]
 
-// CHECK: _start:
+// CHECK: <_start>:
 // CHECK-NEXT:    210158:       mrs     x8, TPIDR_EL0
 // 0x0 + c10 = 0xc10       = tcb (16-bytes) + var0
 // CHECK-NEXT:    21015c:       add     x8, x8, #0, lsl #12

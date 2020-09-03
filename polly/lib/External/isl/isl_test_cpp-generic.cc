@@ -8,6 +8,9 @@
 #ifndef IS_TRUE
 #define IS_TRUE(b)	(b)
 #endif
+#ifndef SIZE_VAL
+#define SIZE_VAL(s)	(s)
+#endif
 
 /* Test the pointer interface for interaction between isl C and C++ types.
  *
@@ -46,6 +49,7 @@ void test_pointer(isl::ctx ctx)
  *  - static constructor without a parameter
  *  - conversion construction (implicit)
  *  - conversion construction (explicit)
+ *  - construction of empty union set
  *
  *  The tests to construct from integers and strings cover functionality that
  *  is also tested in the parameter type tests, but here we verify that
@@ -74,6 +78,10 @@ void test_constructors(isl::ctx ctx)
 	assert(IS_TRUE(s.is_equal(result)));
 	isl::set s2(bs);
 	assert(IS_TRUE(s.unite(s2).is_equal(result)));
+
+	isl::union_set us(ctx, "{ A[1]; B[2, 3] }");
+	isl::union_set empty = isl::union_set::empty(ctx);
+	assert(IS_TRUE(us.is_equal(us.unite(empty))));
 }
 
 /* Test integer function parameters.
@@ -182,4 +190,185 @@ void test_return_string(isl::ctx ctx)
 	expr = build.expr_from(set);
 	expected_string = "n >= 0";
 	assert(expected_string == expr.to_C_str());
+}
+
+/* Test the functionality of "every" functions
+ * that does not depend on the type of C++ bindings.
+ */
+static void test_every_generic(isl::ctx ctx)
+{
+	isl::union_set us(ctx, "{ A[i]; B[j] }");
+
+	auto is_empty = [] (isl::set s) {
+		return s.is_empty();
+	};
+	assert(!IS_TRUE(us.every_set(is_empty)));
+
+	auto is_non_empty = [] (isl::set s) {
+		return !s.is_empty();
+	};
+	assert(IS_TRUE(us.every_set(is_non_empty)));
+
+	auto in_A = [] (isl::set s) {
+		return s.is_subset(isl::set(s.ctx(), "{ A[x] }"));
+	};
+	assert(!IS_TRUE(us.every_set(in_A)));
+
+	auto not_in_A = [] (isl::set s) {
+		return !s.is_subset(isl::set(s.ctx(), "{ A[x] }"));
+	};
+	assert(!IS_TRUE(us.every_set(not_in_A)));
+}
+
+/* Check basic construction of spaces.
+ */
+static void test_space(isl::ctx ctx)
+{
+	isl::space unit = isl::space::unit(ctx);
+	isl::space set_space = unit.add_named_tuple("A", 3);
+	isl::space map_space = set_space.add_named_tuple("B", 2);
+
+	isl::set set = isl::set::universe(set_space);
+	isl::map map = isl::map::universe(map_space);
+	assert(IS_TRUE(set.is_equal(isl::set(ctx, "{ A[*,*,*] }"))));
+	assert(IS_TRUE(map.is_equal(isl::map(ctx, "{ A[*,*,*] -> B[*,*] }"))));
+}
+
+/* Construct a simple schedule tree with an outer sequence node and
+ * a single-dimensional band node in each branch, with one of them
+ * marked coincident.
+ */
+static isl::schedule construct_schedule_tree(isl::ctx ctx)
+{
+	isl::union_set A(ctx, "{ A[i] : 0 <= i < 10 }");
+	isl::union_set B(ctx, "{ B[i] : 0 <= i < 20 }");
+
+	auto node = isl::schedule_node::from_domain(A.unite(B));
+	node = node.child(0);
+
+	isl::union_set_list filters(ctx, 0);
+	filters = filters.add(A).add(B);
+	node = node.insert_sequence(filters);
+
+	isl::multi_union_pw_aff f_A(ctx, "[ { A[i] -> [i] } ]");
+	node = node.child(0);
+	node = node.child(0);
+	node = node.insert_partial_schedule(f_A);
+	auto band = node.as<isl::schedule_node_band>();
+	band = band.member_set_coincident(0, true);
+	node = band.ancestor(2);
+
+	isl::multi_union_pw_aff f_B(ctx, "[ { B[i] -> [i] } ]");
+	node = node.child(1);
+	node = node.child(0);
+	node = node.insert_partial_schedule(f_B);
+	node = node.ancestor(2);
+
+	return node.schedule();
+}
+
+/* Test basic schedule tree functionality that is independent
+ * of the type of bindings.
+ *
+ * In particular, create a simple schedule tree and
+ * - check that the root node is a domain node
+ * - check that an object of a subclass can be used as one of the superclass
+ * - test map_descendant_bottom_up in the successful case
+ */
+static isl::schedule_node test_schedule_tree_generic(isl::ctx ctx)
+{
+	auto schedule = construct_schedule_tree(ctx);
+	auto root = schedule.root();
+
+	assert(IS_TRUE(root.isa<isl::schedule_node_domain>()));
+	root = root.as<isl::schedule_node_domain>().child(0).parent();
+
+	int count = 0;
+	auto inc_count = [&count](isl::schedule_node node) {
+		count++;
+		return node;
+	};
+	root = root.map_descendant_bottom_up(inc_count);
+	assert(count == 8);
+
+	return root;
+}
+
+/* Test marking band members for unrolling.
+ * "schedule" is the schedule created by construct_schedule_tree.
+ * It schedules two statements, with 10 and 20 instances, respectively.
+ * Unrolling all band members therefore results in 30 at-domain calls
+ * by the AST generator.
+ */
+static void test_ast_build_unroll(isl::schedule schedule)
+{
+	auto root = schedule.root();
+	auto mark_unroll = [](isl::schedule_node node) {
+		if (IS_TRUE(node.isa<isl::schedule_node_band>())) {
+			auto band = node.as<isl::schedule_node_band>();
+			node = band.member_set_ast_loop_unroll(0);
+		}
+		return node;
+	};
+	root = root.map_descendant_bottom_up(mark_unroll);
+	schedule = root.schedule();
+
+	int count_ast = 0;
+	auto inc_count_ast =
+	    [&count_ast](isl::ast_node node, isl::ast_build build) {
+		count_ast++;
+		return node;
+	};
+	auto build = isl::ast_build(schedule.ctx());
+	build = build.set_at_each_domain(inc_count_ast);
+	auto ast = build.node_from(schedule);
+	assert(count_ast == 30);
+}
+
+/* Test basic AST generation from a schedule tree that is independent
+ * of the type of bindings.
+ *
+ * In particular, create a simple schedule tree and
+ * - generate an AST from the schedule tree
+ * - test at_each_domain in the successful case
+ * - test unrolling
+ */
+static isl::schedule test_ast_build_generic(isl::ctx ctx)
+{
+	auto schedule = construct_schedule_tree(ctx);
+
+	int count_ast = 0;
+	auto inc_count_ast =
+	    [&count_ast](isl::ast_node node, isl::ast_build build) {
+		count_ast++;
+		return node;
+	};
+	auto build = isl::ast_build(ctx);
+	auto build_copy = build.set_at_each_domain(inc_count_ast);
+	auto ast = build.node_from(schedule);
+	assert(count_ast == 0);
+	count_ast = 0;
+	ast = build_copy.node_from(schedule);
+	assert(count_ast == 2);
+	build = build_copy;
+	count_ast = 0;
+	ast = build.node_from(schedule);
+	assert(count_ast == 2);
+
+	test_ast_build_unroll(schedule);
+
+	return schedule;
+}
+
+/* Test basic AST expression generation from an affine expression.
+ */
+static void test_ast_build_expr(isl::ctx ctx)
+{
+	isl::pw_aff pa(ctx, "[n] -> { [n + 1] }");
+	isl::ast_build build = isl::ast_build::from_context(pa.domain());
+
+	auto expr = build.expr_from(pa);
+	auto op = expr.as<isl::ast_expr_op>();
+	assert(IS_TRUE(op.isa<isl::ast_expr_op_add>()));
+	assert(SIZE_VAL(op.n_arg()) == 2);
 }

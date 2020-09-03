@@ -224,14 +224,17 @@ void ento::registerVirtualCallChecker(CheckerManager &Mgr) {
   }
 }
 
-bool ento::shouldRegisterVirtualCallModeling(const LangOptions &LO) {
+bool ento::shouldRegisterVirtualCallModeling(const CheckerManager &mgr) {
+  const LangOptions &LO = mgr.getLangOpts();
   return LO.CPlusPlus;
 }
 
-bool ento::shouldRegisterPureVirtualCallChecker(const LangOptions &LO) {
+bool ento::shouldRegisterPureVirtualCallChecker(const CheckerManager &mgr) {
+  const LangOptions &LO = mgr.getLangOpts();
   return LO.CPlusPlus;
 }
 
-bool ento::shouldRegisterVirtualCallChecker(const LangOptions &LO) {
+bool ento::shouldRegisterVirtualCallChecker(const CheckerManager &mgr) {
+  const LangOptions &LO = mgr.getLangOpts();
   return LO.CPlusPlus;
 }

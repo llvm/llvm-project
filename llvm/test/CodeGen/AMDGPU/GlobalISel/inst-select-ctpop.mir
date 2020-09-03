@@ -123,8 +123,8 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; CHECK: [[S_BCNT1_I32_B32_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B32 [[COPY]], implicit-def $scc
-    ; CHECK: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_BCNT1_I32_B32_]], [[COPY1]], implicit-def $scc
-    ; CHECK: S_ENDPGM 0, implicit [[S_ADD_U32_]]
+    ; CHECK: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_BCNT1_I32_B32_]], [[COPY1]], implicit-def $scc
+    ; CHECK: S_ENDPGM 0, implicit [[S_ADD_I32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CTPOP %0
@@ -201,4 +201,24 @@ body: |
     %2:sgpr(s32) = G_CTPOP %0
     %3:vgpr(s32) = G_ADD %2, %1
     S_ENDPGM 0, implicit %3
+...
+
+---
+name: ctpop_s64_ss
+legalized: true
+regBankSelected: true
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    ; CHECK-LABEL: name: ctpop_s64_ss
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK: [[S_BCNT1_I32_B64_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B64 [[COPY]], implicit-def $scc
+    ; CHECK: S_ENDPGM 0, implicit [[S_BCNT1_I32_B64_]]
+    %0:sgpr(s64) = COPY $sgpr0_sgpr1
+    %1:sgpr(s32) = G_CTPOP %0
+    S_ENDPGM 0, implicit %1
 ...

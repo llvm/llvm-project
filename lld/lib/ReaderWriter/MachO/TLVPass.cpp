@@ -136,5 +136,5 @@ void addTLVPass(PassManager &pm, const MachOLinkingContext &ctx) {
   pm.add(std::make_unique<TLVPass>(ctx));
 }
 
-} // end namesapce mach_o
-} // end namesapce lld
+} // end namespace mach_o
+} // end namespace lld

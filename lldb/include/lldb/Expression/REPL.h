@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_REPL_h
-#define lldb_REPL_h
+#ifndef LLDB_EXPRESSION_REPL_H
+#define LLDB_EXPRESSION_REPL_H
 
 #include <string>
 
@@ -158,4 +158,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // lldb_REPL_h
+#endif // LLDB_EXPRESSION_REPL_H

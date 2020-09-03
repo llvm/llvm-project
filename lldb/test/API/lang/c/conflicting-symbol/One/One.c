@@ -1,6 +1,5 @@
 #include "One.h"
-#include <stdio.h>
 
 void one() {
-  printf("One\n"); // break here
+  int i = 0; // break here
 }

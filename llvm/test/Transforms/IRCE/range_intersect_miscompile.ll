@@ -1,5 +1,5 @@
 ; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -S < %s 2>&1 | FileCheck %s
-; RUN: opt -verify-loop-info -irce-print-changed-loops -passes='require<branch-prob>,loop(irce)' -S < %s 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -irce-print-changed-loops -passes='require<branch-prob>,irce' -S < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: irce: in function test_01: constrained Loop at depth 1 containing:
 ; CHECK-LABEL: irce: in function test_02: constrained Loop at depth 1 containing:
@@ -226,7 +226,7 @@ define void @test_05(i32* %p) {
 ; CHECK-LABEL: test_05
 ; CHECK-NOT:     preloop
 ; CHECK:         entry:
-; CHECK-NEXT:      %n = load i32, i32* %p, !range !
+; CHECK-NEXT:      %n = load i32, i32* %p, align 4, !range !
 ; CHECK-NEXT:      [[CMP_1:%[^ ]+]] = icmp ugt i32 %n, 2
 ; CHECK-NEXT:      %exit.mainloop.at = select i1 [[CMP_1]], i32 %n, i32 2
 ; CHECK-NEXT:      [[CMP_2:%[^ ]+]] = icmp ult i32 2, %exit.mainloop.at

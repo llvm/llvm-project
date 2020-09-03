@@ -13,7 +13,7 @@ include(CheckCCompilerFlag)
 include(CheckCompilerVersion)
 include(HandleLLVMStdlib)
 
-if( UNIX AND NOT (BEOS OR HAIKU) )
+if( UNIX AND NOT (APPLE OR BEOS OR HAIKU) )
   # Used by check_symbol_exists:
   list(APPEND CMAKE_REQUIRED_LIBRARIES "m")
 endif()
@@ -56,6 +56,7 @@ check_include_file(sys/types.h HAVE_SYS_TYPES_H)
 check_include_file(termios.h HAVE_TERMIOS_H)
 check_include_file(unistd.h HAVE_UNISTD_H)
 check_include_file(valgrind/valgrind.h HAVE_VALGRIND_VALGRIND_H)
+check_include_file(zlib.h HAVE_ZLIB_H)
 check_include_file(fenv.h HAVE_FENV_H)
 check_symbol_exists(FE_ALL_EXCEPT "fenv.h" HAVE_DECL_FE_ALL_EXCEPT)
 check_symbol_exists(FE_INEXACT "fenv.h" HAVE_DECL_FE_INEXACT)
@@ -117,6 +118,19 @@ endif()
 # Don't look for these libraries if we're using MSan, since uninstrumented third
 # party code may call MSan interceptors like strlen, leading to false positives.
 if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
+  set(HAVE_LIBZ 0)
+  if(LLVM_ENABLE_ZLIB)
+    foreach(library z zlib_static zlib)
+      string(TOUPPER ${library} library_suffix)
+      check_library_exists(${library} compress2 "" HAVE_LIBZ_${library_suffix})
+      if(HAVE_LIBZ_${library_suffix})
+        set(HAVE_LIBZ 1)
+        set(ZLIB_LIBRARIES "${library}")
+        break()
+      endif()
+    endforeach()
+  endif()
+
   # Don't look for these libraries on Windows.
   if (NOT PURE_WINDOWS)
     # Skip libedit if using ASan as it contains memory leaks.
@@ -159,6 +173,10 @@ endif()
 
 if (LLVM_ENABLE_LIBXML2 STREQUAL "FORCE_ON" AND NOT LLVM_LIBXML2_ENABLED)
   message(FATAL_ERROR "Failed to congifure libxml2")
+endif()
+
+if (LLVM_ENABLE_ZLIB STREQUAL "FORCE_ON" AND NOT HAVE_LIBZ)
+  message(FATAL_ERROR "Failed to configure zlib")
 endif()
 
 check_library_exists(xar xar_open "" HAVE_LIBXAR)
@@ -256,8 +274,6 @@ if( LLVM_USING_GLIBC )
   list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
 endif()
 # This check requires _GNU_SOURCE
-check_symbol_exists(sched_getaffinity sched.h HAVE_SCHED_GETAFFINITY)
-check_symbol_exists(CPU_COUNT sched.h HAVE_CPU_COUNT)
 if (NOT PURE_WINDOWS)
   if (LLVM_PTHREAD_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
@@ -469,7 +485,7 @@ if( MSVC )
   # though that we should handle it.  We do so by simply checking that
   # the DIA SDK folder exists.  Should this happen you will need to
   # uninstall VS 2012 and then re-install VS 2013.
-  if (IS_DIRECTORY ${MSVC_DIA_SDK_DIR})
+  if (IS_DIRECTORY "${MSVC_DIA_SDK_DIR}")
     set(HAVE_DIA_SDK 1)
   else()
     set(HAVE_DIA_SDK 0)
@@ -501,21 +517,10 @@ else( LLVM_ENABLE_THREADS )
   message(STATUS "Threads disabled.")
 endif()
 
-if(LLVM_ENABLE_ZLIB)
-  if(LLVM_ENABLE_ZLIB STREQUAL FORCE_ON)
-    find_package(ZLIB REQUIRED)
-  else()
-    find_package(ZLIB)
-  endif()
-
-  if(ZLIB_FOUND)
-    set(LLVM_ENABLE_ZLIB "YES" CACHE STRING
-      "Use zlib for compression/decompression if available. Can be ON, OFF, or FORCE_ON"
-      FORCE)
-  else()
-    set(LLVM_ENABLE_ZLIB "NO" CACHE STRING
-      "Use zlib for compression/decompression if available. Can be ON, OFF, or FORCE_ON"
-      FORCE)
+if (LLVM_ENABLE_ZLIB )
+  # Check if zlib is available in the system.
+  if ( NOT HAVE_ZLIB_H OR NOT HAVE_LIBZ )
+    set(LLVM_ENABLE_ZLIB 0)
   endif()
 endif()
 
@@ -634,7 +639,7 @@ function(find_python_module module)
     return()
   endif()
 
-  execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import ${module}"
+  execute_process(COMMAND "${Python3_EXECUTABLE}" "-c" "import ${module}"
     RESULT_VARIABLE status
     ERROR_QUIET)
 

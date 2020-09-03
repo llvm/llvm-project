@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm \
-// RUN:   -debug-info-kind=line-tables-only -dwarf-column-info -std=c++11 %s -o - | FileCheck %s
+// RUN:   -debug-info-kind=line-tables-only -std=c++11 %s -o - | FileCheck %s
 
 // CHECK-LABEL: define{{.*}}lambda_in_func
 void lambda_in_func(int &ref) {

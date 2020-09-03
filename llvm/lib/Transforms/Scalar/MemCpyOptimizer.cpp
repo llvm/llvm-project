@@ -27,7 +27,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -173,8 +172,8 @@ public:
   void addStore(int64_t OffsetFromFirst, StoreInst *SI) {
     int64_t StoreSize = DL.getTypeStoreSize(SI->getOperand(0)->getType());
 
-    addRange(OffsetFromFirst, StoreSize,
-             SI->getPointerOperand(), SI->getAlignment(), SI);
+    addRange(OffsetFromFirst, StoreSize, SI->getPointerOperand(),
+             SI->getAlign().value(), SI);
   }
 
   void addMemSet(int64_t OffsetFromFirst, MemSetInst *MSI) {
@@ -387,13 +386,8 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
     // Get the starting pointer of the block.
     StartPtr = Range.StartPtr;
 
-    // Determine alignment
-    const Align Alignment = DL.getValueOrABITypeAlignment(
-        MaybeAlign(Range.Alignment),
-        cast<PointerType>(StartPtr->getType())->getElementType());
-
     AMemSet = Builder.CreateMemSet(StartPtr, ByteVal, Range.End - Range.Start,
-                                   Alignment);
+                                   MaybeAlign(Range.Alignment));
     LLVM_DEBUG(dbgs() << "Replace stores:\n"; for (Instruction *SI
                                                    : Range.TheStores) dbgs()
                                               << *SI << '\n';
@@ -411,23 +405,6 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
   }
 
   return AMemSet;
-}
-
-static Align findStoreAlignment(const DataLayout &DL, const StoreInst *SI) {
-  return DL.getValueOrABITypeAlignment(MaybeAlign(SI->getAlignment()),
-                                       SI->getOperand(0)->getType());
-}
-
-static Align findLoadAlignment(const DataLayout &DL, const LoadInst *LI) {
-  return DL.getValueOrABITypeAlignment(MaybeAlign(LI->getAlignment()),
-                                       LI->getType());
-}
-
-static Align findCommonAlignment(const DataLayout &DL, const StoreInst *SI,
-                                 const LoadInst *LI) {
-  Align StoreAlign = findStoreAlignment(DL, SI);
-  Align LoadAlign = findLoadAlignment(DL, LI);
-  return commonAlignment(StoreAlign, LoadAlign);
 }
 
 // This method try to lift a store instruction before position P.
@@ -585,12 +562,12 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
           Instruction *M;
           if (UseMemMove)
             M = Builder.CreateMemMove(
-                SI->getPointerOperand(), findStoreAlignment(DL, SI),
-                LI->getPointerOperand(), findLoadAlignment(DL, LI), Size);
+                SI->getPointerOperand(), SI->getAlign(),
+                LI->getPointerOperand(), LI->getAlign(), Size);
           else
             M = Builder.CreateMemCpy(
-                SI->getPointerOperand(), findStoreAlignment(DL, SI),
-                LI->getPointerOperand(), findLoadAlignment(DL, LI), Size);
+                SI->getPointerOperand(), SI->getAlign(),
+                LI->getPointerOperand(), LI->getAlign(), Size);
 
           LLVM_DEBUG(dbgs() << "Promoting " << *LI << " to " << *SI << " => "
                             << *M << "\n");
@@ -642,7 +619,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
             LI, SI->getPointerOperand()->stripPointerCasts(),
             LI->getPointerOperand()->stripPointerCasts(),
             DL.getTypeStoreSize(SI->getOperand(0)->getType()),
-            findCommonAlignment(DL, SI, LI).value(), C);
+            commonAlignment(SI->getAlign(), LI->getAlign()), C);
         if (changed) {
           MD->removeInstruction(SI);
           SI->eraseFromParent();
@@ -675,11 +652,9 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
     auto *T = V->getType();
     if (T->isAggregateType()) {
       uint64_t Size = DL.getTypeStoreSize(T);
-      const Align MA =
-          DL.getValueOrABITypeAlignment(MaybeAlign(SI->getAlignment()), T);
       IRBuilder<> Builder(SI);
-      auto *M =
-          Builder.CreateMemSet(SI->getPointerOperand(), ByteVal, Size, MA);
+      auto *M = Builder.CreateMemSet(SI->getPointerOperand(), ByteVal, Size,
+                                     SI->getAlign());
 
       LLVM_DEBUG(dbgs() << "Promoting " << *SI << " to " << *M << "\n");
 
@@ -713,7 +688,7 @@ bool MemCpyOptPass::processMemSet(MemSetInst *MSI, BasicBlock::iterator &BBI) {
 /// the call write its result directly into the destination of the memcpy.
 bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
                                          Value *cpySrc, uint64_t cpyLen,
-                                         unsigned cpyAlign, CallInst *C) {
+                                         Align cpyAlign, CallInst *C) {
   // The general transformation to keep in mind is
   //
   //   call @func(..., src, ...)
@@ -732,10 +707,6 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
   if (Function *F = C->getCalledFunction())
     if (F->isIntrinsic() && F->getIntrinsicID() == Intrinsic::lifetime_start)
       return false;
-
-  // Deliberately get the source and destination with bitcasts stripped away,
-  // because we'll need to do type comparisons based on the underlying type.
-  CallSite CS(C);
 
   // Require that src be an alloca.  This simplifies the reasoning considerably.
   AllocaInst *srcAlloca = dyn_cast<AllocaInst>(cpySrc);
@@ -795,9 +766,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
   }
 
   // Check that dest points to memory that is at least as aligned as src.
-  unsigned srcAlign = srcAlloca->getAlignment();
-  if (!srcAlign)
-    srcAlign = DL.getABITypeAlignment(srcAlloca->getAllocatedType());
+  Align srcAlign = srcAlloca->getAlign();
   bool isDestSufficientlyAligned = srcAlign <= cpyAlign;
   // If dest is not aligned enough and we can't increase its alignment then
   // bail out.
@@ -836,8 +805,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
 
   // Check that src isn't captured by the called function since the
   // transformation can cause aliasing issues in that case.
-  for (unsigned i = 0, e = CS.arg_size(); i != e; ++i)
-    if (CS.getArgument(i) == cpySrc && !CS.doesNotCapture(i))
+  for (unsigned ArgI = 0, E = C->arg_size(); ArgI != E; ++ArgI)
+    if (C->getArgOperand(ArgI) == cpySrc && !C->doesNotCapture(ArgI))
       return false;
 
   // Since we're changing the parameter to the callsite, we need to make sure
@@ -864,25 +833,26 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
   if (cpySrc->getType()->getPointerAddressSpace() !=
       cpyDest->getType()->getPointerAddressSpace())
     return false;
-  for (unsigned i = 0; i < CS.arg_size(); ++i)
-    if (CS.getArgument(i)->stripPointerCasts() == cpySrc &&
+  for (unsigned ArgI = 0; ArgI < C->arg_size(); ++ArgI)
+    if (C->getArgOperand(ArgI)->stripPointerCasts() == cpySrc &&
         cpySrc->getType()->getPointerAddressSpace() !=
-        CS.getArgument(i)->getType()->getPointerAddressSpace())
+            C->getArgOperand(ArgI)->getType()->getPointerAddressSpace())
       return false;
 
   // All the checks have passed, so do the transformation.
   bool changedArgument = false;
-  for (unsigned i = 0; i < CS.arg_size(); ++i)
-    if (CS.getArgument(i)->stripPointerCasts() == cpySrc) {
+  for (unsigned ArgI = 0; ArgI < C->arg_size(); ++ArgI)
+    if (C->getArgOperand(ArgI)->stripPointerCasts() == cpySrc) {
       Value *Dest = cpySrc->getType() == cpyDest->getType() ?  cpyDest
         : CastInst::CreatePointerCast(cpyDest, cpySrc->getType(),
                                       cpyDest->getName(), C);
       changedArgument = true;
-      if (CS.getArgument(i)->getType() == Dest->getType())
-        CS.setArgument(i, Dest);
+      if (C->getArgOperand(ArgI)->getType() == Dest->getType())
+        C->setArgOperand(ArgI, Dest);
       else
-        CS.setArgument(i, CastInst::CreatePointerCast(Dest,
-                          CS.getArgument(i)->getType(), Dest->getName(), C));
+        C->setArgOperand(ArgI, CastInst::CreatePointerCast(
+                                   Dest, C->getArgOperand(ArgI)->getType(),
+                                   Dest->getName(), C));
     }
 
   if (!changedArgument)
@@ -891,7 +861,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
   // If the destination wasn't sufficiently aligned then increase its alignment.
   if (!isDestSufficientlyAligned) {
     assert(isa<AllocaInst>(cpyDest) && "Can only increase alloca alignment!");
-    cast<AllocaInst>(cpyDest)->setAlignment(MaybeAlign(srcAlign));
+    cast<AllocaInst>(cpyDest)->setAlignment(srcAlign);
   }
 
   // Drop any cached information about the call, because we may have changed
@@ -1127,15 +1097,16 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
 /// B to be a memcpy from X to Z (or potentially a memmove, depending on
 /// circumstances). This allows later passes to remove the first memcpy
 /// altogether.
-bool MemCpyOptPass::processMemCpy(MemCpyInst *M) {
+bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   // We can only optimize non-volatile memcpy's.
   if (M->isVolatile()) return false;
 
   // If the source and destination of the memcpy are the same, then zap it.
   if (M->getSource() == M->getDest()) {
+    ++BBI;
     MD->removeInstruction(M);
     M->eraseFromParent();
-    return false;
+    return true;
   }
 
   // If copying from a constant, try to turn the memcpy into a memset.
@@ -1176,10 +1147,10 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M) {
     if (CallInst *C = dyn_cast<CallInst>(DepInfo.getInst())) {
       // FIXME: Can we pass in either of dest/src alignment here instead
       // of conservatively taking the minimum?
-      unsigned Align = MinAlign(M->getDestAlignment(), M->getSourceAlignment());
+      Align Alignment = std::min(M->getDestAlign().valueOrOne(),
+                                 M->getSourceAlign().valueOrOne());
       if (performCallSlotOptzn(M, M->getDest(), M->getSource(),
-                               CopySize->getZExtValue(), Align,
-                               C)) {
+                               CopySize->getZExtValue(), Alignment, C)) {
         MD->removeInstruction(M);
         M->eraseFromParent();
         return true;
@@ -1247,15 +1218,15 @@ bool MemCpyOptPass::processMemMove(MemMoveInst *M) {
 }
 
 /// This is called on every byval argument in call sites.
-bool MemCpyOptPass::processByValArgument(CallSite CS, unsigned ArgNo) {
-  const DataLayout &DL = CS.getCaller()->getParent()->getDataLayout();
+bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
+  const DataLayout &DL = CB.getCaller()->getParent()->getDataLayout();
   // Find out what feeds this byval argument.
-  Value *ByValArg = CS.getArgument(ArgNo);
+  Value *ByValArg = CB.getArgOperand(ArgNo);
   Type *ByValTy = cast<PointerType>(ByValArg->getType())->getElementType();
   uint64_t ByValSize = DL.getTypeAllocSize(ByValTy);
   MemDepResult DepInfo = MD->getPointerDependencyFrom(
       MemoryLocation(ByValArg, LocationSize::precise(ByValSize)), true,
-      CS.getInstruction()->getIterator(), CS.getInstruction()->getParent());
+      CB.getIterator(), CB.getParent());
   if (!DepInfo.isClobber())
     return false;
 
@@ -1274,16 +1245,17 @@ bool MemCpyOptPass::processByValArgument(CallSite CS, unsigned ArgNo) {
 
   // Get the alignment of the byval.  If the call doesn't specify the alignment,
   // then it is some target specific value that we can't know.
-  unsigned ByValAlign = CS.getParamAlignment(ArgNo);
-  if (ByValAlign == 0) return false;
+  MaybeAlign ByValAlign = CB.getParamAlign(ArgNo);
+  if (!ByValAlign) return false;
 
   // If it is greater than the memcpy, then we check to see if we can force the
   // source of the memcpy to the alignment we need.  If we fail, we bail out.
   AssumptionCache &AC = LookupAssumptionCache();
   DominatorTree &DT = LookupDomTree();
-  if (MDep->getSourceAlignment() < ByValAlign &&
-      getOrEnforceKnownAlignment(MDep->getSource(), ByValAlign, DL,
-                                 CS.getInstruction(), &AC, &DT) < ByValAlign)
+  MaybeAlign MemDepAlign = MDep->getSourceAlign();
+  if ((!MemDepAlign || *MemDepAlign < *ByValAlign) &&
+      getOrEnforceKnownAlignment(MDep->getSource(), ByValAlign, DL, &CB, &AC,
+                                 &DT) < *ByValAlign)
     return false;
 
   // The address space of the memcpy source must match the byval argument
@@ -1302,14 +1274,14 @@ bool MemCpyOptPass::processByValArgument(CallSite CS, unsigned ArgNo) {
   // not just the defining memcpy.
   MemDepResult SourceDep = MD->getPointerDependencyFrom(
       MemoryLocation::getForSource(MDep), false,
-      CS.getInstruction()->getIterator(), MDep->getParent());
+      CB.getIterator(), MDep->getParent());
   if (!SourceDep.isClobber() || SourceDep.getInst() != MDep)
     return false;
 
   Value *TmpCast = MDep->getSource();
   if (MDep->getSource()->getType() != ByValArg->getType()) {
     BitCastInst *TmpBitCast = new BitCastInst(MDep->getSource(), ByValArg->getType(),
-                                              "tmpcast", CS.getInstruction());
+                                              "tmpcast", &CB);
     // Set the tmpcast's DebugLoc to MDep's
     TmpBitCast->setDebugLoc(MDep->getDebugLoc());
     TmpCast = TmpBitCast;
@@ -1317,10 +1289,10 @@ bool MemCpyOptPass::processByValArgument(CallSite CS, unsigned ArgNo) {
 
   LLVM_DEBUG(dbgs() << "MemCpyOptPass: Forwarding memcpy to byval:\n"
                     << "  " << *MDep << "\n"
-                    << "  " << *CS.getInstruction() << "\n");
+                    << "  " << CB << "\n");
 
   // Otherwise we're good!  Update the byval argument.
-  CS.setArgument(ArgNo, TmpCast);
+  CB.setArgOperand(ArgNo, TmpCast);
   ++NumMemCpyInstr;
   return true;
 }
@@ -1351,13 +1323,13 @@ bool MemCpyOptPass::iterateOnFunction(Function &F) {
       else if (MemSetInst *M = dyn_cast<MemSetInst>(I))
         RepeatInstruction = processMemSet(M, BI);
       else if (MemCpyInst *M = dyn_cast<MemCpyInst>(I))
-        RepeatInstruction = processMemCpy(M);
+        RepeatInstruction = processMemCpy(M, BI);
       else if (MemMoveInst *M = dyn_cast<MemMoveInst>(I))
         RepeatInstruction = processMemMove(M);
-      else if (auto CS = CallSite(I)) {
-        for (unsigned i = 0, e = CS.arg_size(); i != e; ++i)
-          if (CS.isByValArgument(i))
-            MadeChange |= processByValArgument(CS, i);
+      else if (auto *CB = dyn_cast<CallBase>(I)) {
+        for (unsigned i = 0, e = CB->arg_size(); i != e; ++i)
+          if (CB->isByValArgument(i))
+            MadeChange |= processByValArgument(*CB, i);
       }
 
       // Reprocess the instruction if desired.

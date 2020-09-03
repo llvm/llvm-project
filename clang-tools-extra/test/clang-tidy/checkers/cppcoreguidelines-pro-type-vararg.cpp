@@ -39,13 +39,22 @@ void CallFooIfAvailable(T& t) {
 #include <stdarg.h>
 void my_printf(const char* format, ...) {
   va_list ap;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not declare variables of type va_list; use variadic templates instead
   va_start(ap, format);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not call c-style vararg functions
   va_list n;
-  va_copy(n, ap); // Don't warn, va_copy is anyway useless without va_start
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not declare variables of type va_list; use variadic templates instead
+  va_copy(n, ap);
   int i = va_arg(ap, int);
-  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: do not use va_start/va_arg to define c-style vararg functions; use variadic templates instead
-  va_end(ap); // Don't warn, va_end is anyway useless without va_start
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: do not use va_arg to define c-style vararg functions; use variadic templates instead
+  va_end(ap);
 }
 
 int my_vprintf(const char* format, va_list arg ); // OK to declare function taking va_list
+
+void ignoredBuiltinsTest() {
+  (void)__builtin_assume_aligned(0, 8);
+  (void)__builtin_constant_p(0);
+  (void)__builtin_fpclassify(0, 0, 0, 0, 0, 0.f);
+  (void)__builtin_isinf_sign(0.f);
+  (void)__builtin_prefetch(nullptr);
+}

@@ -67,6 +67,8 @@ if config.android:
     # to link. In r19 and later we just use the default which is libc++.
     config.cxx_mode_flags.append('-stdlib=libstdc++')
 
+config.environment = dict(os.environ)
+
 # Clear some environment variables that might affect Clang.
 possibly_dangerous_env_vars = ['ASAN_OPTIONS', 'DFSAN_OPTIONS', 'LSAN_OPTIONS',
                                'MSAN_OPTIONS', 'UBSAN_OPTIONS',
@@ -103,9 +105,10 @@ config.available_features.add(config.host_os.lower())
 if re.match(r'^x86_64.*-linux', config.target_triple):
   config.available_features.add("x86_64-linux")
 
-
 if lit.util.isMacOSTriple(config.target_triple):
    config.available_features.add('darwin')
+
+config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 
 if config.have_zlib == "1":
   config.available_features.add("zlib")
@@ -185,7 +188,7 @@ elif config.host_os == 'Darwin' and config.apple_platform != "osx":
   config.compile_wrapper = compile_wrapper
 
   try:
-    prepare_output = subprocess.check_output([prepare_script, config.apple_platform, config.clang]).strip()
+    prepare_output = subprocess.check_output([prepare_script, config.apple_platform, config.clang]).decode().strip()
   except subprocess.CalledProcessError as e:
     print("Command failed:")
     print(e.output)
@@ -311,7 +314,8 @@ if config.host_os == 'Darwin':
 
   osx_version = (10, 0, 0)
   try:
-    osx_version = subprocess.check_output(["sw_vers", "-productVersion"])
+    osx_version = subprocess.check_output(["sw_vers", "-productVersion"],
+                                          universal_newlines=True)
     osx_version = tuple(int(x) for x in osx_version.split('.'))
     if len(osx_version) == 2: osx_version = (osx_version[0], osx_version[1], 0)
     if osx_version >= (10, 11):
@@ -323,7 +327,7 @@ if config.host_os == 'Darwin':
       # this "feature", we can pass the test on newer OS X versions and other
       # platforms.
       config.available_features.add('osx-no-ld64-live_support')
-  except:
+  except subprocess.CalledProcessError:
     pass
 
   config.darwin_osx_version = osx_version

@@ -67,10 +67,11 @@ namespace b6981007 {
   struct S {}; // expected-note 3{{candidate}}
   void f() {
     S s(1, 2, 3); // expected-error {{no matching}}
-    for (auto x : s) {
+    for (auto x : s) { // expected-error {{invalid range expression of}}
       // We used to attempt to evaluate the initializer of this variable,
       // and crash because it has an undeduced type.
       const int &n(x);
+      constexpr int k = sizeof(x);
     }
   }
 }

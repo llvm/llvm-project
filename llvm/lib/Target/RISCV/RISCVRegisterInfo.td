@@ -33,7 +33,21 @@ class RISCVReg64<RISCVReg32 subreg> : Register<""> {
   let AltNames = subreg.AltNames;
 }
 
+class RISCVRegWithSubRegs<bits<5> Enc, string n, list<Register> subregs,
+                          list<string> alt = []>
+      : RegisterWithSubRegs<n, subregs> {
+  let HWEncoding{4-0} = Enc;
+  let AltNames = alt;
+}
+
 def ABIRegAltName : RegAltNameIndex;
+
+def sub_vrm2    : SubRegIndex<64, -1>;
+def sub_vrm2_hi : SubRegIndex<64, -1>;
+def sub_vrm4    : SubRegIndex<128, -1>;
+def sub_vrm4_hi : SubRegIndex<128, -1>;
+def sub_vrm8    : SubRegIndex<256, -1>;
+def sub_vrm8_hi : SubRegIndex<256, -1>;
 } // Namespace = "RISCV"
 
 // Integer registers
@@ -233,3 +247,88 @@ def FPR64C : RegisterClass<"RISCV", [f64], 64, (add
   (sequence "F%u_D", 10, 15),
   (sequence "F%u_D", 8, 9)
 )>;
+
+// Vector registers
+let RegAltNameIndices = [ABIRegAltName] in {
+  foreach Index = 0-31 in {
+    def V#Index : RISCVReg<Index, "v"#Index, ["v"#Index]>, DwarfRegNum<[!add(Index, 64)]>;
+  }
+
+  foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
+                   24, 26, 28, 30] in {
+    def V#Index#M2 : RISCVRegWithSubRegs<Index, "v"#Index,
+                       [!cast<Register>("V"#Index),
+                        !cast<Register>("V"#!add(Index, 1))],
+                       ["v"#Index]>,
+                     DwarfRegAlias<!cast<Register>("V"#Index)> {
+      let SubRegIndices = [sub_vrm2, sub_vrm2_hi];
+    }
+  }
+
+  foreach Index = [0, 4, 8, 12, 16, 20, 24, 28] in {
+    def V#Index#M4 : RISCVRegWithSubRegs<Index, "v"#Index,
+                       [!cast<Register>("V"#Index#"M2"),
+                        !cast<Register>("V"#!add(Index, 2)#"M2")],
+                       ["v"#Index]>,
+                     DwarfRegAlias<!cast<Register>("V"#Index)> {
+      let SubRegIndices = [sub_vrm4, sub_vrm4_hi];
+    }
+  }
+
+  foreach Index = [0, 8, 16, 24] in {
+    def V#Index#M8 : RISCVRegWithSubRegs<Index, "v"#Index,
+                       [!cast<Register>("V"#Index#"M4"),
+                        !cast<Register>("V"#!add(Index, 4)#"M4")],
+                       ["v"#Index]>,
+                     DwarfRegAlias<!cast<Register>("V"#Index)> {
+      let SubRegIndices = [sub_vrm8, sub_vrm8_hi];
+    }
+  }
+
+  def VTYPE  : RISCVReg<0, "vtype", ["vtype"]>;
+  def VL     : RISCVReg<0, "vl", ["vl"]>;
+}
+
+class RegisterTypes<list<ValueType> reg_types> {
+  list<ValueType> types = reg_types;
+}
+
+// The order of registers represents the preferred allocation sequence,
+// meaning caller-save regs are listed before callee-save.
+def VR : RegisterClass<"RISCV", [nxv8i8, nxv4i16, nxv2i32, nxv1i64],
+                         64, (add
+    (sequence "V%u", 25, 31),
+    (sequence "V%u", 8, 24),
+    (sequence "V%u", 0, 7)
+  )> {
+  let Size = 64;
+}
+
+def VRM2 : RegisterClass<"RISCV", [nxv16i8, nxv8i16, nxv4i32, nxv2i64], 64,
+                         (add V26M2, V28M2, V30M2, V8M2, V10M2, V12M2, V14M2, V16M2,
+                              V18M2, V20M2, V22M2, V24M2, V0M2, V2M2, V4M2, V6M2)> {
+  let Size = 128;
+}
+
+def VRM4 : RegisterClass<"RISCV", [nxv32i8, nxv16i16, nxv8i32, nxv4i64], 64,
+                         (add V28M4, V8M4, V12M4, V16M4, V20M4, V24M4, V0M4, V4M4)> {
+  let Size = 256;
+}
+
+def VRM8 : RegisterClass<"RISCV", [nxv32i16, nxv16i32, nxv8i64], 64,
+                         (add V8M8, V16M8, V24M8, V0M8)> {
+  let Size = 512;
+}
+
+def VMaskVT : RegisterTypes<[nxv1i1, nxv2i1, nxv4i1, nxv8i1, nxv16i1, nxv32i1]>;
+
+def VM : RegisterClass<"RISCV", VMaskVT.types, 64, (add
+    (sequence "V%u", 25, 31),
+    (sequence "V%u", 8, 24),
+    (sequence "V%u", 0, 7))> {
+  let Size = 64;
+}
+
+def VMV0 : RegisterClass<"RISCV", VMaskVT.types, 64, (add V0)> {
+  let Size = 64;
+}

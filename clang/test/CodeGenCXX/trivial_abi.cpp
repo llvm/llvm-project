@@ -43,6 +43,31 @@ struct HasNonTrivial {
   NonTrivial m;
 };
 
+struct B0 {
+  virtual Small m0();
+};
+
+struct B1 {
+  virtual Small m0();
+};
+
+struct D0 : B0, B1 {
+  Small m0() override;
+};
+
+// CHECK-LABEL: define i64 @_ZThn8_N2D02m0Ev(
+// CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_SMALL]], align 8
+// CHECK: %[[CALL:.*]] = tail call i64 @_ZN2D02m0Ev(
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], %[[STRUCT_SMALL]]* %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_VAL_IP:.*]] = inttoptr i64 %[[CALL]] to i32*
+// CHECK: store i32* %[[COERCE_VAL_IP]], i32** %[[COERCE_DIVE]], align 8
+// CHECK: %[[COERCE_DIVE2:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], %[[STRUCT_SMALL]]* %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[V3:.*]] = load i32*, i32** %[[COERCE_DIVE2]], align 8
+// CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint i32* %[[V3]] to i64
+// CHECK: ret i64 %[[COERCE_VAL_PI]]
+
+Small D0::m0() { return {}; }
+
 // CHECK: define void @_Z14testParamSmall5Small(i64 %[[A_COERCE:.*]])
 // CHECK: %[[A:.*]] = alloca %[[STRUCT_SMALL]], align 8
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], %[[STRUCT_SMALL]]* %[[A]], i32 0, i32 0
@@ -73,7 +98,7 @@ Small testReturnSmall() {
 // CHECK: %[[T:.*]] = alloca %[[STRUCT_SMALL:.*]], align 8
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_SMALL]], align 8
 // CHECK: %[[CALL:.*]] = call %[[STRUCT_SMALL]]* @_ZN5SmallC1Ev(%[[STRUCT_SMALL]]* %[[T]])
-// CHECK: %[[CALL1:.*]] = call %[[STRUCT_SMALL]]* @_ZN5SmallC1ERKS_(%[[STRUCT_SMALL]]* %[[AGG_TMP]], %[[STRUCT_SMALL]]* dereferenceable(8) %[[T]])
+// CHECK: %[[CALL1:.*]] = call %[[STRUCT_SMALL]]* @_ZN5SmallC1ERKS_(%[[STRUCT_SMALL]]* %[[AGG_TMP]], %[[STRUCT_SMALL]]* nonnull align 8 dereferenceable(8) %[[T]])
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], %[[STRUCT_SMALL]]* %[[AGG_TMP]], i32 0, i32 0
 // CHECK: %[[V0:.*]] = load i32*, i32** %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint i32* %[[V0]] to i64
@@ -140,7 +165,7 @@ Large testReturnLarge() {
 // CHECK: %[[T:.*]] = alloca %[[STRUCT_LARGE:.*]], align 8
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_LARGE]], align 8
 // CHECK: %[[CALL:.*]] = call %[[STRUCT_LARGE]]* @_ZN5LargeC1Ev(%[[STRUCT_LARGE]]* %[[T]])
-// CHECK: %[[CALL1:.*]] = call %[[STRUCT_LARGE]]* @_ZN5LargeC1ERKS_(%[[STRUCT_LARGE]]* %[[AGG_TMP]], %[[STRUCT_LARGE]]* dereferenceable(520) %[[T]])
+// CHECK: %[[CALL1:.*]] = call %[[STRUCT_LARGE]]* @_ZN5LargeC1ERKS_(%[[STRUCT_LARGE]]* %[[AGG_TMP]], %[[STRUCT_LARGE]]* nonnull align 8 dereferenceable(520) %[[T]])
 // CHECK: call void @_Z14testParamLarge5Large(%[[STRUCT_LARGE]]* %[[AGG_TMP]])
 // CHECK: %[[CALL2:.*]] = call %[[STRUCT_LARGE]]* @_ZN5LargeD1Ev(%[[STRUCT_LARGE]]* %[[T]])
 // CHECK: ret void

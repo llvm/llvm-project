@@ -107,13 +107,11 @@ struct DumpVisitor {
   // Overload used when T is exactly 'bool', not merely convertible to 'bool'.
   void print(bool B) { printStr(B ? "true" : "false"); }
 
-  template <class T>
-  typename std::enable_if<std::is_unsigned<T>::value>::type print(T N) {
+  template <class T> std::enable_if_t<std::is_unsigned<T>::value> print(T N) {
     fprintf(stderr, "%llu", (unsigned long long)N);
   }
 
-  template <class T>
-  typename std::enable_if<std::is_signed<T>::value>::type print(T N) {
+  template <class T> std::enable_if_t<std::is_signed<T>::value> print(T N) {
     fprintf(stderr, "%lld", (long long)N);
   }
 

@@ -1,4 +1,4 @@
-//===-- SBBreakpoint.cpp ----------------------------------------*- C++ -*-===//
+//===-- SBBreakpoint.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -673,7 +673,7 @@ SBError SBBreakpoint::AddNameWithErrorHandling(const char *new_name) {
     status.SetErrorString("invalid breakpoint");
   }
 
-  return status;
+  return LLDB_RECORD_RESULT(status);
 }
 
 void SBBreakpoint::RemoveName(const char *name_to_remove) {
@@ -882,7 +882,7 @@ SBBreakpointList::SBBreakpointList(SBTarget &target)
   LLDB_RECORD_CONSTRUCTOR(SBBreakpointList, (lldb::SBTarget &), target);
 }
 
-SBBreakpointList::~SBBreakpointList() {}
+SBBreakpointList::~SBBreakpointList() = default;
 
 size_t SBBreakpointList::GetSize() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(size_t, SBBreakpointList, GetSize);

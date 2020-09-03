@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangPersistentVariables_h_
-#define liblldb_ClangPersistentVariables_h_
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGPERSISTENTVARIABLES_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGPERSISTENTVARIABLES_H
 
 #include "llvm/ADT/DenseMap.h"
 
@@ -23,7 +23,14 @@
 #include <string>
 #include <unordered_map>
 
+namespace clang {
+class TypeDecl;
+}
+
 namespace lldb_private {
+
+class ClangASTImporter;
+class TypeSystemClang;
 
 /// \class ClangPersistentVariables ClangPersistentVariables.h
 /// "lldb/Expression/ClangPersistentVariables.h" Manages persistent values
@@ -43,6 +50,8 @@ public:
     return pv->getKind() == PersistentExpressionState::eKindClang;
   }
 
+  std::shared_ptr<ClangASTImporter> GetClangASTImporter();
+
   lldb::ExpressionVariableSP
   CreatePersistentVariable(const lldb::ValueObjectSP &valobj_sp) override;
 
@@ -53,9 +62,7 @@ public:
 
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
 
-  llvm::StringRef GetPersistentVariablePrefix(bool is_error) const override {
-    return "$";
-  }
+  ConstString GetNextPersistentVariableName(bool is_error = false) override;
 
   // This just adds this module to the list of hand-loaded modules, it doesn't
   // actually load it.
@@ -96,6 +103,12 @@ public:
 
   const ClangModulesDeclVendor::ModuleVector &GetHandLoadedClangModules() {
     return m_hand_loaded_clang_modules;
+  }
+
+protected:
+  llvm::StringRef
+  GetPersistentVariablePrefix(bool is_error = false) const override {
+    return "$";
   }
 
 private:
@@ -139,8 +152,9 @@ private:
       m_hand_loaded_clang_modules; ///< These are Clang modules we hand-loaded;
                                    ///these are the highest-
                                    ///< priority source for macros.
+  std::shared_ptr<ClangASTImporter> m_ast_importer_sp;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_ClangPersistentVariables_h_
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGPERSISTENTVARIABLES_H

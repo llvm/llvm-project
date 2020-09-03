@@ -23,6 +23,7 @@ class SendSignalTestCase(TestBase):
         bugnumber="llvm.org/pr23318: does not report running state")
     @expectedFailureNetBSD(bugnumber='llvm.org/pr43959')
     @skipIfWindows  # Windows does not support signals
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_with_run_command(self):
         """Test that lldb command 'process signal SIGUSR1' sends a signal to the inferior process."""
         self.build()
@@ -46,7 +47,7 @@ class SendSignalTestCase(TestBase):
                         VALID_BREAKPOINT_LOCATION)
 
         # Now launch the process, no arguments & do not stop at entry point.
-        launch_info = lldb.SBLaunchInfo([exe])
+        launch_info = target.GetLaunchInfo()
         launch_info.SetWorkingDirectory(self.get_process_working_directory())
 
         process_listener = lldb.SBListener("signal_test_listener")
@@ -88,7 +89,7 @@ class SendSignalTestCase(TestBase):
 
         # Now make sure the thread was stopped with a SIGUSR1:
         threads = lldbutil.get_stopped_threads(process, lldb.eStopReasonSignal)
-        self.assertTrue(len(threads) == 1, "One thread stopped for a signal.")
+        self.assertEquals(len(threads), 1, "One thread stopped for a signal.")
         thread = threads[0]
 
         self.assertTrue(
@@ -107,6 +108,6 @@ class SendSignalTestCase(TestBase):
             num_seconds, broadcaster, event_type_mask, event)
         self.assertTrue(got_event, "Got an event")
         state = lldb.SBProcess.GetStateFromEvent(event)
-        self.assertTrue(state == expected_state,
+        self.assertEquals(state, expected_state,
                         "It was the %s state." %
                         lldb.SBDebugger_StateAsCString(expected_state))

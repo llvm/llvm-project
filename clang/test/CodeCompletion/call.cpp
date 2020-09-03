@@ -25,4 +25,10 @@ void test() {
   // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:19:13 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
   // CHECK-CC2-NOT: f(Y y, int ZZ)
   // CHECK-CC2: f(int i, int j, <#int k#>)
+  f({}, 0, 0);
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:28:7 %s -o - | FileCheck -check-prefix=CHECK-CC3 %s
+  // CHECK-CC3: OVERLOAD: [#void#]f()
+  // CHECK-CC3-NEXT: OVERLOAD: [#void#]f(<#X#>)
+  // CHECK-CC3-NEXT: OVERLOAD: [#void#]f(<#int i#>, int j, int k)
+  // CHECK-CC3-NEXT: OVERLOAD: [#void#]f(<#float x#>, float y)
 }

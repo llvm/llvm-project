@@ -12,7 +12,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips %s -o %t2eb.o
 # RUN: ld.lld --script %t.script -o %teb.exe %t2eb.o %teb.so
-# RUN: llvm-objdump -d -mattr=micromips --no-show-raw-insn %teb.exe \
+# RUN: llvm-objdump -d --mattr=micromips --no-show-raw-insn %teb.exe \
 # RUN:   | FileCheck --check-prefix=R2 %s
 # RUN: llvm-readelf -A %teb.exe | FileCheck --check-prefix=PLT %s
 
@@ -22,7 +22,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux \
 # RUN:         -mattr=micromips %s -o %t2el.o
 # RUN: ld.lld --script %t.script -o %tel.exe %t2el.o %tel.so
-# RUN: llvm-objdump -d -mattr=micromips --no-show-raw-insn %tel.exe \
+# RUN: llvm-objdump -d --mattr=micromips --no-show-raw-insn %tel.exe \
 # RUN:   | FileCheck --check-prefix=R2 %s
 # RUN: llvm-readelf -A %tel.exe | FileCheck --check-prefix=PLT %s
 
@@ -32,7 +32,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips -mcpu=mips32r6 %s -o %t2eb.o
 # RUN: ld.lld --script %t.script -o %teb.exe %t2eb.o %teb.so
-# RUN: llvm-objdump -d -mattr=micromips %teb.exe --no-show-raw-insn \
+# RUN: llvm-objdump -d --mattr=micromips %teb.exe --no-show-raw-insn \
 # RUN: | FileCheck --check-prefix=R6 %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux \
@@ -41,7 +41,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux \
 # RUN:         -mattr=micromips -mcpu=mips32r6 %s -o %t2el.o
 # RUN: ld.lld --script %t.script -o %tel.exe %t2el.o %tel.so
-# RUN: llvm-objdump -d -mattr=micromips --no-show-raw-insn %tel.exe \
+# RUN: llvm-objdump -d --mattr=micromips --no-show-raw-insn %tel.exe \
 # RUN:   | FileCheck --check-prefix=R6 %s
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
@@ -51,8 +51,8 @@
 # RUN:         %S/Inputs/mips-fpic.s -o %t-reg.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips %s -o %t2eb.o
-# RUN: ld.lld --script %t.script --no-threads -o %teb.exe %t-reg.o %t2eb.o %teb.so
-# RUN: llvm-objdump -d -mattr=micromips --no-show-raw-insn %teb.exe \
+# RUN: ld.lld --script %t.script -o %teb.exe %t-reg.o %t2eb.o %teb.so
+# RUN: llvm-objdump -d --mattr=micromips --no-show-raw-insn %teb.exe \
 # RUN:   | FileCheck --check-prefix=R2 %s
 
 # R2:      .plt:

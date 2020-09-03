@@ -1,4 +1,4 @@
-//===-- AddressResolverName.cpp ---------------------------------*- C++ -*-===//
+//===-- AddressResolverName.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -91,7 +91,7 @@ AddressResolverName::SearchCallback(SearchFilter &filter,
     if (context.module_sp) {
       context.module_sp->FindSymbolsWithNameAndType(m_func_name,
                                                     eSymbolTypeCode, sym_list);
-      context.module_sp->FindFunctions(m_func_name, nullptr,
+      context.module_sp->FindFunctions(m_func_name, CompilerDeclContext(),
                                        eFunctionNameTypeAuto, include_symbols,
                                        include_inlines, func_list);
     }

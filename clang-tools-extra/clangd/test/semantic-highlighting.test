@@ -53,6 +53,9 @@
 # CHECK-NEXT:            "entity.name.type.template.cpp"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
+# CHECK-NEXT:            "entity.name.type.concept.cpp"
+# CHECK-NEXT:          ],
+# CHECK-NEXT:          [
 # CHECK-NEXT:            "storage.type.primitive.cpp"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
@@ -64,7 +67,7 @@
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
 ---
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.cpp","languageId":"cpp","version":1,"text":"int x = 2;"}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.cpp","languageId":"cpp","text":"int x = 2;"}}}
 #      CHECK:  "method": "textDocument/semanticHighlighting",
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "lines": [
@@ -75,12 +78,13 @@
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "textDocument": {
-# CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/foo.cpp"
+# CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/foo.cpp",
+# CHECK-NEXT:      "version": 0
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 # CHECK-NEXT:}
 ---
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo2.cpp","languageId":"cpp","version":1,"text":"int x = 2;\nint y = 2;"}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo2.cpp","languageId":"cpp","text":"int x = 2;\nint y = 2;"}}}
 #      CHECK:  "method": "textDocument/semanticHighlighting",
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "lines": [
@@ -96,12 +100,13 @@
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "textDocument": {
-# CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/foo2.cpp"
+# CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/foo2.cpp",
+# CHECK-NEXT:      "version": 0
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 # CHECK-NEXT:}
 ---
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///foo.cpp","version":2},"contentChanges": [{"range":{"start": {"line": 0,"character": 10},"end": {"line": 0,"character": 10}},"rangeLength": 0,"text": "\nint y = 2;"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///foo.cpp"},"contentChanges": [{"range":{"start": {"line": 0,"character": 10},"end": {"line": 0,"character": 10}},"rangeLength": 0,"text": "\nint y = 2;"}]}}
 #      CHECK:  "method": "textDocument/semanticHighlighting",
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "lines": [
@@ -112,12 +117,13 @@
 # CHECK-NEXT:      }
 # CHECK-NEXT:   ],
 # CHECK-NEXT:    "textDocument": {
-# CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/foo.cpp"
+# CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/foo.cpp",
+# CHECK-NEXT:      "version": 1
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 # CHECK-NEXT:}
 ---
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///foo.cpp","version":2},"contentChanges": [{"range":{"start": {"line": 0,"character": 10},"end": {"line": 1,"character": 10}},"rangeLength": 11,"text": ""}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///foo.cpp"},"contentChanges": [{"range":{"start": {"line": 0,"character": 10},"end": {"line": 1,"character": 10}},"rangeLength": 11,"text": ""}]}}
 #      CHECK:  "method": "textDocument/semanticHighlighting",
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "lines": [
@@ -128,7 +134,8 @@
 # CHECK-NEXT:      }
 # CHECK-NEXT:   ],
 # CHECK-NEXT:    "textDocument": {
-# CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/foo.cpp"
+# CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/foo.cpp",
+# CHECK-NEXT:      "version": 2
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 # CHECK-NEXT:}

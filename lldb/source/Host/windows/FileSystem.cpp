@@ -1,4 +1,4 @@
-//===-- FileSystem.cpp ------------------------------------------*- C++ -*-===//
+//===-- FileSystem.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -86,6 +86,7 @@ Status FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
 }
 
 FILE *FileSystem::Fopen(const char *path, const char *mode) {
+  Collect(path);
   std::wstring wpath, wmode;
   if (!llvm::ConvertUTF8toWide(path, wpath))
     return nullptr;
@@ -98,6 +99,7 @@ FILE *FileSystem::Fopen(const char *path, const char *mode) {
 }
 
 int FileSystem::Open(const char *path, int flags, int mode) {
+  Collect(path);
   std::wstring wpath;
   if (!llvm::ConvertUTF8toWide(path, wpath))
     return -1;

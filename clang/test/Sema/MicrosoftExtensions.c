@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value -Wmicrosoft -verify -fms-extensions
-
+// RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value -Wno-pointer-to-int-cast -Wmicrosoft -verify -fms-extensions
 
 struct A
 {
@@ -92,17 +91,15 @@ enum : long long {  // expected-warning{{enumeration types with a fixed underlyi
   SomeValue = 0x100000000
 };
 
-
 void pointer_to_integral_type_conv(char* ptr) {
-   char ch = (char)ptr;
-   short sh = (short)ptr;
-   ch = (char)ptr;
-   sh = (short)ptr;
+  char ch = (char)ptr;
+  short sh = (short)ptr;
+  ch = (char)ptr;
+  sh = (short)ptr;
 
-   // This is valid ISO C.
-   _Bool b = (_Bool)ptr;
+  // This is valid ISO C.
+  _Bool b = (_Bool)ptr;
 }
-
 
 typedef struct {
   UNKNOWN u; // expected-error {{unknown type name 'UNKNOWN'}}

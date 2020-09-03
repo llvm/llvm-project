@@ -23,19 +23,14 @@ namespace abseil {
 // `FactoryName`, return `None`.
 static llvm::Optional<DurationScale>
 getScaleForFactory(llvm::StringRef FactoryName) {
-  static const std::unordered_map<std::string, DurationScale> ScaleMap(
-      {{"Nanoseconds", DurationScale::Nanoseconds},
-       {"Microseconds", DurationScale::Microseconds},
-       {"Milliseconds", DurationScale::Milliseconds},
-       {"Seconds", DurationScale::Seconds},
-       {"Minutes", DurationScale::Minutes},
-       {"Hours", DurationScale::Hours}});
-
-  auto ScaleIter = ScaleMap.find(FactoryName);
-  if (ScaleIter == ScaleMap.end())
-    return llvm::None;
-
-  return ScaleIter->second;
+  return llvm::StringSwitch<llvm::Optional<DurationScale>>(FactoryName)
+      .Case("Nanoseconds", DurationScale::Nanoseconds)
+      .Case("Microseconds", DurationScale::Microseconds)
+      .Case("Milliseconds", DurationScale::Milliseconds)
+      .Case("Seconds", DurationScale::Seconds)
+      .Case("Minutes", DurationScale::Minutes)
+      .Case("Hours", DurationScale::Hours)
+      .Default(llvm::None);
 }
 
 // Given either an integer or float literal, return its value.
@@ -51,7 +46,7 @@ static double GetValue(const IntegerLiteral *IntLit,
 
 // Given the scale of a duration and a `Multiplier`, determine if `Multiplier`
 // would produce a new scale.  If so, return a tuple containing the new scale
-// and a suitable Multipler for that scale, otherwise `None`.
+// and a suitable Multiplier for that scale, otherwise `None`.
 static llvm::Optional<std::tuple<DurationScale, double>>
 GetNewScaleSingleStep(DurationScale OldScale, double Multiplier) {
   switch (OldScale) {

@@ -8,7 +8,7 @@
 
 // test sized operator delete replacement.
 
-// UNSUPPORTED: sanitizer-new-delete, c++98, c++03, c++11
+// UNSUPPORTED: sanitizer-new-delete, c++03, c++11
 
 // NOTE: Clang does not enable sized-deallocation in C++14 and beyond by
 // default. It is only enabled when -fsized-deallocation is given.

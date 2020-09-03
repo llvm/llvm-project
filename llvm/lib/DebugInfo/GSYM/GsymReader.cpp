@@ -225,20 +225,33 @@ Optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
 
 Expected<uint64_t>
 GsymReader::getAddressIndex(const uint64_t Addr) const {
-  if (Addr < Hdr->BaseAddress)
-    return createStringError(std::errc::invalid_argument,
-                             "address 0x%" PRIx64 " not in GSYM", Addr);
-  const uint64_t AddrOffset = Addr - Hdr->BaseAddress;
-  switch (Hdr->AddrOffSize) {
-  case 1: return getAddressOffsetIndex<uint8_t>(AddrOffset);
-  case 2: return getAddressOffsetIndex<uint16_t>(AddrOffset);
-  case 4: return getAddressOffsetIndex<uint32_t>(AddrOffset);
-  case 8: return getAddressOffsetIndex<uint64_t>(AddrOffset);
-  default: break;
+  if (Addr >= Hdr->BaseAddress) {
+    const uint64_t AddrOffset = Addr - Hdr->BaseAddress;
+    Optional<uint64_t> AddrOffsetIndex;
+    switch (Hdr->AddrOffSize) {
+    case 1:
+      AddrOffsetIndex = getAddressOffsetIndex<uint8_t>(AddrOffset);
+      break;
+    case 2:
+      AddrOffsetIndex = getAddressOffsetIndex<uint16_t>(AddrOffset);
+      break;
+    case 4:
+      AddrOffsetIndex = getAddressOffsetIndex<uint32_t>(AddrOffset);
+      break;
+    case 8:
+      AddrOffsetIndex = getAddressOffsetIndex<uint64_t>(AddrOffset);
+      break;
+    default:
+      return createStringError(std::errc::invalid_argument,
+                               "unsupported address offset size %u",
+                               Hdr->AddrOffSize);
+    }
+    if (AddrOffsetIndex)
+      return *AddrOffsetIndex;
   }
   return createStringError(std::errc::invalid_argument,
-                           "unsupported address offset size %u",
-                           Hdr->AddrOffSize);
+                           "address 0x%" PRIx64 " is not in GSYM", Addr);
+
 }
 
 llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
@@ -255,7 +268,7 @@ llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
       if (ExpectedFI->Range.contains(Addr) || ExpectedFI->Range.size() == 0)
         return ExpectedFI;
       return createStringError(std::errc::invalid_argument,
-                                "address 0x%" PRIx64 " not in GSYM", Addr);
+                                "address 0x%" PRIx64 " is not in GSYM", Addr);
     }
   }
   return createStringError(std::errc::invalid_argument,
@@ -276,4 +289,118 @@ llvm::Expected<LookupResult> GsymReader::lookup(uint64_t Addr) const {
   return createStringError(std::errc::invalid_argument,
                            "failed to extract address[%" PRIu64 "]",
                            *AddressIndex);
+}
+
+void GsymReader::dump(raw_ostream &OS) {
+  const auto &Header = getHeader();
+  // Dump the GSYM header.
+  OS << Header << "\n";
+  // Dump the address table.
+  OS << "Address Table:\n";
+  OS << "INDEX  OFFSET";
+
+  switch (Hdr->AddrOffSize) {
+  case 1: OS << "8 "; break;
+  case 2: OS << "16"; break;
+  case 4: OS << "32"; break;
+  case 8: OS << "64"; break;
+  default: OS << "??"; break;
+  }
+  OS << " (ADDRESS)\n";
+  OS << "====== =============================== \n";
+  for (uint32_t I = 0; I < Header.NumAddresses; ++I) {
+    OS << format("[%4u] ", I);
+    switch (Hdr->AddrOffSize) {
+    case 1: OS << HEX8(getAddrOffsets<uint8_t>()[I]); break;
+    case 2: OS << HEX16(getAddrOffsets<uint16_t>()[I]); break;
+    case 4: OS << HEX32(getAddrOffsets<uint32_t>()[I]); break;
+    case 8: OS << HEX32(getAddrOffsets<uint64_t>()[I]); break;
+    default: break;
+    }
+    OS << " (" << HEX64(*getAddress(I)) << ")\n";
+  }
+  // Dump the address info offsets table.
+  OS << "\nAddress Info Offsets:\n";
+  OS << "INDEX  Offset\n";
+  OS << "====== ==========\n";
+  for (uint32_t I = 0; I < Header.NumAddresses; ++I)
+    OS << format("[%4u] ", I) << HEX32(AddrInfoOffsets[I]) << "\n";
+  // Dump the file table.
+  OS << "\nFiles:\n";
+  OS << "INDEX  DIRECTORY  BASENAME   PATH\n";
+  OS << "====== ========== ========== ==============================\n";
+  for (uint32_t I = 0; I < Files.size(); ++I) {
+    OS << format("[%4u] ", I) << HEX32(Files[I].Dir) << ' '
+       << HEX32(Files[I].Base) << ' ';
+    dump(OS, getFile(I));
+    OS << "\n";
+  }
+  OS << "\n" << StrTab << "\n";
+
+  for (uint32_t I = 0; I < Header.NumAddresses; ++I) {
+    OS << "FunctionInfo @ " << HEX32(AddrInfoOffsets[I]) << ": ";
+    if (auto FI = getFunctionInfo(*getAddress(I)))
+      dump(OS, *FI);
+    else
+      logAllUnhandledErrors(FI.takeError(), OS, "FunctionInfo:");
+  }
+}
+
+void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI) {
+  OS << FI.Range << " \"" << getString(FI.Name) << "\"\n";
+  if (FI.OptLineTable)
+    dump(OS, *FI.OptLineTable);
+  if (FI.Inline)
+    dump(OS, *FI.Inline);
+}
+
+void GsymReader::dump(raw_ostream &OS, const LineTable &LT) {
+  OS << "LineTable:\n";
+  for (auto &LE: LT) {
+    OS << "  " << HEX64(LE.Addr) << ' ';
+    if (LE.File)
+      dump(OS, getFile(LE.File));
+    OS << ':' << LE.Line << '\n';
+  }
+}
+
+void GsymReader::dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent) {
+  if (Indent == 0)
+    OS << "InlineInfo:\n";
+  else
+    OS.indent(Indent);
+  OS << II.Ranges << ' ' << getString(II.Name);
+  if (II.CallFile != 0) {
+    if (auto File = getFile(II.CallFile)) {
+      OS << " called from ";
+      dump(OS, File);
+      OS << ':' << II.CallLine;
+    }
+  }
+  OS << '\n';
+  for (const auto &ChildII: II.Children)
+    dump(OS, ChildII, Indent + 2);
+}
+
+void GsymReader::dump(raw_ostream &OS, Optional<FileEntry> FE) {
+  if (FE) {
+    // IF we have the file from index 0, then don't print anything
+    if (FE->Dir == 0 && FE->Base == 0)
+      return;
+    StringRef Dir = getString(FE->Dir);
+    StringRef Base = getString(FE->Base);
+    if (!Dir.empty()) {
+      OS << Dir;
+      if (Dir.contains('\\') && !Dir.contains('/'))
+        OS << '\\';
+      else
+        OS << '/';
+    }
+    if (!Base.empty()) {
+      OS << Base;
+    }
+    if (!Dir.empty() || !Base.empty())
+      return;
+  }
+  OS << "<invalid-file>";
 }

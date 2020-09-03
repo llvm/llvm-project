@@ -545,9 +545,7 @@ SwiftUserExpression::ResultDelegate::ResultDelegate(
     : m_target_sp(target), m_is_error(is_error) {}
 
 ConstString SwiftUserExpression::ResultDelegate::GetName() {
-  auto prefix = m_persistent_state->GetPersistentVariablePrefix(m_is_error);
-  return m_persistent_state->GetNextPersistentVariableName(*m_target_sp,
-                                                           prefix);
+  return m_persistent_state->GetNextPersistentVariableName(m_is_error);
 }
 
 void SwiftUserExpression::ResultDelegate::DidDematerialize(

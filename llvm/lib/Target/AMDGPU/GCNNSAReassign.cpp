@@ -286,8 +286,15 @@ bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
       }
       Intervals.push_back(LI);
       OrigRegs.push_back(VRM->getPhys(Reg));
-      MinInd = I ? std::min(MinInd, LI->beginIndex()) : LI->beginIndex();
-      MaxInd = I ? std::max(MaxInd, LI->endIndex()) : LI->endIndex();
+      if (LI->empty()) {
+        // The address input is undef, so it doesn't contribute to the relevant
+        // range. Seed a reasonable index range if required.
+        if (I == 0)
+          MinInd = MaxInd = LIS->getInstructionIndex(*MI);
+        continue;
+      }
+      MinInd = I != 0 ? std::min(MinInd, LI->beginIndex()) : LI->beginIndex();
+      MaxInd = I != 0 ? std::max(MaxInd, LI->endIndex()) : LI->endIndex();
     }
 
     if (Intervals.empty())

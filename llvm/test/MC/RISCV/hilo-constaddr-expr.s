@@ -1,9 +1,9 @@
 # RUN: not llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax %s 2>&1 \
 # RUN:     | FileCheck %s -check-prefix=CHECK-RELAX
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=-relax %s 2>&1 \
-# RUN:     | llvm-objdump -d - | FileCheck %s -check-prefix=CHECK-INSTR
+# RUN:     | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-INSTR
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=-relax %s 2>&1 \
-# RUN:     | llvm-objdump -r - | FileCheck %s -check-prefix=CHECK-REL
+# RUN:     | llvm-objdump -r - | FileCheck %s --check-prefix=CHECK-REL
 
 # Check the assembler rejects hi and lo expressions with constant expressions
 # involving labels when diff expressions are emitted as relocation pairs.

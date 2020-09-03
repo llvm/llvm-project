@@ -61,7 +61,7 @@ struct S {
 // CHECK-NEXT: |       `-CapturedStmt {{.+}} <line:[[@LINE-15]]:5, line:[[@LINE-14]]:9>
 // CHECK-NEXT: |         |-CapturedDecl {{.+}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |         | |-ForStmt {{.+}} <line:[[@LINE-17]]:5, line:[[@LINE-16]]:9>
-// CHECK:      |         | | `-UnaryOperator {{.+}} <line:[[@LINE-17]]:7, col:9> openmp_structured_block 'int' lvalue prefix '++'
+// CHECK:      |         | | `-UnaryOperator {{.+}} <line:[[@LINE-17]]:7, col:9> 'int' lvalue prefix '++'
 // CHECK-NEXT: |         | |   `-DeclRefExpr {{.+}} <col:9> 'int' lvalue OMPCapturedExpr {{.+}} 'a' 'int &'
 
 #pragma omp declare simd

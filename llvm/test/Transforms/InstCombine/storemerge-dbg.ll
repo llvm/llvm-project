@@ -17,7 +17,7 @@ rhs:
   br label %cleanup
 
 cleanup:
-  ; CHECK: %storemerge = phi i32 [ 1, %lhs ], [ 2, %rhs ], !dbg [[merge_loc:![0-9]+]]
+  ; CHECK: %storemerge = phi i32 [ 2, %rhs ], [ 1, %lhs ], !dbg [[merge_loc:![0-9]+]]
   %baz.val = load i32, i32* %baz
   %ret.val = call i32 @escape(i32 %baz.val)
   ret i32 %ret.val

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=arm64_32-apple-ios7.0 %s -filetype=obj -o - -disable-post-ra -frame-pointer=non-leaf | \
-; RUN:     llvm-objdump -private-headers - | \
+; RUN:     llvm-objdump --private-headers - | \
 ; RUN:     FileCheck %s --check-prefix=CHECK-MACHO
 ; RUN: llc -mtriple=arm64_32-apple-ios7.0 %s -o - -aarch64-enable-atomic-cfg-tidy=0 -disable-post-ra -frame-pointer=non-leaf | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-OPT
 ; RUN: llc -mtriple=arm64_32-apple-ios7.0 %s -o - -fast-isel -aarch64-enable-atomic-cfg-tidy=0 -disable-post-ra -frame-pointer=non-leaf | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FAST

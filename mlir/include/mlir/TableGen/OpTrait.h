@@ -1,6 +1,6 @@
 //===- OpTrait.h - OpTrait wrapper class ------------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -15,6 +15,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
+#include <vector>
 
 namespace llvm {
 class Init;
@@ -24,7 +25,7 @@ class Record;
 namespace mlir {
 namespace tblgen {
 
-class OpInterface;
+struct OpInterface;
 
 // Wrapper class with helper methods for accessing OpTrait constraints defined
 // in TableGen.
@@ -48,6 +49,9 @@ public:
   static OpTrait create(const llvm::Init *init);
 
   Kind getKind() const { return kind; }
+
+  // Returns the Tablegen definition this operator was constructed from.
+  const llvm::Record &getDef() const { return *def; }
 
 protected:
   // The TableGen definition of this trait.
@@ -94,7 +98,7 @@ public:
   OpInterface getOpInterface() const;
 
   // Returns the trait corresponding to a C++ trait class.
-  StringRef getTrait() const;
+  std::string getTrait() const;
 
   static bool classof(const OpTrait *t) {
     return t->getKind() == Kind::Interface;
@@ -102,6 +106,10 @@ public:
 
   // Whether the declaration of methods for this trait should be emitted.
   bool shouldDeclareMethods() const;
+
+  // Returns the methods that should always be declared if this interface is
+  // emitting declarations.
+  std::vector<StringRef> getAlwaysDeclaredMethods() const;
 };
 
 } // end namespace tblgen

@@ -41,7 +41,6 @@ static const char dummy_remote_dir[] = "bin";
 static const char module_name[] = "TestModule.so";
 static const char module_uuid[] =
     "F4E7E991-9B61-6AD4-0073-561AC3D9FA10-C043A476";
-static const uint32_t uuid_bytes = 20;
 static const size_t module_size = 5602;
 
 static FileSpec GetDummyRemotePath() {
@@ -87,7 +86,7 @@ void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,
   ModuleCache mc;
   ModuleSpec module_spec;
   module_spec.GetFileSpec() = GetDummyRemotePath();
-  module_spec.GetUUID().SetFromStringRef(module_uuid, uuid_bytes);
+  module_spec.GetUUID().SetFromStringRef(module_uuid);
   module_spec.SetObjectSize(module_size);
   ModuleSP module_sp;
   bool did_create;

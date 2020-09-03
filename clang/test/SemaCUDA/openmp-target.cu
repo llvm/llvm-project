@@ -16,9 +16,9 @@ void bazz() {}
 void bazzz() {bazz();}
 #pragma omp declare target to(bazzz) device_type(nohost)
 void any() {bazz();} // expected-error {{function with 'device_type(nohost)' is not available on host}}
-void host1() {bazz();}
+void host1() {bazz();} // expected-error {{function with 'device_type(nohost)' is not available on host}}
 #pragma omp declare target to(host1) device_type(host)
-void host2() {bazz();}
+void host2() {bazz();} // expected-error {{function with 'device_type(nohost)' is not available on host}}
 #pragma omp declare target to(host2)
 void device() {host1();}
 #pragma omp declare target to(device) device_type(nohost)

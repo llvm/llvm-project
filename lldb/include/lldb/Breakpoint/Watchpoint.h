@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Watchpoint_h_
-#define liblldb_Watchpoint_h_
+#ifndef LLDB_BREAKPOINT_WATCHPOINT_H
+#define LLDB_BREAKPOINT_WATCHPOINT_H
 
 #include <memory>
 #include <string>
@@ -54,7 +54,8 @@ public:
     lldb::WatchpointEventType m_watchpoint_event;
     lldb::WatchpointSP m_new_watchpoint_sp;
 
-    DISALLOW_COPY_AND_ASSIGN(WatchpointEventData);
+    WatchpointEventData(const WatchpointEventData &) = delete;
+    const WatchpointEventData &operator=(const WatchpointEventData &) = delete;
   };
 
   Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
@@ -160,8 +161,8 @@ private:
   void ResetHitCount() { m_hit_count = 0; }
 
   void ResetHistoricValues() {
-    m_old_value_sp.reset(nullptr);
-    m_new_value_sp.reset(nullptr);
+    m_old_value_sp.reset();
+    m_new_value_sp.reset();
   }
 
   Target &m_target;
@@ -204,9 +205,10 @@ private:
 
   void SendWatchpointChangedEvent(WatchpointEventData *data);
 
-  DISALLOW_COPY_AND_ASSIGN(Watchpoint);
+  Watchpoint(const Watchpoint &) = delete;
+  const Watchpoint &operator=(const Watchpoint &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_Watchpoint_h_
+#endif // LLDB_BREAKPOINT_WATCHPOINT_H

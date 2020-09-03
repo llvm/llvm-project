@@ -1,4 +1,4 @@
-// RUN: not llvm-tblgen -gen-dag-isel -I %p/../../include %s 2>&1 | FileCheck %s
+// RUN: not --crash llvm-tblgen -gen-dag-isel -I %p/../../include %s 2>&1 | FileCheck %s
 
 // The HwModeSelect class is intended to serve as a base class for other
 // classes that are then used to select a value based on the HW mode.

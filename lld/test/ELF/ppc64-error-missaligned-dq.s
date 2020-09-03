@@ -1,10 +1,10 @@
 # REQUIRES: ppc
 #
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
-# RUN: not ld.lld %t.o -o %t 2>&1 | FileCheck %s
+# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
-# RUN: not ld.lld %t.o -o %t 2>&1 | FileCheck %s
+# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: improper alignment for relocation R_PPC64_TOC16_LO_DS: 0x8009 is not aligned to 16 bytes
 

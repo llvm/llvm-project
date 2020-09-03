@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMVectorize
   LoopVectorize.cpp
   SLPVectorizer.cpp
   Vectorize.cpp
+  VectorCombine.cpp
   VPlan.cpp
   VPlanHCFGBuilder.cpp
   VPlanPredicator.cpp
@@ -13,6 +14,7 @@ add_llvm_component_library(LLVMVectorize
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/Vectorize
 
   DEPENDS
   intrinsics_gen

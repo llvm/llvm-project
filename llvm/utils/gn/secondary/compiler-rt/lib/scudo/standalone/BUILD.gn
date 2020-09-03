@@ -1,8 +1,14 @@
 import("//compiler-rt/target.gni")
 
+scudo_cflags = [
+  "-Werror=conversion",
+  "-nostdinc++",
+]
+
 source_set("sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
+  cflags = scudo_cflags
   sources = [
     "allocator_config.h",
     "atomic_helpers.h",
@@ -19,7 +25,7 @@ source_set("sources") {
     "flags_parser.h",
     "fuchsia.cpp",
     "fuchsia.h",
-    "interface.h",
+    "include/scudo/interface.h",
     "internal_defs.h",
     "linux.cpp",
     "linux.h",
@@ -30,6 +36,7 @@ source_set("sources") {
     "primary32.h",
     "primary64.h",
     "quarantine.h",
+    "release.cpp",
     "release.h",
     "report.cpp",
     "report.h",
@@ -47,10 +54,10 @@ source_set("sources") {
   ]
 
   if (current_cpu == "arm" || current_cpu == "arm64") {
-    cflags = [ "-mcrc" ]
+    cflags += [ "-mcrc" ]
   }
   if (current_cpu == "x64") {
-    cflags = [ "-msse4.2" ]
+    cflags += [ "-msse4.2" ]
   }
 
   public_configs = [ ":scudo_config" ]
@@ -59,7 +66,9 @@ source_set("sources") {
 source_set("c_wrapper_sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
+  cflags = scudo_cflags
   sources = [
+    # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
     "wrappers_c.cpp",
   ]
 
@@ -69,7 +78,9 @@ source_set("c_wrapper_sources") {
 source_set("cxx_wrapper_sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
+  cflags = scudo_cflags
   sources = [
+    # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
     "wrappers_cpp.cpp",
   ]
 
@@ -77,7 +88,10 @@ source_set("cxx_wrapper_sources") {
 }
 
 config("scudo_config") {
-  include_dirs = [ "//compiler-rt/lib/scudo/standalone" ]
+  include_dirs = [
+    ".",
+    "include",
+  ]
   if (current_os == "android") {
     cflags = [ "-fno-emulated-tls" ]
   }

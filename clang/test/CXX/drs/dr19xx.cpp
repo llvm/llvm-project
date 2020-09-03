@@ -167,6 +167,23 @@ namespace dr1959 { // dr1959: 3.9
 #endif
 }
 
+namespace dr1966 { // dr1966: 11
+#if __cplusplus >= 201103L
+  struct A {
+    enum E : int {1}; // expected-error {{expected identifier}} (not bit-field)
+  };
+  auto *p1 = new enum E : int; // expected-error {{only permitted as a standalone declaration}}
+  auto *p2 = new enum F : int {}; // expected-error {{cannot be defined in a type specifier}}
+  auto *p3 = true ? new enum G : int {}; // expected-error {{forward reference}} expected-error {{incomplete}} expected-note {{declaration}}
+  auto h() -> enum E : int {}; // expected-error {{only permitted as a standalone declaration}}
+
+  enum X : enum Y : int {} {}; // expected-error {{cannot be defined in a type specifier}}
+  struct Q {
+    enum X : enum Y : int {} {}; // expected-error +{{}}
+  };
+#endif
+}
+
 namespace dr1968 { // dr1968: no
 #if __cplusplus >= 201103L
   // FIXME: According to DR1968, both of these should be considered

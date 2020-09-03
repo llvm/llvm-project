@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CompUnit_h_
-#define liblldb_CompUnit_h_
+#ifndef LLDB_SYMBOL_COMPILEUNIT_H
+#define LLDB_SYMBOL_COMPILEUNIT_H
 
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/ModuleChild.h"
@@ -447,9 +447,10 @@ private:
         (1u << 6) ///< Have we parsed the debug macros already?
   };
 
-  DISALLOW_COPY_AND_ASSIGN(CompileUnit);
+  CompileUnit(const CompileUnit &) = delete;
+  const CompileUnit &operator=(const CompileUnit &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_CompUnit_h_
+#endif // LLDB_SYMBOL_COMPILEUNIT_H

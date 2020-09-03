@@ -32,6 +32,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -47,6 +48,10 @@ namespace PatternMatch {
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return const_cast<Pattern &>(P).match(V);
+}
+
+template <typename Pattern> bool match(ArrayRef<int> Mask, const Pattern &P) {
+  return const_cast<Pattern &>(P).match(Mask);
 }
 
 template <typename SubPattern_t> struct OneUse_match {
@@ -69,6 +74,11 @@ template <typename Class> struct class_match {
 
 /// Match an arbitrary value and ignore it.
 inline class_match<Value> m_Value() { return class_match<Value>(); }
+
+/// Match an arbitrary unary operation and ignore it.
+inline class_match<UnaryOperator> m_UnOp() {
+  return class_match<UnaryOperator>();
+}
 
 /// Match an arbitrary binary operation and ignore it.
 inline class_match<BinaryOperator> m_BinOp() {
@@ -152,8 +162,10 @@ inline match_combine_and<LTy, RTy> m_CombineAnd(const LTy &L, const RTy &R) {
 
 struct apint_match {
   const APInt *&Res;
+  bool AllowUndef;
 
-  apint_match(const APInt *&R) : Res(R) {}
+  apint_match(const APInt *&Res, bool AllowUndef)
+    : Res(Res), AllowUndef(AllowUndef) {}
 
   template <typename ITy> bool match(ITy *V) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -162,7 +174,8 @@ struct apint_match {
     }
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
-        if (auto *CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue())) {
+        if (auto *CI = dyn_cast_or_null<ConstantInt>(
+                C->getSplatValue(AllowUndef))) {
           Res = &CI->getValue();
           return true;
         }
@@ -174,7 +187,11 @@ struct apint_match {
 // function for both apint/apfloat.
 struct apfloat_match {
   const APFloat *&Res;
-  apfloat_match(const APFloat *&R) : Res(R) {}
+  bool AllowUndef;
+
+  apfloat_match(const APFloat *&Res, bool AllowUndef)
+      : Res(Res), AllowUndef(AllowUndef) {}
+
   template <typename ITy> bool match(ITy *V) {
     if (auto *CI = dyn_cast<ConstantFP>(V)) {
       Res = &CI->getValueAPF();
@@ -182,7 +199,8 @@ struct apfloat_match {
     }
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
-        if (auto *CI = dyn_cast_or_null<ConstantFP>(C->getSplatValue())) {
+        if (auto *CI = dyn_cast_or_null<ConstantFP>(
+                C->getSplatValue(AllowUndef))) {
           Res = &CI->getValueAPF();
           return true;
         }
@@ -192,11 +210,37 @@ struct apfloat_match {
 
 /// Match a ConstantInt or splatted ConstantVector, binding the
 /// specified pointer to the contained APInt.
-inline apint_match m_APInt(const APInt *&Res) { return Res; }
+inline apint_match m_APInt(const APInt *&Res) {
+  // Forbid undefs by default to maintain previous behavior.
+  return apint_match(Res, /* AllowUndef */ false);
+}
+
+/// Match APInt while allowing undefs in splat vector constants.
+inline apint_match m_APIntAllowUndef(const APInt *&Res) {
+  return apint_match(Res, /* AllowUndef */ true);
+}
+
+/// Match APInt while forbidding undefs in splat vector constants.
+inline apint_match m_APIntForbidUndef(const APInt *&Res) {
+  return apint_match(Res, /* AllowUndef */ false);
+}
 
 /// Match a ConstantFP or splatted ConstantVector, binding the
 /// specified pointer to the contained APFloat.
-inline apfloat_match m_APFloat(const APFloat *&Res) { return Res; }
+inline apfloat_match m_APFloat(const APFloat *&Res) {
+  // Forbid undefs by default to maintain previous behavior.
+  return apfloat_match(Res, /* AllowUndef */ false);
+}
+
+/// Match APFloat while allowing undefs in splat vector constants.
+inline apfloat_match m_APFloatAllowUndef(const APFloat *&Res) {
+  return apfloat_match(Res, /* AllowUndef */ true);
+}
+
+/// Match APFloat while forbidding undefs in splat vector constants.
+inline apfloat_match m_APFloatForbidUndef(const APFloat *&Res) {
+  return apfloat_match(Res, /* AllowUndef */ false);
+}
 
 template <int64_t Val> struct constantint_match {
   template <typename ITy> bool match(ITy *V) {
@@ -218,20 +262,26 @@ template <int64_t Val> inline constantint_match<Val> m_ConstantInt() {
   return constantint_match<Val>();
 }
 
-/// This helper class is used to match scalar and vector integer constants that
-/// satisfy a specified predicate.
-/// For vector constants, undefined elements are ignored.
-template <typename Predicate> struct cst_pred_ty : public Predicate {
+/// This helper class is used to match constant scalars, vector splats,
+/// and fixed width vectors that satisfy a specified predicate.
+/// For fixed width vector constants, undefined elements are ignored.
+template <typename Predicate, typename ConstantVal>
+struct cstval_pred_ty : public Predicate {
   template <typename ITy> bool match(ITy *V) {
-    if (const auto *CI = dyn_cast<ConstantInt>(V))
-      return this->isValue(CI->getValue());
-    if (V->getType()->isVectorTy()) {
+    if (const auto *CV = dyn_cast<ConstantVal>(V))
+      return this->isValue(CV->getValue());
+    if (const auto *VTy = dyn_cast<VectorType>(V->getType())) {
       if (const auto *C = dyn_cast<Constant>(V)) {
-        if (const auto *CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue()))
-          return this->isValue(CI->getValue());
+        if (const auto *CV = dyn_cast_or_null<ConstantVal>(C->getSplatValue()))
+          return this->isValue(CV->getValue());
+
+        // Number of elements of a scalable vector unknown at compile time
+        auto *FVTy = dyn_cast<FixedVectorType>(VTy);
+        if (!FVTy)
+          return false;
 
         // Non-splat vector constant: check each element for a match.
-        unsigned NumElts = V->getType()->getVectorNumElements();
+        unsigned NumElts = FVTy->getNumElements();
         assert(NumElts != 0 && "Constant vector with no elements?");
         bool HasNonUndefElements = false;
         for (unsigned i = 0; i != NumElts; ++i) {
@@ -240,8 +290,8 @@ template <typename Predicate> struct cst_pred_ty : public Predicate {
             return false;
           if (isa<UndefValue>(Elt))
             continue;
-          auto *CI = dyn_cast<ConstantInt>(Elt);
-          if (!CI || !this->isValue(CI->getValue()))
+          auto *CV = dyn_cast<ConstantVal>(Elt);
+          if (!CV || !this->isValue(CV->getValue()))
             return false;
           HasNonUndefElements = true;
         }
@@ -251,6 +301,14 @@ template <typename Predicate> struct cst_pred_ty : public Predicate {
     return false;
   }
 };
+
+/// specialization of cstval_pred_ty for ConstantInt
+template <typename Predicate>
+using cst_pred_ty = cstval_pred_ty<Predicate, ConstantInt>;
+
+/// specialization of cstval_pred_ty for ConstantFP
+template <typename Predicate>
+using cstfp_pred_ty = cstval_pred_ty<Predicate, ConstantFP>;
 
 /// This helper class is used to match scalar and vector constants that
 /// satisfy a specified predicate, and bind them to an APInt.
@@ -273,40 +331,6 @@ template <typename Predicate> struct api_pred_ty : public Predicate {
             return true;
           }
 
-    return false;
-  }
-};
-
-/// This helper class is used to match scalar and vector floating-point
-/// constants that satisfy a specified predicate.
-/// For vector constants, undefined elements are ignored.
-template <typename Predicate> struct cstfp_pred_ty : public Predicate {
-  template <typename ITy> bool match(ITy *V) {
-    if (const auto *CF = dyn_cast<ConstantFP>(V))
-      return this->isValue(CF->getValueAPF());
-    if (V->getType()->isVectorTy()) {
-      if (const auto *C = dyn_cast<Constant>(V)) {
-        if (const auto *CF = dyn_cast_or_null<ConstantFP>(C->getSplatValue()))
-          return this->isValue(CF->getValueAPF());
-
-        // Non-splat vector constant: check each element for a match.
-        unsigned NumElts = V->getType()->getVectorNumElements();
-        assert(NumElts != 0 && "Constant vector with no elements?");
-        bool HasNonUndefElements = false;
-        for (unsigned i = 0; i != NumElts; ++i) {
-          Constant *Elt = C->getAggregateElement(i);
-          if (!Elt)
-            return false;
-          if (isa<UndefValue>(Elt))
-            continue;
-          auto *CF = dyn_cast<ConstantFP>(Elt);
-          if (!CF || !this->isValue(CF->getValueAPF()))
-            return false;
-          HasNonUndefElements = true;
-        }
-        return HasNonUndefElements;
-      }
-    }
     return false;
   }
 };
@@ -418,6 +442,7 @@ inline cst_pred_ty<is_zero_int> m_ZeroInt() {
 struct is_zero {
   template <typename ITy> bool match(ITy *V) {
     auto *C = dyn_cast<Constant>(V);
+    // FIXME: this should be able to do something for scalable vectors
     return C && (C->isNullValue() || cst_pred_ty<is_zero_int>().match(C));
   }
 };
@@ -530,6 +555,15 @@ inline cstfp_pred_ty<is_nan> m_NaN() {
   return cstfp_pred_ty<is_nan>();
 }
 
+struct is_inf {
+  bool isValue(const APFloat &C) { return C.isInfinity(); }
+};
+/// Match a positive or negative infinity FP constant.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_inf> m_Inf() {
+  return cstfp_pred_ty<is_inf>();
+}
+
 struct is_any_zero_fp {
   bool isValue(const APFloat &C) { return C.isZero(); }
 };
@@ -579,6 +613,8 @@ inline bind_ty<const Value> m_Value(const Value *&V) { return V; }
 
 /// Match an instruction, capturing it if we match.
 inline bind_ty<Instruction> m_Instruction(Instruction *&I) { return I; }
+/// Match a unary operator, capturing it if we match.
+inline bind_ty<UnaryOperator> m_UnOp(UnaryOperator *&I) { return I; }
 /// Match a binary operator, capturing it if we match.
 inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
 /// Match a with overflow intrinsic, capturing it if we match.
@@ -748,6 +784,26 @@ struct AnyBinaryOp_match {
 template <typename LHS, typename RHS>
 inline AnyBinaryOp_match<LHS, RHS> m_BinOp(const LHS &L, const RHS &R) {
   return AnyBinaryOp_match<LHS, RHS>(L, R);
+}
+
+//===----------------------------------------------------------------------===//
+// Matcher for any unary operator.
+// TODO fuse unary, binary matcher into n-ary matcher
+//
+template <typename OP_t> struct AnyUnaryOp_match {
+  OP_t X;
+
+  AnyUnaryOp_match(const OP_t &X) : X(X) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<UnaryOperator>(V))
+      return X.match(I->getOperand(0));
+    return false;
+  }
+};
+
+template <typename OP_t> inline AnyUnaryOp_match<OP_t> m_UnOp(const OP_t &X) {
+  return AnyUnaryOp_match<OP_t>(X);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1155,13 +1211,16 @@ struct CmpClass_match {
       : Predicate(Pred), L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (auto *I = dyn_cast<Class>(V))
-      if ((L.match(I->getOperand(0)) && R.match(I->getOperand(1))) ||
-          (Commutable && L.match(I->getOperand(1)) &&
-           R.match(I->getOperand(0)))) {
+    if (auto *I = dyn_cast<Class>(V)) {
+      if (L.match(I->getOperand(0)) && R.match(I->getOperand(1))) {
         Predicate = I->getPredicate();
         return true;
+      } else if (Commutable && L.match(I->getOperand(1)) &&
+           R.match(I->getOperand(0))) {
+        Predicate = I->getSwappedPredicate();
+        return true;
       }
+    }
     return false;
   }
 };
@@ -1264,7 +1323,7 @@ inline OneOps_match<OpTy, Instruction::Freeze> m_Freeze(const OpTy &Op) {
 /// Matches InsertElementInst.
 template <typename Val_t, typename Elt_t, typename Idx_t>
 inline ThreeOps_match<Val_t, Elt_t, Idx_t, Instruction::InsertElement>
-m_InsertElement(const Val_t &Val, const Elt_t &Elt, const Idx_t &Idx) {
+m_InsertElt(const Val_t &Val, const Elt_t &Elt, const Idx_t &Idx) {
   return ThreeOps_match<Val_t, Elt_t, Idx_t, Instruction::InsertElement>(
       Val, Elt, Idx);
 }
@@ -1272,16 +1331,73 @@ m_InsertElement(const Val_t &Val, const Elt_t &Elt, const Idx_t &Idx) {
 /// Matches ExtractElementInst.
 template <typename Val_t, typename Idx_t>
 inline TwoOps_match<Val_t, Idx_t, Instruction::ExtractElement>
-m_ExtractElement(const Val_t &Val, const Idx_t &Idx) {
+m_ExtractElt(const Val_t &Val, const Idx_t &Idx) {
   return TwoOps_match<Val_t, Idx_t, Instruction::ExtractElement>(Val, Idx);
 }
 
-/// Matches ShuffleVectorInst.
+/// Matches shuffle.
+template <typename T0, typename T1, typename T2> struct Shuffle_match {
+  T0 Op1;
+  T1 Op2;
+  T2 Mask;
+
+  Shuffle_match(const T0 &Op1, const T1 &Op2, const T2 &Mask)
+      : Op1(Op1), Op2(Op2), Mask(Mask) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<ShuffleVectorInst>(V)) {
+      return Op1.match(I->getOperand(0)) && Op2.match(I->getOperand(1)) &&
+             Mask.match(I->getShuffleMask());
+    }
+    return false;
+  }
+};
+
+struct m_Mask {
+  ArrayRef<int> &MaskRef;
+  m_Mask(ArrayRef<int> &MaskRef) : MaskRef(MaskRef) {}
+  bool match(ArrayRef<int> Mask) {
+    MaskRef = Mask;
+    return true;
+  }
+};
+
+struct m_ZeroMask {
+  bool match(ArrayRef<int> Mask) {
+    return all_of(Mask, [](int Elem) { return Elem == 0 || Elem == -1; });
+  }
+};
+
+struct m_SpecificMask {
+  ArrayRef<int> &MaskRef;
+  m_SpecificMask(ArrayRef<int> &MaskRef) : MaskRef(MaskRef) {}
+  bool match(ArrayRef<int> Mask) { return MaskRef == Mask; }
+};
+
+struct m_SplatOrUndefMask {
+  int &SplatIndex;
+  m_SplatOrUndefMask(int &SplatIndex) : SplatIndex(SplatIndex) {}
+  bool match(ArrayRef<int> Mask) {
+    auto First = find_if(Mask, [](int Elem) { return Elem != -1; });
+    if (First == Mask.end())
+      return false;
+    SplatIndex = *First;
+    return all_of(Mask,
+                  [First](int Elem) { return Elem == *First || Elem == -1; });
+  }
+};
+
+/// Matches ShuffleVectorInst independently of mask value.
+template <typename V1_t, typename V2_t>
+inline TwoOps_match<V1_t, V2_t, Instruction::ShuffleVector>
+m_Shuffle(const V1_t &v1, const V2_t &v2) {
+  return TwoOps_match<V1_t, V2_t, Instruction::ShuffleVector>(v1, v2);
+}
+
 template <typename V1_t, typename V2_t, typename Mask_t>
-inline ThreeOps_match<V1_t, V2_t, Mask_t, Instruction::ShuffleVector>
-m_ShuffleVector(const V1_t &v1, const V2_t &v2, const Mask_t &m) {
-  return ThreeOps_match<V1_t, V2_t, Mask_t, Instruction::ShuffleVector>(v1, v2,
-                                                                        m);
+inline Shuffle_match<V1_t, V2_t, Mask_t>
+m_Shuffle(const V1_t &v1, const V2_t &v2, const Mask_t &mask) {
+  return Shuffle_match<V1_t, V2_t, Mask_t>(v1, v2, mask);
 }
 
 /// Matches LoadInst.
@@ -1378,25 +1494,31 @@ m_ZExtOrSExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_ZExtOrSExt(Op), Op);
 }
 
-/// Matches UIToFP.
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::UIToFP> m_UIToFP(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::UIToFP>(Op);
 }
 
-/// Matches SIToFP.
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::SIToFP> m_SIToFP(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::SIToFP>(Op);
 }
 
-/// Matches FPTrunc
+template <typename OpTy>
+inline CastClass_match<OpTy, Instruction::FPToUI> m_FPToUI(const OpTy &Op) {
+  return CastClass_match<OpTy, Instruction::FPToUI>(Op);
+}
+
+template <typename OpTy>
+inline CastClass_match<OpTy, Instruction::FPToSI> m_FPToSI(const OpTy &Op) {
+  return CastClass_match<OpTy, Instruction::FPToSI>(Op);
+}
+
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::FPTrunc> m_FPTrunc(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::FPTrunc>(Op);
 }
 
-/// Matches FPExt
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::FPExt> m_FPExt(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::FPExt>(Op);
@@ -1778,6 +1900,12 @@ struct m_Intrinsic_Ty<T0, T1, T2, T3, T4> {
                                Argument_match<T4>>;
 };
 
+template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5>
+struct m_Intrinsic_Ty<T0, T1, T2, T3, T4, T5> {
+  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2, T3, T4>::Ty,
+                               Argument_match<T5>>;
+};
+
 /// Match intrinsic calls like this:
 /// m_Intrinsic<Intrinsic::fabs>(m_Value(X))
 template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
@@ -1815,6 +1943,15 @@ m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3,
             const T4 &Op4) {
   return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2, Op3),
                       m_Argument<4>(Op4));
+}
+
+template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
+          typename T3, typename T4, typename T5>
+inline typename m_Intrinsic_Ty<T0, T1, T2, T3, T4, T5>::Ty
+m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3,
+            const T4 &Op4, const T5 &Op5) {
+  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2, Op3, Op4),
+                      m_Argument<5>(Op5));
 }
 
 // Helper intrinsic matching specializations.
@@ -1861,7 +1998,7 @@ inline AnyBinaryOp_match<LHS, RHS, true> m_c_BinOp(const LHS &L, const RHS &R) {
 }
 
 /// Matches an ICmp with a predicate over LHS and RHS in either order.
-/// Does not swap the predicate.
+/// Swaps the predicate if operands are commuted.
 template <typename LHS, typename RHS>
 inline CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>
 m_c_ICmp(ICmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
@@ -2014,6 +2151,42 @@ template <int Ind, typename Opnd_t> struct ExtractValue_match {
 template <int Ind, typename Val_t>
 inline ExtractValue_match<Ind, Val_t> m_ExtractValue(const Val_t &V) {
   return ExtractValue_match<Ind, Val_t>(V);
+}
+
+/// Matches patterns for `vscale`. This can either be a call to `llvm.vscale` or
+/// the constant expression
+///  `ptrtoint(gep <vscale x 1 x i8>, <vscale x 1 x i8>* null, i32 1>`
+/// under the right conditions determined by DataLayout.
+struct VScaleVal_match {
+private:
+  template <typename Base, typename Offset>
+  inline BinaryOp_match<Base, Offset, Instruction::GetElementPtr>
+  m_OffsetGep(const Base &B, const Offset &O) {
+    return BinaryOp_match<Base, Offset, Instruction::GetElementPtr>(B, O);
+  }
+
+public:
+  const DataLayout &DL;
+  VScaleVal_match(const DataLayout &DL) : DL(DL) {}
+
+  template <typename ITy> bool match(ITy *V) {
+    if (m_Intrinsic<Intrinsic::vscale>().match(V))
+      return true;
+
+    if (m_PtrToInt(m_OffsetGep(m_Zero(), m_SpecificInt(1))).match(V)) {
+      Type *PtrTy = cast<Operator>(V)->getOperand(0)->getType();
+      auto *DerefTy = PtrTy->getPointerElementType();
+      if (isa<ScalableVectorType>(DerefTy) &&
+          DL.getTypeAllocSizeInBits(DerefTy).getKnownMinSize() == 8)
+        return true;
+    }
+
+    return false;
+  }
+};
+
+inline VScaleVal_match m_VScale(const DataLayout &DL) {
+  return VScaleVal_match(DL);
 }
 
 } // end namespace PatternMatch

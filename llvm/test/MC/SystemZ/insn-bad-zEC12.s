@@ -83,8 +83,6 @@
 #CHECK: cdzt	%f0, -1(1,%r1), 0
 #CHECK: error: invalid operand
 #CHECK: cdzt	%f0, 4096(1,%r1), 0
-#CHECK: error: %r0 used in an address
-#CHECK: cdzt	%f0, 0(1,%r0), 0
 #CHECK: error: invalid use of indexed addressing
 #CHECK: cdzt	%f0, 0(%r1,%r2), 0
 #CHECK: error: unknown token in expression
@@ -98,7 +96,6 @@
 	cdzt	%f0, 0(257,%r1), 0
 	cdzt	%f0, -1(1,%r1), 0
 	cdzt	%f0, 4096(1,%r1), 0
-	cdzt	%f0, 0(1,%r0), 0
 	cdzt	%f0, 0(%r1,%r2), 0
 	cdzt	%f0, 0(-), 0
 
@@ -197,8 +194,6 @@
 #CHECK: cxzt	%f0, -1(1,%r1), 0
 #CHECK: error: invalid operand
 #CHECK: cxzt	%f0, 4096(1,%r1), 0
-#CHECK: error: %r0 used in an address
-#CHECK: cxzt	%f0, 0(1,%r0), 0
 #CHECK: error: invalid use of indexed addressing
 #CHECK: cxzt	%f0, 0(%r1,%r2), 0
 #CHECK: error: unknown token in expression
@@ -214,7 +209,6 @@
 	cxzt	%f0, 0(257,%r1), 0
 	cxzt	%f0, -1(1,%r1), 0
 	cxzt	%f0, 4096(1,%r1), 0
-	cxzt	%f0, 0(1,%r0), 0
 	cxzt	%f0, 0(%r1,%r2), 0
 	cxzt	%f0, 0(-), 0
 	cxzt	%f15, 0(1), 0
@@ -235,8 +229,6 @@
 #CHECK: czdt	%f0, -1(1,%r1), 0
 #CHECK: error: invalid operand
 #CHECK: czdt	%f0, 4096(1,%r1), 0
-#CHECK: error: %r0 used in an address
-#CHECK: czdt	%f0, 0(1,%r0), 0
 #CHECK: error: invalid use of indexed addressing
 #CHECK: czdt	%f0, 0(%r1,%r2), 0
 #CHECK: error: unknown token in expression
@@ -250,7 +242,6 @@
 	czdt	%f0, 0(257,%r1), 0
 	czdt	%f0, -1(1,%r1), 0
 	czdt	%f0, 4096(1,%r1), 0
-	czdt	%f0, 0(1,%r0), 0
 	czdt	%f0, 0(%r1,%r2), 0
 	czdt	%f0, 0(-), 0
 
@@ -270,8 +261,6 @@
 #CHECK: czxt	%f0, -1(1,%r1), 0
 #CHECK: error: invalid operand
 #CHECK: czxt	%f0, 4096(1,%r1), 0
-#CHECK: error: %r0 used in an address
-#CHECK: czxt	%f0, 0(1,%r0), 0
 #CHECK: error: invalid use of indexed addressing
 #CHECK: czxt	%f0, 0(%r1,%r2), 0
 #CHECK: error: unknown token in expression
@@ -287,7 +276,6 @@
 	czxt	%f0, 0(257,%r1), 0
 	czxt	%f0, -1(1,%r1), 0
 	czxt	%f0, 4096(1,%r1), 0
-	czxt	%f0, 0(1,%r0), 0
 	czxt	%f0, 0(%r1,%r2), 0
 	czxt	%f0, 0(-), 0
 	czxt	%f15, 0(1), 0

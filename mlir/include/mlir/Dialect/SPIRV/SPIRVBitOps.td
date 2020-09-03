@@ -1,6 +1,6 @@
 //===-- SPIRVBitOps.td - MLIR SPIR-V Bit Ops -*- tablegen -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -15,6 +15,7 @@
 #define SPIRV_BIT_OPS
 
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class SPV_BitBinaryOp<string mnemonic, list<OpTrait> traits = []> :
       // All the operands type used in bit instructions are SPV_Integer.
@@ -23,7 +24,8 @@ class SPV_BitBinaryOp<string mnemonic, list<OpTrait> traits = []> :
                                [NoSideEffect, SameOperandsAndResultType])>;
 
 class SPV_BitFieldExtractOp<string mnemonic, list<OpTrait> traits = []> :
-      SPV_Op<mnemonic, !listconcat(traits, [NoSideEffect])> {
+      SPV_Op<mnemonic, !listconcat(traits,
+             [NoSideEffect, AllTypesMatch<["base", "result"]>])> {
   let arguments = (ins
     SPV_ScalarOrVectorOf<SPV_Integer>:$base,
     SPV_Integer:$offset,
@@ -34,9 +36,11 @@ class SPV_BitFieldExtractOp<string mnemonic, list<OpTrait> traits = []> :
     SPV_ScalarOrVectorOf<SPV_Integer>:$result
   );
 
-  let parser = [{ return ::parseBitFieldExtractOp(parser, result); }];
-  let printer = [{ ::printBitFieldExtractOp(this->getOperation(), p); }];
-  let verifier = [{ return ::verifyBitFieldExtractOp(this->getOperation()); }];
+  let verifier = [{ return success(); }];
+
+  let assemblyFormat = [{
+    operands attr-dict `:` type($base) `,` type($offset) `,` type($count)
+  }];
 }
 
 class SPV_BitUnaryOp<string mnemonic, list<OpTrait> traits = []> :
@@ -72,7 +76,7 @@ def SPV_BitCountOp : SPV_BitUnaryOp<"BitCount", []> {
     The result is the unsigned value that is the number of bits in Base that
     are 1.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     integer-scalar-vector-type ::= integer-type |
@@ -81,9 +85,9 @@ def SPV_BitCountOp : SPV_BitUnaryOp<"BitCount", []> {
                                `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.BitCount %0: i32
     %3 = spv.BitCount %1: vector<4xi32>
     ```
@@ -99,7 +103,8 @@ def SPV_BitCountOp : SPV_BitUnaryOp<"BitCount", []> {
 
 // -----
 
-def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert", [NoSideEffect]> {
+def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert",
+    [NoSideEffect, AllTypesMatch<["base", "insert", "result"]>]> {
   let summary = [{
     Make a copy of an object, with a modified bit field that comes from
     another object.
@@ -128,7 +133,7 @@ def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert", [NoSideEffect]> {
     The resulting value is undefined if Count or Offset or their sum is
     greater than the number of bits in the result.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     integer-scalar-vector-type ::= integer-type |
@@ -139,9 +144,9 @@ def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert", [NoSideEffect]> {
                                       `,` integer-type `,` integer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.BitFieldInsert %base, %insert, %offset, %count : vector<3xi32>, i8, i8
     ```
   }];
@@ -163,6 +168,12 @@ def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert", [NoSideEffect]> {
   let results = (outs
     SPV_ScalarOrVectorOf<SPV_Integer>:$result
   );
+
+  let verifier = [{ return success(); }];
+
+  let assemblyFormat = [{
+    operands attr-dict `:` type($base) `,` type($offset) `,` type($count)
+  }];
 }
 
 // -----
@@ -193,7 +204,7 @@ def SPV_BitFieldSExtractOp : SPV_BitFieldExtractOp<"BitFieldSExtract", []> {
     The resulting value is undefined if Count or Offset or their sum is
     greater than the number of bits in the result.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     integer-scalar-vector-type ::= integer-type |
@@ -204,9 +215,9 @@ def SPV_BitFieldSExtractOp : SPV_BitFieldExtractOp<"BitFieldSExtract", []> {
                                          `,` integer-type `,` integer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.BitFieldSExtract %base, %offset, %count : vector<3xi32>, i8, i8
     ```
   }];
@@ -229,7 +240,7 @@ def SPV_BitFieldUExtractOp : SPV_BitFieldExtractOp<"BitFieldUExtract", []> {
     that there is no sign extension. The remaining bits of the result will
     all be 0.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     integer-scalar-vector-type ::= integer-type |
@@ -240,9 +251,9 @@ def SPV_BitFieldUExtractOp : SPV_BitFieldExtractOp<"BitFieldUExtract", []> {
                                          `,` integer-type `,` integer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.BitFieldUExtract %base, %offset, %count : vector<3xi32>, i8, i8
     ```
   }];
@@ -270,7 +281,7 @@ def SPV_BitReverseOp : SPV_BitUnaryOp<"BitReverse", []> {
     The bit-number n of the result will be taken from bit-number Width - 1 -
     n of Base, where Width is the OpTypeInt operand of the Result Type.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     integer-scalar-vector-type ::= integer-type |
@@ -279,9 +290,9 @@ def SPV_BitReverseOp : SPV_BitUnaryOp<"BitReverse", []> {
                                  `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.BitReverse %0 : i32
     %3 = spv.BitReverse %1 : vector<4xi32>
     ```
@@ -311,7 +322,7 @@ def SPV_BitwiseAndOp : SPV_BitBinaryOp<"BitwiseAnd", [Commutative]> {
     They must have the same number of components as Result Type. They must
     have the same component width as Result Type.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     integer-scalar-vector-type ::= integer-type |
@@ -320,9 +331,9 @@ def SPV_BitwiseAndOp : SPV_BitBinaryOp<"BitwiseAnd", [Commutative]> {
                                   `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.BitwiseAnd %0, %1 : i32
     %2 = spv.BitwiseAnd %0, %1 : vector<4xi32>
     ```
@@ -352,7 +363,7 @@ def SPV_BitwiseOrOp : SPV_BitBinaryOp<"BitwiseOr", [Commutative]> {
     They must have the same number of components as Result Type. They must
     have the same component width as Result Type.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     integer-scalar-vector-type ::= integer-type |
@@ -361,9 +372,9 @@ def SPV_BitwiseOrOp : SPV_BitBinaryOp<"BitwiseOr", [Commutative]> {
                                   `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.BitwiseOr %0, %1 : i32
     %2 = spv.BitwiseOr %0, %1 : vector<4xi32>
     ```
@@ -393,7 +404,7 @@ def SPV_BitwiseXorOp : SPV_BitBinaryOp<"BitwiseXor", [Commutative]> {
     They must have the same number of components as Result Type. They must
     have the same component width as Result Type.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     integer-scalar-vector-type ::= integer-type |
@@ -402,9 +413,9 @@ def SPV_BitwiseXorOp : SPV_BitBinaryOp<"BitwiseXor", [Commutative]> {
                                   `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.BitwiseXor %0, %1 : i32
     %2 = spv.BitwiseXor %0, %1 : vector<4xi32>
     ```
@@ -442,7 +453,7 @@ def SPV_ShiftLeftLogicalOp : SPV_ShiftOp<"ShiftLeftLogical", []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     integer-scalar-vector-type ::= integer-type |
@@ -453,9 +464,9 @@ def SPV_ShiftLeftLogicalOp : SPV_ShiftOp<"ShiftLeftLogical", []> {
                                           integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.ShiftLeftLogical %0, %1 : i32, i16
     %5 = spv.ShiftLeftLogical %3, %4 : vector<3xi32>, vector<3xi16>
     ```
@@ -490,7 +501,7 @@ def SPV_ShiftRightArithmeticOp : SPV_ShiftOp<"ShiftRightArithmetic", []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     integer-scalar-vector-type ::= integer-type |
@@ -501,9 +512,9 @@ def SPV_ShiftRightArithmeticOp : SPV_ShiftOp<"ShiftRightArithmetic", []> {
                                               integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.ShiftRightArithmetic %0, %1 : i32, i16
     %5 = spv.ShiftRightArithmetic %3, %4 : vector<3xi32>, vector<3xi16>
     ```
@@ -539,7 +550,7 @@ def SPV_ShiftRightLogicalOp : SPV_ShiftOp<"ShiftRightLogical", []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     integer-scalar-vector-type ::= integer-type |
@@ -550,9 +561,9 @@ def SPV_ShiftRightLogicalOp : SPV_ShiftOp<"ShiftRightLogical", []> {
                                            integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.ShiftRightLogical %0, %1 : i32, i16
     %5 = spv.ShiftRightLogical %3, %4 : vector<3xi32>, vector<3xi16>
     ```
@@ -580,7 +591,7 @@ def SPV_NotOp : SPV_BitUnaryOp<"Not", []> {
     have the same number of components as Result Type.  The component width
     must equal the component width in Result Type.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     integer-scalar-vector-type ::= integer-type |
@@ -588,9 +599,9 @@ def SPV_NotOp : SPV_BitUnaryOp<"Not", []> {
     not-op ::= ssa-id `=` `spv.BitNot` ssa-use `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.Not %0 : i32
     %3 = spv.Not %1 : vector<4xi32>
     ```

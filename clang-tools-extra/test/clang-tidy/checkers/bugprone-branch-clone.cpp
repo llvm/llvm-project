@@ -940,7 +940,7 @@ int decorated_cases(int z) {
   return z + 92;
 }
 
-// The child of the switch statement is not neccessarily a compound statement,
+// The child of the switch statement is not necessarily a compound statement,
 // do not crash in this unusual case.
 char no_real_body(int in, int &out) {
   switch (in)

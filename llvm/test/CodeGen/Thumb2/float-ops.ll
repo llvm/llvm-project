@@ -277,7 +277,7 @@ define float @select_f(float %a, float %b, i1 %c) {
 define double @select_d(double %a, double %b, i1 %c) {
 ; CHECK-LABEL: select_d:
 ; NONE: ldr{{(.w)?}}     [[REG:r[0-9]+]], [sp]
-; NONE  ands    [[REG]], [[REG]], #1
+; NONE: ands    [[REG]], [[REG]], #1
 ; NONE-DAG: moveq   r0, r2
 ; NONE-DAG: moveq   r1, r3
 ; SP: ands r0, r0, #1

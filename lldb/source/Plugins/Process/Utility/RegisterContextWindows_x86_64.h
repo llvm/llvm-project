@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextWindows_x86_64_H_
-#define liblldb_RegisterContextWindows_x86_64_H_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTWINDOWS_X86_64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTWINDOWS_X86_64_H
 
 #include "RegisterInfoInterface.h"
 

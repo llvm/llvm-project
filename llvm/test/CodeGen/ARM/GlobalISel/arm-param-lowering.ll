@@ -8,16 +8,16 @@ define arm_aapcscc i32* @test_call_simple_reg_params(i32 *%a, i32 %b) {
 ; CHECK-LABEL: name: test_call_simple_reg_params
 ; CHECK-DAG: [[AVREG:%[0-9]+]]:_(p0) = COPY $r0
 ; CHECK-DAG: [[BVREG:%[0-9]+]]:_(s32) = COPY $r1
-; CHECK: ADJCALLSTACKDOWN 0, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK-DAG: $r0 = COPY [[BVREG]]
 ; CHECK-DAG: $r1 = COPY [[AVREG]]
 ; ARM: BL @simple_reg_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $r0
-; THUMB: tBL 14, $noreg, @simple_reg_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $r0
+; THUMB: tBL 14 /* CC::al */, $noreg, @simple_reg_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(p0) = COPY $r0
-; CHECK: ADJCALLSTACKUP 0, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[RVREG]]
-; ARM: BX_RET 14, $noreg, implicit $r0
-; THUMB: tBX_RET 14, $noreg, implicit $r0
+; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
 entry:
   %r = notail call arm_aapcscc i32 *@simple_reg_params_target(i32 %b, i32 *%a)
   ret i32 *%r
@@ -29,7 +29,7 @@ define arm_aapcscc i32* @test_call_simple_stack_params(i32 *%a, i32 %b) {
 ; CHECK-LABEL: name: test_call_simple_stack_params
 ; CHECK-DAG: [[AVREG:%[0-9]+]]:_(p0) = COPY $r0
 ; CHECK-DAG: [[BVREG:%[0-9]+]]:_(s32) = COPY $r1
-; CHECK: ADJCALLSTACKDOWN 8, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKDOWN 8, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK-DAG: $r0 = COPY [[BVREG]]
 ; CHECK-DAG: $r1 = COPY [[AVREG]]
 ; CHECK-DAG: $r2 = COPY [[BVREG]]
@@ -43,12 +43,12 @@ define arm_aapcscc i32* @test_call_simple_stack_params(i32 *%a, i32 %b) {
 ; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP2]], [[OFF2]](s32)
 ; CHECK: G_STORE [[AVREG]](p0), [[FI2]](p0){{.*}}store 4
 ; ARM: BL @simple_stack_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
-; THUMB: tBL 14, $noreg, @simple_stack_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
+; THUMB: tBL 14 /* CC::al */, $noreg, @simple_stack_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(p0) = COPY $r0
-; CHECK: ADJCALLSTACKUP 8, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 8, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[RVREG]]
-; ARM: BX_RET 14, $noreg, implicit $r0
-; THUMB: tBX_RET 14, $noreg, implicit $r0
+; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
 entry:
   %r = notail call arm_aapcscc i32 *@simple_stack_params_target(i32 %b, i32 *%a, i32 %b, i32 *%a, i32 %b, i32 *%a)
   ret i32 *%r
@@ -64,7 +64,7 @@ define arm_aapcscc signext i16 @test_call_ext_params(i8 %a, i16 %b, i1 %c) {
 ; CHECK-DAG: [[BVREG:%[0-9]+]]:_(s16) = G_TRUNC [[R1VREG]]
 ; CHECK-DAG: [[R2VREG:%[0-9]+]]:_(s32) = COPY $r2
 ; CHECK-DAG: [[CVREG:%[0-9]+]]:_(s1) = G_TRUNC [[R2VREG]]
-; CHECK: ADJCALLSTACKDOWN 20, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKDOWN 20, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: [[SEXTA:%[0-9]+]]:_(s32) = G_SEXT [[AVREG]](s8)
 ; CHECK: $r0 = COPY [[SEXTA]]
 ; CHECK: [[ZEXTA:%[0-9]+]]:_(s32) = G_ZEXT [[AVREG]](s8)
@@ -99,14 +99,14 @@ define arm_aapcscc signext i16 @test_call_ext_params(i8 %a, i16 %b, i1 %c) {
 ; CHECK: [[ZEXTC:%[0-9]+]]:_(s32) = G_ZEXT [[CVREG]]
 ; CHECK: G_STORE [[ZEXTC]](s32), [[FI5]](p0){{.*}}store 4
 ; ARM: BL @ext_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
-; THUMB: tBL 14, $noreg, @ext_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
+; THUMB: tBL 14 /* CC::al */, $noreg, @ext_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
 ; CHECK: [[R0VREG:%[0-9]+]]:_(s32) = COPY $r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(s16) = G_TRUNC [[R0VREG]]
-; CHECK: ADJCALLSTACKUP 20, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 20, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: [[RExtVREG:%[0-9]+]]:_(s32) = G_SEXT [[RVREG]]
 ; CHECK: $r0 = COPY [[RExtVREG]]
-; ARM: BX_RET 14, $noreg, implicit $r0
-; THUMB: tBX_RET 14, $noreg, implicit $r0
+; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
 entry:
   %r = notail call arm_aapcscc signext i16 @ext_target(i8 signext %a, i8 zeroext %a, i16 signext %b, i16 zeroext %b, i8 signext %a, i8 zeroext %a, i16 signext %b, i16 zeroext %b, i1 zeroext %c)
   ret i16 %r
@@ -118,16 +118,16 @@ define arm_aapcs_vfpcc double @test_call_vfpcc_fp_params(double %a, float %b) {
 ; CHECK-LABEL: name: test_call_vfpcc_fp_params
 ; CHECK-DAG: [[AVREG:%[0-9]+]]:_(s64) = COPY $d0
 ; CHECK-DAG: [[BVREG:%[0-9]+]]:_(s32) = COPY $s2
-; CHECK: ADJCALLSTACKDOWN 0, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK-DAG: $s0 = COPY [[BVREG]]
 ; CHECK-DAG: $d1 = COPY [[AVREG]]
 ; ARM: BL @vfpcc_fp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $d1, implicit-def $d0
-; THUMB: tBL 14, $noreg, @vfpcc_fp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $d1, implicit-def $d0
+; THUMB: tBL 14 /* CC::al */, $noreg, @vfpcc_fp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $d1, implicit-def $d0
 ; CHECK: [[RVREG:%[0-9]+]]:_(s64) = COPY $d0
-; CHECK: ADJCALLSTACKUP 0, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $d0 = COPY [[RVREG]]
-; ARM: BX_RET 14, $noreg, implicit $d0
-; THUMB: tBX_RET 14, $noreg, implicit $d0
+; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $d0
+; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $d0
 entry:
   %r = notail call arm_aapcs_vfpcc double @vfpcc_fp_target(float %b, double %a)
   ret double %r
@@ -142,7 +142,7 @@ define arm_aapcscc double @test_call_aapcs_fp_params(double %a, float %b) {
 ; LITTLE-DAG: [[AVREG:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[A1]](s32), [[A2]](s32)
 ; BIG-DAG: [[AVREG:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[A2]](s32), [[A1]](s32)
 ; CHECK-DAG: [[BVREG:%[0-9]+]]:_(s32) = COPY $r2
-; CHECK: ADJCALLSTACKDOWN 16, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKDOWN 16, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK-DAG: $r0 = COPY [[BVREG]]
 ; CHECK-DAG: [[A1:%[0-9]+]]:_(s32), [[A2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AVREG]](s64)
 ; LITTLE-DAG: $r2 = COPY [[A1]]
@@ -158,19 +158,19 @@ define arm_aapcscc double @test_call_aapcs_fp_params(double %a, float %b) {
 ; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP2]], [[OFF2]](s32)
 ; CHECK: G_STORE [[AVREG]](s64), [[FI2]](p0){{.*}}store 8
 ; ARM: BL @aapcscc_fp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
-; THUMB: tBL 14, $noreg, @aapcscc_fp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
+; THUMB: tBL 14 /* CC::al */, $noreg, @aapcscc_fp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
 ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r0
 ; CHECK-DAG: [[R2:%[0-9]+]]:_(s32) = COPY $r1
 ; LITTLE: [[RVREG:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[R1]](s32), [[R2]](s32)
 ; BIG: [[RVREG:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[R2]](s32), [[R1]](s32)
-; CHECK: ADJCALLSTACKUP 16, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 16, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: [[R1:%[0-9]+]]:_(s32), [[R2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[RVREG]](s64)
 ; LITTLE-DAG: $r0 = COPY [[R1]]
 ; LITTLE-DAG: $r1 = COPY [[R2]]
 ; BIG-DAG: $r0 = COPY [[R2]]
 ; BIG-DAG: $r1 = COPY [[R1]]
-; ARM: BX_RET 14, $noreg, implicit $r0, implicit $r1
-; THUMB: tBX_RET 14, $noreg, implicit $r0, implicit $r1
+; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
+; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
 entry:
   %r = notail call arm_aapcscc double @aapcscc_fp_target(float %b, double %a, float %b, double %a)
   ret double %r
@@ -181,15 +181,15 @@ declare arm_aapcscc float @different_call_conv_target(float)
 define arm_aapcs_vfpcc float @test_call_different_call_conv(float %x) {
 ; CHECK-LABEL: name: test_call_different_call_conv
 ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY $s0
-; CHECK: ADJCALLSTACKDOWN 0, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[X]]
 ; ARM: BL @different_call_conv_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit-def $r0
-; THUMB: tBL 14, $noreg, @different_call_conv_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit-def $r0
+; THUMB: tBL 14 /* CC::al */, $noreg, @different_call_conv_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit-def $r0
 ; CHECK: [[R:%[0-9]+]]:_(s32) = COPY $r0
-; CHECK: ADJCALLSTACKUP 0, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $s0 = COPY [[R]]
-; ARM: BX_RET 14, $noreg, implicit $s0
-; THUMB: tBX_RET 14, $noreg, implicit $s0
+; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $s0
+; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $s0
 entry:
   %r = notail call arm_aapcscc float @different_call_conv_target(float %x)
   ret float %r
@@ -202,23 +202,23 @@ define arm_aapcscc [3 x i32] @test_tiny_int_arrays([2 x i32] %arr) {
 ; CHECK: liveins: $r0, $r1
 ; CHECK: [[R0:%[0-9]+]]:_(s32) = COPY $r0
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY $r1
-; CHECK: ADJCALLSTACKDOWN 0, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[R0]]
 ; CHECK: $r1 = COPY [[R1]]
 ; ARM: BL @tiny_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
-; THUMB: tBL 14, $noreg, @tiny_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
+; THUMB: tBL 14 /* CC::al */, $noreg, @tiny_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
 ; CHECK: [[R0:%[0-9]+]]:_(s32) = COPY $r0
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY $r1
 ; CHECK: [[R2:%[0-9]+]]:_(s32) = COPY $r2
-; CHECK: ADJCALLSTACKUP 0, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; FIXME: This doesn't seem correct with regard to the AAPCS docs (which say
 ; that composite types larger than 4 bytes should be passed through memory),
 ; but it's what DAGISel does. We should fix it in the common code for both.
 ; CHECK: $r0 = COPY [[R0]]
 ; CHECK: $r1 = COPY [[R1]]
 ; CHECK: $r2 = COPY [[R2]]
-; ARM: BX_RET 14, $noreg, implicit $r0, implicit $r1, implicit $r2
-; THUMB: tBX_RET 14, $noreg, implicit $r0, implicit $r1, implicit $r2
+; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1, implicit $r2
+; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1, implicit $r2
 entry:
   %r = notail call arm_aapcscc [3 x i32] @tiny_int_arrays_target([2 x i32] %arr)
   ret [3 x i32] %r
@@ -233,16 +233,16 @@ define arm_aapcscc void @test_multiple_int_arrays([2 x i32] %arr0, [2 x i32] %ar
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY $r1
 ; CHECK: [[R2:%[0-9]+]]:_(s32) = COPY $r2
 ; CHECK: [[R3:%[0-9]+]]:_(s32) = COPY $r3
-; CHECK: ADJCALLSTACKDOWN 0, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[R0]]
 ; CHECK: $r1 = COPY [[R1]]
 ; CHECK: $r2 = COPY [[R2]]
 ; CHECK: $r3 = COPY [[R3]]
 ; ARM: BL @multiple_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
-; THUMB: tBL 14, $noreg, @multiple_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
-; CHECK: ADJCALLSTACKUP 0, 0, 14, $noreg, implicit-def $sp, implicit $sp
-; ARM: BX_RET 14, $noreg
-; THUMB: tBX_RET 14, $noreg
+; THUMB: tBL 14 /* CC::al */, $noreg, @multiple_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
+; CHECK: ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; ARM: BX_RET 14 /* CC::al */, $noreg
+; THUMB: tBX_RET 14 /* CC::al */, $noreg
 entry:
   notail call arm_aapcscc void @multiple_int_arrays_target([2 x i32] %arr0, [2 x i32] %arr1)
   ret void
@@ -266,7 +266,7 @@ define arm_aapcscc void @test_large_int_arrays([20 x i32] %arr) {
 ; CHECK: [[FIRST_STACK_ELEMENT:%[0-9]+]]:_(s32) = G_LOAD [[FIRST_STACK_ELEMENT_FI]]{{.*}}load 4 from %fixed-stack.[[FIRST_STACK_ID]]
 ; CHECK: [[LAST_STACK_ELEMENT_FI:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[LAST_STACK_ID]]
 ; CHECK: [[LAST_STACK_ELEMENT:%[0-9]+]]:_(s32) = G_LOAD [[LAST_STACK_ELEMENT_FI]]{{.*}}load 4 from %fixed-stack.[[LAST_STACK_ID]]
-; CHECK: ADJCALLSTACKDOWN 64, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKDOWN 64, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[R0]]
 ; CHECK: $r1 = COPY [[R1]]
 ; CHECK: $r2 = COPY [[R2]]
@@ -282,10 +282,10 @@ define arm_aapcscc void @test_large_int_arrays([20 x i32] %arr) {
 ; CHECK: [[LAST_STACK_ARG_ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[OFF_LAST_ELEMENT]](s32)
 ; CHECK: G_STORE [[LAST_STACK_ELEMENT]](s32), [[LAST_STACK_ARG_ADDR]]{{.*}}store 4
 ; ARM: BL @large_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
-; THUMB: tBL 14, $noreg, @large_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
-; CHECK: ADJCALLSTACKUP 64, 0, 14, $noreg, implicit-def $sp, implicit $sp
-; ARM: BX_RET 14, $noreg
-; THUMB: tBX_RET 14, $noreg
+; THUMB: tBL 14 /* CC::al */, $noreg, @large_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
+; CHECK: ADJCALLSTACKUP 64, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; ARM: BX_RET 14 /* CC::al */, $noreg
+; THUMB: tBX_RET 14 /* CC::al */, $noreg
 entry:
   notail call arm_aapcscc void @large_int_arrays_target([20 x i32] %arr)
   ret void
@@ -308,7 +308,7 @@ define arm_aapcscc [2 x float] @test_fp_arrays_aapcs([3 x double] %arr) {
 ; BIG: [[ARR1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ARR1_1]](s32), [[ARR1_0]](s32)
 ; CHECK: [[ARR2_FI:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[ARR2_ID]]
 ; CHECK: [[ARR2:%[0-9]+]]:_(s64) = G_LOAD [[ARR2_FI]]{{.*}}load 8 from %fixed-stack.[[ARR2_ID]]
-; CHECK: ADJCALLSTACKDOWN 8, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKDOWN 8, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: [[ARR0_0:%[0-9]+]]:_(s32), [[ARR0_1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ARR0]](s64)
 ; LITTLE: $r0 = COPY [[ARR0_0]](s32)
 ; LITTLE: $r1 = COPY [[ARR0_1]](s32)
@@ -324,14 +324,14 @@ define arm_aapcscc [2 x float] @test_fp_arrays_aapcs([3 x double] %arr) {
 ; CHECK: [[ARR2_ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[ARR2_OFFSET]](s32)
 ; CHECK: G_STORE [[ARR2]](s64), [[ARR2_ADDR]](p0){{.*}}store 8
 ; ARM: BL @fp_arrays_aapcs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
-; THUMB: tBL 14, $noreg, @fp_arrays_aapcs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
+; THUMB: tBL 14 /* CC::al */, $noreg, @fp_arrays_aapcs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
 ; CHECK: [[R0:%[0-9]+]]:_(s32) = COPY $r0
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY $r1
-; CHECK: ADJCALLSTACKUP 8, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 8, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[R0]]
 ; CHECK: $r1 = COPY [[R1]]
-; ARM: BX_RET 14, $noreg, implicit $r0, implicit $r1
-; THUMB: tBX_RET 14, $noreg, implicit $r0, implicit $r1
+; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
+; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
 entry:
   %r = notail call arm_aapcscc [2 x float] @fp_arrays_aapcs_target([3 x double] %arr)
   ret [2 x float] %r
@@ -361,7 +361,7 @@ define arm_aapcs_vfpcc [4 x float] @test_fp_arrays_aapcs_vfp([3 x double] %x, [3
 ; CHECK: [[Z2:%[0-9]+]]:_(s64) = G_LOAD [[Z2_FI]]{{.*}}load 8
 ; CHECK: [[Z3_FI:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[Z3_ID]]
 ; CHECK: [[Z3:%[0-9]+]]:_(s64) = G_LOAD [[Z3_FI]]{{.*}}load 8
-; CHECK: ADJCALLSTACKDOWN 32, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKDOWN 32, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $d0 = COPY [[X0]](s64)
 ; CHECK: $d1 = COPY [[X1]](s64)
 ; CHECK: $d2 = COPY [[X2]](s64)
@@ -385,18 +385,18 @@ define arm_aapcs_vfpcc [4 x float] @test_fp_arrays_aapcs_vfp([3 x double] %x, [3
 ; CHECK: [[Z3_ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[Z3_OFFSET]](s32)
 ; CHECK: G_STORE [[Z3]](s64), [[Z3_ADDR]](p0){{.*}}store 8
 ; ARM: BL @fp_arrays_aapcs_vfp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $d1, implicit $d2, implicit $s6, implicit $s7, implicit $s8, implicit-def $s0, implicit-def $s1, implicit-def $s2, implicit-def $s3
-; THUMB: tBL 14, $noreg, @fp_arrays_aapcs_vfp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $d1, implicit $d2, implicit $s6, implicit $s7, implicit $s8, implicit-def $s0, implicit-def $s1, implicit-def $s2, implicit-def $s3
+; THUMB: tBL 14 /* CC::al */, $noreg, @fp_arrays_aapcs_vfp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $d1, implicit $d2, implicit $s6, implicit $s7, implicit $s8, implicit-def $s0, implicit-def $s1, implicit-def $s2, implicit-def $s3
 ; CHECK: [[R0:%[0-9]+]]:_(s32) = COPY $s0
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY $s1
 ; CHECK: [[R2:%[0-9]+]]:_(s32) = COPY $s2
 ; CHECK: [[R3:%[0-9]+]]:_(s32) = COPY $s3
-; CHECK: ADJCALLSTACKUP 32, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 32, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $s0 = COPY [[R0]]
 ; CHECK: $s1 = COPY [[R1]]
 ; CHECK: $s2 = COPY [[R2]]
 ; CHECK: $s3 = COPY [[R3]]
-; ARM: BX_RET 14, $noreg, implicit $s0, implicit $s1, implicit $s2, implicit $s3
-; THUMB: tBX_RET 14, $noreg, implicit $s0, implicit $s1, implicit $s2, implicit $s3
+; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $s0, implicit $s1, implicit $s2, implicit $s3
+; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $s0, implicit $s1, implicit $s2, implicit $s3
 entry:
   %r = notail call arm_aapcs_vfpcc [4 x float] @fp_arrays_aapcs_vfp_target([3 x double] %x, [3 x float] %y, [4 x double] %z)
   ret [4 x float] %r
@@ -420,7 +420,7 @@ define arm_aapcscc [2 x i32*] @test_tough_arrays([6 x [4 x i32]] %arr) {
 ; CHECK: [[FIRST_STACK_ELEMENT:%[0-9]+]]:_(s32) = G_LOAD [[FIRST_STACK_ELEMENT_FI]]{{.*}}load 4 from %fixed-stack.[[FIRST_STACK_ID]]
 ; CHECK: [[LAST_STACK_ELEMENT_FI:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[LAST_STACK_ID]]
 ; CHECK: [[LAST_STACK_ELEMENT:%[0-9]+]]:_(s32) = G_LOAD [[LAST_STACK_ELEMENT_FI]]{{.*}}load 4 from %fixed-stack.[[LAST_STACK_ID]]
-; CHECK: ADJCALLSTACKDOWN 80, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKDOWN 80, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[R0]]
 ; CHECK: $r1 = COPY [[R1]]
 ; CHECK: $r2 = COPY [[R2]]
@@ -436,14 +436,14 @@ define arm_aapcscc [2 x i32*] @test_tough_arrays([6 x [4 x i32]] %arr) {
 ; CHECK: [[LAST_STACK_ARG_ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[OFF_LAST_ELEMENT]](s32)
 ; CHECK: G_STORE [[LAST_STACK_ELEMENT]](s32), [[LAST_STACK_ARG_ADDR]]{{.*}}store 4
 ; ARM: BL @tough_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
-; THUMB: tBL 14, $noreg, @tough_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
+; THUMB: tBL 14 /* CC::al */, $noreg, @tough_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
 ; CHECK: [[R0:%[0-9]+]]:_(p0) = COPY $r0
 ; CHECK: [[R1:%[0-9]+]]:_(p0) = COPY $r1
-; CHECK: ADJCALLSTACKUP 80, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 80, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[R0]]
 ; CHECK: $r1 = COPY [[R1]]
-; ARM: BX_RET 14, $noreg, implicit $r0, implicit $r1
-; THUMB: tBX_RET 14, $noreg, implicit $r0, implicit $r1
+; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
+; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
 entry:
   %r = notail call arm_aapcscc [2 x i32*] @tough_arrays_target([6 x [4 x i32]] %arr)
   ret [2 x i32*] %r
@@ -456,18 +456,18 @@ define arm_aapcscc {i32, i32} @test_structs({i32, i32} %x) {
 ; CHECK: liveins: $r0, $r1
 ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY $r0
 ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY $r1
-; CHECK: ADJCALLSTACKDOWN 0, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK-DAG: $r0 = COPY [[X0]](s32)
 ; CHECK-DAG: $r1 = COPY [[X1]](s32)
 ; ARM: BL @structs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
-; THUMB: tBL 14, $noreg, @structs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
+; THUMB: tBL 14 /* CC::al */, $noreg, @structs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
 ; CHECK: [[R0:%[0-9]+]]:_(s32) = COPY $r0
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY $r1
-; CHECK: ADJCALLSTACKUP 0, 0, 14, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[R0]](s32)
 ; CHECK: $r1 = COPY [[R1]](s32)
-; ARM: BX_RET 14, $noreg, implicit $r0, implicit $r1
-; THUMB: tBX_RET 14, $noreg, implicit $r0, implicit $r1
+; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
+; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
   %r = notail call arm_aapcscc {i32, i32} @structs_target({i32, i32} %x)
   ret {i32, i32} %r
 }

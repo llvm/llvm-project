@@ -1,0 +1,45 @@
+//=== ---- PPCMacroFusion.def - PowerPC MacroFuson Candidates -v-*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https)//llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier) Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains descriptions of the macro-fusion pair for PowerPC.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+#ifndef FUSION_FEATURE
+
+// Each FUSION_FEATURE is assigned with one TYPE, and can be enabled/disabled
+// by HAS_FEATURE. The instructions pair is fusable only when the opcode
+// of the first instruction is in OPSET1, and the second instruction opcode is
+// in OPSET2. And if DEP_OP_IDX >=0, we will check the result of first OP is  
+// the operand of the second op with DEP_OP_IDX as its operand index. We assume
+// that the result of the first op is its operand zero. 
+#define FUSION_FEATURE(TYPE, HAS_FEATURE, DEP_OP_IDX, OPSET1, OPSET2)
+
+#endif
+
+#ifndef FUSION_OP_SET
+#define FUSION_OP_SET(...) __VA_ARGS__ 
+#endif
+
+// Power8 User Manual Section 10.1.12, Instruction Fusion 
+// {addi} followed by one of these {lxvd2x, lxvw4x, lxvdsx, lvebx, lvehx,
+// lvewx, lvx, lxsdx}
+FUSION_FEATURE(AddiLoad, hasAddiLoadFusion, 2, \
+               FUSION_OP_SET(ADDI, ADDI8, ADDItocL), \
+               FUSION_OP_SET(LXVD2X, LXVW4X, LXVDSX, LVEBX, LVEHX, LVEWX, \
+                             LVX, LXSDX))
+
+// {addis) followed by one of these {ld, lbz, lhz, lwz}
+FUSION_FEATURE(AddisLoad, hasAddisLoadFusion, 2, \
+               FUSION_OP_SET(ADDIS, ADDIS8, ADDIStocHA8), \
+               FUSION_OP_SET(LD, LBZ, LBZ8, LHZ, LHZ8, LWZ, LWZ8))
+
+#undef FUSION_FEATURE
+#undef FUSION_OP_SET

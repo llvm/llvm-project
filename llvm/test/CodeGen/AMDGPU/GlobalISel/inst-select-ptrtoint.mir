@@ -53,7 +53,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrtoint_s_p0_to_s_s64
     ; CHECK: liveins: $sgpr0_sgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; CHECK: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_PTRTOINT %0
@@ -73,7 +73,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrtoint_s_p1_to_s_s64
     ; CHECK: liveins: $sgpr0_sgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; CHECK: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(p1) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_PTRTOINT %0
@@ -93,7 +93,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrtoint_s_p999_to_s_s64
     ; CHECK: liveins: $sgpr0_sgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; CHECK: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(p999) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_PTRTOINT %0

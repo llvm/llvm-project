@@ -25,7 +25,7 @@ entry:
   ret %class.Foo* %retval.0
 }
 
-; CHECK-NOT: call void @__msan_warning_noreturn
+; CHECK-NOT: call void @__msan_warning_with_origin_noreturn
 
 declare dso_local zeroext i1 @_Z2f1PPvb(i8**, i1 zeroext) local_unnamed_addr
 

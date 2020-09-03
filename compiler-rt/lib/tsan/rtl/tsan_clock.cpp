@@ -30,6 +30,14 @@
 //       dst->clock[i] = max(dst->clock[i], clock[i]);
 //   }
 //
+//   void ThreadClock::releaseStoreAcquire(SyncClock *sc) const {
+//     for (int i = 0; i < kMaxThreads; i++) {
+//       tmp = clock[i];
+//       clock[i] = max(clock[i], sc->clock[i]);
+//       sc->clock[i] = tmp;
+//     }
+//   }
+//
 //   void ThreadClock::ReleaseStore(SyncClock *dst) const {
 //     for (int i = 0; i < kMaxThreads; i++)
 //       dst->clock[i] = clock[i];
@@ -107,13 +115,14 @@ static void UnrefClockBlock(ClockCache *c, u32 idx, uptr blocks) {
 ThreadClock::ThreadClock(unsigned tid, unsigned reused)
     : tid_(tid)
     , reused_(reused + 1)  // 0 has special meaning
+    , last_acquire_()
+    , global_acquire_()
     , cached_idx_()
     , cached_size_()
     , cached_blocks_() {
   CHECK_LT(tid, kMaxTidInClock);
   CHECK_EQ(reused_, ((u64)reused_ << kClkBits) >> kClkBits);
   nclk_ = tid_ + 1;
-  last_acquire_ = 0;
   internal_memset(clk_, 0, sizeof(clk_));
 }
 
@@ -177,6 +186,49 @@ void ThreadClock::acquire(ClockCache *c, SyncClock *src) {
   }
 }
 
+void ThreadClock::releaseStoreAcquire(ClockCache *c, SyncClock *sc) {
+  DCHECK_LE(nclk_, kMaxTid);
+  DCHECK_LE(sc->size_, kMaxTid);
+
+  if (sc->size_ == 0) {
+    // ReleaseStore will correctly set release_store_tid_,
+    // which can be important for future operations.
+    ReleaseStore(c, sc);
+    return;
+  }
+
+  nclk_ = max(nclk_, (uptr) sc->size_);
+
+  // Check if we need to resize sc.
+  if (sc->size_ < nclk_)
+    sc->Resize(c, nclk_);
+
+  bool acquired = false;
+
+  sc->Unshare(c);
+  // Update sc->clk_.
+  sc->FlushDirty();
+  uptr i = 0;
+  for (ClockElem &ce : *sc) {
+    u64 tmp = clk_[i];
+    if (clk_[i] < ce.epoch) {
+      clk_[i] = ce.epoch;
+      acquired = true;
+    }
+    ce.epoch = tmp;
+    ce.reused = 0;
+    i++;
+  }
+  sc->release_store_tid_ = kInvalidTid;
+  sc->release_store_reused_ = 0;
+
+  if (acquired) {
+    CPP_STAT_INC(StatClockAcquiredSomething);
+    last_acquire_ = clk_[tid_];
+    ResetCached(c);
+  }
+}
+
 void ThreadClock::release(ClockCache *c, SyncClock *dst) {
   DCHECK_LE(nclk_, kMaxTid);
   DCHECK_LE(dst->size_, kMaxTid);
@@ -196,7 +248,7 @@ void ThreadClock::release(ClockCache *c, SyncClock *dst) {
   // Check if we had not acquired anything from other threads
   // since the last release on dst. If so, we need to update
   // only dst->elem(tid_).
-  if (dst->elem(tid_).epoch > last_acquire_) {
+  if (!HasAcquiredAfterRelease(dst)) {
     UpdateCurrentThread(c, dst);
     if (dst->release_store_tid_ != tid_ ||
         dst->release_store_reused_ != reused_)
@@ -222,8 +274,6 @@ void ThreadClock::release(ClockCache *c, SyncClock *dst) {
   // Clear 'acquired' flag in the remaining elements.
   if (nclk_ < dst->size_)
     CPP_STAT_INC(StatClockReleaseClearTail);
-  for (uptr i = nclk_; i < dst->size_; i++)
-    dst->elem(i).reused = 0;
   dst->release_store_tid_ = kInvalidTid;
   dst->release_store_reused_ = 0;
   // If we've acquired dst, remember this fact,
@@ -269,7 +319,7 @@ void ThreadClock::ReleaseStore(ClockCache *c, SyncClock *dst) {
 
   if (dst->release_store_tid_ == tid_ &&
       dst->release_store_reused_ == reused_ &&
-      dst->elem(tid_).epoch > last_acquire_) {
+      !HasAcquiredAfterRelease(dst)) {
     CPP_STAT_INC(StatClockStoreFast);
     UpdateCurrentThread(c, dst);
     return;
@@ -349,6 +399,14 @@ bool ThreadClock::IsAlreadyAcquired(const SyncClock *src) const {
     }
   }
   return true;
+}
+
+// Checks whether the current thread has acquired anything
+// from other clocks after releasing to dst (directly or indirectly).
+bool ThreadClock::HasAcquiredAfterRelease(const SyncClock *dst) const {
+  const u64 my_epoch = dst->elem(tid_).epoch;
+  return my_epoch <= last_acquire_ ||
+      my_epoch <= atomic_load_relaxed(&global_acquire_);
 }
 
 // Sets a single element in the vector clock.

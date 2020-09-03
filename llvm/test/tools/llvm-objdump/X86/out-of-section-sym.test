@@ -7,11 +7,11 @@
 
 CHECK: SYMBOL TABLE:
 CHECK-NEXT: 00000010 l    d  .text  00000000 .text
-CHECK-NEXT: 00000010         .text  00000000 _start
-CHECK-NEXT: 00000020         .text  00000000 _fdata
-CHECK-NEXT: 00000010         .text  00000000 _ftext
+CHECK-NEXT: 00000010 l       .text  00000000 _start
+CHECK-NEXT: 00000020 g       .text  00000000 _fdata
+CHECK-NEXT: 00000010 g       .text  00000000 _ftext
 CHECK-EMPTY:
 CHECK-NEXT: Disassembly of section .text:
 CHECK-EMPTY:
-CHECK-NEXT: _start:
+CHECK-NEXT: <_start>:
 CHECK-NEXT:   10:  c3  retl

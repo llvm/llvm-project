@@ -1,4 +1,4 @@
-//===-- ValueObjectVariable.cpp ---------------------------------*- C++ -*-===//
+//===-- ValueObjectVariable.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,12 +53,14 @@ using namespace lldb_private;
 lldb::ValueObjectSP
 ValueObjectVariable::Create(ExecutionContextScope *exe_scope,
                             const lldb::VariableSP &var_sp) {
-  return (new ValueObjectVariable(exe_scope, var_sp))->GetSP();
+  auto manager_sp = ValueObjectManager::Create();
+  return (new ValueObjectVariable(exe_scope, *manager_sp, var_sp))->GetSP();
 }
 
 ValueObjectVariable::ValueObjectVariable(ExecutionContextScope *exe_scope,
+                                         ValueObjectManager &manager,
                                          const lldb::VariableSP &var_sp)
-    : ValueObject(exe_scope), m_variable_sp(var_sp) {
+    : ValueObject(exe_scope, manager), m_variable_sp(var_sp) {
   // Do not attempt to construct one of these objects with no variable!
   assert(m_variable_sp.get() != nullptr);
   m_name = var_sp->GetName();
@@ -259,7 +261,7 @@ bool ValueObjectVariable::UpdateValue() {
         break;
       }
 
-      // BEGIN Swift
+#ifdef LLDB_ENABLE_SWIFT
       if (auto type = variable->GetType())
         if (llvm::dyn_cast_or_null<TypeSystemSwift>(
                 type->GetForwardCompilerType().GetTypeSystem()) &&
@@ -280,7 +282,7 @@ bool ValueObjectVariable::UpdateValue() {
                 }
               }
             }
-      // END Swift
+#endif // LLDB_ENABLE_SWIFT
 
       switch (value_type) {
       case Value::eValueTypeVector:

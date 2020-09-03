@@ -1,4 +1,5 @@
 ; RUN: llvm-mc -triple avr -show-encoding < %s | FileCheck %s
+; RUN: llvm-mc -filetype=obj -triple avr < %s | llvm-objdump -d - | FileCheck --check-prefix=CHECK-INST %s
 
 foo:
 
@@ -103,3 +104,37 @@ cli
 ; CHECK: clt               ; encoding: [0xe8,0x94]
 ; CHECK: cli               ; encoding: [0xf8,0x94]
 ; CHECK: cli               ; encoding: [0xf8,0x94]
+
+; CHECK-INST: sec
+; CHECK-INST: sec
+; CHECK-INST: sez
+; CHECK-INST: sez
+; CHECK-INST: sen
+; CHECK-INST: sen
+; CHECK-INST: sev
+; CHECK-INST: sev
+; CHECK-INST: ses
+; CHECK-INST: ses
+; CHECK-INST: seh
+; CHECK-INST: seh
+; CHECK-INST: set
+; CHECK-INST: set
+; CHECK-INST: sei
+; CHECK-INST: sei
+
+; CHECK-INST: clc
+; CHECK-INST: clc
+; CHECK-INST: clz
+; CHECK-INST: clz
+; CHECK-INST: cln
+; CHECK-INST: cln
+; CHECK-INST: clv
+; CHECK-INST: clv
+; CHECK-INST: cls
+; CHECK-INST: cls
+; CHECK-INST: clh
+; CHECK-INST: clh
+; CHECK-INST: clt
+; CHECK-INST: clt
+; CHECK-INST: cli
+; CHECK-INST: cli

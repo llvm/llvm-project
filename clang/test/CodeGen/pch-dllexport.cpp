@@ -91,6 +91,6 @@ template int __declspec(dllexport) variableTemplate<int>;
 // PR38934: Make sure S<int>::operator= gets emitted. While it itself isn't a
 // template specialization, its parent is.
 template struct __declspec(dllexport) pr38934::S<int>;
-// PCHWITHOBJ: define weak_odr dso_local dllexport x86_thiscallcc dereferenceable(1) %"struct.pr38934::S"* @"??4?$S@H@pr38934@@QAEAAU01@ABU01@@Z"
+// PCHWITHOBJ: define weak_odr dso_local dllexport x86_thiscallcc nonnull align 1 dereferenceable(1) %"struct.pr38934::S"* @"??4?$S@H@pr38934@@QAEAAU01@ABU01@@Z"
 
 #endif

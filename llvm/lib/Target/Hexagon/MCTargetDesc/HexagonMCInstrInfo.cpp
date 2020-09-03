@@ -17,6 +17,7 @@
 #include "MCTargetDesc/HexagonMCShuffler.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -119,10 +120,10 @@ size_t HexagonMCInstrInfo::bundleSize(MCInst const &MCI) {
     return (1);
 }
 
-bool HexagonMCInstrInfo::canonicalizePacket(MCInstrInfo const &MCII,
-                                            MCSubtargetInfo const &STI,
-                                            MCContext &Context, MCInst &MCB,
-                                            HexagonMCChecker *Check) {
+namespace {
+bool canonicalizePacketImpl(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
+                            MCContext &Context, MCInst &MCB,
+                            HexagonMCChecker *Check) {
   // Check the bundle for errors.
   bool CheckOk = Check ? Check->check(false) : true;
   if (!CheckOk)
@@ -132,9 +133,9 @@ bool HexagonMCInstrInfo::canonicalizePacket(MCInstrInfo const &MCII,
   if (!HexagonDisableCompound)
     HexagonMCInstrInfo::tryCompound(MCII, STI, Context, MCB);
   HexagonMCShuffle(Context, false, MCII, STI, MCB);
+
   // Examine the packet and convert pairs of instructions to duplex
   // instructions when possible.
-  MCInst InstBundlePreDuplex = MCInst(MCB);
   if (STI.getFeatureBits() [Hexagon::FeatureDuplex]) {
     SmallVector<DuplexCandidate, 8> possibleDuplexes;
     possibleDuplexes =
@@ -146,14 +147,38 @@ bool HexagonMCInstrInfo::canonicalizePacket(MCInstrInfo const &MCII,
   HexagonMCInstrInfo::padEndloop(MCB, Context);
   // If compounding and duplexing didn't reduce the size below
   // 4 or less we have a packet that is too big.
-  if (HexagonMCInstrInfo::bundleSize(MCB) > HEXAGON_PACKET_SIZE)
+  if (HexagonMCInstrInfo::bundleSize(MCB) > HEXAGON_PACKET_SIZE) {
+    if (Check)
+      Check->reportError("invalid instruction packet: out of slots");
     return false;
+  }
   // Check the bundle for errors.
   CheckOk = Check ? Check->check(true) : true;
   if (!CheckOk)
     return false;
   HexagonMCShuffle(Context, true, MCII, STI, MCB);
   return true;
+}
+} // namespace
+
+bool HexagonMCInstrInfo::canonicalizePacket(MCInstrInfo const &MCII,
+                                            MCSubtargetInfo const &STI,
+                                            MCContext &Context, MCInst &MCB,
+                                            HexagonMCChecker *Check,
+                                            bool AttemptCompatibility) {
+  auto ArchSTI = Hexagon_MC::getArchSubtarget(&STI);
+  if (!AttemptCompatibility || ArchSTI == nullptr)
+    return canonicalizePacketImpl(MCII, STI, Context, MCB, Check);
+
+  const MCRegisterInfo *RI = Context.getRegisterInfo();
+  HexagonMCChecker DefaultCheck(Context, MCII, STI, MCB, *RI, false);
+  HexagonMCChecker *BaseCheck = (Check == nullptr) ? &DefaultCheck : Check;
+  HexagonMCChecker PerfCheck(*BaseCheck, STI, false);
+  if (canonicalizePacketImpl(MCII, STI, Context, MCB, &PerfCheck))
+    return true;
+
+  HexagonMCChecker ArchCheck(*BaseCheck, *ArchSTI, true);
+  return canonicalizePacketImpl(MCII, *ArchSTI, Context, MCB, &ArchCheck);
 }
 
 MCInst HexagonMCInstrInfo::deriveExtender(MCInstrInfo const &MCII,
@@ -394,6 +419,26 @@ unsigned HexagonMCInstrInfo::getType(MCInstrInfo const &MCII,
   return ((F >> HexagonII::TypePos) & HexagonII::TypeMask);
 }
 
+/// Return the resources used by this instruction
+unsigned HexagonMCInstrInfo::getCVIResources(MCInstrInfo const &MCII,
+                                      MCSubtargetInfo const &STI,
+                                      MCInst const &MCI) {
+
+  const InstrItinerary *II = STI.getSchedModel().InstrItineraries;
+  int SchedClass = HexagonMCInstrInfo::getDesc(MCII, MCI).getSchedClass();
+  int Size = II[SchedClass].LastStage - II[SchedClass].FirstStage;
+
+  // HVX resources used are currenty located at the second to last stage.
+  // This could also be done with a linear search of the stages looking for:
+  // CVI_ALL, CVI_MPY01, CVI_XLSHF, CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE,
+  // CVI_ZW
+  unsigned Stage = II[SchedClass].LastStage - 1;
+
+  if (Size < 2)
+    return 0;
+  return ((Stage + HexagonStages)->getUnits());
+}
+
 /// Return the slots this instruction can execute out of
 unsigned HexagonMCInstrInfo::getUnits(MCInstrInfo const &MCII,
                                       MCSubtargetInfo const &STI,
@@ -473,7 +518,7 @@ bool HexagonMCInstrInfo::hasNewValue2(MCInstrInfo const &MCII,
 
 MCInst const &HexagonMCInstrInfo::instruction(MCInst const &MCB, size_t Index) {
   assert(isBundle(MCB));
-  assert(Index < HEXAGON_PACKET_SIZE);
+  assert(Index < HEXAGON_PRESHUFFLE_PACKET_SIZE);
   return *MCB.getOperand(bundleInstructionsOffset + Index).getInst();
 }
 
@@ -613,6 +658,12 @@ bool HexagonMCInstrInfo::isNewValue(MCInstrInfo const &MCII,
   return ((F >> HexagonII::NewValuePos) & HexagonII::NewValueMask);
 }
 
+bool HexagonMCInstrInfo::isNewValueStore(MCInstrInfo const &MCII,
+                                         MCInst const &MCI) {
+  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
+  return (F >> HexagonII::NVStorePos) & HexagonII::NVStoreMask;
+}
+
 /// Return whether the operand is extendable.
 bool HexagonMCInstrInfo::isOpExtendable(MCInstrInfo const &MCII,
                                         MCInst const &MCI, unsigned short O) {
@@ -623,6 +674,45 @@ bool HexagonMCInstrInfo::isOuterLoop(MCInst const &MCI) {
   assert(isBundle(MCI));
   int64_t Flags = MCI.getOperand(0).getImm();
   return (Flags & outerLoopMask) != 0;
+}
+
+bool HexagonMCInstrInfo::IsVecRegPair(unsigned VecReg) {
+  return (VecReg >= Hexagon::W0 && VecReg <= Hexagon::W15) ||
+         (VecReg >= Hexagon::WR0 && VecReg <= Hexagon::WR15);
+}
+
+bool HexagonMCInstrInfo::IsReverseVecRegPair(unsigned VecReg) {
+  return (VecReg >= Hexagon::WR0 && VecReg <= Hexagon::WR15);
+}
+
+bool HexagonMCInstrInfo::IsVecRegSingle(unsigned VecReg) {
+  return (VecReg >= Hexagon::V0 && VecReg <= Hexagon::V31);
+}
+
+std::pair<unsigned, unsigned>
+HexagonMCInstrInfo::GetVecRegPairIndices(unsigned VecRegPair) {
+  assert(IsVecRegPair(VecRegPair) &&
+         "VecRegPair must be a vector register pair");
+
+  const bool IsRev = IsReverseVecRegPair(VecRegPair);
+  const unsigned PairIndex =
+      2 * (IsRev ? VecRegPair - Hexagon::WR0 : VecRegPair - Hexagon::W0);
+
+  return IsRev ? std::make_pair(PairIndex, PairIndex + 1)
+               : std::make_pair(PairIndex + 1, PairIndex);
+}
+
+bool HexagonMCInstrInfo::IsSingleConsumerRefPairProducer(unsigned Producer,
+                                                         unsigned Consumer) {
+  if (IsVecRegPair(Producer) && IsVecRegSingle(Consumer)) {
+    const unsigned ProdPairIndex = IsReverseVecRegPair(Producer)
+                                       ? Producer - Hexagon::WR0
+                                       : Producer - Hexagon::W0;
+    const unsigned ConsumerSingleIndex = (Consumer - Hexagon::V0) >> 1;
+
+    return ConsumerSingleIndex == ProdPairIndex;
+  }
+  return false;
 }
 
 bool HexagonMCInstrInfo::isPredicated(MCInstrInfo const &MCII,
@@ -655,8 +745,17 @@ bool HexagonMCInstrInfo::isPredicatedTrue(MCInstrInfo const &MCII,
       !((F >> HexagonII::PredicatedFalsePos) & HexagonII::PredicatedFalseMask));
 }
 
-bool HexagonMCInstrInfo::isPredReg(unsigned Reg) {
-  return (Reg >= Hexagon::P0 && Reg <= Hexagon::P3_0);
+bool HexagonMCInstrInfo::isPredReg(MCRegisterInfo const &MRI, unsigned Reg) {
+  auto &PredRegClass = MRI.getRegClass(Hexagon::PredRegsRegClassID);
+  return PredRegClass.contains(Reg);
+}
+
+bool HexagonMCInstrInfo::isPredRegister(MCInstrInfo const &MCII,
+                                        MCInst const &Inst, unsigned I) {
+  MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, Inst);
+
+  return Inst.getOperand(I).isReg() &&
+         Desc.OpInfo[I].RegClass == Hexagon::PredRegsRegClassID;
 }
 
 /// Return whether the insn can be packaged only with A and X-type insns.
@@ -753,10 +852,8 @@ bool HexagonMCInstrInfo::isSubInstruction(MCInst const &MCI) {
 }
 
 bool HexagonMCInstrInfo::isVector(MCInstrInfo const &MCII, MCInst const &MCI) {
-  if ((getType(MCII, MCI) <= HexagonII::TypeCVI_LAST) &&
-      (getType(MCII, MCI) >= HexagonII::TypeCVI_FIRST))
-    return true;
-  return false;
+  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
+  return (F >> HexagonII::isCVIPos) & HexagonII::isCVIMask;
 }
 
 int64_t HexagonMCInstrInfo::minConstant(MCInst const &MCI, size_t Index) {
@@ -802,6 +899,18 @@ bool HexagonMCInstrInfo::s27_2_reloc(MCExpr const &Expr) {
   return HExpr->s27_2_reloc();
 }
 
+unsigned HexagonMCInstrInfo::packetSizeSlots(MCSubtargetInfo const &STI) {
+  const bool IsTiny = STI.getFeatureBits()[Hexagon::ProcTinyCore];
+
+  return IsTiny ? (HEXAGON_PACKET_SIZE - 1) : HEXAGON_PACKET_SIZE;
+}
+
+unsigned HexagonMCInstrInfo::packetSize(StringRef CPU) {
+  return llvm::StringSwitch<unsigned>(CPU)
+      .Case("hexagonv67t", 3)
+      .Default(4);
+}
+
 void HexagonMCInstrInfo::padEndloop(MCInst &MCB, MCContext &Context) {
   MCInst Nop;
   Nop.setOpcode(Hexagon::A2_nop);
@@ -834,6 +943,33 @@ bool HexagonMCInstrInfo::prefersSlot3(MCInstrInfo const &MCII,
 bool HexagonMCInstrInfo::hasTmpDst(MCInstrInfo const &MCII, MCInst const &MCI) {
   const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
   return (F >> HexagonII::HasTmpDstPos) & HexagonII::HasTmpDstMask;
+}
+
+bool HexagonMCInstrInfo::requiresSlot(MCSubtargetInfo const &STI,
+                                      MCInst const &MCI) {
+  const unsigned OpCode = MCI.getOpcode();
+  const bool IsTiny = STI.getFeatureBits() [Hexagon::ProcTinyCore];
+  const bool NoSlotReqd = Hexagon::A4_ext == OpCode ||
+                          (IsTiny && Hexagon::A2_nop == OpCode) ||
+                          (IsTiny && Hexagon::J4_hintjumpr == OpCode);
+
+  return !NoSlotReqd;
+}
+
+unsigned HexagonMCInstrInfo::slotsConsumed(MCInstrInfo const &MCII,
+                                           MCSubtargetInfo const &STI,
+                                           MCInst const &MCI) {
+  unsigned slotsUsed = 0;
+  for (auto HMI : bundleInstructions(MCI)) {
+    MCInst const &MCI = *HMI.getInst();
+    if (!requiresSlot(STI, MCI))
+      continue;
+    if (isDuplex(MCII, MCI))
+      slotsUsed += 2;
+    else
+      ++slotsUsed;
+  }
+  return slotsUsed;
 }
 
 void HexagonMCInstrInfo::replaceDuplex(MCContext &Context, MCInst &MCB,
@@ -874,9 +1010,8 @@ unsigned HexagonMCInstrInfo::SubregisterBit(unsigned Consumer,
                                             unsigned Producer2) {
   // If we're a single vector consumer of a double producer, set subreg bit
   // based on if we're accessing the lower or upper register component
-  if (Producer >= Hexagon::W0 && Producer <= Hexagon::W15)
-    if (Consumer >= Hexagon::V0 && Consumer <= Hexagon::V31)
-      return (Consumer - Hexagon::V0) & 0x1;
+  if (IsVecRegPair(Producer) && IsVecRegSingle(Consumer))
+    return (Consumer - Hexagon::V0) & 0x1;
   if (Producer2 != Hexagon::NoRegister)
     return Consumer == Producer;
   return 0;

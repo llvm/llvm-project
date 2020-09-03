@@ -72,10 +72,13 @@ class PythonSynthDataFormatterTestCase(TestBase):
             fake_a_val = 0x00000100
 
         # check that we get the two real vars and the fake_a variables
-        self.expect("frame variable f00_1",
-                    substrs=['r = 34',
-                             'fake_a = %d' % fake_a_val,
-                             'a = 1'])
+        self.expect(
+            "frame variable f00_1",
+            substrs=[
+                'a = 1',
+                'fake_a = %d' % fake_a_val,
+                'r = 34',
+            ])
 
         # check that we do not get the extra vars
         self.expect("frame variable f00_1", matching=False,
@@ -110,10 +113,13 @@ class PythonSynthDataFormatterTestCase(TestBase):
         else:
             fake_a_val = 0x00000200
 
-        self.expect("frame variable f00_1",
-                    substrs=['r = 34',
-                             'fake_a = %d' % fake_a_val,
-                             'a = 2'])
+        self.expect(
+            "frame variable f00_1",
+            substrs=[
+                'a = 2',
+                'fake_a = %d' % fake_a_val,
+                'r = 34',
+            ])
 
         # check that altering the object also alters fake_a
         self.runCmd("expr f00_1.a = 280")
@@ -123,10 +129,13 @@ class PythonSynthDataFormatterTestCase(TestBase):
         else:
             fake_a_val = 0x00011800
 
-        self.expect("frame variable f00_1",
-                    substrs=['r = 34',
-                             'fake_a = %d' % fake_a_val,
-                             'a = 280'])
+        self.expect(
+            "frame variable f00_1",
+            substrs=[
+                'a = 280',
+                'fake_a = %d' % fake_a_val,
+                'r = 34',
+            ])
 
         # check that expanding a pointer does the right thing
         if process.GetByteOrder() == lldb.eByteOrderLittle:
@@ -134,14 +143,20 @@ class PythonSynthDataFormatterTestCase(TestBase):
         else:
             fake_a_val = 0x00000c00
 
-        self.expect("frame variable --ptr-depth 1 f00_ptr",
-                    substrs=['r = 45',
-                             'fake_a = %d' % fake_a_val,
-                             'a = 12'])
-        self.expect("frame variable --ptr-depth 1 wrapper",
-                    substrs=['r = 45',
-                             'fake_a = %d' % fake_a_val,
-                             'a = 12'])
+        self.expect(
+            "frame variable --ptr-depth 1 f00_ptr",
+            substrs=[
+                'a = 12',
+                'fake_a = %d' % fake_a_val,
+                'r = 45',
+            ])
+        self.expect(
+            "frame variable --ptr-depth 1 wrapper",
+            substrs=[
+                'a = 12',
+                'fake_a = %d' % fake_a_val,
+                'r = 45',
+            ])
 
         # now add a filter.. it should fail
         self.expect("type filter add foo --child b --child j", error=True,
@@ -151,14 +166,20 @@ class PythonSynthDataFormatterTestCase(TestBase):
         self.expect('frame variable f00_1', matching=False,
                     substrs=['b = 1',
                              'j = 17'])
-        self.expect("frame variable --ptr-depth 1 f00_ptr",
-                    substrs=['r = 45',
-                             'fake_a = %d' % fake_a_val,
-                             'a = 12'])
-        self.expect("frame variable --ptr-depth 1 wrapper",
-                    substrs=['r = 45',
-                             'fake_a = %d' % fake_a_val,
-                             'a = 12'])
+        self.expect(
+            "frame variable --ptr-depth 1 f00_ptr",
+            substrs=[
+                'a = 12',
+                'fake_a = %d' % fake_a_val,
+                'r = 45',
+            ])
+        self.expect(
+            "frame variable --ptr-depth 1 wrapper",
+            substrs=[
+                'a = 12',
+                'fake_a = %d' % fake_a_val,
+                'r = 45',
+            ])
 
         # Test that the custom dereference operator for `wrapfoo` works through
         # the Python API. The synthetic children provider gets queried at
@@ -207,14 +228,20 @@ class PythonSynthDataFormatterTestCase(TestBase):
         self.expect('frame variable f00_1', matching=False,
                     substrs=['b = 2',
                              'j = 18'])
-        self.expect("frame variable --ptr-depth 1 f00_ptr",
-                    substrs=['r = 45',
-                             'fake_a = %d' % fake_a_val,
-                             'a = 12'])
-        self.expect("frame variable --ptr-depth 1 wrapper",
-                    substrs=['r = 45',
-                             'fake_a = %d' % fake_a_val,
-                             'a = 12'])
+        self.expect(
+            "frame variable --ptr-depth 1 f00_ptr",
+            substrs=[
+                'a = 12',
+                'fake_a = %d' % fake_a_val,
+                'r = 45',
+            ])
+        self.expect(
+            "frame variable --ptr-depth 1 wrapper",
+            substrs=[
+                'a = 12',
+                'fake_a = %d' % fake_a_val,
+                'r = 45',
+            ])
 
         # check the listing
         self.expect('type synth list',

@@ -12,7 +12,7 @@
 # RUN:       }" > %t.script
 # RUN: ld.lld %t-exe.o %t.so --script %t.script -o %t.exe
 # RUN: llvm-readelf --symbols --dyn-syms -A %t.exe | FileCheck %s
-# RUN: llvm-objdump -d -mattr=micromips --no-show-raw-insn %t.exe \
+# RUN: llvm-objdump -d --mattr=micromips --no-show-raw-insn %t.exe \
 # RUN:   | FileCheck --check-prefix=ASM %s
 
 # CHECK: Symbol table '.dynsym'
@@ -35,13 +35,13 @@
 # CHECK:    Address  Initial Sym.Val. Type    Ndx Name
 # CHECK:            00020301 00020321 FUNC    UND foo0
 
-# ASM:      __start:
+# ASM:      <__start>:
 # ASM-NEXT:    20200:  lw      $8, -32744($gp)
 # ASM-NEXT:            addi    $8, $8, 529
 # ASM-NEXT:            lui     $8, 2
 # ASM-NEXT:            addi    $8, $8, 801
 #
-# ASM:      foo:
+# ASM:      <foo>:
 # ASM-NEXT:    20210:  jal     131872
 
   .text

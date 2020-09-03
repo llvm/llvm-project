@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_AdbClient_h_
-#define liblldb_AdbClient_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_ADBCLIENT_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_ADBCLIENT_H
 
 #include "lldb/Utility/Status.h"
 #include <chrono>
@@ -137,4 +137,4 @@ private:
 } // namespace platform_android
 } // namespace lldb_private
 
-#endif // liblldb_AdbClient_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_ADBCLIENT_H

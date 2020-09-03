@@ -40,7 +40,7 @@ class SBFrameFindValueTestCase(TestBase):
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, breakpoint)
 
-        self.assertTrue(len(threads) == 1)
+        self.assertEquals(len(threads), 1)
         self.thread = threads[0]
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")

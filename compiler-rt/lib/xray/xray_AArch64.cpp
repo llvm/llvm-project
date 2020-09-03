@@ -61,7 +61,7 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
   // When |Enable|==false, we set back the first instruction in the sled to be
   //   B #32
 
-  uint32_t *FirstAddress = reinterpret_cast<uint32_t *>(Sled.Address);
+  uint32_t *FirstAddress = reinterpret_cast<uint32_t *>(Sled.address());
   uint32_t *CurAddress = FirstAddress + 1;
   if (Enable) {
     *CurAddress = uint32_t(PatchOpcodes::PO_LdrW0_12);

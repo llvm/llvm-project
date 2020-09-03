@@ -124,7 +124,7 @@ Instruction *InstCombiner::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
     auto *SI = new StoreInst(RMWI.getValOperand(),
                              RMWI.getPointerOperand(), &RMWI);
     SI->setAtomic(Ordering, RMWI.getSyncScopeID());
-    SI->setAlignment(MaybeAlign(DL.getABITypeAlignment(RMWI.getType())));
+    SI->setAlignment(DL.getABITypeAlign(RMWI.getType()));
     return eraseInstFromFunction(RMWI);
   }
   
@@ -138,13 +138,11 @@ Instruction *InstCombiner::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   if (RMWI.getType()->isIntegerTy() &&
       RMWI.getOperation() != AtomicRMWInst::Or) {
     RMWI.setOperation(AtomicRMWInst::Or);
-    RMWI.setOperand(1, ConstantInt::get(RMWI.getType(), 0));
-    return &RMWI;
+    return replaceOperand(RMWI, 1, ConstantInt::get(RMWI.getType(), 0));
   } else if (RMWI.getType()->isFloatingPointTy() &&
              RMWI.getOperation() != AtomicRMWInst::FAdd) {
     RMWI.setOperation(AtomicRMWInst::FAdd);
-    RMWI.setOperand(1, ConstantFP::getNegativeZero(RMWI.getType()));
-    return &RMWI;
+    return replaceOperand(RMWI, 1, ConstantFP::getNegativeZero(RMWI.getType()));
   }
 
   // Check if the required ordering is compatible with an atomic load.
@@ -152,8 +150,8 @@ Instruction *InstCombiner::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
       Ordering != AtomicOrdering::Monotonic)
     return nullptr;
   
-  LoadInst *Load = new LoadInst(RMWI.getType(), RMWI.getPointerOperand());
-  Load->setAtomic(Ordering, RMWI.getSyncScopeID());
-  Load->setAlignment(MaybeAlign(DL.getABITypeAlignment(RMWI.getType())));
+  LoadInst *Load = new LoadInst(RMWI.getType(), RMWI.getPointerOperand(), "",
+                                false, DL.getABITypeAlign(RMWI.getType()),
+                                Ordering, RMWI.getSyncScopeID());
   return Load;
 }

@@ -59,4 +59,4 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`search`
 
-__ http://llvm.org/docs/DeveloperPolicy.html#license
+__ https://llvm.org/docs/DeveloperPolicy.html#license

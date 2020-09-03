@@ -1,6 +1,6 @@
 //===- Serialization.h - MLIR SPIR-V (De)serialization ----------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -22,17 +22,20 @@ class MLIRContext;
 
 namespace spirv {
 class ModuleOp;
+class OwningSPIRVModuleRef;
 
 /// Serializes the given SPIR-V `module` and writes to `binary`. On failure,
 /// reports errors to the error handler registered with the MLIR context for
 /// `module`.
-LogicalResult serialize(ModuleOp module, SmallVectorImpl<uint32_t> &binary);
+LogicalResult serialize(ModuleOp module, SmallVectorImpl<uint32_t> &binary,
+                        bool emitDebugInfo = false);
 
 /// Deserializes the given SPIR-V `binary` module and creates a MLIR ModuleOp
 /// in the given `context`. Returns the ModuleOp on success; otherwise, reports
-/// errors to the error handler registered with `context` and returns
-/// llvm::None.
-Optional<ModuleOp> deserialize(ArrayRef<uint32_t> binary, MLIRContext *context);
+/// errors to the error handler registered with `context` and returns a null
+/// module.
+OwningSPIRVModuleRef deserialize(ArrayRef<uint32_t> binary,
+                                 MLIRContext *context);
 
 } // end namespace spirv
 } // end namespace mlir

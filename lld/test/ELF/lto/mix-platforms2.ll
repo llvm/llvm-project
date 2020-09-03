@@ -1,7 +1,7 @@
 ; REQUIRES: x86
 ; RUN: llvm-as %s -o %tx64.o
 ; RUN: llvm-as %S/Inputs/i386-empty.ll -o %ti386.o
-; RUN: not ld.lld %ti386.o %tx64.o -o %t.out 2>&1 | FileCheck %s
+; RUN: not ld.lld %ti386.o %tx64.o -o /dev/null 2>&1 | FileCheck %s
 
 ; CHECK: {{.*}}x64.o is incompatible with {{.*}}i386.o
 

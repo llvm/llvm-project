@@ -21,15 +21,15 @@
 // ctz instruction, gcc resolves __builtin_clz to __clzdi2 rather than
 // __clzsi2, leading to infinite recursion.
 #define __builtin_clz(a) __clzsi2(a)
-extern si_int __clzsi2(si_int);
+extern int __clzsi2(si_int);
 #endif
 
 // Precondition: a != 0
 
-COMPILER_RT_ABI si_int __clzdi2(di_int a) {
+COMPILER_RT_ABI int __clzdi2(di_int a) {
   dwords x;
   x.all = a;
   const si_int f = -(x.s.high == 0);
-  return __builtin_clz((x.s.high & ~f) | (x.s.low & f)) +
+  return clzsi((x.s.high & ~f) | (x.s.low & f)) +
          (f & ((si_int)(sizeof(si_int) * CHAR_BIT)));
 }

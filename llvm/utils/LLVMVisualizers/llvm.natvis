@@ -253,4 +253,51 @@ For later versions of Visual Studio, no setup is required.
       <Item Name="[Raw Bytes]" Condition="sizeof($T1)==8">(unsigned char *)Value.buffer,8</Item>
     </Expand>
   </Type>
+  <!-- llvm::Type has two fields, SubclassData and ContainedTys, the meaning of which change depending on the TypeID.
+       This visualiser decodes those fields based on the value of ID.
+  -->
+  <Type Name="llvm::Type">
+    <DisplayString>{ID}</DisplayString>
+    <Expand>
+      <Item Name="ID">ID</Item>
+
+      <Item Name="NumBits" Condition="ID == llvm::Type::TypeID::IntegerTyID">SubclassData</Item>
+
+      <Item Name="ReturnType" Condition="ID == llvm::Type::TypeID::FunctionTyID">*ContainedTys</Item>
+      <Synthetic Name="Arguments" Condition="ID == llvm::Type::TypeID::FunctionTyID">
+        <DisplayString>{NumContainedTys - 1}</DisplayString>
+        <Expand>
+        <ArrayItems>
+          <Size>NumContainedTys - 1</Size>
+          <ValuePointer>ContainedTys + 1</ValuePointer>
+        </ArrayItems>
+        </Expand>
+      </Synthetic>
+      <Item Name="IsVarArg" Condition="ID == llvm::Type::TypeID::FunctionTyID">SubclassData == 1</Item>
+
+      <Item Name="HasBody" Condition="ID == llvm::Type::TypeID::StructTyID">(SubclassData 	&amp; llvm::StructType::SCDB_HasBody) != 0</Item>
+      <Item Name="Packed" Condition="ID == llvm::Type::TypeID::StructTyID">(SubclassData 	&amp; llvm::StructType::SCDB_Packed) != 0</Item>
+      <Item Name="IsLiteral" Condition="ID == llvm::Type::TypeID::StructTyID">(SubclassData 	&amp; llvm::StructType::SCDB_IsLiteral) != 0</Item>
+      <Item Name="IsSized" Condition="ID == llvm::Type::TypeID::StructTyID">(SubclassData 	&amp; llvm::StructType::SCDB_IsSized) != 0</Item>
+      <Synthetic Name="Members" Condition="ID == llvm::Type::TypeID::StructTyID">
+        <DisplayString>{NumContainedTys}</DisplayString>
+        <Expand>
+          <ArrayItems>
+            <Size>NumContainedTys</Size>
+            <ValuePointer>ContainedTys</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+
+      <Item Name="ElementType" Condition="ID == llvm::Type::TypeID::ArrayTyID || ID == llvm::Type::TypeID::VectorTyID">*ContainedTys</Item>
+      <Item Name="NumElements" Condition="ID == llvm::Type::TypeID::ArrayTyID">((llvm::ArrayType*)this)->NumElements</Item>
+
+      <Item Name="AddressSpace" Condition="ID == llvm::Type::TypeID::PointerTyID">SubclassData</Item>
+      <Item Name="PointeeType" Condition="ID == llvm::Type::TypeID::PointerTyID">*ContainedTys</Item>
+
+      <Item Name="NumElements" Condition="ID == llvm::Type::TypeID::VectorTyID">((llvm::VectorType*)this)->NumElements</Item>
+
+      <Item Name="Context">Context</Item>
+    </Expand>
+  </Type>
 </AutoVisualizer>

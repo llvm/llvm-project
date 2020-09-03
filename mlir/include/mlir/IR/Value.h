@@ -1,6 +1,6 @@
 //===- Value.h - Base of the SSA Value hierarchy ----------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -16,8 +16,10 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/UseDefLists.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
+class AsmState;
 class BlockArgument;
 class Operation;
 class OpResult;
@@ -65,12 +67,12 @@ public:
   struct ImplTypeTraits : public llvm::PointerLikeTypeTraits<void *> {
     // We know that all pointers within the ImplType are aligned by 8-bytes,
     // meaning that we can steal up to 3 bits for the different values.
-    enum { NumLowBitsAvailable = 3 };
+    static constexpr int NumLowBitsAvailable = 3;
   };
   using ImplType = llvm::PointerIntPair<void *, 2, Kind, ImplTypeTraits>;
 
 public:
-  Value(std::nullptr_t) : ownerAndKind() {}
+  constexpr Value(std::nullptr_t) : ownerAndKind() {}
   Value(ImplType ownerAndKind = {}) : ownerAndKind(ownerAndKind) {}
   Value(const Value &) = default;
   Value &operator=(const Value &) = default;
@@ -79,6 +81,12 @@ public:
     assert(*this && "isa<> used on a null type.");
     return U::classof(*this);
   }
+
+  template <typename First, typename Second, typename... Rest>
+  bool isa() const {
+    return isa<First>() || isa<Second, Rest...>();
+  }
+
   template <typename U> U dyn_cast() const {
     return isa<U>() ? U(ownerAndKind) : U(nullptr);
   }
@@ -90,13 +98,7 @@ public:
     return U(ownerAndKind);
   }
 
-  /// Temporary methods to enable transition of Value to being used as a
-  /// value-type.
-  /// TODO(riverriddle) Remove these when all usages have been removed.
-  Value operator*() const { return *this; }
-  Value *operator->() const { return const_cast<Value *>(this); }
-
-  operator bool() const { return ownerAndKind.getPointer(); }
+  explicit operator bool() const { return ownerAndKind.getPointer(); }
   bool operator==(const Value &other) const {
     return ownerAndKind == other.ownerAndKind;
   }
@@ -120,12 +122,22 @@ public:
   /// defines it.
   Operation *getDefiningOp() const;
 
+  /// If this value is the result of an operation of type OpTy, return the
+  /// operation that defines it.
+  template <typename OpTy>
+  OpTy getDefiningOp() const {
+    return llvm::dyn_cast_or_null<OpTy>(getDefiningOp());
+  }
+
   /// If this value is the result of an operation, use it as a location,
   /// otherwise return an unknown location.
-  Location getLoc();
+  Location getLoc() const;
 
   /// Return the Region in which this Value is defined.
   Region *getParentRegion();
+
+  /// Return the Block in which this Value is defined.
+  Block *getParentBlock();
 
   //===--------------------------------------------------------------------===//
   // UseLists
@@ -142,11 +154,26 @@ public:
   /// there are zero uses of 'this'.
   void replaceAllUsesWith(Value newValue) const;
 
+  /// Replace all uses of 'this' value with 'newValue', updating anything in the
+  /// IR that uses 'this' to use the other value instead except if the user is
+  /// listed in 'exceptions' .
+  void
+  replaceAllUsesExcept(Value newValue,
+                       const SmallPtrSetImpl<Operation *> &exceptions) const;
+
+  /// Replace all uses of 'this' value with 'newValue' if the given callback
+  /// returns true.
+  void replaceUsesWithIf(Value newValue,
+                         function_ref<bool(OpOperand &)> shouldReplace);
+
+  /// Returns true if the value is used outside of the given block.
+  bool isUsedOutsideOfBlock(Block *block);
+
   //===--------------------------------------------------------------------===//
   // Uses
 
   /// This class implements an iterator over the uses of a value.
-  using use_iterator = FilteredValueUseIterator<OpOperand>;
+  using use_iterator = ValueUseIterator<OpOperand>;
   using use_range = iterator_range<use_iterator>;
 
   use_iterator use_begin() const;
@@ -178,7 +205,11 @@ public:
   Kind getKind() const { return ownerAndKind.getInt(); }
 
   void print(raw_ostream &os);
+  void print(raw_ostream &os, AsmState &state);
   void dump();
+
+  /// Print this value as if it were an operand.
+  void printAsOperand(raw_ostream &os, AsmState &state);
 
   /// Methods for supporting PointerLikeTypeTraits.
   void *getAsOpaquePointer() const { return ownerAndKind.getOpaqueValue(); }
@@ -236,11 +267,6 @@ class BlockArgument : public Value {
 public:
   using Value::Value;
 
-  /// Temporary methods to enable transition of Value to being used as a
-  /// value-type.
-  /// TODO(riverriddle) Remove this when all usages have been removed.
-  BlockArgument *operator->() { return this; }
-
   static bool classof(Value value) {
     return value.getKind() == Kind::BlockArgument;
   }
@@ -288,12 +314,6 @@ class OpResult : public Value {
 public:
   using Value::Value;
 
-  /// Temporary methods to enable transition of Value to being used as a
-  /// value-type.
-  /// TODO(riverriddle) Remove these when all usages have been removed.
-  OpResult operator*() { return *this; }
-  OpResult *operator->() { return this; }
-
   static bool classof(Value value) {
     return value.getKind() != Kind::BlockArgument;
   }
@@ -304,12 +324,21 @@ public:
   /// Returns the number of this result.
   unsigned getResultNumber() const;
 
+  /// Returns the maximum number of results that can be stored inline.
+  static unsigned getMaxInlineResults() {
+    return static_cast<unsigned>(Kind::TrailingOpResult);
+  }
+
 private:
+  /// Given a number of operation results, returns the number that need to be
+  /// stored inline.
+  static unsigned getNumInline(unsigned numResults);
+
   /// Given a number of operation results, returns the number that need to be
   /// stored as trailing.
   static unsigned getNumTrailing(unsigned numResults);
 
-  /// Allow access to `create` and `destroy`.
+  /// Allow access to constructor.
   friend Operation;
 };
 

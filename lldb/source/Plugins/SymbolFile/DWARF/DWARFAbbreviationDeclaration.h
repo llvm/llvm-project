@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_DWARFAbbreviationDeclaration_h_
-#define liblldb_DWARFAbbreviationDeclaration_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFABBREVIATIONDECLARATION_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFABBREVIATIONDECLARATION_H
 
 #include "DWARFAttribute.h"
 #include "DWARFDefines.h"
@@ -62,4 +62,4 @@ protected:
   DWARFAttribute::collection m_attributes;
 };
 
-#endif // liblldb_DWARFAbbreviationDeclaration_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFABBREVIATIONDECLARATION_H

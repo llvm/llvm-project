@@ -21,7 +21,7 @@ for.cond.cleanup:
 ; CHECK: br i1 [[CMP]], label %[[CLEANUP:.*]], label %for.body.lr.ph.new
 
 ; CHECK-LABEL: for.body.lr.ph.new:
-; CHECK: %unroll_iter = sub nsw i64 %wide.trip.count, %xtraiter
+; CHECK: %unroll_iter = and i64 %wide.trip.count, 4294967292
 ; CHECK: br label %for.body
 
 ; CHECK: [[CLEANUP]]:

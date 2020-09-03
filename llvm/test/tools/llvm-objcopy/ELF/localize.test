@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy \
 # RUN:     --localize-symbol Global \
 # RUN:     -L GlobalUndef \

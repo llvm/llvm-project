@@ -39,9 +39,9 @@ public:
   void printInstruction(const MCInst *MI, uint64_t Address, raw_ostream &O);
   static const char *getRegisterName(unsigned RegNo);
 
-  bool printAliasInstr(const MCInst *MI, raw_ostream &OS);
-  void printCustomAliasOperand(const MCInst *MI, unsigned OpIdx,
-                               unsigned PrintMethodIdx,
+  bool printAliasInstr(const MCInst *MI, uint64_t Address, raw_ostream &OS);
+  void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
+                               unsigned OpIdx, unsigned PrintMethodIdx,
                                raw_ostream &OS);
 
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
@@ -61,14 +61,19 @@ public:
   void printU10ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU12ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printS16ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printS34ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU16ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printBranchOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printImmZeroOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printBranchOperand(const MCInst *MI, uint64_t Address, unsigned OpNo,
+                          raw_ostream &O);
   void printAbsBranchOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printTLSCall(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
   void printcrbitm(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
   void printMemRegImm(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printMemRegImm34PCRel(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printMemRegImm34(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printMemRegReg(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 };
 } // end namespace llvm

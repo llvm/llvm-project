@@ -132,7 +132,8 @@ const RegisterBankInfo::PartialMapping SGPROnly64BreakDown[] {
 };
 
 
-// For some instructions which can operate 64-bit only for the scalar version.
+// For some instructions which can operate 64-bit only for the scalar
+// version. Otherwise, these need to be split into 2 32-bit operations.
 const RegisterBankInfo::ValueMapping ValMappingsSGPR64OnlyVGPR32[] {
   /*32-bit sgpr*/     {&SGPROnly64BreakDown[0], 1},
   /*2 x 32-bit sgpr*/ {&SGPROnly64BreakDown[1], 2},
@@ -207,75 +208,16 @@ const RegisterBankInfo::ValueMapping *getValueMappingSGPR64Only(unsigned BankID,
   return &ValMappingsSGPR64OnlyVGPR32[2];
 }
 
-const RegisterBankInfo::PartialMapping LoadSGPROnlyBreakDown[] {
-  /* 256-bit load */    {0, 256, SGPRRegBank},
-  /* 512-bit load */    {0, 512, SGPRRegBank},
-  /* 8 32-bit loads */  {0, 32, VGPRRegBank}, {32, 32, VGPRRegBank},
-                        {64, 32, VGPRRegBank}, {96, 32, VGPRRegBank},
-                        {128, 32, VGPRRegBank}, {160, 32, VGPRRegBank},
-                        {192, 32, VGPRRegBank}, {224, 32, VGPRRegBank},
-  /* 16 32-bit loads */ {0, 32, VGPRRegBank}, {32, 32, VGPRRegBank},
-                        {64, 32, VGPRRegBank}, {96, 32, VGPRRegBank},
-                        {128, 32, VGPRRegBank}, {160, 32, VGPRRegBank},
-                        {192, 32, VGPRRegBank}, {224, 32, VGPRRegBank},
-                        {256, 32, VGPRRegBank}, {288, 32, VGPRRegBank},
-                        {320, 32, VGPRRegBank}, {352, 32, VGPRRegBank},
-                        {384, 32, VGPRRegBank}, {416, 32, VGPRRegBank},
-                        {448, 32, VGPRRegBank}, {480, 32, VGPRRegBank},
-  /* 4 64-bit loads */  {0, 64, VGPRRegBank}, {64, 64, VGPRRegBank},
-                        {128, 64, VGPRRegBank}, {192, 64, VGPRRegBank},
-  /* 8 64-bit loads */  {0, 64, VGPRRegBank}, {64, 64, VGPRRegBank},
-                        {128, 64, VGPRRegBank}, {192, 64, VGPRRegBank},
-                        {256, 64, VGPRRegBank}, {320, 64, VGPRRegBank},
-                        {384, 64, VGPRRegBank}, {448, 64, VGPRRegBank},
+/// Split any 64-bit value into 2 32-bit pieces. Unlike
+/// getValueMappingSGPR64Only, this splits both VGPRs and SGPRs.
+const RegisterBankInfo::ValueMapping *getValueMappingSplit64(unsigned BankID,
+                                                             unsigned Size) {
+  assert(Size == 64);
+  if (BankID == AMDGPU::VGPRRegBankID)
+    return &ValMappingsSGPR64OnlyVGPR32[4];
 
-  /* FIXME: The generic register bank select does not support complex
-   * break downs where the number of vector elements does not equal the
-   * number of breakdowns.
-   * FIXME: register bank select now tries to handle complex break downs,
-   * but it emits an illegal instruction:
-   * %1:vgpr(<8 x s32>) = G_CONCAT_VECTORS %2:vgpr(s128), %3:vgpr(s128)
-   */
-  /* 2 128-bit loads */ {0, 128, VGPRRegBank}, {128, 128, VGPRRegBank},
-  /* 4 128-bit loads */ {0, 128, VGPRRegBank}, {128, 128, VGPRRegBank},
-                        {256, 128, VGPRRegBank}, {384, 128, VGPRRegBank}
-};
-
-const RegisterBankInfo::ValueMapping ValMappingsLoadSGPROnly[] {
-  /* 256-bit load */     {&LoadSGPROnlyBreakDown[0], 1},
-  /* 512-bit load */     {&LoadSGPROnlyBreakDown[1], 1},
-  /* <8 x i32> load  */  {&LoadSGPROnlyBreakDown[2], 8},
-  /* <16 x i32> load */  {&LoadSGPROnlyBreakDown[10], 16},
-  /* <4 x i64> load */   {&LoadSGPROnlyBreakDown[26], 4},
-  /* <8 x i64> load */   {&LoadSGPROnlyBreakDown[30], 8}
-};
-
-const RegisterBankInfo::ValueMapping *
-getValueMappingLoadSGPROnly(unsigned BankID, LLT SizeTy) {
-  unsigned Size = SizeTy.getSizeInBits();
-  if (Size < 256 || BankID == AMDGPU::SGPRRegBankID)
-    return getValueMapping(BankID, Size);
-
-  assert((Size == 256 || Size == 512) && BankID == AMDGPU::VGPRRegBankID);
-
-  // Default to using the non-split ValueMappings, we will use these if
-  // the register bank is SGPR or if we don't know how to handle the vector
-  // type.
-  unsigned Idx = Size == 256 ? 0 : 1;
-
-  // We need to split this load if it has a vgpr pointer.
-  if (BankID == AMDGPU::VGPRRegBankID) {
-    if (SizeTy == LLT::vector(8, 32))
-      Idx = 2;
-    else if (SizeTy == LLT::vector(16, 32))
-      Idx = 3;
-    else if (SizeTy == LLT::vector(4, 64))
-      Idx = 4;
-    else if (SizeTy == LLT::vector(8, 64))
-      Idx = 5;
-  }
-
-  return &ValMappingsLoadSGPROnly[Idx];
+  assert(BankID == AMDGPU::SGPRRegBankID);
+  return &ValMappingsSGPR64OnlyVGPR32[1];
 }
 
 

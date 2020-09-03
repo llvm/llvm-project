@@ -17,11 +17,9 @@
 #include "llvm/Support/WindowsError.h"
 
 // The Windows.h header must be the last one included.
-#include "WindowsSupport.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
 
-namespace {
-
-DWORD getWindowsProtectionFlags(unsigned Flags) {
+static DWORD getWindowsProtectionFlags(unsigned Flags) {
   switch (Flags & llvm::sys::Memory::MF_RWE_MASK) {
   // Contrary to what you might expect, the Windows page protection flags
   // are not a bitwise combination of RWX values
@@ -50,7 +48,7 @@ DWORD getWindowsProtectionFlags(unsigned Flags) {
 // While we'd be happy to allocate single pages, the Windows allocation
 // granularity may be larger than a single page (in practice, it is 64K)
 // so mapping less than that will create an unreachable fragment of memory.
-size_t getAllocationGranularity() {
+static size_t getAllocationGranularity() {
   SYSTEM_INFO  Info;
   ::GetSystemInfo(&Info);
   if (Info.dwPageSize > Info.dwAllocationGranularity)
@@ -90,8 +88,6 @@ static size_t enableProcessLargePages() {
     return LargePageMin;
   return 0;
 }
-
-} // namespace
 
 namespace llvm {
 namespace sys {

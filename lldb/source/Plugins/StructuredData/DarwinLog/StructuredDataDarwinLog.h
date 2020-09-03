@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef StructuredDataDarwinLog_h
-#define StructuredDataDarwinLog_h
+#ifndef LLDB_SOURCE_PLUGINS_STRUCTUREDDATA_DARWINLOG_STRUCTUREDDATADARWINLOG_H
+#define LLDB_SOURCE_PLUGINS_STRUCTUREDDATA_DARWINLOG_STRUCTUREDDATADARWINLOG_H
 
 #include "lldb/Target/StructuredDataPlugin.h"
 
@@ -34,7 +34,7 @@ public:
 
   /// Return whether the DarwinLog functionality is enabled.
   ///
-  /// The DarwinLog functionality is enabled if the user expicitly enabled
+  /// The DarwinLog functionality is enabled if the user explicitly enabled
   /// it with the enable command, or if the user has the setting set
   /// that controls if we always enable it for newly created/attached
   /// processes.
@@ -115,4 +115,4 @@ private:
 };
 }
 
-#endif /* StructuredDataPluginDarwinLog_hpp */
+#endif // LLDB_SOURCE_PLUGINS_STRUCTUREDDATA_DARWINLOG_STRUCTUREDDATADARWINLOG_H

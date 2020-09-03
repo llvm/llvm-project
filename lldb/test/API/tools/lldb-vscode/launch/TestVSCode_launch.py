@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbvscode_testcase
+import time
 import os
 
 
@@ -34,6 +35,31 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         lines = output.splitlines()
         self.assertTrue(program in lines[0],
                         "make sure program path is in first argument")
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_termination(self):
+        '''
+            Tests the correct termination of lldb-vscode upon a 'disconnect'
+            request.
+        '''
+        self.create_debug_adaptor()
+        # The underlying lldb-vscode process must be alive
+        self.assertEqual(self.vscode.process.poll(), None)
+
+        # The lldb-vscode process should finish even though
+        # we didn't close the communication socket explicitly
+        self.vscode.request_disconnect()
+
+        # Wait until the underlying lldb-vscode process dies.
+        # We need to do this because the popen.wait function in python2.7
+        # doesn't have a timeout argument.
+        for _ in range(10):
+            time.sleep(1)
+            if self.vscode.process.poll() is not None:
+                break
+        # Check the return code
+        self.assertEqual(self.vscode.process.poll(), 0)
 
     @skipIfWindows
     @skipIfRemote
@@ -106,7 +132,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         for line in lines:
             if line.startswith(prefix):
                 found = True
-                self.assertTrue(program_parent_dir == line[len(prefix):],
+                self.assertEquals(program_parent_dir, line[len(prefix):],
                                 "lldb-vscode working dir '%s' == '%s'" % (
                                     program_parent_dir, line[6:]))
         self.assertTrue(found, "verified lldb-vscode working directory")
@@ -132,7 +158,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
             if line.startswith(prefix):
                 found = True
                 quoted_path = '"%s"' % (program_dir)
-                self.assertTrue(quoted_path == line[len(prefix):],
+                self.assertEquals(quoted_path, line[len(prefix):],
                                 "lldb-vscode working dir %s == %s" % (
                                     quoted_path, line[6:]))
         self.assertTrue(found, 'found "sourcePath" in console output')
@@ -150,7 +176,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.continue_to_exit()
         # Now get the STDOUT and verify our program argument is correct
         output = self.get_stdout()
-        self.assertTrue(output is None or len(output) == 0,
+        self.assertEquals(output, None,
                         "expect no program output")
 
     @skipIfWindows
@@ -268,8 +294,9 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfRemote
     def test_commands(self):
         '''
-            Tests the "initCommands", "preRunCommands", "stopCommands" and
-            "exitCommands" that can be passed during launch.
+            Tests the "initCommands", "preRunCommands", "stopCommands",
+            "terminateCommands" and "exitCommands" that can be passed during
+            launch.
 
             "initCommands" are a list of LLDB commands that get executed
             before the targt is created.
@@ -279,17 +306,21 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
             time the program stops.
             "exitCommands" are a list of LLDB commands that get executed when
             the process exits
+            "terminateCommands" are a list of LLDB commands that get executed when
+            the debugger session terminates.
         '''
         program = self.getBuildArtifact("a.out")
         initCommands = ['target list', 'platform list']
         preRunCommands = ['image list a.out', 'image dump sections a.out']
         stopCommands = ['frame variable', 'bt']
         exitCommands = ['expr 2+3', 'expr 3+4']
+        terminateCommands = ['expr 4+2']
         self.build_and_launch(program,
                               initCommands=initCommands,
                               preRunCommands=preRunCommands,
                               stopCommands=stopCommands,
-                              exitCommands=exitCommands)
+                              exitCommands=exitCommands,
+                              terminateCommands=terminateCommands)
 
         # Get output from the console. This should contain both the
         # "initCommands" and the "preRunCommands".
@@ -304,10 +335,10 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         second_line = line_number(source, '// breakpoint 2')
         lines = [first_line, second_line]
 
-        # Set 2 breakoints so we can verify that "stopCommands" get run as the
+        # Set 2 breakpoints so we can verify that "stopCommands" get run as the
         # breakpoints get hit
         breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertTrue(len(breakpoint_ids) == len(lines),
+        self.assertEquals(len(breakpoint_ids), len(lines),
                         "expect correct number of breakpoints")
 
         # Continue after launch and hit the first breakpoint.
@@ -328,8 +359,10 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.continue_to_exit()
         # Get output from the console. This should contain both the
         # "exitCommands" that were run after the second breakpoint was hit
-        output = self.get_console(timeout=1.0)
+        # and the "terminateCommands" due to the debugging session ending
+        output = self.collect_console(duration=1.0)
         self.verify_commands('exitCommands', output, exitCommands)
+        self.verify_commands('terminateCommands', output, terminateCommands)
 
     @skipIfWindows
     @skipIfRemote
@@ -343,7 +376,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         source = 'main.c'
         first_line = line_number(source, '// breakpoint 1')
         second_line = line_number(source, '// breakpoint 2')
-        # Set target binary and 2 breakoints
+        # Set target binary and 2 breakpoints
         # then we can varify the "launchCommands" get run
         # also we can verify that "stopCommands" get run as the
         # breakpoints get hit
@@ -394,3 +427,25 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         # "exitCommands" that were run after the second breakpoint was hit
         output = self.get_console(timeout=1.0)
         self.verify_commands('exitCommands', output, exitCommands)
+
+    @skipIfWindows
+    @skipIfNetBSD # Hangs on NetBSD as well
+    @skipIfDarwin
+    @skipIf(archs="aarch64") # Example of a flaky run http://lab.llvm.org:8011/builders/lldb-aarch64-ubuntu/builds/5540/steps/test/logs/stdio
+    def test_terminate_commands(self):
+        '''
+            Tests that the "terminateCommands", that can be passed during
+            launch, are run when the debugger is disconnected.
+        '''
+        self.build_and_create_debug_adaptor()
+        program = self.getBuildArtifact("a.out")
+        
+        terminateCommands = ['expr 4+2']
+        self.launch(program=program,
+                    terminateCommands=terminateCommands)
+        self.get_console()
+        # Once it's disconnected the console should contain the
+        # "terminateCommands"
+        self.vscode.request_disconnect(terminateDebuggee=True)
+        output = self.collect_console(duration=1.0)
+        self.verify_commands('terminateCommands', output, terminateCommands)

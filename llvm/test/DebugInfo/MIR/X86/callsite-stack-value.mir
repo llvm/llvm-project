@@ -1,5 +1,5 @@
 # RUN: llc -start-after=livedebugvalues -mtriple=x86_64-apple-darwin -o - %s -filetype=obj \
-# RUN:   | llvm-dwarfdump - | FileCheck %s -implicit-check-not=call_site_parameter
+# RUN:   -emit-call-site-info | llvm-dwarfdump - | FileCheck %s -implicit-check-not=call_site_parameter
 
 # CHECK: DW_TAG_formal_parameter
 # CHECK-NEXT: DW_AT_location
@@ -59,7 +59,7 @@ body:             |
     CFI_INSTRUCTION offset $rbp, -16
     $rbp = frame-setup MOV64rr $rsp
     CFI_INSTRUCTION def_cfa_register $rbp
-    renamable $eax = CVTTSS2SIrr killed renamable $xmm0, implicit $mxcsr, debug-location !31
+    renamable $eax = nofpexcept CVTTSS2SIrr killed renamable $xmm0, implicit $mxcsr, debug-location !31
     DBG_VALUE $eax, $noreg, !29, !DIExpression(), debug-location !31
     renamable $rdi = MOVSX64rr32 killed renamable $eax, debug-location !31
     renamable $eax = LEA64_32r $noreg, 4, renamable $rdi, 0, $noreg, debug-location !31

@@ -16,12 +16,12 @@ namespace include_fixer {
 InMemorySymbolIndex::InMemorySymbolIndex(
     const std::vector<SymbolAndSignals> &Symbols) {
   for (const auto &Symbol : Symbols)
-    LookupTable[Symbol.Symbol.getName()].push_back(Symbol);
+    LookupTable[std::string(Symbol.Symbol.getName())].push_back(Symbol);
 }
 
 std::vector<SymbolAndSignals>
 InMemorySymbolIndex::search(llvm::StringRef Identifier) {
-  auto I = LookupTable.find(Identifier);
+  auto I = LookupTable.find(std::string(Identifier));
   if (I != LookupTable.end())
     return I->second;
   return {};

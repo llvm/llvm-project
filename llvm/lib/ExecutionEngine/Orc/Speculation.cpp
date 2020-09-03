@@ -16,9 +16,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Support/Debug.h"
-
-#include <vector>
 
 namespace llvm {
 
@@ -96,7 +93,7 @@ void IRSpeculationLayer::emit(MaterializationResponsibility R,
               M, LoadValueTy, false, GlobalValue::LinkageTypes::InternalLinkage,
               ConstantInt::get(LoadValueTy, 0),
               "__orc_speculate.guard.for." + Fn.getName());
-          SpeculatorGuard->setAlignment(Align::None());
+          SpeculatorGuard->setAlignment(Align(1));
           SpeculatorGuard->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
 
           BasicBlock &ProgramEntry = Fn.getEntryBlock();

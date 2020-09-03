@@ -268,8 +268,8 @@ public:
   }
 
   void setError(const Twine &Message, StringRef::iterator Position) {
-    if (Current >= End)
-      Current = End - 1;
+    if (Position >= End)
+      Position = End - 1;
 
     // propagate the error if possible
     if (EC)
@@ -278,12 +278,8 @@ public:
     // Don't print out more errors after the first one we encounter. The rest
     // are just the result of the first, and have no meaning.
     if (!Failed)
-      printError(SMLoc::getFromPointer(Current), SourceMgr::DK_Error, Message);
+      printError(SMLoc::getFromPointer(Position), SourceMgr::DK_Error, Message);
     Failed = true;
-  }
-
-  void setError(const Twine &Message) {
-    setError(Message, Current);
   }
 
   /// Returns true if an error occurred while parsing.
@@ -934,13 +930,13 @@ void Scanner::scan_ns_uri_char() {
 
 bool Scanner::consume(uint32_t Expected) {
   if (Expected >= 0x80) {
-    setError("Cannot consume non-ascii characters");
+    setError("Cannot consume non-ascii characters", Current);
     return false;
   }
   if (Current == End)
     return false;
   if (uint8_t(*Current) >= 0x80) {
-    setError("Cannot consume non-ascii characters");
+    setError("Cannot consume non-ascii characters", Current);
     return false;
   }
   if (uint8_t(*Current) == Expected) {
@@ -1642,7 +1638,7 @@ bool Scanner::scanBlockScalar(bool IsLiteral) {
   Token T;
   T.Kind = Token::TK_BlockScalar;
   T.Range = StringRef(Start, Current - Start);
-  T.Value = Str.str().str();
+  T.Value = std::string(Str);
   TokenQueue.push_back(T);
   return true;
 }
@@ -1763,7 +1759,7 @@ bool Scanner::fetchMoreTokens() {
                       && !isBlankOrBreak(Current + 2)))
     return scanPlainScalar();
 
-  setError("Unrecognized character while tokenizing.");
+  setError("Unrecognized character while tokenizing.", Current);
   return false;
 }
 
@@ -1819,11 +1815,11 @@ std::string Node::getVerbatimTag() const {
   if (!Raw.empty() && Raw != "!") {
     std::string Ret;
     if (Raw.find_last_of('!') == 0) {
-      Ret = Doc->getTagMap().find("!")->second;
+      Ret = std::string(Doc->getTagMap().find("!")->second);
       Ret += Raw.substr(1);
       return Ret;
     } else if (Raw.startswith("!!")) {
-      Ret = Doc->getTagMap().find("!!")->second;
+      Ret = std::string(Doc->getTagMap().find("!!")->second);
       Ret += Raw.substr(2);
       return Ret;
     } else {
@@ -1831,7 +1827,7 @@ std::string Node::getVerbatimTag() const {
       std::map<StringRef, StringRef>::const_iterator It =
           Doc->getTagMap().find(TagHandle);
       if (It != Doc->getTagMap().end())
-        Ret = It->second;
+        Ret = std::string(It->second);
       else {
         Token T;
         T.Kind = Token::TK_Tag;

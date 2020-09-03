@@ -35,7 +35,7 @@ class MSP430MachineFunctionInfo : public MachineFunctionInfo {
   /// SRetReturnReg - Some subtargets require that sret lowering includes
   /// returning the value of the returned struct in a register. This field
   /// holds the virtual register into which the sret argument is passed.
-  unsigned SRetReturnReg = 0;
+  Register SRetReturnReg;
 
 public:
   MSP430MachineFunctionInfo() = default;
@@ -46,8 +46,8 @@ public:
   unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize; }
   void setCalleeSavedFrameSize(unsigned bytes) { CalleeSavedFrameSize = bytes; }
 
-  unsigned getSRetReturnReg() const { return SRetReturnReg; }
-  void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
+  Register getSRetReturnReg() const { return SRetReturnReg; }
+  void setSRetReturnReg(Register Reg) { SRetReturnReg = Reg; }
 
   int getRAIndex() const { return ReturnAddrIndex; }
   void setRAIndex(int Index) { ReturnAddrIndex = Index; }

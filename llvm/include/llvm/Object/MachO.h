@@ -65,7 +65,7 @@ using dice_iterator = content_iterator<DiceRef>;
 /// ExportEntry encapsulates the current-state-of-the-walk used when doing a
 /// non-recursive walk of the trie data structure.  This allows you to iterate
 /// across all exported symbols using:
-///      Error Err;
+///      Error Err = Error::success();
 ///      for (const llvm::object::ExportEntry &AnExport : Obj->exports(&Err)) {
 ///      }
 ///      if (Err) { report error ...
@@ -160,7 +160,7 @@ private:
 /// MachORebaseEntry encapsulates the current state in the decompression of
 /// rebasing opcodes. This allows you to iterate through the compressed table of
 /// rebasing using:
-///    Error Err;
+///    Error Err = Error::success();
 ///    for (const llvm::object::MachORebaseEntry &Entry : Obj->rebaseTable(&Err)) {
 ///    }
 ///    if (Err) { report error ...
@@ -204,7 +204,7 @@ using rebase_iterator = content_iterator<MachORebaseEntry>;
 /// MachOBindEntry encapsulates the current state in the decompression of
 /// binding opcodes. This allows you to iterate through the compressed table of
 /// bindings using:
-///    Error Err;
+///    Error Err = Error::success();
 ///    for (const llvm::object::MachOBindEntry &Entry : Obj->bindTable(&Err)) {
 ///    }
 ///    if (Err) { report error ...
@@ -287,7 +287,7 @@ public:
   uint32_t getSymbolAlignment(DataRefImpl Symb) const override;
   uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override;
   Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
-  uint32_t getSymbolFlags(DataRefImpl Symb) const override;
+  Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override;
   Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
   unsigned getSymbolSectionID(SymbolRef Symb) const;
   unsigned getSectionID(SectionRef Sec) const;
@@ -309,6 +309,7 @@ public:
   bool isSectionBSS(DataRefImpl Sec) const override;
   bool isSectionVirtual(DataRefImpl Sec) const override;
   bool isSectionBitcode(DataRefImpl Sec) const override;
+  bool isDebugSection(StringRef SectionName) const override;
 
   /// When dsymutil generates the companion file, it strips all unnecessary
   /// sections (e.g. everything in the _TEXT segment) by omitting their body
@@ -644,7 +645,7 @@ public:
     Version = utostr(major) + "." + utostr(minor);
     if (update != 0)
       Version += "." + utostr(update);
-    return Version.str();
+    return std::string(std::string(Version.str()));
   }
 
 private:

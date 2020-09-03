@@ -34,7 +34,7 @@ static std::string LibPath(const std::string Name = "TestPlugin") {
   std::string Path = sys::fs::getMainExecutable(Argv0, Ptr);
   llvm::SmallString<256> Buf{sys::path::parent_path(Path)};
   sys::path::append(Buf, (Name + LTDL_SHLIB_EXT).c_str());
-  return Buf.str();
+  return std::string(Buf.str());
 }
 
 TEST(PluginsTests, LoadPlugin) {

@@ -4,15 +4,15 @@ import sys
 
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.target_triple = "@TARGET_TRIPLE@"
-config.llvm_src_root = "@LLVM_SOURCE_DIR@"
-config.llvm_obj_root = "@LLVM_BINARY_DIR@"
-config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
-config.llvm_lib_dir = "@LLVM_LIBRARY_DIR@"
-config.llvm_shlib_dir = "@SHLIBDIR@"
+config.llvm_src_root = path(r"@LLVM_SOURCE_DIR@")
+config.llvm_obj_root = path(r"@LLVM_BINARY_DIR@")
+config.llvm_tools_dir = path(r"@LLVM_TOOLS_DIR@")
+config.llvm_lib_dir = path(r"@LLVM_LIBRARY_DIR@")
+config.llvm_shlib_dir = path(r"@SHLIBDIR@")
 config.llvm_shlib_ext = "@SHLIBEXT@"
 config.llvm_exe_ext = "@EXEEXT@"
-config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
-config.python_executable = "@PYTHON_EXECUTABLE@"
+config.lit_tools_dir = path(r"@LLVM_LIT_TOOLS_DIR@")
+config.python_executable = "@Python3_EXECUTABLE@"
 config.gold_executable = "@GOLD_EXECUTABLE@"
 config.ld64_executable = "@LD64_EXECUTABLE@"
 config.ocamlfind_executable = "@OCAMLFIND@"
@@ -33,7 +33,7 @@ config.host_cxx = "@HOST_CXX@"
 config.host_ldflags = '@HOST_LDFLAGS@'
 config.llvm_use_intel_jitevents = @LLVM_USE_INTEL_JITEVENTS@
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
-config.have_zlib = @LLVM_ENABLE_ZLIB@
+config.have_zlib = @HAVE_LIBZ@
 config.have_libxar = @HAVE_LIBXAR@
 config.have_dia_sdk = @LLVM_ENABLE_DIA_SDK@
 config.enable_ffi = @LLVM_ENABLE_FFI@
@@ -48,6 +48,7 @@ config.have_opt_viewer_modules = @LLVM_HAVE_OPT_VIEWER_MODULES@
 config.libcxx_used = @LLVM_LIBCXX_USED@
 config.has_plugins = @LLVM_ENABLE_PLUGINS@
 config.linked_bye_extension = @LLVM_BYE_LINK_INTO_TOOLS@
+config.have_tf_aot = @LLVM_HAVE_TF_AOT@
 
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
@@ -63,4 +64,5 @@ import lit.llvm
 lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@LLVM_SOURCE_DIR@/test/lit.cfg.py")
+lit_config.load_config(
+    config, os.path.join(config.llvm_src_root, "test/lit.cfg.py"))

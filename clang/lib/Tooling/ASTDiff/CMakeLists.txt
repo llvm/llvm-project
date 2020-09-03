@@ -8,4 +8,7 @@ add_clang_library(clangToolingASTDiff
   clangBasic
   clangAST
   clangLex
+
+  DEPENDS
+  omp_gen
   )

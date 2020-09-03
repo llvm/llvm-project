@@ -13,8 +13,16 @@ SYNOPSIS
 DESCRIPTION
 -----------
 
-:program:`lldb` is a fully featured debugger. It is a command line interface to
-the LLDB debugger library.
+:program:`lldb` is a next generation, high-performance debugger. It is built as
+a set of reusable components which highly leverage existing libraries in the
+larger LLVM Project, such as the Clang expression parser and LLVM disassembler.
+
+:program:`lldb` is the default debugger in Xcode on macOS and supports
+debugging Swift, C, Objective-C and C++ on the desktop and iOS devices and
+simulator.
+
+All of the code in the LLDB project is available under the Apache 2.0 License
+with LLVM exceptions.
 
 ATTACHING
 ---------
@@ -298,11 +306,15 @@ CONFIGURATION FILES
 :program:`lldb` reads things like settings, aliases and commands from the
 .lldbinit file.
 
-First, it will read the application specific init file whose name is
-~/.lldbinit followed by a "-" and the name of the current program. This would
-be ~/.lldbinit-lldb for the command line :program:`lldb` and ~/.lldbinit-Xcode
-for Xcode. If there is no application specific init file, the global
-~/.lldbinit is read.
+First, :program:`lldb` will try to read the application specific init file
+whose name is ~/.lldbinit followed by a "-" and the name of the current
+program. This would be ~/.lldbinit-lldb for the command line :program:`lldb`
+and ~/.lldbinit-Xcode for Xcode. If there is no application specific init
+file, :program:`lldb` will look for an init file in the home directory.
+If launched with a `REPL`_ option, it will first look for a REPL configuration
+file, specific to the REPL language. If this file doesn't exist, or :program:`lldb`
+wasn't launch with `REPL`_, meaning there is neither a REPL init file nor an
+application specific init file, `lldb` will fallback to the global ~/.lldbinit.
 
 Secondly, it will look for an .lldbinit file in the current working directory.
 For security reasons, :program:`lldb` will print a warning and not source this

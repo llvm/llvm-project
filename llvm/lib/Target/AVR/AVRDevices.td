@@ -121,6 +121,11 @@ def FeatureTinyEncoding   : SubtargetFeature<"tinyencoding",
                                   "The device has Tiny core specific "
                                   "instruction encodings">;
 
+// The device has CPU registers mapped in data address space
+def FeatureMMR : SubtargetFeature<"memmappedregs", "m_hasMemMappedGPR",
+                                  "true", "The device has CPU registers "
+                                  "mapped in data address space">;
+
 class ELFArch<string name>  : SubtargetFeature<"", "ELFArch",
                                     !strconcat("ELF::",name), "">;
 
@@ -152,7 +157,7 @@ def ELFArchXMEGA7  : ELFArch<"EF_AVR_ARCH_XMEGA7">;
 // device should have.
 def FamilyAVR0           : Family<"avr0", []>;
 
-def FamilyAVR1           : Family<"avr1", [FamilyAVR0, FeatureLPM]>;
+def FamilyAVR1           : Family<"avr1", [FamilyAVR0, FeatureLPM, FeatureMMR]>;
 
 def FamilyAVR2           : Family<"avr2",
                                  [FamilyAVR1, FeatureIJMPCALL, FeatureADDSUBIW,
@@ -190,11 +195,14 @@ def FamilyAVR6           : Family<"avr6",
 
 def FamilyTiny           : Family<"avrtiny",
                                  [FamilyAVR0, FeatureBREAK, FeatureSRAM,
-                                  FeatureTinyEncoding]>;
+                                  FeatureTinyEncoding, FeatureMMR]>;
 
 def FamilyXMEGA          : Family<"xmega",
-                                 [FamilyAVR51, FeatureEIJMPCALL, FeatureSPMX,
-                                  FeatureDES]>;
+                                 [FamilyAVR0, FeatureLPM, FeatureIJMPCALL, FeatureADDSUBIW,
+                                  FeatureSRAM, FeatureJMPCALL, FeatureMultiplication,
+                                  FeatureMOVW, FeatureLPMX, FeatureSPM,
+                                  FeatureBREAK, FeatureEIJMPCALL, FeatureSPMX,
+                                  FeatureDES, FeatureELPM, FeatureELPMX]>;
 
 def FamilyXMEGAU         : Family<"xmegau",
                                   [FamilyXMEGA, FeatureRMW]>;
@@ -208,7 +216,7 @@ def FeatureSetSpecial    : FeatureSet<"special",
                                        FeatureLPM, FeatureLPMX, FeatureELPM,
                                        FeatureELPMX, FeatureSPM, FeatureSPMX,
                                        FeatureDES, FeatureRMW,
-                                       FeatureMultiplication, FeatureBREAK]>;
+                                       FeatureMultiplication, FeatureBREAK, FeatureMMR]>;
 
 //===---------------------------------------------------------------------===//
 // AVR microcontrollers supported.

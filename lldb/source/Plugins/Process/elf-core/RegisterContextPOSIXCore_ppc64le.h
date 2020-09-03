@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextCorePOSIX_ppc64le_h_
-#define liblldb_RegisterContextCorePOSIX_ppc64le_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_PPC64LE_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_PPC64LE_H
 
 #include "Plugins/Process/Utility/RegisterContextPOSIX_ppc64le.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
@@ -45,4 +45,4 @@ private:
   lldb_private::DataExtractor m_vsx;
 };
 
-#endif // liblldb_RegisterContextCorePOSIX_ppc64le_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_PPC64LE_H

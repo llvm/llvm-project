@@ -40,9 +40,6 @@ void MoveConstArgCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   auto MoveCallMatcher =
       callExpr(callee(functionDecl(hasName("::std::move"))), argumentCountIs(1),
                unless(isInTemplateInstantiation()))
@@ -54,8 +51,10 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
       MoveCallMatcher, parmVarDecl(hasType(references(isConstQualified()))));
 
   Finder->addMatcher(callExpr(ConstParamMatcher).bind("receiving-expr"), this);
-  Finder->addMatcher(cxxConstructExpr(ConstParamMatcher).bind("receiving-expr"),
-                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               cxxConstructExpr(ConstParamMatcher).bind("receiving-expr")),
+      this);
 }
 
 void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {

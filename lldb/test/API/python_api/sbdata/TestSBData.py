@@ -21,6 +21,7 @@ class SBDataAPICase(TestBase):
         self.line = line_number('main.cpp', '// set breakpoint here')
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # SBData::SetData is not instrumented.
     def test_byte_order_and_address_byte_size(self):
         """Test the SBData::SetData() to ensure the byte order and address
         byte size are obeyed"""
@@ -41,6 +42,7 @@ class SBDataAPICase(TestBase):
         self.assertTrue(addr == 0x8877665544332211);
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # SBData::SetData is not instrumented.
     def test_with_run_command(self):
         """Test the SBData APIs."""
         self.build()

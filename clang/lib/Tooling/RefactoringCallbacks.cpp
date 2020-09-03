@@ -50,8 +50,8 @@ public:
     for (const auto &Callback : Refactoring.Callbacks) {
       for (const auto &Replacement : Callback->getReplacements()) {
         llvm::Error Err =
-            Refactoring.FileToReplaces[Replacement.getFilePath()].add(
-                Replacement);
+            Refactoring.FileToReplaces[std::string(Replacement.getFilePath())]
+                .add(Replacement);
         if (Err) {
           llvm::errs() << "Skipping replacement " << Replacement.toString()
                        << " due to this error:\n"
@@ -83,7 +83,7 @@ static Replacement replaceStmtWithStmt(SourceManager &Sources, const Stmt &From,
 }
 
 ReplaceStmtWithText::ReplaceStmtWithText(StringRef FromId, StringRef ToText)
-    : FromId(FromId), ToText(ToText) {}
+    : FromId(std::string(FromId)), ToText(std::string(ToText)) {}
 
 void ReplaceStmtWithText::run(
     const ast_matchers::MatchFinder::MatchResult &Result) {
@@ -101,7 +101,7 @@ void ReplaceStmtWithText::run(
 }
 
 ReplaceStmtWithStmt::ReplaceStmtWithStmt(StringRef FromId, StringRef ToId)
-    : FromId(FromId), ToId(ToId) {}
+    : FromId(std::string(FromId)), ToId(std::string(ToId)) {}
 
 void ReplaceStmtWithStmt::run(
     const ast_matchers::MatchFinder::MatchResult &Result) {
@@ -121,7 +121,7 @@ void ReplaceStmtWithStmt::run(
 
 ReplaceIfStmtWithItsBody::ReplaceIfStmtWithItsBody(StringRef Id,
                                                    bool PickTrueBranch)
-    : Id(Id), PickTrueBranch(PickTrueBranch) {}
+    : Id(std::string(Id)), PickTrueBranch(PickTrueBranch) {}
 
 void ReplaceIfStmtWithItsBody::run(
     const ast_matchers::MatchFinder::MatchResult &Result) {
@@ -153,7 +153,7 @@ void ReplaceIfStmtWithItsBody::run(
 
 ReplaceNodeWithTemplate::ReplaceNodeWithTemplate(
     llvm::StringRef FromId, std::vector<TemplateElement> Template)
-    : FromId(FromId), Template(std::move(Template)) {}
+    : FromId(std::string(FromId)), Template(std::move(Template)) {}
 
 llvm::Expected<std::unique_ptr<ReplaceNodeWithTemplate>>
 ReplaceNodeWithTemplate::create(StringRef FromId, StringRef ToTemplate) {
@@ -172,8 +172,8 @@ ReplaceNodeWithTemplate::create(StringRef FromId, StringRef ToTemplate) {
                   ToTemplate.substr(Index),
               llvm::inconvertibleErrorCode());
         }
-        std::string SourceNodeName =
-            ToTemplate.substr(Index + 2, EndOfIdentifier - Index - 2);
+        std::string SourceNodeName = std::string(
+            ToTemplate.substr(Index + 2, EndOfIdentifier - Index - 2));
         ParsedTemplate.push_back(
             TemplateElement{TemplateElement::Identifier, SourceNodeName});
         Index = EndOfIdentifier + 1;
@@ -185,9 +185,9 @@ ReplaceNodeWithTemplate::create(StringRef FromId, StringRef ToTemplate) {
       }
     } else {
       size_t NextIndex = ToTemplate.find('$', Index + 1);
-      ParsedTemplate.push_back(
-          TemplateElement{TemplateElement::Literal,
-                          ToTemplate.substr(Index, NextIndex - Index)});
+      ParsedTemplate.push_back(TemplateElement{
+          TemplateElement::Literal,
+          std::string(ToTemplate.substr(Index, NextIndex - Index))});
       Index = NextIndex;
     }
   }

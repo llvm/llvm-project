@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NOT_NULL_TERMINATED_RESULT_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NOT_NULL_TERMINATED_RESULT_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -36,7 +36,7 @@ private:
   // If non-zero it is specifying if the target environment is considered to
   // implement '_s' suffixed memory and string handler functions which are safer
   // than older version (e.g. 'memcpy_s()'). The default value is '1'.
-  const int WantToUseSafeFunctions;
+  const bool WantToUseSafeFunctions;
 
   bool UseSafeFunctions = false;
 

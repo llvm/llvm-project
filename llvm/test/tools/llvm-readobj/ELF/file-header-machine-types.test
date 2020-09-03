@@ -1,0 +1,487 @@
+## Show that all machine codes are correctly printed.
+
+# RUN: yaml2obj %s -o %t.none.o -D MACHINE=EM_NONE
+# RUN: llvm-readelf --file-headers %t.none.o | FileCheck %s -DMACHINE="None"
+
+# RUN: yaml2obj %s -o %t.m32.o -D MACHINE=EM_M32
+# RUN: llvm-readelf --file-headers %t.m32.o | FileCheck %s -DMACHINE="WE32100"
+
+# RUN: yaml2obj %s -o %t.sparc.o -D MACHINE=EM_SPARC
+# RUN: llvm-readelf --file-headers %t.sparc.o | FileCheck %s -DMACHINE="Sparc"
+
+# RUN: yaml2obj %s -o %t.386.o -D MACHINE=EM_386
+# RUN: llvm-readelf --file-headers %t.386.o | FileCheck %s -DMACHINE="Intel 80386"
+
+# RUN: yaml2obj %s -o %t.68k.o -D MACHINE=EM_68K
+# RUN: llvm-readelf --file-headers %t.68k.o | FileCheck %s -DMACHINE="MC68000"
+
+# RUN: yaml2obj %s -o %t.88k.o -D MACHINE=EM_88K
+# RUN: llvm-readelf --file-headers %t.88k.o | FileCheck %s -DMACHINE="MC88000"
+
+# RUN: yaml2obj %s -o %t.iamcu.o -D MACHINE=EM_IAMCU
+# RUN: llvm-readelf --file-headers %t.iamcu.o | FileCheck %s -DMACHINE="EM_IAMCU"
+
+# RUN: yaml2obj %s -o %t.860.o -D MACHINE=EM_860
+# RUN: llvm-readelf --file-headers %t.860.o | FileCheck %s -DMACHINE="Intel 80860"
+
+# RUN: yaml2obj %s -o %t.mips.o -D MACHINE=EM_MIPS
+# RUN: llvm-readelf --file-headers %t.mips.o | FileCheck %s -DMACHINE="MIPS R3000"
+
+# RUN: yaml2obj %s -o %t.s370.o -D MACHINE=EM_S370
+# RUN: llvm-readelf --file-headers %t.s370.o | FileCheck %s -DMACHINE="IBM System/370"
+
+# RUN: yaml2obj %s -o %t.mips_rs3_le.o -D MACHINE=EM_MIPS_RS3_LE
+# RUN: llvm-readelf --file-headers %t.mips_rs3_le.o | FileCheck %s -DMACHINE="MIPS R3000 little-endian"
+
+# RUN: yaml2obj %s -o %t.parisc.o -D MACHINE=EM_PARISC
+# RUN: llvm-readelf --file-headers %t.parisc.o | FileCheck %s -DMACHINE="HPPA"
+
+# RUN: yaml2obj %s -o %t.vpp500.o -D MACHINE=EM_VPP500
+# RUN: llvm-readelf --file-headers %t.vpp500.o | FileCheck %s -DMACHINE="Fujitsu VPP500"
+
+# RUN: yaml2obj %s -o %t.sparc32plus.o -D MACHINE=EM_SPARC32PLUS
+# RUN: llvm-readelf --file-headers %t.sparc32plus.o | FileCheck %s -DMACHINE="Sparc v8+"
+
+# RUN: yaml2obj %s -o %t.960.o -D MACHINE=EM_960
+# RUN: llvm-readelf --file-headers %t.960.o | FileCheck %s -DMACHINE="Intel 80960"
+
+# RUN: yaml2obj %s -o %t.ppc.o -D MACHINE=EM_PPC
+# RUN: llvm-readelf --file-headers %t.ppc.o | FileCheck %s -DMACHINE="PowerPC"
+
+# RUN: yaml2obj %s -o %t.ppc64.o -D MACHINE=EM_PPC64
+# RUN: llvm-readelf --file-headers %t.ppc64.o | FileCheck %s -DMACHINE="PowerPC64"
+
+# RUN: yaml2obj %s -o %t.s390.o -D MACHINE=EM_S390
+# RUN: llvm-readelf --file-headers %t.s390.o | FileCheck %s -DMACHINE="IBM S/390"
+
+# RUN: yaml2obj %s -o %t.spu.o -D MACHINE=EM_SPU
+# RUN: llvm-readelf --file-headers %t.spu.o | FileCheck %s -DMACHINE="SPU"
+
+# RUN: yaml2obj %s -o %t.v800.o -D MACHINE=EM_V800
+# RUN: llvm-readelf --file-headers %t.v800.o | FileCheck %s -DMACHINE="NEC V800 series"
+
+# RUN: yaml2obj %s -o %t.fr20.o -D MACHINE=EM_FR20
+# RUN: llvm-readelf --file-headers %t.fr20.o | FileCheck %s -DMACHINE="Fujistsu FR20"
+
+# RUN: yaml2obj %s -o %t.rh32.o -D MACHINE=EM_RH32
+# RUN: llvm-readelf --file-headers %t.rh32.o | FileCheck %s -DMACHINE="TRW RH-32"
+
+# RUN: yaml2obj %s -o %t.rce.o -D MACHINE=EM_RCE
+# RUN: llvm-readelf --file-headers %t.rce.o | FileCheck %s -DMACHINE="Motorola RCE"
+
+# RUN: yaml2obj %s -o %t.arm.o -D MACHINE=EM_ARM
+# RUN: llvm-readelf --file-headers %t.arm.o | FileCheck %s -DMACHINE="ARM"
+
+# RUN: yaml2obj %s -o %t.alpha.o -D MACHINE=EM_ALPHA
+# RUN: llvm-readelf --file-headers %t.alpha.o | FileCheck %s -DMACHINE="EM_ALPHA"
+
+# RUN: yaml2obj %s -o %t.sh.o -D MACHINE=EM_SH
+# RUN: llvm-readelf --file-headers %t.sh.o | FileCheck %s -DMACHINE="Hitachi SH"
+
+# RUN: yaml2obj %s -o %t.sparcv9.o -D MACHINE=EM_SPARCV9
+# RUN: llvm-readelf --file-headers %t.sparcv9.o | FileCheck %s -DMACHINE="Sparc v9"
+
+# RUN: yaml2obj %s -o %t.tricore.o -D MACHINE=EM_TRICORE
+# RUN: llvm-readelf --file-headers %t.tricore.o | FileCheck %s -DMACHINE="Siemens Tricore"
+
+# RUN: yaml2obj %s -o %t.arc.o -D MACHINE=EM_ARC
+# RUN: llvm-readelf --file-headers %t.arc.o | FileCheck %s -DMACHINE="ARC"
+
+# RUN: yaml2obj %s -o %t.h8_300.o -D MACHINE=EM_H8_300
+# RUN: llvm-readelf --file-headers %t.h8_300.o | FileCheck %s -DMACHINE="Hitachi H8/300"
+
+# RUN: yaml2obj %s -o %t.h8_300h.o -D MACHINE=EM_H8_300H
+# RUN: llvm-readelf --file-headers %t.h8_300h.o | FileCheck %s -DMACHINE="Hitachi H8/300H"
+
+# RUN: yaml2obj %s -o %t.h8s.o -D MACHINE=EM_H8S
+# RUN: llvm-readelf --file-headers %t.h8s.o | FileCheck %s -DMACHINE="Hitachi H8S"
+
+# RUN: yaml2obj %s -o %t.h8_500.o -D MACHINE=EM_H8_500
+# RUN: llvm-readelf --file-headers %t.h8_500.o | FileCheck %s -DMACHINE="Hitachi H8/500"
+
+# RUN: yaml2obj %s -o %t.ia_64.o -D MACHINE=EM_IA_64
+# RUN: llvm-readelf --file-headers %t.ia_64.o | FileCheck %s -DMACHINE="Intel IA-64"
+
+# RUN: yaml2obj %s -o %t.mips_x.o -D MACHINE=EM_MIPS_X
+# RUN: llvm-readelf --file-headers %t.mips_x.o | FileCheck %s -DMACHINE="Stanford MIPS-X"
+
+# RUN: yaml2obj %s -o %t.coldfire.o -D MACHINE=EM_COLDFIRE
+# RUN: llvm-readelf --file-headers %t.coldfire.o | FileCheck %s -DMACHINE="Motorola Coldfire"
+
+# RUN: yaml2obj %s -o %t.68hc12.o -D MACHINE=EM_68HC12
+# RUN: llvm-readelf --file-headers %t.68hc12.o | FileCheck %s -DMACHINE="Motorola MC68HC12 Microcontroller"
+
+# RUN: yaml2obj %s -o %t.mma.o -D MACHINE=EM_MMA
+# RUN: llvm-readelf --file-headers %t.mma.o | FileCheck %s -DMACHINE="Fujitsu Multimedia Accelerator"
+
+# RUN: yaml2obj %s -o %t.pcp.o -D MACHINE=EM_PCP
+# RUN: llvm-readelf --file-headers %t.pcp.o | FileCheck %s -DMACHINE="Siemens PCP"
+
+# RUN: yaml2obj %s -o %t.ncpu.o -D MACHINE=EM_NCPU
+# RUN: llvm-readelf --file-headers %t.ncpu.o | FileCheck %s -DMACHINE="Sony nCPU embedded RISC processor"
+
+# RUN: yaml2obj %s -o %t.ndri.o -D MACHINE=EM_NDR1
+# RUN: llvm-readelf --file-headers %t.ndri.o | FileCheck %s -DMACHINE="Denso NDR1 microprocesspr"
+
+# RUN: yaml2obj %s -o %t.starcore.o -D MACHINE=EM_STARCORE
+# RUN: llvm-readelf --file-headers %t.starcore.o | FileCheck %s -DMACHINE="Motorola Star*Core processor"
+
+# RUN: yaml2obj %s -o %t.me16.o -D MACHINE=EM_ME16
+# RUN: llvm-readelf --file-headers %t.me16.o | FileCheck %s -DMACHINE="Toyota ME16 processor"
+
+# RUN: yaml2obj %s -o %t.st100.o -D MACHINE=EM_ST100
+# RUN: llvm-readelf --file-headers %t.st100.o | FileCheck %s -DMACHINE="STMicroelectronics ST100 processor"
+
+# RUN: yaml2obj %s -o %t.tinyj.o -D MACHINE=EM_TINYJ
+# RUN: llvm-readelf --file-headers %t.tinyj.o | FileCheck %s -DMACHINE="Advanced Logic Corp. TinyJ embedded processor"
+
+# RUN: yaml2obj %s -o %t.x86_64.o -D MACHINE=EM_X86_64
+# RUN: llvm-readelf --file-headers %t.x86_64.o | FileCheck %s -DMACHINE="Advanced Micro Devices X86-64"
+
+# RUN: yaml2obj %s -o %t.pdsp.o -D MACHINE=EM_PDSP
+# RUN: llvm-readelf --file-headers %t.pdsp.o | FileCheck %s -DMACHINE="Sony DSP processor"
+
+# RUN: yaml2obj %s -o %t.pdp10.o -D MACHINE=EM_PDP10
+# RUN: llvm-readelf --file-headers %t.pdp10.o | FileCheck %s -DMACHINE="Digital Equipment Corp. PDP-10"
+
+# RUN: yaml2obj %s -o %t.pdp11.o -D MACHINE=EM_PDP11
+# RUN: llvm-readelf --file-headers %t.pdp11.o | FileCheck %s -DMACHINE="Digital Equipment Corp. PDP-11"
+
+# RUN: yaml2obj %s -o %t.fx66.o -D MACHINE=EM_FX66
+# RUN: llvm-readelf --file-headers %t.fx66.o | FileCheck %s -DMACHINE="Siemens FX66 microcontroller"
+
+# RUN: yaml2obj %s -o %t.st9plus.o -D MACHINE=EM_ST9PLUS
+# RUN: llvm-readelf --file-headers %t.st9plus.o | FileCheck %s -DMACHINE="STMicroelectronics ST9+ 8/16 bit microcontroller"
+
+# RUN: yaml2obj %s -o %t.st7.o -D MACHINE=EM_ST7
+# RUN: llvm-readelf --file-headers %t.st7.o | FileCheck %s -DMACHINE="STMicroelectronics ST7 8-bit microcontroller"
+
+# RUN: yaml2obj %s -o %t.68hc16.o -D MACHINE=EM_68HC16
+# RUN: llvm-readelf --file-headers %t.68hc16.o | FileCheck %s -DMACHINE="Motorola MC68HC16 Microcontroller"
+
+# RUN: yaml2obj %s -o %t.68hc11.o -D MACHINE=EM_68HC11
+# RUN: llvm-readelf --file-headers %t.68hc11.o | FileCheck %s -DMACHINE="Motorola MC68HC11 Microcontroller"
+
+# RUN: yaml2obj %s -o %t.68hc08.o -D MACHINE=EM_68HC08
+# RUN: llvm-readelf --file-headers %t.68hc08.o | FileCheck %s -DMACHINE="Motorola MC68HC08 Microcontroller"
+
+# RUN: yaml2obj %s -o %t.68hc05.o -D MACHINE=EM_68HC05
+# RUN: llvm-readelf --file-headers %t.68hc05.o | FileCheck %s -DMACHINE="Motorola MC68HC05 Microcontroller"
+
+# RUN: yaml2obj %s -o %t.svx.o -D MACHINE=EM_SVX
+# RUN: llvm-readelf --file-headers %t.svx.o | FileCheck %s -DMACHINE="Silicon Graphics SVx"
+
+# RUN: yaml2obj %s -o %t.st19.o -D MACHINE=EM_ST19
+# RUN: llvm-readelf --file-headers %t.st19.o | FileCheck %s -DMACHINE="STMicroelectronics ST19 8-bit microcontroller"
+
+# RUN: yaml2obj %s -o %t.vax.o -D MACHINE=EM_VAX
+# RUN: llvm-readelf --file-headers %t.vax.o | FileCheck %s -DMACHINE="Digital VAX"
+
+# RUN: yaml2obj %s -o %t.cris.o -D MACHINE=EM_CRIS
+# RUN: llvm-readelf --file-headers %t.cris.o | FileCheck %s -DMACHINE="Axis Communications 32-bit embedded processor"
+
+# RUN: yaml2obj %s -o %t.javelin.o -D MACHINE=EM_JAVELIN
+# RUN: llvm-readelf --file-headers %t.javelin.o | FileCheck %s -DMACHINE="Infineon Technologies 32-bit embedded cpu"
+
+# RUN: yaml2obj %s -o %t.firepath.o -D MACHINE=EM_FIREPATH
+# RUN: llvm-readelf --file-headers %t.firepath.o | FileCheck %s -DMACHINE="Element 14 64-bit DSP processor"
+
+# RUN: yaml2obj %s -o %t.zsp.o -D MACHINE=EM_ZSP
+# RUN: llvm-readelf --file-headers %t.zsp.o | FileCheck %s -DMACHINE="LSI Logic's 16-bit DSP processor"
+
+# RUN: yaml2obj %s -o %t.mmix.o -D MACHINE=EM_MMIX
+# RUN: llvm-readelf --file-headers %t.mmix.o | FileCheck %s -DMACHINE="Donald Knuth's educational 64-bit processor"
+
+# RUN: yaml2obj %s -o %t.huany.o -D MACHINE=EM_HUANY
+# RUN: llvm-readelf --file-headers %t.huany.o | FileCheck %s -DMACHINE="Harvard Universitys's machine-independent object format"
+
+# RUN: yaml2obj %s -o %t.prism.o -D MACHINE=EM_PRISM
+# RUN: llvm-readelf --file-headers %t.prism.o | FileCheck %s -DMACHINE="Vitesse Prism"
+
+# RUN: yaml2obj %s -o %t.avr.o -D MACHINE=EM_AVR
+# RUN: llvm-readelf --file-headers %t.avr.o | FileCheck %s -DMACHINE="Atmel AVR 8-bit microcontroller"
+
+# RUN: yaml2obj %s -o %t.fr30.o -D MACHINE=EM_FR30
+# RUN: llvm-readelf --file-headers %t.fr30.o | FileCheck %s -DMACHINE="Fujitsu FR30"
+
+# RUN: yaml2obj %s -o %t.d10v.o -D MACHINE=EM_D10V
+# RUN: llvm-readelf --file-headers %t.d10v.o | FileCheck %s -DMACHINE="Mitsubishi D10V"
+
+# RUN: yaml2obj %s -o %t.d30v.o -D MACHINE=EM_D30V
+# RUN: llvm-readelf --file-headers %t.d30v.o | FileCheck %s -DMACHINE="Mitsubishi D30V"
+
+# RUN: yaml2obj %s -o %t.v850.o -D MACHINE=EM_V850
+# RUN: llvm-readelf --file-headers %t.v850.o | FileCheck %s -DMACHINE="NEC v850"
+
+# RUN: yaml2obj %s -o %t.m32r.o -D MACHINE=EM_M32R
+# RUN: llvm-readelf --file-headers %t.m32r.o | FileCheck %s -DMACHINE="Renesas M32R (formerly Mitsubishi M32r)"
+
+# RUN: yaml2obj %s -o %t.mn10300.o -D MACHINE=EM_MN10300
+# RUN: llvm-readelf --file-headers %t.mn10300.o | FileCheck %s -DMACHINE="Matsushita MN10300"
+
+# RUN: yaml2obj %s -o %t.mn10200.o -D MACHINE=EM_MN10200
+# RUN: llvm-readelf --file-headers %t.mn10200.o | FileCheck %s -DMACHINE="Matsushita MN10200"
+
+# RUN: yaml2obj %s -o %t.pj.o -D MACHINE=EM_PJ
+# RUN: llvm-readelf --file-headers %t.pj.o | FileCheck %s -DMACHINE="picoJava"
+
+# RUN: yaml2obj %s -o %t.openrisc.o -D MACHINE=EM_OPENRISC
+# RUN: llvm-readelf --file-headers %t.openrisc.o | FileCheck %s -DMACHINE="OpenRISC 32-bit embedded processor"
+
+# RUN: yaml2obj %s -o %t.arc_compact.o -D MACHINE=EM_ARC_COMPACT
+# RUN: llvm-readelf --file-headers %t.arc_compact.o | FileCheck %s -DMACHINE="EM_ARC_COMPACT"
+
+# RUN: yaml2obj %s -o %t.xtensa.o -D MACHINE=EM_XTENSA
+# RUN: llvm-readelf --file-headers %t.xtensa.o | FileCheck %s -DMACHINE="Tensilica Xtensa Processor"
+
+# RUN: yaml2obj %s -o %t.videocore.o -D MACHINE=EM_VIDEOCORE
+# RUN: llvm-readelf --file-headers %t.videocore.o | FileCheck %s -DMACHINE="Alphamosaic VideoCore processor"
+
+# RUN: yaml2obj %s -o %t.tmm_gpp.o -D MACHINE=EM_TMM_GPP
+# RUN: llvm-readelf --file-headers %t.tmm_gpp.o | FileCheck %s -DMACHINE="Thompson Multimedia General Purpose Processor"
+
+# RUN: yaml2obj %s -o %t.ns32k.o -D MACHINE=EM_NS32K
+# RUN: llvm-readelf --file-headers %t.ns32k.o | FileCheck %s -DMACHINE="National Semiconductor 32000 series"
+
+# RUN: yaml2obj %s -o %t.tpc.o -D MACHINE=EM_TPC
+# RUN: llvm-readelf --file-headers %t.tpc.o | FileCheck %s -DMACHINE="Tenor Network TPC processor"
+
+# RUN: yaml2obj %s -o %t.snp1k.o -D MACHINE=EM_SNP1K
+# RUN: llvm-readelf --file-headers %t.snp1k.o | FileCheck %s -DMACHINE="EM_SNP1K"
+
+# RUN: yaml2obj %s -o %t.st200.o -D MACHINE=EM_ST200
+# RUN: llvm-readelf --file-headers %t.st200.o | FileCheck %s -DMACHINE="STMicroelectronics ST200 microcontroller"
+
+# RUN: yaml2obj %s -o %t.ip2k.o -D MACHINE=EM_IP2K
+# RUN: llvm-readelf --file-headers %t.ip2k.o | FileCheck %s -DMACHINE="Ubicom IP2xxx 8-bit microcontrollers"
+
+# RUN: yaml2obj %s -o %t.max.o -D MACHINE=EM_MAX
+# RUN: llvm-readelf --file-headers %t.max.o | FileCheck %s -DMACHINE="MAX Processor"
+
+# RUN: yaml2obj %s -o %t.cr.o -D MACHINE=EM_CR
+# RUN: llvm-readelf --file-headers %t.cr.o | FileCheck %s -DMACHINE="National Semiconductor CompactRISC"
+
+# RUN: yaml2obj %s -o %t.f2mc16.o -D MACHINE=EM_F2MC16
+# RUN: llvm-readelf --file-headers %t.f2mc16.o | FileCheck %s -DMACHINE="Fujitsu F2MC16"
+
+# RUN: yaml2obj %s -o %t.msp430.o -D MACHINE=EM_MSP430
+# RUN: llvm-readelf --file-headers %t.msp430.o | FileCheck %s -DMACHINE="Texas Instruments msp430 microcontroller"
+
+# RUN: yaml2obj %s -o %t.blackfin.o -D MACHINE=EM_BLACKFIN
+# RUN: llvm-readelf --file-headers %t.blackfin.o | FileCheck %s -DMACHINE="Analog Devices Blackfin"
+
+# RUN: yaml2obj %s -o %t.se_c33.o -D MACHINE=EM_SE_C33
+# RUN: llvm-readelf --file-headers %t.se_c33.o | FileCheck %s -DMACHINE="S1C33 Family of Seiko Epson processors"
+
+# RUN: yaml2obj %s -o %t.sep.o -D MACHINE=EM_SEP
+# RUN: llvm-readelf --file-headers %t.sep.o | FileCheck %s -DMACHINE="Sharp embedded microprocessor"
+
+# RUN: yaml2obj %s -o %t.arca.o -D MACHINE=EM_ARCA
+# RUN: llvm-readelf --file-headers %t.arca.o | FileCheck %s -DMACHINE="Arca RISC microprocessor"
+
+# RUN: yaml2obj %s -o %t.unicore.o -D MACHINE=EM_UNICORE
+# RUN: llvm-readelf --file-headers %t.unicore.o | FileCheck %s -DMACHINE="Unicore"
+
+# RUN: yaml2obj %s -o %t.excess.o -D MACHINE=EM_EXCESS
+# RUN: llvm-readelf --file-headers %t.excess.o | FileCheck %s -DMACHINE="eXcess 16/32/64-bit configurable embedded CPU"
+
+# RUN: yaml2obj %s -o %t.dxp.o -D MACHINE=EM_DXP
+# RUN: llvm-readelf --file-headers %t.dxp.o | FileCheck %s -DMACHINE="Icera Semiconductor Inc. Deep Execution Processor"
+
+# RUN: yaml2obj %s -o %t.altera_nios2.o -D MACHINE=EM_ALTERA_NIOS2
+# RUN: llvm-readelf --file-headers %t.altera_nios2.o | FileCheck %s -DMACHINE="Altera Nios"
+
+# RUN: yaml2obj %s -o %t.crx.o -D MACHINE=EM_CRX
+# RUN: llvm-readelf --file-headers %t.crx.o | FileCheck %s -DMACHINE="National Semiconductor CRX microprocessor"
+
+# RUN: yaml2obj %s -o %t.xgate.o -D MACHINE=EM_XGATE
+# RUN: llvm-readelf --file-headers %t.xgate.o | FileCheck %s -DMACHINE="Motorola XGATE embedded processor"
+
+# RUN: yaml2obj %s -o %t.c166.o -D MACHINE=EM_C166
+# RUN: llvm-readelf --file-headers %t.c166.o | FileCheck %s -DMACHINE="Infineon Technologies xc16x"
+
+# RUN: yaml2obj %s -o %t.m16c.o -D MACHINE=EM_M16C
+# RUN: llvm-readelf --file-headers %t.m16c.o | FileCheck %s -DMACHINE="Renesas M16C"
+
+# RUN: yaml2obj %s -o %t.dspic30f.o -D MACHINE=EM_DSPIC30F
+# RUN: llvm-readelf --file-headers %t.dspic30f.o | FileCheck %s -DMACHINE="Microchip Technology dsPIC30F Digital Signal Controller"
+
+# RUN: yaml2obj %s -o %t.ce.o -D MACHINE=EM_CE
+# RUN: llvm-readelf --file-headers %t.ce.o | FileCheck %s -DMACHINE="Freescale Communication Engine RISC core"
+
+# RUN: yaml2obj %s -o %t.m32c.o -D MACHINE=EM_M32C
+# RUN: llvm-readelf --file-headers %t.m32c.o | FileCheck %s -DMACHINE="Renesas M32C"
+
+# RUN: yaml2obj %s -o %t.tsk3000.o -D MACHINE=EM_TSK3000
+# RUN: llvm-readelf --file-headers %t.tsk3000.o | FileCheck %s -DMACHINE="Altium TSK3000 core"
+
+# RUN: yaml2obj %s -o %t.rs08.o -D MACHINE=EM_RS08
+# RUN: llvm-readelf --file-headers %t.rs08.o | FileCheck %s -DMACHINE="Freescale RS08 embedded processor"
+
+# RUN: yaml2obj %s -o %t.sharc.o -D MACHINE=EM_SHARC
+# RUN: llvm-readelf --file-headers %t.sharc.o | FileCheck %s -DMACHINE="EM_SHARC"
+
+# RUN: yaml2obj %s -o %t.ecog2.o -D MACHINE=EM_ECOG2
+# RUN: llvm-readelf --file-headers %t.ecog2.o | FileCheck %s -DMACHINE="Cyan Technology eCOG2 microprocessor"
+
+# RUN: yaml2obj %s -o %t.score7.o -D MACHINE=EM_SCORE7
+# RUN: llvm-readelf --file-headers %t.score7.o | FileCheck %s -DMACHINE="SUNPLUS S+Core"
+
+# RUN: yaml2obj %s -o %t.dsp24.o -D MACHINE=EM_DSP24
+# RUN: llvm-readelf --file-headers %t.dsp24.o | FileCheck %s -DMACHINE="New Japan Radio (NJR) 24-bit DSP Processor"
+
+# RUN: yaml2obj %s -o %t.videocore3.o -D MACHINE=EM_VIDEOCORE3
+# RUN: llvm-readelf --file-headers %t.videocore3.o | FileCheck %s -DMACHINE="Broadcom VideoCore III processor"
+
+# RUN: yaml2obj %s -o %t.latticemico32.o -D MACHINE=EM_LATTICEMICO32
+# RUN: llvm-readelf --file-headers %t.latticemico32.o | FileCheck %s -DMACHINE="Lattice Mico32"
+
+# RUN: yaml2obj %s -o %t.se_c17.o -D MACHINE=EM_SE_C17
+# RUN: llvm-readelf --file-headers %t.se_c17.o | FileCheck %s -DMACHINE="Seiko Epson C17 family"
+
+# RUN: yaml2obj %s -o %t.ti_c6000.o -D MACHINE=EM_TI_C6000
+# RUN: llvm-readelf --file-headers %t.ti_c6000.o | FileCheck %s -DMACHINE="Texas Instruments TMS320C6000 DSP family"
+
+# RUN: yaml2obj %s -o %t.ti_c2000.o -D MACHINE=EM_TI_C2000
+# RUN: llvm-readelf --file-headers %t.ti_c2000.o | FileCheck %s -DMACHINE="Texas Instruments TMS320C2000 DSP family"
+
+# RUN: yaml2obj %s -o %t.ti_c5500.o -D MACHINE=EM_TI_C5500
+# RUN: llvm-readelf --file-headers %t.ti_c5500.o | FileCheck %s -DMACHINE="Texas Instruments TMS320C55x DSP family"
+
+# RUN: yaml2obj %s -o %t.mmdsp_plus.o -D MACHINE=EM_MMDSP_PLUS
+# RUN: llvm-readelf --file-headers %t.mmdsp_plus.o | FileCheck %s -DMACHINE="STMicroelectronics 64bit VLIW Data Signal Processor"
+
+# RUN: yaml2obj %s -o %t.cypress_m8c.o -D MACHINE=EM_CYPRESS_M8C
+# RUN: llvm-readelf --file-headers %t.cypress_m8c.o | FileCheck %s -DMACHINE="Cypress M8C microprocessor"
+
+# RUN: yaml2obj %s -o %t.r32c.o -D MACHINE=EM_R32C
+# RUN: llvm-readelf --file-headers %t.r32c.o | FileCheck %s -DMACHINE="Renesas R32C series microprocessors"
+
+# RUN: yaml2obj %s -o %t.trimedia.o -D MACHINE=EM_TRIMEDIA
+# RUN: llvm-readelf --file-headers %t.trimedia.o | FileCheck %s -DMACHINE="NXP Semiconductors TriMedia architecture family"
+
+# RUN: yaml2obj %s -o %t.hexagon.o -D MACHINE=EM_HEXAGON
+# RUN: llvm-readelf --file-headers %t.hexagon.o | FileCheck %s -DMACHINE="Qualcomm Hexagon"
+
+# RUN: yaml2obj %s -o %t.8051.o -D MACHINE=EM_8051
+# RUN: llvm-readelf --file-headers %t.8051.o | FileCheck %s -DMACHINE="Intel 8051 and variants"
+
+# RUN: yaml2obj %s -o %t.stxp7x.o -D MACHINE=EM_STXP7X
+# RUN: llvm-readelf --file-headers %t.stxp7x.o | FileCheck %s -DMACHINE="STMicroelectronics STxP7x family"
+
+# RUN: yaml2obj %s -o %t.nds32.o -D MACHINE=EM_NDS32
+# RUN: llvm-readelf --file-headers %t.nds32.o | FileCheck %s -DMACHINE="Andes Technology compact code size embedded RISC processor family"
+
+# RUN: yaml2obj %s -o %t.ecog1.o -D MACHINE=EM_ECOG1
+# RUN: llvm-readelf --file-headers %t.ecog1.o | FileCheck %s -DMACHINE="Cyan Technology eCOG1 microprocessor"
+
+# RUN: yaml2obj %s -o %t.maxq30.o -D MACHINE=EM_MAXQ30
+# RUN: llvm-readelf --file-headers %t.maxq30.o | FileCheck %s -DMACHINE="Dallas Semiconductor MAXQ30 Core microcontrollers"
+
+# RUN: yaml2obj %s -o %t.ximo16.o -D MACHINE=EM_XIMO16
+# RUN: llvm-readelf --file-headers %t.ximo16.o | FileCheck %s -DMACHINE="New Japan Radio (NJR) 16-bit DSP Processor"
+
+# RUN: yaml2obj %s -o %t.manik.o -D MACHINE=EM_MANIK
+# RUN: llvm-readelf --file-headers %t.manik.o | FileCheck %s -DMACHINE="M2000 Reconfigurable RISC Microprocessor"
+
+# RUN: yaml2obj %s -o %t.craynv2.o -D MACHINE=EM_CRAYNV2
+# RUN: llvm-readelf --file-headers %t.craynv2.o | FileCheck %s -DMACHINE="Cray Inc. NV2 vector architecture"
+
+# RUN: yaml2obj %s -o %t.rx.o -D MACHINE=EM_RX
+# RUN: llvm-readelf --file-headers %t.rx.o | FileCheck %s -DMACHINE="Renesas RX"
+
+# RUN: yaml2obj %s -o %t.metag.o -D MACHINE=EM_METAG
+# RUN: llvm-readelf --file-headers %t.metag.o | FileCheck %s -DMACHINE="Imagination Technologies Meta processor architecture"
+
+# RUN: yaml2obj %s -o %t.mcst_elbrus.o -D MACHINE=EM_MCST_ELBRUS
+# RUN: llvm-readelf --file-headers %t.mcst_elbrus.o | FileCheck %s -DMACHINE="MCST Elbrus general purpose hardware architecture"
+
+# RUN: yaml2obj %s -o %t.ecog16.o -D MACHINE=EM_ECOG16
+# RUN: llvm-readelf --file-headers %t.ecog16.o | FileCheck %s -DMACHINE="Cyan Technology eCOG16 family"
+
+# RUN: yaml2obj %s -o %t.cr16.o -D MACHINE=EM_CR16
+# RUN: llvm-readelf --file-headers %t.cr16.o | FileCheck %s -DMACHINE="Xilinx MicroBlaze"
+
+# RUN: yaml2obj %s -o %t.etpu.o -D MACHINE=EM_ETPU
+# RUN: llvm-readelf --file-headers %t.etpu.o | FileCheck %s -DMACHINE="Freescale Extended Time Processing Unit"
+
+# RUN: yaml2obj %s -o %t.sle9x.o -D MACHINE=EM_SLE9X
+# RUN: llvm-readelf --file-headers %t.sle9x.o | FileCheck %s -DMACHINE="Infineon Technologies SLE9X core"
+
+# RUN: yaml2obj %s -o %t.l10m.o -D MACHINE=EM_L10M
+# RUN: llvm-readelf --file-headers %t.l10m.o | FileCheck %s -DMACHINE="EM_L10M"
+
+# RUN: yaml2obj %s -o %t.k10m.o -D MACHINE=EM_K10M
+# RUN: llvm-readelf --file-headers %t.k10m.o | FileCheck %s -DMACHINE="EM_K10M"
+
+# RUN: yaml2obj %s -o %t.aarch64.o -D MACHINE=EM_AARCH64
+# RUN: llvm-readelf --file-headers %t.aarch64.o | FileCheck %s -DMACHINE="AArch64"
+
+# RUN: yaml2obj %s -o %t.avr32.o -D MACHINE=EM_AVR32
+# RUN: llvm-readelf --file-headers %t.avr32.o | FileCheck %s -DMACHINE="Atmel Corporation 32-bit microprocessor family"
+
+# RUN: yaml2obj %s -o %t.stm8.o -D MACHINE=EM_STM8
+# RUN: llvm-readelf --file-headers %t.stm8.o | FileCheck %s -DMACHINE="STMicroeletronics STM8 8-bit microcontroller"
+
+# RUN: yaml2obj %s -o %t.tile64.o -D MACHINE=EM_TILE64
+# RUN: llvm-readelf --file-headers %t.tile64.o | FileCheck %s -DMACHINE="Tilera TILE64 multicore architecture family"
+
+# RUN: yaml2obj %s -o %t.tilepro.o -D MACHINE=EM_TILEPRO
+# RUN: llvm-readelf --file-headers %t.tilepro.o | FileCheck %s -DMACHINE="Tilera TILEPro multicore architecture family"
+
+# RUN: yaml2obj %s -o %t.cuda.o -D MACHINE=EM_CUDA
+# RUN: llvm-readelf --file-headers %t.cuda.o | FileCheck %s -DMACHINE="NVIDIA CUDA architecture"
+
+# RUN: yaml2obj %s -o %t.tilegx.o -D MACHINE=EM_TILEGX
+# RUN: llvm-readelf --file-headers %t.tilegx.o | FileCheck %s -DMACHINE="Tilera TILE-Gx multicore architecture family"
+
+# RUN: yaml2obj %s -o %t.cloudshield.o -D MACHINE=EM_CLOUDSHIELD
+# RUN: llvm-readelf --file-headers %t.cloudshield.o | FileCheck %s -DMACHINE="EM_CLOUDSHIELD"
+
+# RUN: yaml2obj %s -o %t.corea_1st.o -D MACHINE=EM_COREA_1ST
+# RUN: llvm-readelf --file-headers %t.corea_1st.o | FileCheck %s -DMACHINE="EM_COREA_1ST"
+
+# RUN: yaml2obj %s -o %t.corea_2nd.o -D MACHINE=EM_COREA_2ND
+# RUN: llvm-readelf --file-headers %t.corea_2nd.o | FileCheck %s -DMACHINE="EM_COREA_2ND"
+
+# RUN: yaml2obj %s -o %t.arc_compact2.o -D MACHINE=EM_ARC_COMPACT2
+# RUN: llvm-readelf --file-headers %t.arc_compact2.o | FileCheck %s -DMACHINE="EM_ARC_COMPACT2"
+
+# RUN: yaml2obj %s -o %t.open8.o -D MACHINE=EM_OPEN8
+# RUN: llvm-readelf --file-headers %t.open8.o | FileCheck %s -DMACHINE="EM_OPEN8"
+
+# RUN: yaml2obj %s -o %t.rl78.o -D MACHINE=EM_RL78
+# RUN: llvm-readelf --file-headers %t.rl78.o | FileCheck %s -DMACHINE="Renesas RL78"
+
+# RUN: yaml2obj %s -o %t.videocore5.o -D MACHINE=EM_VIDEOCORE5
+# RUN: llvm-readelf --file-headers %t.videocore5.o | FileCheck %s -DMACHINE="Broadcom VideoCore V processor"
+
+# RUN: yaml2obj %s -o %t.78kor.o -D MACHINE=EM_78KOR
+# RUN: llvm-readelf --file-headers %t.78kor.o | FileCheck %s -DMACHINE="EM_78KOR"
+
+# RUN: yaml2obj %s -o %t.56800ex.o -D MACHINE=EM_56800EX
+# RUN: llvm-readelf --file-headers %t.56800ex.o | FileCheck %s -DMACHINE="EM_56800EX"
+
+# RUN: yaml2obj %s -o %t.amdgpu.o -D MACHINE=EM_AMDGPU
+# RUN: llvm-readelf --file-headers %t.amdgpu.o | FileCheck %s -DMACHINE="EM_AMDGPU"
+
+# RUN: yaml2obj %s -o %t.riscv.o -D MACHINE=EM_RISCV
+# RUN: llvm-readelf --file-headers %t.riscv.o | FileCheck %s -DMACHINE="RISC-V"
+
+# RUN: yaml2obj %s -o %t.lanai.o -D MACHINE=EM_LANAI
+# RUN: llvm-readelf --file-headers %t.lanai.o | FileCheck %s -DMACHINE="EM_LANAI"
+
+# RUN: yaml2obj %s -o %t.bpf.o -D MACHINE=EM_BPF
+# RUN: llvm-readelf --file-headers %t.bpf.o | FileCheck %s -DMACHINE="EM_BPF"
+
+# RUN: yaml2obj %s -o %t.ve.o -D MACHINE=EM_VE
+# RUN: llvm-readelf --file-headers %t.ve.o | FileCheck %s -DMACHINE="NEC SX-Aurora Vector Engine"
+
+# CHECK: Machine: [[MACHINE]]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: [[MACHINE]]

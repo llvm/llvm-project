@@ -28,6 +28,7 @@ enum QueryKind {
   QK_Match,
   QK_SetBool,
   QK_SetOutputKind,
+  QK_SetTraversalKind,
   QK_EnableOutputKind,
   QK_DisableOutputKind,
   QK_Quit
@@ -117,6 +118,10 @@ template <> struct SetQueryKind<bool> {
 
 template <> struct SetQueryKind<OutputKind> {
   static const QueryKind value = QK_SetOutputKind;
+};
+
+template <> struct SetQueryKind<ast_type_traits::TraversalKind> {
+  static const QueryKind value = QK_SetTraversalKind;
 };
 
 /// Query for "set VAR VALUE".

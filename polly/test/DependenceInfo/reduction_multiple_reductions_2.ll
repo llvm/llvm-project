@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-dependences -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-dependences -analyze < %s | FileCheck %s
 ;
 ;
 ; These are the important RAW dependences, as they need to originate/end in only one iteration:

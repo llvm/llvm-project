@@ -13,14 +13,17 @@
 // pass. It should be easy to create an analysis pass around it if there
 // is a need (but D45420 needs to happen first).
 //
-#include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PatternMatch.h"
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
 
 using namespace llvm;
+using namespace PatternMatch;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -666,6 +669,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 
         if (RecurrenceDescriptor::isFirstOrderRecurrence(Phi, TheLoop,
                                                          SinkAfter, DT)) {
+          AllowedExit.insert(Phi);
           FirstOrderRecurrences.insert(Phi);
           continue;
         }
@@ -764,11 +768,9 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // supported on the target.
         if (ST->getMetadata(LLVMContext::MD_nontemporal)) {
           // Arbitrarily try a vector of 2 elements.
-          Type *VecTy = VectorType::get(T, /*NumElements=*/2);
+          auto *VecTy = FixedVectorType::get(T, /*NumElements=*/2);
           assert(VecTy && "did not find vectorized version of stored type");
-          const MaybeAlign Alignment = getLoadStoreAlignment(ST);
-          assert(Alignment && "Alignment should be set");
-          if (!TTI->isLegalNTStore(VecTy, *Alignment)) {
+          if (!TTI->isLegalNTStore(VecTy, ST->getAlign())) {
             reportVectorizationFailure(
                 "nontemporal store instruction cannot be vectorized",
                 "nontemporal store instruction cannot be vectorized",
@@ -781,11 +783,9 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         if (LD->getMetadata(LLVMContext::MD_nontemporal)) {
           // For nontemporal loads, check that a nontemporal vector version is
           // supported on the target (arbitrarily try a vector of 2 elements).
-          Type *VecTy = VectorType::get(I.getType(), /*NumElements=*/2);
+          auto *VecTy = FixedVectorType::get(I.getType(), /*NumElements=*/2);
           assert(VecTy && "did not find vectorized version of load type");
-          const MaybeAlign Alignment = getLoadStoreAlignment(LD);
-          assert(Alignment && "Alignment should be set");
-          if (!TTI->isLegalNTLoad(VecTy, *Alignment)) {
+          if (!TTI->isLegalNTLoad(VecTy, LD->getAlign())) {
             reportVectorizationFailure(
                 "nontemporal load instruction cannot be vectorized",
                 "nontemporal load instruction cannot be vectorized",
@@ -922,6 +922,14 @@ bool LoopVectorizationLegality::blockCanBePredicated(
         if (C->canTrap())
           return false;
     }
+
+    // We can predicate blocks with calls to assume, as long as we drop them in
+    // case we flatten the CFG via predication.
+    if (match(&I, m_Intrinsic<Intrinsic::assume>())) {
+      ConditionalAssumes.insert(&I);
+      continue;
+    }
+
     // We might be able to hoist the load.
     if (I.mayReadFromMemory()) {
       auto *LI = dyn_cast<LoadInst>(&I);
@@ -972,14 +980,14 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   // the memory pointed to can be dereferenced (with the access size implied by
   // the value's type) unconditionally within the loop header without
   // introducing a new fault.
-  SmallPtrSet<Value *, 8> SafePointes;
+  SmallPtrSet<Value *, 8> SafePointers;
 
   // Collect safe addresses.
   for (BasicBlock *BB : TheLoop->blocks()) {
     if (!blockNeedsPredication(BB)) {
       for (Instruction &I : *BB)
         if (auto *Ptr = getLoadStorePointerOperand(&I))
-          SafePointes.insert(Ptr);
+          SafePointers.insert(Ptr);
       continue;
     }
 
@@ -993,7 +1001,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
       LoadInst *LI = dyn_cast<LoadInst>(&I);
       if (LI && !mustSuppressSpeculation(*LI) &&
           isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT))
-        SafePointes.insert(LI->getPointerOperand());
+        SafePointers.insert(LI->getPointerOperand());
     }
   }
 
@@ -1011,7 +1019,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
     // We must be able to predicate all blocks that need to be predicated.
     if (blockNeedsPredication(BB)) {
-      if (!blockCanBePredicated(BB, SafePointes)) {
+      if (!blockCanBePredicated(BB, SafePointers)) {
         reportVectorizationFailure(
             "Control flow cannot be substituted for a select",
             "control flow cannot be substituted for a select",
@@ -1223,18 +1231,9 @@ bool LoopVectorizationLegality::prepareToFoldTailByMasking() {
 
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
 
-  if (!PrimaryInduction) {
-    reportVectorizationFailure(
-        "No primary induction, cannot fold tail by masking",
-        "Missing a primary induction variable in the loop, which is "
-        "needed in order to fold tail by masking as required.",
-        "NoPrimaryInduction", ORE, TheLoop);
-    return false;
-  }
-
   SmallPtrSet<const Value *, 8> ReductionLiveOuts;
 
-  for (auto &Reduction : *getReductionVars())
+  for (auto &Reduction : getReductionVars())
     ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
 
   // TODO: handle non-reduction outside users when tail is folded by masking.

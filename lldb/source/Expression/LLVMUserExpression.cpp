@@ -1,4 +1,4 @@
-//===-- LLVMUserExpression.cpp ----------------------------------*- C++ -*-===//
+//===-- LLVMUserExpression.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -419,8 +419,3 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
   return true;
 }
 
-lldb::ModuleSP LLVMUserExpression::GetJITModule() {
-  if (m_execution_unit_sp)
-    return m_execution_unit_sp->GetJITModule();
-  return lldb::ModuleSP();
-}

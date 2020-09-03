@@ -17,9 +17,9 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
 using namespace polly;
@@ -221,6 +221,16 @@ void polly::splitEntryBlockForAlloca(BasicBlock *EntryBlock, Pass *P) {
   polly::splitEntryBlockForAlloca(EntryBlock, DT, LI, RI);
 }
 
+void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
+                             polly::AssumptionKind Kind, isl::set Set,
+                             DebugLoc Loc, polly::AssumptionSign Sign,
+                             BasicBlock *BB) {
+  assert((Set.is_params() || BB) &&
+         "Assumptions without a basic block must be parameter sets");
+  if (RecordedAssumptions)
+    RecordedAssumptions->push_back({Kind, Sign, Set, Loc, BB});
+}
+
 /// The SCEVExpander will __not__ generate any code for an existing SDiv/SRem
 /// instruction but just use it, if it is referenced as a SCEVUnknown. We want
 /// however to generate new code if the instruction is in the analyzed region
@@ -233,8 +243,8 @@ struct ScopExpander : SCEVVisitor<ScopExpander, const SCEV *> {
   explicit ScopExpander(const Region &R, ScalarEvolution &SE,
                         const DataLayout &DL, const char *Name, ValueMapT *VMap,
                         BasicBlock *RTCBB)
-      : Expander(SCEVExpander(SE, DL, Name)), SE(SE), Name(Name), R(R),
-        VMap(VMap), RTCBB(RTCBB) {}
+      : Expander(SE, DL, Name), SE(SE), Name(Name), R(R), VMap(VMap),
+        RTCBB(RTCBB) {}
 
   Value *expandCodeFor(const SCEV *E, Type *Ty, Instruction *I) {
     // If we generate code in the region we will immediately fall back to the
@@ -656,55 +666,6 @@ llvm::BasicBlock *polly::getUseBlock(const llvm::Use &U) {
     return PHI->getIncomingBlock(U);
 
   return UI->getParent();
-}
-
-std::tuple<std::vector<const SCEV *>, std::vector<int>>
-polly::getIndexExpressionsFromGEP(GetElementPtrInst *GEP, ScalarEvolution &SE) {
-  std::vector<const SCEV *> Subscripts;
-  std::vector<int> Sizes;
-
-  Type *Ty = GEP->getPointerOperandType();
-
-  bool DroppedFirstDim = false;
-
-  for (unsigned i = 1; i < GEP->getNumOperands(); i++) {
-
-    const SCEV *Expr = SE.getSCEV(GEP->getOperand(i));
-
-    if (i == 1) {
-      if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
-        Ty = PtrTy->getElementType();
-      } else if (auto *ArrayTy = dyn_cast<ArrayType>(Ty)) {
-        Ty = ArrayTy->getElementType();
-      } else {
-        Subscripts.clear();
-        Sizes.clear();
-        break;
-      }
-      if (auto *Const = dyn_cast<SCEVConstant>(Expr))
-        if (Const->getValue()->isZero()) {
-          DroppedFirstDim = true;
-          continue;
-        }
-      Subscripts.push_back(Expr);
-      continue;
-    }
-
-    auto *ArrayTy = dyn_cast<ArrayType>(Ty);
-    if (!ArrayTy) {
-      Subscripts.clear();
-      Sizes.clear();
-      break;
-    }
-
-    Subscripts.push_back(Expr);
-    if (!(DroppedFirstDim && i == 2))
-      Sizes.push_back(ArrayTy->getNumElements());
-
-    Ty = ArrayTy->getElementType();
-  }
-
-  return std::make_tuple(Subscripts, Sizes);
 }
 
 llvm::Loop *polly::getFirstNonBoxedLoopFor(llvm::Loop *L, llvm::LoopInfo &LI,

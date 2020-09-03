@@ -118,14 +118,14 @@ static void sectionMapping(IO &IO, WasmYAML::MemorySection &Section) {
   IO.mapOptional("Memories", Section.Memories);
 }
 
-static void sectionMapping(IO &IO, WasmYAML::GlobalSection &Section) {
-  commonSectionMapping(IO, Section);
-  IO.mapOptional("Globals", Section.Globals);
-}
-
 static void sectionMapping(IO &IO, WasmYAML::EventSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Events", Section.Events);
+}
+
+static void sectionMapping(IO &IO, WasmYAML::GlobalSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapOptional("Globals", Section.Globals);
 }
 
 static void sectionMapping(IO &IO, WasmYAML::ExportSection &Section) {
@@ -227,15 +227,15 @@ void MappingTraits<std::unique_ptr<WasmYAML::Section>>::mapping(
       Section.reset(new WasmYAML::MemorySection());
     sectionMapping(IO, *cast<WasmYAML::MemorySection>(Section.get()));
     break;
-  case wasm::WASM_SEC_GLOBAL:
-    if (!IO.outputting())
-      Section.reset(new WasmYAML::GlobalSection());
-    sectionMapping(IO, *cast<WasmYAML::GlobalSection>(Section.get()));
-    break;
   case wasm::WASM_SEC_EVENT:
     if (!IO.outputting())
       Section.reset(new WasmYAML::EventSection());
     sectionMapping(IO, *cast<WasmYAML::EventSection>(Section.get()));
+    break;
+  case wasm::WASM_SEC_GLOBAL:
+    if (!IO.outputting())
+      Section.reset(new WasmYAML::GlobalSection());
+    sectionMapping(IO, *cast<WasmYAML::GlobalSection>(Section.get()));
     break;
   case wasm::WASM_SEC_EXPORT:
     if (!IO.outputting())
@@ -433,6 +433,11 @@ void MappingTraits<wasm::WasmInitExpr>::mapping(IO &IO,
   case wasm::WASM_OPCODE_GLOBAL_GET:
     IO.mapRequired("Index", Expr.Value.Global);
     break;
+  case wasm::WASM_OPCODE_REF_NULL: {
+    WasmYAML::ValueType Ty = wasm::WASM_TYPE_EXTERNREF;
+    IO.mapRequired("Type", Ty);
+    break;
+  }
   }
 }
 
@@ -517,6 +522,7 @@ void ScalarBitSetTraits<WasmYAML::LimitFlags>::bitset(
 #define BCase(X) IO.bitSetCase(Value, #X, wasm::WASM_LIMITS_FLAG_##X)
   BCase(HAS_MAX);
   BCase(IS_SHARED);
+  BCase(IS_64);
 #undef BCase
 }
 
@@ -559,6 +565,8 @@ void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
   ECase(F64);
   ECase(V128);
   ECase(FUNCREF);
+  ECase(EXNREF);
+  ECase(EXTERNREF);
   ECase(FUNC);
 #undef ECase
 }
@@ -583,6 +591,7 @@ void ScalarEnumerationTraits<WasmYAML::Opcode>::enumeration(
   ECase(F64_CONST);
   ECase(F32_CONST);
   ECase(GLOBAL_GET);
+  ECase(REF_NULL);
 #undef ECase
 }
 

@@ -5,13 +5,21 @@
 ## section with multiple entries.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: llvm-readobj --dependent-libraries %t1 2>&1 | FileCheck %s -DFILE=%t
+# RUN: llvm-readobj --dependent-libraries %t1 | \
+# RUN:   FileCheck %s --check-prefix=LLVM --strict-whitespace --match-full-lines
+# RUN: llvm-readelf --dependent-libraries %t1 | \
+# RUN:   FileCheck %s --check-prefix=GNU --strict-whitespace --match-full-lines --implicit-check-not="Dependent libraries"
 
-# CHECK:      DependentLibs [
-# CHECK-NEXT:   foo
-# CHECK-NEXT:   bar
-# CHECK-NEXT:   foo
-# CHECK-NEXT: ]
+#      LLVM:DependentLibs [
+# LLVM-NEXT:  foo
+# LLVM-NEXT:  bar
+# LLVM-NEXT:  foo
+# LLVM-NEXT:]
+
+#      GNU:Dependent libraries section .deplibs at offset 0x40 contains 3 entries:
+# GNU-NEXT:  [     0]  foo
+# GNU-NEXT:  [     4]  bar
+# GNU-NEXT:  [     8]  foo
 
 --- !ELF
 FileHeader:
@@ -27,15 +35,36 @@ Sections:
 ## Now, check how we dump a mix of valid, empty and invalid SHT_LLVM_DEPENDENT_LIBRARIES sections.
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
-# RUN: llvm-readobj --dependent-libraries %t2 2>&1 | FileCheck %s --check-prefix=MIX -DFILE=%t2
+# RUN: llvm-readobj --dependent-libraries %t2 2>&1 | FileCheck %s --check-prefix=MIX-LLVM -DFILE=%t2
+# RUN: llvm-readelf --dependent-libraries %t2 2>&1 | FileCheck %s --check-prefix=MIX-GNU -DFILE=%t2
 
-# MIX:      DependentLibs [
-# MIX-NEXT:  warning: '[[FILE]]': SHT_LLVM_DEPENDENT_LIBRARIES section at index 1 is broken: the content is not null-terminated
-# MIX-NEXT:  abc
-# MIX-NEXT:  warning: '[[FILE]]': SHT_LLVM_DEPENDENT_LIBRARIES section at index 4 is broken: section [index 4] has a sh_offset (0xffff0000) + sh_size (0x4) that is greater than the file size (0x2c0)
-# MIX-NEXT:  bar
-# MIX-NEXT:  xxx
-# MIX-NEXT: ]
+# MIX-LLVM:      DependentLibs [
+# MIX-LLVM-NEXT:   warning: '[[FILE]]': SHT_LLVM_DEPENDENT_LIBRARIES section at index 1 is broken: the content is not null-terminated
+# MIX-LLVM-NEXT:   abc
+# MIX-LLVM-NEXT:   warning: '[[FILE]]': SHT_LLVM_DEPENDENT_LIBRARIES section at index 4 is broken: section [index 4] has a sh_offset (0xffff0000) + sh_size (0x4) that is greater than the file size (0x308)
+# MIX-LLVM-NEXT:   bar
+# MIX-LLVM-NEXT:   xxx
+# MIX-LLVM-NEXT:   baz
+# MIX-LLVM-NEXT: ]
+
+# MIX-GNU:      warning: '[[FILE]]': SHT_LLVM_DEPENDENT_LIBRARIES section at index 1 is broken: the content is not null-terminated
+# MIX-GNU-NEXT: Dependent libraries section .deplibs.nonul at offset 0x40 contains 0 entries:
+# MIX-GNU-EMPTY:
+# MIX-GNU-NEXT: Dependent libraries section .deplibs.single at offset 0x43 contains 1 entries:
+# MIX-GNU-NEXT:   [     0]  abc
+# MIX-GNU-EMPTY:
+# MIX-GNU-NEXT: Dependent libraries section .deplibs.empty at offset 0x47 contains 0 entries:
+# MIX-GNU-EMPTY:
+# MIX-GNU-NEXT: warning: '[[FILE]]': SHT_LLVM_DEPENDENT_LIBRARIES section at index 4 is broken: section [index 4] has a sh_offset (0xffff0000) + sh_size (0x4) that is greater than the file size (0x308)
+# MIX-GNU-NEXT: Dependent libraries section .deplibs.broken.shoffset at offset 0xffff0000 contains 0 entries:
+# MIX-GNU-EMPTY:
+# MIX-GNU-NEXT: Dependent libraries section .deplibs.multiple at offset 0x4b contains 2 entries:
+# MIX-GNU-NEXT:   [     0]  bar
+# MIX-GNU-NEXT:   [     4]  xxx
+# MIX-GNU-EMPTY:
+# MIX-GNU-NEXT: warning: '[[FILE]]': cannot get section name of SHT_LLVM_DEPENDENT_LIBRARIES section: a section [index 6] has an invalid sh_name (0x10000) offset which goes past the end of the section name string table
+# MIX-GNU-NEXT: Dependent libraries section <?> at offset 0x53 contains 1 entries:
+# MIX-GNU-NEXT:   [     0]  baz
 
 --- !ELF
 FileHeader:
@@ -65,8 +94,22 @@ Sections:
   - Name:      .deplibs.multiple
     Type:      SHT_LLVM_DEPENDENT_LIBRARIES
     Libraries: [ bar, xxx ]
+## Case 6: test we report a warning in GNU mode if the section name can't be read.
+  - ShName:    0x10000
+    Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    Libraries: [ baz ]
 
-## llvm-readelf doesn't support --dependent-libraries yet.
-# RUN: llvm-readelf --dependent-libraries %t1 2>&1 | FileCheck %s --check-prefix=READELF
+## Show the output when there are no dependent library sections.
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readobj --dependent-libraries %t3 2>&1 | FileCheck %s --check-prefix=NONE
+# RUN: llvm-readelf --dependent-libraries %t3 2>&1 | FileCheck %s --allow-empty --implicit-check-not={{.}}
 
-# READELF: printDependentLibs not implemented!
+# NONE:      DependentLibs [
+# NONE-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64

@@ -29,6 +29,7 @@ class CXXCompiler(object):
         self.flags = list(flags or [])
         self.compile_flags = list(compile_flags or [])
         self.link_flags = list(link_flags or [])
+        self.link_libcxxabi_flag = '-lc++abi'
         self.warning_flags = list(warning_flags or [])
         self.verify_supported = verify_supported
         self.use_verify = use_verify

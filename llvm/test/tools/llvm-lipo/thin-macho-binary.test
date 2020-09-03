@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
 # RUN: not llvm-lipo %t -thin i386 2>&1 | FileCheck --check-prefix=NO_OUTPUT %s
 # NO_OUTPUT: error: thin expects a single output file

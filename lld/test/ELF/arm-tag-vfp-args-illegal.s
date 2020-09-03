@@ -1,8 +1,8 @@
 // REQUIRES:arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.o
-// RUN: not ld.lld %t.o -o %t 2>&1 | FileCheck %s
+// RUN: ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 
-// CHECK: arm-tag-vfp-args-illegal.s.tmp.o: unknown Tag_ABI_VFP_args value: 5
+// CHECK: {{.*}}.o:(.ARM.attributes): unknown ABI_VFP_args value: 5
         .arch armv7-a
         .eabi_attribute 20, 1
         .eabi_attribute 21, 1

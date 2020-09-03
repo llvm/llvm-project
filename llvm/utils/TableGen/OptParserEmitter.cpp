@@ -10,20 +10,22 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cctype>
 #include <cstring>
 #include <map>
+#include <memory>
 
 using namespace llvm;
 
 static const std::string getOptionName(const Record &R) {
   // Use the record name unless EnumName is defined.
   if (isa<UnsetInit>(R.getValueInit("EnumName")))
-    return R.getName();
+    return std::string(R.getName());
 
-  return R.getValueAsString("EnumName");
+  return std::string(R.getValueAsString("EnumName"));
 }
 
 static raw_ostream &write_cstring(raw_ostream &OS, llvm::StringRef Str) {
@@ -31,6 +33,218 @@ static raw_ostream &write_cstring(raw_ostream &OS, llvm::StringRef Str) {
   OS.write_escaped(Str);
   OS << '"';
   return OS;
+}
+
+static const std::string getOptionSpelling(const Record &R,
+                                           size_t &PrefixLength) {
+  std::vector<StringRef> Prefixes = R.getValueAsListOfStrings("Prefixes");
+  StringRef Name = R.getValueAsString("Name");
+  if (Prefixes.empty()) {
+    PrefixLength = 0;
+    return Name.str();
+  }
+  PrefixLength = Prefixes[0].size();
+  return (Twine(Prefixes[0]) + Twine(Name)).str();
+}
+
+static const std::string getOptionSpelling(const Record &R) {
+  size_t PrefixLength;
+  return getOptionSpelling(R, PrefixLength);
+}
+
+static void emitNameUsingSpelling(raw_ostream &OS, const Record &R) {
+  size_t PrefixLength;
+  OS << "&";
+  write_cstring(OS, StringRef(getOptionSpelling(R, PrefixLength)));
+  OS << "[" << PrefixLength << "]";
+}
+
+class MarshallingKindInfo {
+public:
+  const Record &R;
+  const char *MacroName;
+  bool ShouldAlwaysEmit;
+  StringRef KeyPath;
+  StringRef DefaultValue;
+  StringRef NormalizedValuesScope;
+
+  void emit(raw_ostream &OS) const {
+    write_cstring(OS, StringRef(getOptionSpelling(R)));
+    OS << ", ";
+    OS << ShouldAlwaysEmit;
+    OS << ", ";
+    OS << KeyPath;
+    OS << ", ";
+    emitScopedNormalizedValue(OS, DefaultValue);
+    OS << ", ";
+    emitSpecific(OS);
+  }
+
+  virtual Optional<StringRef> emitValueTable(raw_ostream &OS) const {
+    return None;
+  }
+
+  virtual ~MarshallingKindInfo() = default;
+
+  static std::unique_ptr<MarshallingKindInfo> create(const Record &R);
+
+protected:
+  void emitScopedNormalizedValue(raw_ostream &OS,
+                                 StringRef NormalizedValue) const {
+    if (!NormalizedValuesScope.empty())
+      OS << NormalizedValuesScope << "::";
+    OS << NormalizedValue;
+  }
+
+  virtual void emitSpecific(raw_ostream &OS) const = 0;
+  MarshallingKindInfo(const Record &R, const char *MacroName)
+      : R(R), MacroName(MacroName) {}
+};
+
+class MarshallingFlagInfo final : public MarshallingKindInfo {
+public:
+  bool IsPositive;
+
+  void emitSpecific(raw_ostream &OS) const override { OS << IsPositive; }
+
+  static std::unique_ptr<MarshallingKindInfo> create(const Record &R) {
+    std::unique_ptr<MarshallingFlagInfo> Ret(new MarshallingFlagInfo(R));
+    Ret->IsPositive = R.getValueAsBit("IsPositive");
+    // FIXME: This is a workaround for a bug in older versions of clang (< 3.9)
+    //   The constructor that is supposed to allow for Derived to Base
+    //   conversion does not work. Remove this if we drop support for such
+    //   configurations.
+    return std::unique_ptr<MarshallingKindInfo>(Ret.release());
+  }
+
+private:
+  MarshallingFlagInfo(const Record &R)
+      : MarshallingKindInfo(R, "OPTION_WITH_MARSHALLING_FLAG") {}
+};
+
+class MarshallingStringInfo final : public MarshallingKindInfo {
+public:
+  StringRef NormalizerRetTy;
+  StringRef Normalizer;
+  StringRef Denormalizer;
+  int TableIndex = -1;
+  std::vector<StringRef> Values;
+  std::vector<StringRef> NormalizedValues;
+  std::string ValueTableName;
+
+  static constexpr const char *ValueTablePreamble = R"(
+struct SimpleEnumValue {
+  const char *Name;
+  unsigned Value;
+};
+
+struct SimpleEnumValueTable {
+  const SimpleEnumValue *Table;
+  unsigned Size;
+};
+)";
+
+  static constexpr const char *ValueTablesDecl =
+      "static const SimpleEnumValueTable SimpleEnumValueTables[] = ";
+
+  void emitSpecific(raw_ostream &OS) const override {
+    emitScopedNormalizedValue(OS, NormalizerRetTy);
+    OS << ", ";
+    OS << Normalizer;
+    OS << ", ";
+    OS << Denormalizer;
+    OS << ", ";
+    OS << TableIndex;
+  }
+
+  Optional<StringRef> emitValueTable(raw_ostream &OS) const override {
+    if (TableIndex == -1)
+      return {};
+    OS << "static const SimpleEnumValue " << ValueTableName << "[] = {\n";
+    for (unsigned I = 0, E = Values.size(); I != E; ++I) {
+      OS << "{";
+      write_cstring(OS, Values[I]);
+      OS << ",";
+      OS << "static_cast<unsigned>(";
+      emitScopedNormalizedValue(OS, NormalizedValues[I]);
+      OS << ")},";
+    }
+    OS << "};\n";
+    return StringRef(ValueTableName);
+  }
+
+  static std::unique_ptr<MarshallingKindInfo> create(const Record &R) {
+    assert(!isa<UnsetInit>(R.getValueInit("NormalizerRetTy")) &&
+           "String options must have a type");
+
+    std::unique_ptr<MarshallingStringInfo> Ret(new MarshallingStringInfo(R));
+    Ret->NormalizerRetTy = R.getValueAsString("NormalizerRetTy");
+
+    Ret->Normalizer = R.getValueAsString("Normalizer");
+    Ret->Denormalizer = R.getValueAsString("Denormalizer");
+
+    if (!isa<UnsetInit>(R.getValueInit("NormalizedValues"))) {
+      assert(!isa<UnsetInit>(R.getValueInit("Values")) &&
+             "Cannot provide normalized values for value-less options");
+      Ret->TableIndex = NextTableIndex++;
+      Ret->NormalizedValues = R.getValueAsListOfStrings("NormalizedValues");
+      Ret->Values.reserve(Ret->NormalizedValues.size());
+      Ret->ValueTableName = getOptionName(R) + "ValueTable";
+
+      StringRef ValuesStr = R.getValueAsString("Values");
+      for (;;) {
+        size_t Idx = ValuesStr.find(',');
+        if (Idx == StringRef::npos)
+          break;
+        if (Idx > 0)
+          Ret->Values.push_back(ValuesStr.slice(0, Idx));
+        ValuesStr = ValuesStr.slice(Idx + 1, StringRef::npos);
+      }
+      if (!ValuesStr.empty())
+        Ret->Values.push_back(ValuesStr);
+
+      assert(Ret->Values.size() == Ret->NormalizedValues.size() &&
+             "The number of normalized values doesn't match the number of "
+             "values");
+    }
+
+    // FIXME: This is a workaround for a bug in older versions of clang (< 3.9)
+    //   The constructor that is supposed to allow for Derived to Base
+    //   conversion does not work. Remove this if we drop support for such
+    //   configurations.
+    return std::unique_ptr<MarshallingKindInfo>(Ret.release());
+  }
+
+private:
+  MarshallingStringInfo(const Record &R)
+      : MarshallingKindInfo(R, "OPTION_WITH_MARSHALLING_STRING") {}
+
+  static size_t NextTableIndex;
+};
+
+size_t MarshallingStringInfo::NextTableIndex = 0;
+
+std::unique_ptr<MarshallingKindInfo>
+MarshallingKindInfo::create(const Record &R) {
+  assert(!isa<UnsetInit>(R.getValueInit("KeyPath")) &&
+         !isa<UnsetInit>(R.getValueInit("DefaultValue")) &&
+         "Must provide at least a key-path and a default value for emitting "
+         "marshalling information");
+
+  std::unique_ptr<MarshallingKindInfo> Ret = nullptr;
+  StringRef MarshallingKindStr = R.getValueAsString("MarshallingKind");
+
+  if (MarshallingKindStr == "flag")
+    Ret = MarshallingFlagInfo::create(R);
+  else if (MarshallingKindStr == "string")
+    Ret = MarshallingStringInfo::create(R);
+
+  Ret->ShouldAlwaysEmit = R.getValueAsBit("ShouldAlwaysEmit");
+  Ret->KeyPath = R.getValueAsString("KeyPath");
+  Ret->DefaultValue = R.getValueAsString("DefaultValue");
+  if (!isa<UnsetInit>(R.getValueInit("NormalizedValuesScope")))
+    Ret->NormalizedValuesScope = R.getValueAsString("NormalizedValuesScope");
+  return Ret;
 }
 
 /// OptParserEmitter - This tablegen backend takes an input .td file
@@ -102,7 +316,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     OS << ", \"" << R.getValueAsString("Name") << '"';
 
     // The option identifier name.
-    OS  << ", "<< getOptionName(R);
+    OS << ", " << getOptionName(R);
 
     // The option kind.
     OS << ", Group";
@@ -135,21 +349,17 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "//////////\n";
   OS << "// Options\n\n";
-  for (unsigned i = 0, e = Opts.size(); i != e; ++i) {
-    const Record &R = *Opts[i];
 
-    // Start a single option entry.
-    OS << "OPTION(";
-
+  auto WriteOptRecordFields = [&](raw_ostream &OS, const Record &R) {
     // The option prefix;
     std::vector<StringRef> prf = R.getValueAsListOfStrings("Prefixes");
     OS << Prefixes[PrefixKeyT(prf.begin(), prf.end())] << ", ";
 
     // The option string.
-    write_cstring(OS, R.getValueAsString("Name"));
+    emitNameUsingSpelling(OS, R);
 
     // The option identifier name.
-    OS  << ", "<< getOptionName(R);
+    OS << ", " << getOptionName(R);
 
     // The option kind.
     OS << ", " << R.getValueAsDef("Kind")->getValueAsString("Name");
@@ -190,8 +400,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     int NumFlags = 0;
     const ListInit *LI = R.getValueAsListInit("Flags");
     for (Init *I : *LI)
-      OS << (NumFlags++ ? " | " : "")
-         << cast<DefInit>(I)->getDef()->getName();
+      OS << (NumFlags++ ? " | " : "") << cast<DefInit>(I)->getDef()->getName();
     if (GroupFlags) {
       for (Init *I : *GroupFlags)
         OS << (NumFlags++ ? " | " : "")
@@ -224,10 +433,51 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       write_cstring(OS, R.getValueAsString("Values"));
     else
       OS << "nullptr";
+  };
 
+  std::vector<std::unique_ptr<MarshallingKindInfo>> OptsWithMarshalling;
+  for (unsigned I = 0, E = Opts.size(); I != E; ++I) {
+    const Record &R = *Opts[I];
+
+    // Start a single option entry.
+    OS << "OPTION(";
+    WriteOptRecordFields(OS, R);
     OS << ")\n";
+    if (!isa<UnsetInit>(R.getValueInit("MarshallingKind")))
+      OptsWithMarshalling.push_back(MarshallingKindInfo::create(R));
   }
   OS << "#endif // OPTION\n";
+
+  for (const auto &KindInfo : OptsWithMarshalling) {
+    OS << "#ifdef " << KindInfo->MacroName << "\n";
+    OS << KindInfo->MacroName << "(";
+    WriteOptRecordFields(OS, KindInfo->R);
+    OS << ", ";
+    KindInfo->emit(OS);
+    OS << ")\n";
+    OS << "#endif // " << KindInfo->MacroName << "\n";
+  }
+
+  OS << "\n";
+  OS << "#ifdef SIMPLE_ENUM_VALUE_TABLE";
+  OS << "\n";
+  OS << MarshallingStringInfo::ValueTablePreamble;
+  std::vector<StringRef> ValueTableNames;
+  for (const auto &KindInfo : OptsWithMarshalling)
+    if (auto MaybeValueTableName = KindInfo->emitValueTable(OS))
+      ValueTableNames.push_back(*MaybeValueTableName);
+
+  OS << MarshallingStringInfo::ValueTablesDecl << "{";
+  for (auto ValueTableName : ValueTableNames)
+    OS << "{" << ValueTableName << ", sizeof(" << ValueTableName
+       << ") / sizeof(SimpleEnumValue)"
+       << "},\n";
+  OS << "};\n";
+  OS << "static const unsigned SimpleEnumValueTablesSize = "
+        "sizeof(SimpleEnumValueTables) / sizeof(SimpleEnumValueTable);\n";
+
+  OS << "#endif // SIMPLE_ENUM_VALUE_TABLE\n";
+  OS << "\n";
 
   OS << "\n";
   OS << "#ifdef OPTTABLE_ARG_INIT\n";
@@ -241,8 +491,9 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     OS << "bool ValuesWereAdded;\n";
     OS << R.getValueAsString("ValuesCode");
     OS << "\n";
-    for (std::string S : R.getValueAsListOfStrings("Prefixes")) {
+    for (StringRef Prefix : R.getValueAsListOfStrings("Prefixes")) {
       OS << "ValuesWereAdded = Opt.addValues(";
+      std::string S(Prefix);
       S += R.getValueAsString("Name");
       write_cstring(OS, S);
       OS << ", Values);\n";

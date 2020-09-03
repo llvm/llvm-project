@@ -1,14 +1,14 @@
 ; Test we lose details of not inlined profile without '-sample-profile-merge-inlinee'
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -S | FileCheck -check-prefix=SCALE %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -S | FileCheck -check-prefix=SCALE %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=false -S | FileCheck -check-prefix=SCALE %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true -S | FileCheck -check-prefix=SCALE %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=false -S | FileCheck -check-prefix=SCALE %s
 
 ; Test we properly merge not inlined profile properly with '-sample-profile-merge-inlinee'
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee -S | FileCheck -check-prefix=MERGE %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee -S | FileCheck -check-prefix=MERGE  %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true -S | FileCheck -check-prefix=MERGE  %s
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
-define i32 @main() !dbg !6 {
+define i32 @main() #0 !dbg !6 {
 entry:
   %retval = alloca i32, align 4
   %s = alloca i32, align 4
@@ -22,7 +22,7 @@ entry:
   ret i32 0, !dbg !11
 }
 
-define i32 @_Z3sumii(i32 %x, i32 %y) !dbg !12 {
+define i32 @_Z3sumii(i32 %x, i32 %y) #0 !dbg !12 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
@@ -44,7 +44,7 @@ if.else:                                          ; preds = %entry
   ret i32 %add, !dbg !15
 }
 
-define i32 @_Z3subii(i32 %x, i32 %y) !dbg !16 {
+define i32 @_Z3subii(i32 %x, i32 %y) #0 !dbg !16 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
@@ -55,6 +55,8 @@ entry:
   %add = sub nsw i32 %tmp, %tmp1, !dbg !17
   ret i32 %add, !dbg !18
 }
+
+attributes #0 = { "use-sample-profile" }
 
 declare i32 @printf(i8*, ...)
 

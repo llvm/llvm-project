@@ -14,6 +14,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -27,6 +28,31 @@ using namespace llvm;
 
 namespace clang {
 namespace tidy {
+
+template <> struct OptionEnumMapping<modernize::Confidence::Level> {
+  static llvm::ArrayRef<std::pair<modernize::Confidence::Level, StringRef>>
+  getEnumMapping() {
+    static constexpr std::pair<modernize::Confidence::Level, StringRef>
+        Mapping[] = {{modernize::Confidence::CL_Reasonable, "reasonable"},
+                     {modernize::Confidence::CL_Safe, "safe"},
+                     {modernize::Confidence::CL_Risky, "risky"}};
+    return makeArrayRef(Mapping);
+  }
+};
+
+template <> struct OptionEnumMapping<modernize::VariableNamer::NamingStyle> {
+  static llvm::ArrayRef<
+      std::pair<modernize::VariableNamer::NamingStyle, StringRef>>
+  getEnumMapping() {
+    static constexpr std::pair<modernize::VariableNamer::NamingStyle, StringRef>
+        Mapping[] = {{modernize::VariableNamer::NS_CamelCase, "CamelCase"},
+                     {modernize::VariableNamer::NS_CamelBack, "camelBack"},
+                     {modernize::VariableNamer::NS_LowerCase, "lower_case"},
+                     {modernize::VariableNamer::NS_UpperCase, "UPPER_CASE"}};
+    return makeArrayRef(Mapping);
+  }
+};
+
 namespace modernize {
 
 static const char LoopNameArray[] = "forLoopArray";
@@ -126,9 +152,8 @@ StatementMatcher makeArrayLoopMatcher() {
 ///   - If the end iterator variable 'g' is defined, it is the same as 'f'.
 StatementMatcher makeIteratorLoopMatcher() {
   StatementMatcher BeginCallMatcher =
-      cxxMemberCallExpr(
-          argumentCountIs(0),
-          callee(cxxMethodDecl(anyOf(hasName("begin"), hasName("cbegin")))))
+      cxxMemberCallExpr(argumentCountIs(0),
+                        callee(cxxMethodDecl(hasAnyName("begin", "cbegin"))))
           .bind(BeginCallName);
 
   DeclarationMatcher InitDeclMatcher =
@@ -142,8 +167,7 @@ StatementMatcher makeIteratorLoopMatcher() {
       varDecl(hasInitializer(anything())).bind(EndVarName);
 
   StatementMatcher EndCallMatcher = cxxMemberCallExpr(
-      argumentCountIs(0),
-      callee(cxxMethodDecl(anyOf(hasName("end"), hasName("cend")))));
+      argumentCountIs(0), callee(cxxMethodDecl(hasAnyName("end", "cend"))));
 
   StatementMatcher IteratorBoundMatcher =
       expr(anyOf(ignoringParenImpCasts(
@@ -260,8 +284,7 @@ StatementMatcher makePseudoArrayLoopMatcher() {
       ));
 
   StatementMatcher SizeCallMatcher = cxxMemberCallExpr(
-      argumentCountIs(0),
-      callee(cxxMethodDecl(anyOf(hasName("size"), hasName("length")))),
+      argumentCountIs(0), callee(cxxMethodDecl(hasAnyName("size", "length"))),
       on(anyOf(hasType(pointsTo(RecordWithBeginEnd)),
                hasType(RecordWithBeginEnd))));
 
@@ -456,39 +479,23 @@ LoopConvertCheck::RangeDescriptor::RangeDescriptor()
 
 LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), TUInfo(new TUTrackingInfo),
-      MaxCopySize(std::stoull(Options.get("MaxCopySize", "16"))),
-      MinConfidence(StringSwitch<Confidence::Level>(
-                        Options.get("MinConfidence", "reasonable"))
-                        .Case("safe", Confidence::CL_Safe)
-                        .Case("risky", Confidence::CL_Risky)
-                        .Default(Confidence::CL_Reasonable)),
-      NamingStyle(StringSwitch<VariableNamer::NamingStyle>(
-                      Options.get("NamingStyle", "CamelCase"))
-                      .Case("camelBack", VariableNamer::NS_CamelBack)
-                      .Case("lower_case", VariableNamer::NS_LowerCase)
-                      .Case("UPPER_CASE", VariableNamer::NS_UpperCase)
-                      .Default(VariableNamer::NS_CamelCase)) {}
+      MaxCopySize(Options.get("MaxCopySize", 16ULL)),
+      MinConfidence(Options.get("MinConfidence", Confidence::CL_Reasonable)),
+      NamingStyle(Options.get("NamingStyle", VariableNamer::NS_CamelCase)) {}
 
 void LoopConvertCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "MaxCopySize", std::to_string(MaxCopySize));
-  SmallVector<std::string, 3> Confs{"risky", "reasonable", "safe"};
-  Options.store(Opts, "MinConfidence", Confs[static_cast<int>(MinConfidence)]);
-
-  SmallVector<std::string, 4> Styles{"camelBack", "CamelCase", "lower_case",
-                                     "UPPER_CASE"};
-  Options.store(Opts, "NamingStyle", Styles[static_cast<int>(NamingStyle)]);
+  Options.store(Opts, "MinConfidence", MinConfidence);
+  Options.store(Opts, "NamingStyle", NamingStyle);
 }
 
 void LoopConvertCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++. Because this checker is used for
-  // modernization, it is reasonable to run it on any C++ standard with the
-  // assumption the user is trying to modernize their codebase.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
-  Finder->addMatcher(makeArrayLoopMatcher(), this);
-  Finder->addMatcher(makeIteratorLoopMatcher(), this);
-  Finder->addMatcher(makePseudoArrayLoopMatcher(), this);
+  Finder->addMatcher(traverse(ast_type_traits::TK_AsIs, makeArrayLoopMatcher()),
+                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs, makeIteratorLoopMatcher()), this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs, makePseudoArrayLoopMatcher()), this);
 }
 
 /// Given the range of a single declaration, such as:
@@ -522,13 +529,11 @@ void LoopConvertCheck::doConversion(
     const ValueDecl *MaybeContainer, const UsageResult &Usages,
     const DeclStmt *AliasDecl, bool AliasUseRequired, bool AliasFromForInit,
     const ForStmt *Loop, RangeDescriptor Descriptor) {
-  auto Diag = diag(Loop->getForLoc(), "use range-based for loop instead");
-
   std::string VarName;
   bool VarNameFromAlias = (Usages.size() == 1) && AliasDecl;
   bool AliasVarIsRef = false;
   bool CanCopy = true;
-
+  std::vector<FixItHint> FixIts;
   if (VarNameFromAlias) {
     const auto *AliasVar = cast<VarDecl>(AliasDecl->getSingleDecl());
     VarName = AliasVar->getName().str();
@@ -560,8 +565,8 @@ void LoopConvertCheck::doConversion(
       getAliasRange(Context->getSourceManager(), ReplaceRange);
     }
 
-    Diag << FixItHint::CreateReplacement(
-        CharSourceRange::getTokenRange(ReplaceRange), ReplacementText);
+    FixIts.push_back(FixItHint::CreateReplacement(
+        CharSourceRange::getTokenRange(ReplaceRange), ReplacementText));
     // No further replacements are made to the loop, since the iterator or index
     // was used exactly once - in the initialization of AliasVar.
   } else {
@@ -606,8 +611,8 @@ void LoopConvertCheck::doConversion(
             Usage.Kind == Usage::UK_CaptureByCopy ? "&" + VarName : VarName;
       }
       TUInfo->getReplacedVars().insert(std::make_pair(Loop, IndexVar));
-      Diag << FixItHint::CreateReplacement(
-          CharSourceRange::getTokenRange(Range), ReplaceText);
+      FixIts.push_back(FixItHint::CreateReplacement(
+          CharSourceRange::getTokenRange(Range), ReplaceText));
     }
   }
 
@@ -617,6 +622,7 @@ void LoopConvertCheck::doConversion(
   QualType Type = Context->getAutoDeductType();
   if (!Descriptor.ElemType.isNull() && Descriptor.ElemType->isFundamentalType())
     Type = Descriptor.ElemType.getUnqualifiedType();
+  Type = Type.getDesugaredType(*Context);
 
   // If the new variable name is from the aliased variable, then the reference
   // type for the new variable should only be used if the aliased variable was
@@ -645,8 +651,9 @@ void LoopConvertCheck::doConversion(
   std::string Range = ("(" + TypeString + " " + VarName + " : " +
                        MaybeDereference + Descriptor.ContainerString + ")")
                           .str();
-  Diag << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(ParenRange), Range);
+  FixIts.push_back(FixItHint::CreateReplacement(
+      CharSourceRange::getTokenRange(ParenRange), Range));
+  diag(Loop->getForLoc(), "use range-based for loop instead") << FixIts;
   TUInfo->getGeneratedDecls().insert(make_pair(Loop, VarName));
 }
 
@@ -655,9 +662,14 @@ StringRef LoopConvertCheck::getContainerString(ASTContext *Context,
                                                const ForStmt *Loop,
                                                const Expr *ContainerExpr) {
   StringRef ContainerString;
-  if (isa<CXXThisExpr>(ContainerExpr->IgnoreParenImpCasts())) {
+  ContainerExpr = ContainerExpr->IgnoreParenImpCasts();
+  if (isa<CXXThisExpr>(ContainerExpr)) {
     ContainerString = "this";
   } else {
+    // For CXXOperatorCallExpr (e.g. vector_ptr->size()), its first argument is
+    // the class object (vector_ptr) we are targeting.
+    if (const auto* E = dyn_cast<CXXOperatorCallExpr>(ContainerExpr))
+      ContainerExpr = E->getArg(0);
     ContainerString =
         getStringFromRange(Context->getSourceManager(), Context->getLangOpts(),
                            ContainerExpr->getSourceRange());
@@ -748,7 +760,8 @@ void LoopConvertCheck::determineRangeDescriptor(
     ASTContext *Context, const BoundNodes &Nodes, const ForStmt *Loop,
     LoopFixerKind FixerKind, const Expr *ContainerExpr,
     const UsageResult &Usages, RangeDescriptor &Descriptor) {
-  Descriptor.ContainerString = getContainerString(Context, Loop, ContainerExpr);
+  Descriptor.ContainerString =
+      std::string(getContainerString(Context, Loop, ContainerExpr));
 
   if (FixerKind == LFK_Iterator)
     getIteratorLoopQualifiers(Context, Nodes, Descriptor);
@@ -889,6 +902,7 @@ void LoopConvertCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   // Find out which qualifiers we have to use in the loop range.
+  TraversalKindScope RAII(*Context, ast_type_traits::TK_AsIs);
   const UsageResult &Usages = Finder.getUsages();
   determineRangeDescriptor(Context, Nodes, Loop, FixerKind, ContainerExpr,
                            Usages, Descriptor);

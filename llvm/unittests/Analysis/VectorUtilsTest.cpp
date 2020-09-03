@@ -77,7 +77,7 @@ struct BasicTest : public testing::Test {
 } // namespace
 
 TEST_F(BasicTest, isSplat) {
-  Value *UndefVec = UndefValue::get(VectorType::get(IRB.getInt8Ty(), 4));
+  Value *UndefVec = UndefValue::get(FixedVectorType::get(IRB.getInt8Ty(), 4));
   EXPECT_TRUE(isSplatValue(UndefVec));
 
   Constant *UndefScalar = UndefValue::get(IRB.getInt8Ty());
@@ -98,6 +98,81 @@ TEST_F(BasicTest, isSplat) {
   EXPECT_FALSE(isSplatValue(SplatWithUndefC));
 }
 
+TEST_F(BasicTest, narrowShuffleMaskElts) {
+  SmallVector<int, 16> ScaledMask;
+  narrowShuffleMaskElts(1, {3,2,0,-2}, ScaledMask);
+  EXPECT_EQ(makeArrayRef(ScaledMask), makeArrayRef({3,2,0,-2}));
+  narrowShuffleMaskElts(4, {3,2,0,-1}, ScaledMask);
+  EXPECT_EQ(makeArrayRef(ScaledMask), makeArrayRef({12,13,14,15,8,9,10,11,0,1,2,3,-1,-1,-1,-1}));
+}
+
+TEST_F(BasicTest, widenShuffleMaskElts) {
+  SmallVector<int, 16> WideMask;
+  SmallVector<int, 16> NarrowMask;
+
+  // scale == 1 is a copy
+  EXPECT_TRUE(widenShuffleMaskElts(1, {3,2,0,-1}, WideMask));
+  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({3,2,0,-1}));
+
+  // back to original mask
+  narrowShuffleMaskElts(1, makeArrayRef(WideMask), NarrowMask);
+  EXPECT_EQ(makeArrayRef(NarrowMask), makeArrayRef({3,2,0,-1}));
+
+  // can't widen non-consecutive 3/2
+  EXPECT_FALSE(widenShuffleMaskElts(2, {3,2,0,-1}, WideMask));
+
+  // can't widen if not evenly divisible
+  EXPECT_FALSE(widenShuffleMaskElts(2, {0,1,2}, WideMask));
+
+  // can always widen identity to single element
+  EXPECT_TRUE(widenShuffleMaskElts(3, {0,1,2}, WideMask));
+  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({0}));
+
+  // back to original mask
+  narrowShuffleMaskElts(3, makeArrayRef(WideMask), NarrowMask);
+  EXPECT_EQ(makeArrayRef(NarrowMask), makeArrayRef({0,1,2}));
+
+  // groups of 4 must be consecutive/undef
+  EXPECT_TRUE(widenShuffleMaskElts(4, {12,13,14,15,8,9,10,11,0,1,2,3,-1,-1,-1,-1}, WideMask));
+  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({3,2,0,-1}));
+
+  // back to original mask
+  narrowShuffleMaskElts(4, makeArrayRef(WideMask), NarrowMask);
+  EXPECT_EQ(makeArrayRef(NarrowMask), makeArrayRef({12,13,14,15,8,9,10,11,0,1,2,3,-1,-1,-1,-1}));
+
+  // groups of 2 must be consecutive/undef
+  EXPECT_FALSE(widenShuffleMaskElts(2, {12,12,14,15,8,9,10,11,0,1,2,3,-1,-1,-1,-1}, WideMask));
+
+  // groups of 3 must be consecutive/undef
+  EXPECT_TRUE(widenShuffleMaskElts(3, {6,7,8,0,1,2,-1,-1,-1}, WideMask));
+  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({2,0,-1}));
+
+  // back to original mask
+  narrowShuffleMaskElts(3, makeArrayRef(WideMask), NarrowMask);
+  EXPECT_EQ(makeArrayRef(NarrowMask), makeArrayRef({6,7,8,0,1,2,-1,-1,-1}));
+
+  // groups of 3 must be consecutive/undef (partial undefs are not ok)
+  EXPECT_FALSE(widenShuffleMaskElts(3, {-1,7,8,0,-1,2,-1,-1,-1}, WideMask));
+
+  // negative indexes must match across a wide element
+  EXPECT_FALSE(widenShuffleMaskElts(2, {-1,-2,-1,-1}, WideMask));
+
+  // negative indexes must match across a wide element
+  EXPECT_TRUE(widenShuffleMaskElts(2, {-2,-2,-3,-3}, WideMask));
+  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({-2,-3}));
+}
+
+TEST_F(BasicTest, getSplatIndex) {
+  EXPECT_EQ(getSplatIndex({0,0,0}), 0);
+  EXPECT_EQ(getSplatIndex({1,0,0}), -1);     // no splat
+  EXPECT_EQ(getSplatIndex({0,1,1}), -1);     // no splat
+  EXPECT_EQ(getSplatIndex({42,42,42}), 42);  // array size is independent of splat index
+  EXPECT_EQ(getSplatIndex({42,42,-1}), 42);  // ignore negative
+  EXPECT_EQ(getSplatIndex({-1,42,-1}), 42);  // ignore negatives
+  EXPECT_EQ(getSplatIndex({-4,42,-42}), 42); // ignore all negatives
+  EXPECT_EQ(getSplatIndex({-4,-1,-42}), -1); // all negative values map to -1
+}
+
 TEST_F(VectorUtilsTest, isSplatValue_00) {
   parseAssembly(
       "define <2 x i8> @test(<2 x i8> %x) {\n"
@@ -105,6 +180,24 @@ TEST_F(VectorUtilsTest, isSplatValue_00) {
       "  ret <2 x i8> %A\n"
       "}\n");
   EXPECT_TRUE(isSplatValue(A));
+}
+
+TEST_F(VectorUtilsTest, isSplatValue_00_index0) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %x) {\n"
+      "  %A = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> zeroinitializer\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  EXPECT_TRUE(isSplatValue(A, 0));
+}
+
+TEST_F(VectorUtilsTest, isSplatValue_00_index1) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %x) {\n"
+      "  %A = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> zeroinitializer\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  EXPECT_FALSE(isSplatValue(A, 1));
 }
 
 TEST_F(VectorUtilsTest, isSplatValue_11) {
@@ -116,6 +209,24 @@ TEST_F(VectorUtilsTest, isSplatValue_11) {
   EXPECT_TRUE(isSplatValue(A));
 }
 
+TEST_F(VectorUtilsTest, isSplatValue_11_index0) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %x) {\n"
+      "  %A = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> <i32 1, i32 1>\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  EXPECT_FALSE(isSplatValue(A, 0));
+}
+
+TEST_F(VectorUtilsTest, isSplatValue_11_index1) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %x) {\n"
+      "  %A = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> <i32 1, i32 1>\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  EXPECT_TRUE(isSplatValue(A, 1));
+}
+
 TEST_F(VectorUtilsTest, isSplatValue_01) {
   parseAssembly(
       "define <2 x i8> @test(<2 x i8> %x) {\n"
@@ -125,7 +236,25 @@ TEST_F(VectorUtilsTest, isSplatValue_01) {
   EXPECT_FALSE(isSplatValue(A));
 }
 
-// FIXME: Constant (mask) splat analysis does not allow undef elements.
+TEST_F(VectorUtilsTest, isSplatValue_01_index0) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %x) {\n"
+      "  %A = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> <i32 0, i32 1>\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  EXPECT_FALSE(isSplatValue(A, 0));
+}
+
+TEST_F(VectorUtilsTest, isSplatValue_01_index1) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %x) {\n"
+      "  %A = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> <i32 0, i32 1>\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  EXPECT_FALSE(isSplatValue(A, 1));
+}
+
+// FIXME: Allow undef matching with Constant (mask) splat analysis.
 
 TEST_F(VectorUtilsTest, isSplatValue_0u) {
   parseAssembly(
@@ -134,6 +263,26 @@ TEST_F(VectorUtilsTest, isSplatValue_0u) {
       "  ret <2 x i8> %A\n"
       "}\n");
   EXPECT_FALSE(isSplatValue(A));
+}
+
+// FIXME: Allow undef matching with Constant (mask) splat analysis.
+
+TEST_F(VectorUtilsTest, isSplatValue_0u_index0) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %x) {\n"
+      "  %A = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> <i32 0, i32 undef>\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  EXPECT_FALSE(isSplatValue(A, 0));
+}
+
+TEST_F(VectorUtilsTest, isSplatValue_0u_index1) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %x) {\n"
+      "  %A = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> <i32 0, i32 undef>\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  EXPECT_FALSE(isSplatValue(A, 1));
 }
 
 TEST_F(VectorUtilsTest, isSplatValue_Binop) {
@@ -147,6 +296,28 @@ TEST_F(VectorUtilsTest, isSplatValue_Binop) {
   EXPECT_TRUE(isSplatValue(A));
 }
 
+TEST_F(VectorUtilsTest, isSplatValue_Binop_index0) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %x) {\n"
+      "  %v0 = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> <i32 0, i32 0>\n"
+      "  %v1 = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> <i32 1, i32 1>\n"
+      "  %A = udiv <2 x i8> %v0, %v1\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  EXPECT_FALSE(isSplatValue(A, 0));
+}
+
+TEST_F(VectorUtilsTest, isSplatValue_Binop_index1) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %x) {\n"
+      "  %v0 = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> <i32 0, i32 0>\n"
+      "  %v1 = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> <i32 1, i32 1>\n"
+      "  %A = udiv <2 x i8> %v0, %v1\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  EXPECT_FALSE(isSplatValue(A, 1));
+}
+
 TEST_F(VectorUtilsTest, isSplatValue_Binop_ConstantOp0) {
   parseAssembly(
       "define <2 x i8> @test(<2 x i8> %x) {\n"
@@ -155,6 +326,26 @@ TEST_F(VectorUtilsTest, isSplatValue_Binop_ConstantOp0) {
       "  ret <2 x i8> %A\n"
       "}\n");
   EXPECT_TRUE(isSplatValue(A));
+}
+
+TEST_F(VectorUtilsTest, isSplatValue_Binop_ConstantOp0_index0) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %x) {\n"
+      "  %v1 = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> <i32 1, i32 1>\n"
+      "  %A = ashr <2 x i8> <i8 42, i8 42>, %v1\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  EXPECT_FALSE(isSplatValue(A, 0));
+}
+
+TEST_F(VectorUtilsTest, isSplatValue_Binop_ConstantOp0_index1) {
+  parseAssembly(
+      "define <2 x i8> @test(<2 x i8> %x) {\n"
+      "  %v1 = shufflevector <2 x i8> %x, <2 x i8> undef, <2 x i32> <i32 1, i32 1>\n"
+      "  %A = ashr <2 x i8> <i8 42, i8 42>, %v1\n"
+      "  ret <2 x i8> %A\n"
+      "}\n");
+  EXPECT_TRUE(isSplatValue(A, 1));
 }
 
 TEST_F(VectorUtilsTest, isSplatValue_Binop_Not_Op0) {
@@ -343,6 +534,24 @@ TEST_F(VFShapeAPITest, API_buildVFShape) {
                   {2, VFParamKind::Vector},
               }};
   EXPECT_EQ(Shape, Expected);
+}
+
+TEST_F(VFShapeAPITest, API_getScalarShape) {
+  buildShape(/*VF*/ 1, /*IsScalable*/ false, /*HasGlobalPred*/ false);
+  EXPECT_EQ(VFShape::getScalarShape(*CI), Shape);
+}
+
+TEST_F(VFShapeAPITest, API_getVectorizedFunction) {
+  VFShape ScalarShape = VFShape::getScalarShape(*CI);
+  EXPECT_EQ(VFDatabase(*CI).getVectorizedFunction(ScalarShape),
+            M->getFunction("g"));
+
+  buildShape(/*VF*/ 1, /*IsScalable*/ true, /*HasGlobalPred*/ false);
+  EXPECT_EQ(VFDatabase(*CI).getVectorizedFunction(Shape), nullptr);
+  buildShape(/*VF*/ 1, /*IsScalable*/ false, /*HasGlobalPred*/ true);
+  EXPECT_EQ(VFDatabase(*CI).getVectorizedFunction(Shape), nullptr);
+  buildShape(/*VF*/ 1, /*IsScalable*/ true, /*HasGlobalPred*/ true);
+  EXPECT_EQ(VFDatabase(*CI).getVectorizedFunction(Shape), nullptr);
 }
 
 TEST_F(VFShapeAPITest, API_updateVFShape) {

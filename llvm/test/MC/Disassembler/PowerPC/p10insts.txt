@@ -1,0 +1,4 @@
+# RUN: llvm-mc --disassemble %s -triple powerpc64-unknown-linux-gnu -mcpu=pwr10
+##############################################################################
+# CONTENT MOVED TO ppc64-encoding-ISA31.txt, please do NOT add to this file
+##############################################################################

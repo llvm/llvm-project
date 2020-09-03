@@ -1,5 +1,23 @@
 include "llvm/Option/OptParser.td"
 
+// Convenience classes for long options which only accept two dashes. For lld
+// specific or newer long options, we prefer two dashes to avoid collision with
+// short options. For many others, we have to accept both forms to be compatible
+// with GNU ld.
+class FF<string name> : Flag<["--"], name>;
+class JJ<string name>: Joined<["--"], name>;
+
+multiclass EEq<string name, string help> {
+  def NAME: Separate<["--"], name>;
+  def NAME # _eq: Joined<["--"], name # "=">, Alias<!cast<Separate>(NAME)>,
+    HelpText<help>;
+}
+
+multiclass BB<string name, string help1, string help2> {
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
+}
+
 // For options whose names are multiple letters, either one dash or
 // two can precede the option name except those that start with 'o'.
 class F<string name>: Flag<["--", "-"], name>;
@@ -42,6 +60,10 @@ defm compress_debug_sections:
 
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
+defm optimize_bb_jumps: BB<"optimize-bb-jumps",
+    "Remove direct jumps at the end to the next basic block",
+    "Do not remove any direct jumps at the end to the next basic block (default)">;
+
 defm split_stack_adjust_size
     : Eq<"split-stack-adjust-size",
          "Specify adjustment to stack size when a split-stack function calls a "
@@ -69,11 +91,11 @@ defm allow_shlib_undefined: B<"allow-shlib-undefined",
     "Allow unresolved references in shared libraries (default when linking a shared library)",
     "Do not allow unresolved references in shared libraries (default when linking an executable)">;
 
-defm apply_dynamic_relocs: B<"apply-dynamic-relocs",
+defm apply_dynamic_relocs: BB<"apply-dynamic-relocs",
     "Apply link-time values for dynamic relocations",
     "Do not apply link-time values for dynamic relocations (default)">;
 
-defm dependent_libraries: B<"dependent-libraries",
+defm dependent_libraries: BB<"dependent-libraries",
     "Process dependent library specifiers from input files (default)",
     "Ignore dependent library specifiers from input files">;
 
@@ -84,7 +106,7 @@ defm as_needed: B<"as-needed",
 defm call_graph_ordering_file:
   Eq<"call-graph-ordering-file", "Layout sections to optimize the given callgraph">;
 
-defm call_graph_profile_sort: B<"call-graph-profile-sort",
+defm call_graph_profile_sort: BB<"call-graph-profile-sort",
     "Reorder sections with call graph profile (default)",
     "Do not reorder sections with call graph profile">;
 
@@ -123,7 +145,12 @@ def discard_none: F<"discard-none">,
 
 defm dynamic_linker: Eq<"dynamic-linker", "Which dynamic linker to use">;
 
-defm dynamic_list: Eq<"dynamic-list", "Read a list of dynamic symbols">;
+defm dynamic_list : Eq<"dynamic-list",
+   "Read a list of dynamic symbols. (executable) Put matched non-local defined"
+   "symbols to the dynamic symbol table. (shared object) References to matched"
+   "non-local STV_DEFAULT symbols shouldn't be bound to definitions within the "
+   "shared object. Implies -Bsymbolic but does not set DF_SYMBOLIC">,
+   MetaVarName<"<file>">;
 
 defm eh_frame_hdr: B<"eh-frame-hdr",
     "Request creation of .eh_frame_hdr section and PT_GNU_EH_FRAME segment header",
@@ -151,7 +178,7 @@ def error_unresolved_symbols: F<"error-unresolved-symbols">,
 
 defm exclude_libs: Eq<"exclude-libs", "Exclude static libraries from automatic export">;
 
-defm execute_only: B<"execute-only",
+defm execute_only: BB<"execute-only",
     "Mark executable sections unreadable",
     "Mark executable sections readable (default)">;
 
@@ -159,8 +186,12 @@ defm export_dynamic: B<"export-dynamic",
     "Put symbols in the dynamic symbol table",
     "Do not put symbols in the dynamic symbol table (default)">;
 
-defm export_dynamic_symbol:
-  Eq<"export-dynamic-symbol", "Put a symbol in the dynamic symbol table">;
+defm export_dynamic_symbol : EEq<"export-dynamic-symbol",
+    "(executable) Put matched symbols in the dynamic symbol table. "
+    "(shared object) References to matched non-local STV_DEFAULT symbols "
+    "shouldn't be bound to definitions within the shared object. "
+    "Does not imply -Bsymbolic.">,
+    MetaVarName<"glob">;
 
 defm fatal_warnings: B<"fatal-warnings",
     "Treat warnings as errors",
@@ -176,10 +207,6 @@ def fix_cortex_a53_843419: F<"fix-cortex-a53-843419">,
 def fix_cortex_a8: F<"fix-cortex-a8">,
   HelpText<"Apply fixes for ARM Cortex-A8 erratum 657417">;
 
-// This option is intentionally hidden from the user as the implementation
-// is not complete.
-def require_cet: F<"require-cet">;
-
 defm format: Eq<"format", "Change the input format of the inputs following this option">,
   MetaVarName<"[default,elf,binary]">;
 
@@ -187,11 +214,11 @@ defm gc_sections: B<"gc-sections",
     "Enable garbage collection of unused sections",
     "Disable garbage collection of unused sections (default)">;
 
-defm gdb_index: B<"gdb-index",
+defm gdb_index: BB<"gdb-index",
     "Generate .gdb_index section",
     "Do not generate .gdb_index section (default)">;
 
-defm gnu_unique: B<"gnu-unique",
+defm gnu_unique: BB<"gnu-unique",
   "Enable STB_GNU_UNIQUE symbol binding (default)",
   "Disable STB_GNU_UNIQUE symbol binding">;
 
@@ -231,7 +258,7 @@ defm merge_exidx_entries: B<"merge-exidx-entries",
     "Enable merging .ARM.exidx entries (default)",
     "Disable merging .ARM.exidx entries">;
 
-defm mmap_output_file: B<"mmap-output-file",
+defm mmap_output_file: BB<"mmap-output-file",
     "Mmap the output file for writing (default)",
     "Do not mmap the output file for writing">;
 
@@ -256,9 +283,6 @@ def no_nmagic: F<"no-nmagic">, MetaVarName<"<magic>">,
 def no_omagic: F<"no-omagic">, MetaVarName<"<magic>">,
   HelpText<"Do not set the text data sections to be writable, page align sections (default)">;
 
-def no_rosegment: F<"no-rosegment">,
-  HelpText<"Do not put read-only non-executable sections in their own segment">;
-
 def no_undefined: F<"no-undefined">,
   HelpText<"Report unresolved symbols even if the linker is creating a shared library">;
 
@@ -268,7 +292,7 @@ def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
 def oformat: Separate<["--"], "oformat">, MetaVarName<"<format>">,
   HelpText<"Specify the binary format for the output object file">;
 
-def omagic: Flag<["--"], "omagic">, MetaVarName<"<magic>">,
+def omagic: FF<"omagic">, MetaVarName<"<magic>">,
   HelpText<"Set the text and data sections to be readable and writable, do not page align sections, link against static libraries">;
 
 defm orphan_handling:
@@ -278,7 +302,7 @@ defm pack_dyn_relocs:
   Eq<"pack-dyn-relocs", "Pack dynamic relocations in the given format">,
   MetaVarName<"[none,android,relr,android+relr]">;
 
-defm use_android_relr_tags: B<"use-android-relr-tags",
+defm use_android_relr_tags: BB<"use-android-relr-tags",
     "Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*",
     "Use SHT_RELR / DT_RELR* tags (default)">;
 
@@ -297,6 +321,10 @@ defm print_icf_sections: B<"print-icf-sections",
     "List identical folded sections",
     "Do not list identical folded sections (default)">;
 
+def print_archive_stats: J<"print-archive-stats=">,
+  HelpText<"Write archive usage statistics to the specified file. "
+           "Print the numbers of members and fetched members for each archive">;
+
 defm print_symbol_order: Eq<"print-symbol-order",
   "Print a symbol order specified by --call-graph-ordering-file into the specified file">;
 
@@ -310,6 +338,10 @@ def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
 
 defm reproduce: Eq<"reproduce", "Write a tar file containing input files and command line options to reproduce link">;
+
+defm rosegment: BB<"rosegment",
+  "Put read-only non-executable sections in their own segment (default)",
+  "Do not put read-only non-executable sections in their own segment">;
 
 defm rpath: Eq<"rpath", "Add a DT_RUNPATH to the output">;
 
@@ -354,9 +386,16 @@ defm target2:
   Eq<"target2", "Interpret R_ARM_TARGET2 as <type>, where <type> is one of rel, abs, or got-rel">,
   MetaVarName<"<type>">;
 
-defm threads: B<"threads",
-    "Run the linker multi-threaded (default)",
-    "Do not run the linker multi-threaded">;
+defm threads
+    : Eq<"threads",
+         "Number of threads. '1' disables multi-threading. By default all "
+         "available hardware threads are used">;
+
+def time_trace: F<"time-trace">, HelpText<"Record time trace">;
+def time_trace_file_eq: J<"time-trace-file=">, HelpText<"Specify time trace output file">;
+
+defm time_trace_granularity: Eq<"time-trace-granularity",
+  "Minimum time granularity (in microseconds) traced by time profiler">;
 
 defm toc_optimize : B<"toc-optimize",
     "(PowerPC64) Enable TOC related optimizations (default)",
@@ -371,6 +410,8 @@ defm undefined: Eq<"undefined", "Force undefined symbol during linking">,
 
 defm undefined_glob: Eq<"undefined-glob", "Force undefined symbol during linking">,
   MetaVarName<"<pattern>">;
+
+def unique: F<"unique">, HelpText<"Creates a separate output section for every orphan input section">;
 
 defm unresolved_symbols:
   Eq<"unresolved-symbols", "Determine how to handle unresolved symbols">;
@@ -390,19 +431,25 @@ def version: F<"version">, HelpText<"Display the version number and exit">;
 
 defm version_script: Eq<"version-script", "Read a version script">;
 
-defm warn_backrefs: B<"warn-backrefs",
+defm warn_backrefs: BB<"warn-backrefs",
     "Warn about backward symbol references to fetch archive members",
     "Do not warn about backward symbol references to fetch archive members (default)">;
+
+defm warn_backrefs_exclude
+    : EEq<"warn-backrefs-exclude",
+         "Glob describing an archive (or an object file within --start-lib) "
+         "which should be ignored for --warn-backrefs.">,
+      MetaVarName<"<glob>">;
 
 defm warn_common: B<"warn-common",
     "Warn about duplicate common symbols",
     "Do not warn about duplicate common symbols (default)">;
 
-defm warn_ifunc_textrel: B<"warn-ifunc-textrel",
+defm warn_ifunc_textrel: BB<"warn-ifunc-textrel",
     "Warn about using ifunc symbols with text relocations",
     "Do not warn about using ifunc symbols with text relocations (default)">;
 
-defm warn_symbol_ordering: B<"warn-symbol-ordering",
+defm warn_symbol_ordering: BB<"warn-symbol-ordering",
     "Warn about problems with the symbol ordering file (default)",
     "Do not warn about problems with the symbol ordering file">;
 
@@ -464,84 +511,99 @@ def: JoinedOrSeparate<["-"], "u">, Alias<undefined>, HelpText<"Alias for --undef
 def: Flag<["-"], "V">, Alias<version>, HelpText<"Alias for --version">;
 
 // LTO-related options.
-def lto_aa_pipeline: J<"lto-aa-pipeline=">,
+def lto_aa_pipeline: JJ<"lto-aa-pipeline=">,
   HelpText<"AA pipeline to run during LTO. Used in conjunction with -lto-newpm-passes">;
-def lto_debug_pass_manager: F<"lto-debug-pass-manager">,
+def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
-def lto_new_pass_manager: F<"lto-new-pass-manager">,
+def lto_emit_asm: FF<"lto-emit-asm">,
+  HelpText<"Emit assembly code">;
+def lto_new_pass_manager: FF<"lto-new-pass-manager">,
   HelpText<"Use new pass manager">;
-def lto_newpm_passes: J<"lto-newpm-passes=">,
+def lto_newpm_passes: JJ<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
-def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,
+def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
   HelpText<"Optimization level for LTO">;
-def lto_partitions: J<"lto-partitions=">,
+def lto_partitions: JJ<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
-def lto_cs_profile_generate: F<"lto-cs-profile-generate">,
+def lto_cs_profile_generate: FF<"lto-cs-profile-generate">,
   HelpText<"Perform context sensitive PGO instrumentation">;
-def lto_cs_profile_file: J<"lto-cs-profile-file=">,
+def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
   HelpText<"Context sensitive profile file path">;
-def lto_obj_path_eq: J<"lto-obj-path=">;
-def lto_sample_profile: J<"lto-sample-profile=">,
+def lto_obj_path_eq: JJ<"lto-obj-path=">;
+def lto_sample_profile: JJ<"lto-sample-profile=">,
   HelpText<"Sample profile file path">;
+def lto_whole_program_visibility: FF<"lto-whole-program-visibility">,
+  HelpText<"Asserts that the LTO link has whole program visibility">;
 def disable_verify: F<"disable-verify">;
 defm mllvm: Eq<"mllvm", "Additional arguments to forward to LLVM's option processing">;
 def opt_remarks_filename: Separate<["--"], "opt-remarks-filename">,
   HelpText<"YAML output file for optimization remarks">;
 def opt_remarks_passes: Separate<["--"], "opt-remarks-passes">,
   HelpText<"Regex for the passes that need to be serialized to the output file">;
-def opt_remarks_with_hotness: Flag<["--"], "opt-remarks-with-hotness">,
+def opt_remarks_with_hotness: FF<"opt-remarks-with-hotness">,
   HelpText<"Include hotness information in the optimization remarks file">;
 def opt_remarks_format: Separate<["--"], "opt-remarks-format">,
   HelpText<"The format used for serializing remarks (default: YAML)">;
-defm plugin_opt: Eq<"plugin-opt", "specifies LTO options for compatibility with GNU linkers">;
 def save_temps: F<"save-temps">;
-def thinlto_cache_dir: J<"thinlto-cache-dir=">,
+def lto_basicblock_sections: JJ<"lto-basicblock-sections=">,
+  HelpText<"Enable basic block sections for LTO">;
+defm lto_unique_bb_section_names: BB<"lto-unique-bb-section-names",
+    "Give unique names to every basic block section for LTO",
+    "Do not give unique names to every basic block section for LTO (default)">;
+def shuffle_sections: JJ<"shuffle-sections=">, MetaVarName<"<seed>">,
+  HelpText<"Shuffle input sections using the given seed. If 0, use a random seed">;
+def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
-defm thinlto_cache_policy: Eq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
-def thinlto_emit_imports_files: F<"thinlto-emit-imports-files">;
-def thinlto_index_only: F<"thinlto-index-only">;
-def thinlto_index_only_eq: J<"thinlto-index-only=">;
-def thinlto_jobs: J<"thinlto-jobs=">, HelpText<"Number of ThinLTO jobs">;
-def thinlto_object_suffix_replace_eq: J<"thinlto-object-suffix-replace=">;
-def thinlto_prefix_replace_eq: J<"thinlto-prefix-replace=">;
+defm thinlto_cache_policy: EEq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
+def thinlto_emit_imports_files: FF<"thinlto-emit-imports-files">;
+def thinlto_index_only: FF<"thinlto-index-only">;
+def thinlto_index_only_eq: JJ<"thinlto-index-only=">;
+def thinlto_jobs: JJ<"thinlto-jobs=">,
+  HelpText<"Number of ThinLTO jobs. Default to --threads=">;
+def thinlto_object_suffix_replace_eq: JJ<"thinlto-object-suffix-replace=">;
+def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
+def thinlto_single_module_eq: JJ<"thinlto-single-module=">,
+  HelpText<"Specific a single module to compile in ThinLTO mode, for debugging only">;
 
-def: J<"plugin-opt=O">, Alias<lto_O>, HelpText<"Alias for -lto-O">;
+def: J<"plugin-opt=O">, Alias<lto_O>, HelpText<"Alias for --lto-O">;
 def: F<"plugin-opt=debug-pass-manager">,
-  Alias<lto_debug_pass_manager>, HelpText<"Alias for -lto-debug-pass-manager">;
-def: F<"plugin-opt=disable-verify">, Alias<disable_verify>, HelpText<"Alias for -disable-verify">;
+  Alias<lto_debug_pass_manager>, HelpText<"Alias for --lto-debug-pass-manager">;
+def: F<"plugin-opt=disable-verify">, Alias<disable_verify>, HelpText<"Alias for --disable-verify">;
 def plugin_opt_dwo_dir_eq: J<"plugin-opt=dwo_dir=">,
   HelpText<"Directory to store .dwo files when LTO and debug fission are used">;
+def plugin_opt_emit_asm: F<"plugin-opt=emit-asm">,
+  Alias<lto_emit_asm>, HelpText<"Alias for --lto-emit-asm">;
 def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">;
-def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs>, HelpText<"Alias for -thinlto-jobs">;
-def: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>, HelpText<"Alias for -lto-partitions">;
+def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs>, HelpText<"Alias for --thinlto-jobs">;
+def: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>, HelpText<"Alias for --lto-partitions">;
 def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
 def: F<"plugin-opt=new-pass-manager">,
-  Alias<lto_new_pass_manager>, HelpText<"Alias for -lto-new-pass-manager">;
+  Alias<lto_new_pass_manager>, HelpText<"Alias for --lto-new-pass-manager">;
 def: F<"plugin-opt=cs-profile-generate">,
-  Alias<lto_cs_profile_generate>, HelpText<"Alias for -lto-cs-profile-generate">;
+  Alias<lto_cs_profile_generate>, HelpText<"Alias for --lto-cs-profile-generate">;
 def: J<"plugin-opt=cs-profile-path=">,
-  Alias<lto_cs_profile_file>, HelpText<"Alias for -lto-cs-profile-file">;
+  Alias<lto_cs_profile_file>, HelpText<"Alias for --lto-cs-profile-file">;
 def: J<"plugin-opt=obj-path=">,
   Alias<lto_obj_path_eq>,
-  HelpText<"Alias for -lto-obj-path=">;
+  HelpText<"Alias for --lto-obj-path=">;
 def: J<"plugin-opt=sample-profile=">,
-  Alias<lto_sample_profile>, HelpText<"Alias for -lto-sample-profile">;
-def: F<"plugin-opt=save-temps">, Alias<save_temps>, HelpText<"Alias for -save-temps">;
+  Alias<lto_sample_profile>, HelpText<"Alias for --lto-sample-profile">;
+def: F<"plugin-opt=save-temps">, Alias<save_temps>, HelpText<"Alias for --save-temps">;
 def: F<"plugin-opt=thinlto-emit-imports-files">,
   Alias<thinlto_emit_imports_files>,
-  HelpText<"Alias for -thinlto-emit-imports-files">;
+  HelpText<"Alias for --thinlto-emit-imports-files">;
 def: F<"plugin-opt=thinlto-index-only">,
   Alias<thinlto_index_only>,
-  HelpText<"Alias for -thinlto-index-only">;
+  HelpText<"Alias for --thinlto-index-only">;
 def: J<"plugin-opt=thinlto-index-only=">,
   Alias<thinlto_index_only_eq>,
-  HelpText<"Alias for -thinlto-index-only=">;
+  HelpText<"Alias for --thinlto-index-only=">;
 def: J<"plugin-opt=thinlto-object-suffix-replace=">,
  Alias<thinlto_object_suffix_replace_eq>,
- HelpText<"Alias for -thinlto-object-suffix-replace=">;
+ HelpText<"Alias for --thinlto-object-suffix-replace=">;
 def: J<"plugin-opt=thinlto-prefix-replace=">,
   Alias<thinlto_prefix_replace_eq>,
-  HelpText<"Alias for -thinlto-prefix-replace=">;
+  HelpText<"Alias for --thinlto-prefix-replace=">;
 
 // Ignore LTO plugin-related options.
 // clang -flto passes -plugin and -plugin-opt to the linker. This is required
@@ -552,10 +614,17 @@ def: J<"plugin-opt=thinlto-prefix-replace=">,
 // --version output.
 defm plugin: Eq<"plugin", "Ignored for compatibility with GNU linkers">;
 
-def plugin_opt_fresolution_eq: J<"plugin-opt=-fresolution=">;
-def plugin_opt_pass_through_eq: J<"plugin-opt=-pass-through=">;
-def plugin_opt_thinlto: J<"plugin-opt=thinlto">;
-def plugin_opt_slash: J<"plugin-opt=/">;
+def plugin_opt_eq_minus: J<"plugin-opt=-">,
+  HelpText<"Specify an LLVM option for compatibility with LLVMgold.so">;
+def: J<"plugin-opt=thinlto">;
+
+// Ignore GCC collect2 LTO plugin related options. Note that we don't support
+// GCC LTO, but GCC collect2 passes these options even in non-LTO mode.
+def: J<"plugin-opt=-fresolution=">;
+def: J<"plugin-opt=-pass-through=">;
+// This may be either an unhandled LLVMgold.so feature or GCC passed
+// -plugin-opt=path/to/{liblto_plugin.so,lto-wrapper}
+def plugin_opt_eq : J<"plugin-opt=">;
 
 // Options listed below are silently ignored for now for compatibility.
 def: F<"detect-odr-violations">;
@@ -566,6 +635,7 @@ def: F<"no-copy-dt-needed-entries">;
 def: F<"no-ctors-in-init-array">;
 def: F<"no-keep-memory">;
 def: F<"no-pipeline-knowledge">;
+def: F<"no-relax">;
 def: F<"no-warn-mismatch">;
 def: Flag<["-"], "p">;
 def: Separate<["--", "-"], "rpath-link">;

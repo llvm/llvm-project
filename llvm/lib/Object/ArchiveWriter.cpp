@@ -12,6 +12,7 @@
 
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/IR/LLVMContext.h"
@@ -263,12 +264,15 @@ static sys::TimePoint<std::chrono::seconds> now(bool Deterministic) {
 }
 
 static bool isArchiveSymbol(const object::BasicSymbolRef &S) {
-  uint32_t Symflags = S.getFlags();
-  if (Symflags & object::SymbolRef::SF_FormatSpecific)
+  Expected<uint32_t> SymFlagsOrErr = S.getFlags();
+  if (!SymFlagsOrErr)
+    // TODO: Actually report errors helpfully.
+    report_fatal_error(SymFlagsOrErr.takeError());
+  if (*SymFlagsOrErr & object::SymbolRef::SF_FormatSpecific)
     return false;
-  if (!(Symflags & object::SymbolRef::SF_Global))
+  if (!(*SymFlagsOrErr & object::SymbolRef::SF_Global))
     return false;
-  if (Symflags & object::SymbolRef::SF_Undefined)
+  if (*SymFlagsOrErr & object::SymbolRef::SF_Undefined)
     return false;
   return true;
 }
@@ -545,7 +549,7 @@ Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
   for (auto ToE = sys::path::end(PathTo); ToI != ToE; ++ToI)
     sys::path::append(Relative, sys::path::Style::posix, *ToI);
 
-  return Relative.str();
+  return std::string(Relative.str());
 }
 
 Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,

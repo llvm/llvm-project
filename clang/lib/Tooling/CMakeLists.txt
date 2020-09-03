@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Option
+  FrontendOpenMP
   Support
   )
 
@@ -31,6 +32,7 @@ add_clang_library(clangTooling
 
   DEPENDS
   ClangDriverOptions
+  omp_gen
 
   LINK_LIBS
   clangAST

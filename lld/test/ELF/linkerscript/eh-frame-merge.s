@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: echo "SECTIONS { .eh_frame_hdr : { *(.eh_frame_hdr) *(.eh_frame) } }" > %t.script
-# RUN: ld.lld -o %t --no-threads --eh-frame-hdr --script %t.script %t.o
+# RUN: ld.lld -o %t --eh-frame-hdr --script %t.script %t.o
 # RUN: llvm-readobj -S -u %t | FileCheck %s
 
 # CHECK: Name: .dah

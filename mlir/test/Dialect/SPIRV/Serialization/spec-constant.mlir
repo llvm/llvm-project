@@ -1,6 +1,6 @@
 // RUN: mlir-translate -test-spirv-roundtrip %s | FileCheck %s
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // CHECK: spv.specConstant @sc_true = true
   spv.specConstant @sc_true = true
   // CHECK: spv.specConstant @sc_false spec_id(1) = false
@@ -13,7 +13,7 @@ spv.module "Logical" "GLSL450" {
   spv.specConstant @sc_float spec_id(5) = 1. : f32
 
   // CHECK-LABEL: @use
-  func @use() -> (i32) {
+  spv.func @use() -> (i32) "None" {
     // We materialize a `spv._reference_of` op at every use of a
     // specialization constant in the deserializer. So two ops here.
     // CHECK: %[[USE1:.*]] = spv._reference_of @sc_int : i32

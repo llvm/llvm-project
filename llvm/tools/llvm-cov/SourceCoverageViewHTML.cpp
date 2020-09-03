@@ -30,8 +30,7 @@ std::string escape(StringRef Str, const CoverageViewOptions &Opts) {
     if (C == '\t') {
       // Replace '\t' with up to TabSize spaces.
       unsigned NumSpaces = Opts.TabSize - (ColNum % Opts.TabSize);
-      for (unsigned I = 0; I < NumSpaces; ++I)
-        TabExpandedResult += ' ';
+      TabExpandedResult.append(NumSpaces, ' ');
       ColNum += NumSpaces;
     } else {
       TabExpandedResult += C;
@@ -250,7 +249,7 @@ const char *CreatedTimeTag = "h4";
 
 std::string getPathToStyle(StringRef ViewPath) {
   std::string PathToStyle = "";
-  std::string PathSep = sys::path::get_separator();
+  std::string PathSep = std::string(sys::path::get_separator());
   unsigned NumSeps = ViewPath.count(PathSep);
   for (unsigned I = 0, E = NumSeps; I < E; ++I)
     PathToStyle += ".." + PathSep;
@@ -359,7 +358,7 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
   // Simplify the display file path, and wrap it in a link if requested.
   std::string Filename;
   if (IsTotals) {
-    Filename = SF;
+    Filename = std::string(SF);
   } else {
     Filename = buildLinkToFile(SF, FCS);
   }
@@ -507,7 +506,7 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
 
   unsigned LCol = 1;
   auto Snip = [&](unsigned Start, unsigned Len) {
-    Snippets.push_back(Line.substr(Start, Len));
+    Snippets.push_back(std::string(Line.substr(Start, Len)));
     LCol += Len;
   };
 
@@ -533,7 +532,7 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
   auto Highlight = [&](const std::string &Snippet, unsigned LC, unsigned RC) {
     if (getOptions().Debug)
       HighlightedRanges.emplace_back(LC, RC);
-    return tag("span", Snippet, Color.getValue());
+    return tag("span", Snippet, std::string(Color.getValue()));
   };
 
   auto CheckIfUncovered = [&](const CoverageSegment *S) {

@@ -6,7 +6,12 @@
 ## relocations to avoid generating binaries that crash when executed.
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t.o
-# RUN: ld.lld -shared %t.o -o %t.so 2>&1 | FileCheck %s -check-prefix WARNING-MESSAGE
+## Link in another object file with a .bss as a regression test:
+## Previously LLD asserted when skipping over .bss sections when determining the
+## location for a warning/error message. By adding another file with a .bss
+## section before the actual %t.o we can reproduce this case.
+# RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %S/Inputs/common.s -o %t-common.o
+# RUN: ld.lld -shared %t-common.o %t.o -o %t.so 2>&1 | FileCheck %s -check-prefix WARNING-MESSAGE
 # RUN: llvm-objdump --no-show-raw-insn --no-leading-addr -d %t.so | FileCheck %s
 
 .set	noreorder
@@ -15,13 +20,13 @@ test:
 .Ltmp1:
   jr  $t9
   nop
-# WARNING-MESSAGE: warning: found R_MIPS_JALR relocation against non-function symbol tls_obj. This is invalid and most likely a compiler bug.
+# WARNING-MESSAGE: warning: {{.+}}.tmp.o:(.text+0x0): found R_MIPS_JALR relocation against non-function symbol tls_obj. This is invalid and most likely a compiler bug.
 
   .reloc .Ltmp2, R_MIPS_JALR, reg_obj
 .Ltmp2:
   jr  $t9
   nop
-# WARNING-MESSAGE: warning: found R_MIPS_JALR relocation against non-function symbol reg_obj. This is invalid and most likely a compiler bug.
+# WARNING-MESSAGE: warning: {{.+}}.tmp.o:(.text+0x8): found R_MIPS_JALR relocation against non-function symbol reg_obj. This is invalid and most likely a compiler bug.
 
   .reloc .Ltmp3, R_MIPS_JALR, untyped
 .Ltmp3:
@@ -44,7 +49,7 @@ reg_obj:
 
 # CHECK-LABEL: Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: test:
+# CHECK-NEXT: <test>:
 # CHECK-NEXT: jr	$25
 # CHECK-NEXT: nop
 # CHECK-NEXT: jr	$25

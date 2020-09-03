@@ -371,9 +371,9 @@ std::string MinimalSymbolDumper::typeOrIdIndex(codeview::TypeIndex TI,
   StringRef Name = Container.getTypeName(TI);
   if (Name.size() > 32) {
     Name = Name.take_front(32);
-    return formatv("{0} ({1}...)", TI, Name);
+    return std::string(formatv("{0} ({1}...)", TI, Name));
   } else
-    return formatv("{0} ({1})", TI, Name);
+    return std::string(formatv("{0} ({1})", TI, Name));
 }
 
 std::string MinimalSymbolDumper::idIndex(codeview::TypeIndex TI) const {

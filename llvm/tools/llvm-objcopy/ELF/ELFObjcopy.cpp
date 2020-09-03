@@ -11,7 +11,6 @@
 #include "CopyConfig.h"
 #include "Object.h"
 #include "llvm-objcopy.h"
-
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
@@ -32,6 +31,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -83,6 +83,8 @@ uint64_t getNewShfFlags(SectionFlag AllFlags) {
     NewFlags |= ELF::SHF_MERGE;
   if (AllFlags & SectionFlag::SecStrings)
     NewFlags |= ELF::SHF_STRINGS;
+  if (AllFlags & SectionFlag::SecExclude)
+    NewFlags |= ELF::SHF_EXCLUDE;
   return NewFlags;
 }
 
@@ -90,10 +92,11 @@ static uint64_t getSectionFlagsPreserveMask(uint64_t OldFlags,
                                             uint64_t NewFlags) {
   // Preserve some flags which should not be dropped when setting flags.
   // Also, preserve anything OS/processor dependant.
-  const uint64_t PreserveMask = ELF::SHF_COMPRESSED | ELF::SHF_EXCLUDE |
-                                ELF::SHF_GROUP | ELF::SHF_LINK_ORDER |
-                                ELF::SHF_MASKOS | ELF::SHF_MASKPROC |
-                                ELF::SHF_TLS | ELF::SHF_INFO_LINK;
+  const uint64_t PreserveMask =
+      (ELF::SHF_COMPRESSED | ELF::SHF_GROUP | ELF::SHF_LINK_ORDER |
+       ELF::SHF_MASKOS | ELF::SHF_MASKPROC | ELF::SHF_TLS |
+       ELF::SHF_INFO_LINK) &
+      ~ELF::SHF_EXCLUDE;
   return (OldFlags & PreserveMask) | (NewFlags & ~PreserveMask);
 }
 
@@ -267,7 +270,7 @@ static Error splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
   auto OnlyKeepDWOPred = [&DWOFile](const SectionBase &Sec) {
     return onlyKeepDWOPred(*DWOFile, Sec);
   };
-  if (Error E = DWOFile->removeSections(Config.AllowBrokenLinks, 
+  if (Error E = DWOFile->removeSections(Config.AllowBrokenLinks,
                                         OnlyKeepDWOPred))
     return E;
   if (Config.OutputArch) {
@@ -285,7 +288,7 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                                Object &Obj) {
   for (auto &Sec : Obj.sections()) {
     if (Sec.Name == SecName) {
-      if (Sec.OriginalData.empty())
+      if (Sec.Type == SHT_NOBITS)
         return createStringError(object_error::parse_failed,
                                  "cannot dump section '%s': it has no contents",
                                  SecName.str().c_str());
@@ -387,7 +390,7 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
 
     const auto I = Config.SymbolsToRename.find(Sym.Name);
     if (I != Config.SymbolsToRename.end())
-      Sym.Name = I->getValue();
+      Sym.Name = std::string(I->getValue());
 
     if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
       Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();
@@ -415,6 +418,9 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
       return true;
 
     if (Config.StripAll || Config.StripAllGNU)
+      return true;
+
+    if (Config.StripDebug && Sym.Type == STT_FILE)
       return true;
 
     if (Config.SymbolsToRemove.matches(Sym.Name))
@@ -572,11 +578,11 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
   }
 
   if (Config.CompressionType != DebugCompressionType::None)
-    replaceDebugSections(Obj, RemovePred, isCompressable, 
+    replaceDebugSections(Obj, RemovePred, isCompressable,
                          [&Config, &Obj](const SectionBase *S) {
                            return &Obj.addSection<CompressedSection>(
                                 *S, Config.CompressionType);
-                        });
+                         });
   else if (Config.DecompressDebugSections)
     replaceDebugSections(
         Obj, RemovePred,
@@ -598,7 +604,9 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
 // system. The only priority is that keeps/copies overrule removes.
 static Error handleArgs(const CopyConfig &Config, Object &Obj,
                         const Reader &Reader, ElfType OutputElfType) {
-
+  if (Config.StripSwiftSymbols)
+    return createStringError(llvm::errc::invalid_argument,
+                             "option not supported by llvm-objcopy for ELF");
   if (!Config.SplitDWO.empty())
     if (Error E =
             splitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType))
@@ -607,6 +615,15 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
   if (Config.OutputArch) {
     Obj.Machine = Config.OutputArch.getValue().EMachine;
     Obj.OSABI = Config.OutputArch.getValue().OSABI;
+  }
+
+  // Dump sections before add/remove for compatibility with GNU objcopy.
+  for (StringRef Flag : Config.DumpSection) {
+    StringRef SectionName;
+    StringRef FileName;
+    std::tie(SectionName, FileName) = Flag.split('=');
+    if (Error E = dumpSectionToFile(SectionName, FileName, Obj))
+      return E;
   }
 
   // It is important to remove the sections first. For example, we want to
@@ -624,7 +641,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
       const auto Iter = Config.SectionsToRename.find(Sec.Name);
       if (Iter != Config.SectionsToRename.end()) {
         const SectionRename &SR = Iter->second;
-        Sec.Name = SR.NewName;
+        Sec.Name = std::string(SR.NewName);
         if (SR.NewFlags.hasValue())
           setSectionFlagsAndType(Sec, SR.NewFlags.getValue());
       }
@@ -717,17 +734,15 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
       NewSection.Type = SHT_NOTE;
   }
 
-  for (const auto &Flag : Config.DumpSection) {
-    std::pair<StringRef, StringRef> SecPair = Flag.split("=");
-    StringRef SecName = SecPair.first;
-    StringRef File = SecPair.second;
-    if (Error E = dumpSectionToFile(SecName, File, Obj))
-      return E;
-  }
-
   if (!Config.AddGnuDebugLink.empty())
     Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink,
                                         Config.GnuDebugLinkCRC32);
+
+  // If the symbol table was previously removed, we need to create a new one
+  // before adding new symbols.
+  if (!Obj.SymbolTable && !Config.ELF->SymbolsToAdd.empty()) {
+    Obj.addNewSymbolTable();
+  }
 
   for (const NewSymbolInfo &SI : Config.ELF->SymbolsToAdd) {
     SectionBase *Sec = Obj.findSection(SI.SectionName);

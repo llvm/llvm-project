@@ -50,7 +50,6 @@ define void @test(%struct1* %fde, i32 %fd, void (i32, i32, i8*)* %func, i8* %arg
 ; A53-NEXT:    // =>This Inner Loop Header: Depth=1
 ; A53-NEXT:    b .LBB0_4
 entry:
-
   %0 = bitcast %struct1* %fde to i8*
   tail call void @llvm.memset.p0i8.i64(i8* align 8 %0, i8 0, i64 40, i1 false)
   %state = getelementptr inbounds %struct1, %struct1* %fde, i64 0, i32 4
@@ -93,6 +92,116 @@ while.end.i:
   br label %exit
 
 exit:
+  ret void
+}
+
+; TODO: rev16?
+
+define void @rotate16_in_place(i8* %p) {
+; A53-LABEL: rotate16_in_place:
+; A53:       // %bb.0:
+; A53-NEXT:    ldrb w8, [x0, #1]
+; A53-NEXT:    ldrb w9, [x0]
+; A53-NEXT:    strb w8, [x0]
+; A53-NEXT:    strb w9, [x0, #1]
+; A53-NEXT:    ret
+  %p0 = getelementptr i8, i8* %p, i64 0
+  %p1 = getelementptr i8, i8* %p, i64 1
+  %i0 = load i8, i8* %p0, align 1
+  %i1 = load i8, i8* %p1, align 1
+  store i8 %i1, i8* %p0, align 1
+  store i8 %i0, i8* %p1, align 1
+  ret void
+}
+
+; TODO: rev16?
+
+define void @rotate16(i8* %p, i8* %q) {
+; A53-LABEL: rotate16:
+; A53:       // %bb.0:
+; A53-NEXT:    ldrb w8, [x0, #1]
+; A53-NEXT:    ldrb w9, [x0]
+; A53-NEXT:    strb w8, [x1]
+; A53-NEXT:    strb w9, [x1, #1]
+; A53-NEXT:    ret
+  %p0 = getelementptr i8, i8* %p, i64 0
+  %p1 = getelementptr i8, i8* %p, i64 1
+  %q0 = getelementptr i8, i8* %q, i64 0
+  %q1 = getelementptr i8, i8* %q, i64 1
+  %i0 = load i8, i8* %p0, align 1
+  %i1 = load i8, i8* %p1, align 1
+  store i8 %i1, i8* %q0, align 1
+  store i8 %i0, i8* %q1, align 1
+  ret void
+}
+
+define void @rotate32_in_place(i16* %p) {
+; A53-LABEL: rotate32_in_place:
+; A53:       // %bb.0:
+; A53-NEXT:    ldr w8, [x0]
+; A53-NEXT:    ror w8, w8, #16
+; A53-NEXT:    str w8, [x0]
+; A53-NEXT:    ret
+  %p0 = getelementptr i16, i16* %p, i64 0
+  %p1 = getelementptr i16, i16* %p, i64 1
+  %i0 = load i16, i16* %p0, align 2
+  %i1 = load i16, i16* %p1, align 2
+  store i16 %i1, i16* %p0, align 2
+  store i16 %i0, i16* %p1, align 2
+  ret void
+}
+
+define void @rotate32(i16* %p) {
+; A53-LABEL: rotate32:
+; A53:       // %bb.0:
+; A53-NEXT:    ldr w8, [x0]
+; A53-NEXT:    ror w8, w8, #16
+; A53-NEXT:    str w8, [x0, #84]
+; A53-NEXT:    ret
+  %p0 = getelementptr i16, i16* %p, i64 0
+  %p1 = getelementptr i16, i16* %p, i64 1
+  %p42 = getelementptr i16, i16* %p, i64 42
+  %p43 = getelementptr i16, i16* %p, i64 43
+  %i0 = load i16, i16* %p0, align 2
+  %i1 = load i16, i16* %p1, align 2
+  store i16 %i1, i16* %p42, align 2
+  store i16 %i0, i16* %p43, align 2
+  ret void
+}
+
+; Prefer paired memops over rotate.
+
+define void @rotate64_in_place(i32* %p) {
+; A53-LABEL: rotate64_in_place:
+; A53:       // %bb.0:
+; A53-NEXT:    ldp w9, w8, [x0]
+; A53-NEXT:    stp w8, w9, [x0]
+; A53-NEXT:    ret
+  %p0 = getelementptr i32, i32* %p, i64 0
+  %p1 = getelementptr i32, i32* %p, i64 1
+  %i0 = load i32, i32* %p0, align 4
+  %i1 = load i32, i32* %p1, align 4
+  store i32 %i1, i32* %p0, align 4
+  store i32 %i0, i32* %p1, align 4
+  ret void
+}
+
+; Prefer paired memops over rotate.
+
+define void @rotate64(i32* %p) {
+; A53-LABEL: rotate64:
+; A53:       // %bb.0:
+; A53-NEXT:    ldp w9, w8, [x0]
+; A53-NEXT:    stp w8, w9, [x0, #8]
+; A53-NEXT:    ret
+  %p0 = getelementptr i32, i32* %p, i64 0
+  %p1 = getelementptr i32, i32* %p, i64 1
+  %p2 = getelementptr i32, i32* %p, i64 2
+  %p3 = getelementptr i32, i32* %p, i64 3
+  %i0 = load i32, i32* %p0, align 4
+  %i1 = load i32, i32* %p1, align 4
+  store i32 %i1, i32* %p2, align 4
+  store i32 %i0, i32* %p3, align 4
   ret void
 }
 

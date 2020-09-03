@@ -424,6 +424,8 @@ public:
   virtual void markSymbols();
   virtual void
   replaceSectionReferences(const DenseMap<SectionBase *, SectionBase *> &);
+  // Notify the section that it is subject to removal.
+  virtual void onRemove();
 };
 
 class Segment {
@@ -799,10 +801,14 @@ public:
   void accept(SectionVisitor &) const override;
   void accept(MutableSectionVisitor &Visitor) override;
   void finalize() override;
+  Error removeSectionReferences(
+      bool AllowBrokenLinks,
+      function_ref<bool(const SectionBase *)> ToRemove) override;
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
   void markSymbols() override;
   void replaceSectionReferences(
       const DenseMap<SectionBase *, SectionBase *> &FromTo) override;
+  void onRemove() override;
 
   static bool classof(const SectionBase *S) {
     return S->OriginalType == ELF::SHT_GROUP;
@@ -1066,6 +1072,7 @@ public:
     Ptr->Index = Sections.size();
     return *Ptr;
   }
+  void addNewSymbolTable();
   Segment &addSegment(ArrayRef<uint8_t> Data) {
     Segments.emplace_back(std::make_unique<Segment>(Data));
     return *Segments.back();

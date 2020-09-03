@@ -7,9 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OperatingSystem_h_
-#define liblldb_OperatingSystem_h_
-
+#ifndef LLDB_TARGET_OPERATINGSYSTEM_H
+#define LLDB_TARGET_OPERATINGSYSTEM_H
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/lldb-private.h"
@@ -70,9 +69,10 @@ protected:
   Process
       *m_process; ///< The process that this dynamic loader plug-in is tracking.
 private:
-  DISALLOW_COPY_AND_ASSIGN(OperatingSystem);
+  OperatingSystem(const OperatingSystem &) = delete;
+  const OperatingSystem &operator=(const OperatingSystem &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_OperatingSystem_h_
+#endif // LLDB_TARGET_OPERATINGSYSTEM_H

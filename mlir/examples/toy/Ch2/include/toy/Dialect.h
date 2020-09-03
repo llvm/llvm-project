@@ -1,13 +1,13 @@
 //===- Dialect.h - Dialect definition for the Toy IR ----------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
 // This file implements the IR Dialect for the Toy language.
-// See g3doc/Tutorials/Toy/Ch-2.md for more information.
+// See docs/Tutorials/Toy/Ch-2.md for more information.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,6 +16,7 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Function.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
 namespace toy {

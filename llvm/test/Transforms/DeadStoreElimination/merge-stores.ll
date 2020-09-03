@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @byte_by_byte_replacement(i32 *%ptr) {
 ; CHECK-LABEL: @byte_by_byte_replacement(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 202050057, i32* [[PTR:%.*]]
+; CHECK-NEXT:    store i32 202050057, i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -31,7 +31,7 @@ entry:
 define void @word_replacement(i64 *%ptr) {
 ; CHECK-LABEL: @word_replacement(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 8106482645252179720, i64* [[PTR:%.*]]
+; CHECK-NEXT:    store i64 8106482645252179720, i64* [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -54,7 +54,7 @@ entry:
 define void @differently_sized_replacements(i64 *%ptr) {
 ; CHECK-LABEL: @differently_sized_replacements(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 578437695752307201, i64* [[PTR:%.*]]
+; CHECK-NEXT:    store i64 578437695752307201, i64* [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -79,7 +79,7 @@ entry:
 define void @multiple_replacements_to_same_byte(i64 *%ptr) {
 ; CHECK-LABEL: @multiple_replacements_to_same_byte(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 579005069522043393, i64* [[PTR:%.*]]
+; CHECK-NEXT:    store i64 579005069522043393, i64* [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -103,7 +103,7 @@ entry:
 define void @merged_merges(i64 *%ptr) {
 ; CHECK-LABEL: @merged_merges(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 579005069572506113, i64* [[PTR:%.*]]
+; CHECK-NEXT:    store i64 579005069572506113, i64* [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -160,7 +160,7 @@ define void @foo(%union.U* nocapture %u) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [[UNION_U:%.*]], %union.U* [[U:%.*]], i64 0, i32 0
-; CHECK-NEXT:    store i64 42, i64* [[I]], align 8
+; CHECK-NEXT:    store i64 42, i64* [[I]], align 8, !tbaa !0, !noalias !3, !nontemporal !4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -175,8 +175,8 @@ entry:
 
 define void @PR34074(i32* %x, i64* %y) {
 ; CHECK-LABEL: @PR34074(
-; CHECK-NEXT:    store i64 42, i64* %y
-; CHECK-NEXT:    store i32 4, i32* %x
+; CHECK-NEXT:    store i64 42, i64* [[Y:%.*]], align 8
+; CHECK-NEXT:    store i32 4, i32* [[X:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i64 42, i64* %y          ; independent store
@@ -190,10 +190,10 @@ define void @PR34074(i32* %x, i64* %y) {
 
 define void @PR36129(i32* %P, i32* %Q) {
 ; CHECK-LABEL: @PR36129(
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P]] to i8*
-; CHECK-NEXT:    store i32 2, i32* [[Q:%.*]]
-; CHECK-NEXT:    store i8 3, i8* [[P2]]
+; CHECK-NEXT:    store i32 2, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    store i8 3, i8* [[P2]], align 1
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, i32* %P

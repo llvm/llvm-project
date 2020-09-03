@@ -1,4 +1,4 @@
-//===-- CommandAlias.cpp -----------------------------------------*- C++-*-===//
+//===-- CommandAlias.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,7 +32,7 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
   std::string options_string(options_args);
   // TODO: Find a way to propagate errors in this CommandReturnObject up the
   // stack.
-  CommandReturnObject result;
+  CommandReturnObject result(false);
   // Check to see if the command being aliased can take any command options.
   Options *options = cmd_obj_sp->GetOptions();
   if (options) {
@@ -65,7 +65,8 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
     else {
       for (auto &entry : args.entries()) {
         if (!entry.ref().empty())
-          option_arg_vector->emplace_back("<argument>", -1, entry.ref());
+          option_arg_vector->emplace_back(std::string("<argument>"), -1,
+                                          std::string(entry.ref()));
       }
     }
   }
@@ -79,7 +80,7 @@ CommandAlias::CommandAlias(CommandInterpreter &interpreter,
                            llvm::StringRef help, llvm::StringRef syntax,
                            uint32_t flags)
     : CommandObject(interpreter, name, help, syntax, flags),
-      m_underlying_command_sp(), m_option_string(options_args),
+      m_underlying_command_sp(), m_option_string(std::string(options_args)),
       m_option_args_sp(new OptionArgVector),
       m_is_dashdash_alias(eLazyBoolCalculate), m_did_set_help(false),
       m_did_set_help_long(false) {

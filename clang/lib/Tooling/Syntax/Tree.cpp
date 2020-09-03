@@ -11,8 +11,26 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
+#include <cassert>
 
 using namespace clang;
+
+namespace {
+static void traverse(const syntax::Node *N,
+                     llvm::function_ref<void(const syntax::Node *)> Visit) {
+  if (auto *T = dyn_cast<syntax::Tree>(N)) {
+    for (auto *C = T->firstChild(); C; C = C->nextSibling())
+      traverse(C, Visit);
+  }
+  Visit(N);
+}
+static void traverse(syntax::Node *N,
+                     llvm::function_ref<void(syntax::Node *)> Visit) {
+  traverse(static_cast<const syntax::Node *>(N), [&](const syntax::Node *N) {
+    Visit(const_cast<syntax::Node *>(N));
+  });
+}
+} // namespace
 
 syntax::Arena::Arena(SourceManager &SourceMgr, const LangOptions &LangOpts,
                      TokenBuffer Tokens)
@@ -40,22 +58,33 @@ bool syntax::Leaf::classof(const Node *N) {
 
 syntax::Node::Node(NodeKind Kind)
     : Parent(nullptr), NextSibling(nullptr), Kind(static_cast<unsigned>(Kind)),
-      Role(static_cast<unsigned>(NodeRole::Detached)), Original(false),
-      CanModify(false) {}
+      Role(0), Original(false), CanModify(false) {
+  this->setRole(NodeRole::Detached);
+}
 
 bool syntax::Node::isDetached() const { return role() == NodeRole::Detached; }
+
+void syntax::Node::setRole(NodeRole NR) {
+  this->Role = static_cast<unsigned>(NR);
+}
 
 bool syntax::Tree::classof(const Node *N) { return N->kind() > NodeKind::Leaf; }
 
 void syntax::Tree::prependChildLowLevel(Node *Child, NodeRole Role) {
-  assert(Child->Parent == nullptr);
-  assert(Child->NextSibling == nullptr);
   assert(Child->role() == NodeRole::Detached);
   assert(Role != NodeRole::Detached);
 
+  Child->setRole(Role);
+  prependChildLowLevel(Child);
+}
+
+void syntax::Tree::prependChildLowLevel(Node *Child) {
+  assert(Child->Parent == nullptr);
+  assert(Child->NextSibling == nullptr);
+  assert(Child->role() != NodeRole::Detached);
+
   Child->Parent = this;
   Child->NextSibling = this->FirstChild;
-  Child->Role = static_cast<unsigned>(Role);
   this->FirstChild = Child;
 }
 
@@ -76,9 +105,11 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
        N != End;) {
     auto *Next = N->NextSibling;
 
-    N->Role = static_cast<unsigned>(NodeRole::Detached);
+    N->setRole(NodeRole::Detached);
     N->Parent = nullptr;
     N->NextSibling = nullptr;
+    if (N->Original)
+      traverse(N, [&](Node *C) { C->Original = false; });
 
     N = Next;
   }
@@ -91,8 +122,10 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
 
   if (New) {
     auto *Last = New;
-    while (auto *Next = Last->nextSibling())
-      Last = Next;
+    for (auto *N = New; N != nullptr; N = N->nextSibling()) {
+      Last = N;
+      N->Parent = this;
+    }
     Last->NextSibling = End;
   }
 
@@ -102,14 +135,6 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
 }
 
 namespace {
-static void traverse(const syntax::Node *N,
-                     llvm::function_ref<void(const syntax::Node *)> Visit) {
-  if (auto *T = dyn_cast<syntax::Tree>(N)) {
-    for (auto *C = T->firstChild(); C; C = C->nextSibling())
-      traverse(C, Visit);
-  }
-  Visit(N);
-}
 static void dumpTokens(llvm::raw_ostream &OS, ArrayRef<syntax::Token> Tokens,
                        const SourceManager &SM) {
   assert(!Tokens.empty());
@@ -187,6 +212,31 @@ std::string syntax::Node::dumpTokens(const Arena &A) const {
     OS << " ";
   });
   return OS.str();
+}
+
+void syntax::Node::assertInvariants() const {
+#ifndef NDEBUG
+  if (isDetached())
+    assert(parent() == nullptr);
+  else
+    assert(parent() != nullptr);
+
+  auto *T = dyn_cast<Tree>(this);
+  if (!T)
+    return;
+  for (auto *C = T->firstChild(); C; C = C->nextSibling()) {
+    if (T->isOriginal())
+      assert(C->isOriginal());
+    assert(!C->isDetached());
+    assert(C->parent() == T);
+  }
+#endif
+}
+
+void syntax::Node::assertInvariantsRecursive() const {
+#ifndef NDEBUG
+  traverse(this, [&](const syntax::Node *N) { N->assertInvariants(); });
+#endif
 }
 
 syntax::Leaf *syntax::Tree::firstLeaf() {

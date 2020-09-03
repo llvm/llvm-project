@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __MachTask_h__
-#define __MachTask_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTASK_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTASK_H
 
 #include <mach/mach.h>
 #include <sys/socket.h>
@@ -113,4 +113,4 @@ private:
   MachTask &operator=(const MachTask &rhs) = delete;
 };
 
-#endif // __MachTask_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTASK_H

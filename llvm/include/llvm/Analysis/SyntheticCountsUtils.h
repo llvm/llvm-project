@@ -19,9 +19,6 @@
 
 namespace llvm {
 
-class CallGraph;
-class Function;
-
 /// Class with methods to propagate synthetic entry counts.
 ///
 /// This class is templated on the type of the call graph and designed to work

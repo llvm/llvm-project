@@ -12,7 +12,7 @@ YAML is a human readable data serialization language.  The full YAML language
 spec can be read at `yaml.org 
 <http://www.yaml.org/spec/1.2/spec.html#Introduction>`_.  The simplest form of
 yaml is just "scalars", "mappings", and "sequences".  A scalar is any number
-or string.  The pound/hash symbol (#) begins a comment line.   A mapping is 
+or string.  The pound/hash symbol (#) begins a comment line.   A mapping is
 a set of key-value pairs where the key ends with a colon.  For example:
 
 .. code-block:: yaml
@@ -730,7 +730,7 @@ The YAML syntax supports tags as a way to specify the type of a node before
 it is parsed. This allows dynamic types of nodes.  But the YAML I/O model uses
 static typing, so there are limits to how you can use tags with the YAML I/O
 model. Recently, we added support to YAML I/O for checking/setting the optional 
-tag on a map. Using this functionality it is even possbile to support different 
+tag on a map. Using this functionality it is even possible to support different 
 mappings, as long as they are convertible.  
 
 To check a tag, inside your mapping() method you can use io.mapTag() to specify

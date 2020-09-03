@@ -6,6 +6,7 @@
 
   define void @imm_s32_gpr() { ret void }
   define void @imm_s64_gpr() { ret void }
+  define void @test_f64_cp() { ret void }
 
 ...
 
@@ -48,4 +49,30 @@ body:             |
     ; CHECK: $x0 = COPY [[SUBREG_TO_REG]]
     %0(s64) = G_CONSTANT i64 1234
     $x0 = COPY %0(s64)
+...
+
+# 64b FP immediates need to be loaded.
+---
+name:            test_f64_cp
+legalized:       true
+regBankSelected: true
+liveins:
+  - { reg: '$d0' }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $d0
+
+    ; CHECK-LABEL: name: test_f64_cp
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
+    ; CHECK: [[FADDDrr:%[0-9]+]]:fpr64 = FADDDrr [[COPY]], [[LDRDui]]
+    ; CHECK: $d0 = COPY [[FADDDrr]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:fpr(s64) = COPY $d0
+    %1:fpr(s64) = G_FCONSTANT double 0x3FEFF7CED916872B
+    %2:fpr(s64) = G_FADD %0, %1
+    $d0 = COPY %2(s64)
+    RET_ReallyLR implicit $d0
+
 ...

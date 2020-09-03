@@ -36,6 +36,10 @@ public:
 private:
   void printMemOperandRI(const MCInst *MI, unsigned OpNum, raw_ostream &O);
   void printOperand(const MCInst *MI, unsigned OpNum, raw_ostream &O);
+  void printOperand(const MCInst *MI, uint64_t /*Address*/, unsigned OpNum,
+                    raw_ostream &O) {
+    printOperand(MI, OpNum, O);
+  }
   void printPredicateOperand(const MCInst *MI, unsigned OpNum, raw_ostream &O);
   void printBRCCPredicateOperand(const MCInst *MI, unsigned OpNum,
                                  raw_ostream &O);

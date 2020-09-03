@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
 #include <immintrin.h>
@@ -206,6 +206,12 @@ __m256i test_mm256_broadcastsi128_si256(__m128i a) {
   // CHECK-LABEL: test_mm256_broadcastsi128_si256
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   return _mm256_broadcastsi128_si256(a);
+}
+
+__m256i test_mm_broadcastsi128_si256(__m128i a) {
+  // CHECK-LABEL: test_mm_broadcastsi128_si256
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  return _mm_broadcastsi128_si256(a);
 }
 
 __m128 test_mm_broadcastss_ps(__m128 a) {

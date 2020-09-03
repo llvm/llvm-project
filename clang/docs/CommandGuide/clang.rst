@@ -146,7 +146,7 @@ Language Selection and Mode Options
 
    ISO C 2017 with GNU extensions
 
- The default C language standard is ``gnu11``, except on PS4, where it is
+ The default C language standard is ``gnu17``, except on PS4, where it is
  ``gnu99``.
 
  Supported values for the C++ language are:
@@ -246,7 +246,9 @@ Language Selection and Mode Options
 .. option:: -ffreestanding
 
  Indicate that the file should be compiled for a freestanding, not a hosted,
- environment.
+ environment. Note that it is assumed that a freestanding environment will
+ additionally provide `memcpy`, `memmove`, `memset` and `memcmp`
+ implementations, as these are needed for efficient codegen for many programs.
 
 .. option:: -fno-builtin
 
@@ -278,9 +280,18 @@ Language Selection and Mode Options
  Make all string literals default to writable.  This disables uniquing of
  strings and other optimizations.
 
-.. option:: -flax-vector-conversions
+.. option:: -flax-vector-conversions, -flax-vector-conversions=<kind>, -fno-lax-vector-conversions
 
  Allow loose type checking rules for implicit vector conversions.
+ Possible values of <kind>:
+
+ - ``none``: allow no implicit conversions between vectors
+ - ``integer``: allow implicit bitcasts between integer vectors of the same
+   overall bit-width
+ - ``all``: allow implicit bitcasts between any vectors of the same
+   overall bit-width
+
+ <kind> defaults to ``integer`` if unspecified.
 
 .. option:: -fblocks
 
@@ -462,6 +473,16 @@ Code Generation Options
   the linker merges all such modules into a single combined module for
   optimization. With "thin", :doc:`ThinLTO <../ThinLTO>`
   compilation is invoked instead.
+
+  .. note::
+
+     On Darwin, when using :option:`-flto` along with :option:`-g` and
+     compiling and linking in separate steps, you also need to pass
+     ``-Wl,-object_path_lto,<lto-filename>.o`` at the linking step to instruct the
+     ld64 linker not to delete the temporary object file generated during Link
+     Time Optimization (this flag is automatically passed to the linker by Clang
+     if compilation and linking are done in a single step). This allows debugging
+     the executable as well as generating the ``.dSYM`` bundle using :manpage:`dsymutil(1)`.
 
 Driver Options
 ~~~~~~~~~~~~~~

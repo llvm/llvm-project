@@ -12,21 +12,26 @@
 
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendOptions.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ASTWriter.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <limits>
@@ -71,6 +76,68 @@ public:
   // spuriously added by '-isystem' (e.g. to suppress warnings from those
   // headers).
   bool needSystemDependencies() override { return true; }
+};
+
+// Collects files whose existence would invalidate the preamble.
+// Collecting *all* of these would make validating it too slow though, so we
+// just find all the candidates for 'file not found' diagnostics.
+//
+// A caveat that may be significant for generated files: we'll omit files under
+// search path entries whose roots don't exist when the preamble is built.
+// These are pruned by InitHeaderSearch and so we don't see the search path.
+// It would be nice to include them but we don't want to duplicate all the rest
+// of the InitHeaderSearch logic to reconstruct them.
+class MissingFileCollector : public PPCallbacks {
+  llvm::StringSet<> &Out;
+  const HeaderSearch &Search;
+  const SourceManager &SM;
+
+public:
+  MissingFileCollector(llvm::StringSet<> &Out, const HeaderSearch &Search,
+                       const SourceManager &SM)
+      : Out(Out), Search(Search), SM(SM) {}
+
+  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
+                          StringRef FileName, bool IsAngled,
+                          CharSourceRange FilenameRange, const FileEntry *File,
+                          StringRef SearchPath, StringRef RelativePath,
+                          const Module *Imported,
+                          SrcMgr::CharacteristicKind FileType) override {
+    // File is null if it wasn't found.
+    // (We have some false negatives if PP recovered e.g. <foo> -> "foo")
+    if (File != nullptr)
+      return;
+
+    // If it's a rare absolute include, we know the full path already.
+    if (llvm::sys::path::is_absolute(FileName)) {
+      Out.insert(FileName);
+      return;
+    }
+
+    // Reconstruct the filenames that would satisfy this directive...
+    llvm::SmallString<256> Buf;
+    auto NotFoundRelativeTo = [&](const DirectoryEntry *DE) {
+      Buf = DE->getName();
+      llvm::sys::path::append(Buf, FileName);
+      llvm::sys::path::remove_dots(Buf, /*remove_dot_dot=*/true);
+      Out.insert(Buf);
+    };
+    // ...relative to the including file.
+    if (!IsAngled) {
+      if (const FileEntry *IncludingFile =
+              SM.getFileEntryForID(SM.getFileID(IncludeTok.getLocation())))
+        if (IncludingFile->getDir())
+          NotFoundRelativeTo(IncludingFile->getDir());
+    }
+    // ...relative to the search paths.
+    for (const auto &Dir : llvm::make_range(
+             IsAngled ? Search.angled_dir_begin() : Search.search_dir_begin(),
+             Search.search_dir_end())) {
+      // No support for frameworks or header maps yet.
+      if (Dir.isNormalDir())
+        NotFoundRelativeTo(Dir.getDir());
+    }
+  }
 };
 
 /// Keeps a track of files to be deleted in destructor.
@@ -188,6 +255,10 @@ public:
     Action.setEmittedPreamblePCH(getWriter());
   }
 
+  bool shouldSkipFunctionBody(Decl *D) override {
+    return Action.Callbacks.shouldSkipFunctionBody(D);
+  }
+
 private:
   PrecompilePreambleAction &Action;
   std::unique_ptr<raw_ostream> Out;
@@ -227,7 +298,7 @@ template <class T> bool moveOnNoError(llvm::ErrorOr<T> Val, T &Output) {
 } // namespace
 
 PreambleBounds clang::ComputePreambleBounds(const LangOptions &LangOpts,
-                                            llvm::MemoryBuffer *Buffer,
+                                            const llvm::MemoryBuffer *Buffer,
                                             unsigned MaxLines) {
   return Lexer::ComputePreamble(Buffer->getBuffer(), LangOpts, MaxLines);
 }
@@ -269,8 +340,9 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
 
   // Tell the compiler invocation to generate a temporary precompiled header.
   FrontendOpts.ProgramAction = frontend::GeneratePCH;
-  FrontendOpts.OutputFile = StoreInMemory ? getInMemoryPreamblePath()
-                                          : Storage.asFile().getFilePath();
+  FrontendOpts.OutputFile =
+      std::string(StoreInMemory ? getInMemoryPreamblePath()
+                                : Storage.asFile().getFilePath());
   PreprocessorOpts.PrecompiledPreambleBytes.first = 0;
   PreprocessorOpts.PrecompiledPreambleBytes.second = false;
   // Inform preprocessor to record conditional stack when building the preamble.
@@ -351,6 +423,11 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
     Clang->getPreprocessor().addPPCallbacks(std::move(DelegatedPPCallbacks));
   if (auto CommentHandler = Callbacks.getCommentHandler())
     Clang->getPreprocessor().addCommentHandler(CommentHandler);
+  llvm::StringSet<> MissingFiles;
+  Clang->getPreprocessor().addPPCallbacks(
+      std::make_unique<MissingFileCollector>(
+          MissingFiles, Clang->getPreprocessor().getHeaderSearchInfo(),
+          Clang->getSourceManager()));
 
   if (llvm::Error Err = Act->Execute())
     return errorToErrorCode(std::move(Err));
@@ -385,9 +462,9 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
     }
   }
 
-  return PrecompiledPreamble(std::move(Storage), std::move(PreambleBytes),
-                             PreambleEndsAtStartOfLine,
-                             std::move(FilesInPreamble));
+  return PrecompiledPreamble(
+      std::move(Storage), std::move(PreambleBytes), PreambleEndsAtStartOfLine,
+      std::move(FilesInPreamble), std::move(MissingFiles));
 }
 
 PreambleBounds PrecompiledPreamble::getBounds() const {
@@ -444,6 +521,7 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
   // First, make a record of those files that have been overridden via
   // remapping or unsaved_files.
   std::map<llvm::sys::fs::UniqueID, PreambleFileHash> OverriddenFiles;
+  llvm::StringSet<> OverriddenAbsPaths; // Either by buffers or files.
   for (const auto &R : PreprocessorOpts.RemappedFiles) {
     llvm::vfs::Status Status;
     if (!moveOnNoError(VFS->status(R.second), Status)) {
@@ -451,6 +529,10 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
       // horrible happened.
       return false;
     }
+    // If a mapped file was previously missing, then it has changed.
+    llvm::SmallString<128> MappedPath(R.first);
+    if (!VFS->makeAbsolute(MappedPath))
+      OverriddenAbsPaths.insert(MappedPath);
 
     OverriddenFiles[Status.getUniqueID()] = PreambleFileHash::createForFile(
         Status.getSize(), llvm::sys::toTimeT(Status.getLastModificationTime()));
@@ -466,6 +548,10 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
       OverriddenFiles[Status.getUniqueID()] = PreambleHash;
     else
       OverridenFileBuffers[RB.first] = PreambleHash;
+
+    llvm::SmallString<128> MappedPath(RB.first);
+    if (!VFS->makeAbsolute(MappedPath))
+      OverriddenAbsPaths.insert(MappedPath);
   }
 
   // Check whether anything has changed.
@@ -503,6 +589,17 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
             F.second.ModTime)
       return false;
   }
+  for (const auto &F : MissingFiles) {
+    // A missing file may be "provided" by an override buffer or file.
+    if (OverriddenAbsPaths.count(F.getKey()))
+      return false;
+    // If a file previously recorded as missing exists as a regular file, then
+    // consider the preamble out-of-date.
+    if (auto Status = VFS->status(F.getKey())) {
+      if (Status->isRegularFile())
+        return false;
+    }
+  }
   return true;
 }
 
@@ -523,8 +620,10 @@ void PrecompiledPreamble::OverridePreamble(
 PrecompiledPreamble::PrecompiledPreamble(
     PCHStorage Storage, std::vector<char> PreambleBytes,
     bool PreambleEndsAtStartOfLine,
-    llvm::StringMap<PreambleFileHash> FilesInPreamble)
+    llvm::StringMap<PreambleFileHash> FilesInPreamble,
+    llvm::StringSet<> MissingFiles)
     : Storage(std::move(Storage)), FilesInPreamble(std::move(FilesInPreamble)),
+      MissingFiles(std::move(MissingFiles)),
       PreambleBytes(std::move(PreambleBytes)),
       PreambleEndsAtStartOfLine(PreambleEndsAtStartOfLine) {
   assert(this->Storage.getKind() != PCHStorage::Kind::Empty);
@@ -548,7 +647,7 @@ PrecompiledPreamble::TempPCHFile::CreateNewPreamblePCHFile() {
     return EC;
   // We only needed to make sure the file exists, close the file right away.
   llvm::sys::Process::SafelyCloseFileDescriptor(FD);
-  return TempPCHFile(std::move(File).str());
+  return TempPCHFile(std::string(std::move(File).str()));
 }
 
 PrecompiledPreamble::TempPCHFile::TempPCHFile(std::string FilePath)
@@ -715,7 +814,7 @@ void PrecompiledPreamble::setupPreambleStorage(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> &VFS) {
   if (Storage.getKind() == PCHStorage::Kind::TempFile) {
     const TempPCHFile &PCHFile = Storage.asFile();
-    PreprocessorOpts.ImplicitPCHInclude = PCHFile.getFilePath();
+    PreprocessorOpts.ImplicitPCHInclude = std::string(PCHFile.getFilePath());
 
     // Make sure we can access the PCH file even if we're using a VFS
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> RealFS =
@@ -739,7 +838,7 @@ void PrecompiledPreamble::setupPreambleStorage(
     // For in-memory preamble, we have to provide a VFS overlay that makes it
     // accessible.
     StringRef PCHPath = getInMemoryPreamblePath();
-    PreprocessorOpts.ImplicitPCHInclude = PCHPath;
+    PreprocessorOpts.ImplicitPCHInclude = std::string(PCHPath);
 
     auto Buf = llvm::MemoryBuffer::getMemBuffer(Storage.asMemory().Data);
     VFS = createVFSOverlayForPreamblePCH(PCHPath, std::move(Buf), VFS);

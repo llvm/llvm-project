@@ -56,7 +56,26 @@ def SUBSOME_INSN : I<(outs SRegs:$dst), (ins SOP:$src), []>;
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/1, /*TempRegFlags*/0,
 // CHECK-NEXT: GIR_AddImm, /*InsnID*/0, /*SubRegIndex*/2,
 // CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, Test::DRegsRegClassID,
+// CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/1, Test::SRegsRegClassID,
+// CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/3, Test::SRegsRegClassID,
 def : Pat<(i32 (sext SOP:$src)),
           (REG_SEQUENCE DRegs, (SUBSOME_INSN SOP:$src), sub0,
                                (SUBSOME_INSN SOP:$src), sub1)>;
+
+
+// CHECK: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_ZEXT,
+// CHECK: GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::REG_SEQUENCE,
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/RegState::Define,
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/1, /*TempRegFlags*/0,
+// CHECK-NEXT: GIR_AddImm, /*InsnID*/1, /*SubRegIndex*/1,
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/2, /*TempRegFlags*/0,
+// CHECK-NEXT: GIR_AddImm, /*InsnID*/1, /*SubRegIndex*/2,
+// CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/0, Test::DRegsRegClassID,
+// CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/1, Test::SRegsRegClassID,
+// CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/3, Test::SRegsRegClassID,
+// CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::SOME_INSN,
+// Make sure operands are constrained when REG_SEQUENCE isn't the root instruction.
+def : Pat<(i32 (zext SOP:$src)),
+          (SOME_INSN (REG_SEQUENCE DRegs, (SUBSOME_INSN SOP:$src), sub0,
+                                          (SUBSOME_INSN SOP:$src), sub1))>;

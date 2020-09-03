@@ -4,6 +4,13 @@
 int __attribute__((target("sse4.2"))) foo(void) { return 0; }
 int __attribute__((target("arch=sandybridge"))) foo(void);
 int __attribute__((target("arch=ivybridge"))) foo(void) {return 1;}
+int __attribute__((target("arch=goldmont"))) foo(void) {return 3;}
+int __attribute__((target("arch=goldmont-plus"))) foo(void) {return 4;}
+int __attribute__((target("arch=tremont"))) foo(void) {return 5;}
+int __attribute__((target("arch=icelake-client"))) foo(void) {return 6;}
+int __attribute__((target("arch=icelake-server"))) foo(void) {return 7;}
+int __attribute__((target("arch=cooperlake"))) foo(void) {return 8;}
+int __attribute__((target("arch=tigerlake"))) foo(void) {return 9;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar() {
@@ -47,6 +54,18 @@ void bar5() {
   fwd_decl_avx();
 }
 
+int __attribute__((target("avx"))) changed_to_mv(void) { return 0;}
+int __attribute__((target("fma4"))) changed_to_mv(void) { return 1;}
+
+__attribute__((target("default"), used)) inline void foo_used(int i, double d) {}
+__attribute__((target("avx,sse4.2"))) inline void foo_used(int i, double d) {}
+
+__attribute__((target("default"))) inline void foo_used2(int i, double d) {}
+__attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double d) {}
+
+// LINUX: @llvm.used = appending global [2 x i8*] [i8* bitcast (void (i32, double)* @foo_used to i8*), i8* bitcast (void (i32, double)* @foo_used2.avx_sse4.2 to i8*)], section "llvm.metadata"
+// WINDOWS: @llvm.used = appending global [2 x i8*] [i8* bitcast (void (i32, double)* @foo_used to i8*), i8* bitcast (void (i32, double)* @foo_used2.avx_sse4.2 to i8*)], section "llvm.metadata"
+
 // LINUX: @foo.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo.resolver
 // LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo_inline.resolver
 // LINUX: @foo_decls.ifunc = weak_odr ifunc void (), void ()* ()* @foo_decls.resolver
@@ -58,6 +77,20 @@ void bar5() {
 // LINUX: ret i32 0
 // LINUX: define i32 @foo.arch_ivybridge()
 // LINUX: ret i32 1
+// LINUX: define i32 @foo.arch_goldmont()
+// LINUX: ret i32 3
+// LINUX: define i32 @foo.arch_goldmont-plus()
+// LINUX: ret i32 4
+// LINUX: define i32 @foo.arch_tremont()
+// LINUX: ret i32 5
+// LINUX: define i32 @foo.arch_icelake-client()
+// LINUX: ret i32 6
+// LINUX: define i32 @foo.arch_icelake-server()
+// LINUX: ret i32 7
+// LINUX: define i32 @foo.arch_cooperlake()
+// LINUX: ret i32 8
+// LINUX: define i32 @foo.arch_tigerlake()
+// LINUX: ret i32 9
 // LINUX: define i32 @foo()
 // LINUX: ret i32 2
 // LINUX: define i32 @bar()
@@ -67,6 +100,16 @@ void bar5() {
 // WINDOWS: ret i32 0
 // WINDOWS: define dso_local i32 @foo.arch_ivybridge()
 // WINDOWS: ret i32 1
+// WINDOWS: define dso_local i32 @foo.arch_goldmont()
+// WINDOWS: ret i32 3
+// WINDOWS: define dso_local i32 @foo.arch_goldmont-plus()
+// WINDOWS: ret i32 4
+// WINDOWS: define dso_local i32 @foo.arch_tremont()
+// WINDOWS: ret i32 5
+// WINDOWS: define dso_local i32 @foo.arch_icelake-client()
+// WINDOWS: ret i32 6
+// WINDOWS: define dso_local i32 @foo.arch_icelake-server()
+// WINDOWS: ret i32 7
 // WINDOWS: define dso_local i32 @foo()
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @bar()
@@ -193,6 +236,22 @@ void bar5() {
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: call i32 @fwd_decl_avx.avx
 // WINDOWS: call i32 @fwd_decl_avx
+
+// LINUX: define i32 @changed_to_mv.avx()
+// LINUX: define i32 @changed_to_mv.fma4()
+
+// WINDOWS: define dso_local i32 @changed_to_mv.avx()
+// WINDOWS: define dso_local i32 @changed_to_mv.fma4()
+
+// LINUX: define linkonce void @foo_used(i32 %{{.*}}, double %{{.*}})
+// LINUX-NOT: @foo_used.avx_sse4.2(
+// LINUX-NOT: @foo_used2(
+// LINUX: define linkonce void @foo_used2.avx_sse4.2(i32 %{{.*}}, double %{{.*}})
+
+// WINDOWS: define linkonce_odr dso_local void @foo_used(i32 %{{.*}}, double %{{.*}})
+// WINDOWS-NOT: @foo_used.avx_sse4.2(
+// WINDOWS-NOT: @foo_used2(
+// WINDOWS: define linkonce_odr dso_local void @foo_used2.avx_sse4.2(i32 %{{.*}}, double %{{.*}})
 
 // LINUX: declare i32 @foo.arch_sandybridge()
 // WINDOWS: declare dso_local i32 @foo.arch_sandybridge()

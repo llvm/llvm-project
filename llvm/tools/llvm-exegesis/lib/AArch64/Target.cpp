@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "../Target.h"
-#include "../Latency.h"
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 

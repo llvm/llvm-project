@@ -1,6 +1,6 @@
 //===- LoopFusionUtils.h - Loop fusion utilities ----------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -24,9 +24,8 @@ class AffineForOp;
 struct ComputationSliceState;
 class Operation;
 
-// TODO(andydavis) Extend this module to include utility functions for querying
-// fusion cost/storage reduction, and for performing the loop fusion
-// transformation.
+// TODO: Extend this module to include utility functions for querying fusion
+// cost/storage reduction, and for performing the loop fusion transformation.
 
 struct FusionResult {
   enum ResultEnum {
@@ -46,10 +45,15 @@ struct FusionResult {
 /// returns a FusionResult explaining why fusion is not feasible.
 /// NOTE: This function is not feature complete and should only be used in
 /// testing.
-/// TODO(andydavis) Update comments when this function is fully implemented.
+/// TODO: Update comments when this function is fully implemented.
 FusionResult canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
                           unsigned dstLoopDepth,
                           ComputationSliceState *srcSlice);
+
+/// Fuses 'srcForOp' into 'dstForOp' with destination loop block insertion point
+/// and source slice loop bounds specified in 'srcSlice'.
+void fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
+               ComputationSliceState *srcSlice);
 
 /// LoopNestStats aggregates various per-loop statistics (eg. loop trip count
 /// and operation count) for a loop nest up until (and including) the innermost
@@ -66,14 +70,14 @@ struct LoopNestStats {
 /// Collect loop nest statistics (eg. loop trip count and operation count)
 /// in 'stats' for loop nest rooted at 'forOp'. Returns true on success,
 /// returns false otherwise.
-// TODO(andydavis) Consider moving this to LoopUtils.
+// TODO: Consider moving this to LoopUtils.
 bool getLoopNestStats(AffineForOp forOp, LoopNestStats *stats);
 
 /// Computes the total cost of the loop nest rooted at 'forOp' using 'stats'.
 /// Currently, the total cost is computed by counting the total operation
 /// instance count (i.e. total number of operations in the loop body * loop
 /// trip count) for the entire loop nest.
-// TODO(andydavis) Improve this cost model.
+// TODO: Improve this cost model.
 int64_t getComputeCost(AffineForOp forOp, LoopNestStats &stats);
 
 /// Computes and returns in 'computeCost', the total compute cost of fusing the
@@ -82,7 +86,7 @@ int64_t getComputeCost(AffineForOp forOp, LoopNestStats &stats);
 /// (i.e. total number of operations in the loop body * loop trip count) for
 /// the entire loop nest.
 /// Returns true on success, failure otherwise (e.g. non-constant trip counts).
-// TODO(andydavis) Improve this cost model.
+// TODO: Improve this cost model.
 bool getFusionComputeCost(AffineForOp srcForOp, LoopNestStats &srcStats,
                           AffineForOp dstForOp, LoopNestStats &dstStats,
                           ComputationSliceState *slice, int64_t *computeCost);

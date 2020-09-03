@@ -72,12 +72,6 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
   }
 }
 
-bool
-X86RegisterInfo::trackLivenessAfterRegAlloc(const MachineFunction &MF) const {
-  // ExecutionDomainFix, BreakFalseDeps and PostRAScheduler require liveness.
-  return true;
-}
-
 int
 X86RegisterInfo::getSEHRegNum(unsigned i) const {
   return getEncodingValue(i);
@@ -633,18 +627,22 @@ static bool CantUseSP(const MachineFrameInfo &MFI) {
 }
 
 bool X86RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
-   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+  if (X86FI->hasPreallocatedCall())
+    return true;
 
-   if (!EnableBasePointer)
-     return false;
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-   // When we need stack realignment, we can't address the stack from the frame
-   // pointer.  When we have dynamic allocas or stack-adjusting inline asm, we
-   // can't address variables from the stack pointer.  MS inline asm can
-   // reference locals while also adjusting the stack pointer.  When we can't
-   // use both the SP and the FP, we need a separate base pointer register.
-   bool CantUseFP = needsStackRealignment(MF);
-   return CantUseFP && CantUseSP(MFI);
+  if (!EnableBasePointer)
+    return false;
+
+  // When we need stack realignment, we can't address the stack from the frame
+  // pointer.  When we have dynamic allocas or stack-adjusting inline asm, we
+  // can't address variables from the stack pointer.  MS inline asm can
+  // reference locals while also adjusting the stack pointer.  When we can't
+  // use both the SP and the FP, we need a separate base pointer register.
+  bool CantUseFP = needsStackRealignment(MF);
+  return CantUseFP && CantUseSP(MFI);
 }
 
 bool X86RegisterInfo::canRealignStack(const MachineFunction &MF) const {
@@ -667,7 +665,7 @@ bool X86RegisterInfo::canRealignStack(const MachineFunction &MF) const {
 }
 
 bool X86RegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
-                                           unsigned Reg, int &FrameIdx) const {
+                                           Register Reg, int &FrameIdx) const {
   // Since X86 defines assignCalleeSavedSpillSlots which always return true
   // this function neither used nor tested.
   llvm_unreachable("Unused function on X86. Otherwise need a test case.");
@@ -728,7 +726,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   // Determine base register and offset.
   int FIOffset;
-  unsigned BasePtr;
+  Register BasePtr;
   if (MI.isReturn()) {
     assert((!needsStackRealignment(MF) ||
            MF.getFrameInfo().isFixedObjectIndex(FrameIndex)) &&

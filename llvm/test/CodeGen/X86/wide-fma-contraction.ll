@@ -14,8 +14,8 @@ define <16 x float> @fmafunc(<16 x float> %a, <16 x float> %b, <16 x float> %c) 
 ; CHECK-NEXT:    .cfi_def_cfa_register %ebp
 ; CHECK-NEXT:    andl $-32, %esp
 ; CHECK-NEXT:    subl $32, %esp
-; CHECK-NEXT:    vfmaddps 8(%ebp), %ymm2, %ymm0, %ymm0
-; CHECK-NEXT:    vfmaddps 40(%ebp), %ymm3, %ymm1, %ymm1
+; CHECK-NEXT:    vfmaddps {{.*#+}} ymm0 = (ymm0 * ymm2) + mem
+; CHECK-NEXT:    vfmaddps {{.*#+}} ymm1 = (ymm1 * ymm3) + mem
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl

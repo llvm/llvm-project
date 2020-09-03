@@ -31,7 +31,7 @@ private:
     // width, so we do the same.
     Option::printHelpStr(HelpStr, GlobalWidth, ArgStr.size() + 6);
     const auto &CounterInstance = DebugCounter::instance();
-    for (auto Name : CounterInstance) {
+    for (const auto &Name : CounterInstance) {
       const auto Info =
           CounterInstance.getCounterInfo(CounterInstance.getCounterId(Name));
       size_t NumSpaces = GlobalWidth - Info.first.size() - 8;
@@ -85,7 +85,7 @@ void DebugCounter::push_back(const std::string &Val) {
   // add it to the counter values.
   if (CounterPair.first.endswith("-skip")) {
     auto CounterName = CounterPair.first.drop_back(5);
-    unsigned CounterID = getCounterId(CounterName);
+    unsigned CounterID = getCounterId(std::string(CounterName));
     if (!CounterID) {
       errs() << "DebugCounter Error: " << CounterName
              << " is not a registered counter\n";
@@ -98,7 +98,7 @@ void DebugCounter::push_back(const std::string &Val) {
     Counter.IsSet = true;
   } else if (CounterPair.first.endswith("-count")) {
     auto CounterName = CounterPair.first.drop_back(6);
-    unsigned CounterID = getCounterId(CounterName);
+    unsigned CounterID = getCounterId(std::string(CounterName));
     if (!CounterID) {
       errs() << "DebugCounter Error: " << CounterName
              << " is not a registered counter\n";
@@ -123,7 +123,7 @@ void DebugCounter::print(raw_ostream &OS) const {
   auto &Us = instance();
   OS << "Counters and values:\n";
   for (auto &CounterName : CounterNames) {
-    unsigned CounterID = getCounterId(CounterName);
+    unsigned CounterID = getCounterId(std::string(CounterName));
     OS << left_justify(RegisteredCounters[CounterID], 32) << ": {"
        << Us.Counters[CounterID].Count << "," << Us.Counters[CounterID].Skip
        << "," << Us.Counters[CounterID].StopAfter << "}\n";

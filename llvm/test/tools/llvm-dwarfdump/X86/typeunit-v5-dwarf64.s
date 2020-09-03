@@ -25,7 +25,8 @@
 TU_5_64_start:
         .long 0xffffffff            # DWARF64 mark
         .quad TU_5_64_end-TU_5_64_version  # Length of Unit
-# CHECK-SAME: length = 0x00000022
+# CHECK-SAME: length = 0x0000000000000022
+# CHECK-SAME: format = DWARF64
 TU_5_64_version:
         .short 5                    # DWARF version number
 # CHECK-SAME: version = 0x0005

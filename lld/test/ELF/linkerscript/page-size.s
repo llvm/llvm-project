@@ -46,15 +46,15 @@
 
 # RUN: echo "SECTIONS { symbol = CONSTANT(MAXPAGESIZE); }" > %t.script
 # RUN: ld.lld -z max-page-size=0x4000 -o %t1 --script %t.script %t
-# RUN: llvm-objdump -t %t1 | FileCheck -check-prefix CHECK-SCRIPT %s
+# RUN: llvm-readelf -s %t1 | FileCheck -check-prefix CHECK-SCRIPT %s
 
-# CHECK-SCRIPT: 0000000000004000 *ABS* 00000000 symbol
+# CHECK-SCRIPT: 0000000000004000 0 NOTYPE GLOBAL DEFAULT ABS symbol
 
-# RUN: not ld.lld -z max-page-size=0x1001 -o %t1 --script %t.script %t 2>&1 \
+# RUN: not ld.lld -z max-page-size=0x1001 -o /dev/null --script %t.script %t 2>&1 \
 # RUN:  | FileCheck -check-prefix=ERR1 %s
 # ERR1: max-page-size: value isn't a power of 2
 
-# RUN: not ld.lld -z max-page-size=-0x1000 -o %t1 --script %t.script %t 2>&1 \
+# RUN: not ld.lld -z max-page-size=-0x1000 -o /dev/null --script %t.script %t 2>&1 \
 # RUN:  | FileCheck -check-prefix=ERR2 %s
 # ERR2: invalid max-page-size: -0x1000
 

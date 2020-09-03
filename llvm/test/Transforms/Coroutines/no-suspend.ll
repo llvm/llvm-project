@@ -1,5 +1,6 @@
 ; Test no suspend coroutines
 ; RUN: opt < %s -coro-split -S | FileCheck %s
+; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 ; Coroutine with no-suspends will turn into:
 ;
@@ -359,6 +360,58 @@ cleanup:
 suspend:
   call i1 @llvm.coro.end(i8* %hdl, i1 false)
   ret void
+}
+
+; SimplifySuspendPoint should not simplify final suspend point
+;
+; CHECK-LABEL: define void @cannot_simplify_final_suspend(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:     llvm.coro.id
+;
+define void @cannot_simplify_final_suspend() "coroutine.presplit"="1" personality i32 0 {
+entry:
+  %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
+  %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
+  br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
+dyn.alloc:
+  %size = call i32 @llvm.coro.size.i32()
+  %alloc = call i8* @malloc(i32 %size)
+  br label %coro.begin
+coro.begin:
+  %phi = phi i8* [ null, %entry ], [ %alloc, %dyn.alloc ]
+  %hdl = call noalias i8* @llvm.coro.begin(token %id, i8* %phi)
+  br label %body
+body:
+  %save = call token @llvm.coro.save(i8* %hdl)
+  %subfn = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
+  %bcast = bitcast i8* %subfn to void (i8*)*
+  invoke fastcc void %bcast(i8* %hdl) to label %real_susp unwind label %lpad
+
+real_susp:
+  %0 = call i8 @llvm.coro.suspend(token %save, i1 1)
+  switch i8 %0, label %suspend [i8 0, label %resume
+                                i8 1, label %pre.cleanup]
+resume:
+  call void @print(i32 0)
+  br label %cleanup
+
+pre.cleanup:
+  call void @print(i32 1)
+  br label %cleanup
+
+cleanup:
+  %mem = call i8* @llvm.coro.free(token %id, i8* %hdl)
+  call void @free(i8* %mem)
+  br label %suspend
+suspend:
+  call i1 @llvm.coro.end(i8* %hdl, i1 false)
+  ret void
+lpad:
+  %lpval = landingpad { i8*, i32 }
+     cleanup
+
+  call void @print(i32 2)
+  resume { i8*, i32 } %lpval
 }
 
 declare i8* @malloc(i32)

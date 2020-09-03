@@ -25,6 +25,7 @@ __isl_give isl_schedule_constraints *isl_schedule_constraints_add(
 
 int isl_schedule_constraints_n_basic_map(
 	__isl_keep isl_schedule_constraints *sc);
-int isl_schedule_constraints_n_map(__isl_keep isl_schedule_constraints *sc);
+isl_size isl_schedule_constraints_n_map(
+	__isl_keep isl_schedule_constraints *sc);
 
 #endif

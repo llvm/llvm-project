@@ -34,7 +34,7 @@ public:
   void SetUp() override {
     llvm::SmallString<256> Dir;
     ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory("libclang-test", Dir));
-    TestDir = Dir.str();
+    TestDir = std::string(Dir.str());
     TUFlags = CXTranslationUnit_DetailedPreprocessingRecord |
       clang_defaultEditingTranslationUnitOptions();
     Index = clang_createIndex(0, 0);
@@ -51,7 +51,7 @@ public:
     if (!llvm::sys::path::is_absolute(Filename)) {
       llvm::SmallString<256> Path(TestDir);
       llvm::sys::path::append(Path, Filename);
-      Filename = Path.str();
+      Filename = std::string(Path.str());
       Files.insert(Filename);
     }
     llvm::sys::fs::create_directories(llvm::sys::path::parent_path(Filename));
@@ -63,7 +63,7 @@ public:
     if (!llvm::sys::path::is_absolute(Filename)) {
       llvm::SmallString<256> Path(TestDir);
       llvm::sys::path::append(Path, Filename);
-      Filename = Path.str();
+      Filename = std::string(Path.str());
     }
     auto it = UnsavedFileContents.insert(std::make_pair(
         fixed_addr_string(new std::string(Filename)),

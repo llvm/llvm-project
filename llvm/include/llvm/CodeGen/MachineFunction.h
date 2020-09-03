@@ -20,11 +20,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/EHPersonalities.h"
@@ -35,8 +32,8 @@
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Recycler.h"
+#include "llvm/Target/TargetOptions.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -49,10 +46,12 @@ class BasicBlock;
 class BlockAddress;
 class DataLayout;
 class DebugLoc;
+struct DenormalMode;
 class DIExpression;
 class DILocalVariable;
 class DILocation;
 class Function;
+class GISelChangeObserver;
 class GlobalValue;
 class LLVMTargetMachine;
 class MachineConstantPool;
@@ -64,15 +63,16 @@ class MachineRegisterInfo;
 class MCContext;
 class MCInstrDesc;
 class MCSymbol;
+class MCSection;
 class Pass;
 class PseudoSourceValueManager;
 class raw_ostream;
 class SlotIndexes;
+class StringRef;
 class TargetRegisterClass;
 class TargetSubtargetInfo;
 struct WasmEHFuncInfo;
 struct WinEHFuncInfo;
-class GISelChangeObserver;
 
 template <> struct ilist_alloc_traits<MachineBasicBlock> {
   void deleteNode(MachineBasicBlock *MBB);
@@ -144,6 +144,8 @@ public:
   //  operands, this also means that all generic virtual registers have been
   //  constrained to virtual registers (assigned to register classes) and that
   //  all sizes attached to them have been eliminated.
+  // TiedOpsRewritten: The twoaddressinstruction pass will set this flag, it
+  //  means that tied-def have been rewritten to meet the RegConstraint.
   enum class Property : unsigned {
     IsSSA,
     NoPHIs,
@@ -153,7 +155,8 @@ public:
     Legalized,
     RegBankSelected,
     Selected,
-    LastProperty = Selected,
+    TiedOpsRewritten,
+    LastProperty = TiedOpsRewritten,
   };
 
   bool hasProperty(Property P) const {
@@ -244,6 +247,9 @@ class MachineFunction {
   // Keep track of jump tables for switch instructions
   MachineJumpTableInfo *JumpTableInfo;
 
+  // Keep track of the function section.
+  MCSection *Section = nullptr;
+
   // Keeps track of Wasm exception handling related data. This will be null for
   // functions that aren't using a wasm EH personality.
   WasmEHFuncInfo *WasmEHInfo = nullptr;
@@ -256,6 +262,12 @@ class MachineFunction {
   // MachineBasicBlock is inserted into a MachineFunction is it automatically
   // numbered and this vector keeps track of the mapping from ID's to MBB's.
   std::vector<MachineBasicBlock*> MBBNumbering;
+
+  // Unary encoding of basic block symbols is used to reduce size of ".strtab".
+  // Basic block number 'i' gets a prefix of length 'i'.  The ith character also
+  // denotes the type of basic block number 'i'.  Return blocks are marked with
+  // 'r', landing pads with 'l' and regular blocks with 'a'.
+  std::vector<char> BBSectionsSymbolPrefix;
 
   // Pool-allocate MachineFunction-lifetime and IR objects.
   BumpPtrAllocator Allocator;
@@ -332,6 +344,9 @@ class MachineFunction {
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
 
+  /// Section Type for basic blocks, only relevant with basic block sections.
+  BasicBlockSection BBSectionsType = BasicBlockSection::None;
+
   /// List of C++ TypeInfo used.
   std::vector<const GlobalValue *> TypeInfos;
 
@@ -385,9 +400,9 @@ public:
   /// For now we support only cases when argument is transferred through one
   /// register.
   struct ArgRegPair {
-    unsigned Reg;
+    Register Reg;
     uint16_t ArgNo;
-    ArgRegPair(unsigned R, unsigned Arg) : Reg(R), ArgNo(Arg) {
+    ArgRegPair(Register R, unsigned Arg) : Reg(R), ArgNo(Arg) {
       assert(Arg < (1 << 16) && "Arg out of range");
     }
   };
@@ -453,6 +468,12 @@ public:
   MachineModuleInfo &getMMI() const { return MMI; }
   MCContext &getContext() const { return Ctx; }
 
+  /// Returns the Section this function belongs to.
+  MCSection *getSection() const { return Section; }
+
+  /// Indicates the Section this function belongs to.
+  void setSection(MCSection *S) { Section = S; }
+
   PseudoSourceValueManager &getPSVManager() const { return *PSVManager; }
 
   /// Return the DataLayout attached to the Module associated to this MF.
@@ -469,6 +490,26 @@ public:
 
   /// getFunctionNumber - Return a unique ID for the current function.
   unsigned getFunctionNumber() const { return FunctionNumber; }
+
+  /// Returns true if this function has basic block sections enabled.
+  bool hasBBSections() const {
+    return (BBSectionsType == BasicBlockSection::All ||
+            BBSectionsType == BasicBlockSection::List);
+  }
+
+  /// Returns true if basic block labels are to be generated for this function.
+  bool hasBBLabels() const {
+    return BBSectionsType == BasicBlockSection::Labels;
+  }
+
+  void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
+
+  /// Creates basic block Labels for this function.
+  void createBBLabels();
+
+  /// Assign IsBeginSection IsEndSection fields for basic blocks in this
+  /// function.
+  void assignBeginEndSections();
 
   /// getTarget - Return the target machine this machine code is compiled with
   const LLVMTargetMachine &getTarget() const { return Target; }
@@ -652,7 +693,7 @@ public:
 
   /// addLiveIn - Add the specified physical register as a live-in value and
   /// create a corresponding virtual register for it.
-  unsigned addLiveIn(unsigned PReg, const TargetRegisterClass *RC);
+  Register addLiveIn(MCRegister PReg, const TargetRegisterClass *RC);
 
   //===--------------------------------------------------------------------===//
   // BasicBlock accessor functions.
@@ -762,9 +803,8 @@ public:
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
-      unsigned base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr,
-      SyncScope::ID SSID = SyncScope::System,
+      Align base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
+      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
 
@@ -804,6 +844,8 @@ public:
 
   /// Allocate and initialize a register mask with @p NumRegister bits.
   uint32_t *allocateRegMask();
+
+  ArrayRef<int> allocateShuffleMask(ArrayRef<int> Mask);
 
   /// Allocate and construct an extra info structure for a `MachineInstr`.
   ///
@@ -1015,6 +1057,11 @@ public:
   /// of the instruction stream.
   void copyCallSiteInfo(const MachineInstr *Old,
                         const MachineInstr *New);
+
+  const std::vector<char> &getBBSectionsSymbolPrefix() const {
+    return BBSectionsSymbolPrefix;
+  }
+
   /// Move the call site info from \p Old to \New call site info. This function
   /// is used when we are replacing one call instruction with another one to
   /// the same callee.

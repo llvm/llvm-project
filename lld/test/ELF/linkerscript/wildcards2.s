@@ -5,7 +5,7 @@
 # RUN: echo "SECTIONS { \
 # RUN:      .text : { *(.abc) } }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
-# RUN: llvm-objdump -section-headers %t.out | \
+# RUN: llvm-objdump --section-headers %t.out | \
 # RUN:   FileCheck %s
 # CHECK:      Sections:
 # CHECK-NEXT:  Idx Name          Size

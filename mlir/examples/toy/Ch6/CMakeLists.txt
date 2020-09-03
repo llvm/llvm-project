@@ -1,12 +1,16 @@
+# For a better template to copy, see examples/standalone
+include_directories(include)
 add_subdirectory(include)
 
 set(LLVM_LINK_COMPONENTS
   Core
   Support
+  nativecodegen
+  OrcJIT
   )
 
 set(LLVM_TARGET_DEFINITIONS mlir/ToyCombine.td)
-mlir_tablegen(ToyCombine.inc -gen-rewriters "-I${CMAKE_CURRENT_SOURCE_DIR}/include")
+mlir_tablegen(ToyCombine.inc -gen-rewriters)
 add_public_tablegen_target(ToyCh6CombineIncGen)
 
 add_toy_chapter(toyc-ch6
@@ -14,40 +18,34 @@ add_toy_chapter(toyc-ch6
   parser/AST.cpp
   mlir/MLIRGen.cpp
   mlir/Dialect.cpp
-  mlir/DeadFunctionEliminationPass.cpp
   mlir/LowerToAffineLoops.cpp
   mlir/LowerToLLVM.cpp
   mlir/ShapeInferencePass.cpp
   mlir/ToyCombine.cpp
+
+  DEPENDS
+  ToyCh6ShapeInferenceInterfaceIncGen
+  ToyCh6OpsIncGen
+  ToyCh6CombineIncGen
   )
 
-add_dependencies(toyc-ch6 ToyCh6ShapeInferenceInterfaceIncGen)
-add_dependencies(toyc-ch6 ToyCh6OpsIncGen)
-add_dependencies(toyc-ch6 ToyCh6CombineIncGen)
-add_dependencies(toyc-ch6 MLIRCallOpInterfacesIncGen)
-include_directories(include/)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/)
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 target_link_libraries(toyc-ch6
   PRIVATE
-    MLIRAffineOps
-    MLIRAffineToStandard
+    ${dialect_libs}
+    ${conversion_libs}
     MLIRAnalysis
+    MLIRCallInterfaces
     MLIRExecutionEngine
     MLIRIR
     MLIRLLVMIR
-    MLIRLoopToStandard
     MLIRParser
     MLIRPass
-    MLIRStandardOps
-    MLIRStandardToLLVM
+    MLIRSideEffectInterfaces
+    MLIRSupport
     MLIRTargetLLVMIR
     MLIRTransforms
     )
-
-whole_archive_link(toyc-ch6
-  MLIRAffineToStandard
-  MLIRAffineOps
-  MLIRLLVMIR
-  MLIRStandardOps
-  )

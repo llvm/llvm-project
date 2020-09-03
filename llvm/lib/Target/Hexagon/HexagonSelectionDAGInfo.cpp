@@ -18,10 +18,10 @@ using namespace llvm;
 
 SDValue HexagonSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, unsigned Align, bool isVolatile, bool AlwaysInline,
+    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
-  if (AlwaysInline || (Align & 0x3) != 0 || !ConstantSize)
+  if (AlwaysInline || Alignment < Align(4) || !ConstantSize)
     return SDValue();
 
   uint64_t SizeVal = ConstantSize->getZExtValue();

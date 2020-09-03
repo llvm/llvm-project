@@ -1,9 +1,0 @@
-static_library("Utils") {
-  output_name = "LLVMX86Utils"
-  deps = [
-    "//llvm/lib/Support",
-  ]
-  sources = [
-    "X86ShuffleDecode.cpp",
-  ]
-}

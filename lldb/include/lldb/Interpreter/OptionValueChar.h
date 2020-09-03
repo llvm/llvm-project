@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OptionValueChar_h_
-#define liblldb_OptionValueChar_h_
+#ifndef LLDB_INTERPRETER_OPTIONVALUECHAR_H
+#define LLDB_INTERPRETER_OPTIONVALUECHAR_H
 
 #include "lldb/Interpreter/OptionValue.h"
 
@@ -68,4 +68,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_OptionValueChar_h_
+#endif // LLDB_INTERPRETER_OPTIONVALUECHAR_H

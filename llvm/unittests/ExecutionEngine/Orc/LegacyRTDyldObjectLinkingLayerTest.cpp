@@ -77,10 +77,12 @@ TEST(LegacyRTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   LLVMContext Context;
   auto M = std::make_unique<Module>("", Context);
   M->setTargetTriple("x86_64-unknown-linux-gnu");
-  Type *Int32Ty = IntegerType::get(Context, 32);
-  GlobalVariable *GV =
-    new GlobalVariable(*M, Int32Ty, false, GlobalValue::ExternalLinkage,
-                         ConstantInt::get(Int32Ty, 42), "foo");
+  Constant *StrConstant = ConstantDataArray::getString(Context, "forty-two");
+  auto *GV =
+      new GlobalVariable(*M, StrConstant->getType(), true,
+                         GlobalValue::ExternalLinkage, StrConstant, "foo");
+  GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  GV->setAlignment(Align(1));
 
   GV->setSection(".debug_str");
 
@@ -94,7 +96,7 @@ TEST(LegacyRTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   if (!TM)
     return;
 
-  auto Obj = SimpleCompiler(*TM)(*M);
+  auto Obj = cantFail(SimpleCompiler(*TM)(*M));
 
   {
     // Test with ProcessAllSections = false (the default).
@@ -165,7 +167,7 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
     Builder.CreateRet(FourtyTwo);
   }
 
-  auto Obj1 = Compile(*MB1.getModule());
+  auto Obj1 = cantFail(Compile(*MB1.getModule()));
 
   ModuleBuilder MB2(Context, "", "dummy");
   {
@@ -178,14 +180,14 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
     IRBuilder<> Builder(FooEntry);
     Builder.CreateRet(Builder.CreateCall(BarDecl));
   }
-  auto Obj2 = Compile(*MB2.getModule());
+  auto Obj2 = cantFail(Compile(*MB2.getModule()));
 
   auto K1 = ES.allocateVModule();
   Resolvers[K1] = std::make_shared<NullResolver>();
   cantFail(ObjLayer.addObject(K1, std::move(Obj1)));
 
   auto K2 = ES.allocateVModule();
-  auto LegacyLookup = [&](const std::string &Name) {
+  auto LegacyLookup = [&](StringRef Name) {
     return ObjLayer.findSymbol(Name, true);
   };
 
@@ -251,7 +253,7 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
     Builder.CreateRet(FourtyTwo);
   }
 
-  auto Obj1 = Compile(*MB1.getModule());
+  auto Obj1 = cantFail(Compile(*MB1.getModule()));
 
   ModuleBuilder MB2(Context, "", "dummy");
   {
@@ -264,7 +266,7 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
     Value *Seven = ConstantInt::getSigned(Int32Ty, 7);
     Builder.CreateRet(Seven);
   }
-  auto Obj2 = Compile(*MB2.getModule());
+  auto Obj2 = cantFail(Compile(*MB2.getModule()));
 
   auto K = ES.allocateVModule();
   cantFail(ObjLayer.addObject(K, std::move(Obj1)));

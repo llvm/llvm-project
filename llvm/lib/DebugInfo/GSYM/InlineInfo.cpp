@@ -142,13 +142,17 @@ static bool lookup(const GsymReader &GR, DataExtractor &Data, uint64_t &Offset,
     return false;
   }
 
-  SourceLocation SrcLoc;
-  SrcLoc.Name = SrcLocs.back().Name;
-  SrcLoc.Dir = GR.getString(CallFile->Dir);
-  SrcLoc.Base = GR.getString(CallFile->Base);
-  SrcLoc.Line = Inline.CallLine;
-  SrcLocs.back().Name = GR.getString(Inline.Name);
-  SrcLocs.push_back(SrcLoc);
+  if (CallFile->Dir || CallFile->Base) {
+    SourceLocation SrcLoc;
+    SrcLoc.Name = SrcLocs.back().Name;
+    SrcLoc.Offset = SrcLocs.back().Offset;
+    SrcLoc.Dir = GR.getString(CallFile->Dir);
+    SrcLoc.Base = GR.getString(CallFile->Base);
+    SrcLoc.Line = Inline.CallLine;
+    SrcLocs.back().Name = GR.getString(Inline.Name);
+    SrcLocs.back().Offset = Addr - Inline.Ranges[0].Start;
+    SrcLocs.push_back(SrcLoc);
+  }
   return true;
 }
 

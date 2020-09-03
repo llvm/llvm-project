@@ -16,6 +16,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/MD5.h"
 #include <cstddef>
@@ -33,12 +34,13 @@ class FileSystem;
 namespace clang {
 class CompilerInstance;
 class CompilerInvocation;
+class Decl;
 class DeclGroupRef;
 class PCHContainerOperations;
 
 /// Runs lexer to compute suggested preamble bounds.
 PreambleBounds ComputePreambleBounds(const LangOptions &LangOpts,
-                                     llvm::MemoryBuffer *Buffer,
+                                     const llvm::MemoryBuffer *Buffer,
                                      unsigned MaxLines);
 
 class PreambleCallbacks;
@@ -94,6 +96,11 @@ public:
   /// be used for logging and debugging purposes only.
   std::size_t getSize() const;
 
+  /// Returned string is not null-terminated.
+  llvm::StringRef getContents() const {
+    return {PreambleBytes.data(), PreambleBytes.size()};
+  }
+
   /// Check whether PrecompiledPreamble can be reused for the new contents(\p
   /// MainFileBuffer) of the main file.
   bool CanReuse(const CompilerInvocation &Invocation,
@@ -122,7 +129,8 @@ public:
 private:
   PrecompiledPreamble(PCHStorage Storage, std::vector<char> PreambleBytes,
                       bool PreambleEndsAtStartOfLine,
-                      llvm::StringMap<PreambleFileHash> FilesInPreamble);
+                      llvm::StringMap<PreambleFileHash> FilesInPreamble,
+                      llvm::StringSet<> MissingFiles);
 
   /// A temp file that would be deleted on destructor call. If destructor is not
   /// called for any reason, the file will be deleted at static objects'
@@ -243,6 +251,15 @@ private:
   /// If any of the files have changed from one compile to the next,
   /// the preamble must be thrown away.
   llvm::StringMap<PreambleFileHash> FilesInPreamble;
+  /// Files that were not found during preamble building. If any of these now
+  /// exist then the preamble should not be reused.
+  ///
+  /// Storing *all* the missing files that could invalidate the preamble would
+  /// make it too expensive to revalidate (when the include path has many
+  /// entries, each #include will miss half of them on average).
+  /// Instead, we track only files that could have satisfied an #include that
+  /// was ultimately not found.
+  llvm::StringSet<> MissingFiles;
   /// The contents of the file that was used to precompile the preamble. Only
   /// contains first PreambleBounds::Size bytes. Used to compare if the relevant
   /// part of the file has not changed, so that preamble can be reused.
@@ -277,6 +294,10 @@ public:
   virtual std::unique_ptr<PPCallbacks> createPPCallbacks();
   /// The returned CommentHandler will be added to the preprocessor if not null.
   virtual CommentHandler *getCommentHandler();
+  /// Determines which function bodies are parsed, by default skips everything.
+  /// Only used if FrontendOpts::SkipFunctionBodies is true.
+  /// See ASTConsumer::shouldSkipFunctionBody.
+  virtual bool shouldSkipFunctionBody(Decl *D) { return true; }
 };
 
 enum class BuildPreambleError {

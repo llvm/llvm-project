@@ -29,7 +29,7 @@ class TestSwiftMacCatalyst(TestBase):
         lldbutil.run_to_source_breakpoint(self, "break here",
                                           lldb.SBFileSpec('main.swift'))
         self.expect("image list -t -b",
-                    patterns=[arch + ".*-apple-ios.*-macabi a\.out",
+                    patterns=["x86_64-apple-ios13.0.0-macabi a\.out",
                               "x86_64.*-apple-ios.*-macabi Foundation",
                               "x86_64.*-apple-.* libswiftCore",
                               "x86_64.*-apple-macosx.* libcompiler_rt.dylib"])

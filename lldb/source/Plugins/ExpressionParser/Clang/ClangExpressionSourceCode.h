@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangExpressionSourceCode_h
-#define liblldb_ClangExpressionSourceCode_h
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONSOURCECODE_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONSOURCECODE_H
 
 #include "lldb/Expression/Expression.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
@@ -28,20 +28,30 @@ public:
   static const llvm::StringRef g_prefix_file_name;
   static const char *g_expression_prefix;
 
+  /// The possible ways an expression can be wrapped.
+  enum class WrapKind {
+    /// Wrapped in a non-static member function of a C++ class.
+    CppMemberFunction,
+    /// Wrapped in an instance Objective-C method.
+    ObjCInstanceMethod,
+    /// Wrapped in a static Objective-C method.
+    ObjCStaticMethod,
+    /// Wrapped in a non-member function.
+    /// Note that this is also used for static member functions of a C++ class.
+    Function
+  };
+
   static ClangExpressionSourceCode *CreateWrapped(llvm::StringRef filename,
                                                   llvm::StringRef prefix,
-                                                  llvm::StringRef body) {
+                                                  llvm::StringRef body,
+                                                  WrapKind wrap_kind) {
     return new ClangExpressionSourceCode(filename, "$__lldb_expr", prefix, body,
-                                         Wrap);
+                                         Wrap, wrap_kind);
   }
 
   /// Generates the source code that will evaluate the expression.
   ///
   /// \param text output parameter containing the source code string.
-  /// \param wrapping_language If the expression is supossed to be wrapped,
-  ///        then this is the language that should be used for that.
-  /// \param static_method True iff the expression is valuated inside a static
-  ///        Objective-C method.
   /// \param exe_ctx The execution context in which the expression will be
   ///        evaluated.
   /// \param add_locals True iff local variables should be injected into the
@@ -51,8 +61,7 @@ public:
   /// \param modules A list of (C++) modules that the expression should import.
   ///
   /// \return true iff the source code was successfully generated.
-  bool GetText(std::string &text, lldb::LanguageType wrapping_language,
-               bool static_method, ExecutionContext &exe_ctx, bool add_locals,
+  bool GetText(std::string &text, ExecutionContext &exe_ctx, bool add_locals,
                bool force_add_all_locals,
                llvm::ArrayRef<std::string> modules) const;
 
@@ -60,19 +69,24 @@ public:
   // passed to CreateWrapped. Return true if the bounds could be found.  This
   // will also work on text with FixItHints applied.
   bool GetOriginalBodyBounds(std::string transformed_text,
-                             lldb::LanguageType wrapping_language,
                              size_t &start_loc, size_t &end_loc);
 
 protected:
   ClangExpressionSourceCode(llvm::StringRef filename, llvm::StringRef name,
                             llvm::StringRef prefix, llvm::StringRef body,
-                            Wrapping wrap);
+                            Wrapping wrap, WrapKind wrap_kind);
 
 private:
+  void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
+                             StreamString &stream,
+                             const std::string &expr) const;
+
   /// String marking the start of the user expression.
   std::string m_start_marker;
   /// String marking the end of the user expression.
   std::string m_end_marker;
+  /// How the expression has been wrapped.
+  const WrapKind m_wrap_kind;
 };
 
 } // namespace lldb_private

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_HostProcess_h_
-#define lldb_Host_HostProcess_h_
+#ifndef LLDB_HOST_HOSTPROCESS_H
+#define LLDB_HOST_HOSTPROCESS_H
 
 #include "lldb/Host/Host.h"
 #include "lldb/lldb-types.h"

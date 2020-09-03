@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 
 namespace llvm {
@@ -123,25 +124,6 @@ bool MetadataVerifier::verifyKernelArgs(msgpack::DocNode &Node) {
                                .Case("hidden_default_queue", true)
                                .Case("hidden_completion_action", true)
                                .Case("hidden_multigrid_sync_arg", true)
-                               .Default(false);
-                         }))
-    return false;
-  if (!verifyScalarEntry(ArgsMap, ".value_type", true,
-                         msgpack::Type::String,
-                         [](msgpack::DocNode &SNode) {
-                           return StringSwitch<bool>(SNode.getString())
-                               .Case("struct", true)
-                               .Case("i8", true)
-                               .Case("u8", true)
-                               .Case("i16", true)
-                               .Case("u16", true)
-                               .Case("f16", true)
-                               .Case("i32", true)
-                               .Case("u32", true)
-                               .Case("f32", true)
-                               .Case("i64", true)
-                               .Case("u64", true)
-                               .Case("f64", true)
                                .Default(false);
                          }))
     return false;

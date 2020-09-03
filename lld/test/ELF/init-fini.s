@@ -38,13 +38,21 @@
 // and should not require given symbols to be resolved
 // RUN: ld.lld -shared %t -o %t2 -init=_unknown -fini=_unknown
 // RUN: llvm-readobj --symbols --dynamic-table %t2 | FileCheck --check-prefix=NOENTRY %s
-// NOENTRY: Symbols [
-// NOENTRY-NOT: Name: _unknown
-// NOENTRY: ]
 // NOENTRY: DynamicSection [
 // NOENTRY-NOT: INIT
 // NOENTRY-NOT: FINI
 // NOENTRY: ]
+// NOENTRY: Symbols [
+// NOENTRY-NOT: Name: _unknown
+// NOENTRY: ]
+
+// Should not add entries for "_init" and "_fini" to the symbol table
+// if the symbols are defined in non-fetched achive members.
+// RUN: rm -f %t.a
+// RUN: llvm-ar rcs %t.a %t
+// RUN: ld.lld -shared -m elf_x86_64 -e _unknown %t.a -o %t.so
+// RUN: llvm-nm %t.so | \
+// RUN:   FileCheck %s --implicit-check-not=_init --implicit-check-not=_fini
 
 .global _start,_init,_fini,_foo,_bar,_undef
 _start:

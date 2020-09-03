@@ -1,8 +1,8 @@
 target select 0
-breakpoint set -f simple.c -l 12
+breakpoint set -f simple.c -l 4
 run
 target select 1
-breakpoint set -f simple.c -l 16
+breakpoint set -f simple.c -l 8
 run
 target select 0
 cont

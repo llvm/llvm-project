@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_DWARFLOCATIONEXPRESSION_H
-#define LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_DWARFLOCATIONEXPRESSION_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_DWARFLOCATIONEXPRESSION_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_DWARFLOCATIONEXPRESSION_H
 
 #include "lldb/lldb-forward.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 
 namespace llvm {
 class APSInt;
+class StringRef;
 namespace codeview {
 class TypeIndex;
 }

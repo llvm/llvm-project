@@ -1,4 +1,3 @@
-; REQUIRES: object-emission
 
 ; Verify that DWARF v5 debug_names omit names from CUs that opt-out.
 ; RUN: llc -mtriple x86_64-pc-linux -filetype=obj < %s \

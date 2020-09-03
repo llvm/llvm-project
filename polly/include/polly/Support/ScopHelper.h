@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
+#include "isl/isl-noexceptions.h"
 
 namespace llvm {
 class LoopInfo;
@@ -33,6 +34,63 @@ class RegionNode;
 namespace polly {
 class Scop;
 class ScopStmt;
+
+/// Enumeration of assumptions Polly can take.
+enum AssumptionKind {
+  ALIASING,
+  INBOUNDS,
+  WRAPPING,
+  UNSIGNED,
+  PROFITABLE,
+  ERRORBLOCK,
+  COMPLEXITY,
+  INFINITELOOP,
+  INVARIANTLOAD,
+  DELINEARIZATION,
+};
+
+/// Enum to distinguish between assumptions and restrictions.
+enum AssumptionSign { AS_ASSUMPTION, AS_RESTRICTION };
+
+/// Helper struct to remember assumptions.
+struct Assumption {
+  /// The kind of the assumption (e.g., WRAPPING).
+  AssumptionKind Kind;
+
+  /// Flag to distinguish assumptions and restrictions.
+  AssumptionSign Sign;
+
+  /// The valid/invalid context if this is an assumption/restriction.
+  isl::set Set;
+
+  /// The location that caused this assumption.
+  llvm::DebugLoc Loc;
+
+  /// An optional block whose domain can simplify the assumption.
+  llvm::BasicBlock *BB;
+};
+
+using RecordedAssumptionsTy = llvm::SmallVector<Assumption, 8>;
+
+/// Record an assumption for later addition to the assumed context.
+///
+/// This function will add the assumption to the RecordedAssumptions. This
+/// collection will be added (@see addAssumption) to the assumed context once
+/// all paramaters are known and the context is fully built.
+///
+/// @param RecordedAssumption container which keeps all recorded assumptions.
+/// @param Kind The assumption kind describing the underlying cause.
+/// @param Set  The relations between parameters that are assumed to hold.
+/// @param Loc  The location in the source that caused this assumption.
+/// @param Sign Enum to indicate if the assumptions in @p Set are positive
+///             (needed/assumptions) or negative (invalid/restrictions).
+/// @param BB   The block in which this assumption was taken. If it is
+///             set, the domain of that block will be used to simplify the
+///             actual assumption in @p Set once it is added. This is useful
+///             if the assumption was created prior to the domain.
+void recordAssumption(RecordedAssumptionsTy *RecordedAssumptions,
+                      AssumptionKind Kind, isl::set Set, llvm::DebugLoc Loc,
+                      AssumptionSign Sign, llvm::BasicBlock *BB = nullptr);
 
 /// Type to remap values.
 using ValueMapT = llvm::DenseMap<llvm::AssertingVH<llvm::Value>,
@@ -443,22 +501,6 @@ bool canSynthesize(const llvm::Value *V, const Scop &S,
 /// Non-instructions do not use operands at a specific point such that in this
 /// case this function returns nullptr.
 llvm::BasicBlock *getUseBlock(const llvm::Use &U);
-
-/// Derive the individual index expressions from a GEP instruction.
-///
-/// This function optimistically assumes the GEP references into a fixed size
-/// array. If this is actually true, this function returns a list of array
-/// subscript expressions as SCEV as well as a list of integers describing
-/// the size of the individual array dimensions. Both lists have either equal
-/// length or the size list is one element shorter in case there is no known
-/// size available for the outermost array dimension.
-///
-/// @param GEP The GetElementPtr instruction to analyze.
-///
-/// @return A tuple with the subscript expressions and the dimension sizes.
-std::tuple<std::vector<const llvm::SCEV *>, std::vector<int>>
-getIndexExpressionsFromGEP(llvm::GetElementPtrInst *GEP,
-                           llvm::ScalarEvolution &SE);
 
 // If the loop is nonaffine/boxed, return the first non-boxed surrounding loop
 // for Polly. If the loop is affine, return the loop itself.

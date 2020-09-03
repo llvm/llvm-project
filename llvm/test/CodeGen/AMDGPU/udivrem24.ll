@@ -21,6 +21,63 @@ define amdgpu_kernel void @udiv24_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %in
   ret void
 }
 
+; FUNC-LABEL: {{^}}udiv24_i8_denorm_flush_in_out:
+; SI: v_cvt_f32_ubyte
+; SI-DAG: v_cvt_f32_ubyte
+; SI-DAG: v_rcp_iflag_f32
+; SI: v_cvt_u32_f32
+
+; EG: UINT_TO_FLT
+; EG-DAG: UINT_TO_FLT
+; EG-DAG: RECIP_IEEE
+; EG: FLT_TO_UINT
+define amdgpu_kernel void @udiv24_i8_denorm_flush_in_out(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #0 {
+  %den_ptr = getelementptr i8, i8 addrspace(1)* %in, i8 1
+  %num = load i8, i8 addrspace(1) * %in
+  %den = load i8, i8 addrspace(1) * %den_ptr
+  %result = udiv i8 %num, %den
+  store i8 %result, i8 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}udiv24_i8_denorm_flush_in:
+; SI: v_cvt_f32_ubyte
+; SI-DAG: v_cvt_f32_ubyte
+; SI-DAG: v_rcp_iflag_f32
+; SI: v_cvt_u32_f32
+
+; EG: UINT_TO_FLT
+; EG-DAG: UINT_TO_FLT
+; EG-DAG: RECIP_IEEE
+; EG: FLT_TO_UINT
+define amdgpu_kernel void @udiv24_i8_denorm_flush_in(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
+  %den_ptr = getelementptr i8, i8 addrspace(1)* %in, i8 1
+  %num = load i8, i8 addrspace(1) * %in
+  %den = load i8, i8 addrspace(1) * %den_ptr
+  %result = udiv i8 %num, %den
+  store i8 %result, i8 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}udiv24_i8_denorm_flush_out:
+; SI: v_cvt_f32_ubyte
+; SI-DAG: v_cvt_f32_ubyte
+; SI-DAG: v_rcp_iflag_f32
+; SI: v_cvt_u32_f32
+
+; EG: UINT_TO_FLT
+; EG-DAG: UINT_TO_FLT
+; EG-DAG: RECIP_IEEE
+; EG: FLT_TO_UINT
+define amdgpu_kernel void @udiv24_i8_denorm_flush_out(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #2 {
+  %den_ptr = getelementptr i8, i8 addrspace(1)* %in, i8 1
+  %num = load i8, i8 addrspace(1) * %in
+  %den = load i8, i8 addrspace(1) * %den_ptr
+  %result = udiv i8 %num, %den
+  store i8 %result, i8 addrspace(1)* %out
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}udiv24_i16:
 ; SI: v_cvt_f32_u32
 ; SI: v_cvt_f32_u32
@@ -65,7 +122,7 @@ define amdgpu_kernel void @udiv23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* 
 
 ; FUNC-LABEL: {{^}}udiv24_i32:
 ; SI: v_rcp_iflag
-; SI-NOT v_rcp_f32
+; SI-NOT: v_rcp_f32
 ; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @udiv24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
@@ -82,7 +139,7 @@ define amdgpu_kernel void @udiv24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* 
 
 ; FUNC-LABEL: {{^}}no_udiv24_u23_u24_i32:
 ; SI: v_rcp_iflag
-; SI-NOT v_rcp_f32
+; SI-NOT: v_rcp_f32
 ; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @no_udiv24_u23_u24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
@@ -99,7 +156,7 @@ define amdgpu_kernel void @no_udiv24_u23_u24_i32(i32 addrspace(1)* %out, i32 add
 
 ; FUNC-LABEL: {{^}}no_udiv24_u24_u23_i32:
 ; SI: v_rcp_iflag
-; SI-NOT v_rcp_f32
+; SI-NOT: v_rcp_f32
 ; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @no_udiv24_u24_u23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
@@ -325,3 +382,7 @@ define amdgpu_kernel void @test_udiv24_u23_u16_i32(i32 addrspace(1)* %out, i32 a
   store i32 %result, i32 addrspace(1)* %out, align 4
   ret void
 }
+
+attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #1 = { "denormal-fp-math-f32"="ieee,preserve-sign" }
+attributes #2 = { "denormal-fp-math-f32"="preserve-sign,ieee" }

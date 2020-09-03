@@ -126,9 +126,9 @@ define dso_local signext i32 @caller3(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-NEXT:    .cfi_offset v20, -192
 ; CHECK-PWR8-NEXT:    .cfi_offset v21, -176
 ; CHECK-PWR8-NEXT:    li r5, 48
-; CHECK-PWR8-NEXT:    stxvd2x v20, r1, r5 # 16-byte Folded Spill
+; CHECK-PWR8-NEXT:    stvx v20, r1, r5 # 16-byte Folded Spill
 ; CHECK-PWR8-NEXT:    li r5, 64
-; CHECK-PWR8-NEXT:    stxvd2x v21, r1, r5 # 16-byte Folded Spill
+; CHECK-PWR8-NEXT:    stvx v21, r1, r5 # 16-byte Folded Spill
 ; CHECK-PWR8-NEXT:    #APP
 ; CHECK-PWR8-NEXT:    add r3, r3, r4
 ; CHECK-PWR8-NEXT:    #NO_APP
@@ -136,9 +136,9 @@ define dso_local signext i32 @caller3(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-NEXT:    bl callee
 ; CHECK-PWR8-NEXT:    nop
 ; CHECK-PWR8-NEXT:    li r4, 64
-; CHECK-PWR8-NEXT:    lxvd2x v21, r1, r4 # 16-byte Folded Reload
+; CHECK-PWR8-NEXT:    lvx v21, r1, r4 # 16-byte Folded Reload
 ; CHECK-PWR8-NEXT:    li r4, 48
-; CHECK-PWR8-NEXT:    lxvd2x v20, r1, r4 # 16-byte Folded Reload
+; CHECK-PWR8-NEXT:    lvx v20, r1, r4 # 16-byte Folded Reload
 ; CHECK-PWR8-NEXT:    addi r1, r1, 240
 ; CHECK-PWR8-NEXT:    ld r0, 16(r1)
 ; CHECK-PWR8-NEXT:    mtlr r0
@@ -184,9 +184,9 @@ define dso_local signext i32 @caller4(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-NEXT:    .cfi_offset v20, -192
 ; CHECK-PWR8-NEXT:    .cfi_offset v21, -176
 ; CHECK-PWR8-NEXT:    li r5, 48
-; CHECK-PWR8-NEXT:    stxvd2x v20, r1, r5 # 16-byte Folded Spill
+; CHECK-PWR8-NEXT:    stvx v20, r1, r5 # 16-byte Folded Spill
 ; CHECK-PWR8-NEXT:    li r5, 64
-; CHECK-PWR8-NEXT:    stxvd2x v21, r1, r5 # 16-byte Folded Spill
+; CHECK-PWR8-NEXT:    stvx v21, r1, r5 # 16-byte Folded Spill
 ; CHECK-PWR8-NEXT:    #APP
 ; CHECK-PWR8-NEXT:    add r3, r3, r4
 ; CHECK-PWR8-NEXT:    #NO_APP
@@ -194,9 +194,9 @@ define dso_local signext i32 @caller4(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-NEXT:    bl callee
 ; CHECK-PWR8-NEXT:    nop
 ; CHECK-PWR8-NEXT:    li r4, 64
-; CHECK-PWR8-NEXT:    lxvd2x v21, r1, r4 # 16-byte Folded Reload
+; CHECK-PWR8-NEXT:    lvx v21, r1, r4 # 16-byte Folded Reload
 ; CHECK-PWR8-NEXT:    li r4, 48
-; CHECK-PWR8-NEXT:    lxvd2x v20, r1, r4 # 16-byte Folded Reload
+; CHECK-PWR8-NEXT:    lvx v20, r1, r4 # 16-byte Folded Reload
 ; CHECK-PWR8-NEXT:    addi r1, r1, 240
 ; CHECK-PWR8-NEXT:    ld r0, 16(r1)
 ; CHECK-PWR8-NEXT:    mtlr r0
@@ -246,9 +246,9 @@ define dso_local signext i32 @caller_mixed(i32 signext %a, i32 signext %b) local
 ; CHECK-PWR8-NEXT:    li r5, 48
 ; CHECK-PWR8-NEXT:    std r14, 240(r1) # 8-byte Folded Spill
 ; CHECK-PWR8-NEXT:    stfd f14, 384(r1) # 8-byte Folded Spill
-; CHECK-PWR8-NEXT:    stxvd2x v20, r1, r5 # 16-byte Folded Spill
+; CHECK-PWR8-NEXT:    stvx v20, r1, r5 # 16-byte Folded Spill
 ; CHECK-PWR8-NEXT:    li r5, 64
-; CHECK-PWR8-NEXT:    stxvd2x v21, r1, r5 # 16-byte Folded Spill
+; CHECK-PWR8-NEXT:    stvx v21, r1, r5 # 16-byte Folded Spill
 ; CHECK-PWR8-NEXT:    #APP
 ; CHECK-PWR8-NEXT:    add r3, r3, r4
 ; CHECK-PWR8-NEXT:    #NO_APP
@@ -258,9 +258,9 @@ define dso_local signext i32 @caller_mixed(i32 signext %a, i32 signext %b) local
 ; CHECK-PWR8-NEXT:    li r4, 64
 ; CHECK-PWR8-NEXT:    lfd f14, 384(r1) # 8-byte Folded Reload
 ; CHECK-PWR8-NEXT:    ld r14, 240(r1) # 8-byte Folded Reload
-; CHECK-PWR8-NEXT:    lxvd2x v21, r1, r4 # 16-byte Folded Reload
+; CHECK-PWR8-NEXT:    lvx v21, r1, r4 # 16-byte Folded Reload
 ; CHECK-PWR8-NEXT:    li r4, 48
-; CHECK-PWR8-NEXT:    lxvd2x v20, r1, r4 # 16-byte Folded Reload
+; CHECK-PWR8-NEXT:    lvx v20, r1, r4 # 16-byte Folded Reload
 ; CHECK-PWR8-NEXT:    addi r1, r1, 528
 ; CHECK-PWR8-NEXT:    ld r0, 16(r1)
 ; CHECK-PWR8-NEXT:    mtlr r0

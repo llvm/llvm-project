@@ -325,7 +325,7 @@ define i32 @i32_one_out_arg_i32_1_use(i32* %val) #0 {
 ; CHECK-NEXT: %3 = call %unused_different_type @unused_different_type.body(i32* %0, float* undef)
 ; CHECK-NEXT: %4 = extractvalue %unused_different_type %3, 0
 ; CHECK-NEXT: store float %4, float* %1, align 4
-; CHECK-NEXT  ret void
+; CHECK-NEXT: ret void
 define void @unused_different_type(i32* %arg0, float* nocapture %arg1) #0 {
   store float 4.0, float* %arg1, align 4
   ret void

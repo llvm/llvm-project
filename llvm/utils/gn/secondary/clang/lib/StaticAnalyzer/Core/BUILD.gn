@@ -25,9 +25,11 @@ static_library("Core") {
     "CheckerContext.cpp",
     "CheckerHelpers.cpp",
     "CheckerManager.cpp",
+    "CheckerRegistryData.cpp",
     "CommonBugCategories.cpp",
     "ConstraintManager.cpp",
     "CoreEngine.cpp",
+    "DynamicSize.cpp",
     "DynamicType.cpp",
     "Environment.cpp",
     "ExplodedGraph.cpp",
@@ -54,8 +56,8 @@ static_library("Core") {
     "SimpleConstraintManager.cpp",
     "SimpleSValBuilder.cpp",
     "Store.cpp",
-    "SubEngine.cpp",
     "SymbolManager.cpp",
+    "TextDiagnostics.cpp",
     "WorkList.cpp",
   ]
 }

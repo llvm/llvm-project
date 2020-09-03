@@ -25,7 +25,7 @@
 #  - Fails if stack is executable. Should only be readable and writable. Not executable.
 #  - Program dependencies: perl, readelf
 #  - Available for Unix dynamic library builds. Not available otherwise.
-# (4) test-instr (Intel(R) MIC Architecutre only)
+# (4) test-instr (Intel(R) MIC Architecture only)
 #  - Tests Intel(R) MIC Architecture libraries for valid instruction set
 #  - Fails if finds invalid instruction for Intel(R) MIC Architecture (wasn't compiled with correct flags)
 #  - Program dependencies: perl, objdump
@@ -40,7 +40,7 @@
 # get library location
 if(WIN32)
   get_target_property(LIBOMP_OUTPUT_DIRECTORY omp RUNTIME_OUTPUT_DIRECTORY)
-  get_target_property(LIBOMPIMP_OUTPUT_DIRECTORY ompimp ARCHIVE_OUTPUT_DIRECTORY)
+  get_target_property(LIBOMPIMP_OUTPUT_DIRECTORY ${LIBOMP_IMP_LIB_TARGET} ARCHIVE_OUTPUT_DIRECTORY)
   if(NOT LIBOMPIMP_OUTPUT_DIRECTORY)
     set(LIBOMPIMP_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   endif()

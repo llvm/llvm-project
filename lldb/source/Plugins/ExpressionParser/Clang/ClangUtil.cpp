@@ -1,4 +1,4 @@
-//===-- ClangUtil.cpp -------------------------------------------*- C++ -*-===//
+//===-- ClangUtil.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,6 +26,11 @@ bool ClangUtil::IsClangType(const CompilerType &ct) {
     return false;
 
   return true;
+}
+
+clang::Decl *ClangUtil::GetDecl(const CompilerDecl &decl) {
+  assert(llvm::isa<TypeSystemClang>(decl.GetTypeSystem()));
+  return static_cast<clang::Decl *>(decl.GetOpaqueDecl());
 }
 
 QualType ClangUtil::GetQualType(const CompilerType &ct) {

@@ -27,12 +27,12 @@
 // First argument of the command line received from underlying compilation
 // database is used as compiler driver path. Due to this arbitrary binary
 // execution, this mechanism is not used by default and only executes binaries
-// in the paths that are explicitly whitelisted by the user.
+// in the paths that are explicitly included by the user.
 
 #include "GlobalCompilationDatabase.h"
-#include "Logger.h"
-#include "Path.h"
-#include "Trace.h"
+#include "support/Logger.h"
+#include "support/Path.h"
+#include "support/Trace.h"
 #include "clang/Driver/Types.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/DenseMap.h"
@@ -85,15 +85,16 @@ std::vector<std::string> parseDriverOutput(llvm::StringRef Output) {
   return SystemIncludes;
 }
 
-std::vector<std::string> extractSystemIncludes(PathRef Driver,
-                                               llvm::StringRef Lang,
-                                               llvm::Regex &QueryDriverRegex) {
+std::vector<std::string>
+extractSystemIncludes(PathRef Driver, llvm::StringRef Lang,
+                      llvm::ArrayRef<std::string> CommandLine,
+                      const llvm::Regex &QueryDriverRegex) {
   trace::Span Tracer("Extract system includes");
   SPAN_ATTACH(Tracer, "driver", Driver);
   SPAN_ATTACH(Tracer, "lang", Lang);
 
   if (!QueryDriverRegex.match(Driver)) {
-    vlog("System include extraction: not whitelisted driver {0}", Driver);
+    vlog("System include extraction: not allowed driver {0}", Driver);
     return {};
   }
 
@@ -120,14 +121,43 @@ std::vector<std::string> extractSystemIncludes(PathRef Driver,
   llvm::Optional<llvm::StringRef> Redirects[] = {
       {""}, {""}, llvm::StringRef(StdErrPath)};
 
-  // Should we also preserve flags like "-sysroot", "-nostdinc" ?
-  const llvm::StringRef Args[] = {Driver, "-E", "-x", Lang, "-", "-v"};
+  llvm::SmallVector<llvm::StringRef, 12> Args = {Driver, "-E", "-x",
+                                                 Lang,   "-",  "-v"};
+
+  // These flags will be preserved
+  const llvm::StringRef FlagsToPreserve[] = {
+      "-nostdinc", "--no-standard-includes", "-nostdinc++", "-nobuiltininc"};
+  // Preserves these flags and their values, either as separate args or with an
+  // equalsbetween them
+  const llvm::StringRef ArgsToPreserve[] = {"--sysroot", "-isysroot"};
+
+  for (size_t I = 0, E = CommandLine.size(); I < E; ++I) {
+    llvm::StringRef Arg = CommandLine[I];
+    if (llvm::any_of(FlagsToPreserve,
+                     [&Arg](llvm::StringRef S) { return S == Arg; })) {
+      Args.push_back(Arg);
+    } else {
+      const auto *Found =
+          llvm::find_if(ArgsToPreserve, [&Arg](llvm::StringRef S) {
+            return Arg.startswith(S);
+          });
+      if (Found == std::end(ArgsToPreserve))
+        continue;
+      Arg = Arg.drop_front(Found->size());
+      if (Arg.empty() && I + 1 < E) {
+        Args.push_back(CommandLine[I]);
+        Args.push_back(CommandLine[++I]);
+      } else if (Arg.startswith("=")) {
+        Args.push_back(CommandLine[I]);
+      }
+    }
+  }
 
   if (int RC = llvm::sys::ExecuteAndWait(Driver, Args, /*Env=*/llvm::None,
                                          Redirects)) {
     elog("System include extraction: driver execution failed with return code: "
-         "{0}",
-         llvm::to_string(RC));
+         "{0}. Args: ['{1}']",
+         llvm::to_string(RC), llvm::join(Args, "', '"));
     return {};
   }
 
@@ -139,7 +169,7 @@ std::vector<std::string> extractSystemIncludes(PathRef Driver,
   }
 
   auto Includes = parseDriverOutput(BufOrError->get()->getBuffer());
-  log("System include extractor: succesfully executed {0}, got includes: "
+  log("System include extractor: successfully executed {0}, got includes: "
       "\"{1}\"",
       Driver, llvm::join(Includes, ", "));
   return Includes;
@@ -237,19 +267,12 @@ public:
 
     llvm::SmallString<128> Driver(Cmd->CommandLine.front());
     llvm::sys::fs::make_absolute(Cmd->Directory, Driver);
-    auto Key = std::make_pair(Driver.str(), Lang);
 
-    std::vector<std::string> SystemIncludes;
-    {
-      std::lock_guard<std::mutex> Lock(Mu);
-
-      auto It = DriverToIncludesCache.find(Key);
-      if (It != DriverToIncludesCache.end())
-        SystemIncludes = It->second;
-      else
-        DriverToIncludesCache[Key] = SystemIncludes =
-            extractSystemIncludes(Key.first, Key.second, QueryDriverRegex);
-    }
+    std::vector<std::string> SystemIncludes =
+        QueriedDrivers.get(/*Key=*/(Driver + ":" + Lang).str(), [&] {
+          return extractSystemIncludes(Driver, Lang, Cmd->CommandLine,
+                                       QueryDriverRegex);
+        });
 
     return addSystemIncludes(*Cmd, SystemIncludes);
   }
@@ -259,12 +282,9 @@ public:
   }
 
 private:
-  mutable std::mutex Mu;
-  // Caches includes extracted from a driver.
-  mutable std::map<std::pair<std::string, std::string>,
-                   std::vector<std::string>>
-      DriverToIncludesCache;
-  mutable llvm::Regex QueryDriverRegex;
+  // Caches includes extracted from a driver. Key is driver:lang.
+  Memoize<llvm::StringMap<std::vector<std::string>>> QueriedDrivers;
+  llvm::Regex QueryDriverRegex;
 
   std::unique_ptr<GlobalCompilationDatabase> Base;
   CommandChanged::Subscription BaseChanged;
@@ -278,7 +298,7 @@ getQueryDriverDatabase(llvm::ArrayRef<std::string> QueryDriverGlobs,
   if (QueryDriverGlobs.empty())
     return Base;
   return std::make_unique<QueryDriverDatabase>(QueryDriverGlobs,
-                                                std::move(Base));
+                                               std::move(Base));
 }
 
 } // namespace clangd

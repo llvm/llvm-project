@@ -720,10 +720,8 @@ define i32 @br_fcmp_store_load_stack_slot(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    sw ra, 12(sp)
 ; RV32IF-NEXT:    mv a0, zero
 ; RV32IF-NEXT:    call dummy
-; RV32IF-NEXT:    lui a1, %hi(.LCPI17_0)
-; RV32IF-NEXT:    addi a1, a1, %lo(.LCPI17_0)
-; RV32IF-NEXT:    flw ft1, 0(a1)
 ; RV32IF-NEXT:    fmv.w.x ft0, a0
+; RV32IF-NEXT:    fmv.w.x ft1, zero
 ; RV32IF-NEXT:    fsw ft1, 8(sp)
 ; RV32IF-NEXT:    feq.s a0, ft0, ft1
 ; RV32IF-NEXT:    beqz a0, .LBB17_3
@@ -747,9 +745,7 @@ define i32 @br_fcmp_store_load_stack_slot(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    addi sp, sp, -32
 ; RV64IF-NEXT:    sd ra, 24(sp)
 ; RV64IF-NEXT:    sd s0, 16(sp)
-; RV64IF-NEXT:    lui a0, %hi(.LCPI17_0)
-; RV64IF-NEXT:    addi a0, a0, %lo(.LCPI17_0)
-; RV64IF-NEXT:    flw ft0, 0(a0)
+; RV64IF-NEXT:    fmv.w.x ft0, zero
 ; RV64IF-NEXT:    fsw ft0, 12(sp)
 ; RV64IF-NEXT:    fmv.x.w s0, ft0
 ; RV64IF-NEXT:    mv a0, s0

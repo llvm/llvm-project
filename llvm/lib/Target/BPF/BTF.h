@@ -176,6 +176,13 @@ struct BTFParam {
   uint32_t Type;
 };
 
+/// BTF_KIND_FUNC can be global, static or extern.
+enum : uint8_t {
+  FUNC_STATIC = 0,
+  FUNC_GLOBAL = 1,
+  FUNC_EXTERN = 2,
+};
+
 /// Variable scoping information.
 enum : uint8_t {
   VAR_STATIC = 0,           ///< Linkage: InternalLinkage

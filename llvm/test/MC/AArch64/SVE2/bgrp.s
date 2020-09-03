@@ -3,7 +3,7 @@
 // RUN: not llvm-mc -triple=aarch64 -show-encoding < %s 2>&1 \
 // RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve2-bitperm < %s \
-// RUN:        | llvm-objdump -d -mattr=+sve2-bitperm - | FileCheck %s --check-prefix=CHECK-INST
+// RUN:        | llvm-objdump -d --mattr=+sve2-bitperm - | FileCheck %s --check-prefix=CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve2-bitperm < %s \
 // RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 

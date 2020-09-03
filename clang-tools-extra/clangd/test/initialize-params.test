@@ -7,11 +7,15 @@
 # CHECK-NEXT:    "capabilities": {
 # CHECK-NEXT:      "codeActionProvider": true,
 # CHECK-NEXT:      "completionProvider": {
+# CHECK-NEXT:        "allCommitCharacters": " \t()[]{}<>:;,+-/*%^&#?.=\"'|",
 # CHECK-NEXT:        "resolveProvider": false,
 # CHECK-NEXT:        "triggerCharacters": [
 # CHECK-NEXT:          ".",
+# CHECK-NEXT:          "<",
 # CHECK-NEXT:          ">",
-# CHECK-NEXT:          ":"
+# CHECK-NEXT:          ":",
+# CHECK-NEXT:          "\"",
+# CHECK-NEXT:          "/"
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
 # CHECK-NEXT:      "declarationProvider": true,
@@ -37,15 +41,35 @@
 # CHECK-NEXT:      "referencesProvider": true,
 # CHECK-NEXT:      "renameProvider": true,
 # CHECK-NEXT:      "selectionRangeProvider": true,
+# CHECK-NEXT:      "semanticTokensProvider": {
+# CHECK-NEXT:        "full": {
+# CHECK-NEXT:          "delta": true
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "legend": {
+# CHECK-NEXT:          "tokenModifiers": [],
+# CHECK-NEXT:          "tokenTypes": [
+# CHECK-NEXT:            "variable",
+# CHECK:               ]
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "range": false
+# CHECK-NEXT:      },
 # CHECK-NEXT:      "signatureHelpProvider": {
 # CHECK-NEXT:        "triggerCharacters": [
 # CHECK-NEXT:          "(",
 # CHECK-NEXT:          ","
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "textDocumentSync": 2,
+# CHECK-NEXT:      "textDocumentSync": {
+# CHECK-NEXT:        "change": 2,
+# CHECK-NEXT:        "openClose": true,
+# CHECK-NEXT:        "save": true
+# CHECK-NEXT:      },
 # CHECK-NEXT:      "typeHierarchyProvider": true
 # CHECK-NEXT:      "workspaceSymbolProvider": true
+# CHECK-NEXT:    },
+# CHECK-NEXT:    "serverInfo": {
+# CHECK-NEXT:      "name": "clangd",
+# CHECK-NEXT:      "version": "{{.*}}clangd version {{.*}}"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 ---

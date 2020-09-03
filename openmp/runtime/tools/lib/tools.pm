@@ -87,7 +87,7 @@ my @warning = ( sub {}, \&warning, \&runtime_error );
 
 sub check_opts(\%$;$) {
 
-    my $opts = shift( @_ );  # Referense to hash containing real options and their values.
+    my $opts = shift( @_ );  # Reference to hash containing real options and their values.
     my $good = shift( @_ );  # Reference to an array containing all known option names.
     my $msg  = shift( @_ );  # Optional (non-mandatory) message.
 
@@ -237,7 +237,7 @@ B<Description:>
 
 It is very simple wrapper arounf Getopt::Long::GetOptions. It passes all arguments to GetOptions,
 and add definitions for standard help options: --help, --doc, --verbose, and --quiet.
-When GetOptions finihes, this subroutine checks exit code, if it is non-zero, standard error
+When GetOptions finishes, this subroutine checks exit code, if it is non-zero, standard error
 message is issued and script terminated.
 
 If --verbose or --quiet option is specified, C<tools.pm_verbose> environment variable is set.
@@ -333,7 +333,7 @@ B<Synopsis:>
 B<Description:>
 
 Package variable. It determines verbosity level, which affects C<warning()>, C<info()>, and
-C<debug()> subroutnes .
+C<debug()> subroutines .
 
 The variable gets initial value from C<tools.pm_verbose> environment variable if it is exists.
 If the environment variable does not exist, variable is set to 2.
@@ -357,7 +357,7 @@ B<Synopsis:>
 B<Description:>
 
 Package variable. It determines whether C<debug()>, C<info()>, C<warning()>, C<runtime_error()>
-subroutnes print timestamps or not.
+subroutines print timestamps or not.
 
 The variable gets initial value from C<tools.pm_timestamps> environment variable if it is exists.
 If the environment variable does not exist, variable is set to false.
@@ -700,7 +700,7 @@ Look for "echo" in the directories specified in PATH:
 
     my $echo = which( "echo" );
 
-Look for all occurenses of "cp" in the PATH:
+Look for all occurrences of "cp" in the PATH:
 
     my @cps = which( "cp", -all => 1 );
 
@@ -1488,7 +1488,7 @@ B<Arguments:>
 
 =item B<$file>
 
-The name or handle of file to writte to.
+The name or handle of file to write to.
 
 =item B<$bulk>
 

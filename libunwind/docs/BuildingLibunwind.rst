@@ -57,8 +57,8 @@ build would look like this:
 
   $ cd where-you-want-libunwind-to-live
   $ # Check out llvm, and libunwind
-  $ ``svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm``
-  $ ``svn co http://llvm.org/svn/llvm-project/libunwind/trunk libunwind``
+  $ ``svn co https://llvm.org/svn/llvm-project/llvm/trunk llvm``
+  $ ``svn co https://llvm.org/svn/llvm-project/libunwind/trunk libunwind``
   $ cd where-you-want-to-build
   $ mkdir build && cd build
   $ export CC=clang CXX=clang++

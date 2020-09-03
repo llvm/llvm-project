@@ -41,12 +41,6 @@
 
 namespace llvm {
 
-class ArrayType;
-class IntegerType;
-class PointerType;
-class SequentialType;
-class StructType;
-class VectorType;
 template <class ConstantClass> struct ConstantAggrKeyType;
 
 /// Base class for constants with no operands.
@@ -155,6 +149,20 @@ public:
   /// Return the sign extended value.
   inline int64_t getSExtValue() const {
     return Val.getSExtValue();
+  }
+
+  /// Return the constant as an llvm::MaybeAlign.
+  /// Note that this method can assert if the value does not fit in 64 bits or
+  /// is not a power of two.
+  inline MaybeAlign getMaybeAlignValue() const {
+    return MaybeAlign(getZExtValue());
+  }
+
+  /// Return the constant as an llvm::Align, interpreting `0` as `Align(1)`.
+  /// Note that this method can assert if the value does not fit in 64 bits or
+  /// is not a power of two.
+  inline Align getAlignValue() const {
+    return getMaybeAlignValue().valueOrOne();
   }
 
   /// A helper method that can be used to determine if the constant contained
@@ -300,6 +308,7 @@ public:
   /// Return true if Ty is big enough to represent V.
   static bool isValueValidForType(Type *Ty, const APFloat &V);
   inline const APFloat &getValueAPF() const { return Val; }
+  inline const APFloat &getValue() const { return Val; }
 
   /// Return true if the value is positive or negative zero.
   bool isZero() const { return Val.isZero(); }
@@ -388,7 +397,7 @@ public:
 /// use operands.
 class ConstantAggregate : public Constant {
 protected:
-  ConstantAggregate(CompositeType *T, ValueTy VT, ArrayRef<Constant *> V);
+  ConstantAggregate(Type *T, ValueTy VT, ArrayRef<Constant *> V);
 
 public:
   /// Transparently provide more efficient getOperand methods.
@@ -456,8 +465,7 @@ public:
   static Constant *get(StructType *T, ArrayRef<Constant*> V);
 
   template <typename... Csts>
-  static typename std::enable_if<are_base_of<Constant, Csts...>::value,
-                                 Constant *>::type
+  static std::enable_if_t<are_base_of<Constant, Csts...>::value, Constant *>
   get(StructType *T, Csts *... Vs) {
     SmallVector<Constant *, 8> Values({Vs...});
     return get(T, Values);
@@ -514,12 +522,13 @@ private:
 
 public:
   /// Return a ConstantVector with the specified constant in each element.
-  static Constant *getSplat(unsigned NumElts, Constant *Elt);
+  /// Note that this might not return an instance of ConstantVector
+  static Constant *getSplat(ElementCount EC, Constant *Elt);
 
-  /// Specialize the getType() method to always return a VectorType,
+  /// Specialize the getType() method to always return a FixedVectorType,
   /// which reduces the amount of casting needed in parts of the compiler.
-  inline VectorType *getType() const {
-    return cast<VectorType>(Value::getType());
+  inline FixedVectorType *getType() const {
+    return cast<FixedVectorType>(Value::getType());
   }
 
   /// If all elements of the vector constant have the same value, return that
@@ -628,12 +637,6 @@ public:
   /// efficient as getElementAsInteger/Float/Double.
   Constant *getElementAsConstant(unsigned i) const;
 
-  /// Specialize the getType() method to always return a SequentialType, which
-  /// reduces the amount of casting needed in parts of the compiler.
-  inline SequentialType *getType() const {
-    return cast<SequentialType>(Value::getType());
-  }
-
   /// Return the element type of the array/vector.
   Type *getElementType() const;
 
@@ -724,14 +727,15 @@ public:
     return getImpl(Data, Ty);
   }
 
-  /// getFP() constructors - Return a constant with array type with an element
-  /// count and element type of float with precision matching the number of
-  /// bits in the ArrayRef passed in. (i.e. half for 16bits, float for 32bits,
-  /// double for 64bits) Note that this can return a ConstantAggregateZero
-  /// object.
-  static Constant *getFP(LLVMContext &Context, ArrayRef<uint16_t> Elts);
-  static Constant *getFP(LLVMContext &Context, ArrayRef<uint32_t> Elts);
-  static Constant *getFP(LLVMContext &Context, ArrayRef<uint64_t> Elts);
+  /// getFP() constructors - Return a constant of array type with a float
+  /// element type taken from argument `ElementType', and count taken from
+  /// argument `Elts'.  The amount of bits of the contained type must match the
+  /// number of bits of the type contained in the passed in ArrayRef.
+  /// (i.e. half or bfloat for 16bits, float for 32bits, double for 64bits) Note
+  /// that this can return a ConstantAggregateZero object.
+  static Constant *getFP(Type *ElementType, ArrayRef<uint16_t> Elts);
+  static Constant *getFP(Type *ElementType, ArrayRef<uint32_t> Elts);
+  static Constant *getFP(Type *ElementType, ArrayRef<uint64_t> Elts);
 
   /// This method constructs a CDS and initializes it with a text string.
   /// The default behavior (AddNull==true) causes a null terminator to
@@ -763,7 +767,12 @@ class ConstantDataVector final : public ConstantDataSequential {
   friend class ConstantDataSequential;
 
   explicit ConstantDataVector(Type *ty, const char *Data)
-      : ConstantDataSequential(ty, ConstantDataVectorVal, Data) {}
+      : ConstantDataSequential(ty, ConstantDataVectorVal, Data),
+        IsSplatSet(false) {}
+  // Cache whether or not the constant is a splat.
+  mutable bool IsSplatSet : 1;
+  mutable bool IsSplat : 1;
+  bool isSplatData() const;
 
 public:
   ConstantDataVector(const ConstantDataVector &) = delete;
@@ -778,14 +787,15 @@ public:
   static Constant *get(LLVMContext &Context, ArrayRef<float> Elts);
   static Constant *get(LLVMContext &Context, ArrayRef<double> Elts);
 
-  /// getFP() constructors - Return a constant with vector type with an element
-  /// count and element type of float with the precision matching the number of
-  /// bits in the ArrayRef passed in.  (i.e. half for 16bits, float for 32bits,
-  /// double for 64bits) Note that this can return a ConstantAggregateZero
-  /// object.
-  static Constant *getFP(LLVMContext &Context, ArrayRef<uint16_t> Elts);
-  static Constant *getFP(LLVMContext &Context, ArrayRef<uint32_t> Elts);
-  static Constant *getFP(LLVMContext &Context, ArrayRef<uint64_t> Elts);
+  /// getFP() constructors - Return a constant of vector type with a float
+  /// element type taken from argument `ElementType', and count taken from
+  /// argument `Elts'.  The amount of bits of the contained type must match the
+  /// number of bits of the type contained in the passed in ArrayRef.
+  /// (i.e. half or bfloat for 16bits, float for 32bits, double for 64bits) Note
+  /// that this can return a ConstantAggregateZero object.
+  static Constant *getFP(Type *ElementType, ArrayRef<uint16_t> Elts);
+  static Constant *getFP(Type *ElementType, ArrayRef<uint32_t> Elts);
+  static Constant *getFP(Type *ElementType, ArrayRef<uint64_t> Elts);
 
   /// Return a ConstantVector with the specified constant in each element.
   /// The specified constant has to be a of a compatible type (i8/i16/
@@ -800,10 +810,10 @@ public:
   /// same value, return that value. Otherwise return NULL.
   Constant *getSplatValue() const;
 
-  /// Specialize the getType() method to always return a VectorType,
+  /// Specialize the getType() method to always return a FixedVectorType,
   /// which reduces the amount of casting needed in parts of the compiler.
-  inline VectorType *getType() const {
-    return cast<VectorType>(Value::getType());
+  inline FixedVectorType *getType() const {
+    return cast<FixedVectorType>(Value::getType());
   }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -899,6 +909,8 @@ protected:
     // Operation type (an Instruction opcode) is stored as the SubclassData.
     setValueSubclassData(Opcode);
   }
+
+  ~ConstantExpr() = default;
 
 public:
   // Static methods to construct a ConstantExpr of different kinds.  Note that
@@ -1198,7 +1210,8 @@ public:
                                      Type *OnlyIfReducedTy = nullptr);
   static Constant *getInsertElement(Constant *Vec, Constant *Elt, Constant *Idx,
                                     Type *OnlyIfReducedTy = nullptr);
-  static Constant *getShuffleVector(Constant *V1, Constant *V2, Constant *Mask,
+  static Constant *getShuffleVector(Constant *V1, Constant *V2,
+                                    ArrayRef<int> Mask,
                                     Type *OnlyIfReducedTy = nullptr);
   static Constant *getExtractValue(Constant *Agg, ArrayRef<unsigned> Idxs,
                                    Type *OnlyIfReducedTy = nullptr);
@@ -1216,6 +1229,16 @@ public:
   /// Assert that this is an insertvalue or exactvalue
   /// expression and return the list of indices.
   ArrayRef<unsigned> getIndices() const;
+
+  /// Assert that this is a shufflevector and return the mask. See class
+  /// ShuffleVectorInst for a description of the mask representation.
+  ArrayRef<int> getShuffleMask() const;
+
+  /// Assert that this is a shufflevector and return the mask.
+  ///
+  /// TODO: This is a temporary hack until we update the bitcode format for
+  /// shufflevector.
+  Constant *getShuffleMaskForBitcode() const;
 
   /// Return a string representation for an opcode.
   const char *getOpcodeName() const;

@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s
 
+// Check that passing -fno-unroll-loops does not impact the decision made using pragmas.
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - -O1 -disable-llvm-optzns -fno-unroll-loops %s | FileCheck %s
+
 // Verify while loop is recognized after unroll pragma.
 void while_test(int *List, int Length) {
   // CHECK: define {{.*}} @_Z10while_test

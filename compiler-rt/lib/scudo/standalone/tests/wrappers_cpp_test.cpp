@@ -8,6 +8,7 @@
 
 #include "tests/scudo_unit_test.h"
 
+#include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -113,3 +114,59 @@ TEST(ScudoWrappersCppTest, ThreadedNew) {
   for (auto &T : Threads)
     T.join();
 }
+
+#if !SCUDO_FUCHSIA
+// TODO(kostyak): for me, this test fails in a specific configuration when ran
+//                by itself with some Scudo or GWP-ASan violation. Other people
+//                can't seem to reproduce the failure. Consider skipping this in
+//                the event it fails on the upstream bots.
+TEST(ScudoWrappersCppTest, AllocAfterFork) {
+  std::atomic_bool Stop;
+
+  // Create threads that simply allocate and free different sizes.
+  std::vector<std::thread *> Threads;
+  for (size_t N = 0; N < 5; N++) {
+    std::thread *T = new std::thread([&Stop] {
+      while (!Stop) {
+        for (size_t SizeLog = 3; SizeLog <= 21; SizeLog++) {
+          char *P = new char[1UL << SizeLog];
+          EXPECT_NE(P, nullptr);
+          // Make sure this value is not optimized away.
+          asm volatile("" : : "r,m"(P) : "memory");
+          delete[] P;
+        }
+      }
+    });
+    Threads.push_back(T);
+  }
+
+  // Create a thread to fork and allocate.
+  for (size_t N = 0; N < 100; N++) {
+    pid_t Pid;
+    if ((Pid = fork()) == 0) {
+      for (size_t SizeLog = 3; SizeLog <= 21; SizeLog++) {
+        char *P = new char[1UL << SizeLog];
+        EXPECT_NE(P, nullptr);
+        // Make sure this value is not optimized away.
+        asm volatile("" : : "r,m"(P) : "memory");
+        // Make sure we can touch all of the allocation.
+        memset(P, 0x32, 1U << SizeLog);
+        // EXPECT_LE(1U << SizeLog, malloc_usable_size(ptr));
+        delete[] P;
+      }
+      _exit(10);
+    }
+    EXPECT_NE(-1, Pid);
+    int Status;
+    EXPECT_EQ(Pid, waitpid(Pid, &Status, 0));
+    EXPECT_FALSE(WIFSIGNALED(Status));
+    EXPECT_EQ(10, WEXITSTATUS(Status));
+  }
+
+  printf("Waiting for threads to complete\n");
+  Stop = true;
+  for (auto Thread : Threads)
+    Thread->join();
+  Threads.clear();
+}
+#endif

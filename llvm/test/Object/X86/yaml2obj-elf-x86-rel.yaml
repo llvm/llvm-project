@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj -r %t | FileCheck %s
 
 # CHECK:      Relocations [
@@ -25,8 +25,7 @@ Sections:
     Info:            .text
     AddressAlign:    0x04
     Relocations:
-      - Offset:          0
-        Symbol:          main
+      - Symbol:          main
         Type:            R_386_32
 
 Symbols:

@@ -1,6 +1,6 @@
 //===- BlockAndValueMapping.h -----------------------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -30,6 +30,15 @@ public:
   void map(Block *from, Block *to) { valueMap[from] = to; }
   void map(Value from, Value to) {
     valueMap[from.getAsOpaquePointer()] = to.getAsOpaquePointer();
+  }
+
+  template <
+      typename S, typename T,
+      std::enable_if_t<!std::is_assignable<Value, S>::value &&
+                       !std::is_assignable<Block *, S>::value> * = nullptr>
+  void map(S &&from, T &&to) {
+    for (auto pair : llvm::zip(from, to))
+      map(std::get<0>(pair), std::get<1>(pair));
   }
 
   /// Erases a mapping for 'from'.

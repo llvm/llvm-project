@@ -13,6 +13,7 @@ public:
 using namespace llvm;
 
 void foo(const Twine &x);
+void bar(Twine x);
 
 static Twine Moo = Twine("bark") + "bah";
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: twine variables are prone to use-after-free bugs

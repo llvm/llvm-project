@@ -61,6 +61,9 @@ namespace llvm {
 
   void UpgradeSectionAttributes(Module &M);
 
+  /// Correct any IR that is relying on old function attribute behavior.
+  void UpgradeFunctionAttributes(Function &F);
+
   /// If the given TBAA tag uses the scalar TBAA format, create a new node
   /// corresponding to the upgrade to the struct-path aware TBAA format.
   /// Otherwise return the \p TBAANode itself.
@@ -92,9 +95,8 @@ namespace llvm {
   /// pointers.
   std::string UpgradeDataLayoutString(StringRef DL, StringRef Triple);
 
-  /// Upgrade function attributes "no-frame-pointer-elim" and
-  /// "no-frame-pointer-elim-non-leaf" to "frame-pointer".
-  void UpgradeFramePointerAttributes(AttrBuilder &B);
+  /// Upgrade attributes that changed format or kind.
+  void UpgradeAttributes(AttrBuilder &B);
 
 } // End llvm namespace
 

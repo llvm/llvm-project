@@ -15,7 +15,7 @@ D1 d1a(1), d1b(1, 1);
 D1 fd1() { return 1; }
 
 struct B2 {
-  explicit B2(int, int = 0, int = 0);
+  explicit B2(int, int = 0, int = 0); // expected-note {{not a candidate}}
 };
 struct D2 : B2 { // expected-note 2{{candidate constructor}}
   using B2::B2;

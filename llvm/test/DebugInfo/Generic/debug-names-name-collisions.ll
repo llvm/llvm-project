@@ -1,4 +1,3 @@
-; REQUIRES: object-emission
 ; RUN: %llc_dwarf -accel-tables=Dwarf -dwarf-linkage-names=All -filetype=obj -o %t < %s
 ; RUN: llvm-dwarfdump -debug-names %t | FileCheck %s
 ; RUN: llvm-dwarfdump -debug-names -verify %t | FileCheck --check-prefix=VERIFY %s

@@ -26,6 +26,14 @@ class DebugAttach(IntFlag):
 # UUID for DebugClient7 interface.
 DebugClient7IID = IID(0x13586be3, 0x542e, 0x481e, IID_Data4_Type(0xb1, 0xf2, 0x84, 0x97, 0xba, 0x74, 0xf9, 0xa9 ))
 
+class DEBUG_CREATE_PROCESS_OPTIONS(Structure):
+  _fields_ = [
+    ("CreateFlags", c_ulong),
+    ("EngCreateFlags", c_ulong),
+    ("VerifierFlags", c_ulong),
+    ("Reserved", c_ulong)
+  ]
+
 class IDebugClient7(Structure):
   pass
 
@@ -34,6 +42,8 @@ class IDebugClient7Vtbl(Structure):
   idc_queryinterface = wrp(POINTER(IID), POINTER(c_void_p))
   idc_attachprocess = wrp(c_longlong, c_long, c_long)
   idc_detachprocesses = wrp()
+  idc_terminateprocesses = wrp()
+  idc_createprocessandattach2 = wrp(c_ulonglong, c_char_p, c_void_p, c_ulong, c_char_p, c_char_p, c_ulong, c_ulong)
   _fields_ = [
       ("QueryInterface", idc_queryinterface),
       ("AddRef", c_void_p),
@@ -59,7 +69,7 @@ class IDebugClient7Vtbl(Structure):
       ("ConnectSession", c_void_p),
       ("StartServer", c_void_p),
       ("OutputServers", c_void_p),
-      ("TerminateProcesses", c_void_p),
+      ("TerminateProcesses", idc_terminateprocesses),
       ("DetachProcesses", idc_detachprocesses),
       ("EndSession", c_void_p),
       ("GetExitCode", c_void_p),
@@ -118,7 +128,7 @@ class IDebugClient7Vtbl(Structure):
       ("SetEventCallbacksWide", c_void_p),
       ("CreateProcess2", c_void_p),
       ("CreateProcess2Wide", c_void_p),
-      ("CreateProcessAndAttach2", c_void_p),
+      ("CreateProcessAndAttach2", idc_createprocessandattach2),
       ("CreateProcessAndAttach2Wide", c_void_p),
       ("PushOutputLinePrefix", c_void_p),
       ("PushOutputLinePrefixWide", c_void_p),
@@ -182,4 +192,20 @@ class Client(object):
   def DetachProcesses(self):
     res = self.vt.DetachProcesses(self.client)
     aborter(res, "DetachProcesses")
+    return
+
+  def TerminateProcesses(self):
+    res = self.vt.TerminateProcesses(self.client)
+    aborter(res, "TerminateProcesses")
+    return
+
+  def CreateProcessAndAttach2(self, cmdline):
+    options = DEBUG_CREATE_PROCESS_OPTIONS()
+    options.CreateFlags = 0x2 # DEBUG_ONLY_THIS_PROCESS
+    options.EngCreateFlags  = 0
+    options.VerifierFlags = 0
+    options.Reserved = 0
+    attach_flags = 0
+    res = self.vt.CreateProcessAndAttach2(self.client, 0, cmdline.encode("ascii"), byref(options), sizeof(options), None, None, 0, attach_flags)
+    aborter(res, "CreateProcessAndAttach2")
     return

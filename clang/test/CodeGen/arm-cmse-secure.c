@@ -1,5 +1,5 @@
-// RUN: %clang -mlittle-endian -mcmse -target thumbv8m.base-eabi -emit-llvm -S -o - %s | FileCheck %s
-// RUN: %clang -mbig-endian    -mcmse -target thumbv8m.base-eabi -emit-llvm -S -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple thumbv8m.base-unknown-unknown-eabi   -emit-llvm -mrelocation-model static -mcmse -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple thumbebv8m.base-unknown-unknown-eabi -emit-llvm -mrelocation-model static -mcmse -o - %s | FileCheck %s
 
 #include <arm_cmse.h>
 

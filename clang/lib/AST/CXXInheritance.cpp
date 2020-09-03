@@ -147,37 +147,27 @@ CXXRecordDecl::isCurrentInstantiation(const DeclContext *CurContext) const {
   return false;
 }
 
-bool CXXRecordDecl::forallBases(ForallBasesCallback BaseMatches,
-                                bool AllowShortCircuit) const {
+bool CXXRecordDecl::forallBases(ForallBasesCallback BaseMatches) const {
   SmallVector<const CXXRecordDecl*, 8> Queue;
 
   const CXXRecordDecl *Record = this;
-  bool AllMatches = true;
   while (true) {
     for (const auto &I : Record->bases()) {
       const RecordType *Ty = I.getType()->getAs<RecordType>();
-      if (!Ty) {
-        if (AllowShortCircuit) return false;
-        AllMatches = false;
-        continue;
-      }
+      if (!Ty)
+        return false;
 
       CXXRecordDecl *Base =
             cast_or_null<CXXRecordDecl>(Ty->getDecl()->getDefinition());
       if (!Base ||
           (Base->isDependentContext() &&
            !Base->isCurrentInstantiation(Record))) {
-        if (AllowShortCircuit) return false;
-        AllMatches = false;
-        continue;
+        return false;
       }
 
       Queue.push_back(Base);
-      if (!BaseMatches(Base)) {
-        if (AllowShortCircuit) return false;
-        AllMatches = false;
-        continue;
-      }
+      if (!BaseMatches(Base))
+        return false;
     }
 
     if (Queue.empty())
@@ -185,7 +175,7 @@ bool CXXRecordDecl::forallBases(ForallBasesCallback BaseMatches,
     Record = Queue.pop_back_val(); // not actually a queue.
   }
 
-  return AllMatches;
+  return true;
 }
 
 bool CXXBasePaths::lookupInBases(ASTContext &Context,

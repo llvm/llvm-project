@@ -12,6 +12,7 @@ import errno
 import os
 import re
 import sys
+import subprocess
 
 # Third-party modules
 from six import StringIO as SixStringIO
@@ -53,6 +54,40 @@ def mkdir_p(path):
             raise
     if not os.path.isdir(path):
         raise OSError(errno.ENOTDIR, "%s is not a directory"%path)
+
+
+# ============================
+# Dealing with SDK and triples
+# ============================
+
+def get_xcode_sdk(os, env):
+    if os == "ios":
+        if env == "simulator":
+            return "iphonesimulator"
+        if env == "macabi":
+            return "macosx"
+        return "iphoneos"
+    elif os == "tvos":
+        if env == "simulator":
+            return "appletvsimulator"
+        return "appletvos"
+    elif os == "watchos":
+        if env == "simulator":
+            return "watchsimulator"
+        return "watchos"
+    return os
+
+
+def get_xcode_sdk_version(sdk):
+    return subprocess.check_output(
+        ['xcrun', '--sdk', sdk, '--show-sdk-version']).rstrip().decode('utf-8')
+
+
+def get_xcode_sdk_root(sdk):
+    return subprocess.check_output(['xcrun', '--sdk', sdk, '--show-sdk-path'
+                                    ]).rstrip().decode('utf-8')
+
+
 # ===================================================
 # Disassembly for an SBFunction or an SBSymbol object
 # ===================================================
@@ -776,7 +811,7 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None,
         launch_info = target.GetLaunchInfo()
         launch_info.SetWorkingDirectory(test.get_process_working_directory())
 
-    if extra_images and lldb.remote_platform:
+    if extra_images:
         environ = test.registerSharedLibrariesWithTarget(target, extra_images)
         launch_info.SetEnvironmentEntries(environ, True)
 
@@ -788,6 +823,8 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None,
                     error.GetCString()))
     test.assertFalse(error.Fail(),
                      "Process launch failed: %s" % (error.GetCString()))
+
+    test.assertEqual(process.GetState(), lldb.eStateStopped)
 
     # Frame #0 should be at our breakpoint.
     threads = get_threads_stopped_at_breakpoint(
@@ -1063,7 +1100,7 @@ def print_stacktraces(process, string_buffer=False):
         return output.getvalue()
 
 
-def expect_state_changes(test, listener, process, states, timeout=5):
+def expect_state_changes(test, listener, process, states, timeout=30):
     """Listens for state changed events on the listener and makes sure they match what we
     expect. Stop-and-restart events (where GetRestartedFromEvent() returns true) are ignored."""
 

@@ -23,10 +23,10 @@
 ## The JMP_SLOT relocation is stored at .plt[2]
 # RELOC: 0x10030010 R_PPC64_JMP_SLOT foo 0x0
 
-# CHECK:      _start:
-# CHECK:      10010298: bl .+16
+# CHECK:      <_start>:
+# CHECK:      10010298: bl 0x100102a8
 
-# CHECK-LABEL: 00000000100102a8 __plt_foo:
+# CHECK-LABEL: 00000000100102a8 <__plt_foo>:
 # CHECK-NEXT:      std 2, 24(1)
 # CHECK-NEXT:      addis 12, 2, 1
 # CHECK-NEXT:      ld 12, -32744(12)

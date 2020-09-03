@@ -1,4 +1,4 @@
-# RUN: llc %s -run-pass=block-placement -tail-dup-placement-threshold=4 -o - | FileCheck %s
+# RUN: llc %s -emit-call-site-info -run-pass=block-placement -tail-dup-placement-threshold=4 -o - | FileCheck %s
 #
 # Test case adapted from test/CodeGen/X86/taildup-heapallocsite.ll.
 

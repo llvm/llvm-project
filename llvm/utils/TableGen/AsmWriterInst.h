@@ -48,6 +48,8 @@ namespace llvm {
     /// an operand, specified with syntax like ${opname:modifier}.
     std::string MiModifier;
 
+    bool PCRel = false;
+
     // To make VS STL happy
     AsmWriterOperand(OpType op = isLiteralTextOperand):OperandType(op) {}
 
@@ -55,11 +57,11 @@ namespace llvm {
                      OpType op = isLiteralTextOperand)
     : OperandType(op), Str(LitStr) {}
 
-    AsmWriterOperand(const std::string &Printer,
-                     unsigned _MIOpNo,
+    AsmWriterOperand(const std::string &Printer, unsigned _MIOpNo,
                      const std::string &Modifier,
-                     OpType op = isMachineInstrOperand)
-    : OperandType(op), MIOpNo(_MIOpNo), Str(Printer), MiModifier(Modifier) {}
+                     OpType op = isMachineInstrOperand, bool PCRel = false)
+        : OperandType(op), MIOpNo(_MIOpNo), Str(Printer), MiModifier(Modifier),
+          PCRel(PCRel) {}
 
     bool operator!=(const AsmWriterOperand &Other) const {
       if (OperandType != Other.OperandType || Str != Other.Str) return true;

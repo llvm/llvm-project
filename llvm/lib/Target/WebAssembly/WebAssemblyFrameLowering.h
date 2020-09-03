@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
-class MachineFrameInfo;
 
 class WebAssemblyFrameLowering final : public TargetFrameLowering {
 public:
@@ -44,6 +43,7 @@ public:
 
   bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
+  DwarfFrameBase getDwarfFrameBase(const MachineFunction &MF) const override;
 
   bool needsPrologForEH(const MachineFunction &MF) const;
 
@@ -52,6 +52,15 @@ public:
                        MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator &InsertStore,
                        const DebugLoc &DL) const;
+
+  static unsigned getSPReg(const MachineFunction &MF);
+  static unsigned getFPReg(const MachineFunction &MF);
+  static unsigned getOpcConst(const MachineFunction &MF);
+  static unsigned getOpcAdd(const MachineFunction &MF);
+  static unsigned getOpcSub(const MachineFunction &MF);
+  static unsigned getOpcAnd(const MachineFunction &MF);
+  static unsigned getOpcGlobGet(const MachineFunction &MF);
+  static unsigned getOpcGlobSet(const MachineFunction &MF);
 
 private:
   bool hasBP(const MachineFunction &MF) const;

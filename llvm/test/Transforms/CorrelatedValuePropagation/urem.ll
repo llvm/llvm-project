@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: @test_nop
 define void @test_nop(i32 %n) {
-; CHECK udiv i32 %n, 100
+; CHECK: udiv i32 %n, 100
   %div = udiv i32 %n, 100
   ret void
 }

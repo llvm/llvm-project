@@ -22,7 +22,7 @@
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
-// CHECK: {{.*}}ld.lld{{.*}}" "-z" "rodynamic"
+// CHECK: {{.*}}ld.lld{{.*}}" "-z" "now" "-z" "rodynamic" "-z" "separate-loadable-segments"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"

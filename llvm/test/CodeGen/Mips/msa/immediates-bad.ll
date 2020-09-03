@@ -1,4 +1,4 @@
-; RUN: not llc -march=mips -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s 2> %t1
+; RUN: not --crash llc -march=mips -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s 2> %t1
 ; RUN: FileCheck %s < %t1
 
 ; Test that the immediate intrinsics with out of range values trigger an error.

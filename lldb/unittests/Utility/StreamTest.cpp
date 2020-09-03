@@ -1,4 +1,4 @@
-//===-- StreamTest.cpp ------------------------------------------*- C++ -*-===//
+//===-- StreamTest.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -127,6 +127,39 @@ TEST_F(StreamTest, AddressRangeSize) {
 TEST_F(StreamTest, ChangingByteOrder) {
   s.SetByteOrder(lldb::eByteOrderPDP);
   EXPECT_EQ(lldb::eByteOrderPDP, s.GetByteOrder());
+}
+
+TEST_F(StreamTest, SetIndentLevel) {
+  s.Indent("a");
+  EXPECT_EQ("a", TakeValue());
+
+  s.SetIndentLevel(3);
+  s.Indent("a");
+  EXPECT_EQ("   a", TakeValue());
+
+  s.SetIndentLevel(2);
+  s.Indent("a");
+  EXPECT_EQ("  a", TakeValue());
+
+  s.SetIndentLevel(0);
+  s.Indent("a");
+  EXPECT_EQ("a", TakeValue());
+}
+
+TEST_F(StreamTest, Indent) {
+  s.SetIndentLevel(2);
+  const char *nullptr_cstring = nullptr;
+  s.Indent(nullptr_cstring);
+  EXPECT_EQ("  ", TakeValue());
+
+  s.Indent("");
+  EXPECT_EQ("  ", TakeValue());
+
+  s.Indent(" ");
+  EXPECT_EQ("   ", TakeValue());
+
+  s.Indent(" aa");
+  EXPECT_EQ("   aa", TakeValue());
 }
 
 TEST_F(StreamTest, PutChar) {

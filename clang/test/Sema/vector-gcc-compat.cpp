@@ -83,10 +83,10 @@ void logicTest(void) {
   v2i64 v2i64_c = (v2i64){3, 1}; // expected-warning {{compound literals are a C99-specific feature}}
   v2i64 v2i64_r;
 
-  v2i64_r = !v2i64_a;  // expected-error {{invalid argument type 'v2i64' (vector of 2 'long long' values) to unary expression}}
+  v2i64_r = !v2i64_a;
   v2i64_r = ~v2i64_a;
 
-  v2i64_r = v2i64_a ? v2i64_b : v2i64_c; // expected-error {{value of type 'v2i64' (vector of 2 'long long' values) is not contextually convertible to 'bool'}}
+  v2i64_r = v2i64_a ? v2i64_b : v2i64_c;
 
   v2i64_r = v2i64_a & 1;
   v2i64_r = v2i64_a | 1;

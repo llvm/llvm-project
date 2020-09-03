@@ -15,7 +15,7 @@
 # RUN:  .mega2 : { *(.mega.2) } \
 # RUN: }" > %t.script
 # RUN: ld.lld %t --script %t.script -o %t2
-# RUN: llvm-objdump -section-headers %t2 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t2 | FileCheck %s
 
 # CHECK:     Sections:
 # CHECK-NEXT: Idx Name          Size     VMA
@@ -39,17 +39,17 @@
 # ERR2: malformed number: 0x11k
 
 # RUN: echo "SECTIONS { . = 0x11m; }" > %t4.script
-# RUN: not ld.lld %t --script %t4.script -o %t5 2>&1 | \
+# RUN: not ld.lld %t --script %t4.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=ERR3 %s
 # ERR3: malformed number: 0x11m
 
 # RUN: echo "SECTIONS { . = 1zh; }" > %t5.script
-# RUN: not ld.lld %t --script %t5.script -o %t5 2>&1 | \
+# RUN: not ld.lld %t --script %t5.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=ERR4 %s
 # ERR4: malformed number: 1zh
 
 # RUN: echo "SECTIONS { . = 1zk; }" > %t6.script
-# RUN: not ld.lld %t --script %t6.script -o %t6 2>&1 | \
+# RUN: not ld.lld %t --script %t6.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=ERR5 %s
 # ERR5: malformed number: 1zk
 
@@ -65,7 +65,7 @@
 # RUN:  .hex2 0x500:{ *(.hex.2) } \
 # RUN: }" > %t8.script
 # RUN: ld.lld %t --script %t8.script -o %t6
-# RUN: llvm-objdump -section-headers %t6 | FileCheck -check-prefix=SECADDR %s
+# RUN: llvm-objdump --section-headers %t6 | FileCheck --check-prefix=SECADDR %s
 # SECADDR:     Sections:
 # SECADDR-NEXT: Idx Name          Size     VMA
 # SECADDR-NEXT:   0               00000000 0000000000000000

@@ -5,6 +5,8 @@ sym2:
     .quad zed6b
 sym3:
     .quad zed7
+sym4:
+    .quad zed8
 
 .section .debug_line,"",@progbits
 .Lunit:
@@ -14,7 +16,7 @@ sym3:
     .long .Lprologue_end - .Lprologue_start # prologue length
 .Lprologue_start:
     .byte 1                         # minimum instruction length
-    .byte 1                         # maximum operatiosn per instruction
+    .byte 1                         # maximum operations per instruction
     .byte 1                         # default is_stmt
     .byte -5                        # line base
     .byte 14                        # line range
@@ -47,11 +49,17 @@ sym3:
 .Lunit2:
     .long .Lunit2_end - .Lunit2_start # unit length
 .Lunit2_start:
+    .short 1                        # version
+.Lunit2_end:
+
+.Lunit3:
+    .long .Lunit3_end - .Lunit3_start # unit length
+.Lunit3_start:
     .short 4                        # version
     .long .Lprologue2_end - .Lprologue2_start # prologue length
 .Lprologue2_start:
     .byte 1                         # minimum instruction length
-    .byte 1                         # maximum operatiosn per instruction
+    .byte 1                         # maximum operations per instruction
     .byte 1                         # default is_stmt
     .byte -5                        # line base
     .byte 14                        # line range
@@ -64,7 +72,7 @@ sym3:
     .byte 0
 .Lprologue2_end:
     .byte 0, 9, 2                   # DW_LNE_set_address
-    .quad sym3
+    .quad sym4
     .byte 3                         # DW_LNS_advance_line
     .byte 10
     .byte 1                         # DW_LNS_copy
@@ -79,7 +87,7 @@ sym3:
     .byte 99                        # DW_LNS_advance_pc
     .byte 119
     # Missing end of sequence.
-.Lunit2_end:
+.Lunit3_end:
 
 .section .debug_info,"",@progbits
     .long   .Lcu_end - .Lcu_start   # Length of Unit
@@ -117,6 +125,21 @@ sym3:
     .byte   0                       # End Of Children Mark
 .Lcu2_end:
 
+    .long   .Lcu3_end - .Lcu3_start # Length of Unit
+.Lcu3_start:
+    .short  4                       # DWARF version number
+    .long   .Lsection_abbrev        # Offset Into Abbrev. Section
+    .byte   8                       # Address Size (in bytes)
+    .byte   1                       # Abbrev [1] 0xb:0x79 DW_TAG_compile_unit
+    .long   .Lunit3                 # DW_AT_stmt_list
+    .byte   2                       # Abbrev [2] 0x2a:0x15 DW_TAG_variable
+    .long   .Linfo3_string          # DW_AT_name
+                                        # DW_AT_external
+    .byte   1                       # DW_AT_decl_file
+    .byte   3                       # DW_AT_decl_line
+    .byte   0                       # End Of Children Mark
+.Lcu3_end:
+
 .section .debug_abbrev,"",@progbits
 .Lsection_abbrev:
     .byte   1                       # Abbreviation Code
@@ -148,3 +171,5 @@ sym3:
     .asciz "sym2"
 .Linfo2_string:
     .asciz "sym3"
+.Linfo3_string:
+    .asciz "sym4"

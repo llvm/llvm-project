@@ -96,14 +96,14 @@ define i64 @return64_arg2(i64 %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: return64_arg2:
 ; CHECK: push r28
 ; CHECK: push r29
-; CHECK: ldd r18, Y+3
-; CHECK: ldd r19, Y+4
-; CHECK: ldd r20, Y+5
-; CHECK: ldd r21, Y+6
-; CHECK: ldd r22, Y+7
-; CHECK: ldd r23, Y+8
-; CHECK: ldd r24, Y+9
-; CHECK: ldd r25, Y+10
+; CHECK: ldd r18, Y+5
+; CHECK: ldd r19, Y+6
+; CHECK: ldd r20, Y+7
+; CHECK: ldd r21, Y+8
+; CHECK: ldd r22, Y+9
+; CHECK: ldd r23, Y+10
+; CHECK: ldd r24, Y+11
+; CHECK: ldd r25, Y+12
 ; CHECK: pop r29
 ; CHECK: pop r28
     ret i64 %z
@@ -113,20 +113,14 @@ define i32 @return64_trunc(i32 %a, i32 %b, i32 %c, i64 %d) {
 ; CHECK-LABEL: return64_trunc:
 ; CHECK: push r28
 ; CHECK: push r29
-; CHECK: ldd r22, Y+3
-; CHECK: ldd r23, Y+4
-; CHECK: ldd r24, Y+5
-; CHECK: ldd r25, Y+6
+; CHECK: ldd r22, Y+5
+; CHECK: ldd r23, Y+6
+; CHECK: ldd r24, Y+7
+; CHECK: ldd r25, Y+8
 ; CHECK: pop r29
 ; CHECK: pop r28
   %result = trunc i64 %d to i32
   ret i32 %result
-}
-
-define i32 @naked(i32 %x) naked {
-; CHECK-LABEL: naked:
-; CHECK-NOT: ret
-  ret i32 %x
 }
 
 define avr_intrcc void @interrupt_handler() {

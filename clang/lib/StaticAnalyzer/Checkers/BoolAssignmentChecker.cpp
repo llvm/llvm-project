@@ -70,8 +70,8 @@ void BoolAssignmentChecker::checkBind(SVal loc, SVal val, const Stmt *S,
   // Get the value of the right-hand side.  We only care about values
   // that are defined (UnknownVals and UndefinedVals are handled by other
   // checkers).
-  Optional<DefinedSVal> DV = val.getAs<DefinedSVal>();
-  if (!DV)
+  Optional<NonLoc> NV = val.getAs<NonLoc>();
+  if (!NV)
     return;
 
   // Check if the assigned value meets our criteria for correctness.  It must
@@ -79,84 +79,23 @@ void BoolAssignmentChecker::checkBind(SVal loc, SVal val, const Stmt *S,
   // the value is possibly < 0 (for a negative value) or greater than 1.
   ProgramStateRef state = C.getState();
   SValBuilder &svalBuilder = C.getSValBuilder();
+  BasicValueFactory &BVF = svalBuilder.getBasicValueFactory();
   ConstraintManager &CM = C.getConstraintManager();
 
-  // First, ensure that the value is >= 0.
-  DefinedSVal zeroVal = svalBuilder.makeIntVal(0, valTy);
-  SVal greaterThanOrEqualToZeroVal =
-    svalBuilder.evalBinOp(state, BO_GE, *DV, zeroVal,
-                          svalBuilder.getConditionType());
+  llvm::APSInt Zero = BVF.getValue(0, valTy);
+  llvm::APSInt One = BVF.getValue(1, valTy);
 
-  Optional<DefinedSVal> greaterThanEqualToZero =
-      greaterThanOrEqualToZeroVal.getAs<DefinedSVal>();
+  ProgramStateRef StIn, StOut;
+  std::tie(StIn, StOut) = CM.assumeInclusiveRangeDual(state, *NV, Zero, One);
 
-  if (!greaterThanEqualToZero) {
-    // The SValBuilder cannot construct a valid SVal for this condition.
-    // This means we cannot properly reason about it.
-    return;
-  }
-
-  ProgramStateRef stateLT, stateGE;
-  std::tie(stateGE, stateLT) = CM.assumeDual(state, *greaterThanEqualToZero);
-
-  // Is it possible for the value to be less than zero?
-  if (stateLT) {
-    // It is possible for the value to be less than zero.  We only
-    // want to emit a warning, however, if that value is fully constrained.
-    // If it it possible for the value to be >= 0, then essentially the
-    // value is underconstrained and there is nothing left to be done.
-    if (!stateGE)
-      emitReport(stateLT, C);
-
-    // In either case, we are done.
-    return;
-  }
-
-  // If we reach here, it must be the case that the value is constrained
-  // to only be >= 0.
-  assert(stateGE == state);
-
-  // At this point we know that the value is >= 0.
-  // Now check to ensure that the value is <= 1.
-  DefinedSVal OneVal = svalBuilder.makeIntVal(1, valTy);
-  SVal lessThanEqToOneVal =
-    svalBuilder.evalBinOp(state, BO_LE, *DV, OneVal,
-                          svalBuilder.getConditionType());
-
-  Optional<DefinedSVal> lessThanEqToOne =
-      lessThanEqToOneVal.getAs<DefinedSVal>();
-
-  if (!lessThanEqToOne) {
-    // The SValBuilder cannot construct a valid SVal for this condition.
-    // This means we cannot properly reason about it.
-    return;
-  }
-
-  ProgramStateRef stateGT, stateLE;
-  std::tie(stateLE, stateGT) = CM.assumeDual(state, *lessThanEqToOne);
-
-  // Is it possible for the value to be greater than one?
-  if (stateGT) {
-    // It is possible for the value to be greater than one.  We only
-    // want to emit a warning, however, if that value is fully constrained.
-    // If it is possible for the value to be <= 1, then essentially the
-    // value is underconstrained and there is nothing left to be done.
-    if (!stateLE)
-      emitReport(stateGT, C);
-
-    // In either case, we are done.
-    return;
-  }
-
-  // If we reach here, it must be the case that the value is constrained
-  // to only be <= 1.
-  assert(stateLE == state);
+  if (!StIn)
+    emitReport(StOut, C);
 }
 
 void ento::registerBoolAssignmentChecker(CheckerManager &mgr) {
     mgr.registerChecker<BoolAssignmentChecker>();
 }
 
-bool ento::shouldRegisterBoolAssignmentChecker(const LangOptions &LO) {
+bool ento::shouldRegisterBoolAssignmentChecker(const CheckerManager &mgr) {
   return true;
 }

@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// Generic dominator tree construction - This file provides routines to
+/// Generic dominator tree construction - this file provides routines to
 /// construct immediate dominator information for a flow-graph based on the
 /// Semi-NCA algorithm described in this dissertation:
 ///
-///   Linear-Time Algorithms for Dominators and Related Problems
+///   [1] Linear-Time Algorithms for Dominators and Related Problems
 ///   Loukas Georgiadis, Princeton University, November 2005, pp. 21-23:
 ///   ftp://ftp.cs.princeton.edu/reports/2005/737.pdf
 ///
@@ -20,13 +20,15 @@
 ///
 /// O(n^2) worst cases happen when the computation of nearest common ancestors
 /// requires O(n) average time, which is very unlikely in real world. If this
-/// ever turns out to be an issue, consider implementing a hybrid algorithm.
+/// ever turns out to be an issue, consider implementing a hybrid algorithm
+/// that uses SLT to perform full constructions and SemiNCA for incremental
+/// updates.
 ///
 /// The file uses the Depth Based Search algorithm to perform incremental
 /// updates (insertion and deletions). The implemented algorithm is based on
 /// this publication:
 ///
-///   An Experimental Study of Dynamic Dominators
+///   [2] An Experimental Study of Dynamic Dominators
 ///   Loukas Georgiadis, et al., April 12 2016, pp. 5-7, 9-10:
 ///   https://arxiv.org/pdf/1604.02711.pdf
 ///
@@ -35,7 +37,6 @@
 #ifndef LLVM_SUPPORT_GENERICDOMTREECONSTRUCTION_H
 #define LLVM_SUPPORT_GENERICDOMTREECONSTRUCTION_H
 
-#include <queue>
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -43,6 +44,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GenericDomTree.h"
+#include <queue>
 
 #define DEBUG_TYPE "dom-tree-builder"
 
@@ -185,9 +187,7 @@ struct SemiNCAInfo {
 
     // Add a new tree node for this NodeT, and link it as a child of
     // IDomNode
-    return (DT.DomTreeNodes[BB] = IDomNode->addChild(
-        std::make_unique<DomTreeNodeBase<NodeT>>(BB, IDomNode)))
-        .get();
+    return DT.createChild(BB, IDomNode);
   }
 
   static bool AlwaysDescend(NodePtr, NodePtr) { return true; }
@@ -585,9 +585,7 @@ struct SemiNCAInfo {
     // all real exits (including multiple exit blocks, infinite loops).
     NodePtr Root = IsPostDom ? nullptr : DT.Roots[0];
 
-    DT.RootNode = (DT.DomTreeNodes[Root] =
-                       std::make_unique<DomTreeNodeBase<NodeT>>(Root, nullptr))
-        .get();
+    DT.RootNode = DT.createNode(Root);
     SNCA.attachNewSubtree(DT, DT.RootNode);
   }
 
@@ -597,8 +595,6 @@ struct SemiNCAInfo {
     // Loop over all of the discovered blocks in the function...
     for (size_t i = 1, e = NumToNode.size(); i != e; ++i) {
       NodePtr W = NumToNode[i];
-      LLVM_DEBUG(dbgs() << "\tdiscovered a new reachable node "
-                        << BlockNamePrinter(W) << "\n");
 
       // Don't replace this with 'count', the insertion side effect is important
       if (DT.DomTreeNodes[W]) continue;  // Haven't calculated this node yet?
@@ -610,8 +606,7 @@ struct SemiNCAInfo {
 
       // Add a new tree node for this BasicBlock, and link it as a child of
       // IDomNode.
-      DT.DomTreeNodes[W] = IDomNode->addChild(
-          std::make_unique<DomTreeNodeBase<NodeT>>(W, IDomNode));
+      DT.createChild(W, IDomNode);
     }
   }
 
@@ -661,10 +656,7 @@ struct SemiNCAInfo {
 
       // The unreachable node becomes a new root -- a tree node for it.
       TreeNodePtr VirtualRoot = DT.getNode(nullptr);
-      FromTN =
-          (DT.DomTreeNodes[From] = VirtualRoot->addChild(
-               std::make_unique<DomTreeNodeBase<NodeT>>(From, VirtualRoot)))
-              .get();
+      FromTN = DT.createChild(From, VirtualRoot);
       DT.Roots.push_back(From);
     }
 
@@ -732,7 +724,7 @@ struct SemiNCAInfo {
       LLVM_DEBUG(dbgs() << "Roots are different in updated trees\n"
                         << "The entire tree needs to be rebuilt\n");
       // It may be possible to update the tree without recalculating it, but
-      // we do not know yet how to do it, and it happens rarely in practise.
+      // we do not know yet how to do it, and it happens rarely in practice.
       CalculateFromScratch(DT, BUI);
     }
   }
@@ -757,13 +749,13 @@ struct SemiNCAInfo {
     LLVM_DEBUG(dbgs() << "\t\tNCA == " << BlockNamePrinter(NCD) << "\n");
     const unsigned NCDLevel = NCD->getLevel();
 
-    // Based on Lemma 2.5 from the second paper, after insertion of (From,To), v
-    // is affected iff depth(NCD)+1 < depth(v) && a path P from To to v exists
-    // where every w on P s.t. depth(v) <= depth(w)
+    // Based on Lemma 2.5 from [2], after insertion of (From,To), v is affected
+    // iff depth(NCD)+1 < depth(v) && a path P from To to v exists where every
+    // w on P s.t. depth(v) <= depth(w)
     //
     // This reduces to a widest path problem (maximizing the depth of the
     // minimum vertex in the path) which can be solved by a modified version of
-    // Dijkstra with a bucket queue (named depth-based search in the paper).
+    // Dijkstra with a bucket queue (named depth-based search in [2]).
 
     // To is in the path, so depth(NCD)+1 < depth(v) <= depth(To). Nothing
     // affected if this does not hold.
@@ -957,7 +949,7 @@ struct SemiNCAInfo {
                         << BlockNamePrinter(ToIDom) << "\n");
 
       // To remains reachable after deletion.
-      // (Based on the caption under Figure 4. from the second paper.)
+      // (Based on the caption under Figure 4. from [2].)
       if (FromTN != ToIDom || HasProperSupport(DT, BUI, ToTN))
         DeleteReachable(DT, BUI, FromTN, ToTN);
       else
@@ -976,7 +968,7 @@ struct SemiNCAInfo {
     LLVM_DEBUG(dbgs() << "\tRebuilding subtree\n");
 
     // Find the top of the subtree that needs to be rebuilt.
-    // (Based on the lemma 2.6 from the second paper.)
+    // (Based on the lemma 2.6 from [2].)
     const NodePtr ToIDom =
         DT.findNearestCommonDominator(FromTN->getBlock(), ToTN->getBlock());
     assert(ToIDom || DT.isPostDominator());
@@ -1008,7 +1000,7 @@ struct SemiNCAInfo {
   }
 
   // Checks if a node has proper support, as defined on the page 3 and later
-  // explained on the page 7 of the second paper.
+  // explained on the page 7 of [2].
   static bool HasProperSupport(DomTreeT &DT, const BatchUpdatePtr BUI,
                                const TreeNodePtr TN) {
     LLVM_DEBUG(dbgs() << "IsReachableFromIDom " << BlockNamePrinter(TN)
@@ -1033,7 +1025,7 @@ struct SemiNCAInfo {
   }
 
   // Handle deletions that make destination node unreachable.
-  // (Based on the lemma 2.7 from the second paper.)
+  // (Based on the lemma 2.7 from the [2].)
   static void DeleteUnreachable(DomTreeT &DT, const BatchUpdatePtr BUI,
                                 const TreeNodePtr ToTN) {
     LLVM_DEBUG(dbgs() << "Deleting unreachable subtree "
@@ -1372,7 +1364,7 @@ struct SemiNCAInfo {
     if (!DT.DFSInfoValid || !DT.Parent)
       return true;
 
-    const NodePtr RootBB = IsPostDom ? nullptr : DT.getRoots()[0];
+    const NodePtr RootBB = IsPostDom ? nullptr : *DT.root_begin();
     const TreeNodePtr Root = DT.getNode(RootBB);
 
     auto PrintNodeAndDFSNums = [](const TreeNodePtr TN) {
@@ -1396,7 +1388,7 @@ struct SemiNCAInfo {
       const TreeNodePtr Node = NodeToTN.second.get();
 
       // Handle tree leaves.
-      if (Node->getChildren().empty()) {
+      if (Node->isLeaf()) {
         if (Node->getDFSNumIn() + 1 != Node->getDFSNumOut()) {
           errs() << "Tree leaf should have DFSOut = DFSIn + 1:\n\t";
           PrintNodeAndDFSNums(Node);
@@ -1493,9 +1485,9 @@ struct SemiNCAInfo {
   // LEFT, and thus, LEFT is really an ancestor (in the dominator tree) of
   // RIGHT, not a sibling.
 
-  // It is possible to verify the parent and sibling properties in
-  // linear time, but the algorithms are complex. Instead, we do it in a
-  // straightforward N^2 and N^3 way below, using direct path reachability.
+  // It is possible to verify the parent and sibling properties in linear time,
+  // but the algorithms are complex. Instead, we do it in a straightforward
+  // N^2 and N^3 way below, using direct path reachability.
 
   // Checks if the tree has the parent property: if for all edges from V to W in
   // the input graph, such that V is reachable, the parent of W in the tree is
@@ -1508,7 +1500,8 @@ struct SemiNCAInfo {
     for (auto &NodeToTN : DT.DomTreeNodes) {
       const TreeNodePtr TN = NodeToTN.second.get();
       const NodePtr BB = TN->getBlock();
-      if (!BB || TN->getChildren().empty()) continue;
+      if (!BB || TN->isLeaf())
+        continue;
 
       LLVM_DEBUG(dbgs() << "Verifying parent property of node "
                         << BlockNamePrinter(TN) << "\n");
@@ -1517,7 +1510,7 @@ struct SemiNCAInfo {
         return From != BB && To != BB;
       });
 
-      for (TreeNodePtr Child : TN->getChildren())
+      for (TreeNodePtr Child : TN->children())
         if (NodeToInfo.count(Child->getBlock()) != 0) {
           errs() << "Child " << BlockNamePrinter(Child)
                  << " reachable after its parent " << BlockNamePrinter(BB)
@@ -1541,17 +1534,17 @@ struct SemiNCAInfo {
     for (auto &NodeToTN : DT.DomTreeNodes) {
       const TreeNodePtr TN = NodeToTN.second.get();
       const NodePtr BB = TN->getBlock();
-      if (!BB || TN->getChildren().empty()) continue;
+      if (!BB || TN->isLeaf())
+        continue;
 
-      const auto &Siblings = TN->getChildren();
-      for (const TreeNodePtr N : Siblings) {
+      for (const TreeNodePtr N : TN->children()) {
         clear();
         NodePtr BBN = N->getBlock();
         doFullDFSWalk(DT, [BBN](NodePtr From, NodePtr To) {
           return From != BBN && To != BBN;
         });
 
-        for (const TreeNodePtr S : Siblings) {
+        for (const TreeNodePtr S : TN->children()) {
           if (S == N) continue;
 
           if (NodeToInfo.count(S->getBlock()) == 0) {
@@ -1571,7 +1564,7 @@ struct SemiNCAInfo {
 
   // Check if the given tree is the same as a freshly computed one for the same
   // Parent.
-  // Running time: O(N^2), but faster in practise (same as tree construction).
+  // Running time: O(N^2), but faster in practice (same as tree construction).
   //
   // Note that this does not check if that the tree construction algorithm is
   // correct and should be only used for fast (but possibly unsound)
@@ -1648,12 +1641,12 @@ bool Verify(const DomTreeT &DT, typename DomTreeT::VerificationLevel VL) {
   if (!SNCA.IsSameAsFreshTree(DT))
     return false;
 
-  // Common checks to verify the properties of the tree. O(N log N) at worst
+  // Common checks to verify the properties of the tree. O(N log N) at worst.
   if (!SNCA.verifyRoots(DT) || !SNCA.verifyReachability(DT) ||
       !SNCA.VerifyLevels(DT) || !SNCA.VerifyDFSNumbers(DT))
     return false;
 
-  // Extra checks depending on VerificationLevel. Up to O(N^3)
+  // Extra checks depending on VerificationLevel. Up to O(N^3).
   if (VL == DomTreeT::VerificationLevel::Basic ||
       VL == DomTreeT::VerificationLevel::Full)
     if (!SNCA.verifyParentProperty(DT))

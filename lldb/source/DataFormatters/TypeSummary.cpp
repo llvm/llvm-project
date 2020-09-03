@@ -1,4 +1,4 @@
-//===-- TypeSummary.cpp ----------------------------------------*- C++ -*-===//
+//===-- TypeSummary.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -83,13 +83,13 @@ bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
   if (IsOneLiner()) {
     ValueObjectPrinter printer(valobj, &s, DumpValueObjectOptions());
     printer.PrintChildrenOneLiner(HideNames(valobj));
-    retval = s.GetString();
+    retval = std::string(s.GetString());
     return true;
   } else {
     if (FormatEntity::Format(m_format, s, &sc, &exe_ctx,
                              &sc.line_entry.range.GetBaseAddress(), valobj,
                              false, false)) {
-      retval.assign(s.GetString());
+      retval.assign(std::string(s.GetString()));
       return true;
     } else {
       retval.assign("error: summary string parsing error");
@@ -111,7 +111,7 @@ std::string StringSummaryFormat::GetDescription() {
               SkipsPointers() ? " (skip pointers)" : "",
               SkipsReferences() ? " (skip references)" : "",
               HideNames(nullptr) ? " (hide member names)" : "");
-  return sstr.GetString();
+  return std::string(sstr.GetString());
 }
 
 CXXFunctionSummaryFormat::CXXFunctionSummaryFormat(
@@ -126,7 +126,7 @@ bool CXXFunctionSummaryFormat::FormatObject(ValueObject *valobj,
   StreamString stream;
   if (!m_impl || !m_impl(*valobj, stream, options))
     return false;
-  dest = stream.GetString();
+  dest = std::string(stream.GetString());
   return true;
 }
 
@@ -140,7 +140,7 @@ std::string CXXFunctionSummaryFormat::GetDescription() {
               SkipsReferences() ? " (skip references)" : "",
               HideNames(nullptr) ? " (hide member names)" : "",
               m_description.c_str());
-  return sstr.GetString();
+  return std::string(sstr.GetString());
 }
 
 ScriptSummaryFormat::ScriptSummaryFormat(const TypeSummaryImpl::Flags &flags,
@@ -197,5 +197,5 @@ std::string ScriptSummaryFormat::GetDescription() {
   } else {
     sstr.PutCString(m_python_script);
   }
-  return sstr.GetString();
+  return std::string(sstr.GetString());
 }

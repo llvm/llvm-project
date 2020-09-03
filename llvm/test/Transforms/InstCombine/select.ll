@@ -5,39 +5,6 @@
 
 target datalayout = "e-p:64:64-p1:16:16-p2:32:32:32-p3:64:64:64"
 
-define i32 @test1(i32 %A, i32 %B) {
-; CHECK-LABEL: @test1(
-; CHECK-NEXT:    ret i32 [[B:%.*]]
-;
-  %C = select i1 false, i32 %A, i32 %B
-  ret i32 %C
-}
-
-define i32 @test2(i32 %A, i32 %B) {
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:    ret i32 [[A:%.*]]
-;
-  %C = select i1 true, i32 %A, i32 %B
-  ret i32 %C
-}
-
-
-define i32 @test3(i1 %C, i32 %I) {
-; CHECK-LABEL: @test3(
-; CHECK-NEXT:    ret i32 [[I:%.*]]
-;
-  %V = select i1 %C, i32 %I, i32 %I
-  ret i32 %V
-}
-
-define i1 @test4(i1 %C) {
-; CHECK-LABEL: @test4(
-; CHECK-NEXT:    ret i1 [[C:%.*]]
-;
-  %V = select i1 %C, i1 true, i1 false
-  ret i1 %V
-}
-
 define i1 @test5(i1 %C) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
@@ -408,7 +375,7 @@ define i32 @test16_no_null_opt_2(i1 %C, i32* %P) #0 {
   ret i32 %V
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }
 
 define i1 @test17(i32* %X, i1 %C) {
 ; CHECK-LABEL: @test17(
@@ -1014,7 +981,7 @@ entry:
 
 ; Test that we can speculate the loads around the select even when we can't
 ; fold the load completely away.
-define i32 @test78_deref(i1 %flag, i32* dereferenceable(4) %x, i32* dereferenceable(4) %y, i32* %z) {
+define i32 @test78_deref(i1 %flag, i32* dereferenceable(4) align 4 %x, i32* dereferenceable(4) align 4 %y, i32* %z) {
 ; CHECK-LABEL: @test78_deref(
 ; CHECK-NEXT:    [[X_VAL:%.*]] = load i32, i32* [[X:%.*]], align 4
 ; CHECK-NEXT:    [[Y_VAL:%.*]] = load i32, i32* [[Y:%.*]], align 4
@@ -1288,8 +1255,8 @@ define i128 @test86(i1 %flag) {
 
 define i32 @test_select_select0(i32 %a, i32 %r0, i32 %r1, i32 %v1, i32 %v2) {
 ; CHECK-LABEL: @test_select_select0(
-; CHECK-NEXT:    [[C0:%.*]] = icmp slt i32 [[A:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[R1:%.*]], i32 [[R0:%.*]]
+; CHECK-NEXT:    [[C0_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0_NOT]], i32 [[R1:%.*]], i32 [[R0:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[A]], [[V2:%.*]]
 ; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[S0]], i32 [[R1]]
 ; CHECK-NEXT:    ret i32 [[S1]]
@@ -1303,8 +1270,8 @@ define i32 @test_select_select0(i32 %a, i32 %r0, i32 %r1, i32 %v1, i32 %v2) {
 
 define i32 @test_select_select1(i32 %a, i32 %r0, i32 %r1, i32 %v1, i32 %v2) {
 ; CHECK-LABEL: @test_select_select1(
-; CHECK-NEXT:    [[C0:%.*]] = icmp slt i32 [[A:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[R1:%.*]], i32 [[R0:%.*]]
+; CHECK-NEXT:    [[C0_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0_NOT]], i32 [[R1:%.*]], i32 [[R0:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[A]], [[V2:%.*]]
 ; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[R0]], i32 [[S0]]
 ; CHECK-NEXT:    ret i32 [[S1]]
@@ -1379,6 +1346,29 @@ define i32 @PR27137(i32 %a) {
   %c1 = icmp sgt i32 %s0, -1
   %s1 = select i1 %c1, i32 %s0, i32 -1
   ret i32 %s1
+}
+
+; ub-safe negation pattern
+define i32 @PR27817(i32 %x) {
+; CHECK-LABEL: @PR27817(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %cmp = icmp eq i32 %x, -2147483648
+  %sub = sub i32 0, %x
+  %sel = select i1 %cmp, i32 -2147483648, i32 %sub
+  ret i32 %sel
+}
+
+define i32 @PR27817_nsw(i32 %x) {
+; CHECK-LABEL: @PR27817_nsw(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %cmp = icmp eq i32 %x, -2147483648
+  %sub = sub nsw i32 0, %x
+  %sel = select i1 %cmp, i32 -2147483648, i32 %sub
+  ret i32 %sel
 }
 
 define i32 @select_icmp_slt0_xor(i32 %x) {
@@ -1564,4 +1554,936 @@ define <2 x i32> @test_shl_zext_bool_vec(<2 x i1> %t) {
 ;
   %r = select <2 x i1> %t, <2 x i32> <i32 4, i32 8>, <2 x i32> zeroinitializer
   ret <2 x i32> %r
+}
+
+define float @copysign1(float %x) {
+; CHECK-LABEL: @copysign1(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float 1.000000e+00, float [[X:%.*]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = bitcast float %x to i32
+  %ispos = icmp sgt i32 %i, -1
+  %r = select i1 %ispos, float 1.0, float -1.0
+  ret float %r
+}
+
+define <2 x float> @copysign2(<2 x float> %x) {
+; CHECK-LABEL: @copysign2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nsz <2 x float> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call nsz <2 x float> @llvm.copysign.v2f32(<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> [[TMP1]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %i = bitcast <2 x float> %x to <2 x i32>
+  %isneg = icmp slt <2 x i32> %i, zeroinitializer
+  %r = select nsz <2 x i1> %isneg, <2 x float> <float 42.0, float 42.0>, <2 x float> <float -42.0, float -42.0>
+  ret <2 x float> %r
+}
+
+define float @copysign3(float %x) {
+; CHECK-LABEL: @copysign3(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg fast float [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call fast float @llvm.copysign.f32(float 4.300000e+01, float [[TMP1]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = bitcast float %x to i32
+  %ispos = icmp ult i32 %i, 2147483648
+  %r = select fast i1 %ispos, float -43.0, float 43.0
+  ret float %r
+}
+
+; TODO: Allow undefs when matching vectors.
+
+define <2 x float> @copysign4(<2 x float> %x) {
+; CHECK-LABEL: @copysign4(
+; CHECK-NEXT:    [[I:%.*]] = bitcast <2 x float> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i32> [[I]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select nnan arcp <2 x i1> [[ISNEG]], <2 x float> <float 4.200000e+01, float undef>, <2 x float> <float -4.200000e+01, float -4.200000e+01>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %i = bitcast <2 x float> %x to <2 x i32>
+  %isneg = icmp ugt <2 x i32> %i, <i32 2147483647, i32 2147483647>
+  %r = select arcp nnan <2 x i1> %isneg, <2 x float> <float 42.0, float undef>, <2 x float> <float -42.0, float -42.0>
+  ret <2 x float> %r
+}
+
+declare void @use1(i1)
+
+; Negative test
+
+define float @copysign_extra_use(float %x) {
+; CHECK-LABEL: @copysign_extra_use(
+; CHECK-NEXT:    [[I:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[I]], 0
+; CHECK-NEXT:    call void @use1(i1 [[ISNEG]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], float -4.400000e+01, float 4.400000e+01
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = bitcast float %x to i32
+  %isneg = icmp ugt i32 %i, 2147483647
+  call void @use1(i1 %isneg)
+  %r = select i1 %isneg, float -44.0, float 44.0
+  ret float %r
+}
+
+; Negative test
+
+define float @copysign_type_mismatch(double %x) {
+; CHECK-LABEL: @copysign_type_mismatch(
+; CHECK-NEXT:    [[I:%.*]] = bitcast double [[X:%.*]] to i64
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i64 [[I]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISPOS]], float 1.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = bitcast double %x to i64
+  %ispos = icmp sgt i64 %i, -1
+  %r = select i1 %ispos, float 1.0, float -1.0
+  ret float %r
+}
+
+; Negative test
+
+define float @copysign_wrong_cmp(float %x) {
+; CHECK-LABEL: @copysign_wrong_cmp(
+; CHECK-NEXT:    [[I:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i32 [[I]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISPOS]], float 1.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = bitcast float %x to i32
+  %ispos = icmp sgt i32 %i, 0
+  %r = select i1 %ispos, float 1.0, float -1.0
+  ret float %r
+}
+
+; Negative test
+
+define float @copysign_wrong_const(float %x) {
+; CHECK-LABEL: @copysign_wrong_const(
+; CHECK-NEXT:    [[I:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i32 [[I]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISPOS]], float 2.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = bitcast float %x to i32
+  %ispos = icmp sgt i32 %i, -1
+  %r = select i1 %ispos, float 2.0, float -1.0
+  ret float %r
+}
+
+; TODO: we can replace select with a Phi.
+define i32 @select_dominating_cond(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_dominating_cond(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[Y:%.*]], [[IF_FALSE]] ], [ [[X:%.*]], [[IF_TRUE]] ]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %s = select i1 %cond, i32 %x, i32 %y
+  ret i32 %s
+}
+
+define i32 @select_dominating_inverted(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_dominating_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_FALSE:%.*]], label [[IF_TRUE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[X:%.*]], [[IF_FALSE]] ], [ [[Y:%.*]], [[IF_TRUE]] ]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+entry:
+  %inverted = xor i1 %cond, 1
+  br i1 %inverted, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %s = select i1 %cond, i32 %x, i32 %y
+  ret i32 %s
+}
+
+; More complex CFG: the block with select has multiple predecessors.
+define i32 @select_dominating_cond_multiple_preds(i1 %cond, i1 %cond2, i1 %cond3, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_dominating_cond_multiple_preds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF_TRUE_1:%.*]], label [[IF_TRUE_2:%.*]]
+; CHECK:       if.true.1:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.true.2:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br i1 [[COND3:%.*]], label [[IF_FALSE_1:%.*]], label [[EXIT:%.*]]
+; CHECK:       if.false.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[Y:%.*]], [[IF_FALSE_1]] ], [ [[X:%.*]], [[IF_TRUE_2]] ], [ [[X]], [[IF_TRUE_1]] ]
+; CHECK-NEXT:    ret i32 [[S]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br i1 %cond2, label %if.true.1, label %if.true.2
+
+if.true.1:
+  br label %merge
+
+if.true.2:
+  br label %merge
+
+if.false:
+  br i1 %cond3, label %if.false.1, label %exit
+
+if.false.1:
+  br label %merge
+
+merge:
+  %s = select i1 %cond, i32 %x, i32 %y
+  ret i32 %s
+
+exit:
+  ret i32 0
+}
+
+; More complex CFG for inverted case: the block with select has multiple predecessors.
+define i32 @select_dominating_cond_inverted_multiple_preds(i1 %cond, i1 %cond2, i1 %cond3, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_dominating_cond_inverted_multiple_preds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_FALSE:%.*]], label [[IF_TRUE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF_TRUE_1:%.*]], label [[IF_TRUE_2:%.*]]
+; CHECK:       if.true.1:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.true.2:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br i1 [[COND3:%.*]], label [[IF_FALSE_1:%.*]], label [[EXIT:%.*]]
+; CHECK:       if.false.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[X:%.*]], [[IF_FALSE_1]] ], [ [[Y:%.*]], [[IF_TRUE_2]] ], [ [[Y]], [[IF_TRUE_1]] ]
+; CHECK-NEXT:    ret i32 [[S]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %inverted = xor i1 %cond, 1
+  br i1 %inverted, label %if.true, label %if.false
+
+if.true:
+  br i1 %cond2, label %if.true.1, label %if.true.2
+
+if.true.1:
+  br label %merge
+
+if.true.2:
+  br label %merge
+
+if.false:
+  br i1 %cond3, label %if.false.1, label %exit
+
+if.false.1:
+  br label %merge
+
+merge:
+  %s = select i1 %cond, i32 %x, i32 %y
+  ret i32 %s
+
+exit:
+  ret i32 0
+}
+
+; More complex CFG for inverted case: the block with select has multiple predecessors that can duplicate.
+define i32 @select_dominating_cond_inverted_multiple_duplicating_preds(i1 %cond, i32 %cond2, i1 %cond3, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_dominating_cond_inverted_multiple_duplicating_preds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_FALSE:%.*]], label [[IF_TRUE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    switch i32 [[COND2:%.*]], label [[SWITCH_CASE_1:%.*]] [
+; CHECK-NEXT:    i32 1, label [[MERGE:%.*]]
+; CHECK-NEXT:    i32 2, label [[MERGE]]
+; CHECK-NEXT:    i32 3, label [[MERGE]]
+; CHECK-NEXT:    ]
+; CHECK:       switch.case.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br i1 [[COND3:%.*]], label [[IF_FALSE_1:%.*]], label [[EXIT:%.*]]
+; CHECK:       if.false.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[X:%.*]], [[IF_FALSE_1]] ], [ [[Y:%.*]], [[SWITCH_CASE_1]] ], [ [[Y]], [[IF_TRUE]] ], [ [[Y]], [[IF_TRUE]] ], [ [[Y]], [[IF_TRUE]] ]
+; CHECK-NEXT:    ret i32 [[S]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %inverted = xor i1 %cond, 1
+  br i1 %inverted, label %if.true, label %if.false
+
+if.true:
+  switch i32 %cond2, label %switch.case.1 [
+  i32 1, label %merge
+  i32 2, label %merge
+  i32 3, label %merge
+  ]
+
+switch.case.1:
+  br label %merge
+
+if.false:
+  br i1 %cond3, label %if.false.1, label %exit
+
+if.false.1:
+  br label %merge
+
+merge:
+  %s = select i1 %cond, i32 %x, i32 %y
+  ret i32 %s
+
+exit:
+  ret i32 0
+}
+
+; Negative test: currently we take condition from IDom, but might be willing to expand it in the future.
+define i32 @select_not_imm_dominating_cond_neg(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_not_imm_dominating_cond_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  br label %exit
+
+exit:
+  %s = select i1 %cond, i32 %x, i32 %y
+  ret i32 %s
+}
+
+; Shows how we can leverage dominance to eliminate duplicating selects.
+; TODO: We can optimize further if we eliminate duplicating Phis and similify the whole thing to phi[x, y] * 3.
+define i32 @select_dominance_chain(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_dominance_chain(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE_1:%.*]], label [[IF_FALSE_1:%.*]]
+; CHECK:       if.true.1:
+; CHECK-NEXT:    br label [[MERGE_1:%.*]]
+; CHECK:       if.false.1:
+; CHECK-NEXT:    br label [[MERGE_1]]
+; CHECK:       merge.1:
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE_2:%.*]], label [[IF_FALSE_2:%.*]]
+; CHECK:       if.true.2:
+; CHECK-NEXT:    br label [[MERGE_2:%.*]]
+; CHECK:       if.false.2:
+; CHECK-NEXT:    br label [[MERGE_2]]
+; CHECK:       merge.2:
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE_3:%.*]], label [[IF_FALSE_3:%.*]]
+; CHECK:       if.true.3:
+; CHECK-NEXT:    br label [[MERGE_3:%.*]]
+; CHECK:       if.false.3:
+; CHECK-NEXT:    br label [[MERGE_3]]
+; CHECK:       merge.3:
+; CHECK-NEXT:    [[S_3:%.*]] = phi i32 [ [[Y:%.*]], [[IF_FALSE_3]] ], [ [[X:%.*]], [[IF_TRUE_3]] ]
+; CHECK-NEXT:    [[S_2:%.*]] = phi i32 [ [[Y]], [[IF_FALSE_3]] ], [ [[X]], [[IF_TRUE_3]] ]
+; CHECK-NEXT:    [[S_1:%.*]] = phi i32 [ [[Y]], [[IF_FALSE_3]] ], [ [[X]], [[IF_TRUE_3]] ]
+; CHECK-NEXT:    [[SUM_1:%.*]] = add i32 [[S_1]], [[S_2]]
+; CHECK-NEXT:    [[SUM_2:%.*]] = add i32 [[SUM_1]], [[S_3]]
+; CHECK-NEXT:    ret i32 [[SUM_2]]
+;
+entry:
+  br i1 %cond, label %if.true.1, label %if.false.1
+
+if.true.1:
+  br label %merge.1
+
+if.false.1:
+  br label %merge.1
+
+merge.1:
+  %s.1 = select i1 %cond, i32 %x, i32 %y
+  br i1 %cond, label %if.true.2, label %if.false.2
+
+if.true.2:
+  br label %merge.2
+
+if.false.2:
+  br label %merge.2
+
+merge.2:
+  %s.2 = select i1 %cond, i32 %x, i32 %y
+  br i1 %cond, label %if.true.3, label %if.false.3
+
+if.true.3:
+  br label %merge.3
+
+if.false.3:
+  br label %merge.3
+
+merge.3:
+  %s.3 = select i1 %cond, i32 %x, i32 %y
+  %sum.1 = add i32 %s.1, %s.2
+  %sum.2 = add i32 %sum.1, %s.3
+  ret i32 %sum.2
+}
+
+; TODO: We can replace select with a Phi and then sink a and b to respective
+; branches.
+define i32 @select_dominating_cond_and_sink(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_dominating_cond_and_sink(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+entry:
+  %a = add i32 %x, %y
+  %b = mul i32 %x, %y
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %s = select i1 %cond, i32 %a, i32 %b
+  ret i32 %s
+}
+
+define i32 @select_dominating_cond_same_labels(i1 %cond) {
+; CHECK-LABEL: @select_dominating_cond_same_labels(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND:%.*]], i32 123, i32 456
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %result = select i1 %cond, i32 123, i32 456
+  br i1 %cond, label %exit, label %exit
+exit:
+  ret i32 %result
+}
+
+define i32 @select_phi_same_condition(i1 %cond, i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @select_phi_same_condition(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[Z:%.*]], [[IF_FALSE]] ], [ [[X:%.*]], [[IF_TRUE]] ]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %phi = phi i32 [0, %if.true], [%z, %if.false]
+  %s = select i1 %cond, i32 %x, i32 %phi
+  ret i32 %s
+}
+
+
+; TODO: Replace with phi[a, c] and sink them to respective branches.
+define i32 @select_phi_same_condition_sink(i1 %cond, i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @select_phi_same_condition_sink(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_TRUE]] ], [ [[B]], [[IF_FALSE]] ]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[PHI]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+entry:
+  %a = add i32 %x, %y
+  %b = mul i32 %x, %z
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %phi = phi i32 [0, %if.true], [%b, %if.false]
+  %s = select i1 %cond, i32 %a, i32 %phi
+  ret i32 %s
+}
+
+declare i32 @__gxx_personality_v0(...)
+declare i1 @foo()
+
+define i32 @test_invoke_neg(i32 %x, i32 %y) nounwind uwtable ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @test_invoke_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = invoke i1 @foo()
+; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { i1, i32 }
+; CHECK-NEXT:    filter [0 x i1] zeroinitializer
+; CHECK-NEXT:    unreachable
+;
+entry:
+  %cond = invoke i1 @foo()
+  to label %invoke.cont unwind label %lpad
+
+invoke.cont:
+  %sel = select i1 %cond, i32 %x, i32 %y
+  ret i32 %sel
+
+lpad:
+  %lp = landingpad { i1, i32 }
+  filter [0 x i1] zeroinitializer
+  unreachable
+}
+
+declare i32 @bar()
+
+define i32 @test_invoke_2_neg(i1 %cond, i32 %x, i32 %y) nounwind uwtable ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @test_invoke_2_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    [[RESULT:%.*]] = invoke i32 @bar()
+; CHECK-NEXT:    to label [[MERGE]] unwind label [[LPAD:%.*]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_TRUE]] ], [ [[RESULT]], [[IF_FALSE]] ]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i32 1, i32 [[PHI]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { i1, i32 }
+; CHECK-NEXT:    filter [0 x i1] zeroinitializer
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  %result = invoke i32 @bar()
+  to label %merge unwind label %lpad
+
+merge:
+  %phi = phi i32 [ 0, %if.true ], [ %result, %if.false ]
+  %sel = select i1 %cond, i32 1, i32 %phi
+  ret i32 %sel
+
+lpad:
+  %lp = landingpad { i1, i32 }
+  filter [0 x i1] zeroinitializer
+  unreachable
+}
+
+define i32 @select_phi_same_condition_switch(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_phi_same_condition_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
+; CHECK-NEXT:    i32 1, label [[MERGE:%.*]]
+; CHECK-NEXT:    i32 2, label [[MERGE]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[Y:%.*]], [[IF_FALSE]] ], [ [[X]], [[IF_TRUE]] ], [ [[X]], [[IF_TRUE]] ]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  switch i32 %x, label %exit [
+  i32 1, label %merge
+  i32 2, label %merge
+  ]
+
+exit:
+  ret i32 0
+
+if.false:
+  br label %merge
+
+merge:
+  %phi = phi i32 [0, %if.true], [0, %if.true], [%y, %if.false]
+  %s = select i1 %cond, i32 %x, i32 %phi
+  ret i32 %s
+}
+
+define i32 @transit_different_values_through_phi(i1 %cond, i1 %cond2) {
+; CHECK-LABEL: @transit_different_values_through_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF_TRUE_1:%.*]], label [[IF_TRUE_2:%.*]]
+; CHECK:       if.true.1:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.true.2:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ 3, [[IF_FALSE]] ], [ 2, [[IF_TRUE_2]] ], [ 1, [[IF_TRUE_1]] ]
+; CHECK-NEXT:    ret i32 [[S]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br i1 %cond2, label %if.true.1, label %if.true.2
+
+if.true.1:
+  br label %merge
+
+if.true.2:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %p = phi i32 [ 1, %if.true.1 ], [ 2, %if.true.2 ], [ 4, %if.false ]
+  %s = select i1 %cond, i32 %p, i32 3
+  ret i32 %s
+
+exit:
+  ret i32 0
+}
+
+define i32 @select_phi_degenerate(i1 %cond, i1 %cond2) {
+; CHECK-LABEL: @select_phi_degenerate(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[SELECT:%.*]] = phi i32 [ [[IV_INC:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV_INC]] = add i32 [[SELECT]], 1
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[LOOP]], label [[EXIT2:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i32 [[IV_INC]]
+;
+entry:
+  br i1 %cond, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
+  %select = select i1 %cond, i32 %iv, i32 -1
+  %iv.inc = add i32 %select, 1
+  br i1 %cond2, label %loop, label %exit2
+
+exit:
+  ret i32 0
+
+exit2:
+  ret i32 %iv.inc
+}
+
+define i32 @test_select_into_phi_not_idom(i1 %cond, i32 %A, i32 %B)  {
+; CHECK-LABEL: @test_select_into_phi_not_idom(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[A:%.*]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %phi = phi i32 [%A, %if.true], [%B, %if.false]
+  br label %exit
+
+exit:
+  %sel = select i1 %cond, i32 %phi, i32 %A
+  ret i32 %sel
+}
+
+define i32 @test_select_into_phi_not_idom_2(i1 %cond, i32 %A, i32 %B)  {
+; CHECK-LABEL: @test_select_into_phi_not_idom_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[B:%.*]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %phi = phi i32 [%A, %if.true], [%B, %if.false]
+  br label %exit
+
+exit:
+  %sel = select i1 %cond, i32 %B, i32 %phi
+  ret i32 %sel
+}
+
+define i32 @test_select_into_phi_not_idom_inverted(i1 %cond, i32 %A, i32 %B)  {
+; CHECK-LABEL: @test_select_into_phi_not_idom_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_FALSE:%.*]], label [[IF_TRUE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[B:%.*]], [[IF_FALSE]] ], [ [[A:%.*]], [[IF_TRUE]] ]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+entry:
+  %inverted = xor i1 %cond, 1
+  br i1 %inverted, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %phi = phi i32 [%A, %if.true], [%B, %if.false]
+  br label %exit
+
+exit:
+  %sel = select i1 %cond, i32 %phi, i32 %A
+  ret i32 %sel
+}
+
+define i32 @test_select_into_phi_not_idom_inverted_2(i1 %cond, i32 %A, i32 %B)  {
+; CHECK-LABEL: @test_select_into_phi_not_idom_inverted_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_FALSE:%.*]], label [[IF_TRUE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[B:%.*]], [[IF_FALSE]] ], [ [[A:%.*]], [[IF_TRUE]] ]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+entry:
+  %inverted = xor i1 %cond, 1
+  br i1 %inverted, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %phi = phi i32 [%A, %if.true], [%B, %if.false]
+  br label %exit
+
+exit:
+  %sel = select i1 %cond, i32 %B, i32 %phi
+  ret i32 %sel
+}
+
+define i32 @test_select_into_phi_not_idom_no_dom_input_1(i1 %cond, i32 %A, i32 %B, i32 *%p)  {
+; CHECK-LABEL: @test_select_into_phi_not_idom_no_dom_input_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    [[C:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[A:%.*]], [[IF_FALSE]] ], [ [[C]], [[IF_TRUE]] ]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  %C = load i32, i32* %p
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %phi = phi i32 [%C, %if.true], [%B, %if.false]
+  br label %exit
+
+exit:
+  %sel = select i1 %cond, i32 %phi, i32 %A
+  ret i32 %sel
+}
+
+define i32 @test_select_into_phi_not_idom_no_dom_input_2(i1 %cond, i32 %A, i32 %B, i32 *%p)  {
+; CHECK-LABEL: @test_select_into_phi_not_idom_no_dom_input_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    [[C:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[C]], [[IF_FALSE]] ], [ [[B:%.*]], [[IF_TRUE]] ]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  %C = load i32, i32* %p
+  br label %merge
+
+merge:
+  %phi = phi i32 [%A, %if.true], [%C, %if.false]
+  br label %exit
+
+exit:
+  %sel = select i1 %cond, i32 %B, i32 %phi
+  ret i32 %sel
+}
+
+; FIXME: We shouldn't remove selects with undef true/false values.
+; See https://bugs.llvm.org/show_bug.cgi?id=31633
+; https://lists.llvm.org/pipermail/llvm-dev/2016-October/106182.html
+; https://reviews.llvm.org/D83360
+define i32 @false_undef(i1 %cond, i32 %x) {
+; CHECK-LABEL: @false_undef(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %s = select i1 %cond, i32 %x, i32 undef
+  ret i32 %s
+}
+
+define i32 @true_undef(i1 %cond, i32 %x) {
+; CHECK-LABEL: @true_undef(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %s = select i1 %cond, i32 undef, i32 %x
+  ret i32 %s
+}
+
+define <2 x i32> @false_undef_vec(i1 %cond, <2 x i32> %x) {
+; CHECK-LABEL: @false_undef_vec(
+; CHECK-NEXT:    ret <2 x i32> [[X:%.*]]
+;
+  %s = select i1 %cond, <2 x i32> %x, <2 x i32> undef
+  ret <2 x i32> %s
+}
+
+define <2 x i32> @true_undef_vec(i1 %cond, <2 x i32> %x) {
+; CHECK-LABEL: @true_undef_vec(
+; CHECK-NEXT:    ret <2 x i32> [[X:%.*]]
+;
+  %s = select i1 %cond, <2 x i32> undef, <2 x i32> %x
+  ret <2 x i32> %s
 }

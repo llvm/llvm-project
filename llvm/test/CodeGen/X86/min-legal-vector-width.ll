@@ -180,14 +180,14 @@ define i32 @_Z9test_charPcS_i_256(i8* nocapture readonly, i8* nocapture readonly
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB8_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vpmovsxbw (%rdi,%rcx), %ymm3
-; CHECK-NEXT:    vpmovsxbw 16(%rdi,%rcx), %ymm4
-; CHECK-NEXT:    vpmovsxbw (%rsi,%rcx), %ymm5
+; CHECK-NEXT:    vpmovsxbw 16(%rdi,%rcx), %ymm3
+; CHECK-NEXT:    vpmovsxbw (%rdi,%rcx), %ymm4
+; CHECK-NEXT:    vpmovsxbw 16(%rsi,%rcx), %ymm5
 ; CHECK-NEXT:    vpmaddwd %ymm3, %ymm5, %ymm3
-; CHECK-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
-; CHECK-NEXT:    vpmovsxbw 16(%rsi,%rcx), %ymm3
-; CHECK-NEXT:    vpmaddwd %ymm4, %ymm3, %ymm3
 ; CHECK-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
+; CHECK-NEXT:    vpmovsxbw (%rsi,%rcx), %ymm3
+; CHECK-NEXT:    vpmaddwd %ymm4, %ymm3, %ymm3
+; CHECK-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
 ; CHECK-NEXT:    addq $32, %rcx
 ; CHECK-NEXT:    cmpq %rcx, %rax
 ; CHECK-NEXT:    jne .LBB8_1
@@ -358,9 +358,8 @@ vector.body:
   br i1 %11, label %middle.block, label %vector.body
 
 middle.block:
-  %.lcssa = phi <16 x i32> [ %10, %vector.body ]
-  %rdx.shuf = shufflevector <16 x i32> %.lcssa, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <16 x i32> %.lcssa, %rdx.shuf
+  %rdx.shuf = shufflevector <16 x i32> %10, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx = add <16 x i32> %10, %rdx.shuf
   %rdx.shuf2 = shufflevector <16 x i32> %bin.rdx, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %bin.rdx2 = add <16 x i32> %bin.rdx, %rdx.shuf2
   %rdx.shuf3 = shufflevector <16 x i32> %bin.rdx2, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -420,9 +419,8 @@ vector.body:
   br i1 %11, label %middle.block, label %vector.body
 
 middle.block:
-  %.lcssa = phi <16 x i32> [ %10, %vector.body ]
-  %rdx.shuf = shufflevector <16 x i32> %.lcssa, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <16 x i32> %.lcssa, %rdx.shuf
+  %rdx.shuf = shufflevector <16 x i32> %10, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %bin.rdx = add <16 x i32> %10, %rdx.shuf
   %rdx.shuf2 = shufflevector <16 x i32> %bin.rdx, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %bin.rdx2 = add <16 x i32> %bin.rdx, %rdx.shuf2
   %rdx.shuf3 = shufflevector <16 x i32> %bin.rdx2, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -661,21 +659,21 @@ define void @mul256(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vect
 ; CHECK-AVX512-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; CHECK-AVX512-NEXT:    vmovdqa (%rsi), %ymm2
 ; CHECK-AVX512-NEXT:    vmovdqa 32(%rsi), %ymm3
-; CHECK-AVX512-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm3[8],ymm0[8],ymm3[9],ymm0[9],ymm3[10],ymm0[10],ymm3[11],ymm0[11],ymm3[12],ymm0[12],ymm3[13],ymm0[13],ymm3[14],ymm0[14],ymm3[15],ymm0[15],ymm3[24],ymm0[24],ymm3[25],ymm0[25],ymm3[26],ymm0[26],ymm3[27],ymm0[27],ymm3[28],ymm0[28],ymm3[29],ymm0[29],ymm3[30],ymm0[30],ymm3[31],ymm0[31]
-; CHECK-AVX512-NEXT:    vpunpckhbw {{.*#+}} ymm5 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
+; CHECK-AVX512-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
+; CHECK-AVX512-NEXT:    vpunpckhbw {{.*#+}} ymm5 = ymm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; CHECK-AVX512-NEXT:    vpmullw %ymm4, %ymm5, %ymm4
 ; CHECK-AVX512-NEXT:    vmovdqa {{.*#+}} ymm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-AVX512-NEXT:    vpand %ymm5, %ymm4, %ymm4
-; CHECK-AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm3 = ymm3[0],ymm0[0],ymm3[1],ymm0[1],ymm3[2],ymm0[2],ymm3[3],ymm0[3],ymm3[4],ymm0[4],ymm3[5],ymm0[5],ymm3[6],ymm0[6],ymm3[7],ymm0[7],ymm3[16],ymm0[16],ymm3[17],ymm0[17],ymm3[18],ymm0[18],ymm3[19],ymm0[19],ymm3[20],ymm0[20],ymm3[21],ymm0[21],ymm3[22],ymm0[22],ymm3[23],ymm0[23]
-; CHECK-AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0],ymm0[0],ymm1[1],ymm0[1],ymm1[2],ymm0[2],ymm1[3],ymm0[3],ymm1[4],ymm0[4],ymm1[5],ymm0[5],ymm1[6],ymm0[6],ymm1[7],ymm0[7],ymm1[16],ymm0[16],ymm1[17],ymm0[17],ymm1[18],ymm0[18],ymm1[19],ymm0[19],ymm1[20],ymm0[20],ymm1[21],ymm0[21],ymm1[22],ymm0[22],ymm1[23],ymm0[23]
+; CHECK-AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm3 = ymm3[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
+; CHECK-AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; CHECK-AVX512-NEXT:    vpmullw %ymm3, %ymm1, %ymm1
 ; CHECK-AVX512-NEXT:    vpand %ymm5, %ymm1, %ymm1
 ; CHECK-AVX512-NEXT:    vpackuswb %ymm4, %ymm1, %ymm1
-; CHECK-AVX512-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15],ymm2[24],ymm0[24],ymm2[25],ymm0[25],ymm2[26],ymm0[26],ymm2[27],ymm0[27],ymm2[28],ymm0[28],ymm2[29],ymm0[29],ymm2[30],ymm0[30],ymm2[31],ymm0[31]
+; CHECK-AVX512-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; CHECK-AVX512-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; CHECK-AVX512-NEXT:    vpmullw %ymm3, %ymm4, %ymm3
 ; CHECK-AVX512-NEXT:    vpand %ymm5, %ymm3, %ymm3
-; CHECK-AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm2 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[4],ymm0[4],ymm2[5],ymm0[5],ymm2[6],ymm0[6],ymm2[7],ymm0[7],ymm2[16],ymm0[16],ymm2[17],ymm0[17],ymm2[18],ymm0[18],ymm2[19],ymm0[19],ymm2[20],ymm0[20],ymm2[21],ymm0[21],ymm2[22],ymm0[22],ymm2[23],ymm0[23]
+; CHECK-AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm2 = ymm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; CHECK-AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; CHECK-AVX512-NEXT:    vpmullw %ymm2, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    vpand %ymm5, %ymm0, %ymm0
@@ -691,18 +689,18 @@ define void @mul256(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vect
 ; CHECK-VBMI-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; CHECK-VBMI-NEXT:    vmovdqa (%rsi), %ymm2
 ; CHECK-VBMI-NEXT:    vmovdqa 32(%rsi), %ymm3
-; CHECK-VBMI-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm3[8],ymm0[8],ymm3[9],ymm0[9],ymm3[10],ymm0[10],ymm3[11],ymm0[11],ymm3[12],ymm0[12],ymm3[13],ymm0[13],ymm3[14],ymm0[14],ymm3[15],ymm0[15],ymm3[24],ymm0[24],ymm3[25],ymm0[25],ymm3[26],ymm0[26],ymm3[27],ymm0[27],ymm3[28],ymm0[28],ymm3[29],ymm0[29],ymm3[30],ymm0[30],ymm3[31],ymm0[31]
-; CHECK-VBMI-NEXT:    vpunpckhbw {{.*#+}} ymm5 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
+; CHECK-VBMI-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
+; CHECK-VBMI-NEXT:    vpunpckhbw {{.*#+}} ymm5 = ymm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; CHECK-VBMI-NEXT:    vpmullw %ymm4, %ymm5, %ymm4
-; CHECK-VBMI-NEXT:    vpunpcklbw {{.*#+}} ymm3 = ymm3[0],ymm0[0],ymm3[1],ymm0[1],ymm3[2],ymm0[2],ymm3[3],ymm0[3],ymm3[4],ymm0[4],ymm3[5],ymm0[5],ymm3[6],ymm0[6],ymm3[7],ymm0[7],ymm3[16],ymm0[16],ymm3[17],ymm0[17],ymm3[18],ymm0[18],ymm3[19],ymm0[19],ymm3[20],ymm0[20],ymm3[21],ymm0[21],ymm3[22],ymm0[22],ymm3[23],ymm0[23]
-; CHECK-VBMI-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0],ymm0[0],ymm1[1],ymm0[1],ymm1[2],ymm0[2],ymm1[3],ymm0[3],ymm1[4],ymm0[4],ymm1[5],ymm0[5],ymm1[6],ymm0[6],ymm1[7],ymm0[7],ymm1[16],ymm0[16],ymm1[17],ymm0[17],ymm1[18],ymm0[18],ymm1[19],ymm0[19],ymm1[20],ymm0[20],ymm1[21],ymm0[21],ymm1[22],ymm0[22],ymm1[23],ymm0[23]
+; CHECK-VBMI-NEXT:    vpunpcklbw {{.*#+}} ymm3 = ymm3[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
+; CHECK-VBMI-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; CHECK-VBMI-NEXT:    vpmullw %ymm3, %ymm1, %ymm1
 ; CHECK-VBMI-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,2,4,6,8,10,12,14,32,34,36,38,40,42,44,46,16,18,20,22,24,26,28,30,48,50,52,54,56,58,60,62]
 ; CHECK-VBMI-NEXT:    vpermt2b %ymm4, %ymm3, %ymm1
-; CHECK-VBMI-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15],ymm2[24],ymm0[24],ymm2[25],ymm0[25],ymm2[26],ymm0[26],ymm2[27],ymm0[27],ymm2[28],ymm0[28],ymm2[29],ymm0[29],ymm2[30],ymm0[30],ymm2[31],ymm0[31]
+; CHECK-VBMI-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; CHECK-VBMI-NEXT:    vpunpckhbw {{.*#+}} ymm5 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; CHECK-VBMI-NEXT:    vpmullw %ymm4, %ymm5, %ymm4
-; CHECK-VBMI-NEXT:    vpunpcklbw {{.*#+}} ymm2 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[4],ymm0[4],ymm2[5],ymm0[5],ymm2[6],ymm0[6],ymm2[7],ymm0[7],ymm2[16],ymm0[16],ymm2[17],ymm0[17],ymm2[18],ymm0[18],ymm2[19],ymm0[19],ymm2[20],ymm0[20],ymm2[21],ymm0[21],ymm2[22],ymm0[22],ymm2[23],ymm0[23]
+; CHECK-VBMI-NEXT:    vpunpcklbw {{.*#+}} ymm2 = ymm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; CHECK-VBMI-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; CHECK-VBMI-NEXT:    vpmullw %ymm2, %ymm0, %ymm0
 ; CHECK-VBMI-NEXT:    vpermt2b %ymm4, %ymm3, %ymm0
@@ -722,12 +720,12 @@ define void @mul512(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vect
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; CHECK-AVX512-NEXT:    vmovdqa64 (%rsi), %zmm1
-; CHECK-AVX512-NEXT:    vpunpckhbw {{.*#+}} zmm2 = zmm1[8],zmm0[8],zmm1[9],zmm0[9],zmm1[10],zmm0[10],zmm1[11],zmm0[11],zmm1[12],zmm0[12],zmm1[13],zmm0[13],zmm1[14],zmm0[14],zmm1[15],zmm0[15],zmm1[24],zmm0[24],zmm1[25],zmm0[25],zmm1[26],zmm0[26],zmm1[27],zmm0[27],zmm1[28],zmm0[28],zmm1[29],zmm0[29],zmm1[30],zmm0[30],zmm1[31],zmm0[31],zmm1[40],zmm0[40],zmm1[41],zmm0[41],zmm1[42],zmm0[42],zmm1[43],zmm0[43],zmm1[44],zmm0[44],zmm1[45],zmm0[45],zmm1[46],zmm0[46],zmm1[47],zmm0[47],zmm1[56],zmm0[56],zmm1[57],zmm0[57],zmm1[58],zmm0[58],zmm1[59],zmm0[59],zmm1[60],zmm0[60],zmm1[61],zmm0[61],zmm1[62],zmm0[62],zmm1[63],zmm0[63]
+; CHECK-AVX512-NEXT:    vpunpckhbw {{.*#+}} zmm2 = zmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
 ; CHECK-AVX512-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
 ; CHECK-AVX512-NEXT:    vpmullw %zmm2, %zmm3, %zmm2
 ; CHECK-AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-AVX512-NEXT:    vpandq %zmm3, %zmm2, %zmm2
-; CHECK-AVX512-NEXT:    vpunpcklbw {{.*#+}} zmm1 = zmm1[0],zmm0[0],zmm1[1],zmm0[1],zmm1[2],zmm0[2],zmm1[3],zmm0[3],zmm1[4],zmm0[4],zmm1[5],zmm0[5],zmm1[6],zmm0[6],zmm1[7],zmm0[7],zmm1[16],zmm0[16],zmm1[17],zmm0[17],zmm1[18],zmm0[18],zmm1[19],zmm0[19],zmm1[20],zmm0[20],zmm1[21],zmm0[21],zmm1[22],zmm0[22],zmm1[23],zmm0[23],zmm1[32],zmm0[32],zmm1[33],zmm0[33],zmm1[34],zmm0[34],zmm1[35],zmm0[35],zmm1[36],zmm0[36],zmm1[37],zmm0[37],zmm1[38],zmm0[38],zmm1[39],zmm0[39],zmm1[48],zmm0[48],zmm1[49],zmm0[49],zmm1[50],zmm0[50],zmm1[51],zmm0[51],zmm1[52],zmm0[52],zmm1[53],zmm0[53],zmm1[54],zmm0[54],zmm1[55],zmm0[55]
+; CHECK-AVX512-NEXT:    vpunpcklbw {{.*#+}} zmm1 = zmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
 ; CHECK-AVX512-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
 ; CHECK-AVX512-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
 ; CHECK-AVX512-NEXT:    vpandq %zmm3, %zmm0, %zmm0
@@ -740,10 +738,10 @@ define void @mul512(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vect
 ; CHECK-VBMI:       # %bb.0:
 ; CHECK-VBMI-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; CHECK-VBMI-NEXT:    vmovdqa64 (%rsi), %zmm1
-; CHECK-VBMI-NEXT:    vpunpckhbw {{.*#+}} zmm2 = zmm1[8],zmm0[8],zmm1[9],zmm0[9],zmm1[10],zmm0[10],zmm1[11],zmm0[11],zmm1[12],zmm0[12],zmm1[13],zmm0[13],zmm1[14],zmm0[14],zmm1[15],zmm0[15],zmm1[24],zmm0[24],zmm1[25],zmm0[25],zmm1[26],zmm0[26],zmm1[27],zmm0[27],zmm1[28],zmm0[28],zmm1[29],zmm0[29],zmm1[30],zmm0[30],zmm1[31],zmm0[31],zmm1[40],zmm0[40],zmm1[41],zmm0[41],zmm1[42],zmm0[42],zmm1[43],zmm0[43],zmm1[44],zmm0[44],zmm1[45],zmm0[45],zmm1[46],zmm0[46],zmm1[47],zmm0[47],zmm1[56],zmm0[56],zmm1[57],zmm0[57],zmm1[58],zmm0[58],zmm1[59],zmm0[59],zmm1[60],zmm0[60],zmm1[61],zmm0[61],zmm1[62],zmm0[62],zmm1[63],zmm0[63]
+; CHECK-VBMI-NEXT:    vpunpckhbw {{.*#+}} zmm2 = zmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
 ; CHECK-VBMI-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
 ; CHECK-VBMI-NEXT:    vpmullw %zmm2, %zmm3, %zmm2
-; CHECK-VBMI-NEXT:    vpunpcklbw {{.*#+}} zmm1 = zmm1[0],zmm0[0],zmm1[1],zmm0[1],zmm1[2],zmm0[2],zmm1[3],zmm0[3],zmm1[4],zmm0[4],zmm1[5],zmm0[5],zmm1[6],zmm0[6],zmm1[7],zmm0[7],zmm1[16],zmm0[16],zmm1[17],zmm0[17],zmm1[18],zmm0[18],zmm1[19],zmm0[19],zmm1[20],zmm0[20],zmm1[21],zmm0[21],zmm1[22],zmm0[22],zmm1[23],zmm0[23],zmm1[32],zmm0[32],zmm1[33],zmm0[33],zmm1[34],zmm0[34],zmm1[35],zmm0[35],zmm1[36],zmm0[36],zmm1[37],zmm0[37],zmm1[38],zmm0[38],zmm1[39],zmm0[39],zmm1[48],zmm0[48],zmm1[49],zmm0[49],zmm1[50],zmm0[50],zmm1[51],zmm0[51],zmm1[52],zmm0[52],zmm1[53],zmm0[53],zmm1[54],zmm0[54],zmm1[55],zmm0[55]
+; CHECK-VBMI-NEXT:    vpunpcklbw {{.*#+}} zmm1 = zmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
 ; CHECK-VBMI-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
 ; CHECK-VBMI-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
 ; CHECK-VBMI-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,2,4,6,8,10,12,14,64,66,68,70,72,74,76,78,16,18,20,22,24,26,28,30,80,82,84,86,88,90,92,94,32,34,36,38,40,42,44,46,96,98,100,102,104,106,108,110,48,50,52,54,56,58,60,62,112,114,116,118,120,122,124,126]
@@ -907,10 +905,11 @@ define <32 x i8> @trunc_v32i16_v32i8_zeroes(<32 x i16>* %x) nounwind "min-legal-
 define <8 x i32> @trunc_v8i64_v8i32_sign(<8 x i64>* %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v8i64_v8i32_sign:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsraq $48, 32(%rdi), %ymm1
-; CHECK-NEXT:    vpsraq $48, (%rdi), %ymm2
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
-; CHECK-NEXT:    vpermi2w %ymm1, %ymm2, %ymm0
+; CHECK-NEXT:    vpsraq $48, 32(%rdi), %ymm0
+; CHECK-NEXT:    vpsraq $48, (%rdi), %ymm1
+; CHECK-NEXT:    vpmovqd %ymm1, %xmm1
+; CHECK-NEXT:    vpmovqd %ymm0, %xmm0
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %a = load <8 x i64>, <8 x i64>* %x
   %b = ashr <8 x i64> %a, <i64 48, i64 48, i64 48, i64 48, i64 48, i64 48, i64 48, i64 48>
@@ -1599,4 +1598,203 @@ define i32 @v64i1_inline_asm() "min-legal-vector-width"="256" {
   store i64 %3, i64* @mem64_dst, align 8
   %4 = load i32, i32* %1, align 4
   ret i32 %4
+}
+
+define void @cmp_v8i64_sext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i64>* %zptr) "min-legal-vector-width"="256" {
+; CHECK-LABEL: cmp_v8i64_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa (%rsi), %ymm0
+; CHECK-NEXT:    vmovdqa 32(%rsi), %ymm1
+; CHECK-NEXT:    vpcmpgtq 32(%rdi), %ymm1, %ymm1
+; CHECK-NEXT:    vpcmpgtq (%rdi), %ymm0, %ymm0
+; CHECK-NEXT:    vmovdqa %ymm0, (%rdx)
+; CHECK-NEXT:    vmovdqa %ymm1, 32(%rdx)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %x = load <8 x i64>, <8 x i64>* %xptr
+  %y = load <8 x i64>, <8 x i64>* %yptr
+  %cmp = icmp slt <8 x i64> %x, %y
+  %ext = sext <8 x i1> %cmp to <8 x i64>
+  store <8 x i64> %ext, <8 x i64>* %zptr
+  ret void
+}
+
+define void @cmp_v8i64_zext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i64>* %zptr) "min-legal-vector-width"="256" {
+; CHECK-LABEL: cmp_v8i64_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa (%rsi), %ymm0
+; CHECK-NEXT:    vmovdqa 32(%rsi), %ymm1
+; CHECK-NEXT:    vpcmpgtq 32(%rdi), %ymm1, %ymm1
+; CHECK-NEXT:    vpcmpgtq (%rdi), %ymm0, %ymm0
+; CHECK-NEXT:    vpsrlq $63, %ymm1, %ymm1
+; CHECK-NEXT:    vpsrlq $63, %ymm0, %ymm0
+; CHECK-NEXT:    vmovdqa %ymm0, (%rdx)
+; CHECK-NEXT:    vmovdqa %ymm1, 32(%rdx)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %x = load <8 x i64>, <8 x i64>* %xptr
+  %y = load <8 x i64>, <8 x i64>* %yptr
+  %cmp = icmp slt <8 x i64> %x, %y
+  %ext = zext <8 x i1> %cmp to <8 x i64>
+  store <8 x i64> %ext, <8 x i64>* %zptr
+  ret void
+}
+
+define <16 x i8> @var_rotate_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind "min-legal-vector-width"="256" {
+; CHECK-LABEL: var_rotate_v16i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; CHECK-NEXT:    vpsubb %xmm1, %xmm2, %xmm2
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; CHECK-NEXT:    vpsllvw %ymm1, %ymm0, %ymm1
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
+; CHECK-NEXT:    vpsrlvw %ymm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpmovwb %ymm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %b8 = sub <16 x i8> <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>, %b
+  %shl = shl <16 x i8> %a, %b
+  %lshr = lshr <16 x i8> %a, %b8
+  %or = or <16 x i8> %shl, %lshr
+  ret <16 x i8> %or
+}
+
+define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "min-legal-vector-width"="256" {
+; CHECK-LABEL: var_rotate_v32i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm2
+; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm3
+; CHECK-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm2, %ymm3
+; CHECK-NEXT:    vpsllw $5, %ymm1, %ymm1
+; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
+; CHECK-NEXT:    vpsllw $2, %ymm0, %ymm2
+; CHECK-NEXT:    vpsrlw $6, %ymm0, %ymm3
+; CHECK-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm2, %ymm3
+; CHECK-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
+; CHECK-NEXT:    vpsrlw $7, %ymm0, %ymm2
+; CHECK-NEXT:    vpaddb %ymm0, %ymm0, %ymm3
+; CHECK-NEXT:    vpternlogq $248, {{.*}}(%rip), %ymm2, %ymm3
+; CHECK-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %b8 = sub <32 x i8> <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>, %b
+  %shl = shl <32 x i8> %a, %b
+  %lshr = lshr <32 x i8> %a, %b8
+  %or = or <32 x i8> %shl, %lshr
+  ret <32 x i8> %or
+}
+
+define <32 x i8> @splatvar_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "min-legal-vector-width"="256" {
+; CHECK-LABEL: splatvar_rotate_v32i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpbroadcastb %xmm1, %xmm1
+; CHECK-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsllw %xmm2, %ymm0, %ymm3
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm4 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; CHECK-NEXT:    vpsubb %xmm1, %xmm4, %xmm1
+; CHECK-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpsllw %xmm2, %xmm4, %xmm2
+; CHECK-NEXT:    vpbroadcastb %xmm2, %ymm2
+; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrlw %xmm1, %ymm0, %ymm5
+; CHECK-NEXT:    vpand %ymm2, %ymm3, %ymm2
+; CHECK-NEXT:    vpsrlw %xmm1, %xmm4, %xmm0
+; CHECK-NEXT:    vpsrlw $8, %xmm0, %xmm0
+; CHECK-NEXT:    vpbroadcastb %xmm0, %ymm0
+; CHECK-NEXT:    vpternlogq $236, %ymm5, %ymm2, %ymm0
+; CHECK-NEXT:    retq
+  %splat = shufflevector <32 x i8> %b, <32 x i8> undef, <32 x i32> zeroinitializer
+  %splat8 = sub <32 x i8> <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>, %splat
+  %shl = shl <32 x i8> %a, %splat
+  %lshr = lshr <32 x i8> %a, %splat8
+  %or = or <32 x i8> %shl, %lshr
+  ret <32 x i8> %or
+}
+
+define <32 x i8> @constant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-vector-width"="256" {
+; CHECK-AVX512-LABEL: constant_rotate_v32i8:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vpsllw $4, %ymm0, %ymm1
+; CHECK-AVX512-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
+; CHECK-AVX512-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,57344,41152,24704,8256,8192,24640,41088,57536,57344,41152,24704,8256]
+; CHECK-AVX512-NEXT:    # ymm2 = mem[0,1,0,1]
+; CHECK-AVX512-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm1
+; CHECK-AVX512-NEXT:    vpsllw $2, %ymm1, %ymm3
+; CHECK-AVX512-NEXT:    vpand {{.*}}(%rip), %ymm3, %ymm3
+; CHECK-AVX512-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
+; CHECK-AVX512-NEXT:    vpblendvb %ymm2, %ymm3, %ymm1, %ymm1
+; CHECK-AVX512-NEXT:    vpaddb %ymm1, %ymm1, %ymm3
+; CHECK-AVX512-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
+; CHECK-AVX512-NEXT:    vpblendvb %ymm2, %ymm3, %ymm1, %ymm1
+; CHECK-AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; CHECK-AVX512-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm0[8],ymm2[8],ymm0[9],ymm2[9],ymm0[10],ymm2[10],ymm0[11],ymm2[11],ymm0[12],ymm2[12],ymm0[13],ymm2[13],ymm0[14],ymm2[14],ymm0[15],ymm2[15],ymm0[24],ymm2[24],ymm0[25],ymm2[25],ymm0[26],ymm2[26],ymm0[27],ymm2[27],ymm0[28],ymm2[28],ymm0[29],ymm2[29],ymm0[30],ymm2[30],ymm0[31],ymm2[31]
+; CHECK-AVX512-NEXT:    vpsllvw {{.*}}(%rip), %ymm3, %ymm3
+; CHECK-AVX512-NEXT:    vpsrlw $8, %ymm3, %ymm3
+; CHECK-AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[1],ymm2[1],ymm0[2],ymm2[2],ymm0[3],ymm2[3],ymm0[4],ymm2[4],ymm0[5],ymm2[5],ymm0[6],ymm2[6],ymm0[7],ymm2[7],ymm0[16],ymm2[16],ymm0[17],ymm2[17],ymm0[18],ymm2[18],ymm0[19],ymm2[19],ymm0[20],ymm2[20],ymm0[21],ymm2[21],ymm0[22],ymm2[22],ymm0[23],ymm2[23]
+; CHECK-AVX512-NEXT:    vpsllvw {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-AVX512-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; CHECK-AVX512-NEXT:    vpackuswb %ymm3, %ymm0, %ymm0
+; CHECK-AVX512-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; CHECK-AVX512-NEXT:    retq
+;
+; CHECK-VBMI-LABEL: constant_rotate_v32i8:
+; CHECK-VBMI:       # %bb.0:
+; CHECK-VBMI-NEXT:    vpsllw $4, %ymm0, %ymm1
+; CHECK-VBMI-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
+; CHECK-VBMI-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,57344,41152,24704,8256,8192,24640,41088,57536,57344,41152,24704,8256]
+; CHECK-VBMI-NEXT:    # ymm2 = mem[0,1,0,1]
+; CHECK-VBMI-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm1
+; CHECK-VBMI-NEXT:    vpsllw $2, %ymm1, %ymm3
+; CHECK-VBMI-NEXT:    vpand {{.*}}(%rip), %ymm3, %ymm3
+; CHECK-VBMI-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
+; CHECK-VBMI-NEXT:    vpblendvb %ymm2, %ymm3, %ymm1, %ymm1
+; CHECK-VBMI-NEXT:    vpaddb %ymm1, %ymm1, %ymm3
+; CHECK-VBMI-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
+; CHECK-VBMI-NEXT:    vpblendvb %ymm2, %ymm3, %ymm1, %ymm1
+; CHECK-VBMI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; CHECK-VBMI-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm0[8],ymm2[8],ymm0[9],ymm2[9],ymm0[10],ymm2[10],ymm0[11],ymm2[11],ymm0[12],ymm2[12],ymm0[13],ymm2[13],ymm0[14],ymm2[14],ymm0[15],ymm2[15],ymm0[24],ymm2[24],ymm0[25],ymm2[25],ymm0[26],ymm2[26],ymm0[27],ymm2[27],ymm0[28],ymm2[28],ymm0[29],ymm2[29],ymm0[30],ymm2[30],ymm0[31],ymm2[31]
+; CHECK-VBMI-NEXT:    vpsllvw {{.*}}(%rip), %ymm3, %ymm3
+; CHECK-VBMI-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[1],ymm2[1],ymm0[2],ymm2[2],ymm0[3],ymm2[3],ymm0[4],ymm2[4],ymm0[5],ymm2[5],ymm0[6],ymm2[6],ymm0[7],ymm2[7],ymm0[16],ymm2[16],ymm0[17],ymm2[17],ymm0[18],ymm2[18],ymm0[19],ymm2[19],ymm0[20],ymm2[20],ymm0[21],ymm2[21],ymm0[22],ymm2[22],ymm0[23],ymm2[23]
+; CHECK-VBMI-NEXT:    vpsllvw {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-VBMI-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,3,5,7,9,11,13,15,33,35,37,39,41,43,45,47,17,19,21,23,25,27,29,31,49,51,53,55,57,59,61,63]
+; CHECK-VBMI-NEXT:    vpermi2b %ymm3, %ymm0, %ymm2
+; CHECK-VBMI-NEXT:    vpor %ymm2, %ymm1, %ymm0
+; CHECK-VBMI-NEXT:    retq
+  %shl = shl <32 x i8> %a, <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1>
+  %lshr = lshr <32 x i8> %a, <i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>
+  %or = or <32 x i8> %shl, %lshr
+  ret <32 x i8> %or
+}
+
+define <32 x i8> @splatconstant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-vector-width"="256" {
+; CHECK-LABEL: splatconstant_rotate_v32i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm1
+; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; CHECK-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %shl = shl <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
+  %lshr = lshr <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
+  %or = or <32 x i8> %shl, %lshr
+  ret <32 x i8> %or
+}
+
+define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-legal-vector-width"="256" {
+; CHECK-LABEL: splatconstant_rotate_mask_v32i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm1
+; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; CHECK-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm1, %ymm0
+; CHECK-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %shl = shl <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
+  %lshr = lshr <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
+  %rmask = and <32 x i8> %lshr, <i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55>
+  %lmask = and <32 x i8> %shl, <i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33>
+  %or = or <32 x i8> %lmask, %rmask
+  ret <32 x i8> %or
 }

@@ -8,7 +8,7 @@
 
 ; CHECK-NOT: .debug_line.dwo
 ; CHECK: .debug_info.dwo contents:
-; CHECK: 0x00000000: Type Unit: {{.*}} version = 0x0005 unit_type = DW_UT_split_type abbr_offset
+; CHECK: 0x00000000: Type Unit: {{.*}} version = 0x0005, unit_type = DW_UT_split_type, abbr_offset
 ; CHECK: 0x00000018: DW_TAG_type_unit
 ; CHECK-NOT: DW_AT_stmt_list
 ; CHECK-NOT: DW_AT_decl_file

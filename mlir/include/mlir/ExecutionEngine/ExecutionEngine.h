@@ -1,6 +1,6 @@
 //===- ExecutionEngine.h - MLIR Execution engine and utils -----*- C++ -*--===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -26,6 +26,7 @@ namespace llvm {
 template <typename T> class Expected;
 class Module;
 class ExecutionEngine;
+class JITEventListener;
 class MemoryBuffer;
 } // namespace llvm
 
@@ -59,35 +60,43 @@ private:
 /// be used to invoke the JIT-compiled function.
 class ExecutionEngine {
 public:
-  ExecutionEngine(bool enableObjectCache);
+  ExecutionEngine(bool enableObjectCache, bool enableGDBNotificationListener,
+                  bool enablePerfNotificationListener);
 
-  /// Creates an execution engine for the given module.  If `transformer` is
-  /// provided, it will be called on the LLVM module during JIT-compilation and
-  /// can be used, e.g., for reporting or optimization. `jitCodeGenOptLevel`,
-  /// when provided, is used as the optimization level for target code
-  /// generation. If `sharedLibPaths` are provided, the underlying
-  /// JIT-compilation will open and link the shared libraries for symbol
-  /// resolution. If `objectCache` is provided, JIT compiler will use it to
-  /// store the object generated for the given module.
-  static llvm::Expected<std::unique_ptr<ExecutionEngine>> create(
-      ModuleOp m, std::function<llvm::Error(llvm::Module *)> transformer = {},
-      Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel = llvm::None,
-      ArrayRef<StringRef> sharedLibPaths = {}, bool enableObjectCache = false);
+  /// Creates an execution engine for the given module.
+  ///
+  /// If `transformer` is provided, it will be called on the LLVM module during
+  /// JIT-compilation and can be used, e.g., for reporting or optimization.
+  ///
+  /// `jitCodeGenOptLevel`, when provided, is used as the optimization level for
+  /// target code generation.
+  ///
+  /// If `sharedLibPaths` are provided, the underlying JIT-compilation will
+  /// open and link the shared libraries for symbol resolution.
+  ///
+  /// If `enableObjectCache` is set, the JIT compiler will create one to store
+  /// the object generated for the given module.
+  ///
+  /// If enable `enableGDBNotificationListener` is set, the JIT compiler will
+  /// notify the llvm's global GDB notification listener.
+  ///
+  /// If `enablePerfNotificationListener` is set, the JIT compiler will notify
+  /// the llvm's global Perf notification listener.
+  static llvm::Expected<std::unique_ptr<ExecutionEngine>>
+  create(ModuleOp m,
+         llvm::function_ref<llvm::Error(llvm::Module *)> transformer = {},
+         Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel = llvm::None,
+         ArrayRef<StringRef> sharedLibPaths = {}, bool enableObjectCache = true,
+         bool enableGDBNotificationListener = true,
+         bool enablePerfNotificationListener = true);
 
   /// Looks up a packed-argument function with the given name and returns a
   /// pointer to it.  Propagates errors in case of failure.
   llvm::Expected<void (*)(void **)> lookup(StringRef name) const;
 
-  /// Invokes the function with the given name passing it the list of arguments.
-  /// The arguments are accepted by lvalue-reference since the packed function
-  /// interface expects a list of non-null pointers.
-  template <typename... Args>
-  llvm::Error invoke(StringRef name, Args &... args);
-
   /// Invokes the function with the given name passing it the list of arguments
-  /// as a list of opaque pointers. This is the arity-agnostic equivalent of
-  /// the templated `invoke`.
-  llvm::Error invoke(StringRef name, MutableArrayRef<void *> args);
+  /// as a list of opaque pointers.
+  llvm::Error invoke(StringRef name, MutableArrayRef<void *> args = llvm::None);
 
   /// Set the target triple on the module. This is implicitly done when creating
   /// the engine.
@@ -96,30 +105,28 @@ public:
   /// Dump object code to output file `filename`.
   void dumpToObjectFile(StringRef filename);
 
+  /// Register symbols with this ExecutionEngine.
+  void registerSymbols(
+      llvm::function_ref<llvm::orc::SymbolMap(llvm::orc::MangleAndInterner)>
+          symbolMap);
+
 private:
-  // Ordering of llvmContext and jit is important for destruction purposes: the
-  // jit must be destroyed before the context.
+  /// Ordering of llvmContext and jit is important for destruction purposes: the
+  /// jit must be destroyed before the context.
   llvm::LLVMContext llvmContext;
 
-  // Underlying LLJIT.
+  /// Underlying LLJIT.
   std::unique_ptr<llvm::orc::LLJIT> jit;
 
-  // Underlying cache.
+  /// Underlying cache.
   std::unique_ptr<SimpleObjectCache> cache;
+
+  /// GDB notification listener.
+  llvm::JITEventListener *gdbListener;
+
+  /// Perf notification listener.
+  llvm::JITEventListener *perfListener;
 };
-
-template <typename... Args>
-llvm::Error ExecutionEngine::invoke(StringRef name, Args &... args) {
-  auto expectedFPtr = lookup(name);
-  if (!expectedFPtr)
-    return expectedFPtr.takeError();
-  auto fptr = *expectedFPtr;
-
-  SmallVector<void *, 8> packedArgs{static_cast<void *>(&args)...};
-  (*fptr)(packedArgs.data());
-
-  return llvm::Error::success();
-}
 
 } // end namespace mlir
 

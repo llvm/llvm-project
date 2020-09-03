@@ -1,4 +1,4 @@
-//===-- DynamicLoaderHexagonDYLD.cpp ----------------------------*- C++ -*-===//
+//===-- DynamicLoaderHexagonDYLD.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,6 +24,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(DynamicLoaderHexagonDYLD)
 
 // Aidan 21/05/2014
 //
@@ -418,8 +420,8 @@ DynamicLoaderHexagonDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   if (sym == nullptr || !sym->IsTrampoline())
     return thread_plan_sp;
 
-  const ConstString sym_name = sym->GetMangled().GetName(
-      lldb::eLanguageTypeUnknown, Mangled::ePreferMangled);
+  const ConstString sym_name =
+      sym->GetMangled().GetName(Mangled::ePreferMangled);
   if (!sym_name)
     return thread_plan_sp;
 

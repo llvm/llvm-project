@@ -112,8 +112,8 @@ template <typename Rep, typename Period>
 struct format_provider<std::chrono::duration<Rep, Period>> {
 private:
   typedef std::chrono::duration<Rep, Period> Dur;
-  typedef typename std::conditional<
-      std::chrono::treat_as_floating_point<Rep>::value, double, intmax_t>::type
+  typedef std::conditional_t<std::chrono::treat_as_floating_point<Rep>::value,
+                             double, intmax_t>
       InternalRep;
 
   template <typename AsPeriod> static InternalRep getAs(const Dur &D) {

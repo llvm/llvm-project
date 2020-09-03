@@ -299,10 +299,9 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(new DiagnosticOptions());
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
-      modulePath, *pchRdr, ASTUnit::LoadASTOnly, Diags,
+      std::string(modulePath), *pchRdr, ASTUnit::LoadASTOnly, Diags,
       FileSystemOpts, /*UseDebugInfo=*/false,
-      /*OnlyLocalDecls=*/true, None,
-      CaptureDiagsKind::None,
+      /*OnlyLocalDecls=*/true, None, CaptureDiagsKind::None,
       /*AllowPCHWithCompilerErrors=*/true,
       /*UserFilesAreVolatile=*/false);
   if (!AU) {
@@ -417,7 +416,7 @@ static std::string findRecordNameForFile(indexstore::IndexStore &store,
     Reader.foreachDependency([&](indexstore::IndexUnitDependency Dep) -> bool {
       if (Dep.getKind() == indexstore::IndexUnitDependency::DependencyKind::Record) {
         if (Dep.getFilePath() == filePath) {
-          recName = Dep.getName();
+          recName = std::string(Dep.getName());
           return false;
         }
         return true;
@@ -873,11 +872,10 @@ bool deconstructPathAndRange(StringRef input,
                              std::string &filepath,
                              Optional<unsigned> &lineStart,
                              unsigned &lineCount) {
-  StringRef path, range;
-  std::tie(path, range) = input.split(':');
-  StringRef start, end;
-  std::tie(start, end) = range.split(':');
-  filepath = path;
+  StringRef path, start, end;
+  std::tie(path, end) = input.rsplit(':');
+  std::tie(path, start) = path.rsplit(':');
+  filepath = std::string(path);
   lineCount = 0;
   if (start.empty())
     return false;

@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -779,9 +780,11 @@ TEST_F(LoopPassManagerTest, IndirectOuterPassInvalidation) {
       .WillByDefault(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                                 LoopStandardAnalysisResults &AR) {
         auto &FAMP = AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR);
-        auto &FAM = FAMP.getManager();
         Function &F = *L.getHeader()->getParent();
-        if (FAM.getCachedResult<FunctionAnalysis>(F))
+        // This call will assert when trying to get the actual analysis if the
+        // FunctionAnalysis can be invalidated. Only check its existence.
+        // Alternatively, use FAM above, for the purposes of this unittest.
+        if (FAMP.cachedResultExists<FunctionAnalysis>(F))
           FAMP.registerOuterAnalysisInvalidation<FunctionAnalysis,
                                                  LoopAnalysis>();
         return MLAHandle.getResult();

@@ -49,4 +49,4 @@ class TestSwiftRemoteASTImport(TestBase):
         self.expect("expr -d no-dynamic-values -- input",
                     substrs=['(Library.LibraryProtocol) $R0'])
         self.expect("expr -d run-target -- input",
-                    substrs=['(a.FromMainModule) $R2'])
+                    substrs=['(a.FromMainModule) $R1'])

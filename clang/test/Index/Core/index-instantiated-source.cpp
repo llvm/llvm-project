@@ -86,3 +86,37 @@ void canonicalizeInstaniationReferences(TemplateClass<int, float> &object) {
   (void)TT::NestedType::Enum::EnumCase;
 // CHECK: [[@LINE-1]]:31 | enumerator/C | EnumCase | c:@ST>2#T#T@TemplateClass@S@NestedType@E@Enum@EnumCase |
 }
+
+namespace index_specialization {
+template <typename T>
+class Foo {};
+
+// if there are no explicit template specializations provided, report the
+// primary templates.
+Foo<int> *t1; // incomplete instantiation.
+// CHECK: [[@LINE-1]]:1 | class(Gen)/C++ | Foo | c:@N@index_specialization@ST>1#T@Foo | <no-cgname> | Ref,RelCont | rel: 1
+
+Foo<double> t2;
+// CHECK: [[@LINE-1]]:1 | class(Gen)/C++ | Foo | c:@N@index_specialization@ST>1#T@Foo | <no-cgname> | Ref,RelCont | rel: 1
+
+// explicit instantiations.
+template class Foo<float>;
+Foo<float> t3;
+// CHECK: [[@LINE-1]]:1 | class(Gen)/C++ | Foo | c:@N@index_specialization@ST>1#T@Foo | <no-cgname> | Ref,RelCont | rel: 1
+
+
+template <typename T>
+class Bar {};
+
+// explicit template specialization definition!
+template <>class Bar<int> {};
+// report the explicit template specialization if it exists.
+Bar<int> *b1;
+// CHECK: [[@LINE-1]]:1 | class(Gen,TS)/C++ | Bar | c:@N@index_specialization@S@Bar>#I | <no-cgname> | Ref,RelCont | rel: 1
+
+// explicit template declaration, not a definition!
+template <> class Bar <float>;
+Bar<float> *b2;
+// CHECK: [[@LINE-1]]:1 | class(Gen,TS)/C++ | Bar | c:@N@index_specialization@S@Bar>#f | <no-cgname> | Ref,RelCont | rel: 1
+
+} // namespace index_specialization

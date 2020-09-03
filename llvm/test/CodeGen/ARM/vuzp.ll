@@ -522,12 +522,11 @@ define <10 x i8> @vuzp_wide_type(<10 x i8> %tr0, <10 x i8> %tr1,
 define %struct.uint8x8x2_t @vuzp_extract_subvector(<16 x i8> %t) #0 {
 ; CHECK-LABEL: vuzp_extract_subvector:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov d17, r2, r3
-; CHECK-NEXT:    vmov d16, r0, r1
-; CHECK-NEXT:    vorr d18, d17, d17
-; CHECK-NEXT:    vuzp.8 d16, d18
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d18
+; CHECK-NEXT:    vmov d16, r2, r3
+; CHECK-NEXT:    vmov d17, r0, r1
+; CHECK-NEXT:    vuzp.8 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 
   %vuzp.i = shufflevector <16 x i8> %t, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>

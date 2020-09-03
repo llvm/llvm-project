@@ -30,6 +30,8 @@ private:
   const Driver &D;
   bool IsValid = false;
   CudaVersion Version = CudaVersion::UNKNOWN;
+  std::string DetectedVersion;
+  bool DetectedVersionIsNotSupported = false;
   std::string InstallPath;
   std::string BinPath;
   std::string LibPath;
@@ -75,6 +77,10 @@ public:
   std::string getLibDeviceFile(StringRef Gpu) const {
     return LibDeviceMap.lookup(Gpu);
   }
+  void WarnIfUnsupportedVersion();
+
+private:
+  void ParseCudaVersionFile(llvm::StringRef V);
 };
 
 namespace tools {
@@ -83,9 +89,7 @@ namespace NVPTX {
 // Run ptxas, the NVPTX assembler.
 class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
  public:
-   Assembler(const ToolChain &TC)
-       : Tool("NVPTX::Assembler", "ptxas", TC, RF_Full, llvm::sys::WEM_UTF8,
-              "--options-file") {}
+   Assembler(const ToolChain &TC) : Tool("NVPTX::Assembler", "ptxas", TC) {}
 
    bool hasIntegratedCPP() const override { return false; }
 
@@ -99,9 +103,7 @@ class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
 // assembly into a single output file.
 class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
  public:
-   Linker(const ToolChain &TC)
-       : Tool("NVPTX::Linker", "fatbinary", TC, RF_Full, llvm::sys::WEM_UTF8,
-              "--options-file") {}
+   Linker(const ToolChain &TC) : Tool("NVPTX::Linker", "fatbinary", TC) {}
 
    bool hasIntegratedCPP() const override { return false; }
 
@@ -114,8 +116,7 @@ class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 class LLVM_LIBRARY_VISIBILITY OpenMPLinker : public Tool {
  public:
    OpenMPLinker(const ToolChain &TC)
-       : Tool("NVPTX::OpenMPLinker", "nvlink", TC, RF_Full, llvm::sys::WEM_UTF8,
-              "--options-file") {}
+       : Tool("NVPTX::OpenMPLinker", "nvlink", TC) {}
 
    bool hasIntegratedCPP() const override { return false; }
 
@@ -148,6 +149,10 @@ public:
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,
                              Action::OffloadKind DeviceOffloadKind) const override;
+
+  llvm::DenormalMode getDefaultDenormalModeForType(
+      const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
+      const llvm::fltSemantics *FPType = nullptr) const override;
 
   // Never try to use the integrated assembler with CUDA; always fork out to
   // ptxas.

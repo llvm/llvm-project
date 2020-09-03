@@ -106,27 +106,27 @@ void test_message_send_result(
        NSArray<NSString *> *stringArray,
        void (^block)(void)) {
   int *ip;
-  ip = [stringSet firstObject]; // expected-error{{from incompatible type 'NSString *'}}
-  ip = [mutStringSet firstObject]; // expected-error{{from incompatible type 'NSString *'}}
-  ip = [widgetSet firstObject]; // expected-error{{from incompatible type 'Widget *'}}
-  ip = [untypedMutSet firstObject]; // expected-error{{from incompatible type 'id'}}
-  ip = [mutStringArraySet firstObject]; // expected-error{{from incompatible type 'NSArray<NSString *> *'}}
-  ip = [set firstObject]; // expected-error{{from incompatible type 'id'}}
-  ip = [mutSet firstObject]; // expected-error{{from incompatible type 'id'}}
-  ip = [mutArraySet firstObject]; // expected-error{{from incompatible type 'id'}}
-  ip = [block firstObject]; // expected-error{{from incompatible type 'id'}}
+  ip = [stringSet firstObject]; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSString *'}}
+  ip = [mutStringSet firstObject]; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSString *'}}
+  ip = [widgetSet firstObject]; // expected-error{{incompatible pointer types assigning to 'int *' from 'Widget *'}}
+  ip = [untypedMutSet firstObject]; // expected-error{{incompatible pointer types assigning to 'int *' from 'id'}}
+  ip = [mutStringArraySet firstObject]; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray<NSString *> *'}}
+  ip = [set firstObject]; // expected-error{{incompatible pointer types assigning to 'int *' from 'id'}}
+  ip = [mutSet firstObject]; // expected-error{{incompatible pointer types assigning to 'int *' from 'id'}}
+  ip = [mutArraySet firstObject]; // expected-error{{incompatible pointer types assigning to 'int *' from 'id'}}
+  ip = [block firstObject]; // expected-error{{incompatible pointer types assigning to 'int *' from 'id'}}
 
-  ip = [stringSet findObject:@"blah"]; // expected-error{{from incompatible type 'NSString *'}}
+  ip = [stringSet findObject:@"blah"]; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSString *'}}
 
   // Class messages.
-  ip = [NSSet<NSString *> alloc]; // expected-error{{from incompatible type 'NSSet<NSString *> *'}}
-  ip = [NSSet alloc]; // expected-error{{from incompatible type 'NSSet *'}}
-  ip = [MutableSetOfArrays<NSString *> alloc]; // expected-error{{from incompatible type 'MutableSetOfArrays<NSString *> *'}}
-  ip = [MutableSetOfArrays alloc];  // expected-error{{from incompatible type 'MutableSetOfArrays *'}}
-  ip = [NSArray<NSString *> array]; // expected-error{{from incompatible type 'NSArray<NSString *> *'}}
-  ip = [NSArray<NSString *><NSCopying> array]; // expected-error{{from incompatible type 'NSArray<NSString *> *'}}
+  ip = [NSSet<NSString *> alloc]; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSSet<NSString *> *'}}
+  ip = [NSSet alloc]; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSSet *'}}
+  ip = [MutableSetOfArrays<NSString *> alloc]; // expected-error{{incompatible pointer types assigning to 'int *' from 'MutableSetOfArrays<NSString *> *'}}
+  ip = [MutableSetOfArrays alloc];  // expected-error{{incompatible pointer types assigning to 'int *' from 'MutableSetOfArrays *'}}
+  ip = [NSArray<NSString *> array]; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray<NSString *> *'}}
+  ip = [NSArray<NSString *><NSCopying> array]; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray<NSString *> *'}}
 
-  ip = [[NSMutableArray<NSString *> alloc] init];  // expected-error{{from incompatible type 'NSMutableArray<NSString *> *'}}
+  ip = [[NSMutableArray<NSString *> alloc] init];  // expected-error{{incompatible pointer types assigning to 'int *' from 'NSMutableArray<NSString *> *'}}
 
   [[NSMutableArray alloc] initWithArray: stringArray]; // okay
   [[NSMutableArray<NSString *> alloc] initWithArray: stringArray]; // okay
@@ -166,16 +166,16 @@ void test_property_read(
        MutableSetOfArrays *mutArraySet,
        NSMutableDictionary *mutDict) {
   int *ip;
-  ip = stringSet.allObjects; // expected-error{{from incompatible type 'NSArray<NSString *> *'}}
-  ip = mutStringSet.allObjects; // expected-error{{from incompatible type 'NSArray<NSString *> *'}}
-  ip = widgetSet.allObjects; // expected-error{{from incompatible type 'NSArray<Widget *> *'}}
-  ip = untypedMutSet.allObjects; // expected-error{{from incompatible type 'NSArray *'}}
-  ip = mutStringArraySet.allObjects; // expected-error{{from incompatible type 'NSArray<NSArray<NSString *> *> *'}}
-  ip = set.allObjects; // expected-error{{from incompatible type 'NSArray *'}}
-  ip = mutSet.allObjects; // expected-error{{from incompatible type 'NSArray *'}}
-  ip = mutArraySet.allObjects; // expected-error{{from incompatible type 'NSArray *'}}
+  ip = stringSet.allObjects; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray<NSString *> *'}}
+  ip = mutStringSet.allObjects; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray<NSString *> *'}}
+  ip = widgetSet.allObjects; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray<Widget *> *'}}
+  ip = untypedMutSet.allObjects; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray *'}}
+  ip = mutStringArraySet.allObjects; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray<NSArray<NSString *> *> *'}}
+  ip = set.allObjects; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray *'}}
+  ip = mutSet.allObjects; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray *'}}
+  ip = mutArraySet.allObjects; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray *'}}
 
-  ip = mutDict.someRandomKey; // expected-error{{from incompatible type '__kindof id<NSCopying>'}}
+  ip = mutDict.someRandomKey; // expected-error{{incompatible pointer types assigning to 'int *' from '__kindof id<NSCopying>'}}
 }
 
 void test_property_write(
@@ -215,27 +215,27 @@ void test_subscripting(
   Widget *widget;
   Window *window;
 
-  ip = stringArray[0]; // expected-error{{from incompatible type 'NSString *'}}
+  ip = stringArray[0]; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSString *'}}
 
-  ip = mutStringArray[0]; // expected-error{{from incompatible type 'NSString *'}}
+  ip = mutStringArray[0]; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSString *'}}
   mutStringArray[0] = ip; // expected-error{{parameter of type 'NSString *'}}
 
-  ip = array[0]; // expected-error{{from incompatible type 'id'}}
+  ip = array[0]; // expected-error{{incompatible pointer types assigning to 'int *' from 'id'}}
 
-  ip = mutArray[0]; // expected-error{{from incompatible type 'id'}}
+  ip = mutArray[0]; // expected-error{{incompatible pointer types assigning to 'int *' from 'id'}}
   mutArray[0] = ip; // expected-error{{parameter of type 'id'}}
 
-  ip = stringWidgetDict[string]; // expected-error{{from incompatible type 'Widget *'}}
+  ip = stringWidgetDict[string]; // expected-error{{incompatible pointer types assigning to 'int *' from 'Widget *'}}
   widget = stringWidgetDict[widget]; // expected-error{{parameter of type 'NSString *'}}
 
-  ip = mutStringWidgetDict[string]; // expected-error{{from incompatible type 'Widget *'}}
+  ip = mutStringWidgetDict[string]; // expected-error{{incompatible pointer types assigning to 'int *' from 'Widget *'}}
   widget = mutStringWidgetDict[widget]; // expected-error{{parameter of type 'NSString *'}}
   mutStringWidgetDict[string] = ip; // expected-error{{parameter of type 'Widget *'}}
   mutStringWidgetDict[widget] = widget; // expected-error{{parameter of type 'NSString *'}}
 
-  ip = dict[string]; // expected-error{{from incompatible type 'id'}}
+  ip = dict[string]; // expected-error{{incompatible pointer types assigning to 'int *' from 'id'}}
 
-  ip = mutDict[string]; // expected-error{{incompatible type 'id'}}
+  ip = mutDict[string]; // expected-error{{incompatible pointer types assigning to 'int *' from 'id'}}
   mutDict[string] = ip; // expected-error{{parameter of type 'id'}}
 
   widget = mutDict[window];
@@ -249,15 +249,15 @@ void test_instance_variable(NSArray<NSString *> *stringArray,
                             NSArray *array) {
   int *ip;
 
-  ip = stringArray->data; // expected-error{{from incompatible type 'NSString **'}}
-  ip = array->data; // expected-error{{from incompatible type 'id *'}}
+  ip = stringArray->data; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSString **'}}
+  ip = array->data; // expected-error{{incompatible pointer types assigning to 'int *' from 'id *'}}
 }
 
 @implementation WindowArray
 - (void)testInstanceVariable {
   int *ip;
 
-  ip = data; // expected-error{{from incompatible type 'Window **'}}
+  ip = data; // expected-error{{incompatible pointer types assigning to 'int *' from 'Window **'}}
 }
 @end
 
@@ -276,13 +276,13 @@ void test_implicit_conversions(NSArray<NSString *> *stringArray,
   stringArray = array;
 
   // Specialized -> specialized failure (same level).
-  stringArray = numberArray; // expected-error{{assigning to 'NSArray<NSString *> *' from incompatible type 'NSArray<NSNumber *> *'}}
+  stringArray = numberArray; // expected-error{{incompatible pointer types assigning to 'NSArray<NSString *> *' from 'NSArray<NSNumber *> *'}}
 
   // Specialized -> specialized (different levels).
   stringArray = mutStringArray;
 
   // Specialized -> specialized failure (different levels).
-  numberArray = mutStringArray; // expected-error{{assigning to 'NSArray<NSNumber *> *' from incompatible type 'NSMutableArray<NSString *> *'}}
+  numberArray = mutStringArray; // expected-error{{incompatible pointer types assigning to 'NSArray<NSNumber *> *' from 'NSMutableArray<NSString *> *'}}
 
   // Unspecialized -> specialized (different levels).
   stringArray = mutArray;
@@ -334,19 +334,19 @@ void test_ternary_operator(NSArray<NSString *> *stringArray,
   int *ip;
   id object;
 
-  ip = cond ? stringArray : mutStringArray; // expected-error{{from incompatible type 'NSArray<NSString *> *'}}
-  ip = cond ? mutStringArray : stringArray; // expected-error{{from incompatible type 'NSArray<NSString *> *'}}
+  ip = cond ? stringArray : mutStringArray; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray<NSString *> *'}}
+  ip = cond ? mutStringArray : stringArray; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray<NSString *> *'}}
 
-  ip = cond ? stringArray2 : mutStringArray; // expected-error{{from incompatible type 'NSArray<NSString *> *'}}
-  ip = cond ? mutStringArray : stringArray2; // expected-error{{from incompatible type 'NSArray<NSString *> *'}}
+  ip = cond ? stringArray2 : mutStringArray; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray<NSString *> *'}}
+  ip = cond ? mutStringArray : stringArray2; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray<NSString *> *'}}
 
-  ip = cond ? stringArray : mutArray; // expected-error{{from incompatible type 'NSArray *'}}
+  ip = cond ? stringArray : mutArray; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray *'}}
 
-  ip = cond ? stringArray2 : mutArray; // expected-error{{from incompatible type 'NSArray *'}}
+  ip = cond ? stringArray2 : mutArray; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray *'}}
 
-  ip = cond ? mutArray : stringArray; // expected-error{{from incompatible type 'NSArray *'}}
+  ip = cond ? mutArray : stringArray; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray *'}}
 
-  ip = cond ? mutArray : stringArray2; // expected-error{{from incompatible type 'NSArray *'}}
+  ip = cond ? mutArray : stringArray2; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray *'}}
 
   object = cond ? stringArray : numberArray; // expected-warning{{incompatible operand types ('NSArray<NSString *> *' and 'NSArray<NSNumber *> *')}}
 }
@@ -357,14 +357,14 @@ void test_ternary_operator(NSArray<NSString *> *stringArray,
 @implementation NSStringArray
 - (void)useSuperMethod {
   int *ip;
-  ip = super.lastObject; // expected-error{{from incompatible type 'NSString *'}}
-  ip = [super objectAtIndexedSubscript:0]; // expected-error{{from incompatible type 'NSString *'}}
+  ip = super.lastObject; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSString *'}}
+  ip = [super objectAtIndexedSubscript:0]; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSString *'}}
 }
 
 + (void)useSuperMethod {
   int *ip;
-  ip = super.array; // expected-error{{from incompatible type 'NSArray<NSString *> *'}}
-  ip = [super array]; // expected-error{{from incompatible type 'NSArray<NSString *> *'}}
+  ip = super.array; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray<NSString *> *'}}
+  ip = [super array]; // expected-error{{incompatible pointer types assigning to 'int *' from 'NSArray<NSString *> *'}}
 }
 @end
 
@@ -427,7 +427,6 @@ typedef DependentTemplate<NSMutableDictionaryBuilder>::type DependentTemplateFai
 template<typename K, typename V>
 struct NonDependentTemplate {
   typedef NSMutableDictionaryBuilder::template apply<NSString *, NSObject *> type; // expected-error{{'apply' following the 'template' keyword does not refer to a template}}
-  // expected-error@-1{{expected member name or }}
 };
 
 // However, one can use an alias template to turn a parameterized

@@ -17,19 +17,102 @@
 
 using namespace llvm;
 
+namespace {
+
+enum class DWARFSectionKindV2 {
+  DW_SECT_INFO = 1,
+  DW_SECT_TYPES = 2,
+  DW_SECT_ABBREV = 3,
+  DW_SECT_LINE = 4,
+  DW_SECT_LOC = 5,
+  DW_SECT_STR_OFFSETS = 6,
+  DW_SECT_MACINFO = 7,
+  DW_SECT_MACRO = 8,
+};
+
+} // namespace
+
+// Return true if the section identifier is defined in the DWARFv5 standard.
+constexpr bool isKnownV5SectionID(uint32_t ID) {
+  return ID >= DW_SECT_INFO && ID <= DW_SECT_RNGLISTS &&
+         ID != DW_SECT_EXT_TYPES;
+}
+
+uint32_t llvm::serializeSectionKind(DWARFSectionKind Kind,
+                                    unsigned IndexVersion) {
+  if (IndexVersion == 5) {
+    assert(isKnownV5SectionID(Kind));
+    return static_cast<uint32_t>(Kind);
+  }
+  assert(IndexVersion == 2);
+  switch (Kind) {
+#define CASE(S,T) \
+  case DW_SECT_##S: \
+    return static_cast<uint32_t>(DWARFSectionKindV2::DW_SECT_##T)
+  CASE(INFO, INFO);
+  CASE(EXT_TYPES, TYPES);
+  CASE(ABBREV, ABBREV);
+  CASE(LINE, LINE);
+  CASE(EXT_LOC, LOC);
+  CASE(STR_OFFSETS, STR_OFFSETS);
+  CASE(EXT_MACINFO, MACINFO);
+  CASE(MACRO, MACRO);
+#undef CASE
+  default:
+    // All other section kinds have no corresponding values in v2 indexes.
+    llvm_unreachable("Invalid DWARFSectionKind");
+  }
+}
+
+DWARFSectionKind llvm::deserializeSectionKind(uint32_t Value,
+                                              unsigned IndexVersion) {
+  if (IndexVersion == 5)
+    return isKnownV5SectionID(Value)
+               ? static_cast<DWARFSectionKind>(Value)
+               : DW_SECT_EXT_unknown;
+  assert(IndexVersion == 2);
+  switch (static_cast<DWARFSectionKindV2>(Value)) {
+#define CASE(S,T) \
+  case DWARFSectionKindV2::DW_SECT_##S: \
+    return DW_SECT_##T
+  CASE(INFO, INFO);
+  CASE(TYPES, EXT_TYPES);
+  CASE(ABBREV, ABBREV);
+  CASE(LINE, LINE);
+  CASE(LOC, EXT_LOC);
+  CASE(STR_OFFSETS, STR_OFFSETS);
+  CASE(MACINFO, EXT_MACINFO);
+  CASE(MACRO, MACRO);
+#undef CASE
+  }
+  return DW_SECT_EXT_unknown;
+}
+
 bool DWARFUnitIndex::Header::parse(DataExtractor IndexData,
                                    uint64_t *OffsetPtr) {
+  const uint64_t BeginOffset = *OffsetPtr;
   if (!IndexData.isValidOffsetForDataOfSize(*OffsetPtr, 16))
     return false;
+  // GCC Debug Fission defines the version as an unsigned 32-bit field
+  // with value of 2, https://gcc.gnu.org/wiki/DebugFissionDWP.
+  // DWARFv5 defines the same space as an uhalf version field with value of 5
+  // and a 2 bytes long padding, see Section 7.3.5.3.
   Version = IndexData.getU32(OffsetPtr);
+  if (Version != 2) {
+    *OffsetPtr = BeginOffset;
+    Version = IndexData.getU16(OffsetPtr);
+    if (Version != 5)
+      return false;
+    *OffsetPtr += 2; // Skip padding.
+  }
   NumColumns = IndexData.getU32(OffsetPtr);
   NumUnits = IndexData.getU32(OffsetPtr);
   NumBuckets = IndexData.getU32(OffsetPtr);
-  return Version <= 2;
+  return true;
 }
 
 void DWARFUnitIndex::Header::dump(raw_ostream &OS) const {
-  OS << format("version = %u slots = %u\n\n", Version, NumBuckets);
+  OS << format("version = %u, units = %u, slots = %u\n\n", Version, NumUnits, NumBuckets);
 }
 
 bool DWARFUnitIndex::parse(DataExtractor IndexData) {
@@ -49,6 +132,10 @@ bool DWARFUnitIndex::parseImpl(DataExtractor IndexData) {
   if (!Header.parse(IndexData, &Offset))
     return false;
 
+  // Fix InfoColumnKind: in DWARFv5, type units are in .debug_info.dwo.
+  if (Header.Version == 5)
+    InfoColumnKind = DW_SECT_INFO;
+
   if (!IndexData.isValidOffsetForDataOfSize(
           Offset, Header.NumBuckets * (8 + 4) +
                       (2 * Header.NumUnits + 1) * 4 * Header.NumColumns))
@@ -58,6 +145,7 @@ bool DWARFUnitIndex::parseImpl(DataExtractor IndexData) {
   auto Contribs =
       std::make_unique<Entry::SectionContribution *[]>(Header.NumUnits);
   ColumnKinds = std::make_unique<DWARFSectionKind[]>(Header.NumColumns);
+  RawSectionIds = std::make_unique<uint32_t[]>(Header.NumColumns);
 
   // Read Hash Table of Signatures
   for (unsigned i = 0; i != Header.NumBuckets; ++i)
@@ -76,7 +164,8 @@ bool DWARFUnitIndex::parseImpl(DataExtractor IndexData) {
 
   // Read the Column Headers
   for (unsigned i = 0; i != Header.NumColumns; ++i) {
-    ColumnKinds[i] = static_cast<DWARFSectionKind>(IndexData.getU32(&Offset));
+    RawSectionIds[i] = IndexData.getU32(&Offset);
+    ColumnKinds[i] = deserializeSectionKind(RawSectionIds[i], Header.Version);
     if (ColumnKinds[i] == InfoColumnKind) {
       if (InfoColumn != -1)
         return false;
@@ -105,20 +194,21 @@ bool DWARFUnitIndex::parseImpl(DataExtractor IndexData) {
 }
 
 StringRef DWARFUnitIndex::getColumnHeader(DWARFSectionKind DS) {
-#define CASE(DS)                                                               \
-  case DW_SECT_##DS:                                                           \
-    return #DS;
   switch (DS) {
-    CASE(INFO);
-    CASE(TYPES);
-    CASE(ABBREV);
-    CASE(LINE);
-    CASE(LOC);
-    CASE(STR_OFFSETS);
-    CASE(MACINFO);
-    CASE(MACRO);
+#define HANDLE_DW_SECT(ID, NAME)                                               \
+  case DW_SECT_##NAME:                                                         \
+    return #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  case DW_SECT_EXT_TYPES:
+    return "TYPES";
+  case DW_SECT_EXT_LOC:
+    return "LOC";
+  case DW_SECT_EXT_MACINFO:
+    return "MACINFO";
+  case DW_SECT_EXT_unknown:
+    return StringRef();
   }
-  llvm_unreachable("unknown DWARFSectionKind");
+  llvm_unreachable("Unknown DWARFSectionKind");
 }
 
 void DWARFUnitIndex::dump(raw_ostream &OS) const {
@@ -127,8 +217,14 @@ void DWARFUnitIndex::dump(raw_ostream &OS) const {
 
   Header.dump(OS);
   OS << "Index Signature         ";
-  for (unsigned i = 0; i != Header.NumColumns; ++i)
-    OS << ' ' << left_justify(getColumnHeader(ColumnKinds[i]), 24);
+  for (unsigned i = 0; i != Header.NumColumns; ++i) {
+    DWARFSectionKind Kind = ColumnKinds[i];
+    StringRef Name = getColumnHeader(Kind);
+    if (!Name.empty())
+      OS << ' ' << left_justify(Name, 24);
+    else
+      OS << format(" Unknown: %-15" PRIu32, RawSectionIds[i]);
+  }
   OS << "\n----- ------------------";
   for (unsigned i = 0; i != Header.NumColumns; ++i)
     OS << " ------------------------";
@@ -148,7 +244,7 @@ void DWARFUnitIndex::dump(raw_ostream &OS) const {
 }
 
 const DWARFUnitIndex::Entry::SectionContribution *
-DWARFUnitIndex::Entry::getOffset(DWARFSectionKind Sec) const {
+DWARFUnitIndex::Entry::getContribution(DWARFSectionKind Sec) const {
   uint32_t i = 0;
   for (; i != Index->Header.NumColumns; ++i)
     if (Index->ColumnKinds[i] == Sec)
@@ -157,7 +253,7 @@ DWARFUnitIndex::Entry::getOffset(DWARFSectionKind Sec) const {
 }
 
 const DWARFUnitIndex::Entry::SectionContribution *
-DWARFUnitIndex::Entry::getOffset() const {
+DWARFUnitIndex::Entry::getContribution() const {
   return &Contributions[Index->InfoColumn];
 }
 

@@ -1,6 +1,6 @@
 //===- mlir-translate.cpp - MLIR Translate Driver -------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -11,12 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/InitAllDialects.h"
+#include "mlir/InitAllTranslations.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/ToolUtilities.h"
-#include "mlir/Support/TranslateClParser.h"
+#include "mlir/Translation.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -44,14 +47,29 @@ static llvm::cl::opt<bool> verifyDiagnostics(
                    "expected-* lines on the corresponding line"),
     llvm::cl::init(false));
 
+namespace mlir {
+// Defined in the test directory, no public header.
+void registerTestRoundtripSPIRV();
+void registerTestRoundtripDebugSPIRV();
+} // namespace mlir
+
+static void registerTestTranslations() {
+  registerTestRoundtripSPIRV();
+  registerTestRoundtripDebugSPIRV();
+}
+
 int main(int argc, char **argv) {
+  registerAllDialects();
+  registerAllTranslations();
+  registerTestTranslations();
   llvm::InitLLVM y(argc, argv);
 
   // Add flags for all the registered translations.
   llvm::cl::opt<const TranslateFunction *, false, TranslationParser>
       translationRequested("", llvm::cl::desc("Translation to perform"),
                            llvm::cl::Required);
-
+  registerAsmPrinterCLOptions();
+  registerMLIRContextCLOptions();
   llvm::cl::ParseCommandLineOptions(argc, argv, "MLIR translation driver\n");
 
   std::string errorMessage;
@@ -71,6 +89,8 @@ int main(int argc, char **argv) {
   auto processBuffer = [&](std::unique_ptr<llvm::MemoryBuffer> ownedBuffer,
                            raw_ostream &os) {
     MLIRContext context;
+    context.allowUnregisteredDialects();
+    context.printOpOnDiagnostic(!verifyDiagnostics);
     llvm::SourceMgr sourceMgr;
     sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), llvm::SMLoc());
 

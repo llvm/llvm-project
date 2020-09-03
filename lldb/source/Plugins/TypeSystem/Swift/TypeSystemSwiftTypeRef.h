@@ -51,6 +51,9 @@ public:
   CompilerType
   GetTypeFromMangledTypename(ConstString mangled_typename) override;
 
+  CompilerType GetGenericArgumentType(lldb::opaque_compiler_type_t type,
+                                      size_t idx) override;
+
   // PluginInterface functions
   ConstString GetPluginName() override;
   uint32_t GetPluginVersion() override;
@@ -114,7 +117,8 @@ public:
 
   // Creating related types
   CompilerType GetArrayElementType(lldb::opaque_compiler_type_t type,
-                                   uint64_t *stride) override;
+                                   uint64_t *stride,
+                                   ExecutionContextScope *exe_scope) override;
   CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) override;
   int GetFunctionArgumentCount(lldb::opaque_compiler_type_t type) override;
   CompilerType GetFunctionArgumentTypeAtIndex(lldb::opaque_compiler_type_t type,

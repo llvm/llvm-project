@@ -68,12 +68,14 @@ public:
   /// Crashes if there isn't exactly one.
   size_t point(llvm::StringRef Name = "") const;
   /// Returns the position of all points marked by ^ (or $name^) in the text.
+  /// Order matches the order within the text.
   std::vector<size_t> points(llvm::StringRef Name = "") const;
 
   /// Returns the location of the range marked by [[ ]] (or $name[[ ]]).
   /// Crashes if there isn't exactly one.
   Range range(llvm::StringRef Name = "") const;
   /// Returns the location of all ranges marked by [[ ]] (or $name[[ ]]).
+  /// They are ordered by start position within the text.
   std::vector<Range> ranges(llvm::StringRef Name = "") const;
 
 private:

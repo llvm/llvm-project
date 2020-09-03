@@ -1,6 +1,6 @@
 //===- Types.h - MLIR Type Classes ------------------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -12,6 +12,7 @@
 #include "mlir/IR/TypeSupport.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
 class FloatType;
@@ -46,10 +47,8 @@ struct OpaqueTypeStorage;
 ///        current type. Used for isa/dyn_cast casting functionality.
 ///
 ///  * Optional:
-///    - static LogicalResult verifyConstructionInvariants(
-///                                               Optional<Location> loc,
-///                                               MLIRContext *context,
-///                                               Args... args)
+///    - static LogicalResult verifyConstructionInvariants(Location loc,
+///                                                        Args... args)
 ///      * This method is invoked when calling the 'TypeBase::get/getChecked'
 ///        methods to ensure that the arguments passed in are valid to construct
 ///        a type instance with.
@@ -101,14 +100,14 @@ public:
   };
 
   /// Utility class for implementing types.
-  template <typename ConcreteType, typename BaseType,
-            typename StorageType = DefaultTypeStorage>
+  template <typename ConcreteType, typename BaseType, typename StorageType,
+            template <typename T> class... Traits>
   using TypeBase = detail::StorageUserBase<ConcreteType, BaseType, StorageType,
-                                           detail::TypeUniquer>;
+                                           detail::TypeUniquer, Traits...>;
 
   using ImplType = TypeStorage;
 
-  Type() : impl(nullptr) {}
+  constexpr Type() : impl(nullptr) {}
   /* implicit */ Type(const ImplType *impl)
       : impl(const_cast<ImplType *>(impl)) {}
 
@@ -122,6 +121,8 @@ public:
   bool operator!() const { return impl == nullptr; }
 
   template <typename U> bool isa() const;
+  template <typename First, typename Second, typename... Rest>
+  bool isa() const;
   template <typename U> U dyn_cast() const;
   template <typename U> U dyn_cast_or_null() const;
   template <typename U> U cast() const;
@@ -148,17 +149,35 @@ public:
 
   /// Return true if this is an integer type with the specified width.
   bool isInteger(unsigned width);
+  /// Return true if this is a signless integer type (with the specified width).
+  bool isSignlessInteger();
+  bool isSignlessInteger(unsigned width);
+  /// Return true if this is a signed integer type (with the specified width).
+  bool isSignedInteger();
+  bool isSignedInteger(unsigned width);
+  /// Return true if this is an unsigned integer type (with the specified
+  /// width).
+  bool isUnsignedInteger();
+  bool isUnsignedInteger(unsigned width);
 
   /// Return the bit width of an integer or a float type, assert failure on
   /// other types.
   unsigned getIntOrFloatBitWidth();
 
-  /// Return true if this is an integer or index type.
+  /// Return true if this is a signless integer or index type.
+  bool isSignlessIntOrIndex();
+  /// Return true if this is a signless integer, index, or float type.
+  bool isSignlessIntOrIndexOrFloat();
+  /// Return true of this is a signless integer or a float type.
+  bool isSignlessIntOrFloat();
+
+  /// Return true if this is an integer (of any signedness) or an index type.
   bool isIntOrIndex();
-  /// Return true if this is an integer, index, or float type.
-  bool isIntOrIndexOrFloat();
-  /// Return true of this is an integer or a float type.
+  /// Return true if this is an integer (of any signedness) or a float type.
   bool isIntOrFloat();
+  /// Return true if this is an integer (of any signedness), index, or float
+  /// type.
+  bool isIntOrIndexOrFloat();
 
   /// Print the current type.
   void print(raw_ostream &os);
@@ -177,6 +196,9 @@ public:
     return Type(reinterpret_cast<ImplType *>(const_cast<void *>(pointer)));
   }
 
+  /// Return the abstract type descriptor for this type.
+  const AbstractType &getAbstractType() { return impl->getAbstractType(); }
+
 protected:
   ImplType *impl;
 };
@@ -185,6 +207,45 @@ inline raw_ostream &operator<<(raw_ostream &os, Type type) {
   type.print(os);
   return os;
 }
+
+//===----------------------------------------------------------------------===//
+// TypeTraitBase
+//===----------------------------------------------------------------------===//
+
+namespace TypeTrait {
+/// This class represents the base of a type trait.
+template <typename ConcreteType, template <typename> class TraitType>
+using TraitBase = detail::StorageUserTraitBase<ConcreteType, TraitType>;
+} // namespace TypeTrait
+
+//===----------------------------------------------------------------------===//
+// TypeInterface
+//===----------------------------------------------------------------------===//
+
+/// This class represents the base of a type interface. See the definition  of
+/// `detail::Interface` for requirements on the `Traits` type.
+template <typename ConcreteType, typename Traits>
+class TypeInterface : public detail::Interface<ConcreteType, Type, Traits, Type,
+                                               TypeTrait::TraitBase> {
+public:
+  using Base = TypeInterface<ConcreteType, Traits>;
+  using InterfaceBase =
+      detail::Interface<ConcreteType, Type, Traits, Type, TypeTrait::TraitBase>;
+  using InterfaceBase::InterfaceBase;
+
+private:
+  /// Returns the impl interface instance for the given type.
+  static typename InterfaceBase::Concept *getInterfaceFor(Type type) {
+    return type.getAbstractType().getInterface<ConcreteType>();
+  }
+
+  /// Allow access to 'getInterfaceFor'.
+  friend InterfaceBase;
+};
+
+//===----------------------------------------------------------------------===//
+// FunctionType
+//===----------------------------------------------------------------------===//
 
 /// Function types map from a list of inputs to a list of results.
 class FunctionType
@@ -213,6 +274,10 @@ public:
   static bool kindof(unsigned kind) { return kind == Kind::Function; }
 };
 
+//===----------------------------------------------------------------------===//
+// OpaqueType
+//===----------------------------------------------------------------------===//
+
 /// Opaque types represent types of non-registered dialects. These are types
 /// represented in their raw string form, and can only usefully be tested for
 /// type equality.
@@ -238,8 +303,7 @@ public:
   StringRef getTypeData() const;
 
   /// Verify the construction of an opaque type.
-  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
-                                                    MLIRContext *context,
+  static LogicalResult verifyConstructionInvariants(Location loc,
                                                     Identifier dialect,
                                                     StringRef typeData);
 
@@ -255,6 +319,12 @@ template <typename U> bool Type::isa() const {
   assert(impl && "isa<> used on a null type.");
   return U::classof(*this);
 }
+
+template <typename First, typename Second, typename... Rest>
+bool Type::isa() const {
+  return isa<First>() || isa<Second, Rest...>();
+}
+
 template <typename U> U Type::dyn_cast() const {
   return isa<U>() ? U(impl) : U(nullptr);
 }
@@ -293,7 +363,7 @@ public:
   static inline mlir::Type getFromVoidPointer(void *P) {
     return mlir::Type::getFromOpaquePointer(P);
   }
-  enum { NumLowBitsAvailable = 3 };
+  static constexpr int NumLowBitsAvailable = 3;
 };
 
 } // namespace llvm

@@ -16,10 +16,14 @@ struct Derived : public Base {
   // PGOGEN: {{.*}}add{{.*}}%pgocount, 1
   // PGOGEN: store{{.*}}@__profc__ZN7DerivedD2Ev
 
-  // Check that coverage mapping has 6 function records including
+  // Check that coverage mapping has 5 function records including
   // the default destructor in the derived class.
-  // COVMAP: @__llvm_coverage_mapping = {{.*}} { { i32, i32, i32, i32 }, [5 x
-  // <{{.*}}>],
+  // COVMAP: section "__llvm_covfun", comdat
+  // COVMAP: section "__llvm_covfun", comdat
+  // COVMAP: section "__llvm_covfun", comdat
+  // COVMAP: section "__llvm_covfun", comdat
+  // COVMAP: section "__llvm_covfun", comdat
+  // COVMAP: @__llvm_coverage_mapping = {{.*}} { { i32, i32, i32, i32 }
 };
 
 int main() {

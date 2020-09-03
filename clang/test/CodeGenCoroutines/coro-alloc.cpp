@@ -10,7 +10,7 @@ struct coroutine_traits; // expected-note {{declared here}}
 template <class Promise = void>
 struct coroutine_handle {
   coroutine_handle() = default;
-  static coroutine_handle from_address(void *) { return {}; }
+  static coroutine_handle from_address(void *) noexcept { return {}; }
 };
 
 template <>
@@ -18,7 +18,7 @@ struct coroutine_handle<void> {
   static coroutine_handle from_address(void *) { return {}; }
   coroutine_handle() = default;
   template <class PromiseType>
-  coroutine_handle(coroutine_handle<PromiseType>) {}
+  coroutine_handle(coroutine_handle<PromiseType>) noexcept {}
 };
 
 } // end namespace experimental
@@ -36,9 +36,9 @@ void  operator delete(void* __p, const std::nothrow_t&) noexcept;
 
 
 struct suspend_always {
-  bool await_ready() { return false; }
-  void await_suspend(std::experimental::coroutine_handle<>) {}
-  void await_resume() {}
+  bool await_ready() noexcept { return false; }
+  void await_suspend(std::experimental::coroutine_handle<>) noexcept {}
+  void await_resume() noexcept {}
 };
 
 struct global_new_delete_tag {};
@@ -48,7 +48,7 @@ struct std::experimental::coroutine_traits<void, global_new_delete_tag> {
   struct promise_type {
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
   };
 };
@@ -61,7 +61,7 @@ extern "C" void f0(global_new_delete_tag) {
 
   // CHECK: [[AllocBB]]:
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: %[[MEM:.+]] = call i8* @_Znwm(i64 %[[SIZE]])
+  // CHECK: %[[MEM:.+]] = call noalias nonnull i8* @_Znwm(i64 %[[SIZE]])
   // CHECK: br label %[[InitBB]]
 
   // CHECK: [[InitBB]]:
@@ -89,7 +89,7 @@ struct std::experimental::coroutine_traits<void, promise_new_tag> {
     void *operator new(unsigned long);
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
   };
 };
@@ -115,7 +115,7 @@ struct std::experimental::coroutine_traits<void, promise_matching_placement_new_
                        int, float, double);
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
   };
 };
@@ -145,7 +145,7 @@ struct std::experimental::coroutine_traits<void, promise_matching_global_placeme
   struct promise_type {
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
   };
 };
@@ -156,7 +156,7 @@ struct std::experimental::coroutine_traits<void, promise_matching_global_placeme
 // within the scope of the promise type's class.
 // CHECK-LABEL: f1b(
 extern "C" void f1b(promise_matching_global_placement_new_tag, dummy *) {
-  // CHECK: call i8* @_Znwm(i64
+  // CHECK: call noalias nonnull i8* @_Znwm(i64
   co_return;
 }
 
@@ -168,7 +168,7 @@ struct std::experimental::coroutine_traits<void, promise_delete_tag> {
     void operator delete(void*);
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
   };
 };
@@ -177,7 +177,7 @@ struct std::experimental::coroutine_traits<void, promise_delete_tag> {
 extern "C" void f2(promise_delete_tag) {
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call i8* @_Znwm(i64 %[[SIZE]])
+  // CHECK: call noalias nonnull i8* @_Znwm(i64 %[[SIZE]])
 
   // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
@@ -193,7 +193,7 @@ struct std::experimental::coroutine_traits<void, promise_sized_delete_tag> {
     void operator delete(void*, unsigned long);
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
   };
 };
@@ -202,7 +202,7 @@ struct std::experimental::coroutine_traits<void, promise_sized_delete_tag> {
 extern "C" void f3(promise_sized_delete_tag) {
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call i8* @_Znwm(i64 %[[SIZE]])
+  // CHECK: call noalias nonnull i8* @_Znwm(i64 %[[SIZE]])
 
   // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
@@ -218,7 +218,7 @@ struct std::experimental::coroutine_traits<int, promise_on_alloc_failure_tag> {
   struct promise_type {
     int get_return_object() { return 0; }
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
     static int get_return_object_on_allocation_failure() { return -1; }
   };
@@ -230,7 +230,7 @@ extern "C" int f4(promise_on_alloc_failure_tag) {
   // CHECK: %[[Gro:.+]] = alloca i32
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: %[[MEM:.+]] = call i8* @_ZnwmRKSt9nothrow_t(i64 %[[SIZE]], %"struct.std::nothrow_t"* dereferenceable(1) @_ZStL7nothrow)
+  // CHECK: %[[MEM:.+]] = call noalias i8* @_ZnwmRKSt9nothrow_t(i64 %[[SIZE]], %"struct.std::nothrow_t"* nonnull align 1 dereferenceable(1) @_ZStL7nothrow)
   // CHECK: %[[OK:.+]] = icmp ne i8* %[[MEM]], null
   // CHECK: br i1 %[[OK]], label %[[OKBB:.+]], label %[[ERRBB:.+]]
 

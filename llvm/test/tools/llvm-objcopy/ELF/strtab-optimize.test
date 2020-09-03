@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy %t %t2 --add-symbol='foo=1' --add-symbol='foofoo=2'
 # RUN: llvm-readobj --sections %t2 | FileCheck %s
 

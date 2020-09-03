@@ -1,22 +1,19 @@
 //===- CSE.cpp - Common Sub-expression Elimination ------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
 // This transformation pass performs a simple common sub-expression elimination
-// algorithm on operations within a function.
+// algorithm on operations within a region.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/Dominance.h"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/Function.h"
+#include "PassDetail.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -25,22 +22,13 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <deque>
+
 using namespace mlir;
 
 namespace {
-// TODO(riverriddle) Handle commutative operations.
 struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
   static unsigned getHashValue(const Operation *opC) {
-    auto *op = const_cast<Operation *>(opC);
-    // Hash the operations based upon their:
-    //   - Operation Name
-    //   - Attributes
-    //   - Result Types
-    //   - Operands
-    return hash_combine(
-        op->getName(), op->getAttrList().getDictionary(),
-        hash_combine_range(op->result_type_begin(), op->result_type_end()),
-        hash_combine_range(op->operand_begin(), op->operand_end()));
+    return OperationEquivalence::computeHash(const_cast<Operation *>(opC));
   }
   static bool isEqual(const Operation *lhsC, const Operation *rhsC) {
     auto *lhs = const_cast<Operation *>(lhsC);
@@ -50,34 +38,15 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
     if (lhs == getTombstoneKey() || lhs == getEmptyKey() ||
         rhs == getTombstoneKey() || rhs == getEmptyKey())
       return false;
-
-    // Compare the operation name.
-    if (lhs->getName() != rhs->getName())
-      return false;
-    // Check operand and result type counts.
-    if (lhs->getNumOperands() != rhs->getNumOperands() ||
-        lhs->getNumResults() != rhs->getNumResults())
-      return false;
-    // Compare attributes.
-    if (lhs->getAttrList() != rhs->getAttrList())
-      return false;
-    // Compare operands.
-    if (!std::equal(lhs->operand_begin(), lhs->operand_end(),
-                    rhs->operand_begin()))
-      return false;
-    // Compare result types.
-    return std::equal(lhs->result_type_begin(), lhs->result_type_end(),
-                      rhs->result_type_begin());
+    return OperationEquivalence::isEquivalentTo(const_cast<Operation *>(lhsC),
+                                                const_cast<Operation *>(rhsC));
   }
 };
 } // end anonymous namespace
 
 namespace {
 /// Simple common sub-expression elimination.
-struct CSE : public OperationPass<CSE> {
-  CSE() = default;
-  CSE(const CSE &) {}
-
+struct CSE : public CSEBase<CSE> {
   /// Shared implementation of operation elimination and scoped map definitions.
   using AllocatorTy = llvm::RecyclingAllocator<
       llvm::BumpPtrAllocator,
@@ -95,7 +64,7 @@ struct CSE : public OperationPass<CSE> {
     ScopedMapTy::ScopeTy scope;
 
     DominanceInfoNode *node;
-    DominanceInfoNode::iterator childIterator;
+    DominanceInfoNode::const_iterator childIterator;
 
     /// If this node has been fully processed yet or not.
     bool processed;
@@ -115,32 +84,32 @@ struct CSE : public OperationPass<CSE> {
 private:
   /// Operations marked as dead and to be erased.
   std::vector<Operation *> opsToErase;
-
-  /// Statistics for CSE.
-  Statistic numCSE{this, "num-cse'd", "Number of operations CSE'd"};
-  Statistic numDCE{this, "num-dce'd", "Number of operations trivially DCE'd"};
 };
 } // end anonymous namespace
 
 /// Attempt to eliminate a redundant operation.
 LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op) {
+  // Don't simplify terminator operations.
+  if (op->isKnownTerminator())
+    return failure();
+
+  // If the operation is already trivially dead just add it to the erase list.
+  if (isOpTriviallyDead(op)) {
+    opsToErase.push_back(op);
+    ++numDCE;
+    return success();
+  }
+
   // Don't simplify operations with nested blocks. We don't currently model
   // equality comparisons correctly among other things. It is also unclear
   // whether we would want to CSE such operations.
   if (op->getNumRegions() != 0)
     return failure();
 
-  // TODO(riverriddle) We currently only eliminate non side-effecting
+  // TODO: We currently only eliminate non side-effecting
   // operations.
-  if (!op->hasNoSideEffect())
+  if (!MemoryEffectOpInterface::hasNoEffect(op))
     return failure();
-
-  // If the operation is already trivially dead just add it to the erase list.
-  if (op->use_empty()) {
-    opsToErase.push_back(op);
-    ++numDCE;
-    return success();
-  }
 
   // Look for an existing definition for the operation.
   if (auto *existing = knownValues.lookup(op)) {
@@ -259,5 +228,3 @@ void CSE::runOnOperation() {
 }
 
 std::unique_ptr<Pass> mlir::createCSEPass() { return std::make_unique<CSE>(); }
-
-static PassRegistration<CSE> pass("cse", "Eliminate common sub-expressions");

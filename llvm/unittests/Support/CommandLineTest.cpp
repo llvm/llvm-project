@@ -14,6 +14,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -252,8 +253,8 @@ TEST(CommandLineTest, TokenizeGNUCommandLine) {
 }
 
 TEST(CommandLineTest, TokenizeWindowsCommandLine1) {
-  const char Input[] = "a\\b c\\\\d e\\\\\"f g\" h\\\"i j\\\\\\\"k \"lmn\" o pqr "
-                      "\"st \\\"u\" \\v";
+  const char Input[] =
+      R"(a\b c\\d e\\"f g" h\"i j\\\"k "lmn" o pqr "st \"u" \v)";
   const char *const Output[] = { "a\\b", "c\\\\d", "e\\f g", "h\"i", "j\\\"k",
                                  "lmn", "o", "pqr", "st \"u", "\\v" };
   testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input, Output,
@@ -265,6 +266,17 @@ TEST(CommandLineTest, TokenizeWindowsCommandLine2) {
   const char *const Output[] = { "clang", "-c", "-DFOO=\"ABC\"", "x.cpp"};
   testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input, Output,
                            array_lengthof(Output));
+}
+
+TEST(CommandLineTest, TokenizeWindowsCommandLineQuotedLastArgument) {
+  const char Input1[] = R"(a b c d "")";
+  const char *const Output1[] = {"a", "b", "c", "d", ""};
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input1, Output1,
+                           array_lengthof(Output1));
+  const char Input2[] = R"(a b c d ")";
+  const char *const Output2[] = {"a", "b", "c", "d"};
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input2, Output2,
+                           array_lengthof(Output2));
 }
 
 TEST(CommandLineTest, TokenizeConfigFile1) {
@@ -1723,6 +1735,29 @@ TEST(CommandLineTest, OptionErrorMessageSuggest) {
   cl::ResetAllOptionOccurrences();
 }
 
+TEST(CommandLineTest, OptionErrorMessageSuggestNoHidden) {
+  // We expect that 'really hidden' option do not show up in option
+  // suggestions.
+  cl::ResetCommandLineParser();
+
+  StackOption<bool> OptLong("aluminium", cl::desc("Some long option"));
+  StackOption<bool> OptLong2("aluminum", cl::desc("Bad option"),
+                             cl::ReallyHidden);
+
+  const char *args[] = {"prog", "--alumnum"};
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS));
+  OS.flush();
+  EXPECT_FALSE(Errs.find("prog: Did you mean '--aluminium'?\n") ==
+               std::string::npos);
+  Errs.clear();
+
+  cl::ResetAllOptionOccurrences();
+}
+
 TEST(CommandLineTest, Callback) {
   cl::ResetCommandLineParser();
 
@@ -1791,5 +1826,50 @@ static cl::bits<Enum> ExampleBits(
     cl::values(
       clEnumValN(Val1, "bits-val1", "The Val1 value"),
       clEnumValN(Val1, "bits-val2", "The Val2 value")));
+
+TEST(CommandLineTest, ConsumeAfterOnePositional) {
+  cl::ResetCommandLineParser();
+
+  // input [args]
+  StackOption<std::string, cl::opt<std::string>> Input(cl::Positional,
+                                                       cl::Required);
+  StackOption<std::string, cl::list<std::string>> ExtraArgs(cl::ConsumeAfter);
+
+  const char *Args[] = {"prog", "input", "arg1", "arg2"};
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+  EXPECT_TRUE(cl::ParseCommandLineOptions(4, Args, StringRef(), &OS));
+  OS.flush();
+  EXPECT_EQ("input", Input);
+  EXPECT_TRUE(ExtraArgs.size() == 2);
+  EXPECT_TRUE(ExtraArgs[0] == "arg1");
+  EXPECT_TRUE(ExtraArgs[1] == "arg2");
+  EXPECT_TRUE(Errs.empty());
+}
+
+TEST(CommandLineTest, ConsumeAfterTwoPositionals) {
+  cl::ResetCommandLineParser();
+
+  // input1 input2 [args]
+  StackOption<std::string, cl::opt<std::string>> Input1(cl::Positional,
+                                                        cl::Required);
+  StackOption<std::string, cl::opt<std::string>> Input2(cl::Positional,
+                                                        cl::Required);
+  StackOption<std::string, cl::list<std::string>> ExtraArgs(cl::ConsumeAfter);
+
+  const char *Args[] = {"prog", "input1", "input2", "arg1", "arg2"};
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+  EXPECT_TRUE(cl::ParseCommandLineOptions(5, Args, StringRef(), &OS));
+  OS.flush();
+  EXPECT_EQ("input1", Input1);
+  EXPECT_EQ("input2", Input2);
+  EXPECT_TRUE(ExtraArgs.size() == 2);
+  EXPECT_TRUE(ExtraArgs[0] == "arg1");
+  EXPECT_TRUE(ExtraArgs[1] == "arg2");
+  EXPECT_TRUE(Errs.empty());
+}
 
 } // anonymous namespace

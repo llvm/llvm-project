@@ -78,7 +78,7 @@ define i32 @test7_no_null_opt(i32 %X) #0 {
   %R = load i32, i32* %V          ; <i32> [#uses=1]
   ret i32 %R
 }
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }
 
 define i32 @test8(i32* %P) {
 ; CHECK-LABEL: @test8(
@@ -205,7 +205,6 @@ define i8 @test15(i8 %x, i32 %y) {
 define void @test16(i8* %x, i8* %a, i8* %b, i8* %c) {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_CAST:%.*]] = bitcast i8* [[C:%.*]] to i32*
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
 ; CHECK-NEXT:    [[X11:%.*]] = load i32, i32* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[A:%.*]] to i32*
@@ -216,7 +215,8 @@ define void @test16(i8* %x, i8* %a, i8* %b, i8* %c) {
 ; CHECK-NEXT:    [[X22:%.*]] = load i32, i32* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[B]] to i32*
 ; CHECK-NEXT:    store i32 [[X22]], i32* [[TMP4]], align 4
-; CHECK-NEXT:    store i32 [[X22]], i32* [[C_CAST]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[C:%.*]] to i32*
+; CHECK-NEXT:    store i32 [[X22]], i32* [[TMP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -240,7 +240,6 @@ entry:
 define void @test16-vect(i8* %x, i8* %a, i8* %b, i8* %c) {
 ; CHECK-LABEL: @test16-vect(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_CAST:%.*]] = bitcast i8* [[C:%.*]] to i32*
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
 ; CHECK-NEXT:    [[X11:%.*]] = load i32, i32* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[A:%.*]] to i32*
@@ -251,7 +250,8 @@ define void @test16-vect(i8* %x, i8* %a, i8* %b, i8* %c) {
 ; CHECK-NEXT:    [[X22:%.*]] = load i32, i32* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[B]] to i32*
 ; CHECK-NEXT:    store i32 [[X22]], i32* [[TMP4]], align 4
-; CHECK-NEXT:    store i32 [[X22]], i32* [[C_CAST]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[C:%.*]] to i32*
+; CHECK-NEXT:    store i32 [[X22]], i32* [[TMP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -20,8 +20,8 @@ namespace clang {
 namespace tooling {
 
 /// A refactoring option that stores a value of type \c T.
-template <typename T, typename = typename std::enable_if<
-                          traits::IsValidOptionType<T>::value>::type>
+template <typename T,
+          typename = std::enable_if_t<traits::IsValidOptionType<T>::value>>
 class OptionalRefactoringOption : public RefactoringOption {
 public:
   void passToVisitor(RefactoringOptionVisitor &Visitor) final override {
@@ -39,8 +39,8 @@ protected:
 };
 
 /// A required refactoring option that stores a value of type \c T.
-template <typename T, typename = typename std::enable_if<
-                          traits::IsValidOptionType<T>::value>::type>
+template <typename T,
+          typename = std::enable_if_t<traits::IsValidOptionType<T>::value>>
 class RequiredRefactoringOption : public OptionalRefactoringOption<T> {
 public:
   using ValueType = T;

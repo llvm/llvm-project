@@ -15,16 +15,23 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/WithColor.h"
+
+#include <cstdint>
 #include <cassert>
-#include <tuple>
 
 namespace llvm {
+
+template <typename T> struct DenseMapInfo;
 
 class ElementCount {
 public:
   unsigned Min;  // Minimum number of vector elements.
   bool Scalable; // If true, NumElements is a multiple of 'Min' determined
                  // at runtime rather than compile time.
+
+  ElementCount() = default;
 
   ElementCount(unsigned Min, bool Scalable)
   : Min(Min), Scalable(Scalable) {}
@@ -33,6 +40,7 @@ public:
     return { Min * RHS, Scalable };
   }
   ElementCount operator/(unsigned RHS) {
+    assert(Min % RHS == 0 && "Min is not a multiple of RHS.");
     return { Min / RHS, Scalable };
   }
 
@@ -41,6 +49,12 @@ public:
   }
   bool operator!=(const ElementCount& RHS) const {
     return !(*this == RHS);
+  }
+  bool operator==(unsigned RHS) const { return Min == RHS && !Scalable; }
+  bool operator!=(unsigned RHS) const { return !(*this == RHS); }
+
+  ElementCount NextPowerOf2() const {
+    return ElementCount(llvm::NextPowerOf2(Min), Scalable);
   }
 };
 
@@ -68,8 +82,7 @@ public:
   // not guaranteed to be the same size at runtime, so they are never
   // considered to be equal.
   friend bool operator==(const TypeSize &LHS, const TypeSize &RHS) {
-    return std::tie(LHS.MinSize, LHS.IsScalable) ==
-           std::tie(RHS.MinSize, RHS.IsScalable);
+    return LHS.MinSize == RHS.MinSize && LHS.IsScalable == RHS.IsScalable;
   }
 
   friend bool operator!=(const TypeSize &LHS, const TypeSize &RHS) {
@@ -143,12 +156,40 @@ public:
     return (MinSize & 7) == 0;
   }
 
+  // Returns true if the type size is non-zero.
+  bool isNonZero() const { return MinSize != 0; }
+
+  // Returns true if the type size is zero.
+  bool isZero() const { return MinSize == 0; }
+
   // Casts to a uint64_t if this is a fixed-width size.
   //
-  // NOTE: This interface is obsolete and will be removed in a future version
-  // of LLVM in favour of calling getFixedSize() directly.
+  // This interface is deprecated and will be removed in a future version
+  // of LLVM in favour of upgrading uses that rely on this implicit conversion
+  // to uint64_t. Calls to functions that return a TypeSize should use the
+  // proper interfaces to TypeSize.
+  // In practice this is mostly calls to MVT/EVT::getSizeInBits().
+  //
+  // To determine how to upgrade the code:
+  //
+  //   if (<algorithm works for both scalable and fixed-width vectors>)
+  //     use getKnownMinSize()
+  //   else if (<algorithm works only for fixed-width vectors>) {
+  //     if <algorithm can be adapted for both scalable and fixed-width vectors>
+  //       update the algorithm and use getKnownMinSize()
+  //     else
+  //       bail out early for scalable vectors and use getFixedSize()
+  //   }
   operator uint64_t() const {
+#ifdef STRICT_FIXED_SIZE_VECTORS
     return getFixedSize();
+#else
+    if (isScalable())
+      WithColor::warning() << "Compiler has made implicit assumption that "
+                              "TypeSize is not scalable. This may or may not "
+                              "lead to broken code.\n";
+    return getKnownMinSize();
+#endif
   }
 
   // Additional convenience operators needed to avoid ambiguous parses.
@@ -188,6 +229,10 @@ public:
   TypeSize operator/(int64_t RHS) const {
     return { MinSize / RHS, IsScalable };
   }
+
+  TypeSize NextPowerOf2() const {
+    return TypeSize(llvm::NextPowerOf2(MinSize), IsScalable);
+  }
 };
 
 /// Returns a TypeSize with a known minimum size that is the next integer
@@ -200,6 +245,21 @@ inline TypeSize alignTo(TypeSize Size, uint64_t Align) {
   return {(Size.getKnownMinSize() + Align - 1) / Align * Align,
           Size.isScalable()};
 }
+
+template <> struct DenseMapInfo<ElementCount> {
+  static inline ElementCount getEmptyKey() { return {~0U, true}; }
+  static inline ElementCount getTombstoneKey() { return {~0U - 1, false}; }
+  static unsigned getHashValue(const ElementCount& EltCnt) {
+    if (EltCnt.Scalable)
+      return (EltCnt.Min * 37U) - 1U;
+
+    return EltCnt.Min * 37U;
+  }
+
+  static bool isEqual(const ElementCount& LHS, const ElementCount& RHS) {
+    return LHS == RHS;
+  }
+};
 
 } // end namespace llvm
 

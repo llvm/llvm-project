@@ -1,5 +1,4 @@
-//===-- FormatCache.cpp ------------------------------------------*- C++
-//-*-===//
+//===-- FormatCache.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -52,15 +51,6 @@ void FormatCache::Entry::Set(lldb::SyntheticChildrenSP synthetic_sp) {
   m_synthetic_sp = synthetic_sp;
 }
 
-FormatCache::FormatCache()
-    : m_map(), m_mutex()
-#ifdef LLDB_CONFIGURATION_DEBUG
-      ,
-      m_cache_hits(0), m_cache_misses(0)
-#endif
-{
-}
-
 FormatCache::Entry &FormatCache::GetEntry(ConstString type) {
   auto i = m_map.find(type), e = m_map.end();
   if (i != e)
@@ -68,6 +58,8 @@ FormatCache::Entry &FormatCache::GetEntry(ConstString type) {
   m_map[type] = FormatCache::Entry();
   return m_map[type];
 }
+
+namespace lldb_private {
 
 template<> bool FormatCache::Entry::IsCached<lldb::TypeFormatImplSP>() {
   return IsFormatCached();
@@ -79,20 +71,18 @@ template<> bool FormatCache::Entry::IsCached<lldb::SyntheticChildrenSP>() {
   return IsSyntheticCached();
 }
 
+} // namespace lldb_private
+
 template <typename ImplSP>
 bool FormatCache::Get(ConstString type, ImplSP &format_impl_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   auto entry = GetEntry(type);
   if (entry.IsCached<ImplSP>()) {
-#ifdef LLDB_CONFIGURATION_DEBUG
     m_cache_hits++;
-#endif
     entry.Get(format_impl_sp);
     return true;
   }
-#ifdef LLDB_CONFIGURATION_DEBUG
   m_cache_misses++;
-#endif
   format_impl_sp.reset();
   return false;
 }

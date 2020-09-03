@@ -476,6 +476,10 @@ public:
   friend bool operator!=(const ObjCRuntime &left, const ObjCRuntime &right) {
     return !(left == right);
   }
+
+  friend llvm::hash_code hash_value(const ObjCRuntime &OCR) {
+    return llvm::hash_combine(OCR.getKind(), OCR.getVersion());
+  }
 };
 
 raw_ostream &operator<<(raw_ostream &out, const ObjCRuntime &value);

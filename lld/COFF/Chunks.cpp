@@ -333,7 +333,7 @@ static void maybeReportRelocationToDiscarded(const SectionChunk *fromChunk,
   } else {
     COFFSymbolRef coffSym =
         check(file->getCOFFObj()->getSymbol(rel.SymbolTableIndex));
-    file->getCOFFObj()->getSymbolName(coffSym, name);
+    name = check(file->getCOFFObj()->getSymbolName(coffSym));
   }
 
   std::vector<std::string> symbolLocations =

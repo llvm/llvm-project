@@ -191,6 +191,7 @@ public:
       result.SetStatus(lldb::eReturnStatusFailed);
       return false;
     }
+    result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
     return true;
   }
 
@@ -290,6 +291,7 @@ public:
                  s.GetData());
       result.AppendMessage(res.GetOutput());
     }
+    result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
     return true;
   }
 
@@ -428,6 +430,7 @@ public:
       }
       result.AppendMessage(res.GetOutput());
     }
+    result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
     return true;
   }
 
@@ -480,6 +483,7 @@ public:
       result.SetStatus(lldb::eReturnStatusFailed);
       return false;
     }
+    result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
     return true;
   }
 

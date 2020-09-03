@@ -209,7 +209,7 @@ unsigned InputArgList::MakeIndex(StringRef String0) const {
   unsigned Index = ArgStrings.size();
 
   // Tuck away so we have a reliable const char *.
-  SynthesizedStrings.push_back(String0);
+  SynthesizedStrings.push_back(std::string(String0));
   ArgStrings.push_back(SynthesizedStrings.back().c_str());
 
   return Index;

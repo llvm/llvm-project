@@ -50,24 +50,33 @@
 50 ERR9: line-count.txt:[[#@LINE-1]]:17: error: unsupported operation '*'
 51
 52 BAD10: [[@LINE-x]]
-53 ERR10: line-count.txt:[[#@LINE-1]]:19: error: invalid operand format 'x'
-54
-55 BAD11: [[@LINE-1x]]
-56 ERR11: line-count.txt:[[#@LINE-1]]:20: error: unexpected characters at end of expression 'x'
-57
+53 ERR10: line-count.txt:[[#@LINE-1]]:19: error: invalid operand format
+54 ERR10-NEXT: 52 {{B}}AD10: {{\[\[@LINE-x\]\]}}
+55 ERR10-NEXT:        {{^}}              ^{{$}}
+56
+57 BAD11: [[@LINE-1x]]
+58 ERR11: line-count.txt:[[#@LINE-1]]:20: error: unexpected characters at end of expression 'x'
+59
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -check-prefix BAD12 -input-file %s %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix ERR12 %s
-61
-62 BAD12: [[#@LINE-1]] NOT HERE
-63 ERR12: note: with "@LINE-1" equal to "61"
-64
-65 CHECK: [[#@LINE]] CHECK
-66 CHECK: [[# @LINE]] CHECK
-67 CHECK: [[# @LINE ]] CHECK
-68
-69 CHECK: [[#@LINE-1]]
-70 CHECK: [[# @LINE-1]] CHECK
-71 CHECK: [[# @LINE -1]] CHECK
-72 CHECK: [[# @LINE - 1]] CHECK
-73 CHECK: [[# @LINE - 1 ]] CHECK
+63
+64 BAD12: [[#@LINE-1]] NOT HERE
+65 ERR12: note: with "@LINE-1" equal to "63"
+66
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck --check-prefix BAD13 --input-file %s %s 2>&1 \
+; RUN:   | FileCheck --check-prefix ERR13 %s
+70
+71 BAD13: [[@LINE-0xA]]
+72 ERR13: line-count.txt:[[#@LINE-1]]:20: error: unexpected characters at end of expression 'xA'
+73
+74 CHECK: [[#@LINE]] CHECK
+75 CHECK: [[# @LINE]] CHECK
+76 CHECK: [[# @LINE ]] CHECK
+77
+78 CHECK: [[#@LINE-1]]
+79 CHECK: [[# @LINE-1]] CHECK
+80 CHECK: [[# @LINE -1]] CHECK
+81 CHECK: [[# @LINE - 1]] CHECK
+82 CHECK: [[# @LINE - 1 ]] CHECK

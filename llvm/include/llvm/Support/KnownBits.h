@@ -122,39 +122,55 @@ public:
     return ~Zero;
   }
 
-  /// Truncate the underlying known Zero and One bits. This is equivalent
-  /// to truncating the value we're tracking.
+  /// Return known bits for a truncation of the value we're tracking.
   KnownBits trunc(unsigned BitWidth) const {
     return KnownBits(Zero.trunc(BitWidth), One.trunc(BitWidth));
   }
 
-  /// Extends the underlying known Zero and One bits.
-  /// By setting ExtendedBitsAreKnownZero=true this will be equivalent to
-  /// zero extending the value we're tracking.
-  /// With ExtendedBitsAreKnownZero=false the extended bits are set to unknown.
-  KnownBits zext(unsigned BitWidth, bool ExtendedBitsAreKnownZero) const {
+  /// Return known bits for an "any" extension of the value we're tracking,
+  /// where we don't know anything about the extended bits.
+  KnownBits anyext(unsigned BitWidth) const {
+    return KnownBits(Zero.zext(BitWidth), One.zext(BitWidth));
+  }
+
+  /// Return known bits for a zero extension of the value we're tracking.
+  KnownBits zext(unsigned BitWidth) const {
     unsigned OldBitWidth = getBitWidth();
     APInt NewZero = Zero.zext(BitWidth);
-    if (ExtendedBitsAreKnownZero)
-      NewZero.setBitsFrom(OldBitWidth);
+    NewZero.setBitsFrom(OldBitWidth);
     return KnownBits(NewZero, One.zext(BitWidth));
   }
 
-  /// Sign extends the underlying known Zero and One bits. This is equivalent
-  /// to sign extending the value we're tracking.
+  /// Return known bits for a sign extension of the value we're tracking.
   KnownBits sext(unsigned BitWidth) const {
     return KnownBits(Zero.sext(BitWidth), One.sext(BitWidth));
   }
 
-  /// Extends or truncates the underlying known Zero and One bits. When
-  /// extending the extended bits can either be set as known zero (if
-  /// ExtendedBitsAreKnownZero=true) or as unknown (if
-  /// ExtendedBitsAreKnownZero=false).
-  KnownBits zextOrTrunc(unsigned BitWidth,
-                        bool ExtendedBitsAreKnownZero) const {
+  /// Return known bits for an "any" extension or truncation of the value we're
+  /// tracking.
+  KnownBits anyextOrTrunc(unsigned BitWidth) const {
     if (BitWidth > getBitWidth())
-      return zext(BitWidth, ExtendedBitsAreKnownZero);
-    return KnownBits(Zero.zextOrTrunc(BitWidth), One.zextOrTrunc(BitWidth));
+      return anyext(BitWidth);
+    if (BitWidth < getBitWidth())
+      return trunc(BitWidth);
+    return *this;
+  }
+
+  /// Return known bits for a zero extension or truncation of the value we're
+  /// tracking.
+  KnownBits zextOrTrunc(unsigned BitWidth) const {
+    if (BitWidth > getBitWidth())
+      return zext(BitWidth);
+    if (BitWidth < getBitWidth())
+      return trunc(BitWidth);
+    return *this;
+  }
+
+  /// Return a KnownBits with the extracted bits
+  /// [bitPosition,bitPosition+numBits).
+  KnownBits extractBits(unsigned NumBits, unsigned BitPosition) const {
+    return KnownBits(Zero.extractBits(NumBits, BitPosition),
+                     One.extractBits(NumBits, BitPosition));
   }
 
   /// Returns the minimum number of trailing zero bits.
@@ -224,7 +240,46 @@ public:
   /// Compute known bits resulting from adding LHS and RHS.
   static KnownBits computeForAddSub(bool Add, bool NSW, const KnownBits &LHS,
                                     KnownBits RHS);
+
+  /// Update known bits based on ANDing with RHS.
+  KnownBits &operator&=(const KnownBits &RHS);
+
+  /// Update known bits based on ORing with RHS.
+  KnownBits &operator|=(const KnownBits &RHS);
+
+  /// Update known bits based on XORing with RHS.
+  KnownBits &operator^=(const KnownBits &RHS);
 };
+
+inline KnownBits operator&(KnownBits LHS, const KnownBits &RHS) {
+  LHS &= RHS;
+  return LHS;
+}
+
+inline KnownBits operator&(const KnownBits &LHS, KnownBits &&RHS) {
+  RHS &= LHS;
+  return std::move(RHS);
+}
+
+inline KnownBits operator|(KnownBits LHS, const KnownBits &RHS) {
+  LHS |= RHS;
+  return LHS;
+}
+
+inline KnownBits operator|(const KnownBits &LHS, KnownBits &&RHS) {
+  RHS |= LHS;
+  return std::move(RHS);
+}
+
+inline KnownBits operator^(KnownBits LHS, const KnownBits &RHS) {
+  LHS ^= RHS;
+  return LHS;
+}
+
+inline KnownBits operator^(const KnownBits &LHS, KnownBits &&RHS) {
+  RHS ^= LHS;
+  return std::move(RHS);
+}
 
 } // end namespace llvm
 

@@ -11,6 +11,7 @@ static_library("Transformer") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "Parsing.cpp",
     "RangeSelector.cpp",
     "RewriteRule.cpp",
     "SourceCode.cpp",

@@ -1,6 +1,6 @@
 //===-- SPIRVLogicalOps.td - MLIR SPIR-V Logical Ops -------*- tablegen -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -15,6 +15,7 @@
 #define SPIRV_LOGICAL_OPS
 
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class SPV_LogicalBinaryOp<string mnemonic, Type operandsType,
                     list<OpTrait> traits = []> :
@@ -25,6 +26,12 @@ class SPV_LogicalBinaryOp<string mnemonic, Type operandsType,
                                 SameOperandsAndResultShape])> {
   let parser = [{ return ::parseLogicalBinaryOp(parser, result); }];
   let printer = [{ return ::printLogicalOp(getOperation(), p); }];
+
+  let builders = [
+    OpBuilder<
+      "OpBuilder &builder, OperationState &state, Value lhs, Value rhs",
+      "::buildLogicalBinaryOp(builder, state, lhs, rhs);">
+  ];
 }
 
 class SPV_LogicalUnaryOp<string mnemonic, Type operandType,
@@ -51,7 +58,7 @@ def SPV_FOrdEqualOp : SPV_LogicalBinaryOp<"FOrdEqual", SPV_Float, [Commutative]>
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -59,9 +66,9 @@ def SPV_FOrdEqualOp : SPV_LogicalBinaryOp<"FOrdEqual", SPV_Float, [Commutative]>
     fordequal-op ::= ssa-id `=` `spv.FOrdEqual` ssa-use, ssa-use
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FOrdEqual %0, %1 : f32
     %5 = spv.FOrdEqual %2, %3 : vector<4xf32>
     ```
@@ -85,7 +92,7 @@ def SPV_FOrdGreaterThanOp : SPV_LogicalBinaryOp<"FOrdGreaterThan", SPV_Float, []
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -93,9 +100,9 @@ def SPV_FOrdGreaterThanOp : SPV_LogicalBinaryOp<"FOrdGreaterThan", SPV_Float, []
     fordgt-op ::= ssa-id `=` `spv.FOrdGreaterThan` ssa-use, ssa-use
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FOrdGreaterThan %0, %1 : f32
     %5 = spv.FOrdGreaterThan %2, %3 : vector<4xf32>
     ```
@@ -119,7 +126,7 @@ def SPV_FOrdGreaterThanEqualOp : SPV_LogicalBinaryOp<"FOrdGreaterThanEqual", SPV
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -127,9 +134,9 @@ def SPV_FOrdGreaterThanEqualOp : SPV_LogicalBinaryOp<"FOrdGreaterThanEqual", SPV
     fordgte-op ::= ssa-id `=` `spv.FOrdGreaterThanEqual` ssa-use, ssa-use
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FOrdGreaterThanEqual %0, %1 : f32
     %5 = spv.FOrdGreaterThanEqual %2, %3 : vector<4xf32>
     ```
@@ -153,7 +160,7 @@ def SPV_FOrdLessThanOp : SPV_LogicalBinaryOp<"FOrdLessThan", SPV_Float, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -161,9 +168,9 @@ def SPV_FOrdLessThanOp : SPV_LogicalBinaryOp<"FOrdLessThan", SPV_Float, []> {
     fordlt-op ::= ssa-id `=` `spv.FOrdLessThan` ssa-use, ssa-use
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FOrdLessThan %0, %1 : f32
     %5 = spv.FOrdLessThan %2, %3 : vector<4xf32>
     ```
@@ -187,7 +194,7 @@ def SPV_FOrdLessThanEqualOp : SPV_LogicalBinaryOp<"FOrdLessThanEqual", SPV_Float
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -195,9 +202,9 @@ def SPV_FOrdLessThanEqualOp : SPV_LogicalBinaryOp<"FOrdLessThanEqual", SPV_Float
     fordlte-op ::= ssa-id `=` `spv.FOrdLessThanEqual` ssa-use, ssa-use
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FOrdLessThanEqual %0, %1 : f32
     %5 = spv.FOrdLessThanEqual %2, %3 : vector<4xf32>
     ```
@@ -218,7 +225,7 @@ def SPV_FOrdNotEqualOp : SPV_LogicalBinaryOp<"FOrdNotEqual", SPV_Float, [Commuta
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -226,9 +233,9 @@ def SPV_FOrdNotEqualOp : SPV_LogicalBinaryOp<"FOrdNotEqual", SPV_Float, [Commuta
     fordneq-op ::= ssa-id `=` `spv.FOrdNotEqual` ssa-use, ssa-use
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FOrdNotEqual %0, %1 : f32
     %5 = spv.FOrdNotEqual %2, %3 : vector<4xf32>
     ```
@@ -249,7 +256,7 @@ def SPV_FUnordEqualOp : SPV_LogicalBinaryOp<"FUnordEqual", SPV_Float, [Commutati
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -257,9 +264,9 @@ def SPV_FUnordEqualOp : SPV_LogicalBinaryOp<"FUnordEqual", SPV_Float, [Commutati
     funordequal-op ::= ssa-id `=` `spv.FUnordEqual` ssa-use, ssa-use
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FUnordEqual %0, %1 : f32
     %5 = spv.FUnordEqual %2, %3 : vector<4xf32>
     ```
@@ -283,7 +290,7 @@ def SPV_FUnordGreaterThanOp : SPV_LogicalBinaryOp<"FUnordGreaterThan", SPV_Float
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -291,9 +298,9 @@ def SPV_FUnordGreaterThanOp : SPV_LogicalBinaryOp<"FUnordGreaterThan", SPV_Float
     funordgt-op ::= ssa-id `=` `spv.FUnordGreaterThan` ssa-use, ssa-use
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FUnordGreaterThan %0, %1 : f32
     %5 = spv.FUnordGreaterThan %2, %3 : vector<4xf32>
     ```
@@ -317,7 +324,7 @@ def SPV_FUnordGreaterThanEqualOp : SPV_LogicalBinaryOp<"FUnordGreaterThanEqual",
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -325,9 +332,9 @@ def SPV_FUnordGreaterThanEqualOp : SPV_LogicalBinaryOp<"FUnordGreaterThanEqual",
     funordgte-op ::= ssa-id `=` `spv.FUnordGreaterThanEqual` ssa-use, ssa-use
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FUnordGreaterThanEqual %0, %1 : f32
     %5 = spv.FUnordGreaterThanEqual %2, %3 : vector<4xf32>
     ```
@@ -351,7 +358,7 @@ def SPV_FUnordLessThanOp : SPV_LogicalBinaryOp<"FUnordLessThan", SPV_Float, []> 
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -359,9 +366,9 @@ def SPV_FUnordLessThanOp : SPV_LogicalBinaryOp<"FUnordLessThan", SPV_Float, []> 
     funordlt-op ::= ssa-id `=` `spv.FUnordLessThan` ssa-use, ssa-use
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FUnordLessThan %0, %1 : f32
     %5 = spv.FUnordLessThan %2, %3 : vector<4xf32>
     ```
@@ -385,7 +392,7 @@ def SPV_FUnordLessThanEqualOp : SPV_LogicalBinaryOp<"FUnordLessThanEqual", SPV_F
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -393,9 +400,9 @@ def SPV_FUnordLessThanEqualOp : SPV_LogicalBinaryOp<"FUnordLessThanEqual", SPV_F
     funordlte-op ::= ssa-id `=` `spv.FUnordLessThanEqual` ssa-use, ssa-use
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FUnordLessThanEqual %0, %1 : f32
     %5 = spv.FUnordLessThanEqual %2, %3 : vector<4xf32>
     ```
@@ -416,7 +423,7 @@ def SPV_FUnordNotEqualOp : SPV_LogicalBinaryOp<"FUnordNotEqual", SPV_Float, [Com
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -424,9 +431,9 @@ def SPV_FUnordNotEqualOp : SPV_LogicalBinaryOp<"FUnordNotEqual", SPV_Float, [Com
     funordneq-op ::= ssa-id `=` `spv.FUnordNotEqual` ssa-use, ssa-use
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FUnordNotEqual %0, %1 : f32
     %5 = spv.FUnordNotEqual %2, %3 : vector<4xf32>
     ```
@@ -447,16 +454,16 @@ def SPV_IEqualOp : SPV_LogicalBinaryOp<"IEqual", SPV_Integer, [Commutative]> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     iequal-op ::= ssa-id `=` `spv.IEqual` ssa-use, ssa-use
                              `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.IEqual %0, %1 : i32
     %5 = spv.IEqual %2, %3 : vector<4xi32>
 
@@ -478,16 +485,16 @@ def SPV_INotEqualOp : SPV_LogicalBinaryOp<"INotEqual", SPV_Integer, [Commutative
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     inot-equal-op ::= ssa-id `=` `spv.INotEqual` ssa-use, ssa-use
                                  `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.INotEqual %0, %1 : i32
     %5 = spv.INotEqual %2, %3 : vector<4xi32>
 
@@ -512,20 +519,22 @@ def SPV_LogicalAndOp : SPV_LogicalBinaryOp<"LogicalAnd", SPV_Bool, [Commutative]
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     logical-and ::= `spv.LogicalAnd` ssa-use `,` ssa-use
                     `:` operand-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.LogicalAnd %0, %1 : i1
     %2 = spv.LogicalAnd %0, %1 : vector<4xi1>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -545,16 +554,16 @@ def SPV_LogicalEqualOp : SPV_LogicalBinaryOp<"LogicalEqual", SPV_Bool, [Commutat
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     logical-equal ::= `spv.LogicalEqual` ssa-use `,` ssa-use
                       `:` operand-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.LogicalEqual %0, %1 : i1
     %2 = spv.LogicalEqual %0, %1 : vector<4xi1>
     ```
@@ -575,15 +584,15 @@ def SPV_LogicalNotOp : SPV_LogicalUnaryOp<"LogicalNot", SPV_Bool, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     logical-not ::= `spv.LogicalNot` ssa-use `:` operand-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.LogicalNot %0 : i1
     %2 = spv.LogicalNot %0 : vector<4xi1>
     ```
@@ -609,16 +618,16 @@ def SPV_LogicalNotEqualOp : SPV_LogicalBinaryOp<"LogicalNotEqual", SPV_Bool, [Co
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     logical-not-equal ::= `spv.LogicalNotEqual` ssa-use `,` ssa-use
                           `:` operand-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.LogicalNotEqual %0, %1 : i1
     %2 = spv.LogicalNotEqual %0, %1 : vector<4xi1>
     ```
@@ -642,20 +651,22 @@ def SPV_LogicalOrOp : SPV_LogicalBinaryOp<"LogicalOr", SPV_Bool, [Commutative]> 
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     logical-or ::= `spv.LogicalOr` ssa-use `,` ssa-use
                     `:` operand-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %2 = spv.LogicalOr %0, %1 : i1
     %2 = spv.LogicalOr %0, %1 : vector<4xi1>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -674,16 +685,16 @@ def SPV_SGreaterThanOp : SPV_LogicalBinaryOp<"SGreaterThan", SPV_Integer, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     sgreater-than-op ::= ssa-id `=` `spv.SGreaterThan` ssa-use, ssa-use
                                     `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.SGreaterThan %0, %1 : i32
     %5 = spv.SGreaterThan %2, %3 : vector<4xi32>
 
@@ -708,14 +719,14 @@ def SPV_SGreaterThanEqualOp : SPV_LogicalBinaryOp<"SGreaterThanEqual", SPV_Integ
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     sgreater-than-equal-op ::= ssa-id `=` `spv.SGreaterThanEqual` ssa-use, ssa-use
                                           `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
     ```
     %4 = spv.SGreaterThanEqual %0, %1 : i32
@@ -741,16 +752,16 @@ def SPV_SLessThanOp : SPV_LogicalBinaryOp<"SLessThan", SPV_Integer, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     sless-than-op ::= ssa-id `=` `spv.SLessThan` ssa-use, ssa-use
                                  `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.SLessThan %0, %1 : i32
     %5 = spv.SLessThan %2, %3 : vector<4xi32>
 
@@ -775,16 +786,16 @@ def SPV_SLessThanEqualOp : SPV_LogicalBinaryOp<"SLessThanEqual", SPV_Integer, []
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     sless-than-equal-op ::= ssa-id `=` `spv.SLessThanEqual` ssa-use, ssa-use
                                        `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.SLessThanEqual %0, %1 : i32
     %5 = spv.SLessThanEqual %2, %3 : vector<4xi32>
 
@@ -794,7 +805,8 @@ def SPV_SLessThanEqualOp : SPV_LogicalBinaryOp<"SLessThanEqual", SPV_Integer, []
 
 // -----
 
-def SPV_SelectOp : SPV_Op<"Select", [NoSideEffect]> {
+def SPV_SelectOp : SPV_Op<"Select",
+    [NoSideEffect, AllTypesMatch<["true_value", "false_value", "result"]>]> {
   let summary = [{
     Select between two objects. Before version 1.4, results are only
     computed per component.
@@ -816,7 +828,7 @@ def SPV_SelectOp : SPV_Op<"Select", [NoSideEffect]> {
     component in the result is taken from Object 1, otherwise it is taken
     from Object 2.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scalar-type ::= integer-type | float-type | boolean-type
@@ -829,9 +841,9 @@ def SPV_SelectOp : SPV_Op<"Select", [NoSideEffect]> {
                   `:` select-condition-type `,` select-object-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %3 = spv.Select %0, %1, %2 : i1, f32
     %3 = spv.Select %0, %1, %2 : i1, vector<3xi32>
     %3 = spv.Select %0, %1, %2 : vector<3xi1>, vector<3xf32>
@@ -848,9 +860,13 @@ def SPV_SelectOp : SPV_Op<"Select", [NoSideEffect]> {
     SPV_SelectType:$result
   );
 
-  let builders = [OpBuilder<[{Builder *builder, OperationState &state,
+  let builders = [OpBuilder<[{OpBuilder &builder, OperationState &state,
                               Value cond, Value trueValue,
                               Value falseValue}]>];
+
+  let assemblyFormat = [{
+    operands attr-dict `:` type($condition) `,` type($result)
+  }];
 }
 
 // -----
@@ -869,16 +885,16 @@ def SPV_UGreaterThanOp : SPV_LogicalBinaryOp<"UGreaterThan", SPV_Integer, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     ugreater-than-op ::= ssa-id `=` `spv.UGreaterThan` ssa-use, ssa-use
                                     `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.UGreaterThan %0, %1 : i32
     %5 = spv.UGreaterThan %2, %3 : vector<4xi32>
 
@@ -903,16 +919,16 @@ def SPV_UGreaterThanEqualOp : SPV_LogicalBinaryOp<"UGreaterThanEqual", SPV_Integ
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     ugreater-than-equal-op ::= ssa-id `=` `spv.UGreaterThanEqual` ssa-use, ssa-use
                                           `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.UGreaterThanEqual %0, %1 : i32
     %5 = spv.UGreaterThanEqual %2, %3 : vector<4xi32>
 
@@ -936,16 +952,16 @@ def SPV_ULessThanOp : SPV_LogicalBinaryOp<"ULessThan", SPV_Integer, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     uless-than-op ::= ssa-id `=` `spv.ULessThan` ssa-use, ssa-use
                                  `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.ULessThan %0, %1 : i32
     %5 = spv.ULessThan %2, %3 : vector<4xi32>
 
@@ -971,16 +987,16 @@ def SPV_ULessThanEqualOp :
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     uless-than-equal-op ::= ssa-id `=` `spv.ULessThanEqual` ssa-use, ssa-use
                                        `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.ULessThanEqual %0, %1 : i32
     %5 = spv.ULessThanEqual %2, %3 : vector<4xi32>
 

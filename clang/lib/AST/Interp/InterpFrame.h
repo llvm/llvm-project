@@ -45,16 +45,16 @@ public:
   void popArgs();
 
   /// Describes the frame with arguments for diagnostic purposes.
-  void describe(llvm::raw_ostream &OS);
+  void describe(llvm::raw_ostream &OS) override;
 
   /// Returns the parent frame object.
-  Frame *getCaller() const;
+  Frame *getCaller() const override;
 
   /// Returns the location of the call to the frame.
-  SourceLocation getCallLocation() const;
+  SourceLocation getCallLocation() const override;
 
   /// Returns the caller.
-  const FunctionDecl *getCallee() const;
+  const FunctionDecl *getCallee() const override;
 
   /// Returns the current function.
   Function *getFunction() const { return Func; }

@@ -28,10 +28,10 @@ _start:
   bl foo
   nop
   bl bar_local
-// CHECK-LABEL: _start:
-// CHECK-NEXT:  100102c8:       bl .+64
+// CHECK-LABEL: <_start>:
+// CHECK-NEXT:  100102c8:       bl 0x10010304
 // CHECK-NEXT:  100102cc:       ld 2, 24(1)
-// CHECK-NEXT:  100102d0:       bl .-16
+// CHECK-NEXT:  100102d0:       bl 0x100102c0
 // CHECK-EMPTY:
 
 # Calling a function in another object file which will have same
@@ -42,17 +42,17 @@ _diff_object:
   bl foo_not_shared
   bl foo_not_shared
   nop
-// CHECK-LABEL: _diff_object:
-// CHECK-NEXT:  100102d4:       bl .+28
-// CHECK-NEXT:  100102d8:       bl .+24
+// CHECK-LABEL: <_diff_object>:
+// CHECK-NEXT:  100102d4:       bl 0x100102f0
+// CHECK-NEXT:  100102d8:       bl 0x100102f0
 // CHECK-NEXT:  100102dc:       nop
 
 # Branching to a local function does not need a nop
 .global noretbranch
 noretbranch:
   b bar_local
-// CHECK-LABEL: noretbranch:
-// CHECK:       100102e0:        b .+67108832
+// CHECK-LABEL: <noretbranch>:
+// CHECK-NEXT:  100102e0:        b 0x100102c0
 // CHECK-EMPTY:
 
 // This should come last to check the end-of-buffer condition.
@@ -60,6 +60,6 @@ noretbranch:
 last:
   bl foo
   nop
-// CHECK-LABEL: last:
-// CHECK-NEXT:  100102e4:       bl .+36
+// CHECK-LABEL: <last>:
+// CHECK-NEXT:  100102e4:       bl 0x10010304
 // CHECK-NEXT:  100102e8:       ld 2, 24(1)

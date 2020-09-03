@@ -8,9 +8,9 @@
 
 #include "HeaderSourceSwitch.h"
 #include "AST.h"
-#include "Logger.h"
 #include "SourceCode.h"
 #include "index/SymbolCollector.h"
+#include "support/Logger.h"
 #include "clang/AST/Decl.h"
 
 namespace clang {
@@ -121,7 +121,7 @@ llvm::Optional<Path> getCorrespondingHeaderOrSource(const Path &OriginalFile,
       // candidates.
       Best = It;
   }
-  return Path(Best->first());
+  return Path(std::string(Best->first()));
 }
 
 std::vector<const Decl *> getIndexableLocalDecls(ParsedAST &AST) {

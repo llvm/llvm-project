@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ObjCLanguageRuntime_h_
-#define liblldb_ObjCLanguageRuntime_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_OBJCLANGUAGERUNTIME_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_OBJCLANGUAGERUNTIME_H
 
 #include <functional>
 #include <map>
@@ -17,7 +17,6 @@
 #include "llvm/Support/Casting.h"
 
 #include "lldb/Breakpoint/BreakpointPrecondition.h"
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -29,6 +28,7 @@ class CommandObjectObjC_ClassTable_Dump;
 
 namespace lldb_private {
 
+class TypeSystemClang;
 class UtilityFunction;
 
 class ObjCLanguageRuntime : public LanguageRuntime {
@@ -186,7 +186,8 @@ public:
     TaggedPointerVendor() = default;
 
   private:
-    DISALLOW_COPY_AND_ASSIGN(TaggedPointerVendor);
+    TaggedPointerVendor(const TaggedPointerVendor &) = delete;
+    const TaggedPointerVendor &operator=(const TaggedPointerVendor &) = delete;
   };
 
   ~ObjCLanguageRuntime() override;
@@ -271,8 +272,6 @@ public:
 
   virtual ObjCISA GetISA(ConstString name);
 
-  virtual ConstString GetActualTypeName(ObjCISA isa);
-
   virtual ObjCISA GetParentClass(ObjCISA isa);
 
   // Finds the byte offset of the child_type ivar in parent_type.  If it can't
@@ -301,7 +300,7 @@ public:
 
   /// Check whether the name is "self" or "_cmd" and should show up in
   /// "frame variable".
-  bool IsWhitelistedRuntimeValue(ConstString name) override;
+  bool IsAllowedRuntimeValue(ConstString name) override;
 
 protected:
   // Classes that inherit from ObjCLanguageRuntime can see and modify these
@@ -419,9 +418,10 @@ protected:
 
   void ReadObjCLibraryIfNeeded(const ModuleList &module_list);
 
-  DISALLOW_COPY_AND_ASSIGN(ObjCLanguageRuntime);
+  ObjCLanguageRuntime(const ObjCLanguageRuntime &) = delete;
+  const ObjCLanguageRuntime &operator=(const ObjCLanguageRuntime &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_ObjCLanguageRuntime_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_OBJCLANGUAGERUNTIME_H

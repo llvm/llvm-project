@@ -1272,7 +1272,7 @@ compatible with a given physical, this code can be used:
 
 Sometimes, mostly for debugging purposes, it is useful to change the number of
 physical registers available in the target architecture. This must be done
-statically, inside the ``TargetRegsterInfo.td`` file. Just ``grep`` for
+statically, inside the ``TargetRegisterInfo.td`` file. Just ``grep`` for
 ``RegisterClass``, the last parameter of which is a list of registers. Just
 commenting some out is one simple way to avoid them being used. A more polite
 way is to explicitly exclude some registers from the *allocation order*. See the
@@ -2418,7 +2418,7 @@ to spill registers r3-r10.  This allows callees blind to the call signature,
 such as thunks and vararg functions, enough space to cache the argument
 registers.  Therefore, the parameter area is minimally 32 bytes (64 bytes in 64
 bit mode.)  Also note that since the parameter area is a fixed offset from the
-top of the frame, that a callee can access its spilt arguments using fixed
+top of the frame, that a callee can access its split arguments using fixed
 offsets from the stack pointer (or base pointer.)
 
 Combining the information about the linkage, parameter areas and alignment. A

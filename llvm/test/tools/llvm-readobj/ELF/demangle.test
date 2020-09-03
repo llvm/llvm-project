@@ -1,24 +1,24 @@
 ## Show that llvm-readelf + llvm-readobj demangle symbol names in symbol tables
 ## (including dynamic symbols), relocations (including dynamic relocations), and groups.
 
-# RUN: yaml2obj %s > %t.so
+# RUN: yaml2obj %s -o %t.so
 
 ## Check LLVM output style.
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --elf-cg-profile --addrsig         \
+# RUN:              --elf-section-groups --cg-profile --addrsig         \
 # RUN:              --demangle %t.so > %t.llvm.long
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --elf-cg-profile --addrsig         \
+# RUN:              --elf-section-groups --cg-profile --addrsig         \
 # RUN:              -C %t.so > %t.llvm.short
 # RUN: FileCheck %s --input-file %t.llvm.long --check-prefixes=LLVM-COMMON,LLVM-DEMANGLE
 # RUN: diff %t.llvm.long %t.llvm.short
 
 ## Check that default is no demangling.
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --elf-cg-profile --addrsig         \
+# RUN:              --elf-section-groups --cg-profile --addrsig         \
 # RUN:              %t.so > %t.llvm.default
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --elf-cg-profile --addrsig         \
+# RUN:              --elf-section-groups --cg-profile --addrsig         \
 # RUN:              --demangle=false %t.so > %t.llvm.nodemangle
 # RUN: FileCheck %s --input-file %t.llvm.default --check-prefixes=LLVM-COMMON,LLVM-MANGLED
 # RUN: diff %t.llvm.default %t.llvm.nodemangle
@@ -212,16 +212,14 @@ ProgramHeaders:
   - Type:  PT_LOAD
     Flags: [ PF_R, PF_X ]
     VAddr: 0x0
-    PAddr: 0x0
     Sections:
-      - Section: .dynsym
       - Section: .dynstr
+      - Section: .dynsym
       - Section: .rela.dyn
       - Section: .dynamic
       - Section: .text.foo
   - Type:  PT_DYNAMIC
     Flags: [ PF_R ]
     VAddr: 0x1000
-    PAddr: 0x1000
     Sections:
       - Section: .dynamic

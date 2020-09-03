@@ -9,10 +9,29 @@ body: |
 
     ; CHECK-LABEL: name: test_flog10_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[FLOG10_:%[0-9]+]]:_(s32) = G_FLOG10 [[COPY]]
-    ; CHECK: $vgpr0 = COPY [[FLOG10_]](s32)
+    ; CHECK: [[FLOG2_:%[0-9]+]]:_(s32) = G_FLOG2 [[COPY]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3FD3441340000000
+    ; CHECK: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[FLOG2_]], [[C]]
+    ; CHECK: $vgpr0 = COPY [[FMUL]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_FLOG10 %0
+    $vgpr0 = COPY %1
+...
+
+---
+name: test_flog10_s32_flags
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_flog10_s32_flags
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[FLOG2_:%[0-9]+]]:_(s32) = nnan G_FLOG2 [[COPY]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3FD3441340000000
+    ; CHECK: [[FMUL:%[0-9]+]]:_(s32) = nnan G_FMUL [[FLOG2_]], [[C]]
+    ; CHECK: $vgpr0 = COPY [[FMUL]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = nnan G_FLOG10 %0
     $vgpr0 = COPY %1
 ...
 
@@ -25,9 +44,12 @@ body: |
     ; CHECK-LABEL: name: test_flog10_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK: [[FLOG10_:%[0-9]+]]:_(s32) = G_FLOG10 [[UV]]
-    ; CHECK: [[FLOG10_1:%[0-9]+]]:_(s32) = G_FLOG10 [[UV1]]
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FLOG10_]](s32), [[FLOG10_1]](s32)
+    ; CHECK: [[FLOG2_:%[0-9]+]]:_(s32) = G_FLOG2 [[UV]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3FD3441340000000
+    ; CHECK: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[FLOG2_]], [[C]]
+    ; CHECK: [[FLOG2_1:%[0-9]+]]:_(s32) = G_FLOG2 [[UV1]]
+    ; CHECK: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[FLOG2_1]], [[C]]
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FMUL]](s32), [[FMUL1]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = G_FLOG10 %0
@@ -43,12 +65,74 @@ body: |
     ; CHECK-LABEL: name: test_flog10_v3s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
-    ; CHECK: [[FLOG10_:%[0-9]+]]:_(s32) = G_FLOG10 [[UV]]
-    ; CHECK: [[FLOG10_1:%[0-9]+]]:_(s32) = G_FLOG10 [[UV1]]
-    ; CHECK: [[FLOG10_2:%[0-9]+]]:_(s32) = G_FLOG10 [[UV2]]
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[FLOG10_]](s32), [[FLOG10_1]](s32), [[FLOG10_2]](s32)
+    ; CHECK: [[FLOG2_:%[0-9]+]]:_(s32) = G_FLOG2 [[UV]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3FD3441340000000
+    ; CHECK: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[FLOG2_]], [[C]]
+    ; CHECK: [[FLOG2_1:%[0-9]+]]:_(s32) = G_FLOG2 [[UV1]]
+    ; CHECK: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[FLOG2_1]], [[C]]
+    ; CHECK: [[FLOG2_2:%[0-9]+]]:_(s32) = G_FLOG2 [[UV2]]
+    ; CHECK: [[FMUL2:%[0-9]+]]:_(s32) = G_FMUL [[FLOG2_2]], [[C]]
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[FMUL]](s32), [[FMUL1]](s32), [[FMUL2]](s32)
     ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
     %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(<3 x  s32>) = G_FLOG10 %0
     $vgpr0_vgpr1_vgpr2 = COPY %1
+...
+
+---
+name: test_flog10_s16
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_flog10_s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; CHECK: [[FLOG2_:%[0-9]+]]:_(s32) = G_FLOG2 [[FPEXT]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3FD3441340000000
+    ; CHECK: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[FLOG2_]], [[C]]
+    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
+    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s16) = G_TRUNC %0
+    %2:_(s16) = G_FLOG10 %1
+    %3:_(s32) = G_ANYEXT %2
+    $vgpr0 = COPY %3
+
+...
+
+---
+name: test_flog10_v2s16
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_flog10_v2s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; CHECK: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; CHECK: [[FLOG2_:%[0-9]+]]:_(s32) = G_FLOG2 [[FPEXT]]
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3FD3441340000000
+    ; CHECK: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[FLOG2_]], [[C1]]
+    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
+    ; CHECK: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
+    ; CHECK: [[FLOG2_1:%[0-9]+]]:_(s32) = G_FLOG2 [[FPEXT1]]
+    ; CHECK: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[FLOG2_1]], [[C1]]
+    ; CHECK: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL1]](s32)
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
+    ; CHECK: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
+    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; CHECK: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
+    %0:_(<2 x s16>) = COPY $vgpr0
+    %1:_(<2 x s16>) = G_FLOG10 %0
+    $vgpr0 = COPY %1
+
 ...

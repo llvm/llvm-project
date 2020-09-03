@@ -25,7 +25,7 @@
 
 // These two headers must be included last, and make sure shlobj is required
 // after Windows.h to make sure it picks up our definition of _WIN32_WINNT
-#include "WindowsSupport.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
 #include <shellapi.h>
 #include <shlobj.h>
 
@@ -47,7 +47,7 @@ using namespace llvm;
 using llvm::sys::windows::UTF8ToUTF16;
 using llvm::sys::windows::CurCPToUTF16;
 using llvm::sys::windows::UTF16ToUTF8;
-using llvm::sys::path::widenPath;
+using llvm::sys::windows::widenPath;
 
 static bool is_separator(const wchar_t value) {
   switch (value) {
@@ -61,64 +61,64 @@ static bool is_separator(const wchar_t value) {
 
 namespace llvm {
 namespace sys  {
-namespace path {
+namespace windows {
 
-// Convert a UTF-8 path to UTF-16.  Also, if the absolute equivalent of the
-// path is longer than CreateDirectory can tolerate, make it absolute and
-// prefixed by '\\?\'.
-std::error_code widenPath(const Twine &Path8,
-                          SmallVectorImpl<wchar_t> &Path16) {
-  const size_t MaxDirLen = MAX_PATH - 12; // Must leave room for 8.3 filename.
+// Convert a UTF-8 path to UTF-16. Also, if the absolute equivalent of the path
+// is longer than the limit that the Win32 Unicode File API can tolerate, make
+// it an absolute normalized path prefixed by '\\?\'.
+std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
+                          size_t MaxPathLen) {
+  assert(MaxPathLen <= MAX_PATH);
 
-  // Several operations would convert Path8 to SmallString; more efficient to
-  // do it once up front.
-  SmallString<128> Path8Str;
+  // Several operations would convert Path8 to SmallString; more efficient to do
+  // it once up front.
+  SmallString<MAX_PATH> Path8Str;
   Path8.toVector(Path8Str);
 
-  // If we made this path absolute, how much longer would it get?
+  if (std::error_code EC = UTF8ToUTF16(Path8Str, Path16))
+    return EC;
+
+  const bool IsAbsolute = llvm::sys::path::is_absolute(Path8);
   size_t CurPathLen;
-  if (llvm::sys::path::is_absolute(Twine(Path8Str)))
+  if (IsAbsolute)
     CurPathLen = 0; // No contribution from current_path needed.
   else {
-    CurPathLen = ::GetCurrentDirectoryW(0, NULL);
+    CurPathLen = ::GetCurrentDirectoryW(
+        0, NULL); // Returns the size including the null terminator.
     if (CurPathLen == 0)
       return mapWindowsError(::GetLastError());
   }
 
-  // Would the absolute path be longer than our limit?
-  if ((Path8Str.size() + CurPathLen) >= MaxDirLen &&
-      !Path8Str.startswith("\\\\?\\")) {
-    SmallString<2*MAX_PATH> FullPath("\\\\?\\");
-    if (CurPathLen) {
-      SmallString<80> CurPath;
-      if (std::error_code EC = llvm::sys::fs::current_path(CurPath))
-        return EC;
-      FullPath.append(CurPath);
-    }
-    // Traverse the requested path, canonicalizing . and .. (because the \\?\
-    // prefix is documented to treat them as real components).  Ignore
-    // separators, which can be returned from the iterator if the path has a
-    // drive name.  We don't need to call native() on the result since append()
-    // always attaches preferred_separator.
-    for (llvm::sys::path::const_iterator I = llvm::sys::path::begin(Path8Str),
-                                         E = llvm::sys::path::end(Path8Str);
-                                         I != E; ++I) {
-      if (I->size() == 1 && is_separator((*I)[0]))
-        continue;
-      if (I->size() == 1 && *I == ".")
-        continue;
-      if (I->size() == 2 && *I == "..")
-        llvm::sys::path::remove_filename(FullPath);
-      else
-        llvm::sys::path::append(FullPath, *I);
-    }
-    return UTF8ToUTF16(FullPath, Path16);
+  const char *const LongPathPrefix = "\\\\?\\";
+
+  if ((Path16.size() + CurPathLen) < MaxPathLen ||
+      Path8Str.startswith(LongPathPrefix))
+    return std::error_code();
+
+  if (!IsAbsolute) {
+    if (std::error_code EC = llvm::sys::fs::make_absolute(Path8Str))
+      return EC;
   }
 
-  // Just use the caller's original path.
-  return UTF8ToUTF16(Path8Str, Path16);
+  // Remove '.' and '..' because long paths treat these as real path components.
+  llvm::sys::path::native(Path8Str, path::Style::windows);
+  llvm::sys::path::remove_dots(Path8Str, true);
+
+  const StringRef RootName = llvm::sys::path::root_name(Path8Str);
+  assert(!RootName.empty() &&
+         "Root name cannot be empty for an absolute path!");
+
+  SmallString<2 * MAX_PATH> FullPath(LongPathPrefix);
+  if (RootName[1] != ':') { // Check if UNC.
+    FullPath.append("UNC\\");
+    FullPath.append(Path8Str.begin() + 2, Path8Str.end());
+  } else
+    FullPath.append(Path8Str);
+
+  return UTF8ToUTF16(FullPath, Path16);
 }
-} // end namespace path
+
+} // end namespace windows
 
 namespace fs {
 
@@ -227,7 +227,9 @@ std::error_code create_directory(const Twine &path, bool IgnoreExisting,
                                  perms Perms) {
   SmallVector<wchar_t, 128> path_utf16;
 
-  if (std::error_code ec = widenPath(path, path_utf16))
+  // CreateDirectoryW has a lower maximum path length as it must leave room for
+  // an 8.3 filename.
+  if (std::error_code ec = widenPath(path, path_utf16, MAX_PATH - 12))
     return ec;
 
   if (!::CreateDirectoryW(path_utf16.begin(), NULL)) {
@@ -553,6 +555,11 @@ std::error_code rename(const Twine &From, const Twine &To) {
                       NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (FromHandle)
       break;
+
+    // We don't want to loop if the file doesn't exist.
+    auto EC = mapWindowsError(GetLastError());
+    if (EC == errc::no_such_file_or_directory)
+      return EC;
   }
   if (!FromHandle)
     return mapWindowsError(GetLastError());
@@ -950,9 +957,9 @@ std::error_code detail::directory_iterator_construct(detail::DirIterState &IT,
     return EC;
 
   // Convert path to the format that Windows is happy with.
-  if (PathUTF16.size() > 0 &&
-      !is_separator(PathUTF16[Path.size() - 1]) &&
-      PathUTF16[Path.size() - 1] != L':') {
+  size_t PathUTF16Len = PathUTF16.size();
+  if (PathUTF16Len > 0 && !is_separator(PathUTF16[PathUTF16Len - 1]) &&
+      PathUTF16[PathUTF16Len - 1] != L':') {
     PathUTF16.push_back(L'\\');
     PathUTF16.push_back(L'*');
   } else {
@@ -1363,6 +1370,16 @@ static bool getKnownFolderPath(KNOWNFOLDERID folderId,
 
 bool home_directory(SmallVectorImpl<char> &result) {
   return getKnownFolderPath(FOLDERID_Profile, result);
+}
+
+bool user_config_directory(SmallVectorImpl<char> &result) {
+  // Either local or roaming appdata may be suitable in some cases, depending
+  // on the data. Local is more conservative, Roaming may not always be correct.
+  return getKnownFolderPath(FOLDERID_LocalAppData, result);
+}
+
+bool cache_directory(SmallVectorImpl<char> &result) {
+  return getKnownFolderPath(FOLDERID_LocalAppData, result);
 }
 
 static bool getTempDirEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {

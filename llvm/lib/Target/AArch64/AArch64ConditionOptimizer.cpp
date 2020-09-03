@@ -145,11 +145,11 @@ void AArch64ConditionOptimizer::getAnalysisUsage(AnalysisUsage &AU) const {
 // instructions.
 MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
     MachineBasicBlock *MBB) {
-  MachineBasicBlock::iterator I = MBB->getFirstTerminator();
-  if (I == MBB->end())
+  MachineBasicBlock::iterator Term = MBB->getFirstTerminator();
+  if (Term == MBB->end())
     return nullptr;
 
-  if (I->getOpcode() != AArch64::Bcc)
+  if (Term->getOpcode() != AArch64::Bcc)
     return nullptr;
 
   // Since we may modify cmp of this MBB, make sure NZCV does not live out.
@@ -158,32 +158,33 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
       return nullptr;
 
   // Now find the instruction controlling the terminator.
-  for (MachineBasicBlock::iterator B = MBB->begin(); I != B;) {
-    --I;
-    assert(!I->isTerminator() && "Spurious terminator");
+  for (MachineBasicBlock::iterator B = MBB->begin(), It = Term; It != B;) {
+    It = prev_nodbg(It, B);
+    MachineInstr &I = *It;
+    assert(!I.isTerminator() && "Spurious terminator");
     // Check if there is any use of NZCV between CMP and Bcc.
-    if (I->readsRegister(AArch64::NZCV))
+    if (I.readsRegister(AArch64::NZCV))
       return nullptr;
-    switch (I->getOpcode()) {
+    switch (I.getOpcode()) {
     // cmp is an alias for subs with a dead destination register.
     case AArch64::SUBSWri:
     case AArch64::SUBSXri:
     // cmn is an alias for adds with a dead destination register.
     case AArch64::ADDSWri:
     case AArch64::ADDSXri: {
-      unsigned ShiftAmt = AArch64_AM::getShiftValue(I->getOperand(3).getImm());
-      if (!I->getOperand(2).isImm()) {
-        LLVM_DEBUG(dbgs() << "Immediate of cmp is symbolic, " << *I << '\n');
+      unsigned ShiftAmt = AArch64_AM::getShiftValue(I.getOperand(3).getImm());
+      if (!I.getOperand(2).isImm()) {
+        LLVM_DEBUG(dbgs() << "Immediate of cmp is symbolic, " << I << '\n');
         return nullptr;
-      } else if (I->getOperand(2).getImm() << ShiftAmt >= 0xfff) {
-        LLVM_DEBUG(dbgs() << "Immediate of cmp may be out of range, " << *I
+      } else if (I.getOperand(2).getImm() << ShiftAmt >= 0xfff) {
+        LLVM_DEBUG(dbgs() << "Immediate of cmp may be out of range, " << I
                           << '\n');
         return nullptr;
-      } else if (!MRI->use_empty(I->getOperand(0).getReg())) {
-        LLVM_DEBUG(dbgs() << "Destination of cmp is not dead, " << *I << '\n');
+      } else if (!MRI->use_nodbg_empty(I.getOperand(0).getReg())) {
+        LLVM_DEBUG(dbgs() << "Destination of cmp is not dead, " << I << '\n');
         return nullptr;
       }
-      return &*I;
+      return &I;
     }
     // Prevent false positive case like:
     // cmp      w19, #0
@@ -294,12 +295,10 @@ void AArch64ConditionOptimizer::modifyCmp(MachineInstr *CmpMI,
       .add(BrMI.getOperand(1));
   BrMI.eraseFromParent();
 
-  MBB->updateTerminator();
-
   ++NumConditionsAdjusted;
 }
 
-// Parse a condition code returned by AnalyzeBranch, and compute the CondCode
+// Parse a condition code returned by analyzeBranch, and compute the CondCode
 // corresponding to TBB.
 // Returns true if parsing was successful, otherwise false is returned.
 static bool parseCond(ArrayRef<MachineOperand> Cond, AArch64CC::CondCode &CC) {

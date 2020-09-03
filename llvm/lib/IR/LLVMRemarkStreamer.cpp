@@ -15,6 +15,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace llvm;
 

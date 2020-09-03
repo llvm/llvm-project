@@ -140,6 +140,21 @@ TEST(FileOutputBuffer, Test) {
   ASSERT_NO_ERROR(fs::file_size(Twine(File5), File5Size));
   ASSERT_EQ(File5Size, 8000ULL);
   ASSERT_NO_ERROR(fs::remove(File5.str()));
+
+  // TEST 6: Create an empty file.
+  SmallString<128> File6(TestDirectory);
+  File6.append("/file6");
+  {
+    Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+        FileOutputBuffer::create(File6, 0);
+    ASSERT_NO_ERROR(errorToErrorCode(BufferOrErr.takeError()));
+    ASSERT_NO_ERROR(errorToErrorCode((*BufferOrErr)->commit()));
+  }
+  uint64_t File6Size;
+  ASSERT_NO_ERROR(fs::file_size(Twine(File6), File6Size));
+  ASSERT_EQ(File6Size, 0ULL);
+  ASSERT_NO_ERROR(fs::remove(File6.str()));
+
   // Clean up.
   ASSERT_NO_ERROR(fs::remove(TestDirectory.str()));
 }

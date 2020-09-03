@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_GDBRemoteCommunicationServerPlatform_h_
-#define liblldb_GDBRemoteCommunicationServerPlatform_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONSERVERPLATFORM_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONSERVERPLATFORM_H
 
 #include <map>
 #include <mutex>
@@ -100,10 +100,13 @@ private:
 
   static FileSpec GetDomainSocketPath(const char *prefix);
 
-  DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunicationServerPlatform);
+  GDBRemoteCommunicationServerPlatform(
+      const GDBRemoteCommunicationServerPlatform &) = delete;
+  const GDBRemoteCommunicationServerPlatform &
+  operator=(const GDBRemoteCommunicationServerPlatform &) = delete;
 };
 
 } // namespace process_gdb_remote
 } // namespace lldb_private
 
-#endif // liblldb_GDBRemoteCommunicationServerPlatform_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONSERVERPLATFORM_H

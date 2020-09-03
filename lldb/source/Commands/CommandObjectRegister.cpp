@@ -1,4 +1,4 @@
-//===-- CommandObjectRegister.cpp -------------------------------*- C++ -*-===//
+//===-- CommandObjectRegister.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -69,6 +69,17 @@ public:
   }
 
   ~CommandObjectRegisterRead() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasProcessScope())
+      return;
+
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eRegisterCompletion,
+        request, nullptr);
+  }
 
   Options *GetOptions() override { return &m_option_group; }
 
@@ -322,6 +333,17 @@ public:
   }
 
   ~CommandObjectRegisterWrite() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
+      return;
+
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eRegisterCompletion,
+        request, nullptr);
+  }
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {

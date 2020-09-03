@@ -11,11 +11,11 @@
 //===---------------------------------------------------------------------===//
 
 #include "ResourceFileWriter.h"
-
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -1180,8 +1180,10 @@ Error ResourceFileWriter::writeMenuDefinition(
 
   if (auto *MenuItemPtr = dyn_cast<MenuItem>(DefPtr)) {
     writeInt<uint16_t>(Flags);
-    RETURN_IF_ERROR(
-        checkNumberFits<uint16_t>(MenuItemPtr->Id, "MENUITEM action ID"));
+    // Some resource files use -1, i.e. UINT32_MAX, for empty menu items.
+    if (MenuItemPtr->Id != static_cast<uint32_t>(-1))
+      RETURN_IF_ERROR(
+          checkNumberFits<uint16_t>(MenuItemPtr->Id, "MENUITEM action ID"));
     writeInt<uint16_t>(MenuItemPtr->Id);
     RETURN_IF_ERROR(writeCString(MenuItemPtr->Name));
     return Error::success();
@@ -1244,7 +1246,8 @@ Error ResourceFileWriter::visitStringTableBundle(const RCResource *Res) {
 }
 
 Error ResourceFileWriter::insertStringIntoBundle(
-    StringTableInfo::Bundle &Bundle, uint16_t StringID, StringRef String) {
+    StringTableInfo::Bundle &Bundle, uint16_t StringID,
+    const std::vector<StringRef> &String) {
   uint16_t StringLoc = StringID & 15;
   if (Bundle.Data[StringLoc])
     return createError("Multiple STRINGTABLE strings located under ID " +
@@ -1259,13 +1262,15 @@ Error ResourceFileWriter::writeStringTableBundleBody(const RCResource *Base) {
     // The string format is a tiny bit different here. We
     // first output the size of the string, and then the string itself
     // (which is not null-terminated).
-    bool IsLongString;
     SmallVector<UTF16, 128> Data;
-    RETURN_IF_ERROR(processString(Res->Bundle.Data[ID].getValueOr(StringRef()),
-                                  NullHandlingMethod::CutAtDoubleNull,
-                                  IsLongString, Data, Params.CodePage));
-    if (AppendNull && Res->Bundle.Data[ID])
-      Data.push_back('\0');
+    if (Res->Bundle.Data[ID]) {
+      bool IsLongString;
+      for (StringRef S : *Res->Bundle.Data[ID])
+        RETURN_IF_ERROR(processString(S, NullHandlingMethod::CutAtDoubleNull,
+                                      IsLongString, Data, Params.CodePage));
+      if (AppendNull)
+        Data.push_back('\0');
+    }
     RETURN_IF_ERROR(
         checkNumberFits<uint16_t>(Data.size(), "STRINGTABLE string size"));
     writeInt<uint16_t>(Data.size());

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_PPC64LE_DWARF_Registers_h_
-#define utility_PPC64LE_DWARF_Registers_h_
+#ifndef LLDB_SOURCE_UTILITY_PPC64LE_DWARF_REGISTERS_H
+#define LLDB_SOURCE_UTILITY_PPC64LE_DWARF_REGISTERS_H
 
 #include "lldb/lldb-private.h"
 
@@ -190,4 +190,4 @@ enum {
 
 } // namespace ppc64le_dwarf
 
-#endif // utility_PPC64LE_DWARF_Registers_h_
+#endif // LLDB_SOURCE_UTILITY_PPC64LE_DWARF_REGISTERS_H

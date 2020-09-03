@@ -44,6 +44,7 @@ set(sources
   X86ISelDAGToDAG.cpp
   X86ISelLowering.cpp
   X86IndirectBranchTracking.cpp
+  X86IndirectThunks.cpp
   X86InterleavedAccess.cpp
   X86InsertPrefetch.cpp
   X86InstrFMA3Info.cpp
@@ -51,17 +52,20 @@ set(sources
   X86InstrInfo.cpp
   X86EvexToVex.cpp
   X86LegalizerInfo.cpp
+  X86LoadValueInjectionLoadHardening.cpp
+  X86LoadValueInjectionRetHardening.cpp
   X86MCInstLower.cpp
   X86MachineFunctionInfo.cpp
   X86MacroFusion.cpp
   X86OptimizeLEAs.cpp
   X86PadShortFunction.cpp
+  X86PartialReduction.cpp
   X86RegisterBankInfo.cpp
   X86RegisterInfo.cpp
-  X86RetpolineThunks.cpp
   X86SelectionDAGInfo.cpp
   X86ShuffleDecodeConstantPool.cpp
   X86SpeculativeLoadHardening.cpp
+  X86SpeculativeExecutionSideEffectSuppression.cpp
   X86Subtarget.cpp
   X86TargetMachine.cpp
   X86TargetObjectFile.cpp
@@ -69,6 +73,7 @@ set(sources
   X86VZeroUpper.cpp
   X86WinAllocaExpander.cpp
   X86WinEHState.cpp
+  X86InsertWait.cpp
   )
 
 add_llvm_target(X86CodeGen ${sources})
@@ -77,4 +82,3 @@ add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
-add_subdirectory(Utils)

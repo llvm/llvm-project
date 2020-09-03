@@ -14,7 +14,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/GenericDomTree.h"
 #include <algorithm>
 #include <functional>
@@ -507,7 +507,7 @@ LLVM_DUMP_METHOD void DomTreeUpdater::dump() const {
 
   OS << "Pending DeletedBBs:\n";
   Index = 0;
-  for (auto BB : DeletedBBs) {
+  for (const auto *BB : DeletedBBs) {
     OS << "  " << Index << " : ";
     ++Index;
     if (BB->hasName())
@@ -519,7 +519,7 @@ LLVM_DUMP_METHOD void DomTreeUpdater::dump() const {
 
   OS << "Pending Callbacks:\n";
   Index = 0;
-  for (auto BB : Callbacks) {
+  for (const auto &BB : Callbacks) {
     OS << "  " << Index << " : ";
     ++Index;
     if (BB->hasName())

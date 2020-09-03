@@ -691,7 +691,7 @@ void Sema::checkDeprecatedCommand(const BlockCommandComment *Command) {
         FD->doesThisDeclarationHaveABody())
       return;
 
-    const LangOptions &LO = FD->getASTContext().getLangOpts();
+    const LangOptions &LO = FD->getLangOpts();
     const bool DoubleSquareBracket = LO.CPlusPlus14 || LO.C2x;
     StringRef AttributeSpelling =
         DoubleSquareBracket ? "[[deprecated]]" : "__attribute__((deprecated))";

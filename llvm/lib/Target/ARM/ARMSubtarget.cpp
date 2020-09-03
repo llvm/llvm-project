@@ -183,7 +183,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     if (!ArchFS.empty())
       ArchFS = (Twine(ArchFS) + "," + FS).str();
     else
-      ArchFS = FS;
+      ArchFS = std::string(FS);
   }
   ParseSubtargetFeatures(CPUString, ArchFS);
 
@@ -292,12 +292,15 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA73:
   case CortexA75:
   case CortexA76:
+  case CortexA77:
+  case CortexA78:
   case CortexR4:
   case CortexR4F:
   case CortexR5:
   case CortexR7:
   case CortexM3:
   case CortexR52:
+  case CortexX1:
     break;
   case Exynos:
     LdStMultipleTiming = SingleIssuePlusExtras;

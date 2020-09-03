@@ -19,5 +19,4 @@ class TestClassTemplateSpecializationParametersHandling(TestBase):
 
         lldbutil.run_to_source_breakpoint(self, '// break here',
                 lldb.SBFileSpec("main.cpp", False))
-
-        self.expect("expr -u 0 -- b.foo()", substrs=['$0 = 1'])
+        self.expect_expr("b.foo()", result_type="int", result_value="1")

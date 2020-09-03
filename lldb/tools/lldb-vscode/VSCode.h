@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDBVSCODE_VSCODE_H_
-#define LLDBVSCODE_VSCODE_H_
+#ifndef LLDB_TOOLS_LLDB_VSCODE_VSCODE_H
+#define LLDB_TOOLS_LLDB_VSCODE_VSCODE_H
 
 #include <iosfwd>
 #include <map>
@@ -63,13 +63,13 @@ typedef llvm::DenseMap<uint32_t, SourceBreakpoint> SourceBreakpointMap;
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
 
+enum VSCodeBroadcasterBits { eBroadcastBitStopEventThread = 1u << 0 };
+
 struct VSCode {
   InputStream input;
   OutputStream output;
   lldb::SBDebugger debugger;
   lldb::SBTarget target;
-  lldb::SBAttachInfo attach_info;
-  lldb::SBLaunchInfo launch_info;
   lldb::SBValueList variables;
   lldb::SBBroadcaster broadcaster;
   int64_t num_regs;
@@ -86,9 +86,11 @@ struct VSCode {
   std::vector<std::string> pre_run_commands;
   std::vector<std::string> exit_commands;
   std::vector<std::string> stop_commands;
+  std::vector<std::string> terminate_commands;
   lldb::tid_t focus_tid;
   bool sent_terminated_event;
   bool stop_at_entry;
+  bool is_attach;
   // Keep track of the last stop thread index IDs as threads won't go away
   // unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
@@ -132,6 +134,25 @@ struct VSCode {
   void RunPreRunCommands();
   void RunStopCommands();
   void RunExitCommands();
+  void RunTerminateCommands();
+
+  /// Create a new SBTarget object from the given request arguments.
+  /// \param[in] arguments
+  ///     Launch configuration arguments.
+  ///
+  /// \param[out] error
+  ///     An SBError object that will contain an error description if
+  ///     function failed to create the target.
+  ///
+  /// \return
+  ///     An SBTarget object.
+  lldb::SBTarget CreateTargetFromArguments(
+      const llvm::json::Object &arguments,
+      lldb::SBError &error);
+
+  /// Set given target object as a current target for lldb-vscode and start
+  /// listeing for its breakpoint events.
+  void SetTarget(const lldb::SBTarget target);
 };
 
 extern VSCode g_vsc;

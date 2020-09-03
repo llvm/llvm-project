@@ -250,7 +250,7 @@ public:
     return *this;
   }
 
-  const MachineInstrBuilder &addShuffleMask(const Constant *Val) const {
+  const MachineInstrBuilder &addShuffleMask(ArrayRef<int> Val) const {
     MI->addOperand(*MF, MachineOperand::CreateShuffleMask(Val));
     return *this;
   }

@@ -19,6 +19,8 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Instructions.h"
@@ -27,7 +29,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
-#include "llvm/PassSupport.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -570,6 +571,10 @@ bool ARMParallelDSP::CreateParallelPairs(Reduction &R) {
     auto Ld2 = static_cast<LoadInst*>(PMul0->RHS);
     auto Ld3 = static_cast<LoadInst*>(PMul1->RHS);
 
+    // Check that each mul is operating on two different loads.
+    if (Ld0 == Ld2 || Ld1 == Ld3)
+      return false;
+
     if (AreSequentialLoads(Ld0, Ld1, PMul0->VecLd)) {
       if (AreSequentialLoads(Ld2, Ld3, PMul1->VecLd)) {
         LLVM_DEBUG(dbgs() << "OK: found two pairs of parallel loads!\n");
@@ -770,8 +775,7 @@ LoadInst* ARMParallelDSP::CreateWideLoad(MemInstList &Loads,
   const unsigned AddrSpace = DomLoad->getPointerAddressSpace();
   Value *VecPtr = IRB.CreateBitCast(Base->getPointerOperand(),
                                     LoadTy->getPointerTo(AddrSpace));
-  LoadInst *WideLoad = IRB.CreateAlignedLoad(LoadTy, VecPtr,
-                                             Base->getAlignment());
+  LoadInst *WideLoad = IRB.CreateAlignedLoad(LoadTy, VecPtr, Base->getAlign());
 
   // Make sure everything is in the correct order in the basic block.
   MoveBefore(Base->getPointerOperand(), VecPtr);

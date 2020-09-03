@@ -5,7 +5,7 @@
 # RUN: echo "SECTIONS { \
 # RUN:      .text : { *(.abc .abx) } }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
-# RUN: llvm-objdump -section-headers %t.out | \
+# RUN: llvm-objdump --section-headers %t.out | \
 # RUN:   FileCheck -check-prefix=SEC-DEFAULT %s
 # SEC-DEFAULT:      Sections:
 # SEC-DEFAULT-NEXT: Idx Name          Size
@@ -23,14 +23,14 @@
 # RUN: echo "SECTIONS { \
 # RUN:      .text : { *(.abc .ab?) } }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
-# RUN: llvm-objdump -section-headers %t.out | \
+# RUN: llvm-objdump --section-headers %t.out | \
 # RUN:   FileCheck -check-prefix=SEC-DEFAULT %s
 
 ## Now see how replacing '?' with '*' will consume whole abcd.
 # RUN: echo "SECTIONS { \
 # RUN:      .text : { *(.abc .ab*) } }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
-# RUN: llvm-objdump -section-headers %t.out | \
+# RUN: llvm-objdump --section-headers %t.out | \
 # RUN:   FileCheck -check-prefix=SEC-ALL %s
 # SEC-ALL:      Sections:
 # SEC-ALL-NEXT: Idx Name          Size
@@ -47,7 +47,7 @@
 # RUN: echo "SECTIONS { \
 # RUN:      .text : { *(.a*) } }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
-# RUN: llvm-objdump -section-headers %t.out | \
+# RUN: llvm-objdump --section-headers %t.out | \
 # RUN:   FileCheck -check-prefix=SEC-NO %s
 # SEC-NO: Sections:
 # SEC-NO-NEXT: Idx Name          Size

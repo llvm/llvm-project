@@ -5,7 +5,7 @@ RUN: llvm-readobj --sections %t2 | FileCheck --check-prefix=SECS %s
 RUN: llvm-readobj --symbols %t2 | grep "Symbol {" | wc -l | FileCheck --check-prefix=SYMS %s
 RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefix=SYM_SEC_IDS
 
-EHDR:      Format: ELF64-x86-64
+EHDR:      Format: elf64-x86-64
 EHDR-NEXT: Arch: x86_64
 EHDR-NEXT: AddressSize: 64bit
 EHDR-NEXT: LoadName:

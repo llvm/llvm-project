@@ -86,11 +86,15 @@ STATISTIC(UnknownTripCount, "Loop has unknown trip count");
 STATISTIC(UncomputableTripCount, "SCEV cannot compute trip count of loop");
 STATISTIC(NonEqualTripCount, "Loop trip counts are not the same");
 STATISTIC(NonAdjacent, "Loops are not adjacent");
-STATISTIC(NonEmptyPreheader, "Loop has a non-empty preheader");
+STATISTIC(
+    NonEmptyPreheader,
+    "Loop has a non-empty preheader with instructions that cannot be moved");
 STATISTIC(FusionNotBeneficial, "Fusion is not beneficial");
 STATISTIC(NonIdenticalGuards, "Candidates have different guards");
-STATISTIC(NonEmptyExitBlock, "Candidate has a non-empty exit block");
-STATISTIC(NonEmptyGuardBlock, "Candidate has a non-empty guard block");
+STATISTIC(NonEmptyExitBlock, "Candidate has a non-empty exit block with "
+                             "instructions that cannot be moved");
+STATISTIC(NonEmptyGuardBlock, "Candidate has a non-empty guard block with "
+                              "instructions that cannot be moved");
 STATISTIC(NotRotated, "Candidate is not rotated");
 
 enum FusionDependenceAnalysisChoice {
@@ -738,33 +742,40 @@ private:
             continue;
           }
 
-          // The following three checks look for empty blocks in FC0 and FC1. If
-          // any of these blocks are non-empty, we do not fuse. This is done
-          // because we currently do not have the safety checks to determine if
-          // it is safe to move the blocks past other blocks in the loop. Once
-          // these checks are added, these conditions can be relaxed.
-          if (!isEmptyPreheader(*FC1)) {
-            LLVM_DEBUG(dbgs() << "Fusion candidate does not have empty "
-                                 "preheader. Not fusing.\n");
+          if (!isSafeToMoveBefore(*FC1->Preheader,
+                                  *FC0->Preheader->getTerminator(), DT, &PDT,
+                                  &DI)) {
+            LLVM_DEBUG(dbgs() << "Fusion candidate contains unsafe "
+                                 "instructions in preheader. Not fusing.\n");
             reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1,
                                                        NonEmptyPreheader);
             continue;
           }
 
-          if (FC0->GuardBranch && !isEmptyExitBlock(*FC0)) {
-            LLVM_DEBUG(dbgs() << "Fusion candidate does not have empty exit "
-                                 "block. Not fusing.\n");
-            reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1,
-                                                       NonEmptyExitBlock);
-            continue;
-          }
+          if (FC0->GuardBranch) {
+            assert(FC1->GuardBranch && "Expecting valid FC1 guard branch");
 
-          if (FC1->GuardBranch && !isEmptyGuardBlock(*FC1)) {
-            LLVM_DEBUG(dbgs() << "Fusion candidate does not have empty guard "
-                                 "block. Not fusing.\n");
-            reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1,
-                                                       NonEmptyGuardBlock);
-            continue;
+            if (!isSafeToMoveBefore(*FC0->ExitBlock,
+                                    *FC1->ExitBlock->getFirstNonPHIOrDbg(), DT,
+                                    &PDT, &DI)) {
+              LLVM_DEBUG(dbgs() << "Fusion candidate contains unsafe "
+                                   "instructions in exit block. Not fusing.\n");
+              reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1,
+                                                         NonEmptyExitBlock);
+              continue;
+            }
+
+            if (!isSafeToMoveBefore(
+                    *FC1->GuardBranch->getParent(),
+                    *FC0->GuardBranch->getParent()->getTerminator(), DT, &PDT,
+                    &DI)) {
+              LLVM_DEBUG(dbgs()
+                         << "Fusion candidate contains unsafe "
+                            "instructions in guard block. Not fusing.\n");
+              reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1,
+                                                         NonEmptyGuardBlock);
+              continue;
+            }
           }
 
           // Check the dependencies across the loops and do not fuse if it would
@@ -1075,38 +1086,6 @@ private:
       return (FC1.GuardBranch->getSuccessor(1) == FC1.Preheader);
   }
 
-  /// Check that the guard for \p FC *only* contains the cmp/branch for the
-  /// guard.
-  /// Once we are able to handle intervening code, any code in the guard block
-  /// for FC1 will need to be treated as intervening code and checked whether
-  /// it can safely move around the loops.
-  bool isEmptyGuardBlock(const FusionCandidate &FC) const {
-    assert(FC.GuardBranch && "Expecting a fusion candidate with guard branch.");
-    if (auto *CmpInst = dyn_cast<Instruction>(FC.GuardBranch->getCondition())) {
-      auto *GuardBlock = FC.GuardBranch->getParent();
-      // If the generation of the cmp value is in GuardBlock, then the size of
-      // the guard block should be 2 (cmp + branch). If the generation of the
-      // cmp value is in a different block, then the size of the guard block
-      // should only be 1.
-      if (CmpInst->getParent() == GuardBlock)
-        return GuardBlock->size() == 2;
-      else
-        return GuardBlock->size() == 1;
-    }
-
-    return false;
-  }
-
-  bool isEmptyPreheader(const FusionCandidate &FC) const {
-    assert(FC.Preheader && "Expecting a valid preheader");
-    return FC.Preheader->size() == 1;
-  }
-
-  bool isEmptyExitBlock(const FusionCandidate &FC) const {
-    assert(FC.ExitBlock && "Expecting a valid exit block");
-    return FC.ExitBlock->size() == 1;
-  }
-
   /// Simplify the condition of the latch branch of \p FC to true, when both of
   /// its successors are the same.
   void simplifyLatchBranch(const FusionCandidate &FC) const {
@@ -1123,7 +1102,7 @@ private:
   /// Move instructions from FC0.Latch to FC1.Latch. If FC0.Latch has an unique
   /// successor, then merge FC0.Latch with its unique successor.
   void mergeLatch(const FusionCandidate &FC0, const FusionCandidate &FC1) {
-    moveInstsBottomUp(*FC0.Latch, *FC1.Latch, DT, PDT, DI);
+    moveInstructionsToTheBeginning(*FC0.Latch, *FC1.Latch, DT, PDT, DI);
     if (BasicBlock *Succ = FC0.Latch->getUniqueSuccessor()) {
       MergeBlockIntoPredecessor(Succ, &DTU, &LI);
       DTU.flush();
@@ -1165,6 +1144,10 @@ private:
 
     LLVM_DEBUG(dbgs() << "Fusion Candidate 0: \n"; FC0.dump();
                dbgs() << "Fusion Candidate 1: \n"; FC1.dump(););
+
+    // Move instructions from the preheader of FC1 to the end of the preheader
+    // of FC0.
+    moveInstructionsToTheEnd(*FC1.Preheader, *FC0.Preheader, DT, PDT, DI);
 
     // Fusing guarded loops is handled slightly differently than non-guarded
     // loops and has been broken out into a separate method instead of trying to
@@ -1382,6 +1365,14 @@ private:
     BasicBlock *FC0NonLoopBlock = FC0.getNonLoopBlock();
     BasicBlock *FC1NonLoopBlock = FC1.getNonLoopBlock();
 
+    // Move instructions from the exit block of FC0 to the beginning of the exit
+    // block of FC1.
+    moveInstructionsToTheBeginning(*FC0.ExitBlock, *FC1.ExitBlock, DT, PDT, DI);
+
+    // Move instructions from the guard block of FC1 to the end of the guard
+    // block of FC0.
+    moveInstructionsToTheEnd(*FC1GuardBlock, *FC0GuardBlock, DT, PDT, DI);
+
     assert(FC0NonLoopBlock == FC1GuardBlock && "Loops are not adjacent");
 
     SmallVector<DominatorTree::UpdateType, 8> TreeUpdates;
@@ -1394,6 +1385,7 @@ private:
     // Thus, one path from the guard goes to the preheader for FC0 (and thus
     // executes the new fused loop) and the other path goes to the NonLoopBlock
     // for FC1 (where FC1 guard would have gone if FC1 was not executed).
+    FC1NonLoopBlock->replacePhiUsesWith(FC1GuardBlock, FC0GuardBlock);
     FC0.GuardBranch->replaceUsesOfWith(FC0NonLoopBlock, FC1NonLoopBlock);
     FC0.ExitBlock->getTerminator()->replaceUsesOfWith(FC1GuardBlock,
                                                       FC1.Header);
@@ -1545,7 +1537,10 @@ private:
     // Update DT/PDT
     DTU.applyUpdates(TreeUpdates);
 
+    LI.removeBlock(FC1GuardBlock);
     LI.removeBlock(FC1.Preheader);
+    LI.removeBlock(FC0.ExitBlock);
+    DTU.deleteBB(FC1GuardBlock);
     DTU.deleteBB(FC1.Preheader);
     DTU.deleteBB(FC0.ExitBlock);
     DTU.flush();

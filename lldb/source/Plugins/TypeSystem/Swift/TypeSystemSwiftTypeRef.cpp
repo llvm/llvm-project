@@ -28,10 +28,10 @@
 #include "swift/Demangling/Demangler.h"
 #include "swift/Strings.h"
 
-#include "clang/APINotes/APINotesManager.h"
-#include "clang/APINotes/APINotesReader.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/APINotes/APINotesManager.h"
+#include "clang/APINotes/APINotesReader.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -270,8 +270,7 @@ GetCanonicalNode(lldb_private::Module *M, swift::Demangle::Demangler &Dem,
   case Node::Kind::TypeAlias: {
     auto node_clangtype = ResolveTypeAlias(M, Dem, node);
     if (CompilerType clang_type = node_clangtype.second)
-      return getCanonicalNode(
-          GetClangTypeNode(clang_type.GetCanonicalType(), Dem));
+      return getCanonicalNode(GetClangTypeNode(clang_type.GetCanonicalType(), Dem));
     if (node_clangtype.first)
       return getCanonicalNode(node_clangtype.first);
     return node;
@@ -341,7 +340,7 @@ clang::api_notes::APINotesManager *TypeSystemSwiftTypeRef::GetAPINotesManager(
   std::string path;
   for (clang::Module *parent = module; parent; parent = parent->Parent) {
     if (!parent->APINotesFile.empty()) {
-      path = llvm::sys::path::parent_path(parent->APINotesFile);
+      path = std::string(llvm::sys::path::parent_path(parent->APINotesFile));
       break;
     }
   }
@@ -361,9 +360,10 @@ clang::api_notes::APINotesManager *TypeSystemSwiftTypeRef::GetAPINotesManager(
 }
 
 /// Desugar a sugared type.
-static swift::Demangle::NodePointer
-Desugar(swift::Demangle::Demangler &Dem, swift::Demangle::NodePointer node,
-        Node::Kind bound_kind, Node::Kind kind, llvm::StringRef name) {
+static swift::Demangle::NodePointer Desugar(swift::Demangle::Demangler &Dem,
+                                            swift::Demangle::NodePointer node,
+                                            Node::Kind bound_kind,
+                                            Node::Kind kind, llvm::StringRef name) {
   using namespace swift::Demangle;
   NodePointer desugared = Dem.createNode(bound_kind);
   NodePointer type = Dem.createNode(Node::Kind::Type);
@@ -398,7 +398,8 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
                    GetAPINotesManagerFn get_apinotes_manager,
                    GetClangImporterFn get_clangimporter,
                    swift::Demangle::Demangler &Dem,
-                   swift::Demangle::NodePointer node, bool resolve_objc_module,
+                   swift::Demangle::NodePointer node,
+                   bool resolve_objc_module,
                    bool desugar = true) {
   if (!node)
     return node;
@@ -444,7 +445,8 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
 
     // Create a new node with the Clang module instead of "__C".
     NodePointer renamed = Dem.createNode(kind);
-    NodePointer module = Dem.createNode(Node::Kind::Module, toplevel_module);
+    NodePointer module =
+        Dem.createNode(Node::Kind::Module, toplevel_module);
     renamed->addChild(module, Dem);
 
     // This is unfortunate performance-wise, but only ClangImporter
@@ -467,7 +469,7 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
       break;
 
     // Read the Swift name from the APINotes.
-    std::string swift_name = ident;
+    std::string swift_name = std::string(ident);
     if (unsigned id = clang_decl->getOwningModuleID()) {
       auto *clang_typesystem = llvm::dyn_cast_or_null<TypeSystemClang>(
           compiler_type.GetTypeSystem());
@@ -523,12 +525,12 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
         }
       }
     }
-
+      
     auto clang_importer = get_clangimporter();
     if (!clang_importer)
       break;
-    // swift::DeclName imported_name = clang_importer->importName(clang_decl,
-    // {}); imported_name.getBaseName().userFacingName()
+    //swift::DeclName imported_name = clang_importer->importName(clang_decl, {});
+    //imported_name.getBaseName().userFacingName()
     NodePointer identifier = Dem.createNode(Node::Kind::Identifier, swift_name);
     renamed->addChild(identifier, Dem);
     return renamed;
@@ -561,10 +563,10 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
           if (type->getKind() == Node::Kind::Type &&
               type->getNumChildren() == 1)
             rett->addChild(type->getChild(0), Dem);
-          else if (child->getKind() == Node::Kind::ImplResult)
-            for (NodePointer type : *node)
-              if (type->getKind() == Node::Kind::Type)
-                rett->addChild(type, Dem);
+      else if (child->getKind() == Node::Kind::ImplResult)
+        for (NodePointer type : *node)
+          if (type->getKind() == Node::Kind::Type)
+            rett->addChild(type, Dem);
     }
     args_ty->addChild(args_tuple, Dem);
     args->addChild(args_ty, Dem);
@@ -604,7 +606,7 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
     if (node->getNumChildren() == 2 &&
         node->getChild(0)->getKind() == Node::Kind::Identifier)
       return node->getChild(0);
-    break;
+    break;    
   default:
     break;
   }
@@ -630,7 +632,7 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
             module = node->getChild(0)->getChild(0);
           if (module->getKind() != Node::Kind::Module)
             break;
-
+            
           canonical->addChild(module, Dem);
           canonical->addChild(identifier, Dem);
           return canonical;
@@ -713,8 +715,7 @@ static uint32_t collectTypeInfo(Module *M, swift::Demangle::Demangler &Dem,
       break;
     case Node::Kind::SugaredArray:
     case Node::Kind::SugaredDictionary:
-      swift_flags |=
-          eTypeIsGeneric | eTypeIsBound | eTypeHasChildren | eTypeIsStructUnion;
+      swift_flags |= eTypeIsGeneric | eTypeIsBound | eTypeHasChildren | eTypeIsStructUnion;
       break;
 
     case Node::Kind::DependentGenericParamType:
@@ -724,7 +725,7 @@ static uint32_t collectTypeInfo(Module *M, swift::Demangle::Demangler &Dem,
     case Node::Kind::DependentGenericType:
     case Node::Kind::DependentMemberType:
       swift_flags |= eTypeHasValue | eTypeIsPointer | eTypeIsScalar |
-                     eTypeIsGenericTypeParam;
+        eTypeIsGenericTypeParam;
       break;
 
     case Node::Kind::DynamicSelf:
@@ -772,8 +773,7 @@ static uint32_t collectTypeInfo(Module *M, swift::Demangle::Demangler &Dem,
       if (node->getNumChildren() != 2)
         break;
       // Bug-for-bug compatibility.
-      if (!(collectTypeInfo(M, Dem, node->getChild(1)) &
-            eTypeIsGenericTypeParam))
+      if (!(collectTypeInfo(M, Dem, node->getChild(1)) & eTypeIsGenericTypeParam))
         swift_flags |= eTypeHasValue | eTypeHasChildren;
       auto module = node->getChild(0);
       auto ident = node->getChild(1);
@@ -865,8 +865,7 @@ static uint32_t collectTypeInfo(Module *M, swift::Demangle::Demangler &Dem,
         collect_clang_type(clang_type.GetCanonicalType());
         return swift_flags;
       }
-      swift_flags |=
-          collectTypeInfo(M, Dem, node_clangtype.first, generic_walk);
+      swift_flags |= collectTypeInfo(M, Dem, node_clangtype.first, generic_walk);
       return swift_flags;
     }
     default:
@@ -923,6 +922,13 @@ CompilerType TypeSystemSwiftTypeRef::ReconstructType(CompilerType type) {
 CompilerType TypeSystemSwiftTypeRef::GetTypeFromMangledTypename(
     ConstString mangled_typename) {
   return {this, (opaque_compiler_type_t)mangled_typename.AsCString()};
+}
+
+CompilerType
+TypeSystemSwiftTypeRef::GetGenericArgumentType(opaque_compiler_type_t type,
+                                               size_t idx) {
+  return m_swift_ast_context->GetGenericArgumentType(ReconstructType(type),
+                                                     idx);
 }
 
 lldb::TypeSP TypeSystemSwiftTypeRef::GetCachedType(ConstString mangled) {
@@ -987,9 +993,8 @@ template <> bool Equivalent<uint32_t>(uint32_t l, uint32_t r) {
   if (l != r) {
     // Failure. Dump it for easier debugging.
     llvm::dbgs() << "TypeSystemSwiftTypeRef diverges from SwiftASTContext:\n";
-#define HANDLE_ENUM_CASE(VAL, CASE)                                            \
-  if (VAL & CASE)                                                              \
-  llvm::dbgs() << " | " << #CASE
+#define HANDLE_ENUM_CASE(VAL, CASE) \
+    if (VAL & CASE) llvm::dbgs() << " | " << #CASE
 
     llvm::dbgs() << "l = " << l;
     HANDLE_ENUM_CASE(l, eTypeHasChildren);
@@ -1023,7 +1028,7 @@ template <> bool Equivalent<uint32_t>(uint32_t l, uint32_t r) {
     HANDLE_ENUM_CASE(l, eTypeIsGeneric);
     HANDLE_ENUM_CASE(l, eTypeIsBound);
     llvm::dbgs() << "\nr = " << r;
-
+    
     HANDLE_ENUM_CASE(r, eTypeHasChildren);
     HANDLE_ENUM_CASE(r, eTypeHasValue);
     HANDLE_ENUM_CASE(r, eTypeIsArray);
@@ -1086,8 +1091,7 @@ template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
 
     // If the new variant supports something the old one didn't, accept it.
     if (r.IsEmpty() || r.GetStringRef().equals("<invalid>") ||
-        r.GetStringRef().contains("__ObjC.") ||
-        r.GetStringRef().contains(" -> ()"))
+        r.GetStringRef().contains("__ObjC.") || r.GetStringRef().contains(" -> ()"))
       return true;
 
     std::string r_prime =
@@ -1105,9 +1109,8 @@ template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
     // isn't worth the effort and we accept over-qualified types
     // instead. It would be best to just always qualify types not from
     // the current module.
-    l_prime =
-        std::regex_replace(l.GetStringRef().str(),
-                           std::regex("(CoreGraphics|Foundation|)\\."), "");
+    l_prime = std::regex_replace(
+        l.GetStringRef().str(), std::regex("(CoreGraphics|Foundation|)\\."), "");
     if (llvm::StringRef(l_prime) == r.GetStringRef())
       return true;
 
@@ -1117,7 +1120,7 @@ template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
   }
   return l == r;
 }
-} // namespace
+}
 #endif
 
 // This can be removed once the transition is complete.
@@ -1239,7 +1242,7 @@ bool TypeSystemSwiftTypeRef::IsAggregateType(opaque_compiler_type_t type) {
     using namespace swift::Demangle;
     Demangler Dem;
     NodePointer node = DemangleCanonicalType(Dem, type);
-
+ 
     if (!node)
       return false;
     switch (node->getKind()) {
@@ -1266,7 +1269,9 @@ bool TypeSystemSwiftTypeRef::IsAggregateType(opaque_compiler_type_t type) {
 }
 
 bool TypeSystemSwiftTypeRef::IsDefined(opaque_compiler_type_t type) {
-  auto impl = [&]() -> bool { return type; };
+  auto impl = [&]() -> bool {
+    return type;
+  };
   VALIDATE_AND_RETURN(impl, IsDefined, type, (ReconstructType(type)));
 }
 
@@ -1464,6 +1469,8 @@ TypeSystemSwiftTypeRef::GetTypeClass(opaque_compiler_type_t type) {
   auto impl = [&]() {
     uint32_t flags = GetTypeInfo(type, nullptr);
     // The ordering is significant since GetTypeInfo() returns many flags.
+    if ((flags & eTypeIsGenericTypeParam))
+      return eTypeClassOther;
     if ((flags & eTypeIsScalar))
       return eTypeClassBuiltin;
     if ((flags & eTypeIsVector))
@@ -1491,14 +1498,15 @@ TypeSystemSwiftTypeRef::GetTypeClass(opaque_compiler_type_t type) {
 // Creating related types
 CompilerType
 TypeSystemSwiftTypeRef::GetArrayElementType(opaque_compiler_type_t type,
-                                            uint64_t *stride) {
+                                            uint64_t *stride,
+                                            ExecutionContextScope *exe_scope) {
   auto impl = [&]() {
     CompilerType element_type;
     IsArrayType(type, &element_type, nullptr, nullptr);
     return element_type;
   };
   VALIDATE_AND_RETURN(impl, GetArrayElementType, type,
-                      (ReconstructType(type), nullptr));
+                      (ReconstructType(type), nullptr, exe_scope));
 }
 CompilerType
 TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type) {

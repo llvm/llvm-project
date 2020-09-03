@@ -4,29 +4,29 @@
 
 # FIXME: Is it OK to fold omod for this?
 # GCN-LABEL: name: omod_inst_flag_nsz_src
-# GCN: %0:vgpr_32 = nsz V_ADD_F32_e64 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $exec
-# GCN-NEXT: %1:vgpr_32 = V_MUL_F32_e64 0, %0, 0, 1073741824, 0, 0, implicit $exec
+# GCN: %0:vgpr_32 = nsz nofpexcept V_ADD_F32_e64 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
+# GCN-NEXT: %1:vgpr_32 = nofpexcept V_MUL_F32_e64 0, %0, 0, 1073741824, 0, 0, implicit $mode, implicit $exec
 # GCN-NEXT: S_ENDPGM 0, implicit %1
 name: omod_inst_flag_nsz_src
 tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
-    fp32-denormals: false
+    fp32-output-denormals: false
 
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
 
-  %0:vgpr_32 = nsz V_ADD_F32_e64 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $exec
-  %1:vgpr_32 = V_MUL_F32_e64 0, %0, 0, 1073741824, 0, 0, implicit $exec
+  %0:vgpr_32 = nsz nofpexcept V_ADD_F32_e64 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
+  %1:vgpr_32 = nofpexcept V_MUL_F32_e64 0, %0, 0, 1073741824, 0, 0, implicit $mode, implicit $exec
   S_ENDPGM 0, implicit %1
 
 ...
 ---
 
 # GCN-LABEL: name: omod_inst_flag_nsz_result
-# GCN: %0:vgpr_32 = V_ADD_F32_e64 0, $vgpr0, 0, $vgpr1, 0, 1, implicit $exec
+# GCN: %0:vgpr_32 = nofpexcept V_ADD_F32_e64 0, $vgpr0, 0, $vgpr1, 0, 1, implicit $mode, implicit $exec
 # GCN-NEXT: S_ENDPGM 0, implicit %0
 
 name: omod_inst_flag_nsz_result
@@ -34,21 +34,21 @@ tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
-    fp32-denormals: false
+    fp32-output-denormals: false
 
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
 
-  %0:vgpr_32 = V_ADD_F32_e64 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $exec
-  %1:vgpr_32 = nsz V_MUL_F32_e64 0, %0, 0, 1073741824, 0, 0, implicit $exec
+  %0:vgpr_32 = nofpexcept V_ADD_F32_e64 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
+  %1:vgpr_32 = nsz nofpexcept V_MUL_F32_e64 0, %0, 0, 1073741824, 0, 0, implicit $mode, implicit $exec
   S_ENDPGM 0, implicit %1
 ...
 
 ---
 
 # GCN-LABEL: name: omod_inst_flag_nsz_both
-# GCN: %0:vgpr_32 = nsz V_ADD_F32_e64 0, $vgpr0, 0, $vgpr1, 0, 1, implicit $exec
+# GCN: %0:vgpr_32 = nsz nofpexcept V_ADD_F32_e64 0, $vgpr0, 0, $vgpr1, 0, 1, implicit $mode, implicit $exec
 # GCN-NEXT: S_ENDPGM 0, implicit %0
 
 name: omod_inst_flag_nsz_both
@@ -56,13 +56,13 @@ tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
-    fp32-denormals: false
+    fp32-output-denormals: false
 
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
 
-  %0:vgpr_32 = nsz V_ADD_F32_e64 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $exec
-  %1:vgpr_32 = nsz V_MUL_F32_e64 0, %0, 0, 1073741824, 0, 0, implicit $exec
+  %0:vgpr_32 = nsz nofpexcept V_ADD_F32_e64 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
+  %1:vgpr_32 = nsz nofpexcept V_MUL_F32_e64 0, %0, 0, 1073741824, 0, 0, implicit $mode, implicit $exec
   S_ENDPGM 0, implicit %1
 ...

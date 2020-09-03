@@ -6,14 +6,33 @@ lldb_tablegen(TargetPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesEnumGen)
 
+set(SWIFT_SOURCES
+  SwiftLanguageRuntime.cpp
+  SwiftLanguageRuntimeDynamicTypeResolution.cpp
+  SwiftLanguageRuntimeNames.cpp
+)
+set(SWIFT_LIBS
+    swiftAST
+    swiftBasic
+    swiftReflection
+    swiftRemoteAST
+    lldbPluginExpressionParserSwift
+    lldbPluginSwiftLanguage
+)
+set(LLVM_OPTIONAL_SOURCES ${SWIFT_SOURCES})
+if (NOT LLDB_ENABLE_SWIFT_SUPPORT)
+  unset(SWIFT_SOURCES)
+  unset(SWIFT_LIBS)
+endif()
+
 add_lldb_library(lldbTarget
   ABI.cpp
   AssertFrameRecognizer.cpp
   ExecutionContext.cpp
-  JITLoader.cpp
-  JITLoaderList.cpp
   InstrumentationRuntime.cpp
   InstrumentationRuntimeStopInfo.cpp
+  JITLoader.cpp
+  JITLoaderList.cpp
   Language.cpp
   LanguageRuntime.cpp
   Memory.cpp
@@ -28,6 +47,7 @@ add_lldb_library(lldbTarget
   QueueItem.cpp
   QueueList.cpp
   RegisterContext.cpp
+  RegisterContextUnwind.cpp
   RegisterNumber.cpp
   RemoteAwarePlatform.cpp
   SectionLoadHistory.cpp
@@ -38,9 +58,6 @@ add_lldb_library(lldbTarget
   StackID.cpp
   StopInfo.cpp
   StructuredDataPlugin.cpp
-  SwiftLanguageRuntime.cpp
-  SwiftLanguageRuntimeDynamicTypeResolution.cpp
-  SwiftLanguageRuntimeNames.cpp
   SystemRuntime.cpp
   Target.cpp
   TargetList.cpp
@@ -69,12 +86,11 @@ add_lldb_library(lldbTarget
   ThreadSpec.cpp
   UnixSignals.cpp
   UnwindAssembly.cpp
+  UnwindLLDB.cpp
+
+  ${SWIFT_SOURCES}
 
   LINK_LIBS
-    swiftAST
-    swiftBasic
-    swiftReflection
-    swiftRemoteAST
     lldbBreakpoint
     lldbCore
     lldbExpression
@@ -83,12 +99,13 @@ add_lldb_library(lldbTarget
     lldbSymbol
     lldbUtility
     lldbPluginExpressionParserClang
-    lldbPluginExpressionParserSwift
-    lldbPluginSwiftLanguage
     lldbPluginProcessUtility
+
+    ${SWIFT_LIBS}
 
   LINK_COMPONENTS
     Support
+    MC
   )
 if(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
   target_compile_options(lldbTarget PRIVATE -Wno-dollar-in-identifier-extension)

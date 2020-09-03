@@ -185,7 +185,7 @@ static void stashEntryDbgValues(MachineBasicBlock &MBB,
       break;
     if (!MI.isDebugValue() || !MI.getDebugVariable()->isParameter())
       continue;
-    if (MI.getOperand(0).isFI()) {
+    if (MI.getDebugOperand(0).isFI()) {
       // We can only emit valid locations for frame indices after the frame
       // setup, so do not stash away them.
       FrameIndexValues.push_back(&MI);
@@ -237,7 +237,7 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
     stashEntryDbgValues(*SaveBlock, EntryDbgValues);
 
   // Handle CSR spilling and restoring, for targets that need it.
-  if (MF.getTarget().usesPhysRegsForPEI())
+  if (MF.getTarget().usesPhysRegsForValues())
     spillCalleeSavedRegs(MF);
 
   // Allow the target machine to make final modifications to the function
@@ -258,6 +258,10 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   // Reinsert stashed debug values at the start of the entry blocks.
   for (auto &I : EntryDbgValues)
     I.first->insert(I.first->begin(), I.second.begin(), I.second.end());
+
+  // Allow the target machine to make final modifications to the function
+  // before the frame layout is finalized.
+  TFI->processFunctionBeforeFrameIndicesReplaced(MF, RS);
 
   // Replace all MO_FrameIndex operands with physical register references
   // and actual offsets.
@@ -434,14 +438,12 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
       unsigned Size = RegInfo->getSpillSize(*RC);
       if (FixedSlot == FixedSpillSlots + NumFixedSpillSlots) {
         // Nope, just spill it anywhere convenient.
-        unsigned Align = RegInfo->getSpillAlignment(*RC);
-        unsigned StackAlign = TFI->getStackAlignment();
-
+        Align Alignment(RegInfo->getSpillAlignment(*RC));
         // We may not be able to satisfy the desired alignment specification of
         // the TargetRegisterClass if the stack alignment is smaller. Use the
         // min.
-        Align = std::min(Align, StackAlign);
-        FrameIdx = MFI.CreateStackObject(Size, Align, true);
+        Alignment = std::min(Alignment, TFI->getStackAlign());
+        FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
         if ((unsigned)FrameIdx < MinCSFrameIndex) MinCSFrameIndex = FrameIdx;
         if ((unsigned)FrameIdx > MaxCSFrameIndex) MaxCSFrameIndex = FrameIdx;
       } else {
@@ -631,22 +633,21 @@ void PEI::spillCalleeSavedRegs(MachineFunction &MF) {
 }
 
 /// AdjustStackOffset - Helper function used to adjust the stack frame offset.
-static inline void
-AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
-                  bool StackGrowsDown, int64_t &Offset,
-                  unsigned &MaxAlign, unsigned Skew) {
+static inline void AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
+                                     bool StackGrowsDown, int64_t &Offset,
+                                     Align &MaxAlign, unsigned Skew) {
   // If the stack grows down, add the object size to find the lowest address.
   if (StackGrowsDown)
     Offset += MFI.getObjectSize(FrameIdx);
 
-  unsigned Align = MFI.getObjectAlignment(FrameIdx);
+  Align Alignment = MFI.getObjectAlign(FrameIdx);
 
   // If the alignment of this object is greater than that of the stack, then
   // increase the stack alignment to match.
-  MaxAlign = std::max(MaxAlign, Align);
+  MaxAlign = std::max(MaxAlign, Alignment);
 
   // Adjust to alignment boundary.
-  Offset = alignTo(Offset, Align, Skew);
+  Offset = alignTo(Offset, Alignment, Skew);
 
   if (StackGrowsDown) {
     LLVM_DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << -Offset
@@ -706,7 +707,7 @@ computeFreeStackSlots(MachineFrameInfo &MFI, bool StackGrowsDown,
 /// Assign frame object to an unused portion of the stack in the fixed stack
 /// object range.  Return true if the allocation was successful.
 static inline bool scavengeStackSlot(MachineFrameInfo &MFI, int FrameIdx,
-                                     bool StackGrowsDown, unsigned MaxAlign,
+                                     bool StackGrowsDown, Align MaxAlign,
                                      BitVector &StackBytesFree) {
   if (MFI.isVariableSizedObjectIndex(FrameIdx))
     return false;
@@ -718,7 +719,7 @@ static inline bool scavengeStackSlot(MachineFrameInfo &MFI, int FrameIdx,
     return false;
   }
 
-  unsigned ObjAlign = MFI.getObjectAlignment(FrameIdx);
+  Align ObjAlign = MFI.getObjectAlign(FrameIdx);
   if (ObjAlign > MaxAlign)
     return false;
 
@@ -765,11 +766,11 @@ static inline bool scavengeStackSlot(MachineFrameInfo &MFI, int FrameIdx,
 
 /// AssignProtectedObjSet - Helper function to assign large stack objects (i.e.,
 /// those required to be close to the Stack Protector) to stack offsets.
-static void
-AssignProtectedObjSet(const StackObjSet &UnassignedObjs,
-                      SmallSet<int, 16> &ProtectedObjs,
-                      MachineFrameInfo &MFI, bool StackGrowsDown,
-                      int64_t &Offset, unsigned &MaxAlign, unsigned Skew) {
+static void AssignProtectedObjSet(const StackObjSet &UnassignedObjs,
+                                  SmallSet<int, 16> &ProtectedObjs,
+                                  MachineFrameInfo &MFI, bool StackGrowsDown,
+                                  int64_t &Offset, Align &MaxAlign,
+                                  unsigned Skew) {
 
   for (StackObjSet::const_iterator I = UnassignedObjs.begin(),
         E = UnassignedObjs.end(); I != E; ++I) {
@@ -807,7 +808,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i)
     if (!MFI.isDeadObjectIndex(i) &&
         MFI.getStackID(i) == TargetStackID::Default)
-      assert(MFI.getObjectAlignment(i) <= MFI.getMaxAlignment() &&
+      assert(MFI.getObjectAlign(i) <= MFI.getMaxAlign() &&
              "MaxAlignment is invalid");
 #endif
 
@@ -846,9 +847,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
       // address of the object.
       Offset += MFI.getObjectSize(i);
 
-      unsigned Align = MFI.getObjectAlignment(i);
       // Adjust to alignment boundary
-      Offset = alignTo(Offset, Align, Skew);
+      Offset = alignTo(Offset, MFI.getObjectAlign(i), Skew);
 
       LLVM_DEBUG(dbgs() << "alloc FI(" << i << ") at SP[" << -Offset << "]\n");
       MFI.setObjectOffset(i, -Offset);        // Set the computed offset
@@ -863,9 +863,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
       if (MFI.isDeadObjectIndex(i))
         continue;
 
-      unsigned Align = MFI.getObjectAlignment(i);
       // Adjust to alignment boundary
-      Offset = alignTo(Offset, Align, Skew);
+      Offset = alignTo(Offset, MFI.getObjectAlign(i), Skew);
 
       LLVM_DEBUG(dbgs() << "alloc FI(" << i << ") at SP[" << Offset << "]\n");
       MFI.setObjectOffset(i, Offset);
@@ -876,7 +875,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   // FixedCSEnd is the stack offset to the end of the fixed and callee-save
   // stack area.
   int64_t FixedCSEnd = Offset;
-  unsigned MaxAlign = MFI.getMaxAlignment();
+  Align MaxAlign = MFI.getMaxAlign();
 
   // Make sure the special register scavenging spill slot is closest to the
   // incoming stack pointer if a frame pointer is required and is closer
@@ -899,10 +898,10 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   // frame index registers. Functions which don't want/need this optimization
   // will continue to use the existing code path.
   if (MFI.getUseLocalStackAllocationBlock()) {
-    unsigned Align = MFI.getLocalFrameMaxAlign().value();
+    Align Alignment = MFI.getLocalFrameMaxAlign();
 
     // Adjust to alignment boundary.
-    Offset = alignTo(Offset, Align, Skew);
+    Offset = alignTo(Offset, Alignment, Skew);
 
     LLVM_DEBUG(dbgs() << "Local frame base offset: " << Offset << "\n");
 
@@ -917,7 +916,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
     // Allocate the local block
     Offset += MFI.getLocalFrameSize();
 
-    MaxAlign = std::max(Align, MaxAlign);
+    MaxAlign = std::max(Alignment, MaxAlign);
   }
 
   // Retrieve the Exception Handler registration node.
@@ -1068,12 +1067,12 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
     // ensure that the callee's frame or the alloca data is suitably aligned;
     // otherwise, for leaf functions, align to the TransientStackAlignment
     // value.
-    unsigned StackAlign;
+    Align StackAlign;
     if (MFI.adjustsStack() || MFI.hasVarSizedObjects() ||
         (RegInfo->needsStackRealignment(MF) && MFI.getObjectIndexEnd() != 0))
-      StackAlign = TFI.getStackAlignment();
+      StackAlign = TFI.getStackAlign();
     else
-      StackAlign = TFI.getTransientStackAlignment();
+      StackAlign = TFI.getTransientStackAlign();
 
     // If the frame pointer is eliminated, all frame offsets will be relative to
     // SP not FP. Align to MaxAlign so this works.
@@ -1206,7 +1205,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
       if (MI.isDebugValue()) {
         assert(i == 0 && "Frame indices can only appear as the first "
                          "operand of a DBG_VALUE machine instruction");
-        unsigned Reg;
+        Register Reg;
         unsigned FrameIdx = MI.getOperand(0).getIndex();
         unsigned Size = MF.getFrameInfo().getObjectSize(FrameIdx);
 
@@ -1235,10 +1234,10 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
           bool WithStackValue = true;
           DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);
           // Make the DBG_VALUE direct.
-          MI.getOperand(1).ChangeToRegister(0, false);
+          MI.getDebugOffset().ChangeToRegister(0, false);
         }
         DIExpr = DIExpression::prepend(DIExpr, PrependFlags, Offset);
-        MI.getOperand(3).setMetadata(DIExpr);
+        MI.getDebugExpressionOp().setMetadata(DIExpr);
         continue;
       }
 
@@ -1251,7 +1250,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
         assert((!MI.isDebugValue() || i == 0) &&
                "Frame indicies can only appear as the first operand of a "
                "DBG_VALUE machine instruction");
-        unsigned Reg;
+        Register Reg;
         MachineOperand &Offset = MI.getOperand(i + 1);
         int refOffset = TFI->getFrameIndexReferencePreferSP(
             MF, MI.getOperand(i).getIndex(), Reg, /*IgnoreSPUpdates*/ false);

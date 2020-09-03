@@ -198,8 +198,10 @@ body:             |
     ; CHECK: liveins: $edi
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; CHECK: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-    ; CHECK: [[AND16ri:%[0-9]+]]:gr16 = AND16ri [[COPY1]], 255, implicit-def $eflags
-    ; CHECK: $ax = COPY [[AND16ri]]
+    ; CHECK: [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY1]].sub_8bit
+    ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY2]]
+    ; CHECK: [[COPY3:%[0-9]+]]:gr16 = COPY [[MOVZX32rr8_]].sub_16bit
+    ; CHECK: $ax = COPY [[COPY3]]
     ; CHECK: RET 0, implicit $ax
     %1:gpr(s32) = COPY $edi
     %3:gpr(s16) = G_CONSTANT i16 255

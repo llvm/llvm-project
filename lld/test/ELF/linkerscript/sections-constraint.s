@@ -4,7 +4,7 @@
 # RUN:  .writable : ONLY_IF_RW { *(.writable) } \
 # RUN:  .readable : ONLY_IF_RO { *(.readable) }}" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-objdump -section-headers %t1 | \
+# RUN: llvm-objdump --section-headers %t1 | \
 # RUN:   FileCheck -check-prefix=BASE %s
 # BASE: Sections:
 # BASE-NEXT: Idx Name          Size
@@ -17,7 +17,7 @@
 # RUN:  .writable : ONLY_IF_RW { *(.writable) } \
 # RUN:  .readable : ONLY_IF_RO { *(.readable) }}" > %t2.script
 # RUN: ld.lld -o %t2 --script %t2.script %t
-# RUN: llvm-objdump -section-headers %t2 | \
+# RUN: llvm-objdump --section-headers %t2 | \
 # RUN:   FileCheck -check-prefix=NO1 %s
 # NO1: Sections:
 # NO1-NEXT: Idx Name          Size

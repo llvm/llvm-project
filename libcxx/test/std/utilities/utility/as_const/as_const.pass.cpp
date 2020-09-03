@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14
 
 // template <class T> constexpr add_const<T>& as_const(T& t) noexcept;      // C++17
 // template <class T>           add_const<T>& as_const(const T&&) = delete; // C++17

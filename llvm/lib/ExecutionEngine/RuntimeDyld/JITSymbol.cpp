@@ -14,7 +14,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Object/ObjectFile.h"
 
 using namespace llvm;
@@ -49,14 +49,35 @@ JITSymbolFlags llvm::JITSymbolFlags::fromGlobalValue(const GlobalValue &GV) {
   return Flags;
 }
 
+JITSymbolFlags llvm::JITSymbolFlags::fromSummary(GlobalValueSummary *S) {
+  JITSymbolFlags Flags = JITSymbolFlags::None;
+  auto L = S->linkage();
+  if (GlobalValue::isWeakLinkage(L) || GlobalValue::isLinkOnceLinkage(L))
+    Flags |= JITSymbolFlags::Weak;
+  if (GlobalValue::isCommonLinkage(L))
+    Flags |= JITSymbolFlags::Common;
+  if (GlobalValue::isExternalLinkage(L) || GlobalValue::isExternalWeakLinkage(L))
+    Flags |= JITSymbolFlags::Exported;
+
+  if (isa<FunctionSummary>(S))
+    Flags |= JITSymbolFlags::Callable;
+
+  return Flags;
+}
+
 Expected<JITSymbolFlags>
 llvm::JITSymbolFlags::fromObjectSymbol(const object::SymbolRef &Symbol) {
+  Expected<uint32_t> SymbolFlagsOrErr = Symbol.getFlags();
+  if (!SymbolFlagsOrErr)
+    // TODO: Test this error.
+    return SymbolFlagsOrErr.takeError();
+
   JITSymbolFlags Flags = JITSymbolFlags::None;
-  if (Symbol.getFlags() & object::BasicSymbolRef::SF_Weak)
+  if (*SymbolFlagsOrErr & object::BasicSymbolRef::SF_Weak)
     Flags |= JITSymbolFlags::Weak;
-  if (Symbol.getFlags() & object::BasicSymbolRef::SF_Common)
+  if (*SymbolFlagsOrErr & object::BasicSymbolRef::SF_Common)
     Flags |= JITSymbolFlags::Common;
-  if (Symbol.getFlags() & object::BasicSymbolRef::SF_Exported)
+  if (*SymbolFlagsOrErr & object::BasicSymbolRef::SF_Exported)
     Flags |= JITSymbolFlags::Exported;
 
   auto SymbolType = Symbol.getType();
@@ -71,8 +92,12 @@ llvm::JITSymbolFlags::fromObjectSymbol(const object::SymbolRef &Symbol) {
 
 ARMJITSymbolFlags
 llvm::ARMJITSymbolFlags::fromObjectSymbol(const object::SymbolRef &Symbol) {
+  Expected<uint32_t> SymbolFlagsOrErr = Symbol.getFlags();
+  if (!SymbolFlagsOrErr)
+    // TODO: Actually report errors helpfully.
+    report_fatal_error(SymbolFlagsOrErr.takeError());
   ARMJITSymbolFlags Flags;
-  if (Symbol.getFlags() & object::BasicSymbolRef::SF_Thumb)
+  if (*SymbolFlagsOrErr & object::BasicSymbolRef::SF_Thumb)
     Flags |= ARMJITSymbolFlags::Thumb;
   return Flags;
 }

@@ -1,8 +1,8 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=thumbv7-windows %s -o %t.obj
 // RUN: lld-link -entry:main -subsystem:console %t.obj -out:%t.exe -verbose 2>&1 | FileCheck -check-prefix=VERBOSE %s
-// RUN: llvm-objdump -d %t.exe -start-address=0x403000 -stop-address=0x403008 | FileCheck -check-prefix=FUNC01 %s
-// RUN: llvm-objdump -d %t.exe -start-address=0x404ffa -stop-address=0x405012 | FileCheck -check-prefix=FUNC01-THUNKS %s
+// RUN: llvm-objdump -d %t.exe --start-address=0x403000 --stop-address=0x403008 | FileCheck --check-prefix=FUNC01 %s
+// RUN: llvm-objdump -d %t.exe --start-address=0x404ffa --stop-address=0x405012 | FileCheck --check-prefix=FUNC01-THUNKS %s
 
 // VERBOSE: Added {{.*}} thunks with margin 204800 in 2 passes
 

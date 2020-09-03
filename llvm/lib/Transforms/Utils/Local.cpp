@@ -25,6 +25,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/EHPersonalities.h"
@@ -40,7 +41,6 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -403,15 +403,29 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
         II->getIntrinsicID() == Intrinsic::launder_invariant_group)
       return true;
 
-    // Lifetime intrinsics are dead when their right-hand is undef.
-    if (II->isLifetimeStartOrEnd())
-      return isa<UndefValue>(II->getArgOperand(1));
+    if (II->isLifetimeStartOrEnd()) {
+      auto *Arg = II->getArgOperand(1);
+      // Lifetime intrinsics are dead when their right-hand is undef.
+      if (isa<UndefValue>(Arg))
+        return true;
+      // If the right-hand is an alloc, global, or argument and the only uses
+      // are lifetime intrinsics then the intrinsics are dead.
+      if (isa<AllocaInst>(Arg) || isa<GlobalValue>(Arg) || isa<Argument>(Arg))
+        return llvm::all_of(Arg->uses(), [](Use &Use) {
+          if (IntrinsicInst *IntrinsicUse =
+                  dyn_cast<IntrinsicInst>(Use.getUser()))
+            return IntrinsicUse->isLifetimeStartOrEnd();
+          return false;
+        });
+      return false;
+    }
 
     // Assumptions are dead if their condition is trivially true.  Guards on
     // true are operationally no-ops.  In the future we can consider more
     // sophisticated tradeoffs for guards considering potential for check
     // widening, but for now we keep things simple.
-    if (II->getIntrinsicID() == Intrinsic::assume ||
+    if ((II->getIntrinsicID() == Intrinsic::assume &&
+         isAssumeWithEmptyBundle(*II)) ||
         II->getIntrinsicID() == Intrinsic::experimental_guard) {
       if (ConstantInt *Cond = dyn_cast<ConstantInt>(II->getArgOperand(0)))
         return !Cond->isZero();
@@ -444,29 +458,49 @@ bool llvm::RecursivelyDeleteTriviallyDeadInstructions(
   if (!I || !isInstructionTriviallyDead(I, TLI))
     return false;
 
-  SmallVector<Instruction*, 16> DeadInsts;
+  SmallVector<WeakTrackingVH, 16> DeadInsts;
   DeadInsts.push_back(I);
   RecursivelyDeleteTriviallyDeadInstructions(DeadInsts, TLI, MSSAU);
 
   return true;
 }
 
+bool llvm::RecursivelyDeleteTriviallyDeadInstructionsPermissive(
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts, const TargetLibraryInfo *TLI,
+    MemorySSAUpdater *MSSAU) {
+  unsigned S = 0, E = DeadInsts.size(), Alive = 0;
+  for (; S != E; ++S) {
+    auto *I = cast<Instruction>(DeadInsts[S]);
+    if (!isInstructionTriviallyDead(I)) {
+      DeadInsts[S] = nullptr;
+      ++Alive;
+    }
+  }
+  if (Alive == E)
+    return false;
+  RecursivelyDeleteTriviallyDeadInstructions(DeadInsts, TLI, MSSAU);
+  return true;
+}
+
 void llvm::RecursivelyDeleteTriviallyDeadInstructions(
-    SmallVectorImpl<Instruction *> &DeadInsts, const TargetLibraryInfo *TLI,
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts, const TargetLibraryInfo *TLI,
     MemorySSAUpdater *MSSAU) {
   // Process the dead instruction list until empty.
   while (!DeadInsts.empty()) {
-    Instruction &I = *DeadInsts.pop_back_val();
-    assert(I.use_empty() && "Instructions with uses are not dead.");
-    assert(isInstructionTriviallyDead(&I, TLI) &&
+    Value *V = DeadInsts.pop_back_val();
+    Instruction *I = cast_or_null<Instruction>(V);
+    if (!I)
+      continue;
+    assert(isInstructionTriviallyDead(I, TLI) &&
            "Live instruction found in dead worklist!");
+    assert(I->use_empty() && "Instructions with uses are not dead.");
 
     // Don't lose the debug info while deleting the instructions.
-    salvageDebugInfo(I);
+    salvageDebugInfo(*I);
 
     // Null out all of the instruction's operands to see if any operand becomes
     // dead as we go.
-    for (Use &OpU : I.operands()) {
+    for (Use &OpU : I->operands()) {
       Value *OpV = OpU.get();
       OpU.set(nullptr);
 
@@ -481,9 +515,9 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
           DeadInsts.push_back(OpI);
     }
     if (MSSAU)
-      MSSAU->removeMemoryAccess(&I);
+      MSSAU->removeMemoryAccess(I);
 
-    I.eraseFromParent();
+    I->eraseFromParent();
   }
 }
 
@@ -522,19 +556,20 @@ static bool areAllUsesEqual(Instruction *I) {
 /// delete it.  If that makes any of its operands trivially dead, delete them
 /// too, recursively.  Return true if a change was made.
 bool llvm::RecursivelyDeleteDeadPHINode(PHINode *PN,
-                                        const TargetLibraryInfo *TLI) {
+                                        const TargetLibraryInfo *TLI,
+                                        llvm::MemorySSAUpdater *MSSAU) {
   SmallPtrSet<Instruction*, 4> Visited;
   for (Instruction *I = PN; areAllUsesEqual(I) && !I->mayHaveSideEffects();
        I = cast<Instruction>(*I->user_begin())) {
     if (I->use_empty())
-      return RecursivelyDeleteTriviallyDeadInstructions(I, TLI);
+      return RecursivelyDeleteTriviallyDeadInstructions(I, TLI, MSSAU);
 
     // If we find an instruction more than once, we're on a cycle that
     // won't prove fruitful.
     if (!Visited.insert(I).second) {
       // Break the cycle and delete the instruction and its operands.
       I->replaceAllUsesWith(UndefValue::get(I->getType()));
-      (void)RecursivelyDeleteTriviallyDeadInstructions(I, TLI);
+      (void)RecursivelyDeleteTriviallyDeadInstructions(I, TLI, MSSAU);
       return true;
     }
   }
@@ -1133,9 +1168,8 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
 /// often possible though. If alignment is important, a more reliable approach
 /// is to simply align all global variables and allocation instructions to
 /// their preferred alignment from the beginning.
-static unsigned enforceKnownAlignment(Value *V, unsigned Alignment,
-                                      unsigned PrefAlign,
-                                      const DataLayout &DL) {
+static Align enforceKnownAlignment(Value *V, Align Alignment, Align PrefAlign,
+                                   const DataLayout &DL) {
   assert(PrefAlign > Alignment);
 
   V = V->stripPointerCasts();
@@ -1147,21 +1181,21 @@ static unsigned enforceKnownAlignment(Value *V, unsigned Alignment,
     // stripPointerCasts recurses through infinite layers of bitcasts,
     // while computeKnownBits is not allowed to traverse more than 6
     // levels.
-    Alignment = std::max(AI->getAlignment(), Alignment);
+    Alignment = std::max(AI->getAlign(), Alignment);
     if (PrefAlign <= Alignment)
       return Alignment;
 
     // If the preferred alignment is greater than the natural stack alignment
     // then don't round up. This avoids dynamic stack realignment.
-    if (DL.exceedsNaturalStackAlignment(Align(PrefAlign)))
+    if (DL.exceedsNaturalStackAlignment(PrefAlign))
       return Alignment;
-    AI->setAlignment(MaybeAlign(PrefAlign));
+    AI->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
   if (auto *GO = dyn_cast<GlobalObject>(V)) {
     // TODO: as above, this shouldn't be necessary.
-    Alignment = std::max(GO->getAlignment(), Alignment);
+    Alignment = max(GO->getAlign(), Alignment);
     if (PrefAlign <= Alignment)
       return Alignment;
 
@@ -1172,18 +1206,18 @@ static unsigned enforceKnownAlignment(Value *V, unsigned Alignment,
     if (!GO->canIncreaseAlignment())
       return Alignment;
 
-    GO->setAlignment(MaybeAlign(PrefAlign));
+    GO->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
   return Alignment;
 }
 
-unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
-                                          const DataLayout &DL,
-                                          const Instruction *CxtI,
-                                          AssumptionCache *AC,
-                                          const DominatorTree *DT) {
+Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
+                                       const DataLayout &DL,
+                                       const Instruction *CxtI,
+                                       AssumptionCache *AC,
+                                       const DominatorTree *DT) {
   assert(V->getType()->isPointerTy() &&
          "getOrEnforceKnownAlignment expects a pointer!");
 
@@ -1192,18 +1226,16 @@ unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
 
   // Avoid trouble with ridiculously large TrailZ values, such as
   // those computed from a null pointer.
-  TrailZ = std::min(TrailZ, unsigned(sizeof(unsigned) * CHAR_BIT - 1));
+  // LLVM doesn't support alignments larger than (1 << MaxAlignmentExponent).
+  TrailZ = std::min(TrailZ, +Value::MaxAlignmentExponent);
 
-  unsigned Align = 1u << std::min(Known.getBitWidth() - 1, TrailZ);
+  Align Alignment = Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
 
-  // LLVM doesn't support alignments larger than this currently.
-  Align = std::min(Align, +Value::MaximumAlignment);
-
-  if (PrefAlign > Align)
-    Align = enforceKnownAlignment(V, Align, PrefAlign, DL);
+  if (PrefAlign && *PrefAlign > Alignment)
+    Alignment = enforceKnownAlignment(V, Alignment, *PrefAlign, DL);
 
   // We don't need to make any adjustment.
-  return Align;
+  return Alignment;
 }
 
 ///===---------------------------------------------------------------------===//
@@ -1506,6 +1538,14 @@ TinyPtrVector<DbgVariableIntrinsic *> llvm::FindDbgAddrUses(Value *V) {
   return Declares;
 }
 
+TinyPtrVector<DbgDeclareInst *> llvm::FindDbgDeclareUses(Value *V) {
+  TinyPtrVector<DbgDeclareInst *> DDIs;
+  for (DbgVariableIntrinsic *DVI : FindDbgAddrUses(V))
+    if (auto *DDI = dyn_cast<DbgDeclareInst>(DVI))
+      DDIs.push_back(DDI);
+  return DDIs;
+}
+
 void llvm::findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V) {
   // This function is hot. Check whether the value has any metadata to avoid a
   // DenseMap lookup.
@@ -1588,23 +1628,18 @@ static MetadataAsValue *wrapValueInMetadata(LLVMContext &C, Value *V) {
   return MetadataAsValue::get(C, ValueAsMetadata::get(V));
 }
 
-bool llvm::salvageDebugInfo(Instruction &I) {
+/// Where possible to salvage debug information for \p I do so
+/// and return True. If not possible mark undef and return False.
+void llvm::salvageDebugInfo(Instruction &I) {
   SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   findDbgUsers(DbgUsers, &I);
-  if (DbgUsers.empty())
-    return false;
-
-  return salvageDebugInfoForDbgValues(I, DbgUsers);
+  salvageDebugInfoForDbgValues(I, DbgUsers);
 }
 
-void llvm::salvageDebugInfoOrMarkUndef(Instruction &I) {
-  if (!salvageDebugInfo(I))
-    replaceDbgUsesWithUndef(&I);
-}
-
-bool llvm::salvageDebugInfoForDbgValues(
+void llvm::salvageDebugInfoForDbgValues(
     Instruction &I, ArrayRef<DbgVariableIntrinsic *> DbgUsers) {
   auto &Ctx = I.getContext();
+  bool Salvaged = false;
   auto wrapMD = [&](Value *V) { return wrapValueInMetadata(Ctx, V); };
 
   for (auto *DII : DbgUsers) {
@@ -1619,14 +1654,22 @@ bool llvm::salvageDebugInfoForDbgValues(
     // salvageDebugInfoImpl should fail on examining the first element of
     // DbgUsers, or none of them.
     if (!DIExpr)
-      return false;
+      break;
 
     DII->setOperand(0, wrapMD(I.getOperand(0)));
     DII->setOperand(2, MetadataAsValue::get(Ctx, DIExpr));
     LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
+    Salvaged = true;
   }
 
-  return true;
+  if (Salvaged)
+    return;
+
+  for (auto *DII : DbgUsers) {
+    Value *Undef = UndefValue::get(I.getType());
+    DII->setOperand(0, MetadataAsValue::get(DII->getContext(),
+                                            ValueAsMetadata::get(Undef)));
+  }
 }
 
 DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
@@ -1658,13 +1701,14 @@ DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
   };
 
   if (auto *CI = dyn_cast<CastInst>(&I)) {
-    // No-op casts and zexts are irrelevant for debug info.
-    if (CI->isNoopCast(DL) || isa<ZExtInst>(&I))
+    // No-op casts are irrelevant for debug info.
+    if (CI->isNoopCast(DL))
       return SrcDIExpr;
 
     Type *Type = CI->getType();
-    // Casts other than Trunc or SExt to scalar types cannot be salvaged.
-    if (Type->isVectorTy() || (!isa<TruncInst>(&I) && !isa<SExtInst>(&I)))
+    // Casts other than Trunc, SExt, or ZExt to scalar types cannot be salvaged.
+    if (Type->isVectorTy() ||
+        !(isa<TruncInst>(&I) || isa<SExtInst>(&I) || isa<ZExtInst>(&I)))
       return nullptr;
 
     Value *FromValue = CI->getOperand(0);
@@ -1781,7 +1825,7 @@ static bool rewriteDebugUsers(
 
   if (!UndefOrSalvage.empty()) {
     // Try to salvage the remaining debug users.
-    salvageDebugInfoOrMarkUndef(From);
+    salvageDebugInfo(From);
     Changed = true;
   }
 
@@ -1936,11 +1980,23 @@ CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
   SmallVector<OperandBundleDef, 1> OpBundles;
   II->getOperandBundlesAsDefs(OpBundles);
   CallInst *NewCall = CallInst::Create(II->getFunctionType(),
-                                       II->getCalledValue(), Args, OpBundles);
+                                       II->getCalledOperand(), Args, OpBundles);
   NewCall->setCallingConv(II->getCallingConv());
   NewCall->setAttributes(II->getAttributes());
   NewCall->setDebugLoc(II->getDebugLoc());
   NewCall->copyMetadata(*II);
+
+  // If the invoke had profile metadata, try converting them for CallInst.
+  uint64_t TotalWeight;
+  if (NewCall->extractProfTotalWeight(TotalWeight)) {
+    // Set the total weight if it fits into i32, otherwise reset.
+    MDBuilder MDB(NewCall->getContext());
+    auto NewWeights = uint32_t(TotalWeight) != TotalWeight
+                          ? nullptr
+                          : MDB.createBranchWeights({uint32_t(TotalWeight)});
+    NewCall->setMetadata(LLVMContext::MD_prof, NewWeights);
+  }
+
   return NewCall;
 }
 
@@ -1987,7 +2043,7 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   // as of this time.
 
   InvokeInst *II =
-      InvokeInst::Create(CI->getFunctionType(), CI->getCalledValue(), Split,
+      InvokeInst::Create(CI->getFunctionType(), CI->getCalledOperand(), Split,
                          UnwindEdge, InvokeArgs, OpBundles, CI->getName(), BB);
   II->setDebugLoc(CI->getDebugLoc());
   II->setCallingConv(CI->getCallingConv());
@@ -2018,7 +2074,7 @@ static bool markAliveBlocks(Function &F,
     // canonicalizes unreachable insts into stores to null or undef.
     for (Instruction &I : *BB) {
       if (auto *CI = dyn_cast<CallInst>(&I)) {
-        Value *Callee = CI->getCalledValue();
+        Value *Callee = CI->getCalledOperand();
         // Handle intrinsic calls.
         if (Function *F = dyn_cast<Function>(Callee)) {
           auto IntrinsicID = F->getIntrinsicID();
@@ -2093,7 +2149,7 @@ static bool markAliveBlocks(Function &F,
     Instruction *Terminator = BB->getTerminator();
     if (auto *II = dyn_cast<InvokeInst>(Terminator)) {
       // Turn invokes that call 'nounwind' functions into ordinary calls.
-      Value *Callee = II->getCalledValue();
+      Value *Callee = II->getCalledOperand();
       if ((isa<ConstantPointerNull>(Callee) &&
            !NullPointerIsDefined(BB->getParent())) ||
           isa<UndefValue>(Callee)) {
@@ -2219,7 +2275,7 @@ bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
   SmallSetVector<BasicBlock *, 8> DeadBlockSet;
   for (BasicBlock &BB : F) {
     // Skip reachable basic blocks
-    if (Reachable.find(&BB) != Reachable.end())
+    if (Reachable.count(&BB))
       continue;
     DeadBlockSet.insert(&BB);
   }
@@ -2524,7 +2580,7 @@ bool llvm::callsGCLeafFunction(const CallBase *Call,
   // marked as 'gc-leaf-function.' All available Libcalls are
   // GC-leaf.
   LibFunc LF;
-  if (TLI.getLibFunc(ImmutableCallSite(Call), LF)) {
+  if (TLI.getLibFunc(*Call, LF)) {
     return TLI.has(LF);
   }
 
@@ -2904,21 +2960,40 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   default:
     return true;
   case Instruction::Call:
-  case Instruction::Invoke:
+  case Instruction::Invoke: {
+    const auto &CB = cast<CallBase>(*I);
+
     // Can't handle inline asm. Skip it.
-    if (isa<InlineAsm>(ImmutableCallSite(I).getCalledValue()))
-      return false;
-    // Many arithmetic intrinsics have no issue taking a
-    // variable, however it's hard to distingish these from
-    // specials such as @llvm.frameaddress that require a constant.
-    if (isa<IntrinsicInst>(I))
+    if (CB.isInlineAsm())
       return false;
 
     // Constant bundle operands may need to retain their constant-ness for
     // correctness.
-    if (ImmutableCallSite(I).isBundleOperand(OpIdx))
+    if (CB.isBundleOperand(OpIdx))
       return false;
-    return true;
+
+    if (OpIdx < CB.getNumArgOperands()) {
+      // Some variadic intrinsics require constants in the variadic arguments,
+      // which currently aren't markable as immarg.
+      if (isa<IntrinsicInst>(CB) &&
+          OpIdx >= CB.getFunctionType()->getNumParams()) {
+        // This is known to be OK for stackmap.
+        return CB.getIntrinsicID() == Intrinsic::experimental_stackmap;
+      }
+
+      // gcroot is a special case, since it requires a constant argument which
+      // isn't also required to be a simple ConstantInt.
+      if (CB.getIntrinsicID() == Intrinsic::gcroot)
+        return false;
+
+      // Some intrinsic operands are required to be immediates.
+      return !CB.paramHasAttr(OpIdx, Attribute::ImmArg);
+    }
+
+    // It is never allowed to replace the call argument to an intrinsic, but it
+    // may be possible for a call.
+    return !isa<IntrinsicInst>(CB);
+  }
   case Instruction::ShuffleVector:
     // Shufflevector masks are constant.
     return OpIdx != 2;
@@ -2981,4 +3056,38 @@ AllocaInst *llvm::findAllocaForValue(Value *V,
   if (Res)
     AllocaForValue[V] = Res;
   return Res;
+}
+
+Value *llvm::invertCondition(Value *Condition) {
+  // First: Check if it's a constant
+  if (Constant *C = dyn_cast<Constant>(Condition))
+    return ConstantExpr::getNot(C);
+
+  // Second: If the condition is already inverted, return the original value
+  Value *NotCondition;
+  if (match(Condition, m_Not(m_Value(NotCondition))))
+    return NotCondition;
+
+  BasicBlock *Parent = nullptr;
+  Instruction *Inst = dyn_cast<Instruction>(Condition);
+  if (Inst)
+    Parent = Inst->getParent();
+  else if (Argument *Arg = dyn_cast<Argument>(Condition))
+    Parent = &Arg->getParent()->getEntryBlock();
+  assert(Parent && "Unsupported condition to invert");
+
+  // Third: Check all the users for an invert
+  for (User *U : Condition->users())
+    if (Instruction *I = dyn_cast<Instruction>(U))
+      if (I->getParent() == Parent && match(I, m_Not(m_Specific(Condition))))
+        return I;
+
+  // Last option: Create a new instruction
+  auto *Inverted =
+      BinaryOperator::CreateNot(Condition, Condition->getName() + ".inv");
+  if (Inst && !isa<PHINode>(Inst))
+    Inverted->insertAfter(Inst);
+  else
+    Inverted->insertBefore(&*Parent->getFirstInsertionPt());
+  return Inverted;
 }

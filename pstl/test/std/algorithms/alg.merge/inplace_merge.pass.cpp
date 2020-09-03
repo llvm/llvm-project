@@ -147,6 +147,13 @@ main()
 
     test_algo_basic_single<int32_t>(run_for_rnd_bi<test_non_const<int32_t>>());
 
+    test_by_type<MemoryChecker>(
+        [](std::size_t idx){ return MemoryChecker{std::int32_t(idx * 2)}; },
+        [](std::size_t idx){ return MemoryChecker{std::int32_t(idx * 2 + 1)}; },
+        [](const MemoryChecker& val1, const MemoryChecker& val2){ return val1.value() == val2.value(); });
+    EXPECT_FALSE(MemoryChecker::alive_objects() < 0, "wrong effect from inplace_merge: number of ctors calls < num of dtors calls");
+    EXPECT_FALSE(MemoryChecker::alive_objects() > 0, "wrong effect from inplace_merge: number of ctors calls > num of dtors calls");
+    
     std::cout << done() << std::endl;
     return 0;
 }

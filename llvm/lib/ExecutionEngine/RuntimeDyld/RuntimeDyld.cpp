@@ -214,8 +214,12 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
   {
     JITSymbolResolver::LookupSet Symbols;
     for (auto &Sym : Obj.symbols()) {
-      uint32_t Flags = Sym.getFlags();
-      if ((Flags & SymbolRef::SF_Common) || (Flags & SymbolRef::SF_Weak)) {
+      Expected<uint32_t> FlagsOrErr = Sym.getFlags();
+      if (!FlagsOrErr)
+        // TODO: Test this error.
+        return FlagsOrErr.takeError();
+      if ((*FlagsOrErr & SymbolRef::SF_Common) ||
+          (*FlagsOrErr & SymbolRef::SF_Weak)) {
         // Get symbol name.
         if (auto NameOrErr = Sym.getName())
           Symbols.insert(*NameOrErr);
@@ -234,10 +238,13 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
   LLVM_DEBUG(dbgs() << "Parse symbols:\n");
   for (symbol_iterator I = Obj.symbol_begin(), E = Obj.symbol_end(); I != E;
        ++I) {
-    uint32_t Flags = I->getFlags();
+    Expected<uint32_t> FlagsOrErr = I->getFlags();
+    if (!FlagsOrErr)
+      // TODO: Test this error.
+      return FlagsOrErr.takeError();
 
     // Skip undefined symbols.
-    if (Flags & SymbolRef::SF_Undefined)
+    if (*FlagsOrErr & SymbolRef::SF_Undefined)
       continue;
 
     // Get the symbol type.
@@ -287,7 +294,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       }
     }
 
-    if (Flags & SymbolRef::SF_Absolute &&
+    if (*FlagsOrErr & SymbolRef::SF_Absolute &&
         SymType != object::SymbolRef::ST_File) {
       uint64_t Addr = 0;
       if (auto AddrOrErr = I->getAddress())
@@ -300,7 +307,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       LLVM_DEBUG(dbgs() << "\tType: " << SymType << " (absolute) Name: " << Name
                         << " SID: " << SectionID
                         << " Offset: " << format("%p", (uintptr_t)Addr)
-                        << " flags: " << Flags << "\n");
+                        << " flags: " << *FlagsOrErr << "\n");
       GlobalSymbolTable[Name] = SymbolTableEntry(SectionID, Addr, *JITSymFlags);
     } else if (SymType == object::SymbolRef::ST_Function ||
                SymType == object::SymbolRef::ST_Data ||
@@ -332,7 +339,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       LLVM_DEBUG(dbgs() << "\tType: " << SymType << " Name: " << Name
                         << " SID: " << SectionID
                         << " Offset: " << format("%p", (uintptr_t)SectOffset)
-                        << " flags: " << Flags << "\n");
+                        << " flags: " << *FlagsOrErr << "\n");
       GlobalSymbolTable[Name] =
           SymbolTableEntry(SectionID, SectOffset, *JITSymFlags);
     }
@@ -592,8 +599,11 @@ Error RuntimeDyldImpl::computeTotalAllocSize(const ObjectFile &Obj,
   uint32_t CommonAlign = 1;
   for (symbol_iterator I = Obj.symbol_begin(), E = Obj.symbol_end(); I != E;
        ++I) {
-    uint32_t Flags = I->getFlags();
-    if (Flags & SymbolRef::SF_Common) {
+    Expected<uint32_t> FlagsOrErr = I->getFlags();
+    if (!FlagsOrErr)
+      // TODO: Test this error.
+      return FlagsOrErr.takeError();
+    if (*FlagsOrErr & SymbolRef::SF_Common) {
       // Add the common symbols to a list.  We'll allocate them all below.
       uint64_t Size = I->getCommonSize();
       uint32_t Align = I->getAlignment();
@@ -1190,16 +1200,16 @@ Error RuntimeDyldImpl::resolveExternalSymbols() {
 
 void RuntimeDyldImpl::finalizeAsync(
     std::unique_ptr<RuntimeDyldImpl> This,
-    unique_function<void(Error)> OnEmitted,
-    std::unique_ptr<MemoryBuffer> UnderlyingBuffer) {
+    unique_function<void(object::OwningBinary<object::ObjectFile>, Error)>
+        OnEmitted,
+    object::OwningBinary<object::ObjectFile> O) {
 
   auto SharedThis = std::shared_ptr<RuntimeDyldImpl>(std::move(This));
   auto PostResolveContinuation =
-      [SharedThis, OnEmitted = std::move(OnEmitted),
-       UnderlyingBuffer = std::move(UnderlyingBuffer)](
+      [SharedThis, OnEmitted = std::move(OnEmitted), O = std::move(O)](
           Expected<JITSymbolResolver::LookupResult> Result) mutable {
         if (!Result) {
-          OnEmitted(Result.takeError());
+          OnEmitted(std::move(O), Result.takeError());
           return;
         }
 
@@ -1213,10 +1223,11 @@ void RuntimeDyldImpl::finalizeAsync(
         SharedThis->registerEHFrames();
         std::string ErrMsg;
         if (SharedThis->MemMgr.finalizeMemory(&ErrMsg))
-          OnEmitted(make_error<StringError>(std::move(ErrMsg),
+          OnEmitted(std::move(O),
+                    make_error<StringError>(std::move(ErrMsg),
                                             inconvertibleErrorCode()));
         else
-          OnEmitted(Error::success());
+          OnEmitted(std::move(O), Error::success());
       };
 
   JITSymbolResolver::LookupSet Symbols;
@@ -1403,32 +1414,35 @@ void RuntimeDyld::deregisterEHFrames() {
 // FIXME: Kill this with fire once we have a new JIT linker: this is only here
 // so that we can re-use RuntimeDyld's implementation without twisting the
 // interface any further for ORC's purposes.
-void jitLinkForORC(object::ObjectFile &Obj,
-                   std::unique_ptr<MemoryBuffer> UnderlyingBuffer,
-                   RuntimeDyld::MemoryManager &MemMgr,
-                   JITSymbolResolver &Resolver, bool ProcessAllSections,
-                   unique_function<Error(
-                       std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObj,
-                       std::map<StringRef, JITEvaluatedSymbol>)>
-                       OnLoaded,
-                   unique_function<void(Error)> OnEmitted) {
+void jitLinkForORC(
+    object::OwningBinary<object::ObjectFile> O,
+    RuntimeDyld::MemoryManager &MemMgr, JITSymbolResolver &Resolver,
+    bool ProcessAllSections,
+    unique_function<
+        Error(const object::ObjectFile &Obj,
+              std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObj,
+              std::map<StringRef, JITEvaluatedSymbol>)>
+        OnLoaded,
+    unique_function<void(object::OwningBinary<object::ObjectFile>, Error)>
+        OnEmitted) {
 
   RuntimeDyld RTDyld(MemMgr, Resolver);
   RTDyld.setProcessAllSections(ProcessAllSections);
 
-  auto Info = RTDyld.loadObject(Obj);
+  auto Info = RTDyld.loadObject(*O.getBinary());
 
   if (RTDyld.hasError()) {
-    OnEmitted(make_error<StringError>(RTDyld.getErrorString(),
-                                      inconvertibleErrorCode()));
+    OnEmitted(std::move(O), make_error<StringError>(RTDyld.getErrorString(),
+                                                    inconvertibleErrorCode()));
     return;
   }
 
-  if (auto Err = OnLoaded(std::move(Info), RTDyld.getSymbolTable()))
-    OnEmitted(std::move(Err));
+  if (auto Err =
+          OnLoaded(*O.getBinary(), std::move(Info), RTDyld.getSymbolTable()))
+    OnEmitted(std::move(O), std::move(Err));
 
   RuntimeDyldImpl::finalizeAsync(std::move(RTDyld.Dyld), std::move(OnEmitted),
-                                 std::move(UnderlyingBuffer));
+                                 std::move(O));
 }
 
 } // end namespace llvm

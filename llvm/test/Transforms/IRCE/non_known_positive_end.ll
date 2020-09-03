@@ -1,5 +1,5 @@
 ; RUN: opt -verify-loop-info -irce -irce-print-range-checks -irce-print-changed-loops %s -S 2>&1 | FileCheck %s
-; RUN: opt -verify-loop-info -passes='require<branch-prob>,loop(irce)' -irce-print-range-checks -irce-print-changed-loops %s -S 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -passes='require<branch-prob>,irce' -irce-print-range-checks -irce-print-changed-loops %s -S 2>&1 | FileCheck %s
 
 ; Make sure that we can pick up both range checks.
 define void @test_01(i32 *%arr, i32* %a_len_ptr, i32* %size_ptr) {

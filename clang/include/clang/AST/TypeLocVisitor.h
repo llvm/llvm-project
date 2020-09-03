@@ -13,7 +13,6 @@
 #define LLVM_CLANG_AST_TYPELOCVISITOR_H
 
 #include "clang/AST/TypeLoc.h"
-#include "clang/AST/TypeVisitor.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang {

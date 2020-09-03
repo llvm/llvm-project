@@ -58,7 +58,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | `-NullStmt {{.*}} <line:6:5> openmp_structured_block
+// CHECK-NEXT: |       | | | | `-NullStmt {{.*}} <line:6:5>
 // CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-target-simd.c:4:1) *const restrict'
 // CHECK-NEXT: |       | | | `-VarDecl {{.*}} <line:5:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -73,7 +73,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:5:23> col:23 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |-ForStmt {{.*}} <col:3, line:6:5>
 // CHECK-NEXT: |       |   | |-DeclStmt {{.*}} <line:5:8, col:17>
@@ -87,7 +87,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       |   | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       |   | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | `-NullStmt {{.*}} <line:6:5> openmp_structured_block
+// CHECK-NEXT: |       |   | `-NullStmt {{.*}} <line:6:5>
 // CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-target-simd.c:4:1) *const restrict'
 // CHECK-NEXT: |       |   `-VarDecl {{.*}} <line:5:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |     `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -116,7 +116,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | `-ForStmt {{.*}} <line:12:5, line:13:7> openmp_structured_block
+// CHECK-NEXT: |       | | | | `-ForStmt {{.*}} <line:12:5, line:13:7>
 // CHECK-NEXT: |       | | | |   |-DeclStmt {{.*}} <line:12:10, col:19>
 // CHECK-NEXT: |       | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
@@ -146,9 +146,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | |-FieldDecl {{.*}} <line:11:23> col:23 implicit 'int'
-// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:12:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |-ForStmt {{.*}} <line:11:3, line:13:7>
 // CHECK-NEXT: |       |   | |-DeclStmt {{.*}} <line:11:8, col:17>
@@ -162,7 +162,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       |   | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       |   | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | `-ForStmt {{.*}} <line:12:5, line:13:7> openmp_structured_block
+// CHECK-NEXT: |       |   | `-ForStmt {{.*}} <line:12:5, line:13:7>
 // CHECK-NEXT: |       |   |   |-DeclStmt {{.*}} <line:12:10, col:19>
 // CHECK-NEXT: |       |   |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
@@ -209,7 +209,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | `-ForStmt {{.*}} <line:19:5, line:20:7> openmp_structured_block
+// CHECK-NEXT: |       | | | | `-ForStmt {{.*}} <line:19:5, line:20:7>
 // CHECK-NEXT: |       | | | |   |-DeclStmt {{.*}} <line:19:10, col:19>
 // CHECK-NEXT: |       | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
@@ -239,9 +239,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | |-FieldDecl {{.*}} <line:18:23> col:23 implicit 'int'
-// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:19:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |-ForStmt {{.*}} <line:18:3, line:20:7>
 // CHECK-NEXT: |       |   | |-DeclStmt {{.*}} <line:18:8, col:17>
@@ -255,7 +255,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       |   | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       |   | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | `-ForStmt {{.*}} <line:19:5, line:20:7> openmp_structured_block
+// CHECK-NEXT: |       |   | `-ForStmt {{.*}} <line:19:5, line:20:7>
 // CHECK-NEXT: |       |   |   |-DeclStmt {{.*}} <line:19:10, col:19>
 // CHECK-NEXT: |       |   |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
@@ -314,7 +314,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
 // CHECK-NEXT: |       | | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT: |       | | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | |   `-NullStmt {{.*}} <line:27:7> openmp_structured_block
+// CHECK-NEXT: |       | | | |   `-NullStmt {{.*}} <line:27:7>
 // CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-target-simd.c:24:1) *const restrict'
 // CHECK-NEXT: |       | | | |-VarDecl {{.*}} <line:25:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -332,9 +332,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | |-FieldDecl {{.*}} <line:25:23> col:23 implicit 'int'
-// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:26:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |-ForStmt {{.*}} <line:25:3, line:27:7>
 // CHECK-NEXT: |       |   | |-DeclStmt {{.*}} <line:25:8, col:17>
@@ -360,7 +360,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
 // CHECK-NEXT: |       |   |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT: |       |   |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   |   `-NullStmt {{.*}} <line:27:7> openmp_structured_block
+// CHECK-NEXT: |       |   |   `-NullStmt {{.*}} <line:27:7>
 // CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-target-simd.c:24:1) *const restrict'
 // CHECK-NEXT: |       |   |-VarDecl {{.*}} <line:25:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -409,7 +409,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
 // CHECK-NEXT:         | | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT:         | | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | |   `-ForStmt {{.*}} <line:34:7, line:35:9> openmp_structured_block
+// CHECK-NEXT:         | | | |   `-ForStmt {{.*}} <line:34:7, line:35:9>
 // CHECK-NEXT:         | | | |     |-DeclStmt {{.*}} <line:34:12, col:21>
 // CHECK-NEXT:         | | | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         | | | |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
@@ -442,11 +442,11 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT:         | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT:         | | |-FieldDecl {{.*}} <line:32:23> col:23 implicit 'int'
-// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT:         | | |-FieldDecl {{.*}} <line:33:25> col:25 implicit 'int'
-// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT:         | | `-FieldDecl {{.*}} <line:34:27> col:27 implicit 'int'
-// CHECK-NEXT:         | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT:         | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT:         | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT:         |   |-ForStmt {{.*}} <line:32:3, line:35:9>
 // CHECK-NEXT:         |   | |-DeclStmt {{.*}} <line:32:8, col:17>
@@ -472,7 +472,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
 // CHECK-NEXT:         |   |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT:         |   |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   |   `-ForStmt {{.*}} <line:34:7, line:35:9> openmp_structured_block
+// CHECK-NEXT:         |   |   `-ForStmt {{.*}} <line:34:7, line:35:9>
 // CHECK-NEXT:         |   |     |-DeclStmt {{.*}} <line:34:12, col:21>
 // CHECK-NEXT:         |   |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         |   |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0

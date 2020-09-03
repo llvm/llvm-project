@@ -3,7 +3,7 @@
 ## section), reserved values and processor/os-specific index values, for both GNU
 ## and LLVM styles.
 
-# RUN: yaml2obj --docnum=1 %s > %t1
+# RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj --symbols %t1 | FileCheck %s --check-prefix=LLVM1
 # RUN: llvm-readelf --symbols %t1 | FileCheck %s --check-prefix=GNU1
 
@@ -85,7 +85,7 @@ Symbols:
 ## In this case, the index does not correspond to a real section. Check that GNU
 ## style just prints the section index as normal and LLVM style prints a warning
 ## (but only once for each warning).
-# RUN: yaml2obj --docnum=2 %s > %t2
+# RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: llvm-readobj --symbols %t2 2> %t2.llvm.err | FileCheck %s --check-prefix=LLVM2
 # RUN: FileCheck %s --input-file=%t2.llvm.err --check-prefix=BAD-SHNDX --implicit-check-not=warning
 # RUN: llvm-readelf --symbols %t2 2> %t2.gnu.err | FileCheck %s --check-prefix=GNU2
@@ -152,7 +152,7 @@ Symbols:
 
 ## In this case, the symtab shndx section is missing, so symbols with section
 ## indexes of SHN_XINDEX print as Reserved symbols.
-# RUN: yaml2obj --docnum=3 %s > %t3
+# RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: llvm-readobj --symbols %t3 2> %t3.llvm.err | FileCheck %s --check-prefix=LLVM3
 # RUN: FileCheck %s --input-file=%t3.llvm.err --check-prefix=NO-SYMTAB-SHNDX --implicit-check-not=warning
 # RUN: llvm-readelf --symbols %t3 2> %t3.gnu.err | FileCheck %s --check-prefix=GNU3

@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -gvn -instcombine -S | FileCheck %s
+; RUN: opt < %s -basic-aa -gvn -instcombine -S | FileCheck %s
 ; PR1109
 
 target datalayout = "e-p:32:32"

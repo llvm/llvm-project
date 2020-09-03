@@ -1,6 +1,6 @@
 //===- StorageUniquerSupport.h - MLIR Storage Uniquer Utilities -*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -13,30 +13,60 @@
 #ifndef MLIR_IR_STORAGEUNIQUERSUPPORT_H
 #define MLIR_IR_STORAGEUNIQUERSUPPORT_H
 
+#include "mlir/Support/InterfaceSupport.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/Support/StorageUniquer.h"
+#include "mlir/Support/TypeID.h"
 
 namespace mlir {
-class Location;
+class AttributeStorage;
 class MLIRContext;
 
 namespace detail {
+/// Utility method to generate a raw default location for use when checking the
+/// construction invariants of a storage object. This is defined out-of-line to
+/// avoid the need to include Location.h.
+const AttributeStorage *generateUnknownStorageLocation(MLIRContext *ctx);
+
+//===----------------------------------------------------------------------===//
+// StorageUserTraitBase
+//===----------------------------------------------------------------------===//
+
+/// Helper class for implementing traits for storage classes. Clients are not
+/// expected to interact with this directly, so its members are all protected.
+template <typename ConcreteType, template <typename> class TraitType>
+class StorageUserTraitBase {
+protected:
+  /// Return the derived instance.
+  ConcreteType getInstance() const {
+    // We have to cast up to the trait type, then to the concrete type because
+    // the concrete type will multiply derive from the (content free) TraitBase
+    // class, and we need to be able to disambiguate the path for the C++
+    // compiler.
+    auto *trait = static_cast<const TraitType<ConcreteType> *>(this);
+    return *static_cast<const ConcreteType *>(trait);
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// StorageUserBase
+//===----------------------------------------------------------------------===//
+
 /// Utility class for implementing users of storage classes uniqued by a
 /// StorageUniquer. Clients are not expected to interact with this class
 /// directly.
 template <typename ConcreteT, typename BaseT, typename StorageT,
-          typename UniquerT>
-class StorageUserBase : public BaseT {
+          typename UniquerT, template <typename T> class... Traits>
+class StorageUserBase : public BaseT, public Traits<ConcreteT>... {
 public:
   using BaseT::BaseT;
 
   /// Utility declarations for the concrete attribute class.
-  using Base = StorageUserBase<ConcreteT, BaseT, StorageT, UniquerT>;
+  using Base = StorageUserBase<ConcreteT, BaseT, StorageT, UniquerT, Traits...>;
   using ImplType = StorageT;
 
   /// Return a unique identifier for the concrete type.
-  static ClassID *getClassID() { return ClassID::getID<ConcreteT>(); }
+  static TypeID getTypeID() { return TypeID::get<ConcreteT>(); }
 
   /// Provide a default implementation of 'classof' that invokes a 'kindof'
   /// method on the concrete type.
@@ -46,6 +76,12 @@ public:
     return ConcreteT::kindof(val.getKind());
   }
 
+  /// Returns an interface map for the interfaces registered to this storage
+  /// user. This should not be used directly.
+  static detail::InterfaceMap getInterfaceMap() {
+    return detail::InterfaceMap::template get<Traits<ConcreteT>...>();
+  }
+
 protected:
   /// Get or create a new ConcreteT instance within the ctx. This
   /// function is guaranteed to return a non null object and will assert if
@@ -53,21 +89,20 @@ protected:
   template <typename... Args>
   static ConcreteT get(MLIRContext *ctx, unsigned kind, Args... args) {
     // Ensure that the invariants are correct for construction.
-    assert(succeeded(
-        ConcreteT::verifyConstructionInvariants(llvm::None, ctx, args...)));
+    assert(succeeded(ConcreteT::verifyConstructionInvariants(
+        generateUnknownStorageLocation(ctx), args...)));
     return UniquerT::template get<ConcreteT>(ctx, kind, args...);
   }
 
   /// Get or create a new ConcreteT instance within the ctx, defined at
   /// the given, potentially unknown, location. If the arguments provided are
   /// invalid then emit errors and return a null object.
-  template <typename... Args>
-  static ConcreteT getChecked(const Location &loc, MLIRContext *ctx,
-                              unsigned kind, Args... args) {
+  template <typename LocationT, typename... Args>
+  static ConcreteT getChecked(LocationT loc, unsigned kind, Args... args) {
     // If the construction invariants fail then we return a null attribute.
-    if (failed(ConcreteT::verifyConstructionInvariants(loc, ctx, args...)))
+    if (failed(ConcreteT::verifyConstructionInvariants(loc, args...)))
       return ConcreteT();
-    return UniquerT::template get<ConcreteT>(ctx, kind, args...);
+    return UniquerT::template get<ConcreteT>(loc.getContext(), kind, args...);
   }
 
   /// Default implementation that just returns success.

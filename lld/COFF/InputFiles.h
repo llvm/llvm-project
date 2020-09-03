@@ -26,6 +26,7 @@ namespace llvm {
 struct DILineInfo;
 namespace pdb {
 class DbiModuleDescriptorBuilder;
+class NativeSession;
 }
 namespace lto {
 class InputFile;
@@ -64,6 +65,7 @@ public:
     ArchiveKind,
     ObjectKind,
     LazyObjectKind,
+    PDBKind,
     ImportKind,
     BitcodeKind
   };
@@ -140,7 +142,7 @@ public:
   MachineTypes getMachineType() override;
   ArrayRef<Chunk *> getChunks() { return chunks; }
   ArrayRef<SectionChunk *> getDebugChunks() { return debugChunks; }
-  ArrayRef<SectionChunk *> getSXDataChunks() { return sXDataChunks; }
+  ArrayRef<SectionChunk *> getSXDataChunks() { return sxDataChunks; }
   ArrayRef<SectionChunk *> getGuardFidChunks() { return guardFidChunks; }
   ArrayRef<SectionChunk *> getGuardLJmpChunks() { return guardLJmpChunks; }
   ArrayRef<Symbol *> getSymbols() { return symbols; }
@@ -276,19 +278,12 @@ private:
 
   // Chunks containing symbol table indices of exception handlers. Only used for
   // 32-bit x86.
-  std::vector<SectionChunk *> sXDataChunks;
+  std::vector<SectionChunk *> sxDataChunks;
 
   // Chunks containing symbol table indices of address taken symbols and longjmp
   // targets.  These are not linked into the final binary when /guard:cf is set.
   std::vector<SectionChunk *> guardFidChunks;
   std::vector<SectionChunk *> guardLJmpChunks;
-
-  // This vector contains the same chunks as Chunks, but they are
-  // indexed such that you can get a SectionChunk by section index.
-  // Nonexistent section indices are filled with null pointers.
-  // (Because section number is 1-based, the first slot is always a
-  // null pointer.)
-  std::vector<SectionChunk *> sparseChunks;
 
   // This vector contains a list of all symbols defined or referenced by this
   // file. They are indexed such that you can get a Symbol by symbol
@@ -296,7 +291,40 @@ private:
   // symbols in the real symbol table) are filled with null pointers.
   std::vector<Symbol *> symbols;
 
+  // This vector contains the same chunks as Chunks, but they are
+  // indexed such that you can get a SectionChunk by section index.
+  // Nonexistent section indices are filled with null pointers.
+  // (Because section number is 1-based, the first slot is always a
+  // null pointer.) This vector is only valid during initialization.
+  std::vector<SectionChunk *> sparseChunks;
+
   DWARFCache *dwarf = nullptr;
+};
+
+// This is a PDB type server dependency, that is not a input file per se, but
+// needs to be treated like one. Such files are discovered from the debug type
+// stream.
+class PDBInputFile : public InputFile {
+public:
+  explicit PDBInputFile(MemoryBufferRef m);
+  ~PDBInputFile();
+  static bool classof(const InputFile *f) { return f->kind() == PDBKind; }
+  void parse() override;
+
+  static void enqueue(StringRef path, ObjFile *fromFile);
+
+  static PDBInputFile *findFromRecordPath(StringRef path, ObjFile *fromFile);
+
+  static std::map<std::string, PDBInputFile *> instances;
+
+  // Record possible errors while opening the PDB file
+  llvm::Optional<Error> loadErr;
+
+  // This is the actual interface to the PDB (if it was opened successfully)
+  std::unique_ptr<llvm::pdb::NativeSession> session;
+
+  // If the PDB has a .debug$T stream, this tells how it will be handled.
+  TpiSource *debugTypesObj = nullptr;
 };
 
 // This type represents import library members that contain DLL names

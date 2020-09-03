@@ -145,9 +145,9 @@ static void demangleLine(llvm::raw_ostream &OS, StringRef Mangled, bool Split) {
     SmallVector<std::pair<StringRef, StringRef>, 16> Words;
     SplitStringDelims(Mangled, Words, IsLegalItaniumChar);
     for (const auto &Word : Words)
-      Result += ::demangle(Word.first) + Word.second.str();
+      Result += ::demangle(std::string(Word.first)) + Word.second.str();
   } else
-    Result = ::demangle(Mangled);
+    Result = ::demangle(std::string(Mangled));
   OS << Result << '\n';
   OS.flush();
 }

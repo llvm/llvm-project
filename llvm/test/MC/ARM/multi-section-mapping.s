@@ -42,10 +42,10 @@
 @   + .starts_thumb to have $t at 0
 @   + .starts_data to have $d at 0
 
-@ CHECK: 00000000 .text 00000000 $a
-@ CHECK-NEXT: 00000000 .wibble 00000000 $a
-@ CHECK-NEXT: 0000000a .text 00000000 $d
-@ CHECK-NEXT: 00000000 .starts_thumb 00000000 $t
-@ CHECK-NEXT: 00000008 .text 00000000 $t
+@ CHECK: 00000000 l .text 00000000 $a
+@ CHECK-NEXT: 00000000 l .wibble 00000000 $a
+@ CHECK-NEXT: 0000000a l .text 00000000 $d
+@ CHECK-NEXT: 00000000 l .starts_thumb 00000000 $t
+@ CHECK-NEXT: 00000008 l .text 00000000 $t
 @ CHECK-NOT: ${{[adt]}}
 

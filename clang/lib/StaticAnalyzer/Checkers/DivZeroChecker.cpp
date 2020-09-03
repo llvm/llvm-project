@@ -101,6 +101,6 @@ void ento::registerDivZeroChecker(CheckerManager &mgr) {
   mgr.registerChecker<DivZeroChecker>();
 }
 
-bool ento::shouldRegisterDivZeroChecker(const LangOptions &LO) {
+bool ento::shouldRegisterDivZeroChecker(const CheckerManager &mgr) {
   return true;
 }

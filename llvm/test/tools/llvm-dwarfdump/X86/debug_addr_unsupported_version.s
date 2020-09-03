@@ -1,12 +1,13 @@
 # RUN: llvm-mc %s -filetype obj -triple i386-pc-linux -o - | \
-# RUN: llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
+# RUN: not llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
 # RUN: FileCheck %s -input-file %t.err -check-prefix=ERR
 
-# ERR: version 6 of .debug_addr section at offset 0x0 is not supported
+# ERR: address table at offset 0x0 has unsupported version 6
+# ERR: address table at offset 0x20 has unsupported version 4
 # ERR-NOT: {{.}}
 
 # CHECK: .debug_addr contents
-# CHECK-NEXT:     length = 0x0000000c, version = 0x0005, addr_size = 0x04, seg_size = 0x00
+# CHECK-NEXT:     length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x04, seg_size = 0x00
 # CHECK-NEXT:     Addrs: [
 # CHECK-NEXT:     0x00000002
 # CHECK-NEXT:     0x00000003
@@ -40,3 +41,13 @@
   .byte 0  # segment_selector_size
   .long 0x00000002
   .long 0x00000003
+
+	.section	.debug_addr,"",@progbits
+.Ldebug_addr2:
+  .long 12 # unit_length = .short + .byte + .byte + .long + .long
+  .short 4 # version
+  .byte 4  # address_size
+  .byte 0  # segment_selector_size
+  .long 0x00000000
+  .long 0x00000001
+

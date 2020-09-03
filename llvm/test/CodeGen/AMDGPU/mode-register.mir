@@ -17,12 +17,12 @@ body: |
     liveins: $sgpr0, $sgpr1, $sgpr2
     $m0 = S_MOV_B32 killed $sgpr2
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
-    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $m0, implicit $exec
-    $vgpr2 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $exec
-    $vgpr0 = V_INTERP_P1LL_F16 0, killed $vgpr0, 2, 1, -1, 0, 0, implicit $m0, implicit $exec
-    $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $m0, implicit $exec
-    $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $m0, implicit $exec
-    $vgpr0 = V_ADD_F16_e32 killed $vgpr1, killed $vgpr0, implicit $exec
+    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 killed $sgpr1, implicit $exec
+    $vgpr0 = V_INTERP_P1LL_F16 0, killed $vgpr0, 2, 1, -1, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr0 = V_ADD_F16_e32 killed $vgpr1, killed $vgpr0, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -41,14 +41,14 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2
     $m0 = S_MOV_B32 killed $sgpr2
-    S_SETREG_IMM32_B32 3, 2177
+    S_SETREG_IMM32_B32 3, 2177, implicit-def $mode, implicit $mode
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
-    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $m0, implicit $exec
-    $vgpr2 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $exec
-    $vgpr0 = V_INTERP_P1LL_F16 0, killed $vgpr0, 2, 1, -1, 0, 0, implicit $m0, implicit $exec
-    $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $m0, implicit $exec
-    $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $m0, implicit $exec
-    $vgpr0 = V_ADD_F16_e32 killed $vgpr1, killed $vgpr0, implicit $exec
+    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 killed $sgpr1, implicit $exec
+    $vgpr0 = V_INTERP_P1LL_F16 0, killed $vgpr0, 2, 1, -1, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr0 = V_ADD_F16_e32 killed $vgpr1, killed $vgpr0, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -68,13 +68,13 @@ body: |
     liveins: $sgpr0, $sgpr1, $sgpr2
     $m0 = S_MOV_B32 killed $sgpr2
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
-    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $m0, implicit $exec
-    $vgpr2 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $exec
-    $vgpr0 = V_INTERP_P1LL_F16 0, killed $vgpr0, 2, 1, -1, 0, 0, implicit $m0, implicit $exec
-    $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $m0, implicit $exec
-    $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $m0, implicit $exec
-    S_SETREG_IMM32_B32 0, 2177
-    $vgpr0 = V_ADD_F16_e32 killed $vgpr1, killed $vgpr0, implicit $exec
+    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 killed $sgpr1, implicit $exec
+    $vgpr0 = V_INTERP_P1LL_F16 0, killed $vgpr0, 2, 1, -1, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $mode, implicit $m0, implicit $exec
+    S_SETREG_IMM32_B32 0, 2177, implicit-def $mode, implicit $mode
+    $vgpr0 = V_ADD_F16_e32 killed $vgpr1, killed $vgpr0, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -89,7 +89,7 @@ name: rtn_default
 body: |
   bb.0:
     liveins: $vgpr1_vgpr2
-    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $exec
+    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -106,8 +106,8 @@ name: rtn_from_rtz
 body: |
   bb.0:
     liveins: $vgpr1_vgpr2
-    S_SETREG_IMM32_B32 3, 2177
-    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $exec
+    S_SETREG_IMM32_B32 3, 2177, implicit-def $mode, implicit $mode
+    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -122,11 +122,11 @@ body: |
   bb.0:
     successors: %bb.1
     liveins: $vgpr1_vgpr2
-    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $exec
+    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
-    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $m0, implicit $exec
+    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $mode, implicit $m0, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -150,13 +150,13 @@ body: |
     liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr3, $vgpr4
     $m0 = S_MOV_B32 killed $sgpr2
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit $exec
-    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $m0, implicit $exec
+    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $mode, implicit $m0, implicit $exec
     $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $exec
-    $vgpr0 = V_INTERP_P1LL_F16 0, killed $vgpr0, 2, 1, -1, 0, 0, implicit $m0, implicit $exec
-    $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $m0, implicit $exec
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $exec
-    $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $m0, implicit $exec
-    $vgpr0 = V_ADD_F16_e32 killed $sgpr0, killed $vgpr0, implicit $exec
+    $vgpr0 = V_INTERP_P1LL_F16 0, killed $vgpr0, 2, 1, -1, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
+    $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr0 = V_ADD_F16_e32 killed $sgpr0, killed $vgpr0, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -179,14 +179,14 @@ body: |
     liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr3, $vgpr4
     $m0 = S_MOV_B32 killed $sgpr2
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit $exec
-    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $m0, implicit $exec
-    S_SETREG_IMM32_B32 2, 2049
-    $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $exec
-    $vgpr0 = V_INTERP_P1LL_F16 0, killed $vgpr0, 2, 1, -1, 0, 0, implicit $m0, implicit $exec
-    $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $m0, implicit $exec
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $exec
-    $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $m0, implicit $exec
-    $vgpr0 = V_ADD_F16_e32 killed $sgpr0, killed $vgpr0, implicit $exec
+    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    S_SETREG_IMM32_B32 2, 2049, implicit-def $mode, implicit $mode
+    $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec
+    $vgpr0 = V_INTERP_P1LL_F16 0, killed $vgpr0, 2, 1, -1, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
+    $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $mode, implicit $m0, implicit $exec
+    $vgpr0 = V_ADD_F16_e32 killed $sgpr0, killed $vgpr0, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -212,13 +212,13 @@ body: |
 
   bb.1:
     successors: %bb.2
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $exec
+    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
     successors: %bb.1, %bb.3
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit $exec
-    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $m0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec
+    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $mode, implicit $m0, implicit $exec
     S_CBRANCH_VCCZ %bb.1, implicit $vcc
     S_BRANCH %bb.3
 
@@ -251,7 +251,7 @@ body: |
 
   bb.2:
     successors: %bb.1, %bb.3
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $exec
+    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
     S_CBRANCH_VCCZ %bb.1, implicit $vcc
     S_BRANCH %bb.3
 
@@ -267,7 +267,7 @@ body: |
 
   bb.5:
     successors: %bb.1, %bb.6
-    S_SETREG_IMM32_B32 3, 2177
+    S_SETREG_IMM32_B32 3, 2177, implicit-def $mode, implicit $mode
     S_CBRANCH_VCCZ %bb.1, implicit $vcc
     S_BRANCH %bb.6
 
@@ -306,7 +306,7 @@ body: |
   bb.3:
     successors: %bb.1, %bb.4
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit $exec
-    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $m0, implicit $exec
+    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $mode, implicit $m0, implicit $exec
     S_CBRANCH_VCCZ %bb.1, implicit $vcc
     S_BRANCH %bb.4
 
@@ -337,12 +337,12 @@ body: |
 
   bb.2:
     successors: %bb.3
-    S_SETREG_IMM32_B32 3, 2177
+    S_SETREG_IMM32_B32 3, 2177, implicit-def $mode, implicit $mode
     S_BRANCH %bb.3
 
   bb.3:
     successors: %bb.4
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $exec
+    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
     S_BRANCH %bb.4
 
   bb.4:
@@ -373,7 +373,7 @@ body: |
 
   bb.2:
     successors: %bb.3
-    S_SETREG_IMM32_B32 3, 2177
+    S_SETREG_IMM32_B32 3, 2177, implicit-def $mode, implicit $mode
     S_BRANCH %bb.3
 
   bb.3:
@@ -383,7 +383,7 @@ body: |
 
   bb.4:
     successors: %bb.5
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $exec
+    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
     S_BRANCH %bb.5
 
   bb.5:
@@ -402,8 +402,8 @@ body: |
   bb.0:
     successors: %bb.1
     liveins: $vgpr1_vgpr2
-    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $exec
-    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $m0, implicit $exec
+    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $mode, implicit $exec
+    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $mode, implicit $m0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -419,7 +419,7 @@ body: |
     S_BRANCH %bb.4
 
   bb.4:
-    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $m0, implicit $exec
+    $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $mode, implicit $m0, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -446,14 +446,66 @@ body: |
 
   bb.2:
     successors: %bb.3
-    S_SETREG_IMM32_B32 3, 2177
+    S_SETREG_IMM32_B32 3, 2177, implicit-def $mode, implicit $mode
     S_BRANCH %bb.3
 
   bb.3:
     successors: %bb.4
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $exec
+    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
     S_BRANCH %bb.4
 
   bb.4:
+    S_ENDPGM 0
+...
+---
+# checks for bug where if a block is its own predecessor it could cause mode tracking
+# to produce the wrong mode, resulting in an unnecessary setreg
+# CHECK-LABEL: name: single_block_loop
+# CHECK-LABEL: bb.0:
+# CHECK-NOT: S_SETREG
+
+name: single_block_loop
+
+body: |
+  bb.0:
+    successors: %bb.1
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3
+    liveins: $vgpr1_vgpr2
+    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $mode, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_ENDPGM 0
+...
+---
+# checks for a bug where if the first block is its own predecessor the initial mode was
+# not correctly propagated, resulting in an unnecessary setreg
+# CHECK-LABEL: name: first_block_loop
+# CHECK-LABEL: bb.0:
+# CHECK-NOT: S_SETREG
+
+name: first_block_loop
+
+body: |
+  bb.0:
+    successors: %bb.0, %bb.1
+    S_CBRANCH_VCCZ %bb.0, implicit $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+    liveins: $vgpr1_vgpr2
+    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $mode, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
     S_ENDPGM 0
 ...

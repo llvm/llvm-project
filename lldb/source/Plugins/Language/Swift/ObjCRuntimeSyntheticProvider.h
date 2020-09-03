@@ -66,7 +66,8 @@ public:
 
     lldb::ValueObjectSP m_root_sp;
 
-    DISALLOW_COPY_AND_ASSIGN(FrontEnd);
+    FrontEnd(const FrontEnd &) = delete;
+    const FrontEnd &operator=(const FrontEnd &) = delete;
   };
 
   virtual SyntheticChildrenFrontEnd::AutoPointer
@@ -75,7 +76,9 @@ public:
   }
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ObjCRuntimeSyntheticProvider);
+  ObjCRuntimeSyntheticProvider(const ObjCRuntimeSyntheticProvider &) = delete;
+  const ObjCRuntimeSyntheticProvider &
+  operator=(const ObjCRuntimeSyntheticProvider &) = delete;
 };
 }
 

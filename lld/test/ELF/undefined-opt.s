@@ -54,12 +54,18 @@
 # UNK-UNDEFINED-SO: ]
 
 # Added undefined symbols should appear in the dynamic table if necessary.
-# RUN: ld.lld -shared -o %t5 %t.o -u export
-# RUN: llvm-readobj --dyn-symbols %t5 | \
+# RUN: ld.lld -shared -soname=t -o %t.so %t.o -u export
+# RUN: llvm-readobj --dyn-symbols %t.so | \
 # RUN:     FileCheck --check-prefix=EXPORT-SO %s
 # EXPORT-SO: DynamicSymbols [
 # EXPORT-SO:   Name: export
 # EXPORT-SO: ]
+
+## Test that we handle -u before input files: if we handle -u after
+## %t.so, foo would be undefined in the output.
+# RUN: rm -f %t.a && llvm-ar rc %t.a %t.o
+# RUN: ld.lld -u export %t.a %t.so -o %t5
+# RUN: llvm-readobj --dyn-symbols %t5 | FileCheck --check-prefix=EXPORT-SO %s
 
 .globl _start
 _start:

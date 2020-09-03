@@ -7,6 +7,9 @@
 // CHECK-V8A: #define __ARM_FEATURE_NUMERIC_MAXMIN 1
 // CHECK-V8A-NOT: #define __ARM_FP 0x
 // CHECK-V8A-NOT: #define __ARM_FEATURE_DOTPROD
+// CHECK-V8A-NOT: #define __ARM_BF16_FORMAT_ALTERNATIVE
+// CHECK-V8A-NOT: #define __ARM_FEATURE_BF16
+// CHECK-V8A-NOT: #define __ARM_FEATURE_BF16_VECTOR_ARITHMETIC
 
 // RUN: %clang -target armv8a-none-linux-gnueabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V8A-ALLOW-FP-INSTR %s
 // RUN: %clang -target armv8a-none-linux-gnueabihf -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V8A-ALLOW-FP-INSTR %s
@@ -674,6 +677,7 @@
 // RUN: %clang -target armv8m.main-none-linux-gnu -mcmse -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=V8M_CMSE %s
 // RUN: %clang -target arm-none-linux-gnu -mcpu=cortex-m33 -mcmse -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=V8M_CMSE %s
 // RUN: %clang -target arm -mcpu=cortex-m23 -mcmse -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=V8M_CMSE %s
+// RUN: %clang -target arm-none-linux-gnu -mcpu=cortex-m55 -mcmse -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=V8M_CMSE %s
 // V8M_CMSE-NOT: __ARM_FEATURE_CMSE 1
 // V8M_CMSE: #define __ARM_FEATURE_CMSE 3
 
@@ -726,6 +730,20 @@
 // M33-ALLOW-FP-INSTR: #define __ARM_FP 0x6
 // M33-ALLOW-FP-INSTR: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 
+// Test whether predefines are as expected when targeting cortex-m55 (softfp FP ABI as default).
+// RUN: %clang -target arm-eabi -mcpu=cortex-m55 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=M55 %s
+// M55: #define __ARM_ARCH 8
+// M55: #define __ARM_ARCH_8_1M_MAIN__ 1
+// M55: #define __ARM_ARCH_EXT_IDIV__ 1
+// M55-NOT: __ARM_ARCH_ISA_ARM
+// M55: #define __ARM_ARCH_ISA_THUMB 2
+// M55: #define __ARM_ARCH_PROFILE 'M'
+// M55-NOT: __ARM_FEATURE_CRC32
+// M55: #define __ARM_FEATURE_DSP 1
+// M55: #define __ARM_FEATURE_MVE 3
+// M55: #define __ARM_FP 0xe
+// M55: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+
 // Test whether predefines are as expected when targeting krait (soft FP as default).
 // RUN: %clang -target armv7 -mcpu=krait -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=KRAIT %s
 // RUN: %clang -target armv7 -mthumb -mcpu=krait -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=KRAIT %s
@@ -761,9 +779,11 @@
 // CHECK-V81M-MVEFP: #define __ARM_FEATURE_SIMD32 1
 // CHECK-V81M-MVEFP: #define __ARM_FPV5__ 1
 
-// nofp discards mve.fp
-// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp+nofp -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVEFP-NOFP %s
-// CHECK-V81M-MVEFP-NOFP-NOT: #define __ARM_FEATURE_MVE
+// fpu=none/nofp discards mve.fp, but not mve/dsp
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp+nofp            -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVEFP-NOFP %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp      -mfpu=none -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVEFP-NOFP %s
+// CHECK-V81M-MVEFP-NOFP: #define __ARM_FEATURE_DSP 1
+// CHECK-V81M-MVEFP-NOFP: #define __ARM_FEATURE_MVE 1
 
 // nomve discards mve.fp
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp+nomve -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVEFP-NOMVE %s
@@ -773,10 +793,27 @@
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve+fp -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVE-FP %s
 // CHECK-V81M-MVE-FP: #define __ARM_FEATURE_MVE 1
 
-// nodsp discards both dsp and mve
+// nodsp discards both dsp and mve ...
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve+nodsp -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVE-NODSP %s
 // CHECK-V81M-MVE-NODSP-NOT: #define __ARM_FEATURE_MVE
 // CHECK-V81M-MVE-NODSP-NOT: #define __ARM_FEATURE_DSP
+
+// ... and also mve.fp
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp+nodsp -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVE-NODSP %s
+// CHECK-V81M-MVE-NODSP-NOT: #define __ARM_FEATURE_MVE
+// CHECK-V81M-MVE-NODSP-NOT: #define __ARM_FEATURE_DSP
+
+// Test CDE (Custom Datapath Extension) feature test macros
+
+// RUN: %clang -target arm-arm-none-eabi -march=armv8m.main -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-V8M-NOCDE %s
+// CHECK-V8M-NOCDE-NOT: #define __ARM_FEATURE_CDE
+// CHECK-V8M-NOCDE-NOT: #define __ARM_FEATURE_CDE_COPROC
+// RUN: %clang -target arm-arm-none-eabi -march=armv8m.main+cdecp0+cdecp1+cdecp7 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V8M-CDE-MASK1 %s
+// CHECK-V8M-CDE-MASK1: #define __ARM_FEATURE_CDE 1
+// CHECK-V8M-CDE-MASK1: #define __ARM_FEATURE_CDE_COPROC 0x83
+// RUN: %clang -target arm-arm-none-eabi -march=armv8m.main+cdecp0+cdecp1+cdecp2+cdecp3+cdecp4+cdecp5+cdecp6+cdecp7 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V8M-CDE-MASK2 %s
+// CHECK-V8M-CDE-MASK2: #define __ARM_FEATURE_CDE 1
+// CHECK-V8M-CDE-MASK2: #define __ARM_FEATURE_CDE_COPROC 0xff
 
 // RUN: %clang -target armv8.1a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81A %s
 // CHECK-V81A: #define __ARM_ARCH 8
@@ -807,5 +844,16 @@
 // CHECK-V85A: #define __ARM_ARCH_8_5A__ 1
 // CHECK-V85A: #define __ARM_ARCH_PROFILE 'A'
 
+// RUN: %clang -target armv8.6a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V86A %s
+// CHECK-V86A: #define __ARM_ARCH 8
+// CHECK-V86A: #define __ARM_ARCH_8_6A__ 1
+// CHECK-V86A: #define __ARM_ARCH_PROFILE 'A'
+
 // RUN: %clang -target arm-none-none-eabi -march=armv7-m -mfpu=softvfp -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SOFTVFP %s
 // CHECK-SOFTVFP-NOT: #define __ARM_FP 0x
+
+// ================== Check BFloat16 Extensions.
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.6-a+bf16 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-BFLOAT %s
+// CHECK-BFLOAT: #define __ARM_BF16_FORMAT_ALTERNATIVE 1
+// CHECK-BFLOAT: #define __ARM_FEATURE_BF16 1
+// CHECK-BFLOAT: #define __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1

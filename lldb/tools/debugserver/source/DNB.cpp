@@ -421,7 +421,8 @@ nub_process_t DNBProcessAttachByName(const char *name, struct timespec *timeout,
   if (num_matching_proc_infos == 0) {
     DNBLogError("error: no processes match '%s'\n", name);
     return INVALID_NUB_PROCESS;
-  } else if (num_matching_proc_infos > 1) {
+  }
+  if (num_matching_proc_infos > 1) {
     DNBLogError("error: %llu processes match '%s':\n",
                 (uint64_t)num_matching_proc_infos, name);
     size_t i;

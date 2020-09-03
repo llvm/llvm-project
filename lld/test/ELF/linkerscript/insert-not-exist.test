@@ -1,0 +1,9 @@
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/insert-after.s -o %t.o
+# RUN: not ld.lld -T %s %t.o -o /dev/null 2>&1 | FileCheck %s
+
+# CHECK: error: unable to insert .foo.data after .not_exist
+# CHECK: error: unable to insert .foo.text before .not_exist
+
+SECTIONS { .foo.data : {} } INSERT AFTER .not_exist;
+SECTIONS { .foo.text : {} } INSERT BEFORE .not_exist;

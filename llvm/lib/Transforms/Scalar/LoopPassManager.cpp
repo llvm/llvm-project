@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 
@@ -33,15 +34,19 @@ PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
   // instrumenting callbacks for the passes later.
   PassInstrumentation PI = AM.getResult<PassInstrumentationAnalysis>(L, AR);
   for (auto &Pass : Passes) {
-    if (DebugLogging)
-      dbgs() << "Running pass: " << Pass->name() << " on " << L;
-
     // Check the PassInstrumentation's BeforePass callbacks before running the
     // pass, skip its execution completely if asked to (callback returns false).
     if (!PI.runBeforePass<Loop>(*Pass, L))
       continue;
 
-    PreservedAnalyses PassPA = Pass->run(L, AM, AR, U);
+    if (DebugLogging)
+      dbgs() << "Running pass: " << Pass->name() << " on " << L;
+
+    PreservedAnalyses PassPA;
+    {
+      TimeTraceScope TimeScope(Pass->name(), L.getName());
+      PassPA = Pass->run(L, AM, AR, U);
+    }
 
     // do not pass deleted Loop into the instrumentation
     if (U.skipCurrentLoop())

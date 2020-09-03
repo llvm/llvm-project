@@ -1,4 +1,5 @@
 # RUN: llc -o /dev/null %s -mtriple=aarch64-apple-ios -run-pass=aarch64-collect-loh -debug-only=aarch64-collect-loh 2>&1 | FileCheck %s
+# RUN: llc -debugify-and-strip-all-safe -o /dev/null %s -mtriple=aarch64-apple-ios -run-pass=aarch64-collect-loh -debug-only=aarch64-collect-loh 2>&1 | FileCheck %s
 # REQUIRES: asserts
 --- |
   define void @func0() { ret void }

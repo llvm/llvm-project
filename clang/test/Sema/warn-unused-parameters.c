@@ -7,7 +7,7 @@ int f0(int x,
   return x;
 }
 
-void f1() {
+void f1(void) {
   (void)^(int x,
           int y,
           int z __attribute__((unused))) { return x; };

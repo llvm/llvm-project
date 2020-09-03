@@ -6,6 +6,9 @@
 # RUN: ld.lld -shared -o %t.so %t1.o --start-lib %t2.o
 # RUN: llvm-readobj --dyn-syms %t.so | FileCheck %s
 
+# RUN: ld.lld -pie -o %t %t1.o --start-lib %t2.o
+# RUN: llvm-readobj --dyn-syms %t | FileCheck %s
+
 # CHECK:      Name: foo
 # CHECK-NEXT: Value: 0x0
 # CHECK-NEXT: Size: 0
@@ -15,5 +18,7 @@
 # CHECK-NEXT: Section: Undefined
 
 .weak foo
+call foo@PLT
+
 .data
 .quad foo

@@ -57,8 +57,10 @@ using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Field;
+using ::testing::IsEmpty;
 using ::testing::Matcher;
 using ::testing::Not;
+using ::testing::Pointee;
 using ::testing::StartsWith;
 
 namespace {
@@ -153,11 +155,17 @@ public:
     }
   }
 
-  /// Add a new file, run syntax::tokenize() on it and return the results.
+  /// Add a new file, run syntax::tokenize() on the range if any, run it on the
+  /// whole file otherwise and return the results.
   std::vector<syntax::Token> tokenize(llvm::StringRef Text) {
+    llvm::Annotations Annot(Text);
+    auto FID = SourceMgr->createFileID(
+        llvm::MemoryBuffer::getMemBufferCopy(Annot.code()));
     // FIXME: pass proper LangOptions.
+    if (Annot.ranges().empty())
+      return syntax::tokenize(FID, *SourceMgr, LangOptions());
     return syntax::tokenize(
-        SourceMgr->createFileID(llvm::MemoryBuffer::getMemBufferCopy(Text)),
+        syntax::FileRange(FID, Annot.range().Begin, Annot.range().End),
         *SourceMgr, LangOptions());
   }
 
@@ -178,10 +186,14 @@ public:
   template <class T, class U, class Eq>
   llvm::ArrayRef<T> findSubrange(llvm::ArrayRef<U> Subrange,
                                  llvm::ArrayRef<T> Range, Eq F) {
-    for (auto Begin = Range.begin(); Begin < Range.end(); ++Begin) {
+    assert(Subrange.size() >= 1);
+    if (Range.size() < Subrange.size())
+      return llvm::makeArrayRef(Range.end(), Range.end());
+    for (auto Begin = Range.begin(), Last = Range.end() - Subrange.size();
+         Begin <= Last; ++Begin) {
       auto It = Begin;
-      for (auto ItSub = Subrange.begin();
-           ItSub != Subrange.end() && It != Range.end(); ++ItSub, ++It) {
+      for (auto ItSub = Subrange.begin(); ItSub != Subrange.end();
+           ++ItSub, ++It) {
         if (!F(*ItSub, *It))
           goto continue_outer;
       }
@@ -258,6 +270,20 @@ TEST_F(TokenCollectorTest, RawMode) {
               ElementsAre(Kind(tok::kw_int),
                           AllOf(HasText("a"), Kind(tok::identifier)),
                           Kind(tok::semi)));
+  EXPECT_THAT(tokenize("int [[main() {]]}"),
+              ElementsAre(AllOf(HasText("main"), Kind(tok::identifier)),
+                          Kind(tok::l_paren), Kind(tok::r_paren),
+                          Kind(tok::l_brace)));
+  EXPECT_THAT(tokenize("int [[main() {   ]]}"),
+              ElementsAre(AllOf(HasText("main"), Kind(tok::identifier)),
+                          Kind(tok::l_paren), Kind(tok::r_paren),
+                          Kind(tok::l_brace)));
+  // First token is partially parsed, last token is fully included even though
+  // only a part of it is contained in the range.
+  EXPECT_THAT(tokenize("int m[[ain() {ret]]urn 0;}"),
+              ElementsAre(AllOf(HasText("ain"), Kind(tok::identifier)),
+                          Kind(tok::l_paren), Kind(tok::r_paren),
+                          Kind(tok::l_brace), Kind(tok::kw_return)));
 }
 
 TEST_F(TokenCollectorTest, Basic) {
@@ -343,6 +369,12 @@ TEST_F(TokenCollectorTest, Locations) {
                   AllOf(Kind(tok::equal), RangeIs(Code.range("r3"))),
                   AllOf(Kind(tok::string_literal), RangeIs(Code.range("r4"))),
                   AllOf(Kind(tok::semi), RangeIs(Code.range("r5")))));
+
+  auto StartLoc = SourceMgr->getLocForStartOfFile(SourceMgr->getMainFileID());
+  for (auto &R : Code.ranges()) {
+    EXPECT_THAT(Buffer.spelledTokenAt(StartLoc.getLocWithOffset(R.Begin)),
+                Pointee(RangeIs(R)));
+  }
 }
 
 TEST_F(TokenCollectorTest, MacroDirectives) {
@@ -470,11 +502,28 @@ file './input.cpp'
   mappings:
     ['#'_0, 'int'_7) => ['int'_0, 'int'_0)
     ['FOO'_10, '<eof>'_11) => ['10'_3, '<eof>'_7)
-)"}};
+)"},
+      {R"cpp(
+         #define NUM 42
+         #define ID(a) a
+         #define M 1 + ID
+         M(NUM)
+       )cpp",
+       R"(expanded tokens:
+  1 + 42
+file './input.cpp'
+  spelled tokens:
+    # define NUM 42 # define ID ( a ) a # define M 1 + ID M ( NUM )
+  mappings:
+    ['#'_0, 'M'_17) => ['1'_0, '1'_0)
+    ['M'_17, '<eof>'_21) => ['1'_0, '<eof>'_3)
+)"},
+  };
 
-  for (auto &Test : TestCases)
-    EXPECT_EQ(Test.second, collectAndDump(Test.first))
-        << collectAndDump(Test.first);
+  for (auto &Test : TestCases) {
+    std::string Dump = collectAndDump(Test.first);
+    EXPECT_EQ(Test.second, Dump) << Dump;
+  }
 }
 
 TEST_F(TokenCollectorTest, SpecialTokens) {
@@ -600,6 +649,7 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
 
     A split B
   )cpp");
+  // Ranges going across expansion boundaries.
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("a1 a2 a3 split b1 b2")),
               ValueIs(SameRange(findSpelled("A split B"))));
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("a1 a2 a3")),
@@ -620,22 +670,28 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
     ID(ID(ID(a1) a2 a3)) split ID(B)
   )cpp");
 
-  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("a1 a2 a3")),
-              ValueIs(SameRange(findSpelled("ID ( ID ( ID ( a1 ) a2 a3 ) )"))));
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("b1 b2")),
-              ValueIs(SameRange(findSpelled("ID ( B )"))));
+              ValueIs(SameRange(findSpelled("( B").drop_front())));
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("a1 a2 a3 split b1 b2")),
               ValueIs(SameRange(findSpelled(
                   "ID ( ID ( ID ( a1 ) a2 a3 ) ) split ID ( B )"))));
-  // Ranges crossing macro call boundaries.
-  EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("a1 a2 a3 split b1")),
-            llvm::None);
-  EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("a2 a3 split b1")),
-            llvm::None);
-  // FIXME: next two examples should map to macro arguments, but currently they
-  //        fail.
-  EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("a2")), llvm::None);
-  EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("a1 a2")), llvm::None);
+  // Mixed ranges with expanded and spelled tokens.
+  EXPECT_THAT(
+      Buffer.spelledForExpanded(findExpanded("a1 a2 a3 split")),
+      ValueIs(SameRange(findSpelled("ID ( ID ( ID ( a1 ) a2 a3 ) ) split"))));
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("split b1 b2")),
+              ValueIs(SameRange(findSpelled("split ID ( B )"))));
+  // Macro arguments
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("a1")),
+              ValueIs(SameRange(findSpelled("a1"))));
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("a2")),
+              ValueIs(SameRange(findSpelled("a2"))));
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("a3")),
+              ValueIs(SameRange(findSpelled("a3"))));
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("a1 a2")),
+              ValueIs(SameRange(findSpelled("ID ( a1 ) a2"))));
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("a1 a2 a3")),
+              ValueIs(SameRange(findSpelled("ID ( a1 ) a2 a3"))));
 
   // Empty macro expansions.
   recordTokens(R"cpp(
@@ -647,11 +703,11 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
     ID(7 8 9) EMPTY EMPTY
   )cpp");
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("1 2 3")),
-              ValueIs(SameRange(findSpelled("ID ( 1 2 3 )"))));
+              ValueIs(SameRange(findSpelled("1 2 3"))));
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("4 5 6")),
-              ValueIs(SameRange(findSpelled("ID ( 4 5 6 )"))));
+              ValueIs(SameRange(findSpelled("4 5 6"))));
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("7 8 9")),
-              ValueIs(SameRange(findSpelled("ID ( 7 8 9 )"))));
+              ValueIs(SameRange(findSpelled("7 8 9"))));
 
   // Empty mappings coming from various directives.
   recordTokens(R"cpp(
@@ -662,6 +718,27 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
   )cpp");
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("not_mapped")),
               ValueIs(SameRange(findSpelled("not_mapped"))));
+
+  // Multiple macro arguments
+  recordTokens(R"cpp(
+    #define ID(X) X
+    #define ID2(X, Y) X Y
+
+    ID2(ID(a1), ID(a2) a3) ID2(a4, a5 a6 a7)
+  )cpp");
+  // Should fail, spans multiple arguments.
+  EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("a1 a2")), llvm::None);
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("a2 a3")),
+              ValueIs(SameRange(findSpelled("ID ( a2 ) a3"))));
+  EXPECT_THAT(
+      Buffer.spelledForExpanded(findExpanded("a1 a2 a3")),
+      ValueIs(SameRange(findSpelled("ID2 ( ID ( a1 ) , ID ( a2 ) a3 )"))));
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("a5 a6")),
+              ValueIs(SameRange(findSpelled("a5 a6"))));
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("a4 a5 a6 a7")),
+              ValueIs(SameRange(findSpelled("ID2 ( a4 , a5 a6 a7 )"))));
+  // Should fail, spans multiple invocations.
+  EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("a1 a2 a3 a4")), llvm::None);
 }
 
 TEST_F(TokenBufferTest, ExpandedTokensForRange) {
@@ -832,6 +909,113 @@ TEST_F(TokenBufferTest, Touching) {
   EXPECT_EQ(Identifier(7), "");
 
   ASSERT_EQ(Code.points().size(), 8u);
+}
+
+TEST_F(TokenBufferTest, ExpandedBySpelled) {
+  recordTokens(R"cpp(
+    a1 a2 a3 b1 b2
+  )cpp");
+  // Sanity check: expanded and spelled tokens are stored separately.
+  EXPECT_THAT(findExpanded("a1 a2"), Not(SameRange(findSpelled("a1 a2"))));
+  // Searching for subranges of expanded tokens should give the corresponding
+  // spelled ones.
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("a1 a2 a3 b1 b2")),
+              ElementsAre(SameRange(findExpanded("a1 a2 a3 b1 b2"))));
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("a1 a2 a3")),
+              ElementsAre(SameRange(findExpanded("a1 a2 a3"))));
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("b1 b2")),
+              ElementsAre(SameRange(findExpanded("b1 b2"))));
+
+  // Test search on simple macro expansions.
+  recordTokens(R"cpp(
+    #define A a1 a2 a3
+    #define B b1 b2
+
+    A split B
+  )cpp");
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("A split B")),
+              ElementsAre(SameRange(findExpanded("a1 a2 a3 split b1 b2"))));
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("A split").drop_back()),
+              ElementsAre(SameRange(findExpanded("a1 a2 a3"))));
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("split B").drop_front()),
+              ElementsAre(SameRange(findExpanded("b1 b2"))));
+
+  // Ranges not fully covering macro expansions should fail.
+  recordTokens(R"cpp(
+    #define ID(x) x
+
+    ID(a)
+  )cpp");
+  // Spelled don't cover entire mapping (missing ID token) -> empty result
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("( a )")), IsEmpty());
+  // Spelled don't cover entire mapping (missing ) token) -> empty result
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("ID ( a")), IsEmpty());
+
+  // Recursive macro invocations.
+  recordTokens(R"cpp(
+    #define ID(x) x
+    #define B b1 b2
+
+    ID(ID(ID(a1) a2 a3)) split ID(B)
+  )cpp");
+
+  EXPECT_THAT(
+      Buffer.expandedForSpelled(findSpelled("ID ( ID ( ID ( a1 ) a2 a3 ) )")),
+      ElementsAre(SameRange(findExpanded("a1 a2 a3"))));
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("ID ( B )")),
+              ElementsAre(SameRange(findExpanded("b1 b2"))));
+  EXPECT_THAT(Buffer.expandedForSpelled(
+                  findSpelled("ID ( ID ( ID ( a1 ) a2 a3 ) ) split ID ( B )")),
+              ElementsAre(SameRange(findExpanded("a1 a2 a3 split b1 b2"))));
+  // FIXME: these should succeed, but we do not support macro arguments yet.
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("a1")), IsEmpty());
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("ID ( a1 ) a2")),
+              IsEmpty());
+
+  // Empty macro expansions.
+  recordTokens(R"cpp(
+    #define EMPTY
+    #define ID(X) X
+
+    EMPTY EMPTY ID(1 2 3) EMPTY EMPTY split1
+    EMPTY EMPTY ID(4 5 6) split2
+    ID(7 8 9) EMPTY EMPTY
+  )cpp");
+  // Covered by empty expansions on one of both of the sides.
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("ID ( 1 2 3 )")),
+              ElementsAre(SameRange(findExpanded("1 2 3"))));
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("ID ( 4 5 6 )")),
+              ElementsAre(SameRange(findExpanded("4 5 6"))));
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("ID ( 7 8 9 )")),
+              ElementsAre(SameRange(findExpanded("7 8 9"))));
+  // Including the empty macro expansions on the side.
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("EMPTY ID ( 1 2 3 )")),
+              ElementsAre(SameRange(findExpanded("1 2 3"))));
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("ID ( 1 2 3 ) EMPTY")),
+              ElementsAre(SameRange(findExpanded("1 2 3"))));
+  EXPECT_THAT(
+      Buffer.expandedForSpelled(findSpelled("EMPTY ID ( 1 2 3 ) EMPTY")),
+      ElementsAre(SameRange(findExpanded("1 2 3"))));
+
+  // Empty mappings coming from various directives.
+  recordTokens(R"cpp(
+    #define ID(X) X
+    ID(1)
+    #pragma lalala
+    not_mapped
+  )cpp");
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("# define ID ( X ) X")),
+              IsEmpty());
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("# pragma lalala")),
+              IsEmpty());
+
+  // Empty macro expansion.
+  recordTokens(R"cpp(
+    #define EMPTY
+    EMPTY int a = 100;
+  )cpp");
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("EMPTY int").drop_back()),
+              IsEmpty());
 }
 
 } // namespace

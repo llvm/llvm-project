@@ -49,9 +49,7 @@ template <typename T> struct Bar { T x; };
 template <typename T = Bar<Weber>>  // expected-error {{use of undeclared identifier 'Weber'}}
 struct Foo {
   static_assert(sizeof(T) == 4, "Bar should have gotten int");
-  // FIXME: These diagnostics are bad.
-}; // expected-error {{expected ',' or '>' in template-parameter-list}}
-// expected-warning@-1 {{does not declare anything}}
+};
 typedef int Weber;
 }
 
@@ -94,12 +92,12 @@ namespace test_undeclared_nontype_parm_arg {
 template <typename T> struct Bar { T x; };
 
 template <Bar<Xylophone> *P> // expected-error {{use of undeclared identifier 'Xylophone'}}
-// expected-note@-1 {{template parameter is declared here}}
+// expected-note@-1{{template parameter is declared here}}
 struct Foo { };
 
 typedef int Xylophone;
 Bar<Xylophone> g;
-template struct Foo<&g>; // expected-error {{cannot be converted}}
+template struct Foo<&g>; // expected-error {{value of type}}
 }
 
 #endif

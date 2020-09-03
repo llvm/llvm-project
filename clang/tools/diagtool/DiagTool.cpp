@@ -16,9 +16,8 @@
 
 using namespace diagtool;
 
-DiagTool::DiagTool(llvm::StringRef toolCmd,
-                   llvm::StringRef toolDesc)
-  : cmd(toolCmd), description(toolDesc) {}
+DiagTool::DiagTool(llvm::StringRef toolCmd, llvm::StringRef toolDesc)
+    : cmd(std::string(toolCmd)), description(std::string(toolDesc)) {}
 
 DiagTool::~DiagTool() {}
 

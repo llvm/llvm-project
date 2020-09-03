@@ -26,7 +26,7 @@ kmp_target_offload_kind_t TargetOffloadPolicy = tgt_default;
 std::mutex TargetOffloadMtx;
 
 ////////////////////////////////////////////////////////////////////////////////
-/// manage the success or failure of a target constuct
+/// manage the success or failure of a target construct
 
 static void HandleDefaultTargetOffload() {
   TargetOffloadMtx.lock();
@@ -71,19 +71,19 @@ static void HandleTargetOutcome(bool success) {
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
 EXTERN void __tgt_register_requires(int64_t flags) {
-  RTLs.RegisterRequires(flags);
+  RTLs->RegisterRequires(flags);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds a target shared library to the target execution image
 EXTERN void __tgt_register_lib(__tgt_bin_desc *desc) {
-  RTLs.RegisterLib(desc);
+  RTLs->RegisterLib(desc);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// unloads a target shared library
 EXTERN void __tgt_unregister_lib(__tgt_bin_desc *desc) {
-  RTLs.UnregisterLib(desc);
+  RTLs->UnregisterLib(desc);
 }
 
 /// creates host-to-target data mapping, stores it in the
@@ -108,18 +108,18 @@ EXTERN void __tgt_target_data_begin(int64_t device_id, int32_t arg_num,
     return;
   }
 
-  DeviceTy& Device = Devices[device_id];
+  DeviceTy &Device = Devices[device_id];
 
 #ifdef OMPTARGET_DEBUG
-  for (int i=0; i<arg_num; ++i) {
+  for (int i = 0; i < arg_num; ++i) {
     DP("Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
-        ", Type=0x%" PRIx64 "\n", i, DPxPTR(args_base[i]), DPxPTR(args[i]),
-        arg_sizes[i], arg_types[i]);
+       ", Type=0x%" PRIx64 "\n",
+       i, DPxPTR(args_base[i]), DPxPTR(args[i]), arg_sizes[i], arg_types[i]);
   }
 #endif
 
-  int rc = target_data_begin(Device, arg_num, args_base,
-      args, arg_sizes, arg_types);
+  int rc = target_data_begin(Device, arg_num, args_base, args, arg_sizes,
+                             arg_types, nullptr);
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS);
 }
 
@@ -147,9 +147,9 @@ EXTERN void __tgt_target_data_end(int64_t device_id, int32_t arg_num,
     device_id = omp_get_default_device();
   }
 
-  RTLsMtx.lock();
+  RTLsMtx->lock();
   size_t Devices_size = Devices.size();
-  RTLsMtx.unlock();
+  RTLsMtx->unlock();
   if (Devices_size <= (size_t)device_id) {
     DP("Device ID  %" PRId64 " does not have a matching RTL.\n", device_id);
     HandleTargetOutcome(false);
@@ -171,8 +171,8 @@ EXTERN void __tgt_target_data_end(int64_t device_id, int32_t arg_num,
   }
 #endif
 
-  int rc = target_data_end(Device, arg_num, args_base,
-      args, arg_sizes, arg_types);
+  int rc = target_data_end(Device, arg_num, args_base, args, arg_sizes,
+                           arg_types, nullptr);
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS);
 }
 
@@ -343,8 +343,8 @@ EXTERN void __kmpc_push_target_tripcount(int64_t device_id,
 
   DP("__kmpc_push_target_tripcount(%" PRId64 ", %" PRIu64 ")\n", device_id,
       loop_tripcount);
-  TblMapMtx.lock();
+  TblMapMtx->lock();
   Devices[device_id].LoopTripCnt.emplace(__kmpc_global_thread_num(NULL),
                                          loop_tripcount);
-  TblMapMtx.unlock();
+  TblMapMtx->unlock();
 }

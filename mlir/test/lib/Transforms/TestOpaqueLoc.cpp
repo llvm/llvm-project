@@ -1,12 +1,12 @@
 //===- TestOpaqueLoc.cpp - Pass to test opaque locations ------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 
@@ -17,7 +17,8 @@ namespace {
 /// It also takes all operations that are not function operations or
 /// terminators and clones them with opaque locations which store the initial
 /// locations.
-struct TestOpaqueLoc : public ModulePass<TestOpaqueLoc> {
+struct TestOpaqueLoc
+    : public PassWrapper<TestOpaqueLoc, OperationPass<ModuleOp>> {
 
   /// A simple structure which is used for testing as an underlying location in
   /// OpaqueLoc.
@@ -29,11 +30,11 @@ struct TestOpaqueLoc : public ModulePass<TestOpaqueLoc> {
     int id;
   };
 
-  void runOnModule() override {
+  void runOnOperation() override {
     std::vector<std::unique_ptr<MyLocation>> myLocs;
     int last_it = 0;
 
-    getModule().walk([&](Operation *op) {
+    getOperation().walk([&](Operation *op) {
       myLocs.push_back(std::make_unique<MyLocation>(last_it++));
 
       Location loc = op->getLoc();
@@ -74,11 +75,15 @@ struct TestOpaqueLoc : public ModulePass<TestOpaqueLoc> {
       os.flush();
     });
 
-    getModule().walk([&](Operation *op) { op->emitOpError(); });
+    getOperation().walk([&](Operation *op) { op->emitOpError(); });
   }
 };
 
 } // end anonymous namespace
 
-static PassRegistration<TestOpaqueLoc>
-    pass("test-opaque-loc", "Changes all leaf locations to opaque locations");
+namespace mlir {
+void registerTestOpaqueLoc() {
+  PassRegistration<TestOpaqueLoc> pass(
+      "test-opaque-loc", "Changes all leaf locations to opaque locations");
+}
+} // namespace mlir

@@ -7,11 +7,11 @@
 
 # RUN: not ld.lld %t.o --defsym=a=-1 --defsym=b=0 -o /dev/null 2>&1 | \
 # RUN:   FileCheck --check-prefix=OVERFLOW1 %s
-# OVERFLOW1: relocation R_386_8 out of range: -129 is not in [-128, 255]
+# OVERFLOW1: relocation R_386_8 out of range: -129 is not in [-128, 255]; references a
 
 # RUN: not ld.lld %t.o --defsym=a=0 --defsym=b=129 -o /dev/null 2>&1 | \
 # RUN:   FileCheck --check-prefix=OVERFLOW2 %s
-# OVERFLOW2: relocation R_386_8 out of range: 256 is not in [-128, 255]
+# OVERFLOW2: relocation R_386_8 out of range: 256 is not in [-128, 255]; references b
 
 .code16
 .globl _start

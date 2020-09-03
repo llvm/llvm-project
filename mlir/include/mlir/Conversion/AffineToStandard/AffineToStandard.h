@@ -1,6 +1,6 @@
 //===- AffineToStandard.h - Convert Affine to Standard dialect --*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -14,12 +14,14 @@
 namespace mlir {
 class AffineExpr;
 class AffineForOp;
+class AffineMap;
 class Location;
 struct LogicalResult;
 class MLIRContext;
 class OpBuilder;
 class RewritePattern;
 class Value;
+class ValueRange;
 
 // Owning list of rewriting patterns.
 class OwningRewritePatternList;
@@ -27,13 +29,25 @@ class OwningRewritePatternList;
 /// Emit code that computes the given affine expression using standard
 /// arithmetic operations applied to the provided dimension and symbol values.
 Value expandAffineExpr(OpBuilder &builder, Location loc, AffineExpr expr,
-                       ArrayRef<Value> dimValues, ArrayRef<Value> symbolValues);
+                       ValueRange dimValues, ValueRange symbolValues);
+
+/// Create a sequence of operations that implement the `affineMap` applied to
+/// the given `operands` (as it it were an AffineApplyOp).
+Optional<SmallVector<Value, 8>> expandAffineMap(OpBuilder &builder,
+                                                Location loc,
+                                                AffineMap affineMap,
+                                                ValueRange operands);
 
 /// Collect a set of patterns to convert from the Affine dialect to the Standard
 /// dialect, in particular convert structured affine control flow into CFG
 /// branch-based control flow.
 void populateAffineToStdConversionPatterns(OwningRewritePatternList &patterns,
                                            MLIRContext *ctx);
+
+/// Collect a set of patterns to convert vector-related Affine ops to the Vector
+/// dialect.
+void populateAffineToVectorConversionPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *ctx);
 
 /// Emit code that computes the lower bound of the given affine loop using
 /// standard arithmetic operations.

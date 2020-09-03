@@ -527,7 +527,7 @@ template <class V, class M> struct IsValidReference {
 /// As an analogue to \a isa(), check whether \c MD has an \a Value inside of
 /// type \c X.
 template <class X, class Y>
-inline typename std::enable_if<detail::IsValidPointer<X, Y>::value, bool>::type
+inline std::enable_if_t<detail::IsValidPointer<X, Y>::value, bool>
 hasa(Y &&MD) {
   assert(MD && "Null pointer sent into hasa");
   if (auto *V = dyn_cast<ConstantAsMetadata>(MD))
@@ -535,9 +535,8 @@ hasa(Y &&MD) {
   return false;
 }
 template <class X, class Y>
-inline
-    typename std::enable_if<detail::IsValidReference<X, Y &>::value, bool>::type
-    hasa(Y &MD) {
+inline std::enable_if_t<detail::IsValidReference<X, Y &>::value, bool>
+hasa(Y &MD) {
   return hasa(&MD);
 }
 
@@ -545,14 +544,13 @@ inline
 ///
 /// As an analogue to \a cast(), extract the \a Value subclass \c X from \c MD.
 template <class X, class Y>
-inline typename std::enable_if<detail::IsValidPointer<X, Y>::value, X *>::type
+inline std::enable_if_t<detail::IsValidPointer<X, Y>::value, X *>
 extract(Y &&MD) {
   return cast<X>(cast<ConstantAsMetadata>(MD)->getValue());
 }
 template <class X, class Y>
-inline
-    typename std::enable_if<detail::IsValidReference<X, Y &>::value, X *>::type
-    extract(Y &MD) {
+inline std::enable_if_t<detail::IsValidReference<X, Y &>::value, X *>
+extract(Y &MD) {
   return extract(&MD);
 }
 
@@ -561,7 +559,7 @@ inline
 /// As an analogue to \a cast_or_null(), extract the \a Value subclass \c X
 /// from \c MD, allowing \c MD to be null.
 template <class X, class Y>
-inline typename std::enable_if<detail::IsValidPointer<X, Y>::value, X *>::type
+inline std::enable_if_t<detail::IsValidPointer<X, Y>::value, X *>
 extract_or_null(Y &&MD) {
   if (auto *V = cast_or_null<ConstantAsMetadata>(MD))
     return cast<X>(V->getValue());
@@ -574,7 +572,7 @@ extract_or_null(Y &&MD) {
 /// from \c MD, return null if \c MD doesn't contain a \a Value or if the \a
 /// Value it does contain is of the wrong subclass.
 template <class X, class Y>
-inline typename std::enable_if<detail::IsValidPointer<X, Y>::value, X *>::type
+inline std::enable_if_t<detail::IsValidPointer<X, Y>::value, X *>
 dyn_extract(Y &&MD) {
   if (auto *V = dyn_cast<ConstantAsMetadata>(MD))
     return dyn_cast<X>(V->getValue());
@@ -587,7 +585,7 @@ dyn_extract(Y &&MD) {
 /// from \c MD, return null if \c MD doesn't contain a \a Value or if the \a
 /// Value it does contain is of the wrong subclass, allowing \c MD to be null.
 template <class X, class Y>
-inline typename std::enable_if<detail::IsValidPointer<X, Y>::value, X *>::type
+inline std::enable_if_t<detail::IsValidPointer<X, Y>::value, X *>
 dyn_extract_or_null(Y &&MD) {
   if (auto *V = dyn_cast_or_null<ConstantAsMetadata>(MD))
     return dyn_cast<X>(V->getValue());
@@ -976,7 +974,7 @@ public:
   /// Try to create a uniqued version of \c N -- in place, if possible -- and
   /// return it.  If \c N cannot be uniqued, return a distinct node instead.
   template <class T>
-  static typename std::enable_if<std::is_base_of<MDNode, T>::value, T *>::type
+  static std::enable_if_t<std::is_base_of<MDNode, T>::value, T *>
   replaceWithPermanent(std::unique_ptr<T, TempMDNodeDeleter> N) {
     return cast<T>(N.release()->replaceWithPermanentImpl());
   }
@@ -988,7 +986,7 @@ public:
   ///
   /// \pre N does not self-reference.
   template <class T>
-  static typename std::enable_if<std::is_base_of<MDNode, T>::value, T *>::type
+  static std::enable_if_t<std::is_base_of<MDNode, T>::value, T *>
   replaceWithUniqued(std::unique_ptr<T, TempMDNodeDeleter> N) {
     return cast<T>(N.release()->replaceWithUniquedImpl());
   }
@@ -998,7 +996,7 @@ public:
   /// Create a distinct version of \c N -- in place, if possible -- and return
   /// it.  Takes ownership of the temporary node.
   template <class T>
-  static typename std::enable_if<std::is_base_of<MDNode, T>::value, T *>::type
+  static std::enable_if_t<std::is_base_of<MDNode, T>::value, T *>
   replaceWithDistinct(std::unique_ptr<T, TempMDNodeDeleter> N) {
     return cast<T>(N.release()->replaceWithDistinctImpl());
   }
@@ -1237,15 +1235,13 @@ public:
   template <class U>
   MDTupleTypedArrayWrapper(
       const MDTupleTypedArrayWrapper<U> &Other,
-      typename std::enable_if<std::is_convertible<U *, T *>::value>::type * =
-          nullptr)
+      std::enable_if_t<std::is_convertible<U *, T *>::value> * = nullptr)
       : N(Other.get()) {}
 
   template <class U>
   explicit MDTupleTypedArrayWrapper(
       const MDTupleTypedArrayWrapper<U> &Other,
-      typename std::enable_if<!std::is_convertible<U *, T *>::value>::type * =
-          nullptr)
+      std::enable_if_t<!std::is_convertible<U *, T *>::value> * = nullptr)
       : N(Other.get()) {}
 
   explicit operator bool() const { return get(); }

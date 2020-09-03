@@ -45,6 +45,7 @@ struct A
 
 int main(int, char**)
 {
+    new_called = 0;
     A *ap = new (std::nothrow) A[3];
     DoNotOptimize(ap);
     assert(ap);

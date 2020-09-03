@@ -297,10 +297,10 @@ bool SystemZElimCompare::convertToLoadAndTest(
   MIB.setMemRefs(MI.memoperands());
   MI.eraseFromParent();
 
-  // Mark instruction as raising an FP exception if applicable.  We already
+  // Mark instruction as not raising an FP exception if applicable.  We already
   // verified earlier that this move is valid.
-  if (Compare.mayRaiseFPException())
-    MIB.setMIFlag(MachineInstr::MIFlag::FPExcept);
+  if (!Compare.mayRaiseFPException())
+    MIB.setMIFlag(MachineInstr::MIFlag::NoFPExcept);
 
   return true;
 }

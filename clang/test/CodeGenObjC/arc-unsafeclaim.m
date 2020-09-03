@@ -1,16 +1,16 @@
 //   Make sure it works on x86-64.
-// RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime=macosx-10.11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED
+// RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime=macosx-10.11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED -check-prefix=NOTAIL-CALL
 
 //   Make sure it works on x86-32.
-// RUN: %clang_cc1 -triple i386-apple-darwin11 -fobjc-runtime=macosx-fragile-10.11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED -check-prefix=CHECK-MARKED
+// RUN: %clang_cc1 -triple i386-apple-darwin11 -fobjc-runtime=macosx-fragile-10.11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED -check-prefix=CHECK-MARKED -check-prefix=CALL
 
 //   Make sure it works on ARM.
-// RUN: %clang_cc1 -triple arm64-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED -check-prefix=CHECK-MARKED
-// RUN: %clang_cc1 -triple arm64-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -O -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-OPTIMIZED
+// RUN: %clang_cc1 -triple arm64-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED -check-prefix=CHECK-MARKED -check-prefix=CALL
+// RUN: %clang_cc1 -triple arm64-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -O -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-OPTIMIZED -check-prefix=CALL
 
 //   Make sure it works on ARM64.
-// RUN: %clang_cc1 -triple armv7-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED -check-prefix=CHECK-MARKED
-// RUN: %clang_cc1 -triple armv7-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -O -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-OPTIMIZED
+// RUN: %clang_cc1 -triple armv7-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED -check-prefix=CHECK-MARKED -check-prefix=CALL
+// RUN: %clang_cc1 -triple armv7-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -O -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-OPTIMIZED -check-prefix=CALL
 
 //   Make sure that it's implicitly disabled if the runtime version isn't high enough.
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-10.10 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=DISABLED
@@ -29,7 +29,8 @@ void test_assign() {
 // CHECK:                [[T0:%.*]] = call [[A:.*]]* @makeA()
 // CHECK-MARKED-NEXT:    call void asm sideeffect
 // CHECK-NEXT:           [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-// CHECK-NEXT:           [[T2:%.*]] = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
+// NOTAIL-CALL-NEXT:     [[T2:%.*]] = notail call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
+// CALL-NEXT:            [[T2:%.*]] = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
 // CHECK-NEXT:           [[T3:%.*]] = bitcast i8* [[T2]] to [[A]]*
 // CHECK-NEXT:           [[T4:%.*]] = bitcast [[A]]* [[T3]] to i8*
 // CHECK-NEXT:           store i8* [[T4]], i8** [[X]]
@@ -53,7 +54,8 @@ void test_assign_assign() {
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
 // CHECK-MARKED-NEXT:    call void asm sideeffect
 // CHECK-NEXT:           [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-// CHECK-NEXT:           [[T2:%.*]] = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
+// NOTAIL-CALL-NEXT:     [[T2:%.*]] = notail call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
+// CALL-NEXT:            [[T2:%.*]] = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
 // CHECK-NEXT:           [[T3:%.*]] = bitcast i8* [[T2]] to [[A]]*
 // CHECK-NEXT:           [[T4:%.*]] = bitcast [[A]]* [[T3]] to i8*
 // CHECK-NEXT:           store i8* [[T4]], i8** [[Y]]
@@ -126,7 +128,8 @@ void test_init() {
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
 // CHECK-MARKED-NEXT:    call void asm sideeffect
 // CHECK-NEXT:           [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-// CHECK-NEXT:           [[T2:%.*]] = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
+// NOTAIL-CALL-NEXT:     [[T2:%.*]] = notail call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
+// CALL-NEXT:            [[T2:%.*]] = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
 // CHECK-NEXT:           [[T3:%.*]] = bitcast i8* [[T2]] to [[A]]*
 // CHECK-NEXT:           [[T4:%.*]] = bitcast [[A]]* [[T3]] to i8*
 // CHECK-NEXT:           store i8* [[T4]], i8** [[X]]
@@ -144,7 +147,8 @@ void test_init_assignment() {
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
 // CHECK-MARKED-NEXT:    call void asm sideeffect
 // CHECK-NEXT:           [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-// CHECK-NEXT:           [[T2:%.*]] = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
+// NOTAIL-CALL-NEXT:     [[T2:%.*]] = notail call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
+// CALL-NEXT:            [[T2:%.*]] = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
 // CHECK-NEXT:           [[T3:%.*]] = bitcast i8* [[T2]] to [[A]]*
 // CHECK-NEXT:           [[T4:%.*]] = bitcast [[A]]* [[T3]] to i8*
 // CHECK-NEXT:           store i8* [[T4]], i8** [[X]]
@@ -212,7 +216,8 @@ void test_ignored() {
 // CHECK:             [[T0:%.*]] = call [[A]]* @makeA()
 // CHECK-MARKED-NEXT: call void asm sideeffect
 // CHECK-NEXT:        [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-// CHECK-NEXT:        [[T2:%.*]] = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
+// NOTAIL-CALL-NEXT:  [[T2:%.*]] = notail call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
+// CALL-NEXT:         [[T2:%.*]] = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
 // CHECK-NEXT:        bitcast i8* [[T2]] to [[A]]*
 // CHECK-NEXT:        ret void
 
@@ -223,7 +228,8 @@ void test_cast_to_void() {
 // CHECK:             [[T0:%.*]] = call [[A]]* @makeA()
 // CHECK-MARKED-NEXT: call void asm sideeffect
 // CHECK-NEXT:        [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-// CHECK-NEXT:        [[T2:%.*]] = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
+// NOTAIL-CALL-NEXT:  [[T2:%.*]] = notail call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
+// CALL-NEXT:         [[T2:%.*]] = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* [[T1]])
 // CHECK-NEXT:        bitcast i8* [[T2]] to [[A]]*
 // CHECK-NEXT:        ret void
 

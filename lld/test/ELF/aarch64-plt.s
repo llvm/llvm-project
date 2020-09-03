@@ -5,10 +5,10 @@
 // RUN: ld.lld -shared %t.o %t2.so -o %t.so
 // RUN: ld.lld %t.o %t2.so -o %t.exe
 // RUN: llvm-readobj -S -r %t.so | FileCheck --check-prefix=CHECKDSO %s
-// RUN: llvm-objdump -s -section=.got.plt %t.so | FileCheck --check-prefix=DUMPDSO %s
+// RUN: llvm-objdump -s --section=.got.plt %t.so | FileCheck --check-prefix=DUMPDSO %s
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t.so | FileCheck --check-prefix=DISASMDSO %s
 // RUN: llvm-readobj -S -r %t.exe | FileCheck --check-prefix=CHECKEXE %s
-// RUN: llvm-objdump -s -section=.got.plt %t.exe | FileCheck --check-prefix=DUMPEXE %s
+// RUN: llvm-objdump -s --section=.got.plt %t.exe | FileCheck --check-prefix=DUMPEXE %s
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t.exe | FileCheck --check-prefix=DISASMEXE %s
 
 // CHECKDSO:     Name: .plt
@@ -58,17 +58,17 @@
 // DUMPDSO-NEXT: 30460 00000000 00000000 40030100 00000000
 // DUMPDSO-NEXT: 30470 40030100 00000000 40030100 00000000
 
-// DISASMDSO: _start:
-// DISASMDSO-NEXT:     10330: b       #0x30 <foo@plt>
-// DISASMDSO-NEXT:     10334: b       #0x3c <bar@plt>
-// DISASMDSO-NEXT:     10338: b       #0x48 <weak@plt>
+// DISASMDSO: <_start>:
+// DISASMDSO-NEXT:     10330: b       0x10360 <foo@plt>
+// DISASMDSO-NEXT:     10334: b       0x10370 <bar@plt>
+// DISASMDSO-NEXT:     10338: b       0x10380 <weak@plt>
 
-// DISASMDSO: foo:
+// DISASMDSO: <foo>:
 // DISASMDSO-NEXT:     1033c: nop
 
 // DISASMDSO: Disassembly of section .plt:
 // DISASMDSO-EMPTY:
-// DISASMDSO-NEXT: .plt:
+// DISASMDSO-NEXT: <.plt>:
 // DISASMDSO-NEXT:     10340: stp     x16, x30, [sp, #-0x10]!
 // &(.got.plt[2]) = 0x30450 + 2 * 8 = 0x30460
 // DISASMDSO-NEXT:     10344: adrp    x16, #0x20000
@@ -82,7 +82,7 @@
 // foo@plt 0x30468
 // &.got.plt[foo] = 0x30468
 // DISASMDSO-EMPTY:
-// DISASMDSO-NEXT:   foo@plt:
+// DISASMDSO-NEXT:   <foo@plt>:
 // DISASMDSO-NEXT:     10360: adrp    x16, #0x20000
 // DISASMDSO-NEXT:     10364: ldr     x17, [x16, #0x468]
 // DISASMDSO-NEXT:     10368: add     x16, x16, #0x468
@@ -91,7 +91,7 @@
 // bar@plt
 // &.got.plt[foo] = 0x30470
 // DISASMDSO-EMPTY:
-// DISASMDSO-NEXT:   bar@plt:
+// DISASMDSO-NEXT:   <bar@plt>:
 // DISASMDSO-NEXT:     10370: adrp    x16, #0x20000
 // DISASMDSO-NEXT:     10374: ldr     x17, [x16, #0x470]
 // DISASMDSO-NEXT:     10378: add     x16, x16, #0x470
@@ -100,7 +100,7 @@
 // weak@plt
 // 0x30468 = 0x10000 + 131072 + 1128
 // DISASMDSO-EMPTY:
-// DISASMDSO-NEXT:   weak@plt:
+// DISASMDSO-NEXT:   <weak@plt>:
 // DISASMDSO-NEXT:     10380: adrp    x16, #0x20000
 // DISASMDSO-NEXT:     10384: ldr     x17, [x16, #0x478]
 // DISASMDSO-NEXT:     10388: add     x16, x16, #0x478
@@ -150,17 +150,17 @@
 // DUMPEXE-NEXT:  230400 00000000 00000000 e0022100 00000000
 // DUMPEXE-NEXT:  230410 e0022100 00000000
 
-// DISASMEXE: _start:
-// DISASMEXE-NEXT:    2102c8: b #0xc <foo>
-// DISASMEXE-NEXT:    2102cc: b #0x34 <bar@plt>
-// DISASMEXE-NEXT:    2102d0: b #0x40 <weak@plt>
+// DISASMEXE: <_start>:
+// DISASMEXE-NEXT:    2102c8: b 0x2102d4 <foo>
+// DISASMEXE-NEXT:    2102cc: b 0x210300 <bar@plt>
+// DISASMEXE-NEXT:    2102d0: b 0x210310 <weak@plt>
 
-// DISASMEXE: foo:
+// DISASMEXE: <foo>:
 // DISASMEXE-NEXT:    2102d4: nop
 
 // DISASMEXE: Disassembly of section .plt:
 // DISASMEXE-EMPTY:
-// DISASMEXE-NEXT: .plt:
+// DISASMEXE-NEXT: <.plt>:
 // DISASMEXE-NEXT:    2102e0: stp     x16, x30, [sp, #-0x10]!
 // &(.got.plt[2]) = 0x2303f0 + 2 * 8 = 0x230400
 // DISASMEXE-NEXT:    2102e4: adrp    x16, #0x20000
@@ -173,7 +173,7 @@
 
 // bar@plt
 // DISASMEXE-EMPTY:
-// DISASMEXE-NEXT:   bar@plt:
+// DISASMEXE-NEXT:   <bar@plt>:
 // DISASMEXE-NEXT:    210300: adrp    x16, #0x20000
 // DISASMEXE-NEXT:    210304: ldr     x17, [x16, #0x408]
 // DISASMEXE-NEXT:    210308: add     x16, x16, #0x408
@@ -181,7 +181,7 @@
 
 // weak@plt
 // DISASMEXE-EMPTY:
-// DISASMEXE-NEXT:   weak@plt:
+// DISASMEXE-NEXT:   <weak@plt>:
 // DISASMEXE-NEXT:    210310: adrp    x16, #0x20000
 // DISASMEXE-NEXT:    210314: ldr     x17, [x16, #0x410]
 // DISASMEXE-NEXT:    210318: add     x16, x16, #0x410

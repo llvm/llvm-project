@@ -16,6 +16,11 @@
 
 using namespace llvm;
 
+static cl::opt<bool> SimplifyDDG(
+    "ddg-simplify", cl::init(true), cl::Hidden, cl::ZeroOrMore,
+    cl::desc(
+        "Simplify DDG by merging nodes that have less interesting edges."));
+
 static cl::opt<bool>
     CreatePiBlocks("ddg-pi-blocks", cl::init(true), cl::Hidden, cl::ZeroOrMore,
                    cl::desc("Create pi-block nodes."));
@@ -257,9 +262,46 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const DataDependenceGraph &G) {
   return OS;
 }
 
-bool DDGBuilder::shouldCreatePiBlocks() const {
-  return CreatePiBlocks;
+//===--------------------------------------------------------------------===//
+// DDGBuilder implementation
+//===--------------------------------------------------------------------===//
+
+bool DDGBuilder::areNodesMergeable(const DDGNode &Src,
+                                   const DDGNode &Tgt) const {
+  // Only merge two nodes if they are both simple nodes and the consecutive
+  // instructions after merging belong to the same BB.
+  const auto *SimpleSrc = dyn_cast<const SimpleDDGNode>(&Src);
+  const auto *SimpleTgt = dyn_cast<const SimpleDDGNode>(&Tgt);
+  if (!SimpleSrc || !SimpleTgt)
+    return false;
+
+  return SimpleSrc->getLastInstruction()->getParent() ==
+         SimpleTgt->getFirstInstruction()->getParent();
 }
+
+void DDGBuilder::mergeNodes(DDGNode &A, DDGNode &B) {
+  DDGEdge &EdgeToFold = A.back();
+  assert(A.getEdges().size() == 1 && EdgeToFold.getTargetNode() == B &&
+         "Expected A to have a single edge to B.");
+  assert(isa<SimpleDDGNode>(&A) && isa<SimpleDDGNode>(&B) &&
+         "Expected simple nodes");
+
+  // Copy instructions from B to the end of A.
+  cast<SimpleDDGNode>(&A)->appendInstructions(*cast<SimpleDDGNode>(&B));
+
+  // Move to A any outgoing edges from B.
+  for (DDGEdge *BE : B)
+    Graph.connect(A, BE->getTargetNode(), *BE);
+
+  A.removeEdge(EdgeToFold);
+  destroyEdge(EdgeToFold);
+  Graph.removeNode(B);
+  destroyNode(B);
+}
+
+bool DDGBuilder::shouldSimplify() const { return SimplifyDDG; }
+
+bool DDGBuilder::shouldCreatePiBlocks() const { return CreatePiBlocks; }
 
 //===--------------------------------------------------------------------===//
 // DDG Analysis Passes

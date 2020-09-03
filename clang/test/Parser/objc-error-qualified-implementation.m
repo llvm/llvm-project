@@ -17,13 +17,13 @@
 
 @interface K @end
 
-@implementation K <P // expected-error {{@implementation declaration cannot be protocol qualified}} expected-note{{to match this '<'}}
-@end // expected-error {{expected '>'}}
+@implementation K <P // expected-error {{@implementation declaration cannot be protocol qualified}} expected-error {{expected '>'}} expected-note {{to match this '<'}}
+@end
 
 // rdar://13920026
 @implementation I (Cat) <P>  // expected-error {{@implementation declaration cannot be protocol qualified}}
 - (void) Meth {}
 @end
 
-@implementation I (Cat1) <P // expected-error {{@implementation declaration cannot be protocol qualified}}
-@end // expected-error {{expected '>'}}
+@implementation I (Cat1) <P // expected-error {{@implementation declaration cannot be protocol qualified}} expected-error {{expected '>'}} expected-note {{to match this '<'}}
+@end

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangASTImporter_h_
-#define liblldb_ClangASTImporter_h_
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGASTIMPORTER_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGASTIMPORTER_H
 
 #include <map>
 #include <memory>
@@ -31,18 +31,21 @@
 
 namespace lldb_private {
 
+class ClangASTMetadata;
+class TypeSystemClang;
+
 class ClangASTImporter {
 public:
   struct LayoutInfo {
-    LayoutInfo()
-        : bit_size(0), alignment(0), field_offsets(), base_offsets(),
-          vbase_offsets() {}
-    uint64_t bit_size;
-    uint64_t alignment;
+    LayoutInfo() = default;
+    typedef llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
+        OffsetMap;
+
+    uint64_t bit_size = 0;
+    uint64_t alignment = 0;
     llvm::DenseMap<const clang::FieldDecl *, uint64_t> field_offsets;
-    llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits> base_offsets;
-    llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
-        vbase_offsets;
+    OffsetMap base_offsets;
+    OffsetMap vbase_offsets;
   };
 
   ClangASTImporter()
@@ -81,8 +84,6 @@ public:
 
   bool CompleteType(const CompilerType &compiler_type);
 
-  void CompleteDecl(clang::Decl *decl);
-
   bool CompleteTagDecl(clang::TagDecl *decl);
 
   bool CompleteTagDeclWithOrigin(clang::TagDecl *decl, clang::TagDecl *origin);
@@ -101,8 +102,8 @@ public:
   // Namespace maps
   //
 
-  typedef std::vector<std::pair<lldb::ModuleSP, CompilerDeclContext>>
-      NamespaceMap;
+  typedef std::pair<lldb::ModuleSP, CompilerDeclContext> NamespaceMapItem;
+  typedef std::vector<NamespaceMapItem> NamespaceMap;
   typedef std::shared_ptr<NamespaceMap> NamespaceMapSP;
 
   void RegisterNamespaceMap(const clang::NamespaceDecl *decl,
@@ -143,7 +144,6 @@ public:
   void ForgetDestination(clang::ASTContext *dst_ctx);
   void ForgetSource(clang::ASTContext *dst_ctx, clang::ASTContext *src_ctx);
 
-public:
   struct DeclOrigin {
     DeclOrigin() : ctx(nullptr), decl(nullptr) {}
 
@@ -314,7 +314,6 @@ public:
     return delegate_iter->second;
   }
 
-public:
   DeclOrigin GetDeclOrigin(const clang::Decl *decl);
 
   clang::FileManager m_file_manager;
@@ -326,4 +325,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_ClangASTImporter_h_
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGASTIMPORTER_H

@@ -91,9 +91,6 @@ int test7(unsigned long long b) {
   return a;
 }
 
-// <rdar://problem/7574870>
-asm volatile (""); // expected-warning {{meaningless 'volatile' on asm outside function}}
-
 // PR3904
 void test8(int i) {
   // A number in an input constraint can't point to a read-write constraint.

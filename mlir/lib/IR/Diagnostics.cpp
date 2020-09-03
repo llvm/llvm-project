@@ -1,6 +1,6 @@
 //===- Diagnostics.cpp - MLIR Diagnostics ---------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -16,7 +16,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
@@ -27,21 +26,16 @@
 using namespace mlir;
 using namespace mlir::detail;
 
-static llvm::cl::opt<bool> printStackTraceOnDiagnostic(
-    "mlir-print-stacktrace-on-diagnostic",
-    llvm::cl::desc("When a diagnostic is emitted, also print the stack trace "
-                   "as an attached note"));
-
 //===----------------------------------------------------------------------===//
 // DiagnosticArgument
 //===----------------------------------------------------------------------===//
 
-// Construct from an Attribute.
+/// Construct from an Attribute.
 DiagnosticArgument::DiagnosticArgument(Attribute attr)
     : kind(DiagnosticArgumentKind::Attribute),
       opaqueVal(reinterpret_cast<intptr_t>(attr.getAsOpaquePointer())) {}
 
-// Construct from a Type.
+/// Construct from a Type.
 DiagnosticArgument::DiagnosticArgument(Type val)
     : kind(DiagnosticArgumentKind::Type),
       opaqueVal(reinterpret_cast<intptr_t>(val.getAsOpaquePointer())) {}
@@ -70,9 +64,6 @@ void DiagnosticArgument::print(raw_ostream &os) const {
     break;
   case DiagnosticArgumentKind::Integer:
     os << getAsInteger();
-    break;
-  case DiagnosticArgumentKind::Operation:
-    getAsOperation().print(os, OpPrintingFlags().useLocalScope());
     break;
   case DiagnosticArgumentKind::String:
     os << getAsString();
@@ -129,6 +120,14 @@ Diagnostic &Diagnostic::operator<<(OperationName val) {
   // the lifetime of its data.
   arguments.push_back(DiagnosticArgument(val.getStringRef()));
   return *this;
+}
+
+/// Stream in an Operation.
+Diagnostic &Diagnostic::operator<<(Operation &val) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  os << val;
+  return *this << os.str();
 }
 
 /// Outputs this diagnostic to a stream.
@@ -278,13 +277,14 @@ void DiagnosticEngine::emit(Diagnostic diag) {
 /// diagnostic.
 static InFlightDiagnostic
 emitDiag(Location location, DiagnosticSeverity severity, const Twine &message) {
-  auto &diagEngine = location->getContext()->getDiagEngine();
+  MLIRContext *ctx = location->getContext();
+  auto &diagEngine = ctx->getDiagEngine();
   auto diag = diagEngine.emit(location, severity);
   if (!message.isTriviallyEmpty())
     diag << message;
 
   // Add the stack trace as a note if necessary.
-  if (printStackTraceOnDiagnostic) {
+  if (ctx->shouldPrintStackTraceOnDiagnostic()) {
     std::string bt;
     {
       llvm::raw_string_ostream stream(bt);
@@ -334,31 +334,32 @@ ScopedDiagnosticHandler::~ScopedDiagnosticHandler() {
 namespace mlir {
 namespace detail {
 struct SourceMgrDiagnosticHandlerImpl {
-  /// Get a memory buffer for the given file, or nullptr if one is not found.
-  const llvm::MemoryBuffer *getBufferForFile(llvm::SourceMgr &mgr,
-                                             StringRef filename) {
+  /// Return the SrcManager buffer id for the specified file, or zero if none
+  /// can be found.
+  unsigned getSourceMgrBufferIDForFile(llvm::SourceMgr &mgr,
+                                       StringRef filename) {
     // Check for an existing mapping to the buffer id for this file.
-    auto bufferIt = filenameToBuf.find(filename);
-    if (bufferIt != filenameToBuf.end())
+    auto bufferIt = filenameToBufId.find(filename);
+    if (bufferIt != filenameToBufId.end())
       return bufferIt->second;
 
     // Look for a buffer in the manager that has this filename.
     for (unsigned i = 1, e = mgr.getNumBuffers() + 1; i != e; ++i) {
       auto *buf = mgr.getMemoryBuffer(i);
       if (buf->getBufferIdentifier() == filename)
-        return filenameToBuf[filename] = buf;
+        return filenameToBufId[filename] = i;
     }
 
     // Otherwise, try to load the source file.
-    const llvm::MemoryBuffer *newBuf = nullptr;
     std::string ignored;
-    if (auto newBufID = mgr.AddIncludeFile(filename, llvm::SMLoc(), ignored))
-      newBuf = mgr.getMemoryBuffer(newBufID);
-    return filenameToBuf[filename] = newBuf;
+    unsigned id =
+        mgr.AddIncludeFile(std::string(filename), llvm::SMLoc(), ignored);
+    filenameToBufId[filename] = id;
+    return id;
   }
 
-  /// Mapping between file name and buffer pointer.
-  llvm::StringMap<const llvm::MemoryBuffer *> filenameToBuf;
+  /// Mapping between file name and buffer ID's.
+  llvm::StringMap<unsigned> filenameToBufId;
 };
 } // end namespace detail
 } // end namespace mlir
@@ -373,6 +374,32 @@ static Optional<FileLineColLoc> getFileLineColLoc(Location loc) {
   case StandardAttributes::CallSiteLocation:
     // Process the callee of a callsite location.
     return getFileLineColLoc(loc.cast<CallSiteLoc>().getCallee());
+  case StandardAttributes::FusedLocation:
+    for (auto subLoc : loc.cast<FusedLoc>().getLocations()) {
+      if (auto callLoc = getFileLineColLoc(subLoc)) {
+        return callLoc;
+      }
+    }
+    return llvm::None;
+  default:
+    return llvm::None;
+  }
+}
+
+/// Return a processable CallSiteLoc from the given location.
+static Optional<CallSiteLoc> getCallSiteLoc(Location loc) {
+  switch (loc->getKind()) {
+  case StandardAttributes::NameLocation:
+    return getCallSiteLoc(loc.cast<NameLoc>().getChildLoc());
+  case StandardAttributes::CallSiteLocation:
+    return loc.cast<CallSiteLoc>();
+  case StandardAttributes::FusedLocation:
+    for (auto subLoc : loc.cast<FusedLoc>().getLocations()) {
+      if (auto callLoc = getCallSiteLoc(subLoc)) {
+        return callLoc;
+      }
+    }
+    return llvm::None;
   default:
     return llvm::None;
   }
@@ -408,7 +435,8 @@ SourceMgrDiagnosticHandler::SourceMgrDiagnosticHandler(llvm::SourceMgr &mgr,
 SourceMgrDiagnosticHandler::~SourceMgrDiagnosticHandler() {}
 
 void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
-                                                DiagnosticSeverity kind) {
+                                                DiagnosticSeverity kind,
+                                                bool displaySourceLine) {
   // Extract a file location from this loc.
   auto fileLoc = getFileLineColLoc(loc);
 
@@ -422,108 +450,74 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
     return mgr.PrintMessage(os, llvm::SMLoc(), getDiagKind(kind), strOS.str());
   }
 
-  // Otherwise, try to convert the file location to an SMLoc.
-  auto smloc = convertLocToSMLoc(*fileLoc);
-  if (smloc.isValid())
-    return mgr.PrintMessage(os, smloc, getDiagKind(kind), message);
+  // Otherwise if we are displaying the source line, try to convert the file
+  // location to an SMLoc.
+  if (displaySourceLine) {
+    auto smloc = convertLocToSMLoc(*fileLoc);
+    if (smloc.isValid())
+      return mgr.PrintMessage(os, smloc, getDiagKind(kind), message);
+  }
 
   // If the conversion was unsuccessful, create a diagnostic with the file
-  // information.
-  llvm::SMDiagnostic diag(fileLoc->getFilename(), getDiagKind(kind),
-                          message.str());
+  // information. We manually combine the line and column to avoid asserts in
+  // the constructor of SMDiagnostic that takes a location.
+  std::string locStr;
+  llvm::raw_string_ostream locOS(locStr);
+  locOS << fileLoc->getFilename() << ":" << fileLoc->getLine() << ":"
+        << fileLoc->getColumn();
+  llvm::SMDiagnostic diag(locOS.str(), getDiagKind(kind), message.str());
   diag.print(nullptr, os);
 }
 
 /// Emit the given diagnostic with the held source manager.
 void SourceMgrDiagnosticHandler::emitDiagnostic(Diagnostic &diag) {
   // Emit the diagnostic.
-  auto loc = diag.getLocation();
+  Location loc = diag.getLocation();
   emitDiagnostic(loc, diag.str(), diag.getSeverity());
 
   // If the diagnostic location was a call site location, then print the call
   // stack as well.
-  if (auto callLoc = loc.dyn_cast<CallSiteLoc>()) {
+  if (auto callLoc = getCallSiteLoc(loc)) {
     // Print the call stack while valid, or until the limit is reached.
-    Location callerLoc = callLoc.getCaller();
+    loc = callLoc->getCaller();
     for (unsigned curDepth = 0; curDepth < callStackLimit; ++curDepth) {
-      emitDiagnostic(callerLoc, "called from", DiagnosticSeverity::Note);
-      if ((callLoc = callerLoc.dyn_cast<CallSiteLoc>()))
-        callerLoc = callLoc.getCaller();
+      emitDiagnostic(loc, "called from", DiagnosticSeverity::Note);
+      if ((callLoc = getCallSiteLoc(loc)))
+        loc = callLoc->getCaller();
       else
         break;
     }
   }
 
-  // Emit each of the notes.
-  for (auto &note : diag.getNotes())
-    emitDiagnostic(note.getLocation(), note.str(), note.getSeverity());
+  // Emit each of the notes. Only display the source code if the location is
+  // different from the previous location.
+  for (auto &note : diag.getNotes()) {
+    emitDiagnostic(note.getLocation(), note.str(), note.getSeverity(),
+                   /*displaySourceLine=*/loc != note.getLocation());
+    loc = note.getLocation();
+  }
 }
 
 /// Get a memory buffer for the given file, or nullptr if one is not found.
 const llvm::MemoryBuffer *
 SourceMgrDiagnosticHandler::getBufferForFile(StringRef filename) {
-  return impl->getBufferForFile(mgr, filename);
+  if (unsigned id = impl->getSourceMgrBufferIDForFile(mgr, filename))
+    return mgr.getMemoryBuffer(id);
+  return nullptr;
 }
 
 /// Get a memory buffer for the given file, or the main file of the source
 /// manager if one doesn't exist. This always returns non-null.
 llvm::SMLoc SourceMgrDiagnosticHandler::convertLocToSMLoc(FileLineColLoc loc) {
-  // Get the buffer for this filename.
-  auto *membuf = getBufferForFile(loc.getFilename());
-  if (!membuf)
+  // The column and line may be zero to represent unknown column and/or unknown
+  /// line/column information.
+  if (loc.getLine() == 0 || loc.getColumn() == 0)
     return llvm::SMLoc();
 
-  // TODO: This should really be upstreamed to be a method on llvm::SourceMgr.
-  // Doing so would allow it to use the offset cache that is already maintained
-  // by SrcBuffer, making this more efficient.
-  unsigned lineNo = loc.getLine();
-  unsigned columnNo = loc.getColumn();
-
-  // Scan for the correct line number.
-  const char *position = membuf->getBufferStart();
-  const char *end = membuf->getBufferEnd();
-
-  // We start counting line and column numbers from 1.
-  if (lineNo != 0)
-    --lineNo;
-  if (columnNo != 0)
-    --columnNo;
-
-  while (position < end && lineNo) {
-    auto curChar = *position++;
-
-    // Scan for newlines.  If this isn't one, ignore it.
-    if (curChar != '\r' && curChar != '\n')
-      continue;
-
-    // We saw a line break, decrement our counter.
-    --lineNo;
-
-    // Check for \r\n and \n\r and treat it as a single escape.  We know that
-    // looking past one character is safe because MemoryBuffer's are always nul
-    // terminated.
-    if (*position != curChar && (*position == '\r' || *position == '\n'))
-      ++position;
-  }
-
-  // If the line/column counter was invalid, return a pointer to the start of
-  // the buffer.
-  if (lineNo || position + columnNo > end)
-    return llvm::SMLoc::getFromPointer(membuf->getBufferStart());
-
-  // If the column is zero, try to skip to the first non-whitespace character.
-  if (columnNo == 0) {
-    auto isNewline = [](char c) { return c == '\n' || c == '\r'; };
-    auto isWhitespace = [](char c) { return c == ' ' || c == '\t'; };
-
-    // Look for a valid non-whitespace character before the next line.
-    for (auto *newPos = position; newPos < end && !isNewline(*newPos); ++newPos)
-      if (!isWhitespace(*newPos))
-        return llvm::SMLoc::getFromPointer(newPos);
-  }
-
-  // Otherwise return the right pointer.
-  return llvm::SMLoc::getFromPointer(position + columnNo);
+  unsigned bufferId = impl->getSourceMgrBufferIDForFile(mgr, loc.getFilename());
+  if (!bufferId)
+    return llvm::SMLoc();
+  return mgr.FindLocForLineAndColumn(bufferId, loc.getLine(), loc.getColumn());
 }
 
 //===----------------------------------------------------------------------===//

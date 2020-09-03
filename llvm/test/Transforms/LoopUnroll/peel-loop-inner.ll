@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,unroll<peeling;no-runtime>,simplify-cfg,instcombine' -unroll-force-peel-count=3 -verify-dom-info | FileCheck %s
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll<peeling;no-runtime>,simplify-cfg,instcombine' -unroll-force-peel-count=3 -verify-dom-info | FileCheck %s
 
 define void @basic(i32 %K, i32 %N) {
 ; CHECK-LABEL: @basic(

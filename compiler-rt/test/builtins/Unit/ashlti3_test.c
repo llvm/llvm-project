@@ -1,17 +1,6 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_ashlti3
 // REQUIRES: int128
-//===-- ashlti3_test.c - Test __ashlti3 -----------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __ashlti3 for the compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
 
 #include "int_lib.h"
 #include <stdio.h>

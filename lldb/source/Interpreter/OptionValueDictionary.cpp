@@ -1,4 +1,4 @@
-//===-- OptionValueDictionary.cpp -------------------------------*- C++ -*-===//
+//===-- OptionValueDictionary.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,7 +45,7 @@ void OptionValueDictionary::DumpValue(const ExecutionContext *exe_ctx,
       else
         strm.EOL();
 
-      strm.Indent(pos->first.GetCString());
+      strm.Indent(pos->first.GetStringRef());
 
       const uint32_t extra_dump_options = m_raw_value_dump ? eDumpOptionRaw : 0;
       switch (dict_type) {

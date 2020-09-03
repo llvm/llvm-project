@@ -22,6 +22,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "call-lowering"
 
@@ -29,48 +30,50 @@ using namespace llvm;
 
 void CallLowering::anchor() {}
 
-bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
+bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              ArrayRef<Register> ResRegs,
                              ArrayRef<ArrayRef<Register>> ArgRegs,
                              Register SwiftErrorVReg,
                              std::function<unsigned()> GetCalleeReg) const {
   CallLoweringInfo Info;
-  auto &DL = CS.getParent()->getParent()->getParent()->getDataLayout();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
 
   // First step is to marshall all the function's parameters into the correct
   // physregs and memory locations. Gather the sequence of argument types that
   // we'll pass to the assigner function.
   unsigned i = 0;
-  unsigned NumFixedArgs = CS.getFunctionType()->getNumParams();
-  for (auto &Arg : CS.args()) {
+  unsigned NumFixedArgs = CB.getFunctionType()->getNumParams();
+  for (auto &Arg : CB.args()) {
     ArgInfo OrigArg{ArgRegs[i], Arg->getType(), ISD::ArgFlagsTy{},
                     i < NumFixedArgs};
-    setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CS);
+    setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
     Info.OrigArgs.push_back(OrigArg);
     ++i;
   }
 
-  if (const Function *F = CS.getCalledFunction())
+  // Try looking through a bitcast from one function type to another.
+  // Commonly happens with calls to objc_msgSend().
+  const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
+  if (const Function *F = dyn_cast<Function>(CalleeV))
     Info.Callee = MachineOperand::CreateGA(F, 0);
   else
     Info.Callee = MachineOperand::CreateReg(GetCalleeReg(), false);
 
-  Info.OrigRet = ArgInfo{ResRegs, CS.getType(), ISD::ArgFlagsTy{}};
+  Info.OrigRet = ArgInfo{ResRegs, CB.getType(), ISD::ArgFlagsTy{}};
   if (!Info.OrigRet.Ty->isVoidTy())
-    setArgFlags(Info.OrigRet, AttributeList::ReturnIndex, DL, CS);
+    setArgFlags(Info.OrigRet, AttributeList::ReturnIndex, DL, CB);
 
-  Info.KnownCallees =
-      CS.getInstruction()->getMetadata(LLVMContext::MD_callees);
-  Info.CallConv = CS.getCallingConv();
+  MachineFunction &MF = MIRBuilder.getMF();
+  Info.KnownCallees = CB.getMetadata(LLVMContext::MD_callees);
+  Info.CallConv = CB.getCallingConv();
   Info.SwiftErrorVReg = SwiftErrorVReg;
-  Info.IsMustTailCall = CS.isMustTailCall();
-  Info.IsTailCall = CS.isTailCall() &&
-                    isInTailCallPosition(CS, MIRBuilder.getMF().getTarget()) &&
-                    (MIRBuilder.getMF()
-                         .getFunction()
-                         .getFnAttribute("disable-tail-calls")
-                         .getValueAsString() != "true");
-  Info.IsVarArg = CS.getFunctionType()->isVarArg();
+  Info.IsMustTailCall = CB.isMustTailCall();
+  Info.IsTailCall =
+      CB.isTailCall() && isInTailCallPosition(CB, MF.getTarget()) &&
+      (MF.getFunction()
+           .getFnAttribute("disable-tail-calls")
+           .getValueAsString() != "true");
+  Info.IsVarArg = CB.getFunctionType()->isVarArg();
   return lowerCall(MIRBuilder, Info);
 }
 
@@ -94,10 +97,12 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
     Flags.setSwiftError();
   if (Attrs.hasAttribute(OpIdx, Attribute::ByVal))
     Flags.setByVal();
+  if (Attrs.hasAttribute(OpIdx, Attribute::Preallocated))
+    Flags.setPreallocated();
   if (Attrs.hasAttribute(OpIdx, Attribute::InAlloca))
     Flags.setInAlloca();
 
-  if (Flags.isByVal() || Flags.isInAlloca()) {
+  if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated()) {
     Type *ElementTy = cast<PointerType>(Arg.Ty)->getElementType();
 
     auto Ty = Attrs.getAttribute(OpIdx, Attribute::ByVal).getValueAsType();
@@ -105,16 +110,16 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
 
     // For ByVal, alignment should be passed from FE.  BE will guess if
     // this info is not there but there are cases it cannot get right.
-    unsigned FrameAlign;
-    if (FuncInfo.getParamAlignment(OpIdx - 2))
-      FrameAlign = FuncInfo.getParamAlignment(OpIdx - 2);
+    Align FrameAlign;
+    if (auto ParamAlign = FuncInfo.getParamAlign(OpIdx - 2))
+      FrameAlign = *ParamAlign;
     else
-      FrameAlign = getTLI()->getByValTypeAlignment(ElementTy, DL);
-    Flags.setByValAlign(Align(FrameAlign));
+      FrameAlign = Align(getTLI()->getByValTypeAlignment(ElementTy, DL));
+    Flags.setByValAlign(FrameAlign);
   }
   if (Attrs.hasAttribute(OpIdx, Attribute::Nest))
     Flags.setNest();
-  Flags.setOrigAlign(Align(DL.getABITypeAlignment(Arg.Ty)));
+  Flags.setOrigAlign(DL.getABITypeAlign(Arg.Ty));
 }
 
 template void
@@ -123,9 +128,9 @@ CallLowering::setArgFlags<Function>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                     const Function &FuncInfo) const;
 
 template void
-CallLowering::setArgFlags<CallInst>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
+CallLowering::setArgFlags<CallBase>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                     const DataLayout &DL,
-                                    const CallInst &FuncInfo) const;
+                                    const CallBase &FuncInfo) const;
 
 Register CallLowering::packRegs(ArrayRef<Register> SrcRegs, Type *PackedTy,
                                 MachineIRBuilder &MIRBuilder) const {
@@ -157,7 +162,7 @@ void CallLowering::unpackRegs(ArrayRef<Register> DstRegs, Register SrcReg,
                               MachineIRBuilder &MIRBuilder) const {
   assert(DstRegs.size() > 1 && "Nothing to unpack");
 
-  const DataLayout &DL = MIRBuilder.getMF().getDataLayout();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
 
   SmallVector<LLT, 8> LLTs;
   SmallVector<uint64_t, 8> Offsets;
@@ -189,11 +194,11 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
 
   unsigned NumArgs = Args.size();
   for (unsigned i = 0; i != NumArgs; ++i) {
-    MVT CurVT = MVT::getVT(Args[i].Ty);
-    if (Handler.assignArg(i, CurVT, CurVT, CCValAssign::Full, Args[i],
-                          Args[i].Flags[0], CCInfo)) {
-      if (!CurVT.isValid())
-        return false;
+    EVT CurVT = EVT::getEVT(Args[i].Ty);
+    if (!CurVT.isSimple() ||
+        Handler.assignArg(i, CurVT.getSimpleVT(), CurVT.getSimpleVT(),
+                          CCValAssign::Full, Args[i], Args[i].Flags[0],
+                          CCInfo)) {
       MVT NewVT = TLI->getRegisterTypeForCallingConv(
           F.getContext(), F.getCallingConv(), EVT(CurVT));
 
@@ -239,7 +244,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
             if (Part == 0) {
               Flags.setSplit();
             } else {
-              Flags.setOrigAlign(Align::None());
+              Flags.setOrigAlign(Align(1));
               if (Part == NumParts - 1)
                 Flags.setSplitEnd();
             }
@@ -272,7 +277,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
           if (PartIdx == 0) {
             Flags.setSplit();
           } else {
-            Flags.setOrigAlign(Align::None());
+            Flags.setOrigAlign(Align(1));
             if (PartIdx == NumParts - 1)
               Flags.setSplitEnd();
           }
@@ -293,15 +298,21 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
     assert(VA.getValNo() == i && "Location doesn't correspond to current arg");
 
     if (VA.needsCustom()) {
-      j += Handler.assignCustomValue(Args[i], makeArrayRef(ArgLocs).slice(j));
+      unsigned NumArgRegs =
+          Handler.assignCustomValue(Args[i], makeArrayRef(ArgLocs).slice(j));
+      if (!NumArgRegs)
+        return false;
+      j += NumArgRegs;
       continue;
     }
 
     // FIXME: Pack registers if we have more than one.
     Register ArgReg = Args[i].Regs[0];
 
-    MVT OrigVT = MVT::getVT(Args[i].Ty);
-    MVT VAVT = VA.getValVT();
+    EVT OrigVT = EVT::getEVT(Args[i].Ty);
+    EVT VAVT = VA.getValVT();
+    const LLT OrigTy = getLLTForType(*Args[i].Ty, DL);
+
     if (VA.isRegLoc()) {
       if (Handler.isIncomingArgumentHandler() && VAVT != OrigVT) {
         if (VAVT.getSizeInBits() < OrigVT.getSizeInBits()) {
@@ -323,7 +334,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
           MIRBuilder.buildMerge(Args[i].OrigRegs[0], Args[i].Regs);
           continue;
         }
-        const LLT VATy(VAVT);
+        const LLT VATy(VAVT.getSimpleVT());
         Register NewReg =
             MIRBuilder.getMRI()->createGenericVirtualRegister(VATy);
         Handler.assignValueToReg(NewReg, VA.getLocReg(), VA);
@@ -331,7 +342,6 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
         // or do an unmerge to get the lower block of elements.
         if (VATy.isVector() &&
             VATy.getNumElements() > OrigVT.getVectorNumElements()) {
-          const LLT OrigTy(OrigVT);
           // Just handle the case where the VA type is 2 * original type.
           if (VATy.getNumElements() != OrigVT.getVectorNumElements() * 2) {
             LLVM_DEBUG(dbgs()
@@ -478,7 +488,7 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
     return ValReg;
   case CCValAssign::AExt: {
     auto MIB = MIRBuilder.buildAnyExt(LocTy, ValReg);
-    return MIB->getOperand(0).getReg();
+    return MIB.getReg(0);
   }
   case CCValAssign::SExt: {
     Register NewReg = MRI.createGenericVirtualRegister(LocTy);

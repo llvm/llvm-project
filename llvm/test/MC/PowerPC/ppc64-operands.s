@@ -20,12 +20,12 @@
 # CHECK-LE: add 31, 31, 31                  # encoding: [0x14,0xfa,0xff,0x7f]
             add 31, 31, 31
 
-# CHECK-BE: addi 1, 0, 0                    # encoding: [0x38,0x20,0x00,0x00]
-# CHECK-LE: addi 1, 0, 0                    # encoding: [0x00,0x00,0x20,0x38]
+# CHECK-BE: li 1, 0                         # encoding: [0x38,0x20,0x00,0x00]
+# CHECK-LE: li 1, 0                         # encoding: [0x00,0x00,0x20,0x38]
             addi 1, 0, 0
 
-# CHECK-BE: addi 1, 0, 0                    # encoding: [0x38,0x20,0x00,0x00]
-# CHECK-LE: addi 1, 0, 0                    # encoding: [0x00,0x00,0x20,0x38]
+# CHECK-BE: li 1, 0                         # encoding: [0x38,0x20,0x00,0x00]
+# CHECK-LE: li 1, 0                         # encoding: [0x00,0x00,0x20,0x38]
             addi 1, %r0, 0
 
 # Signed 16-bit immediate operands
@@ -34,12 +34,12 @@
 # CHECK-LE: addi 1, 2, 0                    # encoding: [0x00,0x00,0x22,0x38]
             addi 1, 2, 0
 
-# CHECK-BE: addi 1, 0, -32768               # encoding: [0x38,0x20,0x80,0x00]
-# CHECK-LE: addi 1, 0, -32768               # encoding: [0x00,0x80,0x20,0x38]
+# CHECK-BE: li 1, -32768                    # encoding: [0x38,0x20,0x80,0x00]
+# CHECK-LE: li 1, -32768                    # encoding: [0x00,0x80,0x20,0x38]
             addi 1, 0, -32768
 
-# CHECK-BE: addi 1, 0, 32767                # encoding: [0x38,0x20,0x7f,0xff]
-# CHECK-LE: addi 1, 0, 32767                # encoding: [0xff,0x7f,0x20,0x38]
+# CHECK-BE: li 1, 32767                     # encoding: [0x38,0x20,0x7f,0xff]
+# CHECK-LE: li 1, 32767                     # encoding: [0xff,0x7f,0x20,0x38]
             addi 1, 0, 32767
 
 # Unsigned 16-bit immediate operands
@@ -54,12 +54,12 @@
 
 # Signed 16-bit immediate operands (extended range for addis)
 
-# CHECK-BE: addis 1, 0, 0                   # encoding: [0x3c,0x20,0x00,0x00]
-# CHECK-LE: addis 1, 0, 0                   # encoding: [0x00,0x00,0x20,0x3c]
+# CHECK-BE: lis 1, 0                        # encoding: [0x3c,0x20,0x00,0x00]
+# CHECK-LE: lis 1, 0                        # encoding: [0x00,0x00,0x20,0x3c]
             addis 1, 0, -65536
 
-# CHECK-BE: addis 1, 0, -1                  # encoding: [0x3c,0x20,0xff,0xff]
-# CHECK-LE: addis 1, 0, -1                  # encoding: [0xff,0xff,0x20,0x3c]
+# CHECK-BE: lis 1, -1                       # encoding: [0x3c,0x20,0xff,0xff]
+# CHECK-LE: lis 1, -1                       # encoding: [0xff,0xff,0x20,0x3c]
             addis 1, 0, 65535
 
 # D-Form memory operands

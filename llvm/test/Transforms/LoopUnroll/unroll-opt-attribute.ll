@@ -1,7 +1,7 @@
 ; RUN: opt < %s -S -loop-unroll -unroll-count=4 | FileCheck -check-prefix=CHECK_COUNT4 %s
 ; RUN: opt < %s -S -loop-unroll | FileCheck -check-prefix=CHECK_NOCOUNT %s
-; RUN: opt < %s -S -passes='require<profile-summary>,function(unroll)' -pgso | FileCheck -check-prefix=PGSO %s
-; RUN: opt < %s -S -passes='require<profile-summary>,function(unroll)' -pgso=false | FileCheck -check-prefix=NPGSO %s
+; RUN: opt < %s -S -passes='require<profile-summary>,function(loop-unroll)' -pgso | FileCheck -check-prefix=PGSO %s
+; RUN: opt < %s -S -passes='require<profile-summary>,function(loop-unroll)' -pgso=false | FileCheck -check-prefix=NPGSO %s
 
 
 ;///////////////////// TEST 1 //////////////////////////////

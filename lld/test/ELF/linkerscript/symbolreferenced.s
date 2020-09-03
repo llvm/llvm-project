@@ -5,13 +5,13 @@
 # RUN: echo "SECTIONS { PROVIDE(newsym = 1);}" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=PROVIDE1 %s
-# PROVIDE1: 0000000000000001         *ABS*    00000000 newsym
+# PROVIDE1: 0000000000000001 g       *ABS*  0000000000000000 newsym
 
 # Provide new symbol (hidden). The value should be 1
 # RUN: echo "SECTIONS { PROVIDE_HIDDEN(newsym = 1);}" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=HIDDEN1 %s
-# HIDDEN1: 0000000000000001         *ABS*    00000000 .hidden newsym
+# HIDDEN1: 0000000000000001 l       *ABS*  0000000000000000 .hidden newsym
 
 .global _start
 _start:

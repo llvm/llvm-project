@@ -1,4 +1,4 @@
-//===-- ValueObjectRegister.cpp ---------------------------------*- C++ -*-===//
+//===-- ValueObjectRegister.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,86 +35,24 @@ class ExecutionContextScope;
 using namespace lldb;
 using namespace lldb_private;
 
-#pragma mark ValueObjectRegisterContext
-
-ValueObjectRegisterContext::ValueObjectRegisterContext(
-    ValueObject &parent, RegisterContextSP &reg_ctx)
-    : ValueObject(parent), m_reg_ctx_sp(reg_ctx) {
-  assert(reg_ctx);
-  m_name.SetCString("Registers");
-  SetValueIsValid(true);
-}
-
-ValueObjectRegisterContext::~ValueObjectRegisterContext() {}
-
-CompilerType ValueObjectRegisterContext::GetCompilerTypeImpl() {
-  return CompilerType();
-}
-
-ConstString ValueObjectRegisterContext::GetTypeName() { return ConstString(); }
-
-ConstString ValueObjectRegisterContext::GetDisplayTypeName() {
-  return ConstString();
-}
-
-ConstString ValueObjectRegisterContext::GetQualifiedTypeName() {
-  return ConstString();
-}
-
-size_t ValueObjectRegisterContext::CalculateNumChildren(uint32_t max) {
-  auto reg_set_count = m_reg_ctx_sp->GetRegisterSetCount();
-  return reg_set_count <= max ? reg_set_count : max;
-}
-
-uint64_t ValueObjectRegisterContext::GetByteSize() { return 0; }
-
-bool ValueObjectRegisterContext::UpdateValue() {
-  m_error.Clear();
-  ExecutionContext exe_ctx(GetExecutionContextRef());
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  if (frame)
-    m_reg_ctx_sp = frame->GetRegisterContext();
-  else
-    m_reg_ctx_sp.reset();
-
-  if (m_reg_ctx_sp.get() == nullptr) {
-    SetValueIsValid(false);
-    m_error.SetErrorToGenericError();
-  } else
-    SetValueIsValid(true);
-
-  return m_error.Success();
-}
-
-ValueObject *ValueObjectRegisterContext::CreateChildAtIndex(
-    size_t idx, bool synthetic_array_member, int32_t synthetic_index) {
-  ValueObject *new_valobj = nullptr;
-
-  const size_t num_children = GetNumChildren();
-  if (idx < num_children) {
-    ExecutionContext exe_ctx(GetExecutionContextRef());
-    new_valobj = new ValueObjectRegisterSet(
-        exe_ctx.GetBestExecutionContextScope(), m_reg_ctx_sp, idx);
-  }
-
-  return new_valobj;
-}
-
-#pragma mark -
 #pragma mark ValueObjectRegisterSet
 
 ValueObjectSP
 ValueObjectRegisterSet::Create(ExecutionContextScope *exe_scope,
                                lldb::RegisterContextSP &reg_ctx_sp,
                                uint32_t set_idx) {
-  return (new ValueObjectRegisterSet(exe_scope, reg_ctx_sp, set_idx))->GetSP();
+  auto manager_sp = ValueObjectManager::Create();
+  return (new ValueObjectRegisterSet(exe_scope, *manager_sp, reg_ctx_sp,
+                                     set_idx))
+      ->GetSP();
 }
 
 ValueObjectRegisterSet::ValueObjectRegisterSet(ExecutionContextScope *exe_scope,
+                                               ValueObjectManager &manager,
                                                lldb::RegisterContextSP &reg_ctx,
                                                uint32_t reg_set_idx)
-    : ValueObject(exe_scope), m_reg_ctx_sp(reg_ctx), m_reg_set(nullptr),
-      m_reg_set_idx(reg_set_idx) {
+    : ValueObject(exe_scope, manager), m_reg_ctx_sp(reg_ctx),
+      m_reg_set(nullptr), m_reg_set_idx(reg_set_idx) {
   assert(reg_ctx);
   m_reg_set = reg_ctx->GetRegisterSet(m_reg_set_idx);
   if (m_reg_set) {
@@ -192,7 +130,7 @@ ValueObjectRegisterSet::GetChildMemberWithName(ConstString name,
   ValueObject *valobj = nullptr;
   if (m_reg_ctx_sp && m_reg_set) {
     const RegisterInfo *reg_info =
-        m_reg_ctx_sp->GetRegisterInfoByName(name.AsCString());
+        m_reg_ctx_sp->GetRegisterInfoByName(name.GetStringRef());
     if (reg_info != nullptr)
       valobj = new ValueObjectRegister(*this, m_reg_ctx_sp,
                                        reg_info->kinds[eRegisterKindLLDB]);
@@ -207,7 +145,7 @@ size_t
 ValueObjectRegisterSet::GetIndexOfChildWithName(ConstString name) {
   if (m_reg_ctx_sp && m_reg_set) {
     const RegisterInfo *reg_info =
-        m_reg_ctx_sp->GetRegisterInfoByName(name.AsCString());
+        m_reg_ctx_sp->GetRegisterInfoByName(name.GetStringRef());
     if (reg_info != nullptr)
       return reg_info->kinds[eRegisterKindLLDB];
   }
@@ -240,13 +178,16 @@ ValueObjectRegister::ValueObjectRegister(ValueObject &parent,
 ValueObjectSP ValueObjectRegister::Create(ExecutionContextScope *exe_scope,
                                           lldb::RegisterContextSP &reg_ctx_sp,
                                           uint32_t reg_num) {
-  return (new ValueObjectRegister(exe_scope, reg_ctx_sp, reg_num))->GetSP();
+  auto manager_sp = ValueObjectManager::Create();
+  return (new ValueObjectRegister(exe_scope, *manager_sp, reg_ctx_sp, reg_num))
+      ->GetSP();
 }
 
 ValueObjectRegister::ValueObjectRegister(ExecutionContextScope *exe_scope,
+                                         ValueObjectManager &manager,
                                          lldb::RegisterContextSP &reg_ctx,
                                          uint32_t reg_num)
-    : ValueObject(exe_scope), m_reg_ctx_sp(reg_ctx), m_reg_info(),
+    : ValueObject(exe_scope, manager), m_reg_ctx_sp(reg_ctx), m_reg_info(),
       m_reg_value(), m_type_name(), m_compiler_type() {
   assert(reg_ctx);
   ConstructObject(reg_num);
@@ -278,7 +219,7 @@ CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
 
 ConstString ValueObjectRegister::GetTypeName() {
   if (m_type_name.IsEmpty())
-    m_type_name = GetCompilerType().GetConstTypeName();
+    m_type_name = GetCompilerType().GetTypeName();
   return m_type_name;
 }
 
@@ -357,7 +298,6 @@ bool ValueObjectRegister::ResolveValue(Scalar &scalar) {
 }
 
 void ValueObjectRegister::GetExpressionPath(Stream &s,
-                                            bool qualify_cxx_base_classes,
                                             GetExpressionPathFormat epformat) {
   s.Printf("$%s", m_reg_info.name);
 }

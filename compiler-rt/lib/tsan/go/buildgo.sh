@@ -66,6 +66,10 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 		ARCHCFLAGS=""
 	fi
 elif [ "`uname -a | grep FreeBSD`" != "" ]; then
+	# The resulting object still depends on libc.
+	# We removed this dependency for Go runtime for other OSes,
+	# and we should remove it for FreeBSD as well, but there is no pressing need.
+	DEPENDS_ON_LIBC=1
 	SUFFIX="freebsd_amd64"
 	OSCFLAGS="-fno-strict-aliasing -fPIC -Werror"
 	ARCHCFLAGS="-m64"
@@ -83,6 +87,10 @@ elif [ "`uname -a | grep FreeBSD`" != "" ]; then
 		../../sanitizer_common/sanitizer_stoptheworld_netbsd_libcdep.cpp
 	"
 elif [ "`uname -a | grep NetBSD`" != "" ]; then
+	# The resulting object still depends on libc.
+	# We removed this dependency for Go runtime for other OSes,
+	# and we should remove it for NetBSD as well, but there is no pressing need.
+	DEPENDS_ON_LIBC=1
 	SUFFIX="netbsd_amd64"
 	OSCFLAGS="-fno-strict-aliasing -fPIC -Werror"
 	ARCHCFLAGS="-m64"
@@ -99,6 +107,27 @@ elif [ "`uname -a | grep NetBSD`" != "" ]; then
 		../../sanitizer_common/sanitizer_netbsd.cpp
 		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cpp
 		../../sanitizer_common/sanitizer_stoptheworld_netbsd_libcdep.cpp
+	"
+elif [ "`uname -a | grep OpenBSD`" != "" ]; then
+	# The resulting object still depends on libc.
+	# We removed this dependency for Go runtime for other OSes,
+	# and we should remove it for OpenBSD as well, but there is no pressing need.
+	DEPENDS_ON_LIBC=1
+	SUFFIX="openbsd_amd64"
+	OSCFLAGS="-fno-strict-aliasing -fPIC -Werror"
+	ARCHCFLAGS="-m64"
+	OSLDFLAGS="-pthread -fPIC -fpie"
+	SRCS="
+		$SRCS
+		../rtl/tsan_platform_linux.cpp
+		../../sanitizer_common/sanitizer_posix.cpp
+		../../sanitizer_common/sanitizer_posix_libcdep.cpp
+		../../sanitizer_common/sanitizer_procmaps_bsd.cpp
+		../../sanitizer_common/sanitizer_procmaps_common.cpp
+		../../sanitizer_common/sanitizer_linux.cpp
+		../../sanitizer_common/sanitizer_linux_libcdep.cpp
+		../../sanitizer_common/sanitizer_openbsd.cpp
+		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cpp
 	"
 elif [ "`uname -a | grep Darwin`" != "" ]; then
 	SUFFIX="darwin_amd64"
@@ -149,16 +178,20 @@ for F in $SRCS; do
 	cat $F >> $DIR/gotsan.cpp
 done
 
-FLAGS=" -I../rtl -I../.. -I../../sanitizer_common -I../../../include -std=c++11 -Wall -fno-exceptions -fno-rtti -DSANITIZER_GO=1 -DSANITIZER_DEADLOCK_DETECTOR_VERSION=2 $OSCFLAGS $ARCHCFLAGS"
+FLAGS=" -I../rtl -I../.. -I../../sanitizer_common -I../../../include -std=c++14 -Wall -fno-exceptions -fno-rtti -DSANITIZER_GO=1 -DSANITIZER_DEADLOCK_DETECTOR_VERSION=2 $OSCFLAGS $ARCHCFLAGS"
+DEBUG_FLAGS="$FLAGS -DSANITIZER_DEBUG=1 -g"
+FLAGS="$FLAGS -DSANITIZER_DEBUG=0 -O3 -fomit-frame-pointer"
+if [ "$SUFFIX" = "linux_ppc64le" ]; then
+	FLAGS="$FLAGS -mcpu=power8 -fno-function-sections"
+elif [ "$SUFFIX" = "linux_amd64" ]; then
+	FLAGS="$FLAGS -msse3"
+fi
+
 if [ "$DEBUG" = "" ]; then
-	FLAGS="$FLAGS -DSANITIZER_DEBUG=0 -O3 -fomit-frame-pointer"
-	if [ "$SUFFIX" = "linux_ppc64le" ]; then
-		FLAGS="$FLAGS -mcpu=power8 -fno-function-sections"
-	elif [ "$SUFFIX" = "linux_amd64" ]; then
-		FLAGS="$FLAGS -msse3"
-	fi
+	# Do a build test with debug flags.
+	$CC $DIR/gotsan.cpp -c -o $DIR/race_debug_$SUFFIX.syso $DEBUG_FLAGS $CFLAGS
 else
-	FLAGS="$FLAGS -DSANITIZER_DEBUG=1 -g"
+	FLAGS="$DEBUG_FLAGS"
 fi
 
 if [ "$SILENT" != "1" ]; then
@@ -168,6 +201,18 @@ $CC $DIR/gotsan.cpp -c -o $DIR/race_$SUFFIX.syso $FLAGS $CFLAGS
 
 $CC $OSCFLAGS $ARCHCFLAGS test.c $DIR/race_$SUFFIX.syso -g -o $DIR/test $OSLDFLAGS $LDFLAGS
 
+# Verify that no libc specific code is present.
+if [ "$DEPENDS_ON_LIBC" != "1" ]; then
+	if nm $DIR/race_$SUFFIX.syso | grep -q __libc_; then
+		printf -- '%s seems to link to libc\n' "race_$SUFFIX.syso"
+		exit 1
+	fi
+fi
+
+if [ "`uname -a | grep NetBSD`" != "" ]; then
+  # Turn off ASLR in the test binary.
+  /usr/sbin/paxctl +a $DIR/test
+fi
 export GORACE="exitcode=0 atexit_sleep_ms=0"
 if [ "$SILENT" != "1" ]; then
   $DIR/test

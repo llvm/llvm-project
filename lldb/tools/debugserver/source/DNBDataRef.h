@@ -19,8 +19,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __DNBDataRef_h__
-#define __DNBDataRef_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBDATAREF_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBDATAREF_H
 
 #include "DNBDefs.h"
 #include <limits.h>
@@ -121,4 +121,4 @@ protected:
   addr_t m_addrDATA;
 };
 
-#endif // #ifndef __DNBDataRef_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBDATAREF_H

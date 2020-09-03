@@ -1342,15 +1342,15 @@ define <8 x i16> @var_shuffle_v8i16_v8i16_xyxyxy00_i16(<8 x i16> %x, <8 x i16> %
 ; SSE41-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE41-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE41-NEXT:    andl $7, %edi
+; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movzwl -40(%rsp,%rdi,2), %eax
 ; SSE41-NEXT:    andl $7, %esi
 ; SSE41-NEXT:    andl $7, %edx
 ; SSE41-NEXT:    andl $7, %ecx
-; SSE41-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    andl $7, %r8d
 ; SSE41-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    andl $7, %r9d
-; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    pinsrw $0, -40(%rsp,%rdi,2), %xmm0
+; SSE41-NEXT:    movd %eax, %xmm0
 ; SSE41-NEXT:    pinsrw $1, -24(%rsp,%rsi,2), %xmm0
 ; SSE41-NEXT:    pinsrw $2, -40(%rsp,%rdx,2), %xmm0
 ; SSE41-NEXT:    pinsrw $3, -24(%rsp,%rcx,2), %xmm0
@@ -1367,15 +1367,15 @@ define <8 x i16> @var_shuffle_v8i16_v8i16_xyxyxy00_i16(<8 x i16> %x, <8 x i16> %
 ; AVX-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX-NEXT:    andl $7, %edi
+; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    movzwl -40(%rsp,%rdi,2), %eax
 ; AVX-NEXT:    andl $7, %esi
 ; AVX-NEXT:    andl $7, %edx
 ; AVX-NEXT:    andl $7, %ecx
-; AVX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    andl $7, %r8d
 ; AVX-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    andl $7, %r9d
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrw $0, -40(%rsp,%rdi,2), %xmm0, %xmm0
+; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    vpinsrw $1, -24(%rsp,%rsi,2), %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrw $2, -40(%rsp,%rdx,2), %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrw $3, -24(%rsp,%rcx,2), %xmm0, %xmm0

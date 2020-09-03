@@ -1,5 +1,4 @@
-//===-- DynamicLoaderWindowsDYLD.cpp --------------------------------*- C++
-//-*-===//
+//===-- DynamicLoaderWindowsDYLD.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,6 +22,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(DynamicLoaderWindowsDYLD)
 
 DynamicLoaderWindowsDYLD::DynamicLoaderWindowsDYLD(Process *process)
     : DynamicLoader(process) {}
@@ -191,9 +192,8 @@ DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   // Max size of an instruction in x86 is 15 bytes.
   AddressRange range(pc, 2 * 15);
 
-  ExecutionContext exe_ctx(m_process->GetTarget());
   DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
-      arch, nullptr, nullptr, exe_ctx, range, true);
+      arch, nullptr, nullptr, m_process->GetTarget(), range, true);
   if (!disassembler_sp) {
     return ThreadPlanSP();
   }
@@ -212,6 +212,7 @@ DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   auto first_insn = insn_list->GetInstructionAtIndex(0);
   auto second_insn = insn_list->GetInstructionAtIndex(1);
 
+  ExecutionContext exe_ctx(m_process->GetTarget());
   if (first_insn == nullptr || second_insn == nullptr ||
       strcmp(first_insn->GetMnemonic(&exe_ctx), "jmpl") != 0 ||
       strcmp(second_insn->GetMnemonic(&exe_ctx), "nop") != 0) {

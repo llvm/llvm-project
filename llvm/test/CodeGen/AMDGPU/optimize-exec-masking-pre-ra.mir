@@ -9,7 +9,6 @@ tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
-  scratchWaveOffsetReg: '$sgpr101'
   frameOffsetReg:  '$sgpr101'
 body:             |
   ; GCN-LABEL: name: exec_src1_is_not_copy
@@ -105,7 +104,7 @@ body:             |
   ; GCN-LABEL: name: cndmask_cmp_cbranch_fold_undef
   ; GCN: bb.0:
   ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   $vcc = S_ANDN2_B64 $exec, undef %1:sreg_64_xexec, implicit-def $scc
+  ; GCN:   $vcc = S_ANDN2_B64 $exec, undef %1:sreg_64_xexec, implicit-def dead $scc
   ; GCN:   S_CBRANCH_VCCZ %bb.1, implicit $vcc
   ; GCN: bb.1:
   bb.0:
@@ -114,6 +113,28 @@ body:             |
     V_CMP_NE_U32_e32 1, %1, implicit-def $vcc, implicit $exec
     $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
     S_CBRANCH_VCCZ %bb.1, implicit $vcc
+
+  bb.1:
+
+...
+
+# Don't crash on exec copy to SGPR subregister.
+---
+name: exec_copy_to_subreg
+tracksRegLiveness: true
+body:             |
+  ; GCN-LABEL: name: exec_copy_to_subreg
+  ; GCN: bb.0:
+  ; GCN:   successors: %bb.1(0x80000000)
+  ; GCN:   dead undef %0.sub0:sgpr_256 = COPY $exec
+  ; GCN:   dead %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, undef %2:sreg_64_xexec, implicit $exec
+  ; GCN:   S_BRANCH %bb.1
+  ; GCN: bb.1:
+  bb.0:
+
+    undef %0.sub0:sgpr_256 = COPY $exec
+    %2:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, undef %1:sreg_64_xexec, implicit $exec
+    S_BRANCH %bb.1
 
   bb.1:
 

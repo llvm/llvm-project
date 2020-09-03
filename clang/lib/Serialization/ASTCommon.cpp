@@ -240,8 +240,20 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::BuiltinFn:
     ID = PREDEF_TYPE_BUILTIN_FN;
     break;
+  case BuiltinType::IncompleteMatrixIdx:
+    ID = PREDEF_TYPE_INCOMPLETE_MATRIX_IDX;
+    break;
   case BuiltinType::OMPArraySection:
     ID = PREDEF_TYPE_OMP_ARRAY_SECTION;
+    break;
+  case BuiltinType::OMPArrayShaping:
+    ID = PREDEF_TYPE_OMP_ARRAY_SHAPING;
+    break;
+  case BuiltinType::OMPIterator:
+    ID = PREDEF_TYPE_OMP_ITERATOR;
+    break;
+  case BuiltinType::BFloat16:
+    ID = PREDEF_TYPE_BFLOAT16_ID;
     break;
   }
 
@@ -352,7 +364,6 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::TypeAliasTemplate:
   case Decl::ObjCProtocol:
   case Decl::ObjCInterface:
-  case Decl::ObjCCategory:
   case Decl::Empty:
     return true;
 
@@ -366,6 +377,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::IndirectField:
   case Decl::Field:
   case Decl::MSProperty:
+  case Decl::MSGuid:
   case Decl::ObjCIvar:
   case Decl::ObjCAtDefsField:
   case Decl::NonTypeTemplateParm:
@@ -373,6 +385,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::Using:
   case Decl::UsingPack:
   case Decl::ObjCMethod:
+  case Decl::ObjCCategory:
   case Decl::ObjCCategoryImpl:
   case Decl::ObjCImplementation:
   case Decl::ObjCProperty:
@@ -402,6 +415,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::Binding:
   case Decl::Concept:
   case Decl::LifetimeExtendedTemporary:
+  case Decl::RequiresExprBody:
     return false;
 
   // These indirectly derive from Redeclarable<T> but are not actually

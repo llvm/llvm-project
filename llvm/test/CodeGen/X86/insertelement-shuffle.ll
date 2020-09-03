@@ -40,9 +40,8 @@ define <8 x i64> @insert_subvector_512(i32 %x0, i32 %x1, <8 x i64> %v) nounwind 
 ; X64_AVX256:       # %bb.0:
 ; X64_AVX256-NEXT:    vmovd %edi, %xmm2
 ; X64_AVX256-NEXT:    vpinsrd $1, %esi, %xmm2, %xmm2
-; X64_AVX256-NEXT:    vmovq %xmm2, %rax
-; X64_AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; X64_AVX256-NEXT:    vpinsrq $0, %rax, %xmm2, %xmm2
+; X64_AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; X64_AVX256-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3]
 ; X64_AVX256-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; X64_AVX256-NEXT:    retq
 ;

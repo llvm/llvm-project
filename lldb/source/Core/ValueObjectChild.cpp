@@ -1,4 +1,4 @@
-//===-- ValueObjectChild.cpp ------------------------------------*- C++ -*-===//
+//===-- ValueObjectChild.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -71,14 +71,14 @@ static void AdjustForBitfieldness(ConstString &name,
 
 ConstString ValueObjectChild::GetTypeName() {
   if (m_type_name.IsEmpty()) {
-    m_type_name = GetCompilerType().GetConstTypeName();
+    m_type_name = GetCompilerType().GetTypeName();
     AdjustForBitfieldness(m_type_name, m_bitfield_bit_size);
   }
   return m_type_name;
 }
 
 ConstString ValueObjectChild::GetQualifiedTypeName() {
-  ConstString qualified_name = GetCompilerType().GetConstTypeName();
+  ConstString qualified_name = GetCompilerType().GetTypeName();
   AdjustForBitfieldness(qualified_name, m_bitfield_bit_size);
   return qualified_name;
 }
@@ -141,6 +141,9 @@ bool ValueObjectChild::UpdateValue() {
               bool deref;
               std::tie(addr, deref) =
                   runtime->FixupPointerValue(addr, parent_type);
+              // The runtime will always return an address in the target.
+              // So make sure we force that here.
+              parent->SetAddressTypeOfChildren(eAddressTypeLoad);
               if (deref) {
                 // Read the pointer to the Objective-C object.
                 Target &target = process_sp->GetTarget();
@@ -238,11 +241,7 @@ bool ValueObjectChild::UpdateValue() {
           // try to extract the child value from the parent's scalar value
           {
             Scalar scalar(m_value.GetScalar());
-            if (m_bitfield_bit_size)
-              scalar.ExtractBitfield(m_bitfield_bit_size,
-                                     m_bitfield_bit_offset);
-            else
-              scalar.ExtractBitfield(8 * m_byte_size, 8 * m_byte_offset);
+            scalar.ExtractBitfield(8 * m_byte_size, 8 * m_byte_offset);
             m_value.GetScalar() = scalar;
           }
           break;

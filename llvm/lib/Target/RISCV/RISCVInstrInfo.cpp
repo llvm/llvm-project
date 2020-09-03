@@ -24,13 +24,13 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 
+using namespace llvm;
+
 #define GEN_CHECK_COMPRESS_INSTR
 #include "RISCVGenCompressInstEmitter.inc"
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "RISCVGenInstrInfo.inc"
-
-using namespace llvm;
 
 RISCVInstrInfo::RISCVInstrInfo(RISCVSubtarget &STI)
     : RISCVGenInstrInfo(RISCV::ADJCALLSTACKDOWN, RISCV::ADJCALLSTACKUP),
@@ -76,10 +76,10 @@ unsigned RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     break;
   }
 
-  if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
-      MI.getOperand(1).getImm() == 0) {
-    FrameIndex = MI.getOperand(0).getIndex();
-    return MI.getOperand(2).getReg();
+  if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
+      MI.getOperand(2).getImm() == 0) {
+    FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
   }
 
   return 0;
@@ -112,7 +112,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
 void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator I,
-                                         unsigned SrcReg, bool IsKill, int FI,
+                                         Register SrcReg, bool IsKill, int FI,
                                          const TargetRegisterClass *RC,
                                          const TargetRegisterInfo *TRI) const {
   DebugLoc DL;
@@ -139,7 +139,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
 void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator I,
-                                          unsigned DstReg, int FI,
+                                          Register DstReg, int FI,
                                           const TargetRegisterClass *RC,
                                           const TargetRegisterInfo *TRI) const {
   DebugLoc DL;
@@ -279,7 +279,7 @@ bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
   // Handle a single unconditional branch.
   if (NumTerminators == 1 && I->getDesc().isUnconditionalBranch()) {
-    TBB = I->getOperand(0).getMBB();
+    TBB = getBranchDestBlock(*I);
     return false;
   }
 
@@ -293,7 +293,7 @@ bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   if (NumTerminators == 2 && std::prev(I)->getDesc().isConditionalBranch() &&
       I->getDesc().isUnconditionalBranch()) {
     parseCondBranch(*std::prev(I), TBB, Cond);
-    FBB = I->getOperand(0).getMBB();
+    FBB = getBranchDestBlock(*I);
     return false;
   }
 
@@ -342,7 +342,7 @@ unsigned RISCVInstrInfo::insertBranch(
     *BytesAdded = 0;
 
   // Shouldn't be a fall through.
-  assert(TBB && "InsertBranch must not be told to insert a fallthrough");
+  assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 3 || Cond.size() == 0) &&
          "RISCV branch conditions have two components!");
 
@@ -384,10 +384,6 @@ unsigned RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  const auto &TM = static_cast<const RISCVTargetMachine &>(MF->getTarget());
-
-  if (TM.isPositionIndependent())
-    report_fatal_error("Unable to insert indirect branch");
 
   if (!isInt<32>(BrOffset))
     report_fatal_error(
@@ -399,15 +395,13 @@ unsigned RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   auto II = MBB.end();
 
-  MachineInstr &LuiMI = *BuildMI(MBB, II, DL, get(RISCV::LUI), ScratchReg)
-                             .addMBB(&DestBB, RISCVII::MO_HI);
-  BuildMI(MBB, II, DL, get(RISCV::PseudoBRIND))
-      .addReg(ScratchReg, RegState::Kill)
-      .addMBB(&DestBB, RISCVII::MO_LO);
+  MachineInstr &MI = *BuildMI(MBB, II, DL, get(RISCV::PseudoJump))
+                          .addReg(ScratchReg, RegState::Define | RegState::Dead)
+                          .addMBB(&DestBB, RISCVII::MO_CALL);
 
   RS->enterBasicBlockEnd(MBB);
   unsigned Scav = RS->scavengeRegisterBackwards(RISCV::GPRRegClass,
-                                                LuiMI.getIterator(), false, 0);
+                                                MI.getIterator(), false, 0);
   MRI.replaceRegWith(ScratchReg, Scav);
   MRI.clearVirtRegs();
   RS->setRegUsed(Scav);
@@ -431,6 +425,7 @@ RISCVInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
 
 bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
                                            int64_t BrOffset) const {
+  unsigned XLen = STI.getXLen();
   // Ideally we could determine the supported branch offset from the
   // RISCVII::FormMask, but this can't be used for Pseudo instructions like
   // PseudoBR.
@@ -447,6 +442,8 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   case RISCV::JAL:
   case RISCV::PseudoBR:
     return isIntN(21, BrOffset);
+  case RISCV::PseudoJump:
+    return isIntN(32, SignExtend64(BrOffset + 0x800, XLen));
   }
 }
 
@@ -471,14 +468,38 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::KILL:
   case TargetOpcode::DBG_VALUE:
     return 0;
+  // These values are determined based on RISCVExpandAtomicPseudoInsts,
+  // RISCVExpandPseudoInsts and RISCVMCCodeEmitter, depending on where the
+  // pseudos are expanded.
   case RISCV::PseudoCALLReg:
   case RISCV::PseudoCALL:
+  case RISCV::PseudoJump:
   case RISCV::PseudoTAIL:
   case RISCV::PseudoLLA:
   case RISCV::PseudoLA:
   case RISCV::PseudoLA_TLS_IE:
   case RISCV::PseudoLA_TLS_GD:
     return 8;
+  case RISCV::PseudoAtomicLoadNand32:
+  case RISCV::PseudoAtomicLoadNand64:
+    return 20;
+  case RISCV::PseudoMaskedAtomicSwap32:
+  case RISCV::PseudoMaskedAtomicLoadAdd32:
+  case RISCV::PseudoMaskedAtomicLoadSub32:
+    return 28;
+  case RISCV::PseudoMaskedAtomicLoadNand32:
+    return 32;
+  case RISCV::PseudoMaskedAtomicLoadMax32:
+  case RISCV::PseudoMaskedAtomicLoadMin32:
+    return 44;
+  case RISCV::PseudoMaskedAtomicLoadUMax32:
+  case RISCV::PseudoMaskedAtomicLoadUMin32:
+    return 36;
+  case RISCV::PseudoCmpXchg32:
+  case RISCV::PseudoCmpXchg64:
+    return 16;
+  case RISCV::PseudoMaskedCmpXchg32:
+    return 32;
   case TargetOpcode::INLINEASM:
   case TargetOpcode::INLINEASM_BR: {
     const MachineFunction &MF = *MI.getParent()->getParent();
@@ -776,6 +797,8 @@ void RISCVInstrInfo::buildOutlinedFrame(
       }
     }
   }
+
+  MBB.addLiveIn(RISCV::X5);
 
   // Add in a return instruction to the end of the outlined frame.
   MBB.insert(MBB.end(), BuildMI(MF, DebugLoc(), get(RISCV::JALR))

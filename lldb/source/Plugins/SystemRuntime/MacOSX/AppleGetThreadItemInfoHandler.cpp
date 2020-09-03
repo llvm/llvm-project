@@ -1,5 +1,4 @@
-//===-- AppleGetThreadItemInfoHandler.cpp -------------------------------*- C++
-//-*-===//
+//===-- AppleGetThreadItemInfoHandler.cpp ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -116,7 +115,7 @@ void AppleGetThreadItemInfoHandler::Detach() {
       m_get_thread_item_info_return_buffer_addr != LLDB_INVALID_ADDRESS) {
     std::unique_lock<std::mutex> lock(m_get_thread_item_info_retbuffer_mutex,
                                       std::defer_lock);
-    lock.try_lock(); // Even if we don't get the lock, deallocate the buffer
+    (void)lock.try_lock(); // Even if we don't get the lock, deallocate the buffer
     m_process->DeallocateMemory(m_get_thread_item_info_return_buffer_addr);
   }
 }

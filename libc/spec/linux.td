@@ -55,20 +55,59 @@ def Linux : StandardSpec<"Linux"> {
         Macro<"EL2NSYNC">,
         Macro<"EADV">,
         Macro<"ECOMM">,
-      ],
-      [], // Types
-      []  // Functions
+      ]
   >;
 
   HeaderSpec SysMMan = HeaderSpec<
       "sys/mman.h",
-      [Macro<"MAP_ANONYMOUS">],
-      [], // Types
-      []  // Functions
+      [Macro<"MAP_ANONYMOUS">]
+  >;
+
+  HeaderSpec Signal = HeaderSpec<
+      "signal.h",
+      [
+        Macro<"NSIG">,
+
+        Macro<"SIGHUP">,
+        Macro<"SIGINT">,
+        Macro<"SIGQUIT">,
+        Macro<"SIGILL">,
+        Macro<"SIGTRAP">,
+        Macro<"SIGABRT">,
+        Macro<"SIGIOT">,
+        Macro<"SIGBUS">,
+        Macro<"SIGFPE">,
+        Macro<"SIGKILL">,
+        Macro<"SIGUSR1">,
+        Macro<"SIGSEGV">,
+        Macro<"SIGUSR2">,
+        Macro<"SIGPIPE">,
+        Macro<"SIGALRM">,
+        Macro<"SIGTERM">,
+        Macro<"SIGSTKFLT">,
+        Macro<"SIGCHLD">,
+        Macro<"SIGCONT">,
+        Macro<"SIGSTOP">,
+        Macro<"SIGTSTP">,
+        Macro<"SIGTTIN">,
+        Macro<"SIGTTOU">,
+        Macro<"SIGURG">,
+        Macro<"SIGXCPU">,
+        Macro<"SIGXFSZ">,
+        Macro<"SIGVTALRM">,
+        Macro<"SIGPROF">,
+        Macro<"SIGWINCH">,
+        Macro<"SIGIO">,
+        Macro<"SIGPOLL">,
+        Macro<"SIGPWR">,
+        Macro<"SIGSYS">,
+        Macro<"SIGUNUSED">,
+      ]
   >;
 
   let Headers = [
     Errno,
     SysMMan,
+    Signal,
   ];
 }

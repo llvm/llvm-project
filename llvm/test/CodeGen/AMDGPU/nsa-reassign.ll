@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -enable-misched=0 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}sample_contig_nsa:
 ; GCN-DAG: image_sample_c_l v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}],
@@ -21,8 +21,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_contig_nsa_10vgprs:
-; GCN-DAG: image_sample_c_l v{{[0-9]+}}, [{{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}],
-; GCN-DAG: image_sample v{{[0-9]+}}, [{{v[0-9]+, v[0-9]+, v[0-9]+}}],
+; GCN-DAG: image_sample_c_l v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}],
+; GCN-DAG: image_sample v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}],
 define amdgpu_ps <2 x float> @sample_contig_nsa_10vgprs(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s1, float %t1, float %r1, float %lod, float %r2, float %s2, float %t2) #0 {
 main_body:
   %zcompare.1 = fadd float %zcompare, 1.0

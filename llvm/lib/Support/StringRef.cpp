@@ -19,7 +19,7 @@ using namespace llvm;
 
 // MSVC emits references to this into the translation units which reference it.
 #ifndef _MSC_VER
-const size_t StringRef::npos;
+constexpr size_t StringRef::npos;
 #endif
 
 // strncasecmp() is not available on non-POSIX systems, so define an
@@ -106,19 +106,13 @@ unsigned StringRef::edit_distance(llvm::StringRef Other,
 //===----------------------------------------------------------------------===//
 
 std::string StringRef::lower() const {
-  std::string Result(size(), char());
-  for (size_type i = 0, e = size(); i != e; ++i) {
-    Result[i] = toLower(Data[i]);
-  }
-  return Result;
+  return std::string(map_iterator(begin(), toLower),
+                     map_iterator(end(), toLower));
 }
 
 std::string StringRef::upper() const {
-  std::string Result(size(), char());
-  for (size_type i = 0, e = size(); i != e; ++i) {
-    Result[i] = toUpper(Data[i]);
-  }
-  return Result;
+  return std::string(map_iterator(begin(), toUpper),
+                     map_iterator(end(), toUpper));
 }
 
 //===----------------------------------------------------------------------===//
@@ -588,13 +582,11 @@ bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
 
 bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {
   APFloat F(0.0);
-  auto ErrOrStatus = F.convertFromString(*this, APFloat::rmNearestTiesToEven);
-  if (!ErrOrStatus) {
-    assert(false && "Invalid floating point representation");
+  auto StatusOrErr = F.convertFromString(*this, APFloat::rmNearestTiesToEven);
+  if (errorToBool(StatusOrErr.takeError()))
     return true;
-  }
 
-  APFloat::opStatus Status = *ErrOrStatus;
+  APFloat::opStatus Status = *StatusOrErr;
   if (Status != APFloat::opOK) {
     if (!AllowInexact || !(Status & APFloat::opInexact))
       return true;

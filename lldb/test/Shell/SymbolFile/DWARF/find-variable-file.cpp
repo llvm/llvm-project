@@ -1,7 +1,7 @@
 // REQUIRES: lld
 
-// RUN: %clang -g -c -o %t-1.o --target=x86_64-pc-linux -mllvm -accel-tables=Disable %s
-// RUN: %clang -g -c -o %t-2.o --target=x86_64-pc-linux -mllvm -accel-tables=Disable %S/Inputs/find-variable-file-2.cpp
+// RUN: %clang -g -c -o %t-1.o --target=x86_64-pc-linux -gno-pubnames %s
+// RUN: %clang -g -c -o %t-2.o --target=x86_64-pc-linux -gno-pubnames %S/Inputs/find-variable-file-2.cpp
 // RUN: ld.lld %t-1.o %t-2.o -o %t
 // RUN: lldb-test symbols --file=find-variable-file.cpp --find=variable %t | \
 // RUN:   FileCheck --check-prefix=ONE %s
@@ -18,13 +18,16 @@
 // RUN: lldb-test symbols --file=find-variable-file-2.cpp --find=variable %t | \
 // RUN:   FileCheck --check-prefix=TWO %s
 
-// RUN: %clang -g -c -o %t-1.o --target=x86_64-pc-linux -mllvm -accel-tables=Dwarf %s
-// RUN: %clang -g -c -o %t-2.o --target=x86_64-pc-linux -mllvm -accel-tables=Dwarf %S/Inputs/find-variable-file-2.cpp
+// RUN: %clang -c -o %t-1.o --target=x86_64-pc-linux -gdwarf-5 -gpubnames %s
+// RUN: %clang -c -o %t-2.o --target=x86_64-pc-linux -gdwarf-5 -gpubnames %S/Inputs/find-variable-file-2.cpp
 // RUN: ld.lld %t-1.o %t-2.o -o %t
+// RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix NAMES
 // RUN: lldb-test symbols --file=find-variable-file.cpp --find=variable %t | \
 // RUN:   FileCheck --check-prefix=ONE %s
 // RUN: lldb-test symbols --file=find-variable-file-2.cpp --find=variable %t | \
 // RUN:   FileCheck --check-prefix=TWO %s
+
+// NAMES: Name: .debug_names
 
 // ONE: Found 1 variables:
 namespace one {

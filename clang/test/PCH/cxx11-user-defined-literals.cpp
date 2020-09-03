@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -pedantic-errors -std=c++11 -emit-pch %s -o %t
 // RUN: %clang_cc1 -pedantic-errors -std=c++11 -include-pch %t -verify %s
 
+// RUN: %clang_cc1 -pedantic-errors -std=c++11 -emit-pch -fpch-instantiate-templates %s -o %t
+// RUN: %clang_cc1 -pedantic-errors -std=c++11 -include-pch %t -verify %s
+
 #ifndef HEADER_INCLUDED
 
 #define HEADER_INCLUDED
@@ -17,6 +20,6 @@ int k = f(0);
 int *l = f(&k);
 struct S {};
 int m = f(S()); // expected-error {{no matching}}
-                // expected-note@11 {{substitution failure}}
+                // expected-note@14 {{substitution failure}}
 
 #endif

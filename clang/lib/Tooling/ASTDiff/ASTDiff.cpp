@@ -11,8 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/ASTDiff/ASTDiff.h"
-
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/PriorityQueue.h"
 
@@ -116,12 +117,12 @@ public:
   Impl(SyntaxTree *Parent, Stmt *N, ASTContext &AST);
   template <class T>
   Impl(SyntaxTree *Parent,
-       typename std::enable_if<std::is_base_of<Stmt, T>::value, T>::type *Node,
+       std::enable_if_t<std::is_base_of<Stmt, T>::value, T> *Node,
        ASTContext &AST)
       : Impl(Parent, dyn_cast<Stmt>(Node), AST) {}
   template <class T>
   Impl(SyntaxTree *Parent,
-       typename std::enable_if<std::is_base_of<Decl, T>::value, T>::type *Node,
+       std::enable_if_t<std::is_base_of<Decl, T>::value, T> *Node,
        ASTContext &AST)
       : Impl(Parent, dyn_cast<Decl>(Node), AST) {}
 
@@ -397,7 +398,7 @@ static const DeclContext *getEnclosingDeclContext(ASTContext &AST,
 static std::string getInitializerValue(const CXXCtorInitializer *Init,
                                        const PrintingPolicy &TypePP) {
   if (Init->isAnyMemberInitializer())
-    return Init->getAnyMember()->getName();
+    return std::string(Init->getAnyMember()->getName());
   if (Init->isBaseInitializer())
     return QualType(Init->getBaseClass(), 0).getAsString(TypePP);
   if (Init->isDelegatingInitializer())
@@ -434,36 +435,36 @@ std::string SyntaxTree::Impl::getDeclValue(const Decl *D) const {
           T->getTypeForDecl()->getCanonicalTypeInternal().getAsString(TypePP) +
           ";";
   if (auto *U = dyn_cast<UsingDirectiveDecl>(D))
-    return U->getNominatedNamespace()->getName();
+    return std::string(U->getNominatedNamespace()->getName());
   if (auto *A = dyn_cast<AccessSpecDecl>(D)) {
     CharSourceRange Range(A->getSourceRange(), false);
-    return Lexer::getSourceText(Range, AST.getSourceManager(),
-                                AST.getLangOpts());
+    return std::string(
+        Lexer::getSourceText(Range, AST.getSourceManager(), AST.getLangOpts()));
   }
   return Value;
 }
 
 std::string SyntaxTree::Impl::getStmtValue(const Stmt *S) const {
   if (auto *U = dyn_cast<UnaryOperator>(S))
-    return UnaryOperator::getOpcodeStr(U->getOpcode());
+    return std::string(UnaryOperator::getOpcodeStr(U->getOpcode()));
   if (auto *B = dyn_cast<BinaryOperator>(S))
-    return B->getOpcodeStr();
+    return std::string(B->getOpcodeStr());
   if (auto *M = dyn_cast<MemberExpr>(S))
     return getRelativeName(M->getMemberDecl());
   if (auto *I = dyn_cast<IntegerLiteral>(S)) {
     SmallString<256> Str;
     I->getValue().toString(Str, /*Radix=*/10, /*Signed=*/false);
-    return Str.str();
+    return std::string(Str.str());
   }
   if (auto *F = dyn_cast<FloatingLiteral>(S)) {
     SmallString<256> Str;
     F->getValue().toString(Str);
-    return Str.str();
+    return std::string(Str.str());
   }
   if (auto *D = dyn_cast<DeclRefExpr>(S))
     return getRelativeName(D->getDecl(), getEnclosingDeclContext(AST, S));
   if (auto *String = dyn_cast<StringLiteral>(S))
-    return String->getString();
+    return std::string(String->getString());
   if (auto *B = dyn_cast<CXXBoolLiteralExpr>(S))
     return B->getValue() ? "true" : "false";
   return "";
@@ -683,9 +684,7 @@ private:
   }
 };
 
-ast_type_traits::ASTNodeKind Node::getType() const {
-  return ASTNode.getNodeKind();
-}
+ASTNodeKind Node::getType() const { return ASTNode.getNodeKind(); }
 
 StringRef Node::getTypeLabel() const { return getType().asStringRef(); }
 

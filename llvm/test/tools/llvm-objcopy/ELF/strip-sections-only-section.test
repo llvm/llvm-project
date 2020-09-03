@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --strip-sections --only-section=.test %t %t2
 # RUN: od -Ax -t x1 %t2 | FileCheck %s
 # RUN: od -Ax -t c  %t2 | FileCheck %s --check-prefix=TEXT

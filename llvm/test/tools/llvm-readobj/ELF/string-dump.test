@@ -1,5 +1,5 @@
 # Check the dumping of a section as strings.
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
 # RUN: llvm-readobj --string-dump=.strings \
 # RUN:   --string-dump=.not_null_terminated %t > %t.readobj.out

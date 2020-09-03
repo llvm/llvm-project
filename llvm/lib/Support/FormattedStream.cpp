@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Unicode.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
@@ -19,16 +21,22 @@ using namespace llvm;
 
 /// UpdatePosition - Examine the given char sequence and figure out which
 /// column we end up in after output, and how many line breaks are contained.
-///
-static void UpdatePosition(std::pair<unsigned, unsigned> &Position, const char *Ptr, size_t Size) {
+/// This assumes that the input string is well-formed UTF-8, and takes into
+/// account Unicode characters which render as multiple columns wide.
+void formatted_raw_ostream::UpdatePosition(const char *Ptr, size_t Size) {
   unsigned &Column = Position.first;
   unsigned &Line = Position.second;
 
-  // Keep track of the current column and line by scanning the string for
-  // special characters
-  for (const char *End = Ptr + Size; Ptr != End; ++Ptr) {
-    ++Column;
-    switch (*Ptr) {
+  auto ProcessUTF8CodePoint = [&Line, &Column](StringRef CP) {
+    int Width = sys::unicode::columnWidthUTF8(CP);
+    if (Width != sys::unicode::ErrorNonPrintableCharacter)
+      Column += Width;
+
+    // The only special whitespace characters we care about are single-byte.
+    if (CP.size() > 1)
+      return;
+
+    switch (CP[0]) {
     case '\n':
       Line += 1;
       LLVM_FALLTHROUGH;
@@ -40,6 +48,46 @@ static void UpdatePosition(std::pair<unsigned, unsigned> &Position, const char *
       Column += (8 - (Column & 0x7)) & 0x7;
       break;
     }
+  };
+
+  // If we have a partial UTF-8 sequence from the previous buffer, check that
+  // first.
+  if (PartialUTF8Char.size()) {
+    size_t BytesFromBuffer =
+        getNumBytesForUTF8(PartialUTF8Char[0]) - PartialUTF8Char.size();
+    if (Size < BytesFromBuffer) {
+      // If we still don't have enough bytes for a complete code point, just
+      // append what we have.
+      PartialUTF8Char.append(StringRef(Ptr, Size));
+      return;
+    } else {
+      // The first few bytes from the buffer will complete the code point.
+      // Concatenate them and process their effect on the line and column
+      // numbers.
+      PartialUTF8Char.append(StringRef(Ptr, BytesFromBuffer));
+      ProcessUTF8CodePoint(PartialUTF8Char);
+      PartialUTF8Char.clear();
+      Ptr += BytesFromBuffer;
+      Size -= BytesFromBuffer;
+    }
+  }
+
+  // Now scan the rest of the buffer.
+  unsigned NumBytes;
+  for (const char *End = Ptr + Size; Ptr < End; Ptr += NumBytes) {
+    NumBytes = getNumBytesForUTF8(*Ptr);
+
+    // The buffer might end part way through a UTF-8 code unit sequence for a
+    // Unicode scalar value if it got flushed. If this happens, we can't know
+    // the display width until we see the rest of the code point. Stash the
+    // bytes we do have, so that we can reconstruct the whole code point later,
+    // even if the buffer is being flushed.
+    if ((unsigned)(End - Ptr) < NumBytes) {
+      PartialUTF8Char = StringRef(Ptr, End - Ptr);
+      return;
+    }
+
+    ProcessUTF8CodePoint(StringRef(Ptr, NumBytes));
   }
 }
 
@@ -52,9 +100,9 @@ void formatted_raw_ostream::ComputePosition(const char *Ptr, size_t Size) {
   if (Ptr <= Scanned && Scanned <= Ptr + Size)
     // Scan all characters added since our last scan to determine the new
     // column.
-    UpdatePosition(Position, Scanned, Size - (Scanned - Ptr));
+    UpdatePosition(Scanned, Size - (Scanned - Ptr));
   else
-    UpdatePosition(Position, Ptr, Size);
+    UpdatePosition(Ptr, Size);
 
   // Update the scanning pointer.
   Scanned = Ptr + Size;

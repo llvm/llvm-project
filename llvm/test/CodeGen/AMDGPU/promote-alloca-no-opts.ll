@@ -3,7 +3,7 @@
 
 ; ALL-LABEL: {{^}}promote_alloca_i32_array_array:
 ; NOOPTS: workgroup_group_segment_byte_size = 0{{$}}
-; NOOPTS-NOT ds_write
+; NOOPTS-NOT: ds_write
 ; OPTS: ds_write
 define amdgpu_kernel void @promote_alloca_i32_array_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
@@ -20,7 +20,7 @@ entry:
 
 ; ALL-LABEL: {{^}}optnone_promote_alloca_i32_array_array:
 ; ALL: workgroup_group_segment_byte_size = 0{{$}}
-; ALL-NOT ds_write
+; ALL-NOT: ds_write
 define amdgpu_kernel void @optnone_promote_alloca_i32_array_array(i32 addrspace(1)* %out, i32 %index) #1 {
 entry:
   %alloca = alloca [2 x [2 x i32]], addrspace(5)

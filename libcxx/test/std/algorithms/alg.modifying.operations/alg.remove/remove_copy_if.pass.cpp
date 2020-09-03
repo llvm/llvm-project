@@ -30,7 +30,7 @@ TEST_CONSTEXPR bool test_constexpr() {
 
     auto it = std::remove_copy_if(std::begin(ia), std::end(ia), std::begin(ib), equalToTwo);
 
-    return std::distance(std::begin(ib), it) == (std::size(ia) - 1)   // we removed one element
+    return std::distance(std::begin(ib), it) == static_cast<int>(std::size(ia) - 1)   // we removed one element
         && std::none_of(std::begin(ib), it, equalToTwo)
         && std::all_of (it, std::end(ib), [](int a) {return a == 0;})
            ;

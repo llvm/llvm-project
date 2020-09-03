@@ -16,7 +16,7 @@ functions, variables, arguments, namespaces etc.
 
 The tool is in a very early development stage, so you might encounter bugs and
 crashes. Submitting reports with information about how to reproduce the issue
-to `the LLVM bugtracker <https://llvm.org/bugs>`_ will definitely help the
+to `the LLVM bugtracker <https://bugs.llvm.org>`_ will definitely help the
 project. If you have any ideas or suggestions, you might want to put a feature
 request there.
 

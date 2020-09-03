@@ -1,4 +1,4 @@
-# UNSUPPORTED: system-windows, system-freebsd
+# UNSUPPORTED: system-freebsd
 
 # Test that we can capture twice to the same directory without breaking the
 # reproducer functionality.

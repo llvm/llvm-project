@@ -48,7 +48,7 @@ MCWinCOFFStreamer::MCWinCOFFStreamer(MCContext &Context,
     : MCObjectStreamer(Context, std::move(MAB), std::move(OW), std::move(CE)),
       CurSymbol(nullptr) {}
 
-void MCWinCOFFStreamer::EmitInstToData(const MCInst &Inst,
+void MCWinCOFFStreamer::emitInstToData(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
   MCDataFragment *DF = getOrCreateDataFragment();
 
@@ -71,23 +71,23 @@ void MCWinCOFFStreamer::InitSections(bool NoExecStack) {
   // This emulates the same behavior of GNU as. This makes it easier
   // to compare the output as the major sections are in the same order.
   SwitchSection(getContext().getObjectFileInfo()->getTextSection());
-  EmitCodeAlignment(4);
+  emitCodeAlignment(4);
 
   SwitchSection(getContext().getObjectFileInfo()->getDataSection());
-  EmitCodeAlignment(4);
+  emitCodeAlignment(4);
 
   SwitchSection(getContext().getObjectFileInfo()->getBSSSection());
-  EmitCodeAlignment(4);
+  emitCodeAlignment(4);
 
   SwitchSection(getContext().getObjectFileInfo()->getTextSection());
 }
 
-void MCWinCOFFStreamer::EmitLabel(MCSymbol *S, SMLoc Loc) {
+void MCWinCOFFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
-  MCObjectStreamer::EmitLabel(Symbol, Loc);
+  MCObjectStreamer::emitLabel(Symbol, Loc);
 }
 
-void MCWinCOFFStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
+void MCWinCOFFStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   // Let the target do whatever target specific stuff it needs to do.
   getAssembler().getBackend().handleAssemblerFlag(Flag);
 
@@ -103,11 +103,11 @@ void MCWinCOFFStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
   }
 }
 
-void MCWinCOFFStreamer::EmitThumbFunc(MCSymbol *Func) {
+void MCWinCOFFStreamer::emitThumbFunc(MCSymbol *Func) {
   llvm_unreachable("not implemented");
 }
 
-bool MCWinCOFFStreamer::EmitSymbolAttribute(MCSymbol *S,
+bool MCWinCOFFStreamer::emitSymbolAttribute(MCSymbol *S,
                                             MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
   getAssembler().registerSymbol(*Symbol);
@@ -129,7 +129,7 @@ bool MCWinCOFFStreamer::EmitSymbolAttribute(MCSymbol *S,
   return true;
 }
 
-void MCWinCOFFStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
+void MCWinCOFFStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   llvm_unreachable("not implemented");
 }
 
@@ -262,7 +262,7 @@ void MCWinCOFFStreamer::EmitCOFFImgRel32(const MCSymbol *Symbol,
   DF->getContents().resize(DF->getContents().size() + 4, 0);
 }
 
-void MCWinCOFFStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
+void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                          unsigned ByteAlignment) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
 
@@ -289,38 +289,38 @@ void MCWinCOFFStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
 
     PushSection();
     SwitchSection(MFI->getDrectveSection());
-    EmitBytes(Directive);
+    emitBytes(Directive);
     PopSection();
   }
 }
 
-void MCWinCOFFStreamer::EmitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
+void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
                                               unsigned ByteAlignment) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
 
   MCSection *Section = getContext().getObjectFileInfo()->getBSSSection();
   PushSection();
   SwitchSection(Section);
-  EmitValueToAlignment(ByteAlignment, 0, 1, 0);
-  EmitLabel(Symbol);
+  emitValueToAlignment(ByteAlignment, 0, 1, 0);
+  emitLabel(Symbol);
   Symbol->setExternal(false);
-  EmitZeros(Size);
+  emitZeros(Size);
   PopSection();
 }
 
-void MCWinCOFFStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
+void MCWinCOFFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
                                      uint64_t Size, unsigned ByteAlignment,
                                      SMLoc Loc) {
   llvm_unreachable("not implemented");
 }
 
-void MCWinCOFFStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
+void MCWinCOFFStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                        uint64_t Size, unsigned ByteAlignment) {
   llvm_unreachable("not implemented");
 }
 
 // TODO: Implement this if you want to emit .comment section in COFF obj files.
-void MCWinCOFFStreamer::EmitIdent(StringRef IdentString) {
+void MCWinCOFFStreamer::emitIdent(StringRef IdentString) {
   llvm_unreachable("not implemented");
 }
 
@@ -328,8 +328,35 @@ void MCWinCOFFStreamer::EmitWinEHHandlerData(SMLoc Loc) {
   llvm_unreachable("not implemented");
 }
 
-void MCWinCOFFStreamer::FinishImpl() {
-  MCObjectStreamer::FinishImpl();
+void MCWinCOFFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
+                                           const MCSymbolRefExpr *To,
+                                           uint64_t Count) {
+  // Ignore temporary symbols for now.
+  if (!From->getSymbol().isTemporary() && !To->getSymbol().isTemporary())
+    getAssembler().CGProfile.push_back({From, To, Count});
+}
+
+void MCWinCOFFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
+  const MCSymbol *S = &SRE->getSymbol();
+  bool Created;
+  getAssembler().registerSymbol(*S, &Created);
+  if (Created) {
+    cast<MCSymbolCOFF>(S)->setIsWeakExternal();
+    cast<MCSymbolCOFF>(S)->setExternal(true);
+  }
+}
+
+void MCWinCOFFStreamer::finalizeCGProfile() {
+  for (MCAssembler::CGProfileEntry &E : getAssembler().CGProfile) {
+    finalizeCGProfileEntry(E.From);
+    finalizeCGProfileEntry(E.To);
+  }
+}
+
+void MCWinCOFFStreamer::finishImpl() {
+  finalizeCGProfile();
+
+  MCObjectStreamer::finishImpl();
 }
 
 void MCWinCOFFStreamer::Error(const Twine &Msg) const {

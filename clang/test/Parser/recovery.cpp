@@ -133,7 +133,10 @@ Foo<int> missingSemiBeforeFunctionReturningTemplateId2();
 namespace PR17084 {
 enum class EnumID {};
 template <typename> struct TempID;
-template <> struct TempID<BadType> : BadType, EnumID::Garbage; // expected-error{{use of undeclared identifier 'BadType'}}
+template <> struct TempID<BadType> // expected-error{{use of undeclared identifier 'BadType'}}
+  : BadType, // expected-error {{expected class name}}
+    EnumID::Garbage // expected-error {{expected class name}}
+  ; // expected-error@-1 {{expected '{' after base class list}}
 }
 
 namespace pr15133 {

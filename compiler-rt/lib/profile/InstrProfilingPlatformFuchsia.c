@@ -34,16 +34,15 @@
 #include "InstrProfilingInternal.h"
 #include "InstrProfilingUtil.h"
 
-/* VMO that contains the coverage data shared across all modules. This symbol
- * has default visibility and is exported in each module (executable or DSO)
- * that statically links in the profiling runtime.
- */
-zx_handle_t __llvm_profile_vmo;
-/* Current offset within the VMO where data should be written next. This symbol
- * has default visibility and is exported in each module (executable or DSO)
- * that statically links in the profiling runtime.
- */
-uint64_t __llvm_profile_offset;
+COMPILER_RT_VISIBILITY unsigned lprofProfileDumped() {
+  return 1;
+}
+COMPILER_RT_VISIBILITY void lprofSetProfileDumped(unsigned Value) {}
+
+COMPILER_RT_VISIBILITY unsigned lprofRuntimeCounterRelocation(void) {
+  return 1;
+}
+COMPILER_RT_VISIBILITY void lprofSetRuntimeCounterRelocation(unsigned Value) {}
 
 static const char ProfileSinkName[] = "llvm-profile";
 
@@ -58,65 +57,24 @@ static inline void lprofWrite(const char *fmt, ...) {
   __sanitizer_log_write(s, ret + 1);
 }
 
-static void createVMO() {
-  /* Don't create VMO if it has been alread created. */
-  if (__llvm_profile_vmo != ZX_HANDLE_INVALID)
-    return;
-
-  /* Get information about the current process. */
-  zx_info_handle_basic_t Info;
-  zx_status_t Status =
-      _zx_object_get_info(_zx_process_self(), ZX_INFO_HANDLE_BASIC, &Info,
-                          sizeof(Info), NULL, NULL);
-  if (Status != ZX_OK) {
-    lprofWrite("LLVM Profile: cannot get info about current process: %s\n",
-               _zx_status_get_string(Status));
-    return;
-  }
-
-  /* Create VMO to hold the profile data. */
-  Status = _zx_vmo_create(0, ZX_VMO_RESIZABLE, &__llvm_profile_vmo);
-  if (Status != ZX_OK) {
-    lprofWrite("LLVM Profile: cannot create VMO: %s\n",
-               _zx_status_get_string(Status));
-    return;
-  }
-
-  /* Give the VMO a name including our process KOID so it's easy to spot. */
-  char VmoName[ZX_MAX_NAME_LEN];
-  snprintf(VmoName, sizeof(VmoName), "%s.%" PRIu64, ProfileSinkName, Info.koid);
-  _zx_object_set_property(__llvm_profile_vmo, ZX_PROP_NAME, VmoName,
-                          strlen(VmoName));
-
-  /* Duplicate the handle since __sanitizer_publish_data consumes it. */
-  zx_handle_t Handle;
-  Status =
-      _zx_handle_duplicate(__llvm_profile_vmo, ZX_RIGHT_SAME_RIGHTS, &Handle);
-  if (Status != ZX_OK) {
-    lprofWrite("LLVM Profile: cannot duplicate VMO handle: %s\n",
-               _zx_status_get_string(Status));
-    _zx_handle_close(__llvm_profile_vmo);
-    __llvm_profile_vmo = ZX_HANDLE_INVALID;
-    return;
-  }
-
-  /* Publish the VMO which contains profile data to the system. */
-  __sanitizer_publish_data(ProfileSinkName, Handle);
-
-  /* Use the dumpfile symbolizer markup element to write the name of VMO. */
-  lprofWrite("LLVM Profile: {{{dumpfile:%s:%s}}}\n", ProfileSinkName, VmoName);
-}
+struct lprofVMOWriterCtx {
+  /* VMO that contains the profile data for this module. */
+  zx_handle_t Vmo;
+  /* Current offset within the VMO where data should be written next. */
+  uint64_t Offset;
+};
 
 static uint32_t lprofVMOWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
                                uint32_t NumIOVecs) {
+  struct lprofVMOWriterCtx *Ctx = (struct lprofVMOWriterCtx *)This->WriterCtx;
+
   /* Compute the total length of data to be written. */
   size_t Length = 0;
   for (uint32_t I = 0; I < NumIOVecs; I++)
     Length += IOVecs[I].ElmSize * IOVecs[I].NumElm;
 
   /* Resize the VMO to ensure there's sufficient space for the data. */
-  zx_status_t Status =
-      _zx_vmo_set_size(__llvm_profile_vmo, __llvm_profile_offset + Length);
+  zx_status_t Status = _zx_vmo_set_size(Ctx->Vmo, Ctx->Offset + Length);
   if (Status != ZX_OK)
     return -1;
 
@@ -124,74 +82,112 @@ static uint32_t lprofVMOWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
   for (uint32_t I = 0; I < NumIOVecs; I++) {
     size_t Length = IOVecs[I].ElmSize * IOVecs[I].NumElm;
     if (IOVecs[I].Data) {
-      Status = _zx_vmo_write(__llvm_profile_vmo, IOVecs[I].Data,
-                             __llvm_profile_offset, Length);
+      Status = _zx_vmo_write(Ctx->Vmo, IOVecs[I].Data, Ctx->Offset, Length);
       if (Status != ZX_OK)
         return -1;
     } else if (IOVecs[I].UseZeroPadding) {
       /* Resizing the VMO should zero fill. */
     }
-    __llvm_profile_offset += Length;
+    Ctx->Offset += Length;
   }
+
+  /* Record the profile size as a property of the VMO. */
+  _zx_object_set_property(Ctx->Vmo, ZX_PROP_VMO_CONTENT_SIZE, &Ctx->Offset,
+                          sizeof(Ctx->Offset));
 
   return 0;
 }
 
-static void initVMOWriter(ProfDataWriter *This) {
+static void initVMOWriter(ProfDataWriter *This, struct lprofVMOWriterCtx *Ctx) {
   This->Write = lprofVMOWriter;
-  This->WriterCtx = NULL;
+  This->WriterCtx = Ctx;
 }
 
-static int dump(void) {
-  if (lprofProfileDumped()) {
-    lprofWrite("LLVM Profile: data not published: already written.\n");
-    return 0;
-  }
-
+/* This method is invoked by the runtime initialization hook
+ * InstrProfilingRuntime.o if it is linked in. */
+COMPILER_RT_VISIBILITY
+void __llvm_profile_initialize(void) {
   /* Check if there is llvm/runtime version mismatch. */
   if (GET_VERSION(__llvm_profile_get_version()) != INSTR_PROF_RAW_VERSION) {
     lprofWrite("LLVM Profile: runtime and instrumentation version mismatch: "
                "expected %d, but got %d\n",
                INSTR_PROF_RAW_VERSION,
                (int)GET_VERSION(__llvm_profile_get_version()));
-    return -1;
+    return;
   }
+
+  /* This symbol is defined as weak and initialized to -1 by the runtimer, but
+   * compiler will generate a strong definition initialized to 0 when runtime
+   * counter relocation is used. */
+  if (__llvm_profile_counter_bias == -1) {
+    lprofWrite("LLVM Profile: counter relocation at runtime is required\n");
+    return;
+  }
+
+  const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
+  const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
+  const uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
+  const uint64_t CountersOffset =
+      sizeof(__llvm_profile_header) + (DataSize * sizeof(__llvm_profile_data));
+
+  zx_status_t Status;
+
+  /* Create VMO to hold the profile data. */
+  zx_handle_t Vmo = ZX_HANDLE_INVALID;
+  Status = _zx_vmo_create(0, ZX_VMO_RESIZABLE, &Vmo);
+  if (Status != ZX_OK) {
+    lprofWrite("LLVM Profile: cannot create VMO: %s\n",
+               _zx_status_get_string(Status));
+    return;
+  }
+
+  /* Give the VMO a name that includes the module signature. */
+  char VmoName[ZX_MAX_NAME_LEN];
+  snprintf(VmoName, sizeof(VmoName), "%" PRIu64 ".profraw",
+           lprofGetLoadModuleSignature());
+  _zx_object_set_property(Vmo, ZX_PROP_NAME, VmoName, strlen(VmoName));
 
   /* Write the profile data into the mapped region. */
   ProfDataWriter VMOWriter;
-  initVMOWriter(&VMOWriter);
-  if (lprofWriteData(&VMOWriter, lprofGetVPDataReader(), 0) != 0)
-    return -1;
+  struct lprofVMOWriterCtx Ctx = {.Vmo = Vmo, .Offset = 0};
+  initVMOWriter(&VMOWriter, &Ctx);
+  if (lprofWriteData(&VMOWriter, 0, 0) != 0) {
+    lprofWrite("LLVM Profile: failed to write data\n");
+    _zx_handle_close(Vmo);
+    return;
+  }
 
-  return 0;
-}
+  uint64_t Len = 0;
+  Status = _zx_vmo_get_size(Vmo, &Len);
+  if (Status != ZX_OK) {
+    lprofWrite("LLVM Profile: failed to get the VMO size: %s\n",
+               _zx_status_get_string(Status));
+    _zx_handle_close(Vmo);
+    return;
+  }
 
-COMPILER_RT_VISIBILITY
-int __llvm_profile_dump(void) {
-  int rc = dump();
-  lprofSetProfileDumped();
-  return rc;
-}
+  uintptr_t Mapping;
+  Status =
+      _zx_vmar_map(_zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
+                   Vmo, 0, Len, &Mapping);
+  if (Status != ZX_OK) {
+    lprofWrite("LLVM Profile: failed to map the VMO: %s\n",
+               _zx_status_get_string(Status));
+    _zx_handle_close(Vmo);
+    return;
+  }
 
-static void dumpWithoutReturn(void) { dump(); }
+  /* Publish the VMO which contains profile data to the system. Note that this
+   * also consumes the VMO handle. */
+  __sanitizer_publish_data(ProfileSinkName, Vmo);
 
-/* This method is invoked by the runtime initialization hook
- * InstrProfilingRuntime.o if it is linked in.
- */
-COMPILER_RT_VISIBILITY
-void __llvm_profile_initialize_file(void) { createVMO(); }
+  /* Use the dumpfile symbolizer markup element to write the name of VMO. */
+  lprofWrite("LLVM Profile: {{{dumpfile:%s:%s}}}\n", ProfileSinkName, VmoName);
 
-COMPILER_RT_VISIBILITY
-int __llvm_profile_register_write_file_atexit(void) {
-  static bool HasBeenRegistered = false;
-
-  if (HasBeenRegistered)
-    return 0;
-
-  lprofSetupValueProfiler();
-
-  HasBeenRegistered = true;
-  return atexit(dumpWithoutReturn);
+  /* Update the profile fields based on the current mapping. */
+  __llvm_profile_counter_bias = (intptr_t)Mapping -
+                                (uintptr_t)__llvm_profile_begin_counters() +
+                                CountersOffset;
 }
 
 #endif

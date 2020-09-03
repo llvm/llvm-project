@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --globalize-symbol Global \
 # RUN:   --globalize-symbol Local \
 # RUN:   --globalize-symbol Weak \

@@ -40,10 +40,10 @@ private:
 
 namespace tools {
 namespace AVR {
-class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
+class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
   Linker(const llvm::Triple &Triple, const ToolChain &TC, bool LinkStdlib)
-      : GnuTool("AVR::Linker", "avr-ld", TC), Triple(Triple),
+      : Tool("AVR::Linker", "avr-ld", TC), Triple(Triple),
         LinkStdlib(LinkStdlib) {}
 
   bool hasIntegratedCPP() const override { return false; }

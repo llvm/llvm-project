@@ -279,7 +279,7 @@ private:
     SUnit *NewNode = newSUnit(N);
     // Update the topological ordering.
     if (NewNode->NodeNum >= NumSUnits)
-      Topo.MarkDirty();
+      Topo.AddSUnitWithoutPredecessors(NewNode);
     return NewNode;
   }
 
@@ -289,7 +289,7 @@ private:
     SUnit *NewNode = Clone(N);
     // Update the topological ordering.
     if (NewNode->NodeNum >= NumSUnits)
-      Topo.MarkDirty();
+      Topo.AddSUnitWithoutPredecessors(NewNode);
     return NewNode;
   }
 
@@ -1838,16 +1838,13 @@ protected:
 
 template<class SF>
 static SUnit *popFromQueueImpl(std::vector<SUnit *> &Q, SF &Picker) {
-  unsigned BestIdx = 0;
-  // Only compute the cost for the first 1000 items in the queue, to avoid
-  // excessive compile-times for very large queues.
-  for (unsigned I = 1, E = std::min(Q.size(), (decltype(Q.size()))1000); I != E;
-       I++)
-    if (Picker(Q[BestIdx], Q[I]))
-      BestIdx = I;
-  SUnit *V = Q[BestIdx];
-  if (BestIdx + 1 != Q.size())
-    std::swap(Q[BestIdx], Q.back());
+  std::vector<SUnit *>::iterator Best = Q.begin();
+  for (auto I = std::next(Q.begin()), E = Q.end(); I != E; ++I)
+    if (Picker(*Best, *I))
+      Best = I;
+  SUnit *V = *Best;
+  if (Best != std::prev(Q.end()))
+    std::swap(*Best, Q.back());
   Q.pop_back();
   return V;
 }

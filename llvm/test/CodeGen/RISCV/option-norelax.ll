@@ -7,7 +7,7 @@
 declare i32 @foo(i32)
 
 define i32 @bar(i32 %a) nounwind {
-; CHECK-LABEL: bar:
+; CHECK-LABEL: <bar>:
 ; CHECK: R_RISCV_CALL
 ; CHECK: R_RISCV_RELAX
   tail call void asm sideeffect ".option norelax", ""()

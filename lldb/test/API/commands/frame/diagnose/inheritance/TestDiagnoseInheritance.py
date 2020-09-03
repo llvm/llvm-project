@@ -13,7 +13,7 @@ class TestDiagnoseInheritance(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
-    @skipIfDarwinEmbedded  # <rdar://problem/33842388> frame diagnose doesn't work for armv7 or arm64
+    @skipIf(archs=no_match(['x86_64'])) # <rdar://problem/33842388> frame diagnose doesn't work for armv7 or arm64
     def test_diagnose_inheritance(self):
         TestBase.setUp(self)
         self.build()

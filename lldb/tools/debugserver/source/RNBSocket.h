@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __RNBSocket_h__
-#define __RNBSocket_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBSOCKET_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBSOCKET_H
 
 #include "DNBTimer.h"
 #include "RNBDefs.h"
@@ -74,4 +74,4 @@ protected:
   DNBTimer m_timer;
 };
 
-#endif // #ifndef __RNBSocket_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBSOCKET_H

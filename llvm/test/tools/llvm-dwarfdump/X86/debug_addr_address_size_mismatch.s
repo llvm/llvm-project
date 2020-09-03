@@ -1,12 +1,16 @@
 # RUN: llvm-mc %s -filetype obj -triple i386-pc-linux -o - | \
-# RUN: llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
-# RUN: FileCheck %s -input-file %t.err -check-prefix=ERR
+# RUN: llvm-dwarfdump -debug-addr - 2> %t.warn | FileCheck %s
+# RUN: FileCheck %s -input-file %t.warn -check-prefix=WARN
 
-# ERR: .debug_addr table at offset 0x0 has address size 8 which is different from CU address size 4
-# ERR-NOT: {{.}}
+# WARN: address table at offset 0x0 has address size 8 which is different from CU address size 4
+# WARN-NOT: {{.}}
 
 # CHECK: .debug_addr contents
-# CHECK-NEXT:     length = 0x0000000c, version = 0x0005, addr_size = 0x04, seg_size = 0x00
+# CHECK-NEXT:     length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+# CHECK-NEXT:     Addrs: [
+# CHECK-NEXT:     0x0000000100000000
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x04, seg_size = 0x00
 # CHECK-NEXT:     Addrs: [
 # CHECK-NEXT:     0x00000000
 # CHECK-NEXT:     0x00000001

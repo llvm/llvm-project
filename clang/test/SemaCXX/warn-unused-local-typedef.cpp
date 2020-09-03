@@ -108,13 +108,13 @@ void template_fun_user() {
 }
 
 void typedef_in_nested_name() {
-  typedef struct {
-    typedef int Foo;
-  } A;
+  typedef struct { // expected-warning {{add a tag name}}
+    typedef int Foo; // expected-note {{}}
+  } A; // expected-note {{}}
   A::Foo adsf;
 
-  using A2 = struct {
-    typedef int Foo;
+  using A2 = struct { // expected-warning {{add a tag name}} expected-note {{this alias declaration}}
+    typedef int Foo; // expected-note {{}}
   };
   A2::Foo adsf2;
 }

@@ -238,22 +238,20 @@ namespace PR5066 {
 
 namespace PR17255 {
 void foo() {
-  typename A::template B<>; // expected-error {{use of undeclared identifier 'A'}}
-  // expected-error@-1 {{'template' keyword not permitted here}}
+  typename A::template B<> c; // expected-error {{use of undeclared identifier 'A'}}
 #if __cplusplus <= 199711L
-  // expected-error@-3 {{'template' keyword outside of a template}}
+  // expected-error@-2 {{'template' keyword outside of a template}}
 #endif
-  // expected-error@-5 {{expected a qualified name after 'typename'}}
 }
 }
 
 namespace PR17567 {
   struct Foobar { // expected-note 2{{declared here}}
     FooBar(); // expected-error {{missing return type for function 'FooBar'; did you mean the constructor name 'Foobar'?}}
-    ~FooBar(); // expected-error {{expected the class name after '~' to name a destructor}}
+    ~FooBar(); // expected-error {{undeclared identifier 'FooBar' in destructor name}}
   };
   FooBar::FooBar() {} // expected-error {{undeclared}} expected-error {{missing return type}}
-  FooBar::~FooBar() {} // expected-error {{undeclared}} expected-error {{expected the class name}}
+  FooBar::~FooBar() {} // expected-error 2{{undeclared}}
 }
 
 namespace DuplicateFriend {

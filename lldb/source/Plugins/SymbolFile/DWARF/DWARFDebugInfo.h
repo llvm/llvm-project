@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFDebugInfo_h_
-#define SymbolFileDWARF_DWARFDebugInfo_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFO_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFO_H
 
 #include <map>
 #include <vector>
@@ -35,7 +35,7 @@ public:
                           lldb_private::DWARFContext &context);
 
   size_t GetNumUnits();
-  DWARFUnit *GetUnitAtIndex(lldb::user_id_t idx);
+  DWARFUnit *GetUnitAtIndex(size_t idx);
   DWARFUnit *GetUnitAtOffset(DIERef::Section section, dw_offset_t cu_offset,
                              uint32_t *idx_ptr = nullptr);
   DWARFUnit *GetUnitContainingDIEOffset(DIERef::Section section,
@@ -61,7 +61,10 @@ protected:
 
   SymbolFileDWARF &m_dwarf;
   lldb_private::DWARFContext &m_context;
+
+  llvm::once_flag m_units_once_flag;
   UnitColl m_units;
+
   std::unique_ptr<DWARFDebugAranges>
       m_cu_aranges_up; // A quick address to compile unit table
 
@@ -76,7 +79,8 @@ private:
 
   uint32_t FindUnitIndex(DIERef::Section section, dw_offset_t offset);
 
-  DISALLOW_COPY_AND_ASSIGN(DWARFDebugInfo);
+  DWARFDebugInfo(const DWARFDebugInfo &) = delete;
+  const DWARFDebugInfo &operator=(const DWARFDebugInfo &) = delete;
 };
 
-#endif // SymbolFileDWARF_DWARFDebugInfo_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFO_H

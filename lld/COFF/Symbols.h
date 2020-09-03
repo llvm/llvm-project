@@ -69,7 +69,18 @@ public:
   Kind kind() const { return static_cast<Kind>(symbolKind); }
 
   // Returns the symbol name.
-  StringRef getName();
+  StringRef getName() {
+    // COFF symbol names are read lazily for a performance reason.
+    // Non-external symbol names are never used by the linker except for logging
+    // or debugging. Their internal references are resolved not by name but by
+    // symbol index. And because they are not external, no one can refer them by
+    // name. Object files contain lots of non-external symbols, and creating
+    // StringRefs for them (which involves lots of strlen() on the string table)
+    // is a waste of time.
+    if (nameData == nullptr)
+      computeName();
+    return StringRef(nameData, nameSize);
+  }
 
   void replaceKeepingName(Symbol *other, size_t size);
 
@@ -83,6 +94,9 @@ public:
   bool isLazy() const {
     return symbolKind == LazyArchiveKind || symbolKind == LazyObjectKind;
   }
+
+private:
+  void computeName();
 
 protected:
   friend SymbolTable;
@@ -228,14 +242,7 @@ public:
 
   uint64_t getRVA() { return va - config->imageBase; }
   void setVA(uint64_t v) { va = v; }
-
-  bool isEqual(COFFSymbolRef s) const {
-    return va == s.getValue();
-  }
-
-  bool isEqual(uint64_t otherVa) const {
-    return va == otherVa;
-  }
+  uint64_t getVA() const { return va; }
 
   // Section index relocations against absolute symbols resolve to
   // this 16 bit number, and it is the largest valid section index

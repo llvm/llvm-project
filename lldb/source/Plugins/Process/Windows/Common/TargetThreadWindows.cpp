@@ -1,4 +1,4 @@
-//===-- TargetThreadWindows.cpp----------------------------------*- C++ -*-===//
+//===-- TargetThreadWindows.cpp--------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,11 +11,11 @@
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/Unwind.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/State.h"
 
-#include "Plugins/Process/Utility/UnwindLLDB.h"
 #include "ProcessWindows.h"
 #include "ProcessWindowsLog.h"
 #include "TargetThreadWindows.h"
@@ -113,9 +113,7 @@ TargetThreadWindows::CreateRegisterContextForFrame(StackFrame *frame) {
     }
     reg_ctx_sp = m_thread_reg_ctx_sp;
   } else {
-    Unwind *unwinder = GetUnwinder();
-    if (unwinder != nullptr)
-      reg_ctx_sp = unwinder->CreateRegisterContextForFrame(frame);
+    reg_ctx_sp = GetUnwinder().CreateRegisterContextForFrame(frame);
   }
 
   return reg_ctx_sp;
@@ -124,14 +122,6 @@ TargetThreadWindows::CreateRegisterContextForFrame(StackFrame *frame) {
 bool TargetThreadWindows::CalculateStopInfo() {
   SetStopInfo(m_stop_info_sp);
   return true;
-}
-
-Unwind *TargetThreadWindows::GetUnwinder() {
-  // FIXME: Implement an unwinder based on the Windows unwinder exposed through
-  // DIA SDK.
-  if (!m_unwinder_up)
-    m_unwinder_up.reset(new UnwindLLDB(*this));
-  return m_unwinder_up.get();
 }
 
 Status TargetThreadWindows::DoResume() {

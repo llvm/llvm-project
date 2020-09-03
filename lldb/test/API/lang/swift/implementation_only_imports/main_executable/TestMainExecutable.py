@@ -69,6 +69,7 @@ class TestMainExecutable(TestBase):
     @skipIf(bugnumber="rdar://problem/54322424", # This test is unreliable.
             setting=('symbols.use-swift-clangimporter', 'false'))
     @swiftTest
+    @skipIfLinux # rdar://problem/67348391
     def test_implementation_only_import_main_executable_no_library_module(self):
         """Test `@_implementationOnly import` in the main executable, after removing the library's swiftmodule
         
@@ -91,7 +92,7 @@ class TestMainExecutable(TestBase):
         # even have library evolution support enabled. Just make sure we don't
         # crash.
         self.expect("fr var", substrs=[
-            "value =",
+            "value = <could not resolve type>",
 #            "container = {}",
             "simple = 1"])
 

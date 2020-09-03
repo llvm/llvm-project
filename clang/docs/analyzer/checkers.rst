@@ -292,6 +292,20 @@ Check for memory leaks. Traces memory managed by new/delete.
    int *p = new int;
  } // warn
 
+.. _cplusplus-PlacementNewChecker:
+
+cplusplus.PlacementNewChecker (C++)
+"""""""""""""""""""""""""""""""""""
+Check if default placement new is provided with pointers to sufficient storage capacity.
+
+.. code-block:: cpp
+
+ #include <new>
+
+ void f() {
+   short s;
+   long *lp = ::new (&s) long; // warn
+ }
 
 .. _cplusplus-SelfAssignment:
 
@@ -425,7 +439,7 @@ optin.cplusplus.UninitializedObject (C++)
 This checker reports uninitialized fields in objects created after a constructor
 call. It doesn't only find direct uninitialized fields, but rather makes a deep
 inspection of the object, analyzing all of it's fields subfields.
-The checker regards inherited fields as direct fields, so one will recieve
+The checker regards inherited fields as direct fields, so one will receive
 warnings for uninitialized inherited data members as well.
 
 .. code-block:: cpp
@@ -511,7 +525,7 @@ This checker has several options which can be set from command line (e.g.
   objects that don't have at least one initialized field. Defaults to false.
 
 * ``NotesAsWarnings``  (boolean). If set to true, the checker will emit a
-  warning for each uninitalized field, as opposed to emitting one warning per
+  warning for each uninitialized field, as opposed to emitting one warning per
   constructor call, and listing the uninitialized fields that belongs to it in
   notes. *Defaults to false*.
 
@@ -1360,6 +1374,54 @@ double freed, or use after freed. This check attempts to find such problems.
    zx_handle_close(sb);
  }
 
+WebKit
+^^^^^^
+
+WebKit is an open-source web browser engine available for macOS, iOS and Linux.
+This section describes checkers that can find issues in WebKit codebase.
+
+Most of the checkers focus on memory management for which WebKit uses custom implementation of reference counted smartpointers.
+
+Checkers are formulated in terms related to ref-counting:
+ - *Ref-counted type* is either ``Ref<T>`` or ``RefPtr<T>``.
+ - *Ref-countable type* is any type that implements ``ref()`` and ``deref()`` methods as ``RefPtr<>`` is a template (i. e. relies on duck typing).
+ - *Uncounted type* is ref-countable but not ref-counted type.
+
+.. _webkit-RefCntblBaseVirtualDtor:
+
+webkit.RefCntblBaseVirtualDtor
+""""""""""""""""""""""""""""""""""""
+All uncounted types used as base classes must have a virtual destructor.
+
+Ref-counted types hold their ref-countable data by a raw pointer and allow implicit upcasting from ref-counted pointer to derived type to ref-counted pointer to base type. This might lead to an object of (dynamic) derived type being deleted via pointer to the base class type which C++ standard defines as UB in case the base class doesn't have virtual destructor ``[expr.delete]``.
+
+.. code-block:: cpp
+
+ struct RefCntblBase {
+   void ref() {}
+   void deref() {}
+ };
+
+ struct Derived : RefCntblBase { }; // warn
+
+.. _webkit-NoUncountedMemberChecker:
+
+webkit.NoUncountedMemberChecker
+"""""""""""""""""""""""""""""""""""""
+Raw pointers and references to uncounted types can't be used as class members. Only ref-counted types are allowed.
+
+.. code-block:: cpp
+
+ struct RefCntbl {
+   void ref() {}
+   void deref() {}
+ };
+
+ struct Foo {
+   RefCntbl * ptr; // warn
+   RefCntbl & ptr; // warn
+   // ...
+ };
 
 .. _alpha-checkers:
 
@@ -1774,6 +1836,19 @@ Check unreachable code.
    [x retain]; // warn
  }
 
+.. _alpha-cplusplus-SmartPtr:
+
+alpha.cplusplus.SmartPtr (C++)
+""""""""""""""""""""""""""""""
+Check for dereference of null smart pointers.
+
+.. code-block:: cpp
+
+ void deref_smart_ptr() {
+   std::unique_ptr<int> P;
+   *P; // warn: dereference of a default constructed smart unique_ptr
+ }
+
 alpha.llvm
 ^^^^^^^^^^
 
@@ -1915,6 +1990,38 @@ Warns against using one vs. many plural pattern in code when generating localize
 
 alpha.security
 ^^^^^^^^^^^^^^
+
+
+alpha.security.cert
+^^^^^^^^^^^^^^^^^^^
+
+SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
+
+.. _alpha-security-cert-pos-checkers:
+
+alpha.security.cert.pos
+^^^^^^^^^^^^^^^^^^^^^^^
+
+SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`_.
+
+.. _alpha-security-cert-pos-34c:
+
+alpha.security.cert.pos.34c
+"""""""""""""""""""""""""""
+Finds calls to the ``putenv`` function which pass a pointer to an automatic variable as the argument.
+
+.. code-block:: c
+
+  int func(const char *var) {
+    char env[1024];
+    int retval = snprintf(env, sizeof(env),"TEST=%s", var);
+    if (retval < 0 || (size_t)retval >= sizeof(env)) {
+        /* Handle error */
+    }
+ 
+    return putenv(env); // putenv function should not be called with auto variables
+  }
+  
 .. _alpha-security-ArrayBound:
 
 alpha.security.ArrayBound (C)
@@ -2153,9 +2260,9 @@ lck_rw_try_lock_exclusive, lck_rw_try_lock_shared, pthread_mutex_unlock, pthread
 alpha.unix.SimpleStream (C)
 """""""""""""""""""""""""""
 Check for misuses of stream APIs. Check for misuses of stream APIs: ``fopen, fclose``
-(demo checker, the subject of the demo (`Slides <http://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf>`_ ,
+(demo checker, the subject of the demo (`Slides <https://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf>`_ ,
 `Video <https://youtu.be/kdxlsP5QVPw>`_) by Anna Zaks and Jordan Rose presented at the
-`2012 LLVM Developers' Meeting <http://llvm.org/devmtg/2012-11/>`_).
+`2012 LLVM Developers' Meeting <https://llvm.org/devmtg/2012-11/>`_).
 
 .. code-block:: c
 
@@ -2281,6 +2388,99 @@ Check for non-determinism caused by sorting of pointers.
   std::vector<int *> V = {&a, &b};
   std::sort(V.begin(), V.end()); // warn
  }
+
+
+alpha.WebKit
+^^^^^^^^^^^^
+
+.. _alpha-webkit-UncountedCallArgsChecker:
+
+alpha.webkit.UncountedCallArgsChecker
+"""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that lifetime of any dynamically allocated ref-countable object passed as a call argument spans past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. Ref-countable types aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to uncounted types.
+
+Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that an argument is safe or it's considered if not a bug then bug-prone.
+
+  .. code-block:: cpp
+
+    RefCountable* provide_uncounted();
+    void consume(RefCountable*);
+
+    // In these cases we can't make sure callee won't directly or indirectly call `deref()` on the argument which could make it unsafe from such point until the end of the call.
+
+    void foo1() {
+      consume(provide_uncounted()); // warn
+    }
+
+    void foo2() {
+      RefCountable* uncounted = provide_uncounted();
+      consume(uncounted); // warn
+    }
+
+Although we are enforcing member variables to be ref-counted by `webkit.NoUncountedMemberChecker` any method of the same class still has unrestricted access to these. Since from a caller's perspective we can't guarantee a particular member won't get modified by callee (directly or indirectly) we don't consider values obtained from members safe.
+
+Note: It's likely this heuristic could be made more precise with fewer false positives - for example calls to free functions that don't have any parameter other than the pointer should be safe as the callee won't be able to tamper with the member unless it's a global variable.
+
+  .. code-block:: cpp
+
+    struct Foo {
+      RefPtr<RefCountable> member;
+      void consume(RefCountable*) { /* ... */ }
+      void bugprone() {
+        consume(member.get()); // warn
+      }
+    };
+
+The implementation of this rule is a heuristic - we define a whitelist of kinds of values that are considered safe to be passed as arguments. If we can't prove an argument is safe it's considered an error.
+
+Allowed kinds of arguments:
+
+- values obtained from ref-counted objects (including temporaries as those survive the call too)
+
+  .. code-block:: cpp
+
+    RefCountable* provide_uncounted();
+    void consume(RefCountable*);
+
+    void foo() {
+      RefPtr<RefCountable> rc = makeRef(provide_uncounted());
+      consume(rc.get()); // ok
+      consume(makeRef(provide_uncounted()).get()); // ok
+    }
+
+- forwarding uncounted arguments from caller to callee
+
+  .. code-block:: cpp
+
+    void foo(RefCountable& a) {
+      bar(a); // ok
+    }
+
+  Caller of ``foo()`` is responsible for  ``a``'s lifetime.
+
+- ``this`` pointer
+
+  .. code-block:: cpp
+
+    void Foo::foo() {
+      baz(this);  // ok
+    }
+
+  Caller of ``foo()`` is responsible for keeping the memory pointed to by ``this`` pointer safe.
+
+- constants
+
+  .. code-block:: cpp
+
+    foo(nullptr, NULL, 0); // ok
+
+We also define a set of safe transformations which if passed a safe value as an input provide (usually it's the return value) a safe value (or an object that provides safe values). This is also a heuristic.
+
+- constructors of ref-counted types (including factory methods)
+- getters of ref-counted types
+- member overloaded operators
+- casts
+- unary operators like ``&`` or ``*``
 
 
 Debug Checkers

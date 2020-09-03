@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -18,44 +19,92 @@
 using namespace llvm;
 using namespace dwarf;
 
-DWARFDebugPubTable::DWARFDebugPubTable(const DWARFObject &Obj,
-                                       const DWARFSection &Sec,
-                                       bool LittleEndian, bool GnuStyle)
-    : GnuStyle(GnuStyle) {
-  DWARFDataExtractor PubNames(Obj, Sec, LittleEndian, 0);
+void DWARFDebugPubTable::extract(
+    DWARFDataExtractor Data, bool GnuStyle,
+    function_ref<void(Error)> RecoverableErrorHandler) {
+  this->GnuStyle = GnuStyle;
+  Sets.clear();
   uint64_t Offset = 0;
-  while (PubNames.isValidOffset(Offset)) {
+  while (Data.isValidOffset(Offset)) {
+    uint64_t SetOffset = Offset;
     Sets.push_back({});
-    Set &SetData = Sets.back();
+    Set &NewSet = Sets.back();
 
-    SetData.Length = PubNames.getU32(&Offset);
-    SetData.Version = PubNames.getU16(&Offset);
-    SetData.Offset = PubNames.getRelocatedValue(4, &Offset);
-    SetData.Size = PubNames.getU32(&Offset);
+    DataExtractor::Cursor C(Offset);
+    std::tie(NewSet.Length, NewSet.Format) = Data.getInitialLength(C);
+    if (!C) {
+      // Drop the newly added set because it does not contain anything useful
+      // to dump.
+      Sets.pop_back();
+      RecoverableErrorHandler(createStringError(
+          errc::invalid_argument,
+          "name lookup table at offset 0x%" PRIx64 " parsing failed: %s",
+          SetOffset, toString(C.takeError()).c_str()));
+      return;
+    }
 
-    while (Offset < Sec.Data.size()) {
-      uint32_t DieRef = PubNames.getU32(&Offset);
+    Offset = C.tell() + NewSet.Length;
+    DWARFDataExtractor SetData(Data, Offset);
+    const unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(NewSet.Format);
+
+    NewSet.Version = SetData.getU16(C);
+    NewSet.Offset = SetData.getRelocatedValue(C, OffsetSize);
+    NewSet.Size = SetData.getUnsigned(C, OffsetSize);
+
+    if (!C) {
+      // Preserve the newly added set because at least some fields of the header
+      // are read and can be dumped.
+      RecoverableErrorHandler(
+          createStringError(errc::invalid_argument,
+                            "name lookup table at offset 0x%" PRIx64
+                            " does not have a complete header: %s",
+                            SetOffset, toString(C.takeError()).c_str()));
+      continue;
+    }
+
+    while (C) {
+      uint64_t DieRef = SetData.getUnsigned(C, OffsetSize);
       if (DieRef == 0)
         break;
-      uint8_t IndexEntryValue = GnuStyle ? PubNames.getU8(&Offset) : 0;
-      StringRef Name = PubNames.getCStrRef(&Offset);
-      SetData.Entries.push_back(
-          {DieRef, PubIndexEntryDescriptor(IndexEntryValue), Name});
+      uint8_t IndexEntryValue = GnuStyle ? SetData.getU8(C) : 0;
+      StringRef Name = SetData.getCStrRef(C);
+      if (C)
+        NewSet.Entries.push_back(
+            {DieRef, PubIndexEntryDescriptor(IndexEntryValue), Name});
     }
+
+    if (!C) {
+      RecoverableErrorHandler(createStringError(
+          errc::invalid_argument,
+          "name lookup table at offset 0x%" PRIx64 " parsing failed: %s",
+          SetOffset, toString(C.takeError()).c_str()));
+      continue;
+    }
+    if (C.tell() != Offset)
+      RecoverableErrorHandler(createStringError(
+          errc::invalid_argument,
+          "name lookup table at offset 0x%" PRIx64
+          " has a terminator at offset 0x%" PRIx64
+          " before the expected end at 0x%" PRIx64,
+          SetOffset, C.tell() - OffsetSize, Offset - OffsetSize));
   }
 }
 
 void DWARFDebugPubTable::dump(raw_ostream &OS) const {
   for (const Set &S : Sets) {
-    OS << "length = " << format("0x%08x", S.Length);
-    OS << " version = " << format("0x%04x", S.Version);
-    OS << " unit_offset = " << format("0x%08" PRIx64, S.Offset);
-    OS << " unit_size = " << format("0x%08x", S.Size) << '\n';
+    int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(S.Format);
+    OS << "length = " << format("0x%0*" PRIx64, OffsetDumpWidth, S.Length);
+    OS << ", format = " << dwarf::FormatString(S.Format);
+    OS << ", version = " << format("0x%04x", S.Version);
+    OS << ", unit_offset = "
+       << format("0x%0*" PRIx64, OffsetDumpWidth, S.Offset);
+    OS << ", unit_size = " << format("0x%0*" PRIx64, OffsetDumpWidth, S.Size)
+       << '\n';
     OS << (GnuStyle ? "Offset     Linkage  Kind     Name\n"
                     : "Offset     Name\n");
 
     for (const Entry &E : S.Entries) {
-      OS << format("0x%8.8" PRIx64 " ", E.SecOffset);
+      OS << format("0x%0*" PRIx64 " ", OffsetDumpWidth, E.SecOffset);
       if (GnuStyle) {
         StringRef EntryLinkage =
             GDBIndexEntryLinkageString(E.Descriptor.Linkage);

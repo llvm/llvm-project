@@ -108,6 +108,8 @@ public:
 
   virtual bool hasMostDerivedReturn(GlobalDecl GD) const { return false; }
 
+  virtual bool useSinitAndSterm() const { return false; }
+
   /// Returns true if the target allows calling a function through a pointer
   /// with a different signature than the actual function (or equivalently,
   /// bitcasting a function or function pointer to a different function type).

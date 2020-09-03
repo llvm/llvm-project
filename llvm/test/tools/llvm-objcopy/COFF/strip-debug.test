@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.in.o
+# RUN: yaml2obj %s -o %t.in.o
 #
 # RUN: llvm-objdump --section-headers %t.in.o | FileCheck %s --check-prefixes=SECTIONS,SECTIONS-PRE
 # RUN: llvm-objdump -t %t.in.o | FileCheck %s --check-prefixes=SYMBOLS,SYMBOLS-PRE

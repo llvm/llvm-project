@@ -4,7 +4,7 @@
 ; RUN: opt -loop-vectorize -mve-max-interleave-factor=4 < %s -S -o - | FileCheck %s --check-prefixes=CHECK,CHECK-2,CHECK-4
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "thumbv8.1m.main-arm-none-eabi"
+target triple = "thumbv8.1m.main-none-none-eabi"
 
 ; CHECK-LABEL: vld2
 ; CHECK-2: vector.body
@@ -84,4 +84,4 @@ while.end:                                        ; preds = %while.body, %entry
   ret void
 }
 
-attributes #0 = { "target-features"="+armv8.1-m.main,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fpregs,+fullfp16,+hwdiv,+lob,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp,-crypto,-d32,-fp-armv8,-fp-armv8sp,-neon,-vfp3,-vfp3sp,-vfp4,-vfp4sp" }
+attributes #0 = { "target-features"="+armv8.1-m.main,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fullfp16,+hwdiv,+lob,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp,-crypto,-d32,-fp-armv8,-fp-armv8sp,-neon,-vfp3,-vfp3sp,-vfp4,-vfp4sp" }

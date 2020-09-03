@@ -201,5 +201,7 @@ TEST(DwarfTest, format_provider) {
   EXPECT_EQ("DW_IDX_unknown_3fff", formatv("{0}", DW_IDX_hi_user).str());
   EXPECT_EQ("DW_TAG_compile_unit", formatv("{0}", DW_TAG_compile_unit).str());
   EXPECT_EQ("DW_TAG_unknown_ffff", formatv("{0}", DW_TAG_hi_user).str());
+  EXPECT_EQ("DW_OP_lit0", formatv("{0}", DW_OP_lit0).str());
+  EXPECT_EQ("DW_OP_unknown_ff", formatv("{0}", DW_OP_hi_user).str());
 }
 } // end namespace

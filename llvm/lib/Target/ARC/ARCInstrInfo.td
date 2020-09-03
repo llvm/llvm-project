@@ -34,7 +34,7 @@ def ARCGAWrapper : SDNode<"ARCISD::GAWRAPPER", SDT_ARCmov, []>;
 // Comparison
 def ARCcmp : SDNode<"ARCISD::CMP", SDT_ARCcmptst, [SDNPOutGlue]>;
 
-// Conditionanal mov
+// Conditional mov
 def ARCcmov : SDNode<"ARCISD::CMOV", SDT_ARCcmov, [SDNPInGlue]>;
 
 // Conditional Branch
@@ -206,7 +206,7 @@ multiclass ArcBinaryEXT5Inst<bits<6> mincode, string opasm> :
 multiclass ArcUnaryGEN4Inst<bits<6> mincode, string opasm> :
   ArcUnaryInst<0b00100, mincode, opasm>;
 
-// Pattern generation for differnt instruction variants.
+// Pattern generation for different instruction variants.
 multiclass MultiPat<SDPatternOperator InFrag,
                Instruction RRR, Instruction RRU6, Instruction RRLImm> {
   def _rrr : Pat<(InFrag i32:$B, i32:$C), (RRR i32:$B, i32:$C)>;
@@ -215,7 +215,7 @@ multiclass MultiPat<SDPatternOperator InFrag,
 }
 
 // ---------------------------------------------------------------------------
-// Instruction defintions and patterns for 3 operand binary instructions.
+// Instruction definitions and patterns for 3 operand binary instructions.
 // ---------------------------------------------------------------------------
 
 // Definitions for 3 operand binary instructions.
@@ -344,7 +344,7 @@ let isBranch = 1, isTerminator = 1 in {
   // At worst, this expands into 2 4-byte instructions.
   def BRcc_rr_p : PseudoInstARC<(outs),
                                 (ins btarget:$T, GPR32:$B, GPR32:$C, ccond:$cc),
-                                "pbr$cc\t$B, $C, $T", 
+                                "pbr$cc\t$B, $C, $T",
                                 [(ARCbrcc bb:$T, i32:$B, i32:$C, imm32:$cc)]>
                                 { let Size = 8; }
 
@@ -430,7 +430,7 @@ def LEAVE_S : F16_SP_OPS<0b110,
   (outs), (ins immU<7>:$u7), "leave_s\t$u7"> {
 
   bits<7> u7;
-  
+
   let fieldB = u7{6-4};
   let fieldU{4-1} = u7{3-0};
   let fieldU{0} = 0b0;
@@ -440,7 +440,7 @@ def ENTER_S : F16_SP_OPS<0b111,
   (outs), (ins immU<6>:$u6), "enter_s\t$u6"> {
 
   bits<6> u6;
-  
+
   let fieldB{2} = 0;
   let fieldB{1-0} = u6{5-4};
   let fieldU{4-1} = u6{3-0};
@@ -452,19 +452,19 @@ def ENTER_S : F16_SP_OPS<0b111,
 //----------------------------------------------------------------------------
 class COMPACT_MOV_S :
   F16_COMPACT<0b0, (outs GPR32:$g), (ins GPR32:$h),
-          "mov_s\t$g, $h"> {  
+          "mov_s\t$g, $h"> {
   let DecoderMethod = "DecodeMoveHRegInstruction";
 }
 
 def COMPACT_MOV_S_limm : COMPACT_MOV_S {
-  bits<32> LImm;  
+  bits<32> LImm;
   let Inst{47-16} = LImm;
 
-  bits<5> LImmReg = 0b11110;  
+  bits<5> LImmReg = 0b11110;
   let Inst{7-5} = LImmReg{2-0};
   let Inst{1-0} = LImmReg{4-3};
 
-  let Size = 6;  
+  let Size = 6;
 }
 
 def COMPACT_MOV_S_hreg : COMPACT_MOV_S;
@@ -548,9 +548,9 @@ def GP_ADD_S : F16_GP_LD_ADD<0b11, (ins immS<11>:$s),
 //----------------------------------------------------------------------------
 def PCL_LD : InstARC<2, (outs GPR32:$b), (ins immU<10>:$u10),
  "ld_s\t$b, [%pcl, $u10]", []> {
- 
-  bits<3> b; 
-  bits<10> u10; 
+
+  bits<3> b;
+  bits<10> u10;
 
   let Inst{15-11} = 0b11010;
   let Inst{10-8} = b;
@@ -587,11 +587,11 @@ def BL_S :
   InstARC<2, (outs), (ins btargetS13:$s13), "bl_s\t$s13", []> {
 
   let Inst{15-11} = 0b11111;
-  
+
   bits<13> s13;
   let Inst{10-0} = s13{12-2};
   let s13{1-0} = 0b00;
-  
+
   let isCall = 1;
   let isBarrier = 1;
 }

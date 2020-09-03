@@ -918,9 +918,13 @@ pshufw $90, %mm4, %mm0
 // CHECK:  encoding: [0x0f,0x0b]
         	ud2a
 
-// CHECK: ud2b
-// CHECK:  encoding: [0x0f,0xb9]
-        	ud2b
+// CHECK: ud1l %edx, %edi
+// CHECK:  encoding: [0x0f,0xb9,0xfa]
+        	ud1 %edx, %edi
+
+// CHECK: ud1l (%ebx), %ecx
+// CHECK:  encoding: [0x0f,0xb9,0x0b]
+        	ud2b (%ebx), %ecx
 
 // CHECK: loope 0
 // CHECK: encoding: [0xe1,A]

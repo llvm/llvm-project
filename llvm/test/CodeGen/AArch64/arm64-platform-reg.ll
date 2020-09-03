@@ -29,6 +29,7 @@
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x26 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X26
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x27 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X27
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x28 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X28
+; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x30 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X30
 
 ; Test multiple of reserve-x# options together.
 ; RUN: llc -mtriple=arm64-linux-gnu \
@@ -67,6 +68,7 @@
 ; RUN: -mattr=+reserve-x26 \
 ; RUN: -mattr=+reserve-x27 \
 ; RUN: -mattr=+reserve-x28 \
+; RUN: -mattr=+reserve-x30 \
 ; RUN: -o - %s | FileCheck %s \
 ; RUN: --check-prefix=CHECK-RESERVE \
 ; RUN: --check-prefix=CHECK-RESERVE-X1 \
@@ -92,7 +94,8 @@
 ; RUN: --check-prefix=CHECK-RESERVE-X25 \
 ; RUN: --check-prefix=CHECK-RESERVE-X26 \
 ; RUN: --check-prefix=CHECK-RESERVE-X27 \
-; RUN: --check-prefix=CHECK-RESERVE-X28
+; RUN: --check-prefix=CHECK-RESERVE-X28 \
+; RUN: --check-prefix=CHECK-RESERVE-X30
 
 ; x18 is reserved as a platform register on Darwin but not on other
 ; systems. Create loads of register pressure and make sure this is respected.
@@ -134,6 +137,7 @@ define void @keep_live() {
 ; CHECK-RESERVE-X26-NOT: ldr x26
 ; CHECK-RESERVE-X27-NOT: ldr x27
 ; CHECK-RESERVE-X28-NOT: ldr x28
+; CHECK-RESERVE-X30-NOT: ldr x30
 ; CHECK-RESERVE: Spill
 ; CHECK-RESERVE-NOT: ldr fp
 ; CHECK-RESERVE-X1-NOT: ldr x1,
@@ -160,6 +164,7 @@ define void @keep_live() {
 ; CHECK-RESERVE-X26-NOT: ldr x26
 ; CHECK-RESERVE-X27-NOT: ldr x27
 ; CHECK-RESERVE-X28-NOT: ldr x28
+; CHECK-RESERVE-X30-NOT: ldr x30
 ; CHECK-RESERVE: ret
   ret void
 }

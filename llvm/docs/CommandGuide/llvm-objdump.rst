@@ -33,7 +33,7 @@ combined with other commands:
 
   Disassemble all sections found in the input files.
   
-.. option:: --disassemble-functions=<symbol1[,symbol2,...]>
+.. option:: --disassemble-symbols=<symbol1[,symbol2,...]>
 
   Disassemble only the specified symbols. Takes demangled symbol names when
   :option:`--demangle` is specified, otherwise takes mangled symbol names.
@@ -85,6 +85,10 @@ combined with other commands:
 
   Display the symbol table.
 
+.. option:: -T, --dynamic-syms
+
+  Display the contents of the dynamic symbol table.
+
 .. option:: -u, --unwind-info
 
   Display the unwind info of the input(s).
@@ -118,6 +122,17 @@ OPTIONS
 .. option:: -C, --demangle
 
   Demangle symbol names in the output.
+
+.. option:: --debug-vars=<format>
+
+  Print the locations (in registers or memory) of source-level variables
+  alongside disassembly. ``format`` may be ``unicode`` or ``ascii``, defaulting
+  to ``unicode`` if omitted.
+
+.. option:: --debug-vars-indent=<width>
+
+  Distance to indent the source-level variable display, relative to the start
+  of the disassembly. Defaults to 40 characters.
 
 .. option:: -j, --section=<section1[,section2,...]>
 
@@ -321,10 +336,17 @@ MACH-O ONLY OPTIONS AND COMMANDS
 
   Display weak binding information.
 
+XCOFF ONLY OPTIONS AND COMMANDS
+---------------------------------
+
+.. option:: --symbol-description
+
+  Add symbol description to disassembly output.
+
 BUGS
 ----
 
-To report bugs, please visit <http://llvm.org/bugs/>.
+To report bugs, please visit <https://bugs.llvm.org/>.
 
 SEE ALSO
 --------

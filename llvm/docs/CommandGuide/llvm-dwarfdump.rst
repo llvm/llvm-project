@@ -105,10 +105,15 @@ OPTIONS
             When displaying debug info entries, only show children to a maximum
             depth of <N>.
 
+.. option:: --show-section-sizes
+
+            Show the sizes of all debug sections, expressed in bytes.
+
 .. option:: --statistics
 
             Collect debug info quality metrics and print the results
-            as machine-readable single-line JSON output.
+            as machine-readable single-line JSON output. The output
+            format is described in the section below (:ref:`stats-format`).
 
 .. option:: --summarize-types
 
@@ -144,7 +149,7 @@ OPTIONS
 
             Display the version of the tool.
 
-.. option:: --debug-abbrev, --debug-addr, --debug-aranges, --debug-cu-index, --debug-frame [=<offset>], --debug-gnu-pubnames, --debug-gnu-pubtypes, --debug-info [=<offset>], --debug-line [=<offset>], --debug-line-str, --debug-loc [=<offset>], --debug-loclists [=<offset>], --debug-macro, --debug-names, --debug-pubnames, --debug-pubtypes, --debug-ranges, --debug-rnglists, --debug-str, --debug-str-offsets, --debug-tu-index, --debug-types, --eh-frame [=<offset>], --gdb-index, --apple-names, --apple-types, --apple-namespaces, --apple-objc
+.. option:: --debug-abbrev, --debug-addr, --debug-aranges, --debug-cu-index, --debug-frame[=<offset>], --debug-gnu-pubnames, --debug-gnu-pubtypes, --debug-info [=<offset>], --debug-line [=<offset>], --debug-line-str, --debug-loc [=<offset>], --debug-loclists [=<offset>], --debug-macro, --debug-names, --debug-pubnames, --debug-pubtypes, --debug-ranges, --debug-rnglists, --debug-str, --debug-str-offsets, --debug-tu-index, --debug-types [=<offset>], --eh-frame [=<offset>], --gdb-index, --apple-names, --apple-types, --apple-namespaces, --apple-objc
 
             Dump the specified DWARF section by name. Only the
             `.debug_info` section is shown by default. Some entries
@@ -157,6 +162,30 @@ OPTIONS
 .. option:: @<FILE>
 
             Read command-line options from `<FILE>`.
+
+.. _stats-format:
+
+FORMAT OF STATISTICS OUTPUT
+---------------------------
+
+The ::option:`--statistics` option generates single-line JSON output
+representing quality metrics of the processed debug info. These metrics are
+useful to compare changes between two compilers, particularly for judging
+the effect that a change to the compiler has on the debug info quality.
+
+The output is formatted as key-value pairs. The first pair contains a version
+number. The following naming scheme is used for the keys:
+
+      - `variables` ==> local variables and parameters
+      - `local vars` ==> local variables
+      - `params` ==> formal parameters
+
+For aggregated values, the following keys are used:
+
+      - `sum_of_all_variables(...)` ==> the sum applied to all variables
+      - `#bytes` ==> the number of bytes
+      - `#variables - entry values ...` ==> the number of variables excluding
+        the entry values etc.
 
 EXIT STATUS
 -----------

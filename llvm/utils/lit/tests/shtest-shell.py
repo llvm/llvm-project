@@ -6,6 +6,14 @@
 # RUN: cat %t.out
 # RUN: FileCheck --input-file %t.out %s
 #
+# Test again in non-UTF shell to catch potential errors with python 2 seen
+# on stdout-encoding.txt
+# RUN: env PYTHONIOENCODING=ascii not %{lit} -j 1 -a %{inputs}/shtest-shell > %t.ascii.out
+# FIXME: Temporarily dump test output so we can debug failing tests on
+# buildbots.
+# RUN: cat %t.ascii.out
+# RUN: FileCheck --input-file %t.ascii.out %s
+#
 # END.
 
 # CHECK: -- Testing:
@@ -64,7 +72,7 @@
 # CHECK-NEXT: @@
 # CHECK-NEXT: {{^ .f.o.o.$}}
 # CHECK-NEXT: {{^-.b.a.r.$}}
-# CHECK-NEXT: {{^\+.b.a.r..}}
+# CHECK-NEXT: {{^\+.b.a.r.}}
 # CHECK-NEXT: {{^ .b.a.z.$}}
 # CHECK: error: command failed with exit status: 1
 # CHECK: $ "true"
@@ -78,7 +86,7 @@
 # CHECK-NEXT: -bar
 # CHECK-NEXT: -baz
 # CHECK-NEXT: {{^\+.f.o.o.$}}
-# CHECK-NEXT: {{^\+.b.a.r..}}
+# CHECK-NEXT: {{^\+.b.a.r.}}
 # CHECK-NEXT: {{^\+.b.a.z.$}}
 # CHECK: error: command failed with exit status: 1
 # CHECK: $ "true"
@@ -89,7 +97,7 @@
 # CHECK-NEXT: +++
 # CHECK-NEXT: @@
 # CHECK-NEXT: {{^\-.f.o.o.$}}
-# CHECK-NEXT: {{^\-.b.a.r..}}
+# CHECK-NEXT: {{^\-.b.a.r.}}
 # CHECK-NEXT: {{^\-.b.a.z.$}}
 # CHECK-NEXT: +foo
 # CHECK-NEXT: +bar
@@ -116,7 +124,7 @@
 # CHECK-NEXT: @@
 # CHECK-NEXT: {{^ .f.o.o.$}}
 # CHECK-NEXT: {{^-.b.a.r.$}}
-# CHECK-NEXT: {{^\+.b.a.r..}}
+# CHECK-NEXT: {{^\+.b.a.r.}}
 # CHECK-NEXT: {{^ .b.a.z.$}}
 # CHECK: error: command failed with exit status: 1
 # CHECK: $ "true"
@@ -132,7 +140,7 @@
 # CHECK-NEXT: -bar
 # CHECK-NEXT: -baz
 # CHECK-NEXT: {{^\+.f.o.o.$}}
-# CHECK-NEXT: {{^\+.b.a.r..}}
+# CHECK-NEXT: {{^\+.b.a.r.}}
 # CHECK-NEXT: {{^\+.b.a.z.$}}
 # CHECK: error: command failed with exit status: 1
 # CHECK: $ "true"
@@ -143,7 +151,7 @@
 # CHECK-NEXT: +++
 # CHECK-NEXT: @@
 # CHECK-NEXT: {{^\-.f.o.o.$}}
-# CHECK-NEXT: {{^\-.b.a.r..}}
+# CHECK-NEXT: {{^\-.b.a.r.}}
 # CHECK-NEXT: {{^\-.b.a.z.$}}
 # CHECK-NEXT: +foo
 # CHECK-NEXT: +bar
@@ -576,11 +584,11 @@
 # CHECK: $ "cat" "diff-in.bin"
 # CHECK: # command output:
 # CHECK-NEXT: {{^.f.o.o.$}}
-# CHECK-NEXT: {{^.b.a.r..}}
+# CHECK-NEXT: {{^.b.a.r.}}
 # CHECK-NEXT: {{^.b.a.z.$}}
 # CHECK-NOT: error
 # CHECK: $ "false"
 # CHECK: ***
 
 # CHECK: PASS: shtest-shell :: valid-shell.txt
-# CHECK: Failing Tests (35)
+# CHECK: Failed Tests (35)

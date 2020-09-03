@@ -21,6 +21,7 @@ class AttachDeniedTestCase(TestBase):
     @skipIfWindows
     @skipIfiOSSimulator
     @skipIfDarwinEmbedded  # ptrace(ATTACH_REQUEST...) won't work on ios/tvos/etc
+    @skipIfReproducer
     def test_attach_to_process_by_id_denied(self):
         """Test attach by process id denied"""
         self.build()
@@ -36,7 +37,6 @@ class AttachDeniedTestCase(TestBase):
 
         # Spawn a new process
         popen = self.spawnSubprocess(exe, [pid_file_path])
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         pid = lldbutil.wait_for_file_on_target(self, pid_file_path)
 

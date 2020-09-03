@@ -14,11 +14,6 @@
 #ifndef OMPTARGET_H
 #define OMPTARGET_H
 
-// std includes
-#include <inttypes.h>
-#include <math.h>
-
-// local includes
 #include "target_impl.h"
 #include "common/debug.h"     // debug
 #include "interface.h" // interfaces with omp, compiler, and user
@@ -205,14 +200,13 @@ public:
   INLINE omptarget_nvptx_WorkDescr &WorkDescr() {
     return workDescrForActiveParallel;
   }
-  INLINE uint64_t *getLastprivateIterBuffer() { return &lastprivateIterBuffer; }
 
   // init
   INLINE void InitTeamDescr();
 
   INLINE __kmpc_data_sharing_slot *RootS(int wid, bool IsMasterThread) {
-    // If this is invoked by the master thread of the master warp then intialize
-    // it with a smaller slot.
+    // If this is invoked by the master thread of the master warp then
+    // initialize it with a smaller slot.
     if (IsMasterThread) {
       // Do not initialize this slot again if it has already been initalized.
       if (master_rootS[0].DataEnd == &master_rootS[0].Data[0] + DS_Slot_Size)
@@ -256,7 +250,6 @@ private:
       levelZeroTaskDescr; // icv for team master initial thread
   omptarget_nvptx_WorkDescr
       workDescrForActiveParallel; // one, ONLY for the active par
-  uint64_t lastprivateIterBuffer;
 
   ALIGN(16)
   __kmpc_data_sharing_worker_slot_static worker_rootS[WARPSIZE];
@@ -282,10 +275,6 @@ public:
   INLINE uint16_t &NumThreadsForNextParallel(int tid) {
     return nextRegion.tnum[tid];
   }
-  // simd
-  INLINE uint16_t &SimdLimitForNextSimd(int tid) {
-    return nextRegion.slim[tid];
-  }
   // schedule (for dispatch)
   INLINE kmp_sched_t &ScheduleType(int tid) { return schedule[tid]; }
   INLINE int64_t &Chunk(int tid) { return chunk[tid]; }
@@ -309,8 +298,6 @@ private:
     // Only one of the two is live at the same time.
     // parallel
     uint16_t tnum[MAX_THREADS_PER_TEAM];
-    // simd limit
-    uint16_t slim[MAX_THREADS_PER_TEAM];
   } nextRegion;
   // schedule (for dispatch)
   kmp_sched_t schedule[MAX_THREADS_PER_TEAM]; // remember schedule type for #for

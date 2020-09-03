@@ -1,0 +1,84 @@
+# RUN: llc -mcpu=future -mtriple=powerpc64le-unknown-unknown %s \
+# RUN:   -start-before=ppc-branch-select -verify-machineinstrs \
+# RUN:   -filetype=obj -o - | llvm-objdump --mcpu=future -d -r - | \
+# RUN:   FileCheck --check-prefix=CHECK-LE %s
+# RUN: llc -mcpu=future -mtriple=powerpc64-unknown-unknown %s \
+# RUN:   -start-before=ppc-branch-select -verify-machineinstrs \
+# RUN:   -filetype=obj -o - | llvm-objdump --mcpu=future -d -r - | \
+# RUN:   FileCheck --check-prefix=CHECK-BE %s
+
+# The purpose of this test is to check that long branches are selected correctly
+# when we have prefixed instructions that may require alignment. Prefixed
+# instructions may require alignment and so an additional 4 bytes may be added.
+# If those 4 bytes put the target of the branch past the range of a short branch
+# then we should use a long branch like in this test.
+
+---
+name:            longbranchtest
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$x3', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x30000000), %bb.2(0x50000000)
+    liveins: $x3
+    renamable $cr0 = CMPLWI killed renamable $r3, 0, implicit $x3
+    BCC 76, killed renamable $cr0, %bb.1
+  bb.2:
+    renamable $x3 = LI8 2
+    INLINEASM &".space 32744", 1
+    renamable $x3 = PADDI8 $x3, 13
+    BLR8 implicit $lr8, implicit $rm, implicit killed $x3
+  bb.1:
+    renamable $x3 = LI8 1
+    INLINEASM &".space 32744", 1
+    renamable $x3 = PADDI8 $x3, 21
+    BLR8 implicit $lr8, implicit $rm, implicit killed $x3
+
+...
+
+# Check for the long branch.
+# CHECK-LE:         08 00 82 4{{[01]}}   b{{[tf]}}  2, 0xc
+# CHECK-LE-NEXT:    fc 7f 00 48   b 0x8004
+# CHECK-LE-DAG:     paddi 3, 3, 13, 0
+# CHECK-LE-DAG:     paddi 3, 3, 21, 0
+# CHECK-LE:         blr
+# CHECK-BE:         4{{[01]}} 82 00 08   b{{[tf]}}  2, 0xc
+# CHECK-BE-NEXT:    48 00 7f fc   b 0x8004
+# CHECK-BE-DAG:     paddi 3, 3, 13, 0
+# CHECK-BE-DAG:     paddi 3, 3, 21, 0
+# CHECK-BE:         blr
+
+

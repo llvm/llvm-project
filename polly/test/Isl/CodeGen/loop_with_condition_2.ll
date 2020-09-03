@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
 
 ; Verify that we actually detect this loop as the innermost loop even though
 ; there is a conditional inside.

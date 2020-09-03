@@ -338,10 +338,16 @@ extern "C" {
 #define KMP_ALIAS(alias_of) __attribute__((alias(alias_of)))
 #endif
 
-#if KMP_HAVE_WEAK_ATTRIBUTE
-#define KMP_WEAK_ATTRIBUTE __attribute__((weak))
+#if KMP_HAVE_WEAK_ATTRIBUTE && !KMP_DYNAMIC_LIB
+#define KMP_WEAK_ATTRIBUTE_EXTERNAL __attribute__((weak))
 #else
-#define KMP_WEAK_ATTRIBUTE /* Nothing */
+#define KMP_WEAK_ATTRIBUTE_EXTERNAL /* Nothing */
+#endif
+
+#if KMP_HAVE_WEAK_ATTRIBUTE
+#define KMP_WEAK_ATTRIBUTE_INTERNAL __attribute__((weak))
+#else
+#define KMP_WEAK_ATTRIBUTE_INTERNAL /* Nothing */
 #endif
 
 // Define KMP_VERSION_SYMBOL and KMP_EXPAND_NAME

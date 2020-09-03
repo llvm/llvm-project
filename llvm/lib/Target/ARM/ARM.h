@@ -47,12 +47,14 @@ FunctionPass *createARMConstantIslandPass();
 FunctionPass *createMLxExpansionPass();
 FunctionPass *createThumb2ITBlockPass();
 FunctionPass *createMVEVPTBlockPass();
+FunctionPass *createMVEVPTOptimisationsPass();
 FunctionPass *createARMOptimizeBarriersPass();
 FunctionPass *createThumb2SizeReductionPass(
     std::function<bool(const Function &)> Ftor = nullptr);
 InstructionSelector *
 createARMInstructionSelector(const ARMBaseTargetMachine &TM, const ARMSubtarget &STI,
                              const ARMRegisterBankInfo &RBI);
+Pass *createMVEGatherScatterLoweringPass();
 
 void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                   ARMAsmPrinter &AP);
@@ -65,8 +67,10 @@ void initializeARMExpandPseudoPass(PassRegistry &);
 void initializeThumb2SizeReducePass(PassRegistry &);
 void initializeThumb2ITBlockPass(PassRegistry &);
 void initializeMVEVPTBlockPass(PassRegistry &);
+void initializeMVEVPTOptimisationsPass(PassRegistry &);
 void initializeARMLowOverheadLoopsPass(PassRegistry &);
 void initializeMVETailPredicationPass(PassRegistry &);
+void initializeMVEGatherScatterLoweringPass(PassRegistry &);
 
 } // end namespace llvm
 

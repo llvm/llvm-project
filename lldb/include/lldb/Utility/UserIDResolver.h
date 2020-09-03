@@ -53,4 +53,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // #ifndef LLDB_HOST_USERIDRESOLVER_H
+#endif // LLDB_UTILITY_USERIDRESOLVER_H

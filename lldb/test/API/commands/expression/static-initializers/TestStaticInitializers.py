@@ -17,9 +17,9 @@ class StaticInitializers(TestBase):
                 lldb.SBFileSpec("main.cpp", False))
 
         # We use counter to observe if the initializer was called.
-        self.expect("expr counter", substrs=["(int) $", " = 0"])
+        self.expect_expr("counter", result_type="int", result_value="0")
         self.expect("expr -p -- struct Foo { Foo() { inc_counter(); } }; Foo f;")
-        self.expect("expr counter", substrs=["(int) $", " = 1"])
+        self.expect_expr("counter", result_type="int", result_value="1")
 
     def test_failing_init(self):
         """ Test a static initializer that fails to execute. """

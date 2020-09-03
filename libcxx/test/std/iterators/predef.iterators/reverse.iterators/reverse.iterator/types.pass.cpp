@@ -34,7 +34,7 @@ template <class It>
 struct find_current
     : private std::reverse_iterator<It>
 {
-    void test() {++(this->current);}
+    void test() { (void)this->current; }
 };
 
 template <class It>
@@ -43,8 +43,7 @@ test()
 {
     typedef std::reverse_iterator<It> R;
     typedef std::iterator_traits<It> T;
-    find_current<It> q;
-    q.test();
+    find_current<It> q; q.test(); // Just test that we can access `.current` from derived classes
     static_assert((std::is_same<typename R::iterator_type, It>::value), "");
     static_assert((std::is_same<typename R::value_type, typename T::value_type>::value), "");
     static_assert((std::is_same<typename R::difference_type, typename T::difference_type>::value), "");
@@ -59,5 +58,5 @@ int main(int, char**)
     test<random_access_iterator<char*> >();
     test<char*>();
 
-  return 0;
+    return 0;
 }

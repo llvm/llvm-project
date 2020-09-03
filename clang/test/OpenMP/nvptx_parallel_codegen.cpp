@@ -1,9 +1,12 @@
 // Test target codegen - host bc file has to be created first.
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -disable-llvm-optzns | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -disable-llvm-optzns | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64 --check-prefix SEQ
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -disable-llvm-optzns -fopenmp-cuda-parallel-target-regions | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64 --check-prefix PAR
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - -disable-llvm-optzns | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
-// RUN: %clang_cc1 -verify -fopenmp -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - -disable-llvm-optzns | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - -disable-llvm-optzns | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix SEQ
+// RUN: %clang_cc1 -verify -fopenmp -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - -disable-llvm-optzns | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix SEQ
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - -disable-llvm-optzns -fopenmp-cuda-parallel-target-regions | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix PAR
+// RUN: %clang_cc1 -verify -fopenmp -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - -disable-llvm-optzns -fopenmp-cuda-parallel-target-regions | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix PAR
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -72,15 +75,15 @@ int bar(int n){
   return a;
 }
 
-// CHECK: [[MEM_TY:%.+]] = type { [128 x i8] }
-// CHECK-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
-// CHECK-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
-// CHECK-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i{{64|32}} 4
-// CHECK-DAG: [[KERNEL_SHARED:@.+]] = internal unnamed_addr constant i16 1
+// SEQ: [[MEM_TY:%.+]] = type { [128 x i8] }
+// SEQ-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
+// SEQ-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
+// SEQ-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i{{64|32}} 4
+// SEQ-DAG: [[KERNEL_SHARED:@.+]] = internal unnamed_addr constant i16 1
 
-// CHECK-NOT: define {{.*}}void {{@__omp_offloading_.+template.+l17}}_worker()
+// CHECK-NOT: define {{.*}}void {{@__omp_offloading_.+template.+l20}}_worker()
 
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l26}}_worker()
+// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l29}}_worker()
 // CHECK-DAG: [[OMP_EXEC_STATUS:%.+]] = alloca i8,
 // CHECK-DAG: [[OMP_WORK_FN:%.+]] = alloca i8*,
 // CHECK: store i8* null, i8** [[OMP_WORK_FN]],
@@ -89,7 +92,7 @@ int bar(int n){
 //
 // CHECK: [[AWAIT_WORK]]
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0) #[[#CONVERGENT:]]
-// CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]]
+// CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]])
 // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
 // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
 // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
@@ -133,7 +136,7 @@ int bar(int n){
 // CHECK: [[EXIT]]
 // CHECK: ret void
 
-// CHECK: define {{.*}}void [[T6:@__omp_offloading_.+template.+l26]](i[[SZ:32|64]]
+// CHECK: define {{.*}}void [[T6:@__omp_offloading_.+template.+l29]](i[[SZ:32|64]]
 // Create local storage for each capture.
 // CHECK:  [[LOCAL_A:%.+]] = alloca i[[SZ]],
 // CHECK-DAG:  store i[[SZ]] [[ARG_A:%.+]], i[[SZ]]* [[LOCAL_A]]
@@ -163,13 +166,13 @@ int bar(int n){
 // CHECK-DAG: [[MWS:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK: [[MTMP1:%.+]] = sub nuw i32 [[MNTH]], [[MWS]]
 // CHECK: call void @__kmpc_kernel_init(i32 [[MTMP1]]
-// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN1]]_wrapper to i8*),
+// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN1]]_wrapper to i8*))
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_serialized_parallel(
 // CHECK: {{call|invoke}} void [[PARALLEL_FN3:@.+]](
 // CHECK: call void @__kmpc_end_serialized_parallel(
-// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN2]]_wrapper to i8*),
+// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN2]]_wrapper to i8*))
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK-64-DAG: load i32, i32* [[REF_A]]
@@ -199,7 +202,7 @@ int bar(int n){
 // CHECK: store i[[SZ]] 44, i[[SZ]]* %a,
 // CHECK: ret void
 
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l43}}_worker()
+// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l46}}_worker()
 // CHECK-DAG: [[OMP_EXEC_STATUS:%.+]] = alloca i8,
 // CHECK-DAG: [[OMP_WORK_FN:%.+]] = alloca i8*,
 // CHECK: store i8* null, i8** [[OMP_WORK_FN]],
@@ -208,7 +211,7 @@ int bar(int n){
 //
 // CHECK: [[AWAIT_WORK]]
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
-// CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]],
+// CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]])
 // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
 // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
 // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
@@ -243,7 +246,7 @@ int bar(int n){
 // CHECK: [[EXIT]]
 // CHECK: ret void
 
-// CHECK: define {{.*}}void [[T6:@__omp_offloading_.+template.+l43]](i[[SZ:32|64]]
+// CHECK: define {{.*}}void [[T6:@__omp_offloading_.+template.+l46]](i[[SZ:32|64]]
 // Create local storage for each capture.
 // CHECK:  [[LOCAL_N:%.+]] = alloca i[[SZ]],
 // CHECK:  [[LOCAL_A:%.+]] = alloca i[[SZ]],
@@ -288,7 +291,7 @@ int bar(int n){
 // CHECK: br i1 [[CMP]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK: [[IF_THEN]]
-// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN4]]_wrapper to i8*),
+// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN4]]_wrapper to i8*))
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: br label {{%?}}[[IF_END:.+]]
@@ -323,25 +326,27 @@ int bar(int n){
 
 // CHECK: declare void @__kmpc_barrier(%struct.ident_t*, i32) #[[#CONVERGENT]]
 
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l55}}_worker()
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l55}}(
+// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l58}}_worker()
+// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l58}}(
 // CHECK-32: [[A_ADDR:%.+]] = alloca i32,
 // CHECK-64: [[A_ADDR:%.+]] = alloca i64,
 // CHECK-64: [[CONV:%.+]] = bitcast i64* [[A_ADDR]] to i32*
-// CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
-// CHECK: [[SIZE:%.+]] = load i{{64|32}}, i{{64|32}}* [[KERNEL_SIZE]],
-// CHECK: call void @__kmpc_get_team_static_memory(i16 0, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} [[SIZE]], i16 [[IS_SHARED]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
-// CHECK: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
-// CHECK: [[STACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i{{64|32}} 0
+// SEQ: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
+// SEQ: [[SIZE:%.+]] = load i{{64|32}}, i{{64|32}}* [[KERNEL_SIZE]],
+// SEQ: call void @__kmpc_get_team_static_memory(i16 0, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} [[SIZE]], i16 [[IS_SHARED]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// SEQ: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
+// SEQ: [[STACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i{{64|32}} 0
+// PAR: [[STACK:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{32|64}} 4, i16 1)
 // CHECK: [[BC:%.+]] = bitcast i8* [[STACK]] to %struct._globalized_locals_ty*
 // CHECK-32: [[A:%.+]] = load i32, i32* [[A_ADDR]],
 // CHECK-64: [[A:%.+]] = load i32, i32* [[CONV]],
 // CHECK: [[GLOBAL_A_ADDR:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[BC]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: store i32 [[A]], i32* [[GLOBAL_A_ADDR]],
-// CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
-// CHECK: call void @__kmpc_restore_team_static_memory(i16 0, i16 [[IS_SHARED]])
+// SEQ: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
+// SEQ: call void @__kmpc_restore_team_static_memory(i16 0, i16 [[IS_SHARED]])
+// PAR: call void @__kmpc_data_sharing_pop_stack(i8* [[STACK]])
 
-// CHECK-LABEL: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.*}})
+// CHECK-LABEL: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* nonnull align {{[0-9]+}} dereferenceable{{.*}})
 // CHECK:  [[CC:%.+]] = alloca i32,
 // CHECK:  [[MASK:%.+]] = call i32 @__kmpc_warp_active_thread_mask(){{$}}
 // CHECK:  [[TID:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()

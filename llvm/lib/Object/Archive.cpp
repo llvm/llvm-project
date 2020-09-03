@@ -392,12 +392,8 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
 }
 
 Expected<uint64_t> Archive::Child::getSize() const {
-  if (Parent->IsThin) {
-    Expected<uint32_t> Size = Header.getSize();
-    if (!Size)
-      return Size.takeError();
-    return Size.get();
-  }
+  if (Parent->IsThin)
+    return Header.getSize();
   return Data.size() - StartOfFile;
 }
 
@@ -423,12 +419,12 @@ Expected<std::string> Archive::Child::getFullName() const {
     return NameOrErr.takeError();
   StringRef Name = *NameOrErr;
   if (sys::path::is_absolute(Name))
-    return Name;
+    return std::string(Name);
 
   SmallString<128> FullName = sys::path::parent_path(
       Parent->getMemoryBufferRef().getBufferIdentifier());
   sys::path::append(FullName, Name);
-  return StringRef(FullName);
+  return std::string(FullName.str());
 }
 
 Expected<StringRef> Archive::Child::getBuffer() const {
@@ -437,7 +433,7 @@ Expected<StringRef> Archive::Child::getBuffer() const {
     return isThinOrErr.takeError();
   bool isThin = isThinOrErr.get();
   if (!isThin) {
-    Expected<uint32_t> Size = getSize();
+    Expected<uint64_t> Size = getSize();
     if (!Size)
       return Size.takeError();
     return StringRef(Data.data() + StartOfFile, Size.get());

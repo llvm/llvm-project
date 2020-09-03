@@ -69,8 +69,9 @@ attributes #2 = { argmemonly nounwind }
 !20 = !DILocation(line: 9, column: 5, scope: !14)
 !21 = !DILocation(line: 10, column: 1, scope: !14)
 
-; Check that the store is removed and that the memcpy is still there
+; Check that the both the store and memcpy are removed because they both access
+; an alloca that is not read.
 ; CHECK-LABEL: foo
 ; CHECK-NOT:   store i8
-; CHECK:       call void @llvm.memcpy
+; CHECK-NOT:   call void @llvm.memcpy
 ; CHECK:       ret void

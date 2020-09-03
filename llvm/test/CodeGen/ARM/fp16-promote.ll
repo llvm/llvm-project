@@ -424,7 +424,7 @@ declare half @llvm.fmuladd.f16(half %a, half %b, half %c) #0
 ; CHECK-FP16: vsqrt.f32
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-VFP-LIBCALL: vsqrt.f32
+; CHECK-LIBCALL-VFP: vsqrt.f32
 ; CHECK-NOVFP: bl sqrtf
 ; CHECK-LIBCALL: bl __aeabi_f2h
 define void @test_sqrt(half* %p) #0 {
@@ -665,7 +665,9 @@ define void @test_maxnum(half* %p, half* %q) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL-VFP: vmov.f32 s{{[0-9]+}}, #1.000000e+00
 ; CHECK-NOVFP: mov r{{[0-9]+}}, #1065353216
-; CHECK-VFP: vmin.f32
+; CHECK-VFP: vcmp.f32
+; CHECK-VFP: vmrs
+; CHECK-VFP: vmovlt.f32
 ; CHECK-NOVFP: bl __aeabi_fcmpge
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_f2h
@@ -683,7 +685,9 @@ define void @test_minimum(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL-VFP: vmov.f32 s0, #1.000000e+00
 ; CHECK-NOVFP: mov r{{[0-9]+}}, #1065353216
-; CHECK-VFP: vmax.f32
+; CHECK-VFP: vcmp.f32
+; CHECK-VFP: vmrs
+; CHECK-VFP: vmovhi.f32
 ; CHECK-NOVFP: bl __aeabi_fcmple
 ; CHECK-FP16: vcvtb.f16.f32
 ; CHECK-LIBCALL: bl __aeabi_f2h
@@ -696,18 +700,44 @@ define void @test_maximum(half* %p) #0 {
 }
 
 ; CHECK-FP16-LABEL: test_copysign:
-; CHECK-FP16: vcvtb.f32.f16
-; CHECK-FP16: vcvtb.f32.f16
-; CHECK-FP16: vbsl
-; CHECK-FP16: vcvtb.f16.f32
+; CHECK-FP16:         ldrh r2, [r0]
+; CHECK-FP16-NEXT:    vmov.i32 d0, #0x80000000
+; CHECK-FP16-NEXT:    ldrh r1, [r1]
+; CHECK-FP16-NEXT:    vmov s2, r2
+; CHECK-FP16-NEXT:    vmov s4, r1
+; CHECK-FP16-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-FP16-NEXT:    vcvtb.f32.f16 s4, s4
+; CHECK-FP16-NEXT:    vbsl d0, d2, d1
+; CHECK-FP16-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-FP16-NEXT:    vmov r1, s0
+; CHECK-FP16-NEXT:    strh r1, [r0]
+; CHECK-FP16-NEXT:    bx lr
+
 ; CHECK-LIBCALL-LABEL: test_copysign:
+; CHECK-LIBCALL-VFP:         .fnstart
+; CHECK-LIBCALL-VFP-NEXT:    .save {r4, r5, r11, lr}
+; CHECK-LIBCALL-VFP-NEXT:    push {r4, r5, r11, lr}
+; CHECK-LIBCALL-VFP-NEXT:    .vsave {d8, d9}
+; CHECK-LIBCALL-VFP-NEXT:    vpush {d8, d9}
+; CHECK-LIBCALL-VFP-NEXT:    mov r5, r0
+; CHECK-LIBCALL-VFP-NEXT:    ldrh r0, [r0]
+; CHECK-LIBCALL-VFP-NEXT:    mov r4, r1
 ; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-LIBCALL-VFP:         ldrh r1, [r4]
+; CHECK-LIBCALL-VFP-NEXT:    vmov s18, r0
+; CHECK-LIBCALL-VFP-NEXT:    vmov.i32 d8, #0x80000000
+; CHECK-LIBCALL-VFP-NEXT:    mov r0, r1
 ; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-VFP-LIBCALL: vbsl
+; CHECK-LIBCALL-VFP:         vmov s0, r0
+; CHECK-LIBCALL-VFP-NEXT:    vbsl d8, d0, d9
+; CHECK-LIBCALL-VFP-NEXT:    vmov r0, s16
+; CHECK-LIBCALL: bl __aeabi_f2h
+; CHECK-LIBCALL-VFP:         strh r0, [r5]
+; CHECK-LIBCALL-VFP-NEXT:    vpop {d8, d9}
+; CHECK-LIBCALL-VFP-NEXT:    pop {r4, r5, r11, pc}
 ; CHECK-NOVFP: and
 ; CHECK-NOVFP: bic
 ; CHECK-NOVFP: orr
-; CHECK-LIBCALL: bl __aeabi_f2h
 define void @test_copysign(half* %p, half* %q) #0 {
   %a = load half, half* %p, align 2
   %b = load half, half* %q, align 2
@@ -816,7 +846,7 @@ define void @test_round(half* %p) {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-VFP-LIBCALL: vmla.f32
+; CHECK-LIBCALL-VFP: vmla.f32
 ; CHECK-NOVFP: bl __aeabi_fmul
 ; CHECK-LIBCALL: bl __aeabi_f2h
 define void @test_fmuladd(half* %p, half* %q, half* %r) #0 {
@@ -929,7 +959,6 @@ define void @test_extractvalue(%struct.dummy* %p, half* %q) {
 }
 
 ; CHECK-ALL-LABEL: test_struct_return:
-; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-VFP-LIBCALL: bl __aeabi_h2f
 ; CHECK-NOVFP-DAG: ldr
 ; CHECK-NOVFP-DAG: ldrh

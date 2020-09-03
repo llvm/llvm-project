@@ -1,4 +1,4 @@
-//===-- ClangPersistentVariables.cpp ----------------------------*- C++ -*-===//
+//===-- ClangPersistentVariables.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,7 @@
 
 #include "ClangPersistentVariables.h"
 #include "ClangASTImporter.h"
+#include "lldb/Expression/IRExecutionUnit.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Value.h"
@@ -16,11 +17,12 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+#ifdef LLDB_ENABLE_SWIFT
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h" // Needed for llvm::isa<SwiftASTContext>(...)
 #include "lldb/Symbol/TypeSystem.h"
-
 #include "swift/AST/Decl.h"
 #include "swift/AST/Pattern.h"
+#endif // LLDB_ENABLE_SWIFT
 #include "clang/AST/Decl.h"
 
 #include "llvm/ADT/StringMap.h"
@@ -117,4 +119,23 @@ void ClangPersistentVariables::RegisterPersistentDecl(ConstString name,
 clang::NamedDecl *
 ClangPersistentVariables::GetPersistentDecl(ConstString name) {
   return m_persistent_decls.lookup(name.GetCString()).m_decl;
+}
+
+std::shared_ptr<ClangASTImporter>
+ClangPersistentVariables::GetClangASTImporter() {
+  if (!m_ast_importer_sp) {
+    m_ast_importer_sp = std::make_shared<ClangASTImporter>();
+  }
+  return m_ast_importer_sp;
+}
+
+ConstString
+ClangPersistentVariables::GetNextPersistentVariableName(bool is_error) {
+  llvm::SmallString<64> name;
+  {
+    llvm::raw_svector_ostream os(name);
+    os << GetPersistentVariablePrefix(is_error)
+       << m_next_persistent_variable_id++;
+  }
+  return ConstString(name);
 }

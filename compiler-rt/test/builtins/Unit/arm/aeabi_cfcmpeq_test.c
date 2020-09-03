@@ -1,17 +1,5 @@
 // REQUIRES: arm-target-arch || armv6m-target-arch
-// RUN: %arm_call_apsr -o %t.aspr.o
-// RUN: %clang_builtins %s  %t.aspr.o %librt -o %t && %run %t
-//===-- aeabi_cfcmpeq.c - Test __aeabi_cfcmpeq ----------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __aeabi_cfcmpeq for the compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 
 #include <stdint.h>
 #include <stdio.h>

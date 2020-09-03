@@ -541,6 +541,7 @@ defm : JWriteResFpuPair<WriteFCmp64X,      [JFPU0, JFPA],  2>;
 defm : JWriteResYMMPair<WriteFCmp64Y,      [JFPU0, JFPA],  2, [2,2], 2>;
 defm : X86WriteResPairUnsupported<WriteFCmp64Z>;
 defm : JWriteResFpuPair<WriteFCom,  [JFPU0, JFPA, JALU0],  3>;
+defm : JWriteResFpuPair<WriteFComX, [JFPU0, JFPA, JALU0],  3>;
 defm : JWriteResFpuPair<WriteFMul,         [JFPU1, JFPM],  2>;
 defm : JWriteResFpuPair<WriteFMulX,        [JFPU1, JFPM],  2>;
 defm : JWriteResYMMPair<WriteFMulY,        [JFPU1, JFPM],  2, [2,2], 2>;
@@ -669,8 +670,10 @@ defm : X86WriteRes<WriteVecStoreX,        [JSAGU, JFPU1,   JSTC], 1, [1, 1, 1], 
 defm : X86WriteRes<WriteVecStoreY,        [JSAGU, JFPU1,   JSTC], 1, [2, 2, 2], 2>;
 defm : X86WriteRes<WriteVecStoreNT,       [JSAGU, JFPU1,   JSTC], 2, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteVecStoreNTY,      [JSAGU, JFPU1,   JSTC], 2, [2, 2, 2], 1>;
-defm : X86WriteRes<WriteVecMaskedStore,   [JSAGU, JFPU01, JVALU], 6, [1, 1, 4], 1>;
-defm : X86WriteRes<WriteVecMaskedStoreY,  [JSAGU, JFPU01, JVALU], 6, [2, 2, 4], 2>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore32>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore64>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore32Y>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore64Y>;
 
 defm : X86WriteRes<WriteVecMove,          [JFPU01, JVALU], 1, [1, 1], 1>;
 defm : X86WriteRes<WriteVecMoveX,         [JFPU01, JVALU], 1, [1, 1], 1>;

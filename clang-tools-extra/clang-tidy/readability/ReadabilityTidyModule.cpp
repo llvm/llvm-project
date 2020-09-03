@@ -28,6 +28,7 @@
 #include "MisplacedArrayIndexCheck.h"
 #include "NamedParameterCheck.h"
 #include "NonConstParameterCheck.h"
+#include "QualifiedAutoCheck.h"
 #include "RedundantAccessSpecifiersCheck.h"
 #include "RedundantControlFlowCheck.h"
 #include "RedundantDeclarationCheck.h"
@@ -44,6 +45,7 @@
 #include "StringCompareCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
+#include "UseAnyOfAllOfCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -86,6 +88,8 @@ public:
         "readability-misleading-indentation");
     CheckFactories.registerCheck<MisplacedArrayIndexCheck>(
         "readability-misplaced-array-index");
+    CheckFactories.registerCheck<QualifiedAutoCheck>(
+        "readability-qualified-auto");
     CheckFactories.registerCheck<RedundantAccessSpecifiersCheck>(
         "readability-redundant-access-specifiers");
     CheckFactories.registerCheck<RedundantFunctionPtrDereferenceCheck>(
@@ -122,6 +126,8 @@ public:
         "readability-uniqueptr-delete-release");
     CheckFactories.registerCheck<UppercaseLiteralSuffixCheck>(
         "readability-uppercase-literal-suffix");
+    CheckFactories.registerCheck<UseAnyOfAllOfCheck>(
+        "readability-use-anyofallof");
   }
 };
 

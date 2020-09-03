@@ -1,0 +1,20 @@
+# Check that llvm-symbolizer prints line-table discriminators properly.
+
+RUN: llvm-symbolizer --output-style=GNU -f --obj=%p/Inputs/discrim 0x400590 0x400575 \
+RUN:   | FileCheck %s --check-prefix=GNU --match-full-lines
+RUN: llvm-symbolizer --output-style=LLVM -f --obj=%p/Inputs/discrim 0x400590 0x400575 \
+RUN:   | FileCheck %s --check-prefix=LLVM --match-full-lines
+
+GNU: foo
+GNU: /tmp{{[\\/]}}discrim.c:5
+GNU: main
+GNU: /tmp{{[\\/]}}discrim.c:10
+GNU: foo
+GNU: /tmp{{[\\/]}}discrim.c:5 (discriminator 2)
+
+LLVM: foo
+LLVM: /tmp{{[\\/]}}discrim.c:5:7
+LLVM: main
+LLVM: /tmp{{[\\/]}}discrim.c:10:0
+LLVM: foo
+LLVM: /tmp{{[\\/]}}discrim.c:5:17

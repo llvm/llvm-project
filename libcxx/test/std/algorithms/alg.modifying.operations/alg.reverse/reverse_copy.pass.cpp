@@ -25,7 +25,7 @@ TEST_CONSTEXPR bool test_constexpr() {
 
     auto it = std::reverse_copy(std::begin(ia), std::end(ia), std::begin(ib));
 
-    return std::distance(std::begin(ib), it) == std::size(ia)
+    return std::distance(std::begin(ib), it) == static_cast<int>(std::size(ia))
         && std::equal   (std::begin(ia), std::end(ia), std::rbegin(ib))
            ;
     }

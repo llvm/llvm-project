@@ -3,7 +3,7 @@
 ; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=FASTF64,FASTF16,ALL %s
 ; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefixes=SLOWF64,SLOWF16,ALL %s
 
-; ALL: 'fmul_f32'
+; ALL-LABEL: 'fmul_f32'
 ; ALL: estimated cost of 1 for {{.*}} fmul float
 define amdgpu_kernel void @fmul_f32(float addrspace(1)* %out, float addrspace(1)* %vaddr, float %b) #0 {
   %vec = load float, float addrspace(1)* %vaddr
@@ -12,7 +12,7 @@ define amdgpu_kernel void @fmul_f32(float addrspace(1)* %out, float addrspace(1)
   ret void
 }
 
-; ALL: 'fmul_v2f32'
+; ALL-LABEL: 'fmul_v2f32'
 ; ALL: estimated cost of 2 for {{.*}} fmul <2 x float>
 define amdgpu_kernel void @fmul_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %vaddr, <2 x float> %b) #0 {
   %vec = load <2 x float>, <2 x float> addrspace(1)* %vaddr
@@ -21,7 +21,7 @@ define amdgpu_kernel void @fmul_v2f32(<2 x float> addrspace(1)* %out, <2 x float
   ret void
 }
 
-; ALL: 'fmul_v3f32'
+; ALL-LABEL: 'fmul_v3f32'
 ; Allow for 4 when v3f32 is illegal and TargetLowering thinks it needs widening,
 ; and 3 when it is legal.
 ; ALL: estimated cost of {{[34]}} for {{.*}} fmul <3 x float>
@@ -32,7 +32,7 @@ define amdgpu_kernel void @fmul_v3f32(<3 x float> addrspace(1)* %out, <3 x float
   ret void
 }
 
-; ALL: 'fmul_v5f32'
+; ALL-LABEL: 'fmul_v5f32'
 ; Allow for 8 when v5f32 is illegal and TargetLowering thinks it needs widening,
 ; and 5 when it is legal.
 ; ALL: estimated cost of {{[58]}} for {{.*}} fmul <5 x float>
@@ -43,7 +43,7 @@ define amdgpu_kernel void @fmul_v5f32(<5 x float> addrspace(1)* %out, <5 x float
   ret void
 }
 
-; ALL: 'fmul_f64'
+; ALL-LABEL: 'fmul_f64'
 ; FASTF64: estimated cost of 2 for {{.*}} fmul double
 ; SLOWF64: estimated cost of 3 for {{.*}} fmul double
 define amdgpu_kernel void @fmul_f64(double addrspace(1)* %out, double addrspace(1)* %vaddr, double %b) #0 {
@@ -53,7 +53,7 @@ define amdgpu_kernel void @fmul_f64(double addrspace(1)* %out, double addrspace(
   ret void
 }
 
-; ALL: 'fmul_v2f64'
+; ALL-LABEL: 'fmul_v2f64'
 ; FASTF64: estimated cost of 4 for {{.*}} fmul <2 x double>
 ; SLOWF64: estimated cost of 6 for {{.*}} fmul <2 x double>
 define amdgpu_kernel void @fmul_v2f64(<2 x double> addrspace(1)* %out, <2 x double> addrspace(1)* %vaddr, <2 x double> %b) #0 {
@@ -63,7 +63,7 @@ define amdgpu_kernel void @fmul_v2f64(<2 x double> addrspace(1)* %out, <2 x doub
   ret void
 }
 
-; ALL: 'fmul_v3f64'
+; ALL-LABEL: 'fmul_v3f64'
 ; FASTF64: estimated cost of 6 for {{.*}} fmul <3 x double>
 ; SLOWF64: estimated cost of 9 for {{.*}} fmul <3 x double>
 define amdgpu_kernel void @fmul_v3f64(<3 x double> addrspace(1)* %out, <3 x double> addrspace(1)* %vaddr, <3 x double> %b) #0 {
@@ -73,7 +73,7 @@ define amdgpu_kernel void @fmul_v3f64(<3 x double> addrspace(1)* %out, <3 x doub
   ret void
 }
 
-; ALL: 'fmul_f16'
+; ALL-LABEL: 'fmul_f16'
 ; ALL: estimated cost of 1 for {{.*}} fmul half
 define amdgpu_kernel void @fmul_f16(half addrspace(1)* %out, half addrspace(1)* %vaddr, half %b) #0 {
   %vec = load half, half addrspace(1)* %vaddr
@@ -82,9 +82,9 @@ define amdgpu_kernel void @fmul_f16(half addrspace(1)* %out, half addrspace(1)* 
   ret void
 }
 
-; ALL: 'fmul_v2f16'
-; SLOWF16 estimated cost of 2 for {{.*}} fmul <2 x half>
-; FASTF16 estimated cost of 1 for {{.*}} fmul <2 x half>
+; ALL-LABEL: 'fmul_v2f16'
+; SLOWF16: estimated cost of 2 for {{.*}} fmul <2 x half>
+; FASTF16: estimated cost of 1 for {{.*}} fmul <2 x half>
 define amdgpu_kernel void @fmul_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %vaddr, <2 x half> %b) #0 {
   %vec = load <2 x half>, <2 x half> addrspace(1)* %vaddr
   %add = fmul <2 x half> %vec, %b
@@ -92,9 +92,9 @@ define amdgpu_kernel void @fmul_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
   ret void
 }
 
-; ALL: 'fmul_v3f16'
-; SLOWF16 estimated cost of 4 for {{.*}} fmul <3 x half>
-; FASTF16 estimated cost of 2 for {{.*}} fmul <3 x half>
+; ALL-LABEL: 'fmul_v3f16'
+; SLOWF16: estimated cost of 4 for {{.*}} fmul <3 x half>
+; FASTF16: estimated cost of 2 for {{.*}} fmul <3 x half>
 define amdgpu_kernel void @fmul_v3f16(<3 x half> addrspace(1)* %out, <3 x half> addrspace(1)* %vaddr, <3 x half> %b) #0 {
   %vec = load <3 x half>, <3 x half> addrspace(1)* %vaddr
   %add = fmul <3 x half> %vec, %b
@@ -102,7 +102,7 @@ define amdgpu_kernel void @fmul_v3f16(<3 x half> addrspace(1)* %out, <3 x half> 
   ret void
 }
 
-; ALL: 'fmul_v4f16'
+; ALL-LABEL: 'fmul_v4f16'
 ; SLOWF16: estimated cost of 4 for {{.*}} fmul <4 x half>
 ; FASTF16: estimated cost of 2 for {{.*}} fmul <4 x half>
 define amdgpu_kernel void @fmul_v4f16(<4 x half> addrspace(1)* %out, <4 x half> addrspace(1)* %vaddr, <4 x half> %b) #0 {

@@ -42,29 +42,27 @@ CCState::CCState(CallingConv::ID CC, bool isVarArg, MachineFunction &mf,
 /// its parameter attribute.
 void CCState::HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
                           CCValAssign::LocInfo LocInfo, int MinSize,
-                          int MinAlignment, ISD::ArgFlagsTy ArgFlags) {
-  Align MinAlign(MinAlignment);
-  Align Alignment(ArgFlags.getByValAlign());
+                          Align MinAlign, ISD::ArgFlagsTy ArgFlags) {
+  Align Alignment = ArgFlags.getNonZeroByValAlign();
   unsigned Size  = ArgFlags.getByValSize();
   if (MinSize > (int)Size)
     Size = MinSize;
   if (MinAlign > Alignment)
     Alignment = MinAlign;
   ensureMaxAlignment(Alignment);
-  MF.getSubtarget().getTargetLowering()->HandleByVal(this, Size,
-                                                     Alignment.value());
+  MF.getSubtarget().getTargetLowering()->HandleByVal(this, Size, Alignment);
   Size = unsigned(alignTo(Size, MinAlign));
-  unsigned Offset = AllocateStack(Size, Alignment.value());
+  unsigned Offset = AllocateStack(Size, Alignment);
   addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
 }
 
 /// Mark a register and all of its aliases as allocated.
-void CCState::MarkAllocated(unsigned Reg) {
+void CCState::MarkAllocated(MCPhysReg Reg) {
   for (MCRegAliasIterator AI(Reg, &TRI, true); AI.isValid(); ++AI)
-    UsedRegs[*AI/32] |= 1 << (*AI&31);
+    UsedRegs[*AI / 32] |= 1 << (*AI & 31);
 }
 
-bool CCState::IsShadowAllocatedReg(unsigned Reg) const {
+bool CCState::IsShadowAllocatedReg(MCRegister Reg) const {
   if (!isAllocated(Reg))
     return false;
 
@@ -276,18 +274,14 @@ bool CCState::resultsCompatible(CallingConv::ID CalleeCC,
   for (unsigned I = 0, E = RVLocs1.size(); I != E; ++I) {
     const CCValAssign &Loc1 = RVLocs1[I];
     const CCValAssign &Loc2 = RVLocs2[I];
-    if (Loc1.getLocInfo() != Loc2.getLocInfo())
+
+    if ( // Must both be in registers, or both in memory
+        Loc1.isRegLoc() != Loc2.isRegLoc() ||
+        // Must fill the same part of their locations
+        Loc1.getLocInfo() != Loc2.getLocInfo() ||
+        // Memory offset/register number must be the same
+        Loc1.getExtraInfo() != Loc2.getExtraInfo())
       return false;
-    bool RegLoc1 = Loc1.isRegLoc();
-    if (RegLoc1 != Loc2.isRegLoc())
-      return false;
-    if (RegLoc1) {
-      if (Loc1.getLocReg() != Loc2.getLocReg())
-        return false;
-    } else {
-      if (Loc1.getLocMemOffset() != Loc2.getLocMemOffset())
-        return false;
-    }
   }
   return true;
 }

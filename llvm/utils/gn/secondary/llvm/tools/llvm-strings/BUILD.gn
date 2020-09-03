@@ -3,9 +3,7 @@ import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
 if (llvm_install_binutils_symlinks) {
   symlink_or_copy("strings") {
-    deps = [
-      ":llvm-strings",
-    ]
+    deps = [ ":llvm-strings" ]
     source = "llvm-strings"
     output = "$root_out_dir/bin/strings"
   }
@@ -13,9 +11,7 @@ if (llvm_install_binutils_symlinks) {
 
 # //:llvm-strings depends on this symlink target, see comment in //BUILD.gn.
 group("symlinks") {
-  deps = [
-    ":llvm-strings",
-  ]
+  deps = [ ":llvm-strings" ]
   if (llvm_install_binutils_symlinks) {
     deps += [ ":strings" ]
   }
@@ -28,6 +24,7 @@ executable("llvm-strings") {
     "//llvm/lib/Support",
   ]
   sources = [
+    # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
     "llvm-strings.cpp",
   ]
 }

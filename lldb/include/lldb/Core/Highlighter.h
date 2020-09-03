@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Highlighter_h_
-#define liblldb_Highlighter_h_
+#ifndef LLDB_CORE_HIGHLIGHTER_H
+#define LLDB_CORE_HIGHLIGHTER_H
 
 #include <utility>
 #include <vector>
@@ -91,7 +91,8 @@ class Highlighter {
 public:
   Highlighter() = default;
   virtual ~Highlighter() = default;
-  DISALLOW_COPY_AND_ASSIGN(Highlighter);
+  Highlighter(const Highlighter &) = delete;
+  const Highlighter &operator=(const Highlighter &) = delete;
 
   /// Returns a human readable name for the selected highlighter.
   virtual llvm::StringRef GetName() const = 0;
@@ -152,4 +153,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_Highlighter_h_
+#endif // LLDB_CORE_HIGHLIGHTER_H

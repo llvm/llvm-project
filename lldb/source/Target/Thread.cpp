@@ -1,4 +1,4 @@
-//===-- Thread.cpp ----------------------------------------------*- C++ -*-===//
+//===-- Thread.cpp --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/Thread.h"
-#include "Plugins/Process/Utility/UnwindLLDB.h"
-#include "Plugins/Process/Utility/UnwindMacOSXFrameBackchain.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
@@ -44,7 +42,7 @@
 #include "lldb/Target/ThreadPlanStepThrough.h"
 #include "lldb/Target/ThreadPlanStepUntil.h"
 #include "lldb/Target/ThreadSpec.h"
-#include "lldb/Target/Unwind.h"
+#include "lldb/Target/UnwindLLDB.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/State.h"
@@ -326,11 +324,15 @@ bool Thread::SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
 
 void Thread::FrameSelectedCallback(StackFrame *frame) {
   if (!frame)
-      return;
-  if (frame->HasDebugInformation() && GetProcess()->GetWarningsOptimization()) {
+    return;
+
+  if (frame->HasDebugInformation() &&
+      (GetProcess()->GetWarningsOptimization() ||
+       GetProcess()->GetWarningsUnsupportedLanguage())) {
     SymbolContext sc =
         frame->GetSymbolContext(eSymbolContextFunction | eSymbolContextModule);
     GetProcess()->PrintWarningOptimization(sc);
+    GetProcess()->PrintWarningUnsupportedLanguage(sc);
   }
   SymbolContext msc = frame->GetSymbolContext(eSymbolContextModule);
   if (msc.module_sp)
@@ -410,7 +412,7 @@ lldb::StopInfoSP Thread::GetPrivateStopInfo() {
     // "m_stop_info_stop_id != process_stop_id" as the condition for the if
     // statement below, we must also check the stop info to see if we need to
     // override it. See the header documentation in
-    // Process::GetStopInfoOverrideCallback() for more information on the stop
+    // Architecture::OverrideStopInfo() for more information on the stop
     // info override callback.
     if (m_stop_info_override_stop_id != process_stop_id) {
       m_stop_info_override_stop_id = process_stop_id;
@@ -585,8 +587,12 @@ std::string Thread::GetStopDescription() {
 std::string Thread::GetStopDescriptionRaw() {
   StopInfoSP stop_info_sp = GetStopInfo();
   std::string raw_stop_description;
-  if (stop_info_sp && stop_info_sp->IsValid())
+  if (stop_info_sp && stop_info_sp->IsValid()) {
     raw_stop_description = stop_info_sp->GetDescription();
+    assert((!raw_stop_description.empty() ||
+            stop_info_sp->GetStopReason() == eStopReasonNone) &&
+           "StopInfo returned an empty description.");
+  }
   return raw_stop_description;
 }
 
@@ -1071,7 +1077,7 @@ ThreadPlanStack &Thread::GetPlans() const {
   // ThreadPlanNull as its base plan.  That will give the right answers to the
   // queries GetDescription makes, and only assert if you try to run the thread.
   if (!m_null_plan_stack_up)
-    m_null_plan_stack_up.reset(new ThreadPlanStack(*this, true));
+    m_null_plan_stack_up = std::make_unique<ThreadPlanStack>(*this, true);
   return *(m_null_plan_stack_up.get());
 }
 
@@ -1125,6 +1131,7 @@ ValueObjectSP Thread::GetReturnValueObject(bool *is_swift_error_value) {
   }
   return ValueObjectSP();
 }
+
 ThreadPlanSP Thread::GetCompletedPlan() const {
   return GetPlans().GetCompletedPlan();
 }
@@ -1454,9 +1461,7 @@ StackFrameListSP Thread::GetStackFrameList() {
 void Thread::ClearStackFrames() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
 
-  Unwind *unwinder = GetUnwinder();
-  if (unwinder)
-    unwinder->Clear();
+  GetUnwinder().Clear();
 
   // Only store away the old "reference" StackFrameList if we got all its
   // frames:
@@ -1627,7 +1632,7 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
                 "first location:\n",
                 file.GetFilename().AsCString(), line);
     DumpAddressList(sstr, candidates, target);
-    *warnings = sstr.GetString();
+    *warnings = std::string(sstr.GetString());
   }
 
   if (!reg_ctx->SetPC(dest))
@@ -1895,37 +1900,10 @@ size_t Thread::GetStackFrameStatus(Stream &strm, uint32_t first_frame,
       strm, first_frame, num_frames, show_frame_info, num_frames_with_source);
 }
 
-Unwind *Thread::GetUnwinder() {
-  if (!m_unwinder_up) {
-    const ArchSpec target_arch(CalculateTarget()->GetArchitecture());
-    const llvm::Triple::ArchType machine = target_arch.GetMachine();
-    switch (machine) {
-    case llvm::Triple::x86_64:
-    case llvm::Triple::x86:
-    case llvm::Triple::arm:
-    case llvm::Triple::aarch64:
-    case llvm::Triple::aarch64_32:
-    case llvm::Triple::thumb:
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-    case llvm::Triple::ppc:
-    case llvm::Triple::ppc64:
-    case llvm::Triple::ppc64le:
-    case llvm::Triple::systemz:
-    case llvm::Triple::hexagon:
-    case llvm::Triple::arc:
-      m_unwinder_up.reset(new UnwindLLDB(*this));
-      break;
-
-    default:
-      if (target_arch.GetTriple().getVendor() == llvm::Triple::Apple)
-        m_unwinder_up.reset(new UnwindMacOSXFrameBackchain(*this));
-      break;
-    }
-  }
-  return m_unwinder_up.get();
+Unwind &Thread::GetUnwinder() {
+  if (!m_unwinder_up)
+    m_unwinder_up = std::make_unique<UnwindLLDB>(*this);
+  return *m_unwinder_up;
 }
 
 void Thread::Flush() {

@@ -977,3 +977,81 @@ define <2 x double> @negated_mag_arg_vec(<2 x double> %x) {
   %r = call arcp <2 x double> @llvm.copysign.v2f64(<2 x double> %negx, <2 x double> %x)
   ret <2 x double> %r
 }
+
+; We handle the "returned" attribute only in InstCombine, because the fact
+; that this simplification may replace one call with another may cause issues
+; for call graph passes.
+
+declare i32 @passthru_i32(i32 returned)
+declare i8* @passthru_p8(i8* returned)
+
+define i32 @returned_const_int_arg() {
+; CHECK-LABEL: @returned_const_int_arg(
+; CHECK-NEXT:    [[X:%.*]] = call i32 @passthru_i32(i32 42)
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = call i32 @passthru_i32(i32 42)
+  ret i32 %x
+}
+
+define i8* @returned_const_ptr_arg() {
+; CHECK-LABEL: @returned_const_ptr_arg(
+; CHECK-NEXT:    [[X:%.*]] = call i8* @passthru_p8(i8* null)
+; CHECK-NEXT:    ret i8* [[X]]
+;
+  %x = call i8* @passthru_p8(i8* null)
+  ret i8* %x
+}
+
+define i32 @returned_var_arg(i32 %arg) {
+; CHECK-LABEL: @returned_var_arg(
+; CHECK-NEXT:    [[X:%.*]] = call i32 @passthru_i32(i32 [[ARG:%.*]])
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = call i32 @passthru_i32(i32 %arg)
+  ret i32 %x
+}
+
+define i32 @returned_const_int_arg_musttail(i32 %arg) {
+; CHECK-LABEL: @returned_const_int_arg_musttail(
+; CHECK-NEXT:    [[X:%.*]] = musttail call i32 @passthru_i32(i32 42)
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = musttail call i32 @passthru_i32(i32 42)
+  ret i32 %x
+}
+
+define i32 @returned_var_arg_musttail(i32 %arg) {
+; CHECK-LABEL: @returned_var_arg_musttail(
+; CHECK-NEXT:    [[X:%.*]] = musttail call i32 @passthru_i32(i32 [[ARG:%.*]])
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = musttail call i32 @passthru_i32(i32 %arg)
+  ret i32 %x
+}
+
+define i32 @call_undef_musttail() {
+; CHECK-LABEL: @call_undef_musttail(
+; CHECK-NEXT:    [[X:%.*]] = musttail call i32 undef()
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = musttail call i32 undef()
+  ret i32 %x
+}
+
+; This is not the builtin fmax, so we don't know anything about its behavior.
+
+define float @nobuiltin_fmax() {
+; CHECK-LABEL: @nobuiltin_fmax(
+; CHECK-NEXT:    [[M:%.*]] = call float @fmaxf(float 0.000000e+00, float 1.000000e+00) #3
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[M]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %m = call float @fmaxf(float 0.0, float 1.0) #0
+  %r = call float @llvm.fabs.f32(float %m)
+  ret float %r
+}
+
+declare float @fmaxf(float, float)
+
+attributes #0 = { nobuiltin readnone }

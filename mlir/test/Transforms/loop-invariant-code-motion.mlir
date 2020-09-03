@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -loop-invariant-code-motion -split-input-file | FileCheck %s
+// RUN: mlir-opt %s  -split-input-file -loop-invariant-code-motion | FileCheck %s
 
 func @nested_loops_both_having_invariant_code() {
   %m = alloc() : memref<10xf32>
@@ -25,6 +25,8 @@ func @nested_loops_both_having_invariant_code() {
   return
 }
 
+// -----
+
 func @nested_loops_code_invariant_to_both() {
   %m = alloc() : memref<10xf32>
   %cf7 = constant 7.0 : f32
@@ -43,6 +45,8 @@ func @nested_loops_code_invariant_to_both() {
 
   return
 }
+
+// -----
 
 func @single_loop_nothing_invariant() {
   %m1 = alloc() : memref<10xf32>
@@ -65,13 +69,15 @@ func @single_loop_nothing_invariant() {
   return
 }
 
+// -----
+
 func @invariant_code_inside_affine_if() {
   %m = alloc() : memref<10xf32>
   %cf8 = constant 8.0 : f32
 
   affine.for %arg0 = 0 to 10 {
-    %t0 = affine.apply (d1) -> (d1 + 1)(%arg0)
-    affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %t0) {
+    %t0 = affine.apply affine_map<(d1) -> (d1 + 1)>(%arg0)
+    affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %t0) {
         %cf9 = addf %cf8, %cf8 : f32
         affine.store %cf9, %m[%arg0] : memref<10xf32>
 
@@ -81,7 +87,7 @@ func @invariant_code_inside_affine_if() {
   // CHECK: %0 = alloc() : memref<10xf32>
   // CHECK-NEXT: %cst = constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %arg0 = 0 to 10 {
-  // CHECK-NEXT: %1 = affine.apply #map3(%arg0)
+  // CHECK-NEXT: %1 = affine.apply #map0(%arg0)
   // CHECK-NEXT: affine.if #set0(%arg0, %1) {
   // CHECK-NEXT: %2 = addf %cst, %cst : f32
   // CHECK-NEXT: affine.store %2, %0[%arg0] : memref<10xf32>
@@ -91,12 +97,14 @@ func @invariant_code_inside_affine_if() {
   return
 }
 
+// -----
+
 func @invariant_affine_if() {
   %m = alloc() : memref<10xf32>
   %cf8 = constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = 0 to 10 {
-      affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %arg0) {
+      affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
           %cf9 = addf %cf8, %cf8 : f32
       }
     }
@@ -105,6 +113,8 @@ func @invariant_affine_if() {
   // CHECK: %0 = alloc() : memref<10xf32>
   // CHECK-NEXT: %[[CST:.*]] = constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 10 {
+  // CHECK-NEXT: }
+  // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.if #set0(%[[ARG]], %[[ARG]]) {
   // CHECK-NEXT: addf %[[CST]], %[[CST]] : f32
   // CHECK-NEXT: }
@@ -112,12 +122,14 @@ func @invariant_affine_if() {
   return
 }
 
+// -----
+
 func @invariant_affine_if2() {
   %m = alloc() : memref<10xf32>
   %cf8 = constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = 0 to 10 {
-      affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %arg0) {
+      affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
           %cf9 = addf %cf8, %cf8 : f32
           affine.store %cf9, %m[%arg1] : memref<10xf32>
       }
@@ -137,14 +149,16 @@ func @invariant_affine_if2() {
   return
 }
 
+// -----
+
 func @invariant_affine_nested_if() {
   %m = alloc() : memref<10xf32>
   %cf8 = constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = 0 to 10 {
-      affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %arg0) {
+      affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
           %cf9 = addf %cf8, %cf8 : f32
-          affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %arg0) {
+          affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
             %cf10 = addf %cf9, %cf9 : f32
           }
       }
@@ -167,15 +181,17 @@ func @invariant_affine_nested_if() {
   return
 }
 
+// -----
+
 func @invariant_affine_nested_if_else() {
   %m = alloc() : memref<10xf32>
   %cf8 = constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = 0 to 10 {
-      affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %arg0) {
+      affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
           %cf9 = addf %cf8, %cf8 : f32
           affine.store %cf9, %m[%arg0] : memref<10xf32>
-          affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %arg0) {
+          affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
             %cf10 = addf %cf9, %cf9 : f32
           } else {
             affine.store %cf9, %m[%arg1] : memref<10xf32>
@@ -203,6 +219,8 @@ func @invariant_affine_nested_if_else() {
   return
 }
 
+// -----
+
 func @invariant_loop_dialect() {
   %ci0 = constant 0 : index
   %ci10 = constant 10 : index
@@ -210,8 +228,8 @@ func @invariant_loop_dialect() {
   %m = alloc() : memref<10xf32>
   %cf7 = constant 7.0 : f32
   %cf8 = constant 8.0 : f32
-  loop.for %arg0 = %ci0 to %ci10 step %ci1 {
-    loop.for %arg1 = %ci0 to %ci10 step %ci1 {
+  scf.for %arg0 = %ci0 to %ci10 step %ci1 {
+    scf.for %arg1 = %ci0 to %ci10 step %ci1 {
       %v0 = addf %cf7, %cf8 : f32
     }
   }
@@ -224,21 +242,53 @@ func @invariant_loop_dialect() {
   return
 }
 
+// -----
+
 func @variant_loop_dialect() {
   %ci0 = constant 0 : index
   %ci10 = constant 10 : index
   %ci1 = constant 1 : index
   %m = alloc() : memref<10xf32>
-  loop.for %arg0 = %ci0 to %ci10 step %ci1 {
-    loop.for %arg1 = %ci0 to %ci10 step %ci1 {
+  scf.for %arg0 = %ci0 to %ci10 step %ci1 {
+    scf.for %arg1 = %ci0 to %ci10 step %ci1 {
       %v0 = addi %arg0, %arg1 : index
     }
   }
 
   // CHECK: %0 = alloc() : memref<10xf32>
-  // CHECK-NEXT: loop.for
-  // CHECK-NEXT: loop.for
+  // CHECK-NEXT: scf.for
+  // CHECK-NEXT: scf.for
   // CHECK-NEXT: addi
 
   return
 }
+
+// -----
+
+func @parallel_loop_with_invariant() {
+  %c0 = constant 0 : index
+  %c10 = constant 10 : index
+  %c1 = constant 1 : index
+  %c7 = constant 7 : i32
+  %c8 = constant 8 : i32
+  scf.parallel (%arg0, %arg1) = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+      %v0 = addi %c7, %c8 : i32
+      %v3 = addi %arg0, %arg1 : index
+  }
+
+  // CHECK-LABEL: func @parallel_loop_with_invariant
+  // CHECK: %c0 = constant 0 : index
+  // CHECK-NEXT: %c10 = constant 10 : index
+  // CHECK-NEXT: %c1 = constant 1 : index
+  // CHECK-NEXT: %c7_i32 = constant 7 : i32
+  // CHECK-NEXT: %c8_i32 = constant 8 : i32
+  // CHECK-NEXT: addi %c7_i32, %c8_i32 : i32
+  // CHECK-NEXT: scf.parallel (%arg0, %arg1) = (%c0, %c0) to (%c10, %c10) step (%c1, %c1)
+  // CHECK-NEXT:   addi %arg0, %arg1 : index
+  // CHECK-NEXT:   yield
+  // CHECK-NEXT: }
+  // CHECK-NEXT: return
+
+  return
+}
+

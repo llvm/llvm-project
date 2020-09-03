@@ -38,11 +38,9 @@ enum OpenMPRTLFunctionNVPTX {
   /// Call to void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime);
   OMPRTL_NVPTX__kmpc_spmd_kernel_deinit_v2,
   /// Call to void __kmpc_kernel_prepare_parallel(void
-  /// *outlined_function, int16_t
-  /// IsOMPRuntimeInitialized);
+  /// *outlined_function);
   OMPRTL_NVPTX__kmpc_kernel_prepare_parallel,
-  /// Call to bool __kmpc_kernel_parallel(void **outlined_function,
-  /// int16_t IsOMPRuntimeInitialized);
+  /// Call to bool __kmpc_kernel_parallel(void **outlined_function);
   OMPRTL_NVPTX__kmpc_kernel_parallel,
   /// Call to void __kmpc_kernel_end_parallel();
   OMPRTL_NVPTX__kmpc_kernel_end_parallel,
@@ -85,6 +83,9 @@ enum OpenMPRTLFunctionNVPTX {
   /// Call to void* __kmpc_data_sharing_coalesced_push_stack(size_t size,
   /// int16_t UseSharedMemory);
   OMPRTL_NVPTX__kmpc_data_sharing_coalesced_push_stack,
+  /// Call to void* __kmpc_data_sharing_push_stack(size_t size, int16_t
+  /// UseSharedMemory);
+  OMPRTL_NVPTX__kmpc_data_sharing_push_stack,
   /// Call to void __kmpc_data_sharing_pop_stack(void *a);
   OMPRTL_NVPTX__kmpc_data_sharing_pop_stack,
   /// Call to void __kmpc_begin_sharing_variables(void ***args,
@@ -341,8 +342,7 @@ class CheckVarsEscapingDeclContext final
           if (!Attr)
             return;
           if (((Attr->getCaptureKind() != OMPC_map) &&
-               !isOpenMPPrivate(
-                   static_cast<OpenMPClauseKind>(Attr->getCaptureKind()))) ||
+               !isOpenMPPrivate(Attr->getCaptureKind())) ||
               ((Attr->getCaptureKind() == OMPC_map) &&
                !FD->getType()->isAnyPointerType()))
             return;
@@ -786,6 +786,8 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     case OMPD_taskgroup:
     case OMPD_atomic:
     case OMPD_flush:
+    case OMPD_depobj:
+    case OMPD_scan:
     case OMPD_teams:
     case OMPD_target_data:
     case OMPD_target_exit_data:
@@ -801,6 +803,8 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     case OMPD_target_update:
     case OMPD_declare_simd:
     case OMPD_declare_variant:
+    case OMPD_begin_declare_variant:
+    case OMPD_end_declare_variant:
     case OMPD_declare_target:
     case OMPD_end_declare_target:
     case OMPD_declare_reduction:
@@ -813,6 +817,7 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     case OMPD_parallel_master_taskloop_simd:
     case OMPD_requires:
     case OMPD_unknown:
+    default:
       llvm_unreachable("Unexpected directive.");
     }
   }
@@ -862,6 +867,8 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_taskgroup:
   case OMPD_atomic:
   case OMPD_flush:
+  case OMPD_depobj:
+  case OMPD_scan:
   case OMPD_teams:
   case OMPD_target_data:
   case OMPD_target_exit_data:
@@ -877,6 +884,8 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_target_update:
   case OMPD_declare_simd:
   case OMPD_declare_variant:
+  case OMPD_begin_declare_variant:
+  case OMPD_end_declare_variant:
   case OMPD_declare_target:
   case OMPD_end_declare_target:
   case OMPD_declare_reduction:
@@ -889,6 +898,7 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_parallel_master_taskloop_simd:
   case OMPD_requires:
   case OMPD_unknown:
+  default:
     break;
   }
   llvm_unreachable(
@@ -1031,6 +1041,8 @@ static bool hasNestedLightweightDirective(ASTContext &Ctx,
     case OMPD_taskgroup:
     case OMPD_atomic:
     case OMPD_flush:
+    case OMPD_depobj:
+    case OMPD_scan:
     case OMPD_teams:
     case OMPD_target_data:
     case OMPD_target_exit_data:
@@ -1046,6 +1058,8 @@ static bool hasNestedLightweightDirective(ASTContext &Ctx,
     case OMPD_target_update:
     case OMPD_declare_simd:
     case OMPD_declare_variant:
+    case OMPD_begin_declare_variant:
+    case OMPD_end_declare_variant:
     case OMPD_declare_target:
     case OMPD_end_declare_target:
     case OMPD_declare_reduction:
@@ -1058,6 +1072,7 @@ static bool hasNestedLightweightDirective(ASTContext &Ctx,
     case OMPD_parallel_master_taskloop_simd:
     case OMPD_requires:
     case OMPD_unknown:
+    default:
       llvm_unreachable("Unexpected directive.");
     }
   }
@@ -1113,6 +1128,8 @@ static bool supportsLightweightRuntime(ASTContext &Ctx,
   case OMPD_taskgroup:
   case OMPD_atomic:
   case OMPD_flush:
+  case OMPD_depobj:
+  case OMPD_scan:
   case OMPD_teams:
   case OMPD_target_data:
   case OMPD_target_exit_data:
@@ -1128,6 +1145,8 @@ static bool supportsLightweightRuntime(ASTContext &Ctx,
   case OMPD_target_update:
   case OMPD_declare_simd:
   case OMPD_declare_variant:
+  case OMPD_begin_declare_variant:
+  case OMPD_end_declare_variant:
   case OMPD_declare_target:
   case OMPD_end_declare_target:
   case OMPD_declare_reduction:
@@ -1140,6 +1159,7 @@ static bool supportsLightweightRuntime(ASTContext &Ctx,
   case OMPD_parallel_master_taskloop_simd:
   case OMPD_requires:
   case OMPD_unknown:
+  default:
     break;
   }
   llvm_unreachable(
@@ -1444,8 +1464,7 @@ void CGOpenMPRuntimeNVPTX::emitWorkerLoop(CodeGenFunction &CGF,
   CGF.InitTempAlloca(WorkFn, llvm::Constant::getNullValue(CGF.Int8PtrTy));
 
   // TODO: Optimize runtime initialization and pass in correct value.
-  llvm::Value *Args[] = {WorkFn.getPointer(),
-                         /*RequiresOMPRuntime=*/Bld.getInt16(1)};
+  llvm::Value *Args[] = {WorkFn.getPointer()};
   llvm::Value *Ret = CGF.EmitRuntimeCall(
       createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_kernel_parallel), Args);
   Bld.CreateStore(Bld.CreateZExt(Ret, CGF.Int8Ty), ExecStatus);
@@ -1573,17 +1592,16 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
   }
   case OMPRTL_NVPTX__kmpc_kernel_prepare_parallel: {
     /// Build void __kmpc_kernel_prepare_parallel(
-    /// void *outlined_function, int16_t IsOMPRuntimeInitialized);
-    llvm::Type *TypeParams[] = {CGM.Int8PtrTy, CGM.Int16Ty};
+    /// void *outlined_function);
+    llvm::Type *TypeParams[] = {CGM.Int8PtrTy};
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_kernel_prepare_parallel");
     break;
   }
   case OMPRTL_NVPTX__kmpc_kernel_parallel: {
-    /// Build bool __kmpc_kernel_parallel(void **outlined_function,
-    /// int16_t IsOMPRuntimeInitialized);
-    llvm::Type *TypeParams[] = {CGM.Int8PtrPtrTy, CGM.Int16Ty};
+    /// Build bool __kmpc_kernel_parallel(void **outlined_function);
+    llvm::Type *TypeParams[] = {CGM.Int8PtrPtrTy};
     llvm::Type *RetTy = CGM.getTypes().ConvertType(CGM.getContext().BoolTy);
     auto *FnTy =
         llvm::FunctionType::get(RetTy, TypeParams, /*isVarArg*/ false);
@@ -1736,6 +1754,16 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
         llvm::FunctionType::get(CGM.VoidPtrTy, TypeParams, /*isVarArg=*/false);
     RTLFn = CGM.CreateRuntimeFunction(
         FnTy, /*Name=*/"__kmpc_data_sharing_coalesced_push_stack");
+    break;
+  }
+  case OMPRTL_NVPTX__kmpc_data_sharing_push_stack: {
+    // Build void *__kmpc_data_sharing_push_stack(size_t size, int16_t
+    // UseSharedMemory);
+    llvm::Type *TypeParams[] = {CGM.SizeTy, CGM.Int16Ty};
+    auto *FnTy =
+        llvm::FunctionType::get(CGM.VoidPtrTy, TypeParams, /*isVarArg=*/false);
+    RTLFn = CGM.CreateRuntimeFunction(
+        FnTy, /*Name=*/"__kmpc_data_sharing_push_stack");
     break;
   }
   case OMPRTL_NVPTX__kmpc_data_sharing_pop_stack: {
@@ -1913,19 +1941,6 @@ unsigned CGOpenMPRuntimeNVPTX::getDefaultLocationReserved2Flags() const {
     return UndefinedMode;
   }
   llvm_unreachable("Unknown flags are requested.");
-}
-
-bool CGOpenMPRuntimeNVPTX::tryEmitDeclareVariant(const GlobalDecl &NewGD,
-                                                 const GlobalDecl &OldGD,
-                                                 llvm::GlobalValue *OrigAddr,
-                                                 bool IsForDefinition) {
-  // Emit the function in OldGD with the body from NewGD, if NewGD is defined.
-  auto *NewFD = cast<FunctionDecl>(NewGD.getDecl());
-  if (NewFD->isDefined()) {
-    CGM.emitOpenMPDeviceFunctionRedefinition(OldGD, NewGD, OrigAddr);
-    return true;
-  }
-  return false;
 }
 
 CGOpenMPRuntimeNVPTX::CGOpenMPRuntimeNVPTX(CodeGenModule &CGM)
@@ -2208,7 +2223,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsProlog(CodeGenFunction &CGF,
       GlobalRecCastAddr = Phi;
       I->getSecond().GlobalRecordAddr = Phi;
       I->getSecond().IsInSPMDModeFlag = IsSPMD;
-    } else if (IsInTTDRegion) {
+    } else if (!CGM.getLangOpts().OpenMPCUDATargetParallel && IsInTTDRegion) {
       assert(GlobalizedRecords.back().Records.size() < 2 &&
              "Expected less than 2 globalized records: one for target and one "
              "for teams.");
@@ -2281,12 +2296,16 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsProlog(CodeGenFunction &CGF,
     } else {
       // TODO: allow the usage of shared memory to be controlled by
       // the user, for now, default to global.
+      bool UseSharedMemory =
+          IsInTTDRegion && GlobalRecordSize <= SharedMemorySize;
       llvm::Value *GlobalRecordSizeArg[] = {
           llvm::ConstantInt::get(CGM.SizeTy, GlobalRecordSize),
-          CGF.Builder.getInt16(/*UseSharedMemory=*/0)};
+          CGF.Builder.getInt16(UseSharedMemory ? 1 : 0)};
       llvm::Value *GlobalRecValue = CGF.EmitRuntimeCall(
           createNVPTXRuntimeFunction(
-              OMPRTL_NVPTX__kmpc_data_sharing_coalesced_push_stack),
+              IsInTTDRegion
+                  ? OMPRTL_NVPTX__kmpc_data_sharing_push_stack
+                  : OMPRTL_NVPTX__kmpc_data_sharing_coalesced_push_stack),
           GlobalRecordSizeArg);
       GlobalRecCastAddr = Bld.CreatePointerBitCastOrAddrSpaceCast(
           GlobalRecValue, GlobalRecPtrTy);
@@ -2433,7 +2452,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsEpilog(CodeGenFunction &CGF,
                 OMPRTL_NVPTX__kmpc_data_sharing_pop_stack),
             CGF.EmitCastToVoidPtr(I->getSecond().GlobalRecordAddr));
         CGF.EmitBlock(ExitBB);
-      } else if (IsInTTDRegion) {
+      } else if (!CGM.getLangOpts().OpenMPCUDATargetParallel && IsInTTDRegion) {
         assert(GlobalizedRecords.back().RegionCounter > 0 &&
                "region counter must be > 0.");
         --GlobalizedRecords.back().RegionCounter;
@@ -2546,7 +2565,7 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDParallelCall(
     llvm::Value *ID = Bld.CreateBitOrPointerCast(WFn, CGM.Int8PtrTy);
 
     // Prepare for parallel region. Indicate the outlined function.
-    llvm::Value *Args[] = {ID, /*RequiresOMPRuntime=*/Bld.getInt16(1)};
+    llvm::Value *Args[] = {ID};
     CGF.EmitRuntimeCall(
         createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_kernel_prepare_parallel),
         Args);
@@ -2838,8 +2857,12 @@ static llvm::Value *castValueToType(CodeGenFunction &CGF, llvm::Value *Val,
   Address CastItem = CGF.CreateMemTemp(CastTy);
   Address ValCastItem = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
       CastItem, Val->getType()->getPointerTo(CastItem.getAddressSpace()));
-  CGF.EmitStoreOfScalar(Val, ValCastItem, /*Volatile=*/false, ValTy);
-  return CGF.EmitLoadOfScalar(CastItem, /*Volatile=*/false, CastTy, Loc);
+  CGF.EmitStoreOfScalar(Val, ValCastItem, /*Volatile=*/false, ValTy,
+                        LValueBaseInfo(AlignmentSource::Type),
+                        TBAAAccessInfo());
+  return CGF.EmitLoadOfScalar(CastItem, /*Volatile=*/false, CastTy, Loc,
+                              LValueBaseInfo(AlignmentSource::Type),
+                              TBAAAccessInfo());
 }
 
 /// This function creates calls to one of two shuffle functions to copy
@@ -2926,9 +2949,14 @@ static void shuffleAndStore(CodeGenFunction &CGF, Address SrcAddr,
                        ThenBB, ExitBB);
       CGF.EmitBlock(ThenBB);
       llvm::Value *Res = createRuntimeShuffleFunction(
-          CGF, CGF.EmitLoadOfScalar(Ptr, /*Volatile=*/false, IntType, Loc),
+          CGF,
+          CGF.EmitLoadOfScalar(Ptr, /*Volatile=*/false, IntType, Loc,
+                               LValueBaseInfo(AlignmentSource::Type),
+                               TBAAAccessInfo()),
           IntType, Offset, Loc);
-      CGF.EmitStoreOfScalar(Res, ElemPtr, /*Volatile=*/false, IntType);
+      CGF.EmitStoreOfScalar(Res, ElemPtr, /*Volatile=*/false, IntType,
+                            LValueBaseInfo(AlignmentSource::Type),
+                            TBAAAccessInfo());
       Address LocalPtr = Bld.CreateConstGEP(Ptr, 1);
       Address LocalElemPtr = Bld.CreateConstGEP(ElemPtr, 1);
       PhiSrc->addIncoming(LocalPtr.getPointer(), ThenBB);
@@ -2937,9 +2965,14 @@ static void shuffleAndStore(CodeGenFunction &CGF, Address SrcAddr,
       CGF.EmitBlock(ExitBB);
     } else {
       llvm::Value *Res = createRuntimeShuffleFunction(
-          CGF, CGF.EmitLoadOfScalar(Ptr, /*Volatile=*/false, IntType, Loc),
+          CGF,
+          CGF.EmitLoadOfScalar(Ptr, /*Volatile=*/false, IntType, Loc,
+                               LValueBaseInfo(AlignmentSource::Type),
+                               TBAAAccessInfo()),
           IntType, Offset, Loc);
-      CGF.EmitStoreOfScalar(Res, ElemPtr, /*Volatile=*/false, IntType);
+      CGF.EmitStoreOfScalar(Res, ElemPtr, /*Volatile=*/false, IntType,
+                            LValueBaseInfo(AlignmentSource::Type),
+                            TBAAAccessInfo());
       Ptr = Bld.CreateConstGEP(Ptr, 1);
       ElemPtr = Bld.CreateConstGEP(ElemPtr, 1);
     }
@@ -3093,12 +3126,14 @@ static void emitReductionListCopy(
     } else {
       switch (CGF.getEvaluationKind(Private->getType())) {
       case TEK_Scalar: {
-        llvm::Value *Elem =
-            CGF.EmitLoadOfScalar(SrcElementAddr, /*Volatile=*/false,
-                                 Private->getType(), Private->getExprLoc());
+        llvm::Value *Elem = CGF.EmitLoadOfScalar(
+            SrcElementAddr, /*Volatile=*/false, Private->getType(),
+            Private->getExprLoc(), LValueBaseInfo(AlignmentSource::Type),
+            TBAAAccessInfo());
         // Store the source element value to the dest element address.
-        CGF.EmitStoreOfScalar(Elem, DestElementAddr, /*Volatile=*/false,
-                              Private->getType());
+        CGF.EmitStoreOfScalar(
+            Elem, DestElementAddr, /*Volatile=*/false, Private->getType(),
+            LValueBaseInfo(AlignmentSource::Type), TBAAAccessInfo());
         break;
       }
       case TEK_Complex: {
@@ -3241,8 +3276,9 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
   Address AddrReduceListArg = CGF.GetAddrOfLocalVar(&ReduceListArg);
   Address LocalReduceList(
       Bld.CreatePointerBitCastOrAddrSpaceCast(
-          CGF.EmitLoadOfScalar(AddrReduceListArg, /*Volatile=*/false,
-                               C.VoidPtrTy, Loc),
+          CGF.EmitLoadOfScalar(
+              AddrReduceListArg, /*Volatile=*/false, C.VoidPtrTy, Loc,
+              LValueBaseInfo(AlignmentSource::Type), TBAAAccessInfo()),
           CGF.ConvertTypeForMem(ReductionArrayTy)->getPointerTo()),
       CGF.getPointerAlign());
 
@@ -3320,10 +3356,13 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
 
       // elem = *elemptr
       //*MediumPtr = elem
-      llvm::Value *Elem =
-          CGF.EmitLoadOfScalar(ElemPtr, /*Volatile=*/false, CType, Loc);
+      llvm::Value *Elem = CGF.EmitLoadOfScalar(
+          ElemPtr, /*Volatile=*/false, CType, Loc,
+          LValueBaseInfo(AlignmentSource::Type), TBAAAccessInfo());
       // Store the source element value to the dest element address.
-      CGF.EmitStoreOfScalar(Elem, MediumPtr, /*Volatile=*/true, CType);
+      CGF.EmitStoreOfScalar(Elem, MediumPtr, /*Volatile=*/true, CType,
+                            LValueBaseInfo(AlignmentSource::Type),
+                            TBAAAccessInfo());
 
       Bld.CreateBr(MergeBB);
 
@@ -3703,8 +3742,9 @@ static llvm::Value *emitListToGlobalCopyFunction(
     GlobLVal.setAddress(Address(BufferPtr, GlobLVal.getAlignment()));
     switch (CGF.getEvaluationKind(Private->getType())) {
     case TEK_Scalar: {
-      llvm::Value *V = CGF.EmitLoadOfScalar(ElemPtr, /*Volatile=*/false,
-                                            Private->getType(), Loc);
+      llvm::Value *V = CGF.EmitLoadOfScalar(
+          ElemPtr, /*Volatile=*/false, Private->getType(), Loc,
+          LValueBaseInfo(AlignmentSource::Type), TBAAAccessInfo());
       CGF.EmitStoreOfScalar(V, GlobLVal);
       break;
     }
@@ -3907,7 +3947,9 @@ static llvm::Value *emitGlobalToListCopyFunction(
     switch (CGF.getEvaluationKind(Private->getType())) {
     case TEK_Scalar: {
       llvm::Value *V = CGF.EmitLoadOfScalar(GlobLVal, Loc);
-      CGF.EmitStoreOfScalar(V, ElemPtr, /*Volatile=*/false, Private->getType());
+      CGF.EmitStoreOfScalar(V, ElemPtr, /*Volatile=*/false, Private->getType(),
+                            LValueBaseInfo(AlignmentSource::Type),
+                            TBAAAccessInfo());
       break;
     }
     case TEK_Complex: {
@@ -4751,9 +4793,11 @@ Address CGOpenMPRuntimeNVPTX::getAddressOfLocalVariable(CodeGenFunction &CGF,
                                                         const VarDecl *VD) {
   if (VD && VD->hasAttr<OMPAllocateDeclAttr>()) {
     const auto *A = VD->getAttr<OMPAllocateDeclAttr>();
+    auto AS = LangAS::Default;
     switch (A->getAllocatorType()) {
       // Use the default allocator here as by default local vars are
       // threadlocal.
+    case OMPAllocateDeclAttr::OMPNullMemAlloc:
     case OMPAllocateDeclAttr::OMPDefaultMemAlloc:
     case OMPAllocateDeclAttr::OMPThreadMemAlloc:
     case OMPAllocateDeclAttr::OMPHighBWMemAlloc:
@@ -4763,42 +4807,30 @@ Address CGOpenMPRuntimeNVPTX::getAddressOfLocalVariable(CodeGenFunction &CGF,
     case OMPAllocateDeclAttr::OMPUserDefinedMemAlloc:
       // TODO: implement aupport for user-defined allocators.
       return Address::invalid();
-    case OMPAllocateDeclAttr::OMPConstMemAlloc: {
-      llvm::Type *VarTy = CGF.ConvertTypeForMem(VD->getType());
-      auto *GV = new llvm::GlobalVariable(
-          CGM.getModule(), VarTy, /*isConstant=*/false,
-          llvm::GlobalValue::InternalLinkage,
-          llvm::Constant::getNullValue(VarTy), VD->getName(),
-          /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
-          CGM.getContext().getTargetAddressSpace(LangAS::cuda_constant));
-      CharUnits Align = CGM.getContext().getDeclAlign(VD);
-      GV->setAlignment(Align.getAsAlign());
-      return Address(GV, Align);
-    }
-    case OMPAllocateDeclAttr::OMPPTeamMemAlloc: {
-      llvm::Type *VarTy = CGF.ConvertTypeForMem(VD->getType());
-      auto *GV = new llvm::GlobalVariable(
-          CGM.getModule(), VarTy, /*isConstant=*/false,
-          llvm::GlobalValue::InternalLinkage,
-          llvm::Constant::getNullValue(VarTy), VD->getName(),
-          /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
-          CGM.getContext().getTargetAddressSpace(LangAS::cuda_shared));
-      CharUnits Align = CGM.getContext().getDeclAlign(VD);
-      GV->setAlignment(Align.getAsAlign());
-      return Address(GV, Align);
-    }
+    case OMPAllocateDeclAttr::OMPConstMemAlloc:
+      AS = LangAS::cuda_constant;
+      break;
+    case OMPAllocateDeclAttr::OMPPTeamMemAlloc:
+      AS = LangAS::cuda_shared;
+      break;
     case OMPAllocateDeclAttr::OMPLargeCapMemAlloc:
-    case OMPAllocateDeclAttr::OMPCGroupMemAlloc: {
-      llvm::Type *VarTy = CGF.ConvertTypeForMem(VD->getType());
-      auto *GV = new llvm::GlobalVariable(
-          CGM.getModule(), VarTy, /*isConstant=*/false,
-          llvm::GlobalValue::InternalLinkage,
-          llvm::Constant::getNullValue(VarTy), VD->getName());
-      CharUnits Align = CGM.getContext().getDeclAlign(VD);
-      GV->setAlignment(Align.getAsAlign());
-      return Address(GV, Align);
+    case OMPAllocateDeclAttr::OMPCGroupMemAlloc:
+      break;
     }
-    }
+    llvm::Type *VarTy = CGF.ConvertTypeForMem(VD->getType());
+    auto *GV = new llvm::GlobalVariable(
+        CGM.getModule(), VarTy, /*isConstant=*/false,
+        llvm::GlobalValue::InternalLinkage, llvm::Constant::getNullValue(VarTy),
+        VD->getName(),
+        /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+        CGM.getContext().getTargetAddressSpace(AS));
+    CharUnits Align = CGM.getContext().getDeclAlign(VD);
+    GV->setAlignment(Align.getAsAlign());
+    return Address(
+        CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+            GV, VarTy->getPointerTo(CGM.getContext().getTargetAddressSpace(
+                    VD->getType().getAddressSpace()))),
+        Align);
   }
 
   if (getDataSharingMode(CGM) != CGOpenMPRuntimeNVPTX::Generic)
@@ -4920,6 +4952,7 @@ bool CGOpenMPRuntimeNVPTX::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
     return false;
   const auto *A = VD->getAttr<OMPAllocateDeclAttr>();
   switch(A->getAllocatorType()) {
+  case OMPAllocateDeclAttr::OMPNullMemAlloc:
   case OMPAllocateDeclAttr::OMPDefaultMemAlloc:
   // Not supported, fallback to the default mem space.
   case OMPAllocateDeclAttr::OMPThreadMemAlloc:
@@ -4946,11 +4979,7 @@ bool CGOpenMPRuntimeNVPTX::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
 static CudaArch getCudaArch(CodeGenModule &CGM) {
   if (!CGM.getTarget().hasFeature("ptx"))
     return CudaArch::UNKNOWN;
-  llvm::StringMap<bool> Features;
-  CGM.getTarget().initFeatureMap(Features, CGM.getDiags(),
-                                 CGM.getTarget().getTargetOpts().CPU,
-                                 CGM.getTarget().getTargetOpts().Features);
-  for (const auto &Feature : Features) {
+  for (const auto &Feature : CGM.getTarget().getTargetOpts().FeatureMap) {
     if (Feature.getValue()) {
       CudaArch Arch = StringToCudaArch(Feature.getKey());
       if (Arch != CudaArch::UNKNOWN)
@@ -4962,7 +4991,7 @@ static CudaArch getCudaArch(CodeGenModule &CGM) {
 
 /// Check to see if target architecture supports unified addressing which is
 /// a restriction for OpenMP requires clause "unified_shared_memory".
-void CGOpenMPRuntimeNVPTX::checkArchForUnifiedAddressing(
+void CGOpenMPRuntimeNVPTX::processRequiresDirective(
     const OMPRequiresDecl *D) {
   for (const OMPClause *Clause : D->clauselists()) {
     if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
@@ -4990,6 +5019,7 @@ void CGOpenMPRuntimeNVPTX::checkArchForUnifiedAddressing(
       case CudaArch::SM_70:
       case CudaArch::SM_72:
       case CudaArch::SM_75:
+      case CudaArch::SM_80:
       case CudaArch::GFX600:
       case CudaArch::GFX601:
       case CudaArch::GFX700:
@@ -5010,6 +5040,7 @@ void CGOpenMPRuntimeNVPTX::checkArchForUnifiedAddressing(
       case CudaArch::GFX1010:
       case CudaArch::GFX1011:
       case CudaArch::GFX1012:
+      case CudaArch::GFX1030:
       case CudaArch::UNKNOWN:
         break;
       case CudaArch::LAST:
@@ -5017,7 +5048,7 @@ void CGOpenMPRuntimeNVPTX::checkArchForUnifiedAddressing(
       }
     }
   }
-  CGOpenMPRuntime::checkArchForUnifiedAddressing(D);
+  CGOpenMPRuntime::processRequiresDirective(D);
 }
 
 /// Get number of SMs and number of blocks per SM.
@@ -5047,6 +5078,7 @@ static std::pair<unsigned, unsigned> getSMsBlocksPerSM(CodeGenModule &CGM) {
   case CudaArch::SM_70:
   case CudaArch::SM_72:
   case CudaArch::SM_75:
+  case CudaArch::SM_80:
     return {84, 32};
   case CudaArch::GFX600:
   case CudaArch::GFX601:
@@ -5068,6 +5100,7 @@ static std::pair<unsigned, unsigned> getSMsBlocksPerSM(CodeGenModule &CGM) {
   case CudaArch::GFX1010:
   case CudaArch::GFX1011:
   case CudaArch::GFX1012:
+  case CudaArch::GFX1030:
   case CudaArch::UNKNOWN:
     break;
   case CudaArch::LAST:
@@ -5077,7 +5110,8 @@ static std::pair<unsigned, unsigned> getSMsBlocksPerSM(CodeGenModule &CGM) {
 }
 
 void CGOpenMPRuntimeNVPTX::clear() {
-  if (!GlobalizedRecords.empty()) {
+  if (!GlobalizedRecords.empty() &&
+      !CGM.getLangOpts().OpenMPCUDATargetParallel) {
     ASTContext &C = CGM.getContext();
     llvm::SmallVector<const GlobalPtrSizeRecsTy *, 4> GlobalRecs;
     llvm::SmallVector<const GlobalPtrSizeRecsTy *, 4> SharedRecs;

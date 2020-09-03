@@ -7,12 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// We're building as C, so this test doesn't work when building with modules.
+// UNSUPPORTED: -fmodules
+
 // Test that the C wrapper headers can be included when compiling them as C.
 
 // NOTE: It's not common or recommended to have libc++ in the header search
 // path when compiling C files, but it does happen often enough.
 
-// RUN: %cxx -c -xc %s -fsyntax-only %flags %compile_flags -std=c99
+// RUN: %{cxx} -c -xc %s -fsyntax-only %{flags} %{compile_flags} -std=c99
 
 #include <complex.h>
 #include <ctype.h>

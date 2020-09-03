@@ -26,7 +26,6 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
-#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -36,6 +35,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
@@ -182,7 +182,7 @@ static void buildPartialUnswitchConditionalBranch(BasicBlock &BB,
                                                   BasicBlock &UnswitchedSucc,
                                                   BasicBlock &NormalSucc) {
   IRBuilder<> IRB(&BB);
-  
+
   Value *Cond = Direction ? IRB.CreateOr(Invariants) :
     IRB.CreateAnd(Invariants);
   IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
@@ -598,19 +598,36 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
 
   auto *ParentBB = SI.getParent();
 
+  // The same check must be used both for the default and the exit cases. We
+  // should never leave edges from the switch instruction to a basic block that
+  // we are unswitching, hence the condition used to determine the default case
+  // needs to also be used to populate ExitCaseIndices, which is then used to
+  // remove cases from the switch.
+  auto IsTriviallyUnswitchableExitBlock = [&](BasicBlock &BBToCheck) {
+    // BBToCheck is not an exit block if it is inside loop L.
+    if (L.contains(&BBToCheck))
+      return false;
+    // BBToCheck is not trivial to unswitch if its phis aren't loop invariant.
+    if (!areLoopExitPHIsLoopInvariant(L, *ParentBB, BBToCheck))
+      return false;
+    // We do not unswitch a block that only has an unreachable statement, as
+    // it's possible this is a previously unswitched block. Only unswitch if
+    // either the terminator is not unreachable, or, if it is, it's not the only
+    // instruction in the block.
+    auto *TI = BBToCheck.getTerminator();
+    bool isUnreachable = isa<UnreachableInst>(TI);
+    return !isUnreachable ||
+           (isUnreachable && (BBToCheck.getFirstNonPHIOrDbg() != TI));
+  };
+
   SmallVector<int, 4> ExitCaseIndices;
-  for (auto Case : SI.cases()) {
-    auto *SuccBB = Case.getCaseSuccessor();
-    if (!L.contains(SuccBB) &&
-        areLoopExitPHIsLoopInvariant(L, *ParentBB, *SuccBB))
+  for (auto Case : SI.cases())
+    if (IsTriviallyUnswitchableExitBlock(*Case.getCaseSuccessor()))
       ExitCaseIndices.push_back(Case.getCaseIndex());
-  }
   BasicBlock *DefaultExitBB = nullptr;
   SwitchInstProfUpdateWrapper::CaseWeightOpt DefaultCaseWeight =
       SwitchInstProfUpdateWrapper::getSuccessorWeight(SI, 0);
-  if (!L.contains(SI.getDefaultDest()) &&
-      areLoopExitPHIsLoopInvariant(L, *ParentBB, *SI.getDefaultDest()) &&
-      !isa<UnreachableInst>(SI.getDefaultDest()->getTerminator())) {
+  if (IsTriviallyUnswitchableExitBlock(*SI.getDefaultDest())) {
     DefaultExitBB = SI.getDefaultDest();
   } else if (ExitCaseIndices.empty())
     return false;
@@ -1557,6 +1574,11 @@ static void deleteDeadBlocksFromLoop(Loop &L,
     // Check that the dominator tree has already been updated.
     assert(!DT.getNode(BB) && "Should already have cleared domtree!");
     LI.changeLoopFor(BB, nullptr);
+    // Drop all uses of the instructions to make sure we won't have dangling
+    // uses in other blocks.
+    for (auto &I : *BB)
+      if (!I.use_empty())
+        I.replaceAllUsesWith(UndefValue::get(I.getType()));
     BB->dropAllReferences();
   }
 
@@ -2465,7 +2487,7 @@ turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
 /// unswitch candidates, making adequate predictions instead of wild guesses.
 /// That requires knowing not just the number of "remaining" candidates but
 /// also costs of unswitching for each of these candidates.
-static int calculateUnswitchCostMultiplier(
+static int CalculateUnswitchCostMultiplier(
     Instruction &TI, Loop &L, LoopInfo &LI, DominatorTree &DT,
     ArrayRef<std::pair<Instruction *, TinyPtrVector<Value *>>>
         UnswitchCandidates) {
@@ -2656,11 +2678,11 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
 
       if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
         return false;
-      if (auto CS = CallSite(&I))
-        if (CS.isConvergent() || CS.cannotDuplicate())
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        if (CB->isConvergent() || CB->cannotDuplicate())
           return false;
 
-      Cost += TTI.getUserCost(&I);
+      Cost += TTI.getUserCost(&I, TargetTransformInfo::TCK_CodeSize);
     }
     assert(Cost >= 0 && "Must not have negative costs!");
     LoopCost += Cost;
@@ -2754,7 +2776,7 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
     // exponential behavior of loop-unswitch.
     if (EnableUnswitchCostMultiplier) {
       int CostMultiplier =
-          calculateUnswitchCostMultiplier(TI, L, LI, DT, UnswitchCandidates);
+          CalculateUnswitchCostMultiplier(TI, L, LI, DT, UnswitchCandidates);
       assert(
           (CostMultiplier > 0 && CostMultiplier <= UnswitchThreshold) &&
           "cost multiplier needs to be in the range of 1..UnswitchThreshold");
@@ -2868,7 +2890,7 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
 
   // Save the current loop name in a variable so that we can report it even
   // after it has been deleted.
-  std::string LoopName = L.getName();
+  std::string LoopName = std::string(L.getName());
 
   auto UnswitchCB = [&L, &U, &LoopName](bool CurrentLoopValid,
                                         ArrayRef<Loop *> NewLoops) {
@@ -2982,10 +3004,6 @@ bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   if (MSSA && VerifyMemorySSA)
     MSSA->verifyMemorySSA();
-
-  // If anything was unswitched, also clear any cached information about this
-  // loop.
-  LPM.deleteSimpleAnalysisLoop(L);
 
   // Historically this pass has had issues with the dominator tree so verify it
   // in asserts builds.

@@ -1,4 +1,4 @@
-//===--- VariantValue.cpp - Polymorphic value type -*- C++ -*-===/
+//===--- VariantValue.cpp - Polymorphic value type --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -101,8 +101,7 @@ public:
     return llvm::None;
   }
 
-  bool isConvertibleTo(ast_type_traits::ASTNodeKind Kind,
-                       unsigned *Specificity) const override {
+  bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity) const override {
     return ArgKind(Matcher.getSupportedKind())
         .isConvertibleTo(Kind, Specificity);
   }
@@ -159,8 +158,7 @@ public:
     return llvm::None;
   }
 
-  bool isConvertibleTo(ast_type_traits::ASTNodeKind Kind,
-                       unsigned *Specificity) const override {
+  bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity) const override {
     unsigned MaxSpecificity = 0;
     for (const DynTypedMatcher &Matcher : Matchers) {
       unsigned ThisSpecificity;
@@ -202,8 +200,7 @@ public:
     return Ops.constructVariadicOperator(Op, Args);
   }
 
-  bool isConvertibleTo(ast_type_traits::ASTNodeKind Kind,
-                       unsigned *Specificity) const override {
+  bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity) const override {
     for (const VariantMatcher &Matcher : Args) {
       if (!Matcher.isConvertibleTo(Kind, Specificity))
         return false;

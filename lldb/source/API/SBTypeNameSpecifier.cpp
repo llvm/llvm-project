@@ -1,5 +1,4 @@
-//===-- SBTypeNameSpecifier.cpp ------------------------------------*- C++
-//-*-===//
+//===-- SBTypeNameSpecifier.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,7 +44,7 @@ SBTypeNameSpecifier::SBTypeNameSpecifier(const lldb::SBTypeNameSpecifier &rhs)
                           (const lldb::SBTypeNameSpecifier &), rhs);
 }
 
-SBTypeNameSpecifier::~SBTypeNameSpecifier() {}
+SBTypeNameSpecifier::~SBTypeNameSpecifier() = default;
 
 bool SBTypeNameSpecifier::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeNameSpecifier, IsValid);

@@ -93,12 +93,52 @@
 	.long	0                       # End of list: bar
 	.p2align	2
 .Lnames_end1:
+
+	.long	0xffffffff                  # DWARF64 mark
+	.quad	.Lnames_end2-.Lnames_start2 # Length
+.Lnames_start2:
+	.short	5                           # Version
+	.space	2                           # Padding
+	.long	1                           # CU count
+	.long	1                           # Local TU count
+	.long	1                           # Foreign TU count
+	.long	1                           # Bucket count
+	.long	1                           # Name count
+	.long	.Lnames_abbrev_end2-.Lnames_abbrev_start2   # Abbreviations table size
+	.long	0                           # Augmentation string size
+	.quad	0xcc00cccccccc              # CU0 offset
+	.quad	0xaa00aaaaaaaa              # Local TU0 offset
+	.quad	0xffffff00ffffffff          # Foreign TU2 signature
+	.long	1                           # Bucket 0
+	.long	0xb887389                   # Hash in Bucket 0
+	.quad	.Linfo_string0              # String in Bucket 0: foo
+	.quad	.Lnames3-.Lnames_entries2   # Offset in Bucket 0
+.Lnames_abbrev_start2:
+	.byte	0x01                        # Abbrev code
+	.byte	0x24                        # DW_TAG_base_type
+	.byte	0x02                        # DW_IDX_type_unit
+	.byte	0x06                        # DW_FORM_data4
+	.byte	0x05                        # DW_IDX_type_hash
+	.byte	0x07                        # DW_FORM_data8
+	.byte	0x00                        # End of abbrev
+	.byte	0x00                        # End of abbrev
+	.byte	0x00                        # End of abbrev list
+.Lnames_abbrev_end2:
+.Lnames_entries2:
+.Lnames3:
+	.byte	0x01                        # Abbrev code
+	.long	1                           # DW_IDX_type_unit
+	.quad	0xff03ffffffff              # DW_IDX_type_hash
+	.byte   0x00                        # End of list: foo
+	.p2align	2
+.Lnames_end2:
+
 # CHECK: .debug_names contents:
 # CHECK-NEXT: Name Index @ 0x0 {
 # CHECK-NEXT:   Header {
 # CHECK-NEXT:     Length: 0x60
+# CHECK-NEXT:     Format: DWARF32
 # CHECK-NEXT:     Version: 5
-# CHECK-NEXT:     Padding: 0x0
 # CHECK-NEXT:     CU count: 1
 # CHECK-NEXT:     Local TU count: 0
 # CHECK-NEXT:     Foreign TU count: 0
@@ -143,8 +183,8 @@
 # CHECK-NEXT: Name Index @ 0x64 {
 # CHECK-NEXT:   Header {
 # CHECK-NEXT:     Length: 0x44
+# CHECK-NEXT:     Format: DWARF32
 # CHECK-NEXT:     Version: 5
-# CHECK-NEXT:     Padding: 0x0
 # CHECK-NEXT:     CU count: 1
 # CHECK-NEXT:     Local TU count: 0
 # CHECK-NEXT:     Foreign TU count: 0
@@ -170,6 +210,48 @@
 # CHECK-NEXT:         Abbrev: 0x34
 # CHECK-NEXT:         Tag: DW_TAG_variable
 # CHECK-NEXT:         DW_IDX_die_offset: 0x00000001
+# CHECK-NEXT:       }
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]
+# CHECK-NEXT: }
+# CHECK-NEXT: Name Index @ 0xac {
+# CHECK-NEXT:   Header {
+# CHECK-NEXT:     Length: 0x68
+# CHECK-NEXT:     Format: DWARF64
+# CHECK-NEXT:     Version: 5
+# CHECK-NEXT:     CU count: 1
+# CHECK-NEXT:     Local TU count: 1
+# CHECK-NEXT:     Foreign TU count: 1
+# CHECK-NEXT:     Bucket count: 1
+# CHECK-NEXT:     Name count: 1
+# CHECK-NEXT:     Abbreviations table size: 0x9
+# CHECK-NEXT:     Augmentation: ''
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Compilation Unit offsets [
+# CHECK-NEXT:     CU[0]: 0xcc00cccccccc
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Local Type Unit offsets [
+# CHECK-NEXT:     LocalTU[0]: 0xaa00aaaaaaaa
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Foreign Type Unit signatures [
+# CHECK-NEXT:     ForeignTU[0]: 0xffffff00ffffffff
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Abbreviations [
+# CHECK-NEXT:     Abbreviation 0x1 {
+# CHECK-NEXT:       Tag: DW_TAG_base_type
+# CHECK-NEXT:       DW_IDX_type_unit: DW_FORM_data4
+# CHECK-NEXT:       DW_IDX_type_hash: DW_FORM_data8
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Bucket 0 [
+# CHECK-NEXT:     Name 1 {
+# CHECK-NEXT:       Hash: 0xB887389
+# CHECK-NEXT:       String: 0x00000000 "foo"
+# CHECK-NEXT:       Entry @ 0x111 {
+# CHECK-NEXT:         Abbrev: 0x1
+# CHECK-NEXT:         Tag: DW_TAG_base_type
+# CHECK-NEXT:         DW_IDX_type_unit: 0x00000001
+# CHECK-NEXT:         DW_IDX_type_hash: 0x0000ff03ffffffff
 # CHECK-NEXT:       }
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ]

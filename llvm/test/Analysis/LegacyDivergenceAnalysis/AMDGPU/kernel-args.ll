@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -analyze -divergence | FileCheck %s
+; RUN: opt %s -mtriple amdgcn-- -amdgpu-use-legacy-divergence-analysis -analyze -divergence | FileCheck %s
 
 ; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'test_amdgpu_ps':
 ; CHECK: DIVERGENT:

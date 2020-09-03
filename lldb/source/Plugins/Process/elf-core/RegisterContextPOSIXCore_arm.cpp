@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_arm.cpp ------------------------*- C++ -*-===//
+//===-- RegisterContextPOSIXCore_arm.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -44,10 +44,12 @@ bool RegisterContextCorePOSIX_arm::WriteFPR() {
 bool RegisterContextCorePOSIX_arm::ReadRegister(const RegisterInfo *reg_info,
                                                 RegisterValue &value) {
   lldb::offset_t offset = reg_info->byte_offset;
-  uint64_t v = m_gpr.GetMaxU64(&offset, reg_info->byte_size);
-  if (offset == reg_info->byte_offset + reg_info->byte_size) {
-    value = v;
-    return true;
+  if (offset + reg_info->byte_size <= GetGPRSize()) {
+    uint64_t v = m_gpr.GetMaxU64(&offset, reg_info->byte_size);
+    if (offset == reg_info->byte_offset + reg_info->byte_size) {
+      value = v;
+      return true;
+    }
   }
   return false;
 }

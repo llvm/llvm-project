@@ -2,7 +2,7 @@
 
 ;; Make sure that common symbols are properly internalized.
 ;; In this file, @a does not interpose any symbol in a DSO,
-;; so LTO should be able to internelize it.
+;; so LTO should be able to internalize it.
 
 ; RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux /dev/null -o %t.so.o
 ; RUN: ld.lld -shared -o %t.so %t.so.o

@@ -16,7 +16,7 @@
 
 # A caller with a stack that is small enough that the addis instruction
 # from the split-stack prologue is unneeded, and after the prologue adjustment
-# the stack size still fits whithin 16 bits.
+# the stack size still fits within 16 bits.
         .p2align    2
         .global caller_small_stack
         .type caller_small_stack, @function
@@ -54,9 +54,9 @@ caller_small_stack:
 # CHECK-NEXT:  addi 12, 1, -16416
 # CHECK-NEXT:  nop
 # CHECK-NEXT:  cmpld 7, 12, 0
-# CHECK-NEXT:  bt-  28, .+36
+# CHECK-NEXT:  bt-  28, 0x10010204
 
-# A caller that has a stack size that fits whithin 16 bits, but the adjusted
+# A caller that has a stack size that fits within 16 bits, but the adjusted
 # stack size after prologue adjustment now overflows 16 bits needing both addis
 # and addi instructions.
         .p2align    2
@@ -132,7 +132,7 @@ caller_large_stack:
 # CHECK-NEXT:  addis 12, 1, -1
 # CHECK-NEXT:  addi 12, 12, -16416
 # CHECK-NEXT:  cmpld 7, 12, 0
-# CHECK-NEXT:  bt-  28, .+44
+# CHECK-NEXT:  bt-  28, 0x100102bc
 
 # A caller with a stack size that is larger then 16 bits, but aligned such that
 # the addi instruction is unneeded.
@@ -174,7 +174,7 @@ caller_large_aligned_stack:
 # CHECK-NEXT:  addis 12, 1, -2
 # CHECK-NEXT:  addi 12, 12, -16384
 # CHECK-NEXT:  cmpld 7, 12, 0
-# CHECK-NEXT:  bt-  28, .+40
+# CHECK-NEXT:  bt-  28, 0x10010318
 
 # main only calls split-stack functions or __morestack so
 # there should be no adjustment of its split-stack prologue.

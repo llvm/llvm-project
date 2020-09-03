@@ -1,7 +1,7 @@
 ## Show that llvm-objcopy/llvm-strip removes all symbols and debug sections.
 
-# RUN: yaml2obj %p/Inputs/strip-all.yaml > %t.exec
-# RUN: yaml2obj %p/Inputs/strip-all-with-dwarf.yaml > %t.dwarf
+# RUN: yaml2obj %p/Inputs/strip-all.yaml -o %t.exec
+# RUN: yaml2obj %p/Inputs/strip-all-with-dwarf.yaml -o %t.dwarf
 
 ## Check that the symbol list satisfies the order: local / defined external /
 ## undefined external, otherwise llvm-objcopy will fail.
@@ -9,7 +9,7 @@
 
 # RUN: llvm-objcopy --strip-all %t.exec %t.exec.stripped
 # RUN: llvm-readobj --sections --relocations --symbols %t.exec.stripped \
-# RUN:   | FileCheck --check-prefixes=COMMON,EXEC %s
+# RUN:   | FileCheck --check-prefix=COMMON %s
 
 # RUN: llvm-objcopy --strip-all %t.dwarf %t.dwarf.stripped
 # RUN: llvm-readobj --sections --relocations --symbols %t.dwarf.stripped \

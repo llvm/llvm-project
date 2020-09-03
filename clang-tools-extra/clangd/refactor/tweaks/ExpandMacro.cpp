@@ -98,7 +98,7 @@ bool ExpandMacro::prepare(const Selection &Inputs) {
   auto Expansion = Inputs.AST->getTokens().expansionStartingAt(T);
   if (!Expansion)
     return false;
-  this->MacroName = T->text(Inputs.AST->getSourceManager());
+  this->MacroName = std::string(T->text(Inputs.AST->getSourceManager()));
   this->Expansion = *Expansion;
   return true;
 }
@@ -126,7 +126,7 @@ Expected<Tweak::Effect> ExpandMacro::apply(const Selection &Inputs) {
 }
 
 std::string ExpandMacro::title() const {
-  return llvm::formatv("Expand macro '{0}'", MacroName);
+  return std::string(llvm::formatv("Expand macro '{0}'", MacroName));
 }
 
 } // namespace

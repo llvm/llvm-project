@@ -1,6 +1,6 @@
 ; All of these should be codegen'd without loading immediates
 ; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -o %t
-; RUN: grep subfc %t | count 1
+; RUN: grep subc %t | count 1
 ; RUN: grep subfe %t | count 1
 ; RUN: grep subfze %t | count 1
 ; RUN: grep subfme %t | count 1

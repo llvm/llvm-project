@@ -1,5 +1,5 @@
 // FIXME: Check IR rather than asm, then triple is not needed.
-// RUN: %clang_cc1 -triple %itanium_abi_triple -S -debug-info-kind=limited -masm-verbose -x objective-c < %s | grep DW_AT_name
+// RUN: %clang_cc1 -triple %itanium_abi_triple -S -debug-info-kind=limited -x objective-c < %s | grep DW_AT_name
 @interface Foo {
   int i;
 }

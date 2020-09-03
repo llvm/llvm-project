@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <compare>
 
@@ -197,6 +197,20 @@ constexpr bool test_constexpr() {
       assert(Res > 0);
       break;
     }
+  }
+  {
+    static_assert(std::strong_ordering::less == std::strong_ordering::less);
+    static_assert(std::strong_ordering::less != std::strong_ordering::equal);
+    static_assert(std::strong_ordering::less != std::strong_ordering::greater);
+
+    static_assert(std::strong_ordering::equal != std::strong_ordering::less);
+    static_assert(std::strong_ordering::equal == std::strong_ordering::equal);
+    static_assert(std::strong_ordering::equal != std::strong_ordering::greater);
+
+    static_assert(std::strong_ordering::greater != std::strong_ordering::less);
+    static_assert(std::strong_ordering::greater != std::strong_ordering::equal);
+    static_assert(std::strong_ordering::greater ==
+                  std::strong_ordering::greater);
   }
 #endif
 

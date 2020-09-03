@@ -46,8 +46,25 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
   case MCExpr::Constant: {
     auto Value = cast<MCConstantExpr>(*this).getValue();
     auto PrintInHex = cast<MCConstantExpr>(*this).useHexFormat();
+    auto SizeInBytes = cast<MCConstantExpr>(*this).getSizeInBytes();
     if (PrintInHex)
-      OS << "0x" << Twine::utohexstr(Value);
+      switch (SizeInBytes) {
+      default:
+        OS << "0x" << Twine::utohexstr(Value);
+        break;
+      case 1:
+        OS << format("0x%02" PRIx64, Value);
+        break;
+      case 2:
+        OS << format("0x%04" PRIx64, Value);
+        break;
+      case 4:
+        OS << format("0x%08" PRIx64, Value);
+        break;
+      case 8:
+        OS << format("0x%016" PRIx64, Value);
+        break;
+      }
     else
       OS << Value;
     return;
@@ -167,17 +184,18 @@ const MCUnaryExpr *MCUnaryExpr::create(Opcode Opc, const MCExpr *Expr,
 }
 
 const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx,
-                                             bool PrintInHex) {
-  return new (Ctx) MCConstantExpr(Value, PrintInHex);
+                                             bool PrintInHex,
+                                             unsigned SizeInBytes) {
+  return new (Ctx) MCConstantExpr(Value, PrintInHex, SizeInBytes);
 }
 
 /* *** */
 
 MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
                                  const MCAsmInfo *MAI, SMLoc Loc)
-    : MCExpr(MCExpr::SymbolRef, Loc), Kind(Kind),
-      UseParensForSymbolVariant(MAI->useParensForSymbolVariant()),
-      HasSubsectionsViaSymbols(MAI->hasSubsectionsViaSymbols()),
+    : MCExpr(MCExpr::SymbolRef, Loc,
+             encodeSubclassData(Kind, MAI->useParensForSymbolVariant(),
+                                MAI->hasSubsectionsViaSymbols())),
       Symbol(Symbol) {
   assert(Symbol);
 }
@@ -203,6 +221,7 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_GOT: return "GOT";
   case VK_GOTOFF: return "GOTOFF";
   case VK_GOTREL: return "GOTREL";
+  case VK_PCREL: return "PCREL";
   case VK_GOTPCREL: return "GOTPCREL";
   case VK_GOTTPOFF: return "GOTTPOFF";
   case VK_INDNTPOFF: return "INDNTPOFF";
@@ -298,10 +317,12 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_PPC_GOT_TLSLD_LO: return "got@tlsld@l";
   case VK_PPC_GOT_TLSLD_HI: return "got@tlsld@h";
   case VK_PPC_GOT_TLSLD_HA: return "got@tlsld@ha";
+  case VK_PPC_GOT_PCREL:
+    return "got@pcrel";
   case VK_PPC_TLSLD: return "tlsld";
   case VK_PPC_LOCAL: return "local";
+  case VK_PPC_NOTOC: return "notoc";
   case VK_COFF_IMGREL32: return "IMGREL";
-  case VK_Hexagon_PCREL: return "PCREL";
   case VK_Hexagon_LO16: return "LO16";
   case VK_Hexagon_HI16: return "HI16";
   case VK_Hexagon_GPREL: return "GPREL";
@@ -321,6 +342,20 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_AMDGPU_REL64: return "rel64";
   case VK_AMDGPU_ABS32_LO: return "abs32@lo";
   case VK_AMDGPU_ABS32_HI: return "abs32@hi";
+  case VK_VE_HI32: return "hi";
+  case VK_VE_LO32: return "lo";
+  case VK_VE_PC_HI32: return "pc_hi";
+  case VK_VE_PC_LO32: return "pc_lo";
+  case VK_VE_GOT_HI32: return "got_hi";
+  case VK_VE_GOT_LO32: return "got_lo";
+  case VK_VE_GOTOFF_HI32: return "gotoff_hi";
+  case VK_VE_GOTOFF_LO32: return "gotoff_lo";
+  case VK_VE_PLT_HI32: return "plt_hi";
+  case VK_VE_PLT_LO32: return "plt_lo";
+  case VK_VE_TLS_GD_HI32: return "tls_gd_hi";
+  case VK_VE_TLS_GD_LO32: return "tls_gd_lo";
+  case VK_VE_TPOFF_HI32: return "tpoff_hi";
+  case VK_VE_TPOFF_LO32: return "tpoff_lo";
   }
   llvm_unreachable("Invalid variant kind");
 }
@@ -333,6 +368,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("got", VK_GOT)
     .Case("gotoff", VK_GOTOFF)
     .Case("gotrel", VK_GOTREL)
+    .Case("pcrel", VK_PCREL)
     .Case("gotpcrel", VK_GOTPCREL)
     .Case("gottpoff", VK_GOTTPOFF)
     .Case("indntpoff", VK_INDNTPOFF)
@@ -413,13 +449,14 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("got@tlsld@l", VK_PPC_GOT_TLSLD_LO)
     .Case("got@tlsld@h", VK_PPC_GOT_TLSLD_HI)
     .Case("got@tlsld@ha", VK_PPC_GOT_TLSLD_HA)
+    .Case("got@pcrel", VK_PPC_GOT_PCREL)
+    .Case("notoc", VK_PPC_NOTOC)
     .Case("gdgot", VK_Hexagon_GD_GOT)
     .Case("gdplt", VK_Hexagon_GD_PLT)
     .Case("iegot", VK_Hexagon_IE_GOT)
     .Case("ie", VK_Hexagon_IE)
     .Case("ldgot", VK_Hexagon_LD_GOT)
     .Case("ldplt", VK_Hexagon_LD_PLT)
-    .Case("pcrel", VK_Hexagon_PCREL)
     .Case("none", VK_ARM_NONE)
     .Case("got_prel", VK_ARM_GOT_PREL)
     .Case("target1", VK_ARM_TARGET1)
@@ -440,11 +477,25 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("rel64", VK_AMDGPU_REL64)
     .Case("abs32@lo", VK_AMDGPU_ABS32_LO)
     .Case("abs32@hi", VK_AMDGPU_ABS32_HI)
+    .Case("hi", VK_VE_HI32)
+    .Case("lo", VK_VE_LO32)
+    .Case("pc_hi", VK_VE_PC_HI32)
+    .Case("pc_lo", VK_VE_PC_LO32)
+    .Case("got_hi", VK_VE_GOT_HI32)
+    .Case("got_lo", VK_VE_GOT_LO32)
+    .Case("gotoff_hi", VK_VE_GOTOFF_HI32)
+    .Case("gotoff_lo", VK_VE_GOTOFF_LO32)
+    .Case("plt_hi", VK_VE_PLT_HI32)
+    .Case("plt_lo", VK_VE_PLT_LO32)
+    .Case("tls_gd_hi", VK_VE_TLS_GD_HI32)
+    .Case("tls_gd_lo", VK_VE_TLS_GD_LO32)
+    .Case("tpoff_hi", VK_VE_TPOFF_HI32)
+    .Case("tpoff_lo", VK_VE_TPOFF_LO32)
     .Default(VK_Invalid);
 }
 
 void MCSymbolRefExpr::printVariantKind(raw_ostream &OS) const {
-  if (UseParensForSymbolVariant)
+  if (useParensForSymbolVariant())
     OS << '(' << MCSymbolRefExpr::getVariantKindName(getKind()) << ')';
   else
     OS << '@' << MCSymbolRefExpr::getVariantKindName(getKind());
@@ -524,8 +575,10 @@ static void AttemptToFoldSymbolOffsetDifference(
   if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(*Asm, A, B, InSet))
     return;
 
-  if (SA.getFragment() == SB.getFragment() && !SA.isVariable() &&
-      !SA.isUnset() && !SB.isVariable() && !SB.isUnset()) {
+  MCFragment *FA = SA.getFragment();
+  MCFragment *FB = SB.getFragment();
+  if (FA == FB && !SA.isVariable() && !SA.isUnset() && !SB.isVariable() &&
+      !SB.isUnset()) {
     Addend += (SA.getOffset() - SB.getOffset());
 
     // Pointers to Thumb symbols need to have their low-bit set to allow
@@ -547,10 +600,15 @@ static void AttemptToFoldSymbolOffsetDifference(
   if (!Layout)
     return;
 
-  const MCSection &SecA = *SA.getFragment()->getParent();
-  const MCSection &SecB = *SB.getFragment()->getParent();
+  const MCSection &SecA = *FA->getParent();
+  const MCSection &SecB = *FB->getParent();
 
   if ((&SecA != &SecB) && !Addrs)
+    return;
+
+  // One of the symbol involved is part of a fragment being laid out. Quit now
+  // to avoid a self loop.
+  if (!Layout->canGetFragmentOffset(FA) || !Layout->canGetFragmentOffset(FB))
     return;
 
   // Eagerly evaluate.

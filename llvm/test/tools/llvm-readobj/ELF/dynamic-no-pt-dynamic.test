@@ -5,7 +5,7 @@
 # RUN: llvm-readelf --dynamic-table %t.no-phdr | FileCheck %s --check-prefix=GNU
 
 # LLVM:      File: {{.*}}.no-phdr
-# LLVM-NEXT: Format: ELF64-x86-64
+# LLVM-NEXT: Format: elf64-x86-64
 # LLVM-NEXT: Arch: x86_64
 # LLVM-NEXT: AddressSize: 64bit
 # LLVM-NEXT: LoadName:{{ *}}

@@ -194,6 +194,9 @@ def do_swig_rebuild(options, dependency_file, config_build_dir, settings):
     if options.generate_dependency_file:
         temp_dep_file_path = dependency_file + ".tmp"
 
+    bindings_python_dir = os.path.dirname(os.path.realpath(__file__))
+    bindings_dir = os.path.dirname(bindings_python_dir)
+
     # Build the SWIG args list
     is_darwin = options.target_platform == "Darwin"
     gen_deps = options.generate_dependency_file
@@ -207,7 +210,8 @@ def do_swig_rebuild(options, dependency_file, config_build_dir, settings):
             "-features", "autodoc",
             "-threads",
             "-I" + os.path.normpath(os.path.join(options.src_root, "include")),
-            "-I" + os.path.curdir,
+            "-I" + bindings_dir,
+            "-I" + bindings_python_dir,
             "-D__STDC_LIMIT_MACROS",
             "-D__STDC_CONSTANT_MACROS"
         ]
@@ -418,9 +422,9 @@ def main(options):
             return
 
     # Setup paths used during swig invocation.
-    settings.input_file = os.path.normcase(
-        os.path.join(options.src_root, "bindings", "python.swig"))
     bindings_python_dir = os.path.dirname(os.path.realpath(__file__))
+    settings.input_file = os.path.normcase(
+        os.path.join(bindings_python_dir, "python.swig"))
     settings.extensions_file = os.path.normcase(
         os.path.join(bindings_python_dir, "python-extensions.swig"))
     settings.wrapper_file = os.path.normcase(

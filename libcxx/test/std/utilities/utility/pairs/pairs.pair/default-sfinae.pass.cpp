@@ -13,7 +13,7 @@
 // Test the SFINAE required by LWG Issue #2367.
 // is_default_constructible<pair>
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <utility>
 #include <type_traits>

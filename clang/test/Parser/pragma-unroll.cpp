@@ -55,6 +55,15 @@ void test(int *List, int Length) {
 #pragma nounroll
 /* expected-error {{expected a for, while, or do-while loop to follow '#pragma nounroll'}} */ int l = Length;
 
+  switch (i) {
+  case 1:
+#pragma unroll
+/* expected-error {{expected a for, while, or do-while loop to follow '#pragma unroll'}} */ [[fallthrough]];
+  case 2:
+    for (int i = 0; i < 10; ++i);
+    break;
+  }
+
 #pragma unroll 4
 /* expected-error {{incompatible directives 'unroll(disable)' and '#pragma unroll(4)'}} */ #pragma clang loop unroll(disable)
   while (i-10 < Length) {

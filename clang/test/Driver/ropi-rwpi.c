@@ -21,6 +21,14 @@
 // RUN: %clang -target arm-none-eabi -x c++ -fropi -frwpi -### -c %s 2>&1 | FileCheck --check-prefix=CXX %s
 // RUN: %clang -target arm-none-eabi -x c++ -fallow-unsupported -fropi        -### -c %s 2>&1 | FileCheck --check-prefix=ROPI %s
 
+// RUN: %clang -target arm-none-eabi -march=armv8m.main -fropi -mcmse -### -c %s 2>&1 | FileCheck --check-prefix=ROPI-CMSE   %s
+// RUN: %clang -target arm-none-eabi -march=armv8m.main -frwpi -mcmse -### -c %s 2>&1 | FileCheck --check-prefix=RWPI-CMSE  %s
+// RUN: %clang -target arm-none-eabi -march=armv8m.main -frwpi -fropi -mcmse -### -c %s 2>&1 | FileCheck --check-prefix=ROPI-CMSE --check-prefix=RWPI-CMSE %s
+
+// RUN: %clang -target arm-none-eabi -march=armv8m.main -frwpi -mcmse -fallow-unsupported -### -c %s 2>&1 | FileCheck --check-prefix=RWPI-CMSE-ALLOW-UNSUPPORTED --check-prefix=ROPI-CMSE-ALLOW-UNSUPPORTED  %s
+// RUN: %clang -target arm-none-eabi -march=armv8m.main -fropi -mcmse -fallow-unsupported -### -c %s 2>&1 | FileCheck --check-prefix=ROPI-CMSE-ALLOW-UNSUPPORTED  %s
+// RUN: %clang -target arm-none-eabi -march=armv8m.main -frwpi -fropi -mcmse -fallow-unsupported -### -c %s 2>&1 | FileCheck --check-prefix=ROPI-CMSE-ALLOW-UNSUPPORTED --check-prefix=RWPI-CMSE-ALLOW-UNSUPPORTED %s
+
 
 // STATIC: "-mrelocation-model" "static"
 
@@ -36,3 +44,8 @@
 // PIC: error: embedded and GOT-based position independence are incompatible
 
 // CXX: error: ROPI is not compatible with c++
+
+// ROPI-CMSE: error: cmse is not compatible with ROPI
+// RWPI-CMSE: error: cmse is not compatible with RWPI
+// ROPI-CMSE-ALLOW-UNSUPPORTED-NOT: error: cmse is not compatible with ROPI
+// RWPI-CMSE-ALLOW-UNSUPPORTED-NOT: error: cmse is not compatible with RWPI

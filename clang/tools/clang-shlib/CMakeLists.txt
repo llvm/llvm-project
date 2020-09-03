@@ -13,8 +13,28 @@ foreach (lib ${clang_libs})
   else()
     list(APPEND _OBJECTS $<TARGET_OBJECTS:obj.${lib}>)
   endif()
-  list(APPEND _DEPS $<TARGET_PROPERTY:${lib},INTERFACE_LINK_LIBRARIES>)
-  list(APPEND _DEPS $<TARGET_PROPERTY:${lib},LINK_LIBRARIES>)
+  if (BUILD_SHARED_LIBS)
+    # If we are building static libraries, then we don't need to add the static
+    # libraries as a depedency, because we are already linking against the
+    # individual object files.
+    list(APPEND _DEPS $<TARGET_PROPERTY:${lib},INTERFACE_LINK_LIBRARIES>)
+  endif()
+
+  # clang libraries are redundant since we are linking all the individual
+  # object files into libclang-cpp.so, so filter them out from _DEPS.
+  # This avoids problems with LLVM global data when building with
+  # BUILD_SHARED_LIBS=ON
+  # FIXME: We could use list(FILTER) with cmake >= 3.6
+  # FIXME: With cmake >= 3.15 we could use the generator expression
+  # $<FILTER:list,INCLUDE|EXCLUDE,regex>
+  get_target_property(interface ${lib} LINK_LIBRARIES)
+  if (interface)
+    foreach(lib ${interface})
+      if (NOT ${lib} MATCHES "^clang")
+        list(APPEND _DEPS ${lib})
+      endif()
+    endforeach()
+  endif()
 endforeach ()
 
 if (CLANG_LINK_CLANG_DYLIB)

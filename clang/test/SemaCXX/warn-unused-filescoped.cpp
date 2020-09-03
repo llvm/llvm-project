@@ -164,9 +164,9 @@ namespace unused {
 }
 
 namespace test6 {
-  typedef struct {
-    void bar();
-  } A;
+  typedef struct { // expected-warning {{add a tag name}}
+    void bar(); // expected-note {{}}
+  } A; // expected-note {{}}
 
   typedef struct {
     void bar();  // expected-warning {{unused member function 'bar'}}

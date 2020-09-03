@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy -O binary -j .test2 %t %t.sec
 # RUN: llvm-objcopy -R .test2 %t %t2
 # RUN: llvm-objcopy --add-section=.test2=%t.sec %t2 %t3

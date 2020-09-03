@@ -1,4 +1,4 @@
-RUN: yaml2obj %p/Inputs/only-keep-sections.yaml > %t.in.exe
+RUN: yaml2obj %p/Inputs/only-keep-sections.yaml -o %t.in.exe
 
 RUN: llvm-objcopy --only-keep-debug %t.in.exe %t.out.exe
 RUN: llvm-readobj --sections %t.out.exe | FileCheck %s --check-prefix=SECTIONS

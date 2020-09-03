@@ -38,7 +38,7 @@ body: |
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     BUNDLE implicit-def $sgpr0_sgpr1 {
       $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
-      $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+      $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     }
     S_ENDPGM 0
 ...

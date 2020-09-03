@@ -14,7 +14,6 @@
 #define LLVM_ANALYSIS_GLOBALSMODREF_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -23,6 +22,7 @@
 #include <list>
 
 namespace llvm {
+class CallGraph;
 
 /// An alias analysis result set for globals.
 ///
@@ -82,6 +82,9 @@ class GlobalsAAResult : public AAResultBase<GlobalsAAResult> {
 public:
   GlobalsAAResult(GlobalsAAResult &&Arg);
   ~GlobalsAAResult();
+
+  bool invalidate(Module &M, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &);
 
   static GlobalsAAResult
   analyzeModule(Module &M,

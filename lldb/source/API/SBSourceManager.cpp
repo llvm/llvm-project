@@ -1,4 +1,4 @@
-//===-- SBSourceManager.cpp -------------------------------------*- C++ -*-===//
+//===-- SBSourceManager.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -75,13 +75,13 @@ SBSourceManager::SBSourceManager(const SBDebugger &debugger) {
   LLDB_RECORD_CONSTRUCTOR(SBSourceManager, (const lldb::SBDebugger &),
                           debugger);
 
-  m_opaque_up.reset(new SourceManagerImpl(debugger.get_sp()));
+  m_opaque_up = std::make_unique<SourceManagerImpl>(debugger.get_sp());
 }
 
 SBSourceManager::SBSourceManager(const SBTarget &target) {
   LLDB_RECORD_CONSTRUCTOR(SBSourceManager, (const lldb::SBTarget &), target);
 
-  m_opaque_up.reset(new SourceManagerImpl(target.GetSP()));
+  m_opaque_up = std::make_unique<SourceManagerImpl>(target.GetSP());
 }
 
 SBSourceManager::SBSourceManager(const SBSourceManager &rhs) {
@@ -91,7 +91,7 @@ SBSourceManager::SBSourceManager(const SBSourceManager &rhs) {
   if (&rhs == this)
     return;
 
-  m_opaque_up.reset(new SourceManagerImpl(*(rhs.m_opaque_up.get())));
+  m_opaque_up = std::make_unique<SourceManagerImpl>(*(rhs.m_opaque_up.get()));
 }
 
 const lldb::SBSourceManager &SBSourceManager::
@@ -100,11 +100,11 @@ operator=(const lldb::SBSourceManager &rhs) {
                      SBSourceManager, operator=,(const lldb::SBSourceManager &),
                      rhs);
 
-  m_opaque_up.reset(new SourceManagerImpl(*(rhs.m_opaque_up.get())));
+  m_opaque_up = std::make_unique<SourceManagerImpl>(*(rhs.m_opaque_up.get()));
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBSourceManager::~SBSourceManager() {}
+SBSourceManager::~SBSourceManager() = default;
 
 size_t SBSourceManager::DisplaySourceLinesWithLineNumbers(
     const SBFileSpec &file, uint32_t line, uint32_t context_before,

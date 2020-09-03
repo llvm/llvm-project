@@ -152,7 +152,7 @@ sub generate_output(\%$) {
         print( $bulk );
     }; # if
 
-}; # sub generate_ouput
+}; # sub generate_output
 
 #
 # Parse command line.
@@ -268,7 +268,7 @@ A name of input file.
 =head1 DESCRIPTION
 
 The script reads input file, process conditional directives, checks content for consistency, and
-generates ouptput file suitable for linker.
+generates output file suitable for linker.
 
 =head2 Input File Format
 
@@ -287,7 +287,7 @@ Comments start with C<#> symbol and continue to the end of line.
     %endif
 
 A part of file surrounded by C<%ifdef I<name>> and C<%endif> directives is a conditional part -- it
-has effect only if I<name> is defined in the comman line by B<--define> option. C<%ifndef> is a
+has effect only if I<name> is defined in the command line by B<--define> option. C<%ifndef> is a
 negated version of C<%ifdef> -- conditional part has an effect only if I<name> is B<not> defined.
 
 Conditional parts may be nested.

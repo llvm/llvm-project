@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -globals-aa -gvn -S | FileCheck %s
+; RUN: opt < %s -basic-aa -globals-aa -gvn -S | FileCheck %s
 
 ; This test requires the use of previous analyses to determine that
 ; doesnotmodX does not modify X (because 'sin' doesn't).

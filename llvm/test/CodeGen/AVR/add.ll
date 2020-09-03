@@ -45,6 +45,17 @@ define i16 @add16_reg_imm_subi(i16 %a) {
     ret i16 %result
 }
 
+define i16 @add16_reg_reg_zext(i16 %a, i1 zeroext %b) {
+; CHECK-LABEL: add16_reg_reg_zext:
+; CHECK: mov r18, r22
+; CHECK: clr r19
+; CHECK: add r24, r18
+; CHECK: adc r25, r19
+    %zext = zext i1 %b to i16
+    %result = add i16 %a, %zext
+    ret i16 %result
+}
+
 define i32 @add32_reg_reg(i32 %a, i32 %b) {
 ; CHECK-LABEL: add32_reg_reg:
 ; CHECK: add r22, r18
@@ -62,6 +73,21 @@ define i32 @add32_reg_imm(i32 %a) {
 ; CHECK: sbci r24, 255
 ; CHECK: sbci r25, 255
     %result = add i32 %a, 5
+    ret i32 %result
+}
+
+define i32 @add32_reg_reg_zext(i32 %a, i1 zeroext %b) {
+; CHECK-LABEL: add32_reg_reg_zext:
+; CHECK: mov r18, r20
+; CHECK: clr r19
+; CHECK: ldi r20, 0
+; CHECK: ldi r21, 0
+; CHECK: add r22, r18
+; CHECK: adc r23, r19
+; CHECK: adc r24, r20
+; CHECK: adc r25, r21
+    %zext = zext i1 %b to i32
+    %result = add i32 %a, %zext
     ret i32 %result
 }
 
@@ -89,5 +115,24 @@ define i64 @add64_reg_imm(i64 %a) {
 ; CHECK: sbci r24, 255
 ; CHECK: sbci r25, 255
     %result = add i64 %a, 5
+    ret i64 %result
+}
+
+define i64 @add64_reg_reg_zext(i64 %a, i1 zeroext %b) {
+; CHECK-LABEL: add64_reg_reg_zext:
+; CHECK: mov r30, r16
+; CHECK: clr r31
+; CHECK: ldi r26, 0
+; CHECK: ldi r27, 0
+; CHECK: add r18, r30
+; CHECK: adc r19, r31
+; CHECK: adc r20, r26
+; CHECK: adc r21, r27
+; CHECK: adc r22, r26
+; CHECK: adc r23, r27
+; CHECK: adc r24, r26
+; CHECK: adc r25, r27
+    %zext = zext i1 %b to i64
+    %result = add i64 %a, %zext
     ret i64 %result
 }

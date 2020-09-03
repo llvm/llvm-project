@@ -18,6 +18,7 @@
 #include "AMDGPU.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 
@@ -52,8 +53,6 @@ protected:
   SDValue LowerFRINT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFNEARBYINT(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerFROUND_LegalFTRUNC(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFROUND64(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFFLOOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFLOG(SDValue Op, SelectionDAG &DAG,
@@ -172,7 +171,15 @@ public:
   bool isZExtFree(EVT Src, EVT Dest) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
 
+  SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG,
+                               bool LegalOperations, bool ForCodeSize,
+                               NegatibleCost &Cost,
+                               unsigned Depth) const override;
+
   bool isNarrowingProfitable(EVT VT1, EVT VT2) const override;
+
+  EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
+                          ISD::NodeType ExtendKind) const override;
 
   MVT getVectorIdxTy(const DataLayout &) const override;
   bool isSelectSupported(SelectSupportKind) const override;
@@ -264,6 +271,12 @@ public:
                                            const SelectionDAG &DAG,
                                            unsigned Depth = 0) const override;
 
+  unsigned computeNumSignBitsForTargetInstr(GISelKnownBits &Analysis,
+                                            Register R,
+                                            const APInt &DemandedElts,
+                                            const MachineRegisterInfo &MRI,
+                                            unsigned Depth = 0) const override;
+
   bool isKnownNeverNaNForTargetNode(SDValue Op,
                                     const SelectionDAG &DAG,
                                     bool SNaN = false,
@@ -276,19 +289,19 @@ public:
   /// a copy from the register.
   SDValue CreateLiveInRegister(SelectionDAG &DAG,
                                const TargetRegisterClass *RC,
-                               unsigned Reg, EVT VT,
+                               Register Reg, EVT VT,
                                const SDLoc &SL,
                                bool RawReg = false) const;
   SDValue CreateLiveInRegister(SelectionDAG &DAG,
                                const TargetRegisterClass *RC,
-                               unsigned Reg, EVT VT) const {
+                               Register Reg, EVT VT) const {
     return CreateLiveInRegister(DAG, RC, Reg, VT, SDLoc(DAG.getEntryNode()));
   }
 
   // Returns the raw live in register rather than a copy from it.
   SDValue CreateLiveInRegisterRaw(SelectionDAG &DAG,
                                   const TargetRegisterClass *RC,
-                                  unsigned Reg, EVT VT) const {
+                                  Register Reg, EVT VT) const {
     return CreateLiveInRegister(DAG, RC, Reg, VT, SDLoc(DAG.getEntryNode()), true);
   }
 
@@ -398,14 +411,12 @@ enum NodeType : unsigned {
   // For emitting ISD::FMAD when f32 denormals are enabled because mac/mad is
   // treated as an illegal operation.
   FMAD_FTZ,
-  TRIG_PREOP, // 1 ULP max error for f64
 
   // RCP, RSQ - For f32, 1 ULP max error, no denormal handling.
   //            For f64, max error 2^29 ULP, handles denormals.
   RCP,
   RSQ,
   RCP_LEGACY,
-  RSQ_LEGACY,
   RCP_IFLAG,
   FMUL_LEGACY,
   RSQ_CLAMP,
@@ -433,8 +444,6 @@ enum NodeType : unsigned {
   MUL_LOHI_U24,
   PERM,
   TEXTURE_FETCH,
-  EXPORT, // exp on SI+
-  EXPORT_DONE, // exp on SI+ with done bit set
   R600_EXPORT,
   CONST_ADDRESS,
   REGISTER_LOAD,
@@ -476,12 +485,8 @@ enum NodeType : unsigned {
   BUILD_VERTICAL_VECTOR,
   /// Pointer to the start of the shader's constant data.
   CONST_DATA_PTR,
-  INTERP_P1LL_F16,
-  INTERP_P1LV_F16,
-  INTERP_P2_F16,
   PC_ADD_REL_OFFSET,
   LDS,
-  KILL,
   DUMMY_CHAIN,
   FIRST_MEM_OPCODE_NUMBER = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LOAD_D16_HI,
@@ -503,6 +508,7 @@ enum NodeType : unsigned {
   ATOMIC_DEC,
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_FMAX,
+  ATOMIC_LOAD_CSUB,
   BUFFER_LOAD,
   BUFFER_LOAD_UBYTE,
   BUFFER_LOAD_USHORT,
@@ -529,6 +535,7 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_INC,
   BUFFER_ATOMIC_DEC,
   BUFFER_ATOMIC_CMPSWAP,
+  BUFFER_ATOMIC_CSUB,
   BUFFER_ATOMIC_FADD,
   BUFFER_ATOMIC_PK_FADD,
   ATOMIC_PK_FADD,

@@ -24,10 +24,12 @@ entry:
 %struct.S2 = type { i32, i32, i32, i32 }
 define dso_local [2 x i64] @"?f2"() {
 entry:
+; FIXME: Missed optimization, the entire SP push/pop could be removed
 ; CHECK-LABEL: f2
-; CHECK: stp xzr, xzr, [sp], #16
-; CHECK: mov x0, xzr
-; CHECK: mov x1, xzr
+; CHECK:         stp     xzr, xzr, [sp, #-16]!
+; CHECK-NEXT:    mov     x0, xzr
+; CHECK-NEXT:    mov     x1, xzr
+; CHECK-NEXT:    add     sp, sp, #16
 
   %retval = alloca %struct.S2, align 4
   %a = getelementptr inbounds %struct.S2, %struct.S2* %retval, i32 0, i32 0

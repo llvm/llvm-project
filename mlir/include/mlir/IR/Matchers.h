@@ -1,6 +1,6 @@
 //===- Matchers.h - Various common matchers ---------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -48,27 +48,36 @@ struct attr_value_binder {
   }
 };
 
-/// The matcher that matches a constant foldable operation that has no side
-/// effect, no operands and produces a single result.
+/// The matcher that matches operations that have the `ConstantLike` trait.
+struct constant_op_matcher {
+  bool match(Operation *op) { return op->hasTrait<OpTrait::ConstantLike>(); }
+};
+
+/// The matcher that matches operations that have the `ConstantLike` trait, and
+/// binds the folded attribute value.
 template <typename AttrT> struct constant_op_binder {
   AttrT *bind_value;
 
   /// Creates a matcher instance that binds the constant attribute value to
   /// bind_value if match succeeds.
   constant_op_binder(AttrT *bind_value) : bind_value(bind_value) {}
+  /// Creates a matcher instance that doesn't bind if match succeeds.
+  constant_op_binder() : bind_value(nullptr) {}
 
   bool match(Operation *op) {
-    if (op->getNumOperands() > 0 || op->getNumResults() != 1)
-      return false;
-    if (!op->hasNoSideEffect())
+    if (!op->hasTrait<OpTrait::ConstantLike>())
       return false;
 
+    // Fold the constant to an attribute.
     SmallVector<OpFoldResult, 1> foldedOp;
-    if (succeeded(op->fold(/*operands=*/llvm::None, foldedOp))) {
-      if (auto attr = foldedOp.front().dyn_cast<Attribute>()) {
-        if ((*bind_value = attr.dyn_cast<AttrT>()))
-          return true;
-      }
+    LogicalResult result = op->fold(/*operands=*/llvm::None, foldedOp);
+    (void)result;
+    assert(succeeded(result) && "expected ConstantLike op to be foldable");
+
+    if (auto attr = foldedOp.front().get<Attribute>().dyn_cast<AttrT>()) {
+      if (bind_value)
+        *bind_value = attr;
+      return true;
     }
     return false;
   }
@@ -86,12 +95,11 @@ struct constant_int_op_binder {
     Attribute attr;
     if (!constant_op_binder<Attribute>(&attr).match(op))
       return false;
-    auto type = op->getResult(0)->getType();
+    auto type = op->getResult(0).getType();
 
-    if (type.isIntOrIndex()) {
+    if (type.isa<IntegerType, IndexType>())
       return attr_value_binder<IntegerAttr>(bind_value).match(attr);
-    }
-    if (type.isa<VectorType>() || type.isa<RankedTensorType>()) {
+    if (type.isa<VectorType, RankedTensorType>()) {
       if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>()) {
         return attr_value_binder<IntegerAttr>(bind_value)
             .match(splatAttr.getSplatValue());
@@ -132,20 +140,22 @@ using has_operation_or_value_matcher_t =
 
 /// Statically switch to a Value matcher.
 template <typename MatcherClass>
-typename std::enable_if_t<is_detected<detail::has_operation_or_value_matcher_t,
-                                      MatcherClass, Value>::value,
-                          bool>
+typename std::enable_if_t<
+    llvm::is_detected<detail::has_operation_or_value_matcher_t, MatcherClass,
+                      Value>::value,
+    bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
   return matcher.match(op->getOperand(idx));
 }
 
 /// Statically switch to an Operation matcher.
 template <typename MatcherClass>
-typename std::enable_if_t<is_detected<detail::has_operation_or_value_matcher_t,
-                                      MatcherClass, Operation *>::value,
-                          bool>
+typename std::enable_if_t<
+    llvm::is_detected<detail::has_operation_or_value_matcher_t, MatcherClass,
+                      Operation *>::value,
+    bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
-  if (auto defOp = op->getOperand(idx)->getDefiningOp())
+  if (auto defOp = op->getOperand(idx).getDefiningOp())
     return matcher.match(defOp);
   return false;
 }
@@ -196,6 +206,11 @@ struct RecursivePatternMatcher {
 
 } // end namespace detail
 
+/// Matches a constant foldable operation.
+inline detail::constant_op_matcher m_Constant() {
+  return detail::constant_op_matcher();
+}
+
 /// Matches a value from a constant foldable operation and writes the value to
 /// bind_value.
 template <typename AttrT>
@@ -228,7 +243,7 @@ inline detail::constant_int_not_value_matcher<0> m_NonZero() {
 template <typename Pattern>
 inline bool matchPattern(Value value, const Pattern &pattern) {
   // TODO: handle other cases
-  if (auto *op = value->getDefiningOp())
+  if (auto *op = value.getDefiningOp())
     return const_cast<Pattern &>(pattern).match(op);
   return false;
 }

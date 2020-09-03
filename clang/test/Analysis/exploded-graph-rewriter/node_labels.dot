@@ -7,9 +7,6 @@
 // RUN: %exploded_graph_rewriter %s --gray --dark \
 // RUN:     | FileCheck %s -check-prefixes CHECK,DARK,GRAY
 
-// FIXME: Substitution doesn't seem to work on Windows.
-// UNSUPPORTED: system-windows
-
 // LIGHT: Node0x1 [shape=record,label=<
 // DARK:  Node0x1 [shape=record,color="white",fontcolor="gray80",label=<
 // CHECK-SAME:   <tr>

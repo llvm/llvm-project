@@ -7,7 +7,7 @@
 # RUN:  .rw3 : { *(.rw3) }    \
 # RUN: }" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-objdump -section-headers %t1 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t1 | FileCheck %s
 
 ## .jcr is a relro section and should be placed before other RW sections.
 ## .bss is SHT_NOBITS section and should be last RW section, so some space

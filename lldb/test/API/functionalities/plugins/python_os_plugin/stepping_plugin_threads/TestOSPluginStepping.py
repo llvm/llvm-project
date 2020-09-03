@@ -8,6 +8,7 @@ from __future__ import print_function
 
 import os
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
@@ -17,6 +18,7 @@ class TestOSPluginStepping(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfWindows
     def test_python_os_plugin(self):
         """Test that stepping works when the OS Plugin doesn't report all
            threads at every stop"""
@@ -24,6 +26,7 @@ class TestOSPluginStepping(TestBase):
         self.main_file = lldb.SBFileSpec('main.cpp')
         self.run_python_os_step_missing_thread(False)
 
+    @skipIfWindows
     def test_python_os_plugin_prune(self):
         """Test that pruning the unreported PlanStacks works"""
         self.build()

@@ -1,10 +1,8 @@
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -verify-machineinstrs \
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown -verify-machineinstrs \
 ; RUN:   -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck %s
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -verify-machineinstrs \
-; RUN:   -ppc-asm-full-reg-names \
-; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64-unknown-unknown -verify-machineinstrs \
+; RUN:   -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
+; RUN:   FileCheck %s --check-prefix=CHECK-BE
 
 ; Function Attrs: norecurse nounwind readnone
 define i64 @getPart1(fp128 %in) local_unnamed_addr {

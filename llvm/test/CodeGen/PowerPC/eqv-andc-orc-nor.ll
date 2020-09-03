@@ -5,7 +5,7 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | \
 ; RUN:   grep orc | count 2
 ; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5 | \
-; RUN:   grep nor | count 3
+; RUN:   grep nor | count 2
 ; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | \
 ; RUN:   grep nand | count 1
 

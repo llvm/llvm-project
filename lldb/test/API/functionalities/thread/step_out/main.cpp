@@ -1,11 +1,3 @@
-//===-- main.cpp ------------------------------------------------*- C++ -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 // This test is intended to create a situation in which two threads are stopped
 // at a breakpoint and the debugger issues a step-out command.
 

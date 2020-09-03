@@ -1,6 +1,6 @@
 //===- RegionUtils.h - Region-related transformation utilities --*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -22,7 +22,7 @@ namespace mlir {
 template <typename Range>
 bool areValuesDefinedAbove(Range values, Region &limit) {
   for (Value v : values)
-    if (!v->getParentRegion()->isProperAncestor(&limit))
+    if (!v.getParentRegion()->isProperAncestor(&limit))
       return false;
   return true;
 }

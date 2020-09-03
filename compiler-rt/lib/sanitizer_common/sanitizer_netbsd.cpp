@@ -95,7 +95,7 @@ static void *GetRealLibcAddress(const char *symbol) {
 
 // --------------- sanitizer_libc.h
 uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
-                   OFF_T offset) {
+                   u64 offset) {
   CHECK(&__mmap);
   return (uptr)__mmap(addr, length, prot, flags, fd, 0, offset);
 }
@@ -263,6 +263,11 @@ uptr internal_getpid() {
 uptr internal_getppid() {
   DEFINE__REAL(int, getppid);
   return _REAL(getppid);
+}
+
+int internal_dlinfo(void *handle, int request, void *p) {
+  DEFINE__REAL(int, dlinfo, void *a, int b, void *c);
+  return _REAL(dlinfo, handle, request, p);
 }
 
 uptr internal_getdents(fd_t fd, void *dirp, unsigned int count) {

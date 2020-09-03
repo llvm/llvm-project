@@ -10,8 +10,10 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "AvoidNSErrorInitCheck.h"
+#include "DeallocInCategoryCheck.h"
 #include "ForbiddenSubclassingCheck.h"
 #include "MissingHashCheck.h"
+#include "NSInvocationArgumentLifetimeCheck.h"
 #include "PropertyDeclarationCheck.h"
 #include "SuperSelfCheck.h"
 
@@ -26,10 +28,14 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidNSErrorInitCheck>(
         "objc-avoid-nserror-init");
+    CheckFactories.registerCheck<DeallocInCategoryCheck>(
+        "objc-dealloc-in-category");
     CheckFactories.registerCheck<ForbiddenSubclassingCheck>(
         "objc-forbidden-subclassing");
     CheckFactories.registerCheck<MissingHashCheck>(
         "objc-missing-hash");
+    CheckFactories.registerCheck<NSInvocationArgumentLifetimeCheck>(
+        "objc-nsinvocation-argument-lifetime");
     CheckFactories.registerCheck<PropertyDeclarationCheck>(
         "objc-property-declaration");
     CheckFactories.registerCheck<SuperSelfCheck>(

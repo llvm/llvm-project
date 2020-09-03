@@ -19,6 +19,8 @@ if (current_cpu == "x86") {
 } else if (current_cpu == "arm64") {
   if (current_os == "android") {
     llvm_current_triple = "aarch64-linux-android29"
+  } else if (current_os == "mac") {
+    llvm_current_triple = "arm64-apple-darwin"
   }
 } else if (current_cpu == "ppc64") {
   if (current_os == "linux") {

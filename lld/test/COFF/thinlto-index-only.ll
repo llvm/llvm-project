@@ -39,6 +39,7 @@
 ; BACKEND2-NEXT: <FLAGS
 ; BACKEND2-NEXT: <VALUE_GUID op0=1 op1=-5300342847281564238
 ; BACKEND2-NEXT: <COMBINED
+; BACKEND2-NEXT: <BLOCK_COUNT op0=2/>
 ; BACKEND2-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 
 ; Thin archive tests. Check that the module paths point to the original files.

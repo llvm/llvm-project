@@ -1,3 +1,5 @@
+// REQUIRES: darwin
+
 // RUN: echo "void dso1(void) {}" > %t.dso1.c
 // RUN: echo "void dso2(void) {}" > %t.dso2.c
 // RUN: %clang_pgogen -dynamiclib -o %t.dso1.dylib %t.dso1.c

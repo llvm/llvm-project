@@ -1,16 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_paritydi2
-//===-- paritydi2_test.c - Test __paritydi2 -------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __paritydi2 for the compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
 
 #include "int_lib.h"
 #include <stdio.h>
@@ -18,7 +7,7 @@
 
 // Returns: 1 if number of bits is odd else returns 0
 
-COMPILER_RT_ABI si_int __paritydi2(di_int a);
+COMPILER_RT_ABI int __paritydi2(di_int a);
 
 int naive_parity(di_int a)
 {

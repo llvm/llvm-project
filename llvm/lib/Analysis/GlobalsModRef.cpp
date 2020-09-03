@@ -17,6 +17,7 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -28,6 +29,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "globalsmodref-aa"
@@ -77,7 +79,7 @@ class GlobalsAAResult::FunctionInfo {
     static inline AlignedMap *getFromVoidPointer(void *P) {
       return (AlignedMap *)P;
     }
-    enum { NumLowBitsAvailable = 3 };
+    static constexpr int NumLowBitsAvailable = 3;
     static_assert(alignof(AlignedMap) >= (1 << NumLowBitsAvailable),
                   "AlignedMap insufficiently aligned to have enough low bits.");
   };
@@ -808,6 +810,14 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
 
   // If all the inputs to V were definitively no-alias, then V is no-alias.
   return true;
+}
+
+bool GlobalsAAResult::invalidate(Module &, const PreservedAnalyses &PA,
+                                 ModuleAnalysisManager::Invalidator &) {
+  // Check whether the analysis has been explicitly invalidated. Otherwise, it's
+  // stateless and remains preserved.
+  auto PAC = PA.getChecker<GlobalsAA>();
+  return !PAC.preservedWhenStateless();
 }
 
 /// alias - If one of the pointers is to a global that we are tracking, and the

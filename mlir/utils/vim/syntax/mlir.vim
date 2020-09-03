@@ -31,10 +31,10 @@ syn match mlirType /x\s*\zsvector/
 " Operations.
 " Core ops (not exhaustive yet).
 " TODO: the list is not exhaustive.
-syn keyword mlirOps alloc alloca addf addi call call_indirect cmpi constant
+syn keyword mlirOps alloc alloca addf addi call call_indirect cmpf cmpi constant
 syn keyword mlirOps dealloc divf dma_start dma_wait dim extract_element
 syn keyword mlirOps getTensor index_cast load memref_cast memref_shape_cast
-syn keyword mlirOps mulf muli prefetch sitofp splat store select subf subi
+syn keyword mlirOps mulf muli negf prefetch sitofp splat store select subf subi
 syn keyword mlirOps subview tensor_cast view
 
 " Affine ops.
@@ -53,6 +53,8 @@ syn match mlirOps /\<loop\.if\>/
 
 " Keywords.
 syn keyword mlirKeyword
+      \ affine_map
+      \ affine_set
       \ dense
       \ else
       \ func

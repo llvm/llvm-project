@@ -16,8 +16,56 @@
 #include "ubsan_value.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_mutex.h"
+
+// TODO(dliew): Prefer '__APPLE__' here over 'SANITIZER_MAC', as the latter is
+// unclear. rdar://58124919 tracks using a more obviously portable guard.
+#if defined(__APPLE__)
+#include <dlfcn.h>
+#endif
 
 using namespace __ubsan;
+
+typedef const char *(*ObjCGetClassNameTy)(void *);
+
+const char *__ubsan::getObjCClassName(ValueHandle Pointer) {
+#if defined(__APPLE__)
+  // We need to query the ObjC runtime for some information, but do not want
+  // to introduce a static dependency from the ubsan runtime onto ObjC. Try to
+  // grab a handle to the ObjC runtime used by the process.
+  static bool AttemptedDlopen = false;
+  static void *ObjCHandle = nullptr;
+  static void *ObjCObjectGetClassName = nullptr;
+
+  // Prevent threads from racing to dlopen().
+  static __sanitizer::StaticSpinMutex Lock;
+  {
+    __sanitizer::SpinMutexLock Guard(&Lock);
+
+    if (!AttemptedDlopen) {
+      ObjCHandle = dlopen(
+          "/usr/lib/libobjc.A.dylib",
+          RTLD_LAZY         // Only bind symbols when used.
+              | RTLD_LOCAL  // Only make symbols available via the handle.
+              | RTLD_NOLOAD // Do not load the dylib, just grab a handle if the
+                            // image is already loaded.
+              | RTLD_FIRST  // Only search the image pointed-to by the handle.
+      );
+      AttemptedDlopen = true;
+      if (!ObjCHandle)
+        return nullptr;
+      ObjCObjectGetClassName = dlsym(ObjCHandle, "object_getClassName");
+    }
+  }
+
+  if (!ObjCObjectGetClassName)
+    return nullptr;
+
+  return ObjCGetClassNameTy(ObjCObjectGetClassName)((void *)Pointer);
+#else
+  return nullptr;
+#endif
+}
 
 SIntMax Value::getSIntValue() const {
   CHECK(getType().isSignedIntegerTy());

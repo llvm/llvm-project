@@ -1,9 +1,13 @@
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple \
-; RUN: aarch64-arm-none-eabi %s -o - | FileCheck %s
+; RUN: aarch64-arm-none-eabi %s -o - | FileCheck %s --check-prefixes CHECK,V8A
+; RUN-V83A: llc -verify-machineinstrs -enable-machine-outliner -mtriple \
+; RUN-V83A: aarch64-arm-none-eabi -mattr=+v8.3a %s -o - > %t
+; RUN-V83A: FileCheck --check-prefixes CHECK,V83A < %t %s
 
 define void @a() "sign-return-address"="all" "sign-return-address-key"="a_key" nounwind {
 ; CHECK-LABEL:      a:                                     // @a
-; CHECK:                paciasp
+; V8A:              hint #25
+; V83A:             paciasp
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -16,13 +20,15 @@ define void @a() "sign-return-address"="all" "sign-return-address-key"="a_key" n
   store i32 4, i32* %4, align 4
   store i32 5, i32* %5, align 4
   store i32 6, i32* %6, align 4
-; CHECK:              autiasp
+; V8A:              hint #29
+; V83A:             autiasp
   ret void
 }
 
 define void @b() "sign-return-address"="all" nounwind {
 ; CHECK-LABEL:      b:                                     // @b
-; CHECK:                paciasp
+; V8A:              hint #25
+; V83A:             paciasp
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -35,13 +41,15 @@ define void @b() "sign-return-address"="all" nounwind {
   store i32 4, i32* %4, align 4
   store i32 5, i32* %5, align 4
   store i32 6, i32* %6, align 4
-; CHECK:                autiasp
+; V8A:              hint #29
+; V83A:             autiasp
   ret void
 }
 
 define void @c() "sign-return-address"="all" nounwind {
 ; CHECK-LABEL:      c:                                     // @c
-; CHECK:                paciasp
+; V8A:              hint #25
+; V83A:             paciasp
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -54,11 +62,14 @@ define void @c() "sign-return-address"="all" nounwind {
   store i32 4, i32* %4, align 4
   store i32 5, i32* %5, align 4
   store i32 6, i32* %6, align 4
-; CHECK:              autiasp
+; V8A:              hint #29
+; V83A:             autiasp
   ret void
 }
 
 ; CHECK-LABEL:      OUTLINED_FUNCTION_0:
-; CHECK:              paciasp
-; CHECK:              autiasp
+; V8A:                hint #25
+; V83A:               paciasp
+; V8A:                hint #29
+; V83A:               autiasp
 ; CHECK-NEXT:         ret

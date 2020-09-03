@@ -1,10 +1,17 @@
 // Test host codegen.
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64 --check-prefix OMP45
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64 --check-prefix OMP45
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix OMP45
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix OMP45
+
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64 --check-prefix OMP50
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64 --check-prefix OMP50
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix OMP50
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix OMP50
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
@@ -15,6 +22,15 @@
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
 // Test target codegen - host bc file has to be created first.
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-64
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-64
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-32
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-32
+
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-64
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
@@ -690,31 +706,31 @@ int bar(int n){
 
 // CHECK:       [[IFEND]]
 
-// CHECK: define {{.*}}@{{.*}}zee{{.*}}
+// OMP45: define {{.*}}@{{.*}}zee{{.*}}
 
-// CHECK:       [[LOCAL_THIS:%.+]] = alloca [[S2]]*
-// CHECK:       [[BP:%.+]] = alloca [1 x i8*]
-// CHECK:       [[P:%.+]] = alloca [1 x i8*]
-// CHECK:       [[LOCAL_THIS1:%.+]] = load [[S2]]*, [[S2]]** [[LOCAL_THIS]]
-// CHECK:       [[ARR_IDX:%.+]] = getelementptr inbounds [[S2]], [[S2]]* [[LOCAL_THIS1]], i[[SZ]] 0
-// CHECK:       [[ARR_IDX2:%.+]] = getelementptr inbounds [[S2]], [[S2]]* [[LOCAL_THIS1]], i[[SZ]] 0
+// OMP45:       [[LOCAL_THIS:%.+]] = alloca [[S2]]*
+// OMP45:       [[BP:%.+]] = alloca [1 x i8*]
+// OMP45:       [[P:%.+]] = alloca [1 x i8*]
+// OMP45:       [[LOCAL_THIS1:%.+]] = load [[S2]]*, [[S2]]** [[LOCAL_THIS]]
+// OMP45:       [[ARR_IDX:%.+]] = getelementptr inbounds [[S2]], [[S2]]* [[LOCAL_THIS1]], i[[SZ]] 0
+// OMP45:       [[ARR_IDX2:%.+]] = getelementptr inbounds [[S2]], [[S2]]* [[LOCAL_THIS1]], i[[SZ]] 0
 
-// CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP]], i32 0, i32 0
-// CHECK-DAG:   [[PADDR0:%.+]] =  getelementptr inbounds [1 x i8*], [1 x i8*]* [[P]], i32 0, i32 0
-// CHECK-DAG:   [[CBPADDR0:%.+]] = bitcast i8** [[BPADDR0]] to [[S2]]**
-// CHECK-DAG:   [[CPADDR0:%.+]] = bitcast i8** [[PADDR0]] to [[S2]]**
-// CHECK-DAG:   store [[S2]]* [[ARR_IDX]], [[S2]]** [[CBPADDR0]]
-// CHECK-DAG:   store [[S2]]* [[ARR_IDX2]], [[S2]]** [[CPADDR0]]
+// OMP45-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP]], i32 0, i32 0
+// OMP45-DAG:   [[PADDR0:%.+]] =  getelementptr inbounds [1 x i8*], [1 x i8*]* [[P]], i32 0, i32 0
+// OMP45-DAG:   [[CBPADDR0:%.+]] = bitcast i8** [[BPADDR0]] to [[S2]]**
+// OMP45-DAG:   [[CPADDR0:%.+]] = bitcast i8** [[PADDR0]] to [[S2]]**
+// OMP45-DAG:   store [[S2]]* [[ARR_IDX]], [[S2]]** [[CBPADDR0]]
+// OMP45-DAG:   store [[S2]]* [[ARR_IDX2]], [[S2]]** [[CPADDR0]]
 
-// CHECK:       [[BPR:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP]], i32 0, i32 0
-// CHECK:       [[PR:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[P]], i32 0, i32 0
-// CHECK:       [[RET:%.+]] = call i32 @__tgt_target(i64 -1, i8* @{{[^,]+}}, i32 1, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[SIZET9]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPT10]], i32 0, i32 0))
-// CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
-// CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
-// CHECK:       [[FAIL]]
-// CHECK:       call void [[HVT0:@.+]]([[S2]]* [[LOCAL_THIS1]])
-// CHECK-NEXT:  br label %[[END]]
-// CHECK:       [[END]]
+// OMP45:       [[BPR:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP]], i32 0, i32 0
+// OMP45:       [[PR:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[P]], i32 0, i32 0
+// OMP45:       [[RET:%.+]] = call i32 @__tgt_target(i64 -1, i8* @{{[^,]+}}, i32 1, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[SIZET9]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPT10]], i32 0, i32 0))
+// OMP45-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
+// OMP45-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
+// OMP45:       [[FAIL]]
+// OMP45:       call void [[HVT0:@.+]]([[S2]]* [[LOCAL_THIS1]])
+// OMP45-NEXT:  br label %[[END]]
+// OMP45:       [[END]]
 
 // Check that the offloading functions are emitted and that the arguments are
 // correct and loaded correctly for the target regions of the callees of bar().
@@ -784,6 +800,33 @@ int bar(int n){
 // CHECK-DAG:   load i16, i16* [[REF_AA]]
 // CHECK-DAG:   getelementptr inbounds [10 x i32], [10 x i32]* [[REF_B]], i[[SZ]] 0, i[[SZ]] 2
 
+
+// OMP50: define {{.*}}@{{.*}}zee{{.*}}
+
+// OMP50:       [[LOCAL_THIS:%.+]] = alloca [[S2]]*
+// OMP50:       [[BP:%.+]] = alloca [1 x i8*]
+// OMP50:       [[P:%.+]] = alloca [1 x i8*]
+// OMP50:       [[LOCAL_THIS1:%.+]] = load [[S2]]*, [[S2]]** [[LOCAL_THIS]]
+// OMP50:       [[ARR_IDX:%.+]] = getelementptr inbounds [[S2]], [[S2]]* [[LOCAL_THIS1]], i[[SZ]] 0
+// OMP50:       [[ARR_IDX2:%.+]] = getelementptr inbounds [[S2]], [[S2]]* [[LOCAL_THIS1]], i[[SZ]] 0
+
+// OMP50-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP]], i32 0, i32 0
+// OMP50-DAG:   [[PADDR0:%.+]] =  getelementptr inbounds [1 x i8*], [1 x i8*]* [[P]], i32 0, i32 0
+// OMP50-DAG:   [[CBPADDR0:%.+]] = bitcast i8** [[BPADDR0]] to [[S2]]**
+// OMP50-DAG:   [[CPADDR0:%.+]] = bitcast i8** [[PADDR0]] to [[S2]]**
+// OMP50-DAG:   store [[S2]]* [[ARR_IDX]], [[S2]]** [[CBPADDR0]]
+// OMP50-DAG:   store [[S2]]* [[ARR_IDX2]], [[S2]]** [[CPADDR0]]
+
+// OMP50:       [[BPR:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP]], i32 0, i32 0
+// OMP50:       [[PR:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[P]], i32 0, i32 0
+// OMP50:       [[RET:%.+]] = call i32 @__tgt_target(i64 -1, i8* @{{[^,]+}}, i32 1, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[SIZET9]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPT10]], i32 0, i32 0))
+// OMP50-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
+// OMP50-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
+// OMP50:       [[FAIL]]
+// OMP50:       call void [[HVT0:@.+]]([[S2]]* [[LOCAL_THIS1]])
+// OMP50-NEXT:  br label %[[END]]
+// OMP50:       [[END]]
+ 
 void bar () {
 #define pragma_target _Pragma("omp target")
 pragma_target

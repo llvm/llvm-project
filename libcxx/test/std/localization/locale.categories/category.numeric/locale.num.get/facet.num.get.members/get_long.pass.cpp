@@ -15,7 +15,6 @@
 
 // This test exercises the fix for PR28704, which isn't in the dylib for
 // some systems.
-// XFAIL: with_system_cxx_lib=macosx10.15
 // XFAIL: with_system_cxx_lib=macosx10.14
 // XFAIL: with_system_cxx_lib=macosx10.13
 // XFAIL: with_system_cxx_lib=macosx10.12
@@ -157,6 +156,7 @@ int main(int, char**)
         assert(v == 83);
     }
     {
+        // See PR11871
         const char str[] = "2-";
         ios.setf(zf, ios.basefield);
         std::ios_base::iostate err = ios.goodbit;

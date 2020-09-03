@@ -59,43 +59,30 @@
   $result = list.release();
 }
 
-
 %typemap(in) lldb::tid_t {
-  if (PythonInteger::Check($input))
-  {
-    PythonInteger py_int(PyRefType::Borrowed, $input);
-    $1 = static_cast<lldb::tid_t>(py_int.GetInteger());
-  }
-  else
-  {
-    PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+  PythonObject obj = Retain<PythonObject>($input);
+  lldb::tid_t value = unwrapOrSetPythonException(As<unsigned long long>(obj)); 
+  if (PyErr_Occurred())
     return nullptr;
-  }
+  $1 = value;
 }
 
 %typemap(in) lldb::StateType {
-  if (PythonInteger::Check($input))
-  {
-    PythonInteger py_int(PyRefType::Borrowed, $input);
-    int64_t state_type_value = py_int.GetInteger() ;
-
-    if (state_type_value > lldb::StateType::kLastStateType) {
-      PyErr_SetString(PyExc_ValueError, "Not a valid StateType value");
-      return nullptr;
-    }
-    $1 = static_cast<lldb::StateType>(state_type_value);
-  }
-  else
-  {
-    PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+  PythonObject obj = Retain<PythonObject>($input);
+  unsigned long long state_type_value =
+    unwrapOrSetPythonException(As<unsigned long long>(obj));
+  if (PyErr_Occurred())
+    return nullptr;
+  if (state_type_value > lldb::StateType::kLastStateType) {
+    PyErr_SetString(PyExc_ValueError, "Not a valid StateType value");
     return nullptr;
   }
+  $1 = static_cast<lldb::StateType>(state_type_value);
 }
 
 /* Typemap definitions to allow SWIG to properly handle char buffer. */
 
 // typemap for a char buffer
-// See also SBThread::GetStopDescription.
 %typemap(in) (char *dst, size_t dst_len) {
    if (!PyInt_Check($input)) {
        PyErr_SetString(PyExc_ValueError, "Expecting an integer");
@@ -113,7 +100,6 @@
 %typemap(in) (void *char_buf, size_t size) = (char *dst, size_t dst_len);
 
 // Return the char buffer.  Discarding any previous return result
-// See also SBThread::GetStopDescription.
 %typemap(argout) (char *dst, size_t dst_len) {
    Py_XDECREF($result);   /* Blow away any previous result */
    if (result == 0) {
@@ -130,6 +116,28 @@
 // SBProcess::ReadCStringFromMemory() uses a void*, but needs to be treated
 // as char data instead of byte data.
 %typemap(argout) (void *char_buf, size_t size) = (char *dst, size_t dst_len);
+
+
+// typemap for handling an snprintf-like API like SBThread::GetStopDescription.
+%typemap(in) (char *dst_or_null, size_t dst_len) {
+   if (!PyInt_Check($input)) {
+       PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+       return NULL;
+   }
+   $2 = PyInt_AsLong($input);
+   if ($2 <= 0) {
+       PyErr_SetString(PyExc_ValueError, "Positive integer expected");
+       return NULL;
+   }
+   $1 = (char *) malloc($2);
+}
+%typemap(argout) (char *dst_or_null, size_t dst_len) {
+   Py_XDECREF($result);   /* Blow away any previous result */
+   llvm::StringRef ref($1);
+   PythonString string(ref);
+   $result = string.release();
+   free($1);
+}
 
 
 // typemap for an outgoing buffer
@@ -468,39 +476,53 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
     }
 }
 
+%inline %{
+
+struct Py_buffer_RAII {
+  Py_buffer buffer = {};
+  Py_buffer_RAII() {};
+  Py_buffer &operator=(const Py_buffer_RAII &) = delete;
+  Py_buffer_RAII(const Py_buffer_RAII &) = delete;
+  ~Py_buffer_RAII() {
+    if (buffer.obj)
+      PyBuffer_Release(&buffer);
+  }
+};
+
+%}
+
 // These two pybuffer macros are copied out of swig/Lib/python/pybuffer.i,
 // and fixed so they will not crash if PyObject_GetBuffer fails.
 // https://github.com/swig/swig/issues/1640
+//
+// I've also moved the call to PyBuffer_Release to the end of the SWIG wrapper,
+// doing it right away is not legal according to the python buffer protocol.
 
 %define %pybuffer_mutable_binary(TYPEMAP, SIZE)
-%typemap(in) (TYPEMAP, SIZE) {
+%typemap(in) (TYPEMAP, SIZE) (Py_buffer_RAII view) {
   int res; Py_ssize_t size = 0; void *buf = 0;
-  Py_buffer view;
-  res = PyObject_GetBuffer($input, &view, PyBUF_WRITABLE);
+  res = PyObject_GetBuffer($input, &view.buffer, PyBUF_WRITABLE);
   if (res < 0) {
     PyErr_Clear();
     %argument_fail(res, "(TYPEMAP, SIZE)", $symname, $argnum);
   }
-  size = view.len;
-  buf = view.buf;
-  PyBuffer_Release(&view);
+  size = view.buffer.len;
+  buf = view.buffer.buf;
   $1 = ($1_ltype) buf;
   $2 = ($2_ltype) (size/sizeof($*1_type));
 }
 %enddef
 
 %define %pybuffer_binary(TYPEMAP, SIZE)
-%typemap(in) (TYPEMAP, SIZE) {
+%typemap(in) (TYPEMAP, SIZE) (Py_buffer_RAII view) {
   int res; Py_ssize_t size = 0; const void *buf = 0;
-  Py_buffer view;
-  res = PyObject_GetBuffer($input, &view, PyBUF_CONTIG_RO);
+  res = PyObject_GetBuffer($input, &view.buffer, PyBUF_CONTIG_RO);
   if (res < 0) {
     PyErr_Clear();
     %argument_fail(res, "(TYPEMAP, SIZE)", $symname, $argnum);
   }
-  size = view.len;
-  buf = view.buf;
-  PyBuffer_Release(&view);
+  size = view.buffer.len;
+  buf = view.buffer.buf;
   $1 = ($1_ltype) buf;
   $2 = ($2_ltype) (size / sizeof($*1_type));
 }

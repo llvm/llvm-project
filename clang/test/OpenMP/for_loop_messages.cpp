@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5 %s -Wuninitialized
 
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5 %s -Wuninitialized
 
 class S {
@@ -830,4 +830,14 @@ void test_nowait() {
 #pragma omp for nowait nowait // expected-error {{directive '#pragma omp for' cannot contain more than one 'nowait' clause}}
   for (int i = 0; i < 16; ++i)
     ;
+}
+
+void test_static_data_member() {
+#pragma omp parallel
+#pragma omp for
+  for (int i = 0; i < 16; ++i) {
+    class X {
+      static int x; // expected-error {{static data member 'x' not allowed in local class 'X'}}
+    };
+  }
 }

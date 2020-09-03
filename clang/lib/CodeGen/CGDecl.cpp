@@ -31,6 +31,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "clang/Sema/Sema.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -39,6 +40,9 @@
 
 using namespace clang;
 using namespace CodeGen;
+
+static_assert(clang::Sema::MaximumAlignment <= llvm::Value::MaximumAlignment,
+              "Clang max alignment greater than what LLVM supports?");
 
 void CodeGenFunction::EmitDecl(const Decl &D) {
   switch (D.getKind()) {
@@ -104,6 +108,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::StaticAssert: // static_assert(X, ""); [C++0x]
   case Decl::Label:        // __label__ x;
   case Decl::Import:
+  case Decl::MSGuid:    // __declspec(uuid("..."))
   case Decl::OMPThreadPrivate:
   case Decl::OMPAllocate:
   case Decl::OMPCapturedExpr:
@@ -111,6 +116,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Empty:
   case Decl::Concept:
   case Decl::LifetimeExtendedTemporary:
+  case Decl::RequiresExprBody:
     // None of these decls require codegen support.
     return;
 
@@ -205,9 +211,9 @@ static std::string getStaticDeclName(CodeGenModule &CGM, const VarDecl &D) {
   if (auto *CD = dyn_cast<CapturedDecl>(DC))
     DC = cast<DeclContext>(CD->getNonClosureContext());
   if (const auto *FD = dyn_cast<FunctionDecl>(DC))
-    ContextName = CGM.getMangledName(FD);
+    ContextName = std::string(CGM.getMangledName(FD));
   else if (const auto *BD = dyn_cast<BlockDecl>(DC))
-    ContextName = CGM.getBlockMangledName(GlobalDecl(), BD);
+    ContextName = std::string(CGM.getBlockMangledName(GlobalDecl(), BD));
   else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(DC))
     ContextName = OMD->getSelector().getAsString();
   else
@@ -232,7 +238,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   // Use the label if the variable is renamed with the asm-label extension.
   std::string Name;
   if (D.hasAttr<AsmLabelAttr>())
-    Name = getMangledName(&D);
+    Name = std::string(getMangledName(&D));
   else
     Name = getStaticDeclName(*this, D);
 
@@ -244,7 +250,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   // variables cannot have an initializer.
   llvm::Constant *Init = nullptr;
   if (Ty.getAddressSpace() == LangAS::opencl_local ||
-      D.hasAttr<CUDASharedAttr>())
+      D.hasAttr<CUDASharedAttr>() || D.hasAttr<LoaderUninitializedAttr>())
     Init = llvm::UndefValue::get(LTy);
   else
     Init = EmitNullConstant(Ty);
@@ -336,7 +342,7 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
   // the global to match the initializer.  (We have to do this
   // because some types, like unions, can't be completely represented
   // in the LLVM type system.)
-  if (GV->getType()->getElementType() != Init->getType()) {
+  if (GV->getValueType() != Init->getType()) {
     llvm::GlobalVariable *OldGV = GV;
 
     GV = new llvm::GlobalVariable(CGM.getModule(), Init->getType(),
@@ -366,7 +372,8 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
 
   emitter.finalize(GV);
 
-  if (D.needsDestruction(getContext()) && HaveInsertPoint()) {
+  if (D.needsDestruction(getContext()) == QualType::DK_cxx_destructor &&
+      HaveInsertPoint()) {
     // We have a constant initializer, but a nontrivial destructor. We still
     // need to perform a guarded "initialization" in order to register the
     // destructor.
@@ -445,8 +452,7 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
 
   // Emit global variable debug descriptor for static vars.
   CGDebugInfo *DI = getDebugInfo();
-  if (DI &&
-      CGM.getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo) {
+  if (DI && CGM.getCodeGenOpts().hasReducedDebugInfo()) {
     DI->setLocation(D.getLocation());
     DI->EmitGlobalVariable(var, &D);
   }
@@ -762,10 +768,8 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
 
   // If we're emitting a value with lifetime, we have to do the
   // initialization *before* we leave the cleanup scopes.
-  if (const FullExpr *fe = dyn_cast<FullExpr>(init)) {
-    enterFullExpression(fe);
-    init = fe->getSubExpr();
-  }
+  if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(init))
+    init = EWC->getSubExpr();
   CodeGenFunction::RunCleanupsScope Scope(*this);
 
   // We have to maintain the illusion that the variable is
@@ -1051,13 +1055,13 @@ static llvm::Constant *constWithPadding(CodeGenModule &CGM, IsPattern isPattern,
   llvm::Type *OrigTy = constant->getType();
   if (const auto STy = dyn_cast<llvm::StructType>(OrigTy))
     return constStructWithPadding(CGM, isPattern, STy, constant);
-  if (auto *STy = dyn_cast<llvm::SequentialType>(OrigTy)) {
+  if (auto *ArrayTy = dyn_cast<llvm::ArrayType>(OrigTy)) {
     llvm::SmallVector<llvm::Constant *, 8> Values;
-    unsigned Size = STy->getNumElements();
+    uint64_t Size = ArrayTy->getNumElements();
     if (!Size)
       return constant;
-    llvm::Type *ElemTy = STy->getElementType();
-    bool ZeroInitializer = constant->isZeroValue();
+    llvm::Type *ElemTy = ArrayTy->getElementType();
+    bool ZeroInitializer = constant->isNullValue();
     llvm::Constant *OpValue, *PaddedOp;
     if (ZeroInitializer) {
       OpValue = llvm::Constant::getNullValue(ElemTy);
@@ -1073,13 +1077,12 @@ static llvm::Constant *constWithPadding(CodeGenModule &CGM, IsPattern isPattern,
     auto *NewElemTy = Values[0]->getType();
     if (NewElemTy == ElemTy)
       return constant;
-    if (OrigTy->isArrayTy()) {
-      auto *ArrayTy = llvm::ArrayType::get(NewElemTy, Size);
-      return llvm::ConstantArray::get(ArrayTy, Values);
-    } else {
-      return llvm::ConstantVector::get(Values);
-    }
+    auto *NewArrayTy = llvm::ArrayType::get(NewElemTy, Size);
+    return llvm::ConstantArray::get(NewArrayTy, Values);
   }
+  // FIXME: Add handling for tail padding in vectors. Vectors don't
+  // have padding between or inside elements, but the total amount of
+  // data can be less than the allocated size.
   return constant;
 }
 
@@ -1092,7 +1095,7 @@ Address CodeGenModule::createUnnamedGlobalFrom(const VarDecl &D,
         return CC->getNameAsString();
       if (const auto *CD = dyn_cast<CXXDestructorDecl>(FD))
         return CD->getNameAsString();
-      return getMangledName(FD);
+      return std::string(getMangledName(FD));
     } else if (const auto *OM = dyn_cast<ObjCMethodDecl>(DC)) {
       return OM->getNameAsString();
     } else if (isa<BlockDecl>(DC)) {
@@ -1399,15 +1402,19 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     EmitVariablyModifiedType(Ty);
 
   auto *DI = getDebugInfo();
-  bool EmitDebugInfo = DI && CGM.getCodeGenOpts().getDebugInfo() >=
-                                 codegenoptions::LimitedDebugInfo;
+  bool EmitDebugInfo = DI && CGM.getCodeGenOpts().hasReducedDebugInfo();
 
   Address address = Address::invalid();
   Address AllocaAddr = Address::invalid();
-  Address OpenMPLocalAddr =
-      getLangOpts().OpenMP
-          ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
-          : Address::invalid();
+  Address OpenMPLocalAddr = Address::invalid();
+  if (CGM.getLangOpts().OpenMPIRBuilder)
+    OpenMPLocalAddr = OMPBuilderCBHelpers::getAddressOfLocalVariable(*this, &D);
+  else
+    OpenMPLocalAddr =
+        getLangOpts().OpenMP
+            ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
+            : Address::invalid();
+
   bool NRVO = getLangOpts().ElideConstructors && D.isNRVOVariable();
 
   if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {
@@ -1519,9 +1526,12 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
         // is rare.
         if (!Bypasses.IsBypassed(&D) &&
             !(!getLangOpts().CPlusPlus && hasLabelBeenSeenInCurrentScope())) {
-          uint64_t size = CGM.getDataLayout().getTypeAllocSize(allocaTy);
+          llvm::TypeSize size =
+              CGM.getDataLayout().getTypeAllocSize(allocaTy);
           emission.SizeForLifetimeMarkers =
-              EmitLifetimeStart(size, AllocaAddr.getPointer());
+              size.isScalable() ? EmitLifetimeStart(-1, AllocaAddr.getPointer())
+                                : EmitLifetimeStart(size.getFixedSize(),
+                                                    AllocaAddr.getPointer());
         }
       } else {
         assert(!emission.useLifetimeMarkers());
@@ -1678,9 +1688,13 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
     case LangOptions::TrivialAutoVarInitKind::Uninitialized:
       llvm_unreachable("Uninitialized handled by caller");
     case LangOptions::TrivialAutoVarInitKind::Zero:
+      if (CGM.stopAutoInit())
+        return;
       emitStoresForZeroInit(CGM, D, Loc, isVolatile, Builder);
       break;
     case LangOptions::TrivialAutoVarInitKind::Pattern:
+      if (CGM.stopAutoInit())
+        return;
       emitStoresForPatternInit(CGM, D, Loc, isVolatile, Builder);
       break;
     }
@@ -1703,6 +1717,8 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
     llvm_unreachable("Uninitialized handled by caller");
 
   case LangOptions::TrivialAutoVarInitKind::Zero:
+    if (CGM.stopAutoInit())
+      return;
     if (!EltSize.isOne())
       SizeVal = Builder.CreateNUWMul(SizeVal, CGM.getSize(EltSize));
     Builder.CreateMemSet(Loc, llvm::ConstantInt::get(Int8Ty, 0), SizeVal,
@@ -1710,6 +1726,8 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
     break;
 
   case LangOptions::TrivialAutoVarInitKind::Pattern: {
+    if (CGM.stopAutoInit())
+      return;
     llvm::Type *ElTy = Loc.getElementType();
     llvm::Constant *Constant = constWithPadding(
         CGM, IsPattern::Yes, initializationPatternFor(CGM, ElTy));
@@ -1868,9 +1886,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
 ///
 /// \param init the initializing expression
 /// \param D the object to act as if we're initializing
-/// \param loc the address to initialize; its type is a pointer
-///   to the LLVM mapping of the object's type
-/// \param alignment the alignment of the address
+/// \param lvalue the lvalue to initialize
 /// \param capturedByInit true if \p D is a __block variable
 ///   whose address is potentially changed by the initializer
 void CodeGenFunction::EmitExprAsInit(const Expr *init, const ValueDecl *D,
@@ -2078,21 +2094,47 @@ void CodeGenFunction::pushStackRestore(CleanupKind Kind, Address SPMem) {
   EHStack.pushCleanup<CallStackRestore>(Kind, SPMem);
 }
 
-void CodeGenFunction::pushLifetimeExtendedDestroy(
-    CleanupKind cleanupKind, Address addr, QualType type,
-    Destroyer *destroyer, bool useEHCleanupForArray) {
-  // Push an EH-only cleanup for the object now.
-  // FIXME: When popping normal cleanups, we need to keep this EH cleanup
-  // around in case a temporary's destructor throws an exception.
-  if (cleanupKind & EHCleanup)
-    EHStack.pushCleanup<DestroyObject>(
-        static_cast<CleanupKind>(cleanupKind & ~NormalCleanup), addr, type,
-        destroyer, useEHCleanupForArray);
+void CodeGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
+                                                  Address addr, QualType type,
+                                                  Destroyer *destroyer,
+                                                  bool useEHCleanupForArray) {
+  // If we're not in a conditional branch, we don't need to bother generating a
+  // conditional cleanup.
+  if (!isInConditionalBranch()) {
+    // Push an EH-only cleanup for the object now.
+    // FIXME: When popping normal cleanups, we need to keep this EH cleanup
+    // around in case a temporary's destructor throws an exception.
+    if (cleanupKind & EHCleanup)
+      EHStack.pushCleanup<DestroyObject>(
+          static_cast<CleanupKind>(cleanupKind & ~NormalCleanup), addr, type,
+          destroyer, useEHCleanupForArray);
 
-  // Remember that we need to push a full cleanup for the object at the
-  // end of the full-expression.
-  pushCleanupAfterFullExpr<DestroyObject>(
-      cleanupKind, addr, type, destroyer, useEHCleanupForArray);
+    return pushCleanupAfterFullExprWithActiveFlag<DestroyObject>(
+        cleanupKind, Address::invalid(), addr, type, destroyer, useEHCleanupForArray);
+  }
+
+  // Otherwise, we should only destroy the object if it's been initialized.
+  // Re-use the active flag and saved address across both the EH and end of
+  // scope cleanups.
+
+  using SavedType = typename DominatingValue<Address>::saved_type;
+  using ConditionalCleanupType =
+      EHScopeStack::ConditionalCleanup<DestroyObject, Address, QualType,
+                                       Destroyer *, bool>;
+
+  Address ActiveFlag = createCleanupActiveFlag();
+  SavedType SavedAddr = saveValueInCond(addr);
+
+  if (cleanupKind & EHCleanup) {
+    EHStack.pushCleanup<ConditionalCleanupType>(
+        static_cast<CleanupKind>(cleanupKind & ~NormalCleanup), SavedAddr, type,
+        destroyer, useEHCleanupForArray);
+    initFullExprCleanupWithFlag(ActiveFlag);
+  }
+
+  pushCleanupAfterFullExprWithActiveFlag<ConditionalCleanupType>(
+      cleanupKind, ActiveFlag, SavedAddr, type, destroyer,
+      useEHCleanupForArray);
 }
 
 /// emitDestroy - Immediately perform the destruction of the given
@@ -2501,9 +2543,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
 
   // Emit debug info for param declarations in non-thunk functions.
   if (CGDebugInfo *DI = getDebugInfo()) {
-    if (CGM.getCodeGenOpts().getDebugInfo() >=
-            codegenoptions::LimitedDebugInfo &&
-        !CurFuncIsThunk) {
+    if (CGM.getCodeGenOpts().hasReducedDebugInfo() && !CurFuncIsThunk) {
       DI->EmitDeclareOfArgVariable(&D, DeclPtr.getPointer(), ArgNo, Builder);
     }
   }
@@ -2541,5 +2581,5 @@ void CodeGenModule::EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
 }
 
 void CodeGenModule::EmitOMPRequiresDecl(const OMPRequiresDecl *D) {
-  getOpenMPRuntime().checkArchForUnifiedAddressing(D);
+  getOpenMPRuntime().processRequiresDirective(D);
 }

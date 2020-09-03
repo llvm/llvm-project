@@ -6,18 +6,18 @@ define i32 @test1() {
 ; CHECK-LABEL: test1:
 ; CHECK:         .word b
 ; CHECK-NEXT:    .word .Ltmp0
-; CHECK-LABEL: .Ltmp0:
-; CHECK-LABEL: .LBB0_1: // %l_yes
-; CHECK-LABEL: .LBB0_2: // %cleanup
+; CHECK: // %bb.1:
+; CHECK: .Ltmp0:
+; CHECK: .LBB0_2: // %indirect
 entry:
-  callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "X"(i8* blockaddress(@test1, %l_yes))
-          to label %cleanup [label %l_yes]
+  callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "X"(i8* blockaddress(@test1, %indirect))
+          to label %cleanup [label %indirect]
 
-l_yes:
+indirect:
   br label %cleanup
 
 cleanup:
-  %retval.0 = phi i32 [ 1, %l_yes ], [ 0, %entry ]
+  %retval.0 = phi i32 [ 1, %indirect ], [ 0, %entry ]
   ret i32 %retval.0
 }
 
@@ -32,7 +32,7 @@ entry:
 if.then:
 ; CHECK:       .word b
 ; CHECK-NEXT:  .word .Ltmp2
-; CHECK-LABEL: .Ltmp2:
+; CHECK:       .Ltmp2:
 ; CHECK-NEXT:  .LBB1_3: // %if.end6
   callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "X"(i8* blockaddress(@test2, %if.end6))
           to label %if.then4 [label %if.end6]
@@ -48,7 +48,7 @@ if.end6:
   br i1 %phitmp, label %if.end10, label %if.then9
 
 if.then9:
-; CHECK-LABEL: .Ltmp4:
+; CHECK: .Ltmp4:
 ; CHECK-NEXT:  .LBB1_5: // %l_yes
   callbr void asm sideeffect "", "X"(i8* blockaddress(@test2, %l_yes))
           to label %if.end10 [label %l_yes]

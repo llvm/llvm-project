@@ -40,10 +40,6 @@ information.
 
 ## Sharp edges
 
-For reasons still unclear, using CreateProcessAndAttach never appears to
-allow the debuggee to resume, hence this implementation creates the
-debuggee process manually, attaches, and resumes.
-
 On process startup, we set a breakpoint on main and then continue running
 to it. This has the potential to never complete -- although of course,
 there's no guarantee that the debuggee will ever do anything anyway.

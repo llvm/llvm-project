@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BreakpointResolverAddress_h_
-#define liblldb_BreakpointResolverAddress_h_
+#ifndef LLDB_BREAKPOINT_BREAKPOINTRESOLVERADDRESS_H
+#define LLDB_BREAKPOINT_BREAKPOINTRESOLVERADDRESS_H
 
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -21,15 +21,17 @@ namespace lldb_private {
 
 class BreakpointResolverAddress : public BreakpointResolver {
 public:
-  BreakpointResolverAddress(Breakpoint *bkpt, const Address &addr);
+  BreakpointResolverAddress(const lldb::BreakpointSP &bkpt,
+                            const Address &addr);
 
-  BreakpointResolverAddress(Breakpoint *bkpt, const Address &addr,
+  BreakpointResolverAddress(const lldb::BreakpointSP &bkpt,
+                            const Address &addr,
                             const FileSpec &module_spec);
 
-  ~BreakpointResolverAddress() override;
+  ~BreakpointResolverAddress() override = default;
 
   static BreakpointResolver *
-  CreateFromStructuredData(Breakpoint *bkpt,
+  CreateFromStructuredData(const lldb::BreakpointSP &bkpt,
                            const StructuredData::Dictionary &options_dict,
                            Status &error);
 
@@ -56,11 +58,12 @@ public:
     return V->getResolverID() == BreakpointResolver::AddressResolver;
   }
 
-  lldb::BreakpointResolverSP CopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::BreakpointResolverSP
+  CopyForBreakpoint(lldb::BreakpointSP &breakpoint) override;
 
 protected:
-  Address
-      m_addr; // The address - may be Section Offset or may be just an offset
+  Address m_addr;               // The address - may be Section Offset or
+                                // may be just an offset
   lldb::addr_t m_resolved_addr; // The current value of the resolved load
                                 // address for this breakpoint,
   FileSpec m_module_filespec;   // If this filespec is Valid, and m_addr is an
@@ -68,9 +71,11 @@ protected:
   // to a Section+Offset address in this module, whenever that module gets
   // around to being loaded.
 private:
-  DISALLOW_COPY_AND_ASSIGN(BreakpointResolverAddress);
+  BreakpointResolverAddress(const BreakpointResolverAddress &) = delete;
+  const BreakpointResolverAddress &
+  operator=(const BreakpointResolverAddress &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_BreakpointResolverAddress_h_
+#endif // LLDB_BREAKPOINT_BREAKPOINTRESOLVERADDRESS_H

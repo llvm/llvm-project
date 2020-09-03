@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/shared.s -o %t2.o
 // RUN: ld.lld %t2.o -shared -o %t2.so
-// RUN: not ld.lld -shared %t.o %t2.so -o %t 2>&1 | FileCheck %s
+// RUN: not ld.lld -shared %t.o %t2.so -o /dev/null 2>&1 | FileCheck %s
 
         .global _start
 _start:

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
 
 module attributes {gpu.container_module} {
 
@@ -7,61 +7,27 @@ module attributes {gpu.container_module} {
     // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}})
     gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %sz, %grid_y = %sz, %grid_z = %sz)
                threads(%tx, %ty, %tz) in (%block_x = %sz, %block_y = %sz, %block_z = %sz) {
-      // CHECK: gpu.return
-      gpu.return
+      // CHECK: gpu.terminator
+      gpu.terminator
     }
     return
   }
 
   // CHECK-LABEL:func @args(%{{.*}}: index, %{{.*}}: index, %{{.*}}: f32, %{{.*}}: memref<?xf32, 1>) {
   func @args(%blk : index, %thrd : index, %float : f32, %data : memref<?xf32,1>) {
-    // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) args(%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) : f32, memref<?xf32, 1>
+    // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}})
     gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %blk, %grid_y = %blk, %grid_z = %blk)
-               threads(%tx, %ty, %tz) in (%block_x = %thrd, %block_y = %thrd, %block_z = %thrd)
-               args(%kernel_arg0 = %float, %kernel_arg1 = %data) : f32, memref<?xf32, 1> {
-      // CHECK: gpu.return
-      gpu.return
+               threads(%tx, %ty, %tz) in (%block_x = %thrd, %block_y = %thrd, %block_z = %thrd) {
+      "use"(%float) : (f32) -> ()
+      "use"(%data) : (memref<?xf32,1>) -> ()
+      // CHECK: gpu.terminator
+      gpu.terminator
     }
     return
   }
 
-  // It is possible to use values passed into the region as arguments.
-  // CHECK-LABEL: func @passing_values
-  func @passing_values(%blk : index, %thrd : index, %float : f32, %data : memref<?xf32,1>) {
-    // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) args(%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) : f32, memref<?xf32, 1>
-    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %blk, %grid_y = %blk, %grid_z = %blk)
-               threads(%tx, %ty, %tz) in (%block_x = %thrd, %block_y = %thrd, %block_z = %thrd)
-               args(%kernel_arg0 = %float, %kernel_arg1 = %data) : f32, memref<?xf32, 1> {
-      // CHECK: "use"(%{{.*}})
-      "use"(%kernel_arg0): (f32) -> ()
-      // CHECK: gpu.return
-      gpu.return
-    }
-    return
-  }
-
-  // It is possible to use values defined in nested regions as long as they don't
-  // cross kernel launch region boundaries.
-  // CHECK-LABEL: func @nested_isolation
-  func @nested_isolation(%sz : index) {
-    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %sz, %grid_y = %sz, %grid_z = %sz)
-               threads(%tx, %ty, %tz) in (%block_x = %sz, %block_y = %sz, %block_z = %sz) {
-      "region"() ({
-        // CHECK: %{{.*}} = "produce"()
-        %val = "produce"() : () -> (index)
-        "region"() ({
-          // CHECK: "use"(%{{.*}})
-          "use"(%val) : (index) -> ()
-        }) : () -> ()
-      }) : () -> ()
-      // CHECK: gpu.return
-      gpu.return
-    }
-    return
-  }
-
-  module @kernels attributes {gpu.kernel_module} {
-    gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>) attributes {gpu.kernel} {
+  gpu.module @kernels {
+    gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>) kernel {
       %tIdX = "gpu.thread_id"() {dimension = "x"} : () -> (index)
       %tIdY = "gpu.thread_id"() {dimension = "y"} : () -> (index)
       %tIdZ = "gpu.thread_id"() {dimension = "z"} : () -> (index)
@@ -78,6 +44,10 @@ module attributes {gpu.container_module} {
       %gDimY = "gpu.grid_dim"() {dimension = "y"} : () -> (index)
       %gDimZ = "gpu.grid_dim"() {dimension = "z"} : () -> (index)
 
+      %sgId = gpu.subgroup_id : index
+      %numSg = gpu.num_subgroups : index
+      %SgSi = gpu.subgroup_size : index
+
       %one = constant 1.0 : f32
       %sum = "gpu.all_reduce"(%one) ({}) {op = "add"} : (f32) -> (f32)
 
@@ -93,7 +63,7 @@ module attributes {gpu.container_module} {
       gpu.return
     }
 
-    gpu.func @kernel_2(%arg0: f32, %arg1: memref<?xf32, 1>) attributes {gpu.kernel} {
+    gpu.func @kernel_2(%arg0: f32, %arg1: memref<?xf32, 1>) kernel {
       gpu.return
     }
   }
@@ -104,25 +74,25 @@ module attributes {gpu.container_module} {
     // CHECK: %{{.*}} = constant 8
     %cst = constant 8 : index
 
-    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = "kernel_1", kernel_module = @kernels} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
+    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = @kernels::@kernel_1} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
     "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1)
-    { kernel = "kernel_1", kernel_module = @kernels }
+    { kernel = @kernels::@kernel_1}
         : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
 
-    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = "kernel_2", kernel_module = @kernels} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
+    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = @kernels::@kernel_2} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
     "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1)
-    { kernel = "kernel_2", kernel_module = @kernels }
+    { kernel = @kernels::@kernel_2}
         : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
 
     return
   }
 
-  module @gpu_funcs attributes {gpu.kernel_module} {
-    // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32) -> f32
+  gpu.module @gpu_funcs {
+    // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32)
     // CHECK:       workgroup
     // CHECK:       private
     // CHECK:       attributes
-    gpu.func @kernel_1(%arg0: f32) -> f32
+    gpu.func @kernel_1(%arg0: f32)
         workgroup(%arg1: memref<42xf32, 3>)
         private(%arg2: memref<2xf32, 5>, %arg3: memref<1xf32, 5>)
         kernel
@@ -166,4 +136,11 @@ module attributes {gpu.container_module} {
     }
   }
 
+  gpu.module @explicit_attributions {
+    // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32, {{.*}}: memref<?xf32>) workgroup({{.*}}: memref<5xf32, 3>) private({{.*}}: memref<5xf32, 5>)
+    "gpu.func"() ( {
+    ^bb0(%arg0: f32, %arg1: memref<?xf32>, %arg2: memref<5xf32, 3>, %arg3: memref<5xf32, 5>):
+      "gpu.return"() : () -> ()
+    } ) {gpu.kernel, sym_name = "kernel_1", type = (f32, memref<?xf32>) -> (), workgroup_attributions = 1: i64} : () -> ()
+  }
 }

@@ -20,10 +20,9 @@ namespace {
 template <size_t Index> struct IndexedWriter {
   template <
       class Tuple,
-      typename std::enable_if<
-          (Index <
-           std::tuple_size<typename std::remove_reference<Tuple>::type>::value),
-          int>::type = 0>
+      std::enable_if_t<(Index <
+                        std::tuple_size<std::remove_reference_t<Tuple>>::value),
+                       int> = 0>
   static size_t write(support::endian::Writer &OS, Tuple &&T) {
     OS.write(std::get<Index>(T));
     return sizeof(std::get<Index>(T)) + IndexedWriter<Index + 1>::write(OS, T);
@@ -31,10 +30,9 @@ template <size_t Index> struct IndexedWriter {
 
   template <
       class Tuple,
-      typename std::enable_if<
-          (Index >=
-           std::tuple_size<typename std::remove_reference<Tuple>::type>::value),
-          int>::type = 0>
+      std::enable_if_t<(Index >=
+                        std::tuple_size<std::remove_reference_t<Tuple>>::value),
+                       int> = 0>
   static size_t write(support::endian::Writer &OS, Tuple &&) {
     return 0;
   }

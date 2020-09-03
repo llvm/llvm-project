@@ -1,4 +1,4 @@
-//===-- CommandObjectBreakpointCommand.cpp ----------------------*- C++ -*-===//
+//===-- CommandObjectBreakpointCommand.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -256,7 +256,6 @@ are no syntax errors may indicate that a function was declared but never called.
     m_interpreter.GetLLDBCommandsFromIOHandler(
         "> ",             // Prompt
         *this,            // IOHandlerDelegate
-        true,             // Run IOHandler in async mode
         &bp_options_vec); // Baton for the "io_handler" that will be passed back
                           // into our IOHandlerDelegate functions
   }
@@ -293,7 +292,7 @@ are no syntax errors may indicate that a function was declared but never called.
       switch (short_option) {
       case 'o':
         m_use_one_liner = true;
-        m_one_liner = option_arg;
+        m_one_liner = std::string(option_arg);
         break;
 
       case 's':

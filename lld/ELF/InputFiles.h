@@ -38,8 +38,6 @@ class DWARFCache;
 std::string toString(const elf::InputFile *f);
 
 namespace elf {
-class InputFile;
-class InputSectionBase;
 
 using llvm::object::Archive;
 
@@ -200,7 +198,7 @@ public:
   ArrayRef<Symbol *> getGlobalSymbols();
 
   ObjFile(MemoryBufferRef m, StringRef archiveName) : ELFFileBase(ObjKind, m) {
-    this->archiveName = archiveName;
+    this->archiveName = std::string(archiveName);
   }
 
   void parse(bool ignoreComdats = false);
@@ -250,11 +248,14 @@ public:
   // SHT_LLVM_CALL_GRAPH_PROFILE table
   ArrayRef<Elf_CGProfile> cgProfile;
 
+  // Get cached DWARF information.
+  DWARFCache *getDwarf();
+
 private:
   void initializeSections(bool ignoreComdats);
   void initializeSymbols();
   void initializeJustSymbols();
-  void initializeDwarf();
+
   InputSectionBase *getRelocTarget(const Elf_Shdr &sec);
   InputSectionBase *createInputSection(const Elf_Shdr &sec);
   StringRef getSectionName(const Elf_Shdr &sec);
@@ -282,8 +283,8 @@ private:
   // reporting. Linker may find reasonable number of errors in a
   // single object file, so we cache debugging information in order to
   // parse it only once for each object file we link.
-  DWARFCache *dwarf;
-  llvm::once_flag initDwarfLine;
+  std::unique_ptr<DWARFCache> dwarf;
+  llvm::once_flag initDwarf;
 };
 
 // LazyObjFile is analogous to ArchiveFile in the sense that
@@ -298,13 +299,15 @@ public:
   LazyObjFile(MemoryBufferRef m, StringRef archiveName,
               uint64_t offsetInArchive)
       : InputFile(LazyObjKind, m), offsetInArchive(offsetInArchive) {
-    this->archiveName = archiveName;
+    this->archiveName = std::string(archiveName);
   }
 
   static bool classof(const InputFile *f) { return f->kind() == LazyObjKind; }
 
   template <class ELFT> void parse();
   void fetch();
+
+  bool fetched = false;
 
 private:
   uint64_t offsetInArchive;
@@ -322,6 +325,11 @@ public:
   // function does nothing (so we don't instantiate the same file
   // more than once.)
   void fetch(const Archive::Symbol &sym);
+
+  size_t getMemberCount() const;
+  size_t getFetchedMemberCount() const { return seen.size(); }
+
+  bool parsed = false;
 
 private:
   std::unique_ptr<Archive> file;
@@ -341,7 +349,7 @@ public:
 class SharedFile : public ELFFileBase {
 public:
   SharedFile(MemoryBufferRef m, StringRef defaultSoName)
-      : ELFFileBase(SharedKind, m), soName(defaultSoName),
+      : ELFFileBase(SharedKind, m), soName(std::string(defaultSoName)),
         isNeeded(!config->asNeeded) {}
 
   // This is actually a vector of Elf_Verdef pointers.
@@ -366,6 +374,11 @@ public:
 
   // Used for --as-needed
   bool isNeeded;
+
+private:
+  template <typename ELFT>
+  std::vector<uint32_t> parseVerneed(const llvm::object::ELFFile<ELFT> &obj,
+                                     const typename ELFT::Shdr *sec);
 };
 
 class BinaryFile : public InputFile {
@@ -384,6 +397,7 @@ inline bool isBitcode(MemoryBufferRef mb) {
 
 std::string replaceThinLTOSuffix(StringRef path);
 
+extern std::vector<ArchiveFile *> archiveFiles;
 extern std::vector<BinaryFile *> binaryFiles;
 extern std::vector<BitcodeFile *> bitcodeFiles;
 extern std::vector<LazyObjFile *> lazyObjFiles;

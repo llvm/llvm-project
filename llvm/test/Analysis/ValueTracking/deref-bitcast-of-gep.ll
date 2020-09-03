@@ -59,7 +59,7 @@ define void @f_2(i8* align 4 dereferenceable_or_null(1024) %ptr) {
 ; CHECK-LABEL: @f_2(
 ; CHECK-NOT: load
 ; CHECK:  call void @use(i32 0)
-; CHECK-NEXT:  %val = load i32, i32* %ptr.i32, !invariant.load !0
+; CHECK-NEXT:  %val = load i32, i32* %ptr.i32, align 4, !invariant.load !0
 ; CHECK-NEXT:  call void @use(i32 %val)
 
 entry:

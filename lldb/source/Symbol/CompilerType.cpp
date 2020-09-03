@@ -1,4 +1,4 @@
-//===-- CompilerType.cpp ----------------------------------------*- C++ -*-===//
+//===-- CompilerType.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -268,19 +268,6 @@ size_t CompilerType::GetPointerByteSize() const {
   return 0;
 }
 
-ConstString CompilerType::GetConstQualifiedTypeName() const {
-  return GetConstTypeName();
-}
-
-ConstString CompilerType::GetConstTypeName() const {
-  if (IsValid()) {
-    ConstString type_name(GetTypeName());
-    if (type_name)
-      return type_name;
-  }
-  return ConstString("<invalid>");
-}
-
 ConstString CompilerType::GetTypeName() const {
   if (IsValid()) {
     return m_type_system->GetTypeName(m_type);
@@ -288,10 +275,12 @@ ConstString CompilerType::GetTypeName() const {
   return ConstString("<invalid>");
 }
 
-ConstString CompilerType::GetDisplayTypeName(const SymbolContext *sc) const {
-  if (IsValid())
+ConstString
+CompilerType::GetDisplayTypeName(const SymbolContext *sc) const {
+  if (IsValid()) {
     return m_type_system->GetDisplayTypeName(m_type, sc);
-  return ConstString("<invalid>");
+  }
+  return ConstString();
 }
 
 ConstString CompilerType::GetMangledTypeName() const {
@@ -337,9 +326,10 @@ unsigned CompilerType::GetTypeQualifiers() const {
 
 // Creating related types
 
-CompilerType CompilerType::GetArrayElementType(uint64_t *stride) const {
+CompilerType CompilerType::GetArrayElementType(ExecutionContextScope *exe_scope,
+                                               uint64_t *stride) const {
   if (IsValid()) {
-    return m_type_system->GetArrayElementType(m_type, stride);
+    return m_type_system->GetArrayElementType(m_type, stride, exe_scope);
   }
   return CompilerType();
 }
@@ -733,7 +723,6 @@ CompilerType::GetIndexOfChildWithName(const char *name,
 }
 
 // Dumping types
-#define DEPTH_INCREMENT 2
 
 void CompilerType::DumpValue(ExecutionContext *exe_ctx, Stream *s,
                              lldb::Format format, const DataExtractor &data,
@@ -795,8 +784,8 @@ LLVM_DUMP_METHOD void CompilerType::dump() const {
 
 bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
                                     lldb::offset_t data_byte_offset,
-                                    size_t data_byte_size,
-                                    Scalar &value) const {
+                                    size_t data_byte_size, Scalar &value,
+                                    ExecutionContextScope *exe_scope) const {
   if (!IsValid())
     return false;
 
@@ -809,7 +798,7 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
     if (encoding == lldb::eEncodingInvalid || count != 1)
       return false;
 
-    llvm::Optional<uint64_t> byte_size = GetByteSize(nullptr);
+    llvm::Optional<uint64_t> byte_size = GetByteSize(exe_scope);
     if (!byte_size)
       return false;
     lldb::offset_t offset = data_byte_offset;

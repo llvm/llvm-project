@@ -1,10 +1,15 @@
+if (MSVC)
+  set_source_files_properties(SPIRVDialect.cpp PROPERTIES COMPILE_FLAGS /bigobj)
+endif()
+
 set(LLVM_TARGET_DEFINITIONS SPIRVCanonicalization.td)
 mlir_tablegen(SPIRVCanonicalization.inc -gen-rewriters)
 add_public_tablegen_target(MLIRSPIRVCanonicalizationIncGen)
 
-add_llvm_library(MLIRSPIRV
-  DialectRegistration.cpp
+add_mlir_dialect_library(MLIRSPIRV
   LayoutUtils.cpp
+  SPIRVAttributes.cpp
+  SPIRVCanonicalization.cpp
   SPIRVDialect.cpp
   SPIRVOps.cpp
   SPIRVLowering.cpp
@@ -13,22 +18,24 @@ add_llvm_library(MLIRSPIRV
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
-  )
 
-add_dependencies(MLIRSPIRV
+  DEPENDS
   MLIRSPIRVAvailabilityIncGen
   MLIRSPIRVCanonicalizationIncGen
   MLIRSPIRVEnumAvailabilityIncGen
   MLIRSPIRVEnumsIncGen
   MLIRSPIRVOpsIncGen
   MLIRSPIRVOpUtilsGen
-  MLIRSPIRVTargetAndABIIncGen)
+  MLIRSPIRVTargetAndABIIncGen
 
-target_link_libraries(MLIRSPIRV
+  LINK_LIBS PUBLIC
+  MLIRControlFlowInterfaces
   MLIRIR
   MLIRParser
+  MLIRSideEffectInterfaces
   MLIRSupport
-  MLIRTransforms)
+  MLIRTransforms
+  )
 
 add_subdirectory(Serialization)
 add_subdirectory(Transforms)

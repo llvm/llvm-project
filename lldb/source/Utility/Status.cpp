@@ -1,5 +1,4 @@
-//===-- Status.cpp -----------------------------------------------*- C++
-//-*-===//
+//===-- Status.cpp --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -43,8 +42,13 @@ Status::Status() : m_code(0), m_type(eErrorTypeInvalid), m_string() {}
 Status::Status(ValueType err, ErrorType type)
     : m_code(err), m_type(type), m_string() {}
 
+// This logic is confusing because c++ calls the traditional (posix) errno codes
+// "generic errors", while we use the term "generic" to mean completely
+// arbitrary (text-based) errors.
 Status::Status(std::error_code EC)
-    : m_code(EC.value()), m_type(ErrorType::eErrorTypeGeneric),
+    : m_code(EC.value()),
+      m_type(EC.category() == std::generic_category() ? eErrorTypePOSIX
+                                                      : eErrorTypeGeneric),
       m_string(EC.message()) {}
 
 Status::Status(const char *format, ...)
@@ -242,7 +246,7 @@ void Status::SetErrorString(llvm::StringRef err_str) {
     if (Success())
       SetErrorToGenericError();
   }
-  m_string = err_str;
+  m_string = std::string(err_str);
 }
 
 /// Set the current error string to a formatted error string.
@@ -271,7 +275,7 @@ int Status::SetErrorStringWithVarArg(const char *format, va_list args) {
 
     llvm::SmallString<1024> buf;
     VASprintf(buf, format, args);
-    m_string = buf.str();
+    m_string = std::string(buf.str());
     return buf.size();
   } else {
     m_string.clear();

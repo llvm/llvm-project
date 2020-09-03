@@ -217,6 +217,11 @@ static bool fixupGlobalSaddr(MachineBasicBlock &MBB,
 }
 
 bool SIFixupVectorISel::runOnMachineFunction(MachineFunction &MF) {
+  // Only need to run this in SelectionDAG path.
+  if (MF.getProperties().hasProperty(
+        MachineFunctionProperties::Property::Selected))
+    return false;
+
   if (skipFunction(MF.getFunction()))
     return false;
 

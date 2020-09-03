@@ -27,7 +27,7 @@
 import AA
 
 let x: OtherType = testValue
-// NOT-LOADED: cannot find type 'OtherType' in scope
+// NOT-LOADED:  cannot find type 'OtherType' in scope
 // FROM-INTERFACE: cannot convert value of type 'FromInterface' to specified type 'OtherType'
 // FROM-SERIALIZED: cannot convert value of type 'FromSerialized' to specified type 'OtherType'
 // INVALID: error: invalid enumeration value '{{.*}}', valid values are: {{.*}}

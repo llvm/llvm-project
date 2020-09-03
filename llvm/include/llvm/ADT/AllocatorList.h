@@ -110,8 +110,8 @@ private:
 
     template <class OtherValueT, class OtherIteratorBase>
     IteratorImpl(const IteratorImpl<OtherValueT, OtherIteratorBase> &X,
-                 typename std::enable_if<std::is_convertible<
-                     OtherIteratorBase, IteratorBase>::value>::type * = nullptr)
+                 std::enable_if_t<std::is_convertible<
+                     OtherIteratorBase, IteratorBase>::value> * = nullptr)
         : base_type(X.wrapped()) {}
 
     ~IteratorImpl() = default;

@@ -61,8 +61,8 @@ define arm_aapcs_vfpcc void @test_frem(half* %p, half* %q) {
 ; CHECK-LABEL: test_frem:
 ; CHECK:         .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    vldr.16 s2, [r1]
 ; CHECK-NEXT:    vldr.16 s0, [r0]
+; CHECK-NEXT:    vldr.16 s2, [r1]
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s1, s2
@@ -285,8 +285,8 @@ define void @test_pow(half* %p, half* %q) {
 ; CHECK-LABEL: test_pow:
 ; CHECK:         .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    vldr.16 s2, [r1]
 ; CHECK-NEXT:    vldr.16 s0, [r0]
+; CHECK-NEXT:    vldr.16 s2, [r1]
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s1, s2
@@ -446,7 +446,9 @@ define void @test_minimum(half* %p) {
 ; CHECK-LABEL: test_minimum:
 ; CHECK:         vldr.16 s2, [r0]
 ; CHECK-NEXT:    vmov.f16 s0, #1.000000e+00
-; CHECK-NEXT:    vmin.f16 d0, d1, d0
+; CHECK-NEXT:    vcmp.f16 s2, s0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f16 s0, s0, s2
 ; CHECK-NEXT:    vstr.16 s0, [r0]
 ; CHECK-NEXT:    bx lr
   %a = load half, half* %p, align 2
@@ -460,7 +462,9 @@ define void @test_maximum(half* %p) {
 ; CHECK-LABEL: test_maximum:
 ; CHECK:         vldr.16 s2, [r0]
 ; CHECK-NEXT:    vmov.f16 s0, #1.000000e+00
-; CHECK-NEXT:    vmax.f16 d0, d1, d0
+; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f16 s0, s0, s2
 ; CHECK-NEXT:    vstr.16 s0, [r0]
 ; CHECK-NEXT:    bx lr
   %a = load half, half* %p, align 2

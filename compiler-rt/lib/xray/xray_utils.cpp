@@ -69,6 +69,10 @@ void LogWriter::WriteAll(const char *Begin, const char *End) XRAY_NEVER_INSTRUME
     return;
   }
   Offset += TotalBytes;
+
+  // Record the data size as a property of the VMO.
+  _zx_object_set_property(Vmo, ZX_PROP_VMO_CONTENT_SIZE,
+                          &Offset, sizeof(Offset));
 }
 
 void LogWriter::Flush() XRAY_NEVER_INSTRUMENT {

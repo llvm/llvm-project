@@ -1,4 +1,4 @@
-//===-- NSArray.cpp ---------------------------------------------*- C++ -*-===//
+//===-- NSArray.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/TargetInfo.h"
 
 #include "Cocoa.h"
 
@@ -97,42 +98,46 @@ private:
 };
   
 namespace Foundation1010 {
-  struct DataDescriptor_32 {
-    uint32_t _used;
-    uint32_t _offset;
-    uint32_t _size : 28;
-    uint64_t _priv1 : 4;
-    uint32_t _priv2;
-    uint32_t _data;
-  };
-  
-  struct DataDescriptor_64 {
-    uint64_t _used;
-    uint64_t _offset;
-    uint64_t _size : 60;
-    uint64_t _priv1 : 4;
-    uint32_t _priv2;
-    uint64_t _data;
-  };
+  namespace {
+    struct DataDescriptor_32 {
+      uint32_t _used;
+      uint32_t _offset;
+      uint32_t _size : 28;
+      uint64_t _priv1 : 4;
+      uint32_t _priv2;
+      uint32_t _data;
+    };
+    
+    struct DataDescriptor_64 {
+      uint64_t _used;
+      uint64_t _offset;
+      uint64_t _size : 60;
+      uint64_t _priv1 : 4;
+      uint32_t _priv2;
+      uint64_t _data;
+    };
+  }
   
   using NSArrayMSyntheticFrontEnd =
       GenericNSArrayMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
 }
   
 namespace Foundation1428 {
-  struct DataDescriptor_32 {
-    uint32_t _used;
-    uint32_t _offset;
-    uint32_t _size;
-    uint32_t _data;
-  };
-  
-  struct DataDescriptor_64 {
-    uint64_t _used;
-    uint64_t _offset;
-    uint64_t _size;
-    uint64_t _data;
-  };
+  namespace {
+    struct DataDescriptor_32 {
+      uint32_t _used;
+      uint32_t _offset;
+      uint32_t _size;
+      uint32_t _data;
+    };
+    
+    struct DataDescriptor_64 {
+      uint64_t _used;
+      uint64_t _offset;
+      uint64_t _size;
+      uint64_t _data;
+    };
+  }
   
   using NSArrayMSyntheticFrontEnd =
       GenericNSArrayMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
@@ -528,7 +533,7 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::GetIndexOfChildWithName
 template <typename D32, typename D64>
 lldb_private::formatters::
   GenericNSArrayMSyntheticFrontEnd<D32, D64>::
-    ~GenericNSArrayMSyntheticFrontEnd() {
+    ~GenericNSArrayMSyntheticFrontEnd<D32, D64>() {
   delete m_data_32;
   m_data_32 = nullptr;
   delete m_data_64;
@@ -595,7 +600,7 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
 
 template <typename D32, typename D64, bool Inline>
 lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
-  ~GenericNSArrayISyntheticFrontEnd() {
+  ~GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>() {
   delete m_data_32;
   m_data_32 = nullptr;
   delete m_data_64;

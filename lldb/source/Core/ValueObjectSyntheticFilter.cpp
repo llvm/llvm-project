@@ -1,4 +1,4 @@
-//===-- ValueObjectSyntheticFilter.cpp --------------------------*- C++ -*-===//
+//===-- ValueObjectSyntheticFilter.cpp ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,6 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
-#include "lldb/Utility/SharingPtr.h"
 #include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -54,7 +53,9 @@ ValueObjectSynthetic::ValueObjectSynthetic(ValueObject &parent,
       m_might_have_children(eLazyBoolCalculate),
       m_provides_value(eLazyBoolCalculate) {
   SetName(parent.GetName());
-  CopyValueData(m_parent);
+  // Copying the data of an incomplete type won't work as it has no byte size.
+  if (m_parent->GetCompilerType().IsCompleteType())
+    CopyValueData(m_parent);
   CreateSynthFilter();
 }
 
@@ -220,7 +221,9 @@ bool ValueObjectSynthetic::UpdateValue() {
               GetName().AsCString());
 
     m_provides_value = eLazyBoolNo;
-    CopyValueData(m_parent);
+    // Copying the data of an incomplete type won't work as it has no byte size.
+    if (m_parent->GetCompilerType().IsCompleteType())
+      CopyValueData(m_parent);
   }
 
   SetValueIsValid(true);

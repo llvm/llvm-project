@@ -310,6 +310,10 @@ ANALYZER_OPTION(bool, ShouldApplyFixIts, "apply-fixits",
                 "Apply the fix-it hints to the files",
                 false)
 
+ANALYZER_OPTION(bool, ShouldDisplayCheckerNameForText, "display-checker-name",
+                "Display the checker name for textual outputs",
+                true)
+
 //===----------------------------------------------------------------------===//
 // Unsigned analyzer options.
 //===----------------------------------------------------------------------===//
@@ -317,10 +321,17 @@ ANALYZER_OPTION(bool, ShouldApplyFixIts, "apply-fixits",
 ANALYZER_OPTION(unsigned, CTUImportThreshold, "ctu-import-threshold",
                 "The maximal amount of translation units that is considered "
                 "for import when inlining functions during CTU analysis. "
-                "Lowering this threshold can alleviate the memory burder of "
+                "Lowering this threshold can alleviate the memory burden of "
                 "analysis with many interdependent definitions located in "
-                "various translation units.",
-                100u)
+                "various translation units. This is valid only for non C++ "
+                "source files.",
+                24u)
+
+ANALYZER_OPTION(unsigned, CTUImportCppThreshold, "ctu-import-cpp-threshold",
+                "The maximal amount of translation units that is considered "
+                "for import when inlining functions during CTU analysis of C++ "
+                "source files.",
+                8u)
 
 ANALYZER_OPTION(
     unsigned, AlwaysInlineSize, "ipa-always-inline-size",
@@ -374,8 +385,23 @@ ANALYZER_OPTION(StringRef, CTUDir, "ctu-dir",
                 "The directory containing the CTU related files.", "")
 
 ANALYZER_OPTION(StringRef, CTUIndexName, "ctu-index-name",
-                "the name of the file containing the CTU index of definitions.",
+                "The name of the file containing the CTU index of definitions. "
+                "The index file maps USR-names to identifiers. An identifier "
+                "can end with an '.ast' suffix, indicating the indentifier is "
+                "a path to a pch-dump. Otherwise the identifier is regarded as "
+                "path to a source file which is parsed on-demand. Relative "
+                "paths are prefixed with ctu-dir, absolute paths are used "
+                "unmodified during lookup.",
                 "externalDefMap.txt")
+
+ANALYZER_OPTION(
+    StringRef, CTUInvocationList, "ctu-invocation-list",
+    "The path to the YAML format file containing a mapping from source file "
+    "paths to command-line invocations represented as a list of arguments. "
+    "This invocation is used produce the source-file's AST in case on-demand "
+    "loading is performed. Example file-content: "
+    "{/main.cpp: [clang++, /main.cpp], other.cpp: [clang++, /other.cpp]}",
+    "invocations.yaml")
 
 ANALYZER_OPTION(
     StringRef, ModelPath, "model-path",

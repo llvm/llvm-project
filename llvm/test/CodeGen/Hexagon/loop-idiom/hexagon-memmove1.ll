@@ -1,5 +1,5 @@
 ; Check for recognizing the "memmove" idiom.
-; RUN: opt -basicaa -hexagon-loop-idiom -S -mtriple hexagon-unknown-elf < %s \
+; RUN: opt -basic-aa -hexagon-loop-idiom -S -mtriple hexagon-unknown-elf < %s \
 ; RUN:  | FileCheck %s
 ; CHECK: call void @llvm.memmove
 

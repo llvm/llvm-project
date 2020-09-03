@@ -106,8 +106,17 @@ FunctionPass *llvm::createBreakFalseDeps() { return new BreakFalseDeps(); }
 
 bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   unsigned Pref) {
+
+  // We can't change tied operands.
+  if (MI->isRegTiedToDefOperand(OpIdx))
+    return false;
+
   MachineOperand &MO = MI->getOperand(OpIdx);
   assert(MO.isUndef() && "Expected undef machine operand");
+
+  // We can't change registers that aren't renamable.
+  if (!MO.isRenamable())
+    return false;
 
   Register OriginalReg = MO.getReg();
 

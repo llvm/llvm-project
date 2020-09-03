@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Object/Archive.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -139,6 +140,73 @@ static std::unique_ptr<Module> loadFile(const char *argv0,
   return Result;
 }
 
+static std::unique_ptr<Module> loadArFile(const char *Argv0,
+                                          const std::string &ArchiveName,
+                                          LLVMContext &Context, Linker &L,
+                                          unsigned OrigFlags,
+                                          unsigned ApplicableFlags) {
+  std::unique_ptr<Module> Result(new Module("ArchiveModule", Context));
+  if (Verbose)
+    errs() << "Reading library archive file '" << ArchiveName
+           << "' to memory\n";
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+    MemoryBuffer::getFile(ArchiveName, -1, false);
+  ExitOnErr(errorCodeToError(Buf.getError()));
+  Error Err = Error::success();
+  object::Archive Archive(Buf.get()->getMemBufferRef(), Err);
+  ExitOnErr(std::move(Err));
+  for (const object::Archive::Child &C : Archive.children(Err)) {
+    Expected<StringRef> Ename = C.getName();
+    if (Error E = Ename.takeError()) {
+      errs() << Argv0 << ": ";
+      WithColor::error()
+          << " failed to read name of archive member"
+          << ArchiveName << "'\n";
+      return nullptr;
+    };
+    std::string ChildName = Ename.get().str();
+    if (Verbose)
+      errs() << "Parsing member '" << ChildName
+             << "' of archive library to module.\n";
+    SMDiagnostic ParseErr;
+    Expected<MemoryBufferRef> MemBuf = C.getMemoryBufferRef();
+    if (Error E = MemBuf.takeError()) {
+      errs() << Argv0 << ": ";
+      WithColor::error() << " loading memory for member '" << ChildName
+                         << "' of archive library failed'" << ArchiveName
+                         << "'\n";
+      return nullptr;
+    };
+
+    if (!isBitcode(reinterpret_cast<const unsigned char *>
+                   (MemBuf.get().getBufferStart()),
+                   reinterpret_cast<const unsigned char *>
+                   (MemBuf.get().getBufferEnd()))) {
+      errs() << Argv0 << ": ";
+      WithColor::error() << "  member of archive is not a bitcode file: '"
+                         << ChildName << "'\n";
+      return nullptr;
+    }
+
+    std::unique_ptr<Module> M = parseIR(MemBuf.get(), ParseErr, Context);
+
+    if (!M.get()) {
+      errs() << Argv0 << ": ";
+      WithColor::error() << " parsing member '" << ChildName
+                         << "' of archive library failed'" << ArchiveName
+                         << "'\n";
+      return nullptr;
+    }
+    if (Verbose)
+      errs() << "Linking member '" << ChildName << "' of archive library.\n";
+    if (L.linkModules(*Result, std::move(M), ApplicableFlags))
+      return nullptr;
+    ApplicableFlags = OrigFlags;
+  } // end for each child
+  ExitOnErr(std::move(Err));
+  return Result;
+}
+
 namespace {
 
 /// Helper to load on demand a Module from file and cache it for subsequent
@@ -264,9 +332,10 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
     Entry.insert(F->getGUID());
   }
   auto CachedModuleLoader = [&](StringRef Identifier) {
-    return ModuleLoaderCache.takeModule(Identifier);
+    return ModuleLoaderCache.takeModule(std::string(Identifier));
   };
-  FunctionImporter Importer(*Index, CachedModuleLoader);
+  FunctionImporter Importer(*Index, CachedModuleLoader,
+                            /*ClearDSOLocalOnDeclarations=*/false);
   ExitOnErr(Importer.importFunctions(DestModule, ImportList));
 
   return true;
@@ -280,7 +349,10 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
   // Similar to some flags, internalization doesn't apply to the first file.
   bool InternalizeLinkedSymbols = false;
   for (const auto &File : Files) {
-    std::unique_ptr<Module> M = loadFile(argv0, File, Context);
+    std::unique_ptr<Module> M =
+      (llvm::sys::path::extension(File) == ".a")
+          ? loadArFile(argv0, File, Context, L, Flags, ApplicableFlags)
+          : loadFile(argv0, File, Context);
     if (!M.get()) {
       errs() << argv0 << ": ";
       WithColor::error() << " loading file '" << File << "'\n";
@@ -313,7 +385,8 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
       }
 
       // Promotion
-      if (renameModuleForThinLTO(*M, *Index))
+      if (renameModuleForThinLTO(*M, *Index,
+                                 /*ClearDSOLocalOnDeclarations=*/false))
         return true;
     }
 
@@ -397,7 +470,7 @@ int main(int argc, char **argv) {
     errs() << "Writing bitcode...\n";
   if (OutputAssembly) {
     Composite->print(Out.os(), nullptr, PreserveAssemblyUseListOrder);
-  } else if (Force || !CheckBitcodeOutputToConsole(Out.os(), true))
+  } else if (Force || !CheckBitcodeOutputToConsole(Out.os()))
     WriteBitcodeToFile(*Composite, Out.os(), PreserveBitcodeUseListOrder);
 
   // Declare success.

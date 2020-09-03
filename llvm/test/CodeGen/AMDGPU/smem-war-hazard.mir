@@ -10,7 +10,7 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -25,7 +25,7 @@ body: |
     liveins: $sgpr0, $sgpr1, $sgpr4, $sgpr5, $vgpr0, $vgpr1
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
     $sgpr3 = S_ADD_U32 $sgpr4, $sgpr5, implicit-def $scc
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -42,7 +42,7 @@ body: |
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
     S_WAITCNT 0
     $sgpr3 = S_ADD_U32 $sgpr2, $sgpr4, implicit-def $scc
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -59,7 +59,7 @@ body: |
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
     S_WAITCNT 0
     $sgpr3 = S_ADD_U32 $sgpr5, $sgpr4, implicit-def $scc
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -75,7 +75,7 @@ body: |
     liveins: $sgpr0, $sgpr1, $sgpr6, $sgpr7, $vgpr0, $vgpr1
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
     $sgpr5 = S_LOAD_DWORD_IMM $sgpr6_sgpr7, 0, 0, 0
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -90,7 +90,7 @@ body: |
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
     S_WAITCNT 0
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -106,7 +106,7 @@ body: |
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
     S_WAITCNT 3952
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -122,7 +122,7 @@ body: |
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
     S_WAITCNT 53007
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -137,7 +137,7 @@ body: |
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
     S_WAITCNT 49279
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -152,7 +152,7 @@ body: |
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
     S_WAITCNT_LGKMCNT $sgpr_null, 0
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -168,7 +168,7 @@ body: |
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
     S_WAITCNT_LGKMCNT $sgpr_null, 1
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -187,7 +187,7 @@ body: |
 
   bb.1:
     liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0, $vgpr1
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -212,12 +212,12 @@ body: |
 
   bb.1:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr4, $sgpr5, $vgpr0, $vgpr1
-    $sgpr4_sgpr5 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr4_sgpr5 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 
   bb.2:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr4, $sgpr5, $vgpr0, $vgpr1
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -244,17 +244,17 @@ body: |
 
   bb.1:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr4, $sgpr5, $vgpr0, $vgpr1
-    $sgpr4_sgpr5 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr4_sgpr5 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 
   bb.2:
     successors: %bb.3
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr4, $sgpr5, $vgpr0, $vgpr1
-    $sgpr4_sgpr5 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr4_sgpr5 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
 
   bb.3:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr4, $sgpr5, $vgpr0, $vgpr1
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -268,7 +268,7 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0, $vgpr1
     successors: %bb.1
-    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
 
   bb.1:
     liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0, $vgpr1
@@ -286,7 +286,7 @@ body: |
   bb.0:
     liveins: $vcc, $vgpr0
     $sgpr0 = S_LOAD_DWORD_IMM $vcc, 0, 0, 0
-    V_CMP_EQ_F32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $exec
+    V_CMP_EQ_F32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 

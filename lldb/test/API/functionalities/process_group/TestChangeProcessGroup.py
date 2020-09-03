@@ -14,8 +14,6 @@ class ChangeProcessGroupTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    NO_DEBUG_INFO_TESTCASE = True
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -26,6 +24,7 @@ class ChangeProcessGroupTestCase(TestBase):
     @skipIfWindows  # setpgid call does not exist on Windows
     @expectedFailureAndroid("http://llvm.org/pr23762", api_levels=[16])
     @expectedFailureNetBSD
+    @skipIfReproducer # File synchronization is not supported during replay.
     def test_setpgid(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -39,7 +38,6 @@ class ChangeProcessGroupTestCase(TestBase):
                 (pid_file_path)))
 
         popen = self.spawnSubprocess(exe, [pid_file_path])
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         pid = lldbutil.wait_for_file_on_target(self, pid_file_path)
 
@@ -69,7 +67,8 @@ class ChangeProcessGroupTestCase(TestBase):
 
         # release the child from its loop
         value = thread.GetSelectedFrame().EvaluateExpression("release_child_flag = 1")
-        self.assertTrue(value.IsValid() and value.GetValueAsUnsigned(0) == 1)
+        self.assertTrue(value.IsValid())
+        self.assertEquals(value.GetValueAsUnsigned(0), 1)
         process.Continue()
 
         # make sure the child's process group id is different from its pid

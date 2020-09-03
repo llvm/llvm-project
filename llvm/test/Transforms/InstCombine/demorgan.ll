@@ -5,7 +5,7 @@
 
 define i43 @demorgan_or_apint1(i43 %A, i43 %B) {
 ; CHECK-LABEL: @demorgan_or_apint1(
-; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = and i43 %A, %B
+; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = and i43 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = xor i43 [[C_DEMORGAN]], -1
 ; CHECK-NEXT:    ret i43 [[C]]
 ;
@@ -19,7 +19,7 @@ define i43 @demorgan_or_apint1(i43 %A, i43 %B) {
 
 define i129 @demorgan_or_apint2(i129 %A, i129 %B) {
 ; CHECK-LABEL: @demorgan_or_apint2(
-; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = and i129 %A, %B
+; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = and i129 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = xor i129 [[C_DEMORGAN]], -1
 ; CHECK-NEXT:    ret i129 [[C]]
 ;
@@ -33,7 +33,7 @@ define i129 @demorgan_or_apint2(i129 %A, i129 %B) {
 
 define i477 @demorgan_and_apint1(i477 %A, i477 %B) {
 ; CHECK-LABEL: @demorgan_and_apint1(
-; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i477 %A, %B
+; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i477 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = xor i477 [[C_DEMORGAN]], -1
 ; CHECK-NEXT:    ret i477 [[C]]
 ;
@@ -47,7 +47,7 @@ define i477 @demorgan_and_apint1(i477 %A, i477 %B) {
 
 define i129 @demorgan_and_apint2(i129 %A, i129 %B) {
 ; CHECK-LABEL: @demorgan_and_apint2(
-; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i129 %A, %B
+; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i129 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = xor i129 [[C_DEMORGAN]], -1
 ; CHECK-NEXT:    ret i129 [[C]]
 ;
@@ -61,7 +61,7 @@ define i129 @demorgan_and_apint2(i129 %A, i129 %B) {
 
 define i65 @demorgan_and_apint3(i65 %A, i65 %B) {
 ; CHECK-LABEL: @demorgan_and_apint3(
-; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i65 %A, %B
+; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i65 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = xor i65 [[C_DEMORGAN]], -1
 ; CHECK-NEXT:    ret i65 [[C]]
 ;
@@ -75,7 +75,7 @@ define i65 @demorgan_and_apint3(i65 %A, i65 %B) {
 
 define i66 @demorgan_and_apint4(i66 %A, i66 %B) {
 ; CHECK-LABEL: @demorgan_and_apint4(
-; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i66 %A, %B
+; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i66 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = xor i66 [[C_DEMORGAN]], -1
 ; CHECK-NEXT:    ret i66 [[C]]
 ;
@@ -89,7 +89,7 @@ define i66 @demorgan_and_apint4(i66 %A, i66 %B) {
 
 define i47 @demorgan_and_apint5(i47 %A, i47 %B) {
 ; CHECK-LABEL: @demorgan_and_apint5(
-; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i47 %A, %B
+; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i47 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = xor i47 [[C_DEMORGAN]], -1
 ; CHECK-NEXT:    ret i47 [[C]]
 ;
@@ -104,7 +104,7 @@ define i47 @demorgan_and_apint5(i47 %A, i47 %B) {
 
 define i32 @test3(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i32 %A, %B
+; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[C_DEMORGAN]]
 ;
   %nota = xor i32 %A, -1
@@ -119,7 +119,7 @@ define i32 @test3(i32 %A, i32 %B) {
 
 define i32 @test4(i32 %A) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[NOTC1:%.*]] = or i32 %A, -6
+; CHECK-NEXT:    [[NOTC1:%.*]] = or i32 [[A:%.*]], -6
 ; CHECK-NEXT:    ret i32 [[NOTC1]]
 ;
   %nota = xor i32 %A, -1
@@ -133,7 +133,7 @@ define i32 @test4(i32 %A) {
 
 define i32 @test5(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = and i32 %A, %B
+; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[C_DEMORGAN]]
 ;
   %nota = xor i32 %A, -1
@@ -148,7 +148,7 @@ define i32 @test5(i32 %A, i32 %B) {
 
 define i47 @test3_apint(i47 %A, i47 %B) {
 ; CHECK-LABEL: @test3_apint(
-; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i47 %A, %B
+; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = or i47 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i47 [[C_DEMORGAN]]
 ;
   %nota = xor i47 %A, -1
@@ -162,7 +162,7 @@ define i47 @test3_apint(i47 %A, i47 %B) {
 
 define i61 @test4_apint(i61 %A) {
 ; CHECK-LABEL: @test4_apint(
-; CHECK-NEXT:    [[NOTA:%.*]] = and i61 %A, 5
+; CHECK-NEXT:    [[NOTA:%.*]] = and i61 [[A:%.*]], 5
 ; CHECK-NEXT:    [[C:%.*]] = xor i61 [[NOTA]], 5
 ; CHECK-NEXT:    ret i61 [[C]]
 ;
@@ -176,7 +176,7 @@ define i61 @test4_apint(i61 %A) {
 
 define i71 @test5_apint(i71 %A, i71 %B) {
 ; CHECK-LABEL: @test5_apint(
-; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = and i71 %A, %B
+; CHECK-NEXT:    [[C_DEMORGAN:%.*]] = and i71 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i71 [[C_DEMORGAN]]
 ;
   %nota = xor i71 %A, -1
@@ -190,8 +190,8 @@ define i71 @test5_apint(i71 %A, i71 %B) {
 
 define i8 @demorgan_nand(i8 %A, i8 %B) {
 ; CHECK-LABEL: @demorgan_nand(
-; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
-; CHECK-NEXT:    [[NOTC:%.*]] = or i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[NOTC:%.*]] = or i8 [[B_NOT]], [[A:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOTC]]
 ;
   %notx = xor i8 %A, -1
@@ -204,8 +204,8 @@ define i8 @demorgan_nand(i8 %A, i8 %B) {
 
 define i7 @demorgan_nand_apint1(i7 %A, i7 %B) {
 ; CHECK-LABEL: @demorgan_nand_apint1(
-; CHECK-NEXT:    [[B_NOT:%.*]] = xor i7 %B, -1
-; CHECK-NEXT:    [[NOTC:%.*]] = or i7 [[B_NOT]], %A
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i7 [[B:%.*]], -1
+; CHECK-NEXT:    [[NOTC:%.*]] = or i7 [[B_NOT]], [[A:%.*]]
 ; CHECK-NEXT:    ret i7 [[NOTC]]
 ;
   %nota = xor i7 %A, -1
@@ -218,8 +218,8 @@ define i7 @demorgan_nand_apint1(i7 %A, i7 %B) {
 
 define i117 @demorgan_nand_apint2(i117 %A, i117 %B) {
 ; CHECK-LABEL: @demorgan_nand_apint2(
-; CHECK-NEXT:    [[B_NOT:%.*]] = xor i117 %B, -1
-; CHECK-NEXT:    [[NOTC:%.*]] = or i117 [[B_NOT]], %A
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i117 [[B:%.*]], -1
+; CHECK-NEXT:    [[NOTC:%.*]] = or i117 [[B_NOT]], [[A:%.*]]
 ; CHECK-NEXT:    ret i117 [[NOTC]]
 ;
   %nota = xor i117 %A, -1
@@ -232,8 +232,8 @@ define i117 @demorgan_nand_apint2(i117 %A, i117 %B) {
 
 define i8 @demorgan_nor(i8 %A, i8 %B) {
 ; CHECK-LABEL: @demorgan_nor(
-; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
-; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], [[A:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOTC]]
 ;
   %notx = xor i8 %A, -1
@@ -246,10 +246,10 @@ define i8 @demorgan_nor(i8 %A, i8 %B) {
 
 define i8 @demorgan_nor_use2a(i8 %A, i8 %B) {
 ; CHECK-LABEL: @demorgan_nor_use2a(
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 %A, -1
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A:%.*]], -1
 ; CHECK-NEXT:    [[USE2A:%.*]] = mul i8 [[NOTA]], 23
-; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
-; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], [[A]]
 ; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[NOTC]], [[USE2A]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -265,9 +265,9 @@ define i8 @demorgan_nor_use2a(i8 %A, i8 %B) {
 
 define i8 @demorgan_nor_use2b(i8 %A, i8 %B) {
 ; CHECK-LABEL: @demorgan_nor_use2b(
-; CHECK-NEXT:    [[USE2B:%.*]] = mul i8 %B, 23
-; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
-; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[USE2B:%.*]] = mul i8 [[B:%.*]], 23
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 [[B]], -1
+; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], [[A:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[NOTC]], [[USE2B]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -283,8 +283,8 @@ define i8 @demorgan_nor_use2b(i8 %A, i8 %B) {
 
 define i8 @demorgan_nor_use2c(i8 %A, i8 %B) {
 ; CHECK-LABEL: @demorgan_nor_use2c(
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 %A, -1
-; CHECK-NEXT:    [[C:%.*]] = or i8 [[NOTA]], %B
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A:%.*]], -1
+; CHECK-NEXT:    [[C:%.*]] = or i8 [[NOTA]], [[B:%.*]]
 ; CHECK-NEXT:    [[USE2C:%.*]] = mul i8 [[C]], 23
 ; CHECK-NEXT:    [[NOTC:%.*]] = xor i8 [[C]], -1
 ; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[NOTC]], [[USE2C]]
@@ -302,11 +302,11 @@ define i8 @demorgan_nor_use2c(i8 %A, i8 %B) {
 
 define i8 @demorgan_nor_use2ab(i8 %A, i8 %B) {
 ; CHECK-LABEL: @demorgan_nor_use2ab(
-; CHECK-NEXT:    [[USE2B:%.*]] = mul i8 %B, 23
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 %A, -1
+; CHECK-NEXT:    [[USE2B:%.*]] = mul i8 [[B:%.*]], 23
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A:%.*]], -1
 ; CHECK-NEXT:    [[USE2A:%.*]] = mul i8 [[NOTA]], 17
-; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 %B, -1
-; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], %A
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i8 [[B]], -1
+; CHECK-NEXT:    [[NOTC:%.*]] = and i8 [[B_NOT]], [[A]]
 ; CHECK-NEXT:    [[R1:%.*]] = sdiv i8 [[NOTC]], [[USE2B]]
 ; CHECK-NEXT:    [[R2:%.*]] = sdiv i8 [[R1]], [[USE2A]]
 ; CHECK-NEXT:    ret i8 [[R2]]
@@ -325,9 +325,9 @@ define i8 @demorgan_nor_use2ab(i8 %A, i8 %B) {
 
 define i8 @demorgan_nor_use2ac(i8 %A, i8 %B) {
 ; CHECK-LABEL: @demorgan_nor_use2ac(
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 %A, -1
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A:%.*]], -1
 ; CHECK-NEXT:    [[USE2A:%.*]] = mul i8 [[NOTA]], 17
-; CHECK-NEXT:    [[C:%.*]] = or i8 [[NOTA]], %B
+; CHECK-NEXT:    [[C:%.*]] = or i8 [[NOTA]], [[B:%.*]]
 ; CHECK-NEXT:    [[USE2C:%.*]] = mul i8 [[C]], 23
 ; CHECK-NEXT:    [[NOTC:%.*]] = xor i8 [[C]], -1
 ; CHECK-NEXT:    [[R1:%.*]] = sdiv i8 [[NOTC]], [[USE2C]]
@@ -348,9 +348,9 @@ define i8 @demorgan_nor_use2ac(i8 %A, i8 %B) {
 
 define i8 @demorgan_nor_use2bc(i8 %A, i8 %B) {
 ; CHECK-LABEL: @demorgan_nor_use2bc(
-; CHECK-NEXT:    [[USE2B:%.*]] = mul i8 %B, 23
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 %A, -1
-; CHECK-NEXT:    [[C:%.*]] = or i8 [[NOTA]], %B
+; CHECK-NEXT:    [[USE2B:%.*]] = mul i8 [[B:%.*]], 23
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A:%.*]], -1
+; CHECK-NEXT:    [[C:%.*]] = or i8 [[NOTA]], [[B]]
 ; CHECK-NEXT:    [[USE2C:%.*]] = mul i8 [[C]], 23
 ; CHECK-NEXT:    [[NOTC:%.*]] = xor i8 [[C]], -1
 ; CHECK-NEXT:    [[R1:%.*]] = sdiv i8 [[NOTC]], [[USE2C]]
@@ -371,7 +371,7 @@ define i8 @demorgan_nor_use2bc(i8 %A, i8 %B) {
 
 define i32 @demorganize_constant1(i32 %a) {
 ; CHECK-LABEL: @demorganize_constant1(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 %a, 15
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 15
 ; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[AND]], -1
 ; CHECK-NEXT:    ret i32 [[AND1]]
 ;
@@ -384,7 +384,7 @@ define i32 @demorganize_constant1(i32 %a) {
 
 define i32 @demorganize_constant2(i32 %a) {
 ; CHECK-LABEL: @demorganize_constant2(
-; CHECK-NEXT:    [[AND:%.*]] = or i32 %a, 15
+; CHECK-NEXT:    [[AND:%.*]] = or i32 [[A:%.*]], 15
 ; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[AND]], -1
 ; CHECK-NEXT:    ret i32 [[AND1]]
 ;
@@ -397,7 +397,7 @@ define i32 @demorganize_constant2(i32 %a) {
 
 define i32 @demorgan_or_zext(i1 %X, i1 %Y) {
 ; CHECK-LABEL: @demorgan_or_zext(
-; CHECK-NEXT:    [[OR1_DEMORGAN:%.*]] = and i1 %X, %Y
+; CHECK-NEXT:    [[OR1_DEMORGAN:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[OR1:%.*]] = xor i1 [[OR1_DEMORGAN]], true
 ; CHECK-NEXT:    [[OR:%.*]] = zext i1 [[OR1]] to i32
 ; CHECK-NEXT:    ret i32 [[OR]]
@@ -412,7 +412,7 @@ define i32 @demorgan_or_zext(i1 %X, i1 %Y) {
 
 define i32 @demorgan_and_zext(i1 %X, i1 %Y) {
 ; CHECK-LABEL: @demorgan_and_zext(
-; CHECK-NEXT:    [[AND1_DEMORGAN:%.*]] = or i1 %X, %Y
+; CHECK-NEXT:    [[AND1_DEMORGAN:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[AND1:%.*]] = xor i1 [[AND1_DEMORGAN]], true
 ; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[AND1]] to i32
 ; CHECK-NEXT:    ret i32 [[AND]]
@@ -427,7 +427,7 @@ define i32 @demorgan_and_zext(i1 %X, i1 %Y) {
 
 define <2 x i32> @demorgan_or_zext_vec(<2 x i1> %X, <2 x i1> %Y) {
 ; CHECK-LABEL: @demorgan_or_zext_vec(
-; CHECK-NEXT:    [[OR1_DEMORGAN:%.*]] = and <2 x i1> %X, %Y
+; CHECK-NEXT:    [[OR1_DEMORGAN:%.*]] = and <2 x i1> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[OR1:%.*]] = xor <2 x i1> [[OR1_DEMORGAN]], <i1 true, i1 true>
 ; CHECK-NEXT:    [[OR:%.*]] = zext <2 x i1> [[OR1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[OR]]
@@ -442,7 +442,7 @@ define <2 x i32> @demorgan_or_zext_vec(<2 x i1> %X, <2 x i1> %Y) {
 
 define <2 x i32> @demorgan_and_zext_vec(<2 x i1> %X, <2 x i1> %Y) {
 ; CHECK-LABEL: @demorgan_and_zext_vec(
-; CHECK-NEXT:    [[AND1_DEMORGAN:%.*]] = or <2 x i1> %X, %Y
+; CHECK-NEXT:    [[AND1_DEMORGAN:%.*]] = or <2 x i1> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[AND1:%.*]] = xor <2 x i1> [[AND1_DEMORGAN]], <i1 true, i1 true>
 ; CHECK-NEXT:    [[AND:%.*]] = zext <2 x i1> [[AND1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[AND]]
@@ -457,9 +457,9 @@ define <2 x i32> @demorgan_and_zext_vec(<2 x i1> %X, <2 x i1> %Y) {
 
 define i32 @PR28476(i32 %x, i32 %y) {
 ; CHECK-LABEL: @PR28476(
-; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i32 %x, 0
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 %y, 0
-; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[CMP1]], [[CMP0]]
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[CMP0]], [[CMP1]]
 ; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
@@ -475,8 +475,8 @@ define i32 @PR28476(i32 %x, i32 %y) {
 
 define i32 @demorgan_plus_and_to_xor(i32 %a, i32 %b) {
 ; CHECK-LABEL: @demorgan_plus_and_to_xor(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 %b, %a
-; CHECK-NEXT:    ret i32 [[NOT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %or = or i32 %b, %a
   %notor = xor i32 %or, -1
@@ -488,8 +488,8 @@ define i32 @demorgan_plus_and_to_xor(i32 %a, i32 %b) {
 
 define <4 x i32> @demorgan_plus_and_to_xor_vec(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @demorgan_plus_and_to_xor_vec(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i32> %a, %b
-; CHECK-NEXT:    ret <4 x i32> [[NOT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %or = or <4 x i32> %a, %b
   %notor = xor <4 x i32> %or, < i32 -1, i32 -1, i32 -1, i32 -1 >

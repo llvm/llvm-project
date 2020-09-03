@@ -1,4 +1,4 @@
-//===-- CommandObjectMultiword.cpp ------------------------------*- C++ -*-===//
+//===-- CommandObjectMultiword.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,7 +32,7 @@ CommandObjectSP CommandObjectMultiword::GetSubcommandSP(llvm::StringRef sub_cmd,
   CommandObject::CommandMap::iterator pos;
 
   if (!m_subcommand_dict.empty()) {
-    pos = m_subcommand_dict.find(sub_cmd);
+    pos = m_subcommand_dict.find(std::string(sub_cmd));
     if (pos != m_subcommand_dict.end()) {
       // An exact match; append the sub_cmd to the 'matches' string list.
       if (matches)
@@ -50,7 +50,7 @@ CommandObjectSP CommandObjectMultiword::GetSubcommandSP(llvm::StringRef sub_cmd,
         // function, since I now know I have an exact match...
 
         sub_cmd = matches->GetStringAtIndex(0);
-        pos = m_subcommand_dict.find(sub_cmd);
+        pos = m_subcommand_dict.find(std::string(sub_cmd));
         if (pos != m_subcommand_dict.end())
           return_cmd_sp = pos->second;
       }
@@ -74,9 +74,9 @@ bool CommandObjectMultiword::LoadSubCommand(llvm::StringRef name,
   CommandMap::iterator pos;
   bool success = true;
 
-  pos = m_subcommand_dict.find(name);
+  pos = m_subcommand_dict.find(std::string(name));
   if (pos == m_subcommand_dict.end()) {
-    m_subcommand_dict[name] = cmd_obj;
+    m_subcommand_dict[std::string(name)] = cmd_obj;
   } else
     success = false;
 
@@ -130,9 +130,9 @@ bool CommandObjectMultiword::Execute(const char *args_string,
     error_msg.assign("invalid command ");
 
   error_msg.append("'");
-  error_msg.append(GetCommandName());
+  error_msg.append(std::string(GetCommandName()));
   error_msg.append(" ");
-  error_msg.append(sub_command);
+  error_msg.append(std::string(sub_command));
   error_msg.append("'.");
 
   if (num_subcmd_matches > 0) {
@@ -165,15 +165,14 @@ void CommandObjectMultiword::GenerateHelpText(Stream &output_stream) {
     std::string indented_command("    ");
     indented_command.append(pos->first);
     if (pos->second->WantsRawCommandString()) {
-      std::string help_text(pos->second->GetHelp());
+      std::string help_text(std::string(pos->second->GetHelp()));
       help_text.append("  Expects 'raw' input (see 'help raw-input'.)");
-      m_interpreter.OutputFormattedHelpText(output_stream,
-                                            indented_command.c_str(), "--",
-                                            help_text.c_str(), max_len);
+      m_interpreter.OutputFormattedHelpText(output_stream, indented_command,
+                                            "--", help_text, max_len);
     } else
-      m_interpreter.OutputFormattedHelpText(output_stream,
-                                            indented_command.c_str(), "--",
-                                            pos->second->GetHelp(), max_len);
+      m_interpreter.OutputFormattedHelpText(output_stream, indented_command,
+                                            "--", pos->second->GetHelp(),
+                                            max_len);
   }
 
   output_stream.PutCString("\nFor more help on any particular subcommand, type "

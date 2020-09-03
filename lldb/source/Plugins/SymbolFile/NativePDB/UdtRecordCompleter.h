@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
-#define LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
@@ -25,6 +25,7 @@ class TagDecl;
 namespace llvm {
 namespace pdb {
 class TpiStream;
+class GlobalsStream;
 }
 } // namespace llvm
 
@@ -33,6 +34,7 @@ class Type;
 class CompilerType;
 namespace npdb {
 class PdbAstBuilder;
+class PdbIndex;
 
 class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
   using IndexedBase =
@@ -49,14 +51,14 @@ class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
   CompilerType &m_derived_ct;
   clang::TagDecl &m_tag_decl;
   PdbAstBuilder &m_ast_builder;
-  llvm::pdb::TpiStream &m_tpi;
+  PdbIndex &m_index;
   std::vector<IndexedBase> m_bases;
   ClangASTImporter::LayoutInfo m_layout;
 
 public:
   UdtRecordCompleter(PdbTypeSymId id, CompilerType &derived_ct,
                      clang::TagDecl &tag_decl, PdbAstBuilder &ast_builder,
-                     llvm::pdb::TpiStream &tpi);
+                     PdbIndex &index);
 
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   llvm::Error visitKnownMember(llvm::codeview::CVMemberRecord &CVR,            \
@@ -79,4 +81,4 @@ private:
 } // namespace npdb
 } // namespace lldb_private
 
-#endif // LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H

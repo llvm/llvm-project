@@ -18,19 +18,17 @@
 
 #include <isl_pw_macro.h>
 
-#ifdef HAS_TYPE
-__isl_give PW *FN(PW,alloc_size)(__isl_take isl_space *dim,
-	enum isl_fold type, int n)
-#else
-__isl_give PW *FN(PW,alloc_size)(__isl_take isl_space *dim, int n)
-#endif
+#include "opt_type.h"
+
+__isl_give PW *FN(PW,alloc_size)(__isl_take isl_space *space
+	OPT_TYPE_PARAM, int n)
 {
 	isl_ctx *ctx;
 	struct PW *pw;
 
-	if (!dim)
+	if (!space)
 		return NULL;
-	ctx = isl_space_get_ctx(dim);
+	ctx = isl_space_get_ctx(space);
 	isl_assert(ctx, n >= 0, goto error);
 	pw = isl_alloc(ctx, struct PW,
 			sizeof(struct PW) + (n - 1) * sizeof(S(PW,piece)));
@@ -38,29 +36,20 @@ __isl_give PW *FN(PW,alloc_size)(__isl_take isl_space *dim, int n)
 		goto error;
 
 	pw->ref = 1;
-#ifdef HAS_TYPE
-	pw->type = type;
-#endif
+	OPT_SET_TYPE(pw->, type);
 	pw->size = n;
 	pw->n = 0;
-	pw->dim = dim;
+	pw->dim = space;
 	return pw;
 error:
-	isl_space_free(dim);
+	isl_space_free(space);
 	return NULL;
 }
 
-#ifdef HAS_TYPE
-__isl_give PW *FN(PW,ZERO)(__isl_take isl_space *dim, enum isl_fold type)
+__isl_give PW *FN(PW,ZERO)(__isl_take isl_space *space OPT_TYPE_PARAM)
 {
-	return FN(PW,alloc_size)(dim, type, 0);
+	return FN(PW,alloc_size)(space OPT_TYPE_ARG(NO_LOC), 0);
 }
-#else
-__isl_give PW *FN(PW,ZERO)(__isl_take isl_space *dim)
-{
-	return FN(PW,alloc_size)(dim, 0);
-}
-#endif
 
 __isl_give PW *FN(PW,add_piece)(__isl_take PW *pw,
 	__isl_take isl_set *set, __isl_take EL *el)
@@ -78,11 +67,9 @@ __isl_give PW *FN(PW,add_piece)(__isl_take PW *pw,
 	}
 
 	ctx = isl_set_get_ctx(set);
-#ifdef HAS_TYPE
-	if (pw->type != el->type)
+	if (!OPT_EQUAL_TYPES(pw->, el->))
 		isl_die(ctx, isl_error_invalid, "fold types don't match",
 			goto error);
-#endif
 	el_dim = FN(EL,get_space(el));
 	isl_assert(ctx, isl_space_is_equal(pw->dim, el_dim), goto error);
 	isl_assert(ctx, pw->n < pw->size, goto error);
@@ -136,23 +123,15 @@ static isl_stat FN(PW,check_compatible_domain)(__isl_keep EL *el,
 	return isl_stat_ok;
 }
 
-#ifdef HAS_TYPE
-__isl_give PW *FN(PW,alloc)(enum isl_fold type,
+__isl_give PW *FN(PW,alloc)(OPT_TYPE_PARAM_FIRST
 	__isl_take isl_set *set, __isl_take EL *el)
-#else
-__isl_give PW *FN(PW,alloc)(__isl_take isl_set *set, __isl_take EL *el)
-#endif
 {
 	PW *pw;
 
 	if (FN(PW,check_compatible_domain)(el, set) < 0)
 		goto error;
 
-#ifdef HAS_TYPE
-	pw = FN(PW,alloc_size)(FN(EL,get_space)(el), type, 1);
-#else
-	pw = FN(PW,alloc_size)(FN(EL,get_space)(el), 1);
-#endif
+	pw = FN(PW,alloc_size)(FN(EL,get_space)(el) OPT_TYPE_ARG(NO_LOC), 1);
 
 	return FN(PW,add_piece)(pw, set, el);
 error:
@@ -169,11 +148,8 @@ __isl_give PW *FN(PW,dup)(__isl_keep PW *pw)
 	if (!pw)
 		return NULL;
 
-#ifdef HAS_TYPE
-	dup = FN(PW,alloc_size)(isl_space_copy(pw->dim), pw->type, pw->n);
-#else
-	dup = FN(PW,alloc_size)(isl_space_copy(pw->dim), pw->n);
-#endif
+	dup = FN(PW,alloc_size)(isl_space_copy(pw->dim)
+				OPT_TYPE_ARG(pw->), pw->n);
 	if (!dup)
 		return NULL;
 
@@ -223,6 +199,65 @@ __isl_null PW *FN(PW,free)(__isl_take PW *pw)
 	return NULL;
 }
 
+/* Create a piecewise expression with the given base expression on a universe
+ * domain.
+ */
+static __isl_give PW *FN(FN(FN(PW,from),BASE),type_base)(__isl_take EL *el
+	OPT_TYPE_PARAM)
+{
+	isl_set *dom = isl_set_universe(FN(EL,get_domain_space)(el));
+	return FN(PW,alloc)(OPT_TYPE_ARG_FIRST(NO_LOC) dom, el);
+}
+
+/* Create a piecewise expression with the given base expression on a universe
+ * domain.
+ *
+ * If the default value of this piecewise type is zero and
+ * if "el" is effectively zero, then create an empty piecewise expression
+ * instead.
+ */
+static __isl_give PW *FN(FN(FN(PW,from),BASE),type)(__isl_take EL *el
+	OPT_TYPE_PARAM)
+{
+	isl_bool is_zero;
+	isl_space *space;
+
+	if (!DEFAULT_IS_ZERO)
+		return FN(FN(FN(PW,from),BASE),type_base)(el
+							OPT_TYPE_ARG(NO_LOC));
+	is_zero = FN(EL,EL_IS_ZERO)(el);
+	if (is_zero < 0)
+		goto error;
+	if (!is_zero)
+		return FN(FN(FN(PW,from),BASE),type_base)(el
+							OPT_TYPE_ARG(NO_LOC));
+	space = FN(EL,get_space)(el);
+	FN(EL,free)(el);
+	return FN(PW,ZERO)(space OPT_TYPE_ARG(NO_LOC));
+error:
+	FN(EL,free)(el);
+	return NULL;
+}
+
+#ifdef HAS_TYPE
+/* Create a piecewise expression with the given base expression on a universe
+ * domain.
+ *
+ * Pass along the type as an extra argument for improved uniformity
+ * with piecewise types that do not have a fold type.
+ */
+__isl_give PW *FN(FN(PW,from),BASE)(__isl_take EL *el)
+{
+	enum isl_fold type = FN(EL,get_type)(el);
+	return FN(FN(FN(PW,from),BASE),type)(el, type);
+}
+#else
+__isl_give PW *FN(FN(PW,from),BASE)(__isl_take EL *el)
+{
+	return FN(FN(FN(PW,from),BASE),type)(el);
+}
+#endif
+
 const char *FN(PW,get_dim_name)(__isl_keep PW *pw, enum isl_dim_type type,
 	unsigned pos)
 {
@@ -266,10 +301,9 @@ isl_bool FN(PW,IS_ZERO)(__isl_keep PW *pw)
 	if (!pw)
 		return isl_bool_error;
 
-	return pw->n == 0;
+	return isl_bool_ok(pw->n == 0);
 }
 
-#ifndef NO_REALIGN
 __isl_give PW *FN(PW,realign_domain)(__isl_take PW *pw,
 	__isl_take isl_reordering *exp)
 {
@@ -300,13 +334,10 @@ error:
 	return NULL;
 }
 
-/* Check that "pw" has only named parameters, reporting an error
- * if it does not.
- */
-isl_stat FN(PW,check_named_params)(__isl_keep PW *pw)
-{
-	return isl_space_check_named_params(FN(PW,peek_space)(pw));
-}
+#undef TYPE
+#define TYPE PW
+
+#include "isl_check_named_params_templ.c"
 
 /* Align the parameters of "pw" to those of "model".
  */
@@ -344,79 +375,47 @@ error:
 	return NULL;
 }
 
-static __isl_give PW *FN(PW,align_params_pw_pw_and)(__isl_take PW *pw1,
-	__isl_take PW *pw2,
-	__isl_give PW *(*fn)(__isl_take PW *pw1, __isl_take PW *pw2))
-{
-	isl_bool equal_params;
+#undef TYPE
+#define TYPE	PW
 
-	if (!pw1 || !pw2)
-		goto error;
-	equal_params = isl_space_has_equal_params(pw1->dim, pw2->dim);
-	if (equal_params < 0)
-		goto error;
-	if (equal_params)
-		return fn(pw1, pw2);
-	if (FN(PW,check_named_params)(pw1) < 0 ||
-	    FN(PW,check_named_params)(pw2) < 0)
-		goto error;
-	pw1 = FN(PW,align_params)(pw1, FN(PW,get_space)(pw2));
-	pw2 = FN(PW,align_params)(pw2, FN(PW,get_space)(pw1));
-	return fn(pw1, pw2);
-error:
-	FN(PW,free)(pw1);
-	FN(PW,free)(pw2);
-	return NULL;
-}
+static
+#include "isl_align_params_bin_templ.c"
 
-static __isl_give PW *FN(PW,align_params_pw_set_and)(__isl_take PW *pw,
-	__isl_take isl_set *set,
-	__isl_give PW *(*fn)(__isl_take PW *pw, __isl_take isl_set *set))
-{
-	isl_ctx *ctx;
-	isl_bool aligned;
+#undef SUFFIX
+#define SUFFIX	set
+#undef ARG1
+#define ARG1	PW
+#undef ARG2
+#define ARG2	isl_set
 
-	if (!pw || !set)
-		goto error;
-	aligned = isl_set_space_has_equal_params(set, pw->dim);
-	if (aligned < 0)
-		goto error;
-	if (aligned)
-		return fn(pw, set);
-	ctx = FN(PW,get_ctx)(pw);
-	if (FN(PW,check_named_params)(pw) < 0)
-		goto error;
-	if (!isl_space_has_named_params(set->dim))
-		isl_die(ctx, isl_error_invalid,
-			"unaligned unnamed parameters", goto error);
-	pw = FN(PW,align_params)(pw, isl_set_get_space(set));
-	set = isl_set_align_params(set, FN(PW,get_space)(pw));
-	return fn(pw, set);
-error:
-	FN(PW,free)(pw);
-	isl_set_free(set);
-	return NULL;
-}
-#endif
+static
+#include "isl_align_params_templ.c"
 
-static __isl_give PW *FN(PW,union_add_aligned)(__isl_take PW *pw1,
-	__isl_take PW *pw2)
+#undef TYPE
+#define TYPE	PW
+
+#include "isl_type_has_equal_space_bin_templ.c"
+#include "isl_type_check_equal_space_templ.c"
+
+/* Private version of "union_add".  For isl_pw_qpolynomial and
+ * isl_pw_qpolynomial_fold, we prefer to simply call it "add".
+ */
+static __isl_give PW *FN(PW,union_add_)(__isl_take PW *pw1, __isl_take PW *pw2)
 {
 	int i, j, n;
 	struct PW *res;
 	isl_ctx *ctx;
 	isl_set *set;
 
-	if (!pw1 || !pw2)
+	if (FN(PW,align_params_bin)(&pw1, &pw2) < 0)
 		goto error;
 
 	ctx = isl_space_get_ctx(pw1->dim);
-#ifdef HAS_TYPE
-	if (pw1->type != pw2->type)
+	if (!OPT_EQUAL_TYPES(pw1->, pw2->))
 		isl_die(ctx, isl_error_invalid,
 			"fold types don't match", goto error);
-#endif
-	isl_assert(ctx, isl_space_is_equal(pw1->dim, pw2->dim), goto error);
+	if (FN(PW,check_equal_space)(pw1, pw2) < 0)
+		goto error;
 
 	if (FN(PW,IS_ZERO)(pw1)) {
 		FN(PW,free)(pw1);
@@ -429,11 +428,8 @@ static __isl_give PW *FN(PW,union_add_aligned)(__isl_take PW *pw1,
 	}
 
 	n = (pw1->n + 1) * (pw2->n + 1);
-#ifdef HAS_TYPE
-	res = FN(PW,alloc_size)(isl_space_copy(pw1->dim), pw1->type, n);
-#else
-	res = FN(PW,alloc_size)(isl_space_copy(pw1->dim), n);
-#endif
+	res = FN(PW,alloc_size)(isl_space_copy(pw1->dim)
+				OPT_TYPE_ARG(pw1->), n);
 
 	for (i = 0; i < pw1->n; ++i) {
 		set = isl_set_copy(pw1->p[i].set);
@@ -476,15 +472,6 @@ error:
 	return NULL;
 }
 
-/* Private version of "union_add".  For isl_pw_qpolynomial and
- * isl_pw_qpolynomial_fold, we prefer to simply call it "add".
- */
-static __isl_give PW *FN(PW,union_add_)(__isl_take PW *pw1, __isl_take PW *pw2)
-{
-	return FN(PW,align_params_pw_pw_and)(pw1, pw2,
-						&FN(PW,union_add_aligned));
-}
-
 /* Make sure "pw" has room for at least "n" more pieces.
  *
  * If there is only one reference to pw, we extend it in place.
@@ -510,11 +497,7 @@ static __isl_give PW *FN(PW,grow)(__isl_take PW *pw, int n)
 		res->size = n;
 		return res;
 	}
-#ifdef HAS_TYPE
-	res = FN(PW,alloc_size)(isl_space_copy(pw->dim), pw->type, n);
-#else
-	res = FN(PW,alloc_size)(isl_space_copy(pw->dim), n);
-#endif
+	res = FN(PW,alloc_size)(isl_space_copy(pw->dim) OPT_TYPE_ARG(pw->), n);
 	if (!res)
 		return FN(PW,free)(pw);
 	for (i = 0; i < pw->n; ++i)
@@ -524,25 +507,23 @@ static __isl_give PW *FN(PW,grow)(__isl_take PW *pw, int n)
 	return res;
 }
 
-static __isl_give PW *FN(PW,add_disjoint_aligned)(__isl_take PW *pw1,
-	__isl_take PW *pw2)
+__isl_give PW *FN(PW,add_disjoint)(__isl_take PW *pw1, __isl_take PW *pw2)
 {
 	int i;
 	isl_ctx *ctx;
 
-	if (!pw1 || !pw2)
+	if (FN(PW,align_params_bin)(&pw1, &pw2) < 0)
 		goto error;
 
 	if (pw1->size < pw1->n + pw2->n && pw1->n < pw2->n)
-		return FN(PW,add_disjoint_aligned)(pw2, pw1);
+		return FN(PW,add_disjoint)(pw2, pw1);
 
 	ctx = isl_space_get_ctx(pw1->dim);
-#ifdef HAS_TYPE
-	if (pw1->type != pw2->type)
+	if (!OPT_EQUAL_TYPES(pw1->, pw2->))
 		isl_die(ctx, isl_error_invalid,
 			"fold types don't match", goto error);
-#endif
-	isl_assert(ctx, isl_space_is_equal(pw1->dim, pw2->dim), goto error);
+	if (FN(PW,check_equal_space)(pw1, pw2) < 0)
+		goto error;
 
 	if (FN(PW,IS_ZERO)(pw1)) {
 		FN(PW,free)(pw1);
@@ -572,12 +553,6 @@ error:
 	return NULL;
 }
 
-__isl_give PW *FN(PW,add_disjoint)(__isl_take PW *pw1, __isl_take PW *pw2)
-{
-	return FN(PW,align_params_pw_pw_and)(pw1, pw2,
-						&FN(PW,add_disjoint_aligned));
-}
-
 /* This function is currently only used from isl_aff.c
  */
 static __isl_give PW *FN(PW,on_shared_domain_in)(__isl_take PW *pw1,
@@ -599,11 +574,7 @@ static __isl_give PW *FN(PW,on_shared_domain_in)(__isl_take PW *pw1,
 		goto error;
 
 	n = pw1->n * pw2->n;
-#ifdef HAS_TYPE
-	res = FN(PW,alloc_size)(isl_space_copy(space), pw1->type, n);
-#else
-	res = FN(PW,alloc_size)(isl_space_copy(space), n);
-#endif
+	res = FN(PW,alloc_size)(isl_space_copy(space) OPT_TYPE_ARG(pw1->), n);
 
 	for (i = 0; i < pw1->n; ++i) {
 		for (j = 0; j < pw2->n; ++j) {
@@ -658,7 +629,7 @@ static __isl_give PW *FN(PW,on_shared_domain)(__isl_take PW *pw1,
 {
 	isl_space *space;
 
-	if (!pw1 || !pw2)
+	if (FN(PW,check_equal_space)(pw1, pw2) < 0)
 		goto error;
 
 	space = isl_space_copy(pw1->dim);
@@ -668,38 +639,6 @@ error:
 	FN(PW,free)(pw2);
 	return NULL;
 }
-
-#ifndef NO_NEG
-__isl_give PW *FN(PW,neg)(__isl_take PW *pw)
-{
-	int i;
-
-	if (!pw)
-		return NULL;
-
-	if (FN(PW,IS_ZERO)(pw))
-		return pw;
-
-	pw = FN(PW,cow)(pw);
-	if (!pw)
-		return NULL;
-
-	for (i = 0; i < pw->n; ++i) {
-		pw->p[i].FIELD = FN(EL,neg)(pw->p[i].FIELD);
-		if (!pw->p[i].FIELD)
-			return FN(PW,free)(pw);
-	}
-
-	return pw;
-}
-#endif
-
-#ifndef NO_SUB
-__isl_give PW *FN(PW,sub)(__isl_take PW *pw1, __isl_take PW *pw2)
-{
-	return FN(PW,add)(pw1, FN(PW,neg)(pw2));
-}
-#endif
 
 /* Return the parameter domain of "pw".
  */
@@ -812,7 +751,8 @@ __isl_give PW *FN(PW,fix_si)(__isl_take PW *pw, enum isl_dim_type type,
 
 /* Restrict the domain of "pw" by combining each cell
  * with "set" through a call to "fn", where "fn" may be
- * isl_set_intersect, isl_set_intersect_params or isl_set_subtract.
+ * isl_set_intersect, isl_set_intersect_params, isl_set_intersect_factor_domain,
+ * isl_set_intersect_factor_range or isl_set_subtract.
  */
 static __isl_give PW *FN(PW,restrict_domain_aligned)(__isl_take PW *pw,
 	__isl_take isl_set *set,
@@ -847,24 +787,11 @@ error:
 	return NULL;
 }
 
-static __isl_give PW *FN(PW,intersect_domain_aligned)(__isl_take PW *pw,
-	__isl_take isl_set *set)
-{
-	return FN(PW,restrict_domain_aligned)(pw, set, &isl_set_intersect);
-}
-
 __isl_give PW *FN(PW,intersect_domain)(__isl_take PW *pw,
 	__isl_take isl_set *context)
 {
-	return FN(PW,align_params_pw_set_and)(pw, context,
-					&FN(PW,intersect_domain_aligned));
-}
-
-static __isl_give PW *FN(PW,intersect_params_aligned)(__isl_take PW *pw,
-	__isl_take isl_set *set)
-{
-	return FN(PW,restrict_domain_aligned)(pw, set,
-					&isl_set_intersect_params);
+	FN(PW,align_params_set)(&pw, &context);
+	return FN(PW,restrict_domain_aligned)(pw, context, &isl_set_intersect);
 }
 
 /* Intersect the domain of "pw" with the parameter domain "context".
@@ -872,17 +799,31 @@ static __isl_give PW *FN(PW,intersect_params_aligned)(__isl_take PW *pw,
 __isl_give PW *FN(PW,intersect_params)(__isl_take PW *pw,
 	__isl_take isl_set *context)
 {
-	return FN(PW,align_params_pw_set_and)(pw, context,
-					&FN(PW,intersect_params_aligned));
+	FN(PW,align_params_set)(&pw, &context);
+	return FN(PW,restrict_domain_aligned)(pw, context,
+					&isl_set_intersect_params);
 }
 
-/* Subtract "domain' from the domain of "pw", assuming their
- * parameters have been aligned.
+/* Given a piecewise expression "pw" with domain in a space [A -> B] and
+ * a set in the space A, intersect the domain with the set.
  */
-static __isl_give PW *FN(PW,subtract_domain_aligned)(__isl_take PW *pw,
-	__isl_take isl_set *domain)
+__isl_give PW *FN(PW,intersect_domain_wrapped_domain)(__isl_take PW *pw,
+	__isl_take isl_set *set)
 {
-	return FN(PW,restrict_domain_aligned)(pw, domain, &isl_set_subtract);
+	FN(PW,align_params_set)(&pw, &set);
+	return FN(PW,restrict_domain_aligned)(pw, set,
+					    &isl_set_intersect_factor_domain);
+}
+
+/* Given a piecewise expression "pw" with domain in a space [A -> B] and
+ * a set in the space B, intersect the domain with the set.
+ */
+__isl_give PW *FN(PW,intersect_domain_wrapped_range)(__isl_take PW *pw,
+	__isl_take isl_set *set)
+{
+	FN(PW,align_params_set)(&pw, &set);
+	return FN(PW,restrict_domain_aligned)(pw, set,
+					    &isl_set_intersect_factor_range);
 }
 
 /* Subtract "domain' from the domain of "pw".
@@ -890,8 +831,8 @@ static __isl_give PW *FN(PW,subtract_domain_aligned)(__isl_take PW *pw,
 __isl_give PW *FN(PW,subtract_domain)(__isl_take PW *pw,
 	__isl_take isl_set *domain)
 {
-	return FN(PW,align_params_pw_set_and)(pw, domain,
-					&FN(PW,subtract_domain_aligned));
+	FN(PW,align_params_set)(&pw, &domain);
+	return FN(PW,restrict_domain_aligned)(pw, domain, &isl_set_subtract);
 }
 
 /* Compute the gist of "pw" with respect to the domain constraints
@@ -1029,31 +970,19 @@ error:
 	return NULL;
 }
 
-static __isl_give PW *FN(PW,gist_domain_aligned)(__isl_take PW *pw,
-	__isl_take isl_set *set)
-{
-	return FN(PW,gist_aligned)(pw, set, &FN(EL,gist),
-					&isl_set_gist_basic_set);
-}
-
 __isl_give PW *FN(PW,gist)(__isl_take PW *pw, __isl_take isl_set *context)
 {
-	return FN(PW,align_params_pw_set_and)(pw, context,
-						&FN(PW,gist_domain_aligned));
-}
-
-static __isl_give PW *FN(PW,gist_params_aligned)(__isl_take PW *pw,
-	__isl_take isl_set *set)
-{
-	return FN(PW,gist_aligned)(pw, set, &FN(EL,gist_params),
-					&isl_set_gist_params_basic_set);
+	FN(PW,align_params_set)(&pw, &context);
+	return FN(PW,gist_aligned)(pw, context, &FN(EL,gist),
+					&isl_set_gist_basic_set);
 }
 
 __isl_give PW *FN(PW,gist_params)(__isl_take PW *pw,
 	__isl_take isl_set *context)
 {
-	return FN(PW,align_params_pw_set_and)(pw, context,
-						&FN(PW,gist_params_aligned));
+	FN(PW,align_params_set)(&pw, &context);
+	return FN(PW,gist_aligned)(pw, context, &FN(EL,gist_params),
+					&isl_set_gist_params_basic_set);
 }
 
 /* Return -1 if the piece "p1" should be sorted before "p2"
@@ -1281,9 +1210,11 @@ error:
 __isl_give PW *FN(PW,project_domain_on_params)(__isl_take PW *pw)
 {
 	isl_space *space;
-	unsigned n;
+	isl_size n;
 
 	n = FN(PW,dim)(pw, isl_dim_in);
+	if (n < 0)
+		return FN(PW,free)(pw);
 	pw = FN(PW,project_out)(pw, isl_dim_in, 0, n);
 	space = FN(PW,get_domain_space)(pw);
 	space = isl_space_params(space);
@@ -1295,12 +1226,16 @@ __isl_give PW *FN(PW,project_domain_on_params)(__isl_take PW *pw)
  */
 __isl_give PW *FN(PW,drop_unused_params)(__isl_take PW *pw)
 {
+	isl_size n;
 	int i;
 
 	if (FN(PW,check_named_params)(pw) < 0)
 		return FN(PW,free)(pw);
 
-	for (i = FN(PW,dim)(pw, isl_dim_param) - 1; i >= 0; i--) {
+	n = FN(PW,dim)(pw, isl_dim_param);
+	if (n < 0)
+		return FN(PW,free)(pw);
+	for (i = n - 1; i >= 0; i--) {
 		isl_bool involves;
 
 		involves = FN(PW,involves_dims)(pw, isl_dim_param, i, 1);
@@ -1312,46 +1247,6 @@ __isl_give PW *FN(PW,drop_unused_params)(__isl_take PW *pw)
 
 	return pw;
 }
-
-#ifndef NO_INSERT_DIMS
-__isl_give PW *FN(PW,insert_dims)(__isl_take PW *pw, enum isl_dim_type type,
-	unsigned first, unsigned n)
-{
-	int i;
-	enum isl_dim_type set_type;
-
-	if (!pw)
-		return NULL;
-	if (n == 0 && !isl_space_is_named_or_nested(pw->dim, type))
-		return pw;
-
-	set_type = type == isl_dim_in ? isl_dim_set : type;
-
-	pw = FN(PW,cow)(pw);
-	if (!pw)
-		return NULL;
-
-	pw->dim = isl_space_insert_dims(pw->dim, type, first, n);
-	if (!pw->dim)
-		goto error;
-
-	for (i = 0; i < pw->n; ++i) {
-		pw->p[i].set = isl_set_insert_dims(pw->p[i].set,
-							    set_type, first, n);
-		if (!pw->p[i].set)
-			goto error;
-		pw->p[i].FIELD = FN(EL,insert_dims)(pw->p[i].FIELD,
-								type, first, n);
-		if (!pw->p[i].FIELD)
-			goto error;
-	}
-
-	return pw;
-error:
-	FN(PW,free)(pw);
-	return NULL;
-}
-#endif
 
 __isl_give PW *FN(PW,fix_dim)(__isl_take PW *pw,
 	enum isl_dim_type type, unsigned pos, isl_int v)
@@ -1397,9 +1292,9 @@ error:
 	return FN(PW,free)(pw);
 }
 
-unsigned FN(PW,dim)(__isl_keep PW *pw, enum isl_dim_type type)
+isl_size FN(PW,dim)(__isl_keep PW *pw, enum isl_dim_type type)
 {
-	return pw ? isl_space_dim(pw->dim, type) : 0;
+	return isl_space_dim(FN(PW,peek_space)(pw), type);
 }
 
 __isl_give PW *FN(PW,split_dims)(__isl_take PW *pw,
@@ -1432,53 +1327,6 @@ error:
 	return NULL;
 }
 
-#ifndef NO_OPT
-/* Compute the maximal value attained by the piecewise quasipolynomial
- * on its domain or zero if the domain is empty.
- * In the worst case, the domain is scanned completely,
- * so the domain is assumed to be bounded.
- */
-__isl_give isl_val *FN(PW,opt)(__isl_take PW *pw, int max)
-{
-	int i;
-	isl_val *opt;
-
-	if (!pw)
-		return NULL;
-
-	if (pw->n == 0) {
-		opt = isl_val_zero(FN(PW,get_ctx)(pw));
-		FN(PW,free)(pw);
-		return opt;
-	}
-
-	opt = FN(EL,opt_on_domain)(FN(EL,copy)(pw->p[0].FIELD),
-					isl_set_copy(pw->p[0].set), max);
-	for (i = 1; i < pw->n; ++i) {
-		isl_val *opt_i;
-		opt_i = FN(EL,opt_on_domain)(FN(EL,copy)(pw->p[i].FIELD),
-						isl_set_copy(pw->p[i].set), max);
-		if (max)
-			opt = isl_val_max(opt, opt_i);
-		else
-			opt = isl_val_min(opt, opt_i);
-	}
-
-	FN(PW,free)(pw);
-	return opt;
-}
-
-__isl_give isl_val *FN(PW,max)(__isl_take PW *pw)
-{
-	return FN(PW,opt)(pw, 1);
-}
-
-__isl_give isl_val *FN(PW,min)(__isl_take PW *pw)
-{
-	return FN(PW,opt)(pw, 0);
-}
-#endif
-
 /* Return the space of "pw".
  */
 __isl_keep isl_space *FN(PW,peek_space)(__isl_keep PW *pw)
@@ -1489,6 +1337,145 @@ __isl_keep isl_space *FN(PW,peek_space)(__isl_keep PW *pw)
 __isl_give isl_space *FN(PW,get_space)(__isl_keep PW *pw)
 {
 	return isl_space_copy(FN(PW,peek_space)(pw));
+}
+
+/* Return the space of "pw".
+ * This may be either a copy or the space itself
+ * if there is only one reference to "pw".
+ * This allows the space to be modified inplace
+ * if both the piecewise expression and its space have only a single reference.
+ * The caller is not allowed to modify "pw" between this call and
+ * a subsequent call to isl_pw_*_restore_*.
+ * The only exception is that isl_pw_*_free can be called instead.
+ */
+__isl_give isl_space *FN(PW,take_space)(__isl_keep PW *pw)
+{
+	isl_space *space;
+
+	if (!pw)
+		return NULL;
+	if (pw->ref != 1)
+		return FN(PW,get_space)(pw);
+	space = pw->dim;
+	pw->dim = NULL;
+	return space;
+}
+
+/* Set the space of "pw" to "space", where the space of "pw" may be missing
+ * due to a preceding call to isl_pw_*_take_space.
+ * However, in this case, "pw" only has a single reference and
+ * then the call to isl_pw_*_cow has no effect.
+ */
+__isl_give PW *FN(PW,restore_space)(__isl_take PW *pw,
+	__isl_take isl_space *space)
+{
+	if (!pw || !space)
+		goto error;
+
+	if (pw->dim == space) {
+		isl_space_free(space);
+		return pw;
+	}
+
+	pw = FN(PW,cow)(pw);
+	if (!pw)
+		goto error;
+	isl_space_free(pw->dim);
+	pw->dim = space;
+
+	return pw;
+error:
+	FN(PW,free)(pw);
+	isl_space_free(space);
+	return NULL;
+}
+
+/* Check that "pos" is a valid position for a cell in "pw".
+ */
+static isl_stat FN(PW,check_pos)(__isl_keep PW *pw, int pos)
+{
+	if (!pw)
+		return isl_stat_error;
+	if (pos < 0 || pos >= pw->n)
+		isl_die(FN(PW,get_ctx)(pw), isl_error_internal,
+			"position out of bounds", return isl_stat_error);
+	return isl_stat_ok;
+}
+
+/* Return the cell at position "pos" in "pw".
+ */
+static __isl_keep isl_set *FN(PW,peek_domain_at)(__isl_keep PW *pw, int pos)
+{
+	if (FN(PW,check_pos)(pw, pos) < 0)
+		return NULL;
+	return pw->p[pos].set;
+}
+
+/* Return a copy of the base expression associated to
+ * the cell at position "pos" in "pw".
+ */
+__isl_give EL *FN(PW,get_base_at)(__isl_keep PW *pw, int pos)
+{
+	if (FN(PW,check_pos)(pw, pos) < 0)
+		return NULL;
+	return FN(EL,copy)(pw->p[pos].FIELD);
+}
+
+/* Return the base expression associated to
+ * the cell at position "pos" in "pw".
+ * This may be either a copy or the base expression itself
+ * if there is only one reference to "pw".
+ * This allows the base expression to be modified inplace
+ * if both the piecewise expression and this base expression
+ * have only a single reference.
+ * The caller is not allowed to modify "pw" between this call and
+ * a subsequent call to isl_pw_*_restore_*.
+ * The only exception is that isl_pw_*_free can be called instead.
+ */
+__isl_give EL *FN(PW,take_base_at)(__isl_keep PW *pw, int pos)
+{
+	EL *el;
+
+	if (!pw)
+		return NULL;
+	if (pw->ref != 1)
+		return FN(PW,get_base_at)(pw, pos);
+	if (FN(PW,check_pos)(pw, pos) < 0)
+		return NULL;
+	el = pw->p[pos].FIELD;
+	pw->p[pos].FIELD = NULL;
+	return el;
+}
+
+/* Set the base expression associated to
+ * the cell at position "pos" in "pw" to "el",
+ * where this base expression may be missing
+ * due to a preceding call to isl_pw_*_take_base_at.
+ * However, in this case, "pw" only has a single reference and
+ * then the call to isl_pw_*_cow has no effect.
+ */
+__isl_give PW *FN(PW,restore_base_at)(__isl_take PW *pw, int pos,
+	__isl_take EL *el)
+{
+	if (FN(PW,check_pos)(pw, pos) < 0 || !el)
+		goto error;
+
+	if (pw->p[pos].FIELD == el) {
+		FN(EL,free)(el);
+		return pw;
+	}
+
+	pw = FN(PW,cow)(pw);
+	if (!pw)
+		goto error;
+	FN(EL,free)(pw->p[pos].FIELD);
+	pw->p[pos].FIELD = el;
+
+	return pw;
+error:
+	FN(PW,free)(pw);
+	FN(EL,free)(el);
+	return NULL;
 }
 
 __isl_give isl_space *FN(PW,get_domain_space)(__isl_keep PW *pw)
@@ -1508,7 +1495,37 @@ int FN(PW,find_dim_by_name)(__isl_keep PW *pw,
 	return isl_space_find_dim_by_name(pw->dim, type, name);
 }
 
-#ifndef NO_RESET_DIM
+/* Return the position of the dimension of the given type and identifier
+ * in "pw".
+ * Return -1 if no such dimension can be found.
+ */
+static int FN(PW,find_dim_by_id)(__isl_keep PW *pw,
+	enum isl_dim_type type, __isl_keep isl_id *id)
+{
+	isl_space *space;
+
+	space = FN(PW,peek_space)(pw);
+	return isl_space_find_dim_by_id(space, type, id);
+}
+
+/* Does the piecewise expression "pw" depend in any way
+ * on the parameter with identifier "id"?
+ */
+isl_bool FN(PW,involves_param_id)(__isl_keep PW *pw, __isl_keep isl_id *id)
+{
+	int pos;
+
+	if (!pw || !id)
+		return isl_bool_error;
+	if (pw->n == 0)
+		return isl_bool_false;
+
+	pos = FN(PW,find_dim_by_id)(pw, isl_dim_param, id);
+	if (pos < 0)
+		return isl_bool_false;
+	return FN(PW,involves_dims)(pw, isl_dim_param, pos, 1);
+}
+
 /* Reset the space of "pw".  Since we don't know if the elements
  * represent the spaces themselves or their domains, we pass along
  * both when we call their reset_space_and_domain.
@@ -1615,7 +1632,6 @@ error:
 	isl_id_free(id);
 	return FN(PW,free)(pw);
 }
-#endif
 
 /* Reset the user pointer on all identifiers of parameters and tuples
  * of the space of "pw".
@@ -1630,59 +1646,9 @@ __isl_give PW *FN(PW,reset_user)(__isl_take PW *pw)
 	return FN(PW,reset_space)(pw, space);
 }
 
-isl_bool FN(PW,has_equal_space)(__isl_keep PW *pw1, __isl_keep PW *pw2)
+isl_size FN(PW,n_piece)(__isl_keep PW *pw)
 {
-	if (!pw1 || !pw2)
-		return isl_bool_error;
-
-	return isl_space_is_equal(pw1->dim, pw2->dim);
-}
-
-#ifndef NO_MORPH
-__isl_give PW *FN(PW,morph_domain)(__isl_take PW *pw,
-	__isl_take isl_morph *morph)
-{
-	int i;
-	isl_ctx *ctx;
-
-	if (!pw || !morph)
-		goto error;
-
-	ctx = isl_space_get_ctx(pw->dim);
-	isl_assert(ctx, isl_space_is_domain_internal(morph->dom->dim, pw->dim),
-		goto error);
-
-	pw = FN(PW,cow)(pw);
-	if (!pw)
-		goto error;
-	pw->dim = isl_space_extend_domain_with_range(
-			isl_space_copy(morph->ran->dim), pw->dim);
-	if (!pw->dim)
-		goto error;
-
-	for (i = 0; i < pw->n; ++i) {
-		pw->p[i].set = isl_morph_set(isl_morph_copy(morph), pw->p[i].set);
-		if (!pw->p[i].set)
-			goto error;
-		pw->p[i].FIELD = FN(EL,morph_domain)(pw->p[i].FIELD,
-						isl_morph_copy(morph));
-		if (!pw->p[i].FIELD)
-			goto error;
-	}
-
-	isl_morph_free(morph);
-
-	return pw;
-error:
-	FN(PW,free)(pw);
-	isl_morph_free(morph);
-	return NULL;
-}
-#endif
-
-int FN(PW,n_piece)(__isl_keep PW *pw)
-{
-	return pw ? pw->n : 0;
+	return pw ? pw->n : isl_size_error;
 }
 
 isl_stat FN(PW,foreach_piece)(__isl_keep PW *pw,
@@ -1702,126 +1668,118 @@ isl_stat FN(PW,foreach_piece)(__isl_keep PW *pw,
 	return isl_stat_ok;
 }
 
-#ifndef NO_LIFT
-static isl_bool any_divs(__isl_keep isl_set *set)
+/* Is "pw" defined over a single universe domain?
+ *
+ * If the default value of this piecewise type is zero,
+ * then a "pw" with a zero number of cells is also accepted
+ * as it represents the default zero value.
+ */
+isl_bool FN(FN(PW,isa),BASE)(__isl_keep PW *pw)
 {
-	int i;
+	isl_size n;
 
-	if (!set)
+	n = FN(PW,n_piece)(pw);
+	if (n < 0)
 		return isl_bool_error;
-
-	for (i = 0; i < set->n; ++i)
-		if (set->p[i]->n_div > 0)
-			return isl_bool_true;
-
-	return isl_bool_false;
+	if (DEFAULT_IS_ZERO && n == 0)
+		return isl_bool_true;
+	if (n != 1)
+		return isl_bool_false;
+	return isl_set_plain_is_universe(FN(PW,peek_domain_at)(pw, 0));
 }
 
-static isl_stat foreach_lifted_subset(__isl_take isl_set *set,
-	__isl_take EL *el,
-	isl_stat (*fn)(__isl_take isl_set *set, __isl_take EL *el,
-		void *user), void *user)
+/* Return a zero base expression in the same space (and of the same type)
+ * as "pw".
+ */
+static __isl_give EL *FN(EL,zero_like_type)(__isl_take PW *pw OPT_TYPE_PARAM)
 {
-	int i;
+	isl_space *space;
 
-	if (!set || !el)
+	space = FN(PW,get_space)(pw);
+	FN(PW,free)(pw);
+	return FN(EL,zero_in_space)(space OPT_TYPE_ARG(NO_LOC));
+}
+
+#ifndef HAS_TYPE
+/* Return a zero base expression in the same space as "pw".
+ */
+static __isl_give EL *FN(EL,zero_like)(__isl_take PW *pw)
+{
+	return FN(EL,zero_like_type)(pw);
+}
+#else
+/* Return a zero base expression in the same space and of the same type
+ * as "pw".
+ *
+ * Pass along the type as an explicit argument for uniform handling
+ * in isl_*_zero_like_type.
+ */
+static __isl_give EL *FN(EL,zero_like)(__isl_take PW *pw)
+{
+	enum isl_fold type;
+
+	type = FN(PW,get_type)(pw);
+	if (type < 0)
 		goto error;
-
-	for (i = 0; i < set->n; ++i) {
-		isl_set *lift;
-		EL *copy;
-
-		lift = isl_set_from_basic_set(isl_basic_set_copy(set->p[i]));
-		lift = isl_set_lift(lift);
-
-		copy = FN(EL,copy)(el);
-		copy = FN(EL,lift)(copy, isl_set_get_space(lift));
-
-		if (fn(lift, copy, user) < 0)
-			goto error;
-	}
-
-	isl_set_free(set);
-	FN(EL,free)(el);
-
-	return isl_stat_ok;
-error:
-	isl_set_free(set);
-	FN(EL,free)(el);
-	return isl_stat_error;
-}
-
-isl_stat FN(PW,foreach_lifted_piece)(__isl_keep PW *pw,
-	isl_stat (*fn)(__isl_take isl_set *set, __isl_take EL *el,
-		    void *user), void *user)
-{
-	int i;
-
-	if (!pw)
-		return isl_stat_error;
-
-	for (i = 0; i < pw->n; ++i) {
-		isl_bool any;
-		isl_set *set;
-		EL *el;
-
-		any = any_divs(pw->p[i].set);
-		if (any < 0)
-			return isl_stat_error;
-		set = isl_set_copy(pw->p[i].set);
-		el = FN(EL,copy)(pw->p[i].FIELD);
-		if (!any) {
-			if (fn(set, el, user) < 0)
-				return isl_stat_error;
-			continue;
-		}
-		if (foreach_lifted_subset(set, el, fn, user) < 0)
-			return isl_stat_error;
-	}
-
-	return isl_stat_ok;
-}
-#endif
-
-#ifndef NO_MOVE_DIMS
-__isl_give PW *FN(PW,move_dims)(__isl_take PW *pw,
-	enum isl_dim_type dst_type, unsigned dst_pos,
-	enum isl_dim_type src_type, unsigned src_pos, unsigned n)
-{
-	int i;
-
-	pw = FN(PW,cow)(pw);
-	if (!pw)
-		return NULL;
-
-	pw->dim = isl_space_move_dims(pw->dim, dst_type, dst_pos, src_type, src_pos, n);
-	if (!pw->dim)
-		goto error;
-
-	for (i = 0; i < pw->n; ++i) {
-		pw->p[i].FIELD = FN(EL,move_dims)(pw->p[i].FIELD,
-					dst_type, dst_pos, src_type, src_pos, n);
-		if (!pw->p[i].FIELD)
-			goto error;
-	}
-
-	if (dst_type == isl_dim_in)
-		dst_type = isl_dim_set;
-	if (src_type == isl_dim_in)
-		src_type = isl_dim_set;
-
-	for (i = 0; i < pw->n; ++i) {
-		pw->p[i].set = isl_set_move_dims(pw->p[i].set,
-						dst_type, dst_pos,
-						src_type, src_pos, n);
-		if (!pw->p[i].set)
-			goto error;
-	}
-
-	return pw;
+	return FN(EL,zero_like_type)(pw, type);
 error:
 	FN(PW,free)(pw);
 	return NULL;
+}
+#endif
+
+/* Given that "pw" is defined over a single universe domain,
+ * return the base expression associated to this domain.
+ *
+ * If the number of cells is zero, then "pw" is of a piecewise type
+ * with a default zero value and effectively represents zero.
+ * In this case, create a zero base expression in the same space
+ * (and with the same type).
+ * Otherwise, simply extract the associated base expression.
+ */
+__isl_give EL *FN(FN(PW,as),BASE)(__isl_take PW *pw)
+{
+	isl_bool is_total;
+	isl_size n;
+	EL *el;
+
+	is_total = FN(FN(PW,isa),BASE)(pw);
+	if (is_total < 0)
+		goto error;
+	if (!is_total)
+		isl_die(FN(PW,get_ctx)(pw), isl_error_invalid,
+			"expecting single total function", goto error);
+	n = FN(PW,n_piece)(pw);
+	if (n < 0)
+		goto error;
+	if (n == 0)
+		return FN(EL,zero_like)(pw);
+	el = FN(PW,take_base_at)(pw, 0);
+	FN(PW,free)(pw);
+	return el;
+error:
+	FN(PW,free)(pw);
+	return NULL;
+}
+
+#ifdef HAS_TYPE
+/* Negate the type of "pw".
+ */
+static __isl_give PW *FN(PW,negate_type)(__isl_take PW *pw)
+{
+	pw = FN(PW,cow)(pw);
+	if (!pw)
+		return NULL;
+	pw->type = isl_fold_type_negate(pw->type);
+	return pw;
+}
+#else
+/* Negate the type of "pw".
+ * Since "pw" does not have a type, do nothing.
+ */
+static __isl_give PW *FN(PW,negate_type)(__isl_take PW *pw)
+{
+	return pw;
 }
 #endif
 
@@ -1834,24 +1792,18 @@ __isl_give PW *FN(PW,mul_isl_int)(__isl_take PW *pw, isl_int v)
 	if (pw && DEFAULT_IS_ZERO && isl_int_is_zero(v)) {
 		PW *zero;
 		isl_space *dim = FN(PW,get_space)(pw);
-#ifdef HAS_TYPE
-		zero = FN(PW,ZERO)(dim, pw->type);
-#else
-		zero = FN(PW,ZERO)(dim);
-#endif
+		zero = FN(PW,ZERO)(dim OPT_TYPE_ARG(pw->));
 		FN(PW,free)(pw);
 		return zero;
 	}
 	pw = FN(PW,cow)(pw);
+	if (isl_int_is_neg(v))
+		pw = FN(PW,negate_type)(pw);
 	if (!pw)
 		return NULL;
 	if (pw->n == 0)
 		return pw;
 
-#ifdef HAS_TYPE
-	if (isl_int_is_neg(v))
-		pw->type = isl_fold_type_negate(pw->type);
-#endif
 	for (i = 0; i < pw->n; ++i) {
 		pw->p[i].FIELD = FN(EL,scale)(pw->p[i].FIELD, v);
 		if (!pw->p[i].FIELD)
@@ -1880,11 +1832,7 @@ __isl_give PW *FN(PW,scale_val)(__isl_take PW *pw, __isl_take isl_val *v)
 	if (pw && DEFAULT_IS_ZERO && isl_val_is_zero(v)) {
 		PW *zero;
 		isl_space *space = FN(PW,get_space)(pw);
-#ifdef HAS_TYPE
-		zero = FN(PW,ZERO)(space, pw->type);
-#else
-		zero = FN(PW,ZERO)(space);
-#endif
+		zero = FN(PW,ZERO)(space OPT_TYPE_ARG(pw->));
 		FN(PW,free)(pw);
 		isl_val_free(v);
 		return zero;
@@ -1894,13 +1842,11 @@ __isl_give PW *FN(PW,scale_val)(__isl_take PW *pw, __isl_take isl_val *v)
 		return pw;
 	}
 	pw = FN(PW,cow)(pw);
+	if (isl_val_is_neg(v))
+		pw = FN(PW,negate_type)(pw);
 	if (!pw)
 		goto error;
 
-#ifdef HAS_TYPE
-	if (isl_val_is_neg(v))
-		pw->type = isl_fold_type_negate(pw->type);
-#endif
 	for (i = 0; i < pw->n; ++i) {
 		pw->p[i].FIELD = FN(EL,scale_val)(pw->p[i].FIELD,
 						    isl_val_copy(v));
@@ -1942,13 +1888,11 @@ __isl_give PW *FN(PW,scale_down_val)(__isl_take PW *pw, __isl_take isl_val *v)
 		return pw;
 	}
 	pw = FN(PW,cow)(pw);
+	if (isl_val_is_neg(v))
+		pw = FN(PW,negate_type)(pw);
 	if (!pw)
 		goto error;
 
-#ifdef HAS_TYPE
-	if (isl_val_is_neg(v))
-		pw->type = isl_fold_type_negate(pw->type);
-#endif
 	for (i = 0; i < pw->n; ++i) {
 		pw->p[i].FIELD = FN(EL,scale_down_val)(pw->p[i].FIELD,
 						    isl_val_copy(v));
@@ -2021,8 +1965,9 @@ isl_bool FN(PW,plain_is_equal)(__isl_keep PW *pw1, __isl_keep PW *pw2)
 
 	if (pw1 == pw2)
 		return isl_bool_true;
-	if (!isl_space_is_equal(pw1->dim, pw2->dim))
-		return isl_bool_false;
+	equal = FN(PW,has_equal_space)(pw1, pw2);
+	if (equal < 0 || !equal)
+		return equal;
 
 	pw1 = FN(PW,copy)(pw1);
 	pw2 = FN(PW,copy)(pw2);
@@ -2031,7 +1976,7 @@ isl_bool FN(PW,plain_is_equal)(__isl_keep PW *pw1, __isl_keep PW *pw2)
 	if (!pw1 || !pw2)
 		goto error;
 
-	equal = pw1->n == pw2->n;
+	equal = isl_bool_ok(pw1->n == pw2->n);
 	for (i = 0; equal && i < pw1->n; ++i) {
 		equal = isl_set_plain_is_equal(pw1->p[i].set, pw2->p[i].set);
 		if (equal < 0)
@@ -2071,167 +2016,3 @@ isl_bool FN(PW,involves_nan)(__isl_keep PW *pw)
 
 	return isl_bool_false;
 }
-
-#ifndef NO_PULLBACK
-static __isl_give PW *FN(PW,align_params_pw_multi_aff_and)(__isl_take PW *pw,
-	__isl_take isl_multi_aff *ma,
-	__isl_give PW *(*fn)(__isl_take PW *pw, __isl_take isl_multi_aff *ma))
-{
-	isl_ctx *ctx;
-	isl_bool equal_params;
-	isl_space *ma_space;
-
-	ma_space = isl_multi_aff_get_space(ma);
-	if (!pw || !ma || !ma_space)
-		goto error;
-	equal_params = isl_space_has_equal_params(pw->dim, ma_space);
-	if (equal_params < 0)
-		goto error;
-	if (equal_params) {
-		isl_space_free(ma_space);
-		return fn(pw, ma);
-	}
-	ctx = FN(PW,get_ctx)(pw);
-	if (FN(PW,check_named_params)(pw) < 0)
-		goto error;
-	if (!isl_space_has_named_params(ma_space))
-		isl_die(ctx, isl_error_invalid,
-			"unaligned unnamed parameters", goto error);
-	pw = FN(PW,align_params)(pw, ma_space);
-	ma = isl_multi_aff_align_params(ma, FN(PW,get_space)(pw));
-	return fn(pw, ma);
-error:
-	isl_space_free(ma_space);
-	FN(PW,free)(pw);
-	isl_multi_aff_free(ma);
-	return NULL;
-}
-
-static __isl_give PW *FN(PW,align_params_pw_pw_multi_aff_and)(__isl_take PW *pw,
-	__isl_take isl_pw_multi_aff *pma,
-	__isl_give PW *(*fn)(__isl_take PW *pw,
-		__isl_take isl_pw_multi_aff *ma))
-{
-	isl_bool equal_params;
-	isl_space *pma_space;
-
-	pma_space = isl_pw_multi_aff_get_space(pma);
-	if (!pw || !pma || !pma_space)
-		goto error;
-	equal_params = isl_space_has_equal_params(pw->dim, pma_space);
-	if (equal_params < 0)
-		goto error;
-	if (equal_params) {
-		isl_space_free(pma_space);
-		return fn(pw, pma);
-	}
-	if (FN(PW,check_named_params)(pw) < 0 ||
-	    isl_pw_multi_aff_check_named_params(pma) < 0)
-		goto error;
-	pw = FN(PW,align_params)(pw, pma_space);
-	pma = isl_pw_multi_aff_align_params(pma, FN(PW,get_space)(pw));
-	return fn(pw, pma);
-error:
-	isl_space_free(pma_space);
-	FN(PW,free)(pw);
-	isl_pw_multi_aff_free(pma);
-	return NULL;
-}
-
-/* Compute the pullback of "pw" by the function represented by "ma".
- * In other words, plug in "ma" in "pw".
- */
-static __isl_give PW *FN(PW,pullback_multi_aff_aligned)(__isl_take PW *pw,
-	__isl_take isl_multi_aff *ma)
-{
-	int i;
-	isl_space *space = NULL;
-
-	ma = isl_multi_aff_align_divs(ma);
-	pw = FN(PW,cow)(pw);
-	if (!pw || !ma)
-		goto error;
-
-	space = isl_space_join(isl_multi_aff_get_space(ma),
-				FN(PW,get_space)(pw));
-
-	for (i = 0; i < pw->n; ++i) {
-		pw->p[i].set = isl_set_preimage_multi_aff(pw->p[i].set,
-						    isl_multi_aff_copy(ma));
-		if (!pw->p[i].set)
-			goto error;
-		pw->p[i].FIELD = FN(EL,pullback_multi_aff)(pw->p[i].FIELD,
-						    isl_multi_aff_copy(ma));
-		if (!pw->p[i].FIELD)
-			goto error;
-	}
-
-	pw = FN(PW,reset_space)(pw, space);
-	isl_multi_aff_free(ma);
-	return pw;
-error:
-	isl_space_free(space);
-	isl_multi_aff_free(ma);
-	FN(PW,free)(pw);
-	return NULL;
-}
-
-__isl_give PW *FN(PW,pullback_multi_aff)(__isl_take PW *pw,
-	__isl_take isl_multi_aff *ma)
-{
-	return FN(PW,align_params_pw_multi_aff_and)(pw, ma,
-					&FN(PW,pullback_multi_aff_aligned));
-}
-
-/* Compute the pullback of "pw" by the function represented by "pma".
- * In other words, plug in "pma" in "pw".
- */
-static __isl_give PW *FN(PW,pullback_pw_multi_aff_aligned)(__isl_take PW *pw,
-	__isl_take isl_pw_multi_aff *pma)
-{
-	int i;
-	PW *res;
-
-	if (!pma)
-		goto error;
-
-	if (pma->n == 0) {
-		isl_space *space;
-		space = isl_space_join(isl_pw_multi_aff_get_space(pma),
-					FN(PW,get_space)(pw));
-		isl_pw_multi_aff_free(pma);
-		res = FN(PW,empty)(space);
-		FN(PW,free)(pw);
-		return res;
-	}
-
-	res = FN(PW,pullback_multi_aff)(FN(PW,copy)(pw),
-					isl_multi_aff_copy(pma->p[0].maff));
-	res = FN(PW,intersect_domain)(res, isl_set_copy(pma->p[0].set));
-
-	for (i = 1; i < pma->n; ++i) {
-		PW *res_i;
-
-		res_i = FN(PW,pullback_multi_aff)(FN(PW,copy)(pw),
-					isl_multi_aff_copy(pma->p[i].maff));
-		res_i = FN(PW,intersect_domain)(res_i,
-					isl_set_copy(pma->p[i].set));
-		res = FN(PW,add_disjoint)(res, res_i);
-	}
-
-	isl_pw_multi_aff_free(pma);
-	FN(PW,free)(pw);
-	return res;
-error:
-	isl_pw_multi_aff_free(pma);
-	FN(PW,free)(pw);
-	return NULL;
-}
-
-__isl_give PW *FN(PW,pullback_pw_multi_aff)(__isl_take PW *pw,
-	__isl_take isl_pw_multi_aff *pma)
-{
-	return FN(PW,align_params_pw_pw_multi_aff_and)(pw, pma,
-					&FN(PW,pullback_pw_multi_aff_aligned));
-}
-#endif

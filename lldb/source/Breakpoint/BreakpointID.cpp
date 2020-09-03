@@ -1,4 +1,4 @@
-//===-- BreakpointID.cpp ----------------------------------------*- C++ -*-===//
+//===-- BreakpointID.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -96,7 +96,7 @@ bool BreakpointID::StringIsBreakpointName(llvm::StringRef str, Status &error) {
   error.Clear();
   if (str.empty())
   {
-    error.SetErrorStringWithFormat("Empty breakpoint names are not allowed");
+    error.SetErrorString("Empty breakpoint names are not allowed");
     return false;
   }
 
@@ -112,7 +112,7 @@ bool BreakpointID::StringIsBreakpointName(llvm::StringRef str, Status &error) {
   // Cannot contain ., -, or space.
   if (str.find_first_of(".- ") != llvm::StringRef::npos) {
     error.SetErrorStringWithFormat("Breakpoint names cannot contain "
-                                   "'.' or '-': \"%s\"",
+                                   "'.' or '-' or spaces: \"%s\"",
                                    str.str().c_str());
     return false;
   }

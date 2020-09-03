@@ -398,8 +398,9 @@ define i32 @test28(i32 %a) {
 
 define i32 @test29(i32 %a) {
 ; CHECK-LABEL: @test29(
-; CHECK-NEXT:    [[MUL_LOBIT:%.*]] = and i32 [[A:%.*]], 1
-; CHECK-NEXT:    ret i32 [[MUL_LOBIT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[DIV]]
 ;
   %mul = shl nsw i32 %a, 31
   %div = sdiv i32 %mul, -2147483648

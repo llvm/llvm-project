@@ -152,7 +152,7 @@ void XCoreDAGToDAGISel::Select(SDNode *N) {
                                             CurDAG->getEntryNode());
       MachineMemOperand *MemOp =
           MF->getMachineMemOperand(MachinePointerInfo::getConstantPool(*MF),
-                                   MachineMemOperand::MOLoad, 4, 4);
+                                   MachineMemOperand::MOLoad, 4, Align(4));
       CurDAG->setNodeMemRefs(cast<MachineSDNode>(node), {MemOp});
       ReplaceNode(N, node);
       return;

@@ -82,6 +82,7 @@ enum RuntimeLibcallSignature {
   func_iPTR_i32,
   func_iPTR_i64,
   func_iPTR_i64_i64,
+  func_iPTR_i64_i64_i32,
   func_iPTR_i64_i64_i64_i64,
   func_iPTR_i64_i64_i64_i64_i64_i64,
   i32_func_i64_i64,
@@ -173,10 +174,13 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::FMA_F128] = func_iPTR_i64_i64_i64_i64_i64_i64;
     Table[RTLIB::POWI_F32] = f32_func_f32_i32;
     Table[RTLIB::POWI_F64] = f64_func_f64_i32;
-    Table[RTLIB::POWI_F128] = func_iPTR_i64_i64_i64_i64;
+    Table[RTLIB::POWI_F128] = func_iPTR_i64_i64_i32;
     Table[RTLIB::SQRT_F32] = f32_func_f32;
     Table[RTLIB::SQRT_F64] = f64_func_f64;
     Table[RTLIB::SQRT_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::CBRT_F32] = f32_func_f32;
+    Table[RTLIB::CBRT_F64] = f64_func_f64;
+    Table[RTLIB::CBRT_F128] = func_iPTR_i64_i64;
     Table[RTLIB::LOG_F32] = f32_func_f32;
     Table[RTLIB::LOG_F64] = f64_func_f64;
     Table[RTLIB::LOG_F128] = func_iPTR_i64_i64;
@@ -316,12 +320,6 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::UO_F32] = i32_func_f32_f32;
     Table[RTLIB::UO_F64] = i32_func_f64_f64;
     Table[RTLIB::UO_F128] = i32_func_i64_i64_i64_i64;
-    // O_FXX has the weird property that it uses the same libcall name as UO_FXX
-    // This breaks our name-based lookup. Fortunately only the UO family of
-    // libcalls appears to be actually used.
-    Table[RTLIB::O_F32] = unsupported;
-    Table[RTLIB::O_F64] = unsupported;
-    Table[RTLIB::O_F128] = unsupported;
 
     // Memory
     Table[RTLIB::MEMCPY] = iPTR_func_iPTR_iPTR_iPTR;
@@ -834,6 +832,12 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(PtrTy);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
+    break;
+  case func_iPTR_i64_i64_i32:
+    Params.push_back(PtrTy);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I32);
     break;
   case func_iPTR_i64_i64_i64_i64:
     Params.push_back(PtrTy);

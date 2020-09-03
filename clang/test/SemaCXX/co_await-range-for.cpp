@@ -44,7 +44,7 @@ struct MyForLoopArrayAwaiter {
     void return_void();
     void unhandled_exception();
     suspend_never initial_suspend();
-    suspend_never final_suspend();
+    suspend_never final_suspend() noexcept;
     template <class T>
     Awaiter<T *> await_transform(T *) = delete; // expected-note {{explicitly deleted}}
   };
@@ -62,7 +62,7 @@ struct ForLoopAwaiterBadBeginTransform {
     void return_void();
     void unhandled_exception();
     suspend_never initial_suspend();
-    suspend_never final_suspend();
+    suspend_never final_suspend() noexcept;
 
     template <class T>
     Awaiter<T> await_transform(BeginTag<T>) = delete; // expected-note 1+ {{explicitly deleted}}
@@ -96,7 +96,7 @@ struct ForLoopAwaiterBadIncTransform {
     void return_void();
     void unhandled_exception();
     suspend_never initial_suspend();
-    suspend_never final_suspend();
+    suspend_never final_suspend() noexcept;
 
     template <class T>
     Awaiter<T> await_transform(BeginTag<T> e);
@@ -137,7 +137,7 @@ struct ForLoopAwaiterCoawaitLookup {
     void return_void();
     void unhandled_exception();
     suspend_never initial_suspend();
-    suspend_never final_suspend();
+    suspend_never final_suspend() noexcept;
     template <class T>
     CoawaitTag<T, false> await_transform(BeginTag<T> e);
     template <class T>

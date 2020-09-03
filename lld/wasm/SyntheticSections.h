@@ -141,17 +141,6 @@ public:
 protected:
 };
 
-class MemorySection : public SyntheticSection {
-public:
-  MemorySection() : SyntheticSection(llvm::wasm::WASM_SEC_MEMORY) {}
-
-  bool isNeeded() const override { return !config->importMemory; }
-  void writeBody() override;
-
-  uint32_t numMemoryPages = 0;
-  uint32_t maxMemoryPages = 0;
-};
-
 class TableSection : public SyntheticSection {
 public:
   TableSection() : SyntheticSection(llvm::wasm::WASM_SEC_TABLE) {}
@@ -169,6 +158,37 @@ public:
   }
 
   void writeBody() override;
+};
+
+class MemorySection : public SyntheticSection {
+public:
+  MemorySection() : SyntheticSection(llvm::wasm::WASM_SEC_MEMORY) {}
+
+  bool isNeeded() const override { return !config->importMemory; }
+  void writeBody() override;
+
+  uint64_t numMemoryPages = 0;
+  uint64_t maxMemoryPages = 0;
+};
+
+// The event section contains a list of declared wasm events associated with the
+// module. Currently the only supported event kind is exceptions. A single event
+// entry represents a single event with an event tag. All C++ exceptions are
+// represented by a single event. An event entry in this section contains
+// information on what kind of event it is (e.g. exception) and the type of
+// values contained in a single event object. (In wasm, an event can contain
+// multiple values of primitive types. But for C++ exceptions, we just throw a
+// pointer which is an i32 value (for wasm32 architecture), so the signature of
+// C++ exception is (i32)->(void), because all event types are assumed to have
+// void return type to share WasmSignature with functions.)
+class EventSection : public SyntheticSection {
+public:
+  EventSection() : SyntheticSection(llvm::wasm::WASM_SEC_EVENT) {}
+  void writeBody() override;
+  bool isNeeded() const override { return inputEvents.size() > 0; }
+  void addEvent(InputEvent *event);
+
+  std::vector<InputEvent *> inputEvents;
 };
 
 class GlobalSection : public SyntheticSection {
@@ -194,26 +214,6 @@ protected:
   std::vector<Symbol *> staticGotSymbols;
 };
 
-// The event section contains a list of declared wasm events associated with the
-// module. Currently the only supported event kind is exceptions. A single event
-// entry represents a single event with an event tag. All C++ exceptions are
-// represented by a single event. An event entry in this section contains
-// information on what kind of event it is (e.g. exception) and the type of
-// values contained in a single event object. (In wasm, an event can contain
-// multiple values of primitive types. But for C++ exceptions, we just throw a
-// pointer which is an i32 value (for wasm32 architecture), so the signature of
-// C++ exception is (i32)->(void), because all event types are assumed to have
-// void return type to share WasmSignature with functions.)
-class EventSection : public SyntheticSection {
-public:
-  EventSection() : SyntheticSection(llvm::wasm::WASM_SEC_EVENT) {}
-  void writeBody() override;
-  bool isNeeded() const override { return inputEvents.size() > 0; }
-  void addEvent(InputEvent *event);
-
-  std::vector<InputEvent *> inputEvents;
-};
-
 class ExportSection : public SyntheticSection {
 public:
   ExportSection() : SyntheticSection(llvm::wasm::WASM_SEC_EXPORT) {}
@@ -225,14 +225,14 @@ public:
 
 class StartSection : public SyntheticSection {
 public:
-  StartSection(uint32_t numSegments)
-      : SyntheticSection(llvm::wasm::WASM_SEC_START), numSegments(numSegments) {
-  }
+  StartSection(bool hasInitializedSegments)
+      : SyntheticSection(llvm::wasm::WASM_SEC_START),
+        hasInitializedSegments(hasInitializedSegments) {}
   bool isNeeded() const override;
   void writeBody() override;
 
 protected:
-  uint32_t numSegments;
+  bool hasInitializedSegments;
 };
 
 class ElemSection : public SyntheticSection {
@@ -324,7 +324,8 @@ public:
 class RelocSection : public SyntheticSection {
 public:
   RelocSection(StringRef name, OutputSection *sec)
-      : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, name), sec(sec) {}
+      : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, std::string(name)),
+        sec(sec) {}
   void writeBody() override;
   bool isNeeded() const override { return sec->getNumRelocations() > 0; };
 

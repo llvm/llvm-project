@@ -1,0 +1,10 @@
+add_subdirectory(Common)
+add_subdirectory(Evaluate)
+add_subdirectory(Decimal)
+add_subdirectory(Lower)
+add_subdirectory(Parser)
+add_subdirectory(Semantics)
+
+if(LINK_WITH_FIR)
+  add_subdirectory(Optimizer)
+endif()

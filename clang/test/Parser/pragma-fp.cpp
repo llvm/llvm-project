@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s
 
 void test_0(int *List, int Length) {
-/* expected-error@+1 {{missing option; expected contract}} */
+/* expected-error@+1 {{missing option; expected 'contract' or 'reassociate'}} */
 #pragma clang fp
   for (int i = 0; i < Length; i++) {
     List[i] = i;
   }
 }
 void test_1(int *List, int Length) {
-/* expected-error@+1 {{invalid option 'blah'; expected contract}} */
+/* expected-error@+1 {{invalid option 'blah'; expected 'contract' or 'reassociate'}} */
 #pragma clang fp blah
   for (int i = 0; i < Length; i++) {
     List[i] = i;
@@ -24,7 +24,7 @@ void test_3(int *List, int Length) {
 }
 
 void test_4(int *List, int Length) {
-/* expected-error@+1 {{unexpected argument 'while' to '#pragma clang fp contract'; expected 'on', 'fast' or 'off'}} */
+/* expected-error@+1 {{unexpected argument 'while' to '#pragma clang fp contract'; expected 'fast' or 'on' or 'off'}} */
 #pragma clang fp contract(while)
   for (int i = 0; i < Length; i++) {
     List[i] = i;
@@ -32,7 +32,7 @@ void test_4(int *List, int Length) {
 }
 
 void test_5(int *List, int Length) {
-/* expected-error@+1 {{unexpected argument 'maybe' to '#pragma clang fp contract'; expected 'on', 'fast' or 'off'}} */
+/* expected-error@+1 {{unexpected argument 'maybe' to '#pragma clang fp contract'; expected 'fast' or 'on' or 'off'}} */
 #pragma clang fp contract(maybe)
   for (int i = 0; i < Length; i++) {
     List[i] = i;

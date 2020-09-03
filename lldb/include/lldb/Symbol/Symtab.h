@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Symtab_h_
-#define liblldb_Symtab_h_
+#ifndef LLDB_SYMBOL_SYMTAB_H
+#define LLDB_SYMBOL_SYMTAB_H
 
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/Symbol.h"
@@ -143,7 +143,29 @@ protected:
   typedef std::vector<Symbol> collection;
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
-  typedef RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t>
+  class FileRangeToIndexMapCompare {
+  public:
+    FileRangeToIndexMapCompare(const Symtab &symtab) : m_symtab(symtab) {}
+    bool operator()(const uint32_t a_data, const uint32_t b_data) const {
+      return rank(a_data) > rank(b_data);
+    }
+
+  private:
+    // How much preferred is this symbol?
+    int rank(const uint32_t data) const {
+      const Symbol &symbol = *m_symtab.SymbolAtIndex(data);
+      if (symbol.IsExternal())
+        return 3;
+      if (symbol.IsWeak())
+        return 2;
+      if (symbol.IsDebug())
+        return 0;
+      return 1;
+    }
+    const Symtab &m_symtab;
+  };
+  typedef RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t, 0,
+                          FileRangeToIndexMapCompare>
       FileRangeToIndexMap;
   void InitNameIndexes();
   void InitAddressIndexes();
@@ -202,9 +224,10 @@ private:
                             const char *decl_context,
                             const std::set<const char *> &class_contexts);
 
-  DISALLOW_COPY_AND_ASSIGN(Symtab);
+  Symtab(const Symtab &) = delete;
+  const Symtab &operator=(const Symtab &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_Symtab_h_
+#endif // LLDB_SYMBOL_SYMTAB_H

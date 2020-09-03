@@ -172,13 +172,14 @@ namespace __sanitizer {
   unsigned struct_stat_sz = sizeof(struct stat);
 #if !SANITIZER_IOS && !(SANITIZER_MAC && TARGET_CPU_ARM64)
   unsigned struct_stat64_sz = sizeof(struct stat64);
-#endif // !SANITIZER_IOS
+#endif // !SANITIZER_IOS && !(SANITIZER_MAC && TARGET_CPU_ARM64)
   unsigned struct_rusage_sz = sizeof(struct rusage);
   unsigned struct_tm_sz = sizeof(struct tm);
   unsigned struct_passwd_sz = sizeof(struct passwd);
   unsigned struct_group_sz = sizeof(struct group);
   unsigned siginfo_t_sz = sizeof(siginfo_t);
   unsigned struct_sigaction_sz = sizeof(struct sigaction);
+  unsigned struct_stack_t_sz = sizeof(stack_t);
   unsigned struct_itimerval_sz = sizeof(struct itimerval);
   unsigned pthread_t_sz = sizeof(pthread_t);
   unsigned pthread_mutex_t_sz = sizeof(pthread_mutex_t);
@@ -198,7 +199,7 @@ namespace __sanitizer {
 
 #if (SANITIZER_MAC && !TARGET_CPU_ARM64) && !SANITIZER_IOS
   unsigned struct_statfs64_sz = sizeof(struct statfs64);
-#endif // SANITIZER_MAC && !SANITIZER_IOS
+#endif // (SANITIZER_MAC && !TARGET_CPU_ARM64) && !SANITIZER_IOS
 
 #if !SANITIZER_ANDROID
   unsigned struct_fstab_sz = sizeof(struct fstab);

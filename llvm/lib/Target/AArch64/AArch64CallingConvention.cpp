@@ -38,18 +38,17 @@ static const MCPhysReg QRegList[] = {AArch64::Q0, AArch64::Q1, AArch64::Q2,
 
 static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
                              MVT LocVT, ISD::ArgFlagsTy &ArgFlags,
-                             CCState &State, unsigned SlotAlign) {
+                             CCState &State, Align SlotAlign) {
   unsigned Size = LocVT.getSizeInBits() / 8;
   const Align StackAlign =
       State.getMachineFunction().getDataLayout().getStackAlignment();
-  const Align OrigAlign(ArgFlags.getOrigAlign());
-  const Align Align = std::min(OrigAlign, StackAlign);
+  const Align OrigAlign = ArgFlags.getNonZeroOrigAlign();
+  const Align Alignment = std::min(OrigAlign, StackAlign);
 
   for (auto &It : PendingMembers) {
-    It.convertToMem(State.AllocateStack(
-        Size, std::max((unsigned)Align.value(), SlotAlign)));
+    It.convertToMem(State.AllocateStack(Size, std::max(Alignment, SlotAlign)));
     State.addLoc(It);
-    SlotAlign = 1;
+    SlotAlign = Align(1);
   }
 
   // All pending members have now been allocated
@@ -72,7 +71,7 @@ static bool CC_AArch64_Custom_Stack_Block(
   if (!ArgFlags.isInConsecutiveRegsLast())
     return true;
 
-  return finishStackBlock(PendingMembers, LocVT, ArgFlags, State, 8);
+  return finishStackBlock(PendingMembers, LocVT, ArgFlags, State, Align(8));
 }
 
 /// Given an [N x Ty] block, it should be passed in a consecutive sequence of
@@ -146,7 +145,7 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   for (auto Reg : RegList)
     State.AllocateReg(Reg);
 
-  unsigned SlotAlign = Subtarget.isTargetDarwin() ? 1 : 8;
+  const Align SlotAlign = Subtarget.isTargetDarwin() ? Align(1) : Align(8);
 
   return finishStackBlock(PendingMembers, LocVT, ArgFlags, State, SlotAlign);
 }

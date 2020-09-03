@@ -3,7 +3,7 @@
 ## are configured correctly.
 ## For more detailed syntax tests, see wildcard-syntax.test.
 
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 
 ## Check that --regex and --wildcard cannot be used together.
 # RUN: not llvm-objcopy --regex --wildcard %t.o %t.err.o 2>&1 \

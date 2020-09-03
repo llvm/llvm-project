@@ -1,5 +1,5 @@
 ; RUN: opt -S -early-cse < %s | FileCheck %s
-; RUN: opt < %s -S -basicaa -early-cse-memssa | FileCheck %s
+; RUN: opt < %s -S -basic-aa -early-cse-memssa | FileCheck %s
 ; NOTE: This file is testing the current implementation.  Some of
 ; the transforms used as negative tests below would be legal, but 
 ; only if reached through a chain of logic which EarlyCSE is incapable

@@ -1,6 +1,6 @@
 //===- Utils.h - General analysis utilities ---------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -36,12 +36,12 @@ class Value;
 
 /// Populates 'loops' with IVs of the loops surrounding 'op' ordered from
 /// the outermost 'affine.for' operation to the innermost one.
-//  TODO(bondhugula): handle 'affine.if' ops.
+//  TODO: handle 'affine.if' ops.
 void getLoopIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops);
 
 /// Returns the nesting depth of this operation, i.e., the number of loops
 /// surrounding this operation.
-unsigned getNestingDepth(Operation &op);
+unsigned getNestingDepth(Operation *op);
 
 /// Returns in 'sequentialLoops' all sequential loops in loop nest rooted
 /// at 'forOp'.
@@ -135,7 +135,7 @@ void getComputationSliceState(Operation *depSourceOp, Operation *depSinkOp,
 /// surrounding ops in 'opsB', as a function of IVs and symbols of loop nest
 /// surrounding ops in 'opsA' at 'loopDepth'.
 /// Returns 'success' if union was computed, 'failure' otherwise.
-// TODO(andydavis) Change this API to take 'forOpA'/'forOpB'.
+// TODO: Change this API to take 'forOpA'/'forOpB'.
 LogicalResult computeSliceUnion(ArrayRef<Operation *> opsA,
                                 ArrayRef<Operation *> opsB, unsigned loopDepth,
                                 unsigned numCommonLoops, bool isBackwardSlice,
@@ -150,7 +150,7 @@ LogicalResult computeSliceUnion(ArrayRef<Operation *> opsA,
 // Loop depth is a crucial optimization choice that determines where to
 // materialize the results of the backward slice - presenting a trade-off b/w
 // storage and redundant computation in several cases.
-// TODO(andydavis) Support computation slices with common surrounding loops.
+// TODO: Support computation slices with common surrounding loops.
 AffineForOp insertBackwardComputationSlice(Operation *srcOpInst,
                                            Operation *dstOpInst,
                                            unsigned dstLoopDepth,
@@ -220,11 +220,18 @@ struct MemRefRegion {
   /// i.e., the returned bounding constant holds for *any given* value of the
   /// symbol identifiers. The 'shape' vector is set to the corresponding
   /// dimension-wise bounds major to minor. We use int64_t instead of uint64_t
-  /// since index types can be at most int64_t.
+  /// since index types can be at most int64_t. `lbs` are set to the lower
+  /// bounds for each of the rank dimensions, and lbDivisors contains the
+  /// corresponding denominators for floorDivs.
   Optional<int64_t> getConstantBoundingSizeAndShape(
       SmallVectorImpl<int64_t> *shape = nullptr,
       std::vector<SmallVector<int64_t, 4>> *lbs = nullptr,
       SmallVectorImpl<int64_t> *lbDivisors = nullptr) const;
+
+  /// Gets the lower and upper bound map for the dimensional identifier at
+  /// `pos`.
+  void getLowerAndUpperBound(unsigned pos, AffineMap &lbMap,
+                             AffineMap &ubMap) const;
 
   /// A wrapper around FlatAffineConstraints::getConstantBoundOnDimSize(). 'pos'
   /// corresponds to the position of the memref shape's dimension (major to
@@ -264,7 +271,7 @@ struct MemRefRegion {
   /// identifiers since getMemRefRegion() is called with a specific loop depth,
   /// and thus the region is symbolic in the outer surrounding loops at that
   /// depth.
-  // TODO(bondhugula): Replace this to exploit HyperRectangularSet.
+  // TODO: Replace this to exploit HyperRectangularSet.
   FlatAffineConstraints cst;
 };
 
@@ -289,6 +296,12 @@ Optional<int64_t> getMemoryFootprintBytes(AffineForOp forOp,
 
 /// Returns true if `forOp' is a parallel loop.
 bool isLoopParallel(AffineForOp forOp);
+
+/// Simplify the integer set by simplifying the underlying affine expressions by
+/// flattening and some simple inference. Also, drop any duplicate constraints.
+/// Returns the simplified integer set. This method runs in time linear in the
+/// number of constraints.
+IntegerSet simplifyIntegerSet(IntegerSet set);
 
 } // end namespace mlir
 

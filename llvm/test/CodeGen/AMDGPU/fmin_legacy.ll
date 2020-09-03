@@ -6,7 +6,7 @@
 
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; The two inputs to the instruction are different SGPRs from the same
 ; super register, so we can't fold both SGPR operands even though they
@@ -87,7 +87,7 @@ define amdgpu_kernel void @s_test_fmin_legacy_ule_f32_nnan_src(float addrspace(1
 
 ; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_ule_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
@@ -106,12 +106,12 @@ define amdgpu_kernel void @test_fmin_legacy_ule_f32(float addrspace(1)* %out, fl
 
 ; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 
-; VI-SAFE v_cmp_le_f32_e32 vcc, [[A]], [[B]]
+; VI-SAFE: v_cmp_le_f32_e32 vcc, [[A]], [[B]]
 ; VI-SAFE: v_cndmask_b32_e32 v{{[0-9]+}}, [[B]], [[A]]
 
 ; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_ole_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
@@ -130,12 +130,12 @@ define amdgpu_kernel void @test_fmin_legacy_ole_f32(float addrspace(1)* %out, fl
 
 ; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 
-; VI-SAFE v_cmp_lt_f32_e32 vcc, [[A]], [[B]]
+; VI-SAFE: v_cmp_lt_f32_e32 vcc, [[A]], [[B]]
 ; VI-SAFE: v_cndmask_b32_e32 v{{[0-9]+}}, [[B]], [[A]]
 
 ; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_olt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
@@ -154,12 +154,12 @@ define amdgpu_kernel void @test_fmin_legacy_olt_f32(float addrspace(1)* %out, fl
 
 ; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
 
-; VI-SAFE v_cmp_lt_f32_e32 vcc, [[A]], [[B]]
+; VI-SAFE: v_cmp_nge_f32_e32 vcc, [[A]], [[B]]
 ; VI-SAFE: v_cndmask_b32_e32 v{{[0-9]+}}, [[B]], [[A]]
 
 ; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_ult_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
@@ -178,12 +178,12 @@ define amdgpu_kernel void @test_fmin_legacy_ult_f32(float addrspace(1)* %out, fl
 
 ; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
 
-; VI-SAFE v_cmp_lt_f32_e32 vcc, [[A]], [[B]]
+; VI-SAFE: v_cmp_nge_f32_e32 vcc, [[A]], [[B]]
 ; VI-SAFE: v_cndmask_b32_e32 v{{[0-9]+}}, [[B]], [[A]]
 
 ; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_ult_v1f32(<1 x float> addrspace(1)* %out, <1 x float> addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr <1 x float>, <1 x float> addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr <1 x float>, <1 x float> addrspace(1)* %gep.0, i32 1
 
@@ -202,15 +202,15 @@ define amdgpu_kernel void @test_fmin_legacy_ult_v1f32(<1 x float> addrspace(1)* 
 ; SI-SAFE: v_min_legacy_f32_e32
 ; SI-SAFE: v_min_legacy_f32_e32
 
-; VI-SAFE v_cmp_lt_f32_e32
+; VI-SAFE: v_cmp_nge_f32_e32
 ; VI-SAFE: v_cndmask_b32_e32
-; VI-SAFE v_cmp_lt_f32_e32
+; VI-SAFE: v_cmp_nge_f32_e32
 ; VI-SAFE: v_cndmask_b32_e32
 
 ; GCN-NONAN: v_min_f32_e32
 ; GCN-NONAN: v_min_f32_e32
 define amdgpu_kernel void @test_fmin_legacy_ult_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr <2 x float>, <2 x float> addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr <2 x float>, <2 x float> addrspace(1)* %gep.0, i32 1
 
@@ -243,7 +243,7 @@ define amdgpu_kernel void @test_fmin_legacy_ult_v2f32(<2 x float> addrspace(1)* 
 ; GCN-NONAN: v_min_f32_e32
 ; GCN-NONAN-NOT: v_min_
 define amdgpu_kernel void @test_fmin_legacy_ult_v3f32(<3 x float> addrspace(1)* %out, <3 x float> addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr <3 x float>, <3 x float> addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr <3 x float>, <3 x float> addrspace(1)* %gep.0, i32 1
 
@@ -265,7 +265,7 @@ define amdgpu_kernel void @test_fmin_legacy_ult_v3f32(<3 x float> addrspace(1)* 
 ; GCN-NOT: v_min
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_fmin_legacy_ole_f32_multi_use(float addrspace(1)* %out0, i1 addrspace(1)* %out1, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 

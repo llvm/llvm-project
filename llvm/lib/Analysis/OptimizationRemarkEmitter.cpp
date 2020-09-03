@@ -36,8 +36,7 @@ OptimizationRemarkEmitter::OptimizationRemarkEmitter(const Function *F)
   LI.analyze(DT);
 
   // Then compute BranchProbabilityInfo.
-  BranchProbabilityInfo BPI;
-  BPI.calculate(*F, LI);
+  BranchProbabilityInfo BPI(*F, LI);
 
   // Finally compute BFI.
   OwnedBFI = std::make_unique<BlockFrequencyInfo>(*F, BPI, LI);
@@ -47,6 +46,10 @@ OptimizationRemarkEmitter::OptimizationRemarkEmitter(const Function *F)
 bool OptimizationRemarkEmitter::invalidate(
     Function &F, const PreservedAnalyses &PA,
     FunctionAnalysisManager::Invalidator &Inv) {
+  if (OwnedBFI.get()) {
+    OwnedBFI.reset();
+    BFI = nullptr;
+  }
   // This analysis has no state and so can be trivially preserved but it needs
   // a fresh view of BFI if it was constructed with one.
   if (BFI && Inv.invalidate<BlockFrequencyAnalysis>(F, PA))

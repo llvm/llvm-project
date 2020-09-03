@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++14 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify %s
 // expected-no-diagnostics
 
 // Test default template arguments for function templates.
@@ -116,6 +117,11 @@ namespace rdar34167492 {
   };
 }
 
+namespace use_of_earlier_param {
+  template<typename T> void f(T a, int = decltype(a)());
+  void g() { f(0); }
+}
+
 #if __cplusplus >= 201402L
 namespace lambda {
   // Verify that a default argument in a lambda can refer to the type of a
@@ -127,5 +133,32 @@ namespace lambda {
   void foo() {
     bar<int>();
   }
+
+#if __cplusplus >= 202002L
+  // PR46648: ensure we don't reject this by triggering default argument
+  // instantiation spuriously.
+  auto x = []<typename T>(T x = 123) {};
+  void y() { x(nullptr); }
+
+  template<int A> struct X {
+    template<int B> constexpr int f() {
+      auto l = []<int C>(int n = A + B + C) { return n; };
+      return l.template operator()<3>();
+    }
+  };
+  static_assert(X<100>().f<20>() == 123);
+
+  template<> template<int B> constexpr int X<200>::f() {
+    auto l = []<int C>(int n = 300 + B + C) { return n; };
+    return l.template operator()<1>();
+  }
+  static_assert(X<200>().f<20>() == 321);
+
+  template<> template<> constexpr int X<300>::f<20>() {
+    auto l = []<int C>(int n = 450 + C) { return n; };
+    return l.template operator()<6>();
+  }
+  static_assert(X<300>().f<20>() == 456);
+#endif
 } // namespace lambda
 #endif

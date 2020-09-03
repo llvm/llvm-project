@@ -50,9 +50,9 @@ void GCNMaxOccupancySchedStrategy::initialize(ScheduleDAGMI *DAG) {
     VGPRCriticalLimit = ST.getMaxNumVGPRs(TargetOccupancy);
   } else {
     SGPRCriticalLimit = SRI->getRegPressureSetLimit(DAG->MF,
-                                                    SRI->getSGPRPressureSet());
+        AMDGPU::RegisterPressureSets::SReg_32);
     VGPRCriticalLimit = SRI->getRegPressureSetLimit(DAG->MF,
-                                                    SRI->getVGPRPressureSet());
+        AMDGPU::RegisterPressureSets::VGPR_32);
   }
 
   SGPRCriticalLimit -= ErrorMargin;
@@ -83,8 +83,8 @@ void GCNMaxOccupancySchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU
     TempTracker.getUpwardPressure(SU->getInstr(), Pressure, MaxPressure);
   }
 
-  unsigned NewSGPRPressure = Pressure[SRI->getSGPRPressureSet()];
-  unsigned NewVGPRPressure = Pressure[SRI->getVGPRPressureSet()];
+  unsigned NewSGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
+  unsigned NewVGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
 
   // If two instructions increase the pressure of different register sets
   // by the same amount, the generic scheduler will prefer to schedule the
@@ -109,12 +109,12 @@ void GCNMaxOccupancySchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU
   // marked as RegExcess in tryCandidate() when they are compared with
   // instructions that increase the register pressure.
   if (ShouldTrackVGPRs && NewVGPRPressure >= VGPRExcessLimit) {
-    Cand.RPDelta.Excess = PressureChange(SRI->getVGPRPressureSet());
+    Cand.RPDelta.Excess = PressureChange(AMDGPU::RegisterPressureSets::VGPR_32);
     Cand.RPDelta.Excess.setUnitInc(NewVGPRPressure - VGPRExcessLimit);
   }
 
   if (ShouldTrackSGPRs && NewSGPRPressure >= SGPRExcessLimit) {
-    Cand.RPDelta.Excess = PressureChange(SRI->getSGPRPressureSet());
+    Cand.RPDelta.Excess = PressureChange(AMDGPU::RegisterPressureSets::SReg_32);
     Cand.RPDelta.Excess.setUnitInc(NewSGPRPressure - SGPRExcessLimit);
   }
 
@@ -128,10 +128,12 @@ void GCNMaxOccupancySchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU
 
   if (SGPRDelta >= 0 || VGPRDelta >= 0) {
     if (SGPRDelta > VGPRDelta) {
-      Cand.RPDelta.CriticalMax = PressureChange(SRI->getSGPRPressureSet());
+      Cand.RPDelta.CriticalMax =
+        PressureChange(AMDGPU::RegisterPressureSets::SReg_32);
       Cand.RPDelta.CriticalMax.setUnitInc(SGPRDelta);
     } else {
-      Cand.RPDelta.CriticalMax = PressureChange(SRI->getVGPRPressureSet());
+      Cand.RPDelta.CriticalMax =
+        PressureChange(AMDGPU::RegisterPressureSets::VGPR_32);
       Cand.RPDelta.CriticalMax.setUnitInc(VGPRDelta);
     }
   }
@@ -145,8 +147,8 @@ void GCNMaxOccupancySchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
                                          SchedCandidate &Cand) {
   const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo*>(TRI);
   ArrayRef<unsigned> Pressure = RPTracker.getRegSetPressureAtPos();
-  unsigned SGPRPressure = Pressure[SRI->getSGPRPressureSet()];
-  unsigned VGPRPressure = Pressure[SRI->getVGPRPressureSet()];
+  unsigned SGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
+  unsigned VGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
   ReadyQueue &Q = Zone.Available;
   for (SUnit *SU : Q) {
 
@@ -231,33 +233,11 @@ SUnit *GCNMaxOccupancySchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
   // Pick best from BotCand and TopCand.
   LLVM_DEBUG(dbgs() << "Top Cand: "; traceCandidate(TopCand);
              dbgs() << "Bot Cand: "; traceCandidate(BotCand););
-  SchedCandidate Cand;
-  if (TopCand.Reason == BotCand.Reason) {
-    Cand = BotCand;
-    GenericSchedulerBase::CandReason TopReason = TopCand.Reason;
-    TopCand.Reason = NoCand;
-    GenericScheduler::tryCandidate(Cand, TopCand, nullptr);
-    if (TopCand.Reason != NoCand) {
-      Cand.setBest(TopCand);
-    } else {
-      TopCand.Reason = TopReason;
-    }
-  } else {
-    if (TopCand.Reason == RegExcess && TopCand.RPDelta.Excess.getUnitInc() <= 0) {
-      Cand = TopCand;
-    } else if (BotCand.Reason == RegExcess && BotCand.RPDelta.Excess.getUnitInc() <= 0) {
-      Cand = BotCand;
-    } else if (TopCand.Reason == RegCritical && TopCand.RPDelta.CriticalMax.getUnitInc() <= 0) {
-      Cand = TopCand;
-    } else if (BotCand.Reason == RegCritical && BotCand.RPDelta.CriticalMax.getUnitInc() <= 0) {
-      Cand = BotCand;
-    } else {
-      if (BotCand.Reason > TopCand.Reason) {
-        Cand = TopCand;
-      } else {
-        Cand = BotCand;
-      }
-    }
+  SchedCandidate Cand = BotCand;
+  TopCand.Reason = NoCand;
+  GenericScheduler::tryCandidate(Cand, TopCand, nullptr);
+  if (TopCand.Reason != NoCand) {
+    Cand.setBest(TopCand);
   }
   LLVM_DEBUG(dbgs() << "Picking: "; traceCandidate(Cand););
 
@@ -316,13 +296,13 @@ GCNScheduleDAGMILive::GCNScheduleDAGMILive(MachineSchedContext *C,
   ST(MF.getSubtarget<GCNSubtarget>()),
   MFI(*MF.getInfo<SIMachineFunctionInfo>()),
   StartingOccupancy(MFI.getOccupancy()),
-  MinOccupancy(StartingOccupancy), Stage(0), RegionIdx(0) {
+  MinOccupancy(StartingOccupancy), Stage(Collect), RegionIdx(0) {
 
   LLVM_DEBUG(dbgs() << "Starting occupancy is " << StartingOccupancy << ".\n");
 }
 
 void GCNScheduleDAGMILive::schedule() {
-  if (Stage == 0) {
+  if (Stage == Collect) {
     // Just record regions at the first pass.
     Regions.push_back(std::make_pair(RegionBegin, RegionEnd));
     return;
@@ -348,6 +328,7 @@ void GCNScheduleDAGMILive::schedule() {
 
   ScheduleDAGMILive::schedule();
   Regions[RegionIdx] = std::make_pair(RegionBegin, RegionEnd);
+  RescheduleRegions[RegionIdx] = false;
 
   if (!LIS)
     return;
@@ -389,20 +370,28 @@ void GCNScheduleDAGMILive::schedule() {
                       << MinOccupancy << ".\n");
   }
 
+  unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
+  unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
+  if (PressureAfter.getVGPRNum() > MaxVGPRs ||
+      PressureAfter.getSGPRNum() > MaxSGPRs)
+    RescheduleRegions[RegionIdx] = true;
+
   if (WavesAfter >= MinOccupancy) {
-    unsigned TotalVGPRs = AMDGPU::IsaInfo::getAddressableNumVGPRs(&ST);
-    unsigned TotalSGPRs = AMDGPU::IsaInfo::getAddressableNumSGPRs(&ST);
-    if (WavesAfter > MFI.getMinWavesPerEU() ||
+    if (Stage == UnclusteredReschedule &&
+        !PressureAfter.less(ST, PressureBefore)) {
+      LLVM_DEBUG(dbgs() << "Unclustered reschedule did not help.\n");
+    } else if (WavesAfter > MFI.getMinWavesPerEU() ||
         PressureAfter.less(ST, PressureBefore) ||
-        (TotalVGPRs >= PressureAfter.getVGPRNum() &&
-         TotalSGPRs >= PressureAfter.getSGPRNum())) {
+        !RescheduleRegions[RegionIdx]) {
       Pressure[RegionIdx] = PressureAfter;
       return;
+    } else {
+      LLVM_DEBUG(dbgs() << "New pressure will result in more spilling.\n");
     }
-    LLVM_DEBUG(dbgs() << "New pressure will result in more spilling.\n");
   }
 
   LLVM_DEBUG(dbgs() << "Attempting to revert scheduling.\n");
+  RescheduleRegions[RegionIdx] = true;
   RegionEnd = RegionBegin;
   for (MachineInstr *MI : Unsched) {
     if (MI->isDebugInstr())
@@ -532,33 +521,55 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
 
   LiveIns.resize(Regions.size());
   Pressure.resize(Regions.size());
+  RescheduleRegions.resize(Regions.size());
+  RescheduleRegions.set();
 
   if (!Regions.empty())
     BBLiveInMap = getBBLiveInMap();
+
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
 
   do {
     Stage++;
     RegionIdx = 0;
     MachineBasicBlock *MBB = nullptr;
 
-    if (Stage > 1) {
+    if (Stage > InitialSchedule) {
+      if (!LIS)
+        break;
+
       // Retry function scheduling if we found resulting occupancy and it is
       // lower than used for first pass scheduling. This will give more freedom
       // to schedule low register pressure blocks.
       // Code is partially copied from MachineSchedulerBase::scheduleRegions().
 
-      if (!LIS || StartingOccupancy <= MinOccupancy)
-        break;
+      if (Stage == UnclusteredReschedule) {
+        if (RescheduleRegions.none())
+          continue;
+        LLVM_DEBUG(dbgs() <<
+          "Retrying function scheduling without clustering.\n");
+      }
 
-      LLVM_DEBUG(
-          dbgs()
-          << "Retrying function scheduling with lowest recorded occupancy "
-          << MinOccupancy << ".\n");
+      if (Stage == ClusteredLowOccupancyReschedule) {
+        if (StartingOccupancy <= MinOccupancy)
+          break;
 
-      S.setTargetOccupancy(MinOccupancy);
+        LLVM_DEBUG(
+            dbgs()
+            << "Retrying function scheduling with lowest recorded occupancy "
+            << MinOccupancy << ".\n");
+
+        S.setTargetOccupancy(MinOccupancy);
+      }
     }
 
+    if (Stage == UnclusteredReschedule)
+      SavedMutations.swap(Mutations);
+
     for (auto Region : Regions) {
+      if (Stage == UnclusteredReschedule && !RescheduleRegions[RegionIdx])
+        continue;
+
       RegionBegin = Region.first;
       RegionEnd = Region.second;
 
@@ -566,7 +577,7 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
         if (MBB) finishBlock();
         MBB = RegionBegin->getParent();
         startBlock(MBB);
-        if (Stage == 1)
+        if (Stage == InitialSchedule)
           computeBlockPressure(MBB);
       }
 
@@ -594,5 +605,7 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
     }
     finishBlock();
 
-  } while (Stage < 2);
+    if (Stage == UnclusteredReschedule)
+      SavedMutations.swap(Mutations);
+  } while (Stage != LastStage);
 }

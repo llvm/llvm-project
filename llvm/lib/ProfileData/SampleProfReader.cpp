@@ -245,7 +245,7 @@ std::error_code SampleProfileReaderText::readImpl() {
           InlineStack.pop_back();
         }
         FunctionSamples &FSamples = InlineStack.back()->functionSamplesAt(
-            LineLocation(LineOffset, Discriminator))[FName];
+            LineLocation(LineOffset, Discriminator))[std::string(FName)];
         FSamples.setName(FName);
         MergeResult(Result, FSamples.addTotalSamples(NumSamples));
         InlineStack.push_back(&FSamples);
@@ -430,7 +430,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
       return EC;
 
     FunctionSamples &CalleeProfile = FProfile.functionSamplesAt(
-        LineLocation(*LineOffset, *Discriminator))[*FName];
+        LineLocation(*LineOffset, *Discriminator))[std::string(*FName)];
     CalleeProfile.setName(*FName);
     if (std::error_code EC = readProfile(CalleeProfile))
       return EC;
@@ -470,18 +470,20 @@ std::error_code SampleProfileReaderBinary::readImpl() {
   return sampleprof_error::success;
 }
 
-std::error_code
-SampleProfileReaderExtBinary::readOneSection(const uint8_t *Start,
-                                             uint64_t Size, SecType Type) {
+std::error_code SampleProfileReaderExtBinary::readOneSection(
+    const uint8_t *Start, uint64_t Size, const SecHdrTableEntry &Entry) {
   Data = Start;
   End = Start + Size;
-  switch (Type) {
+  switch (Entry.Type) {
   case SecProfSummary:
     if (std::error_code EC = readSummary())
       return EC;
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagPartial))
+      Summary->setPartialProfile(true);
     break;
   case SecNameTable:
-    if (std::error_code EC = readNameTable())
+    if (std::error_code EC = readNameTableSec(
+            hasSecFlag(Entry, SecNameTableFlags::SecFlagMD5Name)))
       return EC;
     break;
   case SecLBRProfile:
@@ -546,15 +548,28 @@ std::error_code SampleProfileReaderExtBinary::readFuncProfiles() {
     }
   }
 
-  for (auto NameOffset : FuncOffsetTable) {
-    auto FuncName = NameOffset.first;
-    if (!FuncsToUse.count(FuncName) &&
-        (!Remapper || !Remapper->exist(FuncName)))
-      continue;
-    const uint8_t *FuncProfileAddr = Start + NameOffset.second;
-    assert(FuncProfileAddr < End && "out of LBRProfile section");
-    if (std::error_code EC = readFuncProfile(FuncProfileAddr))
-      return EC;
+  if (useMD5()) {
+    for (auto Name : FuncsToUse) {
+      auto GUID = std::to_string(MD5Hash(Name));
+      auto iter = FuncOffsetTable.find(StringRef(GUID));
+      if (iter == FuncOffsetTable.end())
+        continue;
+      const uint8_t *FuncProfileAddr = Start + iter->second;
+      assert(FuncProfileAddr < End && "out of LBRProfile section");
+      if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+        return EC;
+    }
+  } else {
+    for (auto NameOffset : FuncOffsetTable) {
+      auto FuncName = NameOffset.first;
+      if (!FuncsToUse.count(FuncName) &&
+          (!Remapper || !Remapper->exist(FuncName)))
+        continue;
+      const uint8_t *FuncProfileAddr = Start + NameOffset.second;
+      assert(FuncProfileAddr < End && "out of LBRProfile section");
+      if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+        return EC;
+    }
   }
 
   Data = End;
@@ -617,7 +632,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readImpl() {
     // DecompressBuf before reading the actual data. The pointee of
     // 'Data' will be changed to buffer hold by DecompressBuf
     // temporarily when reading the actual data.
-    bool isCompressed = hasSecFlag(Entry, SecFlagCompress);
+    bool isCompressed = hasSecFlag(Entry, SecCommonFlags::SecFlagCompress);
     if (isCompressed) {
       const uint8_t *DecompressBuf;
       uint64_t DecompressBufSize;
@@ -628,7 +643,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readImpl() {
       SecSize = DecompressBufSize;
     }
 
-    if (std::error_code EC = readOneSection(SecStart, SecSize, Entry.Type))
+    if (std::error_code EC = readOneSection(SecStart, SecSize, Entry))
       return EC;
     if (Data != SecStart + SecSize)
       return sampleprof_error::malformed;
@@ -703,6 +718,31 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
   }
 
   return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderExtBinary::readMD5NameTable() {
+  auto Size = readNumber<uint64_t>();
+  if (std::error_code EC = Size.getError())
+    return EC;
+  NameTable.reserve(*Size);
+  MD5StringBuf = std::make_unique<std::vector<std::string>>();
+  MD5StringBuf->reserve(*Size);
+  for (uint32_t I = 0; I < *Size; ++I) {
+    auto FID = readNumber<uint64_t>();
+    if (std::error_code EC = FID.getError())
+      return EC;
+    MD5StringBuf->push_back(std::to_string(*FID));
+    // NameTable is a vector of StringRef. Here it is pushing back a
+    // StringRef initialized with the last string in MD5stringBuf.
+    NameTable.push_back(MD5StringBuf->back());
+  }
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderExtBinary::readNameTableSec(bool IsMD5) {
+  if (IsMD5)
+    return readMD5NameTable();
+  return SampleProfileReaderBinary::readNameTable();
 }
 
 std::error_code SampleProfileReaderCompactBinary::readNameTable() {
@@ -793,11 +833,40 @@ uint64_t SampleProfileReaderExtBinaryBase::getFileSize() {
   return FileSize;
 }
 
+static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
+  std::string Flags;
+  if (hasSecFlag(Entry, SecCommonFlags::SecFlagCompress))
+    Flags.append("{compressed,");
+  else
+    Flags.append("{");
+
+  switch (Entry.Type) {
+  case SecNameTable:
+    if (hasSecFlag(Entry, SecNameTableFlags::SecFlagMD5Name))
+      Flags.append("md5,");
+    break;
+  case SecProfSummary:
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagPartial))
+      Flags.append("partial,");
+    break;
+  default:
+    break;
+  }
+  char &last = Flags.back();
+  if (last == ',')
+    last = '}';
+  else
+    Flags.append("}");
+  return Flags;
+}
+
 bool SampleProfileReaderExtBinaryBase::dumpSectionInfo(raw_ostream &OS) {
   uint64_t TotalSecsSize = 0;
   for (auto &Entry : SecHdrTable) {
     OS << getSecName(Entry.Type) << " - Offset: " << Entry.Offset
-       << ", Size: " << Entry.Size << "\n";
+       << ", Size: " << Entry.Size << ", Flags: " << getSecFlagsStr(Entry)
+       << "\n";
+    ;
     TotalSecsSize += getSectionSize(Entry.Type);
   }
   uint64_t HeaderSize = SecHdrTable.front().Offset;
@@ -1007,7 +1076,7 @@ std::error_code SampleProfileReaderGCC::readHeader() {
   if (!GcovBuffer.readGCOVVersion(version))
     return sampleprof_error::unrecognized_format;
 
-  if (version != GCOV::V704)
+  if (version != GCOV::V407)
     return sampleprof_error::unsupported_version;
 
   // Skip the empty integer.
@@ -1043,7 +1112,7 @@ std::error_code SampleProfileReaderGCC::readNameTable() {
     StringRef Str;
     if (!GcovBuffer.readString(Str))
       return sampleprof_error::truncated;
-    Names.push_back(Str);
+    Names.push_back(std::string(Str));
   }
 
   return sampleprof_error::success;
@@ -1107,7 +1176,7 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
     uint32_t LineOffset = Offset >> 16;
     uint32_t Discriminator = Offset & 0xffff;
     FProfile = &CallerProfile->functionSamplesAt(
-        LineLocation(LineOffset, Discriminator))[Name];
+        LineLocation(LineOffset, Discriminator))[std::string(Name)];
   }
   FProfile->setName(Name);
 
@@ -1210,9 +1279,9 @@ bool SampleProfileReaderGCC::hasFormat(const MemoryBuffer &Buffer) {
 }
 
 void SampleProfileReaderItaniumRemapper::applyRemapping(LLVMContext &Ctx) {
-  // If the reader is in compact format, we can't remap it because
+  // If the reader uses MD5 to represent string, we can't remap it because
   // we don't know what the original function names were.
-  if (Reader.getFormat() == SPF_Compact_Binary) {
+  if (Reader.useMD5()) {
     Ctx.diagnose(DiagnosticInfoSampleProfile(
         Reader.getBuffer()->getBufferIdentifier(),
         "Profile data remapping cannot be applied to profile data "

@@ -1,4 +1,4 @@
-//===-- CommandObjectSettings.cpp -------------------------------*- C++ -*-===//
+//===-- CommandObjectSettings.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -343,7 +343,7 @@ public:
 
       switch (short_option) {
       case 'f':
-        m_filename.assign(option_arg);
+        m_filename.assign(std::string(option_arg));
         break;
       case 'a':
         m_append = true;
@@ -444,7 +444,7 @@ public:
 
       switch (short_option) {
       case 'f':
-        m_filename.assign(option_arg);
+        m_filename.assign(std::string(option_arg));
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -531,10 +531,8 @@ protected:
     if (argc > 0) {
       const bool dump_qualified_name = true;
 
-      // TODO: Convert to StringRef based enumeration.  Requires converting
-      // GetPropertyAtPath first.
-      for (size_t i = 0; i < argc; ++i) {
-        const char *property_path = args.GetArgumentAtIndex(i);
+      for (const Args::ArgEntry &arg : args) {
+        const char *property_path = arg.c_str();
 
         const Property *property =
             GetDebugger().GetValueProperties()->GetPropertyAtPath(
@@ -1043,13 +1041,16 @@ protected:
 };
 
 // CommandObjectSettingsClear
+#define LLDB_OPTIONS_settings_clear
+#include "CommandOptions.inc"
 
 class CommandObjectSettingsClear : public CommandObjectParsed {
 public:
   CommandObjectSettingsClear(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "settings clear",
-            "Clear a debugger setting array, dictionary, or string.", nullptr) {
+            "Clear a debugger setting array, dictionary, or string. "
+            "If '-a' option is specified, it clears all settings.", nullptr) {
     CommandArgumentEntry arg;
     CommandArgumentData var_name_arg;
 
@@ -1077,10 +1078,52 @@ public:
           request, nullptr);
   }
 
+   Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() = default;
+
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      const int short_option = m_getopt_table[option_idx].val;
+      switch (short_option) {
+      case 'a':
+        m_clear_all = true;
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+      return Status();
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_clear_all = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_settings_clear_options);
+    }
+
+    bool m_clear_all = false;
+  };
+
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
     const size_t argc = command.GetArgumentCount();
+
+    if (m_options.m_clear_all) {
+      if (argc != 0) {
+        result.AppendError("'settings clear --all' doesn't take any arguments");
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+      GetDebugger().GetValueProperties()->Clear();
+      return result.Succeeded();
+    }
 
     if (argc != 1) {
       result.AppendError("'settings clear' takes exactly one argument");
@@ -1106,6 +1149,9 @@ protected:
 
     return result.Succeeded();
   }
+
+  private:
+    CommandOptions m_options;
 };
 
 // CommandObjectMultiwordSettings

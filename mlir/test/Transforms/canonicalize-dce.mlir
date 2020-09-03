@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -pass-pipeline='func(canonicalize)' | FileCheck %s --dump-input=fail
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='func(canonicalize)' | FileCheck %s
 
 // Test case: Simple case of deleting a dead pure op.
 
@@ -20,7 +20,7 @@ func @f(%arg0: f32) {
 // CHECK-NEXT:   return
 
 func @f(%arg0: f32) {
-  "test.br"()[^succ(%arg0: f32)] : () -> ()
+  "test.br"(%arg0)[^succ] : (f32) -> ()
 ^succ(%0: f32):
   return
 }
@@ -62,10 +62,6 @@ func @f(%arg0: f32) {
 // Test case: Delete block arguments for cond_br.
 
 // CHECK:      func @f(%arg0: f32, %arg1: i1)
-// CHECK-NEXT:   cond_br %arg1, ^bb1, ^bb2
-// CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   return
-// CHECK-NEXT: ^bb2:
 // CHECK-NEXT:   return
 
 func @f(%arg0: f32, %pred: i1) {
@@ -141,7 +137,7 @@ func @f(%arg0: f32) {
 // Test case: Test the mechanics of deleting multiple block arguments.
 
 // CHECK:      func @f(%arg0: tensor<1xf32>, %arg1: tensor<2xf32>, %arg2: tensor<3xf32>, %arg3: tensor<4xf32>, %arg4: tensor<5xf32>)
-// CHECK-NEXT:   "test.br"()[^bb1(%arg1, %arg3 : tensor<2xf32>, tensor<4xf32>)
+// CHECK-NEXT:   "test.br"(%arg1, %arg3)[^bb1] : (tensor<2xf32>, tensor<4xf32>)
 // CHECK-NEXT: ^bb1([[VAL0:%.+]]: tensor<2xf32>, [[VAL1:%.+]]: tensor<4xf32>):
 // CHECK-NEXT:   "foo.print"([[VAL0]])
 // CHECK-NEXT:   "foo.print"([[VAL1]])
@@ -154,7 +150,7 @@ func @f(
   %arg2: tensor<3xf32>,
   %arg3: tensor<4xf32>,
   %arg4: tensor<5xf32>) {
-  "test.br"()[^succ(%arg0, %arg1, %arg2, %arg3, %arg4 : tensor<1xf32>, tensor<2xf32>, tensor<3xf32>, tensor<4xf32>, tensor<5xf32>)] : () -> ()
+  "test.br"(%arg0, %arg1, %arg2, %arg3, %arg4)[^succ] : (tensor<1xf32>, tensor<2xf32>, tensor<3xf32>, tensor<4xf32>, tensor<5xf32>) -> ()
 ^succ(%t1: tensor<1xf32>, %t2: tensor<2xf32>, %t3: tensor<3xf32>, %t4: tensor<4xf32>, %t5: tensor<5xf32>):
   "foo.print"(%t2) : (tensor<2xf32>) -> ()
   "foo.print"(%t4) : (tensor<4xf32>) -> ()

@@ -183,3 +183,18 @@ concept C8 = sizeof(T) > sizeof(U);
 template<typename... T>
 constexpr bool B8 = C8<T...>;
 // expected-error@-1{{pack expansion used as argument for non-pack parameter of concept}}
+
+
+// Make sure we correctly check for containsUnexpandedParameterPack
+
+template<typename T>
+concept C9 = true;
+
+template <typename Fn, typename... Args>
+using invoke = typename Fn::template invoke<Args...>;
+
+template <typename C, typename... L>
+// The converted argument here will not containsUnexpandedParameterPack, but the
+// as-written one will.
+requires (C9<invoke<C, L>> &&...)
+struct S { };

@@ -236,7 +236,7 @@ std::string RegionBase<Tr>::getNameStr() const {
 
     getEntry()->printAsOperand(OS, false);
   } else
-    entryName = getEntry()->getName();
+    entryName = std::string(getEntry()->getName());
 
   if (getExit()) {
     if (getExit()->getName().empty()) {
@@ -244,7 +244,7 @@ std::string RegionBase<Tr>::getNameStr() const {
 
       getExit()->printAsOperand(OS, false);
     } else
-      exitName = getExit()->getName();
+      exitName = std::string(getExit()->getName());
   } else
     exitName = "<Function Return>";
 
@@ -724,7 +724,7 @@ void RegionInfoBase<Tr>::findRegionsWithEntry(BlockT *entry,
 
 template <class Tr>
 void RegionInfoBase<Tr>::scanForRegions(FuncT &F, BBtoBBMap *ShortCut) {
-  using FuncPtrT = typename std::add_pointer<FuncT>::type;
+  using FuncPtrT = std::add_pointer_t<FuncT>;
 
   BlockT *entry = GraphTraits<FuncPtrT>::getEntryNode(&F);
   DomTreeNodeT *N = DT->getNode(entry);
@@ -912,7 +912,7 @@ RegionInfoBase<Tr>::getCommonRegion(SmallVectorImpl<BlockT *> &BBs) const {
 
 template <class Tr>
 void RegionInfoBase<Tr>::calculate(FuncT &F) {
-  using FuncPtrT = typename std::add_pointer<FuncT>::type;
+  using FuncPtrT = std::add_pointer_t<FuncT>;
 
   // ShortCut a function where for every BB the exit of the largest region
   // starting with BB is stored. These regions can be threated as single BBS.

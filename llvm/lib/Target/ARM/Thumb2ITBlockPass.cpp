@@ -183,7 +183,7 @@ Thumb2ITBlock::MoveCopyOutOfITBlock(MachineInstr *MI,
     ++I;
 
   if (I != E) {
-    unsigned NPredReg = 0;
+    Register NPredReg;
     ARMCC::CondCodes NCC = getITInstrPredicate(*I, NPredReg);
     if (NCC == CC || NCC == OCC)
       return true;
@@ -199,7 +199,7 @@ bool Thumb2ITBlock::InsertITInstructions(MachineBasicBlock &MBB) {
   while (MBBI != E) {
     MachineInstr *MI = &*MBBI;
     DebugLoc dl = MI->getDebugLoc();
-    unsigned PredReg = 0;
+    Register PredReg;
     ARMCC::CondCodes CC = getITInstrPredicate(*MI, PredReg);
     if (CC == ARMCC::AL) {
       ++MBBI;
@@ -239,7 +239,7 @@ bool Thumb2ITBlock::InsertITInstructions(MachineBasicBlock &MBB) {
         MachineInstr *NMI = &*MBBI;
         MI = NMI;
 
-        unsigned NPredReg = 0;
+        Register NPredReg;
         ARMCC::CondCodes NCC = getITInstrPredicate(*NMI, NPredReg);
         if (NCC == CC || NCC == OCC) {
           Mask |= ((NCC ^ CC) & 1) << Pos;

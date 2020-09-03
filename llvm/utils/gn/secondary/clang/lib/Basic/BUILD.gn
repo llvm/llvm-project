@@ -6,7 +6,7 @@ config("write_vcsrevision_config") {
   visibility = [ ":write_vcsrevision" ]
 }
 
-write_vcsrevision("write_vcsrevision") {
+write_vcsrevision("write_vcsversion") {
   visibility = [ ":Basic" ]
   header = "$target_gen_dir/VCSVersion.inc"
   names = [
@@ -24,12 +24,15 @@ static_library("Basic") {
     "//clang/include/clang/Basic:AttrList",
     "//clang/include/clang/Basic:AttrSubMatchRulesList",
     "//clang/include/clang/Basic:DiagnosticGroups",
+    "//clang/include/clang/Basic:arm_cde_builtins",
     "//clang/include/clang/Basic:arm_mve_builtins",
+    "//clang/include/clang/Basic:arm_sve_builtins",
+    "//clang/include/clang/Basic:arm_sve_typeflags",
     "//clang/include/clang/Basic:diags_tablegen",
     "//clang/include/clang/Basic:version",
   ]
   deps = [
-    ":write_vcsrevision",
+    ":write_vcsversion",
     "//clang/include/clang/Basic:AttrHasAttributeImpl",
     "//clang/include/clang/Basic:arm_fp16",
     "//clang/include/clang/Basic:arm_neon",
@@ -49,6 +52,7 @@ static_library("Basic") {
     "Diagnostic.cpp",
     "DiagnosticIDs.cpp",
     "DiagnosticOptions.cpp",
+    "ExpressionTraits.cpp",
     "FileManager.cpp",
     "FileSystemStatCache.cpp",
     "FixedPoint.cpp",
@@ -87,10 +91,12 @@ static_library("Basic") {
     "Targets/Sparc.cpp",
     "Targets/SystemZ.cpp",
     "Targets/TCE.cpp",
+    "Targets/VE.cpp",
     "Targets/WebAssembly.cpp",
     "Targets/X86.cpp",
     "Targets/XCore.cpp",
     "TokenKinds.cpp",
+    "TypeTraits.cpp",
     "Version.cpp",
     "Warnings.cpp",
     "XRayInstr.cpp",

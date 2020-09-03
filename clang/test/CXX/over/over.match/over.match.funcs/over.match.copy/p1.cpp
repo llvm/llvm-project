@@ -4,7 +4,7 @@ namespace ExplicitConv {
   struct X { }; // expected-note 2{{candidate constructor}}
 
   struct Y {
-    explicit operator X() const;
+    explicit operator X() const; // expected-note {{not a candidate}}
   };
 
   void test(const Y& y) {
@@ -18,8 +18,8 @@ namespace DR899 {
   struct C { }; // expected-note 2 {{candidate constructor}}
 
   struct A {
-    explicit operator int() const;
-    explicit operator C() const;
+    explicit operator int() const; // expected-note {{not a candidate}}
+    explicit operator C() const; // expected-note {{not a candidate}}
   };
 
   struct B {

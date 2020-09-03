@@ -1,5 +1,4 @@
-//===-- RegisterContextPOSIX_powerpc.cpp -------------------------*- C++
-//-*-===//
+//===-- RegisterContextPOSIX_powerpc.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -158,36 +157,8 @@ const char *RegisterContextPOSIX_powerpc::GetRegisterName(unsigned reg) {
   return GetRegisterInfo()[reg].name;
 }
 
-lldb::ByteOrder RegisterContextPOSIX_powerpc::GetByteOrder() {
-  // Get the target process whose privileged thread was used for the register
-  // read.
-  lldb::ByteOrder byte_order = eByteOrderInvalid;
-  Process *process = CalculateProcess().get();
-
-  if (process)
-    byte_order = process->GetByteOrder();
-  return byte_order;
-}
-
 bool RegisterContextPOSIX_powerpc::IsRegisterSetAvailable(size_t set_index) {
   size_t num_sets = k_num_register_sets;
 
   return (set_index < num_sets);
-}
-
-// Used when parsing DWARF and EH frame information and any other object file
-// sections that contain register numbers in them.
-uint32_t RegisterContextPOSIX_powerpc::ConvertRegisterKindToRegisterNumber(
-    lldb::RegisterKind kind, uint32_t num) {
-  const uint32_t num_regs = GetRegisterCount();
-
-  assert(kind < kNumRegisterKinds);
-  for (uint32_t reg_idx = 0; reg_idx < num_regs; ++reg_idx) {
-    const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg_idx);
-
-    if (reg_info->kinds[kind] == num)
-      return reg_idx;
-  }
-
-  return LLDB_INVALID_REGNUM;
 }

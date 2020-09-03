@@ -51,7 +51,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | |-CapturedStmt {{.*}} <col:1, col:29>
 // CHECK-NEXT: |       | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | |-OMPTeamsDistributeDirective {{.*}} <col:1, col:29> openmp_structured_block
+// CHECK-NEXT: |       | | | |-OMPTeamsDistributeDirective {{.*}} <col:1, col:29>
 // CHECK-NEXT: |       | | | | `-CapturedStmt {{.*}} <line:6:3, line:7:5>
 // CHECK-NEXT: |       | | | |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | | | |   | |-ForStmt {{.*}} <line:6:3, line:7:5>
@@ -66,7 +66,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       | | | |   | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | |   | | `-NullStmt {{.*}} <line:7:5> openmp_structured_block
+// CHECK-NEXT: |       | | | |   | | `-NullStmt {{.*}} <line:7:5>
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-teams-distribute.c:5:1) *const restrict'
@@ -90,7 +90,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       | | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | `-NullStmt {{.*}} <line:7:5> openmp_structured_block
+// CHECK-NEXT: |       | | | | | `-NullStmt {{.*}} <line:7:5>
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-teams-distribute.c:5:1) *const restrict'
@@ -103,14 +103,15 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | |   `-BinaryOperator {{.*}} <col:3, <invalid sloc>> 'int' '-'
 // CHECK-NEXT: |       | | |     |-BinaryOperator {{.*}} <col:3, col:26> 'int' '/'
 // CHECK-NEXT: |       | | |     | |-ParenExpr {{.*}} <col:3> 'int'
-// CHECK-NEXT: |       | | |     | | `-BinaryOperator {{.*}} <col:23, col:26> 'int' '+'
-// CHECK-NEXT: |       | | |     | |   |-BinaryOperator {{.*}} <col:23, <invalid sloc>> 'int' '-'
-// CHECK-NEXT: |       | | |     | |   | |-BinaryOperator {{.*}} <col:23, col:16> 'int' '-'
-// CHECK-NEXT: |       | | |     | |   | | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     | |   | | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT: |       | | |     | |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | |     | |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT: |       | | |     | |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       | | |     | | `-BinaryOperator {{.*}} <col:23, col:3> 'int' '-'
+// CHECK-NEXT: |       | | |     | |   |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     | |   | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT: |       | | |     | |   `-ParenExpr {{.*}} <col:3> 'int'
+// CHECK-NEXT: |       | | |     | |     `-BinaryOperator {{.*}} <col:16, <invalid sloc>> 'int' '+'
+// CHECK-NEXT: |       | | |     | |       |-BinaryOperator {{.*}} <col:16, col:26> 'int' '-'
+// CHECK-NEXT: |       | | |     | |       | |-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | |     | |       | `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       | | |     | |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       | | |     | `-IntegerLiteral {{.*}} <col:26> 'int' 1
 // CHECK-NEXT: |       | | |     `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       | | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'
@@ -124,9 +125,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:6:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   |-OMPTeamsDistributeDirective {{.*}} <line:5:1, col:29> openmp_structured_block
+// CHECK-NEXT: |       |   |-OMPTeamsDistributeDirective {{.*}} <line:5:1, col:29>
 // CHECK-NEXT: |       |   | `-CapturedStmt {{.*}} <line:6:3, line:7:5>
 // CHECK-NEXT: |       |   |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |   | |-ForStmt {{.*}} <line:6:3, line:7:5>
@@ -141,7 +142,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       |   |   | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       |   |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   |   | | `-NullStmt {{.*}} <line:7:5> openmp_structured_block
+// CHECK-NEXT: |       |   |   | | `-NullStmt {{.*}} <line:7:5>
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-teams-distribute.c:5:1) *const restrict'
@@ -165,7 +166,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       |   | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | `-NullStmt {{.*}} <line:7:5> openmp_structured_block
+// CHECK-NEXT: |       |   | | `-NullStmt {{.*}} <line:7:5>
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-teams-distribute.c:5:1) *const restrict'
@@ -178,14 +179,15 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |     `-BinaryOperator {{.*}} <col:3, <invalid sloc>> 'int' '-'
 // CHECK-NEXT: |       |       |-BinaryOperator {{.*}} <col:3, col:26> 'int' '/'
 // CHECK-NEXT: |       |       | |-ParenExpr {{.*}} <col:3> 'int'
-// CHECK-NEXT: |       |       | | `-BinaryOperator {{.*}} <col:23, col:26> 'int' '+'
-// CHECK-NEXT: |       |       | |   |-BinaryOperator {{.*}} <col:23, <invalid sloc>> 'int' '-'
-// CHECK-NEXT: |       |       | |   | |-BinaryOperator {{.*}} <col:23, col:16> 'int' '-'
-// CHECK-NEXT: |       |       | |   | | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       | |   | | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT: |       |       | |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |       | |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT: |       |       | |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       |       | | `-BinaryOperator {{.*}} <col:23, col:3> 'int' '-'
+// CHECK-NEXT: |       |       | |   |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       | |   | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT: |       |       | |   `-ParenExpr {{.*}} <col:3> 'int'
+// CHECK-NEXT: |       |       | |     `-BinaryOperator {{.*}} <col:16, <invalid sloc>> 'int' '+'
+// CHECK-NEXT: |       |       | |       |-BinaryOperator {{.*}} <col:16, col:26> 'int' '-'
+// CHECK-NEXT: |       |       | |       | |-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |       | |       | `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       |       | |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       |       | `-IntegerLiteral {{.*}} <col:26> 'int' 1
 // CHECK-NEXT: |       |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'
@@ -201,7 +203,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | |-CapturedStmt {{.*}} <col:1, col:29>
 // CHECK-NEXT: |       | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | |-OMPTeamsDistributeDirective {{.*}} <col:1, col:29> openmp_structured_block
+// CHECK-NEXT: |       | | | |-OMPTeamsDistributeDirective {{.*}} <col:1, col:29>
 // CHECK-NEXT: |       | | | | `-CapturedStmt {{.*}} <line:13:3, line:15:7>
 // CHECK-NEXT: |       | | | |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | | | |   | |-ForStmt {{.*}} <line:13:3, line:15:7>
@@ -216,7 +218,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       | | | |   | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | |   | | `-ForStmt {{.*}} <line:14:5, line:15:7> openmp_structured_block
+// CHECK-NEXT: |       | | | |   | | `-ForStmt {{.*}} <line:14:5, line:15:7>
 // CHECK-NEXT: |       | | | |   | |   |-DeclStmt {{.*}} <line:14:10, col:19>
 // CHECK-NEXT: |       | | | |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
@@ -256,7 +258,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       | | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | `-ForStmt {{.*}} <line:14:5, line:15:7> openmp_structured_block
+// CHECK-NEXT: |       | | | | | `-ForStmt {{.*}} <line:14:5, line:15:7>
 // CHECK-NEXT: |       | | | | |   |-DeclStmt {{.*}} <line:14:10, col:19>
 // CHECK-NEXT: |       | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
@@ -283,14 +285,15 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | |   `-BinaryOperator {{.*}} <col:3, <invalid sloc>> 'int' '-'
 // CHECK-NEXT: |       | | |     |-BinaryOperator {{.*}} <col:3, col:26> 'int' '/'
 // CHECK-NEXT: |       | | |     | |-ParenExpr {{.*}} <col:3> 'int'
-// CHECK-NEXT: |       | | |     | | `-BinaryOperator {{.*}} <col:23, col:26> 'int' '+'
-// CHECK-NEXT: |       | | |     | |   |-BinaryOperator {{.*}} <col:23, <invalid sloc>> 'int' '-'
-// CHECK-NEXT: |       | | |     | |   | |-BinaryOperator {{.*}} <col:23, col:16> 'int' '-'
-// CHECK-NEXT: |       | | |     | |   | | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     | |   | | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT: |       | | |     | |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | |     | |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT: |       | | |     | |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       | | |     | | `-BinaryOperator {{.*}} <col:23, col:3> 'int' '-'
+// CHECK-NEXT: |       | | |     | |   |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     | |   | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT: |       | | |     | |   `-ParenExpr {{.*}} <col:3> 'int'
+// CHECK-NEXT: |       | | |     | |     `-BinaryOperator {{.*}} <col:16, <invalid sloc>> 'int' '+'
+// CHECK-NEXT: |       | | |     | |       |-BinaryOperator {{.*}} <col:16, col:26> 'int' '-'
+// CHECK-NEXT: |       | | |     | |       | |-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | |     | |       | `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       | | |     | |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       | | |     | `-IntegerLiteral {{.*}} <col:26> 'int' 1
 // CHECK-NEXT: |       | | |     `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       | | |-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'
@@ -305,11 +308,11 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | |-FieldDecl {{.*}} <line:13:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:14:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   |-OMPTeamsDistributeDirective {{.*}} <line:12:1, col:29> openmp_structured_block
+// CHECK-NEXT: |       |   |-OMPTeamsDistributeDirective {{.*}} <line:12:1, col:29>
 // CHECK-NEXT: |       |   | `-CapturedStmt {{.*}} <line:13:3, line:15:7>
 // CHECK-NEXT: |       |   |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |   | |-ForStmt {{.*}} <line:13:3, line:15:7>
@@ -324,7 +327,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       |   |   | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       |   |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   |   | | `-ForStmt {{.*}} <line:14:5, line:15:7> openmp_structured_block
+// CHECK-NEXT: |       |   |   | | `-ForStmt {{.*}} <line:14:5, line:15:7>
 // CHECK-NEXT: |       |   |   | |   |-DeclStmt {{.*}} <line:14:10, col:19>
 // CHECK-NEXT: |       |   |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
@@ -364,7 +367,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       |   | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | `-ForStmt {{.*}} <line:14:5, line:15:7> openmp_structured_block
+// CHECK-NEXT: |       |   | | `-ForStmt {{.*}} <line:14:5, line:15:7>
 // CHECK-NEXT: |       |   | |   |-DeclStmt {{.*}} <line:14:10, col:19>
 // CHECK-NEXT: |       |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
@@ -391,14 +394,15 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |     `-BinaryOperator {{.*}} <col:3, <invalid sloc>> 'int' '-'
 // CHECK-NEXT: |       |       |-BinaryOperator {{.*}} <col:3, col:26> 'int' '/'
 // CHECK-NEXT: |       |       | |-ParenExpr {{.*}} <col:3> 'int'
-// CHECK-NEXT: |       |       | | `-BinaryOperator {{.*}} <col:23, col:26> 'int' '+'
-// CHECK-NEXT: |       |       | |   |-BinaryOperator {{.*}} <col:23, <invalid sloc>> 'int' '-'
-// CHECK-NEXT: |       |       | |   | |-BinaryOperator {{.*}} <col:23, col:16> 'int' '-'
-// CHECK-NEXT: |       |       | |   | | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       | |   | | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT: |       |       | |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |       | |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT: |       |       | |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       |       | | `-BinaryOperator {{.*}} <col:23, col:3> 'int' '-'
+// CHECK-NEXT: |       |       | |   |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       | |   | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT: |       |       | |   `-ParenExpr {{.*}} <col:3> 'int'
+// CHECK-NEXT: |       |       | |     `-BinaryOperator {{.*}} <col:16, <invalid sloc>> 'int' '+'
+// CHECK-NEXT: |       |       | |       |-BinaryOperator {{.*}} <col:16, col:26> 'int' '-'
+// CHECK-NEXT: |       |       | |       | |-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |       | |       | `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       |       | |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       |       | `-IntegerLiteral {{.*}} <col:26> 'int' 1
 // CHECK-NEXT: |       |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'
@@ -415,7 +419,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | |-CapturedStmt {{.*}} <col:1, col:41>
 // CHECK-NEXT: |       | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | |-OMPTeamsDistributeDirective {{.*}} <col:1, col:41> openmp_structured_block
+// CHECK-NEXT: |       | | | |-OMPTeamsDistributeDirective {{.*}} <col:1, col:41>
 // CHECK-NEXT: |       | | | | |-OMPCollapseClause {{.*}} <col:30, col:40>
 // CHECK-NEXT: |       | | | | | `-ConstantExpr {{.*}} <col:39> 'int'
 // CHECK-NEXT: |       | | | | |   `-IntegerLiteral {{.*}} <col:39> 'int' 1
@@ -433,7 +437,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       | | | |   | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | |   | | `-ForStmt {{.*}} <line:22:5, line:23:7> openmp_structured_block
+// CHECK-NEXT: |       | | | |   | | `-ForStmt {{.*}} <line:22:5, line:23:7>
 // CHECK-NEXT: |       | | | |   | |   |-DeclStmt {{.*}} <line:22:10, col:19>
 // CHECK-NEXT: |       | | | |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
@@ -473,7 +477,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       | | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | `-ForStmt {{.*}} <line:22:5, line:23:7> openmp_structured_block
+// CHECK-NEXT: |       | | | | | `-ForStmt {{.*}} <line:22:5, line:23:7>
 // CHECK-NEXT: |       | | | | |   |-DeclStmt {{.*}} <line:22:10, col:19>
 // CHECK-NEXT: |       | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
@@ -500,14 +504,15 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | |   `-BinaryOperator {{.*}} <col:3, <invalid sloc>> 'int' '-'
 // CHECK-NEXT: |       | | |     |-BinaryOperator {{.*}} <col:3, col:26> 'int' '/'
 // CHECK-NEXT: |       | | |     | |-ParenExpr {{.*}} <col:3> 'int'
-// CHECK-NEXT: |       | | |     | | `-BinaryOperator {{.*}} <col:23, col:26> 'int' '+'
-// CHECK-NEXT: |       | | |     | |   |-BinaryOperator {{.*}} <col:23, <invalid sloc>> 'int' '-'
-// CHECK-NEXT: |       | | |     | |   | |-BinaryOperator {{.*}} <col:23, col:16> 'int' '-'
-// CHECK-NEXT: |       | | |     | |   | | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     | |   | | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT: |       | | |     | |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | |     | |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT: |       | | |     | |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       | | |     | | `-BinaryOperator {{.*}} <col:23, col:3> 'int' '-'
+// CHECK-NEXT: |       | | |     | |   |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     | |   | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT: |       | | |     | |   `-ParenExpr {{.*}} <col:3> 'int'
+// CHECK-NEXT: |       | | |     | |     `-BinaryOperator {{.*}} <col:16, <invalid sloc>> 'int' '+'
+// CHECK-NEXT: |       | | |     | |       |-BinaryOperator {{.*}} <col:16, col:26> 'int' '-'
+// CHECK-NEXT: |       | | |     | |       | |-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | |     | |       | `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       | | |     | |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       | | |     | `-IntegerLiteral {{.*}} <col:26> 'int' 1
 // CHECK-NEXT: |       | | |     `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       | | |-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'
@@ -522,11 +527,11 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | |-FieldDecl {{.*}} <line:21:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:22:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   |-OMPTeamsDistributeDirective {{.*}} <line:20:1, col:41> openmp_structured_block
+// CHECK-NEXT: |       |   |-OMPTeamsDistributeDirective {{.*}} <line:20:1, col:41>
 // CHECK-NEXT: |       |   | |-OMPCollapseClause {{.*}} <col:30, col:40>
 // CHECK-NEXT: |       |   | | `-ConstantExpr {{.*}} <col:39> 'int'
 // CHECK-NEXT: |       |   | |   `-IntegerLiteral {{.*}} <col:39> 'int' 1
@@ -544,7 +549,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       |   |   | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       |   |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   |   | | `-ForStmt {{.*}} <line:22:5, line:23:7> openmp_structured_block
+// CHECK-NEXT: |       |   |   | | `-ForStmt {{.*}} <line:22:5, line:23:7>
 // CHECK-NEXT: |       |   |   | |   |-DeclStmt {{.*}} <line:22:10, col:19>
 // CHECK-NEXT: |       |   |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
@@ -584,7 +589,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       |   | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | `-ForStmt {{.*}} <line:22:5, line:23:7> openmp_structured_block
+// CHECK-NEXT: |       |   | | `-ForStmt {{.*}} <line:22:5, line:23:7>
 // CHECK-NEXT: |       |   | |   |-DeclStmt {{.*}} <line:22:10, col:19>
 // CHECK-NEXT: |       |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
@@ -611,14 +616,15 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |     `-BinaryOperator {{.*}} <col:3, <invalid sloc>> 'int' '-'
 // CHECK-NEXT: |       |       |-BinaryOperator {{.*}} <col:3, col:26> 'int' '/'
 // CHECK-NEXT: |       |       | |-ParenExpr {{.*}} <col:3> 'int'
-// CHECK-NEXT: |       |       | | `-BinaryOperator {{.*}} <col:23, col:26> 'int' '+'
-// CHECK-NEXT: |       |       | |   |-BinaryOperator {{.*}} <col:23, <invalid sloc>> 'int' '-'
-// CHECK-NEXT: |       |       | |   | |-BinaryOperator {{.*}} <col:23, col:16> 'int' '-'
-// CHECK-NEXT: |       |       | |   | | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       | |   | | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT: |       |       | |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |       | |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT: |       |       | |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       |       | | `-BinaryOperator {{.*}} <col:23, col:3> 'int' '-'
+// CHECK-NEXT: |       |       | |   |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       | |   | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT: |       |       | |   `-ParenExpr {{.*}} <col:3> 'int'
+// CHECK-NEXT: |       |       | |     `-BinaryOperator {{.*}} <col:16, <invalid sloc>> 'int' '+'
+// CHECK-NEXT: |       |       | |       |-BinaryOperator {{.*}} <col:16, col:26> 'int' '-'
+// CHECK-NEXT: |       |       | |       | |-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |       | |       | `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       |       | |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       |       | `-IntegerLiteral {{.*}} <col:26> 'int' 1
 // CHECK-NEXT: |       |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'
@@ -635,7 +641,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | |-CapturedStmt {{.*}} <col:1, col:41>
 // CHECK-NEXT: |       | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | |-OMPTeamsDistributeDirective {{.*}} <col:1, col:41> openmp_structured_block
+// CHECK-NEXT: |       | | | |-OMPTeamsDistributeDirective {{.*}} <col:1, col:41>
 // CHECK-NEXT: |       | | | | |-OMPCollapseClause {{.*}} <col:30, col:40>
 // CHECK-NEXT: |       | | | | | `-ConstantExpr {{.*}} <col:39> 'int'
 // CHECK-NEXT: |       | | | | |   `-IntegerLiteral {{.*}} <col:39> 'int' 2
@@ -665,7 +671,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
 // CHECK-NEXT: |       | | | |   | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT: |       | | | |   | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | |   | |   `-NullStmt {{.*}} <line:31:7> openmp_structured_block
+// CHECK-NEXT: |       | | | |   | |   `-NullStmt {{.*}} <line:31:7>
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-teams-distribute.c:28:1) *const restrict'
@@ -705,7 +711,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
 // CHECK-NEXT: |       | | | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT: |       | | | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   `-NullStmt {{.*}} <line:31:7> openmp_structured_block
+// CHECK-NEXT: |       | | | | |   `-NullStmt {{.*}} <line:31:7>
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-teams-distribute.c:28:1) *const restrict'
@@ -725,26 +731,28 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | |     | |-ImplicitCastExpr {{.*}} <line:29:3, col:26> 'long' <IntegralCast>
 // CHECK-NEXT: |       | | |     | | `-BinaryOperator {{.*}} <col:3, col:26> 'int' '/'
 // CHECK-NEXT: |       | | |     | |   |-ParenExpr {{.*}} <col:3> 'int'
-// CHECK-NEXT: |       | | |     | |   | `-BinaryOperator {{.*}} <col:23, col:26> 'int' '+'
-// CHECK-NEXT: |       | | |     | |   |   |-BinaryOperator {{.*}} <col:23, <invalid sloc>> 'int' '-'
-// CHECK-NEXT: |       | | |     | |   |   | |-BinaryOperator {{.*}} <col:23, col:16> 'int' '-'
-// CHECK-NEXT: |       | | |     | |   |   | | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     | |   |   | | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT: |       | | |     | |   |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | |     | |   |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT: |       | | |     | |   |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       | | |     | |   | `-BinaryOperator {{.*}} <col:23, col:3> 'int' '-'
+// CHECK-NEXT: |       | | |     | |   |   |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     | |   |   | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT: |       | | |     | |   |   `-ParenExpr {{.*}} <col:3> 'int'
+// CHECK-NEXT: |       | | |     | |   |     `-BinaryOperator {{.*}} <col:16, <invalid sloc>> 'int' '+'
+// CHECK-NEXT: |       | | |     | |   |       |-BinaryOperator {{.*}} <col:16, col:26> 'int' '-'
+// CHECK-NEXT: |       | | |     | |   |       | |-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | |     | |   |       | `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       | | |     | |   |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       | | |     | |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
 // CHECK-NEXT: |       | | |     | `-ImplicitCastExpr {{.*}} <line:30:5, col:28> 'long' <IntegralCast>
 // CHECK-NEXT: |       | | |     |   `-BinaryOperator {{.*}} <col:5, col:28> 'int' '/'
 // CHECK-NEXT: |       | | |     |     |-ParenExpr {{.*}} <col:5> 'int'
-// CHECK-NEXT: |       | | |     |     | `-BinaryOperator {{.*}} <col:25, col:28> 'int' '+'
-// CHECK-NEXT: |       | | |     |     |   |-BinaryOperator {{.*}} <col:25, <invalid sloc>> 'int' '-'
-// CHECK-NEXT: |       | | |     |     |   | |-BinaryOperator {{.*}} <col:25, col:18> 'int' '-'
-// CHECK-NEXT: |       | | |     |     |   | | |-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     |     |   | | | `-DeclRefExpr {{.*}} <col:25> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT: |       | | |     |     |   | | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       | | |     |     |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT: |       | | |     |     |   `-IntegerLiteral {{.*}} <col:28> 'int' 1
+// CHECK-NEXT: |       | | |     |     | `-BinaryOperator {{.*}} <col:25, col:5> 'int' '-'
+// CHECK-NEXT: |       | | |     |     |   |-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     |     |   | `-DeclRefExpr {{.*}} <col:25> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT: |       | | |     |     |   `-ParenExpr {{.*}} <col:5> 'int'
+// CHECK-NEXT: |       | | |     |     |     `-BinaryOperator {{.*}} <col:18, <invalid sloc>> 'int' '+'
+// CHECK-NEXT: |       | | |     |     |       |-BinaryOperator {{.*}} <col:18, col:28> 'int' '-'
+// CHECK-NEXT: |       | | |     |     |       | |-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       | | |     |     |       | `-IntegerLiteral {{.*}} <col:28> 'int' 1
+// CHECK-NEXT: |       | | |     |     |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       | | |     |     `-IntegerLiteral {{.*}} <col:28> 'int' 1
 // CHECK-NEXT: |       | | |     `-ImplicitCastExpr {{.*}} <<invalid sloc>> 'long' <IntegralCast>
 // CHECK-NEXT: |       | | |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
@@ -760,11 +768,11 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | |-FieldDecl {{.*}} <line:29:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:30:5> col:5 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   |-OMPTeamsDistributeDirective {{.*}} <line:28:1, col:41> openmp_structured_block
+// CHECK-NEXT: |       |   |-OMPTeamsDistributeDirective {{.*}} <line:28:1, col:41>
 // CHECK-NEXT: |       |   | |-OMPCollapseClause {{.*}} <col:30, col:40>
 // CHECK-NEXT: |       |   | | `-ConstantExpr {{.*}} <col:39> 'int'
 // CHECK-NEXT: |       |   | |   `-IntegerLiteral {{.*}} <col:39> 'int' 2
@@ -794,7 +802,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
 // CHECK-NEXT: |       |   |   | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT: |       |   |   | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   |   | |   `-NullStmt {{.*}} <line:31:7> openmp_structured_block
+// CHECK-NEXT: |       |   |   | |   `-NullStmt {{.*}} <line:31:7>
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-teams-distribute.c:28:1) *const restrict'
@@ -834,7 +842,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
 // CHECK-NEXT: |       |   | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT: |       |   | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   `-NullStmt {{.*}} <line:31:7> openmp_structured_block
+// CHECK-NEXT: |       |   | |   `-NullStmt {{.*}} <line:31:7>
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-teams-distribute.c:28:1) *const restrict'
@@ -854,26 +862,28 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |       | |-ImplicitCastExpr {{.*}} <line:29:3, col:26> 'long' <IntegralCast>
 // CHECK-NEXT: |       |       | | `-BinaryOperator {{.*}} <col:3, col:26> 'int' '/'
 // CHECK-NEXT: |       |       | |   |-ParenExpr {{.*}} <col:3> 'int'
-// CHECK-NEXT: |       |       | |   | `-BinaryOperator {{.*}} <col:23, col:26> 'int' '+'
-// CHECK-NEXT: |       |       | |   |   |-BinaryOperator {{.*}} <col:23, <invalid sloc>> 'int' '-'
-// CHECK-NEXT: |       |       | |   |   | |-BinaryOperator {{.*}} <col:23, col:16> 'int' '-'
-// CHECK-NEXT: |       |       | |   |   | | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       | |   |   | | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT: |       |       | |   |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |       | |   |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT: |       |       | |   |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       |       | |   | `-BinaryOperator {{.*}} <col:23, col:3> 'int' '-'
+// CHECK-NEXT: |       |       | |   |   |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       | |   |   | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT: |       |       | |   |   `-ParenExpr {{.*}} <col:3> 'int'
+// CHECK-NEXT: |       |       | |   |     `-BinaryOperator {{.*}} <col:16, <invalid sloc>> 'int' '+'
+// CHECK-NEXT: |       |       | |   |       |-BinaryOperator {{.*}} <col:16, col:26> 'int' '-'
+// CHECK-NEXT: |       |       | |   |       | |-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |       | |   |       | `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT: |       |       | |   |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       |       | |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
 // CHECK-NEXT: |       |       | `-ImplicitCastExpr {{.*}} <line:30:5, col:28> 'long' <IntegralCast>
 // CHECK-NEXT: |       |       |   `-BinaryOperator {{.*}} <col:5, col:28> 'int' '/'
 // CHECK-NEXT: |       |       |     |-ParenExpr {{.*}} <col:5> 'int'
-// CHECK-NEXT: |       |       |     | `-BinaryOperator {{.*}} <col:25, col:28> 'int' '+'
-// CHECK-NEXT: |       |       |     |   |-BinaryOperator {{.*}} <col:25, <invalid sloc>> 'int' '-'
-// CHECK-NEXT: |       |       |     |   | |-BinaryOperator {{.*}} <col:25, col:18> 'int' '-'
-// CHECK-NEXT: |       |       |     |   | | |-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       |     |   | | | `-DeclRefExpr {{.*}} <col:25> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT: |       |       |     |   | | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       |       |     |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT: |       |       |     |   `-IntegerLiteral {{.*}} <col:28> 'int' 1
+// CHECK-NEXT: |       |       |     | `-BinaryOperator {{.*}} <col:25, col:5> 'int' '-'
+// CHECK-NEXT: |       |       |     |   |-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       |     |   | `-DeclRefExpr {{.*}} <col:25> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT: |       |       |     |   `-ParenExpr {{.*}} <col:5> 'int'
+// CHECK-NEXT: |       |       |     |     `-BinaryOperator {{.*}} <col:18, <invalid sloc>> 'int' '+'
+// CHECK-NEXT: |       |       |     |       |-BinaryOperator {{.*}} <col:18, col:28> 'int' '-'
+// CHECK-NEXT: |       |       |     |       | |-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       |       |     |       | `-IntegerLiteral {{.*}} <col:28> 'int' 1
+// CHECK-NEXT: |       |       |     |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT: |       |       |     `-IntegerLiteral {{.*}} <col:28> 'int' 1
 // CHECK-NEXT: |       |       `-ImplicitCastExpr {{.*}} <<invalid sloc>> 'long' <IntegralCast>
 // CHECK-NEXT: |       |         `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
@@ -893,7 +903,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT:         | |-CapturedStmt {{.*}} <col:1, col:41>
 // CHECK-NEXT:         | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         | | | |-OMPTeamsDistributeDirective {{.*}} <col:1, col:41> openmp_structured_block
+// CHECK-NEXT:         | | | |-OMPTeamsDistributeDirective {{.*}} <col:1, col:41>
 // CHECK-NEXT:         | | | | |-OMPCollapseClause {{.*}} <col:30, col:40>
 // CHECK-NEXT:         | | | | | `-ConstantExpr {{.*}} <col:39> 'int'
 // CHECK-NEXT:         | | | | |   `-IntegerLiteral {{.*}} <col:39> 'int' 2
@@ -923,7 +933,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | |   | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
 // CHECK-NEXT:         | | | |   | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT:         | | | |   | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | |   | |   `-ForStmt {{.*}} <line:39:7, line:40:9> openmp_structured_block
+// CHECK-NEXT:         | | | |   | |   `-ForStmt {{.*}} <line:39:7, line:40:9>
 // CHECK-NEXT:         | | | |   | |     |-DeclStmt {{.*}} <line:39:12, col:21>
 // CHECK-NEXT:         | | | |   | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         | | | |   | |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
@@ -979,7 +989,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
 // CHECK-NEXT:         | | | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT:         | | | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | | |   `-ForStmt {{.*}} <line:39:7, line:40:9> openmp_structured_block
+// CHECK-NEXT:         | | | | |   `-ForStmt {{.*}} <line:39:7, line:40:9>
 // CHECK-NEXT:         | | | | |     |-DeclStmt {{.*}} <line:39:12, col:21>
 // CHECK-NEXT:         | | | | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         | | | | |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
@@ -1013,26 +1023,28 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | |     | |-ImplicitCastExpr {{.*}} <line:37:3, col:26> 'long' <IntegralCast>
 // CHECK-NEXT:         | | |     | | `-BinaryOperator {{.*}} <col:3, col:26> 'int' '/'
 // CHECK-NEXT:         | | |     | |   |-ParenExpr {{.*}} <col:3> 'int'
-// CHECK-NEXT:         | | |     | |   | `-BinaryOperator {{.*}} <col:23, col:26> 'int' '+'
-// CHECK-NEXT:         | | |     | |   |   |-BinaryOperator {{.*}} <col:23, <invalid sloc>> 'int' '-'
-// CHECK-NEXT:         | | |     | |   |   | |-BinaryOperator {{.*}} <col:23, col:16> 'int' '-'
-// CHECK-NEXT:         | | |     | |   |   | | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |     | |   |   | | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT:         | | |     | |   |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         | | |     | |   |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT:         | | |     | |   |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT:         | | |     | |   | `-BinaryOperator {{.*}} <col:23, col:3> 'int' '-'
+// CHECK-NEXT:         | | |     | |   |   |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |     | |   |   | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT:         | | |     | |   |   `-ParenExpr {{.*}} <col:3> 'int'
+// CHECK-NEXT:         | | |     | |   |     `-BinaryOperator {{.*}} <col:16, <invalid sloc>> 'int' '+'
+// CHECK-NEXT:         | | |     | |   |       |-BinaryOperator {{.*}} <col:16, col:26> 'int' '-'
+// CHECK-NEXT:         | | |     | |   |       | |-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT:         | | |     | |   |       | `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT:         | | |     | |   |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT:         | | |     | |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
 // CHECK-NEXT:         | | |     | `-ImplicitCastExpr {{.*}} <line:38:5, col:28> 'long' <IntegralCast>
 // CHECK-NEXT:         | | |     |   `-BinaryOperator {{.*}} <col:5, col:28> 'int' '/'
 // CHECK-NEXT:         | | |     |     |-ParenExpr {{.*}} <col:5> 'int'
-// CHECK-NEXT:         | | |     |     | `-BinaryOperator {{.*}} <col:25, col:28> 'int' '+'
-// CHECK-NEXT:         | | |     |     |   |-BinaryOperator {{.*}} <col:25, <invalid sloc>> 'int' '-'
-// CHECK-NEXT:         | | |     |     |   | |-BinaryOperator {{.*}} <col:25, col:18> 'int' '-'
-// CHECK-NEXT:         | | |     |     |   | | |-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |     |     |   | | | `-DeclRefExpr {{.*}} <col:25> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT:         | | |     |     |   | | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         | | |     |     |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT:         | | |     |     |   `-IntegerLiteral {{.*}} <col:28> 'int' 1
+// CHECK-NEXT:         | | |     |     | `-BinaryOperator {{.*}} <col:25, col:5> 'int' '-'
+// CHECK-NEXT:         | | |     |     |   |-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |     |     |   | `-DeclRefExpr {{.*}} <col:25> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT:         | | |     |     |   `-ParenExpr {{.*}} <col:5> 'int'
+// CHECK-NEXT:         | | |     |     |     `-BinaryOperator {{.*}} <col:18, <invalid sloc>> 'int' '+'
+// CHECK-NEXT:         | | |     |     |       |-BinaryOperator {{.*}} <col:18, col:28> 'int' '-'
+// CHECK-NEXT:         | | |     |     |       | |-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT:         | | |     |     |       | `-IntegerLiteral {{.*}} <col:28> 'int' 1
+// CHECK-NEXT:         | | |     |     |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT:         | | |     |     `-IntegerLiteral {{.*}} <col:28> 'int' 1
 // CHECK-NEXT:         | | |     `-ImplicitCastExpr {{.*}} <<invalid sloc>> 'long' <IntegralCast>
 // CHECK-NEXT:         | | |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
@@ -1049,13 +1061,13 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT:         | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT:         | | |-FieldDecl {{.*}} <line:37:3> col:3 implicit 'int'
-// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT:         | | |-FieldDecl {{.*}} <line:38:5> col:5 implicit 'int'
-// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT:         | | `-FieldDecl {{.*}} <line:39:27> col:27 implicit 'int'
-// CHECK-NEXT:         | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT:         | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT:         | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         |   |-OMPTeamsDistributeDirective {{.*}} <line:36:1, col:41> openmp_structured_block
+// CHECK-NEXT:         |   |-OMPTeamsDistributeDirective {{.*}} <line:36:1, col:41>
 // CHECK-NEXT:         |   | |-OMPCollapseClause {{.*}} <col:30, col:40>
 // CHECK-NEXT:         |   | | `-ConstantExpr {{.*}} <col:39> 'int'
 // CHECK-NEXT:         |   | |   `-IntegerLiteral {{.*}} <col:39> 'int' 2
@@ -1085,7 +1097,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   |   | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
 // CHECK-NEXT:         |   |   | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT:         |   |   | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   |   | |   `-ForStmt {{.*}} <line:39:7, line:40:9> openmp_structured_block
+// CHECK-NEXT:         |   |   | |   `-ForStmt {{.*}} <line:39:7, line:40:9>
 // CHECK-NEXT:         |   |   | |     |-DeclStmt {{.*}} <line:39:12, col:21>
 // CHECK-NEXT:         |   |   | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         |   |   | |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
@@ -1141,7 +1153,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
 // CHECK-NEXT:         |   | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT:         |   | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   | |   `-ForStmt {{.*}} <line:39:7, line:40:9> openmp_structured_block
+// CHECK-NEXT:         |   | |   `-ForStmt {{.*}} <line:39:7, line:40:9>
 // CHECK-NEXT:         |   | |     |-DeclStmt {{.*}} <line:39:12, col:21>
 // CHECK-NEXT:         |   | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         |   | |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
@@ -1175,26 +1187,28 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |       | |-ImplicitCastExpr {{.*}} <line:37:3, col:26> 'long' <IntegralCast>
 // CHECK-NEXT:         |       | | `-BinaryOperator {{.*}} <col:3, col:26> 'int' '/'
 // CHECK-NEXT:         |       | |   |-ParenExpr {{.*}} <col:3> 'int'
-// CHECK-NEXT:         |       | |   | `-BinaryOperator {{.*}} <col:23, col:26> 'int' '+'
-// CHECK-NEXT:         |       | |   |   |-BinaryOperator {{.*}} <col:23, <invalid sloc>> 'int' '-'
-// CHECK-NEXT:         |       | |   |   | |-BinaryOperator {{.*}} <col:23, col:16> 'int' '-'
-// CHECK-NEXT:         |       | |   |   | | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         |       | |   |   | | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT:         |       | |   |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         |       | |   |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT:         |       | |   |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT:         |       | |   | `-BinaryOperator {{.*}} <col:23, col:3> 'int' '-'
+// CHECK-NEXT:         |       | |   |   |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
+// CHECK-NEXT:         |       | |   |   | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT:         |       | |   |   `-ParenExpr {{.*}} <col:3> 'int'
+// CHECK-NEXT:         |       | |   |     `-BinaryOperator {{.*}} <col:16, <invalid sloc>> 'int' '+'
+// CHECK-NEXT:         |       | |   |       |-BinaryOperator {{.*}} <col:16, col:26> 'int' '-'
+// CHECK-NEXT:         |       | |   |       | |-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT:         |       | |   |       | `-IntegerLiteral {{.*}} <col:26> 'int' 1
+// CHECK-NEXT:         |       | |   |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT:         |       | |   `-IntegerLiteral {{.*}} <col:26> 'int' 1
 // CHECK-NEXT:         |       | `-ImplicitCastExpr {{.*}} <line:38:5, col:28> 'long' <IntegralCast>
 // CHECK-NEXT:         |       |   `-BinaryOperator {{.*}} <col:5, col:28> 'int' '/'
 // CHECK-NEXT:         |       |     |-ParenExpr {{.*}} <col:5> 'int'
-// CHECK-NEXT:         |       |     | `-BinaryOperator {{.*}} <col:25, col:28> 'int' '+'
-// CHECK-NEXT:         |       |     |   |-BinaryOperator {{.*}} <col:25, <invalid sloc>> 'int' '-'
-// CHECK-NEXT:         |       |     |   | |-BinaryOperator {{.*}} <col:25, col:18> 'int' '-'
-// CHECK-NEXT:         |       |     |   | | |-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT:         |       |     |   | | | `-DeclRefExpr {{.*}} <col:25> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
-// CHECK-NEXT:         |       |     |   | | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         |       |     |   | `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
-// CHECK-NEXT:         |       |     |   `-IntegerLiteral {{.*}} <col:28> 'int' 1
+// CHECK-NEXT:         |       |     | `-BinaryOperator {{.*}} <col:25, col:5> 'int' '-'
+// CHECK-NEXT:         |       |     |   |-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
+// CHECK-NEXT:         |       |     |   | `-DeclRefExpr {{.*}} <col:25> 'int' lvalue OMPCapturedExpr {{.*}} '.capture_expr.' 'int'
+// CHECK-NEXT:         |       |     |   `-ParenExpr {{.*}} <col:5> 'int'
+// CHECK-NEXT:         |       |     |     `-BinaryOperator {{.*}} <col:18, <invalid sloc>> 'int' '+'
+// CHECK-NEXT:         |       |     |       |-BinaryOperator {{.*}} <col:18, col:28> 'int' '-'
+// CHECK-NEXT:         |       |     |       | |-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT:         |       |     |       | `-IntegerLiteral {{.*}} <col:28> 'int' 1
+// CHECK-NEXT:         |       |     |       `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1
 // CHECK-NEXT:         |       |     `-IntegerLiteral {{.*}} <col:28> 'int' 1
 // CHECK-NEXT:         |       `-ImplicitCastExpr {{.*}} <<invalid sloc>> 'long' <IntegralCast>
 // CHECK-NEXT:         |         `-IntegerLiteral {{.*}} <<invalid sloc>> 'int' 1

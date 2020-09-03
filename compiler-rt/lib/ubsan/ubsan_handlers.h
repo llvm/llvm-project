@@ -168,6 +168,14 @@ struct InvalidBuiltinData {
 /// Handle a builtin called in an invalid way.
 RECOVERABLE(invalid_builtin, InvalidBuiltinData *Data)
 
+struct InvalidObjCCast {
+  SourceLocation Loc;
+  const TypeDescriptor &ExpectedType;
+};
+
+/// Handle an invalid ObjC cast.
+RECOVERABLE(invalid_objc_cast, InvalidObjCCast *Data, ValueHandle Pointer)
+
 struct NonNullReturnData {
   SourceLocation AttrLoc;
 };

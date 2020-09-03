@@ -220,7 +220,6 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
            << "\' is deallocated";
         return std::string(OS.str());
       });
-
   C.addTransition(State->set<ReleasedParameter>(true), T);
 }
 
@@ -294,6 +293,6 @@ void ento::registerMIGChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<MIGChecker>();
 }
 
-bool ento::shouldRegisterMIGChecker(const LangOptions &LO) {
+bool ento::shouldRegisterMIGChecker(const CheckerManager &mgr) {
   return true;
 }

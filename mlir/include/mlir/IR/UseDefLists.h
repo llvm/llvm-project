@@ -1,6 +1,6 @@
 //===- UseDefLists.h --------------------------------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -100,85 +100,6 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// IRMultiObjectWithUseList
-//===----------------------------------------------------------------------===//
-
-/// This class represents multiple IR objects with a single use list. This class
-/// provides wrapper functionality for manipulating the uses of a single object.
-template <typename OperandType>
-class IRMultiObjectWithUseList : public IRObjectWithUseList<OperandType> {
-public:
-  using BaseType = IRObjectWithUseList<OperandType>;
-  using ValueType = typename OperandType::ValueType;
-
-  /// Drop all uses of `value` from their respective owners.
-  void dropAllUses(ValueType value) {
-    assert(this == OperandType::getUseList(value) &&
-           "value not attached to this use list");
-    for (OperandType &use : llvm::make_early_inc_range(getUses(value)))
-      use.drop();
-  }
-  using BaseType::dropAllUses;
-
-  /// Replace all uses of `oldValue` with the new value, updating anything in
-  /// the IR that uses 'this' to use the other value instead.  When this returns
-  /// there are zero uses of 'this'.
-  void replaceAllUsesWith(ValueType oldValue, ValueType newValue) {
-    assert(this == OperandType::getUseList(oldValue) &&
-           "value not attached to this use list");
-    assert((!newValue || this != OperandType::getUseList(newValue)) &&
-           "cannot RAUW a value with itself");
-    for (OperandType &use : llvm::make_early_inc_range(getUses(oldValue)))
-      use.set(newValue);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Uses
-  //===--------------------------------------------------------------------===//
-
-  using filtered_use_iterator = FilteredValueUseIterator<OperandType>;
-  using filtered_use_range = iterator_range<filtered_use_iterator>;
-
-  filtered_use_iterator use_begin(ValueType value) const {
-    return filtered_use_iterator(this->getFirstUse(), value);
-  }
-  filtered_use_iterator use_end(ValueType) const { return use_end(); }
-  filtered_use_range getUses(ValueType value) const {
-    return {use_begin(value), use_end(value)};
-  }
-  bool hasOneUse(ValueType value) const {
-    return mlir::has_single_element(getUses(value));
-  }
-  bool use_empty(ValueType value) const {
-    return use_begin(value) == use_end(value);
-  }
-  using BaseType::getUses;
-  using BaseType::hasOneUse;
-  using BaseType::use_begin;
-  using BaseType::use_empty;
-  using BaseType::use_end;
-
-  //===--------------------------------------------------------------------===//
-  // Users
-  //===--------------------------------------------------------------------===//
-
-  using filtered_user_iterator =
-      ValueUserIterator<filtered_use_iterator, OperandType>;
-  using filtered_user_range = iterator_range<filtered_user_iterator>;
-
-  filtered_user_iterator user_begin(ValueType value) const {
-    return {use_begin(value)};
-  }
-  filtered_user_iterator user_end(ValueType value) const { return {use_end()}; }
-  filtered_user_range getUsers(ValueType value) const {
-    return {user_begin(value), user_end(value)};
-  }
-  using BaseType::getUsers;
-  using BaseType::user_begin;
-  using BaseType::user_end;
-};
-
-//===----------------------------------------------------------------------===//
 // IROperand
 //===----------------------------------------------------------------------===//
 
@@ -207,6 +128,9 @@ public:
     value = newValue;
     insertIntoCurrent();
   }
+
+  /// Returns true if this operand contains the given value.
+  bool is(ValueType other) const { return value == other; }
 
   /// Return the owner of this operand.
   Operation *getOwner() { return owner; }
@@ -240,7 +164,8 @@ public:
     other.back = nullptr;
     nextUse = nullptr;
     back = nullptr;
-    insertIntoCurrent();
+    if (value)
+      insertIntoCurrent();
     return *this;
   }
 
@@ -294,13 +219,6 @@ public:
 
   /// Return which operand this is in the operand list of the User.
   unsigned getOperandNumber();
-
-private:
-  /// The number of OpOperands that correspond with this block operand.
-  unsigned numSuccessorOperands = 0;
-
-  /// Allow access to 'numSuccessorOperands'.
-  friend Operation;
 };
 
 //===----------------------------------------------------------------------===//
@@ -316,6 +234,7 @@ public:
   OpaqueValue(std::nullptr_t = nullptr) : impl(nullptr) {}
   OpaqueValue(const OpaqueValue &) = default;
   OpaqueValue &operator=(const OpaqueValue &) = default;
+  bool operator==(const OpaqueValue &other) const { return impl == other.impl; }
   operator bool() const { return impl; }
 
   /// Implicit conversion back to 'Value'.
@@ -326,11 +245,10 @@ private:
 };
 } // namespace detail
 
-/// A reference to a value, suitable for use as an operand of an operation.
+/// This class represents an operand of an operation. Instances of this class
+/// contain a reference to a specific `Value`.
 class OpOperand : public IROperand<OpOperand, detail::OpaqueValue> {
 public:
-  using IROperand<OpOperand, detail::OpaqueValue>::IROperand;
-
   /// Provide the use list that is attached to the given value.
   static IRObjectWithUseList<OpOperand> *getUseList(Value value);
 
@@ -342,40 +260,45 @@ public:
 
   /// Return which operand this is in the operand list of the User.
   unsigned getOperandNumber();
+
+private:
+  /// Keep the constructor private and accessible to the OperandStorage class
+  /// only to avoid hard-to-debug typo/programming mistakes.
+  friend class OperandStorage;
+  using IROperand<OpOperand, detail::OpaqueValue>::IROperand;
 };
 
 //===----------------------------------------------------------------------===//
 // ValueUseIterator
 //===----------------------------------------------------------------------===//
 
-namespace detail {
-/// A base iterator class that allows for iterating over the uses of a value.
-/// This is templated to allow for derived iterators to override specific
-/// iterator methods.
-template <typename DerivedT, typename OperandType>
-class ValueUseIteratorImpl
-    : public llvm::iterator_facade_base<DerivedT, std::forward_iterator_tag,
+/// An iterator class that allows for iterating over the uses of an IR operand
+/// type.
+template <typename OperandType>
+class ValueUseIterator
+    : public llvm::iterator_facade_base<ValueUseIterator<OperandType>,
+                                        std::forward_iterator_tag,
                                         OperandType> {
 public:
-  template <typename T>
-  ValueUseIteratorImpl(const ValueUseIteratorImpl<T, OperandType> &other)
-      : current(other.getOperand()) {}
-  ValueUseIteratorImpl(OperandType *current = nullptr) : current(current) {}
+  ValueUseIterator(OperandType *current = nullptr) : current(current) {}
 
+  /// Returns the user that owns this use.
   Operation *getUser() const { return current->getOwner(); }
-  OperandType *getOperand() const { return current; }
 
+  /// Returns the current operands.
+  OperandType *getOperand() const { return current; }
   OperandType &operator*() const { return *current; }
 
-  using llvm::iterator_facade_base<DerivedT, std::forward_iterator_tag,
+  using llvm::iterator_facade_base<ValueUseIterator<OperandType>,
+                                   std::forward_iterator_tag,
                                    OperandType>::operator++;
-  ValueUseIteratorImpl &operator++() {
+  ValueUseIterator &operator++() {
     assert(current && "incrementing past end()!");
     current = (OperandType *)current->getNextOperandUsingThisValue();
     return *this;
   }
 
-  bool operator==(const ValueUseIteratorImpl &rhs) const {
+  bool operator==(const ValueUseIterator &rhs) const {
     return current == rhs.current;
   }
 
@@ -383,63 +306,12 @@ protected:
   OperandType *current;
 };
 
-} // end namespace detail
-
-/// An iterator over all of the uses of an IR object.
-template <typename OperandType>
-class ValueUseIterator
-    : public detail::ValueUseIteratorImpl<ValueUseIterator<OperandType>,
-                                          OperandType> {
-public:
-  using detail::ValueUseIteratorImpl<ValueUseIterator<OperandType>,
-                                     OperandType>::ValueUseIteratorImpl;
-};
-
-/// This class represents an iterator of the uses of a IR object that optionally
-/// filters on a specific sub-value. This allows for filtering the uses of an
-/// IRMultiObjectWithUseList.
-template <typename OperandType>
-class FilteredValueUseIterator
-    : public detail::ValueUseIteratorImpl<FilteredValueUseIterator<OperandType>,
-                                          OperandType> {
-public:
-  using BaseT =
-      detail::ValueUseIteratorImpl<FilteredValueUseIterator<OperandType>,
-                                   OperandType>;
-
-  FilteredValueUseIterator() = default;
-  FilteredValueUseIterator(const ValueUseIterator<OperandType> &it)
-      : BaseT(it), filterVal(nullptr) {}
-  FilteredValueUseIterator(OperandType *current,
-                           typename OperandType::ValueType filterVal)
-      : BaseT(current), filterVal(filterVal) {
-    findNextValid();
-  }
-
-  using BaseT::operator++;
-  FilteredValueUseIterator<OperandType> &operator++() {
-    BaseT::operator++();
-    findNextValid();
-    return *this;
-  }
-
-private:
-  void findNextValid() {
-    if (!filterVal)
-      return;
-    while (this->current && ((OperandType *)this->current)->get() != filterVal)
-      BaseT::operator++();
-  }
-
-  /// An optional value to use to filter specific uses.
-  typename OperandType::ValueType filterVal;
-};
-
 //===----------------------------------------------------------------------===//
 // ValueUserIterator
 //===----------------------------------------------------------------------===//
 
-/// An iterator over all users of a ValueBase.
+/// An iterator over the users of an IRObject. This is a wrapper iterator around
+/// a specific use iterator.
 template <typename UseIteratorT, typename OperandType>
 class ValueUserIterator final
     : public llvm::mapped_iterator<UseIteratorT,
@@ -450,7 +322,7 @@ public:
   using pointer = Operation *;
   using reference = Operation *;
 
-  /// Initializes the result type iterator to the specified result iterator.
+  /// Initializes the user iterator to the specified use iterator.
   ValueUserIterator(UseIteratorT it)
       : llvm::mapped_iterator<UseIteratorT, Operation *(*)(OperandType &)>(
             it, &unwrap) {}

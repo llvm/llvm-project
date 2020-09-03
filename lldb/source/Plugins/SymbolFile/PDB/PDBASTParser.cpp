@@ -1,4 +1,4 @@
-//===-- PDBASTParser.cpp ----------------------------------------*- C++ -*-===//
+//===-- PDBASTParser.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -386,7 +386,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       return nullptr;
 
     // Ignore unnamed-tag UDTs.
-    std::string name = MSVCUndecoratedNameParser::DropScope(udt->getName());
+    std::string name =
+        std::string(MSVCUndecoratedNameParser::DropScope(udt->getName()));
     if (name.empty())
       return nullptr;
 
@@ -465,7 +466,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     assert(enum_type);
 
     std::string name =
-        MSVCUndecoratedNameParser::DropScope(enum_type->getName());
+        std::string(MSVCUndecoratedNameParser::DropScope(enum_type->getName()));
     auto decl_context = GetDeclContextContainingSymbol(type);
     uint64_t bytes = enum_type->getLength();
 
@@ -539,7 +540,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       return nullptr;
 
     std::string name =
-        MSVCUndecoratedNameParser::DropScope(type_def->getName());
+        std::string(MSVCUndecoratedNameParser::DropScope(type_def->getName()));
     auto decl_ctx = GetDeclContextContainingSymbol(type);
 
     // Check if such a typedef already exists in the current context
@@ -588,7 +589,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         return nullptr;
       func_sig = sig.release();
       // Function type is named.
-      name = MSVCUndecoratedNameParser::DropScope(pdb_func->getName());
+      name = std::string(
+          MSVCUndecoratedNameParser::DropScope(pdb_func->getName()));
     } else if (auto pdb_func_sig =
                    llvm::dyn_cast<PDBSymbolTypeFunctionSig>(&type)) {
       func_sig = const_cast<PDBSymbolTypeFunctionSig *>(pdb_func_sig);
@@ -888,7 +890,8 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
     if (auto parent_decl = llvm::dyn_cast_or_null<clang::TagDecl>(decl_context))
       m_ast.GetCompleteDecl(parent_decl);
 
-    std::string name = MSVCUndecoratedNameParser::DropScope(data->getName());
+    std::string name =
+        std::string(MSVCUndecoratedNameParser::DropScope(data->getName()));
 
     // Check if the current context already contains the symbol with the name.
     clang::Decl *decl =
@@ -914,7 +917,8 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
     auto decl_context = GetDeclContextContainingSymbol(symbol);
     assert(decl_context);
 
-    std::string name = MSVCUndecoratedNameParser::DropScope(func->getName());
+    std::string name =
+        std::string(MSVCUndecoratedNameParser::DropScope(func->getName()));
 
     Type *type = symbol_file->ResolveTypeUID(sym_id);
     if (!type)
@@ -1048,7 +1052,7 @@ clang::DeclContext *PDBASTParser::GetDeclContextContainingSymbol(
     // or a type. We check it to avoid fake namespaces such as `__l2':
     // `N0::N1::CClass::PrivateFunc::__l2::InnerFuncStruct'
     if (!has_type_or_function_parent) {
-      std::string namespace_name = specs[i].GetBaseName();
+      std::string namespace_name = std::string(specs[i].GetBaseName());
       const char *namespace_name_c_str =
           IsAnonymousNamespaceName(namespace_name) ? nullptr
                                                    : namespace_name.data();
@@ -1120,7 +1124,8 @@ bool PDBASTParser::AddEnumValue(CompilerType enum_type,
                                 const PDBSymbolData &enum_value) {
   Declaration decl;
   Variant v = enum_value.getValue();
-  std::string name = MSVCUndecoratedNameParser::DropScope(enum_value.getName());
+  std::string name =
+      std::string(MSVCUndecoratedNameParser::DropScope(enum_value.getName()));
   int64_t raw_value;
   switch (v.Type) {
   case PDB_VariantType::Int8:
@@ -1150,8 +1155,7 @@ bool PDBASTParser::AddEnumValue(CompilerType enum_type,
   default:
     return false;
   }
-  CompilerType underlying_type =
-      m_ast.GetEnumerationIntegerType(enum_type.GetOpaqueQualType());
+  CompilerType underlying_type = m_ast.GetEnumerationIntegerType(enum_type);
   uint32_t byte_size = m_ast.getASTContext().getTypeSize(
       ClangUtil::GetQualType(underlying_type));
   auto enum_constant_decl = m_ast.AddEnumerationValueToEnumerationType(
@@ -1261,6 +1265,52 @@ void PDBASTParser::AddRecordMembers(
       if (!decl)
         continue;
 
+      // Static constant members may be a const[expr] declaration.
+      // Query the symbol's value as the variable initializer if valid.
+      if (member_comp_type.IsConst()) {
+        auto value = member->getValue();
+        clang::QualType qual_type = decl->getType();
+        unsigned type_width = m_ast.getASTContext().getIntWidth(qual_type);
+        unsigned constant_width = value.getBitWidth();
+
+        if (qual_type->isIntegralOrEnumerationType()) {
+          if (type_width >= constant_width) {
+            TypeSystemClang::SetIntegerInitializerForVariable(
+                decl, value.toAPSInt().extOrTrunc(type_width));
+          } else {
+            LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_AST),
+                     "Class '{0}' has a member '{1}' of type '{2}' ({3} bits) "
+                     "which resolves to a wider constant value ({4} bits). "
+                     "Ignoring constant.",
+                     record_type.GetTypeName(), member_name,
+                     member_comp_type.GetTypeName(), type_width,
+                     constant_width);
+          }
+        } else {
+          switch (member_comp_type.GetBasicTypeEnumeration()) {
+          case lldb::eBasicTypeFloat:
+          case lldb::eBasicTypeDouble:
+          case lldb::eBasicTypeLongDouble:
+            if (type_width == constant_width) {
+              TypeSystemClang::SetFloatingInitializerForVariable(
+                  decl, value.toAPFloat());
+              decl->setConstexpr(true);
+            } else {
+              LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_AST),
+                       "Class '{0}' has a member '{1}' of type '{2}' ({3} "
+                       "bits) which resolves to a constant value of mismatched "
+                       "width ({4} bits). Ignoring constant.",
+                       record_type.GetTypeName(), member_name,
+                       member_comp_type.GetTypeName(), type_width,
+                       constant_width);
+            }
+            break;
+          default:
+            break;
+          }
+        }
+      }
+
       m_uid_to_decl[member->getSymIndexId()] = decl;
 
       break;
@@ -1334,7 +1384,8 @@ clang::CXXMethodDecl *
 PDBASTParser::AddRecordMethod(lldb_private::SymbolFile &symbol_file,
                               lldb_private::CompilerType &record_type,
                               const llvm::pdb::PDBSymbolFunc &method) const {
-  std::string name = MSVCUndecoratedNameParser::DropScope(method.getName());
+  std::string name =
+      std::string(MSVCUndecoratedNameParser::DropScope(method.getName()));
 
   Type *method_type = symbol_file.ResolveTypeUID(method.getSymIndexId());
   // MSVC specific __vecDelDtor.

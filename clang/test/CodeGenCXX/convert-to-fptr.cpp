@@ -39,4 +39,4 @@ int main()
 }
 
 // CHECK: call i32 (i32)* @_ZN1AcvPFiiEEv
-// CHECK: call i32 (i32)* @_ZN1BcvRFiiEEv
+// CHECK: call nonnull i32 (i32)* @_ZN1BcvRFiiEEv

@@ -1,5 +1,5 @@
 =====================
-Test-Suite Extentions
+Test-Suite Extensions
 =====================
 
 .. contents::
@@ -191,7 +191,7 @@ CORAL-2 Benchmarks
 ------------------
 https://asc.llnl.gov/coral-2-benchmarks/
 
-Many of its programs have already been integreated in
+Many of its programs have already been integrated in
 MultiSource/Benchmarks/DOE-ProxyApps-C and
 MultiSource/Benchmarks/DOE-ProxyApps-C++.
 

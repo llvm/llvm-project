@@ -18,6 +18,7 @@
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
+#include "X86Subtarget.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -40,6 +41,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Target/TargetMachine.h"
+
 using namespace llvm;
 
 X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
@@ -76,7 +79,7 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   }
 
   // Emit the rest of the function body.
-  EmitFunctionBody();
+  emitFunctionBody();
 
   // Emit the XRay table for this function.
   emitXRayTable();
@@ -87,7 +90,7 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
 
-void X86AsmPrinter::EmitFunctionBodyStart() {
+void X86AsmPrinter::emitFunctionBodyStart() {
   if (EmitFPOData) {
     if (auto *XTS =
         static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer()))
@@ -97,7 +100,7 @@ void X86AsmPrinter::EmitFunctionBodyStart() {
   }
 }
 
-void X86AsmPrinter::EmitFunctionBodyEnd() {
+void X86AsmPrinter::emitFunctionBodyEnd() {
   if (EmitFPOData) {
     if (auto *XTS =
             static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer()))
@@ -124,7 +127,7 @@ void X86AsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
         MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY_PIC_BASE)
       GVSym = getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
     else
-      GVSym = getSymbol(GV);
+      GVSym = getSymbolPreferLocal(*GV);
 
     // Handle dllimport linkage.
     if (MO.getTargetFlags() == X86II::MO_DLLIMPORT)
@@ -404,7 +407,7 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
 static bool printAsmMRegister(X86AsmPrinter &P, const MachineOperand &MO,
                               char Mode, raw_ostream &O) {
   Register Reg = MO.getReg();
-  bool EmitPercent = true;
+  bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
 
   if (!X86::GR8RegClass.contains(Reg) &&
       !X86::GR16RegClass.contains(Reg) &&
@@ -433,6 +436,42 @@ static bool printAsmMRegister(X86AsmPrinter &P, const MachineOperand &MO,
     // Print 64-bit register names if 64-bit integer registers are available.
     // Otherwise, print 32-bit register names.
     Reg = getX86SubSuperRegister(Reg, P.getSubtarget().is64Bit() ? 64 : 32);
+    break;
+  }
+
+  if (EmitPercent)
+    O << '%';
+
+  O << X86ATTInstPrinter::getRegisterName(Reg);
+  return false;
+}
+
+static bool printAsmVRegister(X86AsmPrinter &P, const MachineOperand &MO,
+                              char Mode, raw_ostream &O) {
+  unsigned Reg = MO.getReg();
+  bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
+
+  unsigned Index;
+  if (X86::VR128XRegClass.contains(Reg))
+    Index = Reg - X86::XMM0;
+  else if (X86::VR256XRegClass.contains(Reg))
+    Index = Reg - X86::YMM0;
+  else if (X86::VR512RegClass.contains(Reg))
+    Index = Reg - X86::ZMM0;
+  else
+    return true;
+
+  switch (Mode) {
+  default: // Unknown mode.
+    return true;
+  case 'x': // Print V4SFmode register
+    Reg = X86::XMM0 + Index;
+    break;
+  case 't': // Print V8SFmode register
+    Reg = X86::YMM0 + Index;
+    break;
+  case 'g': // Print V16SFmode register
+    Reg = X86::ZMM0 + Index;
     break;
   }
 
@@ -517,6 +556,14 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       PrintOperand(MI, OpNo, O);
       return false;
 
+    case 'x': // Print V4SFmode register
+    case 't': // Print V8SFmode register
+    case 'g': // Print V16SFmode register
+      if (MO.isReg())
+        return printAsmVRegister(*this, MO, ExtraCode[0], O);
+      PrintOperand(MI, OpNo, O);
+      return false;
+
     case 'P': // This is the operand of a call, treat specially.
       PrintPCRelImm(MI, OpNo, O);
       return false;
@@ -575,7 +622,7 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
   return false;
 }
 
-void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
+void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
   if (TT.isOSBinFormatELF()) {
@@ -597,17 +644,17 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
 
       // Emitting note header.
       int WordSize = TT.isArch64Bit() ? 8 : 4;
-      EmitAlignment(WordSize == 4 ? Align(4) : Align(8));
-      OutStreamer->EmitIntValue(4, 4 /*size*/); // data size for "GNU\0"
-      OutStreamer->EmitIntValue(8 + WordSize, 4 /*size*/); // Elf_Prop size
-      OutStreamer->EmitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4 /*size*/);
-      OutStreamer->EmitBytes(StringRef("GNU", 4)); // note name
+      emitAlignment(WordSize == 4 ? Align(4) : Align(8));
+      OutStreamer->emitIntValue(4, 4 /*size*/); // data size for "GNU\0"
+      OutStreamer->emitIntValue(8 + WordSize, 4 /*size*/); // Elf_Prop size
+      OutStreamer->emitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4 /*size*/);
+      OutStreamer->emitBytes(StringRef("GNU", 4)); // note name
 
       // Emitting an Elf_Prop for the CET properties.
-      OutStreamer->EmitIntValue(ELF::GNU_PROPERTY_X86_FEATURE_1_AND, 4);
-      OutStreamer->EmitIntValue(4, 4);               // data size
-      OutStreamer->EmitIntValue(FeatureFlagsAnd, 4); // data
-      EmitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
+      OutStreamer->emitInt32(ELF::GNU_PROPERTY_X86_FEATURE_1_AND);
+      OutStreamer->emitInt32(4);                          // data size
+      OutStreamer->emitInt32(FeatureFlagsAnd);            // data
+      emitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
 
       OutStreamer->endSection(Nt);
       OutStreamer->SwitchSection(Cur);
@@ -639,30 +686,30 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
     if (M.getModuleFlag("cfguard"))
       Feat00Flags |= 0x800; // Object is CFG-aware.
 
-    OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
-    OutStreamer->EmitAssignment(
+    OutStreamer->emitSymbolAttribute(S, MCSA_Global);
+    OutStreamer->emitAssignment(
         S, MCConstantExpr::create(Feat00Flags, MMI->getContext()));
   }
-  OutStreamer->EmitSyntaxDirective();
+  OutStreamer->emitSyntaxDirective();
 
   // If this is not inline asm and we're in 16-bit
   // mode prefix assembly with .code16.
   bool is16 = TT.getEnvironment() == Triple::CODE16;
   if (M.getModuleInlineAsm().empty() && is16)
-    OutStreamer->EmitAssemblerFlag(MCAF_Code16);
+    OutStreamer->emitAssemblerFlag(MCAF_Code16);
 }
 
 static void
 emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
                          MachineModuleInfoImpl::StubValueTy &MCSym) {
   // L_foo$stub:
-  OutStreamer.EmitLabel(StubLabel);
+  OutStreamer.emitLabel(StubLabel);
   //   .indirect_symbol _foo
-  OutStreamer.EmitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
+  OutStreamer.emitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
 
   if (MCSym.getInt())
     // External to current translation unit.
-    OutStreamer.EmitIntValue(0, 4/*size*/);
+    OutStreamer.emitIntValue(0, 4/*size*/);
   else
     // Internal to current translation unit.
     //
@@ -670,7 +717,7 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
     // pointers need to be indirect and pc-rel. We accomplish this by
     // using NLPs; however, sometimes the types are local to the file.
     // We need to fill in the value for the NLP in those cases.
-    OutStreamer.EmitValue(
+    OutStreamer.emitValue(
         MCSymbolRefExpr::create(MCSym.getPointer(), OutStreamer.getContext()),
         4 /*size*/);
 }
@@ -698,7 +745,7 @@ static void emitNonLazyStubs(MachineModuleInfo *MMI, MCStreamer &OutStreamer) {
   }
 }
 
-void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
+void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
   if (TT.isOSBinFormatMachO()) {
@@ -715,7 +762,7 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
     // points). If this doesn't occur, the linker can safely perform dead code
     // stripping. Since LLVM never generates code that does this, it is always
     // safe to set.
-    OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
   } else if (TT.isOSBinFormatCOFF()) {
     if (MMI->usesMSVCFloatingPoint()) {
       // In Windows' libcmt.lib, there is a file which is linked in only if the
@@ -734,7 +781,7 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
       StringRef SymbolName =
           (TT.getArch() == Triple::x86) ? "__fltused" : "_fltused";
       MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
-      OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
+      OutStreamer->emitSymbolAttribute(S, MCSA_Global);
       return;
     }
     emitStackMaps(SM);
@@ -749,7 +796,7 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
 //===----------------------------------------------------------------------===//
 
 // Force static initialization.
-extern "C" void LLVMInitializeX86AsmPrinter() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86AsmPrinter() {
   RegisterAsmPrinter<X86AsmPrinter> X(getTheX86_32Target());
   RegisterAsmPrinter<X86AsmPrinter> Y(getTheX86_64Target());
 }

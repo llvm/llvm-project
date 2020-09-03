@@ -170,6 +170,10 @@ cmpxchg16b (%eax)
 
 // 32: error: unsupported instruction
 // 64: error: unsupported instruction
+{vex} vmovdqu32 %xmm0, %xmm0
+
+// 32: error: unsupported instruction
+// 64: error: unsupported instruction
 {vex2} vmovdqu32 %xmm0, %xmm0
 
 // 32: error: unsupported instruction

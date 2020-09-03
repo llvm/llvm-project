@@ -1,4 +1,4 @@
-RUN: yaml2obj %p/Inputs/x86_64-exe.yaml > %t.in123.exe
+RUN: yaml2obj %p/Inputs/x86_64-exe.yaml -o %t.in123.exe
 
 # Using a debuglink filename with a length that is a multiple of 4, to
 # showcase padding in CONTENTS below.

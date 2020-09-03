@@ -120,3 +120,80 @@ void assignment(std::vector<int> &V) {
   V.erase(i);
   auto j = V.cbegin(); // no-warning
 }
+
+template<typename T>
+struct cont_with_ptr_iterator {
+  T *begin() const;
+  T *end() const;
+  T &operator[](size_t);
+  void push_back(const T&);
+  T* erase(T*);
+};
+
+void invalidated_dereference_end_ptr_iterator(cont_with_ptr_iterator<int> &C) {
+  auto i = C.begin();
+  C.erase(i);
+  (void) *i; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void invalidated_prefix_increment_end_ptr_iterator(
+    cont_with_ptr_iterator<int> &C) {
+  auto i = C.begin();
+  C.erase(i);
+  ++i; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void invalidated_prefix_decrement_end_ptr_iterator(
+    cont_with_ptr_iterator<int> &C) {
+  auto i = C.begin() + 1;
+  C.erase(i);
+  --i; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void invalidated_postfix_increment_end_ptr_iterator(
+    cont_with_ptr_iterator<int> &C) {
+  auto i = C.begin();
+  C.erase(i);
+  i++; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void invalidated_postfix_decrement_end_ptr_iterator(
+    cont_with_ptr_iterator<int> &C) {
+  auto i = C.begin() + 1;
+  C.erase(i);
+  i--; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void invalidated_increment_by_2_end_ptr_iterator(
+    cont_with_ptr_iterator<int> &C) {
+  auto i = C.begin();
+  C.erase(i);
+  i += 2; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void invalidated_increment_by_2_copy_end_ptr_iterator(
+    cont_with_ptr_iterator<int> &C) {
+  auto i = C.begin();
+  C.erase(i);
+  auto j = i + 2; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void invalidated_decrement_by_2_end_ptr_iterator(
+    cont_with_ptr_iterator<int> &C) {
+  auto i = C.begin();
+  C.erase(i);
+  i -= 2; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void invalidated_decrement_by_2_copy_end_ptr_iterator(
+    cont_with_ptr_iterator<int> &C) {
+  auto i = C.begin();
+  C.erase(i);
+  auto j = i - 2; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void invalidated_subscript_end_ptr_iterator(cont_with_ptr_iterator<int> &C) {
+  auto i = C.begin();
+  C.erase(i);
+  (void) i[1]; // expected-warning{{Invalidated iterator accessed}}
+}

@@ -27,10 +27,8 @@ Sections:
     Link: .symtab
     Relocations:
       - Type: R_X86_64_PC32
-        Offset: 0
         Symbol: 0x42
       - Type: R_X86_64_PC32
-        Offset: 0
         Symbol: 0x1
 Symbols:
   - Name: foo

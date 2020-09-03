@@ -62,7 +62,7 @@ void take_block(void (^block)()) { block(); }
 }
 @end
 
-// ARC: define void @_ZN13LambdaCapture4foo1ERi(i32* dereferenceable(4) %{{.*}})
+// ARC: define void @_ZN13LambdaCapture4foo1ERi(i32* nonnull align 4 dereferenceable(4) %{{.*}})
 // ARC:   %[[CAPTURE0:.*]] = getelementptr inbounds %[[LAMBDACLASS]], %[[LAMBDACLASS]]* %{{.*}}, i32 0, i32 0
 // ARC:   store i32 %{{.*}}, i32* %[[CAPTURE0]]
 

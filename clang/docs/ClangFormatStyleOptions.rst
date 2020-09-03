@@ -151,6 +151,9 @@ the configuration (without a prefix: ``Auto``).
   * ``Microsoft``
     A style complying with `Microsoft's style guide
     <https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference?view=vs-2017>`_
+  * ``GNU``
+    A style complying with the `GNU coding standards
+    <https://www.gnu.org/prep/standards/standards.html>`_
 
 .. START_FORMAT_STYLE_OPTIONS
 
@@ -203,6 +206,18 @@ the configuration (without a prefix: ``Auto``).
     int aaaa = 12;
     int b    = 23;
     int ccc  = 23;
+
+**AlignConsecutiveBitFields** (``bool``)
+  If ``true``, aligns consecutive bitfield members.
+
+  This will align the bitfield separators of consecutive lines. This
+  will result in formattings like
+
+  .. code-block:: c++
+
+    int aaaa : 1;
+    int b    : 12;
+    int ccc  : 8;
 
 **AlignConsecutiveDeclarations** (``bool``)
   If ``true``, aligns consecutive declarations.
@@ -270,17 +285,49 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**AlignOperands** (``bool``)
+**AlignOperands** (``OperandAlignmentStyle``)
   If ``true``, horizontally align operands of binary and ternary
   expressions.
 
-  Specifically, this aligns operands of a single expression that needs to be
-  split over multiple lines, e.g.:
+  Possible values:
 
-  .. code-block:: c++
+  * ``OAS_DontAlign`` (in configuration: ``DontAlign``)
+    Do not align operands of binary and ternary expressions.
+    The wrapped lines are indented ``ContinuationIndentWidth`` spaces from
+    the start of the line.
 
-    int aaa = bbbbbbbbbbbbbbb +
-              ccccccccccccccc;
+  * ``OAS_Align`` (in configuration: ``Align``)
+    Horizontally align operands of binary and ternary expressions.
+
+    Specifically, this aligns operands of a single expression that needs
+    to be split over multiple lines, e.g.:
+
+    .. code-block:: c++
+
+      int aaa = bbbbbbbbbbbbbbb +
+                ccccccccccccccc;
+
+    When ``BreakBeforeBinaryOperators`` is set, the wrapped operator is
+    aligned with the operand on the first line.
+
+    .. code-block:: c++
+
+      int aaa = bbbbbbbbbbbbbbb
+                + ccccccccccccccc;
+
+  * ``OAS_AlignAfterOperator`` (in configuration: ``AlignAfterOperator``)
+    Horizontally align operands of binary and ternary expressions.
+
+    This is similar to ``AO_Align``, except when
+    ``BreakBeforeBinaryOperators`` is set, the operator is un-indented so
+    that the wrapped operand is aligned with the operand on the first line.
+
+    .. code-block:: c++
+
+      int aaa = bbbbbbbbbbbbbbb
+              + ccccccccccccccc;
+
+
 
 **AlignTrailingComments** (``bool``)
   If ``true``, aligns trailing comments.
@@ -394,6 +441,21 @@ the configuration (without a prefix: ``Auto``).
                                             case 2:
                                               return;
                                             }
+
+**AllowShortEnumsOnASingleLine** (``bool``)
+  Allow short enums on a single line.
+
+  .. code-block:: c++
+
+    true:
+    enum { A, B } myEnum;
+
+    false:
+    enum
+    {
+      A,
+      B
+    } myEnum;
 
 **AllowShortFunctionsOnASingleLine** (``ShortFunctionStyle``)
   Dependent on the value, ``int f() { return 0; }`` can be put on a
@@ -947,6 +1009,39 @@ the configuration (without a prefix: ``Auto``).
       if (foo()) {
       } else {
       }
+
+  * ``bool BeforeLambdaBody`` Wrap lambda block.
+
+    .. code-block:: c++
+
+      true:
+      connect(
+        []()
+        {
+          foo();
+          bar();
+        });
+
+      false:
+      connect([]() {
+        foo();
+        bar();
+      });
+
+  * ``bool BeforeWhile`` Wrap before ``while``.
+
+    .. code-block:: c++
+
+      true:
+      do {
+        foo();
+      }
+      while (1);
+
+      false:
+      do {
+        foo();
+      } while (1);
 
   * ``bool IndentBraces`` Indent the wrapped braces themselves.
 
@@ -1605,12 +1700,36 @@ the configuration (without a prefix: ``Auto``).
   ``ClassImpl.hpp`` would not have the main include file put on top
   before any other include.
 
+**IndentCaseBlocks** (``bool``)
+  Indent case label blocks one level from the case label.
+
+  When ``false``, the block following the case label uses the same
+  indentation level as for the case label, treating the case label the same
+  as an if-statement.
+  When ``true``, the block gets indented as a scope block.
+
+  .. code-block:: c++
+
+     false:                                 true:
+     switch (fool) {                vs.     switch (fool) {
+     case 1: {                              case 1:
+       bar();                                 {
+     } break;                                   bar();
+     default: {                               }
+       plop();                                break;
+     }                                      default:
+     }                                        {
+                                                plop();
+                                              }
+                                            }
+
 **IndentCaseLabels** (``bool``)
   Indent case labels one level from the switch statement.
 
   When ``false``, use the same indentation level as for the switch
   statement. Switch statement body is always indented one level more than
-  case labels.
+  case labels (except the first block following the case label, which
+  itself indents the code - unless IndentCaseBlocks is enabled).
 
   .. code-block:: c++
 
@@ -1622,6 +1741,52 @@ the configuration (without a prefix: ``Auto``).
      default:                                 default:
        plop();                                  plop();
      }                                      }
+
+**IndentExternBlock** (``IndentExternBlockStyle``)
+  IndentExternBlockStyle is the type of indenting of extern blocks.
+
+  Possible values:
+
+  * ``IEBS_AfterExternBlock`` (in configuration: ``AfterExternBlock``)
+    Backwards compatible with AfterExternBlock's indenting.
+
+    .. code-block:: c++
+
+       IndentExternBlock: AfterExternBlock
+       BraceWrapping.AfterExternBlock: true
+       extern "C"
+       {
+           void foo();
+       }
+
+
+    .. code-block:: c++
+
+       IndentExternBlock: AfterExternBlock
+       BraceWrapping.AfterExternBlock: false
+       extern "C" {
+       void foo();
+       }
+
+  * ``IEBS_NoIndent`` (in configuration: ``NoIndent``)
+    Does not indent extern blocks.
+
+    .. code-block:: c++
+
+        extern "C" {
+        void foo();
+        }
+
+  * ``IEBS_Indent`` (in configuration: ``Indent``)
+    Indents extern blocks.
+
+    .. code-block:: c++
+
+        extern "C" {
+          void foo();
+        }
+
+
 
 **IndentGotoLabels** (``bool``)
   Indent goto labels.
@@ -1707,6 +1872,38 @@ the configuration (without a prefix: ``Auto``).
      false:
      LoooooooooooooooooooooooooooooooooooooooongReturnType
      LoooooooooooooooooooooooooooooooongFunctionDeclaration();
+
+**InsertTrailingCommas** (``TrailingCommaStyle``)
+  If set to ``TCS_Wrapped`` will insert trailing commas in container
+  literals (arrays and objects) that wrap across multiple lines.
+  It is currently only available for JavaScript
+  and disabled by default ``TCS_None``.
+  ``InsertTrailingCommas`` cannot be used together with ``BinPackArguments``
+  as inserting the comma disables bin-packing.
+
+  .. code-block:: c++
+
+    TSC_Wrapped:
+    const someArray = [
+    aaaaaaaaaaaaaaaaaaaaaaaaaa,
+    aaaaaaaaaaaaaaaaaaaaaaaaaa,
+    aaaaaaaaaaaaaaaaaaaaaaaaaa,
+    //                        ^ inserted
+    ]
+
+  Possible values:
+
+  * ``TCS_None`` (in configuration: ``None``)
+    Do not insert trailing commas.
+
+  * ``TCS_Wrapped`` (in configuration: ``Wrapped``)
+    Insert trailing commas in container literals that were wrapped over
+    multiple lines. Note that this is conceptually incompatible with
+    bin-packing, because the trailing comma is used as an indicator
+    that a container should be formatted one-per-line (i.e. not bin-packed).
+    So inserting a trailing comma counteracts bin-packing.
+
+
 
 **JavaImportGroups** (``std::vector<std::string>``)
   A vector of prefixes ordered by the desired groups for Java imports.
@@ -1993,6 +2190,30 @@ the configuration (without a prefix: ``Auto``).
          [self onOperationDone];
      }];
 
+**ObjCBreakBeforeNestedBlockParam** (``bool``)
+  Break parameters list into lines when there is nested block
+  parameters in a fuction call.
+
+  .. code-block:: c++
+
+    false:
+     - (void)_aMethod
+     {
+         [self.test1 t:self w:self callback:^(typeof(self) self, NSNumber
+         *u, NSNumber *v) {
+             u = c;
+         }]
+     }
+     true:
+     - (void)_aMethod
+     {
+        [self.test1 t:self
+                     w:self
+            callback:^(typeof(self) self, NSNumber *u, NSNumber *v) {
+                 u = c;
+             }]
+     }
+
 **ObjCSpaceAfterProperty** (``bool``)
   Add a space after ``@property`` in Objective-C, i.e. use
   ``@property (readonly)`` instead of ``@property(readonly)``.
@@ -2223,6 +2444,19 @@ the configuration (without a prefix: ``Auto``).
          }
        }
 
+  * ``SBPO_ControlStatementsExceptForEachMacros`` (in configuration: ``ControlStatementsExceptForEachMacros``)
+    Same as ``SBPO_ControlStatements`` except this option doesn't apply to
+    ForEach macros. This is useful in projects where ForEach macros are
+    treated as function calls instead of control statements.
+
+    .. code-block:: c++
+
+       void f() {
+         Q_FOREACH(...) {
+           f();
+         }
+       }
+
   * ``SBPO_NonEmptyParentheses`` (in configuration: ``NonEmptyParentheses``)
     Put a space before opening parentheses only if the parentheses are not
     empty i.e. '()'
@@ -2329,7 +2563,14 @@ the configuration (without a prefix: ``Auto``).
      x = ( int32 )y                 vs.     x = (int32)y
 
 **SpacesInConditionalStatement** (``bool``)
-  If ``true``, spaces will be inserted around if/for/while (and similar) conditions.
+  If ``true``, spaces will be inserted around if/for/switch/while
+  conditions.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     if ( a )  { ... }              vs.     if (a) { ... }
+     while ( i < 5 )  { ... }               while (i < 5) { ... }
 
 **SpacesInContainerLiterals** (``bool``)
   If ``true``, spaces are inserted inside container literals (e.g.
@@ -2442,11 +2683,33 @@ the configuration (without a prefix: ``Auto``).
     Use tabs only for indentation.
 
   * ``UT_ForContinuationAndIndentation`` (in configuration: ``ForContinuationAndIndentation``)
-    Use tabs only for line continuation and indentation.
+    Fill all leading whitespace with tabs, and use spaces for alignment that
+    appears within a line (e.g. consecutive assignments and declarations).
+
+  * ``UT_AlignWithSpaces`` (in configuration: ``AlignWithSpaces``)
+    Use tabs for line continuation and indentation, and spaces for
+    alignment.
 
   * ``UT_Always`` (in configuration: ``Always``)
     Use tabs whenever we need to fill whitespace that spans at least from
     one tab stop to the next one.
+
+**WhitespaceSensitiveMacros** (``std::vector<std::string>``)
+  A vector of macros which are whitespace-sensitive and should not be touched.
+
+  These are expected to be macros of the form:
+
+  .. code-block:: c++
+
+    STRINGIZE(...)
+
+  In the .clang-format configuration file, this can be configured like:
+
+  .. code-block:: yaml
+
+    WhitespaceSensitiveMacros: ['STRINGIZE', 'PP_STRINGIZE']
+
+  For example: BOOST_PP_STRINGIZE.
 
 
 

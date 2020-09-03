@@ -44,7 +44,7 @@ regBankSelected: true
 # Max immediate for CI
 # SIVI: [[K_LO:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967292
 # SIVI: [[K_HI:%[0-9]+]]:sreg_32 = S_MOV_B32 3
-# SIVI: [[K:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[K_LO]], %subreg.sub0, [[K_HI]], %subreg.sub1
+# SIVI: [[K:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[K_LO]], %subreg.sub0, [[K_HI]], %subreg.sub1
 # SIVI-DAG: [[K_SUB0:%[0-9]+]]:sreg_32 = COPY [[K]].sub0
 # SIVI-DAG: [[PTR_LO:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub0
 # SIVI-DAG: [[ADD_PTR_LO:%[0-9]+]]:sreg_32 = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
@@ -58,7 +58,7 @@ regBankSelected: true
 # Immediate overflow for CI
 # GCN: [[K_LO:%[0-9]+]]:sreg_32 = S_MOV_B32 0
 # GCN: [[K_HI:%[0-9]+]]:sreg_32 = S_MOV_B32 4
-# GCN: [[K:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[K_LO]], %subreg.sub0, [[K_HI]], %subreg.sub1
+# GCN: [[K:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[K_LO]], %subreg.sub0, [[K_HI]], %subreg.sub1
 # GCN-DAG: [[K_SUB0:%[0-9]+]]:sreg_32 = COPY [[K]].sub0
 # GCN-DAG: [[PTR_LO:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub0
 # GCN-DAG: [[ADD_PTR_LO:%[0-9]+]]:sreg_32 = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
@@ -76,7 +76,7 @@ regBankSelected: true
 # Overflow 32-bit byte offset
 # SIVI: [[K_LO:%[0-9]+]]:sreg_32 = S_MOV_B32 0
 # SIVI: [[K_HI:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-# SIVI: [[K:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[K_LO]], %subreg.sub0, [[K_HI]], %subreg.sub1
+# SIVI: [[K:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[K_LO]], %subreg.sub0, [[K_HI]], %subreg.sub1
 # SIVI-DAG: [[K_SUB0:%[0-9]+]]:sreg_32 = COPY [[K]].sub0
 # SIVI-DAG: [[PTR_LO:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub0
 # SIVI-DAG: [[ADD_PTR_LO:%[0-9]+]]:sreg_32 = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_RPCSERIALIZATION_H
-#define LLVM_EXECUTIONENGINE_ORC_RPCSERIALIZATION_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_RPC_RPCSERIALIZATION_H
+#define LLVM_EXECUTIONENGINE_ORC_RPC_RPCSERIALIZATION_H
 
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/Support/thread.h"
@@ -230,9 +230,9 @@ public:
 ///
 ///   template <DerivedChannelT>
 ///   class SerializationTraits<DerivedChannelT, bool,
-///         typename std::enable_if<
+///         std::enable_if_t<
 ///           std::is_base_of<VirtChannel, DerivedChannel>::value
-///         >::type> {
+///         >> {
 ///   public:
 ///     static const char* getName() { ... };
 ///   }
@@ -274,9 +274,8 @@ public:
 
   template <typename CArgT>
   static Error serialize(ChannelT &C, CArgT &&CArg) {
-    return SerializationTraits<ChannelT, ArgT,
-                               typename std::decay<CArgT>::type>::
-             serialize(C, std::forward<CArgT>(CArg));
+    return SerializationTraits<ChannelT, ArgT, std::decay_t<CArgT>>::serialize(
+        C, std::forward<CArgT>(CArg));
   }
 
   template <typename CArgT>
@@ -293,8 +292,8 @@ public:
   static Error serialize(ChannelT &C, CArgT &&CArg,
                          CArgTs &&... CArgs) {
     if (auto Err =
-        SerializationTraits<ChannelT, ArgT, typename std::decay<CArgT>::type>::
-          serialize(C, std::forward<CArgT>(CArg)))
+            SerializationTraits<ChannelT, ArgT, std::decay_t<CArgT>>::serialize(
+                C, std::forward<CArgT>(CArg)))
       return Err;
     if (auto Err = SequenceTraits<ChannelT>::emitSeparator(C))
       return Err;
@@ -316,8 +315,8 @@ public:
 
 template <typename ChannelT, typename... ArgTs>
 Error serializeSeq(ChannelT &C, ArgTs &&... Args) {
-  return SequenceSerialization<ChannelT, typename std::decay<ArgTs>::type...>::
-           serialize(C, std::forward<ArgTs>(Args)...);
+  return SequenceSerialization<ChannelT, std::decay_t<ArgTs>...>::serialize(
+      C, std::forward<ArgTs>(Args)...);
 }
 
 template <typename ChannelT, typename... ArgTs>
@@ -700,4 +699,4 @@ public:
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_RPCSERIALIZATION_H
+#endif // LLVM_EXECUTIONENGINE_ORC_RPC_RPCSERIALIZATION_H

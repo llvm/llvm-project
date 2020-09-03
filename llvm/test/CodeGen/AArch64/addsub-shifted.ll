@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs %s -o - -mtriple=arm64-apple-ios7.0 | FileCheck %s
-; RUN: llc -verify-machineinstrs %s -o - -mtriple=arm64-apple-ios7.0 -global-isel -pass-remarks-missed=gisel* 2>&1 | FileCheck %s --check-prefixes=GISEL,FALLBACK
+; RUN: llc -debugify-and-strip-all-safe -verify-machineinstrs %s -o - -mtriple=arm64-apple-ios7.0 | FileCheck %s
+; RUN: llc -debugify-and-strip-all-safe -verify-machineinstrs %s -o - -mtriple=arm64-apple-ios7.0 -global-isel -pass-remarks-missed=gisel* 2>&1 | FileCheck %s --check-prefixes=GISEL,FALLBACK
 
 ; FALLBACK-NOT: remark
 

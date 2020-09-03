@@ -40,6 +40,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "type-promotion"
 #define PASS_NAME "Type Promotion"
@@ -847,8 +848,7 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
 
   // Iterate through, and add to, a tree of operands and users in the use-def.
   while (!WorkList.empty()) {
-    Value *V = WorkList.back();
-    WorkList.pop_back();
+    Value *V = WorkList.pop_back_val();
     if (CurrentVisited.count(V))
       continue;
 
@@ -917,7 +917,7 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
      ++ToPromote;
    }
 
-  // DAG optimisations should be able to handle these cases better, especially
+  // DAG optimizations should be able to handle these cases better, especially
   // for function arguments.
   if (ToPromote < 2 || (Blocks.size() == 1 && (NonFreeArgs > SafeWrap.size())))
     return false;
@@ -941,6 +941,9 @@ bool TypePromotion::runOnFunction(Function &F) {
   if (!TPC)
     return false;
 
+  AllVisited.clear();
+  SafeToPromote.clear();
+  SafeWrap.clear();
   bool MadeChange = false;
   const DataLayout &DL = F.getParent()->getDataLayout();
   const TargetMachine &TM = TPC->getTM<TargetMachine>();
@@ -997,6 +1000,10 @@ bool TypePromotion::runOnFunction(Function &F) {
   }
   if (MadeChange)
     LLVM_DEBUG(dbgs() << "After TypePromotion: " << F << "\n");
+
+  AllVisited.clear();
+  SafeToPromote.clear();
+  SafeWrap.clear();
 
   return MadeChange;
 }

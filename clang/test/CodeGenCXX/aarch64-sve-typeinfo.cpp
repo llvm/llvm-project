@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:   | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
-// RUN:   -target-feature +sve | FileCheck %s
+// RUN:   -target-feature +sve,+bf16 | FileCheck %s
 
 namespace std { class type_info; };
 
@@ -18,6 +18,8 @@ auto &u64 = typeid(__SVUint64_t);
 auto &f16 = typeid(__SVFloat16_t);
 auto &f32 = typeid(__SVFloat32_t);
 auto &f64 = typeid(__SVFloat64_t);
+
+auto &bf16 = typeid(__SVBFloat16_t);
 
 auto &b8 = typeid(__SVBool_t);
 
@@ -53,6 +55,9 @@ auto &b8 = typeid(__SVBool_t);
 
 // CHECK-DAG: @_ZTSu13__SVFloat64_t = {{.*}} c"u13__SVFloat64_t\00"
 // CHECK-DAG: @_ZTIu13__SVFloat64_t = {{.*}} @_ZTVN10__cxxabiv123__fundamental_type_infoE, {{.*}} @_ZTSu13__SVFloat64_t
+//
+// CHECK-DAG: @_ZTSu14__SVBFloat16_t = {{.*}} c"u14__SVBFloat16_t\00"
+// CHECK-DAG: @_ZTIu14__SVBFloat16_t = {{.*}} @_ZTVN10__cxxabiv123__fundamental_type_infoE, {{.*}} @_ZTSu14__SVBFloat16_t
 
 // CHECK-DAG: @_ZTSu10__SVBool_t = {{.*}} c"u10__SVBool_t\00"
 // CHECK-DAG: @_ZTIu10__SVBool_t = {{.*}} @_ZTVN10__cxxabiv123__fundamental_type_infoE, {{.*}} @_ZTSu10__SVBool_t

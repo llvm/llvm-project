@@ -9,7 +9,7 @@
 // RUN:          .callee3 : { *(.callee_high) } \
 // RUN:          .callee4 : { *(.callee_arm_high) } } " > %t.script
 // RUN: ld.lld --script %t.script %t %tfar -o %t2
-// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
+// RUN: llvm-objdump -d --triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
 
 // Test BLX instruction is chosen for ARM BL/BLX instruction and Thumb callee
 // Using two callees to ensure at least one has 2-byte alignment.
@@ -74,19 +74,19 @@ callee_arm_high:
 
 // CHECK: Disassembly of section .callee1:
 // CHECK-EMPTY:
-// CHECK-NEXT: callee_low:
+// CHECK-NEXT: <callee_low>:
 // CHECK-NEXT:    b4:       70 47   bx      lr
-// CHECK: callee_low2:
+// CHECK: <callee_low2>:
 // CHECK-NEXT:    b6:       70 47   bx      lr
 
 // CHECK: Disassembly of section .callee2:
 // CHECK-EMPTY:
-// CHECK-NEXT: callee_arm_low:
+// CHECK-NEXT: <callee_arm_low>:
 // CHECK-NEXT:    100:        1e ff 2f e1     bx      lr
 
 // CHECK: Disassembly of section .caller:
 // CHECK-EMPTY:
-// CHECK-NEXT: _start:
+// CHECK-NEXT: <_start>:
 // CHECK-NEXT:   10000:       2b c0 ff fa     blx     #-65364 <callee_low>
 // CHECK-NEXT:   10004:       2a c0 ff fa     blx     #-65368 <callee_low>
 // CHECK-NEXT:   10008:       29 c0 ff fb     blx     #-65370 <callee_low2>
@@ -107,12 +107,12 @@ callee_arm_high:
 
 // CHECK: Disassembly of section .callee3:
 // CHECK-EMPTY:
-// CHECK: callee_high:
+// CHECK: <callee_high>:
 // CHECK-NEXT:    10100:       70 47   bx      lr
-// CHECK: callee_high2:
+// CHECK: <callee_high2>:
 // CHECK-NEXT:    10102:       70 47   bx      lr
 
 // CHECK: Disassembly of section .callee4:
 // CHECK-EMPTY:
-// CHECK-NEXT: callee_arm_high:
+// CHECK-NEXT: <callee_arm_high>:
 // CHECK-NEXT:   10200:     1e ff 2f e1     bx      lr

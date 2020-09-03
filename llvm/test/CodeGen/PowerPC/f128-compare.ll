@@ -1,5 +1,4 @@
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -verify-machineinstrs \
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown -verify-machineinstrs \
 ; RUN:   -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck %s
 
 @a_qp = common global fp128 0xL00000000000000000000000000000000, align 16
@@ -15,7 +14,7 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: greater_qp
 ; CHECK: xscmpuqp
-; CHECK: isel r{{[0-9]+}}, r{{[0-9]+}}, r{{[0-9]+}}, gt
+; CHECK: iselgt r{{[0-9]+}}, r{{[0-9]+}}, r{{[0-9]+}}
 ; CHECK: blr
 }
 
@@ -29,7 +28,7 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: less_qp
 ; CHECK: xscmpuqp
-; CHECK: isel r{{[0-9]+}}, r{{[0-9]+}}, r{{[0-9]+}}, lt
+; CHECK: isellt r{{[0-9]+}}, r{{[0-9]+}}, r{{[0-9]+}}
 ; CHECK: blr
 }
 
@@ -73,7 +72,7 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: equal_qp
 ; CHECK: xscmpuqp
-; CHECK: isel r{{[0-9]+}}, r{{[0-9]+}}, r{{[0-9]+}}, eq
+; CHECK: iseleq r{{[0-9]+}}, r{{[0-9]+}}, r{{[0-9]+}}
 ; CHECK: blr
 }
 
@@ -88,7 +87,7 @@ entry:
   ret i32 %lnot.ext
 ; CHECK-LABEL: not_greater_qp
 ; CHECK: xscmpuqp
-; CHECK: isel r{{[0-9]+}}, 0, r{{[0-9]+}}, gt
+; CHECK: iselgt r{{[0-9]+}}, 0, r{{[0-9]+}}
 ; CHECK: blr
 }
 
@@ -103,7 +102,7 @@ entry:
   ret i32 %lnot.ext
 ; CHECK-LABEL: not_less_qp
 ; CHECK: xscmpuqp
-; CHECK: isel r{{[0-9]+}}, 0, r{{[0-9]+}}, lt
+; CHECK: isellt r{{[0-9]+}}, 0, r{{[0-9]+}}
 ; CHECK: blr
 }
 
@@ -149,7 +148,7 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: not_equal_qp
 ; CHECK: xscmpuqp
-; CHECK: isel r{{[0-9]+}}, 0, r{{[0-9]+}}, eq
+; CHECK: iseleq r{{[0-9]+}}, 0, r{{[0-9]+}}
 ; CHECK: blr
 }
 

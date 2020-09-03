@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 // Misc utils implementation for Windows.
 //===----------------------------------------------------------------------===//
-#include "FuzzerDefs.h"
+#include "FuzzerPlatform.h"
 #if LIBFUZZER_WINDOWS
 #include "FuzzerCommand.h"
 #include "FuzzerIO.h"
@@ -152,9 +152,26 @@ FILE *OpenProcessPipe(const char *Command, const char *Mode) {
   return _popen(Command, Mode);
 }
 
+int CloseProcessPipe(FILE *F) {
+  return _pclose(F);
+}
+
 int ExecuteCommand(const Command &Cmd) {
   std::string CmdLine = Cmd.toString();
   return system(CmdLine.c_str());
+}
+
+bool ExecuteCommand(const Command &Cmd, std::string *CmdOutput) {
+  FILE *Pipe = _popen(Cmd.toString().c_str(), "r");
+  if (!Pipe)
+    return false;
+
+  if (CmdOutput) {
+    char TmpBuffer[128];
+    while (fgets(TmpBuffer, sizeof(TmpBuffer), Pipe))
+      CmdOutput->append(TmpBuffer);
+  }
+  return _pclose(Pipe) == 0;
 }
 
 const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,

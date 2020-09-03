@@ -185,6 +185,11 @@ static void shrinkScalarCompare(const SIInstrInfo *TII, MachineInstr &MI) {
   if (!MI.getOperand(0).isReg())
     TII->commuteInstruction(MI, false, 0, 1);
 
+  // cmpk requires src0 to be a register
+  const MachineOperand &Src0 = MI.getOperand(0);
+  if (!Src0.isReg())
+    return;
+
   const MachineOperand &Src1 = MI.getOperand(1);
   if (!Src1.isImm())
     return;
@@ -220,7 +225,7 @@ static void shrinkScalarCompare(const SIInstrInfo *TII, MachineInstr &MI) {
 // Shrink NSA encoded instructions with contiguous VGPRs to non-NSA encoding.
 void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) {
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
-  if (Info->MIMGEncoding != AMDGPU::MIMGEncGfx10NSA)
+  if (!Info || Info->MIMGEncoding != AMDGPU::MIMGEncGfx10NSA)
     return;
 
   MachineFunction *MF = MI.getParent()->getParent();
@@ -323,60 +328,61 @@ static bool shrinkScalarLogicOp(const GCNSubtarget &ST,
   MachineOperand *SrcReg = Src0;
   MachineOperand *SrcImm = Src1;
 
-  if (SrcImm->isImm() &&
-      !AMDGPU::isInlinableLiteral32(SrcImm->getImm(), ST.hasInv2PiInlineImm())) {
-    uint32_t Imm = static_cast<uint32_t>(SrcImm->getImm());
-    uint32_t NewImm = 0;
+  if (!SrcImm->isImm() ||
+      AMDGPU::isInlinableLiteral32(SrcImm->getImm(), ST.hasInv2PiInlineImm()))
+    return false;
 
-    if (Opc == AMDGPU::S_AND_B32) {
-      if (isPowerOf2_32(~Imm)) {
-        NewImm = countTrailingOnes(Imm);
-        Opc = AMDGPU::S_BITSET0_B32;
-      } else if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
-        NewImm = ~Imm;
-        Opc = AMDGPU::S_ANDN2_B32;
-      }
-    } else if (Opc == AMDGPU::S_OR_B32) {
-      if (isPowerOf2_32(Imm)) {
-        NewImm = countTrailingZeros(Imm);
-        Opc = AMDGPU::S_BITSET1_B32;
-      } else if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
-        NewImm = ~Imm;
-        Opc = AMDGPU::S_ORN2_B32;
-      }
-    } else if (Opc == AMDGPU::S_XOR_B32) {
-      if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
-        NewImm = ~Imm;
-        Opc = AMDGPU::S_XNOR_B32;
-      }
-    } else {
-      llvm_unreachable("unexpected opcode");
+  uint32_t Imm = static_cast<uint32_t>(SrcImm->getImm());
+  uint32_t NewImm = 0;
+
+  if (Opc == AMDGPU::S_AND_B32) {
+    if (isPowerOf2_32(~Imm)) {
+      NewImm = countTrailingOnes(Imm);
+      Opc = AMDGPU::S_BITSET0_B32;
+    } else if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
+      NewImm = ~Imm;
+      Opc = AMDGPU::S_ANDN2_B32;
+    }
+  } else if (Opc == AMDGPU::S_OR_B32) {
+    if (isPowerOf2_32(Imm)) {
+      NewImm = countTrailingZeros(Imm);
+      Opc = AMDGPU::S_BITSET1_B32;
+    } else if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
+      NewImm = ~Imm;
+      Opc = AMDGPU::S_ORN2_B32;
+    }
+  } else if (Opc == AMDGPU::S_XOR_B32) {
+    if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
+      NewImm = ~Imm;
+      Opc = AMDGPU::S_XNOR_B32;
+    }
+  } else {
+    llvm_unreachable("unexpected opcode");
+  }
+
+  if ((Opc == AMDGPU::S_ANDN2_B32 || Opc == AMDGPU::S_ORN2_B32) &&
+      SrcImm == Src0) {
+    if (!TII->commuteInstruction(MI, false, 1, 2))
+      NewImm = 0;
+  }
+
+  if (NewImm != 0) {
+    if (Register::isVirtualRegister(Dest->getReg()) && SrcReg->isReg()) {
+      MRI.setRegAllocationHint(Dest->getReg(), 0, SrcReg->getReg());
+      MRI.setRegAllocationHint(SrcReg->getReg(), 0, Dest->getReg());
+      return true;
     }
 
-    if ((Opc == AMDGPU::S_ANDN2_B32 || Opc == AMDGPU::S_ORN2_B32) &&
-        SrcImm == Src0) {
-      if (!TII->commuteInstruction(MI, false, 1, 2))
-        NewImm = 0;
-    }
-
-    if (NewImm != 0) {
-      if (Register::isVirtualRegister(Dest->getReg()) && SrcReg->isReg()) {
-        MRI.setRegAllocationHint(Dest->getReg(), 0, SrcReg->getReg());
-        MRI.setRegAllocationHint(SrcReg->getReg(), 0, Dest->getReg());
-        return true;
-      }
-
-      if (SrcReg->isReg() && SrcReg->getReg() == Dest->getReg()) {
-        MI.setDesc(TII->get(Opc));
-        if (Opc == AMDGPU::S_BITSET0_B32 ||
-            Opc == AMDGPU::S_BITSET1_B32) {
-          Src0->ChangeToImmediate(NewImm);
-          // Remove the immediate and add the tied input.
-          MI.getOperand(2).ChangeToRegister(Dest->getReg(), false);
-          MI.tieOperands(0, 2);
-        } else {
-          SrcImm->setImm(NewImm);
-        }
+    if (SrcReg->isReg() && SrcReg->getReg() == Dest->getReg()) {
+      MI.setDesc(TII->get(Opc));
+      if (Opc == AMDGPU::S_BITSET0_B32 ||
+          Opc == AMDGPU::S_BITSET1_B32) {
+        Src0->ChangeToImmediate(NewImm);
+        // Remove the immediate and add the tied input.
+        MI.getOperand(2).ChangeToRegister(Dest->getReg(), false);
+        MI.tieOperands(0, 2);
+      } else {
+        SrcImm->setImm(NewImm);
       }
     }
   }
@@ -426,8 +432,7 @@ getSubRegForIndex(unsigned Reg, unsigned Sub, unsigned I,
     if (Register::isPhysicalRegister(Reg)) {
       Reg = TRI.getSubReg(Reg, TRI.getSubRegFromChannel(I));
     } else {
-      LaneBitmask LM = TRI.getSubRegIndexLaneMask(Sub);
-      Sub = TRI.getSubRegFromChannel(I + countTrailingZeros(LM.getAsInteger()));
+      Sub = TRI.getSubRegFromChannel(I + TRI.getChannelFromSubReg(Sub));
     }
   }
   return TargetInstrInfo::RegSubRegPair(Reg, Sub);
@@ -472,26 +477,30 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
   if (!TRI.isVGPR(MRI, X))
     return nullptr;
 
-  for (MachineOperand &YTop : MRI.use_nodbg_operands(T)) {
-    if (YTop.getSubReg() != Tsub)
+  const unsigned SearchLimit = 16;
+  unsigned Count = 0;
+  for (auto Iter = std::next(MovT.getIterator()),
+            E = MovT.getParent()->instr_end();
+       Iter != E && Count < SearchLimit; ++Iter, ++Count) {
+
+    MachineInstr *MovY = &*Iter;
+    if ((MovY->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
+         MovY->getOpcode() != AMDGPU::COPY) ||
+        !MovY->getOperand(1).isReg()        ||
+        MovY->getOperand(1).getReg() != T   ||
+        MovY->getOperand(1).getSubReg() != Tsub)
       continue;
 
-    MachineInstr &MovY = *YTop.getParent();
-    if ((MovY.getOpcode() != AMDGPU::V_MOV_B32_e32 &&
-         MovY.getOpcode() != AMDGPU::COPY) ||
-        MovY.getOperand(1).getSubReg() != Tsub)
-      continue;
+    Register Y = MovY->getOperand(0).getReg();
+    unsigned Ysub = MovY->getOperand(0).getSubReg();
 
-    Register Y = MovY.getOperand(0).getReg();
-    unsigned Ysub = MovY.getOperand(0).getSubReg();
-
-    if (!TRI.isVGPR(MRI, Y) || MovT.getParent() != MovY.getParent())
+    if (!TRI.isVGPR(MRI, Y))
       continue;
 
     MachineInstr *MovX = nullptr;
-    auto I = std::next(MovT.getIterator()), E = MovT.getParent()->instr_end();
-    for (auto IY = MovY.getIterator(); I != E && I != IY; ++I) {
-      if (instReadsReg(&*I, X, Xsub, TRI) ||
+    for (auto IY = MovY->getIterator(), I = std::next(MovT.getIterator());
+         I != IY; ++I) {
+      if (instReadsReg(&*I, X, Xsub, TRI)    ||
           instModifiesReg(&*I, Y, Ysub, TRI) ||
           instModifiesReg(&*I, T, Tsub, TRI) ||
           (MovX && instModifiesReg(&*I, X, Xsub, TRI))) {
@@ -516,7 +525,7 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
       MovX = &*I;
     }
 
-    if (!MovX || I == E)
+    if (!MovX)
       continue;
 
     LLVM_DEBUG(dbgs() << "Matched v_swap_b32:\n" << MovT << *MovX << MovY);
@@ -533,7 +542,7 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
         .addReg(X1.Reg, 0, X1.SubReg).getInstr();
     }
     MovX->eraseFromParent();
-    MovY.eraseFromParent();
+    MovY->eraseFromParent();
     MachineInstr *Next = &*std::next(MovT.getIterator());
     if (MRI.use_nodbg_empty(T))
       MovT.eraseFromParent();

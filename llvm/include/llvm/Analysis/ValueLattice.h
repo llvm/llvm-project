@@ -29,26 +29,55 @@ class ValueLatticeElement {
     /// producing instruction is dead.  Caution: We use this as the starting
     /// state in our local meet rules.  In this usage, it's taken to mean
     /// "nothing known yet".
-    undefined,
+    /// Transition to any other state allowed.
+    unknown,
 
-    /// This Value has a specific constant value.  (For constant integers,
-    /// constantrange is used instead.  Integer typed constantexprs can appear
-    /// as constant.)
+    /// This Value is an UndefValue constant or produces undef. Undefined values
+    /// can be merged with constants (or single element constant ranges),
+    /// assuming all uses of the result will be replaced.
+    /// Transition allowed to the following states:
+    ///  constant
+    ///  constantrange_including_undef
+    ///  overdefined
+    undef,
+
+    /// This Value has a specific constant value.  The constant cannot be undef.
+    /// (For constant integers, constantrange is used instead. Integer typed
+    /// constantexprs can appear as constant.) Note that the constant state
+    /// can be reached by merging undef & constant states.
+    /// Transition allowed to the following states:
+    ///  overdefined
     constant,
 
-    /// This Value is known to not have the specified value.  (For constant
+    /// This Value is known to not have the specified value. (For constant
     /// integers, constantrange is used instead.  As above, integer typed
     /// constantexprs can appear here.)
+    /// Transition allowed to the following states:
+    ///  overdefined
     notconstant,
 
     /// The Value falls within this range. (Used only for integer typed values.)
+    /// Transition allowed to the following states:
+    ///  constantrange (new range must be a superset of the existing range)
+    ///  constantrange_including_undef
+    ///  overdefined
     constantrange,
 
+    /// This Value falls within this range, but also may be undef.
+    /// Merging it with other constant ranges results in
+    /// constantrange_including_undef.
+    /// Transition allowed to the following states:
+    ///  overdefined
+    constantrange_including_undef,
+
     /// We can not precisely model the dynamic values this value might take.
-    overdefined
+    /// No transitions are allowed after reaching overdefined.
+    overdefined,
   };
 
-  ValueLatticeElementTy Tag;
+  ValueLatticeElementTy Tag : 8;
+  /// Number of times a constant range has been extended with widening enabled.
+  unsigned NumRangeExtensions : 8;
 
   /// The union either stores a pointer to a constant or a constant range,
   /// associated to the lattice element. We have to ensure that Range is
@@ -58,79 +87,145 @@ class ValueLatticeElement {
     ConstantRange Range;
   };
 
-public:
-  // Const and Range are initialized on-demand.
-  ValueLatticeElement() : Tag(undefined) {}
-
-  /// Custom destructor to ensure Range is properly destroyed, when the object
-  /// is deallocated.
-  ~ValueLatticeElement() {
+  /// Destroy contents of lattice value, without destructing the object.
+  void destroy() {
     switch (Tag) {
     case overdefined:
-    case undefined:
+    case unknown:
+    case undef:
     case constant:
     case notconstant:
       break;
+    case constantrange_including_undef:
     case constantrange:
       Range.~ConstantRange();
       break;
     };
   }
 
-  /// Custom copy constructor, to ensure Range gets initialized when
-  /// copying a constant range lattice element.
-  ValueLatticeElement(const ValueLatticeElement &Other) : Tag(undefined) {
-    *this = Other;
-  }
+public:
+  /// Struct to control some aspects related to merging constant ranges.
+  struct MergeOptions {
+    /// The merge value may include undef.
+    bool MayIncludeUndef;
 
-  /// Custom assignment operator, to ensure Range gets initialized when
-  /// assigning a constant range lattice element.
-  ValueLatticeElement &operator=(const ValueLatticeElement &Other) {
-    // If we change the state of this from constant range to non constant range,
-    // destroy Range.
-    if (isConstantRange() && !Other.isConstantRange())
-      Range.~ConstantRange();
+    /// Handle repeatedly extending a range by going to overdefined after a
+    /// number of steps.
+    bool CheckWiden;
 
-    // If we change the state of this from a valid ConstVal to another a state
-    // without a valid ConstVal, zero the pointer.
-    if ((isConstant() || isNotConstant()) && !Other.isConstant() &&
-        !Other.isNotConstant())
-      ConstVal = nullptr;
+    /// The number of allowed widening steps (including setting the range
+    /// initially).
+    unsigned MaxWidenSteps;
 
+    MergeOptions() : MergeOptions(false, false) {}
+
+    MergeOptions(bool MayIncludeUndef, bool CheckWiden,
+                 unsigned MaxWidenSteps = 1)
+        : MayIncludeUndef(MayIncludeUndef), CheckWiden(CheckWiden),
+          MaxWidenSteps(MaxWidenSteps) {}
+
+    MergeOptions &setMayIncludeUndef(bool V = true) {
+      MayIncludeUndef = V;
+      return *this;
+    }
+
+    MergeOptions &setCheckWiden(bool V = true) {
+      CheckWiden = V;
+      return *this;
+    }
+
+    MergeOptions &setMaxWidenSteps(unsigned Steps = 1) {
+      CheckWiden = true;
+      MaxWidenSteps = Steps;
+      return *this;
+    }
+  };
+
+  // ConstVal and Range are initialized on-demand.
+  ValueLatticeElement() : Tag(unknown), NumRangeExtensions(0) {}
+
+  ~ValueLatticeElement() { destroy(); }
+
+  ValueLatticeElement(const ValueLatticeElement &Other)
+      : Tag(Other.Tag), NumRangeExtensions(0) {
     switch (Other.Tag) {
     case constantrange:
-      if (!isConstantRange())
-        new (&Range) ConstantRange(Other.Range);
-      else
-        Range = Other.Range;
+    case constantrange_including_undef:
+      new (&Range) ConstantRange(Other.Range);
+      NumRangeExtensions = Other.NumRangeExtensions;
       break;
     case constant:
     case notconstant:
       ConstVal = Other.ConstVal;
       break;
     case overdefined:
-    case undefined:
+    case unknown:
+    case undef:
       break;
     }
-    Tag = Other.Tag;
+  }
+
+  ValueLatticeElement(ValueLatticeElement &&Other)
+      : Tag(Other.Tag), NumRangeExtensions(0) {
+    switch (Other.Tag) {
+    case constantrange:
+    case constantrange_including_undef:
+      new (&Range) ConstantRange(std::move(Other.Range));
+      NumRangeExtensions = Other.NumRangeExtensions;
+      break;
+    case constant:
+    case notconstant:
+      ConstVal = Other.ConstVal;
+      break;
+    case overdefined:
+    case unknown:
+    case undef:
+      break;
+    }
+    Other.Tag = unknown;
+  }
+
+  ValueLatticeElement &operator=(const ValueLatticeElement &Other) {
+    destroy();
+    new (this) ValueLatticeElement(Other);
+    return *this;
+  }
+
+  ValueLatticeElement &operator=(ValueLatticeElement &&Other) {
+    destroy();
+    new (this) ValueLatticeElement(std::move(Other));
     return *this;
   }
 
   static ValueLatticeElement get(Constant *C) {
     ValueLatticeElement Res;
-    if (!isa<UndefValue>(C))
+    if (isa<UndefValue>(C))
+      Res.markUndef();
+    else
       Res.markConstant(C);
     return Res;
   }
   static ValueLatticeElement getNot(Constant *C) {
     ValueLatticeElement Res;
-    if (!isa<UndefValue>(C))
-      Res.markNotConstant(C);
+    assert(!isa<UndefValue>(C) && "!= undef is not supported");
+    Res.markNotConstant(C);
     return Res;
   }
-  static ValueLatticeElement getRange(ConstantRange CR) {
+  static ValueLatticeElement getRange(ConstantRange CR,
+                                      bool MayIncludeUndef = false) {
+    if (CR.isFullSet())
+      return getOverdefined();
+
+    if (CR.isEmptySet()) {
+      ValueLatticeElement Res;
+      if (MayIncludeUndef)
+        Res.markUndef();
+      return Res;
+    }
+
     ValueLatticeElement Res;
-    Res.markConstantRange(std::move(CR));
+    Res.markConstantRange(std::move(CR),
+                          MergeOptions().setMayIncludeUndef(MayIncludeUndef));
     return Res;
   }
   static ValueLatticeElement getOverdefined() {
@@ -139,10 +234,22 @@ public:
     return Res;
   }
 
-  bool isUndefined() const { return Tag == undefined; }
+  bool isUndef() const { return Tag == undef; }
+  bool isUnknown() const { return Tag == unknown; }
+  bool isUnknownOrUndef() const { return Tag == unknown || Tag == undef; }
   bool isConstant() const { return Tag == constant; }
   bool isNotConstant() const { return Tag == notconstant; }
-  bool isConstantRange() const { return Tag == constantrange; }
+  bool isConstantRangeIncludingUndef() const {
+    return Tag == constantrange_including_undef;
+  }
+  /// Returns true if this value is a constant range. Use \p UndefAllowed to
+  /// exclude non-singleton constant ranges that may also be undef. Note that
+  /// this function also returns true if the range may include undef, but only
+  /// contains a single element. In that case, it can be replaced by a constant.
+  bool isConstantRange(bool UndefAllowed = true) const {
+    return Tag == constantrange || (Tag == constantrange_including_undef &&
+                                    (UndefAllowed || Range.isSingleElement()));
+  }
   bool isOverdefined() const { return Tag == overdefined; }
 
   Constant *getConstant() const {
@@ -155,8 +262,12 @@ public:
     return ConstVal;
   }
 
-  const ConstantRange &getConstantRange() const {
-    assert(isConstantRange() &&
+  /// Returns the constant range for this value. Use \p UndefAllowed to exclude
+  /// non-singleton constant ranges that may also be undef. Note that this
+  /// function also returns a range if the range may include undef, but only
+  /// contains a single element. In that case, it can be replaced by a constant.
+  const ConstantRange &getConstantRange(bool UndefAllowed = true) const {
+    assert(isConstantRange(UndefAllowed) &&
            "Cannot get the constant-range of a non-constant-range!");
     return Range;
   }
@@ -170,88 +281,138 @@ public:
     return None;
   }
 
-private:
-  void markOverdefined() {
+  bool markOverdefined() {
     if (isOverdefined())
-      return;
-    if (isConstant() || isNotConstant())
-      ConstVal = nullptr;
-    if (isConstantRange())
-      Range.~ConstantRange();
+      return false;
+    destroy();
     Tag = overdefined;
+    return true;
   }
 
-  void markConstant(Constant *V) {
-    assert(V && "Marking constant with NULL");
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-      markConstantRange(ConstantRange(CI->getValue()));
-      return;
-    }
-    if (isa<UndefValue>(V))
-      return;
+  bool markUndef() {
+    if (isUndef())
+      return false;
 
-    assert((!isConstant() || getConstant() == V) &&
-           "Marking constant with different value");
-    assert(isUndefined());
+    assert(isUnknown());
+    Tag = undef;
+    return true;
+  }
+
+  bool markConstant(Constant *V, bool MayIncludeUndef = false) {
+    if (isa<UndefValue>(V))
+      return markUndef();
+
+    if (isConstant()) {
+      assert(getConstant() == V && "Marking constant with different value");
+      return false;
+    }
+
+    if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
+      return markConstantRange(
+          ConstantRange(CI->getValue()),
+          MergeOptions().setMayIncludeUndef(MayIncludeUndef));
+
+    assert(isUnknown() || isUndef());
     Tag = constant;
     ConstVal = V;
+    return true;
   }
 
-  void markNotConstant(Constant *V) {
+  bool markNotConstant(Constant *V) {
     assert(V && "Marking constant with NULL");
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-      markConstantRange(ConstantRange(CI->getValue() + 1, CI->getValue()));
-      return;
-    }
-    if (isa<UndefValue>(V))
-      return;
+    if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
+      return markConstantRange(
+          ConstantRange(CI->getValue() + 1, CI->getValue()));
 
-    assert((!isConstant() || getConstant() != V) &&
-           "Marking constant !constant with same value");
-    assert((!isNotConstant() || getNotConstant() == V) &&
-           "Marking !constant with different value");
-    assert(isUndefined() || isConstant());
+    if (isa<UndefValue>(V))
+      return false;
+
+    if (isNotConstant()) {
+      assert(getNotConstant() == V && "Marking !constant with different value");
+      return false;
+    }
+
+    assert(isUnknown());
     Tag = notconstant;
     ConstVal = V;
+    return true;
   }
 
-  void markConstantRange(ConstantRange NewR) {
+  /// Mark the object as constant range with \p NewR. If the object is already a
+  /// constant range, nothing changes if the existing range is equal to \p
+  /// NewR and the tag. Otherwise \p NewR must be a superset of the existing
+  /// range or the object must be undef. The tag is set to
+  /// constant_range_including_undef if either the existing value or the new
+  /// range may include undef.
+  bool markConstantRange(ConstantRange NewR,
+                         MergeOptions Opts = MergeOptions()) {
+    assert(!NewR.isEmptySet() && "should only be called for non-empty sets");
+
+    if (NewR.isFullSet())
+      return markOverdefined();
+
+    ValueLatticeElementTy OldTag = Tag;
+    ValueLatticeElementTy NewTag =
+        (isUndef() || isConstantRangeIncludingUndef() || Opts.MayIncludeUndef)
+            ? constantrange_including_undef
+            : constantrange;
     if (isConstantRange()) {
-      if (NewR.isEmptySet())
-        markOverdefined();
-      else {
-        Range = std::move(NewR);
-      }
-      return;
+      Tag = NewTag;
+      if (getConstantRange() == NewR)
+        return Tag != OldTag;
+
+      // Simple form of widening. If a range is extended multiple times, go to
+      // overdefined.
+      if (Opts.CheckWiden && ++NumRangeExtensions > Opts.MaxWidenSteps)
+        return markOverdefined();
+
+      assert(NewR.contains(getConstantRange()) &&
+             "Existing range must be a subset of NewR");
+      Range = std::move(NewR);
+      return true;
     }
 
-    assert(isUndefined());
-    if (NewR.isEmptySet())
-      markOverdefined();
-    else {
-      Tag = constantrange;
-      new (&Range) ConstantRange(std::move(NewR));
-    }
+    assert(isUnknown() || isUndef());
+
+    NumRangeExtensions = 0;
+    Tag = NewTag;
+    new (&Range) ConstantRange(std::move(NewR));
+    return true;
   }
 
-public:
   /// Updates this object to approximate both this object and RHS. Returns
   /// true if this object has been changed.
-  bool mergeIn(const ValueLatticeElement &RHS, const DataLayout &DL) {
-    if (RHS.isUndefined() || isOverdefined())
+  bool mergeIn(const ValueLatticeElement &RHS,
+               MergeOptions Opts = MergeOptions()) {
+    if (RHS.isUnknown() || isOverdefined())
       return false;
     if (RHS.isOverdefined()) {
       markOverdefined();
       return true;
     }
 
-    if (isUndefined()) {
+    if (isUndef()) {
+      assert(!RHS.isUnknown());
+      if (RHS.isUndef())
+        return false;
+      if (RHS.isConstant())
+        return markConstant(RHS.getConstant(), true);
+      if (RHS.isConstantRange())
+        return markConstantRange(RHS.getConstantRange(true),
+                                 Opts.setMayIncludeUndef());
+      return markOverdefined();
+    }
+
+    if (isUnknown()) {
+      assert(!RHS.isUnknown() && "Unknow RHS should be handled earlier");
       *this = RHS;
-      return !RHS.isUndefined();
+      return true;
     }
 
     if (isConstant()) {
       if (RHS.isConstant() && getConstant() == RHS.getConstant())
+        return false;
+      if (RHS.isUndef())
         return false;
       markOverdefined();
       return true;
@@ -264,35 +425,32 @@ public:
       return true;
     }
 
+    auto OldTag = Tag;
     assert(isConstantRange() && "New ValueLattice type?");
+    if (RHS.isUndef()) {
+      Tag = constantrange_including_undef;
+      return OldTag != Tag;
+    }
+
     if (!RHS.isConstantRange()) {
       // We can get here if we've encountered a constantexpr of integer type
       // and merge it with a constantrange.
       markOverdefined();
       return true;
     }
+
     ConstantRange NewR = getConstantRange().unionWith(RHS.getConstantRange());
-    if (NewR.isFullSet())
-      markOverdefined();
-    else if (NewR == getConstantRange())
-      return false;
-    else
-      markConstantRange(std::move(NewR));
-    return true;
+    return markConstantRange(
+        std::move(NewR),
+        Opts.setMayIncludeUndef(RHS.isConstantRangeIncludingUndef()));
   }
 
-  ConstantInt *getConstantInt() const {
-    assert(isConstant() && isa<ConstantInt>(getConstant()) &&
-           "No integer constant");
-    return cast<ConstantInt>(getConstant());
-  }
-
-  /// Compares this symbolic value with Other using Pred and returns either
+  // Compares this symbolic value with Other using Pred and returns either
   /// true, false or undef constants, or nullptr if the comparison cannot be
   /// evaluated.
   Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
                        const ValueLatticeElement &Other) const {
-    if (isUndefined() || Other.isUndefined())
+    if (isUnknownOrUndef() || Other.isUnknownOrUndef())
       return UndefValue::get(Ty);
 
     if (isConstant() && Other.isConstant())
@@ -314,9 +472,14 @@ public:
 
     return nullptr;
   }
+
+  unsigned getNumRangeExtensions() const { return NumRangeExtensions; }
+  void setNumRangeExtensions(unsigned N) { NumRangeExtensions = N; }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val);
+static_assert(sizeof(ValueLatticeElement) <= 40,
+              "size of ValueLatticeElement changed unexpectedly");
 
+raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val);
 } // end namespace llvm
 #endif

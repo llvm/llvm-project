@@ -25,7 +25,7 @@ config.name = 'Clang'
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = ['.c', '.cpp', '.cppm', '.m', '.mm', '.cu',
+config.suffixes = ['.c', '.cpp', '.i', '.cppm', '.m', '.mm', '.cu',
                    '.ll', '.cl', '.s', '.S', '.modulemap', '.test', '.rs', '.ifs']
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
@@ -46,6 +46,8 @@ llvm_config.use_clang()
 config.substitutions.append(
     ('%src_include_dir', config.clang_src_dir + '/include'))
 
+config.substitutions.append(
+    ('%target_triple', config.target_triple))
 
 # Propagate path to symbolizer for ASan/MSan.
 llvm_config.with_system_environment(
@@ -81,7 +83,7 @@ if config.clang_staticanalyzer:
         config.test_source_root, "Analysis", "check-analyzer-fixit.py")
     config.substitutions.append(
         ('%check_analyzer_fixit',
-         '%s %s' % (config.python_executable, check_analyzer_fixit_path)))
+         '"%s" %s' % (config.python_executable, check_analyzer_fixit_path)))
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
@@ -178,7 +180,7 @@ def calculate_arch_features(arch_string):
 llvm_config.feature_config(
     [('--assertion-mode', {'ON': 'asserts'}),
      ('--cxxflags', {r'-D_GLIBCXX_DEBUG\b': 'libstdcxx-safe-mode'}),
-        ('--targets-built', calculate_arch_features)
+     ('--targets-built', calculate_arch_features),
      ])
 
 if lit.util.which('xmllint'):
@@ -205,3 +207,7 @@ if os.path.exists('/etc/gentoo-release'):
 
 if config.enable_shared:
     config.available_features.add("enable_shared")
+
+# Add a vendor-specific feature.
+if config.clang_vendor_uti:
+    config.available_features.add('clang-vendor=' + config.clang_vendor_uti)

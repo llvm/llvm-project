@@ -8,19 +8,22 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @postincConstIV(i8* %base, i32 %limit) nounwind {
 ; CHECK-LABEL: @postincConstIV(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[LIMIT:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[LIMIT:%.*]], 0
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[LIMIT]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[SMAX]], 1
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[PREADR:%.*]] = getelementptr i8, i8* [[BASE:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[PREADR]]
+; CHECK-NEXT:    store i8 0, i8* [[PREADR]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[POSTADR:%.*]] = getelementptr i8, i8* [[BASE]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 0, i8* [[POSTADR]]
+; CHECK-NEXT:    store i8 0, i8* [[POSTADR]], align 1
 ; CHECK-NEXT:    [[POSTADRNSW:%.*]] = getelementptr inbounds i8, i8* [[BASE]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 0, i8* [[POSTADRNSW]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[TMP0]], [[INDVARS_IV]]
-; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    store i8 0, i8* [[POSTADRNSW]], align 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       return:
@@ -65,12 +68,12 @@ define void @postincVarIV(i8* %base, i32 %init, i32 %limit) nounwind {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[PREADR:%.*]] = getelementptr i8, i8* [[BASE:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[PREADR]]
+; CHECK-NEXT:    store i8 0, i8* [[PREADR]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[POSTADR:%.*]] = getelementptr i8, i8* [[BASE]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 0, i8* [[POSTADR]]
+; CHECK-NEXT:    store i8 0, i8* [[POSTADR]], align 1
 ; CHECK-NEXT:    [[POSTADRNSW:%.*]] = getelementptr i8, i8* [[BASE]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 0, i8* [[POSTADRNSW]]
+; CHECK-NEXT:    store i8 0, i8* [[POSTADRNSW]], align 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -113,14 +116,16 @@ define void @nestedIV(i8* %address, i32 %limit) nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LIMITDEC:%.*]] = add i32 [[LIMIT:%.*]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[LIMITDEC]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[LIMIT]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[LIMIT]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP1]], i32 [[LIMIT]], i32 1
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[OUTERLOOP:%.*]]
 ; CHECK:       outerloop:
 ; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT2:%.*]], [[OUTERMERGE:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[INNERCOUNT:%.*]] = phi i32 [ [[INNERCOUNT_MERGE:%.*]], [[OUTERMERGE]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[INDVARS_IV1]], -1
 ; CHECK-NEXT:    [[ADR1:%.*]] = getelementptr i8, i8* [[ADDRESS:%.*]], i64 [[TMP2]]
-; CHECK-NEXT:    store i8 0, i8* [[ADR1]]
+; CHECK-NEXT:    store i8 0, i8* [[ADR1]], align 1
 ; CHECK-NEXT:    br label [[INNERPREHEADER:%.*]]
 ; CHECK:       innerpreheader:
 ; CHECK-NEXT:    [[INNERPRECMP:%.*]] = icmp sgt i32 [[LIMITDEC]], [[INNERCOUNT]]
@@ -132,9 +137,9 @@ define void @nestedIV(i8* %address, i32 %limit) nounwind {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP3]], [[INNERLOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[INNERLOOP]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ADR2:%.*]] = getelementptr i8, i8* [[ADDRESS]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[ADR2]]
+; CHECK-NEXT:    store i8 0, i8* [[ADR2]], align 1
 ; CHECK-NEXT:    [[ADR3:%.*]] = getelementptr i8, i8* [[ADDRESS]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 0, i8* [[ADR3]]
+; CHECK-NEXT:    store i8 0, i8* [[ADR3]], align 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNERLOOP]], label [[INNEREXIT:%.*]]
 ; CHECK:       innerexit:
@@ -144,13 +149,13 @@ define void @nestedIV(i8* %address, i32 %limit) nounwind {
 ; CHECK:       outermerge:
 ; CHECK-NEXT:    [[INNERCOUNT_MERGE]] = phi i32 [ [[TMP4]], [[INNEREXIT]] ], [ [[INNERCOUNT]], [[INNERPREHEADER]] ]
 ; CHECK-NEXT:    [[ADR4:%.*]] = getelementptr i8, i8* [[ADDRESS]], i64 [[INDVARS_IV1]]
-; CHECK-NEXT:    store i8 0, i8* [[ADR4]]
+; CHECK-NEXT:    store i8 0, i8* [[ADR4]], align 1
 ; CHECK-NEXT:    [[OFS5:%.*]] = sext i32 [[INNERCOUNT_MERGE]] to i64
 ; CHECK-NEXT:    [[ADR5:%.*]] = getelementptr i8, i8* [[ADDRESS]], i64 [[OFS5]]
-; CHECK-NEXT:    store i8 0, i8* [[ADR5]]
+; CHECK-NEXT:    store i8 0, i8* [[ADR5]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nuw nsw i64 [[INDVARS_IV1]], 1
-; CHECK-NEXT:    [[TMP47:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT2]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP47]], label [[OUTERLOOP]], label [[RETURN:%.*]]
+; CHECK-NEXT:    [[EXITCOND4:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT2]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND4]], label [[OUTERLOOP]], label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
 ;

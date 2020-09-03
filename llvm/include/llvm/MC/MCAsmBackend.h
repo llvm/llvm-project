@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFragment.h"
@@ -24,15 +23,14 @@ class MCAsmLayout;
 class MCAssembler;
 class MCCFIInstruction;
 struct MCFixupKindInfo;
-class MCFragment;
 class MCInst;
 class MCObjectStreamer;
 class MCObjectTargetWriter;
 class MCObjectWriter;
-class MCRelaxableFragment;
 class MCSubtargetInfo;
 class MCValue;
 class raw_pwrite_stream;
+class StringRef;
 
 /// Generic interface to target specific assembler backends.
 class MCAsmBackend {
@@ -46,11 +44,19 @@ public:
 
   const support::endianness Endian;
 
+  /// Return true if this target might automatically pad instructions and thus
+  /// need to emit padding enable/disable directives around sensative code.
+  virtual bool allowAutoPadding() const { return false; }
+  /// Return true if this target allows an unrelaxable instruction to be
+  /// emitted into RelaxableFragment and then we can increase its size in a
+  /// tricky way for optimization.
+  virtual bool allowEnhancedRelaxation() const { return false; }
+
   /// Give the target a chance to manipulate state related to instruction
-  /// alignment (e.g. padding for optimization) before and after actually
-  /// emitting the instruction.
-  virtual void alignBranchesBegin(MCObjectStreamer &OS, const MCInst &Inst) {}
-  virtual void alignBranchesEnd(MCObjectStreamer &OS, const MCInst &Inst) {}
+  /// alignment (e.g. padding for optimization), instruction relaxablility, etc.
+  /// before and after actually emitting the instruction.
+  virtual void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst) {}
+  virtual void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst) {}
 
   /// lifetime management
   virtual void reset() {}
@@ -104,6 +110,14 @@ public:
     return false;
   }
 
+  virtual bool evaluateTargetFixup(const MCAssembler &Asm,
+                                   const MCAsmLayout &Layout,
+                                   const MCFixup &Fixup, const MCFragment *DF,
+                                   const MCValue &Target, uint64_t &Value,
+                                   bool &WasForced) {
+    llvm_unreachable("Need to implement hook if target has custom fixups");
+  }
+
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
   /// appropriate. Errors (such as an out of range fixup value) should be
@@ -147,12 +161,11 @@ public:
 
   /// Relax the instruction in the given fragment to the next wider instruction.
   ///
-  /// \param Inst The instruction to relax, which may be the same as the
-  /// output.
+  /// \param [out] Inst The instruction to relax, which is also the relaxed
+  /// instruction.
   /// \param STI the subtarget information for the associated instruction.
-  /// \param [out] Res On return, the relaxed instruction.
-  virtual void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                                MCInst &Res) const = 0;
+  virtual void relaxInstruction(MCInst &Inst,
+                                const MCSubtargetInfo &STI) const {};
 
   /// @}
 

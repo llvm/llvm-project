@@ -2,6 +2,7 @@
 
 ; RUN: opt < %s -data-layout="e-p:32:32" -debugify -sccp -S | FileCheck %s
 ; RUN: opt < %s -data-layout="E-p:32:32" -debugify -sccp -S | FileCheck %s
+; RUN: opt < %s -data-layout="E-p:32:32" -debugify -ipsccp -S | FileCheck %s
 
 @X = constant i32 42		; <i32*> [#uses=1]
 @Y = constant [2 x { i32, float }] [ { i32, float } { i32 12, float 1.000000e+00 }, { i32, float } { i32 37, float 0x3FF3B2FEC0000000 } ]		; <[2 x { i32, float }]*> [#uses=2]
@@ -43,4 +44,3 @@ define i8 @test4() {
 	%B = load i8, i8* %A
 	ret i8 %B
 }
-

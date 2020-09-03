@@ -40,6 +40,10 @@ Or for Intel syntax:
 
   $ clang foo.c -O2 -target x86_64-unknown-unknown -mllvm -x86-asm-syntax=intel -S -o - | llvm-mca -mcpu=btver2
 
+(:program:`llvm-mca` detects Intel syntax by the presence of an `.intel_syntax`
+directive at the beginning of the input.  By default its output syntax matches
+that of its input.)
+
 Scheduling models are not just used to compute instruction latencies and
 throughput, but also to understand what processor resources are available
 and how to simulate them.
@@ -384,10 +388,10 @@ IPC is computed dividing the total number of simulated instructions by the total
 number of cycles.
 
 Field *Block RThroughput* is the reciprocal of the block throughput. Block
-throuhgput is a theoretical quantity computed as the maximum number of blocks
+throughput is a theoretical quantity computed as the maximum number of blocks
 (i.e. iterations) that can be executed per simulated clock cycle in the absence
-of loop carried dependencies. Block throughput is is superiorly
-limited by the dispatch rate, and the availability of hardware resources.
+of loop carried dependencies. Block throughput is superiorly limited by the
+dispatch rate, and the availability of hardware resources.
 
 In the absence of loop-carried data dependencies, the observed IPC tends to a
 theoretical maximum which can be computed by dividing the number of instructions

@@ -45,6 +45,7 @@
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -207,7 +208,7 @@ PreservedAnalyses SafepointIRVerifierPass::run(Function &F,
   Verify(F, DT, CD);
   return PreservedAnalyses::all();
 }
-}
+} // namespace llvm
 
 namespace {
 
@@ -782,7 +783,7 @@ void GCPtrTracker::transferBlock(const BasicBlock *BB, BasicBlockState &BBS,
 
 void GCPtrTracker::transferInstruction(const Instruction &I, bool &Cleared,
                                        AvailableValueSet &Available) {
-  if (isStatepoint(I)) {
+  if (isa<GCStatepointInst>(I)) {
     Cleared = true;
     Available.clear();
   } else if (containsGCPtrType(I.getType()))

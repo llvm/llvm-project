@@ -308,7 +308,7 @@ public:
   /// read.
   virtual void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
                           Optional<FileEntryRef> File,
-                          SrcMgr::CharacteristicKind FileType) {}
+                          SrcMgr::CharacteristicKind FileType);
 
   /// Hook called when a source range is skipped.
   /// \param Range The SourceRange that was skipped. The range begins at the
@@ -374,13 +374,14 @@ public:
 
 /// Simple wrapper class for chaining callbacks.
 class PPChainedCallbacks : public PPCallbacks {
-  virtual void anchor();
   std::unique_ptr<PPCallbacks> First, Second;
 
 public:
   PPChainedCallbacks(std::unique_ptr<PPCallbacks> _First,
                      std::unique_ptr<PPCallbacks> _Second)
     : First(std::move(_First)), Second(std::move(_Second)) {}
+
+  ~PPChainedCallbacks() override;
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -490,10 +491,7 @@ public:
 
   void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
                   Optional<FileEntryRef> File,
-                  SrcMgr::CharacteristicKind FileType) override {
-    First->HasInclude(Loc, FileName, IsAngled, File, FileType);
-    Second->HasInclude(Loc, FileName, IsAngled, File, FileType);
-  }
+                  SrcMgr::CharacteristicKind FileType) override;
 
   void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *Name,
                              SourceLocation StateLoc, unsigned State) override {

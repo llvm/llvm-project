@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExprSequence.h"
+#include "clang/AST/ParentMapContext.h"
 
 namespace clang {
 namespace tidy {
@@ -28,7 +29,8 @@ static SmallVector<const Stmt *, 1> getParentStmts(const Stmt *S,
                                                    ASTContext *Context) {
   SmallVector<const Stmt *, 1> Result;
 
-  ASTContext::DynTypedNodeList Parents = Context->getParents(*S);
+  TraversalKindScope RAII(*Context, ast_type_traits::TK_AsIs);
+  DynTypedNodeList Parents = Context->getParents(*S);
 
   SmallVector<ast_type_traits::DynTypedNode, 1> NodesToProcess(Parents.begin(),
                                                                Parents.end());

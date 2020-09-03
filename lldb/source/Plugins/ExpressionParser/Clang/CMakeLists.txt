@@ -2,7 +2,7 @@ if(NOT LLDB_BUILT_STANDALONE)
   set(tablegen_deps intrinsics_gen)
 endif()
 
-add_lldb_library(lldbPluginExpressionParserClang PLUGIN
+add_lldb_library(lldbPluginExpressionParserClang
   ASTResultSynthesizer.cpp
   ASTStructExtractor.cpp
   ASTUtils.cpp
@@ -26,6 +26,7 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
   CxxModuleHandler.cpp
   IRForTarget.cpp
   IRDynamicChecks.cpp
+  NameSearchContext.cpp
 
   DEPENDS
   ${tablegen_deps}
@@ -41,6 +42,7 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
     lldbPluginCPlusPlusLanguage
     lldbPluginCPPRuntime
     lldbPluginObjCRuntime
+    lldbPluginRenderScriptRuntime
     lldbPluginTypeSystemClang
   CLANG_LIBS
     clangAST

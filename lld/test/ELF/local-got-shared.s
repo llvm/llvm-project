@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 // RUN: ld.lld %t.o -o %t -shared
-// RUN: llvm-readobj -S -r -d %t | FileCheck %s
+// RUN: llvm-readobj -S -d -r %t | FileCheck %s
 // RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=DISASM %s
 
 bar:
@@ -13,10 +13,10 @@ foo:
         nop
 
 // 0x22E0 - 0x1228 - 5 = 4275
-// DISASM:      bar:
-// DISASM-NEXT:   1228:       callq 4275
+// DISASM:      <bar>:
+// DISASM-NEXT:   1228:       callq 0x22e0
 
-// DISASM:      foo:
+// DISASM:      <foo>:
 // DISASM-NEXT:   122d:       nop
 
 // CHECK:      Name: .got
@@ -29,9 +29,10 @@ foo:
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 8
 
+// CHECK:      0x000000006FFFFFF9 RELACOUNT            1
+
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
 // CHECK-NEXT:     0x22E0 R_X86_64_RELATIVE - 0x122D
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
-// CHECK:      0x000000006FFFFFF9 RELACOUNT            1

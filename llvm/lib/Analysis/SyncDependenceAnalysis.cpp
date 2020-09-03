@@ -244,12 +244,12 @@ struct DivergencePropagator {
     );
 
     auto ItBeginRPO = FuncRPOT.begin();
+    auto ItEndRPO = FuncRPOT.end();
 
     // skip until term (TODO RPOT won't let us start at @term directly)
-    for (; *ItBeginRPO != &RootBlock; ++ItBeginRPO) {}
-
-    auto ItEndRPO = FuncRPOT.end();
-    assert(ItBeginRPO != ItEndRPO);
+    for (; *ItBeginRPO != &RootBlock; ++ItBeginRPO) {
+      assert(ItBeginRPO != ItEndRPO && "Unable to find RootBlock");
+    }
 
     // propagate definitions at the immediate successors of the node in RPO
     auto ItBlockRPO = ItBeginRPO;
@@ -369,7 +369,7 @@ SyncDependenceAnalysis::join_blocks(const Instruction &Term) {
   // compute all join points
   DivergencePropagator Propagator{FuncRPOT, DT, PDT, LI};
   const auto &TermBlock = *Term.getParent();
-  auto JoinBlocks = Propagator.computeJoinPoints<succ_const_range>(
+  auto JoinBlocks = Propagator.computeJoinPoints<const_succ_range>(
       TermBlock, successors(Term.getParent()), LI.getLoopFor(&TermBlock));
 
   auto ItInserted = CachedBranchJoins.emplace(&Term, std::move(JoinBlocks));

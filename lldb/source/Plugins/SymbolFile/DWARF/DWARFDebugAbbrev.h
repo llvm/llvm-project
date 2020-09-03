@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFDebugAbbrev_h_
-#define SymbolFileDWARF_DWARFDebugAbbrev_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGABBREV_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGABBREV_H
 
 #include <list>
 #include <map>
@@ -78,4 +78,4 @@ protected:
   mutable DWARFAbbreviationDeclarationCollMapConstIter m_prev_abbr_offset_pos;
 };
 
-#endif // SymbolFileDWARF_DWARFDebugAbbrev_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGABBREV_H

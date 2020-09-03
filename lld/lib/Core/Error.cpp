@@ -62,7 +62,7 @@ public:
 
   int add(std::string msg) {
     std::lock_guard<std::recursive_mutex> lock(_mutex);
-    // Value zero is always the successs value.
+    // Value zero is always the success value.
     if (_messages.empty())
       _messages.push_back("Success");
     _messages.push_back(msg);
@@ -78,7 +78,8 @@ private:
 static dynamic_error_category categorySingleton;
 
 std::error_code make_dynamic_error_code(StringRef msg) {
-  return std::error_code(categorySingleton.add(msg), categorySingleton);
+  return std::error_code(categorySingleton.add(std::string(msg)),
+                         categorySingleton);
 }
 
 char GenericError::ID = 0;

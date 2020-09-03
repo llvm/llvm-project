@@ -73,7 +73,7 @@ CppModuleConfiguration::CppModuleConfiguration(
     llvm::SmallString<256> resource_dir;
     llvm::sys::path::append(resource_dir, GetClangResourceDir().GetPath(),
                             "include");
-    m_resource_inc = resource_dir.str();
+    m_resource_inc = std::string(resource_dir.str());
 
     // This order matches the way Clang orders these directories.
     m_include_dirs = {m_std_inc.Get(), m_resource_inc, m_c_inc.Get()};

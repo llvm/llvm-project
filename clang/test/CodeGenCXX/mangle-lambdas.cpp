@@ -193,9 +193,9 @@ namespace PR12123 {
   void B::h() { f(); j(); }
 }
 
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %"struct.PR12123::A"* @_ZZN7PR121231B1fERKSt9type_infoEd_NKUlvE_clEv
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %"struct.PR12123::A"* @_ZZN7PR121231B1jEbEd_NKUlvE_clEv
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %"struct.PR12123::C"* @_ZZN7PR121231B1jEbEd_NKUlvE0_clEv
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %"struct.PR12123::A"* @_ZZN7PR121231B1fERKSt9type_infoEd_NKUlvE_clEv
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %"struct.PR12123::A"* @_ZZN7PR121231B1jEbEd_NKUlvE_clEv
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %"struct.PR12123::C"* @_ZZN7PR121231B1jEbEd_NKUlvE0_clEv
 
 // CHECK-LABEL: define {{.*}} @_Z{{[0-9]*}}testVarargsLambdaNumberingv(
 inline int testVarargsLambdaNumbering() {

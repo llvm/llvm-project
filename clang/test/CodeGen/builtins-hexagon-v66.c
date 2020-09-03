@@ -33,7 +33,7 @@ typedef long HEXAGON_Vect1024 __attribute__((__vector_size__(128)))
   __attribute__((aligned(128)));
 
 // CHECK-LABEL: @test5
-// CHECK: call <16 x i32> @llvm.hexagon.V6.vaddcarrysat(<16 x i32> %{{[0-9]+}}, <16 x i32> %{{[0-9]+}}, <512 x i1> %{{[0-9]+}})
+// CHECK: call <16 x i32> @llvm.hexagon.V6.vaddcarrysat(<16 x i32> %{{[0-9]+}}, <16 x i32> %{{[0-9]+}}, <64 x i1> %{{[0-9]+}})
 HEXAGON_Vect512 test5(void *in, void *out) {
   HEXAGON_Vect512 v1, v2;
   HEXAGON_Vect512 *p;

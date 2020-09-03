@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --only-section=.test %t %t2
 # RUN: llvm-objcopy -j .test %t %t3
 # RUN: llvm-readobj --file-headers --sections %t2 | FileCheck %s

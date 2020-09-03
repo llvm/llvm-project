@@ -16,7 +16,7 @@
 
 // CHECK:       define {{.*}}void [[FOO:@.+]]()
 
-void foo() {}
+void foo() { extern void mayThrow(); mayThrow(); }
 
 // CHECK-LABEL: @main
 // TERM_DEBUG-LABEL: @main

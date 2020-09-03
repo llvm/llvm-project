@@ -45,7 +45,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips"
 
-extern "C" void LLVMInitializeMipsTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   // Register the target.
   RegisterTargetMachine<MipsebTargetMachine> X(getTheMipsTarget());
   RegisterTargetMachine<MipselTargetMachine> Y(getTheMipselTarget());
@@ -131,6 +131,9 @@ MipsTargetMachine::MipsTargetMachine(const Target &T, const Triple &TT,
                       MaybeAlign(Options.StackAlignmentOverride)) {
   Subtarget = &DefaultSubtarget;
   initAsmInfo();
+
+  // Mips supports the debug entry values.
+  setSupportsDebugEntryValues(true);
 }
 
 MipsTargetMachine::~MipsTargetMachine() = default;

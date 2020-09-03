@@ -540,6 +540,12 @@ MachOLinkingContext::searchDirForLibrary(StringRef path,
     return llvm::None;
   }
 
+  // Search for stub library
+  fullPath.assign(path);
+  llvm::sys::path::append(fullPath, Twine("lib") + libName + ".tbd");
+  if (fileExists(fullPath))
+    return fullPath.str().copy(_allocator);
+
   // Search for dynamic library
   fullPath.assign(path);
   llvm::sys::path::append(fullPath, Twine("lib") + libName + ".dylib");
@@ -604,7 +610,7 @@ bool MachOLinkingContext::validateImpl() {
   }
 
   // If -exported_symbols_list used, all exported symbols must be defined.
-  if (_exportMode == ExportMode::whiteList) {
+  if (_exportMode == ExportMode::exported) {
     for (const auto &symbol : _exportedSymbols)
       addInitialUndefinedSymbol(symbol.getKey());
   }
@@ -618,7 +624,7 @@ bool MachOLinkingContext::validateImpl() {
     if (needsStubsPass())
       addDeadStripRoot(binderSymbolName());
     // If using -exported_symbols_list, make all exported symbols live.
-    if (_exportMode == ExportMode::whiteList) {
+    if (_exportMode == ExportMode::exported) {
       setGlobalsAreDeadStripRoots(false);
       for (const auto &symbol : _exportedSymbols)
         addDeadStripRoot(symbol.getKey());
@@ -852,9 +858,9 @@ bool MachOLinkingContext::exportSymbolNamed(StringRef sym) const {
   case ExportMode::globals:
     llvm_unreachable("exportSymbolNamed() should not be called in this mode");
     break;
-  case ExportMode::whiteList:
+  case ExportMode::exported:
     return _exportedSymbols.count(sym);
-  case ExportMode::blackList:
+  case ExportMode::unexported:
     return !_exportedSymbols.count(sym);
   }
   llvm_unreachable("_exportMode unknown enum value");
@@ -863,11 +869,11 @@ bool MachOLinkingContext::exportSymbolNamed(StringRef sym) const {
 std::string MachOLinkingContext::demangle(StringRef symbolName) const {
   // Only try to demangle symbols if -demangle on command line
   if (!demangleSymbols())
-    return symbolName;
+    return std::string(symbolName);
 
   // Only try to demangle symbols that look like C++ symbols
   if (!symbolName.startswith("__Z"))
-    return symbolName;
+    return std::string(symbolName);
 
   SmallString<256> symBuff;
   StringRef nullTermSym = Twine(symbolName).toNullTerminatedStringRef(symBuff);
@@ -882,7 +888,7 @@ std::string MachOLinkingContext::demangle(StringRef symbolName) const {
     return result;
   }
 
-  return symbolName;
+  return std::string(symbolName);
 }
 
 static void addDependencyInfoHelper(llvm::raw_fd_ostream *DepInfo,

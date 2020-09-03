@@ -5,20 +5,12 @@
 ; This should become a single funnel shift through a combination
 ; of aggressive-instcombine, simplifycfg, and instcombine.
 ; https://bugs.llvm.org/show_bug.cgi?id=34924
-; These are equivalent, but the value name with the new-pm shows a bug -
-; this code should not have been converted to a speculative select with
-; an intermediate transform.
 
 define i32 @rotl(i32 %a, i32 %b) {
-; OLDPM-LABEL: @rotl(
-; OLDPM-NEXT:  entry:
-; OLDPM-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 [[A]], i32 [[B:%.*]])
-; OLDPM-NEXT:    ret i32 [[TMP0]]
-;
-; NEWPM-LABEL: @rotl(
-; NEWPM-NEXT:  entry:
-; NEWPM-NEXT:    [[SPEC_SELECT:%.*]] = tail call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 [[A]], i32 [[B:%.*]])
-; NEWPM-NEXT:    ret i32 [[SPEC_SELECT]]
+; ANY-LABEL: @rotl(
+; ANY-NEXT:  entry:
+; ANY-NEXT:    [[COND:%.*]] = tail call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 [[A]], i32 [[B:%.*]])
+; ANY-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %cmp = icmp eq i32 %b, 0
@@ -35,4 +27,3 @@ end:
   %cond = phi i32 [ %or, %rotbb ], [ %a, %entry ]
   ret i32 %cond
 }
-

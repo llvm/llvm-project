@@ -73,3 +73,11 @@ namespace dr948 { // dr948: 3.7
   }
 #endif
 }
+
+namespace dr974 { // dr974: yes
+#if __cplusplus >= 201103L
+  void test() {
+    auto lam = [](int x = 42) { return x; };
+  }
+#endif
+}

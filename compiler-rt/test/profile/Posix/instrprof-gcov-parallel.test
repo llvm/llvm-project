@@ -1,0 +1,16 @@
+RUN: mkdir -p %t.d
+RUN: cd %t.d
+
+RUN: %clang -o %t.driver %S/../Inputs/instrprof-gcov-parallel.driver.c
+RUN: %clang --coverage -o %t.target %S/../Inputs/instrprof-gcov-parallel.target.c
+RUN: test -f instrprof-gcov-parallel.target.gcno
+
+RUN: rm -f instrprof-gcov-parallel.target.gcda
+RUN: %run %t.driver %t.target
+RUN: llvm-cov gcov instrprof-gcov-parallel.target.gcda
+RUN: FileCheck --input-file instrprof-gcov-parallel.target.c.gcov %s
+
+# Test if the .gcda file is correctly created from one of child processes
+# and counters of all processes are recorded correctly.
+# 707 = CHILDREN * COUNT
+CHECK: 707: {{[0-9]+}}: aaa++;

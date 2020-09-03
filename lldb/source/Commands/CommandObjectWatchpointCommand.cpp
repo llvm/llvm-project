@@ -1,4 +1,4 @@
-//===-- CommandObjectWatchpointCommand.cpp ----------------------*- C++ -*-===//
+//===-- CommandObjectWatchpointCommand.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,7 +39,7 @@ static constexpr OptionEnumValueElement g_script_option_enumeration[] = {
     {
         eScriptLanguageLua,
         "lua",
-        "Commands are in the Python language.",
+        "Commands are in the Lua language.",
     },
     {
         eSortOrderByName,
@@ -243,7 +243,6 @@ are no syntax errors may indicate that a function was declared but never called.
     m_interpreter.GetLLDBCommandsFromIOHandler(
         "> ",        // Prompt
         *this,       // IOHandlerDelegate
-        true,        // Run IOHandler in async mode
         wp_options); // Baton for the "io_handler" that will be passed back into
                      // our IOHandlerDelegate functions
   }
@@ -283,12 +282,12 @@ are no syntax errors may indicate that a function was declared but never called.
       ExecutionContext exe_ctx(context->exe_ctx_ref);
       Target *target = exe_ctx.GetTargetPtr();
       if (target) {
-        CommandReturnObject result;
         Debugger &debugger = target->GetDebugger();
+        CommandReturnObject result(debugger.GetUseColor());
+
         // Rig up the results secondary output stream to the debugger's, so the
         // output will come out synchronously if the debugger is set up that
         // way.
-
         StreamSP output_stream(debugger.GetAsyncOutputStream());
         StreamSP error_stream(debugger.GetAsyncErrorStream());
         result.SetImmediateOutputStream(output_stream);
@@ -328,7 +327,7 @@ are no syntax errors may indicate that a function was declared but never called.
       switch (short_option) {
       case 'o':
         m_use_one_liner = true;
-        m_one_liner = option_arg;
+        m_one_liner = std::string(option_arg);
         break;
 
       case 's':
@@ -360,7 +359,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
       case 'F':
         m_use_one_liner = false;
-        m_function_name.assign(option_arg);
+        m_function_name.assign(std::string(option_arg));
         break;
 
       default:

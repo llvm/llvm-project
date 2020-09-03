@@ -16,6 +16,7 @@
 
 using ::testing::_;
 using ::testing::AllOf;
+using ::testing::ElementsAre;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
@@ -91,6 +92,20 @@ Predicate:       0
 Object:
   ID:              6512AEC512EA3A2D
 ...
+--- !Cmd
+Directory:       'testdir'
+CommandLine:
+  - 'cmd1'
+  - 'cmd2'
+...
+--- !Source
+URI:             'file:///path/source1.cpp'
+Flags:           1
+Digest:          EED8F5EAF25C453C
+DirectIncludes:
+  - 'file:///path/inc1.h'
+  - 'file:///path/inc2.h'
+...
 )";
 
 MATCHER_P(ID, I, "") { return arg.ID == cantFail(SymbolID::fromStr(I)); }
@@ -104,9 +119,6 @@ TEST(SerializationTest, NoCrashOnEmptyYAML) {
 }
 
 TEST(SerializationTest, YAMLConversions) {
-  auto In = readIndexFile(YAML);
-  EXPECT_TRUE(bool(In)) << In.takeError();
-
   auto ParsedYAML = readIndexFile(YAML);
   ASSERT_TRUE(bool(ParsedYAML)) << ParsedYAML.takeError();
   ASSERT_TRUE(bool(ParsedYAML->Symbols));
@@ -155,6 +167,21 @@ TEST(SerializationTest, YAMLConversions) {
   EXPECT_THAT(
       *ParsedYAML->Relations,
       UnorderedElementsAre(Relation{Base, RelationKind::BaseOf, Derived}));
+
+  ASSERT_TRUE(bool(ParsedYAML->Cmd));
+  auto &Cmd = *ParsedYAML->Cmd;
+  ASSERT_EQ(Cmd.Directory, "testdir");
+  EXPECT_THAT(Cmd.CommandLine, ElementsAre("cmd1", "cmd2"));
+
+  ASSERT_TRUE(bool(ParsedYAML->Sources));
+  const auto *URI = "file:///path/source1.cpp";
+  ASSERT_TRUE(ParsedYAML->Sources->count(URI));
+  auto IGNDeserialized = ParsedYAML->Sources->lookup(URI);
+  EXPECT_EQ(llvm::toHex(IGNDeserialized.Digest), "EED8F5EAF25C453C");
+  EXPECT_THAT(IGNDeserialized.DirectIncludes,
+              ElementsAre("file:///path/inc1.h", "file:///path/inc2.h"));
+  EXPECT_EQ(IGNDeserialized.URI, URI);
+  EXPECT_EQ(IGNDeserialized.Flags, IncludeGraphNode::SourceFlag(1));
 }
 
 std::vector<std::string> YAMLFromSymbols(const SymbolSlab &Slab) {

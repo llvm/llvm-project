@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-// UNSUPPORTED: c++98, c++03, c++11
+// UNSUPPORTED: c++03, c++11
 
-// FLAKY_TEST.
+// shared_timed_mutex was introduced in macosx10.12
+// UNSUPPORTED: with_system_cxx_lib=macosx10.11
+// UNSUPPORTED: with_system_cxx_lib=macosx10.10
+// UNSUPPORTED: with_system_cxx_lib=macosx10.9
 
 // <shared_mutex>
 
@@ -33,59 +36,68 @@ typedef Clock::duration duration;
 typedef std::chrono::milliseconds ms;
 typedef std::chrono::nanoseconds ns;
 
+std::atomic<unsigned> countDown;
+time_point readerStart; // Protected by the above mutex 'm'
+time_point writerStart; // Protected by the above mutex 'm'
 
 ms WaitTime = ms(250);
 
-// Thread sanitizer causes more overhead and will sometimes cause this test
-// to fail. To prevent this we give Thread sanitizer more time to complete the
-// test.
-#if !defined(TEST_HAS_SANITIZERS)
-ms Tolerance = ms(50);
-#else
-ms Tolerance = ms(50 * 5);
-#endif
-
-
-void f()
-{
-    time_point t0 = Clock::now();
-    m.lock_shared();
-    time_point t1 = Clock::now();
-    m.unlock_shared();
-    ns d = t1 - t0 - WaitTime;
-    assert(d < Tolerance);  // within tolerance
+void readerMustWait() {
+  --countDown;
+  m.lock_shared();
+  time_point t1 = Clock::now();
+  time_point t0 = readerStart;
+  m.unlock_shared();
+  assert(t0.time_since_epoch() > ms(0));
+  assert(t1 - t0 >= WaitTime);
 }
 
-void g()
-{
-    time_point t0 = Clock::now();
-    m.lock_shared();
-    time_point t1 = Clock::now();
-    m.unlock_shared();
-    ns d = t1 - t0;
-    assert(d < Tolerance);  // within tolerance
+void reader() {
+  --countDown;
+  m.lock_shared();
+  m.unlock_shared();
 }
 
+void writerMustWait() {
+  --countDown;
+  m.lock();
+  time_point t1 = Clock::now();
+  time_point t0 = writerStart;
+  m.unlock();
+  assert(t0.time_since_epoch() > ms(0));
+  assert(t1 - t0 >= WaitTime);
+}
 
 int main(int, char**)
 {
-    m.lock();
-    std::vector<std::thread> v;
-    for (int i = 0; i < 5; ++i)
-        v.push_back(std::thread(f));
-    std::this_thread::sleep_for(WaitTime);
-    m.unlock();
-    for (auto& t : v)
-        t.join();
-    m.lock_shared();
-    for (auto& t : v)
-        t = std::thread(g);
-    std::thread q(f);
-    std::this_thread::sleep_for(WaitTime);
-    m.unlock_shared();
-    for (auto& t : v)
-        t.join();
-    q.join();
+  int threads = 5;
+
+  countDown.store(threads);
+  m.lock();
+  std::vector<std::thread> v;
+  for (int i = 0; i < threads; ++i)
+    v.push_back(std::thread(readerMustWait));
+  while (countDown > 0)
+    std::this_thread::yield();
+  readerStart = Clock::now();
+  std::this_thread::sleep_for(WaitTime);
+  m.unlock();
+  for (auto& t : v)
+    t.join();
+
+  countDown.store(threads + 1);
+  m.lock_shared();
+  for (auto& t : v)
+    t = std::thread(reader);
+  std::thread q(writerMustWait);
+  while (countDown > 0)
+    std::this_thread::yield();
+  writerStart = Clock::now();
+  std::this_thread::sleep_for(WaitTime);
+  m.unlock_shared();
+  for (auto& t : v)
+    t.join();
+  q.join();
 
   return 0;
 }

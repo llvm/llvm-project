@@ -4,10 +4,10 @@
 // expect to see a different instruction.
 
 // RUN: llvm-mc -filetype=obj -mc-relax-all -triple x86_64-pc-linux-gnu %s -o - \
-// RUN:  | llvm-objdump -disassemble - | FileCheck -check-prefix=RELAXALL %s
+// RUN:  | llvm-objdump -d - | FileCheck --check-prefix=RELAXALL %s
 
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - \
-// RUN:  | llvm-objdump -disassemble - | FileCheck %s
+// RUN:  | llvm-objdump -d - | FileCheck %s
 
 .text
 foo:

@@ -15,7 +15,7 @@
 #define LLVM_SUPPORT_POINTERLIKETYPETRAITS_H
 
 #include "llvm/Support/DataTypes.h"
-#include <assert.h>
+#include <cassert>
 #include <type_traits>
 
 namespace llvm {
@@ -37,8 +37,9 @@ template <typename T, typename U = void> struct HasPointerLikeTypeTraits {
 };
 
 // sizeof(T) is valid only for a complete T.
-template <typename T> struct HasPointerLikeTypeTraits<
-  T, decltype((sizeof(PointerLikeTypeTraits<T>) + sizeof(T)), void())> {
+template <typename T>
+struct HasPointerLikeTypeTraits<
+    T, decltype((sizeof(PointerLikeTypeTraits<T>) + sizeof(T)), void())> {
   static const bool value = true;
 };
 
@@ -56,7 +57,8 @@ template <typename T> struct PointerLikeTypeTraits<T *> {
   static inline void *getAsVoidPointer(T *P) { return P; }
   static inline T *getFromVoidPointer(void *P) { return static_cast<T *>(P); }
 
-  enum { NumLowBitsAvailable = detail::ConstantLog2<alignof(T)>::value };
+  static constexpr int NumLowBitsAvailable =
+      detail::ConstantLog2<alignof(T)>::value;
 };
 
 template <> struct PointerLikeTypeTraits<void *> {
@@ -70,7 +72,7 @@ template <> struct PointerLikeTypeTraits<void *> {
   ///
   /// All clients should use assertions to do a run-time check to ensure that
   /// this is actually true.
-  enum { NumLowBitsAvailable = 2 };
+  static constexpr int NumLowBitsAvailable = 2;
 };
 
 // Provide PointerLikeTypeTraits for const things.
@@ -83,7 +85,7 @@ template <typename T> struct PointerLikeTypeTraits<const T> {
   static inline const T getFromVoidPointer(const void *P) {
     return NonConst::getFromVoidPointer(const_cast<void *>(P));
   }
-  enum { NumLowBitsAvailable = NonConst::NumLowBitsAvailable };
+  static constexpr int NumLowBitsAvailable = NonConst::NumLowBitsAvailable;
 };
 
 // Provide PointerLikeTypeTraits for const pointers.
@@ -96,7 +98,7 @@ template <typename T> struct PointerLikeTypeTraits<const T *> {
   static inline const T *getFromVoidPointer(const void *P) {
     return NonConst::getFromVoidPointer(const_cast<void *>(P));
   }
-  enum { NumLowBitsAvailable = NonConst::NumLowBitsAvailable };
+  static constexpr int NumLowBitsAvailable = NonConst::NumLowBitsAvailable;
 };
 
 // Provide PointerLikeTypeTraits for uintptr_t.
@@ -108,7 +110,7 @@ template <> struct PointerLikeTypeTraits<uintptr_t> {
     return reinterpret_cast<uintptr_t>(P);
   }
   // No bits are available!
-  enum { NumLowBitsAvailable = 0 };
+  static constexpr int NumLowBitsAvailable = 0;
 };
 
 /// Provide suitable custom traits struct for function pointers.
@@ -121,7 +123,8 @@ template <> struct PointerLikeTypeTraits<uintptr_t> {
 /// potentially use alignment attributes on functions to satisfy that.
 template <int Alignment, typename FunctionPointerT>
 struct FunctionPointerLikeTypeTraits {
-  enum { NumLowBitsAvailable = detail::ConstantLog2<Alignment>::value };
+  static constexpr int NumLowBitsAvailable =
+      detail::ConstantLog2<Alignment>::value;
   static inline void *getAsVoidPointer(FunctionPointerT P) {
     assert((reinterpret_cast<uintptr_t>(P) &
             ~((uintptr_t)-1 << NumLowBitsAvailable)) == 0 &&

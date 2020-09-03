@@ -1,7 +1,7 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux /dev/null -o %t
-# RUN: ld.lld %t --script %s -o %t2
-# RUN: llvm-objdump -t %t2 | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64 /dev/null -o %t.o
+# RUN: ld.lld %t.o -T %s -o %t
+# RUN: llvm-nm -p %t | FileCheck %s
 
 SECTIONS {
   _start = .;
@@ -48,83 +48,83 @@ SECTIONS {
   logicalor4 = 1 || 1;
 }
 
-# CHECK: 00000000000006 *ABS* 00000000 plus
-# CHECK: 00000000000004 *ABS* 00000000 minus
-# CHECK: 00000000000003 *ABS* 00000000 div
-# CHECK: 00000000000006 *ABS* 00000000 mod
-# CHECK: 00000000000007 *ABS* 00000000 mul
-# CHECK: 00000000000005 *ABS* 00000000 nospace
-# CHECK: 00000000000015 *ABS* 00000000 braces
-# CHECK: 000000000000aa *ABS* 00000000 and
-# CHECK: 00000000000001 *ABS* 00000000 ternary1
-# CHECK: 00000000000002 *ABS* 00000000 ternary2
-# CHECK: 00000000000002 *ABS* 00000000 less
-# CHECK: 00000000000001 *ABS* 00000000 lesseq
-# CHECK: 00000000000002 *ABS* 00000000 greater
-# CHECK: 00000000000001 *ABS* 00000000 greatereq
-# CHECK: 00000000000001 *ABS* 00000000 eq
-# CHECK: 00000000000002 *ABS* 00000000 neq
-# CHECK: 00000000000003 *ABS* 00000000 plusassign
-# CHECK: 00000000000002 *ABS* 00000000 unary
-# CHECK: 00000000000020 *ABS* 00000000 lshift
-# CHECK: 0000000000001f *ABS* 00000000 rshift
-# CHECK: 00000000000009 *ABS* 00000000 precedence1
-# CHECK: 00000000000009 *ABS* 00000000 precedence2
-# CHECK: 00000000001000 *ABS* 00000000 maxpagesize
-# CHECK: 00000000001000 *ABS* 00000000 commonpagesize
-# CHECK: 0000000000ffff *ABS* 00000000 datasegmentalign
-# CHECK: 0000000000fff0 *ABS* 00000000 datasegmentalign2
-# CHECK: 0000000000ffe0 .text 00000000 minus_rel
-# CHECK: 0000000000fff0 *ABS* 00000000 minus_abs
-# CHECK: 00000000000016 *ABS* 00000000 max
-# CHECK: 0000000000000b *ABS* 00000000 min
-# CHECK: 00000000000000 *ABS* 00000000 logicaland1
-# CHECK: 00000000000000 *ABS* 00000000 logicaland2
-# CHECK: 00000000000000 *ABS* 00000000 logicaland3
-# CHECK: 00000000000001 *ABS* 00000000 logicaland4
-# CHECK: 00000000000000 *ABS* 00000000 logicalor1
-# CHECK: 00000000000001 *ABS* 00000000 logicalor2
-# CHECK: 00000000000001 *ABS* 00000000 logicalor3
-# CHECK: 00000000000001 *ABS* 00000000 logicalor4
+# CHECK:      00000000000006 A plus
+# CHECK-NEXT: 00000000000004 A minus
+# CHECK-NEXT: 00000000000003 A div
+# CHECK-NEXT: 00000000000006 A mod
+# CHECK-NEXT: 00000000000007 A mul
+# CHECK-NEXT: 00000000000005 A nospace
+# CHECK-NEXT: 00000000000015 A braces
+# CHECK-NEXT: 000000000000aa A and
+# CHECK-NEXT: 00000000000001 A ternary1
+# CHECK-NEXT: 00000000000002 A ternary2
+# CHECK-NEXT: 00000000000002 A less
+# CHECK-NEXT: 00000000000001 A lesseq
+# CHECK-NEXT: 00000000000002 A greater
+# CHECK-NEXT: 00000000000001 A greatereq
+# CHECK-NEXT: 00000000000001 A eq
+# CHECK-NEXT: 00000000000002 A neq
+# CHECK-NEXT: 00000000000003 A plusassign
+# CHECK-NEXT: 00000000000002 A unary
+# CHECK-NEXT: 00000000000020 A lshift
+# CHECK-NEXT: 0000000000001f A rshift
+# CHECK-NEXT: 00000000000009 A precedence1
+# CHECK-NEXT: 00000000000009 A precedence2
+# CHECK-NEXT: 00000000001000 A maxpagesize
+# CHECK-NEXT: 00000000001000 A commonpagesize
+# CHECK-NEXT: 0000000000ffff A datasegmentalign
+# CHECK-NEXT: 0000000000fff0 A datasegmentalign2
+# CHECK-NEXT: 0000000000ffe0 T minus_rel
+# CHECK-NEXT: 0000000000fff0 A minus_abs
+# CHECK-NEXT: 00000000000016 A max
+# CHECK-NEXT: 0000000000000b A min
+# CHECK-NEXT: 00000000000000 A logicaland1
+# CHECK-NEXT: 00000000000000 A logicaland2
+# CHECK-NEXT: 00000000000000 A logicaland3
+# CHECK-NEXT: 00000000000001 A logicaland4
+# CHECK-NEXT: 00000000000000 A logicalor1
+# CHECK-NEXT: 00000000000001 A logicalor2
+# CHECK-NEXT: 00000000000001 A logicalor3
+# CHECK-NEXT: 00000000000001 A logicalor4
 
 ## Mailformed number error.
 # RUN: echo "SECTIONS { . = 0x12Q41; }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=NUMERR %s
 # NUMERR: malformed number: 0x12Q41
 
 ## Missing closing bracket.
 # RUN: echo "SECTIONS { . = (1; }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=BRACKETERR %s
 # BRACKETERR: ) expected, but got ;
 
 ## Missing opening bracket.
 # RUN: echo "SECTIONS { . = 1); }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=BRACKETERR2 %s
 # BRACKETERR2: ; expected, but got )
 
 ## Empty expression.
 # RUN: echo "SECTIONS { . = ; }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=ERREXPR %s
 # ERREXPR: malformed number: ;
 
 ## Div by zero error.
 # RUN: echo "SECTIONS { . = 1 / 0; }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=DIVZERO %s
 # DIVZERO: {{.*}}.script:1: division by zero
 
 ## Mod by zero error.
 # RUN: echo "SECTIONS { . = 1 % 0; }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=MODZERO %s
 # MODZERO: {{.*}}.script:1: modulo by zero
 
 ## Broken ternary operator expression.
 # RUN: echo "SECTIONS { . = 1 ? 2; }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=TERNERR %s
 # TERNERR: : expected, but got ;

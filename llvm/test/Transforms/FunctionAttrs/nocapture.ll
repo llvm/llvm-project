@@ -311,7 +311,7 @@ define i1 @nocaptureDereferenceableOrNullICmp(i32* dereferenceable_or_null(4) %x
 }
 
 ; FNATTR: define i1 @captureDereferenceableOrNullICmp(i32* readnone dereferenceable_or_null(4) %x)
-define i1 @captureDereferenceableOrNullICmp(i32* dereferenceable_or_null(4) %x) "null-pointer-is-valid"="true" {
+define i1 @captureDereferenceableOrNullICmp(i32* dereferenceable_or_null(4) %x) null_pointer_is_valid {
   %1 = bitcast i32* %x to i8*
   %2 = icmp eq i8* %1, null
   ret i1 %2

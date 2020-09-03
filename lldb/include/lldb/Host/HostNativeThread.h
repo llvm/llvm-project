@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_HostNativeThread_h_
-#define lldb_Host_HostNativeThread_h_
+#ifndef LLDB_HOST_HOSTNATIVETHREAD_H
+#define LLDB_HOST_HOSTNATIVETHREAD_H
 
 #include "HostNativeThreadForward.h"
 

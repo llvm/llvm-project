@@ -42,6 +42,19 @@ define double @test_round_sd_1(double %a, double %b) {
   ret double %6
 }
 
+define double @test_round_sd_2(double %a) {
+; CHECK-LABEL: @test_round_sd_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> undef, <2 x double> [[TMP1]], i32 10)
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
+; CHECK-NEXT:    ret double [[TMP3]]
+;
+  %1 = insertelement <2 x double> zeroinitializer, double %a, i32 0
+  %2 = tail call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %1, <2 x double> %1, i32 10)
+  %3 = extractelement <2 x double> %2, i32 0
+  ret double %3
+}
+
 define <4 x float> @test_round_ss(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test_round_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> <float undef, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>, <4 x float> [[B:%.*]], i32 10)
@@ -92,6 +105,19 @@ define float @test_round_ss_2(float %a, float %b) {
   %9 = tail call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %4, <4 x float> %8, i32 10)
   %r = extractelement <4 x float> %9, i32 2
   ret float %r
+}
+
+define float @test_round_ss_3(float %a) {
+; CHECK-LABEL: @test_round_ss_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> undef, <4 x float> [[TMP1]], i32 10)
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    ret float [[TMP3]]
+;
+  %1 = insertelement <4 x float> zeroinitializer, float %a, i32 0
+  %2 = tail call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %1, <4 x float> %1, i32 10)
+  %3 = extractelement <4 x float> %2, i32 0
+  ret float %3
 }
 
 declare <2 x double> @llvm.x86.sse41.round.sd(<2 x double>, <2 x double>, i32) nounwind readnone

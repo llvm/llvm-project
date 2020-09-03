@@ -86,6 +86,7 @@ namespace llvm {
 
     CodeGenSubRegIndex(Record *R, unsigned Enum);
     CodeGenSubRegIndex(StringRef N, StringRef Nspace, unsigned Enum);
+    CodeGenSubRegIndex(CodeGenSubRegIndex&) = delete;
 
     const std::string &getName() const { return Name; }
     const std::string &getNamespace() const { return Namespace; }
@@ -338,6 +339,9 @@ namespace llvm {
     bool CoveredBySubRegs;
     /// A register class is artificial if all its members are artificial.
     bool Artificial;
+    /// Generate register pressure set for this register class and any class
+    /// synthesized from it.
+    bool GeneratePressureSet;
 
     // Return the Record that defined this class, or NULL if the class was
     // created by TableGen.
@@ -437,11 +441,15 @@ namespace llvm {
     // Get a bit vector of TopoSigs present in this register class.
     const BitVector &getTopoSigs() const { return TopoSigs; }
 
+    // Get a weight of this register class.
+    unsigned getWeight(const CodeGenRegBank&) const;
+
     // Populate a unique sorted list of units from a register set.
     void buildRegUnitSet(const CodeGenRegBank &RegBank,
                          std::vector<unsigned> &RegUnits) const;
 
     CodeGenRegisterClass(CodeGenRegBank&, Record *R);
+    CodeGenRegisterClass(CodeGenRegisterClass&) = delete;
 
     // A key representing the parts of a register class used for forming
     // sub-classes.  Note the ordering provided by this key is not the same as
@@ -611,6 +619,7 @@ namespace llvm {
 
   public:
     CodeGenRegBank(RecordKeeper&, const CodeGenHwModes&);
+    CodeGenRegBank(CodeGenRegBank&) = delete;
 
     SetTheory &getSets() { return Sets; }
 
@@ -623,8 +632,12 @@ namespace llvm {
       return SubRegIndices;
     }
 
-    // Find a SubRegIndex form its Record def.
+    // Find a SubRegIndex from its Record def or add to the list if it does
+    // not exist there yet.
     CodeGenSubRegIndex *getSubRegIdx(Record*);
+
+    // Find a SubRegIndex from its Record def.
+    const CodeGenSubRegIndex *findSubRegIdx(const Record* Def) const;
 
     // Find or create a sub-register index representing the A+B composition.
     CodeGenSubRegIndex *getCompositeSubRegIndex(CodeGenSubRegIndex *A,
@@ -706,7 +719,7 @@ namespace llvm {
     }
 
     // Find a register class from its def.
-    CodeGenRegisterClass *getRegClass(Record*);
+    CodeGenRegisterClass *getRegClass(const Record *) const;
 
     /// getRegisterClassForRegister - Find the register class that contains the
     /// specified physical register.  If the register is not in a register

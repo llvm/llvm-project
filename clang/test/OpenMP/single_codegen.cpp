@@ -1,6 +1,12 @@
-// RUN: %clang_cc1 -verify -fopenmp -fnoopenmp-use-tls -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -fnoopenmp-use-tls -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fnoopenmp-use-tls -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -fnoopenmp-use-tls -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=OMP50,CHECK
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -fnoopenmp-use-tls -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -fopenmp-version=45 -o - | FileCheck %s --check-prefixes=OMP45,CHECK
+
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fnoopenmp-use-tls -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fnoopenmp-use-tls -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=OMP50,CHECK
+
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -fnoopenmp-use-tls -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -fnoopenmp-use-tls -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=OMP45,CHECK
+
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -std=c++11 -fopenmp -fnoopenmp-use-tls -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
 // RUN: %clang_cc1 -verify -fopenmp -fnoopenmp-use-tls -x c++ -std=c++11 -DARRAY -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=ARRAY %s
 
@@ -28,7 +34,7 @@ public:
 // CHECK-DAG:   [[SST_TY:%.+]] = type { double }
 // CHECK-DAG:   [[SS_TY:%.+]] = type { i32, i8, i32* }
 // CHECK-DAG:   [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
-// CHECK:       [[IMPLICIT_BARRIER_SINGLE_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 322, i32 0, i32 0, i8*
+// CHECK:       [[IMPLICIT_BARRIER_SINGLE_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 322, i32 0, i32 0, i8*
 
 // CHECK:       define void [[FOO:@.+]]()
 
@@ -36,7 +42,7 @@ TestClass tc;
 TestClass tc2[2];
 #pragma omp threadprivate(tc, tc2)
 
-void foo() {}
+void foo() { extern void mayThrow(); mayThrow(); }
 
 struct SS {
   int a;
@@ -149,6 +155,7 @@ int main() {
   return a;
 }
 
+// OMP50-LABEL: declare i8* @__kmpc_threadprivate_cached(
 // CHECK: void [[COPY_FUNC]](i8* %0, i8* %1)
 // CHECK: store i8* %0, i8** [[DST_ADDR_REF:%.+]],
 // CHECK: store i8* %1, i8** [[SRC_ADDR_REF:%.+]],
@@ -192,7 +199,58 @@ int main() {
 // CHECK: br i1
 // CHECK: ret void
 
-// CHECK-LABEL:      parallel_single
+
+// OMP50-LABEL: void @_ZN3SSTIdEC2Ev(
+// OMP50: getelementptr inbounds [[SST_TY]], [[SST_TY]]* %{{.+}}, i32 0, i32 0
+// OMP50-NEXT: store double 0.000000e+00, double* %
+// OMP50-NEXT: getelementptr inbounds [[SST_TY]], [[SST_TY]]* %{{.+}}, i32 0, i32 0
+// OMP50-NEXT: store double* %{{.+}}, double** %
+// OMP50-NEXT: load double*, double** %
+// OMP50-NEXT: load double, double* %
+// OMP50-NEXT: bitcast i64* %{{.+}} to double*
+// OMP50-NEXT: store double %{{.+}}, double* %
+// OMP50-NEXT: load i64, i64* %
+// OMP50-NEXT: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* @{{.+}}, i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[SST_TY]]*, i64)* [[SST_MICROTASK:@.+]] to void
+// OMP50-NEXT: ret void
+
+// OMP50: define internal void [[SST_MICROTASK]](i32* {{[^,]+}}, i32* {{[^,]+}}, [[SST_TY]]* {{.+}}, i64 {{.+}})
+// OMP50: [[RES:%.+]] = call i32 @__kmpc_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// OMP50-NEXT: icmp ne i32 [[RES]], 0
+// OMP50-NEXT: br i1
+
+// OMP50: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 1
+// OMP50-NEXT: load double*, double** %
+// OMP50-NEXT: store double* %
+// OMP50-LABEL: invoke void @_ZZN3SSTIdEC1EvENKUlvE_clEv(
+
+// OMP50: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// OMP50-NEXT: store i32 1, i32* [[DID_IT]],
+// OMP50-NEXT: br label
+
+// OMP50: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// OMP50-NEXT: br label
+
+// OMP50: getelementptr inbounds [1 x i8*], [1 x i8*]* [[LIST:%.+]], i64 0, i64 0
+// OMP50: load double*, double** %
+// OMP50-NEXT: bitcast double* %
+// OMP50-NEXT: store i8* %
+// OMP50-NEXT: bitcast [1 x i8*]* [[LIST]] to i8*
+// OMP50-NEXT: load i32, i32* [[DID_IT]],
+// OMP50-NEXT: call void @__kmpc_copyprivate([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}}, i64 8, i8* %{{.+}}, void (i8*, i8*)* [[COPY_FUNC:@[^,]+]], i32 %{{.+}})
+// OMP50-NEXT:  ret void
+
+// OMP50-LABEL: @_ZZN3SSTIdEC1EvENKUlvE_clEv(
+// OMP50: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 1
+// OMP50-NEXT: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 1
+// OMP50-NEXT: load double*, double** %
+// OMP50-NEXT: store double* %
+// OMP50-LABEL: call void @_ZZZN3SSTIdEC1EvENKUlvE_clEvENKUlvE_clEv(
+// OMP50-NEXT: ret void
+
+// OMP50: define internal void [[COPY_FUNC]](i8* %0, i8* %1)
+// OMP50: ret void
+
+// OMP45-LABEL:      parallel_single
 // TERM_DEBUG-LABEL: parallel_single
 void parallel_single() {
 #pragma omp parallel
@@ -385,54 +443,54 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK: define internal void [[COPY_FUNC]](i8* %0, i8* %1)
 // CHECK: ret void
 
-// CHECK-LABEL: @_ZN3SSTIdEC2Ev
-// CHECK: getelementptr inbounds [[SST_TY]], [[SST_TY]]* %{{.+}}, i32 0, i32 0
-// CHECK-NEXT: store double 0.000000e+00, double* %
-// CHECK-NEXT: getelementptr inbounds [[SST_TY]], [[SST_TY]]* %{{.+}}, i32 0, i32 0
-// CHECK-NEXT: store double* %{{.+}}, double** %
-// CHECK-NEXT: load double*, double** %
-// CHECK-NEXT: load double, double* %
-// CHECK-NEXT: bitcast i64* %{{.+}} to double*
-// CHECK-NEXT: store double %{{.+}}, double* %
-// CHECK-NEXT: load i64, i64* %
-// CHECK-NEXT: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* @{{.+}}, i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[SST_TY]]*, i64)* [[SST_MICROTASK:@.+]] to void
-// CHECK-NEXT: ret void
+// OMP45-LABEL: void @_ZN3SSTIdEC2Ev(
+// OMP45: getelementptr inbounds [[SST_TY]], [[SST_TY]]* %{{.+}}, i32 0, i32 0
+// OMP45-NEXT: store double 0.000000e+00, double* %
+// OMP45-NEXT: getelementptr inbounds [[SST_TY]], [[SST_TY]]* %{{.+}}, i32 0, i32 0
+// OMP45-NEXT: store double* %{{.+}}, double** %
+// OMP45-NEXT: load double*, double** %
+// OMP45-NEXT: load double, double* %
+// OMP45-NEXT: bitcast i64* %{{.+}} to double*
+// OMP45-NEXT: store double %{{.+}}, double* %
+// OMP45-NEXT: load i64, i64* %
+// OMP45-NEXT: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* @{{.+}}, i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[SST_TY]]*, i64)* [[SST_MICROTASK:@.+]] to void
+// OMP45-NEXT: ret void
 
-// CHECK: define internal void [[SST_MICROTASK]](i32* {{[^,]+}}, i32* {{[^,]+}}, [[SST_TY]]* {{.+}}, i64 {{.+}})
-// CHECK: [[RES:%.+]] = call i32 @__kmpc_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
-// CHECK-NEXT: icmp ne i32 [[RES]], 0
-// CHECK-NEXT: br i1
+// OMP45: define internal void [[SST_MICROTASK]](i32* {{[^,]+}}, i32* {{[^,]+}}, [[SST_TY]]* {{.+}}, i64 {{.+}})
+// OMP45: [[RES:%.+]] = call i32 @__kmpc_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// OMP45-NEXT: icmp ne i32 [[RES]], 0
+// OMP45-NEXT: br i1
 
-// CHECK: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 1
-// CHECK-NEXT: load double*, double** %
-// CHECK-NEXT: store double* %
-// CHECK-LABEL: invoke void @_ZZN3SSTIdEC1EvENKUlvE_clEv(
+// OMP45: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 1
+// OMP45-NEXT: load double*, double** %
+// OMP45-NEXT: store double* %
+// OMP45-LABEL: invoke void @_ZZN3SSTIdEC1EvENKUlvE_clEv(
 
-// CHECK: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
-// CHECK-NEXT: store i32 1, i32* [[DID_IT]],
-// CHECK-NEXT: br label
+// OMP45: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// OMP45-NEXT: store i32 1, i32* [[DID_IT]],
+// OMP45-NEXT: br label
 
-// CHECK: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
-// CHECK-NEXT: br label
+// OMP45: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// OMP45-NEXT: br label
 
-// CHECK: getelementptr inbounds [1 x i8*], [1 x i8*]* [[LIST:%.+]], i64 0, i64 0
-// CHECK: load double*, double** %
-// CHECK-NEXT: bitcast double* %
-// CHECK-NEXT: store i8* %
-// CHECK-NEXT: bitcast [1 x i8*]* [[LIST]] to i8*
-// CHECK-NEXT: load i32, i32* [[DID_IT]],
-// CHECK-NEXT: call void @__kmpc_copyprivate([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}}, i64 8, i8* %{{.+}}, void (i8*, i8*)* [[COPY_FUNC:@[^,]+]], i32 %{{.+}})
-// CHECK-NEXT:  ret void
+// OMP45: getelementptr inbounds [1 x i8*], [1 x i8*]* [[LIST:%.+]], i64 0, i64 0
+// OMP45: load double*, double** %
+// OMP45-NEXT: bitcast double* %
+// OMP45-NEXT: store i8* %
+// OMP45-NEXT: bitcast [1 x i8*]* [[LIST]] to i8*
+// OMP45-NEXT: load i32, i32* [[DID_IT]],
+// OMP45-NEXT: call void @__kmpc_copyprivate([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}}, i64 8, i8* %{{.+}}, void (i8*, i8*)* [[COPY_FUNC:@[^,]+]], i32 %{{.+}})
+// OMP45-NEXT:  ret void
 
-// CHECK-LABEL: @_ZZN3SSTIdEC1EvENKUlvE_clEv(
-// CHECK: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 1
-// CHECK-NEXT: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 1
-// CHECK-NEXT: load double*, double** %
-// CHECK-NEXT: store double* %
-// CHECK-LABEL: call void @_ZZZN3SSTIdEC1EvENKUlvE_clEvENKUlvE_clEv(
-// CHECK-NEXT: ret void
+// OMP45-LABEL: @_ZZN3SSTIdEC1EvENKUlvE_clEv(
+// OMP45: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 1
+// OMP45-NEXT: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 1
+// OMP45-NEXT: load double*, double** %
+// OMP45-NEXT: store double* %
+// OMP45-LABEL: call void @_ZZZN3SSTIdEC1EvENKUlvE_clEvENKUlvE_clEv(
+// OMP45-NEXT: ret void
 
-// CHECK: define internal void [[COPY_FUNC]](i8* %0, i8* %1)
-// CHECK: ret void
+// OMP45: define internal void [[COPY_FUNC]](i8* %0, i8* %1)
+// OMP45: ret void
 
-// CHECK-LABEL: @_ZZZN3SSTIdEC1EvENKUlvE_clEvENKUlvE_clEv(
+// OMP45-LABEL: @_ZZZN3SSTIdEC1EvENKUlvE_clEvENKUlvE_clEv(

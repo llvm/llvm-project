@@ -2,7 +2,9 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
+#pragma omp requires dynamic_allocators
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -204,7 +206,7 @@ int main(int argc, char **argv) {
 #pragma omp target map(i) private(i) // expected-error {{private variable cannot be in a map clause in '#pragma omp target' directive}}
   {}
   s6 = s6_0; // expected-note {{in instantiation of member function 'S6<float>::operator=' requested here}}
-  s7 = s7_0; // expected-note {{in instantiation of member function 'S7<S6<float> >::operator=' requested here}}
+  s7 = s7_0; // expected-note {{in instantiation of member function 'S7<S6<float>>::operator=' requested here}}
   return foomain(argc, argv); // expected-note {{in instantiation of function template specialization 'foomain<int, char>' requested here}}
 }
 

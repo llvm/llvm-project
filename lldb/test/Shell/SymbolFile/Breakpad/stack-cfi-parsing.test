@@ -11,8 +11,8 @@ image show-unwind -n func0
 # CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.
 # CHECK-NEXT: This UnwindPlan is valid at all instruction locations: no.
 # CHECK-NEXT: Address range of this UnwindPlan: [stack-cfi-parsing.out..module_image + 0-0x0000000000000002)
-# CHECK-NEXT: row[0]:    0: CFA=DW_OP_breg7 +0 => rbp=DW_OP_breg7 +0 rip=DW_OP_pick 0x00 
-# CHECK-NEXT: row[1]:    1: CFA=DW_OP_breg7 +0 => rbx=DW_OP_breg2 +0 rbp=DW_OP_breg0 +0 rip=DW_OP_pick 0x00 
+# CHECK-NEXT: row[0]:    0: CFA=DW_OP_breg7 +0 => rbp=DW_OP_breg7 +0 rip=DW_OP_pick 0x0
+# CHECK-NEXT: row[1]:    1: CFA=DW_OP_breg7 +0 => rbx=DW_OP_breg2 +0 rbp=DW_OP_breg0 +0 rip=DW_OP_pick 0x0
 
 # The following plans are all (syntactically) invalid for various reasons.
 # Processing those should not cause a crash.

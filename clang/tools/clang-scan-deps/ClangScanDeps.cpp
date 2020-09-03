@@ -18,6 +18,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include <mutex>
 #include <thread>
@@ -57,7 +58,7 @@ public:
       return "";
 
     const std::string &ClangBinaryName =
-        llvm::sys::path::filename(ClangBinaryPath);
+        std::string(llvm::sys::path::filename(ClangBinaryPath));
 
     std::unique_lock<std::mutex> LockGuard(CacheLock);
     const auto &CachedResourceDir = Cache.find(ClangBinaryPath);
@@ -170,7 +171,7 @@ llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
 static std::string getObjFilePath(StringRef SrcFile) {
   SmallString<128> ObjFileName(SrcFile);
   llvm::sys::path::replace_extension(ObjFileName, "o");
-  return ObjFileName.str();
+  return std::string(ObjFileName.str());
 }
 
 class SingleCommandCompilationDatabase : public tooling::CompilationDatabase {
@@ -217,16 +218,15 @@ static llvm::json::Array toJSONSorted(const llvm::StringSet<> &Set) {
   std::vector<llvm::StringRef> Strings;
   for (auto &&I : Set)
     Strings.push_back(I.getKey());
-  std::sort(Strings.begin(), Strings.end());
+  llvm::sort(Strings);
   return llvm::json::Array(Strings);
 }
 
 static llvm::json::Array toJSONSorted(std::vector<ClangModuleDep> V) {
-  std::sort(V.begin(), V.end(),
-            [](const ClangModuleDep &A, const ClangModuleDep &B) {
-              return std::tie(A.ModuleName, A.ContextHash) <
-                     std::tie(B.ModuleName, B.ContextHash);
-            });
+  llvm::sort(V, [](const ClangModuleDep &A, const ClangModuleDep &B) {
+    return std::tie(A.ModuleName, A.ContextHash) <
+           std::tie(B.ModuleName, B.ContextHash);
+  });
 
   llvm::json::Array Ret;
   for (const ClangModuleDep &CMD : V)
@@ -243,7 +243,7 @@ public:
     const FullDependencies &FD = FDR.FullDeps;
 
     InputDeps ID;
-    ID.FileName = Input;
+    ID.FileName = std::string(Input);
     ID.ContextHash = std::move(FD.ContextHash);
     ID.FileDeps = std::move(FD.FileDeps);
     ID.ModuleDeps = std::move(FD.ClangModuleDeps);
@@ -274,16 +274,15 @@ public:
     std::vector<ContextModulePair> ModuleNames;
     for (auto &&M : Modules)
       ModuleNames.push_back(M.first);
-    std::sort(ModuleNames.begin(), ModuleNames.end(),
-              [](const ContextModulePair &A, const ContextModulePair &B) {
-                return std::tie(A.ModuleName, A.InputIndex) <
-                       std::tie(B.ModuleName, B.InputIndex);
-              });
+    llvm::sort(ModuleNames,
+               [](const ContextModulePair &A, const ContextModulePair &B) {
+                 return std::tie(A.ModuleName, A.InputIndex) <
+                        std::tie(B.ModuleName, B.InputIndex);
+               });
 
-    std::sort(Inputs.begin(), Inputs.end(),
-              [](const InputDeps &A, const InputDeps &B) {
-                return A.FileName < B.FileName;
-              });
+    llvm::sort(Inputs, [](const InputDeps &A, const InputDeps &B) {
+      return A.FileName < B.FileName;
+    });
 
     using namespace llvm::json;
 
@@ -456,7 +455,7 @@ int main(int argc, const char **argv) {
             AdjustedArgs.push_back(!LastO.empty() ? LastO
                                                   : getObjFilePath(FileName));
           } else {
-            AdjustedArgs.push_back(FileName);
+            AdjustedArgs.push_back(std::string(FileName));
           }
         }
         AdjustedArgs.push_back("-Xclang");
@@ -470,7 +469,7 @@ int main(int argc, const char **argv) {
               ResourceDirCache.findResourceDir(Args);
           if (!ResourceDir.empty()) {
             AdjustedArgs.push_back("-resource-dir");
-            AdjustedArgs.push_back(ResourceDir);
+            AdjustedArgs.push_back(std::string(ResourceDir));
           }
         }
         return AdjustedArgs;
@@ -484,14 +483,9 @@ int main(int argc, const char **argv) {
 
   DependencyScanningService Service(ScanMode, Format, ReuseFileManager,
                                     SkipExcludedPPRanges);
-#if LLVM_ENABLE_THREADS
-  unsigned NumWorkers =
-      NumThreads == 0 ? llvm::hardware_concurrency() : NumThreads;
-#else
-  unsigned NumWorkers = 1;
-#endif
+  llvm::ThreadPool Pool(llvm::hardware_concurrency(NumThreads));
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
-  for (unsigned I = 0; I < NumWorkers; ++I)
+  for (unsigned I = 0; I < Pool.getThreadCount(); ++I)
     WorkerTools.push_back(std::make_unique<DependencyScanningTool>(Service));
 
   std::vector<SingleCommandCompilationDatabase> Inputs;
@@ -499,7 +493,6 @@ int main(int argc, const char **argv) {
        AdjustingCompilations->getAllCompileCommands())
     Inputs.emplace_back(Cmd);
 
-  std::vector<std::thread> WorkerThreads;
   std::atomic<bool> HadErrors(false);
   FullDeps FD;
   std::mutex Lock;
@@ -507,11 +500,11 @@ int main(int argc, const char **argv) {
 
   if (Verbose) {
     llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
-                 << " files using " << NumWorkers << " workers\n";
+                 << " files using " << Pool.getThreadCount() << " workers\n";
   }
-  for (unsigned I = 0; I < NumWorkers; ++I) {
-    auto Worker = [I, &Lock, &Index, &Inputs, &HadErrors, &FD, &WorkerTools,
-                   &DependencyOS, &Errs]() {
+  for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
+    Pool.async([I, &Lock, &Index, &Inputs, &HadErrors, &FD, &WorkerTools,
+                &DependencyOS, &Errs]() {
       llvm::StringSet<> AlreadySeenModules;
       while (true) {
         const SingleCommandCompilationDatabase *Input;
@@ -543,16 +536,9 @@ int main(int argc, const char **argv) {
             HadErrors = true;
         }
       }
-    };
-#if LLVM_ENABLE_THREADS
-    WorkerThreads.emplace_back(std::move(Worker));
-#else
-    // Run the worker without spawning a thread when threads are disabled.
-    Worker();
-#endif
+    });
   }
-  for (auto &W : WorkerThreads)
-    W.join();
+  Pool.wait();
 
   if (Format == ScanningOutputFormat::Full)
     FD.printFullOutput(llvm::outs());

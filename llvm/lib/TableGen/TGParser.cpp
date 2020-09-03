@@ -15,12 +15,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TableGen/Record.h"
+#include "llvm/Support/SourceMgr.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -391,9 +392,11 @@ bool TGParser::resolve(const ForeachLoop &Loop, SubstStack &Substs,
 
   bool Error = false;
   for (auto Elt : *LI) {
-    Substs.emplace_back(Loop.IterVar->getNameInit(), Elt);
+    if (Loop.IterVar)
+      Substs.emplace_back(Loop.IterVar->getNameInit(), Elt);
     Error = resolve(Loop.Entries, Substs, Final, Dest);
-    Substs.pop_back();
+    if (Loop.IterVar)
+      Substs.pop_back();
     if (Error)
       break;
   }
@@ -482,7 +485,15 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
 static bool isObjectStart(tgtok::TokKind K) {
   return K == tgtok::Class || K == tgtok::Def || K == tgtok::Defm ||
          K == tgtok::Let || K == tgtok::MultiClass || K == tgtok::Foreach ||
-         K == tgtok::Defset;
+         K == tgtok::Defset || K == tgtok::Defvar || K == tgtok::If;
+}
+
+bool TGParser::consume(tgtok::TokKind K) {
+  if (Lex.getCode() == K) {
+    Lex.Lex();
+    return true;
+  }
+  return false;
 }
 
 /// ParseObjectName - If a valid object name is specified, return it. If no
@@ -588,11 +599,10 @@ ParseSubClassReference(Record *CurRec, bool isDefm) {
   if (!Result.Rec) return Result;
 
   // If there is no template arg list, we're done.
-  if (Lex.getCode() != tgtok::less) {
+  if (!consume(tgtok::less)) {
     Result.RefRange.End = Lex.getLoc();
     return Result;
   }
-  Lex.Lex();  // Eat the '<'
 
   if (Lex.getCode() == tgtok::greater) {
     TokError("subclass reference requires a non-empty list of template values");
@@ -606,12 +616,11 @@ ParseSubClassReference(Record *CurRec, bool isDefm) {
     return Result;
   }
 
-  if (Lex.getCode() != tgtok::greater) {
+  if (!consume(tgtok::greater)) {
     TokError("expected '>' in template value list");
     Result.Rec = nullptr;
     return Result;
   }
-  Lex.Lex();
   Result.RefRange.End = Lex.getLoc();
 
   return Result;
@@ -633,11 +642,10 @@ ParseSubMultiClassReference(MultiClass *CurMC) {
   if (!Result.MC) return Result;
 
   // If there is no template arg list, we're done.
-  if (Lex.getCode() != tgtok::less) {
+  if (!consume(tgtok::less)) {
     Result.RefRange.End = Lex.getLoc();
     return Result;
   }
-  Lex.Lex();  // Eat the '<'
 
   if (Lex.getCode() == tgtok::greater) {
     TokError("subclass reference requires a non-empty list of template values");
@@ -651,12 +659,11 @@ ParseSubMultiClassReference(MultiClass *CurMC) {
     return Result;
   }
 
-  if (Lex.getCode() != tgtok::greater) {
+  if (!consume(tgtok::greater)) {
     TokError("expected '>' in template value list");
     Result.MC = nullptr;
     return Result;
   }
-  Lex.Lex();
   Result.RefRange.End = Lex.getLoc();
 
   return Result;
@@ -728,36 +735,30 @@ void TGParser::ParseRangeList(SmallVectorImpl<unsigned> &Result) {
     Result.clear();
     return;
   }
-  while (Lex.getCode() == tgtok::comma) {
-    Lex.Lex();  // Eat the comma.
-
+  while (consume(tgtok::comma))
     // Parse the next range piece.
     if (ParseRangePiece(Result)) {
       Result.clear();
       return;
     }
-  }
 }
 
 /// ParseOptionalRangeList - Parse either a range list in <>'s or nothing.
 ///   OptionalRangeList ::= '<' RangeList '>'
 ///   OptionalRangeList ::= /*empty*/
 bool TGParser::ParseOptionalRangeList(SmallVectorImpl<unsigned> &Ranges) {
-  if (Lex.getCode() != tgtok::less)
-    return false;
-
   SMLoc StartLoc = Lex.getLoc();
-  Lex.Lex(); // eat the '<'
+  if (!consume(tgtok::less))
+    return false;
 
   // Parse the range list.
   ParseRangeList(Ranges);
   if (Ranges.empty()) return true;
 
-  if (Lex.getCode() != tgtok::greater) {
+  if (!consume(tgtok::greater)) {
     TokError("expected '>' at end of range list");
     return Error(StartLoc, "to match this '<'");
   }
-  Lex.Lex();   // eat the '>'.
   return false;
 }
 
@@ -765,21 +766,18 @@ bool TGParser::ParseOptionalRangeList(SmallVectorImpl<unsigned> &Ranges) {
 ///   OptionalBitList ::= '{' RangeList '}'
 ///   OptionalBitList ::= /*empty*/
 bool TGParser::ParseOptionalBitList(SmallVectorImpl<unsigned> &Ranges) {
-  if (Lex.getCode() != tgtok::l_brace)
-    return false;
-
   SMLoc StartLoc = Lex.getLoc();
-  Lex.Lex(); // eat the '{'
+  if (!consume(tgtok::l_brace))
+    return false;
 
   // Parse the range list.
   ParseRangeList(Ranges);
   if (Ranges.empty()) return true;
 
-  if (Lex.getCode() != tgtok::r_brace) {
+  if (!consume(tgtok::r_brace)) {
     TokError("expected '}' at end of bit list");
     return Error(StartLoc, "to match this '{'");
   }
-  Lex.Lex();   // eat the '}'.
   return false;
 }
 
@@ -832,11 +830,10 @@ RecTy *TGParser::ParseType() {
     RecTy *SubType = ParseType();
     if (!SubType) return nullptr;
 
-    if (Lex.getCode() != tgtok::greater) {
+    if (!consume(tgtok::greater)) {
       TokError("expected '>' at end of list<ty> type");
       return nullptr;
     }
-    Lex.Lex();  // Eat '>'
     return ListRecTy::get(SubType);
   }
   }
@@ -869,11 +866,17 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
     }
   }
 
+  if (CurLocalScope)
+    if (Init *I = CurLocalScope->getVar(Name->getValue()))
+      return I;
+
   // If this is in a foreach loop, make sure it's not a loop iterator
   for (const auto &L : Loops) {
-    VarInit *IterVar = dyn_cast<VarInit>(L->IterVar);
-    if (IterVar && IterVar->getNameInit() == Name)
-      return IterVar;
+    if (L->IterVar) {
+      VarInit *IterVar = dyn_cast<VarInit>(L->IterVar);
+      if (IterVar && IterVar->getNameInit() == Name)
+        return IterVar;
+    }
   }
 
   if (Mode == ParseNameMode)
@@ -965,11 +968,10 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       Code = UnOpInit::GETOP;
       break;
     }
-    if (Lex.getCode() != tgtok::l_paren) {
+    if (!consume(tgtok::l_paren)) {
       TokError("expected '(' after unary operator");
       return nullptr;
     }
-    Lex.Lex();  // eat the '('
 
     Init *LHS = ParseValue(CurRec);
     if (!LHS) return nullptr;
@@ -1027,11 +1029,10 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       }
     }
 
-    if (Lex.getCode() != tgtok::r_paren) {
+    if (!consume(tgtok::r_paren)) {
       TokError("expected ')' in unary operator");
       return nullptr;
     }
-    Lex.Lex();  // eat the ')'
     return (UnOpInit::get(Code, LHS, Type))->Fold(CurRec);
   }
 
@@ -1043,21 +1044,19 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     if (!Type)
       return nullptr;
 
-    if (Lex.getCode() != tgtok::l_paren) {
+    if (!consume(tgtok::l_paren)) {
       TokError("expected '(' after type of !isa");
       return nullptr;
     }
-    Lex.Lex(); // eat the '('
 
     Init *LHS = ParseValue(CurRec);
     if (!LHS)
       return nullptr;
 
-    if (Lex.getCode() != tgtok::r_paren) {
+    if (!consume(tgtok::r_paren)) {
       TokError("expected ')' in !isa");
       return nullptr;
     }
-    Lex.Lex(); // eat the ')'
 
     return (IsAOpInit::get(Type, LHS))->Fold();
   }
@@ -1159,11 +1158,10 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       return nullptr;
     }
 
-    if (Lex.getCode() != tgtok::l_paren) {
+    if (!consume(tgtok::l_paren)) {
       TokError("expected '(' after binary operator");
       return nullptr;
     }
-    Lex.Lex();  // eat the '('
 
     SmallVector<Init*, 2> InitList;
 
@@ -1172,7 +1170,13 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       InitList.push_back(ParseValue(CurRec, ArgType));
       if (!InitList.back()) return nullptr;
 
-      RecTy *ListType = cast<TypedInit>(InitList.back())->getType();
+      TypedInit *InitListBack = dyn_cast<TypedInit>(InitList.back());
+      if (!InitListBack) {
+        Error(OpLoc, Twine("expected value to be a typed value, got '" +
+                           InitList.back()->getAsString() + "'"));
+        return nullptr;
+      }
+      RecTy *ListType = InitListBack->getType();
       if (!ArgType) {
         ArgType = ListType;
 
@@ -1249,16 +1253,14 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
           break;
       }
 
-      if (Lex.getCode() != tgtok::comma)
+      if (!consume(tgtok::comma))
         break;
-      Lex.Lex();  // eat the ','
     }
 
-    if (Lex.getCode() != tgtok::r_paren) {
+    if (!consume(tgtok::r_paren)) {
       TokError("expected ')' in operator");
       return nullptr;
     }
-    Lex.Lex();  // eat the ')'
 
     // listconcat returns a list with type of the argument.
     if (Code == BinOpInit::LISTCONCAT)
@@ -1302,6 +1304,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     }
 
     Init *LHS = StringInit::get(Lex.getCurStrVal());
+    Lex.Lex();
 
     if (CurRec && CurRec->getValue(LHS)) {
       TokError((Twine("iteration variable '") + LHS->getAsString() +
@@ -1310,21 +1313,19 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       return nullptr;
     }
 
-    if (Lex.Lex() != tgtok::comma) { // eat the id
+    if (!consume(tgtok::comma)) { // eat the id
       TokError("expected ',' in ternary operator");
       return nullptr;
     }
-    Lex.Lex();  // eat the ','
 
     Init *MHS = ParseValue(CurRec);
     if (!MHS)
       return nullptr;
 
-    if (Lex.getCode() != tgtok::comma) {
+    if (!consume(tgtok::comma)) {
       TokError("expected ',' in ternary operator");
       return nullptr;
     }
-    Lex.Lex();  // eat the ','
 
     TypedInit *MHSt = dyn_cast<TypedInit>(MHS);
     if (!MHSt) {
@@ -1377,11 +1378,10 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     if (!RHS)
       return nullptr;
 
-    if (Lex.getCode() != tgtok::r_paren) {
+    if (!consume(tgtok::r_paren)) {
       TokError("expected ')' in binary operator");
       return nullptr;
     }
-    Lex.Lex();  // eat the ')'
 
     RecTy *OutType;
     if (IsDAG) {
@@ -1421,42 +1421,38 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       Code = TernOpInit::SUBST;
       break;
     }
-    if (Lex.getCode() != tgtok::l_paren) {
+    if (!consume(tgtok::l_paren)) {
       TokError("expected '(' after ternary operator");
       return nullptr;
     }
-    Lex.Lex();  // eat the '('
 
     Init *LHS = ParseValue(CurRec);
     if (!LHS) return nullptr;
 
-    if (Lex.getCode() != tgtok::comma) {
+    if (!consume(tgtok::comma)) {
       TokError("expected ',' in ternary operator");
       return nullptr;
     }
-    Lex.Lex();  // eat the ','
 
     SMLoc MHSLoc = Lex.getLoc();
     Init *MHS = ParseValue(CurRec, ItemType);
     if (!MHS)
       return nullptr;
 
-    if (Lex.getCode() != tgtok::comma) {
+    if (!consume(tgtok::comma)) {
       TokError("expected ',' in ternary operator");
       return nullptr;
     }
-    Lex.Lex();  // eat the ','
 
     SMLoc RHSLoc = Lex.getLoc();
     Init *RHS = ParseValue(CurRec, ItemType);
     if (!RHS)
       return nullptr;
 
-    if (Lex.getCode() != tgtok::r_paren) {
+    if (!consume(tgtok::r_paren)) {
       TokError("expected ')' in binary operator");
       return nullptr;
     }
-    Lex.Lex();  // eat the ')'
 
     switch (LexCode) {
     default: llvm_unreachable("Unhandled code!");
@@ -1546,11 +1542,10 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   case tgtok::XFoldl: {
     // Value ::= !foldl '(' Id ',' Id ',' Value ',' Value ',' Value ')'
     Lex.Lex(); // eat the operation
-    if (Lex.getCode() != tgtok::l_paren) {
+    if (!consume(tgtok::l_paren)) {
       TokError("expected '(' after !foldl");
       return nullptr;
     }
-    Lex.Lex(); // eat the '('
 
     Init *StartUntyped = ParseValue(CurRec);
     if (!StartUntyped)
@@ -1563,11 +1558,10 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       return nullptr;
     }
 
-    if (Lex.getCode() != tgtok::comma) {
+    if (!consume(tgtok::comma)) {
       TokError("expected ',' in !foldl");
       return nullptr;
     }
-    Lex.Lex(); // eat the ','
 
     Init *ListUntyped = ParseValue(CurRec);
     if (!ListUntyped)
@@ -1659,11 +1653,10 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       return nullptr;
     }
 
-    if (Lex.getCode() != tgtok::r_paren) {
+    if (!consume(tgtok::r_paren)) {
       TokError("expected ')' in fold operator");
       return nullptr;
     }
-    Lex.Lex(); // eat the ')'
 
     return FoldOpInit::get(Start, List, A, B, Expr, Start->getType())
         ->Fold(CurRec);
@@ -1679,11 +1672,10 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
 RecTy *TGParser::ParseOperatorType() {
   RecTy *Type = nullptr;
 
-  if (Lex.getCode() != tgtok::less) {
+  if (!consume(tgtok::less)) {
     TokError("expected type name for operator");
     return nullptr;
   }
-  Lex.Lex();  // eat the <
 
   Type = ParseType();
 
@@ -1692,11 +1684,10 @@ RecTy *TGParser::ParseOperatorType() {
     return nullptr;
   }
 
-  if (Lex.getCode() != tgtok::greater) {
+  if (!consume(tgtok::greater)) {
     TokError("expected type name for operator");
     return nullptr;
   }
-  Lex.Lex();  // eat the >
 
   return Type;
 }
@@ -1704,47 +1695,40 @@ RecTy *TGParser::ParseOperatorType() {
 Init *TGParser::ParseOperationCond(Record *CurRec, RecTy *ItemType) {
   Lex.Lex();  // eat the operation 'cond'
 
-  if (Lex.getCode() != tgtok::l_paren) {
-     TokError("expected '(' after !cond operator");
-     return nullptr;
+  if (!consume(tgtok::l_paren)) {
+    TokError("expected '(' after !cond operator");
+    return nullptr;
   }
-  Lex.Lex();  // eat the '('
 
   // Parse through '[Case: Val,]+'
   SmallVector<Init *, 4> Case;
   SmallVector<Init *, 4> Val;
   while (true) {
-    if (Lex.getCode() == tgtok::r_paren) {
-      Lex.Lex(); // eat the ')'
+    if (consume(tgtok::r_paren))
       break;
-    }
 
     Init *V = ParseValue(CurRec);
     if (!V)
       return nullptr;
     Case.push_back(V);
 
-    if (Lex.getCode() != tgtok::colon) {
+    if (!consume(tgtok::colon)) {
       TokError("expected ':'  following a condition in !cond operator");
       return nullptr;
     }
-    Lex.Lex(); // eat the ':'
 
     V = ParseValue(CurRec, ItemType);
     if (!V)
       return nullptr;
     Val.push_back(V);
 
-    if (Lex.getCode() == tgtok::r_paren) {
-      Lex.Lex(); // eat the ')'
+    if (consume(tgtok::r_paren))
       break;
-    }
 
-    if (Lex.getCode() != tgtok::comma) {
+    if (!consume(tgtok::comma)) {
       TokError("expected ',' or ')' following a value in !cond operator");
       return nullptr;
     }
-    Lex.Lex();  // eat the ','
   }
 
   if (Case.size() < 1) {
@@ -1812,11 +1796,6 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   Init *R = nullptr;
   switch (Lex.getCode()) {
   default: TokError("Unknown token when parsing a value"); break;
-  case tgtok::paste:
-    // This is a leading paste operation.  This is deprecated but
-    // still exists in some .td files.  Ignore it.
-    Lex.Lex();  // Skip '#'.
-    return ParseSimpleValue(CurRec, ItemType, Mode);
   case tgtok::IntVal: R = IntInit::get(Lex.getCurIntVal()); Lex.Lex(); break;
   case tgtok::BinaryIntVal: {
     auto BinaryVal = Lex.getCurBinaryIntVal();
@@ -1873,11 +1852,10 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
     ParseValueList(Args, CurRec, Class);
     if (Args.empty()) return nullptr;
 
-    if (Lex.getCode() != tgtok::greater) {
+    if (!consume(tgtok::greater)) {
       TokError("expected '>' at end of value list");
       return nullptr;
     }
-    Lex.Lex();  // eat the '>'
 
     // Typecheck the template arguments list
     ArrayRef<Init *> ExpectedArgs = Class->getTemplateArgs();
@@ -1922,11 +1900,10 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
       ParseValueList(Vals, CurRec);
       if (Vals.empty()) return nullptr;
     }
-    if (Lex.getCode() != tgtok::r_brace) {
+    if (!consume(tgtok::r_brace)) {
       TokError("expected '}' at end of bit list value");
       return nullptr;
     }
-    Lex.Lex();  // eat the '}'
 
     SmallVector<Init *, 16> NewBits;
 
@@ -1986,28 +1963,24 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
                      GivenListTy ? GivenListTy->getElementType() : nullptr);
       if (Vals.empty()) return nullptr;
     }
-    if (Lex.getCode() != tgtok::r_square) {
+    if (!consume(tgtok::r_square)) {
       TokError("expected ']' at end of list value");
       return nullptr;
     }
-    Lex.Lex();  // eat the ']'
 
     RecTy *GivenEltTy = nullptr;
-    if (Lex.getCode() == tgtok::less) {
+    if (consume(tgtok::less)) {
       // Optional list element type
-      Lex.Lex();  // eat the '<'
-
       GivenEltTy = ParseType();
       if (!GivenEltTy) {
         // Couldn't parse element type
         return nullptr;
       }
 
-      if (Lex.getCode() != tgtok::greater) {
+      if (!consume(tgtok::greater)) {
         TokError("expected '>' at end of list element type");
         return nullptr;
       }
-      Lex.Lex();  // eat the '>'
     }
 
     // Check elements
@@ -2072,8 +2045,8 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
 
     // If the operator name is present, parse it.
     StringInit *OperatorName = nullptr;
-    if (Lex.getCode() == tgtok::colon) {
-      if (Lex.Lex() != tgtok::VarName) { // eat the ':'
+    if (consume(tgtok::colon)) {
+      if (Lex.getCode() != tgtok::VarName) { // eat the ':'
         TokError("expected variable name in dag operator");
         return nullptr;
       }
@@ -2087,11 +2060,10 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
       if (DagArgs.empty()) return nullptr;
     }
 
-    if (Lex.getCode() != tgtok::r_paren) {
+    if (!consume(tgtok::r_paren)) {
       TokError("expected ')' in dag init");
       return nullptr;
     }
-    Lex.Lex();  // eat the ')'
 
     return DagInit::get(Operator, OperatorName, DagArgs);
   }
@@ -2169,11 +2141,10 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
       }
 
       // Eat the '}'.
-      if (Lex.getCode() != tgtok::r_brace) {
+      if (!consume(tgtok::r_brace)) {
         TokError("expected '}' at end of bit range list");
         return nullptr;
       }
-      Lex.Lex();
       break;
     }
     case tgtok::l_square: {
@@ -2190,11 +2161,10 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
       }
 
       // Eat the ']'.
-      if (Lex.getCode() != tgtok::r_square) {
+      if (!consume(tgtok::r_square)) {
         TokError("expected ']' at end of list slice");
         return nullptr;
       }
-      Lex.Lex();
       break;
     }
     case tgtok::period: {
@@ -2335,8 +2305,8 @@ void TGParser::ParseDagArgList(
 
       Result.push_back(std::make_pair(Val, VarName));
     }
-    if (Lex.getCode() != tgtok::comma) break;
-    Lex.Lex(); // eat the ','
+    if (!consume(tgtok::comma))
+      break;
   }
 }
 
@@ -2372,9 +2342,7 @@ void TGParser::ParseValueList(SmallVectorImpl<Init*> &Result, Record *CurRec,
     return;
   }
 
-  while (Lex.getCode() == tgtok::comma) {
-    Lex.Lex();  // Eat the comma
-
+  while (consume(tgtok::comma)) {
     // ignore trailing comma for lists
     if (Lex.getCode() == tgtok::r_square)
       return;
@@ -2412,8 +2380,7 @@ void TGParser::ParseValueList(SmallVectorImpl<Init*> &Result, Record *CurRec,
 Init *TGParser::ParseDeclaration(Record *CurRec,
                                        bool ParsingTemplateArgs) {
   // Read the field prefix if present.
-  bool HasField = Lex.getCode() == tgtok::Field;
-  if (HasField) Lex.Lex();
+  bool HasField = consume(tgtok::Field);
 
   RecTy *Type = ParseType();
   if (!Type) return nullptr;
@@ -2448,8 +2415,7 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
     return nullptr;
 
   // If a value is present, parse it.
-  if (Lex.getCode() == tgtok::equal) {
-    Lex.Lex();
+  if (consume(tgtok::equal)) {
     SMLoc ValLoc = Lex.getLoc();
     Init *Val = ParseValue(CurRec, Type);
     if (!Val ||
@@ -2481,11 +2447,10 @@ VarInit *TGParser::ParseForeachDeclaration(Init *&ForeachListValue) {
   Lex.Lex();
 
   // If a value is present, parse it.
-  if (Lex.getCode() != tgtok::equal) {
+  if (!consume(tgtok::equal)) {
     TokError("Expected '=' in foreach declaration");
     return nullptr;
   }
-  Lex.Lex();  // Eat the '='
 
   RecTy *IterType = nullptr;
   SmallVector<unsigned, 16> Ranges;
@@ -2494,11 +2459,10 @@ VarInit *TGParser::ParseForeachDeclaration(Init *&ForeachListValue) {
   case tgtok::l_brace: { // '{' RangeList '}'
     Lex.Lex(); // eat the '{'
     ParseRangeList(Ranges);
-    if (Lex.getCode() != tgtok::r_brace) {
+    if (!consume(tgtok::r_brace)) {
       TokError("expected '}' at end of bit range list");
       return nullptr;
     }
-    Lex.Lex();
     break;
   }
 
@@ -2569,9 +2533,7 @@ bool TGParser::ParseTemplateArgList(Record *CurRec) {
 
   TheRecToAddTo->addTemplateArg(TemplArg);
 
-  while (Lex.getCode() == tgtok::comma) {
-    Lex.Lex(); // eat the ','
-
+  while (consume(tgtok::comma)) {
     // Read the following declarations.
     SMLoc Loc = Lex.getLoc();
     TemplArg = ParseDeclaration(CurRec, true/*templateargs*/);
@@ -2585,9 +2547,8 @@ bool TGParser::ParseTemplateArgList(Record *CurRec) {
     TheRecToAddTo->addTemplateArg(TemplArg);
   }
 
-  if (Lex.getCode() != tgtok::greater)
+  if (!consume(tgtok::greater))
     return TokError("expected '>' at end of template argument list");
-  Lex.Lex(); // eat the '>'.
   return false;
 }
 
@@ -2595,14 +2556,17 @@ bool TGParser::ParseTemplateArgList(Record *CurRec) {
 ///
 ///   BodyItem ::= Declaration ';'
 ///   BodyItem ::= LET ID OptionalBitList '=' Value ';'
+///   BodyItem ::= Defvar
 bool TGParser::ParseBodyItem(Record *CurRec) {
+  if (Lex.getCode() == tgtok::Defvar)
+    return ParseDefvar();
+
   if (Lex.getCode() != tgtok::Let) {
     if (!ParseDeclaration(CurRec, false))
       return true;
 
-    if (Lex.getCode() != tgtok::semi)
+    if (!consume(tgtok::semi))
       return TokError("expected ';' after declaration");
-    Lex.Lex();
     return false;
   }
 
@@ -2619,22 +2583,25 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
     return true;
   std::reverse(BitList.begin(), BitList.end());
 
-  if (Lex.getCode() != tgtok::equal)
+  if (!consume(tgtok::equal))
     return TokError("expected '=' in let expression");
-  Lex.Lex();  // eat the '='.
 
   RecordVal *Field = CurRec->getValue(FieldName);
   if (!Field)
     return TokError("Value '" + FieldName->getValue() + "' unknown!");
 
   RecTy *Type = Field->getType();
+  if (!BitList.empty() && isa<BitsRecTy>(Type)) {
+    // When assigning to a subset of a 'bits' object, expect the RHS to have
+    // the type of that subset instead of the type of the whole object.
+    Type = BitsRecTy::get(BitList.size());
+  }
 
   Init *Val = ParseValue(CurRec, Type);
   if (!Val) return true;
 
-  if (Lex.getCode() != tgtok::semi)
+  if (!consume(tgtok::semi))
     return TokError("expected ';' after let expression");
-  Lex.Lex();
 
   return SetValue(CurRec, IdLoc, FieldName, BitList, Val);
 }
@@ -2648,19 +2615,20 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
 ///
 bool TGParser::ParseBody(Record *CurRec) {
   // If this is a null definition, just eat the semi and return.
-  if (Lex.getCode() == tgtok::semi) {
-    Lex.Lex();
+  if (consume(tgtok::semi))
     return false;
-  }
 
-  if (Lex.getCode() != tgtok::l_brace)
+  if (!consume(tgtok::l_brace))
     return TokError("Expected ';' or '{' to start body");
-  // Eat the '{'.
-  Lex.Lex();
+
+  // An object body introduces a new scope for local variables.
+  TGLocalVarScope *BodyScope = PushLocalScope();
 
   while (Lex.getCode() != tgtok::r_brace)
     if (ParseBodyItem(CurRec))
       return true;
+
+  PopLocalScope(BodyScope);
 
   // Eat the '}'.
   Lex.Lex();
@@ -2700,8 +2668,7 @@ bool TGParser::ApplyLetStack(RecordsEntry &Entry) {
 ///
 bool TGParser::ParseObjectBody(Record *CurRec) {
   // If there is a baseclass list, read it.
-  if (Lex.getCode() == tgtok::colon) {
-    Lex.Lex();
+  if (consume(tgtok::colon)) {
 
     // Read all of the subclasses.
     SubClassReference SubClass = ParseSubClassReference(CurRec, false);
@@ -2713,8 +2680,8 @@ bool TGParser::ParseObjectBody(Record *CurRec) {
       if (AddSubClass(CurRec, SubClass))
         return true;
 
-      if (Lex.getCode() != tgtok::comma) break;
-      Lex.Lex(); // eat ','.
+      if (!consume(tgtok::comma))
+        break;
       SubClass = ParseSubClassReference(CurRec, false);
     }
   }
@@ -2789,14 +2756,51 @@ bool TGParser::ParseDefset() {
   if (Err)
     return true;
 
-  if (Lex.getCode() != tgtok::r_brace) {
+  if (!consume(tgtok::r_brace)) {
     TokError("expected '}' at end of defset");
     return Error(BraceLoc, "to match this '{'");
   }
-  Lex.Lex();  // Eat the '}'
 
   Records.addExtraGlobal(DeclName->getValue(),
                          ListInit::get(Defset.Elements, Defset.EltTy));
+  return false;
+}
+
+/// ParseDefvar - Parse a defvar statement.
+///
+///   Defvar ::= DEFVAR Id '=' Value ';'
+///
+bool TGParser::ParseDefvar() {
+  assert(Lex.getCode() == tgtok::Defvar);
+  Lex.Lex(); // Eat the 'defvar' token
+
+  if (Lex.getCode() != tgtok::Id)
+    return TokError("expected identifier");
+  StringInit *DeclName = StringInit::get(Lex.getCurStrVal());
+  if (CurLocalScope) {
+    if (CurLocalScope->varAlreadyDefined(DeclName->getValue()))
+      return TokError("local variable of this name already exists");
+  } else {
+    if (Records.getGlobal(DeclName->getValue()))
+      return TokError("def or global variable of this name already exists");
+  }
+
+  Lex.Lex();
+  if (!consume(tgtok::equal))
+    return TokError("expected '='");
+
+  Init *Value = ParseValue(nullptr);
+  if (!Value)
+    return true;
+
+  if (!consume(tgtok::semi))
+    return TokError("expected ';'");
+
+  if (CurLocalScope)
+    CurLocalScope->addVar(DeclName->getValue(), Value);
+  else
+    Records.addExtraGlobal(DeclName->getValue(), Value);
+
   return false;
 }
 
@@ -2818,12 +2822,14 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
   if (!IterName)
     return TokError("expected declaration in for");
 
-  if (Lex.getCode() != tgtok::In)
+  if (!consume(tgtok::In))
     return TokError("Unknown tok");
-  Lex.Lex();  // Eat the in
 
   // Create a loop object and remember it.
   Loops.push_back(std::make_unique<ForeachLoop>(Loc, IterName, ListValue));
+
+  // A foreach loop introduces a new scope for local variables.
+  TGLocalVarScope *ForeachScope = PushLocalScope();
 
   if (Lex.getCode() != tgtok::l_brace) {
     // FOREACH Declaration IN Object
@@ -2838,18 +2844,123 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
     if (ParseObjectList(CurMultiClass))
       return true;
 
-    if (Lex.getCode() != tgtok::r_brace) {
+    if (!consume(tgtok::r_brace)) {
       TokError("expected '}' at end of foreach command");
       return Error(BraceLoc, "to match this '{'");
     }
-    Lex.Lex();  // Eat the }
   }
+
+  PopLocalScope(ForeachScope);
 
   // Resolve the loop or store it for later resolution.
   std::unique_ptr<ForeachLoop> Loop = std::move(Loops.back());
   Loops.pop_back();
 
   return addEntry(std::move(Loop));
+}
+
+/// ParseIf - Parse an if statement.
+///
+///   If ::= IF Value THEN IfBody
+///   If ::= IF Value THEN IfBody ELSE IfBody
+///
+bool TGParser::ParseIf(MultiClass *CurMultiClass) {
+  SMLoc Loc = Lex.getLoc();
+  assert(Lex.getCode() == tgtok::If && "Unknown tok");
+  Lex.Lex(); // Eat the 'if' token.
+
+  // Make a temporary object to record items associated with the for
+  // loop.
+  Init *Condition = ParseValue(nullptr);
+  if (!Condition)
+    return true;
+
+  if (!consume(tgtok::Then))
+    return TokError("Unknown tok");
+
+  // We have to be able to save if statements to execute later, and they have
+  // to live on the same stack as foreach loops. The simplest implementation
+  // technique is to convert each 'then' or 'else' clause *into* a foreach
+  // loop, over a list of length 0 or 1 depending on the condition, and with no
+  // iteration variable being assigned.
+
+  ListInit *EmptyList = ListInit::get({}, BitRecTy::get());
+  ListInit *SingletonList = ListInit::get({BitInit::get(1)}, BitRecTy::get());
+  RecTy *BitListTy = ListRecTy::get(BitRecTy::get());
+
+  // The foreach containing the then-clause selects SingletonList if
+  // the condition is true.
+  Init *ThenClauseList =
+      TernOpInit::get(TernOpInit::IF, Condition, SingletonList, EmptyList,
+                      BitListTy)
+          ->Fold(nullptr);
+  Loops.push_back(std::make_unique<ForeachLoop>(Loc, nullptr, ThenClauseList));
+
+  if (ParseIfBody(CurMultiClass, "then"))
+    return true;
+
+  std::unique_ptr<ForeachLoop> Loop = std::move(Loops.back());
+  Loops.pop_back();
+
+  if (addEntry(std::move(Loop)))
+    return true;
+
+  // Now look for an optional else clause. The if-else syntax has the usual
+  // dangling-else ambiguity, and by greedily matching an else here if we can,
+  // we implement the usual resolution of pairing with the innermost unmatched
+  // if.
+  if (consume(tgtok::ElseKW)) {
+    // The foreach containing the else-clause uses the same pair of lists as
+    // above, but this time, selects SingletonList if the condition is *false*.
+    Init *ElseClauseList =
+        TernOpInit::get(TernOpInit::IF, Condition, EmptyList, SingletonList,
+                        BitListTy)
+            ->Fold(nullptr);
+    Loops.push_back(
+        std::make_unique<ForeachLoop>(Loc, nullptr, ElseClauseList));
+
+    if (ParseIfBody(CurMultiClass, "else"))
+      return true;
+
+    Loop = std::move(Loops.back());
+    Loops.pop_back();
+
+    if (addEntry(std::move(Loop)))
+      return true;
+  }
+
+  return false;
+}
+
+/// ParseIfBody - Parse the then-clause or else-clause of an if statement.
+///
+///   IfBody ::= Object
+///   IfBody ::= '{' ObjectList '}'
+///
+bool TGParser::ParseIfBody(MultiClass *CurMultiClass, StringRef Kind) {
+  TGLocalVarScope *BodyScope = PushLocalScope();
+
+  if (Lex.getCode() != tgtok::l_brace) {
+    // A single object.
+    if (ParseObject(CurMultiClass))
+      return true;
+  } else {
+    SMLoc BraceLoc = Lex.getLoc();
+    // A braced block.
+    Lex.Lex(); // eat the '{'.
+
+    // Parse the object list.
+    if (ParseObjectList(CurMultiClass))
+      return true;
+
+    if (!consume(tgtok::r_brace)) {
+      TokError("expected '}' at end of '" + Kind + "' clause");
+      return Error(BraceLoc, "to match this '{'");
+    }
+  }
+
+  PopLocalScope(BodyScope);
+  return false;
 }
 
 /// ParseClass - Parse a tblgen class definition.
@@ -2896,7 +3007,7 @@ bool TGParser::ParseClass() {
 ///   LetItem ::= ID OptionalRangeList '=' Value
 ///
 void TGParser::ParseLetList(SmallVectorImpl<LetRecord> &Result) {
-  while (true) {
+  do {
     if (Lex.getCode() != tgtok::Id) {
       TokError("expected identifier in let definition");
       Result.clear();
@@ -2915,12 +3026,11 @@ void TGParser::ParseLetList(SmallVectorImpl<LetRecord> &Result) {
     }
     std::reverse(Bits.begin(), Bits.end());
 
-    if (Lex.getCode() != tgtok::equal) {
+    if (!consume(tgtok::equal)) {
       TokError("expected '=' in let expression");
       Result.clear();
       return;
     }
-    Lex.Lex();  // eat the '='.
 
     Init *Val = ParseValue(nullptr);
     if (!Val) {
@@ -2930,11 +3040,7 @@ void TGParser::ParseLetList(SmallVectorImpl<LetRecord> &Result) {
 
     // Now that we have everything, add the record.
     Result.emplace_back(Name, Bits, Val, NameLoc);
-
-    if (Lex.getCode() != tgtok::comma)
-      return;
-    Lex.Lex();  // eat the comma.
-  }
+  } while (consume(tgtok::comma));
 }
 
 /// ParseTopLevelLet - Parse a 'let' at top level.  This can be a couple of
@@ -2953,9 +3059,10 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
   if (LetInfo.empty()) return true;
   LetStack.push_back(std::move(LetInfo));
 
-  if (Lex.getCode() != tgtok::In)
+  if (!consume(tgtok::In))
     return TokError("expected 'in' at end of top-level 'let'");
-  Lex.Lex();
+
+  TGLocalVarScope *LetScope = PushLocalScope();
 
   // If this is a scalar let, just handle it now
   if (Lex.getCode() != tgtok::l_brace) {
@@ -2971,12 +3078,13 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
     if (ParseObjectList(CurMultiClass))
       return true;
 
-    if (Lex.getCode() != tgtok::r_brace) {
+    if (!consume(tgtok::r_brace)) {
       TokError("expected '}' at end of top level let command");
       return Error(BraceLoc, "to match this '{'");
     }
-    Lex.Lex();
   }
+
+  PopLocalScope(LetScope);
 
   // Outside this let scope, this let block is not active.
   LetStack.pop_back();
@@ -3019,10 +3127,8 @@ bool TGParser::ParseMultiClass() {
   bool inherits = false;
 
   // If there are submulticlasses, parse them.
-  if (Lex.getCode() == tgtok::colon) {
+  if (consume(tgtok::colon)) {
     inherits = true;
-
-    Lex.Lex();
 
     // Read all of the submulticlasses.
     SubMultiClassReference SubMultiClass =
@@ -3035,8 +3141,8 @@ bool TGParser::ParseMultiClass() {
       if (AddSubMultiClass(CurMultiClass, SubMultiClass))
         return true;
 
-      if (Lex.getCode() != tgtok::comma) break;
-      Lex.Lex(); // eat ','.
+      if (!consume(tgtok::comma))
+        break;
       SubMultiClass = ParseSubMultiClassReference(CurMultiClass);
     }
   }
@@ -3044,28 +3150,34 @@ bool TGParser::ParseMultiClass() {
   if (Lex.getCode() != tgtok::l_brace) {
     if (!inherits)
       return TokError("expected '{' in multiclass definition");
-    if (Lex.getCode() != tgtok::semi)
+    if (!consume(tgtok::semi))
       return TokError("expected ';' in multiclass definition");
-    Lex.Lex();  // eat the ';'.
   } else {
     if (Lex.Lex() == tgtok::r_brace)  // eat the '{'.
       return TokError("multiclass must contain at least one def");
 
+    // A multiclass body introduces a new scope for local variables.
+    TGLocalVarScope *MulticlassScope = PushLocalScope();
+
     while (Lex.getCode() != tgtok::r_brace) {
       switch (Lex.getCode()) {
       default:
-        return TokError("expected 'let', 'def', 'defm' or 'foreach' in "
-                        "multiclass body");
+        return TokError("expected 'let', 'def', 'defm', 'defvar', 'foreach' "
+                        "or 'if' in multiclass body");
       case tgtok::Let:
       case tgtok::Def:
       case tgtok::Defm:
+      case tgtok::Defvar:
       case tgtok::Foreach:
+      case tgtok::If:
         if (ParseObject(CurMultiClass))
           return true;
         break;
       }
     }
     Lex.Lex();  // eat the '}'.
+
+    PopLocalScope(MulticlassScope);
   }
 
   CurMultiClass = nullptr;
@@ -3113,7 +3225,7 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
     // To instantiate a multiclass, we need to first get the multiclass, then
     // instantiate each def contained in the multiclass with the SubClassRef
     // template parameters.
-    MultiClass *MC = MultiClasses[Ref.Rec->getName()].get();
+    MultiClass *MC = MultiClasses[std::string(Ref.Rec->getName())].get();
     assert(MC && "Didn't lookup multiclass correctly?");
     ArrayRef<Init*> TemplateVals = Ref.TemplateArgs;
 
@@ -3146,8 +3258,8 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
                 &SubClassLoc))
       return true;
 
-    if (Lex.getCode() != tgtok::comma) break;
-    Lex.Lex(); // eat ','.
+    if (!consume(tgtok::comma))
+      break;
 
     if (Lex.getCode() != tgtok::Id)
       return TokError("expected identifier");
@@ -3180,8 +3292,8 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
           return true;
       }
 
-      if (Lex.getCode() != tgtok::comma) break;
-      Lex.Lex(); // eat ','.
+      if (!consume(tgtok::comma))
+        break;
       SubClass = ParseSubClassReference(nullptr, false);
     }
   }
@@ -3193,9 +3305,8 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
     addEntry(std::move(E));
   }
 
-  if (Lex.getCode() != tgtok::semi)
+  if (!consume(tgtok::semi))
     return TokError("expected ';' at end of defm");
-  Lex.Lex();
 
   return false;
 }
@@ -3207,19 +3318,24 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 ///   Object ::= DefMInst
 ///   Object ::= LETCommand '{' ObjectList '}'
 ///   Object ::= LETCommand Object
+///   Object ::= Defset
+///   Object ::= Defvar
 bool TGParser::ParseObject(MultiClass *MC) {
   switch (Lex.getCode()) {
   default:
-    return TokError("Expected class, def, defm, defset, multiclass, let or "
-                    "foreach");
+    return TokError("Expected class, def, defm, defset, multiclass, let, "
+                    "foreach or if");
   case tgtok::Let:   return ParseTopLevelLet(MC);
   case tgtok::Def:   return ParseDef(MC);
   case tgtok::Foreach:   return ParseForeach(MC);
+  case tgtok::If:    return ParseIf(MC);
   case tgtok::Defm:  return ParseDefm(MC);
   case tgtok::Defset:
     if (MC)
       return TokError("defset is not allowed inside multiclass");
     return ParseDefset();
+  case tgtok::Defvar:
+    return ParseDefvar();
   case tgtok::Class:
     if (MC)
       return TokError("class is not allowed inside multiclass");

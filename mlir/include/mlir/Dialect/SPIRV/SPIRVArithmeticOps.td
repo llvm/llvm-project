@@ -1,6 +1,6 @@
 //===-- SPIRVArithmeticOps.td - MLIR SPIR-V Arithmetic Ops -*- tablegen -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -15,13 +15,25 @@
 #define SPIRV_ARITHMETIC_OPS
 
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class SPV_ArithmeticBinaryOp<string mnemonic, Type type,
                        list<OpTrait> traits = []> :
       // Operands type same as result type.
       SPV_BinaryOp<mnemonic, type, type,
                    !listconcat(traits,
-                               [NoSideEffect, SameOperandsAndResultType])>;
+                               [NoSideEffect, SameOperandsAndResultType])> {
+  // In addition to normal types arithmetic instructions can support cooperative
+  // matrix.
+  let arguments = (ins
+    SPV_ScalarOrVectorOrCoopMatrixOf<type>:$operand1,
+    SPV_ScalarOrVectorOrCoopMatrixOf<type>:$operand2
+  );
+
+  let results = (outs
+    SPV_ScalarOrVectorOrCoopMatrixOf<type>:$result
+  );
+}
 
 class SPV_ArithmeticUnaryOp<string mnemonic, Type type,
                             list<OpTrait> traits = []> :
@@ -43,16 +55,16 @@ def SPV_FAddOp : SPV_ArithmeticBinaryOp<"FAdd", SPV_Float, [Commutative]> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
     fadd-op ::= ssa-id `=` `spv.FAdd` ssa-use, ssa-use
                           `:` float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FAdd %0, %1 : f32
     %5 = spv.FAdd %2, %3 : vector<4xf32>
     ```
@@ -73,7 +85,7 @@ def SPV_FDivOp : SPV_ArithmeticBinaryOp<"FDiv", SPV_Float, []> {
      Results are computed per component.  The resulting value is undefined
     if Operand 2 is 0.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
@@ -81,9 +93,9 @@ def SPV_FDivOp : SPV_ArithmeticBinaryOp<"FDiv", SPV_Float, []> {
                           `:` float-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FDiv %0, %1 : f32
     %5 = spv.FDiv %2, %3 : vector<4xf32>
     ```
@@ -108,16 +120,16 @@ def SPV_FModOp : SPV_ArithmeticBinaryOp<"FMod", SPV_Float, []> {
     1 divided by Operand 2 where if r ≠ 0, the sign of r is the same as the
     sign of Operand 2.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
     fmod-op ::= ssa-id `=` `spv.FMod` ssa-use, ssa-use
                           `:` float-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FMod %0, %1 : f32
     %5 = spv.FMod %2, %3 : vector<4xf32>
     ```
@@ -137,7 +149,7 @@ def SPV_FMulOp : SPV_ArithmeticBinaryOp<"FMul", SPV_Float, [Commutative]> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -146,9 +158,9 @@ def SPV_FMulOp : SPV_ArithmeticBinaryOp<"FMul", SPV_Float, [Commutative]> {
                           `:` float-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FMul %0, %1 : f32
     %5 = spv.FMul %2, %3 : vector<4xf32>
     ```
@@ -158,7 +170,12 @@ def SPV_FMulOp : SPV_ArithmeticBinaryOp<"FMul", SPV_Float, [Commutative]> {
 // -----
 
 def SPV_FNegateOp : SPV_ArithmeticUnaryOp<"FNegate", SPV_Float, []> {
-  let summary = "Floating-point subtract of Operand from zero.";
+  let summary = [{
+    Inverts the sign bit of Operand. (Note, however, that OpFNegate is still
+    considered a floating-point instruction, and so is subject to the
+    general floating-point rules regarding, for example, subnormals and NaN
+    propagation).
+  }];
 
   let description = [{
     Result Type must be a scalar or vector of floating-point type.
@@ -167,7 +184,7 @@ def SPV_FNegateOp : SPV_ArithmeticUnaryOp<"FNegate", SPV_Float, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     float-scalar-vector-type ::= float-type |
@@ -175,9 +192,9 @@ def SPV_FNegateOp : SPV_ArithmeticUnaryOp<"FNegate", SPV_Float, []> {
     fmul-op ::= `spv.FNegate` ssa-use `:` float-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %1 = spv.FNegate %0 : f32
     %3 = spv.FNegate %2 : vector<4xf32>
     ```
@@ -202,7 +219,7 @@ def SPV_FRemOp : SPV_ArithmeticBinaryOp<"FRem", SPV_Float, []> {
     1 divided by Operand 2 where if r ≠ 0, the sign of r is the same as the
     sign of Operand 1.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
@@ -210,9 +227,9 @@ def SPV_FRemOp : SPV_ArithmeticBinaryOp<"FRem", SPV_Float, []> {
                           `:` float-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FRemOp %0, %1 : f32
     %5 = spv.FRemOp %2, %3 : vector<4xf32>
     ```
@@ -232,7 +249,7 @@ def SPV_FSubOp : SPV_ArithmeticBinaryOp<"FSub", SPV_Float, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
@@ -240,9 +257,9 @@ def SPV_FSubOp : SPV_ArithmeticBinaryOp<"FSub", SPV_Float, []> {
                           `:` float-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.FRemOp %0, %1 : f32
     %5 = spv.FRemOp %2, %3 : vector<4xf32>
     ```
@@ -267,7 +284,7 @@ def SPV_IAddOp : SPV_ArithmeticBinaryOp<"IAdd", SPV_Integer, [Commutative]> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
@@ -275,9 +292,9 @@ def SPV_IAddOp : SPV_ArithmeticBinaryOp<"IAdd", SPV_Integer, [Commutative]> {
                           `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.IAdd %0, %1 : i32
     %5 = spv.IAdd %2, %3 : vector<4xi32>
 
@@ -305,7 +322,7 @@ def SPV_IMulOp : SPV_ArithmeticBinaryOp<"IMul", SPV_Integer, [Commutative]> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
@@ -313,9 +330,9 @@ def SPV_IMulOp : SPV_ArithmeticBinaryOp<"IMul", SPV_Integer, [Commutative]> {
                           `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.IMul %0, %1 : i32
     %5 = spv.IMul %2, %3 : vector<4xi32>
 
@@ -343,7 +360,7 @@ def SPV_ISubOp : SPV_ArithmeticBinaryOp<"ISub", SPV_Integer, []> {
 
      Results are computed per component.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
@@ -351,9 +368,9 @@ def SPV_ISubOp : SPV_ArithmeticBinaryOp<"ISub", SPV_Integer, []> {
                           `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.ISub %0, %1 : i32
     %5 = spv.ISub %2, %3 : vector<4xi32>
 
@@ -378,7 +395,7 @@ def SPV_SDivOp : SPV_ArithmeticBinaryOp<"SDiv", SPV_Integer, []> {
      Results are computed per component.  The resulting value is undefined
     if Operand 2 is 0.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
@@ -386,9 +403,9 @@ def SPV_SDivOp : SPV_ArithmeticBinaryOp<"SDiv", SPV_Integer, []> {
                            `:` integer-scalar-vector-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.SDiv %0, %1 : i32
     %5 = spv.SDiv %2, %3 : vector<4xi32>
 
@@ -416,19 +433,44 @@ def SPV_SModOp : SPV_ArithmeticBinaryOp<"SMod", SPV_Integer, []> {
     1 divided by Operand 2 where if r ≠ 0, the sign of r is the same as the
     sign of Operand 2.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     smod-op ::= ssa-id `=` `spv.SMod` ssa-use, ssa-use
                            `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.SMod %0, %1 : i32
     %5 = spv.SMod %2, %3 : vector<4xi32>
 
+    ```
+  }];
+}
+
+// -----
+
+def SPV_SNegateOp : SPV_ArithmeticUnaryOp<"SNegate", SPV_Integer, []> {
+  let summary = "Signed-integer subtract of Operand from zero.";
+
+  let description = [{
+    Result Type must be a scalar or vector of integer type.
+
+    Operand’s type  must be a scalar or vector of integer type.  It must
+    have the same number of components as Result Type.  The component width
+    must equal the component width in Result Type.
+
+     Results are computed per component.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %1 = spv.SNegate %0 : i32
+    %3 = spv.SNegate %2 : vector<4xi32>
     ```
   }];
 }
@@ -453,16 +495,16 @@ def SPV_SRemOp : SPV_ArithmeticBinaryOp<"SRem", SPV_Integer, []> {
     1 divided by Operand 2 where if r ≠ 0, the sign of r is the same as the
     sign of Operand 1.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     srem-op ::= ssa-id `=` `spv.SRem` ssa-use, ssa-use
                            `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.SRem %0, %1 : i32
     %5 = spv.SRem %2, %3 : vector<4xi32>
 
@@ -485,16 +527,16 @@ def SPV_UDivOp : SPV_ArithmeticBinaryOp<"UDiv", SPV_Integer, []> {
      Results are computed per component.  The resulting value is undefined
     if Operand 2 is 0.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     udiv-op ::= ssa-id `=` `spv.UDiv` ssa-use, ssa-use
                            `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.UDiv %0, %1 : i32
     %5 = spv.UDiv %2, %3 : vector<4xi32>
 
@@ -517,16 +559,16 @@ def SPV_UModOp : SPV_ArithmeticBinaryOp<"UMod", SPV_Integer> {
      Results are computed per component.  The resulting value is undefined
     if Operand 2 is 0.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
     umod-op ::= ssa-id `=` `spv.UMod` ssa-use, ssa-use
                            `:` integer-scalar-vector-type
     ```
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %4 = spv.UMod %0, %1 : i32
     %5 = spv.UMod %2, %3 : vector<4xi32>
 

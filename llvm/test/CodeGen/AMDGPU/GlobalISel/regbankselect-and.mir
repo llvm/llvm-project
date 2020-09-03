@@ -28,7 +28,8 @@ body: |
     ; CHECK-LABEL: name: and_s32_sv
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[COPY2]], [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_AND %0, %1
@@ -555,7 +556,8 @@ body: |
     ; CHECK-LABEL: name: and_v2s16_sv
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; CHECK: [[AND:%[0-9]+]]:vgpr(<2 x s16>) = G_AND [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[COPY]](<2 x s16>)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(<2 x s16>) = G_AND [[COPY2]], [[COPY1]]
     %0:_(<2 x s16>) = COPY $sgpr0
     %1:_(<2 x s16>) = COPY $vgpr0
     %2:_(<2 x s16>) = G_AND %0, %1

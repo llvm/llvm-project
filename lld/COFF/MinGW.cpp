@@ -15,9 +15,8 @@
 
 using namespace llvm;
 using namespace llvm::COFF;
-
-namespace lld {
-namespace coff {
+using namespace lld;
+using namespace lld::coff;
 
 AutoExporter::AutoExporter() {
   excludeLibs = {
@@ -35,6 +34,11 @@ AutoExporter::AutoExporter() {
       "libclang_rt.builtins-arm",
       "libclang_rt.builtins-i386",
       "libclang_rt.builtins-x86_64",
+      "libclang_rt.profile",
+      "libclang_rt.profile-aarch64",
+      "libclang_rt.profile-arm",
+      "libclang_rt.profile-i386",
+      "libclang_rt.profile-x86_64",
       "libc++",
       "libc++abi",
       "libunwind",
@@ -58,6 +62,10 @@ AutoExporter::AutoExporter() {
       "__builtin_",
       // Artificial symbols such as .refptr
       ".",
+      // profile generate symbols
+      "__profc_",
+      "__profd_",
+      "__profvp_",
   };
 
   excludeSymbolSuffixes = {
@@ -147,7 +155,7 @@ bool AutoExporter::shouldExport(Defined *sym) const {
   return !excludeObjects.count(fileName);
 }
 
-void writeDefFile(StringRef name) {
+void lld::coff::writeDefFile(StringRef name) {
   std::error_code ec;
   raw_fd_ostream os(name, ec, sys::fs::OF_None);
   if (ec)
@@ -165,6 +173,3 @@ void writeDefFile(StringRef name) {
     os << "\n";
   }
 }
-
-} // namespace coff
-} // namespace lld

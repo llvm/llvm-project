@@ -143,7 +143,7 @@ std::string MSP430ToolChain::computeSysRoot() const {
   else
     llvm::sys::path::append(Dir, getDriver().Dir, "..", getTriple().str());
 
-  return Dir.str();
+  return std::string(Dir.str());
 }
 
 void MSP430ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
@@ -227,6 +227,7 @@ void msp430::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
-  C.addCommand(std::make_unique<Command>(JA, *this, Args.MakeArgString(Linker),
-                                          CmdArgs, Inputs));
+  C.addCommand(
+      std::make_unique<Command>(JA, *this, ResponseFileSupport::AtFileCurCP(),
+                                Args.MakeArgString(Linker), CmdArgs, Inputs));
 }

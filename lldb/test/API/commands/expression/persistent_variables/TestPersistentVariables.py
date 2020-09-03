@@ -15,38 +15,29 @@ class PersistentVariablesTestCase(TestBase):
     def test_persistent_variables(self):
         """Test that lldb persistent variables works correctly."""
         self.build()
+        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
 
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+        self.runCmd("expr int $i = i")
+        self.expect_expr("$i == i", result_type="bool", result_value="true")
+        self.expect_expr("$i + 1", result_type="int", result_value="6")
+        self.expect_expr("$i + 3", result_type="int", result_value="8")
+        self.expect_expr("$1 + $2", result_type="int", result_value="14")
+        self.expect_expr("$3", result_type="int", result_value="14")
+        self.expect_expr("$2", result_type="int", result_value="8")
+        self.expect_expr("(int)-2", result_type="int", result_value="-2")
+        self.expect_expr("$4", result_type="int", result_value="-2")
+        self.expect_expr("$4 > (int)31", result_type="bool", result_value="false")
+        self.expect_expr("(long)$4", result_type="long", result_value="-2")
 
-        self.runCmd("breakpoint set --source-pattern-regexp break")
+        # Try assigning an existing persistent veriable with a numeric name.
+        self.expect("expr int $2 = 1234", error=True,
+            substrs=["Error [IRForTarget]: Names starting with $0, $1, ... are reserved for use as result names"])
+        # $2 should still have its original value.
+        self.expect_expr("$2", result_type="int", result_value="8")
 
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        self.runCmd("expression int $i = i")
-
-        self.expect("expression $i == i",
-                    startstr="(bool) $0 = true")
-
-        self.expect("expression $i + 1",
-                    startstr="(int) $1 = 6")
-
-        self.expect("expression $i + 3",
-                    startstr="(int) $2 = 8")
-
-        self.expect("expression $2 + $1",
-                    startstr="(int) $3 = 14")
-
-        self.expect("expression $3",
-                    startstr="(int) $3 = 14")
-
-        self.expect("expression $2",
-                    startstr="(int) $2 = 8")
-
-        self.expect("expression (int)-2",
-                    startstr="(int) $4 = -2")
-
-        self.expect("expression $4 > (int)31",
-                    startstr="(bool) $5 = false")
-
-        self.expect("expression (long)$4",
-                    startstr="(long) $6 = -2")
+        # Try assigning an non-existing persistent veriable with a numeric name.
+        self.expect("expr int $200 = 3", error=True,
+            substrs=["Error [IRForTarget]: Names starting with $0, $1, ... are reserved for use as result names"])
+        # Test that $200 wasn't created by the previous expression.
+        self.expect("expr $200", error=True,
+            substrs=["use of undeclared identifier '$200'"])

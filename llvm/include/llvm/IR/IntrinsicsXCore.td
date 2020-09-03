@@ -38,58 +38,58 @@ let TargetPrefix = "xcore" in {  // All intrinsics start with "llvm.xcore.".
   // Resource instructions.
   def int_xcore_getr : Intrinsic<[llvm_anyptr_ty],[llvm_i32_ty]>;
   def int_xcore_freer : Intrinsic<[],[llvm_anyptr_ty],
-                                   [NoCapture<0>]>;
-  def int_xcore_in : Intrinsic<[llvm_i32_ty],[llvm_anyptr_ty],[NoCapture<0>]>;
+                                   [NoCapture<ArgIndex<0>>]>;
+  def int_xcore_in : Intrinsic<[llvm_i32_ty],[llvm_anyptr_ty],[NoCapture<ArgIndex<0>>]>;
   def int_xcore_int : Intrinsic<[llvm_i32_ty],[llvm_anyptr_ty],
-                                [NoCapture<0>]>;
+                                [NoCapture<ArgIndex<0>>]>;
   def int_xcore_inct : Intrinsic<[llvm_i32_ty],[llvm_anyptr_ty],
-                                 [NoCapture<0>]>;
+                                 [NoCapture<ArgIndex<0>>]>;
   def int_xcore_out : Intrinsic<[],[llvm_anyptr_ty, llvm_i32_ty],
-                                [NoCapture<0>]>;
+                                [NoCapture<ArgIndex<0>>]>;
   def int_xcore_outt : Intrinsic<[],[llvm_anyptr_ty, llvm_i32_ty],
-                                 [NoCapture<0>]>;
+                                 [NoCapture<ArgIndex<0>>]>;
   def int_xcore_outct : Intrinsic<[],[llvm_anyptr_ty, llvm_i32_ty],
-                                  [NoCapture<0>]>;
+                                  [NoCapture<ArgIndex<0>>]>;
   def int_xcore_chkct : Intrinsic<[],[llvm_anyptr_ty, llvm_i32_ty],
-                                  [NoCapture<0>]>;
+                                  [NoCapture<ArgIndex<0>>]>;
   def int_xcore_testct : Intrinsic<[llvm_i32_ty],[llvm_anyptr_ty],
-                                   [NoCapture<0>]>;
+                                   [NoCapture<ArgIndex<0>>]>;
   def int_xcore_testwct : Intrinsic<[llvm_i32_ty],[llvm_anyptr_ty],
-                                    [NoCapture<0>]>;
+                                    [NoCapture<ArgIndex<0>>]>;
   def int_xcore_setd : Intrinsic<[],[llvm_anyptr_ty, llvm_i32_ty],
-                                  [NoCapture<0>]>;
+                                  [NoCapture<ArgIndex<0>>]>;
   def int_xcore_setc : Intrinsic<[],[llvm_anyptr_ty, llvm_i32_ty],
-                                  [NoCapture<0>]>;
+                                  [NoCapture<ArgIndex<0>>]>;
   def int_xcore_inshr : Intrinsic<[llvm_i32_ty],[llvm_anyptr_ty, llvm_i32_ty],
-                                  [NoCapture<0>]>;
+                                  [NoCapture<ArgIndex<0>>]>;
   def int_xcore_outshr : Intrinsic<[llvm_i32_ty],[llvm_anyptr_ty, llvm_i32_ty],
-                                  [NoCapture<0>]>;
+                                  [NoCapture<ArgIndex<0>>]>;
   def int_xcore_setpt : Intrinsic<[],[llvm_anyptr_ty, llvm_i32_ty],
-                                  [NoCapture<0>]>;
+                                  [NoCapture<ArgIndex<0>>]>;
   def int_xcore_clrpt : Intrinsic<[],[llvm_anyptr_ty],
-                                  [NoCapture<0>]>;
+                                  [NoCapture<ArgIndex<0>>]>;
   def int_xcore_getts : Intrinsic<[llvm_i32_ty],[llvm_anyptr_ty],
-                                  [NoCapture<0>]>;
+                                  [NoCapture<ArgIndex<0>>]>;
   def int_xcore_syncr : Intrinsic<[],[llvm_anyptr_ty],
-                                  [NoCapture<0>]>;
+                                  [NoCapture<ArgIndex<0>>]>;
   def int_xcore_settw : Intrinsic<[],[llvm_anyptr_ty, llvm_i32_ty],
-                                  [NoCapture<0>]>;
+                                  [NoCapture<ArgIndex<0>>]>;
   def int_xcore_setv : Intrinsic<[],[llvm_anyptr_ty, llvm_ptr_ty],
-                                 [NoCapture<0>]>;
+                                 [NoCapture<ArgIndex<0>>]>;
   def int_xcore_setev : Intrinsic<[],[llvm_anyptr_ty, llvm_ptr_ty],
-                                  [NoCapture<0>]>;
-  def int_xcore_eeu : Intrinsic<[],[llvm_anyptr_ty], [NoCapture<0>]>;
-  def int_xcore_edu : Intrinsic<[],[llvm_anyptr_ty], [NoCapture<0>]>;
+                                  [NoCapture<ArgIndex<0>>]>;
+  def int_xcore_eeu : Intrinsic<[],[llvm_anyptr_ty], [NoCapture<ArgIndex<0>>]>;
+  def int_xcore_edu : Intrinsic<[],[llvm_anyptr_ty], [NoCapture<ArgIndex<0>>]>;
   def int_xcore_setclk : Intrinsic<[],[llvm_anyptr_ty, llvm_anyptr_ty],
-                                   [NoCapture<0>, NoCapture<1>]>;
+                                   [NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
   def int_xcore_setrdy : Intrinsic<[],[llvm_anyptr_ty, llvm_anyptr_ty],
-                                   [NoCapture<0>, NoCapture<1>]>;
+                                   [NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
   def int_xcore_setpsc : Intrinsic<[],[llvm_anyptr_ty, llvm_i32_ty],
-                                   [NoCapture<0>]>;
+                                   [NoCapture<ArgIndex<0>>]>;
   def int_xcore_peek : Intrinsic<[llvm_i32_ty],[llvm_anyptr_ty],
-                                 [NoCapture<0>]>;
+                                 [NoCapture<ArgIndex<0>>]>;
   def int_xcore_endin : Intrinsic<[llvm_i32_ty],[llvm_anyptr_ty],
-                                 [NoCapture<0>]>;
+                                 [NoCapture<ArgIndex<0>>]>;
 
   // Intrinsics for events.
   def int_xcore_waitevent : Intrinsic<[llvm_ptr_ty],[], [IntrReadMem]>;
@@ -103,18 +103,18 @@ let TargetPrefix = "xcore" in {  // All intrinsics start with "llvm.xcore.".
 
   // Intrinsics for threads.
   def int_xcore_getst : Intrinsic <[llvm_anyptr_ty],[llvm_anyptr_ty],
-                                   [NoCapture<0>]>;
-  def int_xcore_msync : Intrinsic <[],[llvm_anyptr_ty], [NoCapture<0>]>;
+                                   [NoCapture<ArgIndex<0>>]>;
+  def int_xcore_msync : Intrinsic <[],[llvm_anyptr_ty], [NoCapture<ArgIndex<0>>]>;
   def int_xcore_ssync : Intrinsic <[],[]>;
-  def int_xcore_mjoin : Intrinsic <[],[llvm_anyptr_ty], [NoCapture<0>]>;
+  def int_xcore_mjoin : Intrinsic <[],[llvm_anyptr_ty], [NoCapture<ArgIndex<0>>]>;
   def int_xcore_initsp : Intrinsic <[],[llvm_anyptr_ty, llvm_ptr_ty],
-                                    [NoCapture<0>]>;
+                                    [NoCapture<ArgIndex<0>>]>;
   def int_xcore_initpc : Intrinsic <[],[llvm_anyptr_ty, llvm_ptr_ty],
-                                    [NoCapture<0>]>;
+                                    [NoCapture<ArgIndex<0>>]>;
   def int_xcore_initlr : Intrinsic <[],[llvm_anyptr_ty, llvm_ptr_ty],
-                                    [NoCapture<0>]>;
+                                    [NoCapture<ArgIndex<0>>]>;
   def int_xcore_initcp : Intrinsic <[],[llvm_anyptr_ty, llvm_ptr_ty],
-                                    [NoCapture<0>]>;
+                                    [NoCapture<ArgIndex<0>>]>;
   def int_xcore_initdp : Intrinsic <[],[llvm_anyptr_ty, llvm_ptr_ty],
-                                    [NoCapture<0>]>;
+                                    [NoCapture<ArgIndex<0>>]>;
 }

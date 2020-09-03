@@ -97,6 +97,18 @@ class Option<list<string> prefixes, string name, OptionKind kind> {
   OptionGroup Group = ?;
   Option Alias = ?;
   list<string> AliasArgs = [];
+  string MarshallingKind = ?;
+  code KeyPath = ?;
+  code DefaultValue = ?;
+  bit ShouldAlwaysEmit = 0;
+  // Used by the Flag option kind.
+  bit IsPositive = 1;
+  // Used by the String option kind.
+  code NormalizerRetTy = ?;
+  code NormalizedValuesScope = "";
+  code Normalizer = "";
+  code Denormalizer = "";
+  list<code> NormalizedValues = ?;
 }
 
 // Helpers for defining options.
@@ -129,6 +141,37 @@ class HelpText<string text> { string HelpText = text; }
 class MetaVarName<string name> { string MetaVarName = name; }
 class Values<string value> { string Values = value; }
 class ValuesCode<code valuecode> { code ValuesCode = valuecode; }
+
+// Helpers for defining marshalling information.
+
+class MarshallingInfo<code keypath, code defaultvalue> {
+  code KeyPath = keypath;
+  code DefaultValue = defaultvalue;
+}
+class MarshallingInfoString<code keypath, code defaultvalue, code normalizerretty>
+  : MarshallingInfo<keypath, defaultvalue> {
+  string MarshallingKind = "string";
+  code NormalizerRetTy = normalizerretty;
+}
+
+class MarshallingInfoFlag<code keypath, code defaultvalue>
+  : MarshallingInfo<keypath, defaultvalue> {
+  string MarshallingKind = "flag";
+}
+
+// Mixins for additional marshalling attributes.
+
+class IsNegative { bit IsPositive = 0; }
+class AlwaysEmit { bit ShouldAlwaysEmit = 1; }
+class Normalizer<code normalizer> { code Normalizer = normalizer; }
+class Denormalizer<code denormalizer> { code Denormalizer = denormalizer; }
+class NormalizedValuesScope<code scope> { code NormalizedValuesScope = scope; }
+class NormalizedValues<list<code> definitions> { list<code> NormalizedValues = definitions; } 
+class DenormalizeString { code Denormalizer = "denormalizeString"; }
+class AutoNormalizeEnum {
+  code Normalizer = "normalizeSimpleEnum";
+  code Denormalizer = "denormalizeSimpleEnum";
+}
 
 // Predefined options.
 

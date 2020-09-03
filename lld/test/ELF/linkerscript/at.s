@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 # RUN: echo "SECTIONS { \
 # RUN:  . = 0x1000; \
 # RUN:  .aaa : AT(0x2000) { *(.aaa) } \
@@ -8,76 +8,15 @@
 # RUN:  .ddd : AT(0x4000) { *(.ddd) } \
 # RUN:  .eee 0x5000 : AT(0x5000) { *(.eee) } \
 # RUN: }" > %t.script
-# RUN: ld.lld %t --script %t.script -o %t2
-# RUN: llvm-readobj -l %t2 | FileCheck %s
+# RUN: ld.lld %t.o --script %t.script -o %t
+# RUN: llvm-readelf -l %t | FileCheck %s
 
-# CHECK:      ProgramHeaders [
-# CHECK-NEXT:   ProgramHeader {
-# CHECK-NEXT:     Type: PT_LOAD
-# CHECK-NEXT:     Offset: 0x1000
-# CHECK-NEXT:     VirtualAddress: 0x1000
-# CHECK-NEXT:     PhysicalAddress: 0x2000
-# CHECK-NEXT:     FileSize: 16
-# CHECK-NEXT:     MemSize: 16
-# CHECK-NEXT:     Flags [
-# CHECK-NEXT:       PF_R
-# CHECK-NEXT:       PF_X
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Alignment:
-# CHECK-NEXT:   }
-# CHECK-NEXT:   ProgramHeader {
-# CHECK-NEXT:     Type: PT_LOAD
-# CHECK-NEXT:     Offset: 0x1010
-# CHECK-NEXT:     VirtualAddress: 0x1010
-# CHECK-NEXT:     PhysicalAddress: 0x3000
-# CHECK-NEXT:     FileSize: 8
-# CHECK-NEXT:     MemSize: 8
-# CHECK-NEXT:     Flags [
-# CHECK-NEXT:       PF_R
-# CHECK-NEXT:       PF_X
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Alignment: 4096
-# CHECK-NEXT:   }
-# CHECK-NEXT:   ProgramHeader {
-# CHECK-NEXT:     Type: PT_LOAD
-# CHECK-NEXT:     Offset: 0x1018
-# CHECK-NEXT:     VirtualAddress: 0x1018
-# CHECK-NEXT:     PhysicalAddress: 0x4000
-# CHECK-NEXT:     FileSize: 8
-# CHECK-NEXT:     MemSize: 8
-# CHECK-NEXT:     Flags [
-# CHECK-NEXT:       PF_R
-# CHECK-NEXT:       PF_X
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Alignment: 4096
-# CHECK-NEXT:   }
-# CHECK-NEXT:   ProgramHeader {
-# CHECK-NEXT:     Type: PT_LOAD
-# CHECK-NEXT:     Offset: 0x2000
-# CHECK-NEXT:     VirtualAddress: 0x5000
-# CHECK-NEXT:     PhysicalAddress: 0x5000
-# CHECK-NEXT:     FileSize: 9
-# CHECK-NEXT:     MemSize: 9
-# CHECK-NEXT:     Flags [
-# CHECK-NEXT:       PF_R
-# CHECK-NEXT:       PF_X
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Alignment: 4096
-# CHECK-NEXT:   }
-# CHECK-NEXT:   ProgramHeader {
-# CHECK-NEXT:     Type: PT_GNU_STACK
-# CHECK-NEXT:     Offset:
-# CHECK-NEXT:     VirtualAddress: 0x0
-# CHECK-NEXT:     PhysicalAddress: 0x0
-# CHECK-NEXT:     FileSize:
-# CHECK-NEXT:     MemSize:
-# CHECK-NEXT:     Flags [
-# CHECK-NEXT:       PF_R
-# CHECK-NEXT:       PF_W
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Alignment: 0
-# CHECK-NEXT:   }
-# CHECK-NEXT: ]
+# CHECK:      Type  Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK-NEXT: LOAD  0x001000 0x0000000000001000 0x0000000000002000 0x000010 0x000010 R   0x1000
+# CHECK-NEXT: LOAD  0x001010 0x0000000000001010 0x0000000000003000 0x000008 0x000008 R   0x1000
+# CHECK-NEXT: LOAD  0x001018 0x0000000000001018 0x0000000000004000 0x000008 0x000008 R   0x1000
+# CHECK-NEXT: LOAD  0x002000 0x0000000000005000 0x0000000000005000 0x000008 0x000008 R   0x1000
+# CHECK-NEXT: LOAD  0x002008 0x0000000000005008 0x0000000000005008 0x000001 0x000001 R E 0x1000
 
 .global _start
 _start:

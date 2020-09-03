@@ -66,8 +66,8 @@ function.
 This is inspired and adapted from code by: Naveen Neelakantam, Francesco
 Spadini, and Wojciech Stryjewski.
 
-``-basicaa``: Basic Alias Analysis (stateless AA impl)
-------------------------------------------------------
+``-basic-aa``: Basic Alias Analysis (stateless AA impl)
+-------------------------------------------------------
 
 A basic alias analysis pass that implements identities (two different globals
 cannot alias, etc), but does no stateful analysis.
@@ -330,6 +330,8 @@ table.
 The ``RegionInfo`` pass detects single entry single exit regions in a function,
 where a region is defined as any subgraph that is connected to the remaining
 graph at only two spots.  Furthermore, a hierarchical region tree is built.
+
+.. _passes-scalar-evolution:
 
 ``-scalar-evolution``: Scalar Evolution Analysis
 ------------------------------------------------
@@ -711,6 +713,8 @@ An example of when this can occur is code like this:
 In this case, the unconditional branch at the end of the first if can be
 revectored to the false side of the second if.
 
+.. _passes-lcssa:
+
 ``-lcssa``: Loop-Closed SSA Form Pass
 -------------------------------------
 
@@ -732,7 +736,8 @@ into the right code:
 This is still valid LLVM; the extra phi nodes are purely redundant, and will be
 trivially eliminated by ``InstCombine``.  The major benefit of this
 transformation is that it makes many other loop optimizations, such as
-``LoopUnswitch``\ ing, simpler.
+``LoopUnswitch``\ ing, simpler. You can read more in the
+:ref:`loop terminology section for the LCSSA form <loop-terminology-lcssa>`.
 
 .. _passes-licm:
 
@@ -798,17 +803,24 @@ accomplished by creating a new value to hold the initial value of the array
 access for the first iteration, and then creating a new GEP instruction in the
 loop to increment the value by the appropriate amount.
 
+.. _passes-loop-rotate:
+
 ``-loop-rotate``: Rotate Loops
 ------------------------------
 
-A simple loop rotation transformation.
+A simple loop rotation transformation.  A summary of it can be found in
+:ref:`Loop Terminology for Rotated Loops <loop-terminology-loop-rotate>`.
+
+
+.. _passes-loop-simplify:
 
 ``-loop-simplify``: Canonicalize natural loops
 ----------------------------------------------
 
 This pass performs several transformations to transform natural loops into a
 simpler form, which makes subsequent analyses and transformations simpler and
-more effective.
+more effective. A summary of it can be found in
+:ref:`Loop Terminology, Loop Simplify Form <loop-terminology-loop-simplify>`.
 
 Loop pre-header insertion guarantees that there is a single, non-critical entry
 edge from outside of the loop to the loop header.  This simplifies a number of
@@ -856,6 +868,8 @@ Which can be seen as unrolling the outer loop and "jamming" (fusing) the inner
 loops into one. When variables or loads can be shared in the new inner loop, this
 can lead to significant performance improvements. It uses
 :ref:`Dependence Analysis <passes-da>` for proving the transformations are safe.
+
+.. _passes-loop-unswitch:
 
 ``-loop-unswitch``: Unswitch loops
 ----------------------------------
@@ -1190,6 +1204,8 @@ performing optimizing transformations.
 
 Note that this does not provide full security verification (like Java), but
 instead just tries to ensure that code is well-formed.
+
+.. _passes-view-cfg:
 
 ``-view-cfg``: View CFG of function
 -----------------------------------

@@ -1,6 +1,6 @@
 //===- Block.cpp - MLIR Block Class ---------------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -91,7 +91,7 @@ void Block::dropAllReferences() {
 
 void Block::dropAllDefinedValueUses() {
   for (auto arg : getArguments())
-    arg->dropAllUses();
+    arg.dropAllUses();
   for (auto &op : *this)
     op.dropAllDefinedValueUses();
   dropAllUses();
@@ -143,6 +143,11 @@ void Block::recomputeOpOrder() {
 // Argument list management.
 //===----------------------------------------------------------------------===//
 
+/// Return a range containing the types of the arguments for this block.
+auto Block::getArgumentTypes() -> ValueTypeRange<BlockArgListType> {
+  return ValueTypeRange<BlockArgListType>(getArguments());
+}
+
 BlockArgument Block::addArgument(Type type) {
   BlockArgument arg = BlockArgument::create(type, this);
   arguments.push_back(arg);
@@ -150,33 +155,39 @@ BlockArgument Block::addArgument(Type type) {
 }
 
 /// Add one argument to the argument list for each type specified in the list.
-auto Block::addArguments(ArrayRef<Type> types)
-    -> iterator_range<args_iterator> {
-  arguments.reserve(arguments.size() + types.size());
-  auto initialSize = arguments.size();
-  for (auto type : types) {
+auto Block::addArguments(TypeRange types) -> iterator_range<args_iterator> {
+  size_t initialSize = arguments.size();
+  arguments.reserve(initialSize + types.size());
+  for (auto type : types)
     addArgument(type);
-  }
   return {arguments.data() + initialSize, arguments.data() + arguments.size()};
 }
 
-void Block::eraseArgument(unsigned index, bool updatePredTerms) {
-  assert(index < arguments.size());
+BlockArgument Block::insertArgument(unsigned index, Type type) {
+  auto arg = BlockArgument::create(type, this);
+  assert(index <= arguments.size());
+  arguments.insert(arguments.begin() + index, arg);
+  return arg;
+}
 
-  // Delete the argument.
+void Block::eraseArgument(unsigned index) {
+  assert(index < arguments.size());
   arguments[index].destroy();
   arguments.erase(arguments.begin() + index);
+}
 
-  // If we aren't updating predecessors, there is nothing left to do.
-  if (!updatePredTerms)
-    return;
+/// Insert one value to the given position of the argument list. The existing
+/// arguments are shifted. The block is expected not to have predecessors.
+BlockArgument Block::insertArgument(args_iterator it, Type type) {
+  assert(llvm::empty(getPredecessors()) &&
+         "cannot insert arguments to blocks with predecessors");
 
-  // Erase this argument from each of the predecessor's terminator.
-  for (auto predIt = pred_begin(), predE = pred_end(); predIt != predE;
-       ++predIt) {
-    auto *predTerminator = (*predIt)->getTerminator();
-    predTerminator->eraseSuccessorOperand(predIt.getSuccessorIndex(), index);
-  }
+  // Use the args_iterator (on the BlockArgListType) to compute the insertion
+  // iterator in the underlying argument storage.
+  size_t distance = std::distance(args_begin(), it);
+  auto arg = BlockArgument::create(type, this);
+  arguments.insert(std::next(arguments.begin(), distance), arg);
+  return arg;
 }
 
 //===----------------------------------------------------------------------===//
@@ -216,6 +227,21 @@ Block *Block::getSinglePredecessor() {
   auto *firstPred = *it;
   ++it;
   return it == pred_end() ? firstPred : nullptr;
+}
+
+/// If this block has a unique predecessor, i.e., all incoming edges originate
+/// from one block, return it. Otherwise, return null.
+Block *Block::getUniquePredecessor() {
+  auto it = pred_begin(), e = pred_end();
+  if (it == e)
+    return nullptr;
+
+  // Check for any conflicting predecessors.
+  auto *firstPred = *it;
+  for (++it; it != e; ++it)
+    if (*it != firstPred)
+      return nullptr;
+  return firstPred;
 }
 
 //===----------------------------------------------------------------------===//

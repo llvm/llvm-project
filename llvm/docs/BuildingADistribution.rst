@@ -194,7 +194,6 @@ that are already documented include: *LLVM_TARGETS_TO_BUILD*,
   
   #. ``all`` - All LLVM available component libraries
   #. ``Native`` - The LLVM target for the Native system
-  #. ``AllTargetsAsmPrinters`` - All the included target ASM printers libraries
   #. ``AllTargetsAsmParsers`` - All the included target ASM parsers libraries
   #. ``AllTargetsDescs`` - All the included target descriptions libraries
   #. ``AllTargetsDisassemblers`` - All the included target dissassemblers libraries

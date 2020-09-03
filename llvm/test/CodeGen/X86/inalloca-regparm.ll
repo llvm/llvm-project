@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=i686-windows-msvc < %s -o /dev/null
-; RUN: not llc -mtriple=x86_64-windows-msvc %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=x86_64-windows-msvc %s -o /dev/null 2>&1 | FileCheck %s
 
 ; This will compile successfully on x86 but not x86_64, because %b will become a
 ; register parameter.

@@ -17,7 +17,7 @@
 // CHECK: @"_OBJC_METACLASS_RO_$_A" = internal global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"_OBJC_$_INSTANCE_METHODS_A" = internal global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"_OBJC_$_INSTANCE_VARIABLES_A" = internal global {{.*}} section "__DATA, __objc_const", align 8
-// CHECK: @OBJC_PROP_NAME_ATTR_{{[0-9]*}} = private unnamed_addr constant {{.*}} section "__TEXT,__cstring,cstring_literals", align 1
+// CHECK: @OBJC_PROP_NAME_ATTR_{{[0-9]*}} = private unnamed_addr constant {{.*}} section "__TEXT,__objc_methname,cstring_literals", align 1
 // CHECK: @"_OBJC_$_PROP_LIST_A" = internal global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"_OBJC_CLASS_RO_$_A" = internal global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"_OBJC_$_CATEGORY_INSTANCE_METHODS_A_$_Cat" = internal global {{.*}} section "__DATA, __objc_const", align 8

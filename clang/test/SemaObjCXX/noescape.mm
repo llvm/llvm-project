@@ -74,7 +74,7 @@ template<void (*fn)(int* __attribute__((noescape)))> struct S5 {};
 void test0() {
   fnptr0 = &func0;
   fnptr0 = &noescapeFunc2;
-  fnptr1 = &func0; // expected-error {{assigning to 'void (*)(__attribute__((noescape)) int *)' from incompatible type 'void (*)(int *)'}}
+  fnptr1 = &func0; // expected-error {{incompatible function pointer types assigning to 'void (*)(__attribute__((noescape)) int *)' from 'void (*)(int *)'}}
   fnptr1 = &noescapeFunc2;
   S4<&func0> e0;
   S4<&noescapeFunc2> e1;

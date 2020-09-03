@@ -20,7 +20,7 @@
 #
 # Generated using:
 #
-# clang -Os -fno-inline -g --target=armeb.
+# clang -Os -fno-inline -Xclang -femit-debug-entry-values -g --target=armeb.
 
 --- |
   target datalayout = "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
@@ -106,10 +106,6 @@
 name:            caller
 alignment:       4
 tracksRegLiveness: true
-callSites:
-  - { bb: 0, offset: 6 }
-  - { bb: 0, offset: 9, fwdArgRegs:
-      - { arg: 0, reg: '$r0' } }
 body:             |
   bb.0:
     liveins: $lr

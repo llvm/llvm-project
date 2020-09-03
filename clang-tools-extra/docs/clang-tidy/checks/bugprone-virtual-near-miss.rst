@@ -4,7 +4,7 @@ bugprone-virtual-near-miss
 ==========================
 
 Warn if a function is a near miss (ie. the name is very similar and the function
-signiture is the same) to a virtual function from a base class.
+signature is the same) to a virtual function from a base class.
 
 Example:
 

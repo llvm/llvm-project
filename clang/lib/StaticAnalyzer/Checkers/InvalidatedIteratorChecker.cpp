@@ -26,7 +26,10 @@ using namespace iterator;
 namespace {
 
 class InvalidatedIteratorChecker
-  : public Checker<check::PreCall> {
+  : public Checker<check::PreCall, check::PreStmt<UnaryOperator>,
+                   check::PreStmt<BinaryOperator>,
+                   check::PreStmt<ArraySubscriptExpr>,
+                   check::PreStmt<MemberExpr>> {
 
   std::unique_ptr<BugType> InvalidatedBugType;
 
@@ -37,6 +40,10 @@ public:
   InvalidatedIteratorChecker();
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
+  void checkPreStmt(const UnaryOperator *UO, CheckerContext &C) const;
+  void checkPreStmt(const BinaryOperator *BO, CheckerContext &C) const;
+  void checkPreStmt(const ArraySubscriptExpr *ASE, CheckerContext &C) const;
+  void checkPreStmt(const MemberExpr *ME, CheckerContext &C) const;
 
 };
 
@@ -65,6 +72,48 @@ void InvalidatedIteratorChecker::checkPreCall(const CallEvent &Call,
   }
 }
 
+void InvalidatedIteratorChecker::checkPreStmt(const UnaryOperator *UO,
+                                              CheckerContext &C) const {
+  if (isa<CXXThisExpr>(UO->getSubExpr()))
+    return;
+
+  ProgramStateRef State = C.getState();
+  UnaryOperatorKind OK = UO->getOpcode();
+  SVal SubVal = State->getSVal(UO->getSubExpr(), C.getLocationContext());
+
+  if (isAccessOperator(OK)) {
+    verifyAccess(C, SubVal);
+  }
+}
+
+void InvalidatedIteratorChecker::checkPreStmt(const BinaryOperator *BO,
+                                              CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  BinaryOperatorKind OK = BO->getOpcode();
+  SVal LVal = State->getSVal(BO->getLHS(), C.getLocationContext());
+
+  if (isAccessOperator(OK)) {
+    verifyAccess(C, LVal);
+  }
+}
+
+void InvalidatedIteratorChecker::checkPreStmt(const ArraySubscriptExpr *ASE,
+                                              CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  SVal LVal = State->getSVal(ASE->getLHS(), C.getLocationContext());
+  verifyAccess(C, LVal);
+}
+
+void InvalidatedIteratorChecker::checkPreStmt(const MemberExpr *ME,
+                                              CheckerContext &C) const {
+  if (!ME->isArrow() || ME->isImplicitAccess())
+    return;
+
+  ProgramStateRef State = C.getState();
+  SVal BaseVal = State->getSVal(ME->getBase(), C.getLocationContext());
+  verifyAccess(C, BaseVal);
+}
+
 void InvalidatedIteratorChecker::verifyAccess(CheckerContext &C, const SVal &Val) const {
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Val);
@@ -90,6 +139,6 @@ void ento::registerInvalidatedIteratorChecker(CheckerManager &mgr) {
   mgr.registerChecker<InvalidatedIteratorChecker>();
 }
 
-bool ento::shouldRegisterInvalidatedIteratorChecker(const LangOptions &LO) {
+bool ento::shouldRegisterInvalidatedIteratorChecker(const CheckerManager &mgr) {
   return true;
 }

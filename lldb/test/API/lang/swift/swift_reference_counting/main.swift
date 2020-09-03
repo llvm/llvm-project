@@ -24,7 +24,7 @@ func lambda(_ Arg : Patatino) -> Int {
 }
 
 func main() -> Int {
-  var LiveObj = Patatino(37) //%self.expect('language swift refcount Blah', substrs=['cannot find \'Blah\' in scope'], error=True)
+  var LiveObj = Patatino(37) //%self.expect('language swift refcount Blah', substrs=['cannot find \'Blah\''], error=True)
   var Ret : Int = lambda(LiveObj) //%self.expect('language swift refcount LiveObj', substrs=['(strong =', 'unowned =', 'weak ='])
   var MyStruct = Tinky() //%self.expect('language swift refcount MyStruct', substrs=['refcount only available for class types'], error=True)
   return Ret

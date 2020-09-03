@@ -213,7 +213,7 @@ bool NaryReassociatePass::runImpl(Function &F, AssumptionCache *AC_,
   return Changed;
 }
 
-// Whitelist the instruction types NaryReassociate handles for now.
+// Explicitly list the instruction types NaryReassociate handles for now.
 static bool isPotentiallyNaryReassociable(Instruction *I) {
   switch (I->getOpcode()) {
   case Instruction::Add:

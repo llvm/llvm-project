@@ -177,7 +177,7 @@ define float @fmaxnum32_intrinsic(float %x, float %y) {
 }
 
 ; CHECK-LABEL: fma32:
-; CHECK: {{^}} f32.call $push[[LR:[0-9]+]]=, fmaf, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
+; CHECK: {{^}} call $push[[LR:[0-9]+]]=, fmaf, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
 ; CHECK-NEXT: return $pop[[LR]]{{$}}
 define float @fma32(float %a, float %b, float %c) {
   %d = call float @llvm.fma.f32(float %a, float %b, float %c)

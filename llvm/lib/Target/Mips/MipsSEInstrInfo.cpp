@@ -243,7 +243,7 @@ MipsSEInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 
 void MipsSEInstrInfo::
 storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                unsigned SrcReg, bool isKill, int FI,
+                Register SrcReg, bool isKill, int FI,
                 const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
                 int64_t Offset) const {
   DebugLoc DL;
@@ -317,7 +317,7 @@ storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
 
 void MipsSEInstrInfo::
 loadRegFromStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                 unsigned DestReg, int FI, const TargetRegisterClass *RC,
+                 Register DestReg, int FI, const TargetRegisterClass *RC,
                  const TargetRegisterInfo *TRI, int64_t Offset) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
@@ -481,6 +481,20 @@ bool MipsSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   MBB.erase(MI);
   return true;
+}
+
+/// isBranchWithImm - Return true if the branch contains an immediate
+/// operand (\see lib/Target/Mips/MipsBranchExpansion.cpp).
+bool MipsSEInstrInfo::isBranchWithImm(unsigned Opc) const {
+  switch (Opc) {
+  default:
+    return false;
+  case Mips::BBIT0:
+  case Mips::BBIT1:
+  case Mips::BBIT032:
+  case Mips::BBIT132:
+    return true;
+  }
 }
 
 /// getOppositeBranchOpc - Return the inverse of the specified

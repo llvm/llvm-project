@@ -308,7 +308,6 @@ body: |
     ; GCN-LABEL: name: valu_inst_breaks_clause
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr8 = V_MOV_B32_e32 0, implicit $exec
-    ; XNACK-NEXT: S_NOP 0
     ; GCN-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
 
@@ -327,7 +326,6 @@ body: |
     ; GCN-LABEL: name: salu_inst_breaks_clause
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $sgpr8 = S_MOV_B32 0
-    ; XNACK-NEXT: S_NOP 0
     ; GCN-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
 
@@ -345,7 +343,6 @@ body: |
     ; GCN-LABEL: name: ds_inst_breaks_clause
     ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr8 = DS_READ_B32 $vgpr9, 0, 0, implicit $m0, implicit $exec
-    ; XNACK-NEXT: S_NOP 0
     ; GCN-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
 

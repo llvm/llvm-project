@@ -1,6 +1,4 @@
-; XFAIL: *
-
-; RUN: opt < %s -basicaa -dse -enable-dse-memoryssa -S | FileCheck %s
+; RUN: opt < %s -basic-aa -dse -enable-dse-memoryssa -S | FileCheck %s
 
 declare noalias i8* @calloc(i64, i64)
 
@@ -65,3 +63,98 @@ define i8* @test7(i8 %arg) {
 ; CHECK: store i8 %arg, i8* %1, align 4
   ret i8* %1
 }
+
+define i8* @test8() {
+; CHECK-LABEL: test8
+; CHECK-NOT: store
+  %p = tail call noalias i8* @calloc(i64 1, i64 4)
+  store i8 0, i8* %p, align 1
+  %p.1 = getelementptr i8, i8* %p, i32 1
+  store i8 0, i8* %p.1, align 1
+  %p.3 = getelementptr i8, i8* %p, i32 3
+  store i8 0, i8* %p.3, align 1
+  %p.2 = getelementptr i8, i8* %p, i32 2
+  store i8 0, i8* %p.2, align 1
+  ret i8* %p
+}
+
+define i8* @test9() {
+; CHECK-LABEL: test9
+; CHECK-NEXT:    %p = tail call noalias i8* @calloc(i64 1, i64 4)
+; CHECK-NEXT:    store i8 5, i8* %p, align 1
+; CHECK-NEXT:    ret i8* %p
+
+  %p = tail call noalias i8* @calloc(i64 1, i64 4)
+  store i8 5, i8* %p, align 1
+  %p.1 = getelementptr i8, i8* %p, i32 1
+  store i8 0, i8* %p.1, align 1
+  %p.3 = getelementptr i8, i8* %p, i32 3
+  store i8 0, i8* %p.3, align 1
+  %p.2 = getelementptr i8, i8* %p, i32 2
+  store i8 0, i8* %p.2, align 1
+  ret i8* %p
+}
+
+define i8* @test10() {
+; CHECK-LABEL: @test10(
+; CHECK-NEXT:    [[P:%.*]] = tail call noalias i8* @calloc(i64 1, i64 4)
+; CHECK-NEXT:    [[P_3:%.*]] = getelementptr i8, i8* [[P]], i32 3
+; CHECK-NEXT:    store i8 5, i8* [[P_3]], align 1
+; CHECK-NEXT:    ret i8* [[P]]
+;
+
+  %p = tail call noalias i8* @calloc(i64 1, i64 4)
+  store i8 0, i8* %p, align 1
+  %p.1 = getelementptr i8, i8* %p, i32 1
+  store i8 0, i8* %p.1, align 1
+  %p.3 = getelementptr i8, i8* %p, i32 3
+  store i8 5, i8* %p.3, align 1
+  %p.2 = getelementptr i8, i8* %p, i32 2
+  store i8 0, i8* %p.2, align 1
+  ret i8* %p
+}
+
+; TODO: we could also eliminate the last store i8 0, i8* %p.3.2, but currently
+; don't because those are eliminated before eliminating killed stores.
+define i8* @test11() {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT:    [[P:%.*]] = tail call noalias i8* @calloc(i64 1, i64 4)
+; CHECK-NEXT:    [[P_3_2:%.*]] = getelementptr i8, i8* [[P]], i32 3
+; CHECK-NEXT:    store i8 0, i8* [[P_3_2]], align 1
+; CHECK-NEXT:    ret i8* [[P]]
+;
+
+  %p = tail call noalias i8* @calloc(i64 1, i64 4)
+  store i8 0, i8* %p, align 1
+  %p.1 = getelementptr i8, i8* %p, i32 1
+  store i8 0, i8* %p.1, align 1
+  %p.3 = getelementptr i8, i8* %p, i32 3
+  store i8 5, i8* %p.3, align 1
+  %p.2 = getelementptr i8, i8* %p, i32 2
+  store i8 0, i8* %p.2, align 1
+  %p.3.2 = getelementptr i8, i8* %p, i32 3
+  store i8 0, i8* %p.3.2, align 1
+  ret i8* %p
+}
+
+define i8* @test12() {
+; CHECK-LABEL: @test12(
+; CHECK-NEXT:    [[P:%.*]] = tail call noalias i8* @calloc(i64 1, i64 4)
+; CHECK-NEXT:    [[P_3:%.*]] = getelementptr i8, i8* [[P]], i32 3
+; CHECK-NEXT:    store i8 5, i8* [[P_3]], align 1
+; CHECK-NEXT:    call void @use(i8* [[P]])
+; CHECK-NEXT:    [[P_3_2:%.*]] = getelementptr i8, i8* [[P]], i32 3
+; CHECK-NEXT:    store i8 0, i8* [[P_3_2]], align 1
+; CHECK-NEXT:    ret i8* [[P]]
+;
+
+  %p = tail call noalias i8* @calloc(i64 1, i64 4)
+  %p.3 = getelementptr i8, i8* %p, i32 3
+  store i8 5, i8* %p.3, align 1
+  call void @use(i8* %p)
+  %p.3.2 = getelementptr i8, i8* %p, i32 3
+  store i8 0, i8* %p.3.2, align 1
+  ret i8* %p
+}
+
+declare void @use(i8*) readonly

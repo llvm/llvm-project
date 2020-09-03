@@ -31,6 +31,7 @@ class LLVMContextImpl;
 class Module;
 class OptPassGate;
 template <typename T> class SmallVectorImpl;
+template <typename T> class StringMapEntry;
 class SMDiagnostic;
 class StringRef;
 class Twine;
@@ -83,13 +84,16 @@ public:
   /// Known operand bundle tag IDs, which always have the same value.  All
   /// operand bundle tags that LLVM has special knowledge of are listed here.
   /// Additionally, this scheme allows LLVM to efficiently check for specific
-  /// operand bundle tags without comparing strings.
+  /// operand bundle tags without comparing strings. Keep this in sync with
+  /// LLVMContext::LLVMContext().
   enum : unsigned {
     OB_deopt = 0,         // "deopt"
     OB_funclet = 1,       // "funclet"
     OB_gc_transition = 2, // "gc-transition"
     OB_cfguardtarget = 3, // "cfguardtarget"
-    OB_ptrauth = 4,       // "ptrauth"
+    OB_preallocated = 4,  // "preallocated"
+    OB_gc_live = 5,       // "gc-live"
+    OB_ptrauth = 6,       // "ptrauth"
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
@@ -105,6 +109,10 @@ public:
   /// by increasing bundle IDs.
   /// \see LLVMContext::getOperandBundleTagID
   void getOperandBundleTags(SmallVectorImpl<StringRef> &Result) const;
+
+  /// getOrInsertBundleTag - Returns the Tag to use for an operand bundle of
+  /// name TagName.
+  StringMapEntry<uint32_t> *getOrInsertBundleTag(StringRef TagName) const;
 
   /// getOperandBundleTagID - Maps a bundle tag to an integer ID.  Every bundle
   /// tag registered with an LLVMContext has an unique ID.

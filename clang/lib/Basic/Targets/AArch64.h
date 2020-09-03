@@ -36,6 +36,14 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasFP16FML;
   bool HasMTE;
   bool HasTME;
+  bool HasMatMul;
+  bool HasSVE2;
+  bool HasSVE2AES;
+  bool HasSVE2SHA3;
+  bool HasSVE2SM4;
+  bool HasSVE2BitPerm;
+  bool HasMatmulFP64;
+  bool HasMatmulFP32;
 
   llvm::AArch64::ArchKind ArchKind;
 
@@ -70,6 +78,8 @@ public:
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV85A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
+  void getTargetDefinesARMV86A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
@@ -87,6 +97,21 @@ public:
 
   ArrayRef<const char *> getGCCRegNames() const override;
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;
+
+  std::string convertConstraint(const char *&Constraint) const override {
+    std::string R;
+    switch (*Constraint) {
+    case 'U': // Three-character constraint; add "@3" hint for later parsing.
+      R = std::string("@3") + std::string(Constraint, 3);
+      Constraint += 2;
+      break;
+    default:
+      R = TargetInfo::convertConstraint(Constraint);
+      break;
+    }
+    return R;
+  }
+
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override;
   bool
@@ -103,7 +128,10 @@ public:
 
   bool validatePointerAuthKey(const llvm::APSInt &value) const override;
 
+  const char *getBFloat16Mangling() const override { return "u6__bf16"; };
   bool hasInt128Type() const override;
+
+  bool hasExtIntType() const override { return true; }
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64leTargetInfo : public AArch64TargetInfo {

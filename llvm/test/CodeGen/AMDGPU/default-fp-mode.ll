@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_default_si:
-; GCN: FloatMode: 192
+; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_default_si(float addrspace(1)* %out0, double addrspace(1)* %out1) #0 {
   store float 0.0, float addrspace(1)* %out0
@@ -10,7 +10,7 @@ define amdgpu_kernel void @test_default_si(float addrspace(1)* %out0, double add
 }
 
 ; GCN-LABEL: {{^}}test_default_vi:
-; GCN: FloatMode: 192
+; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_default_vi(float addrspace(1)* %out0, double addrspace(1)* %out1) #1 {
   store float 0.0, float addrspace(1)* %out0
@@ -19,7 +19,7 @@ define amdgpu_kernel void @test_default_vi(float addrspace(1)* %out0, double add
 }
 
 ; GCN-LABEL: {{^}}test_f64_denormals:
-; GCN: FloatMode: 192
+; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_f64_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #2 {
   store float 0.0, float addrspace(1)* %out0
@@ -55,7 +55,7 @@ define amdgpu_kernel void @test_no_denormals(float addrspace(1)* %out0, double a
 }
 
 ; GCN-LABEL: {{^}}test_f16_f64_denormals:
-; GCN: FloatMode: 192
+; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_f16_f64_denormals(half addrspace(1)* %out0, double addrspace(1)* %out1) #6 {
   store half 0.0, half addrspace(1)* %out0
@@ -64,7 +64,7 @@ define amdgpu_kernel void @test_f16_f64_denormals(half addrspace(1)* %out0, doub
 }
 
 ; GCN-LABEL: {{^}}test_no_f16_f64_denormals:
-; GCN: FloatMode: 0
+; GCN: FloatMode: 48
 ; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_no_f16_f64_denormals(half addrspace(1)* %out0, double addrspace(1)* %out1) #7 {
   store half 0.0, half addrspace(1)* %out0
@@ -82,7 +82,71 @@ define amdgpu_kernel void @test_f32_f16_f64_denormals(half addrspace(1)* %out0, 
   ret void
 }
 
+; GCN-LABEL: {{^}}test_just_f32_attr_flush
+; GCN: FloatMode: 192
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_just_f32_attr_flush(float addrspace(1)* %out0, double addrspace(1)* %out1) #9 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_flush_all_outputs:
+; GCN: FloatMode: 80
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_flush_all_outputs(float addrspace(1)* %out0, double addrspace(1)* %out1) #10 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_flush_all_inputs:
+; GCN: FloatMode: 160
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_flush_all_inputs(float addrspace(1)* %out0, double addrspace(1)* %out1) #11 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_flush_f32_inputs:
+; GCN: FloatMode: 224
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_flush_f32_inputs(float addrspace(1)* %out0, double addrspace(1)* %out1) #12 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_flush_f32_outputs:
+; GCN: FloatMode: 208
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_flush_f32_outputs(float addrspace(1)* %out0, double addrspace(1)* %out1) #13 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_flush_f64_inputs:
+; GCN: FloatMode: 176
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_flush_f64_inputs(float addrspace(1)* %out0, double addrspace(1)* %out1) #14 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_flush_f64_outputs:
+; GCN: FloatMode: 112
+; GCN: IeeeMode: 1
+define amdgpu_kernel void @test_flush_f64_outputs(float addrspace(1)* %out0, double addrspace(1)* %out1) #15 {
+  store float 0.0, float addrspace(1)* %out0
+  store double 0.0, double addrspace(1)* %out1
+  ret void
+}
+
 ; GCN-LABEL: {{^}}kill_gs_const:
+; GCN: FloatMode: 240
 ; GCN: IeeeMode: 0
 define amdgpu_gs void @kill_gs_const() {
 main_body:
@@ -94,6 +158,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}kill_vcc_implicit_def:
+; GCN: FloatMode: 240
 ; GCN: IeeeMode: 0
 define amdgpu_ps float @kill_vcc_implicit_def([6 x <16 x i8>] addrspace(4)* inreg, [17 x <16 x i8>] addrspace(4)* inreg, [17 x <4 x i32>] addrspace(4)* inreg, [34 x <8 x i32>] addrspace(4)* inreg, float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, float, i32, float, float) {
 entry:
@@ -107,10 +172,17 @@ declare void @llvm.amdgcn.kill(i1)
 
 attributes #0 = { nounwind "target-cpu"="tahiti" }
 attributes #1 = { nounwind "target-cpu"="fiji" }
-attributes #2 = { nounwind "target-features"="+fp64-denormals" }
-attributes #3 = { nounwind "target-features"="+fp32-denormals" }
-attributes #4 = { nounwind "target-features"="+fp32-denormals,+fp64-denormals" }
-attributes #5 = { nounwind "target-features"="-fp32-denormals,-fp64-fp16-denormals" }
-attributes #6 = { nounwind "target-features"="+fp64-fp16-denormals" }
-attributes #7 = { nounwind "target-features"="-fp64-fp16-denormals" }
-attributes #8 = { nounwind "target-features"="+fp32-denormals,+fp64-fp16-denormals" }
+attributes #2 = { nounwind "denormal-fp-math"="ieee,ieee" }
+attributes #3 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
+attributes #4 = { nounwind "denormal-fp-math"="ieee,ieee" }
+attributes #5 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #6 = { nounwind "denormal-fp-math"="ieee,ieee" }
+attributes #7 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #8 = { nounwind "denormal-fp-math"="ieee,ieee" }
+attributes #9 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #10 = { nounwind "denormal-fp-math"="preserve-sign,ieee" }
+attributes #11 = { nounwind "denormal-fp-math"="ieee,preserve-sign" }
+attributes #12 = { nounwind "denormal-fp-math-f32"="ieee,preserve-sign" "denormal-fp-math"="ieee,ieee" }
+attributes #13 = { nounwind "denormal-fp-math-f32"="preserve-sign,ieee" "denormal-fp-math"="ieee,ieee" }
+attributes #14 = { nounwind "denormal-fp-math"="ieee,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" }
+attributes #15 = { nounwind "denormal-fp-math"="preserve-sign,ieee" "denormal-fp-math-f32"="ieee,ieee" }

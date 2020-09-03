@@ -326,140 +326,88 @@ public:
     Kind k = SE->getKind();
     return k >= BEGIN_BINARYSYMEXPRS && k <= END_BINARYSYMEXPRS;
   }
+
+protected:
+  static unsigned computeOperandComplexity(const SymExpr *Value) {
+    return Value->computeComplexity();
+  }
+  static unsigned computeOperandComplexity(const llvm::APSInt &Value) {
+    return 1;
+  }
+
+  static const llvm::APSInt *getPointer(const llvm::APSInt &Value) {
+    return &Value;
+  }
+  static const SymExpr *getPointer(const SymExpr *Value) { return Value; }
+
+  static void dumpToStreamImpl(raw_ostream &os, const SymExpr *Value);
+  static void dumpToStreamImpl(raw_ostream &os, const llvm::APSInt &Value);
+  static void dumpToStreamImpl(raw_ostream &os, BinaryOperator::Opcode op);
+};
+
+/// Template implementation for all binary symbolic expressions
+template <class LHSTYPE, class RHSTYPE, SymExpr::Kind ClassKind>
+class BinarySymExprImpl : public BinarySymExpr {
+  LHSTYPE LHS;
+  RHSTYPE RHS;
+
+public:
+  BinarySymExprImpl(LHSTYPE lhs, BinaryOperator::Opcode op, RHSTYPE rhs,
+                    QualType t)
+      : BinarySymExpr(ClassKind, op, t), LHS(lhs), RHS(rhs) {
+    assert(getPointer(lhs));
+    assert(getPointer(rhs));
+  }
+
+  void dumpToStream(raw_ostream &os) const override {
+    dumpToStreamImpl(os, LHS);
+    dumpToStreamImpl(os, getOpcode());
+    dumpToStreamImpl(os, RHS);
+  }
+
+  LHSTYPE getLHS() const { return LHS; }
+  RHSTYPE getRHS() const { return RHS; }
+
+  unsigned computeComplexity() const override {
+    if (Complexity == 0)
+      Complexity =
+          computeOperandComplexity(RHS) + computeOperandComplexity(LHS);
+    return Complexity;
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, LHSTYPE lhs,
+                      BinaryOperator::Opcode op, RHSTYPE rhs, QualType t) {
+    ID.AddInteger((unsigned)ClassKind);
+    ID.AddPointer(getPointer(lhs));
+    ID.AddInteger(op);
+    ID.AddPointer(getPointer(rhs));
+    ID.Add(t);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) override {
+    Profile(ID, LHS, getOpcode(), RHS, getType());
+  }
+
+  // Implement isa<T> support.
+  static bool classof(const SymExpr *SE) { return SE->getKind() == ClassKind; }
 };
 
 /// Represents a symbolic expression like 'x' + 3.
-class SymIntExpr : public BinarySymExpr {
-  const SymExpr *LHS;
-  const llvm::APSInt& RHS;
-
-public:
-  SymIntExpr(const SymExpr *lhs, BinaryOperator::Opcode op,
-             const llvm::APSInt &rhs, QualType t)
-      : BinarySymExpr(SymIntExprKind, op, t), LHS(lhs), RHS(rhs) {
-    assert(lhs);
-  }
-
-  void dumpToStream(raw_ostream &os) const override;
-
-  const SymExpr *getLHS() const { return LHS; }
-  const llvm::APSInt &getRHS() const { return RHS; }
-
-  unsigned computeComplexity() const override {
-    if (Complexity == 0)
-      Complexity = 1 + LHS->computeComplexity();
-    return Complexity;
-  }
-
-  static void Profile(llvm::FoldingSetNodeID& ID, const SymExpr *lhs,
-                      BinaryOperator::Opcode op, const llvm::APSInt& rhs,
-                      QualType t) {
-    ID.AddInteger((unsigned) SymIntExprKind);
-    ID.AddPointer(lhs);
-    ID.AddInteger(op);
-    ID.AddPointer(&rhs);
-    ID.Add(t);
-  }
-
-  void Profile(llvm::FoldingSetNodeID& ID) override {
-    Profile(ID, LHS, getOpcode(), RHS, getType());
-  }
-
-  // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymIntExprKind;
-  }
-};
+using SymIntExpr = BinarySymExprImpl<const SymExpr *, const llvm::APSInt &,
+                                     SymExpr::Kind::SymIntExprKind>;
 
 /// Represents a symbolic expression like 3 - 'x'.
-class IntSymExpr : public BinarySymExpr {
-  const llvm::APSInt& LHS;
-  const SymExpr *RHS;
-
-public:
-  IntSymExpr(const llvm::APSInt &lhs, BinaryOperator::Opcode op,
-             const SymExpr *rhs, QualType t)
-      : BinarySymExpr(IntSymExprKind, op, t), LHS(lhs), RHS(rhs) {
-    assert(rhs);
-  }
-
-  void dumpToStream(raw_ostream &os) const override;
-
-  const SymExpr *getRHS() const { return RHS; }
-  const llvm::APSInt &getLHS() const { return LHS; }
-
-  unsigned computeComplexity() const override {
-    if (Complexity == 0)
-      Complexity = 1 + RHS->computeComplexity();
-    return Complexity;
-  }
-
-  static void Profile(llvm::FoldingSetNodeID& ID, const llvm::APSInt& lhs,
-                      BinaryOperator::Opcode op, const SymExpr *rhs,
-                      QualType t) {
-    ID.AddInteger((unsigned) IntSymExprKind);
-    ID.AddPointer(&lhs);
-    ID.AddInteger(op);
-    ID.AddPointer(rhs);
-    ID.Add(t);
-  }
-
-  void Profile(llvm::FoldingSetNodeID& ID) override {
-    Profile(ID, LHS, getOpcode(), RHS, getType());
-  }
-
-  // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == IntSymExprKind;
-  }
-};
+using IntSymExpr = BinarySymExprImpl<const llvm::APSInt &, const SymExpr *,
+                                     SymExpr::Kind::IntSymExprKind>;
 
 /// Represents a symbolic expression like 'x' + 'y'.
-class SymSymExpr : public BinarySymExpr {
-  const SymExpr *LHS;
-  const SymExpr *RHS;
-
-public:
-  SymSymExpr(const SymExpr *lhs, BinaryOperator::Opcode op, const SymExpr *rhs,
-             QualType t)
-      : BinarySymExpr(SymSymExprKind, op, t), LHS(lhs), RHS(rhs) {
-    assert(lhs);
-    assert(rhs);
-  }
-
-  const SymExpr *getLHS() const { return LHS; }
-  const SymExpr *getRHS() const { return RHS; }
-
-  void dumpToStream(raw_ostream &os) const override;
-
-  unsigned computeComplexity() const override {
-    if (Complexity == 0)
-      Complexity = RHS->computeComplexity() + LHS->computeComplexity();
-    return Complexity;
-  }
-
-  static void Profile(llvm::FoldingSetNodeID& ID, const SymExpr *lhs,
-                    BinaryOperator::Opcode op, const SymExpr *rhs, QualType t) {
-    ID.AddInteger((unsigned) SymSymExprKind);
-    ID.AddPointer(lhs);
-    ID.AddInteger(op);
-    ID.AddPointer(rhs);
-    ID.Add(t);
-  }
-
-  void Profile(llvm::FoldingSetNodeID& ID) override {
-    Profile(ID, LHS, getOpcode(), RHS, getType());
-  }
-
-  // Implement isa<T> support.
-  static bool classof(const SymExpr *SE) {
-    return SE->getKind() == SymSymExprKind;
-  }
-};
+using SymSymExpr = BinarySymExprImpl<const SymExpr *, const SymExpr *,
+                                     SymExpr::Kind::SymSymExprKind>;
 
 class SymbolManager {
   using DataSetTy = llvm::FoldingSet<SymExpr>;
-  using SymbolDependTy = llvm::DenseMap<SymbolRef, SymbolRefSmallVectorTy *>;
+  using SymbolDependTy =
+      llvm::DenseMap<SymbolRef, std::unique_ptr<SymbolRefSmallVectorTy>>;
 
   DataSetTy DataSet;
 
@@ -476,7 +424,6 @@ public:
   SymbolManager(ASTContext &ctx, BasicValueFactory &bv,
                 llvm::BumpPtrAllocator& bpalloc)
       : SymbolDependencies(16), BPAlloc(bpalloc), BV(bv), Ctx(ctx) {}
-  ~SymbolManager();
 
   static bool canSymbolicate(QualType T);
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_NativeThreadProtocol_h_
-#define liblldb_NativeThreadProtocol_h_
+#ifndef LLDB_HOST_COMMON_NATIVETHREADPROTOCOL_H
+#define LLDB_HOST_COMMON_NATIVETHREADPROTOCOL_H
 
 #include <memory>
 
@@ -53,4 +53,4 @@ protected:
 };
 }
 
-#endif // #ifndef liblldb_NativeThreadProtocol_h_
+#endif // LLDB_HOST_COMMON_NATIVETHREADPROTOCOL_H

@@ -386,16 +386,10 @@ define <2 x float> @rint_v2f32(<2 x float> %x) nounwind {
 define <2 x float> @round_v2f32(<2 x float> %x) nounwind {
 ; CHECK-LABEL: round_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $40, %rsp
-; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    callq roundf
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
-; CHECK-NEXT:    callq roundf
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm1
+; CHECK-NEXT:    vorps {{.*}}(%rip), %xmm1, %xmm1
+; CHECK-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vroundps $11, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = call <2 x float> @llvm.round.v2f32(<2 x float> %x)
   ret <2 x float> %r

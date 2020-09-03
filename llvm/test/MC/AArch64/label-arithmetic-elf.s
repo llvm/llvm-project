@@ -3,7 +3,7 @@
 start:
   .space 8
 end:
-  // CHECK-LABEL: end:
+  // CHECK-LABEL: <end>:
 
   adds w0, w1, #(end - start)
   adds x0, x1, #(end - start)
@@ -72,7 +72,7 @@ notprivate:
 
   .type foo, @function
 foo:
-  // CHECK-LABEL: foo:
+  // CHECK-LABEL: <foo>:
 
   add w0, w1, #(foo - .Lprivate2)
   cmp w0, #(foo - .Lprivate2)
@@ -83,7 +83,7 @@ foo:
 
   .type goo, @function
 goo:
-  // CHECK-LABEL: goo:
+  // CHECK-LABEL: <goo>:
 
   add w0, w1, #(goo - foo)
   cmp w0, #(goo - foo)

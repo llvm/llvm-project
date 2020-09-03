@@ -81,8 +81,8 @@ class ExprCommandThatRestartsTestCase(TestBase):
             "call_me (%d)" %
             (num_sigchld), options)
         self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success())
-        self.assertTrue(value.GetValueAsSigned(-1) == num_sigchld)
+        self.assertSuccess(value.GetError())
+        self.assertEquals(value.GetValueAsSigned(-1), num_sigchld)
 
         self.check_after_call(num_sigchld)
 
@@ -98,8 +98,9 @@ class ExprCommandThatRestartsTestCase(TestBase):
             "call_me (%d)" %
             (num_sigchld), options)
 
-        self.assertTrue(value.IsValid() and value.GetError().Success())
-        self.assertTrue(value.GetValueAsSigned(-1) == num_sigchld)
+        self.assertTrue(value.IsValid())
+        self.assertSuccess(value.GetError())
+        self.assertEquals(value.GetValueAsSigned(-1), num_sigchld)
         self.check_after_call(num_sigchld)
 
         # Now set the signal to print but not stop and make sure that calling
@@ -110,8 +111,9 @@ class ExprCommandThatRestartsTestCase(TestBase):
             "call_me (%d)" %
             (num_sigchld), options)
 
-        self.assertTrue(value.IsValid() and value.GetError().Success())
-        self.assertTrue(value.GetValueAsSigned(-1) == num_sigchld)
+        self.assertTrue(value.IsValid())
+        self.assertSuccess(value.GetError())
+        self.assertEquals(value.GetValueAsSigned(-1), num_sigchld)
         self.check_after_call(num_sigchld)
 
         # Now set this unwind on error to false, and make sure that we still
@@ -121,8 +123,9 @@ class ExprCommandThatRestartsTestCase(TestBase):
             "call_me (%d)" %
             (num_sigchld), options)
 
-        self.assertTrue(value.IsValid() and value.GetError().Success())
-        self.assertTrue(value.GetValueAsSigned(-1) == num_sigchld)
+        self.assertTrue(value.IsValid())
+        self.assertSuccess(value.GetError())
+        self.assertEquals(value.GetValueAsSigned(-1), num_sigchld)
         self.check_after_call(num_sigchld)
 
         # Okay, now set UnwindOnError to true, and then make the signal behavior to stop

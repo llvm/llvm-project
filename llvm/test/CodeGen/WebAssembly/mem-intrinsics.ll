@@ -12,7 +12,7 @@ declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1)
 ; Test that return values are optimized.
 
 ; CHECK-LABEL: copy_yes:
-; CHECK:      i32.call $push0=, memcpy, $0, $1, $2{{$}}
+; CHECK:      call     $push0=, memcpy, $0, $1, $2{{$}}
 ; CHECK-NEXT: return   $pop0{{$}}
 define i8* @copy_yes(i8* %dst, i8* %src, i32 %len) {
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i1 false)
@@ -20,7 +20,7 @@ define i8* @copy_yes(i8* %dst, i8* %src, i32 %len) {
 }
 
 ; CHECK-LABEL: copy_no:
-; CHECK:      i32.call $drop=, memcpy, $0, $1, $2{{$}}
+; CHECK:      call     $drop=, memcpy, $0, $1, $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @copy_no(i8* %dst, i8* %src, i32 %len) {
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i1 false)
@@ -28,7 +28,7 @@ define void @copy_no(i8* %dst, i8* %src, i32 %len) {
 }
 
 ; CHECK-LABEL: move_yes:
-; CHECK:      i32.call $push0=, memmove, $0, $1, $2{{$}}
+; CHECK:      call     $push0=, memmove, $0, $1, $2{{$}}
 ; CHECK-NEXT: return   $pop0{{$}}
 define i8* @move_yes(i8* %dst, i8* %src, i32 %len) {
   call void @llvm.memmove.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i1 false)
@@ -36,7 +36,7 @@ define i8* @move_yes(i8* %dst, i8* %src, i32 %len) {
 }
 
 ; CHECK-LABEL: move_no:
-; CHECK:      i32.call $drop=, memmove, $0, $1, $2{{$}}
+; CHECK:      call     $drop=, memmove, $0, $1, $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @move_no(i8* %dst, i8* %src, i32 %len) {
   call void @llvm.memmove.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i1 false)
@@ -44,7 +44,7 @@ define void @move_no(i8* %dst, i8* %src, i32 %len) {
 }
 
 ; CHECK-LABEL: set_yes:
-; CHECK:      i32.call $push0=, memset, $0, $1, $2{{$}}
+; CHECK:      call     $push0=, memset, $0, $1, $2{{$}}
 ; CHECK-NEXT: return   $pop0{{$}}
 define i8* @set_yes(i8* %dst, i8 %src, i32 %len) {
   call void @llvm.memset.p0i8.i32(i8* %dst, i8 %src, i32 %len, i1 false)
@@ -52,7 +52,7 @@ define i8* @set_yes(i8* %dst, i8 %src, i32 %len) {
 }
 
 ; CHECK-LABEL: set_no:
-; CHECK:      i32.call $drop=, memset, $0, $1, $2{{$}}
+; CHECK:      call     $drop=, memset, $0, $1, $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @set_no(i8* %dst, i8 %src, i32 %len) {
   call void @llvm.memset.p0i8.i32(i8* %dst, i8 %src, i32 %len, i1 false)
@@ -61,8 +61,8 @@ define void @set_no(i8* %dst, i8 %src, i32 %len) {
 
 
 ; CHECK-LABEL: frame_index:
-; CHECK: i32.call $drop=, memset, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
-; CHECK: i32.call $push{{[0-9]+}}=, memset, ${{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
+; CHECK: call $drop=, memset, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
+; CHECK: call $push{{[0-9]+}}=, memset, ${{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
 ; CHECK: return{{$}}
 define void @frame_index() {
 entry:
@@ -80,7 +80,7 @@ entry:
 ; this specific functionality.
 
 ; CHECK-LABEL: drop_result:
-; CHECK: i32.call $drop=, memset, $0, $1, $2
+; CHECK: call $drop=, memset, $0, $1, $2
 declare i8* @def()
 declare void @block_tail_dup()
 define i8* @drop_result(i8* %arg, i8 %arg1, i32 %arg2, i32 %arg3, i32 %arg4) {
@@ -113,7 +113,7 @@ bb11:
 ; result of the memset *is* stackified.
 
 ; CHECK-LABEL: tail_dup_to_reuse_result:
-; CHECK: i32.call $push{{[0-9]+}}=, memset, $0, $1, $2
+; CHECK: call $push{{[0-9]+}}=, memset, $0, $1, $2
 define i8* @tail_dup_to_reuse_result(i8* %arg, i8 %arg1, i32 %arg2, i32 %arg3, i32 %arg4) {
 bb:
   %tmp = icmp eq i32 %arg3, 0

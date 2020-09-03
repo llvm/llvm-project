@@ -2,13 +2,13 @@
 
 ; Check we add SHF_LINK_ORDER for .stack_sizes and link it with the corresponding .text sections.
 ; CHECK: .section        .text._Z3barv,"ax",@progbits
-; CHECK: .section        .stack_sizes,"o",@progbits,.text._Z3barv,unique,0
+; CHECK: .section        .stack_sizes,"o",@progbits,.text._Z3barv{{$}}
 ; CHECK: .section        .text._Z3foov,"ax",@progbits
-; CHECK: .section        .stack_sizes,"o",@progbits,.text._Z3foov,unique,1
+; CHECK: .section        .stack_sizes,"o",@progbits,.text._Z3foov{{$}}
 
 ; Check we add .stack_size section to a COMDAT group with the corresponding .text section if such a COMDAT exists.
 ; CHECK: .section        .text._Z4fooTIiET_v,"axG",@progbits,_Z4fooTIiET_v,comdat
-; CHECK: .section        .stack_sizes,"Go",@progbits,_Z4fooTIiET_v,comdat,.text._Z4fooTIiET_v,unique,2
+; CHECK: .section        .stack_sizes,"Go",@progbits,_Z4fooTIiET_v,comdat,.text._Z4fooTIiET_v{{$}}
 
 $_Z4fooTIiET_v = comdat any
 

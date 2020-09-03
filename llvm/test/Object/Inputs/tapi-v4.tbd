@@ -1,0 +1,38 @@
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ i386-ios-simulator, x86_64-ios-simulator ]
+uuids:
+  - target:          i386-ios-simulator
+    value:           00000000-0000-0000-0000-000000000000
+  - target:          x86_64-ios-simulator
+    value:           12FF0E69-DD5A-3356-BB9E-24A133D816F0
+install-name:    '/u/l/libFoo.dylib'
+current-version: 1288
+reexported-libraries:
+  - targets:              [ i386-ios-simulator, x86_64-ios-simulator ]
+    libraries:            [  '/u/l/s/libPrivate.dylib', '/u/l/libPublic.dylib' ]
+exports:
+  - targets:              [ i386-ios-simulator ]
+    symbols:              [ '_sym1' ]
+    weak-symbols:         [ '_sym2' ]
+  - targets:              [ x86_64-ios-simulator, i386-ios-simulator ]
+    symbols:              [ '_sym3', '_sym4' ]
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ i386-ios-simulator, x86_64-ios-simulator ]
+uuids:
+  - target:          i386-ios-simulator
+    value:           2E88EC2B-F951-3D76-B114-F6CC635EFE8C
+  - target:          x86_64-ios-simulator
+    value:           42CD91A1-9824-3FC3-81B2-5355D95C99C7
+install-name:    '/u/l/s/libPrivate.dylib'
+current-version: 60177
+parent-umbrella:
+  - targets:         [ i386-ios-simulator, x86_64-ios-simulator ]
+    umbrella:        Foo 
+exports:
+  - targets:         [ x86_64-ios-simulator ]
+    symbols:         [ '_sym1', '_sym2' ]
+  - targets:         [ x86_64-ios-simulator, i386-ios-simulator ]
+    symbols:         [  '_sym3', '_sym4' ]
+...

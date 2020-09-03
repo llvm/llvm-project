@@ -113,6 +113,30 @@ static void test_foreach(isl::ctx ctx)
 	assert(caught);
 }
 
+/* Test the functionality of "every" functions.
+ *
+ * In particular, test the generic functionality and
+ * test that exceptions are properly propagated.
+ */
+static void test_every(isl::ctx ctx)
+{
+	isl::union_set us(ctx, "{ A[i]; B[j] }");
+
+	test_every_generic(ctx);
+
+	auto fail = [] (isl::set s) -> bool {
+		throw "fail";
+	};
+	bool caught = false;
+	try {
+		us.every_set(fail);
+		die("no exception raised");
+	} catch (char const *s) {
+		caught = true;
+	}
+	assert(caught);
+}
+
 /* Test that an exception is generated for an isl error and
  * that the error message is captured by the exception.
  * Also check that the exception can be copied and that copying
@@ -140,6 +164,125 @@ static void test_exception(isl::ctx ctx)
 	assert(strstr(copy.what(), "without explicit domain"));
 }
 
+/* Test basic schedule tree functionality.
+ *
+ * In particular, create a simple schedule tree and
+ * - perform some generic tests
+ * - test map_descendant_bottom_up in the failing case
+ * - test foreach_descendant_top_down
+ * - test every_descendant
+ */
+static void test_schedule_tree(isl::ctx ctx)
+{
+	auto root = test_schedule_tree_generic(ctx);
+
+	auto fail_map = [](isl::schedule_node node) {
+		throw "fail";
+		return node;
+	};
+	auto caught = false;
+	try {
+		root.map_descendant_bottom_up(fail_map);
+		die("no exception raised");
+	} catch (char const *s) {
+		caught = true;
+	}
+	assert(caught);
+
+	int count = 0;
+	auto inc_count = [&count](isl::schedule_node node) {
+		count++;
+		return true;
+	};
+	root.foreach_descendant_top_down(inc_count);
+	assert(count == 8);
+
+	count = 0;
+	auto inc_count_once = [&count](isl::schedule_node node) {
+		count++;
+		return false;
+	};
+	root.foreach_descendant_top_down(inc_count_once);
+	assert(count == 1);
+
+	auto is_not_domain = [](isl::schedule_node node) {
+		return !node.isa<isl::schedule_node_domain>();
+	};
+	assert(root.child(0).every_descendant(is_not_domain));
+	assert(!root.every_descendant(is_not_domain));
+
+	auto fail = [](isl::schedule_node node) {
+		throw "fail";
+		return true;
+	};
+	caught = false;
+	try {
+		root.every_descendant(fail);
+		die("no exception raised");
+	} catch (char const *s) {
+		caught = true;
+	}
+	assert(caught);
+
+	auto domain = root.as<isl::schedule_node_domain>().domain();
+	auto filters = isl::union_set(ctx, "{}");
+	auto collect_filters = [&filters](isl::schedule_node node) {
+		if (node.isa<isl::schedule_node_filter>()) {
+			auto filter = node.as<isl::schedule_node_filter>();
+			filters = filters.unite(filter.filter());
+		}
+		return true;
+	};
+	root.every_descendant(collect_filters);
+	assert(domain.is_equal(filters));
+}
+
+/* Test basic AST generation from a schedule tree.
+ *
+ * In particular, create a simple schedule tree and
+ * - perform some generic tests
+ * - test at_each_domain in the failing case
+ */
+static void test_ast_build(isl::ctx ctx)
+{
+	auto schedule = test_ast_build_generic(ctx);
+
+	bool do_fail = true;
+	int count_ast_fail = 0;
+	auto fail_inc_count_ast =
+	    [&count_ast_fail, &do_fail](isl::ast_node node,
+					isl::ast_build build) {
+		count_ast_fail++;
+		if (do_fail)
+			throw "fail";
+		return node;
+	};
+	auto build = isl::ast_build(ctx);
+	build = build.set_at_each_domain(fail_inc_count_ast);
+	auto caught = false;
+	try {
+		auto ast = build.node_from(schedule);
+	} catch (char const *s) {
+		caught = true;
+	}
+	assert(caught);
+	assert(count_ast_fail > 0);
+	auto build_copy = build;
+	int count_ast = 0;
+	auto inc_count_ast =
+	    [&count_ast](isl::ast_node node, isl::ast_build build) {
+		count_ast++;
+		return node;
+	};
+	build_copy = build_copy.set_at_each_domain(inc_count_ast);
+	auto ast = build_copy.node_from(schedule);
+	assert(count_ast == 2);
+	count_ast_fail = 0;
+	do_fail = false;
+	ast = build.node_from(schedule);
+	assert(count_ast_fail == 2);
+}
+
 /* Test the (unchecked) isl C++ interface
  *
  * This includes:
@@ -149,6 +292,10 @@ static void test_exception(isl::ctx ctx)
  *  - Different return types
  *  - Foreach functions
  *  - Exceptions
+ *  - Spaces
+ *  - Schedule trees
+ *  - AST generation
+ *  - AST expression generation
  */
 int main()
 {
@@ -161,7 +308,12 @@ int main()
 	test_parameters(ctx);
 	test_return(ctx);
 	test_foreach(ctx);
+	test_every(ctx);
 	test_exception(ctx);
+	test_space(ctx);
+	test_schedule_tree(ctx);
+	test_ast_build(ctx);
+	test_ast_build_expr(ctx);
 
 	isl_ctx_free(ctx);
 

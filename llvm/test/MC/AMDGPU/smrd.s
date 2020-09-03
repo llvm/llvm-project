@@ -32,12 +32,12 @@ s_load_dword s1, s[2:3], 0xfffff
 s_load_dword s1, s[2:3], 0x100000
 // NOSI: error: instruction not supported on this GPU
 // CI: s_load_dword s1, s[2:3], 0x100000 ; encoding: [0xff,0x82,0x00,0xc0,0x00,0x00,0x10,0x00]
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: expected a 20-bit unsigned offset
 
 s_load_dword s1, s[2:3], 0xffffffff
 // NOSI: error: instruction not supported on this GPU
 // CI: s_load_dword s1, s[2:3], 0xffffffff ; encoding: [0xff,0x82,0x00,0xc0,0xff,0xff,0xff,0xff]
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: expected a 20-bit unsigned offset
 
 //===----------------------------------------------------------------------===//
 // Instructions

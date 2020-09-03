@@ -57,7 +57,7 @@ define amdgpu_kernel void @simple_read2_f32_max_offset(float addrspace(1)* %out)
 ; CI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-NOT ds_read2_b32
+; GCN-NOT: ds_read2_b32
 ; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:1028
 ; GCN: s_endpgm
@@ -272,7 +272,7 @@ define amdgpu_kernel void @read2_ptr_is_subreg_f32(float addrspace(1)* %out) #0 
 ; CI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-NOT ds_read2_b32
+; GCN-NOT: ds_read2_b32
 ; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
 ; GCN: s_endpgm
@@ -293,7 +293,7 @@ define amdgpu_kernel void @simple_read2_f32_volatile_0(float addrspace(1)* %out)
 ; CI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-NOT ds_read2_b32
+; GCN-NOT: ds_read2_b32
 ; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
 ; GCN: s_endpgm
@@ -398,7 +398,7 @@ define amdgpu_kernel void @simple_read2_f64_max_offset(double addrspace(1)* %out
 ; CI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-NOT ds_read2_b64
+; GCN-NOT: ds_read2_b64
 ; GCN: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
 ; GCN: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset:2056
 ; GCN: s_endpgm
@@ -473,8 +473,8 @@ define amdgpu_kernel void @load_constant_disjoint_offsets(i32 addrspace(1)* %out
 ; GFX9-NOT: m0
 
 ; GCN-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], bar@abs32@lo{{$}}
-; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[PTR]] offset1:1
 ; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[PTR]] offset0:2 offset1:3
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[PTR]] offset1:1
 define amdgpu_kernel void @load_misaligned64_constant_offsets(i64 addrspace(1)* %out) {
   %val0 = load i64, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 0), align 4
   %val1 = load i64, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 1), align 4

@@ -8,6 +8,7 @@
   define i16 @const_s16() { ret i16 42 }
   define i32 @const_s32() { ret i32 42 }
   define i64 @const_s64() { ret i64 1234567890123 }
+  define i8* @const_p0_0() { ret i8* null }
 
   define i32 @fconst_s32() { ret i32 42 }
   define i64 @fconst_s64() { ret i64 1234567890123 }
@@ -78,6 +79,19 @@ body:             |
     ; CHECK: $x0 = COPY [[MOVi64imm]]
     %0(s64) = G_CONSTANT i64 1234567890123
     $x0 = COPY %0(s64)
+...
+
+---
+name:            const_p0_0
+legalized:       true
+regBankSelected: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: const_p0_0
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $xzr
+    ; CHECK: $x0 = COPY [[COPY]]
+    %0:gpr(p0) = G_CONSTANT i64 0
+    $x0 = COPY %0
 ...
 
 ---

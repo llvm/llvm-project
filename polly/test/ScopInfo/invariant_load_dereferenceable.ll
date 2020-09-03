@@ -17,7 +17,7 @@
 
 ; CHECK-NOT: Function: foo_undereferanceable
 
-define void @foo_dereferanceable(double* %A, double* %B, i64* dereferenceable(8) %sizeA_ptr,
+define void @foo_dereferanceable(double* %A, double* %B, i64* dereferenceable(8) align 8 %sizeA_ptr,
 		i32 %lb.i, i32 %lb.j, i32 %ub.i, i32 %ub.j) {
 entry:
 	br label %for.i

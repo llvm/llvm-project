@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDBVSCODE_IOSTREAM_H_
-#define LLDBVSCODE_IOSTREAM_H_
+#ifndef LLDB_TOOLS_LLDB_VSCODE_IOSTREAM_H
+#define LLDB_TOOLS_LLDB_VSCODE_IOSTREAM_H
 
 #if defined(_WIN32)
 // We need to #define NOMINMAX in order to skip `min()` and `max()` macro

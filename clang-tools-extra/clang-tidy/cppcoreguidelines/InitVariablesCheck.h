@@ -24,6 +24,7 @@ namespace cppcoreguidelines {
 class InitVariablesCheck : public ClangTidyCheck {
 public:
   InitVariablesCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;

@@ -244,20 +244,24 @@ static SourcePred matchScalarInAggregate() {
 
 static SourcePred validInsertValueIndex() {
   auto Pred = [](ArrayRef<Value *> Cur, const Value *V) {
-    auto *CTy = cast<CompositeType>(Cur[0]->getType());
     if (auto *CI = dyn_cast<ConstantInt>(V))
-      if (CI->getBitWidth() == 32 &&
-          CTy->getTypeAtIndex(CI->getZExtValue()) == Cur[1]->getType())
-        return true;
+      if (CI->getBitWidth() == 32) {
+        Type *Indexed = ExtractValueInst::getIndexedType(Cur[0]->getType(),
+                                                         CI->getZExtValue());
+        return Indexed == Cur[1]->getType();
+      }
     return false;
   };
   auto Make = [](ArrayRef<Value *> Cur, ArrayRef<Type *> Ts) {
     std::vector<Constant *> Result;
     auto *Int32Ty = Type::getInt32Ty(Cur[0]->getContext());
-    auto *CTy = cast<CompositeType>(Cur[0]->getType());
-    for (int I = 0, E = getAggregateNumElements(CTy); I < E; ++I)
-      if (CTy->getTypeAtIndex(I) == Cur[1]->getType())
+    auto *BaseTy = Cur[0]->getType();
+    int I = 0;
+    while (Type *Indexed = ExtractValueInst::getIndexedType(BaseTy, I)) {
+      if (Indexed == Cur[1]->getType())
         Result.push_back(ConstantInt::get(Int32Ty, I));
+      ++I;
+    }
     return Result;
   };
   return {Pred, Make};
@@ -298,12 +302,12 @@ static SourcePred validShuffleVectorIndex() {
     return ShuffleVectorInst::isValidOperands(Cur[0], Cur[1], V);
   };
   auto Make = [](ArrayRef<Value *> Cur, ArrayRef<Type *> Ts) {
-    auto *FirstTy = cast<VectorType>(Cur[0]->getType());
+    auto *FirstTy = cast<FixedVectorType>(Cur[0]->getType());
     auto *Int32Ty = Type::getInt32Ty(Cur[0]->getContext());
     // TODO: It's straighforward to make up reasonable values, but listing them
     // exhaustively would be insane. Come up with a couple of sensible ones.
-    return std::vector<Constant *>{
-        UndefValue::get(VectorType::get(Int32Ty, FirstTy->getNumElements()))};
+    return std::vector<Constant *>{UndefValue::get(
+        FixedVectorType::get(Int32Ty, FirstTy->getNumElements()))};
   };
   return {Pred, Make};
 }

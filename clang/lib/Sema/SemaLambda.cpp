@@ -361,7 +361,8 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
                                            TypeSourceInfo *MethodTypeInfo,
                                            SourceLocation EndLoc,
                                            ArrayRef<ParmVarDecl *> Params,
-                                           ConstexprSpecKind ConstexprKind) {
+                                           ConstexprSpecKind ConstexprKind,
+                                           Expr *TrailingRequiresClause) {
   QualType MethodType = MethodTypeInfo->getType();
   TemplateParameterList *TemplateParams =
       getGenericLambdaTemplateParameterList(getCurLambda(), *this);
@@ -395,7 +396,7 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
       DeclarationNameInfo(MethodName, IntroducerRange.getBegin(),
                           MethodNameLoc),
       MethodType, MethodTypeInfo, SC_None,
-      /*isInline=*/true, ConstexprKind, EndLoc);
+      /*isInline=*/true, ConstexprKind, EndLoc, TrailingRequiresClause);
   Method->setAccess(AS_public);
   if (!TemplateParams)
     Class->addDecl(Method);
@@ -790,7 +791,8 @@ QualType Sema::buildLambdaInitCaptureInitialization(
   // deduce against.
   QualType DeductType = Context.getAutoDeductType();
   TypeLocBuilder TLB;
-  TLB.pushTypeSpec(DeductType).setNameLoc(Loc);
+  AutoTypeLoc TL = TLB.push<AutoTypeLoc>(DeductType);
+  TL.setNameLoc(Loc);
   if (ByRef) {
     DeductType = BuildReferenceType(DeductType, true, Loc, Id);
     assert(!DeductType.isNull() && "can't build reference to auto");
@@ -798,7 +800,7 @@ QualType Sema::buildLambdaInitCaptureInitialization(
   }
   if (EllipsisLoc.isValid()) {
     if (Init->containsUnexpandedParameterPack()) {
-      Diag(EllipsisLoc, getLangOpts().CPlusPlus2a
+      Diag(EllipsisLoc, getLangOpts().CPlusPlus20
                             ? diag::warn_cxx17_compat_init_capture_pack
                             : diag::ext_init_capture_pack);
       DeductType = Context.getPackExpansionType(DeductType, NumExpansions);
@@ -972,7 +974,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
                                                  KnownDependent, Intro.Default);
   CXXMethodDecl *Method =
       startLambdaDefinition(Class, Intro.Range, MethodTyInfo, EndLoc, Params,
-                            ParamInfo.getDeclSpec().getConstexprSpecifier());
+                            ParamInfo.getDeclSpec().getConstexprSpecifier(),
+                            ParamInfo.getTrailingRequiresClause());
   if (ExplicitParams)
     CheckCXXDefaultArguments(Method);
 
@@ -987,8 +990,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   // Attributes on the lambda apply to the method.
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
 
-  // CUDA lambdas get implicit attributes based on the scope in which they're
-  // declared.
+  // CUDA lambdas get implicit host and device attributes.
   if (getLangOpts().CUDA)
     CUDASetLambdaAttrs(Method);
 
@@ -1050,8 +1052,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
       //  "&identifier", "this", or "* this". [ Note: The form [&,this] is
       //  redundant but accepted for compatibility with ISO C++14. --end note ]
       if (Intro.Default == LCD_ByCopy && C->Kind != LCK_StarThis)
-        Diag(C->Loc, !getLangOpts().CPlusPlus2a
-                         ? diag::ext_equals_this_lambda_capture_cxx2a
+        Diag(C->Loc, !getLangOpts().CPlusPlus20
+                         ? diag::ext_equals_this_lambda_capture_cxx20
                          : diag::warn_cxx17_compat_equals_this_lambda_capture);
 
       // C++11 [expr.prim.lambda]p12:
@@ -1231,7 +1233,9 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   // Enter a new evaluation context to insulate the lambda from any
   // cleanups from the enclosing full-expression.
   PushExpressionEvaluationContext(
-      ExpressionEvaluationContext::PotentiallyEvaluated);
+      LSI->CallOperator->isConsteval()
+          ? ExpressionEvaluationContext::ConstantEvaluated
+          : ExpressionEvaluationContext::PotentiallyEvaluated);
 }
 
 void Sema::ActOnLambdaError(SourceLocation StartLoc, Scope *CurScope,
@@ -1624,7 +1628,8 @@ FieldDecl *Sema::BuildCaptureField(RecordDecl *RD,
   // If the variable being captured has an invalid type, mark the class as
   // invalid as well.
   if (!FieldType->isDependentType()) {
-    if (RequireCompleteType(Loc, FieldType, diag::err_field_incomplete)) {
+    if (RequireCompleteSizedType(Loc, FieldType,
+                                 diag::err_field_incomplete_or_sizeless)) {
       RD->setInvalidDecl();
       Field->setInvalidDecl();
     } else {
@@ -1742,7 +1747,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
           // Capturing 'this' implicitly with a default of '[=]' is deprecated,
           // because it results in a reference capture. Don't warn prior to
           // C++2a; there's nothing that can be done about it before then.
-          if (getLangOpts().CPlusPlus2a && IsImplicit &&
+          if (getLangOpts().CPlusPlus20 && IsImplicit &&
               CaptureDefault == LCD_ByCopy) {
             Diag(From.getLocation(), diag::warn_deprecated_this_capture);
             Diag(CaptureDefaultLoc, diag::note_deprecated_this_capture)
@@ -1774,7 +1779,12 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       BuildCaptureField(Class, From);
       Captures.push_back(Capture);
       CaptureInits.push_back(Init.get());
+
+      if (LangOpts.CUDA)
+        CUDACheckLambdaCapture(CallOperator, From);
     }
+
+    Class->setCaptures(Captures);
 
     // C++11 [expr.prim.lambda]p6:
     //   The closure type for a lambda-expression with no lambda-capture
@@ -1805,7 +1815,6 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
 
   LambdaExpr *Lambda = LambdaExpr::Create(Context, Class, IntroducerRange,
                                           CaptureDefault, CaptureDefaultLoc,
-                                          Captures,
                                           ExplicitParams, ExplicitResultType,
                                           CaptureInits, EndLoc,
                                           ContainsUnexpandedParameterPack);

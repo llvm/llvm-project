@@ -70,16 +70,24 @@ Optional<std::pair<const Module *, std::string>> unwrapModule(Any IR) {
   llvm_unreachable("Unknown IR unit");
 }
 
-void printIR(const Module *M, StringRef Banner, StringRef Extra = StringRef()) {
-  dbgs() << Banner << Extra << "\n";
-  M->print(dbgs(), nullptr, false);
-}
 void printIR(const Function *F, StringRef Banner,
              StringRef Extra = StringRef()) {
   if (!llvm::isFunctionInPrintList(F->getName()))
     return;
   dbgs() << Banner << Extra << "\n" << static_cast<const Value &>(*F);
 }
+
+void printIR(const Module *M, StringRef Banner, StringRef Extra = StringRef()) {
+  if (llvm::isFunctionInPrintList("*") || llvm::forcePrintModuleIR()) {
+    dbgs() << Banner << Extra << "\n";
+    M->print(dbgs(), nullptr, false);
+  } else {
+    for (const auto &F : M->functions()) {
+      printIR(&F, Banner, Extra);
+    }
+  }
+}
+
 void printIR(const LazyCallGraph::SCC *C, StringRef Banner,
              StringRef Extra = StringRef()) {
   bool BannerPrinted = false;
@@ -98,7 +106,7 @@ void printIR(const Loop *L, StringRef Banner) {
   const Function *F = L->getHeader()->getParent();
   if (!llvm::isFunctionInPrintList(F->getName()))
     return;
-  llvm::printLoop(const_cast<Loop &>(*L), dbgs(), Banner);
+  llvm::printLoop(const_cast<Loop &>(*L), dbgs(), std::string(Banner));
 }
 
 /// Generic IR-printing helper that unpacks a pointer to IRUnit wrapped into
@@ -127,7 +135,7 @@ void unwrapAndPrint(Any IR, StringRef Banner, bool ForceModule = false) {
   if (any_isa<const LazyCallGraph::SCC *>(IR)) {
     const LazyCallGraph::SCC *C = any_cast<const LazyCallGraph::SCC *>(IR);
     assert(C && "scc should be valid for printing");
-    std::string Extra = formatv(" (scc: {0})", C->getName());
+    std::string Extra = std::string(formatv(" (scc: {0})", C->getName()));
     printIR(C, Banner, Extra);
     return;
   }

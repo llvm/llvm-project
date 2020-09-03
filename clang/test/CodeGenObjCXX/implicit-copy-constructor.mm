@@ -41,7 +41,7 @@ void f(D d) {
   D d2(d);
 }
 
-// CHECK-LABEL: define linkonce_odr void @_ZN1DC1ERS_(%struct.D* %this, %struct.D* dereferenceable({{[0-9]+}}) %0) unnamed_addr
+// CHECK-LABEL: define linkonce_odr void @_ZN1DC1ERS_(%struct.D* %this, %struct.D* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
 // CHECK: call void @_ZN1AC1Ev
 // CHECK: call void @_ZN1CC2ERS_1A
 // CHECK: call void @_ZN1AD1Ev

@@ -14,7 +14,6 @@ from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
 class ProcessAPITestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-    NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         # Call super's setUp().
@@ -25,6 +24,7 @@ class ProcessAPITestCase(TestBase):
             "// Set break point at this line and check variable 'my_char'.")
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # SBProcess::ReadMemory is not instrumented.
     def test_read_memory(self):
         """Test Python SBProcess.ReadMemory() API."""
         self.build()
@@ -123,6 +123,7 @@ class ProcessAPITestCase(TestBase):
                 "Result from SBProcess.ReadUnsignedFromMemory() does not match our expected output")
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # SBProcess::WriteMemory is not instrumented.
     def test_write_memory(self):
         """Test Python SBProcess.WriteMemory() API."""
         self.build()
@@ -182,6 +183,7 @@ class ProcessAPITestCase(TestBase):
             startstr=b'a')
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # SBProcess::WriteMemory is not instrumented.
     def test_access_my_int(self):
         """Test access 'my_int' using Python SBProcess.GetByteOrder() and other APIs."""
         self.build()
@@ -337,7 +339,7 @@ class ProcessAPITestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Launch the process and stop at the entry point.
-        launch_info = lldb.SBLaunchInfo(None)
+        launch_info = target.GetLaunchInfo()
         launch_info.SetWorkingDirectory(self.get_process_working_directory())
         launch_flags = launch_info.GetLaunchFlags()
         launch_flags |= lldb.eLaunchFlagStopAtEntry

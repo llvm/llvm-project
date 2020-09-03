@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-// UNSUPPORTED: c++98, c++03, c++11
+// UNSUPPORTED: c++03, c++11
 
-// FLAKY_TEST.
+// shared_timed_mutex was introduced in macosx10.12
+// UNSUPPORTED: with_system_cxx_lib=macosx10.11
+// UNSUPPORTED: with_system_cxx_lib=macosx10.10
+// UNSUPPORTED: with_system_cxx_lib=macosx10.9
 
 // <shared_mutex>
 
@@ -34,58 +37,55 @@ typedef Clock::duration duration;
 typedef std::chrono::milliseconds ms;
 typedef std::chrono::nanoseconds ns;
 
-ms WaitTime = ms(250);
+ms SuccessWaitTime = ms(5000); // Some machines are busy or slow or both
+ms FailureWaitTime = ms(50);
 
-// Thread sanitizer causes more overhead and will sometimes cause this test
-// to fail. To prevent this we give Thread sanitizer more time to complete the
-// test.
-#if !defined(TEST_HAS_SANITIZERS)
-ms Tolerance = ms(50);
-#else
-ms Tolerance = ms(50 * 5);
-#endif
+// On busy or slow machines, there can be a significant delay between thread
+// creation and thread start, so we use an atomic variable to signal that the
+// thread is actually executing.
+static std::atomic<unsigned> countDown;
 
 void f1()
 {
-    time_point t0 = Clock::now();
-    assert(m.try_lock_shared_until(Clock::now() + WaitTime + Tolerance) == true);
-    time_point t1 = Clock::now();
-    m.unlock_shared();
-    ns d = t1 - t0 - WaitTime;
-    assert(d < Tolerance);  // within 50ms
+  --countDown;
+  time_point t0 = Clock::now();
+  assert(m.try_lock_shared_until(Clock::now() + SuccessWaitTime) == true);
+  time_point t1 = Clock::now();
+  m.unlock_shared();
+  assert(t1 - t0 <= SuccessWaitTime);
 }
 
 void f2()
 {
-    time_point t0 = Clock::now();
-    assert(m.try_lock_shared_until(Clock::now() + WaitTime) == false);
-    time_point t1 = Clock::now();
-    ns d = t1 - t0 - WaitTime;
-    assert(d < Tolerance);  // within tolerance
+  time_point t0 = Clock::now();
+  assert(m.try_lock_shared_until(Clock::now() + FailureWaitTime) == false);
+  assert(Clock::now() - t0 >= FailureWaitTime);
 }
 
 int main(int, char**)
 {
-    {
-        m.lock();
-        std::vector<std::thread> v;
-        for (int i = 0; i < 5; ++i)
-            v.push_back(std::thread(f1));
-        std::this_thread::sleep_for(WaitTime);
-        m.unlock();
-        for (auto& t : v)
-            t.join();
-    }
-    {
-        m.lock();
-        std::vector<std::thread> v;
-        for (int i = 0; i < 5; ++i)
-            v.push_back(std::thread(f2));
-        std::this_thread::sleep_for(WaitTime + Tolerance);
-        m.unlock();
-        for (auto& t : v)
-            t.join();
-    }
+  int threads = 5;
+  {
+    countDown.store(threads);
+    m.lock();
+    std::vector<std::thread> v;
+    for (int i = 0; i < threads; ++i)
+      v.push_back(std::thread(f1));
+    while (countDown > 0)
+      std::this_thread::yield();
+    m.unlock();
+    for (auto& t : v)
+      t.join();
+  }
+  {
+    m.lock();
+    std::vector<std::thread> v;
+    for (int i = 0; i < threads; ++i)
+      v.push_back(std::thread(f2));
+    for (auto& t : v)
+      t.join();
+    m.unlock();
+  }
 
   return 0;
 }

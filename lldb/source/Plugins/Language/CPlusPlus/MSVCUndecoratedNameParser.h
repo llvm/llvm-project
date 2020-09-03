@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_MSVCUndecoratedNameParser_h_
-#define liblldb_MSVCUndecoratedNameParser_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_MSVCUNDECORATEDNAMEPARSER_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_MSVCUNDECORATEDNAMEPARSER_H
 
 #include <vector>
 

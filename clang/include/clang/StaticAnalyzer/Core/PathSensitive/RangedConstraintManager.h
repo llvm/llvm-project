@@ -30,6 +30,10 @@ public:
       : std::pair<const llvm::APSInt *, const llvm::APSInt *>(&from, &to) {
     assert(from <= to);
   }
+
+  Range(const llvm::APSInt &point)
+      : std::pair<const llvm::APSInt *, const llvm::APSInt *>(&point, &point) {}
+
   bool Includes(const llvm::APSInt &v) const {
     return *first <= v && v <= *second;
   }
@@ -89,6 +93,9 @@ public:
   RangeSet(Factory &F, const llvm::APSInt &from, const llvm::APSInt &to)
       : ranges(F.add(F.getEmptySet(), Range(from, to))) {}
 
+  /// Construct a new RangeSet representing the given point as a range.
+  RangeSet(Factory &F, const llvm::APSInt &point) : RangeSet(F, point, point) {}
+
   /// Profile - Generates a hash profile of this RangeSet for use
   ///  by FoldingSet.
   void Profile(llvm::FoldingSetNodeID &ID) const { ranges.Profile(ID); }
@@ -100,13 +107,16 @@ public:
     return ranges.isSingleton() ? ranges.begin()->getConcreteValue() : nullptr;
   }
 
+  /// Get a minimal value covered by the ranges in the set
+  const llvm::APSInt &getMinValue() const;
+  /// Get a maximal value covered by the ranges in the set
+  const llvm::APSInt &getMaxValue() const;
+
 private:
   void IntersectInRange(BasicValueFactory &BV, Factory &F,
                         const llvm::APSInt &Lower, const llvm::APSInt &Upper,
                         PrimRangeSet &newRanges, PrimRangeSet::iterator &i,
                         PrimRangeSet::iterator &e) const;
-
-  const llvm::APSInt &getMinValue() const;
 
   bool pin(llvm::APSInt &Lower, llvm::APSInt &Upper) const;
 
@@ -116,6 +126,8 @@ public:
   RangeSet Intersect(BasicValueFactory &BV, Factory &F,
                      const RangeSet &Other) const;
   RangeSet Negate(BasicValueFactory &BV, Factory &F) const;
+  RangeSet Delete(BasicValueFactory &BV, Factory &F,
+                  const llvm::APSInt &Point) const;
 
   void print(raw_ostream &os) const;
 
@@ -124,21 +136,13 @@ public:
   }
 };
 
-
-class ConstraintRange {};
-using ConstraintRangeTy = llvm::ImmutableMap<SymbolRef, RangeSet>;
-
-template <>
-struct ProgramStateTrait<ConstraintRange>
-  : public ProgramStatePartialTrait<ConstraintRangeTy> {
-  static void *GDMIndex();
-};
-
+using ConstraintMap = llvm::ImmutableMap<SymbolRef, RangeSet>;
+ConstraintMap getConstraintMap(ProgramStateRef State);
 
 class RangedConstraintManager : public SimpleConstraintManager {
 public:
-  RangedConstraintManager(SubEngine *SE, SValBuilder &SB)
-      : SimpleConstraintManager(SE, SB) {}
+  RangedConstraintManager(ExprEngine *EE, SValBuilder &SB)
+      : SimpleConstraintManager(EE, SB) {}
 
   ~RangedConstraintManager() override;
 
@@ -160,8 +164,8 @@ public:
 protected:
   /// Assume a constraint between a symbolic expression and a concrete integer.
   virtual ProgramStateRef assumeSymRel(ProgramStateRef State, SymbolRef Sym,
-                               BinaryOperator::Opcode op,
-                               const llvm::APSInt &Int);
+                                       BinaryOperator::Opcode op,
+                                       const llvm::APSInt &Int);
 
   //===------------------------------------------------------------------===//
   // Interface that subclasses must implement.
@@ -209,8 +213,9 @@ private:
   static void computeAdjustment(SymbolRef &Sym, llvm::APSInt &Adjustment);
 };
 
-} // end GR namespace
+} // namespace ento
+} // namespace clang
 
-} // end clang namespace
+REGISTER_FACTORY_WITH_PROGRAMSTATE(ConstraintMap)
 
 #endif

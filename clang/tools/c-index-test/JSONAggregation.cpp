@@ -139,7 +139,7 @@ bool Aggregator::process() {
 void Aggregator::processUnit(StringRef name, IndexUnitReader &UnitReader) {
   auto workDir = UnitReader.getWorkingDirectory();
   auto unit = std::make_unique<UnitInfo>();
-  unit->Name = name;
+  unit->Name = std::string(name);
   unit->Triple = getTripleString(UnitReader.getTarget());
   unit->OutFile = getFilePathIndex(UnitReader.getOutputFile(), workDir);
 
@@ -153,7 +153,7 @@ void Aggregator::processUnit(StringRef name, IndexUnitReader &UnitReader) {
     auto &depInfo = Deps.back();
     switch (dep.getKind()) {
       case IndexUnitDependency::DependencyKind::Unit: {
-        depInfo.unitName = dep.getName();
+        depInfo.unitName = std::string(dep.getName());
         StringRef filePath = dep.getFilePath();
         if (!filePath.empty())
           depInfo.source.FilePath = getFilePathIndex(filePath, workDir);

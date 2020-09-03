@@ -222,7 +222,8 @@ Error CoverageMapping::loadFunctionRecord(
                                                 Record.FunctionHash, Counts)) {
     instrprof_error IPE = InstrProfError::take(std::move(E));
     if (IPE == instrprof_error::hash_mismatch) {
-      FuncHashMismatches.emplace_back(Record.FunctionName, Record.FunctionHash);
+      FuncHashMismatches.emplace_back(std::string(Record.FunctionName),
+                                      Record.FunctionHash);
       return Error::success();
     } else if (IPE != instrprof_error::unknown_function)
       return make_error<InstrProfError>(IPE);
@@ -804,6 +805,8 @@ static std::string getCoverageMapErrString(coveragemap_error Err) {
     return "Truncated coverage data";
   case coveragemap_error::malformed:
     return "Malformed coverage data";
+  case coveragemap_error::decompression_failed:
+    return "Failed to decompress coverage data (zlib)";
   }
   llvm_unreachable("A value of coveragemap_error has no message.");
 }

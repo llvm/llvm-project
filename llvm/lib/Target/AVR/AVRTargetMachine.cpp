@@ -49,7 +49,7 @@ AVRTargetMachine::AVRTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, AVRDataLayout, TT, getCPU(CPU), FS, Options,
                         getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      SubTarget(TT, getCPU(CPU), FS, *this) {
+      SubTarget(TT, std::string(getCPU(CPU)), std::string(FS), *this) {
   this->TLOF = std::make_unique<AVRTargetObjectFile>();
   initAsmInfo();
 }
@@ -76,7 +76,7 @@ TargetPassConfig *AVRTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new AVRPassConfig(*this, PM);
 }
 
-extern "C" void LLVMInitializeAVRTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
   // Register the target.
   RegisterTargetMachine<AVRTargetMachine> X(getTheAVRTarget());
 

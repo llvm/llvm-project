@@ -1,4 +1,4 @@
-; RUN: llc -O1 -filetype=obj -debug-entry-values -o - < %s | llvm-dwarfdump -verify - -o /dev/null
+; RUN: llc -O1 -filetype=obj -emit-call-site-info -debug-entry-values -o - < %s | llvm-dwarfdump -verify - -o /dev/null
 
 ; TODO: This test should be made more targeted by converting to MIR and reducing,
 ; however at the moment conversion to MIR fails with:

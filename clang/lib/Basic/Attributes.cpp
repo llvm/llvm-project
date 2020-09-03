@@ -36,10 +36,14 @@ const char *attr::getSubjectMatchRuleSpelling(attr::SubjectMatchRule Rule) {
 }
 
 static StringRef
-normalizeAttrScopeName(StringRef ScopeName,
+normalizeAttrScopeName(const IdentifierInfo *Scope,
                        AttributeCommonInfo::Syntax SyntaxUsed) {
+  if (!Scope)
+    return "";
+
   // Normalize the "__gnu__" scope name to be "gnu" and the "_Clang" scope name
   // to be "clang".
+  StringRef ScopeName = Scope->getName();
   if (SyntaxUsed == AttributeCommonInfo::AS_CXX11 ||
       SyntaxUsed == AttributeCommonInfo::AS_C2x) {
     if (ScopeName == "__gnu__")
@@ -50,7 +54,7 @@ normalizeAttrScopeName(StringRef ScopeName,
   return ScopeName;
 }
 
-static StringRef normalizeAttrName(StringRef AttrName,
+static StringRef normalizeAttrName(const IdentifierInfo *Name,
                                    StringRef NormalizedScopeName,
                                    AttributeCommonInfo::Syntax SyntaxUsed) {
   // Normalize the attribute name, __foo__ becomes foo. This is only allowable
@@ -61,6 +65,7 @@ static StringRef normalizeAttrName(StringRef AttrName,
         SyntaxUsed == AttributeCommonInfo::AS_C2x) &&
        (NormalizedScopeName.empty() || NormalizedScopeName == "gnu" ||
         NormalizedScopeName == "clang"));
+  StringRef AttrName = Name->getName();
   if (ShouldNormalize && AttrName.size() >= 4 && AttrName.startswith("__") &&
       AttrName.endswith("__"))
     AttrName = AttrName.slice(2, AttrName.size() - 2);
@@ -74,35 +79,41 @@ bool AttributeCommonInfo::isGNUScope() const {
 
 #include "clang/Sema/AttrParsedAttrKinds.inc"
 
+static SmallString<64> normalizeName(const IdentifierInfo *Name,
+                                     const IdentifierInfo *Scope,
+                                     AttributeCommonInfo::Syntax SyntaxUsed) {
+  StringRef ScopeName = normalizeAttrScopeName(Scope, SyntaxUsed);
+  StringRef AttrName = normalizeAttrName(Name, ScopeName, SyntaxUsed);
+
+  SmallString<64> FullName = ScopeName;
+  if (!ScopeName.empty()) {
+    assert(SyntaxUsed == AttributeCommonInfo::AS_CXX11 ||
+           SyntaxUsed == AttributeCommonInfo::AS_C2x);
+    FullName += "::";
+  }
+  FullName += AttrName;
+
+  return FullName;
+}
+
 AttributeCommonInfo::Kind
 AttributeCommonInfo::getParsedKind(const IdentifierInfo *Name,
                                    const IdentifierInfo *ScopeName,
                                    Syntax SyntaxUsed) {
-  StringRef AttrName = Name->getName();
+  return ::getAttrKind(normalizeName(Name, ScopeName, SyntaxUsed), SyntaxUsed);
+}
 
-  SmallString<64> FullName;
-  if (ScopeName)
-    FullName += normalizeAttrScopeName(ScopeName->getName(), SyntaxUsed);
-
-  AttrName = normalizeAttrName(AttrName, FullName, SyntaxUsed);
-
-  // Ensure that in the case of C++11 attributes, we look for '::foo' if it is
-  // unscoped.
-  if (ScopeName || SyntaxUsed == AS_CXX11 || SyntaxUsed == AS_C2x)
-    FullName += "::";
-  FullName += AttrName;
-
-  return ::getAttrKind(FullName, SyntaxUsed);
+std::string AttributeCommonInfo::getNormalizedFullName() const {
+  return static_cast<std::string>(
+      normalizeName(getAttrName(), getScopeName(), getSyntax()));
 }
 
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
   // Both variables will be used in tablegen generated
   // attribute spell list index matching code.
   auto Syntax = static_cast<AttributeCommonInfo::Syntax>(getSyntax());
-  StringRef Scope =
-      getScopeName() ? normalizeAttrScopeName(getScopeName()->getName(), Syntax)
-                     : "";
-  StringRef Name = normalizeAttrName(getAttrName()->getName(), Scope, Syntax);
+  StringRef Scope = normalizeAttrScopeName(getScopeName(), Syntax);
+  StringRef Name = normalizeAttrName(getAttrName(), Scope, Syntax);
 
 #include "clang/Sema/AttrSpellingListIndex.inc"
 }

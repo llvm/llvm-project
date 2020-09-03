@@ -1,4 +1,11 @@
+// Test without serialization:
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -ast-dump %s | FileCheck %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c -triple x86_64-linux-gnu -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck %s
 
 // We are checking that implicit casts don't get marked with 'part_of_explicit_cast',
 // while in explicit casts, the implicitly-inserted implicit casts are marked with 'part_of_explicit_cast'

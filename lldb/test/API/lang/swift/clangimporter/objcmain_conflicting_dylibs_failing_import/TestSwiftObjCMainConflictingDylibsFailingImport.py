@@ -64,15 +64,15 @@ class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
         # This initially fails with the shared scratch context and is
         # then retried with the per-dylib scratch context.
         self.expect("p bar", "expected result", substrs=["$R0", "42"])
-        self.expect("p $R0", "expected result", substrs=["$R2", "42"])
-        self.expect("p $R2", "expected result", substrs=["$R4", "42"])
+        self.expect("p $R0", "expected result", substrs=["$R1", "42"])
+        self.expect("p $R1", "expected result", substrs=["$R2", "42"])
         
         # This works by accident because the search paths are in the right order.
         foo_breakpoint = target.BreakpointCreateBySourceRegex(
             'break here', lldb.SBFileSpec('Foo.swift'))
         process.Continue()
         self.expect("fr var foo", "expected result", substrs=["23"])
-        self.expect("p foo", "expected result", substrs=["23"])
-        self.expect("p $R6", "expected result", substrs=["23"])
-        self.expect("p $R8", "expected result", substrs=["23"])
+        self.expect("p foo", "expected result", substrs=["$R3", "23"])
+        self.expect("p $R3", "expected result", substrs=["23"])
+        self.expect("p $R4", "expected result", substrs=["23"])
 

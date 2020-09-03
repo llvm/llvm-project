@@ -4,7 +4,7 @@
 # RUN: llvm-readobj --file-headers %t.i386 | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.i386 --check-prefix I386
 
 #      I386:File: [[FILE]]
-# I386-NEXT:Format: ELF32-i386
+# I386-NEXT:Format: elf32-i386
 # I386-NEXT:Arch: i386
 # I386-NEXT:AddressSize: 32bit
 # I386-NEXT:LoadName: <Not found>
@@ -52,7 +52,7 @@ FileHeader:
 # RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.x86-64 --check-prefix X86-64
 
 #      X86-64:File: [[FILE]]
-# X86-64-NEXT:Format: ELF64-x86-64
+# X86-64-NEXT:Format: elf64-x86-64
 # X86-64-NEXT:Arch: x86_64
 # X86-64-NEXT:AddressSize: 64bit
 # X86-64-NEXT:LoadName: <Not found>
@@ -107,7 +107,7 @@ FileHeader:
   Machine: EM_LANAI
 
 #      LANAI:File: [[FILE]]
-# LANAI-NEXT:Format: ELF32-lanai
+# LANAI-NEXT:Format: elf32-lanai
 # LANAI-NEXT:Arch: lanai
 # LANAI-NEXT:AddressSize: 32bit
 # LANAI-NEXT:LoadName: <Not found>

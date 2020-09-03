@@ -1,4 +1,4 @@
-//===-- ThreadPlanStepOut.cpp -----------------------------------*- C++ -*-===//
+//===-- ThreadPlanStepOut.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -130,11 +130,10 @@ ThreadPlanStepOut::ThreadPlanStepOut(
 
     // Perform some additional validation on the return address.
     uint32_t permissions = 0;
-    if (!m_process.GetLoadAddressPermissions(m_return_addr,
-                                              permissions)) {
+    if (!m_process.GetLoadAddressPermissions(m_return_addr, permissions)) {
       LLDB_LOGF(log, "ThreadPlanStepOut(%p): Return address (0x%" PRIx64
-              ") permissions not found.", static_cast<void *>(this),
-              m_return_addr);
+                ") permissions not found.", static_cast<void *>(this),
+                m_return_addr);
     } else if (!(permissions & ePermissionsExecutable)) {
       m_constructor_errors.Printf("Return address (0x%" PRIx64
                                   ") did not point to executable memory.",
@@ -175,6 +174,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
 
   if (frame_idx == 0) {
     StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0);
+#ifdef LLDB_ENABLE_SWIFT
     if (frame_sp->GuessLanguage() == eLanguageTypeSwift) {
       auto *swift_runtime 
           = SwiftLanguageRuntime::Get(m_process.shared_from_this());
@@ -184,6 +184,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
                 frame_sp, m_swift_error_check_after_return);
       }
     }
+#endif // LLDB_ENABLE_SWIFT
   }
 }
 
@@ -406,24 +407,25 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
     } else {
       m_step_out_further_plan_sp =
           QueueStepOutFromHerePlan(m_flags, eFrameCompareOlder, m_status);
-      // I have a few reports of getting here and not being able to
-      // actually generate a step out from here plan.  That shouldn't happen
-      // because the ShouldStopHere callback shouldn't return true if it
-      // can't make a step out plan.  So far I don't know how that can
-      // happen, but it's better to just stop here than to crash.
-      if (!m_step_out_further_plan_sp)
-        return true;
-
-      if (m_step_out_further_plan_sp->GetKind() == eKindStepOut)
-      {
-        // If we are planning to step out further, then the frame we are going
-        // to step out to is about to go away, so we need to reset the frame
-        // we are stepping out to to the one our step out plan is aiming for.
-        ThreadPlanStepOut *as_step_out
-          = static_cast<ThreadPlanStepOut *>(m_step_out_further_plan_sp.get());
-        m_step_out_to_id = as_step_out->m_step_out_to_id;
+      if (!m_step_out_further_plan_sp) {
+        // We didn't want to stop here, but we can't find a plan to get us 
+        // out of here, so we'll stop.
+        Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+        LLDB_LOG(log, "Should stop here was false but we couldn't find a"
+                      "plan to get us out from here.  Stopping.");
+        SetPlanComplete();
+      } else {
+        if (m_step_out_further_plan_sp->GetKind() == eKindStepOut)
+        {
+          // If we are planning to step out further, then the frame we are going
+          // to step out to is about to go away, so we need to reset the frame
+          // we are stepping out to to the one our step out plan is aiming for.
+          ThreadPlanStepOut *as_step_out
+            = static_cast<ThreadPlanStepOut *>(m_step_out_further_plan_sp.get());
+          m_step_out_to_id = as_step_out->m_step_out_to_id;
+        }
+        done = false;
       }
-      done = false;
     }
   }
 
@@ -553,6 +555,7 @@ void ThreadPlanStepOut::CalculateReturnValue() {
     return;
   // First check if we have an error return address, and if that pointer
   // contains a valid error return, grab it.
+#ifdef LLDB_ENABLE_SWIFT
   auto *swift_runtime = SwiftLanguageRuntime::Get(m_process.shared_from_this());
   if (swift_runtime) {
     // In some ABI's the error is in a memory location in the caller's frame
@@ -580,6 +583,7 @@ void ThreadPlanStepOut::CalculateReturnValue() {
       return;
     }
   }
+#endif // LLDB_ENABLE_SWIFT
 
   // We don't have a swift error, so let's compute the actual return:
   if (m_immediate_step_from_function != nullptr) {

@@ -16,8 +16,12 @@ MCTargetOptions::MCTargetOptions()
       MCNoWarn(false), MCNoDeprecatedWarn(false), MCSaveTempLabels(false),
       MCUseDwarfDirectory(false), MCIncrementalLinkerCompatible(false),
       ShowMCEncoding(false), ShowMCInst(false), AsmVerbose(false),
-      PreserveAsmComments(true) {}
+      PreserveAsmComments(true), Dwarf64(false) {}
 
 StringRef MCTargetOptions::getABIName() const {
   return ABIName;
+}
+
+StringRef MCTargetOptions::getAssemblyLanguage() const {
+  return AssemblyLanguage;
 }

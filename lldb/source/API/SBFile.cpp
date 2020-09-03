@@ -1,4 +1,4 @@
-//===-- SBFile.cpp ------------------------------------------*- C++ -*-===//
+//===-- SBFile.cpp --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBFile::~SBFile() {}
+SBFile::~SBFile() = default;
 
 SBFile::SBFile(FileSP file_sp) : m_opaque_sp(file_sp) {
   // We have no way to capture the incoming FileSP as the class isn't

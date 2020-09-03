@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TGLexer.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h" // for strtoull()/strtoll() define
@@ -350,6 +351,10 @@ tgtok::TokKind TGLexer::LexIdentifier() {
     .Case("field", tgtok::Field)
     .Case("let", tgtok::Let)
     .Case("in", tgtok::In)
+    .Case("defvar", tgtok::Defvar)
+    .Case("if", tgtok::If)
+    .Case("then", tgtok::Then)
+    .Case("else", tgtok::ElseKW)
     .Default(tgtok::Id);
 
   if (Kind == tgtok::Id)

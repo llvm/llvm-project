@@ -28,14 +28,12 @@
 #ifndef LLVM_PASS_H
 #define LLVM_PASS_H
 
-#include "llvm/ADT/StringRef.h"
 #include <string>
 
 namespace llvm {
 
 class AnalysisResolver;
 class AnalysisUsage;
-class BasicBlock;
 class Function;
 class ImmutablePass;
 class Module;
@@ -43,6 +41,7 @@ class PassInfo;
 class PMDataManager;
 class PMStack;
 class raw_ostream;
+class StringRef;
 
 // AnalysisID - Use the PassInfo to identify a pass...
 using AnalysisID = const void *;
@@ -204,14 +203,17 @@ public:
   template<typename AnalysisType>
   AnalysisType &getAnalysis() const; // Defined in PassAnalysisSupport.h
 
-  template<typename AnalysisType>
-  AnalysisType &getAnalysis(Function &F); // Defined in PassAnalysisSupport.h
+  template <typename AnalysisType>
+  AnalysisType &
+  getAnalysis(Function &F,
+              bool *Changed = nullptr); // Defined in PassAnalysisSupport.h
 
   template<typename AnalysisType>
   AnalysisType &getAnalysisID(AnalysisID PI) const;
 
-  template<typename AnalysisType>
-  AnalysisType &getAnalysisID(AnalysisID PI, Function &F);
+  template <typename AnalysisType>
+  AnalysisType &getAnalysisID(AnalysisID PI, Function &F,
+                              bool *Changed = nullptr);
 };
 
 //===----------------------------------------------------------------------===//

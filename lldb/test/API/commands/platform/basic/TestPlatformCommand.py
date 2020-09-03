@@ -48,8 +48,9 @@ class PlatformCommandTestCase(TestBase):
                 'Platform',
                 'Triple',
                 'OS Version',
+                'Hostname',
                 'Kernel',
-                'Hostname'])
+            ])
 
     @expectedFailureAll(oslist=["windows"])
     @no_debug_info_test

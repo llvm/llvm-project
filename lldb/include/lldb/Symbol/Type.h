@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Type_h_
-#define liblldb_Type_h_
+#ifndef LLDB_SYMBOL_TYPE_H
+#define LLDB_SYMBOL_TYPE_H
 
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -114,15 +114,15 @@ public:
   // Type instances. They can store a weak pointer to the Module;
   lldb::ModuleSP GetModule();
 
-  void GetDescription(Stream *s, lldb::DescriptionLevel level, bool show_name);
+  void GetDescription(Stream *s, lldb::DescriptionLevel level, bool show_name,
+                      ExecutionContextScope *exe_scope);
 
   SymbolFile *GetSymbolFile() { return m_symbol_file; }
   const SymbolFile *GetSymbolFile() const { return m_symbol_file; }
 
   ConstString GetName();
 
-  llvm::Optional<uint64_t>
-  GetByteSize(ExecutionContextScope *exe_scope = nullptr);
+  llvm::Optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope);
 
   uint32_t GetNumChildren(bool omit_empty_base_classes);
 
@@ -220,12 +220,13 @@ protected:
   Declaration m_decl;
   CompilerType m_compiler_type;
   ResolveState m_compiler_type_resolve_state;
+  bool m_is_swift_fixed_value_buffer = false;
   /// Language-specific flags.
   Payload m_payload;
 
   Type *GetEncodingType();
 
-  bool ResolveClangType(ResolveState compiler_type_resolve_state);
+  bool ResolveCompilerType(ResolveState compiler_type_resolve_state);
 };
 
 // the two classes here are used by the public API as a backend to the SBType
@@ -516,4 +517,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Type_h_
+#endif // LLDB_SYMBOL_TYPE_H

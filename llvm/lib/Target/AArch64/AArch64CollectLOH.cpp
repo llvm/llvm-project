@@ -382,7 +382,7 @@ static bool handleMiddleInst(const MachineInstr &MI, LOHInfo &DefInfo,
 
 /// Update state when seeing and ADRP instruction.
 static void handleADRP(const MachineInstr &MI, AArch64FunctionInfo &AFI,
-                       LOHInfo &Info) {
+                       LOHInfo &Info, LOHInfo *LOHInfos) {
   if (Info.LastADRP != nullptr) {
     LLVM_DEBUG(dbgs() << "Adding MCLOH_AdrpAdrp:\n"
                       << '\t' << MI << '\t' << *Info.LastADRP);
@@ -393,12 +393,24 @@ static void handleADRP(const MachineInstr &MI, AArch64FunctionInfo &AFI,
   // Produce LOH directive if possible.
   if (Info.IsCandidate) {
     switch (Info.Type) {
-    case MCLOH_AdrpAdd:
+    case MCLOH_AdrpAdd: {
+      // ADRPs and ADDs for this candidate may be split apart if using
+      // GlobalISel instead of pseudo-expanded. If that happens, the
+      // def register of the ADD may have a use in between. Adding an LOH in
+      // this case can cause the linker to rewrite the ADRP to write to that
+      // register, clobbering the use.
+      const MachineInstr *AddMI = Info.MI0;
+      int DefIdx = mapRegToGPRIndex(MI.getOperand(0).getReg());
+      int OpIdx = mapRegToGPRIndex(AddMI->getOperand(0).getReg());
+      LOHInfo DefInfo = LOHInfos[OpIdx];
+      if (DefIdx != OpIdx && (DefInfo.OneUser || DefInfo.MultiUsers))
+        break;
       LLVM_DEBUG(dbgs() << "Adding MCLOH_AdrpAdd:\n"
                         << '\t' << MI << '\t' << *Info.MI0);
       AFI.addLOHDirective(MCLOH_AdrpAdd, {&MI, Info.MI0});
       ++NumADRSimpleCandidate;
       break;
+    }
     case MCLOH_AdrpLdr:
       if (supportLoadFromLiteral(*Info.MI0)) {
         LLVM_DEBUG(dbgs() << "Adding MCLOH_AdrpLdr:\n"
@@ -522,7 +534,8 @@ bool AArch64CollectLOH::runOnMachineFunction(MachineFunction &MF) {
 
     // Walk the basic block backwards and update the per register state machine
     // in the process.
-    for (const MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
+    for (const MachineInstr &MI :
+         instructionsWithoutDebug(MBB.rbegin(), MBB.rend())) {
       unsigned Opcode = MI.getOpcode();
       switch (Opcode) {
       case AArch64::ADDXri:
@@ -544,7 +557,7 @@ bool AArch64CollectLOH::runOnMachineFunction(MachineFunction &MF) {
         const MachineOperand &Op0 = MI.getOperand(0);
         int Idx = mapRegToGPRIndex(Op0.getReg());
         if (Idx >= 0) {
-          handleADRP(MI, AFI, LOHInfos[Idx]);
+          handleADRP(MI, AFI, LOHInfos[Idx], LOHInfos);
           continue;
         }
         break;

@@ -147,41 +147,27 @@ class StdMapDataFormatterTestCase(TestBase):
 
         self.runCmd("c")
 
-        self.expect("frame variable si",
-                    substrs=['map has 5 items',
-                             '[0] = ',
-                             'first = \"zero\"',
-                             'second = 0',
-                             '[1] = ',
-                             'first = \"one\"',
-                             'second = 1',
-                             '[2] = ',
-                             'first = \"two\"',
-                             'second = 2',
-                             '[3] = ',
-                             'first = \"three\"',
-                             'second = 3',
-                             '[4] = ',
-                             'first = \"four\"',
-                             'second = 4'])
+        self.expect(
+            "frame variable si",
+            substrs=[
+                'map has 5 items',
+                '[0] = (first = "four", second = 4)',
+                '[1] = (first = "one", second = 1)',
+                '[2] = (first = "three", second = 3)',
+                '[3] = (first = "two", second = 2)',
+                '[4] = (first = "zero", second = 0)',
+            ])
 
-        self.expect("p si",
-                    substrs=['map has 5 items',
-                             '[0] = ',
-                             'first = \"zero\"',
-                             'second = 0',
-                             '[1] = ',
-                             'first = \"one\"',
-                             'second = 1',
-                             '[2] = ',
-                             'first = \"two\"',
-                             'second = 2',
-                             '[3] = ',
-                             'first = \"three\"',
-                             'second = 3',
-                             '[4] = ',
-                             'first = \"four\"',
-                             'second = 4'])
+        self.expect(
+            "p si",
+            substrs=[
+                'map has 5 items',
+                '[0] = (first = "four", second = 4)',
+                '[1] = (first = "one", second = 1)',
+                '[2] = (first = "three", second = 3)',
+                '[3] = (first = "two", second = 2)',
+                '[4] = (first = "zero", second = 0)',
+            ])
 
         # check access-by-index
         self.expect("frame variable si[0]",
@@ -215,35 +201,23 @@ class StdMapDataFormatterTestCase(TestBase):
 
         self.runCmd("c")
 
-        self.expect("frame variable is",
-                    substrs=['map has 4 items',
-                             '[0] = ',
-                             'second = \"goofy\"',
-                             'first = 85',
-                             '[1] = ',
-                             'second = \"is\"',
-                             'first = 1',
-                             '[2] = ',
-                             'second = \"smart\"',
-                             'first = 2',
-                             '[3] = ',
-                             'second = \"!!!\"',
-                             'first = 3'])
+        self.expect(
+            "frame variable is",
+            substrs=[
+                'map has 4 items', '[0] = (first = 1, second = "is")',
+                '[1] = (first = 2, second = "smart")',
+                '[2] = (first = 3, second = "!!!")',
+                '[3] = (first = 85, second = "goofy")'
+            ])
 
-        self.expect("p is",
-                    substrs=['map has 4 items',
-                             '[0] = ',
-                             'second = \"goofy\"',
-                             'first = 85',
-                             '[1] = ',
-                             'second = \"is\"',
-                             'first = 1',
-                             '[2] = ',
-                             'second = \"smart\"',
-                             'first = 2',
-                             '[3] = ',
-                             'second = \"!!!\"',
-                             'first = 3'])
+        self.expect(
+            "p is",
+            substrs=[
+                'map has 4 items', '[0] = (first = 1, second = "is")',
+                '[1] = (first = 2, second = "smart")',
+                '[2] = (first = 3, second = "!!!")',
+                '[3] = (first = 85, second = "goofy")'
+            ])
 
         # check access-by-index
         self.expect("frame variable is[0]",
@@ -277,35 +251,25 @@ class StdMapDataFormatterTestCase(TestBase):
 
         self.runCmd("c")
 
-        self.expect("frame variable ss",
-                    substrs=['map has 4 items',
-                             '[0] = ',
-                             'second = \"hello\"',
-                             'first = \"ciao\"',
-                             '[1] = ',
-                             'second = \"house\"',
-                             'first = \"casa\"',
-                             '[2] = ',
-                             'second = \"cat\"',
-                             'first = \"gatto\"',
-                             '[3] = ',
-                             'second = \"..is always a Mac!\"',
-                             'first = \"a Mac..\"'])
+        self.expect(
+            "frame variable ss",
+            substrs=[
+                'map has 4 items',
+                '[0] = (first = "a Mac..", second = "..is always a Mac!")',
+                '[1] = (first = "casa", second = "house")',
+                '[2] = (first = "ciao", second = "hello")',
+                '[3] = (first = "gatto", second = "cat")'
+            ])
 
-        self.expect("p ss",
-                    substrs=['map has 4 items',
-                             '[0] = ',
-                             'second = \"hello\"',
-                             'first = \"ciao\"',
-                             '[1] = ',
-                             'second = \"house\"',
-                             'first = \"casa\"',
-                             '[2] = ',
-                             'second = \"cat\"',
-                             'first = \"gatto\"',
-                             '[3] = ',
-                             'second = \"..is always a Mac!\"',
-                             'first = \"a Mac..\"'])
+        self.expect(
+            "p ss",
+            substrs=[
+                'map has 4 items',
+                '[0] = (first = "a Mac..", second = "..is always a Mac!")',
+                '[1] = (first = "casa", second = "house")',
+                '[2] = (first = "ciao", second = "hello")',
+                '[3] = (first = "gatto", second = "cat")'
+            ])
 
         # check access-by-index
         self.expect("frame variable ss[3]",

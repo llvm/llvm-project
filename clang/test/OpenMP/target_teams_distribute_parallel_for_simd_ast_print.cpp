@@ -1,14 +1,25 @@
-// RUN: %clang_cc1 -verify -fopenmp -ast-print %s -Wno-openmp-mapping | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping
-// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ast-print %s -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s -Wno-openmp-mapping | FileCheck %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping
-// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -ast-print %s -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s
 // expected-no-diagnostics
 
 #ifndef HEADER
 #define HEADER
+
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
 
 void foo() {}
 
@@ -33,7 +44,7 @@ public:
   }
   S7 &operator=(S7 &s) {
     int k;
-#pragma omp target teams distribute parallel for simd allocate(a) private(a) private(this->a) linear(k) allocate(k)
+#pragma omp target teams distribute parallel for simd allocate(omp_pteam_mem_alloc: a) private(a) private(this->a) linear(k) allocate(k) uses_allocators(omp_pteam_mem_alloc)
     for (k = 0; k < s.a.a; ++k)
       ++s.a.a;
 
@@ -58,7 +69,7 @@ public:
   }
 };
 // CHECK: #pragma omp target teams distribute parallel for simd private(this->a) private(this->a) private(T::a)
-// CHECK: #pragma omp target teams distribute parallel for simd allocate(this->a) private(this->a) private(this->a) linear(k) allocate(k)
+// CHECK: #pragma omp target teams distribute parallel for simd allocate(omp_pteam_mem_alloc: this->a) private(this->a) private(this->a) linear(k) allocate(k) uses_allocators(omp_pteam_mem_alloc)
 // CHECK: #pragma omp target teams distribute parallel for simd default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
 // CHECK: #pragma omp target teams distribute parallel for simd simdlen(slen1) safelen(slen2) aligned(arr: alen)
 
@@ -168,11 +179,11 @@ int main (int argc, char **argv) {
 // CHECK: #pragma omp target teams distribute parallel for simd
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
-#pragma omp target teams distribute parallel for simd private(argc,b),firstprivate(argv, c), collapse(2)
+#pragma omp target teams distribute parallel for simd private(argc,b),firstprivate(argv, c), collapse(2) order(concurrent)
   for (int i = 0; i < 10; ++i)
     for (int j = 0; j < 10; ++j)
       foo();
-// CHECK: #pragma omp target teams distribute parallel for simd private(argc,b) firstprivate(argv,c) collapse(2)
+// CHECK: #pragma omp target teams distribute parallel for simd private(argc,b) firstprivate(argv,c) collapse(2) order(concurrent)
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
 // CHECK-NEXT: for (int j = 0; j < 10; ++j)
 // CHECK-NEXT: foo();

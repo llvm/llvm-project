@@ -71,10 +71,9 @@ define <2 x float> @f2sqrt(<2 x float> %a) #0 {
 ; CHECK-NEXT:    fmul v2.2s, v1.2s, v1.2s
 ; CHECK-NEXT:    frsqrts v2.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    fmul v2.2s, v2.2s, v0.2s
-; CHECK-NEXT:    fmul v2.2s, v1.2s, v2.2s
-; CHECK-NEXT:    fcmeq v1.2s, v0.2s, #0.0
-; CHECK-NEXT:    bsl v1.8b, v0.8b, v2.8b
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmul v1.2s, v1.2s, v2.2s
+; CHECK-NEXT:    fcmeq v2.2s, v0.2s, #0.0
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %1 = tail call fast <2 x float> @llvm.sqrt.v2f32(<2 x float> %a)
   ret <2 x float> %1
@@ -95,10 +94,9 @@ define <4 x float> @f4sqrt(<4 x float> %a) #0 {
 ; CHECK-NEXT:    fmul v2.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    frsqrts v2.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    fmul v2.4s, v2.4s, v0.4s
-; CHECK-NEXT:    fmul v2.4s, v1.4s, v2.4s
-; CHECK-NEXT:    fcmeq v1.4s, v0.4s, #0.0
-; CHECK-NEXT:    bsl v1.16b, v0.16b, v2.16b
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmul v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    fcmeq v2.4s, v0.4s, #0.0
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %1 = tail call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
   ret <4 x float> %1
@@ -120,21 +118,19 @@ define <8 x float> @f8sqrt(<8 x float> %a) #0 {
 ; CHECK-NEXT:    fmul v3.4s, v2.4s, v2.4s
 ; CHECK-NEXT:    frsqrts v3.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    fmul v3.4s, v3.4s, v0.4s
-; CHECK-NEXT:    fmul v3.4s, v2.4s, v3.4s
-; CHECK-NEXT:    fcmeq v2.4s, v0.4s, #0.0
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v3.16b
-; CHECK-NEXT:    frsqrte v0.4s, v1.4s
-; CHECK-NEXT:    fmul v3.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmul v2.4s, v2.4s, v3.4s
+; CHECK-NEXT:    fcmeq v3.4s, v0.4s, #0.0
+; CHECK-NEXT:    bif v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    frsqrte v2.4s, v1.4s
+; CHECK-NEXT:    fmul v3.4s, v2.4s, v2.4s
 ; CHECK-NEXT:    frsqrts v3.4s, v1.4s, v3.4s
-; CHECK-NEXT:    fmul v0.4s, v0.4s, v3.4s
-; CHECK-NEXT:    fmul v3.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmul v2.4s, v2.4s, v3.4s
+; CHECK-NEXT:    fmul v3.4s, v2.4s, v2.4s
 ; CHECK-NEXT:    frsqrts v3.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    fmul v3.4s, v3.4s, v1.4s
-; CHECK-NEXT:    fmul v0.4s, v0.4s, v3.4s
+; CHECK-NEXT:    fmul v2.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    fcmeq v3.4s, v1.4s, #0.0
-; CHECK-NEXT:    bsl v3.16b, v1.16b, v0.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
-; CHECK-NEXT:    mov v1.16b, v3.16b
+; CHECK-NEXT:    bif v1.16b, v2.16b, v3.16b
 ; CHECK-NEXT:    ret
   %1 = tail call fast <8 x float> @llvm.sqrt.v8f32(<8 x float> %a)
   ret <8 x float> %1
@@ -210,10 +206,9 @@ define <2 x double> @d2sqrt(<2 x double> %a) #0 {
 ; CHECK-NEXT:    fmul v2.2d, v1.2d, v1.2d
 ; CHECK-NEXT:    frsqrts v2.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    fmul v2.2d, v2.2d, v0.2d
-; CHECK-NEXT:    fmul v2.2d, v1.2d, v2.2d
-; CHECK-NEXT:    fcmeq v1.2d, v0.2d, #0.0
-; CHECK-NEXT:    bsl v1.16b, v0.16b, v2.16b
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmul v1.2d, v1.2d, v2.2d
+; CHECK-NEXT:    fcmeq v2.2d, v0.2d, #0.0
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %1 = tail call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> %a)
   ret <2 x double> %1
@@ -238,24 +233,22 @@ define <4 x double> @d4sqrt(<4 x double> %a) #0 {
 ; CHECK-NEXT:    fmul v3.2d, v2.2d, v2.2d
 ; CHECK-NEXT:    frsqrts v3.2d, v0.2d, v3.2d
 ; CHECK-NEXT:    fmul v3.2d, v3.2d, v0.2d
-; CHECK-NEXT:    fmul v3.2d, v2.2d, v3.2d
-; CHECK-NEXT:    fcmeq v2.2d, v0.2d, #0.0
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v3.16b
-; CHECK-NEXT:    frsqrte v0.2d, v1.2d
-; CHECK-NEXT:    fmul v3.2d, v0.2d, v0.2d
+; CHECK-NEXT:    fmul v2.2d, v2.2d, v3.2d
+; CHECK-NEXT:    fcmeq v3.2d, v0.2d, #0.0
+; CHECK-NEXT:    bif v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    frsqrte v2.2d, v1.2d
+; CHECK-NEXT:    fmul v3.2d, v2.2d, v2.2d
 ; CHECK-NEXT:    frsqrts v3.2d, v1.2d, v3.2d
-; CHECK-NEXT:    fmul v0.2d, v0.2d, v3.2d
-; CHECK-NEXT:    fmul v3.2d, v0.2d, v0.2d
+; CHECK-NEXT:    fmul v2.2d, v2.2d, v3.2d
+; CHECK-NEXT:    fmul v3.2d, v2.2d, v2.2d
 ; CHECK-NEXT:    frsqrts v3.2d, v1.2d, v3.2d
-; CHECK-NEXT:    fmul v0.2d, v0.2d, v3.2d
-; CHECK-NEXT:    fmul v3.2d, v0.2d, v0.2d
+; CHECK-NEXT:    fmul v2.2d, v2.2d, v3.2d
+; CHECK-NEXT:    fmul v3.2d, v2.2d, v2.2d
 ; CHECK-NEXT:    frsqrts v3.2d, v1.2d, v3.2d
 ; CHECK-NEXT:    fmul v3.2d, v3.2d, v1.2d
-; CHECK-NEXT:    fmul v0.2d, v0.2d, v3.2d
+; CHECK-NEXT:    fmul v2.2d, v2.2d, v3.2d
 ; CHECK-NEXT:    fcmeq v3.2d, v1.2d, #0.0
-; CHECK-NEXT:    bsl v3.16b, v1.16b, v0.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
-; CHECK-NEXT:    mov v1.16b, v3.16b
+; CHECK-NEXT:    bif v1.16b, v2.16b, v3.16b
 ; CHECK-NEXT:    ret
   %1 = tail call fast <4 x double> @llvm.sqrt.v4f64(<4 x double> %a)
   ret <4 x double> %1

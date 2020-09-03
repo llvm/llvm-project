@@ -10,9 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// CCIfAlign - Match of the original alignment of the arg
-class CCIfAlign<string Align, CCAction A> :
-  CCIf<!strconcat("ArgFlags.getOrigAlign() == ", Align), A>;
 /// CCIfBigEndian - Match only if we're in big endian mode.
 class CCIfBigEndian<CCAction A> :
   CCIf<"State.getMachineFunction().getDataLayout().isBigEndian()", A>;
@@ -33,9 +30,9 @@ def CC_AArch64_AAPCS : CallingConv<[
 
   // Big endian vectors must be passed as if they were 1-element vectors so that
   // their lanes are in a consistent order.
-  CCIfBigEndian<CCIfType<[v2i32, v2f32, v4i16, v4f16, v8i8],
+  CCIfBigEndian<CCIfType<[v2i32, v2f32, v4i16, v4f16, v4bf16, v8i8],
                          CCBitConvertToType<f64>>>,
-  CCIfBigEndian<CCIfType<[v2i64, v2f64, v4i32, v4f32, v8i16, v8f16, v16i8],
+  CCIfBigEndian<CCIfType<[v2i64, v2f64, v4i32, v4f32, v8i16, v8f16, v8bf16, v16i8],
                          CCBitConvertToType<f128>>>,
 
   // In AAPCS, an SRet is passed in X8, not X0 like a normal pointer parameter.
@@ -75,10 +72,10 @@ def CC_AArch64_AAPCS : CallingConv<[
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 
   CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
-            nxv2f32, nxv4f32, nxv2f64],
+            nxv2bf16, nxv4bf16, nxv8bf16, nxv2f32, nxv4f32, nxv2f64],
            CCAssignToReg<[Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7]>>,
   CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
-            nxv2f32, nxv4f32, nxv2f64],
+            nxv2bf16, nxv4bf16, nxv8bf16, nxv2f32, nxv4f32, nxv2f64],
            CCPassIndirect<i64>>,
 
   CCIfType<[nxv2i1, nxv4i1, nxv8i1, nxv16i1],
@@ -102,22 +99,24 @@ def CC_AArch64_AAPCS : CallingConv<[
                                           [W0, W1, W2, W3, W4, W5, W6, W7]>>,
   CCIfType<[f16], CCAssignToRegWithShadow<[H0, H1, H2, H3, H4, H5, H6, H7],
                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
+  CCIfType<[bf16], CCAssignToRegWithShadow<[H0, H1, H2, H3, H4, H5, H6, H7],
+                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
   CCIfType<[f32], CCAssignToRegWithShadow<[S0, S1, S2, S3, S4, S5, S6, S7],
                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
   CCIfType<[f64], CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16],
+  CCIfType<[v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16, v4bf16],
            CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
                                    [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[f128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16],
+  CCIfType<[f128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16],
            CCAssignToReg<[Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
 
   // If more than will fit in registers, pass them on the stack instead.
-  CCIfType<[i1, i8, i16, f16], CCAssignToStack<8, 8>>,
+  CCIfType<[i1, i8, i16, f16, bf16], CCAssignToStack<8, 8>>,
   CCIfType<[i32, f32], CCAssignToStack<8, 8>>,
-  CCIfType<[i64, f64, v1f64, v2f32, v1i64, v2i32, v4i16, v8i8, v4f16],
+  CCIfType<[i64, f64, v1f64, v2f32, v1i64, v2i32, v4i16, v8i8, v4f16, v4bf16],
            CCAssignToStack<8, 8>>,
-  CCIfType<[f128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16],
+  CCIfType<[f128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16],
            CCAssignToStack<16, 16>>
 ]>;
 
@@ -132,9 +131,9 @@ def RetCC_AArch64_AAPCS : CallingConv<[
 
   // Big endian vectors must be passed as if they were 1-element vectors so that
   // their lanes are in a consistent order.
-  CCIfBigEndian<CCIfType<[v2i32, v2f32, v4i16, v4f16, v8i8],
+  CCIfBigEndian<CCIfType<[v2i32, v2f32, v4i16, v4f16, v4bf16, v8i8],
                          CCBitConvertToType<f64>>>,
-  CCIfBigEndian<CCIfType<[v2i64, v2f64, v4i32, v4f32, v8i16, v8f16, v16i8],
+  CCIfBigEndian<CCIfType<[v2i64, v2f64, v4i32, v4f32, v8i16, v8f16, v8bf16, v16i8],
                          CCBitConvertToType<f128>>>,
 
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
@@ -144,18 +143,20 @@ def RetCC_AArch64_AAPCS : CallingConv<[
                                           [W0, W1, W2, W3, W4, W5, W6, W7]>>,
   CCIfType<[f16], CCAssignToRegWithShadow<[H0, H1, H2, H3, H4, H5, H6, H7],
                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
+  CCIfType<[bf16], CCAssignToRegWithShadow<[H0, H1, H2, H3, H4, H5, H6, H7],
+                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
   CCIfType<[f32], CCAssignToRegWithShadow<[S0, S1, S2, S3, S4, S5, S6, S7],
                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
   CCIfType<[f64], CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16],
+  CCIfType<[v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16, v4bf16],
       CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
                               [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[f128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16],
+  CCIfType<[f128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16],
       CCAssignToReg<[Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
 
   CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
-            nxv2f32, nxv4f32, nxv2f64],
+            nxv2bf16, nxv4bf16, nxv8bf16, nxv2f32, nxv4f32, nxv2f64],
            CCAssignToReg<[Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7]>>,
 
   CCIfType<[nxv2i1, nxv4i1, nxv8i1, nxv16i1],
@@ -165,7 +166,7 @@ def RetCC_AArch64_AAPCS : CallingConv<[
 // Vararg functions on windows pass floats in integer registers
 let Entry = 1 in
 def CC_AArch64_Win64_VarArg : CallingConv<[
-  CCIfType<[f16, f32], CCPromoteToType<f64>>,
+  CCIfType<[f16, bf16, f32], CCPromoteToType<f64>>,
   CCIfType<[f64], CCBitConvertToType<i64>>,
   CCDelegateTo<CC_AArch64_AAPCS>
 ]>;
@@ -219,19 +220,22 @@ def CC_AArch64_DarwinPCS : CallingConv<[
                                           [W0, W1, W2, W3, W4, W5, W6, W7]>>,
   CCIfType<[f16], CCAssignToRegWithShadow<[H0, H1, H2, H3, H4, H5, H6, H7],
                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
+  CCIfType<[bf16], CCAssignToRegWithShadow<[H0, H1, H2, H3, H4, H5, H6, H7],
+                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
   CCIfType<[f32], CCAssignToRegWithShadow<[S0, S1, S2, S3, S4, S5, S6, S7],
                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
   CCIfType<[f64], CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
                                           [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16],
+  CCIfType<[v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16, v4bf16],
            CCAssignToRegWithShadow<[D0, D1, D2, D3, D4, D5, D6, D7],
                                    [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16],
+  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16],
            CCAssignToReg<[Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
 
   // If more than will fit in registers, pass them on the stack instead.
   CCIf<"ValVT == MVT::i1 || ValVT == MVT::i8", CCAssignToStack<1, 1>>,
-  CCIf<"ValVT == MVT::i16 || ValVT == MVT::f16", CCAssignToStack<2, 2>>,
+  CCIf<"ValVT == MVT::i16 || ValVT == MVT::f16 || ValVT == MVT::bf16",
+  CCAssignToStack<2, 2>>,
   CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
 
   // Re-demote pointers to 32-bits so we don't end up storing 64-bit
@@ -239,9 +243,9 @@ def CC_AArch64_DarwinPCS : CallingConv<[
   CCIfPtr<CCIfILP32<CCTruncToType<i32>>>,
   CCIfPtr<CCIfILP32<CCAssignToStack<4, 4>>>,
 
-  CCIfType<[i64, f64, v1f64, v2f32, v1i64, v2i32, v4i16, v8i8, v4f16],
+  CCIfType<[i64, f64, v1f64, v2f32, v1i64, v2i32, v4i16, v8i8, v4f16, v4bf16],
            CCAssignToStack<8, 8>>,
-  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16],
+  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16],
            CCAssignToStack<16, 16>>
 ]>;
 
@@ -255,14 +259,14 @@ def CC_AArch64_DarwinPCS_VarArg : CallingConv<[
 
   // Handle all scalar types as either i64 or f64.
   CCIfType<[i8, i16, i32], CCPromoteToType<i64>>,
-  CCIfType<[f16, f32],     CCPromoteToType<f64>>,
+  CCIfType<[f16, bf16, f32], CCPromoteToType<f64>>,
 
   // Everything is on the stack.
   // i128 is split to two i64s, and its stack alignment is 16 bytes.
   CCIfType<[i64], CCIfSplit<CCAssignToStack<8, 16>>>,
-  CCIfType<[i64, f64, v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16],
+  CCIfType<[i64, f64, v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16, v4bf16],
            CCAssignToStack<8, 8>>,
-  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16],
+  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16],
            CCAssignToStack<16, 16>>
 ]>;
 
@@ -275,16 +279,16 @@ def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
 
   // Handle all scalar types as either i32 or f32.
   CCIfType<[i8, i16], CCPromoteToType<i32>>,
-  CCIfType<[f16],     CCPromoteToType<f32>>,
+  CCIfType<[f16, bf16], CCPromoteToType<f32>>,
 
   // Everything is on the stack.
   // i128 is split to two i64s, and its stack alignment is 16 bytes.
   CCIfPtr<CCIfILP32<CCTruncToType<i32>>>,
   CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
   CCIfType<[i64], CCIfSplit<CCAssignToStack<8, 16>>>,
-  CCIfType<[i64, f64, v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16],
+  CCIfType<[i64, f64, v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16, v4bf16],
            CCAssignToStack<8, 8>>,
-  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16],
+  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16],
            CCAssignToStack<16, 16>>
 ]>;
 
@@ -377,6 +381,10 @@ def CSR_AArch64_AAPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
                                            D8,  D9,  D10, D11,
                                            D12, D13, D14, D15)>;
 
+// A variant for treating X18 as callee saved, when interfacing with
+// code that needs X18 to be preserved.
+def CSR_AArch64_AAPCS_X18 : CalleeSavedRegs<(add X18, CSR_AArch64_AAPCS)>;
+
 // Win64 has unwinding codes for an (FP,LR) pair, save_fplr and save_fplr_x.
 // We put FP before LR, so that frame lowering logic generates (FP,LR) pairs,
 // and not (LR,FP) pairs.
@@ -434,6 +442,7 @@ def CSR_AArch64_NoRegs : CalleeSavedRegs<(add)>;
 
 def CSR_AArch64_RT_MostRegs :  CalleeSavedRegs<(add CSR_AArch64_AAPCS,
                                                 (sequence "X%u", 9, 15))>;
+
 def CSR_AArch64_StackProbe_Windows
     : CalleeSavedRegs<(add (sequence "X%u", 0, 15),
                            (sequence "X%u", 18, 28), FP, SP,
@@ -459,27 +468,27 @@ def CSR_Darwin_AArch64_AAPCS_SwiftError
 // guarantees more than a normal AAPCS function. x16 and x17 are used on the
 // fast path for calculation, but other registers except X0 (argument/return)
 // and LR (it is a call, after all) are preserved.
-def CSR_AArch64_TLS_Darwin
+def CSR_Darwin_AArch64_TLS
     : CalleeSavedRegs<(add (sub (sequence "X%u", 1, 28), X16, X17),
                            FP,
                            (sequence "Q%u", 0, 31))>;
 
 // We can only handle a register pair with adjacent registers, the register pair
 // should belong to the same class as well. Since the access function on the
-// fast path calls a function that follows CSR_AArch64_TLS_Darwin,
-// CSR_AArch64_CXX_TLS_Darwin should be a subset of CSR_AArch64_TLS_Darwin.
-def CSR_AArch64_CXX_TLS_Darwin
+// fast path calls a function that follows CSR_Darwin_AArch64_TLS,
+// CSR_Darwin_AArch64_CXX_TLS should be a subset of CSR_Darwin_AArch64_TLS.
+def CSR_Darwin_AArch64_CXX_TLS
     : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS,
                            (sub (sequence "X%u", 1, 28), X15, X16, X17, X18),
                            (sequence "D%u", 0, 31))>;
 
 // CSRs that are handled by prologue, epilogue.
-def CSR_AArch64_CXX_TLS_Darwin_PE
+def CSR_Darwin_AArch64_CXX_TLS_PE
     : CalleeSavedRegs<(add LR, FP)>;
 
 // CSRs that are handled explicitly via copies.
-def CSR_AArch64_CXX_TLS_Darwin_ViaCopy
-    : CalleeSavedRegs<(sub CSR_AArch64_CXX_TLS_Darwin, LR, FP)>;
+def CSR_Darwin_AArch64_CXX_TLS_ViaCopy
+    : CalleeSavedRegs<(sub CSR_Darwin_AArch64_CXX_TLS, LR, FP)>;
 
 def CSR_Darwin_AArch64_RT_MostRegs
     : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS, (sequence "X%u", 9, 15))>;
@@ -490,8 +499,6 @@ def CSR_AArch64_NoRegs_SCS
     : CalleeSavedRegs<(add CSR_AArch64_NoRegs, X18)>;
 def CSR_AArch64_AllRegs_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AllRegs, X18)>;
-def CSR_AArch64_CXX_TLS_Darwin_SCS
-    : CalleeSavedRegs<(add CSR_AArch64_CXX_TLS_Darwin, X18)>;
 def CSR_AArch64_AAPCS_SwiftError_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AAPCS_SwiftError, X18)>;
 def CSR_AArch64_RT_MostRegs_SCS
@@ -502,7 +509,3 @@ def CSR_AArch64_SVE_AAPCS_SCS
     : CalleeSavedRegs<(add CSR_AArch64_SVE_AAPCS, X18)>;
 def CSR_AArch64_AAPCS_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X18)>;
-def CSR_Darwin_AArch64_AAPCS_SCS
-    : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS, X18)>;
-
-

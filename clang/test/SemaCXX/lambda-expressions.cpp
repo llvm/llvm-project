@@ -601,16 +601,24 @@ namespace ConversionOperatorDoesNotHaveDeducedReturnType {
 #if __cplusplus > 201402L
     friend constexpr auto T::operator()(int) const;
     friend constexpr T::operator ExpectedTypeT() const noexcept;
+
+    template<typename T>
+      friend constexpr void U::operator()(T&) const;
+    // FIXME: This should not match; the return type is specified as behaving
+    // "as if it were a decltype-specifier denoting the return type of
+    // [operator()]", which is not equivalent to this alias template.
+    template<typename T>
+      friend constexpr U::operator ExpectedTypeU<T>() const noexcept;
 #else
     friend auto T::operator()(int) const;
     friend T::operator ExpectedTypeT() const;
-#endif
 
-    // FIXME: The first of these should match. The second should not.
     template<typename T>
-      friend void U::operator()(T&) const; // expected-error {{does not match}}
+      friend void U::operator()(T&) const;
+    // FIXME: This should not match, as above.
     template<typename T>
-      friend U::operator ExpectedTypeU<T>() const; // expected-error {{does not match}}
+      friend U::operator ExpectedTypeU<T>() const;
+#endif
 
   private:
     int n;

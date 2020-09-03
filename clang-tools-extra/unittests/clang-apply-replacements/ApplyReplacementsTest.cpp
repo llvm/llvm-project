@@ -28,7 +28,8 @@ makeTUDiagnostics(const std::string &MainSourceFile, StringRef DiagnosticName,
                    Message,
                    {},
                    Diagnostic::Warning,
-                   BuildDirectory}}});
+                   BuildDirectory,
+                   {}}}});
   return TUs;
 }
 

@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -fsyntax-only -fblocks -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -fsyntax-only -fblocks -pedantic -verify %s
 
-void cat0(int a[static 0]) {} // expected-warning {{'static' has no effect on zero-length arrays}}
+void cat0(int a[static 0]) {} // expected-warning {{zero size arrays are an extension}} \
+                              // expected-note {{callee declares array parameter as static here}}
 
 void cat(int a[static 3]) {} // expected-note 4 {{callee declares array parameter as static here}} expected-note 2 {{passing argument to parameter 'a' here}}
 
@@ -9,7 +10,7 @@ void vat(int i, int a[static i]) {} // expected-note {{callee declares array par
 void f(int *p) {
   int a[2], b[3], c[4];
 
-  cat0(0);
+  cat0(0); // expected-warning {{null passed to a callee that requires a non-null argument}}
 
   cat(0); // expected-warning {{null passed to a callee that requires a non-null argument}}
   cat(a); // expected-warning {{array argument is too small; contains 2 elements, callee requires at least 3}}

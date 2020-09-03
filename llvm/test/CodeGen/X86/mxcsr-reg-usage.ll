@@ -17,7 +17,6 @@ define x86_mmx @mxcsr_mmx(<4 x float> %a0) {
 
 define half @mxcsr_f16c(float %a) {
 ; CHECK: VCVTPS2PH{{.*}}mxcsr
-; CHECK: VCVTPH2PS{{.*}}mxcsr
   %res = fptrunc float %a to half
   ret half %res
 }

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -fcxx-exceptions -verify %s
-// RUN: %clang_cc1 -std=c++11 -triple %ms_abi_triple -DMSABI -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -verify %s
+// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -fcxx-exceptions -verify %s -pedantic
+// RUN: %clang_cc1 -std=c++11 -triple %ms_abi_triple -DMSABI -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -verify %s -pedantic
 
 #if defined(BE_THE_HEADER)
 
@@ -75,7 +75,7 @@ struct F {
 };
 
 ~; // expected-error {{expected a class name after '~' to name a destructor}}
-~undef(); // expected-error {{expected the class name after '~' to name a destructor}}
+~undef(); // expected-error {{undeclared identifier 'undef' in destructor name}}
 ~operator+(int, int);  // expected-error {{expected a class name after '~' to name a destructor}}
 ~F(){} // expected-error {{destructor must be a non-static member function}}
 
@@ -432,7 +432,7 @@ namespace PR9238 {
 }
 
 namespace PR7900 {
-  struct A { // expected-note 2{{type 'PR7900::A' is declared here}}
+  struct A { // expected-note 2{{type 'PR7900::A' found by destructor name lookup}}
   };
   struct B : public A {
   };
@@ -492,4 +492,62 @@ void foo1() {
   x.foo1();
 }
 }
+
+namespace DtorTypedef {
+  struct A { ~A(); };
+  using A = A;
+  DtorTypedef::A::~A() {}
+
+  // This is invalid, but compilers accept it.
+  struct B { ~B(); };
+  namespace N { using B = B; }
+  N::B::~B() {} // expected-error {{destructor cannot be declared using a type alias}}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdtor-typedef"
+  struct C { ~C(); };
+  namespace N { using C = C; }
+  N::C::~C() {}
+#pragma clang diagnostic pop
+}
+
+// Ignore ambiguity errors in destructor name lookup. This matches the observed
+// behavior of ICC, and is compatible with the observed behavior of GCC (which
+// appears to ignore lookups that result in ambiguity) and MSVC (which appears
+// to perform the lookups in the opposite order from Clang).
+namespace PR44978 {
+  // All compilers accept this despite it being clearly ill-formed per the
+  // current wording.
+  namespace n {
+    class Foo {}; // expected-note {{found}}
+  }
+  class Foo {}; // expected-note {{found}}
+  using namespace n;
+  static void func(n::Foo *p) { p->~Foo(); } // expected-warning {{ambiguous}}
+
+  // GCC rejects this case, ICC accepts, despite the class member lookup being
+  // ambiguous.
+  struct Z;
+  struct X { using T = Z; }; // expected-note {{found}}
+  struct Y { using T = int; }; // expected-note {{found}}
+  struct Z : X, Y {};
+  void f(Z *p) { p->~T(); } // expected-warning {{ambiguous}}
+
+  // GCC accepts this and ignores the ambiguous class member lookup.
+  //
+  // FIXME: We should warn on the ambiguity here too, but that requires us to
+  // keep doing lookups after we've already found the type we want.
+  using T = Z;
+  void g(Z *p) { p->~T(); }
+
+  // ICC accepts this and ignores the ambiguous unqualified lookup.
+  struct Q {};
+  namespace { using U = Q; } // expected-note {{candidate}} expected-note {{found}}
+  using U = int; // expected-note {{candidate}} expected-note {{found}}
+  void f(Q *p) { p->~U(); } // expected-warning {{ambiguous}}
+
+  // We still diagnose if the unqualified lookup is dependent, though.
+  template<typename T> void f(T *p) { p->~U(); } // expected-error {{ambiguous}}
+}
+
 #endif // BE_THE_HEADER

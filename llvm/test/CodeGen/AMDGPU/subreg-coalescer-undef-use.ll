@@ -18,14 +18,13 @@ define amdgpu_kernel void @foobar(float %a0, float %a1, float addrspace(1)* %out
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s7
 ; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; CHECK-NEXT:    ; mask branch BB0_2
-; CHECK-NEXT:  BB0_1: ; %ift
+; CHECK-NEXT:  ; %bb.1: ; %ift
 ; CHECK-NEXT:    s_mov_b32 s4, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s7
-; CHECK-NEXT:  BB0_2: ; %ife
+; CHECK-NEXT:  ; %bb.2: ; %ife
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; CHECK-NEXT:    s_mov_b32 s3, 0xf000
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], 0

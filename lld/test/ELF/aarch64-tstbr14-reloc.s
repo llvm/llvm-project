@@ -4,23 +4,23 @@
 # RUN: ld.lld %t1 %t2 -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 # RUN: ld.lld -shared %t1 %t2 -o %t3
-# RUN: llvm-objdump -d --no-show-raw-insn %t3 | FileCheck -check-prefix=DSO %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t3 | FileCheck --check-prefix=DSO %s
 # RUN: llvm-readobj -S -r %t3 | FileCheck -check-prefix=DSOREL %s
 
-# CHECK:      _foo:
+# CHECK:      <_foo>:
 # CHECK-NEXT:  210120: nop
 # CHECK-NEXT:  210124: nop
 # CHECK-NEXT:  210128: nop
 # CHECK-NEXT:  21012c: nop
-# CHECK:      _bar:
+# CHECK:      <_bar>:
 # CHECK-NEXT:  210130: nop
 # CHECK-NEXT:  210134: nop
 # CHECK-NEXT:  210138: nop
-# CHECK:      _start:
-# CHECK-NEXT:  21013c: tbnz w3, #15, #-28 <_foo>
-# CHECK-NEXT:  210140: tbnz w3, #15, #-16 <_bar>
-# CHECK-NEXT:  210144: tbz x6, #45, #-36 <_foo>
-# CHECK-NEXT:  210148: tbz x6, #45, #-24 <_bar>
+# CHECK:      <_start>:
+# CHECK-NEXT:  21013c: tbnz w3, #15, 0x210120 <_foo>
+# CHECK-NEXT:  210140: tbnz w3, #15, 0x210130 <_bar>
+# CHECK-NEXT:  210144: tbz x6, #45, 0x210120 <_foo>
+# CHECK-NEXT:  210148: tbz x6, #45, 0x210130 <_bar>
 
 #DSOREL:      Section {
 #DSOREL:        Index:
@@ -47,24 +47,24 @@
 
 #DSO:      Disassembly of section .text:
 #DSO-EMPTY:
-#DSO-NEXT: _foo:
+#DSO-NEXT: <_foo>:
 #DSO-NEXT:  102f8: nop
 #DSO-NEXT:  102fc: nop
 #DSO-NEXT:  10300: nop
 #DSO-NEXT:  10304: nop
-#DSO:      _bar:
+#DSO:      <_bar>:
 #DSO-NEXT:  10308: nop
 #DSO-NEXT:  1030c: nop
 #DSO-NEXT:  10310: nop
-#DSO:      _start:
-#DSO-NEXT:  10314: tbnz w3, #15, #60 <_foo@plt>
-#DSO-NEXT:  10318: tbnz w3, #15, #72 <_bar@plt>
-#DSO-NEXT:  1031c: tbz x6, #45, #52 <_foo@plt>
-#DSO-NEXT:  10320: tbz x6, #45, #64 <_bar@plt>
+#DSO:      <_start>:
+#DSO-NEXT:  10314: tbnz w3, #15, 0x10350 <_foo@plt>
+#DSO-NEXT:  10318: tbnz w3, #15, 0x10360 <_bar@plt>
+#DSO-NEXT:  1031c: tbz x6, #45, 0x10350 <_foo@plt>
+#DSO-NEXT:  10320: tbz x6, #45, 0x10360 <_bar@plt>
 #DSO-EMPTY:
 #DSO-NEXT: Disassembly of section .plt:
 #DSO-EMPTY:
-#DSO-NEXT: .plt:
+#DSO-NEXT: <.plt>:
 #DSO-NEXT:  10330: stp x16, x30, [sp, #-16]!
 #DSO-NEXT:  10334: adrp x16, #131072
 #DSO-NEXT:  10338: ldr x17, [x16, #1072]
@@ -74,13 +74,13 @@
 #DSO-NEXT:  10348: nop
 #DSO-NEXT:  1034c: nop
 #DSO-EMPTY:
-#DSO-NEXT:   _foo@plt:
+#DSO-NEXT:   <_foo@plt>:
 #DSO-NEXT:  10350: adrp x16, #131072
 #DSO-NEXT:  10354: ldr x17, [x16, #1080]
 #DSO-NEXT:  10358: add x16, x16, #1080
 #DSO-NEXT:  1035c: br x17
 #DSO-EMPTY:
-#DSO-NEXT:   _bar@plt:
+#DSO-NEXT:   <_bar@plt>:
 #DSO-NEXT:  10360: adrp x16, #131072
 #DSO-NEXT:  10364: ldr x17, [x16, #1088]
 #DSO-NEXT:  10368: add x16, x16, #1088

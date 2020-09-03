@@ -57,7 +57,7 @@ define void @c() #1 {
 ; CHECK-LABEL:      c:                                     // @c
 ; CHECK:            // %bb.0:
 ; CHECK-NEXT:               .cfi_b_key_frame
-; CHECK-NEXT:               pacibsp
+; CHECK-NEXT:               hint #27
 ; CHECK-NEXT:               .cfi_negate_ra_state
 ; CHECK-NOT:                OUTLINED_FUNCTION_
   %1 = alloca i32, align 4
@@ -72,7 +72,7 @@ define void @c() #1 {
   store i32 4, i32* %4, align 4
   store i32 5, i32* %5, align 4
   store i32 6, i32* %6, align 4
-; CHECK:                  autibsp
+; CHECK:                  hint #31
 ; CHECK-NOT:              ret{{[a,b]}}
   ret void
 }

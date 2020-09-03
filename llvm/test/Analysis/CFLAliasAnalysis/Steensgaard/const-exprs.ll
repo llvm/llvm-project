@@ -1,4 +1,4 @@
-; RUN: opt %s -S -disable-basicaa -cfl-steens-aa -aa-eval -print-all-alias-modref-info 2>&1 | FileCheck %s
+; RUN: opt %s -S -disable-basic-aa -cfl-steens-aa -aa-eval -print-all-alias-modref-info 2>&1 | FileCheck %s
 ;
 ; Regression: we weren't properly checking constexpr selects.
 

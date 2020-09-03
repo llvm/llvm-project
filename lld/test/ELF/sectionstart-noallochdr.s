@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld %t.o --section-start .data=0x20 \
 # RUN: --section-start .bss=0x30 --section-start .text=0x10 -o %t1
-# RUN: llvm-objdump -section-headers %t1 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t1 | FileCheck %s
 
 # CHECK:      Sections:
 # CHECK-NEXT:  Idx Name          Size     VMA              Type

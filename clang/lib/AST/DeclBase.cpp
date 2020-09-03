@@ -240,15 +240,47 @@ TemplateDecl *Decl::getDescribedTemplate() const {
   return nullptr;
 }
 
+const TemplateParameterList *Decl::getDescribedTemplateParams() const {
+  if (auto *TD = getDescribedTemplate())
+    return TD->getTemplateParameters();
+  if (auto *CTPSD = dyn_cast<ClassTemplatePartialSpecializationDecl>(this))
+    return CTPSD->getTemplateParameters();
+  if (auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl>(this))
+    return VTPSD->getTemplateParameters();
+  return nullptr;
+}
+
 bool Decl::isTemplated() const {
-  // A declaration is dependent if it is a template or a template pattern, or
+  // A declaration is templated if it is a template or a template pattern, or
   // is within (lexcially for a friend, semantically otherwise) a dependent
   // context.
   // FIXME: Should local extern declarations be treated like friends?
   if (auto *AsDC = dyn_cast<DeclContext>(this))
     return AsDC->isDependentContext();
   auto *DC = getFriendObjectKind() ? getLexicalDeclContext() : getDeclContext();
-  return DC->isDependentContext() || isTemplateDecl() || getDescribedTemplate();
+  return DC->isDependentContext() || isTemplateDecl() ||
+         getDescribedTemplateParams();
+}
+
+unsigned Decl::getTemplateDepth() const {
+  if (auto *DC = dyn_cast<DeclContext>(this))
+    if (DC->isFileContext())
+      return 0;
+
+  if (auto *TPL = getDescribedTemplateParams())
+    return TPL->getDepth() + 1;
+
+  // If this is a dependent lambda, there might be an enclosing variable
+  // template. In this case, the next step is not the parent DeclContext (or
+  // even a DeclContext at all).
+  auto *RD = dyn_cast<CXXRecordDecl>(this);
+  if (RD && RD->isDependentLambda())
+    if (Decl *Context = RD->getLambdaContextDecl())
+      return Context->getTemplateDepth();
+
+  const DeclContext *DC =
+      getFriendObjectKind() ? getLexicalDeclContext() : getDeclContext();
+  return cast<Decl>(DC)->getTemplateDepth();
 }
 
 const DeclContext *Decl::getParentFunctionOrMethod() const {
@@ -332,13 +364,18 @@ void Decl::setDeclContextsImpl(DeclContext *SemaDC, DeclContext *LexicalDC,
   }
 }
 
-bool Decl::isLexicallyWithinFunctionOrMethod() const {
+bool Decl::isInLocalScopeForInstantiation() const {
   const DeclContext *LDC = getLexicalDeclContext();
+  if (!LDC->isDependentContext())
+    return false;
   while (true) {
     if (LDC->isFunctionOrMethod())
       return true;
     if (!isa<TagDecl>(LDC))
       return false;
+    if (const auto *CRD = dyn_cast<CXXRecordDecl>(LDC))
+      if (CRD->isLambda())
+        return true;
     LDC = LDC->getLexicalParent();
   }
   return false;
@@ -378,6 +415,12 @@ ASTContext &Decl::getASTContext() const {
   return getTranslationUnitDecl()->getASTContext();
 }
 
+/// Helper to get the language options from the ASTContext.
+/// Defined out of line to avoid depending on ASTContext.h.
+const LangOptions &Decl::getLangOpts() const {
+  return getASTContext().getLangOpts();
+}
+
 ASTMutationListener *Decl::getASTMutationListener() const {
   return getASTContext().getASTMutationListener();
 }
@@ -390,8 +433,10 @@ unsigned Decl::getMaxAlignment() const {
   const AttrVec &V = getAttrs();
   ASTContext &Ctx = getASTContext();
   specific_attr_iterator<AlignedAttr> I(V.begin()), E(V.end());
-  for (; I != E; ++I)
-    Align = std::max(Align, I->getAlignment(Ctx));
+  for (; I != E; ++I) {
+    if (!I->isAlignmentErrorDependent())
+      Align = std::max(Align, I->getAlignment(Ctx));
+  }
   return Align;
 }
 
@@ -454,7 +499,8 @@ ExternalSourceSymbolAttr *Decl::getExternalSourceSymbolAttr() const {
 }
 
 bool Decl::hasDefiningAttr() const {
-  return hasAttr<AliasAttr>() || hasAttr<IFuncAttr>();
+  return hasAttr<AliasAttr>() || hasAttr<IFuncAttr>() ||
+         hasAttr<LoaderUninitializedAttr>();
 }
 
 const Attr *Decl::getDefiningAttr() const {
@@ -462,6 +508,8 @@ const Attr *Decl::getDefiningAttr() const {
     return AA;
   if (auto *IFA = getAttr<IFuncAttr>())
     return IFA;
+  if (auto *NZA = getAttr<LoaderUninitializedAttr>())
+    return NZA;
   return nullptr;
 }
 
@@ -587,7 +635,7 @@ AvailabilityResult Decl::getAvailability(std::string *Message,
         continue;
 
       if (Message)
-        ResultMessage = Deprecated->getMessage();
+        ResultMessage = std::string(Deprecated->getMessage());
 
       Result = AR_Deprecated;
       continue;
@@ -595,7 +643,7 @@ AvailabilityResult Decl::getAvailability(std::string *Message,
 
     if (const auto *Unavailable = dyn_cast<UnavailableAttr>(A)) {
       if (Message)
-        *Message = Unavailable->getMessage();
+        *Message = std::string(Unavailable->getMessage());
       return AR_Unavailable;
     }
 
@@ -786,6 +834,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case TranslationUnit:
     case ExternCContext:
     case Decomposition:
+    case MSGuid:
 
     case UsingDirective:
     case BuiltinTemplate:
@@ -804,6 +853,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case OMPCapturedExpr:
     case Empty:
     case LifetimeExtendedTemporary:
+    case RequiresExprBody:
       // Never looked up by name.
       return 0;
   }
@@ -1177,6 +1227,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::Captured:
   case Decl::OMPDeclareReduction:
   case Decl::OMPDeclareMapper:
+  case Decl::RequiresExprBody:
     // There is only one DeclContext for these entities.
     return this;
 
@@ -1200,9 +1251,6 @@ DeclContext *DeclContext::getPrimaryContext() {
     return this;
 
   case Decl::ObjCCategory:
-    if (auto *OCD = dyn_cast<ObjCCategoryDecl>(this))
-      if (auto *Def = OCD->getDefinition())
-        return Def;
     return this;
 
   case Decl::ObjCImplementation:
@@ -1438,6 +1486,13 @@ static bool shouldBeHidden(NamedDecl *D) {
   if (auto *FD = dyn_cast<FunctionDecl>(D))
     if (FD->isFunctionTemplateSpecialization())
       return true;
+
+  // Hide destructors that are invalid. There should always be one destructor,
+  // but if it is an invalid decl, another one is created. We need to hide the
+  // invalid one from places that expect exactly one destructor, like the
+  // serialization code.
+  if (isa<CXXDestructorDecl>(D) && D->isInvalidDecl())
+    return true;
 
   return false;
 }

@@ -15,6 +15,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
@@ -126,6 +127,11 @@ public:
   }
 
   void VisitConstantExpr(ConstantExpr *E) {
+    if (llvm::Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
+      CGF.EmitAggregateStore(Result, Dest.getAddress(),
+                             E->getType().isVolatileQualified());
+      return;
+    }
     return Visit(E->getSubExpr());
   }
 
@@ -676,17 +682,13 @@ AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
 
 /// Attempt to look through various unimportant expressions to find a
 /// cast of the given kind.
-static Expr *findPeephole(Expr *op, CastKind kind) {
-  while (true) {
-    op = op->IgnoreParens();
-    if (CastExpr *castE = dyn_cast<CastExpr>(op)) {
-      if (castE->getCastKind() == kind)
-        return castE->getSubExpr();
-      if (castE->getCastKind() == CK_NoOp)
-        continue;
-    }
-    return nullptr;
+static Expr *findPeephole(Expr *op, CastKind kind, const ASTContext &ctx) {
+  op = op->IgnoreParenNoopCasts(ctx);
+  if (auto castE = dyn_cast<CastExpr>(op)) {
+    if (castE->getCastKind() == kind)
+      return castE->getSubExpr();
   }
+  return nullptr;
 }
 
 void AggExprEmitter::VisitCastExpr(CastExpr *E) {
@@ -775,7 +777,8 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
       (isToAtomic ? CK_AtomicToNonAtomic : CK_NonAtomicToAtomic);
 
     // These two cases are reverses of each other; try to peephole them.
-    if (Expr *op = findPeephole(E->getSubExpr(), peepholeTarget)) {
+    if (Expr *op =
+            findPeephole(E->getSubExpr(), peepholeTarget, CGF.getContext())) {
       assert(CGF.getContext().hasSameUnqualifiedType(op->getType(),
                                                      E->getType()) &&
            "peephole significantly changed types?");
@@ -1351,7 +1354,6 @@ AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
 }
 
 void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
-  CGF.enterFullExpression(E);
   CodeGenFunction::RunCleanupsScope cleanups(CGF);
   Visit(E->getSubExpr());
 }
@@ -1942,6 +1944,18 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
              "constructor or assignment operator");
       // Ignore empty classes in C++.
       if (Record->isEmpty())
+        return;
+    }
+  }
+
+  if (getLangOpts().CUDAIsDevice) {
+    if (Ty->isCUDADeviceBuiltinSurfaceType()) {
+      if (getTargetHooks().emitCUDADeviceBuiltinSurfaceDeviceCopy(*this, Dest,
+                                                                  Src))
+        return;
+    } else if (Ty->isCUDADeviceBuiltinTextureType()) {
+      if (getTargetHooks().emitCUDADeviceBuiltinTextureDeviceCopy(*this, Dest,
+                                                                  Src))
         return;
     }
   }

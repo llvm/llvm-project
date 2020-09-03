@@ -5,7 +5,7 @@
 ; demonstrate the bug. Going the asm->obj route does not show the issue.
 ; RUN: llc -mtriple=arm-none-linux   < %s -filetype=obj | llvm-objdump -d - | FileCheck %s
 ; RUN: llc -mtriple=arm-apple-darwin < %s -filetype=obj | llvm-objdump -d - | FileCheck %s
-; CHECK-LABEL: foo:
+; CHECK-LABEL: <{{_?}}foo>:
 ; CHECK: 0:       00 00 9f e5                                     ldr     r0, [pc]
 ; CHECK: 4:       0e f0 a0 e1                                     mov     pc, lr
 ; Make sure the constant pool entry comes after the return

@@ -1,4 +1,4 @@
-//===-- ThreadPlanStepInRange.cpp -------------------------------*- C++ -*-===//
+//===-- ThreadPlanStepInRange.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -322,7 +322,7 @@ void ThreadPlanStepInRange::SetAvoidRegexp(const char *name) {
   if (m_avoid_regexp_up)
     *m_avoid_regexp_up = RegularExpression(name_ref);
   else
-    m_avoid_regexp_up.reset(new RegularExpression(name_ref));
+    m_avoid_regexp_up = std::make_unique<RegularExpression>(name_ref);
 }
 
 void ThreadPlanStepInRange::SetDefaultFlagValue(uint32_t new_value) {

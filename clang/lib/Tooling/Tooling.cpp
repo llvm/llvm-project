@@ -141,11 +141,13 @@ namespace clang {
 namespace tooling {
 
 /// Returns a clang build invocation initialized from the CC1 flags.
-CompilerInvocation *newInvocation(
-    DiagnosticsEngine *Diagnostics, const llvm::opt::ArgStringList &CC1Args) {
+CompilerInvocation *newInvocation(DiagnosticsEngine *Diagnostics,
+                                  const llvm::opt::ArgStringList &CC1Args,
+                                  const char *const BinaryName) {
   assert(!CC1Args.empty() && "Must at least contain the program name!");
   CompilerInvocation *Invocation = new CompilerInvocation;
-  CompilerInvocation::CreateFromArgs(*Invocation, CC1Args, *Diagnostics);
+  CompilerInvocation::CreateFromArgs(*Invocation, CC1Args, *Diagnostics,
+                                     BinaryName);
   Invocation->getFrontendOpts().DisableFree = false;
   Invocation->getCodeGenOpts().DisableFree = false;
   return Invocation;
@@ -234,7 +236,7 @@ llvm::Expected<std::string> getAbsolutePath(llvm::vfs::FileSystem &FS,
   if (auto EC = FS.makeAbsolute(AbsolutePath))
     return llvm::errorCodeToError(EC);
   llvm::sys::path::native(AbsolutePath);
-  return AbsolutePath.str();
+  return std::string(AbsolutePath.str());
 }
 
 std::string getAbsolutePath(StringRef File) {
@@ -345,7 +347,7 @@ bool ToolInvocation::run() {
   if (!CC1Args)
     return false;
   std::unique_ptr<CompilerInvocation> Invocation(
-      newInvocation(&Diagnostics, *CC1Args));
+      newInvocation(&Diagnostics, *CC1Args, BinaryName));
   // FIXME: remove this when all users have migrated!
   for (const auto &It : MappedFileContents) {
     // Inject the code as the given file name into the preprocessor options.
@@ -619,7 +621,8 @@ buildASTFromCode(StringRef Code, StringRef FileName,
 std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     StringRef Code, const std::vector<std::string> &Args, StringRef FileName,
     StringRef ToolName, std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    ArgumentsAdjuster Adjuster, const FileContentMappings &VirtualMappedFiles) {
+    ArgumentsAdjuster Adjuster, const FileContentMappings &VirtualMappedFiles,
+    DiagnosticConsumer *DiagConsumer) {
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
   ASTBuilderAction Action(ASTs);
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
@@ -633,6 +636,7 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
   ToolInvocation Invocation(
       getSyntaxOnlyToolArgs(ToolName, Adjuster(Args, FileName), FileName),
       &Action, Files.get(), std::move(PCHContainerOps));
+  Invocation.setDiagnosticConsumer(DiagConsumer);
 
   InMemoryFileSystem->addFile(FileName, 0,
                               llvm::MemoryBuffer::getMemBufferCopy(Code));

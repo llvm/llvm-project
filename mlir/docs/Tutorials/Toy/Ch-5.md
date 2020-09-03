@@ -13,8 +13,8 @@ transformations: `Affine`. This dialect is tailored to the computation-heavy
 part of the program and is limited: it doesn't support representing our
 `toy.print` builtin, for instance, neither should it! Instead, we can target
 `Affine` for the computation heavy part of Toy, and in the
-[next chapter](Ch-6.md) directly the `LLVM IR` dialect for lowering `print`. As
-part of this lowering, we will be lowering from the
+[next chapter](Ch-6.md) directly target the `LLVM IR` dialect for lowering
+`print`. As part of this lowering, we will be lowering from the
 [TensorType](../../LangRef.md#tensor-type) that `Toy` operates on to the
 [MemRefType](../../LangRef.md#memref-type) that is indexed via an affine
 loop-nest. Tensors represent an abstract value-typed sequence of data, meaning
@@ -24,9 +24,9 @@ level buffer access, as they are concrete references to a region of memory.
 # Dialect Conversions
 
 MLIR has many different dialects, so it is important to have a unified framework
-for [converting](../../Glossary.md#conversion) between them. This is where the
+for [converting](../../../getting_started/Glossary.md#conversion) between them. This is where the
 `DialectConversion` framework comes into play. This framework allows for
-transforming a set of `illegal` operations to a set of `legal` ones. To use this
+transforming a set of *illegal* operations to a set of *legal* ones. To use this
 framework, we need to provide two things (and an optional third):
 
 *   A [Conversion Target](../../DialectConversion.md#conversion-target)
@@ -34,13 +34,13 @@ framework, we need to provide two things (and an optional third):
     -   This is the formal specification of what operations or dialects are
         legal for the conversion. Operations that aren't legal will require
         rewrite patterns to perform
-        [legalization](../../Glossary.md#legalization).
+        [legalization](../../../getting_started/Glossary.md#legalization).
 
 *   A set of
     [Rewrite Patterns](../../DialectConversion.md#rewrite-pattern-specification)
 
-    -   These are the set of [patterns](../../QuickstartRewrites.md) used to
-        convert `illegal` operations into a set of zero or more `legal` ones.
+    -   This is the set of [patterns](../QuickstartRewrites.md) used to
+        convert *illegal* operations into a set of zero or more *legal* ones.
 
 *   Optionally, a [Type Converter](../../DialectConversion.md#type-conversion).
 
@@ -62,25 +62,31 @@ void ToyToAffineLoweringPass::runOnFunction() {
   // We define the specific operations, or dialects, that are legal targets for
   // this lowering. In our case, we are lowering to a combination of the
   // `Affine` and `Standard` dialects.
-  target.addLegalDialect<mlir::AffineOpsDialect, mlir::StandardOpsDialect>();
+  target.addLegalDialect<mlir::AffineDialect, mlir::StandardOpsDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
   // if any of these operations are *not* converted. Given that we actually want
   // a partial lowering, we explicitly mark the Toy operations that don't want
-  // to lower, `toy.print`, as `legal`.
+  // to lower, `toy.print`, as *legal*.
   target.addIllegalDialect<ToyDialect>();
   target.addLegalOp<PrintOp>();
   ...
 }
 ```
 
+Above, we first set the toy dialect to illegal, and then the print operation
+as legal. We could have done this the other way around.
+Individual operations always take precedence over the (more generic) dialect
+definitions, so the order doesn't matter. See `ConversionTarget::getOpInfo`
+for the details.
+
 ## Conversion Patterns
 
 After the conversion target has been defined, we can define how to convert the
-`illegal` operations into `legal` ones. Similarly to the canonicalization
+*illegal* operations into *legal* ones. Similarly to the canonicalization
 framework introduced in [chapter 3](Ch-3.md), the
 [`DialectConversion` framework](../../DialectConversion.md) also uses
-[RewritePatterns](../../QuickstartRewrites.md) to perform the conversion logic.
+[RewritePatterns](../QuickstartRewrites.md) to perform the conversion logic.
 These patterns may be the `RewritePatterns` seen before or a new type of pattern
 specific to the conversion framework `ConversionPattern`. `ConversionPatterns`
 are different from traditional `RewritePatterns` in that they accept an
@@ -100,7 +106,7 @@ struct TransposeOpLowering : public mlir::ConversionPattern {
 
   /// Match and rewrite the given `toy.transpose` operation, with the given
   /// operands that have been remapped from `tensor<...>` to `memref<...>`.
-  mlir::PatternMatchResult
+  mlir::LogicalResult
   matchAndRewrite(mlir::Operation *op, ArrayRef<mlir::Value> operands,
                   mlir::ConversionPatternRewriter &rewriter) const final {
     auto loc = op->getLoc();
@@ -118,7 +124,7 @@ struct TransposeOpLowering : public mlir::ConversionPattern {
           // This allows for using the nice named accessors that are generated
           // by the ODS. This adaptor is automatically provided by the ODS
           // framework.
-          TransposeOpOperandAdaptor transposeAdaptor(memRefOperands);
+          TransposeOpAdaptor transposeAdaptor(memRefOperands);
           mlir::Value input = transposeAdaptor.input();
 
           // Transpose the elements by generating a load from the reverse
@@ -126,7 +132,7 @@ struct TransposeOpLowering : public mlir::ConversionPattern {
           SmallVector<mlir::Value, 2> reverseIvs(llvm::reverse(loopIvs));
           return rewriter.create<mlir::AffineLoadOp>(loc, input, reverseIvs);
         });
-    return matchSuccess();
+    return success();
   }
 };
 ```
@@ -154,29 +160,10 @@ for our purposes, we will perform a partial lowering, as we will not convert
 
 ```c++
 void ToyToAffineLoweringPass::runOnFunction() {
-  // The first thing to define is the conversion target. This will define the
-  // final target for this lowering.
-  mlir::ConversionTarget target(getContext());
-
-  // We define the specific operations, or dialects, that are legal targets for
-  // this lowering. In our case, we are lowering to a combination of the
-  // `Affine` and `Standard` dialects.
-  target.addLegalDialect<mlir::AffineOpsDialect, mlir::StandardOpsDialect>();
-
-  // We also define the Toy dialect as Illegal so that the conversion will fail
-  // if any of these operations are *not* converted. Given that we actually want
-  // a partial lowering, we explicitly mark the Toy operations that don't want
-  // to lower, `toy.print`, as `legal`.
-  target.addIllegalDialect<ToyDialect>();
-  target.addLegalOp<PrintOp>();
-
-  // Now that the conversion target has been defined, we just need to provide
-  // the set of patterns that will lower the Toy operations.
-  mlir::OwningRewritePatternList patterns;
-  patterns.insert<..., TransposeOpLowering>(&getContext());
+  ...
 
   // With the target and rewrite patterns defined, we can now attempt the
-  // conversion. The conversion will signal failure if any of our `illegal`
+  // conversion. The conversion will signal failure if any of our *illegal*
   // operations were not converted successfully.
   auto function = getFunction();
   if (mlir::failed(mlir::applyPartialConversion(function, target, patterns)))
@@ -195,29 +182,29 @@ many ways to go about this, each with their own tradeoffs:
 
 *   Generate `load` operations from the buffer
 
-One option is to generate `load` operations from the buffer type to materialize
-an instance of the value type. This allows for the definition of the `toy.print`
-operation to remain unchanged. The downside to this approach is that the
-optimizations on the `affine` dialect are limited, because the `load` will
-actually involve a full copy that is only visible *after* our optimizations have
-been performed.
+    One option is to generate `load` operations from the buffer type to materialize
+    an instance of the value type. This allows for the definition of the `toy.print`
+    operation to remain unchanged. The downside to this approach is that the
+    optimizations on the `affine` dialect are limited, because the `load` will
+    actually involve a full copy that is only visible *after* our optimizations have
+    been performed.
 
 *   Generate a new version of `toy.print` that operates on the lowered type
 
-Another option would be to have another, lowered, variant of `toy.print` that
-operates on the lowered type. The benefit of this option is that there is no
-hidden, unnecessary copy to the optimizer. The downside is that another
-operation definition is needed that may duplicate many aspects of the first.
-Defining a base class in [ODS](../../OpDefinitions.md) may simplify this, but
-you still need to treat these operations separately.
+    Another option would be to have another, lowered, variant of `toy.print` that
+    operates on the lowered type. The benefit of this option is that there is no
+    hidden, unnecessary copy to the optimizer. The downside is that another
+    operation definition is needed that may duplicate many aspects of the first.
+    Defining a base class in [ODS](../../OpDefinitions.md) may simplify this, but
+    you still need to treat these operations separately.
 
 *   Update `toy.print` to allow for operating on the lowered type
 
-A third option is to update the current definition of `toy.print` to allow for
-operating the on the lowered type. The benefit of this approach is that it is
-simple, does not introduce an additional hidden copy, and does not require
-another operation definition. The downside to this option is that it requires
-mixing abstraction levels in the `Toy` dialect.
+    A third option is to update the current definition of `toy.print` to allow for
+    operating the on the lowered type. The benefit of this approach is that it is
+    simple, does not introduce an additional hidden copy, and does not require
+    another operation definition. The downside to this option is that it requires
+    mixing abstraction levels in the `Toy` dialect.
 
 For the sake of simplicity, we will use the third option for this lowering. This
 involves updating the type constraints on the PrintOp in the operation
@@ -235,15 +222,15 @@ def PrintOp : Toy_Op<"print"> {
 
 ## Complete Toy Example
 
-Looking back at our current working example:
+Let's take a concrete example:
 
 ```mlir
 func @main() {
-  %0 = "toy.constant"() {value = dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>} : () -> tensor<2x3xf64>
-  %2 = "toy.transpose"(%0) : (tensor<2x3xf64>) -> tensor<3x2xf64>
-  %3 = "toy.mul"(%2, %2) : (tensor<3x2xf64>, tensor<3x2xf64>) -> tensor<3x2xf64>
-  "toy.print"(%3) : (tensor<3x2xf64>) -> ()
-  "toy.return"() : () -> ()
+  %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
+  %2 = toy.transpose(%0 : tensor<2x3xf64>) to tensor<3x2xf64>
+  %3 = toy.mul %2, %2 : tensor<3x2xf64>
+  toy.print %3 : tensor<3x2xf64>
+  toy.return
 }
 ```
 
@@ -281,8 +268,8 @@ func @main() {
   }
 
   // Multiply and store into the output buffer.
-  affine.for %arg0 = 0 to 2 {
-    affine.for %arg1 = 0 to 3 {
+  affine.for %arg0 = 0 to 3 {
+    affine.for %arg1 = 0 to 2 {
       %3 = affine.load %1[%arg0, %arg1] : memref<3x2xf64>
       %4 = affine.load %1[%arg0, %arg1] : memref<3x2xf64>
       %5 = mulf %3, %4 : f64
@@ -291,7 +278,7 @@ func @main() {
   }
 
   // Print the value held by the buffer.
-  "toy.print"(%0) : (memref<3x2xf64>) -> ()
+  toy.print %0 : memref<3x2xf64>
   dealloc %2 : memref<2x3xf64>
   dealloc %1 : memref<3x2xf64>
   dealloc %0 : memref<3x2xf64>
@@ -340,7 +327,7 @@ func @main() {
   }
 
   // Print the value held by the buffer.
-  "toy.print"(%0) : (memref<3x2xf64>) -> ()
+  toy.print %0 : memref<3x2xf64>
   dealloc %1 : memref<2x3xf64>
   dealloc %0 : memref<3x2xf64>
   return
@@ -349,8 +336,8 @@ func @main() {
 
 Here, we can see that a redundant allocation was removed, the two loop nests
 were fused, and some unnecessary `load`s were removed. You can build `toyc-ch5`
-and try yourself: `toyc-ch5 test/lowering.toy -emit=mlir-affine`. We can also
-check our optimizations by adding `-opt`.
+and try yourself: `toyc-ch5 test/Examples/Toy/Ch5/affine-lowering.mlir
+-emit=mlir-affine`. We can also check our optimizations by adding `-opt`.
 
 In this chapter we explored some aspects of partial lowering, with the intent to
 optimize. In the [next chapter](Ch-6.md) we will continue the discussion about

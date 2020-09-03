@@ -37,10 +37,10 @@ extern C<> c;
 D<> d;
 E<> e;
 F<> f;
-G<> g; // expected-error {{default argument of 'G' must be imported from module 'X.A' before it is required}}
-// expected-note@a.h:7 {{default argument declared here}}
-H<> h; // expected-error {{default argument of 'H' must be imported from module 'X.A' before it is required}}
-// expected-note@a.h:8 {{default argument declared here}}
+G<> g; // expected-error {{missing '#include "a.h"'; default argument of 'G' must be defined before it is used}}
+// expected-note@a.h:7 {{default argument declared here is not reachable}}
+H<> h; // expected-error {{missing '#include "a.h"'; default argument of 'H' must be defined before it is used}}
+// expected-note@a.h:8 {{default argument declared here is not reachable}}
 I<> i;
 L<> *l;
 END

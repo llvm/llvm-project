@@ -19,6 +19,22 @@ class GenericInstruction : StandardPseudoInstruction {
   let isPreISelOpcode = 1;
 }
 
+// Provide a variant of an instruction with the same operands, but
+// different instruction flags. This is intended to provide a
+// convenient way to define strict floating point variants of ordinary
+// floating point instructions.
+class ConstrainedIntruction<GenericInstruction baseInst> :
+  GenericInstruction {
+  let OutOperandList = baseInst.OutOperandList;
+  let InOperandList =  baseInst.InOperandList;
+  let isCommutable = baseInst.isCommutable;
+
+  // TODO: Do we need a better way to mark reads from FP mode than
+  // hasSideEffects?
+  let hasSideEffects = 1;
+  let mayRaiseFPException = 1;
+}
+
 // Extend the underlying scalar type of an operation, leaving the high bits
 // unspecified.
 def G_ANYEXT : GenericInstruction {
@@ -203,6 +219,12 @@ def G_DYN_STACKALLOC : GenericInstruction {
   let hasSideEffects = 1;
 }
 
+def G_FREEZE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Binary ops.
 //------------------------------------------------------------------------------
@@ -308,6 +330,22 @@ def G_ASHR : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+/// Funnel 'double' shifts take 3 operands, 2 inputs and the shift amount.
+/// fshl(X,Y,Z): (X << (Z % bitwidth)) | (Y >> (bitwidth - (Z % bitwidth)))
+def G_FSHL : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type1:$src3);
+  let hasSideEffects = 0;
+}
+
+/// Funnel 'double' shifts take 3 operands, 2 inputs and the shift amount.
+/// fshr(X,Y,Z): (X << (bitwidth - (Z % bitwidth))) | (Y >> (Z % bitwidth))
+def G_FSHR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type1:$src3);
+  let hasSideEffects = 0;
+}
+
 // Generic integer comparison.
 def G_ICMP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -336,9 +374,11 @@ def G_PTR_ADD : GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_PTR_MASK : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src, unknown:$bits);
+// Generic pointer mask. type1 should be an integer with the same
+// bitwidth as the pointer type.
+def G_PTRMASK : GenericInstruction {
+  let OutOperandList = (outs ptype0:$dst);
+  let InOperandList = (ins ptype0:$src, type1:$bits);
   let hasSideEffects = 0;
 }
 
@@ -467,6 +507,42 @@ def G_SMULH : GenericInstruction {
   let InOperandList = (ins type0:$src1, type0:$src2);
   let hasSideEffects = 0;
   let isCommutable = 1;
+}
+
+//------------------------------------------------------------------------------
+// Saturating ops
+//------------------------------------------------------------------------------
+
+// Generic saturating unsigned addition.
+def G_UADDSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+// Generic saturating signed addition.
+def G_SADDSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+// Generic saturating unsigned subtraction.
+def G_USUBSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+// Generic saturating signed subtraction.
+def G_SSUBSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -898,7 +974,7 @@ def G_FENCE : GenericInstruction {
 // register banks have been selected.
 def G_EXTRACT : GenericInstruction {
   let OutOperandList = (outs type0:$res);
-  let InOperandList = (ins type1:$src, unknown:$offset);
+  let InOperandList = (ins type1:$src, untyped_imm_0:$offset);
   let hasSideEffects = 0;
 }
 
@@ -917,7 +993,7 @@ def G_UNMERGE_VALUES : GenericInstruction {
 // Insert a smaller register into a larger one at the specified bit-index.
 def G_INSERT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src, type1:$op, unknown:$offset);
+  let InOperandList = (ins type0:$src, type1:$op, untyped_imm_0:$offset);
   let hasSideEffects = 0;
 }
 
@@ -960,6 +1036,10 @@ def G_INTRINSIC : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins unknown:$intrin, variable_ops);
   let hasSideEffects = 0;
+
+  // Conservatively assume this is convergent. If there turnes out to
+  // be a need, there should be separate convergent intrinsic opcode.s
+  let isConvergent = 1;
 }
 
 // Intrinsic with side effects.
@@ -969,6 +1049,10 @@ def G_INTRINSIC_W_SIDE_EFFECTS : GenericInstruction {
   let hasSideEffects = 1;
   let mayLoad = 1;
   let mayStore = 1;
+
+  // Conservatively assume this is convergent. If there turnes out to
+  // be a need, there should be separate convergent intrinsic opcode.s
+  let isConvergent = 1;
 }
 
 //------------------------------------------------------------------------------
@@ -1001,6 +1085,8 @@ def G_BRINDIRECT : GenericInstruction {
   let hasSideEffects = 0;
   let isBranch = 1;
   let isTerminator = 1;
+  let isBarrier = 1;
+  let isIndirectBranch = 1;
 }
 
 // Generic branch to jump table entry
@@ -1010,6 +1096,28 @@ def G_BRJT : GenericInstruction {
   let hasSideEffects = 0;
   let isBranch = 1;
   let isTerminator = 1;
+  let isBarrier = 1;
+  let isIndirectBranch = 1;
+}
+
+def G_READ_REGISTER : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$register);
+  let hasSideEffects = 1;
+
+  // Assume convergent. It's probably not worth the effort of somehow
+  // modeling convergent and nonconvergent register accesses.
+  let isConvergent = 1;
+}
+
+def G_WRITE_REGISTER : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$register, type0:$value);
+  let hasSideEffects = 1;
+
+  // Assume convergent. It's probably not worth the effort of somehow
+  // modeling convergent and nonconvergent register accesses.
+  let isConvergent = 1;
 }
 
 //------------------------------------------------------------------------------
@@ -1040,4 +1148,14 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
   let hasSideEffects = 0;
 }
 
-// TODO: Add the other generic opcodes.
+//------------------------------------------------------------------------------
+// Constrained floating point ops
+//------------------------------------------------------------------------------
+
+def G_STRICT_FADD : ConstrainedIntruction<G_FADD>;
+def G_STRICT_FSUB : ConstrainedIntruction<G_FSUB>;
+def G_STRICT_FMUL : ConstrainedIntruction<G_FMUL>;
+def G_STRICT_FDIV : ConstrainedIntruction<G_FDIV>;
+def G_STRICT_FREM : ConstrainedIntruction<G_FREM>;
+def G_STRICT_FMA : ConstrainedIntruction<G_FMA>;
+def G_STRICT_FSQRT : ConstrainedIntruction<G_FSQRT>;

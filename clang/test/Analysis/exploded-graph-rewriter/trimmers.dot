@@ -13,9 +13,6 @@
 // RUN: %exploded_graph_rewriter --to 4 -s %s \
 // RUN:     | FileCheck %s -check-prefixes=ONE,TWO,NOTHREE,FOUR
 
-// FIXME: Substitution doesn't seem to work on Windows.
-// UNSUPPORTED: system-windows
-
 Node0x1 [shape=record,label=
  "{{ "state_id": 0, "program_state": null, "program_points": [
        {

@@ -1,4 +1,4 @@
-# UNSUPPORTED: system-windows, system-freebsd
+# UNSUPPORTED: system-freebsd
 
 # This tests the replaying with multiple targets.
 
@@ -10,10 +10,10 @@
 
 # CHECK: Process [[TARGET0:[0-9]+]] stopped
 # CHECK: stop reason = breakpoint 1.1
-# CHECK: simple.c:12:5
+# CHECK: simple.c:4:5
 # CHECK: Process [[TARGET1:[0-9]+]] stopped
 # CHECK: stop reason = breakpoint 1.1
-# CHECK: simple.c:16:5
+# CHECK: simple.c:8:5
 # CHECK: Process [[TARGET0]] resuming
 # CHECK: Process [[TARGET0]] exited
 # CHECK: Process [[TARGET1]] resuming

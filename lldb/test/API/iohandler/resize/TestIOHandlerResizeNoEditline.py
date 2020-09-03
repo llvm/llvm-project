@@ -8,6 +8,8 @@ class TestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @no_debug_info_test
+    @skipIfReproducer
+    @skipIfWindows
     def test_resize_no_editline(self):
         """ Tests terminal resizing if the editline isn't used. """
         dbg = lldb.SBDebugger.Create(False)

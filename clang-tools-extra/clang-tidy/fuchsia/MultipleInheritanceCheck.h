@@ -15,7 +15,7 @@ namespace clang {
 namespace tidy {
 namespace fuchsia {
 
-/// Mulitple implementation inheritance is discouraged.
+/// Multiple implementation inheritance is discouraged.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-multiple-inheritance.html
@@ -23,6 +23,9 @@ class MultipleInheritanceCheck : public ClangTidyCheck {
 public:
   MultipleInheritanceCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 

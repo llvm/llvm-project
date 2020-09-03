@@ -47,9 +47,9 @@ define void @add3i32_2(%i32vec3*  sret %ret, %i32vec3* %ap, %i32vec3* %bp)  {
 ; X86-NEXT:    pinsrd $1, 4(%ecx), %xmm1
 ; X86-NEXT:    pinsrd $2, 8(%ecx), %xmm1
 ; X86-NEXT:    paddd %xmm0, %xmm1
+; X86-NEXT:    movd %xmm1, (%eax)
 ; X86-NEXT:    pextrd $1, %xmm1, 4(%eax)
 ; X86-NEXT:    pextrd $2, %xmm1, 8(%eax)
-; X86-NEXT:    movd %xmm1, (%eax)
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: add3i32_2:

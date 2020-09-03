@@ -24,6 +24,15 @@ def verbose: F<"verbose">,
   HelpText<"Enable verbose mode.">,
   Group<grp_general>;
 
+def statistics: F<"statistics">,
+  HelpText<"Print statistics about the contribution of each object file to "
+           "the linked debug info. This prints a table after linking with the "
+           "object file name, the size of the debug info in the object file "
+           "(in bytes) and the size contributed (in bytes) to the linked dSYM. "
+           "The table is sorted by the output size listing the object files "
+           "with the largest contribution first.">,
+  Group<grp_general>;
+
 def verify: F<"verify">,
   HelpText<"Run the DWARF verifier on the linked DWARF debug info.">,
   Group<grp_general>;
@@ -44,7 +53,7 @@ def dump_debug_map: F<"dump-debug-map">,
   HelpText<"Parse and dump the debug map to standard output. Not DWARF link will take place.">,
   Group<grp_general>;
 
-def yaml_input: F<"y">,
+def yaml_input: Flag<["-", "--"], "y">,
   HelpText<"Treat the input file is a YAML debug map rather than a binary.">,
   Group<grp_general>;
 
@@ -52,7 +61,7 @@ def papertrail: F<"papertrail">,
   HelpText<"Embed warnings in the linked DWARF debug info.">,
   Group<grp_general>;
 
-def assembly: F<"S">,
+def assembly: Flag<["-", "--"], "S">,
   HelpText<"Output textual assembly instead of a binary dSYM companion file.">,
   Group<grp_general>;
 
@@ -93,16 +102,17 @@ def: Flag<["-"], "u">,
   HelpText<"Alias for --update">,
   Group<grp_general>;
 
-def output: Separate<["--", "-"], "o">,
+def output: Separate<["-", "--"], "o">,
   MetaVarName<"<filename>">,
   HelpText<"Specify the output file. Defaults to <input file>.dwarf">,
   Group<grp_general>;
 def: Separate<["--", "-"], "out">,
+  MetaVarName<"<filename>">,
   Alias<output>,
-  HelpText<"Alias for --o">,
+  HelpText<"Alias for -o">,
   Group<grp_general>;
 def: Joined<["--", "-"], "out=">, Alias<output>;
-def: Joined<["--", "-"], "o=">, Alias<output>;
+def: Joined<["-", "--"], "o=">, Alias<output>;
 
 def oso_prepend_path: Separate<["--", "-"], "oso-prepend-path">,
   MetaVarName<"<path>">,
@@ -150,9 +160,19 @@ def threads: Separate<["--", "-"], "num-threads">,
   HelpText<"Specifies the maximum number of simultaneous threads to use when linking multiple architectures.">,
   Group<grp_general>;
 def: Separate<["-"], "j">,
-  Alias<threads>,
+  MetaVarName<"<threads>">,
   HelpText<"Alias for --num-threads">,
   Group<grp_general>;
+
+def gen_reproducer: F<"gen-reproducer">,
+  HelpText<"Generate a reproducer consisting of the input object files.">,
+  Group<grp_general>;
+
+def use_reproducer: Separate<["--", "-"], "use-reproducer">,
+  MetaVarName<"<path>">,
+  HelpText<"Use the object files from the given reproducer path.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "use-reproducer=">, Alias<use_reproducer>;
 
 def remarks_prepend_path: Separate<["--", "-"], "remarks-prepend-path">,
   MetaVarName<"<path>">,

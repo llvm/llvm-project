@@ -5,7 +5,7 @@
 // RUN: cp "%S/Inputs/fixed-header.h" "%t/Include/"
 // -I flag is relative to %t (where compile_flags is), not Src/.
 // RUN: echo '-IInclude/' >> %t/compile_flags.txt
-// RUN: echo "-Dklazz=class" >> %t/compile_flags.txt
+// RUN: echo "  -Dklazz=class   " >> %t/compile_flags.txt
 // RUN: echo '-std=c++11' >> %t/compile_flags.txt
 // RUN: clang-check "%t/Src/test.cpp" 2>&1
 // RUN: echo > %t/compile_flags.txt

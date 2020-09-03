@@ -148,13 +148,6 @@ bool LowerSwitch::runOnFunction(Function &F) {
   LazyValueInfo *LVI = &getAnalysis<LazyValueInfoWrapperPass>().getLVI();
   auto *ACT = getAnalysisIfAvailable<AssumptionCacheTracker>();
   AssumptionCache *AC = ACT ? &ACT->getAssumptionCache(F) : nullptr;
-  // Prevent LazyValueInfo from using the DominatorTree as LowerSwitch does not
-  // preserve it and it becomes stale (when available) pretty much immediately.
-  // Currently the DominatorTree is only used by LowerSwitch indirectly via LVI
-  // and computeKnownBits to refine isValidAssumeForContext's results. Given
-  // that the latter can handle some of the simple cases w/o a DominatorTree,
-  // it's easier to refrain from using the tree than to keep it up to date.
-  LVI->disableDT();
 
   bool Changed = false;
   SmallPtrSet<BasicBlock*, 8> DeleteList;

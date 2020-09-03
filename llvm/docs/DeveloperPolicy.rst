@@ -89,7 +89,9 @@ to read it as possible.  As such, we recommend that you:
    patches may not apply correctly if the underlying code changes between the
    time the patch was created and the time it is applied.
 
-#. Patches should be made with ``git format-patch``, or similar. If you use a
+#. Patches should be made with ``git format-patch``, or similar (see special
+   commands for `Requesting Phabricator review via the web interface
+   <Phabricator.html#phabricator-request-review-web>`_ ). If you use a
    different tool, make sure it uses the ``diff -u`` format and that it
    doesn't contain clutter which makes it hard to read.
 
@@ -121,49 +123,9 @@ licensing terms and may result in your contribution being excluded.
 Code Reviews
 ------------
 
-LLVM has a code review policy. Code review is one way to increase the quality of
-software. We generally follow these policies:
-
-#. All developers are required to have significant changes reviewed before they
-   are committed to the repository.
-
-#. Code reviews are conducted by email on the relevant project's commit mailing
-   list, or alternatively on the project's development list or bug tracker.
-
-#. Code can be reviewed either before it is committed or after.  We expect major
-   changes to be reviewed before being committed, but smaller changes (or
-   changes where the developer owns the component) can be reviewed after commit.
-
-#. The developer responsible for a code change is also responsible for making
-   all necessary review-related changes.
-
-#. Code review can be an iterative process, which continues until the patch is
-   ready to be committed. Specifically, once a patch is sent out for review, it
-   needs an explicit "looks good" before it is submitted. Do not assume silent
-   approval, or request active objections to the patch with a deadline.
-
-Sometimes code reviews will take longer than you would hope for, especially for
-larger features. Accepted ways to speed up review times for your patches are:
-
-* Review other people's patches. If you help out, everybody will be more
-  willing to do the same for you; goodwill is our currency.
-* Ping the patch. If it is urgent, provide reasons why it is important to you to
-  get this patch landed and ping it every couple of days. If it is
-  not urgent, the common courtesy ping rate is one week. Remember that you're
-  asking for valuable time from other professional developers.
-* Ask for help on IRC. Developers on IRC will be able to either help you
-  directly, or tell you who might be a good reviewer.
-* Split your patch into multiple smaller patches that build on each other. The
-  smaller your patch, the higher the probability that somebody will take a quick
-  look at it.
-
-Developers should participate in code reviews as both reviewers and
-reviewees. If someone is kind enough to review your code, you should return the
-favor for someone else.  Note that anyone is welcome to review and give feedback
-on a patch, but only people with Subversion write access can approve it.
-
-There is a web based code review tool that can optionally be used
-for code reviews. See :doc:`Phabricator`.
+LLVM has a code-review policy. Code review is one way to increase the quality of
+software. Please see :doc:`CodeReview` for more information on LLVM's code-review
+process.
 
 .. _code owners:
 
@@ -292,8 +254,15 @@ all there is to the change.
 
 Below are some guidelines about the format of the message itself:
 
-* Separate the commit message into title, body and, if you're not the original
-  author, a "Patch by" attribution line (see below).
+* Separate the commit message into title and body separated by a blank line.
+
+* If you're not the original author, ensure the 'Author' property of the commit is
+  set to the original author and the 'Committer' property is set to yourself.
+  You can use a command similar to
+  ``git commit --amend --author="John Doe <jdoe@llvm.org>`` to correct the
+  author property if it is incorrect. See `Attribution of Changes`_ for more
+  information including the method we used for attribution before the project
+  migrated to git.
 
 * The title should be concise. Because all commits are emailed to the list with
   the first line as the subject, long titles are frowned upon.  Short titles
@@ -314,18 +283,13 @@ Below are some guidelines about the format of the message itself:
 
 * If the patch fixes a bug in bugzilla, please include the PR# in the message.
 
-* `Attribution of Changes`_ should be in a separate line, after the end of
-  the body, as simple as "Patch by John Doe.". This is how we officially
-  handle attribution, and there are automated processes that rely on this
-  format.
-
 * Text formatting and spelling should follow the same rules as documentation
   and in-code comments, ex. capitalization, full stop, etc.
 
 * If the commit is a bug fix on top of another recently committed patch, or a
-  revert or reapply of a patch, include the svn revision number of the prior
-  related commit. This could be as simple as "Revert rNNNN because it caused
-  PR#".
+  revert or reapply of a patch, include the git commit hash of the prior
+  related commit. This could be as simple as "Revert commit NNNN because it
+  caused PR#".
 
 For minor violations of these recommendations, the community normally favors
 reminding the contributor of this policy over reverting. Minor corrections and
@@ -340,16 +304,20 @@ We grant commit access to contributors with a track record of submitting high
 quality patches.  If you would like commit access, please send an email to
 `Chris <mailto:clattner@llvm.org>`_ with your GitHub username.
 
+Prior to obtaining commit access, it is common practice to request that
+someone with commit access commits on your behalf. When doing so, please
+provide the name and email address you would like to use in the Author
+property of the commit.
+
 Your first commit to a repository may require the autogenerated email to be
 approved by a moderator of the mailing list.
 This is normal and will be done when the mailing list owner has time.
 
 If you have recently been granted commit access, these policies apply:
 
-#. You are granted *commit-after-approval* to all parts of LLVM.  To get
-   approval, submit a `patch`_ to `llvm-commits
-   <http://lists.llvm.org/mailman/listinfo/llvm-commits>`_. When approved,
-   you may commit it yourself.
+#. You are granted *commit-after-approval* to all parts of LLVM. For
+   information on how to get approval for a patch, please see :doc:`CodeReview`.
+   When approved, you may commit it yourself.
 
 #. You are allowed to commit patches without approval which you think are
    obvious. This is clearly a subjective decision --- we simply expect you to
@@ -377,8 +345,8 @@ after they are committed, depending on the nature of the change).  You are
 encouraged to review other peoples' patches as well, but you aren't required
 to do so.
 
-Current Contributors - Transfering from SVN
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current Contributors - Transferring from SVN
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you had commit access to SVN and would like to request commit access to
 GitHub, please email `llvm-admin <mailto:llvm-admin@lists.llvm.org>`_ with your
 SVN username and GitHub username.
@@ -489,6 +457,11 @@ etc.). The author should first submit them to the relevant project's commit
 list, development list, or LLVM bug tracker component. If someone sends you
 a patch privately, encourage them to submit it to the appropriate list first.
 
+Our previous version control system (subversion) did not distinguish between the
+author and the committer like git does. As such, older commits used a different
+attribution mechanism. The previous method was to include "Patch by John Doe."
+in a separate line of the commit message and there are automated processes that
+rely on this format.
 
 .. _IR backwards compatibility:
 
@@ -548,19 +521,86 @@ C API Changes
   release notes so that it's clear to external users who do not follow the
   project how the C API is changing and evolving.
 
-New Targets
------------
+.. _toolchain:
+
+Updating Toolchain Requirements
+-------------------------------
+
+We intend to require newer toolchains as time goes by. This means LLVM's
+codebase can use newer versions of C++ as they get standardized. Requiring newer
+toolchains to build LLVM can be painful for those building LLVM; therefore, it
+will only be done through the following process:
+
+  * It is a general goal to support LLVM and GCC versions from the last 3 years
+    at a minimum. This time-based guideline is not strict: we may support much
+    older compilers, or decide to support fewer versions.
+
+  * An RFC is sent to the `llvm-dev mailing list`_
+
+    - Detail upsides of the version increase (e.g. which newer C++ language or
+      library features LLVM should use; avoid miscompiles in particular compiler
+      versions, etc).
+    - Detail downsides on important platforms (e.g. Ubuntu LTS status).
+
+  * Once the RFC reaches consensus, update the CMake toolchain version checks as
+    well as the :doc:`getting started<GettingStarted>` guide.  This provides a
+    softer transition path for developers compiling LLVM, because the
+    error can be turned into a warning using a CMake flag. This is an important
+    step: LLVM still doesn't have code which requires the new toolchains, but it
+    soon will. If you compile LLVM but don't read the mailing list, we should
+    tell you!
+
+  * Ensure that at least one LLVM release has had this soft-error. Not all
+    developers compile LLVM top-of-tree. These release-bound developers should
+    also be told about upcoming changes.
+
+  * Turn the soft-error into a hard-error after said LLVM release has branched.
+
+  * Update the :doc:`coding standards<CodingStandards>` to allow the new
+    features we've explicitly approved in the RFC.
+
+  * Start using the new features in LLVM's codebase.
+
+Here's a `sample RFC
+<http://lists.llvm.org/pipermail/llvm-dev/2019-January/129452.html>`_ and the
+`corresponding change <https://reviews.llvm.org/D57264>`_.
+
+.. _new-llvm-components:
+
+Introducing New Components into LLVM
+====================================
+
+The LLVM community is a vibrant and exciting place to be, and we look to be
+inclusive of new projects and foster new communities, and increase
+collaboration across industry and academia.
+
+That said, we need to strike a balance between being inclusive of new ideas and
+people and the cost of ongoing maintenance that new code requires.  As such, we
+have the following general policies for introducing major new components into
+the LLVM world.  However, this is really only intended to cover common cases
+that we have seen arise: different situations are different, and we are open
+to discussing unusual cases as well - just start an RFC thread on the
+`llvm-dev mailing list`_.
+
+Adding a New Target
+-------------------
 
 LLVM is very receptive to new targets, even experimental ones, but a number of
 problems can appear when adding new large portions of code, and back-ends are
-normally added in bulk.  We have found that landing large pieces of new code 
-and then trying to fix emergent problems in-tree is problematic for a variety 
+normally added in bulk.  We have found that landing large pieces of new code
+and then trying to fix emergent problems in-tree is problematic for a variety
 of reasons.
 
 For these reasons, new targets are *always* added as *experimental* until
-they can be proven stable, and later moved to non-experimental. The difference
-between both classes is that experimental targets are not built by default
-(need to be added to -DLLVM_TARGETS_TO_BUILD at CMake time).
+they can be proven stable, and later moved to non-experimental. The differences
+between both classes are:
+
+* Experimental targets are not built by default (they need to be explicitly
+  enabled at CMake time).
+
+* Test failures, bugs, and build breakages that only appear when the
+  experimental target is enabled, caused by changes unrelated to the target, are
+  the responsibility of the community behind the target to fix.
 
 The basic rules for a back-end to be upstreamed in **experimental** mode are:
 
@@ -587,8 +627,8 @@ The basic rules for a back-end to be upstreamed in **experimental** mode are:
 * The target should have either reasonable documentation on how it
   works (ISA, ABI, etc.) or a publicly available simulator/hardware
   (either free or cheap enough) - preferably both.  This allows
-  developers to validate assumptions, understand constraints and review code 
-  that can affect the target. 
+  developers to validate assumptions, understand constraints and review code
+  that can affect the target.
 
 In addition, the rules for a back-end to be promoted to **official** are:
 
@@ -627,49 +667,110 @@ In essences, these rules are necessary for targets to gain and retain their
 status, but also markers to define bit-rot, and will be used to clean up the
 tree from unmaintained targets.
 
-.. _toolchain:
+Adding an Established Project To the LLVM Monorepo
+--------------------------------------------------
 
-Updating Toolchain Requirements
--------------------------------
+The `LLVM monorepo <https://github.com/llvm/llvm-project>`_ is the centerpoint
+of development in the LLVM world, and has all of the primary LLVM components,
+including the LLVM optimizer and code generators, Clang, LLDB, etc.  `Monorepos
+in general <https://en.wikipedia.org/wiki/Monorepo>`_ are great because they
+allow atomic commits to the project, simplify CI, and make it easier for
+subcommunities to collaborate.
 
-We intend to require newer toolchains as time goes by. This means LLVM's
-codebase can use newer versions of C++ as they get standardized. Requiring newer
-toolchains to build LLVM can be painful for those building LLVM; therefore, it
-will only be done through the following process:
+That said, the burden to add things to the LLVM monorepo needs to be very high -
+code that is added to this repository is checked out by everyone in the
+community.  As such, we hold subprojects to a high bar similar to "official
+targets", they:
 
-  * Generally, try to support LLVM and GCC versions from the last 3 years at a
-    minimum. This time-based guideline is not strict: we may support much older
-    compilers, or decide to support fewer versions.
+ * Must be generally aligned with the mission of the LLVM project to advance
+   compilers, languages, tools, runtimes, etc.
+ * Must conform to all of the policies laid out in this developer policy
+   document, including license, patent, coding standards, and code of conduct.
+ * Must have an active community that maintains the code, including established
+   code owners.
+ * Should have reasonable documentation about how it works, including a high
+   quality README file.
+ * Should have CI to catch breakage within the project itself or due to
+   underlying LLVM dependencies.
+ * Should have code free of issues the community finds contentious, or be on a
+   clear path to resolving them.
+ * Must be proposed through the LLVM RFC process, and have its addition approved
+   by the LLVM community - this ultimately mediates the resolution of the
+   "should" concerns above.
 
-  * An RFC is sent to the `llvm-dev mailing list <http://lists.llvm.org/mailman/listinfo/llvm-dev>`_
+If you have a project that you think would make sense to add to the LLVM
+monorepo, please start an RFC thread on the `llvm-dev mailing list`_ to kick off
+the discussion.  This process can take some time and iteration - please don’t
+be discouraged or intimidated by that!
 
-    - Detail upsides of the version increase (e.g. which newer C++ language or
-      library features LLVM should use; avoid miscompiles in particular compiler
-      versions, etc).
-    - Detail downsides on important platforms (e.g. Ubuntu LTS status).
+If you have an earlier stage project that you think is aligned with LLVM, please
+see the "Incubating New Projects" section.
 
-  * Once the RFC reaches consensus, update the CMake toolchain version checks as
-    well as the :doc:`getting started<GettingStarted>` guide. We want to
-    soft-error when developers compile LLVM. We say "soft-error" because the
-    error can be turned into a warning using a CMake flag. This is an important
-    step: LLVM still doesn't have code which requires the new toolchains, but it
-    soon will. If you compile LLVM but don't read the mailing list, we should
-    tell you!
+Incubating New Projects
+-----------------------
 
-  * Ensure that at least one LLVM release has had this soft-error. Not all
-    developers compile LLVM top-of-tree. These release-bound developers should
-    also be told about upcoming changes.
+The burden to add a new project to the LLVM monorepo is intentionally very high,
+but that can have a chilling effect on new and innovative projects.  To help
+foster these sorts of projects, LLVM supports an "incubator" process that is
+much easier to get started with.  It provides space for potentially valuable,
+new top-level and sub-projects to reach a critical mass before they have enough
+code to prove their utility and grow a community.  This also allows
+collaboration between teams that already have permissions to make contributions
+to projects under the LLVM umbrella.
 
-  * Turn the soft-error into a hard-error after said LLVM release has branched.
+Projects which can be considered for the LLVM incubator meet the following
+criteria:
 
-  * Update the :doc:`coding standards<CodingStandards>` to allow the new
-    features we've explicitly approved in the RFC.
+ * Must be generally aligned with the mission of the LLVM project to advance
+   compilers, languages, tools, runtimes, etc.
+ * Must conform to the license, patent, and code of conduct policies laid out
+   in this developer policy document.
+ * Must have a documented charter and development plan, e.g. in the form of a
+   README file, mission statement, and/or manifesto.
+ * Should conform to coding standards, incremental development process, and
+   other expectations.
+ * Should have a sense of the community that it hopes to eventually foster, and
+   there should be interest from members with different affiliations /
+   organizations.
+ * Should have a feasible path to eventually graduate as a dedicated top-level
+   or sub-project within the `LLVM monorepo
+   <https://github.com/llvm/llvm-project>`_.
+ * Should include a notice (e.g. in the project README or web page) that the
+   project is in ‘incubation status’ and is not included in LLVM releases (see
+   suggested wording below).
+ * Must be proposed through the LLVM RFC process, and have its addition
+   approved by the LLVM community - this ultimately mediates the resolution of
+   the "should" concerns above.
 
-  * Start using the new features in LLVM's codebase.
+That said, the project need not have any code to get started, and need not have
+an established community at all!  Furthermore, incubating projects may pass
+through transient states that violate the "Should" guidelines above, or would
+otherwise make them unsuitable for direct inclusion in the monorepo (e.g.
+dependencies that have not yet been factored appropriately, leveraging
+experimental components or APIs that are not yet upstream, etc).
 
-Here's a `sample RFC
-<http://lists.llvm.org/pipermail/llvm-dev/2019-January/129452.html>`_ and the
-`corresponding change <https://reviews.llvm.org/D57264>`_.
+When approved, the llvm-admin group can grant the new project:
+ * A new repository in the LLVM Github Organization - but not the LLVM monorepo.
+ * New mailing list, discourse forum, and/or discord chat hosted with other LLVM
+   forums.
+ * Other infrastructure integration can be discussed on a case-by-case basis.
+
+Graduation to the mono-repo would follow existing processes and standards for
+becoming a first-class part of the monorepo.  Similarly, an incubating project
+may be eventually retired, but no process has been established for that yet.  If
+and when this comes up, please start an RFC discussion on llvm-dev.
+
+This process is very new - please expect the details to change, it is always
+safe to ask on the `llvm-dev mailing list`_ about this.
+
+Suggested disclaimer for the project README and the main project web page:
+
+::
+
+   This project is participating in the LLVM Incubator process: as such, it is
+   not part of any official LLVM release.  While incubation status is not
+   necessarily a reflection of the completeness or stability of the code, it
+   does indicate that the project is not yet endorsed as a component of LLVM.
 
 .. _copyright-license-patents:
 
@@ -732,7 +833,7 @@ OpenMP, etc), Polly, and all other subprojects.  There are a few exceptions:
   is used by LLVM.
 * Some subprojects are impractical or uninteresting to relicense (e.g. llvm-gcc
   and dragonegg). These will be split off from the LLVM project (e.g. to
-  separate Github projects), allowing interested people to continue their
+  separate GitHub projects), allowing interested people to continue their
   development elsewhere.
 
 To relicense LLVM, we will be seeking approval from all of the copyright holders
@@ -863,7 +964,7 @@ holds though)::
 
    Q2: If at any time after my contribution, I am able to license other patent
    claims that would have been subject to Apache's Grant of Patent License if
-   they were licenseable by me at the time of my contribution, do those other
+   they were licensable by me at the time of my contribution, do those other
    claims become subject to the Grant of Patent License?
 
    A2: Yes.
@@ -931,3 +1032,5 @@ applications to the binary redistribution clause. This also means that it is ok
 to move code from (e.g.)  libc++ to the LLVM core without concern, but that code
 cannot be moved from the LLVM core to libc++ without the copyright owner's
 permission.
+
+.. _llvm-dev mailing list: http://lists.llvm.org/mailman/listinfo/llvm-dev

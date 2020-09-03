@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -gvn -dce -S | FileCheck %s
+; RUN: opt < %s -basic-aa -gvn -dce -S | FileCheck %s
 
         %struct.A = type { i32 }
         %struct.B = type { %struct.A }

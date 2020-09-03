@@ -52,7 +52,7 @@ private:
   static const scudo::u32 Size = 64U;
   typedef scudo::u64 T;
   scudo::HybridMutex &Mutex;
-  ALIGNED(SCUDO_CACHE_LINE_SIZE) T Data[Size];
+  alignas(SCUDO_CACHE_LINE_SIZE) T Data[Size];
 };
 
 const scudo::u32 NumberOfThreads = 8;

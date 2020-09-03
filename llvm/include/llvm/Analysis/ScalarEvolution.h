@@ -31,7 +31,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -61,6 +60,8 @@ class DominatorTree;
 class GEPOperator;
 class Instruction;
 class LLVMContext;
+class Loop;
+class LoopInfo;
 class raw_ostream;
 class ScalarEvolution;
 class SCEVAddRecExpr;
@@ -804,7 +805,7 @@ public:
   ///
   /// We don't have a way to invalidate per-loop dispositions. Clear and
   /// recompute is simpler.
-  void forgetLoopDispositions(const Loop *L) { LoopDispositions.clear(); }
+  void forgetLoopDispositions(const Loop *L);
 
   /// Determine the minimum number of zero bits that S is guaranteed to end in
   /// (at every loop iteration).  It is, at the same time, the minimum number
@@ -997,6 +998,19 @@ public:
   void computeAccessFunctions(const SCEV *Expr,
                               SmallVectorImpl<const SCEV *> &Subscripts,
                               SmallVectorImpl<const SCEV *> &Sizes);
+
+  /// Gathers the individual index expressions from a GEP instruction.
+  ///
+  /// This function optimistically assumes the GEP references into a fixed size
+  /// array. If this is actually true, this function returns a list of array
+  /// subscript expressions in \p Subscripts and a list of integers describing
+  /// the size of the individual array dimensions in \p Sizes. Both lists have
+  /// either equal length or the size list is one element shorter in case there
+  /// is no known size available for the outermost array dimension. Returns true
+  /// if successful and false otherwise.
+  bool getIndexExpressionsFromGEP(const GetElementPtrInst *GEP,
+                                  SmallVectorImpl<const SCEV *> &Subscripts,
+                                  SmallVectorImpl<int> &Sizes);
 
   /// Split this SCEVAddRecExpr into two vectors of SCEVs representing the
   /// subscripts and sizes of an array access.
@@ -1693,7 +1707,7 @@ private:
                                       const SCEV *FoundRHS);
 
   /// Return true if the condition denoted by \p LHS \p Pred \p RHS is implied
-  /// by a call to \c @llvm.experimental.guard in \p BB.
+  /// by a call to @llvm.experimental.guard in \p BB.
   bool isImpliedViaGuard(BasicBlock *BB, ICmpInst::Predicate Pred,
                          const SCEV *LHS, const SCEV *RHS);
 
@@ -1886,7 +1900,7 @@ private:
   /// otherwise.  The second component is the `FoldingSetNodeID` that was
   /// constructed to look up the SCEV and the third component is the insertion
   /// point.
-  std::tuple<const SCEV *, FoldingSetNodeID, void *>
+  std::tuple<SCEV *, FoldingSetNodeID, void *>
   findExistingSCEVInCache(int SCEVType, ArrayRef<const SCEV *> Ops);
 
   FoldingSet<SCEV> UniqueSCEVs;

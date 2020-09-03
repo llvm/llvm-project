@@ -109,8 +109,10 @@ extern "C" {
                                            __sanitizer::u32*);
   SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
   void __sanitizer_cov_8bit_counters_init();
-  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-  void __sanitizer_cov_pcs_init();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
+  __sanitizer_cov_bool_flag_init();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
+  __sanitizer_cov_pcs_init();
 } // extern "C"
 
 #endif  // SANITIZER_INTERFACE_INTERNAL_H

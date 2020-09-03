@@ -15,7 +15,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
-// DISASM:      _start:
+// DISASM:      <_start>:
 // DISASM-NEXT:   jmp {{.*}} <__wrap_foo@plt>
 // DISASM-NEXT:   jmp {{.*}} <__wrap_foo@plt>
 // DISASM-NEXT:   jmp {{.*}} <_start@plt>

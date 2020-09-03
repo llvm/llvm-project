@@ -4,7 +4,7 @@
 # Verify the following:
 #
 # - We can fold compares into selects.
-# - This only happens when the result of the compare is only used by the select.
+# - This only happens when the result of the compare is only used by selects.
 #
 # Also verify that, for now:
 #
@@ -45,6 +45,41 @@ body:             |
     %4:fpr(s32) = G_SELECT %6(s1), %2, %1
     $w1 = COPY %5(s32)
     $s0 = COPY %4(s32)
+    RET_ReallyLR implicit $s0
+
+...
+---
+name:            fcmp_more_than_one_select
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $s0, $s1, $w1
+
+    ; CHECK-LABEL: name: fcmp_more_than_one_select
+    ; CHECK: liveins: $s0, $s1, $w1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
+    ; CHECK: [[FMOVS0_:%[0-9]+]]:fpr32 = FMOVS0
+    ; CHECK: FCMPSri [[COPY]], implicit-def $nzcv
+    ; CHECK: [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[FMOVS0_]], [[COPY1]], 0, implicit $nzcv
+    ; CHECK: FCMPSri [[COPY]], implicit-def $nzcv
+    ; CHECK: [[FCSELSrrr1:%[0-9]+]]:fpr32 = FCSELSrrr [[COPY1]], [[FMOVS0_]], 0, implicit $nzcv
+    ; CHECK: $s0 = COPY [[FCSELSrrr]]
+    ; CHECK: $s1 = COPY [[FCSELSrrr1]]
+    ; CHECK: RET_ReallyLR implicit $s0
+    %0:fpr(s32) = COPY $s0
+    %1:fpr(s32) = COPY $s1
+    %2:fpr(s32) = G_FCONSTANT float 0.000000e+00
+    %5:gpr(s32) = G_FCMP floatpred(oeq), %0(s32), %2
+    %3:gpr(s1) = G_TRUNC %5(s32)
+    %6:fpr(s1) = COPY %3(s1)
+    %4:fpr(s32) = G_SELECT %6(s1), %2, %1
+    %7:fpr(s32) = G_SELECT %6(s1), %1, %2
+    $s0 = COPY %4(s32)
+    $s1 = COPY %7(s32)
     RET_ReallyLR implicit $s0
 
 ...

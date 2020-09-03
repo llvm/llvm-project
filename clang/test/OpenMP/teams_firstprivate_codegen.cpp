@@ -100,7 +100,7 @@ int main() {
   #pragma omp target
   #pragma omp teams firstprivate(g, sivar)
   {
-    // LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable(4) [[G_IN:%.+]], i{{64|32}} {{.*}}[[SIVAR_IN:%.+]])
+    // LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) [[G_IN:%.+]], i{{64|32}} {{.*}}[[SIVAR_IN:%.+]])
     // LAMBDA: store i{{[0-9]+}}* [[G_IN]], i{{[0-9]+}}** [[G_ADDR:%.+]],
     // LAMBDA: store i{{[0-9]+}} [[SIVAR_IN]], i{{[0-9]+}}* [[SIVAR_ADDR:%.+]],
     // LAMBDA: [[G_ADDR_VAL:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G_ADDR]],
@@ -157,7 +157,7 @@ int main() {
 // CHECK: call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_teams(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [2 x i32]*, i{{32|64}}, [2 x [[S_FLOAT_TY]]]*, [[S_FLOAT_TY]]*, i{{[0-9]+}})* [[OMP_OUTLINED:@.+]] to void
 // CHECK: ret
 //
-// CHECK: define internal {{.*}}void [[OMP_OUTLINED]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, i{{32|64}} {{.*}}%{{.+}}, [2 x [[S_FLOAT_TY]]]* dereferenceable(8) %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}}, i{{32|64}} {{.*}}[[SIVAR:%.+]])
+// CHECK: define internal {{.*}}void [[OMP_OUTLINED]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [2 x i32]* nonnull align 4 dereferenceable(8) %{{.+}}, i{{32|64}} {{.*}}%{{.+}}, [2 x [[S_FLOAT_TY]]]* nonnull align 4 dereferenceable(8) %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}}, i{{32|64}} {{.*}}[[SIVAR:%.+]])
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[SIVAR7_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
@@ -208,7 +208,7 @@ int main() {
 // CHECK: ret
 
 //
-// CHECK: define internal {{.*}}void [[OMP_OUTLINED_2]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, i32* dereferenceable(4) %{{.+}}, [2 x [[S_INT_TY]]]* dereferenceable(8) %{{.+}}, [[S_INT_TY]]* dereferenceable(4) %{{.+}})
+// CHECK: define internal {{.*}}void [[OMP_OUTLINED_2]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [2 x i32]* nonnull align 4 dereferenceable(8) %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}}, [2 x [[S_INT_TY]]]* nonnull align 4 dereferenceable(8) %{{.+}}, [[S_INT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}}, align 128
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}], align 128
 // CHECK: [[S_ARR_PRIV:%.+]] = alloca [2 x [[S_INT_TY]]], align 128
@@ -246,7 +246,7 @@ int main() {
 // CHECK: call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_teams(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i{{[0-9]+}}*)* [[OMP_OUTLINED_3:@.+]] to void
 // CHECK: ret
 
-// CHECK: define internal {{.*}}void [[OMP_OUTLINED_3]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32* dereferenceable(4) [[T_VAR:%.+]])
+// CHECK: define internal {{.*}}void [[OMP_OUTLINED_3]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) [[T_VAR:%.+]])
 // CHECK: [[T_VAR_LOC:%.+]] = alloca i{{[0-9]+}},
 // CHECK: store i{{[0-9]+}}* [[T_VAR]], i{{[0-9]+}}** [[T_VAR_ADDR:%.+]],
 // CHECK: [[T_VAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[T_VAR_ADDR]],

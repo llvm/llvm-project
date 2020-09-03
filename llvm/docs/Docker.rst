@@ -51,7 +51,7 @@ Overview
 The ``llvm/utils/docker`` folder contains Dockerfiles and simple bash scripts to
 serve as a basis for anyone who wants to create their own Docker image with
 LLVM components, compiled from sources. The sources are checked out from the
-upstream svn repository when building the image.
+upstream git repository when building the image.
 
 The resulting image contains only the requested LLVM components and a few extra
 packages to make the image minimally useful for C++ development, e.g. libstdc++
@@ -68,7 +68,7 @@ Usage
 =====
 The ``llvm/utils/build_docker_image.sh`` script provides a rather high degree of
 control on how to run the build. It allows you to specify the projects to
-checkout from svn and provide a list of CMake arguments to use during when
+checkout from git and provide a list of CMake arguments to use during when
 building LLVM inside docker container.
 
 Here's a very simple example of getting a docker image with clang binary,

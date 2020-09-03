@@ -101,7 +101,14 @@ def unify_arguments(args):
   args = re.sub(r'extern const\s+(.*)&', r'\1 ', args)
   args = re.sub(r'&', r' ', args)
   args = re.sub(r'(^|\s)M\d?(\s)', r'\1Matcher<*>\2', args)
+  args = re.sub(r'BindableMatcher', r'Matcher', args)
+  args = re.sub(r'const Matcher', r'Matcher', args)
   return args
+
+def unify_type(result_type):
+  """Gets rid of anything the user doesn't care about in the type name."""
+  result_type = re.sub(r'^internal::(Bindable)?Matcher<([a-zA-Z_][a-zA-Z0-9_]*)>$', r'\2', result_type)
+  return result_type
 
 def add_matcher(result_type, name, args, comment, is_dyncast=False):
   """Adds a matcher to one of our categories."""
@@ -111,6 +118,7 @@ def add_matcher(result_type, name, args, comment, is_dyncast=False):
   matcher_id = '%s%d' % (name, ids[name])
   ids[name] += 1
   args = unify_arguments(args)
+  result_type = unify_type(result_type)
   matcher_html = TD_TEMPLATE % {
     'result': esc('Matcher<%s>' % result_type),
     'name': name,
@@ -119,7 +127,8 @@ def add_matcher(result_type, name, args, comment, is_dyncast=False):
     'id': matcher_id,
   }
   if is_dyncast:
-    node_matchers[result_type + name] = matcher_html
+    dict = node_matchers
+    lookup = result_type + name
   # Use a heuristic to figure out whether a matcher is a narrowing or
   # traversal matcher. By default, matchers that take other matchers as
   # arguments (and are not node matchers) do traversal. We specifically
@@ -127,9 +136,14 @@ def add_matcher(result_type, name, args, comment, is_dyncast=False):
   # arguments.
   elif ('Matcher<' not in args or
         name in ['allOf', 'anyOf', 'anything', 'unless']):
-    narrowing_matchers[result_type + name + esc(args)] = matcher_html
+    dict = narrowing_matchers
+    lookup = result_type + name + esc(args)
   else:
-    traversal_matchers[result_type + name + esc(args)] = matcher_html
+    dict = traversal_matchers
+    lookup = result_type + name + esc(args)
+  
+  if dict.get(lookup) is None or len(dict.get(lookup)) < len(matcher_html):
+    dict[lookup] = matcher_html
 
 def act_on_decl(declaration, comment, allowed_types):
   """Parse the matcher out of the given declaration and comment.
@@ -139,6 +153,9 @@ def act_on_decl(declaration, comment, allowed_types):
      definition.
   """
   if declaration.strip():
+
+    if re.match(r'^\s?(#|namespace|using)', declaration): return
+
     # Node matchers are defined by writing:
     #   VariadicDynCastAllOfMatcher<ResultType, ArgumentType> name;
     m = re.match(r""".*Variadic(?:DynCast)?AllOfMatcher\s*<
@@ -213,6 +230,28 @@ def act_on_decl(declaration, comment, allowed_types):
         add_matcher(result_type, name, args, comment)
       return
 
+    m = re.match(r"""^\s*AST_POLYMORPHIC_MATCHER_REGEX(?:_OVERLOAD)?\(
+                          \s*([^\s,]+)\s*,
+                          \s*AST_POLYMORPHIC_SUPPORTED_TYPES\(([^)]*)\),
+                          \s*([^\s,]+)\s*
+                       (?:,\s*\d+\s*)?
+                      \)\s*{\s*$""", declaration, flags=re.X)
+
+    if m:
+      name, results, arg_name = m.groups()[0:3]
+      result_types = [r.strip() for r in results.split(',')]
+      if allowed_types and allowed_types != result_types:
+        raise Exception('Inconsistent documentation for: %s' % name)
+      arg = "StringRef %s, Regex::RegexFlags Flags = NoFlags" % arg_name
+      comment += """
+If the matcher is used in clang-query, RegexFlags parameter
+should be passed as a quoted string. e.g: "NoFlags".
+Flags can be combined with '|' example \"IgnoreCase | BasicRegex\"
+"""
+      for result_type in result_types:
+        add_matcher(result_type, name, arg, comment)
+      return
+
     m = re.match(r"""^\s*AST_MATCHER_FUNCTION(_P)?(.?)(?:_OVERLOAD)?\(
                        (?:\s*([^\s,]+)\s*,)?
                           \s*([^\s,]+)\s*
@@ -258,6 +297,31 @@ def act_on_decl(declaration, comment, allowed_types):
         add_matcher(result_type, name, args, comment)
       return
 
+    m = re.match(r"""^\s*AST_MATCHER_REGEX(?:_OVERLOAD)?\(
+                       \s*([^\s,]+)\s*,
+                       \s*([^\s,]+)\s*,
+                       \s*([^\s,]+)\s*
+                       (?:,\s*\d+\s*)?
+                      \)\s*{""", declaration, flags=re.X)
+    if m:
+      result, name, arg_name = m.groups()[0:3]
+      if not result:
+        if not allowed_types:
+          raise Exception('Did not find allowed result types for: %s' % name)
+        result_types = allowed_types
+      else:
+        result_types = [result]
+      arg = "StringRef %s, Regex::RegexFlags Flags = NoFlags" % arg_name
+      comment += """
+If the matcher is used in clang-query, RegexFlags parameter
+should be passed as a quoted string. e.g: "NoFlags".
+Flags can be combined with '|' example \"IgnoreCase | BasicRegex\"
+"""
+
+      for result_type in result_types:
+        add_matcher(result_type, name, arg, comment)
+      return
+
     # Parse ArgumentAdapting matchers.
     m = re.match(
         r"""^.*ArgumentAdaptingMatcherFunc<.*>\s*
@@ -278,6 +342,22 @@ def act_on_decl(declaration, comment, allowed_types):
       add_matcher(result, name, '%s, ..., %s' % (arg, arg), comment)
       return
 
+    m = re.match(
+        r"""^.*internal::VariadicFunction\s*<\s*
+              internal::PolymorphicMatcherWithParam1<[\S\s]+
+              AST_POLYMORPHIC_SUPPORTED_TYPES\(([^)]*)\)>,\s*([^,]+),
+              \s*[^>]+>\s*([a-zA-Z]*);$""", 
+        declaration, flags=re.X)
+
+    if m:
+      results, arg, name = m.groups()[:3]
+
+      result_types = [r.strip() for r in results.split(',')]
+      for result_type in result_types:
+        add_matcher(result_type, name, '%s, ..., %s' % (arg, arg), comment)
+      return
+      
+
     # Parse Variadic operator matchers.
     m = re.match(
         r"""^.*VariadicOperatorMatcherFunc\s*<\s*([^,]+),\s*([^\s]+)\s*>\s*
@@ -295,16 +375,27 @@ def act_on_decl(declaration, comment, allowed_types):
 
     # Parse free standing matcher functions, like:
     #   Matcher<ResultType> Name(Matcher<ArgumentType> InnerMatcher) {
-    m = re.match(r"""^\s*(.*)\s+
+    m = re.match(r"""^\s*(?:template\s+<\s*(?:class|typename)\s+(.+)\s*>\s+)?   
+                     (.*)\s+
                      ([^\s\(]+)\s*\(
                      (.*)
                      \)\s*{""", declaration, re.X)
     if m:
-      result, name, args = m.groups()
+      template_name, result, name, args = m.groups()
+      if template_name:
+        matcherTemplateArgs = re.findall(r'Matcher<\s*(%s)\s*>' % template_name, args)
+        templateArgs = re.findall(r'(?:^|[\s,<])(%s)(?:$|[\s,>])' % template_name, args)
+        if len(matcherTemplateArgs) < len(templateArgs):
+          # The template name is used naked, so don't replace with `*`` later on
+          template_name = None
+        else :
+          args = re.sub(r'(^|[\s,<])%s($|[\s,>])' % template_name, r'\1*\2', args)
       args = ', '.join(p.strip() for p in args.split(','))
-      m = re.match(r'.*\s+internal::(Bindable)?Matcher<([^>]+)>$', result)
+      m = re.match(r'(?:^|.*\s+)internal::(?:Bindable)?Matcher<([^>]+)>$', result)
       if m:
-        result_types = [m.group(2)]
+        result_types = [m.group(1)]
+        if template_name and len(result_types) is 1 and result_types[0] == template_name:
+          result_types = ['*']
       else:
         result_types = extract_result_types(comment)
       if not result_types:

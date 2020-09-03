@@ -1,21 +1,9 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+
 //
 // Bug 42496
 // XFAIL: sparcv9-target-arch
 //
-//===-- compiler_rt_logbl_test.c - Test __compiler_rt_logbl ---------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file checks __compiler_rt_logbl from the compiler_rt library for
-// conformance against libm.
-//
-//===----------------------------------------------------------------------===//
-
 #define QUAD_PRECISION
 #include <math.h>
 #include <stdio.h>
@@ -27,18 +15,20 @@
 int test__compiler_rt_logbl(fp_t x) {
   fp_t crt_value = __compiler_rt_logbl(x);
   fp_t libm_value = logbl(x);
-  // Compare actual rep, e.g. to avoid NaN != the same NaN
-  if (toRep(crt_value) != toRep(libm_value)) {
+  // Compare the values, considering all NaNs equivalent, as the spec doesn't
+  // specify the NaN signedness/payload.
+  if (crt_value != libm_value &&
+      !(crt_isnan(crt_value) && crt_isnan(libm_value))) {
     // Split expected values into two for printf
     twords x_t, crt_value_t, libm_value_t;
     x_t.all = toRep(x);
     crt_value_t.all = toRep(crt_value);
     libm_value_t.all = toRep(libm_value);
     printf(
-        "error: in __compiler_rt_logb(%a [%llX %llX]) = %a [%llX %llX] !=  %a "
+        "error: in __compiler_rt_logbl([%llX %llX]) = [%llX %llX] !=  "
         "[%llX %llX]\n",
-        x, x_t.s.high, x_t.s.low, crt_value, crt_value_t.s.high,
-        crt_value_t.s.low, libm_value, libm_value_t.s.high, libm_value_t.s.low);
+        x_t.s.high, x_t.s.low, crt_value_t.s.high, crt_value_t.s.low,
+        libm_value_t.s.high, libm_value_t.s.low);
     return 1;
   }
   return 0;

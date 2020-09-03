@@ -1,7 +1,7 @@
 // RUN: not %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:   2>&1 | FileCheck %s
 // RUN: not %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
-// RUN:   -target-feature +sve 2>&1 | FileCheck %s
+// RUN:   -target-feature +sve,+bf16 2>&1 | FileCheck %s
 
 // CHECK: error: cannot yet @encode type __SVInt8_t
 const char s8[] = @encode(__SVInt8_t);
@@ -27,6 +27,9 @@ const char f16[] = @encode(__SVFloat16_t);
 const char f32[] = @encode(__SVFloat32_t);
 // CHECK: error: cannot yet @encode type __SVFloat64_t
 const char f64[] = @encode(__SVFloat64_t);
+
+// CHECK: error: cannot yet @encode type __SVBFloat16_t
+const char bf16[] = @encode(__SVBFloat16_t);
 
 // CHECK: error: cannot yet @encode type __SVBool_t
 const char b8[] = @encode(__SVBool_t);

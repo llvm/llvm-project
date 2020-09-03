@@ -14,6 +14,7 @@ class CmdPythonTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test(self):
         self.build()
         self.pycmd_tests()
@@ -86,12 +87,12 @@ class CmdPythonTestCase(TestBase):
                         substrs=["Python command defined by @lldb.command"])
 
         self.expect("help",
-                    substrs=['For more information run',
-                             'welcome'] + decorated_commands)
+                    substrs=['For more information run']
+                             + decorated_commands + ['welcome'])
 
         self.expect("help -a",
-                    substrs=['For more information run',
-                             'welcome'] + decorated_commands)
+                    substrs=['For more information run']
+                             + decorated_commands + ['welcome'])
 
         self.expect("help -u", matching=False,
                     substrs=['For more information run'])

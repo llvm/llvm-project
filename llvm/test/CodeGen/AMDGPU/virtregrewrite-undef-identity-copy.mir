@@ -24,13 +24,12 @@ frameInfo:
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
-  scratchWaveOffsetReg: '$sgpr95'
   frameOffsetReg:  '$sgpr95'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
     ; CHECK-LABEL: name: undef_identity_copy
-    ; CHECK: renamable $vgpr32_vgpr33_vgpr34_vgpr35 = FLAT_LOAD_DWORDX4 undef renamable $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16, addrspace 1)
+    ; CHECK: renamable $vgpr40_vgpr41_vgpr42_vgpr43 = FLAT_LOAD_DWORDX4 undef renamable $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16, addrspace 1)
     ; CHECK: renamable $sgpr6_sgpr7 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 4, implicit-def dead $scc
     ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95
     ; CHECK: $sgpr4 = COPY $sgpr95
@@ -39,9 +38,9 @@ body:             |
     ; CHECK: renamable $sgpr6_sgpr7 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @bar + 4, target-flags(amdgpu-rel32-hi) @bar + 4, implicit-def dead $scc
     ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95
     ; CHECK: $sgpr4 = COPY $sgpr95
-    ; CHECK: $vgpr0 = COPY renamable $vgpr32
-    ; CHECK: $vgpr1 = COPY renamable $vgpr33
-    ; CHECK: $vgpr2 = COPY renamable $vgpr34
+    ; CHECK: $vgpr0 = COPY renamable $vgpr40
+    ; CHECK: $vgpr1 = COPY renamable $vgpr41
+    ; CHECK: $vgpr2 = COPY renamable $vgpr42
     ; CHECK: $vgpr3 = KILL undef renamable $vgpr3
     ; CHECK: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr6_sgpr7, @bar, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit-def $vgpr0
     ; CHECK: ADJCALLSTACKDOWN 0, 4, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95

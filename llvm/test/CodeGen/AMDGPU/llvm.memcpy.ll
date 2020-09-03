@@ -348,7 +348,7 @@ define amdgpu_kernel void @test_memcpy_const_string_align4(i8 addrspace(1)* noal
 
 ; FUNC-LABEL: {{^}}test_memcpy_const_string_align1:
 ; SI-NOT: buffer_load
-; SI: v_mov_b32_e32 v{{[0-9]+}}, 0x69
+; SI: v_mov_b32_e32 v{{[0-9]+}}, 0x
 ; SI: buffer_store_byte
 ; SI: buffer_store_byte
 ; SI: buffer_store_byte

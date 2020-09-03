@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ValueObjectConstResultCast_h_
-#define liblldb_ValueObjectConstResultCast_h_
+#ifndef LLDB_CORE_VALUEOBJECTCONSTRESULTCAST_H
+#define LLDB_CORE_VALUEOBJECTCONSTRESULTCAST_H
 
 #include "lldb/Core/ValueObjectCast.h"
 #include "lldb/Core/ValueObjectConstResultImpl.h"
@@ -61,9 +61,11 @@ private:
   friend class ValueObjectConstResult;
   friend class ValueObjectConstResultImpl;
 
-  DISALLOW_COPY_AND_ASSIGN(ValueObjectConstResultCast);
+  ValueObjectConstResultCast(const ValueObjectConstResultCast &) = delete;
+  const ValueObjectConstResultCast &
+  operator=(const ValueObjectConstResultCast &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_ValueObjectConstResultCast_h_
+#endif // LLDB_CORE_VALUEOBJECTCONSTRESULTCAST_H

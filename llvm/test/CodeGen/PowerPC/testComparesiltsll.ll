@@ -16,7 +16,7 @@ define signext i32 @test_iltsll(i64 %a, i64 %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sradi r5, r3, 63
 ; CHECK-NEXT:    rldicl r6, r4, 1, 63
-; CHECK-NEXT:    subfc r3, r4, r3
+; CHECK-NEXT:    subc r3, r3, r4
 ; CHECK-NEXT:    adde r3, r6, r5
 ; CHECK-NEXT:    xori r3, r3, 1
 ; CHECK-NEXT:    blr
@@ -32,7 +32,7 @@ define signext i32 @test_iltsll_sext(i64 %a, i64 %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sradi r5, r3, 63
 ; CHECK-NEXT:    rldicl r6, r4, 1, 63
-; CHECK-NEXT:    subfc r3, r4, r3
+; CHECK-NEXT:    subc r3, r3, r4
 ; CHECK-NEXT:    adde r3, r6, r5
 ; CHECK-NEXT:    xori r3, r3, 1
 ; CHECK-NEXT:    neg r3, r3
@@ -61,7 +61,7 @@ define void @test_iltsll_store(i64 %a, i64 %b) {
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    sradi r6, r3, 63
 ; BE-NEXT:    addis r5, r2, .LC0@toc@ha
-; BE-NEXT:    subfc r3, r4, r3
+; BE-NEXT:    subc r3, r3, r4
 ; BE-NEXT:    rldicl r3, r4, 1, 63
 ; BE-NEXT:    ld r4, .LC0@toc@l(r5)
 ; BE-NEXT:    adde r3, r3, r6
@@ -73,7 +73,7 @@ define void @test_iltsll_store(i64 %a, i64 %b) {
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    sradi r6, r3, 63
 ; LE-NEXT:    addis r5, r2, glob@toc@ha
-; LE-NEXT:    subfc r3, r4, r3
+; LE-NEXT:    subc r3, r3, r4
 ; LE-NEXT:    rldicl r3, r4, 1, 63
 ; LE-NEXT:    adde r3, r3, r6
 ; LE-NEXT:    xori r3, r3, 1
@@ -93,7 +93,7 @@ define void @test_iltsll_sext_store(i64 %a, i64 %b) {
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    sradi r6, r3, 63
 ; BE-NEXT:    addis r5, r2, .LC0@toc@ha
-; BE-NEXT:    subfc r3, r4, r3
+; BE-NEXT:    subc r3, r3, r4
 ; BE-NEXT:    rldicl r3, r4, 1, 63
 ; BE-NEXT:    ld r4, .LC0@toc@l(r5)
 ; BE-NEXT:    adde r3, r3, r6
@@ -106,7 +106,7 @@ define void @test_iltsll_sext_store(i64 %a, i64 %b) {
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    sradi r6, r3, 63
 ; LE-NEXT:    addis r5, r2, glob@toc@ha
-; LE-NEXT:    subfc r3, r4, r3
+; LE-NEXT:    subc r3, r3, r4
 ; LE-NEXT:    rldicl r3, r4, 1, 63
 ; LE-NEXT:    adde r3, r3, r6
 ; LE-NEXT:    xori r3, r3, 1

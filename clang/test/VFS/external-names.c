@@ -10,7 +10,7 @@
 // Preprocessor (__FILE__ macro and # directives):
 
 // RUN: %clang_cc1 -I %t -ivfsoverlay %t.external.yaml -E %s | FileCheck -check-prefix=CHECK-PP-EXTERNAL %s
-// CHECK-PP-EXTERNAL: # {{[0-9]*}} "[[NAME:.*Inputs.external-names.h]]"
+// CHECK-PP-EXTERNAL: # {{[0-9]*}} "[[NAME:.*Inputs(/|\\\\)external-names.h]]"
 // CHECK-PP-EXTERNAL-NEXT: void foo(char **c) {
 // CHECK-PP-EXTERNAL-NEXT: *c = "[[NAME]]";
 

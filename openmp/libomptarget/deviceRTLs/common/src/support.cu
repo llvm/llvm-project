@@ -94,16 +94,6 @@ DEVICE bool checkRuntimeInitialized(kmp_Ident *loc) {
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Calls to the NVPTX layer  (assuming 1D layout)
-//
-////////////////////////////////////////////////////////////////////////////////
-
-DEVICE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
-
-DEVICE unsigned GetLaneId() { return GetThreadIdInBlock() & (WARPSIZE - 1); }
-
-////////////////////////////////////////////////////////////////////////////////
-//
 // Calls to the Generic Scheme Implementation Layer (assuming 1D layout)
 //
 ////////////////////////////////////////////////////////////////////////////////
@@ -274,6 +264,3 @@ DEVICE char *GetTeamsReductionScratchpad() {
   return static_cast<char *>(ReductionScratchpadPtr) + 256;
 }
 
-DEVICE void SetTeamsReductionScratchpadPtr(void *ScratchpadPtr) {
-  ReductionScratchpadPtr = ScratchpadPtr;
-}

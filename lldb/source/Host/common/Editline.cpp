@@ -1,4 +1,4 @@
-//===-- Editline.cpp --------------------------------------------*- C++ -*-===//
+//===-- Editline.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <iomanip>
-#include <iostream>
 #include <limits.h>
 
 #include "lldb/Host/ConnectionFileDescriptor.h"
@@ -35,7 +34,7 @@ using namespace lldb_private::line_editor;
 // with until TERM is set to VT100 where it stumbles over an implementation
 // assumption that may not exist on other platforms.  The setupterm() function
 // would normally require headers that don't work gracefully in this context,
-// so the function declaraction has been hoisted here.
+// so the function declaration has been hoisted here.
 #if defined(__APPLE__)
 extern "C" {
 int setupterm(char *term, int fildes, int *errret);
@@ -144,10 +143,10 @@ std::vector<EditLineStringType> SplitLines(const EditLineStringType &input) {
   while (start < input.length()) {
     size_t end = input.find('\n', start);
     if (end == std::string::npos) {
-      result.insert(result.end(), input.substr(start));
+      result.push_back(input.substr(start));
       break;
     }
-    result.insert(result.end(), input.substr(start, end - start));
+    result.push_back(input.substr(start, end - start));
     start = end + 1;
   }
   return result;
@@ -220,7 +219,7 @@ private:
         std::string filename = m_prefix + "-history";
 #endif
         llvm::sys::path::append(lldb_history_file, filename);
-        m_path = lldb_history_file.str();
+        m_path = std::string(lldb_history_file.str());
       }
     }
 
@@ -302,19 +301,16 @@ protected:
 // Editline private methods
 
 void Editline::SetBaseLineNumber(int line_number) {
-  std::stringstream line_number_stream;
-  line_number_stream << line_number;
   m_base_line_number = line_number;
   m_line_number_digits =
-      std::max(3, (int)line_number_stream.str().length() + 1);
+      std::max<int>(3, std::to_string(line_number).length() + 1);
 }
 
 std::string Editline::PromptForIndex(int line_index) {
   bool use_line_numbers = m_multiline_enabled && m_base_line_number > 0;
   std::string prompt = m_set_prompt;
-  if (use_line_numbers && prompt.length() == 0) {
+  if (use_line_numbers && prompt.length() == 0)
     prompt = ": ";
-  }
   std::string continuation_prompt = prompt;
   if (m_set_continuation_prompt.length() > 0) {
     continuation_prompt = m_set_continuation_prompt;
@@ -333,7 +329,7 @@ std::string Editline::PromptForIndex(int line_index) {
     prompt_stream.Printf(
         "%*d%s", m_line_number_digits, m_base_line_number + line_index,
         (line_index == 0) ? prompt.c_str() : continuation_prompt.c_str());
-    return std::move(prompt_stream.GetString());
+    return std::string(std::move(prompt_stream.GetString()));
   }
   return (line_index == 0) ? prompt : continuation_prompt;
 }
@@ -429,7 +425,7 @@ void Editline::DisplayInput(int firstIndex) {
 }
 
 int Editline::CountRowsForLine(const EditLineStringType &content) {
-  auto prompt =
+  std::string prompt =
       PromptForIndex(0); // Prompt width is constant during an edit session
   int line_length = (int)(content.length() + prompt.length());
   return (line_length / m_terminal_width) + 1;

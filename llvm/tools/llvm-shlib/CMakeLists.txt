@@ -97,16 +97,16 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND NOT MSVC)
   add_custom_target(libLLVMCExports DEPENDS ${LLVM_EXPORTED_SYMBOL_FILE})
 
   add_llvm_library(LLVM-C SHARED ${SOURCES} INSTALL_WITH_TOOLCHAIN)
-  
+
   target_link_libraries(LLVM-C PUBLIC LLVM)
   add_dependencies(LLVM-C libLLVMCExports)
-  
+
   set_property(TARGET LLVM-C APPEND_STRING PROPERTY
               LINK_FLAGS
               " -compatibility_version 1 -current_version ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH} -Wl,-reexport_library ${LIB_PATH}")
 endif()
 
-if(MSVC)
+if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   # Build the LLVM-C.dll library that exports the C API.
 
   set(LLVM_LINK_COMPONENTS
@@ -132,7 +132,7 @@ if(MSVC)
     list(APPEND FULL_LIB_NAMES ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib/${lib}.lib)
   endforeach()
 
-  # Need to seperate lib names with newlines.
+  # Need to separate lib names with newlines.
   string(REPLACE ";" "\n" FILE_CONTENT "${FULL_LIB_NAMES}")
 
   if(NOT "${CMAKE_CFG_INTDIR}" STREQUAL ".")
@@ -154,17 +154,21 @@ if(MSVC)
   set(GEN_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/gen-msvc-exports.py)
 
   set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.exports)
-
-  if(CMAKE_CROSSCOMPILING)
-    build_native_tool(llvm-nm llvm_nm)
-    set(llvm_nm_target "${llvm_nm}")
+  if(NOT LLVM_NM)
+    if(CMAKE_CROSSCOMPILING)
+      build_native_tool(llvm-nm llvm_nm)
+      set(llvm_nm_target "${llvm_nm}")
+    else()
+      set(llvm_nm $<TARGET_FILE:llvm-nm>)
+      set(llvm_nm_target llvm-nm)
+    endif()
   else()
-    set(llvm_nm $<TARGET_FILE:llvm-nm>)
-    set(llvm_nm_target llvm-nm)
+    set(llvm_nm ${LLVM_NM})
+    set(llvm_nm_target "")
   endif()
 
   add_custom_command(OUTPUT ${LLVM_EXPORTED_SYMBOL_FILE}
-    COMMAND ${PYTHON_EXECUTABLE} ${GEN_SCRIPT} --libsfile ${LIBSFILE} ${GEN_UNDERSCORE} --nm "${llvm_nm}" -o ${LLVM_EXPORTED_SYMBOL_FILE}
+    COMMAND "${Python3_EXECUTABLE}" ${GEN_SCRIPT} --libsfile ${LIBSFILE} ${GEN_UNDERSCORE} --nm "${llvm_nm}" -o ${LLVM_EXPORTED_SYMBOL_FILE}
     DEPENDS ${LIB_NAMES} ${llvm_nm_target}
     COMMENT "Generating export list for LLVM-C"
     VERBATIM )

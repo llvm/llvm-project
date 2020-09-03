@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/Optional.h"
@@ -319,7 +320,7 @@ HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled) const {
           (!IsAngled && StringRef(Inc.Name).startswith("\"")))
         return llvm::None;
   std::string Quoted =
-      llvm::formatv(IsAngled ? "<{0}>" : "\"{0}\"", IncludeName);
+      std::string(llvm::formatv(IsAngled ? "<{0}>" : "\"{0}\"", IncludeName));
   StringRef QuotedName = Quoted;
   int Priority = Categories.getIncludePriority(
       QuotedName, /*CheckMainHeader=*/FirstIncludeOffset < 0);
@@ -336,7 +337,8 @@ HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled) const {
     }
   }
   assert(InsertOffset <= Code.size());
-  std::string NewInclude = llvm::formatv("#include {0}\n", QuotedName);
+  std::string NewInclude =
+      std::string(llvm::formatv("#include {0}\n", QuotedName));
   // When inserting headers at end of the code, also append '\n' to the code
   // if it does not end with '\n'.
   // FIXME: when inserting multiple #includes at the end of code, only one

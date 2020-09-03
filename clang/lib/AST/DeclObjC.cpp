@@ -16,7 +16,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
-#include "clang/AST/ODRHash.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -95,7 +94,7 @@ ObjCContainerDecl::getMethod(Selector Sel, bool isInstance,
   // methods there.
   if (const auto *Proto = dyn_cast<ObjCProtocolDecl>(this)) {
     if (const ObjCProtocolDecl *Def = Proto->getDefinition())
-      if (Def->isHidden() && !AllowHidden)
+      if (!Def->isUnconditionallyVisible() && !AllowHidden)
         return nullptr;
   }
 
@@ -147,7 +146,8 @@ bool ObjCContainerDecl::HasUserDeclaredSetterMethod(
       // auto-synthesized).
       for (const auto *P : Cat->properties())
         if (P->getIdentifier() == Property->getIdentifier()) {
-          if (P->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_readwrite)
+          if (P->getPropertyAttributes() &
+              ObjCPropertyAttribute::kind_readwrite)
             return true;
           break;
         }
@@ -181,7 +181,7 @@ ObjCPropertyDecl::findPropertyDecl(const DeclContext *DC,
   // property.
   if (const auto *Proto = dyn_cast<ObjCProtocolDecl>(DC)) {
     if (const ObjCProtocolDecl *Def = Proto->getDefinition())
-      if (Def->isHidden())
+      if (!Def->isUnconditionallyVisible())
         return nullptr;
   }
 
@@ -239,7 +239,7 @@ ObjCPropertyDecl *ObjCContainerDecl::FindPropertyDeclaration(
   // Don't find properties within hidden protocol definitions.
   if (const auto *Proto = dyn_cast<ObjCProtocolDecl>(this)) {
     if (const ObjCProtocolDecl *Def = Proto->getDefinition())
-      if (Def->isHidden())
+      if (!Def->isUnconditionallyVisible())
         return nullptr;
   }
 
@@ -772,33 +772,6 @@ ObjCMethodDecl *ObjCInterfaceDecl::lookupPrivateMethod(
   return Method;
 }
 
-unsigned ObjCInterfaceDecl::getODRHash() {
-  assert(hasDefinition() && "ODRHash only for records with definitions");
-
-  // Previously calculated hash is stored in DefinitionData.
-  if (hasODRHash())
-    return data().ODRHash;
-
-  // Only calculate hash on first call of getODRHash per record.
-  class ODRHash Hash;
-  Hash.AddObjCInterfaceDecl(getDefinition());
-  setHasODRHash();
-  data().ODRHash = Hash.CalculateHash();
-
-  return data().ODRHash;
-}
-
-bool ObjCInterfaceDecl::hasODRHash() const {
-  if (!hasDefinition())
-    return false;
-  return data().HasODRHash;
-}
-
-void ObjCInterfaceDecl::setHasODRHash(bool Hash) {
-  assert(hasDefinition() && "Cannot set ODRHash without definition");
-  data().HasODRHash = Hash;
-}
-
 //===----------------------------------------------------------------------===//
 // ObjCMethodDecl
 //===----------------------------------------------------------------------===//
@@ -829,7 +802,6 @@ ObjCMethodDecl::ObjCMethodDecl(
   setSelLocsKind(SelLoc_StandardNoSpace);
   setOverriding(false);
   setHasSkippedBody(false);
-  setHasODRHash(false);
 
   setImplicit(isImplicitlyDeclared);
 }
@@ -1390,25 +1362,23 @@ ObjCMethodDecl::findPropertyDecl(bool CheckOverrides) const {
         return Found;
     } else {
       // Determine whether the container is a class.
-      ClassDecl = dyn_cast<ObjCInterfaceDecl>(Container);
+      ClassDecl = cast<ObjCInterfaceDecl>(Container);
     }
+    assert(ClassDecl && "Failed to find main class");
 
     // If we have a class, check its visible extensions.
-    if (ClassDecl) {
-      for (const auto *Ext : ClassDecl->visible_extensions()) {
-        if (Ext == Container)
-          continue;
-
-        if (const auto *Found = findMatchingProperty(Ext))
-          return Found;
-      }
+    for (const auto *Ext : ClassDecl->visible_extensions()) {
+      if (Ext == Container)
+        continue;
+      if (const auto *Found = findMatchingProperty(Ext))
+        return Found;
     }
 
     assert(isSynthesizedAccessorStub() && "expected an accessor stub");
+
     for (const auto *Cat : ClassDecl->known_categories()) {
       if (Cat == Container)
         continue;
-
       if (const auto *Found = findMatchingProperty(Cat))
         return Found;
     }
@@ -1428,25 +1398,6 @@ ObjCMethodDecl::findPropertyDecl(bool CheckOverrides) const {
       return Prop;
 
   return nullptr;
-}
-
-unsigned ObjCMethodDecl::getODRHash() const {
-  assert(hasODRHash());
-  return ODRHash;
-}
-
-unsigned ObjCMethodDecl::getODRHash() {
-  // Previously calculated hash is stored in DefinitionData.
-  if (hasODRHash())
-    return ODRHash;
-
-  // Only calculate hash on first call of getODRHash per record.
-  class ODRHash Hash;
-  Hash.AddObjCMethodDecl(this);
-  setHasODRHash();
-  ODRHash = Hash.CalculateHash();
-
-  return ODRHash;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1964,7 +1915,7 @@ ObjCMethodDecl *ObjCProtocolDecl::lookupMethod(Selector Sel,
   // If there is no definition or the definition is hidden, we don't find
   // anything.
   const ObjCProtocolDecl *Def = getDefinition();
-  if (!Def || Def->isHidden())
+  if (!Def || !Def->isUnconditionallyVisible())
     return nullptr;
 
   if ((MethodDecl = getMethod(Sel, isInstance)))
@@ -1980,7 +1931,6 @@ void ObjCProtocolDecl::allocateDefinitionData() {
   assert(!Data.getPointer() && "Protocol already has a definition!");
   Data.setPointer(new (getASTContext()) DefinitionData);
   Data.getPointer()->Definition = this;
-  Data.getPointer()->HasODRHash = false;
 }
 
 void ObjCProtocolDecl::startDefinition() {
@@ -2035,70 +1985,38 @@ ObjCProtocolDecl::getObjCRuntimeNameAsString() const {
   return getName();
 }
 
-unsigned ObjCProtocolDecl::getODRHash() {
-  assert(hasDefinition() && "ODRHash only for records with definitions");
-
-  // Previously calculated hash is stored in DefinitionData.
-  if (hasODRHash())
-    return data().ODRHash;
-
-  // Only calculate hash on first call of getODRHash per record.
-  class ODRHash Hash;
-  Hash.AddObjCProtocolDecl(getDefinition());
-  setHasODRHash();
-  data().ODRHash = Hash.CalculateHash();
-
-  return data().ODRHash;
-}
-
-bool ObjCProtocolDecl::hasODRHash() const {
-  if (!hasDefinition())
-    return false;
-  return data().HasODRHash;
-}
-
-void ObjCProtocolDecl::setHasODRHash(bool Hash) {
-  assert(hasDefinition() && "Cannot set ODRHash without definition");
-  data().HasODRHash = Hash;
-}
-
 //===----------------------------------------------------------------------===//
 // ObjCCategoryDecl
 //===----------------------------------------------------------------------===//
 
 void ObjCCategoryDecl::anchor() {}
 
-ObjCCategoryDecl::ObjCCategoryDecl(
-    const ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
-    SourceLocation ClassNameLoc, SourceLocation CategoryNameLoc,
-    IdentifierInfo *Id, ObjCInterfaceDecl *IDecl, ObjCCategoryDecl *PrevDecl,
-    ObjCTypeParamList *typeParamList, SourceLocation IvarLBraceLoc,
-    SourceLocation IvarRBraceLoc)
+ObjCCategoryDecl::ObjCCategoryDecl(DeclContext *DC, SourceLocation AtLoc,
+                                   SourceLocation ClassNameLoc,
+                                   SourceLocation CategoryNameLoc,
+                                   IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
+                                   ObjCTypeParamList *typeParamList,
+                                   SourceLocation IvarLBraceLoc,
+                                   SourceLocation IvarRBraceLoc)
     : ObjCContainerDecl(ObjCCategory, DC, Id, ClassNameLoc, AtLoc),
-      redeclarable_base(C), ClassInterface(IDecl),
-      CategoryNameLoc(CategoryNameLoc), IvarLBraceLoc(IvarLBraceLoc),
-      IvarRBraceLoc(IvarRBraceLoc) {
-  setPreviousDecl(PrevDecl);
-
-  // Copy the 'data' pointer over.
-  if (PrevDecl)
-    Data = PrevDecl->Data;
-
+      ClassInterface(IDecl), CategoryNameLoc(CategoryNameLoc),
+      IvarLBraceLoc(IvarLBraceLoc), IvarRBraceLoc(IvarRBraceLoc) {
   setTypeParamList(typeParamList);
-  // allocateDefinitionData();
 }
 
-ObjCCategoryDecl *ObjCCategoryDecl::Create(
-    ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
-    SourceLocation ClassNameLoc, SourceLocation CategoryNameLoc,
-    IdentifierInfo *Id, ObjCInterfaceDecl *IDecl, ObjCCategoryDecl *PrevDecl,
-    ObjCTypeParamList *typeParamList, SourceLocation IvarLBraceLoc,
-    SourceLocation IvarRBraceLoc) {
-  auto *CatDecl = new (C, DC)
-      ObjCCategoryDecl(C, DC, AtLoc, ClassNameLoc, CategoryNameLoc, Id, IDecl,
-                       PrevDecl, typeParamList, IvarLBraceLoc, IvarRBraceLoc);
-  CatDecl->Data.setInt(!C.getLangOpts().Modules);
-
+ObjCCategoryDecl *ObjCCategoryDecl::Create(ASTContext &C, DeclContext *DC,
+                                           SourceLocation AtLoc,
+                                           SourceLocation ClassNameLoc,
+                                           SourceLocation CategoryNameLoc,
+                                           IdentifierInfo *Id,
+                                           ObjCInterfaceDecl *IDecl,
+                                           ObjCTypeParamList *typeParamList,
+                                           SourceLocation IvarLBraceLoc,
+                                           SourceLocation IvarRBraceLoc) {
+  auto *CatDecl =
+      new (C, DC) ObjCCategoryDecl(DC, AtLoc, ClassNameLoc, CategoryNameLoc, Id,
+                                   IDecl, typeParamList, IvarLBraceLoc,
+                                   IvarRBraceLoc);
   if (IDecl) {
     // Link this category into its class's category list.
     CatDecl->NextClassCategory = IDecl->getCategoryListRaw();
@@ -2114,11 +2032,9 @@ ObjCCategoryDecl *ObjCCategoryDecl::Create(
 
 ObjCCategoryDecl *ObjCCategoryDecl::CreateDeserialized(ASTContext &C,
                                                        unsigned ID) {
-  auto *Result = new (C, ID)
-      ObjCCategoryDecl(C, nullptr, SourceLocation(), SourceLocation(),
-                       SourceLocation(), nullptr, nullptr, nullptr, nullptr);
-  Result->Data.setInt(!C.getLangOpts().Modules);
-  return Result;
+  return new (C, ID) ObjCCategoryDecl(nullptr, SourceLocation(),
+                                      SourceLocation(), SourceLocation(),
+                                      nullptr, nullptr, nullptr);
 }
 
 ObjCCategoryImplDecl *ObjCCategoryDecl::getImplementation() const {
@@ -2137,47 +2053,6 @@ void ObjCCategoryDecl::setTypeParamList(ObjCTypeParamList *TPL) {
   // Set the declaration context of each of the type parameters.
   for (auto *typeParam : *TypeParamList)
     typeParam->setDeclContext(this);
-}
-
-void ObjCCategoryDecl::allocateDefinitionData() {
-  assert(!hasDefinition() && "ObjC category already has a definition");
-  Data.setPointer(new (getASTContext()) DefinitionData());
-  Data.getPointer()->Definition = this;
-}
-
-unsigned ObjCCategoryDecl::getODRHash() {
-  assert(hasDefinition() && "ODRHash only for records with definitions");
-
-  // Previously calculated hash is stored in DefinitionData.
-  if (hasODRHash())
-    return data().ODRHash;
-
-  // Only calculate hash on first call of getODRHash per record.
-  class ODRHash Hash;
-  Hash.AddObjCCategoryDecl(getDefinition());
-  setHasODRHash();
-  data().ODRHash = Hash.CalculateHash();
-
-  return data().ODRHash;
-}
-
-void ObjCCategoryDecl::setHasODRHash(bool Hash) {
-  assert(hasDefinition() && "Cannot set ODRHash without definition");
-  data().HasODRHash = Hash;
-}
-
-bool ObjCCategoryDecl::hasODRHash() const {
-  if (!hasDefinition())
-    return false;
-  return data().HasODRHash;
-}
-
-void ObjCCategoryDecl::startDefinition() {
-  allocateDefinitionData();
-
-  // Update all of the declarations with a pointer to the definition.
-  for (auto *RD : redecls())
-    RD->Data = this->Data;
 }
 
 //===----------------------------------------------------------------------===//

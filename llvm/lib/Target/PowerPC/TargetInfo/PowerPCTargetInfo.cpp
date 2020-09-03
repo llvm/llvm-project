@@ -23,7 +23,7 @@ Target &llvm::getThePPC64LETarget() {
   return ThePPC64LETarget;
 }
 
-extern "C" void LLVMInitializePowerPCTargetInfo() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTargetInfo() {
   RegisterTarget<Triple::ppc, /*HasJIT=*/true> X(getThePPC32Target(), "ppc32",
                                                  "PowerPC 32", "PPC");
 

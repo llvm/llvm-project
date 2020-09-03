@@ -130,7 +130,7 @@ extern "C" int cleanup_exit_lvalue(bool cond) {
 // CHECK-LABEL: define{{.*}} i32 @cleanup_exit_lvalue({{.*}})
 // CHECK: call {{.*}} @_ZN1AC1Ei
 //    Spill after bar.
-// CHECK: %[[v:[^ ]*]] = call dereferenceable(4) i32* @_Z6getrefv({{.*}})
+// CHECK: %[[v:[^ ]*]] = call nonnull align 4 dereferenceable(4) i32* @_Z6getrefv({{.*}})
 // CHECK-NEXT: store i32* %[[v]], i32** %[[tmp:[^, ]*]]
 //    Do cleanup.
 // CHECK: call {{.*}} @_ZN1AD1Ev

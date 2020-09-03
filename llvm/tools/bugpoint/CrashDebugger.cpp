@@ -499,7 +499,8 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock *> &BBs) {
   std::vector<std::pair<std::string, std::string>> BlockInfo;
 
   for (BasicBlock *BB : Blocks)
-    BlockInfo.emplace_back(BB->getParent()->getName(), BB->getName());
+    BlockInfo.emplace_back(std::string(BB->getParent()->getName()),
+                           std::string(BB->getName()));
 
   SmallVector<BasicBlock *, 16> ToProcess;
   for (auto &F : *M) {
@@ -606,7 +607,8 @@ bool ReduceCrashingConditionals::TestBlocks(
   std::vector<std::pair<std::string, std::string>> BlockInfo;
 
   for (const BasicBlock *BB : Blocks)
-    BlockInfo.emplace_back(BB->getParent()->getName(), BB->getName());
+    BlockInfo.emplace_back(std::string(BB->getParent()->getName()),
+                           std::string(BB->getName()));
 
   SmallVector<BasicBlock *, 16> ToProcess;
   for (auto &F : *M) {
@@ -696,7 +698,8 @@ bool ReduceSimplifyCFG::TestBlocks(std::vector<const BasicBlock *> &BBs) {
   std::vector<std::pair<std::string, std::string>> BlockInfo;
 
   for (const BasicBlock *BB : Blocks)
-    BlockInfo.emplace_back(BB->getParent()->getName(), BB->getName());
+    BlockInfo.emplace_back(std::string(BB->getParent()->getName()),
+                           std::string(BB->getName()));
 
   // Loop over and delete any hack up any blocks that are not listed...
   for (auto &F : *M)
@@ -861,7 +864,7 @@ bool ReduceCrashingMetadata::TestInsts(std::vector<Instruction *> &Insts) {
   // selected in Instructions.
   for (Function &F : *M)
     for (Instruction &Inst : instructions(F)) {
-      if (Instructions.find(&Inst) == Instructions.end()) {
+      if (!Instructions.count(&Inst)) {
         Inst.dropUnknownNonDebugMetadata();
         Inst.setDebugLoc({});
       }
@@ -1216,7 +1219,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
     // For each remaining function, try to reduce that function's attributes.
     std::vector<std::string> FunctionNames;
     for (Function &F : BD.getProgram())
-      FunctionNames.push_back(F.getName());
+      FunctionNames.push_back(std::string(F.getName()));
 
     if (!FunctionNames.empty() && !BugpointIsInterrupted) {
       outs() << "\n*** Attempting to reduce the number of function attributes"

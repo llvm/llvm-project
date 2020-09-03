@@ -3,7 +3,7 @@
 ; RUN: ld.lld %t.o -o %t2
 ; RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
-; CHECK:      Format: ELF64-x86-64
+; CHECK:      Format: elf64-x86-64
 ; CHECK-NEXT: Arch: x86_64
 ; CHECK-NEXT: AddressSize: 64bit
 

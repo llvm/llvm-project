@@ -20,10 +20,10 @@ namespace hexagon {
 // For Hexagon, we do not need to instantiate tools for PreProcess, PreCompile
 // and Compile.
 // We simply use "clang -cc1" for those actions.
-class LLVM_LIBRARY_VISIBILITY Assembler : public GnuTool {
+class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
 public:
   Assembler(const ToolChain &TC)
-      : GnuTool("hexagon::Assembler", "hexagon-as", TC) {}
+      : Tool("hexagon::Assembler", "hexagon-as", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 
@@ -35,9 +35,9 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
+class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
-  Linker(const ToolChain &TC) : GnuTool("hexagon::Linker", "hexagon-ld", TC) {}
+  Linker(const ToolChain &TC) : Tool("hexagon::Linker", "hexagon-ld", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
@@ -81,9 +81,17 @@ public:
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
 
-  const char *getDefaultLinker() const override { return "hexagon-link"; }
+  void addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args) const override;
+
+  const char *getDefaultLinker() const override {
+    return getTriple().isMusl() ? "ld.lld" : "hexagon-link";
+  }
 
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
+
+  void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs) const override;
 
   StringRef GetGCCLibAndIncVersion() const { return GCCLibAndIncVersion.Text; }
   bool IsIntegratedAssemblerDefault() const override {

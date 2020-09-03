@@ -1,4 +1,4 @@
-//===-- DynamicLoaderMacOSXDYLD.cpp -----------------------------*- C++ -*-===//
+//===-- DynamicLoaderMacOSXDYLD.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DynamicLoaderMacOSXDYLD.h"
+#include "DynamicLoaderDarwin.h"
+#include "DynamicLoaderMacOS.h"
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -25,12 +30,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
-#include "DynamicLoaderDarwin.h"
-#include "DynamicLoaderMacOSXDYLD.h"
-
-#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-
 //#define ENABLE_DEBUG_PRINTF // COMMENT THIS LINE OUT PRIOR TO CHECKIN
 #ifdef ENABLE_DEBUG_PRINTF
 #include <stdio.h>
@@ -47,6 +46,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(DynamicLoaderMacOSXDYLD)
 
 // Create an instance of this class. This function is filled into the plugin
 // info class that gets handed out by the plugin factory and allows the lldb to
@@ -480,17 +481,17 @@ bool DynamicLoaderMacOSXDYLD::ReadAllImageInfosStructure() {
       offset = 0;
       m_dyld_all_image_infos.version = data.GetU32(&offset);
       m_dyld_all_image_infos.dylib_info_count = data.GetU32(&offset);
-      m_dyld_all_image_infos.dylib_info_addr = data.GetPointer(&offset);
-      m_dyld_all_image_infos.notification = data.GetPointer(&offset);
+      m_dyld_all_image_infos.dylib_info_addr = data.GetAddress(&offset);
+      m_dyld_all_image_infos.notification = data.GetAddress(&offset);
       m_dyld_all_image_infos.processDetachedFromSharedRegion =
           data.GetU8(&offset);
       m_dyld_all_image_infos.libSystemInitialized = data.GetU8(&offset);
       // Adjust for padding.
       offset += addr_size - 2;
-      m_dyld_all_image_infos.dyldImageLoadAddress = data.GetPointer(&offset);
+      m_dyld_all_image_infos.dyldImageLoadAddress = data.GetAddress(&offset);
       if (m_dyld_all_image_infos.version >= 11) {
         offset += addr_size * 8;
-        uint64_t dyld_all_image_infos_addr = data.GetPointer(&offset);
+        uint64_t dyld_all_image_infos_addr = data.GetAddress(&offset);
 
         // When we started, we were given the actual address of the
         // all_image_infos struct (probably via TASK_DYLD_INFO) in memory -
@@ -670,9 +671,9 @@ bool DynamicLoaderMacOSXDYLD::ReadImageInfos(
     for (size_t i = 0;
          i < image_infos.size() && info_data_ref.ValidOffset(info_data_offset);
          i++) {
-      image_infos[i].address = info_data_ref.GetPointer(&info_data_offset);
-      lldb::addr_t path_addr = info_data_ref.GetPointer(&info_data_offset);
-      image_infos[i].mod_date = info_data_ref.GetPointer(&info_data_offset);
+      image_infos[i].address = info_data_ref.GetAddress(&info_data_offset);
+      lldb::addr_t path_addr = info_data_ref.GetAddress(&info_data_offset);
+      image_infos[i].mod_date = info_data_ref.GetAddress(&info_data_offset);
 
       char raw_path[PATH_MAX];
       m_process->ReadCStringFromMemory(path_addr, raw_path, sizeof(raw_path),
@@ -1121,9 +1122,11 @@ bool DynamicLoaderMacOSXDYLD::GetSharedCacheInformation(
 void DynamicLoaderMacOSXDYLD::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance);
+  DynamicLoaderMacOS::Initialize();
 }
 
 void DynamicLoaderMacOSXDYLD::Terminate() {
+  DynamicLoaderMacOS::Terminate();
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 

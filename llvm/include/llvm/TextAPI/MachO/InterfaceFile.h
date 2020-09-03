@@ -158,7 +158,7 @@ public:
   /// Set the path from which this file was generated (if applicable).
   ///
   /// \param Path_ The path to the source file.
-  void setPath(StringRef Path_) { Path = Path_; }
+  void setPath(StringRef Path_) { Path = std::string(Path_); }
 
   /// Get the path from which this file was generated (if applicable).
   ///
@@ -217,7 +217,9 @@ public:
   const_filtered_target_range targets(ArchitectureSet Archs) const;
 
   /// Set the install name of the library.
-  void setInstallName(StringRef InstallName_) { InstallName = InstallName_; }
+  void setInstallName(StringRef InstallName_) {
+    InstallName = std::string(InstallName_);
+  }
 
   /// Get the install name of the library.
   StringRef getInstallName() const { return InstallName; }
@@ -272,12 +274,12 @@ public:
   /// \param Target_ The target applicable to Parent
   /// \param Parent  The name of Parent
   void addParentUmbrella(const Target &Target_, StringRef Parent);
-  const std::vector<std::pair<Target, std::string>> &umbrellas() const {
-    return ParentUmbrellas;
-  }
 
-  /// Get the parent umbrella framework.
-  const std::vector<std::pair<Target, std::string>> getParentUmbrellas() const {
+  /// Get the list of Parent Umbrella frameworks.
+  ///
+  /// \return Returns a list of target information and install name of parent
+  /// umbrellas.
+  const std::vector<std::pair<Target, std::string>> &umbrellas() const {
     return ParentUmbrellas;
   }
 
@@ -329,6 +331,20 @@ public:
   /// \return Returns a list of Target/UUID pairs.
   const std::vector<std::pair<Target, std::string>> &uuids() const {
     return UUIDs;
+  }
+
+  /// Add a library for inlining to top level library.
+  ///
+  ///\param Document The library to inline with top level library.
+  void addDocument(std::shared_ptr<InterfaceFile> &&Document) {
+    Documents.emplace_back(std::move(Document));
+  }
+
+  /// Get the list of inlined libraries.
+  ///
+  /// \return Returns a list of the inlined frameworks.
+  const std::vector<std::shared_ptr<InterfaceFile>> &documents() const {
+    return Documents;
   }
 
   /// Add a symbol to the symbols list or extend an existing one.
@@ -406,6 +422,7 @@ private:
   std::vector<std::pair<Target, std::string>> ParentUmbrellas;
   std::vector<InterfaceFileRef> AllowableClients;
   std::vector<InterfaceFileRef> ReexportedLibraries;
+  std::vector<std::shared_ptr<InterfaceFile>> Documents;
   std::vector<std::pair<Target, std::string>> UUIDs;
   SymbolMapType Symbols;
 };

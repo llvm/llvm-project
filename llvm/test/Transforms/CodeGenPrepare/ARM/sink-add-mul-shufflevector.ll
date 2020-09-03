@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+mve.fp < %s -codegenprepare -S | FileCheck -check-prefix=CHECK %s
+; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp < %s -codegenprepare -S | FileCheck -check-prefix=CHECK %s
 
 define void @sink_add_mul(i32* %s1, i32 %x, i32* %d, i32 %n) {
 ; CHECK-LABEL: @sink_add_mul(

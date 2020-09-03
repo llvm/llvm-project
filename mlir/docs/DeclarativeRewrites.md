@@ -11,8 +11,8 @@ compiler build time.
 This manual explains in detail all of the available mechanisms for defining
 rewrite rules in such a declarative manner. It aims to be a specification
 instead of a tutorial. Please refer to
-[Quickstart tutorial to adding MLIR graph rewrite](QuickstartRewrites.md) for
-the latter.
+[Quickstart tutorial to adding MLIR graph
+rewrite](Tutorials/QuickstartRewrites.md) for the latter.
 
 Given that declarative rewrite rules depend on op definition specification, this
 manual assumes knowledge of the [ODS](OpDefinitions.md) doc.
@@ -153,7 +153,7 @@ bound symbol, for example, `def : Pat<(AOp $a, F32Attr), ...>`.
 
 #### Matching DAG of operations
 
-To match an DAG of ops, use nested `dag` objects:
+To match a DAG of ops, use nested `dag` objects:
 
 ```tablegen
 
@@ -265,7 +265,7 @@ For example, for the above `AOp`, a possible builder is:
 
 ```c++
 
-void AOp::build(Builder *builder, OperationState &state,
+void AOp::build(OpBuilder &builder, OperationState &state,
                 Value input, Attribute attr) {
   state.addOperands({input});
   state.addAttribute("a_attr", attr);
@@ -400,14 +400,14 @@ handy methods on `mlir::Builder`.
 example and decompose the array attribute into two attributes:
 
 ```tablegen
-class getNthAttr<int n> : NativeCodeCall<"$_self.getValue()[" # n # "]">;
+class getNthAttr<int n> : NativeCodeCall<"$_self[" # n # "]">;
 
 def : Pat<(OneAttrOp $attr),
           (TwoAttrOp (getNthAttr<0>:$attr), (getNthAttr<1>:$attr)>;
 ```
 
 In the above, `$_self` is substituted by the attribute bound by `$attr`, which
-is `OnAttrOp`'s array attribute.
+is `OneAttrOp`'s array attribute.
 
 Positional placeholders will be substituted by the `dag` object parameters at
 the `NativeCodeCall` use site. For example, if we define `SomeCall :
@@ -469,7 +469,7 @@ value. Instead we can use multiple result patterns:
 
 ```tablegen
 def : Pattern<(AddIOp $lhs, $rhs),
-              [(StoreOp (AllocOp:$mem (ShapeOp %lhs)), (AddIOp $lhs, $rhs)),
+              [(StoreOp (AllocOp:$mem (ShapeOp $lhs)), (AddIOp $lhs, $rhs)),
                (LoadOp $mem)];
 ```
 
@@ -530,7 +530,7 @@ the `TwoResultOp`'s two results, respectively.
 
 The above example also shows how to replace a matched multi-result op.
 
-To replace a `N`-result op, the result patterns must generate at least `N`
+To replace an `N`-result op, the result patterns must generate at least `N`
 declared values (see [Declared vs. actual value](#declared-vs-actual-value) for
 definition). If there are more than `N` declared values generated, only the
 last `N` declared values will be used to replace the matched op. Note that
@@ -618,8 +618,7 @@ results. The third parameter to `Pattern` (and `Pat`) is for this purpose.
 For example, we can write
 
 ```tablegen
-def HasNoUseOf: Constraint<
-    CPred<"$_self->use_begin() == $_self->use_end()">, "has no use">;
+def HasNoUseOf: Constraint<CPred<"$_self.use_empty()">, "has no use">;
 
 def HasSameElementType : Constraint<
     CPred<"$0.cast<ShapedType>().getElementType() == "
@@ -658,9 +657,59 @@ pattern. This is based on the heuristics and assumptions that:
 The fourth parameter to `Pattern` (and `Pat`) allows to manually tweak a
 pattern's benefit. Just supply `(addBenefit N)` to add `N` to the benefit value.
 
-## Special directives
+## Rewrite directives
 
-[TODO]
+### `location`
+
+By default the C++ pattern expanded from a DRR pattern uses the fused location
+of all source ops as the location for all generated ops. This is not always the
+best location mapping relationship. For such cases, DRR provides the `location`
+directive to provide finer control.
+
+`location` is of the following syntax:
+
+```tablegen
+(location $symbol0, $symbol1, ...)
+```
+
+where all `$symbol` should be bound previously in the pattern and one optional
+string may be specified as an attribute. The following locations are created:
+
+*   If only 1 symbol is specified then that symbol's location is used,
+*   If multiple are specified then a fused location is created;
+*   If no symbol is specified then string must be specified and a NamedLoc is
+    created instead;
+
+`location` must be used as the last argument to an op creation. For example,
+
+```tablegen
+def : Pat<(LocSrc1Op:$src1 (LocSrc2Op:$src2 ...),
+          (LocDst1Op (LocDst2Op ..., (location $src2)), (location "outer"))>;
+```
+
+In the above pattern, the generated `LocDst2Op` will use the matched location
+of `LocSrc2Op` while the root `LocDst1Op` node will used the named location
+`outer`.
+
+### `replaceWithValue`
+
+The `replaceWithValue` directive is used to eliminate a matched op by replacing
+all of it uses with a captured value. It is of the following syntax:
+
+```tablegen
+(replaceWithValue $symbol)
+```
+
+where `$symbol` should be a symbol bound previously in the pattern.
+
+For example,
+
+```tablegen
+def : Pat<(Foo $input), (replaceWithValue $input)>;
+```
+
+The above pattern removes the `Foo` and replaces all uses of `Foo` with
+`$input`.
 
 ## Debugging Tips
 

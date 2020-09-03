@@ -347,7 +347,6 @@ define <8 x i32> @masked_gather_v8i32(<8 x i32*>* %ptr, <8 x i1> %masks, <8 x i3
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; X64-NEXT:    vpslld $31, %ymm0, %ymm0
-; X64-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; X64-NEXT:    vmovdqa (%rdi), %ymm2
 ; X64-NEXT:    vmovdqa 32(%rdi), %ymm3
 ; X64-NEXT:    vextracti128 $1, %ymm1, %xmm4
@@ -462,7 +461,6 @@ define <8 x float> @masked_gather_v8float(<8 x float*>* %ptr, <8 x i1> %masks, <
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; X64-NEXT:    vpslld $31, %ymm0, %ymm0
-; X64-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; X64-NEXT:    vmovaps (%rdi), %ymm2
 ; X64-NEXT:    vmovaps 32(%rdi), %ymm3
 ; X64-NEXT:    vextractf128 $1, %ymm1, %xmm4

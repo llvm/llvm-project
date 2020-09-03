@@ -1,6 +1,5 @@
-# RUN: yaml2obj %s > %t.o
-# RUN: llvm-nm %t.o 2>&1 | FileCheck %s
-# RUN: llvm-nm --print-file-name %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-PRINT-FILE-NAME
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-nm %t.o 2>&1 | FileCheck %s -DFILE=%t.o
 
 !ELF
 FileHeader:
@@ -9,6 +8,4 @@ FileHeader:
   Type:            ET_REL
   Machine:         EM_X86_64
 
-# CHECK: {{^}}no symbols{{$}}
-
-# CHECK-PRINT-FILE-NAME: nm-no-symbols.test{{.*}}.o: no symbols{{$}}
+# CHECK: [[FILE]]: no symbols{{$}}

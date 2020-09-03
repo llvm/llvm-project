@@ -23,6 +23,8 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/RISCVAttributeParser.h"
+#include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/TargetRegistry.h"
 #include <algorithm>
 #include <cstddef>
@@ -157,17 +159,21 @@ SubtargetFeatures ELFObjectFileBase::getMIPSFeatures() const {
 SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   SubtargetFeatures Features;
   ARMAttributeParser Attributes;
-  if (Error E = getBuildAttributes(Attributes))
+  if (Error E = getBuildAttributes(Attributes)) {
+    consumeError(std::move(E));
     return SubtargetFeatures();
+  }
 
   // both ARMv7-M and R have to support thumb hardware div
   bool isV7 = false;
-  if (Attributes.hasAttribute(ARMBuildAttrs::CPU_arch))
-    isV7 = Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch)
-      == ARMBuildAttrs::v7;
+  Optional<unsigned> Attr =
+      Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
+  if (Attr.hasValue())
+    isV7 = Attr.getValue() == ARMBuildAttrs::v7;
 
-  if (Attributes.hasAttribute(ARMBuildAttrs::CPU_arch_profile)) {
-    switch(Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile)) {
+  Attr = Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
+  if (Attr.hasValue()) {
+    switch (Attr.getValue()) {
     case ARMBuildAttrs::ApplicationProfile:
       Features.AddFeature("aclass");
       break;
@@ -184,8 +190,9 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
     }
   }
 
-  if (Attributes.hasAttribute(ARMBuildAttrs::THUMB_ISA_use)) {
-    switch(Attributes.getAttributeValue(ARMBuildAttrs::THUMB_ISA_use)) {
+  Attr = Attributes.getAttributeValue(ARMBuildAttrs::THUMB_ISA_use);
+  if (Attr.hasValue()) {
+    switch (Attr.getValue()) {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
@@ -198,8 +205,9 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
     }
   }
 
-  if (Attributes.hasAttribute(ARMBuildAttrs::FP_arch)) {
-    switch(Attributes.getAttributeValue(ARMBuildAttrs::FP_arch)) {
+  Attr = Attributes.getAttributeValue(ARMBuildAttrs::FP_arch);
+  if (Attr.hasValue()) {
+    switch (Attr.getValue()) {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
@@ -221,8 +229,9 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
     }
   }
 
-  if (Attributes.hasAttribute(ARMBuildAttrs::Advanced_SIMD_arch)) {
-    switch(Attributes.getAttributeValue(ARMBuildAttrs::Advanced_SIMD_arch)) {
+  Attr = Attributes.getAttributeValue(ARMBuildAttrs::Advanced_SIMD_arch);
+  if (Attr.hasValue()) {
+    switch (Attr.getValue()) {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
@@ -239,8 +248,9 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
     }
   }
 
-  if (Attributes.hasAttribute(ARMBuildAttrs::MVE_arch)) {
-    switch(Attributes.getAttributeValue(ARMBuildAttrs::MVE_arch)) {
+  Attr = Attributes.getAttributeValue(ARMBuildAttrs::MVE_arch);
+  if (Attr.hasValue()) {
+    switch (Attr.getValue()) {
     default:
       break;
     case ARMBuildAttrs::Not_Allowed:
@@ -257,8 +267,9 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
     }
   }
 
-  if (Attributes.hasAttribute(ARMBuildAttrs::DIV_use)) {
-    switch(Attributes.getAttributeValue(ARMBuildAttrs::DIV_use)) {
+  Attr = Attributes.getAttributeValue(ARMBuildAttrs::DIV_use);
+  if (Attr.hasValue()) {
+    switch (Attr.getValue()) {
     default:
       break;
     case ARMBuildAttrs::DisallowDIV:
@@ -283,6 +294,51 @@ SubtargetFeatures ELFObjectFileBase::getRISCVFeatures() const {
     Features.AddFeature("c");
   }
 
+  // Add features according to the ELF attribute section.
+  // If there are any unrecognized features, ignore them.
+  RISCVAttributeParser Attributes;
+  if (Error E = getBuildAttributes(Attributes)) {
+    // TODO Propagate Error.
+    consumeError(std::move(E));
+    return Features; // Keep "c" feature if there is one in PlatformFlags.
+  }
+
+  Optional<StringRef> Attr = Attributes.getAttributeString(RISCVAttrs::ARCH);
+  if (Attr.hasValue()) {
+    // The Arch pattern is [rv32|rv64][i|e]version(_[m|a|f|d|c]version)*
+    // Version string pattern is (major)p(minor). Major and minor are optional.
+    // For example, a version number could be 2p0, 2, or p92.
+    StringRef Arch = Attr.getValue();
+    if (Arch.consume_front("rv32"))
+      Features.AddFeature("64bit", false);
+    else if (Arch.consume_front("rv64"))
+      Features.AddFeature("64bit");
+
+    while (!Arch.empty()) {
+      switch (Arch[0]) {
+      default:
+        break; // Ignore unexpected features.
+      case 'i':
+        Features.AddFeature("e", false);
+        break;
+      case 'd':
+        Features.AddFeature("f"); // D-ext will imply F-ext.
+        LLVM_FALLTHROUGH;
+      case 'e':
+      case 'm':
+      case 'a':
+      case 'f':
+      case 'c':
+        Features.AddFeature(Arch.take_front());
+        break;
+      }
+
+      // FIXME: Handle version numbers.
+      Arch = Arch.drop_until([](char c) { return c == '_' || c == '\0'; });
+      Arch = Arch.drop_while([](char c) { return c == '_'; });
+    }
+  }
+
   return Features;
 }
 
@@ -305,8 +361,11 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
     return;
 
   ARMAttributeParser Attributes;
-  if (Error E = getBuildAttributes(Attributes))
+  if (Error E = getBuildAttributes(Attributes)) {
+    // TODO Propagate Error.
+    consumeError(std::move(E));
     return;
+  }
 
   std::string Triple;
   // Default to ARM, but use the triple if it's been set.
@@ -315,8 +374,10 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
   else
     Triple = "arm";
 
-  if (Attributes.hasAttribute(ARMBuildAttrs::CPU_arch)) {
-    switch(Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch)) {
+  Optional<unsigned> Attr =
+      Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
+  if (Attr.hasValue()) {
+    switch (Attr.getValue()) {
     case ARMBuildAttrs::v4:
       Triple += "v4";
       break;

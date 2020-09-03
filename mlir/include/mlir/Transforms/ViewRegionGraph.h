@@ -1,6 +1,6 @@
 //===- ViewRegionGraph.h - View/write graphviz graphs -----------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -19,7 +19,7 @@
 
 namespace mlir {
 class FuncOp;
-template <typename T> class OpPassBase;
+template <typename T> class OperationPass;
 class Region;
 
 /// Displays the CFG in a window. This is for use from the debugger and
@@ -32,7 +32,7 @@ raw_ostream &writeGraph(raw_ostream &os, Region &region,
                         bool shortNames = false, const Twine &title = "");
 
 /// Creates a pass to print CFG graphs.
-std::unique_ptr<mlir::OpPassBase<mlir::FuncOp>>
+std::unique_ptr<mlir::OperationPass<mlir::FuncOp>>
 createPrintCFGGraphPass(raw_ostream &os = llvm::errs(), bool shortNames = false,
                         const Twine &title = "");
 

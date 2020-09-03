@@ -5,7 +5,8 @@
 
 // CHECK: .eh_frame contents:
 
-// CHECK:      00000000 0000001c ffffffff CIE
+// CHECK:      00000000 0000001c 00000000 CIE
+// CHECK-NEXT:   Format:                DWARF32
 // CHECK-NEXT:   Version:                       1
 // CHECK-NEXT:   Augmentation:             "zPLR"
 // CHECK-NEXT:   Code alignment factor: 1
@@ -19,7 +20,8 @@
 // CHECK-NEXT: DW_CFA_nop:
 // CHECK-NEXT: DW_CFA_nop:
 
-// CHECK:      00000020 00000014 00000024 FDE cie=00000024 pc=00001014...00001014
+// CHECK:      00000020 00000014 00000024 FDE cie=00000000 pc=00001014...00001014
+// CHECK-NEXT:   Format:       DWARF32
 // CHECK-NEXT:   LSDA Address: 000000000000100b
 // CHECK-NEXT:   DW_CFA_nop:
 // CHECK-NEXT:   DW_CFA_nop:

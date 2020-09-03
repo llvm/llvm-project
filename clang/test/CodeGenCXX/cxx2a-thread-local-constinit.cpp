@@ -64,7 +64,7 @@ int d_init();
 thread_local int d = d_init();
 
 struct Destructed {
-  int n;
+  int n = 0;
   ~Destructed();
 };
 

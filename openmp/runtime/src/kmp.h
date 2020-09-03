@@ -872,36 +872,36 @@ extern int __kmp_hws_abs_flag; // absolute or per-item number requested
 typedef uintptr_t omp_uintptr_t;
 
 typedef enum {
-  OMP_ATK_THREADMODEL = 1,
-  OMP_ATK_ALIGNMENT = 2,
-  OMP_ATK_ACCESS = 3,
-  OMP_ATK_POOL_SIZE = 4,
-  OMP_ATK_FALLBACK = 5,
-  OMP_ATK_FB_DATA = 6,
-  OMP_ATK_PINNED = 7,
-  OMP_ATK_PARTITION = 8
+  omp_atk_threadmodel = 1,
+  omp_atk_alignment = 2,
+  omp_atk_access = 3,
+  omp_atk_pool_size = 4,
+  omp_atk_fallback = 5,
+  omp_atk_fb_data = 6,
+  omp_atk_pinned = 7,
+  omp_atk_partition = 8
 } omp_alloctrait_key_t;
 
 typedef enum {
-  OMP_ATV_FALSE = 0,
-  OMP_ATV_TRUE = 1,
-  OMP_ATV_DEFAULT = 2,
-  OMP_ATV_CONTENDED = 3,
-  OMP_ATV_UNCONTENDED = 4,
-  OMP_ATV_SEQUENTIAL = 5,
-  OMP_ATV_PRIVATE = 6,
-  OMP_ATV_ALL = 7,
-  OMP_ATV_THREAD = 8,
-  OMP_ATV_PTEAM = 9,
-  OMP_ATV_CGROUP = 10,
-  OMP_ATV_DEFAULT_MEM_FB = 11,
-  OMP_ATV_NULL_FB = 12,
-  OMP_ATV_ABORT_FB = 13,
-  OMP_ATV_ALLOCATOR_FB = 14,
-  OMP_ATV_ENVIRONMENT = 15,
-  OMP_ATV_NEAREST = 16,
-  OMP_ATV_BLOCKED = 17,
-  OMP_ATV_INTERLEAVED = 18
+  omp_atv_false = 0,
+  omp_atv_true = 1,
+  omp_atv_default = 2,
+  omp_atv_contended = 3,
+  omp_atv_uncontended = 4,
+  omp_atv_sequential = 5,
+  omp_atv_private = 6,
+  omp_atv_all = 7,
+  omp_atv_thread = 8,
+  omp_atv_pteam = 9,
+  omp_atv_cgroup = 10,
+  omp_atv_default_mem_fb = 11,
+  omp_atv_null_fb = 12,
+  omp_atv_abort_fb = 13,
+  omp_atv_allocator_fb = 14,
+  omp_atv_environment = 15,
+  omp_atv_nearest = 16,
+  omp_atv_blocked = 17,
+  omp_atv_interleaved = 18
 } omp_alloctrait_value_t;
 
 typedef void *omp_memspace_handle_t;
@@ -1548,7 +1548,7 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info32 {
   kmp_int32 tc;
   kmp_int32 static_steal_counter; /* for static_steal only; maybe better to put
                                      after ub */
-
+  kmp_lock_t *th_steal_lock; // lock used for chunk stealing
   // KMP_ALIGN( 16 ) ensures ( if the KMP_ALIGN macro is turned on )
   //    a) parm3 is properly aligned and
   //    b) all parm1-4 are in the same cache line.
@@ -1581,7 +1581,7 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info64 {
   kmp_int64 tc; /* trip count (number of iterations) */
   kmp_int64 static_steal_counter; /* for static_steal only; maybe better to put
                                      after ub */
-
+  kmp_lock_t *th_steal_lock; // lock used for chunk stealing
   /* parm[1-4] are used in different ways by different scheduling algorithms */
 
   // KMP_ALIGN( 32 ) ensures ( if the KMP_ALIGN macro is turned on )
@@ -1722,11 +1722,7 @@ typedef struct kmp_disp {
   kmp_int32 th_disp_index;
   kmp_int32 th_doacross_buf_idx; // thread's doacross buffer index
   volatile kmp_uint32 *th_doacross_flags; // pointer to shared array of flags
-  union { // we can use union here because doacross cannot be used in
-    // nonmonotonic loops
-    kmp_int64 *th_doacross_info; // info on loop bounds
-    kmp_lock_t *th_steal_lock; // lock used for chunk stealing (8-byte variable)
-  };
+  kmp_int64 *th_doacross_info; // info on loop bounds
 #if KMP_USE_INTERNODE_ALIGNMENT
   char more_padding[INTERNODE_CACHE_LINE];
 #endif
@@ -2435,10 +2431,10 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   int th_teams_level; /* save initial level of teams construct */
 /* it is 0 on device but may be any on host */
 
-/* The blocktime info is copied from the team struct to the thread sruct */
-/* at the start of a barrier, and the values stored in the team are used */
-/* at points in the code where the team struct is no longer guaranteed   */
-/* to exist (from the POV of worker threads).                            */
+/* The blocktime info is copied from the team struct to the thread struct */
+/* at the start of a barrier, and the values stored in the team are used  */
+/* at points in the code where the team struct is no longer guaranteed    */
+/* to exist (from the POV of worker threads).                             */
 #if KMP_USE_MONITOR
   int th_team_bt_intervals;
   int th_team_bt_set;
@@ -3907,6 +3903,8 @@ static inline void __kmp_resume_if_hard_paused() {
     __kmp_pause_status = kmp_not_paused;
   }
 }
+
+extern void __kmp_omp_display_env(int verbose);
 
 #ifdef __cplusplus
 }

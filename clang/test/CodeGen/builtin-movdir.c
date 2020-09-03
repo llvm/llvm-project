@@ -24,11 +24,6 @@ void test_directstore64(void *dst, uint64_t value) {
 
 void test_dir64b(void *dst, const void *src) {
   // CHECK-LABEL: test_dir64b
-  // CHECK: [[PTRINT1:%.+]] = ptrtoint
-  // X86: [[MASKEDPTR1:%.+]] = and i32 [[PTRINT1]], 63
-  // X86: [[MASKCOND1:%.+]] = icmp eq i32 [[MASKEDPTR1]], 0
-  // X86_64: [[MASKEDPTR1:%.+]] = and i64 [[PTRINT1]], 63
-  // X86_64: [[MASKCOND1:%.+]] = icmp eq i64 [[MASKEDPTR1]], 0
   // CHECK: call void @llvm.x86.movdir64b
   _movdir64b(dst, src);
 }

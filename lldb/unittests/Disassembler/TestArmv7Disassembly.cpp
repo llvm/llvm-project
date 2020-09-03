@@ -1,5 +1,4 @@
-//===-- TestArmv7Disassembly.cpp ------------------------------------*- C++
-//-*-===//
+//===-- TestArmv7Disassembly.cpp ------------------------------------------===//
 
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -15,7 +14,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Target/ExecutionContext.h"
 
-#include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
+#include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace lldb;

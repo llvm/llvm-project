@@ -184,7 +184,7 @@ class UserValue {
 
   /// Replace OldLocNo ranges with NewRegs ranges where NewRegs
   /// is live. Returns true if any changes were made.
-  bool splitLocation(unsigned OldLocNo, ArrayRef<unsigned> NewRegs,
+  bool splitLocation(unsigned OldLocNo, ArrayRef<Register> NewRegs,
                      LiveIntervals &LIS);
 
 public:
@@ -332,7 +332,7 @@ public:
 
   /// Replace OldReg ranges with NewRegs ranges where NewRegs is
   /// live. Returns true if any changes were made.
-  bool splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs,
+  bool splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
                      LiveIntervals &LIS);
 
   /// Rewrite virtual register locations according to the provided virtual
@@ -420,7 +420,7 @@ class LDVImpl {
                           const DebugLoc &DL);
 
   /// Find the EC leader for VirtReg or null.
-  UserValue *lookupVirtReg(unsigned VirtReg);
+  UserValue *lookupVirtReg(Register VirtReg);
 
   /// Add DBG_VALUE instruction to our maps.
   ///
@@ -470,10 +470,10 @@ public:
   }
 
   /// Map virtual register to an equivalence class.
-  void mapVirtReg(unsigned VirtReg, UserValue *EC);
+  void mapVirtReg(Register VirtReg, UserValue *EC);
 
   /// Replace all references to OldReg with NewRegs.
-  void splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs);
+  void splitRegister(Register OldReg, ArrayRef<Register> NewRegs);
 
   /// Recreate DBG_VALUE instruction from data structures.
   void emitDebugValues(VirtRegMap *VRM);
@@ -593,13 +593,13 @@ UserValue *LDVImpl::getUserValue(const DILocalVariable *Var,
   return UV;
 }
 
-void LDVImpl::mapVirtReg(unsigned VirtReg, UserValue *EC) {
+void LDVImpl::mapVirtReg(Register VirtReg, UserValue *EC) {
   assert(Register::isVirtualRegister(VirtReg) && "Only map VirtRegs");
   UserValue *&Leader = virtRegToEqClass[VirtReg];
   Leader = UserValue::merge(Leader, EC);
 }
 
-UserValue *LDVImpl::lookupVirtReg(unsigned VirtReg) {
+UserValue *LDVImpl::lookupVirtReg(Register VirtReg) {
   if (UserValue *UV = virtRegToEqClass.lookup(VirtReg))
     return UV->getLeader();
   return nullptr;
@@ -608,8 +608,8 @@ UserValue *LDVImpl::lookupVirtReg(unsigned VirtReg) {
 bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   // DBG_VALUE loc, offset, variable
   if (MI.getNumOperands() != 4 ||
-      !(MI.getOperand(1).isReg() || MI.getOperand(1).isImm()) ||
-      !MI.getOperand(2).isMetadata()) {
+      !(MI.getDebugOffset().isReg() || MI.getDebugOffset().isImm()) ||
+      !MI.getDebugVariableOp().isMetadata()) {
     LLVM_DEBUG(dbgs() << "Can't handle " << MI);
     return false;
   }
@@ -622,9 +622,9 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   // (and if the machine verifier is improved to catch this), then these checks
   // could be removed or replaced by asserts.
   bool Discard = false;
-  if (MI.getOperand(0).isReg() &&
-      Register::isVirtualRegister(MI.getOperand(0).getReg())) {
-    const Register Reg = MI.getOperand(0).getReg();
+  if (MI.getDebugOperand(0).isReg() &&
+      Register::isVirtualRegister(MI.getDebugOperand(0).getReg())) {
+    const Register Reg = MI.getDebugOperand(0).getReg();
     if (!LIS->hasInterval(Reg)) {
       // The DBG_VALUE is described by a virtual register that does not have a
       // live interval. Discard the DBG_VALUE.
@@ -648,14 +648,15 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   }
 
   // Get or create the UserValue for (variable,offset) here.
-  bool IsIndirect = MI.getOperand(1).isImm();
+  bool IsIndirect = MI.isDebugOffsetImm();
   if (IsIndirect)
-    assert(MI.getOperand(1).getImm() == 0 && "DBG_VALUE with nonzero offset");
+    assert(MI.getDebugOffset().getImm() == 0 &&
+           "DBG_VALUE with nonzero offset");
   const DILocalVariable *Var = MI.getDebugVariable();
   const DIExpression *Expr = MI.getDebugExpression();
   UserValue *UV = getUserValue(Var, Expr->getFragmentInfo(), MI.getDebugLoc());
   if (!Discard)
-    UV->addDef(Idx, MI.getOperand(0), IsIndirect, *Expr);
+    UV->addDef(Idx, MI.getDebugOperand(0), IsIndirect, *Expr);
   else {
     MachineOperand MO = MachineOperand::CreateReg(0U, false);
     MO.setIsDebug();
@@ -1029,7 +1030,7 @@ LiveDebugVariables::~LiveDebugVariables() {
 //===----------------------------------------------------------------------===//
 
 bool
-UserValue::splitLocation(unsigned OldLocNo, ArrayRef<unsigned> NewRegs,
+UserValue::splitLocation(unsigned OldLocNo, ArrayRef<Register> NewRegs,
                          LiveIntervals& LIS) {
   LLVM_DEBUG({
     dbgs() << "Splitting Loc" << OldLocNo << '\t';
@@ -1129,7 +1130,7 @@ UserValue::splitLocation(unsigned OldLocNo, ArrayRef<unsigned> NewRegs,
 }
 
 bool
-UserValue::splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs,
+UserValue::splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
                          LiveIntervals &LIS) {
   bool DidChange = false;
   // Split locations referring to OldReg. Iterate backwards so splitLocation can
@@ -1144,7 +1145,7 @@ UserValue::splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs,
   return DidChange;
 }
 
-void LDVImpl::splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs) {
+void LDVImpl::splitRegister(Register OldReg, ArrayRef<Register> NewRegs) {
   bool DidChange = false;
   for (UserValue *UV = lookupVirtReg(OldReg); UV; UV = UV->getNext())
     DidChange |= UV->splitRegister(OldReg, NewRegs, *LIS);
@@ -1159,7 +1160,7 @@ void LDVImpl::splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs) {
 }
 
 void LiveDebugVariables::
-splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs, LiveIntervals &LIS) {
+splitRegister(Register OldReg, ArrayRef<Register> NewRegs, LiveIntervals &LIS) {
   if (pImpl)
     static_cast<LDVImpl*>(pImpl)->splitRegister(OldReg, NewRegs);
 }

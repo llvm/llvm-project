@@ -19,9 +19,10 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervalCalc.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveRangeCalc.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -79,10 +80,15 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
   std::pair<SlotIndex, SlotIndex> &LIP = LastInsertPoint[Num];
   SlotIndex MBBEnd = LIS.getMBBEndIdx(&MBB);
 
-  SmallVector<const MachineBasicBlock *, 1> EHPadSuccessors;
-  for (const MachineBasicBlock *SMBB : MBB.successors())
-    if (SMBB->isEHPad())
-      EHPadSuccessors.push_back(SMBB);
+  SmallVector<const MachineBasicBlock *, 1> ExceptionalSuccessors;
+  bool EHPadSuccessor = false;
+  for (const MachineBasicBlock *SMBB : MBB.successors()) {
+    if (SMBB->isEHPad()) {
+      ExceptionalSuccessors.push_back(SMBB);
+      EHPadSuccessor = true;
+    } else if (SMBB->isInlineAsmBrIndirectTarget())
+      ExceptionalSuccessors.push_back(SMBB);
+  }
 
   // Compute insert points on the first call. The pair is independent of the
   // current live interval.
@@ -93,15 +99,17 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
     else
       LIP.first = LIS.getInstructionIndex(*FirstTerm);
 
-    // If there is a landing pad successor, also find the call instruction.
-    if (EHPadSuccessors.empty())
+    // If there is a landing pad or inlineasm_br successor, also find the
+    // instruction. If there is no such instruction, we don't need to do
+    // anything special.  We assume there cannot be multiple instructions that
+    // are Calls with EHPad successors or INLINEASM_BR in a block. Further, we
+    // assume that if there are any, they will be after any other call
+    // instructions in the block.
+    if (ExceptionalSuccessors.empty())
       return LIP.first;
-    // There may not be a call instruction (?) in which case we ignore LPad.
-    LIP.second = LIP.first;
-    for (MachineBasicBlock::const_iterator I = MBB.end(), E = MBB.begin();
-         I != E;) {
-      --I;
-      if (I->isCall()) {
+    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
+      if ((EHPadSuccessor && I->isCall()) ||
+          I->getOpcode() == TargetOpcode::INLINEASM_BR) {
         LIP.second = LIS.getInstructionIndex(*I);
         break;
       }
@@ -113,7 +121,7 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
   if (!LIP.second)
     return LIP.first;
 
-  if (none_of(EHPadSuccessors, [&](const MachineBasicBlock *EHPad) {
+  if (none_of(ExceptionalSuccessors, [&](const MachineBasicBlock *EHPad) {
         return LIS.isLiveInToMBB(CurLI, EHPad);
       }))
     return LIP.first;
@@ -379,11 +387,11 @@ void SplitEditor::reset(LiveRangeEdit &LRE, ComplementSpillMode SM) {
   RegAssign.clear();
   Values.clear();
 
-  // Reset the LiveRangeCalc instances needed for this spill mode.
-  LRCalc[0].reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,
+  // Reset the LiveIntervalCalc instances needed for this spill mode.
+  LICalc[0].reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,
                   &LIS.getVNInfoAllocator());
   if (SpillMode)
-    LRCalc[1].reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,
+    LICalc[1].reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,
                     &LIS.getVNInfoAllocator());
 
   // We don't need an AliasAnalysis since we will only be performing
@@ -832,7 +840,7 @@ void SplitEditor::overlapIntv(SlotIndex Start, SlotIndex End) {
   assert(LIS.getMBBFromIndex(Start) == LIS.getMBBFromIndex(End) &&
          "Range cannot span basic blocks");
 
-  // The complement interval will be extended as needed by LRCalc.extend().
+  // The complement interval will be extended as needed by LICalc.extend().
   if (ParentVNI)
     forceRecompute(0, *ParentVNI);
   LLVM_DEBUG(dbgs() << "    overlapIntv [" << Start << ';' << End << "):");
@@ -1118,7 +1126,7 @@ void SplitEditor::hoistCopies() {
 }
 
 /// transferValues - Transfer all possible values to the new live ranges.
-/// Values that were rematerialized are left alone, they need LRCalc.extend().
+/// Values that were rematerialized are left alone, they need LICalc.extend().
 bool SplitEditor::transferValues() {
   bool Skipped = false;
   RegAssignMap::const_iterator AssignI = RegAssign.begin();
@@ -1166,7 +1174,7 @@ bool SplitEditor::transferValues() {
         continue;
       }
 
-      LiveRangeCalc &LRC = getLRCalc(RegIdx);
+      LiveIntervalCalc &LIC = getLICalc(RegIdx);
 
       // This value has multiple defs in RegIdx, but it wasn't rematerialized,
       // so the live range is accurate. Add live-in blocks in [Start;End) to the
@@ -1182,7 +1190,7 @@ bool SplitEditor::transferValues() {
         LLVM_DEBUG(dbgs() << ':' << VNI->id << "*" << printMBBReference(*MBB));
         // MBB has its own def. Is it also live-out?
         if (BlockEnd <= End)
-          LRC.setLiveOutValue(&*MBB, VNI);
+          LIC.setLiveOutValue(&*MBB, VNI);
 
         // Skip to the next block for live-in.
         ++MBB;
@@ -1200,16 +1208,16 @@ bool SplitEditor::transferValues() {
           VNInfo *VNI = LI.extendInBlock(BlockStart, std::min(BlockEnd, End));
           assert(VNI && "Missing def for complex mapped parent PHI");
           if (End >= BlockEnd)
-            LRC.setLiveOutValue(&*MBB, VNI); // Live-out as well.
+            LIC.setLiveOutValue(&*MBB, VNI); // Live-out as well.
         } else {
           // This block needs a live-in value.  The last block covered may not
           // be live-out.
           if (End < BlockEnd)
-            LRC.addLiveInBlock(LI, MDT[&*MBB], End);
+            LIC.addLiveInBlock(LI, MDT[&*MBB], End);
           else {
             // Live-through, and we don't know the value.
-            LRC.addLiveInBlock(LI, MDT[&*MBB]);
-            LRC.setLiveOutValue(&*MBB, nullptr);
+            LIC.addLiveInBlock(LI, MDT[&*MBB]);
+            LIC.setLiveOutValue(&*MBB, nullptr);
           }
         }
         BlockStart = BlockEnd;
@@ -1220,9 +1228,9 @@ bool SplitEditor::transferValues() {
     LLVM_DEBUG(dbgs() << '\n');
   }
 
-  LRCalc[0].calculateValues();
+  LICalc[0].calculateValues();
   if (SpillMode)
-    LRCalc[1].calculateValues();
+    LICalc[1].calculateValues();
 
   return Skipped;
 }
@@ -1238,7 +1246,7 @@ static bool removeDeadSegment(SlotIndex Def, LiveRange &LR) {
   return true;
 }
 
-void SplitEditor::extendPHIRange(MachineBasicBlock &B, LiveRangeCalc &LRC,
+void SplitEditor::extendPHIRange(MachineBasicBlock &B, LiveIntervalCalc &LIC,
                                  LiveRange &LR, LaneBitmask LM,
                                  ArrayRef<SlotIndex> Undefs) {
   for (MachineBasicBlock *P : B.predecessors()) {
@@ -1252,7 +1260,7 @@ void SplitEditor::extendPHIRange(MachineBasicBlock &B, LiveRangeCalc &LRC,
     LiveRange &PSR = !LM.all() ? getSubRangeForMask(LM, PLI)
                                : static_cast<LiveRange&>(PLI);
     if (PSR.liveAt(LastUse))
-      LRC.extend(LR, End, /*PhysReg=*/0, Undefs);
+      LIC.extend(LR, End, /*PhysReg=*/0, Undefs);
   }
 }
 
@@ -1270,14 +1278,14 @@ void SplitEditor::extendPHIKillRanges() {
 
     unsigned RegIdx = RegAssign.lookup(V->def);
     LiveInterval &LI = LIS.getInterval(Edit->get(RegIdx));
-    LiveRangeCalc &LRC = getLRCalc(RegIdx);
+    LiveIntervalCalc &LIC = getLICalc(RegIdx);
     MachineBasicBlock &B = *LIS.getMBBFromIndex(V->def);
     if (!removeDeadSegment(V->def, LI))
-      extendPHIRange(B, LRC, LI, LaneBitmask::getAll(), /*Undefs=*/{});
+      extendPHIRange(B, LIC, LI, LaneBitmask::getAll(), /*Undefs=*/{});
   }
 
   SmallVector<SlotIndex, 4> Undefs;
-  LiveRangeCalc SubLRC;
+  LiveIntervalCalc SubLIC;
 
   for (LiveInterval::SubRange &PS : ParentLI.subranges()) {
     for (const VNInfo *V : PS.valnos) {
@@ -1290,11 +1298,11 @@ void SplitEditor::extendPHIKillRanges() {
         continue;
 
       MachineBasicBlock &B = *LIS.getMBBFromIndex(V->def);
-      SubLRC.reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,
+      SubLIC.reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,
                    &LIS.getVNInfoAllocator());
       Undefs.clear();
       LI.computeSubRangeUndefs(Undefs, PS.LaneMask, MRI, *LIS.getSlotIndexes());
-      extendPHIRange(B, SubLRC, S, PS.LaneMask, Undefs);
+      extendPHIRange(B, SubLIC, S, PS.LaneMask, Undefs);
     }
   }
 }
@@ -1363,8 +1371,8 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
       if (MO.isUse())
         ExtPoints.push_back(ExtPoint(MO, RegIdx, Next));
     } else {
-      LiveRangeCalc &LRC = getLRCalc(RegIdx);
-      LRC.extend(LI, Next, 0, ArrayRef<SlotIndex>());
+      LiveIntervalCalc &LIC = getLICalc(RegIdx);
+      LIC.extend(LI, Next, 0, ArrayRef<SlotIndex>());
     }
   }
 
@@ -1372,7 +1380,7 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
     LiveInterval &LI = LIS.getInterval(Edit->get(EP.RegIdx));
     assert(LI.hasSubRanges());
 
-    LiveRangeCalc SubLRC;
+    LiveIntervalCalc SubLIC;
     Register Reg = EP.MO.getReg(), Sub = EP.MO.getSubReg();
     LaneBitmask LM = Sub != 0 ? TRI.getSubRegIndexLaneMask(Sub)
                               : MRI.getMaxLaneMaskForVReg(Reg);
@@ -1386,11 +1394,11 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
       //   %1 = COPY %0
       if (S.empty())
         continue;
-      SubLRC.reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,
+      SubLIC.reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,
                    &LIS.getVNInfoAllocator());
       SmallVector<SlotIndex, 4> Undefs;
       LI.computeSubRangeUndefs(Undefs, S.LaneMask, MRI, *LIS.getSlotIndexes());
-      SubLRC.extend(S, EP.Next, 0, Undefs);
+      SubLIC.extend(S, EP.Next, 0, Undefs);
     }
   }
 

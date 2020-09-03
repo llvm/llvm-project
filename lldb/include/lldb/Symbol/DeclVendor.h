@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_DeclVendor_h_
-#define liblldb_DeclVendor_h_
+#ifndef LLDB_SYMBOL_DECLVENDOR_H
+#define LLDB_SYMBOL_DECLVENDOR_H
 
 #include "lldb/lldb-defines.h"
 
@@ -67,7 +67,8 @@ public:
 
 private:
   // For DeclVendor only
-  DISALLOW_COPY_AND_ASSIGN(DeclVendor);
+  DeclVendor(const DeclVendor &) = delete;
+  const DeclVendor &operator=(const DeclVendor &) = delete;
 
   const DeclVendorKind m_kind;
 };

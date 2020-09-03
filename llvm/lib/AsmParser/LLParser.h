@@ -16,18 +16,16 @@
 #include "LLLexer.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/ValueHandle.h"
 #include <map>
 
 namespace llvm {
   class Module;
-  class OpaqueType;
   class Function;
   class Value;
   class BasicBlock;
@@ -38,7 +36,6 @@ namespace llvm {
   class MDString;
   class MDNode;
   struct SlotMapping;
-  class StructType;
 
   /// ValID - Represents a reference of a definition of some sort with no type.
   /// There are several cases where we have to parse the value but where the
@@ -160,23 +157,17 @@ namespace llvm {
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;
 
-    /// DataLayout string to override that in LLVM assembly.
-    StringRef DataLayoutStr;
-
     std::string SourceFileName;
 
   public:
     LLParser(StringRef F, SourceMgr &SM, SMDiagnostic &Err, Module *M,
              ModuleSummaryIndex *Index, LLVMContext &Context,
-             SlotMapping *Slots = nullptr, bool UpgradeDebugInfo = true,
-             StringRef DataLayoutString = "")
+             SlotMapping *Slots = nullptr)
         : Context(Context), Lex(F, SM, Err, Context), M(M), Index(Index),
-          Slots(Slots), BlockAddressPFS(nullptr),
-          UpgradeDebugInfo(UpgradeDebugInfo), DataLayoutStr(DataLayoutString) {
-      if (!DataLayoutStr.empty())
-        M->setDataLayout(DataLayoutStr);
-    }
-    bool Run();
+          Slots(Slots), BlockAddressPFS(nullptr) {}
+    bool Run(
+        bool UpgradeDebugInfo,
+        DataLayoutCallbackTy DataLayoutCallback = [](Module *) {});
 
     bool parseStandaloneConstantValue(Constant *&C, const SlotMapping *Slots);
 
@@ -281,7 +272,8 @@ namespace llvm {
     void ParseOptionalVisibility(unsigned &Res);
     void ParseOptionalDLLStorageClass(unsigned &Res);
     bool ParseOptionalCallingConv(unsigned &CC);
-    bool ParseOptionalAlignment(MaybeAlign &Alignment);
+    bool ParseOptionalAlignment(MaybeAlign &Alignment,
+                                bool AllowParens = false);
     bool ParseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
     bool ParseScopeAndOrdering(bool isAtomic, SyncScope::ID &SSID,
                                AtomicOrdering &Ordering);
@@ -306,8 +298,9 @@ namespace llvm {
 
     // Top-Level Entities
     bool ParseTopLevelEntities();
-    bool ValidateEndOfModule();
+    bool ValidateEndOfModule(bool UpgradeDebugInfo);
     bool ValidateEndOfIndex();
+    bool ParseTargetDefinitions();
     bool ParseTargetDefinition();
     bool ParseModuleAsm();
     bool ParseSourceFileName();
@@ -340,6 +333,7 @@ namespace llvm {
                                     std::vector<unsigned> &FwdRefAttrGrps,
                                     bool inAttrGrp, LocTy &BuiltinLoc);
     bool ParseByValWithOptionalType(Type *&Result);
+    bool ParsePreallocated(Type *&Result);
 
     // Module Summary Index Parsing.
     bool SkipModuleSummaryEntry();
@@ -347,6 +341,8 @@ namespace llvm {
     bool ParseModuleEntry(unsigned ID);
     bool ParseModuleReference(StringRef &ModulePath);
     bool ParseGVReference(ValueInfo &VI, unsigned &GVId);
+    bool ParseSummaryIndexFlags();
+    bool ParseBlockCount();
     bool ParseGVEntry(unsigned ID);
     bool ParseFunctionSummary(std::string Name, GlobalValue::GUID, unsigned ID);
     bool ParseVariableSummary(std::string Name, GlobalValue::GUID, unsigned ID);
@@ -370,6 +366,12 @@ namespace llvm {
     bool ParseVFuncId(FunctionSummary::VFuncId &VFuncId,
                       IdToIndexMapType &IdToIndexMap, unsigned Index);
     bool ParseOptionalVTableFuncs(VTableFuncList &VTableFuncs);
+    bool ParseOptionalParamAccesses(
+        std::vector<FunctionSummary::ParamAccess> &Params);
+    bool ParseParamNo(uint64_t &ParamNo);
+    bool ParseParamAccess(FunctionSummary::ParamAccess &Param);
+    bool ParseParamAccessCall(FunctionSummary::ParamAccess::Call &Call);
+    bool ParseParamAccessOffset(ConstantRange &range);
     bool ParseOptionalRefs(std::vector<ValueInfo> &Refs);
     bool ParseTypeIdEntry(unsigned ID);
     bool ParseTypeIdSummary(TypeIdSummary &TIS);

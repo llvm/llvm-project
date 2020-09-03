@@ -14,12 +14,40 @@
 #define __isl_calloc(type,size)		((type *)calloc(1, size))
 #define __isl_calloc_type(type)		__isl_calloc(type,sizeof(type))
 
+/* Construct an isl_stat indicating whether "obj" is non-NULL.
+ *
+ * That is, return isl_stat_ok if "obj" is non_NULL and
+ * isl_stat_error otherwise.
+ */
+isl_stat isl_stat_non_null(void *obj)
+{
+	if (obj != NULL)
+		return isl_stat_ok;
+	return isl_stat_error;
+}
+
 /* Return the negation of "b", where the negation of isl_bool_error
  * is isl_bool_error again.
  */
 isl_bool isl_bool_not(isl_bool b)
 {
-	return b < 0 ? isl_bool_error : !b;
+	if (b < 0)
+		return isl_bool_error;
+	if (b == isl_bool_false)
+		return isl_bool_true;
+	return isl_bool_false;
+}
+
+/* Create an isl_bool from an integer.
+ *
+ * Return isl_bool_false if b is zero, otherwise return isl_bool_true.
+ * This function never returns isl_bool_error.
+ */
+isl_bool isl_bool_ok(int b)
+{
+	if (b)
+		return isl_bool_true;
+	return isl_bool_false;
 }
 
 /* Check that the result of an allocation ("p") is not NULL and
@@ -136,7 +164,7 @@ static struct isl_options *find_nested_options(struct isl_args *args,
 		if (arg->type != isl_arg_child)
 			continue;
 
-		if (arg->offset == (size_t) -1)
+		if (arg->offset == ISL_ARG_OFFSET_NONE)
 			child = opt;
 		else
 			child = *(void **)(((char *)opt) + arg->offset);

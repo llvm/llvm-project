@@ -1,25 +1,32 @@
-# RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
-# RUN: | llvm-dwarfdump -v --debug-info --debug-line - \
-# RUN: | FileCheck %s
+# RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o %t.o
+# RUN: llvm-dwarfdump -v --debug-info --debug-line %t.o | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace
 
-# CHECK-NOT: .debug_abbrev contents:
+#   CHECK-NOT:{{.*}} contents:
 
-# CHECK: .debug_info contents:
-# CHECK: DW_TAG_compile_unit [1]
-# CHECK: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{.*}}] = "brief.c")
-# CHECK: DW_AT_name [DW_FORM_strp]       ( .debug_str[0x{{.*}}] = "main")
-# CHECK: DW_AT_name [DW_FORM_strp]       ( .debug_str[0x{{.*}}] = "int")
+#       CHECK:.debug_info contents:
+#       CHECK:0x0000000b: DW_TAG_compile_unit [1] *
+#       CHECK:              DW_AT_name [DW_FORM_strp]	( .debug_str[0x{{.*}}] = "brief.c")
+#       CHECK:0x0000002a:   DW_TAG_subprogram [2]  
+#       CHECK:                DW_AT_name [DW_FORM_strp]	( .debug_str[0x{{.*}}] = "main")
+#       CHECK:0x00000043:   DW_TAG_base_type [3]  
+#  CHECK-NEXT:                DW_AT_name [DW_FORM_strp]	( .debug_str[0x{{.*}}] = "int")
 
-# CHECK: .debug_line contents:
-# CHECK: 00 DW_LNE_set_address (0x0000000000000000)
-# CHECK: 01 DW_LNS_copy
-# CHECK: 0x0000000000000000      1      0      1   0             0  is_stmt
-# CHECK: 05 DW_LNS_set_column (12)
-# CHECK: 0a DW_LNS_set_prologue_end
-# CHECK: 66 address += 6,  line += 0
-# CHECK: 0x0000000000000006      1     12      1   0             0  is_stmt prologue_end
-# CHECK: 02 DW_LNS_advance_pc (2)
-# CHECK: 00 DW_LNE_end_sequence
-# CHECK: 0x0000000000000008      1     12      1   0             0  is_stmt end_sequence
-#
-# CHECK-NOT: {{.*}} contents:
+#       CHECK:.debug_line contents:
+#       CHECK:         length: 0x00000000
+# CHECK-EMPTY:
+#  CHECK-NEXT:            Address            Line   Column File   ISA Discriminator Flags
+#  CHECK-NEXT:            ------------------ ------ ------ ------ --- ------------- -------------
+#  CHECK-NEXT:0x00000029: 00 DW_LNE_set_address (0x0000000000000000)
+#  CHECK-NEXT:0x00000034: 01 DW_LNS_copy
+#  CHECK-NEXT:            0x0000000000000000      1      0      1   0             0  is_stmt
+#  CHECK-NEXT:0x00000035: 05 DW_LNS_set_column (12)
+#  CHECK-NEXT:0x00000037: 0a DW_LNS_set_prologue_end
+#  CHECK-NEXT:0x00000038: 66 address += 6,  line += 0
+#  CHECK-NEXT:            0x0000000000000006      1     12      1   0             0  is_stmt prologue_end
+#  CHECK-NEXT:0x00000039: 02 DW_LNS_advance_pc (2)
+#  CHECK-NEXT:0x0000003b: 00 DW_LNE_end_sequence
+#  CHECK-NEXT:            0x0000000000000008      1     12      1   0             0  is_stmt end_sequence
+# CHECK-EMPTY:
+
+#   CHECK-NOT:{{.*}} contents:

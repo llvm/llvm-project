@@ -106,7 +106,7 @@ struct isl_sched_node {
 	int	compressed;
 	isl_set	*hull;
 	isl_multi_aff *compress;
-	isl_multi_aff *decompress;
+	isl_pw_multi_aff *decompress;
 	isl_mat *sched;
 	isl_map *sched_map;
 	int	 rank;
@@ -126,7 +126,7 @@ struct isl_sched_node {
 	isl_vec *max;
 };
 
-static int node_has_tuples(const void *entry, const void *val)
+static isl_bool node_has_tuples(const void *entry, const void *val)
 {
 	struct isl_sched_node *node = (struct isl_sched_node *)entry;
 	isl_space *space = (isl_space *) val;
@@ -436,8 +436,12 @@ static struct isl_sched_node *graph_find_node(isl_ctx *ctx,
 	hash = isl_space_get_tuple_hash(space);
 	entry = isl_hash_table_find(ctx, graph->node_table, hash,
 				    &node_has_tuples, space, 0);
+	if (!entry)
+		return NULL;
+	if (entry == isl_hash_table_entry_none)
+		return graph->node + graph->n;
 
-	return entry ? entry->data : graph->node + graph->n;
+	return entry->data;
 }
 
 /* Is "node" a node in "graph"?
@@ -448,12 +452,12 @@ static int is_node(struct isl_sched_graph *graph,
 	return node && node >= &graph->node[0] && node < &graph->node[graph->n];
 }
 
-static int edge_has_src_and_dst(const void *entry, const void *val)
+static isl_bool edge_has_src_and_dst(const void *entry, const void *val)
 {
 	const struct isl_sched_edge *edge = entry;
 	const struct isl_sched_edge *temp = val;
 
-	return edge->src == temp->src && edge->dst == temp->dst;
+	return isl_bool_ok(edge->src == temp->src && edge->dst == temp->dst);
 }
 
 /* Add the given edge to graph->edge_table[type].
@@ -535,17 +539,21 @@ static struct isl_hash_table_entry *graph_find_edge_entry(
 
 /* If graph->edge_table[type] contains an edge from the given source
  * to the given destination, then return this edge.
- * Otherwise, return NULL.
+ * Return "none" if no such edge can be found.
+ * Return NULL on error.
  */
 static struct isl_sched_edge *graph_find_edge(struct isl_sched_graph *graph,
 	enum isl_edge_type type,
-	struct isl_sched_node *src, struct isl_sched_node *dst)
+	struct isl_sched_node *src, struct isl_sched_node *dst,
+	struct isl_sched_edge *none)
 {
 	struct isl_hash_table_entry *entry;
 
 	entry = graph_find_edge_entry(graph, type, src, dst);
 	if (!entry)
 		return NULL;
+	if (entry == isl_hash_table_entry_none)
+		return none;
 
 	return entry->data;
 }
@@ -557,18 +565,19 @@ static isl_bool graph_has_edge(struct isl_sched_graph *graph,
 	enum isl_edge_type type,
 	struct isl_sched_node *src, struct isl_sched_node *dst)
 {
+	struct isl_sched_edge dummy;
 	struct isl_sched_edge *edge;
 	isl_bool empty;
 
-	edge = graph_find_edge(graph, type, src, dst);
+	edge = graph_find_edge(graph, type, src, dst, &dummy);
 	if (!edge)
+		return isl_bool_error;
+	if (edge == &dummy)
 		return isl_bool_false;
 
 	empty = isl_map_plain_is_empty(edge->map);
-	if (empty < 0)
-		return isl_bool_error;
 
-	return !empty;
+	return isl_bool_not(empty);
 }
 
 /* Look for any edge with the same src, dst and map fields as "model".
@@ -586,8 +595,10 @@ static struct isl_sched_edge *graph_find_matching_edge(
 	for (i = isl_edge_first; i <= isl_edge_last; ++i) {
 		int is_equal;
 
-		edge = graph_find_edge(graph, i, model->src, model->dst);
+		edge = graph_find_edge(graph, i, model->src, model->dst, model);
 		if (!edge)
+			return NULL;
+		if (edge == model)
 			continue;
 		is_equal = isl_map_plain_is_equal(model->map, edge->map);
 		if (is_equal < 0)
@@ -601,7 +612,7 @@ static struct isl_sched_edge *graph_find_matching_edge(
 
 /* Remove the given edge from all the edge_tables that refer to it.
  */
-static void graph_remove_edge(struct isl_sched_graph *graph,
+static isl_stat graph_remove_edge(struct isl_sched_graph *graph,
 	struct isl_sched_edge *edge)
 {
 	isl_ctx *ctx = isl_map_get_ctx(edge->map);
@@ -612,11 +623,15 @@ static void graph_remove_edge(struct isl_sched_graph *graph,
 
 		entry = graph_find_edge_entry(graph, i, edge->src, edge->dst);
 		if (!entry)
+			return isl_stat_error;
+		if (entry == isl_hash_table_entry_none)
 			continue;
 		if (entry->data != edge)
 			continue;
 		isl_hash_table_remove(ctx, graph->edge_table[i], entry);
 	}
+
+	return isl_stat_ok;
 }
 
 /* Check whether the dependence graph has any edge
@@ -703,7 +718,7 @@ static void clear_node(struct isl_sched_graph *graph,
 	isl_space_free(node->space);
 	isl_set_free(node->hull);
 	isl_multi_aff_free(node->compress);
-	isl_multi_aff_free(node->decompress);
+	isl_pw_multi_aff_free(node->decompress);
 	isl_mat_free(node->sched);
 	isl_map_free(node->sched_map);
 	isl_mat_free(node->indep);
@@ -748,7 +763,7 @@ static void graph_free(isl_ctx *ctx, struct isl_sched_graph *graph)
 static isl_stat init_n_maxvar(__isl_take isl_set *set, void *user)
 {
 	struct isl_sched_graph *graph = user;
-	int nvar = isl_set_dim(set, isl_dim_set);
+	isl_size nvar = isl_set_dim(set, isl_dim_set);
 
 	graph->n++;
 	if (nvar > graph->maxvar)
@@ -756,6 +771,8 @@ static isl_stat init_n_maxvar(__isl_take isl_set *set, void *user)
 
 	isl_set_free(set);
 
+	if (nvar < 0)
+		return isl_stat_error;
 	return isl_stat_ok;
 }
 
@@ -791,12 +808,13 @@ static isl_stat compute_max_row(struct isl_sched_graph *graph,
  */
 static isl_bool has_any_defining_equality(__isl_keep isl_basic_set *bset)
 {
-	int i, n;
-
-	if (!bset)
-		return isl_bool_error;
+	int i;
+	isl_size n;
 
 	n = isl_basic_set_dim(bset, isl_dim_set);
+	if (n < 0)
+		return isl_bool_error;
+
 	for (i = 0; i < n; ++i) {
 		isl_bool has;
 
@@ -890,150 +908,6 @@ error:
 	return isl_stat_error;
 }
 
-/* Compute and return the size of "set" in dimension "dim".
- * The size is taken to be the difference in values for that variable
- * for fixed values of the other variables.
- * This assumes that "set" is convex.
- * In particular, the variable is first isolated from the other variables
- * in the range of a map
- *
- *	[i_0, ..., i_dim-1, i_dim+1, ...] -> [i_dim]
- *
- * and then duplicated
- *
- *	[i_0, ..., i_dim-1, i_dim+1, ...] -> [[i_dim] -> [i_dim']]
- *
- * The shared variables are then projected out and the maximal value
- * of i_dim' - i_dim is computed.
- */
-static __isl_give isl_val *compute_size(__isl_take isl_set *set, int dim)
-{
-	isl_map *map;
-	isl_local_space *ls;
-	isl_aff *obj;
-	isl_val *v;
-
-	map = isl_set_project_onto_map(set, isl_dim_set, dim, 1);
-	map = isl_map_project_out(map, isl_dim_in, dim, 1);
-	map = isl_map_range_product(map, isl_map_copy(map));
-	map = isl_set_unwrap(isl_map_range(map));
-	set = isl_map_deltas(map);
-	ls = isl_local_space_from_space(isl_set_get_space(set));
-	obj = isl_aff_var_on_domain(ls, isl_dim_set, 0);
-	v = isl_set_max_val(set, obj);
-	isl_aff_free(obj);
-	isl_set_free(set);
-
-	return v;
-}
-
-/* Compute the size of the instance set "set" of "node", after compression,
- * as well as bounds on the corresponding coefficients, if needed.
- *
- * The sizes are needed when the schedule_treat_coalescing option is set.
- * The bounds are needed when the schedule_treat_coalescing option or
- * the schedule_max_coefficient option is set.
- *
- * If the schedule_treat_coalescing option is not set, then at most
- * the bounds need to be set and this is done in set_max_coefficient.
- * Otherwise, compress the domain if needed, compute the size
- * in each direction and store the results in node->size.
- * If the domain is not convex, then the sizes are computed
- * on a convex superset in order to avoid picking up sizes
- * that are valid for the individual disjuncts, but not for
- * the domain as a whole.
- * Finally, set the bounds on the coefficients based on the sizes
- * and the schedule_max_coefficient option in compute_max_coefficient.
- */
-static isl_stat compute_sizes_and_max(isl_ctx *ctx, struct isl_sched_node *node,
-	__isl_take isl_set *set)
-{
-	int j, n;
-	isl_multi_val *mv;
-
-	if (!isl_options_get_schedule_treat_coalescing(ctx)) {
-		isl_set_free(set);
-		return set_max_coefficient(ctx, node);
-	}
-
-	if (node->compressed)
-		set = isl_set_preimage_multi_aff(set,
-					isl_multi_aff_copy(node->decompress));
-	set = isl_set_from_basic_set(isl_set_simple_hull(set));
-	mv = isl_multi_val_zero(isl_set_get_space(set));
-	n = isl_set_dim(set, isl_dim_set);
-	for (j = 0; j < n; ++j) {
-		isl_val *v;
-
-		v = compute_size(isl_set_copy(set), j);
-		mv = isl_multi_val_set_val(mv, j, v);
-	}
-	node->sizes = mv;
-	isl_set_free(set);
-	if (!node->sizes)
-		return isl_stat_error;
-	return compute_max_coefficient(ctx, node);
-}
-
-/* Add a new node to the graph representing the given instance set.
- * "nvar" is the (possibly compressed) number of variables and
- * may be smaller than then number of set variables in "set"
- * if "compressed" is set.
- * If "compressed" is set, then "hull" represents the constraints
- * that were used to derive the compression, while "compress" and
- * "decompress" map the original space to the compressed space and
- * vice versa.
- * If "compressed" is not set, then "hull", "compress" and "decompress"
- * should be NULL.
- *
- * Compute the size of the instance set and bounds on the coefficients,
- * if needed.
- */
-static isl_stat add_node(struct isl_sched_graph *graph,
-	__isl_take isl_set *set, int nvar, int compressed,
-	__isl_take isl_set *hull, __isl_take isl_multi_aff *compress,
-	__isl_take isl_multi_aff *decompress)
-{
-	int nparam;
-	isl_ctx *ctx;
-	isl_mat *sched;
-	isl_space *space;
-	int *coincident;
-	struct isl_sched_node *node;
-
-	if (!set)
-		return isl_stat_error;
-
-	ctx = isl_set_get_ctx(set);
-	nparam = isl_set_dim(set, isl_dim_param);
-	if (!ctx->opt->schedule_parametric)
-		nparam = 0;
-	sched = isl_mat_alloc(ctx, 0, 1 + nparam + nvar);
-	node = &graph->node[graph->n];
-	graph->n++;
-	space = isl_set_get_space(set);
-	node->space = space;
-	node->nvar = nvar;
-	node->nparam = nparam;
-	node->sched = sched;
-	node->sched_map = NULL;
-	coincident = isl_calloc_array(ctx, int, graph->max_row);
-	node->coincident = coincident;
-	node->compressed = compressed;
-	node->hull = hull;
-	node->compress = compress;
-	node->decompress = decompress;
-	if (compute_sizes_and_max(ctx, node, set) < 0)
-		return isl_stat_error;
-
-	if (!space || !sched || (graph->max_row && !coincident))
-		return isl_stat_error;
-	if (compressed && (!hull || !compress || !decompress))
-		return isl_stat_error;
-
-	return isl_stat_ok;
-}
-
 /* Construct an identifier for node "node", which will represent "set".
  * The name of the identifier is either "compressed" or
  * "compressed_<name>", with <name> the name of the space of "set".
@@ -1070,6 +944,303 @@ static __isl_give isl_id *construct_compressed_id(__isl_keep isl_set *set,
 	return id;
 }
 
+/* Construct a map that isolates the variable in position "pos" in "set".
+ *
+ * That is, construct
+ *
+ *	[i_0, ..., i_pos-1, i_pos+1, ...] -> [i_pos]
+ */
+static __isl_give isl_map *isolate(__isl_take isl_set *set, int pos)
+{
+	isl_map *map;
+
+	map = isl_set_project_onto_map(set, isl_dim_set, pos, 1);
+	map = isl_map_project_out(map, isl_dim_in, pos, 1);
+	return map;
+}
+
+/* Compute and return the size of "set" in dimension "dim".
+ * The size is taken to be the difference in values for that variable
+ * for fixed values of the other variables.
+ * This assumes that "set" is convex.
+ * In particular, the variable is first isolated from the other variables
+ * in the range of a map
+ *
+ *	[i_0, ..., i_dim-1, i_dim+1, ...] -> [i_dim]
+ *
+ * and then duplicated
+ *
+ *	[i_0, ..., i_dim-1, i_dim+1, ...] -> [[i_dim] -> [i_dim']]
+ *
+ * The shared variables are then projected out and the maximal value
+ * of i_dim' - i_dim is computed.
+ */
+static __isl_give isl_val *compute_size(__isl_take isl_set *set, int dim)
+{
+	isl_map *map;
+	isl_local_space *ls;
+	isl_aff *obj;
+	isl_val *v;
+
+	map = isolate(set, dim);
+	map = isl_map_range_product(map, isl_map_copy(map));
+	map = isl_set_unwrap(isl_map_range(map));
+	set = isl_map_deltas(map);
+	ls = isl_local_space_from_space(isl_set_get_space(set));
+	obj = isl_aff_var_on_domain(ls, isl_dim_set, 0);
+	v = isl_set_max_val(set, obj);
+	isl_aff_free(obj);
+	isl_set_free(set);
+
+	return v;
+}
+
+/* Perform a compression on "node" where "hull" represents the constraints
+ * that were used to derive the compression, while "compress" and
+ * "decompress" map the original space to the compressed space and
+ * vice versa.
+ *
+ * If "node" was not compressed already, then simply store
+ * the compression information.
+ * Otherwise the "original" space is actually the result
+ * of a previous compression, which is then combined
+ * with the present compression.
+ *
+ * The dimensionality of the compressed domain is also adjusted.
+ * Other information, such as the sizes and the maximal coefficient values,
+ * has not been computed yet and therefore does not need to be adjusted.
+ */
+static isl_stat compress_node(struct isl_sched_node *node,
+	__isl_take isl_set *hull, __isl_take isl_multi_aff *compress,
+	__isl_take isl_pw_multi_aff *decompress)
+{
+	node->nvar = isl_multi_aff_dim(compress, isl_dim_out);
+	if (!node->compressed) {
+		node->compressed = 1;
+		node->hull = hull;
+		node->compress = compress;
+		node->decompress = decompress;
+	} else {
+		hull = isl_set_preimage_multi_aff(hull,
+					    isl_multi_aff_copy(node->compress));
+		node->hull = isl_set_intersect(node->hull, hull);
+		node->compress = isl_multi_aff_pullback_multi_aff(
+						compress, node->compress);
+		node->decompress = isl_pw_multi_aff_pullback_pw_multi_aff(
+						node->decompress, decompress);
+	}
+
+	if (!node->hull || !node->compress || !node->decompress)
+		return isl_stat_error;
+
+	return isl_stat_ok;
+}
+
+/* Given that dimension "pos" in "set" has a fixed value
+ * in terms of the other dimensions, (further) compress "node"
+ * by projecting out this dimension.
+ * "set" may be the result of a previous compression.
+ * "uncompressed" is the original domain (without compression).
+ *
+ * The compression function simply projects out the dimension.
+ * The decompression function adds back the dimension
+ * in the right position as an expression of the other dimensions
+ * derived from "set".
+ * As in extract_node, the compressed space has an identifier
+ * that references "node" such that each compressed space is unique and
+ * such that the node can be recovered from the compressed space.
+ *
+ * The constraint removed through the compression is added to the "hull"
+ * such that only edges that relate to the original domains
+ * are taken into account.
+ * In particular, it is obtained by composing compression and decompression and
+ * taking the relation among the variables in the range.
+ */
+static isl_stat project_out_fixed(struct isl_sched_node *node,
+	__isl_keep isl_set *uncompressed, __isl_take isl_set *set, int pos)
+{
+	isl_id *id;
+	isl_space *space;
+	isl_set *domain;
+	isl_map *map;
+	isl_multi_aff *compress;
+	isl_pw_multi_aff *decompress, *pma;
+	isl_multi_pw_aff *mpa;
+	isl_set *hull;
+
+	map = isolate(isl_set_copy(set), pos);
+	pma = isl_pw_multi_aff_from_map(map);
+	domain = isl_pw_multi_aff_domain(isl_pw_multi_aff_copy(pma));
+	pma = isl_pw_multi_aff_gist(pma, domain);
+	space = isl_pw_multi_aff_get_domain_space(pma);
+	mpa = isl_multi_pw_aff_identity(isl_space_map_from_set(space));
+	mpa = isl_multi_pw_aff_range_splice(mpa, pos,
+				    isl_multi_pw_aff_from_pw_multi_aff(pma));
+	decompress = isl_pw_multi_aff_from_multi_pw_aff(mpa);
+	space = isl_set_get_space(set);
+	compress = isl_multi_aff_project_out_map(space, isl_dim_set, pos, 1);
+	id = construct_compressed_id(uncompressed, node);
+	compress = isl_multi_aff_set_tuple_id(compress, isl_dim_out, id);
+	space = isl_space_reverse(isl_multi_aff_get_space(compress));
+	decompress = isl_pw_multi_aff_reset_space(decompress, space);
+	pma = isl_pw_multi_aff_pullback_multi_aff(
+	    isl_pw_multi_aff_copy(decompress), isl_multi_aff_copy(compress));
+	hull = isl_map_range(isl_map_from_pw_multi_aff(pma));
+
+	isl_set_free(set);
+
+	return compress_node(node, hull, compress, decompress);
+}
+
+/* Compute the size of the compressed domain in each dimension and
+ * store the results in node->sizes.
+ * "uncompressed" is the original domain (without compression).
+ *
+ * First compress the domain if needed and then compute the size
+ * in each direction.
+ * If the domain is not convex, then the sizes are computed
+ * on a convex superset in order to avoid picking up sizes
+ * that are valid for the individual disjuncts, but not for
+ * the domain as a whole.
+ *
+ * If any of the sizes turns out to be zero, then this means
+ * that this dimension has a fixed value in terms of
+ * the other dimensions.  Perform an (extra) compression
+ * to remove this dimensions.
+ */
+static isl_stat compute_sizes(struct isl_sched_node *node,
+	__isl_keep isl_set *uncompressed)
+{
+	int j;
+	isl_size n;
+	isl_multi_val *mv;
+	isl_set *set = isl_set_copy(uncompressed);
+
+	if (node->compressed)
+		set = isl_set_preimage_pw_multi_aff(set,
+				    isl_pw_multi_aff_copy(node->decompress));
+	set = isl_set_from_basic_set(isl_set_simple_hull(set));
+	mv = isl_multi_val_zero(isl_set_get_space(set));
+	n = isl_set_dim(set, isl_dim_set);
+	if (n < 0)
+		mv = isl_multi_val_free(mv);
+	for (j = 0; j < n; ++j) {
+		isl_bool is_zero;
+		isl_val *v;
+
+		v = compute_size(isl_set_copy(set), j);
+		is_zero = isl_val_is_zero(v);
+		mv = isl_multi_val_set_val(mv, j, v);
+		if (is_zero >= 0 && is_zero) {
+			isl_multi_val_free(mv);
+			if (project_out_fixed(node, uncompressed, set, j) < 0)
+				return isl_stat_error;
+			return compute_sizes(node, uncompressed);
+		}
+	}
+	node->sizes = mv;
+	isl_set_free(set);
+	if (!node->sizes)
+		return isl_stat_error;
+	return isl_stat_ok;
+}
+
+/* Compute the size of the instance set "set" of "node", after compression,
+ * as well as bounds on the corresponding coefficients, if needed.
+ *
+ * The sizes are needed when the schedule_treat_coalescing option is set.
+ * The bounds are needed when the schedule_treat_coalescing option or
+ * the schedule_max_coefficient option is set.
+ *
+ * If the schedule_treat_coalescing option is not set, then at most
+ * the bounds need to be set and this is done in set_max_coefficient.
+ * Otherwise, compute the size of the compressed domain
+ * in each direction and store the results in node->size.
+ * Finally, set the bounds on the coefficients based on the sizes
+ * and the schedule_max_coefficient option in compute_max_coefficient.
+ */
+static isl_stat compute_sizes_and_max(isl_ctx *ctx, struct isl_sched_node *node,
+	__isl_take isl_set *set)
+{
+	isl_stat r;
+
+	if (!isl_options_get_schedule_treat_coalescing(ctx)) {
+		isl_set_free(set);
+		return set_max_coefficient(ctx, node);
+	}
+
+	r = compute_sizes(node, set);
+	isl_set_free(set);
+	if (r < 0)
+		return isl_stat_error;
+	return compute_max_coefficient(ctx, node);
+}
+
+/* Add a new node to the graph representing the given instance set.
+ * "nvar" is the (possibly compressed) number of variables and
+ * may be smaller than then number of set variables in "set"
+ * if "compressed" is set.
+ * If "compressed" is set, then "hull" represents the constraints
+ * that were used to derive the compression, while "compress" and
+ * "decompress" map the original space to the compressed space and
+ * vice versa.
+ * If "compressed" is not set, then "hull", "compress" and "decompress"
+ * should be NULL.
+ *
+ * Compute the size of the instance set and bounds on the coefficients,
+ * if needed.
+ */
+static isl_stat add_node(struct isl_sched_graph *graph,
+	__isl_take isl_set *set, int nvar, int compressed,
+	__isl_take isl_set *hull, __isl_take isl_multi_aff *compress,
+	__isl_take isl_pw_multi_aff *decompress)
+{
+	isl_size nparam;
+	isl_ctx *ctx;
+	isl_mat *sched;
+	isl_space *space;
+	int *coincident;
+	struct isl_sched_node *node;
+
+	nparam = isl_set_dim(set, isl_dim_param);
+	if (nparam < 0)
+		goto error;
+
+	ctx = isl_set_get_ctx(set);
+	if (!ctx->opt->schedule_parametric)
+		nparam = 0;
+	sched = isl_mat_alloc(ctx, 0, 1 + nparam + nvar);
+	node = &graph->node[graph->n];
+	graph->n++;
+	space = isl_set_get_space(set);
+	node->space = space;
+	node->nvar = nvar;
+	node->nparam = nparam;
+	node->sched = sched;
+	node->sched_map = NULL;
+	coincident = isl_calloc_array(ctx, int, graph->max_row);
+	node->coincident = coincident;
+	node->compressed = compressed;
+	node->hull = hull;
+	node->compress = compress;
+	node->decompress = decompress;
+	if (compute_sizes_and_max(ctx, node, set) < 0)
+		return isl_stat_error;
+
+	if (!space || !sched || (graph->max_row && !coincident))
+		return isl_stat_error;
+	if (compressed && (!hull || !compress || !decompress))
+		return isl_stat_error;
+
+	return isl_stat_ok;
+error:
+	isl_set_free(set);
+	isl_set_free(hull);
+	isl_multi_aff_free(compress);
+	isl_pw_multi_aff_free(decompress);
+	return isl_stat_error;
+}
+
 /* Add a new node to the graph representing the given set.
  *
  * If any of the set variables is defined by an equality, then
@@ -1081,13 +1252,14 @@ static __isl_give isl_id *construct_compressed_id(__isl_keep isl_set *set,
  */
 static isl_stat extract_node(__isl_take isl_set *set, void *user)
 {
-	int nvar;
+	isl_size nvar;
 	isl_bool has_equality;
 	isl_id *id;
 	isl_basic_set *hull;
 	isl_set *hull_set;
 	isl_morph *morph;
-	isl_multi_aff *compress, *decompress;
+	isl_multi_aff *compress, *decompress_ma;
+	isl_pw_multi_aff *decompress;
 	struct isl_sched_graph *graph = user;
 
 	hull = isl_set_affine_hull(isl_set_copy(set));
@@ -1095,7 +1267,7 @@ static isl_stat extract_node(__isl_take isl_set *set, void *user)
 	nvar = isl_set_dim(set, isl_dim_set);
 	has_equality = has_any_defining_equality(hull);
 
-	if (has_equality < 0)
+	if (nvar < 0 || has_equality < 0)
 		goto error;
 	if (!has_equality) {
 		isl_basic_set_free(hull);
@@ -1103,13 +1275,15 @@ static isl_stat extract_node(__isl_take isl_set *set, void *user)
 	}
 
 	id = construct_compressed_id(set, &graph->node[graph->n]);
-	morph = isl_basic_set_variable_compression_with_id(hull,
-							    isl_dim_set, id);
+	morph = isl_basic_set_variable_compression_with_id(hull, id);
 	isl_id_free(id);
 	nvar = isl_morph_ran_dim(morph, isl_dim_set);
+	if (nvar < 0)
+		set = isl_set_free(set);
 	compress = isl_morph_get_var_multi_aff(morph);
 	morph = isl_morph_inverse(morph);
-	decompress = isl_morph_get_var_multi_aff(morph);
+	decompress_ma = isl_morph_get_var_multi_aff(morph);
+	decompress = isl_pw_multi_aff_from_multi_aff(decompress_ma);
 	isl_morph_free(morph);
 
 	hull_set = isl_set_from_basic_set(hull);
@@ -1393,6 +1567,7 @@ static isl_stat graph_init(struct isl_sched_graph *graph,
 	struct isl_extract_edge_data data;
 	enum isl_edge_type i;
 	isl_stat r;
+	isl_size n;
 
 	if (!sc)
 		return isl_stat_error;
@@ -1400,11 +1575,14 @@ static isl_stat graph_init(struct isl_sched_graph *graph,
 	ctx = isl_schedule_constraints_get_ctx(sc);
 
 	domain = isl_schedule_constraints_get_domain(sc);
-	graph->n = isl_union_set_n_set(domain);
+	n = isl_union_set_n_set(domain);
+	graph->n = n;
 	isl_union_set_free(domain);
+	if (n < 0)
+		return isl_stat_error;
 
-	if (graph_alloc(ctx, graph, graph->n,
-	    isl_schedule_constraints_n_map(sc)) < 0)
+	n = isl_schedule_constraints_n_map(sc);
+	if (n < 0 || graph_alloc(ctx, graph, graph->n, n) < 0)
 		return isl_stat_error;
 
 	if (compute_max_row(graph, sc) < 0)
@@ -1421,10 +1599,13 @@ static isl_stat graph_init(struct isl_sched_graph *graph,
 	if (graph_init_table(ctx, graph) < 0)
 		return isl_stat_error;
 	for (i = isl_edge_first; i <= isl_edge_last; ++i) {
+		isl_size n;
+
 		c = isl_schedule_constraints_get(sc, i);
-		graph->max_edge[i] = isl_union_map_n_map(c);
+		n = isl_union_map_n_map(c);
+		graph->max_edge[i] = n;
 		isl_union_map_free(c);
-		if (!c)
+		if (n < 0)
 			return isl_stat_error;
 	}
 	if (graph_init_edge_tables(ctx, graph) < 0)
@@ -1551,17 +1732,15 @@ static __isl_give isl_basic_set *get_size_bounds(struct isl_sched_node *node)
 	isl_space *space;
 	isl_basic_set *bounds;
 	int i;
-	unsigned nparam;
 
 	if (node->bounds)
 		return isl_basic_set_copy(node->bounds);
 
 	if (node->compressed)
-		space = isl_multi_aff_get_domain_space(node->decompress);
+		space = isl_pw_multi_aff_get_domain_space(node->decompress);
 	else
 		space = isl_space_copy(node->space);
-	nparam = isl_space_dim(space, isl_dim_param);
-	space = isl_space_drop_dims(space, isl_dim_param, 0, nparam);
+	space = isl_space_drop_all_params(space);
 	bounds = isl_basic_set_universe(space);
 
 	for (i = 0; i < node->nvar; ++i) {
@@ -1584,6 +1763,22 @@ static __isl_give isl_basic_set *get_size_bounds(struct isl_sched_node *node)
 	return bounds;
 }
 
+/* Compress the dependence relation "map", if needed, i.e.,
+ * when the source node "src" and/or the destination node "dst"
+ * has been compressed.
+ */
+static __isl_give isl_map *compress(__isl_take isl_map *map,
+	struct isl_sched_node *src, struct isl_sched_node *dst)
+{
+	if (src->compressed)
+		map = isl_map_preimage_domain_pw_multi_aff(map,
+					isl_pw_multi_aff_copy(src->decompress));
+	if (dst->compressed)
+		map = isl_map_preimage_range_pw_multi_aff(map,
+					isl_pw_multi_aff_copy(dst->decompress));
+	return map;
+}
+
 /* Drop some constraints from "delta" that could be exploited
  * to construct loop coalescing schedules.
  * In particular, drop those constraint that bound the difference
@@ -1593,12 +1788,15 @@ static __isl_give isl_basic_set *get_size_bounds(struct isl_sched_node *node)
 static __isl_give isl_set *drop_coalescing_constraints(
 	__isl_take isl_set *delta, struct isl_sched_node *node)
 {
-	unsigned nparam;
+	isl_size nparam;
 	isl_basic_set *bounds;
+
+	nparam = isl_set_dim(delta, isl_dim_param);
+	if (nparam < 0)
+		return isl_set_free(delta);
 
 	bounds = get_size_bounds(node);
 
-	nparam = isl_set_dim(delta, isl_dim_param);
 	delta = isl_set_project_out(delta, isl_dim_param, 0, nparam);
 	delta = isl_set_remove_divs(delta);
 	delta = isl_set_plain_gist_basic_set(delta, bounds);
@@ -1662,12 +1860,7 @@ static __isl_give isl_basic_set *intra_coefficients(
 	}
 
 	key = isl_map_copy(map);
-	if (node->compressed) {
-		map = isl_map_preimage_domain_multi_aff(map,
-				    isl_multi_aff_copy(node->decompress));
-		map = isl_map_preimage_range_multi_aff(map,
-				    isl_multi_aff_copy(node->decompress));
-	}
+	map = compress(map, node, node);
 	delta = isl_map_deltas(map);
 	if (treat)
 		delta = drop_coalescing_constraints(delta, node);
@@ -1705,12 +1898,7 @@ static __isl_give isl_basic_set *inter_coefficients(
 	}
 
 	key = isl_map_copy(map);
-	if (edge->src->compressed)
-		map = isl_map_preimage_domain_multi_aff(map,
-				    isl_multi_aff_copy(edge->src->decompress));
-	if (edge->dst->compressed)
-		map = isl_map_preimage_range_multi_aff(map,
-				    isl_multi_aff_copy(edge->dst->decompress));
+	map = compress(map, edge->src, edge->dst);
 	set = isl_map_wrap(isl_map_remove_divs(map));
 	coef = isl_set_coefficients(set);
 	graph->inter_hmap = isl_map_to_basic_set_set(graph->inter_hmap, key,
@@ -1728,9 +1916,9 @@ static __isl_give isl_basic_set *inter_coefficients(
  *
  * Return the position of S.
  */
-static int coef_var_offset(__isl_keep isl_basic_set *coef)
+static isl_size coef_var_offset(__isl_keep isl_basic_set *coef)
 {
-	int offset;
+	isl_size offset;
 	isl_space *space;
 
 	space = isl_space_unwrap(isl_basic_set_get_space(coef));
@@ -1815,13 +2003,13 @@ static __isl_give isl_dim_map *intra_dim_map(isl_ctx *ctx,
 	int offset, int s)
 {
 	int pos;
-	unsigned total;
+	isl_size total;
 	isl_dim_map *dim_map;
 
-	if (!node || !graph->lp)
+	total = isl_basic_set_dim(graph->lp, isl_dim_all);
+	if (!node || total < 0)
 		return NULL;
 
-	total = isl_basic_set_total_dim(graph->lp);
 	pos = node_var_coef_pos(node, 0);
 	dim_map = isl_dim_map_alloc(ctx, total);
 	isl_dim_map_range(dim_map, pos, -2, offset, 1, node->nvar, -s);
@@ -1855,13 +2043,13 @@ static __isl_give isl_dim_map *inter_dim_map(isl_ctx *ctx,
 	struct isl_sched_node *dst, int offset, int s)
 {
 	int pos;
-	unsigned total;
+	isl_size total;
 	isl_dim_map *dim_map;
 
-	if (!src || !dst || !graph->lp)
+	total = isl_basic_set_dim(graph->lp, isl_dim_all);
+	if (!src || !dst || total < 0)
 		return NULL;
 
-	total = isl_basic_set_total_dim(graph->lp);
 	dim_map = isl_dim_map_alloc(ctx, total);
 
 	pos = node_cst_coef_offset(dst);
@@ -1919,7 +2107,7 @@ static __isl_give isl_basic_set *add_constraints_dim_map(
 static isl_stat add_intra_validity_constraints(struct isl_sched_graph *graph,
 	struct isl_sched_edge *edge)
 {
-	int offset;
+	isl_size offset;
 	isl_map *map = isl_map_copy(edge->map);
 	isl_ctx *ctx = isl_map_get_ctx(map);
 	isl_dim_map *dim_map;
@@ -1929,7 +2117,8 @@ static isl_stat add_intra_validity_constraints(struct isl_sched_graph *graph,
 	coef = intra_coefficients(graph, node, map, 0);
 
 	offset = coef_var_offset(coef);
-
+	if (offset < 0)
+		coef = isl_basic_set_free(coef);
 	if (!coef)
 		return isl_stat_error;
 
@@ -1955,7 +2144,7 @@ static isl_stat add_intra_validity_constraints(struct isl_sched_graph *graph,
 static isl_stat add_inter_validity_constraints(struct isl_sched_graph *graph,
 	struct isl_sched_edge *edge)
 {
-	int offset;
+	isl_size offset;
 	isl_map *map;
 	isl_ctx *ctx;
 	isl_dim_map *dim_map;
@@ -1971,7 +2160,8 @@ static isl_stat add_inter_validity_constraints(struct isl_sched_graph *graph,
 	coef = inter_coefficients(graph, edge, map);
 
 	offset = coef_var_offset(coef);
-
+	if (offset < 0)
+		coef = isl_basic_set_free(coef);
 	if (!coef)
 		return isl_stat_error;
 
@@ -2031,8 +2221,8 @@ static isl_stat add_inter_validity_constraints(struct isl_sched_graph *graph,
 static isl_stat add_intra_proximity_constraints(struct isl_sched_graph *graph,
 	struct isl_sched_edge *edge, int s, int local)
 {
-	int offset;
-	unsigned nparam;
+	isl_size offset;
+	isl_size nparam;
 	isl_map *map = isl_map_copy(edge->map);
 	isl_ctx *ctx = isl_map_get_ctx(map);
 	isl_dim_map *dim_map;
@@ -2040,13 +2230,14 @@ static isl_stat add_intra_proximity_constraints(struct isl_sched_graph *graph,
 	struct isl_sched_node *node = edge->src;
 
 	coef = intra_coefficients(graph, node, map, !local);
+	nparam = isl_space_dim(node->space, isl_dim_param);
 
 	offset = coef_var_offset(coef);
-
+	if (nparam < 0 || offset < 0)
+		coef = isl_basic_set_free(coef);
 	if (!coef)
 		return isl_stat_error;
 
-	nparam = isl_space_dim(node->space, isl_dim_param);
 	dim_map = intra_dim_map(ctx, graph, node, offset, -s);
 
 	if (!local) {
@@ -2109,8 +2300,8 @@ static isl_stat add_intra_proximity_constraints(struct isl_sched_graph *graph,
 static isl_stat add_inter_proximity_constraints(struct isl_sched_graph *graph,
 	struct isl_sched_edge *edge, int s, int local)
 {
-	int offset;
-	unsigned nparam;
+	isl_size offset;
+	isl_size nparam;
 	isl_map *map = isl_map_copy(edge->map);
 	isl_ctx *ctx = isl_map_get_ctx(map);
 	isl_dim_map *dim_map;
@@ -2119,13 +2310,14 @@ static isl_stat add_inter_proximity_constraints(struct isl_sched_graph *graph,
 	struct isl_sched_node *dst = edge->dst;
 
 	coef = inter_coefficients(graph, edge, map);
+	nparam = isl_space_dim(src->space, isl_dim_param);
 
 	offset = coef_var_offset(coef);
-
+	if (nparam < 0 || offset < 0)
+		coef = isl_basic_set_free(coef);
 	if (!coef)
 		return isl_stat_error;
 
-	nparam = isl_space_dim(src->space, isl_dim_param);
 	dim_map = inter_dim_map(ctx, graph, src, dst, offset, -s);
 
 	if (!local) {
@@ -2248,6 +2440,18 @@ static __isl_give isl_mat *normalize_independent(__isl_take isl_mat *indep)
 	return indep;
 }
 
+/* Extract the linear part of the current schedule for node "node".
+ */
+static __isl_give isl_mat *extract_linear_schedule(struct isl_sched_node *node)
+{
+	isl_size n_row = isl_mat_rows(node->sched);
+
+	if (n_row < 0)
+		return NULL;
+	return isl_mat_sub_alloc(node->sched, 0, n_row,
+			      1 + node->nparam, node->nvar);
+}
+
 /* Compute a basis for the rows in the linear part of the schedule
  * and extend this basis to a full basis.  The remaining rows
  * can then be used to force linear independence from the rows
@@ -2279,10 +2483,8 @@ static __isl_give isl_mat *normalize_independent(__isl_take isl_mat *indep)
 static int node_update_vmap(struct isl_sched_node *node)
 {
 	isl_mat *H, *U, *Q;
-	int n_row = isl_mat_rows(node->sched);
 
-	H = isl_mat_sub_alloc(node->sched, 0, n_row,
-			      1 + node->nparam, node->nvar);
+	H = extract_linear_schedule(node);
 
 	H = isl_mat_left_hermite(H, 0, &U, &Q);
 	isl_mat_free(node->indep);
@@ -2473,13 +2675,15 @@ static isl_stat add_bound_constant_constraints(isl_ctx *ctx,
 {
 	int i, k;
 	int max;
-	int total;
+	isl_size total;
 
 	max = isl_options_get_schedule_max_constant_term(ctx);
 	if (max == -1)
 		return isl_stat_ok;
 
 	total = isl_basic_set_dim(graph->lp, isl_dim_set);
+	if (total < 0)
+		return isl_stat_error;
 
 	for (i = 0; i < graph->n; ++i) {
 		struct isl_sched_node *node = &graph->node[i];
@@ -2552,10 +2756,12 @@ static isl_stat node_add_coefficient_constraints(isl_ctx *ctx,
 	struct isl_sched_graph *graph, struct isl_sched_node *node, int max)
 {
 	int i, j, k;
-	int total;
+	isl_size total;
 	isl_vec *ineq;
 
 	total = isl_basic_set_dim(graph->lp, isl_dim_set);
+	if (total < 0)
+		return isl_stat_error;
 
 	for (j = 0; j < node->nparam; ++j) {
 		int dim;
@@ -2643,9 +2849,11 @@ static isl_stat add_sum_constraint(struct isl_sched_graph *graph,
 	int sum_pos, int first, int n)
 {
 	int i, k;
-	int total;
+	isl_size total;
 
 	total = isl_basic_set_dim(graph->lp, isl_dim_set);
+	if (total < 0)
+		return isl_stat_error;
 
 	k = isl_basic_set_alloc_equality(graph->lp);
 	if (k < 0)
@@ -2665,9 +2873,11 @@ static isl_stat add_param_sum_constraint(struct isl_sched_graph *graph,
 	int sum_pos)
 {
 	int i, j, k;
-	int total;
+	isl_size total;
 
 	total = isl_basic_set_dim(graph->lp, isl_dim_set);
+	if (total < 0)
+		return isl_stat_error;
 
 	k = isl_basic_set_alloc_equality(graph->lp);
 	if (k < 0)
@@ -2691,9 +2901,11 @@ static isl_stat add_var_sum_constraint(struct isl_sched_graph *graph,
 	int sum_pos)
 {
 	int i, j, k;
-	int total;
+	isl_size total;
 
 	total = isl_basic_set_dim(graph->lp, isl_dim_set);
+	if (total < 0)
+		return isl_stat_error;
 
 	k = isl_basic_set_alloc_equality(graph->lp);
 	if (k < 0)
@@ -2745,7 +2957,7 @@ static isl_stat setup_lp(isl_ctx *ctx, struct isl_sched_graph *graph,
 	int use_coincidence)
 {
 	int i;
-	unsigned nparam;
+	isl_size nparam;
 	unsigned total;
 	isl_space *space;
 	int parametric;
@@ -2754,6 +2966,8 @@ static isl_stat setup_lp(isl_ctx *ctx, struct isl_sched_graph *graph,
 
 	parametric = ctx->opt->schedule_parametric;
 	nparam = isl_space_dim(graph->node[0].space, isl_dim_param);
+	if (nparam < 0)
+		return isl_stat_error;
 	param_pos = 4;
 	total = param_pos + 2 * nparam;
 	for (i = 0; i < graph->n; ++i) {
@@ -2856,14 +3070,15 @@ static __isl_give isl_mat *construct_trivial(__isl_keep isl_mat *indep)
 {
 	isl_ctx *ctx;
 	isl_mat *mat;
-	int i, j, n, n_var;
+	int i, j;
+	isl_size n, n_var;
 
-	if (!indep)
+	n = isl_mat_rows(indep);
+	n_var = isl_mat_cols(indep);
+	if (n < 0 || n_var < 0)
 		return NULL;
 
 	ctx = isl_mat_get_ctx(indep);
-	n = isl_mat_rows(indep);
-	n_var = isl_mat_cols(indep);
 	mat = isl_mat_alloc(ctx, n, 2 * n_var);
 	if (!mat)
 		return NULL;
@@ -2969,11 +3184,11 @@ static int update_schedule(struct isl_sched_graph *graph,
 	for (i = 0; i < graph->n; ++i) {
 		struct isl_sched_node *node = &graph->node[i];
 		int pos;
-		int row = isl_mat_rows(node->sched);
+		isl_size row = isl_mat_rows(node->sched);
 
 		isl_vec_free(csol);
 		csol = extract_var_coef(node, sol);
-		if (!csol)
+		if (row < 0 || !csol)
 			goto error;
 
 		isl_map_free(node->sched_map);
@@ -3056,13 +3271,15 @@ static __isl_give isl_multi_aff *node_extract_partial_schedule_multi_aff(
 	isl_local_space *ls;
 	isl_aff *aff;
 	isl_multi_aff *ma;
-	int nrow;
+	isl_size nrow;
 
 	if (!node)
 		return NULL;
 	nrow = isl_mat_rows(node->sched);
+	if (nrow < 0)
+		return NULL;
 	if (node->compressed)
-		space = isl_multi_aff_get_domain_space(node->decompress);
+		space = isl_pw_multi_aff_get_domain_space(node->decompress);
 	else
 		space = isl_space_copy(node->space);
 	ls = isl_local_space_from_space(isl_space_copy(space));
@@ -3091,9 +3308,11 @@ static __isl_give isl_multi_aff *node_extract_partial_schedule_multi_aff(
 static __isl_give isl_multi_aff *node_extract_schedule_multi_aff(
 	struct isl_sched_node *node)
 {
-	int nrow;
+	isl_size nrow;
 
 	nrow = isl_mat_rows(node->sched);
+	if (nrow < 0)
+		return NULL;
 	return node_extract_partial_schedule_multi_aff(node, 0, nrow);
 }
 
@@ -3189,7 +3408,8 @@ static isl_stat update_edge(isl_ctx *ctx, struct isl_sched_graph *graph,
 	if (empty < 0)
 		goto error;
 	if (empty) {
-		graph_remove_edge(graph, edge);
+		if (graph_remove_edge(graph, edge) < 0)
+			goto error;
 	} else if (is_multi_edge_type(edge)) {
 		if (graph_edge_tables_add(ctx, graph, edge) < 0)
 			goto error;
@@ -3475,7 +3695,7 @@ static isl_stat copy_nodes(struct isl_sched_graph *dst,
 		dst->node[j].compress =
 			isl_multi_aff_copy(src->node[i].compress);
 		dst->node[j].decompress =
-			isl_multi_aff_copy(src->node[i].decompress);
+			isl_pw_multi_aff_copy(src->node[i].decompress);
 		dst->node[j].nvar = src->node[i].nvar;
 		dst->node[j].nparam = src->node[i].nparam;
 		dst->node[j].sched = isl_mat_copy(src->node[i].sched);
@@ -3862,15 +4082,17 @@ static __isl_give isl_schedule_node *compute_next_band(
 static isl_stat add_intra_constraints(struct isl_sched_graph *graph,
 	struct isl_sched_node *node, __isl_take isl_basic_set *coef, int pos)
 {
-	int offset;
+	isl_size offset;
 	isl_ctx *ctx;
 	isl_dim_map *dim_map;
 
+	offset = coef_var_offset(coef);
+	if (offset < 0)
+		coef = isl_basic_set_free(coef);
 	if (!coef)
 		return isl_stat_error;
 
 	ctx = isl_basic_set_get_ctx(coef);
-	offset = coef_var_offset(coef);
 	dim_map = intra_dim_map(ctx, graph, node, offset, 1);
 	isl_dim_map_range(dim_map, 3 + pos, 0, 0, 0, 1, -1);
 	graph->lp = add_constraints_dim_map(graph->lp, coef, dim_map);
@@ -3906,15 +4128,17 @@ static isl_stat add_inter_constraints(struct isl_sched_graph *graph,
 	struct isl_sched_node *src, struct isl_sched_node *dst,
 	__isl_take isl_basic_set *coef, int pos)
 {
-	int offset;
+	isl_size offset;
 	isl_ctx *ctx;
 	isl_dim_map *dim_map;
 
+	offset = coef_var_offset(coef);
+	if (offset < 0)
+		coef = isl_basic_set_free(coef);
 	if (!coef)
 		return isl_stat_error;
 
 	ctx = isl_basic_set_get_ctx(coef);
-	offset = coef_var_offset(coef);
 	dim_map = inter_dim_map(ctx, graph, src, dst, offset, 1);
 	if (pos >= 0)
 		isl_dim_map_range(dim_map, 3 + pos, 0, 0, 0, 1, -1);
@@ -4257,6 +4481,7 @@ static __isl_give isl_schedule_node *split_scaled(
 	int row;
 	isl_ctx *ctx;
 	isl_int gcd, gcd_i;
+	isl_size n_row;
 
 	if (!node)
 		return NULL;
@@ -4266,23 +4491,30 @@ static __isl_give isl_schedule_node *split_scaled(
 		return compute_next_band(node, graph, 0);
 	if (graph->n <= 1)
 		return compute_next_band(node, graph, 0);
+	n_row = isl_mat_rows(graph->node[0].sched);
+	if (n_row < 0)
+		return isl_schedule_node_free(node);
 
 	isl_int_init(gcd);
 	isl_int_init(gcd_i);
 
 	isl_int_set_si(gcd, 0);
 
-	row = isl_mat_rows(graph->node[0].sched) - 1;
+	row = n_row - 1;
 
 	for (i = 0; i < graph->n; ++i) {
 		struct isl_sched_node *node = &graph->node[i];
-		int cols = isl_mat_cols(node->sched);
+		isl_size cols = isl_mat_cols(node->sched);
 
+		if (cols < 0)
+			break;
 		isl_seq_gcd(node->sched->row[row] + 1, cols - 1, &gcd_i);
 		isl_int_gcd(gcd, gcd, gcd_i);
 	}
 
 	isl_int_clear(gcd_i);
+	if (i < graph->n)
+		goto error;
 
 	if (isl_int_cmp_si(gcd, 1) <= 0) {
 		isl_int_clear(gcd);
@@ -4620,12 +4852,7 @@ static __isl_give isl_union_map *add_intra(__isl_take isl_union_map *umap,
 		return umap;
 
 	map = isl_map_copy(edge->map);
-	if (node->compressed) {
-		map = isl_map_preimage_domain_multi_aff(map,
-				    isl_multi_aff_copy(node->decompress));
-		map = isl_map_preimage_range_multi_aff(map,
-				    isl_multi_aff_copy(node->decompress));
-	}
+	map = compress(map, node, node);
 	umap = isl_union_map_add_map(umap, map);
 	return umap;
 }
@@ -4644,12 +4871,7 @@ static __isl_give isl_union_map *add_inter(__isl_take isl_union_map *umap,
 		return umap;
 
 	map = isl_map_copy(edge->map);
-	if (edge->src->compressed)
-		map = isl_map_preimage_domain_multi_aff(map,
-				    isl_multi_aff_copy(edge->src->decompress));
-	if (edge->dst->compressed)
-		map = isl_map_preimage_range_multi_aff(map,
-				    isl_multi_aff_copy(edge->dst->decompress));
+	map = compress(map, edge->src, edge->dst);
 	umap = isl_union_map_add_map(umap, map);
 	return umap;
 }
@@ -4737,13 +4959,10 @@ static isl_stat add_non_trivial_lineality(__isl_take isl_basic_set *lineality,
 	isl_multi_aff *ma;
 	isl_multi_pw_aff *mpa;
 	isl_map *map;
-	int n;
+	isl_size n;
 
-	if (!lineality)
-		return isl_stat_error;
-	if (isl_basic_set_dim(lineality, isl_dim_div) != 0)
-		isl_die(isl_basic_set_get_ctx(lineality), isl_error_internal,
-			"local variables not allowed", goto error);
+	if (isl_basic_set_check_no_locals(lineality) < 0)
+		goto error;
 
 	space = isl_basic_set_get_space(lineality);
 	if (!data->any_non_trivial) {
@@ -4757,6 +4976,8 @@ static isl_stat add_non_trivial_lineality(__isl_take isl_basic_set *lineality,
 
 	eq = isl_basic_set_extract_equalities(lineality);
 	n = isl_mat_rows(eq);
+	if (n < 0)
+		space = isl_space_free(space);
 	eq = isl_mat_insert_zero_rows(eq, 0, 1);
 	eq = isl_mat_set_element_si(eq, 0, 0, 1);
 	space = isl_space_from_domain(space);
@@ -4785,18 +5006,22 @@ static isl_stat add_lineality(__isl_take isl_set *set, void *user)
 {
 	struct isl_exploit_lineality_data *data = user;
 	isl_basic_set *hull;
-	int dim, n_eq;
+	isl_size dim;
+	int n_eq;
 
 	set = isl_set_remove_divs(set);
 	hull = isl_set_unshifted_simple_hull(set);
 	dim = isl_basic_set_dim(hull, isl_dim_set);
 	n_eq = isl_basic_set_n_equality(hull);
-	if (!hull)
-		return isl_stat_error;
+	if (dim < 0)
+		goto error;
 	if (dim != n_eq)
 		return add_non_trivial_lineality(hull, data);
 	isl_basic_set_free(hull);
 	return isl_stat_ok;
+error:
+	isl_basic_set_free(hull);
+	return isl_stat_error;
 }
 
 /* Check if the difference set on intra-node schedule constraints "intra"
@@ -4914,17 +5139,6 @@ static __isl_give isl_union_map *collect_validity(struct isl_sched_graph *graph,
 	return umap;
 }
 
-/* Project out all parameters from "uset" and return the result.
- */
-static __isl_give isl_union_set *union_set_drop_parameters(
-	__isl_take isl_union_set *uset)
-{
-	unsigned nparam;
-
-	nparam = isl_union_set_dim(uset, isl_dim_param);
-	return isl_union_set_project_out(uset, isl_dim_param, 0, nparam);
-}
-
 /* For each dependence relation on a (conditional) validity edge
  * from a node to itself,
  * construct the set of coefficients of valid constraints for elements
@@ -4971,7 +5185,7 @@ static __isl_give isl_basic_set_list *collect_intra_validity(isl_ctx *ctx,
 
 	intra = collect_validity(graph, &add_intra, coincidence);
 	delta = isl_union_map_deltas(intra);
-	delta = union_set_drop_parameters(delta);
+	delta = isl_union_set_project_out_all_params(delta);
 	delta = isl_union_set_remove_divs(delta);
 	if (isl_options_get_schedule_treat_coalescing(ctx))
 		delta = union_drop_coalescing_constraints(ctx, graph, delta);
@@ -5085,7 +5299,7 @@ static __isl_give isl_vec *compute_carrying_sol_coef(isl_ctx *ctx,
 static __isl_give isl_vec *compute_carrying_sol(isl_ctx *ctx,
 	struct isl_sched_graph *graph, int fallback, int coincidence)
 {
-	int n_intra, n_inter;
+	isl_size n_intra, n_inter;
 	int n_edge;
 	struct isl_carry carry = { 0 };
 	isl_vec *sol;
@@ -5094,10 +5308,10 @@ static __isl_give isl_vec *compute_carrying_sol(isl_ctx *ctx,
 						&carry.lineality);
 	carry.inter = collect_inter_validity(graph, coincidence,
 						&carry.lineality);
-	if (!carry.intra || !carry.inter)
-		goto error;
 	n_intra = isl_basic_set_list_n_basic_set(carry.intra);
 	n_inter = isl_basic_set_list_n_basic_set(carry.inter);
+	if (n_intra < 0 || n_inter < 0)
+		goto error;
 
 	if (fallback && n_intra > 0 &&
 	    isl_options_get_schedule_carry_self_first(ctx)) {
@@ -5389,10 +5603,12 @@ static int has_any_coincidence(struct isl_sched_graph *graph)
 static __isl_give isl_map *final_row(struct isl_sched_node *node)
 {
 	isl_multi_aff *ma;
-	int row;
+	isl_size n_row;
 
-	row = isl_mat_rows(node->sched) - 1;
-	ma = node_extract_partial_schedule_multi_aff(node, row, 1);
+	n_row = isl_mat_rows(node->sched);
+	if (n_row < 0)
+		return NULL;
+	ma = node_extract_partial_schedule_multi_aff(node, n_row - 1, 1);
 	return isl_map_from_multi_aff(ma);
 }
 
@@ -6406,7 +6622,7 @@ static isl_bool ok_to_merge_coincident(struct isl_clustering *c,
 
 	n_coincident = get_n_coincident(merge_graph);
 
-	return n_coincident >= max_coincident;
+	return isl_bool_ok(n_coincident >= max_coincident);
 }
 
 /* Return the transformation on "node" expressed by the current (and only)
@@ -6490,13 +6706,13 @@ static isl_bool distance_is_bounded(__isl_keep isl_set *set, int pos)
  */
 static isl_bool has_single_value(__isl_keep isl_set *set, int pos)
 {
-	int n;
+	isl_size n;
 	isl_bool single;
 
-	if (!set)
+	n = isl_set_dim(set, isl_dim_set);
+	if (n < 0)
 		return isl_bool_error;
 	set = isl_set_copy(set);
-	n = isl_set_dim(set, isl_dim_set);
 	set = isl_set_project_out(set, isl_dim_set, pos + 1, n - (pos + 1));
 	set = isl_set_project_out(set, isl_dim_set, 0, pos);
 	single = isl_set_is_singleton(set);
@@ -6557,7 +6773,8 @@ static isl_bool has_bounded_distances(isl_ctx *ctx, struct isl_sched_edge *edge,
 	struct isl_sched_graph *graph, struct isl_clustering *c,
 	struct isl_sched_graph *merge_graph)
 {
-	int i, n, n_slack;
+	int i, n_slack;
+	isl_size n;
 	isl_bool bounded;
 	isl_map *map, *t;
 	isl_set *dist;
@@ -6571,6 +6788,8 @@ static isl_bool has_bounded_distances(isl_ctx *ctx, struct isl_sched_edge *edge,
 
 	bounded = isl_bool_true;
 	n = isl_set_dim(dist, isl_dim_set);
+	if (n < 0)
+		goto error;
 	n_slack = n - edge->weight;
 	if (edge->weight < 0)
 		n_slack -= graph->max_weight + 1;
@@ -6701,12 +6920,15 @@ static __isl_give isl_mat *node_transformation(isl_ctx *ctx,
 {
 	int i, j;
 	isl_mat *t;
-	int n_row, n_col, n_param, n_var;
+	isl_size n_row, n_col;
+	int n_param, n_var;
 
 	n_param = node->nparam;
 	n_var = node->nvar;
 	n_row = isl_mat_rows(t_node->sched);
 	n_col = isl_mat_cols(node->sched);
+	if (n_row < 0 || n_col < 0)
+		return NULL;
 	t = isl_mat_alloc(ctx, n_row, n_col);
 	if (!t)
 		return NULL;
@@ -6736,13 +6958,15 @@ static isl_stat transform(isl_ctx *ctx, struct isl_sched_graph *graph,
 	struct isl_sched_node *t_node)
 {
 	int i, j;
-	int n_new;
+	isl_size n_new;
 	int start, n;
 
 	start = graph->band_start;
 	n = graph->n_total_row - start;
 
 	n_new = isl_mat_rows(t_node->sched);
+	if (n_new < 0)
+		return isl_stat_error;
 	for (i = 0; i < graph->n; ++i) {
 		struct isl_sched_node *node = &graph->node[i];
 		isl_mat *t;
@@ -7094,7 +7318,7 @@ static isl_stat compute_weights(struct isl_sched_graph *graph,
 		struct isl_sched_node *dst = edge->dst;
 		isl_basic_map *hull;
 		isl_bool prox;
-		int n_in, n_out;
+		isl_size n_in, n_out;
 
 		prox = is_non_empty_proximity(edge);
 		if (prox < 0)
@@ -7120,6 +7344,8 @@ static isl_stat compute_weights(struct isl_sched_graph *graph,
 		hull = isl_basic_map_remove_divs(hull);
 		n_in = isl_basic_map_dim(hull, isl_dim_in);
 		n_out = isl_basic_map_dim(hull, isl_dim_out);
+		if (n_in < 0 || n_out < 0)
+			hull = isl_basic_map_free(hull);
 		hull = isl_basic_map_drop_constraints_not_involving_dims(hull,
 							isl_dim_in, 0, n_in);
 		hull = isl_basic_map_drop_constraints_not_involving_dims(hull,
@@ -7379,16 +7605,18 @@ __isl_give isl_schedule *isl_schedule_constraints_compute_schedule(
 	isl_schedule *sched;
 	isl_schedule_node *node;
 	isl_union_set *domain;
+	isl_size n;
 
 	sc = isl_schedule_constraints_align_params(sc);
 
 	domain = isl_schedule_constraints_get_domain(sc);
-	if (isl_union_set_n_set(domain) == 0) {
+	n = isl_union_set_n_set(domain);
+	if (n == 0) {
 		isl_schedule_constraints_free(sc);
 		return isl_schedule_from_domain(domain);
 	}
 
-	if (graph_init(&graph, sc) < 0)
+	if (n < 0 || graph_init(&graph, sc) < 0)
 		domain = isl_union_set_free(domain);
 
 	node = isl_schedule_node_from_domain(domain);

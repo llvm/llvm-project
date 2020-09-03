@@ -9,6 +9,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/PassManagerImpl.h"
 
 using namespace llvm;
 
@@ -88,7 +89,7 @@ bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
   // Return false to indicate that this result is still a valid proxy.
   return false;
 }
-}
+} // namespace llvm
 
 AnalysisSetKey CFGAnalyses::SetKey;
 

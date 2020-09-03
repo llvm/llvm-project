@@ -62,8 +62,8 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
   TII.makeFrame(Mips::SP, StackSize, MBB, MBBI);
 
   // emit ".cfi_def_cfa_offset StackSize"
-  unsigned CFIIndex = MF.addFrameInst(
-      MCCFIInstruction::createDefCfaOffset(nullptr, -StackSize));
+  unsigned CFIIndex =
+      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, StackSize));
   BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 
@@ -109,11 +109,9 @@ void Mips16FrameLowering::emitEpilogue(MachineFunction &MF,
   TII.restoreFrame(Mips::SP, StackSize, MBB, MBBI);
 }
 
-bool Mips16FrameLowering::
-spillCalleeSavedRegisters(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MI,
-                          const std::vector<CalleeSavedInfo> &CSI,
-                          const TargetRegisterInfo *TRI) const {
+bool Mips16FrameLowering::spillCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction *MF = MBB.getParent();
 
   //
@@ -137,10 +135,9 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
   return true;
 }
 
-bool Mips16FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator MI,
-                                       std::vector<CalleeSavedInfo> &CSI,
-                                       const TargetRegisterInfo *TRI) const {
+bool Mips16FrameLowering::restoreCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   //
   // Registers RA,S0,S1 are the callee saved registers and they will be restored
   // with the restore instruction during emitEpilogue.

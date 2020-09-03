@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -loop-idiom < %s -S | FileCheck %s
+; RUN: opt -basic-aa -loop-idiom < %s -S | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -52,11 +52,11 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-;; memcpy.atomic formation rejection (atomic store, normal load w/ no align)
+;; memcpy.atomic formation (atomic store, normal load w/ no align)
 define void @test2b(i64 %Size) nounwind ssp {
 ; CHECK-LABEL: @test2b(
-; CHECK-NOT: call void @llvm.memcpy.element.unordered.atomic
-; CHECK: store
+; CHECK: call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %Dest, i8* align 1 %Base, i64 %Size, i32 1)
+; CHECK-NOT: store
 ; CHECK: ret void
 bb.nph:
   %Base = alloca i8, i32 10000
@@ -156,8 +156,8 @@ for.end:                                          ; preds = %for.body, %entry
 ;; memcpy.atomic formation rejection (normal store w/ no align, atomic load)
 define void @test3b(i64 %Size) nounwind ssp {
 ; CHECK-LABEL: @test3b(
-; CHECK-NOT: call void @llvm.memcpy.element.unordered.atomic
-; CHECK: store
+; CHECK: call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %Dest, i8* align 1 %Base, i64 %Size, i32 1)
+; CHECK-NOT: store
 ; CHECK: ret void
 bb.nph:
   %Base = alloca i8, i32 10000

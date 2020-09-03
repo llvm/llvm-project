@@ -14,6 +14,8 @@
 #include <cstddef>
 #include <cuda.h>
 #include <list>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -59,7 +61,7 @@ struct FuncOrGblEntryTy {
 
 enum ExecutionModeType {
   SPMD, // constructors, destructors,
-        // combined constructs (`teams distribute parallel for [simd]`)
+  // combined constructs (`teams distribute parallel for [simd]`)
   GENERIC, // everything else
   NONE
 };
@@ -78,7 +80,8 @@ struct KernelTy {
 };
 
 /// Device environment data
-/// Manually sync with the deviceRTL side for now, move to a dedicated header file later.
+/// Manually sync with the deviceRTL side for now, move to a dedicated header
+/// file later.
 struct omptarget_device_environmentTy {
   int32_t debug_level;
 };
@@ -87,704 +90,1081 @@ struct omptarget_device_environmentTy {
 /// FIXME: we may need this to be per device and per library.
 std::list<KernelTy> KernelsList;
 
-/// Class containing all the device information.
-class RTLDeviceInfoTy {
-  std::vector<std::list<FuncOrGblEntryTy>> FuncGblEntries;
+namespace {
+bool checkResult(CUresult Err, const char *ErrMsg) {
+  if (Err == CUDA_SUCCESS)
+    return true;
+
+  DP("%s", ErrMsg);
+  CUDA_ERR_STRING(Err);
+  return false;
+}
+
+int memcpyDtoD(const void *SrcPtr, void *DstPtr, int64_t Size,
+               CUstream Stream) {
+  CUresult Err =
+      cuMemcpyDtoDAsync((CUdeviceptr)DstPtr, (CUdeviceptr)SrcPtr, Size, Stream);
+
+  if (Err != CUDA_SUCCESS) {
+    DP("Error when copying data from device to device. Pointers: src "
+       "= " DPxMOD ", dst = " DPxMOD ", size = %" PRId64 "\n",
+       DPxPTR(SrcPtr), DPxPTR(DstPtr), Size);
+    CUDA_ERR_STRING(Err);
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
+// Structure contains per-device data
+struct DeviceDataTy {
+  std::list<FuncOrGblEntryTy> FuncGblEntries;
+  CUcontext Context = nullptr;
+  // Device properties
+  int ThreadsPerBlock = 0;
+  int BlocksPerGrid = 0;
+  int WarpSize = 0;
+  // OpenMP properties
+  int NumTeams = 0;
+  int NumThreads = 0;
+};
+
+class StreamManagerTy {
+  int NumberOfDevices;
+  // The initial size of stream pool
+  int EnvNumInitialStreams;
+  // Per-device stream mutex
+  std::vector<std::unique_ptr<std::mutex>> StreamMtx;
+  // Per-device stream Id indicates the next available stream in the pool
+  std::vector<int> NextStreamId;
+  // Per-device stream pool
+  std::vector<std::vector<CUstream>> StreamPool;
+  // Reference to per-device data
+  std::vector<DeviceDataTy> &DeviceData;
+
+  // If there is no CUstream left in the pool, we will resize the pool to
+  // allocate more CUstream. This function should be called with device mutex,
+  // and we do not resize to smaller one.
+  void resizeStreamPool(const int DeviceId, const size_t NewSize) {
+    std::vector<CUstream> &Pool = StreamPool[DeviceId];
+    const size_t CurrentSize = Pool.size();
+    assert(NewSize > CurrentSize && "new size is not larger than current size");
+
+    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
+    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n")) {
+      // We will return if cannot switch to the right context in case of
+      // creating bunch of streams that are not corresponding to the right
+      // device. The offloading will fail later because selected CUstream is
+      // nullptr.
+      return;
+    }
+
+    Pool.resize(NewSize, nullptr);
+
+    for (size_t I = CurrentSize; I < NewSize; ++I) {
+      checkResult(cuStreamCreate(&Pool[I], CU_STREAM_NON_BLOCKING),
+                  "Error returned from cuStreamCreate\n");
+    }
+  }
 
 public:
+  StreamManagerTy(const int NumberOfDevices,
+                  std::vector<DeviceDataTy> &DeviceData)
+      : NumberOfDevices(NumberOfDevices), EnvNumInitialStreams(32),
+        DeviceData(DeviceData) {
+    StreamPool.resize(NumberOfDevices);
+    NextStreamId.resize(NumberOfDevices);
+    StreamMtx.resize(NumberOfDevices);
+
+    if (const char *EnvStr = getenv("LIBOMPTARGET_NUM_INITIAL_STREAMS"))
+      EnvNumInitialStreams = std::stoi(EnvStr);
+
+    // Initialize the next stream id
+    std::fill(NextStreamId.begin(), NextStreamId.end(), 0);
+
+    // Initialize stream mutex
+    for (std::unique_ptr<std::mutex> &Ptr : StreamMtx)
+      Ptr = std::make_unique<std::mutex>();
+  }
+
+  ~StreamManagerTy() {
+    // Destroy streams
+    for (int I = 0; I < NumberOfDevices; ++I) {
+      checkResult(cuCtxSetCurrent(DeviceData[I].Context),
+                  "Error returned from cuCtxSetCurrent\n");
+
+      for (CUstream &S : StreamPool[I]) {
+        if (S)
+          checkResult(cuStreamDestroy(S),
+                      "Error returned from cuStreamDestroy\n");
+      }
+    }
+  }
+
+  // Get a CUstream from pool. Per-device next stream id always points to the
+  // next available CUstream. That means, CUstreams [0, id-1] have been
+  // assigned, and [id,] are still available. If there is no CUstream left, we
+  // will ask more CUstreams from CUDA RT. Each time a CUstream is assigned,
+  // the id will increase one.
+  // xxxxxs+++++++++
+  //      ^
+  //      id
+  // After assignment, the pool becomes the following and s is assigned.
+  // xxxxxs+++++++++
+  //       ^
+  //       id
+  CUstream getStream(const int DeviceId) {
+    const std::lock_guard<std::mutex> Lock(*StreamMtx[DeviceId]);
+    int &Id = NextStreamId[DeviceId];
+    // No CUstream left in the pool, we need to request from CUDA RT
+    if (Id == StreamPool[DeviceId].size()) {
+      // By default we double the stream pool every time
+      resizeStreamPool(DeviceId, Id * 2);
+    }
+    return StreamPool[DeviceId][Id++];
+  }
+
+  // Return a CUstream back to pool. As mentioned above, per-device next
+  // stream is always points to the next available CUstream, so when we return
+  // a CUstream, we need to first decrease the id, and then copy the CUstream
+  // back.
+  // It is worth noting that, the order of streams return might be different
+  // from that they're assigned, that saying, at some point, there might be
+  // two identical CUstreams.
+  // xxax+a+++++
+  //     ^
+  //     id
+  // However, it doesn't matter, because they're always on the two sides of
+  // id. The left one will in the end be overwritten by another CUstream.
+  // Therefore, after several execution, the order of pool might be different
+  // from its initial state.
+  void returnStream(const int DeviceId, CUstream Stream) {
+    const std::lock_guard<std::mutex> Lock(*StreamMtx[DeviceId]);
+    int &Id = NextStreamId[DeviceId];
+    assert(Id > 0 && "Wrong stream ID");
+    StreamPool[DeviceId][--Id] = Stream;
+  }
+
+  bool initializeDeviceStreamPool(const int DeviceId) {
+    assert(StreamPool[DeviceId].empty() && "stream pool has been initialized");
+
+    resizeStreamPool(DeviceId, EnvNumInitialStreams);
+
+    // Check the size of stream pool
+    if (StreamPool[DeviceId].size() != EnvNumInitialStreams)
+      return false;
+
+    // Check whether each stream is valid
+    for (CUstream &S : StreamPool[DeviceId])
+      if (!S)
+        return false;
+
+    return true;
+  }
+};
+
+class DeviceRTLTy {
   int NumberOfDevices;
-  std::vector<CUmodule> Modules;
-  std::vector<CUcontext> Contexts;
-
-  // Device properties
-  std::vector<int> ThreadsPerBlock;
-  std::vector<int> BlocksPerGrid;
-  std::vector<int> WarpSize;
-
-  // OpenMP properties
-  std::vector<int> NumTeams;
-  std::vector<int> NumThreads;
-
-  // OpenMP Environment properties
+  // OpenMP environment properties
   int EnvNumTeams;
   int EnvTeamLimit;
-
-  // OpenMP Requires Flags
+  // OpenMP requires flags
   int64_t RequiresFlags;
 
-  //static int EnvNumThreads;
-  static const int HardTeamLimit = 1<<16; // 64k
-  static const int HardThreadLimit = 1024;
-  static const int DefaultNumTeams = 128;
-  static const int DefaultNumThreads = 128;
+  static constexpr const int HardTeamLimit = 1U << 16U; // 64k
+  static constexpr const int HardThreadLimit = 1024;
+  static constexpr const int DefaultNumTeams = 128;
+  static constexpr const int DefaultNumThreads = 128;
+
+  std::unique_ptr<StreamManagerTy> StreamManager;
+  std::vector<DeviceDataTy> DeviceData;
+  std::vector<CUmodule> Modules;
 
   // Record entry point associated with device
-  void addOffloadEntry(int32_t device_id, __tgt_offload_entry entry) {
-    assert(device_id < (int32_t)FuncGblEntries.size() &&
-           "Unexpected device id!");
-    FuncOrGblEntryTy &E = FuncGblEntries[device_id].back();
-
+  void addOffloadEntry(const int DeviceId, const __tgt_offload_entry entry) {
+    FuncOrGblEntryTy &E = DeviceData[DeviceId].FuncGblEntries.back();
     E.Entries.push_back(entry);
   }
 
   // Return true if the entry is associated with device
-  bool findOffloadEntry(int32_t device_id, void *addr) {
-    assert(device_id < (int32_t)FuncGblEntries.size() &&
-           "Unexpected device id!");
-    FuncOrGblEntryTy &E = FuncGblEntries[device_id].back();
-
-    for (auto &it : E.Entries) {
-      if (it.addr == addr)
+  bool findOffloadEntry(const int DeviceId, const void *Addr) const {
+    for (const __tgt_offload_entry &Itr :
+         DeviceData[DeviceId].FuncGblEntries.back().Entries)
+      if (Itr.addr == Addr)
         return true;
-    }
 
     return false;
   }
 
   // Return the pointer to the target entries table
-  __tgt_target_table *getOffloadEntriesTable(int32_t device_id) {
-    assert(device_id < (int32_t)FuncGblEntries.size() &&
-           "Unexpected device id!");
-    FuncOrGblEntryTy &E = FuncGblEntries[device_id].back();
+  __tgt_target_table *getOffloadEntriesTable(const int DeviceId) {
+    FuncOrGblEntryTy &E = DeviceData[DeviceId].FuncGblEntries.back();
 
-    int32_t size = E.Entries.size();
-
-    // Table is empty
-    if (!size)
-      return 0;
-
-    __tgt_offload_entry *begin = &E.Entries[0];
-    __tgt_offload_entry *end = &E.Entries[size - 1];
+    if (E.Entries.empty())
+      return nullptr;
 
     // Update table info according to the entries and return the pointer
-    E.Table.EntriesBegin = begin;
-    E.Table.EntriesEnd = ++end;
+    E.Table.EntriesBegin = E.Entries.data();
+    E.Table.EntriesEnd = E.Entries.data() + E.Entries.size();
 
     return &E.Table;
   }
 
   // Clear entries table for a device
-  void clearOffloadEntriesTable(int32_t device_id) {
-    assert(device_id < (int32_t)FuncGblEntries.size() &&
-           "Unexpected device id!");
-    FuncGblEntries[device_id].emplace_back();
-    FuncOrGblEntryTy &E = FuncGblEntries[device_id].back();
+  void clearOffloadEntriesTable(const int DeviceId) {
+    DeviceData[DeviceId].FuncGblEntries.emplace_back();
+    FuncOrGblEntryTy &E = DeviceData[DeviceId].FuncGblEntries.back();
     E.Entries.clear();
-    E.Table.EntriesBegin = E.Table.EntriesEnd = 0;
+    E.Table.EntriesBegin = E.Table.EntriesEnd = nullptr;
   }
 
-  RTLDeviceInfoTy() {
+  CUstream getStream(const int DeviceId, __tgt_async_info *AsyncInfoPtr) const {
+    assert(AsyncInfoPtr && "AsyncInfoPtr is nullptr");
+
+    if (!AsyncInfoPtr->Queue)
+      AsyncInfoPtr->Queue = StreamManager->getStream(DeviceId);
+
+    return reinterpret_cast<CUstream>(AsyncInfoPtr->Queue);
+  }
+
+public:
+  // This class should not be copied
+  DeviceRTLTy(const DeviceRTLTy &) = delete;
+  DeviceRTLTy(DeviceRTLTy &&) = delete;
+
+  DeviceRTLTy()
+      : NumberOfDevices(0), EnvNumTeams(-1), EnvTeamLimit(-1),
+        RequiresFlags(OMP_REQ_UNDEFINED) {
 #ifdef OMPTARGET_DEBUG
-    if (char *envStr = getenv("LIBOMPTARGET_DEBUG")) {
-      DebugLevel = std::stoi(envStr);
-    }
+    if (const char *EnvStr = getenv("LIBOMPTARGET_DEBUG"))
+      DebugLevel = std::stoi(EnvStr);
 #endif // OMPTARGET_DEBUG
 
     DP("Start initializing CUDA\n");
 
-    CUresult err = cuInit(0);
-    if (err != CUDA_SUCCESS) {
-      DP("Error when initializing CUDA\n");
-      CUDA_ERR_STRING(err);
+    CUresult Err = cuInit(0);
+    if (!checkResult(Err, "Error returned from cuInit\n")) {
       return;
     }
 
-    NumberOfDevices = 0;
-
-    err = cuDeviceGetCount(&NumberOfDevices);
-    if (err != CUDA_SUCCESS) {
-      DP("Error when getting CUDA device count\n");
-      CUDA_ERR_STRING(err);
+    Err = cuDeviceGetCount(&NumberOfDevices);
+    if (!checkResult(Err, "Error returned from cuDeviceGetCount\n"))
       return;
-    }
 
     if (NumberOfDevices == 0) {
       DP("There are no devices supporting CUDA.\n");
       return;
     }
 
-    FuncGblEntries.resize(NumberOfDevices);
-    Contexts.resize(NumberOfDevices);
-    ThreadsPerBlock.resize(NumberOfDevices);
-    BlocksPerGrid.resize(NumberOfDevices);
-    WarpSize.resize(NumberOfDevices);
-    NumTeams.resize(NumberOfDevices);
-    NumThreads.resize(NumberOfDevices);
+    DeviceData.resize(NumberOfDevices);
 
     // Get environment variables regarding teams
-    char *envStr = getenv("OMP_TEAM_LIMIT");
-    if (envStr) {
+    if (const char *EnvStr = getenv("OMP_TEAM_LIMIT")) {
       // OMP_TEAM_LIMIT has been set
-      EnvTeamLimit = std::stoi(envStr);
+      EnvTeamLimit = std::stoi(EnvStr);
       DP("Parsed OMP_TEAM_LIMIT=%d\n", EnvTeamLimit);
-    } else {
-      EnvTeamLimit = -1;
     }
-    envStr = getenv("OMP_NUM_TEAMS");
-    if (envStr) {
+    if (const char *EnvStr = getenv("OMP_NUM_TEAMS")) {
       // OMP_NUM_TEAMS has been set
-      EnvNumTeams = std::stoi(envStr);
+      EnvNumTeams = std::stoi(EnvStr);
       DP("Parsed OMP_NUM_TEAMS=%d\n", EnvNumTeams);
-    } else {
-      EnvNumTeams = -1;
     }
 
-    // Default state.
-    RequiresFlags = OMP_REQ_UNDEFINED;
+    StreamManager =
+        std::make_unique<StreamManagerTy>(NumberOfDevices, DeviceData);
   }
 
-  ~RTLDeviceInfoTy() {
-    // Close modules
-    for (auto &module : Modules)
-      if (module) {
-        CUresult err = cuModuleUnload(module);
-        if (err != CUDA_SUCCESS) {
-          DP("Error when unloading CUDA module\n");
-          CUDA_ERR_STRING(err);
-        }
+  ~DeviceRTLTy() {
+    // First destruct stream manager in case of Contexts is destructed before it
+    StreamManager = nullptr;
+
+    for (CUmodule &M : Modules)
+      // Close module
+      if (M)
+        checkResult(cuModuleUnload(M), "Error returned from cuModuleUnload\n");
+
+    for (DeviceDataTy &D : DeviceData) {
+      // Destroy context
+      if (D.Context) {
+        checkResult(cuCtxSetCurrent(D.Context),
+                    "Error returned from cuCtxSetCurrent\n");
+        CUdevice Device;
+        checkResult(cuCtxGetDevice(&Device),
+                    "Error returned from cuCtxGetDevice\n");
+        checkResult(cuDevicePrimaryCtxRelease(Device),
+                    "Error returned from cuDevicePrimaryCtxRelease\n");
+      }
+    }
+  }
+
+  // Check whether a given DeviceId is valid
+  bool isValidDeviceId(const int DeviceId) const {
+    return DeviceId >= 0 && DeviceId < NumberOfDevices;
+  }
+
+  int getNumOfDevices() const { return NumberOfDevices; }
+
+  void setRequiresFlag(const int64_t Flags) { this->RequiresFlags = Flags; }
+
+  int initDevice(const int DeviceId) {
+    CUdevice Device;
+
+    DP("Getting device %d\n", DeviceId);
+    CUresult Err = cuDeviceGet(&Device, DeviceId);
+    if (!checkResult(Err, "Error returned from cuDeviceGet\n"))
+      return OFFLOAD_FAIL;
+
+    // Query the current flags of the primary context and set its flags if
+    // it is inactive
+    unsigned int FormerPrimaryCtxFlags = 0;
+    int FormerPrimaryCtxIsActive = 0;
+    Err = cuDevicePrimaryCtxGetState(Device, &FormerPrimaryCtxFlags,
+                                     &FormerPrimaryCtxIsActive);
+    if (!checkResult(Err, "Error returned from cuDevicePrimaryCtxGetState\n"))
+      return OFFLOAD_FAIL;
+
+    if (FormerPrimaryCtxIsActive) {
+      DP("The primary context is active, no change to its flags\n");
+      if ((FormerPrimaryCtxFlags & CU_CTX_SCHED_MASK) !=
+          CU_CTX_SCHED_BLOCKING_SYNC)
+        DP("Warning the current flags are not CU_CTX_SCHED_BLOCKING_SYNC\n");
+    } else {
+      DP("The primary context is inactive, set its flags to "
+         "CU_CTX_SCHED_BLOCKING_SYNC\n");
+      Err = cuDevicePrimaryCtxSetFlags(Device, CU_CTX_SCHED_BLOCKING_SYNC);
+      if (!checkResult(Err, "Error returned from cuDevicePrimaryCtxSetFlags\n"))
+        return OFFLOAD_FAIL;
+    }
+
+    // Retain the per device primary context and save it to use whenever this
+    // device is selected.
+    Err = cuDevicePrimaryCtxRetain(&DeviceData[DeviceId].Context, Device);
+    if (!checkResult(Err, "Error returned from cuDevicePrimaryCtxRetain\n"))
+      return OFFLOAD_FAIL;
+
+    Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
+    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
+      return OFFLOAD_FAIL;
+
+    // Initialize stream pool
+    if (!StreamManager->initializeDeviceStreamPool(DeviceId))
+      return OFFLOAD_FAIL;
+
+    // Query attributes to determine number of threads/block and blocks/grid.
+    int MaxGridDimX;
+    Err = cuDeviceGetAttribute(&MaxGridDimX, CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X,
+                               Device);
+    if (Err != CUDA_SUCCESS) {
+      DP("Error getting max grid dimension, use default value %d\n",
+         DeviceRTLTy::DefaultNumTeams);
+      DeviceData[DeviceId].BlocksPerGrid = DeviceRTLTy::DefaultNumTeams;
+    } else if (MaxGridDimX <= DeviceRTLTy::HardTeamLimit) {
+      DP("Using %d CUDA blocks per grid\n", MaxGridDimX);
+      DeviceData[DeviceId].BlocksPerGrid = MaxGridDimX;
+    } else {
+      DP("Max CUDA blocks per grid %d exceeds the hard team limit %d, capping "
+         "at the hard limit\n",
+         MaxGridDimX, DeviceRTLTy::HardTeamLimit);
+      DeviceData[DeviceId].BlocksPerGrid = DeviceRTLTy::HardTeamLimit;
+    }
+
+    // We are only exploiting threads along the x axis.
+    int MaxBlockDimX;
+    Err = cuDeviceGetAttribute(&MaxBlockDimX,
+                               CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, Device);
+    if (Err != CUDA_SUCCESS) {
+      DP("Error getting max block dimension, use default value %d\n",
+         DeviceRTLTy::DefaultNumThreads);
+      DeviceData[DeviceId].ThreadsPerBlock = DeviceRTLTy::DefaultNumThreads;
+    } else if (MaxBlockDimX <= DeviceRTLTy::HardThreadLimit) {
+      DP("Using %d CUDA threads per block\n", MaxBlockDimX);
+      DeviceData[DeviceId].ThreadsPerBlock = MaxBlockDimX;
+    } else {
+      DP("Max CUDA threads per block %d exceeds the hard thread limit %d, "
+         "capping at the hard limit\n",
+         MaxBlockDimX, DeviceRTLTy::HardThreadLimit);
+      DeviceData[DeviceId].ThreadsPerBlock = DeviceRTLTy::HardThreadLimit;
+    }
+
+    // Get and set warp size
+    int WarpSize;
+    Err =
+        cuDeviceGetAttribute(&WarpSize, CU_DEVICE_ATTRIBUTE_WARP_SIZE, Device);
+    if (Err != CUDA_SUCCESS) {
+      DP("Error getting warp size, assume default value 32\n");
+      DeviceData[DeviceId].WarpSize = 32;
+    } else {
+      DP("Using warp size %d\n", WarpSize);
+      DeviceData[DeviceId].WarpSize = WarpSize;
+    }
+
+    // Adjust teams to the env variables
+    if (EnvTeamLimit > 0 && DeviceData[DeviceId].BlocksPerGrid > EnvTeamLimit) {
+      DP("Capping max CUDA blocks per grid to OMP_TEAM_LIMIT=%d\n",
+         EnvTeamLimit);
+      DeviceData[DeviceId].BlocksPerGrid = EnvTeamLimit;
+    }
+
+    DP("Max number of CUDA blocks %d, threads %d & warp size %d\n",
+       DeviceData[DeviceId].BlocksPerGrid, DeviceData[DeviceId].ThreadsPerBlock,
+       DeviceData[DeviceId].WarpSize);
+
+    // Set default number of teams
+    if (EnvNumTeams > 0) {
+      DP("Default number of teams set according to environment %d\n",
+         EnvNumTeams);
+      DeviceData[DeviceId].NumTeams = EnvNumTeams;
+    } else {
+      DeviceData[DeviceId].NumTeams = DeviceRTLTy::DefaultNumTeams;
+      DP("Default number of teams set according to library's default %d\n",
+         DeviceRTLTy::DefaultNumTeams);
+    }
+
+    if (DeviceData[DeviceId].NumTeams > DeviceData[DeviceId].BlocksPerGrid) {
+      DP("Default number of teams exceeds device limit, capping at %d\n",
+         DeviceData[DeviceId].BlocksPerGrid);
+      DeviceData[DeviceId].NumTeams = DeviceData[DeviceId].BlocksPerGrid;
+    }
+
+    // Set default number of threads
+    DeviceData[DeviceId].NumThreads = DeviceRTLTy::DefaultNumThreads;
+    DP("Default number of threads set according to library's default %d\n",
+       DeviceRTLTy::DefaultNumThreads);
+    if (DeviceData[DeviceId].NumThreads >
+        DeviceData[DeviceId].ThreadsPerBlock) {
+      DP("Default number of threads exceeds device limit, capping at %d\n",
+         DeviceData[DeviceId].ThreadsPerBlock);
+      DeviceData[DeviceId].NumTeams = DeviceData[DeviceId].ThreadsPerBlock;
+    }
+
+    return OFFLOAD_SUCCESS;
+  }
+
+  __tgt_target_table *loadBinary(const int DeviceId,
+                                 const __tgt_device_image *Image) {
+    // Set the context we are using
+    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
+    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
+      return nullptr;
+
+    // Clear the offload table as we are going to create a new one.
+    clearOffloadEntriesTable(DeviceId);
+
+    // Create the module and extract the function pointers.
+    CUmodule Module;
+    DP("Load data from image " DPxMOD "\n", DPxPTR(Image->ImageStart));
+    Err = cuModuleLoadDataEx(&Module, Image->ImageStart, 0, nullptr, nullptr);
+    if (!checkResult(Err, "Error returned from cuModuleLoadDataEx\n"))
+      return nullptr;
+
+    DP("CUDA module successfully loaded!\n");
+
+    Modules.push_back(Module);
+
+    // Find the symbols in the module by name.
+    const __tgt_offload_entry *HostBegin = Image->EntriesBegin;
+    const __tgt_offload_entry *HostEnd = Image->EntriesEnd;
+
+    for (const __tgt_offload_entry *E = HostBegin; E != HostEnd; ++E) {
+      if (!E->addr) {
+        // We return nullptr when something like this happens, the host should
+        // have always something in the address to uniquely identify the target
+        // region.
+        DP("Invalid binary: host entry '<null>' (size = %zd)...\n", E->size);
+        return nullptr;
       }
 
-    // Destroy contexts
-    for (auto &ctx : Contexts)
-      if (ctx) {
-        CUresult err = cuCtxDestroy(ctx);
-        if (err != CUDA_SUCCESS) {
-          DP("Error when destroying CUDA context\n");
-          CUDA_ERR_STRING(err);
+      if (E->size) {
+        __tgt_offload_entry Entry = *E;
+        CUdeviceptr CUPtr;
+        size_t CUSize;
+        Err = cuModuleGetGlobal(&CUPtr, &CUSize, Module, E->name);
+        // We keep this style here because we need the name
+        if (Err != CUDA_SUCCESS) {
+          DP("Loading global '%s' (Failed)\n", E->name);
+          CUDA_ERR_STRING(Err);
+          return nullptr;
         }
+
+        if (CUSize != E->size) {
+          DP("Loading global '%s' - size mismatch (%zd != %zd)\n", E->name,
+             CUSize, E->size);
+          return nullptr;
+        }
+
+        DP("Entry point " DPxMOD " maps to global %s (" DPxMOD ")\n",
+           DPxPTR(E - HostBegin), E->name, DPxPTR(CUPtr));
+
+        Entry.addr = (void *)(CUPtr);
+
+        // Note: In the current implementation declare target variables
+        // can either be link or to. This means that once unified
+        // memory is activated via the requires directive, the variable
+        // can be used directly from the host in both cases.
+        // TODO: when variables types other than to or link are added,
+        // the below condition should be changed to explicitly
+        // check for to and link variables types:
+        // (RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY && (e->flags &
+        // OMP_DECLARE_TARGET_LINK || e->flags == OMP_DECLARE_TARGET_TO))
+        if (RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+          // If unified memory is present any target link or to variables
+          // can access host addresses directly. There is no longer a
+          // need for device copies.
+          cuMemcpyHtoD(CUPtr, E->addr, sizeof(void *));
+          DP("Copy linked variable host address (" DPxMOD
+             ") to device address (" DPxMOD ")\n",
+             DPxPTR(*((void **)E->addr)), DPxPTR(CUPtr));
+        }
+
+        addOffloadEntry(DeviceId, Entry);
+
+        continue;
       }
+
+      CUfunction Func;
+      Err = cuModuleGetFunction(&Func, Module, E->name);
+      // We keep this style here because we need the name
+      if (Err != CUDA_SUCCESS) {
+        DP("Loading '%s' (Failed)\n", E->name);
+        CUDA_ERR_STRING(Err);
+        return nullptr;
+      }
+
+      DP("Entry point " DPxMOD " maps to %s (" DPxMOD ")\n",
+         DPxPTR(E - HostBegin), E->name, DPxPTR(Func));
+
+      // default value GENERIC (in case symbol is missing from cubin file)
+      int8_t ExecModeVal = ExecutionModeType::GENERIC;
+      std::string ExecModeNameStr(E->name);
+      ExecModeNameStr += "_exec_mode";
+      const char *ExecModeName = ExecModeNameStr.c_str();
+
+      CUdeviceptr ExecModePtr;
+      size_t CUSize;
+      Err = cuModuleGetGlobal(&ExecModePtr, &CUSize, Module, ExecModeName);
+      if (Err == CUDA_SUCCESS) {
+        if (CUSize != sizeof(int8_t)) {
+          DP("Loading global exec_mode '%s' - size mismatch (%zd != %zd)\n",
+             ExecModeName, CUSize, sizeof(int8_t));
+          return nullptr;
+        }
+
+        Err = cuMemcpyDtoH(&ExecModeVal, ExecModePtr, CUSize);
+        if (Err != CUDA_SUCCESS) {
+          DP("Error when copying data from device to host. Pointers: "
+             "host = " DPxMOD ", device = " DPxMOD ", size = %zd\n",
+             DPxPTR(&ExecModeVal), DPxPTR(ExecModePtr), CUSize);
+          CUDA_ERR_STRING(Err);
+          return nullptr;
+        }
+
+        if (ExecModeVal < 0 || ExecModeVal > 1) {
+          DP("Error wrong exec_mode value specified in cubin file: %d\n",
+             ExecModeVal);
+          return nullptr;
+        }
+      } else {
+        DP("Loading global exec_mode '%s' - symbol missing, using default "
+           "value GENERIC (1)\n",
+           ExecModeName);
+        CUDA_ERR_STRING(Err);
+      }
+
+      KernelsList.emplace_back(Func, ExecModeVal);
+
+      __tgt_offload_entry Entry = *E;
+      Entry.addr = &KernelsList.back();
+      addOffloadEntry(DeviceId, Entry);
+    }
+
+    // send device environment data to the device
+    {
+      omptarget_device_environmentTy DeviceEnv{0};
+
+#ifdef OMPTARGET_DEBUG
+      if (const char *EnvStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG"))
+        DeviceEnv.debug_level = std::stoi(EnvStr);
+#endif
+
+      const char *DeviceEnvName = "omptarget_device_environment";
+      CUdeviceptr DeviceEnvPtr;
+      size_t CUSize;
+
+      Err = cuModuleGetGlobal(&DeviceEnvPtr, &CUSize, Module, DeviceEnvName);
+      if (Err == CUDA_SUCCESS) {
+        if (CUSize != sizeof(DeviceEnv)) {
+          DP("Global device_environment '%s' - size mismatch (%zu != %zu)\n",
+             DeviceEnvName, CUSize, sizeof(int32_t));
+          CUDA_ERR_STRING(Err);
+          return nullptr;
+        }
+
+        Err = cuMemcpyHtoD(DeviceEnvPtr, &DeviceEnv, CUSize);
+        if (Err != CUDA_SUCCESS) {
+          DP("Error when copying data from host to device. Pointers: "
+             "host = " DPxMOD ", device = " DPxMOD ", size = %zu\n",
+             DPxPTR(&DeviceEnv), DPxPTR(DeviceEnvPtr), CUSize);
+          CUDA_ERR_STRING(Err);
+          return nullptr;
+        }
+
+        DP("Sending global device environment data %zu bytes\n", CUSize);
+      } else {
+        DP("Finding global device environment '%s' - symbol missing.\n",
+           DeviceEnvName);
+        DP("Continue, considering this is a device RTL which does not accept "
+           "environment setting.\n");
+      }
+    }
+
+    return getOffloadEntriesTable(DeviceId);
+  }
+
+  void *dataAlloc(const int DeviceId, const int64_t Size) const {
+    if (Size == 0)
+      return nullptr;
+
+    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
+    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
+      return nullptr;
+
+    CUdeviceptr DevicePtr;
+    Err = cuMemAlloc(&DevicePtr, Size);
+    if (!checkResult(Err, "Error returned from cuMemAlloc\n"))
+      return nullptr;
+
+    return (void *)DevicePtr;
+  }
+
+  int dataSubmit(const int DeviceId, const void *TgtPtr, const void *HstPtr,
+                 const int64_t Size, __tgt_async_info *AsyncInfoPtr) const {
+    assert(AsyncInfoPtr && "AsyncInfoPtr is nullptr");
+
+    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
+    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
+      return OFFLOAD_FAIL;
+
+    CUstream Stream = getStream(DeviceId, AsyncInfoPtr);
+
+    Err = cuMemcpyHtoDAsync((CUdeviceptr)TgtPtr, HstPtr, Size, Stream);
+    if (Err != CUDA_SUCCESS) {
+      DP("Error when copying data from host to device. Pointers: host = " DPxMOD
+         ", device = " DPxMOD ", size = %" PRId64 "\n",
+         DPxPTR(HstPtr), DPxPTR(TgtPtr), Size);
+      CUDA_ERR_STRING(Err);
+      return OFFLOAD_FAIL;
+    }
+
+    return OFFLOAD_SUCCESS;
+  }
+
+  int dataRetrieve(const int DeviceId, void *HstPtr, const void *TgtPtr,
+                   const int64_t Size, __tgt_async_info *AsyncInfoPtr) const {
+    assert(AsyncInfoPtr && "AsyncInfoPtr is nullptr");
+
+    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
+    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
+      return OFFLOAD_FAIL;
+
+    CUstream Stream = getStream(DeviceId, AsyncInfoPtr);
+
+    Err = cuMemcpyDtoHAsync(HstPtr, (CUdeviceptr)TgtPtr, Size, Stream);
+    if (Err != CUDA_SUCCESS) {
+      DP("Error when copying data from device to host. Pointers: host = " DPxMOD
+         ", device = " DPxMOD ", size = %" PRId64 "\n",
+         DPxPTR(HstPtr), DPxPTR(TgtPtr), Size);
+      CUDA_ERR_STRING(Err);
+      return OFFLOAD_FAIL;
+    }
+
+    return OFFLOAD_SUCCESS;
+  }
+
+  int dataExchange(int SrcDevId, const void *SrcPtr, int DstDevId, void *DstPtr,
+                   int64_t Size, __tgt_async_info *AsyncInfoPtr) const {
+    assert(AsyncInfoPtr && "AsyncInfoPtr is nullptr");
+
+    CUresult Err = cuCtxSetCurrent(DeviceData[SrcDevId].Context);
+    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
+      return OFFLOAD_FAIL;
+
+    CUstream Stream = getStream(SrcDevId, AsyncInfoPtr);
+
+    // If they are two devices, we try peer to peer copy first
+    if (SrcDevId != DstDevId) {
+      int CanAccessPeer = 0;
+      Err = cuDeviceCanAccessPeer(&CanAccessPeer, SrcDevId, DstDevId);
+      if (Err != CUDA_SUCCESS) {
+        DP("Error returned from cuDeviceCanAccessPeer. src = %" PRId32
+           ", dst = %" PRId32 "\n",
+           SrcDevId, DstDevId);
+        CUDA_ERR_STRING(Err);
+        return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
+      }
+
+      if (!CanAccessPeer) {
+        DP("P2P memcpy not supported so fall back to D2D memcpy");
+        return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
+      }
+
+      Err = cuCtxEnablePeerAccess(DeviceData[DstDevId].Context, 0);
+      if (Err != CUDA_SUCCESS) {
+        DP("Error returned from cuCtxEnablePeerAccess. src = %" PRId32
+           ", dst = %" PRId32 "\n",
+           SrcDevId, DstDevId);
+        CUDA_ERR_STRING(Err);
+        return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
+      }
+
+      Err = cuMemcpyPeerAsync((CUdeviceptr)DstPtr, DeviceData[DstDevId].Context,
+                              (CUdeviceptr)SrcPtr, DeviceData[SrcDevId].Context,
+                              Size, Stream);
+      if (Err == CUDA_SUCCESS)
+        return OFFLOAD_SUCCESS;
+
+      DP("Error returned from cuMemcpyPeerAsync. src_ptr = " DPxMOD
+         ", src_id =%" PRId32 ", dst_ptr = " DPxMOD ", dst_id =%" PRId32 "\n",
+         DPxPTR(SrcPtr), SrcDevId, DPxPTR(DstPtr), DstDevId);
+      CUDA_ERR_STRING(Err);
+    }
+
+    return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
+  }
+
+  int dataDelete(const int DeviceId, void *TgtPtr) const {
+    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
+    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
+      return OFFLOAD_FAIL;
+
+    Err = cuMemFree((CUdeviceptr)TgtPtr);
+    if (!checkResult(Err, "Error returned from cuMemFree\n"))
+      return OFFLOAD_FAIL;
+
+    return OFFLOAD_SUCCESS;
+  }
+
+  int runTargetTeamRegion(const int DeviceId, const void *TgtEntryPtr,
+                          void **TgtArgs, ptrdiff_t *TgtOffsets,
+                          const int ArgNum, const int TeamNum,
+                          const int ThreadLimit,
+                          const unsigned int LoopTripCount,
+                          __tgt_async_info *AsyncInfo) const {
+    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
+    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
+      return OFFLOAD_FAIL;
+
+    // All args are references.
+    std::vector<void *> Args(ArgNum);
+    std::vector<void *> Ptrs(ArgNum);
+
+    for (int I = 0; I < ArgNum; ++I) {
+      Ptrs[I] = (void *)((intptr_t)TgtArgs[I] + TgtOffsets[I]);
+      Args[I] = &Ptrs[I];
+    }
+
+    const KernelTy *KernelInfo =
+        reinterpret_cast<const KernelTy *>(TgtEntryPtr);
+
+    unsigned int CudaThreadsPerBlock;
+    if (ThreadLimit > 0) {
+      DP("Setting CUDA threads per block to requested %d\n", ThreadLimit);
+      CudaThreadsPerBlock = ThreadLimit;
+      // Add master warp if necessary
+      if (KernelInfo->ExecutionMode == GENERIC) {
+        DP("Adding master warp: +%d threads\n", DeviceData[DeviceId].WarpSize);
+        CudaThreadsPerBlock += DeviceData[DeviceId].WarpSize;
+      }
+    } else {
+      DP("Setting CUDA threads per block to default %d\n",
+         DeviceData[DeviceId].NumThreads);
+      CudaThreadsPerBlock = DeviceData[DeviceId].NumThreads;
+    }
+
+    if (CudaThreadsPerBlock > DeviceData[DeviceId].ThreadsPerBlock) {
+      DP("Threads per block capped at device limit %d\n",
+         DeviceData[DeviceId].ThreadsPerBlock);
+      CudaThreadsPerBlock = DeviceData[DeviceId].ThreadsPerBlock;
+    }
+
+    int KernelLimit;
+    Err = cuFuncGetAttribute(&KernelLimit,
+                             CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK,
+                             KernelInfo->Func);
+    if (Err == CUDA_SUCCESS && KernelLimit < CudaThreadsPerBlock) {
+      DP("Threads per block capped at kernel limit %d\n", KernelLimit);
+      CudaThreadsPerBlock = KernelLimit;
+    }
+
+    unsigned int CudaBlocksPerGrid;
+    if (TeamNum <= 0) {
+      if (LoopTripCount > 0 && EnvNumTeams < 0) {
+        if (KernelInfo->ExecutionMode == SPMD) {
+          // We have a combined construct, i.e. `target teams distribute
+          // parallel for [simd]`. We launch so many teams so that each thread
+          // will execute one iteration of the loop. round up to the nearest
+          // integer
+          CudaBlocksPerGrid = ((LoopTripCount - 1) / CudaThreadsPerBlock) + 1;
+        } else {
+          // If we reach this point, then we have a non-combined construct, i.e.
+          // `teams distribute` with a nested `parallel for` and each team is
+          // assigned one iteration of the `distribute` loop. E.g.:
+          //
+          // #pragma omp target teams distribute
+          // for(...loop_tripcount...) {
+          //   #pragma omp parallel for
+          //   for(...) {}
+          // }
+          //
+          // Threads within a team will execute the iterations of the `parallel`
+          // loop.
+          CudaBlocksPerGrid = LoopTripCount;
+        }
+        DP("Using %d teams due to loop trip count %" PRIu32
+           " and number of threads per block %d\n",
+           CudaBlocksPerGrid, LoopTripCount, CudaThreadsPerBlock);
+      } else {
+        DP("Using default number of teams %d\n", DeviceData[DeviceId].NumTeams);
+        CudaBlocksPerGrid = DeviceData[DeviceId].NumTeams;
+      }
+    } else if (TeamNum > DeviceData[DeviceId].BlocksPerGrid) {
+      DP("Capping number of teams to team limit %d\n",
+         DeviceData[DeviceId].BlocksPerGrid);
+      CudaBlocksPerGrid = DeviceData[DeviceId].BlocksPerGrid;
+    } else {
+      DP("Using requested number of teams %d\n", TeamNum);
+      CudaBlocksPerGrid = TeamNum;
+    }
+
+    // Run on the device.
+    DP("Launch kernel with %d blocks and %d threads\n", CudaBlocksPerGrid,
+       CudaThreadsPerBlock);
+
+    CUstream Stream = getStream(DeviceId, AsyncInfo);
+    Err = cuLaunchKernel(KernelInfo->Func, CudaBlocksPerGrid, /* gridDimY */ 1,
+                         /* gridDimZ */ 1, CudaThreadsPerBlock,
+                         /* blockDimY */ 1, /* blockDimZ */ 1,
+                         /* sharedMemBytes */ 0, Stream, &Args[0], nullptr);
+    if (!checkResult(Err, "Error returned from cuLaunchKernel\n"))
+      return OFFLOAD_FAIL;
+
+    DP("Launch of entry point at " DPxMOD " successful!\n",
+       DPxPTR(TgtEntryPtr));
+
+    return OFFLOAD_SUCCESS;
+  }
+
+  int synchronize(const int DeviceId, __tgt_async_info *AsyncInfoPtr) const {
+    CUstream Stream = reinterpret_cast<CUstream>(AsyncInfoPtr->Queue);
+    CUresult Err = cuStreamSynchronize(Stream);
+    if (Err != CUDA_SUCCESS) {
+      DP("Error when synchronizing stream. stream = " DPxMOD
+         ", async info ptr = " DPxMOD "\n",
+         DPxPTR(Stream), DPxPTR(AsyncInfoPtr));
+      CUDA_ERR_STRING(Err);
+      return OFFLOAD_FAIL;
+    }
+
+    // Once the stream is synchronized, return it to stream pool and reset
+    // async_info. This is to make sure the synchronization only works for its
+    // own tasks.
+    StreamManager->returnStream(
+        DeviceId, reinterpret_cast<CUstream>(AsyncInfoPtr->Queue));
+    AsyncInfoPtr->Queue = nullptr;
+
+    return OFFLOAD_SUCCESS;
   }
 };
 
-static RTLDeviceInfoTy DeviceInfo;
+DeviceRTLTy DeviceRTL;
+} // namespace
 
+// Exposed library API function
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
-  return elf_check_machine(image, 190); // EM_CUDA = 190.
+  return elf_check_machine(image, /* EM_CUDA */ 190);
 }
 
-int32_t __tgt_rtl_number_of_devices() { return DeviceInfo.NumberOfDevices; }
+int32_t __tgt_rtl_number_of_devices() { return DeviceRTL.getNumOfDevices(); }
 
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   DP("Init requires flags to %ld\n", RequiresFlags);
-  DeviceInfo.RequiresFlags = RequiresFlags;
+  DeviceRTL.setRequiresFlag(RequiresFlags);
   return RequiresFlags;
 }
 
+int32_t __tgt_rtl_is_data_exchangable(int32_t src_dev_id, int dst_dev_id) {
+  if (DeviceRTL.isValidDeviceId(src_dev_id) &&
+      DeviceRTL.isValidDeviceId(dst_dev_id))
+    return 1;
+
+  return 0;
+}
+
 int32_t __tgt_rtl_init_device(int32_t device_id) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  CUdevice cuDevice;
-  DP("Getting device %d\n", device_id);
-  CUresult err = cuDeviceGet(&cuDevice, device_id);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when getting CUDA device with id = %d\n", device_id);
-    CUDA_ERR_STRING(err);
-    return OFFLOAD_FAIL;
-  }
-
-  // Create the context and save it to use whenever this device is selected.
-  err = cuCtxCreate(&DeviceInfo.Contexts[device_id], CU_CTX_SCHED_BLOCKING_SYNC,
-                    cuDevice);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when creating a CUDA context\n");
-    CUDA_ERR_STRING(err);
-    return OFFLOAD_FAIL;
-  }
-
-  // Query attributes to determine number of threads/block and blocks/grid.
-  int maxGridDimX;
-  err = cuDeviceGetAttribute(&maxGridDimX, CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X,
-                             cuDevice);
-  if (err != CUDA_SUCCESS) {
-    DP("Error getting max grid dimension, use default\n");
-    DeviceInfo.BlocksPerGrid[device_id] = RTLDeviceInfoTy::DefaultNumTeams;
-  } else if (maxGridDimX <= RTLDeviceInfoTy::HardTeamLimit) {
-    DeviceInfo.BlocksPerGrid[device_id] = maxGridDimX;
-    DP("Using %d CUDA blocks per grid\n", maxGridDimX);
-  } else {
-    DeviceInfo.BlocksPerGrid[device_id] = RTLDeviceInfoTy::HardTeamLimit;
-    DP("Max CUDA blocks per grid %d exceeds the hard team limit %d, capping "
-       "at the hard limit\n",
-       maxGridDimX, RTLDeviceInfoTy::HardTeamLimit);
-  }
-
-  // We are only exploiting threads along the x axis.
-  int maxBlockDimX;
-  err = cuDeviceGetAttribute(&maxBlockDimX, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X,
-                             cuDevice);
-  if (err != CUDA_SUCCESS) {
-    DP("Error getting max block dimension, use default\n");
-    DeviceInfo.ThreadsPerBlock[device_id] = RTLDeviceInfoTy::DefaultNumThreads;
-  } else if (maxBlockDimX <= RTLDeviceInfoTy::HardThreadLimit) {
-    DeviceInfo.ThreadsPerBlock[device_id] = maxBlockDimX;
-    DP("Using %d CUDA threads per block\n", maxBlockDimX);
-  } else {
-    DeviceInfo.ThreadsPerBlock[device_id] = RTLDeviceInfoTy::HardThreadLimit;
-    DP("Max CUDA threads per block %d exceeds the hard thread limit %d, capping"
-       "at the hard limit\n",
-       maxBlockDimX, RTLDeviceInfoTy::HardThreadLimit);
-  }
-
-  int warpSize;
-  err =
-      cuDeviceGetAttribute(&warpSize, CU_DEVICE_ATTRIBUTE_WARP_SIZE, cuDevice);
-  if (err != CUDA_SUCCESS) {
-    DP("Error getting warp size, assume default\n");
-    DeviceInfo.WarpSize[device_id] = 32;
-  } else {
-    DeviceInfo.WarpSize[device_id] = warpSize;
-  }
-
-  // Adjust teams to the env variables
-  if (DeviceInfo.EnvTeamLimit > 0 &&
-      DeviceInfo.BlocksPerGrid[device_id] > DeviceInfo.EnvTeamLimit) {
-    DeviceInfo.BlocksPerGrid[device_id] = DeviceInfo.EnvTeamLimit;
-    DP("Capping max CUDA blocks per grid to OMP_TEAM_LIMIT=%d\n",
-        DeviceInfo.EnvTeamLimit);
-  }
-
-  DP("Max number of CUDA blocks %d, threads %d & warp size %d\n",
-     DeviceInfo.BlocksPerGrid[device_id], DeviceInfo.ThreadsPerBlock[device_id],
-     DeviceInfo.WarpSize[device_id]);
-
-  // Set default number of teams
-  if (DeviceInfo.EnvNumTeams > 0) {
-    DeviceInfo.NumTeams[device_id] = DeviceInfo.EnvNumTeams;
-    DP("Default number of teams set according to environment %d\n",
-        DeviceInfo.EnvNumTeams);
-  } else {
-    DeviceInfo.NumTeams[device_id] = RTLDeviceInfoTy::DefaultNumTeams;
-    DP("Default number of teams set according to library's default %d\n",
-        RTLDeviceInfoTy::DefaultNumTeams);
-  }
-  if (DeviceInfo.NumTeams[device_id] > DeviceInfo.BlocksPerGrid[device_id]) {
-    DeviceInfo.NumTeams[device_id] = DeviceInfo.BlocksPerGrid[device_id];
-    DP("Default number of teams exceeds device limit, capping at %d\n",
-        DeviceInfo.BlocksPerGrid[device_id]);
-  }
-
-  // Set default number of threads
-  DeviceInfo.NumThreads[device_id] = RTLDeviceInfoTy::DefaultNumThreads;
-  DP("Default number of threads set according to library's default %d\n",
-          RTLDeviceInfoTy::DefaultNumThreads);
-  if (DeviceInfo.NumThreads[device_id] >
-      DeviceInfo.ThreadsPerBlock[device_id]) {
-    DeviceInfo.NumTeams[device_id] = DeviceInfo.ThreadsPerBlock[device_id];
-    DP("Default number of threads exceeds device limit, capping at %d\n",
-        DeviceInfo.ThreadsPerBlock[device_id]);
-  }
-
-  return OFFLOAD_SUCCESS;
+  return DeviceRTL.initDevice(device_id);
 }
 
 __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
-    __tgt_device_image *image) {
+                                          __tgt_device_image *image) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  // Set the context we are using.
-  CUresult err = cuCtxSetCurrent(DeviceInfo.Contexts[device_id]);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when setting a CUDA context for device %d\n", device_id);
-    CUDA_ERR_STRING(err);
-    return NULL;
-  }
-
-  // Clear the offload table as we are going to create a new one.
-  DeviceInfo.clearOffloadEntriesTable(device_id);
-
-  // Create the module and extract the function pointers.
-
-  CUmodule cumod;
-  DP("Load data from image " DPxMOD "\n", DPxPTR(image->ImageStart));
-  err = cuModuleLoadDataEx(&cumod, image->ImageStart, 0, NULL, NULL);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when loading CUDA module\n");
-    CUDA_ERR_STRING(err);
-    return NULL;
-  }
-
-  DP("CUDA module successfully loaded!\n");
-  DeviceInfo.Modules.push_back(cumod);
-
-  // Find the symbols in the module by name.
-  __tgt_offload_entry *HostBegin = image->EntriesBegin;
-  __tgt_offload_entry *HostEnd = image->EntriesEnd;
-
-  for (__tgt_offload_entry *e = HostBegin; e != HostEnd; ++e) {
-
-    if (!e->addr) {
-      // We return NULL when something like this happens, the host should have
-      // always something in the address to uniquely identify the target region.
-      DP("Invalid binary: host entry '<null>' (size = %zd)...\n", e->size);
-
-      return NULL;
-    }
-
-    if (e->size) {
-      __tgt_offload_entry entry = *e;
-
-      CUdeviceptr cuptr;
-      size_t cusize;
-      err = cuModuleGetGlobal(&cuptr, &cusize, cumod, e->name);
-
-      if (err != CUDA_SUCCESS) {
-        DP("Loading global '%s' (Failed)\n", e->name);
-        CUDA_ERR_STRING(err);
-        return NULL;
-      }
-
-      if (cusize != e->size) {
-        DP("Loading global '%s' - size mismatch (%zd != %zd)\n", e->name,
-            cusize, e->size);
-        CUDA_ERR_STRING(err);
-        return NULL;
-      }
-
-      DP("Entry point " DPxMOD " maps to global %s (" DPxMOD ")\n",
-          DPxPTR(e - HostBegin), e->name, DPxPTR(cuptr));
-      entry.addr = (void *)cuptr;
-
-      // Note: In the current implementation declare target variables
-      // can either be link or to. This means that once unified
-      // memory is activated via the requires directive, the variable
-      // can be used directly from the host in both cases.
-      // TODO: when variables types other than to or link are added,
-      // the below condition should be changed to explicitly
-      // check for to and link variables types:
-      //  (DeviceInfo.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-      //   (e->flags & OMP_DECLARE_TARGET_LINK ||
-      //    e->flags == OMP_DECLARE_TARGET_TO))
-      if (DeviceInfo.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
-        // If unified memory is present any target link or to variables
-        // can access host addresses directly. There is no longer a
-        // need for device copies.
-        cuMemcpyHtoD(cuptr, e->addr, sizeof(void *));
-        DP("Copy linked variable host address (" DPxMOD ")"
-           "to device address (" DPxMOD ")\n",
-          DPxPTR(*((void**)e->addr)), DPxPTR(cuptr));
-      }
-
-      DeviceInfo.addOffloadEntry(device_id, entry);
-
-      continue;
-    }
-
-    CUfunction fun;
-    err = cuModuleGetFunction(&fun, cumod, e->name);
-
-    if (err != CUDA_SUCCESS) {
-      DP("Loading '%s' (Failed)\n", e->name);
-      CUDA_ERR_STRING(err);
-      return NULL;
-    }
-
-    DP("Entry point " DPxMOD " maps to %s (" DPxMOD ")\n",
-        DPxPTR(e - HostBegin), e->name, DPxPTR(fun));
-
-    // default value GENERIC (in case symbol is missing from cubin file)
-    int8_t ExecModeVal = ExecutionModeType::GENERIC;
-    std::string ExecModeNameStr (e->name);
-    ExecModeNameStr += "_exec_mode";
-    const char *ExecModeName = ExecModeNameStr.c_str();
-
-    CUdeviceptr ExecModePtr;
-    size_t cusize;
-    err = cuModuleGetGlobal(&ExecModePtr, &cusize, cumod, ExecModeName);
-    if (err == CUDA_SUCCESS) {
-      if ((size_t)cusize != sizeof(int8_t)) {
-        DP("Loading global exec_mode '%s' - size mismatch (%zd != %zd)\n",
-           ExecModeName, cusize, sizeof(int8_t));
-        CUDA_ERR_STRING(err);
-        return NULL;
-      }
-
-      err = cuMemcpyDtoH(&ExecModeVal, ExecModePtr, cusize);
-      if (err != CUDA_SUCCESS) {
-        DP("Error when copying data from device to host. Pointers: "
-           "host = " DPxMOD ", device = " DPxMOD ", size = %zd\n",
-           DPxPTR(&ExecModeVal), DPxPTR(ExecModePtr), cusize);
-        CUDA_ERR_STRING(err);
-        return NULL;
-      }
-
-      if (ExecModeVal < 0 || ExecModeVal > 1) {
-        DP("Error wrong exec_mode value specified in cubin file: %d\n",
-           ExecModeVal);
-        return NULL;
-      }
-    } else {
-      DP("Loading global exec_mode '%s' - symbol missing, using default value "
-          "GENERIC (1)\n", ExecModeName);
-      CUDA_ERR_STRING(err);
-    }
-
-    KernelsList.push_back(KernelTy(fun, ExecModeVal));
-
-    __tgt_offload_entry entry = *e;
-    entry.addr = (void *)&KernelsList.back();
-    DeviceInfo.addOffloadEntry(device_id, entry);
-  }
-
-  // send device environment data to the device
-  {
-    omptarget_device_environmentTy device_env;
-
-    device_env.debug_level = 0;
-
-#ifdef OMPTARGET_DEBUG
-    if (char *envStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG")) {
-      device_env.debug_level = std::stoi(envStr);
-    }
-#endif
-
-    const char * device_env_Name="omptarget_device_environment";
-    CUdeviceptr device_env_Ptr;
-    size_t cusize;
-
-    err = cuModuleGetGlobal(&device_env_Ptr, &cusize, cumod, device_env_Name);
-
-    if (err == CUDA_SUCCESS) {
-      if ((size_t)cusize != sizeof(device_env)) {
-        DP("Global device_environment '%s' - size mismatch (%zu != %zu)\n",
-            device_env_Name, cusize, sizeof(int32_t));
-        CUDA_ERR_STRING(err);
-        return NULL;
-      }
-
-      err = cuMemcpyHtoD(device_env_Ptr, &device_env, cusize);
-      if (err != CUDA_SUCCESS) {
-        DP("Error when copying data from host to device. Pointers: "
-            "host = " DPxMOD ", device = " DPxMOD ", size = %zu\n",
-            DPxPTR(&device_env), DPxPTR(device_env_Ptr), cusize);
-        CUDA_ERR_STRING(err);
-        return NULL;
-      }
-
-      DP("Sending global device environment data %zu bytes\n", (size_t)cusize);
-    } else {
-      DP("Finding global device environment '%s' - symbol missing.\n", device_env_Name);
-      DP("Continue, considering this is a device RTL which does not accept environment setting.\n");
-    }
-  }
-
-  return DeviceInfo.getOffloadEntriesTable(device_id);
+  return DeviceRTL.loadBinary(device_id, image);
 }
 
-void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *hst_ptr) {
-  if (size == 0) {
-    return NULL;
-  }
+void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  // Set the context we are using.
-  CUresult err = cuCtxSetCurrent(DeviceInfo.Contexts[device_id]);
-  if (err != CUDA_SUCCESS) {
-    DP("Error while trying to set CUDA current context\n");
-    CUDA_ERR_STRING(err);
-    return NULL;
-  }
-
-  CUdeviceptr ptr;
-  err = cuMemAlloc(&ptr, size);
-  if (err != CUDA_SUCCESS) {
-    DP("Error while trying to allocate %d\n", err);
-    CUDA_ERR_STRING(err);
-    return NULL;
-  }
-
-  void *vptr = (void *)ptr;
-  return vptr;
+  return DeviceRTL.dataAlloc(device_id, size);
 }
 
 int32_t __tgt_rtl_data_submit(int32_t device_id, void *tgt_ptr, void *hst_ptr,
-    int64_t size) {
-  // Set the context we are using.
-  CUresult err = cuCtxSetCurrent(DeviceInfo.Contexts[device_id]);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when setting CUDA context\n");
-    CUDA_ERR_STRING(err);
-    return OFFLOAD_FAIL;
-  }
+                              int64_t size) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  err = cuMemcpyHtoD((CUdeviceptr)tgt_ptr, hst_ptr, size);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when copying data from host to device. Pointers: host = " DPxMOD
-       ", device = " DPxMOD ", size = %" PRId64 "\n", DPxPTR(hst_ptr),
-       DPxPTR(tgt_ptr), size);
-    CUDA_ERR_STRING(err);
+  __tgt_async_info async_info;
+  const int32_t rc = __tgt_rtl_data_submit_async(device_id, tgt_ptr, hst_ptr,
+                                                 size, &async_info);
+  if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
+
+  return __tgt_rtl_synchronize(device_id, &async_info);
+}
+
+int32_t __tgt_rtl_data_submit_async(int32_t device_id, void *tgt_ptr,
+                                    void *hst_ptr, int64_t size,
+                                    __tgt_async_info *async_info_ptr) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  assert(async_info_ptr && "async_info_ptr is nullptr");
+
+  return DeviceRTL.dataSubmit(device_id, tgt_ptr, hst_ptr, size,
+                              async_info_ptr);
 }
 
 int32_t __tgt_rtl_data_retrieve(int32_t device_id, void *hst_ptr, void *tgt_ptr,
-    int64_t size) {
-  // Set the context we are using.
-  CUresult err = cuCtxSetCurrent(DeviceInfo.Contexts[device_id]);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when setting CUDA context\n");
-    CUDA_ERR_STRING(err);
-    return OFFLOAD_FAIL;
-  }
+                                int64_t size) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  err = cuMemcpyDtoH(hst_ptr, (CUdeviceptr)tgt_ptr, size);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when copying data from device to host. Pointers: host = " DPxMOD
-        ", device = " DPxMOD ", size = %" PRId64 "\n", DPxPTR(hst_ptr),
-        DPxPTR(tgt_ptr), size);
-    CUDA_ERR_STRING(err);
+  __tgt_async_info async_info;
+  const int32_t rc = __tgt_rtl_data_retrieve_async(device_id, hst_ptr, tgt_ptr,
+                                                   size, &async_info);
+  if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
+
+  return __tgt_rtl_synchronize(device_id, &async_info);
+}
+
+int32_t __tgt_rtl_data_retrieve_async(int32_t device_id, void *hst_ptr,
+                                      void *tgt_ptr, int64_t size,
+                                      __tgt_async_info *async_info_ptr) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  assert(async_info_ptr && "async_info_ptr is nullptr");
+
+  return DeviceRTL.dataRetrieve(device_id, hst_ptr, tgt_ptr, size,
+                                async_info_ptr);
+}
+
+int32_t __tgt_rtl_data_exchange_async(int32_t src_dev_id, void *src_ptr,
+                                      int dst_dev_id, void *dst_ptr,
+                                      int64_t size,
+                                      __tgt_async_info *async_info_ptr) {
+  assert(DeviceRTL.isValidDeviceId(src_dev_id) && "src_dev_id is invalid");
+  assert(DeviceRTL.isValidDeviceId(dst_dev_id) && "dst_dev_id is invalid");
+  assert(async_info_ptr && "async_info_ptr is nullptr");
+
+  return DeviceRTL.dataExchange(src_dev_id, src_ptr, dst_dev_id, dst_ptr, size,
+                                async_info_ptr);
+}
+
+int32_t __tgt_rtl_data_exchange(int32_t src_dev_id, void *src_ptr,
+                                int32_t dst_dev_id, void *dst_ptr,
+                                int64_t size) {
+  assert(DeviceRTL.isValidDeviceId(src_dev_id) && "src_dev_id is invalid");
+  assert(DeviceRTL.isValidDeviceId(dst_dev_id) && "dst_dev_id is invalid");
+
+  __tgt_async_info async_info;
+  const int32_t rc = __tgt_rtl_data_exchange_async(
+      src_dev_id, src_ptr, dst_dev_id, dst_ptr, size, &async_info);
+  if (rc != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
+  return __tgt_rtl_synchronize(src_dev_id, &async_info);
 }
 
 int32_t __tgt_rtl_data_delete(int32_t device_id, void *tgt_ptr) {
-  // Set the context we are using.
-  CUresult err = cuCtxSetCurrent(DeviceInfo.Contexts[device_id]);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when setting CUDA context\n");
-    CUDA_ERR_STRING(err);
-    return OFFLOAD_FAIL;
-  }
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  err = cuMemFree((CUdeviceptr)tgt_ptr);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when freeing CUDA memory\n");
-    CUDA_ERR_STRING(err);
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
+  return DeviceRTL.dataDelete(device_id, tgt_ptr);
 }
 
 int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
-    void **tgt_args, ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t team_num,
-    int32_t thread_limit, uint64_t loop_tripcount) {
-  // Set the context we are using.
-  CUresult err = cuCtxSetCurrent(DeviceInfo.Contexts[device_id]);
-  if (err != CUDA_SUCCESS) {
-    DP("Error when setting CUDA context\n");
-    CUDA_ERR_STRING(err);
+                                         void **tgt_args,
+                                         ptrdiff_t *tgt_offsets,
+                                         int32_t arg_num, int32_t team_num,
+                                         int32_t thread_limit,
+                                         uint64_t loop_tripcount) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+
+  __tgt_async_info async_info;
+  const int32_t rc = __tgt_rtl_run_target_team_region_async(
+      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, team_num,
+      thread_limit, loop_tripcount, &async_info);
+  if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
-  }
 
-  // All args are references.
-  std::vector<void *> args(arg_num);
-  std::vector<void *> ptrs(arg_num);
+  return __tgt_rtl_synchronize(device_id, &async_info);
+}
 
-  for (int32_t i = 0; i < arg_num; ++i) {
-    ptrs[i] = (void *)((intptr_t)tgt_args[i] + tgt_offsets[i]);
-    args[i] = &ptrs[i];
-  }
+int32_t __tgt_rtl_run_target_team_region_async(
+    int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
+    ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t team_num,
+    int32_t thread_limit, uint64_t loop_tripcount,
+    __tgt_async_info *async_info_ptr) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  KernelTy *KernelInfo = (KernelTy *)tgt_entry_ptr;
-
-  int cudaThreadsPerBlock;
-
-  if (thread_limit > 0) {
-    cudaThreadsPerBlock = thread_limit;
-    DP("Setting CUDA threads per block to requested %d\n", thread_limit);
-    // Add master warp if necessary
-    if (KernelInfo->ExecutionMode == GENERIC) {
-      cudaThreadsPerBlock += DeviceInfo.WarpSize[device_id];
-      DP("Adding master warp: +%d threads\n", DeviceInfo.WarpSize[device_id]);
-    }
-  } else {
-    cudaThreadsPerBlock = DeviceInfo.NumThreads[device_id];
-    DP("Setting CUDA threads per block to default %d\n",
-        DeviceInfo.NumThreads[device_id]);
-  }
-
-  if (cudaThreadsPerBlock > DeviceInfo.ThreadsPerBlock[device_id]) {
-    cudaThreadsPerBlock = DeviceInfo.ThreadsPerBlock[device_id];
-    DP("Threads per block capped at device limit %d\n",
-        DeviceInfo.ThreadsPerBlock[device_id]);
-  }
-
-  int kernel_limit;
-  err = cuFuncGetAttribute(&kernel_limit,
-      CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK, KernelInfo->Func);
-  if (err == CUDA_SUCCESS) {
-    if (kernel_limit < cudaThreadsPerBlock) {
-      cudaThreadsPerBlock = kernel_limit;
-      DP("Threads per block capped at kernel limit %d\n", kernel_limit);
-    }
-  }
-
-  int cudaBlocksPerGrid;
-  if (team_num <= 0) {
-    if (loop_tripcount > 0 && DeviceInfo.EnvNumTeams < 0) {
-      if (KernelInfo->ExecutionMode == SPMD) {
-        // We have a combined construct, i.e. `target teams distribute parallel
-        // for [simd]`. We launch so many teams so that each thread will
-        // execute one iteration of the loop.
-        // round up to the nearest integer
-        cudaBlocksPerGrid = ((loop_tripcount - 1) / cudaThreadsPerBlock) + 1;
-      } else {
-        // If we reach this point, then we have a non-combined construct, i.e.
-        // `teams distribute` with a nested `parallel for` and each team is
-        // assigned one iteration of the `distribute` loop. E.g.:
-        //
-        // #pragma omp target teams distribute
-        // for(...loop_tripcount...) {
-        //   #pragma omp parallel for
-        //   for(...) {}
-        // }
-        //
-        // Threads within a team will execute the iterations of the `parallel`
-        // loop.
-        cudaBlocksPerGrid = loop_tripcount;
-      }
-      DP("Using %d teams due to loop trip count %" PRIu64 " and number of "
-          "threads per block %d\n", cudaBlocksPerGrid, loop_tripcount,
-          cudaThreadsPerBlock);
-    } else {
-      cudaBlocksPerGrid = DeviceInfo.NumTeams[device_id];
-      DP("Using default number of teams %d\n", DeviceInfo.NumTeams[device_id]);
-    }
-  } else if (team_num > DeviceInfo.BlocksPerGrid[device_id]) {
-    cudaBlocksPerGrid = DeviceInfo.BlocksPerGrid[device_id];
-    DP("Capping number of teams to team limit %d\n",
-        DeviceInfo.BlocksPerGrid[device_id]);
-  } else {
-    cudaBlocksPerGrid = team_num;
-    DP("Using requested number of teams %d\n", team_num);
-  }
-
-  // Run on the device.
-  DP("Launch kernel with %d blocks and %d threads\n", cudaBlocksPerGrid,
-     cudaThreadsPerBlock);
-
-  err = cuLaunchKernel(KernelInfo->Func, cudaBlocksPerGrid, 1, 1,
-      cudaThreadsPerBlock, 1, 1, 0 /*bytes of shared memory*/, 0, &args[0], 0);
-  if (err != CUDA_SUCCESS) {
-    DP("Device kernel launch failed!\n");
-    CUDA_ERR_STRING(err);
-    return OFFLOAD_FAIL;
-  }
-
-  DP("Launch of entry point at " DPxMOD " successful!\n",
-      DPxPTR(tgt_entry_ptr));
-
-  CUresult sync_err = cuCtxSynchronize();
-  if (sync_err != CUDA_SUCCESS) {
-    DP("Kernel execution error at " DPxMOD "!\n", DPxPTR(tgt_entry_ptr));
-    CUDA_ERR_STRING(sync_err);
-    return OFFLOAD_FAIL;
-  } else {
-    DP("Kernel execution at " DPxMOD " successful!\n", DPxPTR(tgt_entry_ptr));
-  }
-
-  return OFFLOAD_SUCCESS;
+  return DeviceRTL.runTargetTeamRegion(
+      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, team_num,
+      thread_limit, loop_tripcount, async_info_ptr);
 }
 
 int32_t __tgt_rtl_run_target_region(int32_t device_id, void *tgt_entry_ptr,
-    void **tgt_args, ptrdiff_t *tgt_offsets, int32_t arg_num) {
-  // use one team and the default number of threads.
-  const int32_t team_num = 1;
-  const int32_t thread_limit = 0;
-  return __tgt_rtl_run_target_team_region(device_id, tgt_entry_ptr, tgt_args,
-      tgt_offsets, arg_num, team_num, thread_limit, 0);
+                                    void **tgt_args, ptrdiff_t *tgt_offsets,
+                                    int32_t arg_num) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+
+  __tgt_async_info async_info;
+  const int32_t rc = __tgt_rtl_run_target_region_async(
+      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, &async_info);
+  if (rc != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
+  return __tgt_rtl_synchronize(device_id, &async_info);
+}
+
+int32_t __tgt_rtl_run_target_region_async(int32_t device_id,
+                                          void *tgt_entry_ptr, void **tgt_args,
+                                          ptrdiff_t *tgt_offsets,
+                                          int32_t arg_num,
+                                          __tgt_async_info *async_info_ptr) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+
+  return __tgt_rtl_run_target_team_region_async(
+      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num,
+      /* team num*/ 1, /* thread_limit */ 1, /* loop_tripcount */ 0,
+      async_info_ptr);
+}
+
+int32_t __tgt_rtl_synchronize(int32_t device_id,
+                              __tgt_async_info *async_info_ptr) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  assert(async_info_ptr && "async_info_ptr is nullptr");
+  assert(async_info_ptr->Queue && "async_info_ptr->Queue is nullptr");
+
+  return DeviceRTL.synchronize(device_id, async_info_ptr);
 }
 
 #ifdef __cplusplus

@@ -1,5 +1,5 @@
 // REQUIRES: hexagon-registered-target
-// RUN: %clang_cc1 -emit-llvm -O2 -o - -triple hexagon-unknown-elf %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -O2 -o - -triple hexagon-unknown-elf -target-cpu hexagonv60 %s | FileCheck %s
 
 // The return value should return the value in A[1].
 // Check that the HexagonBuiltinExpr doesn't evaluate &(*ptr++) twice. If so,

@@ -561,7 +561,7 @@ public:
   void setCallee(const CallEnter &CE, const SourceManager &SM);
 
   bool hasCallStackMessage() { return !CallStackMessage.empty(); }
-  void setCallStackMessage(StringRef st) { CallStackMessage = st; }
+  void setCallStackMessage(StringRef st) { CallStackMessage = std::string(st); }
 
   PathDiagnosticLocation getLocation() const override { return callEnter; }
 
@@ -806,7 +806,7 @@ public:
 
   meta_iterator meta_begin() const { return OtherDesc.begin(); }
   meta_iterator meta_end() const { return OtherDesc.end(); }
-  void addMeta(StringRef s) { OtherDesc.push_back(s); }
+  void addMeta(StringRef s) { OtherDesc.push_back(std::string(s)); }
 
   const FilesToLineNumsMap &getExecutedLines() const {
     return *ExecutedLines;

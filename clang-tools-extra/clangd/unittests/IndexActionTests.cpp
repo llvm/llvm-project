@@ -19,6 +19,7 @@ namespace {
 
 using ::testing::AllOf;
 using ::testing::ElementsAre;
+using ::testing::EndsWith;
 using ::testing::Not;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
@@ -59,7 +60,7 @@ void checkNodesAreInitialized(const IndexFileIn &IndexFile,
 std::map<std::string, const IncludeGraphNode &> toMap(const IncludeGraph &IG) {
   std::map<std::string, const IncludeGraphNode &> Nodes;
   for (auto &I : IG)
-    Nodes.emplace(I.getKey(), I.getValue());
+    Nodes.emplace(std::string(I.getKey()), I.getValue());
   return Nodes;
 }
 
@@ -75,8 +76,7 @@ public:
         new FileManager(FileSystemOptions(), InMemoryFileSystem));
 
     auto Action = createStaticIndexingAction(
-        SymbolCollector::Options(),
-        [&](SymbolSlab S) { IndexFile.Symbols = std::move(S); },
+        Opts, [&](SymbolSlab S) { IndexFile.Symbols = std::move(S); },
         [&](RefSlab R) { IndexFile.Refs = std::move(R); },
         [&](RelationSlab R) { IndexFile.Relations = std::move(R); },
         [&](IncludeGraph IG) { IndexFile.Sources = std::move(IG); });
@@ -85,7 +85,7 @@ public:
                                      "-xc++",        "-std=c++11",
                                      "-iquote",      testRoot()};
     Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
-    Args.push_back(MainFilePath);
+    Args.push_back(std::string(MainFilePath));
 
     tooling::ToolInvocation Invocation(
         Args, std::move(Action), Files.get(),
@@ -99,11 +99,12 @@ public:
 
   void addFile(llvm::StringRef Path, llvm::StringRef Content) {
     InMemoryFileSystem->addFile(Path, 0,
-                                llvm::MemoryBuffer::getMemBuffer(Content));
-    FilePaths.push_back(Path);
+                                llvm::MemoryBuffer::getMemBufferCopy(Content));
+    FilePaths.push_back(std::string(Path));
   }
 
 protected:
+  SymbolCollector::Options Opts;
   std::vector<std::string> FilePaths;
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
 };
@@ -248,6 +249,36 @@ TEST_F(IndexActionTest, NoWarnings) {
   ASSERT_TRUE(IndexFile.Sources);
   ASSERT_NE(0u, IndexFile.Sources->size());
   EXPECT_THAT(*IndexFile.Symbols, ElementsAre(HasName("foo"), HasName("bar")));
+}
+
+TEST_F(IndexActionTest, SkipFiles) {
+  std::string MainFilePath = testPath("main.cpp");
+  addFile(MainFilePath, R"cpp(
+    // clang-format off
+    #include "good.h"
+    #include "bad.h"
+    // clang-format on
+  )cpp");
+  addFile(testPath("good.h"), R"cpp(
+    struct S { int s; };
+    void f1() { S f; }
+    auto unskippable1() { return S(); }
+  )cpp");
+  addFile(testPath("bad.h"), R"cpp(
+    struct T { S t; };
+    void f2() { S f; }
+    auto unskippable2() { return S(); }
+  )cpp");
+  Opts.FileFilter = [](const SourceManager &SM, FileID F) {
+    return !SM.getFileEntryForID(F)->getName().endswith("bad.h");
+  };
+  IndexFileIn IndexFile = runIndexingAction(MainFilePath, {"-std=c++14"});
+  EXPECT_THAT(*IndexFile.Symbols,
+              UnorderedElementsAre(HasName("S"), HasName("s"), HasName("f1"),
+                                   HasName("unskippable1")));
+  for (const auto &Pair : *IndexFile.Refs)
+    for (const auto &Ref : Pair.second)
+      EXPECT_THAT(Ref.Location.FileURI, EndsWith("good.h"));
 }
 
 } // namespace

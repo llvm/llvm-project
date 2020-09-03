@@ -7,28 +7,28 @@
 # RUN: ld.lld %t2.o -shared -o %t.so
 # RUN: ld.lld %t1.o %t.so -o %t.exe
 # RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t.exe | FileCheck %s
-# RUN: llvm-readobj --dynamic-table -S -r -A %t.exe \
+# RUN: llvm-readobj -S --dynamic-table -r -A %t.exe \
 # RUN:   | FileCheck -check-prefix=REL %s
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: bar:
+# CHECK-NEXT: <bar>:
 # CHECK-NEXT:   [[BAR:[0-9a-f]+]]:  jal  0x[[LOC:[0-9a-f]+]] <loc>
 # CHECK-NEXT:   {{.*}}:              nop
 #
-# CHECK:      __start:
+# CHECK:      <__start>:
 # CHECK-NEXT:   {{.*}}:       jal     0x[[BAR]] <bar>
 # CHECK-NEXT:   {{.*}}:       nop
 # CHECK-NEXT:   {{.*}}:       jal     0x[[FOO0:[0-9a-f]+]]
 #                                     ^-- gotplt[foo0]
 # CHECK-NEXT:   {{.*}}:       nop
 #
-# CHECK:      loc:
+# CHECK:      <loc>:
 # CHECK-NEXT:   [[LOC]]:      nop
 # CHECK-EMPTY:
 # CHECK-NEXT: Disassembly of section .plt:
 # CHECK-EMPTY:
-# CHECK-NEXT: .plt:
+# CHECK-NEXT: <.plt>:
 # CHECK-NEXT:   {{.*}}:       lui     $gp, 0x3
 # CHECK-NEXT:   {{.*}}:       lw      $25, {{.*}}($gp)
 # CHECK-NEXT:   {{.*}}:       addiu   $gp, $gp, {{.*}}
@@ -58,13 +58,13 @@
 # REL-NEXT: ]
 # REL-NEXT: Address: 0x[[GOTPLTADDR:[0-9A-F]+]]
 
+# REL: 0x70000032  MIPS_PLTGOT  0x[[GOTPLTADDR]]
+
 # REL: Relocations [
 # REL-NEXT:   Section (7) .rel.plt {
 # REL-NEXT:     0x[[PLTSLOT:[0-9A-F]+]] R_MIPS_JUMP_SLOT foo0 0x0
 # REL-NEXT:   }
 # REL-NEXT: ]
-
-# REL: 0x70000032  MIPS_PLTGOT  0x[[GOTPLTADDR]]
 
 # REL:      Primary GOT {
 # REL:        Local entries [

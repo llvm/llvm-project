@@ -990,8 +990,7 @@ inline internal::Benchmark* RegisterBenchmark(const char* name,
 #ifdef BENCHMARK_HAS_CXX11
 template <class Lambda>
 internal::Benchmark* RegisterBenchmark(const char* name, Lambda&& fn) {
-  using BenchType =
-      internal::LambdaBenchmark<typename std::decay<Lambda>::type>;
+  using BenchType = internal::LambdaBenchmark<std::decay_t<Lambda>>;
   return internal::RegisterBenchmarkInternal(
       ::new BenchType(name, std::forward<Lambda>(fn)));
 }

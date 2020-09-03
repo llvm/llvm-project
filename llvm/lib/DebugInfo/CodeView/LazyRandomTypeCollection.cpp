@@ -277,3 +277,8 @@ void LazyRandomTypeCollection::visitRange(TypeIndex Begin, uint32_t BeginOffset,
     ++RI;
   }
 }
+
+bool LazyRandomTypeCollection::replaceType(TypeIndex &Index, CVType Data,
+                                           bool Stabilize) {
+  llvm_unreachable("Method cannot be called");
+}

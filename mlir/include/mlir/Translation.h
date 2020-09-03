@@ -1,6 +1,6 @@
 //===- Translation.h - Translation registry ---------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -12,9 +12,7 @@
 #ifndef MLIR_TRANSLATION_H
 #define MLIR_TRANSLATION_H
 
-#include "llvm/ADT/StringMap.h"
-
-#include <memory>
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 class MemoryBuffer;
@@ -55,14 +53,18 @@ using TranslateFromMLIRFunction =
 using TranslateFunction = std::function<LogicalResult(
     llvm::SourceMgr &sourceMgr, llvm::raw_ostream &output, MLIRContext *)>;
 
-/// Use Translate[ToMLIR|FromMLIR]Registration as a global initializer that
+/// Use Translate[ToMLIR|FromMLIR]Registration as an initializer that
 /// registers a function and associates it with name. This requires that a
 /// translation has not been registered to a given name.
 ///
 /// Usage:
 ///
-///   // At namespace scope.
-///   static TranslateToMLIRRegistration Unused(&MySubCommand, [] { ... });
+///   // At file scope.
+///   namespace mlir {
+///   void registerTRexToMLIRRegistration() {
+///     TranslateToMLIRRegistration Unused(&MySubCommand, [] { ... });
+///   }
+///   } // namespace mlir
 ///
 /// \{
 struct TranslateToMLIRRegistration {
@@ -82,13 +84,13 @@ struct TranslateRegistration {
 };
 /// \}
 
-/// Get a read-only reference to the translator registry.
-const llvm::StringMap<TranslateSourceMgrToMLIRFunction> &
-getTranslationToMLIRRegistry();
-const llvm::StringMap<TranslateFromMLIRFunction> &
-getTranslationFromMLIRRegistry();
-const llvm::StringMap<TranslateFunction> &getTranslationRegistry();
+/// A command line parser for translation functions.
+struct TranslationParser : public llvm::cl::parser<const TranslateFunction *> {
+  TranslationParser(llvm::cl::Option &opt);
 
+  void printOptionInfo(const llvm::cl::Option &o,
+                       size_t globalWidth) const override;
+};
 } // namespace mlir
 
 #endif // MLIR_TRANSLATION_H

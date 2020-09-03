@@ -15,14 +15,14 @@ typedef __INTPTR_TYPE__ intptr_t;
 // CHECK-DAG: [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[S_TY:%.+]] = type { [[INTPTR_T_TY:i[0-9]+]], [[INTPTR_T_TY]], [[INTPTR_T_TY]] }
 // CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CHECK-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr global [[IDENT_T_TY]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr constant [[IDENT_T_TY]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 void foo();
 
 struct S {
   intptr_t a, b, c;
   S(intptr_t a) : a(a) {}
-  operator char() { return a; }
+  operator char() { extern void mayThrow(); mayThrow(); return a; }
   ~S() {}
 };
 

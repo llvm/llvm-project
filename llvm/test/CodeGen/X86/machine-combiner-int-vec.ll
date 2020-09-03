@@ -13,12 +13,18 @@ define <4 x i32> @reassociate_and_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> 
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: reassociate_and_v4i32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpand %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: reassociate_and_v4i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpand %xmm3, %xmm2, %xmm1
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: reassociate_and_v4i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogd $128, %xmm2, %xmm3, %xmm0
+; AVX512-NEXT:    retq
 
   %t0 = add <4 x i32> %x0, %x1
   %t1 = and <4 x i32> %x2, %t0
@@ -34,12 +40,18 @@ define <4 x i32> @reassociate_or_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %
 ; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: reassociate_or_v4i32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpor %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: reassociate_or_v4i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm3, %xmm2, %xmm1
+; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: reassociate_or_v4i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogd $254, %xmm2, %xmm3, %xmm0
+; AVX512-NEXT:    retq
 
   %t0 = add <4 x i32> %x0, %x1
   %t1 = or <4 x i32> %x2, %t0
@@ -55,12 +67,18 @@ define <4 x i32> @reassociate_xor_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> 
 ; SSE-NEXT:    pxor %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: reassociate_xor_v4i32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm3, %xmm2, %xmm1
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: reassociate_xor_v4i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor %xmm3, %xmm2, %xmm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: reassociate_xor_v4i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogd $150, %xmm2, %xmm3, %xmm0
+; AVX512-NEXT:    retq
 
   %t0 = add <4 x i32> %x0, %x1
   %t1 = xor <4 x i32> %x2, %t0
@@ -81,12 +99,18 @@ define <8 x i32> @reassociate_and_v8i32(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> 
 ; SSE-NEXT:    pand %xmm5, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: reassociate_and_v8i32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vpand %ymm3, %ymm2, %ymm1
-; AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: reassociate_and_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm1
+; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: reassociate_and_v8i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpternlogd $128, %ymm2, %ymm3, %ymm0
+; AVX512-NEXT:    retq
 
   %t0 = add <8 x i32> %x0, %x1
   %t1 = and <8 x i32> %x2, %t0
@@ -105,12 +129,18 @@ define <8 x i32> @reassociate_or_v8i32(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %
 ; SSE-NEXT:    por %xmm5, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: reassociate_or_v8i32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vpor %ymm3, %ymm2, %ymm1
-; AVX-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: reassociate_or_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpor %ymm3, %ymm2, %ymm1
+; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: reassociate_or_v8i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpternlogd $254, %ymm2, %ymm3, %ymm0
+; AVX512-NEXT:    retq
 
   %t0 = add <8 x i32> %x0, %x1
   %t1 = or <8 x i32> %x2, %t0
@@ -129,12 +159,18 @@ define <8 x i32> @reassociate_xor_v8i32(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> 
 ; SSE-NEXT:    pxor %xmm5, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: reassociate_xor_v8i32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vpxor %ymm3, %ymm2, %ymm1
-; AVX-NEXT:    vpxor %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: reassociate_xor_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm1
+; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: reassociate_xor_v8i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpternlogd $150, %ymm2, %ymm3, %ymm0
+; AVX512-NEXT:    retq
 
   %t0 = add <8 x i32> %x0, %x1
   %t1 = xor <8 x i32> %x2, %t0
@@ -175,8 +211,7 @@ define <16 x i32> @reassociate_and_v16i32(<16 x i32> %x0, <16 x i32> %x1, <16 x 
 ; AVX512-LABEL: reassociate_and_v16i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpandd %zmm3, %zmm2, %zmm1
-; AVX512-NEXT:    vpandd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogd $128, %zmm2, %zmm3, %zmm0
 ; AVX512-NEXT:    retq
 
   %t0 = add <16 x i32> %x0, %x1
@@ -215,8 +250,7 @@ define <16 x i32> @reassociate_or_v16i32(<16 x i32> %x0, <16 x i32> %x1, <16 x i
 ; AVX512-LABEL: reassociate_or_v16i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpord %zmm3, %zmm2, %zmm1
-; AVX512-NEXT:    vpord %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogd $254, %zmm2, %zmm3, %zmm0
 ; AVX512-NEXT:    retq
 
   %t0 = add <16 x i32> %x0, %x1
@@ -255,8 +289,7 @@ define <16 x i32> @reassociate_xor_v16i32(<16 x i32> %x0, <16 x i32> %x1, <16 x 
 ; AVX512-LABEL: reassociate_xor_v16i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpxord %zmm3, %zmm2, %zmm1
-; AVX512-NEXT:    vpxord %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogd $150, %zmm2, %zmm3, %zmm0
 ; AVX512-NEXT:    retq
 
   %t0 = add <16 x i32> %x0, %x1

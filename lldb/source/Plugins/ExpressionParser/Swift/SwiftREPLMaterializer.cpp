@@ -122,13 +122,12 @@ public:
     if (!persistent_state) {
       err.SetErrorString("Couldn't dematerialize a result variable: language "
                          "doesn't have persistent state");
+      return;
     }
 
-    auto prefix = persistent_state->GetPersistentVariablePrefix();
-    ConstString name =
-        m_delegate ? m_delegate->GetName()
-                   : persistent_state->GetNextPersistentVariableName(*target_sp,
-                                                                     prefix);
+    ConstString name = m_delegate
+                           ? m_delegate->GetName()
+                           : persistent_state->GetNextPersistentVariableName();
 
     lldb::ExpressionVariableSP ret;
 
@@ -261,7 +260,7 @@ public:
 
         lldb::offset_t offset;
 
-        ptr = extractor.GetPointer(&offset);
+        ptr = extractor.GetAddress(&offset);
 
         dump_stream.PutChar('\n');
       }

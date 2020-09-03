@@ -156,7 +156,7 @@ foreach Index = 32-63 in {
   def VSX#Index : VSXReg<Index, "vs"#Index>;
 }
 
-// The reprsentation of r0 when treated as the constant 0.
+// The representation of r0 when treated as the constant 0.
 def ZERO  : GPR<0, "0">,    DwarfRegAlias<R0>;
 def ZERO8 : GP8<ZERO, "0">, DwarfRegAlias<X0>;
 
@@ -363,11 +363,23 @@ def CRBITRC : RegisterClass<"PPC", [i1], 32,
        CR1LT, CR1GT, CR1EQ, CR1UN,
        CR0LT, CR0GT, CR0EQ, CR0UN)> {
   let Size = 32;
+  let AltOrders = [(sub CRBITRC, CR2LT, CR2GT, CR2EQ, CR2UN, CR3LT, CR3GT,
+                        CR3EQ, CR3UN, CR4LT, CR4GT, CR4EQ, CR4UN)];
+  let AltOrderSelect = [{
+    return MF.getSubtarget<PPCSubtarget>().isELFv2ABI() &&
+           MF.getInfo<PPCFunctionInfo>()->isNonVolatileCRDisabled();
+  }];
 }
 
-def CRRC : RegisterClass<"PPC", [i32], 32, (add CR0, CR1, CR5, CR6,
-                                                CR7, CR2, CR3, CR4)>;
-
+def CRRC : RegisterClass<"PPC", [i32], 32,
+  (add CR0, CR1, CR5, CR6,
+       CR7, CR2, CR3, CR4)> {
+  let AltOrders = [(sub CRRC, CR2, CR3, CR4)];
+  let AltOrderSelect = [{
+    return MF.getSubtarget<PPCSubtarget>().isELFv2ABI() &&
+           MF.getInfo<PPCFunctionInfo>()->isNonVolatileCRDisabled();
+  }];
+}
 // The CTR registers are not allocatable because they're used by the
 // decrement-and-branch instructions, and thus need to stay live across
 // multiple basic blocks.

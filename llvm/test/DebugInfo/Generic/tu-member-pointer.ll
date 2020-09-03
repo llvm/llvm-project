@@ -1,5 +1,3 @@
-; REQUIRES: object-emission
-
 ; RUN: %llc_dwarf -filetype=obj -O0 < %s > %t
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 ; CHECK: DW_TAG_ptr_to_member_type

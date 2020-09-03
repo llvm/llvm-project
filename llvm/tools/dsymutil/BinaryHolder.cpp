@@ -41,12 +41,15 @@ getMachOFatMemoryBuffers(StringRef Filename, MemoryBuffer &Mem,
   return Buffers;
 }
 
-Error BinaryHolder::ArchiveEntry::load(StringRef Filename,
+Error BinaryHolder::ArchiveEntry::load(IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                                       StringRef Filename,
                                        TimestampTy Timestamp, bool Verbose) {
   StringRef ArchiveFilename = getArchiveAndObjectName(Filename).first;
 
   // Try to load archive and force it to be memory mapped.
-  auto ErrOrBuff = MemoryBuffer::getFileOrSTDIN(ArchiveFilename, -1, false);
+  auto ErrOrBuff = (ArchiveFilename == "-")
+                       ? MemoryBuffer::getSTDIN()
+                       : VFS->getBufferForFile(ArchiveFilename, -1, false);
   if (auto Err = ErrOrBuff.getError())
     return errorCodeToError(Err);
 
@@ -66,7 +69,7 @@ Error BinaryHolder::ArchiveEntry::load(StringRef Filename,
     ArchiveBuffers.push_back(MemBuffer->getMemBufferRef());
   } else {
     FatBinary = std::move(*ErrOrFat);
-    FatBinaryName = ArchiveFilename;
+    FatBinaryName = std::string(ArchiveFilename);
     ArchiveBuffers =
         getMachOFatMemoryBuffers(FatBinaryName, *MemBuffer, *FatBinary);
   }
@@ -83,9 +86,12 @@ Error BinaryHolder::ArchiveEntry::load(StringRef Filename,
   return Error::success();
 }
 
-Error BinaryHolder::ObjectEntry::load(StringRef Filename, bool Verbose) {
+Error BinaryHolder::ObjectEntry::load(IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                                      StringRef Filename, bool Verbose) {
   // Try to load regular binary and force it to be memory mapped.
-  auto ErrOrBuff = MemoryBuffer::getFileOrSTDIN(Filename, -1, false);
+  auto ErrOrBuff = (Filename == "-")
+                       ? MemoryBuffer::getSTDIN()
+                       : VFS->getBufferForFile(Filename, -1, false);
   if (auto Err = ErrOrBuff.getError())
     return errorCodeToError(Err);
 
@@ -105,7 +111,7 @@ Error BinaryHolder::ObjectEntry::load(StringRef Filename, bool Verbose) {
     ObjectBuffers.push_back(MemBuffer->getMemBufferRef());
   } else {
     FatBinary = std::move(*ErrOrFat);
-    FatBinaryName = Filename;
+    FatBinaryName = std::string(Filename);
     ObjectBuffers =
         getMachOFatMemoryBuffers(FatBinaryName, *MemBuffer, *FatBinary);
   }
@@ -223,7 +229,7 @@ BinaryHolder::getObjectEntry(StringRef Filename, TimestampTy Timestamp) {
                                                           Verbose);
     } else {
       ArchiveEntry &AE = ArchiveCache[ArchiveFilename];
-      auto Err = AE.load(Filename, Timestamp, Verbose);
+      auto Err = AE.load(VFS, Filename, Timestamp, Verbose);
       if (Err) {
         ArchiveCache.erase(ArchiveFilename);
         // Don't return the error here: maybe the file wasn't an archive.
@@ -240,7 +246,7 @@ BinaryHolder::getObjectEntry(StringRef Filename, TimestampTy Timestamp) {
   std::lock_guard<std::mutex> Lock(ObjectCacheMutex);
   if (!ObjectCache.count(Filename)) {
     ObjectEntry &OE = ObjectCache[Filename];
-    auto Err = OE.load(Filename, Verbose);
+    auto Err = OE.load(VFS, Filename, Verbose);
     if (Err) {
       ObjectCache.erase(Filename);
       return std::move(Err);

@@ -45,7 +45,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
         .. code-block:: console
 
-                $ opt -basicaa -polly-ast -analyze matmul.preopt.ll -polly-process-unprofitable -polly-use-llvm-names
+                $ opt -basic-aa -polly-ast -analyze matmul.preopt.ll -polly-process-unprofitable -polly-use-llvm-names
 
         .. code-block:: guess
 
@@ -84,8 +84,8 @@ performance improvement can be expected by an optimal automatic optimizer.
 
         .. code-block:: console
 
-                $ opt -polly-use-llvm-names -basicaa -view-scops -disable-output matmul.preopt.ll
-                $ opt -polly-use-llvm-names -basicaa -view-scops-only -disable-output matmul.preopt.ll
+                $ opt -polly-use-llvm-names -basic-aa -view-scops -disable-output matmul.preopt.ll
+                $ opt -polly-use-llvm-names -basic-aa -view-scops-only -disable-output matmul.preopt.ll
 
         The output for the different functions:
 
@@ -104,7 +104,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
         .. code-block:: console
 
-                $ opt -polly-use-llvm-names -basicaa -polly-scops -analyze matmul.preopt.ll -polly-process-unprofitable
+                $ opt -polly-use-llvm-names -basic-aa -polly-scops -analyze matmul.preopt.ll -polly-process-unprofitable
 
         .. code-block:: guess
 
@@ -194,7 +194,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
         .. code-block:: console
 
-	        $ opt -basicaa -polly-use-llvm-names -polly-dependences -analyze matmul.preopt.ll -polly-process-unprofitable
+	        $ opt -basic-aa -polly-use-llvm-names -polly-dependences -analyze matmul.preopt.ll -polly-process-unprofitable
 
         .. code-block:: guess
 
@@ -226,7 +226,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
         .. code-block:: console
 
-        	$ opt -basicaa -polly-use-llvm-names -polly-export-jscop matmul.preopt.ll -polly-process-unprofitable
+        	$ opt -basic-aa -polly-use-llvm-names -polly-export-jscop matmul.preopt.ll -polly-process-unprofitable
 
         .. code-block:: guess
 
@@ -254,7 +254,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
 	.. code-block:: console
 
-		$ opt -basicaa -polly-use-llvm-names matmul.preopt.ll -polly-import-jscop -polly-ast -analyze -polly-process-unprofitable
+		$ opt -basic-aa -polly-use-llvm-names matmul.preopt.ll -polly-import-jscop -polly-ast -analyze -polly-process-unprofitable
 
 	.. code-block:: c
 
@@ -282,7 +282,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
 	.. code-block:: console
 
-		$ opt -basicaa -polly-use-llvm-names matmul.preopt.ll -polly-import-jscop -polly-import-jscop-postfix=interchanged -polly-ast -analyze -polly-process-unprofitable
+		$ opt -basic-aa -polly-use-llvm-names matmul.preopt.ll -polly-import-jscop -polly-import-jscop-postfix=interchanged -polly-ast -analyze -polly-process-unprofitable
 
 	.. code-block:: c
 
@@ -311,7 +311,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
 	.. code-block:: console
 
-		$ opt -basicaa -polly-use-llvm-names matmul.preopt.ll -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled -polly-ast -analyze -polly-process-unprofitable
+		$ opt -basic-aa -polly-use-llvm-names matmul.preopt.ll -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled -polly-ast -analyze -polly-process-unprofitable
 
 	.. code-block:: c
 
@@ -346,7 +346,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
 	.. code-block:: console
 
-		$ opt -basicaa -polly-use-llvm-names matmul.preopt.ll -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled -polly-ast -analyze -polly-process-unprofitable
+		$ opt -basic-aa -polly-use-llvm-names matmul.preopt.ll -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled -polly-ast -analyze -polly-process-unprofitable
 
 	.. code-block:: c
 
@@ -387,7 +387,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 		
 	.. code-block:: console
 
-		$ opt -S matmul.preopt.ll -basicaa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged -polly-codegen -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged.ll
+		$ opt -S matmul.preopt.ll -basic-aa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged -polly-codegen -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged.ll
 
 	.. code-block:: guess
 
@@ -397,7 +397,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
 	.. code-block:: console
 
-		$ opt -S matmul.preopt.ll -basicaa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled -polly-codegen -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged+tiled.ll
+		$ opt -S matmul.preopt.ll -basic-aa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled -polly-codegen -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged+tiled.ll
 		
 	.. code-block:: guess
 
@@ -407,7 +407,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
 	.. code-block:: console
 
-		$ opt -S matmul.preopt.ll -basicaa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled+vector -polly-codegen -polly-vectorizer=polly -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged+tiled+vector.ll
+		$ opt -S matmul.preopt.ll -basic-aa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled+vector -polly-codegen -polly-vectorizer=polly -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged+tiled+vector.ll
 
 	.. code-block:: guess
 
@@ -417,7 +417,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
 	.. code-block:: console
 
-		$ opt -S matmul.preopt.ll -basicaa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled+vector -polly-codegen -polly-vectorizer=polly -polly-parallel -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged+tiled+openmp.ll
+		$ opt -S matmul.preopt.ll -basic-aa -polly-use-llvm-names -polly-import-jscop -polly-import-jscop-postfix=interchanged+tiled+vector -polly-codegen -polly-vectorizer=polly -polly-parallel -polly-process-unprofitable | opt -S -O3 -o matmul.polly.interchanged+tiled+openmp.ll
 
 	.. code-block:: guess
 

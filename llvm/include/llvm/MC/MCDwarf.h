@@ -41,6 +41,11 @@ class raw_ostream;
 class SMLoc;
 class SourceMgr;
 
+namespace mcdwarf {
+// Emit the common part of the DWARF 5 range/locations list tables header.
+MCSymbol *emitListsTableHeaderStart(MCStreamer &S);
+} // namespace mcdwarf
+
 /// Instances of this class represent the name of the dwarf .file directive and
 /// its associated dwarf file number in the MC file. MCDwarfFile's are created
 /// and uniqued by the MCContext class. In Dwarf 4 file numbers start from 1;
@@ -252,8 +257,8 @@ public:
   void setRootFile(StringRef Directory, StringRef FileName,
                    Optional<MD5::MD5Result> Checksum,
                    Optional<StringRef> Source) {
-    CompilationDir = Directory;
-    RootFile.Name = FileName;
+    CompilationDir = std::string(Directory);
+    RootFile.Name = std::string(FileName);
     RootFile.DirIndex = 0;
     RootFile.Checksum = Checksum;
     RootFile.Source = Source;
@@ -325,8 +330,8 @@ public:
 
   void setRootFile(StringRef Directory, StringRef FileName,
                    Optional<MD5::MD5Result> Checksum, Optional<StringRef> Source) {
-    Header.CompilationDir = Directory;
-    Header.RootFile.Name = FileName;
+    Header.CompilationDir = std::string(Directory);
+    Header.RootFile.Name = std::string(FileName);
     Header.RootFile.DirIndex = 0;
     Header.RootFile.Checksum = Checksum;
     Header.RootFile.Source = Source;
@@ -462,10 +467,12 @@ private:
     unsigned Register2;
   };
   std::vector<char> Values;
+  std::string Comment;
 
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, StringRef V)
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, StringRef V,
+                   StringRef Comment = "")
       : Operation(Op), Label(L), Register(R), Offset(O),
-        Values(V.begin(), V.end()) {
+        Values(V.begin(), V.end()), Comment(Comment) {
     assert(Op != OpRegister);
   }
 
@@ -477,9 +484,9 @@ private:
 public:
   /// .cfi_def_cfa defines a rule for computing CFA as: take address from
   /// Register and add Offset to it.
-  static MCCFIInstruction createDefCfa(MCSymbol *L, unsigned Register,
-                                       int Offset) {
-    return MCCFIInstruction(OpDefCfa, L, Register, -Offset, "");
+  static MCCFIInstruction cfiDefCfa(MCSymbol *L, unsigned Register,
+                                    int Offset) {
+    return MCCFIInstruction(OpDefCfa, L, Register, Offset, "");
   }
 
   /// .cfi_def_cfa_register modifies a rule for computing CFA. From now
@@ -491,8 +498,8 @@ public:
   /// .cfi_def_cfa_offset modifies a rule for computing CFA. Register
   /// remains the same, but offset is new. Note that it is the absolute offset
   /// that will be added to a defined register to the compute CFA address.
-  static MCCFIInstruction createDefCfaOffset(MCSymbol *L, int Offset) {
-    return MCCFIInstruction(OpDefCfaOffset, L, 0, -Offset, "");
+  static MCCFIInstruction cfiDefCfaOffset(MCSymbol *L, int Offset) {
+    return MCCFIInstruction(OpDefCfaOffset, L, 0, Offset, "");
   }
 
   /// .cfi_adjust_cfa_offset Same as .cfi_def_cfa_offset, but
@@ -565,8 +572,9 @@ public:
 
   /// .cfi_escape Allows the user to add arbitrary bytes to the unwind
   /// info.
-  static MCCFIInstruction createEscape(MCSymbol *L, StringRef Vals) {
-    return MCCFIInstruction(OpEscape, L, 0, 0, Vals);
+  static MCCFIInstruction createEscape(MCSymbol *L, StringRef Vals,
+                                       StringRef Comment = "") {
+    return MCCFIInstruction(OpEscape, L, 0, 0, Vals, Comment);
   }
 
   /// A special wrapper for .cfi_escape that indicates GNU_ARGS_SIZE
@@ -600,6 +608,10 @@ public:
   StringRef getValues() const {
     assert(Operation == OpEscape);
     return StringRef(&Values[0], Values.size());
+  }
+
+  StringRef getComment() const {
+    return Comment;
   }
 };
 

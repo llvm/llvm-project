@@ -1,8 +1,8 @@
-; RUN: opt -basicaa -newgvn -S < %s | FileCheck %s
+; RUN: opt -basic-aa -newgvn -S < %s | FileCheck %s
 
 define i32 @test1(i32* %p) {
 ; CHECK-LABEL: @test1(i32* %p)
-; CHECK: %a = load i32, i32* %p, !range ![[RANGE0:[0-9]+]]
+; CHECK: %a = load i32, i32* %p, align 4, !range ![[RANGE0:[0-9]+]]
 ; CHECK: %c = add i32 %a, %a
   %a = load i32, i32* %p, !range !0
   %b = load i32, i32* %p, !range !0
@@ -12,7 +12,7 @@ define i32 @test1(i32* %p) {
 
 define i32 @test2(i32* %p) {
 ; CHECK-LABEL: @test2(i32* %p)
-; CHECK: %a = load i32, i32* %p, !range ![[RANGE0]]
+; CHECK: %a = load i32, i32* %p, align 4, !range ![[RANGE0]]
 ; CHECK: %c = add i32 %a, %a
   %a = load i32, i32* %p, !range !0
   %b = load i32, i32* %p
@@ -22,7 +22,7 @@ define i32 @test2(i32* %p) {
 
 define i32 @test3(i32* %p) {
 ; CHECK-LABEL: @test3(i32* %p)
-; CHECK: %a = load i32, i32* %p, !range ![[RANGE0]]
+; CHECK: %a = load i32, i32* %p, align 4, !range ![[RANGE0]]
 ; CHECK: %c = add i32 %a, %a
   %a = load i32, i32* %p, !range !0
   %b = load i32, i32* %p, !range !1
@@ -32,7 +32,7 @@ define i32 @test3(i32* %p) {
 
 define i32 @test4(i32* %p) {
 ; CHECK-LABEL: @test4(i32* %p)
-; CHECK: %a = load i32, i32* %p, !range ![[RANGE0]]
+; CHECK: %a = load i32, i32* %p, align 4, !range ![[RANGE0]]
 ; CHECK: %c = add i32 %a, %a
   %a = load i32, i32* %p, !range !0
   %b = load i32, i32* %p, !range !2
@@ -42,7 +42,7 @@ define i32 @test4(i32* %p) {
 
 define i32 @test5(i32* %p) {
 ; CHECK-LABEL: @test5(i32* %p)
-; CHECK: %a = load i32, i32* %p, !range ![[RANGE3:[0-9]+]]
+; CHECK: %a = load i32, i32* %p, align 4, !range ![[RANGE3:[0-9]+]]
 ; CHECK: %c = add i32 %a, %a
   %a = load i32, i32* %p, !range !3
   %b = load i32, i32* %p, !range !4
@@ -52,7 +52,7 @@ define i32 @test5(i32* %p) {
 
 define i32 @test6(i32* %p) {
 ; CHECK-LABEL: @test6(i32* %p)
-; CHECK: %a = load i32, i32* %p, !range ![[RANGE5:[0-9]+]]
+; CHECK: %a = load i32, i32* %p, align 4, !range ![[RANGE5:[0-9]+]]
 ; CHECK: %c = add i32 %a, %a
   %a = load i32, i32* %p, !range !5
   %b = load i32, i32* %p, !range !6
@@ -62,7 +62,7 @@ define i32 @test6(i32* %p) {
 
 define i32 @test7(i32* %p) {
 ; CHECK-LABEL: @test7(i32* %p)
-; CHECK: %a = load i32, i32* %p, !range ![[RANGE7:[0-9]+]]
+; CHECK: %a = load i32, i32* %p, align 4, !range ![[RANGE7:[0-9]+]]
 ; CHECK: %c = add i32 %a, %a
   %a = load i32, i32* %p, !range !7
   %b = load i32, i32* %p, !range !8
@@ -72,7 +72,7 @@ define i32 @test7(i32* %p) {
 
 define i32 @test8(i32* %p) {
 ; CHECK-LABEL: @test8(i32* %p)
-; CHECK: %a = load i32, i32* %p, !range ![[RANGE9:[0-9]+]]
+; CHECK: %a = load i32, i32* %p, align 4, !range ![[RANGE9:[0-9]+]]
 ; CHECK-NOT: range
 ; CHECK: %c = add i32 %a, %a
   %a = load i32, i32* %p, !range !9

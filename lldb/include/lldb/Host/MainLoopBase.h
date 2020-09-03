@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_posix_MainLoopBase_h_
-#define lldb_Host_posix_MainLoopBase_h_
+#ifndef LLDB_HOST_MAINLOOPBASE_H
+#define LLDB_HOST_MAINLOOPBASE_H
 
 #include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
@@ -75,13 +75,14 @@ private:
     IOObject::WaitableHandle m_handle;
 
     friend class MainLoopBase;
-    DISALLOW_COPY_AND_ASSIGN(ReadHandle);
+    ReadHandle(const ReadHandle &) = delete;
+    const ReadHandle &operator=(const ReadHandle &) = delete;
   };
 
-private:
-  DISALLOW_COPY_AND_ASSIGN(MainLoopBase);
+  MainLoopBase(const MainLoopBase &) = delete;
+  const MainLoopBase &operator=(const MainLoopBase &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // lldb_Host_posix_MainLoopBase_h_
+#endif // LLDB_HOST_MAINLOOPBASE_H

@@ -6,6 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from dex.command.CommandBase import CommandBase
+from dex.dextIR import LocIR
 from dex.dextIR import ValueIR
 
 class DexExpectStepOrder(CommandBase):
@@ -28,11 +29,9 @@ class DexExpectStepOrder(CommandBase):
     def get_name():
         return __class__.__name__
 
-    def eval(self, debugger):
-        step_info = debugger.get_step_info()
-        loc = step_info.current_location
-        return {'DexExpectStepOrder': ValueIR(expression=str(loc.lineno),
-                      value=str(debugger.step_index), type_name=None,
+    def eval(self, step_info):
+        return {'DexExpectStepOrder': ValueIR(expression=str(step_info.current_location.lineno),
+                      value=str(step_info.step_index), type_name=None,
                       error_string=None,
                       could_evaluate=True,
                       is_optimized_away=True,

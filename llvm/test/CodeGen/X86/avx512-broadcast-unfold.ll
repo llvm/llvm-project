@@ -4633,3 +4633,52 @@ bb1:                                              ; preds = %bb1, %bb
 bb10:                                             ; preds = %bb1
   ret void
 }
+
+; The or/and pattern here should be turned into vpternlog. The multiply is
+; there to increase the use count of the loads so they can't fold. We want to
+; unfold the broadcast and pull it out of the loop.
+define void @bcast_unfold_vpternlog_v16i32(i32* %arg, i32* %arg1) {
+; CHECK-LABEL: bcast_unfold_vpternlog_v16i32:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767]
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB131_1: # %bb2
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vmovdqu64 4096(%rdi,%rax), %zmm1
+; CHECK-NEXT:    vmovdqu64 4096(%rsi,%rax), %zmm2
+; CHECK-NEXT:    vpmulld %zmm2, %zmm1, %zmm3
+; CHECK-NEXT:    vpternlogd $216, %zmm0, %zmm1, %zmm2
+; CHECK-NEXT:    vpmulld %zmm3, %zmm2, %zmm1
+; CHECK-NEXT:    vmovdqu64 %zmm1, 4096(%rdi,%rax)
+; CHECK-NEXT:    addq $64, %rax
+; CHECK-NEXT:    jne .LBB131_1
+; CHECK-NEXT:  # %bb.2: # %bb20
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+bb:
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %bb
+  %tmp = phi i64 [ 0, %bb ], [ %tmp18, %bb2 ]
+  %tmp3 = getelementptr inbounds i32, i32* %arg, i64 %tmp
+  %tmp4 = bitcast i32* %tmp3 to <16 x i32>*
+  %tmp5 = load <16 x i32>, <16 x i32>* %tmp4, align 4
+  %tmp6 = getelementptr inbounds i32, i32* %arg1, i64 %tmp
+  %tmp10 = bitcast i32* %tmp6 to <16 x i32>*
+  %tmp11 = load <16 x i32>, <16 x i32>* %tmp10, align 4
+  %tmp12 = and <16 x i32> %tmp5, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
+  %tmp13 = and <16 x i32> %tmp11, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
+  %tmp14 = or <16 x i32> %tmp12, %tmp13
+  %tmp15 = mul <16 x i32> %tmp14, %tmp5
+  %tmp16 = mul <16 x i32> %tmp15, %tmp11
+  %tmp17 = bitcast i32* %tmp3 to <16 x i32>*
+  store <16 x i32> %tmp16, <16 x i32>* %tmp17, align 4
+  %tmp18 = add i64 %tmp, 16
+  %tmp19 = icmp eq i64 %tmp18, 1024
+  br i1 %tmp19, label %bb20, label %bb2
+
+bb20:                                             ; preds = %bb2
+  ret void
+}
+

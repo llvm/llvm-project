@@ -293,44 +293,40 @@ bb1:
 define void @PR37431(i32* %arg1, i8* %arg2, i8* %arg3, i32 %arg4, i64 %arg5) nounwind {
 ; X32-LABEL: PR37431:
 ; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl (%ecx), %ecx
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    sarl $31, %edx
-; X32-NEXT:    cmpl %ecx, {{[0-9]+}}(%esp)
-; X32-NEXT:    sbbl %edx, %eax
-; X32-NEXT:    setb %cl
-; X32-NEXT:    sbbb %dl, %dl
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movb %dl, (%edi)
-; X32-NEXT:    movzbl %cl, %ecx
-; X32-NEXT:    xorl %edi, %edi
-; X32-NEXT:    subl %ecx, %edi
+; X32-NEXT:    movl (%edi), %edi
+; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    sarl $31, %ebx
+; X32-NEXT:    cmpl %edi, {{[0-9]+}}(%esp)
+; X32-NEXT:    sbbl %ebx, %esi
+; X32-NEXT:    sbbl %ebx, %ebx
+; X32-NEXT:    movb %bl, (%edx)
 ; X32-NEXT:    cltd
-; X32-NEXT:    idivl %edi
-; X32-NEXT:    movb %dl, (%esi)
+; X32-NEXT:    idivl %ebx
+; X32-NEXT:    movb %dl, (%ecx)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
+; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: PR37431:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    movq %rdx, %r9
+; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    movslq (%rdi), %rdx
 ; X64-NEXT:    cmpq %rdx, %r8
-; X64-NEXT:    sbbb %cl, %cl
-; X64-NEXT:    cmpq %rdx, %r8
-; X64-NEXT:    movb %cl, (%rsi)
-; X64-NEXT:    sbbl %ecx, %ecx
+; X64-NEXT:    sbbl %edi, %edi
+; X64-NEXT:    movb %dil, (%rsi)
 ; X64-NEXT:    cltd
-; X64-NEXT:    idivl %ecx
-; X64-NEXT:    movb %dl, (%r9)
+; X64-NEXT:    idivl %edi
+; X64-NEXT:    movb %dl, (%rcx)
 ; X64-NEXT:    retq
 entry:
   %tmp = load i32, i32* %arg1

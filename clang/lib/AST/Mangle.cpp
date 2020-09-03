@@ -25,6 +25,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -50,19 +51,32 @@ enum CCMangling {
   CCM_Fast,
   CCM_RegCall,
   CCM_Vector,
-  CCM_Std
+  CCM_Std,
+  CCM_WasmMainArgcArgv
 };
 
 static bool isExternC(const NamedDecl *ND) {
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND))
     return FD->isExternC();
-  return cast<VarDecl>(ND)->isExternC();
+  if (const VarDecl *VD = dyn_cast<VarDecl>(ND))
+    return VD->isExternC();
+  return false;
 }
 
 static CCMangling getCallingConvMangling(const ASTContext &Context,
                                          const NamedDecl *ND) {
   const TargetInfo &TI = Context.getTargetInfo();
   const llvm::Triple &Triple = TI.getTriple();
+
+  // On wasm, the argc/argv form of "main" is renamed so that the startup code
+  // can call it with the correct function signature.
+  // On Emscripten, users may be exporting "main" and expecting to call it
+  // themselves, so we can't mangle it.
+  if (Triple.isWasm() && !Triple.isOSEmscripten())
+    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND))
+      if (FD->isMain() && FD->hasPrototype() && FD->param_size() == 2)
+        return CCM_WasmMainArgcArgv;
+
   if (!Triple.isOSWindows() || !Triple.isX86())
     return CCM_Other;
 
@@ -111,10 +125,15 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   if (D->hasAttr<AsmLabelAttr>())
     return true;
 
+  // Declarations that don't have identifier names always need to be mangled.
+  if (isa<MSGuidDecl>(D))
+    return true;
+
   return shouldMangleCXXName(D);
 }
 
-void MangleContext::mangleName(const NamedDecl *D, raw_ostream &Out) {
+void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
+  const NamedDecl *D = cast<NamedDecl>(GD.getDecl());
   // Any decl can be declared with __asm("foo") on it, and this takes precedence
   // over all other naming in the .o file.
   if (const AsmLabelAttr *ALA = D->getAttr<AsmLabelAttr>()) {
@@ -141,15 +160,24 @@ void MangleContext::mangleName(const NamedDecl *D, raw_ostream &Out) {
     return;
   }
 
+  if (auto *GD = dyn_cast<MSGuidDecl>(D))
+    return mangleMSGuidDecl(GD, Out);
+
   const ASTContext &ASTContext = getASTContext();
   CCMangling CC = getCallingConvMangling(ASTContext, D);
+
+  if (CC == CCM_WasmMainArgcArgv) {
+    Out << "__main_argc_argv";
+    return;
+  }
+
   bool MCXX = shouldMangleCXXName(D);
   const TargetInfo &TI = Context.getTargetInfo();
   if (CC == CCM_Other || (MCXX && TI.getCXXABI() == TargetCXXABI::Microsoft)) {
     if (const ObjCMethodDecl *OMD = dyn_cast<ObjCMethodDecl>(D))
       mangleObjCMethodName(OMD, Out);
     else
-      mangleCXXName(D, Out);
+      mangleCXXName(GD, Out);
     return;
   }
 
@@ -166,7 +194,7 @@ void MangleContext::mangleName(const NamedDecl *D, raw_ostream &Out) {
   else if (const ObjCMethodDecl *OMD = dyn_cast<ObjCMethodDecl>(D))
     mangleObjCMethodName(OMD, Out);
   else
-    mangleCXXName(D, Out);
+    mangleCXXName(GD, Out);
 
   const FunctionDecl *FD = cast<FunctionDecl>(D);
   const FunctionType *FT = FD->getType()->castAs<FunctionType>();
@@ -191,6 +219,20 @@ void MangleContext::mangleName(const NamedDecl *D, raw_ostream &Out) {
   Out << ((TI.getPointerWidth(0) / 8) * ArgWords);
 }
 
+void MangleContext::mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream &Out) {
+  // For now, follow the MSVC naming convention for GUID objects on all
+  // targets.
+  MSGuidDecl::Parts P = GD->getParts();
+  Out << llvm::format("_GUID_%08" PRIx32 "_%04" PRIx32 "_%04" PRIx32 "_",
+                      P.Part1, P.Part2, P.Part3);
+  unsigned I = 0;
+  for (uint8_t C : P.Part4And5) {
+    Out << llvm::format("%02" PRIx8, C);
+    if (++I == 2)
+      Out << "_";
+  }
+}
+
 void MangleContext::mangleGlobalBlock(const BlockDecl *BD,
                                       const NamedDecl *ID,
                                       raw_ostream &Out) {
@@ -213,7 +255,7 @@ void MangleContext::mangleCtorBlock(const CXXConstructorDecl *CD,
                                     raw_ostream &ResStream) {
   SmallString<64> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
-  mangleCXXCtor(CD, CT, Out);
+  mangleName(GlobalDecl(CD, CT), Out);
   mangleFunctionBlock(*this, Buffer, BD, ResStream);
 }
 
@@ -222,7 +264,7 @@ void MangleContext::mangleDtorBlock(const CXXDestructorDecl *DD,
                                     raw_ostream &ResStream) {
   SmallString<64> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
-  mangleCXXDtor(DD, DT, Out);
+  mangleName(GlobalDecl(DD, DT), Out);
   mangleFunctionBlock(*this, Buffer, BD, ResStream);
 }
 
@@ -358,7 +400,7 @@ public:
       SmallString<40> Mangled;
       auto Prefix = getClassSymbolPrefix(Kind, OCD->getASTContext());
       llvm::Mangler::getNameWithPrefix(Mangled, Prefix + ClassName, DL);
-      return Mangled.str();
+      return std::string(Mangled.str());
     };
 
     return {
@@ -420,12 +462,16 @@ public:
 private:
   bool writeFuncOrVarName(const NamedDecl *D, raw_ostream &OS) {
     if (MC->shouldMangleDeclName(D)) {
+      GlobalDecl GD;
       if (const auto *CtorD = dyn_cast<CXXConstructorDecl>(D))
-        MC->mangleCXXCtor(CtorD, Ctor_Complete, OS);
+        GD = GlobalDecl(CtorD, Ctor_Complete);
       else if (const auto *DtorD = dyn_cast<CXXDestructorDecl>(D))
-        MC->mangleCXXDtor(DtorD, Dtor_Complete, OS);
+        GD = GlobalDecl(DtorD, Dtor_Complete);
+      else if (D->hasAttr<CUDAGlobalAttr>())
+        GD = GlobalDecl(cast<FunctionDecl>(D));
       else
-        MC->mangleName(D, OS);
+        GD = GlobalDecl(D);
+      MC->mangleName(GD, OS);
       return false;
     } else {
       IdentifierInfo *II = D->getIdentifier();
@@ -445,10 +491,12 @@ private:
     std::string FrontendBuf;
     llvm::raw_string_ostream FOS(FrontendBuf);
 
+    GlobalDecl GD;
     if (const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(ND))
-      MC->mangleCXXCtor(CD, static_cast<CXXCtorType>(StructorType), FOS);
+      GD = GlobalDecl(CD, static_cast<CXXCtorType>(StructorType));
     else if (const auto *DD = dyn_cast_or_null<CXXDestructorDecl>(ND))
-      MC->mangleCXXDtor(DD, static_cast<CXXDtorType>(StructorType), FOS);
+      GD = GlobalDecl(DD, static_cast<CXXDtorType>(StructorType));
+    MC->mangleName(GD, FOS);
 
     std::string BackendBuf;
     llvm::raw_string_ostream BOS(BackendBuf);

@@ -51,49 +51,64 @@
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_21 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
-// RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE20
+// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE20
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_32 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
-// RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE20
+// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE20
 // sm_30, sm_6x map to compute_30.
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_30 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
-// RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE30
+// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE30
 // sm_5x is a special case. Maps to compute_30 for cuda-7.x only.
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_50 \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
-// RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE30
+// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE30
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_60 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
-// RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE30
+// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE30
 // sm_35 and sm_37 -> compute_35
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix CUDAINC \
-// RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE35
+// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE35
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_37 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix CUDAINC \
-// RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE35
+// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE35
 // sm_5x -> compute_50 for CUDA-8.0 and newer.
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_50 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
-// RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE50
+// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE50
+
+// CUDA-9+ uses the same libdevice for all GPU variants:
+// RUN: %clang -### -v --target=x86_64-unknown-linux --cuda-gpu-arch=sm_30 \
+// RUN:   --cuda-path=%S/Inputs/CUDA_90/usr/local/cuda %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix COMMON64 \
+// RUN:     -check-prefixes PTX60,LIBDEVICE,LIBDEVICE10
+// RUN: %clang -### -v --target=x86_64-unknown-linux --cuda-gpu-arch=sm_50 \
+// RUN:   --cuda-path=%S/Inputs/CUDA_90/usr/local/cuda %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix COMMON64 \
+// RUN:     -check-prefixes PTX60,LIBDEVICE,LIBDEVICE10
+// RUN: %clang -### -v --target=x86_64-unknown-linux --cuda-gpu-arch=sm_60 \
+// RUN:   --cuda-path=%S/Inputs/CUDA_90/usr/local/cuda %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix COMMON64 \
+// RUN:     -check-prefixes PTX60,LIBDEVICE,LIBDEVICE10
+
 
 // Verify that -nocudainc prevents adding include path to CUDA headers.
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
 // RUN:   -nocudainc --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix NOCUDAINC \
-// RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE35
+// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE35
 // RUN: %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_35 \
 // RUN:   -nocudainc --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix NOCUDAINC \
-// RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE35
+// RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE35
 
 // We should not add any CUDA include paths if there's no valid CUDA installation
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
@@ -154,16 +169,16 @@
 // MISSINGLIBDEVICE: error: cannot find libdevice for sm_20.
 
 // COMMON: "-triple" "nvptx-nvidia-cuda"
+// COMMON64: "-triple" "nvptx64-nvidia-cuda"
 // COMMON-SAME: "-fcuda-is-device"
 // LIBDEVICE-SAME: "-mlink-builtin-bitcode"
-// NOLIBDEVICE-NOT: "-mlink-builtin-bitcode"
+// LIBDEVICE10-SAME: libdevice.10.bc
 // LIBDEVICE20-SAME: libdevice.compute_20.10.bc
 // LIBDEVICE30-SAME: libdevice.compute_30.10.bc
 // LIBDEVICE35-SAME: libdevice.compute_35.10.bc
 // LIBDEVICE50-SAME: libdevice.compute_50.10.bc
-// NOLIBDEVICE-NOT: libdevice.compute_{{.*}}.bc
-// LIBDEVICE-SAME: "-target-feature" "+ptx42"
-// NOLIBDEVICE-NOT: "-target-feature" "+ptx42"
+// PTX42-SAME: "-target-feature" "+ptx42"
+// PTX60-SAME: "-target-feature" "+ptx60"
 // CUDAINC-SAME: "-internal-isystem" "{{.*}}/Inputs/CUDA{{[_0-9]+}}/usr/local/cuda/include"
 // NOCUDAINC-NOT: "-internal-isystem" "{{.*}}/cuda/include"
 // CUDAINC-SAME: "-include" "__clang_cuda_runtime_wrapper.h"

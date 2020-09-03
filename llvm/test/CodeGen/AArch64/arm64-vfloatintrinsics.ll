@@ -817,7 +817,7 @@ define %v4f32 @test_v4f32.fabs(%v4f32 %a) {
 ; GISEL: test_v4f32.floor:
 define %v4f32 @test_v4f32.floor(%v4f32 %a) {
   ; CHECK: frintm.4s
-  ; GISEL frintm.4s
+  ; GISEL: frintm.4s
   %1 = call %v4f32 @llvm.floor.v4f32(%v4f32 %a)
   ret %v4f32 %1
 }

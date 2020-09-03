@@ -40,7 +40,9 @@ void expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input);
 /// of a ppnumber, classifying it as either integer, floating, or erroneous,
 /// determines the radix of the value and can convert it to a useful value.
 class NumericLiteralParser {
-  Preprocessor &PP; // needed for diagnostics
+  const SourceManager &SM;
+  const LangOptions &LangOpts;
+  DiagnosticsEngine &Diags;
 
   const char *const ThisTokBegin;
   const char *const ThisTokEnd;
@@ -54,9 +56,9 @@ class NumericLiteralParser {
   SmallString<32> UDSuffixBuf;
 
 public:
-  NumericLiteralParser(StringRef TokSpelling,
-                       SourceLocation TokLoc,
-                       Preprocessor &PP);
+  NumericLiteralParser(StringRef TokSpelling, SourceLocation TokLoc,
+                       const SourceManager &SM, const LangOptions &LangOpts,
+                       const TargetInfo &Target, DiagnosticsEngine &Diags);
   bool hadError : 1;
   bool isUnsigned : 1;
   bool isLong : 1;          // This is *not* set for long long.
@@ -71,7 +73,9 @@ public:
   bool isFract : 1;         // 1.0hr/r/lr/uhr/ur/ulr
   bool isAccum : 1;         // 1.0hk/k/lk/uhk/uk/ulk
 
-  bool isFixedPointLiteral() const { return saw_fixed_point_suffix; }
+  bool isFixedPointLiteral() const {
+    return (saw_period || saw_exponent) && saw_fixed_point_suffix;
+  }
 
   bool isIntegerLiteral() const {
     return !saw_period && !saw_exponent && !isFixedPointLiteral();

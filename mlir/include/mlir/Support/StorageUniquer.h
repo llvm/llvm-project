@@ -1,6 +1,6 @@
 //===- StorageUniquer.h - Common Storage Class Uniquer ----------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -9,8 +9,7 @@
 #ifndef MLIR_SUPPORT_STORAGEUNIQUER_H
 #define MLIR_SUPPORT_STORAGEUNIQUER_H
 
-#include "mlir/Support/STLExtras.h"
-#include "llvm/ADT/DenseMap.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Allocator.h"
 
@@ -65,6 +64,9 @@ class StorageUniquer {
 public:
   StorageUniquer();
   ~StorageUniquer();
+
+  /// Set the flag specifying if multi-threading is disabled within the uniquer.
+  void disableMultithreading(bool disable = true);
 
   /// This class acts as the base storage that all storage classes must derived
   /// from.
@@ -123,7 +125,7 @@ public:
   /// function is used for derived types that have complex storage or uniquing
   /// constraints.
   template <typename Storage, typename Arg, typename... Args>
-  Storage *get(std::function<void(Storage *)> initFn, unsigned kind, Arg &&arg,
+  Storage *get(function_ref<void(Storage *)> initFn, unsigned kind, Arg &&arg,
                Args &&... args) {
     // Construct a value of the derived key type.
     auto derivedKey =
@@ -133,19 +135,17 @@ public:
     unsigned hashValue = getHash<Storage>(kind, derivedKey);
 
     // Generate an equality function for the derived storage.
-    std::function<bool(const BaseStorage *)> isEqual =
-        [&derivedKey](const BaseStorage *existing) {
-          return static_cast<const Storage &>(*existing) == derivedKey;
-        };
+    auto isEqual = [&derivedKey](const BaseStorage *existing) {
+      return static_cast<const Storage &>(*existing) == derivedKey;
+    };
 
     // Generate a constructor function for the derived storage.
-    std::function<BaseStorage *(StorageAllocator &)> ctorFn =
-        [&](StorageAllocator &allocator) {
-          auto *storage = Storage::construct(allocator, derivedKey);
-          if (initFn)
-            initFn(storage);
-          return storage;
-        };
+    auto ctorFn = [&](StorageAllocator &allocator) {
+      auto *storage = Storage::construct(allocator, derivedKey);
+      if (initFn)
+        initFn(storage);
+      return storage;
+    };
 
     // Get an instance for the derived storage.
     return static_cast<Storage *>(getImpl(kind, hashValue, isEqual, ctorFn));
@@ -156,7 +156,7 @@ public:
   /// function is used for derived types that use no additional storage or
   /// uniquing outside of the kind.
   template <typename Storage>
-  Storage *get(std::function<void(Storage *)> initFn, unsigned kind) {
+  Storage *get(function_ref<void(Storage *)> initFn, unsigned kind) {
     auto ctorFn = [&](StorageAllocator &allocator) {
       auto *storage = new (allocator.allocate<Storage>()) Storage();
       if (initFn)
@@ -178,10 +178,9 @@ public:
     unsigned hashValue = getHash<Storage>(kind, derivedKey);
 
     // Generate an equality function for the derived storage.
-    std::function<bool(const BaseStorage *)> isEqual =
-        [&derivedKey](const BaseStorage *existing) {
-          return static_cast<const Storage &>(*existing) == derivedKey;
-        };
+    auto isEqual = [&derivedKey](const BaseStorage *existing) {
+      return static_cast<const Storage &>(*existing) == derivedKey;
+    };
 
     // Attempt to erase the storage instance.
     eraseImpl(kind, hashValue, isEqual, [](BaseStorage *storage) {
@@ -194,18 +193,18 @@ private:
   /// complex storage.
   BaseStorage *getImpl(unsigned kind, unsigned hashValue,
                        function_ref<bool(const BaseStorage *)> isEqual,
-                       std::function<BaseStorage *(StorageAllocator &)> ctorFn);
+                       function_ref<BaseStorage *(StorageAllocator &)> ctorFn);
 
   /// Implementation for getting/creating an instance of a derived type with
   /// default storage.
   BaseStorage *getImpl(unsigned kind,
-                       std::function<BaseStorage *(StorageAllocator &)> ctorFn);
+                       function_ref<BaseStorage *(StorageAllocator &)> ctorFn);
 
   /// Implementation for erasing an instance of a derived type with complex
   /// storage.
   void eraseImpl(unsigned kind, unsigned hashValue,
                  function_ref<bool(const BaseStorage *)> isEqual,
-                 std::function<void(BaseStorage *)> cleanupFn);
+                 function_ref<void(BaseStorage *)> cleanupFn);
 
   /// The internal implementation class.
   std::unique_ptr<detail::StorageUniquerImpl> impl;
@@ -218,7 +217,7 @@ private:
   /// 'ImplTy::getKey' function for the provided arguments.
   template <typename ImplTy, typename... Args>
   static typename std::enable_if<
-      is_detected<detail::has_impltype_getkey_t, ImplTy, Args...>::value,
+      llvm::is_detected<detail::has_impltype_getkey_t, ImplTy, Args...>::value,
       typename ImplTy::KeyTy>::type
   getKey(Args &&... args) {
     return ImplTy::getKey(args...);
@@ -227,7 +226,7 @@ private:
   /// the 'ImplTy::KeyTy' with the provided arguments.
   template <typename ImplTy, typename... Args>
   static typename std::enable_if<
-      !is_detected<detail::has_impltype_getkey_t, ImplTy, Args...>::value,
+      !llvm::is_detected<detail::has_impltype_getkey_t, ImplTy, Args...>::value,
       typename ImplTy::KeyTy>::type
   getKey(Args &&... args) {
     return typename ImplTy::KeyTy(args...);
@@ -241,7 +240,7 @@ private:
   /// instance if there is an 'ImplTy::hashKey' overload for 'DerivedKey'.
   template <typename ImplTy, typename DerivedKey>
   static typename std::enable_if<
-      is_detected<detail::has_impltype_hash_t, ImplTy, DerivedKey>::value,
+      llvm::is_detected<detail::has_impltype_hash_t, ImplTy, DerivedKey>::value,
       ::llvm::hash_code>::type
   getHash(unsigned kind, const DerivedKey &derivedKey) {
     return llvm::hash_combine(kind, ImplTy::hashKey(derivedKey));
@@ -249,9 +248,9 @@ private:
   /// If there is no 'ImplTy::hashKey' default to using the
   /// 'llvm::DenseMapInfo' definition for 'DerivedKey' for generating a hash.
   template <typename ImplTy, typename DerivedKey>
-  static typename std::enable_if<
-      !is_detected<detail::has_impltype_hash_t, ImplTy, DerivedKey>::value,
-      ::llvm::hash_code>::type
+  static typename std::enable_if<!llvm::is_detected<detail::has_impltype_hash_t,
+                                                    ImplTy, DerivedKey>::value,
+                                 ::llvm::hash_code>::type
   getHash(unsigned kind, const DerivedKey &derivedKey) {
     return llvm::hash_combine(
         kind, DenseMapInfo<DerivedKey>::getHashValue(derivedKey));

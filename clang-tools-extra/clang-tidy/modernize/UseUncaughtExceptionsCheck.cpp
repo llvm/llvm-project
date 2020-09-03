@@ -9,6 +9,7 @@
 #include "UseUncaughtExceptionsCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -17,9 +18,6 @@ namespace tidy {
 namespace modernize {
 
 void UseUncaughtExceptionsCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus17)
-    return;
-
   std::string MatchText = "::std::uncaught_exception";
 
   // Using declaration: warning and fix-it.
@@ -34,15 +32,18 @@ void UseUncaughtExceptionsCheck::registerMatchers(MatchFinder *Finder) {
           .bind("decl_ref_expr"),
       this);
 
+  auto DirectCallToUncaughtException = callee(expr(ignoringImpCasts(
+      declRefExpr(hasDeclaration(functionDecl(hasName(MatchText)))))));
+
   // CallExpr: warning, fix-it.
-  Finder->addMatcher(callExpr(hasDeclaration(functionDecl(hasName(MatchText))),
+  Finder->addMatcher(callExpr(DirectCallToUncaughtException,
                               unless(hasAncestor(initListExpr())))
                          .bind("call_expr"),
                      this);
   // CallExpr in initialisation list: warning, fix-it with avoiding narrowing
   // conversions.
-  Finder->addMatcher(callExpr(hasAncestor(initListExpr()),
-                              hasDeclaration(functionDecl(hasName(MatchText))))
+  Finder->addMatcher(callExpr(DirectCallToUncaughtException,
+                              hasAncestor(initListExpr()))
                          .bind("init_call_expr"),
                      this);
 }

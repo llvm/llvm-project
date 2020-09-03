@@ -1,6 +1,6 @@
-//===- Visitors.cpp - MLIR Visitor Utilties -------------------------------===//
+//===- Visitors.cpp - MLIR Visitor Utilities ------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -14,7 +14,7 @@ using namespace mlir;
 /// Walk all of the operations nested under and including the given operations.
 void detail::walkOperations(Operation *op,
                             function_ref<void(Operation *op)> callback) {
-  // TODO(b/140235992) This walk should be iterative over the operations.
+  // TODO: This walk should be iterative over the operations.
   for (auto &region : op->getRegions())
     for (auto &block : region)
       // Early increment here in the case where the operation is erased.
@@ -29,7 +29,7 @@ void detail::walkOperations(Operation *op,
 WalkResult
 detail::walkOperations(Operation *op,
                        function_ref<WalkResult(Operation *op)> callback) {
-  // TODO(b/140235992) This walk should be iterative over the operations.
+  // TODO: This walk should be iterative over the operations.
   for (auto &region : op->getRegions()) {
     for (auto &block : region) {
       // Early increment here in the case where the operation is erased.

@@ -4,7 +4,7 @@
 ## FIXME: The rules demonstrated by this test are not quite what GNU size
 ## follows. See https://bugs.llvm.org/show_bug.cgi?id=42934.
 
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # RUN: llvm-size --format=sysv %t.o \
 # RUN:   | FileCheck %s --match-full-lines --strict-whitespace -DFILE=%t.o --implicit-check-not={{.}}
 # RUN: llvm-size -A %t.o \

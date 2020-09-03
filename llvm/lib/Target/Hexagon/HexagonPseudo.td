@@ -112,7 +112,7 @@ let isExtendable = 1, isExtentSigned = 1, opExtentBits = 9, opExtentAlign = 2,
     opExtendable = 0, hasSideEffects = 0 in
 class LOOP_iBase<string mnemonic, InstHexagon rootInst>
          : InstHexagon <(outs), (ins b30_2Imm:$offset, u10_0Imm:$src2),
-           #mnemonic#"($offset,#$src2)",
+           mnemonic#"($offset,#$src2)",
            [], "", rootInst.Itinerary, rootInst.Type>, OpcodeHexagon {
     bits<9> offset;
     bits<10> src2;
@@ -132,7 +132,7 @@ let isExtendable = 1, isExtentSigned = 1, opExtentBits = 9, opExtentAlign = 2,
     opExtendable = 0, hasSideEffects = 0 in
 class LOOP_rBase<string mnemonic, InstHexagon rootInst>
          : InstHexagon<(outs), (ins b30_2Imm:$offset, IntRegs:$src2),
-           #mnemonic#"($offset,$src2)",
+           mnemonic#"($offset,$src2)",
            [], "", rootInst.Itinerary, rootInst.Type>, OpcodeHexagon {
     bits<9> offset;
     bits<5> src2;
@@ -490,7 +490,7 @@ def TFRI64_V4 : InstHexagon<(outs DoubleRegs:$dst),
     A2_combineii.Itinerary, TypeALU32_2op>, OpcodeHexagon;
 
 // Hexagon doesn't have a vector multiply with C semantics.
-// Instead, generate a pseudo instruction that gets expaneded into two
+// Instead, generate a pseudo instruction that gets expanded into two
 // scalar MPYI instructions.
 // This is expanded by ExpandPostRAPseudos.
 let isPseudo = 1 in
@@ -527,13 +527,15 @@ multiclass NewCircularLoad<RegisterClass RC, MemAccessSize MS> {
 
 let isCodeGenOnly = 1, isPseudo = 1, Defs = [CS], Uses = [CS],
     addrMode = PostInc, accessSize = MS, hasSideEffects = 0 in {
+  // Use timing class of L2_loadrb_pci.
   def NAME#_pci : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, IntRegs:$Cs),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_e93a3d71>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_5ceb2f9e>;
 
+  // Use timing class of L2_loadrb_pcr.
   def NAME#_pcr : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Cs),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_44d3da28>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_075c8dd8>;
 }
 }
 
@@ -548,13 +550,15 @@ multiclass NewCircularStore<RegisterClass RC, MemAccessSize MS> {
 
 let isCodeGenOnly = 1, isPseudo = 1, Defs = [CS], Uses = [CS],
     addrMode = PostInc, accessSize = MS, hasSideEffects = 0 in {
+  // Use timing class of S2_storerb_pci.
   def NAME#_pci : STInst<(outs IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_e86aa961>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_b4dc7630>;
 
+  // Use timing class of S2_storerb_pcr.
   def NAME#_pcr : STInst<(outs IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_da97ee82>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_a2b365d2>;
 }
 }
 

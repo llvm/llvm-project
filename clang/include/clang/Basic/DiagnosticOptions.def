@@ -65,6 +65,7 @@ VALUE_DIAGOPT(ShowCategories, 2, 0) /// Show categories: 0 -> none, 1 -> Number,
 ENUM_DIAGOPT(Format, TextDiagnosticFormat, 2, Clang) /// Format for diagnostics:
 
 DIAGOPT(ShowColors, 1, 0)       /// Show diagnostics with ANSI color sequences.
+DIAGOPT(UseANSIEscapeCodes, 1, 0)
 ENUM_DIAGOPT(ShowOverloads, OverloadsShown, 1,
              Ovl_All)    /// Overload candidates to show.
 DIAGOPT(VerifyDiagnostics, 1, 0) /// Check that diagnostics match the expected

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 // IO functions implementation using Posix API.
 //===----------------------------------------------------------------------===//
-#include "FuzzerDefs.h"
+#include "FuzzerPlatform.h"
 #if LIBFUZZER_POSIX || LIBFUZZER_FUCHSIA
 
 #include "FuzzerExtFunctions.h"

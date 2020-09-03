@@ -1,11 +1,11 @@
-// RUN: %clang_analyze_cc1 -Wno-format-security -verify %s \
+// RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast -verify %s \
 // RUN:   -analyzer-checker=alpha.security.taint \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
 // RUN:   -analyzer-config \
 // RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
 
-// RUN: %clang_analyze_cc1 -Wno-format-security -verify %s \
+// RUN: %clang_analyze_cc1 -Wno-format-security -Wno-pointer-to-int-cast -verify %s \
 // RUN:   -DFILE_IS_STRUCT \
 // RUN:   -analyzer-checker=alpha.security.taint \
 // RUN:   -analyzer-checker=core \
@@ -13,7 +13,7 @@
 // RUN:   -analyzer-config \
 // RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
 
-// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN: not %clang_analyze_cc1 -Wno-pointer-to-int-cast -verify %s \
 // RUN:   -analyzer-checker=alpha.security.taint \
 // RUN:   -analyzer-config \
 // RUN:     alpha.security.taint.TaintPropagation:Config=justguessit \

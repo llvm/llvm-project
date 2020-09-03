@@ -587,9 +587,8 @@ void BreakableBlockComment::insertBreak(unsigned LineIndex, unsigned TailOffset,
       Text.data() - tokenAt(LineIndex).TokenText.data() + Split.first;
   unsigned CharsToRemove = Split.second;
   assert(LocalIndentAtLineBreak >= Prefix.size());
-  std::string PrefixWithTrailingIndent = Prefix;
-  for (unsigned I = 0; I < ContentIndent; ++I)
-    PrefixWithTrailingIndent += " ";
+  std::string PrefixWithTrailingIndent = std::string(Prefix);
+  PrefixWithTrailingIndent.append(ContentIndent, ' ');
   Whitespaces.replaceWhitespaceInToken(
       tokenAt(LineIndex), BreakOffsetInToken, CharsToRemove, "",
       PrefixWithTrailingIndent, InPPDirective, /*Newlines=*/1,
@@ -864,7 +863,8 @@ void BreakableLineCommentSection::reflow(unsigned LineIndex,
     // tokens by the empty string.
     Whitespaces.replaceWhitespace(
         *Tokens[LineIndex], /*Newlines=*/0, /*Spaces=*/0,
-        /*StartOfTokenColumn=*/StartColumn, /*InPPDirective=*/false);
+        /*StartOfTokenColumn=*/StartColumn, /*IsAligned=*/true,
+        /*InPPDirective=*/false);
   } else if (LineIndex > 0) {
     // In case we're reflowing after the '\' in:
     //
@@ -932,6 +932,7 @@ void BreakableLineCommentSection::adaptStartOfLine(
                                   /*Newlines=*/1,
                                   /*Spaces=*/LineColumn,
                                   /*StartOfTokenColumn=*/LineColumn,
+                                  /*IsAligned=*/true,
                                   /*InPPDirective=*/false);
   }
   if (OriginalPrefix[LineIndex] != Prefix[LineIndex]) {

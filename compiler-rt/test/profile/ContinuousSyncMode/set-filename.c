@@ -1,3 +1,5 @@
+// REQUIRES: darwin
+
 // RUN: %clang_pgogen -o %t.exe %s
 // RUN: env LLVM_PROFILE_FILE="%c%t.profraw" %run %t.exe %t.profraw %t.bad
 

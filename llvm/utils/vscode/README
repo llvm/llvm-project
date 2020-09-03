@@ -1,18 +1,2 @@
-This directory contains a "bundle" for doing syntax highlighting of TableGen
-files for the Microsoft VSCode editor. The highlighting follows that done by
-the TextMate "C" bundle as it is a translation of the textmate bundle to VSCode
-using the "yo code" npm package. Currently, keywords, comments, and strings are
-highlighted.
-
-This colorizer was generate by the vscode-generator tool "Yo Code"
-(https://github.com/Microsoft/vscode-generator-code) from the existing TableGen
-text TableGen.tmLanguage syntax colorizer in utils/textmate. This README was
-copied from utils/textmate/README.
-
-To install this VSCode .td file colorizer, copy it to the following locations
-per your Operating System:
-
-  - Windows: %USERPROFILE%\.vscode\extensions
-  - Mac: ~/.vscode/extensions
-  - Linux: ~/.vscode/extensions
-
+"llvm" directory contains a VS Code Extension for doing syntax highlighting of
+TableGen files and LLVM IR files.

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Materializer_h
-#define liblldb_Materializer_h
+#ifndef LLDB_EXPRESSION_MATERIALIZER_H
+#define LLDB_EXPRESSION_MATERIALIZER_H
 
 #include <memory>
 #include <vector>
@@ -28,14 +28,12 @@ public:
   LLVMCastKind getKind() const { return m_kind; }
 
   Materializer(LLVMCastKind kind);
-  Materializer();
+  Materializer() = default;
   virtual ~Materializer();
 
   class Dematerializer {
   public:
-    Dematerializer()
-        : m_materializer(nullptr), m_map(nullptr),
-          m_process_address(LLDB_INVALID_ADDRESS) {}
+    Dematerializer() = default;
 
     ~Dematerializer() { Wipe(); }
 
@@ -59,11 +57,11 @@ public:
       }
     }
 
-    Materializer *m_materializer;
+    Materializer *m_materializer = nullptr;
     lldb::ThreadWP m_thread_wp;
     StackID m_stack_id;
-    IRMemoryMap *m_map;
-    lldb::addr_t m_process_address;
+    IRMemoryMap *m_map = nullptr;
+    lldb::addr_t m_process_address = LLDB_INVALID_ADDRESS;
   };
 
   typedef std::shared_ptr<Dematerializer> DematerializerSP;
@@ -129,13 +127,13 @@ protected:
   typedef std::unique_ptr<Entity> EntityUP;
   typedef std::vector<EntityUP> EntityVector;
 
-  LLVMCastKind m_kind;
+  LLVMCastKind m_kind = eKindBasic;
   DematerializerWP m_dematerializer_wp;
   EntityVector m_entities;
-  uint32_t m_current_offset;
-  uint32_t m_struct_alignment;
+  uint32_t m_current_offset = 0;
+  uint32_t m_struct_alignment = 8;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_Materializer_h
+#endif // LLDB_EXPRESSION_MATERIALIZER_H

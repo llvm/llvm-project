@@ -281,7 +281,7 @@ void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
 unsigned MatcherTableEmitter::
 EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
             raw_ostream &OS) {
-  OS.indent(Indent*2);
+  OS.indent(Indent);
 
   switch (N->getKind()) {
   case Matcher::Scope: {
@@ -291,6 +291,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
     unsigned StartIdx = CurrentIdx;
 
     // Emit all of the children.
+    SmallString<128> TmpBuf;
     for (unsigned i = 0, e = SM->getNumChildren(); i != e; ++i) {
       if (i == 0) {
         OS << "OPC_Scope, ";
@@ -298,9 +299,9 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       } else  {
         if (!OmitComments) {
           OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
-          OS.indent(Indent*2) << "/*Scope*/ ";
+          OS.indent(Indent) << "/*Scope*/ ";
         } else
-          OS.indent(Indent*2);
+          OS.indent(Indent);
       }
 
       // We need to encode the child and the offset of the failure code before
@@ -308,7 +309,6 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       // string while we get the size.  Unfortunately, the offset of the
       // children depends on the VBR size of the child, so for large children we
       // have to iterate a bit.
-      SmallString<128> TmpBuf;
       unsigned ChildSize = 0;
       unsigned VBRSize = 0;
       do {
@@ -337,7 +337,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
     // Emit a zero as a sentinel indicating end of 'Scope'.
     if (!OmitComments)
       OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
-    OS.indent(Indent*2) << "0, ";
+    OS.indent(Indent) << "0, ";
     if (!OmitComments)
       OS << "/*End of Scope*/";
     OS << '\n';
@@ -450,6 +450,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
     ++CurrentIdx;
 
     // For each case we emit the size, then the opcode, then the matcher.
+    SmallString<128> TmpBuf;
     for (unsigned i = 0, e = NumCases; i != e; ++i) {
       const Matcher *Child;
       unsigned IdxSize;
@@ -466,7 +467,6 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       // string while we get the size.  Unfortunately, the offset of the
       // children depends on the VBR size of the child, so for large children we
       // have to iterate a bit.
-      SmallString<128> TmpBuf;
       unsigned ChildSize = 0;
       unsigned VBRSize = 0;
       do {
@@ -483,7 +483,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       if (i != 0) {
         if (!OmitComments)
           OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
-        OS.indent(Indent*2);
+        OS.indent(Indent);
         if (!OmitComments)
           OS << (isa<SwitchOpcodeMatcher>(N) ?
                      "/*SwitchOpcode*/ " : "/*SwitchType*/ ");
@@ -509,7 +509,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
     // Emit the final zero to terminate the switch.
     if (!OmitComments)
       OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
-    OS.indent(Indent*2) << "0,";
+    OS.indent(Indent) << "0,";
     if (!OmitComments)
       OS << (isa<SwitchOpcodeMatcher>(N) ?
              " // EndSwitchOpcode" : " // EndSwitchType");
@@ -619,7 +619,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
   }
   case Matcher::EmitStringInteger: {
     const std::string &Val = cast<EmitStringIntegerMatcher>(N)->getValue();
-    // These should always fit into one byte.
+    // These should always fit into 7 bits.
     OS << "OPC_EmitInteger, "
       << getEnumName(cast<EmitStringIntegerMatcher>(N)->getVT()) << ", "
       << Val << ",\n";
@@ -712,7 +712,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
         unsigned Offset =
             getPatternIdxFromTable(src + " -> " + dst, std::move(include_src));
         OS << "TARGET_VAL(" << Offset << "),\n";
-        OS.indent(FullIndexWidth + Indent * 2);
+        OS.indent(FullIndexWidth + Indent);
       }
     }
     const EmitNodeMatcherCommon *EN = cast<EmitNodeMatcherCommon>(N);
@@ -731,7 +731,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       OS << "|OPFL_Variadic" << EN->getNumFixedArityOperands();
     OS << ",\n";
 
-    OS.indent(FullIndexWidth + Indent*2+4);
+    OS.indent(FullIndexWidth + Indent+4);
     if (!CompressVTs) {
       OS << EN->getNumVTs();
       if (!OmitComments)
@@ -762,10 +762,10 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       OS << '\n';
 
       if (const MorphNodeToMatcher *SNT = dyn_cast<MorphNodeToMatcher>(N)) {
-        OS.indent(FullIndexWidth + Indent*2) << "// Src: "
+        OS.indent(FullIndexWidth + Indent) << "// Src: "
           << *SNT->getPattern().getSrcPattern() << " - Complexity = "
           << SNT->getPattern().getPatternComplexity(CGP) << '\n';
-        OS.indent(FullIndexWidth + Indent*2) << "// Dst: "
+        OS.indent(FullIndexWidth + Indent) << "// Dst: "
           << *SNT->getPattern().getDstPattern() << '\n';
       }
     } else
@@ -789,7 +789,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       unsigned Offset =
           getPatternIdxFromTable(src + " -> " + dst, std::move(include_src));
       OS << "TARGET_VAL(" << Offset << "),\n";
-      OS.indent(FullIndexWidth + Indent * 2);
+      OS.indent(FullIndexWidth + Indent);
     }
     OS << "OPC_CompleteMatch, " << CM->getNumResults() << ", ";
     unsigned NumResultBytes = 0;
@@ -797,10 +797,10 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       NumResultBytes += EmitVBRValue(CM->getResult(i), OS);
     OS << '\n';
     if (!OmitComments) {
-      OS.indent(FullIndexWidth + Indent*2) << " // Src: "
+      OS.indent(FullIndexWidth + Indent) << " // Src: "
         << *CM->getPattern().getSrcPattern() << " - Complexity = "
         << CM->getPattern().getPatternComplexity(CGP) << '\n';
-      OS.indent(FullIndexWidth + Indent*2) << " // Dst: "
+      OS.indent(FullIndexWidth + Indent) << " // Dst: "
         << *CM->getPattern().getDstPattern();
     }
     OS << '\n';
@@ -960,7 +960,8 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
         OS << "// " << NodeXForms[i]->getName();
       OS << '\n';
 
-      std::string ClassName = CGP.getSDNodeInfo(SDNode).getSDClassName();
+      std::string ClassName =
+          std::string(CGP.getSDNodeInfo(SDNode).getSDClassName());
       if (ClassName == "SDNode")
         OS << "    SDNode *N = V.getNode();\n";
       else

@@ -274,7 +274,7 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 ; CHECK-NEXT:    and w8, w0, #0xff
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsr w8, w8, w1
-; CHECK-NEXT:    ubfx w0, w8, #7, #1
+; CHECK-NEXT:    lsr w0, w8, #7
 ; CHECK-NEXT:    ret
   %t0 = shl i8 128, %y
   %t1 = and i8 %t0, %x
@@ -344,7 +344,7 @@ define i1 @scalar_i8_signbit_eq_with_nonzero(i8 %x, i8 %y) nounwind {
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsl w8, w8, w1
 ; CHECK-NEXT:    and w8, w8, w0
-; CHECK-NEXT:    and w8, w8, #0xff
+; CHECK-NEXT:    and w8, w8, #0x80
 ; CHECK-NEXT:    cmp w8, #1 // =1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret

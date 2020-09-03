@@ -8,10 +8,11 @@
 
 #include "llvm-objcopy.h"
 #include "Buffer.h"
+#include "COFF/COFFObjcopy.h"
 #include "CopyConfig.h"
 #include "ELF/ELFObjcopy.h"
-#include "COFF/COFFObjcopy.h"
 #include "MachO/MachOObjcopy.h"
+#include "wasm/WasmObjcopy.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,6 +26,7 @@
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -33,6 +35,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Path.h"
@@ -172,6 +175,8 @@ static Error executeObjcopyOnBinary(CopyConfig &Config, object::Binary &In,
     return coff::executeObjcopyOnBinary(Config, *COFFBinary, Out);
   else if (auto *MachOBinary = dyn_cast<object::MachOObjectFile>(&In))
     return macho::executeObjcopyOnBinary(Config, *MachOBinary, Out);
+  else if (auto *WasmBinary = dyn_cast<object::WasmObjectFile>(&In))
+    return objcopy::wasm::executeObjcopyOnBinary(Config, *WasmBinary, Out);
   else
     return createStringError(object_error::invalid_file_type,
                              "unsupported object file format");
@@ -322,11 +327,25 @@ enum class ToolType { Objcopy, Strip, InstallNameTool };
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   ToolName = argv[0];
-  ToolType Tool = StringSwitch<ToolType>(sys::path::stem(ToolName))
-                      .EndsWith("strip", ToolType::Strip)
-                      .EndsWith("install-name-tool", ToolType::InstallNameTool)
-                      .EndsWith("install_name_tool", ToolType::InstallNameTool)
-                      .Default(ToolType::Objcopy);
+
+  StringRef Stem = sys::path::stem(ToolName);
+  auto Is = [=](StringRef Tool) {
+    // We need to recognize the following filenames:
+    //
+    // llvm-objcopy -> objcopy
+    // strip-10.exe -> strip
+    // powerpc64-unknown-freebsd13-objcopy -> objcopy
+    // llvm-install-name-tool -> install-name-tool
+    auto I = Stem.rfind_lower(Tool);
+    return I != StringRef::npos &&
+           (I + Tool.size() == Stem.size() || !isAlnum(Stem[I + Tool.size()]));
+  };
+  ToolType Tool = ToolType::Objcopy;
+  if (Is("strip"))
+    Tool = ToolType::Strip;
+  else if (Is("install-name-tool") || Is("install_name_tool"))
+    Tool = ToolType::InstallNameTool;
+
   // Expand response files.
   // TODO: Move these lines, which are copied from lib/Support/CommandLine.cpp,
   // into a separate function in the CommandLine library and call that function

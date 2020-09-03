@@ -28,6 +28,7 @@ struct Iterator {
 };
 template <typename T>
 struct View {
+  View() = default;
   T begin() { return T(); }
   T begin() const { return T(); }
   T end() { return T(); }
@@ -268,5 +269,30 @@ void PositiveConstNonMemberOperatorInvoked() {
 
 void IgnoreLoopVariableNotUsedInLoopBody() {
   for (auto _ : View<Iterator<S>>()) {
+  }
+}
+
+template <typename T>
+struct ValueReturningIterator {
+  void operator++() {}
+  T operator*() { return T(); }
+  bool operator!=(const ValueReturningIterator &) { return false; }
+  typedef const T &const_reference;
+};
+
+void negativeValueIterator() {
+  // Check does not trigger for iterators that return elements by value.
+  for (const S SS : View<ValueReturningIterator<S>>()) {
+  }
+}
+
+View<Iterator<S>> createView(S) { return View<Iterator<S>>(); }
+
+void positiveValueIteratorUsedElseWhere() {
+  for (const S SS : createView(*ValueReturningIterator<S>())) {
+    // CHECK-MESSAGES: [[@LINE-1]]:16: warning: the loop variable's type is not
+    // a reference type; this creates a copy in each iteration; consider making
+    // this a reference [performance-for-range-copy] CHECK-FIXES: for (const S&
+    // SS : createView(*ValueReturningIterator<S>())) {
   }
 }

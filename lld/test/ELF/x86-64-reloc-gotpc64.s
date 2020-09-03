@@ -7,7 +7,7 @@
 // SECTION: .got.plt PROGBITS 00000000000032f0 0002f0 000018
 
 // 0x3300 (.got.plt) - 0x1274 = 8316
-// CHECK: gotpc64:
+// CHECK: <gotpc64>:
 // CHECK-NEXT: 1274: {{.*}} movabsq $8316, %r11
 .global gotpc64
 gotpc64:

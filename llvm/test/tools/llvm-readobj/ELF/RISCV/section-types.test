@@ -1,0 +1,21 @@
+## Show that all RISCV specific section types are properly printed for both
+## LLVM and GNU styles.
+
+# RUN: yaml2obj %s -o %t-riscv.o
+# RUN: llvm-readobj --section-headers %t-riscv.o | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --section-headers %t-riscv.o | FileCheck %s --check-prefix=GNU
+
+# LLVM:      Name: .riscv.attributes (1)
+# LLVM-NEXT: Type: SHT_RISCV_ATTRIBUTES (0x70000003)
+
+# GNU: [ 1] .riscv.attributes RISCV_ATTRIBUTES
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_RISCV
+Sections:
+  - Name: .riscv.attributes
+    Type: SHT_RISCV_ATTRIBUTES

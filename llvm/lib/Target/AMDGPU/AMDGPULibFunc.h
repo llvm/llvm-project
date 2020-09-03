@@ -13,6 +13,7 @@
 
 namespace llvm {
 
+class FunctionCallee;
 class FunctionType;
 class Function;
 class Module;
@@ -341,7 +342,7 @@ public:
   /// and unmangled function name for unmangled library functions.
   virtual std::string mangle() const = 0;
 
-  void setName(StringRef N) { Name = N; }
+  void setName(StringRef N) { Name = std::string(N); }
   void setPrefix(ENamePrefix pfx) { FKind = pfx; }
 
   virtual FunctionType *getFunctionType(Module &M) const = 0;
@@ -438,7 +439,7 @@ class AMDGPUUnmangledLibFunc : public AMDGPULibFuncImpl {
 public:
   explicit AMDGPUUnmangledLibFunc();
   explicit AMDGPUUnmangledLibFunc(StringRef FName, FunctionType *FT) {
-    Name = FName;
+    Name = std::string(FName);
     FuncTy = FT;
   }
   std::string getName() const override { return Name; }

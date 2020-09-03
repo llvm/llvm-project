@@ -2,29 +2,11 @@
 
 ; We do not pipeline sigma yet, but the non-pipelined version
 ; with good scheduling is pretty fast. The compiler generates
-; 19 packets, and the assembly version is 16.
+; 18 packets, and the assembly version is 16.
 
 ; CHECK:  loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK: }
-; CHECK-NOT: }
+; CHECK-COUNT-17: }
 ; CHECK: }{{[ \t]*}}:endloop
 
 @g0 = external constant [10 x i16], align 128
@@ -35,9 +17,9 @@ declare <16 x i32> @llvm.hexagon.V6.lvsplatw(i32) #0
 declare <16 x i32> @llvm.hexagon.V6.vd0() #0
 declare <32 x i32> @llvm.hexagon.V6.vsububh(<16 x i32>, <16 x i32>) #0
 declare <16 x i32> @llvm.hexagon.V6.vabsdiffub(<16 x i32>, <16 x i32>) #0
-declare <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1>, <16 x i32>, <16 x i32>) #0
-declare <16 x i32> @llvm.hexagon.V6.vaddbnq(<512 x i1>, <16 x i32>, <16 x i32>) #0
+declare <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1>, <16 x i32>, <16 x i32>) #0
+declare <16 x i32> @llvm.hexagon.V6.vaddbnq(<64 x i1>, <16 x i32>, <16 x i32>) #0
 declare <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32>, <16 x i32>) #0
 declare <32 x i32> @llvm.hexagon.V6.vmpabus.acc(<32 x i32>, <32 x i32>, i32) #0
 declare <16 x i32> @llvm.hexagon.V6.vlalignbi(<16 x i32>, <16 x i32>, i32) #0
@@ -124,48 +106,48 @@ b6:                                               ; preds = %b6, %b5
   %v53 = tail call <32 x i32> @llvm.hexagon.V6.vsububh(<16 x i32> %v8, <16 x i32> %v47) #2
   %v54 = tail call <16 x i32> @llvm.hexagon.V6.vabsdiffub(<16 x i32> %v45, <16 x i32> %v47) #2
   %v55 = tail call <16 x i32> @llvm.hexagon.V6.vabsdiffub(<16 x i32> %v49, <16 x i32> %v47) #2
-  %v56 = tail call <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v54, <16 x i32> %v7) #2
-  %v57 = tail call <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v55, <16 x i32> %v7) #2
-  %v58 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1> %v56, <16 x i32> %v9, <16 x i32> %v10) #2
-  %v59 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<512 x i1> %v57, <16 x i32> %v58, <16 x i32> %v9) #2
-  %v60 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1> %v56, <16 x i32> %v8, <16 x i32> %v45) #2
-  %v61 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1> %v57, <16 x i32> %v8, <16 x i32> %v49) #2
+  %v56 = tail call <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v54, <16 x i32> %v7) #2
+  %v57 = tail call <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v55, <16 x i32> %v7) #2
+  %v58 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1> %v56, <16 x i32> %v9, <16 x i32> %v10) #2
+  %v59 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<64 x i1> %v57, <16 x i32> %v58, <16 x i32> %v9) #2
+  %v60 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1> %v56, <16 x i32> %v8, <16 x i32> %v45) #2
+  %v61 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1> %v57, <16 x i32> %v8, <16 x i32> %v49) #2
   %v62 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %v61, <16 x i32> %v60) #2
   %v63 = tail call <32 x i32> @llvm.hexagon.V6.vmpabus.acc(<32 x i32> %v53, <32 x i32> %v62, i32 -1) #2
   %v64 = tail call <16 x i32> @llvm.hexagon.V6.vlalignbi(<16 x i32> %v45, <16 x i32> %v44, i32 1) #2
   %v65 = tail call <16 x i32> @llvm.hexagon.V6.vlalignbi(<16 x i32> %v49, <16 x i32> %v48, i32 1) #2
   %v66 = tail call <16 x i32> @llvm.hexagon.V6.vabsdiffub(<16 x i32> %v64, <16 x i32> %v47) #2
   %v67 = tail call <16 x i32> @llvm.hexagon.V6.vabsdiffub(<16 x i32> %v65, <16 x i32> %v47) #2
-  %v68 = tail call <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v66, <16 x i32> %v7) #2
-  %v69 = tail call <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v67, <16 x i32> %v7) #2
-  %v70 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<512 x i1> %v68, <16 x i32> %v59, <16 x i32> %v9) #2
-  %v71 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<512 x i1> %v69, <16 x i32> %v70, <16 x i32> %v9) #2
-  %v72 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1> %v68, <16 x i32> %v8, <16 x i32> %v64) #2
-  %v73 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1> %v69, <16 x i32> %v8, <16 x i32> %v65) #2
+  %v68 = tail call <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v66, <16 x i32> %v7) #2
+  %v69 = tail call <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v67, <16 x i32> %v7) #2
+  %v70 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<64 x i1> %v68, <16 x i32> %v59, <16 x i32> %v9) #2
+  %v71 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<64 x i1> %v69, <16 x i32> %v70, <16 x i32> %v9) #2
+  %v72 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1> %v68, <16 x i32> %v8, <16 x i32> %v64) #2
+  %v73 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1> %v69, <16 x i32> %v8, <16 x i32> %v65) #2
   %v74 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %v73, <16 x i32> %v72) #2
   %v75 = tail call <32 x i32> @llvm.hexagon.V6.vmpabus.acc(<32 x i32> %v63, <32 x i32> %v74, i32 -1) #2
   %v76 = tail call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> %v50, <16 x i32> %v45, i32 1) #2
   %v77 = tail call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> %v52, <16 x i32> %v49, i32 1) #2
   %v78 = tail call <16 x i32> @llvm.hexagon.V6.vabsdiffub(<16 x i32> %v76, <16 x i32> %v47) #2
   %v79 = tail call <16 x i32> @llvm.hexagon.V6.vabsdiffub(<16 x i32> %v77, <16 x i32> %v47) #2
-  %v80 = tail call <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v78, <16 x i32> %v7) #2
-  %v81 = tail call <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v79, <16 x i32> %v7) #2
-  %v82 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<512 x i1> %v80, <16 x i32> %v71, <16 x i32> %v9) #2
-  %v83 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<512 x i1> %v81, <16 x i32> %v82, <16 x i32> %v9) #2
-  %v84 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1> %v80, <16 x i32> %v8, <16 x i32> %v76) #2
-  %v85 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1> %v81, <16 x i32> %v8, <16 x i32> %v77) #2
+  %v80 = tail call <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v78, <16 x i32> %v7) #2
+  %v81 = tail call <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v79, <16 x i32> %v7) #2
+  %v82 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<64 x i1> %v80, <16 x i32> %v71, <16 x i32> %v9) #2
+  %v83 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<64 x i1> %v81, <16 x i32> %v82, <16 x i32> %v9) #2
+  %v84 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1> %v80, <16 x i32> %v8, <16 x i32> %v76) #2
+  %v85 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1> %v81, <16 x i32> %v8, <16 x i32> %v77) #2
   %v86 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %v85, <16 x i32> %v84) #2
   %v87 = tail call <32 x i32> @llvm.hexagon.V6.vmpabus.acc(<32 x i32> %v75, <32 x i32> %v86, i32 -1) #2
   %v88 = tail call <16 x i32> @llvm.hexagon.V6.vlalignbi(<16 x i32> %v47, <16 x i32> %v46, i32 1) #2
   %v89 = tail call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> %v51, <16 x i32> %v47, i32 1) #2
   %v90 = tail call <16 x i32> @llvm.hexagon.V6.vabsdiffub(<16 x i32> %v88, <16 x i32> %v47) #2
   %v91 = tail call <16 x i32> @llvm.hexagon.V6.vabsdiffub(<16 x i32> %v89, <16 x i32> %v47) #2
-  %v92 = tail call <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v90, <16 x i32> %v7) #2
-  %v93 = tail call <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v91, <16 x i32> %v7) #2
-  %v94 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<512 x i1> %v92, <16 x i32> %v83, <16 x i32> %v9) #2
-  %v95 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<512 x i1> %v93, <16 x i32> %v94, <16 x i32> %v9) #2
-  %v96 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1> %v92, <16 x i32> %v8, <16 x i32> %v88) #2
-  %v97 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1> %v93, <16 x i32> %v8, <16 x i32> %v89) #2
+  %v92 = tail call <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v90, <16 x i32> %v7) #2
+  %v93 = tail call <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v91, <16 x i32> %v7) #2
+  %v94 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<64 x i1> %v92, <16 x i32> %v83, <16 x i32> %v9) #2
+  %v95 = tail call <16 x i32> @llvm.hexagon.V6.vaddbnq(<64 x i1> %v93, <16 x i32> %v94, <16 x i32> %v9) #2
+  %v96 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1> %v92, <16 x i32> %v8, <16 x i32> %v88) #2
+  %v97 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1> %v93, <16 x i32> %v8, <16 x i32> %v89) #2
   %v98 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %v97, <16 x i32> %v96) #2
   %v99 = tail call <32 x i32> @llvm.hexagon.V6.vmpabus.acc(<32 x i32> %v87, <32 x i32> %v98, i32 -1) #2
   %v100 = tail call <32 x i32> @llvm.hexagon.V6.vlutvwh(<16 x i32> %v95, <16 x i32> %v4, i32 0) #2
@@ -199,5 +181,5 @@ b8:                                               ; preds = %b7, %b0
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b" }
+attributes #1 = { nounwind "target-cpu"="hexagonv62" "target-features"="+hvx,+hvx-length64b" }
 attributes #2 = { nounwind }

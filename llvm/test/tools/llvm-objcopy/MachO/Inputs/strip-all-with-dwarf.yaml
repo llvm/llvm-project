@@ -33,6 +33,23 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
+        relocations:
+          - address:         0x0
+            symbolnum:       0
+            pcrel:           false
+            length:          0
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x0
+            symbolnum:       1
+            pcrel:           false
+            length:          0
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
       - sectname:        __data
         segname:         __DATA
         addr:            0x0000000000000024
@@ -81,6 +98,39 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
+        relocations:
+          - address:         0x0
+            symbolnum:       0
+            pcrel:           false
+            length:          0
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x0
+            symbolnum:       0
+            pcrel:           false
+            length:          0
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x0
+            symbolnum:       0
+            pcrel:           false
+            length:          0
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x0
+            symbolnum:       0
+            pcrel:           false
+            length:          0
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
       - sectname:        __debug_macinfo
         segname:         __DWARF
         addr:            0x0000000000000166
@@ -153,6 +203,15 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
+        relocations:
+          - address:         0x0
+            symbolnum:       0
+            pcrel:           false
+            length:          0
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
       - sectname:        __eh_frame
         segname:         __TEXT
         addr:            0x0000000000000290
@@ -177,6 +236,15 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
+        relocations:
+          - address:         0x0
+            symbolnum:       0
+            pcrel:           false
+            length:          0
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
   - cmd:             LC_BUILD_VERSION
     cmdsize:         24
     platform:        1
@@ -323,8 +391,7 @@ DWARF:
         - Attribute:       DW_AT_external
           Form:            DW_FORM_flag_present
   debug_info:
-    - Length:
-        TotalLength:     113
+    - Length:          113
       Version:         4
       AbbrOffset:      0
       AddrSize:        8
@@ -393,8 +460,7 @@ DWARF:
         - AbbrCode:        0x00000000
           Values:          []
   debug_line:
-    - Length:
-        TotalLength:     74
+    - Length:          74
       Version:         4
       PrologueLength:  36
       MinInstLength:   1

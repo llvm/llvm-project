@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_StreamFile_h_
-#define liblldb_StreamFile_h_
+#ifndef LLDB_CORE_STREAMFILE_H
+#define LLDB_CORE_STREAMFILE_H
 
 #include "lldb/Host/File.h"
 #include "lldb/Utility/Stream.h"
@@ -48,9 +48,10 @@ protected:
   size_t WriteImpl(const void *s, size_t length) override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(StreamFile);
+  StreamFile(const StreamFile &) = delete;
+  const StreamFile &operator=(const StreamFile &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_StreamFile_h_
+#endif // LLDB_CORE_STREAMFILE_H

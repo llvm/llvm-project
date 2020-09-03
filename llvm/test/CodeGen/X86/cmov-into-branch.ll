@@ -165,6 +165,30 @@ define i32 @weighted_select_pgso(i32 %a, i32 %b) !prof !14 {
   ret i32 %sel
 }
 
+; If two selects in a row are predictable, turn them into branches.
+define i32 @weighted_selects(i32 %a, i32 %b) !prof !19 {
+; CHECK-LABEL: weighted_selects:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    jne .LBB11_2
+; CHECK-NEXT:  # %bb.1: # %select.false
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:  .LBB11_2: # %select.end
+; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    jne .LBB11_4
+; CHECK-NEXT:  # %bb.3: # %select.false2
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:  .LBB11_4: # %select.end1
+; CHECK-NEXT:    retq
+  %cmp = icmp ne i32 %a, 0
+  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !16
+  %cmp1 = icmp ne i32 %sel, 0
+  %sel1 = select i1 %cmp1, i32 %b, i32 %a, !prof !16
+  ret i32 %sel1
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
@@ -185,3 +209,4 @@ define i32 @weighted_select_pgso(i32 %a, i32 %b) !prof !14 {
 !16 = !{!"branch_weights", i32 1, i32 100}
 !17 = !{!"branch_weights", i32 100, i32 1}
 !18 = !{!"branch_weights", i32 0, i32 0}
+!19 = !{!"function_entry_count", i64 100}

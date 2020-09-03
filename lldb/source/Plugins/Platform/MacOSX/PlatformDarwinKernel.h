@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PlatformDarwinKernel_h_
-#define liblldb_PlatformDarwinKernel_h_
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMDARWINKERNEL_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMDARWINKERNEL_H
 
 #include "lldb/Utility/ConstString.h"
 
@@ -172,7 +172,8 @@ public:
                                                           // dSYMs next to them
   lldb_private::LazyBool m_ios_debug_session;
 
-  DISALLOW_COPY_AND_ASSIGN(PlatformDarwinKernel);
+  PlatformDarwinKernel(const PlatformDarwinKernel &) = delete;
+  const PlatformDarwinKernel &operator=(const PlatformDarwinKernel &) = delete;
 };
 
 #else // __APPLE__
@@ -196,4 +197,4 @@ public:
 
 #endif // __APPLE__
 
-#endif // liblldb_PlatformDarwinKernel_h_
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMDARWINKERNEL_H

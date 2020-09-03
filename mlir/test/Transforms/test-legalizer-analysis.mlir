@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-legalize-patterns -verify-diagnostics -test-legalize-mode=analysis %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -test-legalize-patterns -verify-diagnostics -test-legalize-mode=analysis %s | FileCheck %s
 // expected-remark@-2 {{op 'module' is legalizable}}
 // expected-remark@-3 {{op 'module_terminator' is legalizable}}
 

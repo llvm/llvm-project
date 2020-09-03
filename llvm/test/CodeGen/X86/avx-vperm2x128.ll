@@ -357,8 +357,8 @@ entry:
 
 ;; Test zero mask generation.
 ;; PR22984: https://llvm.org/bugs/show_bug.cgi?id=22984
-;; Prefer xor+vblendpd over vperm2f128 because that has better performance.
-;; TODO: When building for optsize we should use vperm2f128.
+;; Prefer xor+vblendpd over vperm2f128 because that has better performance,
+;; unless building for optsize where we should still use vperm2f128.
 
 define <4 x double> @shuffle_v4f64_zz01(<4 x double> %a) {
 ; ALL-LABEL: shuffle_v4f64_zz01:
@@ -389,8 +389,15 @@ define <4 x double> @shuffle_v4f64_zz23(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_zz23_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_zz23_optsize:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[2,3]
+; ALL-NEXT:    retq
+  %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  ret <4 x double> %s
+}
+define <4 x double> @shuffle_v4f64_zz23_pgso(<4 x double> %a) !prof !14 {
+; ALL-LABEL: shuffle_v4f64_zz23_pgso:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[2,3]
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
   ret <4 x double> %s
@@ -425,8 +432,15 @@ define <4 x double> @shuffle_v4f64_zz67(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_zz67_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_zz67_optsize:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[2,3]
+; ALL-NEXT:    retq
+  %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x double> %s
+}
+define <4 x double> @shuffle_v4f64_zz67_pgso(<4 x double> %a) !prof !14 {
+; ALL-LABEL: shuffle_v4f64_zz67_pgso:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[2,3]
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
   ret <4 x double> %s
@@ -452,7 +466,7 @@ define <4 x double> @shuffle_v4f64_01zz_optsize(<4 x double> %a) optsize {
 define <4 x double> @shuffle_v4f64_23zz(<4 x double> %a) {
 ; ALL-LABEL: shuffle_v4f64_23zz:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],zero,zero
+; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
   ret <4 x double> %s
@@ -460,7 +474,7 @@ define <4 x double> @shuffle_v4f64_23zz(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_23zz_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_23zz_optsize:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],zero,zero
+; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
   ret <4 x double> %s
@@ -486,7 +500,7 @@ define <4 x double> @shuffle_v4f64_45zz_optsize(<4 x double> %a) optsize {
 define <4 x double> @shuffle_v4f64_67zz(<4 x double> %a) {
 ; ALL-LABEL: shuffle_v4f64_67zz:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],zero,zero
+; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 6, i32 7, i32 0, i32 1>
   ret <4 x double> %s
@@ -494,7 +508,7 @@ define <4 x double> @shuffle_v4f64_67zz(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_67zz_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_67zz_optsize:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],zero,zero
+; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 6, i32 7, i32 0, i32 1>
   ret <4 x double> %s
@@ -512,7 +526,7 @@ define <4 x i64> @shuffle_v4i64_67zz(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX2-LABEL: shuffle_v4i64_67zz:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],zero,zero
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX2-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
   %s = shufflevector <4 x i64> <i64 0, i64 0, i64 undef, i64 undef>, <4 x i64> %a, <4 x i32> <i32 6, i32 7, i32 0, i32 1>
@@ -605,9 +619,8 @@ entry:
 define <4 x i64> @ld0_hi0_lo1_4i64(<4 x i64> * %pa, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld0_hi0_lo1_4i64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = mem[2,3],ymm0[0,1]
-; AVX1-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
+; AVX1-NEXT:    vpaddq {{.*}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
@@ -627,11 +640,11 @@ entry:
 define <4 x i64> @ld1_hi0_hi1_4i64(<4 x i64> %a, <4 x i64> * %pb) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld1_hi0_hi1_4i64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
-; AVX1-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
+; AVX1-NEXT:    vpaddq {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ld1_hi0_hi1_4i64:
@@ -649,12 +662,10 @@ entry:
 define <8 x i32> @ld0_hi0_lo1_8i32(<8 x i32> * %pa, <8 x i32> %b) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld0_hi0_lo1_8i32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = mem[2,3],ymm0[0,1]
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,2,3,4]
-; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,3,4]
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd 16(%rdi), %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ld0_hi0_lo1_8i32:
@@ -672,12 +683,11 @@ entry:
 define <8 x i32> @ld1_hi0_hi1_8i32(<8 x i32> %a, <8 x i32> * %pb) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld1_hi0_hi1_8i32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,2,3,4]
-; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,3,4]
+; AVX1-NEXT:    vpaddd 16(%rdi), %xmm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ld1_hi0_hi1_8i32:
@@ -691,3 +701,20 @@ entry:
   %res = add <8 x i32> %shuffle, <i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4>
   ret <8 x i32> %res
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}

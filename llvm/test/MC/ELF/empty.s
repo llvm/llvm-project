@@ -5,8 +5,8 @@
 // Check that we can create ELF files for darwin/windows, even though
 // it is not the default file format.
 
-// DARWIN:       Format: ELF64-x86-64
-// WINDOWS:      Format: ELF64-x86-64
+// DARWIN:       Format: elf64-x86-64
+// WINDOWS:      Format: elf64-x86-64
 // DARWIN-NEXT:  Arch: x86_64
 // WINDOWS-NEXT: Arch: x86_64
 

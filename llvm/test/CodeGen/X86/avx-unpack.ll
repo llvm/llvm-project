@@ -73,11 +73,9 @@ define <8 x float> @unpackhips_not(<8 x float> %src1, <8 x float> %src2) nounwin
 define <4 x double> @unpackhipd_not(<4 x double> %src1, <4 x double> %src2) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: unpackhipd_not:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm2 = xmm0[1],xmm1[1]
-; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3,2,3]
+; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[3],ymm1[3]
 ; CHECK-NEXT:    retq
   %shuffle.i = shufflevector <4 x double> %src1, <4 x double> %src2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
   ret <4 x double> %shuffle.i

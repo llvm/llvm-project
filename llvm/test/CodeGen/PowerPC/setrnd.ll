@@ -1,4 +1,10 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s \
+; RUN:   -stop-before=finalize-isel -verify-machineinstrs | \
+; RUN:   FileCheck -check-prefix=BEFORE-FINALIZE-ISEL %s
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s \
+; RUN:   -stop-after=finalize-isel -verify-machineinstrs | \
+; RUN:   FileCheck -check-prefix=AFTER-FINALIZE-ISEL %s
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s \
 ; RUN:   -verify-machineinstrs | FileCheck %s
 ; RUN: llc -mcpu=pwr7 -mtriple=powerpc64le-unknown-linux-gnu < %s \
 ; RUN:   -verify-machineinstrs | FileCheck -check-prefix=CHECK-PWR7 %s
@@ -7,6 +13,14 @@ define double @test_setrndi() {
 entry:
   %0 = tail call double @llvm.ppc.setrnd(i32 2)
   ret double %0
+
+; BEFORE-FINALIZE-ISEL: test_setrndi
+; BEFORE-FINALIZE-ISEL: SETRNDi 2, implicit-def dead $rm, implicit $rm
+
+; AFTER-FINALIZE-ISEL:  test_setrndi
+; AFTER-FINALIZE-ISEL:  MFFS implicit $rm
+; AFTER-FINALIZE-ISEL:  MTFSB0 31, implicit-def $rm, implicit $rm
+; AFTER-FINALIZE-ISEL:  MTFSB1 30, implicit-def $rm, implicit $rm
 
 ; CHECK-LABEL: @test_setrndi
 ; CHECK:      # %bb.0:
@@ -20,6 +34,13 @@ define double @test_setrnd(i32 signext %x) {
 entry:
   %0 = tail call double @llvm.ppc.setrnd(i32 %x)
   ret double %0
+
+; BEFORE-FINALIZE-ISEL: test_setrnd
+; BEFORE-FINALIZE-ISEL: SETRND killed %1, implicit-def dead $rm, implicit $rm
+
+; AFTER-FINALIZE-ISEL: test_setrnd
+; AFTER-FINALIZE-ISEL: MFFS implicit $rm
+; AFTER-FINALIZE-ISEL: MTFSF 255, %7, 0, 0
 
 ; CHECK-LABEL: @test_setrnd
 ; CHECK:      # %bb.0:

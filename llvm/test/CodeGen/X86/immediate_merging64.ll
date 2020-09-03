@@ -5,13 +5,13 @@
 ; 32-bit immediates are merged for code size savings.
 
 ; Immediates with multiple users should not be pulled into instructions when
-; optimizing for code size.
+; optimizing for code size (but 8-bit immediates are exceptions).
+
 define i1 @imm_multiple_users(i64 %a, i64* %b) optsize {
 ; CHECK-LABEL: imm_multiple_users:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq $-1, %rax
-; CHECK-NEXT:    movq %rax, (%rsi)
-; CHECK-NEXT:    cmpq %rax, %rdi
+; CHECK-NEXT:    movq $-1, (%rsi)
+; CHECK-NEXT:    cmpq $-1, %rdi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   store i64 -1, i64* %b, align 8
@@ -22,9 +22,8 @@ define i1 @imm_multiple_users(i64 %a, i64* %b) optsize {
 define i1 @imm_multiple_users_pgso(i64 %a, i64* %b) !prof !14 {
 ; CHECK-LABEL: imm_multiple_users_pgso:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq $-1, %rax
-; CHECK-NEXT:    movq %rax, (%rsi)
-; CHECK-NEXT:    cmpq %rax, %rdi
+; CHECK-NEXT:    movq $-1, (%rsi)
+; CHECK-NEXT:    cmpq $-1, %rdi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   store i64 -1, i64* %b, align 8

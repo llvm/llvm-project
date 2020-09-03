@@ -91,12 +91,16 @@ AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
 
 bool AMDGPUAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
                                             AAQueryInfo &AAQI, bool OrLocal) {
-  const Value *Base = GetUnderlyingObject(Loc.Ptr, DL);
-  unsigned AS = Base->getType()->getPointerAddressSpace();
+  unsigned AS = Loc.Ptr->getType()->getPointerAddressSpace();
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
-      AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
+      AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
     return true;
-  }
+
+  const Value *Base = GetUnderlyingObject(Loc.Ptr, DL);
+  AS = Base->getType()->getPointerAddressSpace();
+  if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
+      AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
+    return true;
 
   if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Base)) {
     if (GV->isConstant())

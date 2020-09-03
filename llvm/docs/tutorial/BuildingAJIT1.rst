@@ -174,7 +174,7 @@ The ConcurrentIRCompiler utility will use the JITTargetMachineBuilder to build
 llvm TargetMachines (which are not thread safe) as needed for compiles. After
 this, we initialize our supporting members: ``DL``, ``Mangler`` and ``Ctx`` with
 the input DataLayout, the ExecutionSession and DL member, and a new default
-constucted LLVMContext respectively. Now that our members have been initialized,
+constructed LLVMContext respectively. Now that our members have been initialized,
 so the one thing that remains to do is to tweak the configuration of the
 *JITDylib* that we will store our code in. We want to modify this dylib to
 contain not only the symbols that we add to it, but also the symbols from our
@@ -204,7 +204,7 @@ REPL process as well. We do this by attaching a
 
 Next we have a named constructor, ``Create``, which will build a KaleidoscopeJIT
 instance that is configured to generate code for our host process. It does this
-by first generating a JITTargetMachineBuilder instance using that clases's
+by first generating a JITTargetMachineBuilder instance using that classes'
 detectHost method and then using that instance to generate a datalayout for
 the target process. Each of these operations can fail, so each returns its
 result wrapped in an Expected value [3]_ that we must check for error before
@@ -320,4 +320,4 @@ Here is the code:
        +-----------------------------+-----------------------------------------------+
 
 .. [3] See the ErrorHandling section in the LLVM Programmer's Manual
-       (http://llvm.org/docs/ProgrammersManual.html#error-handling)
+       (https://llvm.org/docs/ProgrammersManual.html#error-handling)

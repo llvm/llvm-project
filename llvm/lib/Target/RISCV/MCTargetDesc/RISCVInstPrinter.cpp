@@ -73,7 +73,7 @@ void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     Res = uncompressInst(UncompressedMI, *MI, MRI, STI);
   if (Res)
     NewMI = const_cast<MCInst *>(&UncompressedMI);
-  if (NoAliases || !printAliasInstr(NewMI, STI, O))
+  if (NoAliases || !printAliasInstr(NewMI, Address, STI, O))
     printInstruction(NewMI, Address, STI, O);
   printAnnotation(O, Annot);
 }
@@ -148,6 +148,39 @@ void RISCVInstPrinter::printAtomicMemOp(const MCInst *MI, unsigned OpNo,
   printRegName(O, MO.getReg());
   O << ")";
   return;
+}
+
+void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
+                                   const MCSubtargetInfo &STI, raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+  unsigned Sew = (Imm >> 2) & 0x7;
+  unsigned Lmul = Imm & 0x3;
+
+  Lmul = 0x1 << Lmul;
+  Sew = 0x1 << (Sew + 3);
+  O << "e" << Sew << ",m" << Lmul;
+}
+
+void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  assert(MO.isReg() && "printVMaskReg can only print register operands");
+  if (MO.getReg() == RISCV::NoRegister)
+    return;
+  O << ", ";
+  printRegName(O, MO.getReg());
+  O << ".t";
+}
+
+void RISCVInstPrinter::printSImm5Plus1(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  assert(MO.isImm() && "printSImm5Plus1 can only print constant operands");
+  O << MO.getImm() + 1;
 }
 
 const char *RISCVInstPrinter::getRegisterName(unsigned RegNo) {

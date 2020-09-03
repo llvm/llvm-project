@@ -1,0 +1,1 @@
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %S/../llvm.amdgcn.ds.ordered.add.gfx10.ll | FileCheck -check-prefixes=GCN %S/../llvm.amdgcn.ds.ordered.add.gfx10.ll

@@ -8,5 +8,5 @@ READOBJ-NEXT: ]
 
 RUN: llvm-objdump -r %p/Inputs/dynamic-reloc.so | FileCheck --check-prefix=OBJDUMP %s
 
-OBJDUMP: file format ELF64-x86-64
+OBJDUMP: file format elf64-x86-64
 OBJDUMP-NOT: RELOCATION

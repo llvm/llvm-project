@@ -28,7 +28,7 @@ class FrameAPITestCase(TestBase):
 
         # Now create a breakpoint on main.c by name 'c'.
         breakpoint = target.BreakpointCreateByName('c', 'a.out')
-        #print("breakpoint:", breakpoint)
+        self.trace("breakpoint:", breakpoint)
         self.assertTrue(breakpoint and
                         breakpoint.GetNumLocations() == 1,
                         VALID_BREAKPOINT)
@@ -114,7 +114,7 @@ class FrameAPITestCase(TestBase):
         if self.TraceOn():
             print("Full stack traces when stopped on the breakpoint 'c':")
             print(session.getvalue())
-        self.expect(session.getvalue(), "Argugment values displayed correctly",
+        self.expect(session.getvalue(), "Argument values displayed correctly",
                     exe=False,
                     substrs=["a((int)val=1, (char)ch='A')",
                              "a((int)val=3, (char)ch='A')"])
@@ -131,7 +131,7 @@ class FrameAPITestCase(TestBase):
 
         # Now create a breakpoint on main.c by name 'c'.
         breakpoint = target.BreakpointCreateByName('c', 'a.out')
-        #print("breakpoint:", breakpoint)
+        self.trace("breakpoint:", breakpoint)
         self.assertTrue(breakpoint and
                         breakpoint.GetNumLocations() == 1,
                         VALID_BREAKPOINT)
@@ -173,7 +173,7 @@ class FrameAPITestCase(TestBase):
 
         # Now create a breakpoint on main.c by name 'c'.
         breakpoint = target.BreakpointCreateByName('c', 'a.out')
-        #print("breakpoint:", breakpoint)
+        self.trace("breakpoint:", breakpoint)
         self.assertTrue(breakpoint and
                         breakpoint.GetNumLocations() == 1,
                         VALID_BREAKPOINT)

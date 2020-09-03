@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcxxabi-no-exceptions
+// UNSUPPORTED: no-exceptions
 
 #include <cassert>
 #include <cstdlib>

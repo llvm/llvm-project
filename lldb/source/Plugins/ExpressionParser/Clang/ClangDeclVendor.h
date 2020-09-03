@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangDeclVendor_h_
-#define liblldb_ClangDeclVendor_h_
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGDECLVENDOR_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGDECLVENDOR_H
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Symbol/DeclVendor.h"
+
+namespace clang {
+class NamedDecl;
+}
 
 namespace lldb_private {
 
@@ -32,7 +35,8 @@ public:
   }
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ClangDeclVendor);
+  ClangDeclVendor(const ClangDeclVendor &) = delete;
+  const ClangDeclVendor &operator=(const ClangDeclVendor &) = delete;
 };
 } // namespace lldb_private
 

@@ -19,38 +19,6 @@ class DiagnosticOptions;
 class LangOptions;
 
 class LogDiagnosticPrinter : public DiagnosticConsumer {
-  struct DiagEntryLocation {
-    /// The source file name, if available and if different from DiagEntry's
-    /// Filename.
-    std::string Filename;
-
-    /// The source file line number, if available.
-    unsigned Line;
-
-    /// The source file column number, if available.
-    unsigned Column;
-
-    /// The source file offset, if available.
-    unsigned Offset;
-  };
-
-  struct DiagEntryRange {
-    /// The range start.
-    LogDiagnosticPrinter::DiagEntryLocation Start;
-
-    /// The range end.
-    LogDiagnosticPrinter::DiagEntryLocation End;
-  };
-
-  struct DiagEntryFixIt {
-    /// The range of existing source file to act upon.
-    LogDiagnosticPrinter::DiagEntryRange RemoveRange;
-
-    /// The code to insert at the start of the range,
-    ///   after removal of the range; may be empty for pure removal.
-    std::string CodeToInsert;
-  };
-
   struct DiagEntry {
     /// The primary message line of the diagnostic.
     std::string Message;
@@ -72,17 +40,7 @@ class LogDiagnosticPrinter : public DiagnosticConsumer {
 
     /// The level of the diagnostic.
     DiagnosticsEngine::Level DiagnosticLevel;
-
-    /// The source ranges of the diagnostic.
-    SmallVector<LogDiagnosticPrinter::DiagEntryRange, 2> SourceRanges;
-
-    /// The fix-its for the diagnostic.
-    SmallVector<LogDiagnosticPrinter::DiagEntryFixIt, 2> FixIts;
   };
-
-  void
-  EmitDiagEntryLocation(llvm::raw_ostream &OS, StringRef Indent,
-                        const LogDiagnosticPrinter::DiagEntryLocation &Del);
 
   void EmitDiagEntry(llvm::raw_ostream &OS,
                      const LogDiagnosticPrinter::DiagEntry &DE);
@@ -108,7 +66,7 @@ public:
                        std::unique_ptr<raw_ostream> StreamOwner);
 
   void setDwarfDebugFlags(StringRef Value) {
-    DwarfDebugFlags = Value;
+    DwarfDebugFlags = std::string(Value);
   }
 
   void BeginSourceFile(const LangOptions &LO, const Preprocessor *PP) override {

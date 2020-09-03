@@ -72,8 +72,8 @@ define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
 ; CHECK-NEXT: .cfi_def_cfa_offset 8
 ; CHECK-NEXT: retq
 entry:
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 1, i32 0, i32 0, i32 addrspace(1)* %a)
-  %call1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 7, i32 7)
+  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 1, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a)]
+  %call1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 0, i32 0)
   %call2 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
   ret i1 %call2
 }
@@ -97,7 +97,7 @@ define i32 @test_transition_args() gc "statepoint-example" {
 ; CHECK: retq
 entry:
   %val = alloca i32
-  %safepoint_token = call token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 0, i32 0, i32 ()* @return_i32, i32 0, i32 1, i32 2, i32* %val, i64 42, i32 0)
+  %safepoint_token = call token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 0, i32 0, i32 ()* @return_i32, i32 0, i32 1, i32 0, i32 0) ["gc-transition" (i32* %val, i64 42)]
   %call1 = call i32 @llvm.experimental.gc.result.i32(token %safepoint_token)
   ret i32 %call1
 }
@@ -111,7 +111,7 @@ define i32 @test_transition_args_2() gc "statepoint-example" {
 entry:
   %val = alloca i32
   %arg = alloca i8
-  %safepoint_token = call token (i64, i32, i32 (i32, i8*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p0i8f(i64 0, i32 0, i32 (i32, i8*)* @return_i32_with_args, i32 2, i32 1, i32 0, i8* %arg, i32 2, i32* %val, i64 42, i32 0)
+  %safepoint_token = call token (i64, i32, i32 (i32, i8*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p0i8f(i64 0, i32 0, i32 (i32, i8*)* @return_i32_with_args, i32 2, i32 1, i32 0, i8* %arg, i32 0, i32 0) ["gc-transition" (i32* %val, i64 42)]
   %call1 = call i32 @llvm.experimental.gc.result.i32(token %safepoint_token)
   ret i32 %call1
 }

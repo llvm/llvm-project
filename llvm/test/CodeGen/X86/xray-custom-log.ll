@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -filetype=asm -o - -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -filetype=asm -o - \
+; RUN: llc -verify-machineinstrs -debug-entry-values -filetype=asm -o - -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -debug-entry-values -filetype=asm -o - \
 ; RUN:     -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic < %s | FileCheck %s -check-prefix=PIC
 
 define i32 @fn() nounwind noinline uwtable "function-instrument"="xray-always" {

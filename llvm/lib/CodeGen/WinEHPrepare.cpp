@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -234,6 +235,9 @@ static const BasicBlock *getEHPadFromPredecessor(const BasicBlock *BB,
   return CleanupPad->getParent();
 }
 
+// Starting from a EHPad, Backward walk through control-flow graph
+// to produce two primary outputs:
+//      FuncInfo.EHPadStateMap[] and FuncInfo.CxxUnwindMap[]
 static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
                                      const Instruction *FirstNonPHI,
                                      int ParentState) {
@@ -260,6 +264,16 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
 
     // catchpads are separate funclets in C++ EH due to the way rethrow works.
     int TryHigh = CatchLow - 1;
+
+    // MSVC FrameHandler3/4 on x64&Arm64 expect Catch Handlers in $tryMap$
+    //  stored in pre-order (outer first, inner next), not post-order
+    //  Add to map here.  Fix the CatchHigh after children are processed
+    const Module *Mod = BB->getParent()->getParent();
+    bool IsPreOrder = Triple(Mod->getTargetTriple()).isArch64Bit();
+    if (IsPreOrder)
+      addTryBlockMapEntry(FuncInfo, TryLow, TryHigh, CatchLow, Handlers);
+    unsigned TBMEIdx = FuncInfo.TryBlockMap.size() - 1;
+
     for (const auto *CatchPad : Handlers) {
       FuncInfo.FuncletBaseStateMap[CatchPad] = CatchLow;
       for (const User *U : CatchPad->users()) {
@@ -280,7 +294,12 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
       }
     }
     int CatchHigh = FuncInfo.getLastStateNumber();
-    addTryBlockMapEntry(FuncInfo, TryLow, TryHigh, CatchHigh, Handlers);
+    // Now child Catches are processed, update CatchHigh
+    if (IsPreOrder)
+      FuncInfo.TryBlockMap[TBMEIdx].CatchHigh = CatchHigh;
+    else // PostOrder
+      addTryBlockMapEntry(FuncInfo, TryLow, TryHigh, CatchHigh, Handlers);
+
     LLVM_DEBUG(dbgs() << "TryLow[" << BB->getName() << "]: " << TryLow << '\n');
     LLVM_DEBUG(dbgs() << "TryHigh[" << BB->getName() << "]: " << TryHigh
                       << '\n');
@@ -336,6 +355,9 @@ static int addSEHFinally(WinEHFuncInfo &FuncInfo, int ParentState,
   return FuncInfo.SEHUnwindMap.size() - 1;
 }
 
+// Starting from a EHPad, Backward walk through control-flow graph
+// to produce two primary outputs:
+//      FuncInfo.EHPadStateMap[] and FuncInfo.SEHUnwindMap[]
 static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
                                      const Instruction *FirstNonPHI,
                                      int ParentState) {
@@ -942,12 +964,12 @@ void WinEHPrepare::removeImplausibleInstructions(Function &F) {
 
     for (BasicBlock *BB : BlocksInFunclet) {
       for (Instruction &I : *BB) {
-        CallSite CS(&I);
-        if (!CS)
+        auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB)
           continue;
 
         Value *FuncletBundleOperand = nullptr;
-        if (auto BU = CS.getOperandBundle(LLVMContext::OB_funclet))
+        if (auto BU = CB->getOperandBundle(LLVMContext::OB_funclet))
           FuncletBundleOperand = BU->Inputs.front();
 
         if (FuncletBundleOperand == FuncletPad)
@@ -955,13 +977,13 @@ void WinEHPrepare::removeImplausibleInstructions(Function &F) {
 
         // Skip call sites which are nounwind intrinsics or inline asm.
         auto *CalledFn =
-            dyn_cast<Function>(CS.getCalledValue()->stripPointerCasts());
-        if (CalledFn && ((CalledFn->isIntrinsic() && CS.doesNotThrow()) ||
-                         CS.isInlineAsm()))
+            dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
+        if (CalledFn && ((CalledFn->isIntrinsic() && CB->doesNotThrow()) ||
+                         CB->isInlineAsm()))
           continue;
 
         // This call site was not part of this funclet, remove it.
-        if (CS.isInvoke()) {
+        if (isa<InvokeInst>(CB)) {
           // Remove the unwind edge if it was an invoke.
           removeUnwindEdge(BB);
           // Get a pointer to the new call.
@@ -1050,10 +1072,10 @@ bool WinEHPrepare::prepareExplicitEH(Function &F) {
                                 DemoteCatchSwitchPHIOnlyOpt);
 
   if (!DisableCleanups) {
-    LLVM_DEBUG(verifyFunction(F));
+    assert(!verifyFunction(F, &dbgs()));
     removeImplausibleInstructions(F);
 
-    LLVM_DEBUG(verifyFunction(F));
+    assert(!verifyFunction(F, &dbgs()));
     cleanupPreparedFunclets(F);
   }
 

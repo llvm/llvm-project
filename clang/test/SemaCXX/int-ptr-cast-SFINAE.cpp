@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++17
 
 void foo(int* a, int *b) {
-  a -= b; // expected-warning {{incompatible integer to pointer conversion assigning to 'int *' from}}
+  a -= b; // expected-error {{incompatible integer to pointer conversion assigning to 'int *' from}}
 }
 
 template<typename T> T declval();

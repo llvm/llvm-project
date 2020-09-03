@@ -6,7 +6,7 @@
 ## Check sorting first by alignment and then by name.
 # RUN: echo "SECTIONS { .aaa : { *(SORT_BY_ALIGNMENT(SORT_BY_NAME(.aaa.*))) } }" > %t1.script
 # RUN: ld.lld -o %t1 --script %t1.script %t1.o %t2.o
-# RUN: llvm-objdump -s %t1 | FileCheck -check-prefix=SORTED_AN %s
+# RUN: llvm-objdump -s %t1 | FileCheck --check-prefix=SORTED_AN %s
 # SORTED_AN:      Contents of section .aaa:
 # SORTED_AN-NEXT:   01000000 00000000 00000000 00000000
 # SORTED_AN-NEXT:   11000000 00000000 00000000 00000000
@@ -16,7 +16,7 @@
 ## Check sorting first by name and then by alignment.
 # RUN: echo "SECTIONS { .aaa : { *(SORT_BY_NAME(SORT_BY_ALIGNMENT(.aaa.*))) } }" > %t2.script
 # RUN: ld.lld -o %t2 --script %t2.script %t1.o %t2.o
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=SORTED_NA %s
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SORTED_NA %s
 # SORTED_NA: Contents of section .aaa:
 # SORTED_NA:   01000000 00000000 00000000 00000000
 # SORTED_NA:   11000000 00000000 22000000 00000000
@@ -28,10 +28,10 @@
 ## as nested sorting command.
 # RUN: echo "SECTIONS { .aaa : { *(SORT_BY_ALIGNMENT(.aaa.*)) } }" > %t3.script
 # RUN: ld.lld --sort-section name -o %t3 --script %t3.script %t1.o %t2.o
-# RUN: llvm-objdump -s %t3 | FileCheck -check-prefix=SORTED_AN %s
+# RUN: llvm-objdump -s %t3 | FileCheck --check-prefix=SORTED_AN %s
 # RUN: echo "SECTIONS { .aaa : { *(SORT_BY_NAME(.aaa.*)) } }" > %t4.script
 # RUN: ld.lld --sort-section alignment -o %t4 --script %t4.script %t1.o %t2.o
-# RUN: llvm-objdump -s %t4 | FileCheck -check-prefix=SORTED_NA %s
+# RUN: llvm-objdump -s %t4 | FileCheck --check-prefix=SORTED_NA %s
 
 .global _start
 _start:

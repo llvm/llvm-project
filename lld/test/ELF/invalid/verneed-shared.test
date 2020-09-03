@@ -1,0 +1,81 @@
+## REQUIRES: x86
+## Test that we can parse SHT_GNU_verneed in a shared object and report certain errors.
+
+# RUN: echo '.globl _start; _start:' | llvm-mc -filetype=obj -triple=x86_64 - -o %t.o
+
+## sh_offset(SHT_GNU_verneed) is out of bounds.
+# RUN: yaml2obj --docnum=1 %s -o %t1.so
+# RUN: not ld.lld %t.o %t1.so -o /dev/null 2>&1 | FileCheck --check-prefix=SHOFFSET %s
+# SHOFFSET: error: {{.*}}.so: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x0) that is greater than the file size (0x168)
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Info:  1
+    ShOffset: 0xFFFFFFFF
+
+## A Verneed entry is misaligned (not a multiple of 4). This may happen
+## some interface shared objects. We use memcpy to read the fields, so
+## misalignment isn't a problem and there is no need to diagnose.
+# RUN: yaml2obj --docnum=2 %s -o %t2.so
+# RUN: ld.lld %t.o %t2.so -o /dev/null
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Type: Fill
+    Size: 0x1
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Info:  1
+    Link:  .dynstr
+    Dependencies:
+      - Version: 1
+        File:    foo
+        Entries:
+          - Name:  'foo'
+            Hash:  0
+            Flags: 0
+            Other: 0
+DynamicSymbols:
+  - Name: foo
+
+## vn_aux points to a place outside of the file.
+# RUN: yaml2obj --docnum=3 -D VERNEED=0100010001000000040200000000000000000000 %s -o %t3.so
+# RUN: not ld.lld %t.o %t3.so -o /dev/null 2>&1 | FileCheck --check-prefix=AUX-OOB %s
+# AUX-OOB: {{.*}}.so has an invalid Vernaux
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Info:  1
+    Link:  .dynstr
+    Content: "[[VERNEED]]"
+DynamicSymbols:
+  - Name: foo
+
+## vn_aux is misaligned.
+# RUN: yaml2obj --docnum=3 -D VERNEED=0100010001000000110000000000000000000000 %s -o %t4.so
+# RUN: not ld.lld %t.o %t4.so -o /dev/null 2>&1 | FileCheck --check-prefix=AUX-MISALIGNED %s
+# AUX-MISALIGNED: {{.*}}.so has an invalid Vernaux
+
+## vna_name is out of bounds.
+# RUN: yaml2obj --docnum=3 -D VERNEED=010001000000000010000000000000009107000000000000ff00000000000000 %s -o %t5.so
+# RUN: not ld.lld %t.o %t5.so -o /dev/null 2>&1 | FileCheck --check-prefix=NAME-OOB %s
+# NAME-OOB: {{.*}}.so has a Vernaux with an invalid vna_name

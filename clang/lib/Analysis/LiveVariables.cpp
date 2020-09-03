@@ -13,62 +13,15 @@
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/PriorityQueue.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <vector>
 
 using namespace clang;
-
-namespace {
-
-class DataflowWorklist {
-  llvm::BitVector enqueuedBlocks;
-  PostOrderCFGView *POV;
-  llvm::PriorityQueue<const CFGBlock *, SmallVector<const CFGBlock *, 20>,
-                      PostOrderCFGView::BlockOrderCompare> worklist;
-
-public:
-  DataflowWorklist(const CFG &cfg, AnalysisDeclContext &Ctx)
-    : enqueuedBlocks(cfg.getNumBlockIDs()),
-      POV(Ctx.getAnalysis<PostOrderCFGView>()),
-      worklist(POV->getComparator()) {}
-
-  void enqueueBlock(const CFGBlock *block);
-  void enqueuePredecessors(const CFGBlock *block);
-
-  const CFGBlock *dequeue();
-};
-
-}
-
-void DataflowWorklist::enqueueBlock(const clang::CFGBlock *block) {
-  if (block && !enqueuedBlocks[block->getBlockID()]) {
-    enqueuedBlocks[block->getBlockID()] = true;
-    worklist.push(block);
-  }
-}
-
-void DataflowWorklist::enqueuePredecessors(const clang::CFGBlock *block) {
-  for (CFGBlock::const_pred_iterator I = block->pred_begin(),
-       E = block->pred_end(); I != E; ++I) {
-    enqueueBlock(*I);
-  }
-}
-
-const CFGBlock *DataflowWorklist::dequeue() {
-  if (worklist.empty())
-    return nullptr;
-  const CFGBlock *b = worklist.top();
-  worklist.pop();
-  enqueuedBlocks[b->getBlockID()] = false;
-  return b;
-}
 
 namespace {
 class LiveVariablesImpl {
@@ -136,7 +89,7 @@ namespace {
     }
     return A;
   }
-}
+} // namespace
 
 void LiveVariables::Observer::anchor() { }
 
@@ -218,7 +171,7 @@ public:
   void VisitUnaryOperator(UnaryOperator *UO);
   void Visit(Stmt *S);
 };
-}
+} // namespace
 
 static const VariableArrayType *FindVA(QualType Ty) {
   const Type *ty = Ty.getTypePtr();
@@ -537,9 +490,8 @@ LiveVariables::~LiveVariables() {
   delete (LiveVariablesImpl*) impl;
 }
 
-LiveVariables *
-LiveVariables::computeLiveness(AnalysisDeclContext &AC,
-                                 bool killAtAssign) {
+std::unique_ptr<LiveVariables>
+LiveVariables::computeLiveness(AnalysisDeclContext &AC, bool killAtAssign) {
 
   // No CFG?  Bail out.
   CFG *cfg = AC.getCFG();
@@ -555,7 +507,7 @@ LiveVariables::computeLiveness(AnalysisDeclContext &AC,
 
   // Construct the dataflow worklist.  Enqueue the exit block as the
   // start of the analysis.
-  DataflowWorklist worklist(*cfg, AC);
+  BackwardDataflowWorklist worklist(*cfg, AC);
   llvm::BitVector everAnalyzedBlock(cfg->getNumBlockIDs());
 
   // FIXME: we should enqueue using post order.
@@ -612,7 +564,7 @@ LiveVariables::computeLiveness(AnalysisDeclContext &AC,
     worklist.enqueuePredecessors(block);
   }
 
-  return new LiveVariables(LV);
+  return std::unique_ptr<LiveVariables>(new LiveVariables(LV));
 }
 
 void LiveVariables::dumpBlockLiveness(const SourceManager &M) {

@@ -38,7 +38,7 @@ define i32 @bar(i32 %i) local_unnamed_addr {
 ; X86_64-NEXT:    .cfi_offset %rbp, -16
 ; X86_64-NEXT:    movq _buf@{{.*}}(%rip), %rax
 ; X86_64-NEXT:    movq (%rax), %rax
-; X86_64-NEXT:    xorq %rdx, %rdx
+; X86_64-NEXT:    xorl %edx, %edx
 ; X86_64-NEXT:    rdsspq %rdx
 ; X86_64-NEXT:    testq %rdx, %rdx
 ; X86_64-NEXT:    je LBB0_5

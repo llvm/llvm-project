@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CommandReturnObject_h_
-#define liblldb_CommandReturnObject_h_
+#ifndef LLDB_INTERPRETER_COMMANDRETURNOBJECT_H
+#define LLDB_INTERPRETER_COMMANDRETURNOBJECT_H
 
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Utility/StreamString.h"
@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/WithColor.h"
 
 #include <memory>
 
@@ -23,21 +24,21 @@ namespace lldb_private {
 
 class CommandReturnObject {
 public:
-  CommandReturnObject();
+  CommandReturnObject(bool colors);
 
   ~CommandReturnObject();
 
   llvm::StringRef GetOutputData() {
     lldb::StreamSP stream_sp(m_out_stream.GetStreamAtIndex(eStreamStringIndex));
     if (stream_sp)
-      return static_pointer_cast<StreamString>(stream_sp)->GetString();
+      return std::static_pointer_cast<StreamString>(stream_sp)->GetString();
     return llvm::StringRef();
   }
 
   llvm::StringRef GetErrorData() {
     lldb::StreamSP stream_sp(m_err_stream.GetStreamAtIndex(eStreamStringIndex));
     if (stream_sp)
-      return static_pointer_cast<StreamString>(stream_sp)->GetString();
+      return std::static_pointer_cast<StreamString>(stream_sp)->GetString();
     return llvm::StringRef();
   }
 
@@ -45,7 +46,7 @@ public:
     // Make sure we at least have our normal string stream output stream
     lldb::StreamSP stream_sp(m_out_stream.GetStreamAtIndex(eStreamStringIndex));
     if (!stream_sp) {
-      stream_sp.reset(new StreamString());
+      stream_sp = std::make_shared<StreamString>();
       m_out_stream.SetStreamAtIndex(eStreamStringIndex, stream_sp);
     }
     return m_out_stream;
@@ -55,7 +56,7 @@ public:
     // Make sure we at least have our normal string stream output stream
     lldb::StreamSP stream_sp(m_err_stream.GetStreamAtIndex(eStreamStringIndex));
     if (!stream_sp) {
-      stream_sp.reset(new StreamString());
+      stream_sp = std::make_shared<StreamString>();
       m_err_stream.SetStreamAtIndex(eStreamStringIndex, stream_sp);
     }
     return m_err_stream;
@@ -157,4 +158,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_CommandReturnObject_h_
+#endif // LLDB_INTERPRETER_COMMANDRETURNOBJECT_H

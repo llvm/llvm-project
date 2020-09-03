@@ -39,7 +39,8 @@ void ananas::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(II.getFilename());
 
   const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs));
 }
 
 void ananas::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -103,7 +104,7 @@ void ananas::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
-    AddGoldPlugin(ToolChain, Args, CmdArgs, Output, Inputs[0],
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs[0],
                   D.getLTOMode() == LTOK_Thin);
   }
 
@@ -123,7 +124,8 @@ void ananas::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs));
 }
 
 // Ananas - Ananas tool chain which can call as(1) and ld(1) directly.

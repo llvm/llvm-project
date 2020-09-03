@@ -806,3 +806,31 @@ void LiveVariables::addNewBlock(MachineBasicBlock *BB,
       VI.AliveBlocks.set(NumNew);
   }
 }
+
+/// addNewBlock - Add a new basic block BB as an empty succcessor to DomBB. All
+/// variables that are live out of DomBB will be marked as passing live through
+/// BB. LiveInSets[BB] is *not* updated (because it is not needed during
+/// PHIElimination).
+void LiveVariables::addNewBlock(MachineBasicBlock *BB,
+                                MachineBasicBlock *DomBB,
+                                MachineBasicBlock *SuccBB,
+                                std::vector<SparseBitVector<>> &LiveInSets) {
+  const unsigned NumNew = BB->getNumber();
+
+  SparseBitVector<> &BV = LiveInSets[SuccBB->getNumber()];
+  for (auto R = BV.begin(), E = BV.end(); R != E; R++) {
+    unsigned VirtReg = Register::index2VirtReg(*R);
+    LiveVariables::VarInfo &VI = getVarInfo(VirtReg);
+    VI.AliveBlocks.set(NumNew);
+  }
+  // All registers used by PHI nodes in SuccBB must be live through BB.
+  for (MachineBasicBlock::iterator BBI = SuccBB->begin(),
+         BBE = SuccBB->end();
+       BBI != BBE && BBI->isPHI(); ++BBI) {
+    for (unsigned i = 1, e = BBI->getNumOperands(); i != e; i += 2)
+      if (BBI->getOperand(i + 1).getMBB() == BB &&
+          BBI->getOperand(i).readsReg())
+        getVarInfo(BBI->getOperand(i).getReg())
+          .AliveBlocks.set(NumNew);
+  }
+}

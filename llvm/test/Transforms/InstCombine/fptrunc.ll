@@ -136,3 +136,57 @@ define float @fptrunc_select_true_val_type_mismatch_fast(half %x, double %y, i1 
   %r = fptrunc double %sel to float
   ret float %r
 }
+
+; Convert from integer is exact, so convert directly to float.
+
+define <2 x float> @ItoFtoF_s54_f64_f32(<2 x i54> %i) {
+; CHECK-LABEL: @ItoFtoF_s54_f64_f32(
+; CHECK-NEXT:    [[R:%.*]] = sitofp <2 x i54> [[I:%.*]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %x = sitofp <2 x i54> %i to <2 x double>
+  %r = fptrunc <2 x double> %x to <2 x float>
+  ret <2 x float> %r
+}
+
+; Convert from integer is exact, so convert directly to half.
+; Extra use is ok.
+
+define half @ItoFtoF_u24_f32_f16(i24 %i) {
+; CHECK-LABEL: @ItoFtoF_u24_f32_f16(
+; CHECK-NEXT:    [[X:%.*]] = uitofp i24 [[I:%.*]] to float
+; CHECK-NEXT:    call void @use(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = uitofp i24 [[I]] to half
+; CHECK-NEXT:    ret half [[R]]
+;
+  %x = uitofp i24 %i to float
+  call void @use(float %x)
+  %r = fptrunc float %x to half
+  ret half %r
+}
+
+; Negative test - intermediate rounding in float type.
+
+define float @ItoFtoF_s55_f64_f32(i55 %i) {
+; CHECK-LABEL: @ItoFtoF_s55_f64_f32(
+; CHECK-NEXT:    [[X:%.*]] = sitofp i55 [[I:%.*]] to double
+; CHECK-NEXT:    [[R:%.*]] = fptrunc double [[X]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %x = sitofp i55 %i to double
+  %r = fptrunc double %x to float
+  ret float %r
+}
+
+; Negative test - intermediate rounding in float type.
+
+define half @ItoFtoF_u25_f32_f16(i25 %i) {
+; CHECK-LABEL: @ItoFtoF_u25_f32_f16(
+; CHECK-NEXT:    [[X:%.*]] = uitofp i25 [[I:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fptrunc float [[X]] to half
+; CHECK-NEXT:    ret half [[R]]
+;
+  %x = uitofp i25 %i to float
+  %r = fptrunc float %x to half
+  ret half %r
+}

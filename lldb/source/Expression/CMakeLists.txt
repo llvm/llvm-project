@@ -2,6 +2,11 @@ if(NOT LLDB_BUILT_STANDALONE)
   set(tablegen_deps intrinsics_gen)
 endif()
 
+set(SWIFT_LIBS lldbPluginExpressionParserSwift)
+if(NOT LLDB_ENABLE_SWIFT_SUPPORT)
+  unset(SWIFT_LIBS)
+endif()
+
 add_lldb_library(lldbExpression
   DiagnosticManager.cpp
   DWARFExpression.cpp
@@ -31,7 +36,7 @@ add_lldb_library(lldbExpression
     lldbPluginObjectFileJIT
 
     # Begin Swift Mods
-    lldbPluginExpressionParserSwift
+    ${SWIFT_LIBS}
     # End Swift Mods
 
   LINK_COMPONENTS

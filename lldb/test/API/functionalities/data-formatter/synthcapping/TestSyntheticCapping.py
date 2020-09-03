@@ -63,18 +63,23 @@ class SyntheticCappingTestCase(TestBase):
 
         # check that the synthetic children work, so we know we are doing the
         # right thing
-        self.expect("frame variable f00_1",
-                    substrs=['r = 34',
-                             'fake_a = %d' % fake_a_val,
-                             'a = 1'])
+        self.expect(
+            "frame variable f00_1",
+            substrs=[
+                'a = 1',
+                'fake_a = %d' % fake_a_val,
+                'r = 34',
+            ])
 
         # check that capping works
         self.runCmd("settings set target.max-children-count 2", check=False)
 
         self.expect("frame variable f00_1",
-                    substrs=['...',
-                             'fake_a = %d' % fake_a_val,
-                             'a = 1'])
+                    substrs=[
+                        'a = 1',
+                        'fake_a = %d' % fake_a_val,
+                        '...',
+                    ])
 
         self.expect("frame variable f00_1", matching=False,
                     substrs=['r = 34'])

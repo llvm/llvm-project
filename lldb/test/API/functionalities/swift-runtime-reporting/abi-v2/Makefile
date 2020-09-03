@@ -1,3 +1,4 @@
+
 DYLIB_NAME := swiftCore
 DYLIB_CXX_SOURCES := library.cpp
 

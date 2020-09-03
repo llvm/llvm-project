@@ -17,10 +17,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Instruction.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include <cassert>
 #include <cstdint>
@@ -33,6 +32,7 @@ class AssumptionCache;
 class DominatorTree;
 class GEPOperator;
 class IntrinsicInst;
+class LoadInst;
 class WithOverflowInst;
 struct KnownBits;
 class Loop;
@@ -59,9 +59,34 @@ class Value;
                         OptimizationRemarkEmitter *ORE = nullptr,
                         bool UseInstrInfo = true);
 
+  /// Determine which bits of V are known to be either zero or one and return
+  /// them in the KnownZero/KnownOne bit sets.
+  ///
+  /// This function is defined on values with integer type, values with pointer
+  /// type, and vectors of integers.  In the case
+  /// where V is a vector, the known zero and known one values are the
+  /// same width as the vector element, and the bit is set only if it is true
+  /// for all of the demanded elements in the vector.
+  void computeKnownBits(const Value *V, const APInt &DemandedElts,
+                        KnownBits &Known, const DataLayout &DL,
+                        unsigned Depth = 0, AssumptionCache *AC = nullptr,
+                        const Instruction *CxtI = nullptr,
+                        const DominatorTree *DT = nullptr,
+                        OptimizationRemarkEmitter *ORE = nullptr,
+                        bool UseInstrInfo = true);
+
   /// Returns the known bits rather than passing by reference.
   KnownBits computeKnownBits(const Value *V, const DataLayout &DL,
                              unsigned Depth = 0, AssumptionCache *AC = nullptr,
+                             const Instruction *CxtI = nullptr,
+                             const DominatorTree *DT = nullptr,
+                             OptimizationRemarkEmitter *ORE = nullptr,
+                             bool UseInstrInfo = true);
+
+  /// Returns the known bits rather than passing by reference.
+  KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
+                             const DataLayout &DL, unsigned Depth = 0,
+                             AssumptionCache *AC = nullptr,
                              const Instruction *CxtI = nullptr,
                              const DominatorTree *DT = nullptr,
                              OptimizationRemarkEmitter *ORE = nullptr,
@@ -185,7 +210,7 @@ class Value;
 
   /// Map a call instruction to an intrinsic ID.  Libcalls which have equivalent
   /// intrinsics are treated as-if they were intrinsics.
-  Intrinsic::ID getIntrinsicForCallSite(ImmutableCallSite ICS,
+  Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
                                         const TargetLibraryInfo *TLI);
 
   /// Return true if we can prove that the specified FP value is never equal to
@@ -506,7 +531,10 @@ class Value;
 
   /// Determine the possible constant range of an integer or vector of integer
   /// value. This is intended as a cheap, non-recursive check.
-  ConstantRange computeConstantRange(const Value *V, bool UseInstrInfo = true);
+  ConstantRange computeConstantRange(const Value *V, bool UseInstrInfo = true,
+                                     AssumptionCache *AC = nullptr,
+                                     const Instruction *CtxI = nullptr,
+                                     unsigned Depth = 0);
 
   /// Return true if this function can prove that the instruction I will
   /// always transfer execution to one of its successors (including the next
@@ -537,39 +565,51 @@ class Value;
   bool isGuaranteedToExecuteForEveryIteration(const Instruction *I,
                                               const Loop *L);
 
-  /// Return true if this function can prove that I is guaranteed to yield
-  /// full-poison (all bits poison) if at least one of its operands are
-  /// full-poison (all bits poison).
-  ///
-  /// The exact rules for how poison propagates through instructions have
-  /// not been settled as of 2015-07-10, so this function is conservative
-  /// and only considers poison to be propagated in uncontroversial
-  /// cases. There is no attempt to track values that may be only partially
+  /// Return true if I yields poison or raises UB if any of its operands is
   /// poison.
-  bool propagatesFullPoison(const Instruction *I);
+  /// Formally, given I = `r = op v1 v2 .. vN`, propagatesPoison returns true
+  /// if, for all i, r is evaluated to poison or op raises UB if vi = poison.
+  /// To filter out operands that raise UB on poison, you can use
+  /// getGuaranteedNonPoisonOp.
+  bool propagatesPoison(const Instruction *I);
 
   /// Return either nullptr or an operand of I such that I will trigger
-  /// undefined behavior if I is executed and that operand has a full-poison
-  /// value (all bits poison).
-  const Value *getGuaranteedNonFullPoisonOp(const Instruction *I);
+  /// undefined behavior if I is executed and that operand has a poison
+  /// value.
+  const Value *getGuaranteedNonPoisonOp(const Instruction *I);
 
   /// Return true if the given instruction must trigger undefined behavior.
   /// when I is executed with any operands which appear in KnownPoison holding
-  /// a full-poison value at the point of execution.
+  /// a poison value at the point of execution.
   bool mustTriggerUB(const Instruction *I,
                      const SmallSet<const Value *, 16>& KnownPoison);
 
   /// Return true if this function can prove that if PoisonI is executed
-  /// and yields a full-poison value (all bits poison), then that will
-  /// trigger undefined behavior.
+  /// and yields a poison value, then that will trigger undefined behavior.
   ///
   /// Note that this currently only considers the basic block that is
   /// the parent of I.
-  bool programUndefinedIfFullPoison(const Instruction *PoisonI);
+  bool programUndefinedIfPoison(const Instruction *PoisonI);
+
+  /// Return true if I can create poison from non-poison operands.
+  /// For vectors, canCreatePoison returns true if there is potential poison in
+  /// any element of the result when vectors without poison are given as
+  /// operands.
+  /// For example, given `I = shl <2 x i32> %x, <0, 32>`, this function returns
+  /// true. If I raises immediate UB but never creates poison (e.g. sdiv I, 0),
+  /// canCreatePoison returns false.
+  bool canCreatePoison(const Instruction *I);
 
   /// Return true if this function can prove that V is never undef value
   /// or poison value.
-  bool isGuaranteedNotToBeUndefOrPoison(const Value *V);
+  //
+  /// If CtxI and DT are specified this method performs flow-sensitive analysis
+  /// and returns true if it is guaranteed to be never undef or poison
+  /// immediately before the CtxI.
+  bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
+                                        const Instruction *CtxI = nullptr,
+                                        const DominatorTree *DT = nullptr,
+                                        unsigned Depth = 0);
 
   /// Specific patterns of select instructions we can match.
   enum SelectPatternFlavor {

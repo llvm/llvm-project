@@ -2339,6 +2339,16 @@ class LDI_H_DESC : MSA_I10_LDI_DESC_BASE<"ldi.h", MSA128HOpnd>;
 class LDI_W_DESC : MSA_I10_LDI_DESC_BASE<"ldi.w", MSA128WOpnd>;
 class LDI_D_DESC : MSA_I10_LDI_DESC_BASE<"ldi.d", MSA128DOpnd>;
 
+class MSA_LOAD_PSEUDO_BASE<SDPatternOperator intrinsic, RegisterOperand RO> :
+  PseudoSE<(outs RO:$dst), (ins PtrRC:$ptr, GPR32:$imm),
+           [(set RO:$dst, (intrinsic iPTR:$ptr, GPR32:$imm))]> {
+  let hasNoSchedulingInfo = 1;
+  let usesCustomInserter = 1;
+}
+
+def LDR_D : MSA_LOAD_PSEUDO_BASE<int_mips_ldr_d, MSA128DOpnd>;
+def LDR_W : MSA_LOAD_PSEUDO_BASE<int_mips_ldr_w, MSA128WOpnd>;
+
 class LSA_DESC_BASE<string instr_asm, RegisterOperand RORD,
                     InstrItinClass itin = NoItinerary> {
   dag OutOperandList = (outs RORD:$rd);
@@ -2670,6 +2680,16 @@ class ST_W_DESC : ST_DESC_BASE<"st.w", store, v4i32, MSA128WOpnd,
                                mem_simm10_lsl2, addrimm10lsl2>;
 class ST_D_DESC : ST_DESC_BASE<"st.d", store, v2i64, MSA128DOpnd,
                                mem_simm10_lsl3, addrimm10lsl3>;
+
+class MSA_STORE_PSEUDO_BASE<SDPatternOperator intrinsic, RegisterOperand RO> :
+  PseudoSE<(outs), (ins RO:$dst, PtrRC:$ptr, GPR32:$imm),
+           [(intrinsic RO:$dst, iPTR:$ptr, GPR32:$imm)]> {
+  let hasNoSchedulingInfo = 1;
+  let usesCustomInserter = 1;
+}
+
+def STR_D : MSA_STORE_PSEUDO_BASE<int_mips_str_d, MSA128DOpnd>;
+def STR_W : MSA_STORE_PSEUDO_BASE<int_mips_str_w, MSA128WOpnd>;
 
 class SUBS_S_B_DESC : MSA_3R_DESC_BASE<"subs_s.b", int_mips_subs_s_b,
                                        MSA128BOpnd>;

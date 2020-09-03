@@ -1,4 +1,4 @@
-//===-- SymbolFileDWARFTests.cpp --------------------------------*- C++ -*-===//
+//===-- SymbolFileDWARFTests.cpp ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,6 +18,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFAbbreviationDeclaration.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDataExtractor.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugAbbrev.h"
+#include "Plugins/SymbolFile/DWARF/DWARFDebugArangeSet.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -309,4 +310,39 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevMissingTerminator) {
   EXPECT_TRUE(bool(error));
   EXPECT_EQ("abbreviation declaration attribute list not terminated with a "
             "null entry", llvm::toString(std::move(error)));
+}
+
+TEST_F(SymbolFileDWARFTests, ParseArangesNonzeroSegmentSize) {
+  // This `.debug_aranges` table header is a valid 32bit big-endian section
+  // according to the DWARFv5 spec:6.2.1, but contains segment selectors which
+  // are not supported by lldb, and should be gracefully rejected
+  const unsigned char binary_data[] = {
+      0, 0, 0, 41, // unit_length (length field not including this field itself)
+      0, 2,        // DWARF version number (half)
+      0, 0, 0, 0, // offset into the .debug_info_table (ignored for the purposes
+                  // of this test
+      4,          // address size
+      1,          // segment size
+      // alignment for the first tuple which "begins at an offset that is a
+      // multiple of the size of a single tuple". Tuples are nine bytes in this
+      // example.
+      0, 0, 0, 0, 0, 0,
+      // BEGIN TUPLES
+      1, 0, 0, 0, 4, 0, 0, 0,
+      1, // a 1byte object starting at address 4 in segment 1
+      0, 0, 0, 0, 4, 0, 0, 0,
+      1, // a 1byte object starting at address 4 in segment 0
+      // END TUPLES
+      0, 0, 0, 0, 0, 0, 0, 0, 0 // terminator
+  };
+  DWARFDataExtractor data;
+  data.SetData(static_cast<const void *>(binary_data), sizeof binary_data,
+               lldb::ByteOrder::eByteOrderBig);
+  DWARFDebugArangeSet debug_aranges;
+  offset_t off = 0;
+  llvm::Error error = debug_aranges.extract(data, &off);
+  EXPECT_TRUE(bool(error));
+  EXPECT_EQ("segmented arange entries are not supported",
+            llvm::toString(std::move(error)));
+  EXPECT_EQ(off, 12U); // Parser should read no further than the segment size
 }

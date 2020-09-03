@@ -37,8 +37,10 @@ macro(setup_abi_lib abidefines abishared abistatic abifiles abidirs)
   foreach(fpath ${LIBCXX_ABILIB_FILES})
     set(found FALSE)
     foreach(incpath ${LIBCXX_CXX_ABI_INCLUDE_PATHS})
+      message(STATUS "Looking for ${fpath} in ${incpath}")
       if (EXISTS "${incpath}/${fpath}")
         set(found TRUE)
+        message(STATUS "Looking for ${fpath} in ${incpath} - found")
         get_filename_component(dstdir ${fpath} PATH)
         get_filename_component(ifile ${fpath} NAME)
         set(src ${incpath}/${fpath})
@@ -50,7 +52,7 @@ macro(setup_abi_lib abidefines abishared abistatic abifiles abidirs)
             COMMENT "Copying C++ ABI header ${fpath}...")
         list(APPEND abilib_headers "${dst}")
 
-        if (NOT LIBCXX_USING_INSTALLED_LLVM AND LIBCXX_HEADER_DIR)
+        if (LIBCXX_HEADER_DIR)
           set(dst "${LIBCXX_HEADER_DIR}/include/c++/v1/${dstdir}/${fpath}")
           add_custom_command(OUTPUT ${dst}
               DEPENDS ${src}
@@ -66,10 +68,12 @@ macro(setup_abi_lib abidefines abishared abistatic abifiles abidirs)
             PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
             )
         endif()
+      else()
+        message(STATUS "Looking for ${fpath} in ${incpath} - not found")
       endif()
     endforeach()
     if (NOT found)
-      message(WARNING "Failed to find ${fpath}")
+      message(WARNING "Failed to find ${fpath} in ${LIBCXX_CXX_ABI_INCLUDE_PATHS}")
     endif()
   endforeach()
 
@@ -98,34 +102,35 @@ if ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libstdc++" OR
     "${_LIBSUPCXX_LIBNAME}" "${_LIBSUPCXX_LIBNAME}" "${_LIBSUPCXX_INCLUDE_FILES}" "bits"
     )
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxabi")
-  if (LIBCXX_CXX_ABI_INTREE)
-    # Link against just-built "cxxabi" target.
-    set(CXXABI_SHARED_LIBNAME cxxabi_shared)
-    set(CXXABI_STATIC_LIBNAME cxxabi_static)
-  else()
-    # Assume c++abi is installed in the system, rely on -lc++abi link flag.
-    set(CXXABI_SHARED_LIBNAME "c++abi")
-    set(CXXABI_STATIC_LIBNAME "c++abi")
+  if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
+    set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_SOURCE_DIR}/../libcxxabi/include")
   endif()
-  if (LIBCXX_CXX_ABI_SYSTEM)
-    set(HEADERS "")
+
+  if(LIBCXX_STANDALONE_BUILD AND NOT (LIBCXX_CXX_ABI_INTREE OR HAVE_LIBCXXABI))
+    set(shared c++abi)
+    set(static c++abi)
   else()
-    set(HEADERS "cxxabi.h;__cxxabi_config.h")
+    set(shared cxxabi_shared)
+    set(static cxxabi_static)
   endif()
+
   setup_abi_lib(
     "-DLIBCXX_BUILDING_LIBCXXABI"
-    "${CXXABI_SHARED_LIBNAME}" "${CXXABI_STATIC_LIBNAME}" "${HEADERS}" "")
+    "${shared}" "${static}" "cxxabi.h;__cxxabi_config.h" "")
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxrt")
+  if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
+    set(LIBCXX_CXX_ABI_INCLUDE_PATHS "/usr/include/c++/v1")
+  endif()
   setup_abi_lib(
     "-DLIBCXXRT"
     "cxxrt" "cxxrt" "cxxabi.h;unwind.h;unwind-arm.h;unwind-itanium.h" ""
     )
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "vcruntime")
- # Nothing TODO
+ # Nothing to do
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "none")
   list(APPEND LIBCXX_COMPILE_FLAGS "-D_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY")
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "default")
-  # Nothing TODO
+  # Nothing to do
 else()
   message(FATAL_ERROR
     "Unsupported c++ abi: '${LIBCXX_CXX_ABI_LIBNAME}'. \

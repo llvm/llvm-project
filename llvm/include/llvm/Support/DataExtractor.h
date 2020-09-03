@@ -105,19 +105,32 @@ public:
   /// updated with the offset of the byte that follows the NULL
   /// terminator byte.
   ///
-  /// @param[in,out] offset_ptr
+  /// @param[in,out] OffsetPtr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
+  /// @param[in,out] Err
+  ///     A pointer to an Error object. Upon return the Error object is set to
+  ///     indicate the result (success/failure) of the function. If the Error
+  ///     object is already set when calling this function, no extraction is
+  ///     performed.
+  ///
   /// @return
   ///     A pointer to the C string value in the data. If the offset
   ///     pointed to by \a offset_ptr is out of bounds, or if the
   ///     offset plus the length of the C string is out of bounds,
   ///     NULL will be returned.
-  const char *getCStr(uint64_t *offset_ptr) const;
+  const char *getCStr(uint64_t *OffsetPtr, Error *Err = nullptr) const {
+    return getCStrRef(OffsetPtr, Err).data();
+  }
+
+  /// Extract a C string from the location given by the cursor. In case of an
+  /// extraction error, or if the cursor is already in an error state, a
+  /// nullptr is returned.
+  const char *getCStr(Cursor &C) const { return getCStrRef(C).data(); }
 
   /// Extract a C string from \a *offset_ptr.
   ///
@@ -127,19 +140,102 @@ public:
   /// updated with the offset of the byte that follows the NULL
   /// terminator byte.
   ///
-  /// \param[in,out] offset_ptr
+  /// \param[in,out] OffsetPtr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
+  /// @param[in,out] Err
+  ///     A pointer to an Error object. Upon return the Error object is set to
+  ///     indicate the result (success/failure) of the function. If the Error
+  ///     object is already set when calling this function, no extraction is
+  ///     performed.
+  ///
   /// \return
   ///     A StringRef for the C string value in the data. If the offset
   ///     pointed to by \a offset_ptr is out of bounds, or if the
   ///     offset plus the length of the C string is out of bounds,
   ///     a default-initialized StringRef will be returned.
-  StringRef getCStrRef(uint64_t *offset_ptr) const;
+  StringRef getCStrRef(uint64_t *OffsetPtr, Error *Err = nullptr) const;
+
+  /// Extract a C string (as a StringRef) from the location given by the cursor.
+  /// In case of an extraction error, or if the cursor is already in an error
+  /// state, a default-initialized StringRef is returned.
+  StringRef getCStrRef(Cursor &C) const {
+    return getCStrRef(&C.Offset, &C.Err);
+  }
+
+  /// Extract a fixed length string from \a *OffsetPtr and consume \a Length
+  /// bytes.
+  ///
+  /// Returns a StringRef for the string from the data at the offset
+  /// pointed to by \a OffsetPtr. A fixed length C string will be extracted
+  /// and the \a OffsetPtr will be advanced by \a Length bytes.
+  ///
+  /// \param[in,out] OffsetPtr
+  ///     A pointer to an offset within the data that will be advanced
+  ///     by the appropriate number of bytes if the value is extracted
+  ///     correctly. If the offset is out of bounds or there are not
+  ///     enough bytes to extract this value, the offset will be left
+  ///     unmodified.
+  ///
+  /// \param[in] Length
+  ///     The length of the fixed length string to extract. If there are not
+  ///     enough bytes in the data to extract the full string, the offset will
+  ///     be left unmodified.
+  ///
+  /// \param[in] TrimChars
+  ///     A set of characters to trim from the end of the string. Fixed length
+  ///     strings are commonly either NULL terminated by one or more zero
+  ///     bytes. Some clients have one or more spaces at the end of the string,
+  ///     but a good default is to trim the NULL characters.
+  ///
+  /// \return
+  ///     A StringRef for the C string value in the data. If the offset
+  ///     pointed to by \a OffsetPtr is out of bounds, or if the
+  ///     offset plus the length of the C string is out of bounds,
+  ///     a default-initialized StringRef will be returned.
+  StringRef getFixedLengthString(uint64_t *OffsetPtr,
+      uint64_t Length, StringRef TrimChars = {"\0", 1}) const;
+
+  /// Extract a fixed number of bytes from the specified offset.
+  ///
+  /// Returns a StringRef for the bytes from the data at the offset
+  /// pointed to by \a OffsetPtr. A fixed length C string will be extracted
+  /// and the \a OffsetPtr will be advanced by \a Length bytes.
+  ///
+  /// \param[in,out] OffsetPtr
+  ///     A pointer to an offset within the data that will be advanced
+  ///     by the appropriate number of bytes if the value is extracted
+  ///     correctly. If the offset is out of bounds or there are not
+  ///     enough bytes to extract this value, the offset will be left
+  ///     unmodified.
+  ///
+  /// \param[in] Length
+  ///     The number of bytes to extract. If there are not enough bytes in the
+  ///     data to extract all of the bytes, the offset will be left unmodified.
+  ///
+  /// @param[in,out] Err
+  ///     A pointer to an Error object. Upon return the Error object is set to
+  ///     indicate the result (success/failure) of the function. If the Error
+  ///     object is already set when calling this function, no extraction is
+  ///     performed.
+  ///
+  /// \return
+  ///     A StringRef for the extracted bytes. If the offset pointed to by
+  ///     \a OffsetPtr is out of bounds, or if the offset plus the length
+  ///     is out of bounds, a default-initialized StringRef will be returned.
+  StringRef getBytes(uint64_t *OffsetPtr, uint64_t Length,
+                     Error *Err = nullptr) const;
+
+  /// Extract a fixed number of bytes from the location given by the cursor. In
+  /// case of an extraction error, or if the cursor is already in an error
+  /// state, a default-initialized StringRef is returned.
+  StringRef getBytes(Cursor &C, uint64_t Length) {
+    return getBytes(&C.Offset, Length, &C.Err);
+  }
 
   /// Extract an unsigned integer of size \a byte_size from \a
   /// *offset_ptr.
@@ -365,15 +461,26 @@ public:
   /// \a offset_ptr, construct a uint32_t from them and update the offset
   /// on success.
   ///
-  /// @param[in,out] offset_ptr
+  /// @param[in,out] OffsetPtr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the 3 bytes if the value is extracted correctly. If the offset
   ///     is out of bounds or there are not enough bytes to extract this value,
   ///     the offset will be left unmodified.
   ///
+  /// @param[in,out] Err
+  ///     A pointer to an Error object. Upon return the Error object is set to
+  ///     indicate the result (success/failure) of the function. If the Error
+  ///     object is already set when calling this function, no extraction is
+  ///     performed.
+  ///
   /// @return
   ///     The extracted 24-bit value represented in a uint32_t.
-  uint32_t getU24(uint64_t *offset_ptr) const;
+  uint32_t getU24(uint64_t *OffsetPtr, Error *Err = nullptr) const;
+
+  /// Extract a single 24-bit unsigned value from the location given by the
+  /// cursor. In case of an extraction error, or if the cursor is already in an
+  /// error state, zero is returned.
+  uint32_t getU24(Cursor &C) const { return getU24(&C.Offset, &C.Err); }
 
   /// Extract a uint32_t value from \a *offset_ptr.
   ///
@@ -486,16 +593,27 @@ public:
   /// pointed to by \a offset_ptr will be updated with the offset of
   /// the byte following the last extracted byte.
   ///
-  /// @param[in,out] offset_ptr
+  /// @param[in,out] OffsetPtr
   ///     A pointer to an offset within the data that will be advanced
   ///     by the appropriate number of bytes if the value is extracted
   ///     correctly. If the offset is out of bounds or there are not
   ///     enough bytes to extract this value, the offset will be left
   ///     unmodified.
   ///
+  /// @param[in,out] Err
+  ///     A pointer to an Error object. Upon return the Error object is set to
+  ///     indicate the result (success/failure) of the function. If the Error
+  ///     object is already set when calling this function, no extraction is
+  ///     performed.
+  ///
   /// @return
   ///     The extracted signed integer value.
-  int64_t getSLEB128(uint64_t *offset_ptr) const;
+  int64_t getSLEB128(uint64_t *OffsetPtr, Error *Err = nullptr) const;
+
+  /// Extract an signed LEB128 value from the location given by the cursor.
+  /// In case of an extraction error, or if the cursor is already in an error
+  /// state, zero is returned.
+  int64_t getSLEB128(Cursor &C) const { return getSLEB128(&C.Offset, &C.Err); }
 
   /// Extract a unsigned LEB128 value from \a *offset_ptr.
   ///
@@ -521,7 +639,7 @@ public:
   ///     The extracted unsigned integer value.
   uint64_t getULEB128(uint64_t *offset_ptr, llvm::Error *Err = nullptr) const;
 
-  /// Extract an unsigned ULEB128 value from the location given by the cursor.
+  /// Extract an unsigned LEB128 value from the location given by the cursor.
   /// In case of an extraction error, or if the cursor is already in an error
   /// state, zero is returned.
   uint64_t getULEB128(Cursor &C) const { return getULEB128(&C.Offset, &C.Err); }
@@ -534,14 +652,14 @@ public:
   /// error state of the cursor. The only way both eof and error states can be
   /// true is if one attempts a read while the cursor is at the very end of the
   /// data buffer.
-  bool eof(const Cursor &C) const { return Data.size() == C.Offset; }
+  bool eof(const Cursor &C) const { return size() == C.Offset; }
 
   /// Test the validity of \a offset.
   ///
   /// @return
   ///     \b true if \a offset is a valid offset into the data in this
   ///     object, \b false otherwise.
-  bool isValidOffset(uint64_t offset) const { return Data.size() > offset; }
+  bool isValidOffset(uint64_t offset) const { return size() > offset; }
 
   /// Test the availability of \a length bytes of data from \a offset.
   ///
@@ -563,11 +681,24 @@ public:
     return isValidOffsetForDataOfSize(offset, AddressSize);
   }
 
+  /// Return the number of bytes in the underlying buffer.
+  size_t size() const { return Data.size(); }
+
 protected:
   // Make it possible for subclasses to access these fields without making them
   // public.
   static uint64_t &getOffset(Cursor &C) { return C.Offset; }
   static Error &getError(Cursor &C) { return C.Err; }
+
+private:
+  /// If it is possible to read \a Size bytes at offset \a Offset, returns \b
+  /// true. Otherwise, returns \b false. If \a E is not nullptr, also sets the
+  /// error object to indicate an error.
+  bool prepareRead(uint64_t Offset, uint64_t Size, Error *E) const;
+
+  template <typename T> T getU(uint64_t *OffsetPtr, Error *Err) const;
+  template <typename T>
+  T *getUs(uint64_t *OffsetPtr, T *Dst, uint32_t Count, Error *Err) const;
 };
 
 } // namespace llvm

@@ -26,9 +26,8 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 namespace {
 class MSP430 final : public TargetInfo {
@@ -36,7 +35,8 @@ public:
   MSP430();
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
-  void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relocate(uint8_t *loc, const Relocation &rel,
+                uint64_t val) const override;
 };
 } // namespace
 
@@ -60,38 +60,36 @@ RelExpr MSP430::getRelExpr(RelType type, const Symbol &s,
   }
 }
 
-void MSP430::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
-  switch (type) {
+void MSP430::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  switch (rel.type) {
   case R_MSP430_8:
-    checkIntUInt(loc, val, 8, type);
+    checkIntUInt(loc, val, 8, rel);
     *loc = val;
     break;
   case R_MSP430_16:
   case R_MSP430_16_PCREL:
   case R_MSP430_16_BYTE:
   case R_MSP430_16_PCREL_BYTE:
-    checkIntUInt(loc, val, 16, type);
+    checkIntUInt(loc, val, 16, rel);
     write16le(loc, val);
     break;
   case R_MSP430_32:
-    checkIntUInt(loc, val, 32, type);
+    checkIntUInt(loc, val, 32, rel);
     write32le(loc, val);
     break;
   case R_MSP430_10_PCREL: {
     int16_t offset = ((int16_t)val >> 1) - 1;
-    checkInt(loc, offset, 10, type);
+    checkInt(loc, offset, 10, rel);
     write16le(loc, (read16le(loc) & 0xFC00) | (offset & 0x3FF));
     break;
   }
   default:
-    error(getErrorLocation(loc) + "unrecognized relocation " + toString(type));
+    error(getErrorLocation(loc) + "unrecognized relocation " +
+          toString(rel.type));
   }
 }
 
-TargetInfo *getMSP430TargetInfo() {
+TargetInfo *elf::getMSP430TargetInfo() {
   static MSP430 target;
   return &target;
 }
-
-} // namespace elf
-} // namespace lld

@@ -159,7 +159,8 @@ bool lldb_private::formatters::swift::Measurement_SummaryProvider(
   if (!process_sp)
     return false;
 
-  ObjCLanguageRuntime *objc_runtime = ObjCLanguageRuntime::Get(*process_sp);
+  ObjCLanguageRuntime *objc_runtime =
+      ObjCLanguageRuntime::Get(*process_sp);
   if (!objc_runtime)
     return false;
 

@@ -1,6 +1,6 @@
 //===- TypeUtilities.cpp - Helper function for type queries ---------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -25,7 +25,7 @@ Type mlir::getElementTypeOrSelf(Type type) {
 }
 
 Type mlir::getElementTypeOrSelf(Value val) {
-  return getElementTypeOrSelf(val->getType());
+  return getElementTypeOrSelf(val.getType());
 }
 
 Type mlir::getElementTypeOrSelf(Attribute attr) {
@@ -43,7 +43,7 @@ SmallVector<Type, 10> mlir::getFlattenedTypes(TupleType t) {
 bool mlir::isOpaqueTypeWithName(Type type, StringRef dialect,
                                 StringRef typeData) {
   if (auto opaque = type.dyn_cast<mlir::OpaqueType>())
-    return opaque.getDialectNamespace().is(dialect) &&
+    return opaque.getDialectNamespace() == dialect &&
            opaque.getTypeData() == typeData;
   return false;
 }
@@ -92,7 +92,7 @@ OperandElementTypeIterator::OperandElementTypeIterator(
           it, &unwrap) {}
 
 Type OperandElementTypeIterator::unwrap(Value value) {
-  return value->getType().cast<ShapedType>().getElementType();
+  return value.getType().cast<ShapedType>().getElementType();
 }
 
 ResultElementTypeIterator::ResultElementTypeIterator(
@@ -101,5 +101,5 @@ ResultElementTypeIterator::ResultElementTypeIterator(
           it, &unwrap) {}
 
 Type ResultElementTypeIterator::unwrap(Value value) {
-  return value->getType().cast<ShapedType>().getElementType();
+  return value.getType().cast<ShapedType>().getElementType();
 }

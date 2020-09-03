@@ -19,18 +19,11 @@
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_platform.h"
 
-#define _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, shift) \
-  ((link_map *)((handle) == nullptr ? nullptr : ((char *)(handle) + (shift))))
-
-#if defined(__x86_64__)
-#define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
-  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 264)
-#elif defined(__i386__)
-#define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
-  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 136)
-#endif
-
 namespace __sanitizer {
+void *__sanitizer_get_link_map_by_dlopen_handle(void *handle);
+# define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
+    (link_map *)__sanitizer_get_link_map_by_dlopen_handle(handle)
+
 extern unsigned struct_utsname_sz;
 extern unsigned struct_stat_sz;
 extern unsigned struct_rusage_sz;
@@ -48,6 +41,7 @@ extern unsigned struct_timezone_sz;
 extern unsigned struct_tms_sz;
 extern unsigned struct_itimerspec_sz;
 extern unsigned struct_sigevent_sz;
+extern unsigned struct_stack_t_sz;
 extern unsigned struct_sched_param_sz;
 extern unsigned struct_statfs_sz;
 extern unsigned struct_sockaddr_sz;
@@ -133,12 +127,6 @@ struct __sanitizer_shmid_ds {
   u64 shm_dtime;
   u64 shm_ctime;
   void *_shm_internal;
-};
-
-struct __sanitizer_protoent {
-  char *p_name;
-  char **p_aliases;
-  int p_proto;
 };
 
 struct __sanitizer_netent {

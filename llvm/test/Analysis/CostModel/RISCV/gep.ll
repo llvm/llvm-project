@@ -14,7 +14,7 @@ define void @testi8(i8* %a, i32 %i) {
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a5 = getelementptr inbounds i8, i8* %a, i32 -2048
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a6 = getelementptr inbounds i8, i8* %a, i32 -2049
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i8, i8* %a, i32 %i
-; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %a0 = getelementptr inbounds i8, i8* %a, i32 0
   %a1 = getelementptr inbounds i8, i8* %a, i32 1
@@ -37,7 +37,7 @@ define void @testi16(i16* %a, i32 %i) {
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a5 = getelementptr inbounds i16, i16* %a, i32 -1024
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a6 = getelementptr inbounds i16, i16* %a, i32 -1025
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i16, i16* %a, i32 %i
-; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %a0 = getelementptr inbounds i16, i16* %a, i32 0
   %a1 = getelementptr inbounds i16, i16* %a, i32 1
@@ -60,7 +60,7 @@ define void @testi32(i32* %a, i32 %i) {
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a5 = getelementptr inbounds i32, i32* %a, i32 -512
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a6 = getelementptr inbounds i32, i32* %a, i32 -513
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i32, i32* %a, i32 %i
-; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %a0 = getelementptr inbounds i32, i32* %a, i32 0
   %a1 = getelementptr inbounds i32, i32* %a, i32 1
@@ -83,7 +83,7 @@ define void @testi64(i64* %a, i32 %i) {
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a5 = getelementptr inbounds i64, i64* %a, i32 -256
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a6 = getelementptr inbounds i64, i64* %a, i32 -257
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i64, i64* %a, i32 %i
-; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %a0 = getelementptr inbounds i64, i64* %a, i32 0
   %a1 = getelementptr inbounds i64, i64* %a, i32 1
@@ -106,7 +106,7 @@ define void @testfloat(float* %a, i32 %i) {
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a5 = getelementptr inbounds float, float* %a, i32 -512
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a6 = getelementptr inbounds float, float* %a, i32 -513
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds float, float* %a, i32 %i
-; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %a0 = getelementptr inbounds float, float* %a, i32 0
   %a1 = getelementptr inbounds float, float* %a, i32 1
@@ -129,7 +129,7 @@ define void @testdouble(double* %a, i32 %i) {
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a5 = getelementptr inbounds double, double* %a, i32 -256
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a6 = getelementptr inbounds double, double* %a, i32 -257
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds double, double* %a, i32 %i
-; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %a0 = getelementptr inbounds double, double* %a, i32 0
   %a1 = getelementptr inbounds double, double* %a, i32 1
@@ -162,7 +162,7 @@ define void @testvecs(i32 %i) {
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c4 = getelementptr inbounds <4 x i64>, <4 x i64>* undef, i32 128
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c5 = getelementptr inbounds <4 x float>, <4 x float>* undef, i32 128
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c6 = getelementptr inbounds <4 x double>, <4 x double>* undef, i32 128
-; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %a0 = getelementptr inbounds <4 x i8>, <4 x i8>* undef, i32 0
   %a1 = getelementptr inbounds <4 x i16>, <4 x i16>* undef, i32 0

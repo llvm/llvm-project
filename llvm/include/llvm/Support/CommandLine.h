@@ -45,7 +45,6 @@
 namespace llvm {
 
 class StringSaver;
-class raw_ostream;
 
 /// cl Namespace - This namespace contains all of the command line option
 /// processing machinery.  It is intentionally a short name to make qualified
@@ -488,14 +487,13 @@ struct callback_traits : public callback_traits<decltype(&F::operator())> {};
 template <typename R, typename C, typename... Args>
 struct callback_traits<R (C::*)(Args...) const> {
   using result_type = R;
-  using arg_type = typename std::tuple_element<0, std::tuple<Args...>>::type;
+  using arg_type = std::tuple_element_t<0, std::tuple<Args...>>;
   static_assert(sizeof...(Args) == 1, "callback function must have one and only one parameter");
   static_assert(std::is_same<result_type, void>::value,
                 "callback return type must be void");
-  static_assert(
-      std::is_lvalue_reference<arg_type>::value &&
-          std::is_const<typename std::remove_reference<arg_type>::type>::value,
-      "callback arg_type must be a const lvalue reference");
+  static_assert(std::is_lvalue_reference<arg_type>::value &&
+                    std::is_const<std::remove_reference_t<arg_type>>::value,
+                "callback arg_type must be a const lvalue reference");
 };
 } // namespace detail
 
@@ -1453,16 +1451,16 @@ class opt : public Option,
     }
   }
 
-  template <class T, class = typename std::enable_if<
-            std::is_assignable<T&, T>::value>::type>
+  template <class T,
+            class = std::enable_if_t<std::is_assignable<T &, T>::value>>
   void setDefaultImpl() {
     const OptionValue<DataType> &V = this->getDefault();
     if (V.hasValue())
       this->setValue(V.getValue());
   }
 
-  template <class T, class = typename std::enable_if<
-            !std::is_assignable<T&, T>::value>::type>
+  template <class T,
+            class = std::enable_if_t<!std::is_assignable<T &, T>::value>>
   void setDefaultImpl(...) {}
 
   void setDefault() override { setDefaultImpl<DataType>(); }
@@ -1607,8 +1605,8 @@ public:
   reference front() { return Storage.front(); }
   const_reference front() const { return Storage.front(); }
 
-  operator std::vector<DataType>&() { return Storage; }
-  operator ArrayRef<DataType>() { return Storage; }
+  operator std::vector<DataType> &() { return Storage; }
+  operator ArrayRef<DataType>() const { return Storage; }
   std::vector<DataType> *operator&() { return &Storage; }
   const std::vector<DataType> *operator&() const { return &Storage; }
 
@@ -2027,6 +2025,13 @@ void TokenizeGNUCommandLine(StringRef Source, StringSaver &Saver,
 void TokenizeWindowsCommandLine(StringRef Source, StringSaver &Saver,
                                 SmallVectorImpl<const char *> &NewArgv,
                                 bool MarkEOLs = false);
+
+/// Tokenizes a Windows command line while attempting to avoid copies. If no
+/// quoting or escaping was used, this produces substrings of the original
+/// string. If a token requires unquoting, it will be allocated with the
+/// StringSaver.
+void TokenizeWindowsCommandLineNoCopy(StringRef Source, StringSaver &Saver,
+                                      SmallVectorImpl<StringRef> &NewArgv);
 
 /// String tokenization function type.  Should be compatible with either
 /// Windows or Unix command line tokenizers.

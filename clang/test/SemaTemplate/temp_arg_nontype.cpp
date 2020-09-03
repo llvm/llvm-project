@@ -194,7 +194,7 @@ namespace EntityReferenced {
   template<typename T>
   struct Y {
     static void f(T x) { 
-      x = 1; // expected-error{{assigning to 'int *' from incompatible type 'int'}}
+      x = 1; // expected-error{{incompatible integer to pointer conversion assigning to 'int *' from 'int'}}
     }
   };
 
@@ -505,4 +505,12 @@ namespace complete_array_from_incomplete {
   };
   extern const char *const kStrs[3] = {};
   Derived<T, kStrs> d;
+}
+
+namespace type_of_pack {
+  template<typename ...T> struct A { // expected-warning 0-1{{extension}}
+    template<T *...V> void f() {
+      g(V.f() ...); // expected-error {{base type 'T *' is not a structure or union}}
+    }
+  };
 }

@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// GCC 5 does not evaluate static assertions dependent on a template parameter.
+// UNSUPPORTED: gcc-5
+
+// UNSUPPORTED: c++03
 
 // <string>
 
@@ -55,6 +58,7 @@ void test() {
     typedef std::basic_string_view<CharT, trait<CharT> > strv_t;
     std::hash<strv_t>
         h; // expected-error-re 4 {{{{call to implicitly-deleted default constructor of 'std::hash<strv_t>'|implicit instantiation of undefined template}} {{.+}}}}}}
+    (void)h;
 }
 
 int main(int, char**) {

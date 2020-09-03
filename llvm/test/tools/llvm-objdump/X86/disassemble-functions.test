@@ -2,24 +2,24 @@
 ## functions.
 
 # RUN: yaml2obj -o %t.out %p/Inputs/simple-executable-x86_64.yaml
-# RUN: llvm-objdump -d %t.out --disassemble-functions=main \
-# RUN:   | FileCheck %s --check-prefix=MAIN --implicit-check-not=foo --implicit-check-not=somedata
-# RUN: llvm-objdump -d %t.out --disassemble-functions=main,foo \
+# RUN: llvm-objdump -d %t.out --disassemble-symbols=main \
+# RUN:   | FileCheck %s --check-prefix=MAIN --implicit-check-not="<foo>:" --implicit-check-not=somedata
+# RUN: llvm-objdump -d %t.out --disassemble-symbols=main,foo \
 # RUN:   | FileCheck %s --check-prefixes=MAIN,FOO --implicit-check-not=somedata
 
-# FOO: foo:
-# MAIN: main:
+# FOO: <foo>:
+# MAIN: <main>:
 
 ## Unknown symbol name.
-# RUN: llvm-objdump -d %t.out --disassemble-functions=baz \
+# RUN: llvm-objdump -d %t.out --disassemble-symbols=baz \
 # RUN:   | FileCheck %s --implicit-check-not=Disassembly
 
 ## Data symbol.
-# RUN: llvm-objdump -d %t.out --disassemble-functions=a \
+# RUN: llvm-objdump -d %t.out --disassemble-symbols=a \
 # RUN:   | FileCheck %s --implicit-check-not=Disassembly
 
 ## Data symbol + --disassemble-all.
-# RUN: llvm-objdump -D %t.out --disassemble-functions=a \
+# RUN: llvm-objdump -D %t.out --disassemble-symbols=a \
 # RUN:   | FileCheck %s --check-prefix=DATA
 
 # DATA: a:

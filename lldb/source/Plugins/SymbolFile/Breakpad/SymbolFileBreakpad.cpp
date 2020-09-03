@@ -1,4 +1,4 @@
-//===-- SymbolFileBreakpad.cpp ----------------------------------*- C++ -*-===//
+//===-- SymbolFileBreakpad.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,6 +24,8 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::breakpad;
+
+LLDB_PLUGIN_DEFINE(SymbolFileBreakpad)
 
 char SymbolFileBreakpad::ID;
 
@@ -292,7 +294,7 @@ uint32_t SymbolFileBreakpad::ResolveSymbolContext(
 }
 
 void SymbolFileBreakpad::FindFunctions(
-    ConstString name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
     FunctionNameType name_type_mask, bool include_inlines,
     SymbolContextList &sc_list) {
   // TODO
@@ -305,7 +307,7 @@ void SymbolFileBreakpad::FindFunctions(const RegularExpression &regex,
 }
 
 void SymbolFileBreakpad::FindTypes(
-    ConstString name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
     uint32_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files,
     TypeMap &types) {}
 
@@ -406,20 +408,25 @@ GetRule(llvm::StringRef &unwind_rules) {
 }
 
 static const RegisterInfo *
-ResolveRegister(const SymbolFile::RegisterInfoResolver &resolver,
+ResolveRegister(const llvm::Triple &triple,
+                const SymbolFile::RegisterInfoResolver &resolver,
                 llvm::StringRef name) {
-  if (name.consume_front("$"))
-    return resolver.ResolveName(name);
-
-  return nullptr;
+  if (triple.isX86() || triple.isMIPS()) {
+    // X86 and MIPS registers have '$' in front of their register names. Arm and
+    // AArch64 don't.
+    if (!name.consume_front("$"))
+      return nullptr;
+  }
+  return resolver.ResolveName(name);
 }
 
 static const RegisterInfo *
-ResolveRegisterOrRA(const SymbolFile::RegisterInfoResolver &resolver,
+ResolveRegisterOrRA(const llvm::Triple &triple,
+                    const SymbolFile::RegisterInfoResolver &resolver,
                     llvm::StringRef name) {
   if (name == ".ra")
     return resolver.ResolveNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  return ResolveRegister(resolver, name);
+  return ResolveRegister(triple, resolver, name);
 }
 
 llvm::ArrayRef<uint8_t> SymbolFileBreakpad::SaveAsDWARF(postfix::Node &node) {
@@ -438,6 +445,7 @@ bool SymbolFileBreakpad::ParseCFIUnwindRow(llvm::StringRef unwind_rules,
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS);
 
   llvm::BumpPtrAllocator node_alloc;
+  llvm::Triple triple = m_objfile_sp->GetArchitecture().GetTriple();
   while (auto rule = GetRule(unwind_rules)) {
     node_alloc.Reset();
     llvm::StringRef lhs = rule->first;
@@ -453,7 +461,8 @@ bool SymbolFileBreakpad::ParseCFIUnwindRow(llvm::StringRef unwind_rules,
           if (name == ".cfa" && lhs != ".cfa")
             return postfix::MakeNode<postfix::InitialValueNode>(node_alloc);
 
-          if (const RegisterInfo *info = ResolveRegister(resolver, name)) {
+          if (const RegisterInfo *info =
+                  ResolveRegister(triple, resolver, name)) {
             return postfix::MakeNode<postfix::RegisterNode>(
                 node_alloc, info->kinds[eRegisterKindLLDB]);
           }
@@ -468,7 +477,8 @@ bool SymbolFileBreakpad::ParseCFIUnwindRow(llvm::StringRef unwind_rules,
     llvm::ArrayRef<uint8_t> saved = SaveAsDWARF(*rhs);
     if (lhs == ".cfa") {
       row.GetCFAValue().SetIsDWARFExpression(saved.data(), saved.size());
-    } else if (const RegisterInfo *info = ResolveRegisterOrRA(resolver, lhs)) {
+    } else if (const RegisterInfo *info =
+                   ResolveRegisterOrRA(triple, resolver, lhs)) {
       UnwindPlan::Row::RegisterLocation loc;
       loc.SetIsDWARFExpression(saved.data(), saved.size());
       row.SetRegisterInfo(info->kinds[eRegisterKindLLDB], loc);
@@ -572,6 +582,7 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
     return nullptr;
   }
   auto it = program.begin();
+  llvm::Triple triple = m_objfile_sp->GetArchitecture().GetTriple();
   const auto &symbol_resolver =
       [&](postfix::SymbolNode &symbol) -> postfix::Node * {
     llvm::StringRef name = symbol.GetName();
@@ -579,7 +590,7 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
       if (rule.first == name)
         return rule.second;
     }
-    if (const RegisterInfo *info = ResolveRegister(resolver, name))
+    if (const RegisterInfo *info = ResolveRegister(triple, resolver, name))
       return postfix::MakeNode<postfix::RegisterNode>(
           node_alloc, info->kinds[eRegisterKindLLDB]);
     return nullptr;
@@ -609,7 +620,7 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
 
   // Now process the rest of the assignments.
   for (++it; it != program.end(); ++it) {
-    const RegisterInfo *info = ResolveRegister(resolver, it->first);
+    const RegisterInfo *info = ResolveRegister(triple, resolver, it->first);
     // It is not an error if the resolution fails because the program may
     // contain temporary variables.
     if (!info)
@@ -694,18 +705,18 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
          "How did we create compile units without a base address?");
 
   SupportFileMap map;
-  data.line_table_up = std::make_unique<LineTable>(&cu);
-  std::unique_ptr<LineSequence> line_seq_up(
-      data.line_table_up->CreateLineSequenceContainer());
+  std::vector<std::unique_ptr<LineSequence>> sequences;
+  std::unique_ptr<LineSequence> line_seq_up =
+      LineTable::CreateLineSequenceContainer();
   llvm::Optional<addr_t> next_addr;
   auto finish_sequence = [&]() {
-    data.line_table_up->AppendLineEntryToSequence(
+    LineTable::AppendLineEntryToSequence(
         line_seq_up.get(), *next_addr, /*line*/ 0, /*column*/ 0,
         /*file_idx*/ 0, /*is_start_of_statement*/ false,
         /*is_start_of_basic_block*/ false, /*is_prologue_end*/ false,
         /*is_epilogue_begin*/ false, /*is_terminal_entry*/ true);
-    data.line_table_up->InsertSequence(line_seq_up.get());
-    line_seq_up->Clear();
+    sequences.push_back(std::move(line_seq_up));
+    line_seq_up = LineTable::CreateLineSequenceContainer();
   };
 
   LineIterator It(*m_objfile_sp, Record::Func, data.bookmark),
@@ -722,7 +733,7 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
       // Discontiguous entries. Finish off the previous sequence and reset.
       finish_sequence();
     }
-    data.line_table_up->AppendLineEntryToSequence(
+    LineTable::AppendLineEntryToSequence(
         line_seq_up.get(), record->Address, record->LineNum, /*column*/ 0,
         map[record->FileNum], /*is_start_of_statement*/ true,
         /*is_start_of_basic_block*/ false, /*is_prologue_end*/ false,
@@ -731,6 +742,7 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
   }
   if (next_addr)
     finish_sequence();
+  data.line_table_up = std::make_unique<LineTable>(&cu, std::move(sequences));
   data.support_files = map.translate(cu.GetPrimaryFile(), *m_files);
 }
 

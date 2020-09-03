@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Language_h_
-#define liblldb_Language_h_
+#ifndef LLDB_TARGET_LANGUAGE_H
+#define LLDB_TARGET_LANGUAGE_H
 
 #include <functional>
 #include <memory>
@@ -270,9 +270,10 @@ protected:
   Language();
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Language);
+  Language(const Language &) = delete;
+  const Language &operator=(const Language &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_Language_h_
+#endif // LLDB_TARGET_LANGUAGE_H

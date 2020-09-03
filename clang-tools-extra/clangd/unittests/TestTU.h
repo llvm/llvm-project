@@ -17,9 +17,11 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
 
+#include "Compiler.h"
 #include "ParsedAST.h"
-#include "Path.h"
+#include "TestFS.h"
 #include "index/Index.h"
+#include "support/Path.h"
 #include "llvm/ADT/StringMap.h"
 #include "gtest/gtest.h"
 #include <string>
@@ -32,13 +34,13 @@ namespace clangd {
 struct TestTU {
   static TestTU withCode(llvm::StringRef Code) {
     TestTU TU;
-    TU.Code = Code;
+    TU.Code = std::string(Code);
     return TU;
   }
 
   static TestTU withHeaderCode(llvm::StringRef HeaderCode) {
     TestTU TU;
-    TU.HeaderCode = HeaderCode;
+    TU.HeaderCode = std::string(HeaderCode);
     return TU;
   }
 
@@ -54,7 +56,7 @@ struct TestTU {
   llvm::StringMap<std::string> AdditionalFiles;
 
   // Extra arguments for the compiler invocation.
-  std::vector<const char *> ExtraArgs;
+  std::vector<std::string> ExtraArgs;
 
   llvm::Optional<std::string> ClangTidyChecks;
   llvm::Optional<std::string> ClangTidyWarningsAsErrors;
@@ -64,8 +66,13 @@ struct TestTU {
   // Simulate a header guard of the header (using an #import directive).
   bool ImplicitHeaderGuard = true;
 
+  // By default, build() will report Error diagnostics as GTest errors.
+  // Suppress this behavior by adding an 'error-ok' comment to the code.
   ParsedAST build() const;
+  std::shared_ptr<const PreambleData> preamble() const;
+  ParseInputs inputs(MockFS &FS) const;
   SymbolSlab headerSymbols() const;
+  RefSlab headerRefs() const;
   std::unique_ptr<SymbolIndex> index() const;
 };
 

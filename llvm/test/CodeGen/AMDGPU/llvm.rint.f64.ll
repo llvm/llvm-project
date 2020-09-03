@@ -7,7 +7,7 @@
 
 ; SI-DAG: v_add_f64
 ; SI-DAG: v_add_f64
-; SI-DAG v_cmp_gt_f64_e64
+; SI-DAG: v_cmp_gt_f64_e64
 ; SI: v_cndmask_b32
 ; SI: v_cndmask_b32
 ; SI: s_endpgm

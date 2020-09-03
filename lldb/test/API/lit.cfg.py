@@ -6,6 +6,7 @@ import os
 import platform
 import shlex
 import shutil
+import subprocess
 
 import lit.formats
 
@@ -33,7 +34,6 @@ def mkdir_p(path):
 
 
 def find_sanitizer_runtime(name):
-  import subprocess
   resource_dir = subprocess.check_output(
       [config.cmake_cxx_compiler,
        '-print-resource-dir']).decode('utf-8').strip()
@@ -60,7 +60,6 @@ def find_python_interpreter():
     return copied_python
 
   # Find the "real" python binary.
-  import shutil, subprocess
   real_python = subprocess.check_output([
       config.python_executable,
       os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -88,6 +87,9 @@ def find_python_interpreter():
 
 if 'Address' in config.llvm_use_sanitizer:
   config.environment['ASAN_OPTIONS'] = 'detect_stack_use_after_return=1'
+  # Swift's libReflection builds without ASAN, which causes a known
+  # false positive in std::vector.
+  config.environment['ASAN_OPTIONS'] += ':detect_container_overflow=0'
   if 'Darwin' in config.host_os and 'x86' in config.host_triple:
     config.environment['DYLD_INSERT_LIBRARIES'] = find_sanitizer_runtime(
         'libclang_rt.asan_osx_dynamic.dylib')
@@ -118,12 +120,24 @@ if 'LLDB_CAPTURE_REPRODUCER' in os.environ:
   config.environment['LLDB_CAPTURE_REPRODUCER'] = os.environ[
       'LLDB_CAPTURE_REPRODUCER']
 
+# Support running the test suite under the lldb-repro wrapper. This makes it
+# possible to capture a test suite run and then rerun all the test from the
+# just captured reproducer.
+lldb_repro_mode = lit_config.params.get('lldb-run-with-repro', None)
+if lldb_repro_mode:
+  lit_config.note("Running API tests in {} mode.".format(lldb_repro_mode))
+  mkdir_p(config.lldb_reproducer_directory)
+  if lldb_repro_mode == 'capture':
+    config.available_features.add('lldb-repro-capture')
+  elif lldb_repro_mode == 'replay':
+    config.available_features.add('lldb-repro-replay')
+
 # Clean the module caches in the test build directory. This is necessary in an
 # incremental build whenever clang changes underneath, so doing it once per
 # lit.py invocation is close enough.
 for cachedir in [config.clang_module_cache, config.lldb_module_cache]:
   if os.path.isdir(cachedir):
-    print("Deleting module cache at %s."%cachedir)
+    print("Deleting module cache at %s." % cachedir)
     shutil.rmtree(cachedir)
 
 # Set a default per-test timeout of 10 minutes. Setting a timeout per test
@@ -137,13 +151,8 @@ else:
 
 # Build dotest command.
 dotest_cmd = [config.dotest_path]
+dotest_cmd += ['--arch', config.test_arch]
 dotest_cmd.extend(config.dotest_args_str.split(';'))
-
-# We don't want to force users passing arguments to lit to use `;` as a
-# separator. We use Python's simple lexical analyzer to turn the args into a
-# list.
-if config.dotest_lit_args_str:
-  dotest_cmd.extend(shlex.split(config.dotest_lit_args_str))
 
 # Library path may be needed to locate just-built clang.
 if config.llvm_libs_dir:
@@ -163,6 +172,40 @@ if config.lldb_module_cache:
 
 if config.clang_module_cache:
   dotest_cmd += ['--clang-module-cache-dir', config.clang_module_cache]
+
+if config.lldb_executable:
+  dotest_cmd += ['--executable', config.lldb_executable]
+
+if config.test_compiler:
+  dotest_cmd += ['--compiler', config.test_compiler]
+
+if config.dsymutil:
+  dotest_cmd += ['--dsymutil', config.dsymutil]
+
+if config.filecheck:
+  dotest_cmd += ['--filecheck', config.filecheck]
+
+if config.yaml2obj:
+  dotest_cmd += ['--yaml2obj', config.yaml2obj]
+
+if config.lldb_libs_dir:
+  dotest_cmd += ['--lldb-libs-dir', config.lldb_libs_dir]
+
+if 'lldb-repro-capture' in config.available_features or \
+    'lldb-repro-replay' in config.available_features:
+  dotest_cmd += ['--skip-category=lldb-vscode', '--skip-category=std-module']
+
+if config.enabled_plugins:
+  for plugin in config.enabled_plugins:
+    dotest_cmd += ['--enable-plugin', plugin]
+
+# We don't want to force users passing arguments to lit to use `;` as a
+# separator. We use Python's simple lexical analyzer to turn the args into a
+# list. Pass there arguments last so they can override anything that was
+# already configured.
+if config.dotest_lit_args_str:
+  dotest_cmd.extend(shlex.split(config.dotest_lit_args_str))
+
 
 # Load LLDB test format.
 sys.path.append(os.path.join(config.lldb_src_root, "test", "API"))

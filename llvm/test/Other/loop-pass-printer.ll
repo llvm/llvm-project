@@ -11,13 +11,13 @@
 ; RUN: 	   -loop-unroll -print-after=loop-unroll -filter-print-funcs=bar \
 ; RUN:	   | FileCheck %s -check-prefix=BAR -check-prefix=BAR-OLD
 ; RUN: opt < %s 2>&1 -disable-output \
-; RUN: 	   -passes='require<opt-remark-emit>,loop(unroll-full)' -print-after-all -filter-print-funcs=bar \
+; RUN: 	   -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -print-after-all -filter-print-funcs=bar \
 ; RUN:	   | FileCheck %s -check-prefix=BAR
 ; RUN: opt < %s 2>&1 -disable-output \
 ; RUN: 	   -loop-unroll -print-after=loop-unroll -filter-print-funcs=foo -print-module-scope \
 ; RUN:	   | FileCheck %s -check-prefix=FOO-MODULE -check-prefix=FOO-MODULE-OLD
 ; RUN: opt < %s 2>&1 -disable-output \
-; RUN: 	   -passes='require<opt-remark-emit>,loop(unroll-full)' -print-after-all -filter-print-funcs=foo -print-module-scope \
+; RUN: 	   -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -print-after-all -filter-print-funcs=foo -print-module-scope \
 ; RUN:	   | FileCheck %s -check-prefix=FOO-MODULE
 
 ; DEL:	    IR Dump Before {{Delete dead loops|LoopDeletionPass}}

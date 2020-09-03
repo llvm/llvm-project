@@ -35,6 +35,7 @@
         msr ich_vtr_el2, x8
         msr ich_eisr_el2, x22
         msr ich_elsr_el2, x8
+        msr ich_misr_el2, x10
 // CHECK: error: expected writable system register or pstate
 // CHECK-NEXT:         msr icc_iar1_el1, x16
 // CHECK-NEXT:             ^
@@ -58,4 +59,7 @@
 // CHECK-NEXT:             ^
 // CHECK-NEXT: error: expected writable system register or pstate
 // CHECK-NEXT:         msr ich_elsr_el2, x8
+// CHECK-NEXT:             ^
+// CHECK-NEXT: error: expected writable system register or pstate
+// CHECK-NEXT:         msr ich_misr_el2, x10
 // CHECK-NEXT:             ^

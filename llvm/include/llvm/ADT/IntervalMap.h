@@ -491,7 +491,7 @@ class NodeRef {
   struct CacheAlignedPointerTraits {
     static inline void *getAsVoidPointer(void *P) { return P; }
     static inline void *getFromVoidPointer(void *P) { return P; }
-    enum { NumLowBitsAvailable = Log2CacheLine };
+    static constexpr int NumLowBitsAvailable = Log2CacheLine;
   };
   PointerIntPair<void*, Log2CacheLine, unsigned, CacheAlignedPointerTraits> pip;
 
@@ -823,7 +823,7 @@ public:
   }
 
   /// reset - Reset cached information about node(Level) from subtree(Level -1).
-  /// @param Level 1..height. THe node to update after parent node changed.
+  /// @param Level 1..height. The node to update after parent node changed.
   void reset(unsigned Level) {
     path[Level] = Entry(subtree(Level - 1), offset(Level));
   }
@@ -884,7 +884,7 @@ public:
   }
 
   /// getLeftSibling - Get the left sibling node at Level, or a null NodeRef.
-  /// @param Level Get the sinbling to node(Level).
+  /// @param Level Get the sibling to node(Level).
   /// @return Left sibling, or NodeRef().
   NodeRef getRightSibling(unsigned Level) const;
 
@@ -1396,7 +1396,7 @@ public:
     setRoot(map->rootSize);
   }
 
-  /// preincrement - move to the next interval.
+  /// preincrement - Move to the next interval.
   const_iterator &operator++() {
     assert(valid() && "Cannot increment end()");
     if (++path.leafOffset() == path.leafSize() && branched())
@@ -1404,14 +1404,14 @@ public:
     return *this;
   }
 
-  /// postincrement - Dont do that!
+  /// postincrement - Don't do that!
   const_iterator operator++(int) {
     const_iterator tmp = *this;
     operator++();
     return tmp;
   }
 
-  /// predecrement - move to the previous interval.
+  /// predecrement - Move to the previous interval.
   const_iterator &operator--() {
     if (path.leafOffset() && (valid() || !branched()))
       --path.leafOffset();
@@ -1420,7 +1420,7 @@ public:
     return *this;
   }
 
-  /// postdecrement - Dont do that!
+  /// postdecrement - Don't do that!
   const_iterator operator--(int) {
     const_iterator tmp = *this;
     operator--();

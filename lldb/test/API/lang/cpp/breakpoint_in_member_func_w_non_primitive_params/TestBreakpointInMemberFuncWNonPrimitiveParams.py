@@ -19,8 +19,7 @@ class TestBreakpointInMemberFuncWNonPrimitiveParams(TestBase):
     @add_test_categories(["gmodules"])
     def test_breakpint_in_member_func_w_non_primitie_params(self):
         self.build()
-
-        (self.target, self.process, _, bkpt) = lldbutil.run_to_source_breakpoint(self, '// break here',
+        lldbutil.run_to_source_breakpoint(self, '// break here',
                 lldb.SBFileSpec("main.cpp", False))
 
         self.runCmd("b a.cpp:11");

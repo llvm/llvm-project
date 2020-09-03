@@ -5,18 +5,20 @@
 ---
 {"jsonrpc":"2.0","method":"workspace/didChangeConfiguration","params":{"settings":{"compilationDatabaseChanges":{"/clangd-test/foo.c": {"workingDirectory":"/clangd-test", "compilationCommand": ["clang", "-c", "foo.c"]}}}}}
 ---
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.c","languageId":"c","version":1,"text":"int main() { int i; return i; }"}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.c","languageId":"c","text":"int main() { int i; return i; }"}}}
 #      CHECK:  "method": "textDocument/publishDiagnostics",
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [],
-# CHECK-NEXT:    "uri": "file://{{.*}}/foo.c"
+# CHECK-NEXT:    "uri": "file://{{.*}}/foo.c",
+# CHECK-NEXT:    "version": 0
 # CHECK-NEXT:  }
 ---
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///bar.c","languageId":"c","version":1,"text":"int main() { int i; return i; }"}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///bar.c","languageId":"c","text":"int main() { int i; return i; }"}}}
 #      CHECK:  "method": "textDocument/publishDiagnostics",
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [],
-# CHECK-NEXT:    "uri": "file://{{.*}}/bar.c"
+# CHECK-NEXT:    "uri": "file://{{.*}}/bar.c",
+# CHECK-NEXT:    "version": 0
 # CHECK-NEXT:  }
 ---
 {"jsonrpc":"2.0","method":"workspace/didChangeConfiguration","params":{"settings":{"compilationDatabaseChanges":{"/clangd-test/foo.c": {"workingDirectory":"/clangd-test2", "compilationCommand": ["clang", "-c", "foo.c", "-Wall", "-Werror"]}}}}}
@@ -40,14 +42,13 @@
 # CHECK-NEXT:        "source": "clang"
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
-# CHECK-NEXT:    "uri": "file://{{.*}}/foo.c"
+# CHECK-NEXT:    "uri": "file://{{.*}}/foo.c",
+# CHECK-NEXT:    "version": 0
 # CHECK-NEXT:  }
 #
-# ERR: Updating file {{.*}}foo.c with command
+# ERR: ASTWorker building file {{.*}}foo.c version 0 with command
 # ERR: [{{.*}}clangd-test2]
 # ERR: clang -c foo.c -Wall -Werror
-# Don't reparse the second file:
-# ERR: Skipping rebuild of the AST for {{.*}}bar.c
 ---
 {"jsonrpc":"2.0","id":5,"method":"shutdown"}
 ---

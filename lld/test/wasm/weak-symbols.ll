@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj %p/Inputs/weak-symbol1.ll -o %t1.o
-; RUN: llc -filetype=obj %p/Inputs/weak-symbol2.ll -o %t2.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/weak-symbol1.s -o %t1.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/weak-symbol2.s -o %t2.o
 ; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: wasm-ld --export-dynamic -o %t.wasm %t.o %t1.o %t2.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s

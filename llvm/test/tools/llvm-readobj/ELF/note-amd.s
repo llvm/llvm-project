@@ -4,7 +4,7 @@
 // RUN: llvm-readobj --notes %t.o | FileCheck %s --check-prefix=LLVM
 // RUN: llvm-readelf --notes %t.o | FileCheck %s --check-prefix=GNU
 
-// GNU:      Displaying notes found
+// GNU:      Displaying notes found in: .note.no.desc
 // GNU-NEXT:   Owner                Data size        Description
 // GNU-NEXT:   AMD                  0x00000000       NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)
 // GNU-NEXT:     HSA Metadata:
@@ -12,7 +12,7 @@
 // GNU-NEXT:   AMD                  0x00000000       NT_AMD_AMDGPU_ISA (ISA Version)
 // GNU-NEXT:     ISA Version:
 // GNU-NEXT: {{^ +$}}
-// GNU-NEXT: Displaying notes found
+// GNU-NEXT: Displaying notes found in: .note.desc
 // GNU-NEXT:   Owner                Data size        Description
 // GNU-NEXT:   AMD                  0x0000000a       NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)
 // GNU-NEXT:     HSA Metadata:
@@ -20,12 +20,13 @@
 // GNU-NEXT:   AMD                  0x00000009       NT_AMD_AMDGPU_ISA (ISA Version)
 // GNU-NEXT:     ISA Version:
 // GNU-NEXT:     isa_blah
-// GNU-NEXT: Displaying notes found
+// GNU-NEXT: Displaying notes found in: .note.other
 // GNU-NEXT:   Owner                Data size        Description
 // GNU-NEXT:   AMD                  0x00000000       NT_AMD_AMDGPU_PAL_METADATA (PAL Metadata)
 
 // LLVM:      Notes [
 // LLVM-NEXT:   NoteSection {
+// LLVM-NEXT:     Name: .note.no.desc
 // LLVM-NEXT:     Offset:
 // LLVM-NEXT:     Size:
 // LLVM-NEXT:     Note {
@@ -42,6 +43,7 @@
 // LLVM-NEXT:     }
 // LLVM-NEXT:   }
 // LLVM-NEXT:   NoteSection {
+// LLVM-NEXT:     Name: .note.desc
 // LLVM-NEXT:     Offset:
 // LLVM-NEXT:     Size:
 // LLVM-NEXT:     Note {
@@ -58,6 +60,7 @@
 // LLVM-NEXT:     }
 // LLVM-NEXT:   }
 // LLVM-NEXT:   NoteSection {
+// LLVM-NEXT:     Name: .note.other
 // LLVM-NEXT:     Offset:
 // LLVM-NEXT:     Size:
 // LLVM-NEXT:     Note {

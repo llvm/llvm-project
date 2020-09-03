@@ -1,4 +1,4 @@
-//===-- SBTypeEnumMember.cpp ---------------------------------- -*- C++ -*-===//
+//===-- SBTypeEnumMember.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,7 +25,7 @@ SBTypeEnumMember::SBTypeEnumMember() : m_opaque_sp() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeEnumMember);
 }
 
-SBTypeEnumMember::~SBTypeEnumMember() {}
+SBTypeEnumMember::~SBTypeEnumMember() = default;
 
 SBTypeEnumMember::SBTypeEnumMember(
     const lldb::TypeEnumMemberImplSP &enum_member_sp)
@@ -141,7 +141,7 @@ operator=(const SBTypeEnumMemberList &rhs) {
       rhs);
 
   if (this != &rhs) {
-    m_opaque_up.reset(new TypeEnumMemberListImpl());
+    m_opaque_up = std::make_unique<TypeEnumMemberListImpl>();
     for (uint32_t i = 0,
                   rhs_size = const_cast<SBTypeEnumMemberList &>(rhs).GetSize();
          i < rhs_size; i++)
@@ -176,7 +176,7 @@ uint32_t SBTypeEnumMemberList::GetSize() {
   return m_opaque_up->GetSize();
 }
 
-SBTypeEnumMemberList::~SBTypeEnumMemberList() {}
+SBTypeEnumMemberList::~SBTypeEnumMemberList() = default;
 
 bool SBTypeEnumMember::GetDescription(
     lldb::SBStream &description, lldb::DescriptionLevel description_level) {

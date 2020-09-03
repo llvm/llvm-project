@@ -1,4 +1,4 @@
-;RUN: not llc < %s -mtriple=i686-unknown-unknown -mattr=sse2 2>&1 | FileCheck %s --check-prefix=CHECK
+; RUN: not --crash llc < %s -mtriple=i686-unknown-unknown -mattr=sse2 2>&1 | FileCheck %s --check-prefix=CHECK
 
 ; Make sure we generate fatal error from the type legalizer for using a 64-bit
 ; mode intrinsics in 32-bit mode. We used to use an llvm_unreachable.

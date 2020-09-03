@@ -35,9 +35,9 @@ void evalNonNullParamNonNullReturn(const Shape *S) {
   // CHECK-NEXT: ],
   // CHECK-NEXT: "dynamic_casts": [
   // CHECK:        { "region": "SymRegion{reg_$0<const struct clang::Shape * S>}", "casts": [
-  // CHECK-NEXT:     { "from": "const struct clang::Shape *", "to": "const class clang::Circle *", "kind": "success" },
-  // CHECK-NEXT:     { "from": "const struct clang::Shape *", "to": "const class clang::Square *", "kind": "fail" }
-  // CHECK-NEXT:   ]}
+  // CHECK-NEXT:     { "from": "struct clang::Shape", "to": "class clang::Circle", "kind": "success" },
+  // CHECK-NEXT:     { "from": "struct clang::Shape", "to": "class clang::Square", "kind": "fail" }
+  // CHECK-NEXT:   ] }
 
   (void)(1 / !C);
   // expected-note@-1 {{'C' is non-null}}

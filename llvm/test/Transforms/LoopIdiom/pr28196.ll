@@ -50,4 +50,4 @@ for.body:                                         ; preds = %for.body, %for.body
 ; CHECK: load
 ; CHECK: store
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }

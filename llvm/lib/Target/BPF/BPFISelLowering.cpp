@@ -171,6 +171,38 @@ bool BPFTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) cons
   return false;
 }
 
+bool BPFTargetLowering::isTruncateFree(Type *Ty1, Type *Ty2) const {
+  if (!Ty1->isIntegerTy() || !Ty2->isIntegerTy())
+    return false;
+  unsigned NumBits1 = Ty1->getPrimitiveSizeInBits();
+  unsigned NumBits2 = Ty2->getPrimitiveSizeInBits();
+  return NumBits1 > NumBits2;
+}
+
+bool BPFTargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
+  if (!VT1.isInteger() || !VT2.isInteger())
+    return false;
+  unsigned NumBits1 = VT1.getSizeInBits();
+  unsigned NumBits2 = VT2.getSizeInBits();
+  return NumBits1 > NumBits2;
+}
+
+bool BPFTargetLowering::isZExtFree(Type *Ty1, Type *Ty2) const {
+  if (!getHasAlu32() || !Ty1->isIntegerTy() || !Ty2->isIntegerTy())
+    return false;
+  unsigned NumBits1 = Ty1->getPrimitiveSizeInBits();
+  unsigned NumBits2 = Ty2->getPrimitiveSizeInBits();
+  return NumBits1 == 32 && NumBits2 == 64;
+}
+
+bool BPFTargetLowering::isZExtFree(EVT VT1, EVT VT2) const {
+  if (!getHasAlu32() || !VT1.isInteger() || !VT2.isInteger())
+    return false;
+  unsigned NumBits1 = VT1.getSizeInBits();
+  unsigned NumBits2 = VT2.getSizeInBits();
+  return NumBits1 == 32 && NumBits2 == 64;
+}
+
 std::pair<unsigned, const TargetRegisterClass *>
 BPFTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                 StringRef Constraint,
@@ -195,6 +227,8 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerGlobalAddress(Op, DAG);
   case ISD::SELECT_CC:
     return LowerSELECT_CC(Op, DAG);
+  case ISD::DYNAMIC_STACKALLOC:
+    report_fatal_error("Unsupported dynamic stack allocation");
   default:
     llvm_unreachable("unimplemented operand");
   }
@@ -570,6 +604,12 @@ BPFTargetLowering::EmitSubregExt(MachineInstr &MI, MachineBasicBlock *BB,
   DebugLoc DL = MI.getDebugLoc();
 
   MachineRegisterInfo &RegInfo = F->getRegInfo();
+
+  if (!isSigned) {
+    Register PromotedReg0 = RegInfo.createVirtualRegister(RC);
+    BuildMI(BB, DL, TII.get(BPF::MOV_32_64), PromotedReg0).addReg(Reg);
+    return PromotedReg0;
+  }
   Register PromotedReg0 = RegInfo.createVirtualRegister(RC);
   Register PromotedReg1 = RegInfo.createVirtualRegister(RC);
   Register PromotedReg2 = RegInfo.createVirtualRegister(RC);

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FILE_DEPENDENCIES: underflow.dat, underflow_utf8.dat
+
 // <locale>
 
 // wbuffer_convert<Codecvt, Elem, Tr>

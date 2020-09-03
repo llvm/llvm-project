@@ -1,4 +1,4 @@
-//===-- MangledTest.cpp -----------------------------------------*- C++ -*-===//
+//===-- MangledTest.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -31,8 +31,7 @@ using namespace lldb_private;
 TEST(MangledTest, ResultForValidName) {
   ConstString MangledName("_ZN1a1b1cIiiiEEvm");
   Mangled TheMangled(MangledName);
-  ConstString TheDemangled =
-      TheMangled.GetDemangledName(eLanguageTypeC_plus_plus);
+  ConstString TheDemangled = TheMangled.GetDemangledName();
 
   ConstString ExpectedResult("void a::b::c<int, int, int>(unsigned long)");
   EXPECT_STREQ(ExpectedResult.GetCString(), TheDemangled.GetCString());
@@ -41,8 +40,7 @@ TEST(MangledTest, ResultForValidName) {
 TEST(MangledTest, ResultForBlockInvocation) {
   ConstString MangledName("___Z1fU13block_pointerFviE_block_invoke");
   Mangled TheMangled(MangledName);
-  ConstString TheDemangled =
-      TheMangled.GetDemangledName(eLanguageTypeC_plus_plus);
+  ConstString TheDemangled = TheMangled.GetDemangledName();
 
   ConstString ExpectedResult(
       "invocation function for block in f(void (int) block_pointer)");
@@ -52,8 +50,7 @@ TEST(MangledTest, ResultForBlockInvocation) {
 TEST(MangledTest, EmptyForInvalidName) {
   ConstString MangledName("_ZN1a1b1cmxktpEEvm");
   Mangled TheMangled(MangledName);
-  ConstString TheDemangled =
-      TheMangled.GetDemangledName(eLanguageTypeC_plus_plus);
+  ConstString TheDemangled = TheMangled.GetDemangledName();
 
   EXPECT_STREQ("", TheDemangled.GetCString());
 }
@@ -168,8 +165,7 @@ Symbols:
 )");
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
 
-  ModuleSpec Spec{FileSpec(ExpectedFile->name())};
-  auto M = std::make_shared<Module>(Spec);
+  auto M = std::make_shared<Module>(ExpectedFile->moduleSpec());
 
   auto Count = [M](const char *Name, FunctionNameType Type) -> int {
     SymbolContextList SymList;

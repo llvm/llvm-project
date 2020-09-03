@@ -37,7 +37,9 @@ public:
   virtual int vf5a(){0;}; // function definition, expected-warning {{unused}}
   virtual int vf6()(0); // expected-error +{{}} expected-note +{{}}
   virtual int vf7() = { 0 }; // expected-error {{does not look like a pure-specifier}}
-  
+  virtual int PR45267() = \
+                        0; // ok, despite escaped newline
+
 private:
   int x,f(),y,g();
   inline int h();
@@ -209,9 +211,9 @@ namespace DtorErrors {
   };
 
   struct T {};
-  T t1 = t1.T::~T<int>; // expected-error {{destructor name 'T' does not refer to a template}} expected-error {{expected '(' for function-style cast or type construction}} expected-error {{expected expression}}
+  T t1 = t1.T::~T<int>; // expected-error {{destructor name 'T' does not refer to a template}}
   // Emit the same diagnostic as for the previous case, plus something about ~.
-  T t2 = t2.~T::T<int>; // expected-error {{'~' in destructor name should be after nested name specifier}} expected-error {{destructor name 'T' does not refer to a template}} expected-error {{expected '(' for function-style cast or type construction}} expected-error {{expected expression}}
+  T t2 = t2.~T::T<int>; // expected-error {{'~' in destructor name should be after nested name specifier}} expected-error {{destructor name 'T' does not refer to a template}}
 }
 
 namespace BadFriend {
@@ -294,6 +296,11 @@ namespace ArrayMemberAccess {
     // OK: a template-id.
     a->f<int>();
   }
+}
+
+namespace UndeclaredBaseTemplate {
+  template<class> struct imp;
+  template<class T> struct is_member_function_pointer : undeclared<imp<T>::member> {}; // expected-error {{unknown template name 'undeclared'}}
 }
 
 // PR11109 must appear at the end of the source file

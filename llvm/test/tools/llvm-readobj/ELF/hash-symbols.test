@@ -2,9 +2,12 @@
 
 ## Check the output when both .hash and .gnu.hash sections are present.
 
-# RUN: yaml2obj --docnum=1 %s -o %t1-32.so
+# RUN: yaml2obj --docnum=1 -DBITS=32 %s -o %t1-32.so
 # RUN: llvm-readelf --hash-symbols %t1-32.so \
 # RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix HASH-32
+
+# RUN: yaml2obj --docnum=1 -DBITS=64 %s -o %t1-64.so
+# RUN: llvm-readelf --hash-symbols %t1-64.so | FileCheck %s --check-prefix HASH-64
 
 # HASH-32: Symbol table of .hash for image:
 # HASH-32-NEXT:  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
@@ -22,12 +25,28 @@
 # HASH-32-NEXT:    5   2: 00001001     0 NOTYPE  WEAK   DEFAULT   1 bbb
 # HASH-32-NOT: {{.}}
 
+# HASH-64:      Symbol table of .hash for image:
+# HASH-64-NEXT:  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name
+# HASH-64-NEXT:    1   0: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT UND ccc
+# HASH-64-NEXT:    5   0: 0000000000001001     0 NOTYPE  WEAK   DEFAULT   1 bbb
+# HASH-64-NEXT:    3   0: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT ABS ddd
+# HASH-64-NEXT:    2   0: 0000000000001000     0 NOTYPE  GLOBAL DEFAULT   1 aaa
+# HASH-64-NEXT:    4   0: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   2 eee
+# HASH-64-EMPTY:
+# HASH-64-NEXT: Symbol table of .gnu.hash for image:
+# HASH-64-NEXT:  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name
+# HASH-64-NEXT:    2   1: 0000000000001000     0 NOTYPE  GLOBAL DEFAULT   1 aaa
+# HASH-64-NEXT:    3   1: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT ABS ddd
+# HASH-64-NEXT:    4   2: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   2 eee
+# HASH-64-NEXT:    5   2: 0000000000001001     0 NOTYPE  WEAK   DEFAULT   1 bbb
+# HASH-64-NOT: {{.}}
+
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
+  Class:   ELFCLASS[[BITS]]
   Data:    ELFDATA2LSB
   Type:    ET_DYN
-  Machine: EM_386
+  Machine: EM_X86_64
 Sections:
   - Name:    .hash
     Type:    SHT_HASH
@@ -50,14 +69,14 @@ Sections:
     Flags: [ SHF_ALLOC ]
     Link:  .dynstr
     Entries:
-## PT_LOAD's p_vaddr is 0x0. PT_LOAD's p_offset = 0x1bc. DT_HASH value is 0x0. 
-## llvm-readelf will read .hash content from p_offset + (p_vaddr - DT_HASH value) = 0x1bc.
+## PT_LOAD's p_vaddr is 0x0. DT_HASH value is 0x0. 
+## llvm-readelf will read .hash content from PT_LOAD's p_offset + (DT_HASH value - p_vaddr).
 ## This matches the file offset of the .hash section.
       - Tag:   DT_HASH
         Value: 0x0000000000000000
       - Tag:   DT_GNU_HASH
-## PT_LOAD's p_vaddr is 0x0. PT_LOAD's p_offset = 0x1bc. DT_GNU_HASH value is 0x2c (size of .hash = 0x2c).
-## llvm-readelf will read .gnu.hash content from p_offset + (p_vaddr - DT_GNU_HASH value) = 0x1e8.
+## PT_LOAD's p_vaddr is 0x0. DT_GNU_HASH value is 0x2c (size of .hash = 0x2c).
+## llvm-readelf will read .gnu.hash content from PT_LOAD's p_offset + (DT_GNU_HASH value - p_vaddr).
 ## This matches the file offset of the .gnu.hash section.
         Value: 0x000000000000002C
       - Tag:   DT_NULL
@@ -88,94 +107,9 @@ ProgramHeaders:
       - Section: .gnu.hash
       - Section: .dynamic
 
-# RUN: yaml2obj --docnum=2 %s -o %t1-64.so
-# RUN: llvm-readelf --hash-symbols %t1-64.so | FileCheck %s --check-prefix HASH-64
-
-# HASH-64:      Symbol table of .hash for image:
-# HASH-64-NEXT:  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name
-# HASH-64-NEXT:    1   0: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT UND ccc
-# HASH-64-NEXT:    5   0: 0000000000001001     0 NOTYPE  WEAK   DEFAULT   1 bbb
-# HASH-64-NEXT:    3   0: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT ABS ddd
-# HASH-64-NEXT:    2   0: 0000000000001000     0 NOTYPE  GLOBAL DEFAULT   1 aaa
-# HASH-64-NEXT:    4   0: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   2 eee
-# HASH-64-EMPTY:
-# HASH-64-NEXT: Symbol table of .gnu.hash for image:
-# HASH-64-NEXT:  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name
-# HASH-64-NEXT:    2   1: 0000000000001000     0 NOTYPE  GLOBAL DEFAULT   1 aaa
-# HASH-64-NEXT:    3   1: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT ABS ddd
-# HASH-64-NEXT:    4   2: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   2 eee
-# HASH-64-NEXT:    5   2: 0000000000001001     0 NOTYPE  WEAK   DEFAULT   1 bbb
-# HASH-64-NOT: {{.}}
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name:    .hash
-    Type:    SHT_HASH
-    Flags:   [ SHF_ALLOC ]
-    Link:    .dynsym
-    Bucket:  [ 1, 0, 0 ]
-    Chain:   [ 0, 5, 4, 2, 0, 3 ]
-  - Name:    .gnu.hash
-    Type:    SHT_GNU_HASH
-    Flags:   [ SHF_ALLOC ]
-    Link:    .dynsym
-    Header:
-      SymNdx: 0x2
-      Shift2: 0x0
-    BloomFilter: [ 0x0 ]
-    HashBuckets: [ 0x00000000, 0x00000002, 0x00000004 ]
-    HashValues:  [ 0x0B885C68, 0x0B886991, 0x0B886DF4, 0x0B8860CB ]
-  - Name:  .dynamic
-    Type:  SHT_DYNAMIC
-    Flags: [ SHF_ALLOC ]
-    Link:  .dynstr
-    Entries:
-      - Tag:   DT_HASH
-## PT_LOAD's p_vaddr is 0x0. PT_LOAD's p_offset = 0x2b8. DT_HASH value is 0x0. 
-## llvm-readelf will read .hash content from p_offset + (p_vaddr - DT_HASH value) = 0x2b8.
-## This matches the file offset of the .hash section. 
-        Value: 0x0000000000000000
-      - Tag:   DT_GNU_HASH
-## PT_LOAD's p_vaddr is 0x0. PT_LOAD's p_offset = 0x2b8. DT_GNU_HASH value is 0x2c (size of .hash = 0x2c).
-## llvm-readelf will read .gnu.hash content from p_offset + (p_vaddr - DT_GNU_HASH value) = 0x2e4.
-## This matches the file offset of the .gnu.hash section.
-        Value: 0x000000000000002c
-      - Tag:   DT_NULL
-        Value: 0x0000000000000000
-DynamicSymbols:
-  - Name:    ccc
-    Binding: STB_GLOBAL
-  - Name:    aaa
-    Section: .hash
-    Binding: STB_GLOBAL
-    Value:   0x0000000000001000
-  - Name:    ddd
-    Index:   SHN_ABS
-    Binding: STB_GLOBAL
-    Value:   0x0000000000000001
-  - Name:    eee
-    Section: .gnu.hash
-    Binding: STB_GLOBAL
-  - Name:    bbb
-    Section: .hash
-    Binding: STB_WEAK
-    Value:   0x0000000000001001
-ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .hash
-      - Section: .gnu.hash
-      - Section: .dynamic
-
 ## Check the output when only .hash section is present.
 
-# RUN: yaml2obj --docnum=3 %s -o %t2-32.so
+# RUN: yaml2obj --docnum=2 %s -o %t2-32.so
 # RUN: llvm-readelf --hash-symbols %t2-32.so \
 # RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix ONLY-HASH-32
 
@@ -237,7 +171,7 @@ ProgramHeaders:
 
 ## Check the output when only .gnu.hash section is present.
 
-# RUN: yaml2obj --docnum=4 %s -o %t3-32.so
+# RUN: yaml2obj --docnum=3 %s -o %t3-32.so
 # RUN: llvm-readelf --hash-symbols %t3-32.so \
 # RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix ONLY-GNUHASH-32
 
@@ -301,7 +235,7 @@ ProgramHeaders:
       - Section: .dynamic
 
 ## Show that if there are no hash sections, we do not print anything.
-# RUN: yaml2obj --docnum=5 %s -o %t4.so
+# RUN: yaml2obj --docnum=4 %s -o %t4.so
 # RUN: llvm-readelf --hash-symbols %t4.so \
 # RUN:   | FileCheck %s --check-prefix NO-HASH --allow-empty
 
@@ -363,24 +297,22 @@ ProgramHeaders:
   - Type:  PT_LOAD
     Flags: [ PF_R, PF_X ]
     VAddr: 0x0
-    PAddr: 0x0
     Sections:
-      - Section: .dynsym
       - Section: .dynstr
+      - Section: .dynsym
       - Section: .dynamic
       - Section: .text.foo
   - Type:  PT_DYNAMIC
     Flags: [ PF_R ]
     VAddr: 0x1000
-    PAddr: 0x1000
     Sections:
       - Section: .dynamic
 
 ## Show that we report a warning for a hash table which contains an entry of
 ## the bucket array pointing to a cycle.
 
-# RUN: yaml2obj --docnum=6 %s -o %t6.so
-# RUN: llvm-readelf --hash-symbols %t6.so 2>&1 | FileCheck %s -DFILE=%t6.so --check-prefix=BROKEN
+# RUN: yaml2obj --docnum=5 %s -o %t5.so
+# RUN: llvm-readelf --hash-symbols %t5.so 2>&1 | FileCheck %s -DFILE=%t5.so --check-prefix=BROKEN
 
 # BROKEN:      Symbol table of .hash for image:
 # BROKEN-NEXT:  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
@@ -415,3 +347,293 @@ ProgramHeaders:
     Sections:
       - Section: .hash
       - Section: .dynamic
+
+## Each SHT_HASH section starts with two 32-bit fields: nbucket and nchain.
+## Check we report an error when a DT_HASH value points to data that has size less than 8 bytes.
+
+# RUN: yaml2obj --docnum=6 %s -o %t6.o
+# RUN: llvm-readelf --hash-symbols %t6.o 2>&1 | FileCheck %s --check-prefix=ERR1 -DFILE=%t6.o
+
+# ERR1: warning: '[[FILE]]': the hash table at offset 0x2b1 goes past the end of the file (0x2b8){{$}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:   .hash
+    Type:   SHT_HASH
+    Flags:  [ SHF_ALLOC ]
+    Bucket: [ 0 ]
+    Chain:  [ 0 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x239
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols: []
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FileSize: 0x23a
+    Sections:
+      - Section: .hash
+      - Section: .dynamic
+
+## Check we report a warning when the hash table goes past the end of the file.
+
+## Case A.1: the hash table ends right before the EOF. We have a broken nbucket
+##           field that has a value larger than the number of buckets.
+# RUN: yaml2obj --docnum=7 %s -o %t7.1.o -DNBUCKET=0x5d
+# RUN: llvm-readelf --hash-symbols %t7.1.o 2>&1 | FileCheck %s --check-prefix=NOERR1
+# NOERR1:            Symbol table of .hash for image:
+# NOERR1-NEXT:         Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
+# NOERR1-NEXT-EMPTY:
+
+## Case A.2: the hash table ends 1 byte past the EOF. We have a broken nbucket
+##           field that has a value larger than the number of buckets.
+# RUN: yaml2obj --docnum=7 %s -o %t7.2.o -DNBUCKET=0x5e
+# RUN: llvm-readelf --hash-symbols %t7.2.o 2>&1 | FileCheck %s --check-prefix=ERR2 -DFILE=%t7.2.o
+# ERR2:      Symbol table of .hash for image:
+# ERR2-NEXT: warning: '[[FILE]]': the hash table at offset 0x54 goes past the end of the file (0x1d4), nbucket = 94, nchain = 1{{$}}
+# ERR2-NOT:  {{.}}
+
+## Case B.1: the hash table ends right before the EOF. We have a broken nchain
+##           field that has a value larger than the number of chains.
+# RUN: yaml2obj --docnum=7 %s -o %t7.3.o -DNCHAIN=0x5d
+# RUN: llvm-readelf --hash-symbols %t7.3.o 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not="warning:" --check-prefix=NOERR2 -DFILE=%t7.3.o
+# NOERR2:      warning: '[[FILE]]': hash table nchain (93) differs from symbol count derived from SHT_DYNSYM section header (1)
+# NOERR2:      Symbol table of .hash for image:
+# NOERR2-NEXT: Num Buc: Value Size Type Bind Vis Ndx Name
+# NOERR2-NOT:  {{.}}
+
+## Case B.2: the hash table ends 1 byte past the EOF. We have a broken nchain
+##           field that has a value larger than the number of chains.
+# RUN: yaml2obj --docnum=7 %s -o %t7.4.o -DNCHAIN=0x5e
+# RUN: llvm-readelf --hash-symbols %t7.4.o 2>&1 | FileCheck %s --check-prefix=ERR3 -DFILE=%t7.4.o
+# ERR3:      Symbol table of .hash for image:
+# ERR3-NEXT: warning: '[[FILE]]': the hash table at offset 0x54 goes past the end of the file (0x1d4), nbucket = 1, nchain = 94{{$}}
+# ERR3-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .hash
+    Type:    SHT_HASH
+    Flags:   [ SHF_ALLOC ]
+    Bucket:  [ 0 ]
+    NBucket: [[NBUCKET=1]]
+    Chain:   [ 0 ]
+    NChain:  [[NCHAIN=1]]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols: []
+ProgramHeaders:
+  - Type: PT_LOAD
+    Sections:
+      - Section: .hash
+      - Section: .dynamic
+
+## Check we report a proper warning when a GNU hash table goes past the end of the file.
+
+## Case A: the 'maskwords' field is set so that the table goes past the end of the file.
+# RUN: yaml2obj --docnum=8 -D MASKWORDS=4294967295 %s -o %t.err.maskwords
+# RUN: llvm-readelf --hash-symbols %t.err.maskwords 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err.maskwords --check-prefix=ERR4
+
+# ERR4:      Symbol table of .gnu.hash for image:
+# ERR4-NEXT:  Num Buc: Value Size Type Bind Vis Ndx Name
+# ERR4-NEXT: warning: '[[FILE]]': unable to dump the SHT_GNU_HASH section at 0x78: it goes past the end of the file
+
+## Case B: the 'nbuckets' field is set so that the table goes past the end of the file.
+# RUN: yaml2obj --docnum=8 -D NBUCKETS=4294967295 %s -o %t.err.nbuckets
+# RUN: llvm-readelf --hash-symbols %t.err.nbuckets 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err.nbuckets --check-prefix=ERR4
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x1
+      Shift2: 0x2
+## The number of words in the Bloom filter. The value of 2 is no-op.
+      MaskWords: [[MASKWORDS=2]]
+## The number of hash buckets. The value of 3 is no-op.
+      NBuckets:  [[NBUCKETS=3]]
+    BloomFilter: [0x3, 0x4]
+    HashBuckets: [0x5, 0x6, 0x7]
+    HashValues:  [0x8, 0x9, 0xA, 0xB]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Link:  .dynstr
+    Entries:
+      - Tag:   DT_GNU_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols:
+  - Name:    aaa
+    Binding: STB_GLOBAL
+  - Name:    bbb
+    Binding: STB_GLOBAL
+  - Name:    ccc
+    Binding: STB_GLOBAL
+  - Name:    ddd
+    Binding: STB_GLOBAL
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Sections:
+      - Section: .gnu.hash
+      - Section: .dynamic
+
+## Check the behavior when the dynamic symbol table is empty or not found.
+
+## Case A.1: Check we report a warning when the dynamic symbol table is empty and we attempt to print hash symbols
+##         from the .hash table. The number of symbols in the dynamic symbol table can be calculated from its size
+##         or derived from the Chain vector of the .hash table. Make both ways to return a zero to do the check.
+# RUN: yaml2obj --docnum=9 %s -o %t9.1.so
+# RUN: llvm-readelf --hash-symbols %t9.1.so 2>&1 | FileCheck %s -DFILE=%t9.1.so --check-prefix=DYNSYM-EMPTY-HASH
+
+# DYNSYM-EMPTY-HASH:      Symbol table of .hash for image:
+# DYNSYM-EMPTY-HASH-NEXT:   Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
+# DYNSYM-EMPTY-HASH-NEXT: warning: '[[FILE]]': unable to print symbols for the .hash table: the dynamic symbol table is empty
+# DYNSYM-EMPTY-HASH-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:   .hash
+    Type:   SHT_HASH
+    Flags:  [ SHF_ALLOC ]
+    Bucket: [ 0 ]
+    Chain:  [ ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x0
+      - Tag:   DT_STRTAB
+## PT_LOAD p_offset == .hash offset == 0x54.
+## 0x54 + 0x2c == 0x80 == .dynstr offset.
+        Value: 0x2c
+      - Tag:   DT_STRSZ
+        Value: 0x1
+      - Tag:   DT_NULL
+        Value: 0x0
+  - Name:  .dynstr
+    Type:  SHT_STRTAB
+    Flags: [ SHF_ALLOC ]
+  - Name:  .dynsym
+    Type:  [[DYNSYMTYPE=SHT_DYNSYM]]
+    Flags: [ SHF_ALLOC ]
+    Size:  0
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Sections:
+      - Section: .hash
+      - Section: .dynamic
+      - Section: .dynstr
+
+## Case A.2: similar to A.1, but now check that we report a warning when the dynamic symbol table was not found.
+##           To do that, set the type of the .dynsym to SHT_PROGBITS to hide it.
+# RUN: yaml2obj --docnum=9 -DDYNSYMTYPE=SHT_PROGBITS %s -o %t9.2.so
+# RUN: llvm-readelf --hash-symbols %t9.2.so 2>&1 | FileCheck %s -DFILE=%t9.2.so --check-prefix=DYNSYM-NOTFOUND-HASH
+
+# DYNSYM-NOTFOUND-HASH:      Symbol table of .hash for image:
+# DYNSYM-NOTFOUND-HASH-NEXT:   Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
+# DYNSYM-NOTFOUND-HASH-NEXT: warning: '[[FILE]]': unable to print symbols for the .hash table: the dynamic symbol table was not found
+# DYNSYM-NOTFOUND-HASH-NOT:  {{.}}
+
+## Case B.1: Check we report a warning when the dynamic symbol table is empty and we attempt to print
+##           hash symbols from the .gnu.hash table.
+# RUN: yaml2obj --docnum=10 %s -o %t10.1.so
+# RUN: llvm-readelf --hash-symbols %t10.1.so 2>&1 | FileCheck %s -DFILE=%t10.1.so --check-prefix=DYNSYM-EMPTY-GNUHASH
+
+# DYNSYM-EMPTY-GNUHASH:      Symbol table of .gnu.hash for image:
+# DYNSYM-EMPTY-GNUHASH-NEXT:  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
+# DYNSYM-EMPTY-GNUHASH-NEXT: warning: '[[FILE]]': unable to print symbols for the .gnu.hash table: the dynamic symbol table is empty
+# DYNSYM-EMPTY-GNUHASH-NOT:  {{.}}
+
+## Case B.2: similar to B.1, but now check that we report a warning when the dynamic symbol table was not found.
+##           To do that, set the type of the .dynsym to SHT_PROGBITS to hide it.
+# RUN: yaml2obj --docnum=10 -DDYNSYMTYPE=SHT_PROGBITS %s -o %t10.2.so
+# RUN: llvm-readelf --hash-symbols %t10.2.so 2>&1 | FileCheck %s -DFILE=%t10.2.so --check-prefix=DYNSYM-NOTFOUND-GNUHASH
+
+# DYNSYM-NOTFOUND-GNUHASH:      Symbol table of .gnu.hash for image:
+# DYNSYM-NOTFOUND-GNUHASH-NEXT:  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
+# DYNSYM-NOTFOUND-GNUHASH-NEXT: warning: '[[FILE]]': unable to print symbols for the .gnu.hash table: the dynamic symbol table was not found
+# DYNSYM-NOTFOUND-GNUHASH-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x0
+      Shift2: 0x0
+    BloomFilter: [ 0x0 ]
+    HashBuckets: [ 0x1 ]
+    HashValues:  [ 0x0 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_GNU_HASH
+        Value: 0x0
+      - Tag:   DT_STRTAB
+## PT_LOAD p_offset == .hash offset == 0x54.
+## 0x54 + 0x3c == 0x80 == .dynstr offset.
+        Value: 0x3c
+      - Tag:   DT_STRSZ
+        Value: 0x1
+      - Tag:   DT_NULL
+        Value: 0x0
+  - Name: .dynstr
+    Type: SHT_STRTAB
+  - Name:  .dynsym
+    Type:  [[DYNSYMTYPE=SHT_DYNSYM]]
+    Flags: [ SHF_ALLOC ]
+    Size:  0
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Sections:
+      - Section: .gnu.hash
+      - Section: .dynamic
+      - Section: .dynstr

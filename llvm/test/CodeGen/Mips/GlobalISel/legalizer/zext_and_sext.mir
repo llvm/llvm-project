@@ -18,10 +18,8 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; MIPS32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32)
-    ; MIPS32: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
-    ; MIPS32: $v0 = COPY [[UV]](s32)
-    ; MIPS32: $v1 = COPY [[UV1]](s32)
+    ; MIPS32: $v0 = COPY [[COPY]](s32)
+    ; MIPS32: $v1 = COPY [[C]](s32)
     ; MIPS32: RetRA implicit $v0, implicit $v1
     %0:_(s32) = COPY $a0
     %1:_(s64) = G_ZEXT %0(s32)
@@ -44,12 +42,9 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[COPY1]](s32)
-    ; MIPS32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[ASHR]](s32)
-    ; MIPS32: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
-    ; MIPS32: $v0 = COPY [[UV]](s32)
-    ; MIPS32: $v1 = COPY [[UV1]](s32)
+    ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]](s32)
+    ; MIPS32: $v0 = COPY [[COPY]](s32)
+    ; MIPS32: $v1 = COPY [[ASHR]](s32)
     ; MIPS32: RetRA implicit $v0, implicit $v1
     %0:_(s32) = COPY $a0
     %1:_(s64) = G_SEXT %0(s32)

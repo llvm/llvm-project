@@ -10,7 +10,7 @@
 
 // template <size_t I, class T, size_t N> T&& get(array<T, N>&& a);
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <array>
 #include <memory>
@@ -33,5 +33,5 @@ int main(int, char**)
         assert(*t == 3.5);
     }
 
-  return 0;
+    return 0;
 }

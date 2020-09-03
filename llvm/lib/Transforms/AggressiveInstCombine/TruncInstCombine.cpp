@@ -25,16 +25,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "AggressiveInstCombineInternal.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IRBuilder.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "aggressive-instcombine"
+
+STATISTIC(
+    NumDAGsReduced,
+    "Number of truncations eliminated by reducing bit width of expression DAG");
+STATISTIC(NumInstrsReduced,
+          "Number of instructions whose bit width was reduced");
 
 /// Given an instruction and a container, it fills all the relevant operands of
 /// that instruction, with respect to the Trunc expression dag optimizaton.
@@ -55,6 +63,10 @@ static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
   case Instruction::Xor:
     Ops.push_back(I->getOperand(0));
     Ops.push_back(I->getOperand(1));
+    break;
+  case Instruction::Select:
+    Ops.push_back(I->getOperand(1));
+    Ops.push_back(I->getOperand(2));
     break;
   default:
     llvm_unreachable("Unreachable!");
@@ -114,7 +126,8 @@ bool TruncInstCombine::buildTruncExpressionDag() {
     case Instruction::Mul:
     case Instruction::And:
     case Instruction::Or:
-    case Instruction::Xor: {
+    case Instruction::Xor:
+    case Instruction::Select: {
       SmallVector<Value *, 2> Operands;
       getRelevantOperands(I, Operands);
       for (Value *Operand : Operands)
@@ -123,7 +136,7 @@ bool TruncInstCombine::buildTruncExpressionDag() {
     }
     default:
       // TODO: Can handle more cases here:
-      // 1. select, shufflevector, extractelement, insertelement
+      // 1. shufflevector, extractelement, insertelement
       // 2. udiv, urem
       // 3. shl, lshr, ashr
       // 4. phi node(and loop handling)
@@ -194,7 +207,7 @@ unsigned TruncInstCombine::getMinBitWidth() {
         unsigned IOpBitwidth = InstInfoMap.lookup(IOp).ValidBitWidth;
         if (IOpBitwidth >= ValidBitWidth)
           continue;
-        InstInfoMap[IOp].ValidBitWidth = std::max(ValidBitWidth, IOpBitwidth);
+        InstInfoMap[IOp].ValidBitWidth = ValidBitWidth;
         Worklist.push_back(IOp);
       }
   }
@@ -276,8 +289,10 @@ Type *TruncInstCombine::getBestTruncatedType() {
 /// version of \p Ty, otherwise return \p Ty.
 static Type *getReducedType(Value *V, Type *Ty) {
   assert(Ty && !Ty->isVectorTy() && "Expect Scalar Type");
-  if (auto *VTy = dyn_cast<VectorType>(V->getType()))
-    return VectorType::get(Ty, VTy->getNumElements());
+  if (auto *VTy = dyn_cast<VectorType>(V->getType())) {
+    // FIXME: should this handle scalable vectors?
+    return FixedVectorType::get(Ty, VTy->getNumElements());
+  }
   return Ty;
 }
 
@@ -286,9 +301,7 @@ Value *TruncInstCombine::getReducedOperand(Value *V, Type *SclTy) {
   if (auto *C = dyn_cast<Constant>(V)) {
     C = ConstantExpr::getIntegerCast(C, Ty, false);
     // If we got a constantexpr back, try to simplify it with DL info.
-    if (Constant *FoldedC = ConstantFoldConstant(C, DL, &TLI))
-      C = FoldedC;
-    return C;
+    return ConstantFoldConstant(C, DL, &TLI);
   }
 
   auto *I = cast<Instruction>(V);
@@ -298,6 +311,7 @@ Value *TruncInstCombine::getReducedOperand(Value *V, Type *SclTy) {
 }
 
 void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
+  NumInstrsReduced += InstInfoMap.size();
   for (auto &Itr : InstInfoMap) { // Forward
     Instruction *I = Itr.first;
     TruncInstCombine::Info &NodeInfo = Itr.second;
@@ -349,6 +363,13 @@ void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
       Value *LHS = getReducedOperand(I->getOperand(0), SclTy);
       Value *RHS = getReducedOperand(I->getOperand(1), SclTy);
       Res = Builder.CreateBinOp((Instruction::BinaryOps)Opc, LHS, RHS);
+      break;
+    }
+    case Instruction::Select: {
+      Value *Op0 = I->getOperand(0);
+      Value *LHS = getReducedOperand(I->getOperand(1), SclTy);
+      Value *RHS = getReducedOperand(I->getOperand(2), SclTy);
+      Res = Builder.CreateSelect(Op0, LHS, RHS);
       break;
     }
     default:
@@ -409,6 +430,7 @@ bool TruncInstCombine::run(Function &F) {
                     "dominated by: "
                  << CurrentTruncInst << '\n');
       ReduceExpressionDag(NewDstSclTy);
+      ++NumDAGsReduced;
       MadeIRChange = true;
     }
   }

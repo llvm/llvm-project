@@ -1,4 +1,4 @@
-//===-- SymbolFileDWARFDwo.cpp ----------------------------------*- C++ -*-===//
+//===-- SymbolFileDWARFDwo.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,73 +23,58 @@ using namespace lldb_private;
 
 char SymbolFileDWARFDwo::ID;
 
-SymbolFileDWARFDwo::SymbolFileDWARFDwo(ObjectFileSP objfile,
-                                       DWARFCompileUnit &dwarf_cu)
+SymbolFileDWARFDwo::SymbolFileDWARFDwo(SymbolFileDWARF &base_symbol_file,
+                                       ObjectFileSP objfile, uint32_t id)
     : SymbolFileDWARF(objfile, objfile->GetSectionList(
                                    /*update_module_section_list*/ false)),
-      m_base_dwarf_cu(dwarf_cu) {
-  SetID(((lldb::user_id_t)dwarf_cu.GetID()) << 32);
+      m_base_symbol_file(base_symbol_file) {
+  SetID(user_id_t(id) << 32);
+
+  // Parsing of the dwarf unit index is not thread-safe, so we need to prime it
+  // to enable subsequent concurrent lookups.
+  m_context.GetAsLLVM().getCUIndex();
 }
 
-void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
-                                         DWARFDataExtractor &data) {
-  const SectionList *section_list =
-      m_objfile_sp->GetSectionList(false /* update_module_section_list */);
-  if (section_list) {
-    SectionSP section_sp(section_list->FindSectionByType(sect_type, true));
-    if (section_sp) {
-
-      if (m_objfile_sp->ReadSectionData(section_sp.get(), data) != 0)
-        return;
-
-      data.Clear();
+DWARFCompileUnit *SymbolFileDWARFDwo::GetDWOCompileUnitForHash(uint64_t hash) {
+  if (const llvm::DWARFUnitIndex &index = m_context.GetAsLLVM().getCUIndex()) {
+    if (const llvm::DWARFUnitIndex::Entry *entry = index.getFromHash(hash)) {
+      if (auto *unit_contrib = entry->getContribution())
+        return llvm::dyn_cast_or_null<DWARFCompileUnit>(
+            DebugInfo().GetUnitAtOffset(DIERef::Section::DebugInfo,
+                                        unit_contrib->Offset));
     }
+    return nullptr;
   }
 
-  SymbolFileDWARF::LoadSectionData(sect_type, data);
-}
-
-lldb::CompUnitSP
-SymbolFileDWARFDwo::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
-  assert(GetCompileUnit() == &dwarf_cu &&
-         "SymbolFileDWARFDwo::ParseCompileUnit called with incompatible "
-         "compile unit");
-  return GetBaseSymbolFile().ParseCompileUnit(m_base_dwarf_cu);
-}
-
-DWARFCompileUnit *SymbolFileDWARFDwo::GetCompileUnit() {
-  if (!m_cu)
-    m_cu = ComputeCompileUnit();
-  return m_cu;
-}
-
-DWARFCompileUnit *SymbolFileDWARFDwo::ComputeCompileUnit() {
-  DWARFDebugInfo *debug_info = DebugInfo();
-  if (!debug_info)
+  DWARFCompileUnit *cu = FindSingleCompileUnit();
+  if (!cu)
     return nullptr;
+  if (hash !=
+      cu->GetUnitDIEOnly().GetAttributeValueAsUnsigned(DW_AT_GNU_dwo_id, 0))
+    return nullptr;
+  return cu;
+}
+
+DWARFCompileUnit *SymbolFileDWARFDwo::FindSingleCompileUnit() {
+  DWARFDebugInfo &debug_info = DebugInfo();
 
   // Right now we only support dwo files with one compile unit. If we don't have
   // type units, we can just check for the unit count.
-  if (!debug_info->ContainsTypeUnits() && debug_info->GetNumUnits() == 1)
-    return llvm::cast<DWARFCompileUnit>(debug_info->GetUnitAtIndex(0));
+  if (!debug_info.ContainsTypeUnits() && debug_info.GetNumUnits() == 1)
+    return llvm::cast<DWARFCompileUnit>(debug_info.GetUnitAtIndex(0));
 
   // Otherwise, we have to run through all units, and find the compile unit that
   // way.
   DWARFCompileUnit *cu = nullptr;
-  for (size_t i = 0; i < debug_info->GetNumUnits(); ++i) {
+  for (size_t i = 0; i < debug_info.GetNumUnits(); ++i) {
     if (auto *candidate =
-            llvm::dyn_cast<DWARFCompileUnit>(debug_info->GetUnitAtIndex(i))) {
+            llvm::dyn_cast<DWARFCompileUnit>(debug_info.GetUnitAtIndex(i))) {
       if (cu)
         return nullptr; // More that one CU found.
       cu = candidate;
     }
   }
   return cu;
-}
-
-DWARFUnit *
-SymbolFileDWARFDwo::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
-  return GetCompileUnit();
 }
 
 SymbolFileDWARF::DIEToTypePtr &SymbolFileDWARFDwo::GetDIEToType() {
@@ -110,10 +95,10 @@ SymbolFileDWARFDwo::GetForwardDeclClangTypeToDie() {
   return GetBaseSymbolFile().GetForwardDeclClangTypeToDie();
 }
 
-size_t SymbolFileDWARFDwo::GetObjCMethodDIEOffsets(
-    lldb_private::ConstString class_name, DIEArray &method_die_offsets) {
-  return GetBaseSymbolFile().GetObjCMethodDIEOffsets(class_name,
-                                                     method_die_offsets);
+void SymbolFileDWARFDwo::GetObjCMethods(
+    lldb_private::ConstString class_name,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  GetBaseSymbolFile().GetObjCMethods(class_name, callback);
 }
 
 UniqueDWARFASTTypeMap &SymbolFileDWARFDwo::GetUniqueDWARFASTTypeMap() {
@@ -133,17 +118,6 @@ lldb::TypeSP SymbolFileDWARFDwo::FindCompleteObjCDefinitionTypeForDIE(
       die, type_name, must_be_implementation);
 }
 
-SymbolFileDWARF &SymbolFileDWARFDwo::GetBaseSymbolFile() {
-  return m_base_dwarf_cu.GetSymbolFileDWARF();
-}
-
-DWARFExpression::LocationListFormat
-SymbolFileDWARFDwo::GetLocationListFormat() const {
-  return m_base_dwarf_cu.GetVersion() >= 5
-             ? DWARFExpression::LocLists
-             : DWARFExpression::SplitDwarfLocationList;
-}
-
 llvm::Expected<TypeSystem &>
 SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
   return GetBaseSymbolFile().GetTypeSystemForLanguage(language);
@@ -151,7 +125,7 @@ SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
 
 DWARFDIE
 SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
-  if (*die_ref.dwo_num() == GetDwoNum())
-    return DebugInfo()->GetDIE(die_ref);
+  if (die_ref.dwo_num() == GetDwoNum())
+    return DebugInfo().GetDIE(die_ref);
   return GetBaseSymbolFile().GetDIE(die_ref);
 }

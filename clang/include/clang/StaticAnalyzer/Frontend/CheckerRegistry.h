@@ -5,16 +5,22 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Contains the logic for parsing the TableGen file Checkers.td, and parsing the
+// specific invocation of the analyzer (which checker/package is enabled, values
+// of their options, etc). This is in the frontend library because checker
+// registry functions are called from here but are defined in the dependent
+// library libStaticAnalyzerCheckers, but the actual data structure that holds
+// the parsed information is in the Core library.
+//
+//===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_STATICANALYZER_CORE_CHECKERREGISTRY_H
-#define LLVM_CLANG_STATICANALYZER_CORE_CHECKERREGISTRY_H
+#ifndef LLVM_CLANG_STATICANALYZER_FRONTEND_CHECKERREGISTRY_H
+#define LLVM_CLANG_STATICANALYZER_FRONTEND_CHECKERREGISTRY_H
 
 #include "clang/Basic/LLVM.h"
-#include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "llvm/ADT/StringMap.h"
+#include "clang/StaticAnalyzer/Core/CheckerRegistryData.h"
 #include "llvm/ADT/StringRef.h"
-#include <cstddef>
-#include <vector>
 
 // FIXME: move this information to an HTML file in docs/.
 // At the very least, a checker plugin is a dynamic library that exports
@@ -69,9 +75,10 @@ namespace clang {
 
 class AnalyzerOptions;
 class DiagnosticsEngine;
-class LangOptions;
 
 namespace ento {
+
+class CheckerManager;
 
 /// Manages a set of available checkers for running a static analysis.
 /// The checkers are organized into packages by full name, where including
@@ -81,157 +88,59 @@ namespace ento {
 /// "core.builtin", or the full name "core.builtin.NoReturnFunctionChecker".
 class CheckerRegistry {
 public:
-  CheckerRegistry(ArrayRef<std::string> plugins, DiagnosticsEngine &diags,
-                  AnalyzerOptions &AnOpts, const LangOptions &LangOpts,
+  CheckerRegistry(CheckerRegistryData &Data, ArrayRef<std::string> Plugins,
+                  DiagnosticsEngine &Diags, AnalyzerOptions &AnOpts,
                   ArrayRef<std::function<void(CheckerRegistry &)>>
-                      checkerRegistrationFns = {});
+                      CheckerRegistrationFns = {});
 
-  /// Initialization functions perform any necessary setup for a checker.
-  /// They should include a call to CheckerManager::registerChecker.
-  using InitializationFunction = void (*)(CheckerManager &);
-  using ShouldRegisterFunction = bool (*)(const LangOptions &);
+  /// Collects all enabled checkers in the field EnabledCheckers. It preserves
+  /// the order of insertion, as dependencies have to be enabled before the
+  /// checkers that depend on them.
+  void initializeRegistry(const CheckerManager &Mgr);
 
-  /// Specifies a command line option. It may either belong to a checker or a
-  /// package.
-  struct CmdLineOption {
-    StringRef OptionType;
-    StringRef OptionName;
-    StringRef DefaultValStr;
-    StringRef Description;
-    StringRef DevelopmentStatus;
-    bool IsHidden;
 
-    CmdLineOption(StringRef OptionType, StringRef OptionName,
-                  StringRef DefaultValStr, StringRef Description,
-                  StringRef DevelopmentStatus, bool IsHidden)
-        : OptionType(OptionType), OptionName(OptionName),
-          DefaultValStr(DefaultValStr), Description(Description),
-          DevelopmentStatus(DevelopmentStatus), IsHidden(IsHidden) {
-
-      assert((OptionType == "bool" || OptionType == "string" ||
-              OptionType == "int") &&
-             "Unknown command line option type!");
-
-      assert((OptionType != "bool" ||
-              (DefaultValStr == "true" || DefaultValStr == "false")) &&
-             "Invalid value for boolean command line option! Maybe incorrect "
-             "parameters to the addCheckerOption or addPackageOption method?");
-
-      int Tmp;
-      assert((OptionType != "int" || !DefaultValStr.getAsInteger(0, Tmp)) &&
-             "Invalid value for integer command line option! Maybe incorrect "
-             "parameters to the addCheckerOption or addPackageOption method?");
-      (void)Tmp;
-
-      assert((DevelopmentStatus == "alpha" || DevelopmentStatus == "beta" ||
-              DevelopmentStatus == "released") &&
-             "Invalid development status!");
-    }
-  };
-
-  using CmdLineOptionList = llvm::SmallVector<CmdLineOption, 0>;
-
-  struct CheckerInfo;
-
-  using CheckerInfoList = std::vector<CheckerInfo>;
-  using CheckerInfoListRange = llvm::iterator_range<CheckerInfoList::iterator>;
-  using ConstCheckerInfoList = llvm::SmallVector<const CheckerInfo *, 0>;
-  using CheckerInfoSet = llvm::SetVector<const CheckerInfo *>;
-
-  /// Specifies a checker. Note that this isn't what we call a checker object,
-  /// it merely contains everything required to create one.
-  struct CheckerInfo {
-    enum class StateFromCmdLine {
-      // This checker wasn't explicitly enabled or disabled.
-      State_Unspecified,
-      // This checker was explicitly disabled.
-      State_Disabled,
-      // This checker was explicitly enabled.
-      State_Enabled
-    };
-
-    InitializationFunction Initialize = nullptr;
-    ShouldRegisterFunction ShouldRegister = nullptr;
-    StringRef FullName;
-    StringRef Desc;
-    StringRef DocumentationUri;
-    CmdLineOptionList CmdLineOptions;
-    bool IsHidden = false;
-    StateFromCmdLine State = StateFromCmdLine::State_Unspecified;
-
-    ConstCheckerInfoList Dependencies;
-
-    bool isEnabled(const LangOptions &LO) const {
-      return State == StateFromCmdLine::State_Enabled && ShouldRegister(LO);
-    }
-
-    bool isDisabled(const LangOptions &LO) const {
-      return State == StateFromCmdLine::State_Disabled && ShouldRegister(LO);
-    }
-
-    // Since each checker must have a different full name, we can identify
-    // CheckerInfo objects by them.
-    bool operator==(const CheckerInfo &Rhs) const {
-      return FullName == Rhs.FullName;
-    }
-
-    CheckerInfo(InitializationFunction Fn, ShouldRegisterFunction sfn,
-                StringRef Name, StringRef Desc, StringRef DocsUri,
-                bool IsHidden)
-        : Initialize(Fn), ShouldRegister(sfn), FullName(Name), Desc(Desc),
-          DocumentationUri(DocsUri), IsHidden(IsHidden) {}
-
-    // Used for lower_bound.
-    explicit CheckerInfo(StringRef FullName) : FullName(FullName) {}
-  };
-
-  using StateFromCmdLine = CheckerInfo::StateFromCmdLine;
-
-  /// Specifies a package. Each package option is implicitly an option for all
-  /// checkers within the package.
-  struct PackageInfo {
-    StringRef FullName;
-    CmdLineOptionList CmdLineOptions;
-
-    // Since each package must have a different full name, we can identify
-    // CheckerInfo objects by them.
-    bool operator==(const PackageInfo &Rhs) const {
-      return FullName == Rhs.FullName;
-    }
-
-    explicit PackageInfo(StringRef FullName) : FullName(FullName) {}
-  };
-
-  using PackageInfoList = llvm::SmallVector<PackageInfo, 0>;
-
-  template <typename T> static void addToCheckerMgr(CheckerManager &mgr) {
-    mgr.registerChecker<T>();
+private:
+  /// Default initialization function for checkers -- since CheckerManager
+  /// includes this header, we need to make it a template parameter, and since
+  /// the checker must be a template parameter as well, we can't put this in the
+  /// cpp file.
+  template <typename MGR, typename T> static void initializeManager(MGR &mgr) {
+    mgr.template registerChecker<T>();
   }
 
-  static bool returnTrue(const LangOptions &LO) {
+  template <typename T> static bool returnTrue(const CheckerManager &mgr) {
     return true;
   }
 
+public:
   /// Adds a checker to the registry. Use this non-templated overload when your
   /// checker requires custom initialization.
-  void addChecker(InitializationFunction Fn, ShouldRegisterFunction sfn,
+  void addChecker(RegisterCheckerFn Fn, ShouldRegisterFunction sfn,
                   StringRef FullName, StringRef Desc, StringRef DocsUri,
                   bool IsHidden);
 
   /// Adds a checker to the registry. Use this templated overload when your
   /// checker does not require any custom initialization.
+  /// This function isn't really needed and probably causes more headaches than
+  /// the tiny convenience that it provides, but external plugins might use it,
+  /// and there isn't a strong incentive to remove it.
   template <class T>
   void addChecker(StringRef FullName, StringRef Desc, StringRef DocsUri,
                   bool IsHidden = false) {
     // Avoid MSVC's Compiler Error C2276:
     // http://msdn.microsoft.com/en-us/library/850cstw1(v=VS.80).aspx
-    addChecker(&CheckerRegistry::addToCheckerMgr<T>,
-               &CheckerRegistry::returnTrue, FullName, Desc, DocsUri, IsHidden);
+    addChecker(&CheckerRegistry::initializeManager<CheckerManager, T>,
+               &CheckerRegistry::returnTrue<T>, FullName, Desc, DocsUri,
+               IsHidden);
   }
 
-  /// Makes the checker with the full name \p fullName depends on the checker
+  /// Makes the checker with the full name \p fullName depend on the checker
   /// called \p dependency.
   void addDependency(StringRef FullName, StringRef Dependency);
+
+  /// Makes the checker with the full name \p fullName weak depend on the
+  /// checker called \p dependency.
+  void addWeakDependency(StringRef FullName, StringRef Dependency);
 
   /// Registers an option to a given checker. A checker option will always have
   /// the following format:
@@ -262,7 +171,7 @@ public:
   void addPackageOption(StringRef OptionType, StringRef PackageFullName,
                         StringRef OptionName, StringRef DefaultValStr,
                         StringRef Description, StringRef DevelopmentStatus,
-                         bool IsHidden = false);
+                        bool IsHidden = false);
 
   // FIXME: This *really* should be added to the frontend flag descriptions.
   /// Initializes a CheckerManager by calling the initialization functions for
@@ -274,49 +183,17 @@ public:
   /// Check if every option corresponds to a specific checker or package.
   void validateCheckerOptions() const;
 
-  /// Prints the name and description of all checkers in this registry.
-  /// This output is not intended to be machine-parseable.
-  void printCheckerWithDescList(raw_ostream &Out,
-                                size_t MaxNameChars = 30) const;
-  void printEnabledCheckerList(raw_ostream &Out) const;
-  void printCheckerOptionList(raw_ostream &Out) const;
-
 private:
-  /// Collect all enabled checkers. The returned container preserves the order
-  /// of insertion, as dependencies have to be enabled before the checkers that
-  /// depend on them.
-  CheckerInfoSet getEnabledCheckers() const;
-
-  /// Return an iterator range of mutable CheckerInfos \p CmdLineArg applies to.
-  /// For example, it'll return the checkers for the core package, if
-  /// \p CmdLineArg is "core".
-  CheckerInfoListRange getMutableCheckersForCmdLineArg(StringRef CmdLineArg);
-
-  CheckerInfoList Checkers;
-  PackageInfoList Packages;
-  /// Used for couting how many checkers belong to a certain package in the
-  /// \c Checkers field. For convenience purposes.
-  llvm::StringMap<size_t> PackageSizes;
-
-  /// Contains all (Dependendent checker, Dependency) pairs. We need this, as
-  /// we'll resolve dependencies after all checkers were added first.
-  llvm::SmallVector<std::pair<StringRef, StringRef>, 0> Dependencies;
-  void resolveDependencies();
-
-  /// Contains all (FullName, CmdLineOption) pairs. Similarly to dependencies,
-  /// we only modify the actual CheckerInfo and PackageInfo objects once all
-  /// of them have been added.
-  llvm::SmallVector<std::pair<StringRef, CmdLineOption>, 0> PackageOptions;
-  llvm::SmallVector<std::pair<StringRef, CmdLineOption>, 0> CheckerOptions;
-
+  template <bool IsWeak> void resolveDependencies();
   void resolveCheckerAndPackageOptions();
+
+  CheckerRegistryData &Data;
 
   DiagnosticsEngine &Diags;
   AnalyzerOptions &AnOpts;
-  const LangOptions &LangOpts;
 };
 
 } // namespace ento
 } // namespace clang
 
-#endif // LLVM_CLANG_STATICANALYZER_CORE_CHECKERREGISTRY_H
+#endif // LLVM_CLANG_STATICANALYZER_FRONTEND_CHECKERREGISTRY_H

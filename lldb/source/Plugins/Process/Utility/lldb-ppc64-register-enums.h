@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_ppc64_register_enums_h
-#define lldb_ppc64_register_enums_h
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LLDB_PPC64_REGISTER_ENUMS_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LLDB_PPC64_REGISTER_ENUMS_H
 
 // LLDB register codes (e.g. RegisterKind == eRegisterKindLLDB)
 
@@ -133,4 +133,4 @@ enum {
   k_num_vmx_registers_ppc64 = k_last_vmx_ppc64 - k_first_vmx_ppc64 + 1,
 };
 
-#endif // #ifndef lldb_ppc64_register_enums_h
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LLDB_PPC64_REGISTER_ENUMS_H

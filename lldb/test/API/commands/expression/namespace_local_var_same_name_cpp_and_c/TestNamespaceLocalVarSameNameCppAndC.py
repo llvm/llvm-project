@@ -15,10 +15,6 @@ class TestNamespaceLocalVarSameNameCppAndC(TestBase):
         (self.target, self.process, _, bkpt) = lldbutil.run_to_source_breakpoint(self, '// break here',
                 lldb.SBFileSpec("main.cpp", False))
 
-        self.expect("expr error",
-                substrs=['(int) $0 = 1'])
-
+        self.expect_expr("error", result_type="int", result_value="1")
         lldbutil.continue_to_breakpoint(self.process, bkpt)
-
-        self.expect("expr error",
-                substrs=['(int) $1 = 1'])
+        self.expect_expr("error", result_type="int", result_value="1")

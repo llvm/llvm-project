@@ -73,7 +73,12 @@ def get_terminal_size(fd):
 def readfunc_stdio(prompt):
     sys.stdout.write(prompt)
     sys.stdout.flush()
-    return sys.stdin.readline().rstrip()
+    line = sys.stdin.readline()
+    # Readline always includes a trailing newline character unless the file
+    # ends with an incomplete line. An empty line indicates EOF.
+    if not line:
+        raise EOFError
+    return line.rstrip()
 
 
 def run_python_interpreter(local_dict):

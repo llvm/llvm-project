@@ -38,7 +38,7 @@ bytes:
         addis 4, 2, byteSt@toc@ha
         stb   3,    byteSt@toc@l(4)
         blr
-# Dis-LABEL: bytes:
+# Dis-LABEL: <bytes>:
 # Dis-NEXT:   addis
 # Dis-NEXT:   addi
 # Dis-NEXT:   nop
@@ -47,7 +47,7 @@ bytes:
 # Dis-NEXT:   stb   3, -32751(2)
 # Dis-NEXT:   blr
 
-# NoOpt-LABEL: bytes:
+# NoOpt-LABEL: <bytes>:
 # NoOpt-NEXT:     addis
 # NoOpt-NEXT:     addi
 # NoOpt-NEXT:     addis 3, 2, 0
@@ -72,7 +72,7 @@ halfs:
         addis 5, 2, halfSt@toc@ha
         sth   4,    halfSt@toc@l(5)
         blr
-# Dis-LABEL: halfs:
+# Dis-LABEL: <halfs>:
 # Dis-NEXT:   addis
 # Dis-NEXT:   addi
 # Dis-NEXT:   nop
@@ -83,7 +83,7 @@ halfs:
 # Dis-NEXT:   sth 4, -32748(2)
 # Dis-NEXT:   blr
 
-# NoOpt-LABEL: halfs:
+# NoOpt-LABEL: <halfs>:
 # NoOpt-NEXT:   addis
 # NoOpt-NEXT:   addi
 # NoOpt-NEXT:   addis 3, 2, 0
@@ -181,7 +181,7 @@ vec_dq:
         stxv  3,    vecSt@toc@l(3)
         blr
 
-# Dis-LABEL: vec_dq:
+# Dis-LABEL: <vec_dq>:
 # Dis-NEXT:    addis
 # Dis-NEXT:    addi
 # Dis-NEXT:    nop
@@ -190,7 +190,7 @@ vec_dq:
 # Dis-NEXT:    stxv 3, -32704(2)
 # Dis-NEXT:    blr
 
-# NoOpt-LABEL: vec_dq:
+# NoOpt-LABEL: <vec_dq>:
 # NoOpt-NEXT:    addis
 # NoOpt-NEXT:    addi
 # NoOpt-NEXT:    addis 3, 2, 0
@@ -217,7 +217,7 @@ vec_ds:
         addis  3, 2, vecSt@toc@ha
         stxssp 3,    vecSt@toc@l(3)
         blr
-# Dis-LABEL: vec_ds:
+# Dis-LABEL: <vec_ds>:
 # Dis-NEXT:   addis
 # Dis-NEXT:   addi
 # Dis-NEXT:   nop
@@ -230,7 +230,7 @@ vec_ds:
 # Dis-NEXT:   stxssp 3, -32704(2)
 # Dis-NEXT:   blr
 
-# NoOpt-LABEL: vec_ds:
+# NoOpt-LABEL: <vec_ds>:
 # NoOpt-NEXT:   addis
 # NoOpt-NEXT:   addi
 # NoOpt-NEXT:   addis 3, 2, 0

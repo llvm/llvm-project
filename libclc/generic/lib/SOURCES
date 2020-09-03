@@ -176,6 +176,7 @@ math/rint.cl
 math/clc_rootn.cl
 math/rootn.cl
 math/round.cl
+math/rsqrt.cl
 math/sin.cl
 math/sincos.cl
 math/sincos_helpers.cl

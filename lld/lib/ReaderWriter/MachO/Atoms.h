@@ -112,8 +112,8 @@ class MachOTentativeDefAtom : public SimpleDefinedAtom {
 public:
   MachOTentativeDefAtom(const File &f, const StringRef name, Scope scope,
                         uint64_t size, DefinedAtom::Alignment align)
-      : SimpleDefinedAtom(f), _name(name), _scope(scope), _size(size),
-        _align(align) {}
+      : SimpleDefinedAtom(f), _name(std::string(name)), _scope(scope),
+        _size(size), _align(align) {}
 
   ~MachOTentativeDefAtom() override = default;
 

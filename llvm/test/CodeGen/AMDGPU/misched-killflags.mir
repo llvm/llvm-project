@@ -6,7 +6,6 @@ tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
-  scratchWaveOffsetReg: '$sgpr7'
   frameOffsetReg:  '$sgpr7'
 body: |
   bb.0:
@@ -35,12 +34,12 @@ body: |
 # CHECK-DAG: $sgpr8 = S_MOV_B32 3
 # CHECK-DAG: $sgpr33 = S_MOV_B32 $sgpr7
 # CHECK: $vgpr0 = V_MOV_B32_e32 $sgpr8, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr8_sgpr9_sgpr10_sgpr11
-# CHECK: $sgpr32 = S_MOV_B32 $sgpr33
 # CHECK: BUNDLE implicit-def $sgpr6_sgpr7, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $scc {
 # CHECK:   $sgpr6_sgpr7 = S_GETPC_B64
 # CHECK:   $sgpr6 = S_ADD_U32 internal $sgpr6, 0, implicit-def $scc
 # CHECK:   $sgpr7 = S_ADDC_U32 internal $sgpr7, 0, implicit-def $scc, implicit internal $scc
 # CHECK: }
+# CHECK: $sgpr32 = S_MOV_B32 $sgpr33
 # CHECK: $sgpr4 = S_MOV_B32 killed $sgpr33
 # CHECK: $vgpr1 = V_MOV_B32_e32 $sgpr9, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
 # CHECK: $vgpr2 = V_MOV_B32_e32 $sgpr10, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11

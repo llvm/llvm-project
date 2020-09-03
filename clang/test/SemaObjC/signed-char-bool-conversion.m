@@ -108,3 +108,15 @@ int main() {
   f<short>(); // expected-note {{in instantiation of function template specialization 'f<short>' requested here}}
 }
 #endif
+
+void t5(BOOL b) {
+  int i;
+  b = b ?: YES; // no warning
+  b = b ?: i; // expected-warning {{implicit conversion from integral type 'int' to 'BOOL'}}
+  b = (b = i) // expected-warning {{implicit conversion from integral type 'int' to 'BOOL'}}
+               ?: YES;
+  b = (1 ? YES : i) ?: YES; // expected-warning {{implicit conversion from integral type 'int' to 'BOOL'}}
+  b = b ?: (1 ? i : i); // expected-warning 2 {{implicit conversion from integral type 'int' to 'BOOL'}}
+
+  b = b ? YES : (i ?: 0); // expected-warning {{implicit conversion from integral type 'int' to 'BOOL'}}
+}

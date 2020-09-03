@@ -203,6 +203,6 @@ void ento::registerRunLoopAutoreleaseLeakChecker(CheckerManager &mgr) {
   mgr.registerChecker<RunLoopAutoreleaseLeakChecker>();
 }
 
-bool ento::shouldRegisterRunLoopAutoreleaseLeakChecker(const LangOptions &LO) {
+bool ento::shouldRegisterRunLoopAutoreleaseLeakChecker(const CheckerManager &mgr) {
   return true;
 }

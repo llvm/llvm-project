@@ -112,7 +112,7 @@ G
 **GEP**
     ``GetElementPtr``. An LLVM IR instruction that is used to get the address
     of a subelement of an aggregate data structure. It is documented in detail
-    `here <http://llvm.org/docs/GetElementPtr.html>`_.
+    `here <https://llvm.org/docs/GetElementPtr.html>`_.
 
 **GVN**
     Global Value Numbering. GVN is a pass that partitions values computed by a
@@ -230,6 +230,10 @@ R
     and other optimization.  For example, changing ``(A+B-A)`` into ``(B+A-A)``,
     permitting it to be optimized into ``(B+0)`` then ``(B)``.
 
+**RFC**
+  Request for Comment. An email sent to a project mailing list in order to
+  solicit feedback on a proposed change.
+
 .. _roots:
 .. _stack roots:
 
@@ -250,7 +254,7 @@ S
 **Safe Point**
     In garbage collection, it is necessary to identify `stack roots`_ so that
     reachability analysis may proceed. It may be infeasible to provide this
-    information for every instruction, so instead the information may is
+    information for every instruction, so instead the information is
     calculated only at designated safe points. With a copying collector,
     `derived pointers`_ must not be retained across safe points and `object
     pointers`_ must be reloaded from stack roots.

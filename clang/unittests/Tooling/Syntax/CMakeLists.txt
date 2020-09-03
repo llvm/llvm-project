@@ -14,6 +14,7 @@ clang_target_link_libraries(SyntaxTests
   clangFrontend
   clangLex
   clangSerialization
+  clangTesting
   clangTooling
   clangToolingCore
   clangToolingSyntax

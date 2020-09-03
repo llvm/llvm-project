@@ -7,148 +7,160 @@
 //===----------------------------------------------------------------------===//
 
 def HasV4T           : Predicate<"Subtarget->hasV4TOps()">,
-                                 AssemblerPredicate<"HasV4TOps", "armv4t">;
+                                 AssemblerPredicate<(all_of HasV4TOps), "armv4t">;
 def NoV4T            : Predicate<"!Subtarget->hasV4TOps()">;
 def HasV5T           : Predicate<"Subtarget->hasV5TOps()">,
-                                 AssemblerPredicate<"HasV5TOps", "armv5t">;
+                                 AssemblerPredicate<(all_of HasV5TOps), "armv5t">;
 def NoV5T            : Predicate<"!Subtarget->hasV5TOps()">;
 def HasV5TE          : Predicate<"Subtarget->hasV5TEOps()">,
-                                 AssemblerPredicate<"HasV5TEOps", "armv5te">;
+                                 AssemblerPredicate<(all_of HasV5TEOps), "armv5te">;
 def HasV6            : Predicate<"Subtarget->hasV6Ops()">,
-                                 AssemblerPredicate<"HasV6Ops", "armv6">;
+                                 AssemblerPredicate<(all_of HasV6Ops), "armv6">;
 def NoV6             : Predicate<"!Subtarget->hasV6Ops()">;
 def HasV6M           : Predicate<"Subtarget->hasV6MOps()">,
-                                 AssemblerPredicate<"HasV6MOps",
+                                 AssemblerPredicate<(all_of HasV6MOps),
                                                     "armv6m or armv6t2">;
 def HasV8MBaseline   : Predicate<"Subtarget->hasV8MBaselineOps()">,
-                                 AssemblerPredicate<"HasV8MBaselineOps",
+                                 AssemblerPredicate<(all_of HasV8MBaselineOps),
                                                     "armv8m.base">;
 def HasV8MMainline   : Predicate<"Subtarget->hasV8MMainlineOps()">,
-                                 AssemblerPredicate<"HasV8MMainlineOps",
+                                 AssemblerPredicate<(all_of HasV8MMainlineOps),
                                                     "armv8m.main">;
 def HasV8_1MMainline : Predicate<"Subtarget->hasV8_1MMainlineOps()">,
-                                 AssemblerPredicate<"HasV8_1MMainlineOps",
+                                 AssemblerPredicate<(all_of HasV8_1MMainlineOps),
                                                     "armv8.1m.main">;
 def HasMVEInt        : Predicate<"Subtarget->hasMVEIntegerOps()">,
-                                 AssemblerPredicate<"HasMVEIntegerOps",
+                                 AssemblerPredicate<(all_of HasMVEIntegerOps),
                                                     "mve">;
 def HasMVEFloat      : Predicate<"Subtarget->hasMVEFloatOps()">,
-                                 AssemblerPredicate<"HasMVEFloatOps",
+                                 AssemblerPredicate<(all_of HasMVEFloatOps),
                                                     "mve.fp">;
+def HasCDE           : Predicate<"Subtarget->hasCDEOps()">,
+                                 AssemblerPredicate<(all_of HasCDEOps),
+                                                    "cde">;
 def HasFPRegs        : Predicate<"Subtarget->hasFPRegs()">,
-                                 AssemblerPredicate<"FeatureFPRegs",
+                                 AssemblerPredicate<(all_of FeatureFPRegs),
                                                     "fp registers">;
 def HasFPRegs16      : Predicate<"Subtarget->hasFPRegs16()">,
-                                 AssemblerPredicate<"FeatureFPRegs16",
+                                 AssemblerPredicate<(all_of FeatureFPRegs16),
+                                                    "16-bit fp registers">;
+def HasNoFPRegs16    : Predicate<"!Subtarget->hasFPRegs16()">,
+                                 AssemblerPredicate<(all_of (not FeatureFPRegs16)),
                                                     "16-bit fp registers">;
 def HasFPRegs64      : Predicate<"Subtarget->hasFPRegs64()">,
-                                 AssemblerPredicate<"FeatureFPRegs64",
+                                 AssemblerPredicate<(all_of FeatureFPRegs64),
                                                     "64-bit fp registers">;
 def HasFPRegsV8_1M   : Predicate<"Subtarget->hasFPRegs() && Subtarget->hasV8_1MMainlineOps()">,
-                                 AssemblerPredicate<"FeatureFPRegs,HasV8_1MMainlineOps",
+                                 AssemblerPredicate<(all_of FeatureFPRegs, HasV8_1MMainlineOps),
                                                     "armv8.1m.main with FP or MVE">;
 def HasV6T2          : Predicate<"Subtarget->hasV6T2Ops()">,
-                                 AssemblerPredicate<"HasV6T2Ops", "armv6t2">;
+                                 AssemblerPredicate<(all_of HasV6T2Ops), "armv6t2">;
 def NoV6T2           : Predicate<"!Subtarget->hasV6T2Ops()">;
 def HasV6K           : Predicate<"Subtarget->hasV6KOps()">,
-                                 AssemblerPredicate<"HasV6KOps", "armv6k">;
+                                 AssemblerPredicate<(all_of HasV6KOps), "armv6k">;
 def NoV6K            : Predicate<"!Subtarget->hasV6KOps()">;
 def HasV7            : Predicate<"Subtarget->hasV7Ops()">,
-                                 AssemblerPredicate<"HasV7Ops", "armv7">;
+                                 AssemblerPredicate<(all_of HasV7Ops), "armv7">;
 def HasV8            : Predicate<"Subtarget->hasV8Ops()">,
-                                 AssemblerPredicate<"HasV8Ops", "armv8">;
+                                 AssemblerPredicate<(all_of HasV8Ops), "armv8">;
 def PreV8            : Predicate<"!Subtarget->hasV8Ops()">,
-                                 AssemblerPredicate<"!HasV8Ops", "armv7 or earlier">;
+                                 AssemblerPredicate<(all_of (not HasV8Ops)), "armv7 or earlier">;
 def HasV8_1a         : Predicate<"Subtarget->hasV8_1aOps()">,
-                                 AssemblerPredicate<"HasV8_1aOps", "armv8.1a">;
+                                 AssemblerPredicate<(all_of HasV8_1aOps), "armv8.1a">;
 def HasV8_2a         : Predicate<"Subtarget->hasV8_2aOps()">,
-                                 AssemblerPredicate<"HasV8_2aOps", "armv8.2a">;
+                                 AssemblerPredicate<(all_of HasV8_2aOps), "armv8.2a">;
 def HasV8_3a         : Predicate<"Subtarget->hasV8_3aOps()">,
-                                 AssemblerPredicate<"HasV8_3aOps", "armv8.3a">;
+                                 AssemblerPredicate<(all_of HasV8_3aOps), "armv8.3a">;
 def HasV8_4a         : Predicate<"Subtarget->hasV8_4aOps()">,
-                                 AssemblerPredicate<"HasV8_4aOps", "armv8.4a">;
+                                 AssemblerPredicate<(all_of HasV8_4aOps), "armv8.4a">;
 def HasV8_5a         : Predicate<"Subtarget->hasV8_5aOps()">,
-                                 AssemblerPredicate<"HasV8_5aOps", "armv8.5a">;
+                                 AssemblerPredicate<(all_of HasV8_5aOps), "armv8.5a">;
+def HasV8_6a         : Predicate<"Subtarget->hasV8_6aOps()">,
+                                 AssemblerPredicate<(all_of HasV8_6aOps), "armv8.6a">;
 def NoVFP            : Predicate<"!Subtarget->hasVFP2Base()">;
 def HasVFP2          : Predicate<"Subtarget->hasVFP2Base()">,
-                                 AssemblerPredicate<"FeatureVFP2_SP", "VFP2">;
+                                 AssemblerPredicate<(all_of FeatureVFP2_SP), "VFP2">;
 def HasVFP3          : Predicate<"Subtarget->hasVFP3Base()">,
-                                 AssemblerPredicate<"FeatureVFP3_D16_SP", "VFP3">;
+                                 AssemblerPredicate<(all_of FeatureVFP3_D16_SP), "VFP3">;
 def HasVFP4          : Predicate<"Subtarget->hasVFP4Base()">,
-                                 AssemblerPredicate<"FeatureVFP4_D16_SP", "VFP4">;
+                                 AssemblerPredicate<(all_of FeatureVFP4_D16_SP), "VFP4">;
 def HasDPVFP         : Predicate<"Subtarget->hasFP64()">,
-                                 AssemblerPredicate<"FeatureFP64",
+                                 AssemblerPredicate<(all_of FeatureFP64),
                                                     "double precision VFP">;
 def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8Base()">,
-                                 AssemblerPredicate<"FeatureFPARMv8_D16_SP", "FPARMv8">;
+                                 AssemblerPredicate<(all_of FeatureFPARMv8_D16_SP), "FPARMv8">;
 def HasNEON          : Predicate<"Subtarget->hasNEON()">,
-                                 AssemblerPredicate<"FeatureNEON", "NEON">;
+                                 AssemblerPredicate<(all_of FeatureNEON), "NEON">;
 def HasSHA2          : Predicate<"Subtarget->hasSHA2()">,
-                                 AssemblerPredicate<"FeatureSHA2", "sha2">;
+                                 AssemblerPredicate<(all_of FeatureSHA2), "sha2">;
 def HasAES           : Predicate<"Subtarget->hasAES()">,
-                                 AssemblerPredicate<"FeatureAES", "aes">;
+                                 AssemblerPredicate<(all_of FeatureAES), "aes">;
 def HasCrypto        : Predicate<"Subtarget->hasCrypto()">,
-                                 AssemblerPredicate<"FeatureCrypto", "crypto">;
+                                 AssemblerPredicate<(all_of FeatureCrypto), "crypto">;
 def HasDotProd       : Predicate<"Subtarget->hasDotProd()">,
-                                 AssemblerPredicate<"FeatureDotProd", "dotprod">;
+                                 AssemblerPredicate<(all_of FeatureDotProd), "dotprod">;
 def HasCRC           : Predicate<"Subtarget->hasCRC()">,
-                                 AssemblerPredicate<"FeatureCRC", "crc">;
+                                 AssemblerPredicate<(all_of FeatureCRC), "crc">;
 def HasRAS           : Predicate<"Subtarget->hasRAS()">,
-                                 AssemblerPredicate<"FeatureRAS", "ras">;
+                                 AssemblerPredicate<(all_of FeatureRAS), "ras">;
 def HasLOB           : Predicate<"Subtarget->hasLOB()">,
-                                 AssemblerPredicate<"FeatureLOB", "lob">;
+                                 AssemblerPredicate<(all_of FeatureLOB), "lob">;
 def HasFP16          : Predicate<"Subtarget->hasFP16()">,
-                                 AssemblerPredicate<"FeatureFP16","half-float conversions">;
+                                 AssemblerPredicate<(all_of FeatureFP16),"half-float conversions">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
-                                 AssemblerPredicate<"FeatureFullFP16","full half-float">;
+                                 AssemblerPredicate<(all_of FeatureFullFP16),"full half-float">;
 def HasFP16FML       : Predicate<"Subtarget->hasFP16FML()">,
-                                 AssemblerPredicate<"FeatureFP16FML","full half-float fml">;
+                                 AssemblerPredicate<(all_of FeatureFP16FML),"full half-float fml">;
+def HasBF16          : Predicate<"Subtarget->hasBF16()">,
+                                 AssemblerPredicate<(all_of FeatureBF16),"BFloat16 floating point extension">;
+def HasMatMulInt8    : Predicate<"Subtarget->hasMatMulInt8()">,
+                                 AssemblerPredicate<(all_of FeatureMatMulInt8),"8-bit integer matrix multiply">;
 def HasDivideInThumb : Predicate<"Subtarget->hasDivideInThumbMode()">,
-                                 AssemblerPredicate<"FeatureHWDivThumb", "divide in THUMB">;
+                                 AssemblerPredicate<(all_of FeatureHWDivThumb), "divide in THUMB">;
 def HasDivideInARM   : Predicate<"Subtarget->hasDivideInARMMode()">,
-                                 AssemblerPredicate<"FeatureHWDivARM", "divide in ARM">;
+                                 AssemblerPredicate<(all_of FeatureHWDivARM), "divide in ARM">;
 def HasDSP           : Predicate<"Subtarget->hasDSP()">,
-                                 AssemblerPredicate<"FeatureDSP", "dsp">;
+                                 AssemblerPredicate<(all_of FeatureDSP), "dsp">;
 def HasDB            : Predicate<"Subtarget->hasDataBarrier()">,
-                                 AssemblerPredicate<"FeatureDB",
+                                 AssemblerPredicate<(all_of FeatureDB),
                                                     "data-barriers">;
 def HasDFB           : Predicate<"Subtarget->hasFullDataBarrier()">,
-                                 AssemblerPredicate<"FeatureDFB",
+                                 AssemblerPredicate<(all_of FeatureDFB),
                                                     "full-data-barrier">;
 def HasV7Clrex  : Predicate<"Subtarget->hasV7Clrex()">,
-                            AssemblerPredicate<"FeatureV7Clrex",
+                            AssemblerPredicate<(all_of FeatureV7Clrex),
                                                "v7 clrex">;
 def HasAcquireRelease : Predicate<"Subtarget->hasAcquireRelease()">,
-                                  AssemblerPredicate<"FeatureAcquireRelease",
+                                  AssemblerPredicate<(all_of FeatureAcquireRelease),
                                                      "acquire/release">;
 def HasMP            : Predicate<"Subtarget->hasMPExtension()">,
-                                 AssemblerPredicate<"FeatureMP",
+                                 AssemblerPredicate<(all_of FeatureMP),
                                                     "mp-extensions">;
 def HasVirtualization: Predicate<"false">,
-                                 AssemblerPredicate<"FeatureVirtualization",
+                                 AssemblerPredicate<(all_of FeatureVirtualization),
                                                    "virtualization-extensions">;
 def HasTrustZone     : Predicate<"Subtarget->hasTrustZone()">,
-                                 AssemblerPredicate<"FeatureTrustZone",
+                                 AssemblerPredicate<(all_of FeatureTrustZone),
                                                     "TrustZone">;
 def Has8MSecExt      : Predicate<"Subtarget->has8MSecExt()">,
-                                 AssemblerPredicate<"Feature8MSecExt",
+                                 AssemblerPredicate<(all_of Feature8MSecExt),
                                                     "ARMv8-M Security Extensions">;
 def HasZCZ           : Predicate<"Subtarget->hasZeroCycleZeroing()">;
 def UseNEONForFP     : Predicate<"Subtarget->useNEONForSinglePrecisionFP()">;
 def DontUseNEONForFP : Predicate<"!Subtarget->useNEONForSinglePrecisionFP()">;
 def IsThumb          : Predicate<"Subtarget->isThumb()">,
-                                 AssemblerPredicate<"ModeThumb", "thumb">;
+                                 AssemblerPredicate<(all_of ModeThumb), "thumb">;
 def IsThumb1Only     : Predicate<"Subtarget->isThumb1Only()">;
 def IsThumb2         : Predicate<"Subtarget->isThumb2()">,
-                                 AssemblerPredicate<"ModeThumb,FeatureThumb2",
+                                 AssemblerPredicate<(all_of ModeThumb, FeatureThumb2),
                                                     "thumb2">;
 def IsMClass         : Predicate<"Subtarget->isMClass()">,
-                                 AssemblerPredicate<"FeatureMClass", "armv*m">;
+                                 AssemblerPredicate<(all_of FeatureMClass), "armv*m">;
 def IsNotMClass      : Predicate<"!Subtarget->isMClass()">,
-                                 AssemblerPredicate<"!FeatureMClass",
+                                 AssemblerPredicate<(all_of (not FeatureMClass)),
                                                     "!armv*m">;
 def IsARM            : Predicate<"!Subtarget->isThumb()">,
-                                 AssemblerPredicate<"!ModeThumb", "arm-mode">;
+                                 AssemblerPredicate<(all_of (not ModeThumb)), "arm-mode">;
 def IsMachO          : Predicate<"Subtarget->isTargetMachO()">;
 def IsNotMachO       : Predicate<"!Subtarget->isTargetMachO()">;
 def IsNaCl           : Predicate<"Subtarget->isTargetNaCl()">;
@@ -157,12 +169,12 @@ def IsNotWindows     : Predicate<"!Subtarget->isTargetWindows()">;
 def IsReadTPHard     : Predicate<"Subtarget->isReadTPHard()">;
 def IsReadTPSoft     : Predicate<"!Subtarget->isReadTPHard()">;
 def UseNaClTrap      : Predicate<"Subtarget->useNaClTrap()">,
-                                 AssemblerPredicate<"FeatureNaClTrap", "NaCl">;
+                                 AssemblerPredicate<(all_of FeatureNaClTrap), "NaCl">;
 def DontUseNaClTrap  : Predicate<"!Subtarget->useNaClTrap()">;
 
 def UseNegativeImmediates :
   Predicate<"false">,
-            AssemblerPredicate<"!FeatureNoNegativeImmediates",
+            AssemblerPredicate<(all_of (not FeatureNoNegativeImmediates)),
                                "NegativeImmediates">;
 
 // FIXME: Eventually this will be just "hasV6T2Ops".
@@ -206,4 +218,4 @@ def GenExecuteOnly : Predicate<"Subtarget->genExecuteOnly()">;
 
 // Armv8.5-A extensions
 def HasSB            : Predicate<"Subtarget->hasSB()">,
-                       AssemblerPredicate<"FeatureSB", "sb">;
+                       AssemblerPredicate<(all_of FeatureSB), "sb">;

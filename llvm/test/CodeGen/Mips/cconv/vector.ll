@@ -6227,10 +6227,10 @@ define <4 x float> @mixed_32(<4 x float> %a, i32 %b) {
 ; MIPS32EB:       # %bb.0: # %entry
 ; MIPS32EB-NEXT:    addiu $sp, $sp, -8
 ; MIPS32EB-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32EB-NEXT:    lui $1, 17200
-; MIPS32EB-NEXT:    sw $1, 0($sp)
 ; MIPS32EB-NEXT:    lw $1, 32($sp)
 ; MIPS32EB-NEXT:    sw $1, 4($sp)
+; MIPS32EB-NEXT:    lui $1, 17200
+; MIPS32EB-NEXT:    sw $1, 0($sp)
 ; MIPS32EB-NEXT:    lui $1, %hi($CPI41_0)
 ; MIPS32EB-NEXT:    ldc1 $f0, %lo($CPI41_0)($1)
 ; MIPS32EB-NEXT:    ldc1 $f2, 0($sp)
@@ -6302,10 +6302,10 @@ define <4 x float> @mixed_32(<4 x float> %a, i32 %b) {
 ; MIPS32R5EB:       # %bb.0: # %entry
 ; MIPS32R5EB-NEXT:    addiu $sp, $sp, -8
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32R5EB-NEXT:    lui $1, 17200
-; MIPS32R5EB-NEXT:    sw $1, 0($sp)
 ; MIPS32R5EB-NEXT:    lw $1, 32($sp)
 ; MIPS32R5EB-NEXT:    sw $1, 4($sp)
+; MIPS32R5EB-NEXT:    lui $1, 17200
+; MIPS32R5EB-NEXT:    sw $1, 0($sp)
 ; MIPS32R5EB-NEXT:    lui $1, %hi($CPI41_0)
 ; MIPS32R5EB-NEXT:    ldc1 $f0, %lo($CPI41_0)($1)
 ; MIPS32R5EB-NEXT:    ldc1 $f1, 0($sp)
@@ -6498,16 +6498,16 @@ define <4 x float> @cast(<4 x i32> %a) {
 ; MIPS32EB:       # %bb.0: # %entry
 ; MIPS32EB-NEXT:    addiu $sp, $sp, -32
 ; MIPS32EB-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32EB-NEXT:    lw $1, 52($sp)
-; MIPS32EB-NEXT:    lui $2, 17200
-; MIPS32EB-NEXT:    sw $2, 24($sp)
-; MIPS32EB-NEXT:    sw $1, 28($sp)
 ; MIPS32EB-NEXT:    lw $1, 48($sp)
-; MIPS32EB-NEXT:    sw $2, 16($sp)
+; MIPS32EB-NEXT:    lui $2, 17200
+; MIPS32EB-NEXT:    lw $3, 52($sp)
+; MIPS32EB-NEXT:    sw $3, 28($sp)
+; MIPS32EB-NEXT:    sw $2, 24($sp)
 ; MIPS32EB-NEXT:    sw $1, 20($sp)
+; MIPS32EB-NEXT:    sw $2, 16($sp)
 ; MIPS32EB-NEXT:    lui $1, %hi($CPI42_0)
-; MIPS32EB-NEXT:    sw $2, 8($sp)
 ; MIPS32EB-NEXT:    sw $7, 12($sp)
+; MIPS32EB-NEXT:    sw $2, 8($sp)
 ; MIPS32EB-NEXT:    ldc1 $f0, %lo($CPI42_0)($1)
 ; MIPS32EB-NEXT:    ldc1 $f2, 24($sp)
 ; MIPS32EB-NEXT:    sub.d $f2, $f2, $f0
@@ -6521,8 +6521,8 @@ define <4 x float> @cast(<4 x i32> %a) {
 ; MIPS32EB-NEXT:    swc1 $f2, 12($4)
 ; MIPS32EB-NEXT:    swc1 $f4, 8($4)
 ; MIPS32EB-NEXT:    swc1 $f6, 4($4)
-; MIPS32EB-NEXT:    sw $2, 0($sp)
 ; MIPS32EB-NEXT:    sw $6, 4($sp)
+; MIPS32EB-NEXT:    sw $2, 0($sp)
 ; MIPS32EB-NEXT:    ldc1 $f2, 0($sp)
 ; MIPS32EB-NEXT:    sub.d $f0, $f2, $f0
 ; MIPS32EB-NEXT:    cvt.s.d $f0, $f0

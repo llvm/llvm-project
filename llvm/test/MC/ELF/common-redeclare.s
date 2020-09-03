@@ -1,5 +1,6 @@
-# RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux %s | llvm-objdump -t - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux %s | llvm-readelf -s - | FileCheck %s
 
-# CHECK: 0000000000000004 g     O *COM*  00000004 C
+# CHECK:    Value         Size Type   Bind   Vis     Ndx Name
+# CHECK: 0000000000000004    4 OBJECT GLOBAL DEFAULT COM C
         .comm   C,4,4
         .comm   C,4,4

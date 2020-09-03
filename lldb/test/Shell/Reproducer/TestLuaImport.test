@@ -1,0 +1,11 @@
+# REQUIRES: lua
+# UNSUPPORTED: system-windows
+# Ensure that the reproducers know about imported Lua modules.
+
+# RUN: rm -rf %t.repro
+# RUN: %lldb -x -b --script-language lua --capture --capture-path %t.repro -o 'command script import  %S/Inputs/foo.lua' -o 'reproducer generate' | FileCheck %s --check-prefix CAPTURE
+
+# CAPTURE: 95126
+
+# RUN: %lldb -b -o 'reproducer dump -p files -f %t.repro' | FileCheck %s --check-prefix FILES
+# FILES: foo.lua

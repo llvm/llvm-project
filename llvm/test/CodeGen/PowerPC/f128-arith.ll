@@ -1,5 +1,4 @@
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -verify-machineinstrs \
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown -verify-machineinstrs \
 ; RUN:   -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck %s
 
 ; Function Attrs: norecurse nounwind
@@ -71,7 +70,7 @@ entry:
 ; CHECK-LABEL: testLdNSt
 ; CHECK: lxvx
 ; CHECK: stxvx
-; CHECK-NEXT blr
+; CHECK-NEXT: blr
 }
 
 define void @qpSqrt(fp128* nocapture readonly %a, fp128* nocapture %res) {

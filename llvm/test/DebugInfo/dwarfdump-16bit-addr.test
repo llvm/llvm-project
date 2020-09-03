@@ -1,0 +1,34 @@
+; Test that llvm-dwarfdump can handle DWARF32 v3 with addr_size = 0x02
+; Input object file was produced from source containing just "int x;" with
+;   clang -target avr -gdwarf-3 -c dwarfdump-16bit-addr.c
+
+; REQUIRES: avr-registered-target
+; RUN: llvm-dwarfdump --debug-info %S/Inputs/dwarfdump-16bit-addr.o | FileCheck %s
+; RUN: llvm-dwarfdump --verify %S/Inputs/dwarfdump-16bit-addr.o
+
+; CHECK: Inputs/dwarfdump-16bit-addr.o:  file format elf32-avr
+
+; CHECK: .debug_info contents:
+; CHECK: 0x00000000: Compile Unit: length = 0x00000032, format = DWARF32, version = 0x0003, abbr_offset = 0x0000, addr_size = 0x02 (next unit at 0x00000036)
+
+; CHECK: 0x0000000b: DW_TAG_compile_unit
+; CHECK:               DW_AT_producer    ("clang version 10.0.0-4ubuntu1 ")
+; CHECK:               DW_AT_language    (DW_LANG_C99)
+; CHECK:               DW_AT_name        ("dwarfdump-16bit-addr.c")
+; CHECK:               DW_AT_stmt_list   (0x00000000)
+; CHECK:               DW_AT_comp_dir    ("/tmp")
+
+; CHECK: 0x0000001e:   DW_TAG_variable
+; CHECK:                 DW_AT_name      ("x")
+; CHECK:                 DW_AT_type      (0x0000002e "int")
+; CHECK:                 DW_AT_external  (0x01)
+; CHECK:                 DW_AT_decl_file ("/tmp{{[/\\]}}dwarfdump-16bit-addr.c")
+; CHECK:                 DW_AT_decl_line (1)
+; CHECK:                 DW_AT_location  (DW_OP_addr 0x0)
+
+; CHECK: 0x0000002e:   DW_TAG_base_type
+; CHECK:                 DW_AT_name      ("int")
+; CHECK:                 DW_AT_encoding  (DW_ATE_signed)
+; CHECK:                 DW_AT_byte_size (0x02)
+
+; CHECK: 0x00000035:   NULL

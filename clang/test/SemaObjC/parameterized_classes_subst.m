@@ -435,3 +435,16 @@ void test_ternary_operator(NSArray<NSString *> *stringArray,
 // --------------------------------------------------------------------------
 typedef NSArray<NSObject> ArrayOfNSObjectWarning; // expected-warning{{parameterized class 'NSArray' already conforms to the protocols listed; did you forget a '*'?}}
 
+// --------------------------------------------------------------------------
+// Use a type parameter as a type argument.
+// --------------------------------------------------------------------------
+// Type bounds in a category/extension are omitted. rdar://problem/54329242
+@interface ParameterizedContainer<T : id<NSCopying>>
+- (ParameterizedContainer<T> *)inInterface;
+@end
+@interface ParameterizedContainer<T> (Cat)
+- (ParameterizedContainer<T> *)inCategory;
+@end
+@interface ParameterizedContainer<U> ()
+- (ParameterizedContainer<U> *)inExtension;
+@end

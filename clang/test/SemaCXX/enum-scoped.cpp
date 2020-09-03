@@ -149,20 +149,23 @@ namespace PR11484 {
 }
 
 namespace N2764 {
+  enum class E *x0a; // expected-error {{reference to enumeration must use 'enum' not 'enum class'}}
+  enum E2 *x0b; // OK
   enum class E { a, b };
   enum E x1 = E::a; // ok
-  enum class E x2 = E::a; // expected-error {{reference to scoped enumeration must use 'enum' not 'enum class'}}
+  enum class E x2 = E::a; // expected-error {{reference to enumeration must use 'enum' not 'enum class'}}
 
   enum F { a, b };
   enum F y1 = a; // ok
   enum class F y2 = a; // expected-error {{reference to enumeration must use 'enum' not 'enum class'}}
 
   struct S {
-    friend enum class E; // expected-error {{reference to scoped enumeration must use 'enum' not 'enum class'}}
+    friend enum class E; // expected-error {{reference to enumeration must use 'enum' not 'enum class'}}
     friend enum class F; // expected-error {{reference to enumeration must use 'enum' not 'enum class'}}
 
     friend enum G {}; // expected-error {{forward reference}} expected-error {{cannot define a type in a friend declaration}}
-    friend enum class H {}; // expected-error {{cannot define a type in a friend declaration}}
+    friend enum class H {}; // expected-error {{forward reference}} expected-error {{cannot define a type in a friend declaration}}
+    friend enum I : int {}; // expected-error {{forward reference}} expected-error {{cannot define a type in a friend declaration}}
 
     enum A : int;
     A a;

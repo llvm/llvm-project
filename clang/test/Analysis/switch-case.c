@@ -218,3 +218,14 @@ void testConstant() {
     break;
   }
 }
+
+void testExhaustiveSwitch(unsigned int a) {
+  switch (a & 5) {
+  case 0 ... 5:
+    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+    break;
+  default:
+    clang_analyzer_warnIfReached(); // no-warning
+    break;
+  }
+}

@@ -1,4 +1,4 @@
-//===-- CommandObjectPlatform.cpp -------------------------------*- C++ -*-===//
+//===-- CommandObjectPlatform.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionValidators.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -133,7 +132,8 @@ public:
   uint32_t m_permissions;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(OptionPermissions);
+  OptionPermissions(const OptionPermissions &) = delete;
+  const OptionPermissions &operator=(const OptionPermissions &) = delete;
 };
 
 // "platform select <platform-name>"
@@ -421,7 +421,6 @@ protected:
     return &m_options;
   }
 
-protected:
   OptionGroupOptions m_options;
   OptionGroupFile m_option_working_dir;
 };
@@ -546,8 +545,13 @@ public:
     if (platform_sp) {
       std::string cmd_line;
       args.GetCommandString(cmd_line);
-      const lldb::user_id_t fd =
-          StringConvert::ToUInt64(cmd_line.c_str(), UINT64_MAX);
+      lldb::user_id_t fd;
+      if (!llvm::to_integer(cmd_line, fd)) {
+        result.AppendErrorWithFormatv("'{0}' is not a valid file descriptor.\n",
+                                      cmd_line);
+        result.SetStatus(eReturnStatusFailed);
+        return result.Succeeded();
+      }
       Status error;
       bool success = platform_sp->CloseFile(fd, error);
       if (success) {
@@ -586,8 +590,13 @@ public:
     if (platform_sp) {
       std::string cmd_line;
       args.GetCommandString(cmd_line);
-      const lldb::user_id_t fd =
-          StringConvert::ToUInt64(cmd_line.c_str(), UINT64_MAX);
+      lldb::user_id_t fd;
+      if (!llvm::to_integer(cmd_line, fd)) {
+        result.AppendErrorWithFormatv("'{0}' is not a valid file descriptor.\n",
+                                      cmd_line);
+        result.SetStatus(eReturnStatusFailed);
+        return result.Succeeded();
+      }
       std::string buffer(m_options.m_count, 0);
       Status error;
       uint32_t retcode = platform_sp->ReadFile(
@@ -674,8 +683,13 @@ public:
       std::string cmd_line;
       args.GetCommandString(cmd_line);
       Status error;
-      const lldb::user_id_t fd =
-          StringConvert::ToUInt64(cmd_line.c_str(), UINT64_MAX);
+      lldb::user_id_t fd;
+      if (!llvm::to_integer(cmd_line, fd)) {
+        result.AppendErrorWithFormatv("'{0}' is not a valid file descriptor.",
+                                      cmd_line);
+        result.SetStatus(eReturnStatusFailed);
+        return result.Succeeded();
+      }
       uint32_t retcode =
           platform_sp->WriteFile(fd, m_options.m_offset, &m_options.m_data[0],
                                  m_options.m_data.size(), error);
@@ -709,7 +723,7 @@ protected:
                                          option_arg.str().c_str());
         break;
       case 'd':
-        m_data.assign(option_arg);
+        m_data.assign(std::string(option_arg));
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -758,7 +772,9 @@ public:
 
 private:
   // For CommandObjectPlatform only
-  DISALLOW_COPY_AND_ASSIGN(CommandObjectPlatformFile);
+  CommandObjectPlatformFile(const CommandObjectPlatformFile &) = delete;
+  const CommandObjectPlatformFile &
+  operator=(const CommandObjectPlatformFile &) = delete;
 };
 
 // "platform get-file remote-file-path host-file-path"
@@ -1020,7 +1036,6 @@ protected:
     return result.Succeeded();
   }
 
-protected:
   ProcessLaunchCommandOptions m_options;
 };
 
@@ -1541,7 +1556,9 @@ public:
 
 private:
   // For CommandObjectPlatform only
-  DISALLOW_COPY_AND_ASSIGN(CommandObjectPlatformProcess);
+  CommandObjectPlatformProcess(const CommandObjectPlatformProcess &) = delete;
+  const CommandObjectPlatformProcess &
+  operator=(const CommandObjectPlatformProcess &) = delete;
 };
 
 // "platform shell"

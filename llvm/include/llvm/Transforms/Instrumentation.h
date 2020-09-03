@@ -28,6 +28,7 @@ class FunctionPass;
 class ModulePass;
 class OptimizationRemarkEmitter;
 class Comdat;
+class CallBase;
 
 /// Instrumentation passes often insert conditional checks into entry blocks.
 /// Call this function before splitting the entry block to move instructions
@@ -62,20 +63,8 @@ struct GCOVOptions {
   // gcc's gcov-io.h
   char Version[4];
 
-  // Emit a "cfg checksum" that follows the "line number checksum" of a
-  // function. This affects both .gcno and .gcda files.
-  bool UseCfgChecksum;
-
   // Add the 'noredzone' attribute to added runtime library calls.
   bool NoRedZone;
-
-  // Emit the name of the function in the .gcda files. This is redundant, as
-  // the function identifier can be used to find the name from the .gcno file.
-  bool FunctionNamesInData;
-
-  // Emit the exit block immediately after the start block, rather than after
-  // all of the function body's blocks.
-  bool ExitBlockBeforeBody;
 
   // Regexes separated by a semi-colon to filter the files to instrument.
   std::string Filter;
@@ -99,6 +88,8 @@ ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false,
                                                      bool SamplePGO = false);
 FunctionPass *createPGOMemOPSizeOptLegacyPass();
 
+ModulePass *createCGProfileLegacyPass();
+
 // The pgo-specific indirect call promotion function declared below is used by
 // the pgo-driven indirect call promotion and sample profile passes. It's a
 // wrapper around llvm::promoteCall, et al. that additionally computes !prof
@@ -106,7 +97,7 @@ FunctionPass *createPGOMemOPSizeOptLegacyPass();
 // generic utilities.
 namespace pgo {
 
-// Helper function that transforms Inst (either an indirect-call instruction, or
+// Helper function that transforms CB (either an indirect-call instruction, or
 // an invoke instruction , to a conditional call to F. This is like:
 //     if (Inst.CalledValue == F)
 //        F(...);
@@ -119,10 +110,9 @@ namespace pgo {
 // If \p AttachProfToDirectCall is true, a prof metadata is attached to the
 // new direct call to contain \p Count.
 // Returns the promoted direct call instruction.
-Instruction *promoteIndirectCall(Instruction *Inst, Function *F, uint64_t Count,
-                                 uint64_t TotalCount,
-                                 bool AttachProfToDirectCall,
-                                 OptimizationRemarkEmitter *ORE);
+CallBase &promoteIndirectCall(CallBase &CB, Function *F, uint64_t Count,
+                              uint64_t TotalCount, bool AttachProfToDirectCall,
+                              OptimizationRemarkEmitter *ORE);
 } // namespace pgo
 
 /// Options for the frontend instrumentation based profiling pass.
@@ -174,6 +164,7 @@ struct SanitizerCoverageOptions {
   bool TracePC = false;
   bool TracePCGuard = false;
   bool Inline8bitCounters = false;
+  bool InlineBoolFlag = false;
   bool PCTable = false;
   bool NoPrune = false;
   bool StackDepth = false;

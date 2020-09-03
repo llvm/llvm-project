@@ -5,7 +5,5 @@ copy("include") {
     "__cxxabi_config.h",
     "cxxabi.h",
   ]
-  outputs = [
-    "$root_build_dir/include/c++/v1/{{source_target_relative}}",
-  ]
+  outputs = [ "$root_build_dir/include/c++/v1/{{source_target_relative}}" ]
 }

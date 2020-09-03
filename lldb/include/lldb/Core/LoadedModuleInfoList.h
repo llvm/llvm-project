@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_LoadedModuleInfoList_h_
-#define liblldb_LoadedModuleInfoList_h_
-
+#ifndef LLDB_CORE_LOADEDMODULEINFOLIST_H
+#define LLDB_CORE_LOADEDMODULEINFOLIST_H
 
 #include <cassert>
 #include <string>
@@ -113,4 +112,4 @@ public:
 };
 } // namespace lldb_private
 
-#endif // liblldb_LoadedModuleInfoList_h_
+#endif // LLDB_CORE_LOADEDMODULEINFOLIST_H

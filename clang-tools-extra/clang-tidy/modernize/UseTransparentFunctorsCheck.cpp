@@ -18,17 +18,14 @@ namespace modernize {
 
 UseTransparentFunctorsCheck::UseTransparentFunctorsCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), SafeMode(Options.get("SafeMode", 0)) {}
+    : ClangTidyCheck(Name, Context), SafeMode(Options.get("SafeMode", false)) {}
 
 void UseTransparentFunctorsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "SafeMode", SafeMode ? 1 : 0);
+  Options.store(Opts, "SafeMode", SafeMode);
 }
 
 void UseTransparentFunctorsCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus14)
-    return;
-
   const auto TransparentFunctors =
       classTemplateSpecializationDecl(
           unless(hasAnyTemplateArgument(refersToType(voidType()))),

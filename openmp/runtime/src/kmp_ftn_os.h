@@ -133,6 +133,7 @@
 #define FTN_PAUSE_RESOURCE omp_pause_resource
 #define FTN_PAUSE_RESOURCE_ALL omp_pause_resource_all
 #define FTN_GET_SUPPORTED_ACTIVE_LEVELS omp_get_supported_active_levels
+#define FTN_DISPLAY_ENV omp_display_env
 #define FTN_FULFILL_EVENT omp_fulfill_event
 
 #endif /* KMP_FTN_PLAIN */
@@ -256,6 +257,7 @@
 #define FTN_PAUSE_RESOURCE omp_pause_resource_
 #define FTN_PAUSE_RESOURCE_ALL omp_pause_resource_all_
 #define FTN_GET_SUPPORTED_ACTIVE_LEVELS omp_get_supported_active_levels_
+#define FTN_DISPLAY_ENV omp_display_env_
 #define FTN_FULFILL_EVENT omp_fulfill_event_
 
 #endif /* KMP_FTN_APPEND */
@@ -377,6 +379,7 @@
 #define FTN_PAUSE_RESOURCE OMP_PAUSE_RESOURCE
 #define FTN_PAUSE_RESOURCE_ALL OMP_PAUSE_RESOURCE_ALL
 #define FTN_GET_SUPPORTED_ACTIVE_LEVELS OMP_GET_SUPPORTED_ACTIVE_LEVELS
+#define FTN_DISPLAY_ENV OMP_DISPLAY_ENV
 #define FTN_FULFILL_EVENT OMP_FULFILL_EVENT
 
 #endif /* KMP_FTN_UPPER */
@@ -500,6 +503,7 @@
 #define FTN_PAUSE_RESOURCE OMP_PAUSE_RESOURCE_
 #define FTN_PAUSE_RESOURCE_ALL OMP_PAUSE_RESOURCE_ALL_
 #define FTN_GET_SUPPORTED_ACTIVE_LEVELS OMP_GET_SUPPORTED_ACTIVE_LEVELS_
+#define FTN_DISPLAY_ENV OMP_DISPLAY_ENV_
 #define FTN_FULFILL_EVENT OMP_FULFILL_EVENT_
 
 #endif /* KMP_FTN_UAPPEND */
@@ -653,5 +657,27 @@
   GOMP_parallel_loop_nonmonotonic_dynamic
 #define KMP_API_NAME_GOMP_PARALLEL_LOOP_NONMONOTONIC_GUIDED                    \
   GOMP_parallel_loop_nonmonotonic_guided
+
+// All GOMP_5.0 symbols
+#define KMP_API_NAME_GOMP_LOOP_MAYBE_NONMONOTONIC_RUNTIME_NEXT                 \
+  GOMP_loop_maybe_nonmonotonic_runtime_next
+#define KMP_API_NAME_GOMP_LOOP_MAYBE_NONMONOTONIC_RUNTIME_START                \
+  GOMP_loop_maybe_nonmonotonic_runtime_start
+#define KMP_API_NAME_GOMP_LOOP_NONMONOTONIC_RUNTIME_NEXT                       \
+  GOMP_loop_nonmonotonic_runtime_next
+#define KMP_API_NAME_GOMP_LOOP_NONMONOTONIC_RUNTIME_START                      \
+  GOMP_loop_nonmonotonic_runtime_start
+#define KMP_API_NAME_GOMP_LOOP_ULL_MAYBE_NONMONOTONIC_RUNTIME_NEXT             \
+  GOMP_loop_ull_maybe_nonmonotonic_runtime_next
+#define KMP_API_NAME_GOMP_LOOP_ULL_MAYBE_NONMONOTONIC_RUNTIME_START            \
+  GOMP_loop_ull_maybe_nonmonotonic_runtime_start
+#define KMP_API_NAME_GOMP_LOOP_ULL_NONMONOTONIC_RUNTIME_NEXT                   \
+  GOMP_loop_ull_nonmonotonic_runtime_next
+#define KMP_API_NAME_GOMP_LOOP_ULL_NONMONOTONIC_RUNTIME_START                  \
+  GOMP_loop_ull_nonmonotonic_runtime_start
+#define KMP_API_NAME_GOMP_PARALLEL_LOOP_NONMONOTONIC_RUNTIME                   \
+  GOMP_parallel_loop_nonmonotonic_runtime
+#define KMP_API_NAME_GOMP_PARALLEL_LOOP_MAYBE_NONMONOTONIC_RUNTIME             \
+  GOMP_parallel_loop_maybe_nonmonotonic_runtime
 
 #endif /* KMP_FTN_OS_H */

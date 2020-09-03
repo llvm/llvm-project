@@ -124,3 +124,29 @@ define i64 @f12(i64 %a) {
   ret i64 %ret
 }
 
+; NXOR 32-bit (alternate match).
+define i32 @f13(i32 %a) {
+; CHECK-LABEL: f13:
+; CHECK: lhi [[REG:%r[0-5]]], -256
+; CHECK: nxrk %r2, %r2, [[REG]]
+; CHECK: br %r14
+  ; Use an opaque const so the pattern doesn't get optimized away early.
+  %const = bitcast i32 -256 to i32
+  %neg = xor i32 %a, -1
+  %ret = xor i32 %neg, %const
+  ret i32 %ret
+}
+
+; NXOR 64-bit (alternate match).
+define i64 @f14(i64 %a) {
+; CHECK-LABEL: f14:
+; CHECK: lghi [[REG:%r[0-5]]], -256
+; CHECK: nxgrk %r2, %r2, [[REG]]
+; CHECK: br %r14
+  ; Use an opaque const so the pattern doesn't get optimized away early.
+  %const = bitcast i64 -256 to i64
+  %neg = xor i64 %a, -1
+  %ret = xor i64 %neg, %const
+  ret i64 %ret
+}
+

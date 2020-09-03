@@ -17,24 +17,22 @@ define <2 x double> @testi0(<2 x double>* %p1, double* %p2) {
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-NEXT:    lfdx f1, 0, r4
 ; CHECK-NEXT:    xxswapd vs0, vs0
-; CHECK-NEXT:    xxspltd vs1, vs1, 0
-; CHECK-NEXT:    xxpermdi v2, vs0, vs1, 1
+; CHECK-NEXT:    xxmrghd v2, vs0, vs1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-VECTOR-LABEL: testi0:
 ; CHECK-P9-VECTOR:       # %bb.0:
 ; CHECK-P9-VECTOR-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P9-VECTOR-NEXT:    lfdx f1, 0, r4
-; CHECK-P9-VECTOR-NEXT:    xxspltd vs1, vs1, 0
 ; CHECK-P9-VECTOR-NEXT:    xxswapd vs0, vs0
-; CHECK-P9-VECTOR-NEXT:    xxpermdi v2, vs0, vs1, 1
+; CHECK-P9-VECTOR-NEXT:    xxmrghd v2, vs0, vs1
 ; CHECK-P9-VECTOR-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testi0:
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    lfd f1, 0(r4)
 ; CHECK-P9-NEXT:    lxv vs0, 0(r3)
-; CHECK-P9-NEXT:    xxpermdi vs1, f1, f1, 2
+; CHECK-P9-NEXT:    xxswapd vs1, f1
 ; CHECK-P9-NEXT:    xxpermdi v2, vs0, vs1, 1
 ; CHECK-P9-NEXT:    blr
   %v = load <2 x double>, <2 x double>* %p1
@@ -51,24 +49,22 @@ define <2 x double> @testi1(<2 x double>* %p1, double* %p2) {
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-NEXT:    lfdx f1, 0, r4
 ; CHECK-NEXT:    xxswapd vs0, vs0
-; CHECK-NEXT:    xxspltd vs1, vs1, 0
-; CHECK-NEXT:    xxmrgld v2, vs1, vs0
+; CHECK-NEXT:    xxpermdi v2, vs1, vs0, 1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-VECTOR-LABEL: testi1:
 ; CHECK-P9-VECTOR:       # %bb.0:
 ; CHECK-P9-VECTOR-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P9-VECTOR-NEXT:    lfdx f1, 0, r4
-; CHECK-P9-VECTOR-NEXT:    xxspltd vs1, vs1, 0
 ; CHECK-P9-VECTOR-NEXT:    xxswapd vs0, vs0
-; CHECK-P9-VECTOR-NEXT:    xxmrgld v2, vs1, vs0
+; CHECK-P9-VECTOR-NEXT:    xxpermdi v2, vs1, vs0, 1
 ; CHECK-P9-VECTOR-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testi1:
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    lfd f1, 0(r4)
 ; CHECK-P9-NEXT:    lxv vs0, 0(r3)
-; CHECK-P9-NEXT:    xxpermdi vs1, f1, f1, 2
+; CHECK-P9-NEXT:    xxswapd vs1, f1
 ; CHECK-P9-NEXT:    xxmrgld v2, vs1, vs0
 ; CHECK-P9-NEXT:    blr
   %v = load <2 x double>, <2 x double>* %p1

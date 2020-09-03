@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CFString_h__
-#define __CFString_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_CFSTRING_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_CFSTRING_H
 
 #include "CFUtils.h"
 #include <iosfwd>
@@ -37,4 +37,4 @@ public:
   static const char *GlobPath(const char *path, std::string &expanded_path);
 };
 
-#endif // #ifndef __CFString_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_CFSTRING_H

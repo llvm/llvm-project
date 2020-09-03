@@ -1,4 +1,4 @@
-//===-- ValueObjectDynamicValue.cpp ------------------------------*- C++-*-===//
+//===-- ValueObjectDynamicValue.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -58,7 +58,7 @@ ConstString ValueObjectDynamicValue::GetTypeName() {
   const bool success = UpdateValueIfNeeded(false);
   if (success) {
     if (m_dynamic_type_info.HasType())
-      return GetCompilerType().GetConstTypeName();
+      return GetCompilerType().GetTypeName();
     if (m_dynamic_type_info.HasName())
       return m_dynamic_type_info.GetName();
   }
@@ -77,7 +77,7 @@ ConstString ValueObjectDynamicValue::GetQualifiedTypeName() {
   const bool success = UpdateValueIfNeeded(false);
   if (success) {
     if (m_dynamic_type_info.HasType())
-      return GetCompilerType().GetConstQualifiedTypeName();
+      return GetCompilerType().GetTypeName();
     if (m_dynamic_type_info.HasName())
       return m_dynamic_type_info.GetName();
   }
@@ -149,7 +149,9 @@ bool ValueObjectDynamicValue::UpdateValue() {
     m_data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
   }
 
+#ifdef LLDB_ENABLE_SWIFT
   auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
+#endif // LLDB_ENABLE_SWIFT
 
   // First make sure our Type and/or Address haven't changed:
   Process *process = exe_ctx.GetProcessPtr();
@@ -275,7 +277,6 @@ bool ValueObjectDynamicValue::UpdateValue() {
     m_dynamic_type_info =
         runtime->FixUpDynamicType(m_dynamic_type_info, *m_parent);
 
-  // m_value.SetContext (Value::eContextTypeClangType, corrected_type);
   m_value.SetCompilerType(m_dynamic_type_info.GetCompilerType());
 
   m_value.SetValueType(value_type);
@@ -366,7 +367,7 @@ bool ValueObjectDynamicValue::SetData(DataExtractor &data, Status &error) {
     // but NULL'ing out a value should always be allowed
     lldb::offset_t offset = 0;
 
-    if (data.GetPointer(&offset) != 0) {
+    if (data.GetAddress(&offset) != 0) {
       error.SetErrorString(
           "unable to modify dynamic value, use 'expression' command");
       return false;
@@ -433,8 +434,12 @@ bool ValueObjectDynamicValue::DynamicValueTypeInfoNeedsUpdate() {
   if (!m_dynamic_type_info.HasType())
     return false;
 
+#ifdef LLDB_ENABLE_SWIFT
   auto *cached_ctx = m_value.GetCompilerType().GetTypeSystem();
   llvm::Optional<SwiftASTContextReader> scratch_ctx =
       GetScratchSwiftASTContext();
   return scratch_ctx ? (cached_ctx == scratch_ctx->get()) : !cached_ctx;
+#else // !LLDB_ENABLE_SWIFT
+  return false;
+#endif // LLDB_ENABLE_SWIFT
 }

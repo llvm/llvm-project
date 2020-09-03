@@ -65,7 +65,7 @@ protected:
 public:
   virtual ~MCELFObjectTargetWriter() = default;
 
-  virtual Triple::ObjectFormatType getFormat() const { return Triple::ELF; }
+  Triple::ObjectFormatType getFormat() const override { return Triple::ELF; }
   static bool classof(const MCObjectTargetWriter *W) {
     return W->getFormat() == Triple::ELF;
   }
@@ -130,14 +130,10 @@ public:
   }
 
   // N64 relocation type setting
-  unsigned setRType(unsigned Value, unsigned Type) const {
-    return ((Type & R_TYPE_MASK) | ((Value & 0xff) << R_TYPE_SHIFT));
-  }
-  unsigned setRType2(unsigned Value, unsigned Type) const {
-    return (Type & R_TYPE2_MASK) | ((Value & 0xff) << R_TYPE2_SHIFT);
-  }
-  unsigned setRType3(unsigned Value, unsigned Type) const {
-    return (Type & R_TYPE3_MASK) | ((Value & 0xff) << R_TYPE3_SHIFT);
+  static unsigned setRTypes(unsigned Value1, unsigned Value2, unsigned Value3) {
+    return ((Value1 & 0xff) << R_TYPE_SHIFT) |
+           ((Value2 & 0xff) << R_TYPE2_SHIFT) |
+           ((Value3 & 0xff) << R_TYPE3_SHIFT);
   }
   unsigned setRSsym(unsigned Value, unsigned Type) const {
     return (Type & R_SSYM_MASK) | ((Value & 0xff) << R_SSYM_SHIFT);

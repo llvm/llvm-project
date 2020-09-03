@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++2a -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
 
 typedef int fn;
 
@@ -43,7 +43,7 @@ namespace std_example {
 
   int x = f<N::A>(N::A());
 #if __cplusplus <= 201703L
-  // expected-warning@-2 {{C++2a extension}}
+  // expected-warning@-2 {{C++20 extension}}
 #endif
   int y = g<N::A>(N::A());
 #if __cplusplus <= 201703L
@@ -60,7 +60,7 @@ namespace AnnexD_example {
     A a;
     f < a;
 #if __cplusplus > 201703L
-    // expected-error@-2 {{expected '>'}}
+    // expected-error@-2 {{expected '>'}} expected-note@-2 {{to match this '<'}}
 #endif
     (f) < a;
   }

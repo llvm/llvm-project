@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
 ## Test that llvm-objcopy adds a section to the given object with expected
 ## contents.
@@ -35,7 +35,7 @@
 ## Test that llvm-objcopy can add a section to an object with extended
 ## relocations.
 # RUN: %python %p/../Inputs/ungzip.py %p/Inputs/x86_64-obj-xrelocs.yaml.gz > %t.xrelocs.yaml
-# RUN: yaml2obj %t.xrelocs.yaml > %t.xrelocs.obj
+# RUN: yaml2obj %t.xrelocs.yaml -o %t.xrelocs.obj
 # RUN: llvm-objcopy --add-section=.test.section=%t.sec %t.xrelocs.obj %t1.xrelocs.obj
 # RUN: llvm-readobj --file-headers --sections --section-data %t1.xrelocs.obj | FileCheck %s --check-prefixes=CHECK-EXTENDED-RELOCS
 

@@ -270,10 +270,12 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
 /// Helper for HasName matcher that returns getName both for IRUnit and
 /// for IRUnit pointer wrapper into llvm::Any (wrapped by PassInstrumentation).
 template <typename IRUnitT> std::string getName(const IRUnitT &IR) {
-  return IR.getName();
+  return std::string(IR.getName());
 }
 
-template <> std::string getName(const StringRef &name) { return name; }
+template <> std::string getName(const StringRef &name) {
+  return std::string(name);
+}
 
 template <> std::string getName(const llvm::Any &WrappedIR) {
   if (any_isa<const Module *>(WrappedIR))

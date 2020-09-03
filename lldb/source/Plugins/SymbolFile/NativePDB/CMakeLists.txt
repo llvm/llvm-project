@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginSymbolFileNativePDB PLUGIN
+add_lldb_library(lldbPluginSymbolFileNativePDB
   CodeViewRegisterMapping.cpp
   CompileUnitIndex.cpp
   DWARFLocationExpression.cpp

@@ -1,4 +1,4 @@
-//===-- OptionValuePathMappings.cpp -----------------------------*- C++ -*-===//
+//===-- OptionValuePathMappings.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -61,7 +61,7 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
             count);
       } else {
         bool changed = false;
-        for (size_t i = 1; i < argc; i += 2, ++idx) {
+        for (size_t i = 1; i < argc; idx++, i += 2) {
           const char *orginal_path = args.GetArgumentAtIndex(i);
           const char *replace_path = args.GetArgumentAtIndex(i + 1);
           if (VerifyPathExists(replace_path)) {
@@ -71,9 +71,11 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
               m_path_mappings.Append(a, b, m_notify_changes);
             changed = true;
           } else {
+            std::string previousError =
+                error.Fail() ? std::string(error.AsCString()) + "\n" : "";
             error.SetErrorStringWithFormat(
-                "the replacement path doesn't exist: \"%s\"", replace_path);
-            break;
+                "%sthe replacement path doesn't exist: \"%s\"",
+                previousError.c_str(), replace_path);
           }
         }
         if (changed)
@@ -109,9 +111,11 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
           m_value_was_set = true;
           changed = true;
         } else {
+          std::string previousError =
+              error.Fail() ? std::string(error.AsCString()) + "\n" : "";
           error.SetErrorStringWithFormat(
-              "the replacement path doesn't exist: \"%s\"", replace_path);
-          break;
+              "%sthe replacement path doesn't exist: \"%s\"",
+              previousError.c_str(), replace_path);
         }
       }
       if (changed)
@@ -135,7 +139,7 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
         bool changed = false;
         if (op == eVarSetOperationInsertAfter)
           ++idx;
-        for (size_t i = 1; i < argc; i += 2, ++idx) {
+        for (size_t i = 1; i < argc; i += 2) {
           const char *orginal_path = args.GetArgumentAtIndex(i);
           const char *replace_path = args.GetArgumentAtIndex(i + 1);
           if (VerifyPathExists(replace_path)) {
@@ -143,10 +147,13 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
             ConstString b(replace_path);
             m_path_mappings.Insert(a, b, idx, m_notify_changes);
             changed = true;
+            idx++;
           } else {
+            std::string previousError =
+                error.Fail() ? std::string(error.AsCString()) + "\n" : "";
             error.SetErrorStringWithFormat(
-                "the replacement path doesn't exist: \"%s\"", replace_path);
-            break;
+                "%sthe replacement path doesn't exist: \"%s\"",
+                previousError.c_str(), replace_path);
           }
         }
         if (changed)
@@ -161,32 +168,23 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
   case eVarSetOperationRemove:
     if (argc > 0) {
       std::vector<int> remove_indexes;
-      bool all_indexes_valid = true;
-      size_t i;
-      for (i = 0; all_indexes_valid && i < argc; ++i) {
-        const int idx =
+      for (size_t i = 0; i < argc; ++i) {
+        int idx =
             StringConvert::ToSInt32(args.GetArgumentAtIndex(i), INT32_MAX);
-        if (idx == INT32_MAX)
-          all_indexes_valid = false;
-        else
+        if (idx < 0 || idx >= (int)m_path_mappings.GetSize()) {
+          error.SetErrorStringWithFormat(
+              "invalid array index '%s', aborting remove operation",
+              args.GetArgumentAtIndex(i));
+          break;
+        } else
           remove_indexes.push_back(idx);
       }
 
-      if (all_indexes_valid) {
-        size_t num_remove_indexes = remove_indexes.size();
-        if (num_remove_indexes) {
-          // Sort and then erase in reverse so indexes are always valid
-          llvm::sort(remove_indexes.begin(), remove_indexes.end());
-          for (size_t j = num_remove_indexes - 1; j < num_remove_indexes; ++j) {
-            m_path_mappings.Remove(j, m_notify_changes);
-          }
-        }
-        NotifyValueChanged();
-      } else {
-        error.SetErrorStringWithFormat(
-            "invalid array index '%s', aborting remove operation",
-            args.GetArgumentAtIndex(i));
-      }
+      // Sort and then erase in reverse so indexes are always valid
+      llvm::sort(remove_indexes.begin(), remove_indexes.end());
+      for (auto index : llvm::reverse(remove_indexes))
+        m_path_mappings.Remove(index, m_notify_changes);
+      NotifyValueChanged();
     } else {
       error.SetErrorString("remove operation takes one or more array index");
     }

@@ -1,6 +1,6 @@
-# RUN: yaml2obj %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 # RUN: obj2yaml %t.obj | FileCheck --check-prefix=CHECK %s
-# RUN: llvm-objdump -section-headers %t.obj | FileCheck --check-prefix=HEADERS %s
+# RUN: llvm-objdump --section-headers %t.obj | FileCheck --check-prefix=HEADERS %s
 
 --- !COFF
 header:

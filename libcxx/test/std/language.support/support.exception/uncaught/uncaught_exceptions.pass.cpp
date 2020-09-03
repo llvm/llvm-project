@@ -6,16 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-no-exceptions
-// XFAIL: libcpp-no-exceptions
+// UNSUPPORTED: no-exceptions
 
-// XFAIL: macosx10.7
-// XFAIL: macosx10.8
-// XFAIL: macosx10.9
-// XFAIL: macosx10.10
-// XFAIL: macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.12
+// std::uncaught_exceptions() was introduced in the dylib on Mac OS 10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+
+// However, std::uncaught_exceptions() gives the wrong answer in Mac OS 10.12
+// and 10.13, where it only gives 0 or 1. This was fixed later.
 // XFAIL: with_system_cxx_lib=macosx10.13
+// XFAIL: with_system_cxx_lib=macosx10.12
 
 // test uncaught_exceptions
 

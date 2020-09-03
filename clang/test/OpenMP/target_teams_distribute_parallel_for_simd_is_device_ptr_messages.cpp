@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -std=c++11 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -std=c++11 -verify=expected,omp4 -fopenmp -fopenmp-version=45 %s -Wuninitialized
 
 // RUN: %clang_cc1 -std=c++11 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -std=c++11 -verify=expected,omp4 -fopenmp-simd -fopenmp-version=45 %s -Wuninitialized
+
 struct ST {
   int *a;
 };
@@ -228,13 +231,13 @@ T tmain(T argc) {
 #pragma omp target teams distribute parallel for simd is_device_ptr(ps) map(ps->a) // expected-error{{pointer cannot be mapped along with a section derived from itself}} expected-note{{used here}}
   for (int i=0; i<100; i++)
     ;
-#pragma omp target teams distribute parallel for simd is_device_ptr(ps) firstprivate(ps) // expected-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target teams distribute parallel for simd' directive}}
+#pragma omp target teams distribute parallel for simd is_device_ptr(ps) firstprivate(ps) // omp4-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target teams distribute parallel for simd' directive}}
   for (int i=0; i<100; i++)
     ;
 #pragma omp target teams distribute parallel for simd firstprivate(ps) is_device_ptr(ps) // expected-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target teams distribute parallel for simd' directive}} expected-note{{defined as firstprivate}}
   for (int i=0; i<100; i++)
     ;
-#pragma omp target teams distribute parallel for simd is_device_ptr(ps) private(ps) // expected-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target teams distribute parallel for simd' directive}}
+#pragma omp target teams distribute parallel for simd is_device_ptr(ps) private(ps) // omp4-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target teams distribute parallel for simd' directive}}
   for (int i=0; i<100; i++)
     ;
 #pragma omp target teams distribute parallel for simd private(ps) is_device_ptr(ps) // expected-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target teams distribute parallel for simd' directive}} expected-note{{defined as private}}
@@ -323,13 +326,13 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute parallel for simd is_device_ptr(ps) map(ps->a) // expected-error{{pointer cannot be mapped along with a section derived from itself}} expected-note{{used here}}
   for (int i=0; i<100; i++)
     ;
-#pragma omp target teams distribute parallel for simd is_device_ptr(ps) firstprivate(ps) // expected-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target teams distribute parallel for simd' directive}}
+#pragma omp target teams distribute parallel for simd is_device_ptr(ps) firstprivate(ps) // omp4-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target teams distribute parallel for simd' directive}}
   for (int i=0; i<100; i++)
     ;
 #pragma omp target teams distribute parallel for simd firstprivate(ps) is_device_ptr(ps) // expected-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target teams distribute parallel for simd' directive}} expected-note{{defined as firstprivate}}
   for (int i=0; i<100; i++)
     ;
-#pragma omp target teams distribute parallel for simd is_device_ptr(ps) private(ps) // expected-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target teams distribute parallel for simd' directive}}
+#pragma omp target teams distribute parallel for simd is_device_ptr(ps) private(ps) // omp4-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target teams distribute parallel for simd' directive}}
   for (int i=0; i<100; i++)
     ;
 #pragma omp target teams distribute parallel for simd private(ps) is_device_ptr(ps) // expected-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target teams distribute parallel for simd' directive}} expected-note{{defined as private}}

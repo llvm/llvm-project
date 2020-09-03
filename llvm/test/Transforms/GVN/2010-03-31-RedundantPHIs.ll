@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -gvn -S | FileCheck %s
+; RUN: opt < %s -basic-aa -gvn -S | FileCheck %s
 
 ; CHECK-NOT: load
 ; CHECK-NOT: phi

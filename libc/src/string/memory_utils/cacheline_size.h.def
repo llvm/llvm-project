@@ -1,0 +1,27 @@
+//===-- Cacheline Size Constant -------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_SRC_MEMORY_CONSTANTS_H
+#define LLVM_LIBC_SRC_MEMORY_CONSTANTS_H
+
+// LLVM_LIBC_CACHELINE_SIZE
+//
+// Explicitly defines the size of the L1 cache for purposes of alignment.
+//
+// NOTE: this macro should be replaced with the following C++17 features, when
+// those are generally available:
+//
+//   * `std::hardware_constructive_interference_size`
+//   * `std::hardware_destructive_interference_size`
+//
+// See http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0154r1.html
+// for more information.
+
+%%include_file(${machine_cacheline_size})
+
+#endif // LLVM_LIBC_SRC_MEMORY_CONSTANTS_H

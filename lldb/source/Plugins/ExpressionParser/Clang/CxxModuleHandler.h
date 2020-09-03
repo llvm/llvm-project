@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CxxModuleHandler_h_
-#define liblldb_CxxModuleHandler_h_
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CXXMODULEHANDLER_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CXXMODULEHANDLER_H
 
 #include "clang/AST/ASTImporter.h"
 #include "clang/Sema/Sema.h"
@@ -62,4 +62,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_CxxModuleHandler_h_
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CXXMODULEHANDLER_H

@@ -4,7 +4,7 @@
 ; CHECK: DW_TAG_structure_type
 ; CHECK:  DW_AT_APPLE_objc_complete_type
 ; CHECK:  DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-fA-F]+}}] = "Foo")
-; CHECK   DW_AT_APPLE_runtime_class [DW_FORM_data1]       (DW_LANG_ObjC)
+; CHECK:  DW_AT_APPLE_runtime_class [DW_FORM_data1]       (DW_LANG_ObjC)
 ; CHECK: DW_TAG_APPLE_property
 ; CHECK:  DW_AT_APPLE_property_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-fA-F]+}}] = "foo")
 

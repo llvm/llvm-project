@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #define TESTING_CXA_GUARD
 #include "../src/cxa_guard_impl.h"
@@ -127,7 +127,7 @@ int main() {
 #endif
   }
   {
-#if defined(__APPLE__) || defined(__linux__)
+#if (defined(__APPLE__) || defined(__linux__))  && !defined(_LIBCXXABI_HAS_NO_THREADS)
     assert(PlatformThreadID);
 #endif
     if (PlatformSupportsThreadID()) {

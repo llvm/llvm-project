@@ -12,13 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Taint.h"
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
@@ -175,24 +176,23 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
   }
 
   do {
-    // CHECK UPPER BOUND: Is byteOffset >= extent(baseRegion)?  If so,
+    // CHECK UPPER BOUND: Is byteOffset >= size(baseRegion)?  If so,
     // we are doing a load/store after the last valid offset.
-    DefinedOrUnknownSVal extentVal =
-      rawOffset.getRegion()->getExtent(svalBuilder);
-    if (!extentVal.getAs<NonLoc>())
+    const MemRegion *MR = rawOffset.getRegion();
+    DefinedOrUnknownSVal Size = getDynamicSize(state, MR, svalBuilder);
+    if (!Size.getAs<NonLoc>())
       break;
 
-    if (extentVal.getAs<nonloc::ConcreteInt>()) {
+    if (Size.getAs<nonloc::ConcreteInt>()) {
       std::pair<NonLoc, nonloc::ConcreteInt> simplifiedOffsets =
           getSimplifiedOffsets(rawOffset.getByteOffset(),
-                               extentVal.castAs<nonloc::ConcreteInt>(),
-                               svalBuilder);
+                               Size.castAs<nonloc::ConcreteInt>(), svalBuilder);
       rawOffsetVal = simplifiedOffsets.first;
-      extentVal = simplifiedOffsets.second;
+      Size = simplifiedOffsets.second;
     }
 
     SVal upperbound = svalBuilder.evalBinOpNN(state, BO_GE, rawOffsetVal,
-                                              extentVal.castAs<NonLoc>(),
+                                              Size.castAs<NonLoc>(),
                                               svalBuilder.getConditionType());
 
     Optional<NonLoc> upperboundToCheck = upperbound.getAs<NonLoc>();
@@ -356,6 +356,6 @@ void ento::registerArrayBoundCheckerV2(CheckerManager &mgr) {
   mgr.registerChecker<ArrayBoundCheckerV2>();
 }
 
-bool ento::shouldRegisterArrayBoundCheckerV2(const LangOptions &LO) {
+bool ento::shouldRegisterArrayBoundCheckerV2(const CheckerManager &mgr) {
   return true;
 }

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __RNBRemote_h__
-#define __RNBRemote_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBREMOTE_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBREMOTE_H
 
 #include "DNB.h"
 #include "PThreadMutex.h"
@@ -428,4 +428,4 @@ protected:
    about how many bytes gdb might try to send in a single packet.  */
 #define DEFAULT_GDB_REMOTE_PROTOCOL_BUFSIZE 399
 
-#endif // #ifndef __RNBRemote_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBREMOTE_H

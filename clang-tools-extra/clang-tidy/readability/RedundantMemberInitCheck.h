@@ -25,7 +25,10 @@ public:
   RedundantMemberInitCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
         IgnoreBaseInCopyConstructors(
-            Options.get("IgnoreBaseInCopyConstructors", 0)) {}
+            Options.get("IgnoreBaseInCopyConstructors", false)) {}
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;

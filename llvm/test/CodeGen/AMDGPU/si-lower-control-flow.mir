@@ -32,7 +32,7 @@ body:             |
   ; GCN:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], undef %1:sreg_64, implicit-def dead $scc
   ; GCN:   [[S_XOR_B64_:%[0-9]+]]:sreg_64 = S_XOR_B64 [[S_AND_B64_]], [[COPY]], implicit-def dead $scc
   ; GCN:   $exec = S_MOV_B64_term killed [[S_AND_B64_]]
-  ; GCN:   SI_MASK_BRANCH %bb.2, implicit $exec
+  ; GCN:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; GCN:   S_BRANCH %bb.1
   ; GCN: bb.1:
   ; GCN:   successors: %bb.2(0x80000000)

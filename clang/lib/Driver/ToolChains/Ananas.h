@@ -19,10 +19,9 @@ namespace tools {
 
 /// ananas -- Directly call GNU Binutils assembler and linker
 namespace ananas {
-class LLVM_LIBRARY_VISIBILITY Assembler : public GnuTool {
+class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
 public:
-  Assembler(const ToolChain &TC)
-      : GnuTool("ananas::Assembler", "assembler", TC) {}
+  Assembler(const ToolChain &TC) : Tool("ananas::Assembler", "assembler", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 
@@ -32,9 +31,9 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
+class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
-  Linker(const ToolChain &TC) : GnuTool("ananas::Linker", "linker", TC) {}
+  Linker(const ToolChain &TC) : Tool("ananas::Linker", "linker", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }

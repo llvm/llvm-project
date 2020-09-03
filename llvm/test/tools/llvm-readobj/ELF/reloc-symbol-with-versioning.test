@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # RUN: llvm-readobj --demangle -r %t.o | FileCheck %s --check-prefix LLVM
 # RUN: llvm-readelf --demangle -r %t.o | FileCheck %s --check-prefix GNU
 
@@ -64,7 +64,7 @@ Sections:
     Type:            SHT_RELA
     Flags:           [ SHF_ALLOC ]
     Info:            0
-    Link:            7
+    Link:            .dynsym
     AddressAlign:    0x0000000000000008
     EntSize:         0x0000000000000018
     Relocations:     

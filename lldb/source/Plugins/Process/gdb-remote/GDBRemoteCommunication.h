@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_GDBRemoteCommunication_h_
-#define liblldb_GDBRemoteCommunication_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATION_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATION_H
 
 #include "GDBRemoteCommunicationHistory.h"
 
@@ -226,7 +226,9 @@ private:
   void *m_decompression_scratch = nullptr;
 #endif
 
-  DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunication);
+  GDBRemoteCommunication(const GDBRemoteCommunication &) = delete;
+  const GDBRemoteCommunication &
+  operator=(const GDBRemoteCommunication &) = delete;
 };
 
 } // namespace process_gdb_remote
@@ -242,4 +244,4 @@ struct format_provider<
 };
 } // namespace llvm
 
-#endif // liblldb_GDBRemoteCommunication_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATION_H

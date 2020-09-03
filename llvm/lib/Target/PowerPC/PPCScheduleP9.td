@@ -20,7 +20,7 @@ def P9Model : SchedMachineModel {
 
   // Load latency is 4 or 5 cycles depending on the load. This latency assumes
   // that we have a cache hit. For a cache miss the load latency will be more.
-  // There are two instructions (lxvl, lxvll) that have a latencty of 6 cycles.
+  // There are two instructions (lxvl, lxvll) that have a latency of 6 cycles.
   // However it is not worth bumping this value up to 6 when the vast majority
   // of instructions are 4 or 5 cycles.
   let LoadLatency = 5;
@@ -40,9 +40,11 @@ def P9Model : SchedMachineModel {
 
   let CompleteModel = 1;
 
-  // Do not support QPX (Quad Processing eXtension) or SPE (Signal Procesing
-  // Engine) on Power 9.
-  let UnsupportedFeatures = [HasQPX, HasSPE];
+  // Do not support QPX (Quad Processing eXtension), SPE (Signal Processing
+  // Engine), prefixed instructions on Power 9, PC relative mem ops, or
+  // instructions introduced in ISA 3.1.
+  let UnsupportedFeatures = [HasQPX, HasSPE, PrefixInstrs, PCRelativeMemops,
+                             IsISA3_1];
 
 }
 

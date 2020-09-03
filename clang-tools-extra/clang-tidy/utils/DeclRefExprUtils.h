@@ -41,12 +41,6 @@ llvm::SmallPtrSet<const DeclRefExpr *, 16>
 constReferenceDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt,
                            ASTContext &Context);
 
-/// Returns set of all ``DeclRefExprs`` to ``VarDecl`` within ``Decl`` where
-/// ``VarDecl`` is guaranteed to be accessed in a const fashion.
-llvm::SmallPtrSet<const DeclRefExpr *, 16>
-constReferenceDeclRefExprs(const VarDecl &VarDecl, const Decl &Decl,
-                           ASTContext &Context);
-
 /// Returns ``true`` if ``DeclRefExpr`` is the argument of a copy-constructor
 /// call expression within ``Decl``.
 bool isCopyConstructorArgument(const DeclRefExpr &DeclRef, const Decl &Decl,

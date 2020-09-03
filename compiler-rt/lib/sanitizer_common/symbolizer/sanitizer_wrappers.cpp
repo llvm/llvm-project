@@ -19,13 +19,6 @@
 
 #include <tuple>
 
-// Need to match ../sanitizer_common/sanitizer_internal_defs.h
-#if defined(ARCH_PPC)
-#define OFF_T unsigned long
-#else
-#define OFF_T unsigned long long
-#endif
-
 namespace __sanitizer {
 unsigned long internal_open(const char *filename, int flags);
 unsigned long internal_open(const char *filename, int flags, unsigned mode);
@@ -35,7 +28,7 @@ unsigned long internal_lstat(const char *path, void *buf);
 unsigned long internal_fstat(int fd, void *buf);
 size_t internal_strlen(const char *s);
 unsigned long internal_mmap(void *addr, unsigned long length, int prot,
-                            int flags, int fd, OFF_T offset);
+                            int flags, int fd, unsigned long long offset);
 void *internal_memcpy(void *dest, const void *src, unsigned long n);
 // Used to propagate errno.
 bool internal_iserror(unsigned long retval, int *rverrno = 0);

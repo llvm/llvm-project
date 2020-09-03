@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <vector>
 
@@ -31,7 +31,7 @@ int main(int, char**)
         std::vector<bool, test_allocator<bool> > l2(test_allocator<bool>(5));
         l2 = std::move(l);
         assert(l2 == lo);
-        assert(l.empty());
+        LIBCPP_ASSERT(l.empty());
         assert(l2.get_allocator() == lo.get_allocator());
     }
     {

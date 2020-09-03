@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Process_h_
-#define liblldb_Process_h_
+#ifndef LLDB_TARGET_PROCESS_H
+#define LLDB_TARGET_PROCESS_H
 
 #include "lldb/Host/Config.h"
 
@@ -86,15 +86,13 @@ public:
   bool GetDetachKeepsStopped() const;
   void SetDetachKeepsStopped(bool keep_stopped);
   bool GetWarningsOptimization() const;
+  bool GetWarningsUnsupportedLanguage() const;
   bool GetStopOnExec() const;
   std::chrono::seconds GetUtilityExpressionTimeout() const;
   bool GetOSPluginReportsAllThreads() const;
   void SetOSPluginReportsAllThreads(bool does_report);
 
 protected:
-  static void OptionValueChangedCallback(void *baton,
-                                         OptionValue *option_value);
-
   Process *m_process; // Can be nullptr for global ProcessProperties
   std::unique_ptr<ProcessExperimentalProperties> m_experimental_properties_up;
 };
@@ -150,7 +148,9 @@ public:
     return (m_plugin_name.empty() ? nullptr : m_plugin_name.c_str());
   }
 
-  void SetProcessPluginName(llvm::StringRef plugin) { m_plugin_name = plugin; }
+  void SetProcessPluginName(llvm::StringRef plugin) {
+    m_plugin_name = std::string(plugin);
+  }
 
   void Clear() {
     ProcessInstanceInfo::Clear();
@@ -391,7 +391,11 @@ public:
   };
 
   /// Process warning types.
-  enum Warnings { eWarningsOptimization = 1, eWarningsSwiftImport };
+  enum Warnings {
+    eWarningsOptimization = 1,
+    eWarningsUnsupportedLanguage = 2,
+    eWarningsSwiftImport
+  };
 
   typedef Range<lldb::addr_t, lldb::addr_t> LoadRange;
   // We use a read/write lock to allow on or more clients to access the process
@@ -452,6 +456,8 @@ public:
 
     void Dump(Stream *s) const override;
 
+    virtual bool ShouldStop(Event *event_ptr, bool &found_valid_stopinfo);
+
     void DoOnRemoval(Event *event_ptr) override;
 
     static const Process::ProcessEventData *
@@ -497,7 +503,8 @@ public:
     int m_update_state;
     bool m_interrupted;
 
-    DISALLOW_COPY_AND_ASSIGN(ProcessEventData);
+    ProcessEventData(const ProcessEventData &) = delete;
+    const ProcessEventData &operator=(const ProcessEventData &) = delete;
   };
 
   /// Construct with a shared pointer to a target, and the Process listener.
@@ -734,7 +741,7 @@ public:
   ///
   /// \return
   ///     Returns an error object.
-  virtual Status ConnectRemote(Stream *strm, llvm::StringRef remote_url);
+  virtual Status ConnectRemote(llvm::StringRef remote_url);
 
   bool GetShouldDetach() const { return m_should_detach; }
 
@@ -922,7 +929,7 @@ public:
   ///
   /// \return
   ///     Returns an error object.
-  virtual Status DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
+  virtual Status DoConnectRemote(llvm::StringRef remote_url) {
     Status error;
     error.SetErrorString("remote connections are not supported");
     return error;
@@ -1329,9 +1336,14 @@ public:
   void PrintWarningCantLoadSwiftModule(const Module &module,
                                        std::string details);
 
+  /// Print a user-visible warning about a function written in a
+  /// language that this version of LLDB doesn't support.
+  ///
+  /// \see PrintWarningOptimization
+  void PrintWarningUnsupportedLanguage(const SymbolContext &sc);
+
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
-public:
   /// Get the exit status for a process.
   ///
   /// \return
@@ -2943,10 +2955,11 @@ private:
 
   void ControlPrivateStateThread(uint32_t signal);
 
-  DISALLOW_COPY_AND_ASSIGN(Process);
+  Process(const Process &) = delete;
+  const Process &operator=(const Process &) = delete;
 };
 
-/// RAII guard that should be aquired when an utility function is called within
+/// RAII guard that should be acquired when an utility function is called within
 /// a given process.
 class UtilityFunctionScope {
   Process *m_process;
@@ -2964,4 +2977,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_Process_h_
+#endif // LLDB_TARGET_PROCESS_H

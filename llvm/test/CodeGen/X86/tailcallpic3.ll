@@ -16,7 +16,7 @@ entry:
   ret void
 }
 ; CHECK: tailcall_hidden:
-; CHECK: jmp tailcallee_hidden
+; CHECK: jmp .Ltailcallee_hidden$local
 
 define internal void @tailcallee_internal() {
 entry:

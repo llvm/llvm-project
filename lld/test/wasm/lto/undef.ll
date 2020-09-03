@@ -8,7 +8,7 @@ target triple = "wasm32-unknown-unknown"
 declare i32 @bar()
 
 ; Symbols such as foo which are only called indirectly are handled slightly
-; differently with resepect to signature checking.
+; differently with respect to signature checking.
 declare i32 @foo()
 
 @ptr = global i8* bitcast (i32 ()* @foo to i8*), align 8

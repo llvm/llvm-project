@@ -4,7 +4,7 @@
 // RUN: ld.lld --hash-style=sysv -shared %t2.o -soname=t2.so -o %t2.so
 // RUN: llvm-readobj -S %t2.so | FileCheck --check-prefix=SO %s
 // RUN: ld.lld --hash-style=sysv -dynamic-linker /lib64/ld-linux-x86-64.so.2 -rpath foo -rpath bar --export-dynamic %t.o %t2.so -o %t
-// RUN: llvm-readobj --program-headers --dynamic-table --symbols -S --dyn-syms --section-data --hash-table %t | FileCheck %s
+// RUN: llvm-readobj -S -l --dynamic-table --symbols --dyn-syms --section-data --hash-table %t | FileCheck %s
 // RUN: ld.lld --hash-style=sysv %t.o %t2.so %t2.so -o %t2
 // RUN: llvm-readobj --dyn-syms %t2 | FileCheck --check-prefix=DONT_EXPORT %s
 
@@ -129,6 +129,47 @@
 // CHECK-NEXT: AddressAlignment:
 // CHECK-NEXT: EntrySize: [[SYMENT:.*]]
 
+// CHECK:     ProgramHeaders [
+// CHECK:        Type: PT_INTERP
+// CHECK-NEXT:   Offset: [[INTERPOFFSET]]
+// CHECK-NEXT:   VirtualAddress: [[INTERPADDR]]
+// CHECK-NEXT:   PhysicalAddress: [[INTERPADDR]]
+// CHECK-NEXT:   FileSize: [[INTERPSIZE]]
+// CHECK-NEXT:   MemSize: [[INTERPSIZE]]
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:     PF_R
+// CHECK-NEXT:   ]
+// CHECK-NEXT:   Alignment: 1
+// CHECK-NEXT: }
+// CHECK:        Type: PT_DYNAMIC
+// CHECK-NEXT:   Offset: [[OFFSET]]
+// CHECK-NEXT:   VirtualAddress: [[ADDR]]
+// CHECK-NEXT:   PhysicalAddress: [[ADDR]]
+// CHECK-NEXT:   FileSize: [[SIZE]]
+// CHECK-NEXT:   MemSize: [[SIZE]]
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:     PF_R
+// CHECK-NEXT:     PF_W
+// CHECK-NEXT:   ]
+// CHECK-NEXT:   Alignment: [[ALIGN]]
+// CHECK-NEXT: }
+
+// CHECK:      DynamicSection [
+// CHECK-NEXT:   Tag        Type                 Name/Value
+// CHECK-NEXT:   0x0000001D RUNPATH              Library runpath: [foo:bar]
+// CHECK-NEXT:   0x00000001 NEEDED               Shared library: [{{.*}}2.so]
+// CHECK-NEXT:   0x00000015 DEBUG                0x0
+// CHECK-NEXT:   0x00000011 REL                  [[RELADDR]]
+// CHECK-NEXT:   0x00000012 RELSZ                [[RELSIZE]] (bytes)
+// CHECK-NEXT:   0x00000013 RELENT               [[RELENT]] (bytes)
+// CHECK-NEXT:   0x00000006 SYMTAB               [[DYNSYMADDR]]
+// CHECK-NEXT:   0x0000000B SYMENT               [[SYMENT]] (bytes)
+// CHECK-NEXT:   0x00000005 STRTAB               [[DYNSTRADDR]]
+// CHECK-NEXT:   0x0000000A STRSZ
+// CHECK-NEXT:   0x00000004 HASH                 [[HASHADDR]]
+// CHECK-NEXT:   0x00000000 NULL                 0x0
+// CHECK-NEXT: ]
+
 // CHECK:      Symbols [
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name:
@@ -247,47 +288,6 @@
 // DONT_EXPORT-NEXT:     Section: Undefined
 // DONT_EXPORT-NEXT:   }
 // DONT_EXPORT-NEXT: ]
-
-// CHECK:      DynamicSection [
-// CHECK-NEXT:   Tag        Type                 Name/Value
-// CHECK-NEXT:   0x0000001D RUNPATH              Library runpath: [foo:bar]
-// CHECK-NEXT:   0x00000001 NEEDED               Shared library: [{{.*}}2.so]
-// CHECK-NEXT:   0x00000015 DEBUG                0x0
-// CHECK-NEXT:   0x00000011 REL                  [[RELADDR]]
-// CHECK-NEXT:   0x00000012 RELSZ                [[RELSIZE]] (bytes)
-// CHECK-NEXT:   0x00000013 RELENT               [[RELENT]] (bytes)
-// CHECK-NEXT:   0x00000006 SYMTAB               [[DYNSYMADDR]]
-// CHECK-NEXT:   0x0000000B SYMENT               [[SYMENT]] (bytes)
-// CHECK-NEXT:   0x00000005 STRTAB               [[DYNSTRADDR]]
-// CHECK-NEXT:   0x0000000A STRSZ
-// CHECK-NEXT:   0x00000004 HASH                 [[HASHADDR]]
-// CHECK-NEXT:   0x00000000 NULL                 0x0
-// CHECK-NEXT: ]
-
-// CHECK:     ProgramHeaders [
-// CHECK:        Type: PT_INTERP
-// CHECK-NEXT:   Offset: [[INTERPOFFSET]]
-// CHECK-NEXT:   VirtualAddress: [[INTERPADDR]]
-// CHECK-NEXT:   PhysicalAddress: [[INTERPADDR]]
-// CHECK-NEXT:   FileSize: [[INTERPSIZE]]
-// CHECK-NEXT:   MemSize: [[INTERPSIZE]]
-// CHECK-NEXT:   Flags [
-// CHECK-NEXT:     PF_R
-// CHECK-NEXT:   ]
-// CHECK-NEXT:   Alignment: 1
-// CHECK-NEXT: }
-// CHECK:        Type: PT_DYNAMIC
-// CHECK-NEXT:   Offset: [[OFFSET]]
-// CHECK-NEXT:   VirtualAddress: [[ADDR]]
-// CHECK-NEXT:   PhysicalAddress: [[ADDR]]
-// CHECK-NEXT:   FileSize: [[SIZE]]
-// CHECK-NEXT:   MemSize: [[SIZE]]
-// CHECK-NEXT:   Flags [
-// CHECK-NEXT:     PF_R
-// CHECK-NEXT:     PF_W
-// CHECK-NEXT:   ]
-// CHECK-NEXT:   Alignment: [[ALIGN]]
-// CHECK-NEXT: }
 
 // CHECK:      HashTable {
 // CHECK-NEXT:   Num Buckets: 4

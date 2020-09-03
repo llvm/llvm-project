@@ -359,14 +359,14 @@ let isAllocatable = 0 in {
   // Ancillary state registers
   def ASRRegs : RegisterClass<"SP", [i32], 32,
                               (add Y, (sequence "ASR%u", 1, 31))>;
-                            
+
   // This register class should not be used to hold i64 values.
   def CoprocRegs : RegisterClass<"SP", [i32], 32,
                                 (add (sequence "C%u", 0, 31))>;
 
   // Should be in the same order as CoprocRegs.
   def CoprocPair : RegisterClass<"SP", [v2i32], 64,
-    (add C0_C1,   C2_C3,   C4_C5,   C6_C7,   
+    (add C0_C1,   C2_C3,   C4_C5,   C6_C7,
          C8_C9,   C10_C11, C12_C13, C14_C15,
          C16_C17, C18_C19, C20_C21, C22_C23,
          C24_C25, C26_C27, C28_C29, C30_C31)>;

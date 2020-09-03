@@ -86,12 +86,9 @@ body:             |
     ; CHECK-LABEL: name: shl_v2i32_imm_out_of_range
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 40
-    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[MOVi32imm]], %subreg.ssub
-    ; CHECK: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG]], 1, [[MOVi32imm]]
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr]].dsub
-    ; CHECK: [[USHLv2i32_:%[0-9]+]]:fpr64 = USHLv2i32 [[COPY]], [[COPY1]]
+    ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
+    ; CHECK: [[USHLv2i32_:%[0-9]+]]:fpr64 = USHLv2i32 [[COPY]], [[LDRDui]]
     ; CHECK: $d0 = COPY [[USHLv2i32_]]
     ; CHECK: RET_ReallyLR implicit $d0
     %0:fpr(<2 x s32>) = COPY $d0
@@ -251,12 +248,9 @@ body:             |
     ; CHECK-LABEL: name: shl_v2i64_imm_out_of_range
     ; CHECK: liveins: $q0
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 70
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
-    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[SUBREG_TO_REG]], %subreg.dsub
-    ; CHECK: [[INSvi64gpr:%[0-9]+]]:fpr128 = INSvi64gpr [[INSERT_SUBREG]], 1, [[SUBREG_TO_REG]]
-    ; CHECK: [[USHLv2i64_:%[0-9]+]]:fpr128 = USHLv2i64 [[COPY]], [[INSvi64gpr]]
+    ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
+    ; CHECK: [[USHLv2i64_:%[0-9]+]]:fpr128 = USHLv2i64 [[COPY]], [[LDRQui]]
     ; CHECK: $q0 = COPY [[USHLv2i64_]]
     ; CHECK: RET_ReallyLR implicit $q0
     %0:fpr(<2 x s64>) = COPY $q0

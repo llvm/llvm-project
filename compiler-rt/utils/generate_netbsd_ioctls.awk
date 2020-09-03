@@ -256,6 +256,8 @@ END {
   # Add compat entries
   add_compat("dev/filemon/filemon.h (compat <= 9.99.26)", "FILEMON_SET_FD", "READWRITE", "sizeof(int)")
   add_compat("", "FILEMON_SET_PID", "READWRITE", "sizeof(int)")
+  add_compat("dev/usb/urio.h (compat <= 9.99.43)", "URIO_SEND_COMMAND", "READWRITE", "struct_urio_command_sz")
+  add_compat("", "URIO_RECV_COMMAND", "READWRITE", "struct_urio_command_sz")
 
   # Generate sanitizer_interceptors_ioctl_netbsd.inc
 

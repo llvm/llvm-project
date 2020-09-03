@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s modernize-use-default-member-init %t
-// FIXME: Fix the checker to work in C++2a mode.
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s modernize-use-default-member-init %t -- -- -fexceptions
+// FIXME: Fix the checker to work in C++20 mode.
 
 struct S {
 };
@@ -247,24 +247,24 @@ struct NegativeDefaultArg
 };
 
 struct ExistingChar {
-  ExistingChar(short) : e1(), e2(), e3(), e4() {}
+  ExistingChar(short) : e1(), e2{}, e3(), e4() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: member initializer for 'e1' is redundant [modernize-use-default-member-init]
   // CHECK-MESSAGES: :[[@LINE-2]]:31: warning: member initializer for 'e2' is redundant
   // CHECK-MESSAGES: :[[@LINE-3]]:37: warning: member initializer for 'e3' is redundant
   // CHECK-FIXES: ExistingChar(short) :  e4() {}
-  ExistingChar(int) : e1(0), e2(0), e3(0), e4(0) {}
+  ExistingChar(int) : e1(0), e2{0}, e3(0), e4(0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: member initializer for 'e1' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:30: warning: member initializer for 'e2' is redundant
   // CHECK-MESSAGES: :[[@LINE-3]]:37: warning: member initializer for 'e3' is redundant
   // CHECK-FIXES: ExistingChar(int) :  e4(0) {}
-  ExistingChar(long) : e1('\0'), e2('\0'), e3('\0'), e4('\0') {}
+  ExistingChar(long) : e1('\0'), e2{'\0'}, e3('\0'), e4('\0') {}
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: member initializer for 'e1' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:34: warning: member initializer for 'e2' is redundant
   // CHECK-MESSAGES: :[[@LINE-3]]:44: warning: member initializer for 'e3' is redundant
   // CHECK-FIXES: ExistingChar(long) :  e4('\0') {}
-  ExistingChar(char) : e1('a'), e2('a'), e3('a'), e4('a') {}
+  ExistingChar(char) : e1('a'), e2{'a'}, e3('a'), e4('a') {}
   // CHECK-MESSAGES: :[[@LINE-1]]:51: warning: member initializer for 'e4' is redundant
-  // CHECK-FIXES: ExistingChar(char) : e1('a'), e2('a'), e3('a') {}
+  // CHECK-FIXES: ExistingChar(char) : e1('a'), e2{'a'}, e3('a') {}
   char e1{};
   char e2 = 0;
   char e3 = '\0';
@@ -272,75 +272,75 @@ struct ExistingChar {
 };
 
 struct ExistingInt {
-  ExistingInt(short) : e1(), e2(), e3(), e4(), e5(), e6() {}
+  ExistingInt(short) : e1(), e2{}, e3(), e4(), e5(), e6() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: member initializer for 'e1' is redundant [modernize-use-default-member-init]
   // CHECK-MESSAGES: :[[@LINE-2]]:30: warning: member initializer for 'e2' is redundant
   // CHECK-FIXES: ExistingInt(short) :  e3(), e4(), e5(), e6() {}
-  ExistingInt(int) : e1(0), e2(0), e3(0), e4(0), e5(0), e6(0) {}
+  ExistingInt(int) : e1(0), e2{0}, e3(0), e4(0), e5(0), e6(0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: member initializer for 'e1' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:29: warning: member initializer for 'e2' is redundant
   // CHECK-FIXES: ExistingInt(int) :  e3(0), e4(0), e5(0), e6(0) {}
-  ExistingInt(long) : e1(5), e2(5), e3(5), e4(5), e5(5), e6(5) {}
+  ExistingInt(long) : e1(5), e2{5}, e3(5), e4(5), e5(5), e6(5) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: member initializer for 'e3' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:44: warning: member initializer for 'e4' is redundant
   // CHECK-MESSAGES: :[[@LINE-3]]:58: warning: member initializer for 'e6' is redundant
-  // CHECK-FIXES: ExistingInt(long) : e1(5), e2(5),  e5(5) {}
-  ExistingInt(char) : e1(-5), e2(-5), e3(-5), e4(-5), e5(-5), e6(-5) {}
+  // CHECK-FIXES: ExistingInt(long) : e1(5), e2{5},  e5(5) {}
+  ExistingInt(char) : e1(-5), e2{-5}, e3(-5), e4(-5), e5(-5), e6(-5) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:55: warning: member initializer for 'e5' is redundant
-  // CHECK-FIXES: ExistingInt(char) : e1(-5), e2(-5), e3(-5), e4(-5),  e6(-5) {}
+  // CHECK-FIXES: ExistingInt(char) : e1(-5), e2{-5}, e3(-5), e4(-5),  e6(-5) {}
   int e1{};
   int e2 = 0;
   int e3 = {5};
-  int e4 = 5;
+  int e4{5};
   int e5 = -5;
   int e6 = +5;
 };
 
 struct ExistingDouble {
-  ExistingDouble(short) : e1(), e2(), e3(), e4(), e5() {}
+  ExistingDouble(short) : e1(), e2{}, e3(), e4(), e5() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: member initializer for 'e1' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:33: warning: member initializer for 'e2' is redundant
   // CHECK-FIXES: ExistingDouble(short) :  e3(), e4(), e5() {}
-  ExistingDouble(int) : e1(0.0), e2(0.0), e3(0.0), e4(0.0), e5(0.0) {}
+  ExistingDouble(int) : e1(0.0), e2{0.0}, e3(0.0), e4(0.0), e5(0.0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: member initializer for 'e1' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:34: warning: member initializer for 'e2' is redundant
   // CHECK-FIXES: ExistingDouble(int) :  e3(0.0), e4(0.0), e5(0.0) {}
-  ExistingDouble(long) : e1(5.0), e2(5.0), e3(5.0), e4(5.0), e5(5.0) {}
+  ExistingDouble(long) : e1(5.0), e2{5.0}, e3(5.0), e4(5.0), e5(5.0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: member initializer for 'e3' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:62: warning: member initializer for 'e5' is redundant
-  // CHECK-FIXES: ExistingDouble(long) : e1(5.0), e2(5.0),  e4(5.0) {}
-  ExistingDouble(char) : e1(-5.0), e2(-5.0), e3(-5.0), e4(-5.0), e5(-5.0) {}
+  // CHECK-FIXES: ExistingDouble(long) : e1(5.0), e2{5.0},  e4(5.0) {}
+  ExistingDouble(char) : e1(-5.0), e2{-5.0}, e3(-5.0), e4(-5.0), e5(-5.0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:56: warning: member initializer for 'e4' is redundant
-  // CHECK-FIXES: ExistingDouble(char) : e1(-5.0), e2(-5.0), e3(-5.0),  e5(-5.0) {}
+  // CHECK-FIXES: ExistingDouble(char) : e1(-5.0), e2{-5.0}, e3(-5.0),  e5(-5.0) {}
   double e1{};
   double e2 = 0.0;
   double e3 = 5.0;
-  double e4 = -5.0;
+  double e4{-5.0};
   double e5 = +5.0;
 };
 
 struct ExistingBool {
-  ExistingBool(short) : e1(), e2(), e3() {}
+  ExistingBool(short) : e1(), e2{}, e3() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: member initializer for 'e1' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:31: warning: member initializer for 'e2' is redundant
   // CHECK-FIXES: ExistingBool(short) :  e3() {}
-  ExistingBool(int) : e1(false), e2(false), e3(false) {}
+  ExistingBool(int) : e1(false), e2{false}, e3(false) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: member initializer for 'e1' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:34: warning: member initializer for 'e2' is redundant
   // CHECK-FIXES: ExistingBool(int) :  e3(false) {}
-  ExistingBool(long) : e1(true), e2(true), e3(true) {}
+  ExistingBool(long) : e1(true), e2{true}, e3(true) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: member initializer for 'e3' is redundant
-  // CHECK-FIXES: ExistingBool(long) : e1(true), e2(true) {}
+  // CHECK-FIXES: ExistingBool(long) : e1(true), e2{true} {}
   bool e1{};
   bool e2 = false;
-  bool e3 = true;
+  bool e3{true};
 };
 
 struct ExistingEnum {
-  ExistingEnum(short) : e1(Foo), e2(Foo) {}
+  ExistingEnum(short) : e1(Foo), e2{Foo} {}
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: member initializer for 'e1' is redundant
-  // CHECK-FIXES: ExistingEnum(short) :  e2(Foo) {}
-  ExistingEnum(int) : e1(Bar), e2(Bar) {}
+  // CHECK-FIXES: ExistingEnum(short) :  e2{Foo} {}
+  ExistingEnum(int) : e1(Bar), e2{Bar} {}
   // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: member initializer for 'e2' is redundant
   // CHECK-FIXES: ExistingEnum(int) : e1(Bar) {}
   Enum e1 = Foo;
@@ -348,43 +348,43 @@ struct ExistingEnum {
 };
 
 struct ExistingPointer {
-  ExistingPointer(short) : e1(), e2(), e3(), e4() {}
+  ExistingPointer(short) : e1(), e2{}, e3(), e4() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: member initializer for 'e1' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:34: warning: member initializer for 'e2' is redundant
   // CHECK-MESSAGES: :[[@LINE-3]]:40: warning: member initializer for 'e3' is redundant
   // CHECK-FIXES: ExistingPointer(short) :  e4() {}
-  ExistingPointer(int) : e1(0), e2(0), e3(0), e4(&e1) {}
+  ExistingPointer(int) : e1(0), e2{0}, e3(0), e4(&e1) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: member initializer for 'e1' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:33: warning: member initializer for 'e2' is redundant
   // CHECK-MESSAGES: :[[@LINE-3]]:40: warning: member initializer for 'e3' is redundant
   // CHECK-FIXES: ExistingPointer(int) :  e4(&e1) {}
-  ExistingPointer(long) : e1(nullptr), e2(nullptr), e3(nullptr), e4(&e2) {}
+  ExistingPointer(long) : e1(nullptr), e2{nullptr}, e3(nullptr), e4(&e2) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: member initializer for 'e1' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:40: warning: member initializer for 'e2' is redundant
   // CHECK-MESSAGES: :[[@LINE-3]]:53: warning: member initializer for 'e3' is redundant
   // CHECK-FIXES: ExistingPointer(long) :  e4(&e2) {}
   int *e1{};
   int *e2 = 0;
-  int *e3 = nullptr;
+  int *e3{nullptr};
   int **e4 = &e1;
 };
 
 struct ExistingString {
-  ExistingString(short) : e1(), e2(), e3(), e4() {}
+  ExistingString(short) : e1(), e2{}, e3(), e4() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: member initializer for 'e1' is redundant [modernize-use-default-member-init]
   // CHECK-MESSAGES: :[[@LINE-2]]:33: warning: member initializer for 'e2' is redundant
   // CHECK-FIXES: ExistingString(short) :  e3(), e4() {}
-  ExistingString(int) : e1(0), e2(0), e3(0), e4(0) {}
+  ExistingString(int) : e1(0), e2{0}, e3(0), e4(0) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: member initializer for 'e1' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:32: warning: member initializer for 'e2' is redundant
   // CHECK-FIXES: ExistingString(int) :  e3(0), e4(0) {}
-  ExistingString(long) : e1(nullptr), e2(nullptr), e3(nullptr), e4(nullptr) {}
+  ExistingString(long) : e1(nullptr), e2{nullptr}, e3(nullptr), e4(nullptr) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: member initializer for 'e1' is redundant
   // CHECK-MESSAGES: :[[@LINE-2]]:39: warning: member initializer for 'e2' is redundant
   // CHECK-FIXES: ExistingString(long) :  e3(nullptr), e4(nullptr) {}
-  ExistingString(char) : e1("foo"), e2("foo"), e3("foo"), e4("foo") {}
+  ExistingString(char) : e1("foo"), e2{"foo"}, e3("foo"), e4("foo") {}
   // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: member initializer for 'e3' is redundant
-  // CHECK-FIXES: ExistingString(char) : e1("foo"), e2("foo"),  e4("foo") {}
+  // CHECK-FIXES: ExistingString(char) : e1("foo"), e2{"foo"},  e4("foo") {}
   const char *e1{};
   const char *e2 = nullptr;
   const char *e3 = "foo";
@@ -418,3 +418,31 @@ NegativeTemplateExisting<double> nted(0);
   };
 
 MACRO();
+
+
+class FunctionTryBlock {
+public:
+  FunctionTryBlock() try : i(5), k(8) {}
+  // CHECK-FIXES: FunctionTryBlock() try  {}
+  catch (...) {}
+
+private:
+  int i, k;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'i' [modernize-use-default-member-init]
+  // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: use default member initializer for 'k' [modernize-use-default-member-init]
+  // CHECK-FIXES: int i{5}, k{8};
+};
+
+struct PR45363 {
+  // Ensure no warning is emitted here
+  PR45363(int i = 0) : m_i{i} {}
+  int m_i;
+};
+
+struct EmptyBracedIntDefault {
+  EmptyBracedIntDefault() : m_i{} {}
+  int m_i;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'm_i' [modernize-use-default-member-init]
+  // CHECK-FIXES:      {{^  }}EmptyBracedIntDefault()  {}
+  // CHECK-FIXES-NEXT: {{^  }}int m_i{};
+};

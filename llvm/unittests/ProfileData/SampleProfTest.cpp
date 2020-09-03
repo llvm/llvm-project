@@ -16,6 +16,7 @@
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
@@ -52,7 +53,8 @@ struct SampleProfTest : ::testing::Test {
 
   void readProfile(const Module &M, StringRef Profile,
                    StringRef RemapFile = "") {
-    auto ReaderOrErr = SampleProfileReader::create(Profile, Context, RemapFile);
+    auto ReaderOrErr = SampleProfileReader::create(
+        std::string(Profile), Context, std::string(RemapFile));
     ASSERT_TRUE(NoError(ReaderOrErr.getError()));
     Reader = std::move(ReaderOrErr.get());
     Reader->collectFuncsFrom(M);
@@ -75,11 +77,72 @@ struct SampleProfTest : ::testing::Test {
     OS->close();
   }
 
-  void testRoundTrip(SampleProfileFormat Format, bool Remap) {
+  // Verify profile summary is consistent in the roundtrip to and from
+  // Metadata. \p AddPartialField is to choose whether the Metadata
+  // contains the IsPartialProfile field which is optional.
+  void verifyProfileSummary(ProfileSummary &Summary, Module &M,
+                            const bool AddPartialField,
+                            const bool AddPartialProfileRatioField) {
+    LLVMContext &Context = M.getContext();
+    const bool IsPartialProfile = Summary.isPartialProfile();
+    const double PartialProfileRatio = Summary.getPartialProfileRatio();
+    auto VerifySummary = [IsPartialProfile, PartialProfileRatio](
+                             ProfileSummary &Summary) mutable {
+      ASSERT_EQ(ProfileSummary::PSK_Sample, Summary.getKind());
+      ASSERT_EQ(137392u, Summary.getTotalCount());
+      ASSERT_EQ(8u, Summary.getNumCounts());
+      ASSERT_EQ(4u, Summary.getNumFunctions());
+      ASSERT_EQ(1437u, Summary.getMaxFunctionCount());
+      ASSERT_EQ(60351u, Summary.getMaxCount());
+      ASSERT_EQ(IsPartialProfile, Summary.isPartialProfile());
+      ASSERT_EQ(PartialProfileRatio, Summary.getPartialProfileRatio());
+
+      uint32_t Cutoff = 800000;
+      auto Predicate = [&Cutoff](const ProfileSummaryEntry &PE) {
+        return PE.Cutoff == Cutoff;
+      };
+      std::vector<ProfileSummaryEntry> &Details = Summary.getDetailedSummary();
+      auto EightyPerc = find_if(Details, Predicate);
+      Cutoff = 900000;
+      auto NinetyPerc = find_if(Details, Predicate);
+      Cutoff = 950000;
+      auto NinetyFivePerc = find_if(Details, Predicate);
+      Cutoff = 990000;
+      auto NinetyNinePerc = find_if(Details, Predicate);
+      ASSERT_EQ(60000u, EightyPerc->MinCount);
+      ASSERT_EQ(12557u, NinetyPerc->MinCount);
+      ASSERT_EQ(12557u, NinetyFivePerc->MinCount);
+      ASSERT_EQ(610u, NinetyNinePerc->MinCount);
+    };
+    VerifySummary(Summary);
+
+    // Test that conversion of summary to and from Metadata works.
+    Metadata *MD =
+        Summary.getMD(Context, AddPartialField, AddPartialProfileRatioField);
+    ASSERT_TRUE(MD);
+    ProfileSummary *PS = ProfileSummary::getFromMD(MD);
+    ASSERT_TRUE(PS);
+    VerifySummary(*PS);
+    delete PS;
+
+    // Test that summary can be attached to and read back from module.
+    M.eraseNamedMetadata(M.getOrInsertModuleFlagsMetadata());
+    M.setProfileSummary(MD, ProfileSummary::PSK_Sample);
+    MD = M.getProfileSummary(/* IsCS */ false);
+    ASSERT_TRUE(MD);
+    PS = ProfileSummary::getFromMD(MD);
+    ASSERT_TRUE(PS);
+    VerifySummary(*PS);
+    delete PS;
+  }
+
+  void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5) {
     SmallVector<char, 128> ProfilePath;
     ASSERT_TRUE(NoError(llvm::sys::fs::createTemporaryFile("profile", "", ProfilePath)));
     StringRef Profile(ProfilePath.data(), ProfilePath.size());
     createWriter(Format, Profile);
+    if (Format == SampleProfileFormat::SPF_Ext_Binary && UseMD5)
+      static_cast<SampleProfileWriterExtBinary *>(Writer.get())->setUseMD5();
 
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
@@ -166,7 +229,7 @@ struct SampleProfTest : ::testing::Test {
 
     FunctionSamples *ReadFooSamples = Reader->getSamplesFor(FooName);
     ASSERT_TRUE(ReadFooSamples != nullptr);
-    if (Format != SampleProfileFormat::SPF_Compact_Binary) {
+    if (!UseMD5) {
       ASSERT_EQ("_Z3fooi", ReadFooSamples->getName());
     }
     ASSERT_EQ(7711u, ReadFooSamples->getTotalSamples());
@@ -174,7 +237,7 @@ struct SampleProfTest : ::testing::Test {
 
     FunctionSamples *ReadBarSamples = Reader->getSamplesFor(BarName);
     ASSERT_TRUE(ReadBarSamples != nullptr);
-    if (Format != SampleProfileFormat::SPF_Compact_Binary) {
+    if (!UseMD5) {
       ASSERT_EQ("_Z3bari", ReadBarSamples->getName());
     }
     ASSERT_EQ(20301u, ReadBarSamples->getTotalSamples());
@@ -203,58 +266,26 @@ struct SampleProfTest : ::testing::Test {
 
     std::string MconstructGUID;
     StringRef MconstructRep =
-        getRepInFormat(MconstructName, Format, MconstructGUID);
+        getRepInFormat(MconstructName, UseMD5, MconstructGUID);
     std::string StringviewGUID;
     StringRef StringviewRep =
-        getRepInFormat(StringviewName, Format, StringviewGUID);
+        getRepInFormat(StringviewName, UseMD5, StringviewGUID);
     ASSERT_EQ(1000u, CTMap.get()[MconstructRep]);
     ASSERT_EQ(437u, CTMap.get()[StringviewRep]);
 
-    auto VerifySummary = [](ProfileSummary &Summary) mutable {
-      ASSERT_EQ(ProfileSummary::PSK_Sample, Summary.getKind());
-      ASSERT_EQ(137392u, Summary.getTotalCount());
-      ASSERT_EQ(8u, Summary.getNumCounts());
-      ASSERT_EQ(4u, Summary.getNumFunctions());
-      ASSERT_EQ(1437u, Summary.getMaxFunctionCount());
-      ASSERT_EQ(60351u, Summary.getMaxCount());
-
-      uint32_t Cutoff = 800000;
-      auto Predicate = [&Cutoff](const ProfileSummaryEntry &PE) {
-        return PE.Cutoff == Cutoff;
-      };
-      std::vector<ProfileSummaryEntry> &Details = Summary.getDetailedSummary();
-      auto EightyPerc = find_if(Details, Predicate);
-      Cutoff = 900000;
-      auto NinetyPerc = find_if(Details, Predicate);
-      Cutoff = 950000;
-      auto NinetyFivePerc = find_if(Details, Predicate);
-      Cutoff = 990000;
-      auto NinetyNinePerc = find_if(Details, Predicate);
-      ASSERT_EQ(60000u, EightyPerc->MinCount);
-      ASSERT_EQ(12557u, NinetyPerc->MinCount);
-      ASSERT_EQ(12557u, NinetyFivePerc->MinCount);
-      ASSERT_EQ(610u, NinetyNinePerc->MinCount);
-    };
 
     ProfileSummary &Summary = Reader->getSummary();
-    VerifySummary(Summary);
+    Summary.setPartialProfile(true);
+    verifyProfileSummary(Summary, M, true, false);
 
-    // Test that conversion of summary to and from Metadata works.
-    Metadata *MD = Summary.getMD(Context);
-    ASSERT_TRUE(MD);
-    ProfileSummary *PS = ProfileSummary::getFromMD(MD);
-    ASSERT_TRUE(PS);
-    VerifySummary(*PS);
-    delete PS;
+    Summary.setPartialProfile(false);
+    verifyProfileSummary(Summary, M, true, false);
 
-    // Test that summary can be attached to and read back from module.
-    M.setProfileSummary(MD, ProfileSummary::PSK_Sample);
-    MD = M.getProfileSummary(/* IsCS */ false);
-    ASSERT_TRUE(MD);
-    PS = ProfileSummary::getFromMD(MD);
-    ASSERT_TRUE(PS);
-    VerifySummary(*PS);
-    delete PS;
+    verifyProfileSummary(Summary, M, false, false);
+
+    Summary.setPartialProfile(true);
+    Summary.setPartialProfileRatio(0.5);
+    verifyProfileSummary(Summary, M, true, true);
   }
 
   void addFunctionSamples(StringMap<FunctionSamples> *Smap, const char *Fname,
@@ -331,31 +362,35 @@ struct SampleProfTest : ::testing::Test {
 };
 
 TEST_F(SampleProfTest, roundtrip_text_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Text, false);
+  testRoundTrip(SampleProfileFormat::SPF_Text, false, false);
 }
 
 TEST_F(SampleProfTest, roundtrip_raw_binary_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Binary, false);
+  testRoundTrip(SampleProfileFormat::SPF_Binary, false, false);
 }
 
 TEST_F(SampleProfTest, roundtrip_compact_binary_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Compact_Binary, false);
+  testRoundTrip(SampleProfileFormat::SPF_Compact_Binary, false, true);
 }
 
 TEST_F(SampleProfTest, roundtrip_ext_binary_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false);
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
+}
+
+TEST_F(SampleProfTest, roundtrip_md5_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
 }
 
 TEST_F(SampleProfTest, remap_text_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Text, true);
+  testRoundTrip(SampleProfileFormat::SPF_Text, true, false);
 }
 
 TEST_F(SampleProfTest, remap_raw_binary_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Binary, true);
+  testRoundTrip(SampleProfileFormat::SPF_Binary, true, false);
 }
 
 TEST_F(SampleProfTest, remap_ext_binary_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, true);
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, true, false);
 }
 
 TEST_F(SampleProfTest, sample_overflow_saturation) {

@@ -74,6 +74,8 @@ public:
   bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
   bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
+  bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                    bool ForCodeSize) const override;
 
   bool hasBitPreservingFPLogic(EVT VT) const override;
 
@@ -114,6 +116,7 @@ public:
   bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
     return VT.isScalarInteger();
   }
+  bool convertSelectOfConstantsToMath(EVT VT) const override { return true; }
 
   bool shouldInsertFencesForAtomic(const Instruction *I) const override {
     return isa<LoadInst>(I) || isa<StoreInst>(I);
@@ -127,6 +130,10 @@ public:
     return ISD::SIGN_EXTEND;
   }
 
+  ISD::NodeType getExtendForAtomicCmpSwapArg() const override {
+    return ISD::SIGN_EXTEND;
+  }
+
   bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override {
     if (DAG.getMachineFunction().getFunction().hasMinSize())
       return false;
@@ -137,12 +144,12 @@ public:
 
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
-  unsigned
+  Register
   getExceptionPointerRegister(const Constant *PersonalityFn) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
-  unsigned
+  Register
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
   bool shouldExtendTypeInLibCall(EVT Type) const override;
@@ -151,16 +158,9 @@ public:
   /// method is necessary to lower the llvm.read_register.* and
   /// llvm.write_register.* intrinsics. Allocatable registers must be reserved
   /// with the clang -ffixed-xX flag for access to be allowed.
-  Register getRegisterByName(const char *RegName, EVT VT,
+  Register getRegisterByName(const char *RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
-private:
-  void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
-                        const SmallVectorImpl<ISD::InputArg> &Ins,
-                        bool IsRet) const;
-  void analyzeOutputArgs(MachineFunction &MF, CCState &CCInfo,
-                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                         bool IsRet, CallLoweringInfo *CLI) const;
   // Lower incoming arguments, copy physregs into vregs
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool IsVarArg,
@@ -177,10 +177,38 @@ private:
                       SelectionDAG &DAG) const override;
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
+
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                          Type *Ty) const override {
     return true;
   }
+  bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
+  bool shouldConsiderGEPOffsetSplit() const override { return true; }
+
+  bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                              SDValue C) const override;
+
+  TargetLowering::AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+  Value *emitMaskedAtomicRMWIntrinsic(IRBuilder<> &Builder, AtomicRMWInst *AI,
+                                      Value *AlignedAddr, Value *Incr,
+                                      Value *Mask, Value *ShiftAmt,
+                                      AtomicOrdering Ord) const override;
+  TargetLowering::AtomicExpansionKind
+  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CI) const override;
+  Value *emitMaskedAtomicCmpXchgIntrinsic(IRBuilder<> &Builder,
+                                          AtomicCmpXchgInst *CI,
+                                          Value *AlignedAddr, Value *CmpVal,
+                                          Value *NewVal, Value *Mask,
+                                          AtomicOrdering Ord) const override;
+
+private:
+  void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
+                        const SmallVectorImpl<ISD::InputArg> &Ins,
+                        bool IsRet) const;
+  void analyzeOutputArgs(MachineFunction &MF, CCState &CCInfo,
+                         const SmallVectorImpl<ISD::OutputArg> &Outs,
+                         bool IsRet, CallLoweringInfo *CLI) const;
 
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true) const;
@@ -189,7 +217,6 @@ private:
                            bool UseGOT) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
 
-  bool shouldConsiderGEPOffsetSplit() const override { return true; }
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
@@ -200,23 +227,11 @@ private:
   SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShiftRightParts(SDValue Op, SelectionDAG &DAG, bool IsSRA) const;
+  SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
       const SmallVector<CCValAssign, 16> &ArgLocs) const;
-
-  TargetLowering::AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
-  virtual Value *emitMaskedAtomicRMWIntrinsic(
-      IRBuilder<> &Builder, AtomicRMWInst *AI, Value *AlignedAddr, Value *Incr,
-      Value *Mask, Value *ShiftAmt, AtomicOrdering Ord) const override;
-  TargetLowering::AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CI) const override;
-  virtual Value *
-  emitMaskedAtomicCmpXchgIntrinsic(IRBuilder<> &Builder, AtomicCmpXchgInst *CI,
-                                   Value *AlignedAddr, Value *CmpVal,
-                                   Value *NewVal, Value *Mask,
-                                   AtomicOrdering Ord) const override;
 
   /// Generate error diagnostics if any register used by CC has been marked
   /// reserved.

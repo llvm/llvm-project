@@ -546,3 +546,54 @@ namespace designators {
 
   static_assert(f({.a = 1, .b = 2}) == 3, ""); // expected-error {{no matching function}}
 }
+
+namespace nested_packs {
+  template<typename ...T, typename ...U> void f(T (*...f)(U...)); // expected-note {{deduced packs of different lengths for parameter 'U' (<> vs. <int>)}}
+  void g() { f(g); f(g, g); f(g, g, g); }
+  void h(int) { f(h); f(h, h); f(h, h, h); }
+  void i() { f(g, h); } // expected-error {{no matching function}}
+
+#if __cplusplus >= 201703L
+  template<auto ...A> struct Q {};
+  template<typename ...T, T ...A, T ...B> void q(Q<A...>, Q<B...>); // #q
+  void qt(Q<> q0, Q<1, 2> qii, Q<1, 2, 3> qiii) {
+    q(q0, q0);
+    q(qii, qii);
+    q(qii, qiii); // expected-error {{no match}} expected-note@#q {{deduced packs of different lengths for parameter 'T' (<int, int> vs. <int, int, int>)}}
+    q(q0, qiii); // expected-error {{no match}} expected-note@#q {{deduced packs of different lengths for parameter 'T' (<> vs. <int, int, int>)}}
+  }
+#endif
+}
+
+namespace PR44890 {
+  template<typename ...Ts>
+    struct tuple {};
+
+  template<int I, typename ...Ts>
+    int get0(const tuple<Ts...> &t) { return 0; }
+
+  template<typename ...Ts> struct tuple_wrapper : tuple<Ts...> {
+    template<int I> int get() { return get0<0, Ts...>(*this); }
+  };
+
+  int f() {
+    tuple_wrapper<int> w;
+    return w.get<0>();
+  }
+}
+
+namespace merge_size_only_deductions {
+#if __cplusplus >= 201703L
+  // Based on a testcase by Hubert Tong.
+  template<typename ...> struct X {};
+  template<auto ...> struct Y {};
+  template<typename T> struct id { using Type = T; };
+
+  template<typename ...T, typename T::Type ...V>
+    int f(X<char [V] ...>, Y<V ...>, X<T ...>);
+
+  using size_t = __SIZE_TYPE__;
+  int a = f(X<char [1], char [2]>(), Y<(size_t)1, (size_t)2>(), X<id<size_t>, id<size_t>>());
+  int b = f(X<char [1], char [2]>(), Y<1, 2>(), X<id<int>, id<int>>());
+#endif
+}

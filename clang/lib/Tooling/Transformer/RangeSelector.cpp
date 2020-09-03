@@ -23,8 +23,6 @@ using namespace clang;
 using namespace transformer;
 
 using ast_matchers::MatchFinder;
-using ast_type_traits::ASTNodeKind;
-using ast_type_traits::DynTypedNode;
 using llvm::Error;
 using llvm::StringError;
 
@@ -148,7 +146,7 @@ RangeSelector transformer::statement(std::string ID) {
   };
 }
 
-RangeSelector transformer::range(RangeSelector Begin, RangeSelector End) {
+RangeSelector transformer::enclose(RangeSelector Begin, RangeSelector End) {
   return [Begin, End](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<CharSourceRange> BeginRange = Begin(Result);
     if (!BeginRange)
@@ -167,8 +165,9 @@ RangeSelector transformer::range(RangeSelector Begin, RangeSelector End) {
   };
 }
 
-RangeSelector transformer::range(std::string BeginID, std::string EndID) {
-  return transformer::range(node(std::move(BeginID)), node(std::move(EndID)));
+RangeSelector transformer::encloseNodes(std::string BeginID,
+                                        std::string EndID) {
+  return transformer::enclose(node(std::move(BeginID)), node(std::move(EndID)));
 }
 
 RangeSelector transformer::member(std::string ID) {

@@ -1719,8 +1719,8 @@ vzeroupper
 # CHECK-NEXT:  1      8     0.50    *                   vxorps	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.25                        vxorps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      8     0.50    *                   vxorps	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      100   0.25    *      *      U     vzeroall
-# CHECK-NEXT:  1      100   0.25    *      *      U     vzeroupper
+# CHECK-NEXT:  1      100   0.25                  U     vzeroall
+# CHECK-NEXT:  1      100   0.25                  U     vzeroupper
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - ZnAGU0

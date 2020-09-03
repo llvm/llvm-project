@@ -1,4 +1,8 @@
-# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+## This file contains test cases for generating sections in Mach-O object files.
+
+## a) Test that yaml2obj emits sections and obj2yaml converts them back.
+
+# RUN: yaml2obj --docnum=1 %s | obj2yaml | FileCheck %s
 
 --- !mach-o
 FileHeader:      
@@ -281,3 +285,58 @@ LoadCommands:
 #CHECK:         segname:         __DATA
 #CHECK:       - sectname:        __la_symbol_ptr
 #CHECK:         segname:         __DATA
+
+## b) Test that yaml2obj emits an error message if we specify an offset that
+## makes the current section and the previous one overlap.
+
+# RUN: not yaml2obj --docnum=2 %s -o %t2.macho 2>&1 | FileCheck %s --check-prefix=OVERLAP
+
+# OVERLAP: yaml2obj: error: wrote too much data somewhere, section offsets don't line up
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x80000003
+  filetype:   0x00000002
+  ncmds:      1
+  sizeofcmds: 1024
+  flags:      0x00000000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  0xff
+    segname:  __SEC
+    vmaddr:   0
+    vmsize:   0
+    fileoff:  0
+    filesize: 0
+    maxprot:  0
+    initprot: 0
+    nsects:   2
+    flags:    0
+    Sections:
+      - sectname:  __sec1
+        segname:   __SEC
+        addr:      0x0000000000000000
+        size:      2
+        offset:    0x00000000
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x00000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+      - sectname:  __sec2
+        segname:   __SEC
+        addr:      0x0000000000000000
+        size:      2
+        offset:    0x00000001 ## Specify an offset that makes __sec1 and __sec2 overlap.
+        align:     1
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x00000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000

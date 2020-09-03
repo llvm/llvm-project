@@ -17,7 +17,6 @@ static_library("fuchsia") {
     "FuchsiaTidyModule.cpp",
     "MultipleInheritanceCheck.cpp",
     "OverloadedOperatorCheck.cpp",
-    "RestrictSystemIncludesCheck.cpp",
     "StaticallyConstructedObjectsCheck.cpp",
     "TrailingReturnCheck.cpp",
     "VirtualInheritanceCheck.cpp",

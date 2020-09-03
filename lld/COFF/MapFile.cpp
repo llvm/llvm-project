@@ -6,16 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the /lldmap option. It shows lists in order and
-// hierarchically the output sections, input sections, input files and
-// symbol:
+// This file implements the /map option in the same format as link.exe
+// (based on observations)
 //
-//   Address  Size     Align Out     File    Symbol
-//   00201000 00000015     4 .text
-//   00201000 0000000e     4         test.o:(.text)
-//   0020100e 00000000     0                 local
-//   00201005 00000000     0                 f(int)
+// Header (program name, timestamp info, preferred load address)
 //
+// Section list (Start = Section index:Base address):
+// Start         Length     Name                   Class
+// 0001:00001000 00000015H .text                   CODE
+//
+// Symbols list:
+// Address        Publics by Value    Rva + Base          Lib:Object
+// 0001:00001000  main                 0000000140001000    main.obj
+// 0001:00001300  ?__scrt_common_main@@YAHXZ  0000000140001300 libcmt:exe_main.obj
+//
+// entry point at        0001:00000360
+//
+// Static symbols
+//
+// 0000:00000000  __guard_fids__       0000000140000000     libcmt : exe_main.obj
 //===----------------------------------------------------------------------===//
 
 #include "MapFile.h"
@@ -23,71 +32,176 @@
 #include "Symbols.h"
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Threads.h"
+#include "lld/Common/Timer.h"
+#include "llvm/Support/Parallel.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace lld;
+using namespace lld::coff;
 
-namespace lld {
-namespace coff {
+static Timer totalMapTimer("MAP emission (Cumulative)", Timer::root());
+static Timer symbolGatherTimer("Gather symbols", totalMapTimer);
+static Timer symbolStringsTimer("Build symbol strings", totalMapTimer);
+static Timer writeTimer("Write to file", totalMapTimer);
 
-using SymbolMapTy =
-    DenseMap<const SectionChunk *, SmallVector<DefinedRegular *, 4>>;
-
-static constexpr char indent8[] = "        ";          // 8 spaces
-static constexpr char indent16[] = "                "; // 16 spaces
-
-// Print out the first three columns of a line.
-static void writeHeader(raw_ostream &os, uint64_t addr, uint64_t size,
-                        uint64_t align) {
-  os << format("%08llx %08llx %5lld ", addr, size, align);
+// Print out the first two columns of a line.
+static void writeHeader(raw_ostream &os, uint32_t sec, uint64_t addr) {
+  os << format(" %04x:%08llx", sec, addr);
 }
 
-// Returns a list of all symbols that we want to print out.
-static std::vector<DefinedRegular *> getSymbols() {
-  std::vector<DefinedRegular *> v;
+// Write the time stamp with the format used by link.exe
+// It seems identical to strftime with "%c" on msvc build, but we need a
+// locale-agnostic version.
+static void writeFormattedTimestamp(raw_ostream &os, time_t tds) {
+  constexpr const char *const days[7] = {"Sun", "Mon", "Tue", "Wed",
+                                         "Thu", "Fri", "Sat"};
+  constexpr const char *const months[12] = {"Jan", "Feb", "Mar", "Apr",
+                                            "May", "Jun", "Jul", "Aug",
+                                            "Sep", "Oct", "Nov", "Dec"};
+  tm *time = localtime(&tds);
+  os << format("%s %s %2d %02d:%02d:%02d %d", days[time->tm_wday],
+               months[time->tm_mon], time->tm_mday, time->tm_hour, time->tm_min,
+               time->tm_sec, time->tm_year + 1900);
+}
+
+static void sortUniqueSymbols(std::vector<Defined *> &syms) {
+  // Build helper vector
+  using SortEntry = std::pair<Defined *, size_t>;
+  std::vector<SortEntry> v;
+  v.resize(syms.size());
+  for (size_t i = 0, e = syms.size(); i < e; ++i)
+    v[i] = SortEntry(syms[i], i);
+
+  // Remove duplicate symbol pointers
+  parallelSort(v, std::less<SortEntry>());
+  auto end = std::unique(v.begin(), v.end(),
+                         [](const SortEntry &a, const SortEntry &b) {
+                           return a.first == b.first;
+                         });
+  v.erase(end, v.end());
+
+  // Sort by RVA then original order
+  parallelSort(v, [](const SortEntry &a, const SortEntry &b) {
+    // Add config->imageBase to avoid comparing "negative" RVAs.
+    // This can happen with symbols of Absolute kind
+    uint64_t rvaa = config->imageBase + a.first->getRVA();
+    uint64_t rvab = config->imageBase + b.first->getRVA();
+    return rvaa < rvab || (rvaa == rvab && a.second < b.second);
+  });
+
+  syms.resize(v.size());
+  for (size_t i = 0, e = v.size(); i < e; ++i)
+    syms[i] = v[i].first;
+}
+
+// Returns the lists of all symbols that we want to print out.
+static void getSymbols(std::vector<Defined *> &syms,
+                       std::vector<Defined *> &staticSyms) {
+
   for (ObjFile *file : ObjFile::instances)
-    for (Symbol *b : file->getSymbols())
-      if (auto *sym = dyn_cast_or_null<DefinedRegular>(b))
-        if (sym && !sym->getCOFFSymbol().isSectionDefinition())
-          v.push_back(sym);
-  return v;
-}
+    for (Symbol *b : file->getSymbols()) {
+      if (!b || !b->isLive())
+        continue;
+      if (auto *sym = dyn_cast<DefinedCOFF>(b)) {
+        COFFSymbolRef symRef = sym->getCOFFSymbol();
+        if (!symRef.isSectionDefinition() &&
+            symRef.getStorageClass() != COFF::IMAGE_SYM_CLASS_LABEL) {
+          if (symRef.getStorageClass() == COFF::IMAGE_SYM_CLASS_STATIC)
+            staticSyms.push_back(sym);
+          else
+            syms.push_back(sym);
+        }
+      } else if (auto *sym = dyn_cast<Defined>(b)) {
+        syms.push_back(sym);
+      }
+    }
 
-// Returns a map from sections to their symbols.
-static SymbolMapTy getSectionSyms(ArrayRef<DefinedRegular *> syms) {
-  SymbolMapTy ret;
-  for (DefinedRegular *s : syms)
-    ret[s->getChunk()].push_back(s);
+  for (ImportFile *file : ImportFile::instances) {
+    if (!file->live)
+      continue;
 
-  // Sort symbols by address.
-  for (auto &it : ret) {
-    SmallVectorImpl<DefinedRegular *> &v = it.second;
-    std::sort(v.begin(), v.end(), [](DefinedRegular *a, DefinedRegular *b) {
-      return a->getRVA() < b->getRVA();
-    });
+    if (!file->thunkSym)
+      continue;
+
+    if (!file->thunkLive)
+      continue;
+
+    if (auto *thunkSym = dyn_cast<Defined>(file->thunkSym))
+      syms.push_back(thunkSym);
+
+    if (auto *impSym = dyn_cast_or_null<Defined>(file->impSym))
+      syms.push_back(impSym);
   }
-  return ret;
+
+  sortUniqueSymbols(syms);
+  sortUniqueSymbols(staticSyms);
 }
 
 // Construct a map from symbols to their stringified representations.
-static DenseMap<DefinedRegular *, std::string>
-getSymbolStrings(ArrayRef<DefinedRegular *> syms) {
+static DenseMap<Defined *, std::string>
+getSymbolStrings(ArrayRef<Defined *> syms) {
   std::vector<std::string> str(syms.size());
   parallelForEachN((size_t)0, syms.size(), [&](size_t i) {
     raw_string_ostream os(str[i]);
-    writeHeader(os, syms[i]->getRVA(), 0, 0);
-    os << indent16 << toString(*syms[i]);
+    Defined *sym = syms[i];
+
+    uint16_t sectionIdx = 0;
+    uint64_t address = 0;
+    SmallString<128> fileDescr;
+
+    if (auto *absSym = dyn_cast<DefinedAbsolute>(sym)) {
+      address = absSym->getVA();
+      fileDescr = "<absolute>";
+    } else if (isa<DefinedSynthetic>(sym)) {
+      fileDescr = "<linker-defined>";
+    } else if (isa<DefinedCommon>(sym)) {
+      fileDescr = "<common>";
+    } else if (Chunk *chunk = sym->getChunk()) {
+      address = sym->getRVA();
+      if (OutputSection *sec = chunk->getOutputSection())
+        address -= sec->header.VirtualAddress;
+
+      sectionIdx = chunk->getOutputSectionIdx();
+
+      InputFile *file;
+      if (auto *impSym = dyn_cast<DefinedImportData>(sym))
+        file = impSym->file;
+      else if (auto *thunkSym = dyn_cast<DefinedImportThunk>(sym))
+        file = thunkSym->wrappedSym->file;
+      else
+        file = sym->getFile();
+
+      if (file) {
+        if (!file->parentName.empty()) {
+          fileDescr = sys::path::filename(file->parentName);
+          sys::path::replace_extension(fileDescr, "");
+          fileDescr += ":";
+        }
+        fileDescr += sys::path::filename(file->getName());
+      }
+    }
+    writeHeader(os, sectionIdx, address);
+    os << "       ";
+    os << left_justify(sym->getName(), 26);
+    os << " ";
+    os << format_hex_no_prefix((config->imageBase + sym->getRVA()), 16);
+    if (!fileDescr.empty()) {
+      os << "     "; // FIXME : Handle "f" and "i" flags sometimes generated
+                     // by link.exe in those spaces
+      os << fileDescr;
+    }
   });
 
-  DenseMap<DefinedRegular *, std::string> ret;
+  DenseMap<Defined *, std::string> ret;
   for (size_t i = 0, e = syms.size(); i < e; ++i)
     ret[syms[i]] = std::move(str[i]);
   return ret;
 }
 
-void writeMapFile(ArrayRef<OutputSection *> outputSections) {
+void lld::coff::writeMapFile(ArrayRef<OutputSection *> outputSections) {
   if (config->mapFile.empty())
     return;
 
@@ -96,32 +210,113 @@ void writeMapFile(ArrayRef<OutputSection *> outputSections) {
   if (ec)
     fatal("cannot open " + config->mapFile + ": " + ec.message());
 
+  ScopedTimer t1(totalMapTimer);
+
   // Collect symbol info that we want to print out.
-  std::vector<DefinedRegular *> syms = getSymbols();
-  SymbolMapTy sectionSyms = getSectionSyms(syms);
-  DenseMap<DefinedRegular *, std::string> symStr = getSymbolStrings(syms);
+  ScopedTimer t2(symbolGatherTimer);
+  std::vector<Defined *> syms;
+  std::vector<Defined *> staticSyms;
+  getSymbols(syms, staticSyms);
+  t2.stop();
 
-  // Print out the header line.
-  os << "Address  Size     Align Out     In      Symbol\n";
+  ScopedTimer t3(symbolStringsTimer);
+  DenseMap<Defined *, std::string> symStr = getSymbolStrings(syms);
+  DenseMap<Defined *, std::string> staticSymStr = getSymbolStrings(staticSyms);
+  t3.stop();
 
-  // Print out file contents.
+  ScopedTimer t4(writeTimer);
+  SmallString<128> AppName = sys::path::filename(config->outputFile);
+  sys::path::replace_extension(AppName, "");
+
+  // Print out the file header
+  os << " " << AppName << "\n";
+  os << "\n";
+
+  os << " Timestamp is " << format_hex_no_prefix(config->timestamp, 8) << " (";
+  if (config->repro) {
+    os << "Repro mode";
+  } else {
+    writeFormattedTimestamp(os, config->timestamp);
+  }
+  os << ")\n";
+
+  os << "\n";
+  os << " Preferred load address is "
+     << format_hex_no_prefix(config->imageBase, 16) << "\n";
+  os << "\n";
+
+  // Print out section table.
+  os << " Start         Length     Name                   Class\n";
+
   for (OutputSection *sec : outputSections) {
-    writeHeader(os, sec->getRVA(), sec->getVirtualSize(), /*align=*/pageSize);
-    os << sec->name << '\n';
-
+    // Merge display of chunks with same sectionName
+    std::vector<std::pair<SectionChunk *, SectionChunk *>> ChunkRanges;
     for (Chunk *c : sec->chunks) {
       auto *sc = dyn_cast<SectionChunk>(c);
       if (!sc)
         continue;
 
-      writeHeader(os, sc->getRVA(), sc->getSize(), sc->getAlignment());
-      os << indent8 << sc->file->getName() << ":(" << sc->getSectionName()
-         << ")\n";
-      for (DefinedRegular *sym : sectionSyms[sc])
-        os << symStr[sym] << '\n';
+      if (ChunkRanges.empty() ||
+          c->getSectionName() != ChunkRanges.back().first->getSectionName()) {
+        ChunkRanges.emplace_back(sc, sc);
+      } else {
+        ChunkRanges.back().second = sc;
+      }
+    }
+
+    const bool isCodeSection =
+        (sec->header.Characteristics & COFF::IMAGE_SCN_CNT_CODE) &&
+        (sec->header.Characteristics & COFF::IMAGE_SCN_MEM_READ) &&
+        (sec->header.Characteristics & COFF::IMAGE_SCN_MEM_EXECUTE);
+    StringRef SectionClass = (isCodeSection ? "CODE" : "DATA");
+
+    for (auto &cr : ChunkRanges) {
+      size_t size =
+          cr.second->getRVA() + cr.second->getSize() - cr.first->getRVA();
+
+      auto address = cr.first->getRVA() - sec->header.VirtualAddress;
+      writeHeader(os, sec->sectionIndex, address);
+      os << " " << format_hex_no_prefix(size, 8) << "H";
+      os << " " << left_justify(cr.first->getSectionName(), 23);
+      os << " " << SectionClass;
+      os << '\n';
     }
   }
-}
 
-} // namespace coff
-} // namespace lld
+  // Print out the symbols table (without static symbols)
+  os << "\n";
+  os << "  Address         Publics by Value              Rva+Base"
+        "               Lib:Object\n";
+  os << "\n";
+  for (Defined *sym : syms)
+    os << symStr[sym] << '\n';
+
+  // Print out the entry point.
+  os << "\n";
+
+  uint16_t entrySecIndex = 0;
+  uint64_t entryAddress = 0;
+
+  if (!config->noEntry) {
+    Defined *entry = dyn_cast_or_null<Defined>(config->entry);
+    if (entry) {
+      Chunk *chunk = entry->getChunk();
+      entrySecIndex = chunk->getOutputSectionIdx();
+      entryAddress =
+          entry->getRVA() - chunk->getOutputSection()->header.VirtualAddress;
+    }
+  }
+  os << " entry point at         ";
+  os << format("%04x:%08llx", entrySecIndex, entryAddress);
+  os << "\n";
+
+  // Print out the static symbols
+  os << "\n";
+  os << " Static symbols\n";
+  os << "\n";
+  for (Defined *sym : staticSyms)
+    os << staticSymStr[sym] << '\n';
+
+  t4.stop();
+  t1.stop();
+}

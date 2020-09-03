@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
-; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=arm64-eabi -aarch64-neon-syntax=apple 2>&1 | FileCheck %s --check-prefixes=FALLBACK,CHECK
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck -check-prefixes=CHECK,DAG %s
+; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=arm64-eabi -aarch64-neon-syntax=apple 2>&1 | FileCheck %s --check-prefixes=FALLBACK,CHECK,GISEL
 
 ; FALLBACK-NOT: remark:{{.*}} G_ZEXT
 ; FALLBACK-NOT: remark:{{.*}} sabdl8h
@@ -953,8 +953,13 @@ define <2 x i64> @sabdl2_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
 
 define <2 x i32> @abspattern1(<2 x i32> %a) nounwind {
 ; CHECK-LABEL: abspattern1:
-; CHECK: abs.2s
-; CHECK-NEXT: ret
+; DAG: abs.2s
+; DAG-NEXT: ret
+
+; GISEL: cmge.2s
+; GISEL: sub.2s
+; GISEL: fcsel
+; GISEL: fcsel
         %tmp1neg = sub <2 x i32> zeroinitializer, %a
         %b = icmp sge <2 x i32> %a, zeroinitializer
         %abs = select <2 x i1> %b, <2 x i32> %a, <2 x i32> %tmp1neg
@@ -983,8 +988,14 @@ define <8 x i8> @abspattern3(<8 x i8> %a) nounwind {
 
 define <4 x i32> @abspattern4(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: abspattern4:
-; CHECK: abs.4s
-; CHECK-NEXT: ret
+; DAG: abs.4s
+; DAG-NEXT: ret
+
+; GISEL: cmge.4s
+; GISEL: fcsel
+; GISEL: fcsel
+; GISEL: fcsel
+; GISEL: fcsel
         %tmp1neg = sub <4 x i32> zeroinitializer, %a
         %b = icmp sge <4 x i32> %a, zeroinitializer
         %abs = select <4 x i1> %b, <4 x i32> %a, <4 x i32> %tmp1neg
@@ -993,8 +1004,19 @@ define <4 x i32> @abspattern4(<4 x i32> %a) nounwind {
 
 define <8 x i16> @abspattern5(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: abspattern5:
-; CHECK: abs.8h
-; CHECK-NEXT: ret
+; DAG: abs.8h
+; DAG-NEXT: ret
+
+; GISEL: cmgt.8h
+; GISEL: sub.8h
+; GISEL: csel
+; GISEL: csel
+; GISEL: csel
+; GISEL: csel
+; GISEL: csel
+; GISEL: csel
+; GISEL: csel
+; GISEL: csel
         %tmp1neg = sub <8 x i16> zeroinitializer, %a
         %b = icmp sgt <8 x i16> %a, zeroinitializer
         %abs = select <8 x i1> %b, <8 x i16> %a, <8 x i16> %tmp1neg
@@ -1013,8 +1035,13 @@ define <16 x i8> @abspattern6(<16 x i8> %a) nounwind {
 
 define <2 x i64> @abspattern7(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: abspattern7:
-; CHECK: abs.2d
-; CHECK-NEXT: ret
+; DAG: abs.2d
+; DAG-NEXT: ret
+
+; GISEL: cmge.2d
+; GISEL: sub.2d
+; GISEL: fcsel
+; GISEL: fcsel
         %tmp1neg = sub <2 x i64> zeroinitializer, %a
         %b = icmp sle <2 x i64> %a, zeroinitializer
         %abs = select <2 x i1> %b, <2 x i64> %tmp1neg, <2 x i64> %a

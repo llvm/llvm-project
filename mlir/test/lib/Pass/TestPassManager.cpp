@@ -1,6 +1,6 @@
 //===- TestPassManager.cpp - Test pass manager functionality --------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -13,13 +13,14 @@
 using namespace mlir;
 
 namespace {
-struct TestModulePass : public ModulePass<TestModulePass> {
-  void runOnModule() final {}
+struct TestModulePass
+    : public PassWrapper<TestModulePass, OperationPass<ModuleOp>> {
+  void runOnOperation() final {}
 };
-struct TestFunctionPass : public FunctionPass<TestFunctionPass> {
+struct TestFunctionPass : public PassWrapper<TestFunctionPass, FunctionPass> {
   void runOnFunction() final {}
 };
-class TestOptionsPass : public FunctionPass<TestOptionsPass> {
+class TestOptionsPass : public PassWrapper<TestOptionsPass, FunctionPass> {
 public:
   struct Options : public PassPipelineOptions<Options> {
     ListOption<int> listOption{*this, "list",
@@ -34,10 +35,9 @@ public:
   TestOptionsPass() = default;
   TestOptionsPass(const TestOptionsPass &) {}
   TestOptionsPass(const Options &options) {
-    listOption->assign(options.listOption.begin(), options.listOption.end());
-    stringOption.setValue(options.stringOption);
-    stringListOption->assign(options.stringListOption.begin(),
-                             options.stringListOption.end());
+    listOption = options.listOption;
+    stringOption = options.stringOption;
+    stringListOption = options.stringListOption;
   }
 
   void runOnFunction() final {}
@@ -53,12 +53,14 @@ public:
 
 /// A test pass that always aborts to enable testing the crash recovery
 /// mechanism of the pass manager.
-class TestCrashRecoveryPass : public OperationPass<TestCrashRecoveryPass> {
+class TestCrashRecoveryPass
+    : public PassWrapper<TestCrashRecoveryPass, OperationPass<>> {
   void runOnOperation() final { abort(); }
 };
 
 /// A test pass that contains a statistic.
-struct TestStatisticPass : public OperationPass<TestStatisticPass> {
+struct TestStatisticPass
+    : public PassWrapper<TestStatisticPass, OperationPass<>> {
   TestStatisticPass() = default;
   TestStatisticPass(const TestStatisticPass &) {}
 
@@ -88,40 +90,43 @@ static void testNestedPipelineTextual(OpPassManager &pm) {
   (void)parsePassPipeline("test-pm-nested-pipeline", pm);
 }
 
-static PassRegistration<TestOptionsPass>
-    reg("test-options-pass", "Test options parsing capabilities");
+namespace mlir {
+void registerPassManagerTestPass() {
+  PassRegistration<TestOptionsPass>("test-options-pass",
+                                    "Test options parsing capabilities");
 
-static PassRegistration<TestModulePass>
-    unusedMP("test-module-pass", "Test a module pass in the pass manager");
-static PassRegistration<TestFunctionPass>
-    unusedFP("test-function-pass", "Test a function pass in the pass manager");
+  PassRegistration<TestModulePass>("test-module-pass",
+                                   "Test a module pass in the pass manager");
 
-static PassRegistration<TestCrashRecoveryPass>
-    unusedCrashP("test-pass-crash",
-                 "Test a pass in the pass manager that always crashes");
+  PassRegistration<TestFunctionPass>(
+      "test-function-pass", "Test a function pass in the pass manager");
 
-static PassRegistration<TestStatisticPass> unusedStatP("test-stats-pass",
-                                                       "Test pass statistics");
+  PassRegistration<TestCrashRecoveryPass>(
+      "test-pass-crash", "Test a pass in the pass manager that always crashes");
 
-static PassPipelineRegistration<>
-    unused("test-pm-nested-pipeline",
-           "Test a nested pipeline in the pass manager", testNestedPipeline);
-static PassPipelineRegistration<>
-    unusedTextual("test-textual-pm-nested-pipeline",
-                  "Test a nested pipeline in the pass manager",
-                  testNestedPipelineTextual);
-static PassPipelineRegistration<>
-    unusedDump("test-dump-pipeline",
-               "Dumps the pipeline build so far for debugging purposes",
-               [](OpPassManager &pm) {
-                 pm.printAsTextualPipeline(llvm::errs());
-                 llvm::errs() << "\n";
-               });
+  PassRegistration<TestStatisticPass> unusedStatP("test-stats-pass",
+                                                  "Test pass statistics");
 
-static PassPipelineRegistration<TestOptionsPass::Options>
-    registerOptionsPassPipeline(
-        "test-options-pass-pipeline",
-        "Parses options using pass pipeline registration",
-        [](OpPassManager &pm, const TestOptionsPass::Options &options) {
-          pm.addPass(std::make_unique<TestOptionsPass>(options));
-        });
+  PassPipelineRegistration<>("test-pm-nested-pipeline",
+                             "Test a nested pipeline in the pass manager",
+                             testNestedPipeline);
+  PassPipelineRegistration<>("test-textual-pm-nested-pipeline",
+                             "Test a nested pipeline in the pass manager",
+                             testNestedPipelineTextual);
+  PassPipelineRegistration<>(
+      "test-dump-pipeline",
+      "Dumps the pipeline build so far for debugging purposes",
+      [](OpPassManager &pm) {
+        pm.printAsTextualPipeline(llvm::errs());
+        llvm::errs() << "\n";
+      });
+
+  PassPipelineRegistration<TestOptionsPass::Options>
+      registerOptionsPassPipeline(
+          "test-options-pass-pipeline",
+          "Parses options using pass pipeline registration",
+          [](OpPassManager &pm, const TestOptionsPass::Options &options) {
+            pm.addPass(std::make_unique<TestOptionsPass>(options));
+          });
+}
+} // namespace mlir

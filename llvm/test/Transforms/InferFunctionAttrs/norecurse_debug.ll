@@ -53,4 +53,4 @@ attributes #1 = { nounwind readnone speculatable }
 !29 = !DILocation(line: 10, column: 1, scope: !2)
 
 ; CHECK: attributes #0 = { nofree norecurse nounwind }
-; CHECK-NOT foo.coefficient1
+; CHECK-NOT: foo.coefficient1

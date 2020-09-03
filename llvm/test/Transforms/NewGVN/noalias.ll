@@ -1,4 +1,4 @@
-; RUN: opt -scoped-noalias -basicaa -newgvn -S < %s | FileCheck %s
+; RUN: opt -scoped-noalias -basic-aa -newgvn -S < %s | FileCheck %s
 
 define i32 @test1(i32* %p, i32* %q) {
 ; CHECK-LABEL: @test1(i32* %p, i32* %q)
@@ -13,7 +13,7 @@ define i32 @test1(i32* %p, i32* %q) {
 
 define i32 @test2(i32* %p, i32* %q) {
 ; CHECK-LABEL: @test2(i32* %p, i32* %q)
-; CHECK: load i32, i32* %p, !alias.scope !0
+; CHECK: load i32, i32* %p, align 4, !alias.scope !0
 ; CHECK: %c = add i32 %a, %a
   %a = load i32, i32* %p, !alias.scope !0
   %b = load i32, i32* %p, !alias.scope !0
@@ -27,7 +27,7 @@ define i32 @test2(i32* %p, i32* %q) {
 ; throw in between.
 define i32 @test3(i32* %p, i32* %q) {
 ; CHECK-LABEL: @test3(i32* %p, i32* %q)
-; CHECK: load i32, i32* %p, !alias.scope !1
+; CHECK: load i32, i32* %p, align 4, !alias.scope !1
 ; CHECK: %c = add i32 %a, %a
   %a = load i32, i32* %p, !alias.scope !1
   %b = load i32, i32* %p, !alias.scope !2

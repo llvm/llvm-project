@@ -30,7 +30,7 @@ public:
                        std::unique_ptr<MCCodeEmitter> Emitter,
                        MCAssembler *Assembler);
 
-  void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
+  void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void EmitSymbol(const MCInst &Inst);
   void HexagonMCEmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                       unsigned ByteAlignment,

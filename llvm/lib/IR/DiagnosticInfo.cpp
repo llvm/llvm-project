@@ -119,7 +119,7 @@ DiagnosticLocation::DiagnosticLocation(const DebugLoc &DL) {
 DiagnosticLocation::DiagnosticLocation(const DISubprogram *SP) {
   if (!SP)
     return;
-  
+
   File = SP->getFile();
   Line = SP->getScopeLine();
   Column = 0;
@@ -132,7 +132,7 @@ StringRef DiagnosticLocation::getRelativePath() const {
 std::string DiagnosticLocation::getAbsolutePath() const {
   StringRef Name = File->getFilename();
   if (sys::path::is_absolute(Name))
-    return Name;
+    return std::string(Name);
 
   SmallString<128> Path;
   sys::path::append(Path, File->getDirectory(), Name);
@@ -160,8 +160,9 @@ const std::string DiagnosticInfoWithLocationBase::getLocationStr() const {
   return (Filename + ":" + Twine(Line) + ":" + Twine(Column)).str();
 }
 
-DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Value *V)
-    : Key(Key) {
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
+                                                   const Value *V)
+    : Key(std::string(Key)) {
   if (auto *F = dyn_cast<Function>(V)) {
     if (DISubprogram *SP = F->getSubprogram())
       Loc = SP;
@@ -172,7 +173,7 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Value *V
   // Only include names that correspond to user variables.  FIXME: We should use
   // debug info if available to get the name of the user variable.
   if (isa<llvm::Argument>(V) || isa<GlobalValue>(V))
-    Val = GlobalValue::dropLLVMManglingEscape(V->getName());
+    Val = std::string(GlobalValue::dropLLVMManglingEscape(V->getName()));
   else if (isa<Constant>(V)) {
     raw_string_ostream OS(Val);
     V->printAsOperand(OS, /*PrintType=*/false);
@@ -181,39 +182,39 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Value *V
 }
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Type *T)
-    : Key(Key) {
+    : Key(std::string(Key)) {
   raw_string_ostream OS(Val);
   OS << *T;
 }
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, StringRef S)
-    : Key(Key), Val(S.str()) {}
+    : Key(std::string(Key)), Val(S.str()) {}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, int N)
-    : Key(Key), Val(itostr(N)) {}
+    : Key(std::string(Key)), Val(itostr(N)) {}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, float N)
-    : Key(Key), Val(llvm::to_string(N)) {}
+    : Key(std::string(Key)), Val(llvm::to_string(N)) {}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, long N)
-    : Key(Key), Val(itostr(N)) {}
+    : Key(std::string(Key)), Val(itostr(N)) {}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, long long N)
-    : Key(Key), Val(itostr(N)) {}
+    : Key(std::string(Key)), Val(itostr(N)) {}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, unsigned N)
-    : Key(Key), Val(utostr(N)) {}
+    : Key(std::string(Key)), Val(utostr(N)) {}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
                                                    unsigned long N)
-    : Key(Key), Val(utostr(N)) {}
+    : Key(std::string(Key)), Val(utostr(N)) {}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
                                                    unsigned long long N)
-    : Key(Key), Val(utostr(N)) {}
+    : Key(std::string(Key)), Val(utostr(N)) {}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, DebugLoc Loc)
-    : Key(Key), Loc(Loc) {
+    : Key(std::string(Key)), Loc(Loc) {
   if (Loc) {
     Val = (Loc->getFilename() + ":" + Twine(Loc.getLine()) + ":" +
            Twine(Loc.getCol())).str();
@@ -243,11 +244,8 @@ OptimizationRemark::OptimizationRemark(const char *PassName,
                                    RemarkName, *Inst->getParent()->getParent(),
                                    Inst->getDebugLoc(), Inst->getParent()) {}
 
-// Helper to allow for an assert before attempting to return an invalid
-// reference.
-static const BasicBlock &getFirstFunctionBlock(const Function *Func) {
-  assert(!Func->empty() && "Function does not have a body");
-  return Func->front();
+static const BasicBlock *getFirstFunctionBlock(const Function *Func) {
+  return Func->empty() ? nullptr : &Func->front();
 }
 
 OptimizationRemark::OptimizationRemark(const char *PassName,
@@ -255,7 +253,7 @@ OptimizationRemark::OptimizationRemark(const char *PassName,
                                        const Function *Func)
     : DiagnosticInfoIROptimization(DK_OptimizationRemark, DS_Remark, PassName,
                                    RemarkName, *Func, Func->getSubprogram(),
-                                   &getFirstFunctionBlock(Func)) {}
+                                   getFirstFunctionBlock(Func)) {}
 
 bool OptimizationRemark::isEnabled() const {
   const Function &Fn = getFunction();

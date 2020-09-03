@@ -4,7 +4,7 @@
 #define AQ2 __ptrauth(1,1,51)
 #define IQ __ptrauth(1,0,50)
 
-struct __attribute__((trivial_abi)) AddrDisc { // expected-warning {{'trivial_abi' cannot be applied to 'AddrDisc'}}
+struct __attribute__((trivial_abi)) AddrDisc { // expected-warning {{'trivial_abi' cannot be applied to 'AddrDisc'}} expected-note {{'trivial_abi' is disallowed on 'AddrDisc' because it has an address-discriminated __ptrauth field}}
   int * AQ m0;
 };
 
@@ -55,7 +55,7 @@ namespace test_union {
 
   struct S1 {
     union {
-      union { // expected-note 2 {{'S1' is implicitly deleted because variant field '' has a non-trivial}} expected-note 2 {{'S1' is implicitly deleted because field '' has a deleted}}
+      union { // expected-note 4 {{'S1' is implicitly deleted because field '' has a deleted}}
         int * AQ f0;
         char f1;
       };

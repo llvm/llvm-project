@@ -17,7 +17,7 @@
 # RELOC:      0x0 R_RISCV_HI20 target 0x1
 # RELOC-NEXT: 0x4 R_RISCV_LO12_I target 0x1
 
-# CHECK-LABEL: absolute:
+# CHECK-LABEL: <absolute>:
 # CHECK-NEXT:  lui t0, 0
 # CHECK-NEXT:  addi t0, t0, 1
 absolute:
@@ -31,11 +31,11 @@ absolute:
 # RELOC-NEXT: 0x14 R_RISCV_PCREL_LO12_S .Lpcrel_hi1 0x0
 
 ## 1048559 should be -0x11.
-# CHECK-LABEL: relative:
+# CHECK-LABEL: <relative>:
 # CHECK-NEXT:  11{{...}}: auipc a1, 1048559
 # PC-NEXT:     addi a1, a1, -352
 # PLT-NEXT:    addi a1, a1, -792
-# CHECK-LABEL: .Lpcrel_hi1:
+# CHECK-LABEL: <.Lpcrel_hi1>:
 # CHECK-NEXT:  11{{...}}: auipc t1, 1048559
 # PC-NEXT:     sd a2, -358(t1)
 # PLT-NEXT:    sd a2, -798(t1)
@@ -49,7 +49,7 @@ relative:
 # RELOC:      0x18 R_RISCV_CALL target 0x0
 # RELOC-NEXT: 0x20 R_RISCV_JAL target 0x0
 
-# PC-LABEL:    branch:
+# PC-LABEL:    <branch>:
 # PC-NEXT:     auipc ra, 1048559
 # PC-NEXT:     jalr -368(ra)
 ## FIXME: llvm-objdump -d should print the address, instead of the offset.
@@ -57,7 +57,7 @@ relative:
 
 ## If .dynsym exists, an undefined weak symbol is preemptible.
 ## We create a PLT entry and redirect the reference to it.
-# PLT-LABEL:   branch:
+# PLT-LABEL:   <branch>:
 # PLT-NEXT:    auipc ra, 0
 # PLT-NEXT:    jalr 56(ra)
 # PLT-NEXT:    j -70448

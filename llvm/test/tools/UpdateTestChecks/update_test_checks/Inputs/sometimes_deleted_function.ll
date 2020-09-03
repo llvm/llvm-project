@@ -1,9 +1,13 @@
-; RUN: opt -S < %s | FileCheck %s --check-prefixes=ALL,FIRST
-; RUN: opt -S -globalopt < %s | FileCheck %s --check-prefixes=ALL,SECOND
+; RUN: opt -S < %s | FileCheck %s --check-prefixes=ALL,ALL_BUT_TWO,ALL_BUT_THREE,ALL_BUT_FOUR,ONE_AND_TWO,ONE_AND_THREE,ONE_AND_FOUR,ONE
+; RUN: opt -S -globalopt < %s | FileCheck %s --check-prefixes=ALL,ALL_BUT_ONE,ALL_BUT_THREE,ALL_BUT_FOUR,ONE_AND_TWO,TWO_AND_THREE,TWO_AND_FOUR,TWO
+; RUN: opt -S -instsimplify < %s | FileCheck %s --check-prefixes=ALL,ALL_BUT_ONE,ALL_BUT_TWO,ALL_BUT_FOUR,ONE_AND_THREE,TWO_AND_THREE,THREE_AND_FOUR,THREE
+; RUN: opt -S < %s | FileCheck %s --check-prefixes=ALL,ALL_BUT_ONE,ALL_BUT_TWO,ALL_BUT_THREE,ONE_AND_FOUR,TWO_AND_FOUR,THREE_AND_FOUR,FOUR
 ;
-; Make sure we use FIRST to check for @sometimes_here as ALL does not work.
+; Make sure we don't use anything to check for @sometimes_here that contains "ALL" or "TWO".
+; Also verify we use "ONE_AND_FOUR" for the unmodified @sometimes_here version and "THREE" for the version without the add.
 
 define internal void @sometimes_here() {
+  %c = add i32 undef, undef
   ret void
 }
 

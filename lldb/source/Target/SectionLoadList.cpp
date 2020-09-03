@@ -1,4 +1,4 @@
-//===-- SectionLoadList.cpp -------------------------------------*- C++ -*-===//
+//===-- SectionLoadList.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -253,6 +253,6 @@ void SectionLoadList::Dump(Stream &s, Target *target) {
        ++pos) {
     s.Printf("addr = 0x%16.16" PRIx64 ", section = %p: ", pos->first,
              static_cast<void *>(pos->second.get()));
-    pos->second->Dump(&s, target, 0);
+    pos->second->Dump(s.AsRawOstream(), s.GetIndentLevel(), target, 0);
   }
 }

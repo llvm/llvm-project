@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Plugins_SymbolFile_PDB_CodeViewRegisterMapping_h_
-#define lldb_Plugins_SymbolFile_PDB_CodeViewRegisterMapping_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_CODEVIEWREGISTERMAPPING_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_CODEVIEWREGISTERMAPPING_H
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"

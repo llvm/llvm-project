@@ -39,7 +39,7 @@ aeskeygenassist $22, (%rax), %xmm2
 # CHECK-NEXT:  2      12    2.00                        aesimc	%xmm0, %xmm2
 # CHECK-NEXT:  3      18    2.00    *                   aesimc	(%rax), %xmm2
 # CHECK-NEXT:  1      8     3.67                        aeskeygenassist	$22, %xmm0, %xmm2
-# CHECK-NEXT:  1      8     3.33    *                   aeskeygenassist	$22, (%rax), %xmm2
+# CHECK-NEXT:  1      14    3.33    *                   aeskeygenassist	$22, (%rax), %xmm2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SBDivider

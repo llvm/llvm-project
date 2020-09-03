@@ -131,15 +131,14 @@ private:
 ///
 /// This is used to add additional items such as e.g. the llvm.loop.parallel
 /// metadata.
-class IRInserter : protected llvm::IRBuilderDefaultInserter {
+class IRInserter final : public llvm::IRBuilderDefaultInserter {
 public:
   IRInserter() = default;
   IRInserter(class ScopAnnotator &A) : Annotator(&A) {}
 
-protected:
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
                     llvm::BasicBlock *BB,
-                    llvm::BasicBlock::iterator InsertPt) const {
+                    llvm::BasicBlock::iterator InsertPt) const override {
     llvm::IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
     if (Annotator)
       Annotator->annotate(I);
@@ -155,13 +154,5 @@ private:
 // matches for certain names.
 typedef llvm::IRBuilder<llvm::ConstantFolder, IRInserter> PollyIRBuilder;
 
-/// Return an IR builder pointed before the @p BB terminator.
-static inline PollyIRBuilder createPollyIRBuilder(llvm::BasicBlock *BB,
-                                                  ScopAnnotator &LA) {
-  PollyIRBuilder Builder(BB->getContext(), llvm::ConstantFolder(),
-                         polly::IRInserter(LA));
-  Builder.SetInsertPoint(BB->getTerminator());
-  return Builder;
-}
 } // namespace polly
 #endif

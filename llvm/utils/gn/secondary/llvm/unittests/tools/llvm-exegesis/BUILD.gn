@@ -15,5 +15,6 @@ unittest("LLVMExegesisTests") {
     "ClusteringTest.cpp",
     "PerfHelperTest.cpp",
     "RegisterValueTest.cpp",
+    "SnippetGeneratorTest.cpp",
   ]
 }

@@ -80,7 +80,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/RegisterPressure.h"
@@ -102,6 +101,7 @@ extern cl::opt<bool> ForceTopDown;
 extern cl::opt<bool> ForceBottomUp;
 extern cl::opt<bool> VerifyScheduling;
 
+class AAResults;
 class LiveIntervals;
 class MachineDominatorTree;
 class MachineFunction;
@@ -121,7 +121,7 @@ struct MachineSchedContext {
   const MachineLoopInfo *MLI = nullptr;
   const MachineDominatorTree *MDT = nullptr;
   const TargetPassConfig *PassConfig = nullptr;
-  AliasAnalysis *AA = nullptr;
+  AAResults *AA = nullptr;
   LiveIntervals *LIS = nullptr;
 
   RegisterClassInfo *RegClassInfo;
@@ -185,6 +185,9 @@ struct MachineSchedPolicy {
   // Disable heuristic that tries to fetch nodes from long dependency chains
   // first.
   bool DisableLatencyHeuristic = false;
+
+  // Compute DFSResult for use in scheduling heuristics.
+  bool ComputeDFSResult = false;
 
   MachineSchedPolicy() = default;
 };
@@ -261,7 +264,7 @@ public:
 /// PreRA and PostRA MachineScheduler.
 class ScheduleDAGMI : public ScheduleDAGInstrs {
 protected:
-  AliasAnalysis *AA;
+  AAResults *AA;
   LiveIntervals *LIS;
   std::unique_ptr<MachineSchedStrategy> SchedImpl;
 
@@ -757,8 +760,16 @@ public:
 
   unsigned getOtherResourceCount(unsigned &OtherCritIdx);
 
-  template <bool InPQueue>
-  void releaseNode(SUnit *SU, unsigned ReadyCycle, unsigned Idx = 0);
+  /// Release SU to make it ready. If it's not in hazard, remove it from
+  /// pending queue (if already in) and push into available queue.
+  /// Otherwise, push the SU into pending queue.
+  ///
+  /// @param SU The unit to be released.
+  /// @param ReadyCycle Until which cycle the unit is ready.
+  /// @param InPQueue Whether SU is already in pending queue.
+  /// @param Idx Position offset in pending queue (if in it).
+  void releaseNode(SUnit *SU, unsigned ReadyCycle, bool InPQueue,
+                   unsigned Idx = 0);
 
   void bumpCycle(unsigned NextCycle);
 
@@ -956,7 +967,7 @@ public:
     if (SU->isScheduled)
       return;
 
-    Top.releaseNode<false>(SU, SU->TopReadyCycle);
+    Top.releaseNode(SU, SU->TopReadyCycle, false);
     TopCand.SU = nullptr;
   }
 
@@ -964,7 +975,7 @@ public:
     if (SU->isScheduled)
       return;
 
-    Bot.releaseNode<false>(SU, SU->BotReadyCycle);
+    Bot.releaseNode(SU, SU->BotReadyCycle, false);
     BotCand.SU = nullptr;
   }
 
@@ -1044,7 +1055,7 @@ public:
   void releaseTopNode(SUnit *SU) override {
     if (SU->isScheduled)
       return;
-    Top.releaseNode<false>(SU, SU->TopReadyCycle);
+    Top.releaseNode(SU, SU->TopReadyCycle, false);
   }
 
   // Only called for roots.
@@ -1053,7 +1064,7 @@ public:
   }
 
 protected:
-  void tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand);
+  virtual void tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand);
 
   void pickNodeFromQueue(SchedCandidate &Cand);
 };

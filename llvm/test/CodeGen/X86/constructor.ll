@@ -1,3 +1,4 @@
+; RUN: llc -mtriple x86_64 < %s | FileCheck --check-prefix=INIT-ARRAY %s
 ; RUN: llc -mtriple x86_64-pc-linux -use-ctors < %s | FileCheck --check-prefix=CTOR %s
 ; RUN: llc -mtriple x86_64-unknown-freebsd -use-ctors < %s | FileCheck --check-prefix=CTOR %s
 ; RUN: llc -mtriple x86_64-pc-solaris2.11 -use-ctors < %s | FileCheck --check-prefix=CTOR %s

@@ -22,17 +22,18 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
 
 namespace llvm {
+
+class BasicBlock;
+class Instruction;
+class Use;
 
 //===----------------------------------------------------------------------===//
 // BasicBlock pred_iterator definition
@@ -103,7 +104,7 @@ using pred_iterator = PredIterator<BasicBlock, Value::user_iterator>;
 using const_pred_iterator =
     PredIterator<const BasicBlock, Value::const_user_iterator>;
 using pred_range = iterator_range<pred_iterator>;
-using pred_const_range = iterator_range<const_pred_iterator>;
+using const_pred_range = iterator_range<const_pred_iterator>;
 
 inline pred_iterator pred_begin(BasicBlock *BB) { return pred_iterator(BB); }
 inline const_pred_iterator pred_begin(const BasicBlock *BB) {
@@ -124,8 +125,8 @@ inline unsigned pred_size(const BasicBlock *BB) {
 inline pred_range predecessors(BasicBlock *BB) {
   return pred_range(pred_begin(BB), pred_end(BB));
 }
-inline pred_const_range predecessors(const BasicBlock *BB) {
-  return pred_const_range(pred_begin(BB), pred_end(BB));
+inline const_pred_range predecessors(const BasicBlock *BB) {
+  return const_pred_range(pred_begin(BB), pred_end(BB));
 }
 
 //===----------------------------------------------------------------------===//
@@ -238,17 +239,17 @@ public:
 };
 
 using succ_iterator = SuccIterator<Instruction, BasicBlock>;
-using succ_const_iterator = SuccIterator<const Instruction, const BasicBlock>;
+using const_succ_iterator = SuccIterator<const Instruction, const BasicBlock>;
 using succ_range = iterator_range<succ_iterator>;
-using succ_const_range = iterator_range<succ_const_iterator>;
+using const_succ_range = iterator_range<const_succ_iterator>;
 
 inline succ_iterator succ_begin(Instruction *I) { return succ_iterator(I); }
-inline succ_const_iterator succ_begin(const Instruction *I) {
-  return succ_const_iterator(I);
+inline const_succ_iterator succ_begin(const Instruction *I) {
+  return const_succ_iterator(I);
 }
 inline succ_iterator succ_end(Instruction *I) { return succ_iterator(I, true); }
-inline succ_const_iterator succ_end(const Instruction *I) {
-  return succ_const_iterator(I, true);
+inline const_succ_iterator succ_end(const Instruction *I) {
+  return const_succ_iterator(I, true);
 }
 inline bool succ_empty(const Instruction *I) {
   return succ_begin(I) == succ_end(I);
@@ -259,21 +260,21 @@ inline unsigned succ_size(const Instruction *I) {
 inline succ_range successors(Instruction *I) {
   return succ_range(succ_begin(I), succ_end(I));
 }
-inline succ_const_range successors(const Instruction *I) {
-  return succ_const_range(succ_begin(I), succ_end(I));
+inline const_succ_range successors(const Instruction *I) {
+  return const_succ_range(succ_begin(I), succ_end(I));
 }
 
 inline succ_iterator succ_begin(BasicBlock *BB) {
   return succ_iterator(BB->getTerminator());
 }
-inline succ_const_iterator succ_begin(const BasicBlock *BB) {
-  return succ_const_iterator(BB->getTerminator());
+inline const_succ_iterator succ_begin(const BasicBlock *BB) {
+  return const_succ_iterator(BB->getTerminator());
 }
 inline succ_iterator succ_end(BasicBlock *BB) {
   return succ_iterator(BB->getTerminator(), true);
 }
-inline succ_const_iterator succ_end(const BasicBlock *BB) {
-  return succ_const_iterator(BB->getTerminator(), true);
+inline const_succ_iterator succ_end(const BasicBlock *BB) {
+  return const_succ_iterator(BB->getTerminator(), true);
 }
 inline bool succ_empty(const BasicBlock *BB) {
   return succ_begin(BB) == succ_end(BB);
@@ -284,8 +285,8 @@ inline unsigned succ_size(const BasicBlock *BB) {
 inline succ_range successors(BasicBlock *BB) {
   return succ_range(succ_begin(BB), succ_end(BB));
 }
-inline succ_const_range successors(const BasicBlock *BB) {
-  return succ_const_range(succ_begin(BB), succ_end(BB));
+inline const_succ_range successors(const BasicBlock *BB) {
+  return const_succ_range(succ_begin(BB), succ_end(BB));
 }
 
 //===--------------------------------------------------------------------===//
@@ -306,7 +307,7 @@ template <> struct GraphTraits<BasicBlock*> {
 
 template <> struct GraphTraits<const BasicBlock*> {
   using NodeRef = const BasicBlock *;
-  using ChildIteratorType = succ_const_iterator;
+  using ChildIteratorType = const_succ_iterator;
 
   static NodeRef getEntryNode(const BasicBlock *BB) { return BB; }
 

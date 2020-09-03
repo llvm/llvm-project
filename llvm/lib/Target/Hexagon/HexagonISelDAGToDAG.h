@@ -25,7 +25,6 @@ namespace llvm {
 class MachineFunction;
 class HexagonInstrInfo;
 class HexagonRegisterInfo;
-class HexagonTargetLowering;
 
 class HexagonDAGToDAGISel : public SelectionDAGISel {
   const HexagonSubtarget *HST;
@@ -51,7 +50,7 @@ public:
     return true;
   }
   void PreprocessISelDAG() override;
-  void EmitFunctionEntryCode() override;
+  void emitFunctionEntryCode() override;
 
   void Select(SDNode *N) override;
 
@@ -60,9 +59,8 @@ public:
   inline bool SelectAddrGP(SDValue &N, SDValue &R);
   inline bool SelectAnyImm(SDValue &N, SDValue &R);
   inline bool SelectAnyInt(SDValue &N, SDValue &R);
-  bool SelectAnyImmediate(SDValue &N, SDValue &R, uint32_t LogAlign);
-  bool SelectGlobalAddress(SDValue &N, SDValue &R, bool UseGP,
-                           uint32_t LogAlign);
+  bool SelectAnyImmediate(SDValue &N, SDValue &R, Align Alignment);
+  bool SelectGlobalAddress(SDValue &N, SDValue &R, bool UseGP, Align Alignment);
   bool SelectAddrFI(SDValue &N, SDValue &R);
   bool DetectUseSxtw(SDValue &N, SDValue &R);
 

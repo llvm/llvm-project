@@ -110,15 +110,6 @@
 ---
 name:            fn2
 alignment:       16
-callSites:
-  - { bb: 0, offset: 20, fwdArgRegs:
-      - { arg: 0, reg: '$edi' }
-      - { arg: 1, reg: '$esi' }
-      - { arg: 2, reg: '$edx' } }
-  - { bb: 3, offset: 2, fwdArgRegs:
-      - { arg: 0, reg: '$edi' }
-      - { arg: 1, reg: '$esi' }
-      - { arg: 2, reg: '$edx' } }
 body:             |
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)

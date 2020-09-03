@@ -65,6 +65,11 @@ public:
                                      const MCAsmLayout &Layout,
                                      MCAlignFragment &AF) override;
 
+  bool evaluateTargetFixup(const MCAssembler &Asm, const MCAsmLayout &Layout,
+                           const MCFixup &Fixup, const MCFragment *DF,
+                           const MCValue &Target, uint64_t &Value,
+                           bool &WasForced) override;
+
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
@@ -92,52 +97,16 @@ public:
     return RISCV::NumTargetFixupKinds;
   }
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
-    const static MCFixupKindInfo Infos[] = {
-      // This table *must* be in the order that the fixup_* kinds are defined in
-      // RISCVFixupKinds.h.
-      //
-      // name                      offset bits  flags
-      { "fixup_riscv_hi20",         12,     20,  0 },
-      { "fixup_riscv_lo12_i",       20,     12,  0 },
-      { "fixup_riscv_lo12_s",        0,     32,  0 },
-      { "fixup_riscv_pcrel_hi20",   12,     20,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_pcrel_lo12_i", 20,     12,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_pcrel_lo12_s",  0,     32,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_got_hi20",     12,     20,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_tprel_hi20",   12,     20,  0 },
-      { "fixup_riscv_tprel_lo12_i", 20,     12,  0 },
-      { "fixup_riscv_tprel_lo12_s",  0,     32,  0 },
-      { "fixup_riscv_tprel_add",     0,      0,  0 },
-      { "fixup_riscv_tls_got_hi20", 12,     20,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_tls_gd_hi20",  12,     20,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_jal",          12,     20,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_branch",        0,     32,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_rvc_jump",      2,     11,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_rvc_branch",    0,     16,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_call",          0,     64,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_call_plt",      0,     64,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_relax",         0,      0,  0 },
-      { "fixup_riscv_align",         0,      0,  0 }
-    };
-    static_assert((array_lengthof(Infos)) == RISCV::NumTargetFixupKinds,
-                  "Not all fixup kinds added to Infos array");
+  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
-    if (Kind < FirstTargetFixupKind)
-      return MCAsmBackend::getFixupKindInfo(Kind);
-
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
-           "Invalid kind!");
-    return Infos[Kind - FirstTargetFixupKind];
-  }
+  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
   unsigned getRelaxedOpcode(unsigned Op) const;
 
-  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                        MCInst &Res) const override;
-
+  void relaxInstruction(MCInst &Inst,
+                        const MCSubtargetInfo &STI) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 

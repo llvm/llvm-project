@@ -1,9 +1,11 @@
-// RUN: %clang_cc1 -std=c++2a -fconcepts-ts -x c++ -verify %s
+// RUN: %clang_cc1 -std=c++2a -x c++ -verify %s
 
-template<typename T> requires sizeof(T) >= 4
+template<typename T> requires (sizeof(T) >= 4)
+// expected-note@-1{{similar constraint expressions not considered equivalent}}
 bool a() { return false; } // expected-note {{candidate function [with T = unsigned int]}}
 
-template<typename T> requires sizeof(T) >= 4 && sizeof(T) <= 10
+template<typename T> requires (sizeof(T) >= 4 && sizeof(T) <= 10)
+// expected-note@-1{{similar constraint expression here}}
 bool a() { return true; } // expected-note {{candidate function [with T = unsigned int]}}
 
 bool av = a<unsigned>(); // expected-error {{call to 'a' is ambiguous}}
@@ -14,7 +16,7 @@ concept C1 = sizeof(T) >= 4;
 template<typename T> requires C1<T>
 constexpr bool b() { return false; }
 
-template<typename T> requires C1<T> && sizeof(T) <= 10
+template<typename T> requires (C1<T> && sizeof(T) <= 10)
 constexpr bool b() { return true; }
 
 static_assert(b<int>());

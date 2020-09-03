@@ -12,12 +12,9 @@ body:             |
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[TRUNC1]], [[C1]](s32)
-    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C2]](s64)
-    ; CHECK: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[ASHR]], [[AND]](s32)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ASHR1]](s32)
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC1]], 8
+    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SEXT_INREG]], [[AND]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ASHR]](s32)
     ; CHECK: $w0 = COPY [[COPY2]](s32)
     ; CHECK: [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC2]], [[C]]
@@ -29,8 +26,8 @@ body:             |
     ; CHECK: [[TRUNC4:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK: [[AND3:%[0-9]+]]:_(s32) = G_AND [[TRUNC4]], [[C]]
     ; CHECK: [[TRUNC5:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[TRUNC5]], [[AND3]](s32)
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[SHL1]](s32)
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[TRUNC5]], [[AND3]](s32)
+    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[SHL]](s32)
     ; CHECK: $w0 = COPY [[COPY4]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1

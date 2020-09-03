@@ -161,7 +161,7 @@ class TestSwiftTypes(TestBase):
                 'Double',
                 'float64',
                 'value = 2.5'])
-        if "x86_64" in platform.machine() :
+        if self.getArchitecture() == "x86_64":
             self.expect(
                 "frame variable --raw float80",
                 substrs=[

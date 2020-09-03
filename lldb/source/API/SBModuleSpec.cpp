@@ -1,4 +1,4 @@
-//===-- SBModuleSpec.cpp ----------------------------------------*- C++ -*-===//
+//===-- SBModuleSpec.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,7 +38,7 @@ const SBModuleSpec &SBModuleSpec::operator=(const SBModuleSpec &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBModuleSpec::~SBModuleSpec() {}
+SBModuleSpec::~SBModuleSpec() = default;
 
 bool SBModuleSpec::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBModuleSpec, IsValid);
@@ -169,7 +169,7 @@ SBModuleSpecList &SBModuleSpecList::operator=(const SBModuleSpecList &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBModuleSpecList::~SBModuleSpecList() {}
+SBModuleSpecList::~SBModuleSpecList() = default;
 
 SBModuleSpecList SBModuleSpecList::GetModuleSpecifications(const char *path) {
   LLDB_RECORD_STATIC_METHOD(lldb::SBModuleSpecList, SBModuleSpecList,

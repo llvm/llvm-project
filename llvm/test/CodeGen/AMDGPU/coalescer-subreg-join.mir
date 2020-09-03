@@ -11,11 +11,11 @@ registers:
   - { id: 0, class: sreg_64 }
   - { id: 1, class: vgpr_32 }
   - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sreg_256 }
+  - { id: 3, class: sgpr_256 }
   - { id: 4, class: sgpr_128 }
-  - { id: 5, class: sreg_256 }
+  - { id: 5, class: sgpr_256 }
   - { id: 6, class: sgpr_128 }
-  - { id: 7, class: sreg_512 }
+  - { id: 7, class: sgpr_512 }
   - { id: 9, class: vreg_512 }
   - { id: 11, class: vreg_512 }
   - { id: 18, class: vgpr_32 }
@@ -61,7 +61,7 @@ body:             |
     %11.sub6 = COPY %1
     %11.sub7 = COPY %1
     %11.sub8 = COPY %1
-    dead %18 = IMAGE_SAMPLE_C_D_O_V1_V16 %11, %3, %4, 1, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec
+    dead %18 = IMAGE_SAMPLE_C_D_O_V1_V16 %11, %3, %4, 1, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load 4)
     %20.sub1 = COPY %2
     %20.sub2 = COPY %2
     %20.sub3 = COPY %2
@@ -70,6 +70,6 @@ body:             |
     %20.sub6 = COPY %2
     %20.sub7 = COPY %2
     %20.sub8 = COPY %2
-    dead %27 = IMAGE_SAMPLE_C_D_O_V1_V16 %20, %5, %6, 1, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec
+    dead %27 = IMAGE_SAMPLE_C_D_O_V1_V16 %20, %5, %6, 1, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load 4)
 
 ...

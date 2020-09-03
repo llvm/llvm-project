@@ -10,7 +10,7 @@
 extern "C" decltype(strxfrm_l) __strxfrm_l;
 
 int main(void) {
-  char q[10];
+  char q[100];
   locale_t loc = newlocale(LC_ALL_MASK, "", (locale_t)0);
   size_t n = __strxfrm_l(q, "qwerty", sizeof(q), loc);
   assert(n < sizeof(q));

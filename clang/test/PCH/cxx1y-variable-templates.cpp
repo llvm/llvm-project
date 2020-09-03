@@ -7,6 +7,10 @@
 // RUN: %clang_cc1 -pedantic -std=c++1y -include-pch %t.a -emit-pch %s -o %t.b -DHEADER2
 // RUN: %clang_cc1 -pedantic -std=c++1y -include-pch %t.b -verify %s -DHEADERUSE
 
+// RUN: %clang_cc1 -pedantic -std=c++1y -emit-pch -fpch-instantiate-templates %s -o %t.a -DHEADER1
+// RUN: %clang_cc1 -pedantic -std=c++1y -include-pch %t.a -emit-pch -fpch-instantiate-templates %s -o %t.b -DHEADER2
+// RUN: %clang_cc1 -pedantic -std=c++1y -include-pch %t.b -verify %s -DHEADERUSE
+
 #ifndef ERROR
 // expected-no-diagnostics
 #endif
@@ -89,8 +93,8 @@ namespace join {
 
   namespace diff_types {
 #ifdef ERROR
-    template<typename T> extern T err0; // expected-error {{redeclaration of 'err0' with a different type: 'T' vs 'float'}}  // expected-note@42 {{previous declaration is here}}
-    template<typename T> extern float err1; // expected-error {{redeclaration of 'err1' with a different type: 'float' vs 'T'}} // expected-note@43 {{previous declaration is here}}
+    template<typename T> extern T err0; // expected-error {{redeclaration of 'err0' with a different type: 'T' vs 'float'}}  // expected-note@46 {{previous declaration is here}}
+    template<typename T> extern float err1; // expected-error {{redeclaration of 'err1' with a different type: 'float' vs 'T'}} // expected-note@47 {{previous declaration is here}}
 #endif
     template<typename T> extern T def;
   }

@@ -23,15 +23,15 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 
 using namespace llvm;
 using namespace llvm::sys;
 using namespace llvm::opt;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 // Create OptTable
 
@@ -82,7 +82,7 @@ static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &args) {
       return cl::TokenizeWindowsCommandLine;
     return cl::TokenizeGNUCommandLine;
   }
-  if (Triple(sys::getProcessTriple()).getOS() == Triple::Win32)
+  if (Triple(sys::getProcessTriple()).isOSWindows())
     return cl::TokenizeWindowsCommandLine;
   return cl::TokenizeGNUCommandLine;
 }
@@ -143,7 +143,7 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> argv) {
   return args;
 }
 
-void printHelp() {
+void elf::printHelp() {
   ELFOptTable().PrintHelp(
       lld::outs(), (config->progName + " [options] file...").str().c_str(),
       "lld", false /*ShowHidden*/, true /*ShowAllAliases*/);
@@ -160,12 +160,12 @@ void printHelp() {
 static std::string rewritePath(StringRef s) {
   if (fs::exists(s))
     return relativeToRoot(s);
-  return s;
+  return std::string(s);
 }
 
 // Reconstructs command line arguments so that so that you can re-run
 // the same command with the same inputs. This is for --reproduce.
-std::string createResponseFile(const opt::InputArgList &args) {
+std::string elf::createResponseFile(const opt::InputArgList &args) {
   SmallString<0> data;
   raw_svector_ostream os(data);
   os << "--chroot .\n";
@@ -199,7 +199,7 @@ std::string createResponseFile(const opt::InputArgList &args) {
       os << toString(*arg) << "\n";
     }
   }
-  return data.str();
+  return std::string(data.str());
 }
 
 // Find a file by concatenating given paths. If a resulting path
@@ -212,11 +212,11 @@ static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
     path::append(s, path1, path2);
 
   if (fs::exists(s))
-    return s.str().str();
+    return std::string(s);
   return None;
 }
 
-Optional<std::string> findFromSearchPaths(StringRef path) {
+Optional<std::string> elf::findFromSearchPaths(StringRef path) {
   for (StringRef dir : config->searchPaths)
     if (Optional<std::string> s = findFile(dir, path))
       return s;
@@ -225,7 +225,7 @@ Optional<std::string> findFromSearchPaths(StringRef path) {
 
 // This is for -l<basename>. We'll look for lib<basename>.so or lib<basename>.a from
 // search paths.
-Optional<std::string> searchLibraryBaseName(StringRef name) {
+Optional<std::string> elf::searchLibraryBaseName(StringRef name) {
   for (StringRef dir : config->searchPaths) {
     if (!config->isStatic)
       if (Optional<std::string> s = findFile(dir, "lib" + name + ".so"))
@@ -237,7 +237,7 @@ Optional<std::string> searchLibraryBaseName(StringRef name) {
 }
 
 // This is for -l<namespec>.
-Optional<std::string> searchLibrary(StringRef name) {
+Optional<std::string> elf::searchLibrary(StringRef name) {
   if (name.startswith(":"))
     return findFromSearchPaths(name.substr(1));
   return searchLibraryBaseName(name);
@@ -246,11 +246,8 @@ Optional<std::string> searchLibrary(StringRef name) {
 // If a linker/version script doesn't exist in the current directory, we also
 // look for the script in the '-L' search paths. This matches the behaviour of
 // '-T', --version-script=, and linker script INPUT() command in ld.bfd.
-Optional<std::string> searchScript(StringRef name) {
+Optional<std::string> elf::searchScript(StringRef name) {
   if (fs::exists(name))
     return name.str();
   return findFromSearchPaths(name);
 }
-
-} // namespace elf
-} // namespace lld

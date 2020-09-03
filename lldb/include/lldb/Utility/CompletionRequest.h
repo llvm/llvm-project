@@ -17,16 +17,21 @@
 
 namespace lldb_private {
 enum class CompletionMode {
-  // The current token has been completed.
+  /// The current token has been completed. The client should indicate this
+  /// to the user (usually this is done by adding a trailing space behind the
+  /// token).
+  /// Example: "command sub" -> "command subcommand " (note the trailing space).
   Normal,
-  // The current token has been partially completed. This means that we found
-  // a completion, but that the completed token is still incomplete. Examples
-  // for this are file paths, where we want to complete "/bi" to "/bin/", but
-  // the file path token is still incomplete after the completion. Clients
-  // should not indicate to the user that this is a full completion (e.g. by
-  // not inserting the usual trailing space after a successful completion).
+  /// The current token has been partially completed. This means that we found
+  /// a completion, but that the token is still incomplete. Examples
+  /// for this are file paths, where we want to complete "/bi" to "/bin/", but
+  /// the file path token is still incomplete after the completion. Clients
+  /// should not indicate to the user that this is a full completion (e.g. by
+  /// not inserting the usual trailing space after a successful completion).
+  /// Example: "file /us" -> "file /usr/" (note the missing trailing space).
   Partial,
-  // The full line has been rewritten by the completion.
+  /// The full line has been rewritten by the completion.
+  /// Example: "alias name" -> "other_command full_name".
   RewriteLine,
 };
 
@@ -35,7 +40,12 @@ public:
   /// A single completion and all associated data.
   class Completion {
 
+    /// The actual text that should be completed. The meaning of this text
+    /// is defined by the CompletionMode.
+    /// \see m_mode
     std::string m_completion;
+    /// The description that should be displayed to the user alongside the
+    /// completion text.
     std::string m_descripton;
     CompletionMode m_mode;
 
@@ -53,9 +63,12 @@ public:
   };
 
 private:
+  /// List of found completions.
   std::vector<Completion> m_results;
 
-  /// List of added completions so far. Used to filter out duplicates.
+  /// A set of the unique keys of all found completions so far. Used to filter
+  /// out duplicates.
+  /// \see CompletionResult::Completion::GetUniqueKey
   llvm::StringSet<> m_added_values;
 
 public:
@@ -102,7 +115,19 @@ public:
   CompletionRequest(llvm::StringRef command_line, unsigned raw_cursor_pos,
                     CompletionResult &result);
 
-  llvm::StringRef GetRawLine() const { return m_command; }
+  /// Returns the raw user input used to create this CompletionRequest cut off
+  /// at the cursor position. The cursor will be at the end of the raw line.
+  llvm::StringRef GetRawLine() const {
+    return m_command.substr(0, GetRawCursorPos());
+  }
+
+  /// Returns the full raw user input used to create this CompletionRequest.
+  /// This string is not cut off at the cursor position and will include
+  /// characters behind the cursor position.
+  ///
+  /// You should most likely *not* use this function unless the characters
+  /// behind the cursor position influence the completion.
+  llvm::StringRef GetRawLineWithUnusedSuffix() const { return m_command; }
 
   unsigned GetRawCursorPos() const { return m_raw_cursor_pos; }
 
@@ -135,8 +160,8 @@ public:
   /// the suggested completion is stored, so the given string can be free'd
   /// afterwards.
   ///
-  /// \param match The suggested completion.
-  /// \param completion An optional description of the completion string. The
+  /// \param completion The suggested completion.
+  /// \param description An optional description of the completion string. The
   ///     description will be displayed to the user alongside the completion.
   /// \param mode The CompletionMode for this completion.
   void AddCompletion(llvm::StringRef completion,
@@ -148,7 +173,7 @@ public:
   /// Adds a possible completion string if the completion would complete the
   /// current argument.
   ///
-  /// \param match The suggested completion.
+  /// \param completion The suggested completion.
   /// \param description An optional description of the completion string. The
   ///     description will be displayed to the user alongside the completion.
   template <CompletionMode M = CompletionMode::Normal>
@@ -178,7 +203,7 @@ public:
   /// The number of completions and descriptions must be identical.
   ///
   /// \param completions The list of completions.
-  /// \param completions The list of descriptions.
+  /// \param descriptions The list of descriptions.
   ///
   /// \see AddCompletion
   void AddCompletions(const StringList &completions,

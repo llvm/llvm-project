@@ -1,5 +1,5 @@
 ; Test if the !invariant.load metadata is maintained by GVN.
-; RUN: opt -basicaa -gvn -S < %s | FileCheck %s
+; RUN: opt -basic-aa -gvn -S < %s | FileCheck %s
 
 define i32 @test1(i32* nocapture %p, i8* nocapture %q) {
 ; CHECK-LABEL: test1
@@ -117,7 +117,7 @@ entry:
 define i32 @test8(i1 %cnd, i32* %p) {
 ; CHECK-LABEL: test8
 ; CHECK: @bar
-; CHECK: load i32, i32* %p2, !invariant.load
+; CHECK: load i32, i32* %p2, align 4, !invariant.load
 ; CHECK: br label %merge
 entry:
   %v1 = load i32, i32* %p, !invariant.load !0

@@ -1,6 +1,6 @@
 //===- Constraint.cpp - Constraint class ----------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -17,19 +17,28 @@ using namespace mlir::tblgen;
 
 Constraint::Constraint(const llvm::Record *record)
     : def(record), kind(CK_Uncategorized) {
-  if (record->isSubClassOf("TypeConstraint")) {
+  // Look through OpVariable's to their constraint.
+  if (def->isSubClassOf("OpVariable"))
+    def = def->getValueAsDef("constraint");
+  if (def->isSubClassOf("TypeConstraint")) {
     kind = CK_Type;
-  } else if (record->isSubClassOf("AttrConstraint")) {
+  } else if (def->isSubClassOf("AttrConstraint")) {
     kind = CK_Attr;
-  } else if (record->isSubClassOf("RegionConstraint")) {
+  } else if (def->isSubClassOf("RegionConstraint")) {
     kind = CK_Region;
+  } else if (def->isSubClassOf("SuccessorConstraint")) {
+    kind = CK_Successor;
   } else {
-    assert(record->isSubClassOf("Constraint"));
+    assert(def->isSubClassOf("Constraint"));
   }
 }
 
 Constraint::Constraint(Kind kind, const llvm::Record *record)
-    : def(record), kind(kind) {}
+    : def(record), kind(kind) {
+  // Look through OpVariable's to their constraint.
+  if (def->isSubClassOf("OpVariable"))
+    def = def->getValueAsDef("constraint");
+}
 
 Pred Constraint::getPredicate() const {
   auto *val = def->getValue("predicate");
@@ -57,4 +66,5 @@ llvm::StringRef Constraint::getDescription() const {
 AppliedConstraint::AppliedConstraint(Constraint &&constraint,
                                      llvm::StringRef self,
                                      std::vector<std::string> &&entities)
-    : constraint(constraint), self(self), entities(std::move(entities)) {}
+    : constraint(constraint), self(std::string(self)),
+      entities(std::move(entities)) {}

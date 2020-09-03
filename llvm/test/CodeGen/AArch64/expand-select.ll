@@ -6,17 +6,17 @@ define void @foo(i32 %In1, <2 x i128> %In2, <2 x i128> %In3, <2 x i128> *%Out) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0x1
 ; CHECK-NEXT:    fmov s0, wzr
-; CHECK-NEXT:    ldp x10, x9, [sp, #8]
 ; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    ldr x8, [sp]
+; CHECK-NEXT:    ldp x8, x9, [sp, #8]
+; CHECK-NEXT:    ldr x10, [sp]
 ; CHECK-NEXT:    cmeq v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    fmov w11, s0
 ; CHECK-NEXT:    tst w11, #0x1
 ; CHECK-NEXT:    csel x11, x2, x6, ne
 ; CHECK-NEXT:    csel x12, x3, x7, ne
-; CHECK-NEXT:    csel x8, x4, x8, ne
-; CHECK-NEXT:    csel x10, x5, x10, ne
-; CHECK-NEXT:    stp x8, x10, [x9, #16]
+; CHECK-NEXT:    csel x10, x4, x10, ne
+; CHECK-NEXT:    csel x8, x5, x8, ne
+; CHECK-NEXT:    stp x10, x8, [x9, #16]
 ; CHECK-NEXT:    stp x11, x12, [x9]
 ; CHECK-NEXT:    ret
   %cond = and i32 %In1, 1

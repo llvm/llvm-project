@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 #include "TestFS.h"
 #include "GlobalCompilationDatabase.h"
-#include "Path.h"
 #include "URI.h"
+#include "support/Path.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -42,7 +42,7 @@ MockCompilationDatabase::MockCompilationDatabase(llvm::StringRef Directory,
 
 llvm::Optional<ProjectInfo>
 MockCompilationDatabase::getProjectInfo(PathRef File) const {
-  return ProjectInfo{Directory};
+  return ProjectInfo{std::string(Directory)};
 }
 
 llvm::Optional<tooling::CompileCommand>
@@ -57,12 +57,12 @@ MockCompilationDatabase::getCompileCommand(PathRef File) const {
   CommandLine.insert(CommandLine.begin(), "clang");
   if (RelPathPrefix.empty()) {
     // Use the absolute path in the compile command.
-    CommandLine.push_back(File);
+    CommandLine.push_back(std::string(File));
   } else {
     // Build a relative path using RelPathPrefix.
     llvm::SmallString<32> RelativeFilePath(RelPathPrefix);
     llvm::sys::path::append(RelativeFilePath, FileName);
-    CommandLine.push_back(RelativeFilePath.str());
+    CommandLine.push_back(std::string(RelativeFilePath.str()));
   }
 
   return {tooling::CompileCommand(Directory != llvm::StringRef()
@@ -79,14 +79,14 @@ const char *testRoot() {
 #endif
 }
 
-std::string testPath(PathRef File) {
+std::string testPath(PathRef File, llvm::sys::path::Style Style) {
   assert(llvm::sys::path::is_relative(File) && "FileName should be relative");
 
   llvm::SmallString<32> NativeFile = File;
-  llvm::sys::path::native(NativeFile);
+  llvm::sys::path::native(NativeFile, Style);
   llvm::SmallString<32> Path;
-  llvm::sys::path::append(Path, testRoot(), NativeFile);
-  return Path.str();
+  llvm::sys::path::append(Path, Style, testRoot(), NativeFile);
+  return std::string(Path.str());
 }
 
 /// unittest: is a scheme that refers to files relative to testRoot().

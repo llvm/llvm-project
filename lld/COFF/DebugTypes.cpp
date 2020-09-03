@@ -7,22 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "DebugTypes.h"
+#include "Chunks.h"
 #include "Driver.h"
 #include "InputFiles.h"
+#include "TypeMerger.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeRecordHelpers.h"
+#include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
-
-namespace lld {
-namespace coff {
+using namespace lld;
+using namespace lld::coff;
 
 namespace {
 // The TypeServerSource class represents a PDB type server, a file referenced by
@@ -34,36 +38,40 @@ namespace {
 // before any dependent OBJ.
 class TypeServerSource : public TpiSource {
 public:
-  explicit TypeServerSource(MemoryBufferRef m, llvm::pdb::NativeSession *s)
-      : TpiSource(PDB, nullptr), session(s), mb(m) {}
+  explicit TypeServerSource(PDBInputFile *f)
+      : TpiSource(PDB, nullptr), pdbInputFile(f) {
+    if (f->loadErr && *f->loadErr)
+      return;
+    pdb::PDBFile &file = f->session->getPDBFile();
+    auto expectedInfo = file.getPDBInfoStream();
+    if (!expectedInfo)
+      return;
+    auto it = mappings.emplace(expectedInfo->getGuid(), this);
+    assert(it.second);
+    (void)it;
+    tsIndexMap.isTypeServerMap = true;
+  }
 
-  // Queue a PDB type server for loading in the COFF Driver
-  static void enqueue(const ObjFile *dependentFile,
-                      const TypeServer2Record &ts);
+  Expected<const CVIndexMap *> mergeDebugT(TypeMerger *m,
+                                           CVIndexMap *indexMap) override;
+  bool isDependency() const override { return true; }
 
-  // Create an instance
-  static Expected<TypeServerSource *> getInstance(MemoryBufferRef m);
+  PDBInputFile *pdbInputFile = nullptr;
 
-  // Fetch the PDB instance loaded for a corresponding dependent OBJ.
-  static Expected<TypeServerSource *>
-  findFromFile(const ObjFile *dependentFile);
+  CVIndexMap tsIndexMap;
 
-  static std::map<std::string, std::pair<std::string, TypeServerSource *>>
-      instances;
-
-  // The interface to the PDB (if it was opened successfully)
-  std::unique_ptr<llvm::pdb::NativeSession> session;
-
-private:
-  MemoryBufferRef mb;
+  static std::map<codeview::GUID, TypeServerSource *> mappings;
 };
 
 // This class represents the debug type stream of an OBJ file that depends on a
 // PDB type server (see TypeServerSource).
 class UseTypeServerSource : public TpiSource {
 public:
-  UseTypeServerSource(const ObjFile *f, const TypeServer2Record *ts)
-      : TpiSource(UsingPDB, f), typeServerDependency(*ts) {}
+  UseTypeServerSource(ObjFile *f, TypeServer2Record ts)
+      : TpiSource(UsingPDB, f), typeServerDependency(ts) {}
+
+  Expected<const CVIndexMap *> mergeDebugT(TypeMerger *m,
+                                           CVIndexMap *indexMap) override;
 
   // Information about the PDB type server dependency, that needs to be loaded
   // in before merging this OBJ.
@@ -76,15 +84,35 @@ public:
 // such files, clang does not.
 class PrecompSource : public TpiSource {
 public:
-  PrecompSource(const ObjFile *f) : TpiSource(PCH, f) {}
+  PrecompSource(ObjFile *f) : TpiSource(PCH, f) {
+    if (!f->pchSignature || !*f->pchSignature)
+      fatal(toString(f) +
+            " claims to be a PCH object, but does not have a valid signature");
+    auto it = mappings.emplace(*f->pchSignature, this);
+    if (!it.second)
+      fatal("a PCH object with the same signature has already been provided (" +
+            toString(it.first->second->file) + " and " + toString(file) + ")");
+    precompIndexMap.isPrecompiledTypeMap = true;
+  }
+
+  Expected<const CVIndexMap *> mergeDebugT(TypeMerger *m,
+                                           CVIndexMap *indexMap) override;
+  bool isDependency() const override { return true; }
+
+  CVIndexMap precompIndexMap;
+
+  static std::map<uint32_t, PrecompSource *> mappings;
 };
 
 // This class represents the debug type stream of an OBJ file that depends on a
 // Microsoft precompiled headers OBJ (see PrecompSource).
 class UsePrecompSource : public TpiSource {
 public:
-  UsePrecompSource(const ObjFile *f, const PrecompRecord *precomp)
-      : TpiSource(UsingPCH, f), precompDependency(*precomp) {}
+  UsePrecompSource(ObjFile *f, PrecompRecord precomp)
+      : TpiSource(UsingPCH, f), precompDependency(precomp) {}
+
+  Expected<const CVIndexMap *> mergeDebugT(TypeMerger *m,
+                                           CVIndexMap *indexMap) override;
 
   // Information about the Precomp OBJ dependency, that needs to be loaded in
   // before merging this OBJ.
@@ -92,173 +120,363 @@ public:
 };
 } // namespace
 
-TpiSource::TpiSource(TpiKind k, const ObjFile *f) : kind(k), file(f) {}
+static std::vector<TpiSource *> gc;
 
-TpiSource *makeTpiSource(const ObjFile *f) {
-  return make<TpiSource>(TpiSource::Regular, f);
+TpiSource::TpiSource(TpiKind k, ObjFile *f) : kind(k), file(f) {
+  gc.push_back(this);
 }
 
-TpiSource *makeUseTypeServerSource(const ObjFile *f,
-                                              const TypeServer2Record *ts) {
-  TypeServerSource::enqueue(f, *ts);
-  return make<UseTypeServerSource>(f, ts);
+// Vtable key method.
+TpiSource::~TpiSource() = default;
+
+TpiSource *lld::coff::makeTpiSource(ObjFile *file) {
+  return make<TpiSource>(TpiSource::Regular, file);
 }
 
-TpiSource *makePrecompSource(const ObjFile *f) {
-  return make<PrecompSource>(f);
+TpiSource *lld::coff::makeTypeServerSource(PDBInputFile *pdbInputFile) {
+  return make<TypeServerSource>(pdbInputFile);
 }
 
-TpiSource *makeUsePrecompSource(const ObjFile *f,
-                                           const PrecompRecord *precomp) {
-  return make<UsePrecompSource>(f, precomp);
+TpiSource *lld::coff::makeUseTypeServerSource(ObjFile *file,
+                                              TypeServer2Record ts) {
+  return make<UseTypeServerSource>(file, ts);
 }
 
-template <>
-const PrecompRecord &retrieveDependencyInfo(const TpiSource *source) {
-  assert(source->kind == TpiSource::UsingPCH);
-  return ((const UsePrecompSource *)source)->precompDependency;
+TpiSource *lld::coff::makePrecompSource(ObjFile *file) {
+  return make<PrecompSource>(file);
 }
 
-template <>
-const TypeServer2Record &retrieveDependencyInfo(const TpiSource *source) {
-  assert(source->kind == TpiSource::UsingPDB);
-  return ((const UseTypeServerSource *)source)->typeServerDependency;
+TpiSource *lld::coff::makeUsePrecompSource(ObjFile *file,
+                                           PrecompRecord precomp) {
+  return make<UsePrecompSource>(file, precomp);
 }
 
-std::map<std::string, std::pair<std::string, TypeServerSource *>>
-    TypeServerSource::instances;
-
-// Make a PDB path assuming the PDB is in the same folder as the OBJ
-static std::string getPdbBaseName(const ObjFile *file, StringRef tSPath) {
-  StringRef localPath =
-      !file->parentName.empty() ? file->parentName : file->getName();
-  SmallString<128> path = sys::path::parent_path(localPath);
-
-  // Currently, type server PDBs are only created by MSVC cl, which only runs
-  // on Windows, so we can assume type server paths are Windows style.
-  sys::path::append(path, sys::path::filename(tSPath, sys::path::Style::windows));
-  return path.str();
+void TpiSource::forEachSource(llvm::function_ref<void(TpiSource *)> fn) {
+  for_each(gc, fn);
 }
 
-// The casing of the PDB path stamped in the OBJ can differ from the actual path
-// on disk. With this, we ensure to always use lowercase as a key for the
-// PDBInputFile::Instances map, at least on Windows.
-static std::string normalizePdbPath(StringRef path) {
+std::map<codeview::GUID, TypeServerSource *> TypeServerSource::mappings;
+
+std::map<uint32_t, PrecompSource *> PrecompSource::mappings;
+
+// A COFF .debug$H section is currently a clang extension.  This function checks
+// if a .debug$H section is in a format that we expect / understand, so that we
+// can ignore any sections which are coincidentally also named .debug$H but do
+// not contain a format we recognize.
+static bool canUseDebugH(ArrayRef<uint8_t> debugH) {
+  if (debugH.size() < sizeof(object::debug_h_header))
+    return false;
+  auto *header =
+      reinterpret_cast<const object::debug_h_header *>(debugH.data());
+  debugH = debugH.drop_front(sizeof(object::debug_h_header));
+  return header->Magic == COFF::DEBUG_HASHES_SECTION_MAGIC &&
+         header->Version == 0 &&
+         header->HashAlgorithm == uint16_t(GlobalTypeHashAlg::SHA1_8) &&
+         (debugH.size() % 8 == 0);
+}
+
+static Optional<ArrayRef<uint8_t>> getDebugH(ObjFile *file) {
+  SectionChunk *sec =
+      SectionChunk::findByName(file->getDebugChunks(), ".debug$H");
+  if (!sec)
+    return llvm::None;
+  ArrayRef<uint8_t> contents = sec->getContents();
+  if (!canUseDebugH(contents))
+    return None;
+  return contents;
+}
+
+static ArrayRef<GloballyHashedType>
+getHashesFromDebugH(ArrayRef<uint8_t> debugH) {
+  assert(canUseDebugH(debugH));
+
+  debugH = debugH.drop_front(sizeof(object::debug_h_header));
+  uint32_t count = debugH.size() / sizeof(GloballyHashedType);
+  return {reinterpret_cast<const GloballyHashedType *>(debugH.data()), count};
+}
+
+// Merge .debug$T for a generic object file.
+Expected<const CVIndexMap *> TpiSource::mergeDebugT(TypeMerger *m,
+                                                    CVIndexMap *indexMap) {
+  CVTypeArray types;
+  BinaryStreamReader reader(file->debugTypes, support::little);
+  cantFail(reader.readArray(types, reader.getLength()));
+
+  if (config->debugGHashes) {
+    ArrayRef<GloballyHashedType> hashes;
+    std::vector<GloballyHashedType> ownedHashes;
+    if (Optional<ArrayRef<uint8_t>> debugH = getDebugH(file))
+      hashes = getHashesFromDebugH(*debugH);
+    else {
+      ownedHashes = GloballyHashedType::hashTypes(types);
+      hashes = ownedHashes;
+    }
+
+    if (auto err = mergeTypeAndIdRecords(m->globalIDTable, m->globalTypeTable,
+                                         indexMap->tpiMap, types, hashes,
+                                         file->pchSignature))
+      fatal("codeview::mergeTypeAndIdRecords failed: " +
+            toString(std::move(err)));
+  } else {
+    if (auto err =
+            mergeTypeAndIdRecords(m->idTable, m->typeTable, indexMap->tpiMap,
+                                  types, file->pchSignature))
+      fatal("codeview::mergeTypeAndIdRecords failed: " +
+            toString(std::move(err)));
+  }
+
+  if (config->showSummary) {
+    // Count how many times we saw each type record in our input. This
+    // calculation requires a second pass over the type records to classify each
+    // record as a type or index. This is slow, but this code executes when
+    // collecting statistics.
+    m->tpiCounts.resize(m->getTypeTable().size());
+    m->ipiCounts.resize(m->getIDTable().size());
+    uint32_t srcIdx = 0;
+    for (CVType &ty : types) {
+      TypeIndex dstIdx = indexMap->tpiMap[srcIdx++];
+      // Type merging may fail, so a complex source type may become the simple
+      // NotTranslated type, which cannot be used as an array index.
+      if (dstIdx.isSimple())
+        continue;
+      SmallVectorImpl<uint32_t> &counts =
+          isIdRecord(ty.kind()) ? m->ipiCounts : m->tpiCounts;
+      ++counts[dstIdx.toArrayIndex()];
+    }
+  }
+
+  return indexMap;
+}
+
+// Merge types from a type server PDB.
+Expected<const CVIndexMap *> TypeServerSource::mergeDebugT(TypeMerger *m,
+                                                           CVIndexMap *) {
+  pdb::PDBFile &pdbFile = pdbInputFile->session->getPDBFile();
+  Expected<pdb::TpiStream &> expectedTpi = pdbFile.getPDBTpiStream();
+  if (auto e = expectedTpi.takeError())
+    fatal("Type server does not have TPI stream: " + toString(std::move(e)));
+  pdb::TpiStream *maybeIpi = nullptr;
+  if (pdbFile.hasPDBIpiStream()) {
+    Expected<pdb::TpiStream &> expectedIpi = pdbFile.getPDBIpiStream();
+    if (auto e = expectedIpi.takeError())
+      fatal("Error getting type server IPI stream: " + toString(std::move(e)));
+    maybeIpi = &*expectedIpi;
+  }
+
+  if (config->debugGHashes) {
+    // PDBs do not actually store global hashes, so when merging a type server
+    // PDB we have to synthesize global hashes.  To do this, we first synthesize
+    // global hashes for the TPI stream, since it is independent, then we
+    // synthesize hashes for the IPI stream, using the hashes for the TPI stream
+    // as inputs.
+    auto tpiHashes = GloballyHashedType::hashTypes(expectedTpi->typeArray());
+    Optional<uint32_t> endPrecomp;
+    // Merge TPI first, because the IPI stream will reference type indices.
+    if (auto err =
+            mergeTypeRecords(m->globalTypeTable, tsIndexMap.tpiMap,
+                             expectedTpi->typeArray(), tpiHashes, endPrecomp))
+      fatal("codeview::mergeTypeRecords failed: " + toString(std::move(err)));
+
+    // Merge IPI.
+    if (maybeIpi) {
+      auto ipiHashes =
+          GloballyHashedType::hashIds(maybeIpi->typeArray(), tpiHashes);
+      if (auto err = mergeIdRecords(m->globalIDTable, tsIndexMap.tpiMap,
+                                    tsIndexMap.ipiMap, maybeIpi->typeArray(),
+                                    ipiHashes))
+        fatal("codeview::mergeIdRecords failed: " + toString(std::move(err)));
+    }
+  } else {
+    // Merge TPI first, because the IPI stream will reference type indices.
+    if (auto err = mergeTypeRecords(m->typeTable, tsIndexMap.tpiMap,
+                                    expectedTpi->typeArray()))
+      fatal("codeview::mergeTypeRecords failed: " + toString(std::move(err)));
+
+    // Merge IPI.
+    if (maybeIpi) {
+      if (auto err = mergeIdRecords(m->idTable, tsIndexMap.tpiMap,
+                                    tsIndexMap.ipiMap, maybeIpi->typeArray()))
+        fatal("codeview::mergeIdRecords failed: " + toString(std::move(err)));
+    }
+  }
+
+  if (config->showSummary) {
+    // Count how many times we saw each type record in our input. If a
+    // destination type index is present in the source to destination type index
+    // map, that means we saw it once in the input. Add it to our histogram.
+    m->tpiCounts.resize(m->getTypeTable().size());
+    m->ipiCounts.resize(m->getIDTable().size());
+    for (TypeIndex ti : tsIndexMap.tpiMap)
+      if (!ti.isSimple())
+        ++m->tpiCounts[ti.toArrayIndex()];
+    for (TypeIndex ti : tsIndexMap.ipiMap)
+      if (!ti.isSimple())
+        ++m->ipiCounts[ti.toArrayIndex()];
+  }
+
+  return &tsIndexMap;
+}
+
+Expected<const CVIndexMap *>
+UseTypeServerSource::mergeDebugT(TypeMerger *m, CVIndexMap *indexMap) {
+  const codeview::GUID &tsId = typeServerDependency.getGuid();
+  StringRef tsPath = typeServerDependency.getName();
+
+  TypeServerSource *tsSrc;
+  auto it = TypeServerSource::mappings.find(tsId);
+  if (it != TypeServerSource::mappings.end()) {
+    tsSrc = it->second;
+  } else {
+    // The file failed to load, lookup by name
+    PDBInputFile *pdb = PDBInputFile::findFromRecordPath(tsPath, file);
+    if (!pdb)
+      return createFileError(tsPath, errorCodeToError(std::error_code(
+                                         ENOENT, std::generic_category())));
+    // If an error occurred during loading, throw it now
+    if (pdb->loadErr && *pdb->loadErr)
+      return createFileError(tsPath, std::move(*pdb->loadErr));
+
+    tsSrc = (TypeServerSource *)pdb->debugTypesObj;
+  }
+
+  pdb::PDBFile &pdbSession = tsSrc->pdbInputFile->session->getPDBFile();
+  auto expectedInfo = pdbSession.getPDBInfoStream();
+  if (!expectedInfo)
+    return &tsSrc->tsIndexMap;
+
+  // Just because a file with a matching name was found and it was an actual
+  // PDB file doesn't mean it matches.  For it to match the InfoStream's GUID
+  // must match the GUID specified in the TypeServer2 record.
+  if (expectedInfo->getGuid() != typeServerDependency.getGuid())
+    return createFileError(
+        tsPath,
+        make_error<pdb::PDBError>(pdb::pdb_error_code::signature_out_of_date));
+
+  return &tsSrc->tsIndexMap;
+}
+
+static bool equalsPath(StringRef path1, StringRef path2) {
 #if defined(_WIN32)
-  return path.lower();
-#else // LINUX
-  return path;
+  return path1.equals_lower(path2);
+#else
+  return path1.equals(path2);
 #endif
 }
 
-// If existing, return the actual PDB path on disk.
-static Optional<std::string> findPdbPath(StringRef pdbPath,
-                                         const ObjFile *dependentFile) {
-  // Ensure the file exists before anything else. In some cases, if the path
-  // points to a removable device, Driver::enqueuePath() would fail with an
-  // error (EAGAIN, "resource unavailable try again") which we want to skip
-  // silently.
-  if (llvm::sys::fs::exists(pdbPath))
-    return normalizePdbPath(pdbPath);
-  std::string ret = getPdbBaseName(dependentFile, pdbPath);
-  if (llvm::sys::fs::exists(ret))
-    return normalizePdbPath(ret);
-  return None;
+// Find by name an OBJ provided on the command line
+static PrecompSource *findObjByName(StringRef fileNameOnly) {
+  SmallString<128> currentPath;
+  for (auto kv : PrecompSource::mappings) {
+    StringRef currentFileName = sys::path::filename(kv.second->file->getName(),
+                                                    sys::path::Style::windows);
+
+    // Compare based solely on the file name (link.exe behavior)
+    if (equalsPath(currentFileName, fileNameOnly))
+      return kv.second;
+  }
+  return nullptr;
 }
 
-// Fetch the PDB instance that was already loaded by the COFF Driver.
-Expected<TypeServerSource *>
-TypeServerSource::findFromFile(const ObjFile *dependentFile) {
-  const TypeServer2Record &ts =
-      retrieveDependencyInfo<TypeServer2Record>(dependentFile->debugTypesObj);
+Expected<const CVIndexMap *> findPrecompMap(ObjFile *file, PrecompRecord &pr) {
+  // Cross-compile warning: given that Clang doesn't generate LF_PRECOMP
+  // records, we assume the OBJ comes from a Windows build of cl.exe. Thusly,
+  // the paths embedded in the OBJs are in the Windows format.
+  SmallString<128> prFileName =
+      sys::path::filename(pr.getPrecompFilePath(), sys::path::Style::windows);
 
-  Optional<std::string> p = findPdbPath(ts.Name, dependentFile);
-  if (!p)
-    return createFileError(ts.Name, errorCodeToError(std::error_code(
-                                        ENOENT, std::generic_category())));
+  PrecompSource *precomp;
+  auto it = PrecompSource::mappings.find(pr.getSignature());
+  if (it != PrecompSource::mappings.end()) {
+    precomp = it->second;
+  } else {
+    // Lookup by name
+    precomp = findObjByName(prFileName);
+  }
 
-  auto it = TypeServerSource::instances.find(*p);
-  // The PDB file exists on disk, at this point we expect it to have been
-  // inserted in the map by TypeServerSource::loadPDB()
-  assert(it != TypeServerSource::instances.end());
-
-  std::pair<std::string, TypeServerSource *> &pdb = it->second;
-
-  if (!pdb.second)
+  if (!precomp)
     return createFileError(
-        *p, createStringError(inconvertibleErrorCode(), pdb.first.c_str()));
+        prFileName,
+        make_error<pdb::PDBError>(pdb::pdb_error_code::no_matching_pch));
 
-  pdb::PDBFile &pdbFile = (pdb.second)->session->getPDBFile();
-  pdb::InfoStream &info = cantFail(pdbFile.getPDBInfoStream());
-
-  // Just because a file with a matching name was found doesn't mean it can be
-  // used. The GUID must match between the PDB header and the OBJ
-  // TypeServer2 record. The 'Age' is used by MSVC incremental compilation.
-  if (info.getGuid() != ts.getGuid())
+  if (pr.getSignature() != file->pchSignature)
     return createFileError(
-        ts.Name,
-        make_error<pdb::PDBError>(pdb::pdb_error_code::signature_out_of_date));
+        toString(file),
+        make_error<pdb::PDBError>(pdb::pdb_error_code::no_matching_pch));
 
-  return pdb.second;
+  if (pr.getSignature() != *precomp->file->pchSignature)
+    return createFileError(
+        toString(precomp->file),
+        make_error<pdb::PDBError>(pdb::pdb_error_code::no_matching_pch));
+
+  return &precomp->precompIndexMap;
 }
 
-// FIXME: Temporary interface until PDBLinker::maybeMergeTypeServerPDB() is
-// moved here.
-Expected<llvm::pdb::NativeSession *> findTypeServerSource(const ObjFile *f) {
-  Expected<TypeServerSource *> ts = TypeServerSource::findFromFile(f);
-  if (!ts)
-    return ts.takeError();
-  return ts.get()->session.get();
+/// Merges a precompiled headers TPI map into the current TPI map. The
+/// precompiled headers object will also be loaded and remapped in the
+/// process.
+static Expected<const CVIndexMap *>
+mergeInPrecompHeaderObj(ObjFile *file, CVIndexMap *indexMap,
+                        PrecompRecord &precomp) {
+  auto e = findPrecompMap(file, precomp);
+  if (!e)
+    return e.takeError();
+
+  const CVIndexMap *precompIndexMap = *e;
+  assert(precompIndexMap->isPrecompiledTypeMap);
+
+  if (precompIndexMap->tpiMap.empty())
+    return precompIndexMap;
+
+  assert(precomp.getStartTypeIndex() == TypeIndex::FirstNonSimpleIndex);
+  assert(precomp.getTypesCount() <= precompIndexMap->tpiMap.size());
+  // Use the previously remapped index map from the precompiled headers.
+  indexMap->tpiMap.append(precompIndexMap->tpiMap.begin(),
+                          precompIndexMap->tpiMap.begin() +
+                              precomp.getTypesCount());
+  return indexMap;
 }
 
-// Queue a PDB type server for loading in the COFF Driver
-void TypeServerSource::enqueue(const ObjFile *dependentFile,
-                               const TypeServer2Record &ts) {
-  // Start by finding where the PDB is located (either the record path or next
-  // to the OBJ file)
-  Optional<std::string> p = findPdbPath(ts.Name, dependentFile);
-  if (!p)
-    return;
-  auto it = TypeServerSource::instances.emplace(
-      *p, std::pair<std::string, TypeServerSource *>{});
-  if (!it.second)
-    return; // another OBJ already scheduled this PDB for load
+Expected<const CVIndexMap *>
+UsePrecompSource::mergeDebugT(TypeMerger *m, CVIndexMap *indexMap) {
+  // This object was compiled with /Yu, so process the corresponding
+  // precompiled headers object (/Yc) first. Some type indices in the current
+  // object are referencing data in the precompiled headers object, so we need
+  // both to be loaded.
+  auto e = mergeInPrecompHeaderObj(file, indexMap, precompDependency);
+  if (!e)
+    return e.takeError();
 
-  driver->enqueuePath(*p, false, false);
+  // Drop LF_PRECOMP record from the input stream, as it has been replaced
+  // with the precompiled headers Type stream in the mergeInPrecompHeaderObj()
+  // call above. Note that we can't just call Types.drop_front(), as we
+  // explicitly want to rebase the stream.
+  CVTypeArray types;
+  BinaryStreamReader reader(file->debugTypes, support::little);
+  cantFail(reader.readArray(types, reader.getLength()));
+  auto firstType = types.begin();
+  file->debugTypes = file->debugTypes.drop_front(firstType->RecordData.size());
+
+  return TpiSource::mergeDebugT(m, indexMap);
 }
 
-// Create an instance of TypeServerSource or an error string if the PDB couldn't
-// be loaded. The error message will be displayed later, when the referring OBJ
-// will be merged in. NOTE - a PDB load failure is not a link error: some
-// debug info will simply be missing from the final PDB - that is the default
-// accepted behavior.
-void loadTypeServerSource(llvm::MemoryBufferRef m) {
-  std::string path = normalizePdbPath(m.getBufferIdentifier());
-
-  Expected<TypeServerSource *> ts = TypeServerSource::getInstance(m);
-  if (!ts)
-    TypeServerSource::instances[path] = {toString(ts.takeError()), nullptr};
-  else
-    TypeServerSource::instances[path] = {{}, *ts};
+Expected<const CVIndexMap *> PrecompSource::mergeDebugT(TypeMerger *m,
+                                                        CVIndexMap *) {
+  // Note that we're not using the provided CVIndexMap. Instead, we use our
+  // local one. Precompiled headers objects need to save the index map for
+  // further reference by other objects which use the precompiled headers.
+  return TpiSource::mergeDebugT(m, &precompIndexMap);
 }
 
-Expected<TypeServerSource *> TypeServerSource::getInstance(MemoryBufferRef m) {
-  std::unique_ptr<llvm::pdb::IPDBSession> iSession;
-  Error err = pdb::NativeSession::createFromPdb(
-      MemoryBuffer::getMemBuffer(m, false), iSession);
-  if (err)
-    return std::move(err);
-
-  std::unique_ptr<llvm::pdb::NativeSession> session(
-      static_cast<pdb::NativeSession *>(iSession.release()));
-
-  pdb::PDBFile &pdbFile = session->getPDBFile();
-  Expected<pdb::InfoStream &> info = pdbFile.getPDBInfoStream();
-  // All PDB Files should have an Info stream.
-  if (!info)
-    return info.takeError();
-  return make<TypeServerSource>(m, session.release());
+uint32_t TpiSource::countTypeServerPDBs() {
+  return TypeServerSource::mappings.size();
 }
 
-} // namespace coff
-} // namespace lld
+uint32_t TpiSource::countPrecompObjs() {
+  return PrecompSource::mappings.size();
+}
+
+void TpiSource::clear() {
+  gc.clear();
+  TypeServerSource::mappings.clear();
+  PrecompSource::mappings.clear();
+}

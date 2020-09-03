@@ -147,7 +147,60 @@ public:
     return llvm::None;
   }
 
-protected:
+  /// Dump the entire Gsym data contained in this object.
+  ///
+  /// \param  OS The output stream to dump to.
+  void dump(raw_ostream &OS);
+
+  /// Dump a FunctionInfo object.
+  ///
+  /// This function will convert any string table indexes and file indexes
+  /// into human readable format.
+  ///
+  /// \param  OS The output stream to dump to.
+  ///
+  /// \param FI The object to dump.
+  void dump(raw_ostream &OS, const FunctionInfo &FI);
+
+  /// Dump a LineTable object.
+  ///
+  /// This function will convert any string table indexes and file indexes
+  /// into human readable format.
+  ///
+  ///
+  /// \param  OS The output stream to dump to.
+  ///
+  /// \param LT The object to dump.
+  void dump(raw_ostream &OS, const LineTable &LT);
+
+  /// Dump a InlineInfo object.
+  ///
+  /// This function will convert any string table indexes and file indexes
+  /// into human readable format.
+  ///
+  /// \param  OS The output stream to dump to.
+  ///
+  /// \param II The object to dump.
+  ///
+  /// \param Indent The indentation as number of spaces. Used for recurive
+  /// dumping.
+  void dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent = 0);
+
+  /// Dump a FileEntry object.
+  ///
+  /// This function will convert any string table indexes into human readable
+  /// format.
+  ///
+  /// \param  OS The output stream to dump to.
+  ///
+  /// \param FE The object to dump.
+  void dump(raw_ostream &OS, Optional<FileEntry> FE);
+
+  /// Get the number of addresses in this Gsym file.
+  uint32_t getNumAddresses() const {
+    return Hdr->NumAddresses;
+  }
+
   /// Gets an address from the address table.
   ///
   /// Addresses are stored as offsets frrom the gsym::Header::BaseAddress.
@@ -156,6 +209,8 @@ protected:
   /// \returns A resolved virtual address for adddress in the address table
   /// or llvm::None if Index is out of bounds.
   Optional<uint64_t> getAddress(size_t Index) const;
+
+protected:
 
   /// Get an appropriate address info offsets array.
   ///
@@ -202,11 +257,15 @@ protected:
   /// \returns The matching address offset index. This index will be used to
   /// extract the FunctionInfo data's offset from the AddrInfoOffsets array.
   template <class T>
-  uint64_t getAddressOffsetIndex(const uint64_t AddrOffset) const {
+  llvm::Optional<uint64_t> getAddressOffsetIndex(const uint64_t AddrOffset) const {
     ArrayRef<T> AIO = getAddrOffsets<T>();
     const auto Begin = AIO.begin();
     const auto End = AIO.end();
     auto Iter = std::lower_bound(Begin, End, AddrOffset);
+    // Watch for addresses that fall between the gsym::Header::BaseAddress and
+    // the first address offset.
+    if (Iter == Begin && AddrOffset < *Begin)
+      return llvm::None;
     if (Iter == End || AddrOffset < *Iter)
       --Iter;
     return std::distance(Begin, Iter);

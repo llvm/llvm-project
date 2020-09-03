@@ -113,7 +113,7 @@ define void @byval_empty_callee(%EmptyStruct* byval %ptr) {
 ; CHECK-NEXT: local.tee $push[[L10:.+]]=, $[[SP:.+]]=, $pop[[L11]]{{$}}
 ; CHECK-NEXT: global.set __stack_pointer, $pop[[L10]]{{$}}
 ; CHECK-NEXT: i32.const $push[[L0:.+]]=, 131072
-; CHECK-NEXT: i32.call       $push[[L11:.+]]=, memcpy, $[[SP]], ${{.+}}, $pop{{.+}}
+; CHECK-NEXT: call       $push[[L11:.+]]=, memcpy, $[[SP]], ${{.+}}, $pop{{.+}}
 ; CHECK-NEXT: local.tee      $push[[L9:.+]]=, $[[SP:.+]]=, $pop[[L11]]{{$}}
 ; CHECK-NEXT: call           big_byval_callee,
 %big = type [131072 x i8]

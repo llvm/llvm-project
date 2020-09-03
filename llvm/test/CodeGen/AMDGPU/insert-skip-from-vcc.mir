@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass si-insert-skips -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass si-insert-skips -verify-machineinstrs -o - %s | FileCheck -check-prefix=W32 %s
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass si-pre-emit-peephole -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass si-pre-emit-peephole -verify-machineinstrs -o - %s | FileCheck -check-prefix=W32 %s
 
 ---
 # GCN-LABEL: name: and_execz_mov_vccz
@@ -305,7 +305,7 @@ body:             |
 # GCN-LABEL: name: and_execz_imm_vccz_liveout_scc
 # GCN:      $vcc = S_AND_B64 $exec, -1, implicit-def $scc
 # GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
-# GCN-NEXT  S_ENDPGM 0, implicit $scc
+# GCN-NEXT: S_ENDPGM 0, implicit $scc
 name:            and_execz_imm_vccz_liveout_scc
 body:             |
   bb.0:
@@ -336,5 +336,82 @@ body:             |
     $sgpr0 = S_MOV_B32 -1
     $vcc_lo = S_AND_B32 $exec_lo, killed $sgpr0, implicit-def dead $scc
     S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: andn2_execz_mov_vccz
+# GCN-NOT: S_MOV_
+# GCN-NOT: S_ANDN2_
+# GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            andn2_execz_mov_vccz
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 0
+    $vcc = S_ANDN2_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: andn2_branch_mov_vccz
+# GCN-NOT: S_MOV_
+# GCN-NOT: S_ANDN2_
+# GCN: S_BRANCH %bb.1
+name:            andn2_branch_mov_vccz
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $vcc = S_ANDN2_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: andn2_execnz_mov_vccnz
+# GCN-NOT: S_MOV_
+# GCN-NOT: S_ANDN2_
+# GCN: S_CBRANCH_EXECNZ %bb.1, implicit $exec
+name:            andn2_execnz_mov_vccnz
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 0
+    $vcc = S_ANDN2_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: andn2_no_branch_mov_vccnz
+# GCN-NOT: S_MOV_
+# GCN-NOT: S_ANDN2_
+# GCN-NOT: S_CBRANCH
+# GCN-NOT: S_BRANCH
+name:            andn2_no_branch_mov_vccnz
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $vcc = S_ANDN2_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
     S_ENDPGM 0
 ...

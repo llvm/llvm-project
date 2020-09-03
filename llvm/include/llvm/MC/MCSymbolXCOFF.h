@@ -24,6 +24,16 @@ public:
 
   static bool classof(const MCSymbol *S) { return S->isXCOFF(); }
 
+  static StringRef getUnqualifiedName(StringRef Name) {
+    if (Name.back() == ']') {
+      StringRef Lhs, Rhs;
+      std::tie(Lhs, Rhs) = Name.rsplit('[');
+      assert(!Rhs.empty() && "Invalid SMC format in XCOFF symbol.");
+      return Lhs;
+    }
+    return Name;
+  }
+
   void setStorageClass(XCOFF::StorageClass SC) {
     assert((!StorageClass.hasValue() || StorageClass.getValue() == SC) &&
            "Redefining StorageClass of XCOFF MCSymbol.");
@@ -36,35 +46,33 @@ public:
     return StorageClass.getValue();
   }
 
-  void setContainingCsect(MCSectionXCOFF *C) {
-    assert((!ContainingCsect || ContainingCsect == C) &&
-           "Trying to set a containing csect that doesn't match the one that"
-           "this symbol is already mapped to.");
-    ContainingCsect = C;
-  }
+  StringRef getUnqualifiedName() const { return getUnqualifiedName(getName()); }
 
-  MCSectionXCOFF *getContainingCsect() const {
-    assert(ContainingCsect &&
-           "Trying to get containing csect but none was set.");
-    return ContainingCsect;
-  }
+  bool hasRepresentedCsectSet() const { return RepresentedCsect != nullptr; }
 
-  bool hasContainingCsect() const { return ContainingCsect != nullptr; }
+  MCSectionXCOFF *getRepresentedCsect() const;
 
-  StringRef getUnqualifiedName() const {
-    const StringRef name = getName();
-    if (name.back() == ']') {
-      StringRef lhs, rhs;
-      std::tie(lhs, rhs) = name.rsplit('[');
-      assert(!rhs.empty() && "Invalid SMC format in XCOFF symbol.");
-      return lhs;
-    }
-    return name;
+  void setRepresentedCsect(MCSectionXCOFF *C);
+
+  void setVisibilityType(XCOFF::VisibilityType SVT) { VisibilityType = SVT; };
+
+  XCOFF::VisibilityType getVisibilityType() const { return VisibilityType; }
+
+  bool hasRename() const { return !SymbolTableName.empty(); }
+
+  void setSymbolTableName(StringRef STN) { SymbolTableName = STN; }
+
+  StringRef getSymbolTableName() const {
+    if (hasRename())
+      return SymbolTableName;
+    return getUnqualifiedName();
   }
 
 private:
   Optional<XCOFF::StorageClass> StorageClass;
-  MCSectionXCOFF *ContainingCsect = nullptr;
+  MCSectionXCOFF *RepresentedCsect = nullptr;
+  XCOFF::VisibilityType VisibilityType = XCOFF::SYM_V_UNSPECIFIED;
+  StringRef SymbolTableName;
 };
 
 } // end namespace llvm

@@ -318,8 +318,8 @@ define <4 x i32> @test_urem_even_one(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI11_4]
 ; CHECK-NEXT:    neg v3.4s, v3.4s
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mls v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    bit v1.16b, v0.16b, v2.16b
+; CHECK-NEXT:    mls v0.4s, v1.4s, v4.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -351,8 +351,8 @@ define <4 x i32> @test_urem_odd_even_one(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI12_4]
 ; CHECK-NEXT:    neg v3.4s, v3.4s
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mls v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    bit v1.16b, v0.16b, v2.16b
+; CHECK-NEXT:    mls v0.4s, v1.4s, v4.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -577,8 +577,8 @@ define <4 x i32> @test_urem_even_allones_and_one(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI20_4]
 ; CHECK-NEXT:    neg v3.4s, v3.4s
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mls v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    bit v1.16b, v0.16b, v2.16b
+; CHECK-NEXT:    mls v0.4s, v1.4s, v4.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -606,8 +606,8 @@ define <4 x i32> @test_urem_odd_even_allones_and_one(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI21_3]
 ; CHECK-NEXT:    neg v2.4s, v2.4s
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mls v0.4s, v3.4s, v4.4s
+; CHECK-NEXT:    bit v1.16b, v0.16b, v3.16b
+; CHECK-NEXT:    mls v0.4s, v1.4s, v4.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -637,8 +637,8 @@ define <4 x i32> @test_urem_odd_poweroftwo_and_one(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI22_3]
 ; CHECK-NEXT:    neg v2.4s, v2.4s
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mls v0.4s, v3.4s, v4.4s
+; CHECK-NEXT:    bit v1.16b, v0.16b, v3.16b
+; CHECK-NEXT:    mls v0.4s, v1.4s, v4.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -670,8 +670,8 @@ define <4 x i32> @test_urem_even_poweroftwo_and_one(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI23_4]
 ; CHECK-NEXT:    neg v3.4s, v3.4s
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mls v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    bit v1.16b, v0.16b, v2.16b
+; CHECK-NEXT:    mls v0.4s, v1.4s, v4.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -699,8 +699,8 @@ define <4 x i32> @test_urem_odd_even_poweroftwo_and_one(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI24_3]
 ; CHECK-NEXT:    neg v2.4s, v2.4s
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mls v0.4s, v3.4s, v4.4s
+; CHECK-NEXT:    bit v1.16b, v0.16b, v3.16b
+; CHECK-NEXT:    mls v0.4s, v1.4s, v4.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -729,8 +729,8 @@ define <4 x i32> @test_urem_odd_allones_and_poweroftwo_and_one(<4 x i32> %X) nou
 ; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI25_3]
 ; CHECK-NEXT:    neg v2.4s, v2.4s
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mls v0.4s, v3.4s, v4.4s
+; CHECK-NEXT:    bit v1.16b, v0.16b, v3.16b
+; CHECK-NEXT:    mls v0.4s, v1.4s, v4.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -761,8 +761,8 @@ define <4 x i32> @test_urem_even_allones_and_poweroftwo_and_one(<4 x i32> %X) no
 ; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI26_4]
 ; CHECK-NEXT:    neg v3.4s, v3.4s
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mls v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    bit v1.16b, v0.16b, v2.16b
+; CHECK-NEXT:    mls v0.4s, v1.4s, v4.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b

@@ -14,8 +14,8 @@ entry:
   %add = add i32 %sub, %rem
   %2 = tail call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 -1)
   %3 = tail call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 1)
-  %4 = tail call <512 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %add)
-  %5 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32> %3, <512 x i1> %4, i32 12)
+  %4 = tail call <64 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %add)
+  %5 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32> %3, <64 x i1> %4, i32 12)
   %and4 = and i32 %add, 511
   %cmp = icmp eq i32 %and4, 0
   %sMaskR.0 = select i1 %cmp, <16 x i32> %2, <16 x i32> %5
@@ -23,8 +23,8 @@ entry:
   br i1 %cmp547, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:                                   ; preds = %entry
-  %6 = tail call <512 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %boundary)
-  %7 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<512 x i1> %6, i32 16843009)
+  %6 = tail call <64 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %boundary)
+  %7 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %6, i32 16843009)
   %8 = tail call <16 x i32> @llvm.hexagon.V6.vnot(<16 x i32> %7)
   %9 = add i32 %rem, %xsize
   %10 = add i32 %9, -1
@@ -59,9 +59,9 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 }
 
 declare <16 x i32> @llvm.hexagon.V6.lvsplatw(i32) #1
-declare <512 x i1> @llvm.hexagon.V6.pred.scalar2(i32) #1
-declare <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32>, <512 x i1>, i32) #1
-declare <16 x i32> @llvm.hexagon.V6.vandqrt(<512 x i1>, i32) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.scalar2(i32) #1
+declare <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32>, <64 x i1>, i32) #1
+declare <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1>, i32) #1
 declare <16 x i32> @llvm.hexagon.V6.vnot(<16 x i32>) #1
 declare <16 x i32> @llvm.hexagon.V6.vand(<16 x i32>, <16 x i32>) #1
 

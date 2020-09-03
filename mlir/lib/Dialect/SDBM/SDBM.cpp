@@ -1,6 +1,6 @@
 //===- SDBM.cpp - MLIR SDBM implementation --------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -187,7 +187,7 @@ public:
 SDBM SDBM::get(ArrayRef<SDBMExpr> inequalities, ArrayRef<SDBMExpr> equalities) {
   SDBM result;
 
-  // TODO(zinenko): consider detecting equalities in the list of inequalities.
+  // TODO: consider detecting equalities in the list of inequalities.
   // This is potentially expensive and requires to
   //   - create a list of negated inequalities (may allocate under lock);
   //   - perform a pairwise comparison of direct and negated inequalities;
@@ -289,7 +289,7 @@ SDBM SDBM::get(ArrayRef<SDBMExpr> inequalities, ArrayRef<SDBMExpr> equalities) {
   // value is positive, the set defined by SDBM is trivially empty.  We store
   // this value anyway and continue processing to maintain the correspondence
   // between the matrix form and the list-of-SDBMExpr form.
-  // TODO(zinenko): we may want to reconsider this once we have canonicalization
+  // TODO: we may want to reconsider this once we have canonicalization
   // or simplification in place
   auto updateMatrix = [](SDBM &sdbm, const SDBMBuilderResult &r) {
     for (auto positivePos : r.positivePos) {
@@ -512,12 +512,12 @@ void SDBM::print(raw_ostream &os) {
       return "cst";
     matrixPos -= 1;
     if (matrixPos < numDims)
-      return llvm::formatv("d{0}", matrixPos);
+      return std::string(llvm::formatv("d{0}", matrixPos));
     matrixPos -= numDims;
     if (matrixPos < numSymbols)
-      return llvm::formatv("s{0}", matrixPos);
+      return std::string(llvm::formatv("s{0}", matrixPos));
     matrixPos -= numSymbols;
-    return llvm::formatv("t{0}", matrixPos);
+    return std::string(llvm::formatv("t{0}", matrixPos));
   };
 
   // Header row.

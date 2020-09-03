@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_IOHandler_h_
-#define liblldb_IOHandler_h_
+#ifndef LLDB_CORE_IOHANDLER_H
+#define LLDB_CORE_IOHANDLER_H
 
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Host/Config.h"
@@ -180,7 +180,8 @@ protected:
   bool m_active;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(IOHandler);
+  IOHandler(const IOHandler &) = delete;
+  const IOHandler &operator=(const IOHandler &) = delete;
 };
 
 /// A delegate class for use with IOHandler subclasses.
@@ -602,9 +603,10 @@ protected:
   bool m_repl_enabled = false;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(IOHandlerStack);
+  IOHandlerStack(const IOHandlerStack &) = delete;
+  const IOHandlerStack &operator=(const IOHandlerStack &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_IOHandler_h_
+#endif // LLDB_CORE_IOHANDLER_H

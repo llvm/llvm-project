@@ -11,6 +11,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Object/Wasm.h"
 
 using namespace llvm;
 using namespace object;
@@ -27,12 +28,17 @@ int llvm::object::compareAddress(const SymEntry *A, const SymEntry *B) {
 static unsigned getSectionID(const ObjectFile &O, SectionRef Sec) {
   if (auto *M = dyn_cast<MachOObjectFile>(&O))
     return M->getSectionID(Sec);
+  if (isa<WasmObjectFile>(&O))
+    return Sec.getIndex();
+
   return cast<COFFObjectFile>(O).getSectionID(Sec);
 }
 
 static unsigned getSymbolSectionID(const ObjectFile &O, SymbolRef Sym) {
   if (auto *M = dyn_cast<MachOObjectFile>(&O))
     return M->getSymbolSectionID(Sym);
+  if (const auto *M = dyn_cast<WasmObjectFile>(&O))
+    return M->getSymbolSectionId(Sym);
   return cast<COFFObjectFile>(O).getSymbolSectionID(Sym);
 }
 
@@ -55,8 +61,11 @@ llvm::object::computeSymbolSizes(const ObjectFile &O) {
   unsigned SymNum = 0;
   for (symbol_iterator I = O.symbol_begin(), E = O.symbol_end(); I != E; ++I) {
     SymbolRef Sym = *I;
-    uint64_t Value = Sym.getValue();
-    Addresses.push_back({I, Value, SymNum, getSymbolSectionID(O, Sym)});
+    Expected<uint64_t> ValueOrErr = Sym.getValue();
+    if (!ValueOrErr)
+      // TODO: Actually report errors helpfully.
+      report_fatal_error(ValueOrErr.takeError());
+    Addresses.push_back({I, *ValueOrErr, SymNum, getSymbolSectionID(O, Sym)});
     ++SymNum;
   }
   for (SectionRef Sec : O.sections()) {

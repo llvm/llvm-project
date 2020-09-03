@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Ref.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace clang {
 namespace clangd {
@@ -14,8 +15,8 @@ namespace clangd {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, RefKind K) {
   if (K == RefKind::Unknown)
     return OS << "Unknown";
-  static constexpr std::array<const char *, 3> Messages = {"Decl", "Def",
-                                                           "Ref"};
+  static constexpr std::array<const char *, 4> Messages = {"Decl", "Def", "Ref",
+                                                           "Spelled"};
   bool VisitedOnce = false;
   for (unsigned I = 0; I < Messages.size(); ++I) {
     if (static_cast<uint8_t>(K) & 1u << I) {
@@ -33,27 +34,34 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Ref &R) {
 }
 
 void RefSlab::Builder::insert(const SymbolID &ID, const Ref &S) {
-  auto &M = Refs[ID];
-  if (M.count(S))
-    return;
-  Ref R = S;
-  R.Location.FileURI =
-      UniqueStrings.save(R.Location.FileURI).data();
-  M.insert(std::move(R));
+  Entry E = {ID, S};
+  E.Reference.Location.FileURI = UniqueStrings.save(S.Location.FileURI).data();
+  Entries.insert(std::move(E));
 }
 
 RefSlab RefSlab::Builder::build() && {
-  // We can reuse the arena, as it only has unique strings and we need them all.
-  // Reallocate refs on the arena to reduce waste and indirections when reading.
   std::vector<std::pair<SymbolID, llvm::ArrayRef<Ref>>> Result;
-  Result.reserve(Refs.size());
-  size_t NumRefs = 0;
-  for (auto &Sym : Refs) {
-    std::vector<Ref> SymRefs(Sym.second.begin(), Sym.second.end());
-    NumRefs += SymRefs.size();
-    Result.emplace_back(Sym.first, llvm::ArrayRef<Ref>(SymRefs).copy(Arena));
+  // We'll reuse the arena, as it only has unique strings and we need them all.
+  // We need to group refs by symbol and form contiguous arrays on the arena.
+  std::vector<std::pair<SymbolID, const Ref *>> Flat;
+  Flat.reserve(Entries.size());
+  for (const Entry &E : Entries)
+    Flat.emplace_back(E.Symbol, &E.Reference);
+  // Group by SymbolID.
+  llvm::sort(Flat, llvm::less_first());
+  std::vector<Ref> Refs;
+  // Loop over symbols, copying refs for each onto the arena.
+  for (auto I = Flat.begin(), End = Flat.end(); I != End;) {
+    SymbolID Sym = I->first;
+    Refs.clear();
+    do {
+      Refs.push_back(*I->second);
+      ++I;
+    } while (I != End && I->first == Sym);
+    llvm::sort(Refs); // By file, affects xrefs display order.
+    Result.emplace_back(Sym, llvm::ArrayRef<Ref>(Refs).copy(Arena));
   }
-  return RefSlab(std::move(Result), std::move(Arena), NumRefs);
+  return RefSlab(std::move(Result), std::move(Arena), Entries.size());
 }
 
 } // namespace clangd

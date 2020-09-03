@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/NativeFormatting.h"
-
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
-
+#include "llvm/Support/raw_ostream.h"
 #include <float.h>
 
 using namespace llvm;
@@ -89,7 +88,7 @@ static void write_signed(raw_ostream &S, T N, size_t MinDigits,
                          IntegerStyle Style) {
   static_assert(std::is_signed<T>::value, "Value is not signed!");
 
-  using UnsignedT = typename std::make_unsigned<T>::type;
+  using UnsignedT = std::make_unsigned_t<T>;
 
   if (N >= 0) {
     write_unsigned(S, static_cast<UnsignedT>(N), MinDigits, Style);

@@ -71,7 +71,7 @@ void DwarfStringPool::emitStringOffsetsTableHeader(AsmPrinter &Asm,
   // referenced by most unit headers via DW_AT_str_offsets_base.
   // Split units do not use the attribute.
   if (StartSym)
-    Asm.OutStreamer->EmitLabel(StartSym);
+    Asm.OutStreamer->emitLabel(StartSym);
 }
 
 void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
@@ -100,12 +100,12 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
 
     // Emit a label for reference from debug information entries.
     if (ShouldCreateSymbols)
-      Asm.OutStreamer->EmitLabel(Entry->getValue().Symbol);
+      Asm.OutStreamer->emitLabel(Entry->getValue().Symbol);
 
     // Emit the string itself with a terminating null byte.
     Asm.OutStreamer->AddComment("string offset=" +
                                 Twine(Entry->getValue().Offset));
-    Asm.OutStreamer->EmitBytes(
+    Asm.OutStreamer->emitBytes(
         StringRef(Entry->getKeyData(), Entry->getKeyLength() + 1));
   }
 
@@ -125,6 +125,6 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
       if (UseRelativeOffsets)
         Asm.emitDwarfStringOffset(Entry->getValue());
       else
-        Asm.OutStreamer->EmitIntValue(Entry->getValue().Offset, size);
+        Asm.OutStreamer->emitIntValue(Entry->getValue().Offset, size);
   }
 }

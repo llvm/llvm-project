@@ -1,4 +1,4 @@
-//===-- SBError.cpp ---------------------------------------------*- C++ -*-===//
+//===-- SBError.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,7 +25,7 @@ SBError::SBError(const SBError &rhs) : m_opaque_up() {
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBError::~SBError() {}
+SBError::~SBError() = default;
 
 const SBError &SBError::operator=(const SBError &rhs) {
   LLDB_RECORD_METHOD(const lldb::SBError &,
@@ -149,7 +149,7 @@ SBError::operator bool() const {
 
 void SBError::CreateIfNeeded() {
   if (m_opaque_up == nullptr)
-    m_opaque_up.reset(new Status());
+    m_opaque_up = std::make_unique<Status>();
 }
 
 lldb_private::Status *SBError::operator->() { return m_opaque_up.get(); }

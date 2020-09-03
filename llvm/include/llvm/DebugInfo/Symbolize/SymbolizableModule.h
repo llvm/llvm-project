@@ -25,11 +25,12 @@ public:
   virtual ~SymbolizableModule() = default;
 
   virtual DILineInfo symbolizeCode(object::SectionedAddress ModuleOffset,
-                                   FunctionNameKind FNKind,
+                                   DILineInfoSpecifier LineInfoSpecifier,
                                    bool UseSymbolTable) const = 0;
   virtual DIInliningInfo
   symbolizeInlinedCode(object::SectionedAddress ModuleOffset,
-                       FunctionNameKind FNKind, bool UseSymbolTable) const = 0;
+                       DILineInfoSpecifier LineInfoSpecifier,
+                       bool UseSymbolTable) const = 0;
   virtual DIGlobal
   symbolizeData(object::SectionedAddress ModuleOffset) const = 0;
   virtual std::vector<DILocal>

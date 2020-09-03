@@ -1,4 +1,4 @@
-//===----------------- Implementation header for strcat -------------------===//
+//===-- Implementation header for strcat ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRCAT_H
 #define LLVM_LIBC_SRC_STRING_STRCAT_H
 
-#include <string.h>
+#include "include/string.h"
 
 namespace __llvm_libc {
 

@@ -19,13 +19,13 @@
 // RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ --check-prefix=NOFAST
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc \
-// RUN:   -fno-trapping-math -fcuda-flush-denormals-to-zero -o - \
+// RUN:   -fno-trapping-math -fdenormal-fp-math-f32=preserve-sign -o - \
 // RUN:   -fcuda-is-device -triple nvptx-unknown-unknown \
 // RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=FTZ \
 // RUN:   --check-prefix=NOFAST
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc \
-// RUN:   -fno-trapping-math -fcuda-flush-denormals-to-zero -o - \
+// RUN:   -fno-trapping-math -fdenormal-fp-math-f32=preserve-sign -o - \
 // RUN:   -fcuda-is-device -menable-unsafe-fp-math -triple nvptx-unknown-unknown \
 // RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
 
@@ -48,16 +48,40 @@ __global__ void kernel() { lib_fn(); }
 }
 
 // The kernel and lib function should have the same attributes.
-// CHECK: define void @kernel() [[attr:#[0-9]+]]
-// CHECK: define internal void @lib_fn() [[attr]]
+// CHECK: define void @kernel() [[kattr:#[0-9]+]]
+// CHECK: define internal void @lib_fn() [[fattr:#[0-9]+]]
 
-// Check the attribute list.
-// CHECK: attributes [[attr]] = {
+// FIXME: These -NOT checks do not work as intended and do not check on the same
+// line.
+
+// Check the attribute list for kernel.
+// CHECK: attributes [[kattr]] = {
+
 // CHECK-SAME: convergent
+// CHECK-SAME: norecurse
+
+// FTZ-NOT: "denormal-fp-math"
+// FTZ-SAME: "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+// NOFTZ-NOT: "denormal-fp-math-f32"
+
 // CHECK-SAME: "no-trapping-math"="true"
 
-// FTZ-SAME: "nvptx-f32ftz"="true"
-// NOFTZ-NOT: "nvptx-f32ftz"="true"
+// FAST-SAME: "unsafe-fp-math"="true"
+// NOFAST-NOT: "unsafe-fp-math"="true"
+
+// Check the attribute list for lib_fn.
+// CHECK: attributes [[fattr]] = {
+
+// CHECK-SAME: convergent
+// CHECK-NOT: norecurse
+
+// FTZ-NOT: "denormal-fp-math"
+// NOFTZ-NOT: "denormal-fp-math"
+
+// FTZ-SAME: "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+// NOFTZ-NOT: "denormal-fp-math-f32"
+
+// CHECK-SAME: "no-trapping-math"="true"
 
 // FAST-SAME: "unsafe-fp-math"="true"
 // NOFAST-NOT: "unsafe-fp-math"="true"

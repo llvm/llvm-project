@@ -14,7 +14,6 @@ using namespace llvm;
 namespace {
 
 const char numberData[] = "\x80\x90\xFF\xFF\x80\x00\x00\x00";
-const char stringData[] = "hellohello\0hello";
 const char leb128data[] = "\xA6\x49";
 const char bigleb128data[] = "\xAA\xA9\xFF\xAA\xFF\xAA\xFF\x4A";
 
@@ -89,6 +88,7 @@ TEST(DataExtractorTest, SignedNumbers) {
 }
 
 TEST(DataExtractorTest, Strings) {
+  const char stringData[] = "hellohello\0hello";
   DataExtractor DE(StringRef(stringData, sizeof(stringData)-1), false, 8);
   uint64_t offset = 0;
 
@@ -96,6 +96,15 @@ TEST(DataExtractorTest, Strings) {
   EXPECT_EQ(11U, offset);
   EXPECT_EQ(nullptr, DE.getCStr(&offset));
   EXPECT_EQ(11U, offset);
+
+  DataExtractor::Cursor C(0);
+  EXPECT_EQ(stringData, DE.getCStr(C));
+  EXPECT_EQ(11U, C.tell());
+  EXPECT_EQ(nullptr, DE.getCStr(C));
+  EXPECT_EQ(11U, C.tell());
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage("no null terminated string at offset 0xb"));
 }
 
 TEST(DataExtractorTest, LEB128) {
@@ -126,6 +135,28 @@ TEST(DataExtractorTest, LEB128_error) {
   Offset = 0;
   EXPECT_EQ(0U, DE.getSLEB128(&Offset));
   EXPECT_EQ(0U, Offset);
+
+  DataExtractor::Cursor C(0);
+  EXPECT_EQ(0U, DE.getULEB128(C));
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000000: "
+                        "malformed uleb128, extends past end"));
+
+  C = DataExtractor::Cursor(0);
+  EXPECT_EQ(0U, DE.getSLEB128(C));
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000000: "
+                        "malformed sleb128, extends past end"));
+
+  // Show non-zero offsets are reported appropriately.
+  C = DataExtractor::Cursor(1);
+  EXPECT_EQ(0U, DE.getULEB128(C));
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "malformed uleb128, extends past end"));
 }
 
 TEST(DataExtractorTest, Cursor_tell) {
@@ -240,6 +271,22 @@ TEST(DataExtractorTest, getU8_vector) {
   DE.getU8(C, S, 2);
   EXPECT_THAT_ERROR(C.takeError(), Succeeded());
   EXPECT_EQ("AB", toStringRef(S));
+
+  C = DataExtractor::Cursor(0x47);
+  DE.getU8(C, S, 2);
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage("offset 0x47 is beyond the end of data at 0x2"));
+}
+
+TEST(DataExtractorTest, getU24) {
+  DataExtractor DE(StringRef("ABCD"), false, 8);
+  DataExtractor::Cursor C(0);
+
+  EXPECT_EQ(0x414243u, DE.getU24(C));
+  EXPECT_EQ(0u, DE.getU24(C));
+  EXPECT_EQ(3u, C.tell());
+  EXPECT_THAT_ERROR(C.takeError(), Failed());
 }
 
 TEST(DataExtractorTest, skip) {
@@ -269,4 +316,68 @@ TEST(DataExtractorTest, eof) {
   EXPECT_TRUE(DE.eof(C));
   EXPECT_THAT_ERROR(C.takeError(), Succeeded());
 }
+
+TEST(DataExtractorTest, size) {
+  uint8_t Data[] = {'A', 'B', 'C', 'D'};
+  DataExtractor DE1(StringRef(reinterpret_cast<char *>(Data), sizeof(Data)),
+                    false, 8);
+  EXPECT_EQ(DE1.size(), sizeof(Data));
+  DataExtractor DE2(ArrayRef<uint8_t>(Data), false, 8);
+  EXPECT_EQ(DE2.size(), sizeof(Data));
+}
+
+TEST(DataExtractorTest, FixedLengthString) {
+  const char Data[] = "hello\x00\x00\x00world  \thola\x00";
+  DataExtractor DE(StringRef(Data, sizeof(Data)-1), false, 8);
+  uint64_t Offset = 0;
+  StringRef Str;
+  // Test extracting too many bytes doesn't modify Offset and returns None.
+  Str = DE.getFixedLengthString(&Offset, sizeof(Data));
+  EXPECT_TRUE(Str.empty());
+  EXPECT_EQ(Offset, 0u);
+
+  // Test extracting a fixed width C string with trailing NULL characters.
+  Str = DE.getFixedLengthString(&Offset, 8);
+  EXPECT_EQ(Offset, 8u);
+  EXPECT_EQ(Str.size(), 5u);
+  EXPECT_EQ(Str, "hello");
+  // Test extracting a fixed width C string with trailing space and tab
+  // characters.
+  Str = DE.getFixedLengthString(&Offset, 8, " \t");
+  EXPECT_EQ(Offset, 16u);
+  EXPECT_EQ(Str.size(), 5u);
+  EXPECT_EQ(Str, "world");
+  // Now extract a normal C string.
+  Str = DE.getCStrRef(&Offset);
+  EXPECT_EQ(Str.size(), 4u);
+  EXPECT_EQ(Str, "hola");
+}
+
+
+TEST(DataExtractorTest, GetBytes) {
+  // Use data with an embedded NULL character for good measure.
+  const char Data[] = "\x01\x02\x00\x04";
+  StringRef Bytes(Data, sizeof(Data)-1);
+  DataExtractor DE(Bytes, false, 8);
+  uint64_t Offset = 0;
+  StringRef Str;
+  // Test extracting too many bytes doesn't modify Offset and returns None.
+  Str = DE.getBytes(&Offset, sizeof(Data));
+  EXPECT_TRUE(Str.empty());
+  EXPECT_EQ(Offset, 0u);
+  // Test extracting 4 bytes from the stream.
+  Str = DE.getBytes(&Offset, 4);
+  EXPECT_EQ(Offset, 4u);
+  EXPECT_EQ(Str.size(), 4u);
+  EXPECT_EQ(Str, Bytes);
+
+  DataExtractor::Cursor C(0);
+  EXPECT_EQ(StringRef("\x01\x02"), DE.getBytes(C, 2));
+  EXPECT_EQ(StringRef("\x00\x04", 2), DE.getBytes(C, 2));
+  EXPECT_EQ(StringRef(), DE.getBytes(C, 2));
+  EXPECT_EQ(StringRef(), DE.getBytes(C, 2));
+  EXPECT_EQ(4u, C.tell());
+  EXPECT_THAT_ERROR(C.takeError(), Failed());
+}
+
 }

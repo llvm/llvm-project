@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11
+// UNSUPPORTED: c++03, c++11
 
 #include <experimental/coroutine>
 #include <cassert>
@@ -45,7 +45,7 @@ struct Bug {
 struct coro2 {
   struct promise_type {
     suspend_never initial_suspend() { return{}; }
-    suspend_never final_suspend() { return{}; }
+    suspend_never final_suspend() noexcept { return {}; }
     coro2 get_return_object() { return{}; }
     void return_void() {}
     Bug yield_value(int) { return {}; }

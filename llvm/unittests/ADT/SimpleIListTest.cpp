@@ -436,8 +436,8 @@ TEST(SimpleIListTest, merge) {
     // Check setup.
     EXPECT_EQ(4u, L1.size());
     EXPECT_EQ(6u, L2.size());
-    EXPECT_TRUE(std::is_sorted(L1.begin(), L1.end()));
-    EXPECT_TRUE(std::is_sorted(L2.begin(), L2.end()));
+    EXPECT_TRUE(llvm::is_sorted(L1));
+    EXPECT_TRUE(llvm::is_sorted(L2));
 
     // Merge.
     auto &LHS = IsL1LHS ? L1 : L2;
@@ -445,7 +445,7 @@ TEST(SimpleIListTest, merge) {
     LHS.merge(RHS);
     EXPECT_TRUE(RHS.empty());
     EXPECT_FALSE(LHS.empty());
-    EXPECT_TRUE(std::is_sorted(LHS.begin(), LHS.end()));
+    EXPECT_TRUE(llvm::is_sorted(LHS));
     auto I = LHS.begin();
     for (Node &N : Ns)
       EXPECT_EQ(&N, &*I++);
@@ -473,8 +473,8 @@ TEST(SimpleIListTest, mergeIsStable) {
     // Check setup.
     EXPECT_EQ(3u, L1.size());
     EXPECT_EQ(2u, L2.size());
-    EXPECT_TRUE(std::is_sorted(L1.begin(), L1.end(), makeFalse));
-    EXPECT_TRUE(std::is_sorted(L2.begin(), L2.end(), makeFalse));
+    EXPECT_TRUE(llvm::is_sorted(L1, makeFalse));
+    EXPECT_TRUE(llvm::is_sorted(L2, makeFalse));
   };
 
   // Merge.  Should be stable.
@@ -482,7 +482,7 @@ TEST(SimpleIListTest, mergeIsStable) {
   L1.merge(L2, makeFalse);
   EXPECT_TRUE(L2.empty());
   EXPECT_FALSE(L1.empty());
-  EXPECT_TRUE(std::is_sorted(L1.begin(), L1.end(), makeFalse));
+  EXPECT_TRUE(llvm::is_sorted(L1, makeFalse));
   auto I = L1.begin();
   EXPECT_EQ(&Ns[0], &*I++);
   EXPECT_EQ(&Ns[3], &*I++);
@@ -497,7 +497,7 @@ TEST(SimpleIListTest, mergeIsStable) {
   L2.merge(L1, makeFalse);
   EXPECT_TRUE(L1.empty());
   EXPECT_FALSE(L2.empty());
-  EXPECT_TRUE(std::is_sorted(L2.begin(), L2.end(), makeFalse));
+  EXPECT_TRUE(llvm::is_sorted(L2, makeFalse));
   I = L2.begin();
   EXPECT_EQ(&Ns[1], &*I++);
   EXPECT_EQ(&Ns[2], &*I++);
@@ -521,7 +521,7 @@ TEST(SimpleIListTest, mergeEmpty) {
     // Check setup.
     EXPECT_EQ(4u, L1.size());
     EXPECT_TRUE(L2.empty());
-    EXPECT_TRUE(std::is_sorted(L1.begin(), L1.end()));
+    EXPECT_TRUE(llvm::is_sorted(L1));
 
     // Merge.
     auto &LHS = IsL1LHS ? L1 : L2;
@@ -529,7 +529,7 @@ TEST(SimpleIListTest, mergeEmpty) {
     LHS.merge(RHS);
     EXPECT_TRUE(RHS.empty());
     EXPECT_FALSE(LHS.empty());
-    EXPECT_TRUE(std::is_sorted(LHS.begin(), LHS.end()));
+    EXPECT_TRUE(llvm::is_sorted(LHS));
     auto I = LHS.begin();
     for (Node &N : Ns)
       EXPECT_EQ(&N, &*I++);
@@ -554,11 +554,11 @@ TEST(SimpleIListTest, sort) {
 
   // Check setup.
   EXPECT_EQ(10u, L.size());
-  EXPECT_FALSE(std::is_sorted(L.begin(), L.end()));
+  EXPECT_FALSE(llvm::is_sorted(L));
 
   // Sort.
   L.sort();
-  EXPECT_TRUE(std::is_sorted(L.begin(), L.end()));
+  EXPECT_TRUE(llvm::is_sorted(L));
   auto I = L.begin();
   for (Node &N : Ns)
     EXPECT_EQ(&N, &*I++);
@@ -581,11 +581,11 @@ TEST(SimpleIListTest, sortIsStable) {
 
   // Check setup.
   EXPECT_EQ(10u, L.size());
-  EXPECT_FALSE(std::is_sorted(L.begin(), L.end(), compare));
+  EXPECT_FALSE(llvm::is_sorted(L, compare));
 
   // Sort.
   L.sort(compare);
-  EXPECT_TRUE(std::is_sorted(L.begin(), L.end(), compare));
+  EXPECT_TRUE(llvm::is_sorted(L, compare));
   auto I = L.begin();
   for (int O : {3, 4, 1, 2, 0})
     EXPECT_EQ(&Ns[O], &*I++);

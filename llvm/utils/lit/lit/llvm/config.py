@@ -51,12 +51,14 @@ class LLVMConfig(object):
         elif platform.system() == 'Windows':
             # For tests that require Windows to run.
             features.add('system-windows')
-        elif platform.system() == "Linux":
+        elif platform.system() == 'Linux':
             features.add('system-linux')
         elif platform.system() in ['FreeBSD']:
             features.add('system-freebsd')
-        elif platform.system() == "NetBSD":
+        elif platform.system() == 'NetBSD':
             features.add('system-netbsd')
+        elif platform.system() == 'AIX':
+            features.add('system-aix')
 
         # Native compilation: host arch == default triple arch
         # Both of these values should probably be in every site config (e.g. as
@@ -87,6 +89,7 @@ class LLVMConfig(object):
 
         if target_triple:
             if re.match(r'^x86_64.*-apple', target_triple):
+                features.add('x86_64-apple')
                 host_cxx = getattr(config, 'host_cxx', None)
                 if 'address' in sanitizers and self.get_clang_has_lsan(host_cxx, target_triple):
                     self.with_environment(

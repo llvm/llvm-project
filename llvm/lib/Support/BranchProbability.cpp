@@ -19,7 +19,7 @@
 
 using namespace llvm;
 
-const uint32_t BranchProbability::D;
+constexpr uint32_t BranchProbability::D;
 
 raw_ostream &BranchProbability::print(raw_ostream &OS) const {
   if (isUnknown())

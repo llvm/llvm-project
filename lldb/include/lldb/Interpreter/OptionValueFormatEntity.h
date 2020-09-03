@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OptionValueFormatEntity_h_
-#define liblldb_OptionValueFormatEntity_h_
+#ifndef LLDB_INTERPRETER_OPTIONVALUEFORMATENTITY_H
+#define LLDB_INTERPRETER_OPTIONVALUEFORMATENTITY_H
 
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Interpreter/OptionValue.h"
@@ -64,4 +64,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_OptionValueFormatEntity_h_
+#endif // LLDB_INTERPRETER_OPTIONVALUEFORMATENTITY_H

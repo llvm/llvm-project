@@ -68,13 +68,6 @@
 #include <unistd.h>
 #include <vector>
 
-/// \def DISALLOW_COPY_AND_ASSIGN(TypeName)
-///     Macro definition for easily disallowing copy constructor and
-///     assignment operators in C++ classes.
-#define DISALLOW_COPY_AND_ASSIGN(TypeName)                                     \
-  TypeName(const TypeName &);                                                  \
-  const TypeName &operator=(const TypeName &)
-
 extern "C" {
 int accept$NOCANCEL(int, struct sockaddr *__restrict, socklen_t *__restrict);
 int close$NOCANCEL(int);
@@ -135,7 +128,8 @@ protected:
   char *m_str;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(String);
+  String(const String &) = delete;
+  const String &operator=(const String &) = delete;
 };
 
 // Type definitions
@@ -147,7 +141,7 @@ typedef std::tr1::shared_ptr<String> StringSP;
 
 // FDEvent
 //
-// A class that describes a file desciptor event.
+// A class that describes a file descriptor event.
 //
 // File descriptor events fall into one of two categories: create events
 // and delete events.
@@ -185,7 +179,7 @@ private:
   // The frames for the stack backtrace for this event
   Frames m_frames;
   // If this is a file descriptor delete event, this might contain
-  // the correspoding file descriptor create event
+  // the corresponding file descriptor create event
   FDEventSP m_create_event_sp;
   // The file descriptor for this event
   int m_fd;
@@ -232,18 +226,18 @@ typedef std::map<int, FDEventArray> FDEventMap;
 // event is detected, the open event will be removed and placed into
 // the close event so if something tries to double close a file
 // descriptor we can show the previous close event and the file
-// desctiptor event that created it. When a new file descriptor create
+// descriptor event that created it. When a new file descriptor create
 // event comes in, we will remove the previous one for that file
-// desctiptor unless the environment variable
+// descriptor unless the environment variable
 // "FileDescriptorStackLoggingNoCompact"
-// is set. The file desctiptor history can be accessed using the
+// is set. The file descriptor history can be accessed using the
 // get_fd_history() function.
 static FDEventMap g_fd_event_map;
 // A mutex to protect access to our data structures in g_fd_event_map
 // and also our logging messages
 static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 // Log all file descriptor create and close events by default. Only log
-// warnings and erros if the "FileDescriptorMinimalLogging" environment
+// warnings and errors if the "FileDescriptorMinimalLogging" environment
 // variable is set.
 static int g_log_all_calls = 1;
 // We compact the file descriptor events by default. Set the environment
@@ -498,7 +492,7 @@ void save_backtrace(int fd, int err, const StringSP &string_sp,
             fd);
       } else if (g_compact) {
         // We are compacting so we remove previous create event
-        // when we get the correspinding delete event
+        // when we get the corresponding delete event
         event_array.pop_back();
       }
     } else {
@@ -518,7 +512,7 @@ void save_backtrace(int fd, int err, const StringSP &string_sp,
         // that this close if for...
         fd_event_sp->SetCreateEvent(event_array.back());
         // We are compacting so we remove previous create event
-        // when we get the correspinding delete event
+        // when we get the corresponding delete event
         event_array.pop_back();
       }
     }

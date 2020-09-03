@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_QUERY_QUERY_SESSION_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_QUERY_QUERY_SESSION_H
 
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
@@ -25,7 +26,7 @@ public:
   QuerySession(llvm::ArrayRef<std::unique_ptr<ASTUnit>> ASTs)
       : ASTs(ASTs), PrintOutput(false), DiagOutput(true),
         DetailedASTOutput(false), BindRoot(true), PrintMatcher(false),
-        Terminate(false) {}
+        Terminate(false), TK(ast_type_traits::TK_AsIs) {}
 
   llvm::ArrayRef<std::unique_ptr<ASTUnit>> ASTs;
 
@@ -36,6 +37,8 @@ public:
   bool BindRoot;
   bool PrintMatcher;
   bool Terminate;
+
+  ast_type_traits::TraversalKind TK;
   llvm::StringMap<ast_matchers::dynamic::VariantValue> NamedValues;
 };
 

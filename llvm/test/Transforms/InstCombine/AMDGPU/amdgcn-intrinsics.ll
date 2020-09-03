@@ -10,7 +10,7 @@ declare double @llvm.amdgcn.rcp.f64(double) nounwind readnone
 
 define float @test_constant_fold_rcp_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_undef(
-; CHECK-NEXT:    ret float undef
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float undef) nounwind readnone
   ret float %val
@@ -50,8 +50,7 @@ define double @test_constant_fold_rcp_f64_half() nounwind {
 
 define float @test_constant_fold_rcp_f32_43() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_43(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01)
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0x3F97D05F40000000
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) nounwind readnone
   ret float %val
@@ -59,11 +58,19 @@ define float @test_constant_fold_rcp_f32_43() nounwind {
 
 define double @test_constant_fold_rcp_f64_43() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f64_43(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.rcp.f64(double 4.300000e+01)
-; CHECK-NEXT:    ret double [[VAL]]
+; CHECK-NEXT:    ret double 0x3F97D05F417D05F4
 ;
   %val = call double @llvm.amdgcn.rcp.f64(double 4.300000e+01) nounwind readnone
   ret double %val
+}
+
+define float @test_constant_fold_rcp_f32_43_strictfp() nounwind strictfp {
+; CHECK-LABEL: @test_constant_fold_rcp_f32_43_strictfp(
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) [[STRICTFP:#[0-9]+]]
+; CHECK-NEXT:    ret float [[VAL]]
+;
+  %val = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) strictfp nounwind readnone
+  ret float %val
 }
 
 ; --------------------------------------------------------------------
@@ -74,7 +81,7 @@ declare float @llvm.amdgcn.rsq.f32(float) nounwind readnone
 
 define float @test_constant_fold_rsq_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rsq_f32_undef(
-; CHECK-NEXT:    ret float undef
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %val = call float @llvm.amdgcn.rsq.f32(float undef) nounwind readnone
   ret float %val
@@ -2379,6 +2386,65 @@ define i64 @fcmp_constant_to_rhs_olt(float %x) {
 }
 
 ; --------------------------------------------------------------------
+; llvm.amdgcn.ballot
+; --------------------------------------------------------------------
+
+declare i64 @llvm.amdgcn.ballot.i64(i1) nounwind readnone convergent
+declare i32 @llvm.amdgcn.ballot.i32(i1) nounwind readnone convergent
+
+define i64 @ballot_nocombine_64(i1 %i) {
+; CHECK-LABEL: @ballot_nocombine_64(
+; CHECK-NEXT:    [[B:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[I:%.*]])
+; CHECK-NEXT:    ret i64 [[B]]
+;
+  %b = call i64 @llvm.amdgcn.ballot.i64(i1 %i)
+  ret i64 %b
+}
+
+define i64 @ballot_zero_64() {
+; CHECK-LABEL: @ballot_zero_64(
+; CHECK-NEXT:    ret i64 0
+;
+  %b = call i64 @llvm.amdgcn.ballot.i64(i1 0)
+  ret i64 %b
+}
+
+define i64 @ballot_one_64() {
+; CHECK-LABEL: @ballot_one_64(
+; CHECK-NEXT:    %b = call i64 @llvm.read_register.i64(metadata !0) [[CONVERGENT]]
+; CHECK-NEXT:    ret i64 %b
+;
+  %b = call i64 @llvm.amdgcn.ballot.i64(i1 1)
+  ret i64 %b
+}
+
+define i32 @ballot_nocombine_32(i1 %i) {
+; CHECK-LABEL: @ballot_nocombine_32(
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[I:%.*]])
+; CHECK-NEXT:    ret i32 [[B]]
+;
+  %b = call i32 @llvm.amdgcn.ballot.i32(i1 %i)
+  ret i32 %b
+}
+
+define i32 @ballot_zero_32() {
+; CHECK-LABEL: @ballot_zero_32(
+; CHECK-NEXT:    ret i32 0
+;
+  %b = call i32 @llvm.amdgcn.ballot.i32(i1 0)
+  ret i32 %b
+}
+
+define i32 @ballot_one_32() {
+; CHECK-LABEL: @ballot_one_32(
+; CHECK-NEXT:    %b = call i32 @llvm.read_register.i32(metadata !1) [[CONVERGENT]]
+; CHECK-NEXT:    ret i32 %b
+;
+  %b = call i32 @llvm.amdgcn.ballot.i32(i1 1)
+  ret i32 %b
+}
+
+; --------------------------------------------------------------------
 ; llvm.amdgcn.wqm.vote
 ; --------------------------------------------------------------------
 
@@ -2655,5 +2721,84 @@ define amdgpu_kernel void @update_dpp_undef_old(i32 addrspace(1)* %out, i32 %in1
   ret void
 }
 
-; CHECK: attributes [[CONVERGENT]] = { convergent }
 
+; --------------------------------------------------------------------
+; llvm.amdgcn.permlane16
+; --------------------------------------------------------------------
+
+declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1 immarg, i1 immarg)
+
+define amdgpu_kernel void @permlane16(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @permlane16(
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 false)
+; CHECK-NEXT:    store i32 [[RES]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %res = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store i32 %res, i32 addrspace(1)* %out
+  ret void
+}
+
+define amdgpu_kernel void @permlane16_bound_ctrl(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @permlane16_bound_ctrl(
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
+; CHECK-NEXT:    store i32 [[RES]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %res = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
+  store i32 %res, i32 addrspace(1)* %out
+  ret void
+}
+
+define amdgpu_kernel void @permlane16_fetch_invalid_bound_ctrl(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @permlane16_fetch_invalid_bound_ctrl(
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
+; CHECK-NEXT:    store i32 [[RES]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %res = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
+  store i32 %res, i32 addrspace(1)* %out
+  ret void
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.permlanex16
+; --------------------------------------------------------------------
+
+declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1 immarg, i1 immarg)
+
+define amdgpu_kernel void @permlanex16(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @permlanex16(
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 false)
+; CHECK-NEXT:    store i32 [[RES]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %res = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store i32 %res, i32 addrspace(1)* %out
+  ret void
+}
+
+define amdgpu_kernel void @permlanex16_bound_ctrl(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @permlanex16_bound_ctrl(
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
+; CHECK-NEXT:    store i32 [[RES]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %res = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
+  store i32 %res, i32 addrspace(1)* %out
+  ret void
+}
+
+define amdgpu_kernel void @permlanex16_fetch_invalid_bound_ctrl(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @permlanex16_fetch_invalid_bound_ctrl(
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
+; CHECK-NEXT:    store i32 [[RES]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %res = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
+  store i32 %res, i32 addrspace(1)* %out
+  ret void
+}
+
+; CHECK: attributes [[STRICTFP]] = { nounwind readnone strictfp }
+; CHECK: attributes [[CONVERGENT]] = { convergent }

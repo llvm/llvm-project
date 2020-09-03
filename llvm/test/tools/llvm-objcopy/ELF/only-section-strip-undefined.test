@@ -3,12 +3,13 @@
 
 # RUN: yaml2obj --docnum=1 %s -o %t.o
 # RUN: llvm-objcopy -j .other.section %t.o %t2.o
-# RUN: llvm-readobj --symbols %t2.o | FileCheck %s --implicit-check-not=bar
+# RUN: llvm-readobj --symbols %t2.o | FileCheck %s
 
 # RUN: llvm-objcopy -j .text -j .rela.text1 %t.o %t2.o
 # RUN: llvm-readobj --symbols %t2.o | FileCheck %s --check-prefix=BAR
 
-# BAR: bar
+# CHECK-NOT: Name: bar
+# BAR: Name: bar
 
 --- !ELF
 FileHeader:
@@ -43,7 +44,7 @@ Symbols:
 
 # RUN: yaml2obj --docnum=2 %s -o %t.o
 # RUN: llvm-objcopy -j .keep_me %t.o %t2.o
-# RUN: llvm-readobj --symbols %t2.o | FileCheck %s --implicit-check-not=bar
+# RUN: llvm-readobj --symbols %t2.o | FileCheck %s
 
 --- !ELF
 FileHeader:

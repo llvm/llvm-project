@@ -63,7 +63,7 @@ public:
       return;
     if (Path.empty()) {
       // This is an empty leaf. Store NewPath and return.
-      Path = NewPath;
+      Path = std::string(NewPath);
       return;
     }
     if (Children.empty()) {

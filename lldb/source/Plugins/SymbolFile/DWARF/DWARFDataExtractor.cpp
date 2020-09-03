@@ -1,4 +1,4 @@
-//===-- DWARFDataExtractor.cpp ----------------------------------*- C++ -*-===//
+//===-- DWARFDataExtractor.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,8 +23,7 @@ DWARFDataExtractor::GetDWARFOffset(lldb::offset_t *offset_ptr) const {
 
 llvm::DWARFDataExtractor DWARFDataExtractor::GetAsLLVM() const {
   return llvm::DWARFDataExtractor(
-      llvm::StringRef(reinterpret_cast<const char *>(GetDataStart()),
-                      GetByteSize()),
+      llvm::makeArrayRef(GetDataStart(), GetByteSize()),
       GetByteOrder() == lldb::eByteOrderLittle, GetAddressByteSize());
 }
 } // namespace lldb_private

@@ -285,6 +285,22 @@ SymbolRoleSet index::getSymbolRoles(uint64_t Roles) {
 indexstore_symbol_kind_t index::getIndexStoreKind(SymbolKind K) {
   switch (K) {
   case SymbolKind::Unknown:
+  // FIXME: Tweak SymbolKind/SymbolSubKind to separate
+  // generic-ish/language-specific-ish concepts.
+  //
+  // We use SymbolKind/SymbolSubKind
+  // downstream for Swift and this would help us avoid intrusions here or
+  // upstream.
+  //
+  // Separation of concepts for C++ and Objective-C could also be
+  // improved. Once that is done on SymbolKind/SymbolSubKind level we should
+  // update indexstore_symbol_kind_t too.
+  //
+  // Initial discussion here:
+  // https://github.com/apple/llvm-project/pull/1099
+  case SymbolKind::TemplateTypeParm:
+  case SymbolKind::TemplateTemplateParm:
+  case SymbolKind::NonTypeTemplateParm:
     return INDEXSTORE_SYMBOL_KIND_UNKNOWN;
   case SymbolKind::Module:
     return INDEXSTORE_SYMBOL_KIND_MODULE;

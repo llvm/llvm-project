@@ -16,7 +16,7 @@
 
 ## .got - _GLOBAL_OFFSET_TABLE_ = 0
 # LD:      addi 3, 30, 0
-# LD-NEXT: bl .+40
+# LD-NEXT: bl 0x101f8
 ## a@dtprel = st_value(a)-0x8000 = 65540-0x8000 = 65536*1-32764
 ## b@dtprel = st_value(a)-0x8000 = 131080-0x8000 = 65536*2-32760
 # LD-NEXT: addis 9, 3, 1
@@ -30,7 +30,7 @@
 ## It shares In.Got->TlsIndexOff allocated when processing a@got@tlsld.
 ## .got - _GLOBAL_OFFSET_TABLE_ = 0
 # LD-NEXT: addi 3, 9, 0
-# LD-NEXT: bl .+12
+# LD-NEXT: bl 0x101f8
 ## b@dtprel = st_value(a)-0x8000 = 131080-0x8000 = 65536*2-32760
 # LD-NEXT: addis 29, 3, 2
 # LD-NEXT: addi 29, 29, -32760

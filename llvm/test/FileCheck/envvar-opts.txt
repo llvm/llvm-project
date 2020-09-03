@@ -4,15 +4,15 @@
 ; CHECK: bar
 
 ; RUN: %ProtectFileCheckOutput \
-; RUN: not FileCheck %s -input-file %t.in 2>&1 \
+; RUN: not FileCheck %s -dump-input=never -input-file %t.in 2>&1 \
 ; RUN: | FileCheck -check-prefix QUIET %s
 
 ; RUN: %ProtectFileCheckOutput FILECHECK_OPTS= \
-; RUN: not FileCheck %s -input-file %t.in 2>&1 \
+; RUN: not FileCheck %s -dump-input=never -input-file %t.in 2>&1 \
 ; RUN: | FileCheck -check-prefix QUIET %s
 
 ; RUN: %ProtectFileCheckOutput FILECHECK_OPTS=-v \
-; RUN: not FileCheck %s -input-file %t.in 2>&1 \
+; RUN: not FileCheck %s -dump-input=never -input-file %t.in 2>&1 \
 ; RUN: | FileCheck -check-prefix VERB %s
 
 ; QUIET-NOT: remark: {{CHECK}}: expected string found in input

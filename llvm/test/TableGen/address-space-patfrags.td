@@ -81,7 +81,7 @@ def : Pat <
 
 // SDAG-NEXT: if (AddrSpace != 999)
 // SDAG-NEXT: return false;
-// SDAG-NEXT: if (cast<MemSDNode>(N)->getAlignment() < 2)
+// SDAG-NEXT: if (cast<MemSDNode>(N)->getAlign() < Align(2))
 // SDAG-NEXT: return false;
 // SDAG-NEXT: if (cast<MemSDNode>(N)->getMemoryVT() != MVT::i32) return false;
 // SDAG-NEXT: return true;

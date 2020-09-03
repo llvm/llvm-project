@@ -16,13 +16,13 @@
 # RUN: ld.lld %t --script %t.script -o %t2
 # RUN: llvm-objdump -t %t2 | FileCheck %s
 # RUN: echo "SECTIONS { v = LOADADDR(.zzz); }" > %t.script
-# RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | FileCheck --check-prefix=ERROR %s
+# RUN: not ld.lld %t --script %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=ERROR %s
 
-# CHECK:      0000000000002000         *ABS*     00000000 aaa_lma
-# CHECK-NEXT: 0000000000002008         *ABS*     00000000 bbb_lma
-# CHECK-NEXT: 0000000000003000         *ABS*     00000000 ccc_lma
-# CHECK-NEXT: 0000000000004000         *ABS*     00000000 ddd_lma
-# CHECK-NEXT: 0000000000004008         *ABS*     00000000 txt_lma
+# CHECK:      0000000000002000 g       *ABS*  0000000000000000 aaa_lma
+# CHECK-NEXT: 0000000000002008 g       *ABS*  0000000000000000 bbb_lma
+# CHECK-NEXT: 0000000000003000 g       *ABS*  0000000000000000 ccc_lma
+# CHECK-NEXT: 0000000000004000 g       *ABS*  0000000000000000 ddd_lma
+# CHECK-NEXT: 0000000000004008 g       *ABS*  0000000000000000 txt_lma
 # ERROR: {{.*}}.script:1: undefined section .zzz
 
 .global _start

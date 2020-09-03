@@ -1,6 +1,6 @@
 ; RUN: llc -O0 -filetype=obj -mtriple=arm-none-linux < %s | llvm-dwarfdump - | FileCheck %s
 
-; CHECK: file format ELF32-arm-little
+; CHECK: file format elf32-littlearm
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 

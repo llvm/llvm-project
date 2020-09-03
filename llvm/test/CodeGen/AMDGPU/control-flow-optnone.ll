@@ -15,8 +15,8 @@
 ; GCN: s_mov_b64 exec
 
 ; GCN: s_or_b64 exec, exec
-; GCN: s_cmp_eq_u32
-; GCN: s_cbranch_scc1
+; GCN: {{[s|v]}}_cmp_eq_u32
+; GCN: s_cbranch
 ; GCN-NEXT: s_branch
 define amdgpu_kernel void @copytoreg_divergent_brcond(i32 %arg, i32 %arg1, i32 %arg2) #0 {
 bb:

@@ -13,6 +13,7 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/ADT/StringExtras.h"
 #include "gtest/gtest.h"
+#include <stdlib.h>
 
 using namespace llvm;
 
@@ -39,6 +40,25 @@ TEST(CRCTest, CRC32) {
     uint8_t byte = i;
     EXPECT_EQ(crc, ~llvm::crc32(0xFFFFFFFFU, byte));
   }
+
+  EXPECT_EQ(0x00000000U, llvm::crc32(arrayRefFromStringRef("")));
 }
+
+#if (SIZE_MAX > UINT32_MAX) && defined(EXPENSIVE_CHECKS)
+TEST(CRCTest, LargeCRC32) {
+  // Check that crc32 can handle inputs with sizes larger than 32 bits.
+  size_t TestSize = (size_t)UINT32_MAX + 42;
+  uint8_t *TestData = (uint8_t*)calloc(TestSize, 1);
+  if (!TestData)
+    return;
+
+  // Test expectation generated with:
+  // $ truncate --size=`echo 2^32-1+42 | bc` /tmp/foo
+  // $ crc32 /tmp/foo
+  EXPECT_EQ(0xE46F28FBU, llvm::crc32(makeArrayRef(TestData, TestSize)));
+
+  free(TestData);
+}
+#endif
 
 } // end anonymous namespace

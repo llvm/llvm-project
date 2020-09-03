@@ -18,22 +18,21 @@
 #include <stdint.h>
 #include <stdio.h>
 
-static scudo::Allocator<scudo::Config> Allocator;
-// Pointer to the static allocator so that the C++ wrappers can access it.
-// Technically we could have a completely separated heap for C & C++ but in
-// reality the amount of cross pollination between the two is staggering.
-scudo::Allocator<scudo::Config> *AllocatorPtr = &Allocator;
-
-extern "C" {
-
 #define SCUDO_PREFIX(name) name
 #define SCUDO_ALLOCATOR Allocator
+
+extern "C" void SCUDO_PREFIX(malloc_postinit)();
+
+// Export the static allocator so that the C++ wrappers can access it.
+// Technically we could have a completely separated heap for C & C++ but in
+// reality the amount of cross pollination between the two is staggering.
+scudo::Allocator<scudo::Config, SCUDO_PREFIX(malloc_postinit)> SCUDO_ALLOCATOR;
+
 #include "wrappers_c.inc"
+
 #undef SCUDO_ALLOCATOR
 #undef SCUDO_PREFIX
 
-INTERFACE void __scudo_print_stats(void) { Allocator.printStats(); }
-
-} // extern "C"
+extern "C" INTERFACE void __scudo_print_stats(void) { Allocator.printStats(); }
 
 #endif // !SCUDO_ANDROID || !_BIONIC

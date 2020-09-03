@@ -100,28 +100,34 @@ body:             |
     ; MIPS32FP32-LABEL: name: select_float
     ; MIPS32FP32: liveins: $a0, $a1, $a2
     ; MIPS32FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32FP32: [[MTC1_:%[0-9]+]]:fgr32 = MTC1 $a1
-    ; MIPS32FP32: [[MTC1_1:%[0-9]+]]:fgr32 = MTC1 $a2
+    ; MIPS32FP32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
+    ; MIPS32FP32: [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
     ; MIPS32FP32: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
-    ; MIPS32FP32: [[MOVN_I_S:%[0-9]+]]:fgr32 = MOVN_I_S [[MTC1_]], [[ANDi]], [[MTC1_1]]
+    ; MIPS32FP32: [[COPY3:%[0-9]+]]:fgr32 = COPY [[COPY1]]
+    ; MIPS32FP32: [[COPY4:%[0-9]+]]:fgr32 = COPY [[COPY2]]
+    ; MIPS32FP32: [[MOVN_I_S:%[0-9]+]]:fgr32 = MOVN_I_S [[COPY3]], [[ANDi]], [[COPY4]]
     ; MIPS32FP32: $f0 = COPY [[MOVN_I_S]]
     ; MIPS32FP32: RetRA implicit $f0
     ; MIPS32FP64-LABEL: name: select_float
     ; MIPS32FP64: liveins: $a0, $a1, $a2
     ; MIPS32FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32FP64: [[MTC1_:%[0-9]+]]:fgr32 = MTC1 $a1
-    ; MIPS32FP64: [[MTC1_1:%[0-9]+]]:fgr32 = MTC1 $a2
+    ; MIPS32FP64: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
+    ; MIPS32FP64: [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
     ; MIPS32FP64: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
-    ; MIPS32FP64: [[MOVN_I_S:%[0-9]+]]:fgr32 = MOVN_I_S [[MTC1_]], [[ANDi]], [[MTC1_1]]
+    ; MIPS32FP64: [[COPY3:%[0-9]+]]:fgr32 = COPY [[COPY1]]
+    ; MIPS32FP64: [[COPY4:%[0-9]+]]:fgr32 = COPY [[COPY2]]
+    ; MIPS32FP64: [[MOVN_I_S:%[0-9]+]]:fgr32 = MOVN_I_S [[COPY3]], [[ANDi]], [[COPY4]]
     ; MIPS32FP64: $f0 = COPY [[MOVN_I_S]]
     ; MIPS32FP64: RetRA implicit $f0
     %3:gprb(s32) = COPY $a0
-    %1:fgr32(s32) = MTC1 $a1
-    %2:fgr32(s32) = MTC1 $a2
+    %1:gprb(s32) = COPY $a1
+    %2:gprb(s32) = COPY $a2
     %6:gprb(s32) = G_CONSTANT i32 1
     %7:gprb(s32) = COPY %3(s32)
     %5:gprb(s32) = G_AND %7, %6
-    %4:fprb(s32) = G_SELECT %5(s32), %1, %2
+    %8:fprb(s32) = COPY %1(s32)
+    %9:fprb(s32) = COPY %2(s32)
+    %4:fprb(s32) = G_SELECT %5(s32), %8, %9
     $f0 = COPY %4(s32)
     RetRA implicit $f0
 

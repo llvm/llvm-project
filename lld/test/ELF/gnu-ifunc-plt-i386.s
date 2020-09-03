@@ -7,6 +7,11 @@
 // RUN: llvm-objdump -s %tout | FileCheck %s --check-prefix=GOTPLT
 // RUN: llvm-readobj -r --dynamic-table %tout | FileCheck %s
 
+/// Check that the PLTRELSZ tag does not include the IRELATIVE relocations
+// CHECK: DynamicSection [
+// CHECK:  0x00000012 RELSZ                16 (bytes)
+// CHECK:  0x00000002 PLTRELSZ             16 (bytes)
+
 // Check that the IRELATIVE relocations are after the JUMP_SLOT in the plt
 // CHECK: Relocations [
 // CHECK-NEXT:   Section (4) .rel.dyn {
@@ -24,27 +29,22 @@
 // GOTPLT:       403298 20224000 00000000 00000000 e6114000
 // GOTPLT-NEXT:  4032a8 f6114000 b4114000 b5114000
 
-// Check that the PLTRELSZ tag does not include the IRELATIVE relocations
-// CHECK: DynamicSection [
-// CHECK:  0x00000012 RELSZ                16 (bytes)
-// CHECK:  0x00000002 PLTRELSZ             16 (bytes)
-
 // Check that a PLT header is written and the ifunc entries appear last
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: foo:
+// DISASM-NEXT: <foo>:
 // DISASM-NEXT:    4011b4:       retl
-// DISASM:      bar:
+// DISASM:      <bar>:
 // DISASM-NEXT:    4011b5:       retl
-// DISASM:      _start:
-// DISASM-NEXT:    4011b6:       calll   69 <zed2+0x401200>
-// DISASM-NEXT:                  calll   80 <zed2+0x401210>
-// DISASM-NEXT:                  calll   27 <bar2@plt>
-// DISASM-NEXT:                  calll   38 <zed2@plt>
+// DISASM:      <_start>:
+// DISASM-NEXT:    4011b6:       calll   0x401200 <zed2+0x401200>
+// DISASM-NEXT:                  calll   0x401210 <zed2+0x401210>
+// DISASM-NEXT:                  calll   0x4011e0 <bar2@plt>
+// DISASM-NEXT:                  calll   0x4011f0 <zed2@plt>
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
-// DISASM-NEXT: .plt:
+// DISASM-NEXT: <.plt>:
 // DISASM-NEXT:    4011d0:       pushl   4207260
 // DISASM-NEXT:                  jmpl    *4207264
 // DISASM-NEXT:                  nop
@@ -52,25 +52,25 @@
 // DISASM-NEXT:                  nop
 // DISASM-NEXT:                  nop
 // DISASM-EMPTY:
-// DISASM-NEXT:   bar2@plt:
+// DISASM-NEXT:   <bar2@plt>:
 // DISASM-NEXT:    4011e0:       jmpl    *4207268
 // DISASM-NEXT:                  pushl   $0
-// DISASM-NEXT:                  jmp     -32 <.plt>
+// DISASM-NEXT:                  jmp     0x4011d0 <.plt>
 // DISASM-EMPTY:
-// DISASM-NEXT:   zed2@plt:
+// DISASM-NEXT:   <zed2@plt>:
 // DISASM-NEXT:    4011f0:       jmpl    *4207272
 // DISASM-NEXT:                  pushl   $8
-// DISASM-NEXT:                  jmp     -48 <.plt>
+// DISASM-NEXT:                  jmp     0x4011d0 <.plt>
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
-// DISASM-NEXT: .iplt:
+// DISASM-NEXT: <.iplt>:
 // DISASM-NEXT:                  jmpl    *4207276
 // DISASM-NEXT:                  pushl   $0
-// DISASM-NEXT:                  jmp     -64 <.plt>
+// DISASM-NEXT:                  jmp     0x4011d0 <.plt>
 // DISASM-NEXT:                  jmpl    *4207280
 // DISASM-NEXT:                  pushl   $8
-// DISASM-NEXT:                  jmp     -80 <.plt>
+// DISASM-NEXT:                  jmp     0x4011d0 <.plt>
 
 .text
 .type foo STT_GNU_IFUNC

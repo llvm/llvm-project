@@ -32,8 +32,8 @@ source:
  nop.w
  bl external
 
-// CHECK:      00002ffa source:
+// CHECK:      00002ffa <source>:
 // CHECK-NEXT:     2ffa:        nop.w
 // CHECK-NEXT:     2ffe:        blx     #4
-// CHECK:      00003004 __CortexA8657417_2FFE:
+// CHECK:      00003004 <__CortexA8657417_2FFE>:
 // CHECK-NEXT:     3004:        b       #-4076

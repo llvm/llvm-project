@@ -1,7 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=ALL,NORMAL
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=ALL,NORMAL
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-enable-irbuilder -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=ALL,IRBUILDER
+// RUN: %clang_cc1 -fopenmp -fopenmp-enable-irbuilder -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-enable-irbuilder -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=ALL,IRBUILDER
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
@@ -12,45 +15,47 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK:       [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
+// ALL:       [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
 
-// CHECK:       define {{.*}}void [[FOO:@.+]]()
+// ALL:       define {{.*}}void [[FOO:@.+]]()
 
-void foo() {}
+void foo() { extern void mayThrow(); mayThrow(); }
 
-// CHECK-LABEL: @main
+// ALL-LABEL: @main
 // TERM_DEBUG-LABEL: @main
 int main() {
-  // CHECK:       [[A_ADDR:%.+]] = alloca i8
+  // ALL:      			[[A_ADDR:%.+]] = alloca i8
   char a;
 
-// CHECK:       [[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:@.+]])
-// CHECK:       [[RES:%.+]] = call {{.*}}i32 @__kmpc_master([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
-// CHECK-NEXT:  [[IS_MASTER:%.+]] = icmp ne i32 [[RES]], 0
-// CHECK-NEXT:  br i1 [[IS_MASTER]], label {{%?}}[[THEN:.+]], label {{%?}}[[EXIT:.+]]
-// CHECK:       [[THEN]]
-// CHECK-NEXT:  store i8 2, i8* [[A_ADDR]]
-// CHECK-NEXT:  call {{.*}}void @__kmpc_end_master([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
-// CHECK-NEXT:  br label {{%?}}[[EXIT]]
-// CHECK:       [[EXIT]]
+// ALL:       			[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:@.+]])
+// ALL:       			[[RES:%.+]] = call {{.*}}i32 @__kmpc_master([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
+// ALL-NEXT:  			[[IS_MASTER:%.+]] = icmp ne i32 [[RES]], 0
+// ALL-NEXT:  			br i1 [[IS_MASTER]], label {{%?}}[[THEN:.+]], label {{%?}}[[EXIT:.+]]
+// ALL:       			[[THEN]]
+// ALL-NEXT:  			store i8 2, i8* [[A_ADDR]]
+// ALL-NEXT:  			call {{.*}}void @__kmpc_end_master([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
+// ALL-NEXT:  			br label {{%?}}[[EXIT]]
+// ALL:       			[[EXIT]]
 #pragma omp master
   a = 2;
-// CHECK:       [[RES:%.+]] = call {{.*}}i32 @__kmpc_master([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
-// CHECK-NEXT:  [[IS_MASTER:%.+]] = icmp ne i32 [[RES]], 0
-// CHECK-NEXT:  br i1 [[IS_MASTER]], label {{%?}}[[THEN:.+]], label {{%?}}[[EXIT:.+]]
-// CHECK:       [[THEN]]
-// CHECK-NEXT:  invoke {{.*}}void [[FOO]]()
-// CHECK:       call {{.*}}void @__kmpc_end_master([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
-// CHECK-NEXT:  br label {{%?}}[[EXIT]]
-// CHECK:       [[EXIT]]
+// IRBUILDER: 			[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:@.+]])
+// ALL:       			[[RES:%.+]] = call {{.*}}i32 @__kmpc_master([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
+// ALL-NEXT:  			[[IS_MASTER:%.+]] = icmp ne i32 [[RES]], 0
+// ALL-NEXT:  			br i1 [[IS_MASTER]], label {{%?}}[[THEN:.+]], label {{%?}}[[EXIT:.+]]
+// ALL:       			[[THEN]]
+// IRBUILDER-NEXT:  call {{.*}}void [[FOO]]()
+// NORMAL-NEXT:  		invoke {{.*}}void [[FOO]]()
+// ALL:       			call {{.*}}void @__kmpc_end_master([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
+// ALL-NEXT:  			br label {{%?}}[[EXIT]]
+// ALL:       			[[EXIT]]
 #pragma omp master
   foo();
-// CHECK-NOT:   call i32 @__kmpc_master
-// CHECK-NOT:   call void @__kmpc_end_master
+  // ALL-NOT:   call i32 @__kmpc_master
+  // ALL-NOT:   call void @__kmpc_end_master
   return a;
 }
 
-// CHECK-LABEL:      parallel_master
+// ALL-LABEL:      parallel_master
 // TERM_DEBUG-LABEL: parallel_master
 void parallel_master() {
 #pragma omp parallel

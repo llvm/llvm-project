@@ -192,5 +192,128 @@ define <2 x double> @fmul2_negated_vec(<2 x double> %a, <2 x double> %b, <2 x do
   ret <2 x double> %sub
 }
 
+; ((a*b) + (c*d)) + n1 --> (a*b) + ((c*d) + n1)
+
+define double @fadd_fma_fmul_1(double %a, double %b, double %c, double %d, double %n1) nounwind {
+; CHECK-LABEL: fadd_fma_fmul_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmadd d2, d2, d3, d4
+; CHECK-NEXT:    fmadd d0, d0, d1, d2
+; CHECK-NEXT:    ret
+  %m1 = fmul fast double %a, %b
+  %m2 = fmul fast double %c, %d
+  %a1 = fadd fast double %m1, %m2
+  %a2 = fadd fast double %a1, %n1
+  ret double %a2
+}
+
+; Minimum FMF - the 1st fadd is contracted because that combines
+; fmul+fadd as specified by the order of operations; the 2nd fadd
+; requires reassociation to fuse with c*d.
+
+define float @fadd_fma_fmul_fmf(float %a, float %b, float %c, float %d, float %n0) nounwind {
+; CHECK-LABEL: fadd_fma_fmul_fmf:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmadd s2, s2, s3, s4
+; CHECK-NEXT:    fmadd s0, s0, s1, s2
+; CHECK-NEXT:    ret
+  %m1 = fmul float %a, %b
+  %m2 = fmul float %c, %d
+  %a1 = fadd contract float %m1, %m2
+  %a2 = fadd reassoc float %n0, %a1
+  ret float %a2
+}
+
+; Not minimum FMF.
+
+define float @fadd_fma_fmul_2(float %a, float %b, float %c, float %d, float %n0) nounwind {
+; CHECK-LABEL: fadd_fma_fmul_2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmul s2, s2, s3
+; CHECK-NEXT:    fmadd s0, s0, s1, s2
+; CHECK-NEXT:    fadd s0, s4, s0
+; CHECK-NEXT:    ret
+  %m1 = fmul float %a, %b
+  %m2 = fmul float %c, %d
+  %a1 = fadd contract float %m1, %m2
+  %a2 = fadd contract float %n0, %a1
+  ret float %a2
+}
+
+; The final fadd can be folded with either 1 of the leading fmuls.
+
+define <2 x double> @fadd_fma_fmul_3(<2 x double> %x1, <2 x double> %x2, <2 x double> %x3, <2 x double> %x4, <2 x double> %x5, <2 x double> %x6, <2 x double> %x7, <2 x double> %x8) nounwind {
+; CHECK-LABEL: fadd_fma_fmul_3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmul v2.2d, v2.2d, v3.2d
+; CHECK-NEXT:    fmla v2.2d, v1.2d, v0.2d
+; CHECK-NEXT:    fmla v2.2d, v7.2d, v6.2d
+; CHECK-NEXT:    fmla v2.2d, v5.2d, v4.2d
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ret
+  %m1 = fmul fast <2 x double> %x1, %x2
+  %m2 = fmul fast <2 x double> %x3, %x4
+  %m3 = fmul fast <2 x double> %x5, %x6
+  %m4 = fmul fast <2 x double> %x7, %x8
+  %a1 = fadd fast <2 x double> %m1, %m2
+  %a2 = fadd fast <2 x double> %m3, %m4
+  %a3 = fadd fast <2 x double> %a1, %a2
+  ret <2 x double> %a3
+}
+
+; negative test
+
+define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
+; CHECK-LABEL: fadd_fma_fmul_extra_use_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmul s1, s0, s1
+; CHECK-NEXT:    fmadd s0, s2, s3, s1
+; CHECK-NEXT:    fadd s0, s4, s0
+; CHECK-NEXT:    str s1, [x0]
+; CHECK-NEXT:    ret
+  %m1 = fmul fast float %a, %b
+  store float %m1, float* %p
+  %m2 = fmul fast float %c, %d
+  %a1 = fadd fast float %m1, %m2
+  %a2 = fadd fast float %n0, %a1
+  ret float %a2
+}
+
+; negative test
+
+define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
+; CHECK-LABEL: fadd_fma_fmul_extra_use_2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmul s2, s2, s3
+; CHECK-NEXT:    fmadd s0, s0, s1, s2
+; CHECK-NEXT:    fadd s0, s4, s0
+; CHECK-NEXT:    str s2, [x0]
+; CHECK-NEXT:    ret
+  %m1 = fmul fast float %a, %b
+  %m2 = fmul fast float %c, %d
+  store float %m2, float* %p
+  %a1 = fadd fast float %m1, %m2
+  %a2 = fadd fast float %n0, %a1
+  ret float %a2
+}
+
+; negative test
+
+define float @fadd_fma_fmul_extra_use_3(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
+; CHECK-LABEL: fadd_fma_fmul_extra_use_3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmul s2, s2, s3
+; CHECK-NEXT:    fmadd s1, s0, s1, s2
+; CHECK-NEXT:    fadd s0, s4, s1
+; CHECK-NEXT:    str s1, [x0]
+; CHECK-NEXT:    ret
+  %m1 = fmul fast float %a, %b
+  %m2 = fmul fast float %c, %d
+  %a1 = fadd fast float %m1, %m2
+  store float %a1, float* %p
+  %a2 = fadd fast float %n0, %a1
+  ret float %a2
+}
+
 declare void @use(double)
 

@@ -1,4 +1,4 @@
-//===-- DWARFFormValue.cpp --------------------------------------*- C++ -*-===//
+//===-- DWARFFormValue.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -454,40 +454,26 @@ void DWARFFormValue::Dump(Stream &s) const {
 }
 
 const char *DWARFFormValue::AsCString() const {
-  SymbolFileDWARF &symbol_file = m_unit->GetSymbolFileDWARF();
+  DWARFContext &context = m_unit->GetSymbolFileDWARF().GetDWARFContext();
 
-  if (m_form == DW_FORM_string) {
+  if (m_form == DW_FORM_string)
     return m_value.value.cstr;
-  } else if (m_form == DW_FORM_strp) {
-    return symbol_file.GetDWARFContext().getOrLoadStrData().PeekCStr(
-        m_value.value.uval);
-  } else if (m_form == DW_FORM_GNU_str_index) {
-    uint32_t index_size = 4;
-    lldb::offset_t offset = m_value.value.uval * index_size;
-    dw_offset_t str_offset =
-        symbol_file.GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
-            &offset, index_size);
-    return symbol_file.GetDWARFContext().getOrLoadStrData().PeekCStr(
-        str_offset);
-  }
+  if (m_form == DW_FORM_strp)
+    return context.getOrLoadStrData().PeekCStr(m_value.value.uval);
 
-  if (m_form == DW_FORM_strx || m_form == DW_FORM_strx1 ||
-      m_form == DW_FORM_strx2 || m_form == DW_FORM_strx3 ||
-      m_form == DW_FORM_strx4) {
+  if (m_form == DW_FORM_GNU_str_index || m_form == DW_FORM_strx ||
+      m_form == DW_FORM_strx1 || m_form == DW_FORM_strx2 ||
+      m_form == DW_FORM_strx3 || m_form == DW_FORM_strx4) {
 
-    // The same code as above.
-    uint32_t indexSize = 4;
-    lldb::offset_t offset =
-        m_unit->GetStrOffsetsBase() + m_value.value.uval * indexSize;
-    dw_offset_t strOffset =
-        symbol_file.GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
-            &offset, indexSize);
-    return symbol_file.GetDWARFContext().getOrLoadStrData().PeekCStr(strOffset);
+    llvm::Optional<uint64_t> offset =
+        m_unit->GetStringOffsetSectionItem(m_value.value.uval);
+    if (!offset)
+      return nullptr;
+    return context.getOrLoadStrData().PeekCStr(*offset);
   }
 
   if (m_form == DW_FORM_line_strp)
-    return symbol_file.GetDWARFContext().getOrLoadLineStrData().PeekCStr(
-        m_value.value.uval);
+    return context.getOrLoadLineStrData().PeekCStr(m_value.value.uval);
 
   return nullptr;
 }
@@ -531,7 +517,7 @@ DWARFDIE DWARFFormValue::Reference() const {
 
   case DW_FORM_ref_addr: {
     DWARFUnit *ref_cu =
-        m_unit->GetSymbolFileDWARF().DebugInfo()->GetUnitContainingDIEOffset(
+        m_unit->GetSymbolFileDWARF().DebugInfo().GetUnitContainingDIEOffset(
             DIERef::Section::DebugInfo, value);
     if (!ref_cu) {
       m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
@@ -544,7 +530,7 @@ DWARFDIE DWARFFormValue::Reference() const {
 
   case DW_FORM_ref_sig8: {
     DWARFTypeUnit *tu =
-        m_unit->GetSymbolFileDWARF().DebugInfo()->GetTypeUnitForHash(value);
+        m_unit->GetSymbolFileDWARF().DebugInfo().GetTypeUnitForHash(value);
     if (!tu)
       return {};
     return tu->GetDIE(tu->GetTypeOffset());
@@ -600,101 +586,6 @@ bool DWARFFormValue::IsDataForm(const dw_form_t form) {
     return true;
   }
   return false;
-}
-
-int DWARFFormValue::Compare(const DWARFFormValue &a_value,
-                            const DWARFFormValue &b_value) {
-  dw_form_t a_form = a_value.Form();
-  dw_form_t b_form = b_value.Form();
-  if (a_form < b_form)
-    return -1;
-  if (a_form > b_form)
-    return 1;
-  switch (a_form) {
-  case DW_FORM_addr:
-  case DW_FORM_addrx:
-  case DW_FORM_flag:
-  case DW_FORM_data1:
-  case DW_FORM_data2:
-  case DW_FORM_data4:
-  case DW_FORM_data8:
-  case DW_FORM_udata:
-  case DW_FORM_ref_addr:
-  case DW_FORM_sec_offset:
-  case DW_FORM_flag_present:
-  case DW_FORM_ref_sig8:
-  case DW_FORM_GNU_addr_index: {
-    uint64_t a = a_value.Unsigned();
-    uint64_t b = b_value.Unsigned();
-    if (a < b)
-      return -1;
-    if (a > b)
-      return 1;
-    return 0;
-  }
-
-  case DW_FORM_sdata: {
-    int64_t a = a_value.Signed();
-    int64_t b = b_value.Signed();
-    if (a < b)
-      return -1;
-    if (a > b)
-      return 1;
-    return 0;
-  }
-
-  case DW_FORM_string:
-  case DW_FORM_strp:
-  case DW_FORM_GNU_str_index: {
-    const char *a_string = a_value.AsCString();
-    const char *b_string = b_value.AsCString();
-    if (a_string == b_string)
-      return 0;
-    else if (a_string && b_string)
-      return strcmp(a_string, b_string);
-    else if (a_string == nullptr)
-      return -1; // A string is NULL, and B is valid
-    else
-      return 1; // A string valid, and B is NULL
-  }
-
-  case DW_FORM_block:
-  case DW_FORM_block1:
-  case DW_FORM_block2:
-  case DW_FORM_block4:
-  case DW_FORM_exprloc: {
-    uint64_t a_len = a_value.Unsigned();
-    uint64_t b_len = b_value.Unsigned();
-    if (a_len < b_len)
-      return -1;
-    if (a_len > b_len)
-      return 1;
-    // The block lengths are the same
-    return memcmp(a_value.BlockData(), b_value.BlockData(), a_value.Unsigned());
-  } break;
-
-  case DW_FORM_ref1:
-  case DW_FORM_ref2:
-  case DW_FORM_ref4:
-  case DW_FORM_ref8:
-  case DW_FORM_ref_udata: {
-    uint64_t a = a_value.m_value.value.uval;
-    uint64_t b = b_value.m_value.value.uval;
-    if (a < b)
-      return -1;
-    if (a > b)
-      return 1;
-    return 0;
-  }
-
-  case DW_FORM_indirect:
-    llvm_unreachable(
-        "This shouldn't happen after the form has been extracted...");
-
-  default:
-    llvm_unreachable("Unhandled DW_FORM");
-  }
-  return -1;
 }
 
 bool DWARFFormValue::FormIsSupported(dw_form_t form) {

@@ -35,7 +35,6 @@
 #define LLVM_CLANG_BASIC_SOURCEMANAGER_H
 
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -60,6 +59,9 @@ namespace clang {
 
 class ASTReader;
 class ASTWriter;
+class FileManager;
+class FileEntry;
+class FileEntryRef;
 class LineTableInfo;
 class SourceManager;
 
@@ -835,23 +837,11 @@ public:
   /// This translates NULL into standard input.
   FileID createFileID(const FileEntry *SourceFile, SourceLocation IncludePos,
                       SrcMgr::CharacteristicKind FileCharacter,
-                      int LoadedID = 0, unsigned LoadedOffset = 0) {
-    const SrcMgr::ContentCache *IR =
-        getOrCreateContentCache(SourceFile, isSystem(FileCharacter));
-    assert(IR && "getOrCreateContentCache() cannot return NULL");
-    return createFileID(IR, SourceFile->getName(), IncludePos, FileCharacter,
-                        LoadedID, LoadedOffset);
-  }
+                      int LoadedID = 0, unsigned LoadedOffset = 0);
 
   FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
                       SrcMgr::CharacteristicKind FileCharacter,
-                      int LoadedID = 0, unsigned LoadedOffset = 0) {
-    const SrcMgr::ContentCache *IR = getOrCreateContentCache(
-        &SourceFile.getFileEntry(), isSystem(FileCharacter));
-    assert(IR && "getOrCreateContentCache() cannot return NULL");
-    return createFileID(IR, SourceFile.getName(), IncludePos, FileCharacter,
-                        LoadedID, LoadedOffset);
-  }
+                      int LoadedID = 0, unsigned LoadedOffset = 0);
 
   /// Create a new FileID that represents the specified memory buffer.
   ///
@@ -860,12 +850,7 @@ public:
   FileID createFileID(std::unique_ptr<llvm::MemoryBuffer> Buffer,
                       SrcMgr::CharacteristicKind FileCharacter = SrcMgr::C_User,
                       int LoadedID = 0, unsigned LoadedOffset = 0,
-                      SourceLocation IncludeLoc = SourceLocation()) {
-    StringRef Name = Buffer->getBufferIdentifier();
-    return createFileID(
-        createMemBufferContentCache(Buffer.release(), /*DoNotFree*/ false),
-        Name, IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
-  }
+                      SourceLocation IncludeLoc = SourceLocation());
 
   enum UnownedTag { Unowned };
 
@@ -876,20 +861,12 @@ public:
   FileID createFileID(UnownedTag, const llvm::MemoryBuffer *Buffer,
                       SrcMgr::CharacteristicKind FileCharacter = SrcMgr::C_User,
                       int LoadedID = 0, unsigned LoadedOffset = 0,
-                      SourceLocation IncludeLoc = SourceLocation()) {
-    return createFileID(createMemBufferContentCache(Buffer, /*DoNotFree*/ true),
-                        Buffer->getBufferIdentifier(), IncludeLoc,
-                        FileCharacter, LoadedID, LoadedOffset);
-  }
+                      SourceLocation IncludeLoc = SourceLocation());
 
   /// Get the FileID for \p SourceFile if it exists. Otherwise, create a
   /// new FileID for the \p SourceFile.
   FileID getOrCreateFileID(const FileEntry *SourceFile,
-                           SrcMgr::CharacteristicKind FileCharacter) {
-    FileID ID = translateFile(SourceFile);
-    return ID.isValid() ? ID : createFileID(SourceFile, SourceLocation(),
-                                            FileCharacter);
-  }
+                           SrcMgr::CharacteristicKind FileCharacter);
 
   /// Return a new SourceLocation that encodes the
   /// fact that a token from SpellingLoc should actually be referenced from
@@ -1029,17 +1006,7 @@ public:
   }
 
   /// Returns the FileEntryRef for the provided FileID.
-  Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const {
-    bool Invalid = false;
-    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
-    if (Invalid || !Entry.isFile())
-      return None;
-
-    const SrcMgr::ContentCache *Content = Entry.getFile().getContentCache();
-    if (!Content || !Content->OrigEntry)
-      return None;
-    return FileEntryRef(Entry.getFile().getName(), *Content->OrigEntry);
-  }
+  Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const;
 
   /// Returns the FileEntry record for the provided SLocEntry.
   const FileEntry *getFileEntryForSLocEntry(const SrcMgr::SLocEntry &sloc) const
@@ -1102,11 +1069,7 @@ public:
   }
 
   /// Return the filename of the file containing a SourceLocation.
-  StringRef getFilename(SourceLocation SpellingLoc) const {
-    if (const FileEntry *F = getFileEntryForID(getFileID(SpellingLoc)))
-      return F->getName();
-    return StringRef();
-  }
+  StringRef getFilename(SourceLocation SpellingLoc) const;
 
   /// Return the source location corresponding to the first byte of
   /// the specified file.
@@ -1682,8 +1645,7 @@ public:
   unsigned local_sloc_entry_size() const { return LocalSLocEntryTable.size(); }
 
   /// Get a local SLocEntry. This is exposed for indexing.
-  const SrcMgr::SLocEntry &getLocalSLocEntry(unsigned Index,
-                                             bool *Invalid = nullptr) const {
+  const SrcMgr::SLocEntry &getLocalSLocEntry(unsigned Index) const {
     assert(Index < LocalSLocEntryTable.size() && "Invalid index");
     return LocalSLocEntryTable[Index];
   }
@@ -1776,12 +1738,13 @@ private:
   const SrcMgr::SLocEntry &loadSLocEntry(unsigned Index, bool *Invalid) const;
 
   /// Get the entry with the given unwrapped FileID.
+  /// Invalid will not be modified for Local IDs.
   const SrcMgr::SLocEntry &getSLocEntryByID(int ID,
                                             bool *Invalid = nullptr) const {
     assert(ID != -1 && "Using FileID sentinel value");
     if (ID < 0)
       return getLoadedSLocEntryByID(ID, Invalid);
-    return getLocalSLocEntry(static_cast<unsigned>(ID), Invalid);
+    return getLocalSLocEntry(static_cast<unsigned>(ID));
   }
 
   const SrcMgr::SLocEntry &

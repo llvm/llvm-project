@@ -1,0 +1,40 @@
+# RUN: yaml2obj %s -o %t
+
+## Verify that the input file is valid and contains the expected load command.
+# RUN: llvm-objdump --private-headers %t | FileCheck %s
+
+# CHECK:      cmd LC_CODE_SIGNATURE
+# CHECK-NEXT: cmdsize 16
+# CHECK-NEXT: dataoff 124
+# CHECK-NEXT: datasize 16
+
+# RUN: llvm-objcopy %t %t.copy
+# RUN: cmp %t %t.copy
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           2
+  sizeofcmds:      88
+  flags:           0x00218085
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294979584
+    vmsize:          4096
+    fileoff:         120
+    filesize:        20
+    maxprot:         7
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         124
+    datasize:        16
+...

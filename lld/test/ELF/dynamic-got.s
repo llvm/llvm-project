@@ -37,16 +37,16 @@
 // CHECK-NEXT:       0000: 74210000 00000000 00000000
 // CHECK-NEXT:     )
 
+// CHECK:      Type: PT_DYNAMIC
+// CHECK-NEXT: Offset: 0x174
+// CHECK-NEXT: VirtualAddress: 0x2174
+// CHECK-NEXT: PhysicalAddress: 0x2174
+
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rel.dyn {
 // CHECK-NEXT:     0x21C4 R_386_RELATIVE - 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
-
-// CHECK:      Type: PT_DYNAMIC
-// CHECK-NEXT: Offset: 0x174
-// CHECK-NEXT: VirtualAddress: 0x2174
-// CHECK-NEXT: PhysicalAddress: 0x2174
 
         calll   .L0$pb
 .L0$pb:

@@ -44,6 +44,8 @@ llvm_config.use_default_substitutions()
 tools = [
     ToolSubst('%test_debuginfo', command=os.path.join(
         config.debuginfo_tests_src_root, 'llgdb-tests', 'test_debuginfo.pl')),
+    ToolSubst("%llvm_src_root", config.llvm_src_root),
+    ToolSubst("%llvm_tools_dir", config.llvm_tools_dir),
 ]
 
 def get_required_attr(config, attr_name):
@@ -102,13 +104,42 @@ dexter_path = os.path.join(config.debuginfo_tests_src_root,
                            'dexter', 'dexter.py')
 dexter_test_cmd = '"{}" "{}" test'.format(config.python3_executable, dexter_path)
 if lldb_path is not None:
-  dexter_test_cmd += ' --lldb-executable {}'.format(lldb_path)
+  dexter_test_cmd += ' --lldb-executable "{}"'.format(lldb_path)
 tools.append(ToolSubst('%dexter', dexter_test_cmd))
 
 # For testing other bits of dexter that aren't under the "test" subcommand,
 # have a %dexter_base substitution.
 dexter_base_cmd = '"{}" "{}"'.format(config.python3_executable, dexter_path)
 tools.append(ToolSubst('%dexter_base', dexter_base_cmd))
+
+# Set up commands for DexTer regression tests.
+# Builder, debugger, optimisation level and several other flags differ
+# depending on whether we're running a unix like or windows os.
+if platform.system() == 'Windows': 
+  dexter_regression_test_builder = '--builder clang-cl_vs2015'
+  dexter_regression_test_debugger = '--debugger dbgeng'
+  dexter_regression_test_cflags = '--cflags "/Zi /Od"'
+  dexter_regression_test_ldflags = '--ldflags "/Zi"'
+else:
+  dexter_regression_test_builder = '--builder clang'
+  dexter_regression_test_debugger = "--debugger lldb"
+  dexter_regression_test_cflags = '--cflags "-O0 -glldb"'
+  dexter_regression_test_ldflags = ''
+
+# Typical command would take the form:
+# ./path_to_py/python.exe ./path_to_dex/dexter.py test --fail-lt 1.0 -w --builder clang --debugger lldb --cflags '-O0 -g'
+dexter_regression_test_command = ' '.join(
+  # "python3", "dexter.py", test, fail_mode, builder, debugger, cflags, ldflags
+  ["{}".format(config.python3_executable),
+  "{}".format(dexter_path),
+  'test',
+  '--fail-lt 1.0 -w',
+  dexter_regression_test_builder,
+  dexter_regression_test_debugger,
+  dexter_regression_test_cflags,
+  dexter_regression_test_ldflags])
+
+tools.append(ToolSubst('%dexter_regression_test', dexter_regression_test_command))
 
 tool_dirs = [config.llvm_tools_dir]
 
@@ -126,3 +157,6 @@ if platform.system() == 'Darwin':
         if apple_lldb_vers < 1000:
             config.available_features.add('apple-lldb-pre-1000')
 
+llvm_config.feature_config([('--build-mode', {
+    'Debug|RelWithDebInfo': 'debug-info'
+})])

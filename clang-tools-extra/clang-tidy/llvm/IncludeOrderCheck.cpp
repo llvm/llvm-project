@@ -81,7 +81,8 @@ void IncludeOrderPPCallbacks::InclusionDirective(
     SrcMgr::CharacteristicKind FileType) {
   // We recognize the first include as a special main module header and want
   // to leave it in the top position.
-  IncludeDirective ID = {HashLoc, FilenameRange, FileName, IsAngled, false};
+  IncludeDirective ID = {HashLoc, FilenameRange, std::string(FileName),
+                         IsAngled, false};
   if (LookForMainModule && !IsAngled) {
     ID.IsMainModule = true;
     LookForMainModule = false;

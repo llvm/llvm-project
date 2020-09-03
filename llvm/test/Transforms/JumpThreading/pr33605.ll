@@ -27,7 +27,7 @@
 ; CHECK: br label %if.end
 ; CHECK-NOT: br label %for.cond
 ; CHECK: if.end:
-; CHECK br label %for.cond
+; CHECK: br label %for.cond
 define i1 @test(i32 %a, i32 %b, i32* %c) {
 entry:
   br label %for.cond

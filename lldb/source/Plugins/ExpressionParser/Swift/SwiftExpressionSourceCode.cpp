@@ -97,7 +97,11 @@ bool SwiftExpressionSourceCode::GetText(
     }
 
     SwiftPersistentExpressionState *persistent_state =
-      llvm::cast<SwiftPersistentExpressionState>(target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeSwift));
+        llvm::cast<SwiftPersistentExpressionState>(
+            target->GetPersistentExpressionStateForLanguage(
+                lldb::eLanguageTypeSwift));
+    if (!persistent_state)
+      return false;
     std::vector<swift::ValueDecl *> persistent_results;
     // Check if we have already declared the playground stub debug functions
     persistent_state->GetSwiftPersistentDecls(ConstString("__builtin_log_with_id"), {},
@@ -116,7 +120,7 @@ bool SwiftExpressionSourceCode::GetText(
                                         os_vers.str(),
                                         first_body_line);
 
-    text = wrap_stream.GetString();
+    text = wrap_stream.GetString().str();
   } else {
     text.append(m_body);
   }

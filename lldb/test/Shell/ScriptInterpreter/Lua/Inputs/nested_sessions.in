@@ -1,0 +1,6 @@
+script
+print(lldb.target, lldb.debugger:GetSelectedTarget())
+lldb.debugger:SetSelectedTarget(lldb.debugger:GetTargetAtIndex(0))
+print(lldb.target, lldb.debugger:GetSelectedTarget())
+lldb.debugger:HandleCommand("script print(lldb.target, lldb.debugger:GetSelectedTarget())")
+print(lldb.target, lldb.debugger:GetSelectedTarget())

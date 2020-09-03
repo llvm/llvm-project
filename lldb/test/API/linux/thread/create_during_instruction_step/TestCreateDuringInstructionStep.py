@@ -4,7 +4,6 @@ over a thread creation instruction.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -18,10 +17,7 @@ class CreateDuringInstructionStepTestCase(TestBase):
 
     @skipUnlessPlatform(['linux'])
     @expectedFailureAndroid('llvm.org/pr24737', archs=['arm'])
-    @expectedFailureAll(
-        oslist=["linux"],
-        archs=["arm"],
-        bugnumber="llvm.org/pr24737")
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"], bugnumber="llvm.org/pr24737")
     def test_step_inst(self):
         self.build(dictionary=self.getBuildFlags())
         exe = self.getBuildArtifact("a.out")

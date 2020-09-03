@@ -75,3 +75,8 @@ void foo(int xsize, int ysize) {
   // despite v == 0.
   memset(p, -1, v);
 }
+
+void *memset(int);
+void NoCrash() {
+  memset(1);
+}

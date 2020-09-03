@@ -1,4 +1,4 @@
-//===-- SBPlatform.cpp ------------------------------------------*- C++ -*-===//
+//===-- SBPlatform.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,9 +8,11 @@
 
 #include "lldb/API/SBPlatform.h"
 #include "SBReproducerPrivate.h"
+#include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLaunchInfo.h"
+#include "lldb/API/SBPlatform.h"
 #include "lldb/API/SBUnixSignals.h"
 #include "lldb/Host/File.h"
 #include "lldb/Target/Platform.h"
@@ -36,7 +38,7 @@ struct PlatformConnectOptions {
       m_url = url;
   }
 
-  ~PlatformConnectOptions() {}
+  ~PlatformConnectOptions() = default;
 
   std::string m_url;
   std::string m_rsync_options;
@@ -54,7 +56,7 @@ struct PlatformShellCommand {
       m_command = shell_command;
   }
 
-  ~PlatformShellCommand() {}
+  ~PlatformShellCommand() = default;
 
   std::string m_command;
   std::string m_working_dir;
@@ -80,14 +82,16 @@ SBPlatformConnectOptions::SBPlatformConnectOptions(
 
 SBPlatformConnectOptions::~SBPlatformConnectOptions() { delete m_opaque_ptr; }
 
-void SBPlatformConnectOptions::operator=(const SBPlatformConnectOptions &rhs) {
+SBPlatformConnectOptions &SBPlatformConnectOptions::
+operator=(const SBPlatformConnectOptions &rhs) {
   LLDB_RECORD_METHOD(
-      void,
+      SBPlatformConnectOptions &,
       SBPlatformConnectOptions, operator=,(
                                     const lldb::SBPlatformConnectOptions &),
       rhs);
 
   *m_opaque_ptr = *rhs.m_opaque_ptr;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 const char *SBPlatformConnectOptions::GetURL() {
@@ -172,6 +176,18 @@ SBPlatformShellCommand::SBPlatformShellCommand(
                           (const lldb::SBPlatformShellCommand &), rhs);
 
   *m_opaque_ptr = *rhs.m_opaque_ptr;
+}
+
+SBPlatformShellCommand &SBPlatformShellCommand::
+operator=(const SBPlatformShellCommand &rhs) {
+
+  LLDB_RECORD_METHOD(
+      SBPlatformShellCommand &,
+      SBPlatformShellCommand, operator=,(const lldb::SBPlatformShellCommand &),
+      rhs);
+
+  *m_opaque_ptr = *rhs.m_opaque_ptr;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBPlatformShellCommand::~SBPlatformShellCommand() { delete m_opaque_ptr; }
@@ -273,7 +289,30 @@ SBPlatform::SBPlatform(const char *platform_name) : m_opaque_sp() {
     m_opaque_sp = Platform::Create(ConstString(platform_name), error);
 }
 
-SBPlatform::~SBPlatform() {}
+SBPlatform::SBPlatform(const SBPlatform &rhs) {
+  LLDB_RECORD_CONSTRUCTOR(SBPlatform, (const lldb::SBPlatform &), rhs);
+
+  m_opaque_sp = rhs.m_opaque_sp;
+}
+
+SBPlatform &SBPlatform::operator=(const SBPlatform &rhs) {
+  LLDB_RECORD_METHOD(SBPlatform &,
+                     SBPlatform, operator=,(const lldb::SBPlatform &), rhs);
+
+  m_opaque_sp = rhs.m_opaque_sp;
+  return LLDB_RECORD_RESULT(*this);
+}
+
+SBPlatform::~SBPlatform() = default;
+
+SBPlatform SBPlatform::GetHostPlatform() {
+  LLDB_RECORD_STATIC_METHOD_NO_ARGS(lldb::SBPlatform, SBPlatform,
+                                    GetHostPlatform);
+
+  SBPlatform host_platform;
+  host_platform.m_opaque_sp = Platform::GetHostPlatform();
+  return LLDB_RECORD_RESULT(host_platform);
+}
 
 bool SBPlatform::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBPlatform, IsValid);
@@ -615,6 +654,17 @@ SBUnixSignals SBPlatform::GetUnixSignals() const {
   return LLDB_RECORD_RESULT(SBUnixSignals());
 }
 
+SBEnvironment SBPlatform::GetEnvironment() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBEnvironment, SBPlatform, GetEnvironment);
+  PlatformSP platform_sp(GetSP());
+
+  if (platform_sp) {
+    return LLDB_RECORD_RESULT(SBEnvironment(platform_sp->GetEnvironment()));
+  }
+
+  return LLDB_RECORD_RESULT(SBEnvironment());
+}
+
 namespace lldb_private {
 namespace repro {
 
@@ -624,7 +674,7 @@ void RegisterMethods<SBPlatformConnectOptions>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBPlatformConnectOptions,
                             (const lldb::SBPlatformConnectOptions &));
   LLDB_REGISTER_METHOD(
-      void,
+      SBPlatformConnectOptions &,
       SBPlatformConnectOptions, operator=,(
                                     const lldb::SBPlatformConnectOptions &));
   LLDB_REGISTER_METHOD(const char *, SBPlatformConnectOptions, GetURL, ());
@@ -645,6 +695,9 @@ void RegisterMethods<SBPlatformShellCommand>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBPlatformShellCommand, (const char *));
   LLDB_REGISTER_CONSTRUCTOR(SBPlatformShellCommand,
                             (const lldb::SBPlatformShellCommand &));
+  LLDB_REGISTER_METHOD(
+      SBPlatformShellCommand &,
+      SBPlatformShellCommand, operator=,(const lldb::SBPlatformShellCommand &));
   LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, Clear, ());
   LLDB_REGISTER_METHOD(const char *, SBPlatformShellCommand, GetCommand, ());
   LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, SetCommand,
@@ -666,6 +719,9 @@ template <>
 void RegisterMethods<SBPlatform>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBPlatform, ());
   LLDB_REGISTER_CONSTRUCTOR(SBPlatform, (const char *));
+  LLDB_REGISTER_CONSTRUCTOR(SBPlatform, (const lldb::SBPlatform &));
+  LLDB_REGISTER_METHOD(SBPlatform &,
+                       SBPlatform, operator=,(const lldb::SBPlatform &));
   LLDB_REGISTER_METHOD_CONST(bool, SBPlatform, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBPlatform, operator bool, ());
   LLDB_REGISTER_METHOD(void, SBPlatform, Clear, ());
@@ -700,8 +756,11 @@ void RegisterMethods<SBPlatform>(Registry &R) {
                        (const char *));
   LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, SetFilePermissions,
                        (const char *, uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBEnvironment, SBPlatform, GetEnvironment, ());
   LLDB_REGISTER_METHOD_CONST(lldb::SBUnixSignals, SBPlatform, GetUnixSignals,
                              ());
+  LLDB_REGISTER_STATIC_METHOD(lldb::SBPlatform, SBPlatform, GetHostPlatform,
+                              ());
 }
 
 }

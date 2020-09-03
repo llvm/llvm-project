@@ -12,12 +12,6 @@ void f1() {
 void f2() {
   asm("foo" : "=r" (a)); // expected-error {{use of undeclared identifier 'a'}}
   asm("foo" : : "r" (b)); // expected-error {{use of undeclared identifier 'b'}} 
-
-  asm const (""); // expected-warning {{ignored const qualifier on asm}}
-  asm volatile ("");
-  asm restrict (""); // expected-warning {{ignored restrict qualifier on asm}}
-  // FIXME: Once GCC supports _Atomic, check whether it allows this.
-  asm _Atomic (""); // expected-warning {{ignored _Atomic qualifier on asm}}
 }
 
 void a() __asm__(""); // expected-error {{cannot use an empty string literal in 'asm'}}

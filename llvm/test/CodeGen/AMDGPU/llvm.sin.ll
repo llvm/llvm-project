@@ -51,6 +51,21 @@ define amdgpu_kernel void @unsafe_sin_3x_f32(float addrspace(1)* %out, float %x)
   ret void
 }
 
+; FUNC-LABEL: {{^}}fmf_sin_3x_f32:
+; GCN-NOT: v_add_f32
+; GCN: 0x3ef47644
+; GCN: v_mul_f32
+; SICIVI: v_fract_f32
+; GFX9-NOT: v_fract_f32
+; GCN: v_sin_f32
+; GCN-NOT: v_sin_f32
+define amdgpu_kernel void @fmf_sin_3x_f32(float addrspace(1)* %out, float %x) #1 {
+  %y = fmul reassoc float 3.0, %x
+  %sin = call reassoc float @llvm.sin.f32(float %y)
+  store float %sin, float addrspace(1)* %out
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}safe_sin_2x_f32:
 ; GCN: v_add_f32
 ; GCN: v_mul_f32
@@ -80,32 +95,61 @@ define amdgpu_kernel void @unsafe_sin_2x_f32(float addrspace(1)* %out, float %x)
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_safe_2sin_f32:
-; GCN: v_add_f32
-; GCN: v_mul_f32
-; SICIVI: v_fract_f32
-; GFX9-NOT: v_fract_f32
-; GCN: v_sin_f32
-; GCN-NOT: v_sin_f32
-define amdgpu_kernel void @test_safe_2sin_f32(float addrspace(1)* %out, float %x) #1 {
-   %y = fmul float 2.0, %x
-   %sin = call float @llvm.sin.f32(float %y)
-   store float %sin, float addrspace(1)* %out
-   ret void
-}
-
-; FUNC-LABEL: {{^}}test_unsafe_2sin_f32:
+; FUNC-LABEL: {{^}}fmf_sin_2x_f32:
+; GCN-NOT: v_add_f32
 ; GCN: 0x3ea2f983
 ; GCN: v_mul_f32
 ; SICIVI: v_fract_f32
 ; GFX9-NOT: v_fract_f32
 ; GCN: v_sin_f32
 ; GCN-NOT: v_sin_f32
-define amdgpu_kernel void @test_unsafe_2sin_f32(float addrspace(1)* %out, float %x) #2 {
-   %y = fmul float 2.0, %x
-   %sin = call float @llvm.sin.f32(float %y)
-   store float %sin, float addrspace(1)* %out
-   ret void
+define amdgpu_kernel void @fmf_sin_2x_f32(float addrspace(1)* %out, float %x) #1 {
+  %y = fmul reassoc float 2.0, %x
+  %sin = call reassoc float @llvm.sin.f32(float %y)
+  store float %sin, float addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}safe_sin_cancel_f32:
+; GCN: v_mul_f32
+; GCN: v_mul_f32
+; SICIVI: v_fract_f32
+; GFX9-NOT: v_fract_f32
+; GCN: v_sin_f32
+; GCN-NOT: v_sin_f32
+define amdgpu_kernel void @safe_sin_cancel_f32(float addrspace(1)* %out, float %x) #1 {
+  %y = fmul float 0x401921FB60000000, %x
+  %sin = call float @llvm.sin.f32(float %y)
+  store float %sin, float addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}unsafe_sin_cancel_f32:
+; GCN-NOT: v_add_f32
+; GCN-NOT: v_mul_f32
+; SICIVI: v_fract_f32
+; GFX9-NOT: v_fract_f32
+; GCN: v_sin_f32
+; GCN-NOT: v_sin_f32
+define amdgpu_kernel void @unsafe_sin_cancel_f32(float addrspace(1)* %out, float %x) #2 {
+  %y = fmul float 0x401921FB60000000, %x
+  %sin = call float @llvm.sin.f32(float %y)
+  store float %sin, float addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}fmf_sin_cancel_f32:
+; GCN-NOT: v_add_f32
+; GCN-NOT: v_mul_f32
+; SICIVI: v_fract_f32
+; GFX9-NOT: v_fract_f32
+; GCN: v_sin_f32
+; GCN-NOT: v_sin_f32
+define amdgpu_kernel void @fmf_sin_cancel_f32(float addrspace(1)* %out, float %x) #1 {
+  %y = fmul reassoc float 0x401921FB60000000, %x
+  %sin = call reassoc float @llvm.sin.f32(float %y)
+  store float %sin, float addrspace(1)* %out
+  ret void
 }
 
 ; FUNC-LABEL: {{^}}sin_v4f32:

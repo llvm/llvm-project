@@ -1,5 +1,4 @@
-//===-- SBExecutionContext.cpp ------------------------------------*- C++
-//-*-===//
+//===-- SBExecutionContext.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -66,7 +65,7 @@ SBExecutionContext::SBExecutionContext(const lldb::SBFrame &frame)
   m_exe_ctx_sp->SetFrameSP(frame.GetFrameSP());
 }
 
-SBExecutionContext::~SBExecutionContext() {}
+SBExecutionContext::~SBExecutionContext() = default;
 
 const SBExecutionContext &SBExecutionContext::
 operator=(const lldb::SBExecutionContext &rhs) {

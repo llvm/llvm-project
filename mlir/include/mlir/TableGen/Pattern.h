@@ -1,6 +1,6 @@
 //===- Pattern.h - Pattern wrapper class ------------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -77,6 +77,9 @@ public:
   // Returns true if this DAG leaf is specifying an enum attribute case.
   bool isEnumAttrCase() const;
 
+  // Returns true if this DAG leaf is specifying a string attribute.
+  bool isStringAttr() const;
+
   // Returns this DAG leaf as a constraint. Asserts if fails.
   Constraint getAsConstraint() const;
 
@@ -94,6 +97,10 @@ public:
   // Returns the native code call template inside this DAG leaf.
   // Precondition: isNativeCodeCall()
   StringRef getNativeCodeTemplate() const;
+
+  // Returns the string associated with the leaf.
+  // Precondition: isStringAttr()
+  std::string getStringAttr() const;
 
   void print(raw_ostream &os) const;
 
@@ -158,6 +165,9 @@ public:
   // Returns true if this DAG construct means to replace with an existing SSA
   // value.
   bool isReplaceWithValue() const;
+
+  // Returns whether this DAG represents the location of an op creation.
+  bool isLocationDirective() const;
 
   // Returns true if this DAG node is wrapping native code call.
   bool isNativeCodeCall() const;
@@ -308,7 +318,7 @@ public:
   const_iterator find(StringRef key) const;
 
   // Returns the number of static values of the given `symbol` corresponds to.
-  // A static value is a operand/result declared in ODS. Normally a symbol only
+  // A static value is an operand/result declared in ODS. Normally a symbol only
   // represents one static value, but symbols bound to op results can represent
   // more than one if the op is a multi-result op.
   int getStaticValueCount(StringRef symbol) const;
@@ -397,8 +407,8 @@ private:
   const llvm::Record &def;
 
   // All operators.
-  // TODO(antiagainst): we need a proper context manager, like MLIRContext,
-  // for managing the lifetime of shared entities.
+  // TODO: we need a proper context manager, like MLIRContext, for managing the
+  // lifetime of shared entities.
   RecordOperatorMap *recordOpMap;
 };
 

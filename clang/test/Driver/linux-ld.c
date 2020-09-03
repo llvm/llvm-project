@@ -769,6 +769,21 @@
 // CHECK-FEDORA-21-AARCH64: "{{.*}}/usr/lib/gcc/aarch64-redhat-linux/4.9.0{{/|\\\\}}crtend.o"
 // CHECK-FEDORA-21-AARCH64: "{{.*}}/usr/lib/gcc/aarch64-redhat-linux/4.9.0/../../../../lib64{{/|\\\\}}crtn.o"
 //
+// Check Fedora 31 on riscv64.
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=riscv64-redhat-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/fedora_31_riscv64_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-FEDORA-31-RISCV64 %s
+// CHECK-FEDORA-31-RISCV64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-FEDORA-31-RISCV64: "{{.*}}/usr/lib/gcc/riscv64-redhat-linux/9/../../../../lib64{{/|\\\\}}crt1.o"
+// CHECK-FEDORA-31-RISCV64: "{{.*}}/usr/lib/gcc/riscv64-redhat-linux/9{{/|\\\\}}crti.o"
+// CHECK-FEDORA-31-RISCV64: "{{.*}}/usr/lib/gcc/riscv64-redhat-linux/9{{/|\\\\}}crtbegin.o"
+// CHECK-FEDORA-31-RISCV64: "-L[[SYSROOT]]/usr/lib/gcc/riscv64-redhat-linux/9"
+// CHECK-FEDORA-31-RISCV64: "-L[[SYSROOT]]/usr/lib/gcc/riscv64-redhat-linux/9/../../../../lib64"
+// CHECK-FEDORA-31-RISCV64: "{{.*}}/usr/lib/gcc/riscv64-redhat-linux/9{{/|\\\\}}crtend.o"
+// CHECK-FEDORA-31-RISCV64: "{{.*}}/usr/lib/gcc/riscv64-redhat-linux/9{{/|\\\\}}crtn.o"
+//
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-unknown-linux-gnueabi -rtlib=platform \
 // RUN:     --gcc-toolchain="" \

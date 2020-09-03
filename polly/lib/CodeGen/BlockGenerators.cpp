@@ -316,8 +316,8 @@ Value *BlockGenerator::generateArrayLoad(ScopStmt &Stmt, LoadInst *Load,
 
   Value *NewPointer =
       generateLocationAccessed(Stmt, Load, BBMap, LTS, NewAccesses);
-  Value *ScalarLoad = Builder.CreateAlignedLoad(
-      NewPointer, Load->getAlignment(), Load->getName() + "_p_scalar_");
+  Value *ScalarLoad = Builder.CreateAlignedLoad(NewPointer, Load->getAlign(),
+                                                Load->getName() + "_p_scalar_");
 
   if (PollyDebugPrinting)
     RuntimeDebugBuilder::createCPUPrinter(Builder, "Load from ", NewPointer,
@@ -343,7 +343,7 @@ void BlockGenerator::generateArrayStore(ScopStmt &Stmt, StoreInst *Store,
       RuntimeDebugBuilder::createCPUPrinter(Builder, "Store to  ", NewPointer,
                                             ": ", ValueOperand, "\n");
 
-    Builder.CreateAlignedStore(ValueOperand, NewPointer, Store->getAlignment());
+    Builder.CreateAlignedStore(ValueOperand, NewPointer, Store->getAlign());
   });
 }
 
@@ -511,8 +511,9 @@ Value *BlockGenerator::getOrCreateAlloca(const ScopArrayInfo *Array) {
 
   const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
 
-  Addr = new AllocaInst(Ty, DL.getAllocaAddrSpace(),
-                        ScalarBase->getName() + NameExt);
+  Addr =
+      new AllocaInst(Ty, DL.getAllocaAddrSpace(), nullptr,
+                     DL.getPrefTypeAlign(Ty), ScalarBase->getName() + NameExt);
   EntryBB = &Builder.GetInsertBlock()->getParent()->getEntryBlock();
   Addr->insertBefore(&*EntryBB->getFirstInsertionPt());
 
@@ -956,7 +957,7 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
     if (PHI->getParent() != AfterMergeBB)
       continue;
 
-    std::string Name = PHI->getName();
+    std::string Name = PHI->getName().str();
     Value *ScalarAddr = getOrCreateAlloca(SAI);
     Value *Reload = Builder.CreateLoad(ScalarAddr, Name + ".ph.final_reload");
     Reload = Builder.CreateBitOrPointerCast(Reload, PHI->getType());
@@ -1024,7 +1025,7 @@ Value *VectorBlockGenerator::getVectorValue(ScopStmt &Stmt, Value *Old,
 
   int Width = getVectorWidth();
 
-  Value *Vector = UndefValue::get(VectorType::get(Old->getType(), Width));
+  Value *Vector = UndefValue::get(FixedVectorType::get(Old->getType(), Width));
 
   for (int Lane = 0; Lane < Width; Lane++)
     Vector = Builder.CreateInsertElement(
@@ -1041,9 +1042,9 @@ Type *VectorBlockGenerator::getVectorPtrTy(const Value *Val, int Width) {
   assert(PointerTy && "PointerType expected");
 
   Type *ScalarType = PointerTy->getElementType();
-  VectorType *VectorType = VectorType::get(ScalarType, Width);
+  auto *FVTy = FixedVectorType::get(ScalarType, Width);
 
-  return PointerType::getUnqual(VectorType);
+  return PointerType::getUnqual(FVTy);
 }
 
 Value *VectorBlockGenerator::generateStrideOneLoad(
@@ -1092,7 +1093,7 @@ Value *VectorBlockGenerator::generateStrideZeroLoad(
     ScalarLoad->setAlignment(Align(8));
 
   Constant *SplatVector = Constant::getNullValue(
-      VectorType::get(Builder.getInt32Ty(), getVectorWidth()));
+      FixedVectorType::get(Builder.getInt32Ty(), getVectorWidth()));
 
   Value *VectorLoad = Builder.CreateShuffleVector(
       ScalarLoad, ScalarLoad, SplatVector, Load->getName() + "_p_splat");
@@ -1104,10 +1105,10 @@ Value *VectorBlockGenerator::generateUnknownStrideLoad(
     __isl_keep isl_id_to_ast_expr *NewAccesses) {
   int VectorWidth = getVectorWidth();
   auto *Pointer = Load->getPointerOperand();
-  VectorType *VectorType = VectorType::get(
+  auto *FVTy = FixedVectorType::get(
       dyn_cast<PointerType>(Pointer->getType())->getElementType(), VectorWidth);
 
-  Value *Vector = UndefValue::get(VectorType);
+  Value *Vector = UndefValue::get(FVTy);
 
   for (int i = 0; i < VectorWidth; i++) {
     Value *NewPointer = generateLocationAccessed(Stmt, Load, ScalarMaps[i],
@@ -1166,7 +1167,7 @@ void VectorBlockGenerator::copyUnaryInst(ScopStmt &Stmt, UnaryInstruction *Inst,
   assert(isa<CastInst>(Inst) && "Can not generate vector code for instruction");
 
   const CastInst *Cast = dyn_cast<CastInst>(Inst);
-  VectorType *DestType = VectorType::get(Inst->getType(), VectorWidth);
+  auto *DestType = FixedVectorType::get(Inst->getType(), VectorWidth);
   VectorMap[Inst] = Builder.CreateCast(Cast->getOpcode(), NewOperand, DestType);
 }
 
@@ -1276,8 +1277,8 @@ void VectorBlockGenerator::copyInstScalarized(
     return;
 
   // Make the result available as vector value.
-  VectorType *VectorType = VectorType::get(Inst->getType(), VectorWidth);
-  Value *Vector = UndefValue::get(VectorType);
+  auto *FVTy = FixedVectorType::get(Inst->getType(), VectorWidth);
+  Value *Vector = UndefValue::get(FVTy);
 
   for (int i = 0; i < VectorWidth; i++)
     Vector = Builder.CreateInsertElement(Vector, ScalarMaps[i][Inst],
@@ -1343,7 +1344,7 @@ void VectorBlockGenerator::generateScalarVectorLoads(
                                              Address->getName() + "_p_vec_p");
     auto *Val = Builder.CreateLoad(VectorPtr, Address->getName() + ".reload");
     Constant *SplatVector = Constant::getNullValue(
-        VectorType::get(Builder.getInt32Ty(), getVectorWidth()));
+        FixedVectorType::get(Builder.getInt32Ty(), getVectorWidth()));
 
     Value *VectorVal = Builder.CreateShuffleVector(
         Val, Val, SplatVector, Address->getName() + "_p_splat");

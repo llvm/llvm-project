@@ -1,10 +1,16 @@
-// RUN: %clang_cc1 -verify -std=c++11 -fopenmp -fopenmp-version=45 -ast-print %s -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -verify -std=c++11 -fopenmp -fopenmp-version=45 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
+// RUN: %clang_cc1 -verify -std=c++11 -fopenmp -fopenmp-version=50 -ast-print %s -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP5
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 
-// RUN: %clang_cc1 -verify -std=c++11 -fopenmp-simd -fopenmp-version=45 -ast-print %s -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -verify -std=c++11 -fopenmp-simd -fopenmp-version=45 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
+// RUN: %clang_cc1 -verify -std=c++11 -fopenmp-simd -fopenmp-version=50 -ast-print %s -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP5
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -125,11 +131,11 @@ void foo(int argc, char **argv) {
 #pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a) shared(argc)
     // CHECK: #pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a) shared(argc)
     for (int i = 0; i < 2; ++i)
-// CHECK: for (int i = 0; i < 2; ++i)
+      // CHECK: for (int i = 0; i < 2; ++i)
       [&]() {
-	  a = 2;
-	  // CHECK: a = 2;
-	}();
+        a = 2;
+        // CHECK: a = 2;
+      }();
 
   }();
   [&]() {
@@ -138,9 +144,9 @@ void foo(int argc, char **argv) {
 #pragma omp distribute parallel for private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) schedule(auto) if (argc) num_threads(a) default(shared) shared(e) reduction(+ : h) dist_schedule(static, b)
     for (int i = 0; i < 10; ++i)
       for (int j = 0; j < 10; ++j)
-	[&]() {
-	  a++;
-	}();
+        [&]() {
+          a++;
+        }();
     // CHECK: #pragma omp distribute parallel for private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) schedule(auto) if(argc) num_threads(a) default(shared) shared(e) reduction(+: h) dist_schedule(static, b)
     // CHECK-NEXT: for (int i = 0; i < 10; ++i)
     // CHECK-NEXT: for (int j = 0; j < 10; ++j)
@@ -156,8 +162,13 @@ int main(int argc, char **argv) {
 #pragma omp threadprivate(g)
 #pragma omp target
 #pragma omp teams
+#ifdef OMP5
+#pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a) shared(argc) order(concurrent) reduction(task,+:c)
+#else
 #pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a) shared(argc)
-  // CHECK: #pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a) shared(argc)
+#endif // OMP5
+  // OMP45: #pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a) shared(argc)
+  // OMP50: #pragma omp distribute parallel for schedule(guided, argc) default(none) copyin(g) dist_schedule(static, a) private(a) shared(argc) order(concurrent) reduction(task, +: c)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

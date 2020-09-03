@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ProcessGDBRemote_h_
-#define liblldb_ProcessGDBRemote_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_PROCESSGDBREMOTE_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_PROCESSGDBREMOTE_H
 
 #include <atomic>
 #include <map>
@@ -85,7 +85,7 @@ public:
   Status WillAttachToProcessWithName(const char *process_name,
                                      bool wait_for_launch) override;
 
-  Status DoConnectRemote(Stream *strm, llvm::StringRef remote_url) override;
+  Status DoConnectRemote(llvm::StringRef remote_url) override;
 
   Status WillLaunchOrAttach();
 
@@ -312,7 +312,7 @@ protected:
   bool UpdateThreadList(ThreadList &old_thread_list,
                         ThreadList &new_thread_list) override;
 
-  Status ConnectToReplayServer(repro::Loader *loader);
+  Status ConnectToReplayServer();
 
   Status EstablishConnectionIfNeeded(const ProcessInfo &process_info);
 
@@ -377,6 +377,7 @@ protected:
   bool UpdateThreadIDList();
 
   void DidLaunchOrAttach(ArchSpec &process_arch);
+  void MaybeLoadExecutableModule();
 
   Status ConnectToDebugserver(llvm::StringRef host_port);
 
@@ -386,7 +387,7 @@ protected:
   DynamicLoader *GetDynamicLoader() override;
 
   bool GetGDBServerRegisterInfoXMLAndProcess(ArchSpec &arch_to_use,
-                                             std::string xml_filename, 
+                                             std::string xml_filename,
                                              uint32_t &cur_reg_num,
                                              uint32_t &reg_offset);
 
@@ -449,10 +450,11 @@ private:
   llvm::DenseMap<ModuleCacheKey, ModuleSpec, ModuleCacheInfo>
       m_cached_module_specs;
 
-  DISALLOW_COPY_AND_ASSIGN(ProcessGDBRemote);
+  ProcessGDBRemote(const ProcessGDBRemote &) = delete;
+  const ProcessGDBRemote &operator=(const ProcessGDBRemote &) = delete;
 };
 
 } // namespace process_gdb_remote
 } // namespace lldb_private
 
-#endif // liblldb_ProcessGDBRemote_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_PROCESSGDBREMOTE_H

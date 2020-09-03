@@ -32,8 +32,8 @@ class BranchProbability {
   uint32_t N;
 
   // Denominator, which is a constant value.
-  static const uint32_t D = 1u << 31;
-  static const uint32_t UnknownN = UINT32_MAX;
+  static constexpr uint32_t D = 1u << 31;
+  static constexpr uint32_t UnknownN = UINT32_MAX;
 
   // Construct a BranchProbability with only numerator assuming the denominator
   // is 1<<31. For internal use only.

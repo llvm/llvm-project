@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_DURATIONDIVISIONCHECK_H_
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_DURATIONDIVISIONCHECK_H_
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -23,6 +23,9 @@ namespace abseil {
 class DurationDivisionCheck : public ClangTidyCheck {
 public:
   using ClangTidyCheck::ClangTidyCheck;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
   void registerMatchers(ast_matchers::MatchFinder *finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &result) override;
 };

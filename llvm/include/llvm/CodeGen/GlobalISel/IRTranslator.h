@@ -21,7 +21,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
-#include "llvm/CodeGen/GlobalISel/Types.h"
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
@@ -202,6 +201,10 @@ private:
   /// \return true if the materialization succeeded.
   bool translate(const Constant &C, Register Reg);
 
+  // Translate U as a copy of V.
+  bool translateCopy(const User &U, const Value &V,
+                     MachineIRBuilder &MIRBuilder);
+
   /// Translate an LLVM bitcast into generic IR. Either a COPY or a G_BITCAST is
   /// emitted.
   bool translateBitCast(const User &U, MachineIRBuilder &MIRBuilder);
@@ -232,10 +235,13 @@ private:
   bool translateSimpleIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                 MachineIRBuilder &MIRBuilder);
 
+  bool translateConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI,
+                                       MachineIRBuilder &MIRBuilder);
+
   bool translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                MachineIRBuilder &MIRBuilder);
 
-  bool translateInlineAsm(const CallInst &CI, MachineIRBuilder &MIRBuilder);
+  bool translateInlineAsm(const CallBase &CB, MachineIRBuilder &MIRBuilder);
 
   /// Returns true if the value should be split into multiple LLTs.
   /// If \p Offsets is given then the split type's offsets will be stored in it.
@@ -244,8 +250,7 @@ private:
                     SmallVectorImpl<uint64_t> *Offsets = nullptr);
 
   /// Common code for translating normal calls or invokes.
-  bool translateCallSite(const ImmutableCallSite &CS,
-                         MachineIRBuilder &MIRBuilder);
+  bool translateCallBase(const CallBase &CB, MachineIRBuilder &MIRBuilder);
 
   /// Translate call instruction.
   /// \pre \p U is a call instruction.
@@ -453,6 +458,7 @@ private:
   bool translateAtomicCmpXchg(const User &U, MachineIRBuilder &MIRBuilder);
   bool translateAtomicRMW(const User &U, MachineIRBuilder &MIRBuilder);
   bool translateFence(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateFreeze(const User &U, MachineIRBuilder &MIRBuilder);
 
   // Stubs to keep the compiler happy while we implement the rest of the
   // translation.
@@ -481,9 +487,6 @@ private:
     return false;
   }
   bool translateUserOp2(const User &U, MachineIRBuilder &MIRBuilder) {
-    return false;
-  }
-  bool translateFreeze(const User &U, MachineIRBuilder &MIRBuilder) {
     return false;
   }
 
@@ -582,7 +585,7 @@ private:
   /// Get the alignment of the given memory operation instruction. This will
   /// either be the explicitly specified value or the ABI-required alignment for
   /// the type being accessed (according to the Module's DataLayout).
-  unsigned getMemOpAlignment(const Instruction &I);
+  Align getMemOpAlign(const Instruction &I);
 
   /// Get the MachineBasicBlock that represents \p BB. Specifically, the block
   /// returned will be the head of the translated block (suitable for branch

@@ -73,7 +73,7 @@ This differs from SelectionDAG's multiple vregs via ``GetValueVTs``.
 As some of the bits are undef (padding), we should consider augmenting the
 representation with additional metadata (in effect, caching computeKnownBits
 information on vregs).
-See `PR26161 <http://llvm.org/PR26161>`_: [GlobalISel] Value to vreg during
+See `PR26161 <https://llvm.org/PR26161>`_: [GlobalISel] Value to vreg during
 IR to MachineInstr translation for aggregate type
 
 .. _irtranslator-constants:

@@ -95,9 +95,9 @@ void memcpy2 () {
   char src[] = {1, 2, 3, 4};
   char dst[1];
 
-  memcpy(dst, src, 4);  // expected-warning{{Memory copy function overflows destination buffer}}
+  memcpy(dst, src, 4); // expected-warning {{Memory copy function overflows the destination buffer}}
 #ifndef VARIANT
-  // expected-warning@-2{{memcpy' will always overflow; destination buffer has size 1, but size argument is 4}}
+  // expected-warning@-2 {{memcpy' will always overflow; destination buffer has size 1, but size argument is 4}}
 #endif
 }
 
@@ -119,7 +119,7 @@ void memcpy5() {
   char src[] = {1, 2, 3, 4};
   char dst[3];
 
-  memcpy(dst+2, src+2, 2); // expected-warning{{Memory copy function overflows destination buffer}}
+  memcpy(dst + 2, src + 2, 2); // expected-warning{{Memory copy function overflows the destination buffer}}
 #ifndef VARIANT
   // expected-warning@-2{{memcpy' will always overflow; destination buffer has size 1, but size argument is 2}}
 #endif
@@ -221,7 +221,10 @@ void mempcpy2 () {
   char src[] = {1, 2, 3, 4};
   char dst[1];
 
-  mempcpy(dst, src, 4); // expected-warning{{Memory copy function overflows destination buffer}}
+  mempcpy(dst, src, 4); // expected-warning{{Memory copy function overflows the destination buffer}}
+#ifndef VARIANT
+// expected-warning@-2{{'mempcpy' will always overflow; destination buffer has size 1, but size argument is 4}}
+#endif
 }
 
 void mempcpy3 () {
@@ -242,7 +245,10 @@ void mempcpy5() {
   char src[] = {1, 2, 3, 4};
   char dst[3];
 
-  mempcpy(dst+2, src+2, 2); // expected-warning{{Memory copy function overflows destination buffer}}
+  mempcpy(dst + 2, src + 2, 2); // expected-warning{{Memory copy function overflows the destination buffer}}
+#ifndef VARIANT
+// expected-warning@-2{{'mempcpy' will always overflow; destination buffer has size 1, but size argument is 2}}
+#endif
 }
 
 void mempcpy6() {
@@ -380,7 +386,7 @@ void memmove2 () {
   char src[] = {1, 2, 3, 4};
   char dst[1];
 
-  memmove(dst, src, 4); // expected-warning{{Memory copy function overflows destination buffer}}
+  memmove(dst, src, 4); // expected-warning{{Memory copy function overflows the destination buffer}}
 #ifndef VARIANT
   // expected-warning@-2{{memmove' will always overflow; destination buffer has size 1, but size argument is 4}}
 #endif
@@ -517,6 +523,6 @@ struct S {
 };
 
 void nocrash_on_locint_offset(void *addr, void* from, struct S s) {
-  int iAdd = (int) addr;
+  size_t iAdd = (size_t) addr;
   memcpy(((void *) &(s.f)), from, iAdd);
 }

@@ -18,7 +18,6 @@
 
 #include "Disassembler/AMDGPUDisassembler.h"
 #include "AMDGPU.h"
-#include "AMDGPURegisterInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
@@ -99,6 +98,18 @@ static DecodeStatus decodeSoppBrTarget(MCInst &Inst, unsigned Imm,
   if (DAsm->tryAddingSymbolicOperand(Inst, Offset, Addr, true, 2, 2))
     return MCDisassembler::Success;
   return addOperand(Inst, MCOperand::createImm(Imm));
+}
+
+static DecodeStatus decodeSMEMOffset(MCInst &Inst, unsigned Imm,
+                                     uint64_t Addr, const void *Decoder) {
+  auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
+  int64_t Offset;
+  if (DAsm->isVI()) {         // VI supports 20-bit unsigned offsets.
+    Offset = Imm & 0xFFFFF;
+  } else {                    // GFX9+ supports 21-bit signed offsets.
+    Offset = SignExtend64<21>(Imm);
+  }
+  return addOperand(Inst, MCOperand::createImm(Offset));
 }
 
 static DecodeStatus decodeBoolReg(MCInst &Inst, unsigned Val,
@@ -268,7 +279,6 @@ static bool isValidDPP8(const MCInst &MI) {
 DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes_,
                                                 uint64_t Address,
-                                                raw_ostream &WS,
                                                 raw_ostream &CS) const {
   CommentStream = &CS;
   bool IsSDWA = false;
@@ -285,6 +295,18 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // encodings
     if (Bytes.size() >= 8) {
       const uint64_t QW = eatBytes<uint64_t>(Bytes);
+
+      if (STI.getFeatureBits()[AMDGPU::FeatureGFX10_BEncoding]) {
+        Res = tryDecodeInst(DecoderTableGFX10_B64, MI, QW, Address);
+        if (Res) {
+          if (AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dpp8)
+              == -1)
+            break;
+          if (convertDPP8Inst(MI) == MCDisassembler::Success)
+            break;
+          MI = MCInst(); // clear
+        }
+      }
 
       Res = tryDecodeInst(DecoderTableDPP864, MI, QW, Address);
       if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
@@ -335,6 +357,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Res = tryDecodeInst(DecoderTableGFX932, MI, DW, Address);
     if (Res) break;
 
+    if (STI.getFeatureBits()[AMDGPU::FeatureGFX10_BEncoding]) {
+      Res = tryDecodeInst(DecoderTableGFX10_B32, MI, DW, Address);
+      if (Res) break;
+    }
+
     Res = tryDecodeInst(DecoderTableGFX1032, MI, DW, Address);
     if (Res) break;
 
@@ -351,13 +378,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address);
   } while (false);
-
-  if (Res && (MaxInstBytesNum - Bytes.size()) == 12 && (!HasLiteral ||
-        !(MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3))) {
-    MaxInstBytesNum = 8;
-    Bytes = Bytes_.slice(0, MaxInstBytesNum);
-    eatBytes<uint64_t>(Bytes);
-  }
 
   if (Res && (MI.getOpcode() == AMDGPU::V_MAC_F32_e64_vi ||
               MI.getOpcode() == AMDGPU::V_MAC_F32_e64_gfx6_gfx7 ||
@@ -932,6 +952,7 @@ unsigned AMDGPUDisassembler::getAgprClassId(const OpWidthTy Width) const {
     return AGPR_32RegClassID;
   case OPW64: return AReg_64RegClassID;
   case OPW128: return AReg_128RegClassID;
+  case OPW256: return AReg_256RegClassID;
   case OPW512: return AReg_512RegClassID;
   case OPW1024: return AReg_1024RegClassID;
   }
@@ -1203,8 +1224,6 @@ bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
                                 raw_ostream &/*cStream*/, int64_t Value,
                                 uint64_t /*Address*/, bool IsBranch,
                                 uint64_t /*Offset*/, uint64_t /*InstSize*/) {
-  using SymbolInfoTy = std::tuple<uint64_t, StringRef, uint8_t>;
-  using SectionSymbolsTy = std::vector<SymbolInfoTy>;
 
   if (!IsBranch) {
     return false;
@@ -1216,11 +1235,11 @@ bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
 
   auto Result = std::find_if(Symbols->begin(), Symbols->end(),
                              [Value](const SymbolInfoTy& Val) {
-                                return std::get<0>(Val) == static_cast<uint64_t>(Value)
-                                    && std::get<2>(Val) == ELF::STT_NOTYPE;
+                                return Val.Addr == static_cast<uint64_t>(Value)
+                                    && Val.Type == ELF::STT_NOTYPE;
                              });
   if (Result != Symbols->end()) {
-    auto *Sym = Ctx.getOrCreateSymbol(std::get<1>(*Result));
+    auto *Sym = Ctx.getOrCreateSymbol(Result->Name);
     const auto *Add = MCSymbolRefExpr::create(Sym, Ctx);
     Inst.addOperand(MCOperand::createExpr(Add));
     return true;
@@ -1253,7 +1272,7 @@ static MCDisassembler *createAMDGPUDisassembler(const Target &T,
   return new AMDGPUDisassembler(STI, Ctx, T.createMCInstrInfo());
 }
 
-extern "C" void LLVMInitializeAMDGPUDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUDisassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheGCNTarget(),
                                          createAMDGPUDisassembler);
   TargetRegistry::RegisterMCSymbolizer(getTheGCNTarget(),

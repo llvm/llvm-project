@@ -1,7 +1,7 @@
 ; Test target-specific stack cookie location.
 ; RUN: llc -mtriple=aarch64-linux-android < %s -o - | FileCheck --check-prefix=ANDROID-AARCH64 %s
 ; RUN: llc -mtriple=aarch64-fuchsia < %s -o - | FileCheck --check-prefixes=FUCHSIA-AARCH64-COMMON,FUCHSIA-AARCH64-USER %s
-; RUN: llc -mtriple=aarch64-fuchsia -code-model=kernel < %s -o - | FileCheck --check-prefixes=FUCHSIA-AARCH64-COMMON,FUCHSIA-AARCH64-KERNEL %s
+; RUN: llc -mtriple=aarch64-fuchsia -mattr=+tpidr-el1 < %s -o - | FileCheck --check-prefixes=FUCHSIA-AARCH64-COMMON,FUCHSIA-AARCH64-KERNEL %s
 ; RUN: llc -mtriple=aarch64-windows < %s -o - | FileCheck --check-prefix=WINDOWS-AARCH64 %s
 
 define void @_Z1fv() sspreq {

@@ -52,10 +52,22 @@ void DurationUnnecessaryConversionCheck::registerMatchers(MatchFinder *Finder) {
         callee(functionDecl(hasName("::absl::FDivDuration"))),
         hasArgument(0, expr().bind("arg")), hasArgument(1, factory_matcher));
 
+    // Matcher which matches a duration argument being scaled,
+    // e.g. `absl::ToDoubleSeconds(dur) * 2`
+    auto scalar_matcher = ignoringImpCasts(
+        binaryOperator(hasOperatorName("*"),
+                       hasEitherOperand(expr(ignoringParenImpCasts(
+                           callExpr(callee(functionDecl(hasAnyName(
+                                        FloatConversion, IntegerConversion))),
+                                    hasArgument(0, expr().bind("arg")))
+                               .bind("inner_call")))))
+            .bind("binop"));
+
     Finder->addMatcher(
         callExpr(callee(functionDecl(hasName(DurationFactory))),
                  hasArgument(0, anyOf(inverse_function_matcher,
-                                      division_operator_matcher, fdiv_matcher)))
+                                      division_operator_matcher, fdiv_matcher,
+                                      scalar_matcher)))
             .bind("call"),
         this);
   }
@@ -64,16 +76,41 @@ void DurationUnnecessaryConversionCheck::registerMatchers(MatchFinder *Finder) {
 void DurationUnnecessaryConversionCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *OuterCall = Result.Nodes.getNodeAs<Expr>("call");
-  const auto *Arg = Result.Nodes.getNodeAs<Expr>("arg");
 
   if (isInMacro(Result, OuterCall))
     return;
 
+  FixItHint Hint;
+  if (const auto *Binop = Result.Nodes.getNodeAs<BinaryOperator>("binop")) {
+    const auto *Arg = Result.Nodes.getNodeAs<Expr>("arg");
+    const auto *InnerCall = Result.Nodes.getNodeAs<Expr>("inner_call");
+    const Expr *LHS = Binop->getLHS();
+    const Expr *RHS = Binop->getRHS();
+
+    if (LHS->IgnoreParenImpCasts() == InnerCall) {
+      Hint = FixItHint::CreateReplacement(
+          OuterCall->getSourceRange(),
+          (llvm::Twine(tooling::fixit::getText(*Arg, *Result.Context)) + " * " +
+           tooling::fixit::getText(*RHS, *Result.Context))
+              .str());
+    } else {
+      assert(RHS->IgnoreParenImpCasts() == InnerCall &&
+             "Inner call should be find on the RHS");
+
+      Hint = FixItHint::CreateReplacement(
+          OuterCall->getSourceRange(),
+          (llvm::Twine(tooling::fixit::getText(*LHS, *Result.Context)) + " * " +
+           tooling::fixit::getText(*Arg, *Result.Context))
+              .str());
+    }
+  } else if (const auto *Arg = Result.Nodes.getNodeAs<Expr>("arg")) {
+    Hint = FixItHint::CreateReplacement(
+        OuterCall->getSourceRange(),
+        tooling::fixit::getText(*Arg, *Result.Context));
+  }
   diag(OuterCall->getBeginLoc(),
        "remove unnecessary absl::Duration conversions")
-      << FixItHint::CreateReplacement(
-             OuterCall->getSourceRange(),
-             tooling::fixit::getText(*Arg, *Result.Context));
+      << Hint;
 }
 
 } // namespace abseil

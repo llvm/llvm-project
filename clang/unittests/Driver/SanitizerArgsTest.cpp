@@ -43,7 +43,7 @@ std::string concatPaths(llvm::ArrayRef<StringRef> Components) {
   llvm::SmallString<128> P;
   for (StringRef C : Components)
     llvm::sys::path::append(P, C);
-  return P.str().str();
+  return std::string(P);
 }
 
 class SanitizerArgsTest : public ::testing::Test {

@@ -1,6 +1,6 @@
 // Support parsing of concepts
 
-// RUN:  %clang_cc1 -std=c++2a -fconcepts-ts -verify %s
+// RUN:  %clang_cc1 -std=c++20 -verify %s
 template<typename T> concept C1 = true; // expected-note 2{{previous}}
 
 template<typename T> concept C1 = true; // expected-error{{redefinition}}
@@ -50,7 +50,7 @@ template <bool word> concept C6 = integral_constant<bool, wor>::value;
 // expected-note@-2{{'word' declared here}}
 
 template<typename T> concept bool C7 = true;
-// expected-warning@-1{{ISO C++2a does not permit the 'bool' keyword after 'concept'}}
+// expected-warning@-1{{ISO C++20 does not permit the 'bool' keyword after 'concept'}}
 
 template<> concept C8 = false;
 // expected-error@-1{{concept template parameter list must have at least one parameter; explicit specialization of concepts is not allowed}}

@@ -242,7 +242,7 @@
 // RUN:        | FileCheck -check-prefix=GLIO_ONLY %s
 //
 // NOG_PS4: "-cc1"
-// NOG_PS4-NOT "-dwarf-version=
+// NOG_PS4-NOT: "-dwarf-version=
 // NOG_PS4: "-generate-arange-section"
 // NOG_PS4-NOT: "-dwarf-version=
 //
@@ -334,9 +334,9 @@
 // NOFDTS-NOT: "-mllvm" "-generate-type-units"
 // NOFDTSE-NOT: error: unsupported option '-fdebug-types-section' for target 'x86_64-apple-darwin'
 //
-// CI: "-dwarf-column-info"
+// CI-NOT: "-gno-column-info"
 //
-// NOCI-NOT: "-dwarf-column-info"
+// NOCI: "-gno-column-info"
 //
 // GEXTREFS: "-dwarf-ext-refs" "-fmodule-format=obj"
 // GEXTREFS: "-debug-info-kind={{standalone|limited}}"

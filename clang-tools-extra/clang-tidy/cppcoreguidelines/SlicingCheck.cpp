@@ -63,7 +63,9 @@ void SlicingCheck::registerMatchers(MatchFinder *Finder) {
       unless(IsWithinDerivedCtor));
 
   Finder->addMatcher(
-      expr(anyOf(SlicesObjectInAssignment, SlicesObjectInCtor)).bind("Call"),
+      traverse(ast_type_traits::TK_AsIs,
+               expr(anyOf(SlicesObjectInAssignment, SlicesObjectInCtor))
+                   .bind("Call")),
       this);
 }
 

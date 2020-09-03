@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mtriple=r600-- -mcpu=redwood -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=R600 -check-prefix=FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; FUNC-LABEL: {{^}}setcc_v2i32:
 ; R600-DAG: SETE_INT * T{{[0-9]+\.[XYZW]}}, KC0[3].X, KC0[3].Z
@@ -349,7 +349,7 @@ entry:
 ; GCN-DAG: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1,
 ; GCN: s_endpgm
 define amdgpu_kernel void @v3i32_eq(<3 x i32> addrspace(1)* %out, <3 x i32> addrspace(1)* %ptra, <3 x i32> addrspace(1)* %ptrb) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.a = getelementptr <3 x i32>, <3 x i32> addrspace(1)* %ptra, i32 %tid
   %gep.b = getelementptr <3 x i32>, <3 x i32> addrspace(1)* %ptrb, i32 %tid
   %gep.out = getelementptr <3 x i32>, <3 x i32> addrspace(1)* %out, i32 %tid
@@ -370,7 +370,7 @@ define amdgpu_kernel void @v3i32_eq(<3 x i32> addrspace(1)* %out, <3 x i32> addr
 ; GCN-DAG: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1,
 ; GCN: s_endpgm
 define amdgpu_kernel void @v3i8_eq(<3 x i8> addrspace(1)* %out, <3 x i8> addrspace(1)* %ptra, <3 x i8> addrspace(1)* %ptrb) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.a = getelementptr <3 x i8>, <3 x i8> addrspace(1)* %ptra, i32 %tid
   %gep.b = getelementptr <3 x i8>, <3 x i8> addrspace(1)* %ptrb, i32 %tid
   %gep.out = getelementptr <3 x i8>, <3 x i8> addrspace(1)* %out, i32 %tid
@@ -397,9 +397,9 @@ endif:
 }
 
 ; FUNC-LABEL: setcc-i1-and-xor
-; GCN-DAG: v_cmp_nge_f32_e64 [[A:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 0{{$}}
-; GCN-DAG: v_cmp_nle_f32_e64 [[B:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 1.0
-; GCN: s_or_b64 s[2:3], [[A]], [[B]]
+; GCN-DAG: v_cmp_ge_f32_e64 [[A:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 0{{$}}
+; GCN-DAG: v_cmp_le_f32_e64 [[B:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 1.0
+; GCN: s_and_b64 s[2:3], [[A]], [[B]]
 define amdgpu_kernel void @setcc-i1-and-xor(i32 addrspace(1)* %out, float %cond) #0 {
 bb0:
   %tmp5 = fcmp oge float %cond, 0.000000e+00

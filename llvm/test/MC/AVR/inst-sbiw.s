@@ -1,4 +1,5 @@
 ; RUN: llvm-mc -triple avr -mattr=addsubiw -show-encoding < %s | FileCheck %s
+; RUN: llvm-mc -filetype=obj -triple avr -mattr=addsubiw < %s | llvm-objdump -dr --mattr=addsubiw - | FileCheck --check-prefix=CHECK-INST %s
 
 
 foo:
@@ -31,3 +32,18 @@ foo:
 
 ; CHECK: sbiw    r24, SYMBOL-1         ; encoding: [0b00AAAAAA,0x97]
                                        ;   fixup A - offset: 0, value: SYMBOL-1, kind: fixup_6_adiw
+
+; CHECK-INST: sbiw r26, 54
+; CHECK-INST: sbiw r26, 63
+
+; CHECK-INST: sbiw r28, 52
+; CHECK-INST: sbiw r28, 0
+
+; CHECK-INST: sbiw r30, 63
+; CHECK-INST: sbiw r30, 47
+
+; CHECK-INST: sbiw r24, 1
+; CHECK-INST: sbiw r24, 2
+
+; CHECK-INST: sbiw r24, 0
+; CHECK-INST:      R_AVR_6_ADIW SYMBOL-0x1

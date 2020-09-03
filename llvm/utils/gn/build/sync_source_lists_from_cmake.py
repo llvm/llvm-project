@@ -27,13 +27,13 @@ def patch_gn_file(gn_file, add, remove):
     with open(gn_file) as f:
         gn_contents = f.read()
 
-    srcs_tok = 'sources = ['
+    srcs_tok = 'sources = [\n'
     tokloc = gn_contents.find(srcs_tok)
 
     if tokloc == -1: raise ValueError(gn_file + ': Failed to find source list')
     if gn_contents.find(srcs_tok, tokloc + 1) != -1:
         raise ValueError(gn_file + ': Multiple source lists')
-    if gn_file.find('# NOSORT', 0, tokloc) != -1:
+    if gn_contents.find('# NOSORT', 0, tokloc) != -1:
         raise ValueError(gn_file + ': Found # NOSORT, needs manual merge')
 
     tokloc += len(srcs_tok)
@@ -66,8 +66,12 @@ def sync_source_lists(write):
     changes_by_rev = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     def find_gitrev(touched_line, in_file):
-        return git_out(
-            ['log', '--format=%h', '-1', '-S' + touched_line, in_file]).rstrip()
+        # re.escape() escapes e.g. '-', which works in practice but has
+        # undefined behavior according to the POSIX extended regex spec.
+        posix_re_escape = lambda s: re.sub(r'([.[{()\\*+?|^$])', r'\\\1', s)
+        cmd = ['log', '--format=%h', '-1', '--pickaxe-regex',
+               r'-S\b%s\b' % posix_re_escape(touched_line), in_file]
+        return git_out(cmd).rstrip()
 
     # Collect changes to gn files, grouped by revision.
     for gn_file in gn_files:

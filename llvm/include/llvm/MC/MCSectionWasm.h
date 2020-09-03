@@ -13,22 +13,17 @@
 #ifndef LLVM_MC_MCSECTIONWASM_H
 #define LLVM_MC_MCSECTIONWASM_H
 
-#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCSection.h"
-#include "llvm/MC/MCSymbolWasm.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
 class MCSymbol;
+class MCSymbolWasm;
+class StringRef;
+class raw_ostream;
 
 /// This represents a section on wasm.
 class MCSectionWasm final : public MCSection {
-  /// This is the name of the section.  The referenced memory is owned by
-  /// TargetLoweringObjectFileWasm's WasmUniqueMap.
-  StringRef SectionName;
-
   unsigned UniqueID;
 
   const MCSymbolWasm *Group;
@@ -45,18 +40,17 @@ class MCSectionWasm final : public MCSection {
   // Whether this data segment is passive
   bool IsPassive = false;
 
+  // The storage of Name is owned by MCContext's WasmUniquingMap.
   friend class MCContext;
-  MCSectionWasm(StringRef Section, SectionKind K, const MCSymbolWasm *group,
+  MCSectionWasm(StringRef Name, SectionKind K, const MCSymbolWasm *group,
                 unsigned UniqueID, MCSymbol *Begin)
-      : MCSection(SV_Wasm, K, Begin), SectionName(Section), UniqueID(UniqueID),
-        Group(group) {}
+      : MCSection(SV_Wasm, Name, K, Begin), UniqueID(UniqueID), Group(group) {}
 
 public:
   /// Decides whether a '.section' directive should be printed before the
   /// section name
   bool shouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
 
-  StringRef getSectionName() const { return SectionName; }
   const MCSymbolWasm *getGroup() const { return Group; }
 
   void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,

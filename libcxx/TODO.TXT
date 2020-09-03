@@ -2,7 +2,6 @@ This is meant to be a general place to list things that should be done "someday"
 
 CXX Runtime Library Tasks
 =========================
-* Fix that CMake always link to /usr/lib/libc++abi.dylib on OS X.
 * Look into mirroring libsupc++'s typeinfo vtable layout when libsupc++/libstdc++
   is used as the runtime library.
 * Investigate and document interoperability between libc++ and libstdc++ on

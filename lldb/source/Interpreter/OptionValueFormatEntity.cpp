@@ -1,4 +1,4 @@
-//===-- OptionValueFormatEntity.cpp -----------------------------*- C++ -*-===//
+//===-- OptionValueFormatEntity.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -85,7 +85,7 @@ Status OptionValueFormatEntity::SetValueFromString(llvm::StringRef value_str,
       if (first_char == '"' || first_char == '\'') {
         const size_t trimmed_len = trimmed_value_str.size();
         if (trimmed_len == 1 || value_str[trimmed_len - 1] != first_char) {
-          error.SetErrorStringWithFormat("mismatched quotes");
+          error.SetErrorString("mismatched quotes");
           return error;
         }
         value_str = trimmed_value_str.substr(1, trimmed_len - 2);
@@ -95,7 +95,7 @@ Status OptionValueFormatEntity::SetValueFromString(llvm::StringRef value_str,
     error = FormatEntity::Parse(value_str, entry);
     if (error.Success()) {
       m_current_entry = std::move(entry);
-      m_current_format = value_str;
+      m_current_format = std::string(value_str);
       m_value_was_set = true;
       NotifyValueChanged();
     }

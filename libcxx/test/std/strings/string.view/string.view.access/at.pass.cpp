@@ -6,11 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// NOTE: Older versions of clang have a bug where they fail to evaluate
-// string_view::at as a constant expression.
-// XFAIL: clang-3.4, clang-3.3
-
-
 // <string_view>
 
 // constexpr const _CharT& at(size_type _pos) const;

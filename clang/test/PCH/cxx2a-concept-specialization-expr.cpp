@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -std=c++2a -emit-pch %s -o %t
 // RUN: %clang_cc1 -std=c++2a -include-pch %t -verify %s
 
+// RUN: %clang_cc1 -std=c++2a -emit-pch -fpch-instantiate-templates %s -o %t
+// RUN: %clang_cc1 -std=c++2a -include-pch %t -verify %s
+
 // expected-no-diagnostics
 
 #ifndef HEADER

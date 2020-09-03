@@ -70,7 +70,7 @@ namespace llvm {
     }
 
     static std::string getGraphName(const SelectionDAG *G) {
-      return G->getMachineFunction().getName();
+      return std::string(G->getMachineFunction().getName());
     }
 
     static bool renderGraphFromBottomUp() {
@@ -163,6 +163,20 @@ void SelectionDAG::viewGraph(const std::string &Title) {
 void SelectionDAG::viewGraph() {
   viewGraph("");
 }
+
+/// Just dump dot graph to a user-provided path and title.
+/// This doesn't open the dot viewer program and
+/// helps visualization when outside debugging session.
+/// FileName expects absolute path. If provided
+/// without any path separators then the file
+/// will be created in the current directory.
+/// Error will be emitted if the path is insane.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void SelectionDAG::dumpDotGraph(const Twine &FileName,
+                                                 const Twine &Title) {
+  dumpDotGraphToFile(this, FileName, Title);
+}
+#endif
 
 /// clearGraphAttrs - Clear all previously defined node graph attributes.
 /// Intended to be used from a debugging tool (eg. gdb).

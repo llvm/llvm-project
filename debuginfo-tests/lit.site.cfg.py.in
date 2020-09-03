@@ -22,7 +22,7 @@ config.is_msvc = lit.util.pythonize_bool("@MSVC@")
 
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 
-config.python3_executable = "@PYTHON_EXECUTABLE@"
+config.python3_executable = "@Python3_EXECUTABLE@"
 
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

@@ -222,3 +222,10 @@ foo:
 ; CHECK: orn x1, x2, x3, asr #7      ; encoding: [0x41,0x1c,0xa3,0xaa]
 ; CHECK: orn w1, w2, w3, ror #7      ; encoding: [0x41,0x1c,0xe3,0x2a]
 ; CHECK: orn x1, x2, x3, ror #7      ; encoding: [0x41,0x1c,0xe3,0xaa]
+
+;; Allow all-1 in top bits.
+  and w0, w0, #~(0xfe<<24)
+  and w1, w1, #~(0xff<<24)
+
+; CHECK: and w0, w0, #0x1ffffff
+; CHECK: and w1, w1, #0xffffff

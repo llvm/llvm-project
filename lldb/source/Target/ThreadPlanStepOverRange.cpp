@@ -1,4 +1,4 @@
-//===-- ThreadPlanStepOverRange.cpp -----------------------------*- C++ -*-===//
+//===-- ThreadPlanStepOverRange.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -171,6 +171,10 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
       const SymbolContext &older_context =
           older_frame_sp->GetSymbolContext(eSymbolContextEverything);
       if (IsEquivalentContext(older_context)) {
+        // If we have the  next-branch-breakpoint in the range, we can just
+        // rely on that breakpoint to trigger once we return to the range.
+        if (m_next_branch_bp_sp)
+          return false;
         new_plan_sp = thread.QueueThreadPlanForStepOutNoShouldStop(
             false, nullptr, true, stop_others, eVoteNo, eVoteNoOpinion, 0,
             m_status, true);
@@ -391,11 +395,7 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
                   frame_block->GetInlinedFunctionInfo();
               const char *name;
               if (inline_info)
-                name =
-                    inline_info
-                        ->GetName(frame_block->CalculateSymbolContextFunction()
-                                      ->GetLanguage())
-                        .AsCString();
+                name = inline_info->GetName().AsCString();
               else
                 name = "<unknown-notinlined>";
 

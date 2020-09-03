@@ -114,6 +114,9 @@ float foo(float *q, float x, int k) { return 0; }
 #pragma omp declare simd notinbranch
 double foo(double x) { return 0; }
 
+#pragma omp declare simd notinbranch linear(i)
+double constlinear(const int i) { return 0.0; }
+
 // CHECK-DAG: define {{.+}}@_Z5add_1Pf(
 // CHECK-DAG: define {{.+}}@_Z1hIiEvPT_S1_S1_S1_(
 // CHECK-DAG: define {{.+}}@_Z1hIfEvPT_S1_S1_S1_(
@@ -131,15 +134,16 @@ double foo(double x) { return 0; }
 // CHECK-DAG: define {{.+}}@_Z3fooPffi(
 // CHECK-DAG: define {{.+}}@_Z3food(
 // CHECK-DAG: declare {{.+}}@_Z5add_2Pf(
+// CHECK-DAG: define {{.+}}@_Z11constlineari(
 
-// CHECK-DAG: "_ZGVbM4l8__Z5add_1Pf"
-// CHECK-DAG: "_ZGVbN4l8__Z5add_1Pf"
-// CHECK-DAG: "_ZGVcM8l8__Z5add_1Pf"
-// CHECK-DAG: "_ZGVcN8l8__Z5add_1Pf"
-// CHECK-DAG: "_ZGVdM8l8__Z5add_1Pf"
-// CHECK-DAG: "_ZGVdN8l8__Z5add_1Pf"
-// CHECK-DAG: "_ZGVeM16l8__Z5add_1Pf"
-// CHECK-DAG: "_ZGVeN16l8__Z5add_1Pf"
+// CHECK-DAG: "_ZGVbM4l32__Z5add_1Pf"
+// CHECK-DAG: "_ZGVbN4l32__Z5add_1Pf"
+// CHECK-DAG: "_ZGVcM8l32__Z5add_1Pf"
+// CHECK-DAG: "_ZGVcN8l32__Z5add_1Pf"
+// CHECK-DAG: "_ZGVdM8l32__Z5add_1Pf"
+// CHECK-DAG: "_ZGVdN8l32__Z5add_1Pf"
+// CHECK-DAG: "_ZGVeM16l32__Z5add_1Pf"
+// CHECK-DAG: "_ZGVeN16l32__Z5add_1Pf"
 // CHECK-DAG: "_ZGVbM32v__Z5add_1Pf"
 // CHECK-DAG: "_ZGVcM32v__Z5add_1Pf"
 // CHECK-DAG: "_ZGVdM32v__Z5add_1Pf"
@@ -176,14 +180,14 @@ double foo(double x) { return 0; }
 // CHECK-DAG: "_ZGVeM16uus1__ZN2VV3addEii"
 // CHECK-DAG: "_ZGVeN16uus1__ZN2VV3addEii"
 
-// CHECK-DAG: "_ZGVbM4lla16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVbN4lla16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVcM8lla16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVcN8lla16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVdM8lla16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVdN8lla16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVeM16lla16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVeN16lla16l4a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVbM4ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVbN4ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVcM8ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVcN8ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVdM8ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVdN8ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVeM16ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVeN16ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
 
 // CHECK-DAG: "_ZGVbM4vvl8__ZN2VV4taddERA_iRi"
 // CHECK-DAG: "_ZGVbN4vvl8__ZN2VV4taddERA_iRi"
@@ -289,23 +293,23 @@ double foo(double x) { return 0; }
 // CHECK-DAG: "_ZGVeM16vvv__Z3bax2VVPdi"
 // CHECK-DAG: "_ZGVeN16vvv__Z3bax2VVPdi"
 
-// CHECK-DAG: "_ZGVbM4ua16vl1__Z3fooPffi"
-// CHECK-DAG: "_ZGVbN4ua16vl1__Z3fooPffi"
-// CHECK-DAG: "_ZGVcM8ua16vl1__Z3fooPffi"
-// CHECK-DAG: "_ZGVcN8ua16vl1__Z3fooPffi"
-// CHECK-DAG: "_ZGVdM8ua16vl1__Z3fooPffi"
-// CHECK-DAG: "_ZGVdN8ua16vl1__Z3fooPffi"
-// CHECK-DAG: "_ZGVeM16ua16vl1__Z3fooPffi"
-// CHECK-DAG: "_ZGVeN16ua16vl1__Z3fooPffi"
+// CHECK-DAG: "_ZGVbM4ua16vl__Z3fooPffi"
+// CHECK-DAG: "_ZGVbN4ua16vl__Z3fooPffi"
+// CHECK-DAG: "_ZGVcM8ua16vl__Z3fooPffi"
+// CHECK-DAG: "_ZGVcN8ua16vl__Z3fooPffi"
+// CHECK-DAG: "_ZGVdM8ua16vl__Z3fooPffi"
+// CHECK-DAG: "_ZGVdN8ua16vl__Z3fooPffi"
+// CHECK-DAG: "_ZGVeM16ua16vl__Z3fooPffi"
+// CHECK-DAG: "_ZGVeN16ua16vl__Z3fooPffi"
 
-// CHECK-DAG: "_ZGVbM4l8__Z5add_2Pf"
-// CHECK-DAG: "_ZGVbN4l8__Z5add_2Pf"
-// CHECK-DAG: "_ZGVcM8l8__Z5add_2Pf"
-// CHECK-DAG: "_ZGVcN8l8__Z5add_2Pf"
-// CHECK-DAG: "_ZGVdM8l8__Z5add_2Pf"
-// CHECK-DAG: "_ZGVdN8l8__Z5add_2Pf"
-// CHECK-DAG: "_ZGVeM16l8__Z5add_2Pf"
-// CHECK-DAG: "_ZGVeN16l8__Z5add_2Pf"
+// CHECK-DAG: "_ZGVbM4l32__Z5add_2Pf"
+// CHECK-DAG: "_ZGVbN4l32__Z5add_2Pf"
+// CHECK-DAG: "_ZGVcM8l32__Z5add_2Pf"
+// CHECK-DAG: "_ZGVcN8l32__Z5add_2Pf"
+// CHECK-DAG: "_ZGVdM8l32__Z5add_2Pf"
+// CHECK-DAG: "_ZGVdN8l32__Z5add_2Pf"
+// CHECK-DAG: "_ZGVeM16l32__Z5add_2Pf"
+// CHECK-DAG: "_ZGVeN16l32__Z5add_2Pf"
 // CHECK-DAG: "_ZGVbM32v__Z5add_2Pf"
 // CHECK-DAG: "_ZGVcM32v__Z5add_2Pf"
 // CHECK-DAG: "_ZGVdM32v__Z5add_2Pf"
@@ -319,6 +323,11 @@ double foo(double x) { return 0; }
 // CHECK-DAG: "_ZGVcN4v__Z3food"
 // CHECK-DAG: "_ZGVdN4v__Z3food"
 // CHECK-DAG: "_ZGVeN8v__Z3food"
+
+// CHECK-DAG: "_ZGVbN2l__Z11constlineari"
+// CHECK-DAG: "_ZGVcN4l__Z11constlineari"
+// CHECK-DAG: "_ZGVdN4l__Z11constlineari"
+// CHECK-DAG: "_ZGVeN8l__Z11constlineari"
 
 // CHECK-NOT: "_ZGV{{.+}}__Z1fRA_i
 

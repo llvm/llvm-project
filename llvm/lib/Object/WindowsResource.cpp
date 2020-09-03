@@ -346,7 +346,7 @@ Error WindowsResourceParser::parse(WindowsResource *WR,
 
   ResourceEntryRef Entry = EntryOrErr.get();
   uint32_t Origin = InputFilenames.size();
-  InputFilenames.push_back(WR->getFileName());
+  InputFilenames.push_back(std::string(WR->getFileName()));
   bool End = false;
   while (!End) {
 
@@ -368,7 +368,7 @@ Error WindowsResourceParser::parse(ResourceSectionRef &RSR, StringRef Filename,
                                    std::vector<std::string> &Duplicates) {
   UNWRAP_REF_OR_RETURN(BaseTable, RSR.getBaseTable());
   uint32_t Origin = InputFilenames.size();
-  InputFilenames.push_back(Filename);
+  InputFilenames.push_back(std::string(Filename));
   std::vector<StringOrID> Context;
   return addChildren(Root, RSR, BaseTable, Origin, Context, Duplicates);
 }
@@ -721,8 +721,10 @@ WindowsResourceCOFFWriter::write(uint32_t TimeDateStamp) {
 // it's okay to *not* copy the trailing zero.
 static void coffnamecpy(char (&Dest)[COFF::NameSize], StringRef Src) {
   assert(Src.size() <= COFF::NameSize &&
-         "Src is not larger than COFF::NameSize");
-  strncpy(Dest, Src.data(), (size_t)COFF::NameSize);
+         "Src is larger than COFF::NameSize");
+  assert((Src.size() == COFF::NameSize || Dest[Src.size()] == '\0') &&
+         "Dest not zeroed upon initialization");
+  memcpy(Dest, Src.data(), Src.size());
 }
 
 void WindowsResourceCOFFWriter::writeCOFFHeader(uint32_t TimeDateStamp) {

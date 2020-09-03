@@ -168,7 +168,7 @@ The following options are implemented only for the ELF file format.
 
  Display the dynamic table.
 
-.. option:: --elf-cg-profile
+.. option:: --cg-profile
 
  Display the callgraph profile section.
 

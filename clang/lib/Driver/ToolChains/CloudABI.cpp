@@ -75,7 +75,7 @@ void cloudabi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
-    AddGoldPlugin(ToolChain, Args, CmdArgs, Output, Inputs[0],
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs[0],
                   D.getLTOMode() == LTOK_Thin);
   }
 
@@ -92,7 +92,8 @@ void cloudabi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtend.o")));
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs));
 }
 
 // CloudABI - CloudABI tool chain which can call ld(1) directly.
@@ -102,7 +103,7 @@ CloudABI::CloudABI(const Driver &D, const llvm::Triple &Triple,
     : Generic_ELF(D, Triple, Args) {
   SmallString<128> P(getDriver().Dir);
   llvm::sys::path::append(P, "..", getTriple().str(), "lib");
-  getFilePaths().push_back(P.str());
+  getFilePaths().push_back(std::string(P.str()));
 }
 
 void CloudABI::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,

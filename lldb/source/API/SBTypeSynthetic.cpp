@@ -1,5 +1,4 @@
-//===-- SBTypeSynthetic.cpp -----------------------------------------*- C++
-//-*-===//
+//===-- SBTypeSynthetic.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,7 +50,7 @@ SBTypeSynthetic::SBTypeSynthetic(const lldb::SBTypeSynthetic &rhs)
                           rhs);
 }
 
-SBTypeSynthetic::~SBTypeSynthetic() {}
+SBTypeSynthetic::~SBTypeSynthetic() = default;
 
 bool SBTypeSynthetic::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeSynthetic, IsValid);

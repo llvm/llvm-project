@@ -172,6 +172,8 @@ class MockGDBServerResponder:
             return self.qHostInfo()
         if packet == "qGetWorkingDir":
             return self.qGetWorkingDir()
+        if packet == "qOffsets":
+            return self.qOffsets();
         if packet == "qsProcessInfo":
             return self.qsProcessInfo()
         if packet.startswith("qfProcessInfo"):
@@ -187,6 +189,9 @@ class MockGDBServerResponder:
 
     def qGetWorkingDir(self):
         return "2f"
+
+    def qOffsets(self):
+        return ""
 
     def qHostInfo(self):
         return "ptrsize:8;endian:little;"
@@ -330,7 +335,7 @@ class MockGDBServer:
         try:
             # accept() is stubborn and won't fail even when the socket is
             # shutdown, so we'll use a timeout
-            self._socket.settimeout(20.0)
+            self._socket.settimeout(30.0)
             client, client_addr = self._socket.accept()
             self._client = client
             # The connected client inherits its timeout from self._socket,

@@ -1,7 +1,7 @@
 ; Check that the GHC calling convention works (s390x)
 ; Check that no more than 12 integer arguments are passed
 ;
-; RUN: not llc -mtriple=s390x-ibm-linux < %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=s390x-ibm-linux < %s 2>&1 | FileCheck %s
 
 define ghccc void @foo() nounwind {
 entry:

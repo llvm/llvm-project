@@ -102,6 +102,10 @@ class DextIR:
             frame_step = self._get_prev_step_in_this_frame(step)
             prev_step = frame_step if frame_step is not None else prev_step
 
+        # If we're missing line numbers to compare then the step kind has to be UNKNOWN.
+        if prev_step.current_location.lineno is None or step.current_location.lineno is None:
+            return StepKind.UNKNOWN
+
         # We're in the same func as prev step, check lineo.
         if prev_step.current_location.lineno > step.current_location.lineno:
             return StepKind.VERTICAL_BACKWARD

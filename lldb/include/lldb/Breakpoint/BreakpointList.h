@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BreakpointList_h_
-#define liblldb_BreakpointList_h_
+#ifndef LLDB_BREAKPOINT_BREAKPOINTLIST_H
+#define LLDB_BREAKPOINT_BREAKPOINTLIST_H
 
 #include <list>
 #include <mutex>
@@ -168,9 +168,10 @@ public:
   }
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(BreakpointList);
+  BreakpointList(const BreakpointList &) = delete;
+  const BreakpointList &operator=(const BreakpointList &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_BreakpointList_h_
+#endif // LLDB_BREAKPOINT_BREAKPOINTLIST_H

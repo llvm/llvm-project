@@ -95,7 +95,6 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -122,6 +121,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/MergeFunctions.h"
 #include "llvm/Transforms/Utils/FunctionComparator.h"
 #include <algorithm>
 #include <cassert>
@@ -196,16 +196,12 @@ public:
 /// by considering all pointer types to be equivalent. Once identified,
 /// MergeFunctions will fold them by replacing a call to one to a call to a
 /// bitcast of the other.
-class MergeFunctions : public ModulePass {
+class MergeFunctions {
 public:
-  static char ID;
-
-  MergeFunctions()
-    : ModulePass(ID), FnTree(FunctionNodeCmp(&GlobalNumbers)) {
-    initializeMergeFunctionsPass(*PassRegistry::getPassRegistry());
+  MergeFunctions() : FnTree(FunctionNodeCmp(&GlobalNumbers)) {
   }
 
-  bool runOnModule(Module &M) override;
+  bool runOnModule(Module &M);
 
 private:
   // The function comparison operator is provided here so that FunctionNodes do
@@ -298,14 +294,39 @@ private:
   DenseMap<AssertingVH<Function>, FnTreeType::iterator> FNodesInTree;
 };
 
+class MergeFunctionsLegacyPass : public ModulePass {
+public:
+  static char ID;
+
+  MergeFunctionsLegacyPass(): ModulePass(ID) {
+    initializeMergeFunctionsLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+
+    MergeFunctions MF;
+    return MF.runOnModule(M);
+  }
+};
+
 } // end anonymous namespace
 
-char MergeFunctions::ID = 0;
-
-INITIALIZE_PASS(MergeFunctions, "mergefunc", "Merge Functions", false, false)
+char MergeFunctionsLegacyPass::ID = 0;
+INITIALIZE_PASS(MergeFunctionsLegacyPass, "mergefunc",
+                "Merge Functions", false, false)
 
 ModulePass *llvm::createMergeFunctionsPass() {
-  return new MergeFunctions();
+  return new MergeFunctionsLegacyPass();
+}
+
+PreservedAnalyses MergeFunctionsPass::run(Module &M,
+                                          ModuleAnalysisManager &AM) {
+  MergeFunctions MF;
+  if (!MF.runOnModule(M))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
 }
 
 #ifndef NDEBUG
@@ -387,9 +408,6 @@ static bool isEligibleForMerging(Function &F) {
 }
 
 bool MergeFunctions::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
   bool Changed = false;
 
   // All functions in the module, ordered by hash. Functions with a unique
@@ -448,13 +466,13 @@ void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
   for (auto UI = Old->use_begin(), UE = Old->use_end(); UI != UE;) {
     Use *U = &*UI;
     ++UI;
-    CallSite CS(U->getUser());
-    if (CS && CS.isCallee(U)) {
+    CallBase *CB = dyn_cast<CallBase>(U->getUser());
+    if (CB && CB->isCallee(U)) {
       // Do not copy attributes from the called function to the call-site.
       // Function comparison ensures that the attributes are the same up to
       // type congruences in byval(), in which case we need to keep the byval
       // type of the call-site, not the callee function.
-      remove(CS.getInstruction()->getFunction());
+      remove(CB->getFunction());
       U->set(BitcastNew);
     }
   }

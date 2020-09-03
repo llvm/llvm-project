@@ -88,6 +88,7 @@ private:
   Kind TheKind;
   bool PaddingInReg : 1;
   bool InAllocaSRet : 1;    // isInAlloca()
+  bool InAllocaIndirect : 1;// isInAlloca()
   bool IndirectByVal : 1;   // isIndirect()
   bool IndirectRealign : 1; // isIndirect()
   bool SRetAfterThis : 1;   // isIndirect()
@@ -110,8 +111,8 @@ private:
 
 public:
   ABIArgInfo(Kind K = Direct)
-      : TypeData(nullptr), PaddingType(nullptr), DirectOffset(0),
-        TheKind(K), PaddingInReg(false), InAllocaSRet(false),
+      : TypeData(nullptr), PaddingType(nullptr), DirectOffset(0), TheKind(K),
+        PaddingInReg(false), InAllocaSRet(false), InAllocaIndirect(false),
         IndirectByVal(false), IndirectRealign(false), SRetAfterThis(false),
         InReg(false), CanBeFlattened(false), SignExt(false) {}
 
@@ -185,9 +186,10 @@ public:
     AI.setInReg(true);
     return AI;
   }
-  static ABIArgInfo getInAlloca(unsigned FieldIndex) {
+  static ABIArgInfo getInAlloca(unsigned FieldIndex, bool Indirect = false) {
     auto AI = ABIArgInfo(InAlloca);
     AI.setInAllocaFieldIndex(FieldIndex);
+    AI.setInAllocaIndirect(Indirect);
     return AI;
   }
   static ABIArgInfo getExpand() {
@@ -380,6 +382,15 @@ public:
     AllocaFieldIndex = FieldIndex;
   }
 
+  unsigned getInAllocaIndirect() const {
+    assert(isInAlloca() && "Invalid kind!");
+    return InAllocaIndirect;
+  }
+  void setInAllocaIndirect(bool Indirect) {
+    assert(isInAlloca() && "Invalid kind!");
+    InAllocaIndirect = Indirect;
+  }
+
   /// Return true if this field of an inalloca struct should be returned
   /// to implement a struct return calling convention.
   bool getInAllocaSRet() const {
@@ -497,6 +508,9 @@ class CGFunctionInfo final
   /// Whether this is a chain call.
   unsigned ChainCall : 1;
 
+  /// Whether this function is a CMSE nonsecure call
+  unsigned CmseNSCall : 1;
+
   /// Whether this function is noreturn.
   unsigned NoReturn : 1;
 
@@ -563,12 +577,11 @@ public:
   typedef const ArgInfo *const_arg_iterator;
   typedef ArgInfo *arg_iterator;
 
-  typedef llvm::iterator_range<arg_iterator> arg_range;
-  typedef llvm::iterator_range<const_arg_iterator> const_arg_range;
-
-  arg_range arguments() { return arg_range(arg_begin(), arg_end()); }
-  const_arg_range arguments() const {
-    return const_arg_range(arg_begin(), arg_end());
+  MutableArrayRef<ArgInfo> arguments() {
+    return MutableArrayRef<ArgInfo>(arg_begin(), NumArgs);
+  }
+  ArrayRef<ArgInfo> arguments() const {
+    return ArrayRef<ArgInfo>(arg_begin(), NumArgs);
   }
 
   const_arg_iterator arg_begin() const { return getArgsBuffer() + 1; }
@@ -587,6 +600,8 @@ public:
   bool isInstanceMethod() const { return InstanceMethod; }
 
   bool isChainCall() const { return ChainCall; }
+
+  bool isCmseNSCall() const { return CmseNSCall; }
 
   bool isNoReturn() const { return NoReturn; }
 
@@ -625,7 +640,8 @@ public:
   FunctionType::ExtInfo getExtInfo() const {
     return FunctionType::ExtInfo(isNoReturn(), getHasRegParm(), getRegParm(),
                                  getASTCallingConvention(), isReturnsRetained(),
-                                 isNoCallerSavedRegs(), isNoCfCheck());
+                                 isNoCallerSavedRegs(), isNoCfCheck(),
+                                 isCmseNSCall());
   }
 
   CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
@@ -666,6 +682,7 @@ public:
     ID.AddBoolean(HasRegParm);
     ID.AddInteger(RegParm);
     ID.AddBoolean(NoCfCheck);
+    ID.AddBoolean(CmseNSCall);
     ID.AddInteger(Required.getOpaqueData());
     ID.AddBoolean(HasExtParameterInfos);
     if (HasExtParameterInfos) {
@@ -693,6 +710,7 @@ public:
     ID.AddBoolean(info.getHasRegParm());
     ID.AddInteger(info.getRegParm());
     ID.AddBoolean(info.getNoCfCheck());
+    ID.AddBoolean(info.getCmseNSCall());
     ID.AddInteger(required.getOpaqueData());
     ID.AddBoolean(!paramInfos.empty());
     if (!paramInfos.empty()) {

@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # RUN: llvm-nm %t.o --portability | FileCheck %s --strict-whitespace --match-full-lines
 # RUN: llvm-nm %t.o -P | FileCheck %s --strict-whitespace --match-full-lines
 

@@ -43,10 +43,9 @@ int main(int argc, char **argv) {
 }
 
 // CLANGCG:            declare i32 @__kmpc_global_thread_num(%struct.ident_t*)
-// CLANGCG-NOT:        #
 // IRBUILDER:          ; Function Attrs: nounwind
 // IRBUILDER-NEXT:     declare i32 @__kmpc_global_thread_num(%struct.ident_t*) #
-// IRBUILDER_OPT:      ; Function Attrs: nofree nosync nounwind readonly
+// IRBUILDER_OPT:      ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 // IRBUILDER_OPT-NEXT: declare i32 @__kmpc_global_thread_num(%struct.ident_t*) #
 
 // CHECK: define {{.+}} [[TMAIN_INT]](

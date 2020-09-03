@@ -25,7 +25,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.inc"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileUtilities.h"
@@ -40,6 +40,8 @@
 #include "llvm/Support/WithColor.h"
 
 using namespace llvm;
+
+static mc::RegisterMCTargetOptionsFlags MOF;
 
 static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
@@ -317,7 +319,7 @@ int main(int argc, char **argv) {
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
-  const MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
+  const MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   setDwarfDebugFlags(argc, argv);
 
   setDwarfDebugProducer();
@@ -385,6 +387,31 @@ int main(int argc, char **argv) {
     return 1;
   }
   Ctx.setDwarfVersion(DwarfVersion);
+  if (MCOptions.Dwarf64) {
+    // The 64-bit DWARF format was introduced in DWARFv3.
+    if (DwarfVersion < 3) {
+      errs() << ProgName
+             << ": the 64-bit DWARF format is not supported for DWARF versions "
+                "prior to 3\n";
+      return 1;
+    }
+    // 32-bit targets don't support DWARF64, which requires 64-bit relocations.
+    if (MAI->getCodePointerSize() < 8) {
+      errs() << ProgName
+             << ": the 64-bit DWARF format is only supported for 64-bit "
+                "targets\n";
+      return 1;
+    }
+    // If needsDwarfSectionOffsetDirective is true, we would eventually call
+    // MCStreamer::emitSymbolValue() with IsSectionRelative = true, but that
+    // is supported only for 4-byte long references.
+    if (MAI->needsDwarfSectionOffsetDirective()) {
+      errs() << ProgName << ": the 64-bit DWARF format is not supported for "
+             << TheTriple.normalize() << "\n";
+      return 1;
+    }
+    Ctx.setDwarfFormat(dwarf::DWARF64);
+  }
   if (!DwarfDebugFlags.empty())
     Ctx.setDwarfDebugFlags(StringRef(DwarfDebugFlags));
   if (!DwarfDebugProducer.empty())
@@ -399,7 +426,7 @@ int main(int argc, char **argv) {
   }
   for (const auto &Arg : DebugPrefixMap) {
     const auto &KV = StringRef(Arg).split('=');
-    Ctx.addDebugPrefixMapEntry(KV.first, KV.second);
+    Ctx.addDebugPrefixMapEntry(std::string(KV.first), std::string(KV.second));
   }
   if (!MainFileName.empty())
     Ctx.setMainFileName(MainFileName);
@@ -473,9 +500,6 @@ int main(int argc, char **argv) {
     Str.reset(TheTarget->createNullStreamer(Ctx));
   } else {
     assert(FileType == OFT_ObjectFile && "Invalid file type!");
-
-    // Don't waste memory on names of temp labels.
-    Ctx.setUseNamesOnTempLabels(false);
 
     if (!Out->os().supportsSeeking()) {
       BOS = std::make_unique<buffer_ostream>(Out->os());

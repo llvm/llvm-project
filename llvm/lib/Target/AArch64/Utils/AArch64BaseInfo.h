@@ -250,7 +250,13 @@ enum CondCode {  // Meaning (integer)          Meaning (floating-point)
   AL = 0xe,      // Always (unconditional)     Always (unconditional)
   NV = 0xf,      // Always (unconditional)     Always (unconditional)
   // Note the NV exists purely to disassemble 0b1111. Execution is "always".
-  Invalid
+  Invalid,
+
+  // Common aliases used for SVE.
+  ANY_ACTIVE   = NE, // (!Z)
+  FIRST_ACTIVE = MI, // ( N)
+  LAST_ACTIVE  = LO, // (!C)
+  NONE_ACTIVE  = EQ  // ( Z)
 };
 
 inline static const char *getCondCodeName(CondCode Code) {
@@ -691,6 +697,7 @@ namespace AArch64 {
 // in index i*P of a <n x (M*P) x t> vector.  The other elements of the
 // <n x (M*P) x t> vector (such as index 1) are undefined.
 static constexpr unsigned SVEBitsPerBlock = 128;
+static constexpr unsigned SVEMaxBitsPerVector = 2048;
 const unsigned NeonBitsPerVector = 128;
 } // end namespace AArch64
 } // end namespace llvm

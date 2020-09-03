@@ -144,10 +144,10 @@ define <32 x i16> @zext_32i8_to_32i16(<32 x i8> %A) {
 ;
 ; AVX512F-LABEL: zext_32i8_to_32i16:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: zext_32i8_to_32i16:
@@ -2617,7 +2617,7 @@ define <8 x i32> @splatshuf_zext_v8i32_matching_undefs(<8 x i16> %x) {
 ;
 ; SSE41-LABEL: splatshuf_zext_v8i32_matching_undefs:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,6,7,6,7,14,15,8,9,10,11,12,13,14,15]
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,6,7,6,7,14,15,u,u,u,u,u,u,u,u]
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    retq
@@ -2664,7 +2664,7 @@ define <8 x i32> @splatshuf_zext_v8i32_unmatched_undef(<8 x i16> %x) {
 ;
 ; SSE41-LABEL: splatshuf_zext_v8i32_unmatched_undef:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,6,7,14,15,14,15,6,7,12,13,14,15]
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,6,7,14,15,u,u,u,u,u,u,u,u]
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    retq
@@ -2713,7 +2713,7 @@ define <16 x i16> @splatshuf_zext_v16i16(<16 x i8> %x) {
 ;
 ; SSE41-LABEL: splatshuf_zext_v16i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[14,14,14,14,14,14,14,14,14,14,14,14,14,14,15,15]
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[14,14,14,14,14,14,14,14,u,u,u,u,u,u,u,u]
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    retq

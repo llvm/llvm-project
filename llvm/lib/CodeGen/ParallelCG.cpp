@@ -51,7 +51,7 @@ std::unique_ptr<Module> llvm::splitCodeGen(
   // Create ThreadPool in nested scope so that threads will be joined
   // on destruction.
   {
-    ThreadPool CodegenThreadPool(OSs.size());
+    ThreadPool CodegenThreadPool(hardware_concurrency(OSs.size()));
     int ThreadCount = 0;
 
     SplitModule(

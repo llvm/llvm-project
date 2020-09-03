@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <tuple>
 
@@ -86,7 +86,7 @@ void compile_tests() {
 }
 
 void allocator_tests() {
-    std::allocator<void> alloc;
+    std::allocator<int> alloc;
     int x = 42;
     {
         std::tuple<int&> t(std::ref(x));

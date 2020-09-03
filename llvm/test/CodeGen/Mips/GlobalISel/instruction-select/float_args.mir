@@ -75,15 +75,15 @@ body:             |
 
     ; FP32-LABEL: name: float_in_gpr
     ; FP32: liveins: $a0, $a1
-    ; FP32: [[MTC1_:%[0-9]+]]:fgr32 = MTC1 $a1
-    ; FP32: $f0 = COPY [[MTC1_]]
+    ; FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a1
+    ; FP32: $f0 = COPY [[COPY]]
     ; FP32: RetRA implicit $f0
     ; FP64-LABEL: name: float_in_gpr
     ; FP64: liveins: $a0, $a1
-    ; FP64: [[MTC1_:%[0-9]+]]:fgr32 = MTC1 $a1
-    ; FP64: $f0 = COPY [[MTC1_]]
+    ; FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a1
+    ; FP64: $f0 = COPY [[COPY]]
     ; FP64: RetRA implicit $f0
-    %1:fgr32(s32) = MTC1 $a1
+    %1:gprb(s32) = COPY $a1
     $f0 = COPY %1(s32)
     RetRA implicit $f0
 
@@ -100,15 +100,21 @@ body:             |
 
     ; FP32-LABEL: name: double_in_gpr
     ; FP32: liveins: $a0, $a2, $a3
-    ; FP32: [[BuildPairF64_:%[0-9]+]]:afgr64 = BuildPairF64 $a2, $a3
+    ; FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a2
+    ; FP32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a3
+    ; FP32: [[BuildPairF64_:%[0-9]+]]:afgr64 = BuildPairF64 [[COPY]], [[COPY1]]
     ; FP32: $d0 = COPY [[BuildPairF64_]]
     ; FP32: RetRA implicit $d0
     ; FP64-LABEL: name: double_in_gpr
     ; FP64: liveins: $a0, $a2, $a3
-    ; FP64: [[BuildPairF64_:%[0-9]+]]:afgr64 = BuildPairF64 $a2, $a3
-    ; FP64: $d0 = COPY [[BuildPairF64_]]
+    ; FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a2
+    ; FP64: [[COPY1:%[0-9]+]]:gpr32 = COPY $a3
+    ; FP64: [[BuildPairF64_64_:%[0-9]+]]:fgr64 = BuildPairF64_64 [[COPY]], [[COPY1]]
+    ; FP64: $d0 = COPY [[BuildPairF64_64_]]
     ; FP64: RetRA implicit $d0
-    %1:afgr64(s64) = BuildPairF64 $a2, $a3
+    %2:gprb(s32) = COPY $a2
+    %3:gprb(s32) = COPY $a3
+    %1:fprb(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     $d0 = COPY %1(s64)
     RetRA implicit $d0
 
@@ -218,32 +224,32 @@ body:             |
     ; FP32-LABEL: name: call_float_in_gpr
     ; FP32: liveins: $a0, $a1
     ; FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; FP32: [[MTC1_:%[0-9]+]]:fgr32 = MTC1 $a1
+    ; FP32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
     ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $a0 = COPY [[COPY]]
-    ; FP32: $a1 = MFC1 [[MTC1_]]
+    ; FP32: $a1 = COPY [[COPY1]]
     ; FP32: JAL @float_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $f0
-    ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f0
+    ; FP32: [[COPY2:%[0-9]+]]:fgr32 = COPY $f0
     ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-    ; FP32: $f0 = COPY [[COPY1]]
+    ; FP32: $f0 = COPY [[COPY2]]
     ; FP32: RetRA implicit $f0
     ; FP64-LABEL: name: call_float_in_gpr
     ; FP64: liveins: $a0, $a1
     ; FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; FP64: [[MTC1_:%[0-9]+]]:fgr32 = MTC1 $a1
+    ; FP64: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
     ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $a0 = COPY [[COPY]]
-    ; FP64: $a1 = MFC1 [[MTC1_]]
+    ; FP64: $a1 = COPY [[COPY1]]
     ; FP64: JAL @float_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $f0
-    ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f0
+    ; FP64: [[COPY2:%[0-9]+]]:fgr32 = COPY $f0
     ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-    ; FP64: $f0 = COPY [[COPY1]]
+    ; FP64: $f0 = COPY [[COPY2]]
     ; FP64: RetRA implicit $f0
     %0:gprb(s32) = COPY $a0
-    %1:fgr32(s32) = MTC1 $a1
+    %1:gprb(s32) = COPY $a1
     ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     $a0 = COPY %0(s32)
-    $a1 = MFC1 %1(s32)
+    $a1 = COPY %1(s32)
     JAL @float_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $f0
     %2:fprb(s32) = COPY $f0
     ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
@@ -264,40 +270,42 @@ body:             |
     ; FP32-LABEL: name: call_double_in_gpr
     ; FP32: liveins: $a0, $a2, $a3
     ; FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; FP32: [[BuildPairF64_:%[0-9]+]]:afgr64 = BuildPairF64 $a2, $a3
+    ; FP32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a2
+    ; FP32: [[COPY2:%[0-9]+]]:gpr32 = COPY $a3
     ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $a0 = COPY [[COPY]]
-    ; FP32: $a3 = ExtractElementF64 [[BuildPairF64_]], 1
-    ; FP32: $a2 = ExtractElementF64 [[BuildPairF64_]], 0
+    ; FP32: $a2 = COPY [[COPY1]]
+    ; FP32: $a3 = COPY [[COPY2]]
     ; FP32: JAL @double_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $d0
-    ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d0
+    ; FP32: [[COPY3:%[0-9]+]]:afgr64 = COPY $d0
     ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-    ; FP32: $d0 = COPY [[COPY1]]
+    ; FP32: $d0 = COPY [[COPY3]]
     ; FP32: RetRA implicit $d0
     ; FP64-LABEL: name: call_double_in_gpr
     ; FP64: liveins: $a0, $a2, $a3
     ; FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; FP64: [[BuildPairF64_:%[0-9]+]]:afgr64 = BuildPairF64 $a2, $a3
+    ; FP64: [[COPY1:%[0-9]+]]:gpr32 = COPY $a2
+    ; FP64: [[COPY2:%[0-9]+]]:gpr32 = COPY $a3
     ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $a0 = COPY [[COPY]]
-    ; FP64: $a3 = ExtractElementF64 [[BuildPairF64_]], 1
-    ; FP64: $a2 = ExtractElementF64 [[BuildPairF64_]], 0
+    ; FP64: $a2 = COPY [[COPY1]]
+    ; FP64: $a3 = COPY [[COPY2]]
     ; FP64: JAL @double_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $d0
-    ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d0
+    ; FP64: [[COPY3:%[0-9]+]]:fgr64 = COPY $d0
     ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-    ; FP64: $d0 = COPY [[COPY1]]
+    ; FP64: $d0 = COPY [[COPY3]]
     ; FP64: RetRA implicit $d0
     %0:gprb(s32) = COPY $a0
-    %1:afgr64(s64) = BuildPairF64 $a2, $a3
+    %2:gprb(s32) = COPY $a2
+    %3:gprb(s32) = COPY $a3
     ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     $a0 = COPY %0(s32)
-    $a3 = ExtractElementF64 %1(s64), 1
-    $a2 = ExtractElementF64 %1(s64), 0
+    $a2 = COPY %2(s32)
+    $a3 = COPY %3(s32)
     JAL @double_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $d0
-    %2:fprb(s64) = COPY $d0
+    %4:fprb(s64) = COPY $d0
     ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-    $d0 = COPY %2(s64)
+    $d0 = COPY %4(s64)
     RetRA implicit $d0
 
 ...
-

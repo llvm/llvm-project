@@ -56,22 +56,13 @@
 // fpstrict-NOT: -menable-unsafe-fp-math
 // fpstrict-NOT: -ffast-math
 
-// RUN: %clang_cl /Z7 -gcolumn-info -### -- %s 2>&1 | FileCheck -check-prefix=gcolumn %s
-// gcolumn: -dwarf-column-info
-
-// RUN: %clang_cl /Z7 -gno-column-info -### -- %s 2>&1 | FileCheck -check-prefix=gnocolumn %s
-// gnocolumn-NOT: -dwarf-column-info
-
-// RUN: %clang_cl /Z7 -### -- %s 2>&1 | FileCheck -check-prefix=gdefcolumn %s
-// gdefcolumn-NOT: -dwarf-column-info
-
 // RUN: %clang_cl -### /FA -fprofile-instr-generate -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE %s
 // RUN: %clang_cl -### /FA -fprofile-instr-generate=/tmp/somefile.profraw -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE-FILE %s
-// CHECK-PROFILE-INSTR-GENERATE: "-fprofile-instrument=clang" "--dependent-lib={{[^"]*}}clang_rt.profile-{{[^"]*}}.lib"
+// CHECK-PROFILE-INSTR-GENERATE: "-fprofile-instrument=clang" "--dependent-lib=clang_rt.profile-{{[^"]*}}.lib"
 // CHECK-PROFILE-INSTR-GENERATE-FILE: "-fprofile-instrument-path=/tmp/somefile.profraw"
 
 // RUN: %clang_cl -### /FA -fprofile-generate -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE %s
-// CHECK-PROFILE-GENERATE: "-fprofile-instrument=llvm" "--dependent-lib={{[^"]*}}clang_rt.profile-{{[^"]*}}.lib"
+// CHECK-PROFILE-GENERATE: "-fprofile-instrument=llvm" "--dependent-lib=clang_rt.profile-{{[^"]*}}.lib"
 
 // RUN: %clang_cl -### /FA -fprofile-instr-generate -fprofile-instr-use -- %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-GEN-USE %s
 // RUN: %clang_cl -### /FA -fprofile-instr-generate -fprofile-instr-use=file -- %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-GEN-USE %s
@@ -199,10 +190,16 @@
 // RUN: %clang_cl /Qvec /Qvec- -### -- %s 2>&1 | FileCheck -check-prefix=Qvec_ %s
 // Qvec_-NOT: -vectorize-loops
 
-// RUN: %clang_cl /showIncludes -### -- %s 2>&1 | FileCheck -check-prefix=showIncludes %s
-// showIncludes: --show-includes
+// RUN: %clang_cl /showIncludes -### -- %s 2>&1 | FileCheck -check-prefix=showIncludes_ %s
+// showIncludes_: --show-includes
+// showIncludes_: -sys-header-deps
+
+// RUN: %clang_cl /showIncludes:user -### -- %s 2>&1 | FileCheck -check-prefix=showIncludesUser %s
+// showIncludesUser: --show-includes
+// showIncludesUser-NOT: -sys-header-deps
 
 // RUN: %clang_cl /E /showIncludes -### -- %s 2>&1 | FileCheck -check-prefix=showIncludes_E %s
+// RUN: %clang_cl /E /showIncludes:user -### -- %s 2>&1 | FileCheck -check-prefix=showIncludes_E %s
 // RUN: %clang_cl /EP /showIncludes -### -- %s 2>&1 | FileCheck -check-prefix=showIncludes_E %s
 // RUN: %clang_cl /E /EP /showIncludes -### -- %s 2>&1 | FileCheck -check-prefix=showIncludes_E %s
 // RUN: %clang_cl /EP /P /showIncludes -### -- %s 2>&1 | FileCheck -check-prefix=showIncludes_E %s
@@ -458,11 +455,14 @@
 // RUN:     /openmp:experimental \
 // RUN:     /Qfast_transcendentals \
 // RUN:     /QIfist \
+// RUN:     /QIntel-jcc-erratum \
 // RUN:     /Qimprecise_fwaits \
 // RUN:     /Qpar \
 // RUN:     /Qpar-report:1 \
 // RUN:     /Qsafe_fp_loads \
 // RUN:     /Qspectre \
+// RUN:     /Qspectre-load \
+// RUN:     /Qspectre-load-cf \
 // RUN:     /Qvec-report:2 \
 // RUN:     /u \
 // RUN:     /V \
@@ -627,6 +627,7 @@
 // RUN:     -fdiagnostics-color \
 // RUN:     -fno-diagnostics-color \
 // RUN:     -fdebug-compilation-dir . \
+// RUN:     -fdebug-compilation-dir=. \
 // RUN:     -fdiagnostics-parseable-fixits \
 // RUN:     -fdiagnostics-absolute-paths \
 // RUN:     -ferror-limit=10 \

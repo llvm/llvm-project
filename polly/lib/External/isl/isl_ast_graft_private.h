@@ -2,6 +2,7 @@
 #define ISL_AST_GRAFT_PRIVATE_H
 
 #include <isl/ast.h>
+#include <isl/ast_build.h>
 #include <isl/set.h>
 #include <isl/list.h>
 #include <isl/printer.h>
@@ -61,6 +62,8 @@ __isl_give isl_ast_graft_list *isl_ast_graft_list_merge(
 	__isl_take isl_ast_graft_list *list1,
 	__isl_take isl_ast_graft_list *list2,
 	__isl_keep isl_ast_build *build);
+__isl_give isl_ast_graft_list *isl_ast_graft_list_group_on_guard(
+	__isl_take isl_ast_graft_list *list, __isl_keep isl_ast_build *build);
 
 __isl_give isl_ast_node *isl_ast_graft_get_node(
 	__isl_keep isl_ast_graft *graft);

@@ -81,7 +81,7 @@ entry:
 ; CHECK:     sc
 ; CHECK:     #NO_APP
                                       
-; CHECK:     cmpwi {{[0-9]+}}, [[REG]], 1
+; CHECK:     cmpwi [[REG]], 1
 
 ; CHECK: blr
 

@@ -105,10 +105,8 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
 
 void DebugInfoFinder::processInstruction(const Module &M,
                                          const Instruction &I) {
-  if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
-    processDeclare(M, DDI);
-  else if (auto *DVI = dyn_cast<DbgValueInst>(&I))
-    processValue(M, DVI);
+  if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
+    processVariable(M, *DVI);
 
   if (auto DbgLoc = I.getDebugLoc())
     processLocation(M, DbgLoc.get());
@@ -194,24 +192,9 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   }
 }
 
-void DebugInfoFinder::processDeclare(const Module &M,
-                                     const DbgDeclareInst *DDI) {
-  auto *N = dyn_cast<MDNode>(DDI->getVariable());
-  if (!N)
-    return;
-
-  auto *DV = dyn_cast<DILocalVariable>(N);
-  if (!DV)
-    return;
-
-  if (!NodesSeen.insert(DV).second)
-    return;
-  processScope(DV->getScope());
-  processType(DV->getType());
-}
-
-void DebugInfoFinder::processValue(const Module &M, const DbgValueInst *DVI) {
-  auto *N = dyn_cast<MDNode>(DVI->getVariable());
+void DebugInfoFinder::processVariable(const Module &M,
+                                      const DbgVariableIntrinsic &DVI) {
+  auto *N = dyn_cast<MDNode>(DVI.getVariable());
   if (!N)
     return;
 
@@ -664,7 +647,7 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
     }
     for (auto &BB : F) {
       for (auto &I : BB) {
-        auto remapDebugLoc = [&](DebugLoc DL) -> DebugLoc {
+        auto remapDebugLoc = [&](const DebugLoc &DL) -> DebugLoc {
           auto *Scope = DL.getScope();
           MDNode *InlinedAt = DL.getInlinedAt();
           Scope = remap(Scope);

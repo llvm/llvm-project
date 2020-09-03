@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadMinidump_h_
-#define liblldb_ThreadMinidump_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_THREADMINIDUMP_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_THREADMINIDUMP_H
 
 #include "MinidumpTypes.h"
 
@@ -42,4 +42,4 @@ protected:
 } // namespace minidump
 } // namespace lldb_private
 
-#endif // liblldb_ThreadMinidump_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_MINIDUMP_THREADMINIDUMP_H

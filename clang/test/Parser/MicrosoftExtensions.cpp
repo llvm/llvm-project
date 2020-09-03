@@ -33,7 +33,7 @@ public:
 
 void uuidof_test1()
 {
-  __uuidof(0);  // expected-error {{you need to include <guiddef.h> before using the '__uuidof' operator}}
+  __uuidof(0);
 }
 
 typedef struct _GUID
@@ -137,9 +137,7 @@ typedef COM_CLASS_TEMPLATE_REF<struct_with_uuid, __uuidof(struct_with_uuid)> COM
 
 COM_CLASS_TEMPLATE_REF<int, __uuidof(struct_with_uuid)> good_template_arg;
 
-COM_CLASS_TEMPLATE<int, __uuidof(struct_with_uuid)> bad_template_arg; // expected-error {{non-type template argument of type 'const _GUID' is not a constant expression}}
-// expected-note@-1 {{read of object '__uuidof(struct_with_uuid)' whose value is not known}}
-// expected-note@-2 {{temporary created here}}
+COM_CLASS_TEMPLATE<int, __uuidof(struct_with_uuid)> bad_template_arg; // expected-error {{non-type template argument for template parameter of pointer type 'const GUID *' (aka 'const _GUID *') must have its address taken}}
 
 namespace PR16911 {
 struct __declspec(uuid("{12345678-1234-1234-1234-1234567890aB}")) uuid;
@@ -444,4 +442,30 @@ namespace pr36638 {
 // pointers.
 struct A;
 void (A::*mp1)(int) __unaligned;
+}
+
+namespace enum_class {
+  // MSVC allows opaque-enum-declaration syntax anywhere an
+  // elaborated-type-specifier can appear.
+  // FIXME: Most of these are missing warnings.
+  enum E0 *p0; // expected-warning {{Microsoft extension}}
+  enum class E1 : int *p1;
+  enum E2 : int *p2;
+  enum class E3 *p3;
+  auto f4() -> enum class E4 { return {}; }
+  auto f5() -> enum E5 : int { return {}; } // FIXME: MSVC rejects this and crashes if the body is {}.
+  auto f6() -> enum E6 { return {}; } // expected-warning {{Microsoft extension}}
+
+  // MSVC does not perform disambiguation for a colon that could introduce an
+  // enum-base or a bit-field.
+  enum E {};
+  struct S {
+    enum E : int(1); // expected-error {{anonymous bit-field}}
+    enum E : int : 1; // OK, bit-field
+    enum F : int a = {}; // OK, default member initializer
+    // MSVC produces a "C4353 constant 0 as function expression" for this,
+    // considering the final {} to be part of the bit-width. We follow P0683R1
+    // and treat it as a default member initializer.
+    enum E : int : int{}{}; // expected-error {{anonymous bit-field cannot have a default member initializer}} expected-warning {{C++20 extension}}
+  };
 }

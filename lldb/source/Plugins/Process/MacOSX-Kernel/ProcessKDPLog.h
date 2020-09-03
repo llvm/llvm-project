@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ProcessKDPLog_h_
-#define liblldb_ProcessKDPLog_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_PROCESSKDPLOG_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_PROCESSKDPLOG_H
 
 #include "lldb/Utility/Log.h"
 
@@ -39,4 +39,4 @@ public:
 };
 }
 
-#endif // liblldb_ProcessKDPLog_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_PROCESSKDPLOG_H

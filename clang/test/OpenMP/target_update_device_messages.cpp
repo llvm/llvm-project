@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -21,6 +21,7 @@ int tmain(T argc, S **argv) {
 #pragma omp target update to(i) device (argc)) // expected-warning {{extra tokens at the end of '#pragma omp target update' are ignored}}
 #pragma omp target update from(i) device (argc > 0 ? argv[1] : argv[2]) // expected-error {{expression must have integral or unscoped enumeration type, not 'char *'}}
 #pragma omp target update from(i) device (argc + z)
+#pragma omp target update from(i) device (device_num: argc + z) // expected-error {{use of undeclared identifier 'device_num'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update from(i) device (argc), device (argc+1) // expected-error {{directive '#pragma omp target update' cannot contain more than one 'device' clause}}
 #pragma omp target update from(i) device (S1) // expected-error {{'S1' does not refer to a value}}
 #pragma omp target update from(i) device (3.14) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'double'}}

@@ -9,7 +9,7 @@
 
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: _start:
+// DISASM-NEXT: <_start>:
 // LD -> LE:
 // DISASM-NEXT: 4010f4: 65 a1 00 00 00 00 movl %gs:0, %eax
 // DISASM-NEXT: 4010fa: 90                nop

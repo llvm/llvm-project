@@ -110,6 +110,9 @@ inline void remove(BitVector &A, const BitVector &B) {
     A.reset(I);
 }
 
+// Returns a debug string for the list of registers.
+std::string debugString(const MCRegisterInfo &RegInfo, const BitVector &Regs);
+
 } // namespace exegesis
 } // namespace llvm
 

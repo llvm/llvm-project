@@ -1,4 +1,4 @@
-; RUN: not llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -exception-model=wasm
+; RUN: not --crash llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -exception-model=wasm
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck -allow-deprecated-dag-overlap %s
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling
 
@@ -40,10 +40,10 @@ define void @test_throw(i8* %p) {
 ; CHECK:       extract_exception $[[EXN:[0-9]+]]=
 ; CHECK-DAG:   i32.store  __wasm_lpad_context
 ; CHECK-DAG:   i32.store  __wasm_lpad_context+4
-; CHECK:       i32.call  $drop=, _Unwind_CallPersonality, $[[EXN]]
+; CHECK:       call       $drop=, _Unwind_CallPersonality, $[[EXN]]
 ; CHECK:       block
 ; CHECK:         br_if     0
-; CHECK:         i32.call  $drop=, __cxa_begin_catch
+; CHECK:         call      $drop=, __cxa_begin_catch
 ; CHECK:         call      __cxa_end_catch
 ; CHECK:         br        1
 ; CHECK:       end_block
@@ -74,7 +74,7 @@ rethrow:                                          ; preds = %catch.start
   call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
   unreachable
 
-try.cont:                                         ; preds = %entry, %catch
+try.cont:                                         ; preds = %catch, %entry
   ret void
 }
 
@@ -94,7 +94,7 @@ try.cont:                                         ; preds = %entry, %catch
 ; CHECK:   call      foo
 ; CHECK: catch     $[[EXNREF:[0-9]+]]=
 ; CHECK:   global.set  __stack_pointer
-; CHECK:   i32.call  $drop=, _ZN4TempD2Ev
+; CHECK:   call      $drop=, _ZN4TempD2Ev
 ; CHECK:   rethrow   $[[EXNREF]]
 ; CHECK: end_try
 define void @test_cleanup() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
@@ -129,7 +129,7 @@ ehcleanup:                                        ; preds = %entry
 ; CHECK: try
 ; CHECK:   call      foo
 ; CHECK: catch
-; CHECK:   i32.call  $drop=, __cxa_begin_catch
+; CHECK:   call      $drop=, __cxa_begin_catch
 ; CHECK:   try
 ; CHECK:     call      foo
 ; CHECK:   catch
@@ -169,7 +169,7 @@ invoke.cont1:                                     ; preds = %catch.start
   call void @__cxa_end_catch() [ "funclet"(token %1) ]
   catchret from %1 to label %try.cont
 
-try.cont:                                         ; preds = %entry, %invoke.cont1
+try.cont:                                         ; preds = %invoke.cont1, %entry
   ret void
 
 ehcleanup:                                        ; preds = %catch.start
@@ -213,7 +213,7 @@ terminate:                                        ; preds = %ehcleanup
 ; CHECK:       block
 ; CHECK:         block
 ; CHECK:           br_if     0
-; CHECK:           i32.call  $drop=, __cxa_begin_catch
+; CHECK:           call      $drop=, __cxa_begin_catch
 ; CHECK:           try
 ; CHECK:             call      foo
 ; CHECK:           catch
@@ -262,7 +262,7 @@ rethrow:                                          ; preds = %catch.start
   call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
   unreachable
 
-try.cont:                                         ; preds = %entry, %invoke.cont1
+try.cont:                                         ; preds = %invoke.cont1, %entry
   ret void
 
 ehcleanup:                                        ; preds = %catch
@@ -286,7 +286,7 @@ ehcleanup:                                        ; preds = %catch
 ; CHECK:     try
 ; CHECK:       call      foo
 ; CHECK:     catch
-; CHECK:       i32.call  $drop=, __cxa_begin_catch
+; CHECK:       call      $drop=, __cxa_begin_catch
 ; CHECK:       call      __cxa_end_catch
 ; CHECK:     end_try
 ; CHECK-NOT: global.set  __stack_pointer
@@ -303,11 +303,11 @@ catch.start:                                      ; preds = %catch.dispatch
   %1 = catchpad within %0 [i8* null]
   %2 = call i8* @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i8* @__cxa_begin_catch(i8* %2) #2 [ "funclet"(token %1) ]
+  %4 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
   call void @__cxa_end_catch() [ "funclet"(token %1) ]
   catchret from %1 to label %try.cont
 
-try.cont:                                         ; preds = %entry, %catch.start
+try.cont:                                         ; preds = %catch.start, %entry
   ret void
 }
 
@@ -327,8 +327,40 @@ catch.start:                                      ; preds = %catch.dispatch
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
   catchret from %1 to label %try.cont
 
-try.cont:                                         ; preds = %entry, %catch.start
+try.cont:                                         ; preds = %catch.start, %entry
   ret void
+}
+
+; Tests a case when a cleanup region (cleanuppad ~ clanupret) contains another
+; catchpad
+define void @test_complex_cleanup_region() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  invoke void @foo()
+          to label %invoke.cont unwind label %ehcleanup
+
+invoke.cont:                                      ; preds = %entry
+  ret void
+
+ehcleanup:                                        ; preds = %entry
+  %0 = cleanuppad within none []
+  invoke void @foo() [ "funclet"(token %0) ]
+          to label %ehcleanupret unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %ehcleanup
+  %1 = catchswitch within %0 [label %catch.start] unwind label %ehcleanup.1
+
+catch.start:                                      ; preds = %catch.dispatch
+  %2 = catchpad within %1 [i8* null]
+  %3 = call i8* @llvm.wasm.get.exception(token %2)
+  %4 = call i32 @llvm.wasm.get.ehselector(token %2)
+  catchret from %2 to label %ehcleanupret
+
+ehcleanup.1:                                      ; preds = %catch.dispatch
+  %5 = cleanuppad within %0 []
+  unreachable
+
+ehcleanupret:                                     ; preds = %catch.start, %ehcleanup
+  cleanupret from %0 unwind to caller
 }
 
 declare void @foo()

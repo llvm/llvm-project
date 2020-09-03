@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
+#include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -82,10 +83,22 @@ bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(
   SmallVector<LiveInterval *, 4> SplitLIs;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I) {
     unsigned Reg = Register::index2VirtReg(I);
+    auto &TRI = *MF.getSubtarget<WebAssemblySubtarget>().getRegisterInfo();
+
     if (MRI.reg_nodbg_empty(Reg))
       continue;
 
     LIS.splitSeparateComponents(LIS.getInterval(Reg), SplitLIs);
+    if (Reg == TRI.getFrameRegister(MF) && SplitLIs.size() > 0) {
+      // The live interval for the frame register was split, resulting in a new
+      // VReg. For now we only support debug info output for a single frame base
+      // value for the function, so just use the last one. It will certainly be
+      // wrong for some part of the function, but until we are able to track
+      // values through live-range splitting and stackification, it will have to
+      // do.
+      MF.getInfo<WebAssemblyFunctionInfo>()->setFrameBaseVreg(
+          SplitLIs.back()->reg);
+    }
     SplitLIs.clear();
   }
 
@@ -103,5 +116,5 @@ bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(
     }
   }
 
-  return false;
+  return true;
 }

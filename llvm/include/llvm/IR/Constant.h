@@ -43,6 +43,8 @@ protected:
   Constant(Type *ty, ValueTy vty, Use *Ops, unsigned NumOps)
     : User(ty, vty, Ops, NumOps) {}
 
+  ~Constant() = default;
+
 public:
   void operator=(const Constant &) = delete;
   Constant(const Constant &) = delete;

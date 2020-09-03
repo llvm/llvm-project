@@ -22,7 +22,8 @@ inline clang::DeclarationName getDeclarationName(TypeSystemClang &ast,
 }
 
 inline std::unique_ptr<TypeSystemClang> createAST() {
-  return std::make_unique<TypeSystemClang>(HostInfo::GetTargetTriple());
+  return std::make_unique<TypeSystemClang>("test ASTContext",
+                                           HostInfo::GetTargetTriple());
 }
 
 inline CompilerType createRecord(TypeSystemClang &ast, llvm::StringRef name) {

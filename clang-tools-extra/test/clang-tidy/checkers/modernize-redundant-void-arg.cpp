@@ -187,7 +187,7 @@ typedef void (function_ptr)(void);
 // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: {{.*}} in typedef
 // CHECK-FIXES: {{^}}typedef void (function_ptr)();{{$}}
 
-// intentionally not LLVM style to check preservation of whitesapce
+// intentionally not LLVM style to check preservation of whitespace
 typedef void (function_ptr2)
     (
         void
@@ -198,7 +198,7 @@ typedef void (function_ptr2)
 // CHECK-FIXES-NEXT: {{^        $}}
 // CHECK-FIXES-NEXT: {{^    \);$}}
 
-// intentionally not LLVM style to check preservation of whitesapce
+// intentionally not LLVM style to check preservation of whitespace
 typedef
 void
 (
@@ -254,7 +254,7 @@ typedef void (gronk::*member_function_ptr)(void);
 // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: {{.*}} in typedef
 // CHECK-FIXES: {{^}}typedef void (gronk::*member_function_ptr)();{{$}}
 
-// intentionally not LLVM style to check preservation of whitesapce
+// intentionally not LLVM style to check preservation of whitespace
 typedef void (gronk::*member_function_ptr2)
     (
         void
@@ -274,7 +274,7 @@ void gronk::foo() {
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: {{.*}} in variable declaration
   // CHECK-FIXES: {{^  }}void (*f2)();{{$}}
 
-  // intentionally not LLVM style to check preservation of whitesapce
+  // intentionally not LLVM style to check preservation of whitespace
   void (*f3)
       (
           void
@@ -297,7 +297,7 @@ void gronk::bar(void) {
   // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: {{.*}} in variable declaration
   // CHECK-FIXES: {{^  }}void (gronk::*p4)();{{$}}
 
-  // intentionally not LLVM style to check preservation of whitesapce
+  // intentionally not LLVM style to check preservation of whitespace
   void (gronk::*p5)
       (
           void
@@ -309,7 +309,7 @@ void gronk::bar(void) {
   // CHECK-FIXES-NExT: {{^      \);$}}
 }
 
-// intentionally not LLVM style to check preservation of whitesapce
+// intentionally not LLVM style to check preservation of whitespace
 void gronk::bar2
   (
   void
@@ -357,7 +357,7 @@ nutter::nutter(void) {
   // CHECK-MESSAGES: :[[@LINE-2]]:48: warning: {{.*}} in named cast
   // CHECK-FIXES: void (*f5)() = reinterpret_cast<void (*)()>(0);{{$}}
 
-  // intentionally not LLVM style to check preservation of whitesapce
+  // intentionally not LLVM style to check preservation of whitespace
   void (*f6)(void) = static_cast<void (*)
       (
           void
@@ -369,7 +369,7 @@ nutter::nutter(void) {
   // CHECK-FIXES-NEXT: {{^          $}}
   // CHECK-FIXES-NEXT: {{^      }})>(0);{{$}}
 
-  // intentionally not LLVM style to check preservation of whitesapce
+  // intentionally not LLVM style to check preservation of whitespace
   void (*f7)(void) = (void (*)
       (
           void
@@ -381,7 +381,7 @@ nutter::nutter(void) {
   // CHECK-FIXES-NEXT: {{^          $}}
   // CHECK-FIXES-NEXT: {{^      \)\) 0;$}}
 
-  // intentionally not LLVM style to check preservation of whitesapce
+  // intentionally not LLVM style to check preservation of whitespace
   void (*f8)(void) = reinterpret_cast<void (*)
       (
           void

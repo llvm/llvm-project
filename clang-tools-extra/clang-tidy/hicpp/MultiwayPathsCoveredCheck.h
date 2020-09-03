@@ -9,9 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_MULTIWAY_PATHS_COVERED_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_MULTIWAY_PATHS_COVERED_H
 
-#include "../ClangTidy.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include <iostream>
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -27,7 +25,7 @@ class MultiwayPathsCoveredCheck : public ClangTidyCheck {
 public:
   MultiwayPathsCoveredCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        WarnOnMissingElse(Options.get("WarnOnMissingElse", 0)) {}
+        WarnOnMissingElse(Options.get("WarnOnMissingElse", false)) {}
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;

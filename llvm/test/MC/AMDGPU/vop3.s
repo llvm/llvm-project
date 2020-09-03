@@ -2,6 +2,9 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii -show-encoding %s | FileCheck %s --check-prefix=CI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=VI
 
+// Make sure interp instructions disassemble regardless of lds bank count
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx810 -show-encoding %s | FileCheck %s --check-prefix=VI
+
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOVI
@@ -254,6 +257,18 @@ v_mul_f32 v1, v3, s5
 v_mul_i32_i24 v1, v3, s5
 // SICI: v_mul_i32_i24_e64 v1, v3, s5 ; encoding: [0x01,0x00,0x12,0xd2,0x03,0x0b,0x00,0x00]
 // VI:   v_mul_i32_i24_e64 v1, v3, s5 ; encoding: [0x01,0x00,0x06,0xd1,0x03,0x0b,0x00,0x00]
+
+v_mul_i32_i24 v1, v3, s5 clamp
+// NOSICI: error: integer clamping is not supported on this GPU
+// VI:   v_mul_i32_i24_e64 v1, v3, s5 clamp ; encoding: [0x01,0x80,0x06,0xd1,0x03,0x0b,0x00,0x00]
+
+v_mul_u32_u24 v1, v3, s5
+// SICI: v_mul_u32_u24_e64 v1, v3, s5 ; encoding: [0x01,0x00,0x16,0xd2,0x03,0x0b,0x00,0x00]
+// VI:   v_mul_u32_u24_e64 v1, v3, s5 ; encoding: [0x01,0x00,0x08,0xd1,0x03,0x0b,0x00,0x00]
+
+v_mul_u32_u24 v1, v3, s5 clamp
+// NOSICI: error: integer clamping is not supported on this GPU
+// VI:   v_mul_u32_u24_e64 v1, v3, s5 clamp ; encoding: [0x01,0x80,0x08,0xd1,0x03,0x0b,0x00,0x00]
 
 v_mac_f32_e64 v0, v1, v2
 // SICI: v_mac_f32_e64 v0, v1, v2 ; encoding: [0x00,0x00,0x3e,0xd2,0x01,0x05,0x02,0x00]
@@ -540,7 +555,7 @@ v_mad_i16_e64 v5, -1, v2, v3
 // VI: v_mad_i16 v5, -1, v2, v3 ; encoding: [0x05,0x00,0xec,0xd1,0xc1,0x04,0x0e,0x04]
 
 v_mad_i16 v5, v1, -4.0, v3
-// VI: v_mad_i16 v5, v1, -4.0, v3 ; encoding: [0x05,0x00,0xec,0xd1,0x01,0xef,0x0d,0x04]
+// NOVI: error: invalid literal operand
 
 v_mad_i16 v5, v1, v2, 0
 // VI: v_mad_i16 v5, v1, v2, 0 ; encoding: [0x05,0x00,0xec,0xd1,0x01,0x05,0x02,0x02]
@@ -552,7 +567,7 @@ v_mad_u16 v5, v1, 0, v3
 // VI: v_mad_u16 v5, v1, 0, v3 ; encoding: [0x05,0x00,0xeb,0xd1,0x01,0x01,0x0d,0x04]
 
 v_mad_u16 v5, v1, v2, -4.0
-// VI: v_mad_u16 v5, v1, v2, -4.0 ; encoding: [0x05,0x00,0xeb,0xd1,0x01,0x05,0xde,0x03]
+// NOVI: error: invalid literal operand
 
 ///===---------------------------------------------------------------------===//
 // VOP3 with Integer Clamp

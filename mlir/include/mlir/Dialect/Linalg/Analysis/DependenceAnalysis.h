@@ -1,6 +1,6 @@
 //===- DependenceAnalysis.h - Dependence analysis on SSA views --*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -63,6 +63,7 @@ public:
   using dependence_range = iterator_range<dependence_iterator>;
 
   enum DependenceType { RAR = 0, RAW, WAR, WAW, NumTypes };
+  static StringRef getDependenceTypeStr(DependenceType depType);
 
   // Builds a linalg dependence graph for the ops of type LinalgOp under `f`.
   static LinalgDependenceGraph buildDependenceGraph(Aliases &aliases, FuncOp f);

@@ -627,12 +627,30 @@
 // PPCPOWER9:#define _ARCH_PWR7 1
 // PPCPOWER9:#define _ARCH_PWR9 1
 //
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu pwr10 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPOWER10 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu power10 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPOWER10 %s
+//
+// PPCPOWER10:#define _ARCH_PPC 1
+// PPCPOWER10:#define _ARCH_PPC64 1
+// PPCPOWER10:#define _ARCH_PPCGR 1
+// PPCPOWER10:#define _ARCH_PPCSQ 1
+// PPCPOWER10:#define _ARCH_PWR10 1
+// PPCPOWER10:#define _ARCH_PWR4 1
+// PPCPOWER10:#define _ARCH_PWR5 1
+// PPCPOWER10:#define _ARCH_PWR5X 1
+// PPCPOWER10:#define _ARCH_PWR6 1
+// PPCPOWER10-NOT:#define _ARCH_PWR6X 1
+// PPCPOWER10:#define _ARCH_PWR7 1
+// PPCPOWER10:#define _ARCH_PWR8 1
+// PPCPOWER10:#define _ARCH_PWR9 1
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu future -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCFUTURE %s
 //
 // PPCFUTURE:#define _ARCH_PPC 1
 // PPCFUTURE:#define _ARCH_PPC64 1
 // PPCFUTURE:#define _ARCH_PPCGR 1
 // PPCFUTURE:#define _ARCH_PPCSQ 1
+// PPCFUTURE:#define _ARCH_PWR10 1
 // PPCFUTURE:#define _ARCH_PWR4 1
 // PPCFUTURE:#define _ARCH_PWR5 1
 // PPCFUTURE:#define _ARCH_PWR5X 1
@@ -1060,6 +1078,7 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-freebsd11 -target-abi elfv1 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv1 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-freebsd12 -target-abi elfv1 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv1 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-freebsd13 -target-abi elfv2 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv2 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-openbsd -target-abi elfv2 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv2 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-linux-musl -target-abi elfv2 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv2 %s
 
 // PPC64-ELFv1:#define _CALL_ELF 1

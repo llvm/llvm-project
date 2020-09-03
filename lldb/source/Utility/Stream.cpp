@@ -1,4 +1,4 @@
-//===-- Stream.cpp ----------------------------------------------*- C++ -*-===//
+//===-- Stream.cpp --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,13 +22,14 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Stream::Stream(uint32_t flags, uint32_t addr_size, ByteOrder byte_order)
+Stream::Stream(uint32_t flags, uint32_t addr_size, ByteOrder byte_order,
+               bool colors)
     : m_flags(flags), m_addr_size(addr_size), m_byte_order(byte_order),
-      m_indent_level(0), m_forwarder(*this) {}
+      m_indent_level(0), m_forwarder(*this, colors) {}
 
-Stream::Stream()
+Stream::Stream(bool colors)
     : m_flags(0), m_addr_size(4), m_byte_order(endian::InlHostByteOrder()),
-      m_indent_level(0), m_forwarder(*this) {}
+      m_indent_level(0), m_forwarder(*this, colors) {}
 
 // Destructor
 Stream::~Stream() {}
@@ -126,15 +127,10 @@ size_t Stream::PrintfVarArg(const char *format, va_list args) {
 // Print and End of Line character to the stream
 size_t Stream::EOL() { return PutChar('\n'); }
 
-// Indent the current line using the current indentation level and print an
-// optional string following the indentation spaces.
-size_t Stream::Indent(const char *s) {
-  return Printf("%*.*s%s", m_indent_level, m_indent_level, "", s ? s : "");
-}
-
 size_t Stream::Indent(llvm::StringRef str) {
-  return Printf("%*.*s%s", m_indent_level, m_indent_level, "",
-                str.str().c_str());
+  const size_t ind_length = PutCString(std::string(m_indent_level, ' '));
+  const size_t str_length = PutCString(str);
+  return ind_length + str_length;
 }
 
 // Stream a character "ch" out to this stream.

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef EmulateInstructionMIPS64_h_
-#define EmulateInstructionMIPS64_h_
+#ifndef LLDB_SOURCE_PLUGINS_INSTRUCTION_MIPS64_EMULATEINSTRUCTIONMIPS64_H
+#define LLDB_SOURCE_PLUGINS_INSTRUCTION_MIPS64_EMULATEINSTRUCTIONMIPS64_H
 
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Interpreter/OptionValue.h"
@@ -168,7 +168,7 @@ protected:
 
   bool nonvolatile_reg_p(uint64_t regnum);
 
-  const char *GetRegisterName(unsigned reg_num, bool altnernate_name);
+  const char *GetRegisterName(unsigned reg_num, bool alternate_name);
 
 private:
   std::unique_ptr<llvm::MCDisassembler> m_disasm;
@@ -179,4 +179,4 @@ private:
   std::unique_ptr<llvm::MCInstrInfo> m_insn_info;
 };
 
-#endif // EmulateInstructionMIPS64_h_
+#endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_MIPS64_EMULATEINSTRUCTIONMIPS64_H

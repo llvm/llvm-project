@@ -18,10 +18,31 @@ define i101 @array() {
 }
 
 ; CHECK-LABEL: @large_aggregate
-; CHECK-NEXT: ret i101 undef
+; CHECK-NEXT:    %D = and i101 undef, 1
+; CHECK-NEXT:    %DD = or i101 %D, 1
+; CHECK-NEXT:    %G = getelementptr i101, i101* getelementptr inbounds ([6 x i101], [6 x i101]* @Y, i32 0, i32 5), i101 %DD
+; CHECK-NEXT:    %L3 = load i101, i101* %G
+; CHECK-NEXT:    ret i101 %L3
+;
 define i101 @large_aggregate() {
   %B = load i101, i101* undef
   %D = and i101 %B, 1
+  %DD = or i101 %D, 1
+  %F = getelementptr [6 x i101], [6 x i101]* @Y, i32 0, i32 5
+  %G = getelementptr i101, i101* %F, i101 %DD
+  %L3 = load i101, i101* %G
+  ret i101 %L3
+}
+
+; CHECK-LABEL: define i101 @large_aggregate_2() {
+; CHECK-NEXT:     %D = and i101 undef, 1
+; CHECK-NEXT:     %DD = or i101 %D, 1
+; CHECK-NEXT:     %G = getelementptr i101, i101* getelementptr inbounds ([6 x i101], [6 x i101]* @Y, i32 0, i32 5), i101 %DD
+; CHECK-NEXT:     %L3 = load i101, i101* %G
+; CHECK-NEXT:     ret i101 %L3
+;
+define i101 @large_aggregate_2() {
+  %D = and i101 undef, 1
   %DD = or i101 %D, 1
   %F = getelementptr [6 x i101], [6 x i101]* @Y, i32 0, i32 5
   %G = getelementptr i101, i101* %F, i101 %DD

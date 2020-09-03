@@ -5,10 +5,9 @@ add_lldb_unittest(PPC64InstEmulationTests
     lldbSymbol
     lldbTarget
     lldbPluginUnwindAssemblyInstEmulation
-    lldbPluginDisassemblerLLVM
+    lldbPluginDisassemblerLLVMC
     lldbPluginInstructionPPC64
     lldbPluginProcessUtility
-    lldbPluginPlatformMacOSX
   LINK_COMPONENTS
     Support
     ${LLVM_TARGETS_TO_BUILD})

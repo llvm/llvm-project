@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}fold_sgpr:
 ; CHECK: v_add_i32_e32 v{{[0-9]+}}, vcc, s
-define amdgpu_kernel void @fold_sgpr(i32 addrspace(1)* %out, i32 %fold) {
+define amdgpu_kernel void @fold_sgpr(i32 addrspace(1)* %out, i32 %fold) #1 {
 entry:
   %tmp0 = icmp ne i32 %fold, 0
   br i1 %tmp0, label %if, label %endif
@@ -20,7 +20,7 @@ endif:
 
 ; CHECK-LABEL: {{^}}fold_imm:
 ; CHECK: v_or_b32_e32 v{{[0-9]+}}, 5
-define amdgpu_kernel void @fold_imm(i32 addrspace(1)* %out, i32 %cmp) {
+define amdgpu_kernel void @fold_imm(i32 addrspace(1)* %out, i32 %cmp) #1 {
 entry:
   %fold = add i32 3, 2
   %tmp0 = icmp ne i32 %cmp, 0
@@ -46,7 +46,7 @@ endif:
 ; CHECK-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], [[HI]]
 ; CHECK: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}},
 
-define amdgpu_kernel void @fold_64bit_constant_add(i64 addrspace(1)* %out, i32 %cmp, i64 %val) {
+define amdgpu_kernel void @fold_64bit_constant_add(i64 addrspace(1)* %out, i32 %cmp, i64 %val) #1 {
 entry:
   %tmp0 = add i64 %val, 1
   store i64 %tmp0, i64 addrspace(1)* %out
@@ -61,7 +61,7 @@ entry:
 ; CHECK: v_xor_b32_e32 v{{[0-9]+}}, 5, v{{[0-9]+}}
 ; CHECK: v_xor_b32_e32 v{{[0-9]+}}, 5, v{{[0-9]+}}
 
-define amdgpu_kernel void @vector_inline(<4 x i32> addrspace(1)* %out) {
+define amdgpu_kernel void @vector_inline(<4 x i32> addrspace(1)* %out) #1 {
 entry:
   %tmp0 = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp0, 1
@@ -80,7 +80,7 @@ entry:
 ; CHECK-LABEL: {{^}}imm_one_use:
 ; CHECK: v_xor_b32_e32 v{{[0-9]+}}, 0x64, v{{[0-9]+}}
 
-define amdgpu_kernel void @imm_one_use(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @imm_one_use(i32 addrspace(1)* %out) #1 {
 entry:
   %tmp0 = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = xor i32 %tmp0, 100
@@ -94,7 +94,7 @@ entry:
 ; CHECK: v_xor_b32_e32 v{{[0-9]}}, [[IMM]], v{{[0-9]}}
 ; CHECK: v_xor_b32_e32 v{{[0-9]}}, [[IMM]], v{{[0-9]}}
 
-define amdgpu_kernel void @vector_imm(<4 x i32> addrspace(1)* %out) {
+define amdgpu_kernel void @vector_imm(<4 x i32> addrspace(1)* %out) #1 {
 entry:
   %tmp0 = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp0, 1
@@ -114,7 +114,7 @@ entry:
 ; CHECK: buffer_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
 ; CHECK: v_mac_f32_e32 v[[LO]], 0x41200000, v[[HI]]
 ; CHECK: buffer_store_dword v[[LO]]
-define amdgpu_kernel void @no_fold_tied_subregister() {
+define amdgpu_kernel void @no_fold_tied_subregister() #1 {
   %tmp1 = load volatile <2 x float>, <2 x float> addrspace(1)* undef
   %tmp2 = extractelement <2 x float> %tmp1, i32 0
   %tmp3 = extractelement <2 x float> %tmp1, i32 1
@@ -128,7 +128,7 @@ define amdgpu_kernel void @no_fold_tied_subregister() {
 ; CHECK-LABEL: {{^}}no_extra_fold_on_same_opnd
 ; CHECK: v_xor_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
 ; CHECK: v_xor_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define void @no_extra_fold_on_same_opnd() {
+define void @no_extra_fold_on_same_opnd() #1 {
 entry:
   %s0 = load i32, i32 addrspace(5)* undef, align 4
   %s0.i64= zext i32 %s0 to i64
@@ -151,3 +151,4 @@ if.else:
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { nounwind readnone }
+attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

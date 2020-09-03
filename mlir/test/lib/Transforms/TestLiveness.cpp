@@ -1,7 +1,7 @@
 //===- TestLiveness.cpp - Test liveness construction and information
 //-------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -19,7 +19,7 @@ using namespace mlir;
 
 namespace {
 
-struct TestLivenessPass : public FunctionPass<TestLivenessPass> {
+struct TestLivenessPass : public PassWrapper<TestLivenessPass, FunctionPass> {
   void runOnFunction() override {
     llvm::errs() << "Testing : " << getFunction().getName() << "\n";
     getAnalysis<Liveness>().print(llvm::errs());
@@ -28,6 +28,10 @@ struct TestLivenessPass : public FunctionPass<TestLivenessPass> {
 
 } // end anonymous namespace
 
-static PassRegistration<TestLivenessPass>
-    pass("test-print-liveness",
-         "Print the contents of a constructed liveness information.");
+namespace mlir {
+void registerTestLivenessPass() {
+  PassRegistration<TestLivenessPass>(
+      "test-print-liveness",
+      "Print the contents of a constructed liveness information.");
+}
+} // namespace mlir

@@ -155,7 +155,8 @@ void SystemZInstPrinter::printPCRelOperand(const MCInst *MI, int OpNum,
     MO.getExpr()->print(O, &MAI);
 }
 
-void SystemZInstPrinter::printPCRelTLSOperand(const MCInst *MI, int OpNum,
+void SystemZInstPrinter::printPCRelTLSOperand(const MCInst *MI,
+                                              uint64_t Address, int OpNum,
                                               raw_ostream &O) {
   // Output the PC-relative operand.
   printPCRelOperand(MI, OpNum, O);

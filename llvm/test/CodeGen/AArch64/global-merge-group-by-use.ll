@@ -65,8 +65,8 @@ define void @f3(i32 %a1, i32 %a2) #0 {
 define void @f4(i32 %a1, i32 %a2, i32 %a3) #0 {
 ; CHECK-NEXT: adrp x8, [[SET3]]@PAGE
 ; CHECK-NEXT: add x8, x8, [[SET3]]@PAGEOFF
-; CHECK-NEXT: stp w2, w0, [x8]
-; CHECK-NEXT: str w1, [x8, #8]
+; CHECK-NEXT: stp w0, w1, [x8, #4]
+; CHECK-NEXT: str w2, [x8]
 ; CHECK-NEXT: ret
   store i32 %a1, i32* @m4, align 4
   store i32 %a2, i32* @n4, align 4

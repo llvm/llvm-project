@@ -1,6 +1,6 @@
 //===- DialectHooks.h - MLIR DialectHooks mechanism -------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -35,36 +35,53 @@ public:
   DialectConstantDecodeHook getDecodeHook() { return nullptr; }
   // Returns hook to extract an element of an opaque constant tensor.
   DialectExtractElementHook getExtractElementHook() { return nullptr; }
+
+private:
+  /// Registers a function that will set hooks in the registered dialects.
+  /// Registrations are deduplicated by dialect TypeID and only the first
+  /// registration will be used.
+  static void registerDialectHooksSetter(TypeID typeID,
+                                         const DialectHooksSetter &function);
+  template <typename ConcreteHooks>
+  friend void registerDialectHooks(StringRef dialectName);
 };
 
-/// Registers a function that will set hooks in the registered dialects
-/// based on information coming from DialectHooksRegistration.
-void registerDialectHooksSetter(const DialectHooksSetter &function);
+void registerDialectHooksSetter(TypeID typeID,
+                                const DialectHooksSetter &function);
+
+/// Utility to register dialect hooks. Client can register their dialect hooks
+/// with the global registry by calling
+/// registerDialectHooks<MyHooks>("dialect_namespace");
+template <typename ConcreteHooks>
+void registerDialectHooks(StringRef dialectName) {
+  DialectHooks::registerDialectHooksSetter(
+      TypeID::get<ConcreteHooks>(), [dialectName](MLIRContext *ctx) {
+        Dialect *dialect = ctx->getRegisteredDialect(dialectName);
+        if (!dialect) {
+          llvm::errs() << "error: cannot register hooks for unknown dialect '"
+                       << dialectName << "'\n";
+          abort();
+        }
+        // Set hooks.
+        ConcreteHooks hooks;
+        if (auto h = hooks.getConstantFoldHook())
+          dialect->constantFoldHook = h;
+        if (auto h = hooks.getDecodeHook())
+          dialect->decodeHook = h;
+        if (auto h = hooks.getExtractElementHook())
+          dialect->extractElementHook = h;
+      });
+}
 
 /// DialectHooksRegistration provides a global initializer that registers
 /// a dialect hooks setter routine.
 /// Usage:
 ///
 ///   // At namespace scope.
-///   static DialectHooksRegistration<MyHooks, MyDialect> unused;
+///   static DialectHooksRegistration<MyHooks> Unused("dialect_namespace");
 template <typename ConcreteHooks> struct DialectHooksRegistration {
   DialectHooksRegistration(StringRef dialectName) {
-    registerDialectHooksSetter([dialectName](MLIRContext *ctx) {
-      Dialect *dialect = ctx->getRegisteredDialect(dialectName);
-      if (!dialect) {
-        llvm::errs() << "error: cannot register hooks for unknown dialect '"
-                     << dialectName << "'\n";
-        abort();
-      }
-      // Set hooks.
-      ConcreteHooks hooks;
-      if (auto h = hooks.getConstantFoldHook())
-        dialect->constantFoldHook = h;
-      if (auto h = hooks.getDecodeHook())
-        dialect->decodeHook = h;
-      if (auto h = hooks.getExtractElementHook())
-        dialect->extractElementHook = h;
-    });
+    registerDialectHooks<ConcreteHooks>(dialectName);
   }
 };
 

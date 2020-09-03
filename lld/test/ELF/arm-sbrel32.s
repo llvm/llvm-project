@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.o
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t | FileCheck %s
+// RUN: llvm-objdump -d --triple=armv7a-none-linux-gnueabi %t | FileCheck %s
 
 // Test the R_ARM_SBREL32 relocation which calculates the offset of the Symbol
 // from the static base. We define the static base to be the address of the
@@ -32,9 +32,9 @@ foo4:   .space 4
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
-// CHECK-NEXT: _start:
-// CHECK-NEXT:    110d4:        1e ff 2f e1     bx      lr
-// CHECK:         110d8:        00 00 00 00     .word   0x00000000
-// CHECK-NEXT:    110dc:        04 00 00 00     .word   0x00000004
-// CHECK-NEXT:    110e0:        08 00 00 00     .word   0x00000008
-// CHECK-NEXT:    110e4:        0c 00 00 00     .word   0x0000000c
+// CHECK-NEXT: <_start>:
+// CHECK-NEXT:    200d4:        1e ff 2f e1     bx      lr
+// CHECK:         200d8:        00 00 00 00     .word   0x00000000
+// CHECK-NEXT:    200dc:        04 00 00 00     .word   0x00000004
+// CHECK-NEXT:    200e0:        08 00 00 00     .word   0x00000008
+// CHECK-NEXT:    200e4:        0c 00 00 00     .word   0x0000000c

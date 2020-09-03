@@ -34,7 +34,7 @@ int as_fastcall() { return func_as_ptr(f_fastcall); }
 // CHECKX: define dso_local i32 @_Z11as_thiscallv()
 // CHECKX:   call i32 @_ZL11func_as_ptrIPU8thiscallFviiEEiT_(void (i32, i32)* @_Z10f_thiscallii)
 
-// CHECK: define dso_local void @_Z11funcRefTypeRU8fastcallFviiE(void (i32, i32)* %fr)
+// CHECK: define dso_local void @_Z11funcRefTypeRU8fastcallFviiE(void (i32, i32)* nonnull %fr)
 void funcRefType(void(__attribute__((fastcall)) & fr)(int, int)) {
   fr(1, 2);
 }

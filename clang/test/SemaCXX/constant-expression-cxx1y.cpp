@@ -1009,7 +1009,7 @@ constexpr int sum(const char (&Arr)[N]) {
 // As an extension, we support evaluating some things that are `const` as though
 // they were `constexpr` when folding, but it should not be allowed in normal
 // constexpr evaluation.
-const char Cs[] = {'a', 'b'};
+const char Cs[] = {'a', 'b'}; // expected-note 2{{declared here}}
 void foo() __attribute__((enable_if(sum(Cs) == 'a' + 'b', "")));
 void run() { foo(); }
 
@@ -1211,7 +1211,7 @@ namespace ObjectsUnderConstruction {
   static_assert(aggr2.x == 1 && aggr2.y == 1, "");
 
   // The lifetime of 'n' begins at the initialization, not before.
-  constexpr int n = ++const_cast<int&>(n); // expected-error {{constant expression}} expected-note {{modification}}
+  constexpr int n = ++const_cast<int&>(n); // expected-error {{constant expression}} expected-note {{increment of object outside its lifetime}}
 }
 
 namespace PR39728 {

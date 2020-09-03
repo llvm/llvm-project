@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// expected-no-diagnostics
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s
 
 // PR5908
 template <typename Iterator>
@@ -107,4 +106,70 @@ namespace PR18152 {
     static const int n = {N};
   };
   template struct A<0>;
+}
+
+template<typename T> void stmt_expr_1() {
+  static_assert( ({ false; }), "" );
+}
+void stmt_expr_2() {
+  static_assert( ({ false; }), "" ); // expected-error {{failed}}
+}
+
+namespace PR45083 {
+  struct A { bool x; };
+
+  template<typename> struct B : A {
+    void f() {
+      const int n = ({ if (x) {} 0; });
+    }
+  };
+
+  template void B<int>::f();
+
+  template<typename> void f() {
+    decltype(({})) x; // expected-error {{incomplete type}}
+  }
+  template void f<int>(); // expected-note {{instantiation of}}
+
+  template<typename> auto g() {
+    auto c = [](auto, int) -> decltype(({})) {};
+    using T = decltype(c(0.0, 0));
+    using T = void;
+    return c(0, 0);
+  }
+  using U = decltype(g<int>()); // expected-note {{previous}}
+  using U = float; // expected-error {{different types ('float' vs 'decltype(g<int>())' (aka 'void'))}}
+
+  void h(auto a, decltype(g<char>())*) {} // expected-note {{previous}}
+  void h(auto a, void*) {} // expected-error {{redefinition}}
+
+  void i(auto a) {
+    [](auto a, int = ({decltype(a) i; i * 2;})){}(a); // expected-error {{invalid operands to binary expression ('decltype(a)' (aka 'void *') and 'int')}} expected-note {{in instantiation of}}
+  }
+  void use_i() {
+    i(0);
+    i((void*)0); // expected-note {{instantiation of}}
+  }
+}
+
+namespace BindingInStmtExpr {
+  template<class ...Ts> struct overload : Ts... {
+    overload(Ts ...ts) : Ts(decltype(ts)(ts))... {}
+    using Ts::operator()...;
+  };
+
+  template<int> struct N {};
+
+  template<class T> auto num_bindings() {
+    auto f0 = [](auto t, unsigned) { return N<0>(); };
+    auto f1 = [](auto t, int) -> decltype(({ auto [_1] = t; N<1>(); })) { return {}; };
+    auto f2 = [](auto t, int) -> decltype(({ auto [_1, _2] = t; N<2>(); })) { return {}; };
+    auto f3 = [](auto t, int) -> decltype(({ auto [_1, _2, _3] = t; N<3>(); })) { return {}; };
+    return decltype(overload(f0, f1, f2, f3)(T(), 0))();
+  }
+
+  struct T { int a; int b; };
+  // Make sure we get a correct, non-dependent type back.
+  using U = decltype(num_bindings<T>()); // expected-note {{previous}}
+  using U = N<3>; // expected-error-re {{type alias redefinition with different types ('N<3>' vs {{.*}}N<2>}}
 }

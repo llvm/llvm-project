@@ -210,7 +210,7 @@ CF240:                                            ; preds = %CF240, %CF260, %CF
   br i1 %E112, label %CF240, label %CF254
 
 CF254:                                            ; preds = %CF254, %CF267, %CF264, %CF240
-  %Shuff113 = shufflevector <2 x i32> %I68, <2 x i32> zeroinitializer, <2 x i32> undef
+  %Shuff113 = shufflevector <2 x i32> %I68, <2 x i32> zeroinitializer, <2 x i32><i32 undef, i32 0>
   %I114 = insertelement <4 x i16> zeroinitializer, i16 27357, i32 3
   %B115 = and i16 %Sl102, %Sl11
   %FC116 = uitofp i16 %B115 to double

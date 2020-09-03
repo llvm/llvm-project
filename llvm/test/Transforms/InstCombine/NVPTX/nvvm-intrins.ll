@@ -5,11 +5,11 @@
 ; hackery:
 
 ; RUN: cat %s > %t.ftz
-; RUN: echo 'attributes #0 = { "nvptx-f32ftz" = "true" }' >> %t.ftz
+; RUN: echo 'attributes #0 = { "denormal-fp-math-f32" = "preserve-sign" }' >> %t.ftz
 ; RUN: opt < %t.ftz -instcombine -S | FileCheck %s --check-prefix=CHECK --check-prefix=FTZ
 
 ; RUN: cat %s > %t.noftz
-; RUN: echo 'attributes #0 = { "nvptx-f32ftz" = "false" }' >> %t.noftz
+; RUN: echo 'attributes #0 = { "denormal-fp-math-f32" = "ieee" }' >> %t.noftz
 ; RUN: opt < %t.noftz -instcombine -S | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ
 
 ; We handle nvvm intrinsics with ftz variants as follows:

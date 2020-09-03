@@ -35,15 +35,15 @@ multiclass SystemZRegClass<string name, list<ValueType> types, int size,
                            dag regList, bit allocatable = 1> {
   def AsmOperand : AsmOperandClass {
     let Name = name;
-    let ParserMethod = "parse"##name;
+    let ParserMethod = "parse"#name;
     let RenderMethod = "addRegOperands";
   }
   let isAllocatable = allocatable in
     def Bit : RegisterClass<"SystemZ", types, size, regList> {
       let Size = size;
     }
-  def "" : RegisterOperand<!cast<RegisterClass>(name##"Bit")> {
-    let ParserMatchClass = !cast<AsmOperandClass>(name##"AsmOperand");
+  def "" : RegisterOperand<!cast<RegisterClass>(name#"Bit")> {
+    let ParserMatchClass = !cast<AsmOperandClass>(name#"AsmOperand");
   }
 }
 

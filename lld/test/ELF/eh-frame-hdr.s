@@ -40,17 +40,17 @@ _start:
 
 // HDRDISASM:      Disassembly of section foo:
 // HDRDISASM-EMPTY:
-// HDRDISASM-NEXT: foo:
+// HDRDISASM-NEXT: <foo>:
 // HDRDISASM-NEXT:    2011e4: 90 nop
 // HDRDISASM-EMPTY:
 // HDRDISASM-NEXT: Disassembly of section bar:
 // HDRDISASM-EMPTY:
-// HDRDISASM-NEXT: bar:
+// HDRDISASM-NEXT: <bar>:
 // HDRDISASM-NEXT:    2011e5: 90 nop
 // HDRDISASM-EMPTY:
 // HDRDISASM-NEXT: Disassembly of section dah:
 // HDRDISASM-EMPTY:
-// HDRDISASM-NEXT: dah:
+// HDRDISASM-NEXT: <dah>:
 // HDRDISASM-NEXT:    2011e6: 90 nop
 
 // HDR:       Section {

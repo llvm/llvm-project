@@ -1,13 +1,13 @@
 # RUN: yaml2obj --docnum=1 %s > %t.dmp
-# RUN: yaml2obj --docnum=2 %s > %t.exe
-# RUN: %lldb -c %t.dmp %t.exe \
+# RUN: yaml2obj --docnum=2 %s > %T/unwind-via-stack-win-no-memory-info.exe
+# RUN: %lldb -c %t.dmp %T/unwind-via-stack-win-no-memory-info.exe \
 # RUN:   -o "target symbols add %S/Inputs/unwind-via-raSearch.syms" \
 # RUN:   -o "thread backtrace" -b | FileCheck %s
 
 # CHECK-LABEL: thread backtrace
-# CHECK: frame #0: 0x000b1092 unwind-via-stack-win.exe`many_pointer_args
-# CHECK: frame #1: 0x000b1079 unwind-via-stack-win.exe`call_many + 105
-# CHECK: frame #2: 0x000b1085 unwind-via-stack-win.exe`main + 5
+# CHECK: frame #0: 0x000b1092 unwind-via-stack-win-no-memory-info.exe`many_pointer_args
+# CHECK: frame #1: 0x000b1079 unwind-via-stack-win-no-memory-info.exe`call_many + 105
+# CHECK: frame #2: 0x000b1085 unwind-via-stack-win-no-memory-info.exe`main + 5
 # CHECK: frame #3: 0x77278494 kernel32.dll
 # CHECK-NOT: frame
 
@@ -24,7 +24,7 @@ Streams:
           Content:         0000000079100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0000100B0085100B0094842777
   - Type:            ModuleList
     Modules:
-      - Base of Image:   0x00000000000B1000
+      - Base of Image:   0x00000000000B0000
         Size of Image:   0x00004000
         Module Name:     'unwind-via-stack-win.exe'
         CodeView Record: 525344533ED87D89C8A8184197F3A925EE4BF74101000000433A5C70726F6A656374735C746573745F6170705C436F6E736F6C654170706C69636174696F6E315C44656275675C436F6E736F6C654170706C69636174696F6E312E70646200
@@ -65,51 +65,9 @@ OptionalHeader:
   SizeOfStackCommit: 4096
   SizeOfHeapReserve: 1048576
   SizeOfHeapCommit: 4096
-  ExportTable:     
-    RelativeVirtualAddress: 8327
-    Size:            90
-  ImportTable:     
-    RelativeVirtualAddress: 0
-    Size:            0
-  ResourceTable:   
-    RelativeVirtualAddress: 0
-    Size:            0
-  ExceptionTable:  
-    RelativeVirtualAddress: 12288
-    Size:            12
-  CertificateTable: 
-    RelativeVirtualAddress: 0
-    Size:            0
-  BaseRelocationTable: 
-    RelativeVirtualAddress: 0
-    Size:            0
   Debug:           
     RelativeVirtualAddress: 8192
     Size:            28
-  Architecture:    
-    RelativeVirtualAddress: 0
-    Size:            0
-  GlobalPtr:       
-    RelativeVirtualAddress: 0
-    Size:            0
-  TlsTable:        
-    RelativeVirtualAddress: 0
-    Size:            0
-  LoadConfigTable: 
-    RelativeVirtualAddress: 0
-    Size:            0
-  BoundImport:     
-    RelativeVirtualAddress: 0
-    Size:            0
-  IAT:             
-    RelativeVirtualAddress: 0
-    Size:            0
-  DelayImportDescriptor: 
-    RelativeVirtualAddress: 0
-    Size:            0
-  ClrRuntimeHeader: 
-    RelativeVirtualAddress: 0
-    Size:            0
 header:          
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
@@ -117,17 +75,11 @@ sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  4096
-    VirtualSize:     22
-    SectionData:     50894C24048B4C24040FAF4C2404890C248B042459C3
+    VirtualSize:     512
   - Name:            .rdata
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  8192
     VirtualSize:     236
-    SectionData:     00000000A565B65C00000000020000006B0000001C2000001C060000525344533ED87D89C8A8184197F3A925EE4BF74101000000443A5C757073747265616D5C6275696C645C746F6F6C735C6C6C64625C6C69745C4D6F64756C65735C5045434F46465C4F75747075745C6578706F72742D646C6C66756E632E79616D6C2E746D702E70646200000000000000000000000000AF200000000000000200000001000000CB200000D3200000D72000006578706F72742D646C6C66756E632E79616D6C2E746D702E646C6C000000000000100000D92000000100446C6C46756E63000000000101010001020000
-  - Name:            .pdata
-    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
-    VirtualAddress:  12288
-    VirtualSize:     12
-    SectionData:     '0010000016100000E4200000'
+    SectionData:     00000000A565B65C00000000020000006B0000001C2000001C060000525344533ED87D89C8A8184197F3A925EE4BF74101
 symbols:         []
 ...

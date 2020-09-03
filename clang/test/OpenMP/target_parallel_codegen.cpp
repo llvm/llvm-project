@@ -40,7 +40,7 @@
 
 // CHECK-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 // CHECK-DAG: [[TT:%.+]] = type { i64, i8 }
 // CHECK-DAG: [[S1:%.+]] = type { double }
@@ -134,6 +134,7 @@ int foo(int n) {
   #pragma omp target parallel if(target: 1)
   {
     aa += 1;
+#pragma omp cancel parallel
   }
 
   // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 10
@@ -360,6 +361,12 @@ int foo(int n) {
 // CHECK:       store i[[SZ]] %{{.+}}, i[[SZ]]* [[AA_ADDR]], align
 // CHECK:       [[AA_CADDR:%.+]] = bitcast i[[SZ]]* [[AA_ADDR]] to i16*
 // CHECK:       [[AA:%.+]] = load i16, i16* [[AA_CADDR]], align
+// CHECK:       [[IS_CANCEL:%.+]] = call i32 @__kmpc_cancel(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 1)
+// CHECK:       [[CMP:%.+]] = icmp ne i32 [[IS_CANCEL]], 0
+// CHECK:       br i1 [[CMP]], label %[[EXIT:.+]], label %[[CONTINUE:[^,]+]]
+// CHECK:       [[EXIT]]:
+// CHECK:       br label %[[CONTINUE]]
+// CHECK:       [[CONTINUE]]:
 // CHECK:       ret void
 // CHECK-NEXT:  }
 

@@ -1,6 +1,7 @@
 include(CMakePushCheckState)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+include(CheckIncludeFiles)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
 include(TestBigEndian)
@@ -15,7 +16,7 @@ endfunction()
 check_library_exists(c fopen "" COMPILER_RT_HAS_LIBC)
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)
   include(HandleCompilerRT)
-  find_compiler_rt_library(builtins COMPILER_RT_BUILTINS_LIBRARY)
+  find_compiler_rt_library(builtins "" COMPILER_RT_BUILTINS_LIBRARY)
 else()
   if (ANDROID)
     check_library_exists(gcc __gcc_personality_v0 "" COMPILER_RT_HAS_GCC_LIB)
@@ -70,6 +71,9 @@ check_cxx_compiler_flag("-Werror -fno-function-sections" COMPILER_RT_HAS_FNO_FUN
 check_cxx_compiler_flag(-std=c++14           COMPILER_RT_HAS_STD_CXX14_FLAG)
 check_cxx_compiler_flag(-ftls-model=initial-exec COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC)
 check_cxx_compiler_flag(-fno-lto             COMPILER_RT_HAS_FNO_LTO_FLAG)
+check_cxx_compiler_flag(-fno-profile-generate COMPILER_RT_HAS_FNO_PROFILE_GENERATE_FLAG)
+check_cxx_compiler_flag(-fno-profile-instr-generate COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
+check_cxx_compiler_flag(-fno-profile-instr-use COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)
 check_cxx_compiler_flag("-Werror -msse3" COMPILER_RT_HAS_MSSE3_FLAG)
 check_cxx_compiler_flag("-Werror -msse4.2"   COMPILER_RT_HAS_MSSE4_2_FLAG)
 check_cxx_compiler_flag(--sysroot=.          COMPILER_RT_HAS_SYSROOT_FLAG)
@@ -117,7 +121,7 @@ check_cxx_compiler_flag(/wd4800 COMPILER_RT_HAS_WD4800_FLAG)
 check_symbol_exists(__func__ "" COMPILER_RT_HAS_FUNC_SYMBOL)
 
 # Includes.
-check_cxx_compiler_flag(-nostdinc++ COMPILER_RT_HAS_NOSTDINCXX_FLAG)
+check_include_files("sys/auxv.h" COMPILER_RT_HAS_AUXV)
 
 # Libraries.
 check_library_exists(dl dlopen "" COMPILER_RT_HAS_LIBDL)
@@ -299,9 +303,9 @@ set(ALL_GWP_ASAN_SUPPORTED_ARCH ${X86} ${X86_64})
 if(APPLE)
   set(ALL_LSAN_SUPPORTED_ARCH ${X86} ${X86_64} ${MIPS64} ${ARM64})
 else()
-  set(ALL_LSAN_SUPPORTED_ARCH ${X86} ${X86_64} ${MIPS64} ${ARM64} ${ARM32} ${PPC64})
+  set(ALL_LSAN_SUPPORTED_ARCH ${X86} ${X86_64} ${MIPS64} ${ARM64} ${ARM32} ${PPC64} ${S390X})
 endif()
-set(ALL_MSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64} ${PPC64})
+set(ALL_MSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64} ${PPC64} ${S390X})
 set(ALL_HWASAN_SUPPORTED_ARCH ${X86_64} ${ARM64})
 set(ALL_PROFILE_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${PPC64}
     ${MIPS32} ${MIPS64} ${S390X} ${SPARC} ${SPARCV9})
@@ -646,7 +650,7 @@ endif()
 
 # TODO: Add builtins support.
 
-if (CRT_SUPPORTED_ARCH AND OS_NAME MATCHES "Linux")
+if (CRT_SUPPORTED_ARCH AND OS_NAME MATCHES "Linux" AND NOT LLVM_USE_SANITIZER)
   set(COMPILER_RT_HAS_CRT TRUE)
 else()
   set(COMPILER_RT_HAS_CRT FALSE)
@@ -660,7 +664,7 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND LSAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Darwin|Linux|NetBSD")
+    OS_NAME MATCHES "Darwin|Linux|NetBSD|Fuchsia")
   set(COMPILER_RT_HAS_LSAN TRUE)
 else()
   set(COMPILER_RT_HAS_LSAN FALSE)
@@ -722,7 +726,8 @@ else()
 endif()
 
 #TODO(kostyak): add back Android & Fuchsia when the code settles a bit.
-if (SCUDO_STANDALONE_SUPPORTED_ARCH AND OS_NAME MATCHES "Linux")
+if (SCUDO_STANDALONE_SUPPORTED_ARCH AND OS_NAME MATCHES "Linux" AND
+    COMPILER_RT_HAS_AUXV)
   set(COMPILER_RT_HAS_SCUDO_STANDALONE TRUE)
 else()
   set(COMPILER_RT_HAS_SCUDO_STANDALONE FALSE)

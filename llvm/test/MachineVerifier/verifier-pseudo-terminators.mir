@@ -1,10 +1,11 @@
-# RUN: not llc -march=amdgcn -run-pass=verify -o - %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -march=amdgcn -run-pass=verify -o - %s 2>&1 | FileCheck %s
 # REQUIRES: amdgpu-registered-target
 
 # Make sure that mismatched successors are caught when a _term
 # instruction is used
 
-# CHECK: *** Bad machine code: MBB exits via unconditional branch but the CFG successor doesn't match the actual successor! ***
+# CHECK: *** Bad machine code: MBB exits via jump or conditional branch, but its target isn't a CFG successor! ***
+# CHECK: *** Bad machine code: MBB has unexpected successors which are not branch targets, fallthrough, EHPads, or inlineasm_br targets. ***
 
 ---
 name: verifier_pseudo_terminators

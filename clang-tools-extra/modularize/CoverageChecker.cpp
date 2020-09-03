@@ -267,7 +267,7 @@ bool CoverageChecker::collectUmbrellaHeaders(StringRef UmbrellaDirName) {
   return true;
 }
 
-// Collect headers rferenced from an umbrella file.
+// Collect headers referenced from an umbrella file.
 bool
 CoverageChecker::collectUmbrellaHeaderHeaders(StringRef UmbrellaHeaderName) {
 
@@ -282,7 +282,7 @@ CoverageChecker::collectUmbrellaHeaderHeaders(StringRef UmbrellaHeaderName) {
   Compilations.reset(new FixedCompilationDatabase(Twine(PathBuf), CommandLine));
 
   std::vector<std::string> HeaderPath;
-  HeaderPath.push_back(UmbrellaHeaderName);
+  HeaderPath.push_back(std::string(UmbrellaHeaderName));
 
   // Create the tool and run the compilation.
   ClangTool Tool(*Compilations, HeaderPath);
@@ -338,7 +338,7 @@ bool CoverageChecker::collectFileSystemHeaders() {
   }
 
   // Sort it, because different file systems might order the file differently.
-  std::sort(FileSystemHeaders.begin(), FileSystemHeaders.end());
+  llvm::sort(FileSystemHeaders);
 
   return true;
 }

@@ -19,7 +19,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -38,6 +37,7 @@
 namespace llvm {
 
 class MemoryBuffer;
+class Twine;
 
 namespace vfs {
 
@@ -656,7 +656,7 @@ private:
   // In a RedirectingFileSystem, keys can be specified in Posix or Windows
   // style (or even a mixture of both), so this comparison helper allows
   // slashes (representing a root) to match backslashes (and vice versa).  Note
-  // that, other than the root, patch components should not contain slashes or
+  // that, other than the root, path components should not contain slashes or
   // backslashes.
   bool pathComponentMatches(llvm::StringRef lhs, llvm::StringRef rhs) const {
     if ((CaseSensitive ? lhs.equals(rhs) : lhs.equals_lower(rhs)))
@@ -706,16 +706,6 @@ private:
   /// found in VFS.
   bool IsFallthrough = true;
   /// @}
-
-  /// Virtual file paths and external files could be canonicalized without "..",
-  /// "." and "./" in their paths. FIXME: some unittests currently fail on
-  /// win32 when using remove_dots and remove_leading_dotslash on paths.
-  bool UseCanonicalizedPaths =
-#ifdef _WIN32
-      false;
-#else
-      true;
-#endif
 
   RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> ExternalFS);
 

@@ -50,16 +50,27 @@ def warn_drv_avr_stdlib_not_linked: Warning<
   InGroup<AVRRtlibLinkingQuirks>;
 def err_drv_cuda_bad_gpu_arch : Error<"Unsupported CUDA gpu architecture: %0">;
 def err_drv_no_cuda_installation : Error<
-  "cannot find CUDA installation.  Provide its path via --cuda-path, or pass "
+  "cannot find CUDA installation. Provide its path via --cuda-path, or pass "
   "-nocudainc to build without CUDA includes.">;
 def err_drv_no_cuda_libdevice : Error<
   "cannot find libdevice for %0. Provide path to different CUDA installation "
   "via --cuda-path, or pass -nocudalib to build without linking with libdevice.">;
+
+def err_drv_no_rocm_device_lib : Error<
+  "cannot find ROCm device library%select{| for %1}0. Provide its path via --rocm-path or "
+  "--rocm-device-lib-path, or pass -nogpulib to build without ROCm device library.">;
+def err_drv_no_hip_runtime : Error<
+  "cannot find HIP runtime. Provide its path via --rocm-path, or pass "
+  "-nogpuinc to build without HIP runtime.">;
+
 def err_drv_cuda_version_unsupported : Error<
   "GPU arch %0 is supported by CUDA versions between %1 and %2 (inclusive), "
-  "but installation at %3 is %4.  Use --cuda-path to specify a different CUDA "
+  "but installation at %3 is %4. Use --cuda-path to specify a different CUDA "
   "install, pass a different GPU arch with --cuda-gpu-arch, or pass "
   "--no-cuda-version-check.">;
+def warn_drv_unknown_cuda_version: Warning<
+  "Unknown CUDA version %0. Assuming the latest supported version %1">,
+  InGroup<CudaUnknownVersion>;
 def err_drv_cuda_host_arch : Error<"unsupported architecture '%0' for host compilation.">;
 def err_drv_mix_cuda_hip : Error<"Mixed Cuda and HIP compilation is not supported.">;
 def err_drv_invalid_thread_model_for_target : Error<
@@ -147,6 +158,10 @@ def err_drv_invalid_argument_to_option : Error<
   "invalid argument '%0' to -%1">;
 def err_drv_malformed_sanitizer_blacklist : Error<
   "malformed sanitizer blacklist: '%0'">;
+def err_drv_malformed_sanitizer_coverage_whitelist : Error<
+  "malformed sanitizer coverage whitelist: '%0'">;
+def err_drv_malformed_sanitizer_coverage_blacklist : Error<
+  "malformed sanitizer coverage blacklist: '%0'">;
 def err_drv_duplicate_config : Error<
   "no more than one option '--config' is allowed">;
 def err_drv_config_file_not_exist : Error<
@@ -255,6 +270,9 @@ def err_drv_unsupported_embed_bitcode
 def err_drv_bitcode_unsupported_on_toolchain : Error<
   "-fembed-bitcode is not supported on versions of iOS prior to 6.0">;
 
+def err_drv_invalid_malign_branch_EQ : Error<
+  "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
+
 def warn_O4_is_O3 : Warning<"-O4 is equivalent to -O3">, InGroup<Deprecated>;
 def warn_drv_optimization_value : Warning<"optimization level '%0' is not supported; using '%1%2' instead">,
   InGroup<InvalidCommandLineArgument>;
@@ -270,6 +288,9 @@ def warn_drv_unsupported_debug_info_opt_for_target : Warning<
   InGroup<UnsupportedTargetOpt>;
 def warn_c_kext : Warning<
   "ignoring -fapple-kext which is valid for C++ and Objective-C++ only">;
+def warn_ignoring_fdiscard_for_bitcode : Warning<
+  "ignoring -fdiscard-value-names for LLVM Bitcode">,
+  InGroup<UnusedCommandLineArgument>;
 def warn_drv_input_file_unused : Warning<
   "%0: '%1' input unused%select{ when '%3' is present|}2">,
   InGroup<UnusedCommandLineArgument>;
@@ -318,6 +339,8 @@ def warn_drv_object_size_disabled_O0 : Warning<
   InGroup<InvalidCommandLineArgument>, DefaultWarnNoWerror;
 def err_invalid_branch_protection: Error <
   "invalid branch protection option '%0' in '%1'">;
+def err_invalid_sls_hardening : Error<
+  "invalid sls hardening option '%0' in '%1'">;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;
@@ -340,6 +363,8 @@ def err_analyzer_checker_option_unknown : Error<
   "checker '%0' has no option called '%1'">;
 def err_analyzer_checker_option_invalid_input : Error<
   "invalid input for checker option '%0', that expects %1">;
+def err_analyzer_checker_incompatible_analyzer_option : Error<
+  "checker cannot be enabled with analyzer option '%0' == %1">;
 
 def err_drv_invalid_hvx_length : Error<
   "-mhvx-length is not supported without a -mhvx/-mhvx= flag">;
@@ -373,6 +398,9 @@ def err_drv_ropi_incompatible_with_cxx : Error<
 def err_stack_tagging_requires_hardware_feature : Error<
   "'-fsanitize=memtag' requires hardware support (+memtag)">;
 
+def err_cmse_pi_are_incompatible : Error<
+  "cmse is not compatible with %select{RWPI|ROPI}0">;
+
 def warn_target_unsupported_nan2008 : Warning<
   "ignoring '-mnan=2008' option because the '%0' architecture does not support it">,
   InGroup<UnsupportedNan>;
@@ -395,6 +423,9 @@ def warn_drv_unsupported_gpopt : Warning<
   "ignoring '-mgpopt' option as it cannot be used with %select{|the implicit"
   " usage of }0-mabicalls">,
   InGroup<UnsupportedGPOpt>;
+def warn_drv_unsupported_sdata : Warning<
+  "ignoring '-msmall-data-limit=' with -mcmodel=large for -fpic or RV64">,
+  InGroup<OptionIgnored>;
 def warn_drv_unsupported_longcalls : Warning<
   "ignoring '-mlong-calls' option as it is not currently supported with "
   "%select{|the implicit usage of }0-mabicalls">,
@@ -409,6 +440,8 @@ def err_drv_unsupported_indirect_jump_opt : Error<
   "'-mindirect-jump=%0' is unsupported with the '%1' architecture">;
 def err_drv_unknown_indirect_jump_opt : Error<
   "unknown '-mindirect-jump=' option '%0'">;
+def err_drv_unsupported_fpatchable_function_entry_argument : Error<
+  "the second argument of '-fpatchable-function-entry' must be smaller than the first argument">;
 
 def warn_drv_unable_to_find_directory_expected : Warning<
   "unable to find %0 directory, expected to be in '%1'">,
@@ -438,13 +471,13 @@ def note_drv_verify_prefix_spelling : Note<
   "-verify prefixes must start with a letter and contain only alphanumeric"
   " characters, hyphens, and underscores">;
 
-def warn_drv_experimental_isel_incomplete : Warning<
-  "-fexperimental-isel support for the '%0' architecture is incomplete">,
-  InGroup<ExperimentalISel>;
+def warn_drv_global_isel_incomplete : Warning<
+  "-fglobal-isel support for the '%0' architecture is incomplete">,
+  InGroup<GlobalISel>;
 
-def warn_drv_experimental_isel_incomplete_opt : Warning<
-  "-fexperimental-isel support is incomplete for this architecture at the current optimization level">,
-  InGroup<ExperimentalISel>;
+def warn_drv_global_isel_incomplete_opt : Warning<
+  "-fglobal-isel support is incomplete for this architecture at the current optimization level">,
+  InGroup<GlobalISel>;
 
 def warn_drv_moutline_unsupported_opt : Warning<
   "The '%0' architecture does not support -moutline; flag ignored">,
@@ -457,6 +490,12 @@ def warn_drv_darwin_sdk_invalid_settings : Warning<
 def err_drv_trivial_auto_var_init_zero_disabled : Error<
   "-ftrivial-auto-var-init=zero hasn't been enabled. Enable it at your own peril for benchmarking purpose only with "
   "-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang">;
+
+def err_drv_trivial_auto_var_init_stop_after_missing_dependency : Error<
+  "-ftrivial-auto-var-init-stop-after=* is used without -ftrivial-auto-var-init=zero or -ftrivial-auto-var-init=pattern.">;
+
+def err_drv_trivial_auto_var_init_stop_after_invalid_value : Error<
+  "-ftrivial-auto-var-init-stop-after=* only accepts positive integers.">;
 
 def warn_drv_msp430_hwmult_unsupported : Warning<"the given MCU does not "
   "support hardware multiply, but -mhwmult is set to %0.">,
@@ -475,4 +514,6 @@ def warn_drv_libstdcxx_not_found : Warning<
   InGroup<DiagGroup<"stdlibcxx-not-found">>;
 
 def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
+
+def err_drv_invalid_object_mode : Error<"OBJECT_MODE setting %0 is not recognized and is not a valid setting.">;
 }

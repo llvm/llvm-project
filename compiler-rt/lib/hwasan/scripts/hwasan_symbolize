@@ -28,6 +28,7 @@ class Symbolizer:
     self.__binary_prefixes = binary_prefixes
     self.__paths_to_cut = paths_to_cut
     self.__log = False
+    self.__warnings = set()
 
   def enable_logging(self, enable):
     self.__log = enable
@@ -73,7 +74,9 @@ class Symbolizer:
       full_path = os.path.join(p, os.path.basename(name))
       if os.path.exists(full_path):
         return full_path
-    print >>sys.stderr, "Could not find symbols for", name
+    if name not in self.__warnings:
+      print >>sys.stderr, "Could not find symbols for", name
+      self.__warnings.add(name)
     return None
 
   def iter_locals(self, binary, addr):
@@ -116,7 +119,7 @@ class Symbolizer:
 
 def symbolize_line(line, symbolizer_path):
   #0 0x7f6e35cf2e45  (/blah/foo.so+0x11fe45)
-  match = re.match(r'^(.*?)#([0-9]+)( *)(0x[0-9a-f]+) *\((.*)\+(0x[0-9a-f]+)\)', line, re.UNICODE)
+  match = re.match(r'^(.*?)#([0-9]+)( *)(0x[0-9a-f]*) *\((.*)\+(0x[0-9a-f]+)\)', line, re.UNICODE)
   if match:
     frameno = match.group(2)
     binary = match.group(5)
@@ -141,7 +144,7 @@ def save_access_address(line):
   match = re.match(r'^(.*?)HWAddressSanitizer: tag-mismatch on address (0x[0-9a-f]+) ', line, re.UNICODE)
   if match:
     last_access_address = int(match.group(2), 16)
-  match = re.match(r'^(.*?) of size [0-9]+ at 0x[0-9a-f]+ tags: ([0-9a-f]+)/[0-9a-f]+ \(ptr/mem\)', line, re.UNICODE)
+  match = re.match(r'^(.*?) of size [0-9]+ at 0x[0-9a-f]* tags: ([0-9a-f]+)/[0-9a-f]+ \(ptr/mem\)', line, re.UNICODE)
   if match:
     last_access_tag = int(match.group(2), 16)
 

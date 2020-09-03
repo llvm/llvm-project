@@ -72,22 +72,22 @@ TEST(PointerIntPairTest, DefaultInitialize) {
   EXPECT_EQ(0U, Pair.getInt());
 }
 
+// In real code this would be a word-sized integer limited to 31 bits.
+struct Fixnum31 {
+  uintptr_t Value;
+};
+struct FixnumPointerTraits {
+  static inline void *getAsVoidPointer(Fixnum31 Num) {
+    return reinterpret_cast<void *>(Num.Value << NumLowBitsAvailable);
+  }
+  static inline Fixnum31 getFromVoidPointer(void *P) {
+    // In real code this would assert that the value is in range.
+    return {reinterpret_cast<uintptr_t>(P) >> NumLowBitsAvailable};
+  }
+  static constexpr int NumLowBitsAvailable =
+      std::numeric_limits<uintptr_t>::digits - 31;
+};
 TEST(PointerIntPairTest, ManyUnusedBits) {
-  // In real code this would be a word-sized integer limited to 31 bits.
-  struct Fixnum31 {
-    uintptr_t Value;
-  };
-  class FixnumPointerTraits {
-  public:
-    static inline void *getAsVoidPointer(Fixnum31 Num) {
-      return reinterpret_cast<void *>(Num.Value << NumLowBitsAvailable);
-    }
-    static inline Fixnum31 getFromVoidPointer(void *P) {
-      // In real code this would assert that the value is in range.
-      return { reinterpret_cast<uintptr_t>(P) >> NumLowBitsAvailable };
-    }
-    enum { NumLowBitsAvailable = std::numeric_limits<uintptr_t>::digits - 31 };
-  };
 
   PointerIntPair<Fixnum31, 1, bool, FixnumPointerTraits> pair;
   EXPECT_EQ((uintptr_t)0, pair.getPointer().Value);
@@ -98,7 +98,7 @@ TEST(PointerIntPairTest, ManyUnusedBits) {
   EXPECT_TRUE(pair.getInt());
 
   EXPECT_EQ(FixnumPointerTraits::NumLowBitsAvailable - 1,
-            PointerLikeTypeTraits<decltype(pair)>::NumLowBitsAvailable);
+            (int)PointerLikeTypeTraits<decltype(pair)>::NumLowBitsAvailable);
 
   static_assert(
       is_trivially_copyable<

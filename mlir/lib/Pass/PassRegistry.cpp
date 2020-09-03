@@ -1,6 +1,6 @@
 //===- PassRegistry.cpp - Pass Registration Utilities ---------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -18,7 +18,7 @@ using namespace mlir;
 using namespace detail;
 
 /// Static mapping of all of the registered passes.
-static llvm::ManagedStatic<DenseMap<const PassID *, PassInfo>> passRegistry;
+static llvm::ManagedStatic<DenseMap<TypeID, PassInfo>> passRegistry;
 
 /// Static mapping of all of the registered pass pipelines.
 static llvm::ManagedStatic<llvm::StringMap<PassPipelineInfo>>
@@ -35,13 +35,48 @@ buildDefaultRegistryFn(const PassAllocatorFunction &allocator) {
   };
 }
 
+/// Utility to print the help string for a specific option.
+static void printOptionHelp(StringRef arg, StringRef desc, size_t indent,
+                            size_t descIndent, bool isTopLevel) {
+  size_t numSpaces = descIndent - indent - 4;
+  llvm::outs().indent(indent)
+      << "--" << llvm::left_justify(arg, numSpaces) << "-   " << desc << '\n';
+}
+
+//===----------------------------------------------------------------------===//
+// PassRegistry
+//===----------------------------------------------------------------------===//
+
+/// Print the help information for this pass. This includes the argument,
+/// description, and any pass options. `descIndent` is the indent that the
+/// descriptions should be aligned.
+void PassRegistryEntry::printHelpStr(size_t indent, size_t descIndent) const {
+  printOptionHelp(getPassArgument(), getPassDescription(), indent, descIndent,
+                  /*isTopLevel=*/true);
+  // If this entry has options, print the help for those as well.
+  optHandler([=](const PassOptions &options) {
+    options.printHelp(indent, descIndent);
+  });
+}
+
+/// Return the maximum width required when printing the options of this
+/// entry.
+size_t PassRegistryEntry::getOptionWidth() const {
+  size_t maxLen = 0;
+  optHandler([&](const PassOptions &options) mutable {
+    maxLen = options.getOptionWidth() + 2;
+  });
+  return maxLen;
+}
+
 //===----------------------------------------------------------------------===//
 // PassPipelineInfo
 //===----------------------------------------------------------------------===//
 
-void mlir::registerPassPipeline(StringRef arg, StringRef description,
-                                const PassRegistryFunction &function) {
-  PassPipelineInfo pipelineInfo(arg, description, function);
+void mlir::registerPassPipeline(
+    StringRef arg, StringRef description, const PassRegistryFunction &function,
+    std::function<void(function_ref<void(const PassOptions &)>)> optHandler) {
+  PassPipelineInfo pipelineInfo(arg, description, function, optHandler);
   bool inserted = passPipelineRegistry->try_emplace(arg, pipelineInfo).second;
   assert(inserted && "Pass pipeline registered multiple times");
   (void)inserted;
@@ -51,21 +86,25 @@ void mlir::registerPassPipeline(StringRef arg, StringRef description,
 // PassInfo
 //===----------------------------------------------------------------------===//
 
-PassInfo::PassInfo(StringRef arg, StringRef description, const PassID *passID,
+PassInfo::PassInfo(StringRef arg, StringRef description, TypeID passID,
                    const PassAllocatorFunction &allocator)
-    : PassRegistryEntry(arg, description, buildDefaultRegistryFn(allocator)) {}
+    : PassRegistryEntry(
+          arg, description, buildDefaultRegistryFn(allocator),
+          // Use a temporary pass to provide an options instance.
+          [=](function_ref<void(const PassOptions &)> optHandler) {
+            optHandler(allocator()->passOptions);
+          }) {}
 
 void mlir::registerPass(StringRef arg, StringRef description,
-                        const PassID *passID,
                         const PassAllocatorFunction &function) {
+  // TODO: We should use the 'arg' as the lookup key instead of the pass id.
+  TypeID passID = function()->getTypeID();
   PassInfo passInfo(arg, description, passID, function);
-  bool inserted = passRegistry->try_emplace(passID, passInfo).second;
-  assert(inserted && "Pass registered multiple times");
-  (void)inserted;
+  passRegistry->try_emplace(passID, passInfo);
 }
 
 /// Returns the pass info for the specified pass class or null if unknown.
-const PassInfo *mlir::Pass::lookupPassInfo(const PassID *passID) {
+const PassInfo *mlir::Pass::lookupPassInfo(TypeID passID) {
   auto it = passRegistry->find(passID);
   if (it == passRegistry->end())
     return nullptr;
@@ -89,7 +128,7 @@ void detail::PassOptions::copyOptionValuesFrom(const PassOptions &other) {
 }
 
 LogicalResult detail::PassOptions::parseFromString(StringRef options) {
-  // TODO(parkers): Handle escaping strings.
+  // TODO: Handle escaping strings.
   // NOTE: `options` is modified in place to always refer to the unprocessed
   // part of the string.
   while (!options.empty()) {
@@ -137,18 +176,44 @@ void detail::PassOptions::print(raw_ostream &os) {
     return;
 
   // Sort the options to make the ordering deterministic.
-  SmallVector<OptionBase *, 4> orderedOptions(options.begin(), options.end());
-  llvm::array_pod_sort(orderedOptions.begin(), orderedOptions.end(),
-                       [](OptionBase *const *lhs, OptionBase *const *rhs) {
-                         return (*lhs)->getArgStr().compare(
-                             (*rhs)->getArgStr());
-                       });
+  SmallVector<OptionBase *, 4> orderedOps(options.begin(), options.end());
+  auto compareOptionArgs = [](OptionBase *const *lhs, OptionBase *const *rhs) {
+    return (*lhs)->getArgStr().compare((*rhs)->getArgStr());
+  };
+  llvm::array_pod_sort(orderedOps.begin(), orderedOps.end(), compareOptionArgs);
 
   // Interleave the options with ' '.
   os << '{';
-  interleave(
-      orderedOptions, os, [&](OptionBase *option) { option->print(os); }, " ");
+  llvm::interleave(
+      orderedOps, os, [&](OptionBase *option) { option->print(os); }, " ");
   os << '}';
+}
+
+/// Print the help string for the options held by this struct. `descIndent` is
+/// the indent within the stream that the descriptions should be aligned.
+void detail::PassOptions::printHelp(size_t indent, size_t descIndent) const {
+  // Sort the options to make the ordering deterministic.
+  SmallVector<OptionBase *, 4> orderedOps(options.begin(), options.end());
+  auto compareOptionArgs = [](OptionBase *const *lhs, OptionBase *const *rhs) {
+    return (*lhs)->getArgStr().compare((*rhs)->getArgStr());
+  };
+  llvm::array_pod_sort(orderedOps.begin(), orderedOps.end(), compareOptionArgs);
+  for (OptionBase *option : orderedOps) {
+    // TODO: printOptionInfo assumes a specific indent and will
+    // print options with values with incorrect indentation. We should add
+    // support to llvm::cl::Option for passing in a base indent to use when
+    // printing.
+    llvm::outs().indent(indent);
+    option->getOption()->printOptionInfo(descIndent - indent);
+  }
+}
+
+/// Return the maximum width required when printing the help string.
+size_t detail::PassOptions::getOptionWidth() const {
+  size_t max = 0;
+  for (auto *option : options)
+    max = std::max(max, option->getOption()->getOptionWidth());
+  return max;
 }
 
 //===----------------------------------------------------------------------===//
@@ -263,7 +328,7 @@ LogicalResult TextualPipeline::parsePipelineText(StringRef text,
       // Skip over everything until the closing '}' and store as options.
       size_t close = text.find('}');
 
-      // TODO(parkers): Handle skipping over quoted sub-strings.
+      // TODO: Handle skipping over quoted sub-strings.
       if (close == StringRef::npos) {
         return errorHandler(
             /*rawLoc=*/text.data() - 1,
@@ -443,6 +508,7 @@ struct PassNameParser : public llvm::cl::parser<PassArgData> {
   void initialize();
   void printOptionInfo(const llvm::cl::Option &opt,
                        size_t globalWidth) const override;
+  size_t getOptionWidth(const llvm::cl::Option &opt) const override;
   bool parse(llvm::cl::Option &opt, StringRef argName, StringRef arg,
              PassArgData &value);
 };
@@ -467,15 +533,54 @@ void PassNameParser::initialize() {
   }
 }
 
-void PassNameParser::printOptionInfo(const llvm::cl::Option &O,
-                                     size_t GlobalWidth) const {
-  PassNameParser *TP = const_cast<PassNameParser *>(this);
-  llvm::array_pod_sort(TP->Values.begin(), TP->Values.end(),
-                       [](const PassNameParser::OptionInfo *VT1,
-                          const PassNameParser::OptionInfo *VT2) {
-                         return VT1->Name.compare(VT2->Name);
-                       });
-  llvm::cl::parser<PassArgData>::printOptionInfo(O, GlobalWidth);
+void PassNameParser::printOptionInfo(const llvm::cl::Option &opt,
+                                     size_t globalWidth) const {
+  // Print the information for the top-level option.
+  if (opt.hasArgStr()) {
+    llvm::outs() << "  --" << opt.ArgStr;
+    opt.printHelpStr(opt.HelpStr, globalWidth, opt.ArgStr.size() + 7);
+  } else {
+    llvm::outs() << "  " << opt.HelpStr << '\n';
+  }
+
+  // Print the top-level pipeline argument.
+  printOptionHelp(passPipelineArg,
+                  "A textual description of a pass pipeline to run",
+                  /*indent=*/4, globalWidth, /*isTopLevel=*/!opt.hasArgStr());
+
+  // Functor used to print the ordered entries of a registration map.
+  auto printOrderedEntries = [&](StringRef header, auto &map) {
+    llvm::SmallVector<PassRegistryEntry *, 32> orderedEntries;
+    for (auto &kv : map)
+      orderedEntries.push_back(&kv.second);
+    llvm::array_pod_sort(
+        orderedEntries.begin(), orderedEntries.end(),
+        [](PassRegistryEntry *const *lhs, PassRegistryEntry *const *rhs) {
+          return (*lhs)->getPassArgument().compare((*rhs)->getPassArgument());
+        });
+
+    llvm::outs().indent(4) << header << ":\n";
+    for (PassRegistryEntry *entry : orderedEntries)
+      entry->printHelpStr(/*indent=*/6, globalWidth);
+  };
+
+  // Print the available passes.
+  printOrderedEntries("Passes", *passRegistry);
+
+  // Print the available pass pipelines.
+  if (!passPipelineRegistry->empty())
+    printOrderedEntries("Pass Pipelines", *passPipelineRegistry);
+}
+
+size_t PassNameParser::getOptionWidth(const llvm::cl::Option &opt) const {
+  size_t maxWidth = llvm::cl::parser<PassArgData>::getOptionWidth(opt) + 2;
+
+  // Check for any wider pass or pipeline options.
+  for (auto &entry : *passRegistry)
+    maxWidth = std::max(maxWidth, entry.second.getOptionWidth() + 4);
+  for (auto &entry : *passPipelineRegistry)
+    maxWidth = std::max(maxWidth, entry.second.getOptionWidth() + 4);
+  return maxWidth;
 }
 
 bool PassNameParser::parse(llvm::cl::Option &opt, StringRef argName,

@@ -1,4 +1,4 @@
-//===-- StructuredDataDarwinLog.cpp -----------------------------*- C++ -*-===//
+//===-- StructuredDataDarwinLog.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,6 +35,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(StructuredDataDarwinLog)
 
 #pragma mark -
 #pragma mark Anonymous Namespace
@@ -706,9 +708,9 @@ private:
         attribute_end_pos + 1, operation_end_pos - (attribute_end_pos + 1));
 
     // add filter spec
-    auto rule_sp =
-        FilterRule::CreateRule(accept, attribute_index, ConstString(operation),
-                               rule_text.substr(operation_end_pos + 1), error);
+    auto rule_sp = FilterRule::CreateRule(
+        accept, attribute_index, ConstString(operation),
+        std::string(rule_text.substr(operation_end_pos + 1)), error);
 
     if (rule_sp && error.Success())
       m_filter_rules.push_back(rule_sp);
@@ -979,7 +981,7 @@ EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
   EnableOptionsSP options_sp(new EnableOptions());
   options_sp->NotifyOptionParsingStarting(&exe_ctx);
 
-  CommandReturnObject result;
+  CommandReturnObject result(debugger.GetUseColor());
 
   // Parse the arguments.
   auto options_property_sp =
@@ -1034,7 +1036,7 @@ bool RunEnableCommand(CommandInterpreter &interpreter) {
   }
 
   // Run the command.
-  CommandReturnObject return_object;
+  CommandReturnObject return_object(interpreter.GetDebugger().GetUseColor());
   interpreter.HandleCommand(command_stream.GetData(), eLazyBoolNo,
                             return_object);
   return return_object.Succeeded();

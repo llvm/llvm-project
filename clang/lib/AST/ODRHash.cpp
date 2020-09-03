@@ -79,7 +79,6 @@ void ODRHash::AddDeclarationNameImpl(DeclarationName Name) {
         AddIdentifierInfo(II);
       }
     }
-    ID.AddString(S.getAsString());
     break;
   }
   case DeclarationName::CXXConstructorName:
@@ -320,37 +319,6 @@ public:
     Inherited::VisitStaticAssertDecl(D);
   }
 
-  void VisitObjCIvarDecl(const ObjCIvarDecl *D) {
-    ID.AddInteger(D->getAccessControl());
-    Hash.AddBoolean(D->getSynthesize());
-    Inherited::VisitFieldDecl(static_cast<const FieldDecl *>(D));
-  }
-
-  void VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
-    unsigned AttrsAsWritten = D->getPropertyAttributesAsWritten();
-    unsigned Attrs = D->getPropertyAttributes();
-
-    // If null_resettable is present but was not written, it came from
-    // APINotes. This workaround is for not allowing ODR mismatches between
-    // non-modular content annotated in a module by APINotes versus the
-    // same non-modular content found elsewhere. Long term we need to get
-    // rid of this kind of annotations.
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_null_resettable &&
-        !(AttrsAsWritten & ObjCPropertyDecl::OBJC_PR_null_resettable))
-      Attrs &= ~ObjCPropertyDecl::OBJC_PR_null_resettable;
-
-    QualType T = D->getType();
-    if (D->getType()->canHaveNullability())
-      AttributedType::stripOuterNullability(T);
-    AddQualType(T);
-
-    ID.AddInteger(Attrs);
-    ID.AddInteger(D->getPropertyImplementation());
-    AddDecl(D);
-
-    Inherited::VisitObjCPropertyDecl(D);
-  }
-
   void VisitFieldDecl(const FieldDecl *D) {
     const bool IsBitfield = D->isBitField();
     Hash.AddBoolean(IsBitfield);
@@ -376,11 +344,6 @@ public:
     // Handled by the ODRHash for FunctionDecl
 
     Inherited::VisitCXXMethodDecl(D);
-  }
-
-  void VisitObjCMethodDecl(const ObjCMethodDecl *D) {
-    ID.AddInteger(D->getODRHash());
-    Inherited::VisitObjCMethodDecl(D);
   }
 
   void VisitTypedefNameDecl(const TypedefNameDecl *D) {
@@ -416,6 +379,11 @@ public:
       AddTemplateArgument(D->getDefaultArgument());
     }
     Hash.AddBoolean(D->isParameterPack());
+
+    const TypeConstraint *TC = D->getTypeConstraint();
+    Hash.AddBoolean(TC != nullptr);
+    if (TC)
+      AddStmt(TC->getImmediatelyDeclaredConstraint());
 
     Inherited::VisitTemplateTypeParmDecl(D);
   }
@@ -472,12 +440,9 @@ public:
 
 // Only allow a small portion of Decl's to be processed.  Remove this once
 // all Decl's can be handled.
-bool ODRHash::isWhitelistedDecl(const Decl *D, const DeclContext *Parent) {
+bool ODRHash::isDeclToBeProcessed(const Decl *D, const DeclContext *Parent) {
   if (D->isImplicit()) return false;
   if (D->getDeclContext() != Parent) return false;
-  bool ShouldHashIvar = D->getASTContext().getLangOpts().ODRCheckIvars;
-  bool ShouldHashProperties = D->getASTContext().getLangOpts().ODRCheckProperties;
-  bool ShouldHashMethods = D->getASTContext().getLangOpts().ODRCheckMethods;
 
   switch (D->getKind()) {
     default:
@@ -495,72 +460,6 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const DeclContext *Parent) {
     case Decl::Typedef:
     case Decl::Var:
       return true;
-    case Decl::ObjCMethod:
-      return ShouldHashMethods;
-    case Decl::ObjCIvar:
-      return ShouldHashIvar;
-    case Decl::ObjCProperty:
-      return ShouldHashProperties;
-  }
-}
-
-// Only a small portion of Attr's are considered right now.
-bool ODRHash::isWhitelistedAttr(const Attr *A) {
-  // FIXME: This should be auto-generated as part of Attr.td
-  switch (A->getKind()) {
-  default:
-    return false;
-  case attr::ObjCBridge:
-  case attr::ObjCBridgeMutable:
-    return true;
-  }
-}
-
-void ODRHash::AddAttrs(const NamedDecl *D) {
-  if (!D->hasAttrs())
-    return;
-
-  // Go over attributes
-  llvm::SmallVector<const Attr *, 2> Attrs;
-  for (const Attr *A : D->getAttrs()) {
-    if (isWhitelistedAttr(A))
-      Attrs.push_back(A);
-  }
-
-  // Sort attributes by name + other per subject kind. This allows
-  // for extra flexibility when redeclarations use different order.
-  // FIXME: In case the order matters for a group of attributes we
-  // decide to hash, then we might need to change this.
-  // FIXME: This should be auto-generated as part of Attr.td
-  llvm::sort(Attrs,
-             [](const Attr *A, const Attr *B) { return Attr::compare(A, B); });
-
-  for (const Attr *A : Attrs)
-    AddAttr(A);
-}
-
-void ODRHash::AddAttr(const Attr *A) {
-  assert(A && "Expecting non-null pointer.");
-  ID.AddInteger(A->getKind());
-
-  // FIXME: This should be auto-generated as part of Attr.td
-  switch (A->getKind()) {
-  case attr::ObjCBridge: {
-    auto *M = cast<ObjCBridgeAttr>(A);
-    AddBoolean(M->getBridgedType());
-    if (M->getBridgedType())
-      ID.AddString(M->getBridgedType()->getName());
-    break;
-  }
-  case attr::ObjCBridgeMutable: {
-    auto *M = cast<ObjCBridgeMutableAttr>(A);
-    AddBoolean(M->getBridgedType());
-    if (M->getBridgedType())
-      ID.AddString(M->getBridgedType()->getName());
-    break;
-  }
-  default:
-    llvm_unreachable("Not expecting other attribute kinds");
   }
 }
 
@@ -568,162 +467,6 @@ void ODRHash::AddSubDecl(const Decl *D) {
   assert(D && "Expecting non-null pointer.");
 
   ODRDeclVisitor(ID, *this).Visit(D);
-}
-
-void ODRHash::AddObjCCategoryDecl(const ObjCCategoryDecl *Cat) {
-  // Nothing to compute for extensions, there can be as many as
-  // wanted and ODR checking doesn't apply.
-  if (Cat->IsClassExtension())
-    return;
-
-  AddDecl(Cat);
-
-  // Trigger ODR computation for methods (if not yet computed)
-  for (auto *M : Cat->methods())
-    reinterpret_cast<ObjCMethodDecl *>(M)->getODRHash();
-
-  // Filter out sub-Decls which will not be processed in order to get an
-  // accurate count of Decl's.
-  llvm::SmallVector<const Decl *, 16> Decls;
-  for (Decl *SubDecl : Cat->decls())
-    if (isWhitelistedDecl(SubDecl, Cat))
-      Decls.push_back(SubDecl);
-
-  ID.AddInteger(Decls.size());
-  for (auto *SubDecl : Decls)
-    AddSubDecl(SubDecl);
-}
-
-void ODRHash::AddObjCInterfaceDecl(const ObjCInterfaceDecl *IF) {
-  AddDecl(IF);
-
-  // Trigger ODR computation for methods (if not yet computed)
-  for (auto *M : IF->methods())
-    reinterpret_cast<ObjCMethodDecl *>(M)->getODRHash();
-
-  auto *SuperClass = IF->getSuperClass();
-  AddBoolean(SuperClass);
-  if (SuperClass)
-    ID.AddInteger(SuperClass->getODRHash());
-
-  // Filter out sub-Decls which will not be processed in order to get an
-  // accurate count of Decl's.
-  llvm::SmallVector<const Decl *, 16> Decls;
-  for (Decl *SubDecl : IF->decls())
-    if (isWhitelistedDecl(SubDecl, IF))
-      Decls.push_back(SubDecl);
-
-  ID.AddInteger(Decls.size());
-  for (auto *SubDecl : Decls)
-    AddSubDecl(SubDecl);
-}
-
-void ODRHash::AddObjCProtocolDecl(const ObjCProtocolDecl *P) {
-  AddDecl(P);
-
-  // Trigger ODR computation for methods.
-  for (auto *M : P->methods())
-    reinterpret_cast<ObjCMethodDecl *>(M)->getODRHash();
-
-  // Filter out sub-Decls which will not be processed in order to get an
-  // accurate count of Decl's.
-  llvm::SmallVector<const Decl *, 16> Decls;
-  for (Decl *SubDecl : P->decls())
-    if (isWhitelistedDecl(SubDecl, P))
-      Decls.push_back(SubDecl);
-
-  ID.AddInteger(Decls.size());
-  for (auto *SubDecl : Decls)
-    AddSubDecl(SubDecl);
-}
-
-void ODRHash::AddObjCMethodDecl(const ObjCMethodDecl *Method) {
-  assert(Method && "Expecting non-null pointer.");
-
-  ID.AddInteger(Method->getDeclKind());
-  AddBoolean(Method->isInstanceMethod()); // false if class method
-  AddBoolean(Method->isPropertyAccessor());
-  AddBoolean(Method->isVariadic());
-  AddBoolean(Method->isSynthesizedAccessorStub());
-  AddBoolean(Method->isDefined());
-  AddBoolean(Method->isOverriding());
-  AddBoolean(Method->isDirectMethod());
-  AddBoolean(Method->isThisDeclarationADesignatedInitializer());
-  AddBoolean(Method->hasSkippedBody());
-  AddBoolean(Method->isPropertyAccessor());
-  AddBoolean(Method->isDeprecated());
-
-  ID.AddInteger(Method->getImplementationControl());
-  ID.AddInteger(Method->getMethodFamily());
-  ImplicitParamDecl *Cmd = Method->getCmdDecl();
-  AddBoolean(Cmd);
-  if (Cmd)
-    ID.AddInteger(Cmd->getParameterKind());
-
-  ImplicitParamDecl *Self = Method->getSelfDecl();
-  AddBoolean(Self);
-  if (Self)
-    ID.AddInteger(Self->getParameterKind());
-
-  AddDecl(Method);
-
-  AddQualType(Method->getReturnType());
-  ID.AddInteger(Method->param_size());
-  for (auto Param : Method->parameters())
-    AddSubDecl(Param);
-
-  bool SkipBody = Method->hasBody();
-  if (SkipBody) {
-    AddBoolean(false);
-    return;
-  }
-
-  const bool HasBody = Method->isThisDeclarationADefinition();
-  AddBoolean(HasBody);
-  if (!HasBody) {
-    return;
-  }
-
-  auto *Body = Method->getBody();
-  AddBoolean(Body);
-  if (Body)
-    AddStmt(Body);
-
-  // Filter out sub-Decls which will not be processed in order to get an
-  // accurate count of Decl's.
-  llvm::SmallVector<const Decl *, 16> Decls;
-  for (Decl *SubDecl : Method->decls())
-    if (isWhitelistedDecl(SubDecl, Method))
-      Decls.push_back(SubDecl);
-
-  ID.AddInteger(Decls.size());
-  for (auto SubDecl : Decls)
-    AddSubDecl(SubDecl);
-}
-
-void ODRHash::AddRecordDecl(const RecordDecl *Record) {
-  AddDecl(Record);
-
-  // Filter out sub-Decls which will not be processed in order to get an
-  // accurate count of Decl's.
-  llvm::SmallVector<const Decl *, 16> Decls;
-  for (Decl *SubDecl : Record->decls()) {
-    if (auto *SubRD = dyn_cast<RecordDecl>(SubDecl)) {
-      if (!SubRD->isAnonymousStructOrUnion())
-        continue;
-      ID.AddInteger(SubRD->getODRHash());
-      continue;
-    }
-    if (isWhitelistedDecl(SubDecl, Record))
-      Decls.push_back(SubDecl);
-  }
-
-  ID.AddInteger(Decls.size());
-  for (auto SubDecl : Decls)
-    AddSubDecl(SubDecl);
-
-  if (Record->getASTContext().getLangOpts().ODRCheckAttributes)
-    AddAttrs(Record);
 }
 
 void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
@@ -744,7 +487,7 @@ void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
   // accurate count of Decl's.
   llvm::SmallVector<const Decl *, 16> Decls;
   for (Decl *SubDecl : Record->decls()) {
-    if (isWhitelistedDecl(SubDecl, Record)) {
+    if (isDeclToBeProcessed(SubDecl, Record)) {
       Decls.push_back(SubDecl);
       if (auto *Function = dyn_cast<FunctionDecl>(SubDecl)) {
         // Compute/Preload ODRHash into FunctionDecl.
@@ -845,7 +588,7 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
   // accurate count of Decl's.
   llvm::SmallVector<const Decl *, 16> Decls;
   for (Decl *SubDecl : Function->decls()) {
-    if (isWhitelistedDecl(SubDecl, Function)) {
+    if (isDeclToBeProcessed(SubDecl, Function)) {
       Decls.push_back(SubDecl);
     }
   }
@@ -871,7 +614,7 @@ void ODRHash::AddEnumDecl(const EnumDecl *Enum) {
   // accurate count of Decl's.
   llvm::SmallVector<const Decl *, 16> Decls;
   for (Decl *SubDecl : Enum->decls()) {
-    if (isWhitelistedDecl(SubDecl, Enum)) {
+    if (isDeclToBeProcessed(SubDecl, Enum)) {
       assert(isa<EnumConstantDecl>(SubDecl) && "Unexpected Decl");
       Decls.push_back(SubDecl);
     }
@@ -1114,6 +857,13 @@ public:
 
   void VisitAutoType(const AutoType *T) {
     ID.AddInteger((unsigned)T->getKeyword());
+    ID.AddInteger(T->isConstrained());
+    if (T->isConstrained()) {
+      AddDecl(T->getTypeConstraintConcept());
+      ID.AddInteger(T->getNumArgs());
+      for (const auto &TA : T->getTypeConstraintArguments())
+        Hash.AddTemplateArgument(TA);
+    }
     VisitDeducedType(T);
   }
 

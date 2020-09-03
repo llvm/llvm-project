@@ -147,6 +147,6 @@ void ento::registerNonnullGlobalConstantsChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<NonnullGlobalConstantsChecker>();
 }
 
-bool ento::shouldRegisterNonnullGlobalConstantsChecker(const LangOptions &LO) {
+bool ento::shouldRegisterNonnullGlobalConstantsChecker(const CheckerManager &mgr) {
   return true;
 }

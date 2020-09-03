@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fspell-checking-limit 0 -verify -Wno-c++11-extensions %s
+// RUN: %clang_cc1 -fspell-checking-limit 0 -verify -Wno-c++11-extensions -std=c++20 %s
 
 namespace PR21817{
 int a(-rsing[2]); // expected-error {{undeclared identifier 'rsing'; did you mean 'using'?}}
@@ -523,8 +524,8 @@ PR18685::BitVector Map;  // expected-error-re {{no type named 'BitVector' in nam
 namespace shadowed_template {
 template <typename T> class Fizbin {};  // expected-note {{'::shadowed_template::Fizbin' declared here}}
 class Baz {
-   int Fizbin();
-   Fizbin<int> qux;  // expected-error {{no template named 'Fizbin'; did you mean '::shadowed_template::Fizbin'?}}
+   int Fizbin;
+   Fizbin<int> qux; // expected-error {{no template named 'Fizbin'; did you mean '::shadowed_template::Fizbin'?}}
 };
 }
 
@@ -609,6 +610,41 @@ int bar() {
   Test::SomeSettings some_settings; // expected-error {{no type named 'SomeSettings' in 'testCXXDeclarationSpecifierParsing::Test'; did you mean 'test::SomeSettings'?}}
 }
 }
+
+namespace testIncludeTypeInTemplateArgument {
+template <typename T, typename U>
+void foo(T t = {}, U = {}); // expected-note {{candidate template ignored}}
+
+class AddObservation {}; // expected-note {{declared here}}
+int bar1() {
+  // should resolve to a class.
+  foo<AddObservationFn, int>(); // expected-error {{unknown type name 'AddObservationFn'; did you mean 'AddObservation'?}}
+
+  // should not resolve to a class.
+  foo(AddObservationFn, 1);    // expected-error-re {{use of undeclared identifier 'AddObservationFn'{{$}}}}
+  int a = AddObservationFn, b; // expected-error-re {{use of undeclared identifier 'AddObservationFn'{{$}}}}
+
+  int AddObservation; // expected-note 3{{declared here}}
+  // should resolve to a local variable.
+  foo(AddObservationFn, 1);    // expected-error {{use of undeclared identifier 'AddObservationFn'; did you mean}}
+  int c = AddObservationFn, d; // expected-error {{use of undeclared identifier 'AddObservationFn'; did you mean}}
+
+  // FIXME: would be nice to not resolve to a variable.
+  foo<AddObservationFn, int>(); // expected-error {{use of undeclared identifier 'AddObservationFn'; did you mean}} \
+                                   expected-error {{no matching function for call}}
+}
+} // namespace testIncludeTypeInTemplateArgument
+
+namespace testNoCrashOnNullNNSTypoCorrection {
+int AddObservation();
+template <typename T, typename... Args>
+class UsingImpl {};
+class AddObservation { // expected-note {{declared here}}
+  using Using =
+      // should resolve to a class.
+      UsingImpl<AddObservationFn, const int>; // expected-error {{unknown type name 'AddObservationFn'; did you mean}}
+};
+} // namespace testNoCrashOnNullNNSTypoCorrection
 
 namespace testNonStaticMemberHandling {
 struct Foo {

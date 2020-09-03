@@ -85,7 +85,6 @@ entry:
 
 ; CHECK_TRACE_PC-LABEL: define void @foo
 ; CHECK_TRACE_PC: call void @__sanitizer_cov_trace_pc
-; CHECK_TRACE_PC: call void asm sideeffect "", ""()
 ; CHECK_TRACE_PC: ret void
 
 ; CHECK_TRACE_PC-LABEL: define void @CallViaVptr

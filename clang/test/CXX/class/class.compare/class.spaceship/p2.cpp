@@ -97,6 +97,39 @@ namespace Deduction {
 
   // Check that the above mechanism works.
   template void f<std::strong_ordering, weak>(); // expected-note {{instantiation of}}
+
+  std::strong_ordering x = A<strong>() <=> A<strong>();
+}
+
+namespace PR44723 {
+  // Make sure we trigger return type deduction for a callee 'operator<=>'
+  // before inspecting its return type.
+  template<int> struct a {
+    friend constexpr auto operator<=>(a const &lhs, a const &rhs) {
+      return std::strong_ordering::equal;
+    }
+  };
+  struct b {
+    friend constexpr auto operator<=>(b const &, b const &) = default;
+    a<0> m_value;
+  };
+  std::strong_ordering cmp_b = b() <=> b();
+
+  struct c {
+    auto operator<=>(const c&) const&; // expected-note {{selected 'operator<=>' for base class 'c' declared here}}
+  };
+  struct d : c { // expected-note {{base class 'c' declared here}}
+    friend auto operator<=>(const d&, const d&) = default; // #d
+    // expected-error@#d {{return type of defaulted 'operator<=>' cannot be deduced because three-way comparison for base class 'c' has a deduced return type and is not yet defined}}
+    // expected-warning@#d {{implicitly deleted}}
+  };
+  auto c::operator<=>(const c&) const& { // #c
+    return std::strong_ordering::equal;
+  }
+  // expected-error@+1 {{overload resolution selected deleted operator '<=>'}}
+  std::strong_ordering cmp_d = d() <=> d();
+  // expected-note@#c 2{{candidate}}
+  // expected-note@#d {{candidate function has been implicitly deleted}}
 }
 
 namespace BadDeducedType {
@@ -118,8 +151,7 @@ namespace BadDeducedType {
 
   template<typename T> concept CmpCat = true;
   struct D {
-    // FIXME: Once we support P1141R2, we should give a better diagnostic here:
-    // {{deduced return type for defaulted three-way comparison operator must be 'auto', not 'CmpCat auto'}}
-    friend CmpCat auto operator<=>(const D&, const D&) = default; // expected-error {{unknown type name 'CmpCat'}}
+    // expected-error@+1 {{deduced return type for defaulted three-way comparison operator must be 'auto', not 'CmpCat auto'}}
+    friend CmpCat auto operator<=>(const D&, const D&) = default;
   };
 }

@@ -75,8 +75,8 @@ define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32,
 ; multiple.
 ; FUNC-LABEL: {{^}}packed_struct_argument_alignment:
 ; HSA-VI: kernarg_segment_byte_size = 28
-; HSA-VI: global_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:13
 ; HSA-VI: global_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:17
+; HSA-VI: global_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:13
 ; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
 ; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x4
 define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, i8, <{i32, i64}> %arg1) {
@@ -128,5 +128,27 @@ define amdgpu_kernel void @array_3xi32(i16 %arg0, [3 x i32] %arg1) {
 define amdgpu_kernel void @array_3xi16(i8 %arg0, [3 x i16] %arg1) {
   store volatile i8 %arg0, i8 addrspace(1)* undef
   store volatile [3 x i16] %arg1, [3 x i16] addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}v2i15_arg:
+; GCN: s_load_dword [[DWORD:s[0-9]+]]
+; GCN-DAG: s_bfe_u32 [[BFE:s[0-9]+]], [[DWORD]], 0x100010{{$}}
+; GCN-DAG: s_and_b32 [[AND:s[0-9]+]], [[DWORD]], 0x7fff{{$}}
+define amdgpu_kernel void @v2i15_arg(<2 x i15> addrspace(1)* nocapture %out, <2 x i15> %in) {
+entry:
+  store <2 x i15> %in, <2 x i15> addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}v3i15_arg:
+; GCN: s_load_dword [[DWORD:s[0-9]+]]
+; GCN: s_lshl_b64
+; GCN: s_and_b32
+; GCN: s_and_b32
+; GCN: s_or_b32
+define amdgpu_kernel void @v3i15_arg(<3 x i15> addrspace(1)* nocapture %out, <3 x i15> %in) {
+entry:
+  store <3 x i15> %in, <3 x i15> addrspace(1)* %out, align 4
   ret void
 }

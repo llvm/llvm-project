@@ -1,4 +1,4 @@
-//===-- SBStringList.cpp ----------------------------------------*- C++ -*-===//
+//===-- SBStringList.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,7 +39,7 @@ const SBStringList &SBStringList::operator=(const SBStringList &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBStringList::~SBStringList() {}
+SBStringList::~SBStringList() = default;
 
 const lldb_private::StringList *SBStringList::operator->() const {
   return m_opaque_up.get();
@@ -66,7 +66,7 @@ void SBStringList::AppendString(const char *str) {
     if (IsValid())
       m_opaque_up->AppendString(str);
     else
-      m_opaque_up.reset(new lldb_private::StringList(str));
+      m_opaque_up = std::make_unique<lldb_private::StringList>(str);
   }
 }
 
@@ -78,7 +78,7 @@ void SBStringList::AppendList(const char **strv, int strc) {
     if (IsValid())
       m_opaque_up->AppendList(strv, strc);
     else
-      m_opaque_up.reset(new lldb_private::StringList(strv, strc));
+      m_opaque_up = std::make_unique<lldb_private::StringList>(strv, strc);
   }
 }
 
@@ -88,14 +88,14 @@ void SBStringList::AppendList(const SBStringList &strings) {
 
   if (strings.IsValid()) {
     if (!IsValid())
-      m_opaque_up.reset(new lldb_private::StringList());
+      m_opaque_up = std::make_unique<lldb_private::StringList>();
     m_opaque_up->AppendList(*(strings.m_opaque_up));
   }
 }
 
 void SBStringList::AppendList(const StringList &strings) {
   if (!IsValid())
-    m_opaque_up.reset(new lldb_private::StringList());
+    m_opaque_up = std::make_unique<lldb_private::StringList>();
   m_opaque_up->AppendList(strings);
 }
 

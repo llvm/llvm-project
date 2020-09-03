@@ -30,13 +30,17 @@ void tools::PS4cpu::addProfileRTArgs(const ToolChain &TC, const ArgList &Args,
   if ((Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
                     false) ||
        Args.hasFlag(options::OPT_fprofile_generate,
-                    options::OPT_fno_profile_instr_generate, false) ||
+                    options::OPT_fno_profile_generate, false) ||
        Args.hasFlag(options::OPT_fprofile_generate_EQ,
-                    options::OPT_fno_profile_instr_generate, false) ||
+                    options::OPT_fno_profile_generate, false) ||
        Args.hasFlag(options::OPT_fprofile_instr_generate,
                     options::OPT_fno_profile_instr_generate, false) ||
        Args.hasFlag(options::OPT_fprofile_instr_generate_EQ,
                     options::OPT_fno_profile_instr_generate, false) ||
+       Args.hasFlag(options::OPT_fcs_profile_generate,
+                    options::OPT_fno_profile_generate, false) ||
+       Args.hasFlag(options::OPT_fcs_profile_generate_EQ,
+                    options::OPT_fno_profile_generate, false) ||
        Args.hasArg(options::OPT_fcreate_profile) ||
        Args.hasArg(options::OPT_coverage)))
     CmdArgs.push_back("--dependent-lib=libclang_rt.profile-x86_64.a");
@@ -62,7 +66,8 @@ void tools::PS4cpu::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("orbis-as"));
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
 }
 
 static void AddPS4SanitizerArgs(const ToolChain &TC, ArgStringList &CmdArgs) {
@@ -84,13 +89,13 @@ void tools::PS4cpu::addSanitizerArgs(const ToolChain &TC,
     CmdArgs.push_back("--dependent-lib=libSceDbgAddressSanitizer_stub_weak.a");
 }
 
-static void ConstructPS4LinkJob(const Tool &T, Compilation &C,
-                                const JobAction &JA, const InputInfo &Output,
-                                const InputInfoList &Inputs,
-                                const ArgList &Args,
-                                const char *LinkingOutput) {
+void tools::PS4cpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
+                                       const InputInfo &Output,
+                                       const InputInfoList &Inputs,
+                                       const ArgList &Args,
+                                       const char *LinkingOutput) const {
   const toolchains::FreeBSD &ToolChain =
-      static_cast<const toolchains::FreeBSD &>(T.getToolChain());
+      static_cast<const toolchains::FreeBSD &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
   ArgStringList CmdArgs;
 
@@ -139,216 +144,16 @@ static void ConstructPS4LinkJob(const Tool &T, Compilation &C,
     CmdArgs.push_back("-lpthread");
   }
 
-  const char *Exec = Args.MakeArgString(ToolChain.GetProgramPath("orbis-ld"));
-
-  C.addCommand(std::make_unique<Command>(JA, T, Exec, CmdArgs, Inputs));
-}
-
-static void ConstructGoldLinkJob(const Tool &T, Compilation &C,
-                                 const JobAction &JA, const InputInfo &Output,
-                                 const InputInfoList &Inputs,
-                                 const ArgList &Args,
-                                 const char *LinkingOutput) {
-  const toolchains::FreeBSD &ToolChain =
-      static_cast<const toolchains::FreeBSD &>(T.getToolChain());
-  const Driver &D = ToolChain.getDriver();
-  ArgStringList CmdArgs;
-
-  // Silence warning for "clang -g foo.o -o foo"
-  Args.ClaimAllArgs(options::OPT_g_Group);
-  // and "clang -emit-llvm foo.o -o foo"
-  Args.ClaimAllArgs(options::OPT_emit_llvm);
-  // and for "clang -w foo.o -o foo". Other warning options are already
-  // handled somewhere else.
-  Args.ClaimAllArgs(options::OPT_w);
-
-  if (!D.SysRoot.empty())
-    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
-
-  if (Args.hasArg(options::OPT_pie))
-    CmdArgs.push_back("-pie");
-
-  if (Args.hasArg(options::OPT_static)) {
-    CmdArgs.push_back("-Bstatic");
-  } else {
-    if (Args.hasArg(options::OPT_rdynamic))
-      CmdArgs.push_back("-export-dynamic");
-    CmdArgs.push_back("--eh-frame-hdr");
-    if (Args.hasArg(options::OPT_shared)) {
-      CmdArgs.push_back("-Bshareable");
-    } else {
-      CmdArgs.push_back("-dynamic-linker");
-      CmdArgs.push_back("/libexec/ld-elf.so.1");
-    }
-    CmdArgs.push_back("--enable-new-dtags");
-  }
-
-  if (Output.isFilename()) {
-    CmdArgs.push_back("-o");
-    CmdArgs.push_back(Output.getFilename());
-  } else {
-    assert(Output.isNothing() && "Invalid output.");
-  }
-
-  if(!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
-    AddPS4SanitizerArgs(ToolChain, CmdArgs);
-
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
-    const char *crt1 = nullptr;
-    if (!Args.hasArg(options::OPT_shared)) {
-      if (Args.hasArg(options::OPT_pg))
-        crt1 = "gcrt1.o";
-      else if (Args.hasArg(options::OPT_pie))
-        crt1 = "Scrt1.o";
-      else
-        crt1 = "crt1.o";
-    }
-    if (crt1)
-      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crt1)));
-
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crti.o")));
-
-    const char *crtbegin = nullptr;
-    if (Args.hasArg(options::OPT_static))
-      crtbegin = "crtbeginT.o";
-    else if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_pie))
-      crtbegin = "crtbeginS.o";
-    else
-      crtbegin = "crtbegin.o";
-
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtbegin)));
-  }
-
-  Args.AddAllArgs(CmdArgs, options::OPT_L);
-  ToolChain.AddFilePathLibArgs(Args, CmdArgs);
-  Args.AddAllArgs(CmdArgs, options::OPT_T_Group);
-  Args.AddAllArgs(CmdArgs, options::OPT_e);
-  Args.AddAllArgs(CmdArgs, options::OPT_s);
-  Args.AddAllArgs(CmdArgs, options::OPT_t);
-  Args.AddAllArgs(CmdArgs, options::OPT_r);
-
-  if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
-    CmdArgs.push_back("--no-demangle");
-
-  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
-
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    // For PS4, we always want to pass libm, libstdc++ and libkernel
-    // libraries for both C and C++ compilations.
-    CmdArgs.push_back("-lkernel");
-    if (D.CCCIsCXX()) {
-      if (ToolChain.ShouldLinkCXXStdlib(Args))
-        ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
-      if (Args.hasArg(options::OPT_pg))
-        CmdArgs.push_back("-lm_p");
-      else
-        CmdArgs.push_back("-lm");
-    }
-    // FIXME: For some reason GCC passes -lgcc and -lgcc_s before adding
-    // the default system libraries. Just mimic this for now.
-    if (Args.hasArg(options::OPT_pg))
-      CmdArgs.push_back("-lgcc_p");
-    else
-      CmdArgs.push_back("-lcompiler_rt");
-    if (Args.hasArg(options::OPT_static)) {
-      CmdArgs.push_back("-lstdc++");
-    } else if (Args.hasArg(options::OPT_pg)) {
-      CmdArgs.push_back("-lgcc_eh_p");
-    } else {
-      CmdArgs.push_back("--as-needed");
-      CmdArgs.push_back("-lstdc++");
-      CmdArgs.push_back("--no-as-needed");
-    }
-
-    if (Args.hasArg(options::OPT_pthread)) {
-      if (Args.hasArg(options::OPT_pg))
-        CmdArgs.push_back("-lpthread_p");
-      else
-        CmdArgs.push_back("-lpthread");
-    }
-
-    if (Args.hasArg(options::OPT_pg)) {
-      if (Args.hasArg(options::OPT_shared))
-        CmdArgs.push_back("-lc");
-      else {
-        if (Args.hasArg(options::OPT_static)) {
-          CmdArgs.push_back("--start-group");
-          CmdArgs.push_back("-lc_p");
-          CmdArgs.push_back("-lpthread_p");
-          CmdArgs.push_back("--end-group");
-        } else {
-          CmdArgs.push_back("-lc_p");
-        }
-      }
-      CmdArgs.push_back("-lgcc_p");
-    } else {
-      if (Args.hasArg(options::OPT_static)) {
-        CmdArgs.push_back("--start-group");
-        CmdArgs.push_back("-lc");
-        CmdArgs.push_back("-lpthread");
-        CmdArgs.push_back("--end-group");
-      } else {
-        CmdArgs.push_back("-lc");
-      }
-      CmdArgs.push_back("-lcompiler_rt");
-    }
-
-    if (Args.hasArg(options::OPT_static)) {
-      CmdArgs.push_back("-lstdc++");
-    } else if (Args.hasArg(options::OPT_pg)) {
-      CmdArgs.push_back("-lgcc_eh_p");
-    } else {
-      CmdArgs.push_back("--as-needed");
-      CmdArgs.push_back("-lstdc++");
-      CmdArgs.push_back("--no-as-needed");
-    }
-  }
-
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
-    if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_pie))
-      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtendS.o")));
-    else
-      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtend.o")));
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
+  if (Args.hasArg(options::OPT_fuse_ld_EQ)) {
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << "-fuse-ld" << getToolChain().getTriple().str();
   }
 
   const char *Exec =
-#ifdef _WIN32
-      Args.MakeArgString(ToolChain.GetProgramPath("orbis-ld.gold"));
-#else
       Args.MakeArgString(ToolChain.GetProgramPath("orbis-ld"));
-#endif
 
-  C.addCommand(std::make_unique<Command>(JA, T, Exec, CmdArgs, Inputs));
-}
-
-void tools::PS4cpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
-                                       const InputInfo &Output,
-                                       const InputInfoList &Inputs,
-                                       const ArgList &Args,
-                                       const char *LinkingOutput) const {
-  const toolchains::FreeBSD &ToolChain =
-      static_cast<const toolchains::FreeBSD &>(getToolChain());
-  const Driver &D = ToolChain.getDriver();
-  bool PS4Linker;
-  StringRef LinkerOptName;
-  if (const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ)) {
-    LinkerOptName = A->getValue();
-    if (LinkerOptName != "ps4" && LinkerOptName != "gold")
-      D.Diag(diag::err_drv_unsupported_linker) << LinkerOptName;
-  }
-
-  if (LinkerOptName == "gold")
-    PS4Linker = false;
-  else if (LinkerOptName == "ps4")
-    PS4Linker = true;
-  else
-    PS4Linker = !Args.hasArg(options::OPT_shared);
-
-  if (PS4Linker)
-    ConstructPS4LinkJob(*this, C, JA, Output, Inputs, Args, LinkingOutput);
-  else
-    ConstructGoldLinkJob(*this, C, JA, Output, Inputs, Args, LinkingOutput);
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
 }
 
 toolchains::PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple,
@@ -382,7 +187,7 @@ toolchains::PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple,
     if (!llvm::sys::fs::exists(PrefixDir))
       getDriver().Diag(clang::diag::warn_missing_sysroot) << PrefixDir;
   } else
-    PrefixDir = PS4SDKDir.str();
+    PrefixDir = std::string(PS4SDKDir.str());
 
   SmallString<512> PS4SDKIncludeDir(PrefixDir);
   llvm::sys::path::append(PS4SDKIncludeDir, "target/include");
@@ -407,7 +212,7 @@ toolchains::PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple,
         << "PS4 system libraries" << PS4SDKLibDir;
     return;
   }
-  getFilePaths().push_back(PS4SDKLibDir.str());
+  getFilePaths().push_back(std::string(PS4SDKLibDir.str()));
 }
 
 Tool *toolchains::PS4CPU::buildAssembler() const {
@@ -429,4 +234,18 @@ SanitizerMask toolchains::PS4CPU::getSupportedSanitizers() const {
   Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Vptr;
   return Res;
+}
+
+void toolchains::PS4CPU::addClangTargetOptions(
+      const ArgList &DriverArgs,
+      ArgStringList &CC1Args,
+      Action::OffloadKind DeviceOffloadingKind) const {
+  // PS4 does not use init arrays.
+  if (DriverArgs.hasArg(options::OPT_fuse_init_array)) {
+    Arg *A = DriverArgs.getLastArg(options::OPT_fuse_init_array);
+    getDriver().Diag(clang::diag::err_drv_unsupported_opt_for_target)
+        << A->getAsString(DriverArgs) << getTriple().str();
+  }
+
+  CC1Args.push_back("-fno-use-init-array");
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_GDBRemote_h_
-#define liblldb_GDBRemote_h_
+#ifndef LLDB_UTILITY_GDBREMOTE_H
+#define LLDB_UTILITY_GDBREMOTE_H
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Reproducer.h"
@@ -155,4 +155,4 @@ template <> struct MappingTraits<lldb_private::GDBRemotePacket> {
 } // namespace yaml
 } // namespace llvm
 
-#endif // liblldb_GDBRemote_h_
+#endif // LLDB_UTILITY_GDBREMOTE_H

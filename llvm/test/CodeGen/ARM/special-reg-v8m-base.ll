@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m4 2>&1 | FileCheck %s --check-prefix=V7M
+; RUN: not --crash llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m4 2>&1 | FileCheck %s --check-prefix=V7M
 ; RUN: llc < %s -mtriple=thumbv8m.base-none-eabi 2>&1 | FileCheck %s
 
 ; V7M: LLVM ERROR: Invalid register name "sp_ns".

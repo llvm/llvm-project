@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only -ffreestanding
+// RUN: %clang_cc1 %s -Wno-pointer-to-int-cast -verify -fsyntax-only -ffreestanding
 
 #include <stddef.h>
 #include <stdint.h>
@@ -121,6 +121,10 @@ struct foo2 bar2[] = {
 };
 
 struct foo2 bar3 = { 1, 2 }; // expected-warning{{excess elements in struct initializer}}
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wexcess-initializers"
+struct foo2 bar3_silent = {1, 2};
+#pragma clang diagnostic pop
 
 int* ptest1 = __builtin_choose_expr(1, (int*)0, (int*)0);
 

@@ -1,4 +1,4 @@
-//===-- SBMemoryRegionInfoList.cpp ------------------------------*- C++ -*-===//
+//===-- SBMemoryRegionInfoList.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -82,7 +82,7 @@ SBMemoryRegionInfoList::SBMemoryRegionInfoList(
                           (const lldb::SBMemoryRegionInfoList &), rhs);
 }
 
-SBMemoryRegionInfoList::~SBMemoryRegionInfoList() {}
+SBMemoryRegionInfoList::~SBMemoryRegionInfoList() = default;
 
 const SBMemoryRegionInfoList &SBMemoryRegionInfoList::
 operator=(const SBMemoryRegionInfoList &rhs) {

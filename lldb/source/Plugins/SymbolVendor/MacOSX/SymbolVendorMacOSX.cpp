@@ -1,4 +1,4 @@
-//===-- SymbolVendorMacOSX.cpp ----------------------------------*- C++ -*-===//
+//===-- SymbolVendorMacOSX.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,6 +26,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(SymbolVendorMacOSX)
 
 // SymbolVendorMacOSX constructor
 SymbolVendorMacOSX::SymbolVendorMacOSX(const lldb::ModuleSP &module_sp)
@@ -297,7 +299,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
           if (repro::Generator *g =
                   repro::Reproducer::Instance().GetGenerator()) {
             repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-            fp.recordInterestingDirectory(dsym_root);
+            fp.RecordInterestingDirectoryRecursive(dsym_root);
           }
         }
         return symbol_vendor;

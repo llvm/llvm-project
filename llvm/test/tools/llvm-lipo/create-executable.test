@@ -1,7 +1,7 @@
 # Executable testing is not supported on Windows, since all files are considered executable
 # UNSUPPORTED: system-windows
-# RUN: yaml2obj %p/Inputs/i386-slice.yaml > %t-i386.o
-# RUN: yaml2obj %p/Inputs/x86_64-slice.yaml > %t-x86_64.o
+# RUN: yaml2obj %p/Inputs/i386-slice.yaml -o %t-i386.o
+# RUN: yaml2obj %p/Inputs/x86_64-slice.yaml -o %t-x86_64.o
 
 # RUN: chmod a-x %t-i386.o
 # RUN: chmod a-x %t-x86_64.o

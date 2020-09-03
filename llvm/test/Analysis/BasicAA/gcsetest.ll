@@ -2,7 +2,7 @@
 ; disambiguating some obvious cases.  All loads should be removable in
 ; this testcase.
 
-; RUN: opt < %s -basicaa -gvn -instcombine -dce -S | FileCheck %s
+; RUN: opt < %s -basic-aa -gvn -instcombine -dce -S | FileCheck %s
 
 @A = global i32 7
 @B = global i32 8

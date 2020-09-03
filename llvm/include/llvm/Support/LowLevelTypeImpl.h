@@ -27,6 +27,7 @@
 #define LLVM_SUPPORT_LOWLEVELTYPEIMPL_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MachineValueType.h"
 #include <cassert>
 
@@ -137,6 +138,26 @@ public:
                       : LLT::scalar(NewEltSize);
   }
 
+  /// Return a vector or scalar with the same element type and the new number of
+  /// elements.
+  LLT changeNumElements(unsigned NewNumElts) const {
+    return LLT::scalarOrVector(NewNumElts, getScalarType());
+  }
+
+  /// Return a type that is \p Factor times smaller. Reduces the number of
+  /// elements if this is a vector, or the bitwidth for scalar/pointers. Does
+  /// not attempt to handle cases that aren't evenly divisible.
+  LLT divide(int Factor) const {
+    assert(Factor != 1);
+    if (isVector()) {
+      assert(getNumElements() % Factor == 0);
+      return scalarOrVector(getNumElements() / Factor, getElementType());
+    }
+
+    assert(getSizeInBits() % Factor == 0);
+    return scalar(getSizeInBits() / Factor);
+  }
+
   bool isByteSized() const { return (getSizeInBits() & 7) == 0; }
 
   unsigned getScalarSizeInBits() const {
@@ -173,6 +194,13 @@ public:
   }
 
   void print(raw_ostream &OS) const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const {
+    print(dbgs());
+    dbgs() << '\n';
+  }
+#endif
 
   bool operator==(const LLT &RHS) const {
     return IsPointer == RHS.IsPointer && IsVector == RHS.IsVector &&

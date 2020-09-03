@@ -118,6 +118,26 @@ template <typename T> struct J {
 J<Movable> j1(Movable());
 J<NotMovable> j2(NotMovable());
 
+template<class T>
+struct MovableTemplateT
+{
+  MovableTemplateT() {}
+  MovableTemplateT(const MovableTemplateT& o) { }
+  MovableTemplateT(MovableTemplateT&& o) { }
+};
+
+template <class T>
+struct J2 {
+  J2(const MovableTemplateT<T>& A);
+  // CHECK-FIXES: J2(const MovableTemplateT<T>& A);
+  MovableTemplateT<T> M;
+};
+
+template <class T>
+J2<T>::J2(const MovableTemplateT<T>& A) : M(A) {}
+// CHECK-FIXES: J2<T>::J2(const MovableTemplateT<T>& A) : M(A) {}
+J2<int> j3(MovableTemplateT<int>{});
+
 struct K_Movable {
   K_Movable() = default;
   K_Movable(const K_Movable &) = default;

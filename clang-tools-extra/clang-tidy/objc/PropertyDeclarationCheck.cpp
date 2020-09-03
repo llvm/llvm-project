@@ -98,9 +98,6 @@ bool prefixedPropertyNameValid(llvm::StringRef PropertyName) {
 }  // namespace
 
 void PropertyDeclarationCheck::registerMatchers(MatchFinder *Finder) {
-  // this check should only be applied to ObjC sources.
-  if (!getLangOpts().ObjC) return;
-
   Finder->addMatcher(objcPropertyDecl(
                          // the property name should be in Lower Camel Case like
                          // 'lowerCamelCase'

@@ -27,7 +27,7 @@ define void @bar0() {
 ; CHECK:     ld r3, .LC0@toc@l(r3)
 ; CHECK:     addis r3, r2, .LC2@toc@ha
 ; CHECK:     ld r3, .LC2@toc@l(r3)
-; CHECK:     xxpermdi vs0, vs0, vs1, 1
+; CHECK:     xxmrgld vs0, vs0, vs1
 ; CHECK:     stxvd2x vs0, 0, r3
 ; CHECK:     blr
 ;
@@ -38,7 +38,7 @@ define void @bar0() {
 ; CHECK-P9-NOVECTOR:     addis r3, r2, .LC1@toc@ha
 ; CHECK-P9-NOVECTOR:     addis r3, r2, .LC2@toc@ha
 ; CHECK-P9-NOVECTOR:     ld r3, .LC2@toc@l(r3)
-; CHECK-P9-NOVECTOR:     xxpermdi vs0, vs1, vs0, 1
+; CHECK-P9-NOVECTOR:     xxmrgld vs0, vs1, vs0
 ; CHECK-P9-NOVECTOR:     stxvd2x vs0, 0, r3
 ; CHECK-P9-NOVECTOR:     blr
 ;
@@ -52,7 +52,7 @@ define void @bar0() {
 ; CHECK-P9:     lfd f1, 0(r3)
 ; CHECK-P9:     addis r3, r2, .LC2@toc@ha
 ; CHECK-P9:     ld r3, .LC2@toc@l(r3)
-; CHECK-P9:     xxpermdi vs1, f1, f1, 2
+; CHECK-P9:     xxswapd vs1, f1
 ; CHECK-P9:     xxpermdi vs0, vs0, vs1, 1
 ; CHECK-P9:     stxvx vs0, 0, r3
 ; CHECK-P9:     blr
@@ -72,7 +72,7 @@ define void @bar1() {
 ; CHECK:     ld r3, .LC0@toc@l(r3)
 ; CHECK:     addis r3, r2, .LC2@toc@ha
 ; CHECK:     ld r3, .LC2@toc@l(r3)
-; CHECK:     xxmrghd vs0, vs1, vs0
+; CHECK:     xxpermdi vs0, vs1, vs0, 1
 ; CHECK:     stxvd2x vs0, 0, r3
 ; CHECK:     blr
 ;
@@ -83,7 +83,7 @@ define void @bar1() {
 ; CHECK-P9-NOVECTOR:     addis r3, r2, .LC1@toc@ha
 ; CHECK-P9-NOVECTOR:     addis r3, r2, .LC2@toc@ha
 ; CHECK-P9-NOVECTOR:     ld r3, .LC2@toc@l(r3)
-; CHECK-P9-NOVECTOR:     xxmrghd vs0, vs0, vs1
+; CHECK-P9-NOVECTOR:     xxpermdi vs0, vs0, vs1, 1
 ; CHECK-P9-NOVECTOR:     stxvd2x vs0, 0, r3
 ; CHECK-P9-NOVECTOR:     blr
 ;
@@ -97,7 +97,7 @@ define void @bar1() {
 ; CHECK-P9:     lfd f1, 0(r3)
 ; CHECK-P9:     addis r3, r2, .LC2@toc@ha
 ; CHECK-P9:     ld r3, .LC2@toc@l(r3)
-; CHECK-P9:     xxpermdi vs1, f1, f1, 2
+; CHECK-P9:     xxswapd vs1, f1
 ; CHECK-P9:     xxmrgld vs0, vs1, vs0
 ; CHECK-P9:     stxvx vs0, 0, r3
 ; CHECK-P9:     blr

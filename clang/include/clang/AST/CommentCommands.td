@@ -87,6 +87,7 @@ def P      : InlineCommand<"p">;
 def A      : InlineCommand<"a">;
 def E      : InlineCommand<"e">;
 def Em     : InlineCommand<"em">;
+def Ref    : InlineCommand<"ref">;
 def Anchor : InlineCommand<"anchor">;
 
 //===----------------------------------------------------------------------===//
@@ -205,7 +206,6 @@ def Paragraph     : VerbatimLineCommand<"paragraph">;
 
 def Mainpage : VerbatimLineCommand<"mainpage">;
 def Subpage  : VerbatimLineCommand<"subpage">;
-def Ref      : VerbatimLineCommand<"ref">;
 
 def Relates     : VerbatimLineCommand<"relates">;
 def Related     : VerbatimLineCommand<"related">;

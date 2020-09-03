@@ -273,3 +273,12 @@ void testOverloadOperator() {
 // RUN: --implicit-check-not="[#char#]operator=("
 // CHECK-OPER: [#int#]operator=(
 
+struct S { int member; };
+S overloaded(int);
+S overloaded(double);
+void foo() {
+  // No overload matches, but we have recovery-expr with the correct type.
+  overloaded().
+}
+// RUN: not %clang_cc1 -fsyntax-only -frecovery-ast -frecovery-ast-type -code-completion-at=%s:281:16 %s -o - | FileCheck -check-prefix=CHECK-RECOVERY %s
+// CHECK-RECOVERY: [#int#]member

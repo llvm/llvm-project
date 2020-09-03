@@ -31,12 +31,12 @@ def warn_cxx98_compat_less_colon_colon : Warning<
   InGroup<CXX98Compat>, DefaultIgnore;
 
 def warn_cxx17_compat_spaceship : Warning<
-  "'<=>' operator is incompatible with C++ standards before C++2a">,
-  InGroup<CXXPre2aCompat>, DefaultIgnore;
-def warn_cxx2a_compat_spaceship : Warning<
-  "'<=>' is a single token in C++2a; "
+  "'<=>' operator is incompatible with C++ standards before C++20">,
+  InGroup<CXXPre20Compat>, DefaultIgnore;
+def warn_cxx20_compat_spaceship : Warning<
+  "'<=>' is a single token in C++20; "
   "add a space to avoid a change in behavior">,
-  InGroup<CXX2aCompat>;
+  InGroup<CXX20Compat>;
 
 // Trigraphs.
 def trigraph_ignored : Warning<"trigraph ignored">, InGroup<Trigraphs>;
@@ -78,8 +78,8 @@ def ext_token_used : Extension<"extension used">,
 
 def warn_cxx11_keyword : Warning<"'%0' is a keyword in C++11">,
   InGroup<CXX11Compat>, DefaultIgnore;
-def warn_cxx2a_keyword : Warning<"'%0' is a keyword in C++2a">,
-  InGroup<CXX2aCompat>, DefaultIgnore;
+def warn_cxx20_keyword : Warning<"'%0' is a keyword in C++20">,
+  InGroup<CXX20Compat>, DefaultIgnore;
 
 def ext_unterminated_char_or_string : ExtWarn<
   "missing terminating %select{'|'\"'}0 character">, InGroup<InvalidPPToken>;
@@ -175,7 +175,7 @@ def ext_unknown_escape : ExtWarn<"unknown escape sequence '\\%0'">,
 def err_invalid_digit : Error<
   "invalid digit '%0' in %select{decimal|octal|binary}1 constant">;
 def err_invalid_suffix_constant : Error<
-  "invalid suffix '%0' on %select{integer|floating}1 constant">;
+  "invalid suffix '%0' on %select{integer|floating|fixed-point}1 constant">;
 def warn_cxx11_compat_digit_separator : Warning<
   "digit separators are incompatible with C++ standards before C++14">,
   InGroup<CXXPre14Compat>, DefaultIgnore;
@@ -312,6 +312,9 @@ def pp_macro_not_used : Warning<"macro is not used">, DefaultIgnore,
 def warn_pp_undef_identifier : Warning<
   "%0 is not defined, evaluates to 0">,
   InGroup<DiagGroup<"undef">>, DefaultIgnore;
+def warn_pp_undef_prefix : Warning<
+  "%0 is not defined, evaluates to 0">,
+  InGroup<DiagGroup<"undef-prefix">>, DefaultIgnore;
 def warn_pp_ambiguous_macro : Warning<
   "ambiguous expansion of macro %0">, InGroup<AmbiguousMacro>;
 def note_pp_ambiguous_macro_chosen : Note<

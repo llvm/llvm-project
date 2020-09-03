@@ -9,7 +9,7 @@ declare <2 x double> @llvm.x86.fma4.vfmadd.sd(<2 x double> %a, <2 x double> %b, 
 define <4 x float> @test1(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmaddss %xmm2, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vfmaddss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm2
 ; CHECK-NEXT:    vxorps {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = tail call <4 x float> @llvm.x86.fma4.vfmadd.ss(<4 x float> %a, <4 x float> %b, <4 x float> %c)
@@ -20,7 +20,7 @@ define <4 x float> @test1(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 define <4 x float> @test2(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmsubss %xmm2, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vfmsubss {{.*#+}} xmm0 = (xmm0 * xmm1) - xmm2
 ; CHECK-NEXT:    retq
   %sub.i = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %c
   %res = tail call <4 x float> @llvm.x86.fma4.vfmadd.ss(<4 x float> %a, <4 x float> %b, <4 x float> %sub.i)
@@ -30,7 +30,7 @@ define <4 x float> @test2(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 define <4 x float> @test3(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfnmaddss %xmm2, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vfnmaddss {{.*#+}} xmm0 = -(xmm0 * xmm1) + xmm2
 ; CHECK-NEXT:    retq
   %sub.i = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %b
   %res = tail call <4 x float> @llvm.x86.fma4.vfmadd.ss(<4 x float> %a, <4 x float> %sub.i, <4 x float> %c)
@@ -40,7 +40,7 @@ define <4 x float> @test3(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 define <4 x float> @test4(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfnmaddss %xmm2, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vfnmaddss {{.*#+}} xmm0 = -(xmm0 * xmm1) + xmm2
 ; CHECK-NEXT:    retq
   %sub.i = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %a
   %res = tail call <4 x float> @llvm.x86.fma4.vfmadd.ss(<4 x float> %sub.i, <4 x float> %b, <4 x float> %c)
@@ -50,7 +50,7 @@ define <4 x float> @test4(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 define <4 x float> @test5(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfnmsubss %xmm2, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vfnmsubss {{.*#+}} xmm0 = -(xmm0 * xmm1) - xmm2
 ; CHECK-NEXT:    retq
   %sub.i = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %a
   %sub.i.2 = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %c
@@ -61,7 +61,7 @@ define <4 x float> @test5(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 define <2 x double> @test6(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmaddsd %xmm2, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vfmaddsd {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm2
 ; CHECK-NEXT:    vxorpd {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = tail call <2 x double> @llvm.x86.fma4.vfmadd.sd(<2 x double> %a, <2 x double> %b, <2 x double> %c)
@@ -72,7 +72,7 @@ define <2 x double> @test6(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 define <2 x double> @test7(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmsubsd %xmm2, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vfmsubsd {{.*#+}} xmm0 = (xmm0 * xmm1) - xmm2
 ; CHECK-NEXT:    retq
   %sub.i = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %c
   %res = tail call <2 x double> @llvm.x86.fma4.vfmadd.sd(<2 x double> %a, <2 x double> %b, <2 x double> %sub.i)
@@ -82,7 +82,7 @@ define <2 x double> @test7(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 define <2 x double> @test8(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfnmaddsd %xmm2, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vfnmaddsd {{.*#+}} xmm0 = -(xmm0 * xmm1) + xmm2
 ; CHECK-NEXT:    retq
   %sub.i = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %b
   %res = tail call <2 x double> @llvm.x86.fma4.vfmadd.sd(<2 x double> %a, <2 x double> %sub.i, <2 x double> %c)
@@ -92,7 +92,7 @@ define <2 x double> @test8(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 define <2 x double> @test9(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfnmaddsd %xmm2, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vfnmaddsd {{.*#+}} xmm0 = -(xmm0 * xmm1) + xmm2
 ; CHECK-NEXT:    retq
   %sub.i = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %a
   %res = tail call <2 x double> @llvm.x86.fma4.vfmadd.sd(<2 x double> %sub.i, <2 x double> %b, <2 x double> %c)
@@ -102,7 +102,7 @@ define <2 x double> @test9(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 define <2 x double> @test10(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfnmsubsd %xmm2, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vfnmsubsd {{.*#+}} xmm0 = -(xmm0 * xmm1) - xmm2
 ; CHECK-NEXT:    retq
   %sub.i = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %a
   %sub.i.2 = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %c

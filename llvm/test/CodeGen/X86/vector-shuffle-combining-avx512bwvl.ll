@@ -75,3 +75,81 @@ define <16 x i16> @combine_vpermt2var_vpermi2var_16i16_as_unpcklwd(<16 x i16> %a
   %res0 = call <16 x i16> @llvm.x86.avx512.maskz.vpermt2var.hi.256(<16 x i16> <i16 0, i16 16, i16 1, i16 17, i16 2, i16 18, i16 3, i16 19, i16 8, i16 24, i16 9, i16 25, i16 10, i16 26, i16 11, i16 27>, <16 x i16> %a0, <16 x i16> %a1, i16 -1)
   ret <16 x i16> %res0
 }
+
+define <16 x i8> @combine_shuffle_vrotri_v2i64(<2 x i64> %a0) {
+; CHECK-LABEL: combine_shuffle_vrotri_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[13,12,11,10,9,8,15,14,5,4,3,2,1,0,7,6]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a0, <2 x i64> %a0, <2 x i64> <i64 48, i64 48>)
+  %2 = bitcast <2 x i64> %1 to <16 x i8>
+  %3 = shufflevector <16 x i8> %2, <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <16 x i8> %3
+}
+declare <2 x i64> @llvm.fshr.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
+
+define <16 x i8> @combine_shuffle_vrotli_v4i32(<4 x i32> %a0) {
+; CHECK-LABEL: combine_shuffle_vrotli_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[14,13,12,15,10,9,8,11,6,5,4,7,2,1,0,3]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a0, <4 x i32> %a0, <4 x i32> <i32 8, i32 8, i32 8, i32 8>)
+  %2 = bitcast <4 x i32> %1 to <16 x i8>
+  %3 = shufflevector <16 x i8> %2, <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <16 x i8> %3
+}
+declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
+
+define void @PR46178(i16* %0) {
+; X86-LABEL: PR46178:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovdqu 0, %ymm0
+; X86-NEXT:    vmovdqu (%eax), %ymm1
+; X86-NEXT:    vpmovqw %ymm0, %xmm0
+; X86-NEXT:    vpmovqw %ymm1, %xmm1
+; X86-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    vpsllw $8, %ymm0, %ymm0
+; X86-NEXT:    vpsraw $8, %ymm0, %ymm0
+; X86-NEXT:    vmovapd {{.*#+}} ymm1 = [0,0,2,0,4,0,4,0]
+; X86-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; X86-NEXT:    vpermi2pd %ymm2, %ymm0, %ymm1
+; X86-NEXT:    vmovupd %ymm1, (%eax)
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR46178:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovdqu 0, %ymm0
+; X64-NEXT:    vmovdqu (%rax), %ymm1
+; X64-NEXT:    vpmovqw %ymm0, %xmm0
+; X64-NEXT:    vpmovqw %ymm1, %xmm1
+; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vpsllw $8, %ymm0, %ymm0
+; X64-NEXT:    vpsraw $8, %ymm0, %ymm0
+; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; X64-NEXT:    vmovdqa %xmm0, %xmm0
+; X64-NEXT:    vmovdqu %ymm0, (%rdi)
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %2 = load <4 x i64>, <4 x i64>* null, align 8
+  %3 = load <4 x i64>, <4 x i64>* undef, align 8
+  %4 = trunc <4 x i64> %2 to <4 x i16>
+  %5 = trunc <4 x i64> %3 to <4 x i16>
+  %6 = shl <4 x i16> %4, <i16 8, i16 8, i16 8, i16 8>
+  %7 = shl <4 x i16> %5, <i16 8, i16 8, i16 8, i16 8>
+  %8 = ashr exact <4 x i16> %6, <i16 8, i16 8, i16 8, i16 8>
+  %9 = ashr exact <4 x i16> %7, <i16 8, i16 8, i16 8, i16 8>
+  %10 = bitcast i16* %0 to <4 x i16>*
+  %11 = getelementptr inbounds i16, i16* %0, i64 4
+  %12 = bitcast i16* %11 to <4 x i16>*
+  %13 = getelementptr inbounds i16, i16* %0, i64 8
+  %14 = bitcast i16* %13 to <4 x i16>*
+  %15 = getelementptr inbounds i16, i16* %0, i64 12
+  %16 = bitcast i16* %15 to <4 x i16>*
+  store <4 x i16> %8, <4 x i16>* %10, align 2
+  store <4 x i16> %9, <4 x i16>* %12, align 2
+  store <4 x i16> zeroinitializer, <4 x i16>* %14, align 2
+  store <4 x i16> zeroinitializer, <4 x i16>* %16, align 2
+  ret void
+}

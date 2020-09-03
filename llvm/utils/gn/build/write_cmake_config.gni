@@ -30,12 +30,8 @@ template("write_cmake_config") {
   action(target_name) {
     script = "//llvm/utils/gn/build/write_cmake_config.py"
 
-    sources = [
-      invoker.input,
-    ]
-    outputs = [
-      invoker.output,
-    ]
+    sources = [ invoker.input ]
+    outputs = [ invoker.output ]
     args = [
              "-o",
              rebase_path(outputs[0], root_build_dir),

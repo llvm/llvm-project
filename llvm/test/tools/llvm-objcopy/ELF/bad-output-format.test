@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 
 # RUN: not llvm-objcopy -O xyz %t.o %t.2.o 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=BAD-OUTPUT-FORMAT

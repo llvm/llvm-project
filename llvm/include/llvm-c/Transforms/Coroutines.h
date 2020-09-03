@@ -21,6 +21,7 @@
 
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
+#include "llvm-c/Transforms/PassManagerBuilder.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
@@ -42,6 +43,9 @@ void LLVMAddCoroElidePass(LLVMPassManagerRef PM);
 
 /** See llvm::createCoroCleanupLegacyPass function. */
 void LLVMAddCoroCleanupPass(LLVMPassManagerRef PM);
+
+/** See llvm::addCoroutinePassesToExtensionPoints. */
+void LLVMPassManagerBuilderAddCoroutinePassesToExtensionPoints(LLVMPassManagerBuilderRef PMB);
 
 /**
  * @}

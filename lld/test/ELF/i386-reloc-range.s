@@ -7,17 +7,17 @@
 // RUN: llvm-mc %t2.s -o %t2.o -triple i386-pc-linux -filetype=obj
 
 // RUN: ld.lld -Ttext 0x200 %t.o %t1.o -o %t1
-// RUN: llvm-objdump -d --no-show-raw-insn -triple=i386-pc-linux-code16 %t1 | FileCheck %s
+// RUN: llvm-objdump -d --no-show-raw-insn --triple=i386-pc-linux-code16 %t1 | FileCheck %s
 
 // CHECK:        Disassembly of section .text:
 // CHECK-EMPTY:
-// CHECK-NEXT: _start:
-// CHECK-NEXT:      200:       jmp -1
+// CHECK-NEXT: <_start>:
+// CHECK-NEXT:      200:       jmp 0x202
 //              0x10202 - 0x203 == 0xffff
 
 // RUN: not ld.lld -Ttext 0x200 %t.o %t2.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
 
-// ERR: {{.*}}:(.text+0x1): relocation R_386_PC16 out of range: 65536 is not in [-65536, 65535]
+// ERR: {{.*}}:(.text+0x1): relocation R_386_PC16 out of range: 65536 is not in [-65536, 65535]; references foo
 
         .global _start
 _start:

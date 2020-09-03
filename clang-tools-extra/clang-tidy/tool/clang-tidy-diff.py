@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-#===- clang-tidy-diff.py - ClangTidy Diff Checker ------------*- python -*--===#
+#===- clang-tidy-diff.py - ClangTidy Diff Checker -----------*- python -*--===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===------------------------------------------------------------------------===#
+#===-----------------------------------------------------------------------===#
 
 r"""
 ClangTidy Diff Checker
@@ -75,7 +75,7 @@ def run_tidy(task_queue, lock, timeout):
         sys.stderr.write('Failed: ' + str(e) + ': '.join(command) + '\n')
     finally:
       with lock:
-        if (not timeout is None) and (not watchdog is None):
+        if not (timeout is None or watchdog is None):
           if not watchdog.is_alive():
               sys.stderr.write('Terminated by timeout: ' +
                                ' '.join(command) + '\n')
@@ -88,6 +88,7 @@ def start_workers(max_tasks, tidy_caller, task_queue, lock, timeout):
     t = threading.Thread(target=tidy_caller, args=(task_queue, lock, timeout))
     t.daemon = True
     t.start()
+
 
 def merge_replacement_files(tmpdir, mergefile):
   """Merge all replacement files in a directory into a single file"""
@@ -106,7 +107,7 @@ def merge_replacement_files(tmpdir, mergefile):
     # include/clang/Tooling/ReplacementsYaml.h, but the value
     # is actually never used inside clang-apply-replacements,
     # so we set it to '' here.
-    output = { 'MainSourceFile': '', mergekey: merged }
+    output = {'MainSourceFile': '', mergekey: merged}
     with open(mergefile, 'w') as out:
       yaml.safe_dump(output, out)
   else:

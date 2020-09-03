@@ -1,4 +1,4 @@
-//===-- AppleObjCTypeEncodingParser.cpp -------------------------*- C++ -*-===//
+//===-- AppleObjCTypeEncodingParser.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,6 +15,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StringLexer.h"
 
+#include "clang/Basic/TargetInfo.h"
+
 #include <vector>
 
 using namespace lldb_private;
@@ -23,17 +25,16 @@ AppleObjCTypeEncodingParser::AppleObjCTypeEncodingParser(
     ObjCLanguageRuntime &runtime)
     : ObjCLanguageRuntime::EncodingToType(), m_runtime(runtime) {
   if (!m_scratch_ast_ctx_up)
-    m_scratch_ast_ctx_up.reset(new TypeSystemClang(runtime.GetProcess()
-                                                       ->GetTarget()
-                                                       .GetArchitecture()
-                                                       .GetTriple()));
+    m_scratch_ast_ctx_up = std::make_unique<TypeSystemClang>(
+        "AppleObjCTypeEncodingParser ASTContext",
+        runtime.GetProcess()->GetTarget().GetArchitecture().GetTriple());
 }
 
 std::string AppleObjCTypeEncodingParser::ReadStructName(StringLexer &type) {
   StreamString buffer;
   while (type.HasAtLeast(1) && type.Peek() != '=')
     buffer.Printf("%c", type.Next());
-  return buffer.GetString();
+  return std::string(buffer.GetString());
 }
 
 std::string AppleObjCTypeEncodingParser::ReadQuotedString(StringLexer &type) {
@@ -43,7 +44,7 @@ std::string AppleObjCTypeEncodingParser::ReadQuotedString(StringLexer &type) {
   StringLexer::Character next = type.Next();
   UNUSED_IF_ASSERT_DISABLED(next);
   assert(next == '"');
-  return buffer.GetString();
+  return std::string(buffer.GetString());
 }
 
 uint32_t AppleObjCTypeEncodingParser::ReadNumber(StringLexer &type) {
@@ -133,7 +134,7 @@ clang::QualType AppleObjCTypeEncodingParser::BuildAggregate(
       if (element.name.empty()) {
         StreamString elem_name;
         elem_name.Printf("__unnamed_%u", count);
-        element.name = elem_name.GetString();
+        element.name = std::string(elem_name.GetString());
       }
       TypeSystemClang::AddFieldToRecordType(
           union_type, element.name.c_str(), ast_ctx.GetType(element.type),

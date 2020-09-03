@@ -10,7 +10,7 @@ getRodata:
     lwa 3, .LC0@toc(2)
     blr
 
-    .section        .rodata,"aMS",@progbits,8
+    .section        .rodata,"a",@progbits
     .quad _start
 
     .section        .toc,"aw",@progbits

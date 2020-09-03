@@ -14,6 +14,7 @@ class ExprSyscallTestCase(TestBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr21765, getpid() does not exist on Windows")
     @expectedFailureNetBSD
+    @skipIfReproducer
     def test_setpgid(self):
         self.build()
         self.expr_syscall()
@@ -30,6 +31,7 @@ class ExprSyscallTestCase(TestBase):
         # launch the inferior and don't wait for it to stop
         self.dbg.SetAsync(True)
         error = lldb.SBError()
+        flags = target.GetLaunchInfo().GetLaunchFlags()
         process = target.Launch(listener,
                                 None,      # argv
                                 None,      # envp
@@ -37,7 +39,7 @@ class ExprSyscallTestCase(TestBase):
                                 None,      # stdout_path
                                 None,      # stderr_path
                                 None,      # working directory
-                                0,         # launch flags
+                                flags,     # launch flags
                                 False,     # Stop at entry
                                 error)     # error
 

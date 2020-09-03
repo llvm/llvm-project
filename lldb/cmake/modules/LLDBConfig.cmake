@@ -1,6 +1,5 @@
 include(CheckCXXSymbolExists)
 include(CheckTypeSize)
-include(CMakeDependentOption)
 
 set(LLDB_PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLDB_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/source")
@@ -25,6 +24,12 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darw
 endif()
 
 macro(add_optional_dependency variable description package found)
+  cmake_parse_arguments(ARG
+    ""
+    "VERSION"
+    ""
+    ${ARGN})
+
   set(${variable} "Auto" CACHE STRING "${description} On, Off or Auto (default)")
   string(TOUPPER "${${variable}}" ${variable})
 
@@ -40,7 +45,7 @@ macro(add_optional_dependency variable description package found)
   endif()
 
   if(${find_package})
-    find_package(${package} ${maybe_required})
+    find_package(${package} ${ARG_VERSION} ${maybe_required})
     set(${variable} "${${found}}")
   endif()
 
@@ -52,8 +57,8 @@ add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" Curse
 add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
 add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig LUAANDSWIG_FOUND)
 add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonInterpAndLibs PYTHONINTERPANDLIBS_FOUND)
+add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION 2.8)
 
-option(LLDB_RELOCATABLE_PYTHON "Use the PYTHONHOME environment variable to locate Python." OFF)
 option(LLDB_USE_SYSTEM_SIX "Use six.py shipped with system and do not install a copy of it" OFF)
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
@@ -65,6 +70,9 @@ option(LLDB_SKIP_STRIP "Whether to skip stripping of binaries when installing ll
 option(LLDB_ENABLE_SWIFT_SUPPORT "Enable swift support" ON)
 option(LLDB_USE_STATIC_BINDINGS "Use the static Python bindings." OFF)
 option(LLDB_ENABLE_WERROR "Fail and stop if a warning is triggered." ${LLVM_ENABLE_WERROR})
+if(LLDB_ENABLE_SWIFT_SUPPORT)
+  add_definitions( -DLLDB_ENABLE_SWIFT )
+endif()
 # END SWIFT CODE
 
 if (LLDB_USE_SYSTEM_DEBUGSERVER)
@@ -141,10 +149,20 @@ if (LLDB_ENABLE_LIBEDIT)
 endif()
 
 if (LLDB_ENABLE_PYTHON)
+  if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+    set(default_embed_python_home ON)
+  else()
+    set(default_embed_python_home OFF)
+  endif()
+  option(LLDB_EMBED_PYTHON_HOME
+    "Embed PYTHONHOME in the binary. If set to OFF, PYTHONHOME environment variable will be used to to locate Python."
+    ${default_embed_python_home})
+
   include_directories(${PYTHON_INCLUDE_DIRS})
-  if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows" AND NOT LLDB_RELOCATABLE_PYTHON)
+  if (LLDB_EMBED_PYTHON_HOME)
     get_filename_component(PYTHON_HOME "${PYTHON_EXECUTABLE}" DIRECTORY)
-    file(TO_CMAKE_PATH "${PYTHON_HOME}" LLDB_PYTHON_HOME)
+    set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
+      "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
   endif()
 endif()
 
@@ -245,6 +263,10 @@ if (LLDB_ENABLE_LZMA)
   include_directories(${LIBLZMA_INCLUDE_DIRS})
 endif()
 
+if (LLDB_ENABLE_LIBXML2)
+  include_directories(${LIBXML2_INCLUDE_DIR})
+endif()
+
 include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -278,11 +300,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   endif()
 endif()
 
-if (NOT LIBXML2_FOUND)
-  find_package(LibXml2)
-endif()
-
-# Find libraries or frameworks that may be needed
+# Find Apple-specific libraries or frameworks that may be needed.
 if (APPLE)
   if(NOT IOS)
     find_library(CARBON_LIBRARY Carbon)
@@ -291,17 +309,6 @@ if (APPLE)
   find_library(FOUNDATION_LIBRARY Foundation)
   find_library(CORE_FOUNDATION_LIBRARY CoreFoundation)
   find_library(SECURITY_LIBRARY Security)
-  set(LLDB_ENABLE_LIBXML2 ON)
-  list(APPEND system_libs xml2
-       ${FOUNDATION_LIBRARY}
-       ${CORE_FOUNDATION_LIBRARY}
-       ${CORE_SERVICES_LIBRARY}
-       ${SECURITY_LIBRARY}
-       ${DEBUG_SYMBOLS_LIBRARY})
-  include_directories(AFTER "${CMAKE_OSX_SYSROOT}/usr/include/libxml2")
-elseif(LIBXML2_FOUND AND LIBXML2_VERSION_STRING VERSION_GREATER 2.8)
-  set(LLDB_ENABLE_LIBXML2 ON)
-  list(APPEND system_libs ${LIBXML2_LIBRARIES})
   include_directories(${LIBXML2_INCLUDE_DIR})
 endif()
 
@@ -312,10 +319,7 @@ endif()
 if(NOT PURE_WINDOWS)
   set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
   find_package(Threads REQUIRED)
-  list(APPEND system_libs ${CMAKE_THREAD_LIBS_INIT})
 endif()
-
-list(APPEND system_libs ${CMAKE_DL_LIBS})
 
 # Figure out if lldb could use lldb-server.  If so, then we'll
 # ensure we build lldb-server when an lldb target is being built.

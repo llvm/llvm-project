@@ -19,6 +19,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Edit/RefactoringFixits.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Lookup.h"
@@ -938,8 +939,7 @@ static bool checkTypeParamListConsistency(Sema &S,
 
       // Override the new type parameter's bound type with the previous type,
       // so that it's consistent.
-      newTypeParam->setTypeSourceInfo(
-        S.Context.getTrivialTypeSourceInfo(prevTypeParam->getUnderlyingType()));
+      S.Context.adjustObjCTypeParamBoundType(prevTypeParam, newTypeParam);
       continue;
     }
 
@@ -966,8 +966,7 @@ static bool checkTypeParamListConsistency(Sema &S,
     }
 
     // Update the new type parameter's bound to match the previous one.
-    newTypeParam->setTypeSourceInfo(
-      S.Context.getTrivialTypeSourceInfo(prevTypeParam->getUnderlyingType()));
+    S.Context.adjustObjCTypeParamBoundType(prevTypeParam, newTypeParam);
   }
 
   return false;
@@ -1278,7 +1277,8 @@ Decl *Sema::ActOnStartProtocolInterface(
 
 static bool NestedProtocolHasNoDefinition(ObjCProtocolDecl *PDecl,
                                           ObjCProtocolDecl *&UndefinedProtocol) {
-  if (!PDecl->hasDefinition() || PDecl->getDefinition()->isHidden()) {
+  if (!PDecl->hasDefinition() ||
+      !PDecl->getDefinition()->isUnconditionallyVisible()) {
     UndefinedProtocol = PDecl;
     return true;
   }
@@ -1806,7 +1806,7 @@ Decl *Sema::ActOnStartCategoryInterface(
     Decl *const *ProtoRefs, unsigned NumProtoRefs,
     const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
     const ParsedAttributesView &AttrList) {
-  ObjCCategoryDecl *CDecl = nullptr;
+  ObjCCategoryDecl *CDecl;
   ObjCInterfaceDecl *IDecl = getObjCInterfaceDecl(ClassName, ClassLoc, true);
 
   /// Check that class of this category is already completely declared.
@@ -1819,11 +1819,10 @@ Decl *Sema::ActOnStartCategoryInterface(
     // the enclosing method declarations.  We mark the decl invalid
     // to make it clear that this isn't a valid AST.
     CDecl = ObjCCategoryDecl::Create(Context, CurContext, AtInterfaceLoc,
-                                     ClassLoc, CategoryLoc, CategoryName, IDecl,
-                                     nullptr, typeParamList);
+                                     ClassLoc, CategoryLoc, CategoryName,
+                                     IDecl, typeParamList);
     CDecl->setInvalidDecl();
     CurContext->addDecl(CDecl);
-    CDecl->startDefinition();
 
     if (!IDecl)
       Diag(ClassLoc, diag::err_undef_interface) << ClassName;
@@ -1836,15 +1835,14 @@ Decl *Sema::ActOnStartCategoryInterface(
           diag::note_implementation_declared);
   }
 
-  ObjCCategoryDecl *PrevDecl = nullptr;
   if (CategoryName) {
     /// Check for duplicate interface declaration for this category
-    PrevDecl = IDecl->FindCategoryDeclaration(CategoryName);
-    if (!getLangOpts().Modules && PrevDecl) {
+    if (ObjCCategoryDecl *Previous
+          = IDecl->FindCategoryDeclaration(CategoryName)) {
       // Class extensions can be declared multiple times, categories cannot.
       Diag(CategoryLoc, diag::warn_dup_category_def)
         << ClassName << CategoryName;
-      Diag(PrevDecl->getLocation(), diag::note_previous_definition);
+      Diag(Previous->getLocation(), diag::note_previous_definition);
     }
   }
 
@@ -1869,21 +1867,15 @@ Decl *Sema::ActOnStartCategoryInterface(
 
   CDecl = ObjCCategoryDecl::Create(Context, CurContext, AtInterfaceLoc,
                                    ClassLoc, CategoryLoc, CategoryName, IDecl,
-                                   PrevDecl, typeParamList);
+                                   typeParamList);
+  // FIXME: PushOnScopeChains?
   CurContext->addDecl(CDecl);
-
-  if (!PrevDecl)
-    CDecl->startDefinition();
 
   // Process the attributes before looking at protocols to ensure that the
   // availability attribute is attached to the category to provide availability
   // checking for protocol uses.
   ProcessDeclAttributeList(TUScope, CDecl, AttrList);
   AddPragmaAttributes(TUScope, CDecl);
-
-  // Merge attributes from previous declarations.
-  if (PrevDecl)
-    mergeDeclAttributes(CDecl, PrevDecl);
 
   if (NumProtoRefs) {
     diagnoseUseOfProtocols(*this, CDecl, (ObjCProtocolDecl*const*)ProtoRefs,
@@ -1916,11 +1908,10 @@ Decl *Sema::ActOnStartCategoryImplementation(
       // Category @implementation with no corresponding @interface.
       // Create and install one.
       CatIDecl = ObjCCategoryDecl::Create(Context, CurContext, AtCatImplLoc,
-                                          ClassLoc, CatLoc, CatName, IDecl,
-                                          /*PrevDecl=*/nullptr,
+                                          ClassLoc, CatLoc,
+                                          CatName, IDecl,
                                           /*typeParamList=*/nullptr);
       CatIDecl->setImplicit();
-      CatIDecl->startDefinition();
     }
   }
 
@@ -2377,7 +2368,7 @@ static bool CheckMethodOverrideReturn(Sema &S,
                      : diag::warn_conflicting_ret_types;
 
   // Mismatches between ObjC pointers go into a different warning
-  // category, and sometimes they're even completely whitelisted.
+  // category, and sometimes they're even completely explicitly allowed.
   if (const ObjCObjectPointerType *ImplPtrTy =
           MethodImpl->getReturnType()->getAs<ObjCObjectPointerType>()) {
     if (const ObjCObjectPointerType *IfacePtrTy =
@@ -2461,7 +2452,7 @@ static bool CheckMethodOverrideParam(Sema &S,
                      : diag::warn_conflicting_param_types;
 
   // Mismatches between ObjC pointers go into a different warning
-  // category, and sometimes they're even completely whitelisted.
+  // category, and sometimes they're even completely explicitly allowed..
   if (const ObjCObjectPointerType *ImplPtrTy =
         ImplTy->getAs<ObjCObjectPointerType>()) {
     if (const ObjCObjectPointerType *IfacePtrTy =
@@ -3292,7 +3283,7 @@ bool Sema::MatchTwoMethodDeclarations(const ObjCMethodDecl *left,
     return false;
 
   // If either is hidden, it is not considered to match.
-  if (left->isHidden() || right->isHidden())
+  if (!left->isUnconditionallyVisible() || !right->isUnconditionallyVisible())
     return false;
 
   if (left->isDirectMethod() != right->isDirectMethod())
@@ -3551,7 +3542,7 @@ bool Sema::CollectMultipleMethodsInGlobalPool(
   ObjCMethodList &MethList = InstanceFirst ? Pos->second.first :
                              Pos->second.second;
   for (ObjCMethodList *M = &MethList; M; M = M->getNext())
-    if (M->getMethod() && !M->getMethod()->isHidden()) {
+    if (M->getMethod() && M->getMethod()->isUnconditionallyVisible()) {
       if (FilterMethodsByTypeBound(M->getMethod(), TypeBound))
         Methods.push_back(M->getMethod());
     }
@@ -3567,7 +3558,7 @@ bool Sema::CollectMultipleMethodsInGlobalPool(
   ObjCMethodList &MethList2 = InstanceFirst ? Pos->second.second :
                               Pos->second.first;
   for (ObjCMethodList *M = &MethList2; M; M = M->getNext())
-    if (M->getMethod() && !M->getMethod()->isHidden()) {
+    if (M->getMethod() && M->getMethod()->isUnconditionallyVisible()) {
       if (FilterMethodsByTypeBound(M->getMethod(), TypeBound))
         Methods.push_back(M->getMethod());
     }
@@ -3614,7 +3605,7 @@ ObjCMethodDecl *Sema::LookupMethodInGlobalPool(Selector Sel, SourceRange R,
   ObjCMethodList &MethList = instance ? Pos->second.first : Pos->second.second;
   SmallVector<ObjCMethodDecl *, 4> Methods;
   for (ObjCMethodList *M = &MethList; M; M = M->getNext()) {
-    if (M->getMethod() && !M->getMethod()->isHidden())
+    if (M->getMethod() && M->getMethod()->isUnconditionallyVisible())
       return M->getMethod();
   }
   return nullptr;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_QueueItem_h_
-#define liblldb_QueueItem_h_
+#ifndef LLDB_TARGET_QUEUEITEM_H
+#define LLDB_TARGET_QUEUEITEM_H
 
 #include <memory>
 #include <string>
@@ -159,9 +159,10 @@ protected:
   std::string m_target_queue_label;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(QueueItem);
+  QueueItem(const QueueItem &) = delete;
+  const QueueItem &operator=(const QueueItem &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_QueueItem_h_
+#endif // LLDB_TARGET_QUEUEITEM_H

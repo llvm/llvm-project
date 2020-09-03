@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __DNBDefs_h__
-#define __DNBDefs_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBDEFS_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBDEFS_H
 
 #include <signal.h>
 #include <stdint.h>
@@ -358,4 +358,4 @@ typedef void (*DNBCallbackLog)(void *baton, uint32_t flags, const char *format,
 
 #define UNUSED_IF_ASSERT_DISABLED(x) ((void)(x))
 
-#endif // #ifndef __DNBDefs_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBDEFS_H

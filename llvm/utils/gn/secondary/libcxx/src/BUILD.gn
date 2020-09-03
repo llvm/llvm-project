@@ -51,11 +51,6 @@ config("cxx_config") {
     "-Wno-covered-switch-default",
   ]
   cflags_cc = [ "-nostdinc++" ]
-  if (target_os == "win") {
-    cflags_cc += [ "/std:c++11" ]
-  } else {
-    cflags_cc += [ "-std=c++11" ]
-  }
   defines = [ "_LIBCPP_BUILDING_LIBRARY" ]
   if (target_os == "win") {
     cflags += [ "/Zl" ]
@@ -100,7 +95,6 @@ config("cxx_config") {
     } else {
       cflags_cc += [ "-fno-exceptions" ]
     }
-    defines += [ "_LIBCPP_NO_EXCEPTIONS" ]
   }
   if (!libcxx_enable_rtti) {
     if (current_os == "win") {
@@ -108,13 +102,14 @@ config("cxx_config") {
     } else {
       cflags_cc += [ "-fno-rtti" ]
     }
-    defines += [ "_LIBCPP_NO_RTTI" ]
   }
 }
 
 cxx_sources = [
   "algorithm.cpp",
   "any.cpp",
+  "atomic.cpp",
+  "barrier.cpp",
   "bind.cpp",
   "charconv.cpp",
   "chrono.cpp",
@@ -138,6 +133,7 @@ cxx_sources = [
   "new.cpp",
   "optional.cpp",
   "random.cpp",
+  "random_shuffle.cpp",
   "regex.cpp",
   "shared_mutex.cpp",
   "stdexcept.cpp",
@@ -172,8 +168,7 @@ if (target_os == "win") {
 }
 if (target_os == "solaris") {
   cxx_sources += [
-    # This comment prevents `gn format` from putting the file on the same line
-    # as `sources +=`, for sync_source_lists_from_cmake.py.
+    # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
     "support/solaris/xlocale.cpp",
   ]
 }
@@ -185,8 +180,7 @@ if (libcxx_enable_filesystem) {
   ]
   if (libcxx_use_compiler_rt) {
     cxx_sources += [
-      # This comment prevents `gn format` from putting the file on the same line
-      # as `sources +=`, for sync_source_lists_from_cmake.py.
+      # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
       "filesystem/int128_builtins.cpp",
     ]
   }
@@ -221,9 +215,7 @@ if (libcxx_enable_shared) {
   }
 
   symlink_or_copy("cxx_symlink") {
-    deps = [
-      ":cxx_shared",
-    ]
+    deps = [ ":cxx_shared" ]
     source = "libc++.so.0"
     output = "$runtimes_dir/libc++.so"
   }
@@ -231,9 +223,7 @@ if (libcxx_enable_shared) {
   if (libcxx_enable_abi_linker_script) {
     action("cxx_linker_script") {
       script = "//llvm/utils/gn/secondary/libcxx/utils/gen_link_script.py"
-      outputs = [
-        "$runtimes_dir/libc++.so",
-      ]
+      outputs = [ "$runtimes_dir/libc++.so" ]
       args = [
         "--input",
         rebase_path("$runtimes_dir/libc++.so.0", root_build_dir),
@@ -242,9 +232,7 @@ if (libcxx_enable_shared) {
         "c++abi",
         "unwind",
       ]
-      deps = [
-        ":cxx_symlink",
-      ]
+      deps = [ ":cxx_symlink" ]
     }
   }
 }
@@ -280,8 +268,8 @@ if (libcxx_enable_experimental) {
   static_library("cxx_experimental") {
     output_dir = runtimes_dir
     output_name = "c++experimental"
-    cflags_cc = [ "-std=c++14" ]
     sources = [
+      # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
       "experimental/memory_resource.cpp",
     ]
     configs += [ ":cxx_config" ]

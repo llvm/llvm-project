@@ -27,7 +27,7 @@ void hiding() {
 
 struct ExplicitCopy {
   ExplicitCopy(); // expected-note 2{{not viable}}
-  explicit ExplicitCopy(const ExplicitCopy&);
+  explicit ExplicitCopy(const ExplicitCopy&); // expected-note 2{{not a candidate}}
 };
 auto init_kind_1 = [ec(ExplicitCopy())] {};
 auto init_kind_2 = [ec = ExplicitCopy()] {}; // expected-error {{no matching constructor}}

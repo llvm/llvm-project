@@ -1,6 +1,6 @@
-# RUN: yaml2obj %p/Inputs/arm64-slice.yaml > %t-arm64.o
-# RUN: yaml2obj %p/Inputs/armv7-slice.yaml > %t-armv7.o
-# RUN: yaml2obj %p/Inputs/i386-x86_64-universal.yaml > %t-universal.o
+# RUN: yaml2obj %p/Inputs/arm64-slice.yaml -o %t-arm64.o
+# RUN: yaml2obj %p/Inputs/armv7-slice.yaml -o %t-armv7.o
+# RUN: yaml2obj %p/Inputs/i386-x86_64-universal.yaml -o %t-universal.o
 
 # segalign expects an architecture type followed by a hexadecimal value for alignment
 
@@ -65,8 +65,8 @@
 # RUN: llvm-lipo %t2.o -thin armv7 -o %thin-armv7.o
 # RUN: cmp %thin-armv7.o %t-armv7.o
 
-# RUN: yaml2obj %p/Inputs/armv7-slice-big.yaml > %t-armv7-big.o
-# RUN: yaml2obj %p/Inputs/i386-x86_64-armv7-arm64-universal.yaml > %t-universal-big.o
+# RUN: yaml2obj %p/Inputs/armv7-slice-big.yaml -o %t-armv7-big.o
+# RUN: yaml2obj %p/Inputs/i386-x86_64-armv7-arm64-universal.yaml -o %t-universal-big.o
 
 # RUN: llvm-lipo %t-universal-big.o -replace armv7 %t-armv7-big.o -o %t3.o -segalign armv7 4
 # RUN: llvm-objdump %t3.o -m --universal-headers | FileCheck --check-prefix=CHECK_REPLACE_ARMV7 %s

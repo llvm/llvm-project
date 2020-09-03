@@ -491,4 +491,23 @@ void test_close_modifier(int arg) {
   {++arg;}
 }
 #endif
+///==========================================================================///
+// RUN: %clang_cc1 -DCK7 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK7 --check-prefix CK7-64
+// RUN: %clang_cc1 -DCK7 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK7 --check-prefix CK7-64
+
+// RUN: %clang_cc1 -DCK7 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY7 %s
+// RUN: %clang_cc1 -DCK7 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY7 %s
+// SIMD-ONLY7-NOT: {{__kmpc|__tgt}}
+#ifdef CK7
+// CK7: test_device_ptr_addr
+void test_device_ptr_addr(int arg) {
+  int *p;
+  // CK7: add nsw i32
+  // CK7: add nsw i32
+  #pragma omp target data use_device_ptr(p) use_device_addr(arg)
+  { ++arg, ++(*p); }
+}
+#endif
 #endif

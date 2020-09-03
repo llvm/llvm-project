@@ -291,6 +291,6 @@ void ento::registerCStringSyntaxChecker(CheckerManager &mgr) {
   mgr.registerChecker<CStringSyntaxChecker>();
 }
 
-bool ento::shouldRegisterCStringSyntaxChecker(const LangOptions &LO) {
+bool ento::shouldRegisterCStringSyntaxChecker(const CheckerManager &mgr) {
   return true;
 }

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -pedantic -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -xc %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,c -xc %s
 
 #ifdef __OBJC__
 #if !__has_feature(objc_fixed_enum)
@@ -23,8 +23,8 @@ enum Color { Red, Green, Blue };
 struct X { 
   enum Color : 4;
   enum Color field1: 4;
-  enum Other : Integer field2;
-  enum Other : Integer field3 : 4;
+  enum Other : Integer field2; // c-error {{only permitted as a standalone}}
+  enum Other : Integer field3 : 4; // c-error {{only permitted as a standalone}}
   enum  : Integer { Blah, Blarg } field4 : 4;
 };
 

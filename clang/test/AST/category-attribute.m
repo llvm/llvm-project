@@ -1,5 +1,13 @@
+// Test without serialization:
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -ast-dump %s | FileCheck %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -emit-pch -o %t %s
+// RUN: %clang_cc1 -x objective-c -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck %s
+//
 // expected-no-diagnostics
 
 __attribute__ ((external_source_symbol(language= "Swift", defined_in="A")))

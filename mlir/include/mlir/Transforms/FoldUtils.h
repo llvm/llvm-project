@@ -1,6 +1,6 @@
 //===- FoldUtils.h - Operation Fold Utilities -------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -56,11 +56,12 @@ public:
   /// folded results, and returns success. `preReplaceAction` is invoked on `op`
   /// before it is replaced. 'processGeneratedConstants' is invoked for any new
   /// operations generated when folding. If the op was completely folded it is
-  /// erased.
+  /// erased. If it is just updated in place, `inPlaceUpdate` is set to true.
   LogicalResult
   tryToFold(Operation *op,
             function_ref<void(Operation *)> processGeneratedConstants = nullptr,
-            function_ref<void(Operation *)> preReplaceAction = nullptr);
+            function_ref<void(Operation *)> preReplaceAction = nullptr,
+            bool *inPlaceUpdate = nullptr);
 
   /// Notifies that the given constant `op` should be remove from this
   /// OperationFolder's internal bookkeeping.
@@ -75,11 +76,20 @@ public:
   template <typename OpTy, typename... Args>
   void create(OpBuilder &builder, SmallVectorImpl<Value> &results,
               Location location, Args &&... args) {
-    Operation *op = builder.create<OpTy>(location, std::forward<Args>(args)...);
-    if (failed(tryToFold(op, results)))
+    // The op needs to be inserted only if the fold (below) fails, or the number
+    // of results produced by the successful folding is zero (which is treated
+    // as an in-place fold). Using create methods of the builder will insert the
+    // op, so not using it here.
+    OperationState state(location, OpTy::getOperationName());
+    OpTy::build(builder, state, std::forward<Args>(args)...);
+    Operation *op = Operation::create(state);
+
+    if (failed(tryToFold(builder, op, results)) || results.empty()) {
+      builder.insert(op);
       results.assign(op->result_begin(), op->result_end());
-    else if (op->getNumResults() != 0)
-      op->erase();
+      return;
+    }
+    op->destroy();
   }
 
   /// Overload to create or fold a single result operation.
@@ -106,6 +116,14 @@ public:
     return op;
   }
 
+  /// Clear out any constants cached inside of the folder.
+  void clear();
+
+  /// Get or create a constant using the given builder. On success this returns
+  /// the constant operation, nullptr otherwise.
+  Value getOrCreateConstant(OpBuilder &builder, Dialect *dialect,
+                            Attribute value, Type type, Location loc);
+
 private:
   /// This map keeps track of uniqued constants by dialect, attribute, and type.
   /// A constant operation materializes an attribute with a type. Dialects may
@@ -117,7 +135,7 @@ private:
   /// Tries to perform folding on the given `op`. If successful, populates
   /// `results` with the results of the folding.
   LogicalResult tryToFold(
-      Operation *op, SmallVectorImpl<Value> &results,
+      OpBuilder &builder, Operation *op, SmallVectorImpl<Value> &results,
       function_ref<void(Operation *)> processGeneratedConstants = nullptr);
 
   /// Try to get or create a new constant entry. On success this returns the

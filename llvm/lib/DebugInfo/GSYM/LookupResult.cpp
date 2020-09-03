@@ -21,7 +21,7 @@ std::string LookupResult::getSourceFile(uint32_t Index) const {
   if (Index < Locations.size()) {
     if (!Locations[Index].Dir.empty()) {
       if (Locations[Index].Base.empty()) {
-        Fullpath = Locations[Index].Dir;
+        Fullpath = std::string(Locations[Index].Dir);
       } else {
         llvm::SmallString<64> Storage;
         llvm::sys::path::append(Storage, Locations[Index].Dir,
@@ -29,25 +29,30 @@ std::string LookupResult::getSourceFile(uint32_t Index) const {
         Fullpath.assign(Storage.begin(), Storage.end());
       }
     } else if (!Locations[Index].Base.empty())
-      Fullpath = Locations[Index].Base;
+      Fullpath = std::string(Locations[Index].Base);
   }
   return Fullpath;
 }
 
 raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const SourceLocation &SL) {
-  OS << SL.Name << " @ ";
-  if (!SL.Dir.empty()) {
-    OS << SL.Dir;
-    if (SL.Dir.contains('\\') and not SL.Dir.contains('/'))
-      OS << '\\';
+  OS << SL.Name;
+  if (SL.Offset > 0)
+    OS << " + " << SL.Offset;
+  if (SL.Dir.size() || SL.Base.size()) {
+    OS << " @ ";
+    if (!SL.Dir.empty()) {
+      OS << SL.Dir;
+      if (SL.Dir.contains('\\') and not SL.Dir.contains('/'))
+        OS << '\\';
+      else
+        OS << '/';
+    }
+    if (SL.Base.empty())
+      OS << "<invalid-file>";
     else
-      OS << '/';
+      OS << SL.Base;
+    OS << ':' << SL.Line;
   }
-  if (SL.Base.empty())
-    OS << "<invalid-file>";
-  else
-    OS << SL.Base;
-  OS << ':' << SL.Line;
   return OS;
 }
 

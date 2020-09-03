@@ -46,6 +46,10 @@ using namespace llvm;
 // create entries for pseudo groups like x86 or all-targets.
 #include "LibraryDependencies.inc"
 
+// Built-in extensions also register their dependencies, but in a separate file,
+// later in the process.
+#include "ExtensionDependencies.inc"
+
 // LinkMode determines what libraries and flags are returned by llvm-config.
 enum LinkMode {
   // LinkModeAuto will link with the default link mode for the installation,
@@ -108,6 +112,25 @@ static void VisitComponent(const std::string &Name,
     VisitComponent(AC->RequiredLibraries[i], ComponentMap, VisitedComponents,
                    RequiredLibs, IncludeNonInstalled, GetComponentNames,
                    GetComponentLibraryPath, Missing, DirSep);
+  }
+
+  // Special handling for the special 'extensions' component. Its content is
+  // not populated by llvm-build, but later in the process and loaded from
+  // ExtensionDependencies.inc.
+  if (Name == "extensions") {
+    for (auto const &AvailableExtension : AvailableExtensions) {
+      for (const char *const *Iter = &AvailableExtension.RequiredLibraries[0];
+           *Iter; ++Iter) {
+        AvailableComponent *AC = ComponentMap.lookup(*Iter);
+        if (!AC) {
+          RequiredLibs.push_back(*Iter);
+        } else {
+          VisitComponent(*Iter, ComponentMap, VisitedComponents, RequiredLibs,
+                         IncludeNonInstalled, GetComponentNames,
+                         GetComponentLibraryPath, Missing, DirSep);
+        }
+      }
+    }
   }
 
   if (GetComponentNames) {
@@ -338,7 +361,7 @@ int main(int argc, char **argv) {
     ActiveIncludeDir = ActivePrefix + "/include";
     SmallString<256> path(StringRef(LLVM_TOOLS_INSTALL_DIR));
     sys::fs::make_absolute(ActivePrefix, path);
-    ActiveBinDir = path.str();
+    ActiveBinDir = std::string(path.str());
     ActiveLibDir = ActivePrefix + "/lib" + LLVM_LIBDIR_SUFFIX;
     ActiveCMakeDir = ActiveLibDir + "/cmake/llvm";
     ActiveIncludeOption = "-I" + ActiveIncludeDir;
@@ -352,7 +375,8 @@ int main(int argc, char **argv) {
   /// in the first place. This can't be done at configure/build time.
 
   StringRef SharedExt, SharedVersionedExt, SharedDir, SharedPrefix, StaticExt,
-      StaticPrefix, StaticDir = "lib", DirSep = "/";
+      StaticPrefix, StaticDir = "lib";
+  std::string DirSep = "/";
   const Triple HostTriple(Triple::normalize(LLVM_HOST_TRIPLE));
   if (HostTriple.isOSWindows()) {
     SharedExt = "dll";
@@ -449,7 +473,7 @@ int main(int argc, char **argv) {
         // already has the necessary prefix and suffix (e.g. `.so`) added so
         // just return it unmodified.
         assert(Lib.endswith(SharedExt) && "DyLib is missing suffix");
-        LibFileName = Lib;
+        LibFileName = std::string(Lib);
       } else {
         LibFileName = (SharedPrefix + Lib + "." + SharedExt).str();
       }

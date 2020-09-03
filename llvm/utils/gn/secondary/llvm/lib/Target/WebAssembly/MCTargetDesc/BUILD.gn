@@ -6,12 +6,6 @@ tablegen("WebAssemblyGenAsmWriter") {
   td_file = "../WebAssembly.td"
 }
 
-tablegen("WebAssemblyGenInstrInfo") {
-  visibility = [ ":MCTargetDesc" ]
-  args = [ "-gen-instr-info" ]
-  td_file = "../WebAssembly.td"
-}
-
 tablegen("WebAssemblyGenMCCodeEmitter") {
   visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-emitter" ]
@@ -37,7 +31,6 @@ static_library("MCTargetDesc") {
   # by other targets. .inc files only used by .cpp files in this directory
   # should be in deps instead.
   public_deps = [
-    ":WebAssemblyGenInstrInfo",
     ":WebAssemblyGenRegisterInfo",
     ":WebAssemblyGenSubtargetInfo",
   ]

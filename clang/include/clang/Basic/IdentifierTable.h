@@ -48,6 +48,8 @@ using IdentifierLocPair = std::pair<IdentifierInfo *, SourceLocation>;
 /// of a pointer to one of these classes.
 enum { IdentifierInfoAlignment = 8 };
 
+static constexpr int ObjCOrBuiltinIDBits = 15;
+
 /// One of these records is kept for each identifier that
 /// is lexed.  This contains information about whether the token was \#define'd,
 /// is a language keyword, or if it is a front-end token of some sort (e.g. a
@@ -63,7 +65,7 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   // ObjC keyword ('protocol' in '@protocol') or builtin (__builtin_inf).
   // First NUM_OBJC_KEYWORDS values are for Objective-C,
   // the remaining values are for builtins.
-  unsigned ObjCOrBuiltinID : 13;
+  unsigned ObjCOrBuiltinID : ObjCOrBuiltinIDBits;
 
   // True if there is a #define for this.
   unsigned HasMacro : 1;
@@ -104,7 +106,10 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   // True if this is the 'import' contextual keyword.
   unsigned IsModulesImport : 1;
 
-  // 30 bits left in a 64-bit word.
+  // True if this is a mangled OpenMP variant name.
+  unsigned IsMangledOpenMPVariantName : 1;
+
+  // 29 bits left in a 64-bit word.
 
   // Managed by the language front-end.
   void *FETokenInfo = nullptr;
@@ -117,7 +122,7 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
         IsPoisoned(false), IsCPPOperatorKeyword(false),
         NeedsHandleIdentifier(false), IsFromAST(false), ChangedAfterLoad(false),
         RevertedTokenID(false), OutOfDate(false),
-        IsModulesImport(false) {}
+        IsModulesImport(false), IsMangledOpenMPVariantName(false) {}
 
 public:
   IdentifierInfo(const IdentifierInfo &) = delete;
@@ -354,6 +359,12 @@ public:
     else
       RecomputeNeedsHandleIdentifier();
   }
+
+  /// Determine whether this is the mangled name of an OpenMP variant.
+  bool isMangledOpenMPVariantName() const { return IsMangledOpenMPVariantName; }
+
+  /// Set whether this is the mangled name of an OpenMP variant.
+  void setMangledOpenMPVariantName(bool I) { IsMangledOpenMPVariantName = I; }
 
   /// Return true if this identifier is an editor placeholder.
   ///
@@ -951,7 +962,7 @@ struct PointerLikeTypeTraits<clang::Selector> {
     return clang::Selector(reinterpret_cast<uintptr_t>(P));
   }
 
-  enum { NumLowBitsAvailable = 0 };
+  static constexpr int NumLowBitsAvailable = 0;
 };
 
 // Provide PointerLikeTypeTraits for IdentifierInfo pointers, which
@@ -966,7 +977,7 @@ struct PointerLikeTypeTraits<clang::IdentifierInfo*> {
     return static_cast<clang::IdentifierInfo*>(P);
   }
 
-  enum { NumLowBitsAvailable = 1 };
+  static constexpr int NumLowBitsAvailable = 1;
 };
 
 template<>
@@ -979,7 +990,7 @@ struct PointerLikeTypeTraits<const clang::IdentifierInfo*> {
     return static_cast<const clang::IdentifierInfo*>(P);
   }
 
-  enum { NumLowBitsAvailable = 1 };
+  static constexpr int NumLowBitsAvailable = 1;
 };
 
 } // namespace llvm

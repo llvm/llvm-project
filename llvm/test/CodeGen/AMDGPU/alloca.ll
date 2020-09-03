@@ -4,7 +4,7 @@
 ; RUN: opt -data-layout=A5 -S < %s
 ; RUN: llvm-as -data-layout=A5 < %s | opt -S
 
-; CHECK: %tmp = alloca i32, addrspace(5)
+; CHECK: %tmp = alloca i32, align 4, addrspace(5)
 define amdgpu_kernel void @test() {
   %tmp = alloca i32, addrspace(5)
   ret void

@@ -1,6 +1,6 @@
 //===- SPIRVAvailability.td - Op Availability Base file ----*- tablegen -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -12,7 +12,7 @@
 include "mlir/IR/OpBase.td"
 
 //===----------------------------------------------------------------------===//
-// Op availaility definitions
+// Op availability definitions
 //===----------------------------------------------------------------------===//
 
 // The base class for defining op availability dimensions.
@@ -47,6 +47,9 @@ class Availability {
 
   // The following are fields for a concrete availability instance.
 
+  // The code for preparing a concrete instance. This should be C++ statements
+  // and will be generated before the `mergeAction` logic.
+  code instancePreparation = "";
   // The availability requirement carried by a concrete instance.
   string instance = ?;
 }

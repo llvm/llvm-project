@@ -157,6 +157,10 @@ This is recorded in an ELF segment of type
 .It Fl -dynamic-list Ns = Ns Ar file
 Read a list of dynamic symbols from
 .Ar file .
+(executable) Put matched non-local defined symbols to the dynamic symbol table.
+(shared object) References to matched non-local STV_DEFAULT symbols shouldn't be bound to definitions within the shared object. Implies
+.Cm -Bsymbolic
+but does not set DF_SYMBOLIC
 .It Fl -eh-frame-hdr
 Request creation of
 .Li .eh_frame_hdr
@@ -184,10 +188,14 @@ This option is currently only supported on AArch64.
 Exclude static libraries from automatic export.
 .It Fl -export-dynamic , Fl E
 Put symbols in the dynamic symbol table.
-.It Fl -export-dynamic-symbol Ns = Ns Ar symbol
-Include
-.Ar symbol
-in the dynamic symbol table.
+.It Fl -export-dynamic-symbol Ns = Ns Ar glob
+(executable) Put matched non-local defined symbols to the dynamic symbol table.
+(shared object) References to matched non-local STV_DEFAULT symbols shouldn't be bound to definitions within the shared object even if they would otherwise be due to
+.Cm -Bsymbolic
+,
+.Cm -Bsymbolic-functions
+or
+.Cm --dynamic-list
 .It Fl -fatal-warnings
 Treat warnings as errors.
 .It Fl -filter Ns = Ns Ar value , Fl F Ar value
@@ -300,10 +308,10 @@ Disable merging .ARM.exidx entries.
 Page align sections.
 .It Fl -no-omagic
 Do not set the text data sections to be writable, page align sections.
+.It Fl -no-relax
+Disable target-specific relaxations. This is currently a no-op.
 .It Fl -no-rosegment
 Do not put read-only non-executable sections in their own segment.
-.It Fl -no-threads
-Do not run the linker multi-threaded.
 .It Fl -no-undefined-version
 Report version scripts that refer undefined symbols.
 .It Fl -no-undefined
@@ -416,6 +424,9 @@ List removed unused sections.
 List identical folded sections.
 .It Fl -print-map
 Print a link map to the standard output.
+.It Fl -print-archive-stats Ns = Ns Ar file
+Write archive usage statistics to the specified file.
+Print the numbers of members and fetched members for each archive.
 .It Fl -push-state
 Save the current state of
 .Fl -as-needed ,
@@ -456,6 +467,8 @@ were concatenated in the order they appeared on the command line.
 Set address of section.
 .It Fl -shared , Fl -Bsharable
 Build a shared object.
+.It Fl -shuffle-sections Ns = Ns Ar seed
+Shuffle input sections using the given seed. If 0, use a random seed.
 .It Fl -soname Ns = Ns Ar value , Fl h Ar value
 Set
 .Dv DT_SONAME
@@ -523,9 +536,19 @@ Path to ThinLTO cached object file directory.
 Pruning policy for the ThinLTO cache.
 .It Fl -thinlto-jobs Ns = Ns Ar value
 Number of ThinLTO jobs.
-.It Fl -threads
-Run the linker multi-threaded.
-This option is enabled by default.
+.It Fl -threads Ns = Ns Ar N
+Number of threads.
+.Cm all
+(default) means all of concurrent threads supported.
+.Cm 1
+disables multi-threading.
+.It Fl -time-trace
+Record time trace.
+.It Fl -time-trace-file Ns = Ns Ar file
+Write time trace output to
+.Ar file .
+.It Fl -time-trace-granularity Ns = Ns Ar value
+Minimum time granularity (in microseconds) traced by time profiler.
 .It Fl -trace
 Print the names of the input files.
 .It Fl -trace-symbol Ns = Ns Ar symbol , Fl y Ar symbol
@@ -551,6 +574,8 @@ matches the characters within brackets.
 All symbols that match
 a given pattern are handled as if they were given as arguments of
 .Fl -undefined .
+.It Fl -unique
+Creates a separate output section for every orphan input section.
 .It Fl -unresolved-symbols Ns = Ns Ar value
 Determine how to handle unresolved symbols.
 .It Fl -use-android-relr-tags
@@ -569,6 +594,10 @@ Read version script from
 Warn about reverse or cyclic dependencies to or between static archives.
 This can be used to ensure linker invocation remains compatible with
 traditional Unix-like linkers.
+.It Fl -warn-backrefs-exclude Ns = Ns Ar glob
+Glob describing an archive (or an object file within --start-lib)
+which should be ignored for
+.Fl -warn-backrefs
 .It Fl -warn-common
 Warn about duplicate common symbols.
 .It Fl -warn-ifunc-textrel
@@ -596,6 +625,13 @@ Use wrapper functions for symbol.
 Linker option extensions.
 .Bl -tag -width indent -compact
 .Pp
+.It Cm dead-reloc-in-nonalloc Ns = Ns Ar section_glob=value
+Resolve a relocation in a matched non-SHF_ALLOC section referencing a discarded symbol to
+.Ar value
+Accepts globs, in the event of a section matching more than one option, the last
+option takes precedence. An order of least specific to most specific match is
+recommended.
+.Pp
 .It Cm execstack
 Make the main stack executable.
 Stack permissions are recorded in the
@@ -604,6 +640,10 @@ segment.
 .Pp
 .It Cm force-bti
 Force enable AArch64 BTI instruction in PLT, warn if Input ELF file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property.
+.Pp
+.It Cm force-ibt
+Force enable Intel Indirect Branch Tracking in PLT, warn if an input ELF file
+does not have GNU_PROPERTY_X86_FEATURE_1_IBT property.
 .Pp
 .It Cm global
 Sets the
@@ -667,7 +707,7 @@ Do not emit the
 segment.
 .Pp
 .It Cm norelro
-Do not indicate that portions of the object shold be mapped read-only
+Do not indicate that portions of the object should be mapped read-only
 after initial relocation processing.
 The object will omit the
 .Dv PT_GNU_RELRO
@@ -697,6 +737,12 @@ processing.
 .It Cm pac-plt
 AArch64 only, use pointer authentication in PLT.
 .Pp
+.It Cm rel
+Use REL format for dynamic relocations.
+.Pp
+.It Cm rela
+Use RELA format for dynamic relocations.
+.Pp
 .It Cm retpolineplt
 Emit retpoline format PLT entries as a mitigation for CVE-2017-5715.
 .Pp
@@ -718,6 +764,9 @@ Specify whether two adjacent PT_LOAD segments are allowed to overlap in pages.
 allows overlap between two executable segments, or two non-executable segments.
 .Cm separate-loadable-segments
 disallows overlap.
+.Pp
+.It Cm shstk
+x86 only, use shadow stack.
 .Pp
 .It Cm stack-size Ns = Ns Ar size
 Set the main thread's stack size to

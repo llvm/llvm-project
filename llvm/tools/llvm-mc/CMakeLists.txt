@@ -1,9 +1,9 @@
 set(LLVM_LINK_COMPONENTS
-  AllTargetsAsmPrinters
   AllTargetsAsmParsers
   AllTargetsDescs
   AllTargetsDisassemblers
   AllTargetsInfos
+  CodeGen
   MC
   MCParser
   Support

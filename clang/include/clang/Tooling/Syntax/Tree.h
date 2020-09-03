@@ -110,6 +110,12 @@ public:
   /// Dumps the tokens forming this subtree.
   std::string dumpTokens(const Arena &A) const;
 
+  /// Asserts invariants on this node of the tree and its immediate children.
+  /// Will not recurse into the subtree. No-op if NDEBUG is set.
+  void assertInvariants() const;
+  /// Runs checkInvariants on all nodes in the subtree. No-op if NDEBUG is set.
+  void assertInvariantsRecursive() const;
+
 private:
   // Tree is allowed to change the Parent link and Role.
   friend class Tree;
@@ -117,6 +123,10 @@ private:
   friend class TreeBuilder;
   // MutationsImpl sets roles and CanModify flag.
   friend class MutationsImpl;
+  // FactoryImpl sets CanModify flag.
+  friend class FactoryImpl;
+
+  void setRole(NodeRole NR);
 
   Tree *Parent;
   Node *NextSibling;
@@ -163,8 +173,11 @@ private:
   /// Prepend \p Child to the list of children and and sets the parent pointer.
   /// A very low-level operation that does not check any invariants, only used
   /// by TreeBuilder and FactoryImpl.
-  /// EXPECTS: Role != NodeRoleDetached.
+  /// EXPECTS: Role != Detached.
   void prependChildLowLevel(Node *Child, NodeRole Role);
+  /// Like the previous overload, but does not set role for \p Child.
+  /// EXPECTS: Child->Role != Detached
+  void prependChildLowLevel(Node *Child);
   friend class TreeBuilder;
   friend class FactoryImpl;
 

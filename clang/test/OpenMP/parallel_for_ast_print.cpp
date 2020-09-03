@@ -70,8 +70,8 @@ T tmain(T argc) {
 // CHECK: static T a;
   static T g;
 #pragma omp threadprivate(g)
-#pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a) lastprivate(conditional: d, e,f)
-  // CHECK: #pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a) lastprivate(conditional: d,e,f)
+#pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a) lastprivate(conditional: d, e,f) order(concurrent)
+  // CHECK: #pragma omp parallel for schedule(dynamic) default(none) copyin(g) linear(a) allocate(a) lastprivate(conditional: d,e,f) order(concurrent)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
@@ -132,8 +132,8 @@ int main(int argc, char **argv) {
 // CHECK: static int a;
   static float g;
 #pragma omp threadprivate(g)
-#pragma omp parallel for schedule(guided, argc) default(none) copyin(g) linear(a) shared(argc)
-  // CHECK: #pragma omp parallel for schedule(guided, argc) default(none) copyin(g) linear(a) shared(argc)
+#pragma omp parallel for schedule(guided, argc) default(none) copyin(g) linear(a) shared(argc) reduction(task,&:d)
+  // CHECK: #pragma omp parallel for schedule(guided, argc) default(none) copyin(g) linear(a) shared(argc) reduction(task, &: d)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=verde -amdgpu-early-ifcvt=0 -machine-sink-split-probability-threshold=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-early-ifcvt=0 -machine-sink-split-probability-threshold=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=verde -amdgpu-early-ifcvt=0 -machine-sink-split-probability-threshold=0 -structurizecfg-skip-uniform-regions -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-early-ifcvt=0 -machine-sink-split-probability-threshold=0 -structurizecfg-skip-uniform-regions -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
 
 ; GCN-LABEL: {{^}}uniform_if_scc:
 ; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 0
@@ -335,7 +335,7 @@ endif:
 ; GCN: [[IF_LABEL]]:
 ; GCN: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GCN: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN: ; mask branch [[ENDIF_LABEL]]
+; GCN: s_cbranch_execz [[ENDIF_LABEL]]
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN: buffer_store_dword [[ONE]]
 ; GCN: s_endpgm

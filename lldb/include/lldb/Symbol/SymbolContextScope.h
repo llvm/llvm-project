@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SymbolContextScope_h_
-#define liblldb_SymbolContextScope_h_
+#ifndef LLDB_SYMBOL_SYMBOLCONTEXTSCOPE_H
+#define LLDB_SYMBOL_SYMBOLCONTEXTSCOPE_H
 
 #include "lldb/lldb-private.h"
 
@@ -100,4 +100,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_SymbolContextScope_h_
+#endif // LLDB_SYMBOL_SYMBOLCONTEXTSCOPE_H

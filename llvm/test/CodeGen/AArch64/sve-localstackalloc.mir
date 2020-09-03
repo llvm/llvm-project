@@ -1,0 +1,61 @@
+# RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve -run-pass=localstackalloc -o - %s | FileCheck %s
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+
+  define <vscale x 32 x i8> @insert_32i8_idx(<vscale x 32 x i8> %a, i8 %elt, i64 %idx) #0 {
+    %ins = insertelement <vscale x 32 x i8> %a, i8 %elt, i64 %idx
+    ret <vscale x 32 x i8> %ins
+  }
+
+  attributes #0 = { "target-features"="+sve" }
+
+...
+---
+name:            insert_32i8_idx
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: zpr, preferred-register: '' }
+  - { id: 1, class: zpr, preferred-register: '' }
+  - { id: 2, class: gpr32, preferred-register: '' }
+  - { id: 3, class: gpr64, preferred-register: '' }
+  - { id: 5, class: ppr_3b, preferred-register: '' }
+  - { id: 6, class: gpr64sp, preferred-register: '' }
+  - { id: 7, class: zpr, preferred-register: '' }
+  - { id: 8, class: zpr, preferred-register: '' }
+liveins:
+  - { reg: '$z0', virtual-reg: '%0' }
+  - { reg: '$z1', virtual-reg: '%1' }
+  - { reg: '$w0', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+# CHECK-LABEL: name: insert_32i8_idx
+# CHECK: localFrameSize:  0
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 32, alignment: 16,
+      stack-id: sve-vec, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $z0, $z1, $w0
+
+    %2:gpr32 = COPY $w0
+    %1:zpr = COPY $z1
+    %0:zpr = COPY $z0
+    %5:ppr_3b = PTRUE_B 31
+    %6:gpr64sp = ADDXri %stack.0, 0, 0
+    ST1B_IMM %1, %5, %6, 1 :: (store unknown-size, align 16)
+    ST1B_IMM %0, %5, %stack.0, 0 :: (store unknown-size into %stack.0, align 16)
+    %7:zpr = LD1B_IMM %5, %6, 1 :: (load unknown-size from %stack.0 + 16, align 16)
+    %8:zpr = LD1B_IMM %5, %stack.0, 0 :: (load unknown-size from %stack.0, align 16)
+    $z0 = COPY %8
+    $z1 = COPY %7
+    RET_ReallyLR implicit $z0, implicit $z1
+
+...

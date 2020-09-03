@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -verify -std=c++11 -Wall %s
 
 struct Bitfield {
-  int n : 3 = 7; // expected-warning {{C++2a extension}} expected-warning {{changes value from 7 to -1}}
+  int n : 3 = 7; // expected-warning {{C++20 extension}} expected-warning {{changes value from 7 to -1}}
 };
 
 int a;
@@ -64,7 +64,7 @@ namespace PR10578 {
   template<typename T>
   struct X { 
     X() {
-      T* x = 1; // expected-error{{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}}
+      T* x = 1; // expected-error{{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}} expected-warning {{unused variable}}
     }
   };
 

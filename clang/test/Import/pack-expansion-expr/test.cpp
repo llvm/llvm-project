@@ -3,9 +3,10 @@
 // CHECK: PackExpansionExpr
 // CHECK-SAME: '<dependent type>'
 // CHECK-NEXT: DeclRefExpr
-// CHECK-SAME: 'T...'
+// CHECK-SAME: 'T'
 // CHECK-SAME: ParmVar
 // CHECK-SAME: 'a'
+// CHECK-SAME: 'T...'
 
 void expr() {
   f();

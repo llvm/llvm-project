@@ -24,7 +24,7 @@ public:
   static inline const Region *getFromVoidPointer(void *P) {
     return (Region *)P;
   }
-  enum { NumLowBitsAvailable = 0 };
+  static constexpr int NumLowBitsAvailable = 0;
 };
 } // namespace llvm
 

@@ -13,7 +13,7 @@
 
 set -e
 
-projects="llvm clang test-suite compiler-rt libcxx libcxxabi clang-tools-extra polly lldb lld openmp libunwind"
+projects="llvm clang test-suite compiler-rt libcxx libcxxabi clang-tools-extra polly lldb lld openmp libunwind flang"
 
 release=""
 rc=""

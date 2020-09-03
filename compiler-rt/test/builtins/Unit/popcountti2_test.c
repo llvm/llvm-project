@@ -1,17 +1,6 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_popcountti2
 // REQUIRES: int128
-//===-- popcountti2_test.c - Test __popcountti2 ----------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __popcountti2 for the compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
 
 #include "int_lib.h"
 #include <stdio.h>
@@ -21,7 +10,7 @@
 
 // Returns: count of 1 bits
 
-COMPILER_RT_ABI si_int __popcountti2(ti_int a);
+COMPILER_RT_ABI int __popcountti2(ti_int a);
 
 int naive_popcount(ti_int a)
 {

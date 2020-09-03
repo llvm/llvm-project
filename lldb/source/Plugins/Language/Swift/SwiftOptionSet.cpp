@@ -125,7 +125,7 @@ std::string lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
               SkipsPointers() ? " (skip pointers)" : "",
               SkipsReferences() ? " (skip references)" : "",
               HideNames(nullptr) ? " (hide member names)" : "");
-  return sstr.GetString();
+  return sstr.GetString().str();
 }
 
 static bool ReadValueIfAny(ValueObject &valobj, llvm::APInt &value) {

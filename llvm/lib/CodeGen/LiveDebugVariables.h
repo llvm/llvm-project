@@ -41,7 +41,7 @@ public:
   /// splitRegister - Move any user variables in OldReg to the live ranges in
   /// NewRegs where they are live. Mark the values as unavailable where no new
   /// register is live.
-  void splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs,
+  void splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
                      LiveIntervals &LIS);
 
   /// emitDebugValues - Emit new DBG_VALUE instructions reflecting the changes

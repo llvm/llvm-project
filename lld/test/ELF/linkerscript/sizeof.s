@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 
 # RUN: echo "SECTIONS { \
 # RUN:   .aaa         : { *(.aaa) } \
@@ -8,32 +8,22 @@
 # RUN:   _aaa = SIZEOF(.aaa); \
 # RUN:   _bbb = SIZEOF(.bbb); \
 # RUN:   _ccc = SIZEOF(.ccc); \
+# RUN:   _ddd = SIZEOF(.not_exist); \
 # RUN: }" > %t.script
-# RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-objdump -t -section-headers %t1 | FileCheck %s
-# CHECK:      Sections:
-# CHECK-NEXT:  Idx Name          Size
-# CHECK-NEXT:    0               00000000
-# CHECK-NEXT:    1 .aaa          00000008
-# CHECK-NEXT:    2 .bbb          00000010
-# CHECK-NEXT:    3 .ccc          00000018
-# CHECK:      SYMBOL TABLE:
-# CHECK-NEXT:                   .text 00000000 _start
-# CHECK-NEXT:  0000000000000008 *ABS* 00000000 _aaa
-# CHECK-NEXT:  0000000000000010 *ABS* 00000000 _bbb
-# CHECK-NEXT:  0000000000000018 *ABS* 00000000 _ccc
+# RUN: ld.lld -T %t.script %t.o -o %t
+# RUN: llvm-readelf -S -s %t | FileCheck %s
 
-## SIZEOF(.nonexistent_section) should return 0.
-# RUN: echo "SECTIONS { \
-# RUN:   .aaa         : { *(.aaa) } \
-# RUN:   .bbb         : { *(.bbb) } \
-# RUN:   .ccc         : { *(.ccc) } \
-# RUN:   _aaa = SIZEOF(.foo); \
-# RUN: }" > %t.script
-# RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-objdump -t -section-headers %t1 | FileCheck -check-prefix=CHECK2 %s
+# CHECK:      Name Type     Address          Off    Size
+# CHECK:      .aaa PROGBITS 0000000000000000 001000 000008
+# CHECK-NEXT: .bbb PROGBITS 0000000000000008 001008 000010
+# CHECK-NEXT: .ccc PROGBITS 0000000000000018 001018 000018
 
-# CHECK2: 0000000000000000 *ABS* 00000000 _aaa
+# CHECK:        Value          Size Type   Bind   Vis     Ndx Name
+# CHECK:      0000000000000008    0 NOTYPE GLOBAL DEFAULT ABS _aaa
+# CHECK-NEXT: 0000000000000010    0 NOTYPE GLOBAL DEFAULT ABS _bbb
+# CHECK-NEXT: 0000000000000018    0 NOTYPE GLOBAL DEFAULT ABS _ccc
+## SIZEOF(.not_exist) has a value of 0.
+# CHECK-NEXT: 0000000000000000    0 NOTYPE GLOBAL DEFAULT ABS _ddd
 
 .global _start
 _start:

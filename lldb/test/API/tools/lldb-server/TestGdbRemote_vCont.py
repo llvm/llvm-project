@@ -106,15 +106,6 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows # No pty support to test O* & I* notification packets.
     @llgs_test
-    @expectedFailureAndroid(
-        bugnumber="llvm.org/pr24739",
-        archs=[
-            "arm",
-            "aarch64"])
-    @expectedFailureAll(
-        oslist=["linux"],
-        archs=["arm"],
-        bugnumber="llvm.org/pr24739")
     @skipIf(triple='^mips')
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://27005337")
     def test_single_step_only_steps_one_instruction_with_Hc_vCont_s_llgs(self):
@@ -136,15 +127,6 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows # No pty support to test O* & I* notification packets.
     @llgs_test
-    @expectedFailureAndroid(
-        bugnumber="llvm.org/pr24739",
-        archs=[
-            "arm",
-            "aarch64"])
-    @expectedFailureAll(
-        oslist=["linux"],
-        archs=["arm"],
-        bugnumber="llvm.org/pr24739")
     @skipIf(triple='^mips')
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://27005337")
     def test_single_step_only_steps_one_instruction_with_vCont_s_thread_llgs(

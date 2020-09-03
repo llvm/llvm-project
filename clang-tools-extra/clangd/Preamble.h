@@ -28,8 +28,12 @@
 #include "FS.h"
 #include "Headers.h"
 #include "index/CanonicalIncludes.h"
+#include "support/Path.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <memory>
 #include <string>
@@ -43,11 +47,14 @@ namespace clangd {
 /// As we must avoid re-parsing the preamble, any information that can only
 /// be obtained during parsing must be eagerly captured and stored here.
 struct PreambleData {
-  PreambleData(PrecompiledPreamble Preamble, std::vector<Diag> Diags,
-               IncludeStructure Includes, MainFileMacros Macros,
+  PreambleData(const ParseInputs &Inputs, PrecompiledPreamble Preamble,
+               std::vector<Diag> Diags, IncludeStructure Includes,
+               MainFileMacros Macros,
                std::unique_ptr<PreambleFileStatusCache> StatCache,
                CanonicalIncludes CanonIncludes);
 
+  // Version of the ParseInputs this preamble was built from.
+  std::string Version;
   tooling::CompileCommand CompileCommand;
   PrecompiledPreamble Preamble;
   std::vector<Diag> Diags;
@@ -69,18 +76,70 @@ using PreambleParsedCallback =
                        const CanonicalIncludes &)>;
 
 /// Build a preamble for the new inputs unless an old one can be reused.
-/// If \p OldPreamble can be reused, it is returned unchanged.
-/// If \p OldPreamble is null, always builds the preamble.
 /// If \p PreambleCallback is set, it will be run on top of the AST while
-/// building the preamble. Note that if the old preamble was reused, no AST is
-/// built and, therefore, the callback will not be executed.
+/// building the preamble.
 std::shared_ptr<const PreambleData>
-buildPreamble(PathRef FileName, CompilerInvocation &CI,
-              std::shared_ptr<const PreambleData> OldPreamble,
-              const tooling::CompileCommand &OldCompileCommand,
+buildPreamble(PathRef FileName, CompilerInvocation CI,
               const ParseInputs &Inputs, bool StoreInMemory,
               PreambleParsedCallback PreambleCallback);
 
+/// Returns true if \p Preamble is reusable for \p Inputs. Note that it will
+/// return true when some missing headers are now available.
+/// FIXME: Should return more information about the delta between \p Preamble
+/// and \p Inputs, e.g. new headers.
+bool isPreambleCompatible(const PreambleData &Preamble,
+                          const ParseInputs &Inputs, PathRef FileName,
+                          const CompilerInvocation &CI);
+
+/// Stores information required to parse a TU using a (possibly stale) Baseline
+/// preamble. Later on this information can be injected into the main file by
+/// updating compiler invocation with \c apply. This injected section
+/// approximately reflects additions to the preamble in Modified contents, e.g.
+/// new include directives.
+class PreamblePatch {
+public:
+  /// \p Preamble is used verbatim.
+  static PreamblePatch unmodified(const PreambleData &Preamble);
+  /// Builds a patch that contains new PP directives introduced to the preamble
+  /// section of \p Modified compared to \p Baseline.
+  /// FIXME: This only handles include directives, we should at least handle
+  /// define/undef.
+  static PreamblePatch create(llvm::StringRef FileName,
+                              const ParseInputs &Modified,
+                              const PreambleData &Baseline);
+  /// Adjusts CI (which compiles the modified inputs) to be used with the
+  /// baseline preamble. This is done by inserting an artifical include to the
+  /// \p CI that contains new directives calculated in create.
+  void apply(CompilerInvocation &CI) const;
+
+  /// Returns #include directives from the \c Modified preamble that were
+  /// resolved using the \c Baseline preamble. This covers the new locations of
+  /// inclusions that were moved around, but not inclusions of new files. Those
+  /// will be recorded when parsing the main file: the includes in the injected
+  /// section will be resolved back to their spelled positions in the main file
+  /// using the presumed-location mechanism.
+  std::vector<Inclusion> preambleIncludes() const;
+
+  /// Returns preamble bounds for the Modified.
+  PreambleBounds modifiedBounds() const { return ModifiedBounds; }
+
+  /// Returns textual patch contents.
+  llvm::StringRef text() const { return PatchContents; }
+
+private:
+  PreamblePatch() = default;
+  std::string PatchContents;
+  std::string PatchFileName;
+  /// Includes that are present in both \p Baseline and \p Modified. Used for
+  /// patching includes of baseline preamble.
+  std::vector<Inclusion> PreambleIncludes;
+  PreambleBounds ModifiedBounds = {0, false};
+};
+
+/// Translates locations inside preamble patch to their main-file equivalent
+/// using presumed locations. Returns \p Loc if it isn't inside preamble patch.
+SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
+                                              const SourceManager &SM);
 
 } // namespace clangd
 } // namespace clang

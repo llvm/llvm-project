@@ -7,9 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_ValueObjectPrinter_h_
-#define lldb_ValueObjectPrinter_h_
-
+#ifndef LLDB_DATAFORMATTERS_VALUEOBJECTPRINTER_H
+#define LLDB_DATAFORMATTERS_VALUEOBJECTPRINTER_H
 
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
@@ -58,7 +57,7 @@ protected:
 
   const char *GetDescriptionForDisplay();
 
-  const char *GetRootNameForDisplay(const char *if_fail = nullptr);
+  const char *GetRootNameForDisplay();
 
   bool ShouldPrintValueObject();
 
@@ -142,9 +141,10 @@ private:
 
   friend struct StringSummaryFormat;
 
-  DISALLOW_COPY_AND_ASSIGN(ValueObjectPrinter);
+  ValueObjectPrinter(const ValueObjectPrinter &) = delete;
+  const ValueObjectPrinter &operator=(const ValueObjectPrinter &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // lldb_ValueObjectPrinter_h_
+#endif // LLDB_DATAFORMATTERS_VALUEOBJECTPRINTER_H

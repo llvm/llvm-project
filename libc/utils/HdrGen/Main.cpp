@@ -1,4 +1,4 @@
-//===---------------- "main" function of libc-hdrgen ------------*- C++ -*-===//
+//===-- "main" function of libc-hdrgen ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,13 +25,13 @@ llvm::cl::opt<std::string> StandardHeader(
     llvm::cl::desc("The standard header file which is to be generated."),
     llvm::cl::value_desc("<header file>"));
 llvm::cl::list<std::string> ReplacementValues(
-    "args", llvm::cl::desc("Command seperated <argument name>=<value> pairs."),
+    "args", llvm::cl::desc("Command separated <argument name>=<value> pairs."),
     llvm::cl::value_desc("<name=value>[,name=value]"));
 
 void ParseArgValuePairs(std::unordered_map<std::string, std::string> &Map) {
   for (std::string &R : ReplacementValues) {
     auto Pair = llvm::StringRef(R).split('=');
-    Map[Pair.first] = Pair.second;
+    Map[std::string(Pair.first)] = std::string(Pair.second);
   }
 }
 

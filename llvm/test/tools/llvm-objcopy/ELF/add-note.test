@@ -11,7 +11,7 @@
 # RUN: echo -e -n "\x08\x09\x0a\x0b" >> %t-note.bin
 # RUN: echo -e -n "\x0c\x0d\x0e\x0f" >> %t-note.bin
 
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # RUN: llvm-objcopy --add-section=.note.gnu.build-id=%t-note.bin %t.o %t-with-note.o
 # RUN: llvm-readobj --notes %t-with-note.o | FileCheck %s
 
@@ -24,6 +24,7 @@ FileHeader:
 
 # CHECK:      Notes [
 # CHECK-NEXT:   NoteSection {
+# CHECK-NEXT:     Name: .note.gnu.build-id
 # CHECK-NEXT:     Offset:
 # CHECK-NEXT:     Size:
 # CHECK-NEXT:     Note {

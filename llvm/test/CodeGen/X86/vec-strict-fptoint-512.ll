@@ -65,6 +65,7 @@ define <8 x i64> @strict_vector_fptosi_v8f64_to_v8i64(<8 x double> %a) #0 {
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512VL-32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
@@ -128,7 +129,7 @@ define <8 x i64> @strict_vector_fptosi_v8f64_to_v8i64(<8 x double> %a) #0 {
 ; AVX512DQ-NEXT:    vcvttpd2qq %zmm0, %zmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i64> @llvm.experimental.constrained.fptosi.v8i64.v8f64(<8 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i64> %ret
 }
 
@@ -160,6 +161,7 @@ define <8 x i64> @strict_vector_fptoui_v8f64_to_v8i64(<8 x double> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovsd %xmm3, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    movl $0, %eax
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    shll $31, %eax
@@ -176,6 +178,7 @@ define <8 x i64> @strict_vector_fptoui_v8f64_to_v8i64(<8 x double> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovsd %xmm4, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    movl $0, %eax
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    shll $31, %eax
@@ -190,6 +193,7 @@ define <8 x i64> @strict_vector_fptoui_v8f64_to_v8i64(<8 x double> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovsd %xmm3, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    movl $0, %eax
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    shll $31, %eax
@@ -206,6 +210,7 @@ define <8 x i64> @strict_vector_fptoui_v8f64_to_v8i64(<8 x double> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovsd %xmm4, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    movl $0, %eax
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    shll $31, %eax
@@ -220,6 +225,7 @@ define <8 x i64> @strict_vector_fptoui_v8f64_to_v8i64(<8 x double> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovsd %xmm3, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    movl $0, %eax
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    shll $31, %eax
@@ -237,6 +243,7 @@ define <8 x i64> @strict_vector_fptoui_v8f64_to_v8i64(<8 x double> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovsd %xmm4, (%esp)
 ; AVX512VL-32-NEXT:    fldl (%esp)
 ; AVX512VL-32-NEXT:    fisttpll (%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    setae %dl
 ; AVX512VL-32-NEXT:    shll $31, %edx
 ; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %edx
@@ -250,6 +257,7 @@ define <8 x i64> @strict_vector_fptoui_v8f64_to_v8i64(<8 x double> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovsd %xmm3, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    shll $31, %eax
 ; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
@@ -262,6 +270,7 @@ define <8 x i64> @strict_vector_fptoui_v8f64_to_v8i64(<8 x double> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovsd %xmm0, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512VL-32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    vpinsrd $2, (%esp), %xmm0, %xmm0
@@ -331,7 +340,7 @@ define <8 x i64> @strict_vector_fptoui_v8f64_to_v8i64(<8 x double> %a) #0 {
 ; AVX512DQ-NEXT:    vcvttpd2uqq %zmm0, %zmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i64> @llvm.experimental.constrained.fptoui.v8i64.v8f64(<8 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i64> %ret
 }
 
@@ -370,6 +379,7 @@ define <8 x i64> @strict_vector_fptosi_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    flds {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512VL-32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
@@ -433,7 +443,7 @@ define <8 x i64> @strict_vector_fptosi_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512DQ-NEXT:    vcvttps2qq %ymm0, %zmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i64> @llvm.experimental.constrained.fptosi.v8i64.v8f32(<8 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i64> %ret
 }
 
@@ -465,6 +475,7 @@ define <8 x i64> @strict_vector_fptoui_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovss %xmm3, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    flds {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    movl $0, %eax
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    shll $31, %eax
@@ -480,6 +491,7 @@ define <8 x i64> @strict_vector_fptoui_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovss %xmm3, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    flds {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    movl $0, %eax
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    shll $31, %eax
@@ -495,6 +507,7 @@ define <8 x i64> @strict_vector_fptoui_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovss %xmm3, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    flds {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    movl $0, %eax
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    shll $31, %eax
@@ -511,6 +524,7 @@ define <8 x i64> @strict_vector_fptoui_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovss %xmm4, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    flds {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    movl $0, %eax
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    shll $31, %eax
@@ -525,6 +539,7 @@ define <8 x i64> @strict_vector_fptoui_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovss %xmm4, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    flds {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    movl $0, %eax
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    shll $31, %eax
@@ -541,6 +556,7 @@ define <8 x i64> @strict_vector_fptoui_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovss %xmm4, (%esp)
 ; AVX512VL-32-NEXT:    flds (%esp)
 ; AVX512VL-32-NEXT:    fisttpll (%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    setae %dl
 ; AVX512VL-32-NEXT:    shll $31, %edx
 ; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %edx
@@ -555,6 +571,7 @@ define <8 x i64> @strict_vector_fptoui_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovss %xmm3, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    flds {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    setae %al
 ; AVX512VL-32-NEXT:    shll $31, %eax
 ; AVX512VL-32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
@@ -567,6 +584,7 @@ define <8 x i64> @strict_vector_fptoui_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    flds {{[0-9]+}}(%esp)
 ; AVX512VL-32-NEXT:    fisttpll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    wait
 ; AVX512VL-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512VL-32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    vpinsrd $2, (%esp), %xmm0, %xmm0
@@ -636,7 +654,7 @@ define <8 x i64> @strict_vector_fptoui_v8f32_to_v8i64(<8 x float> %a) #0 {
 ; AVX512DQ-NEXT:    vcvttps2uqq %ymm0, %zmm0
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i64> @llvm.experimental.constrained.fptoui.v8i64.v8f32(<8 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i64> %ret
 }
 
@@ -646,7 +664,7 @@ define <8 x i32> @strict_vector_fptosi_v8f64_to_v8i32(<8 x double> %a) #0 {
 ; CHECK-NEXT:    vcvttpd2dq %zmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i32> @llvm.experimental.constrained.fptosi.v8i32.v8f64(<8 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i32> %ret
 }
 
@@ -656,7 +674,7 @@ define <8 x i32> @strict_vector_fptoui_v8f64_to_v8i32(<8 x double> %a) #0 {
 ; CHECK-NEXT:    vcvttpd2udq %zmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i32> @llvm.experimental.constrained.fptoui.v8i32.v8f64(<8 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i32> %ret
 }
 
@@ -676,7 +694,7 @@ define <8 x i16> @strict_vector_fptosi_v8f64_to_v8i16(<8 x double> %a) #0 {
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i16> @llvm.experimental.constrained.fptosi.v8i16.v8f64(<8 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i16> %ret
 }
 
@@ -696,7 +714,7 @@ define <8 x i16> @strict_vector_fptoui_v8f64_to_v8i16(<8 x double> %a) #0 {
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i16> @llvm.experimental.constrained.fptoui.v8i16.v8f64(<8 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i16> %ret
 }
 
@@ -715,7 +733,7 @@ define <8 x i8> @strict_vector_fptosi_v8f64_to_v8i8(<8 x double> %a) #0 {
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i8> @llvm.experimental.constrained.fptosi.v8i8.v8f64(<8 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i8> %ret
 }
 
@@ -734,7 +752,7 @@ define <8 x i8> @strict_vector_fptoui_v8f64_to_v8i8(<8 x double> %a) #0 {
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i8> @llvm.experimental.constrained.fptoui.v8i8.v8f64(<8 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i8> %ret
 }
 
@@ -759,7 +777,7 @@ define <8 x i1> @strict_vector_fptosi_v8f64_to_v8i1(<8 x double> %a) #0 {
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i1> @llvm.experimental.constrained.fptosi.v8i1.v8f64(<8 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i1> %ret
 }
 
@@ -786,7 +804,7 @@ define <8 x i1> @strict_vector_fptoui_v8f64_to_v8i1(<8 x double> %a) #0 {
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i1> @llvm.experimental.constrained.fptoui.v8i1.v8f64(<8 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i1> %ret
 }
 
@@ -796,7 +814,7 @@ define <16 x i32> @strict_vector_fptosi_v16f32_to_v16i32(<16 x float> %a) #0 {
 ; CHECK-NEXT:    vcvttps2dq %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <16 x i32> @llvm.experimental.constrained.fptosi.v16i32.v16f32(<16 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <16 x i32> %ret
 }
 
@@ -806,7 +824,7 @@ define <16 x i32> @strict_vector_fptoui_v16f32_to_v16i32(<16 x float> %a) #0 {
 ; CHECK-NEXT:    vcvttps2udq %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <16 x i32> @llvm.experimental.constrained.fptoui.v16i32.v16f32(<16 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <16 x i32> %ret
 }
 
@@ -817,7 +835,7 @@ define <16 x i16> @strict_vector_fptosi_v16f32_to_v16i16(<16 x float> %a) #0 {
 ; CHECK-NEXT:    vpmovdw %zmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <16 x i16> @llvm.experimental.constrained.fptosi.v16i16.v16f32(<16 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <16 x i16> %ret
 }
 
@@ -828,7 +846,7 @@ define <16 x i16> @strict_vector_fptoui_v16f32_to_v16i16(<16 x float> %a) #0 {
 ; CHECK-NEXT:    vpmovdw %zmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <16 x i16> @llvm.experimental.constrained.fptoui.v16i16.v16f32(<16 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <16 x i16> %ret
 }
 
@@ -840,7 +858,7 @@ define <16 x i8> @strict_vector_fptosi_v16f32_to_v16i8(<16 x float> %a) #0 {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <16 x i8> @llvm.experimental.constrained.fptosi.v16i8.v16f32(<16 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <16 x i8> %ret
 }
 
@@ -852,7 +870,7 @@ define <16 x i8> @strict_vector_fptoui_v16f32_to_v16i8(<16 x float> %a) #0 {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <16 x i8> @llvm.experimental.constrained.fptoui.v16i8.v16f32(<16 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <16 x i8> %ret
 }
 
@@ -875,7 +893,7 @@ define <16 x i1> @strict_vector_fptosi_v16f32_to_v16i1(<16 x float> %a) #0 {
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
   %ret = call <16 x i1> @llvm.experimental.constrained.fptosi.v16i1.v16f32(<16 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <16 x i1> %ret
 }
 
@@ -900,7 +918,7 @@ define <16 x i1> @strict_vector_fptoui_v16f32_to_v16i1(<16 x float> %a) #0 {
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
   %ret = call <16 x i1> @llvm.experimental.constrained.fptoui.v16i1.v16f32(<16 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <16 x i1> %ret
 }
 

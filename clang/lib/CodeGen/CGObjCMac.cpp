@@ -1107,11 +1107,6 @@ public:
 
   void GenerateProtocol(const ObjCProtocolDecl *PD) override;
 
-  /// GetOrEmitProtocol - Get the protocol object for the given
-  /// declaration, emitting it if necessary. The return value has type
-  /// ProtocolPtrTy.
-  virtual llvm::Constant *GetOrEmitProtocol(const ObjCProtocolDecl *PD)=0;
-
   /// GetOrEmitProtocolRef - Get a forward reference to the protocol
   /// object for the given declaration, emitting it if needed. These
   /// forward references will be filled in with empty bodies if no
@@ -2035,7 +2030,7 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   // Don't enforce the target's minimum global alignment, since the only use
   // of the string is via this class initializer.
-  GV->setAlignment(llvm::Align::None());
+  GV->setAlignment(llvm::Align(1));
   Fields.addBitCast(GV, CGM.Int8PtrTy);
 
   // String length.
@@ -2558,9 +2553,8 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
       }
       if (FQT->isRecordType() && ElCount) {
         int OldIndex = RunSkipBlockVars.size() - 1;
-        const RecordType *RT = FQT->getAs<RecordType>();
-        BuildRCBlockVarRecordLayout(RT, BytePos + FieldOffset,
-                                    HasUnion);
+        auto *RT = FQT->castAs<RecordType>();
+        BuildRCBlockVarRecordLayout(RT, BytePos + FieldOffset, HasUnion);
 
         // Replicate layout information for each array element. Note that
         // one element is already done.
@@ -3047,9 +3041,10 @@ llvm::Value *CGObjCCommonMac::EmitClassRefViaRuntime(
                ObjCCommonTypesHelper &ObjCTypes) {
   llvm::FunctionCallee lookUpClassFn = ObjCTypes.getLookUpClassFn();
 
-  llvm::Value *className =
-      CGF.CGM.GetAddrOfConstantCString(ID->getObjCRuntimeNameAsString())
-        .getPointer();
+  llvm::Value *className = CGF.CGM
+                               .GetAddrOfConstantCString(std::string(
+                                   ID->getObjCRuntimeNameAsString()))
+                               .getPointer();
   ASTContext &ctx = CGF.CGM.getContext();
   className =
       CGF.Builder.CreateBitCast(className,
@@ -3639,7 +3634,7 @@ void CGObjCMac::GenerateClass(const ObjCImplementationDecl *ID) {
   // Check for a forward reference.
   llvm::GlobalVariable *GV = CGM.getModule().getGlobalVariable(Name, true);
   if (GV) {
-    assert(GV->getType()->getElementType() == ObjCTypes.ClassTy &&
+    assert(GV->getValueType() == ObjCTypes.ClassTy &&
            "Forward metaclass reference has incorrect type.");
     values.finishAndSetAsInitializer(GV);
     GV->setSection(Section);
@@ -3702,7 +3697,7 @@ llvm::Constant *CGObjCMac::EmitMetaClass(const ObjCImplementationDecl *ID,
   // Check for a forward reference.
   llvm::GlobalVariable *GV = CGM.getModule().getGlobalVariable(Name, true);
   if (GV) {
-    assert(GV->getType()->getElementType() == ObjCTypes.ClassTy &&
+    assert(GV->getValueType() == ObjCTypes.ClassTy &&
            "Forward metaclass reference has incorrect type.");
     values.finishAndSetAsInitializer(GV);
   } else {
@@ -3733,7 +3728,7 @@ llvm::Constant *CGObjCMac::EmitMetaClassRef(const ObjCInterfaceDecl *ID) {
                                   llvm::GlobalValue::PrivateLinkage, nullptr,
                                   Name);
 
-  assert(GV->getType()->getElementType() == ObjCTypes.ClassTy &&
+  assert(GV->getValueType() == ObjCTypes.ClassTy &&
          "Forward metaclass reference has incorrect type.");
   return GV;
 }
@@ -3747,7 +3742,7 @@ llvm::Value *CGObjCMac::EmitSuperClassRef(const ObjCInterfaceDecl *ID) {
                                   llvm::GlobalValue::PrivateLinkage, nullptr,
                                   Name);
 
-  assert(GV->getType()->getElementType() == ObjCTypes.ClassTy &&
+  assert(GV->getValueType() == ObjCTypes.ClassTy &&
          "Forward class metadata reference has incorrect type.");
   return GV;
 }
@@ -4224,7 +4219,8 @@ CGObjCCommonMac::CreateCStringLiteral(StringRef Name, ObjCLabelType Type,
                          : "__TEXT,__cstring,cstring_literals";
     break;
   case ObjCLabelType::PropertyName:
-    Section = "__TEXT,__cstring,cstring_literals";
+    Section = NonFragile ? "__TEXT,__objc_methname,cstring_literals"
+                         : "__TEXT,__cstring,cstring_literals";
     break;
   }
 
@@ -5157,15 +5153,18 @@ void CGObjCCommonMac::EmitImageInfo() {
   Mod.addModuleFlag(llvm::Module::Error, "Objective-C Image Info Section",
                     llvm::MDString::get(VMContext, Section));
 
+  auto Int8Ty = llvm::Type::getInt8Ty(VMContext);
   if (CGM.getLangOpts().getGC() == LangOptions::NonGC) {
     // Non-GC overrides those files which specify GC.
-    Mod.addModuleFlag(llvm::Module::Override,
-                      "Objective-C Garbage Collection", (uint32_t)0);
+    Mod.addModuleFlag(llvm::Module::Error,
+                      "Objective-C Garbage Collection",
+                      llvm::ConstantInt::get(Int8Ty,0));
   } else {
     // Add the ObjC garbage collection value.
     Mod.addModuleFlag(llvm::Module::Error,
                       "Objective-C Garbage Collection",
-                      eImageInfo_GarbageCollected);
+                      llvm::ConstantInt::get(Int8Ty,
+                        (uint8_t)eImageInfo_GarbageCollected));
 
     if (CGM.getLangOpts().getGC() == LangOptions::GCOnly) {
       // Add the ObjC GC Only value.
@@ -5176,7 +5175,7 @@ void CGObjCCommonMac::EmitImageInfo() {
       llvm::Metadata *Ops[2] = {
           llvm::MDString::get(VMContext, "Objective-C Garbage Collection"),
           llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-              llvm::Type::getInt32Ty(VMContext), eImageInfo_GarbageCollected))};
+              Int8Ty, eImageInfo_GarbageCollected))};
       Mod.addModuleFlag(llvm::Module::Require, "Objective-C GC Only",
                         llvm::MDNode::get(VMContext, Ops));
     }
@@ -5452,7 +5451,7 @@ llvm::Constant *IvarLayoutBuilder::buildBitmap(CGObjCCommonMac &CGObjC,
     // This isn't a stable sort, but our algorithm should handle it fine.
     llvm::array_pod_sort(IvarsInfo.begin(), IvarsInfo.end());
   } else {
-    assert(std::is_sorted(IvarsInfo.begin(), IvarsInfo.end()));
+    assert(llvm::is_sorted(IvarsInfo));
   }
   assert(IvarsInfo.back().Offset < InstanceEnd);
 
@@ -6377,7 +6376,7 @@ llvm::GlobalVariable * CGObjCNonFragileABIMac::BuildClassRoTInitializer(
   unsigned InstanceStart,
   unsigned InstanceSize,
   const ObjCImplementationDecl *ID) {
-  std::string ClassName = ID->getObjCRuntimeNameAsString();
+  std::string ClassName = std::string(ID->getObjCRuntimeNameAsString());
 
   CharUnits beginInstance = CharUnits::fromQuantity(InstanceStart);
   CharUnits endInstance = CharUnits::fromQuantity(InstanceSize);

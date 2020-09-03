@@ -9,6 +9,7 @@
 #include "Annotations.h"
 #include "DraftStore.h"
 #include "SourceCode.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -36,7 +37,7 @@ void stepByStep(llvm::ArrayRef<IncrementalTestStep> Steps) {
   constexpr llvm::StringLiteral Path("/hello.cpp");
 
   // Set the initial content.
-  DS.addDraft(Path, InitialSrc.code());
+  EXPECT_EQ(0, DS.addDraft(Path, llvm::None, InitialSrc.code()));
 
   for (size_t i = 1; i < Steps.size(); i++) {
     Annotations SrcBefore(Steps[i - 1].Src);
@@ -48,10 +49,12 @@ void stepByStep(llvm::ArrayRef<IncrementalTestStep> Steps) {
         Contents.str(),
     };
 
-    llvm::Expected<std::string> Result = DS.updateDraft(Path, {Event});
+    llvm::Expected<DraftStore::Draft> Result =
+        DS.updateDraft(Path, llvm::None, {Event});
     ASSERT_TRUE(!!Result);
-    EXPECT_EQ(*Result, SrcAfter.code());
-    EXPECT_EQ(*DS.getDraft(Path), SrcAfter.code());
+    EXPECT_EQ(Result->Contents, SrcAfter.code());
+    EXPECT_EQ(DS.getDraft(Path)->Contents, SrcAfter.code());
+    EXPECT_EQ(Result->Version, static_cast<int64_t>(i));
   }
 }
 
@@ -75,13 +78,15 @@ void allAtOnce(llvm::ArrayRef<IncrementalTestStep> Steps) {
   }
 
   // Set the initial content.
-  DS.addDraft(Path, InitialSrc.code());
+  EXPECT_EQ(0, DS.addDraft(Path, llvm::None, InitialSrc.code()));
 
-  llvm::Expected<std::string> Result = DS.updateDraft(Path, Changes);
+  llvm::Expected<DraftStore::Draft> Result =
+      DS.updateDraft(Path, llvm::None, Changes);
 
   ASSERT_TRUE(!!Result) << llvm::toString(Result.takeError());
-  EXPECT_EQ(*Result, FinalSrc.code());
-  EXPECT_EQ(*DS.getDraft(Path), FinalSrc.code());
+  EXPECT_EQ(Result->Contents, FinalSrc.code());
+  EXPECT_EQ(DS.getDraft(Path)->Contents, FinalSrc.code());
+  EXPECT_EQ(Result->Version, 1);
 }
 
 TEST(DraftStoreIncrementalUpdateTest, Simple) {
@@ -184,7 +189,7 @@ TEST(DraftStoreIncrementalUpdateTest, WrongRangeLength) {
   DraftStore DS;
   Path File = "foo.cpp";
 
-  DS.addDraft(File, "int main() {}\n");
+  DS.addDraft(File, llvm::None, "int main() {}\n");
 
   TextDocumentContentChangeEvent Change;
   Change.range.emplace();
@@ -194,7 +199,8 @@ TEST(DraftStoreIncrementalUpdateTest, WrongRangeLength) {
   Change.range->end.character = 2;
   Change.rangeLength = 10;
 
-  Expected<std::string> Result = DS.updateDraft(File, {Change});
+  Expected<DraftStore::Draft> Result =
+      DS.updateDraft(File, llvm::None, {Change});
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(
@@ -206,7 +212,7 @@ TEST(DraftStoreIncrementalUpdateTest, EndBeforeStart) {
   DraftStore DS;
   Path File = "foo.cpp";
 
-  DS.addDraft(File, "int main() {}\n");
+  DS.addDraft(File, llvm::None, "int main() {}\n");
 
   TextDocumentContentChangeEvent Change;
   Change.range.emplace();
@@ -215,7 +221,7 @@ TEST(DraftStoreIncrementalUpdateTest, EndBeforeStart) {
   Change.range->end.line = 0;
   Change.range->end.character = 3;
 
-  Expected<std::string> Result = DS.updateDraft(File, {Change});
+  auto Result = DS.updateDraft(File, llvm::None, {Change});
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(toString(Result.takeError()),
@@ -226,7 +232,7 @@ TEST(DraftStoreIncrementalUpdateTest, StartCharOutOfRange) {
   DraftStore DS;
   Path File = "foo.cpp";
 
-  DS.addDraft(File, "int main() {}\n");
+  DS.addDraft(File, llvm::None, "int main() {}\n");
 
   TextDocumentContentChangeEvent Change;
   Change.range.emplace();
@@ -236,7 +242,7 @@ TEST(DraftStoreIncrementalUpdateTest, StartCharOutOfRange) {
   Change.range->end.character = 100;
   Change.text = "foo";
 
-  Expected<std::string> Result = DS.updateDraft(File, {Change});
+  auto Result = DS.updateDraft(File, llvm::None, {Change});
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(toString(Result.takeError()),
@@ -247,7 +253,7 @@ TEST(DraftStoreIncrementalUpdateTest, EndCharOutOfRange) {
   DraftStore DS;
   Path File = "foo.cpp";
 
-  DS.addDraft(File, "int main() {}\n");
+  DS.addDraft(File, llvm::None, "int main() {}\n");
 
   TextDocumentContentChangeEvent Change;
   Change.range.emplace();
@@ -257,7 +263,7 @@ TEST(DraftStoreIncrementalUpdateTest, EndCharOutOfRange) {
   Change.range->end.character = 100;
   Change.text = "foo";
 
-  Expected<std::string> Result = DS.updateDraft(File, {Change});
+  auto Result = DS.updateDraft(File, llvm::None, {Change});
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(toString(Result.takeError()),
@@ -268,7 +274,7 @@ TEST(DraftStoreIncrementalUpdateTest, StartLineOutOfRange) {
   DraftStore DS;
   Path File = "foo.cpp";
 
-  DS.addDraft(File, "int main() {}\n");
+  DS.addDraft(File, llvm::None, "int main() {}\n");
 
   TextDocumentContentChangeEvent Change;
   Change.range.emplace();
@@ -278,7 +284,7 @@ TEST(DraftStoreIncrementalUpdateTest, StartLineOutOfRange) {
   Change.range->end.character = 0;
   Change.text = "foo";
 
-  Expected<std::string> Result = DS.updateDraft(File, {Change});
+  auto Result = DS.updateDraft(File, llvm::None, {Change});
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(toString(Result.takeError()), "Line value is out of range (100)");
@@ -288,7 +294,7 @@ TEST(DraftStoreIncrementalUpdateTest, EndLineOutOfRange) {
   DraftStore DS;
   Path File = "foo.cpp";
 
-  DS.addDraft(File, "int main() {}\n");
+  DS.addDraft(File, llvm::None, "int main() {}\n");
 
   TextDocumentContentChangeEvent Change;
   Change.range.emplace();
@@ -298,7 +304,7 @@ TEST(DraftStoreIncrementalUpdateTest, EndLineOutOfRange) {
   Change.range->end.character = 0;
   Change.text = "foo";
 
-  Expected<std::string> Result = DS.updateDraft(File, {Change});
+  auto Result = DS.updateDraft(File, llvm::None, {Change});
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(toString(Result.takeError()), "Line value is out of range (100)");
@@ -311,7 +317,7 @@ TEST(DraftStoreIncrementalUpdateTest, InvalidRangeInASequence) {
   Path File = "foo.cpp";
 
   StringRef OriginalContents = "int main() {}\n";
-  DS.addDraft(File, OriginalContents);
+  EXPECT_EQ(0, DS.addDraft(File, llvm::None, OriginalContents));
 
   // The valid change
   TextDocumentContentChangeEvent Change1;
@@ -331,15 +337,51 @@ TEST(DraftStoreIncrementalUpdateTest, InvalidRangeInASequence) {
   Change2.range->end.character = 100;
   Change2.text = "something";
 
-  Expected<std::string> Result = DS.updateDraft(File, {Change1, Change2});
+  auto Result = DS.updateDraft(File, llvm::None, {Change1, Change2});
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(toString(Result.takeError()),
             "utf-16 offset 100 is invalid for line 0");
 
-  Optional<std::string> Contents = DS.getDraft(File);
+  Optional<DraftStore::Draft> Contents = DS.getDraft(File);
   EXPECT_TRUE(Contents);
-  EXPECT_EQ(*Contents, OriginalContents);
+  EXPECT_EQ(Contents->Contents, OriginalContents);
+  EXPECT_EQ(Contents->Version, 0);
+}
+
+TEST(DraftStore, Version) {
+  DraftStore DS;
+  Path File = "foo.cpp";
+
+  EXPECT_EQ(25, DS.addDraft(File, 25, ""));
+  EXPECT_EQ(25, DS.getDraft(File)->Version);
+
+  EXPECT_EQ(26, DS.addDraft(File, llvm::None, ""));
+  EXPECT_EQ(26, DS.getDraft(File)->Version);
+
+  // We allow versions to go backwards.
+  EXPECT_EQ(7, DS.addDraft(File, 7, ""));
+  EXPECT_EQ(7, DS.getDraft(File)->Version);
+
+  // Valid (no-op) change modifies version.
+  auto Result = DS.updateDraft(File, 10, {});
+  EXPECT_TRUE(!!Result);
+  EXPECT_EQ(10, Result->Version);
+  EXPECT_EQ(10, DS.getDraft(File)->Version);
+
+  Result = DS.updateDraft(File, llvm::None, {});
+  EXPECT_TRUE(!!Result);
+  EXPECT_EQ(11, Result->Version);
+  EXPECT_EQ(11, DS.getDraft(File)->Version);
+
+  TextDocumentContentChangeEvent InvalidChange;
+  InvalidChange.range.emplace();
+  InvalidChange.rangeLength = 99;
+
+  Result = DS.updateDraft(File, 15, {InvalidChange});
+  EXPECT_FALSE(!!Result);
+  consumeError(Result.takeError());
+  EXPECT_EQ(11, DS.getDraft(File)->Version);
 }
 
 } // namespace

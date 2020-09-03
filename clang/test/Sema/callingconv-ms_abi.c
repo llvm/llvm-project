@@ -4,6 +4,6 @@ void __attribute__((ms_abi)) foo(void);
 void (*pfoo)(void) = foo;
 
 void __attribute__((sysv_abi)) bar(void);
-void (*pbar)(void) = bar; // expected-warning{{incompatible pointer types}}
+void (*pbar)(void) = bar; // expected-warning{{incompatible function pointer types}}
 
-void (__attribute__((sysv_abi)) *pfoo2)(void) = foo; // expected-warning{{incompatible pointer types}}
+void (__attribute__((sysv_abi)) *pfoo2)(void) = foo; // expected-warning{{incompatible function pointer types}}

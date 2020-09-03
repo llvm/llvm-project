@@ -17,7 +17,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
@@ -40,11 +39,11 @@ namespace {
           Instruction *UI = dyn_cast<Instruction>(U);
           if (!UI) continue;
 
-          CallSite CS(cast<Value>(UI));
-          if (!CS) continue;
+          CallBase *CB = dyn_cast<CallBase>(UI);
+          if (!CB)
+            continue;
 
-          for (CallSite::arg_iterator AI = CS.arg_begin(),
-               E = CS.arg_end(); AI != E; ++AI) {
+          for (auto AI = CB->arg_begin(), E = CB->arg_end(); AI != E; ++AI) {
             if (!isa<Constant>(*AI)) continue;
 
             if (!PrintedFn) {

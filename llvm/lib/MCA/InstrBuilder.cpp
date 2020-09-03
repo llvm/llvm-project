@@ -160,8 +160,11 @@ static void initializeUsedResources(InstrDesc &ID,
     if (countPopulation(RPC.first) > 1 && !RPC.second.isReserved()) {
       // Remove the leading 1 from the resource group mask.
       uint64_t Mask = RPC.first ^ PowerOf2Floor(RPC.first);
-      if ((Mask & UsedResourceUnits) == Mask)
+      uint64_t MaxResourceUnits = countPopulation(Mask);
+      if (RPC.second.NumUnits > countPopulation(Mask)) {
         RPC.second.setReserved();
+        RPC.second.NumUnits = MaxResourceUnits;
+      }
     }
   }
 
@@ -485,24 +488,16 @@ Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
   if (ID.NumMicroOps != 0)
     return ErrorSuccess();
 
-  bool UsesMemory = ID.MayLoad || ID.MayStore;
   bool UsesBuffers = ID.UsedBuffers;
   bool UsesResources = !ID.Resources.empty();
-  if (!UsesMemory && !UsesBuffers && !UsesResources)
+  if (!UsesBuffers && !UsesResources)
     return ErrorSuccess();
 
-  StringRef Message;
-  if (UsesMemory) {
-    Message = "found an inconsistent instruction that decodes "
-              "into zero opcodes and that consumes load/store "
-              "unit resources.";
-  } else {
-    Message = "found an inconsistent instruction that decodes "
-              "to zero opcodes and that consumes scheduler "
-              "resources.";
-  }
-
-  return make_error<InstructionError<MCInst>>(Message, MCI);
+  // FIXME: see PR44797. We should revisit these checks and possibly move them
+  // in CodeGenSchedule.cpp.
+  StringRef Message = "found an inconsistent instruction that decodes to zero "
+                      "opcodes and that consumes scheduler resources.";
+  return make_error<InstructionError<MCInst>>(std::string(Message), MCI);
 }
 
 Expected<const InstrDesc &>

@@ -31,8 +31,9 @@ DynamicStaticInitializersCheck::DynamicStaticInitializersCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
         "HeaderFileExtensions", utils::defaultHeaderFileExtensions())) {
-  if (!utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
-                                        HeaderFileExtensions, ',')) {
+  if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
+                                  HeaderFileExtensions,
+                                  utils::defaultFileExtensionDelimiters())) {
     llvm::errs() << "Invalid header file extension: "
                  << RawStringHeaderFileExtensions << "\n";
   }
@@ -44,8 +45,6 @@ void DynamicStaticInitializersCheck::storeOptions(
 }
 
 void DynamicStaticInitializersCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus || getLangOpts().ThreadsafeStatics)
-    return;
   Finder->addMatcher(
       varDecl(hasGlobalStorage(), unless(hasConstantDeclaration())).bind("var"),
       this);

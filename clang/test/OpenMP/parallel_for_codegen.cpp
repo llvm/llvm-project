@@ -1,7 +1,13 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=OMP50,CHECK
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=OMP45,CHECK
+
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=OMP50,CHECK
+
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=OMP45,CHECK
+
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -gno-column-info -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -O1 -fopenmp -emit-llvm %s -o - | FileCheck %s --check-prefix=CLEANUP
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
@@ -23,7 +29,7 @@
 
 #ifndef OMP5
 // CHECK-DAG: [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
-// CHECK-DAG: [[LOOP_LOC:@.+]] = private unnamed_addr global [[IDENT_T_TY]] { i32 0, i32 514, i32 0, i32 0, i8*
+// CHECK-DAG: [[LOOP_LOC:@.+]] = private unnamed_addr constant [[IDENT_T_TY]] { i32 0, i32 514, i32 0, i32 0, i8*
 
 // CHECK-LABEL: with_var_schedule
 void with_var_schedule() {
@@ -50,7 +56,7 @@ void with_var_schedule() {
 void without_schedule_clause(float *a, float *b, float *c, float *d) {
   #pragma omp parallel for
 // CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float**, float**, float**, float**)* [[OMP_PARALLEL_FUNC:@.+]] to void (i32*, i32*, ...)*),
-// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}})
 // CHECK: store i32* [[GTID_PARAM_ADDR]], i32** [[GTID_REF_ADDR:%.+]],
 // CHECK: call void @__kmpc_for_static_init_4([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID:%.+]], i32 34, i32* [[IS_LAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 1)
 // UB = min(UB, GlobalUB)
@@ -91,7 +97,7 @@ void without_schedule_clause(float *a, float *b, float *c, float *d) {
 void static_not_chunked(float *a, float *b, float *c, float *d) {
   #pragma omp parallel for schedule(static)
 // CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float**, float**, float**, float**)* [[OMP_PARALLEL_FUNC:@.+]] to void (i32*, i32*, ...)*),
-// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}})
 // CHECK: store i32* [[GTID_PARAM_ADDR]], i32** [[GTID_REF_ADDR:%.+]],
 // CHECK: call void @__kmpc_for_static_init_4([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID:%.+]], i32 34, i32* [[IS_LAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 1)
 // UB = min(UB, GlobalUB)
@@ -132,7 +138,7 @@ void static_not_chunked(float *a, float *b, float *c, float *d) {
 void static_chunked(float *a, float *b, float *c, float *d) {
   #pragma omp parallel for schedule(static, 5)
 // CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float**, float**, float**, float**)* [[OMP_PARALLEL_FUNC:@.+]] to void (i32*, i32*, ...)*),
-// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}})
 // CHECK: store i32* [[GTID_PARAM_ADDR]], i32** [[GTID_REF_ADDR:%.+]],
 // CHECK: call void @__kmpc_for_static_init_4u([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID:%.+]], i32 33, i32* [[IS_LAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 5)
 // UB = min(UB, GlobalUB)
@@ -192,9 +198,10 @@ void static_chunked(float *a, float *b, float *c, float *d) {
 void dynamic1(float *a, float *b, float *c, float *d) {
   #pragma omp parallel for schedule(dynamic)
 // CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float**, float**, float**, float**)* [[OMP_PARALLEL_FUNC:@.+]] to void (i32*, i32*, ...)*),
-// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}})
 // CHECK: store i32* [[GTID_PARAM_ADDR]], i32** [[GTID_REF_ADDR:%.+]],
-// CHECK: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 35, i64 0, i64 16908287, i64 1, i64 1)
+// OMP45: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 35, i64 0, i64 16908287, i64 1, i64 1)
+// OMP50: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 1073741859, i64 0, i64 16908287, i64 1, i64 1)
 //
 // CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32* [[OMP_ISLAST:%[^,]+]], i64* [[OMP_LB:%[^,]+]], i64* [[OMP_UB:%[^,]+]], i64* [[OMP_ST:%[^,]+]])
 // CHECK-NEXT: [[O_CMP:%.+]] = icmp ne i32 [[HASWORK]], 0
@@ -235,9 +242,10 @@ void dynamic1(float *a, float *b, float *c, float *d) {
 void guided7(float *a, float *b, float *c, float *d) {
   #pragma omp parallel for schedule(guided, 7)
 // CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float**, float**, float**, float**)* [[OMP_PARALLEL_FUNC:@.+]] to void (i32*, i32*, ...)*),
-// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}})
 // CHECK: store i32* [[GTID_PARAM_ADDR]], i32** [[GTID_REF_ADDR:%.+]],
-// CHECK: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 36, i64 0, i64 16908287, i64 1, i64 7)
+// OMP45: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 36, i64 0, i64 16908287, i64 1, i64 7)
+// OMP50: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 1073741860, i64 0, i64 16908287, i64 1, i64 7)
 //
 // CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32* [[OMP_ISLAST:%[^,]+]], i64* [[OMP_LB:%[^,]+]], i64* [[OMP_UB:%[^,]+]], i64* [[OMP_ST:%[^,]+]])
 // CHECK-NEXT: [[O_CMP:%.+]] = icmp ne i32 [[HASWORK]], 0
@@ -280,9 +288,10 @@ void test_auto(float *a, float *b, float *c, float *d) {
   unsigned int y = 0;
   #pragma omp parallel for schedule(auto) collapse(2)
 // CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]], i32 5, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, float**, float**, float**, float**)* [[OMP_PARALLEL_FUNC:@.+]] to void (i32*, i32*, ...)*),
-// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, i32* dereferenceable(4) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}})
 // CHECK: store i32* [[GTID_PARAM_ADDR]], i32** [[GTID_REF_ADDR:%.+]],
-// CHECK: call void @__kmpc_dispatch_init_8([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 38, i64 0, i64 [[LAST_ITER:%[^,]+]], i64 1, i64 1)
+// OMP45: call void @__kmpc_dispatch_init_8([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 38, i64 0, i64 [[LAST_ITER:%[^,]+]], i64 1, i64 1)
+// OMP50: call void @__kmpc_dispatch_init_8([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 1073741862, i64 0, i64 [[LAST_ITER:%[^,]+]], i64 1, i64 1)
 //
 // CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_8([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32* [[OMP_ISLAST:%[^,]+]], i64* [[OMP_LB:%[^,]+]], i64* [[OMP_UB:%[^,]+]], i64* [[OMP_ST:%[^,]+]])
 // CHECK-NEXT: [[O_CMP:%.+]] = icmp ne i32 [[HASWORK]], 0
@@ -324,9 +333,10 @@ void runtime(float *a, float *b, float *c, float *d) {
   int x = 0;
   #pragma omp parallel for collapse(2) schedule(runtime)
 // CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float**, float**, float**, float**)* [[OMP_PARALLEL_FUNC:@.+]] to void (i32*, i32*, ...)*),
-// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}}, float** dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}})
 // CHECK: store i32* [[GTID_PARAM_ADDR]], i32** [[GTID_REF_ADDR:%.+]],
-// CHECK: call void @__kmpc_dispatch_init_4([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 37, i32 0, i32 199, i32 1, i32 1)
+// OMP45: call void @__kmpc_dispatch_init_4([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 37, i32 0, i32 199, i32 1, i32 1)
+// OMP50: call void @__kmpc_dispatch_init_4([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 1073741861, i32 0, i32 199, i32 1, i32 1)
 //
 // CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_4([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32* [[OMP_ISLAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]])
 // CHECK-NEXT: [[O_CMP:%.+]] = icmp ne i32 [[HASWORK]], 0
@@ -362,7 +372,7 @@ void runtime(float *a, float *b, float *c, float *d) {
 }
 
 // TERM_DEBUG-LABEL: foo
-int foo() {return 0;};
+int foo() { extern void mayThrow(); mayThrow(); return 0; };
 
 // TERM_DEBUG-LABEL: parallel_for
 // CLEANUP: parallel_for
@@ -374,7 +384,7 @@ void parallel_for(float *a, const int n) {
   // TERM_DEBUG:     invoke i32 {{.*}}foo{{.*}}()
   // TERM_DEBUG:     unwind label %[[TERM_LPAD:.+]],
   // TERM_DEBUG-NOT: __kmpc_global_thread_num
-  // TERM_DEBUG:     call void @__kmpc_for_static_fini({{.+}}), !dbg [[DBG_LOC_END:![0-9]+]]
+  // TERM_DEBUG:     call void @__kmpc_for_static_fini({{.+}}), !dbg [[DBG_LOC_START]]
   // TERM_DEBUG:     [[TERM_LPAD]]
   // TERM_DEBUG:     call void @__clang_call_terminate
   // TERM_DEBUG:     unreachable
@@ -385,8 +395,7 @@ void parallel_for(float *a, const int n) {
     a[i] += foo() + arr[i] + n;
 }
 // Check source line corresponds to "#pragma omp parallel for schedule(static, 5)" above:
-// TERM_DEBUG-DAG: [[DBG_LOC_START]] = !DILocation(line: [[@LINE-4]],
-// TERM_DEBUG-DAG: [[DBG_LOC_END]] = !DILocation(line: [[@LINE-18]],
+// TERM_DEBUG-DAG: [[DBG_LOC_START]] = !DILocation(line: [[@LINE-17]],
 
 #else // OMP5
 // OMP5-LABEL: increment
@@ -479,7 +488,7 @@ void range_for_single() {
     (void)a;
 }
 
-// OMP5: define internal void @.omp_outlined.(i32* {{.+}}, i32* {{.+}}, [10 x i32]* dereferenceable(40) %arr)
+// OMP5: define internal void @.omp_outlined.(i32* {{.+}}, i32* {{.+}}, [10 x i32]* nonnull align 4 dereferenceable(40) %arr)
 // OMP5: [[ARR_ADDR:%.+]] = alloca [10 x i32]*,
 // OMP5: [[IV:%.+]] = alloca i64,
 // OMP5: [[RANGE_ADDR:%.+]] = alloca [10 x i32]*,

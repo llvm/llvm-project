@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryItemStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
@@ -63,11 +64,11 @@ namespace {
 
 class MockCallbacks : public TypeVisitorCallbacks {
 public:
-  virtual Error visitTypeBegin(CVType &CVR, TypeIndex Index) {
+  Error visitTypeBegin(CVType &CVR, TypeIndex Index) override {
     Indices.push_back(Index);
     return Error::success();
   }
-  virtual Error visitKnownRecord(CVType &CVR, ArrayRecord &AR) {
+  Error visitKnownRecord(CVType &CVR, ArrayRecord &AR) override {
     VisitedRecords.push_back(AR);
     RawRecords.push_back(CVR);
     return Error::success();

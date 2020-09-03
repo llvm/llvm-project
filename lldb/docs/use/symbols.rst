@@ -267,7 +267,7 @@ contains the DWARF. Whenever DebugSymbols.framework is asked to lookup a dSYM
 file, it will first look in any file mapped UUID directories for a quick match
 if the defaults are appropriately set.
 
-For example, if we take the sample UUID plist inforamtion from above, we can
+For example, if we take the sample UUID plist information from above, we can
 create a File Mapped UUID directory cache in
 **~/Library/SymbolCache/dsyms/uuids**. We can easily see how things are laid
 out:

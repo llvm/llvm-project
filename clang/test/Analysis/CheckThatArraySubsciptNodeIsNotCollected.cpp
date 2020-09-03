@@ -33,7 +33,7 @@ void test() {
   do {
     found = array[index]; // expected-note {{Null pointer value stored to 'found'}}
 
-    if (found->method()) // expected-warning {{Called C++ object pointer is null}}
+    if (found->method()) // expected-warning {{Called C++ object pointer is null [core.CallAndMessage]}}
       // expected-note@-1 {{Called C++ object pointer is null}}
       bar(found);
   } while (--index);

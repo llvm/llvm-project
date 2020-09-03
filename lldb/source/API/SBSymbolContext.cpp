@@ -1,4 +1,4 @@
-//===-- SBSymbolContext.cpp -------------------------------------*- C++ -*-===//
+//===-- SBSymbolContext.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,7 +37,7 @@ SBSymbolContext::SBSymbolContext(const SBSymbolContext &rhs) : m_opaque_up() {
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBSymbolContext::~SBSymbolContext() {}
+SBSymbolContext::~SBSymbolContext() = default;
 
 const SBSymbolContext &SBSymbolContext::operator=(const SBSymbolContext &rhs) {
   LLDB_RECORD_METHOD(const lldb::SBSymbolContext &,
@@ -185,13 +185,13 @@ const lldb_private::SymbolContext &SBSymbolContext::operator*() const {
 
 lldb_private::SymbolContext &SBSymbolContext::operator*() {
   if (m_opaque_up == nullptr)
-    m_opaque_up.reset(new SymbolContext);
+    m_opaque_up = std::make_unique<SymbolContext>();
   return *m_opaque_up;
 }
 
 lldb_private::SymbolContext &SBSymbolContext::ref() {
   if (m_opaque_up == nullptr)
-    m_opaque_up.reset(new SymbolContext);
+    m_opaque_up = std::make_unique<SymbolContext>();
   return *m_opaque_up;
 }
 

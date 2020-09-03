@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_LLDBAssert_h_
-#define utility_LLDBAssert_h_
+#ifndef LLDB_UTILITY_LLDBASSERT_H
+#define LLDB_UTILITY_LLDBASSERT_H
 
 #ifdef LLDB_CONFIGURATION_DEBUG
 #define lldbassert(x) assert(x)
@@ -22,4 +22,4 @@ void lldb_assert(bool expression, const char *expr_text, const char *func,
                  const char *file, unsigned int line);
 }
 
-#endif // utility_LLDBAssert_h_
+#endif // LLDB_UTILITY_LLDBASSERT_H

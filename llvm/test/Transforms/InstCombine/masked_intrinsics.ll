@@ -83,7 +83,7 @@ define <2 x double> @load_generic(<2 x double>* %ptr, double %pt,
   ret <2 x double> %res
 }
 
-define <2 x double> @load_speculative(<2 x double>* dereferenceable(16) %ptr,
+define <2 x double> @load_speculative(<2 x double>* dereferenceable(16) align 4 %ptr,
 ; CHECK-LABEL: @load_speculative(
 ; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
 ; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> undef, <2 x i32> zeroinitializer
@@ -258,7 +258,7 @@ define void @scatter_zeromask(<2 x double*> %ptrs, <2 x double> %val)  {
 ; CHECK-LABEL: @scatter_zeromask(
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> %val, <2 x double*> %ptrs, i32 6, <2 x i1> zeroinitializer)
+  call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> %val, <2 x double*> %ptrs, i32 8, <2 x i1> zeroinitializer)
   ret void
 }
 

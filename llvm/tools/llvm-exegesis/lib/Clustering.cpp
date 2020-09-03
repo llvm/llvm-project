@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Clustering.h"
+#include "Error.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <deque>
 
 namespace llvm {
 namespace exegesis {
@@ -106,14 +108,13 @@ Error InstructionBenchmarkClustering::validateAndSetup() {
     const auto *CurMeasurement = &Point.Measurements;
     if (LastMeasurement) {
       if (LastMeasurement->size() != CurMeasurement->size()) {
-        return make_error<StringError>("inconsistent measurement dimensions",
-                                       inconvertibleErrorCode());
+        return make_error<ClusteringError>(
+            "inconsistent measurement dimensions");
       }
       for (size_t I = 0, E = LastMeasurement->size(); I < E; ++I) {
         if (LastMeasurement->at(I).Key != CurMeasurement->at(I).Key) {
-          return make_error<StringError>(
-              "inconsistent measurement dimensions keys",
-              inconvertibleErrorCode());
+          return make_error<ClusteringError>(
+              "inconsistent measurement dimensions keys");
         }
       }
     }
@@ -333,7 +334,7 @@ Expected<InstructionBenchmarkClustering> InstructionBenchmarkClustering::create(
       Clustering.stabilize(NumOpcodes.getValue());
   } else /*if(Mode == ModeE::Naive)*/ {
     if (!NumOpcodes.hasValue())
-      report_fatal_error(
+      return make_error<Failure>(
           "'naive' clustering mode requires opcode count to be specified");
     Clustering.clusterizeNaive(NumOpcodes.getValue());
   }

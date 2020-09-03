@@ -13,13 +13,13 @@
 #ifndef LLVM_CLANG_AST_ATTR_H
 #define LLVM_CLANG_AST_ATTR_H
 
-#include "clang/AST/ASTContextAllocate.h"  // For Attrs.inc
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/AttributeCommonInfo.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/Sanitizers.h"
@@ -41,6 +41,7 @@ class Expr;
 class QualType;
 class FunctionDecl;
 class TypeSourceInfo;
+class OMPTraitInfo;
 
 /// Attr - This represents one attribute.
 class Attr : public AttributeCommonInfo {
@@ -109,10 +110,6 @@ public:
 
   // Pretty print this attribute.
   void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
-
-  // Compare two attributes, used for sorting attributes in a Subject.
-  // FIXME: this should be auto generated from Attr.td
-  static bool compare(const Attr *A, const Attr *B);
 };
 
 class TypeAttr : public Attr {

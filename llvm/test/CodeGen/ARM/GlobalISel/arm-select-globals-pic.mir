@@ -33,13 +33,13 @@ body:             |
     ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel @internal_global
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @internal_global)
-    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, $noreg :: (load 4 from @internal_global)
+    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load 4 from @internal_global)
 
     $r0 = COPY %1(s32)
     ; CHECK: $r0 = COPY [[V]]
 
     BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_external_global
@@ -59,13 +59,13 @@ body:             |
     ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr target-flags(arm-got) @external_global :: (load 4 from got)
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @external_global)
-    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, $noreg :: (load 4 from @external_global)
+    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load 4 from @external_global)
 
     $r0 = COPY %1(s32)
     ; CHECK: $r0 = COPY [[V]]
 
     BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_internal_constant
@@ -85,13 +85,13 @@ body:             |
     ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel @internal_constant
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @internal_constant)
-    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, $noreg :: (load 4 from @internal_constant)
+    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load 4 from @internal_constant)
 
     $r0 = COPY %1(s32)
     ; CHECK: $r0 = COPY [[V]]
 
     BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_external_constant
@@ -111,11 +111,11 @@ body:             |
     ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr target-flags(arm-got) @external_constant :: (load 4 from got)
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @external_constant)
-    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, $noreg :: (load 4 from @external_constant)
+    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load 4 from @external_constant)
 
     $r0 = COPY %1(s32)
     ; CHECK: $r0 = COPY [[V]]
 
     BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...

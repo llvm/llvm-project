@@ -42,8 +42,8 @@ class CXDiagnosticCustomNoteImpl : public CXDiagnosticImpl {
   CXSourceLocation Loc;
 public:
   CXDiagnosticCustomNoteImpl(StringRef Msg, CXSourceLocation L)
-    : CXDiagnosticImpl(CustomNoteDiagnosticKind),
-      Message(Msg), Loc(L) {}
+      : CXDiagnosticImpl(CustomNoteDiagnosticKind), Message(std::string(Msg)),
+        Loc(L) {}
 
   ~CXDiagnosticCustomNoteImpl() override {}
 
@@ -51,9 +51,7 @@ public:
     return CXDiagnostic_Note;
   }
 
-  CXSourceLocation getLocation() const override {
-    return Loc;
-  }
+  CXSourceLocation getLocation() const override { return Loc; }
 
   CXString getSpelling() const override {
     return cxstring::createRef(Message.c_str());

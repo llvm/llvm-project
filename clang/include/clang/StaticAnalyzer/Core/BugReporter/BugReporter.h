@@ -17,12 +17,14 @@
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -134,7 +136,7 @@ protected:
   SmallVector<FixItHint, 4> Fixits;
 
   BugReport(Kind kind, const BugType &bt, StringRef desc)
-      : K(kind), BT(bt), Description(desc) {}
+      : BugReport(kind, bt, "", desc) {}
 
   BugReport(Kind K, const BugType &BT, StringRef ShortDescription,
             StringRef Description)
@@ -368,16 +370,13 @@ protected:
 public:
   PathSensitiveBugReport(const BugType &bt, StringRef desc,
                          const ExplodedNode *errorNode)
-      : BugReport(Kind::PathSensitive, bt, desc), ErrorNode(errorNode),
-        ErrorNodeRange(getStmt() ? getStmt()->getSourceRange()
-                                 : SourceRange()) {}
+      : PathSensitiveBugReport(bt, desc, desc, errorNode) {}
 
   PathSensitiveBugReport(const BugType &bt, StringRef shortDesc, StringRef desc,
                          const ExplodedNode *errorNode)
-      : BugReport(Kind::PathSensitive, bt, shortDesc, desc),
-        ErrorNode(errorNode),
-        ErrorNodeRange(getStmt() ? getStmt()->getSourceRange()
-                                 : SourceRange()) {}
+      : PathSensitiveBugReport(bt, shortDesc, desc, errorNode,
+                               /*LocationToUnique*/ {},
+                               /*DeclToUnique*/ nullptr) {}
 
   /// Create a PathSensitiveBugReport with a custom uniqueing location.
   ///
@@ -390,11 +389,13 @@ public:
                          const ExplodedNode *errorNode,
                          PathDiagnosticLocation LocationToUnique,
                          const Decl *DeclToUnique)
-      : BugReport(Kind::PathSensitive, bt, desc), ErrorNode(errorNode),
-        ErrorNodeRange(getStmt() ? getStmt()->getSourceRange() : SourceRange()),
-        UniqueingLocation(LocationToUnique), UniqueingDecl(DeclToUnique) {
-    assert(errorNode);
-  }
+      : PathSensitiveBugReport(bt, desc, desc, errorNode, LocationToUnique,
+                               DeclToUnique) {}
+
+  PathSensitiveBugReport(const BugType &bt, StringRef shortDesc, StringRef desc,
+                         const ExplodedNode *errorNode,
+                         PathDiagnosticLocation LocationToUnique,
+                         const Decl *DeclToUnique);
 
   static bool classof(const BugReport *R) {
     return R->getKind() == Kind::PathSensitive;
@@ -566,6 +567,7 @@ public:
   virtual ASTContext &getASTContext() = 0;
   virtual SourceManager &getSourceManager() = 0;
   virtual AnalyzerOptions &getAnalyzerOptions() = 0;
+  virtual Preprocessor &getPreprocessor() = 0;
 };
 
 /// BugReporter is a utility class for generating PathDiagnostics for analysis.
@@ -587,7 +589,7 @@ private:
   std::vector<BugReportEquivClass *> EQClassesVector;
 
 public:
-  BugReporter(BugReporterData &d) : D(d) {}
+  BugReporter(BugReporterData &d);
   virtual ~BugReporter();
 
   /// Generate and flush diagnostics for all bug reports.
@@ -607,6 +609,8 @@ public:
   const SourceManager &getSourceManager() { return D.getSourceManager(); }
 
   const AnalyzerOptions &getAnalyzerOptions() { return D.getAnalyzerOptions(); }
+
+  Preprocessor &getPreprocessor() { return D.getPreprocessor(); }
 
   /// Add the given report to the set of reports tracked by BugReporter.
   ///
@@ -628,7 +632,7 @@ public:
                        ArrayRef<FixItHint> Fixits = None);
 
 private:
-  llvm::StringMap<BugType *> StrBugTypes;
+  llvm::StringMap<std::unique_ptr<BugType>> StrBugTypes;
 
   /// Returns a BugType that is associated with the given name and
   /// category.

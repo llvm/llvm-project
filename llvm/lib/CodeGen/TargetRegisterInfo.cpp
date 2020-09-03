@@ -13,19 +13,22 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MachineValueType.h"
@@ -38,6 +41,12 @@
 #define DEBUG_TYPE "target-reg-info"
 
 using namespace llvm;
+
+static cl::opt<unsigned>
+    HugeSizeForSplit("huge-size-for-split", cl::Hidden,
+                     cl::desc("A threshold of live range size which may cause "
+                              "high compile time cost in global splitting."),
+                     cl::init(5000));
 
 TargetRegisterInfo::TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
                              regclass_iterator RCB, regclass_iterator RCE,
@@ -55,8 +64,19 @@ TargetRegisterInfo::TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
 
 TargetRegisterInfo::~TargetRegisterInfo() = default;
 
-void TargetRegisterInfo::markSuperRegs(BitVector &RegisterSet, unsigned Reg)
-    const {
+bool TargetRegisterInfo::shouldRegionSplitForVirtReg(
+    const MachineFunction &MF, const LiveInterval &VirtReg) const {
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineInstr *MI = MRI.getUniqueVRegDef(VirtReg.reg);
+  if (MI && TII->isTriviallyReMaterializable(*MI) &&
+      VirtReg.size() > HugeSizeForSplit)
+    return false;
+  return true;
+}
+
+void TargetRegisterInfo::markSuperRegs(BitVector &RegisterSet,
+                                       MCRegister Reg) const {
   for (MCSuperRegIterator AI(Reg, this, true); AI.isValid(); ++AI)
     RegisterSet.set(*AI);
 }
@@ -150,7 +170,7 @@ Printable printVRegOrUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
   });
 }
 
-Printable printRegClassOrBank(unsigned Reg, const MachineRegisterInfo &RegInfo,
+Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
                               const TargetRegisterInfo *TRI) {
   return Printable([Reg, &RegInfo, TRI](raw_ostream &OS) {
     if (RegInfo.getRegClassOrNull(Reg))
@@ -187,7 +207,7 @@ TargetRegisterInfo::getAllocatableClass(const TargetRegisterClass *RC) const {
 /// register of the given type, picking the most sub register class of
 /// the right type that contains this physreg.
 const TargetRegisterClass *
-TargetRegisterInfo::getMinimalPhysRegClass(unsigned reg, MVT VT) const {
+TargetRegisterInfo::getMinimalPhysRegClass(MCRegister reg, MVT VT) const {
   assert(Register::isPhysicalRegister(reg) &&
          "reg must be a physical register");
 
@@ -379,18 +399,15 @@ bool TargetRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
 }
 
 // Compute target-independent register allocator hints to help eliminate copies.
-bool
-TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
-                                          ArrayRef<MCPhysReg> Order,
-                                          SmallVectorImpl<MCPhysReg> &Hints,
-                                          const MachineFunction &MF,
-                                          const VirtRegMap *VRM,
-                                          const LiveRegMatrix *Matrix) const {
+bool TargetRegisterInfo::getRegAllocationHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const std::pair<unsigned, SmallVector<unsigned, 4>> &Hints_MRI =
+  const std::pair<Register, SmallVector<Register, 4>> &Hints_MRI =
     MRI.getRegAllocationHints(VirtReg);
 
-  SmallSet<unsigned, 32> HintedRegs;
+  SmallSet<Register, 32> HintedRegs;
   // First hint may be a target hint.
   bool Skip = (Hints_MRI.first != 0);
   for (auto Reg : Hints_MRI.second) {
@@ -400,8 +417,8 @@ TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
     }
 
     // Target-independent hints are either a physical or a virtual register.
-    unsigned Phys = Reg;
-    if (VRM && Register::isVirtualRegister(Phys))
+    Register Phys = Reg;
+    if (VRM && Phys.isVirtual())
       Phys = VRM->getPhys(Phys);
 
     // Don't add the same reg twice (Hints_MRI may contain multiple virtual
@@ -409,7 +426,7 @@ TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
     if (!HintedRegs.insert(Phys).second)
       continue;
     // Check that Phys is a valid hint in VirtReg's register class.
-    if (!Register::isPhysicalRegister(Phys))
+    if (!Phys.isPhysical())
       continue;
     if (MRI.isReserved(Phys))
       continue;
@@ -426,7 +443,7 @@ TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
 }
 
 bool TargetRegisterInfo::isCalleeSavedPhysReg(
-    unsigned PhysReg, const MachineFunction &MF) const {
+    MCRegister PhysReg, const MachineFunction &MF) const {
   if (PhysReg == 0)
     return false;
   const uint32_t *callerPreservedRegs =
@@ -448,8 +465,8 @@ bool TargetRegisterInfo::needsStackRealignment(
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const Function &F = MF.getFunction();
-  unsigned StackAlign = TFI->getStackAlignment();
-  bool requiresRealignment = ((MFI.getMaxAlignment() > StackAlign) ||
+  Align StackAlign = TFI->getStackAlign();
+  bool requiresRealignment = ((MFI.getMaxAlign() > StackAlign) ||
                               F.hasFnAttribute(Attribute::StackAlignment));
   if (F.hasFnAttribute("stackrealign") || requiresRealignment) {
     if (canRealignStack(MF))
@@ -469,10 +486,11 @@ bool TargetRegisterInfo::regmaskSubsetEqual(const uint32_t *mask0,
   return true;
 }
 
-unsigned TargetRegisterInfo::getRegSizeInBits(unsigned Reg,
-                                         const MachineRegisterInfo &MRI) const {
+unsigned
+TargetRegisterInfo::getRegSizeInBits(Register Reg,
+                                     const MachineRegisterInfo &MRI) const {
   const TargetRegisterClass *RC{};
-  if (Register::isPhysicalRegister(Reg)) {
+  if (Reg.isPhysical()) {
     // The size is not directly available for physical registers.
     // Instead, we need to access a register class that contains Reg and
     // get the size of that register class.
@@ -491,15 +509,15 @@ unsigned TargetRegisterInfo::getRegSizeInBits(unsigned Reg,
   return getRegSizeInBits(*RC);
 }
 
-unsigned
-TargetRegisterInfo::lookThruCopyLike(unsigned SrcReg,
+Register
+TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
                                      const MachineRegisterInfo *MRI) const {
   while (true) {
     const MachineInstr *MI = MRI->getVRegDef(SrcReg);
     if (!MI->isCopyLike())
       return SrcReg;
 
-    unsigned CopySrcReg;
+    Register CopySrcReg;
     if (MI->isCopy())
       CopySrcReg = MI->getOperand(1).getReg();
     else {
@@ -507,7 +525,7 @@ TargetRegisterInfo::lookThruCopyLike(unsigned SrcReg,
       CopySrcReg = MI->getOperand(2).getReg();
     }
 
-    if (!Register::isVirtualRegister(CopySrcReg))
+    if (!CopySrcReg.isVirtual())
       return CopySrcReg;
 
     SrcReg = CopySrcReg;
@@ -516,7 +534,7 @@ TargetRegisterInfo::lookThruCopyLike(unsigned SrcReg,
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
-void TargetRegisterInfo::dumpReg(unsigned Reg, unsigned SubRegIndex,
+void TargetRegisterInfo::dumpReg(Register Reg, unsigned SubRegIndex,
                                  const TargetRegisterInfo *TRI) {
   dbgs() << printReg(Reg, TRI, SubRegIndex) << "\n";
 }

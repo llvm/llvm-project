@@ -78,6 +78,9 @@ void PPCSubtarget::initializeEnvironment() {
   HasP8Crypto = false;
   HasP9Vector = false;
   HasP9Altivec = false;
+  HasP10Vector = false;
+  HasPrefixInstrs = false;
+  HasPCRelativeMemops = false;
   HasFCPSGN = false;
   HasFSQRT = false;
   HasFRE = false;
@@ -102,7 +105,6 @@ void PPCSubtarget::initializeEnvironment() {
   FeatureMFTB = false;
   AllowsUnalignedFPAccess = false;
   DeprecatedDST = false;
-  HasLazyResolverStubs = false;
   HasICBT = false;
   HasInvariantFunctionDescriptors = false;
   HasPartwordAtomics = false;
@@ -110,23 +112,30 @@ void PPCSubtarget::initializeEnvironment() {
   IsQPXStackUnaligned = false;
   HasHTM = false;
   HasFloat128 = false;
+  HasFusion = false;
+  HasAddiLoadFusion = false;
+  HasAddisLoadFusion = false;
   IsISA3_0 = false;
+  IsISA3_1 = false;
   UseLongCalls = false;
   SecurePlt = false;
   VectorsUseTwoUnits = false;
   UsePPCPreRASchedStrategy = false;
   UsePPCPostRASchedStrategy = false;
+  PredictableSelectIsExpensive = false;
 
   HasPOPCNTD = POPCNTD_Unavailable;
 }
 
 void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   // Determine default and user specified characteristics
-  std::string CPUName = CPU;
+  std::string CPUName = std::string(CPU);
   if (CPUName.empty() || CPU == "generic") {
     // If cross-compiling with -march=ppc64le without -mcpu
     if (TargetTriple.getArch() == Triple::ppc64le)
       CPUName = "ppc64le";
+    else if (TargetTriple.getSubArch() == Triple::PPCSubArch_spe)
+      CPUName = "e500";
     else
       CPUName = "generic";
   }
@@ -141,10 +150,6 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   // support it, ignore.
   if (IsPPC64 && has64BitSupport())
     Use64BitRegs = true;
-
-  // Set up darwin-specific properties.
-  if (isDarwin())
-    HasLazyResolverStubs = true;
 
   if ((TargetTriple.isOSFreeBSD() && TargetTriple.getOSMajorVersion() >= 13) ||
       TargetTriple.isOSNetBSD() || TargetTriple.isOSOpenBSD() ||
@@ -172,26 +177,10 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   IsLittleEndian = (TargetTriple.getArch() == Triple::ppc64le);
 }
 
-/// Return true if accesses to the specified global have to go through a dyld
-/// lazy resolution stub.  This means that an extra load is required to get the
-/// address of the global.
-bool PPCSubtarget::hasLazyResolverStub(const GlobalValue *GV) const {
-  if (!HasLazyResolverStubs)
-    return false;
-  if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
-    return true;
-  // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
-  // the section that is being relocated. This means we have to use o load even
-  // for GVs that are known to be local to the dso.
-  if (GV->isDeclarationForLinker() || GV->hasCommonLinkage())
-    return true;
-  return false;
-}
-
 bool PPCSubtarget::enableMachineScheduler() const { return true; }
 
 bool PPCSubtarget::enableMachinePipeliner() const {
-  return (CPUDirective == PPC::DIR_PWR9) && EnableMachinePipeliner;
+  return getSchedModel().hasInstrSchedModel() && EnableMachinePipeliner;
 }
 
 bool PPCSubtarget::useDFAforSMS() const { return false; }
@@ -241,3 +230,8 @@ bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
 
 bool PPCSubtarget::isELFv2ABI() const { return TM.isELFv2ABI(); }
 bool PPCSubtarget::isPPC64() const { return TM.isPPC64(); }
+
+bool PPCSubtarget::isUsingPCRelativeCalls() const {
+  return isPPC64() && hasPCRelativeMemops() && isELFv2ABI() &&
+         CodeModel::Medium == getTargetMachine().getCodeModel();
+}

@@ -51,7 +51,7 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
     RelocationType = MCSymbolRefExpr::VK_None;
     break;
   case HexagonII::MO_PCREL:
-    RelocationType = MCSymbolRefExpr::VK_Hexagon_PCREL;
+    RelocationType = MCSymbolRefExpr::VK_PCREL;
     break;
   case HexagonII::MO_GOT:
     RelocationType = MCSymbolRefExpr::VK_GOT;

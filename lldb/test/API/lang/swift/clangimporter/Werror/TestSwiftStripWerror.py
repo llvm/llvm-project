@@ -21,9 +21,8 @@ class TestSwiftW(TestBase):
         """
         self.build()
         target,  _, _, _ = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec('dylib.swift'))
-        # Register shlib so it can run on-device.
-        self.registerSharedLibrariesWithTarget(target, ['Dylib'])
+            self, "break here", lldb.SBFileSpec('dylib.swift'),
+            extra_images=['Dylib'])
 
         # Turn on logging.
         log = self.getBuildArtifact("types.log")

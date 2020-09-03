@@ -63,14 +63,14 @@ public:
     if (!Alloca)
       return;
 
-    std::string InstName = Alloca->getName();
+    std::string InstName = Alloca->getName().str();
 
     auto NewAlloca =
-        new AllocaInst(Alloca->getType()->getElementType(), 0,
+        new AllocaInst(Alloca->getAllocatedType(), 0,
                        "polly_byref_alloca_" + InstName, &*Entry->begin());
 
-    auto *LoadedVal =
-        new LoadInst(Alloca, "polly_byref_load_" + InstName, &Inst);
+    auto *LoadedVal = new LoadInst(Alloca->getAllocatedType(), Alloca,
+                                   "polly_byref_load_" + InstName, &Inst);
 
     new StoreInst(LoadedVal, NewAlloca, &Inst);
     auto *NewBitCast = new BitCastInst(NewAlloca, BitCast->getType(),

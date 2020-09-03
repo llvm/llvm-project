@@ -31,17 +31,17 @@
 
 ## &DTPMOD(a) - _GLOBAL_OFFSET_TABLE_ = 0x20078 - 0x20078 = 0
 # GD:      addi 3, 31, 0
-# GD-NEXT: bl .+32
+# GD-NEXT: bl 0x1028c
 # GD-NEXT: lwz 3, 0(3)
 
 ## &DTPMOD(b) - _GLOBAL_OFFSET_TABLE_ = 0x20080 - 0x20078 = 8
 # GD-NEXT: addi 3, 31, 8
-# GD-NEXT: bl .+20
+# GD-NEXT: bl 0x1028c
 # GD-NEXT: lwz 3, 0(3)
 
 ## &DTPMOD(c) - _GLOBAL_OFFSET_TABLE_ = 0x20088 - 0x20078 = 16
 # GD-NEXT: addi 3, 9, 16
-# GD-NEXT: bl .+8
+# GD-NEXT: bl 0x1028c
 # GD-NEXT: lwz 3, 0(3)
 
 # NOREL: no relocations

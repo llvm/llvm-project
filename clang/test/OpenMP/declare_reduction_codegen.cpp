@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -emit-llvm %s -triple x86_64-linux -fexceptions -fcxx-exceptions -o - -femit-all-decls -disable-llvm-passes | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-linux -fexceptions -fcxx-exceptions -emit-pch -o %t %s -femit-all-decls -disable-llvm-passes
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-linux -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls -disable-llvm-passes | FileCheck --check-prefix=CHECK-LOAD %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-linux -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls -disable-llvm-passes | FileCheck --check-prefixes=CHECK-LOAD,OMP50-LOAD %s
+
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -emit-llvm %s -triple x86_64-linux -fexceptions -fcxx-exceptions -o - -femit-all-decls -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK,OMP45
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple x86_64-linux -fexceptions -fcxx-exceptions -emit-pch -o %t %s -femit-all-decls -disable-llvm-passes
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-linux -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls -disable-llvm-passes | FileCheck --check-prefixes=CHECK-LOAD,OMP45-LOAD %s
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -emit-llvm %s -triple x86_64-linux -fexceptions -fcxx-exceptions -o - -femit-all-decls -disable-llvm-passes | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-linux -fexceptions -fcxx-exceptions -emit-pch -o %t %s -femit-all-decls -disable-llvm-passes
@@ -14,25 +18,25 @@
 // CHECK: [[SSS_INT:.+]] = type { i32 }
 // CHECK-LOAD: [[SSS_INT:.+]] = type { i32 }
 
-// CHECK: add
+// OMP45: add
 void add(short &out, short &in) {}
 
 #pragma omp declare reduction(my_add : short : add(omp_out, omp_in))
 
-// CHECK: define internal void @.
-// CHECK: call void @{{.+}}add{{.+}}(
-// CHECK: ret void
+// OMP45: define internal void @.
+// OMP45: call void @{{.+}}add{{.+}}(
+// OMP45: ret void
 
-// CHECK: foo_reduction_array
+// OMP45: foo_reduction_array
 void foo_reduction_array() {
   short y[1];
-  // CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
+  // OMP45: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
 #pragma omp parallel for reduction(my_add : y)
   for (int i = 0; i < 1; i++) {
   }
 }
 
-// CHECK: define internal void @
+// OMP45: define internal void @
 
 #pragma omp declare reduction(+ : int, char : omp_out *= omp_in)
 // CHECK: define internal {{.*}}void @{{[^(]+}}(i32* noalias %0, i32* noalias %1)
@@ -88,7 +92,7 @@ SSS<int> d;
 // CHECK-NEXT: }
 
 // CHECK: define internal {{.*}}void @{{[^(]+}}(i32* noalias %0, i32* noalias %1)
-// CHECK: call void @_ZN3SSSIiE6ssssssERi(i32* dereferenceable{{.*}})
+// CHECK: call void @_ZN3SSSIiE6ssssssERi(i32* nonnull align {{[0-9]+}} dereferenceable{{.*}})
 // CHECK-NEXT: ret void
 // CHECK-NEXT: }
 
@@ -181,17 +185,17 @@ int main() {
 // CHECK-LABEL: i32 @{{.+}}foo{{[^(].+}}(i32
 // CHECK-LOAD-LABEL: i32 @{{.+}}foo{{[^(].+}}(i32
 
-// CHECK-LOAD: define internal {{.*}}void @{{[^(]+}}(i32* noalias %0, i32* noalias %1)
-// CHECK-LOAD: [[XOR:%.+]] = xor i32
-// CHECK-LOAD-NEXT: store i32 [[XOR]], i32*
-// CHECK-LOAD-NEXT: ret void
-// CHECK-LOAD-NEXT: }
+// OMP45-LOAD: define internal {{.*}}void @{{[^(]+}}(i32* noalias %0, i32* noalias %1)
+// OMP45-LOAD: [[XOR:%.+]] = xor i32
+// OMP45-LOAD-NEXT: store i32 [[XOR]], i32*
+// OMP45-LOAD-NEXT: ret void
+// OMP45-LOAD-NEXT: }
 
-// CHECK-LOAD: define internal {{.*}}void @{{[^(]+}}(i32* noalias %0, i32* noalias %1)
-// CHECK-LOAD: [[ADD:%.+]] = add nsw i32 24,
-// CHECK-LOAD-NEXT: store i32 [[ADD]], i32*
-// CHECK-LOAD-NEXT: ret void
-// CHECK-LOAD-NEXT: }
+// OMP45-LOAD: define internal {{.*}}void @{{[^(]+}}(i32* noalias %0, i32* noalias %1)
+// OMP45-LOAD: [[ADD:%.+]] = add nsw i32 24,
+// OMP45-LOAD-NEXT: store i32 [[ADD]], i32*
+// OMP45-LOAD-NEXT: ret void
+// OMP45-LOAD-NEXT: }
 
 // CHECK: define internal {{.*}}void @{{[^(]+}}(i32* noalias %0, i32* noalias %1)
 // CHECK: [[ADD:%.+]] = add nsw i32

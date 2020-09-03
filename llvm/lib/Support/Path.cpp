@@ -496,49 +496,44 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
   path.append(ext.begin(), ext.end());
 }
 
-bool replace_path_prefix(SmallVectorImpl<char> &Path,
-                         const StringRef &OldPrefix, const StringRef &NewPrefix,
-                         Style style, bool strict) {
+static bool starts_with(StringRef Path, StringRef Prefix,
+                        Style style = Style::native) {
+  // Windows prefix matching : case and separator insensitive
+  if (real_style(style) == Style::windows) {
+    if (Path.size() < Prefix.size())
+      return false;
+    for (size_t I = 0, E = Prefix.size(); I != E; ++I) {
+      bool SepPath = is_separator(Path[I], style);
+      bool SepPrefix = is_separator(Prefix[I], style);
+      if (SepPath != SepPrefix)
+        return false;
+      if (!SepPath && toLower(Path[I]) != toLower(Prefix[I]))
+        return false;
+    }
+    return true;
+  }
+  return Path.startswith(Prefix);
+}
+
+bool replace_path_prefix(SmallVectorImpl<char> &Path, StringRef OldPrefix,
+                         StringRef NewPrefix, Style style) {
   if (OldPrefix.empty() && NewPrefix.empty())
     return false;
 
   StringRef OrigPath(Path.begin(), Path.size());
-  StringRef OldPrefixDir;
-
-  if (!strict && OldPrefix.size() > OrigPath.size())
+  if (!starts_with(OrigPath, OldPrefix, style))
     return false;
-
-  // Ensure OldPrefixDir does not have a trailing separator.
-  if (!OldPrefix.empty() && is_separator(OldPrefix.back()))
-    OldPrefixDir = parent_path(OldPrefix, style);
-  else
-    OldPrefixDir = OldPrefix;
-
-  if (!OrigPath.startswith(OldPrefixDir))
-    return false;
-
-  if (OrigPath.size() > OldPrefixDir.size())
-    if (!is_separator(OrigPath[OldPrefixDir.size()], style) && strict)
-      return false;
 
   // If prefixes have the same size we can simply copy the new one over.
-  if (OldPrefixDir.size() == NewPrefix.size() && !strict) {
+  if (OldPrefix.size() == NewPrefix.size()) {
     llvm::copy(NewPrefix, Path.begin());
     return true;
   }
 
-  StringRef RelPath = OrigPath.substr(OldPrefixDir.size());
+  StringRef RelPath = OrigPath.substr(OldPrefix.size());
   SmallString<256> NewPath;
-  path::append(NewPath, style, NewPrefix);
-  if (!RelPath.empty()) {
-    if (!is_separator(RelPath[0], style) || !strict)
-      path::append(NewPath, style, RelPath);
-    else
-      path::append(NewPath, style, relative_path(RelPath, style));
-  }
-
+  (Twine(NewPrefix) + RelPath).toVector(NewPath);
   Path.swap(NewPath);
-
   return true;
 }
 
@@ -564,21 +559,15 @@ void native(SmallVectorImpl<char> &Path, Style style) {
       Path = PathHome;
     }
   } else {
-    for (auto PI = Path.begin(), PE = Path.end(); PI < PE; ++PI) {
-      if (*PI == '\\') {
-        auto PN = PI + 1;
-        if (PN < PE && *PN == '\\')
-          ++PI; // increment once, the for loop will move over the escaped slash
-        else
-          *PI = '/';
-      }
-    }
+    for (auto PI = Path.begin(), PE = Path.end(); PI < PE; ++PI)
+      if (*PI == '\\')
+        *PI = '/';
   }
 }
 
 std::string convert_to_slash(StringRef path, Style style) {
   if (real_style(style) != Style::windows)
-    return path;
+    return std::string(path);
 
   std::string s = path.str();
   std::replace(s.begin(), s.end(), '\\', '/');
@@ -708,43 +697,69 @@ StringRef remove_leading_dotslash(StringRef Path, Style style) {
   return Path;
 }
 
-static SmallString<256> remove_dots(StringRef path, bool remove_dot_dot,
-                                    Style style) {
+// Remove path traversal components ("." and "..") when possible, and
+// canonicalize slashes.
+bool remove_dots(SmallVectorImpl<char> &the_path, bool remove_dot_dot,
+                 Style style) {
+  style = real_style(style);
+  StringRef remaining(the_path.data(), the_path.size());
+  bool needs_change = false;
   SmallVector<StringRef, 16> components;
 
-  // Skip the root path, then look for traversal in the components.
-  StringRef rel = path::relative_path(path, style);
-  for (StringRef C :
-       llvm::make_range(path::begin(rel, style), path::end(rel))) {
-    if (C == ".")
-      continue;
-    // Leading ".." will remain in the path unless it's at the root.
-    if (remove_dot_dot && C == "..") {
+  // Consume the root path, if present.
+  StringRef root = path::root_path(remaining, style);
+  bool absolute = !root.empty();
+  if (absolute)
+    remaining = remaining.drop_front(root.size());
+
+  // Loop over path components manually. This makes it easier to detect
+  // non-preferred slashes and double separators that must be canonicalized.
+  while (!remaining.empty()) {
+    size_t next_slash = remaining.find_first_of(separators(style));
+    if (next_slash == StringRef::npos)
+      next_slash = remaining.size();
+    StringRef component = remaining.take_front(next_slash);
+    remaining = remaining.drop_front(next_slash);
+
+    // Eat the slash, and check if it is the preferred separator.
+    if (!remaining.empty()) {
+      needs_change |= remaining.front() != preferred_separator(style);
+      remaining = remaining.drop_front();
+      // The path needs to be rewritten if it has a trailing slash.
+      // FIXME: This is emergent behavior that could be removed.
+      needs_change |= remaining.empty();
+    }
+
+    // Check for path traversal components or double separators.
+    if (component.empty() || component == ".") {
+      needs_change = true;
+    } else if (remove_dot_dot && component == "..") {
+      needs_change = true;
+      // Do not allow ".." to remove the root component. If this is the
+      // beginning of a relative path, keep the ".." component.
       if (!components.empty() && components.back() != "..") {
         components.pop_back();
-        continue;
+      } else if (!absolute) {
+        components.push_back(component);
       }
-      if (path::is_absolute(path, style))
-        continue;
+    } else {
+      components.push_back(component);
     }
-    components.push_back(C);
   }
 
-  SmallString<256> buffer = path::root_path(path, style);
-  for (StringRef C : components)
-    path::append(buffer, style, C);
-  return buffer;
-}
-
-bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot,
-                 Style style) {
-  StringRef p(path.data(), path.size());
-
-  SmallString<256> result = remove_dots(p, remove_dot_dot, style);
-  if (result == path)
+  // Avoid rewriting the path unless we have to.
+  if (!needs_change)
     return false;
 
-  path.swap(result);
+  SmallString<256> buffer = root;
+  if (!components.empty()) {
+    buffer += components[0];
+    for (StringRef C : makeArrayRef(components).drop_front()) {
+      buffer += preferred_separator(style);
+      buffer += C;
+    }
+  }
+  the_path.swap(buffer);
   return true;
 }
 
@@ -1114,7 +1129,7 @@ void directory_entry::replace_filename(const Twine &Filename, file_type Type,
                                        basic_file_status Status) {
   SmallString<128> PathStr = path::parent_path(Path);
   path::append(PathStr, Filename);
-  this->Path = PathStr.str();
+  this->Path = std::string(PathStr.str());
   this->Type = Type;
   this->Status = Status;
 }
@@ -1142,7 +1157,8 @@ ErrorOr<perms> getPermissions(const Twine &Path) {
 namespace llvm {
 namespace sys {
 namespace fs {
-TempFile::TempFile(StringRef Name, int FD) : TmpName(Name), FD(FD) {}
+TempFile::TempFile(StringRef Name, int FD)
+    : TmpName(std::string(Name)), FD(FD) {}
 TempFile::TempFile(TempFile &&Other) { *this = std::move(Other); }
 TempFile &TempFile::operator=(TempFile &&Other) {
   TmpName = std::move(Other.TmpName);

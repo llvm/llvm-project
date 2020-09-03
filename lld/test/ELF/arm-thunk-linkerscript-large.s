@@ -8,12 +8,12 @@
 // RUN: ld.lld --script %t.script %t -o %t2
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
-// RUN: llvm-objdump -d %t2 -start-address=1048576 -stop-address=1048594 -triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t2 -start-address=2097152 -stop-address=2097160 -triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d %t2 -start-address=11534340 -stop-address=11534350 -triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
-// RUN: llvm-objdump -d %t2 -start-address=34603008 -stop-address=34603034 -triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK4 %s
-// RUN: llvm-objdump -d %t2 -start-address=35651584 -stop-address=35651598 -triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK5 %s
-// RUN: llvm-objdump -d %t2 -start-address=68157440 -stop-address=68157472 -triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK6 %s
+// RUN: llvm-objdump -d %t2 --start-address=1048576 --stop-address=1048594 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d %t2 --start-address=2097152 --stop-address=2097160 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d %t2 --start-address=11534340 --stop-address=11534350 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump -d %t2 --start-address=34603008 --stop-address=34603034 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK4 %s
+// RUN: llvm-objdump -d %t2 --start-address=35651584 --stop-address=35651598 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK5 %s
+// RUN: llvm-objdump -d %t2 --start-address=68157440 --stop-address=68157472 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK6 %s
 
 // Test the range extensions in a linker script where there are several
 // OutputSections requiring range extension Thunks. We should be able to reuse
@@ -54,10 +54,10 @@ _start:
  bl tfunch31
 // CHECK1: Disassembly of section .text:
 // CHECK1-EMPTY:
-// CHECK1-NEXT: _start:
+// CHECK1-NEXT: <_start>:
 // CHECK1-NEXT:   100000:       ff f0 fe ff     bl      #1048572
 // CHECK1-NEXT:   100004:       00 f0 00 f8     bl      #0
-// CHECK1: __Thumbv7ABSLongThunk_tfunch31:
+// CHECK1: <__Thumbv7ABSLongThunk_tfunch31>:
 // CHECK1-NEXT:   100008:       40 f2 01 0c     movw    r12, #1
 // CHECK1-NEXT:   10000c:       c0 f2 10 4c     movt    r12, #1040
 // CHECK1-NEXT:   100010:       60 47   bx      r12
@@ -68,7 +68,7 @@ _start:
  bl tfunch31
 // CHECK2: Disassembly of section .textl:
 // CHECK2-EMPTY:
-// CHECK2-NEXT: tfuncl00:
+// CHECK2-NEXT: <tfuncl00>:
 // CHECK2-NEXT:   200000:	70 47 	bx	lr
 // CHECK2-NEXT:   200002:	ff f0 ff df 	bl	#9437182
 // CHECK2-NEXT:   200006:	ff f6 ff ff 	bl	#-1048578
@@ -81,7 +81,7 @@ _start:
  FUNCTIONL 07
  FUNCTIONL 08
  FUNCTIONL 09
-// CHECK3: __Thumbv7ABSLongThunk_tfuncl24:
+// CHECK3: <__Thumbv7ABSLongThunk_tfuncl24>:
 // CHECK3-NEXT:   b00004:      ff f2 fc 97     b.w     #15728632 <tfuncl24>
  FUNCTIONL 10
  FUNCTIONL 11
@@ -113,7 +113,7 @@ _start:
 // CHECK4:  2100002:    00 f0 05 f8     bl      #10
 // CHECK4-NEXT:  2100006:       ff f4 fb f7     bl      #-7340042
 // CHECK4-NEXT:  210000a:       ff f0 f9 ff     bl      #1048562
-// CHECK4: __Thumbv7ABSLongThunk_tfuncl00:
+// CHECK4: <__Thumbv7ABSLongThunk_tfuncl00>:
 // CHECK4-NEXT:  2100010:       40 f2 01 0c     movw    r12, #1
 // CHECK4-NEXT:  2100014:       c0 f2 20 0c     movt    r12, #32
 // CHECK4-NEXT:  2100018:       60 47   bx      r12
@@ -125,7 +125,7 @@ _start:
         bl tfuncl31
 // CHECK5:  Disassembly of section .texth:
 // CHECK5-EMPTY:
-// CHECK5-NEXT: tfunch00:
+// CHECK5-NEXT: <tfunch00>:
 // CHECK5-NEXT:  2200000:       70 47   bx      lr
 // CHECK5-NEXT:  2200002:       00 f7 05 f8     bl      #-1048566
 // CHECK5-NEXT:  2200006:       ff f7 fb df     bl      #-8388618
@@ -164,15 +164,15 @@ _start:
 // expect Thunks in .texth
  bl tfuncl00
  bl tfunch00
-// CHECK6: tfunch31:
+// CHECK6: <tfunch31>:
 // CHECK6-NEXT:  4100000:       70 47   bx      lr
 // CHECK6-NEXT:  4100002:       00 f0 03 f8     bl      #6
 // CHECK6-NEXT:  4100006:       00 f0 06 f8     bl      #12
-// CHECK6: __Thumbv7ABSLongThunk_tfuncl00:
+// CHECK6: <__Thumbv7ABSLongThunk_tfuncl00>:
 // CHECK6-NEXT:  410000c:       40 f2 01 0c     movw    r12, #1
 // CHECK6-NEXT:  4100010:       c0 f2 20 0c     movt    r12, #32
 // CHECK6-NEXT:  4100014:       60 47   bx      r12
-// CHECK6: __Thumbv7ABSLongThunk_tfunch00:
+// CHECK6: <__Thumbv7ABSLongThunk_tfunch00>:
 // CHECK6-NEXT:  4100016:       40 f2 01 0c     movw    r12, #1
 // CHECK6-NEXT:  410001a:       c0 f2 20 2c     movt    r12, #544
 // CHECK6-NEXT:  410001e:       60 47   bx      r12

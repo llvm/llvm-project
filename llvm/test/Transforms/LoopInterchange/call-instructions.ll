@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -basicaa -loop-interchange -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
+; RUN: opt < %s -basic-aa -loop-interchange -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
 ; RUN:     -verify-dom-info -verify-loop-info -stats 2>&1 | FileCheck -check-prefix=STATS %s
 ; RUN: FileCheck --input-file=%t %s
 
@@ -27,7 +27,7 @@ declare void @bar(i64 %a) readnone
 ; CHECK-NEXT: Name:            CallInst
 ; CHECK-NEXT: Function:        interchange_01
 ; CHECK-NEXT: Args:
-; CHECK-NEXT  - String:          Cannot interchange loops due to call instruction.
+; CHECK-NEXT: - String:          Cannot interchange loops due to call instruction.
 
 define void @interchange_01(i32 %k) {
 entry:

@@ -13,10 +13,11 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Timer.h"
-#include "llvm/Support/raw_ostream.h"
 #include <string>
-#include <utility>
-#include <vector>
+
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
 
 namespace clang {
 namespace tidy {

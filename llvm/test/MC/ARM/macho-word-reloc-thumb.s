@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -triple thumbv7-apple-ios %s -filetype=obj -o %t
-@ RUN: llvm-objdump -macho -d %t -triple thumbv7-apple-ios | FileCheck %s
+@ RUN: llvm-objdump --macho -d %t --triple=thumbv7-apple-ios | FileCheck %s
 
 @ ARM relocatable object files try to look like they're pre-linked, so the
 @ offsets in the instructions are a best-guess. I suspect the "-3" should b

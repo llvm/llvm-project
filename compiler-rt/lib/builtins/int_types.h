@@ -22,11 +22,20 @@
 #ifdef si_int
 #undef si_int
 #endif
-typedef int si_int;
-typedef unsigned su_int;
+typedef int32_t si_int;
+typedef uint32_t su_int;
+#if UINT_MAX == 0xFFFFFFFF
+#define clzsi __builtin_clz
+#define ctzsi __builtin_ctz
+#elif ULONG_MAX == 0xFFFFFFFF
+#define clzsi __builtin_clzl
+#define ctzsi __builtin_ctzl
+#else
+#error could not determine appropriate clzsi macro for this system
+#endif
 
-typedef long long di_int;
-typedef unsigned long long du_int;
+typedef int64_t di_int;
+typedef uint64_t du_int;
 
 typedef union {
   di_int all;
@@ -135,9 +144,12 @@ typedef struct {
 // Check if the target supports 80 bit extended precision long doubles.
 // Notably, on x86 Windows, MSVC only provides a 64-bit long double, but GCC
 // still makes it 80 bits. Clang will match whatever compiler it is trying to
-// be compatible with.
-#if ((defined(__i386__) || defined(__x86_64__)) && !defined(_MSC_VER)) ||      \
-    defined(__m68k__) || defined(__ia64__)
+// be compatible with. On 32-bit x86 Android, long double is 64 bits, while on
+// x86_64 Android, long double is 128 bits.
+#if (defined(__i386__) || defined(__x86_64__)) &&                              \
+    !(defined(_MSC_VER) || defined(__ANDROID__))
+#define HAS_80_BIT_LONG_DOUBLE 1
+#elif defined(__m68k__) || defined(__ia64__)
 #define HAS_80_BIT_LONG_DOUBLE 1
 #else
 #define HAS_80_BIT_LONG_DOUBLE 0

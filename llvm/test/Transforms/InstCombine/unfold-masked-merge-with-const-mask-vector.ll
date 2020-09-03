@@ -21,8 +21,8 @@ define <2 x i4> @splat (<2 x i4> %x, <2 x i4> %y) {
 
 define <3 x i4> @splat_undef (<3 x i4> %x, <3 x i4> %y) {
 ; CHECK-LABEL: @splat_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <3 x i4> [[X:%.*]], <i4 -2, i4 undef, i4 -2>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <3 x i4> [[Y:%.*]], <i4 1, i4 undef, i4 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <3 x i4> [[X:%.*]], <i4 -2, i4 -1, i4 -2>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <3 x i4> [[Y:%.*]], <i4 1, i4 0, i4 1>
 ; CHECK-NEXT:    [[R:%.*]] = or <3 x i4> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <3 x i4> [[R]]
 ;
@@ -85,8 +85,8 @@ define <2 x i4> @in_constant_varx_14_nonsplat(<2 x i4> %x, <2 x i4> %mask) {
 
 define <3 x i4> @in_constant_varx_14_undef(<3 x i4> %x, <3 x i4> %mask) {
 ; CHECK-LABEL: @in_constant_varx_14_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <3 x i4> [[X:%.*]], <i4 1, i4 undef, i4 1>
-; CHECK-NEXT:    [[R:%.*]] = or <3 x i4> [[TMP1]], <i4 -2, i4 undef, i4 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <3 x i4> [[X:%.*]], <i4 1, i4 -1, i4 1>
+; CHECK-NEXT:    [[R:%.*]] = or <3 x i4> [[TMP1]], <i4 -2, i4 0, i4 6>
 ; CHECK-NEXT:    ret <3 x i4> [[R]]
 ;
   %n0 = xor <3 x i4> %x, <i4 14, i4 undef, i4 7> ; %x
@@ -133,7 +133,7 @@ define <2 x i4> @in_constant_14_vary_nonsplat(<2 x i4> %y, <2 x i4> %mask) {
 
 define <3 x i4> @in_constant_14_vary_undef(<3 x i4> %y, <3 x i4> %mask) {
 ; CHECK-LABEL: @in_constant_14_vary_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <3 x i4> [[Y:%.*]], <i4 -2, i4 undef, i4 -2>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <3 x i4> [[Y:%.*]], <i4 -2, i4 0, i4 -2>
 ; CHECK-NEXT:    [[R:%.*]] = or <3 x i4> [[TMP1]], <i4 0, i4 undef, i4 1>
 ; CHECK-NEXT:    ret <3 x i4> [[R]]
 ;

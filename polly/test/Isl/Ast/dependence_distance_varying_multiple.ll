@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-stmt-granularity=bb -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-stmt-granularity=bb -polyhedral-info -polly-check-parallel -analyze < %s | FileCheck %s -check-prefix=PINFO
 ;
 ;        void f(int *restrict A, int *restrict B, int *restrict C, int *restrict D,

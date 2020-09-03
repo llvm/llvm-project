@@ -64,7 +64,7 @@ template void fast_enumeration_test<NSString *>(vector); // expected-note{{in in
 template<typename T, typename U>
 void try_catch_finally_test(U value) {
   @try {
-    value = 1; // expected-error{{assigning to 'int *' from incompatible type 'int'}}
+    value = 1; // expected-error{{incompatible integer to pointer conversion assigning to 'int *' from 'int'}}
   }
   @catch (T obj) { // expected-error{{@catch parameter is not a pointer to an interface type}}
     id x = obj;

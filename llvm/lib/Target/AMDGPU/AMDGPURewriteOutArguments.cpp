@@ -208,8 +208,8 @@ bool AMDGPURewriteOutArguments::doInitialization(Module &M) {
 
 #ifndef NDEBUG
 bool AMDGPURewriteOutArguments::isVec3ToVec4Shuffle(Type *Ty0, Type* Ty1) const {
-  VectorType *VT0 = dyn_cast<VectorType>(Ty0);
-  VectorType *VT1 = dyn_cast<VectorType>(Ty1);
+  auto *VT0 = dyn_cast<FixedVectorType>(Ty0);
+  auto *VT1 = dyn_cast<FixedVectorType>(Ty1);
   if (!VT0 || !VT1)
     return false;
 
@@ -409,7 +409,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
             DL->getTypeSizeInBits(Val->getType())) {
           assert(isVec3ToVec4Shuffle(EffectiveEltTy, Val->getType()));
           Val = B.CreateShuffleVector(Val, UndefValue::get(Val->getType()),
-                                      { 0, 1, 2 });
+                                      ArrayRef<int>{0, 1, 2});
         }
 
         Val = B.CreateBitCast(Val, EffectiveEltTy);
@@ -453,9 +453,8 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
     PointerType *ArgType = cast<PointerType>(Arg.getType());
 
     auto *EltTy = ArgType->getElementType();
-    unsigned Align = Arg.getParamAlignment();
-    if (Align == 0)
-      Align = DL->getABITypeAlignment(EltTy);
+    const auto Align =
+        DL->getValueOrABITypeAlignment(Arg.getParamAlign(), EltTy);
 
     Value *Val = B.CreateExtractValue(StubCall, RetIdx++);
     Type *PtrTy = Val->getType()->getPointerTo(ArgType->getAddressSpace());

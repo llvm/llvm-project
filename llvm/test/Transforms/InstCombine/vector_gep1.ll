@@ -62,3 +62,13 @@ define <2 x i32*> @test7(<2 x {i32, i32}*> %a) {
   ret <2 x i32*> %w
 }
 
+define <vscale x 2 x i1> @test8() {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:    ret <vscale x 2 x i1> icmp ult (<vscale x 2 x i64> zext (<vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> undef, i32 1, i32 0), <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer) to <vscale x 2 x i64>), <vscale x 2 x i64> zeroinitializer)
+;
+  %ins = insertelement <vscale x 2 x i32> undef, i32 1, i32 0
+  %b = shufflevector <vscale x 2 x i32> %ins, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
+  %c = inttoptr <vscale x 2 x i32> %b to <vscale x 2 x i8*>
+  %d = icmp ult <vscale x 2 x i8*> %c, zeroinitializer
+  ret <vscale x 2 x i1> %d
+}

@@ -49,7 +49,7 @@ bool WebAssembly::mayThrow(const MachineInstr &MI) {
   if (!MI.isCall())
     return false;
 
-  const MachineOperand &MO = MI.getOperand(getCalleeOpNo(MI.getOpcode()));
+  const MachineOperand &MO = getCalleeOp(MI);
   assert(MO.isGlobal() || MO.isSymbol());
 
   if (MO.isSymbol()) {
@@ -78,4 +78,21 @@ bool WebAssembly::mayThrow(const MachineInstr &MI) {
   // TODO Can we exclude call instructions that are marked as 'nounwind' in the
   // original LLVm IR? (Even when the callee may throw)
   return true;
+}
+
+const MachineOperand &WebAssembly::getCalleeOp(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case WebAssembly::CALL:
+  case WebAssembly::CALL_S:
+  case WebAssembly::RET_CALL:
+  case WebAssembly::RET_CALL_S:
+    return MI.getOperand(MI.getNumExplicitDefs());
+  case WebAssembly::CALL_INDIRECT:
+  case WebAssembly::CALL_INDIRECT_S:
+  case WebAssembly::RET_CALL_INDIRECT:
+  case WebAssembly::RET_CALL_INDIRECT_S:
+    return MI.getOperand(MI.getNumOperands() - 1);
+  default:
+    llvm_unreachable("Not a call instruction");
+  }
 }

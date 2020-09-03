@@ -1,4 +1,4 @@
-//===-- SBAttachInfo.cpp ----------------------------------------*- C++ -*-===//
+//===-- SBAttachInfo.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -54,7 +54,7 @@ SBAttachInfo::SBAttachInfo(const SBAttachInfo &rhs)
   m_opaque_sp = clone(rhs.m_opaque_sp);
 }
 
-SBAttachInfo::~SBAttachInfo() {}
+SBAttachInfo::~SBAttachInfo() = default;
 
 lldb_private::ProcessAttachInfo &SBAttachInfo::ref() { return *m_opaque_sp; }
 

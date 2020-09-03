@@ -219,7 +219,7 @@ OPTIONS
 
 .. option:: --special-syms
 
- Ignored. For GNU compatibility only.
+ Do not filter special symbols from the output.
 
 .. option:: --undefined-only, -u
 
@@ -245,6 +245,10 @@ MACH-O SPECIFIC OPTIONS
 
  Add symbols from the dyldinfo, if they are not already in the symbol table.
  This is the default.
+
+.. option:: --add-inlinedinfo
+
+ Add symbols from the inlined libraries, TBD file inputs only.
 
 .. option:: --arch=<arch1[,arch2,...]>
 

@@ -1,4 +1,4 @@
-.globl foo, bar
+.globl foo
 .type foo, @object
 .size foo, 4
 foo:

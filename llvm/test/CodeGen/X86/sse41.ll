@@ -97,9 +97,8 @@ define <2 x i64> @pmovzxbq_1() nounwind {
 ; X86-AVX512:       ## %bb.0: ## %entry
 ; X86-AVX512-NEXT:    movl L_g16$non_lazy_ptr, %eax ## encoding: [0xa1,A,A,A,A]
 ; X86-AVX512-NEXT:    ## fixup A - offset: 1, value: L_g16$non_lazy_ptr, kind: FK_Data_4
-; X86-AVX512-NEXT:    vpbroadcastw (%eax), %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x79,0x00]
-; X86-AVX512-NEXT:    vpmovzxbq %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x32,0xc0]
-; X86-AVX512-NEXT:    ## xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; X86-AVX512-NEXT:    vpmovzxbq (%eax), %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x32,0x00]
+; X86-AVX512-NEXT:    ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: pmovzxbq_1:
@@ -122,9 +121,8 @@ define <2 x i64> @pmovzxbq_1() nounwind {
 ; X64-AVX512:       ## %bb.0: ## %entry
 ; X64-AVX512-NEXT:    movq _g16@{{.*}}(%rip), %rax ## encoding: [0x48,0x8b,0x05,A,A,A,A]
 ; X64-AVX512-NEXT:    ## fixup A - offset: 3, value: _g16@GOTPCREL-4, kind: reloc_riprel_4byte_movq_load
-; X64-AVX512-NEXT:    vpbroadcastw (%rax), %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x79,0x00]
-; X64-AVX512-NEXT:    vpmovzxbq %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x32,0xc0]
-; X64-AVX512-NEXT:    ## xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; X64-AVX512-NEXT:    vpmovzxbq (%rax), %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x32,0x00]
+; X64-AVX512-NEXT:    ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
 entry:
 	%0 = load i16, i16* @g16, align 2		; <i16> [#uses=1]
@@ -1978,10 +1976,8 @@ define <4 x float> @insertps_5(<4 x float> %A, <4 x float> %B) {
 ;
 ; AVX512-LABEL: insertps_5:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vpblendd $2, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x02,0xc1,0x02]
-; AVX512-NEXT:    ## xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
-; AVX512-NEXT:    vmovq %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x7e,0xc0]
-; AVX512-NEXT:    ## xmm0 = xmm0[0],zero
+; AVX512-NEXT:    vinsertps $92, %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc1,0x5c]
+; AVX512-NEXT:    ## xmm0 = xmm0[0],xmm1[1],zero,zero
 ; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %vecext = extractelement <4 x float> %A, i32 0
   %vecinit = insertelement <4 x float> undef, float %vecext, i32 0
@@ -2062,8 +2058,6 @@ define <4 x float> @insertps_8(<4 x float> %A, <4 x float> %B) {
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vinsertps $28, %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc1,0x1c]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0],xmm1[0],zero,zero
-; AVX512-NEXT:    vmovq %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x7e,0xc0]
-; AVX512-NEXT:    ## xmm0 = xmm0[0],zero
 ; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %vecext = extractelement <4 x float> %A, i32 0
   %vecinit = insertelement <4 x float> undef, float %vecext, i32 0

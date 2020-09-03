@@ -184,7 +184,7 @@
 //      headerlist.txt
 //
 // Note that if the headers in the header list have partial paths, sub-modules
-// will be created for the subdirectires involved, assuming that the
+// will be created for the subdirectories involved, assuming that the
 // subdirectories contain headers to be grouped into a module, but still with
 // individual modules for the headers in the subdirectory.
 //
@@ -509,7 +509,7 @@ public:
              HEnd = CurHeaderContents.end();
          H != HEnd; ++H) {
       // Sort contents.
-      std::sort(H->second.begin(), H->second.end());
+      llvm::sort(H->second);
 
       // Check whether we've seen this header before.
       DenseMap<const FileEntry *, HeaderContents>::iterator KnownH =
@@ -813,7 +813,7 @@ int main(int Argc, const char **Argv) {
   Argv0 = Argv[0];
 
   // Save program arguments for use in module.modulemap comment.
-  CommandLine = sys::path::stem(sys::path::filename(Argv0));
+  CommandLine = std::string(sys::path::stem(sys::path::filename(Argv0)));
   for (int ArgIndex = 1; ArgIndex < Argc; ArgIndex++) {
     CommandLine.append(" ");
     CommandLine.append(Argv[ArgIndex]);
@@ -948,7 +948,7 @@ int main(int Argc, const char **Argv) {
       for (LocationArray::iterator FE = DI->end(); FI != FE; ++FI) {
         errs() << "    " << FI->File->getName() << ":" << FI->Line << ":"
                << FI->Column << "\n";
-        ModUtil->addUniqueProblemFile(FI->File->getName());
+        ModUtil->addUniqueProblemFile(std::string(FI->File->getName()));
       }
       HadErrors = 1;
     }
@@ -978,7 +978,7 @@ int main(int Argc, const char **Argv) {
     }
 
     HadErrors = 1;
-    ModUtil->addUniqueProblemFile(H->first->getName());
+    ModUtil->addUniqueProblemFile(std::string(H->first->getName()));
     errs() << "error: header '" << H->first->getName()
            << "' has different contents depending on how it was included.\n";
     for (unsigned I = 0, N = H->second.size(); I != N; ++I) {

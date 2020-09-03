@@ -269,8 +269,8 @@ TEST(CFGBuilder, Rebuild) {
 
 static_assert(is_trivially_copyable<succ_iterator>::value,
               "trivially copyable");
-static_assert(is_trivially_copyable<succ_const_iterator>::value,
+static_assert(is_trivially_copyable<const_succ_iterator>::value,
               "trivially copyable");
 static_assert(is_trivially_copyable<succ_range>::value, "trivially copyable");
-static_assert(is_trivially_copyable<succ_const_range>::value,
+static_assert(is_trivially_copyable<const_succ_range>::value,
               "trivially copyable");

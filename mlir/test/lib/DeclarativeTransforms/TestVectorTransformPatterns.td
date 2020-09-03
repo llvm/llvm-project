@@ -1,6 +1,6 @@
 //===- TestVectorTransformPatterns.td - Test patterns ---*- tablegen ----*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -14,9 +14,9 @@
 #ifndef TEST_VECTOR_TRANSFORMS_PATTERNS
 #define TEST_VECTOR_TRANSFORMS_PATTERNS
 
-include "mlir/Dialect/StandardOps/Ops.td"
-include "mlir/Dialect/VectorOps/VectorOps.td"
-include "mlir/Dialect/VectorOps/VectorTransformPatterns.td"
+include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir/Dialect/Vector/VectorOps.td"
+include "mlir/Dialect/Vector/VectorTransformPatterns.td"
 
 def : Pat<(AddFOp:$op_results $a, $b),
           (UnrollVectorOp<[2, 2]> $op_results, $a, $b),
@@ -26,7 +26,7 @@ def : Pat<(AddFOp:$op_results $a, $b),
           (UnrollVectorOp<[2, 2]> $op_results, $a, $b),
           [(Constraint<HasShape<[4, 4]>> $a)]>;
 
-// TODO(andydavis) Add Constraints on lhs/rhs shapes.
+// TODO: Add Constraints on lhs/rhs shapes.
 def : Pat<(Vector_ContractionOp:$op_results $a, $b, $c, $masks, $attr0, $attr1),
           (UnrollVectorOp<[2, 2, 2]> $op_results, $a, $b, $c),
           [(Constraint<HasShape<[4, 4]>> $c)]>;

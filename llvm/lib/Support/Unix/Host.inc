@@ -56,7 +56,7 @@ static std::string updateTripleOSVersion(std::string TargetTripleString) {
     if (TT.getOS() == Triple::AIX && !TT.getOSMajorVersion()) {
       struct utsname name;
       if (uname(&name) != -1) {
-        std::string NewOSName = Triple::getOSTypeName(Triple::AIX);
+        std::string NewOSName = std::string(Triple::getOSTypeName(Triple::AIX));
         NewOSName += name.version;
         NewOSName += '.';
         NewOSName += name.release;

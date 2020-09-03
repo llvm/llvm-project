@@ -13,8 +13,9 @@ namespace clang {
 namespace clangd {
 
 void runAddDocument(ClangdServer &Server, PathRef File,
-                    llvm::StringRef Contents, WantDiagnostics WantDiags) {
-  Server.addDocument(File, Contents, WantDiags);
+                    llvm::StringRef Contents, llvm::StringRef Version,
+                    WantDiagnostics WantDiags, bool ForceRebuild) {
+  Server.addDocument(File, Contents, Version, WantDiags, ForceRebuild);
   if (!Server.blockUntilIdleForTest())
     llvm_unreachable("not idle after addDocument");
 }
@@ -97,9 +98,17 @@ runFindDocumentHighlights(ClangdServer &Server, PathRef File, Position Pos) {
 }
 
 llvm::Expected<FileEdits> runRename(ClangdServer &Server, PathRef File,
-                                    Position Pos, llvm::StringRef NewName) {
+                                    Position Pos, llvm::StringRef NewName,
+                                    const RenameOptions &RenameOpts) {
   llvm::Optional<llvm::Expected<FileEdits>> Result;
-  Server.rename(File, Pos, NewName, /*WantFormat=*/false, capture(Result));
+  Server.rename(File, Pos, NewName, RenameOpts, capture(Result));
+  return std::move(*Result);
+}
+
+llvm::Expected<tooling::Replacements>
+runFormatFile(ClangdServer &Server, PathRef File, StringRef Code) {
+  llvm::Optional<llvm::Expected<tooling::Replacements>> Result;
+  Server.formatFile(File, Code, capture(Result));
   return std::move(*Result);
 }
 
@@ -109,23 +118,9 @@ std::string runDumpAST(ClangdServer &Server, PathRef File) {
   return std::move(*Result);
 }
 
-llvm::Expected<std::vector<SymbolInformation>>
-runWorkspaceSymbols(ClangdServer &Server, llvm::StringRef Query, int Limit) {
-  llvm::Optional<llvm::Expected<std::vector<SymbolInformation>>> Result;
-  Server.workspaceSymbols(Query, Limit, capture(Result));
-  return std::move(*Result);
-}
-
-llvm::Expected<std::vector<DocumentSymbol>>
-runDocumentSymbols(ClangdServer &Server, PathRef File) {
-  llvm::Optional<llvm::Expected<std::vector<DocumentSymbol>>> Result;
-  Server.documentSymbols(File, capture(Result));
-  return std::move(*Result);
-}
-
 SymbolSlab runFuzzyFind(const SymbolIndex &Index, llvm::StringRef Query) {
   FuzzyFindRequest Req;
-  Req.Query = Query;
+  Req.Query = std::string(Query);
   Req.AnyScope = true;
   return runFuzzyFind(Index, Req);
 }
@@ -144,9 +139,10 @@ RefSlab getRefs(const SymbolIndex &Index, SymbolID ID) {
   return std::move(Slab).build();
 }
 
-llvm::Expected<std::vector<Range>>
-runSemanticRanges(ClangdServer &Server, PathRef File, Position Pos) {
-  llvm::Optional<llvm::Expected<std::vector<Range>>> Result;
+llvm::Expected<std::vector<SelectionRange>>
+runSemanticRanges(ClangdServer &Server, PathRef File,
+                  const std::vector<Position> &Pos) {
+  llvm::Optional<llvm::Expected<std::vector<SelectionRange>>> Result;
   Server.semanticRanges(File, Pos, capture(Result));
   return std::move(*Result);
 }

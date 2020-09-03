@@ -24,43 +24,47 @@ def HasAddr64 : Predicate<"Subtarget->hasAddr64()">;
 
 def HasSIMD128 :
     Predicate<"Subtarget->hasSIMD128()">,
-    AssemblerPredicate<"FeatureSIMD128", "simd128">;
+    AssemblerPredicate<(all_of FeatureSIMD128), "simd128">;
 
 def HasUnimplementedSIMD128 :
     Predicate<"Subtarget->hasUnimplementedSIMD128()">,
-    AssemblerPredicate<"FeatureUnimplementedSIMD128", "unimplemented-simd128">;
+    AssemblerPredicate<(all_of FeatureUnimplementedSIMD128), "unimplemented-simd128">;
 
 def HasAtomics :
     Predicate<"Subtarget->hasAtomics()">,
-    AssemblerPredicate<"FeatureAtomics", "atomics">;
+    AssemblerPredicate<(all_of FeatureAtomics), "atomics">;
 
 def HasMultivalue :
     Predicate<"Subtarget->hasMultivalue()">,
-    AssemblerPredicate<"FeatureMultivalue", "multivalue">;
+    AssemblerPredicate<(all_of FeatureMultivalue), "multivalue">;
 
 def HasNontrappingFPToInt :
     Predicate<"Subtarget->hasNontrappingFPToInt()">,
-    AssemblerPredicate<"FeatureNontrappingFPToInt", "nontrapping-fptoint">;
+    AssemblerPredicate<(all_of FeatureNontrappingFPToInt), "nontrapping-fptoint">;
 
 def NotHasNontrappingFPToInt :
     Predicate<"!Subtarget->hasNontrappingFPToInt()">,
-    AssemblerPredicate<"!FeatureNontrappingFPToInt", "nontrapping-fptoint">;
+    AssemblerPredicate<(all_of (not FeatureNontrappingFPToInt)), "nontrapping-fptoint">;
 
 def HasSignExt :
     Predicate<"Subtarget->hasSignExt()">,
-    AssemblerPredicate<"FeatureSignExt", "sign-ext">;
+    AssemblerPredicate<(all_of FeatureSignExt), "sign-ext">;
 
 def HasTailCall :
     Predicate<"Subtarget->hasTailCall()">,
-    AssemblerPredicate<"FeatureTailCall", "tail-call">;
+    AssemblerPredicate<(all_of FeatureTailCall), "tail-call">;
 
 def HasExceptionHandling :
     Predicate<"Subtarget->hasExceptionHandling()">,
-    AssemblerPredicate<"FeatureExceptionHandling", "exception-handling">;
+    AssemblerPredicate<(all_of FeatureExceptionHandling), "exception-handling">;
 
 def HasBulkMemory :
     Predicate<"Subtarget->hasBulkMemory()">,
-    AssemblerPredicate<"FeatureBulkMemory", "bulk-memory">;
+    AssemblerPredicate<(all_of FeatureBulkMemory), "bulk-memory">;
+
+def HasReferenceTypes :
+    Predicate<"Subtarget->hasReferenceTypes()">,
+    AssemblerPredicate<(all_of FeatureReferenceTypes), "reference-types">;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.
@@ -91,15 +95,6 @@ def WebAssemblycallseq_start :
 def WebAssemblycallseq_end :
     SDNode<"ISD::CALLSEQ_END", SDT_WebAssemblyCallSeqEnd,
            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
-def WebAssemblycall0 : SDNode<"WebAssemblyISD::CALL0",
-                              SDT_WebAssemblyCall0,
-                              [SDNPHasChain, SDNPVariadic]>;
-def WebAssemblycall1 : SDNode<"WebAssemblyISD::CALL1",
-                              SDT_WebAssemblyCall1,
-                              [SDNPHasChain, SDNPVariadic]>;
-def WebAssemblyretcall : SDNode<"WebAssemblyISD::RET_CALL",
-                                SDT_WebAssemblyCall0,
-                                [SDNPHasChain, SDNPVariadic]>;
 def WebAssemblybr_table : SDNode<"WebAssemblyISD::BR_TABLE",
                                  SDT_WebAssemblyBrTable,
                                  [SDNPHasChain, SDNPVariadic]>;
@@ -171,6 +166,9 @@ def function32_op : Operand<i32>;
 let OperandType = "OPERAND_OFFSET32" in
 def offset32_op : Operand<i32>;
 
+let OperandType = "OPERAND_OFFSET64" in
+def offset64_op : Operand<i64>;
+
 let OperandType = "OPERAND_P2ALIGN" in {
 def P2Align : Operand<i32> {
   let PrintMethod = "printWebAssemblyP2AlignOperand";
@@ -200,6 +198,19 @@ def getStackOpcode : InstrMapping {
   let FilterClass = "StackRel";
   let RowFields = ["BaseName"];
   let ColFields = ["StackBased"];
+  let KeyCol = ["false"];
+  let ValueCols = [["true"]];
+}
+
+//===----------------------------------------------------------------------===//
+// WebAssembly 32 to 64-bit instruction mapping
+//===----------------------------------------------------------------------===//
+
+class Wasm64Rel;
+def getWasm64Opcode : InstrMapping {
+  let FilterClass = "Wasm64Rel";
+  let RowFields = ["Wasm32Name"];
+  let ColFields = ["IsWasm64"];
   let KeyCol = ["false"];
   let ValueCols = [["true"]];
 }

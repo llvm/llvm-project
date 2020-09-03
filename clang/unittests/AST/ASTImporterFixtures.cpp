@@ -38,10 +38,11 @@ void createVirtualFileIfNeeded(ASTUnit *ToAST, StringRef FileName,
                                    llvm::MemoryBuffer::getMemBuffer(Code));
 }
 
-ASTImporterTestBase::TU::TU(StringRef Code, StringRef FileName, ArgVector Args,
+ASTImporterTestBase::TU::TU(StringRef Code, StringRef FileName,
+                            std::vector<std::string> Args,
                             ImporterConstructor C,
                             ASTImporter::ODRHandlingType ODRHandling)
-    : Code(Code), FileName(FileName),
+    : Code(std::string(Code)), FileName(std::string(FileName)),
       Unit(tooling::buildASTFromCodeWithArgs(this->Code, Args, this->FileName)),
       TUDecl(Unit->getASTContext().getTranslationUnitDecl()), Creator(C),
       ODRHandling(ODRHandling) {
@@ -112,13 +113,14 @@ void ASTImporterTestBase::lazyInitSharedState(TranslationUnitDecl *ToTU) {
     SharedStatePtr = std::make_shared<ASTImporterSharedState>(*ToTU);
 }
 
-void ASTImporterTestBase::lazyInitToAST(Language ToLang, StringRef ToSrcCode,
+void ASTImporterTestBase::lazyInitToAST(TestLanguage ToLang,
+                                        StringRef ToSrcCode,
                                         StringRef FileName) {
   if (ToAST)
     return;
-  ArgVector ToArgs = getArgVectorForLanguage(ToLang);
+  std::vector<std::string> ToArgs = getCommandLineArgsForLanguage(ToLang);
   // Source code must be a valid live buffer through the tests lifetime.
-  ToCode = ToSrcCode;
+  ToCode = std::string(ToSrcCode);
   // Build the AST from an empty file.
   ToAST = tooling::buildASTFromCodeWithArgs(ToCode, ToArgs, FileName);
   ToAST->enableSourceFileDiagnostics();
@@ -136,12 +138,11 @@ ASTImporterTestBase::TU *ASTImporterTestBase::findFromTU(Decl *From) {
   return &*It;
 }
 
-std::tuple<Decl *, Decl *>
-ASTImporterTestBase::getImportedDecl(StringRef FromSrcCode, Language FromLang,
-                                     StringRef ToSrcCode, Language ToLang,
-                                     StringRef Identifier) {
-  ArgVector FromArgs = getArgVectorForLanguage(FromLang),
-            ToArgs = getArgVectorForLanguage(ToLang);
+std::tuple<Decl *, Decl *> ASTImporterTestBase::getImportedDecl(
+    StringRef FromSrcCode, TestLanguage FromLang, StringRef ToSrcCode,
+    TestLanguage ToLang, StringRef Identifier) {
+  std::vector<std::string> FromArgs = getCommandLineArgsForLanguage(FromLang);
+  std::vector<std::string> ToArgs = getCommandLineArgsForLanguage(ToLang);
 
   FromTUs.emplace_back(FromSrcCode, InputFileName, FromArgs, Creator,
                        ODRHandling);
@@ -170,13 +171,13 @@ ASTImporterTestBase::getImportedDecl(StringRef FromSrcCode, Language FromLang,
 }
 
 TranslationUnitDecl *ASTImporterTestBase::getTuDecl(StringRef SrcCode,
-                                                    Language Lang,
+                                                    TestLanguage Lang,
                                                     StringRef FileName) {
   assert(llvm::find_if(FromTUs, [FileName](const TU &E) {
            return E.FileName == FileName;
          }) == FromTUs.end());
 
-  ArgVector Args = getArgVectorForLanguage(Lang);
+  std::vector<std::string> Args = getCommandLineArgsForLanguage(Lang);
   FromTUs.emplace_back(SrcCode, FileName, Args, Creator, ODRHandling);
   TU &Tu = FromTUs.back();
 
@@ -184,14 +185,14 @@ TranslationUnitDecl *ASTImporterTestBase::getTuDecl(StringRef SrcCode,
 }
 
 TranslationUnitDecl *ASTImporterTestBase::getToTuDecl(StringRef ToSrcCode,
-                                                      Language ToLang) {
-  ArgVector ToArgs = getArgVectorForLanguage(ToLang);
+                                                      TestLanguage ToLang) {
+  std::vector<std::string> ToArgs = getCommandLineArgsForLanguage(ToLang);
   assert(!ToAST);
   lazyInitToAST(ToLang, ToSrcCode, OutputFileName);
   return ToAST->getASTContext().getTranslationUnitDecl();
 }
 
-Decl *ASTImporterTestBase::Import(Decl *From, Language ToLang) {
+Decl *ASTImporterTestBase::Import(Decl *From, TestLanguage ToLang) {
   lazyInitToAST(ToLang, "", OutputFileName);
   TU *FromTU = findFromTU(From);
   assert(SharedStatePtr);
@@ -200,7 +201,7 @@ Decl *ASTImporterTestBase::Import(Decl *From, Language ToLang) {
 }
 
 llvm::Expected<Decl *> ASTImporterTestBase::importOrError(Decl *From,
-                                                          Language ToLang) {
+                                                          TestLanguage ToLang) {
   lazyInitToAST(ToLang, "", OutputFileName);
   TU *FromTU = findFromTU(From);
   assert(SharedStatePtr);
@@ -210,7 +211,7 @@ llvm::Expected<Decl *> ASTImporterTestBase::importOrError(Decl *From,
 }
 
 QualType ASTImporterTestBase::ImportType(QualType FromType, Decl *TUDecl,
-                                         Language ToLang) {
+                                         TestLanguage ToLang) {
   lazyInitToAST(ToLang, "", OutputFileName);
   TU *FromTU = findFromTU(TUDecl);
   assert(SharedStatePtr);

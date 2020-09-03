@@ -1,9 +1,9 @@
 ; RUN: llc -march=mipsel -mcpu=mips32r6 -disable-mips-delay-filler < %s | FileCheck %s
 ; RUN: llc -march=mips -mcpu=mips32r6 -disable-mips-delay-filler < %s -filetype=obj \
-; RUN:     -o - | llvm-objdump -d - | FileCheck %s -check-prefix=ENCODING
+; RUN:     -o - | llvm-objdump -d - | FileCheck %s --check-prefix=ENCODING
 ; RUN: llc -march=mipsel -mcpu=mips64r6 -disable-mips-delay-filler -target-abi=n64 < %s | FileCheck %s
 ; RUN: llc -march=mips -mcpu=mips64r6 -disable-mips-delay-filler -target-abi=n64 < %s -filetype=obj \
-; RUN:     -o - | llvm-objdump -d - | FileCheck %s -check-prefix=ENCODING
+; RUN:     -o - | llvm-objdump -d - | FileCheck %s --check-prefix=ENCODING
 
 ; bnezc and beqzc have restriction that $rt != 0
 
@@ -40,7 +40,7 @@ define i32 @f1() {
 ; beqc and bnec have the restriction that $rs < $rt.
 
 define i32 @f2(i32 %a, i32 %b) {
-; ENCODING-LABEL: f2:
+; ENCODING-LABEL: <f2>:
 ; ENCODING-NOT:   beqc $5, $4
 ; ENCODING-NOT:   bnec $5, $4
 
@@ -87,7 +87,7 @@ define i64 @f4() {
 ; beqc and bnec have the restriction that $rs < $rt.
 
 define i64 @f5(i64 %a, i64 %b) {
-; ENCODING-LABEL: f5:
+; ENCODING-LABEL: <f5>:
 ; ENCODING-NOT:   beqc $5, $4
 ; ENCODING-NOT:   bnec $5, $4
 

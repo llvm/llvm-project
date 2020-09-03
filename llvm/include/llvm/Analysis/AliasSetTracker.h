@@ -87,12 +87,7 @@ class AliasSet : public ilist_node<AliasSet> {
         AAInfo = NewAAInfo;
       else {
         AAMDNodes Intersection(AAInfo.intersect(NewAAInfo));
-        if (!Intersection.TBAA || !Intersection.Scope ||
-            !Intersection.NoAlias) {
-          // NewAAInfo conflicts with AAInfo.
-          AAInfo = DenseMapInfo<AAMDNodes>::getTombstoneKey();
-          SizeChanged = true;
-        }
+        SizeChanged |= Intersection != AAInfo;
         AAInfo = Intersection;
       }
       return SizeChanged;

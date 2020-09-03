@@ -16,6 +16,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
@@ -50,10 +51,10 @@ static bool isArrayIndexOutOfBounds(CheckerContext &C, const Expr *Ex) {
     return false;
 
   DefinedOrUnknownSVal Idx = ER->getIndex().castAs<DefinedOrUnknownSVal>();
-  DefinedOrUnknownSVal NumElements = C.getStoreManager().getSizeInElements(
-      state, ER->getSuperRegion(), ER->getValueType());
-  ProgramStateRef StInBound = state->assumeInBound(Idx, NumElements, true);
-  ProgramStateRef StOutBound = state->assumeInBound(Idx, NumElements, false);
+  DefinedOrUnknownSVal ElementCount = getDynamicElementCount(
+      state, ER->getSuperRegion(), C.getSValBuilder(), ER->getValueType());
+  ProgramStateRef StInBound = state->assumeInBound(Idx, ElementCount, true);
+  ProgramStateRef StOutBound = state->assumeInBound(Idx, ElementCount, false);
   return StOutBound && !StInBound;
 }
 
@@ -186,6 +187,6 @@ void ento::registerUndefResultChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefResultChecker>();
 }
 
-bool ento::shouldRegisterUndefResultChecker(const LangOptions &LO) {
+bool ento::shouldRegisterUndefResultChecker(const CheckerManager &mgr) {
   return true;
 }

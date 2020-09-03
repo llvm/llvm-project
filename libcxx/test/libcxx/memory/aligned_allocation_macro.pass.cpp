@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14
 
 // AppleClang <= 10 enables aligned allocation regardless of the deployment
 // target, so this test would fail.
 // UNSUPPORTED: apple-clang-9, apple-clang-10
+
+// GCC 5 doesn't support aligned allocation
+// UNSUPPORTED: gcc-5
 
 // XFAIL: availability=macosx10.13
 // XFAIL: availability=macosx10.12
 // XFAIL: availability=macosx10.11
 // XFAIL: availability=macosx10.10
 // XFAIL: availability=macosx10.9
-// XFAIL: availability=macosx10.8
-// XFAIL: availability=macosx10.7
 
 #include <new>
 

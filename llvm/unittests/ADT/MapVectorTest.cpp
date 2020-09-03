@@ -72,7 +72,7 @@ TEST(MapVectorTest, insert_pop) {
   ASSERT_NE(R.first, MV.end());
   EXPECT_EQ(R.first->first, 4);
   EXPECT_EQ(R.first->second, 7);
-  EXPECT_TRUE(R.second);  
+  EXPECT_TRUE(R.second);
 
   EXPECT_EQ(MV.size(), 2u);
   EXPECT_EQ(MV[1], 2);

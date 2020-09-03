@@ -225,9 +225,19 @@ enum FunctionModRefBehavior {
   /// non-volatile loads from objects pointed to by its pointer-typed
   /// arguments, with arbitrary offsets.
   ///
-  /// This property corresponds to the IntrReadArgMem LLVM intrinsic flag.
+  /// This property corresponds to the combination of the IntrReadMem
+  /// and IntrArgMemOnly LLVM intrinsic flags.
   FMRB_OnlyReadsArgumentPointees =
       FMRL_ArgumentPointees | static_cast<int>(ModRefInfo::Ref),
+
+  /// The only memory references in this function (if it has any) are
+  /// non-volatile stores from objects pointed to by its pointer-typed
+  /// arguments, with arbitrary offsets.
+  ///
+  /// This property corresponds to the combination of the IntrWriteMem
+  /// and IntrArgMemOnly LLVM intrinsic flags.
+  FMRB_OnlyWritesArgumentPointees =
+      FMRL_ArgumentPointees | static_cast<int>(ModRefInfo::Mod),
 
   /// The only memory references in this function (if it has any) are
   /// non-volatile loads and stores from objects pointed to by its
@@ -238,11 +248,47 @@ enum FunctionModRefBehavior {
       FMRL_ArgumentPointees | static_cast<int>(ModRefInfo::ModRef),
 
   /// The only memory references in this function (if it has any) are
+  /// reads of memory that is otherwise inaccessible via LLVM IR.
+  ///
+  /// This property corresponds to the LLVM IR inaccessiblememonly attribute.
+  FMRB_OnlyReadsInaccessibleMem =
+      FMRL_InaccessibleMem | static_cast<int>(ModRefInfo::Ref),
+
+  /// The only memory references in this function (if it has any) are
+  /// writes to memory that is otherwise inaccessible via LLVM IR.
+  ///
+  /// This property corresponds to the LLVM IR inaccessiblememonly attribute.
+  FMRB_OnlyWritesInaccessibleMem =
+      FMRL_InaccessibleMem | static_cast<int>(ModRefInfo::Mod),
+
+  /// The only memory references in this function (if it has any) are
   /// references of memory that is otherwise inaccessible via LLVM IR.
   ///
   /// This property corresponds to the LLVM IR inaccessiblememonly attribute.
   FMRB_OnlyAccessesInaccessibleMem =
       FMRL_InaccessibleMem | static_cast<int>(ModRefInfo::ModRef),
+
+  /// The function may perform non-volatile loads from objects pointed
+  /// to by its pointer-typed arguments, with arbitrary offsets, and
+  /// it may also perform loads of memory that is otherwise
+  /// inaccessible via LLVM IR.
+  ///
+  /// This property corresponds to the LLVM IR
+  /// inaccessiblemem_or_argmemonly attribute.
+  FMRB_OnlyReadsInaccessibleOrArgMem = FMRL_InaccessibleMem |
+                                       FMRL_ArgumentPointees |
+                                       static_cast<int>(ModRefInfo::Ref),
+
+  /// The function may perform non-volatile stores to objects pointed
+  /// to by its pointer-typed arguments, with arbitrary offsets, and
+  /// it may also perform stores of memory that is otherwise
+  /// inaccessible via LLVM IR.
+  ///
+  /// This property corresponds to the LLVM IR
+  /// inaccessiblemem_or_argmemonly attribute.
+  FMRB_OnlyWritesInaccessibleOrArgMem = FMRL_InaccessibleMem |
+                                        FMRL_ArgumentPointees |
+                                        static_cast<int>(ModRefInfo::Mod),
 
   /// The function may perform non-volatile loads and stores of objects
   /// pointed to by its pointer-typed arguments, with arbitrary offsets, and
@@ -268,7 +314,7 @@ enum FunctionModRefBehavior {
   //
   // This property corresponds to the LLVM IR 'writeonly' attribute.
   // This property corresponds to the IntrWriteMem LLVM intrinsic flag.
-  FMRB_DoesNotReadMemory = FMRL_Anywhere | static_cast<int>(ModRefInfo::Mod),
+  FMRB_OnlyWritesMemory = FMRL_Anywhere | static_cast<int>(ModRefInfo::Mod),
 
   /// This indicates that the function could not be classified into one of the
   /// behaviors above.
@@ -1139,8 +1185,8 @@ private:
   static void getModuleAAResultImpl(Function &F, FunctionAnalysisManager &AM,
                                     AAResults &AAResults) {
     auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-    auto &MAM = MAMProxy.getManager();
-    if (auto *R = MAM.template getCachedResult<AnalysisT>(*F.getParent())) {
+    if (auto *R =
+            MAMProxy.template getCachedResult<AnalysisT>(*F.getParent())) {
       AAResults.addAAResult(*R);
       MAMProxy
           .template registerOuterAnalysisInvalidation<AnalysisT, AAManager>();

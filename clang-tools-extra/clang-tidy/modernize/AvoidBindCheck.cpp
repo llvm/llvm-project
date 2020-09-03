@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
@@ -35,7 +36,8 @@ namespace modernize {
 namespace {
 
 enum BindArgumentKind { BK_Temporary, BK_Placeholder, BK_CallExpr, BK_Other };
-enum CaptureMode { CM_None, CM_ByRef, CM_ByValue, CM_InitExpression };
+enum CaptureMode { CM_None, CM_ByRef, CM_ByValue };
+enum CaptureExpr { CE_None, CE_Var, CE_InitExpression };
 
 enum CallableType {
   CT_Other,          // unknown
@@ -59,6 +61,10 @@ struct BindArgument {
   // If this argument required a capture, a value indicating how it was
   // captured.
   CaptureMode CM = CM_None;
+
+  // Whether the argument is a simple variable (we can capture it directly),
+  // or an expression (we must introduce a capture variable).
+  CaptureExpr CE = CE_None;
 
   // The exact spelling of this argument in the source code.
   StringRef SourceTokens;
@@ -86,6 +92,7 @@ struct CallableInfo {
   CallableType Type = CT_Other;
   CallableMaterializationKind Materialization = CMK_Other;
   CaptureMode CM = CM_None;
+  CaptureExpr CE = CE_None;
   StringRef SourceTokens;
   std::string CaptureIdentifier;
   std::string UsageIdentifier;
@@ -101,6 +108,12 @@ struct LambdaProperties {
 };
 
 } // end namespace
+
+static bool tryCaptureAsLocalVariable(const MatchFinder::MatchResult &Result,
+                                      BindArgument &B, const Expr *E);
+
+static bool tryCaptureAsMemberVariable(const MatchFinder::MatchResult &Result,
+                                       BindArgument &B, const Expr *E);
 
 static const Expr *ignoreTemporariesAndPointers(const Expr *E) {
   if (const auto *T = dyn_cast<UnaryOperator>(E))
@@ -148,11 +161,22 @@ initializeBindArgumentForCallExpr(const MatchFinder::MatchResult &Result,
   // std::ref(x) means to capture x by reference.
   if (isCallExprNamed(CE, "boost::ref") || isCallExprNamed(CE, "std::ref")) {
     B.Kind = BK_Other;
+    if (tryCaptureAsLocalVariable(Result, B, CE->getArg(0)) ||
+        tryCaptureAsMemberVariable(Result, B, CE->getArg(0))) {
+      B.CE = CE_Var;
+    } else {
+      // The argument to std::ref is an expression that produces a reference.
+      // Create a capture reference to hold it.
+      B.CE = CE_InitExpression;
+      B.UsageIdentifier = "capture" + llvm::utostr(CaptureIndex++);
+    }
+    // Strip off the reference wrapper.
+    B.SourceTokens = getSourceTextForExpr(Result, CE->getArg(0));
     B.CM = CM_ByRef;
-    B.UsageIdentifier = getSourceTextForExpr(Result, CE->getArg(0));
   } else {
     B.Kind = BK_CallExpr;
-    B.CM = CM_InitExpression;
+    B.CM = CM_ByValue;
+    B.CE = CE_InitExpression;
     B.UsageIdentifier = "capture" + llvm::utostr(CaptureIndex++);
   }
   B.CaptureIdentifier = B.UsageIdentifier;
@@ -188,7 +212,7 @@ static bool tryCaptureAsLocalVariable(const MatchFinder::MatchResult &Result,
     return false;
 
   B.CM = CM_ByValue;
-  B.UsageIdentifier = getSourceTextForExpr(Result, E);
+  B.UsageIdentifier = std::string(getSourceTextForExpr(Result, E));
   B.CaptureIdentifier = B.UsageIdentifier;
   return true;
 }
@@ -203,8 +227,9 @@ static bool tryCaptureAsMemberVariable(const MatchFinder::MatchResult &Result,
 
   E = E->IgnoreImplicit();
   if (isa<CXXThisExpr>(E)) {
+    // E is a direct use of "this".
     B.CM = CM_ByValue;
-    B.UsageIdentifier = getSourceTextForExpr(Result, E);
+    B.UsageIdentifier = std::string(getSourceTextForExpr(Result, E));
     B.CaptureIdentifier = "this";
     return true;
   }
@@ -216,17 +241,22 @@ static bool tryCaptureAsMemberVariable(const MatchFinder::MatchResult &Result,
   if (!ME->isLValue() || !isa<FieldDecl>(ME->getMemberDecl()))
     return false;
 
-  B.CM = CM_ByValue;
-  B.UsageIdentifier = getSourceTextForExpr(Result, E);
-  B.CaptureIdentifier = "this";
-  return true;
+  if (isa<CXXThisExpr>(ME->getBase())) {
+    // E refers to a data member without an explicit "this".
+    B.CM = CM_ByValue;
+    B.UsageIdentifier = std::string(getSourceTextForExpr(Result, E));
+    B.CaptureIdentifier = "this";
+    return true;
+  }
+
+  return false;
 }
 
 static SmallVector<BindArgument, 4>
 buildBindArguments(const MatchFinder::MatchResult &Result,
                    const CallableInfo &Callable) {
   SmallVector<BindArgument, 4> BindArguments;
-  llvm::Regex MatchPlaceholder("^_([0-9]+)$");
+  static llvm::Regex MatchPlaceholder("^_([0-9]+)$");
 
   const auto *BindCall = Result.Nodes.getNodeAs<CallExpr>("bind");
 
@@ -250,9 +280,12 @@ buildBindArguments(const MatchFinder::MatchResult &Result,
       B.IsUsed = true;
 
     SmallVector<StringRef, 2> Matches;
-    if (MatchPlaceholder.match(B.SourceTokens, &Matches)) {
+    const auto *DRE = dyn_cast<DeclRefExpr>(E);
+    if (MatchPlaceholder.match(B.SourceTokens, &Matches) ||
+        // Check for match with qualifiers removed.
+        (DRE && MatchPlaceholder.match(DRE->getDecl()->getName(), &Matches))) {
       B.Kind = BK_Placeholder;
-      B.PlaceHolderIndex = std::stoi(Matches[1]);
+      B.PlaceHolderIndex = std::stoi(std::string(Matches[1]));
       B.UsageIdentifier = "PH" + llvm::utostr(B.PlaceHolderIndex);
       B.CaptureIdentifier = B.UsageIdentifier;
       continue;
@@ -272,11 +305,13 @@ buildBindArguments(const MatchFinder::MatchResult &Result,
     // safe.
     B.Kind = BK_Other;
     if (IsObjectPtr) {
-      B.CM = CM_InitExpression;
+      B.CE = CE_InitExpression;
+      B.CM = CM_ByValue;
       B.UsageIdentifier = "ObjectPtr";
       B.CaptureIdentifier = B.UsageIdentifier;
     } else if (anyDescendantIsLocal(B.E)) {
-      B.CM = CM_InitExpression;
+      B.CE = CE_InitExpression;
+      B.CM = CM_ByValue;
       B.CaptureIdentifier = "capture" + llvm::utostr(CaptureIndex++);
       B.UsageIdentifier = B.CaptureIdentifier;
     }
@@ -336,9 +371,12 @@ static void addFunctionCallArgs(ArrayRef<BindArgument> Args,
 
     Stream << Delimiter;
 
-    if (B.Kind == BK_Placeholder || B.CM != CM_None)
+    if (B.Kind == BK_Placeholder) {
+      Stream << "std::forward<decltype(" << B.UsageIdentifier << ")>";
+      Stream << "(" << B.UsageIdentifier << ")";
+    } else if (B.CM != CM_None)
       Stream << B.UsageIdentifier;
-    else if (B.CM == CM_None)
+    else
       Stream << B.SourceTokens;
 
     Delimiter = ", ";
@@ -356,9 +394,9 @@ static bool isPlaceHolderIndexRepeated(const ArrayRef<BindArgument> Args) {
   return false;
 }
 
-static std::vector<const CXXMethodDecl *>
+static std::vector<const FunctionDecl *>
 findCandidateCallOperators(const CXXRecordDecl *RecordDecl, size_t NumArgs) {
-  std::vector<const CXXMethodDecl *> Candidates;
+  std::vector<const FunctionDecl *> Candidates;
 
   for (const clang::CXXMethodDecl *Method : RecordDecl->methods()) {
     OverloadedOperatorKind OOK = Method->getOverloadedOperator();
@@ -370,6 +408,23 @@ findCandidateCallOperators(const CXXRecordDecl *RecordDecl, size_t NumArgs) {
       continue;
 
     Candidates.push_back(Method);
+  }
+
+  // Find templated operator(), if any.
+  for (const clang::Decl *D : RecordDecl->decls()) {
+    const auto *FTD = dyn_cast<FunctionTemplateDecl>(D);
+    if (!FTD)
+      continue;
+    const FunctionDecl *FD = FTD->getTemplatedDecl();
+
+    OverloadedOperatorKind OOK = FD->getOverloadedOperator();
+    if (OOK != OverloadedOperatorKind::OO_Call)
+      continue;
+
+    if (FD->getNumParams() > NumArgs)
+      continue;
+
+    Candidates.push_back(FD);
   }
 
   return Candidates;
@@ -406,7 +461,7 @@ static bool isFixitSupported(const CallableInfo &Callee,
 
 const FunctionDecl *getCallOperator(const CXXRecordDecl *Callable,
                                     size_t NumArgs) {
-  std::vector<const CXXMethodDecl *> Candidates =
+  std::vector<const FunctionDecl *> Candidates =
       findCandidateCallOperators(Callable, NumArgs);
   if (Candidates.size() != 1)
     return nullptr;
@@ -465,11 +520,15 @@ getCallableMaterialization(const MatchFinder::MatchResult &Result) {
 
   const auto *NoTemporaries = ignoreTemporariesAndPointers(CallableExpr);
 
-  if (isa<CallExpr>(NoTemporaries))
+  const auto *CE = dyn_cast<CXXConstructExpr>(NoTemporaries);
+  const auto *FC = dyn_cast<CXXFunctionalCastExpr>(NoTemporaries);
+  if ((isa<CallExpr>(NoTemporaries)) || (CE && (CE->getNumArgs() > 0)) ||
+      (FC && (FC->getCastKind() == CK_ConstructorConversion)))
+    // CE is something that looks like a call, with arguments - either
+    // a function call or a constructor invocation.
     return CMK_CallExpression;
 
-  if (isa<CXXFunctionalCastExpr>(NoTemporaries) ||
-      isa<CXXConstructExpr>(NoTemporaries))
+  if (isa<CXXFunctionalCastExpr>(NoTemporaries) || CE)
     return CMK_Function;
 
   if (const auto *DRE = dyn_cast<DeclRefExpr>(NoTemporaries)) {
@@ -502,12 +561,15 @@ getLambdaProperties(const MatchFinder::MatchResult &Result) {
       getCallMethodDecl(Result, LP.Callable.Type, LP.Callable.Materialization);
   LP.Callable.SourceTokens = getSourceTextForExpr(Result, CalleeExpr);
   if (LP.Callable.Materialization == CMK_VariableRef) {
+    LP.Callable.CE = CE_Var;
     LP.Callable.CM = CM_ByValue;
-    LP.Callable.UsageIdentifier = getSourceTextForExpr(Result, CalleeExpr);
-    LP.Callable.CaptureIdentifier =
-        getSourceTextForExpr(Result, ignoreTemporariesAndPointers(CalleeExpr));
+    LP.Callable.UsageIdentifier =
+        std::string(getSourceTextForExpr(Result, CalleeExpr));
+    LP.Callable.CaptureIdentifier = std::string(
+        getSourceTextForExpr(Result, ignoreTemporariesAndPointers(CalleeExpr)));
   } else if (LP.Callable.Materialization == CMK_CallExpression) {
-    LP.Callable.CM = CM_InitExpression;
+    LP.Callable.CE = CE_InitExpression;
+    LP.Callable.CM = CM_ByValue;
     LP.Callable.UsageIdentifier = "Func";
     LP.Callable.CaptureIdentifier = "Func";
     LP.Callable.CaptureInitializer = getSourceTextForExpr(Result, CalleeExpr);
@@ -521,7 +583,7 @@ getLambdaProperties(const MatchFinder::MatchResult &Result) {
 }
 
 static bool emitCapture(llvm::StringSet<> &CaptureSet, StringRef Delimiter,
-                        CaptureMode CM, StringRef Identifier,
+                        CaptureMode CM, CaptureExpr CE, StringRef Identifier,
                         StringRef InitExpression, raw_ostream &Stream) {
   if (CM == CM_None)
     return false;
@@ -535,7 +597,7 @@ static bool emitCapture(llvm::StringSet<> &CaptureSet, StringRef Delimiter,
   if (CM == CM_ByRef)
     Stream << "&";
   Stream << Identifier;
-  if (CM == CM_InitExpression)
+  if (CE == CE_InitExpression)
     Stream << " = " << InitExpression;
 
   CaptureSet.insert(Identifier);
@@ -548,9 +610,9 @@ static void emitCaptureList(const LambdaProperties &LP,
   llvm::StringSet<> CaptureSet;
   bool AnyCapturesEmitted = false;
 
-  AnyCapturesEmitted = emitCapture(CaptureSet, "", LP.Callable.CM,
-                                   LP.Callable.CaptureIdentifier,
-                                   LP.Callable.CaptureInitializer, Stream);
+  AnyCapturesEmitted = emitCapture(
+      CaptureSet, "", LP.Callable.CM, LP.Callable.CE,
+      LP.Callable.CaptureIdentifier, LP.Callable.CaptureInitializer, Stream);
 
   for (const BindArgument &B : LP.BindArguments) {
     if (B.CM == CM_None || !B.IsUsed)
@@ -558,7 +620,7 @@ static void emitCaptureList(const LambdaProperties &LP,
 
     StringRef Delimiter = AnyCapturesEmitted ? ", " : "";
 
-    if (emitCapture(CaptureSet, Delimiter, B.CM, B.CaptureIdentifier,
+    if (emitCapture(CaptureSet, Delimiter, B.CM, B.CE, B.CaptureIdentifier,
                     B.SourceTokens, Stream))
       AnyCapturesEmitted = true;
   }
@@ -574,16 +636,16 @@ getForwardedArgumentList(const LambdaProperties &P) {
 }
 AvoidBindCheck::AvoidBindCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      PermissiveParameterList(Options.get("PermissiveParameterList", 0) != 0) {}
+      PermissiveParameterList(Options.get("PermissiveParameterList", false)) {}
+
+void AvoidBindCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "PermissiveParameterList", PermissiveParameterList);
+}
 
 void AvoidBindCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus14) // Need C++14 for generic lambdas.
-    return;
-
   Finder->addMatcher(
       callExpr(
-          callee(namedDecl(
-              anyOf(hasName("::boost::bind"), hasName("::std::bind")))),
+          callee(namedDecl(hasAnyName("::boost::bind", "::std::bind"))),
           hasArgument(
               0, anyOf(expr(hasType(memberPointerType())).bind("ref"),
                        expr(hasParent(materializeTemporaryExpr().bind("ref"))),
@@ -632,19 +694,18 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
     Stream << MethodDecl->getName();
   } else {
     Stream << " { return ";
-    switch (LP.Callable.CM) {
-    case CM_ByValue:
-    case CM_ByRef:
+    switch (LP.Callable.CE) {
+    case CE_Var:
       if (LP.Callable.UsageIdentifier != LP.Callable.CaptureIdentifier) {
         Stream << "(" << LP.Callable.UsageIdentifier << ")";
         break;
       }
       LLVM_FALLTHROUGH;
-    case CM_InitExpression:
+    case CE_InitExpression:
       Stream << LP.Callable.UsageIdentifier;
       break;
     default:
-      Ref->printPretty(Stream, nullptr, Result.Context->getPrintingPolicy());
+      Stream << getSourceTextForExpr(Result, Ref);
     }
   }
 

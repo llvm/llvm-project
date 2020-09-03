@@ -11,8 +11,8 @@ func @combine_full_access_chain() -> f32 {
   // CHECK-NEXT: spv.Load "Function" %[[PTR]]
   %c0 = spv.constant 0: i32
   %0 = spv.Variable : !spv.ptr<!spv.struct<!spv.array<4x!spv.array<4xf32>>, !spv.array<4xi32>>, Function>
-  %1 = spv.AccessChain %0[%c0] : !spv.ptr<!spv.struct<!spv.array<4x!spv.array<4xf32>>, !spv.array<4xi32>>, Function>
-  %2 = spv.AccessChain %1[%c0, %c0] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
+  %1 = spv.AccessChain %0[%c0] : !spv.ptr<!spv.struct<!spv.array<4x!spv.array<4xf32>>, !spv.array<4xi32>>, Function>, i32
+  %2 = spv.AccessChain %1[%c0, %c0] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>, i32, i32
   %3 = spv.Load "Function" %2 : f32
   spv.ReturnValue %3 : f32
 }
@@ -28,9 +28,9 @@ func @combine_access_chain_multi_use() -> !spv.array<4xf32> {
   // CHECK-NEXT: spv.Load "Function" %[[PTR_1]]
   %c0 = spv.constant 0: i32
   %0 = spv.Variable : !spv.ptr<!spv.struct<!spv.array<4x!spv.array<4xf32>>, !spv.array<4xi32>>, Function>
-  %1 = spv.AccessChain %0[%c0] : !spv.ptr<!spv.struct<!spv.array<4x!spv.array<4xf32>>, !spv.array<4xi32>>, Function>
-  %2 = spv.AccessChain %1[%c0] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
-  %3 = spv.AccessChain %2[%c0] : !spv.ptr<!spv.array<4xf32>, Function>
+  %1 = spv.AccessChain %0[%c0] : !spv.ptr<!spv.struct<!spv.array<4x!spv.array<4xf32>>, !spv.array<4xi32>>, Function>, i32
+  %2 = spv.AccessChain %1[%c0] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>, i32
+  %3 = spv.AccessChain %2[%c0] : !spv.ptr<!spv.array<4xf32>, Function>, i32
   %4 = spv.Load "Function" %2 : !spv.array<4xf32>
   %5 = spv.Load "Function" %3 : f32
   spv.ReturnValue %4: !spv.array<4xf32>
@@ -49,8 +49,8 @@ func @dont_combine_access_chain_without_common_base() -> !spv.array<4xi32> {
   %c1 = spv.constant 1: i32
   %0 = spv.Variable : !spv.ptr<!spv.struct<!spv.array<4x!spv.array<4xf32>>, !spv.array<4xi32>>, Function>
   %1 = spv.Variable : !spv.ptr<!spv.struct<!spv.array<4x!spv.array<4xf32>>, !spv.array<4xi32>>, Function>
-  %2 = spv.AccessChain %0[%c1] : !spv.ptr<!spv.struct<!spv.array<4x!spv.array<4xf32>>, !spv.array<4xi32>>, Function>
-  %3 = spv.AccessChain %1[%c1] : !spv.ptr<!spv.struct<!spv.array<4x!spv.array<4xf32>>, !spv.array<4xi32>>, Function>
+  %2 = spv.AccessChain %0[%c1] : !spv.ptr<!spv.struct<!spv.array<4x!spv.array<4xf32>>, !spv.array<4xi32>>, Function>, i32
+  %3 = spv.AccessChain %1[%c1] : !spv.ptr<!spv.struct<!spv.array<4x!spv.array<4xf32>>, !spv.array<4xi32>>, Function>, i32
   %4 = spv.Load "Function" %2 : !spv.array<4xi32>
   %5 = spv.Load "Function" %3 : !spv.array<4xi32>
   spv.ReturnValue %4 : !spv.array<4xi32>
@@ -141,7 +141,7 @@ func @extract_from_not_constant() -> i32 {
 // spv.constant
 //===----------------------------------------------------------------------===//
 
-// TODO(antiagainst): test constants in different blocks
+// TODO: test constants in different blocks
 
 func @deduplicate_scalar_constant() -> (i32, i32) {
   // CHECK: %[[CST:.*]] = spv.constant 42 : i32
@@ -273,7 +273,7 @@ func @const_fold_scalar_imul_flow() -> (i32, i32, i32) {
   %c1 = spv.constant 2 : i32
   %c2 = spv.constant 4 : i32
   %c3 = spv.constant 4294967295 : i32  // 2^32 - 1 : 0xffff ffff
-  %c4 = spv.constant -2147483649 : i32 // -2^31 - 1: 0x7fff ffff
+  %c4 = spv.constant 2147483647 : i32  // 2^31 - 1 : 0x7fff ffff
 
   // (0xffff ffff << 1) = 0x1 ffff fffe -> 0xffff fffe
   // CHECK: %[[CST2:.*]] = spv.constant -2
@@ -331,7 +331,7 @@ func @const_fold_scalar_isub_flow() -> (i32, i32, i32, i32) {
   %c1 = spv.constant 0 : i32
   %c2 = spv.constant 1 : i32
   %c3 = spv.constant 4294967295 : i32  // 2^32 - 1 : 0xffff ffff
-  %c4 = spv.constant -2147483649 : i32 // -2^31 - 1: 0x7fff ffff
+  %c4 = spv.constant 2147483647 : i32  // 2^31     : 0x7fff ffff
   %c5 = spv.constant -1 : i32          //          : 0xffff ffff
   %c6 = spv.constant -2 : i32          //          : 0xffff fffe
 
@@ -358,6 +358,36 @@ func @const_fold_vector_isub() -> vector<3xi32> {
   // CHECK: spv.constant dense<[45, -40, 99]>
   %0 = spv.ISub %vc1, %vc2 : vector<3xi32>
   return %0: vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.LogicalAnd
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @convert_logical_and_true_false_scalar
+// CHECK-SAME: %[[ARG:.+]]: i1
+func @convert_logical_and_true_false_scalar(%arg: i1) -> (i1, i1) {
+  %true = spv.constant true
+  // CHECK: %[[FALSE:.+]] = spv.constant false
+  %false = spv.constant false
+  %0 = spv.LogicalAnd %true, %arg: i1
+  %1 = spv.LogicalAnd %arg, %false: i1
+  // CHECK: return %[[ARG]], %[[FALSE]]
+  return %0, %1: i1, i1
+}
+
+// CHECK-LABEL: @convert_logical_and_true_false_vector
+// CHECK-SAME: %[[ARG:.+]]: vector<3xi1>
+func @convert_logical_and_true_false_vector(%arg: vector<3xi1>) -> (vector<3xi1>, vector<3xi1>) {
+  %true = spv.constant dense<true> : vector<3xi1>
+  // CHECK: %[[FALSE:.+]] = spv.constant dense<false>
+  %false = spv.constant dense<false> : vector<3xi1>
+  %0 = spv.LogicalAnd %true, %arg: vector<3xi1>
+  %1 = spv.LogicalAnd %arg, %false: vector<3xi1>
+  // CHECK: return %[[ARG]], %[[FALSE]]
+  return %0, %1: vector<3xi1>, vector<3xi1>
 }
 
 // -----
@@ -415,6 +445,36 @@ func @convert_logical_not_to_logical_equal(%arg0: vector<3xi1>, %arg1: vector<3x
   %2 = spv.LogicalNotEqual %arg0, %arg1 : vector<3xi1>
   %3 = spv.LogicalNot %2 : vector<3xi1>
   spv.ReturnValue %3 : vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.LogicalOr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @convert_logical_or_true_false_scalar
+// CHECK-SAME: %[[ARG:.+]]: i1
+func @convert_logical_or_true_false_scalar(%arg: i1) -> (i1, i1) {
+  // CHECK: %[[TRUE:.+]] = spv.constant true
+  %true = spv.constant true
+  %false = spv.constant false
+  %0 = spv.LogicalOr %true, %arg: i1
+  %1 = spv.LogicalOr %arg, %false: i1
+  // CHECK: return %[[TRUE]], %[[ARG]]
+  return %0, %1: i1, i1
+}
+
+// CHECK-LABEL: @convert_logical_or_true_false_vector
+// CHECK-SAME: %[[ARG:.+]]: vector<3xi1>
+func @convert_logical_or_true_false_vector(%arg: vector<3xi1>) -> (vector<3xi1>, vector<3xi1>) {
+  // CHECK: %[[TRUE:.+]] = spv.constant dense<true>
+  %true = spv.constant dense<true> : vector<3xi1>
+  %false = spv.constant dense<false> : vector<3xi1>
+  %0 = spv.LogicalOr %true, %arg: vector<3xi1>
+  %1 = spv.LogicalOr %arg, %false: vector<3xi1>
+  // CHECK: return %[[TRUE]], %[[ARG]]
+  return %0, %1: vector<3xi1>, vector<3xi1>
 }
 
 // -----
@@ -499,15 +559,18 @@ func @cannot_canonicalize_selection_op_0(%cond: i1) -> () {
 
   // CHECK: spv.selection {
   spv.selection {
+    // CHECK: spv.BranchConditional
+    // CHECK-SAME: ^bb1(%[[DST_VAR_0]], %[[SRC_VALUE_0]]
+    // CHECK-SAME: ^bb1(%[[DST_VAR_1]], %[[SRC_VALUE_1]]
     spv.BranchConditional %cond, ^then, ^else
 
   ^then:
-    // CHECK: spv.Store "Function" %[[DST_VAR_0]], %[[SRC_VALUE_0]] ["Aligned", 8] : vector<3xi32>
+    // CHECK: ^bb1(%[[ARG0:.*]]: !spv.ptr<vector<3xi32>, Function>, %[[ARG1:.*]]: vector<3xi32>):
+    // CHECK: spv.Store "Function" %[[ARG0]], %[[ARG1]] ["Aligned", 8] : vector<3xi32>
     spv.Store "Function" %3, %1 ["Aligned", 8]:  vector<3xi32>
     spv.Branch ^merge
 
   ^else:
-    // CHECK: spv.Store "Function" %[[DST_VAR_1]], %[[SRC_VALUE_1]] ["Aligned", 8] : vector<3xi32>
     spv.Store "Function" %4, %2 ["Aligned", 8] : vector<3xi32>
     spv.Branch ^merge
 

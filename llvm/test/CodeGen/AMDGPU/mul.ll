@@ -141,6 +141,11 @@ define amdgpu_kernel void @v_mul_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %
 ; crash with a 'failed to select' error.
 
 ; FUNC-LABEL: {{^}}s_mul_i64:
+; GFX9_10-DAG: s_mul_i32
+; GFX9_10-DAG: s_mul_hi_u32
+; GFX9_10-DAG: s_mul_i32
+; GFX9_10-DAG: s_mul_i32
+; GFX9_10: s_endpgm
 define amdgpu_kernel void @s_mul_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
   %mul = mul i64 %a, %b
   store i64 %mul, i64 addrspace(1)* %out, align 8
@@ -273,7 +278,7 @@ define amdgpu_kernel void @s_mul_i128(i128 addrspace(1)* %out, [8 x i32], i128 %
 
 ; GCN: {{buffer|flat}}_store_dwordx4
 define amdgpu_kernel void @v_mul_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %aptr, i128 addrspace(1)* %bptr) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.a = getelementptr inbounds i128, i128 addrspace(1)* %aptr, i32 %tid
   %gep.b = getelementptr inbounds i128, i128 addrspace(1)* %bptr, i32 %tid
   %gep.out = getelementptr inbounds i128, i128 addrspace(1)* %bptr, i32 %tid
@@ -284,7 +289,7 @@ define amdgpu_kernel void @v_mul_i128(i128 addrspace(1)* %out, i128 addrspace(1)
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone}

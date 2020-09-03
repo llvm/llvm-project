@@ -54,7 +54,7 @@ BEGIN
     MENUITEM "a&bcde", 2
     MENUITEM "ab&cde", 3
     MENUITEM "abc&de", 4
-    MENUITEM "abcd&e", 5
+    MENUITEM "abcd&e", -1
   }
 END
 

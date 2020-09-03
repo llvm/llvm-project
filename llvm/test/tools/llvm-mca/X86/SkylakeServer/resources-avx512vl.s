@@ -41,6 +41,34 @@ vaddps            %ymm16, %ymm17, %ymm19 {z}{k1}
 vaddps            (%rax), %ymm17, %ymm19 {z}{k1}
 vaddps            (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
+vcmppd            $0, %xmm0, %xmm1, %k2
+vcmppd            $0, (%rax), %xmm1, %k2
+vcmppd            $0, (%rax){1to2}, %xmm1, %k2
+vcmppd            $0, %xmm0, %xmm1, %k2 {k3}
+vcmppd            $0, (%rax), %xmm1, %k2 {k3}
+vcmppd            $0, (%rax){1to2}, %xmm1, %k2 {k3}
+
+vcmppd            $0, %ymm0, %ymm1, %k2
+vcmppd            $0, (%rax), %ymm1, %k2
+vcmppd            $0, (%rax){1to4}, %ymm1, %k2
+vcmppd            $0, %ymm0, %ymm1, %k2 {k3}
+vcmppd            $0, (%rax), %ymm1, %k2 {k3}
+vcmppd            $0, (%rax){1to4}, %ymm1, %k2 {k3}
+
+vcmpps            $0, %xmm0, %xmm1, %k2
+vcmpps            $0, (%rax), %xmm1, %k2
+vcmpps            $0, (%rax){1to4}, %xmm1, %k2
+vcmpps            $0, %xmm0, %xmm1, %k2 {k3}
+vcmpps            $0, (%rax), %xmm1, %k2 {k3}
+vcmpps            $0, (%rax){1to4}, %xmm1, %k2 {k3}
+
+vcmpps            $0, %ymm0, %ymm1, %k2
+vcmpps            $0, (%rax), %ymm1, %k2
+vcmpps            $0, (%rax){1to8}, %ymm1, %k2
+vcmpps            $0, %ymm0, %ymm1, %k2 {k3}
+vcmpps            $0, (%rax), %ymm1, %k2 {k3}
+vcmpps            $0, (%rax){1to8}, %ymm1, %k2 {k3}
+
 vcvtdq2pd         %xmm16, %xmm19
 vcvtdq2pd         (%rax), %xmm19
 vcvtdq2pd         (%rax){1to2}, %xmm19
@@ -120,6 +148,16 @@ vdivps            (%rax){1to8}, %ymm17, %ymm19 {k1}
 vdivps            %ymm16, %ymm17, %ymm19 {z}{k1}
 vdivps            (%rax), %ymm17, %ymm19 {z}{k1}
 vdivps            (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
+
+vgatherdpd        (%rax,%xmm1,2), %ymm2 {k1}
+vgatherdps        (%rax,%ymm1,2), %ymm2 {k1}
+vgatherqpd        (%rax,%ymm1,2), %ymm2 {k1}
+vgatherqps        (%rax,%ymm1,2), %xmm2 {k1}
+
+vgatherdpd        (%rax,%xmm1,2), %xmm2 {k1}
+vgatherdps        (%rax,%xmm1,2), %xmm2 {k1}
+vgatherqpd        (%rax,%xmm1,2), %xmm2 {k1}
+vgatherqps        (%rax,%xmm1,2), %xmm2 {k1}
 
 vmaxpd            %xmm16, %xmm17, %xmm19
 vmaxpd            (%rax), %xmm17, %xmm19
@@ -281,6 +319,118 @@ vpaddq            %ymm16, %ymm17, %ymm19 {z}{k1}
 vpaddq            (%rax), %ymm17, %ymm19 {z}{k1}
 vpaddq            (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
 
+vpcmpd            $0, %xmm0, %xmm1, %k2
+vpcmpd            $0, (%rax), %xmm1, %k2
+vpcmpd            $0, (%rax){1to4}, %xmm1, %k2
+vpcmpd            $0, %xmm0, %xmm1, %k2 {k3}
+vpcmpd            $0, (%rax), %xmm1, %k2 {k3}
+vpcmpd            $0, (%rax){1to4}, %xmm1, %k2 {k3}
+
+vpcmpd            $0, %ymm0, %ymm1, %k2
+vpcmpd            $0, (%rax), %ymm1, %k2
+vpcmpd            $0, (%rax){1to8}, %ymm1, %k2
+vpcmpd            $0, %ymm0, %ymm1, %k2 {k3}
+vpcmpd            $0, (%rax), %ymm1, %k2 {k3}
+vpcmpd            $0, (%rax){1to8}, %ymm1, %k2 {k3}
+
+vpcmpeqd          %xmm0, %xmm1, %k2
+vpcmpeqd          (%rax), %xmm1, %k2
+vpcmpeqd          (%rax){1to4}, %xmm1, %k2
+vpcmpeqd          %xmm0, %xmm1, %k2 {k3}
+vpcmpeqd          (%rax), %xmm1, %k2 {k3}
+vpcmpeqd          (%rax){1to4}, %xmm1, %k2 {k3}
+
+vpcmpeqd          %ymm0, %ymm1, %k2
+vpcmpeqd          (%rax), %ymm1, %k2
+vpcmpeqd          (%rax){1to8}, %ymm1, %k2
+vpcmpeqd          %ymm0, %ymm1, %k2 {k3}
+vpcmpeqd          (%rax), %ymm1, %k2 {k3}
+vpcmpeqd          (%rax){1to8}, %ymm1, %k2 {k3}
+
+vpcmpeqq          %xmm0, %xmm1, %k2
+vpcmpeqq          (%rax), %xmm1, %k2
+vpcmpeqq          (%rax){1to2}, %xmm1, %k2
+vpcmpeqq          %xmm0, %xmm1, %k2 {k3}
+vpcmpeqq          (%rax), %xmm1, %k2 {k3}
+vpcmpeqq          (%rax){1to2}, %xmm1, %k2 {k3}
+
+vpcmpeqq          %ymm0, %ymm1, %k2
+vpcmpeqq          (%rax), %ymm1, %k2
+vpcmpeqq          (%rax){1to4}, %ymm1, %k2
+vpcmpeqq          %ymm0, %ymm1, %k2 {k3}
+vpcmpeqq          (%rax), %ymm1, %k2 {k3}
+vpcmpeqq          (%rax){1to4}, %ymm1, %k2 {k3}
+
+vpcmpgtd          %xmm0, %xmm1, %k2
+vpcmpgtd          (%rax), %xmm1, %k2
+vpcmpgtd          (%rax){1to4}, %xmm1, %k2
+vpcmpgtd          %xmm0, %xmm1, %k2 {k3}
+vpcmpgtd          (%rax), %xmm1, %k2 {k3}
+vpcmpgtd          (%rax){1to4}, %xmm1, %k2 {k3}
+
+vpcmpgtd          %ymm0, %ymm1, %k2
+vpcmpgtd          (%rax), %ymm1, %k2
+vpcmpgtd          (%rax){1to8}, %ymm1, %k2
+vpcmpgtd          %ymm0, %ymm1, %k2 {k3}
+vpcmpgtd          (%rax), %ymm1, %k2 {k3}
+vpcmpgtd          (%rax){1to8}, %ymm1, %k2 {k3}
+
+vpcmpgtq          %xmm0, %xmm1, %k2
+vpcmpgtq          (%rax), %xmm1, %k2
+vpcmpgtq          (%rax){1to2}, %xmm1, %k2
+vpcmpgtq          %xmm0, %xmm1, %k2 {k3}
+vpcmpgtq          (%rax), %xmm1, %k2 {k3}
+vpcmpgtq          (%rax){1to2}, %xmm1, %k2 {k3}
+
+vpcmpgtq          %ymm0, %ymm1, %k2
+vpcmpgtq          (%rax), %ymm1, %k2
+vpcmpgtq          (%rax){1to4}, %ymm1, %k2
+vpcmpgtq          %ymm0, %ymm1, %k2 {k3}
+vpcmpgtq          (%rax), %ymm1, %k2 {k3}
+vpcmpgtq          (%rax){1to4}, %ymm1, %k2 {k3}
+
+vpcmpq            $0, %xmm0, %xmm1, %k2
+vpcmpq            $0, (%rax), %xmm1, %k2
+vpcmpq            $0, (%rax){1to2}, %xmm1, %k2
+vpcmpq            $0, %xmm0, %xmm1, %k2 {k3}
+vpcmpq            $0, (%rax), %xmm1, %k2 {k3}
+vpcmpq            $0, (%rax){1to2}, %xmm1, %k2 {k3}
+
+vpcmpq            $0, %ymm0, %ymm1, %k2
+vpcmpq            $0, (%rax), %ymm1, %k2
+vpcmpq            $0, (%rax){1to4}, %ymm1, %k2
+vpcmpq            $0, %ymm0, %ymm1, %k2 {k3}
+vpcmpq            $0, (%rax), %ymm1, %k2 {k3}
+vpcmpq            $0, (%rax){1to4}, %ymm1, %k2 {k3}
+
+vpcmpud           $0, %xmm0, %xmm1, %k2
+vpcmpud           $0, (%rax), %xmm1, %k2
+vpcmpud           $0, (%rax){1to4}, %xmm1, %k2
+vpcmpud           $0, %xmm0, %xmm1, %k2 {k3}
+vpcmpud           $0, (%rax), %xmm1, %k2 {k3}
+vpcmpud           $0, (%rax){1to4}, %xmm1, %k2 {k3}
+
+vpcmpud           $0, %ymm0, %ymm1, %k2
+vpcmpud           $0, (%rax), %ymm1, %k2
+vpcmpud           $0, (%rax){1to8}, %ymm1, %k2
+vpcmpud           $0, %ymm0, %ymm1, %k2 {k3}
+vpcmpud           $0, (%rax), %ymm1, %k2 {k3}
+vpcmpud           $0, (%rax){1to8}, %ymm1, %k2 {k3}
+
+vpcmpuq           $0, %xmm0, %xmm1, %k2
+vpcmpuq           $0, (%rax), %xmm1, %k2
+vpcmpuq           $0, (%rax){1to2}, %xmm1, %k2
+vpcmpuq           $0, %xmm0, %xmm1, %k2 {k3}
+vpcmpuq           $0, (%rax), %xmm1, %k2 {k3}
+vpcmpuq           $0, (%rax){1to2}, %xmm1, %k2 {k3}
+
+vpcmpuq           $0, %ymm0, %ymm1, %k2
+vpcmpuq           $0, (%rax), %ymm1, %k2
+vpcmpuq           $0, (%rax){1to4}, %ymm1, %k2
+vpcmpuq           $0, %ymm0, %ymm1, %k2 {k3}
+vpcmpuq           $0, (%rax), %ymm1, %k2 {k3}
+vpcmpuq           $0, (%rax){1to4}, %ymm1, %k2 {k3}
+
 vpermd            %ymm16, %ymm17, %ymm19
 vpermd            (%rax), %ymm17, %ymm19
 vpermd            (%rax){1to8}, %ymm17, %ymm19
@@ -421,6 +571,16 @@ vpermq            %ymm16, %ymm17, %ymm19 {z}{k1}
 vpermq            (%rax), %ymm17, %ymm19 {z}{k1}
 vpermq            (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
 
+vpgatherdq        (%rax,%xmm1,2), %ymm2 {k1}
+vpgatherdd        (%rax,%ymm1,2), %ymm2 {k1}
+vpgatherqq        (%rax,%ymm1,2), %ymm2 {k1}
+vpgatherqd        (%rax,%ymm1,2), %xmm2 {k1}
+
+vpgatherdq        (%rax,%xmm1,2), %xmm2 {k1}
+vpgatherdd        (%rax,%xmm1,2), %xmm2 {k1}
+vpgatherqq        (%rax,%xmm1,2), %xmm2 {k1}
+vpgatherqd        (%rax,%xmm1,2), %xmm2 {k1}
+
 vpmulld           %xmm16, %xmm17, %xmm19
 vpmulld           (%rax), %xmm17, %xmm19
 vpmulld           (%rax){1to4}, %xmm17, %xmm19
@@ -500,6 +660,62 @@ vpsubq            (%rax){1to4}, %ymm17, %ymm19 {k1}
 vpsubq            %ymm16, %ymm17, %ymm19 {z}{k1}
 vpsubq            (%rax), %ymm17, %ymm19 {z}{k1}
 vpsubq            (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
+
+vptestmd          %xmm0, %xmm1, %k2
+vptestmd          (%rax), %xmm1, %k2
+vptestmd          (%rax){1to4}, %xmm1, %k2
+vptestmd          %xmm0, %xmm1, %k2 {k3}
+vptestmd          (%rax), %xmm1, %k2 {k3}
+vptestmd          (%rax){1to4}, %xmm1, %k2 {k3}
+
+vptestmd          %ymm0, %ymm1, %k2
+vptestmd          (%rax), %ymm1, %k2
+vptestmd          (%rax){1to8}, %ymm1, %k2
+vptestmd          %ymm0, %ymm1, %k2 {k3}
+vptestmd          (%rax), %ymm1, %k2 {k3}
+vptestmd          (%rax){1to8}, %ymm1, %k2 {k3}
+
+vptestmq          %xmm0, %xmm1, %k2
+vptestmq          (%rax), %xmm1, %k2
+vptestmq          (%rax){1to2}, %xmm1, %k2
+vptestmq          %xmm0, %xmm1, %k2 {k3}
+vptestmq          (%rax), %xmm1, %k2 {k3}
+vptestmq          (%rax){1to2}, %xmm1, %k2 {k3}
+
+vptestmq          %ymm0, %ymm1, %k2
+vptestmq          (%rax), %ymm1, %k2
+vptestmq          (%rax){1to4}, %ymm1, %k2
+vptestmq          %ymm0, %ymm1, %k2 {k3}
+vptestmq          (%rax), %ymm1, %k2 {k3}
+vptestmq          (%rax){1to4}, %ymm1, %k2 {k3}
+
+vptestnmd         %xmm0, %xmm1, %k2
+vptestnmd         (%rax), %xmm1, %k2
+vptestnmd         (%rax){1to4}, %xmm1, %k2
+vptestnmd         %xmm0, %xmm1, %k2 {k3}
+vptestnmd         (%rax), %xmm1, %k2 {k3}
+vptestnmd         (%rax){1to4}, %xmm1, %k2 {k3}
+
+vptestnmd         %ymm0, %ymm1, %k2
+vptestnmd         (%rax), %ymm1, %k2
+vptestnmd         (%rax){1to8}, %ymm1, %k2
+vptestnmd         %ymm0, %ymm1, %k2 {k3}
+vptestnmd         (%rax), %ymm1, %k2 {k3}
+vptestnmd         (%rax){1to8}, %ymm1, %k2 {k3}
+
+vptestnmq         %xmm0, %xmm1, %k2
+vptestnmq         (%rax), %xmm1, %k2
+vptestnmq         (%rax){1to2}, %xmm1, %k2
+vptestnmq         %xmm0, %xmm1, %k2 {k3}
+vptestnmq         (%rax), %xmm1, %k2 {k3}
+vptestnmq         (%rax){1to2}, %xmm1, %k2 {k3}
+
+vptestnmq         %ymm0, %ymm1, %k2
+vptestnmq         (%rax), %ymm1, %k2
+vptestnmq         (%rax){1to4}, %ymm1, %k2
+vptestnmq         %ymm0, %ymm1, %k2 {k3}
+vptestnmq         (%rax), %ymm1, %k2 {k3}
+vptestnmq         (%rax){1to4}, %ymm1, %k2 {k3}
 
 vpunpckhdq        %xmm16, %xmm17, %xmm19
 vpunpckhdq        (%rax), %xmm17, %xmm19
@@ -786,6 +1002,30 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      4     0.50                        vaddps	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      11    0.50    *                   vaddps	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      11    0.50    *                   vaddps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      4     1.00                        vcmpeqpd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vcmpeqpd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vcmpeqpd	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vcmpeqpd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vcmpeqpd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vcmpeqpd	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vcmpeqpd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vcmpeqpd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vcmpeqpd	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vcmpeqpd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vcmpeqpd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vcmpeqpd	(%rax){1to4}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vcmpeqps	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vcmpeqps	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vcmpeqps	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vcmpeqps	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vcmpeqps	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vcmpeqps	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vcmpeqps	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vcmpeqps	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vcmpeqps	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vcmpeqps	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vcmpeqps	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vcmpeqps	(%rax){1to8}, %ymm1, %k2 {%k3}
 # CHECK-NEXT:  2      5     1.00                        vcvtdq2pd	%xmm16, %xmm19
 # CHECK-NEXT:  2      10    0.50    *                   vcvtdq2pd	(%rax), %xmm19
 # CHECK-NEXT:  2      10    0.50    *                   vcvtdq2pd	(%rax){1to2}, %xmm19
@@ -858,6 +1098,14 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      11    5.00                        vdivps	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      18    5.00    *                   vdivps	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      18    5.00    *                   vdivps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  5      19    2.00    *                   vgatherdpd	(%rax,%xmm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  5      21    4.00    *                   vgatherdps	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  5      19    2.00    *                   vgatherqpd	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  5      19    2.00    *                   vgatherqps	(%rax,%ymm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  5      17    1.00    *                   vgatherdpd	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  5      19    2.00    *                   vgatherdps	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  5      17    1.00    *                   vgatherqpd	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  5      17    1.00    *                   vgatherqps	(%rax,%xmm1,2), %xmm2 {%k1}
 # CHECK-NEXT:  1      4     0.50                        vmaxpd	%xmm16, %xmm17, %xmm19
 # CHECK-NEXT:  2      10    0.50    *                   vmaxpd	(%rax), %xmm17, %xmm19
 # CHECK-NEXT:  2      10    0.50    *                   vmaxpd	(%rax){1to2}, %xmm17, %xmm19
@@ -1002,6 +1250,102 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      1     0.33                        vpaddq	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vpaddq	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vpaddq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqd	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqd	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqd	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqd	(%rax){1to8}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqd	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqd	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqd	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqd	(%rax){1to8}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqq	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqq	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqq	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqq	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqq	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqq	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqq	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqq	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqq	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqq	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqq	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqq	(%rax){1to4}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpgtd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpgtd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpgtd	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpgtd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpgtd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpgtd	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpgtd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpgtd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpgtd	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpgtd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpgtd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpgtd	(%rax){1to8}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpgtq	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpgtq	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpgtq	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpgtq	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpgtq	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpgtq	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpgtq	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpgtq	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpgtq	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpgtq	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpgtq	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpgtq	(%rax){1to4}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqq	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqq	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqq	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqq	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqq	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpeqq	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqq	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqq	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqq	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpeqq	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqq	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpeqq	(%rax){1to4}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpequd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpequd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpequd	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpequd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpequd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpequd	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpequd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpequd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpequd	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpequd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpequd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpequd	(%rax){1to8}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpequq	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpequq	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpequq	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpequq	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpequq	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vpcmpequq	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vpcmpequq	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpequq	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpequq	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vpcmpequq	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpequq	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vpcmpequq	(%rax){1to4}, %ymm1, %k2 {%k3}
 # CHECK-NEXT:  1      3     1.00                        vpermd	%ymm16, %ymm17, %ymm19
 # CHECK-NEXT:  2      10    1.00    *                   vpermd	(%rax), %ymm17, %ymm19
 # CHECK-NEXT:  2      10    1.00    *                   vpermd	(%rax){1to8}, %ymm17, %ymm19
@@ -1128,6 +1472,14 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      3     1.00                        vpermq	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   vpermq	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   vpermq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  5      19    2.00    *                   vpgatherdq	(%rax,%xmm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  5      21    4.00    *                   vpgatherdd	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  5      19    2.00    *                   vpgatherqq	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  5      19    2.00    *                   vpgatherqd	(%rax,%ymm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  5      17    1.00    *                   vpgatherdq	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  5      19    2.00    *                   vpgatherdd	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  5      17    1.00    *                   vpgatherqq	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  5      17    1.00    *                   vpgatherqd	(%rax,%xmm1,2), %xmm2 {%k1}
 # CHECK-NEXT:  2      10    1.00                        vpmulld	%xmm16, %xmm17, %xmm19
 # CHECK-NEXT:  3      16    1.00    *                   vpmulld	(%rax), %xmm17, %xmm19
 # CHECK-NEXT:  3      16    1.00    *                   vpmulld	(%rax){1to4}, %xmm17, %xmm19
@@ -1200,6 +1552,54 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      1     0.33                        vpsubq	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vpsubq	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vpsubq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      4     1.00                        vptestmd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vptestmd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vptestmd	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vptestmd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vptestmd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vptestmd	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vptestmd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vptestmd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vptestmd	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vptestmd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vptestmd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vptestmd	(%rax){1to8}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vptestmq	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vptestmq	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vptestmq	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vptestmq	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vptestmq	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vptestmq	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vptestmq	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vptestmq	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vptestmq	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vptestmq	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vptestmq	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vptestmq	(%rax){1to4}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vptestnmd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vptestnmd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vptestnmd	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vptestnmd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vptestnmd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vptestnmd	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vptestnmd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vptestnmd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vptestnmd	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vptestnmd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vptestnmd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vptestnmd	(%rax){1to8}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vptestnmq	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vptestnmq	(%rax), %xmm1, %k2
+# CHECK-NEXT:  2      10    1.00    *                   vptestnmq	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vptestnmq	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vptestnmq	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  2      10    1.00    *                   vptestnmq	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  1      4     1.00                        vptestnmq	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vptestnmq	(%rax), %ymm1, %k2
+# CHECK-NEXT:  2      11    1.00    *                   vptestnmq	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  1      4     1.00                        vptestnmq	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vptestnmq	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  2      11    1.00    *                   vptestnmq	(%rax){1to4}, %ymm1, %k2 {%k3}
 # CHECK-NEXT:  1      1     1.00                        vpunpckhdq	%xmm16, %xmm17, %xmm19
 # CHECK-NEXT:  2      7     1.00    *                   vpunpckhdq	(%rax), %xmm17, %xmm19
 # CHECK-NEXT:  2      7     1.00    *                   vpunpckhdq	(%rax){1to4}, %xmm17, %xmm19
@@ -1431,7 +1831,7 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     423.00 217.00 145.00 222.00 222.00  -     328.00  -      -
+# CHECK-NEXT:  -     423.00 242.33 154.33 308.00 308.00  -     505.33 4.00    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -1471,6 +1871,30 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     vaddps	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -     vaddps	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -     vaddps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vcmpeqpd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqpd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqpd	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vcmpeqpd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqpd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqpd	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vcmpeqpd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqpd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqpd	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vcmpeqpd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqpd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqpd	(%rax){1to4}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vcmpeqps	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqps	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqps	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vcmpeqps	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqps	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqps	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vcmpeqps	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqps	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqps	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vcmpeqps	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqps	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vcmpeqps	(%rax){1to8}, %ymm1, %k2 {%k3}
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     1.33    -      -     vcvtdq2pd	%xmm16, %xmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vcvtdq2pd	(%rax), %xmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vcvtdq2pd	(%rax){1to2}, %xmm19
@@ -1543,6 +1967,14 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -     5.00   1.00    -      -      -      -      -      -      -     vdivps	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -     5.00   1.00    -     0.50   0.50    -      -      -      -     vdivps	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -     5.00   1.00    -     0.50   0.50    -      -      -      -     vdivps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.58   0.58   2.00   2.00    -     0.58   0.25    -     vgatherdpd	(%rax,%xmm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   4.00   4.00    -     0.58   0.25    -     vgatherdps	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   2.00   2.00    -     0.58   0.25    -     vgatherqpd	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   2.00   2.00    -     0.58   0.25    -     vgatherqps	(%rax,%ymm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   1.00   1.00    -     0.58   0.25    -     vgatherdpd	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   2.00   2.00    -     0.58   0.25    -     vgatherdps	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   1.00   1.00    -     0.58   0.25    -     vgatherqpd	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   1.00   1.00    -     0.58   0.25    -     vgatherqps	(%rax,%xmm1,2), %xmm2 {%k1}
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     vmaxpd	%xmm16, %xmm17, %xmm19
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -     vmaxpd	(%rax), %xmm17, %xmm19
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -     vmaxpd	(%rax){1to2}, %xmm17, %xmm19
@@ -1687,6 +2119,102 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpaddq	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpaddq	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpaddq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax){1to8}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqd	(%rax){1to8}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqq	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqq	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqq	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqq	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax){1to4}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpgtd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtd	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpgtd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtd	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpgtd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtd	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpgtd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtd	(%rax){1to8}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpgtq	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtq	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtq	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpgtq	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtq	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtq	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpgtq	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtq	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtq	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpgtq	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtq	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpgtq	(%rax){1to4}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqq	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqq	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqq	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpeqq	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpeqq	(%rax){1to4}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpequd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequd	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpequd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequd	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpequd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequd	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpequd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequd	(%rax){1to8}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpequq	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequq	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequq	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpequq	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequq	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequq	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpequq	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequq	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequq	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpcmpequq	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequq	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpcmpequq	(%rax){1to4}, %ymm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpermd	%ymm16, %ymm17, %ymm19
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpermd	(%rax), %ymm17, %ymm19
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpermd	(%rax){1to8}, %ymm17, %ymm19
@@ -1813,6 +2341,14 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpermq	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpermq	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpermq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.58   0.58   2.00   2.00    -     0.58   0.25    -     vpgatherdq	(%rax,%xmm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   4.00   4.00    -     0.58   0.25    -     vpgatherdd	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   2.00   2.00    -     0.58   0.25    -     vpgatherqq	(%rax,%ymm1,2), %ymm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   2.00   2.00    -     0.58   0.25    -     vpgatherqd	(%rax,%ymm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   1.00   1.00    -     0.58   0.25    -     vpgatherdq	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   2.00   2.00    -     0.58   0.25    -     vpgatherdd	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   1.00   1.00    -     0.58   0.25    -     vpgatherqq	(%rax,%xmm1,2), %xmm2 {%k1}
+# CHECK-NEXT:  -      -     1.58   0.58   1.00   1.00    -     0.58   0.25    -     vpgatherqd	(%rax,%xmm1,2), %xmm2 {%k1}
 # CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -      -      -     vpmulld	%xmm16, %xmm17, %xmm19
 # CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -      -      -      -     vpmulld	(%rax), %xmm17, %xmm19
 # CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -      -      -      -     vpmulld	(%rax){1to4}, %xmm17, %xmm19
@@ -1885,6 +2421,54 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpsubq	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpsubq	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpsubq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestmd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmd	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestmd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmd	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestmd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmd	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestmd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmd	(%rax){1to8}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestmq	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmq	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmq	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestmq	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmq	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmq	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestmq	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmq	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmq	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestmq	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmq	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestmq	(%rax){1to4}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestnmd	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmd	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmd	(%rax){1to4}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestnmd	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmd	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmd	(%rax){1to4}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestnmd	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmd	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmd	(%rax){1to8}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestnmd	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmd	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmd	(%rax){1to8}, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestnmq	%xmm0, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmq	(%rax), %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmq	(%rax){1to2}, %xmm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestnmq	%xmm0, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmq	(%rax), %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmq	(%rax){1to2}, %xmm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestnmq	%ymm0, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmq	(%rax), %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmq	(%rax){1to4}, %ymm1, %k2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vptestnmq	%ymm0, %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmq	(%rax), %ymm1, %k2 {%k3}
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vptestnmq	(%rax){1to4}, %ymm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpunpckhdq	%xmm16, %xmm17, %xmm19
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpunpckhdq	(%rax), %xmm17, %xmm19
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpunpckhdq	(%rax){1to4}, %xmm17, %xmm19

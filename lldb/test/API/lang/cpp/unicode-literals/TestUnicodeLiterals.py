@@ -30,26 +30,15 @@ class UnicodeLiteralsTestCase(TestBase):
 
     def test_expr1(self):
         """Test that the expression parser returns proper Unicode strings."""
-        self.build()
         self.rdar12991846(expr=1)
 
     def test_expr2(self):
         """Test that the expression parser returns proper Unicode strings."""
-        self.build()
         self.rdar12991846(expr=2)
 
     def test_expr3(self):
         """Test that the expression parser returns proper Unicode strings."""
-        self.build()
         self.rdar12991846(expr=3)
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-        # Find the line number to break for main.cpp.
-        self.source = 'main.cpp'
-        self.line = line_number(
-            self.source, '// Set break point at this line.')
 
     def rdar12991846(self, expr=None):
         """Test that the expression parser returns proper Unicode strings."""
@@ -57,21 +46,8 @@ class UnicodeLiteralsTestCase(TestBase):
             self.skipTest(
                 "Skipping because this test is known to crash on i386")
 
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Break on the struct declration statement in main.cpp.
-        lldbutil.run_break_set_by_file_and_line(self, "main.cpp", self.line)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-
-        if not process:
-            self.fail("SBTarget.Launch() failed")
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, "// Set break point at this line", lldb.SBFileSpec("main.cpp"))
 
         if expr == 1:
             self.expect('expression L"hello"', substrs=['hello'])

@@ -115,9 +115,12 @@ class IteratorSymbolMap {};
 class IteratorRegionMap {};
 class ContainerMap {};
 
-using IteratorSymbolMapTy = CLANG_ENTO_PROGRAMSTATE_MAP(SymbolRef, IteratorPosition);
-using IteratorRegionMapTy = CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *, IteratorPosition);
-using ContainerMapTy = CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *, ContainerData);
+using IteratorSymbolMapTy =
+  CLANG_ENTO_PROGRAMSTATE_MAP(SymbolRef, IteratorPosition);
+using IteratorRegionMapTy =
+  CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *, IteratorPosition);
+using ContainerMapTy =
+  CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *, ContainerData);
 
 } // namespace iterator
 
@@ -149,20 +152,33 @@ bool isEraseCall(const FunctionDecl *Func);
 bool isEraseAfterCall(const FunctionDecl *Func);
 bool isEmplaceCall(const FunctionDecl *Func);
 bool isAccessOperator(OverloadedOperatorKind OK);
+bool isAccessOperator(UnaryOperatorKind OK);
+bool isAccessOperator(BinaryOperatorKind OK);
 bool isDereferenceOperator(OverloadedOperatorKind OK);
+bool isDereferenceOperator(UnaryOperatorKind OK);
+bool isDereferenceOperator(BinaryOperatorKind OK);
 bool isIncrementOperator(OverloadedOperatorKind OK);
+bool isIncrementOperator(UnaryOperatorKind OK);
 bool isDecrementOperator(OverloadedOperatorKind OK);
+bool isDecrementOperator(UnaryOperatorKind OK);
 bool isRandomIncrOrDecrOperator(OverloadedOperatorKind OK);
+bool isRandomIncrOrDecrOperator(BinaryOperatorKind OK);
 const ContainerData *getContainerData(ProgramStateRef State,
                                       const MemRegion *Cont);
 const IteratorPosition *getIteratorPosition(ProgramStateRef State,
                                             const SVal &Val);
 ProgramStateRef setIteratorPosition(ProgramStateRef State, const SVal &Val,
                                     const IteratorPosition &Pos);
+ProgramStateRef createIteratorPosition(ProgramStateRef State, const SVal &Val,
+                                       const MemRegion *Cont, const Stmt* S,
+                                       const LocationContext *LCtx,
+                                       unsigned blockCount);
 ProgramStateRef advancePosition(ProgramStateRef State,
                                 const SVal &Iter,
                                 OverloadedOperatorKind Op,
                                 const SVal &Distance);
+ProgramStateRef assumeNoOverflow(ProgramStateRef State, SymbolRef Sym,
+                                 long Scale);
 bool compare(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2,
              BinaryOperator::Opcode Opc);
 bool compare(ProgramStateRef State, NonLoc NL1, NonLoc NL2,

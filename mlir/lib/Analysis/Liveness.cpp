@@ -1,6 +1,6 @@
 //===- Liveness.cpp - Liveness analysis for MLIR --------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -21,6 +21,7 @@
 
 using namespace mlir;
 
+namespace {
 /// Builds and holds block information during the construction phase.
 struct BlockInfoBuilder {
   using ValueSetT = Liveness::ValueSetT;
@@ -30,51 +31,66 @@ struct BlockInfoBuilder {
 
   /// Fills the block builder with initial liveness information.
   BlockInfoBuilder(Block *block) : block(block) {
+    auto gatherOutValues = [&](Value value) {
+      // Check whether this value will be in the outValues set (its uses escape
+      // this block). Due to the SSA properties of the program, the uses must
+      // occur after the definition. Therefore, we do not have to check
+      // additional conditions to detect an escaping value.
+      for (Operation *useOp : value.getUsers()) {
+        Block *ownerBlock = useOp->getBlock();
+        // Find an owner block in the current region. Note that a value does not
+        // escape this block if it is used in a nested region.
+        ownerBlock = block->getParent()->findAncestorBlockInRegion(*ownerBlock);
+        assert(ownerBlock && "Use leaves the current parent region");
+        if (ownerBlock != block) {
+          outValues.insert(value);
+          break;
+        }
+      }
+    };
+
     // Mark all block arguments (phis) as defined.
-    for (BlockArgument argument : block->getArguments())
+    for (BlockArgument argument : block->getArguments()) {
+      // Insert value into the set of defined values.
       defValues.insert(argument);
 
-    // Check all result values and whether their uses
-    // are inside this block or not (see outValues).
-    for (Operation &operation : *block)
-      for (Value result : operation.getResults()) {
-        defValues.insert(result);
+      // Gather all out values of all arguments in the current block.
+      gatherOutValues(argument);
+    }
 
-        // Check whether this value will be in the outValues
-        // set (its uses escape this block). Due to the SSA
-        // properties of the program, the uses must occur after
-        // the definition. Therefore, we do not have to check
-        // additional conditions to detect an escaping value.
-        for (OpOperand &use : result->getUses())
-          if (use.getOwner()->getBlock() != block) {
-            outValues.insert(result);
-            break;
-          }
-      }
+    // Gather out values of all operations in the current block.
+    for (Operation &operation : *block)
+      for (Value result : operation.getResults())
+        gatherOutValues(result);
+
+    // Mark all nested operation results as defined.
+    block->walk([&](Operation *op) {
+      for (Value result : op->getResults())
+        defValues.insert(result);
+    });
 
     // Check all operations for used operands.
-    for (Operation &operation : block->getOperations())
-      for (Value operand : operation.getOperands()) {
+    block->walk([&](Operation *op) {
+      for (Value operand : op->getOperands()) {
         // If the operand is already defined in the scope of this
         // block, we can skip the value in the use set.
         if (!defValues.count(operand))
           useValues.insert(operand);
       }
+    });
   }
 
-  /// Updates live-in information of the current block.
-  /// To do so it uses the default liveness-computation formula:
-  /// newIn = use union out \ def.
-  /// The methods returns true, if the set has changed (newIn != in),
-  /// false otherwise.
+  /// Updates live-in information of the current block. To do so it uses the
+  /// default liveness-computation formula: newIn = use union out \ def. The
+  /// methods returns true, if the set has changed (newIn != in), false
+  /// otherwise.
   bool updateLiveIn() {
     ValueSetT newIn = useValues;
     llvm::set_union(newIn, outValues);
     llvm::set_subtract(newIn, defValues);
 
-    // It is sufficient to check the set sizes (instead of their contents)
-    // since the live-in set can only grow monotonically during all update
-    // operations.
+    // It is sufficient to check the set sizes (instead of their contents) since
+    // the live-in set can only grow monotonically during all update operations.
     if (newIn.size() == inValues.size())
       return false;
 
@@ -82,9 +98,9 @@ struct BlockInfoBuilder {
     return true;
   }
 
-  /// Updates live-out information of the current block.
-  /// It iterates over all successors and unifies their live-in
-  /// values with the current live-out values.
+  /// Updates live-out information of the current block. It iterates over all
+  /// successors and unifies their live-in values with the current live-out
+  /// values.
   template <typename SourceT> void updateLiveOut(SourceT &source) {
     for (Block *succ : block->getSuccessors()) {
       BlockInfoBuilder &builder = source[succ];
@@ -107,21 +123,34 @@ struct BlockInfoBuilder {
   /// The set of all used values.
   ValueSetT useValues;
 };
+} // namespace
+
+/// Walks all regions (including nested regions recursively) and invokes the
+/// given function for every block.
+template <typename FuncT>
+static void walkRegions(MutableArrayRef<Region> regions, const FuncT &func) {
+  for (Region &region : regions)
+    for (Block &block : region) {
+      func(block);
+
+      // Traverse all nested regions.
+      for (Operation &operation : block)
+        walkRegions(operation.getRegions(), func);
+    }
+}
 
 /// Builds the internal liveness block mapping.
 static void buildBlockMapping(MutableArrayRef<Region> regions,
                               DenseMap<Block *, BlockInfoBuilder> &builders) {
   llvm::SetVector<Block *> toProcess;
 
-  // Initialize all block structures
-  for (Region &region : regions)
-    for (Block &block : region) {
-      BlockInfoBuilder &builder =
-          builders.try_emplace(&block, &block).first->second;
+  walkRegions(regions, [&](Block &block) {
+    BlockInfoBuilder &builder =
+        builders.try_emplace(&block, &block).first->second;
 
-      if (builder.updateLiveIn())
-        toProcess.insert(block.pred_begin(), block.pred_end());
-    }
+    if (builder.updateLiveIn())
+      toProcess.insert(block.pred_begin(), block.pred_end());
+  });
 
   // Propagate the in and out-value sets (fixpoint iteration)
   while (!toProcess.empty()) {
@@ -141,8 +170,8 @@ static void buildBlockMapping(MutableArrayRef<Region> regions,
 // Liveness
 //===----------------------------------------------------------------------===//
 
-/// Creates a new Liveness analysis that computes liveness
-/// information for all associated regions.
+/// Creates a new Liveness analysis that computes liveness information for all
+/// associated regions.
 Liveness::Liveness(Operation *op) : operation(op) { build(op->getRegions()); }
 
 /// Initializes the internal mappings.
@@ -171,15 +200,15 @@ Liveness::OperationListT Liveness::resolveLiveness(Value value) const {
 
   // Start with the defining block
   Block *currentBlock;
-  if (Operation *defOp = value->getDefiningOp())
+  if (Operation *defOp = value.getDefiningOp())
     currentBlock = defOp->getBlock();
   else
-    currentBlock = value.cast<BlockArgument>()->getOwner();
+    currentBlock = value.cast<BlockArgument>().getOwner();
   toProcess.push_back(currentBlock);
   visited.insert(currentBlock);
 
   // Start with all associated blocks
-  for (OpOperand &use : value->getUses()) {
+  for (OpOperand &use : value.getUses()) {
     Block *useBlock = use.getOwner()->getBlock();
     if (visited.insert(useBlock).second)
       toProcess.push_back(useBlock);
@@ -227,8 +256,8 @@ const Liveness::ValueSetT &Liveness::getLiveOut(Block *block) const {
   return getLiveness(block)->out();
 }
 
-/// Returns true if the given operation represent the last use of the
-/// given value.
+/// Returns true if the given operation represent the last use of the given
+/// value.
 bool Liveness::isLastUse(Value value, Operation *operation) const {
   Block *block = operation->getBlock();
   const LivenessBlockInfo *blockInfo = getLiveness(block);
@@ -255,26 +284,25 @@ void Liveness::print(raw_ostream &os) const {
   DenseMap<Block *, size_t> blockIds;
   DenseMap<Operation *, size_t> operationIds;
   DenseMap<Value, size_t> valueIds;
-  for (Region &region : operation->getRegions())
-    for (Block &block : region) {
-      blockIds.insert({&block, blockIds.size()});
-      for (BlockArgument argument : block.getArguments())
-        valueIds.insert({argument, valueIds.size()});
-      for (Operation &operation : block) {
-        operationIds.insert({&operation, operationIds.size()});
-        for (Value result : operation.getResults())
-          valueIds.insert({result, valueIds.size()});
-      }
+  walkRegions(operation->getRegions(), [&](Block &block) {
+    blockIds.insert({&block, blockIds.size()});
+    for (BlockArgument argument : block.getArguments())
+      valueIds.insert({argument, valueIds.size()});
+    for (Operation &operation : block) {
+      operationIds.insert({&operation, operationIds.size()});
+      for (Value result : operation.getResults())
+        valueIds.insert({result, valueIds.size()});
     }
+  });
 
   // Local printing helpers
   auto printValueRef = [&](Value value) {
-    if (Operation *defOp = value->getDefiningOp())
-      os << "val_" << defOp->getName();
+    if (value.getDefiningOp())
+      os << "val_" << valueIds[value];
     else {
       auto blockArg = value.cast<BlockArgument>();
-      os << "arg" << blockArg->getArgNumber() << "@"
-         << blockIds[blockArg->getOwner()];
+      os << "arg" << blockArg.getArgNumber() << "@"
+         << blockIds[blockArg.getOwner()];
     }
     os << " ";
   };
@@ -290,39 +318,38 @@ void Liveness::print(raw_ostream &os) const {
   };
 
   // Dump information about in and out values.
-  for (Region &region : operation->getRegions())
-    for (Block &block : region) {
-      os << "// - Block: " << blockIds[&block] << "\n";
-      auto liveness = getLiveness(&block);
-      os << "// --- LiveIn: ";
-      printValueRefs(liveness->inValues);
-      os << "\n// --- LiveOut: ";
-      printValueRefs(liveness->outValues);
-      os << "\n";
+  walkRegions(operation->getRegions(), [&](Block &block) {
+    os << "// - Block: " << blockIds[&block] << "\n";
+    auto liveness = getLiveness(&block);
+    os << "// --- LiveIn: ";
+    printValueRefs(liveness->inValues);
+    os << "\n// --- LiveOut: ";
+    printValueRefs(liveness->outValues);
+    os << "\n";
 
-      // Print liveness intervals.
-      os << "// --- BeginLiveness";
-      for (Operation &op : block) {
-        if (op.getNumResults() < 1)
-          continue;
-        os << "\n";
-        for (Value result : op.getResults()) {
-          os << "// ";
-          printValueRef(result);
-          os << ":";
-          auto liveOperations = resolveLiveness(result);
-          std::sort(liveOperations.begin(), liveOperations.end(),
-                    [&](Operation *left, Operation *right) {
-                      return operationIds[left] < operationIds[right];
-                    });
-          for (Operation *operation : liveOperations) {
-            os << "\n//     ";
-            operation->print(os);
-          }
+    // Print liveness intervals.
+    os << "// --- BeginLiveness";
+    for (Operation &op : block) {
+      if (op.getNumResults() < 1)
+        continue;
+      os << "\n";
+      for (Value result : op.getResults()) {
+        os << "// ";
+        printValueRef(result);
+        os << ":";
+        auto liveOperations = resolveLiveness(result);
+        std::sort(liveOperations.begin(), liveOperations.end(),
+                  [&](Operation *left, Operation *right) {
+                    return operationIds[left] < operationIds[right];
+                  });
+        for (Operation *operation : liveOperations) {
+          os << "\n//     ";
+          operation->print(os);
         }
       }
-      os << "\n// --- EndLiveness\n";
     }
+    os << "\n// --- EndLiveness\n";
+  });
   os << "// -------------------\n";
 }
 
@@ -340,10 +367,10 @@ bool LivenessBlockInfo::isLiveOut(Value value) const {
   return outValues.count(value);
 }
 
-/// Gets the start operation for the given value
-/// (must be referenced in this block).
+/// Gets the start operation for the given value (must be referenced in this
+/// block).
 Operation *LivenessBlockInfo::getStartOperation(Value value) const {
-  Operation *definingOp = value->getDefiningOp();
+  Operation *definingOp = value.getDefiningOp();
   // The given value is either live-in or is defined
   // in the scope of this block.
   if (isLiveIn(value) || !definingOp)
@@ -361,13 +388,13 @@ Operation *LivenessBlockInfo::getEndOperation(Value value,
 
   // Resolve the last operation (must exist by definition).
   Operation *endOperation = startOperation;
-  for (OpOperand &use : value->getUses()) {
-    Operation *useOperation = use.getOwner();
-    // Check whether the use is in our block and after
-    // the current end operation.
-    if (useOperation->getBlock() == block &&
-        endOperation->isBeforeInBlock(useOperation))
-      endOperation = useOperation;
+  for (Operation *useOp : value.getUsers()) {
+    // Find the associated operation in the current block (if any).
+    useOp = block->findAncestorOpInBlock(*useOp);
+    // Check whether the use is in our block and after the current end
+    // operation.
+    if (useOp && endOperation->isBeforeInBlock(useOp))
+      endOperation = useOp;
   }
   return endOperation;
 }

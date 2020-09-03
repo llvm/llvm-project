@@ -21,7 +21,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Allocator.h"
+#include "llvm/Support/AllocatorBase.h"
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -79,7 +79,7 @@ struct SparseSetValFunctor<KeyT, KeyT, KeyFunctorT> {
   }
 };
 
-/// SparseSet - Fast set implmentation for objects that can be identified by
+/// SparseSet - Fast set implementation for objects that can be identified by
 /// small unsigned keys.
 ///
 /// SparseSet allocates memory proportional to the size of the key universe, so

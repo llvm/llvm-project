@@ -40,14 +40,16 @@ body:             |
 
     ; CHECK-LABEL: name: test_sdiv_i8
     ; CHECK: liveins: $edi, $esi
-    ; CHECK: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
-    ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; CHECK: [[COPY2:%[0-9]+]]:gr32_abcd = COPY $esi
-    ; CHECK: [[COPY3:%[0-9]+]]:gr8 = COPY [[COPY2]].sub_8bit
-    ; CHECK: $ax = MOVSX16rr8 [[COPY1]]
-    ; CHECK: IDIV8r [[COPY3]], implicit-def $al, implicit-def $ah, implicit-def $eflags, implicit $ax
-    ; CHECK: [[COPY4:%[0-9]+]]:gr8 = COPY $al
-    ; CHECK: $al = COPY [[COPY4]]
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; CHECK: [[COPY1:%[0-9]+]]:gr32_abcd = COPY [[COPY]]
+    ; CHECK: [[COPY2:%[0-9]+]]:gr8_abcd_l = COPY [[COPY1]].sub_8bit
+    ; CHECK: [[COPY3:%[0-9]+]]:gr32 = COPY $esi
+    ; CHECK: [[COPY4:%[0-9]+]]:gr32_abcd = COPY [[COPY3]]
+    ; CHECK: [[COPY5:%[0-9]+]]:gr8_abcd_l = COPY [[COPY4]].sub_8bit
+    ; CHECK: $ax = MOVSX16rr8 [[COPY2]]
+    ; CHECK: IDIV8r [[COPY5]], implicit-def $al, implicit-def $ah, implicit-def $eflags, implicit $ax
+    ; CHECK: [[COPY6:%[0-9]+]]:gr8 = COPY $al
+    ; CHECK: $al = COPY [[COPY6]]
     ; CHECK: RET 0, implicit $al
     %2:gpr(s32) = COPY $edi
     %0:gpr(s8) = G_TRUNC %2(s32)

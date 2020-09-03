@@ -39,7 +39,7 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
 
   // Handle CPU name is 'native'.
   if (CPU == "native")
-    return llvm::sys::getHostCPUName();
+    return std::string(llvm::sys::getHostCPUName());
 
   // arm64e requires v8.3a and only runs on vortex and later CPUs.
   if (Triple.getArchName() == "arm64e") {
@@ -65,7 +65,8 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
 
 // Decode AArch64 features from string like +[no]featureA+[no]featureB+...
 static bool DecodeAArch64Features(const Driver &D, StringRef text,
-                                  std::vector<StringRef> &Features) {
+                                  std::vector<StringRef> &Features,
+                                  llvm::AArch64::ArchKind ArchKind) {
   SmallVector<StringRef, 8> Split;
   text.split(Split, StringRef("+"), -1, false);
 
@@ -77,6 +78,11 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
       D.Diag(clang::diag::err_drv_no_neon_modifier);
     else
       return false;
+
+    // +sve implies +f32mm if the base architecture is v8.6A
+    // it isn't the case in general that sve implies both f64mm and f32mm
+    if ((ArchKind == llvm::AArch64::ArchKind::ARMV8_6A) && Feature == "sve")
+      Features.push_back("+f32mm");
   }
   return true;
 }
@@ -87,6 +93,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
                               std::vector<StringRef> &Features) {
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
   CPU = Split.first;
+  llvm::AArch64::ArchKind ArchKind = llvm::AArch64::ArchKind::ARMV8A;
 
   if (CPU == "native")
     CPU = llvm::sys::getHostCPUName();
@@ -94,7 +101,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   if (CPU == "generic") {
     Features.push_back("+neon");
   } else {
-    llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseCPUArch(CPU);
+    ArchKind = llvm::AArch64::parseCPUArch(CPU);
     if (!llvm::AArch64::getArchFeatures(ArchKind, Features))
       return false;
 
@@ -103,10 +110,11 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
       return false;
    }
 
-  if (Split.second.size() && !DecodeAArch64Features(D, Split.second, Features))
-    return false;
+   if (Split.second.size() &&
+       !DecodeAArch64Features(D, Split.second, Features, ArchKind))
+     return false;
 
-  return true;
+   return true;
 }
 
 static bool
@@ -119,7 +127,8 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
   if (ArchKind == llvm::AArch64::ArchKind::INVALID ||
       !llvm::AArch64::getArchFeatures(ArchKind, Features) ||
-      (Split.second.size() && !DecodeAArch64Features(D, Split.second, Features)))
+      (Split.second.size() &&
+       !DecodeAArch64Features(D, Split.second, Features, ArchKind)))
     return false;
 
   return true;
@@ -150,11 +159,12 @@ getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
 
   // Handle CPU name is 'native'.
   if (MtuneLowerCase == "native")
-    MtuneLowerCase = llvm::sys::getHostCPUName();
+    MtuneLowerCase = std::string(llvm::sys::getHostCPUName());
 
   // 'cyclone' and later have zero-cycle register moves and zeroing.
   if (MtuneLowerCase == "cyclone" || MtuneLowerCase == "vortex" ||
-      MtuneLowerCase == "lightning" || MtuneLowerCase.find("apple") == 0) {
+      MtuneLowerCase == "lightning" ||
+      StringRef(MtuneLowerCase).startswith("apple")) {
     Features.push_back("+zcm");
     Features.push_back("+zcz");
   }
@@ -221,6 +231,39 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
       Features.push_back("+tpidr-el1");
     else if (Mtp != "el0")
       D.Diag(diag::err_drv_invalid_mtp) << A->getAsString(Args);
+  }
+
+  // Enable/disable straight line speculation hardening.
+  if (Arg *A = Args.getLastArg(options::OPT_mharden_sls_EQ)) {
+    StringRef Scope = A->getValue();
+    bool EnableRetBr = false;
+    bool EnableBlr = false;
+    if (Scope != "none" && Scope != "all") {
+      SmallVector<StringRef, 4> Opts;
+      Scope.split(Opts, ",");
+      for (auto Opt : Opts) {
+        Opt = Opt.trim();
+        if (Opt == "retbr") {
+          EnableRetBr = true;
+          continue;
+        }
+        if (Opt == "blr") {
+          EnableBlr = true;
+          continue;
+        }
+        D.Diag(diag::err_invalid_sls_hardening)
+            << Scope << A->getAsString(Args);
+        break;
+      }
+    } else if (Scope == "all") {
+      EnableRetBr = true;
+      EnableBlr = true;
+    }
+
+    if (EnableRetBr)
+      Features.push_back("+harden-sls-retbr");
+    if (EnableBlr)
+      Features.push_back("+harden-sls-blr");
   }
 
   // En/disable crc
@@ -337,10 +380,16 @@ fp16_fml_fallthrough:
     }
   }
 
+  auto V8_6Pos = llvm::find(Features, "+v8.6a");
+  if (V8_6Pos != std::end(Features))
+    V8_6Pos = Features.insert(std::next(V8_6Pos), {"+i8mm", "+bf16"});
+
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
-                               options::OPT_munaligned_access))
+                               options::OPT_munaligned_access)) {
     if (A->getOption().matches(options::OPT_mno_unaligned_access))
       Features.push_back("+strict-align");
+  } else if (Triple.isOSOpenBSD())
+    Features.push_back("+strict-align");
 
   if (Args.hasArg(options::OPT_ffixed_x1))
     Features.push_back("+reserve-x1");
@@ -413,6 +462,9 @@ fp16_fml_fallthrough:
 
   if (Args.hasArg(options::OPT_ffixed_x28))
     Features.push_back("+reserve-x28");
+
+  if (Args.hasArg(options::OPT_ffixed_x30))
+    Features.push_back("+reserve-x30");
 
   if (Args.hasArg(options::OPT_fcall_saved_x8))
     Features.push_back("+call-saved-x8");

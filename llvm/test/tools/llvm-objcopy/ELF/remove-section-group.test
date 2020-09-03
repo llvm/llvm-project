@@ -1,0 +1,33 @@
+## This checks that when the header section of a group is removed, the tool
+## drops the flag SHF_GROUP for preserved members of that group.
+
+# RUN: yaml2obj %s -o - \
+# RUN:   | llvm-objcopy -R .group - - \
+# RUN:   | llvm-readobj --sections - \
+# RUN:   | FileCheck %s
+
+# CHECK:      Name: .foo
+# CHECK-NEXT: Type: SHT_PROGBITS
+# CHECK-NEXT: Flags [
+# CHECK-NEXT:   SHF_ALLOC
+# CHECK-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_REL
+  Machine:    EM_X86_64
+Sections:
+  - Name:     .group
+    Type:     SHT_GROUP
+    Info:     foo_grp
+    Members:
+      - SectionOrType:  GRP_COMDAT
+      - SectionOrType:  .foo
+  - Name:     .foo
+    Type:     SHT_PROGBITS
+    Flags:    [ SHF_ALLOC, SHF_GROUP ]
+Symbols:
+  - Name:     foo_grp
+    Section:  .group

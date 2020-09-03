@@ -1,4 +1,4 @@
-//===-- ClangHighlighter.cpp ------------------------------------*- C++ -*-===//
+//===-- ClangHighlighter.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +13,7 @@
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringSet.h"

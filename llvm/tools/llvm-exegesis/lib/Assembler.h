@@ -18,6 +18,7 @@
 #include <memory>
 
 #include "BenchmarkCode.h"
+#include "Error.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -86,11 +87,11 @@ using FillFunction = std::function<void(FunctionFiller &)>;
 // Instructions. Runs a set of llvm Passes to provide correct prologue and
 // epilogue. Once the MachineFunction is ready, it is assembled for TM to
 // AsmStream, the temporary function is eventually discarded.
-void assembleToStream(const ExegesisTarget &ET,
-                      std::unique_ptr<LLVMTargetMachine> TM,
-                      ArrayRef<unsigned> LiveIns,
-                      ArrayRef<RegisterValue> RegisterInitialValues,
-                      const FillFunction &Fill, raw_pwrite_stream &AsmStream);
+Error assembleToStream(const ExegesisTarget &ET,
+                       std::unique_ptr<LLVMTargetMachine> TM,
+                       ArrayRef<unsigned> LiveIns,
+                       ArrayRef<RegisterValue> RegisterInitialValues,
+                       const FillFunction &Fill, raw_pwrite_stream &AsmStream);
 
 // Creates an ObjectFile in the format understood by the host.
 // Note: the resulting object keeps a copy of Buffer so it can be discarded once

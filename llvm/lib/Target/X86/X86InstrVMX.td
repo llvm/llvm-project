@@ -37,7 +37,7 @@ def VMCLEARm : I<0xC7, MRM6m, (outs), (ins i64mem:$vmcs),
   "vmclear\t$vmcs", []>, PD;
 
 // OF 01 D4
-def VMFUNC : I<0x01, MRM_D4, (outs), (ins), "vmfunc", []>, TB;
+def VMFUNC : I<0x01, MRM_D4, (outs), (ins), "vmfunc", []>, PS;
 
 // 0F 01 C2
 def VMLAUNCH : I<0x01, MRM_C2, (outs), (ins), "vmlaunch", []>, TB;

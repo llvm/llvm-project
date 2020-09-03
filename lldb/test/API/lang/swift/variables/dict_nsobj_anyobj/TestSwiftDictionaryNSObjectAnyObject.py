@@ -27,10 +27,9 @@ class TestDictionaryNSObjectAnyObject(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-    @skipIf(bugnumber="rdar://60396797",
-                        setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @swiftTest
+    @skipIf(bugnumber="rdar://problem/66843018")
     def test_dictionary_nsobject_any_object(self):
         """Tests that we properly vend synthetic children for Swift.Dictionary<NSObject,AnyObject>"""
         self.build()
@@ -40,6 +39,7 @@ class TestDictionaryNSObjectAnyObject(TestBase):
         if self.getArchitecture() in ['arm', 'armv7', 'armv7k', 'i386']:
             self.expect(
                 "frame variable -d run -- d2",
+                ordered=False,
                 substrs=[
                     'Int32(1)',
                     'Int32(2)',
@@ -48,6 +48,7 @@ class TestDictionaryNSObjectAnyObject(TestBase):
         else:
             self.expect(
                 "frame variable -d run -- d2",
+                ordered=False,
                 substrs=[
                     'Int64(1)',
                     'Int64(2)',

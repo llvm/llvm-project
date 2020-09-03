@@ -1,4 +1,11 @@
+// Test without serialization:
 // RUN: %clang_cc1 -x c -ffixed-point -ast-dump %s | FileCheck %s --strict-whitespace
+//
+// Test with serialization:
+// RUN: %clang_cc1 -ffixed-point -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c -ffixed-point -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck %s --strict-whitespace
 
 /*  Various contexts where type _Accum can appear. */
 

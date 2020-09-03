@@ -20,6 +20,8 @@ include "llvm/TableGen/SearchableTable.td"
 class SysReg<string name, bits<12> op> {
   string Name = name;
   bits<12> Encoding = op;
+  // A maximum of one alias is supported right now.
+  string AltName = name;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read and Write = 0, 1, 2; Read-Only = 3.
   // Privilege Mode: User = 0, System = 1 or Machine = 3.
@@ -36,7 +38,7 @@ class SysReg<string name, bits<12> op> {
 def SysRegsList : GenericTable {
   let FilterClass = "SysReg";
   // FIXME: add "ReadWrite", "Mode", "Extra", "Number" fields when needed.
-  let Fields = [ "Name", "Encoding", "FeaturesRequired", "isRV32Only" ];
+  let Fields = [ "Name", "Encoding", "AltName", "FeaturesRequired", "isRV32Only" ];
 
   let PrimaryKey = [ "Encoding" ];
   let PrimaryKeyName = "lookupSysRegByEncoding";
@@ -45,6 +47,11 @@ def SysRegsList : GenericTable {
 def lookupSysRegByName : SearchIndex {
   let Table = SysRegsList;
   let Key = [ "Name" ];
+}
+
+def lookupSysRegByAltName : SearchIndex {
+  let Table = SysRegsList;
+  let Key = [ "AltName" ];
 }
 
 // The following CSR encodings match those given in Tables 2.2,
@@ -303,6 +310,7 @@ def: SysReg<"mhpmcounter31h", 0xB9F>;
 //===--------------------------
 // Machine Counter Setup
 //===--------------------------
+def : SysReg<"mcountinhibit", 0x320>;
 def : SysReg<"mhpmevent3", 0x323>;
 def : SysReg<"mhpmevent4", 0x324>;
 def : SysReg<"mhpmevent5", 0x325>;
@@ -346,4 +354,19 @@ def : SysReg<"tdata3", 0x7A3>;
 //===-----------------------------------------------
 def : SysReg<"dcsr", 0x7B0>;
 def : SysReg<"dpc", 0x7B1>;
-def : SysReg<"dscratch", 0x7B2>;
+
+// "dscratch" is an alternative name for "dscratch0" which appeared in earlier
+// drafts of the RISC-V debug spec
+let AltName = "dscratch" in
+def : SysReg<"dscratch0", 0x7B2>;
+def : SysReg<"dscratch1", 0x7B3>;
+
+//===-----------------------------------------------
+// User Vector CSRs
+//===-----------------------------------------------
+def : SysReg<"vstart", 0x008>;
+def : SysReg<"vxsat", 0x009>;
+def : SysReg<"vxrm", 0x00A>;
+def : SysReg<"vl", 0xC20>;
+def : SysReg<"vtype", 0xC21>;
+def : SysReg<"vlenb", 0xC22>;

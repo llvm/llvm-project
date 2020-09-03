@@ -1,5 +1,5 @@
-# RUN: yaml2obj %p/Inputs/i386-slice.yaml > %t-32.o
-# RUN: yaml2obj %p/Inputs/i386-x86_64-universal.yaml > %t-universal.o
+# RUN: yaml2obj %p/Inputs/i386-slice.yaml -o %t-32.o
+# RUN: yaml2obj %p/Inputs/i386-x86_64-universal.yaml -o %t-universal.o
 
 # RUN: not llvm-lipo %t-32.o -create 2>&1 | FileCheck --check-prefix=NO_OUTPUT %s
 # NO_OUTPUT: error: create expects a single output file to be specified

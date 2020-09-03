@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_VMRange_h_
-#define liblldb_VMRange_h_
+#ifndef LLDB_UTILITY_VMRANGE_H
+#define LLDB_UTILITY_VMRANGE_H
 
 #include "lldb/lldb-types.h"
 #include "llvm/Support/raw_ostream.h"
@@ -101,4 +101,4 @@ bool operator>=(const VMRange &lhs, const VMRange &rhs);
 
 } // namespace lldb_private
 
-#endif // liblldb_VMRange_h_
+#endif // LLDB_UTILITY_VMRANGE_H

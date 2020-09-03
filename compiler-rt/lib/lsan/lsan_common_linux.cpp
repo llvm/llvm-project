@@ -134,7 +134,8 @@ static int LockStuffAndStopTheWorldCallback(struct dl_phdr_info *info,
 // while holding the libdl lock in the parent thread, we can safely reenter it
 // in the tracer. The solution is to run stoptheworld from a dl_iterate_phdr()
 // callback in the parent thread.
-void LockStuffAndStopTheWorld(StopTheWorldCallback callback, void *argument) {
+void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
+                              CheckForLeaksParam *argument) {
   DoStopTheWorldParam param = {callback, argument};
   dl_iterate_phdr(LockStuffAndStopTheWorldCallback, &param);
 }

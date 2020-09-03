@@ -54,6 +54,7 @@ private:
   static StringRef getCPUSuffix(const PPCSubtarget *Subtarget);
   static std::string createMASSVFuncName(Function &Func,
                                          const PPCSubtarget *Subtarget);
+  bool handlePowSpecialCases(CallInst *CI, Function &Func, Module &M);
   bool lowerMASSVCall(CallInst *CI, Function &Func, Module &M,
                       const PPCSubtarget *Subtarget);
 };
@@ -96,6 +97,34 @@ PPCLowerMASSVEntries::createMASSVFuncName(Function &Func,
   return MASSVEntryName;
 }
 
+/// If there are proper fast-math flags, this function creates llvm.pow
+/// intrinsics when the exponent is 0.25 or 0.75.
+bool PPCLowerMASSVEntries::handlePowSpecialCases(CallInst *CI, Function &Func,
+                                                 Module &M) {
+  if (Func.getName() != "__powf4_massv" && Func.getName() != "__powd2_massv")
+    return false;
+
+  if (Constant *Exp = dyn_cast<Constant>(CI->getArgOperand(1)))
+    if (ConstantFP *CFP = dyn_cast<ConstantFP>(Exp->getSplatValue())) {
+      // If the argument is 0.75 or 0.25 it is cheaper to turn it into pow
+      // intrinsic so that it could be optimzed as sequence of sqrt's.
+      if (!CI->hasNoInfs() || !CI->hasApproxFunc())
+        return false;
+
+      if (!CFP->isExactlyValue(0.75) && !CFP->isExactlyValue(0.25))
+        return false;
+
+      if (CFP->isExactlyValue(0.25) && !CI->hasNoSignedZeros())
+        return false;
+
+      CI->setCalledFunction(
+          Intrinsic::getDeclaration(&M, Intrinsic::pow, CI->getType()));
+      return true;
+    }
+
+  return false;
+}
+
 /// Lowers generic MASSV entries to PowerPC subtarget-specific MASSV entries.
 /// e.g.: __sind2_massv --> __sind2_P9 for a Power9 subtarget.
 /// Both function prototypes and their callsites are updated during lowering.
@@ -105,11 +134,14 @@ bool PPCLowerMASSVEntries::lowerMASSVCall(CallInst *CI, Function &Func,
   if (CI->use_empty())
     return false;
 
+  // Handling pow(x, 0.25), pow(x, 0.75), powf(x, 0.25), powf(x, 0.75)
+  if (handlePowSpecialCases(CI, Func, M))
+    return true;
+
   std::string MASSVEntryName = createMASSVFuncName(Func, Subtarget);
   FunctionCallee FCache = M.getOrInsertFunction(
       MASSVEntryName, Func.getFunctionType(), Func.getAttributes());
 
-  CallSite CS(CI);
   CI->setCalledFunction(FCache);  
 
   return true;

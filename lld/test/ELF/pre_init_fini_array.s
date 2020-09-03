@@ -3,17 +3,17 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/shared.s -o %t2
 // RUN: ld.lld %t2 -o %t2.so -shared -soname=so
 // RUN: ld.lld %t %t2.so -o %t2
-// RUN: llvm-readobj -r --symbols --sections --dynamic-table %t2 | FileCheck %s
-// RUN: llvm-objdump -d %t2 | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-readelf -S -d -r -s %t2 | FileCheck %s
+// RUN: llvm-objdump -d --syms %t2 | FileCheck --check-prefix=DISASM %s
 
 .globl _start
 _start:
-  call __preinit_array_start
-  call __preinit_array_end
-  call __init_array_start
-  call __init_array_end
-  call __fini_array_start
-  call __fini_array_end
+  call *__preinit_array_start
+  call *__preinit_array_end
+  call *__init_array_start
+  call *__init_array_end
+  call *__fini_array_start
+  call *__fini_array_end
 
 
 .section .init_array,"aw",@init_array
@@ -27,119 +27,43 @@ _start:
         .quad 0
         .short 0
 
-// CHECK:      Name: .init_array
-// CHECK-NEXT: Type: SHT_INIT_ARRAY
-// CHECK-NEXT: Flags [
-// CHECK-NEXT:   SHF_ALLOC
-// CHECK-NEXT:   SHF_WRITE
-// CHECK-NEXT: ]
-// CHECK-NEXT: Address: [[INIT_ADDR:.*]]
-// CHECK-NEXT: Offset:
-// CHECK-NEXT: Size: [[INIT_SIZE:.*]]
+// CHECK-LABEL: Section Headers:
+// CHECK:      Name           Type          Address                 Off       Size                    ES Flg
+// CHECK:      .init_array    INIT_ARRAY    [[# %x, INIT_ADDR:]]    [[# %x,]] [[# %x, INIT_SIZE:]]    00 WA
+// CHECK-NEXT: .preinit_array PREINIT_ARRAY [[# %x, PREINIT_ADDR:]] [[# %x,]] [[# %x, PREINIT_SIZE:]] 00 WA
+// CHECK-NEXT: .fini_array    FINI_ARRAY    [[# %x, FINI_ADDR:]]    [[# %x,]] [[# %x, FINI_SIZE:]]    00 WA
 
+// CHECK-LABEL: Dynamic section
+// CHECK: (PREINIT_ARRAY)        0x[[# PREINIT_ADDR]]
+// CHECK: (PREINIT_ARRAYSZ)      [[# %u, PREINIT_SIZE]] (bytes)
+// CHECK: (INIT_ARRAY)           0x[[# INIT_ADDR]]
+// CHECK: (INIT_ARRAYSZ)         [[# %u, INIT_SIZE]] (bytes)
+// CHECK: (FINI_ARRAY)           0x[[# FINI_ADDR]]
+// CHECK: (FINI_ARRAYSZ)         [[# %u, FINI_SIZE]] (bytes)
 
-// CHECK:     Name: .preinit_array
-// CHECK-NEXT: Type: SHT_PREINIT_ARRAY
-// CHECK-NEXT: Flags [
-// CHECK-NEXT:   SHF_ALLOC
-// CHECK-NEXT:   SHF_WRITE
-// CHECK-NEXT:    ]
-// CHECK-NEXT: Address: [[PREINIT_ADDR:.*]]
-// CHECK-NEXT: Offset:
-// CHECK-NEXT: Size: [[PREINIT_SIZE:.*]]
+// CHECK-LABEL:      There are no relocations in this file.
 
+// CHECK-LABEL: Symbol table '.symtab'
+// CHECK:       Value                             Size Type    Bind   Vis       Ndx   Name
+// CHECK:       [[# FINI_ADDR + FINI_SIZE]]       0    NOTYPE  LOCAL  HIDDEN    [[#]] __fini_array_end
+// CHECK-NEXT:  [[# FINI_ADDR]]                   0    NOTYPE  LOCAL  HIDDEN    [[#]] __fini_array_start
+// CHECK-NEXT:  [[# INIT_ADDR + INIT_SIZE]]       0    NOTYPE  LOCAL  HIDDEN    [[#]] __init_array_end
+// CHECK-NEXT:  [[# INIT_ADDR]]                   0    NOTYPE  LOCAL  HIDDEN    [[#]] __init_array_start
+// CHECK-NEXT:  [[# PREINIT_ADDR + PREINIT_SIZE]] 0    NOTYPE  LOCAL  HIDDEN    [[#]] __preinit_array_end
+// CHECK-NEXT:  [[# PREINIT_ADDR]]                0    NOTYPE  LOCAL  HIDDEN    [[#]] __preinit_array_start
 
-// CHECK:      Name: .fini_array
-// CHECK-NEXT: Type: SHT_FINI_ARRAY
-// CHECK-NEXT: Flags [
-// CHECK-NEXT:   SHF_ALLOC
-// CHECK-NEXT:   SHF_WRITE
-// CHECK-NEXT: ]
-// CHECK-NEXT: Address: [[FINI_ADDR:.*]]
-// CHECK-NEXT: Offset:
-// CHECK-NEXT: Size: [[FINI_SIZE:.*]]
+// DISASM:      SYMBOL TABLE:
+// DISASM-DAG: {{0*}}[[# %x, PREINIT_ARRAY_START:]]  l  .preinit_array  {{0+}}  .hidden  __preinit_array_start
+// DISASM-DAG: {{0*}}[[# %x, PREINIT_ARRAY_END:]]    l  .preinit_array  {{0+}}  .hidden  __preinit_array_end
+// DISASM-DAG: {{0*}}[[# %x, INIT_ARRAY_START:]]     l  .init_array  {{0+}}  .hidden  __init_array_start
+// DISASM-DAG: {{0*}}[[# %x, INIT_ARRAY_END:]]       l  .init_array  {{0+}}  .hidden  __init_array_end
+// DISASM-DAG: {{0*}}[[# %x, FINI_ARRAY_START:]]     l  .fini_array  {{0+}}  .hidden  __fini_array_start
+// DISASM-DAG: {{0*}}[[# %x, FINI_ARRAY_END:]]       l  .fini_array  {{0+}}  .hidden  __fini_array_end
 
-// CHECK:      Relocations [
-// CHECK-NEXT: ]
-
-// CHECK:        Name: __fini_array_end
-// CHECK-NEXT:   Value:
-// CHECK-NEXT:   Size: 0
-// CHECK-NEXT:   Binding: Local
-// CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other [
-// CHECK-NEXT:     STV_HIDDEN
-// CHECK-NEXT:   ]
-// CHECK-NEXT:   Section: .fini_array
-// CHECK-NEXT: }
-// CHECK-NEXT: Symbol {
-// CHECK-NEXT:   Name: __fini_array_start
-// CHECK-NEXT:   Value: [[FINI_ADDR]]
-// CHECK-NEXT:   Size: 0
-// CHECK-NEXT:   Binding: Local
-// CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other [
-// CHECK-NEXT:     STV_HIDDEN
-// CHECK-NEXT:   ]
-// CHECK-NEXT:   Section: .fini_array
-// CHECK-NEXT: }
-// CHECK-NEXT: Symbol {
-// CHECK-NEXT:   Name: __init_array_end
-// CHECK-NEXT:   Value:
-// CHECK-NEXT:   Size: 0
-// CHECK-NEXT:   Binding: Local
-// CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other [
-// CHECK-NEXT:     STV_HIDDEN
-// CHECK-NEXT:   ]
-// CHECK-NEXT:   Section: .init_array
-// CHECK-NEXT: }
-// CHECK-NEXT: Symbol {
-// CHECK-NEXT:   Name: __init_array_start
-// CHECK-NEXT:   Value: [[INIT_ADDR]]
-// CHECK-NEXT:   Size: 0
-// CHECK-NEXT:   Binding: Local
-// CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other [
-// CHECK-NEXT:     STV_HIDDEN
-// CHECK-NEXT:   ]
-// CHECK-NEXT:   Section: .init_array
-// CHECK-NEXT: }
-// CHECK-NEXT: Symbol {
-// CHECK-NEXT:   Name: __preinit_array_end
-// CHECK-NEXT:   Value:
-// CHECK-NEXT:   Size: 0
-// CHECK-NEXT:   Binding: Local
-// CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other [
-// CHECK-NEXT:     STV_HIDDEN
-// CHECK-NEXT:   ]
-// CHECK-NEXT:   Section: .preinit_array
-// CHECK-NEXT: }
-// CHECK-NEXT: Symbol {
-// CHECK-NEXT:   Name: __preinit_array_start
-// CHECK-NEXT:   Value: [[PREINIT_ADDR]]
-// CHECK-NEXT:   Size: 0
-// CHECK-NEXT:   Binding: Local
-// CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other [
-// CHECK-NEXT:     STV_HIDDEN
-// CHECK-NEXT:   ]
-// CHECK-NEXT:   Section: .preinit_array
-// CHECK-NEXT: }
-
-// CHECK: DynamicSection
-// CHECK: PREINIT_ARRAY        [[PREINIT_ADDR]]
-// CHECK: PREINIT_ARRAYSZ      [[PREINIT_SIZE]] (bytes)
-// CHECK: INIT_ARRAY           [[INIT_ADDR]]
-// CHECK: INIT_ARRAYSZ         [[INIT_SIZE]] (bytes)
-// CHECK: FINI_ARRAY           [[FINI_ADDR]]
-// CHECK: FINI_ARRAYSZ         [[FINI_SIZE]] (bytes)
-
-// DISASM:      _start:
-// DISASM-NEXT:   callq   {{.*}} <__preinit_array_start>
-// DISASM-NEXT:   callq   {{.*}} <__fini_array_start>
-// DISASM-NEXT:   callq   {{.*}} <__init_array_start>
-// DISASM-NEXT:   callq   {{.*}} <__preinit_array_start>
-// DISASM-NEXT:   callq   {{.*}} <__fini_array_start>
-// DISASM-NEXT:   callq   {{.*}} <__fini_array_end>
+// DISASM:      <_start>:
+// DISASM-NEXT:   callq   *[[# %u, PREINIT_ARRAY_START]]
+// DISASM-NEXT:   callq   *[[# %u, PREINIT_ARRAY_END]]
+// DISASM-NEXT:   callq   *[[# %u, INIT_ARRAY_START]]
+// DISASM-NEXT:   callq   *[[# %u, INIT_ARRAY_END]]
+// DISASM-NEXT:   callq   *[[# %u, FINI_ARRAY_START]]
+// DISASM-NEXT:   callq   *[[# %u, FINI_ARRAY_END]]

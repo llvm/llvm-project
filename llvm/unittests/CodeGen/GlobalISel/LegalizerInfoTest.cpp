@@ -27,6 +27,7 @@ operator<<(std::ostream &OS, const LegalizeAction Act) {
   case MoreElements:  OS << "MoreElements"; break;
   case Libcall: OS << "Libcall"; break;
   case Custom: OS << "Custom"; break;
+  case Bitcast: OS << "Bitcast"; break;
   case Unsupported: OS << "Unsupported"; break;
   case NotFound: OS << "NotFound"; break;
   case UseLegacyRules: OS << "UseLegacyRules"; break;

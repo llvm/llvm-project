@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=thumbv6-apple-darwin | FileCheck %s
 ; RUN: llc < %s -mtriple=thumbv6-apple-darwin -regalloc=basic | FileCheck %s
 ; RUN: llc < %s -o %t -filetype=obj -mtriple=thumbv6-apple-darwin
-; RUN: llvm-objdump -triple=thumbv6-apple-darwin -d %t | FileCheck %s
+; RUN: llvm-objdump --triple=thumbv6-apple-darwin -d %t | FileCheck %s
 
 @__bar = external hidden global i8*
 @__baz = external hidden global i8*
@@ -9,7 +9,7 @@
 ; rdar://8819685
 define i8* @_foo() {
 entry:
-; CHECK-LABEL: foo:
+; CHECK-LABEL: __foo{{>?}}:
 
 	%size = alloca i32, align 4
 	%0 = load i8*, i8** @__bar, align 4
@@ -46,7 +46,7 @@ declare i32 @_called_func(i8*, i32*) nounwind
 
 ; Simple variable ending up *at* sp.
 define void @test_simple_var() {
-; CHECK-LABEL: test_simple_var:
+; CHECK-LABEL: test_simple_var{{>?}}:
 
   %addr32 = alloca i32
   %addr8 = bitcast i32* %addr32 to i8*
@@ -60,7 +60,7 @@ define void @test_simple_var() {
 
 ; Simple variable ending up at aligned offset from sp.
 define void @test_local_var_addr_aligned() {
-; CHECK-LABEL: test_local_var_addr_aligned:
+; CHECK-LABEL: test_local_var_addr_aligned{{>?}}:
 
   %addr1.32 = alloca i32
   %addr1 = bitcast i32* %addr1.32 to i8*
@@ -81,7 +81,7 @@ define void @test_local_var_addr_aligned() {
 
 ; Simple variable ending up at aligned offset from sp.
 define void @test_local_var_big_offset() {
-; CHECK-LABEL: test_local_var_big_offset:
+; CHECK-LABEL: test_local_var_big_offset{{>?}}:
   %addr1.32 = alloca i32, i32 257
   %addr1 = bitcast i32* %addr1.32 to i8*
   %addr2.32 = alloca i32, i32 257

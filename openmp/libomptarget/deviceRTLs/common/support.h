@@ -20,8 +20,8 @@
 // Execution Parameters
 ////////////////////////////////////////////////////////////////////////////////
 enum ExecutionMode {
-  Generic = 0x00u,
-  Spmd = 0x01u,
+  Spmd = 0x00u,
+  Generic = 0x01u,
   ModeMask = 0x01u,
 };
 
@@ -49,10 +49,6 @@ DEVICE bool checkRuntimeInitialized(kmp_Ident *loc);
 ////////////////////////////////////////////////////////////////////////////////
 // get info from machine
 ////////////////////////////////////////////////////////////////////////////////
-
-// get low level ids of resources
-DEVICE unsigned GetWarpId();
-DEVICE unsigned GetLaneId();
 
 // get global ids to locate tread/team info (constant regardless of OMP)
 DEVICE int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode);
@@ -98,6 +94,5 @@ DEVICE unsigned long PadBytes(unsigned long size, unsigned long alignment);
 ////////////////////////////////////////////////////////////////////////////////
 DEVICE unsigned int *GetTeamsReductionTimestamp();
 DEVICE char *GetTeamsReductionScratchpad();
-DEVICE void SetTeamsReductionScratchpadPtr(void *ScratchpadPtr);
 
 #endif

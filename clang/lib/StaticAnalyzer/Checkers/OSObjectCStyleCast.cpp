@@ -55,8 +55,7 @@ static void emitDiagnostics(const BoundNodes &Nodes,
     CE->getSourceRange());
 }
 
-static auto hasTypePointingTo(DeclarationMatcher DeclM)
-    -> decltype(hasType(pointerType())) {
+static decltype(auto) hasTypePointingTo(DeclarationMatcher DeclM) {
   return hasType(pointerType(pointee(hasDeclaration(DeclM))));
 }
 
@@ -85,6 +84,6 @@ void ento::registerOSObjectCStyleCast(CheckerManager &Mgr) {
   Mgr.registerChecker<OSObjectCStyleCastChecker>();
 }
 
-bool ento::shouldRegisterOSObjectCStyleCast(const LangOptions &LO) {
+bool ento::shouldRegisterOSObjectCStyleCast(const CheckerManager &mgr) {
   return true;
 }

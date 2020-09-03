@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBTYPES_H
 #define LLVM_DEBUGINFO_PDB_PDBTYPES_H
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBFrameData.h"
@@ -28,6 +29,7 @@ class IPDBDataStream;
 class IPDBInjectedSource;
 class IPDBLineNumber;
 class IPDBSectionContrib;
+class IPDBSession;
 class IPDBSourceFile;
 class IPDBTable;
 class PDBSymDumper;
@@ -462,6 +464,88 @@ struct Variant {
     uint64_t UInt64;
     char *String;
   } Value;
+
+  bool isIntegralType() const {
+    switch (Type) {
+    case Bool:
+    case Int8:
+    case Int16:
+    case Int32:
+    case Int64:
+    case UInt8:
+    case UInt16:
+    case UInt32:
+    case UInt64:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+#define VARIANT_WIDTH(Enum, NumBits)                                           \
+  case PDB_VariantType::Enum:                                                  \
+    return NumBits;
+
+  unsigned getBitWidth() const {
+    switch (Type) {
+      VARIANT_WIDTH(Bool, 1u)
+      VARIANT_WIDTH(Int8, 8u)
+      VARIANT_WIDTH(Int16, 16u)
+      VARIANT_WIDTH(Int32, 32u)
+      VARIANT_WIDTH(Int64, 64u)
+      VARIANT_WIDTH(Single, 32u)
+      VARIANT_WIDTH(Double, 64u)
+      VARIANT_WIDTH(UInt8, 8u)
+      VARIANT_WIDTH(UInt16, 16u)
+      VARIANT_WIDTH(UInt32, 32u)
+      VARIANT_WIDTH(UInt64, 64u)
+    default:
+      assert(false && "Variant::toAPSInt called on non-numeric type");
+      return 0u;
+    }
+  }
+
+#undef VARIANT_WIDTH
+
+#define VARIANT_APSINT(Enum, NumBits, IsUnsigned)                              \
+  case PDB_VariantType::Enum:                                                  \
+    return APSInt(APInt(NumBits, Value.Enum), IsUnsigned);
+
+  APSInt toAPSInt() const {
+    switch (Type) {
+      VARIANT_APSINT(Bool, 1u, true)
+      VARIANT_APSINT(Int8, 8u, false)
+      VARIANT_APSINT(Int16, 16u, false)
+      VARIANT_APSINT(Int32, 32u, false)
+      VARIANT_APSINT(Int64, 64u, false)
+      VARIANT_APSINT(UInt8, 8u, true)
+      VARIANT_APSINT(UInt16, 16u, true)
+      VARIANT_APSINT(UInt32, 32u, true)
+      VARIANT_APSINT(UInt64, 64u, true)
+    default:
+      assert(false && "Variant::toAPSInt called on non-integral type");
+      return APSInt();
+    }
+  }
+
+#undef VARIANT_APSINT
+
+  APFloat toAPFloat() const {
+    // Float constants may be tagged as integers.
+    switch (Type) {
+    case PDB_VariantType::Single:
+    case PDB_VariantType::UInt32:
+    case PDB_VariantType::Int32:
+      return APFloat(Value.Single);
+    case PDB_VariantType::Double:
+    case PDB_VariantType::UInt64:
+    case PDB_VariantType::Int64:
+      return APFloat(Value.Double);
+    default:
+      assert(false && "Variant::toAPFloat called on non-floating-point type");
+      return APFloat::getZero(APFloat::IEEEsingle());
+    }
+  }
 
 #define VARIANT_EQUAL_CASE(Enum)                                               \
   case PDB_VariantType::Enum:                                                  \

@@ -595,11 +595,6 @@ void PromoteMem2Reg::run() {
     // Keep the reverse mapping of the 'Allocas' array for the rename pass.
     AllocaLookup[Allocas[AllocaNum]] = AllocaNum;
 
-    // At this point, we're committed to promoting the alloca using IDF's, and
-    // the standard SSA construction algorithm.  Determine which blocks need PHI
-    // nodes and see if we can optimize out some work by avoiding insertion of
-    // dead phi nodes.
-
     // Unique the set of defining blocks for efficient lookup.
     SmallPtrSet<BasicBlock *, 32> DefBlocks(Info.DefiningBlocks.begin(),
                                             Info.DefiningBlocks.end());

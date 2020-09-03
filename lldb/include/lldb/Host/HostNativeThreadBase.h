@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_HostNativeThreadBase_h_
-#define lldb_Host_HostNativeThreadBase_h_
+#ifndef LLDB_HOST_HOSTNATIVETHREADBASE_H
+#define LLDB_HOST_HOSTNATIVETHREADBASE_H
 
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
@@ -23,7 +23,8 @@ namespace lldb_private {
 
 class HostNativeThreadBase {
   friend class ThreadLauncher;
-  DISALLOW_COPY_AND_ASSIGN(HostNativeThreadBase);
+  HostNativeThreadBase(const HostNativeThreadBase &) = delete;
+  const HostNativeThreadBase &operator=(const HostNativeThreadBase &) = delete;
 
 public:
   HostNativeThreadBase();

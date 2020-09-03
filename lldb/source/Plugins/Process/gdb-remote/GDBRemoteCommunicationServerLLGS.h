@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_GDBRemoteCommunicationServerLLGS_h_
-#define liblldb_GDBRemoteCommunicationServerLLGS_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONSERVERLLGS_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONSERVERLLGS_H
 
 #include <mutex>
 #include <unordered_map>
@@ -199,6 +199,8 @@ protected:
   static std::string XMLEncodeAttributeValue(llvm::StringRef value);
 
 private:
+  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> BuildTargetXml();
+
   void HandleInferiorState_Exited(NativeProcessProtocol *process);
 
   void HandleInferiorState_Stopped(NativeProcessProtocol *process);
@@ -222,10 +224,13 @@ private:
   void StopSTDIOForwarding();
 
   // For GDBRemoteCommunicationServerLLGS only
-  DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunicationServerLLGS);
+  GDBRemoteCommunicationServerLLGS(const GDBRemoteCommunicationServerLLGS &) =
+      delete;
+  const GDBRemoteCommunicationServerLLGS &
+  operator=(const GDBRemoteCommunicationServerLLGS &) = delete;
 };
 
 } // namespace process_gdb_remote
 } // namespace lldb_private
 
-#endif // liblldb_GDBRemoteCommunicationServerLLGS_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONSERVERLLGS_H

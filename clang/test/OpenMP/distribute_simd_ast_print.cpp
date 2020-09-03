@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
 #pragma omp target
 #pragma omp teams
 #ifdef OMP5
-#pragma omp distribute simd aligned(x:8) linear(i:2) safelen(8) simdlen(8) if(argc) nontemporal(argc, c, d)
+#pragma omp distribute simd aligned(x:8) linear(i:2) safelen(8) simdlen(8) if(argc) nontemporal(argc, c, d) order(concurrent)
 #else
 #pragma omp distribute simd aligned(x:8) linear(i:2) safelen(8) simdlen(8)
 #endif // OMP5
@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
     for (int j = 0; j < 200; j++)
       a += h + x[j];
 // OMP45: #pragma omp distribute simd aligned(x: 8) linear(i: 2) safelen(8) simdlen(8)
-// OMP50: #pragma omp distribute simd aligned(x: 8) linear(i: 2) safelen(8) simdlen(8) if(argc) nontemporal(argc,c,d)
+// OMP50: #pragma omp distribute simd aligned(x: 8) linear(i: 2) safelen(8) simdlen(8) if(argc) nontemporal(argc,c,d) order(concurrent)
 // CHECK-NEXT: for (i = 0; i < 100; i++)
 // CHECK-NEXT: for (int j = 0; j < 200; j++)
 // CHECK-NEXT: a += h + x[j];

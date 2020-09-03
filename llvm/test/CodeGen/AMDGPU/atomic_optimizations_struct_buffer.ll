@@ -8,14 +8,15 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.struct.buffer.atomic.add(i32, <4 x i32>, i32, i32, i32, i32)
 declare i32 @llvm.amdgcn.struct.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i32, i32)
 
-; Show that what the atomic optimization pass will do for struct buffers.
+; Show what the atomic optimization pass will do for struct buffers.
 
 ; GCN-LABEL: add_i32_constant:
-; GCN32: v_cmp_ne_u32_e64 s[[exec_lo:[0-9]+]], 1, 0
-; GCN64: v_cmp_ne_u32_e64 s{{\[}}[[exec_lo:[0-9]+]]:[[exec_hi:[0-9]+]]{{\]}}, 1, 0
+; GCN32: s_mov_b32 s[[exec_lo:[0-9]+]], exec_lo
+; GCN64: s_mov_b64 s{{\[}}[[exec_lo:[0-9]+]]:[[exec_hi:[0-9]+]]{{\]}}, exec
 ; GCN: v_mbcnt_lo_u32_b32{{(_e[0-9]+)?}} v[[mbcnt:[0-9]+]], s[[exec_lo]], 0
 ; GCN64: v_mbcnt_hi_u32_b32{{(_e[0-9]+)?}} v[[mbcnt]], s[[exec_hi]], v[[mbcnt]]
 ; GCN: v_cmp_eq_u32{{(_e[0-9]+)?}} vcc{{(_lo)?}}, 0, v[[mbcnt]]
+; GCN: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
 ; GCN32: s_bcnt1_i32_b32 s[[popcount:[0-9]+]], s[[exec_lo]]
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s{{\[}}[[exec_lo]]:[[exec_hi]]{{\]}}
 ; GCN: v_mul_u32_u24{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[popcount]], 5
@@ -28,11 +29,12 @@ entry:
 }
 
 ; GCN-LABEL: add_i32_uniform:
-; GCN32: v_cmp_ne_u32_e64 s[[exec_lo:[0-9]+]], 1, 0
-; GCN64: v_cmp_ne_u32_e64 s{{\[}}[[exec_lo:[0-9]+]]:[[exec_hi:[0-9]+]]{{\]}}, 1, 0
+; GCN32: s_mov_b32 s[[exec_lo:[0-9]+]], exec_lo
+; GCN64: s_mov_b64 s{{\[}}[[exec_lo:[0-9]+]]:[[exec_hi:[0-9]+]]{{\]}}, exec
 ; GCN: v_mbcnt_lo_u32_b32{{(_e[0-9]+)?}} v[[mbcnt:[0-9]+]], s[[exec_lo]], 0
 ; GCN64: v_mbcnt_hi_u32_b32{{(_e[0-9]+)?}} v[[mbcnt]], s[[exec_hi]], v[[mbcnt]]
 ; GCN: v_cmp_eq_u32{{(_e[0-9]+)?}} vcc{{(_lo)?}}, 0, v[[mbcnt]]
+; GCN: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
 ; GCN32: s_bcnt1_i32_b32 s[[popcount:[0-9]+]], s[[exec_lo]]
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s{{\[}}[[exec_lo]]:[[exec_hi]]{{\]}}
 ; GCN: s_mul_i32 s[[scalar_value:[0-9]+]], s{{[0-9]+}}, s[[popcount]]
@@ -91,11 +93,12 @@ entry:
 }
 
 ; GCN-LABEL: sub_i32_constant:
-; GCN32: v_cmp_ne_u32_e64 s[[exec_lo:[0-9]+]], 1, 0
-; GCN64: v_cmp_ne_u32_e64 s{{\[}}[[exec_lo:[0-9]+]]:[[exec_hi:[0-9]+]]{{\]}}, 1, 0
+; GCN32: s_mov_b32 s[[exec_lo:[0-9]+]], exec_lo
+; GCN64: s_mov_b64 s{{\[}}[[exec_lo:[0-9]+]]:[[exec_hi:[0-9]+]]{{\]}}, exec
 ; GCN: v_mbcnt_lo_u32_b32{{(_e[0-9]+)?}} v[[mbcnt:[0-9]+]], s[[exec_lo]], 0
 ; GCN64: v_mbcnt_hi_u32_b32{{(_e[0-9]+)?}} v[[mbcnt]], s[[exec_hi]], v[[mbcnt]]
 ; GCN: v_cmp_eq_u32{{(_e[0-9]+)?}} vcc{{(_lo)?}}, 0, v[[mbcnt]]
+; GCN: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
 ; GCN32: s_bcnt1_i32_b32 s[[popcount:[0-9]+]], s[[exec_lo]]
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s{{\[}}[[exec_lo]]:[[exec_hi]]{{\]}}
 ; GCN: v_mul_u32_u24{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[popcount]], 5
@@ -108,11 +111,12 @@ entry:
 }
 
 ; GCN-LABEL: sub_i32_uniform:
-; GCN32: v_cmp_ne_u32_e64 s[[exec_lo:[0-9]+]], 1, 0
-; GCN64: v_cmp_ne_u32_e64 s{{\[}}[[exec_lo:[0-9]+]]:[[exec_hi:[0-9]+]]{{\]}}, 1, 0
+; GCN32: s_mov_b32 s[[exec_lo:[0-9]+]], exec_lo
+; GCN64: s_mov_b64 s{{\[}}[[exec_lo:[0-9]+]]:[[exec_hi:[0-9]+]]{{\]}}, exec
 ; GCN: v_mbcnt_lo_u32_b32{{(_e[0-9]+)?}} v[[mbcnt:[0-9]+]], s[[exec_lo]], 0
 ; GCN64: v_mbcnt_hi_u32_b32{{(_e[0-9]+)?}} v[[mbcnt]], s[[exec_hi]], v[[mbcnt]]
 ; GCN: v_cmp_eq_u32{{(_e[0-9]+)?}} vcc{{(_lo)?}}, 0, v[[mbcnt]]
+; GCN: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
 ; GCN32: s_bcnt1_i32_b32 s[[popcount:[0-9]+]], s[[exec_lo]]
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s{{\[}}[[exec_lo]]:[[exec_hi]]{{\]}}
 ; GCN: s_mul_i32 s[[scalar_value:[0-9]+]], s{{[0-9]+}}, s[[popcount]]

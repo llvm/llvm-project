@@ -15,6 +15,7 @@
 #define LLVM_BINARYFORMAT_WASM_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -62,8 +63,8 @@ struct WasmExport {
 
 struct WasmLimits {
   uint8_t Flags;
-  uint32_t Initial;
-  uint32_t Maximum;
+  uint64_t Initial;
+  uint64_t Maximum;
 };
 
 struct WasmTable {
@@ -76,8 +77,8 @@ struct WasmInitExpr {
   union {
     int32_t Int32;
     int64_t Int64;
-    int32_t Float32;
-    int64_t Float64;
+    uint32_t Float32;
+    uint64_t Float64;
     uint32_t Global;
   } Value;
 };
@@ -131,7 +132,7 @@ struct WasmFunction {
   uint32_t CodeSectionOffset;
   uint32_t Size;
   uint32_t CodeOffset;  // start of Locals and Body
-  StringRef ExportName; // from the "export" section
+  Optional<StringRef> ExportName; // from the "export" section
   StringRef SymbolName; // from the "linking" section
   StringRef DebugName;  // from the "name" section
   uint32_t Comdat;      // from the "comdat info" section
@@ -158,8 +159,8 @@ struct WasmElemSegment {
 // the index of the segment, and the offset and size within the segment.
 struct WasmDataReference {
   uint32_t Segment;
-  uint32_t Offset;
-  uint32_t Size;
+  uint64_t Offset;
+  uint64_t Size;
 };
 
 struct WasmRelocation {
@@ -178,9 +179,12 @@ struct WasmSymbolInfo {
   StringRef Name;
   uint8_t Kind;
   uint32_t Flags;
-  StringRef ImportModule; // For undefined symbols the module of the import
-  StringRef ImportName;   // For undefined symbols the name of the import
-  StringRef ExportName;   // For symbols to be exported from the final module
+  // For undefined symbols the module of the import
+  Optional<StringRef> ImportModule;
+  // For undefined symbols the name of the import
+  Optional<StringRef> ImportName;
+  // For symbols to be exported from the final module
+  Optional<StringRef> ExportName;
   union {
     // For function or global symbols, the index in function or global index
     // space.
@@ -228,6 +232,7 @@ enum : unsigned {
   WASM_TYPE_V128 = 0x7B,
   WASM_TYPE_FUNCREF = 0x70,
   WASM_TYPE_EXNREF = 0x68,
+  WASM_TYPE_EXTERNREF = 0x6F,
   WASM_TYPE_FUNC = 0x60,
   WASM_TYPE_NORESULT = 0x40, // for blocks with no result values
 };
@@ -249,11 +254,14 @@ enum : unsigned {
   WASM_OPCODE_GLOBAL_GET = 0x23,
   WASM_OPCODE_GLOBAL_SET = 0x24,
   WASM_OPCODE_I32_STORE = 0x36,
+  WASM_OPCODE_I64_STORE = 0x37,
   WASM_OPCODE_I32_CONST = 0x41,
   WASM_OPCODE_I64_CONST = 0x42,
   WASM_OPCODE_F32_CONST = 0x43,
   WASM_OPCODE_F64_CONST = 0x44,
   WASM_OPCODE_I32_ADD = 0x6a,
+  WASM_OPCODE_I64_ADD = 0x7c,
+  WASM_OPCODE_REF_NULL = 0xd0,
 };
 
 // Opcodes used in synthetic functions.
@@ -272,8 +280,10 @@ enum : unsigned {
 };
 
 enum : unsigned {
+  WASM_LIMITS_FLAG_NONE = 0x0,
   WASM_LIMITS_FLAG_HAS_MAX = 0x1,
   WASM_LIMITS_FLAG_IS_SHARED = 0x2,
+  WASM_LIMITS_FLAG_IS_64 = 0x4,
 };
 
 enum : unsigned {
@@ -351,6 +361,7 @@ enum class ValType {
   F64 = WASM_TYPE_F64,
   V128 = WASM_TYPE_V128,
   EXNREF = WASM_TYPE_EXNREF,
+  EXTERNREF = WASM_TYPE_EXTERNREF,
 };
 
 struct WasmSignature {

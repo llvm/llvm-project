@@ -12,6 +12,9 @@
 
 // function& operator=(nullptr_t);
 
+// This test runs in C++03, but we have deprecated using std::function in C++03.
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <functional>
 #include <cassert>
 
@@ -50,6 +53,7 @@ int g(int) {return 0;}
 
 int main(int, char**)
 {
+    globalMemCounter.reset();
     assert(globalMemCounter.checkOutstandingNewEq(0));
     {
     std::function<int(int)> f = A();

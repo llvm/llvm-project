@@ -41,6 +41,8 @@ SwiftRuntimeReporting::CreateInstance(const lldb::ProcessSP &process_sp) {
   return InstrumentationRuntimeSP(new SwiftRuntimeReporting(process_sp));
 }
 
+LLDB_PLUGIN_DEFINE_ADV(SwiftRuntimeReporting, InstrumentationRuntimeSwiftRuntimeReporting)
+
 void SwiftRuntimeReporting::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(),
@@ -354,7 +356,7 @@ bool SwiftRuntimeReporting::NotifyBreakpointHit(
     std::string description = report->GetAsDictionary()
                                 ->GetValueForKey("description")
                                 ->GetAsString()
-                                ->GetValue();
+      ->GetValue().str();
     thread_sp->SetStopInfo(
         InstrumentationRuntimeStopInfo::CreateStopReasonWithInstrumentationData(
             *thread_sp, description, report));

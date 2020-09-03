@@ -30,9 +30,9 @@
 # LIMITS-NEXT: sw      zero, -2048(a0)
 
 # RUN: ld.lld %t.rv32.o --defsym foo=_start+0x7ffff800 --defsym bar=_start+12-0x80000801 -o %t
-# RUN: not ld.lld %t.rv64.o --defsym foo=_start+0x7ffff800 --defsym bar=_start+12-0x80000801 -o %t 2>&1 | FileCheck --check-prefix=ERROR %s
-# ERROR:      relocation R_RISCV_PCREL_HI20 out of range: 524288 is not in [-524288, 524287]
-# ERROR-NEXT: relocation R_RISCV_PCREL_HI20 out of range: -524289 is not in [-524288, 524287]
+# RUN: not ld.lld %t.rv64.o --defsym foo=_start+0x7ffff800 --defsym bar=_start+12-0x80000801 -o /dev/null 2>&1 | FileCheck --check-prefix=ERROR %s
+# ERROR: relocation R_RISCV_PCREL_HI20 out of range: 524288 is not in [-524288, 524287]; references foo
+# ERROR: relocation R_RISCV_PCREL_HI20 out of range: -524289 is not in [-524288, 524287]; references bar
 
 .global _start
 _start:

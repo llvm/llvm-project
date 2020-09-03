@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -da -analyze -delinearize
+; RUN: opt < %s -basic-aa -da -analyze -delinearize
 ;
 ; a, b, c, d, g, h;
 ; char *f;

@@ -29,7 +29,7 @@
 # WASM-NEXT:          U puts
 # WASM-NEXT: 00000010 D var
 
-# RUN: yaml2obj -docnum=1 %s > %t.elf-i386
+# RUN: yaml2obj --docnum=1 %s -o %t.elf-i386
 
 --- !ELF
 FileHeader:
@@ -79,7 +79,7 @@ Symbols:
 
 ## Test different ELF symbols for 64-bit platform.
 
-# RUN: yaml2obj -docnum=2 %s > %t.elf-x86-64
+# RUN: yaml2obj --docnum=2 %s -o %t.elf-x86-64
 # RUN: llvm-nm %t.elf-x86-64 | FileCheck %s -check-prefix ELF64
 
 # ELF64:                  U SomeOtherFunction
@@ -157,7 +157,7 @@ Symbols:
 
 ## Test llvm-nm shows all symbols with -a.
 
-# RUN: yaml2obj -docnum=3 %s > %t-a.elf-x86-64
+# RUN: yaml2obj --docnum=3 %s -o %t-a.elf-x86-64
 # RUN: llvm-nm -a %t-a.elf-x86-64 | FileCheck %s -check-prefix ELF64-a
 
 # ELF64-a:      00000000 b .bss
@@ -221,7 +221,7 @@ Symbols:
 
 ## Test that we drop the thumb bit only from function addresses.
 
-# RUN: yaml2obj -docnum=4 %s > %t.elf-arm32
+# RUN: yaml2obj --docnum=4 %s -o %t.elf-arm32
 # RUN: llvm-nm %t.elf-arm32 | FileCheck %s -check-prefix ELF-THUMB
 
 # ELF-THUMB: 00000000 t func

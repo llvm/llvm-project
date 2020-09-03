@@ -2,9 +2,10 @@
 
 The main purpose of the declarative builders API is to provide an intuitive way
 of constructing MLIR programmatically. In the majority of cases, the IR we wish
-to construct exhibits structured control-flow. Declarative builders provide an
-API to make MLIR construction and manipulation very idiomatic, for the
-structured control-flow case, in C++.
+to construct exhibits structured control-flow. The Declarative builders in the
+`EDSC` library (Embedded Domain Specific Constructs) provide an API to make MLIR
+construction and manipulation very idiomatic, for the structured control-flow
+case, in C++.
 
 ## ScopedContext
 
@@ -12,30 +13,17 @@ structured control-flow case, in C++.
 supporting a simple declarative API with globally accessible builders. These
 declarative builders are available within the lifetime of a `ScopedContext`.
 
-## ValueHandle and IndexHandle
-
-`mlir::edsc::ValueHandle` and `mlir::edsc::IndexHandle` provide typed
-abstractions around an `mlir::Value`. These abstractions are "delayed", in the
-sense that they allow separating declaration from definition. They may capture
-IR snippets, as they are built, for programmatic manipulation. Intuitive
-operators are provided to allow concise and idiomatic expressions.
-
-```c++
-ValueHandle zero = constant_index(0);
-IndexHandle i, j, k;
-```
-
 ## Intrinsics
 
-`mlir::edsc::ValueBuilder` is a generic wrapper for the `mlir::Builder::create`
-method that operates on `ValueHandle` objects and return a single ValueHandle.
-For instructions that return no values or that return multiple values, the
-`mlir::edsc::InstructionBuilder` can be used. Named intrinsics are provided as
+`mlir::ValueBuilder` is a generic wrapper for the `mlir::OpBuilder::create`
+method that operates on `Value` objects and return a single Value. For
+instructions that return no values or that return multiple values, the
+`mlir::edsc::OperationBuilder` can be used. Named intrinsics are provided as
 syntactic sugar to further reduce boilerplate.
 
 ```c++
 using load = ValueBuilder<LoadOp>;
-using store = InstructionBuilder<StoreOp>;
+using store = OperationBuilder<StoreOp>;
 ```
 
 ## LoopBuilder and AffineLoopNestBuilder
@@ -45,20 +33,17 @@ concise and structured loop nests.
 
 ```c++
   ScopedContext scope(f.get());
-  ValueHandle i(indexType),
-              j(indexType),
-              lb(f->getArgument(0)),
-              ub(f->getArgument(1));
-  ValueHandle f7(constant_float(llvm::APFloat(7.0f), f32Type)),
-              f13(constant_float(llvm::APFloat(13.0f), f32Type)),
-              i7(constant_int(7, 32)),
-              i13(constant_int(13, 32));
+  Value i, j, lb(f->getArgument(0)), ub(f->getArgument(1));
+  Value f7(std_constant_float(llvm::APFloat(7.0f), f32Type)),
+           f13(std_constant_float(llvm::APFloat(13.0f), f32Type)),
+           i7(constant_int(7, 32)),
+           i13(constant_int(13, 32));
   AffineLoopNestBuilder(&i, lb, ub, 3)([&]{
-      lb * index_t(3) + ub;
-      lb + index_t(3);
+      lb * index_type(3) + ub;
+      lb + index_type(3);
       AffineLoopNestBuilder(&j, lb, ub, 2)([&]{
-          ceilDiv(index_t(31) * floorDiv(i + j * index_t(3), index_t(32)),
-                  index_t(32));
+          ceilDiv(index_type(31) * floorDiv(i + j * index_type(3), index_type(32)),
+                  index_type(32));
           ((f7 + f13) / f7) % f13 - f7 * f13;
           ((i7 + i13) / i7) % i13 - i7 * i13;
       });
@@ -83,11 +68,10 @@ def AddOp : Op<"x.add">,
     Arguments<(ins Tensor:$A, Tensor:$B)>,
     Results<(outs Tensor: $C)> {
   code referenceImplementation = [{
-    auto ivs = makeIndexHandles(view_A.rank());
-    auto pivs = makePIndexHandles(ivs);
+    SmallVector<Value, 4> ivs(view_A.rank());
     IndexedValue A(arg_A), B(arg_B), C(arg_C);
-    AffineLoopNestBuilder(pivs, view_A.getLbs(), view_A.getUbs(), view_A.getSteps())(
-      [&]{
+    AffineLoopNestBuilder(
+      ivs, view_A.getLbs(), view_A.getUbs(), view_A.getSteps())([&]{
         C(ivs) = A(ivs) + B(ivs)
       });
   }];
@@ -119,14 +103,8 @@ or the following, for a 0-D `memref<f32>`:
 //       CHECK: store {{.*}}, %arg2[] : memref<f32>
 ```
 
-Similar APIs are provided to emit the lower-level `loop.for` op with
+Similar APIs are provided to emit the lower-level `scf.for` op with
 `LoopNestBuilder`. See the `builder-api-test.cpp` test for more usage examples.
 
 Since the implementation of declarative builders is in C++, it is also available
-to program the IR with an embedded-DSL flavor directly integrated in MLIR. We
-make use of these properties in the tutorial.
-
-Spoiler: MLIR also provides Python bindings for these builders, and a
-full-fledged Python machine learning DSL with automatic differentiation
-targeting MLIR was built as an early research collaboration.
-
+to program the IR with an embedded-DSL flavor directly integrated in MLIR.

@@ -58,7 +58,7 @@ using namespace llvm;
 
 /// Allow disabling BasicAA from the AA results. This is particularly useful
 /// when testing to isolate a single AA implementation.
-static cl::opt<bool> DisableBasicAA("disable-basicaa", cl::Hidden,
+static cl::opt<bool> DisableBasicAA("disable-basic-aa", cl::Hidden,
                                     cl::init(false));
 
 AAResults::AAResults(AAResults &&Arg)
@@ -196,8 +196,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
   // Try to refine the mod-ref info further using other API entry points to the
   // aggregate set of AA results.
   auto MRB = getModRefBehavior(Call);
-  if (MRB == FMRB_DoesNotAccessMemory ||
-      MRB == FMRB_OnlyAccessesInaccessibleMem)
+  if (onlyAccessesInaccessibleMem(MRB))
     return ModRefInfo::NoModRef;
 
   if (onlyReadsMemory(MRB))

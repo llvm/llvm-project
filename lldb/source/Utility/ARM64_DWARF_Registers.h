@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_ARM64_DWARF_Registers_h_
-#define utility_ARM64_DWARF_Registers_h_
+#ifndef LLDB_SOURCE_UTILITY_ARM64_DWARF_REGISTERS_H
+#define LLDB_SOURCE_UTILITY_ARM64_DWARF_REGISTERS_H
 
 #include "lldb/lldb-private.h"
 
@@ -51,7 +51,31 @@ enum {
   sp = x31,
   pc = 32,
   cpsr = 33,
-  // 34-63 reserved
+  // 34-45 reserved
+
+  // 64-bit SVE Vector granule pseudo register
+  vg = 46,
+
+  // VG ́8-bit SVE first fault register
+  ffr = 47,
+
+  // VG x ́8-bit SVE predicate registers
+  p0 = 48,
+  p1,
+  p2,
+  p3,
+  p4,
+  p5,
+  p6,
+  p7,
+  p8,
+  p9,
+  p10,
+  p11,
+  p12,
+  p13,
+  p14,
+  p15,
 
   // V0-V31 (128 bit vector registers)
   v0 = 64,
@@ -85,11 +109,43 @@ enum {
   v28,
   v29,
   v30,
-  v31
+  v31,
 
-  // 96-127 reserved
+  // VG ́64-bit SVE vector registers
+  z0 = 96,
+  z1,
+  z2,
+  z3,
+  z4,
+  z5,
+  z6,
+  z7,
+  z8,
+  z9,
+  z10,
+  z11,
+  z12,
+  z13,
+  z14,
+  z15,
+  z16,
+  z17,
+  z18,
+  z19,
+  z20,
+  z21,
+  z22,
+  z23,
+  z24,
+  z25,
+  z26,
+  z27,
+  z28,
+  z29,
+  z30,
+  z31
 };
 
 } // namespace arm64_dwarf
 
-#endif // utility_ARM64_DWARF_Registers_h_
+#endif // LLDB_SOURCE_UTILITY_ARM64_DWARF_REGISTERS_H

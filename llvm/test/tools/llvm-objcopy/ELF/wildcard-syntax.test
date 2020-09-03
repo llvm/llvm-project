@@ -1,7 +1,7 @@
 ## This test checks that llvm-objcopy accepts glob (or "shell wildcard") syntax
 ## for the --wildcard (-w) flag correctly.
 
-# RUN: yaml2obj --docnum=1 %s > %t.o
+# RUN: yaml2obj --docnum=1 %s -o %t.o
 
 ## * matches all characters.
 # RUN: llvm-objcopy --remove-section='.f*' %t.o %t.glob.o
@@ -61,7 +61,7 @@ Symbols: []
 
 ## Use a separate test file with special characters for the following tests.
 
-# RUN: yaml2obj --docnum=2 %s > %t.special.o
+# RUN: yaml2obj --docnum=2 %s -o %t.special.o
 
 ## \ escapes wildcard characters.
 # RUN: llvm-objcopy --remove-section='\*' %t.special.o %t.escape.1.o

@@ -269,7 +269,7 @@ void RuntimeDyldELF::resolveX86_64Relocation(const SectionEntry &Section,
                                              uint64_t SymOffset) {
   switch (Type) {
   default:
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_X86_64_NONE:
     break;
@@ -359,7 +359,7 @@ void RuntimeDyldELF::resolveX86Relocation(const SectionEntry &Section,
   default:
     // There are other relocation types, but it appears these are the
     // only ones currently used by the LLVM ELF object writer
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   }
 }
@@ -382,7 +382,7 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
 
   switch (Type) {
   default:
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_AARCH64_ABS16: {
     uint64_t Result = Value + Addend;
@@ -399,6 +399,13 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
   case ELF::R_AARCH64_ABS64:
     write(isBE, TargetPtr, Value + Addend);
     break;
+  case ELF::R_AARCH64_PLT32: {
+    uint64_t Result = Value + Addend - FinalAddress;
+    assert(static_cast<int64_t>(Result) >= INT32_MIN &&
+           static_cast<int64_t>(Result) <= INT32_MAX);
+    write(isBE, TargetPtr, static_cast<uint32_t>(Result));
+    break;
+  }
   case ELF::R_AARCH64_PREL32: {
     uint64_t Result = Value + Addend - FinalAddress;
     assert(static_cast<int64_t>(Result) >= INT32_MIN &&
@@ -554,7 +561,7 @@ void RuntimeDyldELF::setMipsABI(const ObjectFile &Obj) {
     IsMipsO32ABI = AbiVariant & ELF::EF_MIPS_ABI_O32;
     IsMipsN32ABI = AbiVariant & ELF::EF_MIPS_ABI2;
   }
-  IsMipsN64ABI = Obj.getFileFormatName().equals("ELF64-mips");
+  IsMipsN64ABI = Obj.getFileFormatName().equals("elf64-mips");
 }
 
 // Return the .TOC. section and offset.
@@ -714,7 +721,7 @@ void RuntimeDyldELF::resolvePPC32Relocation(const SectionEntry &Section,
   uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
   switch (Type) {
   default:
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_PPC_ADDR16_LO:
     writeInt16BE(LocalAddress, applyPPClo(Value + Addend));
@@ -734,7 +741,7 @@ void RuntimeDyldELF::resolvePPC64Relocation(const SectionEntry &Section,
   uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
   switch (Type) {
   default:
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_PPC64_ADDR16:
     writeInt16BE(LocalAddress, applyPPClo(Value + Addend));
@@ -828,7 +835,7 @@ void RuntimeDyldELF::resolveSystemZRelocation(const SectionEntry &Section,
   uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
   switch (Type) {
   default:
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_390_PC16DBL:
   case ELF::R_390_PLT16DBL: {
@@ -883,7 +890,7 @@ void RuntimeDyldELF::resolveBPFRelocation(const SectionEntry &Section,
 
   switch (Type) {
   default:
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_BPF_NONE:
     break;

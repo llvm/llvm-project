@@ -31,3 +31,9 @@ void foo3() {
 void foo4() {
   foo3<5>();
 }
+
+namespace NS {
+  int f() { extern int arr[3]; { extern int arr[]; } return 0; }
+  template<typename T> void g() { extern int arr[3]; extern T arr; }
+  template void g<int[]>();
+}

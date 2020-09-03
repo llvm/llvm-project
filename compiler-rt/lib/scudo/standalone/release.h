@@ -11,6 +11,7 @@
 
 #include "common.h"
 #include "list.h"
+#include "mutex.h"
 
 namespace scudo {
 
@@ -39,11 +40,13 @@ private:
 };
 
 // A packed array of Counters. Each counter occupies 2^N bits, enough to store
-// counter's MaxValue. Ctor will try to allocate the required Buffer via map()
-// and the caller is expected to check whether the initialization was successful
-// by checking isAllocated() result. For the performance sake, none of the
-// accessors check the validity of the arguments, It is assumed that Index is
-// always in [0, N) range and the value is not incremented past MaxValue.
+// counter's MaxValue. Ctor will try to use a static buffer first, and if that
+// fails (the buffer is too small or already locked), will allocate the
+// required Buffer via map(). The caller is expected to check whether the
+// initialization was successful by checking isAllocated() result. For
+// performance sake, none of the accessors check the validity of the arguments,
+// It is assumed that Index is always in [0, N) range and the value is not
+// incremented past MaxValue.
 class PackedCounterArray {
 public:
   PackedCounterArray(uptr NumCounters, uptr MaxValue) : N(NumCounters) {
@@ -66,11 +69,20 @@ public:
     BufferSize = (roundUpTo(N, static_cast<uptr>(1U) << PackingRatioLog) >>
                   PackingRatioLog) *
                  sizeof(*Buffer);
-    Buffer = reinterpret_cast<uptr *>(
-        map(nullptr, BufferSize, "scudo:counters", MAP_ALLOWNOMEM));
+    if (BufferSize <= StaticBufferSize && Mutex.tryLock()) {
+      Buffer = &StaticBuffer[0];
+      memset(Buffer, 0, BufferSize);
+    } else {
+      Buffer = reinterpret_cast<uptr *>(
+          map(nullptr, BufferSize, "scudo:counters", MAP_ALLOWNOMEM));
+    }
   }
   ~PackedCounterArray() {
-    if (isAllocated())
+    if (!isAllocated())
+      return;
+    if (Buffer == &StaticBuffer[0])
+      Mutex.unlock();
+    else
       unmap(reinterpret_cast<void *>(Buffer), BufferSize);
   }
 
@@ -95,7 +107,8 @@ public:
 
   void incRange(uptr From, uptr To) const {
     DCHECK_LE(From, To);
-    for (uptr I = From; I <= To; I++)
+    const uptr Top = Min(To + 1, N);
+    for (uptr I = From; I < Top; I++)
       inc(I);
   }
 
@@ -110,6 +123,10 @@ private:
 
   uptr BufferSize;
   uptr *Buffer;
+
+  static HybridMutex Mutex;
+  static const uptr StaticBufferSize = 1024U;
+  static uptr StaticBuffer[StaticBufferSize];
 };
 
 template <class ReleaseRecorderT> class FreePagesRangeTracker {
@@ -150,8 +167,7 @@ private:
 template <class TransferBatchT, class ReleaseRecorderT>
 NOINLINE void
 releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
-                      uptr AllocatedPagesCount, uptr BlockSize,
-                      ReleaseRecorderT *Recorder) {
+                      uptr Size, uptr BlockSize, ReleaseRecorderT *Recorder) {
   const uptr PageSize = getPageSizeCached();
 
   // Figure out the number of chunks per page and whether we can take a fast
@@ -188,34 +204,51 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
     }
   }
 
-  PackedCounterArray Counters(AllocatedPagesCount, FullPagesBlockCountMax);
+  const uptr PagesCount = roundUpTo(Size, PageSize) / PageSize;
+  PackedCounterArray Counters(PagesCount, FullPagesBlockCountMax);
   if (!Counters.isAllocated())
     return;
 
   const uptr PageSizeLog = getLog2(PageSize);
-  const uptr End = Base + AllocatedPagesCount * PageSize;
+  const uptr RoundedSize = PagesCount << PageSizeLog;
 
   // Iterate over free chunks and count how many free chunks affect each
   // allocated page.
   if (BlockSize <= PageSize && PageSize % BlockSize == 0) {
     // Each chunk affects one page only.
     for (const auto &It : FreeList) {
-      for (u32 I = 0; I < It.getCount(); I++) {
-        const uptr P = reinterpret_cast<uptr>(It.get(I));
-        if (P >= Base && P < End)
-          Counters.inc((P - Base) >> PageSizeLog);
+      // If dealing with a TransferBatch, the first pointer of the batch will
+      // point to the batch itself, we do not want to mark this for release as
+      // the batch is in use, so skip the first entry.
+      const bool IsTransferBatch =
+          (It.getCount() != 0) &&
+          (reinterpret_cast<uptr>(It.get(0)) == reinterpret_cast<uptr>(&It));
+      for (u32 I = IsTransferBatch ? 1 : 0; I < It.getCount(); I++) {
+        const uptr P = reinterpret_cast<uptr>(It.get(I)) - Base;
+        // This takes care of P < Base and P >= Base + RoundedSize.
+        if (P < RoundedSize)
+          Counters.inc(P >> PageSizeLog);
       }
     }
+    for (uptr P = Size; P < RoundedSize; P += BlockSize)
+      Counters.inc(P >> PageSizeLog);
   } else {
     // In all other cases chunks might affect more than one page.
     for (const auto &It : FreeList) {
-      for (u32 I = 0; I < It.getCount(); I++) {
-        const uptr P = reinterpret_cast<uptr>(It.get(I));
-        if (P >= Base && P < End)
-          Counters.incRange((P - Base) >> PageSizeLog,
-                            (P - Base + BlockSize - 1) >> PageSizeLog);
+      // See TransferBatch comment above.
+      const bool IsTransferBatch =
+          (It.getCount() != 0) &&
+          (reinterpret_cast<uptr>(It.get(0)) == reinterpret_cast<uptr>(&It));
+      for (u32 I = IsTransferBatch ? 1 : 0; I < It.getCount(); I++) {
+        const uptr P = reinterpret_cast<uptr>(It.get(I)) - Base;
+        // This takes care of P < Base and P >= Base + RoundedSize.
+        if (P < RoundedSize)
+          Counters.incRange(P >> PageSizeLog,
+                            (P + BlockSize - 1) >> PageSizeLog);
       }
     }
+    for (uptr P = Size; P < RoundedSize; P += BlockSize)
+      Counters.incRange(P >> PageSizeLog, (P + BlockSize - 1) >> PageSizeLog);
   }
 
   // Iterate over pages detecting ranges of pages with chunk Counters equal

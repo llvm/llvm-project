@@ -1,4 +1,4 @@
-//===-- OptionValueProperties.cpp --------------------------------*- C++-*-===//
+//===-- OptionValueProperties.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -60,10 +60,10 @@ void OptionValueProperties::Initialize(const PropertyDefinitions &defs) {
 }
 
 void OptionValueProperties::SetValueChangedCallback(
-    uint32_t property_idx, OptionValueChangedCallback callback, void *baton) {
+    uint32_t property_idx, std::function<void()> callback) {
   Property *property = ProtectedGetPropertyAtIndex(property_idx);
   if (property)
-    property->SetValueChangedCallback(callback, baton);
+    property->SetValueChangedCallback(std::move(callback));
 }
 
 void OptionValueProperties::AppendProperty(ConstString name,

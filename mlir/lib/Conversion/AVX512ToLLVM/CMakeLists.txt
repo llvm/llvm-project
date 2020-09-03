@@ -1,0 +1,19 @@
+add_mlir_conversion_library(MLIRAVX512ToLLVM
+  ConvertAVX512ToLLVM.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/AVX512ToLLVM
+
+  DEPENDS
+  MLIRConversionPassIncGen
+
+  LINK_COMPONENTS
+  Core
+
+  LINK_LIBS PUBLIC
+  MLIRAVX512
+  MLIRLLVMAVX512
+  MLIRLLVMIR
+  MLIRStandardToLLVM
+  MLIRTransforms
+  )

@@ -13,10 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMCInstLower.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "WebAssemblyAsmPrinter.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRuntimeLibcallSignatures.h"
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Constants.h"
@@ -28,11 +29,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
-
-// Defines llvm::WebAssembly::getStackOpcode to convert register instructions to
-// stack instructions
-#define GET_INSTRMAP_INFO 1
-#include "WebAssemblyGenInstrInfo.inc"
 
 // This disables the removal of registers when lowering into MC, as required
 // by some current tests.
@@ -56,7 +52,8 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
 
     SmallVector<MVT, 1> ResultMVTs;
     SmallVector<MVT, 4> ParamMVTs;
-    computeSignatureVTs(FuncTy, CurrentFunc, TM, ParamMVTs, ResultMVTs);
+    const auto *const F = dyn_cast<Function>(Global);
+    computeSignatureVTs(FuncTy, F, CurrentFunc, TM, ParamMVTs, ResultMVTs);
 
     auto Signature = signatureFromMVTs(ResultMVTs, ParamMVTs);
     WasmSym->setSignature(Signature.get());
@@ -84,8 +81,9 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
         strcmp(Name, "__stack_pointer") == 0 || strcmp(Name, "__tls_base") == 0;
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
     WasmSym->setGlobalType(wasm::WasmGlobalType{
-        uint8_t(Subtarget.hasAddr64() ? wasm::WASM_TYPE_I64
-                                      : wasm::WASM_TYPE_I32),
+        uint8_t(Subtarget.hasAddr64() && strcmp(Name, "__table_base") != 0
+                    ? wasm::WASM_TYPE_I64
+                    : wasm::WASM_TYPE_I32),
         Mutable});
     return WasmSym;
   }
@@ -208,6 +206,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
   OutMI.setOpcode(MI->getOpcode());
 
   const MCInstrDesc &Desc = MI->getDesc();
+  unsigned NumVariadicDefs = MI->getNumExplicitDefs() - Desc.getNumDefs();
   for (unsigned I = 0, E = MI->getNumOperands(); I != E; ++I) {
     const MachineOperand &MO = MI->getOperand(I);
 
@@ -229,9 +228,10 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       MCOp = MCOperand::createReg(WAReg);
       break;
     }
-    case MachineOperand::MO_Immediate:
-      if (I < Desc.NumOperands) {
-        const MCOperandInfo &Info = Desc.OpInfo[I];
+    case MachineOperand::MO_Immediate: {
+      unsigned DescIndex = I - NumVariadicDefs;
+      if (DescIndex < Desc.NumOperands) {
+        const MCOperandInfo &Info = Desc.OpInfo[DescIndex];
         if (Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
           SmallVector<wasm::ValType, 4> Returns;
           SmallVector<wasm::ValType, 4> Params;
@@ -270,6 +270,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       }
       MCOp = MCOperand::createImm(MO.getImm());
       break;
+    }
     case MachineOperand::MO_FPImmediate: {
       // TODO: MC converts all floating point immediate operands to double.
       // This is fine for numeric values, but may cause NaNs to change bits.
@@ -306,13 +307,15 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
 
   if (!WasmKeepRegisters)
     removeRegisterOperands(MI, OutMI);
+  else if (Desc.variadicOpsAreDefs())
+    OutMI.insert(OutMI.begin(), MCOperand::createImm(MI->getNumExplicitDefs()));
 }
 
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI) {
   // Remove all uses of stackified registers to bring the instruction format
   // into its final stack form used thruout MC, and transition opcodes to
   // their _S variant.
-  // We do this seperate from the above code that still may need these
+  // We do this separate from the above code that still may need these
   // registers for e.g. call_indirect signatures.
   // See comments in lib/Target/WebAssembly/WebAssemblyInstrFormats.td for
   // details.

@@ -4,7 +4,6 @@
 // I386: "-disable-free"
 // I386: "-mrelocation-model" "static"
 // I386: "-mframe-pointer=all"
-// I386: "-masm-verbose"
 // I386: "-munwind-tables"
 // I386: "-Os"
 // I386: "-fvisibility"

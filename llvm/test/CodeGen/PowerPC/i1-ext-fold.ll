@@ -16,7 +16,7 @@ entry:
 ; CHECK-DAG: cmpw
 ; CHECK-DAG: li [[REG1:[0-9]+]], 0
 ; CHECK-DAG: li [[REG2:[0-9]+]], 16
-; CHECK: isel 3, [[REG2]], [[REG1]],
+; CHECK: isellt 3, [[REG2]], [[REG1]]
 ; CHECK: blr
 
 ; CHECK-NO-ISEL: bclr 12, 0, 0
@@ -38,7 +38,7 @@ entry:
 ; CHECK-DAG: cmpw
 ; CHECK-DAG: li [[REG1:[0-9]+]], 5
 ; CHECK-DAG: li [[REG2:[0-9]+]], 21
-; CHECK: isel 3, [[REG2]], [[REG1]],
+; CHECK: isellt 3, [[REG2]], [[REG1]]
 ; CHECK: blr
 
 ; CHECK-NO-ISEL: bclr 12, 0, 0
@@ -58,14 +58,14 @@ entry:
 ; CHECK-NO-ISEL-LABEL: @foo3
 ; CHECK-DAG: cmpw
 ; CHECK-DAG: li [[REG1:[0-9]+]], 16
-; CHECK: isel 3, 0, [[REG1]],
+; CHECK: iselgt 3, 0, [[REG1]]
 ; CHECK: blr
 
 ; CHECK-NO-ISEL: bc 12, 1, [[TRUE:.LBB[0-9]+]]
 ; CHECK-NO-ISEL: ori 3, 5, 0
 ; CHECK-NO-ISEL-NEXT: blr
 ; CHECK-NO-ISEL-NEXT: [[TRUE]]
-; CHECK-NO-ISEL-NEXT: addi 3, 0, 0
+; CHECK-NO-ISEL-NEXT: li 3, 0
 ; CHECK-NO-ISEL-NEXT: blr
 }
 

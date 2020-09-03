@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
   int res = posix_memalign(&p, alignment, 100);
   // CHECK: {{ERROR: .*Sanitizer: invalid alignment requested in posix_memalign}}
   // CHECK: {{#0 .*posix_memalign}}
-  // CHECK: {{#1 .*main .*posix_memalign-alignment.cpp:}}[[@LINE-3]]
+  // CHECK: {{#[12] .*main .*posix_memalign-alignment.cpp:}}[[@LINE-3]]
   // CHECK: {{SUMMARY: .*Sanitizer: invalid-posix-memalign-alignment}}
 
   // The NULL pointer is printed differently on different systems, while (long)0

@@ -1,4 +1,4 @@
-; Example input for update_llc_test_checks (taken from test/Transforms/InstSimplify/add.ll)
+; Example input for update_test_checks (taken from test/Transforms/InstSimplify/add.ll)
 ; RUN: opt < %s -instsimplify -S | FileCheck %s
 
 define i32 @common_sub_operand(i32 %X, i32 %Y) {
@@ -46,4 +46,13 @@ define <2 x i8> @knownnegation_commute_vec(<2 x i8> %x, <2 x i8> %y) {
   %yx = sub <2 x i8> %y, %x
   %r = add <2 x i8> %yx, %xy
   ret <2 x i8> %r
+}
+
+define i32 @nameless_value(i32 %X) {
+; CHECK-LABEL: @nameless_value(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 42, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %1 = sub i32 42, %X
+  ret i32 %1
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SystemRuntime_h_
-#define liblldb_SystemRuntime_h_
+#ifndef LLDB_TARGET_SYSTEMRUNTIME_H
+#define LLDB_TARGET_SYSTEMRUNTIME_H
 
 #include <vector>
 
@@ -300,9 +300,10 @@ protected:
   std::vector<ConstString> m_types;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(SystemRuntime);
+  SystemRuntime(const SystemRuntime &) = delete;
+  const SystemRuntime &operator=(const SystemRuntime &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_SystemRuntime_h_
+#endif // LLDB_TARGET_SYSTEMRUNTIME_H

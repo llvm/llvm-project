@@ -13,8 +13,9 @@
 #include "llvm/Support/Process.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -55,7 +56,7 @@ Optional<std::string> Process::FindInEnvPath(StringRef EnvName,
     SmallString<128> FilePath(Dir);
     path::append(FilePath, FileName);
     if (fs::exists(Twine(FilePath))) {
-      FoundPath = FilePath.str();
+      FoundPath = std::string(FilePath.str());
       break;
     }
   }
@@ -87,6 +88,13 @@ static const char colorcodes[2][2][8][10] = {
 static bool coreFilesPrevented = !LLVM_ENABLE_CRASH_DUMPS;
 
 bool Process::AreCoreFilesPrevented() { return coreFilesPrevented; }
+
+LLVM_ATTRIBUTE_NORETURN
+void Process::Exit(int RetCode) {
+  if (CrashRecoveryContext *CRC = CrashRecoveryContext::GetCurrent())
+    CRC->HandleExit(RetCode);
+  ::exit(RetCode);
+}
 
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX

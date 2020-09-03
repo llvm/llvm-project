@@ -1,4 +1,4 @@
-//===---------------------- Unittests for errno --------------------------===//
+//===-- Unittests for errno -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/errno/llvmlibc_errno.h"
-
-#include "gtest/gtest.h"
+#include "utils/UnitTest/Test.h"
 
 TEST(ErrnoTest, Basic) {
   int test_val = 123;

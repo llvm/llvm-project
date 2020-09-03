@@ -1,7 +1,7 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; CHECK: [[REG0:(r[0-9]+)]] = add(r29
-; CHECK: [[REG1:(r[0-9]+)]] = add([[REG0]],#4)
+; CHECK: [[REG1:(r[0-9]+)]] = add([[REG0]],#8)
 ; CHECK-DAG: memd([[REG1]]+#8) =
 ; CHECK-DAG: memd([[REG1]]+#0) =
 

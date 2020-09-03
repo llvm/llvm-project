@@ -34,7 +34,7 @@ b0:
   %v11 = mul i32 %v10, %v9
   %v12 = sub i32 %a1, %v11
   %v13 = lshr i32 %v12, 1
-  %v14 = tail call <512 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %v13)
+  %v14 = tail call <64 x i1> @llvm.hexagon.V6.pred.scalar2(i32 %v13)
   %v15 = icmp eq i32 %a2, 0
   br i1 %v15, label %b11, label %b1
 
@@ -132,7 +132,7 @@ b9:                                               ; preds = %b8, %b7
   %v80 = tail call <16 x i32> @llvm.hexagon.V6.vdmpybus.acc(<16 x i32> %v78, <16 x i32> %v76, i32 1077952576)
   %v81 = tail call <16 x i32> @llvm.hexagon.V6.vpackob(<16 x i32> %v80, <16 x i32> %v79)
   %v82 = load <16 x i32>, <16 x i32>* %v68, align 64, !tbaa !2
-  %v83 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1> %v14, <16 x i32> %v81, <16 x i32> %v82)
+  %v83 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1> %v14, <16 x i32> %v81, <16 x i32> %v82)
   store <16 x i32> %v83, <16 x i32>* %v68, align 64, !tbaa !2
   br label %b10
 
@@ -157,7 +157,7 @@ declare <16 x i32> @llvm.hexagon.V6.lvsplatw(i32) #1
 declare i32 @llvm.hexagon.S2.ct0(i32) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.scalar2(i32) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.scalar2(i32) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vdmpybus.acc(<16 x i32>, <16 x i32>, i32) #1
@@ -166,7 +166,7 @@ declare <16 x i32> @llvm.hexagon.V6.vdmpybus.acc(<16 x i32>, <16 x i32>, i32) #1
 declare <16 x i32> @llvm.hexagon.V6.vpackob(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
 attributes #1 = { nounwind readnone }

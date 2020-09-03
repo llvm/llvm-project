@@ -216,9 +216,9 @@ define <2 x i1> @test13_vector(<2 x i64> %X, <2 x %S*> %P) nounwind {
 define <2 x i1> @test13_vector2(i64 %X, <2 x %S*> %P) nounwind {
 ; CHECK-LABEL: @test13_vector2(
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 2, i64 undef>
-; CHECK-NEXT:    [[A_IDX:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i64> [[A_IDX]], <i64 -4, i64 -4>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 2, i64 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i64> [[TMP1]], <i64 -4, i64 undef>
+; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds %S, <2 x %S*> %P, <2 x i64> zeroinitializer, <2 x i32> <i32 1, i32 1>, i64 %X
@@ -231,9 +231,9 @@ define <2 x i1> @test13_vector2(i64 %X, <2 x %S*> %P) nounwind {
 define <2 x i1> @test13_vector3(i64 %X, <2 x %S*> %P) nounwind {
 ; CHECK-LABEL: @test13_vector3(
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 2, i64 undef>
-; CHECK-NEXT:    [[A_IDX:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i64> [[A_IDX]], <i64 4, i64 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 2, i64 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i64> [[TMP1]], <i64 4, i64 undef>
+; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds %S, <2 x %S*> %P, <2 x i64> zeroinitializer, <2 x i32> <i32 1, i32 1>, i64 %X
@@ -1208,3 +1208,33 @@ define i32* @test_gep_inbounds_of_gep(i32* %base) {
   %ptr2 = getelementptr inbounds i32, i32* %ptr1, i64 4
   ret i32* %ptr2
 }
+
+%struct.f = type { i32 }
+
+@g0 = internal unnamed_addr constant %struct.f zeroinitializer, align 4
+@g1 = internal unnamed_addr constant %struct.f { i32 -1 }, align 4
+
+define i32* @PR45084(i1 %cond) {
+; CHECK-LABEL: @PR45084(
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[COND:%.*]], i32* getelementptr inbounds (%struct.f, %struct.f* @g0, i64 0, i32 0), i32* getelementptr inbounds (%struct.f, %struct.f* @g1, i64 0, i32 0), !prof !0
+; CHECK-NEXT:    ret i32* [[GEP]]
+;
+  %sel = select i1 %cond, %struct.f* @g0, %struct.f* @g1, !prof !0
+  %gep = getelementptr inbounds %struct.f, %struct.f* %sel, i64 0, i32 0
+  ret i32* %gep
+}
+
+define i32* @PR45084_extra_use(i1 %cond, %struct.f** %p) {
+; CHECK-LABEL: @PR45084_extra_use(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], %struct.f* @g0, %struct.f* @g1
+; CHECK-NEXT:    store %struct.f* [[SEL]], %struct.f** [[P:%.*]], align 8
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[COND]], i32* getelementptr inbounds (%struct.f, %struct.f* @g0, i64 0, i32 0), i32* getelementptr inbounds (%struct.f, %struct.f* @g1, i64 0, i32 0)
+; CHECK-NEXT:    ret i32* [[GEP]]
+;
+  %sel = select i1 %cond, %struct.f* @g0, %struct.f* @g1
+  store %struct.f* %sel, %struct.f** %p
+  %gep = getelementptr %struct.f, %struct.f* %sel, i64 0, i32 0
+  ret i32* %gep
+}
+
+!0 = !{!"branch_weights", i32 2, i32 10}

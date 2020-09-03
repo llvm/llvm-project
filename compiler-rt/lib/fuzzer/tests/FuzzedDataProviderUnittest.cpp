@@ -190,14 +190,26 @@ TEST(FuzzedDataProvider, ConsumeRandomLengthString) {
                 "\x1D\xBD\x4E\x17\x04\x1E\xBA\x26\xAC\x1F\xE3\x37\x1C\x15\x43"
                 "\x60\x41\x2A\x7C\xCA\x70\xCE\xAB\x20\x24\xF8\xD9\x1F\x14\x7C"),
             DataProv.ConsumeRandomLengthString(31337));
-  EXPECT_EQ(std::string(Data + 141, Data + 141 + 5),
+  size_t Offset = 141;
+  EXPECT_EQ(std::string(Data + Offset, Data + Offset + 5),
             DataProv.ConsumeRandomLengthString(5));
-  EXPECT_EQ(std::string(Data + 141 + 5, Data + 141 + 5 + 2),
+  Offset += 5;
+  EXPECT_EQ(std::string(Data + Offset, Data + Offset + 2),
             DataProv.ConsumeRandomLengthString(2));
+  Offset += 2;
+
+  // Call the overloaded method without arguments (uses max length available).
+  EXPECT_EQ(std::string(Data + Offset, Data + Offset + 664),
+            DataProv.ConsumeRandomLengthString());
+  Offset += 664 + 2; // +2 because of '\' character followed by any other byte.
+
+  EXPECT_EQ(std::string(Data + Offset, Data + Offset + 92),
+            DataProv.ConsumeRandomLengthString());
+  Offset += 92 + 2;
 
   // Exhaust the buffer.
   auto String = DataProv.ConsumeBytesAsString(31337);
-  EXPECT_EQ(size_t(876), String.length());
+  EXPECT_EQ(size_t(116), String.length());
   EXPECT_EQ(std::string(), DataProv.ConsumeRandomLengthString(1));
 }
 
@@ -397,6 +409,25 @@ TEST(FuzzedDataProvider, ConsumeFloatingPoint) {
                   DataProv.ConsumeFloatingPointInRange<float>(123.0, 777.0));
   ASSERT_DOUBLE_EQ(double(-13.37), DataProv.ConsumeFloatingPointInRange<double>(
                                        -13.37, 31.337));
+}
+
+TEST(FuzzedDataProvider, ConsumeData) {
+  FuzzedDataProvider DataProv(Data, sizeof(Data));
+  uint8_t Buffer[10] = {};
+  EXPECT_EQ(sizeof(Buffer), DataProv.ConsumeData(Buffer, sizeof(Buffer)));
+  std::vector<uint8_t> Expected(Data, Data + sizeof(Buffer));
+  EXPECT_EQ(Expected, std::vector<uint8_t>(Buffer, Buffer + sizeof(Buffer)));
+
+  EXPECT_EQ(size_t(2), DataProv.ConsumeData(Buffer, 2));
+  Expected[0] = Data[sizeof(Buffer)];
+  Expected[1] = Data[sizeof(Buffer) + 1];
+  EXPECT_EQ(Expected, std::vector<uint8_t>(Buffer, Buffer + sizeof(Buffer)));
+
+  // Exhaust the buffer.
+  EXPECT_EQ(std::vector<uint8_t>(Data + 12, Data + sizeof(Data)),
+            DataProv.ConsumeRemainingBytes<uint8_t>());
+  EXPECT_EQ(size_t(0), DataProv.ConsumeData(Buffer, sizeof(Buffer)));
+  EXPECT_EQ(Expected, std::vector<uint8_t>(Buffer, Buffer + sizeof(Buffer)));
 }
 
 int main(int argc, char **argv) {

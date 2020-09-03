@@ -42,7 +42,8 @@ public:
   }
   Expected<Effect> apply(const Selection &Inputs) override;
   std::string title() const override {
-    return llvm::formatv("Dump {0} AST", Node->getNodeKind().asStringRef());
+    return std::string(
+        llvm::formatv("Dump {0} AST", Node->getNodeKind().asStringRef()));
   }
   Intent intent() const override { return Info; }
   bool hidden() const override { return true; }
@@ -61,7 +62,7 @@ REGISTER_TWEAK(DumpAST)
 llvm::Expected<Tweak::Effect> DumpAST::apply(const Selection &Inputs) {
   std::string Str;
   llvm::raw_string_ostream OS(Str);
-  Node->dump(OS, Inputs.AST->getSourceManager());
+  Node->dump(OS, Inputs.AST->getASTContext());
   return Effect::showMessage(std::move(OS.str()));
 }
 
@@ -148,9 +149,9 @@ public:
     return Effect::showMessage(std::move(OS.str()));
   }
   std::string title() const override {
-    return llvm::formatv(
+    return std::string(llvm::formatv(
         "Show {0} layout",
-        TypeWithKeyword::getTagTypeKindName(Record->getTagKind()));
+        TypeWithKeyword::getTagTypeKindName(Record->getTagKind())));
   }
   Intent intent() const override { return Info; }
   // FIXME: this is interesting to most users. However:

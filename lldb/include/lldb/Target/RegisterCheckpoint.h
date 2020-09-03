@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterCheckpoint_h_
-#define liblldb_RegisterCheckpoint_h_
+#ifndef LLDB_TARGET_REGISTERCHECKPOINT_H
+#define LLDB_TARGET_REGISTERCHECKPOINT_H
 
 #include "lldb/Target/StackID.h"
 #include "lldb/Utility/UserID.h"
@@ -45,9 +45,10 @@ protected:
   Reason m_reason;
 
   // Make RegisterCheckpointSP if you wish to share the data in this class.
-  DISALLOW_COPY_AND_ASSIGN(RegisterCheckpoint);
+  RegisterCheckpoint(const RegisterCheckpoint &) = delete;
+  const RegisterCheckpoint &operator=(const RegisterCheckpoint &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_RegisterCheckpoint_h_
+#endif // LLDB_TARGET_REGISTERCHECKPOINT_H

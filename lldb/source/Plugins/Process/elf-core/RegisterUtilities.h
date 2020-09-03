@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_REGISTERUTILITIES_H
-#define LLDB_REGISTERUTILITIES_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERUTILITIES_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERUTILITIES_H
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -118,4 +118,4 @@ constexpr RegsetDesc PPC_VSX_Desc[] = {
 
 } // namespace lldb_private
 
-#endif // #ifndef LLDB_REGISTERUTILITIES_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERUTILITIES_H

@@ -195,7 +195,7 @@ enum stats_state_e {
 //                                from a dynamically scheduled loop
 // OMP_critical           -- Time thread spends executing critical section
 // OMP_critical_wait      -- Time thread spends waiting to enter
-//                           a critcal seciton
+//                           a critical section
 // OMP_single             -- Time spent executing a "single" region
 // OMP_master             -- Time spent executing a "master" region
 // OMP_task_immediate     -- Time spent executing non-deferred tasks
@@ -522,7 +522,7 @@ public:
   void windup();
 };
 
-// Special wrapper around the partioned timers to aid timing code blocks
+// Special wrapper around the partitioned timers to aid timing code blocks
 // It avoids the need to have an explicit end, leaving the scope suffices.
 class blockPartitionedTimer {
   partitionedTimers *part_timers;
@@ -920,7 +920,7 @@ extern kmp_stats_output_module __kmp_stats_output;
 #define KMP_OUTPUT_STATS(heading_string) __kmp_output_stats(heading_string)
 
 /*!
- * \brief Initializes the paritioned timers to begin with name.
+ * \brief Initializes the partitioned timers to begin with name.
  *
  * @param name timer which you want this thread to begin with
  *

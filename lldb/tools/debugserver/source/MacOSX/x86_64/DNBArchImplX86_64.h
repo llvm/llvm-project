@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __DNBArchImplX86_64_h__
-#define __DNBArchImplX86_64_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_X86_64_DNBARCHIMPLX86_64_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_X86_64_DNBARCHIMPLX86_64_H
 
 #if defined(__i386__) || defined(__x86_64__)
 #include "DNBArch.h"
@@ -247,4 +247,4 @@ protected:
 };
 
 #endif // #if defined (__i386__) || defined (__x86_64__)
-#endif // #ifndef __DNBArchImplX86_64_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_X86_64_DNBARCHIMPLX86_64_H

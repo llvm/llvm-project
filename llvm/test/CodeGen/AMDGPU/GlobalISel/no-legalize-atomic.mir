@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -O0 -run-pass=legalizer -global-isel-abort=0 -o - %s | FileCheck %s
+# RUN: llc -amdgpu-global-isel-new-legality -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -O0 -run-pass=legalizer -global-isel-abort=0 -o - %s | FileCheck %s
 
 # CHECK: %1:_(<8 x s32>) = G_LOAD %0(p1) :: (load monotonic 32, addrspace 1)
 # CHECK:  G_STORE %1(<8 x s32>), %0(p1) :: (store monotonic 32, addrspace 1)

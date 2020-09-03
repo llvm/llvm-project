@@ -106,13 +106,17 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
                                               const MCValue &Target,
                                               const MCFixup &Fixup,
                                               bool IsPCRel) const {
+  unsigned Kind = Fixup.getTargetKind();
+  if (Kind >= FirstLiteralRelocationKind)
+    return Kind - FirstLiteralRelocationKind;
   AArch64MCExpr::VariantKind RefKind =
       static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
   AArch64MCExpr::VariantKind SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
   bool IsNC = AArch64MCExpr::isNotChecked(RefKind);
 
   assert((!Target.getSymA() ||
-          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_None) &&
+          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_None ||
+          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_PLT) &&
          "Should only be expression-level modifiers here");
 
   assert((!Target.getSymB() ||
@@ -120,14 +124,17 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
          "Should only be expression-level modifiers here");
 
   if (IsPCRel) {
-    switch (Fixup.getTargetKind()) {
+    switch (Kind) {
     case FK_Data_1:
       Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
       return ELF::R_AARCH64_NONE;
     case FK_Data_2:
       return R_CLS(PREL16);
-    case FK_Data_4:
-      return R_CLS(PREL32);
+    case FK_Data_4: {
+      return Target.getAccessVariant() == MCSymbolRefExpr::VK_PLT
+                 ? R_CLS(PLT32)
+                 : R_CLS(PREL32);
+    }
     case FK_Data_8:
       if (IsILP32) {
         Ctx.reportError(Fixup.getLoc(),
@@ -185,8 +192,6 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     if (IsILP32 && isNonILP32reloc(Fixup, RefKind, Ctx))
       return ELF::R_AARCH64_NONE;
     switch (Fixup.getTargetKind()) {
-    case FK_NONE:
-      return ELF::R_AARCH64_NONE;
     case FK_Data_1:
       Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
       return ELF::R_AARCH64_NONE;

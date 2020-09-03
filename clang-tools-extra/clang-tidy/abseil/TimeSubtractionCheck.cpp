@@ -10,6 +10,7 @@
 #include "DurationRewriter.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
@@ -96,7 +97,7 @@ void TimeSubtractionCheck::registerMatchers(MatchFinder *Finder) {
        {"Hours", "Minutes", "Seconds", "Millis", "Micros", "Nanos"}) {
     std::string TimeInverse = (llvm::Twine("ToUnix") + ScaleName).str();
     llvm::Optional<DurationScale> Scale = getScaleForTimeInverse(TimeInverse);
-    assert(Scale && "Unknow scale encountered");
+    assert(Scale && "Unknown scale encountered");
 
     auto TimeInverseMatcher = callExpr(callee(
         functionDecl(hasName((llvm::Twine("::absl::") + TimeInverse).str()))

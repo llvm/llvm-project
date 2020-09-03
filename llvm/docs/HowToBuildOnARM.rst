@@ -22,7 +22,7 @@ on the ARMv6 and ARMv7 architectures and may be inapplicable to older chips.
    Pandaboard, have become hard-float platforms. There are a number of
    choices when using CMake. Autoconf usage is deprecated as of 3.8.
 
-   Building LLVM/Clang in ``Relese`` mode is preferred since it consumes
+   Building LLVM/Clang in ``Release`` mode is preferred since it consumes
    a lot less memory. Otherwise, the building process will very likely
    fail due to insufficient memory. It's also a lot quicker to only build
    the relevant back-ends (ARM and AArch64), since it's very unlikely that
@@ -42,7 +42,7 @@ on the ARMv6 and ARMv7 architectures and may be inapplicable to older chips.
      Use Ninja instead of Make: "-G Ninja"
      Build with assertions on: "-DLLVM_ENABLE_ASSERTIONS=True"
      Force Python2: "-DPYTHON_EXECUTABLE=/usr/bin/python2"
-     Local (non-sudo) install path: "-DCMAKE_INSTALL_PREFIX=$HOME/llvm/instal"
+     Local (non-sudo) install path: "-DCMAKE_INSTALL_PREFIX=$HOME/llvm/install"
      CPU flags: "DCMAKE_C_FLAGS=-mcpu=cortex-a15" (same for CXX_FLAGS)
 
    After that, just typing ``make -jN`` or ``ninja`` will build everything.

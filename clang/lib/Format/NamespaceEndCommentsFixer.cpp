@@ -121,7 +121,25 @@ bool validEndComment(const FormatToken *RBraceTok, StringRef NamespaceName,
   // Named namespace comments must not mention anonymous namespace.
   if (!NamespaceName.empty() && !AnonymousInComment.empty())
     return false;
-  return NamespaceNameInComment == NamespaceName;
+  if (NamespaceNameInComment == NamespaceName)
+    return true;
+
+  // Has namespace comment flowed onto the next line.
+  // } // namespace
+  //   // verylongnamespacenamethatdidnotfitonthepreviouscommentline
+  if (!(Comment->Next && Comment->Next->is(TT_LineComment)))
+    return false;
+
+  static const llvm::Regex CommentPattern = llvm::Regex(
+      "^/[/*] *( +([a-zA-Z0-9:_]+))?\\.? *(\\*/)?$", llvm::Regex::IgnoreCase);
+
+  // Pull out just the comment text.
+  if (!CommentPattern.match(Comment->Next->TokenText, &Groups)) {
+    return false;
+  }
+  NamespaceNameInComment = Groups.size() > 2 ? Groups[2] : "";
+
+  return (NamespaceNameInComment == NamespaceName);
 }
 
 void addEndComment(const FormatToken *RBraceTok, StringRef EndCommentText,
@@ -187,6 +205,23 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
   const SourceManager &SourceMgr = Env.getSourceManager();
   AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
   tooling::Replacements Fixes;
+
+  // Spin through the lines and ensure we have balanced braces.
+  int Braces = 0;
+  for (size_t I = 0, E = AnnotatedLines.size(); I != E; ++I) {
+    FormatToken *Tok = AnnotatedLines[I]->First;
+    while (Tok) {
+      Braces += Tok->is(tok::l_brace) ? 1 : Tok->is(tok::r_brace) ? -1 : 0;
+      Tok = Tok->Next;
+    }
+  }
+  // Don't attempt to comment unbalanced braces or this can
+  // lead to comments being placed on the closing brace which isn't
+  // the matching brace of the namespace. (occurs during incomplete editing).
+  if (Braces != 0) {
+    return {Fixes, 0};
+  }
+
   std::string AllNamespaceNames = "";
   size_t StartLineIndex = SIZE_MAX;
   StringRef NamespaceTokenText;

@@ -142,6 +142,8 @@ private:
     APInt OtherOffset;
     // Scaled variable (non-constant) indices.
     SmallVector<VariableGEPIndex, 4> VarIndices;
+    // Is GEP index scale compile-time constant.
+    bool HasCompileTimeConstantScale;
   };
 
   /// Tracks phi nodes we have visited.
@@ -187,7 +189,7 @@ private:
   bool
   constantOffsetHeuristic(const SmallVectorImpl<VariableGEPIndex> &VarIndices,
                           LocationSize V1Size, LocationSize V2Size,
-                          APInt BaseOffset, AssumptionCache *AC,
+                          const APInt &BaseOffset, AssumptionCache *AC,
                           DominatorTree *DT);
 
   bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2);

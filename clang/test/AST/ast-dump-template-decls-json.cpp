@@ -597,13 +597,31 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "kind": "TemplateArgument",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "float"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "BuiltinType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "float"
+// CHECK-NEXT:        }
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "kind": "TemplateArgument",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "BuiltinType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "int"
+// CHECK-NEXT:        }
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
@@ -1120,7 +1138,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "TemplateArgument",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int"
-// CHECK-NEXT:        }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "inner": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "BuiltinType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "int"
+// CHECK-NEXT:          }
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
 // CHECK-NEXT:     },
@@ -1238,7 +1265,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "TemplateArgument",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "void"
-// CHECK-NEXT:        }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "inner": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "BuiltinType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "void"
+// CHECK-NEXT:          }
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
 // CHECK-NEXT:     },
@@ -1351,6 +1387,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "hasConstParam": true,
 // CHECK-NEXT:        "implicitHasConstParam": true,
 // CHECK-NEXT:        "needsImplicit": true,
+// CHECK-NEXT:        "simple": true,
 // CHECK-NEXT:        "trivial": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "copyCtor": {
@@ -1461,6 +1498,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "hasConstParam": true,
 // CHECK-NEXT:      "implicitHasConstParam": true,
 // CHECK-NEXT:      "needsImplicit": true,
+// CHECK-NEXT:      "simple": true,
 // CHECK-NEXT:      "trivial": true
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "copyCtor": {
@@ -1509,7 +1547,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "kind": "TemplateArgument",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "BuiltinType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "int"
+// CHECK-NEXT:        }
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
@@ -1643,6 +1690,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "hasConstParam": true,
 // CHECK-NEXT:        "implicitHasConstParam": true,
 // CHECK-NEXT:        "needsImplicit": true,
+// CHECK-NEXT:        "simple": true,
 // CHECK-NEXT:        "trivial": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "copyCtor": {
@@ -1747,6 +1795,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "hasConstParam": true,
 // CHECK-NEXT:      "implicitHasConstParam": true,
 // CHECK-NEXT:      "needsImplicit": true,
+// CHECK-NEXT:      "simple": true,
 // CHECK-NEXT:      "trivial": true
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "copyCtor": {
@@ -1795,13 +1844,38 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "kind": "TemplateArgument",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "type-parameter-0-0"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "TemplateTypeParmType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "type-parameter-0-0"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "isDependent": true,
+// CHECK-NEXT:        "isInstantiationDependent": true,
+// CHECK-NEXT:        "depth": 0,
+// CHECK-NEXT:        "index": 0,
+// CHECK-NEXT:        "decl": {
+// CHECK-NEXT:         "id": "0x0"
+// CHECK-NEXT:        }
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "kind": "TemplateArgument",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "BuiltinType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "int"
+// CHECK-NEXT:        }
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
@@ -1939,6 +2013,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "hasConstParam": true,
 // CHECK-NEXT:        "implicitHasConstParam": true,
 // CHECK-NEXT:        "needsImplicit": true,
+// CHECK-NEXT:        "simple": true,
 // CHECK-NEXT:        "trivial": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "copyCtor": {
@@ -2093,6 +2168,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "hasConstParam": true,
 // CHECK-NEXT:        "implicitHasConstParam": true,
 // CHECK-NEXT:        "needsImplicit": true,
+// CHECK-NEXT:        "simple": true,
 // CHECK-NEXT:        "trivial": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "copyCtor": {
@@ -2247,6 +2323,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "hasConstParam": true,
 // CHECK-NEXT:        "implicitHasConstParam": true,
 // CHECK-NEXT:        "needsImplicit": true,
+// CHECK-NEXT:        "simple": true,
 // CHECK-NEXT:        "trivial": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "copyCtor": {

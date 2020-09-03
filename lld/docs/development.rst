@@ -6,7 +6,7 @@ Development
 Note: this document discuss Mach-O port of LLD. For ELF and COFF,
 see :doc:`index`.
 
-lld is developed as part of the `LLVM <http://llvm.org>`_ project.
+lld is developed as part of the `LLVM <https://llvm.org>`_ project.
 
 Creating a Reader
 -----------------

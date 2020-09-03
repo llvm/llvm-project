@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFDebugAranges_h_
-#define SymbolFileDWARF_DWARFDebugAranges_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGARANGES_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGARANGES_H
 
 #include "lldb/Core/dwarf.h"
 #include "lldb/Utility/RangeMap.h"
@@ -52,4 +52,4 @@ protected:
   RangeToDIE m_aranges;
 };
 
-#endif // SymbolFileDWARF_DWARFDebugAranges_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGARANGES_H

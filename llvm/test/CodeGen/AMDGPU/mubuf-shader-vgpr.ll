@@ -9,7 +9,7 @@ define amdgpu_vs float @test_none(<4 x i32> addrspace(4)* inreg %base, i32 %i) {
 main_body:
   %ptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %base, i32 %i
   %tmp2 = load <4 x i32>, <4 x i32> addrspace(4)* %ptr, align 32
-  %tmp7 = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> %tmp2, i32 0, i32 0, i1 0, i1 0)
+  %tmp7 = call float @llvm.amdgcn.raw.buffer.load.format.f32(<4 x i32> %tmp2, i32 0, i32 0, i32 0)
   ret float %tmp7
 }
 
@@ -19,7 +19,7 @@ define amdgpu_vs float @test_idxen(<4 x i32> addrspace(4)* inreg %base, i32 %i) 
 main_body:
   %ptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %base, i32 %i
   %tmp2 = load <4 x i32>, <4 x i32> addrspace(4)* %ptr, align 32
-  %tmp7 = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> %tmp2, i32 undef, i32 0, i1 0, i1 0)
+  %tmp7 = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %tmp2, i32 undef, i32 0, i32 0, i32 0)
   ret float %tmp7
 }
 
@@ -29,7 +29,7 @@ define amdgpu_vs float @test_offen(<4 x i32> addrspace(4)* inreg %base, i32 %i) 
 main_body:
   %ptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %base, i32 %i
   %tmp2 = load <4 x i32>, <4 x i32> addrspace(4)* %ptr, align 32
-  %tmp7 = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> %tmp2, i32 0, i32 undef, i1 0, i1 0)
+  %tmp7 = call float @llvm.amdgcn.raw.buffer.load.format.f32(<4 x i32> %tmp2, i32 undef, i32 0, i32 0)
   ret float %tmp7
 }
 
@@ -39,10 +39,12 @@ define amdgpu_vs float @test_both(<4 x i32> addrspace(4)* inreg %base, i32 %i) {
 main_body:
   %ptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %base, i32 %i
   %tmp2 = load <4 x i32>, <4 x i32> addrspace(4)* %ptr, align 32
-  %tmp7 = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> %tmp2, i32 undef, i32 undef, i1 0, i1 0)
+  %tmp7 = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %tmp2, i32 undef, i32 undef, i32 0, i32 0)
   ret float %tmp7
 }
 
-declare float @llvm.amdgcn.buffer.load.format.f32(<4 x i32>, i32, i32, i1, i1) nounwind readonly
+declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i32, i32 immarg) #1
+declare float @llvm.amdgcn.raw.buffer.load.format.f32(<4 x i32>, i32, i32, i32 immarg) #1
 
 attributes #0 = { nounwind readnone }
+attributes #1 = { nounwind readonly }

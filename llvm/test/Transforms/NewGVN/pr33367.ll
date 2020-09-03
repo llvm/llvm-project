@@ -9,18 +9,18 @@ declare i64 @llvm.x86.bmi.bextr.64(i64, i64) #3
 define %MNR_struct @f000316011717_2(%DS_struct* %pDS, [64 x i64]* %pCG) #2 {
 ; CHECK-LABEL: @f000316011717_2(
 ; CHECK-NEXT:  Entry:
-; CHECK-NEXT:    [[RESTART:%.*]] = alloca [[MNR_STRUCT:%.*]]
+; CHECK-NEXT:    [[RESTART:%.*]] = alloca [[MNR_STRUCT:%.*]], align 8
 ; CHECK-NEXT:    [[PCARRY:%.*]] = getelementptr [[DS_STRUCT:%.*]], %DS_struct* [[PDS:%.*]], i32 0, i32 1
 ; CHECK-NEXT:    [[PBRBASE:%.*]] = getelementptr [[DS_STRUCT]], %DS_struct* [[PDS]], i32 0, i32 0
 ; CHECK-NEXT:    [[PBASE:%.*]] = getelementptr [32 x i64*], [32 x i64*]* [[PBRBASE]], i64 0, i64 0
-; CHECK-NEXT:    [[BASE:%.*]] = load i64*, i64** [[PBASE]], !tbaa !14
+; CHECK-NEXT:    [[BASE:%.*]] = load i64*, i64** [[PBASE]], align 8, !tbaa !14
 ; CHECK-NEXT:    [[ABSADDR:%.*]] = getelementptr i64, i64* [[BASE]], i64 9
 ; CHECK-NEXT:    [[EXTARGET:%.*]] = load i64, i64* [[ABSADDR]], align 8, !tbaa !4
 ; CHECK-NEXT:    [[TEMPLATE:%.*]] = icmp eq i64 [[EXTARGET]], 8593987412
 ; CHECK-NEXT:    br i1 [[TEMPLATE]], label %"BB3.000316011731#1", label [[BB2_000316011731_5:%.*]]
 ; CHECK:       "BB3.000316011731#1":
 ; CHECK-NEXT:    [[PBASE8:%.*]] = getelementptr [32 x i64*], [32 x i64*]* [[PBRBASE]], i64 0, i64 29
-; CHECK-NEXT:    [[BASE9:%.*]] = load i64*, i64** [[PBASE8]], !tbaa !14
+; CHECK-NEXT:    [[BASE9:%.*]] = load i64*, i64** [[PBASE8]], align 8, !tbaa !14
 ; CHECK-NEXT:    [[ABSADDR1:%.*]] = getelementptr i64, i64* [[BASE9]], i64 7
 ; CHECK-NEXT:    [[RMEM:%.*]] = load i64, i64* [[ABSADDR1]], align 8, !tbaa !4
 ; CHECK-NEXT:    [[PWT:%.*]] = getelementptr [[DS_STRUCT]], %DS_struct* [[PDS]], i32 0, i32 2
@@ -39,7 +39,7 @@ define %MNR_struct @f000316011717_2(%DS_struct* %pDS, [64 x i64]* %pCG) #2 {
 ; CHECK-NEXT:    store i64 [[VAL]], i64* [[PREG]], align 32, !tbaa !10
 ; CHECK-NEXT:    [[PREG2:%.*]] = getelementptr [64 x i64], [64 x i64]* [[PCG]], i64 0, i64 14
 ; CHECK-NEXT:    [[REG:%.*]] = load i64, i64* [[PREG2]], align 16, !tbaa !12
-; CHECK-NEXT:    [[BASE2:%.*]] = load i64*, i64** [[PBASE8]], !tbaa !14
+; CHECK-NEXT:    [[BASE2:%.*]] = load i64*, i64** [[PBASE8]], align 8, !tbaa !14
 ; CHECK-NEXT:    [[ABSADDR2:%.*]] = getelementptr i64, i64* [[BASE2]], i64 [[REG]]
 ; CHECK-NEXT:    [[RMEM2:%.*]] = load i64, i64* [[ABSADDR2]], align 8, !tbaa !1
 ; CHECK-NEXT:    [[PREG7:%.*]] = getelementptr [64 x i64], [64 x i64]* [[PCG]], i64 0, i64 9
@@ -50,7 +50,7 @@ define %MNR_struct @f000316011717_2(%DS_struct* %pDS, [64 x i64]* %pCG) #2 {
 ; CHECK-NEXT:    store i8 [[CFL]], i8* [[PCARRY]], align 1, !tbaa !16
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       Exit:
-; CHECK-NEXT:    [[RESTART378:%.*]] = load [[MNR_STRUCT]], %MNR_struct* [[RESTART]]
+; CHECK-NEXT:    [[RESTART378:%.*]] = load [[MNR_STRUCT]], %MNR_struct* [[RESTART]], align 8
 ; CHECK-NEXT:    ret [[MNR_STRUCT]] %restart378
 ;
 Entry:

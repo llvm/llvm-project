@@ -66,8 +66,54 @@ private:
     /// Represents moving 'bags of bits' around. Select same bank for entire
     /// chain to avoid cross bank copies. Currently we select fprb for s64 and
     /// gprb for s32 Ambiguous operands.
-    Ambiguous
+    Ambiguous,
+    /// Only used for s64. Unlike Ambiguous s64, AmbiguousWithMergeOrUnmerge s64
+    /// is mapped to gprb (legalized using narrow scalar to s32).
+    AmbiguousWithMergeOrUnmerge
   };
+
+  bool isAmbiguous_64(InstType InstTy, unsigned OpSize) const {
+    if (InstTy == InstType::Ambiguous && OpSize == 64)
+      return true;
+    return false;
+  }
+
+  bool isAmbiguous_32(InstType InstTy, unsigned OpSize) const {
+    if (InstTy == InstType::Ambiguous && OpSize == 32)
+      return true;
+    return false;
+  }
+
+  bool isAmbiguous_32or64(InstType InstTy, unsigned OpSize) const {
+    if (InstTy == InstType::Ambiguous && (OpSize == 32 || OpSize == 64))
+      return true;
+    return false;
+  }
+
+  bool isAmbiguousWithMergeOrUnmerge_64(InstType InstTy,
+                                        unsigned OpSize) const {
+    if (InstTy == InstType::AmbiguousWithMergeOrUnmerge && OpSize == 64)
+      return true;
+    return false;
+  }
+
+  bool isFloatingPoint_32or64(InstType InstTy, unsigned OpSize) const {
+    if (InstTy == InstType::FloatingPoint && (OpSize == 32 || OpSize == 64))
+      return true;
+    return false;
+  }
+
+  bool isFloatingPoint_64(InstType InstTy, unsigned OpSize) const {
+    if (InstTy == InstType::FloatingPoint && OpSize == 64)
+      return true;
+    return false;
+  }
+
+  bool isInteger_32(InstType InstTy, unsigned OpSize) const {
+    if (InstTy == InstType::Integer && OpSize == 32)
+      return true;
+    return false;
+  }
 
   /// Some generic instructions have operands that can be mapped to either fprb
   /// or gprb e.g. for G_LOAD we consider only operand 0 as ambiguous, operand 1
@@ -113,12 +159,13 @@ private:
     DenseMap<const MachineInstr *, InstType> Types;
 
     /// Recursively visit MI's adjacent instructions and find MI's InstType.
-    bool visit(const MachineInstr *MI, const MachineInstr *WaitingForTypeOfMI);
+    bool visit(const MachineInstr *MI, const MachineInstr *WaitingForTypeOfMI,
+               InstType &AmbiguousTy);
 
     /// Visit MI's adjacent UseDefs or DefUses.
     bool visitAdjacentInstrs(const MachineInstr *MI,
                              SmallVectorImpl<MachineInstr *> &AdjacentInstrs,
-                             bool isDefUse);
+                             bool isDefUse, InstType &AmbiguousTy);
 
     /// Set type for MI, and recursively for all instructions that are
     /// waiting for MI's type.
@@ -170,6 +217,13 @@ private:
     InstType determineInstType(const MachineInstr *MI);
 
     void cleanupIfNewFunction(llvm::StringRef FunctionName);
+
+    /// MI is about to get destroyed (using narrow scalar). Internal data is
+    /// saved based on MI's address, clear it since it is no longer valid.
+    void clearTypeInfoData(const MachineInstr *MI) {
+      Types.erase(MI);
+      WaitingQueues.erase(MI);
+    };
   };
 };
 } // end namespace llvm

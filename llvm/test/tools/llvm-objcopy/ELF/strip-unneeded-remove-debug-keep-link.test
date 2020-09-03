@@ -1,7 +1,7 @@
 ## Verifies that running with --strip-unneeded removes debugging sections but
 ## retains the .gnu_debuglink section.
 
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # RUN: touch %t.debug
 # RUN: llvm-objcopy --add-gnu-debuglink=%t.debug %t.o %t.2.o
 # RUN: llvm-strip --strip-unneeded %t.2.o -o %t.3.o

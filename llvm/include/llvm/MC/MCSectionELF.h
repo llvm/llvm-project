@@ -25,10 +25,6 @@ class MCSymbol;
 /// This represents a section on linux, lots of unix variants and some bare
 /// metal systems.
 class MCSectionELF final : public MCSection {
-  /// This is the name of the section.  The referenced memory is owned by
-  /// TargetLoweringObjectFileELF's ELFUniqueMap.
-  StringRef SectionName;
-
   /// This is the sh_type field of a section, drawn from the enums below.
   unsigned Type;
 
@@ -44,30 +40,33 @@ class MCSectionELF final : public MCSection {
 
   const MCSymbolELF *Group;
 
-  /// sh_info for SHF_LINK_ORDER (can be null).
-  const MCSymbol *AssociatedSymbol;
+  /// Used by SHF_LINK_ORDER. If non-null, the sh_link field will be set to the
+  /// section header index of the section where LinkedToSym is defined.
+  const MCSymbol *LinkedToSym;
 
 private:
   friend class MCContext;
 
-  MCSectionELF(StringRef Section, unsigned type, unsigned flags, SectionKind K,
+  // The storage of Name is owned by MCContext's ELFUniquingMap.
+  MCSectionELF(StringRef Name, unsigned type, unsigned flags, SectionKind K,
                unsigned entrySize, const MCSymbolELF *group, unsigned UniqueID,
-               MCSymbol *Begin, const MCSymbolELF *AssociatedSymbol)
-      : MCSection(SV_ELF, K, Begin), SectionName(Section), Type(type),
-        Flags(flags), UniqueID(UniqueID), EntrySize(entrySize), Group(group),
-        AssociatedSymbol(AssociatedSymbol) {
+               MCSymbol *Begin, const MCSymbolELF *LinkedToSym)
+      : MCSection(SV_ELF, Name, K, Begin), Type(type), Flags(flags),
+        UniqueID(UniqueID), EntrySize(entrySize), Group(group),
+        LinkedToSym(LinkedToSym) {
     if (Group)
       Group->setIsSignature();
   }
 
-  void setSectionName(StringRef Name) { SectionName = Name; }
+  // TODO Delete after we stop supporting generation of GNU-style .zdebug_*
+  // sections.
+  void setSectionName(StringRef Name) { this->Name = Name; }
 
 public:
   /// Decides whether a '.section' directive should be printed before the
   /// section name
   bool ShouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
 
-  StringRef getSectionName() const { return SectionName; }
   unsigned getType() const { return Type; }
   unsigned getFlags() const { return Flags; }
   unsigned getEntrySize() const { return EntrySize; }
@@ -79,12 +78,15 @@ public:
                             const MCExpr *Subsection) const override;
   bool UseCodeAlign() const override;
   bool isVirtualSection() const override;
+  StringRef getVirtualSectionKind() const override;
 
-  bool isUnique() const { return UniqueID != ~0U; }
+  bool isUnique() const { return UniqueID != NonUniqueID; }
   unsigned getUniqueID() const { return UniqueID; }
 
-  const MCSection *getAssociatedSection() const { return &AssociatedSymbol->getSection(); }
-  const MCSymbol *getAssociatedSymbol() const { return AssociatedSymbol; }
+  const MCSection *getLinkedToSection() const {
+    return &LinkedToSym->getSection();
+  }
+  const MCSymbol *getLinkedToSymbol() const { return LinkedToSym; }
 
   static bool classof(const MCSection *S) {
     return S->getVariant() == SV_ELF;

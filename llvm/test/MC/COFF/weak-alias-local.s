@@ -33,7 +33,7 @@ a=b
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
-// CHECK-NEXT:   Name: .weak.a.default
+// CHECK-NEXT:   Name: .weak.a.default{{$}}
 // CHECK-NEXT:   Value: 4
 // CHECK-NEXT:   Section: .data (2)
 // CHECK-NEXT:   BaseType: Null (0x0)

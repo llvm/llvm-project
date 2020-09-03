@@ -153,21 +153,6 @@ def note_module_odr_violation_definition_data : Note <
   "%ordinal2 base class %3 with "
   "%select{public|protected|private|no}4 access specifier}1">;
 
-def err_module_odr_violation_objc_container_definition_data : Error <
-  "%q0 has different definitions in different modules; first difference is "
-  "%select{definition in module '%2'|defined here}1 found "
-  "%select{"
-  "%select{no super class|super class with type %5}4|"
-  "%4 referenced %plural{1:protocol|:protocols}4|"
-  "}3">;
-
-def note_module_odr_violation_objc_container_definition_data : Note <
-  "but in '%0' found "
-  "%select{"
-  "%select{no super class|super class with type %3}2|"
-  "%2 referenced %plural{1:protocol|:protocols}2|"
-  "}1">;
-
 def err_module_odr_violation_template_parameter : Error <
   "%q0 has different definitions in different modules; first difference is "
   "%select{definition in module '%2'|defined here}1 found "
@@ -191,16 +176,14 @@ def err_module_odr_violation_mismatch_decl : Error<
   "%select{definition in module '%2'|defined here}1 found "
   "%select{end of class|public access specifier|private access specifier|"
   "protected access specifier|static assert|field|method|type alias|typedef|"
-  "data member|friend declaration|function template|method|"
-  "instance variable}3">;
+  "data member|friend declaration|function template}3">;
 def note_module_odr_violation_mismatch_decl : Note<"but in '%0' found "
   "%select{end of class|public access specifier|private access specifier|"
   "protected access specifier|static assert|field|method|type alias|typedef|"
-  "data member|friend declaration|function template|method|"
-  "instance variable}1">;
+  "data member|friend declaration|function template}1">;
 
 def err_module_odr_violation_mismatch_decl_diff : Error<
-  "%0 has different definitions in different modules; first difference is "
+  "%q0 has different definitions in different modules; first difference is "
   "%select{definition in module '%2'|defined here}1 found "
   "%select{"
   "static assert with condition|"
@@ -270,22 +253,6 @@ def err_module_odr_violation_mismatch_decl_diff : Error<
   "function template %4 with %ordinal5 template parameter with one type|"
   "function template %4 with %ordinal5 template parameter %select{not |}6"
     "being a template parameter pack|"
-  "return type is %4|"
-  "method name %4|"
-  "%select{class|instance}4 method|"
-  "method with %select{no designater initializer|designater initializer}4|"
-  "%select{no direct|direct}4 method|"
-  "instance variable '%4' access control is "
-    "%select{|@private|@protected|@public|@package}5|"
-  "property name %4|"
-  "property %4 with type %5|"
-  "%select{default |}5'%select{none|readonly|getter|assign|readwrite|"
-    "retain|copy|nonatomic|setter|atomic|weak|strong|"
-    "unsafe_unretained|nullability|null_resettable|class|}4'"
-    " property attribute|"
-  "%select{no|'required'|'optional'}4 %select{property|method}5 control|"
-  "with %ordinal4 protocol named %5|"
-  "%select{no attribute|%5}4|"
   "}3">;
 
 def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
@@ -357,19 +324,6 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "function template %2 with %ordinal3 template parameter with different type|"
   "function template %2 with %ordinal3 template parameter %select{not |}4"
     "being a template parameter pack|"
-  "different return type %2|"
-  "method name %2|"
-  "%select{class|instance}2 method|"
-  "method with %select{no designater initializer|designater initializer}2|"
-  "%select{no direct|direct}2 method|"
-  "instance variable '%2' access control is "
-    "%select{|@private|@protected|@public|@package}3|"
-  "property name %2|"
-  "property %2 with type %3|"
-  "no written or default attribute for property|"
-  "%select{no|'required'|'optional'}2 %select{property|method}3 control|"
-  "with %ordinal2 protocol named %3|"
-  "%select{no attribute|%3}2|"
   "}1">;
 
 def err_module_odr_violation_function : Error<
@@ -426,13 +380,12 @@ def err_module_odr_violation_mismatch_decl_unknown : Error<
   "%q0 %select{with definition in module '%2'|defined here}1 has different "
   "definitions in different modules; first difference is this "
   "%select{||||static assert|field|method|type alias|typedef|data member|"
-  "friend declaration|unexpected decl|method|instance variable|property}3">;
+  "friend declaration|unexpected decl}3">;
 def note_module_odr_violation_mismatch_decl_unknown : Note<
   "but in '%0' found "
   "%select{||||different static assert|different field|different method|"
   "different type alias|different typedef|different data member|"
-  "different friend declaration|another unexpected decl|method|"
-  "instance variable|property}1">;
+  "different friend declaration|another unexpected decl}1">;
 
 def warn_duplicate_module_file_extension : Warning<
   "duplicate module file extension block name '%0'">,

@@ -143,7 +143,7 @@ TEST(FunctionTest, GetPointerAlignment) {
   FunctionType *FuncType(FunctionType::get(VoidType, false));
   std::unique_ptr<Function> Func(Function::Create(
       FuncType, GlobalValue::ExternalLinkage));
-  EXPECT_EQ(MaybeAlign(), Func->getPointerAlignment(DataLayout("")));
+  EXPECT_EQ(Align(1), Func->getPointerAlignment(DataLayout("")));
   EXPECT_EQ(Align(1), Func->getPointerAlignment(DataLayout("Fi8")));
   EXPECT_EQ(Align(1), Func->getPointerAlignment(DataLayout("Fn8")));
   EXPECT_EQ(Align(2), Func->getPointerAlignment(DataLayout("Fi16")));
@@ -153,7 +153,7 @@ TEST(FunctionTest, GetPointerAlignment) {
 
   Func->setAlignment(Align(4));
 
-  EXPECT_EQ(MaybeAlign(), Func->getPointerAlignment(DataLayout("")));
+  EXPECT_EQ(Align(1), Func->getPointerAlignment(DataLayout("")));
   EXPECT_EQ(Align(1), Func->getPointerAlignment(DataLayout("Fi8")));
   EXPECT_EQ(Align(4), Func->getPointerAlignment(DataLayout("Fn8")));
   EXPECT_EQ(Align(2), Func->getPointerAlignment(DataLayout("Fi16")));

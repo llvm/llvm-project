@@ -1,6 +1,12 @@
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr9 -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-PWR8 -implicit-check-not mod[us][wd]
+; RUN: opt < %s -div-rem-pairs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 | \
+; RUN:   llc -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-DRP
+; RUN: opt < %s -div-rem-pairs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr9 | \
+; RUN:   llc -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-DRP
+; RUN: opt < %s -div-rem-pairs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 | \
+; RUN:   llc -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-PWR8 -implicit-check-not mod[us][wd]
 
 @mod_resultsw = local_unnamed_addr global i32 0, align 4
 @mod_resultud = local_unnamed_addr global i64 0, align 8
@@ -82,13 +88,16 @@ entry:
   store i32 %div, i32* @div_resultsw, align 4
   ret void
 ; CHECK-LABEL: modulo_div_sw
-; CHECK-NOT: modsw
-; CHECK: div
-; CHECK-NOT: modsw
-; CHECK: mull
-; CHECK-NOT: modsw
-; CHECK: sub
+; CHECK: modsw {{[0-9]+}}, 3, 4
 ; CHECK: blr
+; CHECK-DRP-LABEL: modulo_div_sw
+; CHECK-DRP-NOT: modsw
+; CHECK-DRP: div
+; CHECK-DRP-NOT: modsw
+; CHECK-DRP: mull
+; CHECK-DRP-NOT: modsw
+; CHECK-DRP: sub
+; CHECK-DRP: blr
 ; CHECK-PWR8-LABEL: modulo_div_sw
 ; CHECK-PWR8: div
 ; CHECK-PWR8: mull
@@ -123,13 +132,16 @@ entry:
   store i32 %div, i32* @div_resultuw, align 4
   ret void
 ; CHECK-LABEL: modulo_div_uw
-; CHECK-NOT: modsw
-; CHECK: div
-; CHECK-NOT: modsw
-; CHECK: mull
-; CHECK-NOT: modsw
-; CHECK: sub
+; CHECK: moduw {{[0-9]+}}, 3, 4
 ; CHECK: blr
+; CHECK-DRP-LABEL: modulo_div_uw
+; CHECK-DRP-NOT: moduw
+; CHECK-DRP: div
+; CHECK-DRP-NOT: moduw
+; CHECK-DRP: mull
+; CHECK-DRP-NOT: moduw
+; CHECK-DRP: sub
+; CHECK-DRP: blr
 ; CHECK-PWR8-LABEL: modulo_div_uw
 ; CHECK-PWR8: div
 ; CHECK-PWR8: mull
@@ -187,14 +199,14 @@ entry:
 ; CHECK-NOT: modsw
 ; CHECK: slwi
 ; CHECK-NOT: modsw
-; CHECK: subf
+; CHECK: sub
 ; CHECK-NOT: modsw
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: modulo_const32_sw
 ; CHECK-PWR8: srawi
 ; CHECK-PWR8: addze
 ; CHECK-PWR8: slwi
-; CHECK-PWR8: subf
+; CHECK-PWR8: sub
 ; CHECK-PWR8: blr
 }
 
@@ -205,13 +217,13 @@ entry:
   ret i32 %rem
 ; CHECK-LABEL: modulo_const3_sw
 ; CHECK-NOT: modsw
-; CHECK: mull
+; CHECK: mulh
 ; CHECK-NOT: modsw
 ; CHECK: sub
 ; CHECK-NOT: modsw
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: modulo_const3_sw
-; CHECK-PWR8: mull
+; CHECK-PWR8: mulh
 ; CHECK-PWR8: sub
 ; CHECK-PWR8: blr
 }
@@ -232,9 +244,6 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-; FIXME On power 9 this test will still produce modsw because the divide is in
-; a different block than the remainder. Due to the nature of the SDAG we cannot
-; see the div in the other block.
 define void @blocks_modulo_div_sw(i32 signext %a, i32 signext %b, i32 signext %c) local_unnamed_addr {
 entry:
   %div = sdiv i32 %a, %b
@@ -253,11 +262,18 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: div
 ; CHECK: modsw {{[0-9]+}}, 3, 4
 ; CHECK: blr
+; CHECK-DRP-LABEL: blocks_modulo_div_sw
+; CHECK-DRP-NOT: modsw
+; CHECK-DRP: div
+; CHECK-DRP-NOT: modsw
+; CHECK-DRP: mull
+; CHECK-DRP-NOT: modsw
+; CHECK-DRP: sub
+; CHECK-DRP: blr
 ; CHECK-PWR8-LABEL: blocks_modulo_div_sw
 ; CHECK-PWR8: div
 ; CHECK-PWR8: mull
 ; CHECK-PWR8: sub
 ; CHECK-PWR8: blr
 }
-
 

@@ -11,7 +11,7 @@
 # RUN: llvm-readelf --all %t.a | FileCheck %s --check-prefixes=GNU,COFF
 
 # LLVM: File: {{.*}}1.o
-# LLVM: Format: ELF64-x86-64
+# LLVM: Format: elf64-x86-64
 # LLVM: ElfHeader {
 # LLVM:   SectionHeaderCount: 3
 # LLVM: Sections [
@@ -23,7 +23,7 @@
 # GNU: Section Headers:
 
 # LLVM: File: {{.*}}2.o
-# LLVM: Format: ELF32-i386
+# LLVM: Format: elf32-i386
 # LLVM: ElfHeader {
 # LLVM:   SectionHeaderCount: 4
 # LLVM: Sections [
@@ -48,9 +48,9 @@
 # RUN: llvm-readobj --file-headers %t.a | FileCheck %s --check-prefix=RESIZED
 
 # RESIZED: File: {{.*}}1.o
-# RESIZED: Format: ELF64-x86-64
+# RESIZED: Format: elf64-x86-64
 # RESIZED: File: {{.*}}2.o
-# RESIZED: Format: ELF64-x86-64
+# RESIZED: Format: elf64-x86-64
 
 # Remove the second member and show that the first can still be dumped, but that the last isn't.
 # RUN: rm %t/2.o
@@ -58,7 +58,7 @@
 # RUN: FileCheck %s --check-prefix=ERR --input-file=%t.err
 
 # MISSING:     File: {{.*}}1.o
-# MISSING:     Format: ELF64-x86-64
+# MISSING:     Format: elf64-x86-64
 # MISSING-NOT: File: {{.*}}3.o
 # ERR: error: '{{.*}}.a': '{{.*}}2.o': {{[Nn]}}o such file or directory
 

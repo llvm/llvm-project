@@ -46,7 +46,7 @@ class LaunchWithShellExpandTestCase(TestBase):
 
         process = self.process()
 
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEquals(process.GetState(), lldb.eStateStopped,
                         STOPPED_DUE_TO_BREAKPOINT)
 
         thread = process.GetThreadAtIndex(0)
@@ -84,7 +84,7 @@ class LaunchWithShellExpandTestCase(TestBase):
 
         process = self.process()
 
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEquals(process.GetState(), lldb.eStateStopped,
                         STOPPED_DUE_TO_BREAKPOINT)
 
         thread = process.GetThreadAtIndex(0)
@@ -107,7 +107,7 @@ class LaunchWithShellExpandTestCase(TestBase):
 
         process = self.process()
 
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEquals(process.GetState(), lldb.eStateStopped,
                         STOPPED_DUE_TO_BREAKPOINT)
 
         thread = process.GetThreadAtIndex(0)

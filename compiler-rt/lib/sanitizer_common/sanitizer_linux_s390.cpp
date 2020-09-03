@@ -15,19 +15,20 @@
 
 #if SANITIZER_LINUX && SANITIZER_S390
 
-#include "sanitizer_libc.h"
-#include "sanitizer_linux.h"
-
+#include <dlfcn.h>
 #include <errno.h>
 #include <sys/syscall.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 
+#include "sanitizer_libc.h"
+#include "sanitizer_linux.h"
+
 namespace __sanitizer {
 
 // --------------- sanitizer_libc.h
 uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
-                   OFF_T offset) {
+                   u64 offset) {
   struct s390_mmap_params {
     unsigned long addr;
     unsigned long length;
@@ -123,7 +124,7 @@ static bool FixedCVE_2016_2143() {
   struct utsname buf;
   unsigned int major, minor, patch = 0;
   // This should never fail, but just in case...
-  if (uname(&buf))
+  if (internal_uname(&buf))
     return false;
   const char *ptr = buf.release;
   major = internal_simple_strtoll(ptr, &ptr, 10);

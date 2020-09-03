@@ -44,7 +44,7 @@ entry:
                  i32 signext 7, i32 signext 8) ret void
   ret void
 
-; CHECK-LABEL : WithoutParamArea3
+; CHECK-LABEL: WithoutParamArea3
 ; CHECK: stdu 1, -32(1)
 ; CHECK: blr
 }
@@ -63,7 +63,7 @@ entry:
   call fastcc void @PassByValue(%"myClass::Mem"* byval nonnull align 8 undef);
   ret void
 
-; CHECK-LABEL : PassByValue
+; CHECK-LABEL: PassByValue
 ; CHECK: stdu 1, -32(1)
 ; CHECK: blr
 }
@@ -131,7 +131,7 @@ entry:
                                                byval nonnull align 8 undef);
   ret void
 
-; CHECK-LABEL : AggMemExprEmitter
+; CHECK-LABEL: AggMemExprEmitter
 ; CHECK: stdu 1, -144(1)
 ; CHECK: blr
 }

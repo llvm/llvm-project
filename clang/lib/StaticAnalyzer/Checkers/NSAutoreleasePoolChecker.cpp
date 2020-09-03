@@ -80,6 +80,7 @@ void ento::registerNSAutoreleasePoolChecker(CheckerManager &mgr) {
   mgr.registerChecker<NSAutoreleasePoolChecker>();
 }
 
-bool ento::shouldRegisterNSAutoreleasePoolChecker(const LangOptions &LO) {
+bool ento::shouldRegisterNSAutoreleasePoolChecker(const CheckerManager &mgr) { 
+  const LangOptions &LO = mgr.getLangOpts();
   return LO.getGC() != LangOptions::NonGC;
 }

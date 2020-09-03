@@ -535,7 +535,7 @@ let hasSideEffects = 0, isReMaterializable = 1 in
 def LDAWDP_ru6: _FRU6<0b011000, (outs RRegs:$a), (ins i32imm:$b),
                       "ldaw $a, dp[$b]", []>;
 
-let isReMaterializable = 1 in                    
+let isReMaterializable = 1 in
 def LDAWDP_lru6: _FLRU6<0b011000, (outs RRegs:$a), (ins i32imm:$b),
                         "ldaw $a, dp[$b]",
                         [(set RRegs:$a, (dprelwrapper tglobaladdr:$b))]>;
@@ -974,17 +974,17 @@ def SETDP_1r : _F1R<0b001100, (outs), (ins GRRegs:$a), "set dp, $a", []>;
 let hasSideEffects=0 in
 def SETCP_1r : _F1R<0b001101, (outs), (ins GRRegs:$a), "set cp, $a", []>;
 
-let hasCtrlDep = 1 in 
+let hasCtrlDep = 1 in
 def ECALLT_1r : _F1R<0b010011, (outs), (ins GRRegs:$a),
                  "ecallt $a",
                  []>;
 
-let hasCtrlDep = 1 in 
+let hasCtrlDep = 1 in
 def ECALLF_1r : _F1R<0b010010, (outs), (ins GRRegs:$a),
                  "ecallf $a",
                  []>;
 
-let isCall=1, 
+let isCall=1,
 // All calls clobber the link register and the non-callee-saved registers:
 Defs = [R0, R1, R2, R3, R11, LR], Uses = [SP] in {
 def BLA_1r : _F1R<0b001000, (outs), (ins GRRegs:$a),
@@ -1141,7 +1141,7 @@ def : Pat<(truncstorei8 GRRegs:$val, (add GRRegs:$addr, GRRegs:$offset)),
           (ST8_l3r GRRegs:$val, GRRegs:$addr, GRRegs:$offset)>;
 def : Pat<(truncstorei8 GRRegs:$val, GRRegs:$addr),
           (ST8_l3r GRRegs:$val, GRRegs:$addr, (LDC_ru6 0))>;
-          
+
 def : Pat<(truncstorei16 GRRegs:$val, (lda16f GRRegs:$addr, GRRegs:$offset)),
           (ST16_l3r GRRegs:$val, GRRegs:$addr, GRRegs:$offset)>;
 def : Pat<(truncstorei16 GRRegs:$val, GRRegs:$addr),
@@ -1153,6 +1153,9 @@ def : Pat<(store GRRegs:$val, (add GRRegs:$addr, immUs4:$offset)),
           (STW_2rus GRRegs:$val, GRRegs:$addr, (div4_xform immUs4:$offset))>;
 def : Pat<(store GRRegs:$val, GRRegs:$addr),
           (STW_2rus GRRegs:$val, GRRegs:$addr, 0)>;
+
+/// bitrev
+def : Pat<(bitreverse GRRegs:$src), (BITREV_l2r GRRegs:$src)>;
 
 /// cttz
 def : Pat<(cttz GRRegs:$src), (CLZ_l2r (BITREV_l2r GRRegs:$src))>;

@@ -413,14 +413,6 @@ public:
   unsigned getThumbSRImmOpValue(const MCInst &MI, unsigned Op,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
-  template <uint8_t shift, bool invert>
-  unsigned getExpandedImmOpValue(const MCInst &MI, unsigned Op,
-                                 SmallVectorImpl<MCFixup> &Fixups,
-                                 const MCSubtargetInfo &STI) const {
-    static_assert(shift <= 32, "Shift count must be less than or equal to 32.");
-    const MCOperand MO = MI.getOperand(Op);
-    return (invert ? (MO.getImm() ^ 0xff) : MO.getImm()) >> shift;
-  }
 
   unsigned NEONThumb2DataIPostEncoder(const MCInst &MI,
                                       unsigned EncodedValue,

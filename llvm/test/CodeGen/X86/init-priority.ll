@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-netbsd | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-netbsd -use-ctors | FileCheck %s
 
 ; Check that our compiler never emits global constructors
 ; inside the .init_array section when building for a non supported target.

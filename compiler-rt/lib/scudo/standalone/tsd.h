@@ -14,6 +14,7 @@
 #include "mutex.h"
 
 #include <limits.h> // for PTHREAD_DESTRUCTOR_ITERATIONS
+#include <pthread.h>
 
 // With some build setups, this might still not be defined.
 #ifndef PTHREAD_DESTRUCTOR_ITERATIONS
@@ -22,7 +23,7 @@
 
 namespace scudo {
 
-template <class Allocator> struct ALIGNED(SCUDO_CACHE_LINE_SIZE) TSD {
+template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
   typename Allocator::CacheT Cache;
   typename Allocator::QuarantineCacheT QuarantineCache;
   u8 DestructorIterations;

@@ -44,14 +44,12 @@ def main():
     # Create a new lldb invocation with capture or replay enabled.
     lldb = os.path.join(os.path.dirname(sys.argv[0]), 'lldb')
     new_args = [lldb]
-    cleanup = False
     if sys.argv[1] == "replay":
         new_args.extend(['--replay', reproducer_path])
-        cleanup = True
     elif sys.argv[1] == "capture":
         new_args.extend([
             '--capture', '--capture-path', reproducer_path,
-            '--reproducer-auto-generate'
+            '--reproducer-generate-on-exit'
         ])
         new_args.extend(sys.argv[2:])
     else:
@@ -59,8 +57,19 @@ def main():
         return 1
 
     exit_code = subprocess.call(new_args)
-    if cleanup:
+
+    # The driver always exists with a zero exit code during replay. Store the
+    # exit code and return that for tests that expect a non-zero exit code.
+    exit_code_path = os.path.join(reproducer_path, 'exit_code.txt')
+    if sys.argv[1] == "replay":
+        with open(exit_code_path, 'r') as f:
+            assert exit_code == 0
+            exit_code = int(f.read())
         shutil.rmtree(reproducer_path, True)
+    elif sys.argv[1] == "capture":
+        with open(exit_code_path, 'w') as f:
+            f.write('%d' % exit_code)
+
     return exit_code
 
 

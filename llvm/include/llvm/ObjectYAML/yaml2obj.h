@@ -11,14 +11,14 @@
 #ifndef LLVM_TOOLS_YAML2OBJ_YAML2OBJ_H
 #define LLVM_TOOLS_YAML2OBJ_YAML2OBJ_H
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Error.h"
+#include "llvm/ADT/STLExtras.h"
 #include <memory>
 
 namespace llvm {
 class raw_ostream;
 template <typename T> class SmallVectorImpl;
-template <typename T> class Expected;
+class StringRef;
+class Twine;
 
 namespace object {
 class ObjectFile;
@@ -47,14 +47,15 @@ struct YamlObjectFile;
 using ErrorHandler = llvm::function_ref<void(const Twine &Msg)>;
 
 bool yaml2coff(COFFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH);
-bool yaml2elf(ELFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH);
+bool yaml2elf(ELFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH,
+              uint64_t MaxSize);
 bool yaml2macho(YamlObjectFile &Doc, raw_ostream &Out, ErrorHandler EH);
 bool yaml2minidump(MinidumpYAML::Object &Doc, raw_ostream &Out,
                    ErrorHandler EH);
 bool yaml2wasm(WasmYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH);
 
 bool convertYAML(Input &YIn, raw_ostream &Out, ErrorHandler ErrHandler,
-                 unsigned DocNum = 1);
+                 unsigned DocNum = 1, uint64_t MaxSize = UINT64_MAX);
 
 /// Convenience function for tests.
 std::unique_ptr<object::ObjectFile>

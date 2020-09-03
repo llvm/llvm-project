@@ -173,9 +173,11 @@ bool TypeMapTy::areTypesIsomorphic(Type *DstTy, Type *SrcTy) {
     if (DSTy->isLiteral() != SSTy->isLiteral() ||
         DSTy->isPacked() != SSTy->isPacked())
       return false;
-  } else if (auto *DSeqTy = dyn_cast<SequentialType>(DstTy)) {
-    if (DSeqTy->getNumElements() !=
-        cast<SequentialType>(SrcTy)->getNumElements())
+  } else if (auto *DArrTy = dyn_cast<ArrayType>(DstTy)) {
+    if (DArrTy->getNumElements() != cast<ArrayType>(SrcTy)->getNumElements())
+      return false;
+  } else if (auto *DVecTy = dyn_cast<VectorType>(DstTy)) {
+    if (DVecTy->getElementCount() != cast<VectorType>(SrcTy)->getElementCount())
       return false;
   }
 
@@ -303,9 +305,11 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   case Type::ArrayTyID:
     return *Entry = ArrayType::get(ElementTypes[0],
                                    cast<ArrayType>(Ty)->getNumElements());
-  case Type::VectorTyID:
-    return *Entry = VectorType::get(ElementTypes[0],
-                                    cast<VectorType>(Ty)->getNumElements());
+  case Type::ScalableVectorTyID:
+    // FIXME: handle scalable vectors
+  case Type::FixedVectorTyID:
+    return *Entry = FixedVectorType::get(
+               ElementTypes[0], cast<FixedVectorType>(Ty)->getNumElements());
   case Type::PointerTyID:
     return *Entry = PointerType::get(ElementTypes[0],
                                      cast<PointerType>(Ty)->getAddressSpace());
@@ -1277,11 +1281,17 @@ Error IRLinker::linkModuleFlagsMetadata() {
     }
 
     // Diagnose inconsistent merge behavior types.
-    if (SrcBehaviorValue != DstBehaviorValue)
-      return stringErr("linking module flags '" + ID->getString() +
-                       "': IDs have conflicting behaviors in '" +
-                       SrcM->getModuleIdentifier() + "' and '" +
-                       DstM.getModuleIdentifier() + "'");
+    if (SrcBehaviorValue != DstBehaviorValue) {
+      bool MaxAndWarn = (SrcBehaviorValue == Module::Max &&
+                         DstBehaviorValue == Module::Warning) ||
+                        (DstBehaviorValue == Module::Max &&
+                         SrcBehaviorValue == Module::Warning);
+      if (!MaxAndWarn)
+        return stringErr("linking module flags '" + ID->getString() +
+                         "': IDs have conflicting behaviors in '" +
+                         SrcM->getModuleIdentifier() + "' and '" +
+                         DstM.getModuleIdentifier() + "'");
+    }
 
     auto replaceDstValue = [&](MDNode *New) {
       Metadata *FlagOps[] = {DstOp->getOperand(0), ID, New};
@@ -1289,6 +1299,40 @@ Error IRLinker::linkModuleFlagsMetadata() {
       DstModFlags->setOperand(DstIndex, Flag);
       Flags[ID].first = Flag;
     };
+
+    // Emit a warning if the values differ and either source or destination
+    // request Warning behavior.
+    if ((DstBehaviorValue == Module::Warning ||
+         SrcBehaviorValue == Module::Warning) &&
+        SrcOp->getOperand(2) != DstOp->getOperand(2)) {
+      std::string Str;
+      raw_string_ostream(Str)
+          << "linking module flags '" << ID->getString()
+          << "': IDs have conflicting values ('" << *SrcOp->getOperand(2)
+          << "' from " << SrcM->getModuleIdentifier() << " with '"
+          << *DstOp->getOperand(2) << "' from " << DstM.getModuleIdentifier()
+          << ')';
+      emitWarning(Str);
+    }
+
+    // Choose the maximum if either source or destination request Max behavior.
+    if (DstBehaviorValue == Module::Max || SrcBehaviorValue == Module::Max) {
+      ConstantInt *DstValue =
+          mdconst::extract<ConstantInt>(DstOp->getOperand(2));
+      ConstantInt *SrcValue =
+          mdconst::extract<ConstantInt>(SrcOp->getOperand(2));
+
+      // The resulting flag should have a Max behavior, and contain the maximum
+      // value from between the source and destination values.
+      Metadata *FlagOps[] = {
+          (DstBehaviorValue != Module::Max ? SrcOp : DstOp)->getOperand(0), ID,
+          (SrcValue->getZExtValue() > DstValue->getZExtValue() ? SrcOp : DstOp)
+              ->getOperand(2)};
+      MDNode *Flag = MDNode::get(DstM.getContext(), FlagOps);
+      DstModFlags->setOperand(DstIndex, Flag);
+      Flags[ID].first = Flag;
+      continue;
+    }
 
     // Perform the merge for standard behavior types.
     switch (SrcBehaviorValue) {
@@ -1305,26 +1349,9 @@ Error IRLinker::linkModuleFlagsMetadata() {
       continue;
     }
     case Module::Warning: {
-      // Emit a warning if the values differ.
-      if (SrcOp->getOperand(2) != DstOp->getOperand(2)) {
-        std::string str;
-        raw_string_ostream(str)
-            << "linking module flags '" << ID->getString()
-            << "': IDs have conflicting values ('" << *SrcOp->getOperand(2)
-            << "' from " << SrcM->getModuleIdentifier() << " with '"
-            << *DstOp->getOperand(2) << "' from " << DstM.getModuleIdentifier()
-            << ')';
-        emitWarning(str);
-      }
-      continue;
+      break;
     }
     case Module::Max: {
-      ConstantInt *DstValue =
-          mdconst::extract<ConstantInt>(DstOp->getOperand(2));
-      ConstantInt *SrcValue =
-          mdconst::extract<ConstantInt>(SrcOp->getOperand(2));
-      if (SrcValue->getZExtValue() > DstValue->getZExtValue())
-        overrideDstValue();
       break;
     }
     case Module::Append: {
@@ -1350,6 +1377,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
       break;
     }
     }
+
   }
 
   // Check all of the requirements.

@@ -13,19 +13,16 @@
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            a
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            b
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:   CodeProps:
 define amdgpu_kernel void @test0(
@@ -47,24 +44,20 @@ entry:
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            a
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            b
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetX
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:   CodeProps:
 define amdgpu_kernel void @test8(
     half addrspace(1)* %r,
@@ -85,28 +78,23 @@ entry:
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            a
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            b
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetX
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetY
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:   CodeProps:
 define amdgpu_kernel void @test16(
     half addrspace(1)* %r,
@@ -127,32 +115,26 @@ entry:
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            a
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            b
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetX
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetY
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetZ
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:   CodeProps:
 define amdgpu_kernel void @test24(
     half addrspace(1)* %r,
@@ -173,36 +155,29 @@ entry:
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            a
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            b
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetX
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetY
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetZ
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenNone
-; CHECK-NEXT:       ValueType:       I8
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:   CodeProps:
 define amdgpu_kernel void @test32(
@@ -224,46 +199,37 @@ entry:
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            a
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            b
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetX
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetY
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetZ
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenNone
-; CHECK-NEXT:       ValueType:       I8
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenNone
-; CHECK-NEXT:       ValueType:       I8
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenNone
-; CHECK-NEXT:       ValueType:       I8
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:   CodeProps:
 define amdgpu_kernel void @test48(
@@ -285,51 +251,41 @@ entry:
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            a
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Name:            b
 ; CHECK-NEXT:       Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       GlobalBuffer
-; CHECK-NEXT:       ValueType:       F16
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetX
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetY
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetZ
-; CHECK-NEXT:       ValueType:       I64
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenNone
-; CHECK-NEXT:       ValueType:       I8
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenNone
-; CHECK-NEXT:       ValueType:       I8
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenNone
-; CHECK-NEXT:       ValueType:       I8
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenMultiGridSyncArg
-; CHECK-NEXT:       ValueType:       I8
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:   CodeProps:
 define amdgpu_kernel void @test56(

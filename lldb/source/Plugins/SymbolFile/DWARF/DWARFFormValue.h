@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFFormValue_h_
-#define SymbolFileDWARF_DWARFFormValue_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFFORMVALUE_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFFORMVALUE_H
 
 #include "DWARFDataExtractor.h"
 #include <stddef.h>
@@ -86,4 +86,4 @@ protected:
   ValueType m_value;            // Contains all data for the form
 };
 
-#endif // SymbolFileDWARF_DWARFFormValue_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFFORMVALUE_H

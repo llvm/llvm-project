@@ -6,10 +6,10 @@
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 32768
 # RUN: llvm-objdump -d %t | FileCheck %s
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 4096
-# RUN: llvm-objdump -d %t | FileCheck %s -check-prefix=SMALL
+# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=SMALL
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 0
-# RUN: llvm-objdump -d %t | FileCheck %s -check-prefix=ZERO
-# RUN: not ld.lld %t1.o %t2.o -o %t -split-stack-adjust-size -1 2>&1 | FileCheck %s -check-prefix=ERR
+# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=ZERO
+# RUN: not ld.lld %t1.o %t2.o -o /dev/null -split-stack-adjust-size -1 2>&1 | FileCheck %s -check-prefix=ERR
 # ERR: error: --split-stack-adjust-size: size must be >= 0
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t1.o
@@ -18,9 +18,9 @@
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 32768
 # RUN: llvm-objdump -d %t | FileCheck %s
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 4096
-# RUN: llvm-objdump -d %t | FileCheck %s -check-prefix=SMALL
+# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=SMALL
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 0
-# RUN: llvm-objdump -d %t | FileCheck %s -check-prefix=ZERO
+# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=ZERO
         .p2align    2
         .global caller
         .type caller, @function
@@ -58,21 +58,21 @@ caller:
 # CHECK-NEXT: addis 12, 1, -1
 # CHECK-NEXT: addi 12, 12, 32736
 # CHECK-NEXT: cmpld 7, 12, 0
-# CHECK-NEXT: bt- 28, .+36
+# CHECK-NEXT: bt- 28, 0x10010204
 
 # SMALL-LABEL: caller
 # SMALL:      ld 0, -28736(13)
 # SMALL-NEXT: addi 12, 1, -4128
 # SMALL-NEXT: nop
 # SMALL-NEXT: cmpld 7, 12, 0
-# SMALL-NEXT: bt- 28, .+36
+# SMALL-NEXT: bt- 28, 0x10010204
 
 # ZERO-LABEL: caller
 # ZERO:      ld 0, -28736(13)
 # ZERO-NEXT: addi 12, 1, -32
 # ZERO-NEXT: nop
 # ZERO-NEXT: cmpld 7, 12, 0
-# ZERO-NEXT: bt- 28, .+36
+# ZERO-NEXT: bt- 28, 0x10010204
         .p2align    2
         .global main
 	.type  main, @function

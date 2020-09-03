@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextPOSIX_arm_h_
-#define liblldb_RegisterContextPOSIX_arm_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM_H
 
 #include "RegisterInfoInterface.h"
 #include "lldb-arm-register-enums.h"
@@ -43,9 +43,6 @@ public:
   const lldb_private::RegisterSet *GetRegisterSet(size_t set) override;
 
   const char *GetRegisterName(unsigned reg);
-
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
 
 protected:
   struct RegInfo {
@@ -95,12 +92,10 @@ protected:
 
   bool IsFPR(unsigned reg);
 
-  lldb::ByteOrder GetByteOrder();
-
   virtual bool ReadGPR() = 0;
   virtual bool ReadFPR() = 0;
   virtual bool WriteGPR() = 0;
   virtual bool WriteFPR() = 0;
 };
 
-#endif // liblldb_RegisterContextPOSIX_arm_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM_H

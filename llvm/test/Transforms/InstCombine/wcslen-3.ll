@@ -3,11 +3,11 @@
 ;
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 
+target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+
 ; Test behavior for wchar_size==2
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"wchar_size", i32 2}
-
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 declare i64 @wcslen(i16*)
 

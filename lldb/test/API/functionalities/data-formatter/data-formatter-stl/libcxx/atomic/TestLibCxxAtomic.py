@@ -21,7 +21,7 @@ class LibCxxAtomicTestCase(TestBase):
         var.SetPreferSyntheticValue(True)
         return var
 
-    @skipIf(compiler="gcc")
+    @skipIf(compiler=["gcc"])
     @add_test_categories(["libc++"])
     def test(self):
         """Test that std::atomic as defined by libc++ is correctly printed by LLDB"""
@@ -55,11 +55,6 @@ class LibCxxAtomicTestCase(TestBase):
         s = s_atomic.GetChildAtIndex(0)
         self.assertEqual(i_atomic.GetNumChildren(), 1)
         i = i_atomic.GetChildAtIndex(0)
-
-        if self.TraceOn():
-            print(s)
-        if self.TraceOn():
-            print(i)
 
         self.assertTrue(i.GetValueAsUnsigned(0) == 5, "i == 5")
         self.assertTrue(s.GetNumChildren() == 2, "s has two children")

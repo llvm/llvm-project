@@ -39,8 +39,8 @@
 
 // CHECK-IR: [[DESC:@.+]] = internal constant [[DESCTY]] { i32 1, [[IMAGETY]]* getelementptr inbounds ([1 x [[IMAGETY]]], [1 x [[IMAGETY]]]* [[IMAGES]], i64 0, i64 0), [[ENTTY]]* [[ENTBEGIN]], [[ENTTY]]* [[ENTEND]] }
 
-// CHECK-IR: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* [[REGFN:@.+]], i8* null }]
-// CHECK-IR: @llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* [[UNREGFN:@.+]], i8* null }]
+// CHECK-IR: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* [[REGFN:@.+]], i8* null }]
+// CHECK-IR: @llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* [[UNREGFN:@.+]], i8* null }]
 
 // CHECK-IR: define internal void [[REGFN]]()
 // CHECK-IR:   call void @__tgt_register_lib([[DESCTY]]* [[DESC]])

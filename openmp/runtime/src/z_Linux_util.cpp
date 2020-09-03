@@ -164,7 +164,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
   if (gCode > 0) { // Linux* OS only
     // The optimal situation: the OS returns the size of the buffer it expects.
     //
-    // A verification of correct behavior is that Isetaffinity on a NULL
+    // A verification of correct behavior is that setaffinity on a NULL
     // buffer with the same size fails with errno set to EFAULT.
     sCode = syscall(__NR_sched_setaffinity, 0, gCode, NULL);
     KA_TRACE(30, ("__kmp_affinity_determine_capable: "
@@ -286,7 +286,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
   if (gCode == 0) {
     KMP_AFFINITY_ENABLE(KMP_CPU_SET_SIZE_LIMIT);
     KA_TRACE(10, ("__kmp_affinity_determine_capable: "
-                  "affinity supported (mask size %d)\n"<
+                  "affinity supported (mask size %d)\n",
 		  (int)__kmp_affin_mask_size));
     KMP_INTERNAL_FREE(buf);
     return;
@@ -2207,7 +2207,7 @@ int __kmp_get_load_balance(int max) {
 
 #else // Linux* OS
 
-// The fuction returns number of running (not sleeping) threads, or -1 in case
+// The function returns number of running (not sleeping) threads, or -1 in case
 // of error. Error could be reported if Linux* OS kernel too old (without
 // "/proc" support). Counting running threads stops if max running threads
 // encountered.

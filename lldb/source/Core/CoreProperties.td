@@ -21,6 +21,10 @@ let Definition = "modulelist" in {
     EnumValues<"OptionEnumValues(g_swift_module_loading_mode_enums)">,
     Desc<"The module loading mode to use when loading modules for Swift.">;
 // END SWIFT
+  def SymLinkPaths: Property<"debug-info-symlink-paths", "FileSpecList">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"Debug info path which should be resolved while parsing, relative to the host filesystem.">;
 }
 
 let Definition = "debugger" in {
@@ -111,6 +115,10 @@ let Definition = "debugger" in {
     Global,
     DefaultTrue,
     Desc<"Whether to use Ansi color codes or not.">;
+  def UseSourceCache: Property<"use-source-cache", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Whether to cache source files in memory or not.">;
   def AutoOneLineSummaries: Property<"auto-one-line-summaries", "Boolean">,
     Global,
     DefaultTrue,

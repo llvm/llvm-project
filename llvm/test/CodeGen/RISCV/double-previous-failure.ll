@@ -24,22 +24,20 @@ define i32 @main() nounwind {
 ; RV32IFD-NEXT:    sw a1, 4(sp)
 ; RV32IFD-NEXT:    fld ft0, 0(sp)
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_0)
-; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI1_0)
-; RV32IFD-NEXT:    fld ft1, 0(a0)
-; RV32IFD-NEXT:    flt.d a0, ft0, ft1
-; RV32IFD-NEXT:    bnez a0, .LBB1_3
-; RV32IFD-NEXT:  # %bb.1: # %entry
+; RV32IFD-NEXT:    fld ft1, %lo(.LCPI1_0)(a0)
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_1)
-; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI1_1)
-; RV32IFD-NEXT:    fld ft1, 0(a0)
-; RV32IFD-NEXT:    flt.d a0, ft1, ft0
-; RV32IFD-NEXT:    xori a0, a0, 1
-; RV32IFD-NEXT:    beqz a0, .LBB1_3
-; RV32IFD-NEXT:  # %bb.2: # %if.end
+; RV32IFD-NEXT:    fld ft2, %lo(.LCPI1_1)(a0)
+; RV32IFD-NEXT:    flt.d a0, ft0, ft1
+; RV32IFD-NEXT:    not a0, a0
+; RV32IFD-NEXT:    flt.d a1, ft2, ft0
+; RV32IFD-NEXT:    xori a1, a1, 1
+; RV32IFD-NEXT:    and a0, a0, a1
+; RV32IFD-NEXT:    bnez a0, .LBB1_2
+; RV32IFD-NEXT:  # %bb.1: # %if.then
+; RV32IFD-NEXT:    call abort
+; RV32IFD-NEXT:  .LBB1_2: # %if.end
 ; RV32IFD-NEXT:    mv a0, zero
 ; RV32IFD-NEXT:    call exit
-; RV32IFD-NEXT:  .LBB1_3: # %if.then
-; RV32IFD-NEXT:    call abort
 entry:
   %call = call double @test(double 2.000000e+00)
   %cmp = fcmp olt double %call, 2.400000e-01

@@ -54,6 +54,9 @@ let Definition = "target" in {
   def AutoApplyFixIts: Property<"auto-apply-fixits", "Boolean">,
     DefaultTrue,
     Desc<"Automatically apply fix-it hints to expressions.">;
+  def RetriesWithFixIts: Property<"retries-with-fixits", "UInt64">,
+    DefaultUnsignedValue<1>,
+    Desc<"Maximum number of attempts to fix an expression with Fix-Its">;
   def NotifyAboutFixIts: Property<"notify-about-fixits", "Boolean">,
     DefaultTrue,
     Desc<"Print the fixed expression text.">;
@@ -82,10 +85,10 @@ let Definition = "target" in {
     DefaultStringValue<"">,
     Desc<"A list containing all the arguments to be passed to the executable when it is run. Note that this does NOT include the argv[0] which is in target.arg0.">;
   def EnvVars: Property<"env-vars", "Dictionary">,
-    DefaultUnsignedValue<16>,
+    ElementType<"String">,
     Desc<"A list of user provided environment variables to be passed to the executable's environment, and their values.">;
   def UnsetEnvVars: Property<"unset-env-vars", "Array">,
-    DefaultUnsignedValue<16>,
+    ElementType<"String">,
     Desc<"A list of environment variable names to be unset in the inferior's environment. This is most useful to unset some host environment variables when target.inherit-env is true. target.env-vars takes precedence over target.unset-env-vars.">;
   def InheritEnv: Property<"inherit-env", "Boolean">,
     DefaultTrue,
@@ -111,6 +114,9 @@ let Definition = "target" in {
   def DisableSTDIO: Property<"disable-stdio", "Boolean">,
     DefaultFalse,
     Desc<"Disable stdin/stdout for process (e.g. for a GUI application)">;
+  def InheritTCC: Property<"inherit-tcc", "Boolean">,
+    DefaultFalse,
+    Desc<"Inherit the TCC permissions from the inferior's parent instead of making the process itself responsible.">;
   def InlineStrategy: Property<"inline-breakpoint-strategy", "Enum">,
     DefaultEnumValue<"eInlineBreakpointsAlways">,
     EnumValues<"OptionEnumValues(g_inline_breakpoint_enums)">,
@@ -146,7 +152,7 @@ let Definition = "target" in {
     Desc<"Expressions that crash will show up in crash logs if the host system supports executable specific crash log strings and this setting is set to true.">;
   def TrapHandlerNames: Property<"trap-handler-names", "Array">,
     Global,
-    DefaultUnsignedValue<16>,
+    ElementType<"String">,
     Desc<"A list of trap handler function names, e.g. a common Unix user process one is _sigtramp.">;
   def DisplayRuntimeSupportValues: Property<"display-runtime-support-values", "Boolean">,
     DefaultFalse,
@@ -160,6 +166,9 @@ let Definition = "target" in {
   def RequireHardwareBreakpoints: Property<"require-hardware-breakpoint", "Boolean">,
     DefaultFalse,
     Desc<"Require all breakpoints to be hardware breakpoints.">;
+  def AutoInstallMainExecutable: Property<"auto-install-main-executable", "Boolean">,
+    DefaultTrue,
+    Desc<"Always install the main executable when connected to a remote platform.">;
   def SwiftFrameworkSearchPaths: Property<"swift-framework-search-paths", "FileSpecList">,
     DefaultStringValue<"">,
     Desc<"List of directories to be searched when locating frameworks for Swift.">;
@@ -189,7 +198,7 @@ let Definition = "process" in {
     DefaultFalse,
     Desc<"Disable reading and caching of memory in fixed-size units.">;
   def ExtraStartCommand: Property<"extra-startup-command", "Array">,
-    DefaultUnsignedValue<16>,
+    ElementType<"String">,
     Desc<"A list containing extra commands understood by the particular process plugin used.  For instance, to turn on debugserver logging set this to 'QSetLogging:bitmask=LOG_DEFAULT;'">;
   def IgnoreBreakpointsInExpressions: Property<"ignore-breakpoints-in-expressions", "Boolean">,
     Global,
@@ -216,6 +225,9 @@ let Definition = "process" in {
   def WarningOptimization: Property<"optimization-warnings", "Boolean">,
     DefaultTrue,
     Desc<"If true, warn when stopped in code that is optimized where stepping and variable availability may not behave as expected.">;
+  def WarningUnsupportedLanguage: Property<"unsupported-language-warnings", "Boolean">,
+    DefaultTrue,
+    Desc<"If true, warn when stopped in code that is written in a source language that LLDB does not support.">;
   def StopOnExec: Property<"stop-on-exec", "Boolean">,
     Global,
     DefaultTrue,

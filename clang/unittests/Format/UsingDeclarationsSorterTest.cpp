@@ -343,7 +343,8 @@ TEST_F(UsingDeclarationsSorterTest, SortsPartialRangeOfUsingDeclarations) {
                                   {tooling::Range(19, 1)}));
 }
 
-TEST_F(UsingDeclarationsSorterTest, SortsUsingDeclarationsWithLeadingkComments) {
+TEST_F(UsingDeclarationsSorterTest,
+       SortsUsingDeclarationsWithLeadingkComments) {
   EXPECT_EQ("/* comment */ using a;\n"
             "/* comment */ using b;",
             sortUsingDeclarations("/* comment */ using b;\n"
@@ -366,7 +367,6 @@ TEST_F(UsingDeclarationsSorterTest, DeduplicatesUsingDeclarations) {
                                   "using e;\n"
                                   "using a;\n"
                                   "using e;"));
-
 }
 
 } // end namespace

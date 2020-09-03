@@ -1,4 +1,4 @@
-; RUN: opt -S -basicaa -dse -enable-dse-memoryssa < %s | FileCheck %s
+; RUN: opt -S -basic-aa -dse -enable-dse-memoryssa < %s | FileCheck %s
 
 ; We conservative choose to prevent dead store elimination
 ; across release or stronger fences.  It's not required 

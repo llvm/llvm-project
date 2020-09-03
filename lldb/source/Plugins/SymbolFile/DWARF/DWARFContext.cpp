@@ -1,4 +1,4 @@
-//===-- DWARFContext.cpp ----------------------------------------*- C++ -*-===//
+//===-- DWARFContext.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,16 +28,26 @@ static DWARFDataExtractor LoadSection(SectionList *section_list,
 }
 
 const DWARFDataExtractor &
-DWARFContext::LoadOrGetSection(SectionType main_section_type,
+DWARFContext::LoadOrGetSection(llvm::Optional<SectionType> main_section_type,
                                llvm::Optional<SectionType> dwo_section_type,
                                SectionData &data) {
   llvm::call_once(data.flag, [&] {
     if (dwo_section_type && isDwo())
       data.data = LoadSection(m_dwo_section_list, *dwo_section_type);
-    else
-      data.data = LoadSection(m_main_section_list, main_section_type);
+    else if (main_section_type)
+      data.data = LoadSection(m_main_section_list, *main_section_type);
   });
   return data.data;
+}
+
+const DWARFDataExtractor &DWARFContext::getOrLoadCuIndexData() {
+  return LoadOrGetSection(llvm::None, eSectionTypeDWARFDebugCuIndex,
+                          m_data_debug_cu_index);
+}
+
+const DWARFDataExtractor &DWARFContext::getOrLoadTuIndexData() {
+  return LoadOrGetSection(llvm::None, eSectionTypeDWARFDebugTuIndex,
+                          m_data_debug_tu_index);
 }
 
 const DWARFDataExtractor &DWARFContext::getOrLoadAbbrevData() {
@@ -68,6 +78,17 @@ const DWARFDataExtractor &DWARFContext::getOrLoadLineData() {
 const DWARFDataExtractor &DWARFContext::getOrLoadLineStrData() {
   return LoadOrGetSection(eSectionTypeDWARFDebugLineStr, llvm::None,
                           m_data_debug_line_str);
+}
+
+const DWARFDataExtractor &DWARFContext::getOrLoadLocData() {
+  return LoadOrGetSection(eSectionTypeDWARFDebugLoc,
+                          eSectionTypeDWARFDebugLocDwo, m_data_debug_loc);
+}
+
+const DWARFDataExtractor &DWARFContext::getOrLoadLocListsData() {
+  return LoadOrGetSection(eSectionTypeDWARFDebugLocLists,
+                          eSectionTypeDWARFDebugLocListsDwo,
+                          m_data_debug_loclists);
 }
 
 const DWARFDataExtractor &DWARFContext::getOrLoadMacroData() {
@@ -106,32 +127,19 @@ llvm::DWARFContext &DWARFContext::GetAsLLVM() {
   if (!m_llvm_context) {
     llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> section_map;
     uint8_t addr_size = 0;
-
-    auto AddSection = [&](Section &section) {
-      DataExtractor section_data;
-      section.GetSectionData(section_data);
-
+    auto AddSection = [&](llvm::StringRef name, DWARFDataExtractor data) {
       // Set the address size the first time we see it.
       if (addr_size == 0)
-        addr_size = section_data.GetByteSize();
+        addr_size = data.GetAddressByteSize();
 
-      llvm::StringRef data = llvm::toStringRef(section_data.GetData());
-      llvm::StringRef name = section.GetName().GetStringRef();
-      if (name.startswith("."))
-        name = name.drop_front();
       section_map.try_emplace(
-          name, llvm::MemoryBuffer::getMemBuffer(data, name, false));
+          name, llvm::MemoryBuffer::getMemBuffer(toStringRef(data.GetData()),
+                                                 name, false));
     };
 
-    if (m_main_section_list) {
-      for (auto &section : *m_main_section_list)
-        AddSection(*section);
-    }
-
-    if (m_dwo_section_list) {
-      for (auto &section : *m_dwo_section_list)
-        AddSection(*section);
-    }
+    AddSection("debug_line_str", getOrLoadLineStrData());
+    AddSection("debug_cu_index", getOrLoadCuIndexData());
+    AddSection("debug_tu_index", getOrLoadTuIndexData());
 
     m_llvm_context = llvm::DWARFContext::create(section_map, addr_size);
   }

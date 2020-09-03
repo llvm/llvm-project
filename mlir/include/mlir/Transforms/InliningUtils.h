@@ -1,6 +1,6 @@
 //===- InliningUtils.h - Inliner utilities ----------------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -27,7 +27,9 @@ class FuncOp;
 class OpBuilder;
 class Operation;
 class Region;
+class TypeRange;
 class Value;
+class ValueRange;
 
 //===----------------------------------------------------------------------===//
 // InlinerInterface
@@ -172,13 +174,15 @@ public:
 /// remapped operands that are used within the region, and *must* include
 /// remappings for the entry arguments to the region. 'resultsToReplace'
 /// corresponds to any results that should be replaced by terminators within the
-/// inlined region. 'inlineLoc' is an optional Location that, if provided, will
-/// be used to update the inlined operations' location information.
-/// 'shouldCloneInlinedRegion' corresponds to whether the source region should
-/// be cloned into the 'inlinePoint' or spliced directly.
+/// inlined region. 'regionResultTypes' specifies the expected return types of
+/// the terminators in the region. 'inlineLoc' is an optional Location that, if
+/// provided, will be used to update the inlined operations' location
+/// information. 'shouldCloneInlinedRegion' corresponds to whether the source
+/// region should be cloned into the 'inlinePoint' or spliced directly.
 LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
                            Operation *inlinePoint, BlockAndValueMapping &mapper,
-                           ArrayRef<Value> resultsToReplace,
+                           ValueRange resultsToReplace,
+                           TypeRange regionResultTypes,
                            Optional<Location> inlineLoc = llvm::None,
                            bool shouldCloneInlinedRegion = true);
 
@@ -187,8 +191,8 @@ LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
 /// in-favor of the region arguments when inlining.
 LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
                            Operation *inlinePoint,
-                           ArrayRef<Value> inlinedOperands,
-                           ArrayRef<Value> resultsToReplace,
+                           ValueRange inlinedOperands,
+                           ValueRange resultsToReplace,
                            Optional<Location> inlineLoc = llvm::None,
                            bool shouldCloneInlinedRegion = true);
 

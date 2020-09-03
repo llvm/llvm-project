@@ -18,8 +18,8 @@ id get_an_id(unsigned);
 
 template<unsigned N, typename T, typename U, typename V>
 void f(U value, V value2) {
-  get_an_A(N)->ivar = value; // expected-error{{assigning to 'int' from incompatible type 'int *'}}
-  get_an_A(N).prop = value2; // expected-error{{assigning to 'int' from incompatible type 'double *'}}
+  get_an_A(N)->ivar = value; // expected-error{{incompatible pointer to integer conversion assigning to 'int' from 'int *'; dereference with *}}
+  get_an_A(N).prop = value2; // expected-error{{incompatible pointer to integer conversion assigning to 'int' from 'double *'}}
   T c = get_an_id(N)->isa; // expected-error{{cannot initialize a variable of type 'int' with an lvalue of type 'Class'}} \
                            // expected-warning 3 {{direct access to Objective-C's isa is deprecated in favor of object_getClass()}}
 }
@@ -33,8 +33,8 @@ template void f<9, int>(int, int); // expected-note{{in instantiation of}}
 // ivar reference.
 template<typename T, typename U, typename V>
 void f2(T ptr, U value, V value2) {
-  ptr->ivar = value; // expected-error{{assigning to 'int' from incompatible type 'int *'}}
-  ptr.prop = value2; // expected-error{{assigning to 'int' from incompatible type 'double *'}}
+  ptr->ivar = value; // expected-error{{incompatible pointer to integer conversion assigning to 'int' from 'int *'; dereference with *}}
+  ptr.prop = value2; // expected-error{{incompatible pointer to integer conversion assigning to 'int' from 'double *'}}
 }
 
 template void f2(A*, int, int);
@@ -60,7 +60,7 @@ template void f3<int>(id); // expected-note{{instantiation of}}
 
 template<typename T>
 void f4(B *b, T value) {
-  b.foo = value; // expected-error{{assigning to 'int' from incompatible type 'int *'}}
+  b.foo = value; // expected-error{{incompatible pointer to integer conversion assigning to 'int' from 'int *'; dereference with *}}
 }
 
 template void f4(B*, int);
@@ -68,7 +68,7 @@ template void f4(B*, int*); // expected-note{{in instantiation of function templ
 
 template<typename T, typename U>
 void f5(T ptr, U value) {
-  ptr.foo = value; // expected-error{{assigning to 'int' from incompatible type 'int *'}}
+  ptr.foo = value; // expected-error{{incompatible pointer to integer conversion assigning to 'int' from 'int *'; dereference with *}}
 }
 
 template void f5(B*, int);

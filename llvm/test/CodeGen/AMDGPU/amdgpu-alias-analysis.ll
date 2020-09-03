@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=amdgcn-- -aa-eval -amdgpu-aa -amdgpu-aa-wrapper -disable-basicaa  -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -mtriple=r600-- -aa-eval -amdgpu-aa -amdgpu-aa-wrapper -disable-basicaa  -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=amdgcn-- -aa-eval -amdgpu-aa -amdgpu-aa-wrapper -disable-basic-aa  -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=r600-- -aa-eval -amdgpu-aa -amdgpu-aa-wrapper -disable-basic-aa  -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK: NoAlias:      i8 addrspace(1)* %p1, i8 addrspace(5)* %p
 

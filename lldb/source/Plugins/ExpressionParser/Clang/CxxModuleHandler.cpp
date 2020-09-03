@@ -1,4 +1,4 @@
-//===-- CxxModuleHandler.cpp ------------------------------------*- C++ -*-===//
+//===-- CxxModuleHandler.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -66,9 +66,9 @@ emulateLookupInCtxt(Sema &sema, llvm::StringRef name, DeclContext *ctxt) {
   IdentifierInfo &ident = sema.getASTContext().Idents.get(name);
 
   std::unique_ptr<LookupResult> lookup_result;
-  lookup_result.reset(new LookupResult(sema, DeclarationName(&ident),
-                                       SourceLocation(),
-                                       Sema::LookupOrdinaryName));
+  lookup_result = std::make_unique<LookupResult>(sema, DeclarationName(&ident),
+                                                 SourceLocation(),
+                                                 Sema::LookupOrdinaryName);
 
   // Usually during parsing we already encountered the scopes we would use. But
   // here don't have these scopes so we have to emulate the behavior of the
@@ -186,7 +186,7 @@ llvm::Optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
   if (!td->getDeclContext()->isStdNamespace())
     return {};
 
-  // We have a whitelist of supported template names.
+  // We have a list of supported template names.
   if (m_supported_templates.find(td->getName()) == m_supported_templates.end())
     return {};
 

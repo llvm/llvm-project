@@ -1,6 +1,6 @@
 // REQUIRES: lld
 
-// RUN: %clang %s -g -c -o %t.o --target=x86_64-pc-linux -mllvm -accel-tables=Disable
+// RUN: %clang %s -g -c -o %t.o --target=x86_64-pc-linux -gno-pubnames
 // RUN: ld.lld %t.o -o %t
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=base %t | \
 // RUN:   FileCheck --check-prefix=BASE %s
@@ -21,7 +21,7 @@
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=method %t | \
 // RUN:   FileCheck --check-prefix=METHOD %s
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=full %t | \
-// RUN:   FileCheck --check-prefix=FULL %s
+// RUN:   FileCheck --check-prefix=FULL-INDEXED %s
 // RUN: lldb-test symbols --name=_Z3fooi --find=function --function-flags=full %t | \
 // RUN:   FileCheck --check-prefix=FULL-MANGLED %s
 // RUN: lldb-test symbols --name=foo --context=context --find=function --function-flags=base %t | \
@@ -29,20 +29,23 @@
 // RUN: lldb-test symbols --name=not_there --find=function %t | \
 // RUN:   FileCheck --check-prefix=EMPTY %s
 
-// RUN: %clang %s -g -c -o %t.o --target=x86_64-pc-linux -mllvm -accel-tables=Dwarf
+// RUN: %clang %s -c -o %t.o --target=x86_64-pc-linux -gdwarf-5 -gpubnames
 // RUN: ld.lld %t.o -o %t
+// RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix NAMES
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=base %t | \
 // RUN:   FileCheck --check-prefix=BASE %s
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=method %t | \
 // RUN:   FileCheck --check-prefix=METHOD %s
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=full %t | \
-// RUN:   FileCheck --check-prefix=FULL %s
+// RUN:   FileCheck --check-prefix=FULL-INDEXED %s
 // RUN: lldb-test symbols --name=_Z3fooi --find=function --function-flags=full %t | \
 // RUN:   FileCheck --check-prefix=FULL-MANGLED %s
 // RUN: lldb-test symbols --name=foo --context=context --find=function --function-flags=base %t | \
 // RUN:   FileCheck --check-prefix=CONTEXT %s
 // RUN: lldb-test symbols --name=not_there --find=function %t | \
 // RUN:   FileCheck --check-prefix=EMPTY %s
+
+// NAMES: Name: .debug_names
 
 // BASE: Found 4 functions:
 // BASE-DAG: name = "foo()", mangled = "_Z3foov"
@@ -55,14 +58,16 @@
 // METHOD-DAG: name = "sbar::foo(int)", mangled = "_ZN4sbar3fooEi"
 // METHOD-DAG: name = "ffbar()::sbaz::foo()", mangled = "_ZZ5ffbarvEN4sbaz3fooEv"
 
-// FULL: Found 7 functions:
-// FULL-DAG: name = "foo()", mangled = "_Z3foov"
-// FULL-DAG: name = "foo(int)", mangled = "_Z3fooi"
-// FULL-DAG: name = "bar::foo()", mangled = "_ZN3bar3fooEv"
-// FULL-DAG: name = "bar::baz::foo()", mangled = "_ZN3bar3baz3fooEv"
-// FULL-DAG: name = "sbar::foo()", mangled = "_ZN4sbar3fooEv"
-// FULL-DAG: name = "sbar::foo(int)", mangled = "_ZN4sbar3fooEi"
-// FULL-DAG: name = "ffbar()::sbaz::foo()", mangled = "_ZZ5ffbarvEN4sbaz3fooEv"
+// FULL-INDEXED: Found 7 functions:
+// FULL-INDEXED-DAG: name = "foo()", mangled = "_Z3foov"
+// FULL-INDEXED-DAG: name = "foo(int)", mangled = "_Z3fooi"
+// FULL-INDEXED-DAG: name = "bar::foo()", mangled = "_ZN3bar3fooEv"
+// FULL-INDEXED-DAG: name = "bar::baz::foo()", mangled = "_ZN3bar3baz3fooEv"
+// FULL-INDEXED-DAG: name = "sbar::foo()", mangled = "_ZN4sbar3fooEv"
+// FULL-INDEXED-DAG: name = "sbar::foo(int)", mangled = "_ZN4sbar3fooEi"
+// FULL-INDEXED-DAG: name = "ffbar()::sbaz::foo()", mangled = "_ZZ5ffbarvEN4sbaz3fooEv"
+
+// FULL: Found 0 functions:
 
 // FULL-MANGLED: Found 1 functions:
 // FULL-MANGLED-DAG: name = "foo(int)", mangled = "_Z3fooi"

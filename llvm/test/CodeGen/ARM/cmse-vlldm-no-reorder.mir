@@ -1,0 +1,112 @@
+# RUN: llc -mtriple=thumbv8m.main -mcpu=cortex-m33 --float-abi=hard --run-pass=arm-pseudo %s -o - | \
+# RUN: FileCheck %s
+--- |
+  ; ModuleID = 'cmse-vlldm-no-reorder.ll'
+  source_filename = "cmse-vlldm-no-reorder.ll"
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8m.main"
+  
+  @g = hidden local_unnamed_addr global float (...)* null, align 4
+  @a = hidden local_unnamed_addr global float 0.000000e+00, align 4
+  
+  ; Function Attrs: nounwind
+  define hidden void @f() local_unnamed_addr #0 {
+  entry:
+    %0 = load float ()*, float ()** bitcast (float (...)** @g to float ()**), align 4
+    %call = tail call nnan ninf nsz float %0() #2
+    store float %call, float* @a, align 4
+    ret void
+  }
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #1
+  
+  attributes #0 = { nounwind "target-cpu"="cortex-m33" }
+  attributes #1 = { nounwind }
+  attributes #2 = { nounwind "cmse_nonsecure_call" }
+
+...
+---
+name:            f
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       8
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r7', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $r7, $lr
+  
+    $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r7, killed $lr
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    renamable $r0 = t2MOVi32imm @g
+    renamable $r0 = t2LDRi12 killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (dereferenceable load 4 from `float ()** bitcast (float (...)** @g to float ()**)`)
+    tBLXNS_CALL killed renamable $r0, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $s0
+    renamable $r0 = t2MOVi32imm @a
+    VSTRS killed renamable $s0, killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 4 into @a)
+    $sp = frame-destroy t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r7, def $pc
+
+...
+
+# CHECK-LABEL: bb.0.entry:
+# CHECK: $sp = t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, $r4, $r5, $r6, undef $r7, $r8, $r9, $r10, $r11
+# CHECK-NEXT:  $r0 = t2BICri $r0, 1, 14 /* CC::al */, $noreg, $noreg
+# CHECK-NEXT:  $sp = tSUBspi $sp, 34, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  VLSTM $sp, 14 /* CC::al */, $noreg, implicit undef $vpr, implicit undef $fpscr, implicit undef $fpscr_nzcv, implicit undef $q0, implicit undef $q1, implicit undef $q2, implicit undef $q3, implicit undef $q4, implicit undef $q5, implicit undef $q6, implicit undef $q7
+# CHECK-NEXT:  $r1 = tMOVr $r0, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  $r2 = tMOVr $r0, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  $r3 = tMOVr $r0, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  $r4 = tMOVr $r0, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  $r5 = tMOVr $r0, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  $r6 = tMOVr $r0, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  $r7 = tMOVr $r0, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  $r8 = tMOVr $r0, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  $r9 = tMOVr $r0, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  $r10 = tMOVr $r0, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  $r11 = tMOVr $r0, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  $r12 = tMOVr $r0, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  t2MSR_M 3072, $r0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+# CHECK-NEXT:  tBLXNSr 14 /* CC::al */, $noreg, killed $r0, csr_aapcs, implicit-def $lr, implicit $sp, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $s0
+# CHECK-NEXT:  $r12 = VMOVRS $s0, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  VLLDM $sp, 14 /* CC::al */, $noreg, implicit-def $q0, implicit-def $q1, implicit-def $q2, implicit-def $q3, implicit-def $q4, implicit-def $q5, implicit-def $q6, implicit-def $q7, implicit-def $vpr, implicit-def $fpscr, implicit-def $fpscr_nzcv
+# CHECK-NEXT:  $s0 = VMOVSR $r12, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  $sp = tADDspi $sp, 34, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r4, def $r5, def $r6, def $r7, def $r8, def $r9, def $r10, def $r11
+ 

@@ -98,7 +98,7 @@ private:
   void readTokenWithJavaScriptASI();
   void parseStructuralElement();
   bool tryToParseBracedList();
-  bool parseBracedList(bool ContinueOnSemicolons = false,
+  bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
                        tok::TokenKind ClosingBraceKind = tok::r_brace);
   void parseParens();
   void parseSquare(bool LambdaIntroducer = false);
@@ -125,9 +125,16 @@ private:
   bool parseObjCProtocol();
   void parseJavaScriptEs6ImportExport();
   void parseStatementMacro();
+  void parseCSharpAttribute();
+  // Parse a C# generic type constraint: `where T : IComparable<T>`.
+  // See:
+  // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/where-generic-type-constraint
+  void parseCSharpGenericTypeConstraint();
   bool tryToParseLambda();
   bool tryToParseLambdaIntroducer();
+  bool tryToParsePropertyAccessor();
   void tryToParseJSFunction();
+  bool tryToParseSimpleAttribute();
   void addUnwrappedLine();
   bool eof() const;
   // LevelDifference is the difference of levels after and before the current

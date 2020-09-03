@@ -38,7 +38,7 @@ void launch_kernel() {
   // Notice that these two diagnostics are different: Because the call to hd1
   // is not dependent on T, the call to hd1 comes from 'launch_kernel', while
   // the call to hd3, being dependent, comes from 'launch_kernel<int>'.
-  hd1(); // expected-note {{called by 'launch_kernel'}}
+  hd1(); // expected-note {{called by 'launch_kernel<int>'}}
   hd3(T()); // expected-note {{called by 'launch_kernel<int>'}}
 }
 

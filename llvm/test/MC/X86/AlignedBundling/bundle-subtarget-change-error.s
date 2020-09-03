@@ -1,5 +1,5 @@
-# RUN: not llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -mcpu=pentiumpro %s -o - 2>&1 | FileCheck %s
-# RUN: not llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -mcpu=pentiumpro -mc-relax-all %s -o - 2>&1 | FileCheck %s
+# RUN: not --crash llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -mcpu=pentiumpro %s -o - 2>&1 | FileCheck %s
+# RUN: not --crash llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -mcpu=pentiumpro -mc-relax-all %s -o - 2>&1 | FileCheck %s
 
 # Switching mode will change subtarget, which we can't do within a bundle
   .text

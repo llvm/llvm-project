@@ -3,14 +3,20 @@ add_compiler_rt_component(gwp_asan)
 include_directories(..)
 
 set(GWP_ASAN_SOURCES
+  common.cpp
+  crash_handler.cpp
+  platform_specific/common_posix.cpp
   platform_specific/guarded_pool_allocator_posix.cpp
   platform_specific/mutex_posix.cpp
+  platform_specific/utilities_posix.cpp
   guarded_pool_allocator.cpp
   random.cpp
   stack_trace_compressor.cpp
 )
 
 set(GWP_ASAN_HEADERS
+  common.h
+  crash_handler.h
   definitions.h
   guarded_pool_allocator.h
   mutex.h
@@ -18,6 +24,7 @@ set(GWP_ASAN_HEADERS
   options.inc
   random.h
   stack_trace_compressor.h
+  utilities.h
 )
 
 # Ensure that GWP-ASan meets the delegated requirements of some supporting
@@ -50,6 +57,9 @@ set(GWP_ASAN_BACKTRACE_HEADERS
   options.h
   options.inc
 )
+set(GWP_ASAN_SEGV_HANDLER_HEADERS
+  optional/segv_handler.h
+  options.h)
 
 set(GWP_ASAN_OPTIONS_PARSER_CFLAGS
     ${GWP_ASAN_CFLAGS}
@@ -93,6 +103,11 @@ if (COMPILER_RT_HAS_GWP_ASAN)
       ARCHS ${GWP_ASAN_SUPPORTED_ARCH}
       SOURCES optional/backtrace_linux_libc.cpp
       ADDITIONAL_HEADERS ${GWP_ASAN_BACKTRACE_HEADERS}
+      CFLAGS ${GWP_ASAN_CFLAGS})
+  add_compiler_rt_object_libraries(RTGwpAsanSegvHandler
+      ARCHS ${GWP_ASAN_SUPPORTED_ARCH}
+      SOURCES optional/segv_handler_posix.cpp
+      ADDITIONAL_HEADERS ${GWP_ASAN_SEGV_HANDLER_HEADERS}
       CFLAGS ${GWP_ASAN_CFLAGS})
   add_compiler_rt_object_libraries(RTGwpAsanBacktraceSanitizerCommon
       ARCHS ${GWP_ASAN_SUPPORTED_ARCH}

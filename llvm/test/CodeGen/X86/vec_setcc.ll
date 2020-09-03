@@ -206,7 +206,7 @@ define <3 x i1> @test_setcc_v3i1_v3i16(<3 x i16>* %a) nounwind {
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm1
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %dl

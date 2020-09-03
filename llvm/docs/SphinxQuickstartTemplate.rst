@@ -84,7 +84,7 @@ To create a new paragraph, simply insert a blank line.
 Links
 =====
 
-You can format a link `like this <http://llvm.org/>`_. A more `sophisticated syntax`_ allows you to place the ``.. _`link text`: <URL>`` block
+You can format a link `like this <https://llvm.org/>`_. A more `sophisticated syntax`_ allows you to place the ``.. _`link text`: <URL>`` block
 pretty much anywhere else in the document. This is useful when linking to especially long URLs.
 
 .. _`sophisticated syntax`: http://en.wikipedia.org/wiki/LLVM

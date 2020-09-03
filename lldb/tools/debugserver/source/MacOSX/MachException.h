@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __MachException_h__
-#define __MachException_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHEXCEPTION_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHEXCEPTION_H
 
 #include <mach/mach.h>
 #include <vector>

@@ -55,7 +55,7 @@ Sections:
   - Name:  .text.group1
     Type:  SHT_PROGBITS
     Flags: [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
-  - Name: '.group [1]'
+  - Name: '.group (1)'
     Type: SHT_GROUP
     Link: .symtab
     Info: group2

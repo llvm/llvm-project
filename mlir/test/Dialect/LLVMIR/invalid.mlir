@@ -1,7 +1,14 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
 // expected-error@+1{{llvm.noalias argument attribute of non boolean type}}
 func @invalid_noalias(%arg0: !llvm.i32 {llvm.noalias = 3}) {
+  "llvm.return"() : () -> ()
+}
+
+// -----
+
+// expected-error@+1{{llvm.align argument attribute of non integer type}}
+func @invalid_align(%arg0: !llvm.i32 {llvm.align = "foo"}) {
   "llvm.return"() : () -> ()
 }
 
@@ -12,7 +19,7 @@ func @invalid_noalias(%arg0: !llvm.i32 {llvm.noalias = 3}) {
 // -----
 
 func @icmp_non_string(%arg0 : !llvm.i32, %arg1 : !llvm<"i16">) {
-  // expected-error@+1 {{expected 'predicate' attribute of string type}}
+  // expected-error@+1 {{invalid kind of attribute specified}}
   llvm.icmp 42 %arg0, %arg0 : !llvm.i32
   return
 }
@@ -63,28 +70,28 @@ func @alloca_nonpositive_alignment(%size : !llvm.i64) {
 // -----
 
 func @gep_missing_input_result_type(%pos : !llvm.i64, %base : !llvm<"float*">) {
-  // expected-error@+1 {{expected trailing function type with at least one argument and one result}}
+  // expected-error@+1 {{2 operands present, but expected 0}}
   llvm.getelementptr %base[%pos] : () -> ()
 }
 
 // -----
 
 func @gep_missing_input_type(%pos : !llvm.i64, %base : !llvm<"float*">) {
-  // expected-error@+1 {{expected trailing function type with at least one argument and one result}}
+  // expected-error@+1 {{2 operands present, but expected 0}}
   llvm.getelementptr %base[%pos] : () -> (!llvm<"float*">)
 }
 
 // -----
 
 func @gep_missing_result_type(%pos : !llvm.i64, %base : !llvm<"float*">) {
-  // expected-error@+1 {{expected trailing function type with at least one argument and one result}}
+  // expected-error@+1 {{op requires one result}}
   llvm.getelementptr %base[%pos] : (!llvm<"float *">, !llvm.i64) -> ()
 }
 
 // -----
 
 func @gep_non_function_type(%pos : !llvm.i64, %base : !llvm<"float*">) {
-  // expected-error@+1 {{expected trailing function type with at least one argument and one result}}
+  // expected-error@+1 {{invalid kind of type specified}}
   llvm.getelementptr %base[%pos] : !llvm<"float*">
 }
 
@@ -146,6 +153,13 @@ func @call_non_llvm_input(%callee : (i32) -> (), %arg : i32) {
 
 // -----
 
+func @constant_wrong_type() {
+  // expected-error@+1 {{only supports integer, float, string or elements attributes}}
+  llvm.mlir.constant(@constant_wrong_type) : !llvm<"void ()*">
+}
+
+// -----
+
 func @insertvalue_non_llvm_type(%a : i32, %b : i32) {
   // expected-error@+1 {{expected LLVM IR Dialect type}}
   llvm.insertvalue %a, %b[0] : i32
@@ -156,7 +170,7 @@ func @insertvalue_non_llvm_type(%a : i32, %b : i32) {
 func @insertvalue_non_array_position() {
   // Note the double-type, otherwise attribute parsing consumes the trailing
   // type of the op as the (wrong) attribute type.
-  // expected-error@+1 {{expected an array attribute}}
+  // expected-error@+1 {{invalid kind of attribute specified}}
   llvm.insertvalue %a, %b 0 : i32 : !llvm<"{i32}">
 }
 
@@ -200,7 +214,7 @@ func @extractvalue_non_llvm_type(%a : i32, %b : i32) {
 func @extractvalue_non_array_position() {
   // Note the double-type, otherwise attribute parsing consumes the trailing
   // type of the op as the (wrong) attribute type.
-  // expected-error@+1 {{expected an array attribute}}
+  // expected-error@+1 {{invalid kind of attribute specified}}
   llvm.extractvalue %b 0 : i32 : !llvm<"{i32}">
 }
 
@@ -295,7 +309,7 @@ func @nvvm_invalid_mma_0(%a0 : !llvm.half, %a1 : !llvm<"<2 x half>">,
                          %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
                          %c4 : !llvm.float, %c5 : !llvm.float, %c6 : !llvm.float, %c7 : !llvm.float) {
   // expected-error@+1 {{expected operands to be 4 <halfx2>s followed by either 4 <halfx2>s or 8 floats}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="row"} : (!llvm.half, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> !llvm<"{ float, float, float, float, float, float, float, float }">
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (!llvm.half, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> !llvm<"{ float, float, float, float, float, float, float, float }">
   llvm.return %0 : !llvm<"{ float, float, float, float, float, float, float, float }">
 }
 
@@ -307,7 +321,7 @@ func @nvvm_invalid_mma_1(%a0 : !llvm<"<2 x half>">, %a1 : !llvm<"<2 x half>">,
                          %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
                          %c4 : !llvm.float, %c5 : !llvm.float, %c6 : !llvm.float, %c7 : !llvm.float) {
   // expected-error@+1 {{expected result type to be a struct of either 4 <halfx2>s or 8 floats}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="row"} : (!llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> !llvm<"{ float, float, float, float, float, float, float, half }">
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (!llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> !llvm<"{ float, float, float, float, float, float, float, half }">
   llvm.return %0 : !llvm<"{ float, float, float, float, float, float, float, half }">
 }
 
@@ -331,7 +345,7 @@ func @nvvm_invalid_mma_3(%a0 : !llvm<"<2 x half>">, %a1 : !llvm<"<2 x half>">,
                          %c0 : !llvm<"<2 x half>">, %c1 : !llvm<"<2 x half>">,
                          %c2 : !llvm<"<2 x half>">, %c3 : !llvm<"<2 x half>">) {
   // expected-error@+1 {{unimplemented mma.sync variant}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3 {alayout="row", blayout="row"} : (!llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">) -> !llvm<"{ float, float, float, float, float, float, float, float }">
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3 {alayout="row", blayout="col"} : (!llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">) -> !llvm<"{ float, float, float, float, float, float, float, float }">
   llvm.return %0 : !llvm<"{ float, float, float, float, float, float, float, float }">
 }
 
@@ -343,7 +357,7 @@ func @nvvm_invalid_mma_4(%a0 : !llvm<"<2 x half>">, %a1 : !llvm<"<2 x half>">,
                          %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
                          %c4 : !llvm.float, %c5 : !llvm.float, %c6 : !llvm.float, %c7 : !llvm.float) {
   // expected-error@+1 {{unimplemented mma.sync variant}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="row"} : (!llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> !llvm<"{<2 x half>, <2 x half>, <2 x half>, <2 x half>}">
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (!llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> !llvm<"{<2 x half>, <2 x half>, <2 x half>, <2 x half>}">
   llvm.return %0 : !llvm<"{<2 x half>, <2 x half>, <2 x half>, <2 x half>}">
 }
 
@@ -366,7 +380,7 @@ func @nvvm_invalid_mma_6(%a0 : !llvm<"<2 x half>">, %a1 : !llvm<"<2 x half>">,
                          %b0 : !llvm<"<2 x half>">, %b1 : !llvm<"<2 x half>">,
                          %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
                          %c4 : !llvm.float, %c5 : !llvm.float, %c6 : !llvm.float, %c7 : !llvm.float) {
-  // expected-error@+1 {{expected the type to be the full list of input and output}}
+  // expected-error@+1 {{invalid kind of type specified}}
   %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : !llvm<"{ float, float, float, float, float, float, float, float }">
   llvm.return %0 : !llvm<"{ float, float, float, float, float, float, float, float }">
 }
@@ -378,7 +392,224 @@ func @nvvm_invalid_mma_7(%a0 : !llvm<"<2 x half>">, %a1 : !llvm<"<2 x half>">,
                          %b0 : !llvm<"<2 x half>">, %b1 : !llvm<"<2 x half>">,
                          %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
                          %c4 : !llvm.float, %c5 : !llvm.float, %c6 : !llvm.float, %c7 : !llvm.float) {
-  // expected-error@+1 {{expected single result}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : (!llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> (!llvm<"{ float, float, float, float, float, float, float, float }">, !llvm.i32)
-  llvm.return %0 : (!llvm<"{ float, float, float, float, float, float, float, float }">, !llvm.i32)
+  // expected-error@+1 {{op requires one result}}
+  %0:2 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : (!llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> (!llvm<"{ float, float, float, float, float, float, float, float }">, !llvm.i32)
+  llvm.return %0#0 : !llvm<"{ float, float, float, float, float, float, float, float }">
+}
+
+// -----
+
+// FIXME: the LLVM-IR dialect should parse mutually recursive types
+// CHECK-LABEL: @recursive_type
+// expected-error@+1 {{expected end of string}}
+llvm.func @recursive_type(%a : !llvm<"%a = type { %a* }">) ->
+                          !llvm<"%a = type { %a* }"> {
+  llvm.return %a : !llvm<"%a = type { %a* }">
+}
+
+// -----
+
+// CHECK-LABEL: @atomicrmw_expected_ptr
+func @atomicrmw_expected_ptr(%f32 : !llvm.float) {
+  // expected-error@+1 {{expected LLVM IR pointer type for operand #0}}
+  %0 = "llvm.atomicrmw"(%f32, %f32) {bin_op=11, ordering=1} : (!llvm.float, !llvm.float) -> !llvm.float
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @atomicrmw_mismatched_operands
+func @atomicrmw_mismatched_operands(%f32_ptr : !llvm<"float*">, %i32 : !llvm.i32) {
+  // expected-error@+1 {{expected LLVM IR element type for operand #0 to match type for operand #1}}
+  %0 = "llvm.atomicrmw"(%f32_ptr, %i32) {bin_op=11, ordering=1} : (!llvm<"float*">, !llvm.i32) -> !llvm.float
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @atomicrmw_mismatched_result
+func @atomicrmw_mismatched_operands(%f32_ptr : !llvm<"float*">, %f32 : !llvm.float) {
+  // expected-error@+1 {{expected LLVM IR result type to match type for operand #1}}
+  %0 = "llvm.atomicrmw"(%f32_ptr, %f32) {bin_op=11, ordering=1} : (!llvm<"float*">, !llvm.float) -> !llvm.i32
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @atomicrmw_expected_float
+func @atomicrmw_expected_float(%i32_ptr : !llvm<"i32*">, %i32 : !llvm.i32) {
+  // expected-error@+1 {{expected LLVM IR floating point type}}
+  %0 = llvm.atomicrmw fadd %i32_ptr, %i32 unordered : !llvm.i32
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @atomicrmw_unexpected_xchg_type
+func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm<"i1*">, %i1 : !llvm.i1) {
+  // expected-error@+1 {{unexpected LLVM IR type for 'xchg' bin_op}}
+  %0 = llvm.atomicrmw xchg %i1_ptr, %i1 unordered : !llvm.i1
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @atomicrmw_expected_int
+func @atomicrmw_expected_int(%f32_ptr : !llvm<"float*">, %f32 : !llvm.float) {
+  // expected-error@+1 {{expected LLVM IR integer type}}
+  %0 = llvm.atomicrmw max %f32_ptr, %f32 unordered : !llvm.float
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @cmpxchg_expected_ptr
+func @cmpxchg_expected_ptr(%f32_ptr : !llvm<"float*">, %f32 : !llvm.float) {
+  // expected-error@+1 {{expected LLVM IR pointer type for operand #0}}
+  %0 = "llvm.cmpxchg"(%f32, %f32, %f32) {success_ordering=2,failure_ordering=2} : (!llvm.float, !llvm.float, !llvm.float) -> !llvm<"{ float, i1 }">
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @cmpxchg_mismatched_operands
+func @cmpxchg_mismatched_operands(%f32_ptr : !llvm<"float*">, %i32 : !llvm.i32) {
+  // expected-error@+1 {{expected LLVM IR element type for operand #0 to match type for all other operands}}
+  %0 = "llvm.cmpxchg"(%f32_ptr, %i32, %i32) {success_ordering=2,failure_ordering=2} : (!llvm<"float*">, !llvm.i32, !llvm.i32) -> !llvm<"{ i32, i1 }">
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @cmpxchg_unexpected_type
+func @cmpxchg_unexpected_type(%i1_ptr : !llvm<"i1*">, %i1 : !llvm.i1) {
+  // expected-error@+1 {{unexpected LLVM IR type}}
+  %0 = llvm.cmpxchg %i1_ptr, %i1, %i1 monotonic monotonic : !llvm.i1
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @cmpxchg_at_least_monotonic_success
+func @cmpxchg_at_least_monotonic_success(%i32_ptr : !llvm<"i32*">, %i32 : !llvm.i32) {
+  // expected-error@+1 {{ordering must be at least 'monotonic'}}
+  %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 unordered monotonic : !llvm.i32
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @cmpxchg_at_least_monotonic_failure
+func @cmpxchg_at_least_monotonic_failure(%i32_ptr : !llvm<"i32*">, %i32 : !llvm.i32) {
+  // expected-error@+1 {{ordering must be at least 'monotonic'}}
+  %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 monotonic unordered : !llvm.i32
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @cmpxchg_failure_release
+func @cmpxchg_failure_release(%i32_ptr : !llvm<"i32*">, %i32 : !llvm.i32) {
+  // expected-error@+1 {{failure ordering cannot be 'release' or 'acq_rel'}}
+  %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 acq_rel release : !llvm.i32
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @cmpxchg_failure_acq_rel
+func @cmpxchg_failure_acq_rel(%i32_ptr : !llvm<"i32*">, %i32 : !llvm.i32) {
+  // expected-error@+1 {{failure ordering cannot be 'release' or 'acq_rel'}}
+  %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 acq_rel acq_rel : !llvm.i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @foo(!llvm.i32) -> !llvm.i32
+llvm.func @__gxx_personality_v0(...) -> !llvm.i32
+
+llvm.func @bad_landingpad(%arg0: !llvm<"i8**">) attributes { personality = @__gxx_personality_v0} {
+  %0 = llvm.mlir.constant(3 : i32) : !llvm.i32
+  %1 = llvm.mlir.constant(2 : i32) : !llvm.i32
+  %2 = llvm.invoke @foo(%1) to ^bb1 unwind ^bb2 : (!llvm.i32) -> !llvm.i32
+^bb1:  // pred: ^bb0
+  llvm.return %1 : !llvm.i32
+^bb2:  // pred: ^bb0
+  // expected-error@+1 {{clause #0 is not a known constant - null, addressof, bitcast}}
+  %3 = llvm.landingpad cleanup (catch %1 : !llvm.i32) (catch %arg0 : !llvm<"i8**">) : !llvm<"{ i8*, i32 }">
+  llvm.return %0 : !llvm.i32
+}
+
+// -----
+
+llvm.func @foo(!llvm.i32) -> !llvm.i32
+llvm.func @__gxx_personality_v0(...) -> !llvm.i32
+
+llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 attributes { personality = @__gxx_personality_v0} {
+  %0 = llvm.mlir.constant(1 : i32) : !llvm.i32
+  %1 = llvm.alloca %0 x !llvm<"i8*"> : (!llvm.i32) -> !llvm<"i8**">
+  // expected-note@+1 {{global addresses expected as operand to bitcast used in clauses for landingpad}}
+  %2 = llvm.bitcast %1 : !llvm<"i8**"> to !llvm<"i8*">
+  %3 = llvm.invoke @foo(%0) to ^bb1 unwind ^bb2 : (!llvm.i32) -> !llvm.i32
+^bb1: // pred: ^bb0
+  llvm.return %0 : !llvm.i32
+^bb2: // pred: ^bb0
+  // expected-error@+1 {{constant clauses expected}}
+  %5 = llvm.landingpad (catch %2 : !llvm<"i8*">) : !llvm<"{ i8*, i32 }">
+  llvm.return %0 : !llvm.i32
+}
+
+// -----
+
+llvm.func @foo(!llvm.i32) -> !llvm.i32
+llvm.func @__gxx_personality_v0(...) -> !llvm.i32
+
+llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 attributes { personality = @__gxx_personality_v0} {
+  %0 = llvm.mlir.constant(1 : i32) : !llvm.i32
+  %1 = llvm.invoke @foo(%0) to ^bb1 unwind ^bb2 : (!llvm.i32) -> !llvm.i32
+^bb1: // pred: ^bb0
+  llvm.return %0 : !llvm.i32
+^bb2: // pred: ^bb0
+  // expected-error@+1 {{landingpad instruction expects at least one clause or cleanup attribute}}
+  %2 = llvm.landingpad : !llvm<"{ i8*, i32 }">
+  llvm.return %0 : !llvm.i32
+}
+
+// -----
+
+llvm.func @foo(!llvm.i32) -> !llvm.i32
+llvm.func @__gxx_personality_v0(...) -> !llvm.i32
+
+llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 attributes { personality = @__gxx_personality_v0 } {
+  %0 = llvm.mlir.constant(1 : i32) : !llvm.i32
+  %1 = llvm.invoke @foo(%0) to ^bb1 unwind ^bb2 : (!llvm.i32) -> !llvm.i32
+^bb1: // pred: ^bb0
+  llvm.return %0 : !llvm.i32
+^bb2: // pred: ^bb0
+  %2 = llvm.landingpad cleanup : !llvm<"{ i8*, i32 }">
+  // expected-error@+1 {{'llvm.resume' op expects landingpad value as operand}}
+  llvm.resume %0 : !llvm.i32
+}
+
+// -----
+
+llvm.func @foo(!llvm.i32) -> !llvm.i32
+
+llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 {
+  %0 = llvm.mlir.constant(1 : i32) : !llvm.i32
+  %1 = llvm.invoke @foo(%0) to ^bb1 unwind ^bb2 : (!llvm.i32) -> !llvm.i32
+^bb1: // pred: ^bb0
+  llvm.return %0 : !llvm.i32
+^bb2: // pred: ^bb0
+  // expected-error@+1 {{llvm.landingpad needs to be in a function with a personality}}
+  %2 = llvm.landingpad cleanup : !llvm<"{ i8*, i32 }">
+  llvm.resume %2 : !llvm<"{ i8*, i32 }">
+}
+
+// -----
+
+func @invalid_ordering_in_fence() {
+  // expected-error @+1 {{can be given only acquire, release, acq_rel, and seq_cst orderings}}
+  llvm.fence syncscope("agent") monotonic
 }

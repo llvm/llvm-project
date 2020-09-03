@@ -62,46 +62,37 @@
 ; MSSA-NEXT: Running analysis: PostDominatorTreeAnalysis on f
 ; MSSA-NEXT: Finished llvm::Function pass manager run.
 
-
 ; CHECK-LABEL: define i8 @f() {
-; CHECK-NEXT : entry:
-; CHECK-NEXT :   br label %bb
-; CHECK-NEXT :
-; CHECK-NEXT : bb:                                               ; preds = %bb, %entry
-; CHECK-NEXT :   %mode.0 = phi i8 [ 0, %entry ], [ %indvar.next, %bb ]
-; CHECK-NEXT :   %tmp5 = icmp eq i8 %mode.0, 1
-; CHECK-NEXT :   %indvar.next = add i8 %mode.0, 1
-; CHECK-NEXT :   br i1 %tmp5, label %bb5, label %bb
-; CHECK-NEXT :
-; CHECK-NEXT : bb5:                                              ; preds = %bb
-; CHECK-NEXT :   tail call void @raise_exception() #0
-; CHECK-NEXT :   unreachable
-; CHECK-NEXT : }
-; CHECK-NEXT :
-; CHECK-NEXT : ; Function Attrs: noreturn
-; CHECK-NEXT : declare void @raise_exception() #0
-; CHECK-NEXT :
-; CHECK-NEXT : attributes #0 = { noreturn }
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label %bb
+; CHECK:       bb:                                               ; preds = %bb, %entry
+; CHECK-NEXT:    %mode.0 = phi i8 [ 0, %entry ], [ %indvar.next, %bb ]
+; CHECK-NEXT:    %tmp5 = icmp eq i8 %mode.0, 1
+; CHECK-NEXT:    %indvar.next = add i8 %mode.0, 1
+; CHECK-NEXT:    br i1 %tmp5, label %bb5, label %bb
+; CHECK:       bb5:                                              ; preds = %bb
+; CHECK-NEXT:    tail call void @raise_exception() #0
+; CHECK-NEXT:    unreachable
+; CHECK-NEXT:  }
+; CHECK:       ; Function Attrs: noreturn
+; CHECK:       declare void @raise_exception() #0
+; CHECK:       attributes #0 = { noreturn }
 
 ; MSSA-LABEL: define i8 @f() {
-; MSSA-NEXT : entry:
-; MSSA-NEXT :   br label %bb
-; MSSA-NEXT :
-; MSSA-NEXT : bb:                                               ; preds = %bb, %entry
-; MSSA-NEXT :   %mode.0 = phi i8 [ 0, %entry ], [ %indvar.next, %bb ]
-; MSSA-NEXT :   %tmp5 = icmp eq i8 %mode.0, 1
-; MSSA-NEXT :   %indvar.next = add i8 %mode.0, 1
-; MSSA-NEXT :   br i1 %tmp5, label %bb5, label %bb
-; MSSA-NEXT :
-; MSSA-NEXT : bb5:                                              ; preds = %bb
-; MSSA-NEXT :   tail call void @raise_exception() #0
-; MSSA-NEXT :   unreachable
-; MSSA-NEXT : }
-; MSSA-NEXT :
-; MSSA-NEXT : ; Function Attrs: noreturn
-; MSSA-NEXT : declare void @raise_exception() #0
-; MSSA-NEXT :
-; MSSA-NEXT : attributes #0 = { noreturn }
+; MSSA-NEXT:  entry:
+; MSSA-NEXT:    br label %bb
+; MSSA:       bb:                                               ; preds = %bb, %entry
+; MSSA-NEXT:    %mode.0 = phi i8 [ 0, %entry ], [ %indvar.next, %bb ]
+; MSSA-NEXT:    %tmp5 = icmp eq i8 %mode.0, 1
+; MSSA-NEXT:    %indvar.next = add i8 %mode.0, 1
+; MSSA-NEXT:    br i1 %tmp5, label %bb5, label %bb
+; MSSA:       bb5:                                              ; preds = %bb
+; MSSA-NEXT:    tail call void @raise_exception() #0
+; MSSA-NEXT:    unreachable
+; MSSA-NEXT:  }
+; MSSA:       ; Function Attrs: noreturn
+; MSSA:       declare void @raise_exception() #0
+; MSSA:       attributes #0 = { noreturn }
 
 define i8 @f() {
 entry:

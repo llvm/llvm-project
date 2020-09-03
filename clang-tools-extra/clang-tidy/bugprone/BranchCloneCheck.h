@@ -10,7 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_BRANCHCLONECHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_BRANCHCLONECHECK_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {

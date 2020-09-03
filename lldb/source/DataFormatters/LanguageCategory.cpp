@@ -1,5 +1,4 @@
-//===-- LanguageCategory.cpp ---------------------------------------*- C++
-//-*-===//
+//===-- LanguageCategory.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -55,6 +54,8 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
   return result;
 }
 
+namespace lldb_private {
+
 /// Explicit instantiations for the three types.
 /// \{
 template bool
@@ -82,6 +83,8 @@ template <>
 auto &LanguageCategory::GetHardcodedFinder<lldb::SyntheticChildrenSP>() {
   return m_hardcoded_synthetics;
 }
+
+} // namespace lldb_private
 
 template <typename ImplSP>
 bool LanguageCategory::GetHardcoded(FormatManager &fmt_mgr,

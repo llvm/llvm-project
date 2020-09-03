@@ -28,8 +28,10 @@ enum isl_lp_result isl_tab_solve_lp(__isl_keep isl_basic_map *bmap,
 {
 	struct isl_tab *tab;
 	enum isl_lp_result res;
-	unsigned dim = isl_basic_map_total_dim(bmap);
+	isl_size dim = isl_basic_map_dim(bmap, isl_dim_all);
 
+	if (dim < 0)
+		return isl_lp_error;
 	if (maximize)
 		isl_seq_neg(f, f, 1 + dim);
 
@@ -107,7 +109,9 @@ enum isl_lp_result isl_map_solve_lp(__isl_keep isl_map *map, int max,
 		if (map->p[i]->n_div > max_div)
 			max_div = map->p[i]->n_div;
 	if (max_div > 0) {
-		unsigned total = isl_space_dim(map->dim, isl_dim_all);
+		isl_size total = isl_map_dim(map, isl_dim_all);
+		if (total < 0)
+			return isl_lp_error;
 		v = isl_vec_alloc(map->ctx, 1 + total + max_div);
 		if (!v)
 			return isl_lp_error;
@@ -259,7 +263,7 @@ static __isl_give isl_val *isl_basic_set_opt_lp_val_aligned(
 	isl_mat *bset_div = NULL;
 	isl_mat *div = NULL;
 	isl_val *res;
-	int bset_n_div, obj_n_div;
+	isl_size bset_n_div, obj_n_div;
 
 	if (!bset || !obj)
 		return NULL;
@@ -271,6 +275,8 @@ static __isl_give isl_val *isl_basic_set_opt_lp_val_aligned(
 
 	bset_n_div = isl_basic_set_dim(bset, isl_dim_div);
 	obj_n_div = isl_aff_dim(obj, isl_dim_div);
+	if (bset_n_div < 0 || obj_n_div < 0)
+		return NULL;
 	if (bset_n_div == 0 && obj_n_div == 0)
 		return basic_set_opt_lp(bset, max, obj);
 

@@ -541,44 +541,20 @@ body:             |
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 
     $eflags = COPY %3
-    %4:gr8 = SETB_C8r implicit-def $eflags, implicit $eflags
-    MOV8mr $rsp, 1, $noreg, -16, $noreg, killed %4
+    %4:gr32 = SETB_C32r implicit-def $eflags, implicit $eflags
+    MOV32mr $rsp, 1, $noreg, -16, $noreg, killed %4
   ; CHECK-NOT:     $eflags =
-  ; CHECK:         %[[ZERO:[^:]*]]:gr32 = MOV32r0 implicit-def $eflags
-  ; CHECK-NEXT:    %[[ZERO_SUBREG:[^:]*]]:gr8 = COPY %[[ZERO]].sub_8bit
-  ; CHECK-NEXT:    %[[REPLACEMENT:[^:]*]]:gr8 = SUB8rr %[[ZERO_SUBREG]], %[[CF_REG]]
-  ; CHECK-NEXT:    MOV8mr $rsp, 1, $noreg, -16, $noreg, killed %[[REPLACEMENT]]
+  ; CHECK:         dead %{{[^:]*}}:gr8 = ADD8ri %[[CF_REG]], 255, implicit-def $eflags
+  ; CHECK-NEXT:    %[[SETB:[^:]*]]:gr32 = SETB_C32r implicit-def{{( dead)?}} $eflags, implicit{{( killed)?}} $eflags
+  ; CHECK-NEXT:    MOV32mr $rsp, 1, $noreg, -16, $noreg, killed %[[SETB]]
 
     $eflags = COPY %3
-    %5:gr16 = SETB_C16r implicit-def $eflags, implicit $eflags
-    MOV16mr $rsp, 1, $noreg, -16, $noreg, killed %5
+    %5:gr64 = SETB_C64r implicit-def $eflags, implicit $eflags
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
   ; CHECK-NOT:     $eflags =
-  ; CHECK:         %[[CF_EXT:[^:]*]]:gr32 = MOVZX32rr8 %[[CF_REG]]
-  ; CHECK-NEXT:    %[[CF_TRUNC:[^:]*]]:gr16 = COPY %[[CF_EXT]].sub_16bit
-  ; CHECK-NEXT:    %[[ZERO:[^:]*]]:gr32 = MOV32r0 implicit-def $eflags
-  ; CHECK-NEXT:    %[[ZERO_SUBREG:[^:]*]]:gr16 = COPY %[[ZERO]].sub_16bit
-  ; CHECK-NEXT:    %[[REPLACEMENT:[^:]*]]:gr16 = SUB16rr %[[ZERO_SUBREG]], %[[CF_TRUNC]]
-  ; CHECK-NEXT:    MOV16mr $rsp, 1, $noreg, -16, $noreg, killed %[[REPLACEMENT]]
-
-    $eflags = COPY %3
-    %6:gr32 = SETB_C32r implicit-def $eflags, implicit $eflags
-    MOV32mr $rsp, 1, $noreg, -16, $noreg, killed %6
-  ; CHECK-NOT:     $eflags =
-  ; CHECK:         %[[CF_EXT:[^:]*]]:gr32 = MOVZX32rr8 %[[CF_REG]]
-  ; CHECK-NEXT:    %[[ZERO:[^:]*]]:gr32 = MOV32r0 implicit-def $eflags
-  ; CHECK-NEXT:    %[[REPLACEMENT:[^:]*]]:gr32 = SUB32rr %[[ZERO]], %[[CF_EXT]]
-  ; CHECK-NEXT:    MOV32mr $rsp, 1, $noreg, -16, $noreg, killed %[[REPLACEMENT]]
-
-    $eflags = COPY %3
-    %7:gr64 = SETB_C64r implicit-def $eflags, implicit $eflags
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %7
-  ; CHECK-NOT:     $eflags =
-  ; CHECK:         %[[CF_EXT1:[^:]*]]:gr32 = MOVZX32rr8 %[[CF_REG]]
-  ; CHECK-NEXT:    %[[CF_EXT2:[^:]*]]:gr64 = SUBREG_TO_REG 0, %[[CF_EXT1]], %subreg.sub_32bit
-  ; CHECK-NEXT:    %[[ZERO:[^:]*]]:gr32 = MOV32r0 implicit-def $eflags
-  ; CHECK-NEXT:    %[[ZERO_EXT:[^:]*]]:gr64 = SUBREG_TO_REG 0, %[[ZERO]], %subreg.sub_32bit
-  ; CHECK-NEXT:    %[[REPLACEMENT:[^:]*]]:gr64 = SUB64rr %[[ZERO_EXT]], %[[CF_EXT2]]
-  ; CHECK-NEXT:    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %[[REPLACEMENT]]
+  ; CHECK:         dead %{{[^:]*}}:gr8 = ADD8ri %[[CF_REG]], 255, implicit-def $eflags
+  ; CHECK-NEXT:    %[[SETB:[^:]*]]:gr64 = SETB_C64r implicit-def{{( dead)?}} $eflags, implicit{{( killed)?}} $eflags
+  ; CHECK-NEXT:    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %[[SETB]]
 
     RET 0
 

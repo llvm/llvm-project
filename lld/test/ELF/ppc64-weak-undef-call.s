@@ -24,6 +24,6 @@ _start:
 # be unreachable. But, we should link successfully. We should not, however,
 # generate a .plt entry (this would be wasted space). For now, we do nothing
 # (leaving the zero relative offset present in the input).
-# CHECK: 10010158:       bl .+0
+# CHECK: 10010158:       bl 0x10010158
 # CHECK: 1001015c:       nop
 # CHECK: 10010160:       blr

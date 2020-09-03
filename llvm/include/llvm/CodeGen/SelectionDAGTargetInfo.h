@@ -51,7 +51,7 @@ public:
   virtual SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
                                           SDValue Chain, SDValue Op1,
                                           SDValue Op2, SDValue Op3,
-                                          unsigned Align, bool isVolatile,
+                                          Align Alignment, bool isVolatile,
                                           bool AlwaysInline,
                                           MachinePointerInfo DstPtrInfo,
                                           MachinePointerInfo SrcPtrInfo) const {
@@ -66,7 +66,7 @@ public:
   /// lowering strategy should be used.
   virtual SDValue EmitTargetCodeForMemmove(
       SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Op1,
-      SDValue Op2, SDValue Op3, unsigned Align, bool isVolatile,
+      SDValue Op2, SDValue Op3, Align Alignment, bool isVolatile,
       MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
     return SDValue();
   }
@@ -80,7 +80,7 @@ public:
   virtual SDValue EmitTargetCodeForMemset(SelectionDAG &DAG, const SDLoc &dl,
                                           SDValue Chain, SDValue Op1,
                                           SDValue Op2, SDValue Op3,
-                                          unsigned Align, bool isVolatile,
+                                          Align Alignment, bool isVolatile,
                                           MachinePointerInfo DstPtrInfo) const {
     return SDValue();
   }
@@ -158,6 +158,11 @@ public:
   // Return true when the decision to generate FMA's (or FMS, FMLA etc) rather
   // than FMUL and ADD is delegated to the machine combiner.
   virtual bool generateFMAsInMachineCombiner(CodeGenOpt::Level OptLevel) const {
+    return false;
+  }
+
+  // Return true if the DAG Combiner should disable generic combines.
+  virtual bool disableGenericCombines(CodeGenOpt::Level OptLevel) const {
     return false;
   }
 };

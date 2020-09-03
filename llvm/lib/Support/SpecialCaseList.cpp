@@ -126,7 +126,7 @@ bool SpecialCaseList::createInternal(const MemoryBuffer *MB,
 bool SpecialCaseList::parse(const MemoryBuffer *MB,
                             StringMap<size_t> &SectionsMap,
                             std::string &Error) {
-  // Iterate through each line in the blacklist file.
+  // Iterate through each line in the exclusion list file.
   SmallVector<StringRef, 16> Lines;
   MB->getBuffer().split(Lines, '\n');
 
@@ -172,14 +172,14 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB,
     }
 
     std::pair<StringRef, StringRef> SplitRegexp = SplitLine.second.split("=");
-    std::string Regexp = SplitRegexp.first;
+    std::string Regexp = std::string(SplitRegexp.first);
     StringRef Category = SplitRegexp.second;
 
     // Create this section if it has not been seen before.
     if (SectionsMap.find(Section) == SectionsMap.end()) {
       std::unique_ptr<Matcher> M = std::make_unique<Matcher>();
       std::string REError;
-      if (!M->insert(Section, LineNo, REError)) {
+      if (!M->insert(std::string(Section), LineNo, REError)) {
         Error = (Twine("malformed section ") + Section + ": '" + REError).str();
         return false;
       }

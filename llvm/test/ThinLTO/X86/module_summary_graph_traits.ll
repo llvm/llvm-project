@@ -10,8 +10,8 @@
 ; CHECK: 5800840261926955363{{.*}} is root
 
 ; CHECK: SCC (2 nodes) {
-; CHECK-NEXT: {{^}} 17000277804057984823 (has loop)
-; CHECK-NEXT: {{^}} 765152853862302398 (has loop)
+; CHECK-NEXT: {{^}} 17000277804057984823 (has cycle)
+; CHECK-NEXT: {{^}} 765152853862302398 (has cycle)
 ; CHECK-NEXT: }
 
 ; CHECK: SCC (1 node) {

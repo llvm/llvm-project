@@ -365,3 +365,14 @@ namespace designated_init {
   static_assert(c.size() == 5, "");
   static_assert(d.size() == 1, "");
 }
+
+namespace weird_initlist {
+  struct weird {};
+}
+template<> struct std::initializer_list<weird_initlist::weird> { int a, b, c; };
+namespace weird_initlist {
+  // We don't check the struct layout in Sema.
+  auto x = {weird{}, weird{}, weird{}, weird{}, weird{}};
+  // ... but we do in constant evaluation.
+  constexpr auto y = {weird{}, weird{}, weird{}, weird{}, weird{}}; // expected-error {{constant}} expected-note {{type 'const std::initializer_list<weird_initlist::weird>' has unexpected layout}}
+}

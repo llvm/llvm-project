@@ -30,8 +30,8 @@ std::string StrError();
 std::string StrError(int errnum);
 
 template <typename FailT, typename Fun, typename... Args>
-inline auto RetryAfterSignal(const FailT &Fail, const Fun &F,
-                             const Args &... As) -> decltype(F(As...)) {
+inline decltype(auto) RetryAfterSignal(const FailT &Fail, const Fun &F,
+                                       const Args &... As) {
   decltype(F(As...)) Res;
   do {
     errno = 0;

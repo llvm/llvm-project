@@ -9,13 +9,15 @@
 #ifndef LLVM_CLANG_LIB_ARCMIGRATE_INTERNALS_H
 #define LLVM_CLANG_LIB_ARCMIGRATE_INTERNALS_H
 
-#include "clang/ARCMigrate/ARCMT.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Frontend/MigratorOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include <list>
 
 namespace clang {
+  class ASTContext;
   class Sema;
   class Stmt;
 

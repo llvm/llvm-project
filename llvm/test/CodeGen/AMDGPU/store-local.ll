@@ -1,5 +1,5 @@
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,VI,FUNC %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
 ; RUN: llc -march=r600 -mtriple=r600-- -mcpu=redwood < %s | FileCheck -check-prefixes=EG,FUNC %s
 ; RUN: llc -march=r600 -mtriple=r600-- -mcpu=cayman < %s | FileCheck -check-prefixes=CM,FUNC %s
@@ -156,7 +156,9 @@ entry:
 ; CM: LDS_WRITE
 ; CM: LDS_WRITE
 
-; GCN: ds_write2_b64
+; SI: ds_write2_b32
+; VI: ds_write_b128
+; GFX9: ds_write_b128
 define amdgpu_kernel void @store_local_v4i32(<4 x i32> addrspace(3)* %out, <4 x i32> %in) {
 entry:
   store <4 x i32> %in, <4 x i32> addrspace(3)* %out

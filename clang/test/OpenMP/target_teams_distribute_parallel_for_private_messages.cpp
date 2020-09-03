@@ -1,8 +1,9 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -116,7 +117,7 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute parallel for firstprivate(i), private(i) // expected-error {{firstprivate variable cannot be private}} expected-note {{defined as firstprivate}}
   for (int k = 0; k < argc; ++k) ++k;
 
-#pragma omp target teams distribute parallel for allocate(omp_thread_mem_alloc: j) private(j) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute parallel for' directive}}
+#pragma omp target teams distribute parallel for allocate(omp_thread_mem_alloc: j) private(j) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute parallel for' directive}} expected-error {{allocator must be specified in the 'uses_allocators' clause}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target teams distribute parallel for reduction(+:i)

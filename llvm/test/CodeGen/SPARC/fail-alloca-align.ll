@@ -2,8 +2,8 @@
 ;; alignment greater than the stack alignment.  This code ought to
 ;; compile, but doesn't currently.
 
-;; RUN: not llc -march=sparc < %s 2>&1 | FileCheck %s
-;; RUN: not llc -march=sparcv9 < %s 2>&1 | FileCheck %s
+;; RUN: not --crash llc -march=sparc < %s 2>&1 | FileCheck %s
+;; RUN: not --crash llc -march=sparcv9 < %s 2>&1 | FileCheck %s
 ;; CHECK: ERROR: Function {{.*}} required stack re-alignment
 
 define void @variable_alloca_with_overalignment(i32 %num) {

@@ -1,5 +1,5 @@
 // REQUIRES: hexagon-registered-target
-// RUN: %clang_cc1 -triple hexagon-unknown-elf -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple hexagon-unknown-elf -target-cpu hexagonv60 -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-LABEL: test1
 // CHECK: @llvm.hexagon.L2.loadrub.pci

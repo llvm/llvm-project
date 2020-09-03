@@ -1,4 +1,14 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -fms-extensions -ast-dump -ast-dump-filter Test %s | FileCheck -strict-whitespace %s
+// Test without serialization:
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -fms-extensions \
+// RUN: -ast-dump -ast-dump-filter Test %s \
+// RUN: | FileCheck --strict-whitespace %s
+//
+// Test with serialization: FIXME: Find why the outputs differs and fix it!
+//    : %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -fms-extensions -emit-pch -o %t %s
+//    : %clang_cc1 -x c++ -std=c++11 -triple x86_64-linux-gnu -fms-extensions -include-pch %t \
+//    : -ast-dump-all -ast-dump-filter Test /dev/null \
+//    : | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+//    : | FileCheck --strict-whitespace %s
 
 class testEnumDecl {
   enum class TestEnumDeclScoped;
@@ -79,7 +89,7 @@ namespace testCXXRecordDecl {
 // CHECK-NEXT:     DefaultConstructor exists trivial constexpr
 // CHECK-NEXT:     CopyConstructor simple trivial has_const_param
 // CHECK-NEXT:     MoveConstructor exists simple trivial
-// CHECK-NEXT:     CopyAssignment trivial has_const_param
+// CHECK-NEXT:     CopyAssignment simple trivial has_const_param
 // CHECK-NEXT:     MoveAssignment exists simple trivial
 // CHECK-NEXT:     Destructor simple irrelevant trivial
 
@@ -94,7 +104,7 @@ namespace testCXXRecordDecl {
 // CHECK-NEXT:     DefaultConstructor exists non_trivial
 // CHECK-NEXT:     CopyConstructor simple non_trivial has_const_param
 // CHECK-NEXT:     MoveConstructor exists simple non_trivial
-// CHECK-NEXT:     CopyAssignment non_trivial has_const_param
+// CHECK-NEXT:     CopyAssignment simple non_trivial has_const_param
 // CHECK-NEXT:     MoveAssignment exists simple non_trivial
 // CHECK-NEXT:     Destructor simple irrelevant trivial
 // CHECK-NEXT:   virtual private 'testCXXRecordDecl::A'
@@ -214,19 +224,27 @@ namespace testFunctionTemplateDecl {
   // CHECK-NEXT:  | `-CompoundStmt 0x{{.+}} <col:53, col:55>
   // CHECK-NEXT:  |-FunctionDecl 0x{{.+}} <col:24, col:55> col:29 used TestFunctionTemplate 'void (testFunctionTemplateDecl::A)'
   // CHECK-NEXT:  | |-TemplateArgument type 'testFunctionTemplateDecl::A'
+  // CHECK-NEXT:  | | `-RecordType 0{{.+}} 'testFunctionTemplateDecl::A'
+  // CHECK-NEXT:  | |   `-CXXRecord 0x{{.+}} 'A'
   // CHECK-NEXT:  | |-ParmVarDecl 0x{{.+}} <col:50> col:51 'testFunctionTemplateDecl::A':'testFunctionTemplateDecl::A'
   // CHECK-NEXT:  | `-CompoundStmt 0x{{.+}} <col:53, col:55>
   // CHECK-NEXT:  |-Function 0x{{.+}} 'TestFunctionTemplate' 'void (testFunctionTemplateDecl::B)'
   // CHECK-NEXT:  |-FunctionDecl 0x{{.+}} <col:24, col:55> col:29 TestFunctionTemplate 'void (testFunctionTemplateDecl::C)'
   // CHECK-NEXT:  | |-TemplateArgument type 'testFunctionTemplateDecl::C'
+  // CHECK-NEXT:  | | `-RecordType 0{{.+}} 'testFunctionTemplateDecl::C'
+  // CHECK-NEXT:  | |   `-CXXRecord 0x{{.+}} 'C'
   // CHECK-NEXT:  | `-ParmVarDecl 0x{{.+}} <col:50> col:51 'testFunctionTemplateDecl::C':'testFunctionTemplateDecl::C'
   // CHECK-NEXT:  `-FunctionDecl 0x{{.+}} <col:24, col:55> col:29 TestFunctionTemplate 'void (testFunctionTemplateDecl::D)'
   // CHECK-NEXT:    |-TemplateArgument type 'testFunctionTemplateDecl::D'
+  // CHECK-NEXT:    | `-RecordType 0{{.+}} 'testFunctionTemplateDecl::D'
+  // CHECK-NEXT:    |   `-CXXRecord 0x{{.+}} 'D'
   // CHECK-NEXT:    |-ParmVarDecl 0x{{.+}} <col:50> col:51 'testFunctionTemplateDecl::D':'testFunctionTemplateDecl::D'
   // CHECK-NEXT:    `-CompoundStmt 0x{{.+}} <col:53, col:55>
 
-  // CHECK:       FunctionDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-26]]:3, col:41> col:19 TestFunctionTemplate 'void (testFunctionTemplateDecl::B)'
+  // CHECK:       FunctionDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-32]]:3, col:41> col:19 TestFunctionTemplate 'void (testFunctionTemplateDecl::B)'
   // CHECK-NEXT:  |-TemplateArgument type 'testFunctionTemplateDecl::B'
+  // CHECK-NEXT:  | `-RecordType 0{{.+}} 'testFunctionTemplateDecl::B'
+  // CHECK-NEXT:  |   `-CXXRecord 0x{{.+}} 'B'
   // CHECK-NEXT:  `-ParmVarDecl 0x{{.+}} <col:40> col:41 'testFunctionTemplateDecl::B'
 
 
@@ -283,7 +301,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  | | |-DefaultConstructor exists non_trivial user_provided
 // CHECK-NEXT:  | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | | |-MoveConstructor
-// CHECK-NEXT:  | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:  | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | | |-MoveAssignment
 // CHECK-NEXT:  | | `-Destructor non_trivial user_declared
 // CHECK-NEXT:  | |-CXXRecordDecl 0x{{.+}} <col:24, col:30> col:30 implicit referenced class TestClassTemplate
@@ -297,137 +315,151 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  | | |-DefaultConstructor exists non_trivial user_provided
 // CHECK-NEXT:  | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
 // CHECK-NEXT:  | | |-MoveConstructor
-// CHECK-NEXT:  | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:  | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | | |-MoveAssignment
 // CHECK-NEXT:  | | `-Destructor non_trivial user_declared
 // CHECK-NEXT:  | |-TemplateArgument type 'testClassTemplateDecl::A'
+// CHECK-NEXT:  | | `-RecordType 0{{.+}} 'testClassTemplateDecl::A'
+// CHECK-NEXT:  | |   `-CXXRecord 0x{{.+}} 'A'
 // CHECK-NEXT:  | |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:24, col:30> col:30 implicit class TestClassTemplate
-// CHECK-NEXT:  | |-AccessSpecDecl 0x{{.+}} <line:[[@LINE-65]]:3, col:9> col:3 public
-// CHECK-NEXT:  | |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-65]]:5, col:23> col:5 used TestClassTemplate 'void ()'
-// CHECK-NEXT:  | |-CXXDestructorDecl 0x{{.+}} <line:[[@LINE-65]]:5, col:24> col:5 used ~TestClassTemplate 'void () noexcept'
-// CHECK-NEXT:  | |-CXXMethodDecl 0x{{.+}} <line:[[@LINE-65]]:5, col:11> col:9 j 'int ()'
-// CHECK-NEXT:  | |-FieldDecl 0x{{.+}} <line:[[@LINE-65]]:5, col:9> col:9 i 'int'
-// CHECK-NEXT:  | `-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-71]]:30> col:30 implicit constexpr TestClassTemplate 'void (const testClassTemplateDecl::TestClassTemplate<testClassTemplateDecl::A> &)' inline default trivial noexcept-unevaluated 0x{{.+}}
+// CHECK-NEXT:  | |-AccessSpecDecl 0x{{.+}} <line:[[@LINE-67]]:3, col:9> col:3 public
+// CHECK-NEXT:  | |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-67]]:5, col:23> col:5 used TestClassTemplate 'void ()'
+// CHECK-NEXT:  | |-CXXDestructorDecl 0x{{.+}} <line:[[@LINE-67]]:5, col:24> col:5 used ~TestClassTemplate 'void () noexcept'
+// CHECK-NEXT:  | |-CXXMethodDecl 0x{{.+}} <line:[[@LINE-67]]:5, col:11> col:9 j 'int ()'
+// CHECK-NEXT:  | |-FieldDecl 0x{{.+}} <line:[[@LINE-67]]:5, col:9> col:9 i 'int'
+// CHECK-NEXT:  | `-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-73]]:30> col:30 implicit constexpr TestClassTemplate 'void (const testClassTemplateDecl::TestClassTemplate<testClassTemplateDecl::A> &)' inline default trivial noexcept-unevaluated 0x{{.+}}
 // CHECK-NEXT:  |   `-ParmVarDecl 0x{{.+}} <col:30> col:30 'const testClassTemplateDecl::TestClassTemplate<testClassTemplateDecl::A> &'
 // CHECK-NEXT:  |-ClassTemplateSpecialization 0x{{.+}} 'TestClassTemplate'
 // CHECK-NEXT:  |-ClassTemplateSpecialization 0x{{.+}} 'TestClassTemplate'
 // CHECK-NEXT:  `-ClassTemplateSpecialization 0x{{.+}} 'TestClassTemplate'
 
-// CHECK:       ClassTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-65]]:3, line:[[@LINE-63]]:3> line:[[@LINE-65]]:20 class TestClassTemplate definition
+// CHECK:       ClassTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-67]]:3, line:[[@LINE-65]]:3> line:[[@LINE-67]]:20 class TestClassTemplate definition
 // CHECK-NEXT:  |-DefinitionData pass_in_registers standard_layout trivially_copyable trivial literal
 // CHECK-NEXT:  | |-DefaultConstructor exists trivial needs_implicit
 // CHECK-NEXT:  | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:  | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:  | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveAssignment exists simple trivial needs_implicit
 // CHECK-NEXT:  | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:  |-TemplateArgument type 'testClassTemplateDecl::B'
+// CHECK-NEXT:  | `-RecordType 0{{.+}} 'testClassTemplateDecl::B'
+// CHECK-NEXT:  |   `-CXXRecord 0x{{.+}} 'B'
 // CHECK-NEXT:  |-CXXRecordDecl 0x{{.+}} <col:14, col:20> col:20 implicit class TestClassTemplate
-// CHECK-NEXT:  `-FieldDecl 0x{{.+}} <line:[[@LINE-74]]:5, col:9> col:9 j 'int'
+// CHECK-NEXT:  `-FieldDecl 0x{{.+}} <line:[[@LINE-78]]:5, col:9> col:9 j 'int'
 
-// CHECK:       ClassTemplateSpecializationDecl 0x{{.+}} <{{.+}}:256:3, col:44> col:25 class TestClassTemplate definition
+// CHECK:       ClassTemplateSpecializationDecl 0x{{.+}} <{{.+}}:{{.*}}:3, col:44> col:25 class TestClassTemplate definition
 // CHECK-NEXT:  |-DefinitionData standard_layout has_user_declared_ctor can_const_default_init
 // CHECK-NEXT:  | |-DefaultConstructor exists non_trivial user_provided
 // CHECK-NEXT:  | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveConstructor
-// CHECK-NEXT:  | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:  | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveAssignment
 // CHECK-NEXT:  | `-Destructor non_trivial user_declared
 // CHECK-NEXT:  |-TemplateArgument type 'testClassTemplateDecl::C'
-// CHECK-NEXT:  |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-98]]:24, col:30> col:30 implicit class TestClassTemplate
-// CHECK-NEXT:  |-AccessSpecDecl 0x{{.+}} <line:[[@LINE-98]]:3, col:9> col:3 public
-// CHECK-NEXT:  |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-98]]:5, col:23> col:5 TestClassTemplate 'void ()'
-// CHECK-NEXT:  |-CXXDestructorDecl 0x{{.+}} <line:[[@LINE-98]]:5, col:24> col:5 ~TestClassTemplate 'void ()' noexcept-unevaluated 0x{{.+}}
-// CHECK-NEXT:  |-CXXMethodDecl 0x{{.+}} <line:[[@LINE-98]]:5, col:11> col:9 j 'int ()'
-// CHECK-NEXT:  `-FieldDecl 0x{{.+}} <line:[[@LINE-98]]:5, col:9> col:9 i 'int'
+// CHECK-NEXT:  | `-RecordType 0{{.+}} 'testClassTemplateDecl::C'
+// CHECK-NEXT:  |   `-CXXRecord 0x{{.+}} 'C'
+// CHECK-NEXT:  |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-104]]:24, col:30> col:30 implicit class TestClassTemplate
+// CHECK-NEXT:  |-AccessSpecDecl 0x{{.+}} <line:[[@LINE-104]]:3, col:9> col:3 public
+// CHECK-NEXT:  |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-104]]:5, col:23> col:5 TestClassTemplate 'void ()'
+// CHECK-NEXT:  |-CXXDestructorDecl 0x{{.+}} <line:[[@LINE-104]]:5, col:24> col:5 ~TestClassTemplate 'void ()' noexcept-unevaluated 0x{{.+}}
+// CHECK-NEXT:  |-CXXMethodDecl 0x{{.+}} <line:[[@LINE-104]]:5, col:11> col:9 j 'int ()'
+// CHECK-NEXT:  `-FieldDecl 0x{{.+}} <line:[[@LINE-104]]:5, col:9> col:9 i 'int'
 
-// CHECK:       ClassTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-85]]:3, col:37> col:18 class TestClassTemplate definition
+// CHECK:       ClassTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-91]]:3, col:37> col:18 class TestClassTemplate definition
 // CHECK-NEXT:  |-DefinitionData standard_layout has_user_declared_ctor can_const_default_init
 // CHECK-NEXT:  | |-DefaultConstructor exists non_trivial user_provided
 // CHECK-NEXT:  | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveConstructor
-// CHECK-NEXT:  | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:  | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveAssignment
 // CHECK-NEXT:  | `-Destructor non_trivial user_declared
 // CHECK-NEXT:  |-TemplateArgument type 'testClassTemplateDecl::D'
-// CHECK-NEXT:  |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-114]]:24, col:30> col:30 implicit class TestClassTemplate
-// CHECK-NEXT:  |-AccessSpecDecl 0x{{.+}} <line:[[@LINE-114]]:3, col:9> col:3 public
-// CHECK-NEXT:  |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-114]]:5, col:23> col:5 TestClassTemplate 'void ()'
-// CHECK-NEXT:  |-CXXDestructorDecl 0x{{.+}} <line:[[@LINE-114]]:5, col:24> col:5 ~TestClassTemplate 'void ()' noexcept-unevaluated 0x{{.+}}
-// CHECK-NEXT:  |-CXXMethodDecl 0x{{.+}} <line:[[@LINE-114]]:5, col:11> col:9 j 'int ()'
-// CHECK-NEXT:  `-FieldDecl 0x{{.+}} <line:[[@LINE-114]]:5, col:9> col:9 i 'int'
+// CHECK-NEXT:  | `-RecordType 0{{.+}} 'testClassTemplateDecl::D'
+// CHECK-NEXT:  |   `-CXXRecord 0x{{.+}} 'D'
+// CHECK-NEXT:  |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-122]]:24, col:30> col:30 implicit class TestClassTemplate
+// CHECK-NEXT:  |-AccessSpecDecl 0x{{.+}} <line:[[@LINE-122]]:3, col:9> col:3 public
+// CHECK-NEXT:  |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-122]]:5, col:23> col:5 TestClassTemplate 'void ()'
+// CHECK-NEXT:  |-CXXDestructorDecl 0x{{.+}} <line:[[@LINE-122]]:5, col:24> col:5 ~TestClassTemplate 'void ()' noexcept-unevaluated 0x{{.+}}
+// CHECK-NEXT:  |-CXXMethodDecl 0x{{.+}} <line:[[@LINE-122]]:5, col:11> col:9 j 'int ()'
+// CHECK-NEXT:  `-FieldDecl 0x{{.+}} <line:[[@LINE-122]]:5, col:9> col:9 i 'int'
 
-// CHECK:      ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-98]]:3, line:[[@LINE-96]]:3> line:[[@LINE-98]]:44 TestClassTemplatePartial
+// CHECK:      ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-106]]:3, line:[[@LINE-104]]:3> line:[[@LINE-106]]:44 TestClassTemplatePartial
 // CHECK-NEXT:  |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T1
 // CHECK-NEXT:  |-TemplateTypeParmDecl 0x{{.+}} <col:25, col:34> col:34 typename depth 0 index 1 T2
-// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:38, line:[[@LINE-99]]:3> line:[[@LINE-101]]:44 class TestClassTemplatePartial definition
+// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:38, line:[[@LINE-107]]:3> line:[[@LINE-109]]:44 class TestClassTemplatePartial definition
 // CHECK-NEXT:    |-DefinitionData standard_layout trivially_copyable trivial literal
 // CHECK-NEXT:    | |-DefaultConstructor exists trivial needs_implicit
 // CHECK-NEXT:    | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:    | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | |-MoveAssignment exists simple trivial needs_implicit
 // CHECK-NEXT:    | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    |-CXXRecordDecl 0x{{.+}} <col:38, col:44> col:44 implicit class TestClassTemplatePartial
-// CHECK-NEXT:    `-FieldDecl 0x{{.+}} <line:[[@LINE-109]]:5, col:9> col:9 i 'int'
+// CHECK-NEXT:    `-FieldDecl 0x{{.+}} <line:[[@LINE-117]]:5, col:9> col:9 i 'int'
 
-// CHECK:       ClassTemplatePartialSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-109]]:3, line:[[@LINE-107]]:3> line:[[@LINE-109]]:31 class TestClassTemplatePartial definition
+// CHECK:       ClassTemplatePartialSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-117]]:3, line:[[@LINE-115]]:3> line:[[@LINE-117]]:31 class TestClassTemplatePartial definition
 // CHECK-NEXT:  |-DefinitionData standard_layout trivially_copyable trivial literal
 // CHECK-NEXT:  | |-DefaultConstructor exists trivial needs_implicit
 // CHECK-NEXT:  | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:  | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:  | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveAssignment exists simple trivial needs_implicit
 // CHECK-NEXT:  | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:  |-TemplateArgument type 'type-parameter-0-0'
+// CHECK-NEXT:  | `-TemplateTypeParmType 0x{{.+}} 'type-parameter-0-0' dependent depth 0 index 0
 // CHECK-NEXT:  |-TemplateArgument type 'testClassTemplateDecl::A'
+// CHECK-NEXT:  | `-RecordType 0x{{.+}} 'testClassTemplateDecl::A'
+// CHECK-NEXT:  |   `-CXXRecord 0x{{.+}} 'A'
 // CHECK-NEXT:  |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 referenced typename depth 0 index 0 T1
 // CHECK-NEXT:  |-CXXRecordDecl 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplatePartial
-// CHECK-NEXT:  `-FieldDecl 0x{{.+}} <line:[[@LINE-120]]:5, col:9> col:9 j 'int'
+// CHECK-NEXT:  `-FieldDecl 0x{{.+}} <line:[[@LINE-131]]:5, col:9> col:9 j 'int'
 
-// CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-119]]:3, col:37> col:37 TestTemplateDefaultType
+// CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-130]]:3, col:37> col:37 TestTemplateDefaultType
 // CHECK-NEXT:  |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:25> col:21 typename depth 0 index 0 T
 // CHECK-NEXT:  | `-TemplateArgument type 'int'
+// CHECK-NEXT:  |   `-BuiltinType 0x{{.+}} 'int'
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:30, col:37> col:37 struct TestTemplateDefaultType
 
-// CHECK:       ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-123]]:3, col:57> col:31 TestTemplateDefaultType
+// CHECK:       ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-135]]:3, col:57> col:31 TestTemplateDefaultType
 // CHECK-NEXT:  |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T
 // CHECK-NEXT:  | `-TemplateArgument type 'int'
-// CHECK-NEXT:  |   `-inherited from TemplateTypeParm 0x{{.+}} 'T'
+// CHECK-NEXT:  |   |-inherited from TemplateTypeParm 0x{{.+}} 'T'
+// CHECK-NEXT:  |   `-BuiltinType 0x{{.+}} 'int'
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:24, col:57> col:31 struct TestTemplateDefaultType definition
 // CHECK-NEXT:    |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
 // CHECK-NEXT:    | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
 // CHECK-NEXT:    | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:    | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | |-MoveAssignment exists simple trivial needs_implicit
 // CHECK-NEXT:    | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    `-CXXRecordDecl 0x{{.+}} <col:24, col:31> col:31 implicit struct TestTemplateDefaultType
 
-// CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-135]]:3, col:31> col:31 TestTemplateDefaultNonType
+// CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-148]]:3, col:31> col:31 TestTemplateDefaultNonType
 // CHECK-NEXT:  |-NonTypeTemplateParmDecl 0x{{.+}} <col:12, col:20> col:16 'int' depth 0 index 0 I
 // CHECK-NEXT:  | `-TemplateArgument expr
 // CHECK-NEXT:  |   `-ConstantExpr 0x{{.+}} <col:20> 'int'
+// CHECK-NEXT:  |     |-value: Int 42
 // CHECK-NEXT:  |     `-IntegerLiteral 0x{{.+}} <col:20> 'int' 42
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:24, col:31> col:31 struct TestTemplateDefaultNonType
 
-// CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:275:3, col:68> col:68 TestTemplateTemplateDefaultType
+// CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:{{.*}}:3, col:68> col:68 TestTemplateTemplateDefaultType
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:42> col:37 depth 0 index 0 TT
 // CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:29 typename depth 1 index 0
 // CHECK-NEXT:  | `-TemplateArgument <col:42> template TestClassTemplate
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:61, col:68> col:68 struct TestTemplateTemplateDefaultType
 
-// CHECK:       ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:276:3, col:82> col:48 TestTemplateTemplateDefaultType
+// CHECK:       ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:{{.*}}:3, col:82> col:48 TestTemplateTemplateDefaultType
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:37> col:37 depth 0 index 0 TT
 // CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:29 typename depth 1 index 0
-// CHECK-NEXT:  | `-TemplateArgument <line:275:42> template TestClassTemplate
+// CHECK-NEXT:  | `-TemplateArgument <line:{{.*}}:42> template TestClassTemplate
 // CHECK-NEXT:  |   `-inherited from TemplateTemplateParm 0x{{.+}} 'TT'
-// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:276:41, col:82> col:48 struct TestTemplateTemplateDefaultType definition
+// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:{{.*}}:41, col:82> col:48 struct TestTemplateTemplateDefaultType definition
 // CHECK-NEXT:    |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
 // CHECK-NEXT:    | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
 // CHECK-NEXT:    | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:    | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | |-MoveAssignment exists simple trivial needs_implicit
 // CHECK-NEXT:    | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    `-CXXRecordDecl 0x{{.+}} <col:41, col:48> col:48 implicit struct TestTemplateTemplateDefaultType
@@ -446,9 +478,11 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT:   | `-ParmVarDecl 0x{{.*}} <col:50> col:51 'T'
   // CHECK-NEXT:   `-FunctionDecl 0x{{.*}} <line:[[@LINE-6]]:24, col:51> col:29 used TestFunctionTemplate 'void (testCanonicalTemplate::A)'
   // CHECK-NEXT:     |-TemplateArgument type 'testCanonicalTemplate::A'
+  // CHECK-NEXT:     | `-RecordType 0x{{.+}} 'testCanonicalTemplate::A'
+  // CHECK-NEXT:     |   `-CXXRecord 0x{{.+}} 'A'
   // CHECK-NEXT:     `-ParmVarDecl 0x{{.*}} <col:50> col:51 'testCanonicalTemplate::A':'testCanonicalTemplate::A'
 
-  // CHECK:      FunctionTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-10]]:3, col:51> col:29 TestFunctionTemplate
+  // CHECK:      FunctionTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-12]]:3, col:51> col:29 TestFunctionTemplate
   // CHECK-NEXT:   |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 referenced typename depth 0 index 0 T
   // CHECK-NEXT:   |-FunctionDecl{{.*}} 0x{{.+}} prev 0x{{.+}} <col:24, col:51> col:29 TestFunctionTemplate 'void (T)'
   // CHECK-NEXT:   | `-ParmVarDecl 0x{{.+}} <col:50> col:51 'T'
@@ -466,7 +500,7 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT: | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
   // CHECK-NEXT: | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: | | |-MoveConstructor exists simple trivial needs_implicit
-  // CHECK-NEXT: | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+  // CHECK-NEXT: | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: | | |-MoveAssignment exists simple trivial needs_implicit
   // CHECK-NEXT: | | `-Destructor simple irrelevant trivial needs_implicit
   // CHECK-NEXT: | |-CXXRecordDecl 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplate
@@ -479,17 +513,19 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT:   | |-DefaultConstructor exists trivial constexpr defaulted_is_constexpr
   // CHECK-NEXT:   | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
   // CHECK-NEXT:   | |-MoveConstructor exists simple trivial
-  // CHECK-NEXT:   | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+  // CHECK-NEXT:   | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT:   | |-MoveAssignment exists simple trivial needs_implicit
   // CHECK-NEXT:   | `-Destructor simple irrelevant trivial needs_implicit
   // CHECK-NEXT:   |-TemplateArgument type 'testCanonicalTemplate::A'
+  // CHECK-NEXT:   | `-RecordType 0x{{.+}} 'testCanonicalTemplate::A'
+  // CHECK-NEXT:   |   `-CXXRecord 0x{{.+}} 'A'
   // CHECK-NEXT:   |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplate
-  // CHECK-NEXT:   |-FriendDecl 0x{{.+}} <line:[[@LINE-28]]:5, col:40> col:40
+  // CHECK-NEXT:   |-FriendDecl 0x{{.+}} <line:[[@LINE-30]]:5, col:40> col:40
   // CHECK-NEXT:   | `-ClassTemplateDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <col:5, col:40> col:40 TestClassTemplate
   // CHECK-NEXT:   |   |-TemplateTypeParmDecl 0x{{.+}} <col:14, col:23> col:23 typename depth 0 index 0 T2
   // CHECK-NEXT:   |   |-CXXRecordDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <col:34, col:40> col:40 class TestClassTemplate
   // CHECK-NEXT:   |   `-ClassTemplateSpecialization 0x{{.+}} 'TestClassTemplate'
-  // CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-34]]:31> col:31 implicit used constexpr TestClassTemplate 'void () noexcept' inline default trivial
+  // CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-36]]:31> col:31 implicit used constexpr TestClassTemplate 'void () noexcept' inline default trivial
   // CHECK-NEXT:   | `-CompoundStmt 0x{{.+}} <col:31>
   // CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit constexpr TestClassTemplate 'void (const testCanonicalTemplate::TestClassTemplate<testCanonicalTemplate::A> &)' inline default trivial noexcept-unevaluated 0x{{.+}}
   // CHECK-NEXT:   | `-ParmVarDecl 0x{{.+}} <col:31> col:31 'const testCanonicalTemplate::TestClassTemplate<testCanonicalTemplate::A> &'
@@ -510,10 +546,12 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT:   | |-DefaultConstructor exists trivial constexpr defaulted_is_constexpr
   // CHECK-NEXT:   | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
   // CHECK-NEXT:   | |-MoveConstructor exists simple trivial
-  // CHECK-NEXT:   | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+  // CHECK-NEXT:   | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT:   | |-MoveAssignment exists simple trivial needs_implicit
   // CHECK-NEXT:   | `-Destructor simple irrelevant trivial needs_implicit
   // CHECK-NEXT:   |-TemplateArgument type 'testCanonicalTemplate::A'
+  // CHECK-NEXT:   | `-RecordType 0x{{.+}} 'testCanonicalTemplate::A'
+  // CHECK-NEXT:   |   `-CXXRecord 0x{{.+}} 'A'
   // CHECK-NEXT:   |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplate2
   // CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit used constexpr TestClassTemplate2 'void () noexcept' inline default trivial
   // CHECK-NEXT:   | `-CompoundStmt 0x{{.+}} <col:31>
@@ -522,19 +560,19 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT:   `-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit constexpr TestClassTemplate2 'void (testCanonicalTemplate::TestClassTemplate2<testCanonicalTemplate::A> &&)' inline default trivial noexcept-unevaluated 0x{{.+}}
   // CHECK-NEXT:     `-ParmVarDecl 0x{{.+}} <col:31> col:31 'testCanonicalTemplate::TestClassTemplate2<testCanonicalTemplate::A> &&'
 
-  // CHECK:      ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-24]]:3, col:31> col:31 TestClassTemplate2
+  // CHECK:      ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-26]]:3, col:31> col:31 TestClassTemplate2
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T1
   // CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:25, col:31> col:31 class TestClassTemplate2
   // CHECK-NEXT: `-ClassTemplateSpecialization 0x{{.+}} 'TestClassTemplate2'
 
-  // CHECK:      ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-28]]:3, line:[[@LINE-27]]:3> line:[[@LINE-28]]:31 TestClassTemplate2
+  // CHECK:      ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-30]]:3, line:[[@LINE-29]]:3> line:[[@LINE-30]]:31 TestClassTemplate2
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T1
-  // CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:25, line:[[@LINE-29]]:3> line:[[@LINE-30]]:31 class TestClassTemplate2 definition
+  // CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:25, line:[[@LINE-31]]:3> line:[[@LINE-32]]:31 class TestClassTemplate2 definition
   // CHECK-NEXT: | |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
   // CHECK-NEXT: | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
   // CHECK-NEXT: | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: | | |-MoveConstructor exists simple trivial needs_implicit
-  // CHECK-NEXT: | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+  // CHECK-NEXT: | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: | | |-MoveAssignment exists simple trivial needs_implicit
   // CHECK-NEXT: | | `-Destructor simple irrelevant trivial needs_implicit
   // CHECK-NEXT: | `-CXXRecordDecl 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplate2
@@ -557,22 +595,25 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT: |-VarDecl 0x{{.+}} <col:28, col:43> col:43 TestVarTemplate 'const T' static
   // CHECK-NEXT: |-VarTemplateSpecializationDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-11]]:3, col:34> col:14 referenced TestVarTemplate 'const int':'const int' cinit
   // CHECK-NEXT: | |-TemplateArgument type 'int'
+  // CHECK-NEXT: | | `-BuiltinType 0x{{.+}} 'int'
   // CHECK-NEXT: | `-InitListExpr 0x{{.+}} <col:32, col:34> 'int':'int'
-  // CHECK-NEXT: `-VarTemplateSpecializationDecl 0x{{.+}} <line:[[@LINE-17]]:28, col:43> col:43 referenced TestVarTemplate 'const int':'const int' static
+  // CHECK-NEXT: `-VarTemplateSpecializationDecl 0x{{.+}} <line:[[@LINE-18]]:28, col:43> col:43 referenced TestVarTemplate 'const int':'const int' static
   // CHECK-NEXT:   `-TemplateArgument type 'int'
 
-  // CHECK:     VarTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-20]]:28, col:43> col:43 referenced TestVarTemplate 'const int':'const int' static
+  // CHECK:     VarTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-21]]:28, col:43> col:43 referenced TestVarTemplate 'const int':'const int' static
   // CHECK-NEXT:`-TemplateArgument type 'int'
+  // CHECK-NEXT:  `-BuiltinType 0x{{.+}} 'int'
 
-  // CHECK:      VarTemplateDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-21]]:3, line:[[@LINE-20]]:34> col:14 TestVarTemplate
-  // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <line:[[@LINE-22]]:12, col:21> col:21 referenced typename depth 0 index 0 T
-  // CHECK-NEXT: |-VarDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-22]]:3, col:34> col:14 TestVarTemplate 'const T' cinit
+  // CHECK:      VarTemplateDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-23]]:3, line:[[@LINE-22]]:34> col:14 TestVarTemplate
+  // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <line:[[@LINE-24]]:12, col:21> col:21 referenced typename depth 0 index 0 T
+  // CHECK-NEXT: |-VarDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-24]]:3, col:34> col:14 TestVarTemplate 'const T' cinit
   // CHECK-NEXT: | `-InitListExpr 0x{{.+}} <col:32, col:34> 'void'
   // CHECK-NEXT: |-VarTemplateSpecialization 0x{{.+}} 'TestVarTemplate' 'const int':'const int'
   // CHECK-NEXT: `-VarTemplateSpecialization 0x{{.+}} 'TestVarTemplate' 'const int':'const int'
     
-  // CHECK:      VarTemplateSpecializationDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-27]]:3, col:34> col:14 referenced TestVarTemplate 'const int':'const int' cinit
+  // CHECK:      VarTemplateSpecializationDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-29]]:3, col:34> col:14 referenced TestVarTemplate 'const int':'const int' cinit
   // CHECK-NEXT: |-TemplateArgument type 'int'
+  // CHECK-NEXT: | `-BuiltinType 0x{{.+}} 'int'
   // CHECK-NEXT: `-InitListExpr 0x{{.+}} <col:32, col:34> 'int':'int'
 } 
 
@@ -604,6 +645,7 @@ namespace TestNonTypeTemplateParmDecl {
 // CHECK-NEXT:     NonTypeTemplateParmDecl{{.*}} 'int' depth 0 index 0 I
 // CHECK-NEXT:       TemplateArgument expr
 // CHECK-NEXT:         ConstantExpr{{.*}} 'int'
+// CHECK-NEXT:           value: Int 1
 // CHECK-NEXT:           IntegerLiteral{{.*}} 'int' 1
 // CHECK-NEXT:     NonTypeTemplateParmDecl{{.*}} 'int' depth 0 index 1 ... J
 

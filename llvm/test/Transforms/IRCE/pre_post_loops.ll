@@ -1,5 +1,5 @@
 ; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -S < %s 2>&1 | FileCheck %s
-; RUN: opt -verify-loop-info -irce-print-changed-loops -passes='require<branch-prob>,loop(irce)' -S < %s 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -irce-print-changed-loops -passes='require<branch-prob>,irce' -S < %s 2>&1 | FileCheck %s
 
 ; CHECK: irce: in function test_01: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK: irce: in function test_02: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
@@ -66,7 +66,7 @@ define void @test_02(i32* %arr, i32* %a_len_ptr) {
 
 ; CHECK:      test_02(
 ; CHECK:      entry:
-; CHECK-NEXT:   %len = load i32, i32* %a_len_ptr, !range !0
+; CHECK-NEXT:   %len = load i32, i32* %a_len_ptr, align 4, !range !0
 ; CHECH-NEXT:    br i1 true, label %loop.preloop.preheader
 ; CHECK:      mainloop:
 ; CHECK-NEXT:   br label %loop

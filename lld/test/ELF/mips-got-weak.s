@@ -9,19 +9,19 @@
 # RUN: llvm-readelf -r --dyn-syms --dynamic-table -A %t2.so \
 # RUN:   | FileCheck -check-prefixes=CHECK,SYM %s
 
-# CHECK: There are no relocations in this file.
-
-# CHECK: Symbol table '.dynsym'
-# CHECK-DAG: [[FOO:[0-9a-f]+]]     0 NOTYPE  WEAK   DEFAULT    8 foo
-# CHECK-DAG:          00000000     0 NOTYPE  WEAK   DEFAULT  UND bar
-# CHECK-DAG: [[SYM:[0-9a-f]+]]     0 NOTYPE  GLOBAL DEFAULT    8 sym
-
 # CHECK: Dynamic section
 # CHECK: (MIPS_SYMTABNO)      4
 # NOSYM: (MIPS_LOCAL_GOTNO)   2
 # NOSYM: (MIPS_GOTSYM)        0x1
 #   SYM: (MIPS_LOCAL_GOTNO)   4
 #   SYM: (MIPS_GOTSYM)        0x3
+
+# CHECK: There are no relocations in this file.
+
+# CHECK: Symbol table '.dynsym'
+# CHECK-DAG: [[FOO:[0-9a-f]+]]     0 NOTYPE  WEAK   DEFAULT    8 foo
+# CHECK-DAG:          00000000     0 NOTYPE  WEAK   DEFAULT  UND bar
+# CHECK-DAG: [[SYM:[0-9a-f]+]]     0 NOTYPE  GLOBAL DEFAULT    8 sym
 
 # NOSYM:      Primary GOT:
 # NOSYM-NOT:   Local entries:

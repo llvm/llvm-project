@@ -1,29 +1,3 @@
-if ( CMAKE_SYSTEM_NAME MATCHES "Linux" )
-include_directories(
-  ../../../../llvm/include
-  ../../source/Plugins/Process/Linux
-  ../../source/Plugins/Process/POSIX
-  )
-endif ()
-
-if ( CMAKE_SYSTEM_NAME MATCHES "FreeBSD" )
-include_directories(
-  ../../../../llvm/include
-  ../../source/Plugins/Process/FreeBSD
-  ../../source/Plugins/Process/POSIX
-  )
-endif ()
-
-if ( CMAKE_SYSTEM_NAME MATCHES "NetBSD" )
-include_directories(
-  ../../../../llvm/include
-  ../../source/Plugins/Process/NetBSD
-  ../../source/Plugins/Process/POSIX
-  )
-endif ()
-
-include_directories(../../source)
-
 set(LLDB_PLUGINS)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
@@ -76,4 +50,5 @@ add_lldb_tool(lldb-server
       Support
 )
 
+target_include_directories(lldb-server PRIVATE "${LLDB_SOURCE_DIR}/source")
 target_link_libraries(lldb-server PRIVATE ${LLDB_SYSTEM_LIBS})

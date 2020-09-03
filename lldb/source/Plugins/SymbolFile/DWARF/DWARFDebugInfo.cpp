@@ -1,4 +1,4 @@
-//===-- DWARFDebugInfo.cpp --------------------------------------*- C++ -*-===//
+//===-- DWARFDebugInfo.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -72,10 +72,16 @@ void DWARFDebugInfo::ParseUnitsFor(DIERef::Section section) {
   DWARFDataExtractor data = section == DIERef::Section::DebugTypes
                                 ? m_context.getOrLoadDebugTypesData()
                                 : m_context.getOrLoadDebugInfoData();
+  const llvm::DWARFUnitIndex *index = nullptr;
+  if (m_context.isDwo())
+    index = &llvm::getDWARFUnitIndex(m_context.GetAsLLVM(),
+                                     section == DIERef::Section::DebugTypes
+                                         ? llvm::DW_SECT_EXT_TYPES
+                                         : llvm::DW_SECT_INFO);
   lldb::offset_t offset = 0;
   while (data.ValidOffset(offset)) {
-    llvm::Expected<DWARFUnitSP> unit_sp =
-        DWARFUnit::extract(m_dwarf, m_units.size(), data, section, &offset);
+    llvm::Expected<DWARFUnitSP> unit_sp = DWARFUnit::extract(
+        m_dwarf, m_units.size(), data, section, &offset, index);
 
     if (!unit_sp) {
       // FIXME: Propagate this error up.
@@ -96,12 +102,11 @@ void DWARFDebugInfo::ParseUnitsFor(DIERef::Section section) {
 }
 
 void DWARFDebugInfo::ParseUnitHeadersIfNeeded() {
-  if (!m_units.empty())
-    return;
-
-  ParseUnitsFor(DIERef::Section::DebugInfo);
-  ParseUnitsFor(DIERef::Section::DebugTypes);
-  llvm::sort(m_type_hash_to_unit_index, llvm::less_first());
+  llvm::call_once(m_units_once_flag, [&] {
+    ParseUnitsFor(DIERef::Section::DebugInfo);
+    ParseUnitsFor(DIERef::Section::DebugTypes);
+    llvm::sort(m_type_hash_to_unit_index, llvm::less_first());
+  });
 }
 
 size_t DWARFDebugInfo::GetNumUnits() {
@@ -109,7 +114,7 @@ size_t DWARFDebugInfo::GetNumUnits() {
   return m_units.size();
 }
 
-DWARFUnit *DWARFDebugInfo::GetUnitAtIndex(user_id_t idx) {
+DWARFUnit *DWARFDebugInfo::GetUnitAtIndex(size_t idx) {
   DWARFUnit *cu = nullptr;
   if (idx < GetNumUnits())
     cu = m_units[idx].get();
@@ -191,7 +196,7 @@ DWARFDIE
 DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
   DWARFUnit *cu = GetUnit(die_ref);
   if (cu)
-    return cu->GetDIE(die_ref.die_offset());
+    return cu->GetNonSkeletonUnit().GetDIE(die_ref.die_offset());
   return DWARFDIE(); // Not found
 }
 

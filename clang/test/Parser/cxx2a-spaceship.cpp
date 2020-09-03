@@ -16,3 +16,9 @@ void f(X<0> x0, X<1> x1) {
   X<3> e = x0 < x0 <=> x0 << x0;
   X<3> f = x0 << x0 <=> x0 < x0; // expected-warning {{overloaded operator << has higher precedence than comparison operator}} expected-note 2{{}}
 }
+
+struct PR41991 {
+  [[nodiscard]] friend bool operator==(const PR41991&, const PR41991&) = default;
+  [[nodiscard]] friend bool operator!=(const PR41991&, const PR41991&) = delete;
+  [[nodiscard]] friend bool operator<(const PR41991&, const PR41991&); // expected-error {{an attribute list cannot appear here}}
+};

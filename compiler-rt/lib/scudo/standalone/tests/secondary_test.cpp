@@ -29,8 +29,8 @@ template <class SecondaryT> static void testSecondaryBasic(void) {
   memset(P, 'A', Size);
   EXPECT_GE(SecondaryT::getBlockSize(P), Size);
   L->deallocate(P);
-  // If we are not using a free list, blocks are unmapped on deallocation.
-  if (SecondaryT::getMaxFreeListSize() == 0U)
+  // If the Secondary can't cache that pointer, it will be unmapped.
+  if (!SecondaryT::canCache(Size))
     EXPECT_DEATH(memset(P, 'A', Size), "");
 
   const scudo::uptr Align = 1U << 16;
@@ -55,17 +55,18 @@ template <class SecondaryT> static void testSecondaryBasic(void) {
 }
 
 TEST(ScudoSecondaryTest, SecondaryBasic) {
-  testSecondaryBasic<scudo::MapAllocator<0U>>();
+  testSecondaryBasic<scudo::MapAllocator<scudo::MapAllocatorNoCache>>();
 #if !SCUDO_FUCHSIA
-  testSecondaryBasic<scudo::MapAllocator<>>();
-  testSecondaryBasic<scudo::MapAllocator<64U>>();
+  testSecondaryBasic<scudo::MapAllocator<scudo::MapAllocatorCache<>>>();
+  testSecondaryBasic<
+      scudo::MapAllocator<scudo::MapAllocatorCache<64U, 1UL << 20>>>();
 #endif
 }
 
 #if SCUDO_FUCHSIA
-using LargeAllocator = scudo::MapAllocator<0U>;
+using LargeAllocator = scudo::MapAllocator<scudo::MapAllocatorNoCache>;
 #else
-using LargeAllocator = scudo::MapAllocator<>;
+using LargeAllocator = scudo::MapAllocator<scudo::MapAllocatorCache<>>;
 #endif
 
 // This exercises a variety of combinations of size and alignment for the
@@ -136,8 +137,15 @@ static void performAllocations(LargeAllocator *L) {
     while (!Ready)
       Cv.wait(Lock);
   }
-  for (scudo::uptr I = 0; I < 32U; I++)
-    V.push_back(L->allocate((std::rand() % 16) * PageSize));
+  for (scudo::uptr I = 0; I < 128U; I++) {
+    // Deallocate 75% of the blocks.
+    const bool Deallocate = (rand() & 3) != 0;
+    void *P = L->allocate((std::rand() % 16) * PageSize);
+    if (Deallocate)
+      L->deallocate(P);
+    else
+      V.push_back(P);
+  }
   while (!V.empty()) {
     L->deallocate(V.back());
     V.pop_back();
@@ -146,9 +154,9 @@ static void performAllocations(LargeAllocator *L) {
 
 TEST(ScudoSecondaryTest, SecondaryThreadsRace) {
   LargeAllocator *L = new LargeAllocator;
-  L->init(nullptr);
-  std::thread Threads[10];
-  for (scudo::uptr I = 0; I < 10U; I++)
+  L->init(nullptr, /*ReleaseToOsInterval=*/0);
+  std::thread Threads[16];
+  for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
     Threads[I] = std::thread(performAllocations, L);
   {
     std::unique_lock<std::mutex> Lock(Mutex);

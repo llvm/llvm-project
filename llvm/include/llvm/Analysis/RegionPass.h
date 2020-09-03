@@ -16,15 +16,13 @@
 #define LLVM_ANALYSIS_REGIONPASS_H
 
 #include "llvm/Analysis/RegionInfo.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/LegacyPassManagers.h"
 #include "llvm/Pass.h"
 #include <deque>
 
 namespace llvm {
-
-class RGPassManager;
 class Function;
+class RGPassManager;
 
 //===----------------------------------------------------------------------===//
 /// A pass that runs on each Region in a function.

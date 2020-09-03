@@ -1,7 +1,7 @@
-# RUN: llc -start-before=livedebugvalues -stop-after=machineverifier -o - %s \
+# RUN: llc -emit-call-site-info -start-before=livedebugvalues -stop-after=machineverifier -o - %s \
 # RUN:   | FileCheck %s -check-prefix=MIR
 
-# RUN: llc -start-before=livedebugvalues -filetype=obj -o - %s \
+# RUN: llc -emit-call-site-info -start-before=livedebugvalues -filetype=obj -o - %s \
 # RUN:   | llvm-dwarfdump - | FileCheck %s -check-prefix=DWARF -implicit-check-not=DW_OP_entry_value
 
 # // Original Source

@@ -6,16 +6,16 @@
 @str.4S = external constant [5 x i8]
 
 ; Function Attrs: uwtable
-define void @"_ZN65_$LT$lib..str..Chars$LT$$u27$a$GT$$u20$as$u20$lib..fmt..Debug$GT$3fmt17h76a537e22649f739E"(%"fmt::Formatter.1.77.153.229.305.381.1673"* dereferenceable(27) %__arg_0) unnamed_addr #0 personality i32 (...)* @rust_eh_personality {
+define void @"_ZN65_$LT$lib..str..Chars$LT$$u27$a$GT$$u20$as$u20$lib..fmt..Debug$GT$3fmt17h76a537e22649f739E"(%"fmt::Formatter.1.77.153.229.305.381.1673"* dereferenceable(27) %__arg_0) unnamed_addr #0 personality i32 (...) addrspace(1)* @rust_eh_personality {
 ; CHECK-LABEL: "_ZN65_$LT$lib..str..Chars$LT$$u27$a$GT$$u20$as$u20$lib..fmt..Debug$GT$3fmt17h76a537e22649f739E"
 start:
   %0 = getelementptr inbounds %"fmt::Formatter.1.77.153.229.305.381.1673", %"fmt::Formatter.1.77.153.229.305.381.1673"* %__arg_0, i16 0, i32 11, i32 0
   %1 = load {}*, {}** %0, align 1, !noalias !0, !nonnull !9
   %2 = getelementptr inbounds %"fmt::Formatter.1.77.153.229.305.381.1673", %"fmt::Formatter.1.77.153.229.305.381.1673"* %__arg_0, i16 0, i32 11, i32 1
-  %3 = bitcast {}** %2 to i1 ({}*, [0 x i8]*, i16)***
-  %4 = load i1 ({}*, [0 x i8]*, i16)**, i1 ({}*, [0 x i8]*, i16)*** %3, align 1, !noalias !0, !nonnull !9
-  %5 = getelementptr inbounds i1 ({}*, [0 x i8]*, i16)*, i1 ({}*, [0 x i8]*, i16)** %4, i16 3
-  %6 = load i1 ({}*, [0 x i8]*, i16)*, i1 ({}*, [0 x i8]*, i16)** %5, align 1, !invariant.load !9, !noalias !0, !nonnull !9
+  %3 = bitcast {}** %2 to i1 ({}*, [0 x i8]*, i16) addrspace(1)***
+  %4 = load i1 ({}*, [0 x i8]*, i16) addrspace(1)**, i1 ({}*, [0 x i8]*, i16) addrspace(1)*** %3, align 1, !noalias !0, !nonnull !9
+  %5 = getelementptr inbounds i1 ({}*, [0 x i8]*, i16) addrspace(1)*, i1 ({}*, [0 x i8]*, i16) addrspace(1)** %4, i16 3
+  %6 = load i1 ({}*, [0 x i8]*, i16) addrspace(1)*, i1 ({}*, [0 x i8]*, i16) addrspace(1)** %5, align 1, !invariant.load !9, !noalias !0, !nonnull !9
   %7 = tail call zeroext i1 %6({}* nonnull %1, [0 x i8]* noalias nonnull readonly bitcast ([5 x i8]* @str.4S to [0 x i8]*), i16 5), !noalias !10
   unreachable
 }

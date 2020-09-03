@@ -1634,6 +1634,15 @@ void MicrosoftCXXABI::emitVTableTypeMetadata(const VPtrInfo &Info,
   if (!CGM.getCodeGenOpts().LTOUnit)
     return;
 
+  // TODO: Should VirtualFunctionElimination also be supported here?
+  // See similar handling in CodeGenModule::EmitVTableTypeMetadata.
+  if (CGM.getCodeGenOpts().WholeProgramVTables) {
+    llvm::GlobalObject::VCallVisibility TypeVis =
+        CGM.GetVCallVisibilityLevel(RD);
+    if (TypeVis != llvm::GlobalObject::VCallVisibilityPublic)
+      VTable->setVCallVisibilityMetadata(TypeVis);
+  }
+
   // The location of the first virtual function pointer in the virtual table,
   // aka the "address point" on Itanium. This is at offset 0 if RTTI is
   // disabled, or sizeof(void*) if RTTI is enabled.
@@ -1694,10 +1703,11 @@ void MicrosoftCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
                [](const VTableComponent &VTC) { return VTC.isRTTIKind(); }))
       RTTI = getMSCompleteObjectLocator(RD, *Info);
 
-    ConstantInitBuilder Builder(CGM);
-    auto Components = Builder.beginStruct();
-    CGVT.createVTableInitializer(Components, VTLayout, RTTI);
-    Components.finishAndSetAsInitializer(VTable);
+    ConstantInitBuilder builder(CGM);
+    auto components = builder.beginStruct();
+    CGVT.createVTableInitializer(components, VTLayout, RTTI,
+                                 VTable->hasLocalLinkage());
+    components.finishAndSetAsInitializer(VTable);
 
     emitVTableTypeMetadata(*Info, RD, VTable);
   }
@@ -2354,7 +2364,7 @@ void MicrosoftCXXABI::EmitThreadLocalInitFuncs(
   if (!NonComdatInits.empty()) {
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-    llvm::Function *InitFunc = CGM.CreateGlobalInitOrDestructFunction(
+    llvm::Function *InitFunc = CGM.CreateGlobalInitOrCleanUpFunction(
         FTy, "__tls_init", CGM.getTypes().arrangeNullaryFunction(),
         SourceLocation(), /*TLS=*/true);
     CodeGenFunction(CGM).GenerateCXXGlobalInitFunc(InitFunc, NonComdatInits);
@@ -2528,7 +2538,7 @@ void MicrosoftCXXABI::EmitGuardedInit(CodeGenFunction &CGF, const VarDecl &D,
       GuardVar->setComdat(
           CGM.getModule().getOrInsertComdat(GuardVar->getName()));
     if (D.getTLSKind())
-      GuardVar->setThreadLocal(true);
+      CGM.setTLSMode(GuardVar, D);
     if (GI && !HasPerVariableGuard)
       GI->Guard = GuardVar;
   }
@@ -3926,7 +3936,7 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   // Calculate the mangled name.
   SmallString<256> ThunkName;
   llvm::raw_svector_ostream Out(ThunkName);
-  getMangleContext().mangleCXXCtor(CD, CT, Out);
+  getMangleContext().mangleName(GlobalDecl(CD, CT), Out);
 
   // If the thunk has been generated previously, just return it.
   if (llvm::GlobalValue *GV = CGM.getModule().getNamedValue(ThunkName))

@@ -8,6 +8,7 @@
 # CHECK-NEXT: debug_line[0x00000000]
 # CHECK-NEXT: Line table prologue:
 # CHECK-NEXT:     total_length: 0x00000069
+# CHECK-NEXT:           format: DWARF32
 # CHECK-NEXT:          version: 5
 # CHECK-NEXT:     address_size: 8
 # CHECK-NEXT:  seg_select_size: 0
@@ -30,7 +31,7 @@
 # CHECK-NEXT: standard_opcode_lengths[DW_LNS_set_prologue_end] = 0
 # CHECK-NEXT: standard_opcode_lengths[DW_LNS_set_epilogue_begin] = 0
 # CHECK-NEXT: standard_opcode_lengths[DW_LNS_set_isa] = 1
-# CHECK-NEXT: standard_opcode_lengths[(null)] = 0
+# CHECK-NEXT: standard_opcode_lengths[DW_LNS_unknown_d] = 0
 # CHECK-NEXT: include_directories[  0] = "dir1/dir2"
 # CHECK-NEXT: file_names[  0]:
 # CHECK-NEXT:            name: "file1.c"
@@ -47,6 +48,7 @@
 # CHECK-NEXT: debug_line[0x0000006d]
 # CHECK-NEXT: Line table prologue:
 # CHECK-NEXT:     total_length: 0x0000001b
+# CHECK-NEXT:           format: DWARF32
 # CHECK-NEXT:          version: 4
 # CHECK-NEXT:  prologue_length: 0x00000015
 # CHECK-NEXT:  min_inst_length: 2

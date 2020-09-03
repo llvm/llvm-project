@@ -1,16 +1,27 @@
-## Check how we print sections.
+## Check how llvm-readobj prints sections with --sections.
+## We test the --sections flag for llvm-readelf in the gnu-sections.test.
 
-# RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-i386 \
-# RUN:   | FileCheck %s --check-prefix ELF
-# RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-mipsel \
-# RUN:   | FileCheck %s --check-prefix ELF-MIPSEL
+# RUN: yaml2obj --docnum=1 %s -o %t64
+# RUN: llvm-readobj --sections %t64 | FileCheck %s --check-prefixes=ELF,ELF64
+# RUN: yaml2obj --docnum=2 %s -o %t32
+# RUN: llvm-readobj --sections %t32 | FileCheck %s --check-prefixes=ELF,ELF32
 
 ## Check flag aliases produce identical output.
-# RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-i386 > %t.sections
-# RUN: llvm-readobj -S %p/Inputs/trivial.obj.elf-i386 > %t.uppers
-# RUN: cmp %t.sections %t.uppers
-# RUN: llvm-readobj -S %p/Inputs/trivial.obj.elf-i386 > %t.lowers
-# RUN: cmp %t.sections %t.lowers
+# RUN: llvm-readobj --sections %t64 > %t64.llvm.sections
+# RUN: llvm-readobj -S %t64 > %t64.llvm.upper.s
+# RUN: cmp %t64.llvm.sections %t64.llvm.upper.s
+# RUN: llvm-readobj -s %t64 > %t64.llvm.lower.s
+# RUN: cmp %t64.llvm.sections %t64.llvm.lower.s
+# RUN: llvm-readobj --section-headers %t64 > %t64.llvm.section-headers
+# RUN: cmp %t64.llvm.sections %t64.llvm.section-headers
+
+# RUN: llvm-readobj --sections %t32 > %t32.llvm.sections
+# RUN: llvm-readobj -S %t32 > %t32.llvm.upper.s
+# RUN: cmp %t32.llvm.sections %t32.llvm.upper.s
+# RUN: llvm-readobj -s %t32 > %t32.llvm.lower.s
+# RUN: cmp %t32.llvm.sections %t32.llvm.lower.s
+# RUN: llvm-readobj --section-headers %t32 > %t32.llvm.section-headers
+# RUN: cmp %t32.llvm.sections %t32.llvm.section-headers
 
 # ELF:      Sections [
 # ELF-NEXT:   Section {
@@ -29,48 +40,83 @@
 # ELF-NEXT:   }
 # ELF-NEXT:   Section {
 # ELF-NEXT:     Index: 1
-# ELF-NEXT:     Name: .text (5)
+# ELF-NEXT:     Name: .foo (1)
 # ELF-NEXT:     Type: SHT_PROGBITS (0x1)
-# ELF-NEXT:     Flags [ (0x6)
+# ELF-NEXT:     Flags [ (0x3)
 # ELF-NEXT:       SHF_ALLOC (0x2)
-# ELF-NEXT:       SHF_EXECINSTR (0x4)
+# ELF-NEXT:       SHF_WRITE (0x1)
+# ELF-NEXT:     ]
+# ELF-NEXT:     Address: 0x2
+# ELF64-NEXT:   Offset: 0x41
+# ELF32-NEXT:   Offset: 0x37
+# ELF-NEXT:     Size: 3
+# ELF-NEXT:     Link: 4
+# ELF-NEXT:     Info: 1
+# ELF-NEXT:     AddressAlignment: 5
+# ELF-NEXT:     EntrySize: 6
+# ELF-NEXT:   }
+# ELF-NEXT:   Section {
+# ELF-NEXT:     Index: 2
+# ELF-NEXT:     Name: .strtab (16)
+# ELF-NEXT:     Type: SHT_STRTAB (0x3)
+# ELF-NEXT:     Flags [ (0x0)
 # ELF-NEXT:     ]
 # ELF-NEXT:     Address: 0x0
-# ELF-NEXT:     Offset: 0x40
-# ELF-NEXT:     Size: 42
+# ELF64-NEXT:   Offset: 0x44
+# ELF32-NEXT:   Offset: 0x3A
+# ELF-NEXT:     Size: 1
 # ELF-NEXT:     Link: 0
 # ELF-NEXT:     Info: 0
-# ELF-NEXT:     AddressAlignment: 16
+# ELF-NEXT:     AddressAlignment: 1
 # ELF-NEXT:     EntrySize: 0
 # ELF-NEXT:   }
+# ELF-NEXT:   Section {
+# ELF-NEXT:     Index: 3
+# ELF-NEXT:     Name: .shstrtab (6)
+# ELF-NEXT:     Type: SHT_STRTAB (0x3)
+# ELF-NEXT:     Flags [ (0x0)
+# ELF-NEXT:     ]
+# ELF-NEXT:     Address: 0x0
+# ELF64-NEXT:   Offset: 0x45
+# ELF32-NEXT:   Offset: 0x3B
+# ELF-NEXT:     Size: 24
+# ELF-NEXT:     Link: 0
+# ELF-NEXT:     Info: 0
+# ELF-NEXT:     AddressAlignment: 1
+# ELF-NEXT:     EntrySize: 0
+# ELF-NEXT:   }
+# ELF-NEXT: ]
 
-# ELF-MIPSEL:      Section {
-# ELF-MIPSEL:        Index: 4
-# ELF-MIPSEL-NEXT:   Name: .reginfo (27)
-# ELF-MIPSEL-NEXT:   Type: SHT_MIPS_REGINFO (0x70000006)
-# ELF-MIPSEL-NEXT:   Flags [ (0x2)
-# ELF-MIPSEL-NEXT:     SHF_ALLOC (0x2)
-# ELF-MIPSEL-NEXT:   ]
-# ELF-MIPSEL-NEXT:   Address: 0x0
-# ELF-MIPSEL-NEXT:   Offset: 0x34
-# ELF-MIPSEL-NEXT:   Size: 24
-# ELF-MIPSEL-NEXT:   Link: 0
-# ELF-MIPSEL-NEXT:   Info: 0
-# ELF-MIPSEL-NEXT:   AddressAlignment: 1
-# ELF-MIPSEL-NEXT:   EntrySize: 0
-# ELF-MIPSEL-NEXT: }
-# ELF-MIPSEL-NEXT: Section {
-# ELF-MIPSEL-NEXT:   Index: 5
-# ELF-MIPSEL-NEXT:   Name: .MIPS.abiflags (12)
-# ELF-MIPSEL-NEXT:   Type: SHT_MIPS_ABIFLAGS (0x7000002A)
-# ELF-MIPSEL-NEXT:   Flags [ (0x2)
-# ELF-MIPSEL-NEXT:     SHF_ALLOC (0x2)
-# ELF-MIPSEL-NEXT:   ]
-# ELF-MIPSEL-NEXT:   Address: 0x0
-# ELF-MIPSEL-NEXT:   Offset: 0x50
-# ELF-MIPSEL-NEXT:   Size: 24
-# ELF-MIPSEL-NEXT:   Link: 0
-# ELF-MIPSEL-NEXT:   Info: 0
-# ELF-MIPSEL-NEXT:   AddressAlignment: 8
-# ELF-MIPSEL-NEXT:   EntrySize: 0
-# ELF-MIPSEL-NEXT: }
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:         .foo
+    Type:         SHT_PROGBITS
+    Info:         1
+    Address:      0x2
+    Size:         0x3
+    Flags:        [ SHF_WRITE, SHF_ALLOC ]
+    Link:         4
+    AddressAlign: 5
+    EntSize:      6
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name:         .foo
+    Type:         SHT_PROGBITS
+    Info:         1
+    Address:      0x2
+    Size:         0x3
+    Flags:        [ SHF_WRITE, SHF_ALLOC ]
+    Link:         4
+    AddressAlign: 5
+    EntSize:      6

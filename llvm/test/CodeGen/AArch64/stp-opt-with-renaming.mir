@@ -1,5 +1,5 @@
 # RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -verify-machineinstrs -aarch64-load-store-renaming=true -o - %s | FileCheck %s
-# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -verify-machineinstrs -o - %s | FileCheck --check-prefix=NO-RENAME %s
+# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -verify-machineinstrs -aarch64-load-store-renaming=false -o - %s | FileCheck --check-prefix=NO-RENAME %s
 
 # NO-RENAME-NOT: STP
 # NO-RENAME:     test12
@@ -175,7 +175,7 @@ body:             |
 ...
 ---
 # CHECK-LABEL: name: test6
-# CHECK-LABEL  bb.0:
+# CHECK-LABEL: bb.0:
 # CHECK:    liveins: $x0, $x1, $q3
 
 # CHECK:         renamable $q9 = LDRQui $x0, 0 :: (load 16)
@@ -288,7 +288,7 @@ body:             |
 # TODO: Can we check that all instructions that require renaming also support
 #       the second 16 Q registers?
 # CHECK-LABEL: name: test9
-# CHECK-LABEL  bb.0:
+# CHECK-LABEL: bb.0:
 # CHECK:    liveins: $x0, $x1, $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
 
 # CHECK:         renamable $q9 = LDRQui $x0, 0 :: (load 16)
@@ -322,7 +322,7 @@ body:             |
 ---
 # The livein $q7 is killed early, so we can re-use it for renaming.
 # CHECK-LABEL: name: test10
-# CHECK-LABEL  bb.0:
+# CHECK-LABEL: bb.0:
 # CHECK:    liveins: $x0, $x1, $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
 
 # CHECK:         renamable $q7 = FADDv2f64 renamable $q7, renamable $q7
@@ -507,4 +507,40 @@ body:             |
     $w8 = ORRWrs $wzr, killed $w25, 0, implicit-def $x8
     STURXi killed renamable $x8, $fp, -32 :: (store 8)
     RET undef $lr
+...
+---
+# Make sure we do not pick a register marked as undef for renaming.
+#
+# CHECK-LABEL: name: test15_undef_op
+# CHECK: bb.0:
+# CHECK-NEXT: liveins: $x0, $x1, $x8
+# CHECK:       undef renamable $x10, $x11 = LDPXi renamable $x0, 0 :: (load 8)
+# CHECK-NEXT:  renamable $x9 = LDRXui renamable $x0, 1 :: (load 8)
+# CHECK-NEXT:  STRXui renamable $x9, renamable $x0, 100 :: (store 8, align 4)
+# CHECK-NEXT:  renamable $x10 = ADDXrr $x10, $x10
+# CHECK-NEXT:  STPXi renamable $x10, killed $x11, renamable $x0, 10 :: (store 8, align 4)
+# CHECK-NEXT:  RET undef $lr
+#
+name:            test15_undef_op
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x8
+    renamable undef $x10, renamable $x9 = LDPXi renamable $x0, 0 :: (load 8)
+    STRXui renamable killed $x9, renamable $x0, 11 :: (store 8, align 4)
+    renamable $x9 = LDRXui renamable $x0, 1 :: (load 8)
+    STRXui renamable $x9, renamable $x0, 100 :: (store 8, align 4)
+    renamable $x10 = ADDXrr $x10, $x10
+    STRXui renamable $x10, renamable $x0, 10 :: (store 8, align 4)
+    RET undef $lr
+
 ...

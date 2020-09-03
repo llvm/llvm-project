@@ -81,14 +81,14 @@ public:
                       std::move(Emitter)),
         MappingSymbolCounter(0), LastEMS(EMS_None) {}
 
-  void ChangeSection(MCSection *Section, const MCExpr *Subsection) override {
+  void changeSection(MCSection *Section, const MCExpr *Subsection) override {
     // We have to keep track of the mapping symbol state of any sections we
     // use. Each one should start off as EMS_None, which is provided as the
     // default constructor by DenseMap::lookup.
     LastMappingSymbols[getPreviousSection().first] = LastEMS;
     LastEMS = LastMappingSymbols.lookup(Section);
 
-    MCELFStreamer::ChangeSection(Section, Subsection);
+    MCELFStreamer::changeSection(Section, Subsection);
   }
 
   // Reset state between object emissions
@@ -102,10 +102,10 @@ public:
   /// This function is the one used to emit instruction data into the ELF
   /// streamer. We override it to add the appropriate mapping symbol if
   /// necessary.
-  void EmitInstruction(const MCInst &Inst,
+  void emitInstruction(const MCInst &Inst,
                        const MCSubtargetInfo &STI) override {
     EmitA64MappingSymbol();
-    MCELFStreamer::EmitInstruction(Inst, STI);
+    MCELFStreamer::emitInstruction(Inst, STI);
   }
 
   /// Emit a 32-bit value as an instruction. This is only used for the .inst
@@ -122,28 +122,28 @@ public:
     }
 
     EmitA64MappingSymbol();
-    MCELFStreamer::EmitBytes(StringRef(Buffer, 4));
+    MCELFStreamer::emitBytes(StringRef(Buffer, 4));
   }
 
   /// This is one of the functions used to emit data into an ELF section, so the
   /// AArch64 streamer overrides it to add the appropriate mapping symbol ($d)
   /// if necessary.
-  void EmitBytes(StringRef Data) override {
-    EmitDataMappingSymbol();
-    MCELFStreamer::EmitBytes(Data);
+  void emitBytes(StringRef Data) override {
+    emitDataMappingSymbol();
+    MCELFStreamer::emitBytes(Data);
   }
 
   /// This is one of the functions used to emit data into an ELF section, so the
   /// AArch64 streamer overrides it to add the appropriate mapping symbol ($d)
   /// if necessary.
-  void EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
-    EmitDataMappingSymbol();
-    MCELFStreamer::EmitValueImpl(Value, Size, Loc);
+  void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
+    emitDataMappingSymbol();
+    MCELFStreamer::emitValueImpl(Value, Size, Loc);
   }
 
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                                   SMLoc Loc) override {
-    EmitDataMappingSymbol();
+    emitDataMappingSymbol();
     MCObjectStreamer::emitFill(NumBytes, FillValue, Loc);
   }
 private:
@@ -153,7 +153,7 @@ private:
     EMS_Data
   };
 
-  void EmitDataMappingSymbol() {
+  void emitDataMappingSymbol() {
     if (LastEMS == EMS_Data)
       return;
     EmitMappingSymbol("$d");
@@ -170,7 +170,7 @@ private:
   void EmitMappingSymbol(StringRef Name) {
     auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
         Name + "." + Twine(MappingSymbolCounter++)));
-    EmitLabel(Symbol);
+    emitLabel(Symbol);
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
     Symbol->setExternal(false);

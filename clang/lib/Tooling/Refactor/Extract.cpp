@@ -264,13 +264,13 @@ initiateAnyExtractOperation(ASTSlice &Slice, ASTContext &Context,
           FirstCandidateRange, "+ ",
           /*AnalyzedStatement=*/BinOp->getRHS());
       Candidates.push_back(
-          Lexer::getSourceText(
-              CharSourceRange::getTokenRange(FirstCandidateRange),
-              Context.getSourceManager(), Context.getLangOpts())
-              .trim());
-      Candidates.push_back(Lexer::getSourceText(
+          std::string(Lexer::getSourceText(
+                          CharSourceRange::getTokenRange(FirstCandidateRange),
+                          Context.getSourceManager(), Context.getLangOpts())
+                          .trim()));
+      Candidates.push_back(std::string(Lexer::getSourceText(
           CharSourceRange::getTokenRange(BinOp->getSourceRange()),
-          Context.getSourceManager(), Context.getLangOpts()));
+          Context.getSourceManager(), Context.getLangOpts())));
     }
   } else if (const auto *CS = dyn_cast<CompoundStmt>(Selected)) {
     // We want to extract some child statements from a compound statement unless
@@ -431,22 +431,26 @@ static void findArgumentsPassedByNonConstReference(
   auto NonPointerReceiver =
       expr(unless(hasType(qualType(pointerType())))).bind("arg");
   auto NonConstMethodCallee = callee(cxxMethodDecl(unless(isConst())));
-  auto Matches =
-      match(findAll(expr(anyOf(
-                cxxMemberCallExpr(NonConstMethodCallee, on(NonPointerReceiver)),
-                cxxOperatorCallExpr(NonConstMethodCallee,
-                                    hasArgument(0, NonPointerReceiver))))),
-            *S, Context);
+  auto Matches = match(
+      traverse(
+          TK_AsIs,
+          findAll(expr(anyOf(
+              cxxMemberCallExpr(NonConstMethodCallee, on(NonPointerReceiver)),
+              cxxOperatorCallExpr(NonConstMethodCallee,
+                                  hasArgument(0, NonPointerReceiver)))))),
+      *S, Context);
   for (const auto &Match : Matches)
     Handler(Match.getNodeAs<Expr>("arg"));
   // Check parameters in calls.
   auto RefParameter = forEachArgumentWithParam(
       expr().bind("arg"), parmVarDecl(hasType(qualType(referenceType(unless(
                               pointee(qualType(isConstQualified()))))))));
-  Matches = match(findAll(callExpr(RefParameter)), *S, Context);
+  Matches =
+      match(traverse(TK_AsIs, findAll(callExpr(RefParameter))), *S, Context);
   for (const auto &Match : Matches)
     Handler(Match.getNodeAs<Expr>("arg"));
-  Matches = match(findAll(cxxConstructExpr(RefParameter)), *S, Context);
+  Matches = match(traverse(TK_AsIs, findAll(cxxConstructExpr(RefParameter))),
+                  *S, Context);
   for (const auto &Match : Matches)
     Handler(Match.getNodeAs<Expr>("arg"));
 }
@@ -459,10 +463,13 @@ static void findAddressExpressionsPassedByConstPointer(
       ignoringParenImpCasts(unaryOperator(hasOperatorName("&")).bind("arg")),
       parmVarDecl(hasType(
           qualType(pointerType(pointee(qualType(isConstQualified())))))));
-  auto Matches = match(findAll(callExpr(ConstPtrParameter)), *S, Context);
+  auto Matches = match(traverse(TK_AsIs, findAll(callExpr(ConstPtrParameter))),
+                       *S, Context);
   for (const auto &Match : Matches)
     Handler(Match.getNodeAs<UnaryOperator>("arg"));
-  Matches = match(findAll(cxxConstructExpr(ConstPtrParameter)), *S, Context);
+  Matches =
+      match(traverse(TK_AsIs, findAll(cxxConstructExpr(ConstPtrParameter))), *S,
+            Context);
   for (const auto &Match : Matches)
     Handler(Match.getNodeAs<UnaryOperator>("arg"));
 }
@@ -596,13 +603,15 @@ public:
     return RecursiveASTVisitor::TraverseObjCPropertyRefExpr(E);
   }
 
-  bool TraverseBinAssign(BinaryOperator *S) {
+  bool TraverseBinaryOperator(BinaryOperator *S) {
+    if (S->getOpcode() != BO_Assign)
+      return RecursiveASTVisitor::TraverseBinaryOperator(S);
     // RHS might be an opaque expression, if this is a property assignment. We
     // have to visit it manually as we don't necessarily visit the setter/getter
     // message sends if just the property was selected.
     if (const auto *OVE = dyn_cast<OpaqueValueExpr>(S->getRHS()))
       TraverseStmt(OVE->getSourceExpr());
-    return RecursiveASTVisitor::TraverseBinAssign(S);
+    return RecursiveASTVisitor::TraverseBinaryOperator(S);
   }
 
   void findCapturedVariableOrFieldsInExpression(
@@ -631,22 +640,23 @@ public:
     return true;
   }
 
-  bool VisitUnaryPreInc(const UnaryOperator *E) {
-    markDirectlyReferencedVariableOrFieldInExpressionAsMutated(E->getSubExpr());
-    return true;
-  }
-
-  bool VisitUnaryPostInc(const UnaryOperator *E) {
-    markDirectlyReferencedVariableOrFieldInExpressionAsMutated(E->getSubExpr());
-    return true;
-  }
-
-  bool VisitUnaryPreDec(const UnaryOperator *E) {
-    markDirectlyReferencedVariableOrFieldInExpressionAsMutated(E->getSubExpr());
-    return true;
-  }
-
-  bool VisitUnaryPostDec(const UnaryOperator *E) {
+  bool VisitUnaryOperator(const UnaryOperator *E) {
+    auto Op = E->getOpcode();
+    if (Op != UO_PreInc && Op != UO_PostInc && Op != UO_PreDec &&
+        Op != UO_PostDec) {
+      if (Op == UO_AddrOf) {
+        // Capture the entity with 'const' reference/pointer when its address is
+        // passed into a function that takes a 'const' pointer and no other
+        // mutations or non-const address/reference acquisitions occur.
+        if (AddressExpressionsPassedToConstPointerParameter.count(E))
+          findCapturedVariableOrFieldsInExpression(
+              E->getSubExpr(),
+              [](CaptureInfo &Capture) { Capture.IsConstAddressTaken = true; });
+        else
+          captureVariableOrFieldInExpressionByReference(E->getSubExpr());
+      }
+      return true;
+    }
     markDirectlyReferencedVariableOrFieldInExpressionAsMutated(E->getSubExpr());
     return true;
   }
@@ -657,19 +667,6 @@ public:
   void captureVariableOrFieldInExpressionByReference(const Expr *E) {
     findCapturedVariableOrFieldsInExpression(
         E, [](CaptureInfo &Capture) { Capture.IsAddressTaken = true; });
-  }
-
-  bool VisitUnaryAddrOf(const UnaryOperator *E) {
-    // Capture the entity with 'const' reference/pointer when its address is
-    // passed into a function that takes a 'const' pointer and no other
-    // mutations or non-const address/reference acquisitions occur.
-    if (AddressExpressionsPassedToConstPointerParameter.count(E))
-      findCapturedVariableOrFieldsInExpression(
-          E->getSubExpr(),
-          [](CaptureInfo &Capture) { Capture.IsConstAddressTaken = true; });
-    else
-      captureVariableOrFieldInExpressionByReference(E->getSubExpr());
-    return true;
   }
 
   bool VisitObjCMessageExpr(const ObjCMessageExpr *E) {
@@ -1027,13 +1024,15 @@ public:
     return Base::TraverseObjCPropertyRefExpr(E);
   }
 
-  bool TraverseBinAssign(BinaryOperator *S) {
+  bool TraverseBinaryOperator(BinaryOperator *S) {
+    if (S->getOpcode() != BO_Assign)
+      return Base::TraverseBinaryOperator(S);
     // RHS might be an opaque expression, if this is a property assignment. We
     // have to visit it manually as we don't necessarily visit the setter/getter
     // message sends if just the property was selected.
     if (const auto *OVE = dyn_cast<OpaqueValueExpr>(S->getRHS()))
       Base::TraverseStmt(OVE->getSourceExpr());
-    return Base::TraverseBinAssign(S);
+    return Base::TraverseBinaryOperator(S);
   }
 };
 
@@ -1071,7 +1070,9 @@ public:
     return true;
   }
 
-  bool TraverseUnaryAddrOf(UnaryOperator *E) {
+  bool TraverseUnaryOperator(UnaryOperator *E) {
+    if (E->getOpcode() != UO_AddrOf)
+      return RecursiveASTVisitor::TraverseUnaryOperator(E);
     if (const auto *DRE =
             dyn_cast<DeclRefExpr>(E->getSubExpr()->IgnoreParenCasts())) {
       const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
@@ -1082,7 +1083,7 @@ public:
         return true;
       }
     }
-    return RecursiveASTVisitor::TraverseUnaryAddrOf(E);
+    return RecursiveASTVisitor::TraverseUnaryOperator(E);
   }
 
   bool TraverseMemberExpr(MemberExpr *E) {
@@ -1164,7 +1165,9 @@ public:
     return true;
   }
 
-  bool TraverseUnaryDeref(UnaryOperator *E) {
+  bool TraverseUnaryOperator(UnaryOperator *E) {
+    if (E->getOpcode() != UO_Deref)
+      return RecursiveASTVisitor::TraverseUnaryOperator(E);
     if (const auto *This =
             dyn_cast<CXXThisExpr>(E->getSubExpr()->IgnoreParenImpCasts())) {
       if (!This->isImplicit()) {
@@ -1175,7 +1178,7 @@ public:
         return true;
       }
     }
-    return RecursiveASTVisitor::TraverseUnaryAddrOf(E);
+    return RecursiveASTVisitor::TraverseUnaryOperator(E);
   }
 };
 
@@ -1870,7 +1873,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
     }
     NameOS << ')';
     ReturnType.print(OS, PP, NameOS.str());
-    unsigned NameOffset = OS.str().find(ExtractedName);
+    unsigned NameOffset = OS.str().find(std::string(ExtractedName));
     if (isMethodExtraction() && isEnclosingMethodConst(FunctionLikeParentDecl))
       OS << " const";
     return RefactoringReplacement::AssociatedSymbolLocation(

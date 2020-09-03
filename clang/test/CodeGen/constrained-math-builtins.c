@@ -148,3 +148,15 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // CHECK: declare x86_fp80 @llvm.experimental.constrained.trunc.f80(x86_fp80, metadata)
 };
 
+#pragma STDC FP_CONTRACT ON
+void bar(float f) {
+  f * f + f;
+  (double)f * f - f;
+  (long double)-f * f + f;
+
+  // CHECK: call float @llvm.experimental.constrained.fmuladd.f32
+  // CHECK: fneg
+  // CHECK: call double @llvm.experimental.constrained.fmuladd.f64
+  // CHECK: fneg
+  // CHECK: call x86_fp80 @llvm.experimental.constrained.fmuladd.f80
+};

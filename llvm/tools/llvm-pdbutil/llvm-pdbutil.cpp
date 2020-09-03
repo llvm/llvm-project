@@ -466,6 +466,10 @@ cl::opt<bool> DumpTypeStats(
     "type-stats",
     cl::desc("Dump a detailed breakdown of type usage/size"),
     cl::cat(MsfOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpIDStats(
+    "id-stats",
+    cl::desc("Dump a detailed breakdown of IPI types usage/size"),
+    cl::cat(MsfOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpUdtStats(
     "udt-stats",
     cl::desc("Dump a detailed breakdown of S_UDT record usage / stats"),
@@ -1507,7 +1511,7 @@ int main(int Argc, const char **Argv) {
     if (opts::yaml2pdb::YamlPdbOutputFile.empty()) {
       SmallString<16> OutputFilename(opts::yaml2pdb::InputFilename.getValue());
       sys::path::replace_extension(OutputFilename, ".pdb");
-      opts::yaml2pdb::YamlPdbOutputFile = OutputFilename.str();
+      opts::yaml2pdb::YamlPdbOutputFile = std::string(OutputFilename.str());
     }
     yamlToPdb(opts::yaml2pdb::InputFilename);
   } else if (opts::DiaDumpSubcommand) {

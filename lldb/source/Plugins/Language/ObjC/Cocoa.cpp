@@ -1,4 +1,4 @@
-//===-- Cocoa.cpp -----------------------------------------------*- C++ -*-===//
+//===-- Cocoa.cpp ---------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -72,6 +72,9 @@ bool lldb_private::formatters::NSBundleSummaryProvider(
         valobj.GetCompilerType().GetBasicTypeFromAST(lldb::eBasicTypeObjCID),
         true));
 
+    if (!text)
+      return false;
+
     StreamString summary_stream;
     bool was_nsstring_ok =
         NSStringSummaryProvider(*text, summary_stream, options);
@@ -117,6 +120,10 @@ bool lldb_private::formatters::NSTimeZoneSummaryProvider(
     uint64_t offset = ptr_size;
     ValueObjectSP text(valobj.GetSyntheticChildAtOffset(
         offset, valobj.GetCompilerType(), true));
+
+    if (!text)
+      return false;
+
     StreamString summary_stream;
     bool was_nsstring_ok =
         NSStringSummaryProvider(*text, summary_stream, options);
@@ -162,6 +169,10 @@ bool lldb_private::formatters::NSNotificationSummaryProvider(
     uint64_t offset = ptr_size;
     ValueObjectSP text(valobj.GetSyntheticChildAtOffset(
         offset, valobj.GetCompilerType(), true));
+
+    if (!text)
+      return false;
+
     StreamString summary_stream;
     bool was_nsstring_ok =
         NSStringSummaryProvider(*text, summary_stream, options);
@@ -818,13 +829,14 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   static const ConstString g___NSDate("__NSDate");
   static const ConstString g___NSTaggedDate("__NSTaggedDate");
   static const ConstString g_NSCalendarDate("NSCalendarDate");
+  static const ConstString g_NSConstantDate("NSConstantDate");
 
   if (class_name.IsEmpty())
     return false;
 
   uint64_t info_bits = 0, value_bits = 0;
   if ((class_name == g_NSDate) || (class_name == g___NSDate) ||
-      (class_name == g___NSTaggedDate)) {
+      (class_name == g___NSTaggedDate) || (class_name == g_NSConstantDate)) {
     if (descriptor->GetTaggedPointerInfo(&info_bits, &value_bits)) {
       date_value_bits = ((value_bits << 8) | (info_bits << 4));
       memcpy(&date_value, &date_value_bits, sizeof(date_value_bits));
@@ -850,8 +862,14 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   } else
     return false;
 
-  if (date_value == -63114076800) {
-    stream.Printf("0001-12-30 00:00:00 +0000");
+  // FIXME: It seems old dates are not formatted according to NSDate's calendar
+  // so we hardcode distantPast's value so that it looks like LLDB is doing
+  // the right thing.
+
+  // The relative time in seconds from Cocoa Epoch to [NSDate distantPast].
+  const double RelSecondsFromCocoaEpochToNSDateDistantPast = -63114076800;
+  if (date_value == RelSecondsFromCocoaEpochToNSDateDistantPast) {
+    stream.Printf("0001-01-01 00:00:00 UTC");
     return true;
   }
 
@@ -867,7 +885,7 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   // is generally true and POSIXly happy, but might break if a library vendor
   // decides to get creative
   time_t epoch = GetOSXEpoch();
-  epoch = epoch + (time_t)date_value;
+  epoch = epoch + static_cast<time_t>(std::floor(date_value));
   tm *tm_date = gmtime(&epoch);
   if (!tm_date)
     return false;
@@ -902,8 +920,7 @@ bool lldb_private::formatters::ObjCClassSummaryProvider(
   if (class_name.IsEmpty())
     return false;
 
-  if (ConstString cs =
-          Mangled(class_name).GetDemangledName(lldb::eLanguageTypeUnknown))
+  if (ConstString cs = Mangled(class_name).GetDemangledName())
     class_name = cs;
 
   stream.Printf("%s", class_name.AsCString("<unknown class>"));

@@ -55,10 +55,10 @@ done:                                             ; preds = %loop
 
 ; GCN-LABEL: {{^}}smrd_valu:
 ; SI: s_movk_i32 [[OFFSET:s[0-9]+]], 0x2ee0
-; SI: s_mov_b32
 ; GCN: v_readfirstlane_b32 s[[PTR_LO:[0-9]+]], v{{[0-9]+}}
 ; GCN: v_readfirstlane_b32 s[[PTR_HI:[0-9]+]], v{{[0-9]+}}
-; SI: s_nop 3
+; SI: s_mov_b32
+; SI: s_nop 1
 ; SI: s_load_dword [[OUT:s[0-9]+]], s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, [[OFFSET]]
 
 ; CI: s_load_dword [[OUT:s[0-9]+]], s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0xbb8
@@ -170,9 +170,8 @@ entry:
 ; CI.
 
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x8:
-; GCN-NOHSA: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x9a40{{$}}
-; GCN-NOHSA-NOT: v_add
-; CI-NOHSA: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x9a50{{$}}
+; GCN-NOHSA-DAG: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x9a40{{$}}
+; CI-NOHSA-DAG: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x9a50{{$}}
 ; CI-NOHSA-NOT: v_add
 ; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:16
 ; CI-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
@@ -204,10 +203,10 @@ entry:
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x16:
 
 ; SI: s_mov_b32 {{s[0-9]+}}, 0x13480
+; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], {{s[0-9]+}} addr64
 ; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:16
 ; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:32
 ; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:48
-; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], {{s[0-9]+}} addr64
 ; CI-NOHSA-DAG: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x13480{{$}}
 ; CI-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
 ; CI-NOHSA-DAG: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x13490{{$}}
@@ -266,7 +265,7 @@ entry:
 
 ; GCN-LABEL: {{^}}smrd_valu2_max_smrd_offset:
 ; GCN-NOHSA: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:1020{{$}}
-; GCN-HSA flat_load_dword v{{[0-9]}}, v{{[0-9]+:[0-9]+}}
+; GCN-HSA: flat_load_dword v{{[0-9]}}, v[{{[0-9]+:[0-9]+}}]
 define amdgpu_kernel void @smrd_valu2_max_smrd_offset(i32 addrspace(1)* %out, [1024 x i32] addrspace(4)* %in) #1 {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()

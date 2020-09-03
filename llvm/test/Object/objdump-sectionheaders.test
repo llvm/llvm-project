@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.elf-x86-64
+# RUN: yaml2obj %s -o %t.elf-x86-64
 # RUN: llvm-objdump -h %t.elf-x86-64 | FileCheck %s
 
 # To verify this, use readelf -S, not objdump -h. Binutils objdump filters the

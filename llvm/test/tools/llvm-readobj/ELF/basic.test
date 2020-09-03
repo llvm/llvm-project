@@ -5,7 +5,7 @@
 # RUN: llvm-readelf %t.trivial.obj.elf-x86-64 | FileCheck --check-prefix=NO-OUTPUT --allow-empty %s
 
 # HEADER: File: {{.*}}trivial.obj.elf-x86-64
-# HEADER: Format: ELF64-x86-64
+# HEADER: Format: elf64-x86-64
 # HEADER: Arch: x86_64
 # HEADER: AddressSize: 64bit
 

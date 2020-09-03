@@ -14,6 +14,7 @@
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "PPC.h"
 #include "PPCMachineScheduler.h"
+#include "PPCMacroFusion.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetObjectFile.h"
 #include "PPCTargetTransformInfo.h"
@@ -94,7 +95,7 @@ static cl::opt<bool>
   ReduceCRLogical("ppc-reduce-cr-logicals",
                   cl::desc("Expand eligible cr-logical binary ops to branches"),
                   cl::init(true), cl::Hidden);
-extern "C" void LLVMInitializePowerPCTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   // Register the targets
   RegisterTargetMachine<PPCTargetMachine> A(getThePPC32Target());
   RegisterTargetMachine<PPCTargetMachine> B(getThePPC64Target());
@@ -158,7 +159,7 @@ static std::string getDataLayoutString(const Triple &T) {
 
 static std::string computeFSAdditions(StringRef FS, CodeGenOpt::Level OL,
                                       const Triple &TT) {
-  std::string FullFS = FS;
+  std::string FullFS = std::string(FS);
 
   // Make sure 64-bit features are available when CPUname is generic
   if (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le) {
@@ -223,6 +224,9 @@ static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            Optional<Reloc::Model> RM) {
+  assert((!TT.isOSAIX() || !RM.hasValue() || *RM == Reloc::PIC_) &&
+         "Invalid relocation model for AIX.");
+
   if (RM.hasValue())
     return *RM;
 
@@ -230,8 +234,8 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   if (TT.isOSDarwin())
     return Reloc::DynamicNoPIC;
 
-  // Big Endian PPC is PIC by default.
-  if (TT.getArch() == Triple::ppc64)
+  // Big Endian PPC and AIX default to PIC.
+  if (TT.getArch() == Triple::ppc64 || TT.isOSAIX())
     return Reloc::PIC_;
 
   // Rest are static by default.
@@ -272,6 +276,9 @@ static ScheduleDAGInstrs *createPPCMachineScheduler(MachineSchedContext *C) {
                           std::make_unique<GenericScheduler>(C));
   // add DAG Mutations here.
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
+  if (ST.hasFusion())
+    DAG->addMutation(createPowerPCMacroFusionDAGMutation());
+
   return DAG;
 }
 
@@ -283,6 +290,8 @@ static ScheduleDAGInstrs *createPPCPostMachineScheduler(
                       std::make_unique<PPCPostRASchedStrategy>(C) :
                       std::make_unique<PostGenericScheduler>(C), true);
   // add DAG Mutations here.
+  if (ST.hasFusion())
+    DAG->addMutation(createPowerPCMacroFusionDAGMutation());
   return DAG;
 }
 
@@ -495,7 +504,7 @@ void PPCPassConfig::addPreRegAlloc() {
     // PPCTLSDynamicCallPass uses LiveIntervals which previously dependent on
     // LiveVariables. This (unnecessary) dependency has been removed now,
     // however a stage-2 clang build fails without LiveVariables computed here.
-    addPass(&LiveVariablesID, false);
+    addPass(&LiveVariablesID);
     addPass(createPPCTLSDynamicCallPass());
   }
   if (EnableExtraTOCRegDeps)
@@ -522,9 +531,9 @@ void PPCPassConfig::addPreEmitPass() {
   addPass(createPPCExpandISELPass());
 
   if (getOptLevel() != CodeGenOpt::None)
-    addPass(createPPCEarlyReturnPass(), false);
+    addPass(createPPCEarlyReturnPass());
   // Must run branch selection immediately preceding the asm printer.
-  addPass(createPPCBranchSelectionPass(), false);
+  addPass(createPPCBranchSelectionPass());
 }
 
 TargetTransformInfo

@@ -17,12 +17,12 @@
 
 # DISASM:       Disassembly of section .text:
 # DISASM-EMPTY:
-# DISASM:       entrypoint:
+# DISASM:       <entrypoint>:
 # DISASM-CHECK:   201000: 90 nop
 # DISASM-CHECK:   201001: cc int3
 # DISASM-CHECK:   201002: cc int3
 # DISASM-CHECK:   201003: cc int3
-# DISASM:       aaaaaaaaaaaaaaaa:
+# DISASM:       <aaaaaaaaaaaaaaaa>:
 # DISASM-CHECK:   201004: 90 nop
 # DISASM-CHECK:   201005: 90 nop
 
@@ -109,7 +109,7 @@ entrypoint:
 .byte 0
 
 .section .debug_gnu_pubnames,"",@progbits
-.long 0x18
+.long 0x1e
 .value 0x2
 .long 0
 .long 0x33

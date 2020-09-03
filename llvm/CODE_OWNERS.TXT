@@ -9,6 +9,12 @@ beautification by scripts. The fields are: name (N), email (E), web-address
 (S) and (I) IRC handle. Each entry should contain at least the (N), (E) and
 (D) fields.
 
+N: Matt Arsenault
+E: Matthew.Arsenault@amd.com
+E: arsenm2@gmail.com
+I: arsenm
+D: InferAddressSpaces
+
 N: Simon Atanasyan
 E: simon@atanasyan.com
 D: MIPS Backend (lib/Target/Mips/*)
@@ -52,8 +58,8 @@ N: Pete Couperus
 E: petecoup@synopsys.com
 D: ARC backend (lib/Target/ARC/*)
 
-N: Sanjoy Das
-E: sanjoy@playingwithpointers.com
+N: Philip Reames
+E: listmail@philipreames.com
 D: IndVar Simplify, Scalar Evolution
 
 N: Marshall Clow
@@ -62,7 +68,7 @@ D: libc++
 
 N: Peter Collingbourne
 E: peter@pcc.me.uk
-D: llgo, libLTO (lib/LTO/* tools/lto/*), LLVM Bitcode (lib/Bitcode/* include/llvm/Bitcode/*)
+D: libLTO (lib/LTO/* tools/lto/*), LLVM Bitcode (lib/Bitcode/* include/llvm/Bitcode/*)
 
 N: Quentin Colombet
 E: quentin.colombet@gmail.com
@@ -150,6 +156,10 @@ N: Dylan McKay
 E: me@dylanmckay.io
 D: AVR Backend
 
+N: Simon Moll
+E: simon.moll@emea.nec.com
+D: VE Backend
+
 N: Tim Northover
 E: t.p.northover@gmail.com
 D: AArch64 backend, misc ARM backend
@@ -214,10 +224,6 @@ D: SystemZ Backend
 N: Hans Wennborg
 E: hans@chromium.org
 D: Release management (x.y.0 releases)
-
-N: whitequark
-E: whitequark@whitequark.org
-D: C API, OCaml bindings
 
 N: Jake Ehrlich
 E: jakehehrlich@google.com

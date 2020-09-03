@@ -11,8 +11,8 @@
 #include <isl_ctx_private.h>
 #include <isl_id_private.h>
 
-#undef BASE
-#define BASE id
+#undef EL_BASE
+#define EL_BASE id
 
 #include <isl_list_templ.c>
 
@@ -81,19 +81,19 @@ struct isl_name_and_user {
 	void *user;
 };
 
-static int isl_id_has_name_and_user(const void *entry, const void *val)
+static isl_bool isl_id_has_name_and_user(const void *entry, const void *val)
 {
 	isl_id *id = (isl_id *)entry;
 	struct isl_name_and_user *nu = (struct isl_name_and_user *) val;
 
 	if (id->user != nu->user)
-		return 0;
+		return isl_bool_false;
 	if (id->name == nu->name)
-		return 1;
+		return isl_bool_true;
 	if (!id->name || !nu->name)
-		return 0;
+		return isl_bool_false;
 
-	return !strcmp(id->name, nu->name);
+	return isl_bool_ok(!strcmp(id->name, nu->name));
 }
 
 __isl_give isl_id *isl_id_alloc(isl_ctx *ctx, const char *name, void *user)
@@ -164,9 +164,9 @@ int isl_id_cmp(__isl_keep isl_id *id1, __isl_keep isl_id *id2)
 		return 1;
 }
 
-static int isl_id_eq(const void *entry, const void *name)
+static isl_bool isl_id_eq(const void *entry, const void *name)
 {
-	return entry == name;
+	return isl_bool_ok(entry == name);
 }
 
 uint32_t isl_hash_id(uint32_t hash, __isl_keep isl_id *id)
@@ -209,6 +209,8 @@ __isl_null isl_id *isl_id_free(__isl_take isl_id *id)
 	entry = isl_hash_table_find(id->ctx, &id->ctx->id_table, id->hash,
 					isl_id_eq, id, 0);
 	if (!entry)
+		return NULL;
+	if (entry == isl_hash_table_entry_none)
 		isl_die(id->ctx, isl_error_unknown,
 			"unable to find id", (void)0);
 	else
@@ -242,3 +244,63 @@ error:
 	isl_printer_free(p);
 	return NULL;
 }
+
+/* Read an isl_id from "s" based on its name.
+ */
+__isl_give isl_id *isl_stream_read_id(__isl_keep isl_stream *s)
+{
+	struct isl_token *tok;
+	char *str;
+	isl_ctx *ctx;
+	isl_id *id;
+
+	if (!s)
+		return NULL;
+	tok = isl_stream_next_token(s);
+	if (!tok) {
+		isl_stream_error(s, NULL, "unexpected EOF");
+		return NULL;
+	}
+	ctx = isl_stream_get_ctx(s);
+	str = isl_token_get_str(ctx, tok);
+	isl_token_free(tok);
+	if (!str)
+		return NULL;
+	id = isl_id_alloc(ctx, str, NULL);
+	free(str);
+
+	return id;
+}
+
+/* Read an isl_id object from the string "str".
+ */
+__isl_give isl_id *isl_id_read_from_str(isl_ctx *ctx, const char *str)
+{
+	isl_id *id;
+	isl_stream *s = isl_stream_new_str(ctx, str);
+	if (!s)
+		return NULL;
+	id = isl_stream_read_id(s);
+	isl_stream_free(s);
+	return id;
+}
+
+/* Is "id1" (obviously) equal to "id2"?
+ *
+ * isl_id objects can be compared by pointer value, but
+ * isl_multi_*_plain_is_equal needs an isl_*_plain_is_equal.
+ */
+static isl_bool isl_id_plain_is_equal(__isl_keep isl_id *id1,
+	__isl_keep isl_id *id2)
+{
+	if (!id1 || !id2)
+		return isl_bool_error;
+	return id1 == id2;
+}
+
+#undef BASE
+#define BASE id
+
+#include <isl_multi_no_domain_templ.c>
+#include <isl_multi_no_explicit_domain.c>
+#include <isl_multi_templ.c>

@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple=arm64e-apple-ios -filetype=obj %s -o - | llvm-objdump -macho -d -p - | FileCheck %s
+; RUN: llvm-mc -triple=arm64e-apple-ios -filetype=obj %s -o - | llvm-objdump --macho -d -p - | FileCheck %s
 
 ; CHECK: _foo:
 ; CHECK: 0: c0 03 5f d6   ret

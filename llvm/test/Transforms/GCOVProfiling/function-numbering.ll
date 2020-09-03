@@ -16,12 +16,9 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
 
-; GCDA: @[[FOO:[0-9]+]] = private unnamed_addr constant [4 x i8] c"foo\00"
-; GCDA-NOT: @{{[0-9]+}} = private unnamed_addr constant .* c"bar\00"
-; GCDA: @[[BAZ:[0-9]+]] = private unnamed_addr constant [4 x i8] c"baz\00"
 ; GCDA: @__llvm_internal_gcov_emit_function_args.0 = internal unnamed_addr constant
-; GCDA-SAME: { i32 0, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @[[FOO]]
-; GCDA-SAME: { i32 1, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @[[BAZ]]
+; GCDA-SAME: { i32 0,
+; GCDA-SAME: { i32 1,
 ;
 ; GCDA-LABEL: define internal void @__llvm_gcov_writeout() {{.*}} {
 ; GCDA-NEXT:  entry:
@@ -34,10 +31,10 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; GCDA-NEXT:    %[[START_FILE_ARG_0_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[START_FILE_ARGS]], i32 0, i32 0
 ; GCDA-NEXT:    %[[START_FILE_ARG_0:.*]] = load i8*, i8** %[[START_FILE_ARG_0_PTR]]
 ; GCDA-NEXT:    %[[START_FILE_ARG_1_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[START_FILE_ARGS]], i32 0, i32 1
-; GCDA-NEXT:    %[[START_FILE_ARG_1:.*]] = load i8*, i8** %[[START_FILE_ARG_1_PTR]]
+; GCDA-NEXT:    %[[START_FILE_ARG_1:.*]] = load i32, i32* %[[START_FILE_ARG_1_PTR]]
 ; GCDA-NEXT:    %[[START_FILE_ARG_2_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[START_FILE_ARGS]], i32 0, i32 2
 ; GCDA-NEXT:    %[[START_FILE_ARG_2:.*]] = load i32, i32* %[[START_FILE_ARG_2_PTR]]
-; GCDA-NEXT:    call void @llvm_gcda_start_file(i8* %[[START_FILE_ARG_0]], i8* %[[START_FILE_ARG_1]], i32 %[[START_FILE_ARG_2]])
+; GCDA-NEXT:    call void @llvm_gcda_start_file(i8* %[[START_FILE_ARG_0]], i32 %[[START_FILE_ARG_1]], i32 %[[START_FILE_ARG_2]])
 ; GCDA-NEXT:    %[[NUM_COUNTERS_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[FILE_INFO]], i32 0, i32 1
 ; GCDA-NEXT:    %[[NUM_COUNTERS:.*]] = load i32, i32* %[[NUM_COUNTERS_PTR]]
 ; GCDA-NEXT:    %[[EMIT_FUN_ARGS_ARRAY_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[FILE_INFO]], i32 0, i32 2
@@ -53,18 +50,12 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; GCDA-NEXT:    %[[EMIT_FUN_ARG_0_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_FUN_ARGS]], i32 0, i32 0
 ; GCDA-NEXT:    %[[EMIT_FUN_ARG_0:.*]] = load i32, i32* %[[EMIT_FUN_ARG_0_PTR]]
 ; GCDA-NEXT:    %[[EMIT_FUN_ARG_1_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_FUN_ARGS]], i32 0, i32 1
-; GCDA-NEXT:    %[[EMIT_FUN_ARG_1:.*]] = load i8*, i8** %[[EMIT_FUN_ARG_1_PTR]]
+; GCDA-NEXT:    %[[EMIT_FUN_ARG_1:.*]] = load i32, i32* %[[EMIT_FUN_ARG_1_PTR]]
 ; GCDA-NEXT:    %[[EMIT_FUN_ARG_2_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_FUN_ARGS]], i32 0, i32 2
 ; GCDA-NEXT:    %[[EMIT_FUN_ARG_2:.*]] = load i32, i32* %[[EMIT_FUN_ARG_2_PTR]]
-; GCDA-NEXT:    %[[EMIT_FUN_ARG_3_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_FUN_ARGS]], i32 0, i32 3
-; GCDA-NEXT:    %[[EMIT_FUN_ARG_3:.*]] = load i8, i8* %[[EMIT_FUN_ARG_3_PTR]]
-; GCDA-NEXT:    %[[EMIT_FUN_ARG_4_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_FUN_ARGS]], i32 0, i32 4
-; GCDA-NEXT:    %[[EMIT_FUN_ARG_4:.*]] = load i32, i32* %[[EMIT_FUN_ARG_4_PTR]]
 ; GCDA-NEXT:    call void @llvm_gcda_emit_function(i32 %[[EMIT_FUN_ARG_0]],
-; GCDA-SAME:                                       i8* %[[EMIT_FUN_ARG_1]],
-; GCDA-SAME:                                       i32 %[[EMIT_FUN_ARG_2]],
-; GCDA-SAME:                                       i8 %[[EMIT_FUN_ARG_3]],
-; GCDA-SAME:                                       i32 %[[EMIT_FUN_ARG_4]])
+; GCDA-SAME:                                       i32 %[[EMIT_FUN_ARG_1]],
+; GCDA-SAME:                                       i32 %[[EMIT_FUN_ARG_2]])
 ; GCDA-NEXT:    %[[EMIT_ARCS_ARGS:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_ARCS_ARGS_ARRAY]], i32 %[[JV]]
 ; GCDA-NEXT:    %[[EMIT_ARCS_ARG_0_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_ARCS_ARGS]], i32 0, i32 0
 ; GCDA-NEXT:    %[[EMIT_ARCS_ARG_0:.*]] = load i32, i32* %[[EMIT_ARCS_ARG_0_PTR]]

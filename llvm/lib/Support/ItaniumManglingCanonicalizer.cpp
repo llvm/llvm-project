@@ -7,15 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ItaniumManglingCanonicalizer.h"
-
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
 #include "llvm/Support/Allocator.h"
-
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/StringRef.h"
 
 using namespace llvm;
 using llvm::itanium_demangle::ForwardTemplateReference;
@@ -30,9 +26,8 @@ struct FoldingSetNodeIDBuilder {
   void operator()(StringView Str) {
     ID.AddString(llvm::StringRef(Str.begin(), Str.size()));
   }
-  template<typename T>
-  typename std::enable_if<std::is_integral<T>::value ||
-                          std::is_enum<T>::value>::type
+  template <typename T>
+  std::enable_if_t<std::is_integral<T>::value || std::is_enum<T>::value>
   operator()(T V) {
     ID.AddInteger((unsigned long long)V);
   }

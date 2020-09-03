@@ -4,7 +4,7 @@
 # Empty SECTIONS command.
 # RUN: echo "SECTIONS {}" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-objdump -section-headers %t1 | \
+# RUN: llvm-objdump --section-headers %t1 | \
 # RUN:   FileCheck -check-prefix=SEC-DEFAULT %s
 
 # SECTIONS command with the same order as default.
@@ -12,7 +12,7 @@
 # RUN:          .text : { *(.text) } \
 # RUN:          .data : { *(.data) } }" > %t.script
 # RUN: ld.lld -o %t2 --script %t.script %t
-# RUN: llvm-objdump -section-headers %t2 | \
+# RUN: llvm-objdump --section-headers %t2 | \
 # RUN:   FileCheck -check-prefix=SEC-DEFAULT %s
 
 #             Idx Name          Size
@@ -36,7 +36,7 @@
 # RUN:          .data : { *(.data) } \
 # RUN:          .text : { *(.text) } }" > %t.script
 # RUN: ld.lld -o %t3 --script %t.script %t
-# RUN: llvm-objdump -section-headers %t3 | \
+# RUN: llvm-objdump --section-headers %t3 | \
 # RUN:   FileCheck -check-prefix=SEC-ORDER %s
 
 #           Idx Name          Size
@@ -54,7 +54,7 @@
 # RUN:          .data : { *(.text) } \
 # RUN:          .text : { *(.data) } }" > %t.script
 # RUN: ld.lld -o %t4 --script %t.script %t
-# RUN: llvm-objdump -section-headers %t4 | \
+# RUN: llvm-objdump --section-headers %t4 | \
 # RUN:   FileCheck -check-prefix=SEC-SWAP-NAMES %s
 
 #                Idx Name          Size
@@ -76,7 +76,7 @@
 # RUN:       SECTIONS { \
 # RUN:          .data : { *(other) } }" > %t.script
 # RUN: ld.lld -o %t6 --script %t.script %t
-# RUN: llvm-objdump -section-headers %t6 | \
+# RUN: llvm-objdump --section-headers %t6 | \
 # RUN:   FileCheck -check-prefix=SEC-MULTI %s
 
 #           Idx Name          Size

@@ -1,4 +1,4 @@
-//===-- NativeProcessNetBSD.cpp ------------------------------- -*- C++ -*-===//
+//===-- NativeProcessNetBSD.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -95,7 +95,7 @@ NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
            Info.GetArchitecture().GetArchitectureName());
 
   std::unique_ptr<NativeProcessNetBSD> process_up(new NativeProcessNetBSD(
-      pid, launch_info.GetPTY().ReleaseMasterFileDescriptor(), native_delegate,
+      pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
       Info.GetArchitecture(), mainloop));
 
   // Enable event reporting

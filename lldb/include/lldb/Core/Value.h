@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Value_h_
-#define liblldb_Value_h_
+#ifndef LLDB_CORE_VALUE_H
+#define LLDB_CORE_VALUE_H
 
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -258,4 +258,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Value_h_
+#endif // LLDB_CORE_VALUE_H

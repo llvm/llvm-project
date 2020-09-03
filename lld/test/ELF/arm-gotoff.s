@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabi %s -o %t.o
 // RUN: ld.lld %t.o -o %t
 // RUN: llvm-readobj -S -r --symbols %t | FileCheck %s
-// RUN: llvm-objdump -triple=armv7a-linux-gnueabi -d %t | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --triple=armv7a-linux-gnueabi -d %t | FileCheck --check-prefix=DISASM %s
 
 // Test the R_ARM_GOTOFF32 relocation
 
@@ -12,7 +12,7 @@
 // CHECK-NEXT:      SHF_ALLOC
 // CHECK-NEXT:      SHF_WRITE
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x12124
+// CHECK-NEXT:    Address: 0x30124
 // CHECK-NEXT:    Offset: 0x124
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Link:
@@ -25,7 +25,7 @@
 // CHECK-NEXT:      SHF_ALLOC
 // CHECK-NEXT:      SHF_WRITE
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x13124
+// CHECK-NEXT:    Address: 0x40124
 // CHECK-NEXT:    Offset:
 // CHECK-NEXT:    Size: 20
 // CHECK-NEXT:    Link:
@@ -36,7 +36,7 @@
 
 // CHECK:       Symbol {
 // CHECK:       Name: bar
-// CHECK-NEXT:    Value: 0x13124
+// CHECK-NEXT:    Value: 0x40124
 // CHECK-NEXT:    Size: 10
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: Object
@@ -45,7 +45,7 @@
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: obj
-// CHECK-NEXT:    Value: 0x1312E
+// CHECK-NEXT:    Value: 0x4012E
 // CHECK-NEXT:    Size: 10
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: Object

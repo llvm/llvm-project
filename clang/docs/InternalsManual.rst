@@ -2294,9 +2294,10 @@ are created implicitly. The following spellings are accepted:
   ============  ================================================================
   ``GNU``       Spelled with a GNU-style ``__attribute__((attr))`` syntax and
                 placement.
-  ``CXX11``     Spelled with a C++-style ``[[attr]]`` syntax. If the attribute
-                is meant to be used by Clang, it should set the namespace to
-                ``"clang"``.
+  ``CXX11``     Spelled with a C++-style ``[[attr]]`` syntax with an optional
+                vendor-specific namespace.
+  ``C2x``       Spelled with a C-style ``[[attr]]`` syntax with an optional
+                vendor-specific namespace.
   ``Declspec``  Spelled with a Microsoft-style ``__declspec(attr)`` syntax.
   ``Keyword``   The attribute is spelled as a keyword, and required custom
                 parsing.
@@ -2304,6 +2305,11 @@ are created implicitly. The following spellings are accepted:
                 the second is a C++-style spelling with the ``gnu`` namespace.
                 Attributes should only specify this spelling for attributes
                 supported by GCC.
+  ``Clang``     Specifies two or three spellings: the first is a GNU-style
+                spelling, the second is a C++-style spelling with the ``clang``
+                namespace, and the third is an optional C-style spelling with
+                the ``clang`` namespace. By default, a C-style spelling is
+                provided.
   ``Pragma``    The attribute is spelled as a ``#pragma``, and requires custom
                 processing within the preprocessor. If the attribute is meant to
                 be used by Clang, it should set the namespace to ``"clang"``.
@@ -2449,6 +2455,9 @@ Attributes that do not require custom semantic handling should set the
 attributes are assumed to use a semantic handler by default. Attributes
 without a semantic handler are not given a parsed attribute ``Kind`` enumerator.
 
+"Simple" attributes, that require no custom semantic processing aside from what
+is automatically provided, should set the ``SimpleHandler`` field to ``1``.
+
 Target-specific attributes may share a spelling with other attributes in
 different targets. For instance, the ARM and MSP430 targets both have an
 attribute spelled ``GNU<"interrupt">``, but with different parsing and semantic
@@ -2475,12 +2484,11 @@ Boilerplate
 All semantic processing of declaration attributes happens in `lib/Sema/SemaDeclAttr.cpp
 <https://github.com/llvm/llvm-project/blob/master/clang/lib/Sema/SemaDeclAttr.cpp>`_,
 and generally starts in the ``ProcessDeclAttribute()`` function. If the
-attribute is a "simple" attribute -- meaning that it requires no custom semantic
-processing aside from what is automatically  provided, add a call to
-``handleSimpleAttribute<YourAttr>(S, D, Attr);`` to the switch statement.
-Otherwise, write a new ``handleYourAttr()`` function, and add that to the switch
-statement. Please do not implement handling logic directly in the ``case`` for
-the attribute.
+attribute has the ``SimpleHandler`` field set to ``1`` then the function to
+process the attribute will be automatically generated, and nothing needs to be
+done here. Otherwise, write a new ``handleYourAttr()`` function, and add that to
+the switch statement. Please do not implement handling logic directly in the
+``case`` for the attribute.
 
 Unless otherwise specified by the attribute definition, common semantic checking
 of the parsed attribute is handled automatically. This includes diagnosing

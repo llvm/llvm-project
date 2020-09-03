@@ -5,12 +5,12 @@ target triple = "wasm32-unknown-unknown"
 
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
 
-@global_var = hidden global i32 0, align 4
+@global_var = global i32 0, align 4
 ; CHECK-DAG: __THREW__ = external global i32
 ; CHECK-DAG: __threwValue = external global i32
 
 ; Test a simple setjmp - longjmp sequence
-define hidden void @setjmp_longjmp() {
+define void @setjmp_longjmp() {
 ; CHECK-LABEL: @setjmp_longjmp
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
@@ -73,7 +73,7 @@ entry:
 }
 
 ; Test a case of a function call (which is not longjmp) after a setjmp
-define hidden void @setjmp_other() {
+define void @setjmp_other() {
 ; CHECK-LABEL: @setjmp_other
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
@@ -94,7 +94,7 @@ entry:
 }
 
 ; Test a case when a function call is within try-catch, after a setjmp
-define hidden void @exception_and_longjmp() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @exception_and_longjmp() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @exception_and_longjmp
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
@@ -132,7 +132,7 @@ try.cont:                                         ; preds = %entry, %lpad
 }
 
 ; Test SSA validity
-define hidden void @ssa(i32 %n) {
+define void @ssa(i32 %n) {
 ; CHECK-LABEL: @ssa
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
@@ -170,7 +170,7 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; Test a case when a function only calls other functions that are neither setjmp nor longjmp
-define hidden void @only_other_func() {
+define void @only_other_func() {
 entry:
   call void @foo()
   ret void
@@ -178,7 +178,7 @@ entry:
 }
 
 ; Test a case when a function only calls longjmp and not setjmp
-define hidden void @only_longjmp() {
+define void @only_longjmp() {
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
   %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
@@ -189,7 +189,7 @@ entry:
 }
 
 ; Test inline asm handling
-define hidden void @inline_asm() {
+define void @inline_asm() {
 ; CHECK-LABEL: @inline_asm
 entry:
   %env = alloca [1 x %struct.__jmp_buf_tag], align 16
@@ -205,7 +205,7 @@ entry:
 
 ; Test that the allocsize attribute is being transformed properly
 declare i8 *@allocator(i32, %struct.__jmp_buf_tag*) #3
-define hidden i8 *@allocsize() {
+define i8 *@allocsize() {
 ; CHECK-LABEL: @allocsize
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
@@ -271,4 +271,29 @@ attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
 attributes #2 = { nounwind }
 attributes #3 = { allocsize(0) }
+; CHECK: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="getTempRet0" }
+; CHECK: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="setTempRet0" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__resumeException" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="llvm_eh_typeid_for" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_void" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__cxa_find_matching_catch_3" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp_jmpbuf" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="saveSetjmp" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="testSetjmp" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_i8*_i32_%struct.__jmp_buf_tag*" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_void_%struct.__jmp_buf_tag*_i32" }
 ; CHECK: attributes #[[ALLOCSIZE_ATTR]] = { allocsize(1) }
+
+!llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = !DIFile(filename: "lower-em-sjlj.c", directory: "test")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
+!3 = distinct !DISubprogram(name: "setjmp_debug_info", unit:!2, file: !1, line: 1)
+!4 = !DILocation(line:2, scope: !3)
+!5 = !DILocation(line:3, scope: !3)
+!6 = !DILocation(line:4, scope: !3)
+!7 = !DILocation(line:5, scope: !3)
+!8 = !DILocation(line:6, scope: !3)

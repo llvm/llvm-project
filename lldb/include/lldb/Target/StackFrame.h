@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_StackFrame_h_
-#define liblldb_StackFrame_h_
+#ifndef LLDB_TARGET_STACKFRAME_H
+#define LLDB_TARGET_STACKFRAME_H
 
 #include <memory>
 #include <mutex>
@@ -367,12 +367,6 @@ public:
   /// may have limited support for inspecting variables.
   bool IsArtificial() const;
 
-  /// Query whether this frame behaves like the zeroth frame, in the sense
-  /// that its pc value might not immediately follow a call (and thus might
-  /// be the first address of its function).  True for actual frame zero as
-  /// well as any other frame with the same trait.
-  bool BehavesLikeZerothFrame() const;
-
   /// Query this frame to find what frame it is in this Thread's
   /// StackFrameList.
   ///
@@ -517,6 +511,11 @@ private:
   bool m_cfa_is_valid; // Does this frame have a CFA?  Different from CFA ==
                        // LLDB_INVALID_ADDRESS
   Kind m_stack_frame_kind;
+
+  // Whether this frame behaves like the zeroth frame, in the sense
+  // that its pc value might not immediately follow a call (and thus might
+  // be the first address of its function). True for actual frame zero as
+  // well as any other frame with the same trait.
   bool m_behaves_like_zeroth_frame;
   lldb::VariableListSP m_variable_list_sp;
   ValueObjectList m_variable_list_value_objects; // Value objects for each
@@ -526,9 +525,10 @@ private:
   StreamString m_disassembly;
   std::recursive_mutex m_mutex;
 
-  DISALLOW_COPY_AND_ASSIGN(StackFrame);
+  StackFrame(const StackFrame &) = delete;
+  const StackFrame &operator=(const StackFrame &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_StackFrame_h_
+#endif // LLDB_TARGET_STACKFRAME_H

@@ -34,10 +34,10 @@ using namespace llvm;
 TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
                              const Triple &TT, StringRef CPU, StringRef FS,
                              const TargetOptions &Options)
-    : TheTarget(T), DL(DataLayoutString), TargetTriple(TT), TargetCPU(CPU),
-      TargetFS(FS), AsmInfo(nullptr), MRI(nullptr), MII(nullptr), STI(nullptr),
-      RequireStructuredCFG(false), O0WantsFastISel(false),
-      DefaultOptions(Options), Options(Options) {}
+    : TheTarget(T), DL(DataLayoutString), TargetTriple(TT),
+      TargetCPU(std::string(CPU)), TargetFS(std::string(FS)), AsmInfo(nullptr),
+      MRI(nullptr), MII(nullptr), STI(nullptr), RequireStructuredCFG(false),
+      O0WantsFastISel(false), DefaultOptions(Options), Options(Options) {}
 
 TargetMachine::~TargetMachine() = default;
 
@@ -46,17 +46,17 @@ bool TargetMachine::isPositionIndependent() const {
 }
 
 /// Reset the target options based on the function's attributes.
+/// setFunctionAttributes should have made the raw attribute value consistent
+/// with the command line flag if used.
+//
 // FIXME: This function needs to go away for a number of reasons:
 // a) global state on the TargetMachine is terrible in general,
 // b) these target options should be passed only on the function
 //    and not on the TargetMachine (via TargetOptions) at all.
 void TargetMachine::resetTargetOptions(const Function &F) const {
-#define RESET_OPTION(X, Y)                                                     \
-  do {                                                                         \
-    if (F.hasFnAttribute(Y))                                                   \
-      Options.X = (F.getFnAttribute(Y).getValueAsString() == "true");          \
-    else                                                                       \
-      Options.X = DefaultOptions.X;                                            \
+#define RESET_OPTION(X, Y)                                              \
+  do {                                                                  \
+    Options.X = (F.getFnAttribute(Y).getValueAsString() == "true");     \
   } while (0)
 
   RESET_OPTION(UnsafeFPMath, "unsafe-fp-math");
@@ -193,6 +193,14 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
     // Check if we can use copy relocations.
     if (!(GV && GV->isThreadLocal()) && RM == Reloc::Static)
       return true;
+  } else if (TT.isOSBinFormatELF()) {
+    // If dso_local allows AsmPrinter::getSymbolPreferLocal to use a local
+    // alias, set the flag. We cannot set dso_local for other global values,
+    // because otherwise direct accesses to a probably interposable symbol (even
+    // if the codegen assumes not) will be rejected by the linker.
+    if (!GV || !GV->canBenefitFromLocalAlias())
+      return false;
+    return TT.isX86() && M.noSemanticInterposition();
   }
 
   // ELF & wasm support preemption of other symbols.
@@ -258,6 +266,10 @@ void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,
 
 MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV) const {
   const TargetLoweringObjectFile *TLOF = getObjFileLowering();
+  // XCOFF symbols could have special naming convention.
+  if (MCSymbol *TargetSymbol = TLOF->getTargetSymbol(GV, *this))
+    return TargetSymbol;
+
   SmallString<128> NameStr;
   getNameWithPrefix(NameStr, GV, TLOF->getMangler());
   return TLOF->getContext().getOrCreateSymbol(NameStr);

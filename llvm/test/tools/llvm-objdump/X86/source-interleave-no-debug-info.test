@@ -10,6 +10,6 @@
 # RUN: FileCheck %s --input-file %t2.e --check-prefixes=WARN
 
 # WARN:        warning: '{{.*}}2.o': failed to parse debug information
-# CHECK:       0000000000000010 main:
+# CHECK:       0000000000000010 <main>:
 # SOURCE-NEXT: ; int main() {
 # CHECK-NEXT:   10:   55                      pushq   %rbp

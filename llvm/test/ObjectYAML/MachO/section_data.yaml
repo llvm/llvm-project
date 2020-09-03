@@ -42,7 +42,7 @@ LoadCommands:
         content:         CDAB3412
 
 ## Case 2: The content size equals the section size.
-# RUN: yaml2obj --docnum=2 %s > %t2
+# RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=CASE2
 # CASE2:       Index: 0
 # CASE2-NEXT:  Name: __data (5F 5F 64 61 74 61 00 00 00 00 00 00 00 00 00 00)
@@ -102,7 +102,7 @@ LoadCommands:
 
 ## Case 3: The content size is less than the section size. In this case, the area
 ## after the custom content is filled with zeroes.
-# RUN: yaml2obj --docnum=3 %s > %t3
+# RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: llvm-readobj --sections --section-data %t3 | FileCheck %s --check-prefix=CASE3
 # CASE3:       Index: 0
 # CASE3-NEXT:  Name: __data (5F 5F 64 61 74 61 00 00 00 00 00 00 00 00 00 00)

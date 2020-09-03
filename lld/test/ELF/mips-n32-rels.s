@@ -26,8 +26,8 @@ loc:
   .section  .rodata,"a",@progbits
   .gpword(loc)                                # R_MIPS_GPREL32
 
-# CHECK: 00020104      .text   00000000 loc
-# CHECK: 00028100      .got    00000000 .hidden _gp
+# CHECK: 00020104 l    .text   00000000 loc
+# CHECK: 00028100 l    .got    00000000 .hidden _gp
 # CHECK: 00020100 g  F .text   00000000 __start
 
 # CHECK:      Contents of section .rodata:
@@ -36,12 +36,12 @@ loc:
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: __start:
+# CHECK-NEXT: <__start>:
 # CHECK-NEXT:    20100:  lui     $gp, 1
 #                                     ^-- 0x20100 - 0x28100
 #                                     ^-- 0 - 0xffff8000
 #                                     ^-- %hi(0x8000)
-# CHECK:      loc:
+# CHECK:      <loc>:
 # CHECK-NEXT:    20104:  daddiu  $gp, $gp, -32768
 #                                          ^-- 0x20100 - 0x28100
 #                                          ^-- 0 - 0xffff8000

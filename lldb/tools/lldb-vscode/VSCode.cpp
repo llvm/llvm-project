@@ -28,8 +28,8 @@ namespace lldb_vscode {
 VSCode g_vsc;
 
 VSCode::VSCode()
-    : launch_info(nullptr), variables(), broadcaster("lldb-vscode"),
-      num_regs(0), num_locals(0), num_globals(0), log(),
+    : variables(), broadcaster("lldb-vscode"), num_regs(0), num_locals(0),
+      num_globals(0), log(),
       exception_breakpoints(
           {{"cpp_catch", "C++ Catch", lldb::eLanguageTypeC_plus_plus},
            {"cpp_throw", "C++ Throw", lldb::eLanguageTypeC_plus_plus},
@@ -38,7 +38,7 @@ VSCode::VSCode()
            {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift},
            {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift}}),
       focus_tid(LLDB_INVALID_THREAD_ID), sent_terminated_event(false),
-      stop_at_entry(false) {
+      stop_at_entry(false), is_attach(false) {
   const char *log_file_path = getenv("LLDBVSCODE_LOG");
 #if defined(_WIN32)
 // Windows opens stdout and stdin in text mode which converts \n to 13,10
@@ -128,6 +128,12 @@ std::string VSCode::ReadJSON() {
 
   if (!input.read_full(log.get(), length, json_str))
     return json_str;
+
+  if (log) {
+    *log << "--> " << std::endl
+         << "Content-Length: " << length << "\r\n\r\n"
+         << json_str << std::endl;
+  }
 
   return json_str;
 }
@@ -301,6 +307,63 @@ void VSCode::RunStopCommands() {
 
 void VSCode::RunExitCommands() {
   RunLLDBCommands("Running exitCommands:", exit_commands);
+}
+
+void VSCode::RunTerminateCommands() {
+  RunLLDBCommands("Running terminateCommands:", terminate_commands);
+}
+
+lldb::SBTarget VSCode::CreateTargetFromArguments(
+    const llvm::json::Object &arguments,
+    lldb::SBError &error) {
+  // Grab the name of the program we need to debug and create a target using
+  // the given program as an argument. Executable file can be a source of target
+  // architecture and platform, if they differ from the host. Setting exe path
+  // in launch info is useless because Target.Launch() will not change
+  // architecture and platform, therefore they should be known at the target
+  // creation. We also use target triple and platform from the launch
+  // configuration, if given, since in some cases ELF file doesn't contain
+  // enough information to determine correct arch and platform (or ELF can be
+  // omitted at all), so it is good to leave the user an apportunity to specify
+  // those. Any of those three can be left empty.
+  llvm::StringRef target_triple = GetString(arguments, "targetTriple");
+  llvm::StringRef platform_name = GetString(arguments, "platformName");
+  llvm::StringRef program = GetString(arguments, "program");
+  auto target = this->debugger.CreateTarget(
+    program.data(),
+    target_triple.data(),
+    platform_name.data(),
+    true, // Add dependent modules.
+    error
+  );
+
+  if (error.Fail()) {
+    // Update message if there was an error.
+    error.SetErrorStringWithFormat(
+        "Could not create a target for a program '%s': %s.",
+        program.data(), error.GetCString());
+  }
+
+  return target;
+}
+
+void VSCode::SetTarget(const lldb::SBTarget target) {
+  this->target = target;
+
+  if (target.IsValid()) {
+    // Configure breakpoint event listeners for the target.
+    lldb::SBListener listener = this->debugger.GetListener();
+    listener.StartListeningForEvents(
+        this->target.GetBroadcaster(),
+        lldb::SBTarget::eBroadcastBitBreakpointChanged);
+    listener.StartListeningForEvents(this->broadcaster,
+                                     eBroadcastBitStopEventThread);
+    listener.StartListeningForEvents(
+      this->target.GetBroadcaster(),
+      lldb::SBTarget::eBroadcastBitModulesLoaded |
+          lldb::SBTarget::eBroadcastBitModulesUnloaded |
+          lldb::SBTarget::eBroadcastBitSymbolsLoaded);                                
+  }
 }
 
 } // namespace lldb_vscode

@@ -1,4 +1,4 @@
-//===-- AdbClient.cpp -------------------------------------------*- C++ -*-===//
+//===-- AdbClient.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -94,11 +94,7 @@ Status ReadAllBytes(Connection &conn, void *buffer, size_t size) {
 
 Status AdbClient::CreateByDeviceID(const std::string &device_id,
                                    AdbClient &adb) {
-  DeviceIDList connect_devices;
-  auto error = adb.GetDevices(connect_devices);
-  if (error.Fail())
-    return error;
-
+  Status error;
   std::string android_serial;
   if (!device_id.empty())
     android_serial = device_id;
@@ -106,18 +102,18 @@ Status AdbClient::CreateByDeviceID(const std::string &device_id,
     android_serial = env_serial;
 
   if (android_serial.empty()) {
-    if (connect_devices.size() != 1)
+    DeviceIDList connected_devices;
+    error = adb.GetDevices(connected_devices);
+    if (error.Fail())
+      return error;
+
+    if (connected_devices.size() != 1)
       return Status("Expected a single connected device, got instead %zu - try "
                     "setting 'ANDROID_SERIAL'",
-                    connect_devices.size());
-    adb.SetDeviceID(connect_devices.front());
+                    connected_devices.size());
+    adb.SetDeviceID(connected_devices.front());
   } else {
-    auto find_it = std::find(connect_devices.begin(), connect_devices.end(),
-                             android_serial);
-    if (find_it == connect_devices.end())
-      return Status("Device \"%s\" not found", android_serial.c_str());
-
-    adb.SetDeviceID(*find_it);
+    adb.SetDeviceID(android_serial);
   }
   return error;
 }
@@ -136,12 +132,12 @@ const std::string &AdbClient::GetDeviceID() const { return m_device_id; }
 
 Status AdbClient::Connect() {
   Status error;
-  m_conn.reset(new ConnectionFileDescriptor);
+  m_conn = std::make_unique<ConnectionFileDescriptor>();
   std::string port = "5037";
   if (const char *env_port = std::getenv("ANDROID_ADB_SERVER_PORT")) {
     port = env_port;
   }
-  std::string uri = "connect://localhost:" + port;
+  std::string uri = "connect://127.0.0.1:" + port;
   m_conn->Connect(uri.c_str(), &error);
 
   return error;
@@ -166,7 +162,7 @@ Status AdbClient::GetDevices(DeviceIDList &device_list) {
   response.split(devices, "\n", -1, false);
 
   for (const auto &device : devices)
-    device_list.push_back(device.split('\t').first);
+    device_list.push_back(std::string(device.split('\t').first));
 
   // Force disconnect since ADB closes connection after host:devices response
   // is sent.
@@ -365,7 +361,7 @@ Status AdbClient::internalShell(const char *command, milliseconds timeout,
 
   StreamString adb_command;
   adb_command.Printf("shell:%s", command);
-  error = SendMessage(adb_command.GetString(), false);
+  error = SendMessage(std::string(adb_command.GetString()), false);
   if (error.Fail())
     return error;
 

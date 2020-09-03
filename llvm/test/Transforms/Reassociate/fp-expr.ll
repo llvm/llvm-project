@@ -4,7 +4,7 @@
 define void @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[T1:%.*]] = tail call <4 x float> @blam()
-; CHECK-NEXT:    [[T1_NEG:%.*]] = fsub fast <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[T1]]
+; CHECK-NEXT:    [[T1_NEG:%.*]] = fneg fast <4 x float> [[T1]]
 ; CHECK-NEXT:    [[T24:%.*]] = fadd fast <4 x float> [[T1_NEG]], undef
 ; CHECK-NEXT:    tail call void @wombat(<4 x float> [[T24]])
 ; CHECK-NEXT:    ret void
@@ -19,7 +19,7 @@ define void @test1() {
 define half @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[T15:%.*]] = fsub fast half undef, undef
-; CHECK-NEXT:    [[T15_NEG:%.*]] = fsub fast half 0xH8000, [[T15]]
+; CHECK-NEXT:    [[T15_NEG:%.*]] = fneg fast half [[T15]]
 ; CHECK-NEXT:    [[T18:%.*]] = fadd fast half [[T15_NEG]], undef
 ; CHECK-NEXT:    ret half [[T18]]
 ;

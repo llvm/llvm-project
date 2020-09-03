@@ -86,6 +86,15 @@ main_body:
   ret void
 }
 
+;CHECK-LABEL: {{^}}buffer_store_x1_i32:
+;CHECK-NOT: s_waitcnt
+;CHECK: buffer_store_format_x v0, v1, s[0:3], 0 idxen
+define amdgpu_ps void @buffer_store_x1_i32(<4 x i32> inreg %rsrc, i32 %data, i32 %index) {
+main_body:
+  call void @llvm.amdgcn.struct.buffer.store.format.i32(i32 %data, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
+  ret void
+}
+
 ;CHECK-LABEL: {{^}}buffer_store_x2:
 ;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_store_format_xy v[0:1], v2, s[0:3], 0 idxen
@@ -98,6 +107,7 @@ main_body:
 declare void @llvm.amdgcn.struct.buffer.store.format.f32(float, <4 x i32>, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.struct.buffer.store.format.v2f32(<2 x float>, <4 x i32>, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) #0
+declare void @llvm.amdgcn.struct.buffer.store.format.i32(i32, <4 x i32>, i32, i32, i32, i32) #0
 declare <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32, i32) #1
 
 attributes #0 = { nounwind }

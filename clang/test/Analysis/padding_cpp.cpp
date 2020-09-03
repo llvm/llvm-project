@@ -165,7 +165,7 @@ class Holder1 { // no-warning
   TemplateSandwich<void *> t3;
 };
 
-typedef struct { // expected-warning{{Excessive padding in 'TypedefSandwich2'}}
+typedef struct TypedefSandwich2 { // expected-warning{{Excessive padding in 'struct TypedefSandwich2'}}
   char c1;
   typedef struct { // expected-warning{{Excessive padding in 'TypedefSandwich2::NestedTypedef'}}
     char c1;

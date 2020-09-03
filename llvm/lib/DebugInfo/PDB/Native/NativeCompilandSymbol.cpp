@@ -49,11 +49,11 @@ SymIndexId NativeCompilandSymbol::getLexicalParentId() const { return 0; }
 // this potential confusion.
 
 std::string NativeCompilandSymbol::getLibraryName() const {
-  return Module.getObjFileName();
+  return std::string(Module.getObjFileName());
 }
 
 std::string NativeCompilandSymbol::getName() const {
-  return Module.getModuleName();
+  return std::string(Module.getModuleName());
 }
 
 } // namespace pdb

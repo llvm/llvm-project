@@ -66,9 +66,7 @@ write_cmake_config("abi-breaking") {
 }
 
 write_cmake_config("config") {
-  public_deps = [
-    ":llvm-config",
-  ]
+  public_deps = [ ":llvm-config" ]
 
   input = "config.h.cmake"
   output = "$target_gen_dir/config.h"
@@ -143,8 +141,6 @@ write_cmake_config("config") {
       "HAVE_LSEEK64=1",
       "HAVE_MALLINFO=1",
       "HAVE_POSIX_FALLOCATE=1",
-      "HAVE_SCHED_GETAFFINITY=1",
-      "HAVE_CPU_COUNT=1",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
     ]
   } else {
@@ -154,8 +150,6 @@ write_cmake_config("config") {
       "HAVE_LSEEK64=",
       "HAVE_MALLINFO=",
       "HAVE_POSIX_FALLOCATE=",
-      "HAVE_SCHED_GETAFFINITY=",
-      "HAVE_CPU_COUNT=",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=",
     ]
   }
@@ -301,10 +295,20 @@ write_cmake_config("config") {
     values += [ "LLVM_ENABLE_DIA_SDK=" ]
   }
 
+  # FIXME: Once https://reviews.llvm.org/D79219 is in, remove the two
+  # redundant HAVE_ variables.
   if (llvm_enable_zlib) {
-    values += [ "LLVM_ENABLE_ZLIB=1" ]
+    values += [
+      "HAVE_LIBZ=1",
+      "HAVE_ZLIB_H=1",
+      "LLVM_ENABLE_ZLIB=1",
+    ]
   } else {
-    values += [ "LLVM_ENABLE_ZLIB=" ]
+    values += [
+      "HAVE_LIBZ=",
+      "HAVE_ZLIB_H=",
+      "LLVM_ENABLE_ZLIB=",
+    ]
   }
 
   if (llvm_enable_libxml2) {
@@ -321,6 +325,7 @@ write_cmake_config("llvm-config") {
     "LLVM_ENABLE_DUMP=",
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
     "LLVM_HAS_ATOMICS=1",
+    "LLVM_HAVE_TF_API=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_NATIVE_ARCH=$native_target",
     "LLVM_NATIVE_ASMPARSER=1",

@@ -13,7 +13,7 @@
 
 
 
-def HasHTM : Predicate<"PPCSubTarget->hasHTM()">;
+def HasHTM : Predicate<"Subtarget->hasHTM()">;
 
 def HTM_get_imm : SDNodeXForm<imm, [{
   return getI32Imm (N->getZExtValue(), SDLoc(N));
@@ -169,3 +169,8 @@ def : Pat<(i64 (int_ppc_ttest)),
                    36, 28)>;
 
 } // [HasHTM]
+
+def : InstAlias<"tend.", (TEND 0)>, Requires<[HasHTM]>;
+def : InstAlias<"tendall.", (TEND 1)>, Requires<[HasHTM]>;
+def : InstAlias<"tsuspend.", (TSR 0)>, Requires<[HasHTM]>;
+def : InstAlias<"tresume.", (TSR 1)>, Requires<[HasHTM]>;

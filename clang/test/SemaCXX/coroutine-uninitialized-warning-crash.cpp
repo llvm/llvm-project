@@ -16,7 +16,7 @@ struct coro_t {
   struct promise_type {
     coro_t get_return_object() { return {}; }
     suspend_never initial_suspend() { return {}; }
-    suspend_never final_suspend() { return {}; }
+    suspend_never final_suspend() noexcept { return {}; }
     A yield_value(int) { return {}; }
     void return_void() {}
     static void unhandled_exception() {}

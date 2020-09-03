@@ -51,3 +51,12 @@ Example
     // WARNING: OpenMP directive ``parallel`` specifies ``default(shared)``
     //          clause. Consider using ``default(none)`` clause instead.
   }
+
+  // ``parallel`` directive can have ``default`` clause, and said clause is
+  // specified, but with ``firstprivate`` kind, which is not ``none``, diagnose.
+  void p0_3() {
+  #pragma omp parallel default(firstprivate)
+    ;
+    // WARNING: OpenMP directive ``parallel`` specifies ``default(firstprivate)``
+    //          clause. Consider using ``default(none)`` clause instead.
+  }

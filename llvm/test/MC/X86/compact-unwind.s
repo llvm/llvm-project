@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin10.0 %s | llvm-objdump -unwind-info - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin10.0 %s | llvm-objdump --unwind-info - | FileCheck %s
 
 	.section	__TEXT,__text,regular,pure_instructions
 	.macosx_version_min 10, 10

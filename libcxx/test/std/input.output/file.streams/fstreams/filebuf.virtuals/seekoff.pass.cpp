@@ -13,6 +13,8 @@
 // pos_type seekpos(pos_type sp,
 //                  ios_base::openmode which = ios_base::in | ios_base::out);
 
+// FILE_DEPENDENCIES: underflow.dat
+
 #include <fstream>
 #include <cassert>
 

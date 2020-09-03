@@ -1,6 +1,6 @@
 //===- LLVMIRConversionGen.cpp - MLIR LLVM IR builder generator -----------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Support/LogicalResult.h"
+#include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
 
@@ -73,7 +75,7 @@ static bool isVariadicOperandName(const tblgen::Operator &op, StringRef name) {
   if (numOperands == 0)
     return false;
   const auto &operand = op.getOperand(numOperands - 1);
-  return operand.isVariadic() && operand.name == name;
+  return operand.isVariableLength() && operand.name == name;
 }
 
 // Check if `result` is a known name of a result of `op`.
@@ -133,7 +135,7 @@ static bool emitOneBuilder(const Record &record, raw_ostream &os) {
     } else if (isResultName(op, name)) {
       bs << formatv("valueMapping[op.{0}()]", name);
     } else if (name == "_resultType") {
-      bs << "op.getResult()->getType().cast<LLVM::LLVMType>()."
+      bs << "op.getResult().getType().cast<LLVM::LLVMType>()."
             "getUnderlyingType()";
     } else if (name == "_hasResult") {
       bs << "opInst.getNumResults() == 1";
@@ -171,6 +173,126 @@ static bool emitBuilders(const RecordKeeper &recordKeeper, raw_ostream &os) {
   return false;
 }
 
+namespace {
+// Wrapper class around a Tablegen definition of an LLVM enum attribute case.
+class LLVMEnumAttrCase : public tblgen::EnumAttrCase {
+public:
+  using tblgen::EnumAttrCase::EnumAttrCase;
+
+  // Constructs a case from a non LLVM-specific enum attribute case.
+  explicit LLVMEnumAttrCase(const tblgen::EnumAttrCase &other)
+      : tblgen::EnumAttrCase(&other.getDef()) {}
+
+  // Returns the C++ enumerant for the LLVM API.
+  StringRef getLLVMEnumerant() const {
+    return def->getValueAsString("llvmEnumerant");
+  }
+};
+
+// Wraper class around a Tablegen definition of an LLVM enum attribute.
+class LLVMEnumAttr : public tblgen::EnumAttr {
+public:
+  using tblgen::EnumAttr::EnumAttr;
+
+  // Returns the C++ enum name for the LLVM API.
+  StringRef getLLVMClassName() const {
+    return def->getValueAsString("llvmClassName");
+  }
+
+  // Returns all associated cases viewed as LLVM-specific enum cases.
+  std::vector<LLVMEnumAttrCase> getAllCases() const {
+    std::vector<LLVMEnumAttrCase> cases;
+
+    for (auto &c : tblgen::EnumAttr::getAllCases())
+      cases.push_back(LLVMEnumAttrCase(c));
+
+    return cases;
+  }
+};
+} // namespace
+
+// Emits conversion function "LLVMClass convertEnumToLLVM(Enum)" and containing
+// switch-based logic to convert from the MLIR LLVM dialect enum attribute case
+// (Enum) to the corresponding LLVM API enumerant
+static void emitOneEnumToConversion(const llvm::Record *record,
+                                    raw_ostream &os) {
+  LLVMEnumAttr enumAttr(record);
+  StringRef llvmClass = enumAttr.getLLVMClassName();
+  StringRef cppClassName = enumAttr.getEnumClassName();
+  StringRef cppNamespace = enumAttr.getCppNamespace();
+
+  // Emit the function converting the enum attribute to its LLVM counterpart.
+  os << formatv("static {0} convert{1}ToLLVM({2}::{1} value) {{\n", llvmClass,
+                cppClassName, cppNamespace);
+  os << "  switch (value) {\n";
+
+  for (const auto &enumerant : enumAttr.getAllCases()) {
+    StringRef llvmEnumerant = enumerant.getLLVMEnumerant();
+    StringRef cppEnumerant = enumerant.getSymbol();
+    os << formatv("  case {0}::{1}::{2}:\n", cppNamespace, cppClassName,
+                  cppEnumerant);
+    os << formatv("    return {0}::{1};\n", llvmClass, llvmEnumerant);
+  }
+
+  os << "  }\n";
+  os << formatv("  llvm_unreachable(\"unknown {0} type\");\n",
+                enumAttr.getEnumClassName());
+  os << "}\n\n";
+}
+
+// Emits conversion function "Enum convertEnumFromLLVM(LLVMClass)" and
+// containing switch-based logic to convert from the LLVM API enumerant to MLIR
+// LLVM dialect enum attribute (Enum).
+static void emitOneEnumFromConversion(const llvm::Record *record,
+                                      raw_ostream &os) {
+  LLVMEnumAttr enumAttr(record);
+  StringRef llvmClass = enumAttr.getLLVMClassName();
+  StringRef cppClassName = enumAttr.getEnumClassName();
+  StringRef cppNamespace = enumAttr.getCppNamespace();
+
+  // Emit the function converting the enum attribute from its LLVM counterpart.
+  os << formatv("static {0}::{1} convert{1}FromLLVM({2} value) {{\n",
+                cppNamespace, cppClassName, llvmClass);
+  os << "  switch (value) {\n";
+
+  for (const auto &enumerant : enumAttr.getAllCases()) {
+    StringRef llvmEnumerant = enumerant.getLLVMEnumerant();
+    StringRef cppEnumerant = enumerant.getSymbol();
+    os << formatv("  case {0}::{1}:\n", llvmClass, llvmEnumerant);
+    os << formatv("    return {0}::{1}::{2};\n", cppNamespace, cppClassName,
+                  cppEnumerant);
+  }
+
+  os << "  }\n";
+  os << formatv("  llvm_unreachable(\"unknown {0} type\");",
+                enumAttr.getLLVMClassName());
+  os << "}\n\n";
+}
+
+// Emits conversion functions between MLIR enum attribute case and corresponding
+// LLVM API enumerants for all registered LLVM dialect enum attributes.
+template <bool ConvertTo>
+static bool emitEnumConversionDefs(const RecordKeeper &recordKeeper,
+                                   raw_ostream &os) {
+  for (const auto *def : recordKeeper.getAllDerivedDefinitions("LLVM_EnumAttr"))
+    if (ConvertTo)
+      emitOneEnumToConversion(def, os);
+    else
+      emitOneEnumFromConversion(def, os);
+
+  return false;
+}
+
 static mlir::GenRegistration
     genLLVMIRConversions("gen-llvmir-conversions",
                          "Generate LLVM IR conversions", emitBuilders);
+
+static mlir::GenRegistration
+    genEnumToLLVMConversion("gen-enum-to-llvmir-conversions",
+                            "Generate conversions of EnumAttrs to LLVM IR",
+                            emitEnumConversionDefs</*ConvertTo=*/true>);
+
+static mlir::GenRegistration
+    genEnumFromLLVMConversion("gen-enum-from-llvmir-conversions",
+                              "Generate conversions of EnumAttrs from LLVM IR",
+                              emitEnumConversionDefs</*ConvertTo=*/false>);

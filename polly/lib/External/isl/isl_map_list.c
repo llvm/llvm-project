@@ -6,8 +6,8 @@
 
 #include <isl_list_templ.h>
 
-#undef BASE
-#define BASE basic_map
+#undef EL_BASE
+#define EL_BASE basic_map
 
 #include <isl_list_templ.c>
 
@@ -16,8 +16,8 @@
 
 #include <isl_list_templ.h>
 
-#undef BASE
-#define BASE map
+#undef EL_BASE
+#define EL_BASE map
 
 #include <isl_list_templ.c>
 
@@ -26,7 +26,7 @@
 
 #include <isl_list_templ.h>
 
-#undef BASE
-#define BASE union_map
+#undef EL_BASE
+#define EL_BASE union_map
 
 #include <isl_list_templ.c>

@@ -109,3 +109,21 @@ struct Template {
 
 Template<int> TemplateInt;
 }
+
+struct AssignmentCallAtReturn {
+  AssignmentCallAtReturn &returnThis() {
+    return *this;
+  }
+  AssignmentCallAtReturn &operator=(int rhs) {
+    return *this;
+  }
+  AssignmentCallAtReturn &operator=(char rhs) {
+    // Allow call to assignment from other type.
+    return (*this = static_cast<int>(rhs));
+  }
+  AssignmentCallAtReturn &operator=(float rhs) {
+    // Do not allow calls to other functions.
+    return returnThis();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operator=() should always return '*this'
+  }
+};

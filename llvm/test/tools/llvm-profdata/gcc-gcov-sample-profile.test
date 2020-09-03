@@ -1,8 +1,6 @@
 The input gcov file has been generated on a little endian machine. Expect
 failures on big endian systems.
 
-XFAIL: host-byteorder-big-endian
-
 Tests for sample profiles encoded in GCC's gcov format.
 
 1- Show all functions. This profile has a single main() function with several

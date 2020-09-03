@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=mips-unknown-linux -mcpu=mips32 -mattr=+use-indirect-jump-hazard %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=mips-unknown-linux -mcpu=mips32 -mattr=+use-indirect-jump-hazard %s 2>&1 | FileCheck %s
 
 ; Test that mips32 and indirect jump with hazard barriers is not supported.
 

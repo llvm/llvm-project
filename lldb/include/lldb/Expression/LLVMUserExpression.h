@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_LLVMUserExpression_h
-#define liblldb_LLVMUserExpression_h
+#ifndef LLDB_EXPRESSION_LLVMUSEREXPRESSION_H
+#define LLDB_EXPRESSION_LLVMUSEREXPRESSION_H
 
 #include <map>
 #include <string>
@@ -70,8 +70,6 @@ public:
   /// Return the string that the parser should parse.  Must be a full
   /// translation unit.
   const char *Text() override { return m_transformed_text.c_str(); }
-
-  lldb::ModuleSP GetJITModule() override;
 
 protected:
   lldb::ExpressionResults

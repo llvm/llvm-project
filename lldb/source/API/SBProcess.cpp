@@ -1,4 +1,4 @@
-//===-- SBProcess.cpp -------------------------------------------*- C++ -*-===//
+//===-- SBProcess.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -75,7 +75,7 @@ const SBProcess &SBProcess::operator=(const SBProcess &rhs) {
 }
 
 // Destructor
-SBProcess::~SBProcess() {}
+SBProcess::~SBProcess() = default;
 
 const char *SBProcess::GetBroadcasterClassName() {
   LLDB_RECORD_STATIC_METHOD_NO_ARGS(const char *, SBProcess,
@@ -271,8 +271,8 @@ size_t SBProcess::PutSTDIN(const char *src, size_t src_len) {
 }
 
 size_t SBProcess::GetSTDOUT(char *dst, size_t dst_len) const {
-  LLDB_RECORD_METHOD_CONST(size_t, SBProcess, GetSTDOUT, (char *, size_t), "",
-                           dst_len);
+  LLDB_RECORD_CHAR_PTR_METHOD_CONST(size_t, SBProcess, GetSTDOUT,
+                                    (char *, size_t), dst, "", dst_len);
 
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
@@ -285,8 +285,8 @@ size_t SBProcess::GetSTDOUT(char *dst, size_t dst_len) const {
 }
 
 size_t SBProcess::GetSTDERR(char *dst, size_t dst_len) const {
-  LLDB_RECORD_METHOD_CONST(size_t, SBProcess, GetSTDERR, (char *, size_t), "",
-                           dst_len);
+  LLDB_RECORD_CHAR_PTR_METHOD_CONST(size_t, SBProcess, GetSTDERR,
+                                    (char *, size_t), dst, "", dst_len);
 
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
@@ -299,8 +299,8 @@ size_t SBProcess::GetSTDERR(char *dst, size_t dst_len) const {
 }
 
 size_t SBProcess::GetAsyncProfileData(char *dst, size_t dst_len) const {
-  LLDB_RECORD_METHOD_CONST(size_t, SBProcess, GetAsyncProfileData,
-                           (char *, size_t), "", dst_len);
+  LLDB_RECORD_CHAR_PTR_METHOD_CONST(size_t, SBProcess, GetAsyncProfileData,
+                                    (char *, size_t), dst, "", dst_len);
 
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
@@ -1440,9 +1440,9 @@ void RegisterMethods<SBProcess>(Registry &R) {
                        GetMemoryRegions, ());
   LLDB_REGISTER_METHOD(lldb::SBProcessInfo, SBProcess, GetProcessInfo, ());
 
-  LLDB_REGISTER_CHAR_PTR_REDIRECT_CONST(size_t, SBProcess, GetSTDOUT);
-  LLDB_REGISTER_CHAR_PTR_REDIRECT_CONST(size_t, SBProcess, GetSTDERR);
-  LLDB_REGISTER_CHAR_PTR_REDIRECT_CONST(size_t, SBProcess, GetAsyncProfileData);
+  LLDB_REGISTER_CHAR_PTR_METHOD_CONST(size_t, SBProcess, GetSTDOUT);
+  LLDB_REGISTER_CHAR_PTR_METHOD_CONST(size_t, SBProcess, GetSTDERR);
+  LLDB_REGISTER_CHAR_PTR_METHOD_CONST(size_t, SBProcess, GetAsyncProfileData);
 }
 
 }

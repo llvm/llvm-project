@@ -1,4 +1,4 @@
-//===-------------- Implementation header for mumap function ----- *-C++-* ===//
+//===-- Implementation header for mumap function ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SYS_MMAN_MUNMAP_H
 #define LLVM_LIBC_SRC_SYS_MMAN_MUNMAP_H
 
-#include <sys/mman.h> // For size_t
+#include "include/sys/mman.h" // For size_t.
 
 namespace __llvm_libc {
 

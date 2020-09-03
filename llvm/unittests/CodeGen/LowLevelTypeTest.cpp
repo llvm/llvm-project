@@ -85,7 +85,7 @@ TEST(LowLevelTypeTest, Vector) {
 
       // Test Type->LLT conversion.
       Type *IRSTy = IntegerType::get(C, S);
-      Type *IRTy = VectorType::get(IRSTy, Elts);
+      Type *IRTy = FixedVectorType::get(IRSTy, Elts);
       EXPECT_EQ(VTy, getLLTForType(*IRTy, DL));
     }
   }
@@ -136,6 +136,29 @@ TEST(LowLevelTypeTest, ChangeElementType) {
 
   EXPECT_EQ(V2P1, V2P0.changeElementType(P1));
   EXPECT_EQ(V2S32, V2P0.changeElementType(S32));
+}
+
+TEST(LowLevelTypeTest, ChangeNumElements) {
+  const LLT P0 = LLT::pointer(0, 32);
+  const LLT V2P0 = LLT::vector(2, P0);
+  const LLT V3P0 = LLT::vector(3, P0);
+
+  const LLT S64 = LLT::scalar(64);
+  const LLT V2S64 = LLT::vector(2, 64);
+  const LLT V3S64 = LLT::vector(3, 64);
+
+  // Vector to scalar
+  EXPECT_EQ(S64, V2S64.changeNumElements(1));
+
+  // Vector to vector
+  EXPECT_EQ(V3S64, V2S64.changeNumElements(3));
+
+  // Scalar to vector
+  EXPECT_EQ(V2S64, S64.changeNumElements(2));
+
+  EXPECT_EQ(P0, V2P0.changeNumElements(1));
+  EXPECT_EQ(V3P0, V2P0.changeNumElements(3));
+  EXPECT_EQ(V2P0, P0.changeNumElements(2));
 }
 
 #ifdef GTEST_HAS_DEATH_TEST
@@ -199,8 +222,8 @@ TEST(LowLevelTypeTest, Pointer) {
       // Test Type->LLT conversion.
       Type *IRTy = PointerType::get(IntegerType::get(C, 8), AS);
       EXPECT_EQ(Ty, getLLTForType(*IRTy, DL));
-      Type *IRVTy =
-        VectorType::get(PointerType::get(IntegerType::get(C, 8), AS), NumElts);
+      Type *IRVTy = FixedVectorType::get(
+          PointerType::get(IntegerType::get(C, 8), AS), NumElts);
       EXPECT_EQ(VTy, getLLTForType(*IRVTy, DL));
     }
   }
@@ -213,6 +236,26 @@ TEST(LowLevelTypeTest, Invalid) {
   ASSERT_FALSE(Ty.isScalar());
   ASSERT_FALSE(Ty.isPointer());
   ASSERT_FALSE(Ty.isVector());
+}
+
+TEST(LowLevelTypeTest, Divide) {
+  // Test basic scalar->scalar cases.
+  EXPECT_EQ(LLT::scalar(16), LLT::scalar(32).divide(2));
+  EXPECT_EQ(LLT::scalar(8), LLT::scalar(32).divide(4));
+  EXPECT_EQ(LLT::scalar(8), LLT::scalar(32).divide(4));
+
+  // Test pointer->scalar
+  EXPECT_EQ(LLT::scalar(32), LLT::pointer(0, 64).divide(2));
+
+  // Test dividing vectors.
+  EXPECT_EQ(LLT::scalar(32), LLT::vector(2, 32).divide(2));
+  EXPECT_EQ(LLT::vector(2, 32), LLT::vector(4, 32).divide(2));
+
+  // Test vector of pointers
+  EXPECT_EQ(LLT::pointer(1, 64),
+            LLT::vector(4, LLT::pointer(1, 64)).divide(4));
+  EXPECT_EQ(LLT::vector(2, LLT::pointer(1, 64)),
+            LLT::vector(4, LLT::pointer(1, 64)).divide(2));
 }
 
 }

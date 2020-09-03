@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PECallFrameInfo_h_
-#define liblldb_PECallFrameInfo_h_
+#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_PECOFF_PECALLFRAMEINFO_H
+#define LLDB_SOURCE_PLUGINS_OBJECTFILE_PECOFF_PECALLFRAMEINFO_H
 
 #include "lldb/Symbol/CallFrameInfo.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -44,4 +44,4 @@ private:
   lldb_private::DataExtractor m_exception_dir;
 };
 
-#endif // liblldb_PECallFrameInfo_h_
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_PECOFF_PECALLFRAMEINFO_H

@@ -31,10 +31,10 @@
 ; CST-NEXT: .long 1392508928 # 0x53000000
 
 ; CST: [[MAGICCSTADDR:.LCPI[0-9_]+]]:
-; CST-NEXT: .long 1392509056 # float 5.49764202E+11
-; CST-NEXT: .long 1392509056 # float 5.49764202E+11
-; CST-NEXT: .long 1392509056 # float 5.49764202E+11
-; CST-NEXT: .long 1392509056 # float 5.49764202E+11
+; CST-NEXT: .long 0x53000080 # float 5.49764202E+11
+; CST-NEXT: .long 0x53000080 # float 5.49764202E+11
+; CST-NEXT: .long 0x53000080 # float 5.49764202E+11
+; CST-NEXT: .long 0x53000080 # float 5.49764202E+11
 
 ; AVX2: [[LOWCSTADDR:.LCPI[0-9_]+]]:
 ; AVX2-NEXT: .long 1258291200 # 0x4b000000
@@ -43,7 +43,7 @@
 ; AVX2-NEXT: .long 1392508928 # 0x53000000
 
 ; AVX2: [[MAGICCSTADDR:.LCPI[0-9_]+]]:
-; AVX2-NEXT: .long 1392509056 # float 5.49764202E+11
+; AVX2-NEXT: .long 0x53000080 # float 5.49764202E+11
 
 define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ; SSE2-LABEL: test_uitofp_v4i32_to_v4f32:
@@ -114,7 +114,7 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ; AVX2-NEXT: .long 1392508928 # 0x53000000
 
 ; AVX2: [[MAGICCSTADDR:.LCPI[0-9_]+]]:
-; AVX2-NEXT: .long 1392509056 # float 5.49764202E+11
+; AVX2-NEXT: .long 0x53000080 # float 5.49764202E+11
 
 define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
 ; Legalization will break the thing is 2 x <4 x i32> on anthing prior AVX.

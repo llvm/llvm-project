@@ -43,6 +43,37 @@ static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
   return M;
 }
 
+TEST(DominatorTree, PHIs) {
+  StringRef ModuleString = R"(
+      define void @f() {
+      bb1:
+        br label %bb1
+      bb2:
+        %a = phi i32 [0, %bb1], [1, %bb2]
+        %b = phi i32 [2, %bb1], [%a, %bb2]
+        br label %bb2
+      };
+  )";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  runWithDomTree(*M, "f",
+                 [&](Function &F, DominatorTree *DT, PostDominatorTree *PDT) {
+                   auto FI = F.begin();
+                   ++FI;
+                   BasicBlock *BB2 = &*FI;
+                   auto BI = BB2->begin();
+                   Instruction *PhiA = &*BI++;
+                   Instruction *PhiB = &*BI;
+
+                   // Phis are thought to execute "instantly, together".
+                   EXPECT_TRUE(DT->dominates(PhiA, PhiB));
+                   EXPECT_TRUE(DT->dominates(PhiB, PhiA));
+                 });
+}
+
 TEST(DominatorTree, Unreachable) {
   StringRef ModuleString =
       "declare i32 @g()\n"
@@ -774,7 +805,7 @@ TEST(DominatorTree, InsertFromUnreachable) {
   BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
   PDT.insertEdge(From, To);
   EXPECT_TRUE(PDT.verify());
-  EXPECT_TRUE(PDT.getRoots().size() == 2);
+  EXPECT_EQ(PDT.root_size(), 2UL);
   // Make sure we can use a const pointer with getNode.
   const BasicBlock *BB5 = B.getOrAddBlock("5");
   EXPECT_NE(PDT.getNode(BB5), nullptr);
@@ -989,3 +1020,54 @@ TEST(DominatorTree, InsertIntoIrreducible) {
   EXPECT_TRUE(DT.verify());
 }
 
+TEST(DominatorTree, EdgeDomination) {
+  StringRef ModuleString = "define i32 @f(i1 %cond) {\n"
+                           " bb0:\n"
+                           "   br i1 %cond, label %bb1, label %bb2\n"
+                           " bb1:\n"
+                           "   br label %bb3\n"
+                           " bb2:\n"
+                           "   br label %bb3\n"
+                           " bb3:\n"
+                           "   ret i32 4"
+                           "}\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  runWithDomTree(*M, "f",
+                 [&](Function &F, DominatorTree *DT, PostDominatorTree *PDT) {
+    Function::iterator FI = F.begin();
+
+    BasicBlock *BB0 = &*FI++;
+    BasicBlock *BB1 = &*FI++;
+    BasicBlock *BB2 = &*FI++;
+    BasicBlock *BB3 = &*FI++;
+
+    BasicBlockEdge E01(BB0, BB1);
+    BasicBlockEdge E02(BB0, BB2);
+    BasicBlockEdge E13(BB1, BB3);
+    BasicBlockEdge E23(BB2, BB3);
+
+    EXPECT_TRUE(DT->dominates(E01, E01));
+    EXPECT_FALSE(DT->dominates(E01, E02));
+    EXPECT_TRUE(DT->dominates(E01, E13));
+    EXPECT_FALSE(DT->dominates(E01, E23));
+
+    EXPECT_FALSE(DT->dominates(E02, E01));
+    EXPECT_TRUE(DT->dominates(E02, E02));
+    EXPECT_FALSE(DT->dominates(E02, E13));
+    EXPECT_TRUE(DT->dominates(E02, E23));
+
+    EXPECT_FALSE(DT->dominates(E13, E01));
+    EXPECT_FALSE(DT->dominates(E13, E02));
+    EXPECT_TRUE(DT->dominates(E13, E13));
+    EXPECT_FALSE(DT->dominates(E13, E23));
+
+    EXPECT_FALSE(DT->dominates(E23, E01));
+    EXPECT_FALSE(DT->dominates(E23, E02));
+    EXPECT_FALSE(DT->dominates(E23, E13));
+    EXPECT_TRUE(DT->dominates(E23, E23));
+  });
+}

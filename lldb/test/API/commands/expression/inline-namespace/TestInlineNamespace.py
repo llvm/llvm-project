@@ -20,7 +20,7 @@ class TestInlineNamespace(TestBase):
 
         # The 'A::B::f' function must be found via 'A::f' as 'B' is an inline
         # namespace.
-        self.expect("expr A::f()", substrs=['$0 = 3'])
+        self.expect_expr("A::f()", result_type="int", result_value="3")
         # But we should still find the function when we pretend the inline
         # namespace is not inline.
-        self.expect("expr A::B::f()", substrs=['$1 = 3'])
+        self.expect_expr("A::B::f()", result_type="int", result_value="3")

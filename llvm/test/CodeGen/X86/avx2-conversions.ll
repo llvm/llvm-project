@@ -14,7 +14,7 @@ define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ;
 ; X32-FAST-LABEL: trunc4:
 ; X32-FAST:       # %bb.0:
-; X32-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; X32-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; X32-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X32-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X32-FAST-NEXT:    vzeroupper
@@ -29,7 +29,7 @@ define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ;
 ; X64-FAST-LABEL: trunc4:
 ; X64-FAST:       # %bb.0:
-; X64-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; X64-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; X64-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X64-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X64-FAST-NEXT:    vzeroupper
@@ -41,7 +41,7 @@ define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 define <8 x i16> @trunc8(<8 x i32> %A) nounwind {
 ; X32-LABEL: trunc8:
 ; X32:       # %bb.0:
-; X32-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; X32-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; X32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; X32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X32-NEXT:    vzeroupper
@@ -49,7 +49,7 @@ define <8 x i16> @trunc8(<8 x i32> %A) nounwind {
 ;
 ; X64-LABEL: trunc8:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; X64-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; X64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X64-NEXT:    vzeroupper

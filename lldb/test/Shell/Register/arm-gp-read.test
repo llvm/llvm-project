@@ -1,4 +1,4 @@
-# REQUIRES: native && target-arm
+# REQUIRES: native && target-arm && !system-darwin
 # RUN: %clangxx_host -fomit-frame-pointer %p/Inputs/arm-gp-read.cpp -o %t
 # RUN: %lldb -b -s %s %t | FileCheck %s
 process launch

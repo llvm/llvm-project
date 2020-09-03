@@ -1,4 +1,4 @@
-//===-- CommandObjectWatchpoint.cpp -----------------------------*- C++ -*-===//
+//===-- CommandObjectWatchpoint.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -692,7 +692,7 @@ public:
 
       switch (short_option) {
       case 'c':
-        m_condition = option_arg;
+        m_condition = std::string(option_arg);
         m_condition_passed = true;
         break;
       default:
@@ -934,7 +934,7 @@ protected:
         StreamString ss;
         // True to show fullpath for declaration file.
         var_sp->GetDeclaration().DumpStopContext(&ss, true);
-        wp->SetDeclInfo(ss.GetString());
+        wp->SetDeclInfo(std::string(ss.GetString()));
       }
       output_stream.Printf("Watchpoint created: ");
       wp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
@@ -1038,7 +1038,7 @@ protected:
     // set a watchpoint.
     if (raw_command.trim().empty()) {
       result.GetErrorStream().Printf("error: required argument missing; "
-                                     "specify an expression to evaulate into "
+                                     "specify an expression to evaluate into "
                                      "the address to watch for\n");
       result.SetStatus(eReturnStatusFailed);
       return false;
@@ -1070,6 +1070,8 @@ protected:
       result.GetErrorStream().Printf(
           "error: expression evaluation of address to watch failed\n");
       result.GetErrorStream() << "expression evaluated: \n" << expr << "\n";
+      if (valobj_sp && !valobj_sp->GetError().Success())
+        result.GetErrorStream() << valobj_sp->GetError().AsCString() << "\n";
       result.SetStatus(eReturnStatusFailed);
       return false;
     }

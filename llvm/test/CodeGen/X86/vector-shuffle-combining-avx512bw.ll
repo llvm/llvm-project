@@ -4,486 +4,11 @@
 
 declare <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8>, <64 x i8>, <64 x i8>, i64)
 
-declare <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float>, <16 x i32>, <16 x float>, i16)
-
-declare <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double>, <8 x i64>)
-declare <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64>, <8 x i64>)
-declare <16 x i32> @llvm.x86.avx512.permvar.si.512(<16 x i32>, <16 x i32>)
 declare <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16>, <32 x i16>)
 
-declare <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64>, <8 x double>, <8 x double>, i8)
-declare <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32>, <16 x float>, <16 x float>, i16)
-
-declare <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
-declare <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
 declare <32 x i16> @llvm.x86.avx512.maskz.vpermt2var.hi.512(<32 x i16>, <32 x i16>, <32 x i16>, i32)
 
-declare <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double>, <8 x i64>, <8 x double>, i8)
-declare <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float>, <16 x i32>, <16 x float>, i16)
-
-declare <8 x i64> @llvm.x86.avx512.mask.vpermi2var.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
-declare <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
 declare <32 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.512(<32 x i16>, <32 x i16>, <32 x i16>, i32)
-
-define <8 x double> @combine_permvar_8f64_identity(<8 x double> %x0, <8 x double> %x1) {
-; CHECK-LABEL: combine_permvar_8f64_identity:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> %x0, <8 x i64> <i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>)
-  %2 = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> %1, <8 x i64> <i64 7, i64 14, i64 5, i64 12, i64 3, i64 10, i64 1, i64 8>)
-  ret <8 x double> %2
-}
-define <8 x double> @combine_permvar_8f64_identity_mask(<8 x double> %x0, <8 x double> %x1, i8 %m) {
-; X86-LABEL: combine_permvar_8f64_identity_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    vmovapd {{.*#+}} zmm2 = [7,0,6,0,5,0,4,0,3,0,2,0,1,0,0,0]
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    vpermpd %zmm0, %zmm2, %zmm1 {%k1}
-; X86-NEXT:    vmovapd {{.*#+}} zmm0 = [7,0,14,0,5,0,12,0,3,0,10,0,1,0,8,0]
-; X86-NEXT:    vpermpd %zmm1, %zmm0, %zmm1 {%k1}
-; X86-NEXT:    vmovapd %zmm1, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_permvar_8f64_identity_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovapd {{.*#+}} zmm2 = [7,6,5,4,3,2,1,0]
-; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpermpd %zmm0, %zmm2, %zmm1 {%k1}
-; X64-NEXT:    vmovapd {{.*#+}} zmm0 = [7,14,5,12,3,10,1,8]
-; X64-NEXT:    vpermpd %zmm1, %zmm0, %zmm1 {%k1}
-; X64-NEXT:    vmovapd %zmm1, %zmm0
-; X64-NEXT:    retq
-  %1 = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> %x0, <8 x i64> <i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>)
-  %2 = bitcast i8 %m to <8 x i1>
-  %3 = select <8 x i1> %2, <8 x double> %1, <8 x double> %x1
-  %4 = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> %3, <8 x i64> <i64 7, i64 14, i64 5, i64 12, i64 3, i64 10, i64 1, i64 8>)
-  %5 = bitcast i8 %m to <8 x i1>
-  %6 = select <8 x i1> %5, <8 x double> %4, <8 x double> %3
-  ret <8 x double> %6
-}
-
-define <8 x i64> @combine_permvar_8i64_identity(<8 x i64> %x0, <8 x i64> %x1) {
-; CHECK-LABEL: combine_permvar_8i64_identity:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %x0, <8 x i64> <i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>)
-  %2 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %1, <8 x i64> <i64 7, i64 14, i64 5, i64 12, i64 3, i64 10, i64 1, i64 8>)
-  ret <8 x i64> %2
-}
-define <8 x i64> @combine_permvar_8i64_identity_mask(<8 x i64> %x0, <8 x i64> %x1, i8 %m) {
-; X86-LABEL: combine_permvar_8i64_identity_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [7,0,6,0,5,0,4,0,3,0,2,0,1,0,0,0]
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    vpermq %zmm0, %zmm2, %zmm1 {%k1}
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [7,0,14,0,5,0,12,0,3,0,10,0,1,0,8,0]
-; X86-NEXT:    vpermq %zmm1, %zmm0, %zmm1 {%k1}
-; X86-NEXT:    vmovdqa64 %zmm1, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_permvar_8i64_identity_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [7,6,5,4,3,2,1,0]
-; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpermq %zmm0, %zmm2, %zmm1 {%k1}
-; X64-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [7,14,5,12,3,10,1,8]
-; X64-NEXT:    vpermq %zmm1, %zmm0, %zmm1 {%k1}
-; X64-NEXT:    vmovdqa64 %zmm1, %zmm0
-; X64-NEXT:    retq
-  %1 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %x0, <8 x i64> <i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>)
-  %2 = bitcast i8 %m to <8 x i1>
-  %3 = select <8 x i1> %2, <8 x i64> %1, <8 x i64> %x1
-  %4 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %3, <8 x i64> <i64 7, i64 14, i64 5, i64 12, i64 3, i64 10, i64 1, i64 8>)
-  %5 = bitcast i8 %m to <8 x i1>
-  %6 = select <8 x i1> %5, <8 x i64> %4, <8 x i64> %3
-  ret <8 x i64> %6
-}
-
-define <8 x double> @combine_vpermt2var_8f64_identity(<8 x double> %x0, <8 x double> %x1) {
-; CHECK-LABEL: combine_vpermt2var_8f64_identity:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64> <i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>, <8 x double> %x0, <8 x double> %x1, i8 -1)
-  %res1 = call <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64> <i64 7, i64 14, i64 5, i64 12, i64 3, i64 10, i64 1, i64 8>, <8 x double> %res0, <8 x double> %res0, i8 -1)
-  ret <8 x double> %res1
-}
-define <8 x double> @combine_vpermt2var_8f64_identity_mask(<8 x double> %x0, <8 x double> %x1, i8 %m) {
-; X86-LABEL: combine_vpermt2var_8f64_identity_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    vmovapd {{.*#+}} zmm1 = [7,0,6,0,5,0,4,0,3,0,2,0,1,0,0,0]
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    vpermi2pd %zmm0, %zmm0, %zmm1 {%k1} {z}
-; X86-NEXT:    vmovapd {{.*#+}} zmm0 = [7,0,14,0,5,0,12,0,3,0,10,0,1,0,8,0]
-; X86-NEXT:    vpermi2pd %zmm1, %zmm1, %zmm0 {%k1} {z}
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_8f64_identity_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovapd {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
-; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpermi2pd %zmm0, %zmm0, %zmm1 {%k1} {z}
-; X64-NEXT:    vmovapd {{.*#+}} zmm0 = [7,14,5,12,3,10,1,8]
-; X64-NEXT:    vpermi2pd %zmm1, %zmm1, %zmm0 {%k1} {z}
-; X64-NEXT:    retq
-  %res0 = call <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64> <i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>, <8 x double> %x0, <8 x double> %x1, i8 %m)
-  %res1 = call <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64> <i64 7, i64 14, i64 5, i64 12, i64 3, i64 10, i64 1, i64 8>, <8 x double> %res0, <8 x double> %res0, i8 %m)
-  ret <8 x double> %res1
-}
-
-define <8 x double> @combine_vpermt2var_8f64_movddup(<8 x double> %x0, <8 x double> %x1) {
-; CHECK-LABEL: combine_vpermt2var_8f64_movddup:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} zmm0 = zmm0[0,0,2,2,4,4,6,6]
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64> <i64 0, i64 0, i64 2, i64 2, i64 4, i64 4, i64 undef, i64 undef>, <8 x double> %x0, <8 x double> %x1, i8 -1)
-  ret <8 x double> %res0
-}
-define <8 x double> @combine_vpermt2var_8f64_movddup_load(<8 x double> *%p0, <8 x double> %x1) {
-; X86-LABEL: combine_vpermt2var_8f64_movddup_load:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovddup {{.*#+}} zmm0 = mem[0,0,2,2,4,4,6,6]
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_8f64_movddup_load:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovddup {{.*#+}} zmm0 = mem[0,0,2,2,4,4,6,6]
-; X64-NEXT:    retq
-  %x0 = load <8 x double>, <8 x double> *%p0
-  %res0 = call <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64> <i64 0, i64 0, i64 2, i64 2, i64 4, i64 4, i64 6, i64 6>, <8 x double> %x0, <8 x double> %x1, i8 -1)
-  ret <8 x double> %res0
-}
-define <8 x double> @combine_vpermt2var_8f64_movddup_mask(<8 x double> %x0, <8 x double> %x1, i8 %m) {
-; X86-LABEL: combine_vpermt2var_8f64_movddup_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    vmovddup {{.*#+}} zmm0 {%k1} {z} = zmm0[0,0,2,2,4,4,6,6]
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_8f64_movddup_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vmovddup {{.*#+}} zmm0 {%k1} {z} = zmm0[0,0,2,2,4,4,6,6]
-; X64-NEXT:    retq
-  %res0 = call <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64> <i64 0, i64 0, i64 2, i64 2, i64 4, i64 4, i64 6, i64 6>, <8 x double> %x0, <8 x double> %x1, i8 %m)
-  ret <8 x double> %res0
-}
-
-define <8 x i64> @combine_vpermt2var_8i64_identity(<8 x i64> %x0, <8 x i64> %x1) {
-; CHECK-LABEL: combine_vpermt2var_8i64_identity:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> <i64 undef, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>, <8 x i64> %x0, <8 x i64> %x1, i8 -1)
-  %res1 = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> <i64 undef, i64 14, i64 5, i64 12, i64 3, i64 10, i64 1, i64 8>, <8 x i64> %res0, <8 x i64> %res0, i8 -1)
-  ret <8 x i64> %res1
-}
-define <8 x i64> @combine_vpermt2var_8i64_identity_mask(<8 x i64> %x0, <8 x i64> %x1, i8 %m) {
-; X86-LABEL: combine_vpermt2var_8i64_identity_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [7,0,6,0,5,0,4,0,3,0,2,0,1,0,0,0]
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    vpermi2q %zmm0, %zmm0, %zmm1 {%k1} {z}
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [7,0,14,0,5,0,12,0,3,0,10,0,1,0,8,0]
-; X86-NEXT:    vpermi2q %zmm1, %zmm1, %zmm0 {%k1} {z}
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_8i64_identity_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
-; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpermi2q %zmm0, %zmm0, %zmm1 {%k1} {z}
-; X64-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [7,14,5,12,3,10,1,8]
-; X64-NEXT:    vpermi2q %zmm1, %zmm1, %zmm0 {%k1} {z}
-; X64-NEXT:    retq
-  %res0 = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> <i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>, <8 x i64> %x0, <8 x i64> %x1, i8 %m)
-  %res1 = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> <i64 7, i64 14, i64 5, i64 12, i64 3, i64 10, i64 1, i64 8>, <8 x i64> %res0, <8 x i64> %res0, i8 %m)
-  ret <8 x i64> %res1
-}
-
-define <16 x float> @combine_vpermt2var_16f32_identity(<16 x float> %x0, <16 x float> %x1) {
-; CHECK-LABEL: combine_vpermt2var_16f32_identity:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>, <16 x float> %x0, <16 x float> %x1, i16 -1)
-  %res1 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 15, i32 30, i32 13, i32 28, i32 11, i32 26, i32 9, i32 24, i32 7, i32 22, i32 5, i32 20, i32 3, i32 18, i32 1, i32 16>, <16 x float> %res0, <16 x float> %res0, i16 -1)
-  ret <16 x float> %res1
-}
-define <16 x float> @combine_vpermt2var_16f32_identity_mask(<16 x float> %x0, <16 x float> %x1, i16 %m) {
-; X86-LABEL: combine_vpermt2var_16f32_identity_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    vmovaps {{.*#+}} zmm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpermi2ps %zmm0, %zmm0, %zmm1 {%k1} {z}
-; X86-NEXT:    vmovaps {{.*#+}} zmm0 = [15,30,13,28,11,26,9,24,7,22,5,20,3,18,1,16]
-; X86-NEXT:    vpermi2ps %zmm1, %zmm1, %zmm0 {%k1} {z}
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_16f32_identity_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} zmm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpermi2ps %zmm0, %zmm0, %zmm1 {%k1} {z}
-; X64-NEXT:    vmovaps {{.*#+}} zmm0 = [15,30,13,28,11,26,9,24,7,22,5,20,3,18,1,16]
-; X64-NEXT:    vpermi2ps %zmm1, %zmm1, %zmm0 {%k1} {z}
-; X64-NEXT:    retq
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>, <16 x float> %x0, <16 x float> %x1, i16 %m)
-  %res1 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 15, i32 30, i32 13, i32 28, i32 11, i32 26, i32 9, i32 24, i32 7, i32 22, i32 5, i32 20, i32 3, i32 18, i32 1, i32 16>, <16 x float> %res0, <16 x float> %res0, i16 %m)
-  ret <16 x float> %res1
-}
-
-define <16 x float> @combine_vpermt2var_16f32_vmovddup(<16 x float> %x0, <16 x float> %x1) {
-; CHECK-LABEL: combine_vpermt2var_16f32_vmovddup:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
-; CHECK-NEXT:    vpermt2ps %zmm0, %zmm1, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5, i32 8, i32 9, i32 8, i32 9, i32 12, i32 13, i32 12, i32 13>, <16 x float> %x0, <16 x float> %x1, i16 -1)
-  ret <16 x float> %res0
-}
-define <16 x float> @combine_vpermt2var_16f32_vmovddup_load(<16 x float> *%p0, <16 x float> %x1) {
-; X86-LABEL: combine_vpermt2var_16f32_vmovddup_load:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovaps (%eax), %zmm1
-; X86-NEXT:    vmovaps {{.*#+}} zmm0 = [0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
-; X86-NEXT:    vpermi2ps %zmm0, %zmm1, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_16f32_vmovddup_load:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovaps (%rdi), %zmm1
-; X64-NEXT:    vmovaps {{.*#+}} zmm0 = [0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
-; X64-NEXT:    vpermi2ps %zmm0, %zmm1, %zmm0
-; X64-NEXT:    retq
-  %x0 = load <16 x float>, <16 x float> *%p0
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5, i32 8, i32 9, i32 8, i32 9, i32 12, i32 13, i32 12, i32 13>, <16 x float> %x0, <16 x float> %x1, i16 -1)
-  ret <16 x float> %res0
-}
-define <16 x float> @combine_vpermt2var_16f32_vmovddup_mask(<16 x float> %x0, <16 x float> %x1, i16 %m) {
-; X86-LABEL: combine_vpermt2var_16f32_vmovddup_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    vmovaps {{.*#+}} zmm1 = [0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpermt2ps %zmm0, %zmm1, %zmm0 {%k1} {z}
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_16f32_vmovddup_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} zmm1 = [0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
-; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpermt2ps %zmm0, %zmm1, %zmm0 {%k1} {z}
-; X64-NEXT:    retq
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5, i32 8, i32 9, i32 8, i32 9, i32 12, i32 13, i32 12, i32 13>, <16 x float> %x0, <16 x float> %x1, i16 %m)
-  ret <16 x float> %res0
-}
-define <16 x float> @combine_vpermt2var_16f32_vmovddup_mask_load(<16 x float> *%p0, <16 x float> %x1, i16 %m) {
-; X86-LABEL: combine_vpermt2var_16f32_vmovddup_mask_load:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovaps (%eax), %zmm1
-; X86-NEXT:    vmovaps {{.*#+}} zmm0 = [0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpermi2ps %zmm0, %zmm1, %zmm0 {%k1} {z}
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_16f32_vmovddup_mask_load:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovaps (%rdi), %zmm1
-; X64-NEXT:    vmovaps {{.*#+}} zmm0 = [0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
-; X64-NEXT:    kmovd %esi, %k1
-; X64-NEXT:    vpermi2ps %zmm0, %zmm1, %zmm0 {%k1} {z}
-; X64-NEXT:    retq
-  %x0 = load <16 x float>, <16 x float> *%p0
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5, i32 8, i32 9, i32 8, i32 9, i32 12, i32 13, i32 12, i32 13>, <16 x float> %x0, <16 x float> %x1, i16 %m)
-  ret <16 x float> %res0
-}
-
-define <16 x float> @combine_vpermt2var_16f32_vmovshdup(<16 x float> %x0, <16 x float> %x1) {
-; CHECK-LABEL: combine_vpermt2var_16f32_vmovshdup:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovshdup {{.*#+}} zmm0 = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7, i32 9, i32 9, i32 11, i32 11, i32 13, i32 13, i32 15, i32 15>, <16 x float> %x0, <16 x float> %x1, i16 -1)
-  ret <16 x float> %res0
-}
-define <16 x float> @combine_vpermt2var_16f32_vmovshdup_load(<16 x float> *%p0, <16 x float> %x1) {
-; X86-LABEL: combine_vpermt2var_16f32_vmovshdup_load:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovshdup {{.*#+}} zmm0 = mem[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_16f32_vmovshdup_load:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovshdup {{.*#+}} zmm0 = mem[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
-; X64-NEXT:    retq
-  %x0 = load <16 x float>, <16 x float> *%p0
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7, i32 9, i32 9, i32 11, i32 11, i32 13, i32 13, i32 15, i32 15>, <16 x float> %x0, <16 x float> %x1, i16 -1)
-  ret <16 x float> %res0
-}
-define <16 x float> @combine_vpermt2var_16f32_vmovshdup_mask(<16 x float> %x0, <16 x float> %x1, i16 %m) {
-; X86-LABEL: combine_vpermt2var_16f32_vmovshdup_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vmovshdup {{.*#+}} zmm0 {%k1} {z} = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_16f32_vmovshdup_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vmovshdup {{.*#+}} zmm0 {%k1} {z} = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
-; X64-NEXT:    retq
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7, i32 9, i32 9, i32 11, i32 11, i32 13, i32 13, i32 15, i32 15>, <16 x float> %x0, <16 x float> %x1, i16 %m)
-  ret <16 x float> %res0
-}
-
-define <16 x float> @combine_vpermt2var_16f32_vmovsldup(<16 x float> %x0, <16 x float> %x1) {
-; CHECK-LABEL: combine_vpermt2var_16f32_vmovsldup:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovsldup {{.*#+}} zmm0 = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14>, <16 x float> %x0, <16 x float> %x1, i16 -1)
-  ret <16 x float> %res0
-}
-define <16 x float> @combine_vpermt2var_16f32_vmovsldup_load(<16 x float> *%p0, <16 x float> %x1) {
-; X86-LABEL: combine_vpermt2var_16f32_vmovsldup_load:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovsldup {{.*#+}} zmm0 = mem[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_16f32_vmovsldup_load:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovsldup {{.*#+}} zmm0 = mem[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
-; X64-NEXT:    retq
-  %x0 = load <16 x float>, <16 x float> *%p0
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14>, <16 x float> %x0, <16 x float> %x1, i16 -1)
-  ret <16 x float> %res0
-}
-define <16 x float> @combine_vpermt2var_16f32_vmovsldup_mask(<16 x float> %x0, <16 x float> %x1, i16 %m) {
-; X86-LABEL: combine_vpermt2var_16f32_vmovsldup_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vmovsldup {{.*#+}} zmm0 {%k1} {z} = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_16f32_vmovsldup_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vmovsldup {{.*#+}} zmm0 {%k1} {z} = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
-; X64-NEXT:    retq
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 undef, i32 0, i32 undef, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14>, <16 x float> %x0, <16 x float> %x1, i16 %m)
-  ret <16 x float> %res0
-}
-define <16 x float> @combine_vpermt2var_16f32_vmovsldup_mask_load(<16 x float> *%p0, <16 x float> %x1, i16 %m) {
-; X86-LABEL: combine_vpermt2var_16f32_vmovsldup_mask_load:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vmovsldup {{.*#+}} zmm0 {%k1} {z} = mem[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_16f32_vmovsldup_mask_load:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovd %esi, %k1
-; X64-NEXT:    vmovsldup {{.*#+}} zmm0 {%k1} {z} = mem[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
-; X64-NEXT:    retq
-  %x0 = load <16 x float>, <16 x float> *%p0
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 undef, i32 0, i32 undef, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14>, <16 x float> %x0, <16 x float> %x1, i16 %m)
-  ret <16 x float> %res0
-}
-
-define <16 x float> @combine_vpermt2var_16f32_vpermilps(<16 x float> %x0, <16 x float> %x1) {
-; CHECK-LABEL: combine_vpermt2var_16f32_vpermilps:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>, <16 x float> %x0, <16 x float> %x1, i16 -1)
-  ret <16 x float> %res0
-}
-define <16 x float> @combine_vpermt2var_16f32_vpermilps_load(<16 x float> *%p0, <16 x float> %x1) {
-; X86-LABEL: combine_vpermt2var_16f32_vpermilps_load:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpermilps {{.*#+}} zmm0 = mem[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_16f32_vpermilps_load:
-; X64:       # %bb.0:
-; X64-NEXT:    vpermilps {{.*#+}} zmm0 = mem[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; X64-NEXT:    retq
-  %x0 = load <16 x float>, <16 x float> *%p0
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>, <16 x float> %x0, <16 x float> %x1, i16 -1)
-  ret <16 x float> %res0
-}
-define <16 x float> @combine_vpermt2var_16f32_vpermilps_mask(<16 x float> %x0, <16 x float> %x1, i16 %m) {
-; X86-LABEL: combine_vpermt2var_16f32_vpermilps_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_16f32_vpermilps_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; X64-NEXT:    retq
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>, <16 x float> %x0, <16 x float> %x1, i16 %m)
-  ret <16 x float> %res0
-}
-define <16 x float> @combine_vpermt2var_16f32_vpermilps_mask_load(<16 x float> *%p0, <16 x float> %x1, i16 %m) {
-; X86-LABEL: combine_vpermt2var_16f32_vpermilps_mask_load:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = mem[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_16f32_vpermilps_mask_load:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovd %esi, %k1
-; X64-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = mem[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; X64-NEXT:    retq
-  %x0 = load <16 x float>, <16 x float> *%p0
-  %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>, <16 x float> %x0, <16 x float> %x1, i16 %m)
-  ret <16 x float> %res0
-}
-
-define <16 x i32> @combine_vpermt2var_16i32_identity(<16 x i32> %x0, <16 x i32> %x1) {
-; CHECK-LABEL: combine_vpermt2var_16i32_identity:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 undef>, <16 x i32> %x0, <16 x i32> %x1, i16 -1)
-  %res1 = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> <i32 15, i32 30, i32 13, i32 28, i32 undef, i32 26, i32 9, i32 24, i32 7, i32 22, i32 5, i32 20, i32 3, i32 18, i32 1, i32 16>, <16 x i32> %res0, <16 x i32> %res0, i16 -1)
-  ret <16 x i32> %res1
-}
-define <16 x i32> @combine_vpermt2var_16i32_identity_mask(<16 x i32> %x0, <16 x i32> %x1, i16 %m) {
-; X86-LABEL: combine_vpermt2var_16i32_identity_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpermi2d %zmm0, %zmm0, %zmm1 {%k1} {z}
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [15,30,13,28,11,26,9,24,7,22,5,20,3,18,1,16]
-; X86-NEXT:    vpermi2d %zmm1, %zmm1, %zmm0 {%k1} {z}
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_16i32_identity_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpermi2d %zmm0, %zmm0, %zmm1 {%k1} {z}
-; X64-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [15,30,13,28,11,26,9,24,7,22,5,20,3,18,1,16]
-; X64-NEXT:    vpermi2d %zmm1, %zmm1, %zmm0 {%k1} {z}
-; X64-NEXT:    retq
-  %res0 = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>, <16 x i32> %x0, <16 x i32> %x1, i16 %m)
-  %res1 = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> <i32 15, i32 30, i32 13, i32 28, i32 11, i32 26, i32 9, i32 24, i32 7, i32 22, i32 5, i32 20, i32 3, i32 18, i32 1, i32 16>, <16 x i32> %res0, <16 x i32> %res0, i16 %m)
-  ret <16 x i32> %res1
-}
 
 define <32 x i16> @combine_vpermt2var_32i16_identity(<32 x i16> %x0, <32 x i16> %x1) {
 ; CHECK-LABEL: combine_vpermt2var_32i16_identity:
@@ -564,96 +89,10 @@ define <32 x i16> @combine_permvar_as_vpbroadcastw512(<32 x i16> %x0) {
   ret <32 x i16> %1
 }
 
-define <16 x i32> @combine_permvar_as_vpbroadcastd512(<16 x i32> %x0) {
-; CHECK-LABEL: combine_permvar_as_vpbroadcastd512:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcastss %xmm0, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <16 x i32> @llvm.x86.avx512.permvar.si.512(<16 x i32> %x0, <16 x i32> zeroinitializer)
-  ret <16 x i32> %1
-}
-
-define <8 x i64> @combine_permvar_as_vpbroadcastq512(<8 x i64> %x0) {
-; CHECK-LABEL: combine_permvar_as_vpbroadcastq512:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcastsd %xmm0, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %x0, <8 x i64> zeroinitializer)
-  ret <8 x i64> %1
-}
-
-define <8 x i64> @combine_permvar_8i64_as_permq(<8 x i64> %x0, <8 x i64> %x1) {
-; CHECK-LABEL: combine_permvar_8i64_as_permq:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4]
-; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %x0, <8 x i64> <i64 3, i64 2, i64 1, i64 undef, i64 undef, i64 6, i64 5, i64 4>)
-  ret <8 x i64> %1
-}
-define <8 x i64> @combine_permvar_8i64_as_permq_mask(<8 x i64> %x0, <8 x i64> %x1, i8 %m) {
-; X86-LABEL: combine_permvar_8i64_as_permq_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    vpermq {{.*#+}} zmm1 {%k1} = zmm0[3,2,1,0,7,6,5,4]
-; X86-NEXT:    vmovdqa64 %zmm1, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_permvar_8i64_as_permq_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpermq {{.*#+}} zmm1 {%k1} = zmm0[3,2,1,0,7,6,5,4]
-; X64-NEXT:    vmovdqa64 %zmm1, %zmm0
-; X64-NEXT:    retq
-  %1 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %x0, <8 x i64> <i64 3, i64 2, i64 1, i64 undef, i64 undef, i64 6, i64 5, i64 4>)
-  %2 = bitcast i8 %m to <8 x i1>
-  %3 = select <8 x i1> %2, <8 x i64> %1, <8 x i64> %x1
-  ret <8 x i64> %3
-}
-
-define <8 x double> @combine_permvar_8f64_as_permpd(<8 x double> %x0, <8 x double> %x1) {
-; CHECK-LABEL: combine_permvar_8f64_as_permpd:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4]
-; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> %x0, <8 x i64> <i64 3, i64 2, i64 1, i64 undef, i64 undef, i64 6, i64 5, i64 4>)
-  ret <8 x double> %1
-}
-define <8 x double> @combine_permvar_8f64_as_permpd_mask(<8 x double> %x0, <8 x double> %x1, i8 %m) {
-; X86-LABEL: combine_permvar_8f64_as_permpd_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    kmovd %eax, %k1
-; X86-NEXT:    vpermpd {{.*#+}} zmm1 {%k1} = zmm0[3,2,1,0,7,6,5,4]
-; X86-NEXT:    vmovapd %zmm1, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_permvar_8f64_as_permpd_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpermpd {{.*#+}} zmm1 {%k1} = zmm0[3,2,1,0,7,6,5,4]
-; X64-NEXT:    vmovapd %zmm1, %zmm0
-; X64-NEXT:    retq
-  %1 = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> %x0, <8 x i64> <i64 3, i64 2, i64 1, i64 undef, i64 undef, i64 6, i64 5, i64 4>)
-  %2 = bitcast i8 %m to <8 x i1>
-  %3 = select <8 x i1> %2, <8 x double> %1, <8 x double> %x1
-  ret <8 x double> %3
-}
-
-define <16 x float> @combine_vpermilvar_16f32_230146759A8BCFDE(<16 x float> %x0) {
-; CHECK-LABEL: combine_vpermilvar_16f32_230146759A8BCFDE:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[2,3,0,1,4,6,7,5,9,10,8,11,12,15,13,14]
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 3, i32 2, i32 1, i32 0, i32 2, i32 3, i32 0, i32 1, i32 1, i32 0, i32 3, i32 2>, <16 x float> undef, i16 -1)
-  %res1 = call <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float> %res0, <16 x i32> <i32 2, i32 3, i32 0, i32 1, i32 3, i32 1, i32 0, i32 2, i32 3, i32 0, i32 2, i32 1, i32 1, i32 2, i32 0, i32 3>, <16 x float> undef, i16 -1)
-  ret <16 x float> %res1
-}
-
 define <64 x i8> @combine_pshufb_as_pslldq(<64 x i8> %a0) {
 ; CHECK-LABEL: combine_pshufb_as_pslldq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[0,1,2,3,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[16,17,18,19,20,21],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[32,33,34,35,36,37],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[48,49,50,51,52,53]
+; CHECK-NEXT:    vpslldq {{.*#+}} zmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[0,1,2,3,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[16,17,18,19,20,21],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[32,33,34,35,36,37],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[48,49,50,51,52,53]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res0 = call <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8> %a0, <64 x i8> <i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5>, <64 x i8> undef, i64 -1)
   ret <64 x i8> %res0
@@ -661,14 +100,16 @@ define <64 x i8> @combine_pshufb_as_pslldq(<64 x i8> %a0) {
 define <64 x i8> @combine_pshufb_as_pslldq_mask(<64 x i8> %a0, i64 %m) {
 ; X86-LABEL: combine_pshufb_as_pslldq_mask:
 ; X86:       # %bb.0:
+; X86-NEXT:    vpslldq {{.*#+}} zmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[0,1,2,3,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[16,17,18,19,20,21],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[32,33,34,35,36,37],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[48,49,50,51,52,53]
 ; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[0,1,2,3,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[16,17,18,19,20,21],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[32,33,34,35,36,37],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[48,49,50,51,52,53]
+; X86-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_pshufb_as_pslldq_mask:
 ; X64:       # %bb.0:
+; X64-NEXT:    vpslldq {{.*#+}} zmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[0,1,2,3,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[16,17,18,19,20,21],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[32,33,34,35,36,37],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[48,49,50,51,52,53]
 ; X64-NEXT:    kmovq %rdi, %k1
-; X64-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[0,1,2,3,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[16,17,18,19,20,21],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[32,33,34,35,36,37],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[48,49,50,51,52,53]
+; X64-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
   %res0 = call <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8> %a0, <64 x i8> <i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5>, <64 x i8> zeroinitializer, i64 %m)
   ret <64 x i8> %res0
@@ -677,7 +118,7 @@ define <64 x i8> @combine_pshufb_as_pslldq_mask(<64 x i8> %a0, i64 %m) {
 define <64 x i8> @combine_pshufb_as_psrldq(<64 x i8> %a0) {
 ; CHECK-LABEL: combine_pshufb_as_psrldq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[47],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} zmm0 = zmm0[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[47],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res0 = call <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8> %a0, <64 x i8> <i8 15, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 15, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 15, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 15, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128>, <64 x i8> undef, i64 -1)
   ret <64 x i8> %res0
@@ -685,17 +126,53 @@ define <64 x i8> @combine_pshufb_as_psrldq(<64 x i8> %a0) {
 define <64 x i8> @combine_pshufb_as_psrldq_mask(<64 x i8> %a0, i64 %m) {
 ; X86-LABEL: combine_pshufb_as_psrldq_mask:
 ; X86:       # %bb.0:
+; X86-NEXT:    vpsrldq {{.*#+}} zmm0 = zmm0[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[47],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm0[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[47],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_pshufb_as_psrldq_mask:
 ; X64:       # %bb.0:
+; X64-NEXT:    vpsrldq {{.*#+}} zmm0 = zmm0[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[47],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    kmovq %rdi, %k1
-; X64-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm0[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[47],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X64-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
   %res0 = call <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8> %a0, <64 x i8> <i8 15, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 15, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 15, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 15, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128>, <64 x i8> zeroinitializer, i64 %m)
   ret <64 x i8> %res0
+}
+
+define <64 x i8> @combine_permi2q_pshufb_as_permi2d(<8 x i64> %a0, <8 x i64> %a1) {
+; CHECK-LABEL: combine_permi2q_pshufb_as_permi2d:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [14,14,14,14,11,11,11,11,24,24,24,24,29,29,29,29]
+; CHECK-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res0 = shufflevector <8 x i64> %a0, <8 x i64> %a1, <8 x i32> <i32 15, i32 0, i32 13, i32 2, i32 11, i32 4, i32 9, i32 6>
+  %res1 = bitcast <8 x i64> %res0 to <64 x i8>
+  %res2 = call <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8> %res1, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15>, <64 x i8> undef, i64 -1)
+  ret <64 x i8> %res2
+}
+define <64 x i8> @combine_permi2q_pshufb_as_permi2d_mask(<8 x i64> %a0, <8 x i64> %a1, i64 %m) {
+; X86-LABEL: combine_permi2q_pshufb_as_permi2d_mask:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm2 = <7,0,u,u,5,0,u,u,u,u,12,0,u,u,14,0>
+; X86-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm2[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,20,21,22,23,20,21,22,23,20,21,22,23,20,21,22,23,40,41,42,43,40,41,42,43,40,41,42,43,40,41,42,43,60,61,62,63,60,61,62,63,60,61,62,63,60,61,62,63]
+; X86-NEXT:    retl
+;
+; X64-LABEL: combine_permi2q_pshufb_as_permi2d_mask:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovdqa64 {{.*#+}} zmm2 = <7,u,5,u,u,12,u,14>
+; X64-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
+; X64-NEXT:    kmovq %rdi, %k1
+; X64-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm2[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,20,21,22,23,20,21,22,23,20,21,22,23,20,21,22,23,40,41,42,43,40,41,42,43,40,41,42,43,40,41,42,43,60,61,62,63,60,61,62,63,60,61,62,63,60,61,62,63]
+; X64-NEXT:    retq
+  %res0 = shufflevector <8 x i64> %a0, <8 x i64> %a1, <8 x i32> <i32 15, i32 0, i32 13, i32 2, i32 11, i32 4, i32 9, i32 6>
+  %res1 = bitcast <8 x i64> %res0 to <64 x i8>
+  %res2 = call <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8> %res1, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15>, <64 x i8> zeroinitializer, i64 %m)
+  ret <64 x i8> %res2
 }
 
 define <32 x i16> @combine_permvar_as_pshuflw(<32 x i16> %a0) {
@@ -707,13 +184,43 @@ define <32 x i16> @combine_permvar_as_pshuflw(<32 x i16> %a0) {
   ret <32 x i16> %1
 }
 
-define <32 x i16> @combine_pshufb_as_pshufhw(<32 x i16> %a0) {
-; CHECK-LABEL: combine_pshufb_as_pshufhw:
+define <32 x i16> @combine_permvar_as_pshufhw(<32 x i16> %a0) {
+; CHECK-LABEL: combine_permvar_as_pshufhw:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 = zmm0[0,1,2,3,5,4,7,6,8,9,10,11,13,12,15,14,16,17,18,19,21,20,23,22,24,25,26,27,29,28,31,30]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> %a0, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 5, i16 4, i16 7, i16 6, i16 8, i16 9, i16 10, i16 11, i16 13, i16 12, i16 15, i16 14, i16 16, i16 17, i16 18, i16 19, i16 21, i16 20, i16 23, i16 22, i16 24, i16 25, i16 26, i16 27, i16 29, i16 28, i16 31, i16 30>)
   ret <32 x i16> %1
+}
+
+define <32 x i16> @combine_vpermi2var_as_packssdw(<16 x i32> %a0, <16 x i32> %a1) nounwind {
+; CHECK-LABEL: combine_vpermi2var_as_packssdw:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrad $25, %zmm0, %zmm0
+; CHECK-NEXT:    vpsrad $25, %zmm1, %zmm1
+; CHECK-NEXT:    vpackssdw %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = ashr <16 x i32> %a0, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
+  %2 = ashr <16 x i32> %a1, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
+  %3 = bitcast <16 x i32> %1 to <32 x i16>
+  %4 = bitcast <16 x i32> %2 to <32 x i16>
+  %5 = call <32 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.512(<32 x i16> %3, <32 x i16> <i16 0, i16 2, i16 4, i16 6, i16 32, i16 34, i16 36, i16 38, i16 8, i16 10, i16 12, i16 14, i16 40, i16 42, i16 44, i16 46, i16 16, i16 18, i16 20, i16 22, i16 48, i16 50, i16 52, i16 54, i16 24, i16 26, i16 28, i16 30, i16 56, i16 58, i16 60, i16 62>, <32 x i16> %4, i32 -1)
+  ret <32 x i16> %5
+}
+
+define <32 x i16> @combine_vpermi2var_as_packusdw(<16 x i32> %a0, <16 x i32> %a1) nounwind {
+; CHECK-LABEL: combine_vpermi2var_as_packusdw:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrld $25, %zmm0, %zmm0
+; CHECK-NEXT:    vpsrld $25, %zmm1, %zmm1
+; CHECK-NEXT:    vpackusdw %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = lshr <16 x i32> %a0, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
+  %2 = lshr <16 x i32> %a1, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
+  %3 = bitcast <16 x i32> %1 to <32 x i16>
+  %4 = bitcast <16 x i32> %2 to <32 x i16>
+  %5 = call <32 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.512(<32 x i16> %3, <32 x i16> <i16 0, i16 2, i16 4, i16 6, i16 32, i16 34, i16 36, i16 38, i16 8, i16 10, i16 12, i16 14, i16 40, i16 42, i16 44, i16 46, i16 16, i16 18, i16 20, i16 22, i16 48, i16 50, i16 52, i16 54, i16 24, i16 26, i16 28, i16 30, i16 56, i16 58, i16 60, i16 62>, <32 x i16> %4, i32 -1)
+  ret <32 x i16> %5
 }
 
 define <64 x i8> @combine_pshufb_as_packsswb(<32 x i16> %a0, <32 x i16> %a1) nounwind {
@@ -750,77 +257,24 @@ define <64 x i8> @combine_pshufb_as_packuswb(<32 x i16> %a0, <32 x i16> %a1) nou
   ret <64 x i8> %7
 }
 
-define <32 x i16> @combine_vpermi2var_32i16_as_pshufb(<32 x i16> %a0) {
-; CHECK-LABEL: combine_vpermi2var_32i16_as_pshufb:
+define <32 x i16> @combine_vpermi2var_32i16_as_rotate(<32 x i16> %a0) {
+; CHECK-LABEL: combine_vpermi2var_32i16_as_rotate:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[2,3,0,1,6,7,4,5,10,11,8,9,14,15,12,13,18,19,16,17,22,23,20,21,26,27,24,25,30,31,28,29,34,35,32,33,38,39,36,37,42,43,40,41,46,47,44,45,50,51,48,49,54,55,52,53,58,59,56,57,62,63,60,61]
+; CHECK-NEXT:    vprold $16, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> %a0, <32 x i16> <i16 1, i16 0, i16 3, i16 2, i16 4, i16 5, i16 6, i16 7, i16 9, i16 8, i16 11, i16 10, i16 12, i16 13, i16 14, i16 15, i16 17, i16 16, i16 19, i16 18, i16 20, i16 21, i16 22, i16 23, i16 25, i16 24, i16 27, i16 26, i16 28, i16 29, i16 30, i16 31>)
   %2 = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> %1, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 5, i16 4, i16 7, i16 6, i16 8, i16 9, i16 10, i16 11, i16 13, i16 12, i16 15, i16 14, i16 16, i16 17, i16 18, i16 19, i16 21, i16 20, i16 23, i16 22, i16 24, i16 25, i16 26, i16 27, i16 29, i16 28, i16 31, i16 30>)
   ret <32 x i16> %2
 }
 
-define <8 x double> @combine_vpermi2var_8f64_identity(<8 x double> %x0, <8 x double> %x1) {
-; CHECK-LABEL: combine_vpermi2var_8f64_identity:
+define <32 x i16> @combine_vpermi2var_32i16_as_pshufb(<32 x i16> %a0) {
+; CHECK-LABEL: combine_vpermi2var_32i16_as_pshufb:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[2,3,0,1,4,5,6,7,10,11,8,9,14,15,12,13,18,19,16,17,20,21,22,23,26,27,24,25,30,31,28,29,34,35,32,33,36,37,38,39,42,43,40,41,46,47,44,45,50,51,48,49,52,53,54,55,58,59,56,57,62,63,60,61]
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> <i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>, <8 x double> %x1, i8 -1)
-  %res1 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %res0, <8 x i64> <i64 7, i64 14, i64 5, i64 12, i64 3, i64 10, i64 1, i64 8>, <8 x double> %res0, i8 -1)
-  ret <8 x double> %res1
-}
-
-define <8 x double> @combine_vpermi2var_8f64_as_shufpd(<8 x double> %x0, <8 x double> %x1) {
-; CHECK-LABEL: combine_vpermi2var_8f64_as_shufpd:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[1],zmm1[0],zmm0[2],zmm1[2],zmm0[5],zmm1[5],zmm0[6],zmm1[7]
-; CHECK-NEXT:    ret{{[l|q]}}
-  %1 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> <i64 1, i64 8, i64 2, i64 10, i64 5, i64 13, i64 6, i64 15>, <8 x double> %x1, i8 -1)
-  ret <8 x double> %1
-}
-
-define <8 x i64> @combine_vpermi2var_8i64_identity(<8 x i64> %x0, <8 x i64> %x1) {
-; CHECK-LABEL: combine_vpermi2var_8i64_identity:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <8 x i64> @llvm.x86.avx512.mask.vpermi2var.q.512(<8 x i64> %x0, <8 x i64> <i64 undef, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>, <8 x i64> %x1, i8 -1)
-  %res1 = call <8 x i64> @llvm.x86.avx512.mask.vpermi2var.q.512(<8 x i64> %res0, <8 x i64> <i64 undef, i64 14, i64 5, i64 12, i64 3, i64 10, i64 1, i64 8>, <8 x i64> %res0, i8 -1)
-  ret <8 x i64> %res1
-}
-
-define <16 x float> @combine_vpermi2var_16f32_identity(<16 x float> %x0, <16 x float> %x1) {
-; CHECK-LABEL: combine_vpermi2var_16f32_identity:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float> %x0, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>, <16 x float> %x1, i16 -1)
-  %res1 = call <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float> %res0, <16 x i32> <i32 15, i32 30, i32 13, i32 28, i32 11, i32 26, i32 9, i32 24, i32 7, i32 22, i32 5, i32 20, i32 3, i32 18, i32 1, i32 16>, <16 x float> %res0, i16 -1)
-  ret <16 x float> %res1
-}
-
-define <16 x i32> @combine_vpermi2var_16i32_identity(<16 x i32> %x0, <16 x i32> %x1) {
-; CHECK-LABEL: combine_vpermi2var_16i32_identity:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32> %x0, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 undef>, <16 x i32> %x1, i16 -1)
-  %res1 = call <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32> %res0, <16 x i32> <i32 15, i32 30, i32 13, i32 28, i32 undef, i32 26, i32 9, i32 24, i32 7, i32 22, i32 5, i32 20, i32 3, i32 18, i32 1, i32 16>, <16 x i32> %res0, i16 -1)
-  ret <16 x i32> %res1
-}
-
-define <16 x float> @combine_vpermt2var_vpermi2var_16f32_as_unpckhps(<16 x float> %a0, <16 x float> %a1) {
-; CHECK-LABEL: combine_vpermt2var_vpermi2var_16f32_as_unpckhps:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 = zmm1[2],zmm0[2],zmm1[3],zmm0[3],zmm1[6],zmm0[6],zmm1[7],zmm0[7],zmm1[10],zmm0[10],zmm1[11],zmm0[11],zmm1[14],zmm0[14],zmm1[15],zmm0[15]
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float> %a0, <16 x i32> <i32 18, i32 2, i32 19, i32 3, i32 22, i32 6, i32 23, i32 7, i32 26, i32 10, i32 27, i32 11, i32 30, i32 14, i32 31, i32 15>, <16 x float> %a1, i16 -1)
-  ret <16 x float> %res0
-}
-
-define <16 x i32> @vpermt2var_vpermi2var_16i32_as_unpckldq(<16 x i32> %a0, <16 x i32> %a1) {
-; CHECK-LABEL: vpermt2var_vpermi2var_16i32_as_unpckldq:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32> %a0, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>, <16 x i32> %a1, i16 -1)
-  ret <16 x i32> %res0
+  %1 = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> %a0, <32 x i16> <i16 1, i16 0, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 9, i16 8, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 17, i16 16, i16 18, i16 19, i16 20, i16 21, i16 22, i16 23, i16 25, i16 24, i16 26, i16 27, i16 28, i16 29, i16 30, i16 31>)
+  %2 = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> %1, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 5, i16 4, i16 7, i16 6, i16 8, i16 9, i16 10, i16 11, i16 13, i16 12, i16 15, i16 14, i16 16, i16 17, i16 18, i16 19, i16 21, i16 20, i16 23, i16 22, i16 24, i16 25, i16 26, i16 27, i16 29, i16 28, i16 31, i16 30>)
+  ret <32 x i16> %2
 }
 
 define <32 x i16> @combine_vpermi2var_32i16_identity(<32 x i16> %x0, <32 x i16> %x1) {
@@ -830,62 +284,6 @@ define <32 x i16> @combine_vpermi2var_32i16_identity(<32 x i16> %x0, <32 x i16> 
   %res0 = call <32 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.512(<32 x i16> %x0, <32 x i16> <i16 31, i16 30, i16 29, i16 28, i16 27, i16 26, i16 25, i16 24, i16 23, i16 22, i16 21, i16 20, i16 19, i16 18, i16 17, i16 16, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>, <32 x i16> %x1, i32 -1)
   %res1 = call <32 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.512(<32 x i16> %res0, <32 x i16> <i16 63, i16 30, i16 61, i16 28, i16 59, i16 26, i16 57, i16 24, i16 55, i16 22, i16 53, i16 20, i16 51, i16 18, i16 49, i16 16, i16 47, i16 46, i16 13, i16 44, i16 11, i16 42, i16 9, i16 40, i16 7, i16 38, i16 5, i16 36, i16 3, i16 34, i16 1, i16 32>, <32 x i16> %res0, i32 -1)
   ret <32 x i16> %res1
-}
-
-define <8 x double> @combine_vpermi2var_8f64_as_vpermpd(<8 x double> %x0, <8 x double> %x1) {
-; X86-LABEL: combine_vpermi2var_8f64_as_vpermpd:
-; X86:       # %bb.0:
-; X86-NEXT:    vmovaps {{.*#+}} zmm1 = [7,0,6,0,5,0,4,0,3,0,2,0,1,0,0,0]
-; X86-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermi2var_8f64_as_vpermpd:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
-; X64-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
-; X64-NEXT:    retq
-  %res0 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> <i64 3, i64 2, i64 1, i64 0, i64 7, i64 6, i64 5, i64 4>, <8 x double> %x1, i8 -1)
-  %res1 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %res0, <8 x i64> <i64 12, i64 5, i64 14, i64 7, i64 8, i64 1, i64 10, i64 3>, <8 x double> %res0, i8 -1)
-  ret <8 x double> %res1
-}
-
-define <8 x i64> @combine_vpermt2var_8i64_as_vpermq(<8 x i64> %x0, <8 x i64> %x1) {
-; X86-LABEL: combine_vpermt2var_8i64_as_vpermq:
-; X86:       # %bb.0:
-; X86-NEXT:    vmovaps {{.*#+}} zmm1 = [7,0,6,0,5,0,4,0,3,0,2,0,1,0,0,0]
-; X86-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermt2var_8i64_as_vpermq:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
-; X64-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
-; X64-NEXT:    retq
-  %res0 = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> <i64 3, i64 2, i64 1, i64 0, i64 7, i64 6, i64 5, i64 4>, <8 x i64> %x0, <8 x i64> %x1, i8 -1)
-  %res1 = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> <i64 12, i64 5, i64 14, i64 7, i64 8, i64 1, i64 10, i64 3>, <8 x i64> %res0, <8 x i64> %res0, i8 -1)
-  ret <8 x i64> %res1
-}
-
-define <16 x float> @combine_vpermi2var_16f32_as_vpermps(<16 x float> %x0, <16 x float> %x1) {
-; CHECK-LABEL: combine_vpermi2var_16f32_as_vpermps:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [7,7,5,5,3,3,1,1,15,15,13,13,11,11,9,9]
-; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float> %x0, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>, <16 x float> %x1, i16 -1)
-  %res1 = call <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float> %res0, <16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>, <16 x float> %res0, i16 -1)
-  ret <16 x float> %res1
-}
-
-define <16 x i32> @combine_vpermt2var_16i32_as_vpermd(<16 x i32> %x0, <16 x i32> %x1) {
-; CHECK-LABEL: combine_vpermt2var_16i32_as_vpermd:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [7,7,5,5,3,3,1,1,15,15,13,13,11,11,9,9]
-; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>, <16 x i32> %x0, <16 x i32> %x1, i16 -1)
-  %res1 = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>, <16 x i32> %res0, <16 x i32> %res0, i16 -1)
-  ret <16 x i32> %res1
 }
 
 define <32 x i16> @combine_vpermi2var_32i16_as_permw(<32 x i16> %x0, <32 x i16> %x1) {
@@ -899,59 +297,6 @@ define <32 x i16> @combine_vpermi2var_32i16_as_permw(<32 x i16> %x0, <32 x i16> 
   ret <32 x i16> %res1
 }
 
-define <8 x double> @combine_vpermi2var_vpermt2var_8f64_as_vperm2(<8 x double> %x0, <8 x double> %x1) {
-; X86-LABEL: combine_vpermi2var_vpermt2var_8f64_as_vperm2:
-; X86:       # %bb.0:
-; X86-NEXT:    vmovapd {{.*#+}} zmm2 = [4,0,14,0,3,0,12,0,7,0,8,0,0,0,15,0]
-; X86-NEXT:    vpermi2pd %zmm0, %zmm1, %zmm2
-; X86-NEXT:    vmovapd %zmm2, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermi2var_vpermt2var_8f64_as_vperm2:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovapd {{.*#+}} zmm2 = [4,14,3,12,7,8,0,15]
-; X64-NEXT:    vpermi2pd %zmm0, %zmm1, %zmm2
-; X64-NEXT:    vmovapd %zmm2, %zmm0
-; X64-NEXT:    retq
-  %res0 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> <i64 15, i64 0, i64 8, i64 7, i64 12, i64 6, i64 11, i64 4>, <8 x double> %x1, i8 -1)
-  %res1 = call <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64> <i64 12, i64 5, i64 14, i64 7, i64 8, i64 1, i64 10, i64 3>, <8 x double> %res0, <8 x double> %res0, i8 -1)
-  ret <8 x double> %res1
-}
-
-define <8 x double> @combine_vpermi2var_8f64_as_permpd(<8 x double> %x0, <8 x double> %x1, i64 %a2) {
-; X86-LABEL: combine_vpermi2var_8f64_as_permpd:
-; X86:       # %bb.0:
-; X86-NEXT:    movl $2, %eax
-; X86-NEXT:    vmovd %eax, %xmm2
-; X86-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
-; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; X86-NEXT:    vinserti128 $1, {{\.LCPI.*}}, %ymm2, %ymm2
-; X86-NEXT:    vinserti64x4 $1, {{\.LCPI.*}}, %zmm2, %zmm2
-; X86-NEXT:    vpermi2pd %zmm1, %zmm0, %zmm2
-; X86-NEXT:    vpermpd {{.*#+}} zmm0 = zmm2[2,3,1,1,6,7,5,5]
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermi2var_8f64_as_permpd:
-; X64:       # %bb.0:
-; X64-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[1,3,2,2,5,7,6,6]
-; X64-NEXT:    retq
-  %res0 = insertelement <8 x i64> <i64 0, i64 2, i64 1, i64 3, i64 4, i64 6, i64 5, i64 7>, i64 %a2, i32 0
-  %res1 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> %res0, <8 x double> %x1, i8 -1)
-  %res2 = shufflevector <8 x double> %res1, <8 x double> undef, <8 x i32> <i32 2, i32 3, i32 1, i32 1, i32 6, i32 7, i32 5, i32 5>
-  ret <8 x double> %res2
-}
-
-define <16 x i32> @combine_vpermi2var_vpermt2var_16i32_as_vpermd(<16 x i32> %x0, <16 x i32> %x1) {
-; CHECK-LABEL: combine_vpermi2var_vpermt2var_16i32_as_vpermd:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,31,2,2,4,29,6,27,8,25,10,23,12,21,14,19]
-; CHECK-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = call <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32> %x0, <16 x i32> <i32 0, i32 31, i32 2, i32 29, i32 4, i32 27, i32 6, i32 25, i32 8, i32 23, i32 10, i32 21, i32 12, i32 19, i32 14, i32 17>, <16 x i32> %x1, i16 -1)
-  %res1 = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> <i32 0, i32 17, i32 2, i32 18, i32 4, i32 19, i32 6, i32 21, i32 8, i32 23, i32 10, i32 25, i32 12, i32 27, i32 14, i32 29>, <16 x i32> %res0, <16 x i32> %res0, i16 -1)
-  ret <16 x i32> %res1
-}
-
 define <32 x i16> @combine_vpermt2var_vpermi2var_32i16_as_permw(<32 x i16> %x0, <32 x i16> %x1) {
 ; CHECK-LABEL: combine_vpermt2var_vpermi2var_32i16_as_permw:
 ; CHECK:       # %bb.0:
@@ -962,50 +307,4 @@ define <32 x i16> @combine_vpermt2var_vpermi2var_32i16_as_permw(<32 x i16> %x0, 
   %res0 = call <32 x i16> @llvm.x86.avx512.maskz.vpermt2var.hi.512(<32 x i16> <i16 0, i16 63, i16 1, i16 61, i16 2, i16 59, i16 3, i16 57, i16 4, i16 55, i16 5, i16 53, i16 6, i16 51, i16 7, i16 49, i16 8, i16 47, i16 9, i16 45, i16 10, i16 43, i16 11, i16 41, i16 12, i16 39, i16 13, i16 37, i16 14, i16 35, i16 15, i16 33>, <32 x i16> %x0, <32 x i16> %x1, i32 -1)
   %res1 = call <32 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.512(<32 x i16> %res0, <32 x i16> <i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0, i16 31, i16 30, i16 29, i16 28, i16 27, i16 26, i16 25, i16 24, i16 23, i16 22, i16 21, i16 20, i16 19, i16 18, i16 17, i16 16>, <32 x i16> %res0, i32 -1)
   ret <32 x i16> %res1
-}
-
-define <8 x double> @combine_vpermi2var_vpermvar_8f64_as_vperm2_zero(<8 x double> %x0) {
-; X86-LABEL: combine_vpermi2var_vpermvar_8f64_as_vperm2_zero:
-; X86:       # %bb.0:
-; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vmovapd {{.*#+}} zmm2 = [8,0,3,0,10,0,11,0,1,0,7,0,14,0,5,0]
-; X86-NEXT:    vpermt2pd %zmm1, %zmm2, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermi2var_vpermvar_8f64_as_vperm2_zero:
-; X64:       # %bb.0:
-; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vmovapd {{.*#+}} zmm2 = [8,3,10,11,1,7,14,5]
-; X64-NEXT:    vpermt2pd %zmm1, %zmm2, %zmm0
-; X64-NEXT:    retq
-  %res0 = shufflevector <8 x double> %x0, <8 x double> zeroinitializer, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %1 = call <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double> %res0, <8 x i64> <i64 3, i64 2, i64 1, i64 7, i64 0, i64 6, i64 5, i64 4>)
-  ret <8 x double> %1
-}
-
-define <16 x float> @combine_vpermi2var_vpermvar_16f32_as_vperm2_zero(<16 x float> %x0) {
-; CHECK-LABEL: combine_vpermi2var_vpermvar_16f32_as_vperm2_zero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [0,13,1,12,4,9,22,12,4,25,26,9,5,29,30,8]
-; CHECK-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
-  %res0 = shufflevector <16 x float> %x0, <16 x float> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res1 = call <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float> %res0, <16 x i32> <i32 0, i32 14, i32 2, i32 12, i32 4, i32 10, i32 3, i32 12, i32 4, i32 11, i32 5, i32 10, i32 6, i32 9, i32 7, i32 8>, <16 x float> %res0, i16 -1)
-  ret <16 x float> %res1
-}
-
-define <8 x i64> @combine_vpermvar_insertion_as_broadcast_v8i64(i64 %a0) {
-; X86-LABEL: combine_vpermvar_insertion_as_broadcast_v8i64:
-; X86:       # %bb.0:
-; X86-NEXT:    vbroadcastsd {{[0-9]+}}(%esp), %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: combine_vpermvar_insertion_as_broadcast_v8i64:
-; X64:       # %bb.0:
-; X64-NEXT:    vpbroadcastq %rdi, %zmm0
-; X64-NEXT:    retq
-  %1 = insertelement <8 x i64> undef, i64 %a0, i32 0
-  %2 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %1, <8 x i64> zeroinitializer)
-  ret <8 x i64> %2
 }

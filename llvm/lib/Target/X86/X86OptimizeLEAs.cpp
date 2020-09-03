@@ -578,7 +578,7 @@ bool X86OptimizeLEAPass::removeRedundantAddrCalc(MemOpMap &LEAs) {
 MachineInstr *X86OptimizeLEAPass::replaceDebugValue(MachineInstr &MI,
                                                     unsigned VReg,
                                                     int64_t AddrDispShift) {
-  DIExpression *Expr = const_cast<DIExpression *>(MI.getDebugExpression());
+  const DIExpression *Expr = MI.getDebugExpression();
   if (AddrDispShift != 0)
     Expr = DIExpression::prepend(Expr, DIExpression::StackValue, AddrDispShift);
 

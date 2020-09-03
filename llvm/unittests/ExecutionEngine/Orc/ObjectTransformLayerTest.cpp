@@ -296,7 +296,8 @@ TEST(LegacyObjectTransformLayerTest, Main) {
   LegacyObjectTransformLayer<decltype(BaseLayer), decltype(IdentityTransform)>
       TransformLayer(llvm::AcknowledgeORCv1Deprecation, BaseLayer,
                      IdentityTransform);
-  auto NullCompiler = [](llvm::Module &) {
+  auto NullCompiler = [](llvm::Module &)
+      -> llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> {
     return std::unique_ptr<llvm::MemoryBuffer>(nullptr);
   };
   LegacyIRCompileLayer<decltype(TransformLayer), decltype(NullCompiler)>

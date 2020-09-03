@@ -1,6 +1,5 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr9 -enable-ppc-quad-precision \
-; RUN:   -mtriple=powerpc64le-unknown-unknown -ppc-vsr-nums-as-vr \
-; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
+; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
 
 @A = common global fp128 0xL00000000000000000000000000000000, align 16
 @B = common global fp128 0xL00000000000000000000000000000000, align 16

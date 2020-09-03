@@ -1,12 +1,16 @@
-; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -relocation-model=pic | FileCheck -check-prefix=LARGE-BSS %s
-; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -mattr=+secure-plt -relocation-model=pic | FileCheck -check-prefix=LARGE-SECUREPLT %s
+; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -relocation-model=pic | FileCheck --check-prefixes=LARGE,LARGE-BSS %s
+; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -mattr=+secure-plt -relocation-model=pic | FileCheck --check-prefixes=LARGE,LARGE-SECUREPLT %s
 ; RUN: llc < %s -mtriple=powerpc-unknown-netbsd -mattr=+secure-plt -relocation-model=pic | FileCheck -check-prefix=LARGE-SECUREPLT %s
 ; RUN: llc < %s -mtriple=powerpc-unknown-netbsd -relocation-model=pic | FileCheck -check-prefix=LARGE-SECUREPLT %s
 ; RUN: llc < %s -mtriple=powerpc-unknown-openbsd -mattr=+secure-plt -relocation-model=pic | FileCheck -check-prefix=LARGE-SECUREPLT %s
 ; RUN: llc < %s -mtriple=powerpc-unknown-openbsd -relocation-model=pic | FileCheck -check-prefix=LARGE-SECUREPLT %s
 ; RUN: llc < %s -mtriple=powerpc-linux-musl -mattr=+secure-plt -relocation-model=pic | FileCheck -check-prefix=LARGE-SECUREPLT %s
 ; RUN: llc < %s -mtriple=powerpc-linux-musl -relocation-model=pic | FileCheck -check-prefix=LARGE-SECUREPLT %s
+$bar1 = comdat any
+
 @bar = common global i32 0, align 4
+@bar1 = global i32 0, align 4, comdat($bar1)
+@bar2 = global i32 0, align 4, comdat($bar1)
 
 declare i32 @call_foo(i32, ...)
 
@@ -15,6 +19,14 @@ entry:
   %0 = load i32, i32* @bar, align 4
   %call = call i32 (i32, ...) @call_foo(i32 %0, i32 0, i32 1, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64)
   ret i32 %0
+}
+
+define i32 @load() {
+entry:
+  %0 = load i32, i32* @bar1
+  %1 = load i32, i32* @bar2
+  %2 = add i32 %0, %1
+  ret i32 %2
 }
 
 !llvm.module.flags = !{!0}
@@ -33,9 +45,19 @@ entry:
 ; LARGE-BSS-DAG:     lwz {{[0-9]+}}, 0([[VREG]])
 ; LARGE-BSS-DAG:     stw {{[0-9]+}}, 8(1)
 ; LARGE-BSS:         lwz 30, 24(1)
-; LARGE-BSS:       [[VREF]]:
-; LARGE-BSS-NEXT:     .p2align 2
-; LARGE-BSS-NEXT:    .long bar
 ; LARGE-SECUREPLT:   addis 30, 30, .LTOC-.L0$pb@ha
 ; LARGE-SECUREPLT:   addi 30, 30, .LTOC-.L0$pb@l
 ; LARGE-SECUREPLT:   bl call_foo@PLT+32768
+
+; LARGE:      .section .bss.bar1,"aGw",@nobits,bar1,comdat
+; LARGE:      bar1:
+; LARGE:      .section .bss.bar2,"aGw",@nobits,bar1,comdat
+; LARGE:      bar2:
+; LARGE:      .section .got2,"aw",@progbits
+; LARGE-NEXT: .p2align 2
+; LARGE-NEXT: .LC0:
+; LARGE-NEXT:  .long bar
+; LARGE-NEXT: .LC1:
+; LARGE-NEXT:  .long bar1
+; LARGE-NEXT: .LC2:
+; LARGE-NEXT:  .long bar2

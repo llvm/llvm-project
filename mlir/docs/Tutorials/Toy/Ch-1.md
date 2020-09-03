@@ -12,7 +12,7 @@ the model of the
 
 This tutorial assumes you have cloned and built MLIR; if you have not yet done
 so, see
-[Getting started with MLIR](https://github.com/tensorflow/mlir#getting-started-with-mlir).
+[Getting started with MLIR](https://mlir.llvm.org/getting_started/).
 
 ## The Chapters
 
@@ -29,7 +29,7 @@ This tutorial is divided in the following chapters:
     with Interfaces. Here we will show how to plug dialect specific information
     into generic transformations like shape inference and inlining.
 -   [Chapter #5](Ch-5.md): Partially lowering to lower-level dialects. We'll
-    convert some our high level language specific semantics towards a generic
+    convert some of our high level language specific semantics towards a generic
     affine oriented dialect for optimization.
 -   [Chapter #6](Ch-6.md): Lowering to LLVM and code generation. Here we'll
     target LLVM IR for code generation, and detail more of the lowering
@@ -109,48 +109,48 @@ The AST from the above code is fairly straightforward; here is a dump of it:
 
 ```
 Module:
-  Function
-    Proto 'multiply_transpose' @test/ast.toy:5:1'
-    Args: [a, b]
+  Function 
+    Proto 'multiply_transpose' @test/Examples/Toy/Ch1/ast.toy:4:1'
+    Params: [a, b]
     Block {
       Return
-        BinOp: * @test/ast.toy:6:25
-          Call 'transpose' [ @test/ast.toy:6:10
-            var: a @test/ast.toy:6:20
+        BinOp: * @test/Examples/Toy/Ch1/ast.toy:5:25
+          Call 'transpose' [ @test/Examples/Toy/Ch1/ast.toy:5:10
+            var: a @test/Examples/Toy/Ch1/ast.toy:5:20
           ]
-          Call 'transpose' [ @test/ast.toy:6:25
-            var: b @test/ast.toy:6:35
+          Call 'transpose' [ @test/Examples/Toy/Ch1/ast.toy:5:25
+            var: b @test/Examples/Toy/Ch1/ast.toy:5:35
           ]
     } // Block
-  Function
-    Proto 'main' @test/ast.toy:9:1'
-    Args: []
+  Function 
+    Proto 'main' @test/Examples/Toy/Ch1/ast.toy:8:1'
+    Params: []
     Block {
-      VarDecl a<> @test/ast.toy:11:3
-        Literal: <2, 3>[<3>[1.000000e+00, 2.000000e+00, 3.000000e+00], <3>[4.000000e+00, 5.000000e+00, 6.000000e+00]] @test/ast.toy:11:17
-      VarDecl b<2, 3> @test/ast.toy:12:3
-        Literal: <6>[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00] @test/ast.toy:12:17
-      VarDecl c<> @test/ast.toy:15:3
-        Call 'multiply_transpose' [ @test/ast.toy:15:11
-          var: a @test/ast.toy:15:30
-          var: b @test/ast.toy:15:33
+      VarDecl a<> @test/Examples/Toy/Ch1/ast.toy:11:3
+        Literal: <2, 3>[ <3>[ 1.000000e+00, 2.000000e+00, 3.000000e+00], <3>[ 4.000000e+00, 5.000000e+00, 6.000000e+00]] @test/Examples/Toy/Ch1/ast.toy:11:11
+      VarDecl b<2, 3> @test/Examples/Toy/Ch1/ast.toy:15:3
+        Literal: <6>[ 1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00] @test/Examples/Toy/Ch1/ast.toy:15:17
+      VarDecl c<> @test/Examples/Toy/Ch1/ast.toy:19:3
+        Call 'multiply_transpose' [ @test/Examples/Toy/Ch1/ast.toy:19:11
+          var: a @test/Examples/Toy/Ch1/ast.toy:19:30
+          var: b @test/Examples/Toy/Ch1/ast.toy:19:33
         ]
-      VarDecl d<> @test/ast.toy:18:3
-        Call 'multiply_transpose' [ @test/ast.toy:18:11
-          var: b @test/ast.toy:18:30
-          var: a @test/ast.toy:18:33
+      VarDecl d<> @test/Examples/Toy/Ch1/ast.toy:22:3
+        Call 'multiply_transpose' [ @test/Examples/Toy/Ch1/ast.toy:22:11
+          var: b @test/Examples/Toy/Ch1/ast.toy:22:30
+          var: a @test/Examples/Toy/Ch1/ast.toy:22:33
         ]
-      VarDecl e<> @test/ast.toy:21:3
-        Call 'multiply_transpose' [ @test/ast.toy:21:11
-          var: b @test/ast.toy:21:30
-          var: c @test/ast.toy:21:33
+      VarDecl e<> @test/Examples/Toy/Ch1/ast.toy:25:3
+        Call 'multiply_transpose' [ @test/Examples/Toy/Ch1/ast.toy:25:11
+          var: b @test/Examples/Toy/Ch1/ast.toy:25:30
+          var: c @test/Examples/Toy/Ch1/ast.toy:25:33
         ]
-      VarDecl f<> @test/ast.toy:24:3
-        Call 'multiply_transpose' [ @test/ast.toy:24:11
-          Call 'transpose' [ @test/ast.toy:24:30
-            var: a @test/ast.toy:24:40
+      VarDecl f<> @test/Examples/Toy/Ch1/ast.toy:28:3
+        Call 'multiply_transpose' [ @test/Examples/Toy/Ch1/ast.toy:28:11
+          Call 'transpose' [ @test/Examples/Toy/Ch1/ast.toy:28:30
+            var: a @test/Examples/Toy/Ch1/ast.toy:28:40
           ]
-          var: c @test/ast.toy:24:44
+          var: c @test/Examples/Toy/Ch1/ast.toy:28:44
         ]
     } // Block
 ```

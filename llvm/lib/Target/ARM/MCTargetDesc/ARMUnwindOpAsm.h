@@ -64,7 +64,7 @@ public:
     OpBegins.push_back(OpBegins.back() + Opcodes.size());
   }
 
-  /// Finalize the unwind opcode sequence for EmitBytes()
+  /// Finalize the unwind opcode sequence for emitBytes()
   void Finalize(unsigned &PersonalityIndex,
                 SmallVectorImpl<uint8_t> &Result);
 
@@ -80,7 +80,7 @@ private:
     OpBegins.push_back(OpBegins.back() + 2);
   }
 
-  void EmitBytes(const uint8_t *Opcode, size_t Size) {
+  void emitBytes(const uint8_t *Opcode, size_t Size) {
     Ops.insert(Ops.end(), Opcode, Opcode + Size);
     OpBegins.push_back(OpBegins.back() + Size);
   }

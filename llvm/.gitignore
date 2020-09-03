@@ -7,21 +7,8 @@
 #==============================================================================#
 
 #==============================================================================#
-# File extensions to be ignored anywhere in the tree.
+# Nested build directory.
 #==============================================================================#
-# Temp files created by most text editors.
-*~
-# Merge files created by git.
-*.orig
-# Byte compiled python modules.
-*.pyc
-# vim swap files
-.*.sw?
-.sw?
-#OS X specific files.
-.DS_store
-
-# Nested build directory
 /build
 
 #==============================================================================#
@@ -63,8 +50,6 @@ tools/clang
 tools/lldb
 # lld, which is tracked independently.
 tools/lld
-# llgo, which is tracked independently.
-tools/llgo
 # Polly, which is tracked independently.
 tools/polly
 # avrlit, which is tracked independently.
@@ -74,11 +59,25 @@ docs/_build
 # VS2017 and VSCode config files.
 .vscode
 .vs
-# clangd index
-.clangd
 
 #==============================================================================#
 # Files created in tree by the Go bindings.
 #==============================================================================#
 bindings/go/llvm/llvm_config.go
 bindings/go/llvm/workdir
+
+#==============================================================================#
+# File extensions to be ignored anywhere in the tree.
+# Placed at the end to override any previous ! patterns.
+#==============================================================================#
+# Temp files created by most text editors.
+*~
+# Merge files created by git.
+*.orig
+# Byte compiled python modules.
+*.pyc
+# vim swap files
+.*.sw?
+.sw?
+#OS X specific files.
+.DS_store

@@ -29,7 +29,8 @@ static bool runOnCode(tooling::ToolAction *ToolAction, StringRef Code,
       new FileManager(FileSystemOptions(), InMemoryFileSystem));
   // FIXME: Investigate why -fms-compatibility breaks tests.
   std::vector<std::string> Args = {"include_fixer", "-fsyntax-only",
-                                   "-fno-ms-compatibility", FileName};
+                                   "-fno-ms-compatibility",
+                                   std::string(FileName)};
   Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
   tooling::ToolInvocation Invocation(
       Args, ToolAction, Files.get(),
@@ -102,7 +103,7 @@ static std::string runIncludeFixer(
   runOnCode(&Factory, Code, FakeFileName, ExtraArgs);
   assert(FixerContexts.size() == 1);
   if (FixerContexts.front().getHeaderInfos().empty())
-    return Code;
+    return std::string(Code);
   auto Replaces = createIncludeFixerReplacements(Code, FixerContexts.front());
   EXPECT_TRUE(static_cast<bool>(Replaces))
       << llvm::toString(Replaces.takeError()) << "\n";
@@ -268,7 +269,7 @@ TEST(IncludeFixer, FixNamespaceQualifiers) {
   EXPECT_EQ("#include \"bar2.h\"\nnamespace c {\na::c::bar b;\n}\n",
             runIncludeFixer("namespace c {\nbar b;\n}\n"));
 
-  // Test common qualifers reduction.
+  // Test common qualifiers reduction.
   EXPECT_EQ("#include \"bar.h\"\nnamespace a {\nnamespace d {\nb::bar b;\n}\n} "
             "// namespace a\n",
             runIncludeFixer("namespace a {\nnamespace d {\nbar b;\n}\n}\n"));

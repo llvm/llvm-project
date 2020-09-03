@@ -205,7 +205,7 @@ entry:
 ; GCN-NOT: and
 ; GCN-NOT: lshr
 ; GCN: v_mul_hi_u32_u24_e32 v[[MUL_HI:[0-9]+]],
-; GCN-NEXT: v_and_b32_e32 v[[HI:[0-9]+]], 1, v[[MUL_HI]]
+; GCN: v_and_b32_e32 v[[HI:[0-9]+]], 1, v[[MUL_HI]]
 ; GCN-NEXT: buffer_store_dword v[[HI]]
 define amdgpu_kernel void @test_umulhi24_i33(i32 addrspace(1)* %out, i33 %a, i33 %b) {
 entry:

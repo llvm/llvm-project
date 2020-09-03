@@ -1,4 +1,4 @@
-//===-- SBEvent.cpp ---------------------------------------------*- C++ -*-===//
+//===-- SBEvent.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -58,7 +58,7 @@ const SBEvent &SBEvent::operator=(const SBEvent &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBEvent::~SBEvent() {}
+SBEvent::~SBEvent() = default;
 
 const char *SBEvent::GetDataFlavor() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBEvent, GetDataFlavor);

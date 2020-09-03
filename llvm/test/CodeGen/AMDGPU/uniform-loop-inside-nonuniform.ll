@@ -5,11 +5,10 @@
 ; CHECK-LABEL: {{^}}test1:
 ; CHECK: v_cmp_ne_u32_e32 vcc, 0
 ; CHECK: s_and_saveexec_b64
-; CHECK-NEXT: ; mask branch
 ; CHECK-NEXT: s_cbranch_execz BB{{[0-9]+_[0-9]+}}
 
 ; CHECK: [[LOOP_BODY_LABEL:BB[0-9]+_[0-9]+]]: ; %loop_body
-; CHECK: s_cbranch_scc0 [[LOOP_BODY_LABEL]]
+; CHECK: s_cbranch_scc1 [[LOOP_BODY_LABEL]]
 
 ; CHECK: s_endpgm
 define amdgpu_ps void @test1(<8 x i32> inreg %rsrc, <2 x i32> %addr.base, i32 %y, i32 %p) {
@@ -33,7 +32,6 @@ out:
 
 ; CHECK-LABEL: {{^}}test2:
 ; CHECK: s_and_saveexec_b64
-; CHECK-NEXT: ; mask branch
 ; CHECK-NEXT: s_cbranch_execz
 define amdgpu_kernel void @test2(i32 addrspace(1)* %out, i32 %a, i32 %b) {
 main_body:

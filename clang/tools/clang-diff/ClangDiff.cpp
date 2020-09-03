@@ -102,7 +102,7 @@ getAST(const std::unique_ptr<CompilationDatabase> &CommonCompilations,
     }
   }
   addExtraArgs(Compilations);
-  std::array<std::string, 1> Files = {{Filename}};
+  std::array<std::string, 1> Files = {{std::string(Filename)}};
   ClangTool Tool(Compilations ? *Compilations : *CommonCompilations, Files);
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
   Tool.buildASTs(ASTs);

@@ -103,3 +103,11 @@ namespace copy_init {
 bool PR21836(_Atomic(int) *x) { // expected-warning {{'_Atomic' is a C11 extension}}
     return *x;
 }
+
+namespace non_trivially_copyable {
+  struct S {
+    ~S() {}
+  };
+  _Atomic S s;  // expected-error {{_Atomic cannot be applied to type 'non_trivially_copyable::S' which is not trivially copyable}} \
+                // expected-warning {{'_Atomic' is a C11 extension}}
+}

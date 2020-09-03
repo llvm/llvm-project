@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -fast-isel -mtriple=aarch64-apple-ios -o - %s | FileCheck %s
-; RUN: not llc -O0 -mtriple=aarch64-apple-ios -o /dev/null -fast-isel -fast-isel-abort=3 %s 2> %t
+; RUN: not --crash llc -O0 -mtriple=aarch64-apple-ios -o /dev/null -fast-isel -fast-isel-abort=3 %s 2> %t
 ; RUN: FileCheck %s --check-prefix=CHECK-ERRORS < %t
 
 ; The issue here is that FastISel cannot emit an ADDrr where one of the inputs
@@ -15,8 +15,7 @@
 ; CHECK-LABEL: foo:
 ; CHECK: sub
 ; CHECK-DAG: mov x[[SP:[0-9]+]], sp
-; CHECK-DAG: mov [[TMP:w[0-9]+]], #4104
-; CHECK: mov w[[OFFSET:[0-9]+]], [[TMP]]
+; CHECK-DAG: mov w[[OFFSET:[0-9]+]], #4104
 ; CHECK: strb w0, [x[[SP]], x[[OFFSET]]]
 
 define void @foo(i8 %in) {

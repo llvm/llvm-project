@@ -372,291 +372,291 @@ entry:
   %retval = alloca i32, align 4
   store i32 0, i32* %retval, align 4
   %0 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %1 = bitcast <16 x i32> %0 to <512 x i1>
+  %1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %0, i32 -1)
   %2 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 1), align 64
-  %3 = bitcast <16 x i32> %2 to <512 x i1>
-  %4 = call <512 x i1> @llvm.hexagon.V6.pred.and(<512 x i1> %1, <512 x i1> %3)
-  %5 = bitcast <512 x i1> %4 to <16 x i32>
+  %3 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %2, i32 -1)
+  %4 = call <64 x i1> @llvm.hexagon.V6.pred.and(<64 x i1> %1, <64 x i1> %3)
+  %5 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %4, i32 -1)
   store volatile <16 x i32> %5, <16 x i32>* @Q6VecPredResult, align 64
   %6 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %7 = bitcast <16 x i32> %6 to <512 x i1>
+  %7 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %6, i32 -1)
   %8 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 1), align 64
-  %9 = bitcast <16 x i32> %8 to <512 x i1>
-  %10 = call <512 x i1> @llvm.hexagon.V6.pred.and.n(<512 x i1> %7, <512 x i1> %9)
-  %11 = bitcast <512 x i1> %10 to <16 x i32>
+  %9 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %8, i32 -1)
+  %10 = call <64 x i1> @llvm.hexagon.V6.pred.and.n(<64 x i1> %7, <64 x i1> %9)
+  %11 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %10, i32 -1)
   store volatile <16 x i32> %11, <16 x i32>* @Q6VecPredResult, align 64
   %12 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %13 = bitcast <16 x i32> %12 to <512 x i1>
-  %14 = call <512 x i1> @llvm.hexagon.V6.pred.not(<512 x i1> %13)
-  %15 = bitcast <512 x i1> %14 to <16 x i32>
+  %13 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %12, i32 -1)
+  %14 = call <64 x i1> @llvm.hexagon.V6.pred.not(<64 x i1> %13)
+  %15 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %14, i32 -1)
   store volatile <16 x i32> %15, <16 x i32>* @Q6VecPredResult, align 64
   %16 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %17 = bitcast <16 x i32> %16 to <512 x i1>
+  %17 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %16, i32 -1)
   %18 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 1), align 64
-  %19 = bitcast <16 x i32> %18 to <512 x i1>
-  %20 = call <512 x i1> @llvm.hexagon.V6.pred.or(<512 x i1> %17, <512 x i1> %19)
-  %21 = bitcast <512 x i1> %20 to <16 x i32>
+  %19 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %18, i32 -1)
+  %20 = call <64 x i1> @llvm.hexagon.V6.pred.or(<64 x i1> %17, <64 x i1> %19)
+  %21 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %20, i32 -1)
   store volatile <16 x i32> %21, <16 x i32>* @Q6VecPredResult, align 64
   %22 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %23 = bitcast <16 x i32> %22 to <512 x i1>
+  %23 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %22, i32 -1)
   %24 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 1), align 64
-  %25 = bitcast <16 x i32> %24 to <512 x i1>
-  %26 = call <512 x i1> @llvm.hexagon.V6.pred.or.n(<512 x i1> %23, <512 x i1> %25)
-  %27 = bitcast <512 x i1> %26 to <16 x i32>
+  %25 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %24, i32 -1)
+  %26 = call <64 x i1> @llvm.hexagon.V6.pred.or.n(<64 x i1> %23, <64 x i1> %25)
+  %27 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %26, i32 -1)
   store volatile <16 x i32> %27, <16 x i32>* @Q6VecPredResult, align 64
   %28 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
-  %29 = call <512 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %28, i32 -1)
-  %30 = bitcast <512 x i1> %29 to <16 x i32>
+  %29 = call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %28, i32 -1)
+  %30 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %29, i32 -1)
   store volatile <16 x i32> %30, <16 x i32>* @Q6VecPredResult, align 64
   %31 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %32 = bitcast <16 x i32> %31 to <512 x i1>
+  %32 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %31, i32 -1)
   %33 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
-  %34 = call <512 x i1> @llvm.hexagon.V6.vandvrt.acc(<512 x i1> %32, <16 x i32> %33, i32 -1)
-  %35 = bitcast <512 x i1> %34 to <16 x i32>
+  %34 = call <64 x i1> @llvm.hexagon.V6.vandvrt.acc(<64 x i1> %32, <16 x i32> %33, i32 -1)
+  %35 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %34, i32 -1)
   store volatile <16 x i32> %35, <16 x i32>* @Q6VecPredResult, align 64
   %36 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %37 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %38 = call <512 x i1> @llvm.hexagon.V6.veqb(<16 x i32> %36, <16 x i32> %37)
-  %39 = bitcast <512 x i1> %38 to <16 x i32>
+  %38 = call <64 x i1> @llvm.hexagon.V6.veqb(<16 x i32> %36, <16 x i32> %37)
+  %39 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %38, i32 -1)
   store volatile <16 x i32> %39, <16 x i32>* @Q6VecPredResult, align 64
   %40 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %41 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %42 = call <512 x i1> @llvm.hexagon.V6.veqh(<16 x i32> %40, <16 x i32> %41)
-  %43 = bitcast <512 x i1> %42 to <16 x i32>
+  %42 = call <64 x i1> @llvm.hexagon.V6.veqh(<16 x i32> %40, <16 x i32> %41)
+  %43 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %42, i32 -1)
   store volatile <16 x i32> %43, <16 x i32>* @Q6VecPredResult, align 64
   %44 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %45 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %46 = call <512 x i1> @llvm.hexagon.V6.veqw(<16 x i32> %44, <16 x i32> %45)
-  %47 = bitcast <512 x i1> %46 to <16 x i32>
+  %46 = call <64 x i1> @llvm.hexagon.V6.veqw(<16 x i32> %44, <16 x i32> %45)
+  %47 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %46, i32 -1)
   store volatile <16 x i32> %47, <16 x i32>* @Q6VecPredResult, align 64
   %48 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %49 = bitcast <16 x i32> %48 to <512 x i1>
+  %49 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %48, i32 -1)
   %50 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %51 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %52 = call <512 x i1> @llvm.hexagon.V6.veqb.and(<512 x i1> %49, <16 x i32> %50, <16 x i32> %51)
-  %53 = bitcast <512 x i1> %52 to <16 x i32>
+  %52 = call <64 x i1> @llvm.hexagon.V6.veqb.and(<64 x i1> %49, <16 x i32> %50, <16 x i32> %51)
+  %53 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %52, i32 -1)
   store volatile <16 x i32> %53, <16 x i32>* @Q6VecPredResult, align 64
   %54 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %55 = bitcast <16 x i32> %54 to <512 x i1>
+  %55 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %54, i32 -1)
   %56 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %57 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %58 = call <512 x i1> @llvm.hexagon.V6.veqh.and(<512 x i1> %55, <16 x i32> %56, <16 x i32> %57)
-  %59 = bitcast <512 x i1> %58 to <16 x i32>
+  %58 = call <64 x i1> @llvm.hexagon.V6.veqh.and(<64 x i1> %55, <16 x i32> %56, <16 x i32> %57)
+  %59 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %58, i32 -1)
   store volatile <16 x i32> %59, <16 x i32>* @Q6VecPredResult, align 64
   %60 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %61 = bitcast <16 x i32> %60 to <512 x i1>
+  %61 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %60, i32 -1)
   %62 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %63 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %64 = call <512 x i1> @llvm.hexagon.V6.veqw.and(<512 x i1> %61, <16 x i32> %62, <16 x i32> %63)
-  %65 = bitcast <512 x i1> %64 to <16 x i32>
+  %64 = call <64 x i1> @llvm.hexagon.V6.veqw.and(<64 x i1> %61, <16 x i32> %62, <16 x i32> %63)
+  %65 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %64, i32 -1)
   store volatile <16 x i32> %65, <16 x i32>* @Q6VecPredResult, align 64
   %66 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %67 = bitcast <16 x i32> %66 to <512 x i1>
+  %67 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %66, i32 -1)
   %68 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %69 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %70 = call <512 x i1> @llvm.hexagon.V6.veqb.or(<512 x i1> %67, <16 x i32> %68, <16 x i32> %69)
-  %71 = bitcast <512 x i1> %70 to <16 x i32>
+  %70 = call <64 x i1> @llvm.hexagon.V6.veqb.or(<64 x i1> %67, <16 x i32> %68, <16 x i32> %69)
+  %71 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %70, i32 -1)
   store volatile <16 x i32> %71, <16 x i32>* @Q6VecPredResult, align 64
   %72 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %73 = bitcast <16 x i32> %72 to <512 x i1>
+  %73 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %72, i32 -1)
   %74 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %75 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %76 = call <512 x i1> @llvm.hexagon.V6.veqh.or(<512 x i1> %73, <16 x i32> %74, <16 x i32> %75)
-  %77 = bitcast <512 x i1> %76 to <16 x i32>
+  %76 = call <64 x i1> @llvm.hexagon.V6.veqh.or(<64 x i1> %73, <16 x i32> %74, <16 x i32> %75)
+  %77 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %76, i32 -1)
   store volatile <16 x i32> %77, <16 x i32>* @Q6VecPredResult, align 64
   %78 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %79 = bitcast <16 x i32> %78 to <512 x i1>
+  %79 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %78, i32 -1)
   %80 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %81 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %82 = call <512 x i1> @llvm.hexagon.V6.veqw.or(<512 x i1> %79, <16 x i32> %80, <16 x i32> %81)
-  %83 = bitcast <512 x i1> %82 to <16 x i32>
+  %82 = call <64 x i1> @llvm.hexagon.V6.veqw.or(<64 x i1> %79, <16 x i32> %80, <16 x i32> %81)
+  %83 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %82, i32 -1)
   store volatile <16 x i32> %83, <16 x i32>* @Q6VecPredResult, align 64
   %84 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %85 = bitcast <16 x i32> %84 to <512 x i1>
+  %85 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %84, i32 -1)
   %86 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %87 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %88 = call <512 x i1> @llvm.hexagon.V6.veqb.xor(<512 x i1> %85, <16 x i32> %86, <16 x i32> %87)
-  %89 = bitcast <512 x i1> %88 to <16 x i32>
+  %88 = call <64 x i1> @llvm.hexagon.V6.veqb.xor(<64 x i1> %85, <16 x i32> %86, <16 x i32> %87)
+  %89 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %88, i32 -1)
   store volatile <16 x i32> %89, <16 x i32>* @Q6VecPredResult, align 64
   %90 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %91 = bitcast <16 x i32> %90 to <512 x i1>
+  %91 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %90, i32 -1)
   %92 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %93 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %94 = call <512 x i1> @llvm.hexagon.V6.veqh.xor(<512 x i1> %91, <16 x i32> %92, <16 x i32> %93)
-  %95 = bitcast <512 x i1> %94 to <16 x i32>
+  %94 = call <64 x i1> @llvm.hexagon.V6.veqh.xor(<64 x i1> %91, <16 x i32> %92, <16 x i32> %93)
+  %95 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %94, i32 -1)
   store volatile <16 x i32> %95, <16 x i32>* @Q6VecPredResult, align 64
   %96 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %97 = bitcast <16 x i32> %96 to <512 x i1>
+  %97 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %96, i32 -1)
   %98 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %99 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %100 = call <512 x i1> @llvm.hexagon.V6.veqw.xor(<512 x i1> %97, <16 x i32> %98, <16 x i32> %99)
-  %101 = bitcast <512 x i1> %100 to <16 x i32>
+  %100 = call <64 x i1> @llvm.hexagon.V6.veqw.xor(<64 x i1> %97, <16 x i32> %98, <16 x i32> %99)
+  %101 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %100, i32 -1)
   store volatile <16 x i32> %101, <16 x i32>* @Q6VecPredResult, align 64
   %102 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %103 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %104 = call <512 x i1> @llvm.hexagon.V6.vgtb(<16 x i32> %102, <16 x i32> %103)
-  %105 = bitcast <512 x i1> %104 to <16 x i32>
+  %104 = call <64 x i1> @llvm.hexagon.V6.vgtb(<16 x i32> %102, <16 x i32> %103)
+  %105 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %104, i32 -1)
   store volatile <16 x i32> %105, <16 x i32>* @Q6VecPredResult, align 64
   %106 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %107 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %108 = call <512 x i1> @llvm.hexagon.V6.vgth(<16 x i32> %106, <16 x i32> %107)
-  %109 = bitcast <512 x i1> %108 to <16 x i32>
+  %108 = call <64 x i1> @llvm.hexagon.V6.vgth(<16 x i32> %106, <16 x i32> %107)
+  %109 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %108, i32 -1)
   store volatile <16 x i32> %109, <16 x i32>* @Q6VecPredResult, align 64
   %110 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %111 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %112 = call <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %110, <16 x i32> %111)
-  %113 = bitcast <512 x i1> %112 to <16 x i32>
+  %112 = call <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %110, <16 x i32> %111)
+  %113 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %112, i32 -1)
   store volatile <16 x i32> %113, <16 x i32>* @Q6VecPredResult, align 64
   %114 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %115 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %116 = call <512 x i1> @llvm.hexagon.V6.vgtuh(<16 x i32> %114, <16 x i32> %115)
-  %117 = bitcast <512 x i1> %116 to <16 x i32>
+  %116 = call <64 x i1> @llvm.hexagon.V6.vgtuh(<16 x i32> %114, <16 x i32> %115)
+  %117 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %116, i32 -1)
   store volatile <16 x i32> %117, <16 x i32>* @Q6VecPredResult, align 64
   %118 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %119 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %120 = call <512 x i1> @llvm.hexagon.V6.vgtuw(<16 x i32> %118, <16 x i32> %119)
-  %121 = bitcast <512 x i1> %120 to <16 x i32>
+  %120 = call <64 x i1> @llvm.hexagon.V6.vgtuw(<16 x i32> %118, <16 x i32> %119)
+  %121 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %120, i32 -1)
   store volatile <16 x i32> %121, <16 x i32>* @Q6VecPredResult, align 64
   %122 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %123 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %124 = call <512 x i1> @llvm.hexagon.V6.vgtw(<16 x i32> %122, <16 x i32> %123)
-  %125 = bitcast <512 x i1> %124 to <16 x i32>
+  %124 = call <64 x i1> @llvm.hexagon.V6.vgtw(<16 x i32> %122, <16 x i32> %123)
+  %125 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %124, i32 -1)
   store volatile <16 x i32> %125, <16 x i32>* @Q6VecPredResult, align 64
   %126 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %127 = bitcast <16 x i32> %126 to <512 x i1>
+  %127 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %126, i32 -1)
   %128 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %129 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %130 = call <512 x i1> @llvm.hexagon.V6.vgtb.and(<512 x i1> %127, <16 x i32> %128, <16 x i32> %129)
-  %131 = bitcast <512 x i1> %130 to <16 x i32>
+  %130 = call <64 x i1> @llvm.hexagon.V6.vgtb.and(<64 x i1> %127, <16 x i32> %128, <16 x i32> %129)
+  %131 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %130, i32 -1)
   store volatile <16 x i32> %131, <16 x i32>* @Q6VecPredResult, align 64
   %132 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %133 = bitcast <16 x i32> %132 to <512 x i1>
+  %133 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %132, i32 -1)
   %134 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %135 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %136 = call <512 x i1> @llvm.hexagon.V6.vgth.and(<512 x i1> %133, <16 x i32> %134, <16 x i32> %135)
-  %137 = bitcast <512 x i1> %136 to <16 x i32>
+  %136 = call <64 x i1> @llvm.hexagon.V6.vgth.and(<64 x i1> %133, <16 x i32> %134, <16 x i32> %135)
+  %137 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %136, i32 -1)
   store volatile <16 x i32> %137, <16 x i32>* @Q6VecPredResult, align 64
   %138 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %139 = bitcast <16 x i32> %138 to <512 x i1>
+  %139 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %138, i32 -1)
   %140 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %141 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %142 = call <512 x i1> @llvm.hexagon.V6.vgtub.and(<512 x i1> %139, <16 x i32> %140, <16 x i32> %141)
-  %143 = bitcast <512 x i1> %142 to <16 x i32>
+  %142 = call <64 x i1> @llvm.hexagon.V6.vgtub.and(<64 x i1> %139, <16 x i32> %140, <16 x i32> %141)
+  %143 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %142, i32 -1)
   store volatile <16 x i32> %143, <16 x i32>* @Q6VecPredResult, align 64
   %144 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %145 = bitcast <16 x i32> %144 to <512 x i1>
+  %145 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %144, i32 -1)
   %146 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %147 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %148 = call <512 x i1> @llvm.hexagon.V6.vgtuh.and(<512 x i1> %145, <16 x i32> %146, <16 x i32> %147)
-  %149 = bitcast <512 x i1> %148 to <16 x i32>
+  %148 = call <64 x i1> @llvm.hexagon.V6.vgtuh.and(<64 x i1> %145, <16 x i32> %146, <16 x i32> %147)
+  %149 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %148, i32 -1)
   store volatile <16 x i32> %149, <16 x i32>* @Q6VecPredResult, align 64
   %150 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %151 = bitcast <16 x i32> %150 to <512 x i1>
+  %151 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %150, i32 -1)
   %152 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %153 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %154 = call <512 x i1> @llvm.hexagon.V6.vgtuw.and(<512 x i1> %151, <16 x i32> %152, <16 x i32> %153)
-  %155 = bitcast <512 x i1> %154 to <16 x i32>
+  %154 = call <64 x i1> @llvm.hexagon.V6.vgtuw.and(<64 x i1> %151, <16 x i32> %152, <16 x i32> %153)
+  %155 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %154, i32 -1)
   store volatile <16 x i32> %155, <16 x i32>* @Q6VecPredResult, align 64
   %156 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %157 = bitcast <16 x i32> %156 to <512 x i1>
+  %157 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %156, i32 -1)
   %158 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %159 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %160 = call <512 x i1> @llvm.hexagon.V6.vgtw.and(<512 x i1> %157, <16 x i32> %158, <16 x i32> %159)
-  %161 = bitcast <512 x i1> %160 to <16 x i32>
+  %160 = call <64 x i1> @llvm.hexagon.V6.vgtw.and(<64 x i1> %157, <16 x i32> %158, <16 x i32> %159)
+  %161 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %160, i32 -1)
   store volatile <16 x i32> %161, <16 x i32>* @Q6VecPredResult, align 64
   %162 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %163 = bitcast <16 x i32> %162 to <512 x i1>
+  %163 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %162, i32 -1)
   %164 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %165 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %166 = call <512 x i1> @llvm.hexagon.V6.vgtb.or(<512 x i1> %163, <16 x i32> %164, <16 x i32> %165)
-  %167 = bitcast <512 x i1> %166 to <16 x i32>
+  %166 = call <64 x i1> @llvm.hexagon.V6.vgtb.or(<64 x i1> %163, <16 x i32> %164, <16 x i32> %165)
+  %167 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %166, i32 -1)
   store volatile <16 x i32> %167, <16 x i32>* @Q6VecPredResult, align 64
   %168 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %169 = bitcast <16 x i32> %168 to <512 x i1>
+  %169 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %168, i32 -1)
   %170 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %171 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %172 = call <512 x i1> @llvm.hexagon.V6.vgth.or(<512 x i1> %169, <16 x i32> %170, <16 x i32> %171)
-  %173 = bitcast <512 x i1> %172 to <16 x i32>
+  %172 = call <64 x i1> @llvm.hexagon.V6.vgth.or(<64 x i1> %169, <16 x i32> %170, <16 x i32> %171)
+  %173 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %172, i32 -1)
   store volatile <16 x i32> %173, <16 x i32>* @Q6VecPredResult, align 64
   %174 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %175 = bitcast <16 x i32> %174 to <512 x i1>
+  %175 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %174, i32 -1)
   %176 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %177 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %178 = call <512 x i1> @llvm.hexagon.V6.vgtub.or(<512 x i1> %175, <16 x i32> %176, <16 x i32> %177)
-  %179 = bitcast <512 x i1> %178 to <16 x i32>
+  %178 = call <64 x i1> @llvm.hexagon.V6.vgtub.or(<64 x i1> %175, <16 x i32> %176, <16 x i32> %177)
+  %179 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %178, i32 -1)
   store volatile <16 x i32> %179, <16 x i32>* @Q6VecPredResult, align 64
   %180 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %181 = bitcast <16 x i32> %180 to <512 x i1>
+  %181 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %180, i32 -1)
   %182 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %183 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %184 = call <512 x i1> @llvm.hexagon.V6.vgtuh.or(<512 x i1> %181, <16 x i32> %182, <16 x i32> %183)
-  %185 = bitcast <512 x i1> %184 to <16 x i32>
+  %184 = call <64 x i1> @llvm.hexagon.V6.vgtuh.or(<64 x i1> %181, <16 x i32> %182, <16 x i32> %183)
+  %185 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %184, i32 -1)
   store volatile <16 x i32> %185, <16 x i32>* @Q6VecPredResult, align 64
   %186 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %187 = bitcast <16 x i32> %186 to <512 x i1>
+  %187 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %186, i32 -1)
   %188 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %189 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %190 = call <512 x i1> @llvm.hexagon.V6.vgtuw.or(<512 x i1> %187, <16 x i32> %188, <16 x i32> %189)
-  %191 = bitcast <512 x i1> %190 to <16 x i32>
+  %190 = call <64 x i1> @llvm.hexagon.V6.vgtuw.or(<64 x i1> %187, <16 x i32> %188, <16 x i32> %189)
+  %191 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %190, i32 -1)
   store volatile <16 x i32> %191, <16 x i32>* @Q6VecPredResult, align 64
   %192 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %193 = bitcast <16 x i32> %192 to <512 x i1>
+  %193 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %192, i32 -1)
   %194 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %195 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %196 = call <512 x i1> @llvm.hexagon.V6.vgtw.or(<512 x i1> %193, <16 x i32> %194, <16 x i32> %195)
-  %197 = bitcast <512 x i1> %196 to <16 x i32>
+  %196 = call <64 x i1> @llvm.hexagon.V6.vgtw.or(<64 x i1> %193, <16 x i32> %194, <16 x i32> %195)
+  %197 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %196, i32 -1)
   store volatile <16 x i32> %197, <16 x i32>* @Q6VecPredResult, align 64
   %198 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %199 = bitcast <16 x i32> %198 to <512 x i1>
+  %199 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %198, i32 -1)
   %200 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %201 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %202 = call <512 x i1> @llvm.hexagon.V6.vgtb.xor(<512 x i1> %199, <16 x i32> %200, <16 x i32> %201)
-  %203 = bitcast <512 x i1> %202 to <16 x i32>
+  %202 = call <64 x i1> @llvm.hexagon.V6.vgtb.xor(<64 x i1> %199, <16 x i32> %200, <16 x i32> %201)
+  %203 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %202, i32 -1)
   store volatile <16 x i32> %203, <16 x i32>* @Q6VecPredResult, align 64
   %204 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %205 = bitcast <16 x i32> %204 to <512 x i1>
+  %205 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %204, i32 -1)
   %206 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %207 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %208 = call <512 x i1> @llvm.hexagon.V6.vgth.xor(<512 x i1> %205, <16 x i32> %206, <16 x i32> %207)
-  %209 = bitcast <512 x i1> %208 to <16 x i32>
+  %208 = call <64 x i1> @llvm.hexagon.V6.vgth.xor(<64 x i1> %205, <16 x i32> %206, <16 x i32> %207)
+  %209 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %208, i32 -1)
   store volatile <16 x i32> %209, <16 x i32>* @Q6VecPredResult, align 64
   %210 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %211 = bitcast <16 x i32> %210 to <512 x i1>
+  %211 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %210, i32 -1)
   %212 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %213 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %214 = call <512 x i1> @llvm.hexagon.V6.vgtub.xor(<512 x i1> %211, <16 x i32> %212, <16 x i32> %213)
-  %215 = bitcast <512 x i1> %214 to <16 x i32>
+  %214 = call <64 x i1> @llvm.hexagon.V6.vgtub.xor(<64 x i1> %211, <16 x i32> %212, <16 x i32> %213)
+  %215 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %214, i32 -1)
   store volatile <16 x i32> %215, <16 x i32>* @Q6VecPredResult, align 64
   %216 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %217 = bitcast <16 x i32> %216 to <512 x i1>
+  %217 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %216, i32 -1)
   %218 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %219 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %220 = call <512 x i1> @llvm.hexagon.V6.vgtuh.xor(<512 x i1> %217, <16 x i32> %218, <16 x i32> %219)
-  %221 = bitcast <512 x i1> %220 to <16 x i32>
+  %220 = call <64 x i1> @llvm.hexagon.V6.vgtuh.xor(<64 x i1> %217, <16 x i32> %218, <16 x i32> %219)
+  %221 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %220, i32 -1)
   store volatile <16 x i32> %221, <16 x i32>* @Q6VecPredResult, align 64
   %222 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %223 = bitcast <16 x i32> %222 to <512 x i1>
+  %223 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %222, i32 -1)
   %224 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %225 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %226 = call <512 x i1> @llvm.hexagon.V6.vgtuw.xor(<512 x i1> %223, <16 x i32> %224, <16 x i32> %225)
-  %227 = bitcast <512 x i1> %226 to <16 x i32>
+  %226 = call <64 x i1> @llvm.hexagon.V6.vgtuw.xor(<64 x i1> %223, <16 x i32> %224, <16 x i32> %225)
+  %227 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %226, i32 -1)
   store volatile <16 x i32> %227, <16 x i32>* @Q6VecPredResult, align 64
   %228 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %229 = bitcast <16 x i32> %228 to <512 x i1>
+  %229 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %228, i32 -1)
   %230 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %231 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %232 = call <512 x i1> @llvm.hexagon.V6.vgtw.xor(<512 x i1> %229, <16 x i32> %230, <16 x i32> %231)
-  %233 = bitcast <512 x i1> %232 to <16 x i32>
+  %232 = call <64 x i1> @llvm.hexagon.V6.vgtw.xor(<64 x i1> %229, <16 x i32> %230, <16 x i32> %231)
+  %233 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %232, i32 -1)
   store volatile <16 x i32> %233, <16 x i32>* @Q6VecPredResult, align 64
-  %234 = call <512 x i1> @llvm.hexagon.V6.pred.scalar2(i32 1)
-  %235 = bitcast <512 x i1> %234 to <16 x i32>
+  %234 = call <64 x i1> @llvm.hexagon.V6.pred.scalar2(i32 1)
+  %235 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %234, i32 -1)
   store volatile <16 x i32> %235, <16 x i32>* @Q6VecPredResult, align 64
   %236 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %237 = bitcast <16 x i32> %236 to <512 x i1>
+  %237 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %236, i32 -1)
   %238 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 1), align 64
-  %239 = bitcast <16 x i32> %238 to <512 x i1>
-  %240 = call <512 x i1> @llvm.hexagon.V6.pred.xor(<512 x i1> %237, <512 x i1> %239)
-  %241 = bitcast <512 x i1> %240 to <16 x i32>
+  %239 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %238, i32 -1)
+  %240 = call <64 x i1> @llvm.hexagon.V6.pred.xor(<64 x i1> %237, <64 x i1> %239)
+  %241 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %240, i32 -1)
   store volatile <16 x i32> %241, <16 x i32>* @Q6VecPredResult, align 64
   %242 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %243 = call <16 x i32> @llvm.hexagon.V6.vassign(<16 x i32> %242)
@@ -676,8 +676,8 @@ entry:
   %253 = call <16 x i32> @llvm.hexagon.V6.valignb(<16 x i32> %251, <16 x i32> %252, i32 -1)
   store volatile <16 x i32> %253, <16 x i32>* @VectorResult, align 64
   %254 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %255 = bitcast <16 x i32> %254 to <512 x i1>
-  %256 = call <16 x i32> @llvm.hexagon.V6.vandqrt(<512 x i1> %255, i32 -1)
+  %255 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %254, i32 -1)
+  %256 = call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %255, i32 -1)
   store volatile <16 x i32> %256, <16 x i32>* @VectorResult, align 64
   %257 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %258 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
@@ -685,8 +685,8 @@ entry:
   store volatile <16 x i32> %259, <16 x i32>* @VectorResult, align 64
   %260 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %261 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %262 = bitcast <16 x i32> %261 to <512 x i1>
-  %263 = call <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32> %260, <512 x i1> %262, i32 -1)
+  %262 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %261, i32 -1)
+  %263 = call <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32> %260, <64 x i1> %262, i32 -1)
   store volatile <16 x i32> %263, <16 x i32>* @VectorResult, align 64
   %264 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %265 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
@@ -701,10 +701,10 @@ entry:
   %272 = call <16 x i32> @llvm.hexagon.V6.vlalignb(<16 x i32> %270, <16 x i32> %271, i32 -1)
   store volatile <16 x i32> %272, <16 x i32>* @VectorResult, align 64
   %273 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %274 = bitcast <16 x i32> %273 to <512 x i1>
+  %274 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %273, i32 -1)
   %275 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %276 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %277 = call <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1> %274, <16 x i32> %275, <16 x i32> %276)
+  %277 = call <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1> %274, <16 x i32> %275, <16 x i32> %276)
   store volatile <16 x i32> %277, <16 x i32>* @VectorResult, align 64
   %278 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %279 = call <16 x i32> @llvm.hexagon.V6.vnot(<16 x i32> %278)
@@ -729,28 +729,28 @@ entry:
   %292 = call <16 x i32> @llvm.hexagon.V6.vd0()
   store volatile <16 x i32> %292, <16 x i32>* @VectorResult, align 64
   %293 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %294 = bitcast <16 x i32> %293 to <512 x i1>
+  %294 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %293, i32 -1)
   %295 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %296 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %297 = call <16 x i32> @llvm.hexagon.V6.vaddbq(<512 x i1> %294, <16 x i32> %295, <16 x i32> %296)
+  %297 = call <16 x i32> @llvm.hexagon.V6.vaddbq(<64 x i1> %294, <16 x i32> %295, <16 x i32> %296)
   store volatile <16 x i32> %297, <16 x i32>* @VectorResult, align 64
   %298 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %299 = bitcast <16 x i32> %298 to <512 x i1>
+  %299 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %298, i32 -1)
   %300 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %301 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %302 = call <16 x i32> @llvm.hexagon.V6.vaddbnq(<512 x i1> %299, <16 x i32> %300, <16 x i32> %301)
+  %302 = call <16 x i32> @llvm.hexagon.V6.vaddbnq(<64 x i1> %299, <16 x i32> %300, <16 x i32> %301)
   store volatile <16 x i32> %302, <16 x i32>* @VectorResult, align 64
   %303 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %304 = bitcast <16 x i32> %303 to <512 x i1>
+  %304 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %303, i32 -1)
   %305 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %306 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %307 = call <16 x i32> @llvm.hexagon.V6.vsubbq(<512 x i1> %304, <16 x i32> %305, <16 x i32> %306)
+  %307 = call <16 x i32> @llvm.hexagon.V6.vsubbq(<64 x i1> %304, <16 x i32> %305, <16 x i32> %306)
   store volatile <16 x i32> %307, <16 x i32>* @VectorResult, align 64
   %308 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %309 = bitcast <16 x i32> %308 to <512 x i1>
+  %309 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %308, i32 -1)
   %310 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %311 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %312 = call <16 x i32> @llvm.hexagon.V6.vsubbnq(<512 x i1> %309, <16 x i32> %310, <16 x i32> %311)
+  %312 = call <16 x i32> @llvm.hexagon.V6.vsubbnq(<64 x i1> %309, <16 x i32> %310, <16 x i32> %311)
   store volatile <16 x i32> %312, <16 x i32>* @VectorResult, align 64
   %313 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %314 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
@@ -812,28 +812,28 @@ entry:
   %356 = call <16 x i32> @llvm.hexagon.V6.vsubb(<16 x i32> %354, <16 x i32> %355)
   store volatile <16 x i32> %356, <16 x i32>* @VectorResult, align 64
   %357 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %358 = bitcast <16 x i32> %357 to <512 x i1>
+  %358 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %357, i32 -1)
   %359 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %360 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %361 = call <16 x i32> @llvm.hexagon.V6.vaddhq(<512 x i1> %358, <16 x i32> %359, <16 x i32> %360)
+  %361 = call <16 x i32> @llvm.hexagon.V6.vaddhq(<64 x i1> %358, <16 x i32> %359, <16 x i32> %360)
   store volatile <16 x i32> %361, <16 x i32>* @VectorResult, align 64
   %362 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %363 = bitcast <16 x i32> %362 to <512 x i1>
+  %363 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %362, i32 -1)
   %364 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %365 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %366 = call <16 x i32> @llvm.hexagon.V6.vaddhnq(<512 x i1> %363, <16 x i32> %364, <16 x i32> %365)
+  %366 = call <16 x i32> @llvm.hexagon.V6.vaddhnq(<64 x i1> %363, <16 x i32> %364, <16 x i32> %365)
   store volatile <16 x i32> %366, <16 x i32>* @VectorResult, align 64
   %367 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %368 = bitcast <16 x i32> %367 to <512 x i1>
+  %368 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %367, i32 -1)
   %369 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %370 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %371 = call <16 x i32> @llvm.hexagon.V6.vsubhq(<512 x i1> %368, <16 x i32> %369, <16 x i32> %370)
+  %371 = call <16 x i32> @llvm.hexagon.V6.vsubhq(<64 x i1> %368, <16 x i32> %369, <16 x i32> %370)
   store volatile <16 x i32> %371, <16 x i32>* @VectorResult, align 64
   %372 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %373 = bitcast <16 x i32> %372 to <512 x i1>
+  %373 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %372, i32 -1)
   %374 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %375 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %376 = call <16 x i32> @llvm.hexagon.V6.vsubhnq(<512 x i1> %373, <16 x i32> %374, <16 x i32> %375)
+  %376 = call <16 x i32> @llvm.hexagon.V6.vsubhnq(<64 x i1> %373, <16 x i32> %374, <16 x i32> %375)
   store volatile <16 x i32> %376, <16 x i32>* @VectorResult, align 64
   %377 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %378 = call <16 x i32> @llvm.hexagon.V6.vabsh(<16 x i32> %377)
@@ -1105,28 +1105,28 @@ entry:
   %574 = call <16 x i32> @llvm.hexagon.V6.vrmpyubv.acc(<16 x i32> %571, <16 x i32> %572, <16 x i32> %573)
   store volatile <16 x i32> %574, <16 x i32>* @VectorResult, align 64
   %575 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %576 = bitcast <16 x i32> %575 to <512 x i1>
+  %576 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %575, i32 -1)
   %577 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %578 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %579 = call <16 x i32> @llvm.hexagon.V6.vaddwq(<512 x i1> %576, <16 x i32> %577, <16 x i32> %578)
+  %579 = call <16 x i32> @llvm.hexagon.V6.vaddwq(<64 x i1> %576, <16 x i32> %577, <16 x i32> %578)
   store volatile <16 x i32> %579, <16 x i32>* @VectorResult, align 64
   %580 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %581 = bitcast <16 x i32> %580 to <512 x i1>
+  %581 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %580, i32 -1)
   %582 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %583 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %584 = call <16 x i32> @llvm.hexagon.V6.vaddwnq(<512 x i1> %581, <16 x i32> %582, <16 x i32> %583)
+  %584 = call <16 x i32> @llvm.hexagon.V6.vaddwnq(<64 x i1> %581, <16 x i32> %582, <16 x i32> %583)
   store volatile <16 x i32> %584, <16 x i32>* @VectorResult, align 64
   %585 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %586 = bitcast <16 x i32> %585 to <512 x i1>
+  %586 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %585, i32 -1)
   %587 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %588 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %589 = call <16 x i32> @llvm.hexagon.V6.vsubwq(<512 x i1> %586, <16 x i32> %587, <16 x i32> %588)
+  %589 = call <16 x i32> @llvm.hexagon.V6.vsubwq(<64 x i1> %586, <16 x i32> %587, <16 x i32> %588)
   store volatile <16 x i32> %589, <16 x i32>* @VectorResult, align 64
   %590 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %591 = bitcast <16 x i32> %590 to <512 x i1>
+  %591 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %590, i32 -1)
   %592 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %593 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %594 = call <16 x i32> @llvm.hexagon.V6.vsubwnq(<512 x i1> %591, <16 x i32> %592, <16 x i32> %593)
+  %594 = call <16 x i32> @llvm.hexagon.V6.vsubwnq(<64 x i1> %591, <16 x i32> %592, <16 x i32> %593)
   store volatile <16 x i32> %594, <16 x i32>* @VectorResult, align 64
   %595 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %596 = call <16 x i32> @llvm.hexagon.V6.vabsw(<16 x i32> %595)
@@ -1359,10 +1359,10 @@ entry:
   %764 = call <32 x i32> @llvm.hexagon.V6.vshuffvdd(<16 x i32> %762, <16 x i32> %763, i32 1)
   store volatile <32 x i32> %764, <32 x i32>* @VectorPairResult, align 128
   %765 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
-  %766 = bitcast <16 x i32> %765 to <512 x i1>
+  %766 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %765, i32 -1)
   %767 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %768 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %769 = call <32 x i32> @llvm.hexagon.V6.vswap(<512 x i1> %766, <16 x i32> %767, <16 x i32> %768)
+  %769 = call <32 x i32> @llvm.hexagon.V6.vswap(<64 x i1> %766, <16 x i32> %767, <16 x i32> %768)
   store volatile <32 x i32> %769, <32 x i32>* @VectorPairResult, align 128
   %770 = load volatile <32 x i32>, <32 x i32>* getelementptr inbounds ([15 x <32 x i32>], [15 x <32 x i32>]* @vector_pairs, i32 0, i32 0), align 128
   %771 = load volatile <32 x i32>, <32 x i32>* getelementptr inbounds ([15 x <32 x i32>], [15 x <32 x i32>]* @vector_pairs, i32 0, i32 1), align 128
@@ -1664,139 +1664,139 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.and(<512 x i1>, <512 x i1>) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.and(<64 x i1>, <64 x i1>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.and.n(<512 x i1>, <512 x i1>) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.and.n(<64 x i1>, <64 x i1>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.not(<512 x i1>) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.not(<64 x i1>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.or(<512 x i1>, <512 x i1>) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.or(<64 x i1>, <64 x i1>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.or.n(<512 x i1>, <512 x i1>) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.or.n(<64 x i1>, <64 x i1>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #1
+declare <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vandvrt.acc(<512 x i1>, <16 x i32>, i32) #1
+declare <64 x i1> @llvm.hexagon.V6.vandvrt.acc(<64 x i1>, <16 x i32>, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.veqb(<16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.veqb(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.veqh(<16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.veqh(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.veqw(<16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.veqw(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.veqb.and(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.veqb.and(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.veqh.and(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.veqh.and(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.veqw.and(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.veqw.and(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.veqb.or(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.veqb.or(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.veqh.or(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.veqh.or(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.veqw.or(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.veqw.or(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.veqb.xor(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.veqb.xor(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.veqh.xor(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.veqh.xor(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.veqw.xor(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.veqw.xor(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtb(<16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtb(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgth(<16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgth(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtub(<16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtuh(<16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtuh(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtuw(<16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtuw(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtw(<16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtw(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtb.and(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtb.and(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgth.and(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgth.and(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtub.and(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtub.and(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtuh.and(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtuh.and(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtuw.and(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtuw.and(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtw.and(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtw.and(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtb.or(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtb.or(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgth.or(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgth.or(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtub.or(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtub.or(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtuh.or(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtuh.or(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtuw.or(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtuw.or(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtw.or(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtw.or(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtb.xor(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtb.xor(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgth.xor(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgth.xor(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtub.xor(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtub.xor(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtuh.xor(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtuh.xor(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtuw.xor(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtuw.xor(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtw.xor(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtw.xor(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.scalar2(i32) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.scalar2(i32) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.pred.xor(<512 x i1>, <512 x i1>) #1
+declare <64 x i1> @llvm.hexagon.V6.pred.xor(<64 x i1>, <64 x i1>) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vassign(<16 x i32>) #1
@@ -1814,13 +1814,13 @@ declare <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32>, <16 x i32>, i32) #1
 declare <16 x i32> @llvm.hexagon.V6.valignb(<16 x i32>, <16 x i32>, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vandqrt(<512 x i1>, i32) #1
+declare <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1>, i32) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vand(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32>, <512 x i1>, i32) #1
+declare <16 x i32> @llvm.hexagon.V6.vandqrt.acc(<16 x i32>, <64 x i1>, i32) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vdelta(<16 x i32>, <16 x i32>) #1
@@ -1832,7 +1832,7 @@ declare <16 x i32> @llvm.hexagon.V6.vlalignbi(<16 x i32>, <16 x i32>, i32) #1
 declare <16 x i32> @llvm.hexagon.V6.vlalignb(<16 x i32>, <16 x i32>, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vmux(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vnot(<16 x i32>) #1
@@ -1856,16 +1856,16 @@ declare <16 x i32> @llvm.hexagon.V6.vxor(<16 x i32>, <16 x i32>) #1
 declare <16 x i32> @llvm.hexagon.V6.vd0() #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vaddbq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vaddbq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vaddbnq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vaddbnq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vsubbq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vsubbq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vsubbnq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vsubbnq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vaddb(<16 x i32>, <16 x i32>) #1
@@ -1913,16 +1913,16 @@ declare <16 x i32> @llvm.hexagon.V6.vshuffob(<16 x i32>, <16 x i32>) #1
 declare <16 x i32> @llvm.hexagon.V6.vsubb(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vaddhq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vaddhq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vaddhnq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vaddhnq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vsubhq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vsubhq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vsubhnq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vsubhnq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vabsh(<16 x i32>) #1
@@ -2138,16 +2138,16 @@ declare <16 x i32> @llvm.hexagon.V6.vrmpyub.acc(<16 x i32>, <16 x i32>, i32) #1
 declare <16 x i32> @llvm.hexagon.V6.vrmpyubv.acc(<16 x i32>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vaddwq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vaddwq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vaddwnq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vaddwnq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vsubwq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vsubwq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vsubwnq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vsubwnq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vabsw(<16 x i32>) #1
@@ -2318,7 +2318,7 @@ declare <32 x i32> @llvm.hexagon.V6.vdealvdd(<16 x i32>, <16 x i32>, i32) #1
 declare <32 x i32> @llvm.hexagon.V6.vshuffvdd(<16 x i32>, <16 x i32>, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare <32 x i32> @llvm.hexagon.V6.vswap(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <32 x i32> @llvm.hexagon.V6.vswap(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
 declare <32 x i32> @llvm.hexagon.V6.vaddb.dv(<32 x i32>, <32 x i32>) #1

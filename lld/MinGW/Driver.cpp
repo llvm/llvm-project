@@ -42,6 +42,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
@@ -114,7 +115,7 @@ static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
   SmallString<128> s;
   sys::path::append(s, path1, path2);
   if (sys::fs::exists(s))
-    return s.str().str();
+    return std::string(s);
   return None;
 }
 
@@ -248,6 +249,12 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     add("-lldmap:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_reproduce))
     add("-reproduce:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_thinlto_cache_dir))
+    add("-lldltocache:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_file_alignment))
+    add("-filealign:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_section_alignment))
+    add("-align:" + StringRef(a->getValue()));
 
   if (auto *a = args.getLastArg(OPT_o))
     add("-out:" + StringRef(a->getValue()));
@@ -281,6 +288,8 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     add("-kill-at");
   if (args.hasArg(OPT_appcontainer))
     add("-appcontainer");
+  if (args.hasArg(OPT_no_seh))
+    add("-noseh");
 
   if (args.getLastArgValue(OPT_m) != "thumb2pe" &&
       args.getLastArgValue(OPT_m) != "arm64pe" && !args.hasArg(OPT_dynamicbase))
@@ -293,6 +302,16 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     add("-opt:ref");
   else
     add("-opt:noref");
+
+  if (args.hasFlag(OPT_enable_auto_import, OPT_disable_auto_import, true))
+    add("-auto-import");
+  else
+    add("-auto-import:no");
+  if (args.hasFlag(OPT_enable_runtime_pseudo_reloc,
+                   OPT_disable_runtime_pseudo_reloc, true))
+    add("-runtime-pseudo-reloc");
+  else
+    add("-runtime-pseudo-reloc:no");
 
   if (auto *a = args.getLastArg(OPT_icf)) {
     StringRef s = a->getValue();

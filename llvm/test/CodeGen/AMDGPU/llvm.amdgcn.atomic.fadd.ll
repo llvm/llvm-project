@@ -70,3 +70,14 @@ main_body:
   call void @llvm.amdgcn.global.atomic.fadd.p1v2f16.v2f16(<2 x half> addrspace(1)* %p, <2 x half> %data)
   ret void
 }
+
+; Make sure this artificially selects with an incorrect subtarget, but
+; the feature set.
+; GCN-LABEL: {{^}}global_atomic_fadd_f32_wrong_subtarget:
+; GCN: global_atomic_add_f32 v[{{[0-9:]+}}], v{{[0-9]+}}, off
+define amdgpu_kernel void @global_atomic_fadd_f32_wrong_subtarget(float addrspace(1)* %ptr, float %data) #0 {
+  call void @llvm.amdgcn.global.atomic.fadd.p1f32.f32(float addrspace(1)* %ptr, float %data)
+  ret void
+}
+
+attributes #0 = { "target-cpu"="gfx803" "target-features"="+atomic-fadd-insts" }

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-codegen -polly-vectorizer=polly -dce -S < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-codegen -polly-vectorizer=polly -dce -S < %s | FileCheck %s
 
 ;#define N 1024
 ;float A[N];

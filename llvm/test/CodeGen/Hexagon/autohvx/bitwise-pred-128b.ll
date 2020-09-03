@@ -10,7 +10,7 @@ define <128 x i8> @t00(<128 x i8> %a0, <128 x i8> %a1) #0 {
   ret <128 x i8> %v0
 }
 
-declare <1024 x i1> @llvm.hexagon.vandvrt.128B(<128 x i8>, i32)
+declare <128 x i1> @llvm.hexagon.vandvrt.128B(<128 x i8>, i32)
 
 ; CHECK-LABEL: t01
 ; CHECK: vor(v{{[0-9:]+}},v{{[0-9:]+}})

@@ -79,7 +79,7 @@
 # RUN: llvm-readobj -l %p/../../../Object/Inputs/program-headers.mips \
 # RUN:     | FileCheck %s -check-prefix ELF-MIPS
 
-# ELF-MIPS:      Format: ELF32-mips
+# ELF-MIPS:      Format: elf32-mips
 # ELF-MIPS-NEXT: Arch: mips
 # ELF-MIPS-NEXT: AddressSize: 32bit
 # ELF-MIPS-NEXT: LoadName:
@@ -126,7 +126,7 @@
 # RUN: llvm-readobj -l %p/../../../Object/Inputs/program-headers.mips64 \
 # RUN:     | FileCheck %s -check-prefix ELF-MIPS64
 
-# ELF-MIPS64:      Format: ELF64-mips
+# ELF-MIPS64:      Format: elf64-mips
 # ELF-MIPS64-NEXT: Arch: mips64
 # ELF-MIPS64-NEXT: AddressSize: 64bit
 # ELF-MIPS64-NEXT: LoadName:
@@ -168,3 +168,27 @@ ProgramHeaders:
   - Type: 0x65a3dbe6 ## PT_OPENBSD_RANDOMIZE
   - Type: 0x65a3dbe7 ## PT_OPENBSD_WXNEEDED
   - Type: 0x65a41be6 ## PT_OPENBSD_BOOTDATA
+
+## Check we report a warning when we are unable to read program headers.
+# RUN: yaml2obj --docnum=2 %s -o %t.err
+# RUN: llvm-readobj --program-headers %t.err 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err --check-prefix=WARN-PHENTSIZE
+
+# WARN-PHENTSIZE:      ProgramHeaders [
+# WARN-PHENTSIZE-NEXT: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 1
+# WARN-PHENTSIZE-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_EXEC
+  Machine:    EM_X86_64
+  EPhEntSize: 1
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+ProgramHeaders:
+  - Type: PT_PHDR
+    Sections:
+      - Section: .foo

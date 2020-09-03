@@ -10,7 +10,7 @@
 
 ; EG: RECIP_IEEE
 define amdgpu_kernel void @rcp_pat_f32(float addrspace(1)* %out, float %src) #0 {
-  %rcp = fdiv float 1.0, %src
+  %rcp = fdiv float 1.0, %src, !fpmath !0
   store float %rcp, float addrspace(1)* %out, align 4
   ret void
 }
@@ -71,7 +71,7 @@ define amdgpu_kernel void @rcp_global_fast_ulp25_pat_f32(float addrspace(1)* %ou
 ; EG: RECIP_IEEE
 define amdgpu_kernel void @rcp_fabs_pat_f32(float addrspace(1)* %out, float %src) #0 {
   %src.fabs = call float @llvm.fabs.f32(float %src)
-  %rcp = fdiv float 1.0, %src.fabs
+  %rcp = fdiv float 1.0, %src.fabs, !fpmath !0
   store float %rcp, float addrspace(1)* %out, align 4
   ret void
 }
@@ -83,7 +83,7 @@ define amdgpu_kernel void @rcp_fabs_pat_f32(float addrspace(1)* %out, float %src
 
 ; EG: RECIP_IEEE
 define amdgpu_kernel void @neg_rcp_pat_f32(float addrspace(1)* %out, float %src) #0 {
-  %rcp = fdiv float -1.0, %src
+  %rcp = fdiv float -1.0, %src, !fpmath !0
   store float %rcp, float addrspace(1)* %out, align 4
   ret void
 }
@@ -95,7 +95,7 @@ define amdgpu_kernel void @neg_rcp_pat_f32(float addrspace(1)* %out, float %src)
 define amdgpu_kernel void @rcp_fabs_fneg_pat_f32(float addrspace(1)* %out, float %src) #0 {
   %src.fabs = call float @llvm.fabs.f32(float %src)
   %src.fabs.fneg = fsub float -0.0, %src.fabs
-  %rcp = fdiv float 1.0, %src.fabs.fneg
+  %rcp = fdiv float 1.0, %src.fabs.fneg, !fpmath !0
   store float %rcp, float addrspace(1)* %out, align 4
   ret void
 }
@@ -109,7 +109,7 @@ define amdgpu_kernel void @rcp_fabs_fneg_pat_f32(float addrspace(1)* %out, float
 define amdgpu_kernel void @rcp_fabs_fneg_pat_multi_use_f32(float addrspace(1)* %out, float %src) #0 {
   %src.fabs = call float @llvm.fabs.f32(float %src)
   %src.fabs.fneg = fsub float -0.0, %src.fabs
-  %rcp = fdiv float 1.0, %src.fabs.fneg
+  %rcp = fdiv float 1.0, %src.fabs.fneg, !fpmath !0
   store volatile float %rcp, float addrspace(1)* %out, align 4
 
   %other = fmul float %src, %src.fabs.fneg
@@ -150,8 +150,8 @@ define amdgpu_kernel void @div_arcp_neg_k_x_pat_f32(float addrspace(1)* %out) #0
 declare float @llvm.fabs.f32(float) #1
 declare float @llvm.sqrt.f32(float) #1
 
-attributes #0 = { nounwind "unsafe-fp-math"="false" }
+attributes #0 = { nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "unsafe-fp-math"="true" }
+attributes #2 = { nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 
 !0 = !{float 2.500000e+00}

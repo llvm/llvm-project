@@ -83,20 +83,11 @@ public:
   Scalar(double v) : m_type(e_double), m_float(v) {
     m_float = llvm::APFloat(v);
   }
-  Scalar(long double v, bool ieee_quad)
-      : m_type(e_long_double), m_float(static_cast<float>(0)),
-        m_ieee_quad(ieee_quad) {
-    if (ieee_quad)
-      m_float =
-          llvm::APFloat(llvm::APFloat::IEEEquad(),
-                        llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-                                    (reinterpret_cast<type128 *>(&v))->x));
-    else
-      m_float =
-          llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
-                        llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-                                    (reinterpret_cast<type128 *>(&v))->x));
-  }
+  Scalar(long double v)
+      : m_type(e_long_double),
+        m_float(llvm::APFloat::x87DoubleExtended(),
+                llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
+                            (reinterpret_cast<type128 *>(&v))->x)) {}
   Scalar(llvm::APInt v) : m_type(), m_float(static_cast<float>(0)) {
     m_integer = llvm::APInt(v);
     m_type = GetBestTypeForBitSize(m_integer.getBitWidth(), true);
@@ -115,7 +106,10 @@ public:
 
   bool ClearBit(uint32_t bit);
 
-  const void *GetBytes() const;
+  /// Store the binary representation of this value into the given storage.
+  /// Exactly GetByteSize() bytes will be stored, and the buffer must be large
+  /// enough to hold this data.
+  void GetBytes(llvm::MutableArrayRef<uint8_t> storage) const;
 
   size_t GetByteSize() const;
 
@@ -131,7 +125,7 @@ public:
     m_integer.clearAllBits();
   }
 
-  const char *GetTypeAsCString() const;
+  const char *GetTypeAsCString() const { return GetValueTypeAsCString(m_type); }
 
   void GetValue(Stream *s, bool show_type) const;
 
@@ -139,8 +133,8 @@ public:
     return (m_type >= e_sint) && (m_type <= e_long_double);
   }
 
-  /// Convert integer to \p type, limited to \p bits size.
-  void TruncOrExtendTo(Scalar::Type type, uint16_t bits);
+  /// Convert to an integer with \p bits and the given signedness.
+  void TruncOrExtendTo(uint16_t bits, bool sign);
 
   bool Promote(Scalar::Type type);
 
@@ -162,16 +156,6 @@ public:
   // automagically by the compiler, so no temporary objects will need to be
   // created. As a result, we currently don't need a variety of overloaded set
   // value accessors.
-  Scalar &operator=(const int i);
-  Scalar &operator=(unsigned int v);
-  Scalar &operator=(long v);
-  Scalar &operator=(unsigned long v);
-  Scalar &operator=(long long v);
-  Scalar &operator=(unsigned long long v);
-  Scalar &operator=(float v);
-  Scalar &operator=(double v);
-  Scalar &operator=(long double v);
-  Scalar &operator=(llvm::APInt v);
   Scalar &operator+=(const Scalar &rhs);
   Scalar &operator<<=(const Scalar &rhs); // Shift left
   Scalar &operator>>=(const Scalar &rhs); // Shift right (arithmetic)
@@ -204,7 +188,7 @@ public:
 
   unsigned char UChar(unsigned char fail_value = 0) const;
 
-  signed char SChar(char fail_value = 0) const;
+  signed char SChar(signed char fail_value = 0) const;
 
   unsigned short UShort(unsigned short fail_value = 0) const;
 
@@ -220,7 +204,7 @@ public:
 
   unsigned long long ULongLong(unsigned long long fail_value = 0) const;
 
-  llvm::APInt SInt128(llvm::APInt &fail_value) const;
+  llvm::APInt SInt128(const llvm::APInt &fail_value) const;
 
   llvm::APInt UInt128(const llvm::APInt &fail_value) const;
 
@@ -282,7 +266,8 @@ protected:
   Scalar::Type m_type;
   llvm::APInt m_integer;
   llvm::APFloat m_float;
-  bool m_ieee_quad = false;
+
+  template <typename T> T GetAs(T fail_value) const;
 
 private:
   friend const Scalar operator+(const Scalar &lhs, const Scalar &rhs);

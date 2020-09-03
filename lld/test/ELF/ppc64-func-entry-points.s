@@ -69,12 +69,12 @@ glob:
 # foo_external_diff+8. Also check that foo_external_same has no global entry
 # point and we branch to start of foo_external_same.
 
-// CHECK-LABEL: _start:
-// CHECK:         100101f0: bl .+144
-// CHECK:         10010204: bl .+84
-// CHECK-LABEL: foo_external_diff:
+// CHECK-LABEL: <_start>:
+// CHECK:         100101f0: bl 0x10010280
+// CHECK:         10010204: bl 0x10010258
+// CHECK-LABEL: <foo_external_diff>:
 // CHECK-NEXT:    10010250: addis 2, 12, 2
 // CHECK-NEXT:    10010254: addi 2, 2, -32696
 // CHECK-NEXT:    10010258: addis 5, 2, 1
-// CHECK-LABEL: foo_external_same:
+// CHECK-LABEL: <foo_external_same>:
 // CHECK-NEXT:    10010280: add 3, 4, 3

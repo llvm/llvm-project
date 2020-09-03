@@ -1,4 +1,4 @@
-//===-- Address.cpp ---------------------------------------------*- C++ -*-===//
+//===-- Address.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -415,7 +415,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
 
   case DumpStyleSectionNameOffset:
     if (section_sp) {
-      section_sp->DumpName(s);
+      section_sp->DumpName(s->AsRawOstream());
       s->Printf(" + %" PRIu64, m_offset);
     } else {
       DumpAddress(s->AsRawOstream(), m_offset, addr_size);

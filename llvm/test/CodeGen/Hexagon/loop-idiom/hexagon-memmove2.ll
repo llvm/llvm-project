@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -hexagon-loop-idiom -S -mtriple hexagon-unknown-elf < %s \
+; RUN: opt -basic-aa -hexagon-loop-idiom -S -mtriple hexagon-unknown-elf < %s \
 ; RUN:  | FileCheck %s
 
 define void @PR14241(i32* %s, i64 %size) #0 {

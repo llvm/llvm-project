@@ -38,6 +38,13 @@ AST_POLYMORPHIC_MATCHER_P(
   *Builder = std::move(Result);
   return Matched;
 }
+
+AST_MATCHER_P(DeducedTemplateSpecializationType, refsToTemplatedDecl,
+              clang::ast_matchers::internal::Matcher<NamedDecl>, DeclMatcher) {
+  if (const auto *TD = Node.getTemplateName().getAsTemplateDecl())
+    return DeclMatcher.matches(*TD, Finder, Builder);
+  return false;
+}
 } // namespace
 
 // A function that helps to tell whether a TargetDecl in a UsingDecl will be
@@ -56,6 +63,9 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(loc(enumType(DeclMatcher)), this);
   Finder->addMatcher(loc(recordType(DeclMatcher)), this);
   Finder->addMatcher(loc(templateSpecializationType(DeclMatcher)), this);
+  Finder->addMatcher(loc(deducedTemplateSpecializationType(
+                         refsToTemplatedDecl(namedDecl().bind("used")))),
+                     this);
   Finder->addMatcher(declRefExpr().bind("used"), this);
   Finder->addMatcher(callExpr(callee(unresolvedLookupExpr().bind("used"))),
                      this);

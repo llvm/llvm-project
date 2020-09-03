@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +gfni -emit-llvm -o - | FileCheck %s --check-prefix SSE
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +gfni -target-feature +avx -emit-llvm -o - | FileCheck %s --check-prefixes SSE,AVX
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +gfni -target-feature +avx512bw -target-feature +avx512vl -emit-llvm -o - | FileCheck %s --check-prefixes SSE,AVX,AVX512
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +gfni -emit-llvm -o - | FileCheck %s --check-prefix SSE
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +gfni -target-feature +avx -emit-llvm -o - | FileCheck %s --check-prefixes SSE,AVX
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +gfni -target-feature +avx512bw -target-feature +avx512vl -emit-llvm -o - | FileCheck %s --check-prefixes SSE,AVX,AVX512
 
 #include <immintrin.h>
 

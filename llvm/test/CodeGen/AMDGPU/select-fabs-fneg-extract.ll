@@ -181,8 +181,8 @@ define amdgpu_kernel void @add_select_negk_fabs_f32(i32 %c) #0 {
 }
 
 ; GCN-LABEL: {{^}}add_select_negliteralk_fabs_f32:
-; GCN: buffer_load_dword [[X:v[0-9]+]]
-; GCN: buffer_load_dword [[Y:v[0-9]+]]
+; GCN-DAG: buffer_load_dword [[X:v[0-9]+]]
+; GCN-DAG: buffer_load_dword [[Y:v[0-9]+]]
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0xc4800000
 
 ; GCN-DAG: v_cmp_ne_u32_e64 [[VCC:.*]], s{{[0-9]+}}, 0
@@ -367,9 +367,9 @@ define amdgpu_kernel void @add_select_fneg_negk_f32(i32 %c) #0 {
 }
 
 ; GCN-LABEL: {{^}}add_select_fneg_inv2pi_f32:
-; GCN: buffer_load_dword [[X:v[0-9]+]]
-; GCN: buffer_load_dword [[Y:v[0-9]+]]
-; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0xbe22f983
+; GCN-DAG: buffer_load_dword [[X:v[0-9]+]]
+; GCN-DAG: buffer_load_dword [[Y:v[0-9]+]]
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0xbe22f983
 
 ; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[K]], [[X]], vcc
 ; GCN: v_sub_f32_e32 v{{[0-9]+}}, [[Y]], [[SELECT]]
@@ -385,9 +385,9 @@ define amdgpu_kernel void @add_select_fneg_inv2pi_f32(i32 %c) #0 {
 }
 
 ; GCN-LABEL: {{^}}add_select_fneg_neginv2pi_f32:
-; GCN: buffer_load_dword [[X:v[0-9]+]]
-; GCN: buffer_load_dword [[Y:v[0-9]+]]
-; SI: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e22f983
+; GCN-DAG: buffer_load_dword [[X:v[0-9]+]]
+; GCN-DAG: buffer_load_dword [[Y:v[0-9]+]]
+; SI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e22f983
 
 ; SI: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[K]], [[X]], vcc
 ; VI: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], 0.15915494, [[X]], vcc
@@ -439,8 +439,8 @@ define amdgpu_kernel void @add_select_negliteralk_negliteralk_f32(i32 %c) #0 {
 ; GCN-LABEL: {{^}}add_select_fneg_negk_negk_f32:
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
 
-; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], -1.0, -2.0, s
-; GCN: v_sub_f32_e32 v{{[0-9]+}}, [[X]], [[SELECT]]
+; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], 1.0, 2.0, s
+; GCN: v_add_f32_e32 v{{[0-9]+}}, [[SELECT]], [[X]]
 define amdgpu_kernel void @add_select_fneg_negk_negk_f32(i32 %c) #0 {
   %x = load volatile float, float addrspace(1)* undef
   %cmp = icmp eq i32 %c, 0

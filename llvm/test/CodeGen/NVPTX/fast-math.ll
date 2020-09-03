@@ -13,10 +13,19 @@ define float @sqrt_div(float %a, float %b) {
 }
 
 ; CHECK-LABEL: sqrt_div_fast(
-; CHECK: sqrt.approx.f32
+; CHECK: sqrt.rn.f32
 ; CHECK: div.approx.f32
 define float @sqrt_div_fast(float %a, float %b) #0 {
   %t1 = tail call float @llvm.sqrt.f32(float %a)
+  %t2 = fdiv float %t1, %b
+  ret float %t2
+}
+
+; CHECK-LABEL: sqrt_div_fast_ninf(
+; CHECK: sqrt.approx.f32
+; CHECK: div.approx.f32
+define float @sqrt_div_fast_ninf(float %a, float %b) #0 {
+  %t1 = tail call ninf float @llvm.sqrt.f32(float %a)
   %t2 = fdiv float %t1, %b
   ret float %t2
 }
@@ -31,10 +40,19 @@ define float @sqrt_div_ftz(float %a, float %b) #1 {
 }
 
 ; CHECK-LABEL: sqrt_div_fast_ftz(
-; CHECK: sqrt.approx.ftz.f32
+; CHECK: sqrt.rn.ftz.f32
 ; CHECK: div.approx.ftz.f32
 define float @sqrt_div_fast_ftz(float %a, float %b) #0 #1 {
   %t1 = tail call float @llvm.sqrt.f32(float %a)
+  %t2 = fdiv float %t1, %b
+  ret float %t2
+}
+
+; CHECK-LABEL: sqrt_div_fast_ftz_ninf(
+; CHECK: sqrt.approx.ftz.f32
+; CHECK: div.approx.ftz.f32
+define float @sqrt_div_fast_ftz_ninf(float %a, float %b) #0 #1 {
+  %t1 = tail call ninf float @llvm.sqrt.f32(float %a)
   %t2 = fdiv float %t1, %b
   ret float %t2
 }
@@ -43,11 +61,20 @@ define float @sqrt_div_fast_ftz(float %a, float %b) #0 #1 {
 ; reciprocal(rsqrt(x)) for sqrt(x), and emit a vanilla divide.
 
 ; CHECK-LABEL: sqrt_div_fast_ftz_f64(
-; CHECK: rsqrt.approx.f64
-; CHECK: rcp.approx.ftz.f64
+; CHECK: sqrt.rn.f64
 ; CHECK: div.rn.f64
 define double @sqrt_div_fast_ftz_f64(double %a, double %b) #0 #1 {
   %t1 = tail call double @llvm.sqrt.f64(double %a)
+  %t2 = fdiv double %t1, %b
+  ret double %t2
+}
+
+; CHECK-LABEL: sqrt_div_fast_ftz_f64_ninf(
+; CHECK: rsqrt.approx.f64
+; CHECK: rcp.approx.ftz.f64
+; CHECK: div.rn.f64
+define double @sqrt_div_fast_ftz_f64_ninf(double %a, double %b) #0 #1 {
+  %t1 = tail call ninf double @llvm.sqrt.f64(double %a)
   %t2 = fdiv double %t1, %b
   ret double %t2
 }
@@ -162,4 +189,4 @@ define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor
 }
 
 attributes #0 = { "unsafe-fp-math" = "true" }
-attributes #1 = { "nvptx-f32ftz" = "true" }
+attributes #1 = { "denormal-fp-math-f32" = "preserve-sign" }

@@ -658,15 +658,19 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(noinline);
   KEYWORD(norecurse);
   KEYWORD(nonlazybind);
+  KEYWORD(nomerge);
   KEYWORD(nonnull);
   KEYWORD(noredzone);
   KEYWORD(noreturn);
   KEYWORD(nosync);
   KEYWORD(nocf_check);
+  KEYWORD(noundef);
   KEYWORD(nounwind);
+  KEYWORD(null_pointer_is_valid);
   KEYWORD(optforfuzzing);
   KEYWORD(optnone);
   KEYWORD(optsize);
+  KEYWORD(preallocated);
   KEYWORD(readnone);
   KEYWORD(readonly);
   KEYWORD(returned);
@@ -738,6 +742,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(name);
   KEYWORD(summaries);
   KEYWORD(flags);
+  KEYWORD(blockcount);
   KEYWORD(linkage);
   KEYWORD(notEligibleToImport);
   KEYWORD(live);
@@ -754,6 +759,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(alwaysInline);
   KEYWORD(calls);
   KEYWORD(callee);
+  KEYWORD(params);
+  KEYWORD(param);
   KEYWORD(hotness);
   KEYWORD(unknown);
   KEYWORD(hot);
@@ -788,6 +795,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(sizeM1);
   KEYWORD(bitMask);
   KEYWORD(inlineBits);
+  KEYWORD(vcall_visibility);
   KEYWORD(wpdResolutions);
   KEYWORD(wpdRes);
   KEYWORD(indir);
@@ -817,6 +825,7 @@ lltok::Kind LLLexer::LexIdentifier() {
 
   TYPEKEYWORD("void",      Type::getVoidTy(Context));
   TYPEKEYWORD("half",      Type::getHalfTy(Context));
+  TYPEKEYWORD("bfloat",    Type::getBFloatTy(Context));
   TYPEKEYWORD("float",     Type::getFloatTy(Context));
   TYPEKEYWORD("double",    Type::getDoubleTy(Context));
   TYPEKEYWORD("x86_fp80",  Type::getX86_FP80Ty(Context));
@@ -982,11 +991,13 @@ lltok::Kind LLLexer::LexIdentifier() {
 ///    HexFP128Constant  0xL[0-9A-Fa-f]+
 ///    HexPPC128Constant 0xM[0-9A-Fa-f]+
 ///    HexHalfConstant   0xH[0-9A-Fa-f]+
+///    HexBFloatConstant 0xR[0-9A-Fa-f]+
 lltok::Kind LLLexer::Lex0x() {
   CurPtr = TokStart + 2;
 
   char Kind;
-  if ((CurPtr[0] >= 'K' && CurPtr[0] <= 'M') || CurPtr[0] == 'H') {
+  if ((CurPtr[0] >= 'K' && CurPtr[0] <= 'M') || CurPtr[0] == 'H' ||
+      CurPtr[0] == 'R') {
     Kind = *CurPtr++;
   } else {
     Kind = 'J';
@@ -1004,7 +1015,7 @@ lltok::Kind LLLexer::Lex0x() {
   if (Kind == 'J') {
     // HexFPConstant - Floating point constant represented in IEEE format as a
     // hexadecimal number for when exponential notation is not precise enough.
-    // Half, Float, and double only.
+    // Half, BFloat, Float, and double only.
     APFloatVal = APFloat(APFloat::IEEEdouble(),
                          APInt(64, HexIntToVal(TokStart + 2, CurPtr)));
     return lltok::APFloat;
@@ -1031,6 +1042,11 @@ lltok::Kind LLLexer::Lex0x() {
   case 'H':
     APFloatVal = APFloat(APFloat::IEEEhalf(),
                          APInt(16,HexIntToVal(TokStart+3, CurPtr)));
+    return lltok::APFloat;
+  case 'R':
+    // Brain floating point
+    APFloatVal = APFloat(APFloat::BFloat(),
+                         APInt(16, HexIntToVal(TokStart + 3, CurPtr)));
     return lltok::APFloat;
   }
 }

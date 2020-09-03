@@ -65,7 +65,7 @@ body:             |
     ; CHECK: %4.dsub_3:qqqqpr_with_ssub_4 = COPY %4.dsub_1
     ; CHECK: KILL implicit-def %4.dsub_2, implicit %4.qqsub_0
     ; CHECK: %4.dsub_4:qqqqpr_with_ssub_4 = COPY %4.dsub_1
-    ; CHECK: tBX_RET 14, $noreg, implicit %4.ssub_4_ssub_5_ssub_6_ssub_7_ssub_8_ssub_9
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit %4.ssub_4_ssub_5_ssub_6_ssub_7_ssub_8_ssub_9
     %3:dpr_vfp2 = COPY $d4
     undef %0.ssub_0:dpr_vfp2 = COPY $s1
     %1:dpr_vfp2 = COPY $d2

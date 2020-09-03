@@ -9,9 +9,9 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_HOVER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_HOVER_H
 
-#include "FormattedString.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
+#include "support/Markup.h"
 #include "clang/Index/IndexSymbol.h"
 
 namespace clang {
@@ -59,10 +59,13 @@ struct HoverInfo {
   /// Source code containing the definition of the symbol.
   std::string Definition;
 
+  /// Access specifier for declarations inside class/struct/unions, empty for
+  /// others.
+  std::string AccessSpecifier;
   /// Pretty-printed variable type.
   /// Set only for variables.
   llvm::Optional<std::string> Type;
-  /// Set for functions and lambadas.
+  /// Set for functions and lambdas.
   llvm::Optional<std::string> ReturnType;
   /// Set for functions, lambdas and macros with parameters.
   llvm::Optional<std::vector<Param>> Parameters;
@@ -70,10 +73,39 @@ struct HoverInfo {
   llvm::Optional<std::vector<Param>> TemplateParameters;
   /// Contains the evaluated value of the symbol if available.
   llvm::Optional<std::string> Value;
+  /// Contains the byte-size of fields and types where it's interesting.
+  llvm::Optional<uint64_t> Size;
+  /// Contains the offset of fields within the enclosing class.
+  llvm::Optional<uint64_t> Offset;
+  // Set when symbol is inside function call. Contains information extracted
+  // from the callee definition about the argument this is passed as.
+  llvm::Optional<Param> CalleeArgInfo;
+  struct PassType {
+    // How the variable is passed to callee.
+    enum PassMode { Ref, ConstRef, Value };
+    PassMode PassBy = Ref;
+    // True if type conversion happened. This includes calls to implicit
+    // constructor, as well as built-in type conversions. Casting to base class
+    // is not considered conversion.
+    bool Converted = false;
+  };
+  // Set only if CalleeArgInfo is set.
+  llvm::Optional<PassType> CallPassType;
 
   /// Produce a user-readable information.
   markup::Document present() const;
 };
+
+inline bool operator==(const HoverInfo::PassType &LHS,
+                       const HoverInfo::PassType &RHS) {
+  return std::tie(LHS.PassBy, LHS.Converted) ==
+         std::tie(RHS.PassBy, RHS.Converted);
+}
+
+// Try to infer structure of a documentation comment (e.g. line breaks).
+// FIXME: move to another file so CodeComplete doesn't depend on Hover.
+void parseDocumentation(llvm::StringRef Input, markup::Document &Output);
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const HoverInfo::Param &);
 inline bool operator==(const HoverInfo::Param &LHS,
                        const HoverInfo::Param &RHS) {

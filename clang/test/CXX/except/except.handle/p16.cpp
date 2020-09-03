@@ -11,12 +11,12 @@ class X {
 public:
   X(const X<T> &) {
     int *ip = 0;
-    ptr = ip; // expected-error{{assigning to 'float *' from incompatible type 'int *'}}
+    ptr = ip; // expected-error{{incompatible pointer types assigning to 'float *' from 'int *'}}
   }
 
   ~X() {
     float *fp = 0;
-    ptr = fp; // expected-error{{assigning to 'int *' from incompatible type 'float *'}}
+    ptr = fp; // expected-error{{incompatible pointer types assigning to 'int *' from 'float *'}}
   }
 };
 

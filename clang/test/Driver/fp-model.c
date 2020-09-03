@@ -27,10 +27,6 @@
 // RUN:   | FileCheck --check-prefix=WARN5 %s
 // WARN5: warning: overriding '-ffp-model=strict' option with '-ffp-contract=fast' [-Woverriding-t-option]
 
-// RUN: %clang -### -ffp-model=strict -ffp-contract=off -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=WARN6 %s
-// WARN6: warning: overriding '-ffp-model=strict' option with '-ffp-contract=off' [-Woverriding-t-option]
-
 // RUN: %clang -### -ffp-model=strict -ffp-contract=on -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN7 %s
 // WARN7: warning: overriding '-ffp-model=strict' option with '-ffp-contract=on' [-Woverriding-t-option]
@@ -66,6 +62,10 @@
 // RUN: %clang -### -ffp-model=strict -Ofast -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARNf %s
 // WARNf: warning: overriding '-ffp-model=strict' option with '-Ofast' [-Woverriding-t-option]
+
+// RUN: %clang -### -ffp-model=strict -fdenormal-fp-math=preserve-sign,preserve-sign -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN10 %s
+// WARN10: warning: overriding '-ffp-model=strict' option with '-fdenormal-fp-math=preserve-sign,preserve-sign' [-Woverriding-t-option]
 
 // RUN: %clang -### -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOROUND %s

@@ -130,7 +130,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(MODULE_CODE, DATALAYOUT)
       STRINGIFY_CODE(MODULE_CODE, ASM)
       STRINGIFY_CODE(MODULE_CODE, SECTIONNAME)
-      STRINGIFY_CODE(MODULE_CODE, DEPLIB) // FIXME: Remove in 4.0
+      STRINGIFY_CODE(MODULE_CODE, DEPLIB) // Deprecated, present in old bitcode
       STRINGIFY_CODE(MODULE_CODE, GLOBALVAR)
       STRINGIFY_CODE(MODULE_CODE, FUNCTION)
       STRINGIFY_CODE(MODULE_CODE, ALIAS)
@@ -305,6 +305,8 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(FS, CFI_FUNCTION_DECLS)
       STRINGIFY_CODE(FS, TYPE_ID)
       STRINGIFY_CODE(FS, TYPE_ID_METADATA)
+      STRINGIFY_CODE(FS, BLOCK_COUNT)
+      STRINGIFY_CODE(FS, PARAM_ACCESS)
     }
   case bitc::METADATA_ATTACHMENT_ID:
     switch (CodeID) {
@@ -910,17 +912,14 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
             Hasher.update(ArrayRef<uint8_t>(Ptr, BlockSize));
             Hash = Hasher.result();
           }
-          SmallString<20> RecordedHash;
-          RecordedHash.resize(20);
+          std::array<char, 20> RecordedHash;
           int Pos = 0;
           for (auto &Val : Record) {
             assert(!(Val >> 32) && "Unexpected high bits set");
-            RecordedHash[Pos++] = (Val >> 24) & 0xFF;
-            RecordedHash[Pos++] = (Val >> 16) & 0xFF;
-            RecordedHash[Pos++] = (Val >> 8) & 0xFF;
-            RecordedHash[Pos++] = (Val >> 0) & 0xFF;
+            support::endian::write32be(&RecordedHash[Pos], Val);
+            Pos += 4;
           }
-          if (Hash == RecordedHash)
+          if (Hash == StringRef(RecordedHash.data(), RecordedHash.size()))
             O->OS << " (match)";
           else
             O->OS << " (!mismatch!)";

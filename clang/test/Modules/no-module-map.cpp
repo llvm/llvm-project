@@ -30,7 +30,7 @@
 #error A_H should not be defined
 #endif
 // expected-error@+3 {{must be imported from}}
-// expected-note@* {{previous declaration}}
+// expected-note@* {{declaration}}
 #endif
 void use_a() { a(); }
 
@@ -43,6 +43,6 @@ void use_a() { a(); }
 #error B_H should not be defined
 #endif
 // expected-error@+3 {{must be imported from}}
-// expected-note@* {{previous declaration}}
+// expected-note@* {{declaration}}
 #endif
 void use_b() { b(); }

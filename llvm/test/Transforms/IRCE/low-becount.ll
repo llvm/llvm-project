@@ -1,7 +1,7 @@
 ; RUN: opt -irce-print-changed-loops -verify-loop-info -irce -S < %s 2>&1 | FileCheck %s
-; 
+;
 ; TODO: new-pm version should be enabled after we decide on branch-probability handling for loop passes
-; TODO: opt -irce-print-changed-loops -verify-loop-info -passes='require<branch-prob>,loop(irce)' -S < %s 2>&1 | FileCheck %s
+; TODO: opt -irce-print-changed-loops -verify-loop-info -passes='require<branch-prob>,irce' -S < %s 2>&1 | FileCheck %s
 
 ; CHECK-NOT: constrained Loop
 

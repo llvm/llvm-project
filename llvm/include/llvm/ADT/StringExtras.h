@@ -107,6 +107,14 @@ inline bool isPrint(char C) {
   return (0x20 <= UC) && (UC <= 0x7E);
 }
 
+/// Checks whether character \p C is whitespace in the "C" locale.
+///
+/// Locale-independent version of the C standard library isspace.
+inline bool isSpace(char C) {
+  return C == ' ' || C == '\f' || C == '\n' || C == '\r' || C == '\t' ||
+         C == '\v';
+}
+
 /// Returns the corresponding lowercase character if \p x is uppercase.
 inline char toLower(char x) {
   if (x >= 'A' && x <= 'Z')
@@ -237,7 +245,7 @@ inline std::string utostr(uint64_t X, bool isNeg = false) {
 
 inline std::string itostr(int64_t X) {
   if (X < 0)
-    return utostr(static_cast<uint64_t>(-X), true);
+    return utostr(-static_cast<uint64_t>(X), true);
   else
     return utostr(static_cast<uint64_t>(X));
 }
@@ -291,6 +299,18 @@ void printHTMLEscaped(StringRef String, raw_ostream &Out);
 
 /// printLowerCase - Print each character as lowercase if it is uppercase.
 void printLowerCase(StringRef String, raw_ostream &Out);
+
+/// Converts a string from camel-case to snake-case by replacing all uppercase
+/// letters with '_' followed by the letter in lowercase, except if the
+/// uppercase letter is the first character of the string.
+std::string convertToSnakeFromCamelCase(StringRef input);
+
+/// Converts a string from snake-case to camel-case by replacing all occurrences
+/// of '_' followed by a lowercase letter with the letter in uppercase.
+/// Optionally allow capitalization of the first letter (if it is a lowercase
+/// letter)
+std::string convertToCamelFromSnakeCase(StringRef input,
+                                        bool capitalizeFirst = false);
 
 namespace detail {
 

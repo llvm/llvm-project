@@ -115,11 +115,6 @@ void testUseAfter(int *p) {
   delete c;
 }
 
-//--------------------------------------------------------------------
-// Check for intersection with other checkers from MallocChecker.cpp 
-// bounded with unix.Malloc
-//--------------------------------------------------------------------
-
 // new/delete oparators are subjects of cplusplus.NewDelete.
 void testNewDeleteNoWarn() {
   int i;
@@ -135,11 +130,11 @@ void testNewDeleteNoWarn() {
   int *p3 = new int; // no-warning
 }
 
-// unix.Malloc does not know about operators new/delete.
 void testDeleteMallocked() {
   int *x = (int *)malloc(sizeof(int));
-  delete x; // FIXME: Should detect pointer escape and keep silent after 'delete' is modeled properly.
-} // expected-warning{{Potential leak of memory pointed to by 'x'}}
+  // unix.MismatchedDeallocator would catch this, but we're not testing it here.
+  delete x;
+}
 
 void testDeleteOpAfterFree() {
   int *p = (int *)malloc(sizeof(int));

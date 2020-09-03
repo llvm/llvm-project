@@ -126,7 +126,7 @@ public:
   }
 
   void writeHeader(const std::string &Title) {
-    std::string GraphName = DTraits.getGraphName(G);
+    std::string GraphName(DTraits.getGraphName(G));
 
     if (!Title.empty())
       O << "digraph \"" << DOT::EscapeString(Title) << "\" {\n";
@@ -330,11 +330,8 @@ std::string WriteGraph(const GraphType &G, const Twine &Name,
                        const Twine &Title = "",
                        std::string Filename = "") {
   int FD;
-  // Windows can't always handle long paths, so limit the length of the name.
-  std::string N = Name.str();
-  N = N.substr(0, std::min<std::size_t>(N.size(), 140));
   if (Filename.empty()) {
-    Filename = createGraphFilename(N, FD);
+    Filename = createGraphFilename(Name.str(), FD);
   } else {
     std::error_code EC = sys::fs::openFileForWrite(Filename, FD);
 
@@ -344,6 +341,8 @@ std::string WriteGraph(const GraphType &G, const Twine &Name,
     } else if (EC) {
       errs() << "error writing into file" << "\n";
       return "";
+    } else {
+      errs() << "writing to the newly created file " << Filename << "\n";
     }
   }
   raw_fd_ostream O(FD, /*shouldClose=*/ true);
@@ -358,6 +357,17 @@ std::string WriteGraph(const GraphType &G, const Twine &Name,
 
   return Filename;
 }
+
+/// DumpDotGraph - Just dump a dot graph to the user-provided file name.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+template <typename GraphType>
+LLVM_DUMP_METHOD void
+dumpDotGraphToFile(const GraphType &G, const Twine &FileName,
+                   const Twine &Title, bool ShortNames = false,
+                   const Twine &Name = "") {
+  llvm::WriteGraph(G, Name, ShortNames, Title, FileName.str());
+}
+#endif
 
 /// ViewGraph - Emit a dot graph, run 'dot', run gv on the postscript file,
 /// then cleanup.  For use from the debugger.

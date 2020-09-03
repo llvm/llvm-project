@@ -14,17 +14,22 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -45,8 +50,7 @@
 #endif
 
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include "llvm/Support/Windows/WindowsSupport.h"
 #endif
 
 using namespace llvm;
@@ -83,6 +87,9 @@ OPTIONS:
     =bsd                -   bsd
   --plugin=<string>     - ignored for compatibility
   -h --help             - display this help and exit
+  --rsp-quoting         - quoting style for response files
+    =posix              -   posix
+    =windows            -   windows
   --version             - print the version and exit
   @<file>               - read options from <file>
 
@@ -513,13 +520,13 @@ static std::string normalizePath(StringRef Path) {
 
 static bool comparePaths(StringRef Path1, StringRef Path2) {
 // When on Windows this function calls CompareStringOrdinal
-// as Windows file paths are case-insensitive. 
+// as Windows file paths are case-insensitive.
 // CompareStringOrdinal compares two Unicode strings for
 // binary equivalence and allows for case insensitivity.
 #ifdef _WIN32
   SmallVector<wchar_t, 128> WPath1, WPath2;
-  failIfError(sys::path::widenPath(normalizePath(Path1), WPath1));
-  failIfError(sys::path::widenPath(normalizePath(Path2), WPath2));
+  failIfError(sys::windows::UTF8ToUTF16(normalizePath(Path1), WPath1));
+  failIfError(sys::windows::UTF8ToUTF16(normalizePath(Path2), WPath2));
 
   return CompareStringOrdinal(WPath1.data(), WPath1.size(), WPath2.data(),
                               WPath2.size(), true) == CSTR_EQUAL;
@@ -650,7 +657,7 @@ static void addChildMember(std::vector<NewArchiveMember> &Members,
   // the archive it's in, so the file resolves correctly.
   if (Thin && FlattenArchive) {
     StringSaver Saver(Alloc);
-    Expected<std::string> FileNameOrErr = M.getName();
+    Expected<std::string> FileNameOrErr(M.getName());
     failIfError(FileNameOrErr.takeError());
     if (sys::path::is_absolute(*FileNameOrErr)) {
       NMOrErr->MemberName = Saver.save(sys::path::convert_to_slash(*FileNameOrErr));
@@ -792,7 +799,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
       int Pos = Ret.size();
       Expected<StringRef> NameOrErr = Child.getName();
       failIfError(NameOrErr.takeError());
-      std::string Name = NameOrErr.get();
+      std::string Name = std::string(NameOrErr.get());
       if (comparePaths(Name, RelPos)) {
         assert(AddAfter || AddBefore);
         if (AddBefore)
@@ -871,8 +878,9 @@ static object::Archive::Kind getDefaultForHost() {
 }
 
 static object::Archive::Kind getKindFromMember(const NewArchiveMember &Member) {
+  auto MemBufferRef = Member.Buf->getMemBufferRef();
   Expected<std::unique_ptr<object::ObjectFile>> OptionalObject =
-      object::ObjectFile::createObjectFile(Member.Buf->getMemBufferRef());
+      object::ObjectFile::createObjectFile(MemBufferRef);
 
   if (OptionalObject)
     return isa<object::MachOObjectFile>(**OptionalObject)
@@ -881,6 +889,23 @@ static object::Archive::Kind getKindFromMember(const NewArchiveMember &Member) {
 
   // squelch the error in case we had a non-object file
   consumeError(OptionalObject.takeError());
+
+  // If we're adding a bitcode file to the archive, detect the Archive kind
+  // based on the target triple.
+  LLVMContext Context;
+  if (identify_magic(MemBufferRef.getBuffer()) == file_magic::bitcode) {
+    if (auto ObjOrErr = object::SymbolicFile::createSymbolicFile(
+            MemBufferRef, file_magic::bitcode, &Context)) {
+      auto &IRObject = cast<object::IRObjectFile>(**ObjOrErr);
+      return Triple(IRObject.getTargetTriple()).isOSDarwin()
+                 ? object::Archive::K_DARWIN
+                 : object::Archive::K_GNU;
+    } else {
+      // Squelch the error in case this was not a SymbolicFile.
+      consumeError(ObjOrErr.takeError());
+    }
+  }
+
   return getDefaultForHost();
 }
 
@@ -974,7 +999,7 @@ static int performOperation(ArchiveOperation Operation,
       MemoryBuffer::getFile(ArchiveName, -1, false);
   std::error_code EC = Buf.getError();
   if (EC && EC != errc::no_such_file_or_directory)
-    fail("error opening '" + ArchiveName + "': " + EC.message());
+    fail("unable to open '" + ArchiveName + "': " + EC.message());
 
   if (!EC) {
     Error Err = Error::success();
@@ -989,7 +1014,7 @@ static int performOperation(ArchiveOperation Operation,
   assert(EC == errc::no_such_file_or_directory);
 
   if (!shouldCreateArchive(Operation)) {
-    failIfError(EC, Twine("error loading '") + ArchiveName + "'");
+    failIfError(EC, Twine("unable to load '") + ArchiveName + "'");
   } else {
     if (!Create) {
       // Produce a warning if we should and we're creating the archive
@@ -1058,7 +1083,7 @@ static void runMRIScript() {
         fail("editing multiple archives not supported");
       if (Saved)
         fail("file already saved");
-      ArchiveName = Rest;
+      ArchiveName = std::string(Rest);
       break;
     case MRICommand::Delete: {
       llvm::erase_if(NewMembers, [=](NewArchiveMember &M) {
@@ -1075,9 +1100,9 @@ static void runMRIScript() {
       fail("unknown command: " + CommandStr);
     }
   }
-  
+
   ParsingMRIScript = false;
-  
+
   // Nothing to do if not saved.
   if (Saved)
     performOperation(ReplaceOrInsert, &NewMembers);
@@ -1096,61 +1121,103 @@ static bool handleGenericOption(StringRef arg) {
   return false;
 }
 
-static int ar_main(int argc, char **argv) {
-  SmallVector<const char *, 0> Argv(argv, argv + argc);
-  StringSaver Saver(Alloc);
-  cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);
-  for (size_t i = 1; i < Argv.size(); ++i) {
-    StringRef Arg = Argv[i];
-    const char *match = nullptr;
-    auto MatchFlagWithArg = [&](const char *expected) {
-      size_t len = strlen(expected);
-      if (Arg == expected) {
-        if (++i >= Argv.size())
-          fail(std::string(expected) + " requires an argument");
-        match = Argv[i];
-        return true;
-      }
-      if (Arg.startswith(expected) && Arg.size() > len && Arg[len] == '=') {
-        match = Arg.data() + len + 1;
-        return true;
-      }
-      return false;
-    };
-    if (handleGenericOption(Argv[i]))
-      return 0;
-    if (Arg == "--") {
-      for (; i < Argv.size(); ++i)
-        PositionalArgs.push_back(Argv[i]);
-      break;
-    }
-    if (Arg[0] == '-') {
-      if (Arg.startswith("--"))
-        Arg = Argv[i] + 2;
+static const char *matchFlagWithArg(StringRef Expected,
+                                    ArrayRef<const char *>::iterator &ArgIt,
+                                    ArrayRef<const char *> Args) {
+  StringRef Arg = *ArgIt;
+
+  if (Arg.startswith("--"))
+    Arg = Arg.substr(2);
+  else if (Arg.startswith("-"))
+    Arg = Arg.substr(1);
+
+  size_t len = Expected.size();
+  if (Arg == Expected) {
+    if (++ArgIt == Args.end())
+      fail(std::string(Expected) + " requires an argument");
+
+    return *ArgIt;
+  }
+  if (Arg.startswith(Expected) && Arg.size() > len && Arg[len] == '=')
+    return Arg.data() + len + 1;
+
+  return nullptr;
+}
+
+static cl::TokenizerCallback getRspQuoting(ArrayRef<const char *> ArgsArr) {
+  cl::TokenizerCallback Ret =
+      Triple(sys::getProcessTriple()).getOS() == Triple::Win32
+          ? cl::TokenizeWindowsCommandLine
+          : cl::TokenizeGNUCommandLine;
+
+  for (ArrayRef<const char *>::iterator ArgIt = ArgsArr.begin();
+       ArgIt != ArgsArr.end(); ++ArgIt) {
+    if (const char *Match = matchFlagWithArg("rsp-quoting", ArgIt, ArgsArr)) {
+      StringRef MatchRef = Match;
+      if (MatchRef == "posix")
+        Ret = cl::TokenizeGNUCommandLine;
+      else if (MatchRef == "windows")
+        Ret = cl::TokenizeWindowsCommandLine;
       else
-        Arg = Argv[i] + 1;
-      if (Arg == "M") {
-        MRI = true;
-      } else if (MatchFlagWithArg("format")) {
-        FormatType = StringSwitch<Format>(match)
-                         .Case("default", Default)
-                         .Case("gnu", GNU)
-                         .Case("darwin", DARWIN)
-                         .Case("bsd", BSD)
-                         .Default(Unknown);
-        if (FormatType == Unknown)
-          fail(std::string("Invalid format ") + match);
-      } else if (MatchFlagWithArg("plugin")) {
-        // Ignored.
-      } else {
-        Options += Argv[i] + 1;
-      }
-    } else if (Options.empty()) {
-      Options += Argv[i];
-    } else {
-      PositionalArgs.push_back(Argv[i]);
+        fail(std::string("Invalid response file quoting style ") + Match);
     }
   }
+
+  return Ret;
+}
+
+static int ar_main(int argc, char **argv) {
+  SmallVector<const char *, 0> Argv(argv + 1, argv + argc);
+  StringSaver Saver(Alloc);
+
+  cl::ExpandResponseFiles(Saver, getRspQuoting(makeArrayRef(argv, argc)), Argv);
+
+  for (ArrayRef<const char *>::iterator ArgIt = Argv.begin();
+       ArgIt != Argv.end(); ++ArgIt) {
+    const char *Match = nullptr;
+
+    if (handleGenericOption(*ArgIt))
+      return 0;
+    if (strcmp(*ArgIt, "--") == 0) {
+      ++ArgIt;
+      for (; ArgIt != Argv.end(); ++ArgIt)
+        PositionalArgs.push_back(*ArgIt);
+      break;
+    }
+
+    if (*ArgIt[0] != '-') {
+      if (Options.empty())
+        Options += *ArgIt;
+      else
+        PositionalArgs.push_back(*ArgIt);
+      continue;
+    }
+
+    if (strcmp(*ArgIt, "-M") == 0) {
+      MRI = true;
+      continue;
+    }
+
+    Match = matchFlagWithArg("format", ArgIt, Argv);
+    if (Match) {
+      FormatType = StringSwitch<Format>(Match)
+                       .Case("default", Default)
+                       .Case("gnu", GNU)
+                       .Case("darwin", DARWIN)
+                       .Case("bsd", BSD)
+                       .Default(Unknown);
+      if (FormatType == Unknown)
+        fail(std::string("Invalid format ") + Match);
+      continue;
+    }
+
+    if (matchFlagWithArg("plugin", ArgIt, Argv) ||
+        matchFlagWithArg("rsp-quoting", ArgIt, Argv))
+      continue;
+
+    Options += *ArgIt + 1;
+  }
+
   ArchiveOperation Operation = parseCommandLine();
   return performOperation(Operation, nullptr);
 }

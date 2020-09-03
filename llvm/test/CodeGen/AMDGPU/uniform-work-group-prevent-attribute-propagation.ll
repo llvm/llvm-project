@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd- -amdgpu-annotate-kernel-features %s | FileCheck %s 
+; RUN: opt -S -mtriple=amdgcn-amd- -amdgpu-annotate-kernel-features %s | FileCheck %s
 
 ; Two kernels with different values of the uniform-work-group-attribute call the same function
 
@@ -13,7 +13,7 @@ define amdgpu_kernel void @kernel1() #1 {
   ret void
 }
 
-; CHECK: define amdgpu_kernel void @kernel2() #[[FUNC]] {
+; CHECK: define amdgpu_kernel void @kernel2() #[[KERNEL2:[0-9]+]] {
 define amdgpu_kernel void @kernel2() #2 {
   call void @func()
   ret void
@@ -22,4 +22,5 @@ define amdgpu_kernel void @kernel2() #2 {
 attributes #1 = { "uniform-work-group-size"="true" }
 
 ; CHECK: attributes #[[FUNC]] = { "uniform-work-group-size"="false" }
-; CHECK: attributes #[[KERNEL1]] = { "uniform-work-group-size"="true" }
+; CHECK: attributes #[[KERNEL1]] = { "amdgpu-calls" "uniform-work-group-size"="true" }
+; CHECK: attributes #[[KERNEL2]] = { "amdgpu-calls" "uniform-work-group-size"="false" }

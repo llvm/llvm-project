@@ -131,45 +131,47 @@ static void checkValueMappings() {
 
 ARMRegisterBankInfo::ARMRegisterBankInfo(const TargetRegisterInfo &TRI)
     : ARMGenRegisterBankInfo() {
-  static bool AlreadyInit = false;
   // We have only one set of register banks, whatever the subtarget
   // is. Therefore, the initialization of the RegBanks table should be
   // done only once. Indeed the table of all register banks
   // (ARM::RegBanks) is unique in the compiler. At some point, it
   // will get tablegen'ed and the whole constructor becomes empty.
-  if (AlreadyInit)
-    return;
-  AlreadyInit = true;
+  static llvm::once_flag InitializeRegisterBankFlag;
 
-  const RegisterBank &RBGPR = getRegBank(ARM::GPRRegBankID);
-  (void)RBGPR;
-  assert(&ARM::GPRRegBank == &RBGPR && "The order in RegBanks is messed up");
+  static auto InitializeRegisterBankOnce = [&]() {
+    const RegisterBank &RBGPR = getRegBank(ARM::GPRRegBankID);
+    (void)RBGPR;
+    assert(&ARM::GPRRegBank == &RBGPR && "The order in RegBanks is messed up");
 
-  // Initialize the GPR bank.
-  assert(RBGPR.covers(*TRI.getRegClass(ARM::GPRRegClassID)) &&
-         "Subclass not added?");
-  assert(RBGPR.covers(*TRI.getRegClass(ARM::GPRwithAPSRRegClassID)) &&
-         "Subclass not added?");
-  assert(RBGPR.covers(*TRI.getRegClass(ARM::GPRnopcRegClassID)) &&
-         "Subclass not added?");
-  assert(RBGPR.covers(*TRI.getRegClass(ARM::rGPRRegClassID)) &&
-         "Subclass not added?");
-  assert(RBGPR.covers(*TRI.getRegClass(ARM::tGPRRegClassID)) &&
-         "Subclass not added?");
-  assert(RBGPR.covers(*TRI.getRegClass(ARM::tcGPRRegClassID)) &&
-         "Subclass not added?");
-  assert(RBGPR.covers(*TRI.getRegClass(ARM::tGPR_and_tcGPRRegClassID)) &&
-         "Subclass not added?");
-  assert(RBGPR.covers(*TRI.getRegClass(ARM::tGPREven_and_tGPR_and_tcGPRRegClassID)) &&
-         "Subclass not added?");
-  assert(RBGPR.covers(*TRI.getRegClass(ARM::tGPROdd_and_tcGPRRegClassID)) &&
-         "Subclass not added?");
-  assert(RBGPR.getSize() == 32 && "GPRs should hold up to 32-bit");
+    // Initialize the GPR bank.
+    assert(RBGPR.covers(*TRI.getRegClass(ARM::GPRRegClassID)) &&
+           "Subclass not added?");
+    assert(RBGPR.covers(*TRI.getRegClass(ARM::GPRwithAPSRRegClassID)) &&
+           "Subclass not added?");
+    assert(RBGPR.covers(*TRI.getRegClass(ARM::GPRnopcRegClassID)) &&
+           "Subclass not added?");
+    assert(RBGPR.covers(*TRI.getRegClass(ARM::rGPRRegClassID)) &&
+           "Subclass not added?");
+    assert(RBGPR.covers(*TRI.getRegClass(ARM::tGPRRegClassID)) &&
+           "Subclass not added?");
+    assert(RBGPR.covers(*TRI.getRegClass(ARM::tcGPRRegClassID)) &&
+           "Subclass not added?");
+    assert(RBGPR.covers(*TRI.getRegClass(ARM::tGPR_and_tcGPRRegClassID)) &&
+           "Subclass not added?");
+    assert(RBGPR.covers(
+               *TRI.getRegClass(ARM::tGPREven_and_tGPR_and_tcGPRRegClassID)) &&
+           "Subclass not added?");
+    assert(RBGPR.covers(*TRI.getRegClass(ARM::tGPROdd_and_tcGPRRegClassID)) &&
+           "Subclass not added?");
+    assert(RBGPR.getSize() == 32 && "GPRs should hold up to 32-bit");
 
 #ifndef NDEBUG
-  ARM::checkPartialMappings();
-  ARM::checkValueMappings();
+    ARM::checkPartialMappings();
+    ARM::checkValueMappings();
 #endif
+  };
+
+  llvm::call_once(InitializeRegisterBankFlag, InitializeRegisterBankOnce);
 }
 
 const RegisterBank &

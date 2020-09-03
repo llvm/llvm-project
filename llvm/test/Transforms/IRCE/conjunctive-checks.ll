@@ -1,5 +1,5 @@
 ; RUN: opt -S -verify-loop-info -irce < %s | FileCheck %s
-; RUN: opt -S -verify-loop-info -passes='require<branch-prob>,loop(irce)' < %s | FileCheck %s
+; RUN: opt -S -verify-loop-info -passes='require<branch-prob>,irce' < %s | FileCheck %s
 
 define void @f_0(i32 *%arr, i32 *%a_len_ptr, i32 %n, i1* %cond_buf) {
 ; CHECK-LABEL: @f_0(

@@ -18,7 +18,7 @@ entry:
 ; CHECK-NM-64:             nmadd.s $f0, $f14, $f12, $f13
 ; CHECK-NM:                nmadd.s $f0, $f0, $f12, $f14
 ; CHECK-MM:                NMADD_S_MM
-; CHECK-NOT-NM-64          mul.s $f0, $f12, $f13
+; CHECK-NOT-NM-64:         mul.s $f0, $f12, $f13
 ; CHECK-NOT-NM-64:         neg.s $f0, $f0
 ; CHECK-NOT-NM:            mul.s $f0, $f12, $f14
 ; CHECK-NOT-NM:            neg.s $f0, $f0
@@ -36,7 +36,7 @@ entry:
 ; CHECK-NM-64:             nmadd.d $f0, $f14, $f12, $f13
 ; CHECK-NM:                nmadd.d $f0, $f0, $f12, $f14
 ; CHECK-MM:                NMADD_D32_MM
-; CHECK-NOT-NM-64          mul.d $f0, $f12, $f13
+; CHECK-NOT-NM-64:         mul.d $f0, $f12, $f13
 ; CHECK-NOT-NM-64:         neg.d $f0, $f0
 ; CHECK-NOT-NM:            mul.d $f0, $f12, $f14
 ; CHECK-NOT-NM:            neg.d $f0, $f0
@@ -54,7 +54,7 @@ entry:
 ; CHECK-NM-64:             nmsub.s $f0, $f14, $f12, $f13
 ; CHECK-NM:                nmsub.s $f0, $f0, $f12, $f14
 ; CHECK-MM:                NMSUB_S_MM
-; CHECK-NOT-NM-64          mul.s $f0, $f12, $f13
+; CHECK-NOT-NM-64:         mul.s $f0, $f12, $f13
 ; CHECK-NOT-NM-64:         neg.s $f0, $f0
 ; CHECK-NOT-NM:            mul.s $f0, $f12, $f14
 ; CHECK-NOT-NM:            neg.s $f0, $f0
@@ -72,7 +72,7 @@ entry:
 ; CHECK-NM-64:             nmsub.d $f0, $f14, $f12, $f13
 ; CHECK-NM:                nmsub.d $f0, $f0, $f12, $f14
 ; CHECK-MM:                NMSUB_D32_MM
-; CHECK-NOT-NM-64          mul.d $f0, $f12, $f13
+; CHECK-NOT-NM-64:         mul.d $f0, $f12, $f13
 ; CHECK-NOT-NM-64:         neg.d $f0, $f0
 ; CHECK-NOT-NM:            mul.d $f0, $f12, $f14
 ; CHECK-NOT-NM:            neg.d $f0, $f0

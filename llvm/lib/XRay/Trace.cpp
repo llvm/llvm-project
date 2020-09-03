@@ -410,6 +410,7 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
   auto TraceOrError = loadTrace(LittleEndianDE, Sort);
   if (!TraceOrError) {
     DataExtractor BigEndianDE(Data, false, 8);
+    consumeError(TraceOrError.takeError());
     TraceOrError = loadTrace(BigEndianDE, Sort);
   }
   return TraceOrError;

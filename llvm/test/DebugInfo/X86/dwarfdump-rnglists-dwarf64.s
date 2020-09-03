@@ -1,8 +1,10 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
-# RUN: llvm-dwarfdump -v -debug-info %t.o 2> %t.err | FileCheck %s
+# RUN: not llvm-dwarfdump -v -debug-info %t.o 2> %t.err | FileCheck %s
 # RUN: FileCheck %s --input-file %t.err --check-prefix=ERR
-# RUN: llvm-dwarfdump -lookup 10 %t.o 2> %t2.err
+# RUN: not llvm-dwarfdump -lookup 10 %t.o 2> %t2.err
 # RUN: FileCheck %s --input-file %t2.err --check-prefix=ERR
+# RUN: llvm-dwarfdump -debug-rnglists %t.o | \
+# RUN:   FileCheck %s --check-prefix=RNGLISTS
 
 # Test object to verify dwarfdump handles v5 range lists in 64-bit DWARF format.
 # This is similar to 'dwarfdump-rnglists.s', which uses 32-bit DWARF format.
@@ -34,7 +36,7 @@
 
 # The split CU uses DW_FORM_rnglistx (the only correct option).
 # There is no DW_AT_rnglists_base in split units.
-        .section .debug_abbrev.dwo,"",@progbits
+        .section .debug_abbrev.dwo,"e",@progbits
         .byte 0x01  # Abbrev code
         .byte 0x11  # DW_TAG_compile_unit
         .byte 0x00  # DW_CHILDREN_no
@@ -99,7 +101,7 @@ CU4_5_64_version:
         .quad 4000             # DW_AT_ranges
 CU4_5_64_end:
 
-        .section .debug_info.dwo,"",@progbits
+        .section .debug_info.dwo,"e",@progbits
 
 # DWARF v5 split CU header.
         .long 0xffffffff       # DWARF64 mark
@@ -151,7 +153,7 @@ Rnglist_Table0_end:
 # uses DW_RLE_base_address and DW_RLE_offset_pair. The ranges have entries
 # in the offset table. We use the empty range list so we can test 
 # DW_FORM_rnglistx with an index other than 0.
-        .section .debug_rnglists.dwo,"",@progbits
+        .section .debug_rnglists.dwo,"e",@progbits
         .long 0xffffffff                            # DWARF64 mark
         .quad Rnglist_Table0_dwo_end - Rnglist_Table0_dwo   # table length
 Rnglist_Table0_dwo:
@@ -188,15 +190,15 @@ Range1_end:
 # CHECK:      Compile Unit: 
 # CHECK-NOT:  Compile Unit:
 # CHECK:      DW_TAG_compile_unit
-# CHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x00000014)
-# CHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000024
+# CHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000000000014)
+# CHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x0000000000000024
 # CHECK-NEXT: [0x00000014, 0x0000001e) ".text"
 # CHECK-NEXT: [0x0000002a, 0x00000034) ".text")
 
 # CHECK:      Compile Unit:
 # CHECK-NOT:  Compile Unit:
 # CHECK:      DW_TAG_compile_unit
-# CHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x00000014)
+# CHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000000000014)
 # CHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = 0x00000034
 # CHECK-NEXT: [0x0000002a, 0x00000034) ".text")
 
@@ -210,3 +212,39 @@ Range1_end:
 #ERR: error: parsing a range list table: did not detect a valid list table with base = 0x8
 #ERR: error: decoding address ranges: missing or invalid range list table
 #ERR: error: decoding address ranges: invalid range list offset 0xfa0
+
+# RNGLISTS:      .debug_rnglists contents:
+# RNGLISTS:      range list header:
+# RNGLISTS-SAME:   length = 0x0000000000000031,
+# RNGLISTS-SAME:   format = DWARF64,
+# RNGLISTS-SAME:   version = 0x0005,
+# RNGLISTS-SAME:   addr_size = 0x04,
+# RNGLISTS-SAME:   seg_size = 0x00,
+# RNGLISTS-SAME:   offset_entry_count = 0x00000002
+# RNGLISTS-NEXT: offsets: [
+# RNGLISTS-NEXT: 0x0000000000000010
+# RNGLISTS-NEXT: 0x0000000000000020
+# RNGLISTS-NEXT: ]
+# RNGLISTS-NEXT: ranges:
+# RNGLISTS-NEXT: [0x00000014, 0x0000001e)
+# RNGLISTS-NEXT: [0x0000002a, 0x00000034)
+# RNGLISTS-NEXT: <End of list>
+# RNGLISTS-NEXT: [0x0000002a, 0x00000034)
+# RNGLISTS-NEXT: <End of list>
+
+# RNGLISTS:      .debug_rnglists.dwo contents:
+# RNGLISTS:      range list header:
+# RNGLISTS-SAME:   length = 0x0000000000000022,
+# RNGLISTS-SAME:   format = DWARF64,
+# RNGLISTS-SAME:   version = 0x0005,
+# RNGLISTS-SAME:   addr_size = 0x04,
+# RNGLISTS-SAME:   seg_size = 0x00,
+# RNGLISTS-SAME:   offset_entry_count = 0x00000002
+# RNGLISTS-NEXT: offsets: [
+# RNGLISTS-NEXT: 0x0000000000000010
+# RNGLISTS-NEXT: 0x0000000000000011
+# RNGLISTS-NEXT: ]
+# RNGLISTS-NEXT: ranges:
+# RNGLISTS-NEXT: <End of list>
+# RNGLISTS-NEXT: [0x0000002a, 0x00000034)
+# RNGLISTS-NEXT: <End of list>

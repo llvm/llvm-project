@@ -1,0 +1,13 @@
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64 /dev/null -o %t.o
+# RUN: not ld.lld -shared %t.o -o /dev/null --script %s 2>&1 | FileCheck -strict-whitespace %s
+
+## Check that the section flag is recognized.
+
+SECTIONS {
+ .text : { INPUT_SECTION_FLAGS(UNKNOWN_FLAG) *(.text) }
+}
+
+# CHECK: unrecognised flag: UNKNOWN_FLAG
+# CHECK-NEXT: >>>  .text : { INPUT_SECTION_FLAGS(UNKNOWN_FLAG) *(.text) }
+# CHECK-NEXT: >>>                                ^

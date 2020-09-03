@@ -437,6 +437,6 @@ void ento::registerObjCSelfInitChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCSelfInitChecker>();
 }
 
-bool ento::shouldRegisterObjCSelfInitChecker(const LangOptions &LO) {
+bool ento::shouldRegisterObjCSelfInitChecker(const CheckerManager &mgr) {
   return true;
 }

@@ -314,6 +314,6 @@ void ento::registerLLVMConventionsChecker(CheckerManager &mgr) {
   mgr.registerChecker<LLVMConventionsChecker>();
 }
 
-bool ento::shouldRegisterLLVMConventionsChecker(const LangOptions &LO) {
+bool ento::shouldRegisterLLVMConventionsChecker(const CheckerManager &mgr) {
   return true;
 }

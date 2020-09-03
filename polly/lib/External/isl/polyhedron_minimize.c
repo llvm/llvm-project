@@ -61,16 +61,16 @@ int main(int argc, char **argv)
 	struct isl_vec *obj;
 	struct isl_vec *sol;
 	isl_int opt;
-	unsigned dim;
+	isl_size dim;
 	enum isl_lp_result res;
 	isl_printer *p;
 
 	isl_int_init(opt);
 	bset = isl_basic_set_read_from_file(ctx, stdin);
-	assert(bset);
+	dim = isl_basic_set_dim(bset, isl_dim_all);
+	assert(dim >= 0);
 	obj = isl_vec_read_from_file(ctx, stdin);
 	assert(obj);
-	dim = isl_basic_set_total_dim(bset);
 	assert(obj->size >= dim && obj->size <= dim + 1);
 	if (obj->size != dim + 1)
 		obj = isl_vec_lin_to_aff(obj);

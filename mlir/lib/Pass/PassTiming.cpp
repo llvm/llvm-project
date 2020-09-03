@@ -1,6 +1,6 @@
 //===- PassTiming.cpp -----------------------------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -160,7 +160,8 @@ struct Timer {
 };
 
 struct PassTiming : public PassInstrumentation {
-  PassTiming(PassDisplayMode displayMode) : displayMode(displayMode) {}
+  PassTiming(std::unique_ptr<PassManager::PassTimingConfig> config)
+      : config(std::move(config)) {}
   ~PassTiming() override { print(); }
 
   /// Setup the instrumentation hooks.
@@ -173,10 +174,10 @@ struct PassTiming : public PassInstrumentation {
   void runAfterPassFailed(Pass *pass, Operation *op) override {
     runAfterPass(pass, op);
   }
-  void runBeforeAnalysis(StringRef name, AnalysisID *id, Operation *) override {
+  void runBeforeAnalysis(StringRef name, TypeID id, Operation *) override {
     startAnalysisTimer(name, id);
   }
-  void runAfterAnalysis(StringRef, AnalysisID *, Operation *) override;
+  void runAfterAnalysis(StringRef, TypeID, Operation *) override;
 
   /// Print and clear the timing results.
   void print();
@@ -185,7 +186,7 @@ struct PassTiming : public PassInstrumentation {
   void startPassTimer(Pass *pass);
 
   /// Start a new timer for the given analysis.
-  void startAnalysisTimer(StringRef name, AnalysisID *id);
+  void startAnalysisTimer(StringRef name, TypeID id);
 
   /// Pop the last active timer for the current thread.
   Timer *popLastActiveTimer() {
@@ -231,8 +232,8 @@ struct PassTiming : public PassInstrumentation {
   /// A stack of the currently active pass timers per thread.
   DenseMap<uint64_t, SmallVector<Timer *, 4>> activeThreadTimers;
 
-  /// The display mode to use when printing the timing results.
-  PassDisplayMode displayMode;
+  /// The configuration object to use when printing the timing results.
+  std::unique_ptr<PassManager::PassTimingConfig> config;
 
   /// A mapping of pipeline timers that need to be merged into the parent
   /// collection. The timers are mapped to the parent info to merge into.
@@ -243,7 +244,7 @@ struct PassTiming : public PassInstrumentation {
 
 void PassTiming::runBeforePipeline(const OperationName &name,
                                    const PipelineParentInfo &parentInfo) {
-  // We don't actually want to time the piplelines, they gather their total
+  // We don't actually want to time the pipelines, they gather their total
   // from their held passes.
   getTimer(name.getAsOpaquePointer(), TimerKind::Pipeline,
            [&] { return ("'" + name.getStringRef() + "' Pipeline").str(); });
@@ -276,23 +277,23 @@ void PassTiming::runAfterPipeline(const OperationName &name,
 
 /// Start a new timer for the given pass.
 void PassTiming::startPassTimer(Pass *pass) {
-  auto kind = isAdaptorPass(pass) ? TimerKind::PipelineCollection
-                                  : TimerKind::PassOrAnalysis;
+  auto kind = isa<OpToOpPassAdaptor>(pass) ? TimerKind::PipelineCollection
+                                           : TimerKind::PassOrAnalysis;
   Timer *timer = getTimer(pass, kind, [pass]() -> std::string {
-    if (auto *adaptor = getAdaptorPassBase(pass))
-      return adaptor->getName();
-    return pass->getName();
+    if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass))
+      return adaptor->getAdaptorName();
+    return std::string(pass->getName());
   });
 
   // We don't actually want to time the adaptor passes, they gather their total
   // from their held passes.
-  if (!isAdaptorPass(pass))
+  if (!isa<OpToOpPassAdaptor>(pass))
     timer->start();
 }
 
 /// Start a new timer for the given analysis.
-void PassTiming::startAnalysisTimer(StringRef name, AnalysisID *id) {
-  Timer *timer = getTimer(id, TimerKind::PassOrAnalysis,
+void PassTiming::startAnalysisTimer(StringRef name, TypeID id) {
+  Timer *timer = getTimer(id.getAsOpaquePointer(), TimerKind::PassOrAnalysis,
                           [name] { return "(A) " + name.str(); });
   timer->start();
 }
@@ -301,9 +302,9 @@ void PassTiming::startAnalysisTimer(StringRef name, AnalysisID *id) {
 void PassTiming::runAfterPass(Pass *pass, Operation *) {
   Timer *timer = popLastActiveTimer();
 
-  // If this is an OpToOpPassAdaptorParallel, then we need to merge in the
-  // timing data for the pipelines running on other threads.
-  if (isa<OpToOpPassAdaptorParallel>(pass)) {
+  // If this is a pass adaptor, then we need to merge in the timing data for the
+  // pipelines running on other threads.
+  if (isa<OpToOpPassAdaptor>(pass)) {
     auto toMerge = pipelinesToMerge.find({llvm::get_threadid(), pass});
     if (toMerge != pipelinesToMerge.end()) {
       for (auto &it : toMerge->second)
@@ -313,14 +314,11 @@ void PassTiming::runAfterPass(Pass *pass, Operation *) {
     return;
   }
 
-  // Adaptor passes aren't timed directly, so we don't need to stop their
-  // timers.
-  if (!isAdaptorPass(pass))
-    timer->stop();
+  timer->stop();
 }
 
 /// Stop a timer.
-void PassTiming::runAfterAnalysis(StringRef, AnalysisID *, Operation *) {
+void PassTiming::runAfterAnalysis(StringRef, TypeID, Operation *) {
   popLastActiveTimer()->stop();
 }
 
@@ -353,28 +351,37 @@ void PassTiming::print() {
     return;
 
   assert(rootTimers.size() == 1 && "expected one remaining root timer");
-  auto &rootTimer = rootTimers.begin()->second;
-  auto os = llvm::CreateInfoOutputFile();
 
-  // Print the timer header.
-  TimeRecord totalTime = rootTimer->getTotalTime();
-  printTimerHeader(*os, totalTime);
+  auto printCallback = [&](raw_ostream &os) {
+    auto &rootTimer = rootTimers.begin()->second;
+    // Print the timer header.
+    TimeRecord totalTime = rootTimer->getTotalTime();
+    printTimerHeader(os, totalTime);
+    // Defer to a specialized printer for each display mode.
+    switch (config->getDisplayMode()) {
+    case PassDisplayMode::List:
+      printResultsAsList(os, rootTimer.get(), totalTime);
+      break;
+    case PassDisplayMode::Pipeline:
+      printResultsAsPipeline(os, rootTimer.get(), totalTime);
+      break;
+    }
+    printTimeEntry(os, 0, "Total", totalTime, totalTime);
+    os.flush();
 
-  // Defer to a specialized printer for each display mode.
-  switch (displayMode) {
-  case PassDisplayMode::List:
-    printResultsAsList(*os, rootTimer.get(), totalTime);
-    break;
-  case PassDisplayMode::Pipeline:
-    printResultsAsPipeline(*os, rootTimer.get(), totalTime);
-    break;
-  }
-  printTimeEntry(*os, 0, "Total", totalTime, totalTime);
-  os->flush();
+    // Reset root timers.
+    rootTimers.clear();
+    activeThreadTimers.clear();
+  };
 
-  // Reset root timers.
-  rootTimers.clear();
-  activeThreadTimers.clear();
+  config->printTiming(printCallback);
+}
+
+// The default implementation for printTiming uses
+// `llvm::CreateInfoOutputFile()` as stream, it can be overridden by clients
+// to customize the output.
+void PassManager::PassTimingConfig::printTiming(PrintCallbackFn printCallback) {
+  printCallback(*llvm::CreateInfoOutputFile());
 }
 
 /// Print the timing result in list mode.
@@ -449,16 +456,21 @@ void PassTiming::printResultsAsPipeline(raw_ostream &os, Timer *root,
     printTimer(0, topLevelTimer.second.get());
 }
 
+// Out-of-line as key function.
+PassManager::PassTimingConfig::~PassTimingConfig() {}
+
 //===----------------------------------------------------------------------===//
 // PassManager
 //===----------------------------------------------------------------------===//
 
 /// Add an instrumentation to time the execution of passes and the computation
 /// of analyses.
-void PassManager::enableTiming(PassDisplayMode displayMode) {
+void PassManager::enableTiming(std::unique_ptr<PassTimingConfig> config) {
   // Check if pass timing is already enabled.
   if (passTiming)
     return;
-  addInstrumentation(std::make_unique<PassTiming>(displayMode));
+  if (!config)
+    config = std::make_unique<PassManager::PassTimingConfig>();
+  addInstrumentation(std::make_unique<PassTiming>(std::move(config)));
   passTiming = true;
 }

@@ -119,10 +119,12 @@ int main() {
 
   mutex_exclusive_lock(&mu1);    // expected-note {{mutex acquired here}}
   mutex_shared_unlock(&mu1);     // expected-warning {{releasing mutex 'mu1' using shared access, expected exclusive access}}
+                                 // expected-note@-1{{mutex released here}}
   mutex_exclusive_unlock(&mu1);  // expected-warning {{releasing mutex 'mu1' that was not held}}
 
   mutex_shared_lock(&mu1);      // expected-note {{mutex acquired here}}
   mutex_exclusive_unlock(&mu1); // expected-warning {{releasing mutex 'mu1' using exclusive access, expected shared access}}
+                                // expected-note@-1{{mutex released here}}
   mutex_shared_unlock(&mu1);    // expected-warning {{releasing mutex 'mu1' that was not held}}
 
   return 0;

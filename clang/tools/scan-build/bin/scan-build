@@ -971,6 +971,7 @@ sub Finalize {
         my $ScanView = Cwd::realpath("$RealBin/scan-view");
         if (! -x $ScanView) { $ScanView = "scan-view"; }
         if (! -x $ScanView) { $ScanView = Cwd::realpath("$RealBin/../../scan-view/bin/scan-view"); }
+        if (! -x $ScanView) { $ScanView = `which scan-view`; chomp $ScanView; }
         exec $ScanView, "$Options{OutputDir}";
       }
 
@@ -1972,13 +1973,11 @@ my $CCC_ANALYZER_ANALYSIS = join ' ', @AnalysesToRun;
 my $CCC_ANALYZER_PLUGINS = join ' ', map { "-load ".$_ } @{$Options{PluginsToLoad}};
 my $CCC_ANALYZER_CONFIG = join ' ', map { "-analyzer-config ".$_ } @{$Options{ConfigOptions}};
 
-if (%{$Options{SilenceCheckers}}) {
+foreach (sort { $Options{SilenceCheckers}{$a} <=> $Options{SilenceCheckers}{$b} }
+         keys %{$Options{SilenceCheckers}}) {
+  # Add checkers in order they were silenced.
   $CCC_ANALYZER_CONFIG =
-      $CCC_ANALYZER_CONFIG." -analyzer-config silence-checkers="
-                          .join(';', sort {
-                                            $Options{SilenceCheckers}{$a} <=>
-                                            $Options{SilenceCheckers}{$b}
-                                          } keys %{$Options{SilenceCheckers}});
+      $CCC_ANALYZER_CONFIG." -analyzer-config silence-checkers=".$_;
 }
 
 my %EnvVars = (

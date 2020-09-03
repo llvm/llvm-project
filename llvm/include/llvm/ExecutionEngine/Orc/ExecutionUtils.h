@@ -17,6 +17,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Object/Archive.h"
@@ -103,6 +104,53 @@ iterator_range<CtorDtorIterator> getConstructors(const Module &M);
 /// Create an iterator range over the entries of the llvm.global_ctors
 ///        array.
 iterator_range<CtorDtorIterator> getDestructors(const Module &M);
+
+/// This iterator provides a convenient way to iterate over GlobalValues that
+/// have initialization effects.
+class StaticInitGVIterator {
+public:
+  StaticInitGVIterator() = default;
+
+  StaticInitGVIterator(Module &M)
+      : I(M.global_values().begin()), E(M.global_values().end()),
+        ObjFmt(Triple(M.getTargetTriple()).getObjectFormat()) {
+    if (I != E) {
+      if (!isStaticInitGlobal(*I))
+        moveToNextStaticInitGlobal();
+    } else
+      I = E = Module::global_value_iterator();
+  }
+
+  bool operator==(const StaticInitGVIterator &O) const { return I == O.I; }
+  bool operator!=(const StaticInitGVIterator &O) const { return I != O.I; }
+
+  StaticInitGVIterator &operator++() {
+    assert(I != E && "Increment past end of range");
+    moveToNextStaticInitGlobal();
+    return *this;
+  }
+
+  GlobalValue &operator*() { return *I; }
+
+private:
+  bool isStaticInitGlobal(GlobalValue &GV);
+  void moveToNextStaticInitGlobal() {
+    ++I;
+    while (I != E && !isStaticInitGlobal(*I))
+      ++I;
+    if (I == E)
+      I = E = Module::global_value_iterator();
+  }
+
+  Module::global_value_iterator I, E;
+  Triple::ObjectFormatType ObjFmt;
+};
+
+/// Create an iterator range over the GlobalValues that contribute to static
+/// initialization.
+inline iterator_range<StaticInitGVIterator> getStaticInitGVs(Module &M) {
+  return make_range(StaticInitGVIterator(M), StaticInitGVIterator());
+}
 
 /// Convenience class for recording constructor/destructor names for
 ///        later execution.
@@ -246,6 +294,22 @@ public:
   Error enable(JITDylib &JD, MangleAndInterner &Mangler);
 };
 
+/// An interface for Itanium __cxa_atexit interposer implementations.
+class ItaniumCXAAtExitSupport {
+public:
+  struct AtExitRecord {
+    void (*F)(void *);
+    void *Ctx;
+  };
+
+  void registerAtExit(void (*F)(void *), void *Ctx, void *DSOHandle);
+  void runAtExits(void *DSOHandle);
+
+private:
+  std::mutex AtExitsMutex;
+  DenseMap<void *, std::vector<AtExitRecord>> AtExitRecords;
+};
+
 /// A utility class to expose symbols found via dlsym to the JIT.
 ///
 /// If an instance of this class is attached to a JITDylib as a fallback
@@ -302,6 +366,14 @@ public:
   /// is a valid archive, otherwise it will return an error.
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Load(ObjectLayer &L, const char *FileName);
+
+  /// Try to create a StaticLibraryDefinitionGenerator from the given path.
+  ///
+  /// This call will succeed if the file at the given path is a static library
+  /// or a MachO universal binary containing a static library that is compatible
+  /// with the given triple. Otherwise it will return an error.
+  static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
+  Load(ObjectLayer &L, const char *FileName, const Triple &TT);
 
   /// Try to create a StaticLibrarySearchGenerator from the given memory buffer.
   /// This call will succeed if the buffer contains a valid archive, otherwise

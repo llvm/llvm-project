@@ -62,16 +62,39 @@ class CodeGenVTables {
                                  bool ForVTable);
 
   void addVTableComponent(ConstantArrayBuilder &builder,
-                          const VTableLayout &layout, unsigned idx,
-                          llvm::Constant *rtti,
-                          unsigned &nextVTableThunkIndex);
+                          const VTableLayout &layout, unsigned componentIndex,
+                          llvm::Constant *rtti, unsigned &nextVTableThunkIndex,
+                          unsigned vtableAddressPoint,
+                          bool vtableHasLocalLinkage);
+
+  /// Add a 32-bit offset to a component relative to the vtable when using the
+  /// relative vtables ABI. The array builder points to the start of the vtable.
+  void addRelativeComponent(ConstantArrayBuilder &builder,
+                            llvm::Constant *component,
+                            unsigned vtableAddressPoint,
+                            bool vtableHasLocalLinkage,
+                            bool isCompleteDtor) const;
+
+  /// Create a dso_local stub that will be used for a relative reference in the
+  /// relative vtable layout. This stub will just be a tail call to the original
+  /// function and propagate any function attributes from the original. If the
+  /// original function is already dso_local, the original is returned instead
+  /// and a stub is not created.
+  llvm::Function *
+  getOrCreateRelativeStub(llvm::Function *func,
+                          llvm::GlobalValue::LinkageTypes stubLinkage,
+                          bool isCompleteDtor) const;
+
+  bool useRelativeLayout() const;
+
+  llvm::Type *getVTableComponentType() const;
 
 public:
   /// Add vtable components for the given vtable layout to the given
   /// global initializer.
   void createVTableInitializer(ConstantStructBuilder &builder,
-                               const VTableLayout &layout,
-                               llvm::Constant *rtti);
+                               const VTableLayout &layout, llvm::Constant *rtti,
+                               bool vtableHasLocalLinkage);
 
   CodeGenVTables(CodeGenModule &CGM);
 
@@ -124,6 +147,13 @@ public:
   /// arrays of pointers, with one struct element for each vtable in the vtable
   /// group.
   llvm::Type *getVTableType(const VTableLayout &layout);
+
+  /// Generate a public facing alias for the vtable and make the vtable either
+  /// hidden or private. The alias will have the original linkage and visibility
+  /// of the vtable. This is used for cases under the relative vtables ABI
+  /// when a vtable may not be dso_local.
+  void GenerateRelativeVTableAlias(llvm::GlobalVariable *VTable,
+                                   llvm::StringRef AliasNameRef);
 };
 
 } // end namespace CodeGen

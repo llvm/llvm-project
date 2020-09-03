@@ -1,4 +1,4 @@
-; RUN: opt -S -basicaa -gvn < %s | FileCheck %s
+; RUN: opt -S -basic-aa -gvn < %s | FileCheck %s
 
 declare void @argmemonly_function(i32 *) argmemonly
 

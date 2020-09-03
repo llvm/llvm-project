@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlan_Python_h_
-#define liblldb_ThreadPlan_Python_h_
+#ifndef LLDB_TARGET_THREADPLANPYTHON_H
+#define LLDB_TARGET_THREADPLANPYTHON_H
 
 #include <string>
 
@@ -68,9 +68,10 @@ private:
   StructuredData::ObjectSP m_implementation_sp;
   bool m_did_push;
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanPython);
+  ThreadPlanPython(const ThreadPlanPython &) = delete;
+  const ThreadPlanPython &operator=(const ThreadPlanPython &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlan_Python_h_
+#endif // LLDB_TARGET_THREADPLANPYTHON_H

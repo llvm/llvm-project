@@ -31,28 +31,27 @@
 #ifndef LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
 #define LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
 
-#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/IR/User.h"
 
 namespace llvm {
-class Function;
+
 template <typename T, typename... TArgs> class AnalysisManager;
 template <class T> class ArrayRef;
 class AssumptionCache;
+class BinaryOperator;
 class CallBase;
-class DominatorTree;
 class DataLayout;
-class FastMathFlags;
+class DominatorTree;
+class Function;
 struct LoopStandardAnalysisResults;
+class MDNode;
 class OptimizationRemarkEmitter;
 class Pass;
+template <class T, unsigned n> class SmallSetVector;
 class TargetLibraryInfo;
 class Type;
 class Value;
-class MDNode;
-class BinaryOperator;
 
 /// InstrInfoQuery provides an interface to query additional information for
 /// instructions like metadata or keywords like nsw, which provides conservative
@@ -230,7 +229,8 @@ Value *SimplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
                         const SimplifyQuery &Q);
 
 /// Given operands for a ShuffleVectorInst, fold the result or return null.
-Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
+/// See class ShuffleVectorInst for a description of the mask representation.
+Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, ArrayRef<int> Mask,
                                  Type *RetTy, const SimplifyQuery &Q);
 
 //=== Helper functions for higher up the class hierarchy.

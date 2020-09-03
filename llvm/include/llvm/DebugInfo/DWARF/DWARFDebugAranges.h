@@ -10,7 +10,7 @@
 #define LLVM_DEBUGINFO_DWARFDEBUGARANGES_H
 
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include <cstdint>
 #include <vector>
 
@@ -21,19 +21,19 @@ class DWARFContext;
 class DWARFDebugAranges {
 public:
   void generate(DWARFContext *CTX);
-  uint32_t findAddress(uint64_t Address) const;
+  uint64_t findAddress(uint64_t Address) const;
 
 private:
   void clear();
-  void extract(DataExtractor DebugArangesData);
+  void extract(DWARFDataExtractor DebugArangesData,
+               function_ref<void(Error)> RecoverableErrorHandler);
 
   /// Call appendRange multiple times and then call construct.
   void appendRange(uint64_t CUOffset, uint64_t LowPC, uint64_t HighPC);
   void construct();
 
   struct Range {
-    explicit Range(uint64_t LowPC = -1ULL, uint64_t HighPC = -1ULL,
-                   uint32_t CUOffset = -1U)
+    explicit Range(uint64_t LowPC, uint64_t HighPC, uint64_t CUOffset)
       : LowPC(LowPC), Length(HighPC - LowPC), CUOffset(CUOffset) {}
 
     void setHighPC(uint64_t HighPC) {
@@ -54,8 +54,8 @@ private:
     }
 
     uint64_t LowPC; /// Start of address range.
-    uint32_t Length; /// End of address range (not including this address).
-    uint32_t CUOffset; /// Offset of the compile unit or die.
+    uint64_t Length; /// End of address range (not including this address).
+    uint64_t CUOffset; /// Offset of the compile unit or die.
   };
 
   struct RangeEndpoint {

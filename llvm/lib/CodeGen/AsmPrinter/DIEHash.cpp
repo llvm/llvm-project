@@ -17,10 +17,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/CodeGen/DIE.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -224,8 +222,9 @@ void DIEHash::hashLocList(const DIELocList &LocList) {
   HashingByteStreamer Streamer(*this);
   DwarfDebug &DD = *AP->getDwarfDebug();
   const DebugLocStream &Locs = DD.getDebugLocs();
-  for (const auto &Entry : Locs.getEntries(Locs.getList(LocList.getValue())))
-    DD.emitDebugLocEntry(Streamer, Entry, nullptr);
+  const DebugLocStream::List &List = Locs.getList(LocList.getValue());
+  for (const DebugLocStream::Entry &Entry : Locs.getEntries(List))
+    DD.emitDebugLocEntry(Streamer, Entry, List.CU);
 }
 
 // Hash an individual attribute \param Attr based on the type of attribute and
@@ -361,7 +360,7 @@ void DIEHash::computeHash(const DIE &Die) {
   for (auto &C : Die.children()) {
     // 7.27 Step 7
     // If C is a nested type entry or a member function entry, ...
-    if (isType(C.getTag()) || C.getTag() == dwarf::DW_TAG_subprogram) {
+    if (isType(C.getTag()) || (C.getTag() == dwarf::DW_TAG_subprogram && isType(C.getParent()->getTag()))) {
       StringRef Name = getDIEStringAttr(C, dwarf::DW_AT_name);
       // ... and has a DW_AT_name attribute
       if (!Name.empty()) {

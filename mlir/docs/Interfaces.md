@@ -1,12 +1,14 @@
-# Introduction to MLIR Interfaces
+# Interfaces
 
-MLIR is generic and very extensible; it allows for opaquely representing many
-different dialects that have their own operations, attributes, types, and so on.
-This allows for dialects to be very expressive in their semantics and for MLIR
-to capture many different levels of abstraction. The downside to this is that
-transformations and analyses must be extremely conservative about the operations
-that they encounter, and must special-case the different dialects that they
-support. To combat this, MLIR provides the concept of `interfaces`.
+MLIR is a generic and extensible framework, representing different
+dialects with their own operations, attributes, types, and so on.
+MLIR Dialects can express operations with a wide variety of semantics
+and different levels of abstraction. The downside to this is that MLIR
+transformations and analyses need to account for the semantics of
+every operation, or handle operations conservatively. Without care,
+this can result in code with special-cases for each supported
+operation type. To combat this, MLIR provides the concept of
+`interfaces`.
 
 ## Motivation
 
@@ -20,14 +22,15 @@ transformations/analyses.
 ### Dialect Interfaces
 
 Dialect interfaces are generally useful for transformation passes or analyses
-that want to opaquely operate on operations, even *across* dialects. These
-interfaces generally involve wide coverage over the entire dialect and are only
-used for a handful of transformations/analyses. In these cases, registering the
-interface directly on each operation is overly complex and cumbersome. The
-interface is not core to the operation, just to the specific transformation. An
-example of where this type of interface would be used is inlining. Inlining
-generally queries high-level information about the operations within a dialect,
-like legality and cost modeling, that often is not specific to one operation.
+that want to operate generically on a set of attributes/operations/types, which
+might even be defined in different dialects. These interfaces generally involve
+wide coverage over the entire dialect and are only used for a handful of
+transformations/analyses. In these cases, registering the interface directly on
+each operation is overly complex and cumbersome. The interface is not core to
+the operation, just to the specific transformation. An example of where this
+type of interface would be used is inlining. Inlining generally queries
+high-level information about the operations within a dialect, like legality and
+cost modeling, that often is not specific to one operation.
 
 A dialect interface can be defined by inheriting from the CRTP base class
 `DialectInterfaceBase::Base`. This class provides the necessary utilities for
@@ -63,13 +66,14 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 };
 
 /// Register the interface with the dialect.
-AffineOpsDialect::AffineOpsDialect(MLIRContext *context) ... {
+AffineDialect::AffineDialect(MLIRContext *context) ... {
   addInterfaces<AffineInlinerInterface>();
 }
 ```
 
-Once registered, these interfaces can be opaquely queried from the dialect by
-the transformation/analysis that wants to use them:
+Once registered, these interfaces can be queried from the dialect by
+the transformation/analysis that wants to use them, without
+determining the particular dialect subclass:
 
 ```c++
 Dialect *dialect = ...;
@@ -102,24 +106,25 @@ if(!interface.isLegalToInline(...))
    ...
 ```
 
-### Operation Interfaces
+### Attribute/Operation/Type Interfaces
 
-Operation interfaces, as the name suggests, are those registered at the
-Operation level. These interfaces provide an opaque view into derived operations
-by providing a virtual interface that must be implemented. As an example, the
-`Linalg` dialect may implement an interface that provides general queries about
-some of the dialects library operations. These queries may provide things like:
-the number of parallel loops; the number of inputs and outputs; etc.
+Attribute/Operation/Type interfaces, as the names suggest, are those registered
+at the level of a specific attribute/operation/type. These interfaces provide
+access to derived objects by providing a virtual interface that must be
+implemented. As an example, the `Linalg` dialect may implement an interface that
+provides general queries about some of the dialects library operations. These
+queries may provide things like: the number of parallel loops; the number of
+inputs and outputs; etc.
 
-Operation interfaces are defined by overriding the CRTP base class
-`OpInterface`. This class takes, as a template parameter, a `Traits` class that
-defines a `Concept` and a `Model` class. These classes provide an implementation
-of concept-based polymorphism, where the Concept defines a set of virtual
-methods that are overridden by the Model that is templated on the concrete
-operation type. It is important to note that these classes should be pure in
-that they contain no non-static data members. Operations that wish to override
-this interface should add the provided trait `OpInterface<..>::Trait` upon
-registration.
+These interfaces are defined by overriding the CRTP base class `AttrInterface`,
+`OpInterface`, or `TypeInterface` respectively. These classes take, as a
+template parameter, a `Traits` class that defines a `Concept` and a `Model`
+class. These classes provide an implementation of concept-based polymorphism,
+where the Concept defines a set of virtual methods that are overridden by the
+Model that is templated on the concrete object type. It is important to note
+that these classes should be pure in that they contain no non-static data
+members. Objects that wish to override this interface should add the provided
+trait `*Interface<..>::Trait` to the trait list upon registration.
 
 ```c++
 struct ExampleOpInterfaceTraits {
@@ -127,14 +132,14 @@ struct ExampleOpInterfaceTraits {
   /// to be overridden.
   struct Concept {
     virtual ~Concept();
-    virtual unsigned getNumInputs(Operation *op) = 0;
+    virtual unsigned getNumInputs(Operation *op) const = 0;
   };
 
   /// Define a model class that specializes a concept on a given operation type.
   template <typename OpT>
   struct Model : public Concept {
     /// Override the method to dispatch on the concrete operation.
-    unsigned getNumInputs(Operation *op) final {
+    unsigned getNumInputs(Operation *op) const final {
       return llvm::cast<OpT>(op).getNumInputs();
     }
   };
@@ -147,7 +152,7 @@ public:
   using OpInterface<ExampleOpInterface, ExampleOpInterfaceTraits>::OpInterface;
 
   /// The interface dispatches to 'getImpl()', an instance of the concept.
-  unsigned getNumInputs() {
+  unsigned getNumInputs() const {
     return getImpl()->getNumInputs(getOperation());
   }
 };
@@ -178,8 +183,7 @@ if (ExampleOpInterface example = dyn_cast<ExampleOpInterface>(op))
 
 Operation interfaces require a bit of boiler plate to connect all of the pieces
 together. The ODS(Operation Definition Specification) framework provides
-simplified mechanisms for
-[defining interfaces](OpDefinitions.md#operation-interfaces).
+simplified mechanisms for [defining interfaces](OpDefinitions.md#interfaces).
 
 As an example, using the ODS framework would allow for defining the example
 interface above as:

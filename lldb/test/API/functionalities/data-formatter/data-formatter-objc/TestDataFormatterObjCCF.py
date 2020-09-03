@@ -31,6 +31,7 @@ class ObjCDataFormatterCF(ObjCDataFormatterTestCase):
         # check formatters for common Objective-C types
         expect_strings = [
             '(CFGregorianUnits) cf_greg_units = 1 years, 3 months, 5 days, 12 hours, 5 minutes 7 seconds',
+            '(CFGregorianDate) cf_greg_date = @"4/10/1985 18:0:0"',
             '(CFRange) cf_range = location=4 length=4',
             '(NSPoint) ns_point = (x = 4, y = 4)',
             '(NSRange) ns_range = location=4, length=4',
@@ -43,17 +44,16 @@ class ObjCDataFormatterCF(ObjCDataFormatterTestCase):
             '(Rect) rect = (t=4, l=8, b=4, r=7)',
             '(Rect *) rect_ptr = (t=4, l=8, b=4, r=7)',
             '(Point) point = (v=7, h=12)', '(Point *) point_ptr = (v=7, h=12)',
-            '1985', 'foo_selector_impl'
+            '(SEL) foo_selector = "foo_selector_impl"'
         ]
 
-        if self.getArchitecture() in ['i386', 'x86_64']:
-            expect_strings.append('(HIPoint) hi_point = (x=7, y=12)')
-            expect_strings.append(
-                '(HIRect) hi_rect = origin=(x = 3, y = 5) size=(width = 4, height = 6)'
-            )
-            expect_strings.append(
-                '(RGBColor) rgb_color = red=3 green=56 blue=35')
-            expect_strings.append(
-                '(RGBColor *) rgb_color_ptr = red=3 green=56 blue=35')
-
         self.expect("frame variable", substrs=expect_strings)
+
+        if self.getArchitecture() in ['i386', 'x86_64']:
+            extra_string = [
+                '(RGBColor) rgb_color = red=3 green=56 blue=35',
+                '(RGBColor *) rgb_color_ptr = red=3 green=56 blue=35',
+                '(HIPoint) hi_point = (x=7, y=12)',
+                '(HIRect) hi_rect = origin=(x = 3, y = 5) size=(width = 4, height = 6)',
+            ]
+            self.expect("frame variable", substrs=extra_string)

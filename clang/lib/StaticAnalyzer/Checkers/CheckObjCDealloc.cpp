@@ -1088,7 +1088,8 @@ void ento::registerObjCDeallocChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ObjCDeallocChecker>();
 }
 
-bool ento::shouldRegisterObjCDeallocChecker(const LangOptions &LO) {
+bool ento::shouldRegisterObjCDeallocChecker(const CheckerManager &mgr) {
   // These checker only makes sense under MRR.
+  const LangOptions &LO = mgr.getLangOpts();
   return LO.getGC() != LangOptions::GCOnly && !LO.ObjCAutoRefCount;
 }

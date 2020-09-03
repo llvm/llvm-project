@@ -91,8 +91,8 @@ define <2 x i1> @test_vector_index(i8* %base, <2 x i64> %idx) {
 ; CHECK-LABEL: @test_vector_index(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i8*> undef, i8* [[BASE:%.*]], i32 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i8*> [[DOTSPLATINSERT]], <2 x i8*> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[CND:%.*]] = icmp eq <2 x i8*> [[DOTSPLAT]], zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <2 x i8*> [[DOTSPLATINSERT]], zeroinitializer
+; CHECK-NEXT:    [[CND:%.*]] = shufflevector <2 x i1> [[TMP0]], <2 x i1> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CND]]
 ;
 entry:

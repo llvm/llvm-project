@@ -48,11 +48,13 @@ private:
 
 /// Pointer to a pooled string representing a symbol name.
 class SymbolStringPtr {
+  friend class OrcV2CAPIHelper;
   friend class SymbolStringPool;
   friend struct DenseMapInfo<SymbolStringPtr>;
 
 public:
   SymbolStringPtr() = default;
+  SymbolStringPtr(std::nullptr_t) {}
   SymbolStringPtr(const SymbolStringPtr &Other)
     : S(Other.S) {
     if (isRealPoolEntry(S))
@@ -85,6 +87,8 @@ public:
       --S->getValue();
   }
 
+  explicit operator bool() const { return S; }
+
   StringRef operator*() const { return S->first(); }
 
   friend bool operator==(const SymbolStringPtr &LHS,
@@ -103,7 +107,8 @@ public:
   }
 
 private:
-  using PoolEntryPtr = SymbolStringPool::PoolMapEntry *;
+  using PoolEntry = SymbolStringPool::PoolMapEntry;
+  using PoolEntryPtr = PoolEntry *;
 
   SymbolStringPtr(SymbolStringPool::PoolMapEntry *S)
       : S(S) {

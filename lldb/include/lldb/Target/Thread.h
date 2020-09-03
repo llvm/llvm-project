@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Thread_h_
-#define liblldb_Thread_h_
+#ifndef LLDB_TARGET_THREAD_H
+#define LLDB_TARGET_THREAD_H
 
 #include <memory>
 #include <mutex>
@@ -113,7 +113,8 @@ public:
     lldb::ThreadSP m_thread_sp;
     StackID m_stack_id;
 
-    DISALLOW_COPY_AND_ASSIGN(ThreadEventData);
+    ThreadEventData(const ThreadEventData &) = delete;
+    const ThreadEventData &operator=(const ThreadEventData &) = delete;
   };
 
   struct ThreadStateCheckpoint {
@@ -179,8 +180,6 @@ public:
   /// to force the thread to run (e.g. the "thread continue" command, or are
   /// resetting the state
   /// (e.g. in SBThread::Resume()), then pass true to override_suspend.
-  /// \return
-  ///    The User resume state for this thread.
   void SetResumeState(lldb::StateType state, bool override_suspend = false) {
     if (m_resume_state == lldb::eStateSuspended && !override_suspend)
       return;
@@ -1160,7 +1159,7 @@ public:
   /// Some Thread subclasses may maintain a token to help with providing
   /// an extended backtrace.  The SystemRuntime plugin will set/request this.
   ///
-  /// \param [in] token
+  /// \param [in] token The extended backtrace token.
   virtual void SetExtendedBacktraceToken(uint64_t token) {}
 
   /// Gets the extended backtrace token for this thread
@@ -1200,7 +1199,7 @@ protected:
 
   ThreadPlan *GetPreviousPlan(ThreadPlan *plan) const;
 
-  virtual lldb_private::Unwind *GetUnwinder();
+  virtual Unwind &GetUnwinder();
 
   // Check to see whether the thread is still at the last breakpoint hit that
   // stopped it.
@@ -1270,12 +1269,12 @@ private:
                                 // for this thread?
   StructuredData::ObjectSP m_extended_info; // The extended info for this thread
 
-private:
   void BroadcastSelectedFrameChange(StackID &new_frame_id);
 
-  DISALLOW_COPY_AND_ASSIGN(Thread);
+  Thread(const Thread &) = delete;
+  const Thread &operator=(const Thread &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_Thread_h_
+#endif // LLDB_TARGET_THREAD_H

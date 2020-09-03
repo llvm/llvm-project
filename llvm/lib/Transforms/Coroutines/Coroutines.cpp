@@ -19,7 +19,6 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -648,4 +647,10 @@ void LLVMAddCoroElidePass(LLVMPassManagerRef PM) {
 
 void LLVMAddCoroCleanupPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createCoroCleanupLegacyPass());
+}
+
+void
+LLVMPassManagerBuilderAddCoroutinePassesToExtensionPoints(LLVMPassManagerBuilderRef PMB) {
+  PassManagerBuilder *Builder = unwrap(PMB);
+  addCoroutinePassesToExtensionPoints(*Builder);
 }

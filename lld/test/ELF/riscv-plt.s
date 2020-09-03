@@ -43,7 +43,7 @@
 # GOTPLT64-NEXT: 0x000130d0 00000000 00000000 00000000 00000000
 # GOTPLT64-NEXT: 0x000130e0 30100100 00000000 30100100 00000000
 
-# DIS:      _start:
+# DIS:      <_start>:
 ## Direct call
 ## foo - . = 0x11020-0x11000 = 32
 # DIS-NEXT:   11000: auipc ra, 0
@@ -57,11 +57,11 @@
 ## weak@plt - . = 0x11060-0x11018 = 72
 # DIS-NEXT:   11018: auipc ra, 0
 # DIS-NEXT:          jalr 72(ra)
-# DIS:      foo:
+# DIS:      <foo>:
 # DIS-NEXT:   11020:
 
 # DIS:      Disassembly of section .plt:
-# DIS:      .plt:
+# DIS:      <.plt>:
 # DIS-NEXT:     auipc t2, 2
 # DIS-NEXT:     sub t1, t1, t3
 ## .got.plt - .plt = 0x13068 - 0x11030 = 4096*2+56

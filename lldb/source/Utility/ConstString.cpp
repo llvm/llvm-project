@@ -1,4 +1,4 @@
-//===-- ConstString.cpp -----------------------------------------*- C++ -*-===//
+//===-- ConstString.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,9 +29,37 @@ using namespace lldb_private;
 
 class Pool {
 public:
+  /// The default BumpPtrAllocatorImpl slab size.
+  static const size_t AllocatorSlabSize = 4096;
+  static const size_t SizeThreshold = AllocatorSlabSize;
+  /// Every Pool has its own allocator which receives an equal share of
+  /// the ConstString allocations. This means that when allocating many
+  /// ConstStrings, every allocator sees only its small share of allocations and
+  /// assumes LLDB only allocated a small amount of memory so far. In reality
+  /// LLDB allocated a total memory that is N times as large as what the
+  /// allocator sees (where N is the number of string pools). This causes that
+  /// the BumpPtrAllocator continues a long time to allocate memory in small
+  /// chunks which only makes sense when allocating a small amount of memory
+  /// (which is true from the perspective of a single allocator). On some
+  /// systems doing all these small memory allocations causes LLDB to spend
+  /// a lot of time in malloc, so we need to force all these allocators to
+  /// behave like one allocator in terms of scaling their memory allocations
+  /// with increased demand. To do this we set the growth delay for each single
+  /// allocator to a rate so that our pool of allocators scales their memory
+  /// allocations similar to a single BumpPtrAllocatorImpl.
+  ///
+  /// Currently we have 256 string pools and the normal growth delay of the
+  /// BumpPtrAllocatorImpl is 128 (i.e., the memory allocation size increases
+  /// every 128 full chunks), so by changing the delay to 1 we get a
+  /// total growth delay in our allocator collection of 256/1 = 256. This is
+  /// still only half as fast as a normal allocator but we can't go any faster
+  /// without decreasing the number of string pools.
+  static const size_t AllocatorGrowthDelay = 1;
+  typedef llvm::BumpPtrAllocatorImpl<llvm::MallocAllocator, AllocatorSlabSize,
+                                     SizeThreshold, AllocatorGrowthDelay>
+      Allocator;
   typedef const char *StringPoolValueType;
-  typedef llvm::StringMap<StringPoolValueType, llvm::BumpPtrAllocator>
-      StringPool;
+  typedef llvm::StringMap<StringPoolValueType, Allocator> StringPool;
   typedef llvm::StringMapEntry<StringPoolValueType> StringPoolEntryType;
 
   static StringPoolEntryType &
@@ -307,7 +335,7 @@ size_t ConstString::StaticMemorySize() {
 void llvm::format_provider<ConstString>::format(const ConstString &CS,
                                                 llvm::raw_ostream &OS,
                                                 llvm::StringRef Options) {
-  format_provider<StringRef>::format(CS.AsCString(), OS, Options);
+  format_provider<StringRef>::format(CS.GetStringRef(), OS, Options);
 }
 
 void llvm::yaml::ScalarTraits<ConstString>::output(const ConstString &Val,

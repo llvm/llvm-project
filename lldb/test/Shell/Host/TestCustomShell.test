@@ -8,7 +8,7 @@
 # XFAIL: system-openbsd
 
 # RUN: %clang_host %S/Inputs/simple.c -g -o %t.out
-# RUN: SHELL=bogus %lldb %t.out -b -o 'run' 2>&1 | FileCheck %s --check-prefix ERROR
+# RUN: SHELL=bogus not %lldb %t.out -b -o 'run' 2>&1 | FileCheck %s --check-prefix ERROR
 # RUN: env -i %lldb %t.out -b -o 'run' 2>&1 | FileCheck %s
 
 # ERROR: error: shell expansion failed

@@ -4,7 +4,7 @@
 # CHECK: bb.0:
 # CHECK:     [[COND:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64
 # CHECK:     [[IF_SOURCE0:%[0-9]+]]:sreg_64 = SI_IF [[COND]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-# CHECK:     [[IF_INPUT_REG:%[0-9]+]]:sreg_64 =  S_MOV_B64_term killed [[IF_SOURCE0]], implicit $exec
+# CHECK:     [[IF_INPUT_REG:%[0-9]+]]:sreg_64 = S_MOV_B64_term killed [[IF_SOURCE0]], implicit $exec
 
 # CHECK: bb.1:
 # CHECK:     [[END_CF_ARG:%[0-9]+]]:sreg_64 = COPY killed [[IF_INPUT_REG]]
@@ -12,7 +12,7 @@
 
 # CHECK: bb.2:
 # CHECK:     [[IF_SOURCE1:%[0-9]+]]:sreg_64 = SI_IF [[COND]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-# CHECK:     [[IF_INPUT_REG]]:sreg_64 =  S_MOV_B64_term killed [[IF_SOURCE1]], implicit $exec
+# CHECK:     [[IF_INPUT_REG]]:sreg_64 = S_MOV_B64_term killed [[IF_SOURCE1]], implicit $exec
 
 
 ...

@@ -22,8 +22,8 @@
 // CHECK-AARCH64: "-fsanitize=shadow-call-stack"
 // CHECK-X86_64: "-fsanitize=safe-stack"
 // CHECK: "-stack-protector" "2"
-// CHECK: "-fno-common"
-// CHECK: {{.*}}ld.lld{{.*}}" "-z" "rodynamic" "-z" "separate-loadable-segments"
+// CHECK-NOT: "-fcommon"
+// CHECK: {{.*}}ld.lld{{.*}}" "-z" "max-page-size=4096" "-z" "now" "-z" "rodynamic" "-z" "separate-loadable-segments" "--pack-dyn-relocs=relr"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"
@@ -174,6 +174,35 @@
 // CHECK-SCUDO-SHARED: "-fsanitize=safe-stack,scudo"
 // CHECK-SCUDO-SHARED: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}libclang_rt.scudo.so"
 
+// RUN: %clang %s -### --target=aarch64-fuchsia \
+// RUN:     -fsanitize=leak 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld \
+// RUN:     | FileCheck %s -check-prefix=CHECK-LSAN-AARCH64
+// CHECK-LSAN-AARCH64: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LSAN-AARCH64: "-fsanitize=leak,shadow-call-stack"
+// CHECK-LSAN-AARCH64: "-pie"
+// CHECK-LSAN-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}libclang_rt.lsan.a"
+
+// RUN: %clang %s -### --target=x86_64-fuchsia \
+// RUN:     -fsanitize=leak 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld \
+// RUN:     | FileCheck %s -check-prefix=CHECK-LSAN-X86
+// CHECK-LSAN-X86: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LSAN-X86: "-fsanitize=leak,safe-stack"
+// CHECK-LSAN-X86: "-pie"
+// CHECK-LSAN-X86: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}libclang_rt.lsan.a"
+
+// RUN: %clang %s -### --target=aarch64-fuchsia \
+// RUN:     -fsanitize=leak -fPIC -shared 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld \
+// RUN:     | FileCheck %s -check-prefix=CHECK-LSAN-SHARED
+// CHECK-LSAN-SHARED: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LSAN-SHARED: "-fsanitize=leak,shadow-call-stack"
+// CHECK-LSAN-SHARED-NOT: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}libclang_rt.lsan.a"
+
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fxray-instrument -fxray-modes=xray-basic \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
@@ -213,3 +242,21 @@
 // RUN:     -gsplit-dwarf -c %s 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SPLIT-DWARF
 // CHECK-SPLIT-DWARF: "-split-dwarf-output" "fuchsia.dwo"
+
+// RUN: %clang %s -### --target=aarch64-fuchsia \
+// RUN:     -fprofile-instr-generate -fcoverage-mapping \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-PROFRT-AARCH64
+// CHECK-PROFRT-AARCH64: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-PROFRT-AARCH64: "-u__llvm_profile_runtime"
+// CHECK-PROFRT-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}libclang_rt.profile.a"
+
+// RUN: %clang %s -### --target=x86_64-fuchsia \
+// RUN:     -fprofile-instr-generate -fcoverage-mapping \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-PROFRT-X86_64
+// CHECK-PROFRT-X86_64: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-PROFRT-X86_64: "-u__llvm_profile_runtime"
+// CHECK-PROFRT-X86_64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}libclang_rt.profile.a"

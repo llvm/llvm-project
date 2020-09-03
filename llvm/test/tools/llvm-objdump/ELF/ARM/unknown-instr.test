@@ -1,0 +1,28 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -D --triple=thumbv8.1m.main-none-eabi %t | FileCheck %s
+
+## This is a test case with "random" data/instructions, checking that
+## llvm-objdump handles such instructions cleanly. Disassembly of instructions
+## can fail when it e.g. is not given the right set of architecture features,
+## for example when the source is compiled with:
+##
+##   clang -march=..+ext1+ext2
+##
+## and disassembly is attempted with:
+##
+##   llvm-objdump --mattr=+ext1
+
+# CHECK:        00000000 <.text>:
+# CHECK-NEXT:       0: cb              <unknown>
+# CHECK-NEXT:       1: f3 f7 8b be     b.w #-49898
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_ARM
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Content: "cbf3f78bbe"

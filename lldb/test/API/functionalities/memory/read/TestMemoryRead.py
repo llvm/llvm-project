@@ -52,7 +52,8 @@ class MemoryReadTestCase(TestBase):
         items = line.split(':')
         address = int(items[0], 0)
         argc = int(items[1], 0)
-        self.assertTrue(address > 0 and argc == 1)
+        self.assertGreater(address, 0)
+        self.assertEquals(argc, 1)
 
         # (lldb) memory read --format uint32_t[] --size 4 --count 4 `&argc`
         # 0x7fff5fbff9a0: {0x00000001}
@@ -70,7 +71,7 @@ class MemoryReadTestCase(TestBase):
                         lines[i].split(':')[1].strip(' {}'), 0))
             addr = int(lines[i].split(':')[0], 0)
             # Verify that the printout for addr is incremented correctly.
-            self.assertTrue(addr == (address + i * 4))
+            self.assertEquals(addr, (address + i * 4))
 
         # (lldb) memory read --format char[] --size 7 --count 1 `&my_string`
         # 0x7fff5fbff990: {abcdefg}
@@ -130,4 +131,4 @@ class MemoryReadTestCase(TestBase):
           # Check that we got back 4 0x0000 etc bytes
           for o in objects_read:
               self.assertTrue (len(o) == expected_object_length)
-          self.assertTrue(len(objects_read) == 4)
+          self.assertEquals(len(objects_read), 4)

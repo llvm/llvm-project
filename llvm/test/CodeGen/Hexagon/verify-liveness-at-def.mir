@@ -1,8 +1,8 @@
 # Using a trick to run simple-register-coalescing twice, that way
 # liveintervals should be preserved while running the machine verifier.
 #
-# RUN: not llc -o - %s -march=hexagon -hexagon-subreg-liveness=false -run-pass simple-register-coalescing -verify-machineinstrs -run-pass simple-register-coalescing 2>&1 | FileCheck -check-prefix=CHECK-NOSUB %s
-# RUN: not llc -o - %s -march=hexagon -hexagon-subreg-liveness=true -run-pass simple-register-coalescing -verify-machineinstrs -run-pass simple-register-coalescing 2>&1 | FileCheck -check-prefix=CHECK-SUB %s
+# RUN: not --crash llc -o - %s -march=hexagon -hexagon-subreg-liveness=false -run-pass simple-register-coalescing -verify-machineinstrs -run-pass simple-register-coalescing 2>&1 | FileCheck -check-prefix=CHECK-NOSUB %s
+# RUN: not --crash llc -o - %s -march=hexagon -hexagon-subreg-liveness=true -run-pass simple-register-coalescing -verify-machineinstrs -run-pass simple-register-coalescing 2>&1 | FileCheck -check-prefix=CHECK-SUB %s
 
 ---
 name: test_pass
@@ -40,21 +40,21 @@ body: |
 # CHECK-SUB: Bad machine code: Live range continues after dead def flag
 # CHECK_SUB-NEXT: function:    test_fail
 # CHECK-SUB:      v. register: %0
-# CHECK-SUB:      lanemask:    00000002
+# CHECK-SUB:      lanemask:    0000000000000002
 #
 # CHECK-SUB-NOT: Bad machine code
 #
 # CHECK-SUB: Bad machine code: Live range continues after dead def flag
 # CHECK-SUB-NEXT: function:    test_fail
 # CHECK-SUB:      v. register: %1
-# CHECK-SUB:      lanemask:    00000002
+# CHECK-SUB:      lanemask:    0000000000000002
 #
 # CHECK-SUB-NOT: Bad machine code
 #
 # CHECK-SUB: Bad machine code: Live range continues after dead def flag
 # CHECK-SUB-NEXT: function:    test_fail
 # CHECK-SUB:      v. register: %1
-# CHECK-SUB:      lanemask:    00000001
+# CHECK-SUB:      lanemask:    0000000000000001
 #
 # CHECK-SUB: Bad machine code: Live range continues after dead def flag
 # CHECK-SUB-NEXT: function:    test_fail

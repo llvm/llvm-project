@@ -51,11 +51,11 @@ define i64 @test_var32_alias() {
 ; CHECK-LABEL: test_var32_alias:
   %addr = bitcast [3 x i32]* @alias to i64*
 
-  ; Test that we can find the alignment for aliases.
+  ; We don't know anything about the alignment of aliases.
   %val = load i64, i64* %addr
 ; CHECK: adrp x[[HIBITS:[0-9]+]], alias
-; CHECK-NOT: add x[[HIBITS]]
-; CHECK: ldr x0, [x[[HIBITS]], {{#?}}:lo12:alias]
+; CHECK: add x[[ADDR:[0-9]+]], x[[HIBITS]], {{#?}}:lo12:alias
+; CHECK: ldr x0, [x[[ADDR]]]
 
   ret i64 %val
 }

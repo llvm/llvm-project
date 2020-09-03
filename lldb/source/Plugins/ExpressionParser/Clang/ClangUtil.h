@@ -8,8 +8,8 @@
 // types and decls.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_CLANGUTIL_H
-#define LLDB_SYMBOL_CLANGUTIL_H
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGUTIL_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGUTIL_H
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Type.h"
@@ -23,6 +23,10 @@ class TagDecl;
 namespace lldb_private {
 struct ClangUtil {
   static bool IsClangType(const CompilerType &ct);
+
+  /// Returns the clang::Decl of the given CompilerDecl.
+  /// CompilerDecl has to be valid and represent a clang::Decl.
+  static clang::Decl *GetDecl(const CompilerDecl &decl);
 
   static clang::QualType GetQualType(const CompilerType &ct);
 

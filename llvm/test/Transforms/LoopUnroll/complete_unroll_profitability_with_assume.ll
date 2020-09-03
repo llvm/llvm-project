@@ -22,55 +22,55 @@ define i32 @foo(i32* %a) {
 ; ANALYZE-FULL:       for.body:
 ; ANALYZE-FULL-NEXT:    br i1 true, label [[DO_STORE:%.*]], label [[FOR_NEXT:%.*]]
 ; ANALYZE-FULL:       do_store:
-; ANALYZE-FULL-NEXT:    store i32 0, i32* [[A:%.*]]
+; ANALYZE-FULL-NEXT:    store i32 0, i32* [[A:%.*]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT]]
 ; ANALYZE-FULL:       for.next:
 ; ANALYZE-FULL-NEXT:    br i1 true, label [[DO_STORE_1:%.*]], label [[FOR_NEXT_1:%.*]]
 ; ANALYZE-FULL:       do_store.1:
 ; ANALYZE-FULL-NEXT:    [[GEP_1:%.*]] = getelementptr i32, i32* [[A]], i32 1
-; ANALYZE-FULL-NEXT:    store i32 1, i32* [[GEP_1]]
+; ANALYZE-FULL-NEXT:    store i32 1, i32* [[GEP_1]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_1]]
 ; ANALYZE-FULL:       for.next.1:
 ; ANALYZE-FULL-NEXT:    br i1 true, label [[DO_STORE_2:%.*]], label [[FOR_NEXT_2:%.*]]
 ; ANALYZE-FULL:       do_store.2:
 ; ANALYZE-FULL-NEXT:    [[GEP_2:%.*]] = getelementptr i32, i32* [[A]], i32 2
-; ANALYZE-FULL-NEXT:    store i32 2, i32* [[GEP_2]]
+; ANALYZE-FULL-NEXT:    store i32 2, i32* [[GEP_2]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_2]]
 ; ANALYZE-FULL:       for.next.2:
 ; ANALYZE-FULL-NEXT:    br i1 true, label [[DO_STORE_3:%.*]], label [[FOR_NEXT_3:%.*]]
 ; ANALYZE-FULL:       do_store.3:
 ; ANALYZE-FULL-NEXT:    [[GEP_3:%.*]] = getelementptr i32, i32* [[A]], i32 3
-; ANALYZE-FULL-NEXT:    store i32 3, i32* [[GEP_3]]
+; ANALYZE-FULL-NEXT:    store i32 3, i32* [[GEP_3]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_3]]
 ; ANALYZE-FULL:       for.next.3:
 ; ANALYZE-FULL-NEXT:    br i1 false, label [[DO_STORE_4:%.*]], label [[FOR_NEXT_4:%.*]]
 ; ANALYZE-FULL:       do_store.4:
 ; ANALYZE-FULL-NEXT:    [[GEP_4:%.*]] = getelementptr i32, i32* [[A]], i32 4
-; ANALYZE-FULL-NEXT:    store i32 4, i32* [[GEP_4]]
+; ANALYZE-FULL-NEXT:    store i32 4, i32* [[GEP_4]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_4]]
 ; ANALYZE-FULL:       for.next.4:
 ; ANALYZE-FULL-NEXT:    br i1 false, label [[DO_STORE_5:%.*]], label [[FOR_NEXT_5:%.*]]
 ; ANALYZE-FULL:       do_store.5:
 ; ANALYZE-FULL-NEXT:    [[GEP_5:%.*]] = getelementptr i32, i32* [[A]], i32 5
-; ANALYZE-FULL-NEXT:    store i32 5, i32* [[GEP_5]]
+; ANALYZE-FULL-NEXT:    store i32 5, i32* [[GEP_5]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_5]]
 ; ANALYZE-FULL:       for.next.5:
 ; ANALYZE-FULL-NEXT:    br i1 false, label [[DO_STORE_6:%.*]], label [[FOR_NEXT_6:%.*]]
 ; ANALYZE-FULL:       do_store.6:
 ; ANALYZE-FULL-NEXT:    [[GEP_6:%.*]] = getelementptr i32, i32* [[A]], i32 6
-; ANALYZE-FULL-NEXT:    store i32 6, i32* [[GEP_6]]
+; ANALYZE-FULL-NEXT:    store i32 6, i32* [[GEP_6]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_6]]
 ; ANALYZE-FULL:       for.next.6:
 ; ANALYZE-FULL-NEXT:    br i1 false, label [[DO_STORE_7:%.*]], label [[FOR_NEXT_7:%.*]]
 ; ANALYZE-FULL:       do_store.7:
 ; ANALYZE-FULL-NEXT:    [[GEP_7:%.*]] = getelementptr i32, i32* [[A]], i32 7
-; ANALYZE-FULL-NEXT:    store i32 7, i32* [[GEP_7]]
+; ANALYZE-FULL-NEXT:    store i32 7, i32* [[GEP_7]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_7]]
 ; ANALYZE-FULL:       for.next.7:
 ; ANALYZE-FULL-NEXT:    br i1 false, label [[DO_STORE_8:%.*]], label [[FOR_NEXT_8:%.*]]
 ; ANALYZE-FULL:       do_store.8:
 ; ANALYZE-FULL-NEXT:    [[GEP_8:%.*]] = getelementptr i32, i32* [[A]], i32 8
-; ANALYZE-FULL-NEXT:    store i32 8, i32* [[GEP_8]]
+; ANALYZE-FULL-NEXT:    store i32 8, i32* [[GEP_8]], align 4
 ; ANALYZE-FULL-NEXT:    br label [[FOR_NEXT_8]]
 ; ANALYZE-FULL:       for.next.8:
 ; ANALYZE-FULL-NEXT:    ret i32 9
@@ -87,7 +87,7 @@ define i32 @foo(i32* %a) {
 ; DONT-ANALYZE-FULL-NEXT:    br i1 [[CMP2]], label [[DO_STORE:%.*]], label [[FOR_NEXT]]
 ; DONT-ANALYZE-FULL:       do_store:
 ; DONT-ANALYZE-FULL-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[A:%.*]], i32 [[INDVAR]]
-; DONT-ANALYZE-FULL-NEXT:    store i32 [[INDVAR]], i32* [[GEP]]
+; DONT-ANALYZE-FULL-NEXT:    store i32 [[INDVAR]], i32* [[GEP]], align 4
 ; DONT-ANALYZE-FULL-NEXT:    br label [[FOR_NEXT]]
 ; DONT-ANALYZE-FULL:       for.next:
 ; DONT-ANALYZE-FULL-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INDVAR_NEXT]], 9

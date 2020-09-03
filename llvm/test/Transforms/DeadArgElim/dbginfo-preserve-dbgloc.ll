@@ -63,6 +63,7 @@ if.end3:                                          ; preds = %if.end
 
 cleanup:                                          ; preds = %if.end3, %if.then2, %if.then
   %retval.0 = phi i1 [ false, %if.then2 ], [ true, %if.end3 ], [ false, %if.then ]
+; CHECK: ret void, !dbg
   ret i1 %retval.0, !dbg !56
 }
 

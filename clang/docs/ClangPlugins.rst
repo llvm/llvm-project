@@ -63,6 +63,56 @@ registering it using ``PragmaHandlerRegistry::Add<>``:
 
   static PragmaHandlerRegistry::Add<ExamplePragmaHandler> Y("example_pragma","example pragma description");
 
+Defining attributes
+===================
+
+Plugins can define attributes by declaring a ``ParsedAttrInfo`` and registering
+it using ``ParsedAttrInfoRegister::Add<>``:
+
+.. code-block:: c++
+
+  class ExampleAttrInfo : public ParsedAttrInfo {
+  public:
+    ExampleAttrInfo() {
+      Spellings.push_back({ParsedAttr::AS_GNU,"example"});
+    }
+    AttrHandling handleDeclAttribute(Sema &S, Decl *D,
+                                     const ParsedAttr &Attr) const override {
+      // Handle the attribute
+      return AttributeApplied;
+    }
+  };
+
+  static ParsedAttrInfoRegistry::Add<ExampleAttrInfo> Z("example_attr","example attribute description");
+
+The members of ``ParsedAttrInfo`` that a plugin attribute must define are:
+
+ * ``Spellings``, which must be populated with every `Spelling
+   </doxygen/structclang_1_1ParsedAttrInfo_1_1Spelling.html>`_ of the
+   attribute, each of which consists of an attribute syntax and how the
+   attribute name is spelled for that syntax. If the syntax allows a scope then
+   the spelling must be "scope::attr" if a scope is present or "::attr" if not.
+ * ``handleDeclAttribute``, which is the function that applies the attribute to
+   a declaration. It is responsible for checking that the attribute's arguments
+   are valid, and typically applies the attribute by adding an ``Attr`` to the
+   ``Decl``. It returns either ``AttributeApplied``, to indicate that the
+   attribute was successfully applied, or ``AttributeNotApplied`` if it wasn't.
+
+The members of ``ParsedAttrInfo`` that may need to be defined, depending on the
+attribute, are:
+
+ * ``NumArgs`` and ``OptArgs``, which set the number of required and optional
+   arguments to the attribute.
+ * ``diagAppertainsToDecl``, which checks if the attribute has been used on the
+   right kind of declaration and issues a diagnostic if not.
+ * ``diagLangOpts``, which checks if the attribute is permitted for the current
+   language mode and issues a diagnostic if not.
+ * ``existsInTarget``, which checks if the attribute is permitted for the given
+   target.
+
+To see a working example of an attribute plugin, see `the Attribute.cpp example
+<https://github.com/llvm/llvm-project/blob/master/clang/examples/Attribute/Attribute.cpp>`_.
+
 Putting it all together
 =======================
 

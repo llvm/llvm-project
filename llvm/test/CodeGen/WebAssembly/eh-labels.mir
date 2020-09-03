@@ -23,12 +23,13 @@ body: |
     ; TRY should be before EH_LABEL wrappers of throwing calls
     ; CHECK:      TRY
     ; CHECK-NEXT: EH_LABEL
-    ; CHECK-NEXT: CALL_VOID @foo
+    ; CHECK-NEXT: CALL @foo
     ; CHECK-NEXT: EH_LABEL
     successors: %bb.1, %bb.2
     EH_LABEL <mcsymbol .Ltmp0>
-    CALL_VOID @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     EH_LABEL <mcsymbol .Ltmp1>
+    BR %bb.2, implicit-def dead $arguments
 
   bb.1 (landing-pad):
   ; predecessors: %bb.0

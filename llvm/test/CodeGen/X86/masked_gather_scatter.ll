@@ -638,30 +638,38 @@ entry:
 define <16 x float> @test11(float* %base, i32 %ind) {
 ; KNL_64-LABEL: test11:
 ; KNL_64:       # %bb.0:
-; KNL_64-NEXT:    vpbroadcastd %esi, %zmm1
+; KNL_64-NEXT:    movslq %esi, %rax
+; KNL_64-NEXT:    leaq (%rdi,%rax,4), %rax
+; KNL_64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
-; KNL_64-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
+; KNL_64-NEXT:    vgatherdps (%rax,%zmm1,4), %zmm0 {%k1}
 ; KNL_64-NEXT:    retq
 ;
 ; KNL_32-LABEL: test11:
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL_32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm1
+; KNL_32-NEXT:    shll $2, %eax
+; KNL_32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: test11:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastd %esi, %zmm1
+; SKX-NEXT:    movslq %esi, %rax
+; SKX-NEXT:    leaq (%rdi,%rax,4), %rax
+; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
-; SKX-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
+; SKX-NEXT:    vgatherdps (%rax,%zmm1,4), %zmm0 {%k1}
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: test11:
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SKX_32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm1
+; SKX_32-NEXT:    shll $2, %eax
+; SKX_32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
 ; SKX_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; SKX_32-NEXT:    retl

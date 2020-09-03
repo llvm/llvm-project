@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-symbol-rauw -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -test-symbol-rauw -split-input-file | FileCheck %s
 
 // Symbol references to the module itself don't affect uses of symbols within
 // its table.
@@ -27,6 +27,39 @@ module attributes {sym.outside_use = @symbol_foo } {
     // CHECK: foo.op
     // CHECK-SAME: @symbol_foo
     "foo.op"() {test.nested_reference = @symbol_foo} : () -> ()
+  }
+}
+
+// -----
+
+// Check the support for nested references.
+
+// CHECK: module
+module {
+  // CHECK: module @module_a
+  module @module_a {
+    // CHECK: func @replaced_foo
+    func @foo() attributes {sym.new_name = "replaced_foo" }
+  }
+
+  // CHECK: module @replaced_module_b
+  module @module_b attributes {sym.new_name = "replaced_module_b"} {
+    // CHECK: module @replaced_module_c
+    module @module_c attributes {sym.new_name = "replaced_module_c"} {
+      // CHECK: func @replaced_foo
+      func @foo() attributes {sym.new_name = "replaced_foo" }
+    }
+  }
+
+  // CHECK: func @symbol_bar
+  func @symbol_bar() {
+    // CHECK: foo.op
+    // CHECK-SAME: use_1 = @module_a::@replaced_foo
+    // CHECK-SAME: use_2 = @replaced_module_b::@replaced_module_c::@replaced_foo
+    "foo.op"() {
+      use_1 = @module_a::@foo,
+      use_2 = @module_b::@module_c::@foo
+    } : () -> ()
   }
 }
 

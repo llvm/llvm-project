@@ -233,7 +233,7 @@ static ELFSymbolType convertInfoToType(uint8_t Info) {
 template <class ELFT>
 static ELFSymbol createELFSym(StringRef SymName,
                               const typename ELFT::Sym &RawSym) {
-  ELFSymbol TargetSym(SymName);
+  ELFSymbol TargetSym{std::string(SymName)};
   uint8_t Binding = RawSym.getBinding();
   if (Binding == STB_WEAK)
     TargetSym.Weak = true;
@@ -331,7 +331,7 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
     if (!NameOrErr) {
       return appendToError(NameOrErr.takeError(), "when reading DT_SONAME");
     }
-    DestStub->SoName = *NameOrErr;
+    DestStub->SoName = std::string(*NameOrErr);
   }
 
   // Populate NeededLibs from .dynamic entries and dynamic string table.
@@ -341,7 +341,7 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
     if (!LibNameOrErr) {
       return appendToError(LibNameOrErr.takeError(), "when reading DT_NEEDED");
     }
-    DestStub->NeededLibs.push_back(*LibNameOrErr);
+    DestStub->NeededLibs.push_back(std::string(*LibNameOrErr));
   }
 
   // Populate Symbols from .dynsym table and dynamic string table.

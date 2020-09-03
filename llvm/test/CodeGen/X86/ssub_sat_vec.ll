@@ -4,7 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefixes=SSE,SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX,AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX,AVX512,AVX512F
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BW
 
 declare <1 x i8> @llvm.ssub.sat.v1i8(<1 x i8>, <1 x i8>)
 declare <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8>, <2 x i8>)
@@ -111,10 +112,19 @@ define <64 x i8> @v64i8(<64 x i8> %x, <64 x i8> %y) nounwind {
 ; AVX2-NEXT:    vpsubsb %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: v64i8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsubsb %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: v64i8:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512F-NEXT:    vpsubsb %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpsubsb %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v64i8:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpsubsb %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
   %z = call <64 x i8> @llvm.ssub.sat.v64i8(<64 x i8> %x, <64 x i8> %y)
   ret <64 x i8> %z
 }
@@ -191,10 +201,19 @@ define <32 x i16> @v32i16(<32 x i16> %x, <32 x i16> %y) nounwind {
 ; AVX2-NEXT:    vpsubsw %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: v32i16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsubsw %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: v32i16:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512F-NEXT:    vpsubsw %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpsubsw %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v32i16:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpsubsw %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
   %z = call <32 x i16> @llvm.ssub.sat.v32i16(<32 x i16> %x, <32 x i16> %y)
   ret <32 x i16> %z
 }
@@ -361,10 +380,10 @@ define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind 
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
 ; SSE-NEXT:    movdqa 16(%rdi), %xmm1
-; SSE-NEXT:    psubsw (%rsi), %xmm0
 ; SSE-NEXT:    psubsw 16(%rsi), %xmm1
-; SSE-NEXT:    movq %xmm1, 16(%rdx)
+; SSE-NEXT:    psubsw (%rsi), %xmm0
 ; SSE-NEXT:    movdqa %xmm0, (%rdx)
+; SSE-NEXT:    movq %xmm1, 16(%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: v12i16:
@@ -491,20 +510,64 @@ define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 ; SSE-NEXT:    psubb %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: v16i4:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsllw $4, %xmm1, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
-; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpsllw $4, %xmm0, %xmm0
-; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpsubsb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: v16i4:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsllw $4, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpsllw $4, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpsubsb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: v16i4:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsllw $4, %xmm1, %xmm1
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpsllw $4, %xmm0, %xmm0
+; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpsubsb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: v16i4:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpsllw $4, %xmm1, %xmm1
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm2 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; AVX512F-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX512F-NEXT:    vpsllw $4, %xmm0, %xmm0
+; AVX512F-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX512F-NEXT:    vpsubsb %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512F-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; AVX512F-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v16i4:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpsllw $4, %xmm1, %xmm1
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm2 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; AVX512BW-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpsllw $4, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpsubsb %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; AVX512BW-NEXT:    vpternlogq $108, {{.*}}(%rip), %xmm1, %xmm0
+; AVX512BW-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    retq
   %z = call <16 x i4> @llvm.ssub.sat.v16i4(<16 x i4> %x, <16 x i4> %y)
   ret <16 x i4> %z
 }
@@ -547,15 +610,28 @@ define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 ; AVX2-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: v16i1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllw $7, %xmm0, %xmm0
-; AVX512-NEXT:    vpmovb2m %xmm0, %k0
-; AVX512-NEXT:    vpsllw $7, %xmm1, %xmm0
-; AVX512-NEXT:    vpmovb2m %xmm0, %k1
-; AVX512-NEXT:    kandnw %k0, %k1, %k0
-; AVX512-NEXT:    vpmovm2b %k0, %xmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: v16i1:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
+; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
+; AVX512F-NEXT:    vpmovsxbd %xmm1, %zmm1
+; AVX512F-NEXT:    vpslld $31, %zmm1, %zmm1
+; AVX512F-NEXT:    vptestnmd %zmm1, %zmm1, %k1
+; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1 {%k1}
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v16i1:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpsllw $7, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpmovb2m %xmm0, %k0
+; AVX512BW-NEXT:    vpsllw $7, %xmm1, %xmm0
+; AVX512BW-NEXT:    vpmovb2m %xmm0, %k1
+; AVX512BW-NEXT:    kandnw %k0, %k1, %k0
+; AVX512BW-NEXT:    vpmovm2b %k0, %xmm0
+; AVX512BW-NEXT:    retq
   %z = call <16 x i1> @llvm.ssub.sat.v16i1(<16 x i1> %x, <16 x i1> %y)
   ret <16 x i1> %z
 }
@@ -641,19 +717,32 @@ define <2 x i32> @v2i32(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; AVX2-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: v2i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtd %xmm2, %xmm1, %k0
-; AVX512-NEXT:    vpsubd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k1
-; AVX512-NEXT:    vpcmpgtd %xmm1, %xmm2, %k2
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
-; AVX512-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k2}
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1}
-; AVX512-NEXT:    vmovdqa %xmm1, %xmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: v2i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm2
+; AVX512F-NEXT:    vpsubd %xmm1, %xmm0, %xmm1
+; AVX512F-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpxor %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2147483647,2147483647,2147483647,2147483647]
+; AVX512F-NEXT:    vbroadcastss {{.*#+}} xmm3 = [2147483648,2147483648,2147483648,2147483648]
+; AVX512F-NEXT:    vblendvps %xmm1, %xmm2, %xmm3, %xmm2
+; AVX512F-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v2i32:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpcmpgtd %xmm2, %xmm1, %k0
+; AVX512BW-NEXT:    vpsubd %xmm1, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
+; AVX512BW-NEXT:    kxorw %k1, %k0, %k1
+; AVX512BW-NEXT:    vpcmpgtd %xmm1, %xmm2, %k2
+; AVX512BW-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
+; AVX512BW-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k2}
+; AVX512BW-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1}
+; AVX512BW-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX512BW-NEXT:    retq
   %z = call <2 x i32> @llvm.ssub.sat.v2i32(<2 x i32> %x, <2 x i32> %y)
   ret <2 x i32> %z
 }
@@ -737,19 +826,32 @@ define <4 x i32> @v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; AVX2-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: v4i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtd %xmm2, %xmm1, %k0
-; AVX512-NEXT:    vpsubd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k1
-; AVX512-NEXT:    vpcmpgtd %xmm1, %xmm2, %k2
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
-; AVX512-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k2}
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1}
-; AVX512-NEXT:    vmovdqa %xmm1, %xmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: v4i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm2
+; AVX512F-NEXT:    vpsubd %xmm1, %xmm0, %xmm1
+; AVX512F-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpxor %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2147483647,2147483647,2147483647,2147483647]
+; AVX512F-NEXT:    vbroadcastss {{.*#+}} xmm3 = [2147483648,2147483648,2147483648,2147483648]
+; AVX512F-NEXT:    vblendvps %xmm1, %xmm2, %xmm3, %xmm2
+; AVX512F-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v4i32:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpcmpgtd %xmm2, %xmm1, %k0
+; AVX512BW-NEXT:    vpsubd %xmm1, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
+; AVX512BW-NEXT:    kxorw %k1, %k0, %k1
+; AVX512BW-NEXT:    vpcmpgtd %xmm1, %xmm2, %k2
+; AVX512BW-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
+; AVX512BW-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k2}
+; AVX512BW-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1}
+; AVX512BW-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX512BW-NEXT:    retq
   %z = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %x, <4 x i32> %y)
   ret <4 x i32> %z
 }
@@ -883,19 +985,32 @@ define <8 x i32> @v8i32(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; AVX2-NEXT:    vblendvps %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: v8i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtd %ymm2, %ymm1, %k0
-; AVX512-NEXT:    vpsubd %ymm1, %ymm0, %ymm1
-; AVX512-NEXT:    vpcmpgtd %ymm1, %ymm0, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k1
-; AVX512-NEXT:    vpcmpgtd %ymm1, %ymm2, %k2
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648]
-; AVX512-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k2}
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1}
-; AVX512-NEXT:    vmovdqa %ymm1, %ymm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: v8i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpgtd %ymm2, %ymm1, %ymm2
+; AVX512F-NEXT:    vpsubd %ymm1, %ymm0, %ymm1
+; AVX512F-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpxor %ymm0, %ymm2, %ymm0
+; AVX512F-NEXT:    vbroadcastss {{.*#+}} ymm2 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
+; AVX512F-NEXT:    vbroadcastss {{.*#+}} ymm3 = [2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648]
+; AVX512F-NEXT:    vblendvps %ymm1, %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vblendvps %ymm0, %ymm2, %ymm1, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v8i32:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpcmpgtd %ymm2, %ymm1, %k0
+; AVX512BW-NEXT:    vpsubd %ymm1, %ymm0, %ymm1
+; AVX512BW-NEXT:    vpcmpgtd %ymm1, %ymm0, %k1
+; AVX512BW-NEXT:    kxorw %k1, %k0, %k1
+; AVX512BW-NEXT:    vpcmpgtd %ymm1, %ymm2, %k2
+; AVX512BW-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648]
+; AVX512BW-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k2}
+; AVX512BW-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1}
+; AVX512BW-NEXT:    vmovdqa %ymm1, %ymm0
+; AVX512BW-NEXT:    retq
   %z = call <8 x i32> @llvm.ssub.sat.v8i32(<8 x i32> %x, <8 x i32> %y)
   ret <8 x i32> %z
 }
@@ -1280,19 +1395,31 @@ define <2 x i64> @v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; AVX2-NEXT:    vblendvpd %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: v2i64:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtq %xmm2, %xmm1, %k0
-; AVX512-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vpcmpgtq %xmm1, %xmm0, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k1
-; AVX512-NEXT:    vpcmpgtq %xmm1, %xmm2, %k2
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm0 = [9223372036854775808,9223372036854775808]
-; AVX512-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm0 {%k2}
-; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm1 {%k1}
-; AVX512-NEXT:    vmovdqa %xmm1, %xmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: v2i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpgtq %xmm2, %xmm1, %xmm2
+; AVX512F-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
+; AVX512F-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpxor %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vmovapd {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX512F-NEXT:    vblendvpd %xmm1, {{.*}}(%rip), %xmm2, %xmm2
+; AVX512F-NEXT:    vblendvpd %xmm0, %xmm2, %xmm1, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v2i64:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpcmpgtq %xmm2, %xmm1, %k0
+; AVX512BW-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpcmpgtq %xmm1, %xmm0, %k1
+; AVX512BW-NEXT:    kxorw %k1, %k0, %k1
+; AVX512BW-NEXT:    vpcmpgtq %xmm1, %xmm2, %k2
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm0 = [9223372036854775808,9223372036854775808]
+; AVX512BW-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm0 {%k2}
+; AVX512BW-NEXT:    vmovdqa64 %xmm0, %xmm1 {%k1}
+; AVX512BW-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX512BW-NEXT:    retq
   %z = call <2 x i64> @llvm.ssub.sat.v2i64(<2 x i64> %x, <2 x i64> %y)
   ret <2 x i64> %z
 }
@@ -1532,19 +1659,32 @@ define <4 x i64> @v4i64(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; AVX2-NEXT:    vblendvpd %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: v4i64:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtq %ymm2, %ymm1, %k0
-; AVX512-NEXT:    vpsubq %ymm1, %ymm0, %ymm1
-; AVX512-NEXT:    vpcmpgtq %ymm1, %ymm0, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k1
-; AVX512-NEXT:    vpcmpgtq %ymm1, %ymm2, %k2
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
-; AVX512-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm0 {%k2}
-; AVX512-NEXT:    vmovdqa64 %ymm0, %ymm1 {%k1}
-; AVX512-NEXT:    vmovdqa %ymm1, %ymm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: v4i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpgtq %ymm2, %ymm1, %ymm2
+; AVX512F-NEXT:    vpsubq %ymm1, %ymm0, %ymm1
+; AVX512F-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpxor %ymm0, %ymm2, %ymm0
+; AVX512F-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [9223372036854775807,9223372036854775807,9223372036854775807,9223372036854775807]
+; AVX512F-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
+; AVX512F-NEXT:    vblendvpd %ymm1, %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vblendvpd %ymm0, %ymm2, %ymm1, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v4i64:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpcmpgtq %ymm2, %ymm1, %k0
+; AVX512BW-NEXT:    vpsubq %ymm1, %ymm0, %ymm1
+; AVX512BW-NEXT:    vpcmpgtq %ymm1, %ymm0, %k1
+; AVX512BW-NEXT:    kxorw %k1, %k0, %k1
+; AVX512BW-NEXT:    vpcmpgtq %ymm1, %ymm2, %k2
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
+; AVX512BW-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm0 {%k2}
+; AVX512BW-NEXT:    vmovdqa64 %ymm0, %ymm1 {%k1}
+; AVX512BW-NEXT:    vmovdqa %ymm1, %ymm0
+; AVX512BW-NEXT:    retq
   %z = call <4 x i64> @llvm.ssub.sat.v4i64(<4 x i64> %x, <4 x i64> %y)
   ret <4 x i64> %z
 }

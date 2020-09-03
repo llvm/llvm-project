@@ -1,4 +1,4 @@
-﻿"""
+"""
 Test 'watchpoint command'.
 """
 
@@ -83,9 +83,12 @@ class WatchpointLLDBCommandTestCase(TestBase):
                     substrs=['stop reason = watchpoint'])
 
         # Check that the watchpoint snapshoting mechanism is working.
-        self.expect("watchpoint list -v",
-                    substrs=['old value:', ' = 0',
-                             'new value:', ' = 1'])
+        self.expect(
+            "watchpoint list -v",
+            substrs=[
+                'old value: 0', 'new value: 1', 'hit_count = 1',
+                'ignore_count = 0'
+            ])
 
         # The watchpoint command "forced" our global variable 'cookie' to
         # become 777.

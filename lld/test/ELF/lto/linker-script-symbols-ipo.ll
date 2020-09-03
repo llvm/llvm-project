@@ -7,7 +7,7 @@
 ; RUN: ld.lld %t1.o %t2.o -o %t3 -save-temps
 ; RUN: llvm-objdump -d %t3 | FileCheck %s --check-prefix=IPO
 ; IPO:      Disassembly of section .text:
-; IPO:      _start:
+; IPO:      <_start>:
 ; IPO-NEXT:   movl $1, %eax
 ; IPO-NEXT:   retq
 
@@ -15,10 +15,10 @@
 ; RUN: ld.lld %t1.o %t2.o -o %t4 --script %t.script -save-temps
 ; RUN: llvm-objdump -d %t4 | FileCheck %s --check-prefix=NOIPO
 ; NOIPO:      Disassembly of section .text:
-; NOIPO:      foo:
+; NOIPO:      <foo>:
 ; NOIPO-NEXT:   movl $2, %eax
-; NOIPO:      _start:
-; NOIPO-NEXT:   jmp -21 <foo>
+; NOIPO:      <_start>:
+; NOIPO-NEXT:   jmp 0x201160 <foo>
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

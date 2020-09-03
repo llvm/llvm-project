@@ -91,7 +91,7 @@ public:
   ///     otherwise '-print-multi-lib' will not emit them correctly.
   Multilib &flag(StringRef F) {
     assert(F.front() == '+' || F.front() == '-');
-    Flags.push_back(F);
+    Flags.push_back(std::string(F));
     return *this;
   }
 

@@ -23,7 +23,9 @@ subdirectories =
  CodeGen
  DebugInfo
  Demangle
+ DWARFLinker
  ExecutionEngine
+ Extensions
  Frontend
  FuzzMutate
  LineEditor

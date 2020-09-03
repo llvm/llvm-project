@@ -1,6 +1,7 @@
 ; Test that all coroutine passes run in the correct order at all optimization
 ; levels and -enable-coroutines adds coroutine passes to the pipeline.
 ;
+; Legacy pass manager:
 ; RUN: opt < %s -disable-output -enable-coroutines -debug-pass=Arguments -O0 2>&1 | FileCheck %s
 ; RUN: opt < %s -disable-output -enable-coroutines -debug-pass=Arguments -O1 2>&1 | FileCheck %s
 ; RUN: opt < %s -disable-output -enable-coroutines -debug-pass=Arguments -O2 2>&1 | FileCheck %s
@@ -9,6 +10,18 @@
 ; RUN:     -coro-early -coro-split -coro-elide -coro-cleanup 2>&1 | FileCheck %s
 ; RUN: opt < %s -disable-output -debug-pass=Arguments 2>&1 \
 ; RUN:     | FileCheck %s -check-prefix=NOCORO
+; New pass manager:
+; RUN: opt < %s -disable-output -passes='default<O0>' -enable-coroutines \
+; RUN:     -debug-pass-manager 2>&1 | FileCheck %s -check-prefix=NEWPM
+; RUN: opt < %s -disable-output -passes='default<O1>' -enable-coroutines \
+; RUN:     -debug-pass-manager 2>&1 | FileCheck %s -check-prefix=NEWPM
+; RUN: opt < %s -disable-output -passes='default<O2>' -enable-coroutines \
+; RUN:     -debug-pass-manager 2>&1 | FileCheck %s -check-prefix=NEWPM
+; RUN: opt < %s -disable-output -passes='default<O3>' -enable-coroutines \
+; RUN:     -debug-pass-manager 2>&1 | FileCheck %s -check-prefix=NEWPM
+; RUN: opt < %s -disable-output -debug-pass-manager \
+; RUN:     -passes='function(coro-early),cgscc(coro-split),function(coro-elide,coro-cleanup)' 2>&1 \
+; RUN:     | FileCheck %s -check-prefix=NEWPM
 
 ; CHECK: coro-early
 ; CHECK: coro-split
@@ -19,6 +32,11 @@
 ; NOCORO-NOT: coro-split
 ; NOCORO-NOT: coro-elide
 ; NOCORO-NOT: coro-cleanup
+
+; NEWPM: CoroEarlyPass
+; NEWPM: CoroSplitPass
+; NEWPM: CoroElidePass
+; NEWPM: CoroCleanupPass
 
 define void @foo() {
   ret void

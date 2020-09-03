@@ -28,7 +28,7 @@
   .byte  0                       # EOM(1)
   .byte  0                       # EOM(2)
   .byte  0                       # EOM(3)
-  .section  .debug_abbrev.dwo,"",@progbits
+  .section  .debug_abbrev.dwo,"e",@progbits
   .byte  1                       # Abbreviation Code
   .byte  17                      # DW_TAG_compile_unit
   .byte  1                       # DW_CHILDREN_yes

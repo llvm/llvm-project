@@ -15,12 +15,12 @@ body:             |
   bb.0 ():
     liveins: $r1d
     renamable $r0l = L $r1d, 0, $noreg
-    CLFIMux killed renamable $r0l, 0, implicit-def $cc
+    CLFIMux renamable $r0l, 0, implicit-def $cc
     BRC 14, 10, %bb.2, implicit $cc
 
   bb.1 ():
     liveins: $r0l
-    ST killed renamable $r0l, $r15d, 164, $noreg
+    ST renamable $r0l, $r15d, 164, $noreg
 
   bb.2 ():
     liveins: $r0l
@@ -38,12 +38,12 @@ body:             |
   bb.0 ():
     liveins: $r1d
     renamable $r0l = L $r1d, 0, $noreg
-    CLFIMux killed renamable $r0l, 0, implicit-def $cc
+    CLFIMux renamable $r0l, 0, implicit-def $cc
     BRC 14, 8, %bb.2, implicit $cc
 
   bb.1 ():
     liveins: $r0l
-    ST killed renamable $r0l, $r15d, 164, $noreg
+    ST renamable $r0l, $r15d, 164, $noreg
 
   bb.2 ():
     liveins: $r0l

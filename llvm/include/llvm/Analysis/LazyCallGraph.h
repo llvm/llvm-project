@@ -937,6 +937,9 @@ public:
   LazyCallGraph(LazyCallGraph &&G);
   LazyCallGraph &operator=(LazyCallGraph &&RHS);
 
+  bool invalidate(Module &, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &);
+
   EdgeSequence::iterator begin() { return EntryEdges.begin(); }
   EdgeSequence::iterator end() { return EntryEdges.end(); }
 
@@ -1055,6 +1058,13 @@ public:
   /// fully visited by the DFS prior to calling this routine.
   void removeDeadFunction(Function &F);
 
+  /// Introduce a node for the function \p NewF in the SCC \p C.
+  void addNewFunctionIntoSCC(Function &NewF, SCC &C);
+
+  /// Introduce a node for the function \p NewF, as a single node in a
+  /// new SCC, in the RefSCC \p RC.
+  void addNewFunctionIntoRefSCC(Function &NewF, RefSCC &RC);
+
   ///@}
 
   ///@{
@@ -1160,6 +1170,13 @@ private:
 
   /// Helper to update pointers back to the graph object during moves.
   void updateGraphPtrs();
+
+  /// Helper to insert a new function, add it to the NodeMap, and populate its
+  /// node.
+  Node &createNode(Function &F);
+
+  /// Helper to add the given Node \p N to the SCCMap, mapped to the SCC \p C.
+  void addNodeToSCC(SCC &C, Node &N);
 
   /// Allocates an SCC and constructs it using the graph allocator.
   ///

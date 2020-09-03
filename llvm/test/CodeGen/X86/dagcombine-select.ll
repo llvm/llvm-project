@@ -430,3 +430,46 @@ define i32 @cttz_32_ne_select_ffs(i32 %v) nounwind {
   %add = select i1 %tobool, i32 %.op, i32 0
   ret i32 %add
 }
+
+; This matches the pattern emitted for __builtin_ffs - 1
+define i32 @cttz_32_eq_select_ffs_m1(i32 %v) nounwind {
+; NOBMI-LABEL: cttz_32_eq_select_ffs_m1:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    bsfl %edi, %ecx
+; NOBMI-NEXT:    movl $-1, %eax
+; NOBMI-NEXT:    cmovnel %ecx, %eax
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: cttz_32_eq_select_ffs_m1:
+; BMI:       # %bb.0:
+; BMI-NEXT:    tzcntl %edi, %ecx
+; BMI-NEXT:    movl $-1, %eax
+; BMI-NEXT:    cmovael %ecx, %eax
+; BMI-NEXT:    retq
+
+  %cnt = tail call i32 @llvm.cttz.i32(i32 %v, i1 true)
+  %tobool = icmp eq i32 %v, 0
+  %sel = select i1 %tobool, i32 -1, i32 %cnt
+  ret i32 %sel
+}
+
+define i32 @cttz_32_ne_select_ffs_m1(i32 %v) nounwind {
+; NOBMI-LABEL: cttz_32_ne_select_ffs_m1:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    bsfl %edi, %ecx
+; NOBMI-NEXT:    movl $-1, %eax
+; NOBMI-NEXT:    cmovnel %ecx, %eax
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: cttz_32_ne_select_ffs_m1:
+; BMI:       # %bb.0:
+; BMI-NEXT:    tzcntl %edi, %ecx
+; BMI-NEXT:    movl $-1, %eax
+; BMI-NEXT:    cmovael %ecx, %eax
+; BMI-NEXT:    retq
+
+  %cnt = tail call i32 @llvm.cttz.i32(i32 %v, i1 true)
+  %tobool = icmp ne i32 %v, 0
+  %sel = select i1 %tobool, i32 %cnt, i32 -1
+  ret i32 %sel
+}

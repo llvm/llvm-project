@@ -23,7 +23,7 @@ class ObjCDataFormatterNSData(ObjCDataFormatterTestCase):
         self.expect(
             'frame variable immutableData mutableData data_ref mutable_data_ref mutable_string_ref concreteData concreteMutableData',
             substrs=[
-                '(NSData *) immutableData = ', ' 4 bytes',
+                '(NSData *) immutableData = ', ' 5 bytes',
                 '(NSData *) mutableData = ', ' 14 bytes',
                 '(CFDataRef) data_ref = ', '@"5 bytes"',
                 '(CFMutableDataRef) mutable_data_ref = ', '@"5 bytes"',

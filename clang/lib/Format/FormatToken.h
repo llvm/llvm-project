@@ -54,6 +54,7 @@ namespace format {
   TYPE(InheritanceComma)                                                       \
   TYPE(InlineASMBrace)                                                         \
   TYPE(InlineASMColon)                                                         \
+  TYPE(InlineASMSymbolicNameLSquare)                                           \
   TYPE(JavaAnnotation)                                                         \
   TYPE(JsComputedPropertyName)                                                 \
   TYPE(JsExponentiation)                                                       \
@@ -101,10 +102,20 @@ namespace format {
   TYPE(TrailingUnaryOperator)                                                  \
   TYPE(TypenameMacro)                                                          \
   TYPE(UnaryOperator)                                                          \
+  TYPE(UntouchableMacroFunc)                                                   \
   TYPE(CSharpStringLiteral)                                                    \
+  TYPE(CSharpNamedArgumentColon)                                               \
+  TYPE(CSharpNullable)                                                         \
   TYPE(CSharpNullCoalescing)                                                   \
+  TYPE(CSharpNullConditional)                                                  \
+  TYPE(CSharpNullConditionalLSquare)                                           \
+  TYPE(CSharpGenericTypeConstraint)                                            \
+  TYPE(CSharpGenericTypeConstraintColon)                                       \
+  TYPE(CSharpGenericTypeConstraintComma)                                       \
   TYPE(Unknown)
 
+/// Determines the semantic type of a syntactic token, e.g. whether "<" is a
+/// template opener or binary operator.
 enum TokenType {
 #define TYPE(X) TT_##X,
   LIST_TOKEN_TYPES
@@ -172,6 +183,12 @@ struct FormatToken {
   /// before the token.
   bool MustBreakBefore = false;
 
+  /// Whether to not align across this token
+  ///
+  /// This happens for example when a preprocessor directive ended directly
+  /// before the token, but very rarely otherwise.
+  bool MustBreakAlignBefore = false;
+
   /// The raw text of the token.
   ///
   /// Contains the raw token text without leading whitespace and without leading
@@ -184,7 +201,10 @@ struct FormatToken {
   /// Contains the kind of block if this token is a brace.
   BraceBlockKind BlockKind = BK_Unknown;
 
-  TokenType Type = TT_Unknown;
+  /// Returns the token's type, e.g. whether "<" is a template opener or
+  /// binary operator.
+  TokenType getType() const { return Type; }
+  void setType(TokenType T) { Type = T; }
 
   /// The number of spaces that should be inserted before this token.
   unsigned SpacesRequiredBefore = 0;
@@ -505,6 +525,9 @@ struct FormatToken {
   /// Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
   bool opensBlockOrBlockTypeList(const FormatStyle &Style) const {
+    // C# Does not indent object initialisers as continuations.
+    if (is(tok::l_brace) && BlockKind == BK_BracedInit && Style.isCSharp())
+      return true;
     if (is(TT_TemplateString) && opensScope())
       return true;
     return is(TT_ArrayInitializerLSquare) || is(TT_ProtoExtensionLSquare) ||
@@ -580,6 +603,8 @@ private:
       return Previous->endsSequenceInternal(K1, Tokens...);
     return is(K1) && Previous && Previous->endsSequenceInternal(Tokens...);
   }
+
+  TokenType Type = TT_Unknown;
 };
 
 class ContinuationIndenter;
@@ -771,6 +796,8 @@ struct AdditionalKeywords {
     kw_unchecked = &IdentTable.get("unchecked");
     kw_unsafe = &IdentTable.get("unsafe");
     kw_ushort = &IdentTable.get("ushort");
+    kw_when = &IdentTable.get("when");
+    kw_where = &IdentTable.get("where");
 
     // Keep this at the end of the constructor to make sure everything here
     // is
@@ -787,7 +814,8 @@ struct AdditionalKeywords {
          kw_fixed, kw_foreach, kw_implicit, kw_in, kw_interface, kw_internal,
          kw_is, kw_lock, kw_null, kw_object, kw_out, kw_override, kw_params,
          kw_readonly, kw_ref, kw_string, kw_stackalloc, kw_sbyte, kw_sealed,
-         kw_uint, kw_ulong, kw_unchecked, kw_unsafe, kw_ushort,
+         kw_uint, kw_ulong, kw_unchecked, kw_unsafe, kw_ushort, kw_when,
+         kw_where,
          // Keywords from the JavaScript section.
          kw_as, kw_async, kw_await, kw_declare, kw_finally, kw_from,
          kw_function, kw_get, kw_import, kw_is, kw_let, kw_module, kw_readonly,
@@ -891,13 +919,77 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_unchecked;
   IdentifierInfo *kw_unsafe;
   IdentifierInfo *kw_ushort;
+  IdentifierInfo *kw_when;
+  IdentifierInfo *kw_where;
 
   /// Returns \c true if \p Tok is a true JavaScript identifier, returns
   /// \c false if it is a keyword or a pseudo keyword.
-  bool IsJavaScriptIdentifier(const FormatToken &Tok) const {
-    return Tok.is(tok::identifier) &&
-           JsExtraKeywords.find(Tok.Tok.getIdentifierInfo()) ==
-               JsExtraKeywords.end();
+  /// If \c AcceptIdentifierName is true, returns true not only for keywords,
+  // but also for IdentifierName tokens (aka pseudo-keywords), such as
+  // ``yield``.
+  bool IsJavaScriptIdentifier(const FormatToken &Tok,
+                              bool AcceptIdentifierName = true) const {
+    // Based on the list of JavaScript & TypeScript keywords here:
+    // https://github.com/microsoft/TypeScript/blob/master/src/compiler/scanner.ts#L74
+    switch (Tok.Tok.getKind()) {
+    case tok::kw_break:
+    case tok::kw_case:
+    case tok::kw_catch:
+    case tok::kw_class:
+    case tok::kw_continue:
+    case tok::kw_const:
+    case tok::kw_default:
+    case tok::kw_delete:
+    case tok::kw_do:
+    case tok::kw_else:
+    case tok::kw_enum:
+    case tok::kw_export:
+    case tok::kw_false:
+    case tok::kw_for:
+    case tok::kw_if:
+    case tok::kw_import:
+    case tok::kw_module:
+    case tok::kw_new:
+    case tok::kw_private:
+    case tok::kw_protected:
+    case tok::kw_public:
+    case tok::kw_return:
+    case tok::kw_static:
+    case tok::kw_switch:
+    case tok::kw_this:
+    case tok::kw_throw:
+    case tok::kw_true:
+    case tok::kw_try:
+    case tok::kw_typeof:
+    case tok::kw_void:
+    case tok::kw_while:
+      // These are JS keywords that are lexed by LLVM/clang as keywords.
+      return false;
+    case tok::identifier: {
+      // For identifiers, make sure they are true identifiers, excluding the
+      // JavaScript pseudo-keywords (not lexed by LLVM/clang as keywords).
+      bool IsPseudoKeyword =
+          JsExtraKeywords.find(Tok.Tok.getIdentifierInfo()) !=
+          JsExtraKeywords.end();
+      return AcceptIdentifierName || !IsPseudoKeyword;
+    }
+    default:
+      // Other keywords are handled in the switch below, to avoid problems due
+      // to duplicate case labels when using the #include trick.
+      break;
+    }
+
+    switch (Tok.Tok.getKind()) {
+      // Handle C++ keywords not included above: these are all JS identifiers.
+#define KEYWORD(X, Y) case tok::kw_##X:
+#include "clang/Basic/TokenKinds.def"
+      // #undef KEYWORD is not needed -- it's #undef-ed at the end of
+      // TokenKinds.def
+      return true;
+    default:
+      // All other tokens (punctuation etc) are not JS identifiers.
+      return false;
+    }
   }
 
   /// Returns \c true if \p Tok is a C# keyword, returns

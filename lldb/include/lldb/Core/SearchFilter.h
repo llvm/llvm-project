@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SearchFilter_h_
-#define liblldb_SearchFilter_h_
+#ifndef LLDB_CORE_SEARCHFILTER_H
+#define LLDB_CORE_SEARCHFILTER_H
 
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Utility/StructuredData.h"
@@ -98,6 +98,8 @@ public:
   ///    The file spec to check against the filter.
   /// \return
   ///    \b true if \a spec passes, and \b false otherwise.
+  ///
+  /// \note the default implementation always returns \c true.
   virtual bool ModulePasses(const FileSpec &spec);
 
   /// Call this method with a Module to see if that module passes the filter.
@@ -107,6 +109,8 @@ public:
   ///
   /// \return
   ///    \b true if \a module passes, and \b false otherwise.
+  ///
+  /// \note the default implementation always returns \c true.
   virtual bool ModulePasses(const lldb::ModuleSP &module_sp);
 
   /// Call this method with a Address to see if \a address passes the filter.
@@ -116,6 +120,8 @@ public:
   ///
   /// \return
   ///    \b true if \a address passes, and \b false otherwise.
+  ///
+  /// \note the default implementation always returns \c true.
   virtual bool AddressPasses(Address &addr);
 
   /// Call this method with a FileSpec to see if \a file spec passes the
@@ -126,6 +132,8 @@ public:
   ///
   /// \return
   ///    \b true if \a file spec passes, and \b false otherwise.
+  ///
+  /// \note the default implementation always returns \c true.
   virtual bool CompUnitPasses(FileSpec &fileSpec);
 
   /// Call this method with a CompileUnit to see if \a comp unit passes the
@@ -136,6 +144,8 @@ public:
   ///
   /// \return
   ///    \b true if \a Comp Unit passes, and \b false otherwise.
+  ///
+  /// \note the default implementation always returns \c true.
   virtual bool CompUnitPasses(CompileUnit &compUnit);
 
   /// Call this method with a Function to see if \a function passes the
@@ -187,10 +197,10 @@ public:
   /// Standard "Dump" method.  At present it does nothing.
   virtual void Dump(Stream *s) const;
 
-  lldb::SearchFilterSP CopyForBreakpoint(Breakpoint &breakpoint);
+  lldb::SearchFilterSP CreateCopy(lldb::TargetSP& target_sp);
 
   static lldb::SearchFilterSP
-  CreateFromStructuredData(Target &target,
+  CreateFromStructuredData(const lldb::TargetSP& target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
@@ -261,13 +271,13 @@ protected:
                                                const SymbolContext &context,
                                                Searcher &searcher);
 
-  virtual lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) = 0;
+  virtual lldb::SearchFilterSP DoCreateCopy() = 0;
 
   void SetTarget(lldb::TargetSP &target_sp) { m_target_sp = target_sp; }
 
-  lldb::TargetSP
-      m_target_sp; // Every filter has to be associated with a target for
-                   // now since you need a starting place for the search.
+  lldb::TargetSP m_target_sp; // Every filter has to be associated with
+                              // a target for now since you need a starting
+                              // place for the search.
 private:
   unsigned char SubclassID;
 };
@@ -288,14 +298,14 @@ public:
   bool ModulePasses(const lldb::ModuleSP &module_sp) override;
 
   static lldb::SearchFilterSP
-  CreateFromStructuredData(Target &target,
+  CreateFromStructuredData(const lldb::TargetSP& target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
 
 protected:
-  lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::SearchFilterSP DoCreateCopy() override;
 };
 
 /// \class SearchFilterByModule SearchFilter.h "lldb/Core/SearchFilter.h" This
@@ -321,10 +331,6 @@ public:
 
   bool AddressPasses(Address &address) override;
 
-  bool CompUnitPasses(FileSpec &fileSpec) override;
-
-  bool CompUnitPasses(CompileUnit &compUnit) override;
-
   void GetDescription(Stream *s) override;
 
   uint32_t GetFilterRequiredItems() override;
@@ -334,14 +340,14 @@ public:
   void Search(Searcher &searcher) override;
 
   static lldb::SearchFilterSP
-  CreateFromStructuredData(Target &target,
+  CreateFromStructuredData(const lldb::TargetSP& target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
 
 protected:
-  lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::SearchFilterSP DoCreateCopy() override;
 
 private:
   FileSpec m_module_spec;
@@ -372,10 +378,6 @@ public:
 
   bool AddressPasses(Address &address) override;
 
-  bool CompUnitPasses(FileSpec &fileSpec) override;
-
-  bool CompUnitPasses(CompileUnit &compUnit) override;
-
   void GetDescription(Stream *s) override;
 
   uint32_t GetFilterRequiredItems() override;
@@ -385,7 +387,7 @@ public:
   void Search(Searcher &searcher) override;
 
   static lldb::SearchFilterSP
-  CreateFromStructuredData(Target &target,
+  CreateFromStructuredData(const lldb::TargetSP& target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
@@ -394,9 +396,8 @@ public:
   void SerializeUnwrapped(StructuredData::DictionarySP &options_dict_sp);
 
 protected:
-  lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::SearchFilterSP DoCreateCopy() override;
 
-protected:
   FileSpecList m_module_spec_list;
 };
 
@@ -425,14 +426,14 @@ public:
   void Search(Searcher &searcher) override;
 
   static lldb::SearchFilterSP
-  CreateFromStructuredData(Target &target,
+  CreateFromStructuredData(const lldb::TargetSP& target_sp,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
 
 protected:
-  lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::SearchFilterSP DoCreateCopy() override;
 
 private:
   FileSpecList m_cu_spec_list;
@@ -440,4 +441,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_SearchFilter_h_
+#endif // LLDB_CORE_SEARCHFILTER_H

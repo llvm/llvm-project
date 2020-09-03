@@ -58,26 +58,26 @@ test:
 # Check that we are branching to the definitions, and not range-extending
 # thunks.
 # CHECK-LABEL: test
-# CHECK:  10010014:       bl .+33554428
-# CHECK:  10010024:       b  .+33554428
+# CHECK:  10010014:       bl 0x12010010
+# CHECK:  10010024:       b  0x12010020
 
 # NEGOFFSET-LABEL: test
-# NEGOFFSET:  10010014:       bl .-33554432
-# NEGOFFSET:  10010024:       b  .+33554432
+# NEGOFFSET:  10010014:       bl 0xe010014
+# NEGOFFSET:  10010024:       b  0xe010024
 
-# THUNK-LABEL: test:
-# THUNK: 10010014:       bl .+20
-# THUNK: 10010024:       b .+20
+# THUNK-LABEL: <test>:
+# THUNK: 10010014:       bl 0x10010028
+# THUNK: 10010024:       b 0x10010038
 
 # .branch_lt[0]
-# THUNK-LABEL: __long_branch_callee:
+# THUNK-LABEL: <__long_branch_callee>:
 # THUNK-NEXT: 10010028:       addis 12, 2, 1
 # THUNK-NEXT:                 ld 12, -32760(12)
 # THUNK-NEXT:                 mtctr 12
 # THUNK-NEXT:                 bctr
 
 # .branch_lt[1]
-# THUNK-LABEL: __long_branch_tail_callee:
+# THUNK-LABEL: <__long_branch_tail_callee>:
 # THUNK-NEXT: 10010038:       addis 12, 2, 1
 # THUNK-NEXT:                 ld 12, -32752(12)
 # THUNK-NEXT:                 mtctr 12

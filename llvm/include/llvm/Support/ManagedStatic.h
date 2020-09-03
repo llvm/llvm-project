@@ -40,8 +40,8 @@ template <typename T, size_t N> struct object_deleter<T[N]> {
 // constexpr, a dynamic initializer may be emitted depending on optimization
 // settings. For the affected versions of MSVC, use the old linker
 // initialization pattern of not providing a constructor and leaving the fields
-// uninitialized.
-#if !defined(_MSC_VER) || defined(__clang__)
+// uninitialized. See http://llvm.org/PR41367 for details.
+#if !defined(_MSC_VER) || (_MSC_VER >= 1925) || defined(__clang__)
 #define LLVM_USE_CONSTEXPR_CTOR
 #endif
 
@@ -102,6 +102,12 @@ public:
   }
 
   const C *operator->() const { return &**this; }
+
+  // Extract the instance, leaving the ManagedStatic uninitialized. The
+  // user is then responsible for the lifetime of the returned instance.
+  C *claim() {
+    return static_cast<C *>(Ptr.exchange(nullptr));
+  }
 };
 
 /// llvm_shutdown - Deallocate and destroy all ManagedStatic variables.

@@ -9,7 +9,7 @@
 // CHECK-NOT:          Disassembly
 // CHECK:              Disassembly of section .anothertext:
 // CHECK-EMPTY:
-// CHECK-NEXT:         main:
+// CHECK-NEXT:         <main>:
 // CHECK-NEXT:         18:	48 8d 04 25 a8 00 00 00 	leaq	168, %rax
 // CHECK-NEXT:         20:	c7 45 fc 00 00 00 00 	movl	$0, -4(%rbp)
 // CHECK-NEXT:         27:	48 89 45 f0 	movq	%rax, -16(%rbp)
@@ -19,39 +19,39 @@
 // CROSSECTION-NOT:    Disassembly
 // CROSSSECTION:       Disassembly of section .text:
 // CROSSSECTION-EMPTY:
-// CROSSSECTION-NEXT:  foo:
+// CROSSSECTION-NEXT:  <foo>:
 // CROSSSECTION-NEXT:  c:	c3 	retq
 // CROSSSECTION-NEXT:  d:	0f 1f 00 	nopl	(%rax)
 // CROSSSECTION-EMPTY:
 // CROSSSECTION-NEXT:  Disassembly of section .anothertext:
 // CROSSSECTION-EMPTY:
-// CROSSSECTION-NEXT:  main:
+// CROSSSECTION-NEXT:  <main>:
 // CROSSSECTION-NEXT:  10:	55 	pushq	%rbp
 // CROSSSECTION-NOT:   {{.}}
 
 // CROSSDATA-NOT:      Disassembly
 // CROSSDATA:          Disassembly of section .anothertext:
-// CROSSDATA:          main:
+// CROSSDATA:          <main>:
 // CROSSDATA:          40:	48 83 c4 20 	addq	$32, %rsp
 // CROSSDATA:          44:	5d 	popq	%rbp
-// CROSSDATA-DAG:      somedata:
+// CROSSDATA-DAG:      <somedata>:
 // CROSSDATA-NEXT:     45:	 74 65                           te
 // CROSSDATA-NOT:      {{.}}
 
 // START-NOT:   Disassembly
 // START:       Disassembly of section .anothertext:
 // START-EMPTY:
-// START-NEXT:  0000000000000010 main:
+// START-NEXT:  0000000000000010 <main>:
 // START-NEXT:        40: 48 83 c4 20                   addq    $32, %rsp
 // START-NEXT:        44: 5d                            popq    %rbp
 // START-EMPTY:
-// START-NEXT:  0000000000000045 somedata:
+// START-NEXT:  0000000000000045 <somedata>:
 // START-NEXT:        45:        74 65 73 74 20 73 74 72         test str
 // START-NEXT:        4d:        00 c3                           ..
 
 // STOP:       Disassembly of section .text:
 // STOP-EMPTY:
-// STOP-NEXT:       0000000000000000 foo:
+// STOP-NEXT:       0000000000000000 <foo>:
 // STOP-NEXT:       0: 55                            pushq   %rbp
 // STOP-NEXT:       1: 48 89 e5                      movq    %rsp, %rbp
 // STOP-NEXT:       4: 8b 04 25 a8 00 00 00          movl    168, %eax
@@ -61,7 +61,7 @@
 // STOP-EMPTY:
 // STOP-NEXT:  Disassembly of section .anothertext:
 // STOP-EMPTY:
-// STOP-NEXT:  0000000000000010 main:
+// STOP-NEXT:  0000000000000010 <main>:
 // STOP-NEXT:      10: 55                            pushq   %rbp
 // STOP-NOT:       {{.}}
 

@@ -209,7 +209,7 @@ void SequenceBBQuery::traverseToExitBlock(const BasicBlock *AtBB,
     VisitedBlocks.insert(std::make_pair(AtBB, BlockHint));
   }
 
-  succ_const_iterator PIt = succ_begin(AtBB), EIt = succ_end(AtBB);
+  const_succ_iterator PIt = succ_begin(AtBB), EIt = succ_end(AtBB);
   if (PIt == EIt) // No succs.
     return;
 

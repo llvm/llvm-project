@@ -15,9 +15,6 @@
 __start:
     lui  $gp, %hi(%neg(%gp_rel(g1)))
 
-# CHECK:      Name: _gp
-# CHECK-NEXT: Value: 0x[[GP:[0-9A-F]+]]
-
 # CHECK:      ProgramHeader {
 # CHECK:        Type: PT_MIPS_OPTIONS
 # CHECK-NEXT:   Offset:
@@ -30,6 +27,9 @@ __start:
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   Alignment: 8
 # CHECK-NEXT: }
+
+# CHECK:      Name: _gp
+# CHECK-NEXT: Value: 0x[[GP:[0-9A-F]+]]
 
 # CHECK:      MIPS Options {
 # CHECK-NEXT:   ODK_REGINFO {

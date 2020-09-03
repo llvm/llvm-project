@@ -172,11 +172,10 @@ char cnt;
 // BLOCKS: [[SS_TY:%.+]] = type { i{{[0-9]+}}, i8
 // CHECK: [[S_FLOAT_TY:%.+]] = type { float }
 // CHECK: [[S_INT_TY:%.+]] = type { i32 }
-// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
+// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
 // CHECK-DAG: [[X:@.+]] = global double 0.0
 // CHECK-DAG: [[F:@.+]] = global float 0.0
 // CHECK-DAG: [[CNT:@.+]] = global i8 0
-// OMP50-DAG: [[IV_REF:@.+]] = {{.*}}common global i32 0
 // OMP50-DAG: [[LAST_IV_F:@.+]] = {{.*}}common global i32 0
 // OMP50-DAG: [[LAST_F:@.+]] = {{.*}}common global float 0.000000e+00,
 
@@ -282,7 +281,7 @@ int main() {
     // LAMBDA: define internal void @{{.+}}(i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}})
     // LAMBDA: ret void
 
-    // LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable(4) [[SIVAR:%.+]])
+    // LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) [[SIVAR:%.+]])
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: alloca i{{[0-9]+}},
@@ -362,7 +361,7 @@ int main() {
 #pragma omp parallel
 #pragma omp for lastprivate(g, g1, sivar)
   for (int i = 0; i < 2; ++i) {
-    // BLOCKS: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable(4) [[SIVAR:%.+]])
+    // BLOCKS: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) [[SIVAR:%.+]])
     // BLOCKS: alloca i{{[0-9]+}},
     // BLOCKS: alloca i{{[0-9]+}},
     // BLOCKS: alloca i{{[0-9]+}},
@@ -517,7 +516,7 @@ int main() {
 // CHECK: call void [[S_FLOAT_TY_DESTR:@.+]]([[S_FLOAT_TY]]*
 // CHECK: ret
 
-// CHECK: define internal void [[MAIN_MICROTASK]](i32* noalias [[GTID_ADDR:%.+]], i32* noalias %{{.+}}, i32* dereferenceable(4) %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, [2 x [[S_FLOAT_TY]]]* dereferenceable(8) %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK]](i32* noalias [[GTID_ADDR:%.+]], i32* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}}, [2 x i32]* nonnull align 4 dereferenceable(8) %{{.+}}, [2 x [[S_FLOAT_TY]]]* nonnull align 4 dereferenceable(8) %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
@@ -674,16 +673,10 @@ int main() {
 // CHECK-NEXT: [[LB:%.+]] = load i32, i32* [[OMP_LB]]
 // CHECK-NEXT: store i32 [[LB]], i32* [[OMP_IV:[^,]+]]
 // <Skip loop body>
-// OMP50: [[LOCAL_IV_REF:%.+]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* bitcast (i32* [[IV_REF]] to i8*), i64 4, i8*** @{{.+}})
-// OMP50: [[BC:%.+]] = bitcast i8* [[LOCAL_IV_REF]] to i32*
-// OMP50: store i32 %{{.+}}, i32* [[BC]],
 // CHECK: store float 0.000000e+00, float* [[F_PRIV:%.+]],
-// OMP50: [[LOCAL_IV_REF:%.+]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* bitcast (i32* [[IV_REF]] to i8*), i64 4, i8*** @{{.+}})
-// OMP50: [[BC:%.+]] = bitcast i8* [[LOCAL_IV_REF]] to i32*
-// OMP50: [[IV:%.+]] = load i32, i32* [[BC]],
 // OMP50: call void @__kmpc_critical(%struct.ident_t* @{{.+}}, i32 [[GTID]], [8 x i32]* [[F_REGION:@.+]])
 // OMP50: [[LAST_IV:%.+]] = load i32, i32* [[LAST_IV_F]],
-// OMP50: [[CMP:%.+]] = icmp sle i32 [[LAST_IV]], [[IV]]
+// OMP50: [[CMP:%.+]] = icmp sle i32 [[LAST_IV]], [[IV:%.+]]
 // OMP50: br i1 [[CMP]], label %[[LP_THEN:.+]], label %[[LP_DONE:[^,]+]]
 
 // OMP50: [[LP_THEN]]:
@@ -773,7 +766,7 @@ int main() {
 // CHECK: br label
 // CHECK: ret void
 
-// CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32* dereferenceable(4) %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, [2 x [[S_INT_TY]]]* dereferenceable(8) %{{.+}}, [[S_INT_TY]]* dereferenceable(4) %{{.+}})
+// CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}}, [2 x i32]* nonnull align 4 dereferenceable(8) %{{.+}}, [2 x [[S_INT_TY]]]* nonnull align 4 dereferenceable(8) %{{.+}}, [[S_INT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},

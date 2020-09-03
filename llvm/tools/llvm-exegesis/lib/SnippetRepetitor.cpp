@@ -110,6 +110,8 @@ SnippetRepetitor::Create(InstructionBenchmark::RepetitionModeE Mode,
     return std::make_unique<DuplicateSnippetRepetitor>(State);
   case InstructionBenchmark::Loop:
     return std::make_unique<LoopSnippetRepetitor>(State);
+  case InstructionBenchmark::AggregateMin:
+    break;
   }
   llvm_unreachable("Unknown RepetitionModeE enum");
 }

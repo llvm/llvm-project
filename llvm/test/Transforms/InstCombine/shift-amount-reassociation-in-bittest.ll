@@ -687,3 +687,23 @@ entry:
   %tobool = icmp ne i16 %and, 0
   ret i1 %tobool
 }
+
+; See https://bugs.llvm.org/show_bug.cgi?id=44802
+define i1 @pr44802(i3 %a, i3 %x, i3 %y) {
+; CHECK-LABEL: @pr44802(
+; CHECK-NEXT:    [[T0:%.*]] = icmp ne i3 [[A:%.*]], 0
+; CHECK-NEXT:    [[T1:%.*]] = zext i1 [[T0]] to i3
+; CHECK-NEXT:    [[T2:%.*]] = lshr i3 [[X:%.*]], [[T1]]
+; CHECK-NEXT:    [[T3:%.*]] = shl i3 [[Y:%.*]], [[T1]]
+; CHECK-NEXT:    [[T4:%.*]] = and i3 [[T2]], [[T3]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i3 [[T4]], 0
+; CHECK-NEXT:    ret i1 [[T5]]
+;
+  %t0 = icmp ne i3 %a, 0
+  %t1 = zext i1 %t0 to i3
+  %t2 = lshr i3 %x, %t1
+  %t3 = shl i3 %y, %t1
+  %t4 = and i3 %t2, %t3
+  %t5 = icmp ne i3 %t4, 0
+  ret i1 %t5
+}

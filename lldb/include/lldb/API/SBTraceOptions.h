@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SBTRACEOPTIONS_H_
-#define SBTRACEOPTIONS_H_
+#ifndef LLDB_API_SBTRACEOPTIONS_H
+#define LLDB_API_SBTRACEOPTIONS_H
 
 #include "lldb/API/SBDefines.h"
 
@@ -56,4 +56,4 @@ protected:
 };
 }
 
-#endif /* SBTRACEOPTIONS_H_ */
+#endif // LLDB_API_SBTRACEOPTIONS_H

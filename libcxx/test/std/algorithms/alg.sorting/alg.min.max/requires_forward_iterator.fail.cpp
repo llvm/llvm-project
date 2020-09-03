@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// GCC 5 does not evaluate static assertions dependent on a template parameter.
+// UNSUPPORTED: gcc-5
+
 // <algorithm>
 
 // template<ForwardIterator Iter>

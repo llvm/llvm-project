@@ -77,7 +77,7 @@ class TestSwiftStringVariables(TestBase):
         lldbutil.check_variable(
             self,
             IContainEscapes,
-            summary='"Hello\\u{8}\\n\\u{8d}\\u{2028}\\nGoodbye"')
+            summary='"Hello\\u{8}\\n\\u{8}\\u{8}\\nGoodbye"')
 
         self.expect(
             'expression -l objc++ -- (char*)"Hello\b\b\b\b\bGoodbye"',

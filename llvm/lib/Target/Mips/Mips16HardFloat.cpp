@@ -43,7 +43,7 @@ namespace {
 
 } // end anonymous namespace
 
-static void EmitInlineAsm(LLVMContext &C, BasicBlock *BB, StringRef AsmText) {
+static void emitInlineAsm(LLVMContext &C, BasicBlock *BB, StringRef AsmText) {
   std::vector<Type *> AsmArgTypes;
   std::vector<Value *> AsmArgs;
 
@@ -260,7 +260,7 @@ static void assureFPCallStub(Function &F, Module *M,
     return;
   LLVMContext &Context = M->getContext();
   bool LE = TM.isLittleEndian();
-  std::string Name = F.getName();
+  std::string Name(F.getName());
   std::string SectionName = ".mips16.call.fp." + Name;
   std::string StubName = "__call_stub_fp_" + Name;
   //
@@ -339,7 +339,7 @@ static void assureFPCallStub(Function &F, Module *M,
     AsmText += "jr $$18\n";
   else
     AsmText += "jr $$25\n";
-  EmitInlineAsm(Context, BB, AsmText);
+  emitInlineAsm(Context, BB, AsmText);
 
   new UnreachableInst(Context, BB);
 }
@@ -448,7 +448,7 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
   bool PicMode = TM.isPositionIndependent();
   bool LE = TM.isLittleEndian();
   LLVMContext &Context = M->getContext();
-  std::string Name = F->getName();
+  std::string Name(F->getName());
   std::string SectionName = ".mips16.fn." + Name;
   std::string StubName = "__fn_stub_" + Name;
   std::string LocalName = "$$__fn_local_" + Name;
@@ -475,7 +475,7 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
   AsmText += swapFPIntParams(PV, M, LE, false);
   AsmText += "jr $$25\n";
   AsmText += LocalName + " = " + Name + "\n";
-  EmitInlineAsm(Context, BB, AsmText);
+  emitInlineAsm(Context, BB, AsmText);
 
   new UnreachableInst(FStub->getContext(), BB);
 }

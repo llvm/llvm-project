@@ -19,11 +19,11 @@
 // x86-64 FreeBSD 9.2 and older define 'ucontext_t' incorrectly in
 // 32-bit mode.
 #if SANITIZER_FREEBSD && (SANITIZER_WORDSIZE == 32)
-# include <osreldate.h>
-# if __FreeBSD_version <= 902001  // v9.2
-#  include <link.h>
-#  include <sys/param.h>
-#  include <ucontext.h>
+#include <osreldate.h>
+#if __FreeBSD_version <= 902001  // v9.2
+#include <link.h>
+#include <sys/param.h>
+#include <ucontext.h>
 
 namespace __sanitizer {
 
@@ -68,8 +68,8 @@ typedef struct __xmcontext {
 } xmcontext_t;
 
 typedef struct __xucontext {
-  sigset_t  uc_sigmask;
-  xmcontext_t  uc_mcontext;
+  sigset_t uc_sigmask;
+  xmcontext_t uc_mcontext;
 
   struct __ucontext *uc_link;
   stack_t uc_stack;
@@ -122,15 +122,16 @@ struct xdl_phdr_info {
   void *dlpi_tls_data;
 };
 
-typedef int (*__xdl_iterate_hdr_callback)(struct xdl_phdr_info*, size_t, void*);
-typedef int xdl_iterate_phdr_t(__xdl_iterate_hdr_callback, void*);
+typedef int (*__xdl_iterate_hdr_callback)(struct xdl_phdr_info *, size_t,
+                                          void *);
+typedef int xdl_iterate_phdr_t(__xdl_iterate_hdr_callback, void *);
 
 #define xdl_iterate_phdr(callback, param) \
-  (((xdl_iterate_phdr_t*) dl_iterate_phdr)((callback), (param)))
+  (((xdl_iterate_phdr_t *)dl_iterate_phdr)((callback), (param)))
 
 }  // namespace __sanitizer
 
-# endif  // __FreeBSD_version <= 902001
+#endif  // __FreeBSD_version <= 902001
 #endif  // SANITIZER_FREEBSD && (SANITIZER_WORDSIZE == 32)
 
 #endif  // SANITIZER_FREEBSD_H

@@ -15,7 +15,7 @@
     ret void
   }
 
-  attributes #0 = { noinline noredzone "frame-pointer"="all" }
+  attributes #0 = { noinline noredzone }
 ...
 ---
 # This test ensures that we

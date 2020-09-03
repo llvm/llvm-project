@@ -548,9 +548,11 @@ unsigned APInt::getBitsNeeded(StringRef str, uint8_t radix) {
 
 hash_code llvm::hash_value(const APInt &Arg) {
   if (Arg.isSingleWord())
-    return hash_combine(Arg.U.VAL);
+    return hash_combine(Arg.BitWidth, Arg.U.VAL);
 
-  return hash_combine_range(Arg.U.pVal, Arg.U.pVal + Arg.getNumWords());
+  return hash_combine(
+      Arg.BitWidth,
+      hash_combine_range(Arg.U.pVal, Arg.U.pVal + Arg.getNumWords()));
 }
 
 bool APInt::isSplat(unsigned SplatSizeInBits) const {
@@ -670,20 +672,16 @@ bool APInt::isSubsetOfSlowCase(const APInt &RHS) const {
 }
 
 APInt APInt::byteSwap() const {
-  assert(BitWidth >= 16 && BitWidth % 16 == 0 && "Cannot byteswap!");
+  assert(BitWidth >= 16 && BitWidth % 8 == 0 && "Cannot byteswap!");
   if (BitWidth == 16)
     return APInt(BitWidth, ByteSwap_16(uint16_t(U.VAL)));
   if (BitWidth == 32)
     return APInt(BitWidth, ByteSwap_32(unsigned(U.VAL)));
-  if (BitWidth == 48) {
-    unsigned Tmp1 = unsigned(U.VAL >> 16);
-    Tmp1 = ByteSwap_32(Tmp1);
-    uint16_t Tmp2 = uint16_t(U.VAL);
-    Tmp2 = ByteSwap_16(Tmp2);
-    return APInt(BitWidth, (uint64_t(Tmp2) << 32) | Tmp1);
+  if (BitWidth <= 64) {
+    uint64_t Tmp1 = ByteSwap_64(U.VAL);
+    Tmp1 >>= (64 - BitWidth);
+    return APInt(BitWidth, Tmp1);
   }
-  if (BitWidth == 64)
-    return APInt(BitWidth, ByteSwap_64(U.VAL));
 
   APInt Result(getNumWords() * APINT_BITS_PER_WORD, 0);
   for (unsigned I = 0, N = getNumWords(); I != N; ++I)
@@ -2283,7 +2281,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
 std::string APInt::toString(unsigned Radix = 10, bool Signed = true) const {
   SmallString<40> S;
   toString(S, Radix, Signed, /* formatAsCLiteral = */false);
-  return S.str();
+  return std::string(S.str());
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3088,7 +3086,8 @@ void llvm::StoreIntToMemory(const APInt &IntVal, uint8_t *Dst,
 
 /// LoadIntFromMemory - Loads the integer stored in the LoadBytes bytes starting
 /// from Src into IntVal, which is assumed to be wide enough and to hold zero.
-void llvm::LoadIntFromMemory(APInt &IntVal, uint8_t *Src, unsigned LoadBytes) {
+void llvm::LoadIntFromMemory(APInt &IntVal, const uint8_t *Src,
+                             unsigned LoadBytes) {
   assert((IntVal.getBitWidth()+7)/8 >= LoadBytes && "Integer too small!");
   uint8_t *Dst = reinterpret_cast<uint8_t *>(
                    const_cast<uint64_t *>(IntVal.getRawData()));

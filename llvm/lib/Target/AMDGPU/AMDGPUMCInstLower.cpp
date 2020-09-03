@@ -254,7 +254,7 @@ const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
   return AsmPrinter::lowerConstant(CV);
 }
 
-void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
     return;
 
@@ -272,7 +272,7 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     const MachineBasicBlock *MBB = MI->getParent();
     MachineBasicBlock::const_instr_iterator I = ++MI->getIterator();
     while (I != MBB->instr_end() && I->isInsideBundle()) {
-      EmitInstruction(&*I);
+      emitInstruction(&*I);
       ++I;
     }
   } else {
@@ -381,7 +381,7 @@ void R600MCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   }
 }
 
-void R600AsmPrinter::EmitInstruction(const MachineInstr *MI) {
+void R600AsmPrinter::emitInstruction(const MachineInstr *MI) {
   const R600Subtarget &STI = MF->getSubtarget<R600Subtarget>();
   R600MCInstLower MCInstLowering(OutContext, STI, *this);
 
@@ -396,7 +396,7 @@ void R600AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     const MachineBasicBlock *MBB = MI->getParent();
     MachineBasicBlock::const_instr_iterator I = ++MI->getIterator();
     while (I != MBB->instr_end() && I->isInsideBundle()) {
-      EmitInstruction(&*I);
+      emitInstruction(&*I);
       ++I;
     }
   } else {

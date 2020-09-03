@@ -13,13 +13,15 @@
 # CONTENT-NEXT: Address: 0x0
 # CONTENT-NEXT: Offset: 0x40
 # CONTENT-NEXT: Size: 3
-# CONTENT-NEXT: Link: 4
+# CONTENT-NEXT: Link: 2
 # CONTENT-NEXT: Info: 0
 # CONTENT-NEXT: AddressAlignment: 0
 # CONTENT-NEXT: EntrySize: 0
 # CONTENT-NEXT: SectionData (
 # CONTENT-NEXT:   0000: 001122 |
 # CONTENT-NEXT: )
+# CONTENT:      Index: 2
+# CONTENT-NEXT: Name: .dynsym (9)
 
 --- !ELF
 FileHeader:

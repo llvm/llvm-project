@@ -92,11 +92,18 @@ private:
   TargetInstrInfo TII;
 };
 
+static TargetOptions getTargetOptionsForBogusMachine() {
+  TargetOptions Opts;
+  Opts.EmitCallSiteInfo = true;
+  return Opts;
+}
+
 class BogusTargetMachine : public LLVMTargetMachine {
 public:
   BogusTargetMachine()
-      : LLVMTargetMachine(Target(), "", Triple(""), "", "", TargetOptions(),
-                          Reloc::Static, CodeModel::Small, CodeGenOpt::Default),
+      : LLVMTargetMachine(Target(), "", Triple(""), "", "",
+                          getTargetOptionsForBogusMachine(), Reloc::Static,
+                          CodeModel::Small, CodeGenOpt::Default),
         ST(*this) {}
 
   ~BogusTargetMachine() override {}

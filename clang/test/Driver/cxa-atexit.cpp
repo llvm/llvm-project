@@ -17,6 +17,8 @@
 // RUN: %clang -### -target mips-unknown-none-gnu -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-MIPS
 // RUN: %clang -### -target mips-mti-none-gnu -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-MIPS
 // RUN: %clang -### -target sparc-sun-solaris -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-SOLARIS
+// RUN: %clang -### -target powerpc-ibm-aix-xcoff -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-AIX
+// RUN: %clang -### -target powerpc64-ibm-aix-xcoff -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-AIX
 
 // CHECK-WINDOWS: "-fno-use-cxa-atexit"
 // CHECK-SOLARIS-NOT: "-fno-use-cxa-atexit"
@@ -24,6 +26,7 @@
 // CHECK-XCORE: "-fno-use-cxa-atexit"
 // CHECK-MTI: "-fno-use-cxa-atexit"
 // CHECK-MIPS-NOT: "-fno-use-cxa-atexit"
+// CHECK-AIX: "-fno-use-cxa-atexit"
 
 // RUN: %clang -target x86_64-apple-darwin -fregister-global-dtors-with-atexit -fno-register-global-dtors-with-atexit -c -### %s 2>&1 | \
 // RUN: FileCheck --check-prefix=WITHOUTATEXIT %s

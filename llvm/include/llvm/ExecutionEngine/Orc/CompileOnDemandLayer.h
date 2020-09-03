@@ -18,7 +18,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
@@ -94,6 +93,7 @@ public:
 
   /// Sets the ImplSymbolMap
   void setImplMap(ImplSymbolMap *Imp);
+
   /// Emits the given module. This should not be called by clients: it will be
   /// called by the JIT when a definition added via the add method is requested.
   void emit(MaterializationResponsibility R, ThreadSafeModule TSM) override;
@@ -338,12 +338,13 @@ public:
     for (auto &KV : LogicalDylibs) {
       if (auto Sym = KV.second.StubsMgr->findStub(Name, ExportedSymbolsOnly))
         return Sym;
-      if (auto Sym = findSymbolIn(KV.first, Name, ExportedSymbolsOnly))
+      if (auto Sym =
+              findSymbolIn(KV.first, std::string(Name), ExportedSymbolsOnly))
         return Sym;
       else if (auto Err = Sym.takeError())
         return std::move(Err);
     }
-    return BaseLayer.findSymbol(Name, ExportedSymbolsOnly);
+    return BaseLayer.findSymbol(std::string(Name), ExportedSymbolsOnly);
   }
 
   /// Get the address of a symbol provided by this layer, or some layer
@@ -392,49 +393,48 @@ private:
 
     // Create stub functions.
     const DataLayout &DL = SrcM.getDataLayout();
-    {
-      typename IndirectStubsMgrT::StubInitsMap StubInits;
-      for (auto &F : SrcM) {
-        // Skip declarations.
-        if (F.isDeclaration())
+
+    typename IndirectStubsMgrT::StubInitsMap StubInits;
+    for (auto &F : SrcM) {
+      // Skip declarations.
+      if (F.isDeclaration())
+        continue;
+
+      // Skip weak functions for which we already have definitions.
+      auto MangledName = mangle(F.getName(), DL);
+      if (F.hasWeakLinkage() || F.hasLinkOnceLinkage()) {
+        if (auto Sym = LD.findSymbol(BaseLayer, MangledName, false))
           continue;
-
-        // Skip weak functions for which we already have definitions.
-        auto MangledName = mangle(F.getName(), DL);
-        if (F.hasWeakLinkage() || F.hasLinkOnceLinkage()) {
-          if (auto Sym = LD.findSymbol(BaseLayer, MangledName, false))
-            continue;
-          else if (auto Err = Sym.takeError())
-            return std::move(Err);
-        }
-
-        // Record all functions defined by this module.
-        if (CloneStubsIntoPartitions)
-          LD.getStubsToClone(LMId).insert(&F);
-
-        // Create a callback, associate it with the stub for the function,
-        // and set the compile action to compile the partition containing the
-        // function.
-        auto CompileAction = [this, &LD, LMId, &F]() -> JITTargetAddress {
-          if (auto FnImplAddrOrErr = this->extractAndCompile(LD, LMId, F))
-            return *FnImplAddrOrErr;
-          else {
-            // FIXME: Report error, return to 'abort' or something similar.
-            consumeError(FnImplAddrOrErr.takeError());
-            return 0;
-          }
-        };
-        if (auto CCAddr =
-                CompileCallbackMgr.getCompileCallback(std::move(CompileAction)))
-          StubInits[MangledName] =
-              std::make_pair(*CCAddr, JITSymbolFlags::fromGlobalValue(F));
-        else
-          return CCAddr.takeError();
+        else if (auto Err = Sym.takeError())
+          return Err;
       }
 
-      if (auto Err = LD.StubsMgr->createStubs(StubInits))
-        return Err;
+      // Record all functions defined by this module.
+      if (CloneStubsIntoPartitions)
+        LD.getStubsToClone(LMId).insert(&F);
+
+      // Create a callback, associate it with the stub for the function,
+      // and set the compile action to compile the partition containing the
+      // function.
+      auto CompileAction = [this, &LD, LMId, &F]() -> JITTargetAddress {
+        if (auto FnImplAddrOrErr = this->extractAndCompile(LD, LMId, F))
+          return *FnImplAddrOrErr;
+        else {
+          // FIXME: Report error, return to 'abort' or something similar.
+          consumeError(FnImplAddrOrErr.takeError());
+          return 0;
+        }
+      };
+      if (auto CCAddr =
+              CompileCallbackMgr.getCompileCallback(std::move(CompileAction)))
+        StubInits[MangledName] =
+            std::make_pair(*CCAddr, JITSymbolFlags::fromGlobalValue(F));
+      else
+        return CCAddr.takeError();
     }
+
+    if (auto Err = LD.StubsMgr->createStubs(StubInits))
+      return Err;
 
     // If this module doesn't contain any globals, aliases, or module flags then
     // we can bail out early and avoid the overhead of creating and managing an
@@ -511,11 +511,11 @@ private:
     }
 
     // Build a resolver for the globals module and add it to the base layer.
-    auto LegacyLookup = [this, &LD](const std::string &Name) -> JITSymbol {
+    auto LegacyLookup = [this, &LD](StringRef Name) -> JITSymbol {
       if (auto Sym = LD.StubsMgr->findStub(Name, false))
         return Sym;
 
-      if (auto Sym = LD.findSymbol(BaseLayer, Name, false))
+      if (auto Sym = LD.findSymbol(BaseLayer, std::string(Name), false))
         return Sym;
       else if (auto Err = Sym.takeError())
         return std::move(Err);
@@ -631,7 +631,7 @@ private:
     Module &SrcM = LD.getSourceModule(LMId);
 
     // Create the module.
-    std::string NewName = SrcM.getName();
+    std::string NewName(SrcM.getName());
     for (auto *F : Part) {
       NewName += ".";
       NewName += F->getName();
@@ -688,8 +688,8 @@ private:
 
     auto K = ES.allocateVModule();
 
-    auto LegacyLookup = [this, &LD](const std::string &Name) -> JITSymbol {
-      return LD.findSymbol(BaseLayer, Name, false);
+    auto LegacyLookup = [this, &LD](StringRef Name) -> JITSymbol {
+      return LD.findSymbol(BaseLayer, std::string(Name), false);
     };
 
     // Create memory manager and symbol resolver.

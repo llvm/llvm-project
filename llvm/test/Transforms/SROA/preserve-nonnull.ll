@@ -12,7 +12,7 @@ define i8* @propagate_nonnull(i32* %v) {
 ; CHECK-NEXT:    %[[A:.*]] = alloca i8*
 ; CHECK-NEXT:    %[[V_CAST:.*]] = bitcast i32* %v to i8*
 ; CHECK-NEXT:    store i8* %[[V_CAST]], i8** %[[A]]
-; CHECK-NEXT:    %[[LOAD:.*]] = load volatile i8*, i8** %[[A]], !nonnull !0
+; CHECK-NEXT:    %[[LOAD:.*]] = load volatile i8*, i8** %[[A]], align 8, !nonnull !0
 ; CHECK-NEXT:    ret i8* %[[LOAD]]
 entry:
   %a = alloca [2 x i8*]

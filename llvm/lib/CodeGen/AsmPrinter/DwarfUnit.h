@@ -27,7 +27,6 @@
 
 namespace llvm {
 
-class MachineLocation;
 class MachineOperand;
 class ConstantInt;
 class ConstantFP;

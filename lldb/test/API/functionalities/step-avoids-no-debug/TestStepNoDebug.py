@@ -48,7 +48,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
             "3.9"],
         archs=["i386"],
         bugnumber="llvm.org/pr28549")
-    @expectedFailureAll(oslist=["ios", "tvos", "bridgeos"], bugnumber="<rdar://problem/34026777>")  # lldb doesn't step past last source line in function on arm64
+    @expectedFailureAll(archs=["arm64"], bugnumber="<rdar://problem/34026777>")  # lldb doesn't step past last source line in function on arm64
     @expectedFailureAll(archs=["aarch64"], oslist=["linux"],
                         bugnumber="llvm.org/pr44057")
     def test_step_in_with_python(self):
@@ -109,7 +109,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
         # Now finish, and make sure the return value is correct.
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             self.process, inner_bkpt)
-        self.assertTrue(len(threads) == 1, "Stopped at inner breakpoint.")
+        self.assertEquals(len(threads), 1, "Stopped at inner breakpoint.")
         self.thread = threads[0]
 
     def do_step_out_past_nodebug(self):

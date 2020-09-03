@@ -1,8 +1,8 @@
 // RUN: mlir-translate -test-spirv-roundtrip %s | FileCheck %s
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // CHECK-LABEL: @bool_const
-  func @bool_const() -> () {
+  spv.func @bool_const() -> () "None" {
     // CHECK: spv.constant true
     %0 = spv.constant true
     // CHECK: spv.constant false
@@ -14,7 +14,7 @@ spv.module "Logical" "GLSL450" {
   }
 
   // CHECK-LABEL: @i32_const
-  func @i32_const() -> () {
+  spv.func @i32_const() -> () "None" {
     // CHECK: spv.constant 0 : i32
     %0 = spv.constant  0 : i32
     // CHECK: spv.constant 10 : i32
@@ -27,8 +27,39 @@ spv.module "Logical" "GLSL450" {
     spv.Return
   }
 
+  // CHECK-LABEL: @si32_const
+  spv.func @si32_const() -> () "None" {
+    // CHECK: spv.constant 0 : si32
+    %0 = spv.constant  0 : si32
+    // CHECK: spv.constant 10 : si32
+    %1 = spv.constant 10 : si32
+    // CHECK: spv.constant -5 : si32
+    %2 = spv.constant -5 : si32
+
+    %3 = spv.IAdd %0, %1 : si32
+    %4 = spv.IAdd %2, %3 : si32
+    spv.Return
+  }
+
+  // CHECK-LABEL: @ui32_const
+  // We cannot differentiate signless vs. unsigned integers in SPIR-V blob
+  // because they all use 1 as the signedness bit. So we always treat them
+  // as signless integers.
+  spv.func @ui32_const() -> () "None" {
+    // CHECK: spv.constant 0 : i32
+    %0 = spv.constant  0 : ui32
+    // CHECK: spv.constant 10 : i32
+    %1 = spv.constant 10 : ui32
+    // CHECK: spv.constant -5 : i32
+    %2 = spv.constant 4294967291 : ui32
+
+    %3 = spv.IAdd %0, %1 : ui32
+    %4 = spv.IAdd %2, %3 : ui32
+    spv.Return
+  }
+
   // CHECK-LABEL: @i64_const
-  func @i64_const() -> () {
+  spv.func @i64_const() -> () "None" {
     // CHECK: spv.constant 4294967296 : i64
     %0 = spv.constant           4294967296 : i64 //  2^32
     // CHECK: spv.constant -4294967296 : i64
@@ -44,7 +75,7 @@ spv.module "Logical" "GLSL450" {
   }
 
   // CHECK-LABEL: @i16_const
-  func @i16_const() -> () {
+  spv.func @i16_const() -> () "None" {
     // CHECK: spv.constant -32768 : i16
     %0 = spv.constant -32768 : i16 // -2^15
     // CHECK: spv.constant 32767 : i16
@@ -55,7 +86,7 @@ spv.module "Logical" "GLSL450" {
   }
 
   // CHECK-LABEL: @float_const
-  func @float_const() -> () {
+  spv.func @float_const() -> () "None" {
     // CHECK: spv.constant 0.000000e+00 : f32
     %0 = spv.constant 0. : f32
     // CHECK: spv.constant 1.000000e+00 : f32
@@ -76,8 +107,8 @@ spv.module "Logical" "GLSL450" {
   }
 
   // CHECK-LABEL: @double_const
-  func @double_const() -> () {
-    // TODO(antiagainst): test range boundary values
+  spv.func @double_const() -> () "None" {
+    // TODO: test range boundary values
     // CHECK: spv.constant 1.024000e+03 : f64
     %0 = spv.constant 1024. : f64
     // CHECK: spv.constant -1.024000e+03 : f64
@@ -88,7 +119,7 @@ spv.module "Logical" "GLSL450" {
   }
 
   // CHECK-LABEL: @half_const
-  func @half_const() -> () {
+  spv.func @half_const() -> () "None" {
     // CHECK: spv.constant 5.120000e+02 : f16
     %0 = spv.constant 512. : f16
     // CHECK: spv.constant -5.120000e+02 : f16
@@ -99,7 +130,7 @@ spv.module "Logical" "GLSL450" {
   }
 
   // CHECK-LABEL: @bool_vector_const
-  func @bool_vector_const() -> () {
+  spv.func @bool_vector_const() -> () "None" {
     // CHECK: spv.constant dense<false> : vector<2xi1>
     %0 = spv.constant dense<false> : vector<2xi1>
     // CHECK: spv.constant dense<[true, true, true]> : vector<3xi1>
@@ -114,7 +145,7 @@ spv.module "Logical" "GLSL450" {
   }
 
   // CHECK-LABEL: @int_vector_const
-  func @int_vector_const() -> () {
+  spv.func @int_vector_const() -> () "None" {
     // CHECK: spv.constant dense<0> : vector<3xi32>
     %0 = spv.constant dense<0> : vector<3xi32>
     // CHECK: spv.constant dense<1> : vector<3xi32>
@@ -128,7 +159,7 @@ spv.module "Logical" "GLSL450" {
   }
 
   // CHECK-LABEL: @fp_vector_const
-  func @fp_vector_const() -> () {
+  spv.func @fp_vector_const() -> () "None" {
     // CHECK: spv.constant dense<0.000000e+00> : vector<4xf32>
     %0 = spv.constant dense<0.> : vector<4xf32>
     // CHECK: spv.constant dense<-1.500000e+01> : vector<4xf32>
@@ -141,8 +172,23 @@ spv.module "Logical" "GLSL450" {
     spv.Return
   }
 
-  // CHECK-LABEL: @array_const
-  func @array_const() -> (!spv.array<2 x vector<2xf32>>) {
+  // CHECK-LABEL: @ui64_array_const
+  spv.func @ui64_array_const() -> (!spv.array<3xui64>) "None" {
+    // CHECK: spv.constant [5, 6, 7] : !spv.array<3 x i64>
+    %0 = spv.constant [5 : ui64, 6 : ui64, 7 : ui64] : !spv.array<3 x ui64>
+
+    spv.ReturnValue %0: !spv.array<3xui64>
+  }
+
+  // CHECK-LABEL: @si32_array_const
+  spv.func @si32_array_const() -> (!spv.array<3xsi32>) "None" {
+    // CHECK: spv.constant [5 : si32, 6 : si32, 7 : si32] : !spv.array<3 x si32>
+    %0 = spv.constant [5 : si32, 6 : si32, 7 : si32] : !spv.array<3 x si32>
+
+    spv.ReturnValue %0 : !spv.array<3xsi32>
+  }
+  // CHECK-LABEL: @float_array_const
+  spv.func @float_array_const() -> (!spv.array<2 x vector<2xf32>>) "None" {
     // CHECK: spv.constant [dense<3.000000e+00> : vector<2xf32>, dense<[4.000000e+00, 5.000000e+00]> : vector<2xf32>] : !spv.array<2 x vector<2xf32>>
     %0 = spv.constant [dense<3.0> : vector<2xf32>, dense<[4., 5.]> : vector<2xf32>] : !spv.array<2 x vector<2xf32>>
 
@@ -150,14 +196,14 @@ spv.module "Logical" "GLSL450" {
   }
 
   // CHECK-LABEL: @ignore_not_used_const
-  func @ignore_not_used_const() -> () {
+  spv.func @ignore_not_used_const() -> () "None" {
     %0 = spv.constant false
     // CHECK-NEXT: spv.Return
     spv.Return
   }
 
   // CHECK-LABEL: @materialize_const_at_each_use
-  func @materialize_const_at_each_use() -> (i32) {
+  spv.func @materialize_const_at_each_use() -> (i32) "None" {
     // CHECK: %[[USE1:.*]] = spv.constant 42 : i32
     // CHECK: %[[USE2:.*]] = spv.constant 42 : i32
     // CHECK: spv.IAdd %[[USE1]], %[[USE2]]
@@ -167,7 +213,7 @@ spv.module "Logical" "GLSL450" {
   }
 
   // CHECK-LABEL: @const_variable
-  func @const_variable(%arg0 : i32, %arg1 : i32) -> () {
+  spv.func @const_variable(%arg0 : i32, %arg1 : i32) -> () "None" {
     // CHECK: %[[CONST:.*]] = spv.constant 5 : i32
     // CHECK: spv.Variable init(%[[CONST]]) : !spv.ptr<i32, Function>
     // CHECK: spv.IAdd %arg0, %arg1
@@ -180,16 +226,16 @@ spv.module "Logical" "GLSL450" {
   }
 
   // CHECK-LABEL: @multi_dimensions_const
-  func @multi_dimensions_const() -> (!spv.array<2 x !spv.array<2 x !spv.array<3 x i32 [4]> [12]> [24]>) {
-    // CHECK: spv.constant {{\[}}{{\[}}[1 : i32, 2 : i32, 3 : i32], [4 : i32, 5 : i32, 6 : i32]], {{\[}}[7 : i32, 8 : i32, 9 : i32], [10 : i32, 11 : i32, 12 : i32]]] : !spv.array<2 x !spv.array<2 x !spv.array<3 x i32 [4]> [12]> [24]>
-    %0 = spv.constant dense<[[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]]> : tensor<2x2x3xi32> : !spv.array<2 x !spv.array<2 x !spv.array<3 x i32 [4]> [12]> [24]>
-    spv.ReturnValue %0 : !spv.array<2 x !spv.array<2 x !spv.array<3 x i32 [4]> [12]> [24]>
+  spv.func @multi_dimensions_const() -> (!spv.array<2 x !spv.array<2 x !spv.array<3 x i32, stride=4>, stride=12>, stride=24>) "None" {
+    // CHECK: spv.constant {{\[}}{{\[}}[1 : i32, 2 : i32, 3 : i32], [4 : i32, 5 : i32, 6 : i32]], {{\[}}[7 : i32, 8 : i32, 9 : i32], [10 : i32, 11 : i32, 12 : i32]]] : !spv.array<2 x !spv.array<2 x !spv.array<3 x i32, stride=4>, stride=12>, stride=24>
+    %0 = spv.constant dense<[[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]]> : tensor<2x2x3xi32> : !spv.array<2 x !spv.array<2 x !spv.array<3 x i32, stride=4>, stride=12>, stride=24>
+    spv.ReturnValue %0 : !spv.array<2 x !spv.array<2 x !spv.array<3 x i32, stride=4>, stride=12>, stride=24>
   }
 
   // CHECK-LABEL: @multi_dimensions_splat_const
-  func @multi_dimensions_splat_const() -> (!spv.array<2 x !spv.array<2 x !spv.array<3 x i32 [4]> [12]> [24]>) {
-    // CHECK: spv.constant {{\[}}{{\[}}[1 : i32, 1 : i32, 1 : i32], [1 : i32, 1 : i32, 1 : i32]], {{\[}}[1 : i32, 1 : i32, 1 : i32], [1 : i32, 1 : i32, 1 : i32]]] : !spv.array<2 x !spv.array<2 x !spv.array<3 x i32 [4]> [12]> [24]>
-    %0 = spv.constant dense<1> : tensor<2x2x3xi32> : !spv.array<2 x !spv.array<2 x !spv.array<3 x i32 [4]> [12]> [24]>
-    spv.ReturnValue %0 : !spv.array<2 x !spv.array<2 x !spv.array<3 x i32 [4]> [12]> [24]>
+  spv.func @multi_dimensions_splat_const() -> (!spv.array<2 x !spv.array<2 x !spv.array<3 x i32, stride=4>, stride=12>, stride=24>) "None" {
+    // CHECK: spv.constant {{\[}}{{\[}}[1 : i32, 1 : i32, 1 : i32], [1 : i32, 1 : i32, 1 : i32]], {{\[}}[1 : i32, 1 : i32, 1 : i32], [1 : i32, 1 : i32, 1 : i32]]] : !spv.array<2 x !spv.array<2 x !spv.array<3 x i32, stride=4>, stride=12>, stride=24>
+    %0 = spv.constant dense<1> : tensor<2x2x3xi32> : !spv.array<2 x !spv.array<2 x !spv.array<3 x i32, stride=4>, stride=12>, stride=24>
+    spv.ReturnValue %0 : !spv.array<2 x !spv.array<2 x !spv.array<3 x i32, stride=4>, stride=12>, stride=24>
   }
 }

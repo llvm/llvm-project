@@ -1,6 +1,6 @@
 //===- Region.cpp - MLIR Region Class -------------------------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -31,6 +31,11 @@ MLIRContext *Region::getContext() {
 Location Region::getLoc() {
   assert(container && "region is not attached to a container");
   return container->getLoc();
+}
+
+/// Add one argument to the argument list for each type specified in the list.
+iterator_range<Region::args_iterator> Region::addArguments(TypeRange types) {
+  return front().addArguments(types);
 }
 
 Region *Region::getParentRegion() {
@@ -84,7 +89,7 @@ void Region::cloneInto(Region *dest, Region::iterator destPos,
     // argument to the cloned block.
     for (auto arg : block.getArguments())
       if (!mapper.contains(arg))
-        mapper.map(arg, newBlock->addArgument(arg->getType()));
+        mapper.map(arg, newBlock->addArgument(arg.getType()));
 
     // Clone and remap the operations within this block.
     for (auto &op : block)
@@ -106,6 +111,20 @@ void Region::cloneInto(Region *dest, Region::iterator destPos,
 
   for (iterator it(mapper.lookup(&front())); it != destPos; ++it)
     it->walk(remapOperands);
+}
+
+/// Returns 'block' if 'block' lies in this region, or otherwise finds the
+/// ancestor of 'block' that lies in this region. Returns nullptr if the latter
+/// fails.
+Block *Region::findAncestorBlockInRegion(Block &block) {
+  auto currBlock = &block;
+  while (currBlock->getParent() != this) {
+    Operation *parentOp = currBlock->getParentOp();
+    if (!parentOp || !parentOp->getBlock())
+      return nullptr;
+    currBlock = parentOp->getBlock();
+  }
+  return currBlock;
 }
 
 void Region::dropAllReferences() {
@@ -132,34 +151,32 @@ static bool isIsolatedAbove(Region &region, Region &limit,
 
   // Traverse all operations in the region.
   while (!pendingRegions.empty()) {
-    for (Block &block : *pendingRegions.pop_back_val()) {
-      for (Operation &op : block) {
-        for (Value operand : op.getOperands()) {
-          // operand should be non-null here if the IR is well-formed. But
-          // we don't assert here as this function is called from the verifier
-          // and so could be called on invalid IR.
-          if (!operand) {
-            if (noteLoc)
-              op.emitOpError("block's operand not defined").attachNote(noteLoc);
-            return false;
-          }
-
-          // Check that any value that is used by an operation is defined in the
-          // same region as either an operation result or a block argument.
-          if (operand->getParentRegion()->isProperAncestor(&limit)) {
-            if (noteLoc) {
-              op.emitOpError("using value defined outside the region")
-                      .attachNote(noteLoc)
-                  << "required by region isolation constraints";
-            }
-            return false;
-          }
+    for (Operation &op : pendingRegions.pop_back_val()->getOps()) {
+      for (Value operand : op.getOperands()) {
+        // operand should be non-null here if the IR is well-formed. But
+        // we don't assert here as this function is called from the verifier
+        // and so could be called on invalid IR.
+        if (!operand) {
+          if (noteLoc)
+            op.emitOpError("block's operand not defined").attachNote(noteLoc);
+          return false;
         }
-        // Schedule any regions the operations contain for further checking.
-        pendingRegions.reserve(pendingRegions.size() + op.getNumRegions());
-        for (Region &subRegion : op.getRegions())
-          pendingRegions.push_back(&subRegion);
+
+        // Check that any value that is used by an operation is defined in the
+        // same region as either an operation result or a block argument.
+        if (operand.getParentRegion()->isProperAncestor(&limit)) {
+          if (noteLoc) {
+            op.emitOpError("using value defined outside the region")
+                    .attachNote(noteLoc)
+                << "required by region isolation constraints";
+          }
+          return false;
+        }
       }
+      // Schedule any regions the operations contain for further checking.
+      pendingRegions.reserve(pendingRegions.size() + op.getNumRegions());
+      for (Region &subRegion : op.getRegions())
+        pendingRegions.push_back(&subRegion);
     }
   }
   return true;
@@ -206,6 +223,40 @@ void llvm::ilist_traits<::mlir::Block>::transferNodesFromList(
 }
 
 //===----------------------------------------------------------------------===//
+// Region::OpIterator
+//===----------------------------------------------------------------------===//
+
+Region::OpIterator::OpIterator(Region *region, bool end)
+    : region(region), block(end ? region->end() : region->begin()) {
+  if (!region->empty())
+    skipOverBlocksWithNoOps();
+}
+
+Region::OpIterator &Region::OpIterator::operator++() {
+  // We increment over operations, if we reach the last use then move to next
+  // block.
+  if (operation != block->end())
+    ++operation;
+  if (operation == block->end()) {
+    ++block;
+    skipOverBlocksWithNoOps();
+  }
+  return *this;
+}
+
+void Region::OpIterator::skipOverBlocksWithNoOps() {
+  while (block != region->end() && block->empty())
+    ++block;
+
+  // If we are at the last block, then set the operation to first operation of
+  // next block (sentinel value used for end).
+  if (block == region->end())
+    operation = {};
+  else
+    operation = block->begin();
+}
+
+//===----------------------------------------------------------------------===//
 // RegionRange
 //===----------------------------------------------------------------------===//
 
@@ -214,14 +265,14 @@ RegionRange::RegionRange(MutableArrayRef<Region> regions)
 RegionRange::RegionRange(ArrayRef<std::unique_ptr<Region>> regions)
     : RegionRange(regions.data(), regions.size()) {}
 
-/// See `detail::indexed_accessor_range_base` for details.
+/// See `llvm::detail::indexed_accessor_range_base` for details.
 RegionRange::OwnerT RegionRange::offset_base(const OwnerT &owner,
                                              ptrdiff_t index) {
   if (auto *operand = owner.dyn_cast<const std::unique_ptr<Region> *>())
     return operand + index;
   return &owner.get<Region *>()[index];
 }
-/// See `detail::indexed_accessor_range_base` for details.
+/// See `llvm::detail::indexed_accessor_range_base` for details.
 Region *RegionRange::dereference_iterator(const OwnerT &owner,
                                           ptrdiff_t index) {
   if (auto *operand = owner.dyn_cast<const std::unique_ptr<Region> *>())

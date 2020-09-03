@@ -14,7 +14,7 @@
 
 // Returns: count of 1 bits
 
-COMPILER_RT_ABI si_int __popcountsi2(si_int a) {
+COMPILER_RT_ABI int __popcountsi2(si_int a) {
   su_int x = (su_int)a;
   x = x - ((x >> 1) & 0x55555555);
   // Every 2 bits holds the sum of every pair of bits

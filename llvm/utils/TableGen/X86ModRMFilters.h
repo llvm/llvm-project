@@ -108,6 +108,29 @@ public:
   }
 };
 
+/// ExtendedRMFilter - Extended opcodes are classified based on the value of the
+///   mod field [bits 7-6] and the value of the nnn field [bits 2-0].
+class ExtendedRMFilter : public ModRMFilter {
+  void anchor() override;
+  bool R;
+  uint8_t NNN;
+public:
+  /// Constructor
+  ///
+  /// \param r   True if the mod field must be set to 11; false otherwise.
+  ///            The name is explained at ModFilter.
+  /// \param nnn The required value of the nnn field.
+  ExtendedRMFilter(bool r, uint8_t nnn) :
+    ModRMFilter(),
+    R(r),
+    NNN(nnn) {
+  }
+
+  bool accepts(uint8_t modRM) const override {
+    return ((R && ((modRM & 0xc0) == 0xc0)) &&
+            ((modRM & 0x7) == NNN));
+  }
+};
 /// ExactFilter - The occasional extended opcode (such as VMCALL or MONITOR)
 ///   requires the ModR/M byte to have a specific value.
 class ExactFilter : public ModRMFilter {

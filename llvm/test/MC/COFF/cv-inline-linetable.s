@@ -47,7 +47,7 @@ Lfunc_begin0:
 Lfunc_end0:
 
 # Check the disassembly so we have accurate instruction offsets in hex.
-# ASM-LABEL: ?baz@@YAXXZ:
+# ASM-LABEL: <?baz@@YAXXZ>:
 # ASM-NEXT:       0: {{.*}} pushl   %eax
 # ASM-NEXT:       1: {{.*}} addl    $6, 0
 # ASM-NEXT:       8: {{.*}} addl    $4, 0

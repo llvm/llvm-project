@@ -28,12 +28,12 @@ namespace clang {
     // Size of each of the diagnostic categories.
     enum {
       DIAG_SIZE_COMMON        =  300,
-      DIAG_SIZE_DRIVER        =  200,
+      DIAG_SIZE_DRIVER        =  250,
       DIAG_SIZE_FRONTEND      =  151, // swift-clang has 1 extra diag
       DIAG_SIZE_SERIALIZATION =  120,
       DIAG_SIZE_LEX           =  400,
       DIAG_SIZE_PARSE         =  600,
-      DIAG_SIZE_AST           =  200,
+      DIAG_SIZE_AST           =  250,
       DIAG_SIZE_COMMENT       =  100,
       DIAG_SIZE_CROSSTU       =  100,
       DIAG_SIZE_SEMA          = 4000,

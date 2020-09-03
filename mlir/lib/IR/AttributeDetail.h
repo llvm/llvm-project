@@ -1,6 +1,6 @@
 //===- AttributeDetail.h - MLIR Affine Map details Class --------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -63,28 +63,6 @@ struct ArrayAttributeStorage : public AttributeStorage {
   }
 
   ArrayRef<Attribute> value;
-};
-
-/// An attribute representing a boolean value.
-struct BoolAttributeStorage : public AttributeStorage {
-  using KeyTy = std::pair<MLIRContext *, bool>;
-
-  BoolAttributeStorage(Type type, bool value)
-      : AttributeStorage(type), value(value) {}
-
-  /// We only check equality for and hash with the boolean key parameter.
-  bool operator==(const KeyTy &key) const { return key.second == value; }
-  static unsigned hashKey(const KeyTy &key) {
-    return llvm::hash_value(key.second);
-  }
-
-  static BoolAttributeStorage *construct(AttributeStorageAllocator &allocator,
-                                         const KeyTy &key) {
-    return new (allocator.allocate<BoolAttributeStorage>())
-        BoolAttributeStorage(IntegerType::get(1, key.first), key.second);
-  }
-
-  bool value;
 };
 
 /// An attribute representing a dictionary of sorted named attributes.
@@ -154,9 +132,7 @@ struct FloatAttributeStorage final
 
   /// Construct a key with a type and double.
   static KeyTy getKey(Type type, double value) {
-    // Treat BF16 as double because it is not supported in LLVM's APFloat.
-    // TODO(b/121118307): add BF16 support to APFloat?
-    if (type.isBF16() || type.isF64())
+    if (type.isF64())
       return KeyTy(type, APFloat(value));
 
     // This handles, e.g., F16 because there is no APFloat constructor for it.
@@ -196,7 +172,7 @@ struct FloatAttributeStorage final
   size_t numObjects;
 };
 
-/// An attribute representing a integral value.
+/// An attribute representing an integral value.
 struct IntegerAttributeStorage final
     : public AttributeStorage,
       public llvm::TrailingObjects<IntegerAttributeStorage, uint64_t> {
@@ -372,8 +348,32 @@ struct TypeAttributeStorage : public AttributeStorage {
 // Elements Attributes
 //===----------------------------------------------------------------------===//
 
+/// Return the bit width which DenseElementsAttr should use for this type.
+inline size_t getDenseElementBitWidth(Type eltType) {
+  // Align the width for complex to 8 to make storage and interpretation easier.
+  if (ComplexType comp = eltType.dyn_cast<ComplexType>())
+    return llvm::alignTo<8>(getDenseElementBitWidth(comp.getElementType())) * 2;
+  if (eltType.isIndex())
+    return IndexType::kInternalStorageBitWidth;
+  return eltType.getIntOrFloatBitWidth();
+}
+
 /// An attribute representing a reference to a dense vector or tensor object.
 struct DenseElementsAttributeStorage : public AttributeStorage {
+public:
+  DenseElementsAttributeStorage(ShapedType ty, bool isSplat)
+      : AttributeStorage(ty), isSplat(isSplat) {}
+
+  bool isSplat;
+};
+
+/// An attribute representing a reference to a dense vector or tensor object.
+struct DenseIntOrFPElementsAttributeStorage
+    : public DenseElementsAttributeStorage {
+  DenseIntOrFPElementsAttributeStorage(ShapedType ty, ArrayRef<char> data,
+                                       bool isSplat = false)
+      : DenseElementsAttributeStorage(ty, isSplat), data(data) {}
+
   struct KeyTy {
     KeyTy(ShapedType type, ArrayRef<char> data, llvm::hash_code hashCode,
           bool isSplat = false)
@@ -392,10 +392,6 @@ struct DenseElementsAttributeStorage : public AttributeStorage {
     bool isSplat;
   };
 
-  DenseElementsAttributeStorage(ShapedType ty, ArrayRef<char> data,
-                                bool isSplat = false)
-      : AttributeStorage(ty), data(data), isSplat(isSplat) {}
-
   /// Compare this storage instance with the provided key.
   bool operator==(const KeyTy &key) const {
     if (key.type != getType())
@@ -405,7 +401,7 @@ struct DenseElementsAttributeStorage : public AttributeStorage {
     // same. Boolean values are packed at the bit level, and even though a splat
     // is detected the rest of the bits in the first byte may differ from the
     // splat value.
-    if (key.type.getElementTypeBitWidth() == 1) {
+    if (key.type.getElementType().isInteger(1)) {
       if (key.isSplat != isSplat)
         return false;
       if (isSplat)
@@ -437,15 +433,10 @@ struct DenseElementsAttributeStorage : public AttributeStorage {
     assert(numElements != 1 && "splat of 1 element should already be detected");
 
     // Handle boolean values directly as they are packed to 1-bit.
-    size_t elementWidth = ty.getElementTypeBitWidth();
-    if (elementWidth == 1)
+    if (ty.getElementType().isInteger(1) == 1)
       return getKeyForBoolData(ty, data, numElements);
 
-    // FIXME(b/121118307): using 64 bits for BF16 because it is currently stored
-    // with double semantics.
-    if (ty.getElementType().isBF16())
-      elementWidth = 64;
-
+    size_t elementWidth = getDenseElementBitWidth(ty.getElementType());
     // Non 1-bit dense elements are padded to 8-bits.
     size_t storageSize = llvm::divideCeil(elementWidth, CHAR_BIT);
     assert(((data.size() / storageSize) == numElements) &&
@@ -506,7 +497,7 @@ struct DenseElementsAttributeStorage : public AttributeStorage {
   }
 
   /// Construct a new storage instance.
-  static DenseElementsAttributeStorage *
+  static DenseIntOrFPElementsAttributeStorage *
   construct(AttributeStorageAllocator &allocator, KeyTy key) {
     // If the data buffer is non-empty, we copy it into the allocator with a
     // 64-bit alignment.
@@ -517,17 +508,134 @@ struct DenseElementsAttributeStorage : public AttributeStorage {
       std::memcpy(rawData, data.data(), data.size());
 
       // If this is a boolean splat, make sure only the first bit is used.
-      if (key.isSplat && key.type.getElementTypeBitWidth() == 1)
+      if (key.isSplat && key.type.getElementType().isInteger(1))
         rawData[0] &= 1;
       copy = ArrayRef<char>(rawData, data.size());
     }
 
-    return new (allocator.allocate<DenseElementsAttributeStorage>())
-        DenseElementsAttributeStorage(key.type, copy, key.isSplat);
+    return new (allocator.allocate<DenseIntOrFPElementsAttributeStorage>())
+        DenseIntOrFPElementsAttributeStorage(key.type, copy, key.isSplat);
   }
 
   ArrayRef<char> data;
-  bool isSplat;
+};
+
+/// An attribute representing a reference to a dense vector or tensor object
+/// containing strings.
+struct DenseStringElementsAttributeStorage
+    : public DenseElementsAttributeStorage {
+  DenseStringElementsAttributeStorage(ShapedType ty, ArrayRef<StringRef> data,
+                                      bool isSplat = false)
+      : DenseElementsAttributeStorage(ty, isSplat), data(data) {}
+
+  struct KeyTy {
+    KeyTy(ShapedType type, ArrayRef<StringRef> data, llvm::hash_code hashCode,
+          bool isSplat = false)
+        : type(type), data(data), hashCode(hashCode), isSplat(isSplat) {}
+
+    /// The type of the dense elements.
+    ShapedType type;
+
+    /// The raw buffer for the data storage.
+    ArrayRef<StringRef> data;
+
+    /// The computed hash code for the storage data.
+    llvm::hash_code hashCode;
+
+    /// A boolean that indicates if this data is a splat or not.
+    bool isSplat;
+  };
+
+  /// Compare this storage instance with the provided key.
+  bool operator==(const KeyTy &key) const {
+    if (key.type != getType())
+      return false;
+
+    // Otherwise, we can default to just checking the data. StringRefs compare
+    // by contents.
+    return key.data == data;
+  }
+
+  /// Construct a key from a shaped type, StringRef data buffer, and a flag that
+  /// signals if the data is already known to be a splat. Callers to this
+  /// function are expected to tag preknown splat values when possible, e.g. one
+  /// element shapes.
+  static KeyTy getKey(ShapedType ty, ArrayRef<StringRef> data,
+                      bool isKnownSplat) {
+    // Handle an empty storage instance.
+    if (data.empty())
+      return KeyTy(ty, data, 0);
+
+    // If the data is already known to be a splat, the key hash value is
+    // directly the data buffer.
+    if (isKnownSplat)
+      return KeyTy(ty, data, llvm::hash_value(data.front()), isKnownSplat);
+
+    // Handle the simple case of only one element.
+    assert(ty.getNumElements() != 1 &&
+           "splat of 1 element should already be detected");
+
+    // Create the initial hash value with just the first element.
+    const auto &firstElt = data.front();
+    auto hashVal = llvm::hash_value(firstElt);
+
+    // Check to see if this storage represents a splat. If it doesn't then
+    // combine the hash for the data starting with the first non splat element.
+    for (size_t i = 1, e = data.size(); i != e; i++)
+      if (!firstElt.equals(data[i]))
+        return KeyTy(ty, data, llvm::hash_combine(hashVal, data.drop_front(i)));
+
+    // Otherwise, this is a splat so just return the hash of the first element.
+    return KeyTy(ty, data.take_front(), hashVal, /*isSplat=*/true);
+  }
+
+  /// Hash the key for the storage.
+  static llvm::hash_code hashKey(const KeyTy &key) {
+    return llvm::hash_combine(key.type, key.hashCode);
+  }
+
+  /// Construct a new storage instance.
+  static DenseStringElementsAttributeStorage *
+  construct(AttributeStorageAllocator &allocator, KeyTy key) {
+    // If the data buffer is non-empty, we copy it into the allocator with a
+    // 64-bit alignment.
+    ArrayRef<StringRef> copy, data = key.data;
+    if (data.empty()) {
+      return new (allocator.allocate<DenseStringElementsAttributeStorage>())
+          DenseStringElementsAttributeStorage(key.type, copy, key.isSplat);
+    }
+
+    int numEntries = key.isSplat ? 1 : data.size();
+
+    // Compute the amount data needed to store the ArrayRef and StringRef
+    // contents.
+    size_t dataSize = sizeof(StringRef) * numEntries;
+    for (int i = 0; i < numEntries; i++)
+      dataSize += data[i].size();
+
+    char *rawData = reinterpret_cast<char *>(
+        allocator.allocate(dataSize, alignof(uint64_t)));
+
+    // Setup a mutable array ref of our string refs so that we can update their
+    // contents.
+    auto mutableCopy = MutableArrayRef<StringRef>(
+        reinterpret_cast<StringRef *>(rawData), numEntries);
+    auto stringData = rawData + numEntries * sizeof(StringRef);
+
+    for (int i = 0; i < numEntries; i++) {
+      memcpy(stringData, data[i].data(), data[i].size());
+      mutableCopy[i] = StringRef(stringData, data[i].size());
+      stringData += data[i].size();
+    }
+
+    copy =
+        ArrayRef<StringRef>(reinterpret_cast<StringRef *>(rawData), numEntries);
+
+    return new (allocator.allocate<DenseStringElementsAttributeStorage>())
+        DenseStringElementsAttributeStorage(key.type, copy, key.isSplat);
+  }
+
+  ArrayRef<StringRef> data;
 };
 
 /// An attribute representing a reference to a tensor constant with opaque
@@ -550,7 +658,7 @@ struct OpaqueElementsAttributeStorage : public AttributeStorage {
   /// Construct a new storage instance.
   static OpaqueElementsAttributeStorage *
   construct(AttributeStorageAllocator &allocator, KeyTy key) {
-    // TODO(b/131468830): Provide a way to avoid copying content of large opaque
+    // TODO: Provide a way to avoid copying content of large opaque
     // tensors This will likely require a new reference attribute kind.
     return new (allocator.allocate<OpaqueElementsAttributeStorage>())
         OpaqueElementsAttributeStorage(std::get<0>(key), std::get<1>(key),

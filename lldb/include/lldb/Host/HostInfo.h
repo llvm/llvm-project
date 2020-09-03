@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Host_HostInfo_h_
-#define lldb_Host_HostInfo_h_
+#ifndef LLDB_HOST_HOSTINFO_H
+#define LLDB_HOST_HOSTINFO_H
 
 /// \class HostInfo HostInfo.h "lldb/Host/HostInfo.h"
 /// A class that provides host computer information.
@@ -35,7 +35,7 @@
 #if defined(_WIN32)
 #include "lldb/Host/windows/HostInfoWindows.h"
 #define HOST_INFO_TYPE HostInfoWindows
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__EMSCRIPTEN__)
 #if defined(__ANDROID__)
 #include "lldb/Host/android/HostInfoAndroid.h"
 #define HOST_INFO_TYPE HostInfoAndroid

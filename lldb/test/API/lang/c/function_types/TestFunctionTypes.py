@@ -38,9 +38,13 @@ class FunctionTypesTestCase(TestBase):
         self.runCmd("continue")
 
         # Check that we do indeed stop on the string_not_empty function.
-        self.expect("process status", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['a.out`string_not_empty',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "process status",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=[
+                'stop reason = breakpoint',
+                'a.out`string_not_empty',
+            ])
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     @expectedFailureNetBSD

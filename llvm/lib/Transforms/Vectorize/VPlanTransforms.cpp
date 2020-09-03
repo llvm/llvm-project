@@ -18,7 +18,7 @@ using namespace llvm;
 
 void VPlanTransforms::VPInstructionsToVPRecipes(
     Loop *OrigLoop, VPlanPtr &Plan,
-    LoopVectorizationLegality::InductionList *Inductions,
+    LoopVectorizationLegality::InductionList &Inductions,
     SmallPtrSetImpl<Instruction *> &DeadInstructions) {
 
   auto *TopRegion = cast<VPRegionBlock>(Plan->getEntry());
@@ -41,7 +41,6 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       continue;
 
     VPBasicBlock *VPBB = Base->getEntryBasicBlock();
-    VPRecipeBase *LastRecipe = nullptr;
     // Introduce each ingredient into VPlan.
     for (auto I = VPBB->begin(), E = VPBB->end(); I != E;) {
       VPRecipeBase *Ingredient = &*I++;
@@ -55,31 +54,29 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
 
       VPRecipeBase *NewRecipe = nullptr;
       // Create VPWidenMemoryInstructionRecipe for loads and stores.
-      if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
-        NewRecipe = new VPWidenMemoryInstructionRecipe(*Inst, nullptr /*Mask*/);
+      if (LoadInst *Load = dyn_cast<LoadInst>(Inst))
+        NewRecipe = new VPWidenMemoryInstructionRecipe(
+            *Load, Plan->getOrAddVPValue(getLoadStorePointerOperand(Inst)),
+            nullptr /*Mask*/);
+      else if (StoreInst *Store = dyn_cast<StoreInst>(Inst))
+        NewRecipe = new VPWidenMemoryInstructionRecipe(
+            *Store, Plan->getOrAddVPValue(getLoadStorePointerOperand(Inst)),
+            Plan->getOrAddVPValue(Store->getValueOperand()), nullptr /*Mask*/);
       else if (PHINode *Phi = dyn_cast<PHINode>(Inst)) {
-        InductionDescriptor II = Inductions->lookup(Phi);
+        InductionDescriptor II = Inductions.lookup(Phi);
         if (II.getKind() == InductionDescriptor::IK_IntInduction ||
             II.getKind() == InductionDescriptor::IK_FpInduction) {
           NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi);
         } else
           NewRecipe = new VPWidenPHIRecipe(Phi);
       } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
-        NewRecipe = new VPWidenGEPRecipe(GEP, OrigLoop);
-      } else {
-        // If the last recipe is a VPWidenRecipe, add Inst to it instead of
-        // creating a new recipe.
-        if (VPWidenRecipe *WidenRecipe =
-                dyn_cast_or_null<VPWidenRecipe>(LastRecipe)) {
-          WidenRecipe->appendInstruction(Inst);
-          Ingredient->eraseFromParent();
-          continue;
-        }
-        NewRecipe = new VPWidenRecipe(Inst);
-      }
+        NewRecipe = new VPWidenGEPRecipe(
+            GEP, Plan->mapToVPValues(GEP->operands()), OrigLoop);
+      } else
+        NewRecipe =
+            new VPWidenRecipe(*Inst, Plan->mapToVPValues(Inst->operands()));
 
       NewRecipe->insertBefore(Ingredient);
-      LastRecipe = NewRecipe;
       Ingredient->eraseFromParent();
     }
   }

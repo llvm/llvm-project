@@ -1,0 +1,19 @@
+## Test that -o sets the output file name.
+
+# RUN: rm -f %t
+# RUN: yaml2obj %s -o %t
+# RUN: ls %t
+# RUN: rm -f %t
+# RUN: yaml2obj %s -o%t
+# RUN: ls %t
+
+# RUN: not yaml2obj -o %p/path/does/not/exist 2>&1 | FileCheck %s
+
+# CHECK: yaml2obj: error: failed to open '{{.*}}/path/does/not/exist': {{[Nn]}}o such file or directory
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_NONE

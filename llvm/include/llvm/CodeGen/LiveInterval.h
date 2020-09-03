@@ -617,7 +617,7 @@ namespace llvm {
     /// subranges). Returns true if found at least one index.
     template <typename Range, typename OutputIt>
     bool findIndexesLiveAt(Range &&R, OutputIt O) const {
-      assert(std::is_sorted(R.begin(), R.end()));
+      assert(llvm::is_sorted(R));
       auto Idx = R.begin(), EndIdx = R.end();
       auto Seg = segments.begin(), EndSeg = segments.end();
       bool Found = false;
@@ -625,11 +625,12 @@ namespace llvm {
         // if the Seg is lower find first segment that is above Idx using binary
         // search
         if (Seg->end <= *Idx) {
-          Seg = std::upper_bound(++Seg, EndSeg, *Idx,
-            [=](typename std::remove_reference<decltype(*Idx)>::type V,
-                const typename std::remove_reference<decltype(*Seg)>::type &S) {
-              return V < S.end;
-            });
+          Seg = std::upper_bound(
+              ++Seg, EndSeg, *Idx,
+              [=](std::remove_reference_t<decltype(*Idx)> V,
+                  const std::remove_reference_t<decltype(*Seg)> &S) {
+                return V < S.end;
+              });
           if (Seg == EndSeg)
             break;
         }

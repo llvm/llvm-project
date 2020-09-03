@@ -1,4 +1,4 @@
-//===-- TestTypeSystemClang.cpp ---------------------------------*- C++ -*-===//
+//===-- TestTypeSystemClang.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,8 @@ public:
   SubsystemRAII<FileSystem, HostInfo> subsystems;
 
   void SetUp() override {
-    m_ast.reset(new TypeSystemClang(HostInfo::GetTargetTriple()));
+    m_ast.reset(
+        new TypeSystemClang("test ASTContext", HostInfo::GetTargetTriple()));
   }
 
   void TearDown() override { m_ast.reset(); }
@@ -219,6 +220,78 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEncodingAndBitSize) {
 
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 32);
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 64);
+}
+
+TEST_F(TestTypeSystemClang, TestDisplayName) {
+  TypeSystemClang ast("some name", llvm::Triple());
+  EXPECT_EQ("some name", ast.getDisplayName());
+}
+
+TEST_F(TestTypeSystemClang, TestDisplayNameEmpty) {
+  TypeSystemClang ast("", llvm::Triple());
+  EXPECT_EQ("", ast.getDisplayName());
+}
+
+TEST_F(TestTypeSystemClang, TestGetEnumIntegerTypeInvalid) {
+  EXPECT_FALSE(m_ast->GetEnumerationIntegerType(CompilerType()).IsValid());
+}
+
+TEST_F(TestTypeSystemClang, TestGetEnumIntegerTypeUnexpectedType) {
+  CompilerType int_type = m_ast->GetBasicType(lldb::eBasicTypeInt);
+  CompilerType t = m_ast->GetEnumerationIntegerType(int_type);
+  EXPECT_FALSE(t.IsValid());
+}
+
+TEST_F(TestTypeSystemClang, TestGetEnumIntegerTypeBasicTypes) {
+  // All possible underlying integer types of enums.
+  const std::vector<lldb::BasicType> types_to_test = {
+      eBasicTypeInt,          eBasicTypeUnsignedInt, eBasicTypeLong,
+      eBasicTypeUnsignedLong, eBasicTypeLongLong,    eBasicTypeUnsignedLongLong,
+  };
+
+  for (bool scoped : {true, false}) {
+    SCOPED_TRACE("scoped: " + std::to_string(scoped));
+    for (lldb::BasicType basic_type : types_to_test) {
+      SCOPED_TRACE(std::to_string(basic_type));
+
+      TypeSystemClang ast("enum_ast", HostInfo::GetTargetTriple());
+      CompilerType basic_compiler_type = ast.GetBasicType(basic_type);
+      EXPECT_TRUE(basic_compiler_type.IsValid());
+
+      CompilerType enum_type = ast.CreateEnumerationType(
+          "my_enum", ast.GetTranslationUnitDecl(), OptionalClangModuleID(),
+          Declaration(), basic_compiler_type, scoped);
+
+      CompilerType t = ast.GetEnumerationIntegerType(enum_type);
+      // Check that the type we put in at the start is found again.
+      EXPECT_EQ(basic_compiler_type.GetTypeName(), t.GetTypeName());
+    }
+  }
+}
+
+TEST_F(TestTypeSystemClang, TestOwningModule) {
+  TypeSystemClang ast("module_ast", HostInfo::GetTargetTriple());
+  CompilerType basic_compiler_type = ast.GetBasicType(BasicType::eBasicTypeInt);
+  CompilerType enum_type = ast.CreateEnumerationType(
+      "my_enum", ast.GetTranslationUnitDecl(), OptionalClangModuleID(100),
+      Declaration(), basic_compiler_type, false);
+  auto *ed = TypeSystemClang::GetAsEnumDecl(enum_type);
+  EXPECT_FALSE(!ed);
+  EXPECT_EQ(ed->getOwningModuleID(), 100u);
+
+  CompilerType record_type = ast.CreateRecordType(
+      nullptr, OptionalClangModuleID(200), lldb::eAccessPublic, "FooRecord",
+      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+  auto *rd = TypeSystemClang::GetAsRecordDecl(record_type);
+  EXPECT_FALSE(!rd);
+  EXPECT_EQ(rd->getOwningModuleID(), 200u);
+
+  CompilerType class_type =
+      ast.CreateObjCClass("objc_class", ast.GetTranslationUnitDecl(),
+                          OptionalClangModuleID(300), false, false);
+  auto *cd = TypeSystemClang::GetAsObjCInterfaceDecl(class_type);
+  EXPECT_FALSE(!cd);
+  EXPECT_EQ(cd->getOwningModuleID(), 300u);
 }
 
 TEST_F(TestTypeSystemClang, TestIsClangType) {
@@ -528,6 +601,92 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateInRecordConstruction) {
   EXPECT_EQ(record, func_template->getDeclContext());
   EXPECT_EQ("foo", func_template->getName());
   EXPECT_EQ(clang::AccessSpecifier::AS_public, func_template->getAccess());
+}
+
+TEST_F(TestTypeSystemClang, TestDeletingImplicitCopyCstrDueToMoveCStr) {
+  // We need to simulate this behavior in our AST that we construct as we don't
+  // have a Sema instance that can do this for us:
+  // C++11 [class.copy]p7, p18:
+  //  If the class definition declares a move constructor or move assignment
+  //  operator, an implicitly declared copy constructor or copy assignment
+  //  operator is defined as deleted.
+
+  // Create a record and start defining it.
+  llvm::StringRef class_name = "S";
+  CompilerType t = clang_utils::createRecord(*m_ast, class_name);
+  m_ast->StartTagDeclarationDefinition(t);
+
+  // Create a move constructor that will delete the implicit copy constructor.
+  CompilerType return_type = m_ast->GetBasicType(lldb::eBasicTypeVoid);
+  CompilerType param_type = t.GetRValueReferenceType();
+  CompilerType function_type =
+      m_ast->CreateFunctionType(return_type, &param_type, /*num_params*/ 1,
+                                /*variadic=*/false, /*quals*/ 0U);
+  bool is_virtual = false;
+  bool is_static = false;
+  bool is_inline = false;
+  bool is_explicit = true;
+  bool is_attr_used = false;
+  bool is_artificial = false;
+  m_ast->AddMethodToCXXRecordType(
+      t.GetOpaqueQualType(), class_name, nullptr, function_type,
+      lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
+      is_explicit, is_attr_used, is_artificial);
+
+  // Complete the definition and check the created record.
+  m_ast->CompleteTagDeclarationDefinition(t);
+  auto *record = llvm::cast<CXXRecordDecl>(ClangUtil::GetAsTagDecl(t));
+  // We can't call defaultedCopyConstructorIsDeleted() as this requires that
+  // the Decl passes through Sema which will actually compute this field.
+  // Instead we check that there is no copy constructor declared by the user
+  // which only leaves a non-deleted defaulted copy constructor as an option
+  // that our record will have no simple copy constructor.
+  EXPECT_FALSE(record->hasUserDeclaredCopyConstructor());
+  EXPECT_FALSE(record->hasSimpleCopyConstructor());
+}
+
+TEST_F(TestTypeSystemClang, TestNotDeletingUserCopyCstrDueToMoveCStr) {
+  // Tests that we don't delete the a user-defined copy constructor when
+  // a move constructor is provided.
+  // See also the TestDeletingImplicitCopyCstrDueToMoveCStr test.
+  llvm::StringRef class_name = "S";
+  CompilerType t = clang_utils::createRecord(*m_ast, class_name);
+  m_ast->StartTagDeclarationDefinition(t);
+
+  CompilerType return_type = m_ast->GetBasicType(lldb::eBasicTypeVoid);
+  bool is_virtual = false;
+  bool is_static = false;
+  bool is_inline = false;
+  bool is_explicit = true;
+  bool is_attr_used = false;
+  bool is_artificial = false;
+  // Create a move constructor.
+  {
+    CompilerType param_type = t.GetRValueReferenceType();
+    CompilerType function_type =
+        m_ast->CreateFunctionType(return_type, &param_type, /*num_params*/ 1,
+                                  /*variadic=*/false, /*quals*/ 0U);
+    m_ast->AddMethodToCXXRecordType(
+        t.GetOpaqueQualType(), class_name, nullptr, function_type,
+        lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
+        is_explicit, is_attr_used, is_artificial);
+  }
+  // Create a copy constructor.
+  {
+    CompilerType param_type = t.GetLValueReferenceType().AddConstModifier();
+    CompilerType function_type =
+        m_ast->CreateFunctionType(return_type, &param_type, /*num_params*/ 1,
+                                  /*variadic=*/false, /*quals*/ 0U);
+    m_ast->AddMethodToCXXRecordType(
+        t.GetOpaqueQualType(), class_name, nullptr, function_type,
+        lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
+        is_explicit, is_attr_used, is_artificial);
+  }
+
+  // Complete the definition and check the created record.
+  m_ast->CompleteTagDeclarationDefinition(t);
+  auto *record = llvm::cast<CXXRecordDecl>(ClangUtil::GetAsTagDecl(t));
+  EXPECT_TRUE(record->hasUserDeclaredCopyConstructor());
 }
 
 TEST_F(TestTypeSystemClang, AddMethodToObjCObjectType) {

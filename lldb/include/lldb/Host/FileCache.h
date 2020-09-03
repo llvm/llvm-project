@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef liblldb_Host_FileCache_h
-#define liblldb_Host_FileCache_h
+#ifndef LLDB_HOST_FILECACHE_H
+#define LLDB_HOST_FILECACHE_H
 
 #include <map>
 #include <stdint.h>

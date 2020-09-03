@@ -230,6 +230,27 @@ declare void @escape(i32* %a)
 
 ; Canonicalize a nonnull assumption on a load into metadata form.
 
+define i32 @bundle1(i32* %P) {
+; CHECK-LABEL: @bundle1(
+; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P:%.*]]) ]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+  tail call void @llvm.assume(i1 true) ["nonnull"(i32* %P)]
+  %load = load i32, i32* %P
+  ret i32 %load
+}
+
+define i32 @bundle2(i32* %P) {
+; CHECK-LABEL: @bundle2(
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+  tail call void @llvm.assume(i1 true) ["ignore"(i32* undef)]
+  %load = load i32, i32* %P
+  ret i32 %load
+}
+
 define i1 @nonnull1(i32** %a) {
 ; CHECK-LABEL: @nonnull1(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8, !nonnull !6
@@ -268,9 +289,9 @@ define i1 @nonnull3(i32** %a, i1 %control) {
 ; CHECK-LABEL: @nonnull3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
 ; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
 ; CHECK:       taken:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       not_taken:
@@ -332,7 +353,10 @@ define i1 @nonnull5(i32** %a) {
 
 define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
 ; CHECK-LABEL: @assumption_conflicts_with_known_bits(
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], 3
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 false)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[AND1]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP2]])
 ; CHECK-NEXT:    ret i32 0
 ;
   %and1 = and i32 %b, 3
@@ -388,6 +412,180 @@ define i32 @PR40940(<4 x i8> %x) {
   %t3 = icmp ult i32 %t2, 65536
   call void @llvm.assume(i1 %t3)
   ret i32 %t2
+}
+
+define i1 @nonnull3A(i32** %a, i1 %control) {
+; CHECK-LABEL: @nonnull3A(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
+; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i1 true
+; CHECK:       not_taken:
+; CHECK-NEXT:    [[RVAL_2:%.*]] = icmp sgt i32* [[LOAD]], null
+; CHECK-NEXT:    ret i1 [[RVAL_2]]
+;
+entry:
+  %load = load i32*, i32** %a
+  %cmp = icmp ne i32* %load, null
+  br i1 %control, label %taken, label %not_taken
+taken:
+  call void @llvm.assume(i1 %cmp)
+  ret i1 %cmp
+not_taken:
+  call void @llvm.assume(i1 %cmp)
+  %rval.2 = icmp sgt i32* %load, null
+  ret i1 %rval.2
+}
+
+define i1 @nonnull3B(i32** %a, i1 %control) {
+; CHECK-LABEL: @nonnull3B(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]]) [ "nonnull"(i32* [[LOAD]]), "nonnull"(i1 [[CMP]]) ]
+; CHECK-NEXT:    ret i1 true
+; CHECK:       not_taken:
+; CHECK-NEXT:    ret i1 [[CONTROL]]
+;
+entry:
+  %load = load i32*, i32** %a
+  %cmp = icmp ne i32* %load, null
+  br i1 %control, label %taken, label %not_taken
+taken:
+  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load), "nonnull"(i1 %cmp)]
+  ret i1 %cmp
+not_taken:
+  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load), "nonnull"(i1 %cmp)]
+  ret i1 %control
+}
+
+declare i1 @tmp1(i1)
+
+define i1 @nonnull3C(i32** %a, i1 %control) {
+; CHECK-LABEL: @nonnull3C(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
+; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @tmp1(i1 [[CMP]])
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK:       not_taken:
+; CHECK-NEXT:    ret i1 [[CONTROL]]
+;
+entry:
+  %load = load i32*, i32** %a
+  %cmp = icmp ne i32* %load, null
+  br i1 %control, label %taken, label %not_taken
+taken:
+  %cmp2 = call i1 @tmp1(i1 %cmp)
+  br label %exit
+exit:
+  ; FIXME: this shouldn't be dropped because it is still dominated by the new position of %load
+  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load), "nonnull"(i1 %cmp)]
+  ret i1 %cmp2
+not_taken:
+  call void @llvm.assume(i1 %cmp)
+  ret i1 %control
+}
+
+define i1 @nonnull3D(i32** %a, i1 %control) {
+; CHECK-LABEL: @nonnull3D(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
+; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @tmp1(i1 [[CMP]])
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK:       not_taken:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(i32* undef), "ignore"(i1 undef), "nonnull"(i1 [[CONTROL]]) ]
+; CHECK-NEXT:    ret i1 [[CONTROL]]
+;
+entry:
+  %load = load i32*, i32** %a
+  %cmp = icmp ne i32* %load, null
+  br i1 %control, label %taken, label %not_taken
+taken:
+  %cmp2 = call i1 @tmp1(i1 %cmp)
+  br label %exit
+exit:
+  ret i1 %cmp2
+not_taken:
+  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load), "nonnull"(i1 %cmp), "nonnull"(i1 %control)]
+  ret i1 %control
+}
+
+
+define void @always_true_assumption() {
+; CHECK-LABEL: @always_true_assumption(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true)
+  ret void
+
+}
+
+; The alloca guarantees that the low bits of %a are zero because of alignment.
+; The assume says the opposite. Make sure we don't crash.
+
+define i64 @PR31809() {
+; CHECK-LABEL: @PR31809(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[T1:%.*]] = ptrtoint i32* [[A]] to i64
+; CHECK-NEXT:    call void @llvm.assume(i1 false)
+; CHECK-NEXT:    ret i64 [[T1]]
+;
+  %a = alloca i32
+  %t1 = ptrtoint i32* %a to i64
+  %cond = icmp eq i64 %t1, 3
+  call void @llvm.assume(i1 %cond)
+  ret i64 %t1
+}
+
+; Similar to above: there's no way to know which assumption is truthful,
+; so just don't crash.
+
+define i8 @conflicting_assumptions(i8 %x){
+; CHECK-LABEL: @conflicting_assumptions(
+; CHECK-NEXT:    call void @llvm.assume(i1 false)
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i8 [[X:%.*]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND2]])
+; CHECK-NEXT:    ret i8 5
+;
+  %add = add i8 %x, 1
+  %cond1 = icmp eq i8 %x, 3
+  call void @llvm.assume(i1 %cond1)
+  %cond2 = icmp eq i8 %x, 4
+  call void @llvm.assume(i1 %cond2)
+  ret i8 %add
+}
+
+; Another case of conflicting assumptions. This would crash because we'd
+; try to set more known bits than existed in the known bits struct.
+
+define void @PR36270(i32 %b) {
+; CHECK-LABEL: @PR36270(
+; CHECK-NEXT:    tail call void @llvm.assume(i1 false)
+; CHECK-NEXT:    unreachable
+;
+  %B7 = xor i32 -1, 2147483647
+  %and1 = and i32 %b, 3
+  %B12 = lshr i32 %B7, %and1
+  %C1 = icmp ult i32 %and1, %B12
+  tail call void @llvm.assume(i1 %C1)
+  %cmp2 = icmp eq i32 0, %B12
+  tail call void @llvm.assume(i1 %cmp2)
+  unreachable
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)

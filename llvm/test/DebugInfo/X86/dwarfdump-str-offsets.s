@@ -69,7 +69,7 @@ str_Variable3:
         .long str_TU_type
 .debug_str_offsets_segment2_end:
 
-        .section .debug_str.dwo,"MS",@progbits,1
+        .section .debug_str.dwo,"MSe",@progbits,1
 dwo_str_CU_5_producer:
         .asciz "Handmade split DWARF producer"
 dwo_str_CU_5_name:
@@ -81,7 +81,7 @@ dwo_str_TU_5:
 dwo_str_TU_5_type:
         .asciz "V5_split_Mystruct"
 
-        .section .debug_str_offsets.dwo,"",@progbits
+        .section .debug_str_offsets.dwo,"e",@progbits
 # One contribution only in a .dwo file
         .long .debug_dwo_str_offsets_segment0_end-.debug_dwo_str_offsets_base0+4
         .short 5    # DWARF version
@@ -174,7 +174,7 @@ dwo_str_TU_5_type:
         .byte 0x00  # EOM(3)
 
 # And a .dwo copy of a subset for the .dwo sections.
-        .section .debug_abbrev.dwo,"",@progbits
+        .section .debug_abbrev.dwo,"e",@progbits
         .byte 0x01  # Abbrev code
         .byte 0x11  # DW_TAG_compile_unit
         .byte 0x00  # DW_CHILDREN_no
@@ -300,7 +300,7 @@ TU_5_type:
         .byte 0 # NULL
 TU_5_end:
         
-        .section .debug_info.dwo,"",@progbits
+        .section .debug_info.dwo,"e",@progbits
 
 # DWARF v5 split CU header.
         .long  CU_split_5_end-CU_split_5_version  # Length of Unit
@@ -318,7 +318,7 @@ CU_split_5_version:
         .byte 0 # NULL
 CU_split_5_end:
         
-        .section .debug_types.dwo,"",@progbits
+        .section .debug_types.dwo,"e",@progbits
 
 # DWARF v5 split type unit header.
 TU_split_5_start:
@@ -377,7 +377,7 @@ TU_split_5_end:
 # COMMON:      DW_TAG_compile_unit
 # COMMON-NEXT: DW_AT_producer [DW_FORM_strx] (indexed (00000000) string = "Handmade DWARF producer")
 # COMMON-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000001) string = "Compile_Unit_2")
-# COMMON-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000038)
+# COMMON-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x0000000000000038)
 # COMMON-NEXT: DW_AT_comp_dir [DW_FORM_strx] (indexed (00000002) string = "/home/test/CU2")
 # 
 # The split CU
@@ -414,9 +414,9 @@ TU_split_5_end:
 # COMMON-NEXT: 0x00000020: 0000007c "MyVar3"
 # COMMON-NEXT: Gap, length = 4
 # COMMON-NEXT: 0x00000028: Contribution size = 28, Format = DWARF64, Version = 5
-# COMMON-NEXT: 0x00000038: 00000000 "Handmade DWARF producer"
-# COMMON-NEXT: 0x00000040: 00000036 "Compile_Unit_2"
-# COMMON-NEXT: 0x00000048: 00000045 "/home/test/CU2"
+# COMMON-NEXT: 0x00000038: 0000000000000000 "Handmade DWARF producer"
+# COMMON-NEXT: 0x00000040: 0000000000000036 "Compile_Unit_2"
+# COMMON-NEXT: 0x00000048: 0000000000000045 "/home/test/CU2"
 # COMMON-NEXT: 0x00000050: Contribution size = 12, Format = DWARF32, Version = 5
 # COMMON-NEXT: 0x00000058: 00000054 "Type_Unit"
 # COMMON-NEXT: 0x0000005c: 0000005e "MyStruct"

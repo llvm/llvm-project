@@ -6,7 +6,7 @@
 
 # CHECK:       Symbol {
 # CHECK:         Name: bar
-# CHECK-NEXT:     Value: 0x134
+# CHECK-NEXT:     Value: [[BAR:.*]]
 # CHECK-NEXT:     Size: 4
 # CHECK-NEXT:     Binding: Global
 # CHECK-NEXT:     Type: Object
@@ -15,7 +15,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: foo
-# CHECK-NEXT:     Value: 0x138
+# CHECK-NEXT:     Value: [[FOO:.*]]
 # CHECK-NEXT:     Size: 4
 # CHECK-NEXT:     Binding: Global
 # CHECK-NEXT:     Type: Object
@@ -24,19 +24,19 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: pfoo
-# CHECK-NEXT:     Value: 0x138
+# CHECK-NEXT:     Value: [[FOO]]
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Type: Object
 # CHECK-NEXT:     Other: 0
 # CHECK-NEXT:     Section: .bss
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: pbar
-# CHECK-NEXT:     Value: 0x134
+# CHECK-NEXT:     Value: [[BAR]]
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Type: Object
 # CHECK-NEXT:     Other: 0
 # CHECK-NEXT:     Section: .bss
 # CHECK-NEXT:   }

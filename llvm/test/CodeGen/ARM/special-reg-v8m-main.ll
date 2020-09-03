@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=thumbv8m.base-none-eabi 2>&1 | FileCheck %s --check-prefix=BASELINE
+; RUN: not --crash llc < %s -mtriple=thumbv8m.base-none-eabi 2>&1 | FileCheck %s --check-prefix=BASELINE
 ; RUN: llc < %s -mtriple=thumbv8m.main-none-eabi -mattr=+dsp 2>&1 | FileCheck %s --check-prefix=MAINLINE
 
 ; BASELINE: LLVM ERROR: Invalid register name "faultmask_ns".

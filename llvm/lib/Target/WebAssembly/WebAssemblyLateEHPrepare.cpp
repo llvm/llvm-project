@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-late-eh-prepare"
@@ -31,11 +32,15 @@ class WebAssemblyLateEHPrepare final : public MachineFunctionPass {
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+  void recordCatchRetBBs(MachineFunction &MF);
   bool addCatches(MachineFunction &MF);
   bool replaceFuncletReturns(MachineFunction &MF);
   bool removeUnnecessaryUnreachables(MachineFunction &MF);
   bool addExceptionExtraction(MachineFunction &MF);
   bool restoreStackPointer(MachineFunction &MF);
+
+  MachineBasicBlock *getMatchingEHPad(MachineInstr *MI);
+  SmallSet<MachineBasicBlock *, 8> CatchRetBBs;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -57,7 +62,8 @@ FunctionPass *llvm::createWebAssemblyLateEHPrepare() {
 // possible search paths should be the same.
 // Returns nullptr in case it does not find any EH pad in the search, or finds
 // multiple different EH pads.
-static MachineBasicBlock *getMatchingEHPad(MachineInstr *MI) {
+MachineBasicBlock *
+WebAssemblyLateEHPrepare::getMatchingEHPad(MachineInstr *MI) {
   MachineFunction *MF = MI->getParent()->getParent();
   SmallVector<MachineBasicBlock *, 2> WL;
   SmallPtrSet<MachineBasicBlock *, 2> Visited;
@@ -76,7 +82,9 @@ static MachineBasicBlock *getMatchingEHPad(MachineInstr *MI) {
     }
     if (MBB == &MF->front())
       return nullptr;
-    WL.append(MBB->pred_begin(), MBB->pred_end());
+    for (auto *Pred : MBB->predecessors())
+      if (!CatchRetBBs.count(Pred)) // We don't go into child scopes
+        WL.push_back(Pred);
   }
   return EHPad;
 }
@@ -110,6 +118,7 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
   if (MF.getFunction().hasPersonalityFn()) {
+    recordCatchRetBBs(MF);
     Changed |= addCatches(MF);
     Changed |= replaceFuncletReturns(MF);
   }
@@ -119,6 +128,21 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
     Changed |= restoreStackPointer(MF);
   }
   return Changed;
+}
+
+// Record which BB ends with 'CATCHRET' instruction, because this will be
+// replaced with BRs later. This set of 'CATCHRET' BBs is necessary in
+// 'getMatchingEHPad' function.
+void WebAssemblyLateEHPrepare::recordCatchRetBBs(MachineFunction &MF) {
+  CatchRetBBs.clear();
+  for (auto &MBB : MF) {
+    auto Pos = MBB.getFirstTerminator();
+    if (Pos == MBB.end())
+      continue;
+    MachineInstr *TI = &*Pos;
+    if (TI->getOpcode() == WebAssembly::CATCHRET)
+      CatchRetBBs.insert(&MBB);
+  }
 }
 
 // Add catch instruction to beginning of catchpads and cleanuppads.
@@ -343,7 +367,7 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
              "There is no __clang_call_terminate() function");
       Register Reg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
       BuildMI(ElseMBB, DL, TII.get(WebAssembly::CONST_I32), Reg).addImm(0);
-      BuildMI(ElseMBB, DL, TII.get(WebAssembly::CALL_VOID))
+      BuildMI(ElseMBB, DL, TII.get(WebAssembly::CALL))
           .addGlobalAddress(ClangCallTerminateFn)
           .addReg(Reg);
       BuildMI(ElseMBB, DL, TII.get(WebAssembly::UNREACHABLE));
@@ -384,8 +408,8 @@ bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
       ++InsertPos;
     if (InsertPos->getOpcode() == WebAssembly::CATCH)
       ++InsertPos;
-    FrameLowering->writeSPToGlobal(WebAssembly::SP32, MF, MBB, InsertPos,
-                                   MBB.begin()->getDebugLoc());
+    FrameLowering->writeSPToGlobal(FrameLowering->getSPReg(MF), MF, MBB,
+                                   InsertPos, MBB.begin()->getDebugLoc());
   }
   return Changed;
 }

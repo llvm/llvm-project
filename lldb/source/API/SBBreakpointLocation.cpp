@@ -1,4 +1,4 @@
-//===-- SBBreakpointLocation.cpp --------------------------------*- C++ -*-===//
+//===-- SBBreakpointLocation.cpp ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -59,7 +59,7 @@ operator=(const SBBreakpointLocation &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBBreakpointLocation::~SBBreakpointLocation() {}
+SBBreakpointLocation::~SBBreakpointLocation() = default;
 
 BreakpointLocationSP SBBreakpointLocation::GetSP() const {
   return m_opaque_wp.lock();

@@ -5,10 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// PR14919 was fixed in r172447, out_of_range wasn't thrown before.
-// XFAIL: with_system_cxx_lib=macosx10.7
-// XFAIL: with_system_cxx_lib=macosx10.8
 
 // <string>
 
@@ -93,9 +89,9 @@ int main(int, char**)
     {
         assert(idx == 0);
     }
-//  LWG issue #2009
     try
     {
+        // LWG#2009 and PR14919
         std::stol("9999999999999999999999999999999999999999999999999", &idx);
         assert(false);
     }
@@ -105,6 +101,7 @@ int main(int, char**)
     }
     try
     {
+        // LWG#2009 and PR14919
         std::stol(L"9999999999999999999999999999999999999999999999999", &idx);
         assert(false);
     }

@@ -8,7 +8,7 @@
 # CHECK-NEXT:    0x00000000:
 # CHECK-NEXT:    DW_LLE_startx_length (0x00000001, 0x00000010): DW_OP_reg5 RDI
 
-.section .debug_loc.dwo,"",@progbits
+.section .debug_loc.dwo,"e",@progbits
 # One location list. The pre-DWARF v5 implementation only recognizes
 # DW_LLE_startx_length as an entry kind in .debug_loc.dwo (besides
 # end_of_list), which is what llvm generates as well.

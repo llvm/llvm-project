@@ -1,4 +1,4 @@
-//===-------------------- Common internal contructs ---------------------*-===//
+//===-- Common internal contructs -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +10,10 @@
 #define LLVM_LIBC_SUPPORT_COMMON_H
 
 #define LIBC_INLINE_ASM __asm__ __volatile__
+
+#define likely(x) __builtin_expect (!!(x), 1)
+#define unlikely(x) __builtin_expect (x, 0)
+#define UNUSED __attribute__((unused))
 
 <!> Include the platform specific definitions at build time. For example, that
 <!> of entrypoint macro.

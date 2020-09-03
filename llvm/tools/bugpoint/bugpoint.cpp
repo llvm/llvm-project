@@ -110,7 +110,7 @@ public:
   void add(Pass *P) override {
     const void *ID = P->getPassID();
     const PassInfo *PI = PassRegistry::getPassRegistry()->getPassInfo(ID);
-    D.addPass(PI->getPassArgument());
+    D.addPass(std::string(PI->getPassArgument()));
   }
 };
 }
@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
     AddOptimizationPasses(PM, 2, 2);
 
   for (const PassInfo *PI : PassList)
-    D.addPass(PI->getPassArgument());
+    D.addPass(std::string(PI->getPassArgument()));
 
 // Bugpoint has the ability of generating a plethora of core files, so to
 // avoid filling up the disk, we prevent it

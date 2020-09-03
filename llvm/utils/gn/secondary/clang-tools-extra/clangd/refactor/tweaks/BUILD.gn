@@ -6,12 +6,14 @@ source_set("tweaks") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang-tools-extra/clangd",
+    "//clang-tools-extra/clangd/support",
     "//clang/lib/AST",
     "//clang/lib/Tooling/Core",
     "//llvm/lib/Support",
   ]
   include_dirs = [ "../.." ]
   sources = [
+    "AddUsing.cpp",
     "AnnotateHighlightings.cpp",
     "DefineInline.cpp",
     "DefineOutline.cpp",

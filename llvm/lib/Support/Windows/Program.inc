@@ -10,14 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "WindowsSupport.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
 #include "llvm/Support/WindowsError.h"
 #include "llvm/Support/raw_ostream.h"
+#include <psapi.h>
 #include <cstdio>
 #include <fcntl.h>
 #include <io.h>
@@ -138,7 +139,7 @@ static HANDLE RedirectIO(Optional<StringRef> Path, int fd,
   if (Path->empty())
     fname = "NUL";
   else
-    fname = *Path;
+    fname = std::string(*Path);
 
   SECURITY_ATTRIBUTES sa;
   sa.nLength = sizeof(sa);
@@ -151,7 +152,7 @@ static HANDLE RedirectIO(Optional<StringRef> Path, int fd,
     if (windows::UTF8ToUTF16(fname, fnameUnicode))
       return INVALID_HANDLE_VALUE;
   } else {
-    if (path::widenPath(fname, fnameUnicode))
+    if (sys::windows::widenPath(fname, fnameUnicode))
       return INVALID_HANDLE_VALUE;
   }
   h = CreateFileW(fnameUnicode.data(), fd ? GENERIC_WRITE : GENERIC_READ,
@@ -263,7 +264,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   fflush(stderr);
 
   SmallVector<wchar_t, MAX_PATH> ProgramUtf16;
-  if (std::error_code ec = path::widenPath(Program, ProgramUtf16)) {
+  if (std::error_code ec = sys::windows::widenPath(Program, ProgramUtf16)) {
     SetLastError(ec.value());
     MakeErrMsg(ErrMsg,
                std::string("Unable to convert application name to UTF-16"));
@@ -390,7 +391,8 @@ std::string sys::flattenWindowsCommandLine(ArrayRef<StringRef> Args) {
 }
 
 ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
-                      bool WaitUntilChildTerminates, std::string *ErrMsg) {
+                      bool WaitUntilChildTerminates, std::string *ErrMsg,
+                      Optional<ProcessStatistics> *ProcStat) {
   assert(PI.Pid && "invalid pid to wait on, process not started?");
   assert((PI.Process && PI.Process != INVALID_HANDLE_VALUE) &&
          "invalid process handle to wait on, process not started?");
@@ -401,6 +403,8 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
     milliSecondsToWait = SecondsToWait * 1000;
 
   ProcessInfo WaitResult = PI;
+  if (ProcStat)
+    ProcStat->reset();
   DWORD WaitStatus = WaitForSingleObject(PI.Process, milliSecondsToWait);
   if (WaitStatus == WAIT_TIMEOUT) {
     if (SecondsToWait) {
@@ -418,6 +422,22 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
     } else {
       // Non-blocking wait.
       return ProcessInfo();
+    }
+  }
+
+  // Get process execution statistics.
+  if (ProcStat) {
+    FILETIME CreationTime, ExitTime, KernelTime, UserTime;
+    PROCESS_MEMORY_COUNTERS MemInfo;
+    if (GetProcessTimes(PI.Process, &CreationTime, &ExitTime, &KernelTime,
+                        &UserTime) &&
+        GetProcessMemoryInfo(PI.Process, &MemInfo, sizeof(MemInfo))) {
+      auto UserT = std::chrono::duration_cast<std::chrono::microseconds>(
+          toDuration(UserTime));
+      auto KernelT = std::chrono::duration_cast<std::chrono::microseconds>(
+          toDuration(KernelTime));
+      uint64_t PeakMemory = MemInfo.PeakPagefileUsage / 1024;
+      *ProcStat = ProcessStatistics{UserT + KernelT, UserT, PeakMemory};
     }
   }
 

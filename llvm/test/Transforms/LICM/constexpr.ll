@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -basicaa -licm | FileCheck %s
+; RUN: opt < %s -S -basic-aa -licm | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
 ; This fixes PR22460
 

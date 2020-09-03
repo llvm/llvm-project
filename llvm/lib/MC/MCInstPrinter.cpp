@@ -62,12 +62,29 @@ void MCInstPrinter::printAnnotation(raw_ostream &OS, StringRef Annot) {
 static bool matchAliasCondition(const MCInst &MI, const MCSubtargetInfo *STI,
                                 const MCRegisterInfo &MRI, unsigned &OpIdx,
                                 const AliasMatchingData &M,
-                                const AliasPatternCond &C) {
+                                const AliasPatternCond &C,
+                                bool &OrPredicateResult) {
   // Feature tests are special, they don't consume operands.
   if (C.Kind == AliasPatternCond::K_Feature)
     return STI->getFeatureBits().test(C.Value);
   if (C.Kind == AliasPatternCond::K_NegFeature)
     return !STI->getFeatureBits().test(C.Value);
+  // For feature tests where just one feature is required in a list, set the
+  // predicate result bit to whether the expression will return true, and only
+  // return the real result at the end of list marker.
+  if (C.Kind == AliasPatternCond::K_OrFeature) {
+    OrPredicateResult |= STI->getFeatureBits().test(C.Value);
+    return true;
+  }
+  if (C.Kind == AliasPatternCond::K_OrNegFeature) {
+    OrPredicateResult |= !(STI->getFeatureBits().test(C.Value));
+    return true;
+  }
+  if (C.Kind == AliasPatternCond::K_EndOrFeatures) {
+    bool Res = OrPredicateResult;
+    OrPredicateResult = false;
+    return Res;
+  }
 
   // Get and consume an operand.
   const MCOperand &Opnd = MI.getOperand(OpIdx);
@@ -95,6 +112,9 @@ static bool matchAliasCondition(const MCInst &MI, const MCSubtargetInfo *STI,
     return true;
   case AliasPatternCond::K_Feature:
   case AliasPatternCond::K_NegFeature:
+  case AliasPatternCond::K_OrFeature:
+  case AliasPatternCond::K_OrNegFeature:
+  case AliasPatternCond::K_EndOrFeatures:
     llvm_unreachable("handled earlier");
   }
   llvm_unreachable("invalid kind");
@@ -125,8 +145,10 @@ const char *MCInstPrinter::matchAliasPatterns(const MCInst *MI,
     ArrayRef<AliasPatternCond> Conds =
         M.PatternConds.slice(P.AliasCondStart, P.NumConds);
     unsigned OpIdx = 0;
+    bool OrPredicateResult = false;
     if (llvm::all_of(Conds, [&](const AliasPatternCond &C) {
-          return matchAliasCondition(*MI, STI, MRI, OpIdx, M, C);
+          return matchAliasCondition(*MI, STI, MRI, OpIdx, M, C,
+                                     OrPredicateResult);
         })) {
       // If all conditions matched, use this asm string.
       AsmStrOffset = P.AsmStrOffset;

@@ -22,6 +22,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -75,14 +76,16 @@ public:
 PrintedDeclMatches(StringRef Code, const std::vector<std::string> &Args,
                    const DeclarationMatcher &NodeMatch,
                    StringRef ExpectedPrinted, StringRef FileName,
-                   PrintingPolicyModifier PolicyModifier = nullptr) {
+                   PrintingPolicyModifier PolicyModifier = nullptr,
+                   bool AllowError = false) {
   PrintMatch Printer(PolicyModifier);
   MatchFinder Finder;
   Finder.addMatcher(NodeMatch, &Printer);
   std::unique_ptr<FrontendActionFactory> Factory(
       newFrontendActionFactory(&Finder));
 
-  if (!runToolOnCodeWithArgs(Factory->create(), Code, Args, FileName))
+  if (!runToolOnCodeWithArgs(Factory->create(), Code, Args, FileName) &&
+      !AllowError)
     return testing::AssertionFailure()
       << "Parsing error in \"" << Code.str() << "\"";
 
@@ -108,12 +111,8 @@ PrintedDeclCXX98Matches(StringRef Code, StringRef DeclName,
                         StringRef ExpectedPrinted,
                         PrintingPolicyModifier PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c++98");
-  return PrintedDeclMatches(Code,
-                            Args,
-                            namedDecl(hasName(DeclName)).bind("id"),
-                            ExpectedPrinted,
-                            "input.cc",
-                            PolicyModifier);
+  return PrintedDeclMatches(Code, Args, namedDecl(hasName(DeclName)).bind("id"),
+                            ExpectedPrinted, "input.cc", PolicyModifier);
 }
 
 ::testing::AssertionResult
@@ -133,11 +132,8 @@ PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                                                    StringRef DeclName,
                                                    StringRef ExpectedPrinted) {
   std::vector<std::string> Args(1, "-std=c++11");
-  return PrintedDeclMatches(Code,
-                            Args,
-                            namedDecl(hasName(DeclName)).bind("id"),
-                            ExpectedPrinted,
-                            "input.cc");
+  return PrintedDeclMatches(Code, Args, namedDecl(hasName(DeclName)).bind("id"),
+                            ExpectedPrinted, "input.cc");
 }
 
 ::testing::AssertionResult PrintedDeclCXX11Matches(
@@ -176,16 +172,12 @@ PrintedDeclCXX1ZMatches(StringRef Code, const DeclarationMatcher &NodeMatch,
                             "input.cc");
 }
 
-::testing::AssertionResult PrintedDeclObjCMatches(
-                                  StringRef Code,
-                                  const DeclarationMatcher &NodeMatch,
-                                  StringRef ExpectedPrinted) {
+::testing::AssertionResult
+PrintedDeclObjCMatches(StringRef Code, const DeclarationMatcher &NodeMatch,
+                       StringRef ExpectedPrinted, bool AllowError = false) {
   std::vector<std::string> Args(1, "");
-  return PrintedDeclMatches(Code,
-                            Args,
-                            NodeMatch,
-                            ExpectedPrinted,
-                            "input.m");
+  return PrintedDeclMatches(Code, Args, NodeMatch, ExpectedPrinted, "input.m",
+                            /*PolicyModifier=*/nullptr, AllowError);
 }
 
 } // unnamed namespace
@@ -1164,8 +1156,8 @@ TEST(DeclPrinter, TestTemplateArgumentList4) {
     "template<typename T> struct X {};"
     "Z<X<int>> A;",
     "A",
-    "Z<X<int> > A"));
-    // Should be: with semicolon, without extra space in "> >"
+    "Z<X<int>> A"));
+    // Should be: with semicolon
 }
 
 TEST(DeclPrinter, TestTemplateArgumentList5) {
@@ -1280,6 +1272,15 @@ TEST(DeclPrinter, TestTemplateArgumentList15) {
     // Should be: with semicolon
 }
 
+TEST(DeclPrinter, TestTemplateArgumentList16) {
+  llvm::StringLiteral Code = "template<typename T1, int NT1, typename T2 = "
+                             "bool, int NT2 = 5> struct Z {};";
+  ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "T1", "typename T1"));
+  ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "T2", "typename T2 = bool"));
+  ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "NT1", "int NT1"));
+  ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "NT2", "int NT2 = 5"));
+}
+
 TEST(DeclPrinter, TestStaticAssert1) {
   ASSERT_TRUE(PrintedDeclCXX1ZMatches(
     "static_assert(true);",
@@ -1317,4 +1318,18 @@ TEST(DeclPrinter, TestObjCProtocol2) {
     "@protocol P1<P2> @end",
     namedDecl(hasName("P1")).bind("id"),
     "@protocol P1<P2>\n@end"));
+}
+
+TEST(DeclPrinter, TestObjCCategoryInvalidInterface) {
+  ASSERT_TRUE(PrintedDeclObjCMatches(
+      "@interface I (Extension) @end",
+      namedDecl(hasName("Extension")).bind("id"),
+      "@interface <<error-type>>(Extension)\n@end", /*AllowError=*/true));
+}
+
+TEST(DeclPrinter, TestObjCCategoryImplInvalidInterface) {
+  ASSERT_TRUE(PrintedDeclObjCMatches(
+      "@implementation I (Extension) @end",
+      namedDecl(hasName("Extension")).bind("id"),
+      "@implementation <<error-type>>(Extension)\n@end", /*AllowError=*/true));
 }

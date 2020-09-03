@@ -410,6 +410,10 @@ public:
   ConstantRange binaryOr(const ConstantRange &Other) const;
 
   /// Return a new range representing the possible values resulting
+  /// from a binary-xor of a value in this range by a value in \p Other.
+  ConstantRange binaryXor(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
   /// from a left shift of a value in this range by a value in \p Other.
   /// TODO: This isn't fully implemented yet.
   ConstantRange shl(const ConstantRange &Other) const;

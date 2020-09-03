@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn---amdgizcl -debug-info-kind=limited -O0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn---amdgizcl -debug-info-kind=limited -gno-column-info -O0 -emit-llvm -o - %s | FileCheck %s
 
 typedef struct
 {

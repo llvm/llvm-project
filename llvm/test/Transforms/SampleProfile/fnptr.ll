@@ -127,6 +127,9 @@ declare i32 @rand() #1
 ; Function Attrs: nounwind
 declare i32 @printf(i8* nocapture readonly, ...) #1
 
+attributes #0 = {"use-sample-profile"}
+attributes #2 = {"use-sample-profile"}
+
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}
 !llvm.dbg.cu = !{!26}

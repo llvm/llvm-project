@@ -12,6 +12,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "test_macros.h"
+
 //  Wrapper routines
 void *my_alloc2 ( size_t sz ) {
     void *p = std::malloc ( sz );
@@ -47,14 +49,14 @@ int gConstructorThrowTarget;
 int gDestructorCounter;
 int gDestructorThrowTarget;
 void throw_construct ( void * ) {
-#ifndef LIBCXXABI_HAS_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
     if ( gConstructorCounter   == gConstructorThrowTarget )
         throw 1;
     ++gConstructorCounter;
 #endif
 }
 void throw_destruct  ( void * ) {
-#ifndef LIBCXXABI_HAS_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
     if ( ++gDestructorCounter  == gDestructorThrowTarget  )
         throw 2;
 #endif
@@ -156,7 +158,7 @@ int test_counted ( ) {
     return retVal;
     }
     
-#ifndef LIBCXXABI_HAS_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
 //  Make sure the constructors and destructors are matched
 int test_exception_in_constructor ( ) {
     int retVal = 0;
@@ -215,7 +217,7 @@ int test_exception_in_constructor ( ) {
     }
 #endif
 
-#ifndef LIBCXXABI_HAS_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
 //  Make sure the constructors and destructors are matched
 int test_exception_in_destructor ( ) {
     int retVal = 0;
@@ -272,7 +274,7 @@ int main () {
     int retVal = 0;
     retVal += test_empty ();
     retVal += test_counted ();
-#ifndef LIBCXXABI_HAS_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
     retVal += test_exception_in_constructor ();
     retVal += test_exception_in_destructor ();
 #endif

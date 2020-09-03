@@ -34,6 +34,18 @@
 // RUN:     -fxray-instrumentation-bundle=typed -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,FUNCTION,CUSTOM,TYPED %s
+// RUN: %clang_cc1 -fxray-instrument \
+// RUN:     -fxray-instrumentation-bundle=function-entry -x c++ \
+// RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
+// RUN:     | FileCheck --check-prefixes CHECK,NOCUSTOM,NOTYPED,SKIPEXIT %s
+// RUN: %clang_cc1 -fxray-instrument \
+// RUN:     -fxray-instrumentation-bundle=function-exit -x c++ \
+// RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
+// RUN:     | FileCheck --check-prefixes CHECK,NOCUSTOM,NOTYPED,SKIPENTRY %s
+// RUN: %clang_cc1 -fxray-instrument \
+// RUN:     -fxray-instrumentation-bundle=function-entry,function-exit -x c++ \
+// RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
+// RUN:     | FileCheck --check-prefixes CHECK,FUNCTION,NOCUSTOM,NOTYPED %s
 
 // CHECK: define void @_Z16alwaysInstrumentv() #[[ALWAYSATTR:[0-9]+]] {
 [[clang::xray_always_instrument]] void alwaysInstrument() {
@@ -48,3 +60,6 @@
 
 // FUNCTION: attributes #[[ALWAYSATTR]] = {{.*}} "function-instrument"="xray-always" {{.*}}
 // NOFUNCTION-NOT: attributes #[[ALWAYSATTR]] = {{.*}} "function-instrument"="xray-always" {{.*}}
+
+// SKIPENTRY: attributes #[[ALWAYSATTR]] = {{.*}} "function-instrument"="xray-always" {{.*}} "xray-skip-entry" {{.*}}
+// SKIPEXIT: attributes #[[ALWAYSATTR]] = {{.*}} "function-instrument"="xray-always" {{.*}} "xray-skip-exit" {{.*}}

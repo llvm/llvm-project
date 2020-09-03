@@ -12,10 +12,10 @@
 #include "AMDGPU.h"
 #include "AMDKernelCodeT.h"
 #include "SIDefines.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetParser.h"
@@ -26,17 +26,13 @@
 namespace llvm {
 
 class Argument;
-class AMDGPUSubtarget;
-class FeatureBitset;
 class Function;
 class GCNSubtarget;
 class GlobalValue;
-class MCContext;
 class MCRegisterClass;
 class MCRegisterInfo;
-class MCSection;
 class MCSubtargetInfo;
-class MachineMemOperand;
+class StringRef;
 class Triple;
 
 namespace AMDGPU {
@@ -87,15 +83,6 @@ unsigned getEUsPerCU(const MCSubtargetInfo *STI);
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
                                unsigned FlatWorkGroupSize);
 
-/// \returns Maximum number of waves per compute unit for given subtarget \p
-/// STI without any kind of limitation.
-unsigned getMaxWavesPerCU(const MCSubtargetInfo *STI);
-
-/// \returns Maximum number of waves per compute unit for given subtarget \p
-/// STI and limited by given \p FlatWorkGroupSize.
-unsigned getMaxWavesPerCU(const MCSubtargetInfo *STI,
-                          unsigned FlatWorkGroupSize);
-
 /// \returns Minimum number of waves per execution unit for given subtarget \p
 /// STI.
 unsigned getMinWavesPerEU(const MCSubtargetInfo *STI);
@@ -104,10 +91,10 @@ unsigned getMinWavesPerEU(const MCSubtargetInfo *STI);
 /// STI without any kind of limitation.
 unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI);
 
-/// \returns Maximum number of waves per execution unit for given subtarget \p
-/// STI and limited by given \p FlatWorkGroupSize.
-unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI,
-                          unsigned FlatWorkGroupSize);
+/// \returns Number of waves per execution unit required to support the given \p
+/// FlatWorkGroupSize.
+unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo *STI,
+                                   unsigned FlatWorkGroupSize);
 
 /// \returns Minimum flat work group size for given subtarget \p STI.
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI);
@@ -116,7 +103,7 @@ unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI);
 unsigned getMaxFlatWorkGroupSize(const MCSubtargetInfo *STI);
 
 /// \returns Number of waves per work group for given subtarget \p STI and
-/// limited by given \p FlatWorkGroupSize.
+/// \p FlatWorkGroupSize.
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo *STI,
                               unsigned FlatWorkGroupSize);
 
@@ -211,6 +198,7 @@ struct MIMGBaseOpcodeInfo {
 
   uint8_t NumExtraArgs;
   bool Gradients;
+  bool G16;
   bool Coordinates;
   bool LodOrClampOrMip;
   bool HasD16;
@@ -247,11 +235,19 @@ struct MIMGMIPMappingInfo {
   MIMGBaseOpcode NONMIP;
 };
 
+struct MIMGG16MappingInfo {
+  MIMGBaseOpcode G;
+  MIMGBaseOpcode G16;
+};
+
 LLVM_READONLY
 const MIMGLZMappingInfo *getMIMGLZMappingInfo(unsigned L);
 
 LLVM_READONLY
-const MIMGMIPMappingInfo *getMIMGMIPMappingInfo(unsigned L);
+const MIMGMIPMappingInfo *getMIMGMIPMappingInfo(unsigned MIP);
+
+LLVM_READONLY
+const MIMGG16MappingInfo *getMIMGG16MappingInfo(unsigned G);
 
 LLVM_READONLY
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
@@ -306,6 +302,9 @@ bool getMUBUFHasSrsrc(unsigned Opc);
 
 LLVM_READONLY
 bool getMUBUFHasSoffset(unsigned Opc);
+
+LLVM_READONLY
+bool getSMEMIsBuffer(unsigned Opc);
 
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
@@ -551,6 +550,8 @@ inline bool isKernel(CallingConv::ID CC) {
 bool hasXNACK(const MCSubtargetInfo &STI);
 bool hasSRAMECC(const MCSubtargetInfo &STI);
 bool hasMIMG_R128(const MCSubtargetInfo &STI);
+bool hasGFX10A16(const MCSubtargetInfo &STI);
+bool hasG16(const MCSubtargetInfo &STI);
 bool hasPackedD16(const MCSubtargetInfo &STI);
 
 bool isSI(const MCSubtargetInfo &STI);
@@ -558,6 +559,9 @@ bool isCI(const MCSubtargetInfo &STI);
 bool isVI(const MCSubtargetInfo &STI);
 bool isGFX9(const MCSubtargetInfo &STI);
 bool isGFX10(const MCSubtargetInfo &STI);
+bool isGCN3Encoding(const MCSubtargetInfo &STI);
+bool isGFX10_BEncoding(const MCSubtargetInfo &STI);
+bool hasGFX10_3Insts(const MCSubtargetInfo &STI);
 
 /// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
@@ -633,6 +637,13 @@ inline unsigned getOperandSize(const MCInstrDesc &Desc, unsigned OpNo) {
   return getOperandSize(Desc.OpInfo[OpNo]);
 }
 
+/// Is this literal inlinable, and not one of the values intended for floating
+/// point values.
+LLVM_READNONE
+inline bool isInlinableIntLiteral(int64_t Literal) {
+  return Literal >= -16 && Literal <= 64;
+}
+
 /// Is this literal inlinable
 LLVM_READNONE
 bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi);
@@ -646,11 +657,35 @@ bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi);
 LLVM_READNONE
 bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi);
 
+LLVM_READNONE
+bool isInlinableIntLiteralV216(int32_t Literal);
+
 bool isArgPassedInSGPR(const Argument *Arg);
 
-/// \returns The encoding that will be used for \p ByteOffset in the SMRD
-/// offset field.
-int64_t getSMRDEncodedOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
+LLVM_READONLY
+bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
+                                      int64_t EncodedOffset);
+
+LLVM_READONLY
+bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
+                                    int64_t EncodedOffset,
+                                    bool IsBuffer);
+
+/// Convert \p ByteOffset to dwords if the subtarget uses dword SMRD immediate
+/// offsets.
+uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST, uint64_t ByteOffset);
+
+/// \returns The encoding that will be used for \p ByteOffset in the
+/// SMRD offset field, or None if it won't fit. On GFX9 and GFX10
+/// S_LOAD instructions have a signed offset, on other subtargets it is
+/// unsigned. S_BUFFER has an unsigned offset for all subtargets.
+Optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
+                                       int64_t ByteOffset, bool IsBuffer);
+
+/// \return The encoding that can be used for a 32-bit literal offset in an SMRD
+/// instruction. This is only useful on CI.s
+Optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
+                                                int64_t ByteOffset);
 
 /// \returns true if this offset is small enough to fit in the SMRD
 /// offset field.  \p ByteOffset should be the offset in bytes and
@@ -658,7 +693,8 @@ int64_t getSMRDEncodedOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 
 bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
-                      const GCNSubtarget *Subtarget, uint32_t Align = 4);
+                      const GCNSubtarget *Subtarget,
+                      Align Alignment = Align(4));
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
@@ -677,45 +713,76 @@ struct SIModeRegisterDefaults {
 
   /// If this is set, neither input or output denormals are flushed for most f32
   /// instructions.
-  ///
-  /// TODO: Split into separate input and output fields if necessary like the
-  /// control bits really provide?
-  bool FP32Denormals : 1;
+  bool FP32InputDenormals : 1;
+  bool FP32OutputDenormals : 1;
 
   /// If this is set, neither input or output denormals are flushed for both f64
   /// and f16/v2f16 instructions.
-  bool FP64FP16Denormals : 1;
+  bool FP64FP16InputDenormals : 1;
+  bool FP64FP16OutputDenormals : 1;
 
   SIModeRegisterDefaults() :
     IEEE(true),
     DX10Clamp(true),
-    FP32Denormals(true),
-    FP64FP16Denormals(true) {}
+    FP32InputDenormals(true),
+    FP32OutputDenormals(true),
+    FP64FP16InputDenormals(true),
+    FP64FP16OutputDenormals(true) {}
 
-  // FIXME: Should not depend on the subtarget
-  SIModeRegisterDefaults(const Function &F, const GCNSubtarget &ST);
+  SIModeRegisterDefaults(const Function &F);
 
   static SIModeRegisterDefaults getDefaultForCallingConv(CallingConv::ID CC) {
     const bool IsCompute = AMDGPU::isCompute(CC);
 
     SIModeRegisterDefaults Mode;
-    Mode.DX10Clamp = true;
     Mode.IEEE = IsCompute;
-    Mode.FP32Denormals = false; // FIXME: Should be on by default.
-    Mode.FP64FP16Denormals = true;
     return Mode;
   }
 
   bool operator ==(const SIModeRegisterDefaults Other) const {
     return IEEE == Other.IEEE && DX10Clamp == Other.DX10Clamp &&
-           FP32Denormals == Other.FP32Denormals &&
-           FP64FP16Denormals == Other.FP64FP16Denormals;
+           FP32InputDenormals == Other.FP32InputDenormals &&
+           FP32OutputDenormals == Other.FP32OutputDenormals &&
+           FP64FP16InputDenormals == Other.FP64FP16InputDenormals &&
+           FP64FP16OutputDenormals == Other.FP64FP16OutputDenormals;
+  }
+
+  bool allFP32Denormals() const {
+    return FP32InputDenormals && FP32OutputDenormals;
+  }
+
+  bool allFP64FP16Denormals() const {
+    return FP64FP16InputDenormals && FP64FP16OutputDenormals;
+  }
+
+  /// Get the encoding value for the FP_DENORM bits of the mode register for the
+  /// FP32 denormal mode.
+  uint32_t fpDenormModeSPValue() const {
+    if (FP32InputDenormals && FP32OutputDenormals)
+      return FP_DENORM_FLUSH_NONE;
+    if (FP32InputDenormals)
+      return FP_DENORM_FLUSH_OUT;
+    if (FP32OutputDenormals)
+      return FP_DENORM_FLUSH_IN;
+    return FP_DENORM_FLUSH_IN_FLUSH_OUT;
+  }
+
+  /// Get the encoding value for the FP_DENORM bits of the mode register for the
+  /// FP64/FP16 denormal mode.
+  uint32_t fpDenormModeDPValue() const {
+    if (FP64FP16InputDenormals && FP64FP16OutputDenormals)
+      return FP_DENORM_FLUSH_NONE;
+    if (FP64FP16InputDenormals)
+      return FP_DENORM_FLUSH_OUT;
+    if (FP64FP16OutputDenormals)
+      return FP_DENORM_FLUSH_IN;
+    return FP_DENORM_FLUSH_IN_FLUSH_OUT;
   }
 
   /// Returns true if a flag is compatible if it's enabled in the callee, but
   /// disabled in the caller.
   static bool oneWayCompatible(bool CallerMode, bool CalleeMode) {
-    return CallerMode == CalleeMode || (CallerMode && !CalleeMode);
+    return CallerMode == CalleeMode || (!CallerMode && CalleeMode);
   }
 
   // FIXME: Inlining should be OK for dx10-clamp, since the caller's mode should
@@ -727,8 +794,10 @@ struct SIModeRegisterDefaults {
       return false;
 
     // Allow inlining denormals enabled into denormals flushed functions.
-    return oneWayCompatible(FP64FP16Denormals, CalleeMode.FP64FP16Denormals) &&
-           oneWayCompatible(FP32Denormals, CalleeMode.FP32Denormals);
+    return oneWayCompatible(FP64FP16InputDenormals, CalleeMode.FP64FP16InputDenormals) &&
+           oneWayCompatible(FP64FP16OutputDenormals, CalleeMode.FP64FP16OutputDenormals) &&
+           oneWayCompatible(FP32InputDenormals, CalleeMode.FP32InputDenormals) &&
+           oneWayCompatible(FP32OutputDenormals, CalleeMode.FP32OutputDenormals);
   }
 };
 

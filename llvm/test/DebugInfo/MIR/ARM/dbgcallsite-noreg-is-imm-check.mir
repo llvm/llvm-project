@@ -1,4 +1,4 @@
-# RUN: llc -debug-entry-values -mtriple=armebv6k-unknown-linux-gnueabihf -filetype=obj -start-after=machineverifier %s -o -| llvm-dwarfdump - | FileCheck %s --implicit-check-not=DW_TAG_GNU_call_site_parameter
+# RUN: llc -emit-call-site-info -debug-entry-values -mtriple=armebv6k-unknown-linux-gnueabihf -filetype=obj -start-after=machineverifier %s -o -| llvm-dwarfdump - | FileCheck %s --implicit-check-not=DW_TAG_GNU_call_site_parameter
 
 ## The test was handmade.
 

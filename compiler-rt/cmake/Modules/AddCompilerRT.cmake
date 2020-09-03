@@ -1,5 +1,6 @@
 include(ExternalProject)
 include(CompilerRTUtils)
+include(HandleCompilerRT)
 
 function(set_target_output_directories target output_dir)
   # For RUNTIME_OUTPUT_DIRECTORY variable, Multi-configuration generators
@@ -162,6 +163,19 @@ function(add_compiler_rt_runtime name type)
     set(NO_LTO_FLAGS "")
   endif()
 
+  # By default do not instrument or use profdata for compiler-rt.
+  set(NO_PGO_FLAGS "")
+  if(NOT COMPILER_RT_ENABLE_PGO)
+    if(LLVM_PROFDATA_FILE AND COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)
+      list(APPEND NO_PGO_FLAGS "-fno-profile-instr-use")
+    endif()
+    if(LLVM_BUILD_INSTRUMENTED MATCHES IR AND COMPILER_RT_HAS_FNO_PROFILE_GENERATE_FLAG)
+      list(APPEND NO_PGO_FLAGS "-fno-profile-generate")
+    elseif(LLVM_BUILD_INSTRUMENTED AND COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
+      list(APPEND NO_PGO_FLAGS "-fno-profile-instr-generate")
+    endif()
+  endif()
+
   list(LENGTH LIB_SOURCES LIB_SOURCES_LENGTH)
   if (${LIB_SOURCES_LENGTH} GREATER 0)
     # Add headers to LIB_SOURCES for IDEs. It doesn't make sense to
@@ -190,7 +204,7 @@ function(add_compiler_rt_runtime name type)
       list_intersect(LIB_ARCHS_${libname} DARWIN_${os}_ARCHS LIB_ARCHS)
       if(LIB_ARCHS_${libname})
         list(APPEND libnames ${libname})
-        set(extra_cflags_${libname} ${DARWIN_${os}_CFLAGS} ${NO_LTO_FLAGS} ${LIB_CFLAGS})
+        set(extra_cflags_${libname} ${DARWIN_${os}_CFLAGS} ${NO_LTO_FLAGS} ${NO_PGO_FLAGS} ${LIB_CFLAGS})
         set(output_name_${libname} ${libname}${COMPILER_RT_OS_SUFFIX})
         set(sources_${libname} ${LIB_SOURCES})
         format_object_libs(sources_${libname} ${os} ${LIB_OBJECT_LIBS})
@@ -220,10 +234,18 @@ function(add_compiler_rt_runtime name type)
           set_output_name(output_name_${libname} ${name} ${arch})
         endif()
       endif()
+      if(COMPILER_RT_USE_BUILTINS_LIBRARY AND NOT type STREQUAL "OBJECT" AND
+         NOT name STREQUAL "clang_rt.builtins")
+        get_compiler_rt_target(${arch} target)
+        find_compiler_rt_library(builtins ${target} builtins_${libname})
+        if(builtins_${libname} STREQUAL "NOTFOUND")
+          message(FATAL_ERROR "Cannot find builtins library for the target architecture")
+        endif()
+      endif()
       set(sources_${libname} ${LIB_SOURCES})
       format_object_libs(sources_${libname} ${arch} ${LIB_OBJECT_LIBS})
       set(libnames ${libnames} ${libname})
-      set(extra_cflags_${libname} ${TARGET_${arch}_CFLAGS} ${NO_LTO_FLAGS} ${LIB_CFLAGS})
+      set(extra_cflags_${libname} ${TARGET_${arch}_CFLAGS} ${NO_LTO_FLAGS} ${NO_PGO_FLAGS} ${LIB_CFLAGS})
       get_compiler_rt_output_dir(${arch} output_dir_${libname})
       get_compiler_rt_install_dir(${arch} install_dir_${libname})
     endforeach()
@@ -312,6 +334,9 @@ function(add_compiler_rt_runtime name type)
     set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Runtime")
     if(LIB_LINK_LIBS)
       target_link_libraries(${libname} PRIVATE ${LIB_LINK_LIBS})
+    endif()
+    if(builtins_${libname})
+      target_link_libraries(${libname} PRIVATE ${builtins_${libname}})
     endif()
     if(${type} STREQUAL "SHARED")
       if(COMMAND llvm_setup_rpath)
@@ -461,7 +486,13 @@ function(add_compiler_rt_test test_suite test_name arch)
   # trump. With MSVC we can't do that because CMake is set up to run link.exe
   # when linking, not the compiler. Here, we hack it to use the compiler
   # because we want to use -fsanitize flags.
-  if(NOT MSVC)
+
+  # Only add CMAKE_EXE_LINKER_FLAGS when in a standalone bulid.
+  # Or else CMAKE_EXE_LINKER_FLAGS contains flags for build compiler of Clang/llvm.
+  # This might not be the same as what the COMPILER_RT_TEST_COMPILER supports.
+  # eg: the build compiler use lld linker and we build clang with default ld linker
+  # then to be tested clang will complain about lld options like --color-diagnostics.
+  if(NOT MSVC AND COMPILER_RT_STANDALONE_BUILD)
     set(TEST_LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${TEST_LINK_FLAGS}")
     separate_arguments(TEST_LINK_FLAGS)
   endif()

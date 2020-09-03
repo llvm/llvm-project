@@ -186,17 +186,23 @@ TEST(InstructionsTest, CastInst) {
   Type *Int16Ty = Type::getInt16Ty(C);
   Type *Int32Ty = Type::getInt32Ty(C);
   Type *Int64Ty = Type::getInt64Ty(C);
-  Type *V8x8Ty = VectorType::get(Int8Ty, 8);
-  Type *V8x64Ty = VectorType::get(Int64Ty, 8);
+  Type *V8x8Ty = FixedVectorType::get(Int8Ty, 8);
+  Type *V8x64Ty = FixedVectorType::get(Int64Ty, 8);
   Type *X86MMXTy = Type::getX86_MMXTy(C);
 
   Type *HalfTy = Type::getHalfTy(C);
   Type *FloatTy = Type::getFloatTy(C);
   Type *DoubleTy = Type::getDoubleTy(C);
 
-  Type *V2Int32Ty = VectorType::get(Int32Ty, 2);
-  Type *V2Int64Ty = VectorType::get(Int64Ty, 2);
-  Type *V4Int16Ty = VectorType::get(Int16Ty, 4);
+  Type *V2Int32Ty = FixedVectorType::get(Int32Ty, 2);
+  Type *V2Int64Ty = FixedVectorType::get(Int64Ty, 2);
+  Type *V4Int16Ty = FixedVectorType::get(Int16Ty, 4);
+  Type *V1Int16Ty = FixedVectorType::get(Int16Ty, 1);
+
+  Type *VScaleV2Int32Ty = VectorType::get(Int32Ty, 2, true);
+  Type *VScaleV2Int64Ty = VectorType::get(Int64Ty, 2, true);
+  Type *VScaleV4Int16Ty = VectorType::get(Int16Ty, 4, true);
+  Type *VScaleV1Int16Ty = VectorType::get(Int16Ty, 1, true);
 
   Type *Int32PtrTy = PointerType::get(Int32Ty, 0);
   Type *Int64PtrTy = PointerType::get(Int64Ty, 0);
@@ -204,14 +210,18 @@ TEST(InstructionsTest, CastInst) {
   Type *Int32PtrAS1Ty = PointerType::get(Int32Ty, 1);
   Type *Int64PtrAS1Ty = PointerType::get(Int64Ty, 1);
 
-  Type *V2Int32PtrAS1Ty = VectorType::get(Int32PtrAS1Ty, 2);
-  Type *V2Int64PtrAS1Ty = VectorType::get(Int64PtrAS1Ty, 2);
-  Type *V4Int32PtrAS1Ty = VectorType::get(Int32PtrAS1Ty, 4);
-  Type *V4Int64PtrAS1Ty = VectorType::get(Int64PtrAS1Ty, 4);
+  Type *V2Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 2);
+  Type *V2Int64PtrAS1Ty = FixedVectorType::get(Int64PtrAS1Ty, 2);
+  Type *V4Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 4);
+  Type *VScaleV4Int32PtrAS1Ty = VectorType::get(Int32PtrAS1Ty, 4, true);
+  Type *V4Int64PtrAS1Ty = FixedVectorType::get(Int64PtrAS1Ty, 4);
 
-  Type *V2Int64PtrTy = VectorType::get(Int64PtrTy, 2);
-  Type *V2Int32PtrTy = VectorType::get(Int32PtrTy, 2);
-  Type *V4Int32PtrTy = VectorType::get(Int32PtrTy, 4);
+  Type *V2Int64PtrTy = FixedVectorType::get(Int64PtrTy, 2);
+  Type *V2Int32PtrTy = FixedVectorType::get(Int32PtrTy, 2);
+  Type *VScaleV2Int32PtrTy = VectorType::get(Int32PtrTy, 2, true);
+  Type *V4Int32PtrTy = FixedVectorType::get(Int32PtrTy, 4);
+  Type *VScaleV4Int32PtrTy = VectorType::get(Int32PtrTy, 4, true);
+  Type *VScaleV4Int64PtrTy = VectorType::get(Int64PtrTy, 4, true);
 
   const Constant* c8 = Constant::getNullValue(V8x8Ty);
   const Constant* c64 = Constant::getNullValue(V8x64Ty);
@@ -286,6 +296,75 @@ TEST(InstructionsTest, CastInst) {
                                      Constant::getNullValue(V2Int32PtrTy),
                                      V4Int32PtrAS1Ty));
 
+  // Address space cast of fixed/scalable vectors of pointers to scalable/fixed
+  // vector of pointers.
+  EXPECT_FALSE(CastInst::castIsValid(
+      Instruction::AddrSpaceCast, Constant::getNullValue(VScaleV4Int32PtrAS1Ty),
+      V4Int32PtrTy));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::AddrSpaceCast,
+                                     Constant::getNullValue(V4Int32PtrTy),
+                                     VScaleV4Int32PtrAS1Ty));
+  // Address space cast of scalable vectors of pointers to scalable vector of
+  // pointers.
+  EXPECT_FALSE(CastInst::castIsValid(
+      Instruction::AddrSpaceCast, Constant::getNullValue(VScaleV4Int32PtrAS1Ty),
+      VScaleV2Int32PtrTy));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::AddrSpaceCast,
+                                     Constant::getNullValue(VScaleV2Int32PtrTy),
+                                     VScaleV4Int32PtrAS1Ty));
+  EXPECT_TRUE(CastInst::castIsValid(Instruction::AddrSpaceCast,
+                                    Constant::getNullValue(VScaleV4Int64PtrTy),
+                                    VScaleV4Int32PtrAS1Ty));
+  // Same number of lanes, different address space.
+  EXPECT_TRUE(CastInst::castIsValid(
+      Instruction::AddrSpaceCast, Constant::getNullValue(VScaleV4Int32PtrAS1Ty),
+      VScaleV4Int32PtrTy));
+  // Same number of lanes, same address space.
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::AddrSpaceCast,
+                                     Constant::getNullValue(VScaleV4Int64PtrTy),
+                                     VScaleV4Int32PtrTy));
+
+  // Bit casting fixed/scalable vector to scalable/fixed vectors.
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(V2Int32Ty),
+                                     VScaleV2Int32Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(V2Int64Ty),
+                                     VScaleV2Int64Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(V4Int16Ty),
+                                     VScaleV4Int16Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(VScaleV2Int32Ty),
+                                     V2Int32Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(VScaleV2Int64Ty),
+                                     V2Int64Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(VScaleV4Int16Ty),
+                                     V4Int16Ty));
+
+  // Bit casting scalable vectors to scalable vectors.
+  EXPECT_TRUE(CastInst::castIsValid(Instruction::BitCast,
+                                    Constant::getNullValue(VScaleV4Int16Ty),
+                                    VScaleV2Int32Ty));
+  EXPECT_TRUE(CastInst::castIsValid(Instruction::BitCast,
+                                    Constant::getNullValue(VScaleV2Int32Ty),
+                                    VScaleV4Int16Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(VScaleV2Int64Ty),
+                                     VScaleV2Int32Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(VScaleV2Int32Ty),
+                                     VScaleV2Int64Ty));
+
+  // Bitcasting to/from <vscale x 1 x Ty>
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(VScaleV1Int16Ty),
+                                     V1Int16Ty));
+  EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
+                                     Constant::getNullValue(V1Int16Ty),
+                                     VScaleV1Int16Ty));
 
   // Check that assertion is not hit when creating a cast with a vector of
   // pointers
@@ -311,8 +390,8 @@ TEST(InstructionsTest, VectorGep) {
   PointerType *Ptri8Ty = PointerType::get(I8Ty, 0);
   PointerType *Ptri32Ty = PointerType::get(I32Ty, 0);
 
-  VectorType *V2xi8PTy = VectorType::get(Ptri8Ty, 2);
-  VectorType *V2xi32PTy = VectorType::get(Ptri32Ty, 2);
+  VectorType *V2xi8PTy = FixedVectorType::get(Ptri8Ty, 2);
+  VectorType *V2xi32PTy = FixedVectorType::get(Ptri32Ty, 2);
 
   // Test different aspects of the vector-of-pointers type
   // and GEPs which use this type.
@@ -1095,7 +1174,7 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
   std::unique_ptr<CallInst> ICall(CallInst::Create(IFnTy, ICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(ICall));
 
-  Type *VITy = VectorType::get(ITy, 2);
+  Type *VITy = FixedVectorType::get(ITy, 2);
   FunctionType *VIFnTy = FunctionType::get(VITy, {});
   Value *VICallee = Constant::getNullValue(VIFnTy->getPointerTo());
   std::unique_ptr<CallInst> VICall(CallInst::Create(VIFnTy, VICallee, {}, ""));
@@ -1113,7 +1192,7 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
   std::unique_ptr<CallInst> FCall(CallInst::Create(FFnTy, FCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(FCall));
 
-  Type *VFTy = VectorType::get(FTy, 2);
+  Type *VFTy = FixedVectorType::get(FTy, 2);
   FunctionType *VFFnTy = FunctionType::get(VFTy, {});
   Value *VFCallee = Constant::getNullValue(VFFnTy->getPointerTo());
   std::unique_ptr<CallInst> VFCall(CallInst::Create(VFFnTy, VFCallee, {}, ""));

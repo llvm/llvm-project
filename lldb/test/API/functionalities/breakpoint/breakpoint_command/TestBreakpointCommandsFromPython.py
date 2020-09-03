@@ -18,16 +18,18 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # side_effect bypasses reproducer
     def test_step_out_python(self):
         """Test stepping out using a python breakpoint command."""
         self.build()
         self.do_set_python_command_from_python()
 
+    @skipIfReproducer # side_effect bypasses reproducer
     def test_bkpt_cmd_bad_arguments(self):
         """Test what happens when pass structured data to a command:"""
         self.build()
         self.do_bad_args_to_python_command()
-        
+
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.c"
@@ -93,7 +95,7 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
             (error.GetCString()))
 
         self.expect("command script import --allow-reload ./bktptcmd.py")
-        
+
         func_bkpt.SetScriptCallbackFunction("bktptcmd.function")
 
         extra_args = lldb.SBStructuredData()
@@ -102,11 +104,11 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         extra_args.SetFromJSON(stream)
         error = fancy_bkpt.SetScriptCallbackFunction("bktptcmd.another_function", extra_args)
         self.assertTrue(error.Success(), "Failed to add callback %s"%(error.GetCString()))
-        
+
         stream.Clear()
         stream.Print('{"side_effect" : "I am so much fancier"}')
         extra_args.SetFromJSON(stream)
-        
+
         # Fancier's callback is set up from the command line
         id = fancier_bkpt.GetID()
         self.expect("breakpoint command add -F bktptcmd.a_third_function -k side_effect -v 'I am fancier' %d"%(id))
@@ -115,14 +117,14 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         empty_args = lldb.SBStructuredData()
         error = not_so_fancy_bkpt.SetScriptCallbackFunction("bktptcmd.empty_extra_args", empty_args)
         self.assertTrue(error.Success(), "Failed to add callback %s"%(error.GetCString()))
-        
+
         # Clear out canary variables
         side_effect.bktptcmd = None
         side_effect.callback = None
         side_effect.fancy    = None
         side_effect.fancier  = None
         side_effect.not_so_fancy = None
-        
+
         # Now launch the process, and do not stop at entry point.
         self.process = self.target.LaunchSimple(
             None, None, self.get_process_working_directory())
@@ -157,7 +159,7 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
 
         # Pass a breakpoint command function that doesn't take extra_args,
         # but pass it extra args:
-        
+
         extra_args = lldb.SBStructuredData()
         stream = lldb.SBStream()
         stream.Print('{"side_effect" : "I am fancy"}')
@@ -171,4 +173,4 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
 
         error = bkpt.SetScriptCallbackFunction("bktptcmd.nosuch_function", extra_args)
         self.assertTrue(error.Fail(), "Can't pass extra args if the function doesn't exist.")
-        
+

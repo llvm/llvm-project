@@ -37,6 +37,12 @@ def note_fe_backend_plugin: Note<"%0">, BackendInfo;
 def warn_fe_override_module : Warning<
     "overriding the module target triple with %0">,
     InGroup<DiagGroup<"override-module">>;
+def warn_fe_backend_unsupported_fp_rounding : Warning<
+    "overriding currently unsupported rounding mode on this target">,
+    InGroup<UnsupportedFPOpt>;
+def warn_fe_backend_unsupported_fp_exceptions : Warning<
+    "overriding currently unsupported use of floating point exceptions "
+    "on this target">, InGroup<UnsupportedFPOpt>;
 
 def remark_fe_backend_optimization_remark : Remark<"%0">, BackendInfo,
     InGroup<BackendOptimizationRemark>;
@@ -61,6 +67,7 @@ def note_fe_backend_invalid_loc : Note<"could "
   "not determine the original source location for %0:%1:%2">, BackendInfo;
 
 def err_fe_backend_unsupported : Error<"%0">, BackendInfo;
+def warn_fe_backend_unsupported : Warning<"%0">, BackendInfo;
 
 def err_fe_invalid_code_complete_file : Error<
     "cannot locate code-completion file %0">, DefaultFatal;
@@ -105,12 +112,21 @@ def err_fe_invalid_wchar_type
     : Error<"invalid wchar_t type '%0'; must be one of 'char', 'short', 'int'">;
 def err_fe_invalid_exception_model
    : Error<"invalid exception model '%0' for target '%1'">;
+def warn_fe_concepts_ts_flag : Warning<
+  "-fconcepts-ts is deprecated - use '-std=c++20' for Concepts support">,
+  InGroup<Deprecated>;
+
+def err_fe_unable_to_load_basic_block_sections_file : Error<
+    "unable to load basic block sections function list: '%0'">;
 
 def warn_fe_serialized_diag_merge_failure : Warning<
     "unable to merge a subprocess's serialized diagnostics">,
     InGroup<SerializedDiagnostics>;
 def warn_fe_serialized_diag_failure : Warning<
     "unable to open file %0 for serializing diagnostics (%1)">,
+    InGroup<SerializedDiagnostics>;
+def warn_fe_serialized_diag_failure_during_finalisation : Warning<
+    "Received warning after diagnostic serialization teardown was underway: %0">,
     InGroup<SerializedDiagnostics>;
 
 def err_verify_missing_line : Error<
@@ -172,9 +188,9 @@ def note_incompatible_analyzer_plugin_api : Note<
 def err_module_build_requires_fmodules : Error<
   "module compilation requires '-fmodules'">;
 def err_module_interface_requires_cpp_modules : Error<
-  "module interface compilation requires '-std=c++2a' or '-fmodules-ts'">;
+  "module interface compilation requires '-std=c++20' or '-fmodules-ts'">;
 def err_header_module_requires_modules : Error<
-  "header module compilation requires '-fmodules', '-std=c++2a', or "
+  "header module compilation requires '-fmodules', '-std=c++20', or "
   "'-fmodules-ts'">;
 def warn_module_config_mismatch : Warning<
   "module file %0 cannot be loaded due to a configuration mismatch with the current "
@@ -236,6 +252,12 @@ def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
 def err_function_needs_feature : Error<
   "always_inline function %1 requires target feature '%2', but would "
   "be inlined into function %0 that is compiled without support for '%2'">;
+
+def warn_avx_calling_convention
+    : Warning<"AVX vector %select{return|argument}0 of type %1 without '%2' "
+              "enabled changes the ABI">,
+      InGroup<DiagGroup<"psabi">>;
+def err_avx_calling_convention : Error<warn_avx_calling_convention.Text>;
 
 def err_alias_to_undefined : Error<
   "%select{alias|ifunc}0 must point to a defined "

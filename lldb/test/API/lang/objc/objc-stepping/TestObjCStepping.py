@@ -106,21 +106,21 @@ class TestObjCStepping(TestBase):
         # Now step in, that should leave us in the Source randomMethod:
         thread.StepInto()
         line_number = thread.GetFrameAtIndex(0).GetLineEntry().GetLine()
-        self.assertTrue(
-            line_number == self.source_randomMethod_line,
+        self.assertEqual(
+            line_number, self.source_randomMethod_line,
             "Stepped into Source randomMethod.")
 
         # Now step in again, through the super call, and that should leave us
         # in the SourceBase randomMethod:
         thread.StepInto()
         line_number = thread.GetFrameAtIndex(0).GetLineEntry().GetLine()
-        self.assertTrue(
-            line_number == self.sourceBase_randomMethod_line,
+        self.assertEqual(
+            line_number, self.sourceBase_randomMethod_line,
             "Stepped through super into SourceBase randomMethod.")
 
         threads = lldbutil.continue_to_breakpoint(process, break2)
-        self.assertTrue(
-            len(threads) == 1,
+        self.assertEqual(
+            len(threads), 1,
             "Continued to second breakpoint in main.")
 
         # Again, step in twice gets us to a stret method and a stret super
@@ -128,21 +128,21 @@ class TestObjCStepping(TestBase):
         thread = threads[0]
         thread.StepInto()
         line_number = thread.GetFrameAtIndex(0).GetLineEntry().GetLine()
-        self.assertTrue(
-            line_number == self.source_returnsStruct_start_line,
+        self.assertEqual(
+            line_number, self.source_returnsStruct_start_line,
             "Stepped into Source returnsStruct.")
 
         threads = lldbutil.continue_to_breakpoint(
             process, break_returnStruct_call_super)
-        self.assertTrue(
-            len(threads) == 1,
+        self.assertEqual(
+            len(threads), 1,
             "Stepped to the call super line in Source returnsStruct.")
         thread = threads[0]
 
         thread.StepInto()
         line_number = thread.GetFrameAtIndex(0).GetLineEntry().GetLine()
-        self.assertTrue(
-            line_number == self.sourceBase_returnsStruct_start_line,
+        self.assertEqual(
+            line_number, self.sourceBase_returnsStruct_start_line,
             "Stepped through super into SourceBase returnsStruct.")
 
         # Cool now continue to get past the call that initializes the Observer, and then do our steps in again to see that
@@ -150,8 +150,8 @@ class TestObjCStepping(TestBase):
         # object.
 
         threads = lldbutil.continue_to_breakpoint(process, break3)
-        self.assertTrue(
-            len(threads) == 1,
+        self.assertEqual(
+            len(threads), 1,
             "Continued to third breakpoint in main, our object should now be swizzled.")
 
         newClassName = mySource_isa.GetSummary()
@@ -168,21 +168,21 @@ class TestObjCStepping(TestBase):
         thread = threads[0]
         thread.StepInto()
         line_number = thread.GetFrameAtIndex(0).GetLineEntry().GetLine()
-        self.assertTrue(
-            line_number == self.source_randomMethod_line,
+        self.assertEqual(
+            line_number, self.source_randomMethod_line,
             "Stepped into Source randomMethod in swizzled object.")
 
         # Now step in again, through the super call, and that should leave us
         # in the SourceBase randomMethod:
         thread.StepInto()
         line_number = thread.GetFrameAtIndex(0).GetLineEntry().GetLine()
-        self.assertTrue(
-            line_number == self.sourceBase_randomMethod_line,
+        self.assertEqual(
+            line_number, self.sourceBase_randomMethod_line,
             "Stepped through super into SourceBase randomMethod in swizzled object.")
 
         threads = lldbutil.continue_to_breakpoint(process, break4)
-        self.assertTrue(
-            len(threads) == 1,
+        self.assertEqual(
+            len(threads), 1,
             "Continued to fourth breakpoint in main.")
         thread = threads[0]
 
@@ -190,28 +190,28 @@ class TestObjCStepping(TestBase):
         # call:
         thread.StepInto()
         line_number = thread.GetFrameAtIndex(0).GetLineEntry().GetLine()
-        self.assertTrue(
-            line_number == self.source_returnsStruct_start_line,
+        self.assertEqual(
+            line_number, self.source_returnsStruct_start_line,
             "Stepped into Source returnsStruct in swizzled object.")
 
         threads = lldbutil.continue_to_breakpoint(
             process, break_returnStruct_call_super)
-        self.assertTrue(
-            len(threads) == 1,
+        self.assertEqual(
+            len(threads), 1,
             "Stepped to the call super line in Source returnsStruct - second time.")
         thread = threads[0]
 
         thread.StepInto()
         line_number = thread.GetFrameAtIndex(0).GetLineEntry().GetLine()
-        self.assertTrue(
-            line_number == self.sourceBase_returnsStruct_start_line,
+        self.assertEqual(
+            line_number, self.sourceBase_returnsStruct_start_line,
             "Stepped through super into SourceBase returnsStruct in swizzled object.")
 
         for bkpt in breakpoints_to_disable:
             bkpt.SetEnabled(False)
 
         threads = lldbutil.continue_to_breakpoint(process, break_step_nil)
-        self.assertTrue(len(threads) == 1, "Continued to step nil breakpoint.")
+        self.assertEqual(len(threads), 1, "Continued to step nil breakpoint.")
 
         thread.StepInto()
         line_number = thread.GetFrameAtIndex(0).GetLineEntry().GetLine()

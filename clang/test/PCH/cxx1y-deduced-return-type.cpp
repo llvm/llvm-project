@@ -6,6 +6,10 @@
 // RUN: %clang_cc1 -pedantic -std=c++1y -include-pch %t.a -emit-pch %s -o %t.b
 // RUN: %clang_cc1 -pedantic -std=c++1y -include-pch %t.b -verify %s
 
+// RUN: %clang_cc1 -pedantic -std=c++1y -emit-pch -fpch-instantiate-templates %s -o %t.a
+// RUN: %clang_cc1 -pedantic -std=c++1y -include-pch %t.a -emit-pch -fpch-instantiate-templates %s -o %t.b
+// RUN: %clang_cc1 -pedantic -std=c++1y -include-pch %t.b -verify %s
+
 // expected-no-diagnostics
 
 #if !defined(HEADER1)

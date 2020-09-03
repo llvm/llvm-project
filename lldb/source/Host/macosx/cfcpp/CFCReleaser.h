@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CoreFoundationCPP_CFReleaser_h_
-#define CoreFoundationCPP_CFReleaser_h_
+#ifndef LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCRELEASER_H
+#define LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCRELEASER_H
 
 #include <CoreFoundation/CoreFoundation.h>
 
@@ -106,4 +106,4 @@ private:
 };
 
 #endif // #ifdef __cplusplus
-#endif // #ifndef CoreFoundationCPP_CFReleaser_h_
+#endif // LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCRELEASER_H

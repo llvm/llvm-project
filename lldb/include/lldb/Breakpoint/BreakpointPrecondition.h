@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BreakpointPrecondition_h_
-#define liblldb_BreakpointPrecondition_h_
+#ifndef LLDB_BREAKPOINT_BREAKPOINTPRECONDITION_H
+#define LLDB_BREAKPOINT_BREAKPOINTPRECONDITION_H
 
 #include "lldb/lldb-enumerations.h"
 

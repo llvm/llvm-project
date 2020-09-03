@@ -16,6 +16,7 @@
 
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/TypeSize.h"
+#include <cassert>
 
 namespace llvm {
 
@@ -120,6 +121,18 @@ public:
       NumDataVectors = NumPredicateVectors / 8;
       NumPredicateVectors -= NumDataVectors * 8;
     }
+  }
+
+  void getForDwarfOffset(int64_t &ByteSized, int64_t &VGSized) const {
+    assert(isValid() && "Invalid frame offset");
+
+    // VGSized offsets are divided by '2', because the VG register is the
+    // the number of 64bit granules as opposed to 128bit vector chunks,
+    // which is how the 'n' in e.g. MVT::nxv1i8 is modelled.
+    // So, for a stack offset of 16 MVT::nxv1i8's, the size is n x 16 bytes.
+    // VG = n * 2 and the dwarf offset must be VG * 8 bytes.
+    ByteSized = Bytes;
+    VGSized = ScalableBytes / 2;
   }
 
   /// Returns whether the offset is known zero.

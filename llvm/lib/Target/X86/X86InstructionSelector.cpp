@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86RegisterBankInfo.h"
@@ -71,7 +72,7 @@ private:
 
   // TODO: remove after supported by Tablegen-erated instruction selection.
   unsigned getLoadStoreOp(const LLT &Ty, const RegisterBank &RB, unsigned Opc,
-                          uint64_t Alignment) const;
+                          Align Alignment) const;
 
   bool selectLoadStoreOp(MachineInstr &I, MachineRegisterInfo &MRI,
                          MachineFunction &MF) const;
@@ -394,7 +395,7 @@ bool X86InstructionSelector::select(MachineInstr &I) {
 unsigned X86InstructionSelector::getLoadStoreOp(const LLT &Ty,
                                                 const RegisterBank &RB,
                                                 unsigned Opc,
-                                                uint64_t Alignment) const {
+                                                Align Alignment) const {
   bool Isload = (Opc == TargetOpcode::G_LOAD);
   bool HasAVX = STI.hasAVX();
   bool HasAVX512 = STI.hasAVX512();
@@ -427,7 +428,7 @@ unsigned X86InstructionSelector::getLoadStoreOp(const LLT &Ty,
                        HasAVX    ? X86::VMOVSDmr :
                                    X86::MOVSDmr);
   } else if (Ty.isVector() && Ty.getSizeInBits() == 128) {
-    if (Alignment >= 16)
+    if (Alignment >= Align(16))
       return Isload ? (HasVLX ? X86::VMOVAPSZ128rm
                               : HasAVX512
                                     ? X86::VMOVAPSZ128rm_NOVLX
@@ -446,7 +447,7 @@ unsigned X86InstructionSelector::getLoadStoreOp(const LLT &Ty,
                                     ? X86::VMOVUPSZ128mr_NOVLX
                                     : HasAVX ? X86::VMOVUPSmr : X86::MOVUPSmr);
   } else if (Ty.isVector() && Ty.getSizeInBits() == 256) {
-    if (Alignment >= 32)
+    if (Alignment >= Align(32))
       return Isload ? (HasVLX ? X86::VMOVAPSZ256rm
                               : HasAVX512 ? X86::VMOVAPSZ256rm_NOVLX
                                           : X86::VMOVAPSYrm)
@@ -461,7 +462,7 @@ unsigned X86InstructionSelector::getLoadStoreOp(const LLT &Ty,
                               : HasAVX512 ? X86::VMOVUPSZ256mr_NOVLX
                                           : X86::VMOVUPSYmr);
   } else if (Ty.isVector() && Ty.getSizeInBits() == 512) {
-    if (Alignment >= 64)
+    if (Alignment >= Align(64))
       return Isload ? X86::VMOVAPSZrm : X86::VMOVAPSZmr;
     else
       return Isload ? X86::VMOVUPSZrm : X86::VMOVUPSZmr;
@@ -520,13 +521,13 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
       LLVM_DEBUG(dbgs() << "Atomic ordering not supported yet\n");
       return false;
     }
-    if (MemOp.getAlignment() < Ty.getSizeInBits()/8) {
+    if (MemOp.getAlign() < Ty.getSizeInBits() / 8) {
       LLVM_DEBUG(dbgs() << "Unaligned atomics not supported yet\n");
       return false;
     }
   }
 
-  unsigned NewOpc = getLoadStoreOp(Ty, RB, Opc, MemOp.getAlignment());
+  unsigned NewOpc = getLoadStoreOp(Ty, RB, Opc, MemOp.getAlign());
   if (NewOpc == Opc)
     return false;
 
@@ -1435,14 +1436,15 @@ bool X86InstructionSelector::materializeFP(MachineInstr &I,
   const Register DstReg = I.getOperand(0).getReg();
   const LLT DstTy = MRI.getType(DstReg);
   const RegisterBank &RegBank = *RBI.getRegBank(DstReg, MRI, TRI);
-  unsigned Align = DstTy.getSizeInBits();
+  Align Alignment = Align(DstTy.getSizeInBytes());
   const DebugLoc &DbgLoc = I.getDebugLoc();
 
-  unsigned Opc = getLoadStoreOp(DstTy, RegBank, TargetOpcode::G_LOAD, Align);
+  unsigned Opc =
+      getLoadStoreOp(DstTy, RegBank, TargetOpcode::G_LOAD, Alignment);
 
   // Create the load from the constant pool.
   const ConstantFP *CFP = I.getOperand(1).getFPImm();
-  unsigned CPI = MF.getConstantPool()->getConstantPoolIndex(CFP, Align);
+  unsigned CPI = MF.getConstantPool()->getConstantPoolIndex(CFP, Alignment);
   MachineInstr *LoadInst = nullptr;
   unsigned char OpFlag = STI.classifyLocalReference(nullptr);
 
@@ -1456,7 +1458,7 @@ bool X86InstructionSelector::materializeFP(MachineInstr &I,
 
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
-        MF.getDataLayout().getPointerSize(), Align);
+        MF.getDataLayout().getPointerSize(), Alignment);
 
     LoadInst =
         addDirectMem(BuildMI(*I.getParent(), I, DbgLoc, TII.get(Opc), DstReg),

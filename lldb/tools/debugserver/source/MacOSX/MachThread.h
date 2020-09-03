@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __MachThread_h__
-#define __MachThread_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTHREAD_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTHREAD_H
 
 #include <string>
 #include <vector>

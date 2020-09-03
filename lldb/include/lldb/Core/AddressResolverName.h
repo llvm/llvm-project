@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_AddressResolverName_h_
-#define liblldb_AddressResolverName_h_
+#ifndef LLDB_CORE_ADDRESSRESOLVERNAME_H
+#define LLDB_CORE_ADDRESSRESOLVERNAME_H
 
 #include "lldb/Core/AddressResolver.h"
 #include "lldb/Core/SearchFilter.h"
@@ -54,9 +54,10 @@ protected:
   AddressResolver::MatchType m_match_type;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(AddressResolverName);
+  AddressResolverName(const AddressResolverName &) = delete;
+  const AddressResolverName &operator=(const AddressResolverName &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_AddressResolverName_h_
+#endif // LLDB_CORE_ADDRESSRESOLVERNAME_H

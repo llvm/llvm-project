@@ -19,9 +19,6 @@ namespace tidy {
 namespace modernize {
 
 void ShrinkToFitCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   // Swap as a function need not to be considered, because rvalue can not
   // be bound to a non-const reference.
   const auto ShrinkableAsMember =
@@ -45,7 +42,8 @@ void ShrinkToFitCheck::registerMatchers(MatchFinder *Finder) {
           on(hasType(hasCanonicalType(hasDeclaration(namedDecl(
               hasAnyName("std::basic_string", "std::deque", "std::vector")))))),
           callee(cxxMethodDecl(hasName("swap"))),
-          has(ignoringParenImpCasts(memberExpr(hasDescendant(CopyCtorCall)))),
+          has(ignoringParenImpCasts(memberExpr(traverse(
+              ast_type_traits::TK_AsIs, hasDescendant(CopyCtorCall))))),
           hasArgument(0, SwapParam.bind("ContainerToShrink")),
           unless(isInTemplateInstantiation()))
           .bind("CopyAndSwapTrick"),
@@ -62,15 +60,15 @@ void ShrinkToFitCheck::check(const MatchFinder::MatchResult &Result) {
     const LangOptions &Opts = getLangOpts();
     std::string ReplacementText;
     if (const auto *UnaryOp = llvm::dyn_cast<UnaryOperator>(Container)) {
-      ReplacementText =
+      ReplacementText = std::string(
           Lexer::getSourceText(CharSourceRange::getTokenRange(
                                    UnaryOp->getSubExpr()->getSourceRange()),
-                               *Result.SourceManager, Opts);
+                               *Result.SourceManager, Opts));
       ReplacementText += "->shrink_to_fit()";
     } else {
-      ReplacementText = Lexer::getSourceText(
+      ReplacementText = std::string(Lexer::getSourceText(
           CharSourceRange::getTokenRange(Container->getSourceRange()),
-          *Result.SourceManager, Opts);
+          *Result.SourceManager, Opts));
       ReplacementText += ".shrink_to_fit()";
     }
 

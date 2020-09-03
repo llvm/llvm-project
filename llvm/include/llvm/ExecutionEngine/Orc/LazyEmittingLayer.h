@@ -78,7 +78,7 @@ private:
         // RuntimeDyld that did the lookup), so just return a nullptr here.
         return nullptr;
       case Emitted:
-        return B.findSymbolIn(K, Name, ExportedSymbolsOnly);
+        return B.findSymbolIn(K, std::string(Name), ExportedSymbolsOnly);
       }
       llvm_unreachable("Invalid emit-state.");
     }

@@ -6,12 +6,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: system-windows
 // REQUIRES: libcxx_gdb
 //
-// RUN: %cxx %flags %s -o %t.exe %compile_flags -g %link_flags
+// RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.
-// RUN: %libcxx_gdb -nx -batch -iex "set autoload off" -ex "source %libcxx_src_root/utils/gdb/libcxx/printers.py" -ex "python register_libcxx_printer_loader()" -ex "source %libcxx_src_root/test/pretty_printers/gdb_pretty_printer_test.py" %t.exe
+// RUN: %{libcxx_gdb} -nx -batch -iex "set autoload off" -ex "source %S/../../utils/gdb/libcxx/printers.py" -ex "python register_libcxx_printer_loader()" -ex "source %S/gdb_pretty_printer_test.py" %t.exe
 
 #include <bitset>
 #include <deque>
@@ -151,6 +150,37 @@ void string_test() {
       long_string("mehmet bizim dostumuz agzi kirik testimiz");
   ComparePrettyPrintToChars(long_string,
                             "\"mehmet bizim dostumuz agzi kirik testimiz\"");
+}
+
+namespace a_namespace {
+// To test name-lookup in the presence of using inside a namespace. Inside this
+// namespace, unqualified string_view variables will appear in the debug info as
+// "a_namespace::string_view, rather than "std::string_view".
+//
+// There is nothing special here about string_view; it's just the data structure
+// where lookup with using inside a namespace wasn't always working.
+
+using string_view = std::string_view;
+
+void string_view_test() {
+  std::string_view i_am_empty;
+  ComparePrettyPrintToChars(i_am_empty, "std::string_view of length 0: \"\"");
+
+  std::string source_string("to be or not to be");
+  std::string_view to_be(source_string);
+  ComparePrettyPrintToChars(
+      to_be, "std::string_view of length 18: \"to be or not to be\"");
+
+  const char char_arr[] = "what a wonderful world";
+  std::string_view wonderful(&char_arr[7], 9);
+  ComparePrettyPrintToChars(
+      wonderful, "std::string_view of length 9: \"wonderful\"");
+
+  const char char_arr1[] = "namespace_stringview";
+  string_view namespace_stringview(&char_arr1[10], 10);
+  ComparePrettyPrintToChars(
+      namespace_stringview, "std::string_view of length 10: \"stringview\"");
+}
 }
 
 void u16string_test() {
@@ -353,6 +383,10 @@ void set_test() {
   ComparePrettyPrintToChars(prime_pairs,
       "std::set with 2 elements = {"
       "{first = 3, second = 5}, {first = 5, second = 7}}");
+
+  using using_set = std::set<int>;
+  using_set other{1, 2, 3};
+  ComparePrettyPrintToChars(other, "std::set with 3 elements = {1, 2, 3}");
 }
 
 void stack_test() {
@@ -613,6 +647,7 @@ int main(int argc, char* argv[]) {
   framework_self_test();
 
   string_test();
+  a_namespace::string_view_test();
 
   u32string_test();
   tuple_test();

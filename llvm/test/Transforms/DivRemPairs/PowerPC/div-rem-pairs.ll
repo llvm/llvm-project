@@ -5,9 +5,11 @@ declare void @foo(i32, i32)
 
 define void @decompose_illegal_srem_same_block(i32 %a, i32 %b) {
 ; CHECK-LABEL: @decompose_illegal_srem_same_block(
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], [[B]]
-; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[A]], [[TMP1]]
+; CHECK-NEXT:    [[A_FROZEN:%.*]] = freeze i32 [[A:%.*]]
+; CHECK-NEXT:    [[B_FROZEN:%.*]] = freeze i32 [[B:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A_FROZEN]], [[B_FROZEN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], [[B_FROZEN]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[A_FROZEN]], [[TMP1]]
 ; CHECK-NEXT:    call void @foo(i32 [[REM_DECOMPOSED]], i32 [[DIV]])
 ; CHECK-NEXT:    ret void
 ;
@@ -19,9 +21,11 @@ define void @decompose_illegal_srem_same_block(i32 %a, i32 %b) {
 
 define void @decompose_illegal_urem_same_block(i32 %a, i32 %b) {
 ; CHECK-LABEL: @decompose_illegal_urem_same_block(
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], [[B]]
-; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[A]], [[TMP1]]
+; CHECK-NEXT:    [[A_FROZEN:%.*]] = freeze i32 [[A:%.*]]
+; CHECK-NEXT:    [[B_FROZEN:%.*]] = freeze i32 [[B:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A_FROZEN]], [[B_FROZEN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], [[B_FROZEN]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[A_FROZEN]], [[TMP1]]
 ; CHECK-NEXT:    call void @foo(i32 [[REM_DECOMPOSED]], i32 [[DIV]])
 ; CHECK-NEXT:    ret void
 ;
@@ -37,9 +41,11 @@ define void @decompose_illegal_urem_same_block(i32 %a, i32 %b) {
 define i32 @hoist_sdiv(i32 %a, i32 %b) {
 ; CHECK-LABEL: @hoist_sdiv(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[DIV]], [[B]]
-; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[A]], [[TMP0]]
+; CHECK-NEXT:    [[A_FROZEN:%.*]] = freeze i32 [[A:%.*]]
+; CHECK-NEXT:    [[B_FROZEN:%.*]] = freeze i32 [[B:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A_FROZEN]], [[B_FROZEN]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[DIV]], [[B_FROZEN]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[A_FROZEN]], [[TMP0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM_DECOMPOSED]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
@@ -67,9 +73,11 @@ end:
 define i64 @hoist_udiv(i64 %a, i64 %b) {
 ; CHECK-LABEL: @hoist_udiv(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[DIV]], [[B]]
-; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i64 [[A]], [[TMP0]]
+; CHECK-NEXT:    [[A_FROZEN:%.*]] = freeze i64 [[A:%.*]]
+; CHECK-NEXT:    [[B_FROZEN:%.*]] = freeze i64 [[B:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A_FROZEN]], [[B_FROZEN]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[DIV]], [[B_FROZEN]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i64 [[A_FROZEN]], [[TMP0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[REM_DECOMPOSED]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
@@ -97,12 +105,14 @@ end:
 define i16 @hoist_srem(i16 %a, i16 %b) {
 ; CHECK-LABEL: @hoist_srem(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i16 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[A_FROZEN:%.*]] = freeze i16 [[A:%.*]]
+; CHECK-NEXT:    [[B_FROZEN:%.*]] = freeze i16 [[B:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i16 [[A_FROZEN]], [[B_FROZEN]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[DIV]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i16 [[DIV]], [[B]]
-; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i16 [[A]], [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i16 [[DIV]], [[B_FROZEN]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i16 [[A_FROZEN]], [[TMP0]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i16 [ [[REM_DECOMPOSED]], [[IF]] ], [ 3, [[ENTRY:%.*]] ]
@@ -127,12 +137,14 @@ end:
 define i8 @hoist_urem(i8 %a, i8 %b) {
 ; CHECK-LABEL: @hoist_urem(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[A_FROZEN:%.*]] = freeze i8 [[A:%.*]]
+; CHECK-NEXT:    [[B_FROZEN:%.*]] = freeze i8 [[B:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[A_FROZEN]], [[B_FROZEN]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[DIV]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i8 [[DIV]], [[B]]
-; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i8 [[A]], [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i8 [[DIV]], [[B_FROZEN]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i8 [[A_FROZEN]], [[TMP0]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ [[REM_DECOMPOSED]], [[IF]] ], [ 3, [[ENTRY:%.*]] ]
@@ -157,14 +169,18 @@ end:
 define i32 @srem_of_srem_unexpanded(i32 %X, i32 %Y, i32 %Z) {
 ; CHECK-LABEL: @srem_of_srem_unexpanded(
 ; CHECK-NEXT:    [[T0:%.*]] = mul nsw i32 [[Z:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = sdiv i32 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[T0_FROZEN:%.*]] = freeze i32 [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = sdiv i32 [[X_FROZEN]], [[T0_FROZEN]]
 ; CHECK-NEXT:    [[T2:%.*]] = mul nsw i32 [[T0]], [[T1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[T1]], [[T0]]
-; CHECK-NEXT:    [[T3_DECOMPOSED:%.*]] = sub i32 [[X]], [[TMP1]]
-; CHECK-NEXT:    [[T4:%.*]] = sdiv i32 [[T3_DECOMPOSED]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[T1]], [[T0_FROZEN]]
+; CHECK-NEXT:    [[T3_DECOMPOSED:%.*]] = sub i32 [[X_FROZEN]], [[TMP1]]
+; CHECK-NEXT:    [[T3_DECOMPOSED_FROZEN:%.*]] = freeze i32 [[T3_DECOMPOSED]]
+; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze i32 [[Y]]
+; CHECK-NEXT:    [[T4:%.*]] = sdiv i32 [[T3_DECOMPOSED_FROZEN]], [[Y_FROZEN]]
 ; CHECK-NEXT:    [[T5:%.*]] = mul nsw i32 [[T4]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[T4]], [[Y]]
-; CHECK-NEXT:    [[T6_DECOMPOSED:%.*]] = sub i32 [[T3_DECOMPOSED]], [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[T4]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[T6_DECOMPOSED:%.*]] = sub i32 [[T3_DECOMPOSED_FROZEN]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[T6_DECOMPOSED]]
 ;
   %t0 = mul nsw i32 %Z, %Y
@@ -289,12 +305,14 @@ end:
 define i128 @dont_hoist_urem(i128 %a, i128 %b) {
 ; CHECK-LABEL: @dont_hoist_urem(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i128 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[A_FROZEN:%.*]] = freeze i128 [[A:%.*]]
+; CHECK-NEXT:    [[B_FROZEN:%.*]] = freeze i128 [[B:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i128 [[A_FROZEN]], [[B_FROZEN]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i128 [[DIV]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i128 [[DIV]], [[B]]
-; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i128 [[A]], [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i128 [[DIV]], [[B_FROZEN]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i128 [[A_FROZEN]], [[TMP0]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i128 [ [[REM_DECOMPOSED]], [[IF]] ], [ 3, [[ENTRY:%.*]] ]

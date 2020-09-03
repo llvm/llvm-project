@@ -250,6 +250,6 @@ void ento::registerMallocSizeofChecker(CheckerManager &mgr) {
   mgr.registerChecker<MallocSizeofChecker>();
 }
 
-bool ento::shouldRegisterMallocSizeofChecker(const LangOptions &LO) {
+bool ento::shouldRegisterMallocSizeofChecker(const CheckerManager &mgr) {
   return true;
 }

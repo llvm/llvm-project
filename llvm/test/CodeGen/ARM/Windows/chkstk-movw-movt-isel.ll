@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple thumbv7--windows-itanium -code-model large -verify-machineinstrs -filetype obj -o - %s \
-; RUN:    | llvm-objdump -no-show-raw-insn -d - | FileCheck %s
+; RUN:    | llvm-objdump --no-show-raw-insn -d - | FileCheck %s
 
 ; ModuleID = 'reduced.c'
 target datalayout = "e-m:e-p:32:32-i1:8:32-i8:8:32-i16:16:32-i64:64-v128:64:128-a:0:32-n32-S64"

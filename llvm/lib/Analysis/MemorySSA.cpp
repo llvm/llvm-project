@@ -167,7 +167,7 @@ public:
     if (!IsCall)
       return Loc == Other.Loc;
 
-    if (Call->getCalledValue() != Other.Call->getCalledValue())
+    if (Call->getCalledOperand() != Other.Call->getCalledOperand())
       return false;
 
     return Call->arg_size() == Other.Call->arg_size() &&
@@ -203,7 +203,7 @@ template <> struct DenseMapInfo<MemoryLocOrCall> {
 
     hash_code hash =
         hash_combine(MLOC.IsCall, DenseMapInfo<const Value *>::getHashValue(
-                                      MLOC.getCall()->getCalledValue()));
+                                      MLOC.getCall()->getCalledOperand()));
 
     for (const Value *Arg : MLOC.getCall()->args())
       hash = hash_combine(hash, DenseMapInfo<const Value *>::getHashValue(Arg));
@@ -466,7 +466,8 @@ checkClobberSanity(const MemoryAccess *Start, MemoryAccess *ClobberAt,
 
       assert(isa<MemoryPhi>(MA));
       Worklist.append(
-          upward_defs_begin({const_cast<MemoryAccess *>(MA), MAP.second}),
+          upward_defs_begin({const_cast<MemoryAccess *>(MA), MAP.second},
+                            MSSA.getDomTree()),
           upward_defs_end());
     }
   }
@@ -518,9 +519,16 @@ template <class AliasAnalysisType> class ClobberWalker {
   UpwardsMemoryQuery *Query;
   unsigned *UpwardWalkLimit;
 
-  // Phi optimization bookkeeping
+  // Phi optimization bookkeeping:
+  // List of DefPath to process during the current phi optimization walk.
   SmallVector<DefPath, 32> Paths;
+  // List of visited <Access, Location> pairs; we can skip paths already
+  // visited with the same memory location.
   DenseSet<ConstMemoryAccessPair> VisitedPhis;
+  // Record if phi translation has been performed during the current phi
+  // optimization walk, as merging alias results after phi translation can
+  // yield incorrect results. Context in PR46156.
+  bool PerformedPhiTranslation = false;
 
   /// Find the nearest def or phi that `From` can legally be optimized to.
   const MemoryAccess *getWalkTarget(const MemoryPhi *From) const {
@@ -595,12 +603,13 @@ template <class AliasAnalysisType> class ClobberWalker {
 
   void addSearches(MemoryPhi *Phi, SmallVectorImpl<ListIndex> &PausedSearches,
                    ListIndex PriorNode) {
-    auto UpwardDefs = make_range(upward_defs_begin({Phi, Paths[PriorNode].Loc}),
-                                 upward_defs_end());
+    auto UpwardDefsBegin = upward_defs_begin({Phi, Paths[PriorNode].Loc}, DT);
+    auto UpwardDefs = make_range(UpwardDefsBegin, upward_defs_end());
     for (const MemoryAccessPair &P : UpwardDefs) {
       PausedSearches.push_back(Paths.size());
       Paths.emplace_back(P.second, P.first, PriorNode);
     }
+    PerformedPhiTranslation |= UpwardDefsBegin.performedPhiTranslation();
   }
 
   /// Represents a search that terminated after finding a clobber. This clobber
@@ -650,8 +659,16 @@ template <class AliasAnalysisType> class ClobberWalker {
       //   - We still cache things for A, so C only needs to walk up a bit.
       // If this behavior becomes problematic, we can fix without a ton of extra
       // work.
-      if (!VisitedPhis.insert({Node.Last, Node.Loc}).second)
+      if (!VisitedPhis.insert({Node.Last, Node.Loc}).second) {
+        if (PerformedPhiTranslation) {
+          // If visiting this path performed Phi translation, don't continue,
+          // since it may not be correct to merge results from two paths if one
+          // relies on the phi translation.
+          TerminatedPath Term{Node.Last, PathIndex};
+          return Term;
+        }
         continue;
+      }
 
       const MemoryAccess *SkipStopWhere = nullptr;
       if (Query->SkipSelfAccess && Node.Loc == Query->StartingLoc) {
@@ -764,7 +781,7 @@ template <class AliasAnalysisType> class ClobberWalker {
   /// terminates when a MemoryAccess that clobbers said MemoryLocation is found.
   OptznResult tryOptimizePhi(MemoryPhi *Phi, MemoryAccess *Start,
                              const MemoryLocation &Loc) {
-    assert(Paths.empty() && VisitedPhis.empty() &&
+    assert(Paths.empty() && VisitedPhis.empty() && !PerformedPhiTranslation &&
            "Reset the optimization state.");
 
     Paths.emplace_back(Loc, Start, Phi, None);
@@ -920,6 +937,7 @@ template <class AliasAnalysisType> class ClobberWalker {
   void resetPhiOptznState() {
     Paths.clear();
     VisitedPhis.clear();
+    PerformedPhiTranslation = false;
   }
 
 public:
@@ -2298,7 +2316,10 @@ bool MemorySSAWrapperPass::runOnFunction(Function &F) {
   return false;
 }
 
-void MemorySSAWrapperPass::verifyAnalysis() const { MSSA->verifyMemorySSA(); }
+void MemorySSAWrapperPass::verifyAnalysis() const {
+  if (VerifyMemorySSA)
+    MSSA->verifyMemorySSA();
+}
 
 void MemorySSAWrapperPass::print(raw_ostream &OS, const Module *M) const {
   MSSA->print(OS);

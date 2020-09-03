@@ -242,6 +242,10 @@ bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+  // TinyCore with Duplexes: Translate to big-instructions.
+  if (HST.isTinyCoreWithDuplex())
+    HII->translateInstrsForDup(MF, true);
+
   // Loop over all of the basic blocks.
   for (auto &MB : MF) {
     auto Begin = MB.begin(), End = MB.end();
@@ -266,6 +270,10 @@ bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
       Begin = RE;
     }
   }
+
+  // TinyCore with Duplexes: Translate to tiny-instructions.
+  if (HST.isTinyCoreWithDuplex())
+    HII->translateInstrsForDup(MF, false);
 
   Packetizer.unpacketizeSoloInstrs(MF);
   return true;
@@ -1052,12 +1060,11 @@ bool HexagonPacketizerList::ignorePseudoInstruction(const MachineInstr &MI,
   // we ignore the instruction.
   const MCInstrDesc& TID = MI.getDesc();
   auto *IS = ResourceTracker->getInstrItins()->beginStage(TID.getSchedClass());
-  unsigned FuncUnits = IS->getUnits();
-  return !FuncUnits;
+  return !IS->getUnits();
 }
 
 bool HexagonPacketizerList::isSoloInstruction(const MachineInstr &MI) {
-  // Ensure any bundles created by gather packetize remain seperate.
+  // Ensure any bundles created by gather packetize remain separate.
   if (MI.isBundle())
     return true;
 
@@ -1802,6 +1809,8 @@ void HexagonPacketizerList::endPacket(MachineBasicBlock *MBB,
     setmemShufDisabled(false);
   }
 
+  PacketHasDuplex = false;
+  PacketHasSLOT0OnlyInsn = false;
   ResourceTracker->clearResources();
   LLVM_DEBUG(dbgs() << "End packet\n");
 }
@@ -1809,7 +1818,64 @@ void HexagonPacketizerList::endPacket(MachineBasicBlock *MBB,
 bool HexagonPacketizerList::shouldAddToPacket(const MachineInstr &MI) {
   if (Minimal)
     return false;
-  return !producesStall(MI);
+
+  // Constrainst for not packetizing this MI with existing instructions in a
+  // packet.
+  //	MI is a store instruction.
+  //	CurrentPacketMIs has a SLOT0 only instruction with constraint
+  //    A_RESTRICT_NOSLOT1_STORE/isRestrictNoSlot1Store.
+  if (MI.mayStore() && isPureSlot0InsnWithNoSlot1Store(MI))
+    return false;
+
+  if (producesStall(MI))
+    return false;
+
+  // If TinyCore with Duplexes is enabled, check if this MI can form a Duplex
+  // with any other instruction in the existing packet.
+  auto &HST = MI.getParent()->getParent()->getSubtarget<HexagonSubtarget>();
+  // Constraint 1: Only one duplex allowed per packet.
+  // Constraint 2: Consider duplex checks only if there is atleast one
+  // instruction in a packet.
+  // Constraint 3: If one of the existing instructions in the packet has a
+  // SLOT0 only instruction that can not be duplexed, do not attempt to form
+  // duplexes. (TODO: This will invalidate the L4_return* instructions to form a
+  // duplex)
+  if (HST.isTinyCoreWithDuplex() && CurrentPacketMIs.size() > 0 &&
+      !PacketHasDuplex) {
+    // Check for SLOT0 only non-duplexable instruction in packet.
+    for (auto &MJ : CurrentPacketMIs)
+      PacketHasSLOT0OnlyInsn |= HII->isPureSlot0(*MJ);
+    // Get the Big Core Opcode (dup_*).
+    int Opcode = HII->getDuplexOpcode(MI, false);
+    if (Opcode >= 0) {
+      // We now have an instruction that can be duplexed.
+      for (auto &MJ : CurrentPacketMIs) {
+        if (HII->isDuplexPair(MI, *MJ) && !PacketHasSLOT0OnlyInsn) {
+          PacketHasDuplex = true;
+          return true;
+        }
+      }
+      // If it can not be duplexed, check if there is a valid transition in DFA
+      // with the original opcode.
+      MachineInstr &MIRef = const_cast<MachineInstr &>(MI);
+      MIRef.setDesc(HII->get(Opcode));
+      return ResourceTracker->canReserveResources(MIRef);
+    }
+  }
+
+  return true;
+}
+
+bool HexagonPacketizerList::isPureSlot0InsnWithNoSlot1Store(
+    const MachineInstr &MI) {
+  bool noSlot1Store = false;
+  bool isSlot0Only = false;
+  for (auto J : CurrentPacketMIs) {
+    noSlot1Store |= HII->isRestrictNoSlot1Store(*J);
+    isSlot0Only |= HII->isPureSlot0(*J);
+  }
+
+  return (noSlot1Store && isSlot0Only);
 }
 
 // V60 forward scheduling.

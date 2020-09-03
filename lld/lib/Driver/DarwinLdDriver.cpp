@@ -147,11 +147,11 @@ std::vector<std::unique_ptr<File>> loadFile(MachOLinkingContext &ctx,
 static std::string canonicalizePath(StringRef path) {
   char sep = llvm::sys::path::get_separator().front();
   if (sep != '/') {
-    std::string fixedPath = path;
+    std::string fixedPath = std::string(path);
     std::replace(fixedPath.begin(), fixedPath.end(), sep, '/');
     return fixedPath;
   } else {
-    return path;
+    return std::string(path);
   }
 }
 
@@ -650,12 +650,12 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx) {
 
   // Handle -exported_symbols_list <file>
   for (auto expFile : parsedArgs.filtered(OPT_exported_symbols_list)) {
-    if (ctx.exportMode() == MachOLinkingContext::ExportMode::blackList) {
+    if (ctx.exportMode() == MachOLinkingContext::ExportMode::unexported) {
       error("-exported_symbols_list cannot be combined with "
             "-unexported_symbol[s_list]");
       return false;
     }
-    ctx.setExportMode(MachOLinkingContext::ExportMode::whiteList);
+    ctx.setExportMode(MachOLinkingContext::ExportMode::exported);
     if (std::error_code ec = parseExportsList(expFile->getValue(), ctx)) {
       error(ec.message() + ", processing '-exported_symbols_list " +
             expFile->getValue());
@@ -665,23 +665,23 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx) {
 
   // Handle -exported_symbol <symbol>
   for (auto symbol : parsedArgs.filtered(OPT_exported_symbol)) {
-    if (ctx.exportMode() == MachOLinkingContext::ExportMode::blackList) {
+    if (ctx.exportMode() == MachOLinkingContext::ExportMode::unexported) {
       error("-exported_symbol cannot be combined with "
             "-unexported_symbol[s_list]");
       return false;
     }
-    ctx.setExportMode(MachOLinkingContext::ExportMode::whiteList);
+    ctx.setExportMode(MachOLinkingContext::ExportMode::exported);
     ctx.addExportSymbol(symbol->getValue());
   }
 
   // Handle -unexported_symbols_list <file>
   for (auto expFile : parsedArgs.filtered(OPT_unexported_symbols_list)) {
-    if (ctx.exportMode() == MachOLinkingContext::ExportMode::whiteList) {
+    if (ctx.exportMode() == MachOLinkingContext::ExportMode::exported) {
       error("-unexported_symbols_list cannot be combined with "
             "-exported_symbol[s_list]");
       return false;
     }
-    ctx.setExportMode(MachOLinkingContext::ExportMode::blackList);
+    ctx.setExportMode(MachOLinkingContext::ExportMode::unexported);
     if (std::error_code ec = parseExportsList(expFile->getValue(), ctx)) {
       error(ec.message() + ", processing '-unexported_symbols_list " +
             expFile->getValue());
@@ -691,12 +691,12 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx) {
 
   // Handle -unexported_symbol <symbol>
   for (auto symbol : parsedArgs.filtered(OPT_unexported_symbol)) {
-    if (ctx.exportMode() == MachOLinkingContext::ExportMode::whiteList) {
+    if (ctx.exportMode() == MachOLinkingContext::ExportMode::exported) {
       error("-unexported_symbol cannot be combined with "
             "-exported_symbol[s_list]");
       return false;
     }
-    ctx.setExportMode(MachOLinkingContext::ExportMode::blackList);
+    ctx.setExportMode(MachOLinkingContext::ExportMode::unexported);
     ctx.addExportSymbol(symbol->getValue());
   }
 

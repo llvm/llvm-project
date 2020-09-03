@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OptionValueProperties_h_
-#define liblldb_OptionValueProperties_h_
+#ifndef LLDB_INTERPRETER_OPTIONVALUEPROPERTIES_H
+#define LLDB_INTERPRETER_OPTIONVALUEPROPERTIES_H
 
 #include <vector>
 
@@ -198,8 +198,7 @@ public:
                                                ConstString name);
 
   void SetValueChangedCallback(uint32_t property_idx,
-                               OptionValueChangedCallback callback,
-                               void *baton);
+                               std::function<void()> callback);
 
 protected:
   Property *ProtectedGetPropertyAtIndex(uint32_t idx) {
@@ -219,4 +218,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_OptionValueProperties_h_
+#endif // LLDB_INTERPRETER_OPTIONVALUEPROPERTIES_H

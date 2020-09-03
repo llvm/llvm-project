@@ -1,6 +1,6 @@
 //===- ConvertToNVVMIR.cpp - MLIR to LLVM IR conversion -------------------===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -48,11 +48,8 @@ static llvm::Intrinsic::ID getShflBflyIntrinsicId(llvm::Type *resultType,
 
 namespace {
 class ModuleTranslation : public LLVM::ModuleTranslation {
-
 public:
-  explicit ModuleTranslation(Operation *module)
-      : LLVM::ModuleTranslation(module) {}
-  ~ModuleTranslation() override {}
+  using LLVM::ModuleTranslation::ModuleTranslation;
 
 protected:
   LogicalResult convertOperation(Operation &opInst,
@@ -62,11 +59,13 @@ protected:
 
     return LLVM::ModuleTranslation::convertOperation(opInst, builder);
   }
+
+  /// Allow access to the constructor.
+  friend LLVM::ModuleTranslation;
 };
 } // namespace
 
 std::unique_ptr<llvm::Module> mlir::translateModuleToNVVMIR(Operation *m) {
-  ModuleTranslation translation(m);
   auto llvmModule =
       LLVM::ModuleTranslation::translateModule<ModuleTranslation>(m);
   if (!llvmModule)
@@ -95,12 +94,16 @@ std::unique_ptr<llvm::Module> mlir::translateModuleToNVVMIR(Operation *m) {
   return llvmModule;
 }
 
-static TranslateFromMLIRRegistration
-    registration("mlir-to-nvvmir", [](ModuleOp module, raw_ostream &output) {
-      auto llvmModule = mlir::translateModuleToNVVMIR(module);
-      if (!llvmModule)
-        return failure();
+namespace mlir {
+void registerToNVVMIRTranslation() {
+  TranslateFromMLIRRegistration registration(
+      "mlir-to-nvvmir", [](ModuleOp module, raw_ostream &output) {
+        auto llvmModule = mlir::translateModuleToNVVMIR(module);
+        if (!llvmModule)
+          return failure();
 
-      llvmModule->print(output, nullptr);
-      return success();
-    });
+        llvmModule->print(output, nullptr);
+        return success();
+      });
+}
+} // namespace mlir

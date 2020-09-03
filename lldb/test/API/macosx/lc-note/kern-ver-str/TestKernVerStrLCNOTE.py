@@ -17,7 +17,7 @@ class TestKernVerStrLCNOTE(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is looking explicitly for a dSYM")
-    @skipIfDarwinEmbedded
+    @skipIf(archs=no_match(['x86_64']))
     @skipUnlessDarwin
     def test_lc_note(self):
         self.build()
@@ -51,7 +51,7 @@ class TestKernVerStrLCNOTE(TestBase):
                 'echo "<!DOCTYPE plist PUBLIC \\"-//Apple//DTD PLIST 1.0//EN\\" \\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\\">"',
                 'echo "<plist version=\\"1.0\\">"',
                 '',
-                '# the last arugment is probably the uuid',
+                '# the last argument is probably the uuid',
                 'while [ $# -gt 1 ]',
                 'do',
                 '  shift',

@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -triple thumbv7-apple-ios -filetype=obj %s -o %t
-@ RUN: llvm-objdump -macho -d %t | FileCheck %s
+@ RUN: llvm-objdump --macho -d %t | FileCheck %s
 
         @ Size: 2 bytes
         .thumb_func _f1

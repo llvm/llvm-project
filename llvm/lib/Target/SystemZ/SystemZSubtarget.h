@@ -68,6 +68,7 @@ protected:
   bool HasVectorPackedDecimalEnhancement;
   bool HasEnhancedSort;
   bool HasDeflateConversion;
+  bool HasSoftFloat;
 
 private:
   Triple TargetTriple;
@@ -238,6 +239,9 @@ public:
 
   // Return true if the target has the deflate-conversion facility.
   bool hasDeflateConversion() const { return HasDeflateConversion; }
+
+  // Return true if soft float should be used.
+  bool hasSoftFloat() const { return HasSoftFloat; }
 
   // Return true if GV can be accessed using LARL for reloc model RM
   // and code model CM.

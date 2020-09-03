@@ -56,6 +56,10 @@ def {
   // Make sure we can initialise ints with bits<> values.
   int J = H;
   int K = { 0, 1 };
+
+  bits<2> L;
+  let L{0} = 1;
+  let L{1} = !eq(L{0}, 0);
 }
 
 // CHECK: def {{.*}} {
@@ -82,4 +86,5 @@ def {
 // CHECK: bits<16> I = { 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0 };
 // CHECK: int J = 52275;
 // CHECK: int K = 1;
+// CHECK: bits<2> L = { 0, 1 };
 // CHECK: }

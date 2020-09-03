@@ -57,7 +57,7 @@ An ``AttributeList`` object is designed to be passed around by value.
 
 Note: It is advised that you do *not* use the ``AttributeList`` "introspection"
 methods (e.g. ``Raw``, ``getRawPointer``, etc.).  These methods break
-encapsulation, and may be removed in a future release (i.e. LLVM 4.0).
+encapsulation, and may be removed in a future release.
 
 ``AttrBuilder``
 ===============
@@ -73,7 +73,7 @@ should be passed by reference.
 
 Note: It is advised that you do *not* use the ``AttrBuilder::addRawValue()``
 method or the ``AttrBuilder(uint64_t Val)`` constructor.  These are for
-backwards compatibility and may be removed in a future release (i.e. LLVM 4.0).
+backwards compatibility and may be removed in a future release.
 
 And that's basically it! A lot of functionality is hidden behind these classes,
 but the interfaces are pretty straight forward.

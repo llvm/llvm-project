@@ -1,4 +1,4 @@
-//===-- SystemInitializerCommon.cpp -----------------------------*- C++ -*-===//
+//===-- SystemInitializerCommon.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -94,6 +94,8 @@ llvm::Error SystemInitializerCommon::Initialize() {
     vp.SetVersion(lldb_private::GetVersion());
     repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
     FileSystem::Initialize(fp.GetFileCollector());
+    repro::WorkingDirectoryProvider &wp = g->GetOrCreate<repro::WorkingDirectoryProvider>();
+    fp.RecordInterestingDirectory(wp.GetWorkingDirectory());
   } else {
     FileSystem::Initialize();
   }

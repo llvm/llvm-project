@@ -28,7 +28,7 @@ Each trace file corresponds to a sequence of events in a particular thread.
 
 The file has a header followed by a sequence of discriminated record types.
 
-The endianness of byte fields matches the endianess of the platform which
+The endianness of byte fields matches the endianness of the platform which
 produced the trace file.
 
 

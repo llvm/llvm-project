@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -aa-eval -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -basic-aa -aa-eval -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 
 declare void @takebyval(i32* byval %p)
 

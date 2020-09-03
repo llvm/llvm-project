@@ -40,17 +40,17 @@ void MipsRegInfoRecord::EmitMipsOptionRecord() {
     Sec->setAlignment(Align(8));
     Streamer->SwitchSection(Sec);
 
-    Streamer->EmitIntValue(ELF::ODK_REGINFO, 1);  // kind
-    Streamer->EmitIntValue(40, 1); // size
-    Streamer->EmitIntValue(0, 2);  // section
-    Streamer->EmitIntValue(0, 4);  // info
-    Streamer->EmitIntValue(ri_gprmask, 4);
-    Streamer->EmitIntValue(0, 4); // pad
-    Streamer->EmitIntValue(ri_cprmask[0], 4);
-    Streamer->EmitIntValue(ri_cprmask[1], 4);
-    Streamer->EmitIntValue(ri_cprmask[2], 4);
-    Streamer->EmitIntValue(ri_cprmask[3], 4);
-    Streamer->EmitIntValue(ri_gp_value, 8);
+    Streamer->emitInt8(ELF::ODK_REGINFO); // kind
+    Streamer->emitInt8(40);               // size
+    Streamer->emitInt16(0);               // section
+    Streamer->emitInt32(0);               // info
+    Streamer->emitInt32(ri_gprmask);
+    Streamer->emitInt32(0); // pad
+    Streamer->emitInt32(ri_cprmask[0]);
+    Streamer->emitInt32(ri_cprmask[1]);
+    Streamer->emitInt32(ri_cprmask[2]);
+    Streamer->emitInt32(ri_cprmask[3]);
+    Streamer->emitIntValue(ri_gp_value, 8);
   } else {
     MCSectionELF *Sec = Context.getELFSection(".reginfo", ELF::SHT_MIPS_REGINFO,
                                               ELF::SHF_ALLOC, 24, "");
@@ -58,13 +58,13 @@ void MipsRegInfoRecord::EmitMipsOptionRecord() {
     Sec->setAlignment(MTS->getABI().IsN32() ? Align(8) : Align(4));
     Streamer->SwitchSection(Sec);
 
-    Streamer->EmitIntValue(ri_gprmask, 4);
-    Streamer->EmitIntValue(ri_cprmask[0], 4);
-    Streamer->EmitIntValue(ri_cprmask[1], 4);
-    Streamer->EmitIntValue(ri_cprmask[2], 4);
-    Streamer->EmitIntValue(ri_cprmask[3], 4);
+    Streamer->emitInt32(ri_gprmask);
+    Streamer->emitInt32(ri_cprmask[0]);
+    Streamer->emitInt32(ri_cprmask[1]);
+    Streamer->emitInt32(ri_cprmask[2]);
+    Streamer->emitInt32(ri_cprmask[3]);
     assert((ri_gp_value & 0xffffffff) == ri_gp_value);
-    Streamer->EmitIntValue(ri_gp_value, 4);
+    Streamer->emitInt32(ri_gp_value);
   }
 
   Streamer->PopSection();

@@ -10,7 +10,6 @@ add_lldb_unittest(LLDBMinidumpTests
     lldbPluginProcessMinidump
     lldbUtilityHelpers
     LLVMTestingSupport
-    lldbPluginPlatformMacOSX
   LINK_COMPONENTS
     ObjectYAML
     Support

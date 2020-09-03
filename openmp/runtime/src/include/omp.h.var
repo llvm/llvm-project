@@ -228,36 +228,36 @@
     typedef uintptr_t omp_uintptr_t;
 
     typedef enum {
-        OMP_ATK_THREADMODEL = 1,
-        OMP_ATK_ALIGNMENT = 2,
-        OMP_ATK_ACCESS = 3,
-        OMP_ATK_POOL_SIZE = 4,
-        OMP_ATK_FALLBACK = 5,
-        OMP_ATK_FB_DATA = 6,
-        OMP_ATK_PINNED = 7,
-        OMP_ATK_PARTITION = 8
+        omp_atk_threadmodel = 1,
+        omp_atk_alignment = 2,
+        omp_atk_access = 3,
+        omp_atk_pool_size = 4,
+        omp_atk_fallback = 5,
+        omp_atk_fb_data = 6,
+        omp_atk_pinned = 7,
+        omp_atk_partition = 8
     } omp_alloctrait_key_t;
 
     typedef enum {
-        OMP_ATV_FALSE = 0,
-        OMP_ATV_TRUE = 1,
-        OMP_ATV_DEFAULT = 2,
-        OMP_ATV_CONTENDED = 3,
-        OMP_ATV_UNCONTENDED = 4,
-        OMP_ATV_SEQUENTIAL = 5,
-        OMP_ATV_PRIVATE = 6,
-        OMP_ATV_ALL = 7,
-        OMP_ATV_THREAD = 8,
-        OMP_ATV_PTEAM = 9,
-        OMP_ATV_CGROUP = 10,
-        OMP_ATV_DEFAULT_MEM_FB = 11,
-        OMP_ATV_NULL_FB = 12,
-        OMP_ATV_ABORT_FB = 13,
-        OMP_ATV_ALLOCATOR_FB = 14,
-        OMP_ATV_ENVIRONMENT = 15,
-        OMP_ATV_NEAREST = 16,
-        OMP_ATV_BLOCKED = 17,
-        OMP_ATV_INTERLEAVED = 18
+        omp_atv_false = 0,
+        omp_atv_true = 1,
+        omp_atv_default = 2,
+        omp_atv_contended = 3,
+        omp_atv_uncontended = 4,
+        omp_atv_sequential = 5,
+        omp_atv_private = 6,
+        omp_atv_all = 7,
+        omp_atv_thread = 8,
+        omp_atv_pteam = 9,
+        omp_atv_cgroup = 10,
+        omp_atv_default_mem_fb = 11,
+        omp_atv_null_fb = 12,
+        omp_atv_abort_fb = 13,
+        omp_atv_allocator_fb = 14,
+        omp_atv_environment = 15,
+        omp_atv_nearest = 16,
+        omp_atv_blocked = 17,
+        omp_atv_interleaved = 18
     } omp_alloctrait_value_t;
 
     typedef struct {
@@ -354,6 +354,9 @@
     extern int __KAI_KMPC_CONVENTION omp_pause_resource_all(omp_pause_resource_t);
 
     extern int __KAI_KMPC_CONVENTION omp_get_supported_active_levels(void);
+
+    /* OpenMP 5.1 Display Environment */
+    extern void omp_display_env(int verbose);
 
 #   undef __KAI_KMPC_CONVENTION
 #   undef __KMP_IMP

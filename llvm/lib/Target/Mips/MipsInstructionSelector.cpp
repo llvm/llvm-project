@@ -49,6 +49,12 @@ private:
   getRegClassForTypeOnBank(Register Reg, MachineRegisterInfo &MRI) const;
   unsigned selectLoadStoreOpCode(MachineInstr &I,
                                  MachineRegisterInfo &MRI) const;
+  bool buildUnalignedStore(MachineInstr &I, unsigned Opc,
+                           MachineOperand &BaseAddr, unsigned Offset,
+                           MachineMemOperand *MMO) const;
+  bool buildUnalignedLoad(MachineInstr &I, unsigned Opc, Register Dest,
+                          MachineOperand &BaseAddr, unsigned Offset,
+                          Register TiedDest, MachineMemOperand *MMO) const;
 
   const MipsTargetMachine &TM;
   const MipsSubtarget &STI;
@@ -248,6 +254,35 @@ MipsInstructionSelector::selectLoadStoreOpCode(MachineInstr &I,
   return Opc;
 }
 
+bool MipsInstructionSelector::buildUnalignedStore(
+    MachineInstr &I, unsigned Opc, MachineOperand &BaseAddr, unsigned Offset,
+    MachineMemOperand *MMO) const {
+  MachineInstr *NewInst =
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc))
+          .add(I.getOperand(0))
+          .add(BaseAddr)
+          .addImm(Offset)
+          .addMemOperand(MMO);
+  if (!constrainSelectedInstRegOperands(*NewInst, TII, TRI, RBI))
+    return false;
+  return true;
+}
+
+bool MipsInstructionSelector::buildUnalignedLoad(
+    MachineInstr &I, unsigned Opc, Register Dest, MachineOperand &BaseAddr,
+    unsigned Offset, Register TiedDest, MachineMemOperand *MMO) const {
+  MachineInstr *NewInst =
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc))
+          .addDef(Dest)
+          .add(BaseAddr)
+          .addImm(Offset)
+          .addUse(TiedDest)
+          .addMemOperand(*I.memoperands_begin());
+  if (!constrainSelectedInstRegOperands(*NewInst, TII, TRI, RBI))
+    return false;
+  return true;
+}
+
 bool MipsInstructionSelector::select(MachineInstr &I) {
 
   MachineBasicBlock &MBB = *I.getParent();
@@ -358,7 +393,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
             .addUse(DestAddress)
             .addJumpTableIndex(I.getOperand(1).getIndex(), MipsII::MO_ABS_LO)
             .addMemOperand(MF.getMachineMemOperand(
-                MachinePointerInfo(), MachineMemOperand::MOLoad, 4, 4));
+                MachinePointerInfo(), MachineMemOperand::MOLoad, 4, Align(4)));
     if (!constrainSelectedInstRegOperands(*LW, TII, TRI, RBI))
       return false;
 
@@ -369,7 +404,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
                                .addDef(Dest)
                                .addUse(DestTmp)
                                .addUse(MF.getInfo<MipsFunctionInfo>()
-                                           ->getGlobalBaseRegForGlobalISel());
+                                           ->getGlobalBaseRegForGlobalISel(MF));
       if (!constrainSelectedInstRegOperands(*ADDu, TII, TRI, RBI))
         return false;
     }
@@ -404,10 +439,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
   case G_LOAD:
   case G_ZEXTLOAD:
   case G_SEXTLOAD: {
-    const unsigned NewOpc = selectLoadStoreOpCode(I, MRI);
-    if (NewOpc == I.getOpcode())
-      return false;
-
+    auto MMO = *I.memoperands_begin();
     MachineOperand BaseAddr = I.getOperand(1);
     int64_t SignedOffset = 0;
     // Try to fold load/store + G_PTR_ADD + G_CONSTANT
@@ -429,11 +461,48 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
       }
     }
 
+    // Unaligned memory access
+    if (MMO->getAlign() < MMO->getSize() &&
+        !STI.systemSupportsUnalignedAccess()) {
+      if (MMO->getSize() != 4 || !isRegInGprb(I.getOperand(0).getReg(), MRI))
+        return false;
+
+      if (I.getOpcode() == G_STORE) {
+        if (!buildUnalignedStore(I, Mips::SWL, BaseAddr, SignedOffset + 3, MMO))
+          return false;
+        if (!buildUnalignedStore(I, Mips::SWR, BaseAddr, SignedOffset, MMO))
+          return false;
+        I.eraseFromParent();
+        return true;
+      }
+
+      if (I.getOpcode() == G_LOAD) {
+        Register ImplDef = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+        BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::IMPLICIT_DEF))
+            .addDef(ImplDef);
+        Register Tmp = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+        if (!buildUnalignedLoad(I, Mips::LWL, Tmp, BaseAddr, SignedOffset + 3,
+                                ImplDef, MMO))
+          return false;
+        if (!buildUnalignedLoad(I, Mips::LWR, I.getOperand(0).getReg(),
+                                BaseAddr, SignedOffset, Tmp, MMO))
+          return false;
+        I.eraseFromParent();
+        return true;
+      }
+
+      return false;
+    }
+
+    const unsigned NewOpc = selectLoadStoreOpCode(I, MRI);
+    if (NewOpc == I.getOpcode())
+      return false;
+
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
              .add(I.getOperand(0))
              .add(BaseAddr)
              .addImm(SignedOffset)
-             .addMemOperand(*I.memoperands_begin());
+             .addMemOperand(MMO);
     break;
   }
   case G_UDIV:
@@ -471,6 +540,36 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
              .add(I.getOperand(1))
              .add(I.getOperand(3));
     break;
+  }
+  case G_UNMERGE_VALUES: {
+    if (I.getNumOperands() != 3)
+      return false;
+    Register Src = I.getOperand(2).getReg();
+    Register Lo = I.getOperand(0).getReg();
+    Register Hi = I.getOperand(1).getReg();
+    if (!isRegInFprb(Src, MRI) ||
+        !(isRegInGprb(Lo, MRI) && isRegInGprb(Hi, MRI)))
+      return false;
+
+    unsigned Opcode =
+        STI.isFP64bit() ? Mips::ExtractElementF64_64 : Mips::ExtractElementF64;
+
+    MachineInstr *ExtractLo = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode))
+                                  .addDef(Lo)
+                                  .addUse(Src)
+                                  .addImm(0);
+    if (!constrainSelectedInstRegOperands(*ExtractLo, TII, TRI, RBI))
+      return false;
+
+    MachineInstr *ExtractHi = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode))
+                                  .addDef(Hi)
+                                  .addUse(Src)
+                                  .addImm(1);
+    if (!constrainSelectedInstRegOperands(*ExtractHi, TII, TRI, RBI))
+      return false;
+
+    I.eraseFromParent();
+    return true;
   }
   case G_IMPLICIT_DEF: {
     Register Dst = I.getOperand(0).getReg();
@@ -570,7 +669,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
       MachineInstr *LWGOT = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LW))
                                 .addDef(I.getOperand(0).getReg())
                                 .addReg(MF.getInfo<MipsFunctionInfo>()
-                                            ->getGlobalBaseRegForGlobalISel())
+                                            ->getGlobalBaseRegForGlobalISel(MF))
                                 .addGlobalAddress(GVal);
       // Global Values that don't have local linkage are handled differently
       // when they are part of call sequence. MipsCallLowering::lowerCall
@@ -582,7 +681,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
         LWGOT->getOperand(2).setTargetFlags(MipsII::MO_GOT);
       LWGOT->addMemOperand(
           MF, MF.getMachineMemOperand(MachinePointerInfo::getGOT(MF),
-                                      MachineMemOperand::MOLoad, 4, 4));
+                                      MachineMemOperand::MOLoad, 4, Align(4)));
       if (!constrainSelectedInstRegOperands(*LWGOT, TII, TRI, RBI))
         return false;
 
@@ -626,11 +725,11 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
       MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LW))
                .addDef(I.getOperand(0).getReg())
                .addReg(MF.getInfo<MipsFunctionInfo>()
-                           ->getGlobalBaseRegForGlobalISel())
+                           ->getGlobalBaseRegForGlobalISel(MF))
                .addJumpTableIndex(I.getOperand(1).getIndex(), MipsII::MO_GOT)
-               .addMemOperand(
-                   MF.getMachineMemOperand(MachinePointerInfo::getGOT(MF),
-                                           MachineMemOperand::MOLoad, 4, 4));
+               .addMemOperand(MF.getMachineMemOperand(
+                   MachinePointerInfo::getGOT(MF), MachineMemOperand::MOLoad, 4,
+                   Align(4)));
     } else {
       MI =
           BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LUi))

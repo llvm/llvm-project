@@ -1,4 +1,3 @@
-; REQUIRES: object-emission
 
 ; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj -generate-arange-section < %s | llvm-dwarfdump -debug-aranges - | FileCheck %s
 ; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj -generate-arange-section < %s | llvm-readobj --relocations - | FileCheck --check-prefix=OBJ %s

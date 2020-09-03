@@ -7,10 +7,7 @@ Provides the LLDBTestResult class, which holds information about progress
 and results of a single test run.
 """
 
-from __future__ import absolute_import
-
 # System modules
-import inspect
 import os
 
 # Third-party modules
@@ -102,22 +99,26 @@ class LLDBTestResult(unittest2.TextTestResult):
         else:
             return str(test)
 
-    @staticmethod
-    def _getFileBasedCategories(test):
+    def _getTestPath(self, test):
+        # Use test.test_filename if the test was created with
+        # lldbinline.MakeInlineTest().
+        if test is None:
+            return ""
+        elif hasattr(test, "test_filename"):
+            return test.test_filename
+        else:
+            import inspect
+            return inspect.getsourcefile(test.__class__)
+
+    def _getFileBasedCategories(self, test):
         """
         Returns the list of categories to which this test case belongs by
         collecting values of ".categories" files. We start at the folder the test is in
         and traverse the hierarchy upwards until the test-suite root directory.
         """
-        import inspect
-        import os.path
-        # Use test.test_filename if the test was created with
-        # lldbinline.MakeInlineTest().
-        if hasattr(test, 'test_filename'):
-            start_path = test.test_filename
-        else:
-            start_path = inspect.getfile(test.__class__)
+        start_path = self._getTestPath(test)
 
+        import os.path
         folder = os.path.dirname(start_path)
 
         from lldbsuite import lldb_test_root as test_root
@@ -163,6 +164,10 @@ class LLDBTestResult(unittest2.TextTestResult):
                     return True
         return False
 
+    def checkCategoryExclusion(self, exclusion_list, test):
+        return not set(exclusion_list).isdisjoint(
+            self.getCategoriesForTest(test))
+
     def startTest(self, test):
         if configuration.shouldSkipBecauseOfCategories(
                 self.getCategoriesForTest(test)):
@@ -181,8 +186,10 @@ class LLDBTestResult(unittest2.TextTestResult):
                 EventBuilder.event_for_start(test))
 
     def addSuccess(self, test):
-        if self.checkExclusion(
-                configuration.xfail_tests, test.id()):
+        if (self.checkExclusion(
+                configuration.xfail_tests, test.id()) or
+            self.checkCategoryExclusion(
+                configuration.xfail_categories, test)):
             self.addUnexpectedSuccess(test, None)
             return
 
@@ -197,14 +204,6 @@ class LLDBTestResult(unittest2.TextTestResult):
     def _isBuildError(self, err_tuple):
         exception = err_tuple[1]
         return isinstance(exception, build_exception.BuildError)
-
-    def _getTestPath(self, test):
-        if test is None:
-            return ""
-        elif hasattr(test, "test_filename"):
-            return test.test_filename
-        else:
-            return inspect.getsourcefile(test.__class__)
 
     def _saveBuildErrorTuple(self, test, err):
         # Adjust the error description so it prints the build command and build error
@@ -252,8 +251,10 @@ class LLDBTestResult(unittest2.TextTestResult):
                     test, err))
 
     def addFailure(self, test, err):
-        if self.checkExclusion(
-                configuration.xfail_tests, test.id()):
+        if (self.checkExclusion(
+                configuration.xfail_tests, test.id()) or
+            self.checkCategoryExclusion(
+                configuration.xfail_categories, test)):
             self.addExpectedFailure(test, err, None)
             return
 
@@ -265,14 +266,14 @@ class LLDBTestResult(unittest2.TextTestResult):
         self.stream.write(
             "FAIL: LLDB (%s) :: %s\n" %
             (self._config_string(test), str(test)))
-        if configuration.useCategories:
+        if configuration.use_categories:
             test_categories = self.getCategoriesForTest(test)
             for category in test_categories:
-                if category in configuration.failuresPerCategory:
-                    configuration.failuresPerCategory[
-                        category] = configuration.failuresPerCategory[category] + 1
+                if category in configuration.failures_per_category:
+                    configuration.failures_per_category[
+                        category] = configuration.failures_per_category[category] + 1
                 else:
-                    configuration.failuresPerCategory[category] = 1
+                    configuration.failures_per_category[category] = 1
         if self.results_formatter:
             self.results_formatter.handle_event(
                 EventBuilder.event_for_failure(test, err))

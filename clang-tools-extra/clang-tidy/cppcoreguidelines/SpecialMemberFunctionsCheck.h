@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIAL_MEMBER_FUNCTIONS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIAL_MEMBER_FUNCTIONS_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 #include "llvm/ADT/DenseMapInfo.h"
 
@@ -25,6 +25,9 @@ namespace cppcoreguidelines {
 class SpecialMemberFunctionsCheck : public ClangTidyCheck {
 public:
   SpecialMemberFunctionsCheck(StringRef Name, ClangTidyContext *Context);
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -40,19 +43,30 @@ public:
     MoveAssignment
   };
 
+  struct SpecialMemberFunctionData {
+    SpecialMemberFunctionKind FunctionKind;
+    bool IsDeleted;
+
+    bool operator==(const SpecialMemberFunctionData &Other) {
+      return (Other.FunctionKind == FunctionKind) &&
+             (Other.IsDeleted == IsDeleted);
+    }
+  };
+
   using ClassDefId = std::pair<SourceLocation, std::string>;
 
   using ClassDefiningSpecialMembersMap =
       llvm::DenseMap<ClassDefId,
-                     llvm::SmallVector<SpecialMemberFunctionKind, 5>>;
+                     llvm::SmallVector<SpecialMemberFunctionData, 5>>;
 
 private:
   void checkForMissingMembers(
       const ClassDefId &ID,
-      llvm::ArrayRef<SpecialMemberFunctionKind> DefinedSpecialMembers);
+      llvm::ArrayRef<SpecialMemberFunctionData> DefinedSpecialMembers);
 
   const bool AllowMissingMoveFunctions;
   const bool AllowSoleDefaultDtor;
+  const bool AllowMissingMoveFunctionsWhenCopyIsDeleted;
   ClassDefiningSpecialMembersMap ClassWithSpecialMembers;
 };
 

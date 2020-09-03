@@ -16,5 +16,5 @@ int null_check(int *P) {
   return *Q;
 }
 
-// NULL-POINTER-INVALID-NOT: attributes #0 = {{.*}} "null-pointer-is-valid"="true"
-// NULL-POINTER-VALID: attributes #0 = {{.*}} "null-pointer-is-valid"="true"
+// NULL-POINTER-INVALID-NOT: attributes #0 = {{.*}} null_pointer_is_valid
+// NULL-POINTER-VALID: attributes #0 = {{.*}} null_pointer_is_valid

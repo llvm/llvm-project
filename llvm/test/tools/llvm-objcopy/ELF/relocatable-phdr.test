@@ -1,6 +1,6 @@
 # This test ensures an object without a program header will retain zero values
 # for offset and header size when copied with llvm-objcopy.
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy %t %t2
 # RUN: llvm-readobj --file-headers %t2 | FileCheck %s
 

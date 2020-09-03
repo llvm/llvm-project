@@ -154,6 +154,9 @@ struct X0 {
 #endif
 
   enum E1 : seventeen;
+#if __cplusplus >= 201103L
+  // expected-error@-2 {{bit-field}}
+#endif
 };
 
 #if __cplusplus <= 199711L
@@ -200,17 +203,31 @@ extern const int static_var; // expected-note {{previous declaration is here}}
 static const int static_var = 3; // expected-warning {{redeclaring non-static 'static_var' as static is a Microsoft extension}}
 
 void pointer_to_integral_type_conv(char* ptr) {
-   char ch = (char)ptr;
-   short sh = (short)ptr;
-   ch = (char)ptr;
-   sh = (short)ptr;
+  char ch = (char)ptr;   // expected-warning {{cast to smaller integer type 'char' from 'char *'}}
+  short sh = (short)ptr; // expected-warning {{cast to smaller integer type 'short' from 'char *'}}
+  ch = (char)ptr;        // expected-warning {{cast to smaller integer type 'char' from 'char *'}}
+  sh = (short)ptr;       // expected-warning {{cast to smaller integer type 'short' from 'char *'}}
 
-   // These are valid C++.
-   bool b = (bool)ptr;
-   b = static_cast<bool>(ptr);
+  // These are valid C++.
+  bool b = (bool)ptr;
+  b = static_cast<bool>(ptr);
 
-   // This is bad.
-   b = reinterpret_cast<bool>(ptr); // expected-error {{cast from pointer to smaller type 'bool' loses information}}
+  // This is bad.
+  b = reinterpret_cast<bool>(ptr); // expected-error {{cast from pointer to smaller type 'bool' loses information}}
+}
+
+void void_pointer_to_integral_type_conv(void *ptr) {
+  char ch = (char)ptr;   // expected-warning {{cast to smaller integer type 'char' from 'void *'}}
+  short sh = (short)ptr; // expected-warning {{cast to smaller integer type 'short' from 'void *'}}
+  ch = (char)ptr;        // expected-warning {{cast to smaller integer type 'char' from 'void *'}}
+  sh = (short)ptr;       // expected-warning {{cast to smaller integer type 'short' from 'void *'}}
+
+  // These are valid C++.
+  bool b = (bool)ptr;
+  b = static_cast<bool>(ptr);
+
+  // This is bad.
+  b = reinterpret_cast<bool>(ptr); // expected-error {{cast from pointer to smaller type 'bool' loses information}}
 }
 
 struct PR11150 {

@@ -74,20 +74,14 @@ AST_MATCHER(Decl, isFromStdNamespace) {
 ReplaceAutoPtrCheck::ReplaceAutoPtrCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
+      IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
+                                            utils::IncludeSorter::IS_LLVM)) {}
 
 void ReplaceAutoPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle",
-                utils::IncludeSorter::toString(IncludeStyle));
+  Options.store(Opts, "IncludeStyle", IncludeStyle);
 }
 
 void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   auto AutoPtrDecl = recordDecl(hasName("auto_ptr"), isFromStdNamespace());
   auto AutoPtrType = qualType(hasDeclaration(AutoPtrDecl));
 
@@ -127,19 +121,16 @@ void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
                           callee(cxxMethodDecl(ofClass(AutoPtrDecl))),
                           hasArgument(1, MovableArgumentMatcher)),
       this);
-  Finder->addMatcher(cxxConstructExpr(hasType(AutoPtrType), argumentCountIs(1),
-                                      hasArgument(0, MovableArgumentMatcher)),
-                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               cxxConstructExpr(hasType(AutoPtrType), argumentCountIs(1),
+                                hasArgument(0, MovableArgumentMatcher))),
+      this);
 }
 
 void ReplaceAutoPtrCheck::registerPPCallbacks(const SourceManager &SM,
                                               Preprocessor *PP,
                                               Preprocessor *ModuleExpanderPP) {
-  // Only register the preprocessor callbacks for C++; the functionality
-  // currently does not provide any benefit to other languages, despite being
-  // benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
   Inserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
                                                        IncludeStyle);
   PP->addPPCallbacks(Inserter->CreatePPCallbacks());
@@ -155,14 +146,12 @@ void ReplaceAutoPtrCheck::check(const MatchFinder::MatchResult &Result) {
     if (Range.isInvalid())
       return;
 
-    auto Diag = diag(Range.getBegin(), "use std::move to transfer ownership")
-                << FixItHint::CreateInsertion(Range.getBegin(), "std::move(")
-                << FixItHint::CreateInsertion(Range.getEnd(), ")");
-
-    if (auto Fix =
-            Inserter->CreateIncludeInsertion(SM.getMainFileID(), "utility",
-                                             /*IsAngled=*/true))
-      Diag << *Fix;
+    auto Diag =
+        diag(Range.getBegin(), "use std::move to transfer ownership")
+        << FixItHint::CreateInsertion(Range.getBegin(), "std::move(")
+        << FixItHint::CreateInsertion(Range.getEnd(), ")")
+        << Inserter->CreateIncludeInsertion(SM.getMainFileID(), "utility",
+                                            /*IsAngled=*/true);
 
     return;
   }

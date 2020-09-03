@@ -158,6 +158,10 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
       case WebAssembly::OPERAND_EVENT:
         FixupKind = MCFixupKind(WebAssembly::fixup_uleb128_i32);
         break;
+      case WebAssembly::OPERAND_OFFSET64:
+        FixupKind = MCFixupKind(WebAssembly::fixup_uleb128_i64);
+        PaddedSize = 10;
+        break;
       default:
         llvm_unreachable("unexpected symbolic operand kind");
       }

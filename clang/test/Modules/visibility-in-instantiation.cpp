@@ -47,5 +47,5 @@ void g() {
 
   ST<int>::f(); // expected-error {{must be imported from module 'M.B'}}
   foo(X<int>()); // expected-error {{must be imported from module 'M.C'}}
-  // expected-note@* 2{{previous declaration is here}}
+  // expected-note@* 2{{declaration here is not visible}}
 }

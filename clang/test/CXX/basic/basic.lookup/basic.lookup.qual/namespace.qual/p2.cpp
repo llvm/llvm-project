@@ -38,7 +38,7 @@ namespace Numbers {
   // expected-note@-2 2 {{candidate constructor (the implicit move constructor) not viable}}
 #endif
 
-    explicit Number(double d) : d(d) {}
+    explicit Number(double d) : d(d) {} // expected-note 2{{explicit constructor is not a candidate}}
     double d;
   };
   Number zero(0.0f);

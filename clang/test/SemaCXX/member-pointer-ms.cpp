@@ -239,11 +239,11 @@ template <typename T> struct __multiple_inheritance A<T, T>;
   // expected-warning@-1 {{inheritance model ignored on partial specialization}}
 template <> struct __single_inheritance A<int, float>;
 
-struct B {}; // expected-note {{B defined here}}
+struct B {}; // expected-note {{'B' defined here}}
 struct __multiple_inheritance B; // expected-error{{inheritance model does not match definition}}
 
 struct __multiple_inheritance C {}; // expected-error{{inheritance model does not match definition}}
- // expected-note@-1 {{C defined here}}
+ // expected-note@-1 {{'C' defined here}}
 
 struct __virtual_inheritance D;
 struct D : virtual B {};

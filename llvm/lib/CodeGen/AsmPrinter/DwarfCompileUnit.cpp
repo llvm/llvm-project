@@ -37,6 +37,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -113,8 +114,9 @@ unsigned DwarfCompileUnit::getOrCreateSourceID(const DIFile *File) {
   // extend .file to support this.
   unsigned CUID = Asm->OutStreamer->hasRawTextSupport() ? 0 : getUniqueID();
   if (!File)
-    return Asm->OutStreamer->EmitDwarfFileDirective(0, "", "", None, None, CUID);
-  return Asm->OutStreamer->EmitDwarfFileDirective(
+    return Asm->OutStreamer->emitDwarfFileDirective(0, "", "", None, None,
+                                                    CUID);
+  return Asm->OutStreamer->emitDwarfFileDirective(
       0, File->getDirectory(), File->getFilename(), getMD5AsBytes(File),
       File->getSource(), CUID);
 }
@@ -154,7 +156,8 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     DeclContext = GV->getScope();
     // Add name and type.
     addString(*VariableDIE, dwarf::DW_AT_name, GV->getDisplayName());
-    addType(*VariableDIE, GTy);
+    if (GTy)
+      addType(*VariableDIE, GTy);
 
     // Add scoping info.
     if (!GV->isLocalToUnit())
@@ -328,6 +331,8 @@ DIE *DwarfCompileUnit::getOrCreateCommonBlock(
 }
 
 void DwarfCompileUnit::addRange(RangeSpan Range) {
+  DD->insertSectionLabel(Range.Begin);
+
   bool SameAsPrevCU = this == DD->getPrevCU();
   DD->setPrevCU(this);
   // If we have no current ranges just add the range and return, otherwise,
@@ -348,8 +353,6 @@ void DwarfCompileUnit::initStmtList() {
   if (CUNode->isDebugDirectivesOnly())
     return;
 
-  // Define start line table label for each Compile Unit.
-  MCSymbol *LineTableStartSym;
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   if (DD->useSectionsAsReferences()) {
     LineTableStartSym = TLOF.getDwarfLineSection()->getBeginSymbol();
@@ -363,13 +366,14 @@ void DwarfCompileUnit::initStmtList() {
   // left in the skeleton CU and so not included.
   // The line table entries are not always emitted in assembly, so it
   // is not okay to use line_table_start here.
-  StmtListValue =
       addSectionLabel(getUnitDie(), dwarf::DW_AT_stmt_list, LineTableStartSym,
                       TLOF.getDwarfLineSection()->getBeginSymbol());
 }
 
 void DwarfCompileUnit::applyStmtList(DIE &D) {
-  D.addValue(DIEValueAllocator, *StmtListValue);
+  const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
+  addSectionLabel(D, dwarf::DW_AT_stmt_list, LineTableStartSym,
+                  TLOF.getDwarfLineSection()->getBeginSymbol());
 }
 
 void DwarfCompileUnit::attachLowHighPC(DIE &D, const MCSymbol *Begin,
@@ -392,7 +396,14 @@ void DwarfCompileUnit::attachLowHighPC(DIE &D, const MCSymbol *Begin,
 DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
   DIE *SPDie = getOrCreateSubprogramDIE(SP, includeMinimalInlineScopes());
 
-  attachLowHighPC(*SPDie, Asm->getFunctionBegin(), Asm->getFunctionEnd());
+  SmallVector<RangeSpan, 2> BB_List;
+  // If basic block sections are on, ranges for each basic block section has
+  // to be emitted separately.
+  for (const auto &R : Asm->MBBSectionRanges)
+    BB_List.push_back({R.second.BeginLabel, R.second.EndLabel});
+
+  attachRangesOrLowHighPC(*SPDie, BB_List);
+
   if (DD->useAppleExtensionAttributes() &&
       !DD->getCurrentFunction()->getTarget().Options.DisableFramePointerElim(
           *DD->getCurrentFunction()))
@@ -400,15 +411,60 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
 
   // Only include DW_AT_frame_base in full debug info
   if (!includeMinimalInlineScopes()) {
-    if (Asm->MF->getTarget().getTargetTriple().isNVPTX()) {
+    const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
+    TargetFrameLowering::DwarfFrameBase FrameBase =
+        TFI->getDwarfFrameBase(*Asm->MF);
+    switch (FrameBase.Kind) {
+    case TargetFrameLowering::DwarfFrameBase::Register: {
+      if (Register::isPhysicalRegister(FrameBase.Location.Reg)) {
+        MachineLocation Location(FrameBase.Location.Reg);
+        addAddress(*SPDie, dwarf::DW_AT_frame_base, Location);
+      }
+      break;
+    }
+    case TargetFrameLowering::DwarfFrameBase::CFA: {
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_call_frame_cfa);
       addBlock(*SPDie, dwarf::DW_AT_frame_base, Loc);
-    } else {
-      const TargetRegisterInfo *RI = Asm->MF->getSubtarget().getRegisterInfo();
-      MachineLocation Location(RI->getFrameRegister(*Asm->MF));
-      if (Register::isPhysicalRegister(Location.getReg()))
-        addAddress(*SPDie, dwarf::DW_AT_frame_base, Location);
+      break;
+    }
+    case TargetFrameLowering::DwarfFrameBase::WasmFrameBase: {
+      // FIXME: duplicated from Target/WebAssembly/WebAssembly.h
+      // don't want to depend on target specific headers in this code?
+      const unsigned TI_GLOBAL_RELOC = 3;
+      if (FrameBase.Location.WasmLoc.Kind == TI_GLOBAL_RELOC) {
+        // These need to be relocatable.
+        assert(FrameBase.Location.WasmLoc.Index == 0);  // Only SP so far.
+        auto SPSym = cast<MCSymbolWasm>(
+          Asm->GetExternalSymbolSymbol("__stack_pointer"));
+        // FIXME: this repeats what WebAssemblyMCInstLower::
+        // GetExternalSymbolSymbol does, since if there's no code that
+        // refers to this symbol, we have to set it here.
+        SPSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
+        SPSym->setGlobalType(wasm::WasmGlobalType{
+            uint8_t(Asm->getSubtargetInfo().getTargetTriple().getArch() ==
+                            Triple::wasm64
+                        ? wasm::WASM_TYPE_I64
+                        : wasm::WASM_TYPE_I32),
+            true});
+        DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+        addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_WASM_location);
+        addSInt(*Loc, dwarf::DW_FORM_sdata, FrameBase.Location.WasmLoc.Kind);
+        addLabel(*Loc, dwarf::DW_FORM_udata, SPSym);
+        DD->addArangeLabel(SymbolCU(this, SPSym));
+        addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_stack_value);
+        addBlock(*SPDie, dwarf::DW_AT_frame_base, Loc);
+      } else {
+        DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+        DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+        DIExpressionCursor Cursor({});
+        DwarfExpr.addWasmLocation(FrameBase.Location.WasmLoc.Kind,
+            FrameBase.Location.WasmLoc.Index);
+        DwarfExpr.addExpression(std::move(Cursor));
+        addBlock(*SPDie, dwarf::DW_AT_frame_base, DwarfExpr.finalize());
+      }
+      break;
+    }
     }
   }
 
@@ -521,9 +577,33 @@ void DwarfCompileUnit::attachRangesOrLowHighPC(
     DIE &Die, const SmallVectorImpl<InsnRange> &Ranges) {
   SmallVector<RangeSpan, 2> List;
   List.reserve(Ranges.size());
-  for (const InsnRange &R : Ranges)
-    List.push_back(
-        {DD->getLabelBeforeInsn(R.first), DD->getLabelAfterInsn(R.second)});
+  for (const InsnRange &R : Ranges) {
+    auto *BeginLabel = DD->getLabelBeforeInsn(R.first);
+    auto *EndLabel = DD->getLabelAfterInsn(R.second);
+
+    const auto *BeginMBB = R.first->getParent();
+    const auto *EndMBB = R.second->getParent();
+
+    const auto *MBB = BeginMBB;
+    // Basic block sections allows basic block subsets to be placed in unique
+    // sections. For each section, the begin and end label must be added to the
+    // list. If there is more than one range, debug ranges must be used.
+    // Otherwise, low/high PC can be used.
+    // FIXME: Debug Info Emission depends on block order and this assumes that
+    // the order of blocks will be frozen beyond this point.
+    do {
+      if (MBB->sameSection(EndMBB) || MBB->isEndSection()) {
+        auto MBBSectionRange = Asm->MBBSectionRanges[MBB->getSectionIDNum()];
+        List.push_back(
+            {MBB->sameSection(BeginMBB) ? BeginLabel
+                                        : MBBSectionRange.BeginLabel,
+             MBB->sameSection(EndMBB) ? EndLabel : MBBSectionRange.EndLabel});
+      }
+      if (MBB->sameSection(EndMBB))
+        break;
+      MBB = MBB->getNextNode();
+    } while (true);
+  }
   attachRangesOrLowHighPC(Die, std::move(List));
 }
 
@@ -654,7 +734,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   for (auto &Fragment : DV.getFrameIndexExprs()) {
-    unsigned FrameReg = 0;
+    Register FrameReg;
     const DIExpression *Expr = Fragment.Expr;
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
     int Offset = TFI->getFrameIndexReference(*Asm->MF, Fragment.FI, FrameReg);
@@ -719,11 +799,22 @@ static SmallVector<const DIVariable *, 2> dependencies(DbgVariable *Var) {
   auto *Array = dyn_cast<DICompositeType>(Var->getType());
   if (!Array || Array->getTag() != dwarf::DW_TAG_array_type)
     return Result;
+  if (auto *DLVar = Array->getDataLocation())
+    Result.push_back(DLVar);
   for (auto *El : Array->getElements()) {
     if (auto *Subrange = dyn_cast<DISubrange>(El)) {
-      auto Count = Subrange->getCount();
-      if (auto *Dependency = Count.dyn_cast<DIVariable *>())
-        Result.push_back(Dependency);
+      if (auto Count = Subrange->getCount())
+        if (auto *Dependency = Count.dyn_cast<DIVariable *>())
+          Result.push_back(Dependency);
+      if (auto LB = Subrange->getLowerBound())
+        if (auto *Dependency = LB.dyn_cast<DIVariable *>())
+          Result.push_back(Dependency);
+      if (auto UB = Subrange->getUpperBound())
+        if (auto *Dependency = UB.dyn_cast<DIVariable *>())
+          Result.push_back(Dependency);
+      if (auto ST = Subrange->getStride())
+        if (auto *Dependency = ST.dyn_cast<DIVariable *>())
+          Result.push_back(Dependency);
     }
   }
   return Result;
@@ -1127,7 +1218,7 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
   // Don't bother labeling the .dwo unit, as its offset isn't used.
   if (!Skeleton && !DD->useSectionsAsReferences()) {
     LabelBegin = Asm->createTempSymbol("cu_begin");
-    Asm->OutStreamer->EmitLabel(LabelBegin);
+    Asm->OutStreamer->emitLabel(LabelBegin);
   }
 
   dwarf::UnitType UT = Skeleton ? dwarf::DW_UT_split_compile

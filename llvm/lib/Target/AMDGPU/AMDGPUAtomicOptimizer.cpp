@@ -438,7 +438,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
 
   Type *const Ty = I.getType();
   const unsigned TyBitWidth = DL->getTypeSizeInBits(Ty);
-  Type *const VecTy = VectorType::get(B.getInt32Ty(), 2);
+  auto *const VecTy = FixedVectorType::get(B.getInt32Ty(), 2);
 
   // This is the value in the atomic operation we need to combine in order to
   // reduce the number of atomic operations.
@@ -447,9 +447,8 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
   // We need to know how many lanes are active within the wavefront, and we do
   // this by doing a ballot of active lanes.
   Type *const WaveTy = B.getIntNTy(ST->getWavefrontSize());
-  CallInst *const Ballot = B.CreateIntrinsic(
-      Intrinsic::amdgcn_icmp, {WaveTy, B.getInt32Ty()},
-      {B.getInt32(1), B.getInt32(0), B.getInt32(CmpInst::ICMP_NE)});
+  CallInst *const Ballot =
+      B.CreateIntrinsic(Intrinsic::amdgcn_ballot, WaveTy, B.getTrue());
 
   // We need to know how many lanes are active within the wavefront that are
   // below us. If we counted each lane linearly starting from 0, a lane is

@@ -1,5 +1,5 @@
-// RUN: %clang -cl-std=CL2.0 -emit-llvm -g -O0 -S -target amdgcn-amd-amdhsa -mcpu=fiji -o - %s | FileCheck %s
-// RUN: %clang -cl-std=CL2.0 -emit-llvm -g -O0 -S -target amdgcn-amd-amdhsa-opencl -mcpu=fiji -o - %s | FileCheck %s
+// RUN: %clang -cl-std=CL2.0 -emit-llvm -g -O0 -S -nogpulib -target amdgcn-amd-amdhsa -mcpu=fiji -o - %s | FileCheck %s
+// RUN: %clang -cl-std=CL2.0 -emit-llvm -g -O0 -S -nogpulib -target amdgcn-amd-amdhsa-opencl -mcpu=fiji -o - %s | FileCheck %s
 
 // CHECK-DAG: ![[DWARF_ADDRESS_SPACE_NONE:[0-9]+]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}})
 // CHECK-DAG: ![[DWARF_ADDRESS_SPACE_LOCAL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}}, dwarfAddressSpace: 2)

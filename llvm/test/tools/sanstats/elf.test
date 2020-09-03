@@ -1,5 +1,5 @@
-# RUN: yaml2obj %s > %t1.o
-# RUN: yaml2obj %s > %t2.o
+# RUN: yaml2obj %s -o %t1.o
+# RUN: yaml2obj %s -o %t2.o
 
 # RUN: printf "\x04" > %t.stats
 

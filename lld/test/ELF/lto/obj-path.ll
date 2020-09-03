@@ -16,10 +16,10 @@
 ; CHECK-NEXT: T g
 
 ; NM1: T f
-; ELF1: Format: ELF64-x86-64
+; ELF1: Format: elf64-x86-64
 
 ; NM2: T g
-; ELF2: Format: ELF64-x86-64
+; ELF2: Format: elf64-x86-64
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

@@ -1,7 +1,3 @@
-
-# All test suites added here should be excuded from check-all
-set(EXCLUDE_FROM_ALL On)
-
 if (CMAKE_CFG_INTDIR STREQUAL ".")
   set(LLVM_BUILD_MODE ".")
 else ()
@@ -22,11 +18,12 @@ if(LLVM_BUILD_INSTRUMENTED)
 
   add_lit_testsuite(generate-profraw "Generating clang PGO data"
     ${CMAKE_CURRENT_BINARY_DIR}/pgo-data/
+    EXCLUDE_FROM_CHECK_ALL
     DEPENDS clang clear-profraw
     )
 
   add_custom_target(clear-profraw
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} profraw
+    COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} profraw
     COMMENT "Clearing old profraw data")
 
   if(NOT LLVM_PROFDATA)
@@ -37,7 +34,7 @@ if(LLVM_BUILD_INSTRUMENTED)
     message(STATUS "To enable merging PGO data LLVM_PROFDATA has to point to llvm-profdata")
   else()
     add_custom_target(generate-profdata
-      COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py merge ${LLVM_PROFDATA} ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata ${CMAKE_CURRENT_BINARY_DIR}
+      COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py merge ${LLVM_PROFDATA} ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata ${CMAKE_CURRENT_BINARY_DIR}
       COMMENT "Merging profdata"
       DEPENDS generate-profraw)
   endif()
@@ -52,12 +49,13 @@ if(APPLE AND DTRACE)
 
   add_lit_testsuite(generate-dtrace-logs "Generating clang dtrace data"
     ${CMAKE_CURRENT_BINARY_DIR}/order-files/
+    EXCLUDE_FROM_CHECK_ALL
     ARGS -j 1
     DEPENDS clang clear-dtrace-logs
     )
 
   add_custom_target(clear-dtrace-logs
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} dtrace
+    COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} dtrace
     COMMENT "Clearing old dtrace data")
 
   if(NOT CLANG_ORDER_FILE)
@@ -65,7 +63,7 @@ if(APPLE AND DTRACE)
   endif()
 
   add_custom_target(generate-order-file
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py gen-order-file --binary $<TARGET_FILE:clang> --output ${CLANG_ORDER_FILE} ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py gen-order-file --binary $<TARGET_FILE:clang> --output ${CLANG_ORDER_FILE} ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating order file"
     DEPENDS generate-dtrace-logs)
 endif()

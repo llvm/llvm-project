@@ -27,6 +27,12 @@ module _Builtin_intrinsics [system] [extern_c] {
       header "arm_fp16.h"
       export *
     }
+
+    explicit module sve {
+      requires sve
+      header "arm_sve.h"
+      export *
+    }
   }
 
   explicit module intel {
@@ -40,47 +46,6 @@ module _Builtin_intrinsics [system] [extern_c] {
     textual header "avx512fintrin.h"
     textual header "avx512erintrin.h"
     textual header "fmaintrin.h"
-    textual header "adxintrin.h"
-    textual header "avx512bf16intrin.h"
-    textual header "avx512bitalgintrin.h"
-    textual header "avx512bwintrin.h"
-    textual header "avx512cdintrin.h"
-    textual header "avx512dqintrin.h"
-    textual header "avx512ifmaintrin.h"
-    textual header "avx512ifmavlintrin.h"
-    textual header "avx512pfintrin.h"
-    textual header "avx512vbmi2intrin.h"
-    textual header "avx512vbmiintrin.h"
-    textual header "avx512vbmivlintrin.h"
-    textual header "avx512vlbf16intrin.h"
-    textual header "avx512vlbitalgintrin.h"
-    textual header "avx512vlbwintrin.h"
-    textual header "avx512vlcdintrin.h"
-    textual header "avx512vldqintrin.h"
-    textual header "avx512vlintrin.h"
-    textual header "avx512vlvbmi2intrin.h"
-    textual header "avx512vlvnniintrin.h"
-    textual header "avx512vlvp2intersectintrin.h"
-    textual header "avx512vnniintrin.h"
-    textual header "avx512vp2intersectintrin.h"
-    textual header "avx512vpopcntdqintrin.h"
-    textual header "avx512vpopcntdqvlintrin.h"
-    textual header "cetintrin.h"
-    textual header "clflushoptintrin.h"
-    textual header "clwbintrin.h"
-    textual header "enqcmdintrin.h"
-    textual header "fxsrintrin.h"
-    textual header "gfniintrin.h"
-    textual header "pkuintrin.h"
-    textual header "rtmintrin.h"
-    textual header "shaintrin.h"
-    textual header "vaesintrin.h"
-    textual header "vpclmulqdqintrin.h"
-    textual header "xsavecintrin.h"
-    textual header "xsaveintrin.h"
-    textual header "xsaveoptintrin.h"
-    textual header "xsavesintrin.h"
-    textual header "xtestintrin.h"
 
     header "x86intrin.h"
     textual header "bmiintrin.h"
@@ -98,15 +63,6 @@ module _Builtin_intrinsics [system] [extern_c] {
     textual header "sgxintrin.h"
     textual header "ptwriteintrin.h"
     textual header "invpcidintrin.h"
-    textual header "ia32intrin.h"
-    textual header "lwpintrin.h"
-    textual header "prfchwintrin.h"
-    textual header "rdseedintrin.h"
-    textual header "tbmintrin.h"
-    textual header "lwpintrin.h"
-    textual header "prfchwintrin.h"
-    textual header "rdseedintrin.h"
-    textual header "tbmintrin.h"
 
     textual header "__wmmintrin_aes.h"
     textual header "__wmmintrin_pclmul.h"

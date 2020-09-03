@@ -56,7 +56,9 @@ define void @test3a() {
 	ret void
 }
 ; CHECK-LABEL: define void @test3a(
-; CHECK-NEXT: ret void
+; CHECK-NEXT:    %X = load i32, i32* @G
+; CHECK-NEXT:    store i32 %X, i32* @G
+; CHECK-NEXT:   ret void
 
 
 define i32 @test3b() {
@@ -71,9 +73,17 @@ F:
 	ret i32 0
 }
 ; CHECK-LABEL: define i32 @test3b(
-; CHECK-NOT: store
-; CHECK: ret i32 0
+; CHECK-NEXT:    %V = load i32, i32* @G
+; CHECK-NEXT:    %C = icmp eq i32 %V, 17
+; CHECK-NEXT:    br i1 %C, label %T, label %F
 
+; CHECK-LABEL: T:
+; CHECK-NEXT:   store i32 17, i32* @G
+; CHECK-NEXT:   ret i32 17
+
+; CHECK-LABEL: F:
+; CHECK-NEXT:    store i32 123, i32* @G
+; CHECK-NEXT:    ret i32 0
 
 ;;======================== test4
 
@@ -226,8 +236,11 @@ define i32 @test10a() nounwind {
 entry:
   %call = call i32 @test10b(i32 undef)
   ret i32 %call
+
 ; CHECK-LABEL: define i32 @test10a(
-; CHECK: ret i32 0
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %call = call i32 @test10b(i32 undef)
+; CHECK-NEXT:    ret i32 %call
 }
 
 define internal i32 @test10b(i32 %x) nounwind {
@@ -235,7 +248,9 @@ entry:
   %r = and i32 %x, 1
   ret i32 %r
 ; CHECK-LABEL: define internal i32 @test10b(
-; CHECK: ret i32 undef
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %r = and i32 undef, 1
+; CHECK-NEXT:    ret i32 %r
 }
 
 ;;======================== test11
@@ -244,7 +259,8 @@ define i64 @test11a() {
   %xor = xor i64 undef, undef
   ret i64 %xor
 ; CHECK-LABEL: define i64 @test11a
-; CHECK: ret i64 0
+; CHECK-NEXT:    %xor = xor i64 undef, undef
+; CHECK-NEXT:    ret i64 %xor
 }
 
 define i64 @test11b() {
@@ -252,9 +268,9 @@ define i64 @test11b() {
   %call2 = call i64 @llvm.ctpop.i64(i64 %call1)
   ret i64 %call2
 ; CHECK-LABEL: define i64 @test11b
-; CHECK: %[[call1:.*]] = call i64 @test11a()
-; CHECK-NOT: call i64 @llvm.ctpop.i64
-; CHECK-NEXT: ret i64 0
+; CHECK-NEXT:   [[call1:%.*]] = call i64 @test11a()
+; CHECK-NEXT:    [[call2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[call1]])
+; CHECK-NEXT: ret i64 [[call2]]
 }
 
 declare i64 @llvm.ctpop.i64(i64)

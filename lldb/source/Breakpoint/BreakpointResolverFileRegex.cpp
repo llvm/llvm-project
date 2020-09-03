@@ -1,4 +1,4 @@
-//===-- BreakpointResolverFileRegex.cpp -------------------------*- C++-*-===//
+//===-- BreakpointResolverFileRegex.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,16 +20,14 @@ using namespace lldb_private;
 
 // BreakpointResolverFileRegex:
 BreakpointResolverFileRegex::BreakpointResolverFileRegex(
-    Breakpoint *bkpt, RegularExpression regex,
+    const lldb::BreakpointSP &bkpt, RegularExpression regex,
     const std::unordered_set<std::string> &func_names, bool exact_match)
     : BreakpointResolver(bkpt, BreakpointResolver::FileRegexResolver),
       m_regex(std::move(regex)), m_exact_match(exact_match),
       m_function_names(func_names) {}
 
-BreakpointResolverFileRegex::~BreakpointResolverFileRegex() {}
-
 BreakpointResolver *BreakpointResolverFileRegex::CreateFromStructuredData(
-    Breakpoint *bkpt, const StructuredData::Dictionary &options_dict,
+    const lldb::BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
     Status &error) {
   bool success;
 
@@ -65,7 +63,7 @@ BreakpointResolver *BreakpointResolverFileRegex::CreateFromStructuredData(
             "BRFR::CFSD: Malformed element %zu in the names array.", i);
         return nullptr;
       }
-      names_set.insert(name);
+      names_set.insert(std::string(name));
     }
   }
 
@@ -97,7 +95,6 @@ BreakpointResolverFileRegex::SerializeToStructuredData() {
 Searcher::CallbackReturn BreakpointResolverFileRegex::SearchCallback(
     SearchFilter &filter, SymbolContext &context, Address *addr) {
 
-  assert(m_breakpoint != nullptr);
   if (!context.target_sp)
     return eCallbackReturnContinue;
 
@@ -144,7 +141,6 @@ Searcher::CallbackReturn BreakpointResolverFileRegex::SearchCallback(
     BreakpointResolver::SetSCMatchesByLine(filter, sc_list, skip_prologue,
                                            m_regex.GetText());
   }
-  assert(m_breakpoint != nullptr);
 
   return Searcher::eCallbackReturnContinue;
 }
@@ -161,9 +157,9 @@ void BreakpointResolverFileRegex::GetDescription(Stream *s) {
 void BreakpointResolverFileRegex::Dump(Stream *s) const {}
 
 lldb::BreakpointResolverSP
-BreakpointResolverFileRegex::CopyForBreakpoint(Breakpoint &breakpoint) {
+BreakpointResolverFileRegex::CopyForBreakpoint(BreakpointSP &breakpoint) {
   lldb::BreakpointResolverSP ret_sp(new BreakpointResolverFileRegex(
-      &breakpoint, m_regex, m_function_names, m_exact_match));
+      breakpoint, m_regex, m_function_names, m_exact_match));
   return ret_sp;
 }
 

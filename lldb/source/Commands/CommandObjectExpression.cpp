@@ -1,4 +1,4 @@
-//===-- CommandObjectExpression.cpp -----------------------------*- C++ -*-===//
+//===-- CommandObjectExpression.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -317,7 +317,12 @@ void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
     target = &GetDummyTarget();
 
   unsigned cursor_pos = request.GetRawCursorPos();
-  llvm::StringRef code = request.GetRawLine();
+  // Get the full user input including the suffix. The suffix is necessary
+  // as OptionsWithRaw will use it to detect if the cursor is cursor is in the
+  // argument part of in the raw input part of the arguments. If we cut of
+  // of the suffix then "expr -arg[cursor] --" would interpret the "-arg" as
+  // the raw input (as the "--" is hidden in the suffix).
+  llvm::StringRef code = request.GetRawLineWithUnusedSuffix();
 
   const std::size_t original_code_size = code.size();
 
@@ -397,6 +402,7 @@ CommandObjectExpression::GetEvalOptions(const Target &target) {
     auto_apply_fixits = m_command_options.auto_apply_fixits == eLazyBoolYes;
 
   options.SetAutoApplyFixIts(auto_apply_fixits);
+  options.SetRetriesWithFixIts(target.GetNumberOfRetriesWithFixits());
 
   if (m_command_options.top_level)
     options.SetExecutionPolicy(eExecutionPolicyTopLevel);
@@ -511,7 +517,8 @@ void CommandObjectExpression::IOHandlerInputComplete(IOHandler &io_handler,
   StreamFileSP output_sp = io_handler.GetOutputStreamFileSP();
   StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
 
-  CommandReturnObject return_obj;
+  CommandReturnObject return_obj(
+      GetCommandInterpreter().GetDebugger().GetUseColor());
   EvaluateExpression(line.c_str(), *output_sp, *error_sp, return_obj);
   if (output_sp)
     output_sp->Flush();
@@ -580,7 +587,7 @@ void CommandObjectExpression::GetMultilineExpression() {
         "Enter expressions, then terminate with an empty line to evaluate:\n");
     output_sp->Flush();
   }
-  debugger.PushIOHandler(io_handler_sp);
+  debugger.RunIOHandlerAsync(io_handler_sp);
 }
 
 static EvaluateExpressionOptions
@@ -667,10 +674,8 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
           }
 
           IOHandlerSP io_handler_sp(repl_sp->GetIOHandler());
-
           io_handler_sp->SetIsDone(false);
-
-          debugger.PushIOHandler(io_handler_sp);
+          debugger.RunIOHandlerAsync(io_handler_sp);
         } else {
           repl_error.SetErrorStringWithFormat(
               "Couldn't create a REPL for %s",
@@ -699,7 +704,7 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
       std::string fixed_command("expression ");
       if (args.HasArgs()) {
         // Add in any options that might have been in the original command:
-        fixed_command.append(args.GetArgStringWithDelimiter());
+        fixed_command.append(std::string(args.GetArgStringWithDelimiter()));
         fixed_command.append(m_fixed_expression);
       } else
         fixed_command.append(m_fixed_expression);

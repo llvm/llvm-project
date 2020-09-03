@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Conversion.h"
-#include "Logger.h"
 #include "Protocol.h" // For LSPError
 #include "Transport.h"
+#include "support/Logger.h"
 #include "llvm/Support/Errno.h"
 
 #include <xpc/xpc.h>
@@ -37,7 +37,8 @@ json::Object encodeError(Error E) {
 }
 
 Error decodeError(const json::Object &O) {
-  std::string Msg = O.getString("message").getValueOr("Unspecified error");
+  std::string Msg =
+      std::string(O.getString("message").getValueOr("Unspecified error"));
   if (auto Code = O.getInteger("code"))
     return make_error<LSPError>(std::move(Msg), ErrorCode(*Code));
   return make_error<StringError>(std::move(Msg), inconvertibleErrorCode());

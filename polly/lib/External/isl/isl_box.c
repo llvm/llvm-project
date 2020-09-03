@@ -76,7 +76,8 @@ static __isl_give isl_fixed_box *isl_fixed_box_init(
 	isl_multi_val *size;
 
 	offset = isl_multi_aff_zero(isl_space_copy(space));
-	size = isl_multi_val_zero(isl_space_range(space));
+	space = isl_space_drop_all_params(isl_space_range(space));
+	size = isl_multi_val_zero(space);
 	return isl_fixed_box_alloc(offset, size);
 }
 
@@ -130,7 +131,8 @@ static __isl_give isl_fixed_box *isl_fixed_box_set_valid_extent(
 static __isl_give isl_fixed_box *isl_fixed_box_invalidate(
 	__isl_take isl_fixed_box *box)
 {
-	int i, n;
+	int i;
+	isl_size n;
 	isl_space *space;
 	isl_val *infty;
 	isl_aff *nan;
@@ -138,6 +140,8 @@ static __isl_give isl_fixed_box *isl_fixed_box_invalidate(
 	if (!box)
 		return NULL;
 	n = isl_multi_val_dim(box->size, isl_dim_set);
+	if (n < 0)
+		return isl_fixed_box_free(box);
 
 	infty = isl_val_infty(isl_fixed_box_get_ctx(box));
 	space = isl_space_domain(isl_fixed_box_get_space(box));
@@ -149,6 +153,27 @@ static __isl_give isl_fixed_box *isl_fixed_box_invalidate(
 
 	if (!box->offset || !box->size)
 		return isl_fixed_box_free(box);
+	return box;
+}
+
+/* Project the domain of the fixed box onto its parameter space.
+ * In particular, project out the domain of the offset.
+ */
+static __isl_give isl_fixed_box *isl_fixed_box_project_domain_on_params(
+	__isl_take isl_fixed_box *box)
+{
+	isl_bool valid;
+
+	valid = isl_fixed_box_is_valid(box);
+	if (valid < 0)
+		return isl_fixed_box_free(box);
+	if (!valid)
+		return box;
+
+	box->offset = isl_multi_aff_project_domain_on_params(box->offset);
+	if (!box->offset)
+		return isl_fixed_box_free(box);
+
 	return box;
 }
 
@@ -212,7 +237,7 @@ __isl_give isl_multi_val *isl_fixed_box_get_size(__isl_keep isl_fixed_box *box)
  */
 struct isl_size_info {
 	isl_basic_set *bset;
-	int pos;
+	isl_size pos;
 	isl_val *size;
 	isl_aff *offset;
 };
@@ -225,7 +250,7 @@ struct isl_size_info {
  */
 static isl_bool is_suitable_bound(__isl_keep isl_constraint *c, unsigned pos)
 {
-	unsigned n_div;
+	isl_size n_div;
 	isl_bool is_bound, any_divs;
 
 	is_bound = isl_constraint_is_lower_bound(c, isl_dim_set, pos);
@@ -233,6 +258,8 @@ static isl_bool is_suitable_bound(__isl_keep isl_constraint *c, unsigned pos)
 		return is_bound;
 
 	n_div = isl_constraint_dim(c, isl_dim_div);
+	if (n_div < 0)
+		return isl_bool_error;
 	any_divs = isl_constraint_involves_dims(c, isl_dim_div, 0, n_div);
 	return isl_bool_not(any_divs);
 }
@@ -316,6 +343,8 @@ static __isl_give isl_fixed_box *set_dim_extent(__isl_take isl_fixed_box *box,
 	info.offset = NULL;
 	info.pos = isl_map_dim(map, isl_dim_in);
 	info.bset = isl_basic_map_wrap(isl_map_simple_hull(map));
+	if (info.pos < 0)
+		info.bset = isl_basic_set_free(info.bset);
 	if (isl_basic_set_foreach_constraint(info.bset,
 					&compute_size_in_direction, &info) < 0)
 		box = isl_fixed_box_free(box);
@@ -345,11 +374,14 @@ static __isl_give isl_fixed_box *set_dim_extent(__isl_take isl_fixed_box *box,
 __isl_give isl_fixed_box *isl_map_get_range_simple_fixed_box_hull(
 	__isl_keep isl_map *map)
 {
-	int i, n;
+	int i;
+	isl_size n;
 	isl_space *space;
 	isl_fixed_box *box;
 
 	n = isl_map_dim(map, isl_dim_out);
+	if (n < 0)
+		return NULL;
 	space = isl_map_get_space(map);
 	box = isl_fixed_box_init(space);
 
@@ -366,3 +398,55 @@ __isl_give isl_fixed_box *isl_map_get_range_simple_fixed_box_hull(
 
 	return box;
 }
+
+/* Try and construct a fixed-size rectangular box with an offset
+ * in terms of the parameters of "set" that contains "set".
+ * If no such box can be constructed, then return an invalidated box,
+ * i.e., one where isl_fixed_box_is_valid returns false.
+ *
+ * Compute the box using isl_map_get_range_simple_fixed_box_hull
+ * by constructing a map from the set and
+ * project out the domain again from the result.
+ */
+__isl_give isl_fixed_box *isl_set_get_simple_fixed_box_hull(
+	__isl_keep isl_set *set)
+{
+	isl_map *map;
+	isl_fixed_box *box;
+
+	map = isl_map_from_range(isl_set_copy(set));
+	box = isl_map_get_range_simple_fixed_box_hull(map);
+	isl_map_free(map);
+	box = isl_fixed_box_project_domain_on_params(box);
+
+	return box;
+}
+
+#undef BASE
+#define BASE multi_val
+#include "print_yaml_field_templ.c"
+
+#undef BASE
+#define BASE multi_aff
+#include "print_yaml_field_templ.c"
+
+/* Print the information contained in "box" to "p".
+ * The information is printed as a YAML document.
+ */
+__isl_give isl_printer *isl_printer_print_fixed_box(
+	__isl_take isl_printer *p, __isl_keep isl_fixed_box *box)
+{
+	if (!box)
+		return isl_printer_free(p);
+
+	p = isl_printer_yaml_start_mapping(p);
+	p = print_yaml_field_multi_aff(p, "offset", box->offset);
+	p = print_yaml_field_multi_val(p, "size", box->size);
+	p = isl_printer_yaml_end_mapping(p);
+
+	return p;
+}
+
+#undef BASE
+#define BASE fixed_box
+#include <print_templ_yaml.c>

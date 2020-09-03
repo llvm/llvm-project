@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_TypeSystem_h_
-#define liblldb_TypeSystem_h_
+#ifndef LLDB_SYMBOL_TYPESYSTEM_H
+#define LLDB_SYMBOL_TYPESYSTEM_H
 
 #include <functional>
 #include <map>
@@ -217,6 +217,9 @@ public:
 
   virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type) = 0;
 
+  // Defaults to GetTypeName(type).  Override if your language desires
+  // specialized behavior.
+  // \param sc  An optional symbol context of the function the type appears in.
   virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type,
                                          const SymbolContext *sc = nullptr) = 0;
 
@@ -235,8 +238,9 @@ public:
 
   // Creating related types
 
-  virtual CompilerType GetArrayElementType(lldb::opaque_compiler_type_t type,
-                                           uint64_t *stride) = 0;
+  virtual CompilerType
+  GetArrayElementType(lldb::opaque_compiler_type_t type, uint64_t *stride,
+                      ExecutionContextScope *exe_scope) = 0;
 
   virtual CompilerType GetArrayType(lldb::opaque_compiler_type_t type,
                                     uint64_t size);
@@ -561,4 +565,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_TypeSystem_h_
+#endif // LLDB_SYMBOL_TYPESYSTEM_H

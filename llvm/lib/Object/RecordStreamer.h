@@ -13,13 +13,12 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/SMLoc.h"
 #include <vector>
 
 namespace llvm {
 
-class GlobalValue;
+class MCSymbol;
 class Module;
 
 class RecordStreamer : public MCStreamer {
@@ -46,13 +45,13 @@ private:
 public:
   RecordStreamer(MCContext &Context, const Module &M);
 
-  void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
-  void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
-  void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
-  bool EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
-  void EmitZerofill(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
+  void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+  void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
+  void emitZerofill(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                     unsigned ByteAlignment, SMLoc Loc = SMLoc()) override;
-  void EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
 
   // Ignore COFF-specific directives; we do not need any information from them,

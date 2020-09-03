@@ -38,7 +38,7 @@ define float @test3(float %x, float %y) nounwind  {
 
 define float @test4(float %x) nounwind  {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[T34:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[T34:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    ret float [[T34]]
 ;
   %t1 = fpext float %x to double
@@ -257,4 +257,175 @@ define float @test18(half %x, half %y) nounwind  {
   %t5 = frem double %t1, %t23
   %t56 = fptrunc double %t5 to float
   ret float %t56
+}
+
+; Convert from integer is exact, so convert directly to double.
+
+define double @ItoFtoF_s25_f32_f64(i25 %i) {
+; CHECK-LABEL: @ItoFtoF_s25_f32_f64(
+; CHECK-NEXT:    [[R:%.*]] = sitofp i25 [[I:%.*]] to double
+; CHECK-NEXT:    ret double [[R]]
+;
+  %x = sitofp i25 %i to float
+  %r = fpext float %x to double
+  ret double %r
+}
+
+; Convert from integer is exact, so convert directly to fp128.
+
+define fp128 @ItoFtoF_u24_f32_f128(i24 %i) {
+; CHECK-LABEL: @ItoFtoF_u24_f32_f128(
+; CHECK-NEXT:    [[R:%.*]] = uitofp i24 [[I:%.*]] to fp128
+; CHECK-NEXT:    ret fp128 [[R]]
+;
+  %x = uitofp i24 %i to float
+  %r = fpext float %x to fp128
+  ret fp128 %r
+}
+
+; Negative test - intermediate rounding in float type.
+
+define double @ItoFtoF_s26_f32_f64(i26 %i) {
+; CHECK-LABEL: @ItoFtoF_s26_f32_f64(
+; CHECK-NEXT:    [[X:%.*]] = sitofp i26 [[I:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fpext float [[X]] to double
+; CHECK-NEXT:    ret double [[R]]
+;
+  %x = sitofp i26 %i to float
+  %r = fpext float %x to double
+  ret double %r
+}
+
+; Negative test - intermediate rounding in float type.
+
+define double @ItoFtoF_u25_f32_f64(i25 %i) {
+; CHECK-LABEL: @ItoFtoF_u25_f32_f64(
+; CHECK-NEXT:    [[X:%.*]] = uitofp i25 [[I:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fpext float [[X]] to double
+; CHECK-NEXT:    ret double [[R]]
+;
+  %x = uitofp i25 %i to float
+  %r = fpext float %x to double
+  ret double %r
+}
+
+; UB on overflow guarantees that the input is small enough to fit in i32.
+
+define double @FtoItoFtoF_f32_s32_f32_f64(float %f) {
+; CHECK-LABEL: @FtoItoFtoF_f32_s32_f32_f64(
+; CHECK-NEXT:    [[I:%.*]] = fptosi float [[F:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[I]] to double
+; CHECK-NEXT:    ret double [[R]]
+;
+  %i = fptosi float %f to i32
+  %x = sitofp i32 %i to float
+  %r = fpext float %x to double
+  ret double %r
+}
+
+declare void @use_i32(i32)
+declare void @use_f32(float)
+
+; Extra uses are ok; unsigned is ok.
+
+define double @FtoItoFtoF_f32_u32_f32_f64_extra_uses(float %f) {
+; CHECK-LABEL: @FtoItoFtoF_f32_u32_f32_f64_extra_uses(
+; CHECK-NEXT:    [[I:%.*]] = fptoui float [[F:%.*]] to i32
+; CHECK-NEXT:    call void @use_i32(i32 [[I]])
+; CHECK-NEXT:    [[X:%.*]] = uitofp i32 [[I]] to float
+; CHECK-NEXT:    call void @use_f32(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[I]] to double
+; CHECK-NEXT:    ret double [[R]]
+;
+  %i = fptoui float %f to i32
+  call void @use_i32(i32 %i)
+  %x = uitofp i32 %i to float
+  call void @use_f32(float %x)
+  %r = fpext float %x to double
+  ret double %r
+}
+
+; Vectors are ok; initial type can be smaller than intermediate type.
+
+define <3 x double> @FtoItoFtoF_v3f16_v3s32_v3f32_v3f64(<3 x half> %f) {
+; CHECK-LABEL: @FtoItoFtoF_v3f16_v3s32_v3f32_v3f64(
+; CHECK-NEXT:    [[I:%.*]] = fptosi <3 x half> [[F:%.*]] to <3 x i32>
+; CHECK-NEXT:    [[R:%.*]] = sitofp <3 x i32> [[I]] to <3 x double>
+; CHECK-NEXT:    ret <3 x double> [[R]]
+;
+  %i = fptosi <3 x half> %f to <3 x i32>
+  %x = sitofp <3 x i32> %i to <3 x float>
+  %r = fpext <3 x float> %x to <3 x double>
+  ret <3 x double> %r
+}
+
+; Wider than double is ok.
+
+define fp128 @FtoItoFtoF_f32_s64_f64_f128(float %f) {
+; CHECK-LABEL: @FtoItoFtoF_f32_s64_f64_f128(
+; CHECK-NEXT:    [[I:%.*]] = fptosi float [[F:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = sitofp i64 [[I]] to fp128
+; CHECK-NEXT:    ret fp128 [[R]]
+;
+  %i = fptosi float %f to i64
+  %x = sitofp i64 %i to double
+  %r = fpext double %x to fp128
+  ret fp128 %r
+}
+
+; Target-specific type is ok.
+
+define x86_fp80 @FtoItoFtoF_f64_u54_f64_f80(double %f) {
+; CHECK-LABEL: @FtoItoFtoF_f64_u54_f64_f80(
+; CHECK-NEXT:    [[I:%.*]] = fptoui double [[F:%.*]] to i54
+; CHECK-NEXT:    [[R:%.*]] = uitofp i54 [[I]] to x86_fp80
+; CHECK-NEXT:    ret x86_fp80 [[R]]
+;
+  %i = fptoui double %f to i54
+  %x = uitofp i54 %i to double
+  %r = fpext double %x to x86_fp80
+  ret x86_fp80 %r
+}
+
+; Weird target-specific type is ok (not possible to extend *from* that type).
+
+define ppc_fp128 @FtoItoFtoF_f64_u54_f64_p128(double %f) {
+; CHECK-LABEL: @FtoItoFtoF_f64_u54_f64_p128(
+; CHECK-NEXT:    [[I:%.*]] = fptoui double [[F:%.*]] to i54
+; CHECK-NEXT:    [[R:%.*]] = uitofp i54 [[I]] to ppc_fp128
+; CHECK-NEXT:    ret ppc_fp128 [[R]]
+;
+  %i = fptoui double %f to i54
+  %x = uitofp i54 %i to double
+  %r = fpext double %x to ppc_fp128
+  ret ppc_fp128 %r
+}
+
+; Unsigned to signed is ok because signed int has smaller magnitude.
+
+define double @FtoItoFtoF_f32_us32_f32_f64(float %f) {
+; CHECK-LABEL: @FtoItoFtoF_f32_us32_f32_f64(
+; CHECK-NEXT:    [[I:%.*]] = fptoui float [[F:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[I]] to double
+; CHECK-NEXT:    ret double [[R]]
+;
+  %i = fptoui float %f to i32
+  %x = sitofp i32 %i to float
+  %r = fpext float %x to double
+  ret double %r
+}
+
+; Negative test: consider -1.0
+
+define double @FtoItoFtoF_f32_su32_f32_f64(float %f) {
+; CHECK-LABEL: @FtoItoFtoF_f32_su32_f32_f64(
+; CHECK-NEXT:    [[I:%.*]] = fptosi float [[F:%.*]] to i32
+; CHECK-NEXT:    [[X:%.*]] = uitofp i32 [[I]] to float
+; CHECK-NEXT:    [[R:%.*]] = fpext float [[X]] to double
+; CHECK-NEXT:    ret double [[R]]
+;
+  %i = fptosi float %f to i32
+  %x = uitofp i32 %i to float
+  %r = fpext float %x to double
+  ret double %r
 }

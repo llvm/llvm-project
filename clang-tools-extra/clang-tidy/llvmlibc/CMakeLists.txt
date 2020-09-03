@@ -1,0 +1,28 @@
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
+
+add_clang_library(clangTidyLLVMLibcModule
+  CalleeNamespaceCheck.cpp
+  ImplementationInNamespaceCheck.cpp
+  LLVMLibcTidyModule.cpp
+  RestrictSystemLibcHeadersCheck.cpp
+
+  LINK_LIBS
+  clangTidy
+  clangTidyPortabilityModule
+  clangTidyUtils
+
+  DEPENDS
+  omp_gen
+  )
+
+clang_target_link_libraries(clangTidyLLVMLibcModule
+  PRIVATE
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangLex
+  clangTooling
+  )

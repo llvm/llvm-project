@@ -40,7 +40,7 @@ define dso_local i32 @foo() local_unnamed_addr #0 !dbg !2 {
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   16777248                # 0x1000020
 ; CHECK-NEXT:        .long   5                       # BTF_KIND_FUNC(id = 3)
-; CHECK-NEXT:        .long   201326592               # 0xc000000
+; CHECK-NEXT:        .long   201326593               # 0xc000001
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_VOLATILE(id = 4)
 ; CHECK-NEXT:        .long   150994944               # 0x9000000

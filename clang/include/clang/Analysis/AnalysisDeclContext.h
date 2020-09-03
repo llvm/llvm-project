@@ -191,18 +191,17 @@ public:
   /// necessary or nullptr if the analysis could not run.
   template <typename T> T *getAnalysis() {
     const void *tag = T::getTag();
-    ManagedAnalysis *&data = getAnalysisImpl(tag);
-    if (!data) {
+    std::unique_ptr<ManagedAnalysis> &data = getAnalysisImpl(tag);
+    if (!data)
       data = T::create(*this);
-    }
-    return static_cast<T *>(data);
+    return static_cast<T *>(data.get());
   }
 
   /// \returns Whether the root namespace of \p D is the \c std C++ namespace.
   static bool isInStdNamespace(const Decl *D);
 
 private:
-  ManagedAnalysis *&getAnalysisImpl(const void *tag);
+  std::unique_ptr<ManagedAnalysis> &getAnalysisImpl(const void *tag);
 
   LocationContextManager &getLocationContextManager();
 };
@@ -325,6 +324,8 @@ public:
 
   unsigned getIndex() const { return Index; }
 
+  CFGElement getCallSiteCFGElement() const { return (*Block)[Index]; }
+  
   void Profile(llvm::FoldingSetNodeID &ID) override;
 
   static void Profile(llvm::FoldingSetNodeID &ID, AnalysisDeclContext *ADC,

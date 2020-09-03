@@ -107,7 +107,7 @@ rescheduleLexographically(std::vector<MachineInstr *> instructions,
     II->print(OS);
     OS.flush();
 
-    // Trim the assignment, or start from the begining in the case of a store.
+    // Trim the assignment, or start from the beginning in the case of a store.
     const size_t i = S.find("=");
     StringInstrMap.push_back({(i == std::string::npos) ? S : S.substr(i), II});
   }
@@ -138,7 +138,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
 
   bool Changed = false;
 
-  // Calculates the distance of MI from the begining of its parent BB.
+  // Calculates the distance of MI from the beginning of its parent BB.
   auto getInstrIdx = [](const MachineInstr &MI) {
     unsigned i = 0;
     for (auto &CurMI : *MI.getParent()) {

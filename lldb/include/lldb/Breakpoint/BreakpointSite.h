@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BreakpointSite_h_
-#define liblldb_BreakpointSite_h_
-
+#ifndef LLDB_BREAKPOINT_BREAKPOINTSITE_H
+#define LLDB_BREAKPOINT_BREAKPOINTSITE_H
 
 #include <list>
 #include <mutex>
@@ -226,9 +225,10 @@ private:
                  const lldb::BreakpointLocationSP &owner, lldb::addr_t m_addr,
                  bool use_hardware);
 
-  DISALLOW_COPY_AND_ASSIGN(BreakpointSite);
+  BreakpointSite(const BreakpointSite &) = delete;
+  const BreakpointSite &operator=(const BreakpointSite &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_BreakpointSite_h_
+#endif // LLDB_BREAKPOINT_BREAKPOINTSITE_H

@@ -600,12 +600,16 @@ namespace CopyCtor {
   constexpr B c = b;
   static_assert(c.arr[2] == 3, "");
   static_assert(c.arr[7] == 0, "");
+
+  // OK: the copy ctor for X doesn't read any members.
+  struct X { struct Y {} y; } x1;
+  constexpr X x2 = x1;
 }
 
 constexpr int selfref[2][2][2] = {
-  selfref[1][1][1] + 1, selfref[0][0][0] + 1,
-  selfref[1][0][1] + 1, selfref[0][1][0] + 1,
-  selfref[1][0][0] + 1, selfref[0][1][1] + 1 };
+  1, selfref[0][0][0] + 1,
+  1, selfref[0][1][0] + 1,
+  1, selfref[0][1][1] + 1 };
 static_assert(selfref[0][0][0] == 1, "");
 static_assert(selfref[0][0][1] == 2, "");
 static_assert(selfref[0][1][0] == 1, "");
@@ -614,6 +618,10 @@ static_assert(selfref[1][0][0] == 1, "");
 static_assert(selfref[1][0][1] == 3, "");
 static_assert(selfref[1][1][0] == 0, "");
 static_assert(selfref[1][1][1] == 0, "");
+
+constexpr int badselfref[2][2][2] = { // expected-error {{constant expression}}
+  badselfref[1][0][0] // expected-note {{outside its lifetime}}
+};
 
 struct TrivialDefCtor { int n; };
 typedef TrivialDefCtor TDCArray[2][2];
@@ -674,12 +682,12 @@ template<bool B, typename T> struct S : T {
   }
 };
 
-extern const int n;
+extern const int n; // expected-note {{declared here}}
 template<typename T> void f() {
   // This is ill-formed, because a hypothetical instantiation at the point of
   // template definition would be ill-formed due to a construct that does not
   // depend on a template parameter.
-  constexpr int k = n; // expected-error {{must be initialized by a constant expression}}
+  constexpr int k = n; // expected-error {{must be initialized by a constant expression}} expected-note {{initializer of 'n' is unknown}}
 }
 // It doesn't matter that the instantiation could later become valid:
 constexpr int n = 4;
@@ -870,8 +878,8 @@ static_assert((Derived*)(Base*)pb1 == (Derived*)pok2, "");
 constexpr Base *nullB = 42 - 6 * 7; // expected-error {{cannot initialize a variable of type 'Class::Base *const' with an rvalue of type 'int'}}
 constexpr Base *nullB1 = 0;
 static_assert((Bottom*)nullB == 0, "");
-static_assert((Derived*)nullB == 0, "");
-static_assert((void*)(Bottom*)nullB == (void*)(Derived*)nullB, "");
+static_assert((Derived*)nullB1 == 0, "");
+static_assert((void*)(Bottom*)nullB1 == (void*)(Derived*)nullB1, "");
 Base *nullB2 = '\0'; // expected-error {{cannot initialize a variable of type 'Class::Base *' with an rvalue of type 'char'}}
 Base *nullB3 = (0);
 Base *nullB4 = false; // expected-error {{cannot initialize a variable of type 'Class::Base *' with an rvalue of type 'bool'}}
@@ -1250,7 +1258,7 @@ constexpr int m1b = const_cast<const int&>(n1); // expected-error {{constant exp
 constexpr int m2b = const_cast<const int&>(n2); // expected-error {{constant expression}} expected-note {{read of volatile object 'n2'}}
 
 struct T { int n; };
-const T t = { 42 };
+const T t = { 42 }; // expected-note {{declared here}}
 
 constexpr int f(volatile int &&r) {
   return r; // expected-note {{read of volatile-qualified type 'volatile int'}}
@@ -1277,18 +1285,16 @@ namespace ExternConstexpr {
   }
 
   extern const int q;
-  constexpr int g() { return q; }
-  constexpr int q = g();
-  static_assert(q == 0, "zero-initialization should precede static initialization");
+  constexpr int g() { return q; } // expected-note {{outside its lifetime}}
+  constexpr int q = g(); // expected-error {{constant expression}} expected-note {{in call}}
 
   extern int r; // expected-note {{here}}
   constexpr int h() { return r; } // expected-error {{never produces a constant}} expected-note {{read of non-const}}
 
   struct S { int n; };
   extern const S s;
-  constexpr int x() { return s.n; }
-  constexpr S s = {x()};
-  static_assert(s.n == 0, "zero-initialization should precede static initialization");
+  constexpr int x() { return s.n; } // expected-note {{outside its lifetime}}
+  constexpr S s = {x()}; // expected-error {{constant expression}} expected-note {{in call}}
 }
 
 namespace ComplexConstexpr {
@@ -1366,7 +1372,7 @@ namespace InstantiateCaseStmt {
 
 namespace ConvertedConstantExpr {
   extern int &m;
-  extern int &n;
+  extern int &n; // expected-note 2{{declared here}}
 
   constexpr int k = 4;
   int &m = const_cast<int&>(k);
@@ -1375,9 +1381,9 @@ namespace ConvertedConstantExpr {
   // useless note and instead just point to the non-constant subexpression.
   enum class E {
     em = m,
-    en = n, // expected-error {{not a constant expression}}
-    eo = (m +
-          n // expected-error {{not a constant expression}}
+    en = n, // expected-error {{not a constant expression}} expected-note {{initializer of 'n' is unknown}}
+    eo = (m + // expected-error {{not a constant expression}}
+          n // expected-note {{initializer of 'n' is unknown}}
           ),
     eq = reinterpret_cast<long>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
   };
@@ -1955,11 +1961,10 @@ namespace Lifetime {
 
   struct R { // expected-note {{field init}}
     struct Inner { constexpr int f() const { return 0; } };
-    int a = b.f(); // expected-warning {{uninitialized}} expected-note {{member call on object outside its lifetime}}
+    int a = b.f(); // expected-warning {{uninitialized}} expected-note 2{{member call on object outside its lifetime}}
     Inner b;
   };
-  // FIXME: This should be rejected under DR2026.
-  constexpr R r; // expected-note {{default constructor}}
+  constexpr R r; // expected-error {{constant expression}} expected-note {{in call}} expected-note {{implicit default constructor for 'Lifetime::R' first required here}}
   void rf() {
     constexpr R r; // expected-error {{constant expression}} expected-note {{in call}}
   }
@@ -2041,9 +2046,9 @@ namespace BadDefaultInit {
   // FIXME: The "constexpr constructor must initialize all members" diagnostic
   // here is bogus (we discard the k(k) initializer because the parameter 'k'
   // has been marked invalid).
-  struct B { // expected-note 2{{candidate}}
-    constexpr B( // expected-warning {{initialize all members}} expected-note {{candidate}}
-        int k = X<B().k>::n) : // expected-error {{no matching constructor}}
+  struct B {
+    constexpr B( // expected-warning {{initialize all members}}
+        int k = X<B().k>::n) : // expected-error {{default argument to function 'B' that is declared later}} expected-note {{here}}
       k(k) {}
     int k; // expected-note {{not initialized}}
   };
@@ -2296,4 +2301,43 @@ namespace PR41854 {
   int a;
   f &d = reinterpret_cast<f&>(a);
   unsigned b = d.c;
+}
+
+namespace array_size {
+  template<int N> struct array {
+    static constexpr int size() { return N; }
+  };
+  template<typename T> void f1(T t) {
+    constexpr int k = t.size();
+  }
+  template<typename T> void f2(const T &t) {
+    constexpr int k = t.size(); // expected-error {{constant}} expected-note {{function parameter 't' with unknown value cannot be used in a constant expression}}
+  }
+  template<typename T> void f3(const T &t) {
+    constexpr int k = T::size();
+  }
+  void g(array<3> a) {
+    f1(a);
+    f2(a); // expected-note {{instantiation of}}
+    f3(a);
+  }
+}
+
+namespace flexible_array {
+  struct A { int x; char arr[]; }; // expected-warning {{C99}} expected-note {{here}}
+  constexpr A a = {1};
+  static_assert(a.x == 1, "");
+  static_assert(&a.arr != nullptr, "");
+  static_assert(a.arr[0], ""); // expected-error {{constant expression}} expected-note {{array member without known bound}}
+  static_assert(a.arr[1], ""); // expected-error {{constant expression}} expected-note {{array member without known bound}}
+
+  constexpr A b[] = {{1}, {2}, {3}}; // expected-warning {{flexible array member}}
+  static_assert(b[0].x == 1, "");
+  static_assert(b[1].x == 2, "");
+  static_assert(b[2].x == 3, "");
+  static_assert(b[2].arr[0], ""); // expected-error {{constant expression}} expected-note {{array member without known bound}}
+
+  // If we ever start to accept this, we'll need to ensure we can
+  // constant-evaluate it properly.
+  constexpr A c = {1, 2, 3}; // expected-error {{initialization of flexible array member}}
 }

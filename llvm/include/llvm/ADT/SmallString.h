@@ -263,7 +263,7 @@ public:
   // Extra methods.
 
   /// Explicit conversion to StringRef.
-  StringRef str() const { return StringRef(this->begin(), this->size()); }
+  StringRef str() const { return StringRef(this->data(), this->size()); }
 
   // TODO: Make this const, if it's safe...
   const char* c_str() {
@@ -274,6 +274,10 @@ public:
 
   /// Implicit conversion to StringRef.
   operator StringRef() const { return str(); }
+
+  explicit operator std::string() const {
+    return std::string(this->data(), this->size());
+  }
 
   // Extra operators.
   const SmallString &operator=(StringRef RHS) {

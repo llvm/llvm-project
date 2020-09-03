@@ -43,7 +43,6 @@
 #include "llvm/Analysis/ObjCARCInstKind.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -610,8 +609,7 @@ bool
 ObjCARCOpt::OptimizeRetainRVCall(Function &F, Instruction *RetainRV) {
   // Check for the argument being from an immediately preceding call or invoke.
   const Value *Arg = GetArgRCIdentityRoot(RetainRV);
-  ImmutableCallSite CS(Arg);
-  if (const Instruction *Call = CS.getInstruction()) {
+  if (const Instruction *Call = dyn_cast<CallBase>(Arg)) {
     if (Call->getParent() == RetainRV->getParent()) {
       BasicBlock::const_iterator I(Call);
       ++I;
@@ -678,6 +676,7 @@ bool ObjCARCOpt::OptimizeInlinedAutoreleaseRVCall(
   // Delete the RV pair, starting with the AutoreleaseRV.
   AutoreleaseRV->replaceAllUsesWith(
       cast<CallInst>(AutoreleaseRV)->getArgOperand(0));
+  Changed = true;
   EraseInstruction(AutoreleaseRV);
   if (Class == ARCInstKind::RetainRV) {
     // AutoreleaseRV and RetainRV cancel out.  Delete the RetainRV.
@@ -917,6 +916,7 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
       if (!Inst->getType()->isVoidTy())
         Inst->replaceAllUsesWith(Inst->getOperand(0));
       Inst->eraseFromParent();
+      Changed = true;
       return;
     }
 
@@ -2054,6 +2054,7 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
     // Delete objc_loadWeak calls with no users.
     if (Class == ARCInstKind::LoadWeak && Inst->use_empty()) {
       Inst->eraseFromParent();
+      Changed = true;
       continue;
     }
 

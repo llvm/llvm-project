@@ -1,7 +1,15 @@
+import os
 from ctypes import *
+from ctypes.util import find_library
 
-isl = cdll.LoadLibrary("libisl.so")
-libc = cdll.LoadLibrary("libc.so.6")
+isl_dyld_library_path = os.environ.get('ISL_DYLD_LIBRARY_PATH')
+if isl_dyld_library_path != None:
+    os.environ['DYLD_LIBRARY_PATH'] =  isl_dyld_library_path
+try:
+    isl = cdll.LoadLibrary(isl_dlname)
+except:
+    isl = cdll.LoadLibrary(find_library("isl"))
+libc = cdll.LoadLibrary(find_library("c"))
 
 class Error(Exception):
     pass

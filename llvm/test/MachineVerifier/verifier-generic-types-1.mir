@@ -1,4 +1,4 @@
-# RUN: not llc -o - %s -mtriple=x86_64-- -verify-machineinstrs -run-pass=none 2>&1 | FileCheck %s
+# RUN: not --crash llc -o - %s -mtriple=x86_64-- -verify-machineinstrs -run-pass=none 2>&1 | FileCheck %s
 # REQUIRES: x86-registered-target
 
 # CHECK-NOT: Type mismatch

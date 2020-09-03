@@ -1,6 +1,6 @@
 //===- Parser.h - MLIR Parser Library Interface -----------------*- C++ -*-===//
 //
-// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -58,7 +58,7 @@ OwningModuleRef parseSourceString(llvm::StringRef moduleStr,
 /// constructed from a new SourceMgr with a single a MemoryBuffer wrapping
 /// `attrStr`. If the passed `attrStr` has additional tokens that were not part
 /// of the type, an error is emitted.
-// TODO(ntv) Improve diagnostic reporting.
+// TODO: Improve diagnostic reporting.
 Attribute parseAttribute(llvm::StringRef attrStr, MLIRContext *context);
 Attribute parseAttribute(llvm::StringRef attrStr, Type type);
 
@@ -76,7 +76,7 @@ Attribute parseAttribute(llvm::StringRef attrStr, Type type, size_t &numRead);
 /// constructed from a new SourceMgr with a single a MemoryBuffer wrapping
 /// `typeStr`. If the passed `typeStr` has additional tokens that were not part
 /// of the type, an error is emitted.
-// TODO(ntv) Improve diagnostic reporting.
+// TODO: Improve diagnostic reporting.
 Type parseType(llvm::StringRef typeStr, MLIRContext *context);
 
 /// This parses a single MLIR type to an MLIR context if it was valid.  If not,

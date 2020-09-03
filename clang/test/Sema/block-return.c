@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-int-to-pointer-cast -pedantic -fsyntax-only %s -verify -fblocks
+// RUN: %clang_cc1 -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -pedantic -fsyntax-only %s -verify -fblocks
 
 typedef void (^CL)(void);
 
@@ -79,7 +79,7 @@ static int funk(char *s) {
 void next();
 void foo4() {
   int (^xx)(const char *s) = ^(char *s) { return 1; }; // expected-error {{incompatible block pointer types initializing 'int (^)(const char *)' with an expression of type 'int (^)(char *)'}}
-  int (*yy)(const char *s) = funk; // expected-warning {{incompatible pointer types initializing 'int (*)(const char *)' with an expression of type 'int (char *)'}}
+  int (*yy)(const char *s) = funk; // expected-warning {{incompatible function pointer types initializing 'int (*)(const char *)' with an expression of type 'int (char *)'}}
   
   int (^nested)(char *s) = ^(char *str) { void (^nest)(void) = ^(void) { printf("%s\n", str); }; next(); return 1; }; // expected-warning{{implicitly declaring library function 'printf' with type 'int (const char *, ...)'}} \
   // expected-note{{include the header <stdio.h> or explicitly provide a declaration for 'printf'}}

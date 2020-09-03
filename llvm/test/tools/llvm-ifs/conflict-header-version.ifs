@@ -5,12 +5,12 @@
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS2
 
 # CHECK-IFS: error: Interface Stub: IfsVersion Mismatch.
-# CHECK-IFS2: error: Interface Stub: Bad IfsVersion: 0.0, llvm-ifs supported version: 1.2.
+# CHECK-IFS2: error: Interface Stub: Bad IfsVersion: 0.0, llvm-ifs supported version: 2.0.
 
---- !experimental-ifs-v1
+--- !experimental-ifs-v2
 IfsVersion:      0.0
 Triple:          x86_64-unknown-linux-gnu
 ObjectFileFormat: ELF
 Symbols:
-  a:               { Type: Func }
+  - { Name: a, Type: Func }
 ...

@@ -451,18 +451,24 @@ CodeExtractor::getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
   for (User *U : Addr->users()) {
     IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(U);
     if (IntrInst) {
+      // We don't model addresses with multiple start/end markers, but the
+      // markers do not need to be in the region.
       if (IntrInst->getIntrinsicID() == Intrinsic::lifetime_start) {
-        // Do not handle the case where Addr has multiple start markers.
         if (Info.LifeStart)
           return {};
         Info.LifeStart = IntrInst;
+        continue;
       }
       if (IntrInst->getIntrinsicID() == Intrinsic::lifetime_end) {
         if (Info.LifeEnd)
           return {};
         Info.LifeEnd = IntrInst;
+        continue;
       }
-      continue;
+      // At this point, permit debug uses outside of the region.
+      // This is fixed in a later call to fixupDebugInfoPostExtraction().
+      if (isa<DbgInfoIntrinsic>(IntrInst))
+        continue;
     }
     // Find untracked uses of the address, bail.
     if (!definedInRegion(Blocks, U))
@@ -808,7 +814,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
     dbgs() << ")\n";
   });
 
-  StructType *StructTy;
+  StructType *StructTy = nullptr;
   if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
     StructTy = StructType::get(M->getContext(), paramTy);
     paramTy.clear();
@@ -868,10 +874,13 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::NoAlias:
       case Attribute::NoBuiltin:
       case Attribute::NoCapture:
+      case Attribute::NoMerge:
       case Attribute::NoReturn:
       case Attribute::NoSync:
+      case Attribute::NoUndef:
       case Attribute::None:
       case Attribute::NonNull:
+      case Attribute::Preallocated:
       case Attribute::ReadNone:
       case Attribute::ReadOnly:
       case Attribute::Returned:
@@ -887,6 +896,8 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::ZExt:
       case Attribute::ImmArg:
       case Attribute::EndAttrKinds:
+      case Attribute::EmptyKey:
+      case Attribute::TombstoneKey:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
@@ -901,6 +912,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::NonLazyBind:
       case Attribute::NoRedZone:
       case Attribute::NoUnwind:
+      case Attribute::NullPointerIsValid:
       case Attribute::OptForFuzzing:
       case Attribute::OptimizeNone:
       case Attribute::OptimizeForSize:
@@ -1123,8 +1135,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
       codeReplacer->getInstList().push_back(GEP);
-      StoreInst *SI = new StoreInst(StructValues[i], GEP);
-      codeReplacer->getInstList().push_back(SI);
+      new StoreInst(StructValues[i], GEP, codeReplacer);
     }
   }
 
@@ -1167,9 +1178,9 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       Output = ReloadOutputs[i];
     }
     LoadInst *load = new LoadInst(outputs[i]->getType(), Output,
-                                  outputs[i]->getName() + ".reload");
+                                  outputs[i]->getName() + ".reload",
+                                  codeReplacer);
     Reloads.push_back(load);
-    codeReplacer->getInstList().push_back(load);
     std::vector<User *> Users(outputs[i]->user_begin(), outputs[i]->user_end());
     for (unsigned u = 0, e = Users.size(); u != e; ++u) {
       Instruction *inst = cast<Instruction>(Users[u]);
@@ -1354,6 +1365,9 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
   // Block Frequency distribution with dummy node.
   Distribution BranchDist;
 
+  SmallVector<BranchProbability, 4> EdgeProbabilities(
+      TI->getNumSuccessors(), BranchProbability::getUnknown());
+
   // Add each of the frequencies of the successors.
   for (unsigned i = 0, e = TI->getNumSuccessors(); i < e; ++i) {
     BlockNode ExitNode(i);
@@ -1361,12 +1375,14 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
     if (ExitFreq != 0)
       BranchDist.addExit(ExitNode, ExitFreq);
     else
-      BPI->setEdgeProbability(CodeReplacer, i, BranchProbability::getZero());
+      EdgeProbabilities[i] = BranchProbability::getZero();
   }
 
   // Check for no total weight.
-  if (BranchDist.Total == 0)
+  if (BranchDist.Total == 0) {
+    BPI->setEdgeProbability(CodeReplacer, EdgeProbabilities);
     return;
+  }
 
   // Normalize the distribution so that they can fit in unsigned.
   BranchDist.normalize();
@@ -1378,8 +1394,9 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
     // Get the weight and update the current BFI.
     BranchWeights[Weight.TargetNode.Index] = Weight.Amount;
     BranchProbability BP(Weight.Amount, BranchDist.Total);
-    BPI->setEdgeProbability(CodeReplacer, Weight.TargetNode.Index, BP);
+    EdgeProbabilities[Weight.TargetNode.Index] = BP;
   }
+  BPI->setEdgeProbability(CodeReplacer, EdgeProbabilities);
   TI->setMetadata(
       LLVMContext::MD_prof,
       MDBuilder(TI->getContext()).createBranchWeights(BranchWeights));
@@ -1405,11 +1422,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   DISubprogram *OldSP = OldFunc.getSubprogram();
   LLVMContext &Ctx = OldFunc.getContext();
 
-  // See llvm.org/PR44560, OpenMP passes an invalid subprogram to CodeExtractor.
-  bool NeedWorkaroundForOpenMPIRBuilderBug =
-      OldSP && OldSP->getRetainedNodes()->isTemporary();
-
-  if (!OldSP || NeedWorkaroundForOpenMPIRBuilderBug) {
+  if (!OldSP) {
     // Erase any debug info the new function contains.
     stripDebugInfo(NewFunc);
     // Make sure the old function doesn't contain any non-local metadata refs.

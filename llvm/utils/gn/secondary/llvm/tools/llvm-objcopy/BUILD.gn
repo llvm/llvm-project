@@ -29,9 +29,7 @@ if (llvm_install_binutils_symlinks) {
 }
 foreach(target, symlinks) {
   symlink_or_copy(target) {
-    deps = [
-      ":llvm-objcopy",
-    ]
+    deps = [ ":llvm-objcopy" ]
     source = "llvm-objcopy"
     output = "$root_out_dir/bin/$target"
   }
@@ -72,5 +70,9 @@ executable("llvm-objcopy") {
     "MachO/MachOWriter.cpp",
     "MachO/Object.cpp",
     "llvm-objcopy.cpp",
+    "wasm/Object.cpp",
+    "wasm/Reader.cpp",
+    "wasm/WasmObjcopy.cpp",
+    "wasm/Writer.cpp",
   ]
 }

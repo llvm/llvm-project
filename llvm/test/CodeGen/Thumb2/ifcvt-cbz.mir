@@ -26,16 +26,16 @@ body:             |
   ; CHECK-LABEL: name: f1
   ; CHECK: bb.0:
   ; CHECK:   liveins: $r0, $lr, $r7
-  ; CHECK:   t2CMPri killed renamable $r0, 1, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   tBX_RET 1, killed $cpsr
-  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r7, killed $lr
+  ; CHECK:   t2CMPri killed renamable $r0, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   tBX_RET 1 /* CC::ne */, killed $cpsr
+  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r7, killed $lr
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   $r0 = t2MOVi 0, 14, $noreg, $noreg
-  ; CHECK:   tBL 14, $noreg, @fn, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp, implicit-def dead $r0
-  ; CHECK:   $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r7, def $lr
-  ; CHECK:   tBX_RET 14, $noreg
+  ; CHECK:   $r0 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @fn, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp, implicit-def dead $r0
+  ; CHECK:   $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r7, def $lr
+  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $r0, $lr, $r7
@@ -78,21 +78,21 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   liveins: $r0, $lr, $r7
-  ; CHECK:   t2CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   t2Bcc %bb.2, 1, killed $cpsr
+  ; CHECK:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   t2Bcc %bb.2, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r7, $lr
-  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r7, killed $lr
+  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r7, killed $lr
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   $r0 = t2MOVi 0, 14, $noreg, $noreg
-  ; CHECK:   tBL 14, $noreg, @fn, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp, implicit-def dead $r0
-  ; CHECK:   $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r7, def $lr
-  ; CHECK:   tBX_RET 14, $noreg
+  ; CHECK:   $r0 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @fn, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp, implicit-def dead $r0
+  ; CHECK:   $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r7, def $lr
+  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
   ; CHECK: bb.2:
   ; CHECK:   liveins: $lr, $r7
-  ; CHECK:   tBX_RET 14, $noreg
+  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $r0, $lr, $r7
@@ -135,22 +135,22 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   liveins: $r0, $lr, $r7
-  ; CHECK:   t2CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   $r1 = t2MOVi 0, 14, $noreg, $noreg
-  ; CHECK:   t2Bcc %bb.2, 1, killed $cpsr
+  ; CHECK:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   $r1 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   t2Bcc %bb.2, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r7, $lr
-  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r7, killed $lr
+  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r7, killed $lr
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   $r0 = t2MOVi 0, 14, $noreg, $noreg
-  ; CHECK:   tBL 14, $noreg, @fn, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp, implicit-def dead $r0
-  ; CHECK:   $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r7, def $lr
-  ; CHECK:   tBX_RET 14, $noreg
+  ; CHECK:   $r0 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @fn, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp, implicit-def dead $r0
+  ; CHECK:   $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r7, def $lr
+  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
   ; CHECK: bb.2:
   ; CHECK:   liveins: $lr, $r7
-  ; CHECK:   tBX_RET 14, $noreg
+  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $r0, $lr, $r7

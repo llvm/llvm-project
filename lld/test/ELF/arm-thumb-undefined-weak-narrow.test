@@ -1,11 +1,11 @@
 # REQUIRES: arm
 # RUN: yaml2obj %s -o %t.o
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-objdump -triple=thumbv7a-linux-gnueabi -d %t | FileCheck %s
+# RUN: llvm-objdump --triple=thumbv7a-linux-gnueabi -d %t | FileCheck %s
 
 # CHECK: Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT:_start:
+# CHECK-NEXT: <_start>:
 # CHECK-NEXT:    ff e7   b       #-2
 
 # Test the R_ARM_THM_JUMP11 relocation (102) to an undefined weak reference
@@ -29,8 +29,7 @@ Sections:
     Link:            .symtab
     Info:            .text
     Relocations:
-      - Offset:          0
-        Symbol:          undefined_weak
+      - Symbol:          undefined_weak
         Type:            R_ARM_THM_JUMP11
 
 Symbols:

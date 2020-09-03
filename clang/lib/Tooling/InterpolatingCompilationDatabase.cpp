@@ -114,6 +114,9 @@ static types::ID foldType(types::ID Lang) {
   case types::TY_ObjCXX:
   case types::TY_ObjCXXHeader:
     return types::TY_ObjCXX;
+  case types::TY_CUDA:
+  case types::TY_CUDA_DEVICE:
+    return types::TY_CUDA;
   default:
     return types::TY_INVALID;
   }
@@ -203,7 +206,7 @@ struct TransferableCommand {
   // Produce a CompileCommand for \p filename, based on this one.
   CompileCommand transferTo(StringRef Filename) const {
     CompileCommand Result = Cmd;
-    Result.Filename = Filename;
+    Result.Filename = std::string(Filename);
     bool TypeCertain;
     auto TargetType = guessType(Filename, &TypeCertain);
     // If the filename doesn't determine the language (.h), transfer with -x.
@@ -217,7 +220,7 @@ struct TransferableCommand {
       if (ClangCLMode) {
         const StringRef Flag = toCLFlag(TargetType);
         if (!Flag.empty())
-          Result.CommandLine.push_back(Flag);
+          Result.CommandLine.push_back(std::string(Flag));
       } else {
         Result.CommandLine.push_back("-x");
         Result.CommandLine.push_back(types::getTypeName(TargetType));
@@ -230,7 +233,7 @@ struct TransferableCommand {
           llvm::Twine(ClangCLMode ? "/std:" : "-std=") +
           LangStandard::getLangStandardForKind(Std).getName()).str());
     }
-    Result.CommandLine.push_back(Filename);
+    Result.CommandLine.push_back(std::string(Filename));
     Result.Heuristic = "inferred from " + Cmd.Filename;
     return Result;
   }

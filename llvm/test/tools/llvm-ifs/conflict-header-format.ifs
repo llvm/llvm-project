@@ -5,10 +5,10 @@
 # CHECK-IFS-NEXT: Filenames:
 # CHECK-IFS-NEXT: ObjectFileFormat Values: TBD ELF
 
---- !experimental-ifs-v1
-IfsVersion:      1.0
+--- !experimental-ifs-v2
+IfsVersion: 2.0
 Triple:          x86_64-apple-unknown
 ObjectFileFormat: TBD
 Symbols:
-  a:               { Type: Func }
+  - { Name: a, Type: Func }
 ...

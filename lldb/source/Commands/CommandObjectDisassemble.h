@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CommandObjectDisassemble_h_
-#define liblldb_CommandObjectDisassemble_h_
+#ifndef LLDB_SOURCE_COMMANDS_COMMANDOBJECTDISASSEMBLE_H
+#define LLDB_SOURCE_COMMANDS_COMMANDOBJECTDISASSEMBLE_H
 
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/Options.h"
@@ -62,6 +62,7 @@ public:
                                   // "at_pc".  This should be set
     // in SetOptionValue if anything the selects a location is set.
     lldb::addr_t symbol_containing_addr;
+    bool force = false;
   };
 
   CommandObjectDisassemble(CommandInterpreter &interpreter);
@@ -73,9 +74,22 @@ public:
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override;
 
+  llvm::Expected<std::vector<AddressRange>>
+  GetRangesForSelectedMode(CommandReturnObject &result);
+
+  llvm::Expected<std::vector<AddressRange>> GetContainingAddressRanges();
+  llvm::Expected<std::vector<AddressRange>> GetCurrentFunctionRanges();
+  llvm::Expected<std::vector<AddressRange>> GetCurrentLineRanges();
+  llvm::Expected<std::vector<AddressRange>>
+  GetNameRanges(CommandReturnObject &result);
+  llvm::Expected<std::vector<AddressRange>> GetPCRanges();
+  llvm::Expected<std::vector<AddressRange>> GetStartEndAddressRanges();
+
+  llvm::Error CheckRangeSize(const AddressRange &range, llvm::StringRef what);
+
   CommandOptions m_options;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_CommandObjectDisassemble_h_
+#endif // LLDB_SOURCE_COMMANDS_COMMANDOBJECTDISASSEMBLE_H

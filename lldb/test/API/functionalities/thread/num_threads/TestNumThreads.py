@@ -95,6 +95,8 @@ class NumberOfThreadsTestCase(TestBase):
         # the same breakpoint.
         def is_thread3(thread):
             for frame in thread:
+                if frame.GetFunctionName() is None:
+                    continue
                 if "thread3" in frame.GetFunctionName(): return True
             return False
 

@@ -24,11 +24,20 @@
 namespace llvm {
 namespace orc {
 
+IRSymbolMapper::ManglingOptions
+irManglingOptionsFromTargetOptions(const TargetOptions &Opts) {
+  IRSymbolMapper::ManglingOptions MO;
+
+  MO.EmulatedTLS = Opts.EmulatedTLS;
+
+  return MO;
+}
+
 /// Compile a Module to an ObjectFile.
-SimpleCompiler::CompileResult SimpleCompiler::operator()(Module &M) {
+Expected<SimpleCompiler::CompileResult> SimpleCompiler::operator()(Module &M) {
   CompileResult CachedObject = tryToLoadFromObjectCache(M);
   if (CachedObject)
-    return CachedObject;
+    return std::move(CachedObject);
 
   SmallVector<char, 0> ObjBufferSV;
 
@@ -38,7 +47,8 @@ SimpleCompiler::CompileResult SimpleCompiler::operator()(Module &M) {
     legacy::PassManager PM;
     MCContext *Ctx;
     if (TM.addPassesToEmitMC(PM, Ctx, ObjStream))
-      llvm_unreachable("Target does not support MC emission.");
+      return make_error<StringError>("Target does not support MC emission",
+                                     inconvertibleErrorCode());
     PM.run(M);
   }
 
@@ -47,14 +57,11 @@ SimpleCompiler::CompileResult SimpleCompiler::operator()(Module &M) {
 
   auto Obj = object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef());
 
-  if (Obj) {
-    notifyObjectCompiled(M, *ObjBuffer);
-    return std::move(ObjBuffer);
-  }
+  if (!Obj)
+    return Obj.takeError();
 
-  // TODO: Actually report errors helpfully.
-  consumeError(Obj.takeError());
-  return nullptr;
+  notifyObjectCompiled(M, *ObjBuffer);
+  return std::move(ObjBuffer);
 }
 
 SimpleCompiler::CompileResult
@@ -73,9 +80,11 @@ void SimpleCompiler::notifyObjectCompiled(const Module &M,
 
 ConcurrentIRCompiler::ConcurrentIRCompiler(JITTargetMachineBuilder JTMB,
                                            ObjectCache *ObjCache)
-    : JTMB(std::move(JTMB)), ObjCache(ObjCache) {}
+    : IRCompiler(irManglingOptionsFromTargetOptions(JTMB.getOptions())),
+      JTMB(std::move(JTMB)), ObjCache(ObjCache) {}
 
-std::unique_ptr<MemoryBuffer> ConcurrentIRCompiler::operator()(Module &M) {
+Expected<std::unique_ptr<MemoryBuffer>>
+ConcurrentIRCompiler::operator()(Module &M) {
   auto TM = cantFail(JTMB.createTargetMachine());
   SimpleCompiler C(*TM, ObjCache);
   return C(M);

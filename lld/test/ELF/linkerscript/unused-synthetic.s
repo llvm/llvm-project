@@ -20,7 +20,7 @@
 # RUN:    .got.plt : { a_sym = .; *(.got.plt) } \
 # RUN:  }" > %t2.script
 # RUN: ld.lld -shared -o %t2.so --script %t2.script %t.o
-# RUN: llvm-objdump -section-headers %t2.so | FileCheck %s --check-prefix=CHECK2
+# RUN: llvm-objdump --section-headers %t2.so | FileCheck %s --check-prefix=CHECK2
 # CHECK2: .got.plt 00000000
 
 .global _start

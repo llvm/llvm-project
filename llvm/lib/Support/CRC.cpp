@@ -25,7 +25,7 @@
 
 using namespace llvm;
 
-#if !LLVM_ENABLE_ZLIB
+#if LLVM_ENABLE_ZLIB == 0 || !HAVE_ZLIB_H
 
 static const uint32_t CRCTable[256] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
@@ -85,7 +85,15 @@ uint32_t llvm::crc32(uint32_t CRC, ArrayRef<uint8_t> Data) {
 
 #include <zlib.h>
 uint32_t llvm::crc32(uint32_t CRC, ArrayRef<uint8_t> Data) {
-  return ::crc32(CRC, (const Bytef *)Data.data(), Data.size());
+  // Zlib's crc32() only takes a 32-bit length, so we have to iterate for larger
+  // sizes. One could use crc32_z() instead, but that's a recent (2017) addition
+  // and may not be available on all systems.
+  do {
+    ArrayRef<uint8_t> Slice = Data.take_front(UINT32_MAX);
+    CRC = ::crc32(CRC, (const Bytef *)Slice.data(), (uInt)Slice.size());
+    Data = Data.drop_front(Slice.size());
+  } while (Data.size() > 0);
+  return CRC;
 }
 
 #endif

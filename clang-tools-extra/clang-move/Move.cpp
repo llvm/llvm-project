@@ -65,7 +65,7 @@ std::string CleanPath(StringRef PathRef) {
   llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
   // FIXME: figure out why this is necessary.
   llvm::sys::path::native(Path);
-  return Path.str();
+  return std::string(Path.str());
 }
 
 // Make the Path absolute using the CurrentDir if the Path is not an absolute
@@ -145,7 +145,7 @@ private:
   ClangMoveTool *const MoveTool;
 };
 
-/// Add a declatration being moved to new.h/cc. Note that the declaration will
+/// Add a declaration being moved to new.h/cc. Note that the declaration will
 /// also be deleted in old.h/cc.
 void MoveDeclFromOldFileToNewFile(ClangMoveTool *MoveTool, const NamedDecl *D) {
   MoveTool->getMovedDecls().push_back(D);
@@ -453,7 +453,7 @@ createInsertedReplacements(const std::vector<std::string> &Includes,
 }
 
 // Return a set of all decls which are used/referenced by the given Decls.
-// Specically, given a class member declaration, this method will return all
+// Specifically, given a class member declaration, this method will return all
 // decls which are used by the whole class.
 llvm::DenseSet<const Decl *>
 getUsedDecls(const HelperDeclRefGraph *RG,
@@ -552,20 +552,22 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
 
   // Match static functions/variable definitions which are defined in named
   // namespaces.
-  Optional<ast_matchers::internal::Matcher<NamedDecl>> HasAnySymbolNames;
+  SmallVector<std::string, 4> QualNames;
+  QualNames.reserve(Context->Spec.Names.size());
   for (StringRef SymbolName : Context->Spec.Names) {
-    llvm::StringRef GlobalSymbolName = SymbolName.trim().ltrim(':');
-    const auto HasName = hasName(("::" + GlobalSymbolName).str());
-    HasAnySymbolNames =
-        HasAnySymbolNames ? anyOf(*HasAnySymbolNames, HasName) : HasName;
+    QualNames.push_back(("::" + SymbolName.trim().ltrim(':')).str());
   }
 
-  if (!HasAnySymbolNames) {
+  if (QualNames.empty()) {
     llvm::errs() << "No symbols being moved.\n";
     return;
   }
+
+  ast_matchers::internal::Matcher<NamedDecl> HasAnySymbolNames =
+      hasAnyName(SmallVector<StringRef, 4>(QualNames.begin(), QualNames.end()));
+
   auto InMovedClass =
-      hasOutermostEnclosingClass(cxxRecordDecl(*HasAnySymbolNames));
+      hasOutermostEnclosingClass(cxxRecordDecl(HasAnySymbolNames));
 
   // Matchers for helper declarations in old.cc.
   auto InAnonymousNS = hasParent(namespaceDecl(isAnonymous()));
@@ -612,17 +614,17 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // Create a MatchCallback for class declarations.
   MatchCallbacks.push_back(std::make_unique<ClassDeclarationMatch>(this));
   // Match moved class declarations.
-  auto MovedClass = cxxRecordDecl(InOldFiles, *HasAnySymbolNames,
-                                  isDefinition(), TopLevelDecl)
-                        .bind("moved_class");
+  auto MovedClass =
+      cxxRecordDecl(InOldFiles, HasAnySymbolNames, isDefinition(), TopLevelDecl)
+          .bind("moved_class");
   Finder->addMatcher(MovedClass, MatchCallbacks.back().get());
   // Match moved class methods (static methods included) which are defined
   // outside moved class declaration.
-  Finder->addMatcher(
-      cxxMethodDecl(InOldFiles, ofOutermostEnclosingClass(*HasAnySymbolNames),
-                    isDefinition())
-          .bind("class_method"),
-      MatchCallbacks.back().get());
+  Finder->addMatcher(cxxMethodDecl(InOldFiles,
+                                   ofOutermostEnclosingClass(HasAnySymbolNames),
+                                   isDefinition())
+                         .bind("class_method"),
+                     MatchCallbacks.back().get());
   // Match static member variable definition of the moved class.
   Finder->addMatcher(
       varDecl(InMovedClass, InOldFiles, isDefinition(), isStaticDataMember())
@@ -630,20 +632,20 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
       MatchCallbacks.back().get());
 
   MatchCallbacks.push_back(std::make_unique<FunctionDeclarationMatch>(this));
-  Finder->addMatcher(functionDecl(InOldFiles, *HasAnySymbolNames, TopLevelDecl)
+  Finder->addMatcher(functionDecl(InOldFiles, HasAnySymbolNames, TopLevelDecl)
                          .bind("function"),
                      MatchCallbacks.back().get());
 
   MatchCallbacks.push_back(std::make_unique<VarDeclarationMatch>(this));
   Finder->addMatcher(
-      varDecl(InOldFiles, *HasAnySymbolNames, TopLevelDecl).bind("var"),
+      varDecl(InOldFiles, HasAnySymbolNames, TopLevelDecl).bind("var"),
       MatchCallbacks.back().get());
 
   // Match enum definition in old.h. Enum helpers (which are defined in old.cc)
   // will not be moved for now no matter whether they are used or not.
   MatchCallbacks.push_back(std::make_unique<EnumDeclarationMatch>(this));
   Finder->addMatcher(
-      enumDecl(InOldHeader, *HasAnySymbolNames, isDefinition(), TopLevelDecl)
+      enumDecl(InOldHeader, HasAnySymbolNames, isDefinition(), TopLevelDecl)
           .bind("enum"),
       MatchCallbacks.back().get());
 
@@ -653,7 +655,7 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   MatchCallbacks.push_back(std::make_unique<TypeAliasMatch>(this));
   Finder->addMatcher(namedDecl(anyOf(typedefDecl().bind("typedef"),
                                      typeAliasDecl().bind("type_alias")),
-                               InOldHeader, *HasAnySymbolNames, TopLevelDecl),
+                               InOldHeader, HasAnySymbolNames, TopLevelDecl),
                      MatchCallbacks.back().get());
 }
 
@@ -767,7 +769,7 @@ void ClangMoveTool::removeDeclsInOldFiles() {
       // FIXME: Minimize the include path like clang-include-fixer.
       std::string IncludeNewH =
           "#include \"" + Context->Spec.NewHeader + "\"\n";
-      // This replacment for inserting header will be cleaned up at the end.
+      // This replacement for inserting header will be cleaned up at the end.
       auto Err = FileAndReplacements.second.add(
           tooling::Replacement(FilePath, UINT_MAX, 0, IncludeNewH));
       if (Err)
@@ -785,13 +787,13 @@ void ClangMoveTool::removeDeclsInOldFiles() {
       continue;
     }
     auto CleanReplacements = format::cleanupAroundReplacements(
-        Code, Context->FileToReplacements[FilePath], *Style);
+        Code, Context->FileToReplacements[std::string(FilePath)], *Style);
 
     if (!CleanReplacements) {
       llvm::errs() << llvm::toString(CleanReplacements.takeError()) << "\n";
       continue;
     }
-    Context->FileToReplacements[FilePath] = *CleanReplacements;
+    Context->FileToReplacements[std::string(FilePath)] = *CleanReplacements;
   }
 }
 
@@ -810,7 +812,7 @@ void ClangMoveTool::moveDeclsToNewFiles() {
   std::vector<const NamedDecl *> ActualNewCCDecls;
 
   // Filter out all unused helpers in NewCCDecls.
-  // We only move the used helpers (including transively used helpers) and the
+  // We only move the used helpers (including transitively used helpers) and the
   // given symbols being moved.
   for (const auto *D : NewCCDecls) {
     if (llvm::is_contained(HelperDeclarations, D) &&
@@ -870,7 +872,7 @@ void ClangMoveTool::moveAll(SourceManager &SM, StringRef OldFile,
     else if (Context->Spec.NewHeader == NewFile &&
              OldHeaderIncludeRangeInHeader.isValid())
       ReplaceOldInclude(OldHeaderIncludeRangeInHeader);
-    Context->FileToReplacements[NewFile] = std::move(AllCode);
+    Context->FileToReplacements[std::string(NewFile)] = std::move(AllCode);
   }
 }
 

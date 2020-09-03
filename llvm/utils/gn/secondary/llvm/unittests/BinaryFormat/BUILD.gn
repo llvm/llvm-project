@@ -1,9 +1,7 @@
 import("//llvm/utils/unittest/unittest.gni")
 
 unittest("BinaryFormatTests") {
-  deps = [
-    "//llvm/lib/BinaryFormat",
-  ]
+  deps = [ "//llvm/lib/BinaryFormat" ]
   sources = [
     "DwarfTest.cpp",
     "MachOTest.cpp",

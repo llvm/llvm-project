@@ -23,6 +23,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
@@ -30,6 +31,7 @@
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
@@ -673,13 +675,13 @@ static bool mergeBlocksIntoPredecessors(Loop &L, DominatorTree &DT,
 
 static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
                             ScalarEvolution &SE, MemorySSAUpdater *MSSAU,
-                            bool &isLoopDeleted) {
+                            bool &IsLoopDeleted) {
   bool Changed = false;
 
   // Constant-fold terminators with known constant conditions.
-  Changed |= constantFoldTerminators(L, DT, LI, SE, MSSAU, isLoopDeleted);
+  Changed |= constantFoldTerminators(L, DT, LI, SE, MSSAU, IsLoopDeleted);
 
-  if (isLoopDeleted)
+  if (IsLoopDeleted)
     return true;
 
   // Eliminate unconditional branches by merging blocks into their predecessors.
@@ -752,7 +754,7 @@ public:
     getLoopAnalysisUsage(AU);
   }
 };
-}
+} // end namespace
 
 char LoopSimplifyCFGLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopSimplifyCFGLegacyPass, "loop-simplifycfg",

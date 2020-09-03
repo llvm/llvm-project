@@ -42,11 +42,11 @@ def FeatureAES : SubtargetFeature<
     "Enable AES support", [FeatureNEON]>;
 
 // Crypto has been split up and any combination is now valid (see the
-// crypto defintions above). Also, crypto is now context sensitive:
+// crypto definitions above). Also, crypto is now context sensitive:
 // it has a different meaning for e.g. Armv8.4 than it has for Armv8.2.
 // Therefore, we rely on Clang, the user interacing tool, to pass on the
 // appropriate crypto options. But here in the backend, crypto has very little
-// meaning anymore. We kept the Crypto defintion here for backward
+// meaning anymore. We kept the Crypto definition here for backward
 // compatibility, and now imply features SHA2 and AES, which was the
 // "traditional" meaning of Crypto.
 def FeatureCrypto : SubtargetFeature<"crypto", "HasCrypto", "true",
@@ -101,7 +101,25 @@ def FeatureCCPP : SubtargetFeature<"ccpp", "HasCCPP",
     "true", "Enable v8.2 data Cache Clean to Point of Persistence" >;
 
 def FeatureSVE : SubtargetFeature<"sve", "HasSVE", "true",
-  "Enable Scalable Vector Extension (SVE) instructions">;
+  "Enable Scalable Vector Extension (SVE) instructions", [FeatureFullFP16]>;
+
+// This flag is currently still labeled as Experimental, but when fully
+// implemented this should tell the compiler to use the zeroing pseudos to
+// benefit from the reverse instructions (e.g. SUB vs SUBR) if the inactive
+// lanes are known to be zero. The pseudos will then be expanded using the
+// MOVPRFX instruction to zero the inactive lanes. This feature should only be
+// enabled if MOVPRFX instructions are known to merge with the destructive
+// operations they prefix.
+//
+// This feature could similarly be extended to support cheap merging of _any_
+// value into the inactive lanes using the MOVPRFX instruction that uses
+// merging-predication.
+def FeatureExperimentalZeroingPseudos
+    : SubtargetFeature<"use-experimental-zeroing-pseudos",
+                       "UseExperimentalZeroingPseudos", "true",
+                       "Hint to the compiler that the MOVPRFX instruction is "
+                       "merged with destructive operations",
+                       []>;
 
 def FeatureSVE2 : SubtargetFeature<"sve2", "HasSVE2", "true",
   "Enable Scalable Vector Extension 2 (SVE2) instructions", [FeatureSVE]>;
@@ -142,7 +160,7 @@ def FeatureStrictAlign : SubtargetFeature<"strict-align",
                                           "Disallow all unaligned memory "
                                           "access">;
 
-foreach i = {1-7,9-15,18,20-28} in
+foreach i = {1-7,9-15,18,20-28,30} in
     def FeatureReserveX#i : SubtargetFeature<"reserve-x"#i, "ReserveXRegister["#i#"]", "true",
                                              "Reserve X"#i#", making it unavailable "
                                              "as a GPR">;
@@ -240,11 +258,11 @@ def FeatureDotProd : SubtargetFeature<
 
 def FeaturePA : SubtargetFeature<
     "pa", "HasPA", "true",
-    "Enable v8.3-A Pointer Authentication enchancement">;
+    "Enable v8.3-A Pointer Authentication extension">;
 
 def FeatureJS : SubtargetFeature<
     "jsconv", "HasJS", "true",
-    "Enable v8.3-A JavaScript FP conversion enchancement",
+    "Enable v8.3-A JavaScript FP conversion instructions",
     [FeatureFPARMv8]>;
 
 def FeatureCCIDX : SubtargetFeature<
@@ -280,6 +298,11 @@ def FeatureTRACEV8_4 : SubtargetFeature<
 def FeatureAM : SubtargetFeature<
     "am", "HasAM", "true",
     "Enable v8.4-A Activity Monitors extension">;
+
+def FeatureAMVS : SubtargetFeature<
+    "amvs", "HasAMVS", "true",
+    "Enable v8.6-A Activity Monitors Virtualization support",
+    [FeatureAM]>;
 
 def FeatureSEL2 : SubtargetFeature<
     "sel2", "HasSEL2", "true",
@@ -365,6 +388,25 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
 
+def FeatureBF16 : SubtargetFeature<"bf16", "HasBF16",
+    "true", "Enable BFloat16 Extension" >;
+
+def FeatureMatMulInt8 : SubtargetFeature<"i8mm", "HasMatMulInt8",
+    "true", "Enable Matrix Multiply Int8 Extension">;
+
+def FeatureMatMulFP32 : SubtargetFeature<"f32mm", "HasMatMulFP32",
+    "true", "Enable Matrix Multiply FP32 Extension", [FeatureSVE]>;
+
+def FeatureMatMulFP64 : SubtargetFeature<"f64mm", "HasMatMulFP64",
+    "true", "Enable Matrix Multiply FP64 Extension", [FeatureSVE]>;
+
+def FeatureFineGrainedTraps : SubtargetFeature<"fgt", "HasFineGrainedTraps",
+    "true", "Enable fine grained virtualization traps extension">;
+
+def FeatureEnhancedCounterVirtualization :
+      SubtargetFeature<"ecv", "HasEnhancedCounterVirtualization",
+      "true", "Enable enhanced counter virtualization extension">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -391,8 +433,13 @@ def HasV8_5aOps : SubtargetFeature<
   "v8.5a", "HasV8_5aOps", "true", "Support ARM v8.5a instructions",
   [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
    FeatureSSBS, FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
-   FeatureBranchTargetId]
->;
+   FeatureBranchTargetId]>;
+
+def HasV8_6aOps : SubtargetFeature<
+  "v8.6a", "HasV8_6aOps", "true", "Support ARM v8.6a instructions",
+
+  [HasV8_5aOps, FeatureAMVS, FeatureBF16, FeatureFineGrainedTraps,
+   FeatureEnhancedCounterVirtualization, FeatureMatMulInt8]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description
@@ -429,6 +476,17 @@ def FeatureUseEL#i#ForTP : SubtargetFeature<"tpidr-el"#i, "UseEL"#i#"ForTP",
   "true", "Permit use of TPIDR_EL"#i#" for the TLS base">;
 
 //===----------------------------------------------------------------------===//
+// Control codegen mitigation against Straight Line Speculation vulnerability.
+//===----------------------------------------------------------------------===//
+
+def FeatureHardenSlsRetBr : SubtargetFeature<"harden-sls-retbr",
+  "HardenSlsRetBr", "true",
+  "Harden against straight line speculation across RET and BR instructions">;
+def FeatureHardenSlsBlr : SubtargetFeature<"harden-sls-blr",
+  "HardenSlsBlr", "true",
+  "Harden against straight line speculation across BLR instructions">;
+
+//===----------------------------------------------------------------------===//
 // AArch64 Processors supported.
 //
 
@@ -443,6 +501,10 @@ def SVEUnsupported : AArch64Unsupported {
            HasSVE2BitPerm];
 }
 
+def PAUnsupported : AArch64Unsupported {
+  let F = [HasPA];
+}
+
 include "AArch64SchedA53.td"
 include "AArch64SchedA57.td"
 include "AArch64SchedCyclone.td"
@@ -453,6 +515,7 @@ include "AArch64SchedExynosM4.td"
 include "AArch64SchedExynosM5.td"
 include "AArch64SchedThunderX.td"
 include "AArch64SchedThunderX2T99.td"
+include "AArch64SchedThunderX3T110.td"
 
 def ProcA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
                                    "Cortex-A35 ARM processors", [
@@ -562,6 +625,67 @@ def ProcA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
                                     FeatureDotProd,
                                     FeatureSSBS
                                     ]>;
+
+def ProcA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
+                                   "Cortex-A77 ARM processors", [
+                                    HasV8_2aOps,
+                                    FeatureFPARMv8,
+                                    FeatureNEON, FeatureRCPC,
+                                    FeatureCrypto,
+                                    FeatureFullFP16,
+                                    FeatureDotProd
+                                    ]>;
+
+def ProcA78 : SubtargetFeature<"cortex-a78", "ARMProcFamily",
+                               "CortexA78",
+                               "Cortex-A78 ARM processors", [
+                               HasV8_2aOps,
+                               FeatureCrypto,
+                               FeatureFPARMv8,
+                               FeatureFuseAES,
+                               FeatureNEON,
+                               FeatureRCPC,
+                               FeaturePerfMon,
+                               FeaturePostRAScheduler,
+                               FeatureSPE,
+                               FeatureFullFP16,
+                               FeatureSSBS,
+                               FeatureDotProd]>;
+
+def ProcX1 : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
+                                  "Cortex-X1 ARM processors", [
+                                  HasV8_2aOps,
+                                  FeatureCrypto,
+                                  FeatureFPARMv8,
+                                  FeatureFuseAES,
+                                  FeatureNEON,
+                                  FeatureRCPC,
+                                  FeaturePerfMon,
+                                  FeaturePostRAScheduler,
+                                  FeatureSPE,
+                                  FeatureFullFP16,
+                                  FeatureDotProd]>;
+
+def ProcA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
+                                 "Fujitsu A64FX processors", [
+                                  HasV8_2aOps,
+                                  FeatureFPARMv8,
+                                  FeatureNEON,
+                                  FeatureSHA2,
+                                  FeaturePerfMon,
+                                  FeatureFullFP16,
+                                  FeatureSVE,
+                                  FeaturePostRAScheduler,
+                                  FeatureComplxNum
+                                  ]>;
+
+def ProcCarmel : SubtargetFeature<"carmel", "ARMProcFamily", "Carmel",
+                                  "Nvidia Carmel processors", [
+                                   HasV8_2aOps,
+                                   FeatureNEON,
+                                   FeatureCrypto,
+                                   FeatureFullFP16
+                                   ]>;
 
 // Note that cyclone does not fuse AES instructions, but newer apple chips do
 // perform the fusion and cyclone is used by default when targetting apple OSes.
@@ -780,6 +904,25 @@ def ProcThunderX2T99  : SubtargetFeature<"thunderx2t99", "ARMProcFamily",
                                           FeatureLSE,
                                           HasV8_1aOps]>;
 
+def ProcThunderX3T110  : SubtargetFeature<"thunderx3t110", "ARMProcFamily",
+                                         "ThunderX3T110",
+                                         "Marvell ThunderX3 processors", [
+                                          FeatureAggressiveFMA,
+                                          FeatureCRC,
+                                          FeatureCrypto,
+                                          FeatureFPARMv8,
+                                          FeatureArithmeticBccFusion,
+                                          FeatureNEON,
+                                          FeaturePostRAScheduler,
+                                          FeaturePredictableSelectIsExpensive,
+                                          FeatureLSE,
+                                          FeaturePA,
+                                          FeatureUseAA,
+                                          FeatureBalanceFPOps,
+                                          FeaturePerfMon,
+                                          FeatureStrictAlign,
+                                          HasV8_3aOps]>;
+
 def ProcThunderX : SubtargetFeature<"thunderx", "ARMProcFamily", "ThunderX",
                                     "Cavium ThunderX processors", [
                                     FeatureCRC,
@@ -844,7 +987,7 @@ def : ProcessorModel<"generic", NoSchedModel, [
                      FeatureNEON,
                      FeaturePerfMon,
                      FeaturePostRAScheduler,
-// ETE and TRBE are future architecture extensions. We temporariliy enable them
+// ETE and TRBE are future architecture extensions. We temporarily enable them
 // by default for users targeting generic AArch64, until it is decided in which
 // armv8.x-a architecture revision they will end up. The extensions do not
 // affect code generated by the compiler and can be used only by explicitly
@@ -853,6 +996,7 @@ def : ProcessorModel<"generic", NoSchedModel, [
                      ]>;
 
 def : ProcessorModel<"cortex-a35", CortexA53Model, [ProcA35]>;
+def : ProcessorModel<"cortex-a34", CortexA53Model, [ProcA35]>;
 def : ProcessorModel<"cortex-a53", CortexA53Model, [ProcA53]>;
 def : ProcessorModel<"cortex-a55", CortexA53Model, [ProcA55]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, [ProcA57]>;
@@ -863,6 +1007,9 @@ def : ProcessorModel<"cortex-a73", CortexA57Model, [ProcA73]>;
 def : ProcessorModel<"cortex-a75", CortexA57Model, [ProcA75]>;
 def : ProcessorModel<"cortex-a76", CortexA57Model, [ProcA76]>;
 def : ProcessorModel<"cortex-a76ae", CortexA57Model, [ProcA76]>;
+def : ProcessorModel<"cortex-a77", CortexA57Model, [ProcA77]>;
+def : ProcessorModel<"cortex-a78", CortexA57Model, [ProcA78]>;
+def : ProcessorModel<"cortex-x1", CortexA57Model, [ProcX1]>;
 def : ProcessorModel<"neoverse-e1", CortexA53Model, [ProcNeoverseE1]>;
 def : ProcessorModel<"neoverse-n1", CortexA57Model, [ProcNeoverseN1]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, [ProcExynosM3]>;
@@ -878,6 +1025,8 @@ def : ProcessorModel<"thunderxt81", ThunderXT8XModel,  [ProcThunderXT81]>;
 def : ProcessorModel<"thunderxt83", ThunderXT8XModel,  [ProcThunderXT83]>;
 // Cavium ThunderX2T9X  Processors. Formerly Broadcom Vulcan.
 def : ProcessorModel<"thunderx2t99", ThunderX2T99Model, [ProcThunderX2T99]>;
+// Marvell ThunderX3T110 Processors.
+def : ProcessorModel<"thunderx3t110", ThunderX3T110Model, [ProcThunderX3T110]>;
 // FIXME: HiSilicon TSV110 is currently modeled as a Cortex-A57.
 def : ProcessorModel<"tsv110", CortexA57Model, [ProcTSV110]>;
 
@@ -901,6 +1050,13 @@ def : ProcessorModel<"apple-s5", CycloneModel, [ProcAppleA12]>;
 
 // Alias for the latest Apple processor model supported by LLVM.
 def : ProcessorModel<"apple-latest", CycloneModel, [ProcAppleA13]>;
+
+// Fujitsu A64FX
+// FIXME: Scheduling model is not implemented yet.
+def : ProcessorModel<"a64fx", NoSchedModel, [ProcA64FX]>;
+
+// Nvidia Carmel
+def : ProcessorModel<"carmel", NoSchedModel, [ProcCarmel]>;
 
 //===----------------------------------------------------------------------===//
 // Assembly parser

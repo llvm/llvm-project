@@ -24,13 +24,13 @@ std::string llvm::demangle(const std::string &MangledName) {
   if (isItaniumEncoding(MangledName))
     Demangled = itaniumDemangle(MangledName.c_str(), nullptr, nullptr, nullptr);
   else
-    Demangled =
-        microsoftDemangle(MangledName.c_str(), nullptr, nullptr, nullptr);
+    Demangled = microsoftDemangle(MangledName.c_str(), nullptr, nullptr,
+                                  nullptr, nullptr);
 
   if (!Demangled)
     return MangledName;
 
   std::string Ret = Demangled;
-  std::free(Demangled);
+  free(Demangled);
   return Ret;
 }

@@ -1,4 +1,4 @@
-; RUN: opt -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=2 -S < %s | FileCheck %s
+; RUN: opt -attributor  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=2 -S < %s | FileCheck %s
 ;
 ; This file is the same as noreturn_sync.ll but with a personality which
 ; indicates that the exception handler *can* catch asynchronous exceptions. As
@@ -25,8 +25,10 @@ entry:
 ; CHECK:      Function Attrs: nofree noreturn nosync nounwind
 ; CHECK-NEXT: define
 ; CHECK-NEXT:   entry:
+; CHECK-NEXT:   {{.*}}@printf{{.*}}
 ; CHECK-NEXT:   call void @"?overflow@@YAXXZ"()
 ; CHECK-NEXT:   unreachable
+  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0)) nofree nosync nounwind
   call void @"?overflow@@YAXXZ"()
   %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0))
   ret void
@@ -100,9 +102,9 @@ define dso_local i32 @"?catchoverflow@@YAHXZ_may_throw"()  personality i8* bitca
 entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
-; CHECK: invoke void @"?overflow@@YAXXZ_may_throw"() 
+; CHECK: invoke void @"?overflow@@YAXXZ_may_throw"()
 ; CHECK:          to label %invoke.cont unwind label %catch.dispatch
-  invoke void @"?overflow@@YAXXZ_may_throw"() 
+  invoke void @"?overflow@@YAXXZ_may_throw"()
           to label %invoke.cont unwind label %catch.dispatch
 
 invoke.cont:                                      ; preds = %entry

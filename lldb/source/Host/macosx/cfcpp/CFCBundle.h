@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CoreFoundationCPP_CFBundle_h_
-#define CoreFoundationCPP_CFBundle_h_
+#ifndef LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCBUNDLE_H
+#define LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCBUNDLE_H
 
 #include "CFCReleaser.h"
 
@@ -36,4 +36,4 @@ private:
   const CFCBundle &operator=(const CFCBundle &) = delete;
 };
 
-#endif // #ifndef CoreFoundationCPP_CFBundle_h_
+#endif // LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCBUNDLE_H

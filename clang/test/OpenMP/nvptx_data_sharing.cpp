@@ -2,7 +2,8 @@
 ///==========================================================================///
 
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -disable-llvm-optzns | FileCheck %s --check-prefix CK1
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -disable-llvm-optzns | FileCheck %s --check-prefix CK1 --check-prefix SEQ
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -disable-llvm-optzns -fopenmp-cuda-parallel-target-regions | FileCheck %s --check-prefix CK1 --check-prefix PAR
 
 // expected-no-diagnostics
 
@@ -26,11 +27,11 @@ void test_ds(){
     }
   }
 }
-// CK1: [[MEM_TY:%.+]] = type { [128 x i8] }
-// CK1-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
-// CK1-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
-// CK1-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i64 8
-// CK1-DAG: [[KERNEL_SHARED:@.+]] = internal unnamed_addr constant i16 1
+// SEQ: [[MEM_TY:%.+]] = type { [128 x i8] }
+// SEQ-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
+// SEQ-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
+// SEQ-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i64 8
+// SEQ-DAG: [[KERNEL_SHARED:@.+]] = internal unnamed_addr constant i16 1
 
 /// ========= In the worker function ========= ///
 // CK1: {{.*}}define internal void @__omp_offloading{{.*}}test_ds{{.*}}_worker()
@@ -44,16 +45,17 @@ void test_ds(){
 // CK1: [[SHAREDARGS2:%.+]] = alloca i8**
 // CK1: call void @__kmpc_kernel_init
 // CK1: call void @__kmpc_data_sharing_init_stack
-// CK1: [[SHARED_MEM_FLAG:%.+]] = load i16, i16* [[KERNEL_SHARED]],
-// CK1: [[SIZE:%.+]] = load i64, i64* [[KERNEL_SIZE]],
-// CK1: call void @__kmpc_get_team_static_memory(i16 0, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i64 [[SIZE]], i16 [[SHARED_MEM_FLAG]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
-// CK1: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
-// CK1: [[GLOBALSTACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i64 0
+// SEQ: [[SHARED_MEM_FLAG:%.+]] = load i16, i16* [[KERNEL_SHARED]],
+// SEQ: [[SIZE:%.+]] = load i64, i64* [[KERNEL_SIZE]],
+// SEQ: call void @__kmpc_get_team_static_memory(i16 0, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i64 [[SIZE]], i16 [[SHARED_MEM_FLAG]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// SEQ: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
+// SEQ: [[GLOBALSTACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i64 0
+// PAR: [[GLOBALSTACK:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{32|64}} 8, i16 1)
 // CK1: [[GLOBALSTACK2:%.+]] = bitcast i8* [[GLOBALSTACK]] to %struct._globalized_locals_ty*
 // CK1: [[A:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[GLOBALSTACK2]], i32 0, i32 0
 // CK1: [[B:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[GLOBALSTACK2]], i32 0, i32 1
 // CK1: store i32 10, i32* [[A]]
-// CK1: call void @__kmpc_kernel_prepare_parallel({{.*}}, i16 1)
+// CK1: call void @__kmpc_kernel_prepare_parallel({{.*}})
 // CK1: call void @__kmpc_begin_sharing_variables(i8*** [[SHAREDARGS1]], i64 1)
 // CK1: [[SHARGSTMP1:%.+]] = load i8**, i8*** [[SHAREDARGS1]]
 // CK1: [[SHARGSTMP2:%.+]] = getelementptr inbounds i8*, i8** [[SHARGSTMP1]], i64 0
@@ -63,7 +65,7 @@ void test_ds(){
 // CK1: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CK1: call void @__kmpc_end_sharing_variables()
 // CK1: store i32 100, i32* [[B]]
-// CK1: call void @__kmpc_kernel_prepare_parallel({{.*}}, i16 1)
+// CK1: call void @__kmpc_kernel_prepare_parallel({{.*}})
 // CK1: call void @__kmpc_begin_sharing_variables(i8*** [[SHAREDARGS2]], i64 2)
 // CK1: [[SHARGSTMP3:%.+]] = load i8**, i8*** [[SHAREDARGS2]]
 // CK1: [[SHARGSTMP4:%.+]] = getelementptr inbounds i8*, i8** [[SHARGSTMP3]], i64 0
@@ -75,8 +77,9 @@ void test_ds(){
 // CK1: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CK1: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CK1: call void @__kmpc_end_sharing_variables()
-// CK1: [[SHARED_MEM_FLAG:%.+]] = load i16, i16* [[KERNEL_SHARED]],
-// CK1: call void @__kmpc_restore_team_static_memory(i16 0, i16 [[SHARED_MEM_FLAG]])
+// SEQ: [[SHARED_MEM_FLAG:%.+]] = load i16, i16* [[KERNEL_SHARED]],
+// SEQ: call void @__kmpc_restore_team_static_memory(i16 0, i16 [[SHARED_MEM_FLAG]])
+// PAR: call void @__kmpc_data_sharing_pop_stack(i8* [[GLOBALSTACK]])
 // CK1: call void @__kmpc_kernel_deinit(i16 1)
 
 /// ========= In the data sharing wrapper function ========= ///
@@ -92,7 +95,7 @@ void test_ds(){
 
 /// outlined function for the second parallel region ///
 
-// CK1: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.+}}, i32* dereferenceable{{.+}})
+// CK1: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* nonnull align {{[0-9]+}} dereferenceable{{.+}}, i32* nonnull align {{[0-9]+}} dereferenceable{{.+}})
 // CK1-NOT: call i8* @__kmpc_data_sharing_push_stack(
 // CK1: [[C_ADDR:%.+]] = alloca i32,
 // CK1: store i32* [[C_ADDR]], i32** %

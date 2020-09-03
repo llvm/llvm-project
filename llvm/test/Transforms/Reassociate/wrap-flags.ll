@@ -18,6 +18,20 @@ entry:
   ret i32 %mul2
 }
 
+define i32 @shl_to_mul_nsw_2(i32 %i) {
+;
+; CHECK-LABEL: @shl_to_mul_nsw_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I:%.*]], 1073741824
+; CHECK-NEXT:    [[MUL2:%.*]] = add i32 [[MUL]], 1
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+entry:
+  %mul = shl nsw i32 %i, 30
+  %mul2 = add i32 %mul, 1
+  ret i32 %mul2
+}
+
 define i32 @shl_to_mul_nuw(i32 %i) {
 ;
 ; CHECK-LABEL: @shl_to_mul_nuw(
@@ -42,6 +56,20 @@ define i32 @shl_to_mul_nuw_nsw(i32 %i) {
 ;
 entry:
   %mul = shl nuw nsw i32 %i, 2
+  %mul2 = add i32 %mul, 1
+  ret i32 %mul2
+}
+
+define i32 @shl_to_mul_nuw_nsw_bitwidth_m1(i32 %i) {
+;
+; CHECK-LABEL: @shl_to_mul_nuw_nsw_bitwidth_m1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[I:%.*]], -2147483648
+; CHECK-NEXT:    [[MUL2:%.*]] = add i32 [[MUL]], 1
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+entry:
+  %mul = shl nuw nsw i32 %i, 31
   %mul2 = add i32 %mul, 1
   ret i32 %mul2
 }

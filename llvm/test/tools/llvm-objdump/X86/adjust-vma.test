@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objdump --all-headers -D -z %t | FileCheck %s --check-prefixes=COMMON,NOADJUST
 # RUN: llvm-objdump --all-headers -D -z --adjust-vma=0x0 %t | FileCheck %s --check-prefixes=COMMON,NOADJUST
 # RUN: llvm-objdump --all-headers -D -z --adjust-vma=0x123000 %t | FileCheck %s --check-prefixes=COMMON,ADJUST
@@ -28,45 +28,45 @@
 # ADJUST-NEXT:    8 .shstrtab       0000003c 0000000000000000
 
 # COMMON:      SYMBOL TABLE:
-# COMMON-NEXT:  0000000000000001  l F .text 00000000 func
-# COMMON-NEXT:  0000000000000000      .text 00000000 sym
-# COMMON-NEXT:  0000000000000000  l d .text 00000000 .text
+# COMMON-NEXT:  0000000000000001  l F .text 0000000000000000 func
+# COMMON-NEXT:  0000000000000000  l   .text 0000000000000000 sym
+# COMMON-NEXT:  0000000000000000  l d .text 0000000000000000 .text
 
-# NOADJUST:      0000000000000000 sym:
+# NOADJUST:      0000000000000000 <sym>:
 # NOADJUST-NEXT:   0: {{.*}}  nop
-# NOADJUST:      0000000000000001 func:
+# NOADJUST:      0000000000000001 <func>:
 # NOADJUST-NEXT:   1: {{.*}}  retq
 
-# ADJUST:        0000000000123000 sym:
+# ADJUST:        0000000000123000 <sym>:
 # ADJUST-NEXT:     123000: {{.*}} nop
-# ADJUST:        0000000000123001 func:
+# ADJUST:        0000000000123001 <func>:
 # ADJUST-NEXT:     123001: {{.*}} retq
 
-# NOADJUST:      0000000000000000 .debug_str:
+# NOADJUST:      0000000000000000 <.debug_str>:
 # NOADJUST-NEXT:   0: {{.*}}  %al, (%rax)
 # NOADJUST-NEXT:      0000000000000001:  R_X86_64_32  .text
 # NOADJUST-NEXT:   2: {{.*}}  addb    %al, (%rax)
 
-# ADJUST:        0000000000000000 .debug_str:
+# ADJUST:        0000000000000000 <.debug_str>:
 # ADJUST-NEXT:     0: {{.*}}  %al, (%rax)
 # ADJUST-NEXT:        0000000000123001:  R_X86_64_32  .text
 # ADJUST-NEXT:     2: {{.*}}  addb    %al, (%rax)
 
-# COMMON:        0000000000000000    .rela.debug_str:
+# COMMON:        0000000000000000    <.rela.debug_str>:
 # COMMON-NEXT:     0: {{.*}}  addl %eax, (%rax)
 ## ... There are more lines here. We do not care.
 
-# NOADJUST:      0000000000000000  .data:
+# NOADJUST:      0000000000000000  <.data>:
 # NOADJUST-NEXT:  0: {{.*}} addb    %al, (%rax)
 # NOADJUST-NEXT: 0000000000000000: R_X86_64_32  .text
 # NOADJUST-NEXT:  2: {{.*}} addb    %al, (%rax)
 
-# ADJUST:        0000000000123000  .data:
+# ADJUST:        0000000000123000  <.data>:
 # ADJUST-NEXT:    123000: {{.*}}  addb    %al, (%rax)
 # ADJUST-NEXT:   0000000000123000: R_X86_64_32  .text
 # ADJUST-NEXT:    123002: {{.*}}  addb    %al, (%rax)
 
-# COMMON:        0000000000000000   .rela.data:
+# COMMON:        0000000000000000   <.rela.data>:
 # COMMON-NEXT:    0: {{.*}} addb %al, (%rax)
 ## ... There are more lines here. We do not care.
 

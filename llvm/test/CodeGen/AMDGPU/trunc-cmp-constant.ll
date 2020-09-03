@@ -3,7 +3,7 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-; FUNC-LABEL {{^}}sextload_i1_to_i32_trunc_cmp_eq_0:
+; FUNC-LABEL: {{^}}sextload_i1_to_i32_trunc_cmp_eq_0:
 ; SI: buffer_load_ubyte [[LOAD:v[0-9]+]]
 ; SI: v_and_b32_e32 [[TMP:v[0-9]+]], 1, [[LOAD]]
 ; SI: v_cmp_eq_u32_e32 vcc, 0, [[TMP]]{{$}}
@@ -80,9 +80,9 @@ define amdgpu_kernel void @zextload_i1_to_i32_trunc_cmp_eq_neg1(i1 addrspace(1)*
 }
 
 
-; FUNC-LABEL {{^}}sextload_i1_to_i32_trunc_cmp_ne_0:
+; FUNC-LABEL: {{^}}sextload_i1_to_i32_trunc_cmp_ne_0:
 ; SI: buffer_load_ubyte [[LOAD:v[0-9]+]]
-; SI: v_and_b32_e32 [[TMP:v[0-9]+]], 1, [[LOAD]]
+; SI: v_and_b32_e32 [[RESULT:v[0-9]+]], 1, [[LOAD]]
 ; SI: buffer_store_byte [[RESULT]]
 define amdgpu_kernel void @sextload_i1_to_i32_trunc_cmp_ne_0(i1 addrspace(1)* %out, i1 addrspace(1)* %in) nounwind {
   %load = load i1, i1 addrspace(1)* %in

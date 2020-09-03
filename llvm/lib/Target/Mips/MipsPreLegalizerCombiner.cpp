@@ -44,9 +44,22 @@ bool MipsPreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     return false;
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_SEXTLOAD:
-  case TargetOpcode::G_ZEXTLOAD:
+  case TargetOpcode::G_ZEXTLOAD: {
+    // Don't attempt to combine non power of 2 loads or unaligned loads when
+    // subtarget doesn't support them.
+    auto MMO = *MI.memoperands_begin();
+    const MipsSubtarget &STI =
+        static_cast<const MipsSubtarget &>(MI.getMF()->getSubtarget());
+    if (!isPowerOf2_64(MMO->getSize()))
+      return false;
+    bool isUnaligned = MMO->getAlign() < MMO->getSize();
+    if (!STI.systemSupportsUnalignedAccess() && isUnaligned)
+      return false;
+
     return Helper.tryCombineExtendingLoads(MI);
   }
+  }
+
   return false;
 }
 

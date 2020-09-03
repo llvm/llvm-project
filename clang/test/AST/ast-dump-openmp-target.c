@@ -13,7 +13,7 @@ void test() {
 // CHECK-NEXT:         `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT:           |-CapturedStmt {{.*}} <col:3>
 // CHECK-NEXT:           | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:           |   |-NullStmt {{.*}} <col:3> openmp_structured_block
+// CHECK-NEXT:           |   |-NullStmt {{.*}} <col:3>
 // CHECK-NEXT:           |   `-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-target.c:4:1) *const restrict'
 // CHECK-NEXT:           |-AlwaysInlineAttr {{.*}} <<invalid sloc>> Implicit __forceinline
 // CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .global_tid. 'const int'
@@ -25,5 +25,5 @@ void test() {
 // CHECK-NEXT:           |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT:           | `-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT:           `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:             |-NullStmt {{.*}} <line:5:3> openmp_structured_block
+// CHECK-NEXT:             |-NullStmt {{.*}} <line:5:3>
 // CHECK-NEXT:             `-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-target.c:4:1) *const restrict'

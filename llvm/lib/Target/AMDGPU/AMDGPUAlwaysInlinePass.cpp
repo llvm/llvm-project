@@ -71,6 +71,13 @@ void AMDGPUAlwaysInline::recursivelyVisitUsers(
     if (Instruction *I = dyn_cast<Instruction>(U)) {
       Function *F = I->getParent()->getParent();
       if (!AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
+        // FIXME: This is a horrible hack. We should always respect noinline,
+        // and just let us hit the error when we can't handle this.
+        //
+        // Unfortunately, clang adds noinline to all functions at -O0. We have
+        // to override this here. until that's fixed.
+        F->removeFnAttr(Attribute::NoInline);
+
         FuncsToAlwaysInline.insert(F);
         Stack.push_back(F);
       }

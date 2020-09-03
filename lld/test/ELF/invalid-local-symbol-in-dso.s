@@ -6,7 +6,7 @@
 # WARN: found local symbol 'foo' in global part of symbol table in file {{.*}}local-symbol-in-dso.so
 
 # RUN: llvm-mc %s -o %t.o -filetype=obj -triple x86_64-pc-linux
-# RUN: not ld.lld %t.o %p/Inputs/local-symbol-in-dso.so -o %t
+# RUN: not ld.lld %t.o %p/Inputs/local-symbol-in-dso.so -o /dev/null
 
 .globl main
 main:

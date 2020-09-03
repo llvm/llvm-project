@@ -7,7 +7,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld --hash-style=sysv %t.o %t1.so %t2.so -o %t
-# RUN: llvm-readobj -V --sections --section-data --dyn-syms --dynamic-table %t | FileCheck %s
+# RUN: llvm-readobj -S -d --section-data --dyn-syms -V %t | FileCheck %s
 
 # CHECK:        Section {
 # CHECK:          Index: 1
@@ -74,6 +74,10 @@
 # CHECK-NEXT:     )
 # CHECK-NEXT:   }
 
+# CHECK:      0x000000006FFFFFF0 VERSYM               [[VERSYM]]
+# CHECK-NEXT: 0x000000006FFFFFFE VERNEED              [[VERNEED]]
+# CHECK-NEXT: 0x000000006FFFFFFF VERNEEDNUM           2
+
 # CHECK:      DynamicSymbols [
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name:
@@ -112,10 +116,6 @@
 # CHECK-NEXT:     Section: Undefined (0x0)
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
-
-# CHECK:      0x000000006FFFFFF0 VERSYM               [[VERSYM]]
-# CHECK-NEXT: 0x000000006FFFFFFE VERNEED              [[VERNEED]]
-# CHECK-NEXT: 0x000000006FFFFFFF VERNEEDNUM           2
 
 # CHECK:      VersionSymbols [
 # CHECK-NEXT:    Symbol {

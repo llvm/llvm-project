@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -std=c++2a -include %s -verify %s
 // RUN: %clang_cc1 -std=c++2a -emit-pch %s -o %t
 // RUN: %clang_cc1 -std=c++2a -include-pch %t -verify %s -DPCH
+// RUN: %clang_cc1 -std=c++2a -emit-pch -fpch-instantiate-templates %s -o %t
+// RUN: %clang_cc1 -std=c++2a -include-pch %t -verify %s -DPCH
 
 #ifndef HEADER
 #define HEADER

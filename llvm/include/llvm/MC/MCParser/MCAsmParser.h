@@ -165,8 +165,19 @@ public:
   /// Run the parser on the input source buffer.
   virtual bool Run(bool NoInitialTextSection, bool NoFinalize = false) = 0;
 
-  virtual void setParsingInlineAsm(bool V) = 0;
-  virtual bool isParsingInlineAsm() = 0;
+  virtual void setParsingMSInlineAsm(bool V) = 0;
+  virtual bool isParsingMSInlineAsm() = 0;
+
+  virtual bool isParsingMasm() const { return false; }
+
+  virtual bool lookUpField(StringRef Name, StringRef &Type,
+                           unsigned &Offset) const {
+    return true;
+  }
+  virtual bool lookUpField(StringRef Base, StringRef Member, StringRef &Type,
+                           unsigned &Offset) const {
+    return true;
+  }
 
   /// Parse MS-style inline assembly.
   virtual bool parseMSInlineAsm(
@@ -250,6 +261,10 @@ public:
   /// characters and return the string contents.
   virtual bool parseEscapedString(std::string &Data) = 0;
 
+  /// Parse an angle-bracket delimited string at the current position if one is
+  /// present, returning the string contents.
+  virtual bool parseAngleBracketString(std::string &Data) = 0;
+
   /// Skip to the end of the current statement, for error recovery.
   virtual void eatToEndOfStatement() = 0;
 
@@ -300,9 +315,13 @@ public:
                                      SMLoc &EndLoc) = 0;
 };
 
-/// Create an MCAsmParser instance.
+/// Create an MCAsmParser instance for parsing assembly similar to gas syntax
 MCAsmParser *createMCAsmParser(SourceMgr &, MCContext &, MCStreamer &,
                                const MCAsmInfo &, unsigned CB = 0);
+
+/// Create an MCAsmParser instance for parsing Microsoft MASM-style assembly
+MCAsmParser *createMCMasmParser(SourceMgr &, MCContext &, MCStreamer &,
+                                const MCAsmInfo &, unsigned CB = 0);
 
 } // end namespace llvm
 

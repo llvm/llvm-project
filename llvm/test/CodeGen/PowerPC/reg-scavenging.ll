@@ -12,7 +12,7 @@ define dso_local signext i32 @caller(i32 signext %a, i32 signext %b) local_unnam
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset v20, -192
 ; CHECK-NEXT:    li r5, 48
-; CHECK-NEXT:    stxvd2x v20, r1, r5 # 16-byte Folded Spill
+; CHECK-NEXT:    stvx v20, r1, r5 # 16-byte Folded Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    add r3, r3, r4
 ; CHECK-NEXT:    #NO_APP
@@ -20,7 +20,7 @@ define dso_local signext i32 @caller(i32 signext %a, i32 signext %b) local_unnam
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    li r4, 48
-; CHECK-NEXT:    lxvd2x v20, r1, r4 # 16-byte Folded Reload
+; CHECK-NEXT:    lvx v20, r1, r4 # 16-byte Folded Reload
 ; CHECK-NEXT:    addi r1, r1, 240
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0

@@ -1,4 +1,4 @@
-//===-- DWARFCompileUnit.cpp ------------------------------------*- C++ -*-===//
+//===-- DWARFCompileUnit.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,41 +33,27 @@ void DWARFCompileUnit::BuildAddressRangeTable(
 
   size_t num_debug_aranges = debug_aranges->GetNumRanges();
 
-  // First get the compile unit DIE only and check if it has a DW_AT_ranges
+  // First get the compile unit DIE only and check contains ranges information.
   const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
 
   const dw_offset_t cu_offset = GetOffset();
   if (die) {
     DWARFRangeList ranges;
     const size_t num_ranges =
-        die->GetAttributeAddressRanges(this, ranges, false);
+        die->GetAttributeAddressRanges(this, ranges, /*check_hi_lo_pc=*/true);
     if (num_ranges > 0) {
-      // This compile unit has DW_AT_ranges, assume this is correct if it is
-      // present since clang no longer makes .debug_aranges by default and it
-      // emits DW_AT_ranges for DW_TAG_compile_units. GCC also does this with
-      // recent GCC builds.
       for (size_t i = 0; i < num_ranges; ++i) {
         const DWARFRangeList::Entry &range = ranges.GetEntryRef(i);
         debug_aranges->AppendRange(cu_offset, range.GetRangeBase(),
                                    range.GetRangeEnd());
       }
 
-      return; // We got all of our ranges from the DW_AT_ranges attribute
+      return;
     }
   }
-  // We don't have a DW_AT_ranges attribute, so we need to parse the DWARF
-
-  // If the DIEs weren't parsed, then we don't want all dies for all compile
-  // units to stay loaded when they weren't needed. So we can end up parsing
-  // the DWARF and then throwing them all away to keep memory usage down.
-  ScopedExtractDIEs clear_dies(ExtractDIEsScoped());
-
-  die = DIEPtr();
-  if (die)
-    die->BuildAddressRangeTable(this, debug_aranges);
 
   if (debug_aranges->GetNumRanges() == num_debug_aranges) {
-    // We got nothing from the functions, maybe we have a line tables only
+    // We got nothing from the debug info, maybe we have a line tables only
     // situation. Check the line tables and build the arange table from this.
     SymbolContext sc;
     sc.comp_unit = m_dwarf.GetCompUnitForDWARFCompUnit(*this);

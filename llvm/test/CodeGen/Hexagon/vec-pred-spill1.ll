@@ -30,20 +30,20 @@ entry:
   %call1 = tail call i32 @acquire_vector_unit(i8 zeroext 0) #3
   tail call void @init_vectors() #3
   %0 = tail call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 2)
-  %1 = tail call <512 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %0, i32 16843009)
+  %1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %0, i32 16843009)
   %2 = tail call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 1)
-  %3 = tail call <512 x i1> @llvm.hexagon.V6.vandvrt.acc(<512 x i1> %1, <16 x i32> %2, i32 -2147483648)
-  %4 = bitcast <512 x i1> %3 to <16 x i32>
+  %3 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt.acc(<64 x i1> %1, <16 x i32> %2, i32 -2147483648)
+  %4 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %3, i32 -1)
   store <16 x i32> %4, <16 x i32>* @Q6VecPredResult, align 64, !tbaa !1
   %puts = tail call i32 @puts(i8* getelementptr inbounds ([106 x i8], [106 x i8]* @str, i32 0, i32 0))
   tail call void @print_vecpred(i32 512, i8* bitcast (<16 x i32>* @Q6VecPredResult to i8*)) #3
-  %5 = tail call <512 x i1> @llvm.hexagon.V6.vandvrt.acc(<512 x i1> %1, <16 x i32> %2, i32 -1)
-  %6 = bitcast <512 x i1> %5 to <16 x i32>
+  %5 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt.acc(<64 x i1> %1, <16 x i32> %2, i32 -1)
+  %6 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %5, i32 -1)
   store <16 x i32> %6, <16 x i32>* @Q6VecPredResult, align 64, !tbaa !1
   %puts5 = tail call i32 @puts(i8* getelementptr inbounds ([99 x i8], [99 x i8]* @str3, i32 0, i32 0))
   tail call void @print_vecpred(i32 512, i8* bitcast (<16 x i32>* @Q6VecPredResult to i8*)) #3
-  %7 = tail call <512 x i1> @llvm.hexagon.V6.vandvrt.acc(<512 x i1> %1, <16 x i32> %2, i32 0)
-  %8 = bitcast <512 x i1> %7 to <16 x i32>
+  %7 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt.acc(<64 x i1> %1, <16 x i32> %2, i32 0)
+  %8 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %7, i32 -1)
   store <16 x i32> %8, <16 x i32>* @Q6VecPredResult, align 64, !tbaa !1
   %puts6 = tail call i32 @puts(i8* getelementptr inbounds ([98 x i8], [98 x i8]* @str4, i32 0, i32 0))
   tail call void @print_vecpred(i32 512, i8* bitcast (<16 x i32>* @Q6VecPredResult to i8*)) #3
@@ -57,10 +57,13 @@ declare i32 @acquire_vector_unit(i8 zeroext) #1
 declare void @init_vectors() #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vandvrt.acc(<512 x i1>, <16 x i32>, i32) #2
+declare <64 x i1> @llvm.hexagon.V6.vandvrt.acc(<64 x i1>, <16 x i32>, i32) #2
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #2
+declare <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #2
+
+; Function Attrs: nounwind readnone
+declare <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1>, i32) #2
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.lvsplatw(i32) #2

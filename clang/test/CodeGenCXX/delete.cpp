@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOSIZE
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -emit-llvm -o - -Oz -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK,CHECK-SIZE
 
 void t1(int *a) {
   delete a;
@@ -9,7 +10,19 @@ struct S {
 };
 
 // POD types.
+
+// CHECK-LABEL: define void @_Z2t3P1S
 void t3(S *s) {
+  // CHECK: icmp {{.*}} null
+  // CHECK: br i1
+
+  // CHECK: bitcast
+  // CHECK-NEXT: call void @_ZdlPv
+
+  // Check the delete is inside the 'if !null' check unless we're optimizing
+  // for size. FIXME: We could omit the branch entirely in this case.
+  // CHECK-NOSIZE-NEXT: br
+  // CHECK-SIZE-NEXT: ret
   delete s;
 }
 
@@ -22,7 +35,9 @@ struct T {
 // CHECK-LABEL: define void @_Z2t4P1T
 void t4(T *t) {
   // CHECK: call void @_ZN1TD1Ev
-  // CHECK-NEXT: bitcast
+  // CHECK-NOSIZE-NEXT: bitcast
+  // CHECK-SIZE-NEXT: br
+  // CHECK-SIZE: bitcast
   // CHECK-NEXT: call void @_ZdlPv
   delete t;
 }
@@ -49,7 +64,9 @@ namespace test0 {
   // CHECK-LABEL: define void @_ZN5test04testEPNS_1AE(
   void test(A *a) {
     // CHECK: call void @_ZN5test01AD1Ev
-    // CHECK-NEXT: bitcast
+    // CHECK-NOSIZE-NEXT: bitcast
+    // CHECK-SIZE-NEXT: br
+    // CHECK-SIZE: bitcast
     // CHECK-NEXT: call void @_ZN5test01AdlEPv
     delete a;
   }

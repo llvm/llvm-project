@@ -224,12 +224,13 @@ TEST_F(StringMapTest, IterationTest) {
 
 // Test StringMapEntry::Create() method.
 TEST_F(StringMapTest, StringMapEntryTest) {
-  StringMap<uint32_t>::value_type* entry =
+  MallocAllocator Allocator;
+  StringMap<uint32_t>::value_type *entry =
       StringMap<uint32_t>::value_type::Create(
-          StringRef(testKeyFirst, testKeyLength), 1u);
+          StringRef(testKeyFirst, testKeyLength), Allocator, 1u);
   EXPECT_STREQ(testKey, entry->first().data());
   EXPECT_EQ(1u, entry->second);
-  free(entry);
+  entry->Destroy(Allocator);
 }
 
 // Test insert() method.
@@ -353,14 +354,15 @@ TEST_F(StringMapTest, MoveOnly) {
   StringMap<MoveOnly> t;
   t.insert(std::make_pair("Test", MoveOnly(42)));
   StringRef Key = "Test";
-  StringMapEntry<MoveOnly>::Create(Key, MoveOnly(42))
-      ->Destroy();
+  StringMapEntry<MoveOnly>::Create(Key, t.getAllocator(), MoveOnly(42))
+      ->Destroy(t.getAllocator());
 }
 
 TEST_F(StringMapTest, CtorArg) {
   StringRef Key = "Test";
-  StringMapEntry<MoveOnly>::Create(Key, Immovable())
-      ->Destroy();
+  MallocAllocator Allocator;
+  StringMapEntry<MoveOnly>::Create(Key, Allocator, Immovable())
+      ->Destroy(Allocator);
 }
 
 TEST_F(StringMapTest, MoveConstruct) {
@@ -383,6 +385,70 @@ TEST_F(StringMapTest, MoveAssignment) {
   ASSERT_EQ(B.size(), 0u);
   ASSERT_EQ(A["y"], 117);
   ASSERT_EQ(B.count("x"), 0u);
+}
+
+TEST_F(StringMapTest, EqualEmpty) {
+  StringMap<int> A;
+  StringMap<int> B;
+  ASSERT_TRUE(A == B);
+  ASSERT_FALSE(A != B);
+  ASSERT_TRUE(A == A); // self check
+}
+
+TEST_F(StringMapTest, EqualWithValues) {
+  StringMap<int> A;
+  A["A"] = 1;
+  A["B"] = 2;
+  A["C"] = 3;
+  A["D"] = 3;
+
+  StringMap<int> B;
+  B["A"] = 1;
+  B["B"] = 2;
+  B["C"] = 3;
+  B["D"] = 3;
+
+  ASSERT_TRUE(A == B);
+  ASSERT_TRUE(B == A);
+  ASSERT_FALSE(A != B);
+  ASSERT_FALSE(B != A);
+  ASSERT_TRUE(A == A); // self check
+}
+
+TEST_F(StringMapTest, NotEqualMissingKeys) {
+  StringMap<int> A;
+  A["A"] = 1;
+  A["B"] = 2;
+
+  StringMap<int> B;
+  B["A"] = 1;
+  B["B"] = 2;
+  B["C"] = 3;
+  B["D"] = 3;
+
+  ASSERT_FALSE(A == B);
+  ASSERT_FALSE(B == A);
+  ASSERT_TRUE(A != B);
+  ASSERT_TRUE(B != A);
+}
+
+TEST_F(StringMapTest, NotEqualWithDifferentValues) {
+  StringMap<int> A;
+  A["A"] = 1;
+  A["B"] = 2;
+  A["C"] = 100;
+  A["D"] = 3;
+
+  StringMap<int> B;
+  B["A"] = 1;
+  B["B"] = 2;
+  B["C"] = 3;
+  B["D"] = 3;
+
+  ASSERT_FALSE(A == B);
+  ASSERT_FALSE(B == A);
+  ASSERT_TRUE(A != B);
+  ASSERT_TRUE(B != A);
 }
 
 struct Countable {

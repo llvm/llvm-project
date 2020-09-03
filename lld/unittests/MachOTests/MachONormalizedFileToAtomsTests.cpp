@@ -97,3 +97,44 @@ TEST(ToAtomsTest, basic_obj_x86_64) {
   EXPECT_TRUE(atom4->name().equals("_undef"));
   EXPECT_EQ(lld::Atom::definitionUndefined, atom4->definition());
 }
+
+TEST(ToAtomsTest, reservedUnitLength) {
+  static const uint8_t debugInfoWithReservedLengthContent[12] = {
+      0xf0, 0xff, 0xff, 0xff // Reserved length value
+  };
+  static const uint8_t debugInfoWithValidBigLengthContent[12] = {
+      0xef, 0xff, 0xff, 0xff, // The maximum valid length value for DWARF32
+      0x00, 0x00              // Wrong version
+  };
+  static const uint8_t dummyContent[] = {0x00};
+
+  NormalizedFile fReservedLength, fValidBigLength;
+  fReservedLength.arch = lld::MachOLinkingContext::arch_x86;
+  fValidBigLength.arch = lld::MachOLinkingContext::arch_x86;
+  Section section;
+  section.segmentName = "__DWARF";
+  section.sectionName = "__debug_info";
+  section.content = llvm::makeArrayRef(debugInfoWithReservedLengthContent);
+  fReservedLength.sections.push_back(section);
+  section.content = llvm::makeArrayRef(debugInfoWithValidBigLengthContent);
+  fValidBigLength.sections.push_back(section);
+  section.sectionName = "__debug_abbrev";
+  section.content = llvm::makeArrayRef(dummyContent);
+  fReservedLength.sections.push_back(section);
+  fValidBigLength.sections.push_back(section);
+  section.sectionName = "__debug_str";
+  fReservedLength.sections.push_back(section);
+  fValidBigLength.sections.push_back(section);
+
+  auto resultReservedLength = normalizedToAtoms(fReservedLength, "foo", false);
+  auto resultValidBigLength = normalizedToAtoms(fValidBigLength, "foo", false);
+
+  // Both cases should return errors, but different.
+  ASSERT_FALSE(resultReservedLength);
+  ASSERT_FALSE(resultValidBigLength);
+
+  EXPECT_STREQ("Malformed DWARF in foo",
+               toString(resultReservedLength.takeError()).c_str());
+  EXPECT_STREQ("Unsupported DWARF version in foo",
+               toString(resultValidBigLength.takeError()).c_str());
+}

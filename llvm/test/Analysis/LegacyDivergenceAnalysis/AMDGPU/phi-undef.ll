@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-- -analyze -divergence %s | FileCheck %s
+; RUN: opt -mtriple=amdgcn-- -amdgpu-use-legacy-divergence-analysis -analyze -divergence %s | FileCheck %s
 
 ; CHECK-LABEL: 'test1':
 ; CHECK-NEXT: DIVERGENT: i32 %bound

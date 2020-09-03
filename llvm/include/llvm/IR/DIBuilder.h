@@ -449,19 +449,22 @@ namespace llvm {
     /// \param Scope        Scope in which this type is defined.
     /// \param Name         Type parameter name.
     /// \param Ty           Parameter type.
-    DITemplateTypeParameter *
-    createTemplateTypeParameter(DIScope *Scope, StringRef Name, DIType *Ty);
+    /// \param IsDefault    Parameter is default or not
+    DITemplateTypeParameter *createTemplateTypeParameter(DIScope *Scope,
+                                                         StringRef Name,
+                                                         DIType *Ty,
+                                                         bool IsDefault);
 
     /// Create debugging information for template
     /// value parameter.
     /// \param Scope        Scope in which this type is defined.
     /// \param Name         Value parameter name.
     /// \param Ty           Parameter type.
+    /// \param IsDefault    Parameter is default or not
     /// \param Val          Constant parameter value.
-    DITemplateValueParameter *createTemplateValueParameter(DIScope *Scope,
-                                                           StringRef Name,
-                                                           DIType *Ty,
-                                                           Constant *Val);
+    DITemplateValueParameter *
+    createTemplateValueParameter(DIScope *Scope, StringRef Name, DIType *Ty,
+                                 bool IsDefault, Constant *Val);
 
     /// Create debugging information for a template template parameter.
     /// \param Scope        Scope in which this type is defined.
@@ -573,6 +576,8 @@ namespace llvm {
     /// implicitly uniques the values returned.
     DISubrange *getOrCreateSubrange(int64_t Lo, int64_t Count);
     DISubrange *getOrCreateSubrange(int64_t Lo, Metadata *CountNode);
+    DISubrange *getOrCreateSubrange(Metadata *Count, Metadata *LowerBound,
+                                    Metadata *UpperBound, Metadata *Stride);
 
     /// Create a new descriptor for the specified variable.
     /// \param Context     Variable scope.
@@ -742,9 +747,14 @@ namespace llvm {
     ///                    definitions as they would appear on a command line.
     /// \param IncludePath The path to the module map file.
     /// \param APINotesFile The path to an API notes file for this module.
+    /// \param File        Source file of the module declaration. Used for
+    ///                    Fortran modules.
+    /// \param LineNo      Source line number of the  module declaration.
+    ///                    Used for Fortran modules.
     DIModule *createModule(DIScope *Scope, StringRef Name,
-                           StringRef ConfigurationMacros,
-                           StringRef IncludePath, StringRef APINotesFile = {});
+                           StringRef ConfigurationMacros, StringRef IncludePath,
+                           StringRef APINotesFile = {}, DIFile *File = nullptr,
+                           unsigned LineNo = 0);
 
     /// This creates a descriptor for a lexical block with a new file
     /// attached. This merely extends the existing

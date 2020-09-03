@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadPlanFundamental_h_
-#define liblldb_ThreadPlanFundamental_h_
+#ifndef LLDB_TARGET_THREADPLANBASE_H
+#define LLDB_TARGET_THREADPLANBASE_H
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
@@ -47,9 +47,10 @@ private:
   friend lldb::ThreadPlanSP
   Thread::QueueFundamentalPlan(bool abort_other_plans);
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanBase);
+  ThreadPlanBase(const ThreadPlanBase &) = delete;
+  const ThreadPlanBase &operator=(const ThreadPlanBase &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadPlanFundamental_h_
+#endif // LLDB_TARGET_THREADPLANBASE_H

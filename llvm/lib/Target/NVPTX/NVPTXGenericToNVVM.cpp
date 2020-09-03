@@ -144,7 +144,7 @@ bool GenericToNVVM::runOnModule(Module &M) {
     // variable initializers, as other uses have been already been removed
     // while walking through the instructions in function definitions.
     GV->replaceAllUsesWith(BitCastNewGV);
-    std::string Name = GV->getName();
+    std::string Name = std::string(GV->getName());
     GV->eraseFromParent();
     NewGV->setName(Name);
   }

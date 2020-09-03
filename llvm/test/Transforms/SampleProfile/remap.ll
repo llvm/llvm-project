@@ -2,13 +2,13 @@
 ;
 ; Check whether profile remapping work with loading profile on demand used by extbinary format profile.
 ; RUN: llvm-profdata merge -sample -extbinary %S/Inputs/remap.prof -o %t.extbinary.afdo
-; RUN: opt %s -passes=sample-profile -sample-profile-file=%S/Inputs/remap.prof -sample-profile-remapping-file=%S/Inputs/remap.map | opt -analyze -branch-prob | FileCheck %s
+; RUN: opt %s -passes=sample-profile -sample-profile-file=%t.extbinary.afdo -sample-profile-remapping-file=%S/Inputs/remap.map | opt -analyze -branch-prob | FileCheck %s
 ;
 ; Reduced from branch.ll
 
 declare i1 @foo()
 
-define void @_ZN3foo3barERKN1M1XINS_6detail3quxEEE() !dbg !2 {
+define void @_ZN3foo3barERKN1M1XINS_6detail3quxEEE() #0 !dbg !2 {
 ; CHECK: Printing analysis 'Branch Probability Analysis' for function '_ZN3foo3barERKN1M1XINS_6detail3quxEEE':
 
 entry:
@@ -48,6 +48,8 @@ if.else:
 return:
   ret void
 }
+
+attributes #0 = { "use-sample-profile" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!4, !5}

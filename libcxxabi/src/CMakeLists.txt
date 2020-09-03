@@ -7,7 +7,6 @@ set(LIBCXXABI_SOURCES
   cxa_exception_storage.cpp
   cxa_guard.cpp
   cxa_handlers.cpp
-  cxa_unexpected.cpp
   cxa_vector.cpp
   cxa_virtual.cpp
   # C++ STL files
@@ -60,6 +59,10 @@ if (LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL)
   add_definitions(-DHAVE___CXA_THREAD_ATEXIT_IMPL)
 endif()
 
+if (LIBCXXABI_ENABLE_FORGIVING_DYNAMIC_CAST)
+  add_definitions(-D_LIBCXXABI_FORGIVING_DYNAMIC_CAST)
+endif()
+
 if (APPLE)
   add_library_flags_if(LIBCXXABI_HAS_SYSTEM_LIB System)
 else()
@@ -95,6 +98,9 @@ if (MINGW)
   # MINGW_LIBRARIES is defined in config-ix.cmake
   list(APPEND LIBCXXABI_LIBRARIES ${MINGW_LIBRARIES})
 endif()
+if (ANDROID AND ANDROID_PLATFORM_LEVEL LESS 21)
+  list(APPEND LIBCXXABI_LIBRARIES android_support)
+endif()
 
 if (NOT LIBCXXABI_USE_COMPILER_RT)
   add_library_flags_if(LIBCXXABI_HAS_GCC_LIB gcc)
@@ -128,6 +134,17 @@ if ( APPLE )
       add_link_flags("-Wl,-rpath,${LIBDIR}")
     endif()
   endif()
+
+  # Make sure we link in CrashReporterClient if we find it -- it's used by
+  # abort() on Apple platforms when building the system dylib.
+  find_library(CrashReporterClient NAMES libCrashReporterClient.a
+                                   PATHS "${CMAKE_OSX_SYSROOT}/usr/local/lib")
+  if (CrashReporterClient)
+    message(STATUS "Linking with CrashReporterClient at ${CrashReporterClient}")
+    add_library_flags("${CrashReporterClient}")
+  else()
+    message(STATUS "Could not find CrashReporterClient, not linking against it")
+  endif()
 endif()
 
 split_list(LIBCXXABI_COMPILE_FLAGS)
@@ -141,12 +158,6 @@ endif()
 
 if (NOT TARGET pstl::ParallelSTL)
   message(STATUS "Could not find ParallelSTL, libc++abi will not attempt to use it but the build may fail if the libc++ in use needs it to be available.")
-endif()
-
-if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
-  set(LIBCXXABI_USE_SJLJ_EXCEPTIONS ON)
-else()
-  set(LIBCXXABI_USE_SJLJ_EXCEPTIONS OFF)
 endif()
 
 # Build the shared library.
@@ -197,10 +208,14 @@ if (LIBCXXABI_ENABLE_SHARED)
       target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
     endif()
 
-    if (LIBCXXABI_USE_SJLJ_EXCEPTIONS)
-      target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-sjlj.exp")
-    else()
-      target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
+    if (LIBCXXABI_ENABLE_EXCEPTIONS)
+      target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/exceptions.exp")
+
+      if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
+        target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-sjlj.exp")
+      else()
+        target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
+      endif()
     endif()
   endif()
 endif()
@@ -255,7 +270,7 @@ if (LIBCXXABI_ENABLE_STATIC)
     set(MERGE_ARCHIVES_LIBTOOL "--use-libtool" "--libtool" "${CMAKE_LIBTOOL}")
   endif()
 
-  # Merge the the libc++abi.a and libunwind.a into one.
+  # Merge the libc++abi.a and libunwind.a into one.
   if(LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
     add_custom_command(TARGET cxxabi_static POST_BUILD
       COMMAND ${PYTHON_EXECUTABLE} ${LIBCXXABI_LIBCXX_PATH}/utils/merge_archives.py
@@ -292,7 +307,4 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND LIBCXXABI_INSTALL_LIBRARY)
             -DCMAKE_INSTALL_COMPONENT=cxxabi
             -DCMAKE_INSTALL_DO_STRIP=1
             -P "${LIBCXXABI_BINARY_DIR}/cmake_install.cmake")
-
-  # TODO: This is a legacy target name and should be removed at some point.
-  add_custom_target(install-libcxxabi DEPENDS install-cxxabi)
 endif()

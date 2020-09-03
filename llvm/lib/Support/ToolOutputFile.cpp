@@ -15,31 +15,45 @@
 #include "llvm/Support/Signals.h"
 using namespace llvm;
 
+static bool isStdout(StringRef Filename) { return Filename == "-"; }
+
 ToolOutputFile::CleanupInstaller::CleanupInstaller(StringRef Filename)
-    : Filename(Filename), Keep(false) {
+    : Filename(std::string(Filename)), Keep(false) {
   // Arrange for the file to be deleted if the process is killed.
-  if (Filename != "-")
+  if (!isStdout(Filename))
     sys::RemoveFileOnSignal(Filename);
 }
 
 ToolOutputFile::CleanupInstaller::~CleanupInstaller() {
+  if (isStdout(Filename))
+    return;
+
   // Delete the file if the client hasn't told us not to.
-  if (!Keep && Filename != "-")
+  if (!Keep)
     sys::fs::remove(Filename);
 
   // Ok, the file is successfully written and closed, or deleted. There's no
   // further need to clean it up on signals.
-  if (Filename != "-")
-    sys::DontRemoveFileOnSignal(Filename);
+  sys::DontRemoveFileOnSignal(Filename);
 }
 
 ToolOutputFile::ToolOutputFile(StringRef Filename, std::error_code &EC,
                                sys::fs::OpenFlags Flags)
-    : Installer(Filename), OS(Filename, EC, Flags) {
+    : Installer(Filename) {
+  if (isStdout(Filename)) {
+    OS = &outs();
+    EC = std::error_code();
+    return;
+  }
+  OSHolder.emplace(Filename, EC, Flags);
+  OS = OSHolder.getPointer();
   // If open fails, no cleanup is needed.
   if (EC)
     Installer.Keep = true;
 }
 
 ToolOutputFile::ToolOutputFile(StringRef Filename, int FD)
-    : Installer(Filename), OS(FD, true) {}
+    : Installer(Filename) {
+  OSHolder.emplace(FD, true);
+  OS = OSHolder.getPointer();
+}

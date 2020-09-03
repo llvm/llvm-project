@@ -7,13 +7,17 @@ add_library(LLVMCFIVerify
   )
 
 llvm_update_compile_flags(LLVMCFIVerify)
-llvm_map_components_to_libnames(libs
-  DebugInfoDWARF
-  MC
-  MCParser
-  Object
-  Support
-  Symbolize
-  )
+if (LLVM_LINK_LLVM_DYLIB)
+  set(libs LLVM)
+else()
+  llvm_map_components_to_libnames(libs
+    DebugInfoDWARF
+    MC
+    MCParser
+    Object
+    Support
+    Symbolize
+    )
+endif()
 target_link_libraries(LLVMCFIVerify ${libs})
 set_target_properties(LLVMCFIVerify PROPERTIES FOLDER "Libraries")

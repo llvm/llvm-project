@@ -131,27 +131,14 @@ define <4 x double> @combine_vpermil2pd256_as_shufpd(<4 x double> %a0, <4 x doub
 }
 
 define <4 x double> @demandedelts_vpermil2pd256_as_shufpd(<4 x double> %a0, <4 x double> %a1, i64 %a2) {
-; X86-AVX-LABEL: demandedelts_vpermil2pd256_as_shufpd:
-; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    movl $4, %eax
-; X86-AVX-NEXT:    vmovd %eax, %xmm2
-; X86-AVX-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
-; X86-AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; X86-AVX-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm2, %ymm2
-; X86-AVX-NEXT:    vpermil2pd $0, %ymm2, %ymm1, %ymm0, %ymm0
-; X86-AVX-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,2,3]
-; X86-AVX-NEXT:    retl
-;
-; X86-AVX2-LABEL: demandedelts_vpermil2pd256_as_shufpd:
-; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    movl $4, %eax
-; X86-AVX2-NEXT:    vmovd %eax, %xmm2
-; X86-AVX2-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
-; X86-AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; X86-AVX2-NEXT:    vinserti128 $1, {{\.LCPI.*}}, %ymm2, %ymm2
-; X86-AVX2-NEXT:    vpermil2pd $0, %ymm2, %ymm1, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,2,3]
-; X86-AVX2-NEXT:    retl
+; X86-LABEL: demandedelts_vpermil2pd256_as_shufpd:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],mem[0]
+; X86-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm2, %ymm2
+; X86-NEXT:    vpermil2pd $0, %ymm2, %ymm1, %ymm0, %ymm0
+; X86-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,2,3]
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: demandedelts_vpermil2pd256_as_shufpd:
 ; X64:       # %bb.0:
@@ -252,6 +239,39 @@ define <4 x i32> @combine_vpperm_10zz32BA(<4 x i32> %a0, <4 x i32> %a1) {
   ret <4 x i32> %res3
 }
 
+define <16 x i8> @combine_vpperm_as_proti_v8i16(<16 x i8> %a0, <16 x i8> %a1) {
+; CHECK-LABEL: combine_vpperm_as_proti_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vprotw $8, %xmm0, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14>)
+  ret <16 x i8> %res0
+}
+
+define <16 x i8> @combine_shuffle_proti_v2i64(<2 x i64> %a0) {
+; CHECK-LABEL: combine_shuffle_proti_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[13,12,11,10,9,8,15,14,5,4,3,2,1,0,7,6]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a0, <2 x i64> %a0, <2 x i64> <i64 48, i64 48>)
+  %2 = bitcast <2 x i64> %1 to <16 x i8>
+  %3 = shufflevector <16 x i8> %2, <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <16 x i8> %3
+}
+declare <2 x i64> @llvm.fshr.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
+
+define <16 x i8> @combine_shuffle_proti_v4i32(<4 x i32> %a0) {
+; CHECK-LABEL: combine_shuffle_proti_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[14,13,12,15,10,9,8,11,6,5,4,7,2,1,0,3]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a0, <4 x i32> %a0, <4 x i32> <i32 8, i32 8, i32 8, i32 8>)
+  %2 = bitcast <4 x i32> %1 to <16 x i8>
+  %3 = shufflevector <16 x i8> %2, <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <16 x i8> %3
+}
+declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
+
 define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
 ; X86-LABEL: buildvector_v4f32_0404:
 ; X86:       # %bb.0:
@@ -268,7 +288,7 @@ define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
 ;
 ; X64-AVX2-LABEL: buildvector_v4f32_0404:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X64-AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; X64-AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; X64-AVX2-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-AVX2-NEXT:    retq

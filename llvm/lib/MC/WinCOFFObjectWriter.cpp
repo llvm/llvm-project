@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -33,7 +34,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Endian.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
@@ -118,7 +119,7 @@ public:
   COFFSymbol *Symbol = nullptr;
   relocations Relocations;
 
-  COFFSection(StringRef Name) : Name(Name) {}
+  COFFSection(StringRef Name) : Name(std::string(Name)) {}
 };
 
 class WinCOFFObjectWriter : public MCObjectWriter {
@@ -130,6 +131,8 @@ public:
 
   using symbol_map = DenseMap<MCSymbol const *, COFFSymbol *>;
   using section_map = DenseMap<MCSection const *, COFFSection *>;
+
+  using symbol_list = DenseSet<COFFSymbol *>;
 
   std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
 
@@ -143,11 +146,15 @@ public:
   section_map SectionMap;
   symbol_map SymbolMap;
 
+  symbol_list WeakDefaults;
+
   bool UseBigObj;
 
   bool EmitAddrsigSection = false;
   MCSectionCOFF *AddrsigSection;
   std::vector<const MCSymbol *> AddrsigSyms;
+
+  MCSectionCOFF *CGProfileSection = nullptr;
 
   WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
                       raw_pwrite_stream &OS);
@@ -205,6 +212,7 @@ public:
                         MCValue Target, uint64_t &FixedValue) override;
 
   void createFileSymbols(MCAssembler &Asm);
+  void setWeakDefaultNames();
   void assignSectionNumbers();
   void assignFileOffsets(MCAssembler &Asm, const MCAsmLayout &Layout);
 
@@ -292,8 +300,8 @@ static uint32_t getAlignment(const MCSectionCOFF &Sec) {
 /// This function takes a section data object from the assembler
 /// and creates the associated COFF section staging object.
 void WinCOFFObjectWriter::defineSection(const MCSectionCOFF &MCSec) {
-  COFFSection *Section = createSection(MCSec.getSectionName());
-  COFFSymbol *Symbol = createSymbol(MCSec.getSectionName());
+  COFFSection *Section = createSection(MCSec.getName());
+  COFFSymbol *Symbol = createSymbol(MCSec.getName());
   Section->Symbol = Symbol;
   Symbol->Section = Section;
   Symbol->Data.StorageClass = COFF::IMAGE_SYM_CLASS_STATIC;
@@ -367,6 +375,7 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
   COFFSymbol *Local = nullptr;
   if (cast<MCSymbolCOFF>(MCSym).isWeakExternal()) {
     Sym->Data.StorageClass = COFF::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
+    Sym->Section = nullptr;
 
     COFFSymbol *WeakDefault = getLinkedSymbol(MCSym);
     if (!WeakDefault) {
@@ -376,6 +385,7 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
         WeakDefault->Data.SectionNumber = COFF::IMAGE_SYM_ABSOLUTE;
       else
         WeakDefault->Section = Sec;
+      WeakDefaults.insert(WeakDefault);
       Local = WeakDefault;
     }
 
@@ -667,6 +677,13 @@ void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     Asm.registerSection(*AddrsigSection);
   }
 
+  if (!Asm.CGProfile.empty()) {
+    CGProfileSection = Asm.getContext().getCOFFSection(
+        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE,
+        SectionKind::getMetadata());
+    Asm.registerSection(*CGProfileSection);
+  }
+
   // "Define" each section & symbol. This creates section & symbol
   // entries in the staging area.
   for (const auto &Section : Asm)
@@ -863,6 +880,47 @@ void WinCOFFObjectWriter::createFileSymbols(MCAssembler &Asm) {
   }
 }
 
+void WinCOFFObjectWriter::setWeakDefaultNames() {
+  if (WeakDefaults.empty())
+    return;
+
+  // If multiple object files use a weak symbol (either with a regular
+  // defined default, or an absolute zero symbol as default), the defaults
+  // cause duplicate definitions unless their names are made unique. Look
+  // for a defined extern symbol, that isn't comdat - that should be unique
+  // unless there are other duplicate definitions. And if none is found,
+  // allow picking a comdat symbol, as that's still better than nothing.
+
+  COFFSymbol *Unique = nullptr;
+  for (bool AllowComdat : {false, true}) {
+    for (auto &Sym : Symbols) {
+      // Don't include the names of the defaults themselves
+      if (WeakDefaults.count(Sym.get()))
+        continue;
+      // Only consider external symbols
+      if (Sym->Data.StorageClass != COFF::IMAGE_SYM_CLASS_EXTERNAL)
+        continue;
+      // Only consider symbols defined in a section or that are absolute
+      if (!Sym->Section && Sym->Data.SectionNumber != COFF::IMAGE_SYM_ABSOLUTE)
+        continue;
+      if (!AllowComdat && Sym->Section &&
+          Sym->Section->Header.Characteristics & COFF::IMAGE_SCN_LNK_COMDAT)
+        continue;
+      Unique = Sym.get();
+      break;
+    }
+    if (Unique)
+      break;
+  }
+  // If we didn't find any unique symbol to use for the names, just skip this.
+  if (!Unique)
+    return;
+  for (auto *Sym : WeakDefaults) {
+    Sym->Name.append(".");
+    Sym->Name.append(Unique->Name);
+  }
+}
+
 static bool isAssociative(const COFFSection &Section) {
   return Section.Symbol->Aux[0].Aux.SectionDefinition.Selection ==
          COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
@@ -961,6 +1019,7 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
   Header.NumberOfSections = Sections.size();
   Header.NumberOfSymbols = 0;
 
+  setWeakDefaultNames();
   assignSectionNumbers();
   createFileSymbols(Asm);
 
@@ -1014,7 +1073,7 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
     // without a section.
     if (!AssocMCSym->isInSection()) {
       Asm.getContext().reportError(
-          SMLoc(), Twine("cannot make section ") + MCSec.getSectionName() +
+          SMLoc(), Twine("cannot make section ") + MCSec.getName() +
                        Twine(" associative with sectionless symbol ") +
                        AssocMCSym->getName());
       continue;
@@ -1047,6 +1106,20 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
              "Section must already have been defined in "
              "executePostLayoutBinding!");
       encodeULEB128(SectionMap[TargetSection]->Symbol->getIndex(), OS);
+    }
+  }
+
+  // Create the contents of the .llvm.call-graph-profile section.
+  if (CGProfileSection) {
+    auto *Frag = new MCDataFragment(CGProfileSection);
+    Frag->setLayoutOrder(0);
+    raw_svector_ostream OS(Frag->getContents());
+    for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
+      uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
+      uint32_t ToIndex = CGPE.To->getSymbol().getIndex();
+      support::endian::write(OS, FromIndex, W.Endian);
+      support::endian::write(OS, ToIndex, W.Endian);
+      support::endian::write(OS, CGPE.Count, W.Endian);
     }
   }
 

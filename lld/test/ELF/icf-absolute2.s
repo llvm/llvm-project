@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %S/Inputs/icf-absolute2.s -o %t2
 # RUN: ld.lld %t %t2 -o /dev/null --icf=all --print-icf-sections | FileCheck -allow-empty %s
 
-## Test we do not crash and do not fold sections which relocations reffering to
+## Test we do not crash and do not fold sections which relocations referring to
 ## absolute symbols with a different values.
 # CHECK-NOT: selected
 

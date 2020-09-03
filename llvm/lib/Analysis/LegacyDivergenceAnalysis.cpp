@@ -301,14 +301,13 @@ FunctionPass *llvm::createLegacyDivergenceAnalysisPass() {
 void LegacyDivergenceAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<PostDominatorTreeWrapperPass>();
-  if (UseGPUDA)
-    AU.addRequired<LoopInfoWrapperPass>();
+  AU.addRequired<LoopInfoWrapperPass>();
   AU.setPreservesAll();
 }
 
 bool LegacyDivergenceAnalysis::shouldUseGPUDivergenceAnalysis(
-    const Function &F) const {
-  if (!UseGPUDA)
+    const Function &F, const TargetTransformInfo &TTI) const {
+  if (!(UseGPUDA || TTI.useGPUDivergenceAnalysis()))
     return false;
 
   // GPUDivergenceAnalysis requires a reducible CFG.
@@ -337,7 +336,7 @@ bool LegacyDivergenceAnalysis::runOnFunction(Function &F) {
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
 
-  if (shouldUseGPUDivergenceAnalysis(F)) {
+  if (shouldUseGPUDivergenceAnalysis(F, TTI)) {
     // run the new GPU divergence analysis
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     gpuDA = std::make_unique<GPUDivergenceAnalysis>(F, DT, PDT, LI, TTI);

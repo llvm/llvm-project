@@ -153,7 +153,7 @@ void MipsSEDAGToDAGISel::emitMCountABI(MachineInstr &MI, MachineBasicBlock &MBB,
 }
 
 void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
-  MF.getInfo<MipsFunctionInfo>()->initGlobalBaseReg();
+  MF.getInfo<MipsFunctionInfo>()->initGlobalBaseReg(MF);
 
   MachineRegisterInfo *MRI = &MF.getRegInfo();
 
@@ -833,7 +833,9 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   }
 
   case ISD::INTRINSIC_W_CHAIN: {
-    switch (cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue()) {
+    const unsigned IntrinsicOpcode =
+        cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    switch (IntrinsicOpcode) {
     default:
       break;
 
@@ -843,6 +845,41 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       SDValue Reg = CurDAG->getCopyFromReg(ChainIn, DL,
                                            getMSACtrlReg(RegIdx), MVT::i32);
       ReplaceNode(Node, Reg.getNode());
+      return true;
+    }
+    case Intrinsic::mips_ldr_d:
+    case Intrinsic::mips_ldr_w: {
+      unsigned Op = (IntrinsicOpcode == Intrinsic::mips_ldr_d) ? Mips::LDR_D
+                                                               : Mips::LDR_W;
+
+      SDLoc DL(Node);
+      assert(Node->getNumOperands() == 4 && "Unexpected number of operands.");
+      const SDValue &Chain = Node->getOperand(0);
+      const SDValue &Intrinsic = Node->getOperand(1);
+      const SDValue &Pointer = Node->getOperand(2);
+      const SDValue &Constant = Node->getOperand(3);
+
+      assert(Chain.getValueType() == MVT::Other);
+      (void)Intrinsic;
+      assert(Intrinsic.getOpcode() == ISD::TargetConstant &&
+             Constant.getOpcode() == ISD::Constant &&
+             "Invalid instruction operand.");
+
+      // Convert Constant to TargetConstant.
+      const ConstantInt *Val =
+          cast<ConstantSDNode>(Constant)->getConstantIntValue();
+      SDValue Imm =
+          CurDAG->getTargetConstant(*Val, DL, Constant.getValueType());
+
+      SmallVector<SDValue, 3> Ops{Pointer, Imm, Chain};
+
+      assert(Node->getNumValues() == 2);
+      assert(Node->getValueType(0).is128BitVector());
+      assert(Node->getValueType(1) == MVT::Other);
+      SmallVector<EVT, 2> ResTys{Node->getValueType(0), Node->getValueType(1)};
+
+      ReplaceNode(Node, CurDAG->getMachineNode(Op, DL, ResTys, Ops));
+
       return true;
     }
     }
@@ -866,7 +903,9 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   }
 
   case ISD::INTRINSIC_VOID: {
-    switch (cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue()) {
+    const unsigned IntrinsicOpcode =
+        cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    switch (IntrinsicOpcode) {
     default:
       break;
 
@@ -877,6 +916,40 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       SDValue ChainOut = CurDAG->getCopyToReg(ChainIn, DL,
                                               getMSACtrlReg(RegIdx), Value);
       ReplaceNode(Node, ChainOut.getNode());
+      return true;
+    }
+    case Intrinsic::mips_str_d:
+    case Intrinsic::mips_str_w: {
+      unsigned Op = (IntrinsicOpcode == Intrinsic::mips_str_d) ? Mips::STR_D
+                                                               : Mips::STR_W;
+
+      SDLoc DL(Node);
+      assert(Node->getNumOperands() == 5 && "Unexpected number of operands.");
+      const SDValue &Chain = Node->getOperand(0);
+      const SDValue &Intrinsic = Node->getOperand(1);
+      const SDValue &Vec = Node->getOperand(2);
+      const SDValue &Pointer = Node->getOperand(3);
+      const SDValue &Constant = Node->getOperand(4);
+
+      assert(Chain.getValueType() == MVT::Other);
+      (void)Intrinsic;
+      assert(Intrinsic.getOpcode() == ISD::TargetConstant &&
+             Constant.getOpcode() == ISD::Constant &&
+             "Invalid instruction operand.");
+
+      // Convert Constant to TargetConstant.
+      const ConstantInt *Val =
+          cast<ConstantSDNode>(Constant)->getConstantIntValue();
+      SDValue Imm =
+          CurDAG->getTargetConstant(*Val, DL, Constant.getValueType());
+
+      SmallVector<SDValue, 4> Ops{Vec, Pointer, Imm, Chain};
+
+      assert(Node->getNumValues() == 1);
+      assert(Node->getValueType(0) == MVT::Other);
+      SmallVector<EVT, 1> ResTys{Node->getValueType(0)};
+
+      ReplaceNode(Node, CurDAG->getMachineNode(Op, DL, ResTys, Ops));
       return true;
     }
     }

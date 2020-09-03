@@ -15,13 +15,14 @@
 #define LLVM_SUPPORT_VERSIONTUPLE_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <tuple>
 
 namespace llvm {
+class raw_ostream;
+class StringRef;
 
 /// Represents a version number in the form major[.minor[.subminor[.build]]].
 class VersionTuple {
@@ -148,6 +149,10 @@ public:
     return !(X < Y);
   }
 
+  friend llvm::hash_code hash_value(const VersionTuple &VT) {
+    return llvm::hash_combine(VT.Major, VT.Minor, VT.Subminor, VT.Build);
+  }
+
   /// Retrieve a string representation of the version number.
   std::string getAsString() const;
 
@@ -172,11 +177,11 @@ raw_ostream &operator<<(raw_ostream &Out, const VersionTuple &V);
     static unsigned getHashValue(const VersionTuple &value) {
       unsigned result = value.getMajor();
       if (auto minor = value.getMinor())
-        result = combineHashValue(result, *minor);
+        result = detail::combineHashValue(result, *minor);
       if (auto subminor = value.getSubminor())
-        result = combineHashValue(result, *subminor);
+        result = detail::combineHashValue(result, *subminor);
       if (auto build = value.getBuild())
-        result = combineHashValue(result, *build);
+        result = detail::combineHashValue(result, *build);
 
       return result;
     }

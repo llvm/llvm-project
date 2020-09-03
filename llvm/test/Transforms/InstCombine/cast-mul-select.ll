@@ -13,8 +13,8 @@ define i32 @mul(i32 %x, i32 %y) {
 ; we preserve the debug information in the resulting
 ; instruction.
 ; DBGINFO-LABEL: @mul(
-; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 %x
-; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 %y
+; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 %x, {{.*}} !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value))
+; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 %y, {{.*}} !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value))
 ; DBGINFO-NEXT:    [[C:%.*]] = mul i32 {{.*}}
 ; DBGINFO-NEXT:    [[D:%.*]] = and i32 {{.*}}
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[C]]
@@ -175,7 +175,7 @@ exit:
 ; Check that we don't drop debug info when a zext is removed.
 define i1 @foo(i1 zeroext %b) {
 ; DBGINFO-LABEL: @foo(
-; DBGINFO-NEXT:  call void @llvm.dbg.value(metadata i1 %b
+; DBGINFO-NEXT:  call void @llvm.dbg.value(metadata i1 %b, {{.*}} !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value))
 ; DBGINFO-NEXT:  ret i1 %b
 
   %frombool = zext i1 %b to i8 

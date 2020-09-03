@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
 # RUN: llvm-lipo %t -archs | FileCheck --check-prefix=ARCHS %s
 # RUN: llvm-lipo %t --archs | FileCheck --check-prefix=ARCHS %s

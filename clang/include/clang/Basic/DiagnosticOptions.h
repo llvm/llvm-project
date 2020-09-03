@@ -98,6 +98,10 @@ public:
   /// prefixes removed.
   std::vector<std::string> Warnings;
 
+  /// The list of prefixes from -Wundef-prefix=... used to generate warnings
+  /// for undefined macros.
+  std::vector<std::string> UndefPrefixes;
+
   /// The list of -R... options used to alter the diagnostic mappings, with the
   /// prefixes removed.
   std::vector<std::string> Remarks;

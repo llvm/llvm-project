@@ -22,7 +22,7 @@ entry-block:
 ; CHECK: asr    {{.*}}[[LOW]]
 ; CHECK: ldi    [[RET:r[0-9]+]], 1
 ; CHECK: cp     {{.*}}[[HIGH]], {{.*}}[[LOW]]
-; CHECK: brne   [[LABEL:LBB[_0-9]+]]
+; CHECK: brne   [[LABEL:.LBB[_0-9]+]]
 ; CHECK: ldi    {{.*}}[[RET]], 0
 ; CHECK: {{.*}}[[LABEL]]
 ; CHECK: ret

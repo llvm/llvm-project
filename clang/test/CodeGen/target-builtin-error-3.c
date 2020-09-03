@@ -18,11 +18,11 @@ static inline half8 __attribute__((__overloadable__)) convert_half( float8 a ) {
   return __extension__ ({ __m256 __a = (a); (__m128i)__builtin_ia32_vcvtps2ph256((__v8sf)__a, (0x00)); }); // expected-error {{'__builtin_ia32_vcvtps2ph256' needs target feature f16c}}
 }
 static inline half16 __attribute__((__overloadable__)) convert_half( float16 a ) {
-  half16 r; 
-  r.lo = convert_half( a.lo); 
+  half16 r;
+  r.lo = convert_half(a.lo);
   return r;
 }
 void avx_test( uint16_t *destData, float16 argbF)
 {
-   ((half16U*)destData)[0] = convert_half(argbF);
+  ((half16U *)destData)[0] = convert_half(argbF);
 }

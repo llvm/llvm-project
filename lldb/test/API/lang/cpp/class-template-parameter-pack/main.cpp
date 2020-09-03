@@ -1,11 +1,3 @@
-//===-- main.cpp ------------------------------------------------*- C++ -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 template <class T, int... Args> struct C {
   T member;
   bool isSixteenThirtyTwo() { return false; }
@@ -34,6 +26,11 @@ template <> struct D<int, int, bool> : D<int, int> {
   bool isIntBool() { return true; }
 };
 
+template<int Size> struct array {
+  int Arr[Size];
+  array() {}
+};
+
 int main (int argc, char const *argv[])
 {
     C<int,16,32> myC;
@@ -53,12 +50,15 @@ int main (int argc, char const *argv[])
     D<int,int> myLesserD;
     myD.member = 64;
     (void)D<int,int,bool>().isIntBool();
-    (void)D<int,int>().isIntBool();
-    return myD.member != 64;	//% self.expect("expression -- myD", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["64"])
+    (void)D<int,int>().isIntBool(); //% self.expect("expression -- myD", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["64"])
                                 //% self.expect("expression -- myLesserD.isIntBool()", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["false"])
                                 //% self.expect("expression -- myD.isIntBool()", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["true"])
 
                                 // See comment above.
                                 //#% self.expect("expression -- D<int, int>().isIntBool()", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["false"])
                                 //#% self.expect("expression -- D<int, int, bool>().isIntBool()", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["true"])
+
+    array<3> myArray; //% self.expect("expression -- myArray", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["Arr"])
+
+    return 1;
 }

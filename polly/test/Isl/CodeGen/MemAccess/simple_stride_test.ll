@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-import-jscop -polly-codegen -polly-vectorizer=polly -S < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-import-jscop -polly-codegen -polly-vectorizer=polly -S < %s | FileCheck %s
 ;
 ; Check that we use the correct __new__ strides:
 ;    stride zero for B

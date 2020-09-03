@@ -9,14 +9,63 @@
 #ifndef LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 #define LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace llvm {
 
+struct XCOFFSymbolInfo {
+  Optional<XCOFF::StorageMappingClass> StorageMappingClass;
+  Optional<uint32_t> Index;
+  bool IsLabel;
+  XCOFFSymbolInfo(Optional<XCOFF::StorageMappingClass> Smc,
+                  Optional<uint32_t> Idx, bool Label)
+      : StorageMappingClass(Smc), Index(Idx), IsLabel(Label) {}
+
+  bool operator<(const XCOFFSymbolInfo &SymInfo) const;
+};
+
+struct SymbolInfoTy {
+  uint64_t Addr;
+  StringRef Name;
+  union {
+    uint8_t Type;
+    XCOFFSymbolInfo XCOFFSymInfo;
+  };
+
+private:
+  bool IsXCOFF;
+
+public:
+  SymbolInfoTy(uint64_t Addr, StringRef Name,
+               Optional<XCOFF::StorageMappingClass> Smc, Optional<uint32_t> Idx,
+               bool Label)
+      : Addr(Addr), Name(Name), XCOFFSymInfo(Smc, Idx, Label), IsXCOFF(true) {}
+  SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type)
+      : Addr(Addr), Name(Name), Type(Type), IsXCOFF(false) {}
+  bool isXCOFF() const { return IsXCOFF; }
+
+private:
+  friend bool operator<(const SymbolInfoTy &P1, const SymbolInfoTy &P2) {
+    assert(P1.IsXCOFF == P2.IsXCOFF &&
+           "P1.IsXCOFF should be equal to P2.IsXCOFF.");
+    if (P1.IsXCOFF)
+      return std::tie(P1.Addr, P1.XCOFFSymInfo, P1.Name) <
+             std::tie(P2.Addr, P2.XCOFFSymInfo, P2.Name);
+
+    return std::tie(P1.Addr, P1.Name, P1.Type) <
+             std::tie(P2.Addr, P2.Name, P2.Type);
+  }
+};
+
+using SectionSymbolsTy = std::vector<SymbolInfoTy>;
+
 template <typename T> class ArrayRef;
-class StringRef;
 class MCContext;
 class MCInst;
 class MCSubtargetInfo;
@@ -69,7 +118,6 @@ public:
   /// \param Address  - The address, in the memory space of region, of the first
   ///                   byte of the instruction.
   /// \param Bytes    - A reference to the actual bytes of the instruction.
-  /// \param VStream  - The stream to print warnings and diagnostic messages on.
   /// \param CStream  - The stream to print comments and annotations on.
   /// \return         - MCDisassembler::Success if the instruction is valid,
   ///                   MCDisassembler::SoftFail if the instruction was
@@ -77,25 +125,42 @@ public:
   ///                   MCDisassembler::Fail if the instruction was invalid.
   virtual DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                                       ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                      raw_ostream &VStream,
                                       raw_ostream &CStream) const = 0;
 
-  /// May parse any prelude that precedes instructions after the start of a
-  /// symbol. Needed for some targets, e.g. WebAssembly.
+  /// Used to perform separate target specific disassembly for a particular
+  /// symbol. May parse any prelude that precedes instructions after the
+  /// start of a symbol, or the entire symbol.
+  /// This is used for example by WebAssembly to decode preludes.
   ///
-  /// \param Name     - The name of the symbol.
+  /// Base implementation returns None. So all targets by default ignore to
+  /// treat symbols separately.
+  ///
+  /// \param Symbol   - The symbol.
   /// \param Size     - The number of bytes consumed.
   /// \param Address  - The address, in the memory space of region, of the first
   ///                   byte of the symbol.
   /// \param Bytes    - A reference to the actual bytes at the symbol location.
-  /// \param VStream  - The stream to print warnings and diagnostic messages on.
   /// \param CStream  - The stream to print comments and annotations on.
-  /// \return         - MCDisassembler::Success if the bytes are valid,
-  ///                   MCDisassembler::Fail if the bytes were invalid.
-  virtual DecodeStatus onSymbolStart(StringRef Name, uint64_t &Size,
-                                     ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                     raw_ostream &VStream,
-                                     raw_ostream &CStream) const;
+  /// \return         - MCDisassembler::Success if bytes are decoded
+  ///                   successfully. Size must hold the number of bytes that
+  ///                   were decoded.
+  ///                 - MCDisassembler::Fail if the bytes are invalid. Size
+  ///                   must hold the number of bytes that were decoded before
+  ///                   failing. The target must print nothing. This can be
+  ///                   done by buffering the output if needed.
+  ///                 - None if the target doesn't want to handle the symbol
+  ///                   separately. Value of Size is ignored in this case.
+  virtual Optional<DecodeStatus>
+  onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
+                uint64_t Address, raw_ostream &CStream) const;
+  // TODO:
+  // Implement similar hooks that can be used at other points during
+  // disassembly. Something along the following lines:
+  // - onBeforeInstructionDecode()
+  // - onAfterInstructionDecode()
+  // - onSymbolEnd()
+  // It should help move much of the target specific code from llvm-objdump to
+  // respective target disassemblers.
 
 private:
   MCContext &Ctx;

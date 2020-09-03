@@ -52,7 +52,7 @@ Sections:
 # RUN: llvm-readobj -V %t3 2>&1 | FileCheck %s --check-prefix=INVALID-DATA -DFILE=%t3
 # RUN: llvm-readelf -V %t3 2>&1 | FileCheck %s --check-prefix=INVALID-DATA -DFILE=%t3
 
-# INVALID-DATA: warning: '[[FILE]]': cannot read content of SHT_GNU_verdef section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x0) that is greater than the file size (0x230)
+# INVALID-DATA: warning: '[[FILE]]': cannot read content of SHT_GNU_verdef section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x0) that is greater than the file size (0x228)
 
 --- !ELF
 FileHeader:
@@ -281,7 +281,7 @@ DynamicSymbols:
 # INVALID-VERDEF-LLVM-NEXT:    Name: foo@<corrupt>
 
 # INVALID-VERDEF-GNU:      Version symbols section '.gnu.version' contains 2 entries:
-# INVALID-VERDEF-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 5 (.dynsym)
+# INVALID-VERDEF-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 3 (.dynsym)
 # INVALID-VERDEF-GNU-NEXT: warning: '[[FILE]]': unable to get a version for entry 1 of SHT_GNU_versym section with index 1: invalid SHT_GNU_verdef section with index 2: version definition 1 goes past the end of the section
 # INVALID-VERDEF-GNU-NEXT:   000: 0 (*local*) 2 (<corrupt>)
 

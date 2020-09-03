@@ -120,7 +120,7 @@ entry:
   %shuffle = shufflevector <4 x i16> %v, <4 x i16> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %prod = call <4 x i16> @llvm.aarch64.neon.sqrdmulh.v4i16(<4 x i16> %x, <4 x i16> %shuffle)
   %retval =  call <4 x i16> @llvm.aarch64.neon.sqadd.v4i16(<4 x i16> %acc, <4 x i16> %prod)
-; CHECK-V8a :       sqrdmulh    v1.4h, v1.4h, v2.h[3]
+; CHECK-V8a:        sqrdmulh    v1.4h, v1.4h, v2.h[3]
 ; CHECK-V81a:       sqrdmlah    v0.4h, v1.4h, v2.h[3]
 ; CHECK-V81a-apple: sqrdmlah.4h v0,    v1,    v2[3]
   ret <4 x i16> %retval

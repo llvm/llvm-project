@@ -59,22 +59,19 @@ public:
   template <typename OtherT>
   MSVCPExpected(
       OtherT &&Val,
-      typename std::enable_if<std::is_convertible<OtherT, T>::value>::type * =
-          nullptr)
+      std::enable_if_t<std::is_convertible<OtherT, T>::value> * = nullptr)
       : Expected<T>(std::move(Val)) {}
 
   template <class OtherT>
   MSVCPExpected(
       Expected<OtherT> &&Other,
-      typename std::enable_if<std::is_convertible<OtherT, T>::value>::type * =
-          nullptr)
+      std::enable_if_t<std::is_convertible<OtherT, T>::value> * = nullptr)
       : Expected<T>(std::move(Other)) {}
 
   template <class OtherT>
   explicit MSVCPExpected(
       Expected<OtherT> &&Other,
-      typename std::enable_if<!std::is_convertible<OtherT, T>::value>::type * =
-          nullptr)
+      std::enable_if_t<!std::is_convertible<OtherT, T>::value> * = nullptr)
       : Expected<T>(std::move(Other)) {}
 };
 

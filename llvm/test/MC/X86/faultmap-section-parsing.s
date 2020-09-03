@@ -1,4 +1,4 @@
-// RUN: llvm-mc < %s -triple=x86_64-apple-macosx -filetype=obj -o - | llvm-objdump -fault-map-section - | FileCheck %s
+// RUN: llvm-mc < %s -triple=x86_64-apple-macosx -filetype=obj -o - | llvm-objdump --fault-map-section - | FileCheck %s
 
 	.section	__LLVM_FAULTMAPS,__llvm_faultmaps
 __LLVM_FaultMaps:

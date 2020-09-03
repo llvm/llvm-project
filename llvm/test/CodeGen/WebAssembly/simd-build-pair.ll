@@ -14,13 +14,7 @@ target triple = "wasm32-unknown-unknown"
 ;    t8: ch = store<(store 8 into `i64* undef`, align 1)> t3:1, t24, undef:i32, undef:i32
 ;  t9: ch = WebAssemblyISD::RETURN t8
 
-; CHECK:      i32x4.extract_lane
-; CHECK-NEXT: i64.extend_i32_u
-; CHECK-NEXT: i32x4.extract_lane
-; CHECK-NEXT: i64.extend_i32_u
-; CHECK-NEXT: i64.const {{.*}} 32
-; CHECK-NEXT: i64.shl
-; CHECK-NEXT: i64.or
+; CHECK:      i64x2.extract_lane
 ; CHECK-NEXT: i64.store
 define void @build_pair_i32s() {
 entry:

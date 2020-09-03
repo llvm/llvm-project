@@ -28,3 +28,19 @@ static int4 test2() {
   return vec > vec;  // no-warning
   return vec >= vec; // no-warning
 }
+
+static int4 test3() {
+  int4 i0, i1;
+
+  return i0 > i1 ? i0 : i1; // no-error
+  return i0 ? i0 : i1;      // no-error
+}
+
+static float4 test4() {
+  float4 f0, f1;
+
+  // This would actually generate implicit casting warning
+  // under Weverything flag but we don't really care here
+  return f0 > f1 ? f0 : f1; // no-error
+  return f0 ? f0 : f1;      // expected-error {{used type 'float4' (vector of 4 'float' values) where floating point type is not allowed}}
+}

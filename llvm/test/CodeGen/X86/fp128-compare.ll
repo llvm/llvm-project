@@ -121,6 +121,68 @@ entry:
   ret i32 %conv
 }
 
+define i32 @TestComp128UEQ(fp128 %d1, fp128 %d2) {
+; CHECK-LABEL: TestComp128UEQ:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    subq $32, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    callq __eqtf2
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    sete %bl
+; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    callq __unordtf2
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    orb %bl, %al
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    addq $32, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+entry:
+  %cmp = fcmp ueq fp128 %d1, %d2
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @TestComp128ONE(fp128 %d1, fp128 %d2) {
+; CHECK-LABEL: TestComp128ONE:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    subq $32, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    callq __eqtf2
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    setne %bl
+; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    callq __unordtf2
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    andb %bl, %al
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    addq $32, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+entry:
+  %cmp = fcmp one fp128 %d1, %d2
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
 define fp128 @TestMax(fp128 %x, fp128 %y) {
 ; CHECK-LABEL: TestMax:
 ; CHECK:       # %bb.0: # %entry
@@ -131,10 +193,10 @@ define fp128 @TestMax(fp128 %x, fp128 %y) {
 ; CHECK-NEXT:    callq __gttf2
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    jg .LBB6_2
+; CHECK-NEXT:    jg .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:  .LBB6_2: # %entry
+; CHECK-NEXT:  .LBB8_2: # %entry
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

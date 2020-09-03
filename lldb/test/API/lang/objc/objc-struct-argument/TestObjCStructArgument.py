@@ -48,7 +48,7 @@ class TestObjCStructArgument(TestBase):
         self.assertTrue(
             len(thread_list) != 0,
             "No thread stopped at our breakpoint.")
-        self.assertTrue(len(thread_list) == 1,
+        self.assertEquals(len(thread_list), 1,
                         "More than one thread stopped at our breakpoint.")
 
         frame = thread_list[0].GetFrameAtIndex(0)

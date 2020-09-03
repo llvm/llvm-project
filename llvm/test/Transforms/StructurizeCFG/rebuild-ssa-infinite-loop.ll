@@ -9,7 +9,7 @@ target triple = "amdgcn--"
 define amdgpu_vs void @wrapper(i32 inreg %arg, i32 %arg1) {
 main_body:
   %tmp = add i32 %arg1, %arg
-  %tmp2 = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> undef, i32 %tmp, i32 0, i1 false, i1 false)
+  %tmp2 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> undef, i32 %tmp, i32 0, i32 0, i32 0)
   %tmp3 = extractelement <4 x float> %tmp2, i32 1
   %tmp4 = fptosi float %tmp3 to i32
   %tmp5 = insertelement <2 x i32> undef, i32 %tmp4, i32 1
@@ -45,10 +45,7 @@ main.exit:                                        ; preds = %if28.i, %loop11.i
 ; Function Attrs: nounwind
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 
-; Function Attrs: nounwind readnone
-declare <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32>, i32, i32, i1, i1) #2
-
-; Function Attrs: nounwind readonly
+declare <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32, i32 immarg) #2
 declare <4 x float> @llvm.amdgcn.image.load.v4f32.v2i32.v8i32(<2 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #2
 
 attributes #0 = { nounwind }

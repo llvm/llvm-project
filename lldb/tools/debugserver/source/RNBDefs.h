@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __RNBDefs_h__
-#define __RNBDefs_h__
+#ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBDEFS_H
+#define LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBDEFS_H
 
 #include "DNBDefs.h"
 #include <memory>
@@ -87,4 +87,4 @@ enum rnb_err_t { rnb_success = 0, rnb_err = 1, rnb_not_connected = 2 };
 
 extern RNBRemoteSP g_remoteSP;
 
-#endif // #ifndef __RNBDefs_h__
+#endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBDEFS_H

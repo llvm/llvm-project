@@ -27,6 +27,7 @@ struct Configuration {
   bool compressRelocations;
   bool demangle;
   bool disableVerify;
+  bool experimentalPic;
   bool emitRelocs;
   bool exportAll;
   bool exportDynamic;
@@ -36,6 +37,7 @@ struct Configuration {
   bool importMemory;
   bool sharedMemory;
   bool importTable;
+  bool is64;
   bool mergeDataSegments;
   bool pie;
   bool printGcSections;
@@ -46,14 +48,14 @@ struct Configuration {
   bool stripDebug;
   bool stackFirst;
   bool trace;
-  uint32_t globalBase;
-  uint32_t initialMemory;
-  uint32_t maxMemory;
-  uint32_t zStackSize;
+  uint64_t globalBase;
+  uint64_t initialMemory;
+  uint64_t maxMemory;
+  uint64_t zStackSize;
   unsigned ltoPartitions;
   unsigned ltoo;
   unsigned optimize;
-  unsigned thinLTOJobs;
+  llvm::StringRef thinLTOJobs;
 
   llvm::StringRef entry;
   llvm::StringRef outputFile;

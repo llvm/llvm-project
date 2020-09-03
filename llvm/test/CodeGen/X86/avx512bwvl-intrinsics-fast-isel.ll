@@ -736,7 +736,7 @@ define <4 x i64> @test_mm256_maskz_broadcastw_epi16(i16 %a0, <2 x i64> %a1) {
 define <2 x i64> @test_mm_cvtepi16_epi8(<2 x i64> %__A) {
 ; CHECK-LABEL: test_mm_cvtepi16_epi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14],zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpmovwb %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = bitcast <2 x i64> %__A to <8 x i16>

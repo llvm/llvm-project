@@ -26,6 +26,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CFG.h"
@@ -42,7 +43,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -72,6 +72,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
@@ -97,10 +98,11 @@ STATISTIC(NumGVNSimpl,  "Number of instructions simplified");
 STATISTIC(NumGVNEqProp, "Number of equalities propagated");
 STATISTIC(NumPRELoad,   "Number of loads PRE'd");
 
-static cl::opt<bool> EnablePRE("enable-pre",
-                               cl::init(true), cl::Hidden);
-static cl::opt<bool> EnableLoadPRE("enable-load-pre", cl::init(true));
-static cl::opt<bool> EnableMemDep("enable-gvn-memdep", cl::init(true));
+static cl::opt<bool> GVNEnablePRE("enable-pre", cl::init(true), cl::Hidden);
+static cl::opt<bool> GVNEnableLoadPRE("enable-load-pre", cl::init(true));
+static cl::opt<bool> GVNEnableLoadInLoopPRE("enable-load-in-loop-pre",
+                                            cl::init(true));
+static cl::opt<bool> GVNEnableMemDep("enable-gvn-memdep", cl::init(true));
 
 // Maximum allowed recursion depth.
 static cl::opt<uint32_t>
@@ -113,8 +115,8 @@ static cl::opt<uint32_t> MaxNumDeps(
 
 struct llvm::GVN::Expression {
   uint32_t opcode;
-  Type *type = nullptr;
   bool commutative = false;
+  Type *type = nullptr;
   SmallVector<uint32_t, 4> varargs;
 
   Expression(uint32_t o = ~2U) : opcode(o) {}
@@ -288,7 +290,7 @@ GVN::Expression GVN::ValueTable::createExpr(Instruction *I) {
     e.commutative = true;
   }
 
-  if (CmpInst *C = dyn_cast<CmpInst>(I)) {
+  if (auto *C = dyn_cast<CmpInst>(I)) {
     // Sort the operand value numbers so x<y and y>x get the same value number.
     CmpInst::Predicate Predicate = C->getPredicate();
     if (e.varargs[0] > e.varargs[1]) {
@@ -297,10 +299,11 @@ GVN::Expression GVN::ValueTable::createExpr(Instruction *I) {
     }
     e.opcode = (C->getOpcode() << 8) | Predicate;
     e.commutative = true;
-  } else if (InsertValueInst *E = dyn_cast<InsertValueInst>(I)) {
-    for (InsertValueInst::idx_iterator II = E->idx_begin(), IE = E->idx_end();
-         II != IE; ++II)
-      e.varargs.push_back(*II);
+  } else if (auto *E = dyn_cast<InsertValueInst>(I)) {
+    e.varargs.append(E->idx_begin(), E->idx_end());
+  } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
+    ArrayRef<int> ShuffleMask = SVI->getShuffleMask();
+    e.varargs.append(ShuffleMask.begin(), ShuffleMask.end());
   }
 
   return e;
@@ -530,6 +533,7 @@ uint32_t GVN::ValueTable::lookupOrAdd(Value *V) {
     case Instruction::AddrSpaceCast:
     case Instruction::BitCast:
     case Instruction::Select:
+    case Instruction::Freeze:
     case Instruction::ExtractElement:
     case Instruction::InsertElement:
     case Instruction::ShuffleVector:
@@ -610,6 +614,22 @@ void GVN::ValueTable::verifyRemoved(const Value *V) const {
 //                                GVN Pass
 //===----------------------------------------------------------------------===//
 
+bool GVN::isPREEnabled() const {
+  return Options.AllowPRE.getValueOr(GVNEnablePRE);
+}
+
+bool GVN::isLoadPREEnabled() const {
+  return Options.AllowLoadPRE.getValueOr(GVNEnableLoadPRE);
+}
+
+bool GVN::isLoadInLoopPREEnabled() const {
+  return Options.AllowLoadInLoopPRE.getValueOr(GVNEnableLoadInLoopPRE);
+}
+
+bool GVN::isMemDepEnabled() const {
+  return Options.AllowMemDep.getValueOr(GVNEnableMemDep);
+}
+
 PreservedAnalyses GVN::run(Function &F, FunctionAnalysisManager &AM) {
   // FIXME: The order of evaluation of these 'getResult' calls is very
   // significant! Re-ordering these variables will cause GVN when run alone to
@@ -619,10 +639,11 @@ PreservedAnalyses GVN::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
-  auto &MemDep = AM.getResult<MemoryDependenceAnalysis>(F);
+  auto *MemDep =
+      isMemDepEnabled() ? &AM.getResult<MemoryDependenceAnalysis>(F) : nullptr;
   auto *LI = AM.getCachedResult<LoopAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  bool Changed = runImpl(F, AC, DT, TLI, AA, &MemDep, LI, &ORE);
+  bool Changed = runImpl(F, AC, DT, TLI, AA, MemDep, LI, &ORE);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -927,6 +948,7 @@ bool GVN::AnalyzeLoadAvailability(LoadInst *LI, MemDepResult DepInfo,
 
   // Loading the allocation -> undef.
   if (isa<AllocaInst>(DepInst) || isMallocLikeFn(DepInst, TLI) ||
+      isAlignedAllocLikeFn(DepInst, TLI) ||
       // Loading immediately after lifetime begin -> undef.
       isLifetimeStart(DepInst)) {
     Res = AvailableValue::get(UndefValue::get(LI->getType()));
@@ -1245,7 +1267,7 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
 
     auto *NewLoad = new LoadInst(
         LI->getType(), LoadPtr, LI->getName() + ".pre", LI->isVolatile(),
-        MaybeAlign(LI->getAlignment()), LI->getOrdering(), LI->getSyncScopeID(),
+        LI->getAlign(), LI->getOrdering(), LI->getSyncScopeID(),
         UnavailablePred->getTerminator());
     NewLoad->setDebugLoc(LI->getDebugLoc());
 
@@ -1383,7 +1405,10 @@ bool GVN::processNonLocalLoad(LoadInst *LI) {
   }
 
   // Step 4: Eliminate partial redundancy.
-  if (!EnablePRE || !EnableLoadPRE)
+  if (!isPREEnabled() || !isLoadPREEnabled())
+    return false;
+  if (!isLoadInLoopPREEnabled() && this->LI &&
+      this->LI->getLoopFor(LI->getParent()))
     return false;
 
   return PerformLoadPRE(LI, ValuesPerBlock, UnavailableBlocks);
@@ -1428,7 +1453,7 @@ static bool impliesEquivalanceIfFalse(CmpInst* Cmp) {
       Value *LHS = Cmp->getOperand(0);
       Value *RHS = Cmp->getOperand(1);
       // If we can prove either side non-zero, then equality must imply
-      // equivalence. 
+      // equivalence.
       // FIXME: We should do this optimization if 'no signed zeros' is
       // applicable via an instruction-level fast-math-flag or some other
       // indicator that relaxed FP semantics are being used.
@@ -1465,7 +1490,8 @@ bool GVN::processAssumeIntrinsic(IntrinsicInst *IntrinsicI) {
                     Constant::getNullValue(Int8Ty->getPointerTo()),
                     IntrinsicI);
     }
-    markInstructionForDeletion(IntrinsicI);
+    if (isAssumeWithEmptyBundle(*IntrinsicI))
+      markInstructionForDeletion(IntrinsicI);
     return false;
   } else if (isa<Constant>(V)) {
     // If it's not false, and constant, it must evaluate to true. This means our
@@ -1493,10 +1519,10 @@ bool GVN::processAssumeIntrinsic(IntrinsicInst *IntrinsicI) {
   // If we find an equality fact, canonicalize all dominated uses in this block
   // to one of the two values.  We heuristically choice the "oldest" of the
   // two where age is determined by value number. (Note that propagateEquality
-  // above handles the cross block case.) 
-  // 
+  // above handles the cross block case.)
+  //
   // Key case to cover are:
-  // 1) 
+  // 1)
   // %cmp = fcmp oeq float 3.000000e+00, %0 ; const on lhs could happen
   // call void @llvm.assume(i1 %cmp)
   // ret float %0 ; will change it to ret float 3.000000e+00
@@ -1537,7 +1563,7 @@ bool GVN::processAssumeIntrinsic(IntrinsicInst *IntrinsicI) {
                  << *CmpLHS << " with "
                  << *CmpRHS << " in block "
                  << IntrinsicI->getParent()->getName() << "\n");
-      
+
 
       // Setup the replacement map - this handles uses within the same block
       if (hasUsersIn(CmpLHS, IntrinsicI->getParent()))
@@ -1710,7 +1736,8 @@ uint32_t GVN::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
     // instead of value numbers. Those index numbers should not be
     // translated.
     if ((i > 1 && Exp.opcode == Instruction::InsertValue) ||
-        (i > 0 && Exp.opcode == Instruction::ExtractValue))
+        (i > 0 && Exp.opcode == Instruction::ExtractValue) ||
+        (i > 1 && Exp.opcode == Instruction::ShuffleVector))
       continue;
     Exp.varargs[i] = phiTranslate(Pred, PhiBlock, Exp.varargs[i], Gvn);
   }
@@ -1802,7 +1829,7 @@ void GVN::assignBlockRPONumber(Function &F) {
 bool GVN::replaceOperandsForInBlockEquality(Instruction *Instr) const {
   bool Changed = false;
   for (unsigned OpNum = 0; OpNum < Instr->getNumOperands(); ++OpNum) {
-    Value *Operand = Instr->getOperand(OpNum); 
+    Value *Operand = Instr->getOperand(OpNum);
     auto it = ReplaceOperandsWithMap.find(Operand);
     if (it != ReplaceOperandsWithMap.end()) {
       LLVM_DEBUG(dbgs() << "GVN replacing: " << *Operand << " with "
@@ -1922,7 +1949,7 @@ bool GVN::propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
 
       // If "A == B" is known true, or "A != B" is known false, then replace
       // A with B everywhere in the scope.  For floating point operations, we
-      // have to be careful since equality does not always imply equivalance.  
+      // have to be careful since equality does not always imply equivalance.
       if ((isKnownTrue && impliesEquivalanceIfTrue(Cmp)) ||
           (isKnownFalse && impliesEquivalanceIfFalse(Cmp)))
         Worklist.push_back(std::make_pair(Op0, Op1));
@@ -2117,7 +2144,7 @@ bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   TLI = &RunTLI;
   VN.setAliasAnalysis(&RunAA);
   MD = RunMD;
-  ImplicitControlFlowTracking ImplicitCFT(DT);
+  ImplicitControlFlowTracking ImplicitCFT;
   ICF = &ImplicitCFT;
   this->LI = LI;
   VN.setMemDep(MD);
@@ -2148,7 +2175,7 @@ bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
     ++Iteration;
   }
 
-  if (EnablePRE) {
+  if (isPREEnabled()) {
     // Fabricate val-num for dead-code in order to suppress assertion in
     // performPRE().
     assignValNumForDeadCode();
@@ -2206,6 +2233,7 @@ bool GVN::processBlock(BasicBlock *BB) {
     for (auto *I : InstrsToErase) {
       assert(I->getParent() == BB && "Removing instruction from wrong block?");
       LLVM_DEBUG(dbgs() << "GVN removed: " << *I << '\n');
+      salvageKnowledge(I, AC);
       salvageDebugInfo(*I);
       if (MD) MD->removeInstruction(I);
       LLVM_DEBUG(verifyRemoved(I));
@@ -2685,8 +2713,8 @@ class llvm::gvn::GVNLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  explicit GVNLegacyPass(bool NoMemDepAnalysis = !EnableMemDep)
-      : FunctionPass(ID), NoMemDepAnalysis(NoMemDepAnalysis) {
+  explicit GVNLegacyPass(bool NoMemDepAnalysis = !GVNEnableMemDep)
+      : FunctionPass(ID), Impl(GVNOptions().setMemDep(!NoMemDepAnalysis)) {
     initializeGVNLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -2701,9 +2729,9 @@ public:
         getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
         getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F),
         getAnalysis<AAResultsWrapperPass>().getAAResults(),
-        NoMemDepAnalysis
-            ? nullptr
-            : &getAnalysis<MemoryDependenceWrapperPass>().getMemDep(),
+        Impl.isMemDepEnabled()
+            ? &getAnalysis<MemoryDependenceWrapperPass>().getMemDep()
+            : nullptr,
         LIWP ? &LIWP->getLoopInfo() : nullptr,
         &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE());
   }
@@ -2713,7 +2741,7 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
-    if (!NoMemDepAnalysis)
+    if (Impl.isMemDepEnabled())
       AU.addRequired<MemoryDependenceWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
 
@@ -2725,7 +2753,6 @@ public:
   }
 
 private:
-  bool NoMemDepAnalysis;
   GVN Impl;
 };
 

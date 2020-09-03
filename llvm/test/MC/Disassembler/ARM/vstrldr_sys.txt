@@ -92,206 +92,206 @@
 # CHECK: vldrhi fpscr, [r0] @ encoding: [0x90,0xed,0x80,0x2f]
 [0x90,0xed,0x80,0x2f]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vstr fpcxts, [r12, #508] @ encoding: [0xcc,0xed,0xff,0xef]
 # CHECK-NOVFP: vstr fpcxts, [r12, #508] @ encoding: [0xcc,0xed,0xff,0xef]
 # CHECK: vstr fpcxts, [r12, #508] @ encoding: [0xcc,0xed,0xff,0xef]
 [0xcc,0xed,0xff,0xef]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vstr fpcxts, [r12, #508]! @ encoding: [0xec,0xed,0xff,0xef]
 # CHECK-NOVFP: vstr fpcxts, [r12, #508]! @ encoding: [0xec,0xed,0xff,0xef]
 # CHECK: vstr fpcxts, [r12, #508]! @ encoding: [0xec,0xed,0xff,0xef]
 [0xec,0xed,0xff,0xef]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vstr fpcxts, [r12], #508 @ encoding: [0xec,0xec,0xff,0xef]
 # CHECK-NOVFP: vstr fpcxts, [r12], #508 @ encoding: [0xec,0xec,0xff,0xef]
 # CHECK: vstr fpcxts, [r12], #508 @ encoding: [0xec,0xec,0xff,0xef]
 [0xec,0xec,0xff,0xef]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vstr fpcxts, [sp], #-24 @ encoding: [0x6d,0xec,0x86,0xef]
 # CHECK-NOVFP: vstr fpcxts, [sp], #-24 @ encoding: [0x6d,0xec,0x86,0xef]
 # CHECK: vstr fpcxts, [sp], #-24 @ encoding: [0x6d,0xec,0x86,0xef]
 [0x6d,0xec,0x86,0xef]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vldr fpcxts, [r12, #508] @ encoding: [0xdc,0xed,0xff,0xef]
 # CHECK-NOVFP: vldr fpcxts, [r12, #508] @ encoding: [0xdc,0xed,0xff,0xef]
 # CHECK: vldr fpcxts, [r12, #508] @ encoding: [0xdc,0xed,0xff,0xef]
 [0xdc,0xed,0xff,0xef]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vldr fpcxts, [r12, #508]! @ encoding: [0xfc,0xed,0xff,0xef]
 # CHECK-NOVFP: vldr fpcxts, [r12, #508]! @ encoding: [0xfc,0xed,0xff,0xef]
 # CHECK: vldr fpcxts, [r12, #508]! @ encoding: [0xfc,0xed,0xff,0xef]
 [0xfc,0xed,0xff,0xef]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vldr fpcxts, [r12], #508 @ encoding: [0xfc,0xec,0xff,0xef]
 # CHECK-NOVFP: vldr fpcxts, [r12], #508 @ encoding: [0xfc,0xec,0xff,0xef]
 # CHECK: vldr fpcxts, [r12], #508 @ encoding: [0xfc,0xec,0xff,0xef]
 [0xfc,0xec,0xff,0xef]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vldr fpcxts, [sp], #-24 @ encoding: [0x7d,0xec,0x86,0xef]
 # CHECK-NOVFP: vldr fpcxts, [sp], #-24 @ encoding: [0x7d,0xec,0x86,0xef]
 # CHECK: vldr fpcxts, [sp], #-24 @ encoding: [0x7d,0xec,0x86,0xef]
 [0x7d,0xec,0x86,0xef]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vstr fpcxtns, [r0] @ encoding: [0xc0,0xed,0x80,0xcf]
 # CHECK-NOVFP: vstr fpcxtns, [r0] @ encoding: [0xc0,0xed,0x80,0xcf]
 # CHECK: vstr fpcxtns, [r0] @ encoding: [0xc0,0xed,0x80,0xcf]
 [0xc0,0xed,0x80,0xcf]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vstr fpcxtns, [r9, #-24] @ encoding: [0x49,0xed,0x86,0xcf]
 # CHECK-NOVFP: vstr fpcxtns, [r9, #-24] @ encoding: [0x49,0xed,0x86,0xcf]
 # CHECK: vstr fpcxtns, [r9, #-24] @ encoding: [0x49,0xed,0x86,0xcf]
 [0x49,0xed,0x86,0xcf]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vstr fpcxtns, [r6, #500] @ encoding: [0xc6,0xed,0xfd,0xcf]
 # CHECK-NOVFP: vstr fpcxtns, [r6, #500] @ encoding: [0xc6,0xed,0xfd,0xcf]
 # CHECK: vstr fpcxtns, [r6, #500] @ encoding: [0xc6,0xed,0xfd,0xcf]
 [0xc6,0xed,0xfd,0xcf]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vstr fpcxtns, [lr, #-508] @ encoding: [0x4e,0xed,0xff,0xcf]
 # CHECK-NOVFP: vstr fpcxtns, [lr, #-508] @ encoding: [0x4e,0xed,0xff,0xcf]
 # CHECK: vstr fpcxtns, [lr, #-508] @ encoding: [0x4e,0xed,0xff,0xcf]
 [0x4e,0xed,0xff,0xcf]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vstr fpcxtns, [r12, #508] @ encoding: [0xcc,0xed,0xff,0xcf]
 # CHECK-NOVFP: vstr fpcxtns, [r12, #508] @ encoding: [0xcc,0xed,0xff,0xcf]
 # CHECK: vstr fpcxtns, [r12, #508] @ encoding: [0xcc,0xed,0xff,0xcf]
 [0xcc,0xed,0xff,0xcf]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vstr fpcxtns, [sp], #-24 @ encoding: [0x6d,0xec,0x86,0xcf]
 # CHECK-NOVFP: vstr fpcxtns, [sp], #-24 @ encoding: [0x6d,0xec,0x86,0xcf]
 # CHECK: vstr fpcxtns, [sp], #-24 @ encoding: [0x6d,0xec,0x86,0xcf]
 [0x6d,0xec,0x86,0xcf]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vldr fpcxtns, [r0] @ encoding: [0xd0,0xed,0x80,0xcf]
 # CHECK-NOVFP: vldr fpcxtns, [r0] @ encoding: [0xd0,0xed,0x80,0xcf]
 # CHECK: vldr fpcxtns, [r0] @ encoding: [0xd0,0xed,0x80,0xcf]
 [0xd0,0xed,0x80,0xcf]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vldr fpcxtns, [r9, #-24] @ encoding: [0x59,0xed,0x86,0xcf]
 # CHECK-NOVFP: vldr fpcxtns, [r9, #-24] @ encoding: [0x59,0xed,0x86,0xcf]
 # CHECK: vldr fpcxtns, [r9, #-24] @ encoding: [0x59,0xed,0x86,0xcf]
 [0x59,0xed,0x86,0xcf]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vldr fpcxtns, [r6, #500] @ encoding: [0xd6,0xed,0xfd,0xcf]
 # CHECK-NOVFP: vldr fpcxtns, [r6, #500] @ encoding: [0xd6,0xed,0xfd,0xcf]
 # CHECK: vldr fpcxtns, [r6, #500] @ encoding: [0xd6,0xed,0xfd,0xcf]
 [0xd6,0xed,0xfd,0xcf]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vldr fpcxtns, [lr, #-508] @ encoding: [0x5e,0xed,0xff,0xcf]
 # CHECK-NOVFP: vldr fpcxtns, [lr, #-508] @ encoding: [0x5e,0xed,0xff,0xcf]
 # CHECK: vldr fpcxtns, [lr, #-508] @ encoding: [0x5e,0xed,0xff,0xcf]
 [0x5e,0xed,0xff,0xcf]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vldr fpcxtns, [r12, #508] @ encoding: [0xdc,0xed,0xff,0xcf]
 # CHECK-NOVFP: vldr fpcxtns, [r12, #508] @ encoding: [0xdc,0xed,0xff,0xcf]
 # CHECK: vldr fpcxtns, [r12, #508] @ encoding: [0xdc,0xed,0xff,0xcf]
 [0xdc,0xed,0xff,0xcf]
 
-# ERROR-NOSEC invalid instruction encoding
+# ERROR-NOSEC: invalid instruction encoding
 # CHECK-NOMVE: vldr fpcxtns, [sp], #-24 @ encoding: [0x7d,0xec,0x86,0xcf]
 # CHECK-NOVFP: vldr fpcxtns, [sp], #-24 @ encoding: [0x7d,0xec,0x86,0xcf]
 # CHECK: vldr fpcxtns, [sp], #-24 @ encoding: [0x7d,0xec,0x86,0xcf]
 [0x7d,0xec,0x86,0xcf]
 
 # CHECK-NOSEC: vstr vpr, [r6, #500] @ encoding: [0xc6,0xed,0xfd,0x8f]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vstr vpr, [r6, #500] @ encoding: [0xc6,0xed,0xfd,0x8f]
 # CHECK: vstr vpr, [r6, #500] @ encoding: [0xc6,0xed,0xfd,0x8f]
 [0xc6,0xed,0xfd,0x8f]
 
 # CHECK-NOSEC: vstr p0, [lr, #-508] @ encoding: [0x4e,0xed,0xff,0xaf]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vstr p0, [lr, #-508] @ encoding: [0x4e,0xed,0xff,0xaf]
 # CHECK: vstr p0, [lr, #-508] @ encoding: [0x4e,0xed,0xff,0xaf]
 [0x4e,0xed,0xff,0xaf]
 
 # CHECK-NOSEC: vstr vpr, [r6, #500]! @ encoding: [0xe6,0xed,0xfd,0x8f]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vstr vpr, [r6, #500]! @ encoding: [0xe6,0xed,0xfd,0x8f]
 # CHECK: vstr vpr, [r6, #500]! @ encoding: [0xe6,0xed,0xfd,0x8f]
 [0xe6,0xed,0xfd,0x8f]
 
 # CHECK-NOSEC: vstr p0, [lr, #-508]! @ encoding: [0x6e,0xed,0xff,0xaf]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vstr p0, [lr, #-508]! @ encoding: [0x6e,0xed,0xff,0xaf]
 # CHECK: vstr p0, [lr, #-508]! @ encoding: [0x6e,0xed,0xff,0xaf]
 [0x6e,0xed,0xff,0xaf]
 
 # CHECK-NOSEC: vstr vpr, [r6], #500 @ encoding: [0xe6,0xec,0xfd,0x8f]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vstr vpr, [r6], #500 @ encoding: [0xe6,0xec,0xfd,0x8f]
 # CHECK: vstr vpr, [r6], #500 @ encoding: [0xe6,0xec,0xfd,0x8f]
 [0xe6,0xec,0xfd,0x8f]
 
 # CHECK-NOSEC: vstr p0, [lr], #-508 @ encoding: [0x6e,0xec,0xff,0xaf]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vstr p0, [lr], #-508 @ encoding: [0x6e,0xec,0xff,0xaf]
 # CHECK: vstr p0, [lr], #-508 @ encoding: [0x6e,0xec,0xff,0xaf]
 [0x6e,0xec,0xff,0xaf]
 
 # CHECK-NOSEC: vstr p0, [sp], #-24 @ encoding: [0x6d,0xec,0x86,0xaf]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vstr p0, [sp], #-24 @ encoding: [0x6d,0xec,0x86,0xaf]
 # CHECK: vstr p0, [sp], #-24 @ encoding: [0x6d,0xec,0x86,0xaf]
 [0x6d,0xec,0x86,0xaf]
 
 # CHECK-NOSEC: vldr vpr, [r6, #500] @ encoding: [0xd6,0xed,0xfd,0x8f]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vldr vpr, [r6, #500] @ encoding: [0xd6,0xed,0xfd,0x8f]
 # CHECK: vldr vpr, [r6, #500] @ encoding: [0xd6,0xed,0xfd,0x8f]
 [0xd6,0xed,0xfd,0x8f]
 
 # CHECK-NOSEC: vldr p0, [lr, #-508] @ encoding: [0x5e,0xed,0xff,0xaf]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vldr p0, [lr, #-508] @ encoding: [0x5e,0xed,0xff,0xaf]
 # CHECK: vldr p0, [lr, #-508] @ encoding: [0x5e,0xed,0xff,0xaf]
 [0x5e,0xed,0xff,0xaf]
 
 # CHECK-NOSEC: vldr vpr, [r6, #500]! @ encoding: [0xf6,0xed,0xfd,0x8f]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vldr vpr, [r6, #500]! @ encoding: [0xf6,0xed,0xfd,0x8f]
 # CHECK: vldr vpr, [r6, #500]! @ encoding: [0xf6,0xed,0xfd,0x8f]
 [0xf6,0xed,0xfd,0x8f]
 
 # CHECK-NOSEC: vldr p0, [lr, #-508]! @ encoding: [0x7e,0xed,0xff,0xaf]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vldr p0, [lr, #-508]! @ encoding: [0x7e,0xed,0xff,0xaf]
 # CHECK: vldr p0, [lr, #-508]! @ encoding: [0x7e,0xed,0xff,0xaf]
 [0x7e,0xed,0xff,0xaf]
 
 # CHECK-NOSEC: vldr vpr, [r6], #500 @ encoding: [0xf6,0xec,0xfd,0x8f]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vldr vpr, [r6], #500 @ encoding: [0xf6,0xec,0xfd,0x8f]
 # CHECK: vldr vpr, [r6], #500 @ encoding: [0xf6,0xec,0xfd,0x8f]
 [0xf6,0xec,0xfd,0x8f]
 
 # CHECK-NOSEC: vldr p0, [lr], #-508 @ encoding: [0x7e,0xec,0xff,0xaf]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vldr p0, [lr], #-508 @ encoding: [0x7e,0xec,0xff,0xaf]
 # CHECK: vldr p0, [lr], #-508 @ encoding: [0x7e,0xec,0xff,0xaf]
 [0x7e,0xec,0xff,0xaf]
 
 # CHECK-NOSEC: vldr p0, [sp], #-24 @ encoding: [0x7d,0xec,0x86,0xaf]
-# ERROR-NOMVE invalid instruction encoding
+# ERROR-NOMVE: invalid instruction encoding
 # CHECK-NOVFP: vldr p0, [sp], #-24 @ encoding: [0x7d,0xec,0x86,0xaf]
 # CHECK: vldr p0, [sp], #-24 @ encoding: [0x7d,0xec,0x86,0xaf]
 [0x7d,0xec,0x86,0xaf]

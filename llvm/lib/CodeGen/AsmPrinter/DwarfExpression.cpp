@@ -40,12 +40,12 @@ void DwarfExpression::emitConstu(uint64_t Value) {
 }
 
 void DwarfExpression::addReg(int DwarfReg, const char *Comment) {
- assert(DwarfReg >= 0 && "invalid negative dwarf register number");
- assert((isUnknownLocation() || isRegisterLocation()) &&
-        "location description already locked down");
- LocationKind = Register;
- if (DwarfReg < 32) {
-   emitOp(dwarf::DW_OP_reg0 + DwarfReg, Comment);
+  assert(DwarfReg >= 0 && "invalid negative dwarf register number");
+  assert((isUnknownLocation() || isRegisterLocation()) &&
+         "location description already locked down");
+  LocationKind = Register;
+  if (DwarfReg < 32) {
+    emitOp(dwarf::DW_OP_reg0 + DwarfReg, Comment);
   } else {
     emitOp(dwarf::DW_OP_regx, Comment);
     emitUnsigned(DwarfReg);
@@ -237,8 +237,17 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   // If the register can only be described by a complex expression (i.e.,
   // multiple subregisters) it doesn't safely compose with another complex
   // expression. For example, it is not possible to apply a DW_OP_deref
-  // operation to multiple DW_OP_pieces.
-  if (HasComplexExpression && DwarfRegs.size() > 1) {
+  // operation to multiple DW_OP_pieces, since composite location descriptions
+  // do not push anything on the DWARF stack.
+  //
+  // DW_OP_entry_value operations can only hold a DWARF expression or a
+  // register location description, so we can't emit a single entry value
+  // covering a composite location description. In the future we may want to
+  // emit entry value operations for each register location in the composite
+  // location, but until that is supported do not emit anything.
+  if ((HasComplexExpression || IsEmittingEntryValue) && DwarfRegs.size() > 1) {
+    if (IsEmittingEntryValue)
+      cancelEntryValue();
     DwarfRegs.clear();
     LocationKind = Unknown;
     return false;
@@ -248,8 +257,8 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   // a call site parameter expression and if that expression is just a register
   // location, emit it with addBReg and offset 0, because we should emit a DWARF
   // expression representing a value, rather than a location.
-  if (!isMemoryLocation() && !HasComplexExpression && (!isParameterValue() ||
-                                                       isEntryValue())) {
+  if (!isMemoryLocation() && !HasComplexExpression &&
+      (!isParameterValue() || isEntryValue())) {
     for (auto &Reg : DwarfRegs) {
       if (Reg.DwarfRegNo >= 0)
         addReg(Reg.DwarfRegNo, Reg.Comment);
@@ -349,7 +358,6 @@ void DwarfExpression::beginEntryValueExpression(
   assert(Op->getArg(0) == 1 &&
          "Can currently only emit entry values covering a single operation");
 
-  emitOp(CU.getDwarf5OrGNULocationAtom(dwarf::DW_OP_entry_value));
   IsEmittingEntryValue = true;
   enableTemporaryBuffer();
 }
@@ -357,6 +365,8 @@ void DwarfExpression::beginEntryValueExpression(
 void DwarfExpression::finalizeEntryValue() {
   assert(IsEmittingEntryValue && "Entry value not open?");
   disableTemporaryBuffer();
+
+  emitOp(CU.getDwarf5OrGNULocationAtom(dwarf::DW_OP_entry_value));
 
   // Emit the entry value's size operand.
   unsigned Size = getTemporaryBufferSize();
@@ -368,7 +378,35 @@ void DwarfExpression::finalizeEntryValue() {
   IsEmittingEntryValue = false;
 }
 
-/// Assuming a well-formed expression, match "DW_OP_deref* DW_OP_LLVM_fragment?".
+void DwarfExpression::cancelEntryValue() {
+  assert(IsEmittingEntryValue && "Entry value not open?");
+  disableTemporaryBuffer();
+
+  // The temporary buffer can't be emptied, so for now just assert that nothing
+  // has been emitted to it.
+  assert(getTemporaryBufferSize() == 0 &&
+         "Began emitting entry value block before cancelling entry value");
+
+  IsEmittingEntryValue = false;
+}
+
+unsigned DwarfExpression::getOrCreateBaseType(unsigned BitSize,
+                                              dwarf::TypeKind Encoding) {
+  // Reuse the base_type if we already have one in this CU otherwise we
+  // create a new one.
+  unsigned I = 0, E = CU.ExprRefedBaseTypes.size();
+  for (; I != E; ++I)
+    if (CU.ExprRefedBaseTypes[I].BitSize == BitSize &&
+        CU.ExprRefedBaseTypes[I].Encoding == Encoding)
+      break;
+
+  if (I == E)
+    CU.ExprRefedBaseTypes.emplace_back(BitSize, Encoding);
+  return I;
+}
+
+/// Assuming a well-formed expression, match "DW_OP_deref*
+/// DW_OP_LLVM_fragment?".
 static bool isMemoryLocation(DIExpressionCursor ExprCursor) {
   while (ExprCursor) {
     auto Op = ExprCursor.take();
@@ -385,6 +423,10 @@ static bool isMemoryLocation(DIExpressionCursor ExprCursor) {
 
 void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
                                     unsigned FragmentOffsetInBits) {
+  // Entry values can currently only cover the initial register location,
+  // and not any other parts of the following DWARF expression.
+  assert(!IsEmittingEntryValue && "Can't emit entry value around expression");
+
   // If we need to mask out a subregister, do it now, unless the next
   // operation would emit an OpPiece anyway.
   auto N = ExprCursor.peek();
@@ -455,6 +497,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
     case dwarf::DW_OP_lit0:
     case dwarf::DW_OP_not:
     case dwarf::DW_OP_dup:
+    case dwarf::DW_OP_push_object_address:
       emitOp(OpNum);
       break;
     case dwarf::DW_OP_deref:
@@ -475,24 +518,13 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       dwarf::TypeKind Encoding = static_cast<dwarf::TypeKind>(Op->getArg(1));
       if (DwarfVersion >= 5) {
         emitOp(dwarf::DW_OP_convert);
-        // Reuse the base_type if we already have one in this CU otherwise we
-        // create a new one.
-        unsigned I = 0, E = CU.ExprRefedBaseTypes.size();
-        for (; I != E; ++I)
-          if (CU.ExprRefedBaseTypes[I].BitSize == BitSize &&
-              CU.ExprRefedBaseTypes[I].Encoding == Encoding)
-            break;
-
-        if (I == E)
-          CU.ExprRefedBaseTypes.emplace_back(BitSize, Encoding);
-
         // If targeting a location-list; simply emit the index into the raw
         // byte stream as ULEB128, DwarfDebug::emitDebugLocEntry has been
         // fitted with means to extract it later.
         // If targeting a inlined DW_AT_location; insert a DIEBaseTypeRef
         // (containing the index and a resolve mechanism during emit) into the
         // DIE value list.
-        emitBaseTypeRef(I);
+        emitBaseTypeRef(getOrCreateBaseType(BitSize, Encoding));
       } else {
         if (PrevConvertOp && PrevConvertOp->getArg(0) < BitSize) {
           if (Encoding == dwarf::DW_ATE_signed)
@@ -597,10 +629,10 @@ void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
   emitOp(dwarf::DW_OP_and);
 }
 
-void DwarfExpression::addWasmLocation(unsigned Index, int64_t Offset) {
+void DwarfExpression::addWasmLocation(unsigned Index, uint64_t Offset) {
   assert(LocationKind == Implicit || LocationKind == Unknown);
   LocationKind = Implicit;
   emitOp(dwarf::DW_OP_WASM_location);
   emitUnsigned(Index);
-  emitSigned(Offset);
+  emitUnsigned(Offset);
 }

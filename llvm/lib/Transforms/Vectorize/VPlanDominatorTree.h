@@ -30,7 +30,8 @@ using VPDomTreeNode = DomTreeNodeBase<VPBlockBase>;
 /// Template specializations of GraphTraits for VPDomTreeNode.
 template <>
 struct GraphTraits<VPDomTreeNode *>
-    : public DomTreeGraphTraitsBase<VPDomTreeNode, VPDomTreeNode::iterator> {};
+    : public DomTreeGraphTraitsBase<VPDomTreeNode,
+                                    VPDomTreeNode::const_iterator> {};
 
 template <>
 struct GraphTraits<const VPDomTreeNode *>

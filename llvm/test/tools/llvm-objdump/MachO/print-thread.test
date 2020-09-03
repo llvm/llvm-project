@@ -1,0 +1,11 @@
+RUN: llvm-objdump --macho --private-headers %p/Inputs/thread.macho-i386 | FileCheck %s
+
+CHECK: Load command 9
+CHECK:         cmd LC_UNIXTHREAD
+CHECK:     cmdsize 80
+CHECK:      flavor i386_THREAD_STATE
+CHECK:       count i386_THREAD_STATE_COUNT
+CHECK: 	    eax 0x00000000 ebx    0x00000000 ecx 0x00000000 edx 0x00000000
+CHECK: 	    edi 0x00000000 esi    0x00000000 ebp 0x00000000 esp 0x00000000
+CHECK: 	    ss  0x00000000 eflags 0x00000000 eip 0x00001db0 cs  0x00000000
+CHECK: 	    ds  0x00000000 es     0x00000000 fs  0x00000000 gs  0x00000000

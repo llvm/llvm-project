@@ -23,7 +23,6 @@ namespace llvm {
 
 class LPPassManager;
 class Function;
-class PMStack;
 
 class LoopPass : public Pass {
 public:
@@ -65,26 +64,6 @@ public:
   PassManagerType getPotentialPassManagerType() const override {
     return PMT_LoopPassManager;
   }
-
-  //===--------------------------------------------------------------------===//
-  /// SimpleAnalysis - Provides simple interface to update analysis info
-  /// maintained by various passes. Note, if required this interface can
-  /// be extracted into a separate abstract class but it would require
-  /// additional use of multiple inheritance in Pass class hierarchy, something
-  /// we are trying to avoid.
-
-  /// Each loop pass can override these simple analysis hooks to update
-  /// desired analysis information.
-  /// cloneBasicBlockAnalysis - Clone analysis info associated with basic block.
-  virtual void cloneBasicBlockAnalysis(BasicBlock *F, BasicBlock *T, Loop *L) {}
-
-  /// deleteAnalysisValue - Delete analysis info associated with value V.
-  virtual void deleteAnalysisValue(Value *V, Loop *L) {}
-
-  /// Delete analysis info associated with Loop L.
-  /// Called to notify a Pass that a loop has been deleted and any
-  /// associated analysis values can be deleted.
-  virtual void deleteAnalysisLoop(Loop *L) {}
 
 protected:
   /// Optional passes call this function to check whether the pass should be
@@ -130,25 +109,6 @@ public:
 
   // Mark \p L as deleted.
   void markLoopAsDeleted(Loop &L);
-
-  //===--------------------------------------------------------------------===//
-  /// SimpleAnalysis - Provides simple interface to update analysis info
-  /// maintained by various passes. Note, if required this interface can
-  /// be extracted into a separate abstract class but it would require
-  /// additional use of multiple inheritance in Pass class hierarchy, something
-  /// we are trying to avoid.
-
-  /// cloneBasicBlockSimpleAnalysis - Invoke cloneBasicBlockAnalysis hook for
-  /// all passes that implement simple analysis interface.
-  void cloneBasicBlockSimpleAnalysis(BasicBlock *From, BasicBlock *To, Loop *L);
-
-  /// deleteSimpleAnalysisValue - Invoke deleteAnalysisValue hook for all passes
-  /// that implement simple analysis interface.
-  void deleteSimpleAnalysisValue(Value *V, Loop *L);
-
-  /// Invoke deleteAnalysisLoop hook for all passes that implement simple
-  /// analysis interface.
-  void deleteSimpleAnalysisLoop(Loop *L);
 
 private:
   std::deque<Loop *> LQ;

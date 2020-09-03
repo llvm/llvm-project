@@ -290,13 +290,14 @@ class RegisterCommandsTestCase(TestBase):
 
         # Launch the process, stop at the entry point.
         error = lldb.SBError()
+        flags = target.GetLaunchInfo().GetLaunchFlags()
         process = target.Launch(
                 lldb.SBListener(),
                 None, None, # argv, envp
                 None, None, None, # stdin/out/err
                 self.get_process_working_directory(),
-                0, # launch flags
-                True, # stop at entry
+                flags, # launch flags
+                True,  # stop at entry
                 error)
         self.assertSuccess(error, "Launch succeeds")
 
@@ -463,7 +464,6 @@ class RegisterCommandsTestCase(TestBase):
 
         # Spawn a new process
         pid = self.spawnSubprocess(exe, ['wait_for_attach']).pid
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         if self.TraceOn():
             print("pid of spawned process: %d" % pid)

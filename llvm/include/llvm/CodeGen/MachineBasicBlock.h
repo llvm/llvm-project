@@ -15,16 +15,13 @@
 
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/ilist.h"
-#include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/ADT/simple_ilist.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/LaneBitmask.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
-#include "llvm/Support/Printable.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -39,11 +36,43 @@ class MachineFunction;
 class MCSymbol;
 class ModuleSlotTracker;
 class Pass;
+class Printable;
 class SlotIndexes;
 class StringRef;
 class raw_ostream;
 class TargetRegisterClass;
 class TargetRegisterInfo;
+
+// This structure uniquely identifies a basic block section.
+// Possible values are
+//  {Type: Default, Number: (unsigned)} (These are regular section IDs)
+//  {Type: Exception, Number: 0}  (ExceptionSectionID)
+//  {Type: Cold, Number: 0}  (ColdSectionID)
+struct MBBSectionID {
+  enum SectionType {
+    Default = 0, // Regular section (these sections are distinguished by the
+                 // Number field).
+    Exception,   // Special section type for exception handling blocks
+    Cold,        // Special section type for cold blocks
+  } Type;
+  unsigned Number;
+
+  MBBSectionID(unsigned N) : Type(Default), Number(N) {}
+
+  // Special unique sections for cold and exception blocks.
+  const static MBBSectionID ColdSectionID;
+  const static MBBSectionID ExceptionSectionID;
+
+  bool operator==(const MBBSectionID &Other) const {
+    return Type == Other.Type && Number == Other.Number;
+  }
+
+  bool operator!=(const MBBSectionID &Other) const { return !(*this == Other); }
+
+private:
+  // This is only used to construct the special cold and exception sections.
+  MBBSectionID(SectionType T) : Type(T), Number(0) {}
+};
 
 template <> struct ilist_traits<MachineInstr> {
 private:
@@ -129,9 +158,24 @@ private:
   /// Indicate that this basic block is the entry block of a cleanup funclet.
   bool IsCleanupFuncletEntry = false;
 
+  /// With basic block sections, this stores the Section ID of the basic block.
+  MBBSectionID SectionID{0};
+
+  // Indicate that this basic block begins a section.
+  bool IsBeginSection = false;
+
+  // Indicate that this basic block ends a section.
+  bool IsEndSection = false;
+
+  /// Indicate that this basic block is the indirect dest of an INLINEASM_BR.
+  bool IsInlineAsmBrIndirectTarget = false;
+
   /// since getSymbol is a relatively heavy-weight operation, the symbol
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
+
+  /// Used during basic block sections to mark the end of a basic block.
+  MCSymbol *EndMCSymbol = nullptr;
 
   // Intrusive list support
   MachineBasicBlock() = default;
@@ -331,7 +375,7 @@ public:
   /// Add PhysReg as live in to this block, and ensure that there is a copy of
   /// PhysReg to a virtual register of class RC. Return the virtual register
   /// that is a copy of the live in PhysReg.
-  unsigned addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC);
+  Register addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC);
 
   /// Remove the specified register from the live in set.
   void removeLiveIn(MCPhysReg Reg,
@@ -408,6 +452,43 @@ public:
   /// Indicates if this is the entry block of a cleanup funclet.
   void setIsCleanupFuncletEntry(bool V = true) { IsCleanupFuncletEntry = V; }
 
+  /// Returns true if this block begins any section.
+  bool isBeginSection() const { return IsBeginSection; }
+
+  /// Returns true if this block ends any section.
+  bool isEndSection() const { return IsEndSection; }
+
+  void setIsBeginSection(bool V = true) { IsBeginSection = V; }
+
+  void setIsEndSection(bool V = true) { IsEndSection = V; }
+
+  /// Returns the section ID of this basic block.
+  MBBSectionID getSectionID() const { return SectionID; }
+
+  /// Returns the unique section ID number of this basic block.
+  unsigned getSectionIDNum() const {
+    return ((unsigned)MBBSectionID::SectionType::Cold) -
+           ((unsigned)SectionID.Type) + SectionID.Number;
+  }
+
+  /// Sets the section ID for this basic block.
+  void setSectionID(MBBSectionID V) { SectionID = V; }
+
+  /// Returns true if this block may have an INLINEASM_BR (overestimate, by
+  /// checking if any of the successors are indirect targets of any inlineasm_br
+  /// in the function).
+  bool mayHaveInlineAsmBr() const;
+
+  /// Returns true if this is the indirect dest of an INLINEASM_BR.
+  bool isInlineAsmBrIndirectTarget() const {
+    return IsInlineAsmBrIndirectTarget;
+  }
+
+  /// Indicates if this is the indirect dest of an INLINEASM_BR.
+  void setIsInlineAsmBrIndirectTarget(bool V = true) {
+    IsInlineAsmBrIndirectTarget = V;
+  }
+
   /// Returns true if it is legal to hoist instructions into this block.
   bool isLegalToHoistInto() const;
 
@@ -419,11 +500,18 @@ public:
   void moveBefore(MachineBasicBlock *NewAfter);
   void moveAfter(MachineBasicBlock *NewBefore);
 
-  /// Update the terminator instructions in block to account for changes to the
-  /// layout. If the block previously used a fallthrough, it may now need a
-  /// branch, and if it previously used branching it may now be able to use a
-  /// fallthrough.
-  void updateTerminator();
+  /// Returns true if this and MBB belong to the same section.
+  bool sameSection(const MachineBasicBlock *MBB) const {
+    return getSectionID() == MBB->getSectionID();
+  }
+
+  /// Update the terminator instructions in block to account for changes to
+  /// block layout which may have been made. PreviousLayoutSuccessor should be
+  /// set to the block which may have been used as fallthrough before the block
+  /// layout was modified.  If the block previously fell through to that block,
+  /// it may now need a branch. If it previously branched to another block, it
+  /// may now be able to fallthrough to the current layout successor.
+  void updateTerminator(MachineBasicBlock *PreviousLayoutSuccessor);
 
   // Machine-CFG mutators
 
@@ -588,7 +676,9 @@ public:
   ///
   /// This function updates LiveVariables, MachineDominatorTree, and
   /// MachineLoopInfo, as applicable.
-  MachineBasicBlock *SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P);
+  MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P,
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr);
 
   /// Check if the edge between this block and the given successor \p
   /// Succ, can be split. If this returns true a subsequent call to
@@ -737,16 +827,6 @@ public:
   /// instead of basic block \p Old.
   void replacePhiUsesWith(MachineBasicBlock *Old, MachineBasicBlock *New);
 
-  /// Various pieces of code can cause excess edges in the CFG to be inserted.
-  /// If we have proven that MBB can only branch to DestA and DestB, remove any
-  /// other MBB successors from the CFG. DestA and DestB can be null. Besides
-  /// DestA and DestB, retain other edges leading to LandingPads (currently
-  /// there can be only one; we don't check or require that here). Note it is
-  /// possible that DestA and/or DestB are LandingPads.
-  bool CorrectExtraCFGEdges(MachineBasicBlock *DestA,
-                            MachineBasicBlock *DestB,
-                            bool IsCond);
-
   /// Find the next valid DebugLoc starting at MBBI, skipping any DBG_VALUE
   /// and DBG_LABEL instructions.  Return UnknownLoc if there is none.
   DebugLoc findDebugLoc(instr_iterator MBBI);
@@ -781,7 +861,7 @@ public:
   ///
   /// \p Reg must be a physical register.
   LivenessQueryResult computeRegisterLiveness(const TargetRegisterInfo *TRI,
-                                              unsigned Reg,
+                                              MCRegister Reg,
                                               const_iterator Before,
                                               unsigned Neighborhood = 10) const;
 
@@ -959,6 +1039,27 @@ inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin) {
   while (It != Begin && It->isDebugInstr())
     --It;
   return It;
+}
+
+/// Increment \p It, then continue incrementing it while it points to a debug
+/// instruction. A replacement for std::next.
+template <typename IterT> inline IterT next_nodbg(IterT It, IterT End) {
+  return skipDebugInstructionsForward(std::next(It), End);
+}
+
+/// Decrement \p It, then continue decrementing it while it points to a debug
+/// instruction. A replacement for std::prev.
+template <typename IterT> inline IterT prev_nodbg(IterT It, IterT Begin) {
+  return skipDebugInstructionsBackward(std::prev(It), Begin);
+}
+
+/// Construct a range iterator which begins at \p It and moves forwards until
+/// \p End is reached, skipping any debug instructions.
+template <typename IterT>
+inline auto instructionsWithoutDebug(IterT It, IterT End) {
+  return make_filter_range(make_range(It, End), [](const MachineInstr &MI) {
+    return !MI.isDebugInstr();
+  });
 }
 
 } // end namespace llvm

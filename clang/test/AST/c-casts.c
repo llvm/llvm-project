@@ -1,4 +1,11 @@
+// Test without serialization:
 // RUN: %clang_cc1 -w -ast-dump %s | FileCheck %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -w -emit-pch -o %t %s
+// RUN: %clang_cc1 -w -x c -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck %s
 
 // The cast construction code both for implicit and c-style casts is very
 // different in C vs C++. This file is intended to test the C behavior.

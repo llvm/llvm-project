@@ -29,6 +29,7 @@ add_lld_library(lldWasm
   MC
   Object
   Option
+  Passes
   Support
 
   LINK_LIBS

@@ -10,14 +10,6 @@ from lldbsuite.test import lldbutil
 class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        super(TestPlatformProcessConnect, self).setUp()
-        self._initial_platform = lldb.DBG.GetSelectedPlatform()
-
-    def tearDown(self):
-        lldb.DBG.SetSelectedPlatform(self._initial_platform)
-        super(TestPlatformProcessConnect, self).tearDown()
-
     @llgs_test
     @no_debug_info_test
     @skipIf(remote=False)
@@ -62,20 +54,13 @@ class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
             self.debug_monitor_exe,
             commandline_args,
             install_remote=False)
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         socket_id = lldbutil.wait_for_file_on_target(self, port_file)
 
-        new_debugger = lldb.SBDebugger.Create()
-        new_debugger.SetAsync(False)
-
-        def del_debugger(new_debugger=new_debugger):
-            del new_debugger
-        self.addTearDownHook(del_debugger)
+        self.dbg.SetAsync(False)
 
         new_platform = lldb.SBPlatform(lldb.remote_platform.GetName())
-        new_debugger.SetSelectedPlatform(new_platform)
-        new_interpreter = new_debugger.GetCommandInterpreter()
+        self.dbg.SetSelectedPlatform(new_platform)
 
         if unix_protocol:
             connect_url = "%s://%s%s" % (protocol, hostname, socket_id)
@@ -84,13 +69,13 @@ class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         command = "platform connect %s" % (connect_url)
         result = lldb.SBCommandReturnObject()
-        new_interpreter.HandleCommand(command, result)
+        self.dbg.GetCommandInterpreter().HandleCommand(command, result)
         self.assertTrue(
             result.Succeeded(),
             "platform process connect failed: %s" %
             result.GetOutput())
 
-        target = new_debugger.GetSelectedTarget()
+        target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
         thread = process.GetThreadAtIndex(0)
 

@@ -45,7 +45,7 @@ void test8(int, x);  /* expected-warning {{declaration specifier missing, defaul
 
 typedef int sometype;
 int a(sometype, y) {return 0;}  /* expected-warning {{declaration specifier missing, defaulting to 'int'}} \
-                                   expected-error {{parameter name omitted}}*/
+                                   expected-warning {{omitting the parameter name in a function definition is a C2x extension}}*/
 
 
 

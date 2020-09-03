@@ -45,7 +45,7 @@ public:
   void createCallSpawnThreads(Value *SubFn, Value *SubFnParam, Value *LB,
                               Value *UB, Value *Stride);
 
-  void deployParallelExecution(Value *SubFn, Value *SubFnParam, Value *LB,
+  void deployParallelExecution(Function *SubFn, Value *SubFnParam, Value *LB,
                                Value *UB, Value *Stride) override;
 
   virtual Function *prepareSubFnDefinition(Function *F) const override;

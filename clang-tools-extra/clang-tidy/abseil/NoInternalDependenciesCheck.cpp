@@ -18,9 +18,6 @@ namespace tidy {
 namespace abseil {
 
 void NoInternalDependenciesCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // TODO: refactor matcher to be configurable or just match on any internal
   // access from outside the enclosing namespace.
 
@@ -37,7 +34,13 @@ void NoInternalDependenciesCheck::check(const MatchFinder::MatchResult &Result) 
   const auto *InternalDependency =
       Result.Nodes.getNodeAs<NestedNameSpecifierLoc>("InternalDep");
 
-  diag(InternalDependency->getBeginLoc(),
+  SourceLocation LocAtFault =
+      Result.SourceManager->getSpellingLoc(InternalDependency->getBeginLoc());
+
+  if (!LocAtFault.isValid())
+    return;
+
+  diag(LocAtFault,
        "do not reference any 'internal' namespaces; those implementation "
        "details are reserved to Abseil");
 }

@@ -250,7 +250,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   Orders.push_back(Entry);
   while (Idx != Orders.size()) {
     BasicBlock *Node = Orders[Idx++];
-    for (auto ChildDomNode : DT.getNode(Node)->getChildren()) {
+    for (auto ChildDomNode : DT.getNode(Node)->children()) {
       if (Candidates.count(ChildDomNode->getBlock()))
         Orders.push_back(ChildDomNode->getBlock());
     }
@@ -363,10 +363,12 @@ void ConstantHoistingPass::collectConstantCandidates(
   // instruction and operand index.
   if (auto IntrInst = dyn_cast<IntrinsicInst>(Inst))
     Cost = TTI->getIntImmCostIntrin(IntrInst->getIntrinsicID(), Idx,
-                                    ConstInt->getValue(), ConstInt->getType());
+                                    ConstInt->getValue(), ConstInt->getType(),
+                                    TargetTransformInfo::TCK_SizeAndLatency);
   else
     Cost = TTI->getIntImmCostInst(Inst->getOpcode(), Idx, ConstInt->getValue(),
-                                  ConstInt->getType());
+                                  ConstInt->getType(),
+                                  TargetTransformInfo::TCK_SizeAndLatency);
 
   // Ignore cheap integer constants.
   if (Cost > TargetTransformInfo::TCC_Basic) {
@@ -416,7 +418,8 @@ void ConstantHoistingPass::collectConstantCandidates(
   // usually lowered to a load from constant pool. Such operation is unlikely
   // to be cheaper than compute it by <Base + Offset>, which can be lowered to
   // an ADD instruction or folded into Load/Store instruction.
-  int Cost = TTI->getIntImmCostInst(Instruction::Add, 1, Offset, PtrIntTy);
+  int Cost = TTI->getIntImmCostInst(Instruction::Add, 1, Offset, PtrIntTy,
+                                    TargetTransformInfo::TCK_SizeAndLatency);
   ConstCandVecType &ExprCandVec = ConstGEPCandMap[BaseGV];
   ConstCandMapType::iterator Itr;
   bool Inserted;
@@ -491,7 +494,7 @@ void ConstantHoistingPass::collectConstantCandidates(
     // take constant variables is lower than `TargetTransformInfo::TCC_Basic`.
     // So it's safe for us to collect constant candidates from all
     // IntrinsicInsts.
-    if (canReplaceOperandWithVariable(Inst, Idx) || isa<IntrinsicInst>(Inst)) {
+    if (canReplaceOperandWithVariable(Inst, Idx)) {
       collectConstantCandidates(ConstCandMap, Inst, Idx);
     }
   } // end of for all operands
@@ -582,7 +585,8 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
     for (auto User : ConstCand->Uses) {
       unsigned Opcode = User.Inst->getOpcode();
       unsigned OpndIdx = User.OpndIdx;
-      Cost += TTI->getIntImmCostInst(Opcode, OpndIdx, Value, Ty);
+      Cost += TTI->getIntImmCostInst(Opcode, OpndIdx, Value, Ty,
+                                     TargetTransformInfo::TCK_SizeAndLatency);
       LLVM_DEBUG(dbgs() << "Cost: " << Cost << "\n");
 
       for (auto C2 = S; C2 != E; ++C2) {
@@ -975,8 +979,8 @@ PreservedAnalyses ConstantHoistingPass::run(Function &F,
   auto BFI = ConstHoistWithBlockFrequency
                  ? &AM.getResult<BlockFrequencyAnalysis>(F)
                  : nullptr;
-  auto &MAM = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
-  auto *PSI = MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  auto *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   if (!runImpl(F, TTI, DT, BFI, F.getEntryBlock(), PSI))
     return PreservedAnalyses::all();
 

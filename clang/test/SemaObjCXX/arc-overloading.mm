@@ -174,6 +174,36 @@ void test_f9() {
   const __autoreleasing id& ar4 = weak_a;
 }
 
+int &f10(__strong id *&); // expected-note 2{{not viable: no known conversion}}
+float &f10(__autoreleasing id *&); // expected-note 2{{not viable: no known conversion}}
+
+void test_f10() {
+  __strong id *strong_id;
+  __weak id *weak_id;
+  __autoreleasing id *autoreleasing_id;
+  __unsafe_unretained id *unsafe_id;
+
+  int &ir1 = f10(strong_id);
+  float &fr1 = f10(autoreleasing_id);
+  float &fr2 = f10(unsafe_id); // expected-error {{no match}}
+  float &fr2a = f10(weak_id); // expected-error {{no match}}
+}
+
+int &f11(__strong id *const &); // expected-note {{not viable: 1st argument ('__weak id *') has __weak ownership, but parameter has __strong ownership}}
+float &f11(const __autoreleasing id *const &); // expected-note {{not viable: 1st argument ('__weak id *') has __weak ownership, but parameter has __autoreleasing ownership}}
+
+void test_f11() {
+  __strong id *strong_id;
+  __weak id *weak_id;
+  __autoreleasing id *autoreleasing_id;
+  __unsafe_unretained id *unsafe_id;
+
+  int &ir1 = f11(strong_id);
+  float &fr1 = f11(autoreleasing_id);
+  float &fr2 = f11(unsafe_id);
+  float &fr2a = f11(weak_id); // expected-error {{no match}}
+}
+
 // rdar://9790531
 void f9790531(void *inClientData); // expected-note {{candidate function not viable: cannot implicitly convert argument of type 'MixerEQGraphTestDelegate *const __strong' to 'void *' for 1st argument under ARC}}
 void f9790531_1(struct S*inClientData); // expected-note {{candidate function not viable}}

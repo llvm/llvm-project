@@ -33,7 +33,7 @@
 # Linker could satisfy alignment by removing NOPs after linker relaxation.
 
 # The first R_RISCV_ALIGN come from
-# MCELFStreamer::InitSections() EmitCodeAlignment(4).
+# MCELFStreamer::InitSections() emitCodeAlignment(4).
 # C-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x2
 # C-EXT-RELAX-INST:  c.nop
 test:

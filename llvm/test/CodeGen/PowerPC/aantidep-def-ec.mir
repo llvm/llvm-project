@@ -79,7 +79,7 @@ body:             |
     $x29 = ADDI8 killed $x3, -48
     $x3 = ADDIStocHA8 $x2, @tasklist_lock
     $x3 = LDtocL @tasklist_lock, killed $x3, implicit $x2 :: (load 8 from got)
-    BL8_NOP @__raw_read_unlock, csr_svr464_altivec, implicit-def $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1, implicit-def dead $x3
+    BL8_NOP @__raw_read_unlock, csr_ppc64_altivec, implicit-def $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1, implicit-def dead $x3
     $r3 = LI 0
     STW killed $r3, 0, killed $x30 :: (volatile store 4 into %ir.p2)
     INLINEASM &"#compiler barrier", 25

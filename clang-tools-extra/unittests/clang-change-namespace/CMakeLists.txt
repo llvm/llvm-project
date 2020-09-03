@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
-  support
+  FrontendOpenMP
+  Support
   )
 
 get_filename_component(CHANGE_NAMESPACE_SOURCE_DIR

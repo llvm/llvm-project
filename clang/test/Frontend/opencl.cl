@@ -21,7 +21,7 @@ int member;
 #endif
 #endif
 
-void f(void (^g)(void)) {
+typedef int (^bl_t)(void);
 #if defined(__OPENCL_C_VERSION__) || defined(__OPENCL_CPP_VERSION__)
 #if !defined(BLOCKS) && (defined(__OPENCL_CPP_VERSION__)  || __OPENCL_C_VERSION__ != CL_VERSION_2_0)
   // expected-error@-3{{blocks support disabled - compile with -fblocks or for OpenCL 2.0}}
@@ -29,7 +29,6 @@ void f(void (^g)(void)) {
 #else
   // expected-error@-6{{blocks support disabled - compile with -fblocks or pick a deployment target that supports them}}
 #endif
-}
 
 // CHECK-INVALID-OPENCL-VERSION11: warning: OpenCL version 1.1 does not support the option '-cl-strict-aliasing'
 // CHECK-INVALID-OPENCL-VERSION12: warning: OpenCL version 1.2 does not support the option '-cl-strict-aliasing'

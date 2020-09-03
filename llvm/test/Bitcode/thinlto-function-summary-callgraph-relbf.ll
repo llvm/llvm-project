@@ -15,6 +15,7 @@
 ; CHECK-NEXT:    <FLAGS
 ; See if the call to func is registered.
 ; CHECK-NEXT:    <PERMODULE_RELBF {{.*}} op4=1 {{.*}} op9=256
+; CHECK-NEXT:    <BLOCK_COUNT op0=1/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 ; CHECK: <STRTAB_BLOCK
 ; CHECK-NEXT: blob data = 'undefinedglobmainfunc{{.*}}'

@@ -1,2 +1,5 @@
 add_subdirectory(Clang)
-add_subdirectory(Swift)
+
+if (LLDB_ENABLE_SWIFT_SUPPORT)
+  add_subdirectory(Swift)
+endif()

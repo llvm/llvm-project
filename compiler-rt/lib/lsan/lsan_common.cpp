@@ -25,6 +25,8 @@
 #include "sanitizer_common/sanitizer_thread_registry.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
+extern "C" const char *__lsan_current_stage = "unknown";
+
 #if CAN_SANITIZE_LEAKS
 namespace __lsan {
 
@@ -33,6 +35,7 @@ namespace __lsan {
 BlockingMutex global_mutex(LINKER_INITIALIZED);
 
 Flags lsan_flags;
+
 
 void DisableCounterUnderflow() {
   if (common_flags()->detect_leaks) {
@@ -211,6 +214,13 @@ void ForEachExtraStackRangeCb(uptr begin, uptr end, void* arg) {
   ScanRangeForPointers(begin, end, frontier, "FAKE STACK", kReachable);
 }
 
+#if SANITIZER_FUCHSIA
+
+// Fuchsia handles all threads together with its own callback.
+static void ProcessThreads(SuspendedThreadsList const &, Frontier *) {}
+
+#else
+
 // Scans thread data (stacks and TLS) for heap pointers.
 static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                            Frontier *frontier) {
@@ -308,6 +318,8 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
   }
 }
 
+#endif  // SANITIZER_FUCHSIA
+
 void ScanRootRegion(Frontier *frontier, const RootRegion &root_region,
                     uptr region_begin, uptr region_end, bool is_readable) {
   uptr intersection_begin = Max(root_region.begin, region_begin);
@@ -354,6 +366,7 @@ static void FloodFillTag(Frontier *frontier, ChunkTag tag) {
 // ForEachChunk callback. If the chunk is marked as leaked, marks all chunks
 // which are reachable from it as indirectly leaked.
 static void MarkIndirectlyLeakedCb(uptr chunk, void *arg) {
+  __lsan_current_stage = "MarkIndirectlyLeakedCb";
   chunk = GetUserBegin(chunk);
   LsanMetadata m(chunk);
   if (m.allocated() && m.tag() != kReachable) {
@@ -366,6 +379,7 @@ static void MarkIndirectlyLeakedCb(uptr chunk, void *arg) {
 // frontier.
 static void CollectIgnoredCb(uptr chunk, void *arg) {
   CHECK(arg);
+  __lsan_current_stage = "CollectIgnoredCb";
   chunk = GetUserBegin(chunk);
   LsanMetadata m(chunk);
   if (m.allocated() && m.tag() == kIgnored) {
@@ -395,6 +409,7 @@ struct InvalidPCParam {
 static void MarkInvalidPCCb(uptr chunk, void *arg) {
   CHECK(arg);
   InvalidPCParam *param = reinterpret_cast<InvalidPCParam *>(arg);
+  __lsan_current_stage = "MarkInvalidPCCb";
   chunk = GetUserBegin(chunk);
   LsanMetadata m(chunk);
   if (m.allocated() && m.tag() != kReachable && m.tag() != kIgnored) {
@@ -443,25 +458,23 @@ void ProcessPC(Frontier *frontier) {
 }
 
 // Sets the appropriate tag on each chunk.
-static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads) {
-  // Holds the flood fill frontier.
-  Frontier frontier;
+static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads,
+                              Frontier *frontier) {
+  ForEachChunk(CollectIgnoredCb, frontier);
+  ProcessGlobalRegions(frontier);
+  ProcessThreads(suspended_threads, frontier);
+  ProcessRootRegions(frontier);
+  FloodFillTag(frontier, kReachable);
 
-  ForEachChunk(CollectIgnoredCb, &frontier);
-  ProcessGlobalRegions(&frontier);
-  ProcessThreads(suspended_threads, &frontier);
-  ProcessRootRegions(&frontier);
-  FloodFillTag(&frontier, kReachable);
-
-  CHECK_EQ(0, frontier.size());
-  ProcessPC(&frontier);
+  CHECK_EQ(0, frontier->size());
+  ProcessPC(frontier);
 
   // The check here is relatively expensive, so we do this in a separate flood
   // fill. That way we can skip the check for chunks that are reachable
   // otherwise.
   LOG_POINTERS("Processing platform-specific allocations.\n");
-  ProcessPlatformSpecificAllocations(&frontier);
-  FloodFillTag(&frontier, kReachable);
+  ProcessPlatformSpecificAllocations(frontier);
+  FloodFillTag(frontier, kReachable);
 
   // Iterate over leaked chunks and mark those that are reachable from other
   // leaked chunks.
@@ -472,6 +485,7 @@ static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads) {
 // ForEachChunk callback. Resets the tags to pre-leak-check state.
 static void ResetTagsCb(uptr chunk, void *arg) {
   (void)arg;
+  __lsan_current_stage = "ResetTagsCb";
   chunk = GetUserBegin(chunk);
   LsanMetadata m(chunk);
   if (m.allocated() && m.tag() != kIgnored)
@@ -488,6 +502,7 @@ static void PrintStackTraceById(u32 stack_trace_id) {
 static void CollectLeaksCb(uptr chunk, void *arg) {
   CHECK(arg);
   LeakReport *leak_report = reinterpret_cast<LeakReport *>(arg);
+  __lsan_current_stage = "CollectLeaksCb";
   chunk = GetUserBegin(chunk);
   LsanMetadata m(chunk);
   if (!m.allocated()) return;
@@ -521,11 +536,6 @@ static void PrintMatchedSuppressions() {
   Printf("%s\n\n", line);
 }
 
-struct CheckForLeaksParam {
-  bool success;
-  LeakReport leak_report;
-};
-
 static void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
   const InternalMmapVector<tid_t> &suspended_threads =
       *(const InternalMmapVector<tid_t> *)arg;
@@ -537,6 +547,14 @@ static void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
              tctx->os_id);
   }
 }
+
+#if SANITIZER_FUCHSIA
+
+// Fuchsia provides a libc interface that guarantees all threads are
+// covered, and SuspendedThreadList is never really used.
+static void ReportUnsuspendedThreads(const SuspendedThreadsList &) {}
+
+#else  // !SANITIZER_FUCHSIA
 
 static void ReportUnsuspendedThreads(
     const SuspendedThreadsList &suspended_threads) {
@@ -550,13 +568,15 @@ static void ReportUnsuspendedThreads(
       &ReportIfNotSuspended, &threads);
 }
 
+#endif  // !SANITIZER_FUCHSIA
+
 static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
                                   void *arg) {
   CheckForLeaksParam *param = reinterpret_cast<CheckForLeaksParam *>(arg);
   CHECK(param);
   CHECK(!param->success);
   ReportUnsuspendedThreads(suspended_threads);
-  ClassifyAllChunks(suspended_threads);
+  ClassifyAllChunks(suspended_threads, &param->frontier);
   ForEachChunk(CollectLeaksCb, &param->leak_report);
   // Clean up for subsequent leak checks. This assumes we did not overwrite any
   // kIgnored tags.
@@ -569,7 +589,6 @@ static bool CheckForLeaks() {
       return false;
   EnsureMainThreadIDIsCorrect();
   CheckForLeaksParam param;
-  param.success = false;
   LockStuffAndStopTheWorld(CheckForLeaksCallback, &param);
 
   if (!param.success) {

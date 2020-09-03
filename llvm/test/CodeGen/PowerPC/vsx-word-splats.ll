@@ -9,7 +9,7 @@ entry:
   %2 = bitcast <16 x i8> %1 to <4 x float>
   ret <4 x float> %2
 ; CHECK-LABEL: test0f
-; CHECK xxspltw: 34, 34, 3
+; CHECK: xxspltw 34, 34, 3
 ; CHECK-BE-LABEL: test0f
 ; CHECK-BE: xxspltw 34, 34, 0
 }
@@ -21,7 +21,7 @@ entry:
   %2 = bitcast <16 x i8> %1 to <4 x float>
   ret <4 x float> %2
 ; CHECK-LABEL: test1f
-; CHECK xxspltw: 34, 34, 2
+; CHECK: xxspltw 34, 34, 2
 ; CHECK-BE-LABEL: test1f
 ; CHECK-BE: xxspltw 34, 34, 1
 }
@@ -33,8 +33,8 @@ entry:
   %2 = bitcast <16 x i8> %1 to <4 x float>
   ret <4 x float> %2
 ; CHECK-LABEL: test2f
-; CHECK xxspltw: 34, 34, 1
-; CHECK-LABEL: test2f
+; CHECK: xxspltw 34, 34, 1
+; CHECK-BE-LABEL: test2f
 ; CHECK-BE: xxspltw 34, 34, 2
 }
 
@@ -45,7 +45,7 @@ entry:
   %2 = bitcast <16 x i8> %1 to <4 x float>
   ret <4 x float> %2
 ; CHECK-LABEL: test3f
-; CHECK xxspltw: 34, 34, 0
+; CHECK: xxspltw 34, 34, 0
 ; CHECK-BE-LABEL: test3f
 ; CHECK-BE: xxspltw 34, 34, 3
 }
@@ -57,7 +57,7 @@ entry:
   %2 = bitcast <16 x i8> %1 to <4 x i32>
   ret <4 x i32> %2
 ; CHECK-LABEL: test0si
-; CHECK xxspltw: 34, 34, 3
+; CHECK: xxspltw 34, 34, 3
 ; CHECK-BE-LABEL: test0si
 ; CHECK-BE: xxspltw 34, 34, 0
 }
@@ -69,7 +69,7 @@ entry:
   %2 = bitcast <16 x i8> %1 to <4 x i32>
   ret <4 x i32> %2
 ; CHECK-LABEL: test1si
-; CHECK xxspltw: 34, 34, 2
+; CHECK: xxspltw 34, 34, 2
 ; CHECK-BE-LABEL: test1si
 ; CHECK-BE: xxspltw 34, 34, 1
 }
@@ -81,7 +81,7 @@ entry:
   %2 = bitcast <16 x i8> %1 to <4 x i32>
   ret <4 x i32> %2
 ; CHECK-LABEL: test2si
-; CHECK xxspltw: 34, 34, 1
+; CHECK: xxspltw 34, 34, 1
 ; CHECK-BE-LABEL: test2si
 ; CHECK-BE: xxspltw 34, 34, 2
 }
@@ -93,7 +93,7 @@ entry:
   %2 = bitcast <16 x i8> %1 to <4 x i32>
   ret <4 x i32> %2
 ; CHECK-LABEL: test3si
-; CHECK xxspltw: 34, 34, 0
+; CHECK: xxspltw 34, 34, 0
 ; CHECK-BE-LABEL: test3si
 ; CHECK-BE: xxspltw 34, 34, 3
 }
@@ -105,7 +105,7 @@ entry:
   %2 = bitcast <16 x i8> %1 to <4 x i32>
   ret <4 x i32> %2
 ; CHECK-LABEL: test0ui
-; CHECK xxspltw: 34, 34, 3
+; CHECK: xxspltw 34, 34, 3
 ; CHECK-BE-LABEL: test0ui
 ; CHECK-BE: xxspltw 34, 34, 0
 }
@@ -117,7 +117,7 @@ entry:
   %2 = bitcast <16 x i8> %1 to <4 x i32>
   ret <4 x i32> %2
 ; CHECK-LABEL: test1ui
-; CHECK xxspltw: 34, 34, 2
+; CHECK: xxspltw 34, 34, 2
 ; CHECK-BE-LABEL: test1ui
 ; CHECK-BE: xxspltw 34, 34, 1
 }
@@ -129,7 +129,7 @@ entry:
   %2 = bitcast <16 x i8> %1 to <4 x i32>
   ret <4 x i32> %2
 ; CHECK-LABEL: test2ui
-; CHECK xxspltw: 34, 34, 1
+; CHECK: xxspltw 34, 34, 1
 ; CHECK-BE-LABEL: test2ui
 ; CHECK-BE: xxspltw 34, 34, 2
 }
@@ -141,7 +141,7 @@ entry:
   %2 = bitcast <16 x i8> %1 to <4 x i32>
   ret <4 x i32> %2
 ; CHECK-LABEL: test3ui
-; CHECK xxspltw: 34, 34, 0
+; CHECK: xxspltw 34, 34, 0
 ; CHECK-BE-LABEL: test3ui
 ; CHECK-BE: xxspltw 34, 34, 3
 }

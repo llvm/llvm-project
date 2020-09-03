@@ -11,7 +11,7 @@
 ; RUN:   FileCheck --check-prefix=INVALID %s
 ; INVALID: invalid optimization level for LTO: 6
 
-; RUN: not wasm-ld -o %t3 -m elf_x86_64 -e main --lto-O-1 %t.o 2>&1 | \
+; RUN: not wasm-ld -o %t3 -e main --lto-O-1 %t.o 2>&1 | \
 ; RUN:   FileCheck --check-prefix=INVALIDNEGATIVE %s
 ; INVALIDNEGATIVE: invalid optimization level for LTO: 4294967295
 

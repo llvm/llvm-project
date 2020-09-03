@@ -70,40 +70,6 @@ constReferenceDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt,
   return DeclRefs;
 }
 
-// Finds all DeclRefExprs where a const method is called on VarDecl or VarDecl
-// is the a const reference or value argument to a CallExpr or CXXConstructExpr.
-SmallPtrSet<const DeclRefExpr *, 16>
-constReferenceDeclRefExprs(const VarDecl &VarDecl, const Decl &Decl,
-                           ASTContext &Context) {
-  auto DeclRefToVar =
-      declRefExpr(to(varDecl(equalsNode(&VarDecl)))).bind("declRef");
-  auto ConstMethodCallee = callee(cxxMethodDecl(isConst()));
-  // Match method call expressions where the variable is referenced as the this
-  // implicit object argument and opertor call expression for member operators
-  // where the variable is the 0-th argument.
-  auto Matches =
-      match(decl(forEachDescendant(expr(
-                anyOf(cxxMemberCallExpr(ConstMethodCallee, on(DeclRefToVar)),
-                      cxxOperatorCallExpr(ConstMethodCallee,
-                                          hasArgument(0, DeclRefToVar)))))),
-            Decl, Context);
-  SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
-  extractNodesByIdTo(Matches, "declRef", DeclRefs);
-  auto ConstReferenceOrValue =
-      qualType(anyOf(referenceType(pointee(qualType(isConstQualified()))),
-                     unless(anyOf(referenceType(), pointerType()))));
-  auto UsedAsConstRefOrValueArg = forEachArgumentWithParam(
-      DeclRefToVar, parmVarDecl(hasType(ConstReferenceOrValue)));
-  Matches = match(decl(forEachDescendant(callExpr(UsedAsConstRefOrValueArg))),
-                  Decl, Context);
-  extractNodesByIdTo(Matches, "declRef", DeclRefs);
-  Matches =
-      match(decl(forEachDescendant(cxxConstructExpr(UsedAsConstRefOrValueArg))),
-            Decl, Context);
-  extractNodesByIdTo(Matches, "declRef", DeclRefs);
-  return DeclRefs;
-}
-
 bool isOnlyUsedAsConst(const VarDecl &Var, const Stmt &Stmt,
                        ASTContext &Context) {
   // Collect all DeclRefExprs to the loop variable and all CallExprs and

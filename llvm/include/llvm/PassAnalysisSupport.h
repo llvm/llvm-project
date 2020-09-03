@@ -15,13 +15,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !defined(LLVM_PASS_H) || defined(LLVM_PASSANALYSISSUPPORT_H)
+#error "Do not include <PassAnalysisSupport.h>; include <Pass.h> instead"
+#endif 
+
 #ifndef LLVM_PASSANALYSISSUPPORT_H
 #define LLVM_PASSANALYSISSUPPORT_H
 
-#include "Pass.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include <cassert>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -30,6 +33,7 @@ namespace llvm {
 class Function;
 class Pass;
 class PMDataManager;
+class StringRef;
 
 //===----------------------------------------------------------------------===//
 /// Represent the analysis usage information of a pass.  This tracks analyses
@@ -164,7 +168,7 @@ public:
   }
 
   /// Find pass that is implementing PI. Initialize pass for Function F.
-  Pass *findImplPass(Pass *P, AnalysisID PI, Function &F);
+  std::tuple<Pass *, bool> findImplPass(Pass *P, AnalysisID PI, Function &F);
 
   void addAnalysisImplsPair(AnalysisID PI, Pass *P) {
     if (findImplPass(PI) == P)
@@ -243,23 +247,33 @@ AnalysisType &Pass::getAnalysisID(AnalysisID PI) const {
 
 /// getAnalysis<AnalysisType>() - This function is used by subclasses to get
 /// to the analysis information that they claim to use by overriding the
-/// getAnalysisUsage function.
-template<typename AnalysisType>
-AnalysisType &Pass::getAnalysis(Function &F) {
+/// getAnalysisUsage function. If as part of the dependencies, an IR
+/// transformation is triggered (e.g. because the analysis requires
+/// BreakCriticalEdges), and Changed is non null, *Changed is updated.
+template <typename AnalysisType>
+AnalysisType &Pass::getAnalysis(Function &F, bool *Changed) {
   assert(Resolver &&"Pass has not been inserted into a PassManager object!");
 
-  return getAnalysisID<AnalysisType>(&AnalysisType::ID, F);
+  return getAnalysisID<AnalysisType>(&AnalysisType::ID, F, Changed);
 }
 
-template<typename AnalysisType>
-AnalysisType &Pass::getAnalysisID(AnalysisID PI, Function &F) {
+template <typename AnalysisType>
+AnalysisType &Pass::getAnalysisID(AnalysisID PI, Function &F, bool *Changed) {
   assert(PI && "getAnalysis for unregistered pass!");
   assert(Resolver && "Pass has not been inserted into a PassManager object!");
   // PI *must* appear in AnalysisImpls.  Because the number of passes used
   // should be a small number, we just do a linear search over a (dense)
   // vector.
-  Pass *ResultPass = Resolver->findImplPass(this, PI, F);
+  Pass *ResultPass;
+  bool LocalChanged;
+  std::tie(ResultPass, LocalChanged) = Resolver->findImplPass(this, PI, F);
+
   assert(ResultPass && "Unable to find requested analysis info");
+  if (Changed)
+    *Changed |= LocalChanged;
+  else
+    assert(!LocalChanged &&
+           "A pass trigged a code update but the update status is lost");
 
   // Because the AnalysisType may not be a subclass of pass (for
   // AnalysisGroups), we use getAdjustedAnalysisPointer here to potentially

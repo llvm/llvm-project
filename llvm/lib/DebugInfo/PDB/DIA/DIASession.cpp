@@ -189,8 +189,8 @@ DIASession::getSymbolById(SymIndexId SymbolId) const {
   return PDBSymbol::create(*this, std::move(RawSymbol));
 }
 
-std::unique_ptr<PDBSymbol>
-DIASession::findSymbolByAddress(uint64_t Address, PDB_SymType Type) const {
+std::unique_ptr<PDBSymbol> DIASession::findSymbolByAddress(uint64_t Address,
+                                                           PDB_SymType Type) {
   enum SymTagEnum EnumVal = static_cast<enum SymTagEnum>(Type);
 
   CComPtr<IDiaSymbol> Symbol;
@@ -207,7 +207,7 @@ DIASession::findSymbolByAddress(uint64_t Address, PDB_SymType Type) const {
 }
 
 std::unique_ptr<PDBSymbol> DIASession::findSymbolByRVA(uint32_t RVA,
-                                                       PDB_SymType Type) const {
+                                                       PDB_SymType Type) {
   enum SymTagEnum EnumVal = static_cast<enum SymTagEnum>(Type);
 
   CComPtr<IDiaSymbol> Symbol;
@@ -220,7 +220,7 @@ std::unique_ptr<PDBSymbol> DIASession::findSymbolByRVA(uint32_t RVA,
 
 std::unique_ptr<PDBSymbol>
 DIASession::findSymbolBySectOffset(uint32_t Sect, uint32_t Offset,
-                                   PDB_SymType Type) const {
+                                   PDB_SymType Type) {
   enum SymTagEnum EnumVal = static_cast<enum SymTagEnum>(Type);
 
   CComPtr<IDiaSymbol> Symbol;

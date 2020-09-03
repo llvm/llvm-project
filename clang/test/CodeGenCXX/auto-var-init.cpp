@@ -748,7 +748,7 @@ TEST_UNINIT(paddedpacked, paddedpacked);
 // PATTERN-LABEL: @test_paddedpacked_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_paddedpacked_uninit.uninit
 // PATTERN-O1:  %[[C:[^ ]*]] = getelementptr inbounds {{.*}}%uninit, i64 0, i32 0
-// PATTERN-O1  store i8 [[I8]], i8* %[[C]], align
+// PATTERN-O1:  store i8 [[I8]], i8* %[[C]], align
 // PATTERN-O1:  %[[I:[^ ]*]] = getelementptr inbounds {{.*}}%uninit, i64 0, i32 1
 // PATTERN-O1: store i32 [[I32]], i32* %[[I]], align
 
@@ -1175,7 +1175,7 @@ TEST_UNINIT(complexfloat, _Complex float);
 // PATTERN-LABEL: @test_complexfloat_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_complexfloat_uninit.uninit
 // PATTERN-O1:  %[[F1:[^ ]*]] = getelementptr inbounds {{.*}}%uninit, i64 0, i32 0
-// PATTERN-O1  store float 0xFFFFFFFFE0000000, float* %[[F1]], align
+// PATTERN-O1: store float 0xFFFFFFFFE0000000, float* %[[F1]], align
 // PATTERN-O1:  %[[F2:[^ ]*]] = getelementptr inbounds {{.*}}%uninit, i64 0, i32 1
 // PATTERN-O1: store float 0xFFFFFFFFE0000000, float* %[[F2]], align
 
@@ -1610,5 +1610,24 @@ TEST_CUSTOM(doublevec32, double  __attribute__((vector_size(32))), { 3.141592653
 // CHECK-NEXT:  store <4 x double> <double 0x400921FB54442D18, double 0x400921FB54442D18, double 0x400921FB54442D18, double 0x400921FB54442D18>, <4 x double>* %custom, align [[ALIGN]]
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
 
+// TODO: This vector has tail padding
+TEST_UNINIT(doublevec24, double  __attribute__((vector_size(24))));
+// CHECK-LABEL: @test_doublevec24_uninit()
+// CHECK:       %uninit = alloca <3 x double>, align
+// CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
+// PATTERN-LABEL: @test_doublevec24_uninit()
+// PATTERN: store <3 x double> <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>, <3 x double>* %uninit, align 32
+// ZERO-LABEL: @test_doublevec24_uninit()
+// ZERO: store <3 x double> zeroinitializer, <3 x double>* %uninit, align 32
+
+// TODO: This vector has tail padding
+TEST_UNINIT(longdoublevec32, long double  __attribute__((vector_size(sizeof(long double)*2))));
+// CHECK-LABEL: @test_longdoublevec32_uninit()
+// CHECK:       %uninit = alloca <2 x x86_fp80>, align
+// CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
+// PATTERN-LABEL: @test_longdoublevec32_uninit()
+// PATTERN: store <2 x x86_fp80> <x86_fp80 0xKFFFFFFFFFFFFFFFFFFFF, x86_fp80 0xKFFFFFFFFFFFFFFFFFFFF>, <2 x x86_fp80>* %uninit, align 32
+// ZERO-LABEL: @test_longdoublevec32_uninit()
+// ZERO: store <2 x x86_fp80> zeroinitializer, <2 x x86_fp80>* %uninit, align 32
 
 } // extern "C"

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_TypeSystemClang_h_
-#define liblldb_TypeSystemClang_h_
+#ifndef LLDB_SOURCE_PLUGINS_TYPESYSTEM_CLANG_TYPESYSTEMCLANG_H
+#define LLDB_SOURCE_PLUGINS_TYPESYSTEM_CLANG_TYPESYSTEMCLANG_H
 
 #include <stdint.h>
 
@@ -21,11 +21,13 @@
 #include <vector>
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/TemplateBase.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 
-#include "lldb/Core/ClangForward.h"
+#include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -47,6 +49,8 @@ class ModuleMap;
 
 namespace lldb_private {
 
+class ClangASTMetadata;
+class ClangASTSource;
 class Declaration;
 
 /// A Clang module ID.
@@ -114,17 +118,20 @@ public:
 
   /// Constructs a TypeSystemClang with an ASTContext using the given triple.
   ///
+  /// \param name The name for the TypeSystemClang (for logging purposes)
   /// \param triple The llvm::Triple used for the ASTContext. The triple defines
   ///               certain characteristics of the ASTContext and its types
   ///               (e.g., whether certain primitive types exist or what their
   ///               signedness is).
-  explicit TypeSystemClang(llvm::Triple triple = llvm::Triple());
+  explicit TypeSystemClang(llvm::StringRef name, llvm::Triple triple);
 
   /// Constructs a TypeSystemClang that uses an existing ASTContext internally.
   /// Useful when having an existing ASTContext created by Clang.
   ///
+  /// \param name The name for the TypeSystemClang (for logging purposes)
   /// \param existing_ctxt An existing ASTContext.
-  explicit TypeSystemClang(clang::ASTContext &existing_ctxt);
+  explicit TypeSystemClang(llvm::StringRef name,
+                           clang::ASTContext &existing_ctxt);
 
   ~TypeSystemClang() override;
 
@@ -162,6 +169,11 @@ public:
     return llvm::dyn_cast<TypeSystemClang>(&type_system_or_err.get());
   }
 
+  /// Returns the display name of this TypeSystemClang that indicates what
+  /// purpose it serves in LLDB. Used for example in logs.
+  llvm::StringRef getDisplayName() const { return m_display_name; }
+
+  /// Returns the clang::ASTContext instance managed by this TypeSystemClang.
   clang::ASTContext &getASTContext();
 
   clang::MangleContext *getMangleContext();
@@ -470,6 +482,16 @@ public:
       llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
           &vbase_offsets);
 
+  /// Creates a CompilerDecl from the given Decl with the current
+  /// TypeSystemClang instance as its typesystem.
+  /// The Decl has to come from the ASTContext of this
+  /// TypeSystemClang.
+  CompilerDecl GetCompilerDecl(clang::Decl *decl) {
+    assert(&decl->getASTContext() == &getASTContext() &&
+           "CreateCompilerDecl for Decl from wrong ASTContext?");
+    return CompilerDecl(this, decl);
+  }
+
   // CompilerDecl override functions
   ConstString DeclGetName(void *opaque_decl) override;
 
@@ -647,7 +669,7 @@ public:
   ConstString GetTypeName(lldb::opaque_compiler_type_t type) override;
 
   ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type,
-                                 const SymbolContext *sc) override;
+                                 const SymbolContext *sc = nullptr) override;
 
   uint32_t GetTypeInfo(lldb::opaque_compiler_type_t type,
                        CompilerType *pointee_or_element_compiler_type) override;
@@ -670,7 +692,8 @@ public:
                     uint32_t opaque_payload);
 
   CompilerType GetArrayElementType(lldb::opaque_compiler_type_t type,
-                                   uint64_t *stride) override;
+                                   uint64_t *stride,
+                                   ExecutionContextScope *exe_scope) override;
 
   CompilerType GetArrayType(lldb::opaque_compiler_type_t type,
                             uint64_t size) override;
@@ -744,7 +767,9 @@ public:
 
   llvm::Optional<uint64_t>
   GetByteStride(lldb::opaque_compiler_type_t type,
-                ExecutionContextScope *exe_scope) override;
+                ExecutionContextScope *exe_scope) override {
+    return {};
+  }
 
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                              uint64_t &count) override;
@@ -858,6 +883,24 @@ public:
                                                  const CompilerType &var_type,
                                                  lldb::AccessType access);
 
+  /// Initializes a variable with an integer value.
+  /// \param var The variable to initialize. Must not already have an
+  ///            initializer and must have an integer or enum type.
+  /// \param init_value The integer value that the variable should be
+  ///                   initialized to. Has to match the bit width of the
+  ///                   variable type.
+  static void SetIntegerInitializerForVariable(clang::VarDecl *var,
+                                               const llvm::APInt &init_value);
+
+  /// Initializes a variable with a floating point value.
+  /// \param var The variable to initialize. Must not already have an
+  ///            initializer and must have a floating point type.
+  /// \param init_value The float value that the variable should be
+  ///                   initialized to.
+  static void
+  SetFloatingInitializerForVariable(clang::VarDecl *var,
+                                    const llvm::APFloat &init_value);
+
   clang::CXXMethodDecl *AddMethodToCXXRecordType(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
       const char *mangled_name, const CompilerType &method_type,
@@ -912,7 +955,10 @@ public:
       const CompilerType &enum_type, const Declaration &decl, const char *name,
       const llvm::APSInt &value);
 
-  CompilerType GetEnumerationIntegerType(lldb::opaque_compiler_type_t type);
+  /// Returns the underlying integer type for an enum type. If the given type
+  /// is invalid or not an enum-type, the function returns an invalid
+  /// CompilerType.
+  CompilerType GetEnumerationIntegerType(CompilerType type);
 
   // Pointers & References
 
@@ -1053,6 +1099,10 @@ private:
   std::unique_ptr<clang::MangleContext> m_mangle_ctx_up;
   uint32_t m_pointer_byte_size = 0;
   bool m_ast_owned = false;
+  /// A string describing what this TypeSystemClang represents (e.g.,
+  /// AST for debug information, an expression, some other utility ClangAST).
+  /// Useful for logging and debugging.
+  std::string m_display_name;
 
   typedef llvm::DenseMap<const clang::Decl *, ClangASTMetadata> DeclMetadataMap;
   /// Maps Decls to their associated ClangASTMetadata.
@@ -1075,6 +1125,8 @@ private:
   void SetTargetTriple(llvm::StringRef target_triple);
 };
 
+/// The TypeSystemClang instance used for the scratch ASTContext in a
+/// lldb::Target.
 class TypeSystemClangForExpressions : public TypeSystemClang {
 public:
   TypeSystemClangForExpressions(Target &target, llvm::Triple triple);
@@ -1101,7 +1153,7 @@ public:
   PersistentExpressionState *GetPersistentExpressionState() override;
 private:
   lldb::TargetWP m_target_wp;
-  std::unique_ptr<PersistentExpressionState>
+  std::unique_ptr<ClangPersistentVariables>
       m_persistent_variables; // These are the persistent variables associated
                               // with this process for the expression parser
   std::unique_ptr<ClangASTSource> m_scratch_ast_source_up;
@@ -1109,4 +1161,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_TypeSystemClang_h_
+#endif // LLDB_SOURCE_PLUGINS_TYPESYSTEM_CLANG_TYPESYSTEMCLANG_H

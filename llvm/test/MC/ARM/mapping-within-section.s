@@ -24,10 +24,10 @@
     .arm
     add r0, r0, r0
 
-@ CHECK:      00000000         .text  00000000 $a
-@ CHECK-NEXT: 0000000c         .text  00000000 $a
-@ CHECK-NEXT: 00000018         .text  00000000 $a
-@ CHECK-NEXT: 00000004         .text  00000000 $d
-@ CHECK-NEXT: 00000012         .text  00000000 $d
-@ CHECK-NEXT: 00000008         .text  00000000 $t
-@ CHECK-NEXT: 00000010         .text  00000000 $t
+@ CHECK:      00000000 l       .text  00000000 $a
+@ CHECK-NEXT: 0000000c l       .text  00000000 $a
+@ CHECK-NEXT: 00000018 l       .text  00000000 $a
+@ CHECK-NEXT: 00000004 l       .text  00000000 $d
+@ CHECK-NEXT: 00000012 l       .text  00000000 $d
+@ CHECK-NEXT: 00000008 l       .text  00000000 $t
+@ CHECK-NEXT: 00000010 l       .text  00000000 $t

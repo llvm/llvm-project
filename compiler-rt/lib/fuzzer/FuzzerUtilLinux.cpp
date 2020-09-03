@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 // Misc utils for Linux.
 //===----------------------------------------------------------------------===//
-#include "FuzzerDefs.h"
+#include "FuzzerPlatform.h"
 #if LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FREEBSD ||                \
     LIBFUZZER_OPENBSD || LIBFUZZER_EMSCRIPTEN
 #include "FuzzerCommand.h"

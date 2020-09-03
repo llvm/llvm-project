@@ -88,7 +88,6 @@ foo:
   msr CPTR_EL2, x3
   msr CPTR_EL3, x3
   msr CSSELR_EL1, x3
-  msr CURRENTEL, x3
   msr DACR32_EL2, x3
   msr ESR_EL1, x3
   msr ESR_EL2, x3
@@ -168,7 +167,6 @@ foo:
 ; CHECK: msr CPTR_EL2, x3               ; encoding: [0x43,0x11,0x1c,0xd5]
 ; CHECK: msr CPTR_EL3, x3               ; encoding: [0x43,0x11,0x1e,0xd5]
 ; CHECK: msr CSSELR_EL1, x3             ; encoding: [0x03,0x00,0x1a,0xd5]
-; CHECK: msr CurrentEL, x3              ; encoding: [0x43,0x42,0x18,0xd5]
 ; CHECK: msr DACR32_EL2, x3             ; encoding: [0x03,0x30,0x1c,0xd5]
 ; CHECK: msr ESR_EL1, x3                ; encoding: [0x03,0x52,0x18,0xd5]
 ; CHECK: msr ESR_EL2, x3                ; encoding: [0x03,0x52,0x1c,0xd5]
@@ -218,6 +216,10 @@ foo:
 ; CHECK: msr  S3_2_C11_C6_4, x1         ; encoding: [0x81,0xb6,0x1a,0xd5]
 ; CHECK: msr  S0_0_C0_C0_0, x0          ; encoding: [0x00,0x00,0x00,0xd5]
 ; CHECK: msr  S1_2_C3_C4_5, x2          ; encoding: [0xa2,0x34,0x0a,0xd5]
+
+// Readonly system registers: writing to them gives an error
+  msr CURRENTEL, x3
+; CHECK-ERRORS: :[[@LINE-1]]:7: error: expected writable system register or pstate
 
   mrs x3, ACTLR_EL1
   mrs x3, ACTLR_EL2

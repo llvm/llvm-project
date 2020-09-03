@@ -153,7 +153,7 @@ void SIAnnotateControlFlow::initialize(Module &M, const GCNSubtarget &ST) {
   Else = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_else,
                                    { IntMask, IntMask });
   IfBreak = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_if_break,
-                                      { IntMask, IntMask });
+                                      { IntMask });
   Loop = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_loop, { IntMask });
   EndCf = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_end_cf, { IntMask });
 }

@@ -1,4 +1,4 @@
-//===-- DWARFCallFrameInfo.cpp ----------------------------------*- C++ -*-===//
+//===-- DWARFCallFrameInfo.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -690,7 +690,7 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           UnwindPlan::Row *newrow = new UnwindPlan::Row;
           *newrow = *row.get();
           row.reset(newrow);
-          row->SetOffset(m_cfi_data.GetPointer(&offset) -
+          row->SetOffset(m_cfi_data.GetAddress(&offset) -
                          startaddr.GetFileAddress());
           break;
         }

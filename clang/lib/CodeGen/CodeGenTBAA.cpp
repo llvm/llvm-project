@@ -141,6 +141,34 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     case BuiltinType::UInt128:
       return getTypeInfo(Context.Int128Ty);
 
+    case BuiltinType::UShortFract:
+      return getTypeInfo(Context.ShortFractTy);
+    case BuiltinType::UFract:
+      return getTypeInfo(Context.FractTy);
+    case BuiltinType::ULongFract:
+      return getTypeInfo(Context.LongFractTy);
+
+    case BuiltinType::SatUShortFract:
+      return getTypeInfo(Context.SatShortFractTy);
+    case BuiltinType::SatUFract:
+      return getTypeInfo(Context.SatFractTy);
+    case BuiltinType::SatULongFract:
+      return getTypeInfo(Context.SatLongFractTy);
+
+    case BuiltinType::UShortAccum:
+      return getTypeInfo(Context.ShortAccumTy);
+    case BuiltinType::UAccum:
+      return getTypeInfo(Context.AccumTy);
+    case BuiltinType::ULongAccum:
+      return getTypeInfo(Context.LongAccumTy);
+
+    case BuiltinType::SatUShortAccum:
+      return getTypeInfo(Context.SatShortAccumTy);
+    case BuiltinType::SatUAccum:
+      return getTypeInfo(Context.SatAccumTy);
+    case BuiltinType::SatULongAccum:
+      return getTypeInfo(Context.SatLongAccumTy);
+
     // Treat all other builtin types as distinct types. This includes
     // treating wchar_t, char16_t, and char32_t as distinct from their
     // "underlying types".
@@ -178,6 +206,15 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     SmallString<256> OutName;
     llvm::raw_svector_ostream Out(OutName);
     MContext.mangleTypeName(QualType(ETy, 0), Out);
+    return createScalarTypeNode(OutName, getChar(), Size);
+  }
+
+  if (const auto *EIT = dyn_cast<ExtIntType>(Ty)) {
+    SmallString<256> OutName;
+    llvm::raw_svector_ostream Out(OutName);
+    // Don't specify signed/unsigned since integer types can alias despite sign
+    // differences.
+    Out << "_ExtInt(" << EIT->getNumBits() << ')';
     return createScalarTypeNode(OutName, getChar(), Size);
   }
 

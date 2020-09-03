@@ -46,6 +46,7 @@
 
 ; Legacy PM
 ; RUN: llvm-lto2 run %t.o -save-temps -pass-remarks=. \
+; RUN:   -whole-program-visibility \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t.o,_Z3bazP1A,px \
 ; RUN:   -r=%t.o,_ZN1A3fooEv, \
@@ -64,6 +65,7 @@
 
 ; New PM
 ; RUN: llvm-lto2 run %t.o -save-temps -use-new-pm -pass-remarks=. \
+; RUN:   -whole-program-visibility \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t.o,_Z3bazP1A,px \
 ; RUN:   -r=%t.o,_ZN1A3fooEv, \

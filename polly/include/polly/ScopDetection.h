@@ -185,6 +185,9 @@ public:
     int MaxDepth;
   };
 
+  int NextScopID = 0;
+  int getNextID() { return NextScopID++; }
+
 private:
   //===--------------------------------------------------------------------===//
 

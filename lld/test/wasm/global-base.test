@@ -1,4 +1,4 @@
-RUN: llc -filetype=obj %p/Inputs/start.ll -o %t.o
+RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.o
 
 RUN: wasm-ld --export=__global_base --export=__data_end --allow-undefined -o %t.wasm %t.o
 RUN: obj2yaml %t.wasm | FileCheck %s  -check-prefix=CHECK-1024

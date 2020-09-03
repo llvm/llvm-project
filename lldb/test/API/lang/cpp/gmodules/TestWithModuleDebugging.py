@@ -3,7 +3,6 @@ import os
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-from lldbsuite.test import decorators
 
 
 class TestWithGmodulesDebugInfo(TestBase):
@@ -39,7 +38,7 @@ class TestWithGmodulesDebugInfo(TestBase):
         self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
 
         # Get the thread of the process
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEquals(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(

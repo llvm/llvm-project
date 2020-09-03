@@ -158,6 +158,12 @@ EXECUTION OPTIONS
 SELECTION OPTIONS
 -----------------
 
+.. option:: --max-failures N
+
+ Stop execution after the given number ``N`` of failures.
+ An integer argument should be passed on the command line
+ prior to execution.
+
 .. option:: --max-tests=N
 
  Run at most ``N`` tests and then terminate.
@@ -165,10 +171,8 @@ SELECTION OPTIONS
 .. option:: --max-time=N
 
  Spend at most ``N`` seconds (approximately) running tests and then terminate.
-
-.. option:: --shuffle
-
- Run the tests in a random order.
+ Note that this is not an alias for :option:`--timeout`; the two are
+ different kinds of maximums.
 
 .. option:: --num-shards=M
 
@@ -176,7 +180,7 @@ SELECTION OPTIONS
  "shards", and run only one of them.  Must be used with the
  ``--run-shard=N`` option, which selects the shard to run. The environment
  variable ``LIT_NUM_SHARDS`` can also be used in place of this
- option. These two options provide a coarse mechanism for paritioning large
+ option. These two options provide a coarse mechanism for partitioning large
  testsuites, for parallel execution on separate machines (say in a large
  testing farm).
 
@@ -186,6 +190,16 @@ SELECTION OPTIONS
  provided. The two options must be used together, and the value of ``N``
  must be in the range ``1..M``. The environment variable
  ``LIT_RUN_SHARD`` can also be used in place of this option.
+
+.. option:: --shuffle
+
+ Run the tests in a random order.
+
+.. option:: --timeout=N
+
+ Spend at most ``N`` seconds (approximately) running each individual test.
+ ``0`` means no time limit, and ``0`` is the default. Note that this is not an
+ alias for :option:`--max-time`; the two are different kinds of maximums.
 
 .. option:: --filter=REGEXP
 
@@ -251,11 +265,16 @@ convenient and flexible support for out-of-tree builds.
 TEST STATUS RESULTS
 -------------------
 
-Each test ultimately produces one of the following six results:
+Each test ultimately produces one of the following eight results:
 
 **PASS**
 
  The test succeeded.
+
+**FLAKYPASS**
+
+ The test succeeded after being re-run more than once. This only applies to
+ tests containing an ``ALLOW_RETRIES:`` annotation.
 
 **XFAIL**
 
@@ -282,6 +301,11 @@ Each test ultimately produces one of the following six results:
 
  The test is not supported in this environment.  This is used by test formats
  which can report unsupported tests.
+
+**TIMEOUT**
+
+ The test was run, but it timed out before it was able to complete. This is
+ considered a failure.
 
 Depending on the test format tests may produce additional information about
 their status (generally only for failures).  See the :ref:`output-options`
@@ -400,11 +424,12 @@ be used to define subdirectories of optional tests, or to change other
 configuration parameters --- for example, to change the test format, or the
 suffixes which identify test files.
 
-PRE-DEFINED SUBSTITUTIONS
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+SUBSTITUTIONS
+~~~~~~~~~~~~~
 
-:program:`lit` provides various patterns that can be used with the RUN command.
-These are defined in TestRunner.py. The base set of substitutions are:
+:program:`lit` allows patterns to be substituted inside RUN commands. It also
+provides the following base set of substitutions, which are defined in
+TestRunner.py:
 
  ======================= ==============
   Macro                   Substitution
@@ -442,6 +467,14 @@ These are defined in TestRunner.py. The base set of substitutions are:
 Other substitutions are provided that are variations on this base set and
 further substitution patterns can be defined by each test module. See the
 modules :ref:`local-configuration-files`.
+
+By default, substitutions are expanded exactly once, so that if e.g. a
+substitution ``%build`` is defined in top of another substitution ``%cxx``,
+``%build`` will expand to ``%cxx`` textually, not to what ``%cxx`` expands to.
+However, if the ``recursiveExpansionLimit`` property of the ``TestingConfig``
+is set to a non-negative integer, substitutions will be expanded recursively
+until that limit is reached. It is an error if the limit is reached and
+expanding substitutions again would yield a different result.
 
 More detailed information on substitutions can be found in the
 :doc:`../TestingGuide`.

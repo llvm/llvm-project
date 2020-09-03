@@ -159,6 +159,8 @@ def ARMcall_nolink   : SDNode<"ARMISD::CALL_NOLINK", SDT_ARMcall,
 
 def ARMretflag       : SDNode<"ARMISD::RET_FLAG", SDTNone,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def ARMseretflag     : SDNode<"ARMISD::SERET_FLAG", SDTNone,
+                              [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def ARMintretflag    : SDNode<"ARMISD::INTRET_FLAG", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov,
@@ -264,7 +266,7 @@ def ARMvrev64    : SDNode<"ARMISD::VREV64", SDTARMVSHUF>;
 def ARMvrev32    : SDNode<"ARMISD::VREV32", SDTARMVSHUF>;
 def ARMvrev16    : SDNode<"ARMISD::VREV16", SDTARMVSHUF>;
 
-def SDTARMVGETLN  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisInt<1>,
+def SDTARMVGETLN  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisVec<1>,
                                          SDTCisVT<2, i32>]>;
 def ARMvgetlaneu : SDNode<"ARMISD::VGETLANEu", SDTARMVGETLN>;
 def ARMvgetlanes : SDNode<"ARMISD::VGETLANEs", SDTARMVGETLN>;
@@ -274,6 +276,10 @@ def ARMvmovImm   : SDNode<"ARMISD::VMOVIMM", SDTARMVMOVIMM>;
 def ARMvmvnImm   : SDNode<"ARMISD::VMVNIMM", SDTARMVMOVIMM>;
 def ARMvmovFPImm : SDNode<"ARMISD::VMOVFPIMM", SDTARMVMOVIMM>;
 
+def SDTARMVORRIMM : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
+                                           SDTCisVT<2, i32>]>;
+def ARMvorrImm   : SDNode<"ARMISD::VORRIMM", SDTARMVORRIMM>;
+def ARMvbicImm   : SDNode<"ARMISD::VBICIMM", SDTARMVORRIMM>;
 
 def SDTARMVSHIMM : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
                                         SDTCisVT<2, i32>]>;
@@ -285,6 +291,11 @@ def ARMvshruImm  : SDNode<"ARMISD::VSHRuIMM", SDTARMVSHIMM>;
 def ARMvshls     : SDNode<"ARMISD::VSHLs", SDTARMVSH>;
 def ARMvshlu     : SDNode<"ARMISD::VSHLu", SDTARMVSH>;
 
+def SDTARMVMULL   : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
+                                         SDTCisSameAs<1, 2>]>;
+def ARMvmulls    : SDNode<"ARMISD::VMULLs", SDTARMVMULL>;
+def ARMvmullu    : SDNode<"ARMISD::VMULLu", SDTARMVMULL>;
+
 def SDTARMVCMP    : SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<1, 2>,
                                          SDTCisInt<3>]>;
 def SDTARMVCMPZ   : SDTypeProfile<1, 2, [SDTCisInt<2>]>;
@@ -295,6 +306,36 @@ def ARMvcmpz     : SDNode<"ARMISD::VCMPZ", SDTARMVCMPZ>;
 def ARMWLS      : SDNode<"ARMISD::WLS", SDT_ARMLoLoop, [SDNPHasChain]>;
 def ARMLE       : SDNode<"ARMISD::LE", SDT_ARMLoLoop, [SDNPHasChain]>;
 def ARMLoopDec  : SDNode<"ARMISD::LOOP_DEC", SDTIntBinOp, [SDNPHasChain]>;
+
+// 'VECTOR_REG_CAST' is an operation that reinterprets the contents of a
+// vector register as a different vector type, without changing the contents of
+// the register. It differs from 'bitconvert' in that bitconvert reinterprets
+// the _memory_ storage format of the vector, whereas VECTOR_REG_CAST
+// reinterprets the _register_ format - and in big-endian, the memory and
+// register formats are different, so they are different operations.
+//
+// For example, 'VECTOR_REG_CAST' between v8i16 and v16i8 will map the LSB of
+// the zeroth i16 lane to the zeroth i8 lane, regardless of system endianness,
+// whereas 'bitconvert' will map it to the high byte in big-endian mode,
+// because that's what (MVE) VSTRH.16 followed by VLDRB.8 would do. So the
+// bitconvert would have to emit a VREV16.8 instruction, whereas the
+// VECTOR_REG_CAST emits no code at all if the vector is already in a register.
+def ARMVectorRegCastImpl : SDNode<"ARMISD::VECTOR_REG_CAST", SDTUnaryOp>;
+
+// In little-endian, VECTOR_REG_CAST is often turned into bitconvert during
+// lowering (because in that situation they're identical). So an isel pattern
+// that needs to match something that's _logically_ a VECTOR_REG_CAST must
+// _physically_ match a different node type depending on endianness.
+//
+// This 'PatFrags' instance is a centralized facility to make that easy. It
+// matches VECTOR_REG_CAST in either endianness, and also bitconvert in the
+// endianness where it's equivalent.
+def ARMVectorRegCast: PatFrags<
+    (ops node:$x), [(ARMVectorRegCastImpl node:$x), (bitconvert node:$x)], [{
+       // Reject a match against bitconvert (aka ISD::BITCAST) if big-endian
+       return !(CurDAG->getDataLayout().isBigEndian() &&
+                N->getOpcode() == ISD::BITCAST);
+    }]>;
 
 //===----------------------------------------------------------------------===//
 // ARM Flag Definitions.
@@ -401,6 +442,62 @@ def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
 def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fsub node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
 }]>;
+
+def imm_even : ImmLeaf<i32, [{ return (Imm & 1) == 0; }]>;
+def imm_odd : ImmLeaf<i32, [{ return (Imm & 1) == 1; }]>;
+
+//===----------------------------------------------------------------------===//
+// NEON/MVE pattern fragments
+//
+
+// Extract D sub-registers of Q registers.
+def DSubReg_i8_reg  : SDNodeXForm<imm, [{
+  assert(ARM::dsub_7 == ARM::dsub_0+7 && "Unexpected subreg numbering");
+  return CurDAG->getTargetConstant(ARM::dsub_0 + N->getZExtValue()/8, SDLoc(N),
+                                   MVT::i32);
+}]>;
+def DSubReg_i16_reg : SDNodeXForm<imm, [{
+  assert(ARM::dsub_7 == ARM::dsub_0+7 && "Unexpected subreg numbering");
+  return CurDAG->getTargetConstant(ARM::dsub_0 + N->getZExtValue()/4, SDLoc(N),
+                                   MVT::i32);
+}]>;
+def DSubReg_i32_reg : SDNodeXForm<imm, [{
+  assert(ARM::dsub_7 == ARM::dsub_0+7 && "Unexpected subreg numbering");
+  return CurDAG->getTargetConstant(ARM::dsub_0 + N->getZExtValue()/2, SDLoc(N),
+                                   MVT::i32);
+}]>;
+def DSubReg_f64_reg : SDNodeXForm<imm, [{
+  assert(ARM::dsub_7 == ARM::dsub_0+7 && "Unexpected subreg numbering");
+  return CurDAG->getTargetConstant(ARM::dsub_0 + N->getZExtValue(), SDLoc(N),
+                                   MVT::i32);
+}]>;
+
+// Extract S sub-registers of Q/D registers.
+def SSubReg_f32_reg : SDNodeXForm<imm, [{
+  assert(ARM::ssub_3 == ARM::ssub_0+3 && "Unexpected subreg numbering");
+  return CurDAG->getTargetConstant(ARM::ssub_0 + N->getZExtValue(), SDLoc(N),
+                                   MVT::i32);
+}]>;
+
+// Extract S sub-registers of Q/D registers containing a given f16/bf16 lane.
+def SSubReg_f16_reg : SDNodeXForm<imm, [{
+  assert(ARM::ssub_3 == ARM::ssub_0+3 && "Unexpected subreg numbering");
+  return CurDAG->getTargetConstant(ARM::ssub_0 + N->getZExtValue()/2, SDLoc(N),
+                                   MVT::i32);
+}]>;
+
+// Translate lane numbers from Q registers to D subregs.
+def SubReg_i8_lane  : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() & 7, SDLoc(N), MVT::i32);
+}]>;
+def SubReg_i16_lane : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() & 3, SDLoc(N), MVT::i32);
+}]>;
+def SubReg_i32_lane : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() & 1, SDLoc(N), MVT::i32);
+}]>;
+
+
 
 //===----------------------------------------------------------------------===//
 // Operand Definitions.
@@ -2780,7 +2877,7 @@ multiclass AI2_ldridx<bit isByte, string opc,
 }
 
 let mayLoad = 1, hasSideEffects = 0 in {
-// FIXME: for LDR_PRE_REG etc. the itineray should be either IIC_iLoad_ru or
+// FIXME: for LDR_PRE_REG etc. the itinerary should be either IIC_iLoad_ru or
 // IIC_iLoad_siu depending on whether it the offset register is shifted.
 defm LDR  : AI2_ldridx<0, "ldr", IIC_iLoad_iu, IIC_iLoad_ru>;
 defm LDRB : AI2_ldridx<1, "ldrb", IIC_iLoad_bh_iu, IIC_iLoad_bh_ru>;
@@ -2947,6 +3044,9 @@ multiclass AI3ldrT<bits<4> op, string opc> {
     let Inst{3-0} = Rm{3-0};
     let DecoderMethod = "DecodeLDR";
   }
+
+  def ii : ARMAsmPseudo<!strconcat(opc, "${p} $Rt, $addr"),
+                        (ins addr_offset_none:$addr, pred:$p), (outs GPR:$Rt)>;
 }
 
 defm LDRSBT : AI3ldrT<0b1101, "ldrsbt">;
@@ -2990,11 +3090,6 @@ def STOREDUAL : ARMPseudoInst<(outs), (ins GPRPairOp:$Rt, addrmode3:$addr),
                 Requires<[IsARM, HasV5TE]> {
   let AM = AddrMode3;
 }
-}
-
-let Predicates = [IsARM, HasV5TE] in {
-def : Pat<(ARMstrd GPR:$Rt, GPR:$Rt2, addrmode3:$addr),
-          (STOREDUAL (REG_SEQUENCE GPRPair, GPR:$Rt, gsub_0, GPR:$Rt2, gsub_1), addrmode3:$addr)>;
 }
 
 // Indexed stores
@@ -3063,7 +3158,7 @@ multiclass AI2_stridx<bit isByte, string opc,
 }
 
 let mayStore = 1, hasSideEffects = 0 in {
-// FIXME: for STR_PRE_REG etc. the itineray should be either IIC_iStore_ru or
+// FIXME: for STR_PRE_REG etc. the itinerary should be either IIC_iStore_ru or
 // IIC_iStore_siu depending on whether it the offset register is shifted.
 defm STR  : AI2_stridx<0, "str", IIC_iStore_iu, IIC_iStore_ru>;
 defm STRB : AI2_stridx<1, "strb", IIC_iStore_bh_iu, IIC_iStore_bh_ru>;
@@ -3797,9 +3892,8 @@ def QSUB16  : AAIIntrinsic<0b01100010, 0b11110111, "qsub16", int_arm_qsub16>;
 def QSUB8   : AAIIntrinsic<0b01100010, 0b11111111, "qsub8", int_arm_qsub8>;
 
 def QDADD   : AAIRevOpr<0b00010100, 0b00000101, "qdadd",
-              [(set GPRnopc:$Rd, (int_arm_qadd (int_arm_qadd GPRnopc:$Rm,
-                                                             GPRnopc:$Rm),
-                                  GPRnopc:$Rn))]>;
+              [(set GPRnopc:$Rd, (int_arm_qadd GPRnopc:$Rm,
+                                  (int_arm_qadd GPRnopc:$Rn, GPRnopc:$Rn)))]>;
 def QDSUB   : AAIRevOpr<0b00010110, 0b00000101, "qdsub",
               [(set GPRnopc:$Rd, (int_arm_qsub GPRnopc:$Rm,
                                   (int_arm_qadd GPRnopc:$Rn, GPRnopc:$Rn)))]>;
@@ -3814,7 +3908,7 @@ def : ARMV5TEPat<(saddsat GPR:$a, GPR:$b),
                  (QADD GPR:$a, GPR:$b)>;
 def : ARMV5TEPat<(ssubsat GPR:$a, GPR:$b),
                  (QSUB GPR:$a, GPR:$b)>;
-def : ARMV5TEPat<(saddsat(saddsat rGPR:$Rm, rGPR:$Rm), rGPR:$Rn),
+def : ARMV5TEPat<(saddsat rGPR:$Rm, (saddsat rGPR:$Rn, rGPR:$Rn)),
                  (QDADD rGPR:$Rm, rGPR:$Rn)>;
 def : ARMV5TEPat<(ssubsat rGPR:$Rm, (saddsat rGPR:$Rn, rGPR:$Rn)),
                  (QDSUB rGPR:$Rm, rGPR:$Rn)>;
@@ -5441,7 +5535,8 @@ def : ARMInstAlias<"mcr${p} $cop, $opc1, $Rt, $CRn, $CRm",
 def MRC : MovRCopro<"mrc", 1 /* from coprocessor to ARM core register */,
                     (outs GPRwithAPSR:$Rt),
                     (ins p_imm:$cop, imm0_7:$opc1, c_imm:$CRn, c_imm:$CRm,
-                         imm0_7:$opc2), []>;
+                         imm0_7:$opc2), []>,
+                    ComplexDeprecationPredicate<"MRC">;
 def : ARMInstAlias<"mrc${p} $cop, $opc1, $Rt, $CRn, $CRm",
                    (MRC GPRwithAPSR:$Rt, p_imm:$cop, imm0_7:$opc1, c_imm:$CRn,
                         c_imm:$CRm, 0, pred:$p)>;
@@ -5718,7 +5813,7 @@ def : ARMPat<(ARMthread_pointer), (MRC 15, 0, 13, 0, 3)>,
 //   when we get here from a longjmp(). We force everything out of registers
 //   except for our own input by listing the relevant registers in Defs. By
 //   doing so, we also cause the prologue/epilogue code to actively preserve
-//   all of the callee-saved resgisters, which is exactly what we want.
+//   all of the callee-saved registers, which is exactly what we want.
 //   A constant value is passed in $val, and we use the location as a scratch.
 //
 // These are pseudo-instructions and are lowered to individual MC-insts, so
@@ -6001,6 +6096,12 @@ include "ARMInstrNEON.td"
 //
 
 include "ARMInstrMVE.td"
+
+//===----------------------------------------------------------------------===//
+// CDE (Custom Datapath Extension)
+//
+
+include "ARMInstrCDE.td"
 
 //===----------------------------------------------------------------------===//
 // Assembler aliases

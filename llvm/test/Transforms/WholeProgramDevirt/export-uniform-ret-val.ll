@@ -1,4 +1,4 @@
-; RUN: opt -wholeprogramdevirt -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -S -o - %s | FileCheck %s
+; RUN: opt -wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -S -o - %s | FileCheck %s
 ; RUN: FileCheck --check-prefix=SUMMARY %s < %t
 
 ; SUMMARY-NOT: TypeTests:
@@ -6,7 +6,7 @@
 ; SUMMARY:      TypeIdMap:
 ; SUMMARY-NEXT:   typeid4:
 ; SUMMARY-NEXT:     TTRes:
-; SUMMARY-NEXT:       Kind:            Unsat
+; SUMMARY-NEXT:       Kind:            Unknown
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
 ; SUMMARY-NEXT:       AlignLog2:       0
 ; SUMMARY-NEXT:       SizeM1:          0

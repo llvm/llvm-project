@@ -72,8 +72,6 @@ using ValueName = StringMapEntry<Value *>;
 /// objects that watch it and listen to RAUW and Destroy events.  See
 /// llvm/IR/ValueHandle.h for details.
 class Value {
-  // The least-significant bit of the first word of Value *must* be zero:
-  //   http://www.llvm.org/docs/ProgrammersManual.html#the-waymarking-algorithm
   Type *VTy;
   Use *UseList;
 
@@ -444,6 +442,34 @@ public:
   /// This is logically equivalent to getNumUses() >= N.
   bool hasNUsesOrMore(unsigned N) const;
 
+  /// Return true if there is exactly one user of this value that cannot be
+  /// dropped.
+  ///
+  /// This is specialized because it is a common request and does not require
+  /// traversing the whole use list.
+  Use *getSingleUndroppableUse();
+
+  /// Return true if there this value.
+  ///
+  /// This is specialized because it is a common request and does not require
+  /// traversing the whole use list.
+  bool hasNUndroppableUses(unsigned N) const;
+
+  /// Return true if this value has N users or more.
+  ///
+  /// This is logically equivalent to getNumUses() >= N.
+  bool hasNUndroppableUsesOrMore(unsigned N) const;
+
+  /// Remove every uses that can safely be removed.
+  ///
+  /// This will remove for example uses in llvm.assume.
+  /// This should be used when performing want to perform a tranformation but
+  /// some Droppable uses pervent it.
+  /// This function optionally takes a filter to only remove some droppable
+  /// uses.
+  void dropDroppableUses(llvm::function_ref<bool(const Use *)> ShouldDrop =
+                             [](const Use *) { return true; });
+
   /// Check if this value is used in the specified basic block.
   bool isUsedInBasicBlock(const BasicBlock *BB) const;
 
@@ -567,17 +593,22 @@ public:
   }
 
   /// Accumulate the constant offset this value has compared to a base pointer.
-  /// Only 'getelementptr' instructions (GEPs) with constant indices are
-  /// accumulated but other instructions, e.g., casts, are stripped away as
-  /// well. The accumulated constant offset is added to \p Offset and the base
+  /// Only 'getelementptr' instructions (GEPs) are accumulated but other
+  /// instructions, e.g., casts, are stripped away as well.
+  /// The accumulated constant offset is added to \p Offset and the base
   /// pointer is returned.
   ///
   /// The APInt \p Offset has to have a bit-width equal to the IntPtr type for
   /// the address space of 'this' pointer value, e.g., use
   /// DataLayout::getIndexTypeSizeInBits(Ty).
   ///
-  /// If \p AllowNonInbounds is true, constant offsets in GEPs are stripped and
+  /// If \p AllowNonInbounds is true, offsets in GEPs are stripped and
   /// accumulated even if the GEP is not "inbounds".
+  ///
+  /// If \p ExternalAnalysis is provided it will be used to calculate a offset
+  /// when a operand of GEP is not constant.
+  /// For example, for a value \p ExternalAnalysis might try to calculate a
+  /// lower bound. If \p ExternalAnalysis is successful, it should return true.
   ///
   /// If this is called on a non-pointer value, it returns 'this' and the
   /// \p Offset is not modified.
@@ -587,9 +618,10 @@ public:
   /// between the underlying value and the returned one. Thus, if no constant
   /// offset was found, the returned value is the underlying one and \p Offset
   /// is unchanged.
-  const Value *stripAndAccumulateConstantOffsets(const DataLayout &DL,
-                                                 APInt &Offset,
-                                                 bool AllowNonInbounds) const;
+  const Value *stripAndAccumulateConstantOffsets(
+      const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
+          nullptr) const;
   Value *stripAndAccumulateConstantOffsets(const DataLayout &DL, APInt &Offset,
                                            bool AllowNonInbounds) {
     return const_cast<Value *>(
@@ -614,10 +646,12 @@ public:
   ///
   /// Returns the original pointer value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  const Value *stripInBoundsOffsets() const;
-  Value *stripInBoundsOffsets() {
+  const Value *stripInBoundsOffsets(function_ref<void(const Value *)> Func =
+                                        [](const Value *) {}) const;
+  inline Value *stripInBoundsOffsets(function_ref<void(const Value *)> Func =
+                                  [](const Value *) {}) {
     return const_cast<Value *>(
-                      static_cast<const Value *>(this)->stripInBoundsOffsets());
+        static_cast<const Value *>(this)->stripInBoundsOffsets(Func));
   }
 
   /// Returns the number of bytes known to be dereferenceable for the
@@ -632,7 +666,7 @@ public:
   ///
   /// Returns an alignment which is either specified explicitly, e.g. via
   /// align attribute of a function argument, or guaranteed by DataLayout.
-  MaybeAlign getPointerAlignment(const DataLayout &DL) const;
+  Align getPointerAlignment(const DataLayout &DL) const;
 
   /// Translate PHI node to its predecessor from the given basic block.
   ///
@@ -805,7 +839,7 @@ template <class Compare> void Value::sortUseList(Compare Cmp) {
 
   // Fix the Prev pointers.
   for (Use *I = UseList, **Prev = &UseList; I; I = I->Next) {
-    I->setPrev(Prev);
+    I->Prev = Prev;
     Prev = &I->Next;
   }
 }

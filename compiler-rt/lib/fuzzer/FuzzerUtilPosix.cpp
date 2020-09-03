@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 // Misc utils implementation using Posix API.
 //===----------------------------------------------------------------------===//
-#include "FuzzerDefs.h"
+#include "FuzzerPlatform.h"
 #if LIBFUZZER_POSIX
 #include "FuzzerIO.h"
 #include "FuzzerInternal.h"
@@ -86,6 +86,20 @@ static void SetSigaction(int signum,
   }
 }
 
+// Return true on success, false otherwise.
+bool ExecuteCommand(const Command &Cmd, std::string *CmdOutput) {
+  FILE *Pipe = popen(Cmd.toString().c_str(), "r");
+  if (!Pipe)
+    return false;
+
+  if (CmdOutput) {
+    char TmpBuffer[128];
+    while (fgets(TmpBuffer, sizeof(TmpBuffer), Pipe))
+      CmdOutput->append(TmpBuffer);
+  }
+  return pclose(Pipe) == 0;
+}
+
 void SetTimer(int Seconds) {
   struct itimerval T {
     {Seconds, 0}, { Seconds, 0 }
@@ -147,6 +161,10 @@ size_t GetPeakRSSMb() {
 
 FILE *OpenProcessPipe(const char *Command, const char *Mode) {
   return popen(Command, Mode);
+}
+
+int CloseProcessPipe(FILE *F) {
+  return pclose(F);
 }
 
 const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,

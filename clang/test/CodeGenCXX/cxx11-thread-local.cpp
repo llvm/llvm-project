@@ -204,22 +204,19 @@ int f() {
 // DARWIN: declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
 
 // DARWIN: declare cxx_fast_tlscc i32* @_ZTWN1VIcE1mE()
-// LINUX: define linkonce_odr hidden i32* @_ZTWN1VIcE1mE()
-// LINUX-NOT: comdat
+// LINUX: define linkonce_odr hidden i32* @_ZTWN1VIcE1mE() {{#[0-9]+}} comdat {
 // LINUX: br i1 icmp ne (void ()* @_ZTHN1VIcE1mE,
 // LINUX: call void @_ZTHN1VIcE1mE()
 // LINUX: ret i32* @_ZN1VIcE1mE
 
 // DARWIN: declare cxx_fast_tlscc i32* @_ZTWN1WIcE1mE()
-// LINUX: define linkonce_odr hidden i32* @_ZTWN1WIcE1mE()
-// LINUX-NOT: comdat
+// LINUX: define linkonce_odr hidden i32* @_ZTWN1WIcE1mE() {{#[0-9]+}} comdat {
 // LINUX: br i1 icmp ne (void ()* @_ZTHN1WIcE1mE,
 // LINUX: call void @_ZTHN1WIcE1mE()
 // LINUX: ret i32* @_ZN1WIcE1mE
 
 // DARWIN: declare cxx_fast_tlscc {{.*}}* @_ZTWN1XIcE1mE()
-// LINUX: define linkonce_odr hidden {{.*}}* @_ZTWN1XIcE1mE()
-// LINUX-NOT: comdat
+// LINUX: define linkonce_odr hidden {{.*}}* @_ZTWN1XIcE1mE() {{#[0-9]+}} comdat {
 // LINUX: br i1 icmp ne (void ()* @_ZTHN1XIcE1mE,
 // LINUX: call void @_ZTHN1XIcE1mE()
 // LINUX: ret {{.*}}* @_ZN1XIcE1mE

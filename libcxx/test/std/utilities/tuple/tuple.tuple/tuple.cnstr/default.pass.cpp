@@ -12,7 +12,7 @@
 
 // explicit(see-below) constexpr tuple();
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <tuple>
 #include <string>

@@ -24,6 +24,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include <memory>
 
 namespace clang {
@@ -64,6 +65,11 @@ public:
 
   /// Determine if a declaration should be included in the graph.
   static bool includeInGraph(const Decl *D);
+
+  /// Determine if a declaration should be included in the graph for the 
+  /// purposes of being a callee. This is similar to includeInGraph except
+  /// it permits declarations, not just definitions.
+  static bool includeCalleeInGraph(const Decl *D);
 
   /// Lookup the node for the given declaration.
   CallGraphNode *getNode(const Decl *) const;
@@ -136,14 +142,23 @@ public:
 private:
   /// Add the given declaration to the call graph.
   void addNodeForDecl(Decl *D, bool IsGlobal);
-
-  /// Allocate a new node in the graph.
-  CallGraphNode *allocateNewNode(Decl *);
 };
 
 class CallGraphNode {
 public:
-  using CallRecord = CallGraphNode *;
+  struct CallRecord {
+    CallGraphNode *Callee;
+    Expr *CallExpr;
+
+    CallRecord() = default;
+
+    CallRecord(CallGraphNode *Callee_, Expr *CallExpr_)
+        : Callee(Callee_), CallExpr(CallExpr_) {}
+
+    // The call destination is the only important data here,
+    // allow to transparently unwrap into it.
+    operator CallGraphNode *() const { return Callee; }
+  };
 
 private:
   /// The function/method declaration.
@@ -164,24 +179,67 @@ public:
   const_iterator begin() const { return CalledFunctions.begin(); }
   const_iterator end() const { return CalledFunctions.end(); }
 
+  /// Iterator access to callees/children of the node.
+  llvm::iterator_range<iterator> callees() {
+    return llvm::make_range(begin(), end());
+  }
+  llvm::iterator_range<const_iterator> callees() const {
+    return llvm::make_range(begin(), end());
+  }
+
   bool empty() const { return CalledFunctions.empty(); }
   unsigned size() const { return CalledFunctions.size(); }
 
-  void addCallee(CallGraphNode *N) {
-    CalledFunctions.push_back(N);
-  }
+  void addCallee(CallRecord Call) { CalledFunctions.push_back(Call); }
 
   Decl *getDecl() const { return FD; }
+
+  FunctionDecl *getDefinition() const {
+    return getDecl()->getAsFunction()->getDefinition();
+  }
 
   void print(raw_ostream &os) const;
   void dump() const;
 };
 
+// NOTE: we are comparing based on the callee only. So different call records
+// (with different call expressions) to the same callee will compare equal!
+inline bool operator==(const CallGraphNode::CallRecord &LHS,
+                       const CallGraphNode::CallRecord &RHS) {
+  return LHS.Callee == RHS.Callee;
+}
+
 } // namespace clang
 
-// Graph traits for iteration, viewing.
 namespace llvm {
 
+// Specialize DenseMapInfo for clang::CallGraphNode::CallRecord.
+template <> struct DenseMapInfo<clang::CallGraphNode::CallRecord> {
+  static inline clang::CallGraphNode::CallRecord getEmptyKey() {
+    return clang::CallGraphNode::CallRecord(
+        DenseMapInfo<clang::CallGraphNode *>::getEmptyKey(),
+        DenseMapInfo<clang::Expr *>::getEmptyKey());
+  }
+
+  static inline clang::CallGraphNode::CallRecord getTombstoneKey() {
+    return clang::CallGraphNode::CallRecord(
+        DenseMapInfo<clang::CallGraphNode *>::getTombstoneKey(),
+        DenseMapInfo<clang::Expr *>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const clang::CallGraphNode::CallRecord &Val) {
+    // NOTE: we are comparing based on the callee only.
+    // Different call records with the same callee will compare equal!
+    return DenseMapInfo<clang::CallGraphNode *>::getHashValue(Val.Callee);
+  }
+
+  static bool isEqual(const clang::CallGraphNode::CallRecord &LHS,
+                      const clang::CallGraphNode::CallRecord &RHS) {
+    return LHS == RHS;
+  }
+};
+
+// Graph traits for iteration, viewing.
 template <> struct GraphTraits<clang::CallGraphNode*> {
   using NodeType = clang::CallGraphNode;
   using NodeRef = clang::CallGraphNode *;

@@ -1,4 +1,4 @@
-//===-- StringList.cpp ------------------------------------------*- C++ -*-===//
+//===-- StringList.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -199,7 +199,7 @@ std::string StringList::CopyList(const char *item_preamble,
       strm << item_preamble;
     strm << GetStringAtIndex(i);
   }
-  return strm.GetString();
+  return std::string(strm.GetString());
 }
 
 StringList &StringList::operator<<(const char *str) {

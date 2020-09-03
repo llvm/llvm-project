@@ -28,8 +28,7 @@ define i32 @get_ext() {
 ; DAG-ISEL: ldr w0, [x8, ext]
 ; FAST-ISEL: add x8, x8, ext
 ; FAST-ISEL: ldr w0, [x8]
-; GLOBAL-ISEL-FALLBACK: add x8, x8, ext
-; GLOBAL-ISEL-FALLBACK: ldr w0, [x8]
+; GLOBAL-ISEL-FALLBACK: ldr w0, [x8, ext]
 ; CHECK: ret
 
 define i32* @get_var_pointer() {

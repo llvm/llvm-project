@@ -529,12 +529,14 @@ define float @max1(float %a, float %b) {
 
 define float @fake_fmin(float %a, float %b) {
 ; CHECK-LABEL: @fake_fmin(
-; CHECK-NEXT:    [[C:%.*]] = fpext float [[A:%.*]] to fp128
-; CHECK-NEXT:    [[D:%.*]] = fpext float [[B:%.*]] to fp128
-; ISC99-NEXT:    [[E:%.*]] = call nsz fp128 @llvm.minnum.f128(fp128 [[C]], fp128 [[D]])
+; ISC99-NEXT:    [[MIN:%.*]] = call nsz float @llvm.minnum.f32(float %a, float %b)
+; ISC99-NEXT:    ret float [[MIN]]
+
+; ISC89-NEXT:    [[C:%.*]] = fpext float [[A:%.*]] to fp128
+; ISC89-NEXT:    [[D:%.*]] = fpext float [[B:%.*]] to fp128
 ; ISC89-NEXT:    [[E:%.*]] = call fp128 @fmin(fp128 [[C]], fp128 [[D]])
-; CHECK-NEXT:    [[F:%.*]] = fptrunc fp128 [[E]] to float
-; CHECK-NEXT:    ret float [[F]]
+; ISC89-NEXT:    [[F:%.*]] = fptrunc fp128 [[E]] to float
+; ISC89-NEXT:    ret float [[F]]
 ;
   %c = fpext float %a to fp128
   %d = fpext float %b to fp128

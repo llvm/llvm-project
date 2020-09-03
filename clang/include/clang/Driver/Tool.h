@@ -10,7 +10,6 @@
 #define LLVM_CLANG_DRIVER_TOOL_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/Support/Program.h"
 
 namespace llvm {
 namespace opt {
@@ -31,24 +30,6 @@ namespace driver {
 
 /// Tool - Information on a specific compilation tool.
 class Tool {
-public:
-  // Documents the level of support for response files in this tool.
-  // Response files are necessary if the command line gets too large,
-  // requiring the arguments to be transferred to a file.
-  enum ResponseFileSupport {
-    // Provides full support for response files, which means we can transfer
-    // all tool input arguments to a file. E.g.: clang, gcc, binutils and MSVC
-    // tools.
-    RF_Full,
-    // Input file names can live in a file, but flags can't. E.g.: ld64 (Mac
-    // OS X linker).
-    RF_FileList,
-    // Does not support response files: all arguments must be passed via
-    // command line.
-    RF_None
-  };
-
-private:
   /// The tool name (for debugging).
   const char *Name;
 
@@ -58,20 +39,8 @@ private:
   /// The tool chain this tool is a part of.
   const ToolChain &TheToolChain;
 
-  /// The level of support for response files seen in this tool
-  const ResponseFileSupport ResponseSupport;
-
-  /// The encoding to use when writing response files for this tool on Windows
-  const llvm::sys::WindowsEncodingMethod ResponseEncoding;
-
-  /// The flag used to pass a response file via command line to this tool
-  const char *const ResponseFlag;
-
 public:
-  Tool(const char *Name, const char *ShortName, const ToolChain &TC,
-       ResponseFileSupport ResponseSupport = RF_None,
-       llvm::sys::WindowsEncodingMethod ResponseEncoding = llvm::sys::WEM_UTF8,
-       const char *ResponseFlag = "@");
+  Tool(const char *Name, const char *ShortName, const ToolChain &TC);
 
 public:
   virtual ~Tool();
@@ -87,29 +56,6 @@ public:
   virtual bool hasIntegratedCPP() const = 0;
   virtual bool isLinkJob() const { return false; }
   virtual bool isDsymutilJob() const { return false; }
-  /// Returns the level of support for response files of this tool,
-  /// whether it accepts arguments to be passed via a file on disk.
-  ResponseFileSupport getResponseFilesSupport() const {
-    return ResponseSupport;
-  }
-  /// Returns which encoding the response file should use. This is only
-  /// relevant on Windows platforms where there are different encodings being
-  /// accepted for different tools. On UNIX, UTF8 is universal.
-  ///
-  /// Windows use cases: - GCC and Binutils on mingw only accept ANSI response
-  /// files encoded with the system current code page.
-  /// - MSVC's CL.exe and LINK.exe accept UTF16 on Windows.
-  /// - Clang accepts both UTF8 and UTF16.
-  ///
-  /// FIXME: When GNU tools learn how to parse UTF16 on Windows, we should
-  /// always use UTF16 for Windows, which is the Windows official encoding for
-  /// international characters.
-  llvm::sys::WindowsEncodingMethod getResponseFileEncoding() const {
-    return ResponseEncoding;
-  }
-  /// Returns which prefix to use when passing the name of a response
-  /// file as a parameter to this tool.
-  const char *getResponseFileFlag() const { return ResponseFlag; }
 
   /// Does this tool have "good" standardized diagnostics, or should the
   /// driver add an additional "command failed" diagnostic on failures.

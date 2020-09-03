@@ -486,7 +486,9 @@ static const X86MemoryFoldTableEntry MemoryFoldTable1[] = {
   { X86::CVTPD2PSrr,           X86::CVTPD2PSrm,           TB_ALIGN_16 },
   { X86::CVTPS2DQrr,           X86::CVTPS2DQrm,           TB_ALIGN_16 },
   { X86::CVTPS2PDrr,           X86::CVTPS2PDrm,           TB_NO_REVERSE },
+  { X86::CVTSD2SI64rr,         X86::CVTSD2SI64rm,         0 },
   { X86::CVTSD2SI64rr_Int,     X86::CVTSD2SI64rm_Int,     TB_NO_REVERSE },
+  { X86::CVTSD2SIrr,           X86::CVTSD2SIrm,           0 },
   { X86::CVTSD2SIrr_Int,       X86::CVTSD2SIrm_Int,       TB_NO_REVERSE },
   { X86::CVTSD2SSrr,           X86::CVTSD2SSrm,           0 },
   { X86::CVTSI2SDrr,           X86::CVTSI2SDrm,           0 },
@@ -494,7 +496,9 @@ static const X86MemoryFoldTableEntry MemoryFoldTable1[] = {
   { X86::CVTSI642SDrr,         X86::CVTSI642SDrm,         0 },
   { X86::CVTSI642SSrr,         X86::CVTSI642SSrm,         0 },
   { X86::CVTSS2SDrr,           X86::CVTSS2SDrm,           0 },
+  { X86::CVTSS2SI64rr,         X86::CVTSS2SI64rm,         0 },
   { X86::CVTSS2SI64rr_Int,     X86::CVTSS2SI64rm_Int,     TB_NO_REVERSE },
+  { X86::CVTSS2SIrr,           X86::CVTSS2SIrm,           0 },
   { X86::CVTSS2SIrr_Int,       X86::CVTSS2SIrm_Int,       TB_NO_REVERSE },
   { X86::CVTTPD2DQrr,          X86::CVTTPD2DQrm,          TB_ALIGN_16 },
   { X86::CVTTPS2DQrr,          X86::CVTTPS2DQrm,          TB_ALIGN_16 },
@@ -627,18 +631,18 @@ static const X86MemoryFoldTableEntry MemoryFoldTable1[] = {
   { X86::UCOMISSrr_Int,        X86::UCOMISSrm_Int,        TB_NO_REVERSE },
   { X86::VAESIMCrr,            X86::VAESIMCrm,            0 },
   { X86::VAESKEYGENASSIST128rr,X86::VAESKEYGENASSIST128rm,0 },
-  { X86::VBROADCASTF32X2Z256r, X86::VBROADCASTF32X2Z256m, TB_NO_REVERSE },
-  { X86::VBROADCASTF32X2Zr,    X86::VBROADCASTF32X2Zm,    TB_NO_REVERSE },
-  { X86::VBROADCASTI32X2Z128r, X86::VBROADCASTI32X2Z128m, TB_NO_REVERSE },
-  { X86::VBROADCASTI32X2Z256r, X86::VBROADCASTI32X2Z256m, TB_NO_REVERSE },
-  { X86::VBROADCASTI32X2Zr,    X86::VBROADCASTI32X2Zm,    TB_NO_REVERSE },
+  { X86::VBROADCASTF32X2Z256rr,X86::VBROADCASTF32X2Z256rm,TB_NO_REVERSE },
+  { X86::VBROADCASTF32X2Zrr,   X86::VBROADCASTF32X2Zrm,   TB_NO_REVERSE },
+  { X86::VBROADCASTI32X2Z128rr,X86::VBROADCASTI32X2Z128rm,TB_NO_REVERSE },
+  { X86::VBROADCASTI32X2Z256rr,X86::VBROADCASTI32X2Z256rm,TB_NO_REVERSE },
+  { X86::VBROADCASTI32X2Zrr,   X86::VBROADCASTI32X2Zrm,   TB_NO_REVERSE },
   { X86::VBROADCASTSDYrr,      X86::VBROADCASTSDYrm,      TB_NO_REVERSE },
-  { X86::VBROADCASTSDZ256r,    X86::VBROADCASTSDZ256m,    TB_NO_REVERSE },
-  { X86::VBROADCASTSDZr,       X86::VBROADCASTSDZm,       TB_NO_REVERSE },
+  { X86::VBROADCASTSDZ256rr,   X86::VBROADCASTSDZ256rm,   TB_NO_REVERSE },
+  { X86::VBROADCASTSDZrr,      X86::VBROADCASTSDZrm,      TB_NO_REVERSE },
   { X86::VBROADCASTSSYrr,      X86::VBROADCASTSSYrm,      TB_NO_REVERSE },
-  { X86::VBROADCASTSSZ128r,    X86::VBROADCASTSSZ128m,    TB_NO_REVERSE },
-  { X86::VBROADCASTSSZ256r,    X86::VBROADCASTSSZ256m,    TB_NO_REVERSE },
-  { X86::VBROADCASTSSZr,       X86::VBROADCASTSSZm,       TB_NO_REVERSE },
+  { X86::VBROADCASTSSZ128rr,   X86::VBROADCASTSSZ128rm,   TB_NO_REVERSE },
+  { X86::VBROADCASTSSZ256rr,   X86::VBROADCASTSSZ256rm,   TB_NO_REVERSE },
+  { X86::VBROADCASTSSZrr,      X86::VBROADCASTSSZrm,      TB_NO_REVERSE },
   { X86::VBROADCASTSSrr,       X86::VBROADCASTSSrm,       TB_NO_REVERSE },
   { X86::VCOMISDZrr,           X86::VCOMISDZrm,           0 },
   { X86::VCOMISDZrr_Int,       X86::VCOMISDZrm_Int,       TB_NO_REVERSE },
@@ -710,15 +714,23 @@ static const X86MemoryFoldTableEntry MemoryFoldTable1[] = {
   { X86::VCVTQQ2PSZ128rr,      X86::VCVTQQ2PSZ128rm,      0 },
   { X86::VCVTQQ2PSZ256rr,      X86::VCVTQQ2PSZ256rm,      0 },
   { X86::VCVTQQ2PSZrr,         X86::VCVTQQ2PSZrm,         0 },
+  { X86::VCVTSD2SI64Zrr,       X86::VCVTSD2SI64Zrm,       0 },
   { X86::VCVTSD2SI64Zrr_Int,   X86::VCVTSD2SI64Zrm_Int,   TB_NO_REVERSE },
+  { X86::VCVTSD2SI64rr,        X86::VCVTSD2SI64rm,        0 },
   { X86::VCVTSD2SI64rr_Int,    X86::VCVTSD2SI64rm_Int,    TB_NO_REVERSE },
+  { X86::VCVTSD2SIZrr,         X86::VCVTSD2SIZrm,         0 },
   { X86::VCVTSD2SIZrr_Int,     X86::VCVTSD2SIZrm_Int,     TB_NO_REVERSE },
+  { X86::VCVTSD2SIrr,          X86::VCVTSD2SIrm,          0 },
   { X86::VCVTSD2SIrr_Int,      X86::VCVTSD2SIrm_Int,      TB_NO_REVERSE },
   { X86::VCVTSD2USI64Zrr_Int,  X86::VCVTSD2USI64Zrm_Int,  TB_NO_REVERSE },
   { X86::VCVTSD2USIZrr_Int,    X86::VCVTSD2USIZrm_Int,    TB_NO_REVERSE },
+  { X86::VCVTSS2SI64Zrr,       X86::VCVTSS2SI64Zrm,       0 },
   { X86::VCVTSS2SI64Zrr_Int,   X86::VCVTSS2SI64Zrm_Int,   TB_NO_REVERSE },
+  { X86::VCVTSS2SI64rr,        X86::VCVTSS2SI64rm,        0 },
   { X86::VCVTSS2SI64rr_Int,    X86::VCVTSS2SI64rm_Int,    TB_NO_REVERSE },
+  { X86::VCVTSS2SIZrr,         X86::VCVTSS2SIZrm,         0 },
   { X86::VCVTSS2SIZrr_Int,     X86::VCVTSS2SIZrm_Int,     TB_NO_REVERSE },
+  { X86::VCVTSS2SIrr,          X86::VCVTSS2SIrm,          0 },
   { X86::VCVTSS2SIrr_Int,      X86::VCVTSS2SIrm_Int,      TB_NO_REVERSE },
   { X86::VCVTSS2USI64Zrr_Int,  X86::VCVTSS2USI64Zrm_Int,  TB_NO_REVERSE },
   { X86::VCVTSS2USIZrr_Int,    X86::VCVTSS2USIZrm_Int,    TB_NO_REVERSE },
@@ -906,24 +918,24 @@ static const X86MemoryFoldTableEntry MemoryFoldTable1[] = {
   { X86::VPABSWZrr,            X86::VPABSWZrm,            0 },
   { X86::VPABSWrr,             X86::VPABSWrm,             0 },
   { X86::VPBROADCASTBYrr,      X86::VPBROADCASTBYrm,      TB_NO_REVERSE },
-  { X86::VPBROADCASTBZ128r,    X86::VPBROADCASTBZ128m,    TB_NO_REVERSE },
-  { X86::VPBROADCASTBZ256r,    X86::VPBROADCASTBZ256m,    TB_NO_REVERSE },
-  { X86::VPBROADCASTBZr,       X86::VPBROADCASTBZm,       TB_NO_REVERSE },
-  { X86::VPBROADCASTBrr,       X86::VPBROADCASTBrm,       TB_NO_REVERSE },
+  { X86::VPBROADCASTBZ128rr,   X86::VPBROADCASTBZ128rm,   TB_NO_REVERSE },
+  { X86::VPBROADCASTBZ256rr,   X86::VPBROADCASTBZ256rm,   TB_NO_REVERSE },
+  { X86::VPBROADCASTBZrr,      X86::VPBROADCASTBZrm,      TB_NO_REVERSE },
+  { X86::VPBROADCASTBrr ,      X86::VPBROADCASTBrm,       TB_NO_REVERSE },
   { X86::VPBROADCASTDYrr,      X86::VPBROADCASTDYrm,      TB_NO_REVERSE },
-  { X86::VPBROADCASTDZ128r,    X86::VPBROADCASTDZ128m,    TB_NO_REVERSE },
-  { X86::VPBROADCASTDZ256r,    X86::VPBROADCASTDZ256m,    TB_NO_REVERSE },
-  { X86::VPBROADCASTDZr,       X86::VPBROADCASTDZm,       TB_NO_REVERSE },
+  { X86::VPBROADCASTDZ128rr,   X86::VPBROADCASTDZ128rm,   TB_NO_REVERSE },
+  { X86::VPBROADCASTDZ256rr,   X86::VPBROADCASTDZ256rm,   TB_NO_REVERSE },
+  { X86::VPBROADCASTDZrr,      X86::VPBROADCASTDZrm,      TB_NO_REVERSE },
   { X86::VPBROADCASTDrr,       X86::VPBROADCASTDrm,       TB_NO_REVERSE },
   { X86::VPBROADCASTQYrr,      X86::VPBROADCASTQYrm,      TB_NO_REVERSE },
-  { X86::VPBROADCASTQZ128r,    X86::VPBROADCASTQZ128m,    TB_NO_REVERSE },
-  { X86::VPBROADCASTQZ256r,    X86::VPBROADCASTQZ256m,    TB_NO_REVERSE },
-  { X86::VPBROADCASTQZr,       X86::VPBROADCASTQZm,       TB_NO_REVERSE },
+  { X86::VPBROADCASTQZ128rr,   X86::VPBROADCASTQZ128rm,   TB_NO_REVERSE },
+  { X86::VPBROADCASTQZ256rr,   X86::VPBROADCASTQZ256rm,   TB_NO_REVERSE },
+  { X86::VPBROADCASTQZrr,      X86::VPBROADCASTQZrm,      TB_NO_REVERSE },
   { X86::VPBROADCASTQrr,       X86::VPBROADCASTQrm,       TB_NO_REVERSE },
   { X86::VPBROADCASTWYrr,      X86::VPBROADCASTWYrm,      TB_NO_REVERSE },
-  { X86::VPBROADCASTWZ128r,    X86::VPBROADCASTWZ128m,    TB_NO_REVERSE },
-  { X86::VPBROADCASTWZ256r,    X86::VPBROADCASTWZ256m,    TB_NO_REVERSE },
-  { X86::VPBROADCASTWZr,       X86::VPBROADCASTWZm,       TB_NO_REVERSE },
+  { X86::VPBROADCASTWZ128rr,   X86::VPBROADCASTWZ128rm,   TB_NO_REVERSE },
+  { X86::VPBROADCASTWZ256rr,   X86::VPBROADCASTWZ256rm,   TB_NO_REVERSE },
+  { X86::VPBROADCASTWZrr,      X86::VPBROADCASTWZrm,      TB_NO_REVERSE },
   { X86::VPBROADCASTWrr,       X86::VPBROADCASTWrm,       TB_NO_REVERSE },
   { X86::VPCMPESTRIrr,         X86::VPCMPESTRIrm,         0 },
   { X86::VPCMPESTRMrr,         X86::VPCMPESTRMrm,         0 },
@@ -1100,9 +1112,9 @@ static const X86MemoryFoldTableEntry MemoryFoldTable1[] = {
   { X86::VPSHUFLWZ256ri,       X86::VPSHUFLWZ256mi,       0 },
   { X86::VPSHUFLWZri,          X86::VPSHUFLWZmi,          0 },
   { X86::VPSHUFLWri,           X86::VPSHUFLWmi,           0 },
-  { X86::VPSLLDQZ128rr,        X86::VPSLLDQZ128rm,        0 },
-  { X86::VPSLLDQZ256rr,        X86::VPSLLDQZ256rm,        0 },
-  { X86::VPSLLDQZrr,           X86::VPSLLDQZrm,           0 },
+  { X86::VPSLLDQZ128ri,        X86::VPSLLDQZ128mi,        0 },
+  { X86::VPSLLDQZ256ri,        X86::VPSLLDQZ256mi,        0 },
+  { X86::VPSLLDQZri,           X86::VPSLLDQZmi,           0 },
   { X86::VPSLLDZ128ri,         X86::VPSLLDZ128mi,         0 },
   { X86::VPSLLDZ256ri,         X86::VPSLLDZ256mi,         0 },
   { X86::VPSLLDZri,            X86::VPSLLDZmi,            0 },
@@ -1121,9 +1133,9 @@ static const X86MemoryFoldTableEntry MemoryFoldTable1[] = {
   { X86::VPSRAWZ128ri,         X86::VPSRAWZ128mi,         0 },
   { X86::VPSRAWZ256ri,         X86::VPSRAWZ256mi,         0 },
   { X86::VPSRAWZri,            X86::VPSRAWZmi,            0 },
-  { X86::VPSRLDQZ128rr,        X86::VPSRLDQZ128rm,        0 },
-  { X86::VPSRLDQZ256rr,        X86::VPSRLDQZ256rm,        0 },
-  { X86::VPSRLDQZrr,           X86::VPSRLDQZrm,           0 },
+  { X86::VPSRLDQZ128ri,        X86::VPSRLDQZ128mi,        0 },
+  { X86::VPSRLDQZ256ri,        X86::VPSRLDQZ256mi,        0 },
+  { X86::VPSRLDQZri,           X86::VPSRLDQZmi,           0 },
   { X86::VPSRLDZ128ri,         X86::VPSRLDZ128mi,         0 },
   { X86::VPSRLDZ256ri,         X86::VPSRLDZ256mi,         0 },
   { X86::VPSRLDZri,            X86::VPSRLDZmi,            0 },
@@ -1609,16 +1621,16 @@ static const X86MemoryFoldTableEntry MemoryFoldTable2[] = {
   { X86::VBLENDVPDrr,              X86::VBLENDVPDrm,              0 },
   { X86::VBLENDVPSYrr,             X86::VBLENDVPSYrm,             0 },
   { X86::VBLENDVPSrr,              X86::VBLENDVPSrm,              0 },
-  { X86::VBROADCASTF32X2Z256rkz,   X86::VBROADCASTF32X2Z256mkz,   TB_NO_REVERSE },
-  { X86::VBROADCASTF32X2Zrkz,      X86::VBROADCASTF32X2Zmkz,      TB_NO_REVERSE },
-  { X86::VBROADCASTI32X2Z128rkz,   X86::VBROADCASTI32X2Z128mkz,   TB_NO_REVERSE },
-  { X86::VBROADCASTI32X2Z256rkz,   X86::VBROADCASTI32X2Z256mkz,   TB_NO_REVERSE },
-  { X86::VBROADCASTI32X2Zrkz,      X86::VBROADCASTI32X2Zmkz,      TB_NO_REVERSE },
-  { X86::VBROADCASTSDZ256rkz,      X86::VBROADCASTSDZ256mkz,      TB_NO_REVERSE },
-  { X86::VBROADCASTSDZrkz,         X86::VBROADCASTSDZmkz,         TB_NO_REVERSE },
-  { X86::VBROADCASTSSZ128rkz,      X86::VBROADCASTSSZ128mkz,      TB_NO_REVERSE },
-  { X86::VBROADCASTSSZ256rkz,      X86::VBROADCASTSSZ256mkz,      TB_NO_REVERSE },
-  { X86::VBROADCASTSSZrkz,         X86::VBROADCASTSSZmkz,         TB_NO_REVERSE },
+  { X86::VBROADCASTF32X2Z256rrkz,  X86::VBROADCASTF32X2Z256rmkz,  TB_NO_REVERSE },
+  { X86::VBROADCASTF32X2Zrrkz,     X86::VBROADCASTF32X2Zrmkz,     TB_NO_REVERSE },
+  { X86::VBROADCASTI32X2Z128rrkz,  X86::VBROADCASTI32X2Z128rmkz,  TB_NO_REVERSE },
+  { X86::VBROADCASTI32X2Z256rrkz,  X86::VBROADCASTI32X2Z256rmkz,  TB_NO_REVERSE },
+  { X86::VBROADCASTI32X2Zrrkz,     X86::VBROADCASTI32X2Zrmkz,     TB_NO_REVERSE },
+  { X86::VBROADCASTSDZ256rrkz,     X86::VBROADCASTSDZ256rmkz,     TB_NO_REVERSE },
+  { X86::VBROADCASTSDZrrkz,        X86::VBROADCASTSDZrmkz,        TB_NO_REVERSE },
+  { X86::VBROADCASTSSZ128rrkz,     X86::VBROADCASTSSZ128rmkz,     TB_NO_REVERSE },
+  { X86::VBROADCASTSSZ256rrkz,     X86::VBROADCASTSSZ256rmkz,     TB_NO_REVERSE },
+  { X86::VBROADCASTSSZrrkz,        X86::VBROADCASTSSZrmkz,        TB_NO_REVERSE },
   { X86::VCMPPDYrri,               X86::VCMPPDYrmi,               0 },
   { X86::VCMPPDZ128rri,            X86::VCMPPDZ128rmi,            0 },
   { X86::VCMPPDZ256rri,            X86::VCMPPDZ256rmi,            0 },
@@ -2153,18 +2165,18 @@ static const X86MemoryFoldTableEntry MemoryFoldTable2[] = {
   { X86::VPBLENDVBrr,              X86::VPBLENDVBrm,              0 },
   { X86::VPBLENDWYrri,             X86::VPBLENDWYrmi,             0 },
   { X86::VPBLENDWrri,              X86::VPBLENDWrmi,              0 },
-  { X86::VPBROADCASTBZ128rkz,      X86::VPBROADCASTBZ128mkz,      TB_NO_REVERSE },
-  { X86::VPBROADCASTBZ256rkz,      X86::VPBROADCASTBZ256mkz,      TB_NO_REVERSE },
-  { X86::VPBROADCASTBZrkz,         X86::VPBROADCASTBZmkz,         TB_NO_REVERSE },
-  { X86::VPBROADCASTDZ128rkz,      X86::VPBROADCASTDZ128mkz,      TB_NO_REVERSE },
-  { X86::VPBROADCASTDZ256rkz,      X86::VPBROADCASTDZ256mkz,      TB_NO_REVERSE },
-  { X86::VPBROADCASTDZrkz,         X86::VPBROADCASTDZmkz,         TB_NO_REVERSE },
-  { X86::VPBROADCASTQZ128rkz,      X86::VPBROADCASTQZ128mkz,      TB_NO_REVERSE },
-  { X86::VPBROADCASTQZ256rkz,      X86::VPBROADCASTQZ256mkz,      TB_NO_REVERSE },
-  { X86::VPBROADCASTQZrkz,         X86::VPBROADCASTQZmkz,         TB_NO_REVERSE },
-  { X86::VPBROADCASTWZ128rkz,      X86::VPBROADCASTWZ128mkz,      TB_NO_REVERSE },
-  { X86::VPBROADCASTWZ256rkz,      X86::VPBROADCASTWZ256mkz,      TB_NO_REVERSE },
-  { X86::VPBROADCASTWZrkz,         X86::VPBROADCASTWZmkz,         TB_NO_REVERSE },
+  { X86::VPBROADCASTBZ128rrkz,     X86::VPBROADCASTBZ128rmkz,     TB_NO_REVERSE },
+  { X86::VPBROADCASTBZ256rrkz,     X86::VPBROADCASTBZ256rmkz,     TB_NO_REVERSE },
+  { X86::VPBROADCASTBZrrkz,        X86::VPBROADCASTBZrmkz,        TB_NO_REVERSE },
+  { X86::VPBROADCASTDZ128rrkz,     X86::VPBROADCASTDZ128rmkz,     TB_NO_REVERSE },
+  { X86::VPBROADCASTDZ256rrkz,     X86::VPBROADCASTDZ256rmkz,     TB_NO_REVERSE },
+  { X86::VPBROADCASTDZrrkz,        X86::VPBROADCASTDZrmkz,        TB_NO_REVERSE },
+  { X86::VPBROADCASTQZ128rrkz,     X86::VPBROADCASTQZ128rmkz,     TB_NO_REVERSE },
+  { X86::VPBROADCASTQZ256rrkz,     X86::VPBROADCASTQZ256rmkz,     TB_NO_REVERSE },
+  { X86::VPBROADCASTQZrrkz,        X86::VPBROADCASTQZrmkz,        TB_NO_REVERSE },
+  { X86::VPBROADCASTWZ128rrkz,     X86::VPBROADCASTWZ128rmkz,     TB_NO_REVERSE },
+  { X86::VPBROADCASTWZ256rrkz,     X86::VPBROADCASTWZ256rmkz,     TB_NO_REVERSE },
+  { X86::VPBROADCASTWZrrkz,        X86::VPBROADCASTWZrmkz,        TB_NO_REVERSE },
   { X86::VPCLMULQDQYrr,            X86::VPCLMULQDQYrm,            0 },
   { X86::VPCLMULQDQZ128rr,         X86::VPCLMULQDQZ128rm,         0 },
   { X86::VPCLMULQDQZ256rr,         X86::VPCLMULQDQZ256rm,         0 },
@@ -3010,16 +3022,16 @@ static const X86MemoryFoldTableEntry MemoryFoldTable3[] = {
   { X86::VBLENDMPSZ128rrk,           X86::VBLENDMPSZ128rmk,           0 },
   { X86::VBLENDMPSZ256rrk,           X86::VBLENDMPSZ256rmk,           0 },
   { X86::VBLENDMPSZrrk,              X86::VBLENDMPSZrmk,              0 },
-  { X86::VBROADCASTF32X2Z256rk,      X86::VBROADCASTF32X2Z256mk,      TB_NO_REVERSE },
-  { X86::VBROADCASTF32X2Zrk,         X86::VBROADCASTF32X2Zmk,         TB_NO_REVERSE },
-  { X86::VBROADCASTI32X2Z128rk,      X86::VBROADCASTI32X2Z128mk,      TB_NO_REVERSE },
-  { X86::VBROADCASTI32X2Z256rk,      X86::VBROADCASTI32X2Z256mk,      TB_NO_REVERSE },
-  { X86::VBROADCASTI32X2Zrk,         X86::VBROADCASTI32X2Zmk,         TB_NO_REVERSE },
-  { X86::VBROADCASTSDZ256rk,         X86::VBROADCASTSDZ256mk,         TB_NO_REVERSE },
-  { X86::VBROADCASTSDZrk,            X86::VBROADCASTSDZmk,            TB_NO_REVERSE },
-  { X86::VBROADCASTSSZ128rk,         X86::VBROADCASTSSZ128mk,         TB_NO_REVERSE },
-  { X86::VBROADCASTSSZ256rk,         X86::VBROADCASTSSZ256mk,         TB_NO_REVERSE },
-  { X86::VBROADCASTSSZrk,            X86::VBROADCASTSSZmk,            TB_NO_REVERSE },
+  { X86::VBROADCASTF32X2Z256rrk,     X86::VBROADCASTF32X2Z256rmk,     TB_NO_REVERSE },
+  { X86::VBROADCASTF32X2Zrrk,        X86::VBROADCASTF32X2Zrmk,        TB_NO_REVERSE },
+  { X86::VBROADCASTI32X2Z128rrk,     X86::VBROADCASTI32X2Z128rmk,     TB_NO_REVERSE },
+  { X86::VBROADCASTI32X2Z256rrk,     X86::VBROADCASTI32X2Z256rmk,     TB_NO_REVERSE },
+  { X86::VBROADCASTI32X2Zrrk,        X86::VBROADCASTI32X2Zrmk,        TB_NO_REVERSE },
+  { X86::VBROADCASTSDZ256rrk,        X86::VBROADCASTSDZ256rmk,        TB_NO_REVERSE },
+  { X86::VBROADCASTSDZrrk,           X86::VBROADCASTSDZrmk,           TB_NO_REVERSE },
+  { X86::VBROADCASTSSZ128rrk,        X86::VBROADCASTSSZ128rmk,        TB_NO_REVERSE },
+  { X86::VBROADCASTSSZ256rrk,        X86::VBROADCASTSSZ256rmk,        TB_NO_REVERSE },
+  { X86::VBROADCASTSSZrrk,           X86::VBROADCASTSSZrmk,           TB_NO_REVERSE },
   { X86::VCMPPDZ128rrik,             X86::VCMPPDZ128rmik,             0 },
   { X86::VCMPPDZ256rrik,             X86::VCMPPDZ256rmik,             0 },
   { X86::VCMPPDZrrik,                X86::VCMPPDZrmik,                0 },
@@ -3662,18 +3674,18 @@ static const X86MemoryFoldTableEntry MemoryFoldTable3[] = {
   { X86::VPBLENDMWZ128rrk,           X86::VPBLENDMWZ128rmk,           0 },
   { X86::VPBLENDMWZ256rrk,           X86::VPBLENDMWZ256rmk,           0 },
   { X86::VPBLENDMWZrrk,              X86::VPBLENDMWZrmk,              0 },
-  { X86::VPBROADCASTBZ128rk,         X86::VPBROADCASTBZ128mk,         TB_NO_REVERSE },
-  { X86::VPBROADCASTBZ256rk,         X86::VPBROADCASTBZ256mk,         TB_NO_REVERSE },
-  { X86::VPBROADCASTBZrk,            X86::VPBROADCASTBZmk,            TB_NO_REVERSE },
-  { X86::VPBROADCASTDZ128rk,         X86::VPBROADCASTDZ128mk,         TB_NO_REVERSE },
-  { X86::VPBROADCASTDZ256rk,         X86::VPBROADCASTDZ256mk,         TB_NO_REVERSE },
-  { X86::VPBROADCASTDZrk,            X86::VPBROADCASTDZmk,            TB_NO_REVERSE },
-  { X86::VPBROADCASTQZ128rk,         X86::VPBROADCASTQZ128mk,         TB_NO_REVERSE },
-  { X86::VPBROADCASTQZ256rk,         X86::VPBROADCASTQZ256mk,         TB_NO_REVERSE },
-  { X86::VPBROADCASTQZrk,            X86::VPBROADCASTQZmk,            TB_NO_REVERSE },
-  { X86::VPBROADCASTWZ128rk,         X86::VPBROADCASTWZ128mk,         TB_NO_REVERSE },
-  { X86::VPBROADCASTWZ256rk,         X86::VPBROADCASTWZ256mk,         TB_NO_REVERSE },
-  { X86::VPBROADCASTWZrk,            X86::VPBROADCASTWZmk,            TB_NO_REVERSE },
+  { X86::VPBROADCASTBZ128rrk,        X86::VPBROADCASTBZ128rmk,        TB_NO_REVERSE },
+  { X86::VPBROADCASTBZ256rrk,        X86::VPBROADCASTBZ256rmk,        TB_NO_REVERSE },
+  { X86::VPBROADCASTBZrrk,           X86::VPBROADCASTBZrmk,           TB_NO_REVERSE },
+  { X86::VPBROADCASTDZ128rrk,        X86::VPBROADCASTDZ128rmk,        TB_NO_REVERSE },
+  { X86::VPBROADCASTDZ256rrk,        X86::VPBROADCASTDZ256rmk,        TB_NO_REVERSE },
+  { X86::VPBROADCASTDZrrk,           X86::VPBROADCASTDZrmk,           TB_NO_REVERSE },
+  { X86::VPBROADCASTQZ128rrk,        X86::VPBROADCASTQZ128rmk,        TB_NO_REVERSE },
+  { X86::VPBROADCASTQZ256rrk,        X86::VPBROADCASTQZ256rmk,        TB_NO_REVERSE },
+  { X86::VPBROADCASTQZrrk,           X86::VPBROADCASTQZrmk,           TB_NO_REVERSE },
+  { X86::VPBROADCASTWZ128rrk,        X86::VPBROADCASTWZ128rmk,        TB_NO_REVERSE },
+  { X86::VPBROADCASTWZ256rrk,        X86::VPBROADCASTWZ256rmk,        TB_NO_REVERSE },
+  { X86::VPBROADCASTWZrrk,           X86::VPBROADCASTWZrmk,           TB_NO_REVERSE },
   { X86::VPCMOVYrrr,                 X86::VPCMOVYrrm,                 0 },
   { X86::VPCMOVrrr,                  X86::VPCMOVrrm,                  0 },
   { X86::VPCMPBZ128rrik,             X86::VPCMPBZ128rmik,             0 },
@@ -5509,6 +5521,12 @@ static const X86MemoryFoldTableEntry BroadcastFoldTable3[] = {
   { X86::VFNMSUB231PSZ128r,    X86::VFNMSUB231PSZ128mb,   TB_BCAST_SS },
   { X86::VFNMSUB231PSZ256r,    X86::VFNMSUB231PSZ256mb,   TB_BCAST_SS },
   { X86::VFNMSUB231PSZr,       X86::VFNMSUB231PSZmb,      TB_BCAST_SS },
+  { X86::VPTERNLOGDZ128rri,    X86::VPTERNLOGDZ128rmbi,   TB_BCAST_D },
+  { X86::VPTERNLOGDZ256rri,    X86::VPTERNLOGDZ256rmbi,   TB_BCAST_D },
+  { X86::VPTERNLOGDZrri,       X86::VPTERNLOGDZrmbi,      TB_BCAST_D },
+  { X86::VPTERNLOGQZ128rri,    X86::VPTERNLOGQZ128rmbi,   TB_BCAST_Q },
+  { X86::VPTERNLOGQZ256rri,    X86::VPTERNLOGQZ256rmbi,   TB_BCAST_Q },
+  { X86::VPTERNLOGQZrri,       X86::VPTERNLOGQZrmbi,      TB_BCAST_Q },
 };
 
 static const X86MemoryFoldTableEntry *
@@ -5517,53 +5535,45 @@ lookupFoldTableImpl(ArrayRef<X86MemoryFoldTableEntry> Table, unsigned RegOp) {
   // Make sure the tables are sorted.
   static std::atomic<bool> FoldTablesChecked(false);
   if (!FoldTablesChecked.load(std::memory_order_relaxed)) {
-    assert(std::is_sorted(std::begin(MemoryFoldTable2Addr),
-                          std::end(MemoryFoldTable2Addr)) &&
+    assert(llvm::is_sorted(MemoryFoldTable2Addr) &&
            std::adjacent_find(std::begin(MemoryFoldTable2Addr),
                               std::end(MemoryFoldTable2Addr)) ==
-           std::end(MemoryFoldTable2Addr) &&
+               std::end(MemoryFoldTable2Addr) &&
            "MemoryFoldTable2Addr is not sorted and unique!");
-    assert(std::is_sorted(std::begin(MemoryFoldTable0),
-                          std::end(MemoryFoldTable0)) &&
+    assert(llvm::is_sorted(MemoryFoldTable0) &&
            std::adjacent_find(std::begin(MemoryFoldTable0),
                               std::end(MemoryFoldTable0)) ==
-           std::end(MemoryFoldTable0) &&
+               std::end(MemoryFoldTable0) &&
            "MemoryFoldTable0 is not sorted and unique!");
-    assert(std::is_sorted(std::begin(MemoryFoldTable1),
-                          std::end(MemoryFoldTable1)) &&
+    assert(llvm::is_sorted(MemoryFoldTable1) &&
            std::adjacent_find(std::begin(MemoryFoldTable1),
                               std::end(MemoryFoldTable1)) ==
-           std::end(MemoryFoldTable1) &&
+               std::end(MemoryFoldTable1) &&
            "MemoryFoldTable1 is not sorted and unique!");
-    assert(std::is_sorted(std::begin(MemoryFoldTable2),
-                          std::end(MemoryFoldTable2)) &&
+    assert(llvm::is_sorted(MemoryFoldTable2) &&
            std::adjacent_find(std::begin(MemoryFoldTable2),
                               std::end(MemoryFoldTable2)) ==
-           std::end(MemoryFoldTable2) &&
+               std::end(MemoryFoldTable2) &&
            "MemoryFoldTable2 is not sorted and unique!");
-    assert(std::is_sorted(std::begin(MemoryFoldTable3),
-                          std::end(MemoryFoldTable3)) &&
+    assert(llvm::is_sorted(MemoryFoldTable3) &&
            std::adjacent_find(std::begin(MemoryFoldTable3),
                               std::end(MemoryFoldTable3)) ==
-           std::end(MemoryFoldTable3) &&
+               std::end(MemoryFoldTable3) &&
            "MemoryFoldTable3 is not sorted and unique!");
-    assert(std::is_sorted(std::begin(MemoryFoldTable4),
-                          std::end(MemoryFoldTable4)) &&
+    assert(llvm::is_sorted(MemoryFoldTable4) &&
            std::adjacent_find(std::begin(MemoryFoldTable4),
                               std::end(MemoryFoldTable4)) ==
-           std::end(MemoryFoldTable4) &&
+               std::end(MemoryFoldTable4) &&
            "MemoryFoldTable4 is not sorted and unique!");
-    assert(std::is_sorted(std::begin(BroadcastFoldTable2),
-                          std::end(BroadcastFoldTable2)) &&
+    assert(llvm::is_sorted(BroadcastFoldTable2) &&
            std::adjacent_find(std::begin(BroadcastFoldTable2),
                               std::end(BroadcastFoldTable2)) ==
-           std::end(BroadcastFoldTable2) &&
+               std::end(BroadcastFoldTable2) &&
            "BroadcastFoldTable2 is not sorted and unique!");
-    assert(std::is_sorted(std::begin(BroadcastFoldTable3),
-                          std::end(BroadcastFoldTable3)) &&
+    assert(llvm::is_sorted(BroadcastFoldTable3) &&
            std::adjacent_find(std::begin(BroadcastFoldTable3),
                               std::end(BroadcastFoldTable3)) ==
-           std::end(BroadcastFoldTable3) &&
+               std::end(BroadcastFoldTable3) &&
            "BroadcastFoldTable3 is not sorted and unique!");
     FoldTablesChecked.store(true, std::memory_order_relaxed);
   }
@@ -5639,7 +5649,7 @@ struct X86MemUnfoldTable {
       addTableEntry(Entry, TB_INDEX_2 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
 
     for (const X86MemoryFoldTableEntry &Entry : BroadcastFoldTable3)
-      // Index 2, folded broadcast
+      // Index 3, folded broadcast
       addTableEntry(Entry, TB_INDEX_3 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
 
     // Sort the memory->reg unfold table.

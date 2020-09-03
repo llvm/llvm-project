@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.o
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-objdump -triple armv7a-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-readobj -r --symbols --sections %t | FileCheck %s
  .syntax unified
  .text
@@ -43,7 +43,7 @@ _start:
 // CHECK-NEXT:       SHF_ALLOC
 // CHECK-NEXT:       SHF_EXECINSTR
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x11130
+// CHECK-NEXT:     Address: 0x20130
 // CHECK-NEXT:     Offset: 0x130
 // CHECK-NEXT:     Size: 32
 // CHECK:          Index: 4
@@ -53,13 +53,13 @@ _start:
 // CHECK-NEXT:       SHF_ALLOC
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x12150
+// CHECK-NEXT:     Address: 0x30150
 // CHECK-NEXT:     Offset: 0x150
 // CHECK-NEXT:     Size: 8
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section (1) .rel.dyn {
-// CHECK-NEXT:     0x12150 R_ARM_IRELATIVE
-// CHECK-NEXT:     0x12154 R_ARM_IRELATIVE
+// CHECK-NEXT:     0x30150 R_ARM_IRELATIVE
+// CHECK-NEXT:     0x30154 R_ARM_IRELATIVE
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 // CHECK:        Symbol {
@@ -86,7 +86,7 @@ _start:
 // CHECK-NEXT:   }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: _start
-// CHECK-NEXT:    Value: 0x1110C
+// CHECK-NEXT:    Value: 0x2010C
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: None
@@ -95,7 +95,7 @@ _start:
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: bar
-// CHECK-NEXT:    Value: 0x11108
+// CHECK-NEXT:    Value: 0x20108
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: GNU_IFunc
@@ -104,7 +104,7 @@ _start:
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: foo
-// CHECK-NEXT:    Value: 0x11104
+// CHECK-NEXT:    Value: 0x20104
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: GNU_IFunc
@@ -114,32 +114,32 @@ _start:
 
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: foo:
-// DISASM-NEXT:    11104:      bx      lr
-// DISASM: bar:
-// DISASM-NEXT:    11108:      bx      lr
-// DISASM: _start:
-// DISASM-NEXT:    1110c:      bl      #28
-// DISASM-NEXT:    11110:      bl      #40
+// DISASM-NEXT: <foo>:
+// DISASM-NEXT:    20104:      bx      lr
+// DISASM: <bar>:
+// DISASM-NEXT:    20108:      bx      lr
+// DISASM: <_start>:
+// DISASM-NEXT:    2010c:      bl      #28
+// DISASM-NEXT:    20110:      bl      #40
 // 1 * 65536 + 244 = 0x100f4 __rel_iplt_start
-// DISASM-NEXT:    11114:      movw    r0, #244
-// DISASM-NEXT:    11118:      movt    r0, #1
+// DISASM-NEXT:    20114:      movw    r0, #244
+// DISASM-NEXT:    20118:      movt    r0, #1
 // 1 * 65536 + 260 = 0x10104 __rel_iplt_end
-// DISASM-NEXT:    1111c:      movw    r0, #260
-// DISASM-NEXT:    11120:      movt    r0, #1
+// DISASM-NEXT:    2011c:      movw    r0, #260
+// DISASM-NEXT:    20120:      movt    r0, #1
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
-// DISASM-NEXT: $a:
-// DISASM-NEXT:    11130:       add     r12, pc, #0, #12
-// DISASM-NEXT:    11134:       add     r12, r12, #4096
-// DISASM-NEXT:    11138:       ldr     pc, [r12, #24]!
-// DISASM: $d:
-// DISASM-NEXT:    1113c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM: $a:
-// DISASM-NEXT:    11140:       add     r12, pc, #0, #12
-// DISASM-NEXT:    11144:       add     r12, r12, #4096
-// DISASM-NEXT:    11148:       ldr     pc, [r12, #12]!
-// DISASM: $d:
-// DISASM-NEXT:    1114c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DISASM-NEXT: <$a>:
+// DISASM-NEXT:    20130:       add     r12, pc, #0, #12
+// DISASM-NEXT:    20134:       add     r12, r12, #16
+// DISASM-NEXT:    20138:       ldr     pc, [r12, #24]!
+// DISASM: <$d>:
+// DISASM-NEXT:    2013c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DISASM: <$a>:
+// DISASM-NEXT:    20140:       add     r12, pc, #0, #12
+// DISASM-NEXT:    20144:       add     r12, r12, #16
+// DISASM-NEXT:    20148:       ldr     pc, [r12, #12]!
+// DISASM: <$d>:
+// DISASM-NEXT:    2014c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 
