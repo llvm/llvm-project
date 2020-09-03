@@ -491,7 +491,7 @@ int Driver::MainLoop() {
   SBCommandInterpreter sb_interpreter = m_debugger.GetCommandInterpreter();
 
   // Before we handle any options from the command line, we parse the
-  // .lldbinit file in the user's home directory.
+  // REPL init file or the default file in the user's home directory.
   SBCommandReturnObject result;
   sb_interpreter.SourceInitFileInHomeDirectory(result, m_option_data.m_repl);
   if (m_option_data.m_debug_mode) {

@@ -360,6 +360,18 @@ bool FileSystem::ResolveExecutableLocation(FileSpec &file_spec) {
   return true;
 }
 
+bool FileSystem::GetHomeDirectory(SmallVectorImpl<char> &path) const {
+  return llvm::sys::path::home_directory(path);
+}
+
+bool FileSystem::GetHomeDirectory(FileSpec &file_spec) const {
+  SmallString<128> home_dir;
+  if (!GetHomeDirectory(home_dir))
+    return false;
+  file_spec.SetPath(home_dir);
+  return true;
+}
+
 static int OpenWithFS(const FileSystem &fs, const char *path, int flags,
                       int mode) {
   return const_cast<FileSystem &>(fs).Open(path, flags, mode);
