@@ -434,11 +434,14 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
                      m_OneUse(m_Shuffle(m_Value(V), m_Undef(), m_Mask(Mask))))))
     return false;
 
-  // Disallow non-vector casts and length-changing shuffles.
+  // 1) Do not fold bitcast shuffle for scalable type. First, shuffle cost for
+  // scalable type is unknown; Second, we cannot reason if the narrowed shuffle
+  // mask for scalable type is a splat or not.
+  // 2) Disallow non-vector casts and length-changing shuffles.
   // TODO: We could allow any shuffle.
-  auto *DestTy = dyn_cast<VectorType>(I.getType());
-  auto *SrcTy = cast<VectorType>(V->getType());
-  if (!DestTy || I.getOperand(0)->getType() != SrcTy)
+  auto *DestTy = dyn_cast<FixedVectorType>(I.getType());
+  auto *SrcTy = dyn_cast<FixedVectorType>(V->getType());
+  if (!SrcTy || !DestTy || I.getOperand(0)->getType() != SrcTy)
     return false;
 
   // The new shuffle must not cost more than the old shuffle. The bitcast is
@@ -447,10 +450,8 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, SrcTy))
     return false;
 
-  // FIXME: it should be possible to implement the computation of the widened
-  // shuffle mask in terms of ElementCount to work with scalable shuffles.
-  unsigned DestNumElts = cast<FixedVectorType>(DestTy)->getNumElements();
-  unsigned SrcNumElts = cast<FixedVectorType>(SrcTy)->getNumElements();
+  unsigned DestNumElts = DestTy->getNumElements();
+  unsigned SrcNumElts = SrcTy->getNumElements();
   SmallVector<int, 16> NewMask;
   if (SrcNumElts <= DestNumElts) {
     // The bitcast is from wide to narrow/equal elements. The shuffle mask can
