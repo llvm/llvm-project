@@ -175,6 +175,11 @@
 								"type": "array",
 								"description": "Commands executed at the end of debugging session.",
 								"default": []
+							},
+							"runInTerminal": {
+								"type": "boolean",
+								"description": "Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs",
+								"default": false
 							}
 						}
 					},
