@@ -20,7 +20,7 @@
 // CHECK-NEXT:   }
 // CHECK:        Section {
 // CHECK:          Name: .xdata
-// CHECK:          RawDataSize: 48
+// CHECK:          RawDataSize: 56
 // CHECK:          RelocationCount: 1
 // CHECK:          Characteristics [
 // CHECK-NEXT:       ALIGN_4BYTES
@@ -41,7 +41,7 @@
 
 // CHECK-NEXT: Relocations [
 // CHECK-NEXT:   Section (4) .xdata {
-// CHECK-NEXT:     0x24 IMAGE_REL_ARM64_ADDR32NB __C_specific_handler
+// CHECK-NEXT:     0x2C IMAGE_REL_ARM64_ADDR32NB __C_specific_handler
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (5) .pdata {
 // CHECK-NEXT:     0x0 IMAGE_REL_ARM64_ADDR32NB func
@@ -54,8 +54,12 @@
 // CHECK-NEXT:     Function: func
 // CHECK-NEXT:     ExceptionRecord: .xdata
 // CHECK-NEXT:     ExceptionData {
-// CHECK-NEXT:       FunctionLength: 72
+// CHECK-NEXT:       FunctionLength: 100
 // CHECK:            Prologue [
+// CHECK-NEXT:         0xec                ; clear unwound to call
+// CHECK-NEXT:         0xea                ; context
+// CHECK-NEXT:         0xe9                ; machine frame
+// CHECK-NEXT:         0xe8                ; trap frame
 // CHECK-NEXT:         0xe3                ; nop
 // CHECK-NEXT:         0xe202              ; add fp, sp, #16
 // CHECK-NEXT:         0xdd41              ; str d13, [sp, #8]
@@ -66,7 +70,10 @@
 // CHECK-NEXT:         0x46                ; stp x29, x30, [sp, #48]
 // CHECK-NEXT:         0xd141              ; str x24, [sp, #8]
 // CHECK-NEXT:         0xd483              ; str x23, [sp, #-32]!
+// CHECK-NEXT:         0xe6                ; save next
 // CHECK-NEXT:         0xc882              ; stp x21, x22, [sp, #16]
+// CHECK-NEXT:         0xd6c2              ; stp x25, lr, [sp, #16]
+// CHECK-NEXT:         0x24                ; stp x19, x20, [sp, #-32]!
 // CHECK-NEXT:         0xcc03              ; stp x19, x20, [sp, #-32]!
 // CHECK-NEXT:         0x83                ; stp x29, x30, [sp, #-32]!
 // CHECK-NEXT:         0xe1                ; mov fp, sp
@@ -75,8 +82,8 @@
 // CHECK-NEXT:       ]
 // CHECK-NEXT:       EpilogueScopes [
 // CHECK-NEXT:         EpilogueScope {
-// CHECK-NEXT:           StartOffset: 16
-// CHECK-NEXT:           EpilogueStartIndex: 25
+// CHECK-NEXT:           StartOffset: 23
+// CHECK-NEXT:           EpilogueStartIndex: 33
 // CHECK-NEXT:           Opcodes [
 // CHECK-NEXT:             0x01                ; add sp, #16
 // CHECK-NEXT:             0xe4                ; end
@@ -108,8 +115,14 @@ func:
     .seh_save_fplr_x 32
     stp x19, x20, [sp, #-32]!
     .seh_save_regp_x x19, 32
+    stp x19, x20, [sp, #-32]!
+    .seh_save_r19r20_x 32
+    stp x25, x30, [sp, #16]
+    .seh_save_lrpair x25, 16
     stp x21, x22, [sp, #16]
     .seh_save_regp x21, 16
+    stp x23, x24, [sp, #32]
+    .seh_save_next
     str x23, [sp, #-32]!
     .seh_save_reg_x x23, 32
     str x24, [sp, #8]
@@ -130,6 +143,14 @@ func:
     .seh_add_fp 16
     nop
     .seh_nop
+    nop
+    .seh_trap_frame
+    nop
+    .seh_pushframe
+    nop
+    .seh_context
+    nop
+    .seh_clear_unwound_to_call
     .seh_endprologue
     nop
     .seh_startepilogue
