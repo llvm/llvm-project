@@ -51,10 +51,8 @@ define i101 @large_aggregate_2() {
 }
 
 ; CHECK-LABEL: @index_too_large
-; CHECK-NEXT:    %ptr1 = getelementptr [6 x i101], [6 x i101]* @Y, i32 0, i32 -1
-; CHECK-NEXT:    %ptr2 = getelementptr i101, i101* %ptr1, i101 9224497936761618431
-; CHECK-NEXT:    store i101* %ptr2, i101** undef
-; CHECK-NEXT:    ret void
+; CHECK-NEXT: store i101* getelementptr (i101, i101* getelementptr ([6 x i101], [6 x i101]* @Y, i32 0, i32 -1), i101 9224497936761618431), i101** undef
+; CHECK-NEXT: ret void
 define void @index_too_large() {
   %ptr1 = getelementptr [6 x i101], [6 x i101]* @Y, i32 0, i32 -1
   %ptr2 = getelementptr i101, i101* %ptr1, i101 9224497936761618431
