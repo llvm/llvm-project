@@ -15,6 +15,8 @@
 // UNSUPPORTED: clang-4, clang-5, clang-6, clang-7, clang-8, clang-9, clang-10
 // UNSUPPORTED: apple-clang-9, apple-clang-10, apple-clang-11, apple-clang-12
 
+// UNSUPPORTED: c++03
+
 #include <atomic>
 
 int main(int, char**)
