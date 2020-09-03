@@ -15,9 +15,15 @@ namespace clang {
 /// output (e.g., -E).
 class PreprocessorOutputOptions {
 public:
-#define PREPROCESSOR_OUTPUTOPT(Name, Bits, Description) unsigned Name : Bits;
-#define TYPED_PREPROCESSOR_OUTPUTOPT(Type, Name, Description) Type Name;
-#include "clang/Frontend/PreprocessorOutputOptions.def"
+  unsigned ShowCPP : 1;            ///< Print normal preprocessed output.
+  unsigned ShowComments : 1;       ///< Show comments.
+  unsigned ShowLineMarkers : 1;    ///< Show \#line markers.
+  unsigned UseLineDirectives : 1;   ///< Use \#line instead of GCC-style \# N.
+  unsigned ShowMacroComments : 1;  ///< Show comments, even in macros.
+  unsigned ShowMacros : 1;         ///< Print macro definitions.
+  unsigned ShowIncludeDirectives : 1;  ///< Print includes, imports etc. within preprocessed output.
+  unsigned RewriteIncludes : 1;    ///< Preprocess include directives only.
+  unsigned RewriteImports  : 1;    ///< Include contents of transitively-imported modules.
 
 public:
   PreprocessorOutputOptions() {

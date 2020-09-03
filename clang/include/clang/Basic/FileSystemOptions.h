@@ -21,8 +21,9 @@ namespace clang {
 /// Keeps track of options that affect how file operations are performed.
 class FileSystemOptions {
 public:
-#define TYPED_FILESYSTEMOPT(Type, Name, Description) Type Name;
-#include "clang/Basic/FileSystemOptions.def"
+  /// If set, paths are resolved as if the working directory was
+  /// set to the value of WorkingDir.
+  std::string WorkingDir;
 };
 
 } // end namespace clang
