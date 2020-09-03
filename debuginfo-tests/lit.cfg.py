@@ -46,7 +46,6 @@ tools = [
         config.debuginfo_tests_src_root, 'llgdb-tests', 'test_debuginfo.pl')),
     ToolSubst("%llvm_src_root", config.llvm_src_root),
     ToolSubst("%llvm_tools_dir", config.llvm_tools_dir),
-    ToolSubst("%mlir_src_root", config.mlir_src_root),
 ]
 
 def get_required_attr(config, attr_name):
