@@ -60,7 +60,7 @@ protected:
   /// This is an implementation of the grow() method which only works
   /// on POD-like data types and is out of line to reduce code duplication.
   /// This function will report a fatal error if it cannot increase capacity.
-  void grow_pod(void *FirstEl, size_t MinCapacity, size_t TSize);
+  void grow_pod(void *FirstEl, size_t MinSize, size_t TSize);
 
 public:
   size_t size() const { return Size; }
@@ -115,8 +115,8 @@ class SmallVectorTemplateCommon
 protected:
   SmallVectorTemplateCommon(size_t Size) : Base(getFirstEl(), Size) {}
 
-  void grow_pod(size_t MinCapacity, size_t TSize) {
-    Base::grow_pod(getFirstEl(), MinCapacity, TSize);
+  void grow_pod(size_t MinSize, size_t TSize) {
+    Base::grow_pod(getFirstEl(), MinSize, TSize);
   }
 
   /// Return true if this is a smallvector which has not had dynamic
@@ -268,16 +268,32 @@ template <typename T, bool TriviallyCopyable>
 void SmallVectorTemplateBase<T, TriviallyCopyable>::grow(size_t MinSize) {
   // Ensure we can fit the new capacity.
   // This is only going to be applicable when the capacity is 32 bit.
-  if (MinSize > this->SizeTypeMax())
-    report_bad_alloc_error("SmallVector capacity overflow during allocation");
+  if (MinSize > this->SizeTypeMax()) {
+    std::string Reason = "SmallVector unable to grow. Requested capacity (" +
+                         std::to_string(MinSize) +
+                         ") is larger than maximum value for size type (" +
+                         std::to_string(this->SizeTypeMax()) + ")";
+#ifdef LLVM_ENABLE_EXCEPTIONS
+    throw std::length_error(Reason);
+#else
+    report_fatal_error(Reason);
+#endif
+  }
 
   // Ensure we can meet the guarantee of space for at least one more element.
   // The above check alone will not catch the case where grow is called with a
-  // default MinCapacity of 0, but the current capacity cannot be increased.
+  // default MinSize of 0, but the current capacity cannot be increased.
   // This is only going to be applicable when the capacity is 32 bit.
-  if (this->capacity() == this->SizeTypeMax())
-    report_bad_alloc_error("SmallVector capacity unable to grow");
-
+  if (this->capacity() == this->SizeTypeMax()) {
+    std::string Reason =
+        "SmallVector capacity unable to grow. Already at maximum size " +
+        std::to_string(this->SizeTypeMax());
+#ifdef LLVM_ENABLE_EXCEPTIONS
+    throw std::length_error(Reason);
+#else
+    report_fatal_error(Reason);
+#endif
+  }
   // Always grow, even from zero.
   size_t NewCapacity = size_t(NextPowerOf2(this->capacity() + 2));
   NewCapacity = std::min(std::max(NewCapacity, MinSize), this->SizeTypeMax());
