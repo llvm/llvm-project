@@ -1,4 +1,5 @@
-# RUN: llc -march=x86-64 -run-pass mir-canonicalizer -o - %s | FileCheck %s
+# RUN: llc -march=x86-64 -run-pass mir-canonicalizer -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -march=x86-64 -run-pass mir-canonicalizer -mir-vreg-namer-use-stable-hash -verify-machineinstrs -o - %s | FileCheck %s
 # The purpose of this test is to ensure that differing flags do in-fact cause
 # naming collisions with the new vreg renamers naming scheme.
 --- |

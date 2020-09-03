@@ -415,6 +415,11 @@ static const char *getTargetIndexName(const MachineFunction &MF, int Index) {
   return nullptr;
 }
 
+const char *MachineOperand::getTargetIndexName() const {
+  const MachineFunction *MF = getMFIfAvailable(*this);
+  return MF ? ::getTargetIndexName(*MF, this->getIndex()) : nullptr;
+}
+
 static const char *getTargetFlagName(const TargetInstrInfo *TII, unsigned TF) {
   auto Flags = TII->getSerializableDirectMachineOperandTargetFlags();
   for (const auto &I : Flags) {
@@ -823,7 +828,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "target-index(";
     const char *Name = "<unknown>";
     if (const MachineFunction *MF = getMFIfAvailable(*this))
-      if (const auto *TargetIndexName = getTargetIndexName(*MF, getIndex()))
+      if (const auto *TargetIndexName = ::getTargetIndexName(*MF, getIndex()))
         Name = TargetIndexName;
     OS << Name << ')';
     printOperandOffset(OS, getOffset());
