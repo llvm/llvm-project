@@ -31,7 +31,7 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   %1:g8rc = COPY $x4
   ; CHECK:   %0:g8rc = COPY $x3
-  ; CHECK:   %3:g8rc = RLDIC %1, 2, 30
+  ; CHECK:   %3:g8rc = RLDIC killed %1, 2, 30
   ; CHECK:   $x3 = COPY %3
   ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 ...
