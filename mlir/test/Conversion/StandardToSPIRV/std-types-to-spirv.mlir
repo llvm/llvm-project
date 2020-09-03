@@ -7,10 +7,7 @@
 // Check that non-32-bit integer types are converted to 32-bit types if the
 // corresponding capabilities are not available.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: spv.func @integer8
@@ -38,10 +35,7 @@ func @integer64(%arg0: i64, %arg1: si64, %arg2: ui64) { return }
 // Check that non-32-bit integer types are kept untouched if the corresponding
 // capabilities are available.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Int8, Int16, Int64], []>, {}>
 } {
 
 // CHECK-LABEL: spv.func @integer8
@@ -68,10 +62,7 @@ func @integer64(%arg0: i64, %arg1: si64, %arg2: ui64) { return }
 
 // Check that weird bitwidths are not supported.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-NOT: spv.func @integer4
@@ -92,10 +83,7 @@ func @integer42(%arg0: i42) { return }
 
 // The index type is always converted into i32.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: spv.func @index_type
@@ -113,10 +101,7 @@ func @index_type(%arg0: index) { return }
 // Check that non-32-bit float types are converted to 32-bit types if the
 // corresponding capabilities are not available.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: spv.func @float16
@@ -134,10 +119,7 @@ func @float64(%arg0: f64) { return }
 // Check that non-32-bit float types are kept untouched if the corresponding
 // capabilities are available.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Float16, Float64], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Float16, Float64], []>, {}>
 } {
 
 // CHECK-LABEL: spv.func @float16
@@ -154,10 +136,7 @@ func @float64(%arg0: f64) { return }
 
 // Check that bf16 is not supported.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-NOT: spv.func @bf16_type
@@ -174,10 +153,7 @@ func @bf16_type(%arg0: bf16) { return }
 // Check that capabilities for scalar types affects vector types too: no special
 // capabilities available means using turning element types to 32-bit.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: spv.func @int_vector
@@ -206,9 +182,7 @@ func @float_vector(
 // special capabilities means keep vector types untouched.
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, {}>
 } {
 
 // CHECK-LABEL: spv.func @int_vector
@@ -235,10 +209,7 @@ func @float_vector(
 
 // Check that 1- or > 4-element vectors are not supported.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-NOT: spv.func @one_element_vector
@@ -258,9 +229,7 @@ func @large_vector(%arg0: vector<1024xi32>) { return }
 // Check memory spaces.
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], [SPV_KHR_storage_buffer_storage_class]>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.0, [], [SPV_KHR_storage_buffer_storage_class]>, {}>
 } {
 
 // CHECK-LABEL: func @memref_mem_space
@@ -285,10 +254,7 @@ func @memref_mem_space(
 
 // Check that boolean memref is not supported at the moment.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: func @memref_type({{%.*}}: memref<3xi1>)
@@ -304,10 +270,7 @@ func @memref_type(%arg0: memref<3xi1>) {
 // requires special capability and extension: convert them to 32-bit if not
 // satisfied.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: spv.func @memref_8bit_StorageBuffer
@@ -352,9 +315,7 @@ func @memref_16bit_Output(%arg4: memref<16xf16, 10>) { return }
 module attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [StoragePushConstant8, StoragePushConstant16],
-             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>, {}>
 } {
 
 // CHECK-LABEL: spv.func @memref_8bit_PushConstant
@@ -379,9 +340,7 @@ func @memref_16bit_PushConstant(
 module attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [StorageBuffer8BitAccess, StorageBuffer16BitAccess],
-             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>, {}>
 } {
 
 // CHECK-LABEL: spv.func @memref_8bit_StorageBuffer
@@ -406,9 +365,7 @@ func @memref_16bit_StorageBuffer(
 module attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [UniformAndStorageBuffer8BitAccess, StorageUniform16],
-             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>, {}>
 } {
 
 // CHECK-LABEL: spv.func @memref_8bit_Uniform
@@ -432,9 +389,7 @@ func @memref_16bit_Uniform(
 // and extension is available.
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [StorageInputOutput16], [SPV_KHR_16bit_storage]>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.0, [StorageInputOutput16], [SPV_KHR_16bit_storage]>, {}>
 } {
 
 // CHECK-LABEL: spv.func @memref_16bit_Input
@@ -452,9 +407,7 @@ func @memref_16bit_Output(%arg4: memref<16xi16, 10>) { return }
 // Check that memref offset and strides affect the array size.
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [StorageBuffer16BitAccess], [SPV_KHR_16bit_storage]>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.0, [StorageBuffer16BitAccess], [SPV_KHR_16bit_storage]>, {}>
 } {
 
 // CHECK-LABEL: spv.func @memref_offset_strides
@@ -488,10 +441,7 @@ func @memref_offset_strides(
 
 // Dynamic shapes
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // Check that unranked shapes are not supported.
@@ -512,10 +462,7 @@ func @dynamic_dim_memref(%arg0: memref<8x?xi32>,
 
 // Vector types
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: func @memref_vector
@@ -539,10 +486,7 @@ func @dynamic_dim_memref_vector(%arg0: memref<8x?xvector<4xi32>>,
 
 // Vector types, check that sizes not available in SPIR-V are not transformed.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: func @memref_vector_wrong_size
@@ -562,9 +506,7 @@ func @memref_vector_wrong_size(
 // Check that tensor element types are kept untouched with proper capabilities.
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, {}>
 } {
 
 // CHECK-LABEL: spv.func @int_tensor_types
@@ -595,10 +537,7 @@ func @float_tensor_types(
 
 // Check that tensor element types are changed to 32-bit without capabilities.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: spv.func @int_tensor_types
@@ -629,10 +568,7 @@ func @float_tensor_types(
 
 // Check that dynamic shapes are not supported.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: func @unranked_tensor
