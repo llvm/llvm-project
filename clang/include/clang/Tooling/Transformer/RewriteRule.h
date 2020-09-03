@@ -380,6 +380,38 @@ EditGenerator rewriteDescendants(std::string NodeId, RewriteRule Rule);
 // RewriteRule API.  Recast them as such.  Or, just declare these functions
 // public and well-supported and move them out of `detail`.
 namespace detail {
+/// The following overload set is a version of `rewriteDescendants` that
+/// operates directly on the AST, rather than generating a Transformer
+/// combinator. It applies `Rule` to all descendants of `Node`, although not
+/// `Node` itself. `Rule` can refer to nodes bound in `Result`.
+///
+/// For example, assuming that "body" is bound to a function body in MatchResult
+/// `Results`, this will produce edits to change all appearances of `x` in that
+/// body to `3`.
+/// ```
+/// auto InlineX =
+///     makeRule(declRefExpr(to(varDecl(hasName("x")))), changeTo(cat("3")));
+/// const auto *Node = Results.Nodes.getNodeAs<Stmt>("body");
+/// auto Edits = rewriteDescendants(*Node, InlineX, Results);
+/// ```
+/// @{
+llvm::Expected<SmallVector<Edit, 1>>
+rewriteDescendants(const Decl &Node, RewriteRule Rule,
+                   const ast_matchers::MatchFinder::MatchResult &Result);
+
+llvm::Expected<SmallVector<Edit, 1>>
+rewriteDescendants(const Stmt &Node, RewriteRule Rule,
+                   const ast_matchers::MatchFinder::MatchResult &Result);
+
+llvm::Expected<SmallVector<Edit, 1>>
+rewriteDescendants(const TypeLoc &Node, RewriteRule Rule,
+                   const ast_matchers::MatchFinder::MatchResult &Result);
+
+llvm::Expected<SmallVector<Edit, 1>>
+rewriteDescendants(const DynTypedNode &Node, RewriteRule Rule,
+                   const ast_matchers::MatchFinder::MatchResult &Result);
+/// @}
+
 /// Builds a single matcher for the rule, covering all of the rule's cases.
 /// Only supports Rules whose cases' matchers share the same base "kind"
 /// (`Stmt`, `Decl`, etc.)  Deprecated: use `buildMatchers` instead, which

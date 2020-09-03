@@ -25,6 +25,7 @@ using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using transformer::cat;
 using transformer::changeTo;
+using transformer::rewriteDescendants;
 using transformer::RewriteRule;
 
 constexpr char KHeaderContents[] = R"cc(
@@ -566,6 +567,88 @@ TEST_F(TransformerTest, RewriteDescendantsInvalidNodeType) {
   EXPECT_FALSE(rewrite(Input));
   EXPECT_THAT(Changes, IsEmpty());
   EXPECT_EQ(ErrorCount, 1);
+}
+
+//
+// We include one test per typed overload. We don't test extensively since that
+// is already covered by the tests above.
+//
+
+TEST_F(TransformerTest, RewriteDescendantsTypedStmt) {
+  // Add an unrelated definition to the header that also has a variable named
+  // "x", to test that the rewrite is limited to the scope we intend.
+  appendToHeader(R"cc(int g(int x) { return x; })cc");
+  std::string Input =
+      "int f(int x) { int y = x; { int z = x * x; } return x; }";
+  std::string Expected =
+      "int f(int x) { int y = 3; { int z = 3 * 3; } return 3; }";
+  auto InlineX =
+      makeRule(declRefExpr(to(varDecl(hasName("x")))), changeTo(cat("3")));
+  testRule(makeRule(functionDecl(hasName("f"), hasBody(stmt().bind("body"))),
+                    [&InlineX](const MatchFinder::MatchResult &R) {
+                      const auto *Node = R.Nodes.getNodeAs<Stmt>("body");
+                      assert(Node != nullptr && "body must be bound");
+                      return transformer::detail::rewriteDescendants(
+                          *Node, InlineX, R);
+                    }),
+           Input, Expected);
+}
+
+TEST_F(TransformerTest, RewriteDescendantsTypedDecl) {
+  std::string Input =
+      "int f(int x) { int y = x; { int z = x * x; } return x; }";
+  std::string Expected =
+      "int f(int x) { int y = 3; { int z = 3 * 3; } return 3; }";
+  auto InlineX =
+      makeRule(declRefExpr(to(varDecl(hasName("x")))), changeTo(cat("3")));
+  testRule(makeRule(functionDecl(hasName("f")).bind("fun"),
+                    [&InlineX](const MatchFinder::MatchResult &R) {
+                      const auto *Node = R.Nodes.getNodeAs<Decl>("fun");
+                      assert(Node != nullptr && "fun must be bound");
+                      return transformer::detail::rewriteDescendants(
+                          *Node, InlineX, R);
+                    }),
+           Input, Expected);
+}
+
+TEST_F(TransformerTest, RewriteDescendantsTypedTypeLoc) {
+  std::string Input = "int f(int *x) { return *x; }";
+  std::string Expected = "int f(char *x) { return *x; }";
+  auto IntToChar =
+      makeRule(typeLoc(loc(qualType(isInteger(), builtinType()))).bind("loc"),
+               changeTo(cat("char")));
+  testRule(
+      makeRule(
+          functionDecl(
+              hasName("f"),
+              hasParameter(0, varDecl(hasTypeLoc(typeLoc().bind("parmType"))))),
+          [&IntToChar](const MatchFinder::MatchResult &R) {
+            const auto *Node = R.Nodes.getNodeAs<TypeLoc>("parmType");
+            assert(Node != nullptr && "parmType must be bound");
+            return transformer::detail::rewriteDescendants(*Node, IntToChar, R);
+          }),
+      Input, Expected);
+}
+
+TEST_F(TransformerTest, RewriteDescendantsTypedDynTyped) {
+  // Add an unrelated definition to the header that also has a variable named
+  // "x", to test that the rewrite is limited to the scope we intend.
+  appendToHeader(R"cc(int g(int x) { return x; })cc");
+  std::string Input =
+      "int f(int x) { int y = x; { int z = x * x; } return x; }";
+  std::string Expected =
+      "int f(int x) { int y = 3; { int z = 3 * 3; } return 3; }";
+  auto InlineX =
+      makeRule(declRefExpr(to(varDecl(hasName("x")))), changeTo(cat("3")));
+  testRule(
+      makeRule(functionDecl(hasName("f"), hasBody(stmt().bind("body"))),
+               [&InlineX](const MatchFinder::MatchResult &R) {
+                 auto It = R.Nodes.getMap().find("body");
+                 assert(It != R.Nodes.getMap().end() && "body must be bound");
+                 return transformer::detail::rewriteDescendants(It->second,
+                                                                InlineX, R);
+               }),
+      Input, Expected);
 }
 
 TEST_F(TransformerTest, InsertBeforeEdit) {
