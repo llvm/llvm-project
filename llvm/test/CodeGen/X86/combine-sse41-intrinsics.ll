@@ -257,6 +257,28 @@ define <2 x double> @xor_blendvpd(<2 x double> %a0, <2 x double> %a1, <2 x doubl
   ret <2 x double> %4
 }
 
+define <16 x i8> @PR47404(<16 x i8> %0, <16 x i8> %1, <16 x i8> %2) {
+; SSE-LABEL: PR47404:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    pcmpgtb %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    pblendvb %xmm0, %xmm3, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR47404:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX-NEXT:    vpcmpgtb %xmm3, %xmm2, %xmm2
+; AVX-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %4 = icmp sgt <16 x i8> %2, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %5 = select <16 x i1> %4, <16 x i8> %0, <16 x i8> %1
+  ret <16 x i8> %5
+}
+
 declare <2 x double> @llvm.x86.sse41.blendpd(<2 x double>, <2 x double>, i32)
 declare <4 x float> @llvm.x86.sse41.blendps(<4 x float>, <4 x float>, i32)
 declare <8 x i16> @llvm.x86.sse41.pblendw(<8 x i16>, <8 x i16>, i32)
