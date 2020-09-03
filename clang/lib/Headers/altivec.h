@@ -5487,6 +5487,16 @@ vec_msum(vector unsigned short __a, vector unsigned short __b,
   return __builtin_altivec_vmsumuhm(__a, __b, __c);
 }
 
+/* vec_msumc */
+
+#ifdef __POWER10_VECTOR__
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_msumc(vector unsigned long long __a, vector unsigned long long __b,
+          vector unsigned __int128 __c) {
+  return __builtin_altivec_vmsumcud(__a, __b, __c);
+}
+#endif
+
 /* vec_vmsummbm */
 
 static __inline__ vector int __attribute__((__always_inline__))
@@ -5713,6 +5723,26 @@ vec_mule(vector unsigned int __a, vector unsigned int __b) {
 }
 #endif
 
+#ifdef __POWER10_VECTOR__
+static __inline__ vector signed __int128 __ATTRS_o_ai
+vec_mule(vector signed long long __a, vector signed long long __b) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vmulosd(__a, __b);
+#else
+  return __builtin_altivec_vmulesd(__a, __b);
+#endif
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_mule(vector unsigned long long __a, vector unsigned long long __b) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vmuloud(__a, __b);
+#else
+  return __builtin_altivec_vmuleud(__a, __b);
+#endif
+}
+#endif
+
 /* vec_vmulesb */
 
 static __inline__ vector short __attribute__((__always_inline__))
@@ -5835,6 +5865,26 @@ vec_mulo(vector unsigned int __a, vector unsigned int __b) {
   return __builtin_altivec_vmuleuw(__a, __b);
 #else
   return __builtin_altivec_vmulouw(__a, __b);
+#endif
+}
+#endif
+
+#ifdef __POWER10_VECTOR__
+static __inline__ vector signed __int128 __ATTRS_o_ai
+vec_mulo(vector signed long long __a, vector signed long long __b) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vmulesd(__a, __b);
+#else
+  return __builtin_altivec_vmulosd(__a, __b);
+#endif
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_mulo(vector unsigned long long __a, vector unsigned long long __b) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vmuleud(__a, __b);
+#else
+  return __builtin_altivec_vmuloud(__a, __b);
 #endif
 }
 #endif
