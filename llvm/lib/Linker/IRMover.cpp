@@ -1126,14 +1126,13 @@ void IRLinker::prepareCompileUnitsForImport() {
     assert(CU && "Expected valid compile unit");
     // Enums, macros, and retained types don't need to be listed on the
     // imported DICompileUnit. This means they will only be imported
-    // if reached from the mapped IR. Do this by setting their value map
-    // entries to nullptr, which will automatically prevent their importing
-    // when reached from the DICompileUnit during metadata mapping.
-    ValueMap.MD()[CU->getRawEnumTypes()].reset(nullptr);
-    ValueMap.MD()[CU->getRawMacros()].reset(nullptr);
-    ValueMap.MD()[CU->getRawRetainedTypes()].reset(nullptr);
+    // if reached from the mapped IR.
+    CU->replaceEnumTypes(nullptr);
+    CU->replaceMacros(nullptr);
+    CU->replaceRetainedTypes(nullptr);
+
     // The original definition (or at least its debug info - if the variable is
-    // internalized an optimized away) will remain in the source module, so
+    // internalized and optimized away) will remain in the source module, so
     // there's no need to import them.
     // If LLVM ever does more advanced optimizations on global variables
     // (removing/localizing write operations, for instance) that can track
@@ -1141,7 +1140,7 @@ void IRLinker::prepareCompileUnitsForImport() {
     // with care when it comes to debug info size. Emitting small CUs containing
     // only a few imported entities into every destination module may be very
     // size inefficient.
-    ValueMap.MD()[CU->getRawGlobalVariables()].reset(nullptr);
+    CU->replaceGlobalVariables(nullptr);
 
     // Imported entities only need to be mapped in if they have local
     // scope, as those might correspond to an imported entity inside a
@@ -1174,7 +1173,7 @@ void IRLinker::prepareCompileUnitsForImport() {
       else
         // If there were no local scope imported entities, we can map
         // the whole list to nullptr.
-        ValueMap.MD()[CU->getRawImportedEntities()].reset(nullptr);
+        CU->replaceImportedEntities(nullptr);
     }
   }
 }
