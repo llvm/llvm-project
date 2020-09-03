@@ -70,13 +70,12 @@ public:
     case Intrinsic::uadd_with_overflow:
     case Intrinsic::smul_with_overflow:
     case Intrinsic::umul_with_overflow:
-    // TODO: These fixed-point math intrinsics have commutative first two
-    //       operands, but callers may not handle instructions with more than
-    //       two operands.
-    // case Intrinsic::smul_fix:
-    // case Intrinsic::umul_fix:
-    // case Intrinsic::smul_fix_sat:
-    // case Intrinsic::umul_fix_sat:
+    case Intrinsic::smul_fix:
+    case Intrinsic::umul_fix:
+    case Intrinsic::smul_fix_sat:
+    case Intrinsic::umul_fix_sat:
+    case Intrinsic::fma:
+    case Intrinsic::fmuladd:
       return true;
     default:
       return false;
