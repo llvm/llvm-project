@@ -40710,10 +40710,18 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     return V;
 
   // select(~Cond, X, Y) -> select(Cond, Y, X)
-  if (CondVT.getScalarType() != MVT::i1)
+  if (CondVT.getScalarType() != MVT::i1) {
     if (SDValue CondNot = IsNOT(Cond, DAG))
       return DAG.getNode(N->getOpcode(), DL, VT,
                          DAG.getBitcast(CondVT, CondNot), RHS, LHS);
+    // pcmpgt(X, -1) -> pcmpgt(0, X) to help select/blendv just use the signbit.
+    if (Cond.getOpcode() == X86ISD::PCMPGT && Cond.hasOneUse() &&
+        ISD::isBuildVectorAllOnes(Cond.getOperand(1).getNode())) {
+      Cond = DAG.getNode(X86ISD::PCMPGT, DL, CondVT,
+                         DAG.getConstant(0, DL, CondVT), Cond.getOperand(0));
+      return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
+    }
+  }
 
   // Try to optimize vXi1 selects if both operands are either all constants or
   // bitcasts from scalar integer type. In that case we can convert the operands
