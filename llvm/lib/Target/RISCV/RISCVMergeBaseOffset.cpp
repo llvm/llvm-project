@@ -64,7 +64,7 @@ private:
 } // end anonymous namespace
 
 char RISCVMergeBaseOffsetOpt::ID = 0;
-INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, "riscv-merge-base-offset",
+INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, DEBUG_TYPE,
                 RISCV_MERGE_BASE_OFFSET_NAME, false, false)
 
 // Detect the pattern:
