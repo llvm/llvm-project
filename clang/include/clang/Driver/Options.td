@@ -4696,6 +4696,9 @@ def _SLASH_openmp : CLFlag<"openmp">, HelpText<"Enable OpenMP support">,
 def _SLASH_openmp_experimental : CLFlag<"openmp:experimental">,
   HelpText<"Enable OpenMP support with experimental SIMD support">,
   Alias<fopenmp>;
+def _SLASH_tune : CLCompileJoined<"tune:">,
+  HelpText<"Set CPU for optimization without affecting instruction set">,
+  Alias<mtune_EQ>;
 
 // Non-aliases:
 
