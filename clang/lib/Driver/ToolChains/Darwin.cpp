@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Darwin.h"
+#include "Arch/AArch64.h"
 #include "Arch/ARM.h"
 #include "CommonArgs.h"
 #include "clang/Basic/AlignedAllocation.h"
@@ -58,7 +59,7 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
       .Cases("arm", "armv4t", "armv5", "armv6", "armv6m", llvm::Triple::arm)
       .Cases("armv7", "armv7em", "armv7k", "armv7m", llvm::Triple::arm)
       .Cases("armv7s", "xscale", llvm::Triple::arm)
-      .Case("arm64", llvm::Triple::aarch64)
+      .Cases("arm64", "arm64e", llvm::Triple::aarch64)
       .Case("arm64_32", llvm::Triple::aarch64_32)
       .Case("r600", llvm::Triple::r600)
       .Case("amdgcn", llvm::Triple::amdgcn)
@@ -74,7 +75,7 @@ void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str) {
   llvm::ARM::ArchKind ArchKind = llvm::ARM::parseArch(Str);
   T.setArch(Arch);
 
-  if (Str == "x86_64h")
+  if (Str == "x86_64h" || Str == "arm64e")
     T.setArchName(Str);
   else if (ArchKind == llvm::ARM::ArchKind::ARMV6M ||
            ArchKind == llvm::ARM::ArchKind::ARMV7M ||
@@ -899,8 +900,11 @@ StringRef MachO::getMachOArchName(const ArgList &Args) const {
   case llvm::Triple::aarch64_32:
     return "arm64_32";
 
-  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64: {
+    if (getTriple().isArm64e())
+      return "arm64e";
     return "arm64";
+  }
 
   case llvm::Triple::thumb:
   case llvm::Triple::arm:
@@ -1010,6 +1014,9 @@ void DarwinClang::AddLinkARCArgs(const ArgList &Args,
   if (isTargetMacOS() && getArch() == llvm::Triple::x86)
     return;
   if (isTargetAppleSiliconMac())
+    return;
+  // ARC runtime is supported everywhere on arm64e.
+  if (getTriple().isArm64e())
     return;
 
   ObjCRuntime runtime = getDefaultObjCRuntime(/*nonfragile*/ true);
@@ -1711,7 +1718,7 @@ inferDeploymentTargetFromArch(DerivedArgList &Args, const Darwin &Toolchain,
   llvm::Triple::OSType OSTy = llvm::Triple::UnknownOS;
 
   StringRef MachOArchName = Toolchain.getMachOArchName(Args);
-  if (MachOArchName == "arm64") {
+  if (MachOArchName == "arm64" || MachOArchName == "arm64e") {
 #if __arm64__
     // A clang running on an Apple Silicon mac defaults
     // to building for mac when building for arm64 rather than
