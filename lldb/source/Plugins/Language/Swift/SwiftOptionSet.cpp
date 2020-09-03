@@ -167,6 +167,14 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
 
     for (auto val_name : *m_cases) {
       llvm::APInt case_value = val_name.first;
+      // Print single valued sets without using enclosing brackets.
+      // `WouldEvenConsiderFormatting` can't opt out early because it
+      // has only the type, but needs the value for this case.
+      if (case_value == value) {
+        ss << '.' << val_name.second;
+        dest.assign(ss.GetData());
+        return true;
+      }
       // Don't display the zero case in an option set unless it's the
       // only value.
       if (case_value == 0 && value != 0)
