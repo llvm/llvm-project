@@ -56,7 +56,7 @@ static MCRegisterInfo *createP2MCRegisterInfo(const Triple &TT) {
 }
 
 static MCSubtargetInfo *createP2MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
-    return createP2MCSubtargetInfoImpl(TT, CPU, FS);
+    return createP2MCSubtargetInfoImpl(TT, CPU, CPU, FS);
     // createP2MCSubtargetInfoImpl defined in P2GenSubtargetInfo.inc
 }
 

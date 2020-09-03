@@ -38,7 +38,8 @@ namespace llvm {
         SelectionDAGTargetInfo TSInfo;
 
     public:
-        void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
+        // implementation generated in P2GenSubtargetInfo.inc
+        void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
         /// This constructor initializes the data members to match that
         /// of the specified triple.
