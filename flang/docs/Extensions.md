@@ -56,6 +56,7 @@ Extensions, deletions, and legacy features supported by default
 * `NAME=` as synonym for `FILE=`
 * Data edit descriptors without width or other details
 * `D` lines in fixed form as comments or debug code
+* `CARRIAGECONTROL=` on the OPEN and INQUIRE statements
 * `CONVERT=` on the OPEN and INQUIRE statements
 * `DISPOSE=` on the OPEN and INQUIRE statements
 * Leading semicolons are ignored before any statement that

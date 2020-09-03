@@ -260,6 +260,8 @@ bool IONAME(SetAccess)(Cookie, const char *, std::size_t);
 bool IONAME(SetAction)(Cookie, const char *, std::size_t);
 // ASYNCHRONOUS=YES, NO
 bool IONAME(SetAsynchronous)(Cookie, const char *, std::size_t);
+// CARRIAGECONTROL=LIST, FORTRAN, NONE
+bool IONAME(SetCarriagecontrol)(Cookie, const char *, std::size_t);
 // CONVERT=NATIVE, LITTLE_ENDIAN, BIG_ENDIAN, or SWAP
 bool IONAME(SetConvert)(Cookie, const char *, std::size_t);
 // ENCODING=UTF-8, DEFAULT

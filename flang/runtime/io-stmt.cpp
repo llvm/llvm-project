@@ -779,6 +779,9 @@ bool InquireUnitState::Inquire(
         : unit().modes.editingFlags & blankZero ? "ZERO"
                                                 : "NULL";
     break;
+  case HashInquiryKeyword("CARRIAGECONTROL"):
+    str = "LIST";
+    break;
   case HashInquiryKeyword("CONVERT"):
     str = unit().swapEndianness() ? "SWAP" : "NATIVE";
     break;
@@ -976,6 +979,7 @@ bool InquireNoUnitState::Inquire(
   case HashInquiryKeyword("ACTION"):
   case HashInquiryKeyword("ASYNCHRONOUS"):
   case HashInquiryKeyword("BLANK"):
+  case HashInquiryKeyword("CARRIAGECONTROL"):
   case HashInquiryKeyword("CONVERT"):
   case HashInquiryKeyword("DECIMAL"):
   case HashInquiryKeyword("DELIM"):
@@ -1061,6 +1065,7 @@ bool InquireUnconnectedFileState::Inquire(
   case HashInquiryKeyword("ACTION"):
   case HashInquiryKeyword("ASYNCHRONOUS"):
   case HashInquiryKeyword("BLANK"):
+  case HashInquiryKeyword("CARRIAGECONTROL"):
   case HashInquiryKeyword("CONVERT"):
   case HashInquiryKeyword("DECIMAL"):
   case HashInquiryKeyword("DELIM"):
