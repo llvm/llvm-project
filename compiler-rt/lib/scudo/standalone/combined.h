@@ -306,7 +306,7 @@ public:
 
     void *Block = nullptr;
     uptr ClassId = 0;
-    uptr SecondaryBlockEnd;
+    uptr SecondaryBlockEnd = 0;
     if (LIKELY(PrimaryT::canAllocate(NeededSize))) {
       ClassId = SizeClassMap::getClassIdBySize(NeededSize);
       DCHECK_NE(ClassId, 0U);
