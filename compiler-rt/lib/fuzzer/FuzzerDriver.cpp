@@ -680,6 +680,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.IgnoreCrashes = Flags.ignore_crashes;
   Options.MaxTotalTimeSec = Flags.max_total_time;
   Options.DoCrossOver = Flags.cross_over;
+  Options.CrossOverUniformDist = Flags.cross_over_uniform_dist;
   Options.MutateDepth = Flags.mutate_depth;
   Options.ReduceDepth = Flags.reduce_depth;
   Options.UseCounters = Flags.use_counters;

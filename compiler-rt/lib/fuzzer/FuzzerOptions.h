@@ -31,6 +31,7 @@ struct FuzzingOptions {
   int RssLimitMb = 0;
   int MallocLimitMb = 0;
   bool DoCrossOver = true;
+  bool CrossOverUniformDist = false;
   int MutateDepth = 5;
   bool ReduceDepth = false;
   bool UseCounters = false;

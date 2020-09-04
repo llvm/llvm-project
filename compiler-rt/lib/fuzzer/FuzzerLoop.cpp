@@ -666,8 +666,11 @@ void Fuzzer::MutateAndTestOne() {
   MD.StartMutationSequence();
 
   auto &II = Corpus.ChooseUnitToMutate(MD.GetRand());
-  if (Options.DoCrossOver)
-    MD.SetCrossOverWith(&Corpus.ChooseUnitToMutate(MD.GetRand()).U);
+  if (Options.DoCrossOver) {
+    auto &CrossOverII = Corpus.ChooseUnitToCrossOverWith(
+        MD.GetRand(), Options.CrossOverUniformDist);
+    MD.SetCrossOverWith(&CrossOverII.U);
+  }
   const auto &U = II.U;
   memcpy(BaseSha1, II.Sha1, sizeof(BaseSha1));
   assert(CurrentUnitData);
