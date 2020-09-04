@@ -7562,14 +7562,6 @@ bool SwiftASTContext::IsMeaninglessWithoutDynamicResolution(
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
     return swift_can_type->hasTypeParameter();
-
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::GenericTypeParam:
-      return true;
-    default:
-      return false;
-    }
   }
 
   return false;
