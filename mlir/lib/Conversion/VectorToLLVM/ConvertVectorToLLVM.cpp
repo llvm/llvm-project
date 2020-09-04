@@ -117,6 +117,49 @@ static SmallVector<int64_t, 4> getI64SubArray(ArrayAttr arrayAttr,
   return res;
 }
 
+// Helper that returns a vector comparison that constructs a mask:
+//     mask = [0,1,..,n-1] + [o,o,..,o] < [b,b,..,b]
+//
+// NOTE: The LLVM::GetActiveLaneMaskOp intrinsic would provide an alternative,
+//       much more compact, IR for this operation, but LLVM eventually
+//       generates more elaborate instructions for this intrinsic since it
+//       is very conservative on the boundary conditions.
+static Value buildVectorComparison(ConversionPatternRewriter &rewriter,
+                                   Operation *op, bool enableIndexOptimizations,
+                                   int64_t dim, Value b, Value *off = nullptr) {
+  auto loc = op->getLoc();
+  // If we can assume all indices fit in 32-bit, we perform the vector
+  // comparison in 32-bit to get a higher degree of SIMD parallelism.
+  // Otherwise we perform the vector comparison using 64-bit indices.
+  Value indices;
+  Type idxType;
+  if (enableIndexOptimizations) {
+    SmallVector<int32_t, 4> values(dim);
+    for (int64_t d = 0; d < dim; d++)
+      values[d] = d;
+    indices =
+        rewriter.create<ConstantOp>(loc, rewriter.getI32VectorAttr(values));
+    idxType = rewriter.getI32Type();
+  } else {
+    SmallVector<int64_t, 4> values(dim);
+    for (int64_t d = 0; d < dim; d++)
+      values[d] = d;
+    indices =
+        rewriter.create<ConstantOp>(loc, rewriter.getI64VectorAttr(values));
+    idxType = rewriter.getI64Type();
+  }
+  // Add in an offset if requested.
+  if (off) {
+    Value o = rewriter.create<IndexCastOp>(loc, idxType, *off);
+    Value ov = rewriter.create<SplatOp>(loc, indices.getType(), o);
+    indices = rewriter.create<AddIOp>(loc, ov, indices);
+  }
+  // Construct the vector comparison.
+  Value bound = rewriter.create<IndexCastOp>(loc, idxType, b);
+  Value bounds = rewriter.create<SplatOp>(loc, indices.getType(), bound);
+  return rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, indices, bounds);
+}
+
 // Helper that returns data layout alignment of an operation with memref.
 template <typename T>
 LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter, T op,
@@ -512,10 +555,10 @@ class VectorReductionOpConversion : public ConvertToLLVMPattern {
 public:
   explicit VectorReductionOpConversion(MLIRContext *context,
                                        LLVMTypeConverter &typeConverter,
-                                       bool reassociateFP)
+                                       bool reassociateFPRed)
       : ConvertToLLVMPattern(vector::ReductionOp::getOperationName(), context,
                              typeConverter),
-        reassociateFPReductions(reassociateFP) {}
+        reassociateFPReductions(reassociateFPRed) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -587,6 +630,34 @@ public:
 
 private:
   const bool reassociateFPReductions;
+};
+
+/// Conversion pattern for a vector.create_mask (1-D only).
+class VectorCreateMaskOpConversion : public ConvertToLLVMPattern {
+public:
+  explicit VectorCreateMaskOpConversion(MLIRContext *context,
+                                        LLVMTypeConverter &typeConverter,
+                                        bool enableIndexOpt)
+      : ConvertToLLVMPattern(vector::CreateMaskOp::getOperationName(), context,
+                             typeConverter),
+        enableIndexOptimizations(enableIndexOpt) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = op->getResult(0).getType().cast<VectorType>();
+    int64_t rank = dstType.getRank();
+    if (rank == 1) {
+      rewriter.replaceOp(
+          op, buildVectorComparison(rewriter, op, enableIndexOptimizations,
+                                    dstType.getDimSize(0), operands[0]));
+      return success();
+    }
+    return failure();
+  }
+
+private:
+  const bool enableIndexOptimizations;
 };
 
 class VectorShuffleOpConversion : public ConvertToLLVMPattern {
@@ -1121,17 +1192,19 @@ public:
 
 /// Conversion pattern that converts a 1-D vector transfer read/write op in a
 /// sequence of:
-/// 1. Bitcast or addrspacecast to vector form.
-/// 2. Create an offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
-/// 3. Create a mask where offsetVector is compared against memref upper bound.
-/// 4. Rewrite op as a masked read or write.
+/// 1. Get the source/dst address as an LLVM vector pointer.
+/// 2. Create a vector with linear indices [ 0 .. vector_length - 1 ].
+/// 3. Create an offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
+/// 4. Create a mask where offsetVector is compared against memref upper bound.
+/// 5. Rewrite op as a masked read or write.
 template <typename ConcreteOp>
 class VectorTransferConversion : public ConvertToLLVMPattern {
 public:
   explicit VectorTransferConversion(MLIRContext *context,
-                                    LLVMTypeConverter &typeConv)
-      : ConvertToLLVMPattern(ConcreteOp::getOperationName(), context,
-                             typeConv) {}
+                                    LLVMTypeConverter &typeConv,
+                                    bool enableIndexOpt)
+      : ConvertToLLVMPattern(ConcreteOp::getOperationName(), context, typeConv),
+        enableIndexOptimizations(enableIndexOpt) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -1155,7 +1228,6 @@ public:
     auto toLLVMTy = [&](Type t) { return typeConverter.convertType(t); };
 
     Location loc = op->getLoc();
-    Type i64Type = rewriter.getIntegerType(64);
     MemRefType memRefType = xferOp.getMemRefType();
 
     if (auto memrefVectorElementType =
@@ -1202,41 +1274,26 @@ public:
                                               xferOp, operands, vectorDataPtr);
 
     // 2. Create a vector with linear indices [ 0 .. vector_length - 1 ].
-    unsigned vecWidth = vecTy.getVectorNumElements();
-    VectorType vectorCmpType = VectorType::get(vecWidth, i64Type);
-    SmallVector<int64_t, 8> indices;
-    indices.reserve(vecWidth);
-    for (unsigned i = 0; i < vecWidth; ++i)
-      indices.push_back(i);
-    Value linearIndices = rewriter.create<ConstantOp>(
-        loc, vectorCmpType,
-        DenseElementsAttr::get(vectorCmpType, ArrayRef<int64_t>(indices)));
-    linearIndices = rewriter.create<LLVM::DialectCastOp>(
-        loc, toLLVMTy(vectorCmpType), linearIndices);
-
     // 3. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
-    // TODO: when the leaf transfer rank is k > 1 we need the last
-    // `k` dimensions here.
-    unsigned lastIndex = llvm::size(xferOp.indices()) - 1;
-    Value offsetIndex = *(xferOp.indices().begin() + lastIndex);
-    offsetIndex = rewriter.create<IndexCastOp>(loc, i64Type, offsetIndex);
-    Value base = rewriter.create<SplatOp>(loc, vectorCmpType, offsetIndex);
-    Value offsetVector = rewriter.create<AddIOp>(loc, base, linearIndices);
-
     // 4. Let dim the memref dimension, compute the vector comparison mask:
     //   [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
+    //
+    // TODO: when the leaf transfer rank is k > 1, we need the last `k`
+    //       dimensions here.
+    unsigned vecWidth = vecTy.getVectorNumElements();
+    unsigned lastIndex = llvm::size(xferOp.indices()) - 1;
+    Value off = *(xferOp.indices().begin() + lastIndex);
     Value dim = rewriter.create<DimOp>(loc, xferOp.memref(), lastIndex);
-    dim = rewriter.create<IndexCastOp>(loc, i64Type, dim);
-    dim = rewriter.create<SplatOp>(loc, vectorCmpType, dim);
-    Value mask =
-        rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, offsetVector, dim);
-    mask = rewriter.create<LLVM::DialectCastOp>(loc, toLLVMTy(mask.getType()),
-                                                mask);
+    Value mask = buildVectorComparison(rewriter, op, enableIndexOptimizations,
+                                       vecWidth, dim, &off);
 
     // 5. Rewrite as a masked read / write.
     return replaceTransferOpWithMasked(rewriter, typeConverter, loc, xferOp,
                                        operands, vectorDataPtr, mask);
   }
+
+private:
+  const bool enableIndexOptimizations;
 };
 
 class VectorPrintOpConversion : public ConvertToLLVMPattern {
@@ -1444,7 +1501,7 @@ public:
 /// Populate the given list with patterns that convert from Vector to LLVM.
 void mlir::populateVectorToLLVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    bool reassociateFPReductions) {
+    bool reassociateFPReductions, bool enableIndexOptimizations) {
   MLIRContext *ctx = converter.getDialect()->getContext();
   // clang-format off
   patterns.insert<VectorFMAOpNDRewritePattern,
@@ -1453,6 +1510,10 @@ void mlir::populateVectorToLLVMConversionPatterns(
                   VectorExtractStridedSliceOpConversion>(ctx);
   patterns.insert<VectorReductionOpConversion>(
       ctx, converter, reassociateFPReductions);
+  patterns.insert<VectorCreateMaskOpConversion,
+                  VectorTransferConversion<TransferReadOp>,
+                  VectorTransferConversion<TransferWriteOp>>(
+      ctx, converter, enableIndexOptimizations);
   patterns
       .insert<VectorShuffleOpConversion,
               VectorExtractElementOpConversion,
@@ -1461,8 +1522,6 @@ void mlir::populateVectorToLLVMConversionPatterns(
               VectorInsertElementOpConversion,
               VectorInsertOpConversion,
               VectorPrintOpConversion,
-              VectorTransferConversion<TransferReadOp>,
-              VectorTransferConversion<TransferWriteOp>,
               VectorTypeCastOpConversion,
               VectorMaskedLoadOpConversion,
               VectorMaskedStoreOpConversion,
@@ -1485,6 +1544,7 @@ struct LowerVectorToLLVMPass
     : public ConvertVectorToLLVMBase<LowerVectorToLLVMPass> {
   LowerVectorToLLVMPass(const LowerVectorToLLVMOptions &options) {
     this->reassociateFPReductions = options.reassociateFPReductions;
+    this->enableIndexOptimizations = options.enableIndexOptimizations;
   }
   void runOnOperation() override;
 };
@@ -1505,15 +1565,14 @@ void LowerVectorToLLVMPass::runOnOperation() {
   LLVMTypeConverter converter(&getContext());
   OwningRewritePatternList patterns;
   populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
-  populateVectorToLLVMConversionPatterns(converter, patterns,
-                                         reassociateFPReductions);
+  populateVectorToLLVMConversionPatterns(
+      converter, patterns, reassociateFPReductions, enableIndexOptimizations);
   populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
   populateStdToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
-  if (failed(applyPartialConversion(getOperation(), target, patterns))) {
+  if (failed(applyPartialConversion(getOperation(), target, patterns)))
     signalPassFailure();
-  }
 }
 
 std::unique_ptr<OperationPass<ModuleOp>>
