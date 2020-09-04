@@ -106,8 +106,11 @@ COMPILER_CHECK(kChunkHeader2Size <= 16);
 // CHUNK_ALLOCATED: the chunk is allocated and not yet freed.
 // CHUNK_QUARANTINE: the chunk was freed and put into quarantine zone.
 enum {
-  CHUNK_AVAILABLE  = 0,  // 0 is the default value even if we didn't set it.
-  CHUNK_ALLOCATED  = 2,
+  // Either just allocated by underlying allocator, but AsanChunk is not yet
+  // ready, or almost returned to undelying allocator and AsanChunk is already
+  // meaningless.
+  CHUNK_INVALID = 0,
+  CHUNK_ALLOCATED = 2,
   CHUNK_QUARANTINE = 3
 };
 
@@ -142,8 +145,7 @@ struct QuarantineCallback {
   void Recycle(AsanChunk *m) {
     u8 old_chunk_state = CHUNK_QUARANTINE;
     if (!atomic_compare_exchange_strong(&m->chunk_state, &old_chunk_state,
-                                        CHUNK_AVAILABLE,
-                                        memory_order_acquire)) {
+                                        CHUNK_INVALID, memory_order_acquire)) {
       CHECK_EQ(old_chunk_state, CHUNK_QUARANTINE);
     }
 
@@ -859,7 +861,7 @@ static AsanAllocator &get_allocator() {
 
 bool AsanChunkView::IsValid() const {
   return chunk_ && atomic_load(&chunk_->chunk_state, memory_order_relaxed) !=
-                       CHUNK_AVAILABLE;
+                       CHUNK_INVALID;
 }
 bool AsanChunkView::IsAllocated() const {
   return chunk_ && atomic_load(&chunk_->chunk_state, memory_order_relaxed) ==
