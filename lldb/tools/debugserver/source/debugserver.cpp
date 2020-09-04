@@ -156,6 +156,7 @@ RNBRunLoopMode RNBRunLoopGetStartModeFromRemote(RNBRemote *remote) {
   return eRNBRunLoopModeExit;
 }
 
+#if defined(WITH_FBS) || defined(WITH_BKS) || defined(WITH_SPRINGBOARD)
 // Check the name to see if it ends with .app
 static bool is_dot_app (const char *app_name) {
   size_t len = strlen(app_name);
@@ -169,6 +170,7 @@ static bool is_dot_app (const char *app_name) {
     return true;
   return false;
 }
+#endif
 
 // This run loop mode will wait for the process to launch and hit its
 // entry point. It will currently ignore all events except for the

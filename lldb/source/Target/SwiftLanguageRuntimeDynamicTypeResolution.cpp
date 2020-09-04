@@ -347,14 +347,10 @@ public:
     // If there's a single symbol, then we're golden. If there's more than
     // a symbol, then just make sure all of them agree on the value.
     Status error;
-    auto sym = sc_list.GetContextAtIndex(0, sym_ctx);
     auto load_addr = sym_ctx.symbol->GetLoadAddress(&m_process.GetTarget());
     uint64_t sym_value = m_process.GetTarget().ReadUnsignedIntegerFromMemory(
         load_addr, false, m_process.GetAddressByteSize(), 0, error);
     for (unsigned i = 1; i < sc_list.GetSize(); ++i) {
-      auto other_sym = sc_list.GetContextAtIndex(i, sym_ctx);
-      auto other_load_addr =
-          sym_ctx.symbol->GetLoadAddress(&m_process.GetTarget());
       uint64_t other_sym_value =
           m_process.GetTarget().ReadUnsignedIntegerFromMemory(
               load_addr, false, m_process.GetAddressByteSize(), 0, error);
