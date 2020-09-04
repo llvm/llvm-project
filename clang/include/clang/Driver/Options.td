@@ -995,7 +995,7 @@ defm cxx_static_destructors : OptOutFFlag<"c++-static-destructors", "",
 def fsymbol_partition_EQ : Joined<["-"], "fsymbol-partition=">, Group<f_Group>,
   Flags<[CC1Option]>;
 
-defm memprof : OptInFFlag<"memprof", "Enable", "Disable", " heap memory profiling">;
+defm memory_profile : OptInFFlag<"memory-profile", "Enable", "Disable", " heap memory profiling">;
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.

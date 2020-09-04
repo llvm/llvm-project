@@ -1,4 +1,4 @@
-//===--------- Definition of the HeapProfiler class ---------*- C++ -*-===//
+//===--------- Definition of the HeapProfiler class -------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -38,8 +38,6 @@ class ModuleHeapProfilerPass : public PassInfoMixin<ModuleHeapProfilerPass> {
 public:
   explicit ModuleHeapProfilerPass();
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-private:
 };
 
 // Insert HeapProfiler instrumentation
