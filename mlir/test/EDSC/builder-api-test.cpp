@@ -1089,7 +1089,7 @@ TEST_FUNC(vector_extractelement_op_i32) {
   ScopedContext scope(builder, f.getLoc());
   auto i32Type = builder.getI32Type();
   auto vectorType = VectorType::get(/*shape=*/{8}, i32Type);
-  vector_extractelement(
+  vector_extract_element(
       i32Type, std_constant(vectorType, builder.getI32VectorAttr({10})),
       std_constant_int(0, i32Type));
 
