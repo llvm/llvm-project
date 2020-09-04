@@ -123,6 +123,33 @@ entry:
   ret i8 %0
 }
 
+define void @test7([4 x i32]* %ptr) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* [[PTR:%.*]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* [[PTR]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* [[PTR]], i64 0, i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* [[PTR]], i64 0, i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP4]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = getelementptr inbounds [4 x i32], [4 x i32]* %ptr, i64 0, i32 0
+  store i32 0, i32* %0, align 1
+  %1 = getelementptr inbounds [4 x i32], [4 x i32]* %ptr, i64 0, i32 1
+  store i32 0, i32* %1, align 1
+  %2 = getelementptr inbounds [4 x i32], [4 x i32]* %ptr, i64 0, i32 2
+  store i32 0, i32* %2, align 1
+  %3 = getelementptr inbounds [4 x i32], [4 x i32]* %ptr, i64 0, i32 3
+  store i32 0, i32* %3, align 1
+  call void @clobber()
+  ret void
+}
+
+declare void @clobber()
+
 ; Function Attrs: argmemonly nounwind willreturn
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #0
 
