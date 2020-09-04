@@ -744,6 +744,9 @@ struct Allocator {
     uptr *alloc_magic = reinterpret_cast<uptr *>(alloc_beg);
     if (alloc_magic[0] == kAllocBegMagic)
       return reinterpret_cast<AsanChunk *>(alloc_magic[1]);
+    // FIXME: This is either valid small chunk with tiny redzine or invalid
+    // chunk which is beeing allocated/deallocated. The latter case should
+    // return nullptr like secondary allocator does.
     return reinterpret_cast<AsanChunk *>(alloc_beg);
   }
 
