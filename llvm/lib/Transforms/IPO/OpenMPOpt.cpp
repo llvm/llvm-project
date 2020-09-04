@@ -1480,6 +1480,9 @@ struct AAICVTrackerFunction : public AAICVTracker {
     auto &SetterRFI = OMPInfoCache.RFIs[OMPInfoCache.ICVs[ICV].Setter];
     Function *CalledFunction = CB->getCalledFunction();
 
+    // Indirect call, assume ICV changes.
+    if (CalledFunction == nullptr)
+      return nullptr;
     if (CalledFunction == GetterRFI.Declaration)
       return None;
     if (CalledFunction == SetterRFI.Declaration) {
