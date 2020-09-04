@@ -448,7 +448,6 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
       llvm::Optional<SwiftASTContextReader> scratch_ctx_reader = nativeStorage_sp->GetScratchSwiftASTContext();
       if (!scratch_ctx_reader)
         return;
-      SwiftASTContext *scratch_ctx = scratch_ctx_reader->get();
       auto *runtime = SwiftLanguageRuntime::Get(m_process);
       if (!runtime)
         return;
@@ -461,7 +460,6 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
       if (element_stride) {
         m_key_stride_padded = *element_stride - m_value_stride;
       }
-      uint64_t offset = m_key_stride_padded;
       if (llvm::isa<::swift::TupleType>(swift_type)) {
         Status error;
         llvm::Optional<uint64_t> result = runtime->GetMemberVariableOffset(

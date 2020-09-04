@@ -776,7 +776,6 @@ static uint32_t collectTypeInfo(Module *M, swift::Demangle::Demangler &Dem,
       if (!(collectTypeInfo(M, Dem, node->getChild(1)) & eTypeIsGenericTypeParam))
         swift_flags |= eTypeHasValue | eTypeHasChildren;
       auto module = node->getChild(0);
-      auto ident = node->getChild(1);
       if (module->hasText() &&
           module->getText() == swift::MANGLING_MODULE_OBJC) {
         swift_flags |= eTypeHasValue /*| eTypeIsObjC*/;
@@ -1541,7 +1540,6 @@ TypeSystemSwiftTypeRef::GetFunctionReturnType(opaque_compiler_type_t type) {
     if (!node || (node->getKind() != Node::Kind::FunctionType &&
                   node->getKind() != Node::Kind::ImplFunctionType))
       return {};
-    unsigned num_args = 0;
     for (NodePointer child : *node) {
       if (child->getKind() == Node::Kind::ImplResult) {
         for (NodePointer type : *child)

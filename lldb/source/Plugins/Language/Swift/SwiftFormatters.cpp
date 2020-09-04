@@ -979,7 +979,6 @@ ReadVector(Process &process, ValueObject &valobj,
   // array. It's a contiguous bag of bytes with no padding.
   lldb_private::DataExtractor data;
   uint64_t len = value_sp->GetData(data, error);
-  unsigned elt_size = formatter.getElementSize();
   if (error.Fail())
     return llvm::None;
 
@@ -1029,7 +1028,6 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   ProcessSP process_sp(valobj.GetProcessSP());
   if (!process_sp)
     return false;
-  Process &process = *process_sp.get();
 
   // SIMD vector contains an inner member `_storage` which is an opaque
   // container. Given SIMD is always in the form SIMDX<Type> where X is a
@@ -1185,8 +1183,6 @@ bool lldb_private::formatters::swift::GLKit_SummaryProvider(
   ProcessSP process_sp(valobj.GetProcessSP());
   if (!process_sp)
     return false;
-
-  Process &process = *process_sp.get();
 
   // Get the type name without the "GLKit." prefix.
   ConstString full_type_name = valobj.GetTypeName();
