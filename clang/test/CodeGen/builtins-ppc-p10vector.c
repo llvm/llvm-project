@@ -23,11 +23,15 @@ vector double vda, vdb;
 signed int *iap;
 unsigned int uia, uib, *uiap;
 signed char *cap;
-unsigned char uca, *ucap;
-signed short *sap;
-unsigned short usa, *usap;
-signed long long *llap, llb;
-unsigned long long ulla, *ullap;
+unsigned char uca;
+const unsigned char *ucap;
+const signed short *sap;
+unsigned short usa;
+const unsigned short *usap;
+const signed long long *llap;
+signed long long llb;
+unsigned long long ulla;
+const unsigned long long *ullap;
 
 vector signed long long test_vec_mul_sll(void) {
   // CHECK: mul <2 x i64>
