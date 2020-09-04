@@ -462,6 +462,9 @@ public:
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
                                  MachineInstr *OldWaitcntInstr);
+  bool generateWaitcntInstAfter(MachineInstr &MI,
+                                WaitcntBrackets &ScoreBrackets,
+                                MachineInstr *OldWaitcntInstr);
   void updateEventWaitcntAfter(MachineInstr &Inst,
                                WaitcntBrackets *ScoreBrackets);
   bool insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block,
@@ -824,8 +827,17 @@ static bool readsVCCZ(const MachineInstr &MI) {
          !MI.getOperand(1).isUndef();
 }
 
+// For jumps like function calls and returns, we insert waitcnts at the jump
+// destination. The jump adds latency because new instructions need to be
+// fetched, waiting for outstanding memory operations after the jump means
+// that the memory latency can be overlapped with the jump latency.
+
+// FIXME callWaitsOnFunctionEntry and callWaitsOnFunctionReturn should depend
+// on the calling convention. We need to track the calling convention for
+// call instructions, so it is available here.
+
 /// \returns true if the callee inserts an s_waitcnt 0 on function entry.
-static bool callWaitsOnFunctionEntry(const MachineInstr &MI) {
+static bool callWaitsOnFunctionEntry() {
   // Currently all conventions wait, but this may not always be the case.
   //
   // TODO: If IPRA is enabled, and the callee is isSafeForNoCSROpt, it may make
@@ -835,8 +847,14 @@ static bool callWaitsOnFunctionEntry(const MachineInstr &MI) {
 
 /// \returns true if the callee is expected to wait for any outstanding waits
 /// before returning.
-static bool callWaitsOnFunctionReturn(const MachineInstr &MI) {
-  return true;
+static bool callWaitsOnFunctionReturn(const MachineInstr &MI) { return false; }
+
+/// \returns true if the instruction is an s_sendmsg of gs-done.
+static bool isSendGsDoneMessage(const MachineInstr &MI) {
+  return (MI.getOpcode() == AMDGPU::S_SENDMSG ||
+          MI.getOpcode() == AMDGPU::S_SENDMSGHALT) &&
+         (MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_) ==
+             AMDGPU::SendMsg::ID_GS_DONE;
 }
 
 ///  Generate s_waitcnt instruction to be placed before cur_Inst.
@@ -870,19 +888,16 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     Wait.VmCnt = 0;
   }
 
-  // All waits must be resolved at call return.
-  // NOTE: this could be improved with knowledge of all call sites or
-  //   with knowledge of the called routines.
   if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
       MI.getOpcode() == AMDGPU::S_SETPC_B64_return ||
-      (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
-    Wait = Wait.combined(AMDGPU::Waitcnt::allZero(ST->hasVscnt()));
-  }
-  // Resolve vm waits before gs-done.
-  else if ((MI.getOpcode() == AMDGPU::S_SENDMSG ||
-            MI.getOpcode() == AMDGPU::S_SENDMSGHALT) &&
-           ((MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_) ==
-            AMDGPU::SendMsg::ID_GS_DONE)) {
+      (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry())) {
+    // All waits must be resolved at call return.
+    // NOTE: this could be improved with knowledge of all call sites or
+    //   with knowledge of the called routines.
+    if (callWaitsOnFunctionReturn(MI))
+      Wait = Wait.combined(AMDGPU::Waitcnt::allZero(ST->hasVscnt()));
+  } else if (isSendGsDoneMessage(MI)) {
+    // Resolve vm waits before gs-done.
     Wait.VmCnt = 0;
   }
 #if 0 // TODO: the following blocks of logic when we have fence.
@@ -955,7 +970,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       }
     }
 
-    if (MI.isCall() && callWaitsOnFunctionEntry(MI)) {
+    if (MI.isCall() && callWaitsOnFunctionEntry()) {
       // The function is going to insert a wait on everything in its prolog.
       // This still needs to be careful if the call target is a load (e.g. a GOT
       // load). We also need to check WAW depenancy with saved PC.
@@ -1194,6 +1209,27 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   return Modified;
 }
 
+bool SIInsertWaitcnts::generateWaitcntInstAfter(MachineInstr &MI,
+                                                WaitcntBrackets &ScoreBrackets,
+                                                MachineInstr *OldWaitcntInstr) {
+  // Insert waitcnts after function calls (that are not tail calls)
+  if (!MI.isCall() || MI.isTerminator() || callWaitsOnFunctionReturn(MI))
+    return false;
+
+  auto I = ++MI.getIterator();
+  // Don't insert waitcnt if this function returns immediately
+  if (I.isEnd() || I->isReturn())
+    return false;
+
+  DebugLoc DL = MI.getDebugLoc();
+  BuildMI(*MI.getParent(), I, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(0);
+  if (ST->hasVscnt())
+    BuildMI(*MI.getParent(), I, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
+        .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
+        .addImm(0);
+  return true;
+}
+
 // This is a flat memory operation. Check to see if it has memory
 // tokens for both LDS and Memory, and if so mark it as a flat.
 bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
@@ -1269,13 +1305,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   } else if (TII->isSMRD(Inst)) {
     ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);
   } else if (Inst.isCall()) {
-    if (callWaitsOnFunctionReturn(Inst)) {
-      // Act as a wait on everything
-      ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt::allZero(ST->hasVscnt()));
-    } else {
-      // May need to way wait for anything.
-      ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
-    }
+    // Act as a wait on everything. Either the callee waits or we insert a wait.
+    ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt::allZero(ST->hasVscnt()));
   } else {
     switch (Inst.getOpcode()) {
     case AMDGPU::S_SENDMSG:
@@ -1452,6 +1483,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     // Generate an s_waitcnt instruction to be placed before
     // cur_Inst, if needed.
     Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr);
+    Modified |= generateWaitcntInstAfter(Inst, ScoreBrackets, OldWaitcntInstr);
     OldWaitcntInstr = nullptr;
 
     updateEventWaitcntAfter(Inst, &ScoreBrackets);
@@ -1629,7 +1661,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  if (!MFI->isEntryFunction()) {
+  if (!MFI->isEntryFunction() && callWaitsOnFunctionEntry()) {
     // Wait for any outstanding memory operations that the input registers may
     // depend on. We can't track them and it's better to the wait after the
     // costly call sequence.

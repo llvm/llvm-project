@@ -68,7 +68,6 @@ define i32 @main() #0 {
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_mov_b32 s33, s6
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %1 = alloca i32, align 4, addrspace(5)
   %2 = alloca i32, align 4, addrspace(5)

@@ -213,7 +213,6 @@ define float @v_test_fmax_legacy_ule_f32_multi_use(float %a, float %b) {
 ; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    ds_write_b32 v0, v1
-; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_test_fmax_legacy_ule_f32_multi_use:
@@ -224,7 +223,6 @@ define float @v_test_fmax_legacy_ule_f32_multi_use(float %a, float %b) {
 ; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    ds_write_b32 v0, v1
-; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp ogt float %a, %b
   %val0 = select i1 %cmp, float %a, float %b

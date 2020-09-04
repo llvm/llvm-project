@@ -28,7 +28,6 @@ define void @lsr_order_mul24_0(i32 %arg, i32 %arg2, i32 %arg6, i32 %arg13, i32 %
 ; GFX9-NEXT:    s_cbranch_execnz BB0_1
 ; GFX9-NEXT:  ; %bb.2: ; %.loopexit
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %tmp22 = and i32 %arg6, 16777215
@@ -102,7 +101,6 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, float addrspace(3
 ; GFX9-NEXT:    s_cbranch_execnz BB1_2
 ; GFX9-NEXT:  BB1_3: ; %Flow3
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[8:9]
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %tmp = icmp ult i32 %arg, %arg1
@@ -158,7 +156,6 @@ define void @slsr1_0(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9-NEXT:    v_add_u32_e32 v0, v0, v2
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %b = and i32 %b.arg, 16777215
   %s = and i32 %s.arg, 16777215
@@ -209,11 +206,14 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-NEXT:    v_and_b32_e32 v42, 0xffffff, v40
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[34:35]
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mad_u32_u24 v40, v41, v40, v42
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v40
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[34:35]
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_add_u32_e32 v0, v40, v42
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[34:35]
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_readlane_b32 s4, v43, 2
 ; GFX9-NEXT:    v_readlane_b32 s5, v43, 3
 ; GFX9-NEXT:    v_readlane_b32 s35, v43, 1
@@ -226,7 +226,6 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_mov_b64 exec, s[6:7]
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[4:5]
   %b = and i32 %b.arg, 16777215
   %s = and i32 %s.arg, 16777215

@@ -94,7 +94,6 @@ define float @v_uitofp_to_f32_multi_use_lshr8_mask255(i32 %arg0) nounwind {
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_uitofp_to_f32_multi_use_lshr8_mask255:
@@ -103,7 +102,6 @@ define float @v_uitofp_to_f32_multi_use_lshr8_mask255(i32 %arg0) nounwind {
 ; VI-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
 ; VI-NEXT:    flat_store_dword v[0:1], v0
 ; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %lshr.8 = lshr i32 %arg0, 8
   store i32 %lshr.8, i32 addrspace(1)* undef

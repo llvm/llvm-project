@@ -17,7 +17,6 @@ define void @func_use_lds_global() {
 ; GFX8-NEXT:    ds_write_b32 v0, v0
 ; GFX8-NEXT:    s_mov_b64 s[0:1], s[4:5]
 ; GFX8-NEXT:    s_trap 2
-; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: func_use_lds_global:
@@ -27,7 +26,6 @@ define void @func_use_lds_global() {
 ; GFX9-NEXT:    ds_write_b32 v0, v0
 ; GFX9-NEXT:    s_mov_b64 s[0:1], s[4:5]
 ; GFX9-NEXT:    s_trap 2
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   store float 0.0, float addrspace(3)* @lds, align 4
   ret void
