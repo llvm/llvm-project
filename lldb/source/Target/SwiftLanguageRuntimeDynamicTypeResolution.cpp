@@ -1222,13 +1222,23 @@ CompilerType SwiftLanguageRuntimeImpl::DoArchetypeBindingForTypeRef(
   });
 
   // Nothing to do if there are no type parameters.
-  if (substitutions.empty())
+  auto get_canonical = [&]() {
     return ts.GetTypeFromMangledTypename(ConstString(mangleNode(canonical)));
+  };
+  if (substitutions.empty())
+    return get_canonical();
 
   // Build a TypeRef from the demangle tree.
-  const swift::reflection::TypeRef *type_ref =
-      swift::Demangle::decodeMangledType(reflection_ctx->getBuilder(),
-                                         canonical);
+  auto type_ref_or_err =
+    swift::Demangle::decodeMangledType(reflection_ctx->getBuilder(),
+                                       canonical);
+  if (type_ref_or_err.isError()) {
+    LLDB_LOG(
+      GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_TYPES),
+      "Couldn't get TypeRef");
+    return get_canonical();
+  }
+  const swift::reflection::TypeRef *type_ref = type_ref_or_err.getType();
 
   // Apply the substitutions.
   const swift::reflection::TypeRef *bound_type_ref =
@@ -1960,8 +1970,11 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type, Module *module) {
   if (!reflection_ctx)
     return nullptr;
 
-  const swift::reflection::TypeRef *type_ref =
-      swift::Demangle::decodeMangledType(reflection_ctx->getBuilder(), node);
+  auto type_ref_or_err =
+    swift::Demangle::decodeMangledType(reflection_ctx->getBuilder(), node);
+  if (type_ref_or_err.isError())
+    return nullptr;
+  const swift::reflection::TypeRef *type_ref = type_ref_or_err.getType();
   return type_ref;
 }
 
