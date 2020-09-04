@@ -15,7 +15,7 @@
 # CHECK-DAG: {{0*}}[[#ADDR+0x8]] g     O __DATA,__data _baz
 # CHECK-DAG: {{0*}}[[#ADDR+0x9]] g     O __DATA,__data _qux
 
-# CHECK:      Contents of section __data:
+# CHECK:      Contents of section __DATA,__data:
 # CHECK-NEXT: {{0*}}[[#ADDR]] ca000000 fe000000 baefbead de000000
 
 .section __TEXT,__text

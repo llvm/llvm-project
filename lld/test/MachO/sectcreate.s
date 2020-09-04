@@ -10,13 +10,13 @@
 # RUN:     -o %t %t.o
 # RUN: llvm-objdump -s %t | FileCheck %s
 
-# CHECK: Contents of section __text:
-# CHECK: Contents of section __data:
+# CHECK: Contents of section __TEXT,__text:
+# CHECK: Contents of section __DATA,__data:
 # CHECK: my string!.
-# CHECK: Contents of section SEC1:
+# CHECK: Contents of section SEG,SEC1:
 # CHECK: -sectcreate 1.1.
 # CHECK: -sectcreate 1.2.
-# CHECK: Contents of section SEC2:
+# CHECK: Contents of section SEG,SEC2:
 # CHECK: -sectcreate 2.
 
 .text
