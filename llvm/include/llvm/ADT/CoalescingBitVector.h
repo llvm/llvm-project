@@ -34,15 +34,14 @@ namespace llvm {
 /// performance for non-sequential find() operations.
 ///
 /// \tparam IndexT - The type of the index into the bitvector.
-/// \tparam N - The first N coalesced intervals of set bits are stored in-place.
-template <typename IndexT, unsigned N = 16> class CoalescingBitVector {
+template <typename IndexT> class CoalescingBitVector {
   static_assert(std::is_unsigned<IndexT>::value,
                 "Index must be an unsigned integer.");
 
-  using ThisT = CoalescingBitVector<IndexT, N>;
+  using ThisT = CoalescingBitVector<IndexT>;
 
   /// An interval map for closed integer ranges. The mapped values are unused.
-  using MapT = IntervalMap<IndexT, char, N>;
+  using MapT = IntervalMap<IndexT, char>;
 
   using UnderlyingIterator = typename MapT::const_iterator;
 
