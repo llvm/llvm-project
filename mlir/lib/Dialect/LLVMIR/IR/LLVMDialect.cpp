@@ -1533,8 +1533,6 @@ static ParseResult parseAtomicRMWOp(OpAsmParser &parser,
 
 static LogicalResult verify(AtomicRMWOp op) {
   auto ptrType = op.ptr().getType().cast<LLVM::LLVMType>();
-  if (!ptrType.isPointerTy())
-    return op.emitOpError("expected LLVM IR pointer type for operand #0");
   auto valType = op.val().getType().cast<LLVM::LLVMType>();
   if (valType != ptrType.getPointerElementTy())
     return op.emitOpError("expected LLVM IR element type for operand #0 to "
