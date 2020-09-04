@@ -308,6 +308,7 @@ private:
   runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
                        ModuleOp module, AnalysisManager am);
 
+  /// Context this PassManager was initialized with.
   MLIRContext *context;
 
   /// Flag that specifies if pass statistics should be dumped.
