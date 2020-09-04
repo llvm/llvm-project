@@ -33,6 +33,7 @@ struct InputInfo {
   // Stats.
   size_t NumExecutedMutations = 0;
   size_t NumSuccessfullMutations = 0;
+  bool NeverReduce = false;
   bool MayDeleteFile = false;
   bool Reduced = false;
   bool HasFocusFunction = false;
@@ -177,7 +178,7 @@ public:
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
   InputInfo *AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
-                         bool HasFocusFunction,
+                         bool HasFocusFunction, bool NeverReduce,
                          const Vector<uint32_t> &FeatureSet,
                          const DataFlowTrace &DFT, const InputInfo *BaseII) {
     assert(!U.empty());
@@ -187,6 +188,7 @@ public:
     InputInfo &II = *Inputs.back();
     II.U = U;
     II.NumFeatures = NumFeatures;
+    II.NeverReduce = NeverReduce;
     II.MayDeleteFile = MayDeleteFile;
     II.UniqFeatureSet = FeatureSet;
     II.HasFocusFunction = HasFocusFunction;

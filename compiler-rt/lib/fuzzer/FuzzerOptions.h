@@ -18,6 +18,7 @@ struct FuzzingOptions {
   int Verbosity = 1;
   size_t MaxLen = 0;
   size_t LenControl = 1000;
+  bool KeepSeed = false;
   int UnitTimeoutSec = 300;
   int TimeoutExitCode = 70;
   int OOMExitCode = 71;
