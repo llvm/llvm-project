@@ -1313,7 +1313,6 @@ private:
   bool transferSpillOrRestoreInst(MachineInstr &MI);
 
   /// Examines \p MI for any registers that it defines, and notifies trackers.
-  /// \returns true if MI was recognized and processed.
   void transferRegisterDef(MachineInstr &MI);
 
   /// Copy one location to the other, accounting for movement of subregisters
