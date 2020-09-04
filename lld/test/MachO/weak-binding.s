@@ -7,13 +7,13 @@
 # RUN: llvm-objdump -d --no-show-raw-insn --bind --lazy-bind --weak-bind --full-contents %t/test | \
 # RUN:   FileCheck %s
 
-# CHECK:      Contents of section __la_symbol_ptr:
+# CHECK:      Contents of section __DATA,__la_symbol_ptr:
 ## Check that this section contains a nonzero pointer. It should point to
 ## _weak_external_fn, but we don't have a good way of testing the exact value as
 ## the bytes here are in little-endian order.
 # CHECK-NEXT: {{[0-9a-f]+}} {{[0-9a-f ]*[1-9a-f]+[0-9a-f ]*}}
 
-# CHECK:      Contents of section __got:
+# CHECK:      Contents of section __DATA_CONST,__got:
 ## Check that this section contains a nonzero pointer. It should point to
 ## _weak_external_for_gotpcrel.
 # CHECK-NEXT: {{[0-9a-f]+}} {{[0-9a-f ]*[1-9a-f]+[0-9a-f ]*}}
