@@ -92,7 +92,7 @@ define i32 @test_02(i32* %p) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[RC:%.*]] = icmp sgt i32 [[IV_NEXT]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[RC]], label [[BACKEDGE]], label [[FAIL:%.*]]
 ; CHECK:       backedge:
@@ -132,7 +132,7 @@ define i32 @test_02_neg(i32* %p) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[RC:%.*]] = icmp sgt i32 [[IV_NEXT]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[RC]], label [[BACKEDGE]], label [[FAIL:%.*]]
 ; CHECK:       backedge:
@@ -166,4 +166,4 @@ exit:
 
 
 !0 = !{i32 0, i32 2147483647}
-!1 = !{i32 -2147483648, i32 -1}
+!1 = !{i32 -2147483648, i32 0}
