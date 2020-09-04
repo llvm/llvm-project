@@ -807,8 +807,8 @@ entry:
 define <32 x i8> @PR27320(<8 x i32> %a0) {
 ; CHECK-LABEL: PR27320:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,2,1]
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,1,2,3,4,4,5,6,7,7,8,9,10,10,11,28,29,29,30,31,16,16,17,18,19,19,20,21,22,22,23]
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,1,2]
+; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,1,2,3,4,4,5,6,7,7,8,9,10,10,11,20,21,21,22,23,24,24,25,26,27,27,28,29,30,30,31]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <8 x i32> %a0, <8 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 3, i32 4, i32 5, i32 undef>
   %2 = bitcast <8 x i32> %1 to <32 x i8>
