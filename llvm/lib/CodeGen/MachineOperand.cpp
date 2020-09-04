@@ -153,22 +153,25 @@ void MachineOperand::removeRegFromUses() {
 /// ChangeToImmediate - Replace this operand with a new immediate operand of
 /// the specified value.  If an operand is known to be an immediate already,
 /// the setImm method should be used.
-void MachineOperand::ChangeToImmediate(int64_t ImmVal) {
+void MachineOperand::ChangeToImmediate(int64_t ImmVal, unsigned TargetFlags) {
   assert((!isReg() || !isTied()) && "Cannot change a tied operand into an imm");
 
   removeRegFromUses();
 
   OpKind = MO_Immediate;
   Contents.ImmVal = ImmVal;
+  setTargetFlags(TargetFlags);
 }
 
-void MachineOperand::ChangeToFPImmediate(const ConstantFP *FPImm) {
+void MachineOperand::ChangeToFPImmediate(const ConstantFP *FPImm,
+                                         unsigned TargetFlags) {
   assert((!isReg() || !isTied()) && "Cannot change a tied operand into an imm");
 
   removeRegFromUses();
 
   OpKind = MO_FPImmediate;
   Contents.CFP = FPImm;
+  setTargetFlags(TargetFlags);
 }
 
 void MachineOperand::ChangeToES(const char *SymName,
@@ -197,7 +200,7 @@ void MachineOperand::ChangeToGA(const GlobalValue *GV, int64_t Offset,
   setTargetFlags(TargetFlags);
 }
 
-void MachineOperand::ChangeToMCSymbol(MCSymbol *Sym) {
+void MachineOperand::ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into an MCSymbol");
 
@@ -205,9 +208,10 @@ void MachineOperand::ChangeToMCSymbol(MCSymbol *Sym) {
 
   OpKind = MO_MCSymbol;
   Contents.Sym = Sym;
+  setTargetFlags(TargetFlags);
 }
 
-void MachineOperand::ChangeToFrameIndex(int Idx) {
+void MachineOperand::ChangeToFrameIndex(int Idx, unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into a FrameIndex");
 
@@ -215,6 +219,7 @@ void MachineOperand::ChangeToFrameIndex(int Idx) {
 
   OpKind = MO_FrameIndex;
   setIndex(Idx);
+  setTargetFlags(TargetFlags);
 }
 
 void MachineOperand::ChangeToTargetIndex(unsigned Idx, int64_t Offset,
