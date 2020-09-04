@@ -78,14 +78,14 @@ SelfTargetProcessControl::lookupSymbols(LookupRequest Request) {
       auto &Sym = KV.first;
       std::string Tmp((*Sym).data() + !!GlobalManglingPrefix,
                       (*Sym).size() - !!GlobalManglingPrefix);
-      if (void *Addr = Dylib->getAddressOfSymbol(Tmp.c_str()))
-        R.back().push_back(pointerToJITTargetAddress(Addr));
-      else if (KV.second == SymbolLookupFlags::RequiredSymbol) {
+      void *Addr = Dylib->getAddressOfSymbol(Tmp.c_str());
+      if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol) {
         // FIXME: Collect all failing symbols before erroring out.
         SymbolNameVector MissingSymbols;
         MissingSymbols.push_back(Sym);
         return make_error<SymbolsNotFound>(std::move(MissingSymbols));
       }
+      R.back().push_back(pointerToJITTargetAddress(Addr));
     }
   }
 

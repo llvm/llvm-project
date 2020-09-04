@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/TPCDynamicLibrarySearchGenerator.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -30,7 +31,6 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
@@ -802,19 +802,13 @@ Error sanitizeArguments(const Session &S) {
 }
 
 Error loadProcessSymbols(Session &S) {
-  std::string ErrMsg;
-  if (sys::DynamicLibrary::LoadLibraryPermanently(nullptr, &ErrMsg))
-    return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
-
-  char GlobalPrefix =
-      S.TPC->getTargetTriple().getObjectFormat() == Triple::MachO ? '_' : '\0';
   auto InternedEntryPointName = S.ES.intern(EntryPointName);
   auto FilterMainEntryPoint = [InternedEntryPointName](SymbolStringPtr Name) {
     return Name != InternedEntryPointName;
   };
   S.MainJD->addGenerator(
-      ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-          GlobalPrefix, FilterMainEntryPoint)));
+      ExitOnErr(orc::TPCDynamicLibrarySearchGenerator::GetForTargetProcess(
+          *S.TPC, std::move(FilterMainEntryPoint))));
 
   return Error::success();
 }
