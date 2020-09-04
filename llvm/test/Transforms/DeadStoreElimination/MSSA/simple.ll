@@ -749,3 +749,17 @@ define void @test47_volatile(i32* %P) {
   store volatile i32 3, i32* %P, align 4
   ret void
 }
+
+define i32 @test48(i32* %P, i32* noalias %Q, i32* %R) {
+; CHECK-LABEL: @test48(
+; CHECK-NEXT:    store i32 2, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 3, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[R:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[L]]
+;
+  store i32 1, i32* %Q
+  store i32 2, i32* %P
+  store i32 3, i32* %Q
+  %l = load i32, i32* %R
+  ret i32 %l
+}
