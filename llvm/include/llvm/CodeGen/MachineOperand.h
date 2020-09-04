@@ -759,6 +759,11 @@ public:
                         bool isKill = false, bool isDead = false,
                         bool isUndef = false, bool isDebug = false);
 
+  /// getTargetIndexName - If this MachineOperand is a TargetIndex that has a
+  /// name, attempt to get the name. Returns nullptr if the TargetIndex does not
+  /// have a name. Asserts if MO is not a TargetIndex.
+  const char *getTargetIndexName() const;
+
   //===--------------------------------------------------------------------===//
   // Construction methods.
   //===--------------------------------------------------------------------===//
