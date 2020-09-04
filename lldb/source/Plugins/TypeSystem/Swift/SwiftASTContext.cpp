@@ -5315,10 +5315,6 @@ ConstString SwiftASTContext::GetTypeName(opaque_compiler_type_t type) {
                   swift::dyn_cast<swift::SyntaxSugarType>(type.getPointer())) {
             return syntax_sugar_type->getSinglyDesugaredType();
           }
-          if (swift::DictionaryType *dictionary_type =
-                  swift::dyn_cast<swift::DictionaryType>(type.getPointer())) {
-            return dictionary_type->getSinglyDesugaredType();
-          }
           return type;
         });
 
