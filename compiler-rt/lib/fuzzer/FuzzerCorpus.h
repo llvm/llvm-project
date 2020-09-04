@@ -270,6 +270,15 @@ public:
     return II;
   }
 
+  InputInfo &ChooseUnitToCrossOverWith(Random &Rand, bool UniformDist) {
+    if (!UniformDist) {
+      return ChooseUnitToMutate(Rand);
+    }
+    InputInfo &II = *Inputs[Rand(Inputs.size())];
+    assert(!II.U.empty());
+    return II;
+  }
+
   // Returns an index of random unit from the corpus to mutate.
   size_t ChooseUnitIdxToMutate(Random &Rand) {
     UpdateCorpusDistribution(Rand);

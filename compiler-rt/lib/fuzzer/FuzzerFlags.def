@@ -28,6 +28,16 @@ FUZZER_FLAG_INT(keep_seed, 0, "If 1, keep seed inputs in the corpus even if "
   "seed inputs will never be reduced. This option can be useful when seeds are"
   "not properly formed for the fuzz target but still have useful snippets.")
 FUZZER_FLAG_INT(cross_over, 1, "If 1, cross over inputs.")
+FUZZER_FLAG_INT(cross_over_uniform_dist, 0, "Experimental. If 1, use a "
+  "uniform probability distribution when choosing inputs to cross over with. "
+  "Some of the inputs in the corpus may never get chosen for mutation "
+  "depending on the input mutation scheduling policy. With this flag, all "
+  "inputs, regardless of the input mutation scheduling policy, can be chosen "
+  "as an input to cross over with. This can be particularly useful with "
+  "|keep_seed==1|; all the initial seed inputs, even though they do not "
+  "increase coverage because they are not properly formed, will still be "
+  "chosen as an input to cross over with.")
+
 FUZZER_FLAG_INT(mutate_depth, 5,
             "Apply this number of consecutive mutations to each input.")
 FUZZER_FLAG_INT(reduce_depth, 0, "Experimental/internal. "
