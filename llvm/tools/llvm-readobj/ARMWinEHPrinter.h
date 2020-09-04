@@ -120,6 +120,14 @@ class Decoder {
                     bool Prologue);
   bool opcode_save_next(const uint8_t *Opcodes, unsigned &Offset,
                         unsigned Length, bool Prologue);
+  bool opcode_trap_frame(const uint8_t *Opcodes, unsigned &Offset,
+                         unsigned Length, bool Prologue);
+  bool opcode_machine_frame(const uint8_t *Opcodes, unsigned &Offset,
+                            unsigned Length, bool Prologue);
+  bool opcode_context(const uint8_t *Opcodes, unsigned &Offset, unsigned Length,
+                      bool Prologue);
+  bool opcode_clear_unwound_to_call(const uint8_t *Opcodes, unsigned &Offset,
+                                    unsigned Length, bool Prologue);
 
   void decodeOpcodes(ArrayRef<uint8_t> Opcodes, unsigned Offset,
                      bool Prologue);

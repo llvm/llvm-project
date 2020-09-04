@@ -35,7 +35,7 @@
 
 // CHECK-LABEL: @cmp_exchange_weak_suitable_version_capabilities
 func @cmp_exchange_weak_suitable_version_capabilities(%ptr: !spv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.1, [Kernel, AtomicStorage], []>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.1, [Kernel, AtomicStorage], []>, {}>
 } {
   // CHECK: spv.AtomicCompareExchangeWeak "Workgroup" "AcquireRelease|AtomicCounterMemory" "Acquire"
   %0 = "test.convert_to_atomic_compare_exchange_weak_op"(%ptr, %value, %comparator): (!spv.ptr<i32, Workgroup>, i32, i32) -> (i32)
@@ -44,7 +44,7 @@ func @cmp_exchange_weak_suitable_version_capabilities(%ptr: !spv.ptr<i32, Workgr
 
 // CHECK-LABEL: @cmp_exchange_weak_unsupported_version
 func @cmp_exchange_weak_unsupported_version(%ptr: !spv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.4, [Kernel, AtomicStorage], []>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.4, [Kernel, AtomicStorage], []>, {}>
 } {
   // CHECK: test.convert_to_atomic_compare_exchange_weak_op
   %0 = "test.convert_to_atomic_compare_exchange_weak_op"(%ptr, %value, %comparator): (!spv.ptr<i32, Workgroup>, i32, i32) -> (i32)
@@ -57,7 +57,7 @@ func @cmp_exchange_weak_unsupported_version(%ptr: !spv.ptr<i32, Workgroup>, %val
 
 // CHECK-LABEL: @group_non_uniform_ballot_suitable_version
 func @group_non_uniform_ballot_suitable_version(%predicate: i1) -> vector<4xi32> attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.4, [GroupNonUniformBallot], []>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.4, [GroupNonUniformBallot], []>, {}>
 } {
   // CHECK: spv.GroupNonUniformBallot "Workgroup"
   %0 = "test.convert_to_group_non_uniform_ballot_op"(%predicate): (i1) -> (vector<4xi32>)
@@ -66,7 +66,7 @@ func @group_non_uniform_ballot_suitable_version(%predicate: i1) -> vector<4xi32>
 
 // CHECK-LABEL: @group_non_uniform_ballot_unsupported_version
 func @group_non_uniform_ballot_unsupported_version(%predicate: i1) -> vector<4xi32> attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.1, [GroupNonUniformBallot], []>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.1, [GroupNonUniformBallot], []>, {}>
 } {
   // CHECK: test.convert_to_group_non_uniform_ballot_op
   %0 = "test.convert_to_group_non_uniform_ballot_op"(%predicate): (i1) -> (vector<4xi32>)
@@ -79,7 +79,7 @@ func @group_non_uniform_ballot_unsupported_version(%predicate: i1) -> vector<4xi
 
 // CHECK-LABEL: @cmp_exchange_weak_missing_capability_kernel
 func @cmp_exchange_weak_missing_capability_kernel(%ptr: !spv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.3, [AtomicStorage], []>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.3, [AtomicStorage], []>, {}>
 } {
   // CHECK: test.convert_to_atomic_compare_exchange_weak_op
   %0 = "test.convert_to_atomic_compare_exchange_weak_op"(%ptr, %value, %comparator): (!spv.ptr<i32, Workgroup>, i32, i32) -> (i32)
@@ -88,7 +88,7 @@ func @cmp_exchange_weak_missing_capability_kernel(%ptr: !spv.ptr<i32, Workgroup>
 
 // CHECK-LABEL: @cmp_exchange_weak_missing_capability_atomic_storage
 func @cmp_exchange_weak_missing_capability_atomic_storage(%ptr: !spv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.3, [Kernel], []>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.3, [Kernel], []>, {}>
 } {
   // CHECK: test.convert_to_atomic_compare_exchange_weak_op
   %0 = "test.convert_to_atomic_compare_exchange_weak_op"(%ptr, %value, %comparator): (!spv.ptr<i32, Workgroup>, i32, i32) -> (i32)
@@ -97,7 +97,7 @@ func @cmp_exchange_weak_missing_capability_atomic_storage(%ptr: !spv.ptr<i32, Wo
 
 // CHECK-LABEL: @subgroup_ballot_missing_capability
 func @subgroup_ballot_missing_capability(%predicate: i1) -> vector<4xi32> attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.4, [], [SPV_KHR_shader_ballot]>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.4, [], [SPV_KHR_shader_ballot]>, {}>
 } {
   // CHECK: test.convert_to_subgroup_ballot_op
   %0 = "test.convert_to_subgroup_ballot_op"(%predicate): (i1) -> (vector<4xi32>)
@@ -106,7 +106,7 @@ func @subgroup_ballot_missing_capability(%predicate: i1) -> vector<4xi32> attrib
 
 // CHECK-LABEL: @bit_reverse_directly_implied_capability
 func @bit_reverse_directly_implied_capability(%operand: i32) -> i32 attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Geometry], []>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Geometry], []>, {}>
 } {
   // CHECK: spv.BitReverse
   %0 = "test.convert_to_bit_reverse_op"(%operand): (i32) -> (i32)
@@ -115,7 +115,7 @@ func @bit_reverse_directly_implied_capability(%operand: i32) -> i32 attributes {
 
 // CHECK-LABEL: @bit_reverse_recursively_implied_capability
 func @bit_reverse_recursively_implied_capability(%operand: i32) -> i32 attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [GeometryPointSize], []>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [GeometryPointSize], []>, {}>
 } {
   // CHECK: spv.BitReverse
   %0 = "test.convert_to_bit_reverse_op"(%operand): (i32) -> (i32)
@@ -128,7 +128,7 @@ func @bit_reverse_recursively_implied_capability(%operand: i32) -> i32 attribute
 
 // CHECK-LABEL: @subgroup_ballot_suitable_extension
 func @subgroup_ballot_suitable_extension(%predicate: i1) -> vector<4xi32> attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.4, [SubgroupBallotKHR], [SPV_KHR_shader_ballot]>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.4, [SubgroupBallotKHR], [SPV_KHR_shader_ballot]>, {}>
 } {
   // CHECK: spv.SubgroupBallotKHR
   %0 = "test.convert_to_subgroup_ballot_op"(%predicate): (i1) -> (vector<4xi32>)
@@ -137,7 +137,7 @@ func @subgroup_ballot_suitable_extension(%predicate: i1) -> vector<4xi32> attrib
 
 // CHECK-LABEL: @subgroup_ballot_missing_extension
 func @subgroup_ballot_missing_extension(%predicate: i1) -> vector<4xi32> attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.4, [SubgroupBallotKHR], []>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.4, [SubgroupBallotKHR], []>, {}>
 } {
   // CHECK: test.convert_to_subgroup_ballot_op
   %0 = "test.convert_to_subgroup_ballot_op"(%predicate): (i1) -> (vector<4xi32>)
@@ -146,7 +146,7 @@ func @subgroup_ballot_missing_extension(%predicate: i1) -> vector<4xi32> attribu
 
 // CHECK-LABEL: @module_suitable_extension1
 func @module_suitable_extension1() attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_vulkan_memory_model, SPV_EXT_physical_storage_buffer]>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_vulkan_memory_model, SPV_EXT_physical_storage_buffer]>, {}>
 } {
   // CHECK: spv.module PhysicalStorageBuffer64 Vulkan
   "test.convert_to_module_op"() : () ->()
@@ -155,7 +155,7 @@ func @module_suitable_extension1() attributes {
 
 // CHECK-LABEL: @module_suitable_extension2
 func @module_suitable_extension2() attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_vulkan_memory_model, SPV_KHR_physical_storage_buffer]>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_vulkan_memory_model, SPV_KHR_physical_storage_buffer]>, {}>
 } {
   // CHECK: spv.module PhysicalStorageBuffer64 Vulkan
   "test.convert_to_module_op"() : () -> ()
@@ -164,7 +164,7 @@ func @module_suitable_extension2() attributes {
 
 // CHECK-LABEL: @module_missing_extension_mm
 func @module_missing_extension_mm() attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_physical_storage_buffer]>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_physical_storage_buffer]>, {}>
 } {
   // CHECK: test.convert_to_module_op
   "test.convert_to_module_op"() : () -> ()
@@ -173,7 +173,7 @@ func @module_missing_extension_mm() attributes {
 
 // CHECK-LABEL: @module_missing_extension_am
 func @module_missing_extension_am() attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_vulkan_memory_model]>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_vulkan_memory_model]>, {}>
 } {
   // CHECK: test.convert_to_module_op
   "test.convert_to_module_op"() : () -> ()
@@ -183,7 +183,7 @@ func @module_missing_extension_am() attributes {
 // CHECK-LABEL: @module_implied_extension
 func @module_implied_extension() attributes {
   // Version 1.5 implies SPV_KHR_vulkan_memory_model and SPV_KHR_physical_storage_buffer.
-  spv.target_env = #spv.target_env<#spv.vce<v1.5, [VulkanMemoryModel, PhysicalStorageBufferAddresses], []>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.5, [VulkanMemoryModel, PhysicalStorageBufferAddresses], []>, {}>
 } {
   // CHECK: spv.module PhysicalStorageBuffer64 Vulkan
   "test.convert_to_module_op"() : () -> ()

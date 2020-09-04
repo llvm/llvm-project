@@ -378,8 +378,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 
   if (Opts.ArmSveVectorBits)
-    Builder.defineMacro("__ARM_FEATURE_SVE_BITS_EXPERIMENTAL",
-                        Twine(Opts.ArmSveVectorBits));
+    Builder.defineMacro("__ARM_FEATURE_SVE_BITS", Twine(Opts.ArmSveVectorBits));
 }
 
 ArrayRef<Builtin::Info> AArch64TargetInfo::getTargetBuiltins() const {

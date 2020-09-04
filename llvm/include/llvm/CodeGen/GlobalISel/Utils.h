@@ -16,10 +16,9 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Register.h"
-#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
-#include "llvm/Support/MachineValueType.h"
+#include <cstdint>
 
 namespace llvm {
 
@@ -34,10 +33,10 @@ class MachineRegisterInfo;
 class MCInstrDesc;
 class RegisterBankInfo;
 class TargetInstrInfo;
+class TargetLowering;
 class TargetPassConfig;
 class TargetRegisterInfo;
 class TargetRegisterClass;
-class Twine;
 class ConstantFP;
 class APFloat;
 

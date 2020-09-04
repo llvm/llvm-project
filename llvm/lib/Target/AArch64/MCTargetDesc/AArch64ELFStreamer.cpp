@@ -50,6 +50,9 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   void EmitARM64WinCFIAllocStack(unsigned Size) override {
     OS << "\t.seh_stackalloc " << Size << "\n";
   }
+  void EmitARM64WinCFISaveR19R20X(int Offset) override {
+    OS << "\t.seh_save_r19r20_x " << Offset << "\n";
+  }
   void EmitARM64WinCFISaveFPLR(int Offset) override {
     OS << "\t.seh_save_fplr " << Offset << "\n";
   }
@@ -68,6 +71,9 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   void EmitARM64WinCFISaveRegPX(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_regp_x x" << Reg << ", " << Offset << "\n";
   }
+  void EmitARM64WinCFISaveLRPair(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_lrpair x" << Reg << ", " << Offset << "\n";
+  }
   void EmitARM64WinCFISaveFReg(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_freg d" << Reg << ", " << Offset << "\n";
   }
@@ -85,9 +91,16 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     OS << "\t.seh_add_fp " << Size << "\n";
   }
   void EmitARM64WinCFINop() override { OS << "\t.seh_nop\n"; }
+  void EmitARM64WinCFISaveNext() override { OS << "\t.seh_save_next\n"; }
   void EmitARM64WinCFIPrologEnd() override { OS << "\t.seh_endprologue\n"; }
   void EmitARM64WinCFIEpilogStart() override { OS << "\t.seh_startepilogue\n"; }
   void EmitARM64WinCFIEpilogEnd() override { OS << "\t.seh_endepilogue\n"; }
+  void EmitARM64WinCFITrapFrame() override { OS << "\t.seh_trap_frame\n"; }
+  void EmitARM64WinCFIMachineFrame() override { OS << "\t.seh_pushframe\n"; }
+  void EmitARM64WinCFIContext() override { OS << "\t.seh_context\n"; }
+  void EmitARM64WinCFIClearUnwoundToCall() override {
+    OS << "\t.seh_clear_unwound_to_call\n";
+  }
 
 public:
   AArch64TargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);

@@ -309,11 +309,15 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
   else
     Env.MainCorpusDir = CorpusDirs[0];
 
-  auto CFPath = DirPlusFile(Env.TempDir, "merge.txt");
-  CrashResistantMerge(Env.Args, {}, SeedFiles, &Env.Files, {}, &Env.Features,
-                      {}, &Env.Cov,
-                      CFPath, false);
-  RemoveFile(CFPath);
+  if (Options.KeepSeed) {
+    for (auto &File : SeedFiles)
+      Env.Files.push_back(File.File);
+  } else {
+    auto CFPath = DirPlusFile(Env.TempDir, "merge.txt");
+    CrashResistantMerge(Env.Args, {}, SeedFiles, &Env.Files, {}, &Env.Features,
+                        {}, &Env.Cov, CFPath, false);
+    RemoveFile(CFPath);
+  }
   Printf("INFO: -fork=%d: %zd seed inputs, starting to fuzz in %s\n", NumJobs,
          Env.Files.size(), Env.TempDir.c_str());
 

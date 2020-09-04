@@ -1494,17 +1494,9 @@ Sema::TryImplicitConversion(Expr *From, QualType ToType,
 /// converted expression. Flavor is the kind of conversion we're
 /// performing, used in the error message. If @p AllowExplicit,
 /// explicit user-defined conversions are permitted.
-ExprResult
-Sema::PerformImplicitConversion(Expr *From, QualType ToType,
-                                AssignmentAction Action, bool AllowExplicit) {
-  ImplicitConversionSequence ICS;
-  return PerformImplicitConversion(From, ToType, Action, AllowExplicit, ICS);
-}
-
-ExprResult
-Sema::PerformImplicitConversion(Expr *From, QualType ToType,
-                                AssignmentAction Action, bool AllowExplicit,
-                                ImplicitConversionSequence& ICS) {
+ExprResult Sema::PerformImplicitConversion(Expr *From, QualType ToType,
+                                           AssignmentAction Action,
+                                           bool AllowExplicit) {
   if (checkPlaceholderForOverload(*this, From))
     return ExprError();
 
@@ -1515,13 +1507,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   if (getLangOpts().ObjC)
     CheckObjCBridgeRelatedConversions(From->getBeginLoc(), ToType,
                                       From->getType(), From);
-  ICS = ::TryImplicitConversion(*this, From, ToType,
-                                /*SuppressUserConversions=*/false,
-                                AllowExplicit ? AllowedExplicit::All
-                                              : AllowedExplicit::None,
-                                /*InOverloadResolution=*/false,
-                                /*CStyle=*/false, AllowObjCWritebackConversion,
-                                /*AllowObjCConversionOnExplicit=*/false);
+  ImplicitConversionSequence ICS = ::TryImplicitConversion(
+      *this, From, ToType,
+      /*SuppressUserConversions=*/false,
+      AllowExplicit ? AllowedExplicit::All : AllowedExplicit::None,
+      /*InOverloadResolution=*/false,
+      /*CStyle=*/false, AllowObjCWritebackConversion,
+      /*AllowObjCConversionOnExplicit=*/false);
   return PerformImplicitConversion(From, ToType, ICS, Action);
 }
 

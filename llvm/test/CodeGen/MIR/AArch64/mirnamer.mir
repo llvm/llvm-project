@@ -1,4 +1,4 @@
-# RUN: llc -x mir -mtriple aarch64-apple-ios -run-pass mir-namer -verify-machineinstrs -o - < %s | FileCheck %s
+# RUN: llc -x mir -mtriple aarch64-apple-ios -run-pass mir-namer -mir-vreg-namer-use-stable-hash -verify-machineinstrs -o - < %s | FileCheck %s
 
 ---
 name: foo

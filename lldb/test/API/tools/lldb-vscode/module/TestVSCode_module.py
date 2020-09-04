@@ -38,7 +38,8 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
         def checkSymbolsLoadedWithSize():
             active_modules = self.vscode.get_active_modules()
             program_module = active_modules[program_basename]
-            symbolsStatus = program_module['debugInfoSize']
+            self.assertIn('symbolFilePath', program_module)
+            self.assertIn(symbols_path, program_module['symbolFilePath'])
             symbol_regex = re.compile(r"[0-9]+(\.[0-9]*)?[KMG]?B")
             return symbol_regex.match(program_module['symbolStatus'])
                 
@@ -48,8 +49,6 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
         program_module = active_modules[program_basename]
         self.assertEqual(program_basename, program_module['name'])
         self.assertEqual(program, program_module['path'])
-        self.assertIn('symbolFilePath', program_module)
-        self.assertIn(symbols_path, program_module['symbolFilePath'])
         self.assertIn('addressRange', program_module)
 
     @skipIfWindows

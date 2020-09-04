@@ -14,7 +14,7 @@
 // RUN:  -target-feature +sve -target-feature +bf16 -msve-vector-bits=2048 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-2048
 
-#define N __ARM_FEATURE_SVE_BITS_EXPERIMENTAL
+#define N __ARM_FEATURE_SVE_BITS
 
 namespace std {
 class type_info;

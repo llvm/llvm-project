@@ -77,8 +77,4 @@ typedef signed int ssize_t;
 # define UINT64_MAX 0xffffffffffffffffULL
 #endif
 
-#ifndef HUGE_VALF
-#define HUGE_VALF (float)HUGE_VAL
-#endif
-
 #endif /* LLVM_C_DATATYPES_H */

@@ -20,9 +20,10 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
-#include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Allocator.h"
@@ -37,7 +38,6 @@ class CallInst;
 class CallLowering;
 class Constant;
 class DataLayout;
-class FunctionLoweringInfo;
 class Instruction;
 class MachineBasicBlock;
 class MachineFunction;

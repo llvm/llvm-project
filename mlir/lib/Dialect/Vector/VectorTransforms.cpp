@@ -1347,7 +1347,8 @@ public:
     auto eltType = dstType.getElementType();
     auto dimSizes = op.mask_dim_sizes();
     int64_t rank = dimSizes.size();
-    int64_t trueDim = dimSizes[0].cast<IntegerAttr>().getInt();
+    int64_t trueDim = std::min(dstType.getDimSize(0),
+                               dimSizes[0].cast<IntegerAttr>().getInt());
 
     if (rank == 1) {
       // Express constant 1-D case in explicit vector form:
@@ -1402,21 +1403,8 @@ public:
     int64_t rank = dstType.getRank();
     Value idx = op.getOperand(0);
 
-    if (rank == 1) {
-      // Express dynamic 1-D case in explicit vector form:
-      //   mask = [0,1,..,n-1] < [a,a,..,a]
-      SmallVector<int64_t, 4> values(dim);
-      for (int64_t d = 0; d < dim; d++)
-        values[d] = d;
-      Value indices =
-          rewriter.create<ConstantOp>(loc, rewriter.getI64VectorAttr(values));
-      Value bound =
-          rewriter.create<IndexCastOp>(loc, rewriter.getI64Type(), idx);
-      Value bounds = rewriter.create<SplatOp>(loc, indices.getType(), bound);
-      rewriter.replaceOpWithNewOp<CmpIOp>(op, CmpIPredicate::slt, indices,
-                                          bounds);
-      return success();
-    }
+    if (rank == 1)
+      return failure(); // leave for lowering
 
     VectorType lowType =
         VectorType::get(dstType.getShape().drop_front(), eltType);

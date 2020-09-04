@@ -2686,7 +2686,6 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
     UseMI.setDesc(get(NewOpc));
     UseMI.getOperand(1).ChangeToImmediate(Imm.getSExtValue());
-    UseMI.getOperand(1).setTargetFlags(0);
     UseMI.addImplicitDefUseOperands(*UseMI.getParent()->getParent());
     return true;
   }

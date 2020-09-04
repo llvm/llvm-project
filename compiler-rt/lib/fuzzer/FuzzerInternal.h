@@ -67,7 +67,8 @@ public:
 
   void ExecuteCallback(const uint8_t *Data, size_t Size);
   bool RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile = false,
-              InputInfo *II = nullptr, bool *FoundUniqFeatures = nullptr);
+              InputInfo *II = nullptr, bool ForceAddToCorpus = false,
+              bool *FoundUniqFeatures = nullptr);
 
   // Merge Corpora[1:] into Corpora[0].
   void Merge(const Vector<std::string> &Corpora);

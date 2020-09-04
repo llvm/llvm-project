@@ -15,12 +15,14 @@
 // UNSUPPORTED: clang-4, clang-5, clang-6, clang-7, clang-8, clang-9, clang-10
 // UNSUPPORTED: apple-clang-9, apple-clang-10, apple-clang-11, apple-clang-12
 
+// UNSUPPORTED: c++03
+
 #include <atomic>
 
 int main(int, char**)
 {
   // expected-error@atomic:*1 {{_Atomic cannot be applied to integer type '_ExtInt(32)'}}
-  std::atomic<_ExtInt(32)> x {42};
+  std::atomic<_ExtInt(32)> x(42);
 
   return 0;
 }

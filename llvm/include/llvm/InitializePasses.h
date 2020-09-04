@@ -218,7 +218,7 @@ void initializeLegalizerPass(PassRegistry&);
 void initializeGISelCSEAnalysisWrapperPassPass(PassRegistry &);
 void initializeGISelKnownBitsAnalysisPass(PassRegistry &);
 void initializeLibCallsShrinkWrapLegacyPassPass(PassRegistry&);
-void initializeLintPass(PassRegistry&);
+void initializeLintLegacyPassPass(PassRegistry &);
 void initializeLiveDebugValuesPass(PassRegistry&);
 void initializeLiveDebugVariablesPass(PassRegistry&);
 void initializeLiveIntervalsPass(PassRegistry&);
