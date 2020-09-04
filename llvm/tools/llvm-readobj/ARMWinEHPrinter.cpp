@@ -1111,6 +1111,143 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
   return true;
 }
 
+bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
+                                   const SectionRef Section, uint64_t Offset,
+                                   unsigned Index,
+                                   const RuntimeFunctionARM64 &RF) {
+  assert((RF.Flag() == RuntimeFunctionFlag::RFF_Packed ||
+          RF.Flag() == RuntimeFunctionFlag::RFF_PackedFragment) &&
+         "unpacked entry cannot be treated as a packed entry");
+
+  ErrorOr<SymbolRef> Function = getRelocatedSymbol(COFF, Section, Offset);
+  if (!Function)
+    Function = getSymbol(COFF, RF.BeginAddress, /*FunctionOnly=*/true);
+
+  StringRef FunctionName;
+  uint64_t FunctionAddress;
+  if (Function) {
+    Expected<StringRef> FunctionNameOrErr = Function->getName();
+    if (!FunctionNameOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
+      OS.flush();
+      report_fatal_error(Buf);
+    }
+    FunctionName = *FunctionNameOrErr;
+    Expected<uint64_t> FunctionAddressOrErr = Function->getAddress();
+    if (!FunctionAddressOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(FunctionAddressOrErr.takeError(), OS);
+      OS.flush();
+      report_fatal_error(Buf);
+    }
+    FunctionAddress = *FunctionAddressOrErr;
+  } else {
+    FunctionAddress = COFF.getPE32PlusHeader()->ImageBase + RF.BeginAddress;
+  }
+
+  SW.printString("Function", formatSymbol(FunctionName, FunctionAddress));
+  SW.printBoolean("Fragment",
+                  RF.Flag() == RuntimeFunctionFlag::RFF_PackedFragment);
+  SW.printNumber("FunctionLength", RF.FunctionLength());
+  SW.printNumber("RegF", RF.RegF());
+  SW.printNumber("RegI", RF.RegI());
+  SW.printBoolean("HomedParameters", RF.H());
+  SW.printNumber("CR", RF.CR());
+  SW.printNumber("FrameSize", RF.FrameSize() << 4);
+  ListScope PS(SW, "Prologue");
+
+  // Synthesize the equivalent prologue according to the documentation
+  // at https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling,
+  // printed in reverse order compared to the docs, to match how prologues
+  // are printed for the non-packed case.
+  int IntSZ = 8 * RF.RegI();
+  if (RF.CR() == 1)
+    IntSZ += 8;
+  int FpSZ = 8 * RF.RegF();
+  if (RF.RegF())
+    FpSZ += 8;
+  int SavSZ = (IntSZ + FpSZ + 8 * 8 * RF.H() + 0xf) & ~0xf;
+  int LocSZ = (RF.FrameSize() << 4) - SavSZ;
+
+  if (RF.CR() == 3) {
+    SW.startLine() << "mov x29, sp\n";
+    if (LocSZ <= 512) {
+      SW.startLine() << format("stp x29, lr, [sp, #-%d]!\n", LocSZ);
+    } else {
+      SW.startLine() << "stp x29, lr, [sp, #0]\n";
+    }
+  }
+  if (LocSZ > 4080) {
+    SW.startLine() << format("sub sp, sp, #%d\n", LocSZ - 4080);
+    SW.startLine() << "sub sp, sp, #4080\n";
+  } else if ((RF.CR() != 3 && LocSZ > 0) || LocSZ > 512) {
+    SW.startLine() << format("sub sp, sp, #%d\n", LocSZ);
+  }
+  if (RF.H()) {
+    SW.startLine() << format("stp x6, x7, [sp, #%d]\n", IntSZ + FpSZ + 48);
+    SW.startLine() << format("stp x4, x5, [sp, #%d]\n", IntSZ + FpSZ + 32);
+    SW.startLine() << format("stp x2, x3, [sp, #%d]\n", IntSZ + FpSZ + 16);
+    if (RF.RegI() > 0 || RF.RegF() > 0 || RF.CR() == 1) {
+      SW.startLine() << format("stp x0, x1, [sp, #%d]\n", IntSZ + FpSZ);
+    } else {
+      // This case isn't documented; if neither RegI nor RegF nor CR=1
+      // have decremented the stack pointer by SavSZ, we need to do it here
+      // (as the final stack adjustment of LocSZ excludes SavSZ).
+      SW.startLine() << format("stp x0, x1, [sp, #-%d]!\n", SavSZ);
+    }
+  }
+  int FloatRegs = RF.RegF() > 0 ? RF.RegF() + 1 : 0;
+  for (int I = (FloatRegs + 1) / 2 - 1; I >= 0; I--) {
+    if (I == (FloatRegs + 1) / 2 - 1 && FloatRegs % 2 == 1) {
+      // The last register, an odd register without a pair
+      SW.startLine() << format("str d%d, [sp, #%d]\n", 8 + 2 * I,
+                               IntSZ + 16 * I);
+    } else if (I == 0 && RF.RegI() == 0 && RF.CR() != 1) {
+      SW.startLine() << format("stp d%d, d%d, [sp, #-%d]!\n", 8 + 2 * I,
+                               8 + 2 * I + 1, SavSZ);
+    } else {
+      SW.startLine() << format("stp d%d, d%d, [sp, #%d]\n", 8 + 2 * I,
+                               8 + 2 * I + 1, IntSZ + 16 * I);
+    }
+  }
+  if (RF.CR() == 1 && (RF.RegI() % 2) == 0) {
+    if (RF.RegI() == 0)
+      SW.startLine() << format("str lr, [sp, #-%d]!\n", SavSZ);
+    else
+      SW.startLine() << format("str lr, [sp, #%d]\n", IntSZ - 8);
+  }
+  for (int I = (RF.RegI() + 1) / 2 - 1; I >= 0; I--) {
+    if (I == (RF.RegI() + 1) / 2 - 1 && RF.RegI() % 2 == 1) {
+      // The last register, an odd register without a pair
+      if (RF.CR() == 1) {
+        if (I == 0) // If this is the only register pair
+          SW.startLine() << format("stp x%d, lr, [sp, #-%d]!\n", 19 + 2 * I,
+                                   SavSZ);
+        else
+          SW.startLine() << format("stp x%d, lr, [sp, #%d]\n", 19 + 2 * I,
+                                   16 * I);
+      } else {
+        if (I == 0)
+          SW.startLine() << format("str x%d, [sp, #-%d]!\n", 19 + 2 * I, SavSZ);
+        else
+          SW.startLine() << format("str x%d, [sp, #%d]\n", 19 + 2 * I, 16 * I);
+      }
+    } else if (I == 0) {
+      // The first register pair
+      SW.startLine() << format("stp x19, x20, [sp, #-%d]!\n", SavSZ);
+    } else {
+      SW.startLine() << format("stp x%d, x%d, [sp, #%d]\n", 19 + 2 * I,
+                               19 + 2 * I + 1, 16 * I);
+    }
+  }
+  SW.startLine() << "end\n";
+
+  return true;
+}
+
 bool Decoder::dumpProcedureDataEntry(const COFFObjectFile &COFF,
                                      const SectionRef Section, unsigned Index,
                                      ArrayRef<uint8_t> Contents) {
@@ -1123,8 +1260,8 @@ bool Decoder::dumpProcedureDataEntry(const COFFObjectFile &COFF,
   if (Entry.Flag() == RuntimeFunctionFlag::RFF_Unpacked)
     return dumpUnpackedEntry(COFF, Section, Offset, Index, Entry);
   if (isAArch64) {
-    SW.startLine() << "Packed unwind data not yet supported for ARM64\n";
-    return true;
+    const RuntimeFunctionARM64 EntryARM64(Data);
+    return dumpPackedARM64Entry(COFF, Section, Offset, Index, EntryARM64);
   }
   return dumpPackedEntry(COFF, Section, Offset, Index, Entry);
 }
