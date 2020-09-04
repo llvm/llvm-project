@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-c/Index.h"
+#include "clang-c/Rewrite.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -841,4 +842,91 @@ TEST_F(LibclangParseTest, clang_Cursor_hasVarDeclExternalStorageTrue) {
         return CXChildVisit_Continue;
       },
       nullptr);
+}
+class LibclangRewriteTest : public LibclangParseTest {
+public:
+  CXRewriter Rew = nullptr;
+  std::string Filename;
+  CXFile File = nullptr;
+
+  void SetUp() override {
+    LibclangParseTest::SetUp();
+    Filename = "file.cpp";
+    WriteFile(Filename, "int main() { return 0; }");
+    ClangTU = clang_parseTranslationUnit(Index, Filename.c_str(), nullptr, 0,
+                                         nullptr, 0, TUFlags);
+    Rew = clang_CXRewriter_create(ClangTU);
+    File = clang_getFile(ClangTU, Filename.c_str());
+  }
+  void TearDown() override {
+    clang_CXRewriter_dispose(Rew);
+    LibclangParseTest::TearDown();
+  }
+};
+
+static std::string getFileContent(const std::string& Filename) {
+  std::ifstream RewrittenFile(Filename);
+  std::string RewrittenFileContent;
+  std::string Line;
+  while (std::getline(RewrittenFile, Line)) {
+    if (RewrittenFileContent.empty())
+      RewrittenFileContent = Line;
+    else {
+      RewrittenFileContent += "\n" + Line;
+    }
+  }
+  return RewrittenFileContent;
+}
+
+TEST_F(LibclangRewriteTest, RewriteReplace) {
+  CXSourceLocation B = clang_getLocation(ClangTU, File, 1, 5);
+  CXSourceLocation E = clang_getLocation(ClangTU, File, 1, 9);
+  CXSourceRange Rng	= clang_getRange(B, E);
+
+  clang_CXRewriter_replaceText(Rew, Rng, "MAIN");
+
+  ASSERT_EQ(clang_CXRewriter_overwriteChangedFiles(Rew), 0);
+  EXPECT_EQ(getFileContent(Filename), "int MAIN() { return 0; }");
+}
+
+TEST_F(LibclangRewriteTest, RewriteReplaceShorter) {
+  CXSourceLocation B = clang_getLocation(ClangTU, File, 1, 5);
+  CXSourceLocation E = clang_getLocation(ClangTU, File, 1, 9);
+  CXSourceRange Rng	= clang_getRange(B, E);
+
+  clang_CXRewriter_replaceText(Rew, Rng, "foo");
+
+  ASSERT_EQ(clang_CXRewriter_overwriteChangedFiles(Rew), 0);
+  EXPECT_EQ(getFileContent(Filename), "int foo() { return 0; }");
+}
+
+TEST_F(LibclangRewriteTest, RewriteReplaceLonger) {
+  CXSourceLocation B = clang_getLocation(ClangTU, File, 1, 5);
+  CXSourceLocation E = clang_getLocation(ClangTU, File, 1, 9);
+  CXSourceRange Rng	= clang_getRange(B, E);
+
+  clang_CXRewriter_replaceText(Rew, Rng, "patatino");
+
+  ASSERT_EQ(clang_CXRewriter_overwriteChangedFiles(Rew), 0);
+  EXPECT_EQ(getFileContent(Filename), "int patatino() { return 0; }");
+}
+
+TEST_F(LibclangRewriteTest, RewriteInsert) {
+  CXSourceLocation Loc = clang_getLocation(ClangTU, File, 1, 5);
+
+  clang_CXRewriter_insertTextBefore(Rew, Loc, "ro");
+
+  ASSERT_EQ(clang_CXRewriter_overwriteChangedFiles(Rew), 0);
+  EXPECT_EQ(getFileContent(Filename), "int romain() { return 0; }");
+}
+
+TEST_F(LibclangRewriteTest, RewriteRemove) {
+  CXSourceLocation B = clang_getLocation(ClangTU, File, 1, 5);
+  CXSourceLocation E = clang_getLocation(ClangTU, File, 1, 9);
+  CXSourceRange Rng	= clang_getRange(B, E);
+
+  clang_CXRewriter_removeText(Rew, Rng);
+
+  ASSERT_EQ(clang_CXRewriter_overwriteChangedFiles(Rew), 0);
+  EXPECT_EQ(getFileContent(Filename), "int () { return 0; }");
 }
