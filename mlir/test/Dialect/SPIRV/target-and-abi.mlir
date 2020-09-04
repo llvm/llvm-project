@@ -104,15 +104,6 @@ func @interface_var(
 // spv.target_env
 //===----------------------------------------------------------------------===//
 
-func @target_env_missing_limits() attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
-    // expected-error @+1 {{limits must be a dictionary attribute containing two 32-bit integer attributes 'max_compute_workgroup_invocations' and 'max_compute_workgroup_size'}}
-    {max_compute_workgroup_size = dense<[128, 64, 64]> : vector<3xi32>}>
-} { return }
-
-// -----
-
 func @target_env_wrong_limits() attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,

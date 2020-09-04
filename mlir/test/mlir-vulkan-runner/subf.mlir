@@ -4,9 +4,7 @@
 module attributes {
   gpu.container_module,
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
 } {
   gpu.module @kernels {
     gpu.func @kernel_sub(%arg0 : memref<8x4x4xf32>, %arg1 : memref<4x4xf32>, %arg2 : memref<8x4x4xf32>)
