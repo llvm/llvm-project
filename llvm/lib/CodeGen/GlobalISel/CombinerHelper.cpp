@@ -1612,6 +1612,48 @@ bool CombinerHelper::applyCombineUnmergeMergeToPlainValues(
   return true;
 }
 
+bool CombinerHelper::matchCombineUnmergeConstant(MachineInstr &MI,
+                                                 SmallVectorImpl<APInt> &Csts) {
+  unsigned SrcIdx = MI.getNumOperands() - 1;
+  Register SrcReg = MI.getOperand(SrcIdx).getReg();
+  MachineInstr *SrcInstr = MRI.getVRegDef(SrcReg);
+  if (SrcInstr->getOpcode() != TargetOpcode::G_CONSTANT &&
+      SrcInstr->getOpcode() != TargetOpcode::G_FCONSTANT)
+    return false;
+  // Break down the big constant in smaller ones.
+  const MachineOperand &CstVal = SrcInstr->getOperand(1);
+  APInt Val = SrcInstr->getOpcode() == TargetOpcode::G_CONSTANT
+                  ? CstVal.getCImm()->getValue()
+                  : CstVal.getFPImm()->getValueAPF().bitcastToAPInt();
+
+  LLT Dst0Ty = MRI.getType(MI.getOperand(0).getReg());
+  unsigned ShiftAmt = Dst0Ty.getSizeInBits();
+  // Unmerge a constant.
+  for (unsigned Idx = 0; Idx != SrcIdx; ++Idx) {
+    Csts.emplace_back(Val.trunc(ShiftAmt));
+    Val = Val.lshr(ShiftAmt);
+  }
+
+  return true;
+}
+
+bool CombinerHelper::applyCombineUnmergeConstant(MachineInstr &MI,
+                                                 SmallVectorImpl<APInt> &Csts) {
+  assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
+         "Expected an unmerge");
+  assert((MI.getNumOperands() - 1 == Csts.size()) &&
+         "Not enough operands to replace all defs");
+  unsigned NumElems = MI.getNumOperands() - 1;
+  Builder.setInstrAndDebugLoc(MI);
+  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+    Register DstReg = MI.getOperand(Idx).getReg();
+    Builder.buildConstant(DstReg, Csts[Idx]);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::matchCombineShiftToUnmerge(MachineInstr &MI,
                                                 unsigned TargetShiftSize,
                                                 unsigned &ShiftVal) {
