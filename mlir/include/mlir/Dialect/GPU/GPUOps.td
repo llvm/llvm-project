@@ -21,7 +21,8 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // Type constraint accepting standard integers, indices and wrapped LLVM integer
 // types.
 def IntLikeOrLLVMInt : TypeConstraint<
-  Or<[AnySignlessInteger.predicate, Index.predicate, LLVMInt.predicate]>,
+  Or<[AnySignlessInteger.predicate, Index.predicate,
+      LLVM_AnyInteger.predicate]>,
   "integer, index or LLVM dialect equivalent">;
 
 //===----------------------------------------------------------------------===//
