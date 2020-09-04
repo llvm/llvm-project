@@ -190,7 +190,7 @@ public:
   TemplatedIndexedValue operator()(Value index, Args... indices) {
     return TemplatedIndexedValue(value, index).append(indices...);
   }
-  TemplatedIndexedValue operator()(ArrayRef<Value> indices) {
+  TemplatedIndexedValue operator()(ValueRange indices) {
     return TemplatedIndexedValue(value, indices);
   }
 
@@ -319,7 +319,7 @@ public:
   }
 
 private:
-  TemplatedIndexedValue(Value value, ArrayRef<Value> indices)
+  TemplatedIndexedValue(Value value, ValueRange indices)
       : value(value), indices(indices.begin(), indices.end()) {}
 
   TemplatedIndexedValue &append() { return *this; }
