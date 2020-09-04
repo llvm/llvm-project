@@ -101,16 +101,14 @@ static const uptr kChunkHeader2Size = sizeof(ChunkBase) - kChunkHeaderSize;
 COMPILER_CHECK(kChunkHeaderSize == 16);
 COMPILER_CHECK(kChunkHeader2Size <= 16);
 
-// Every chunk of memory allocated by this allocator can be in one of 3 states:
-// CHUNK_AVAILABLE: the chunk is in the free list and ready to be allocated.
-// CHUNK_ALLOCATED: the chunk is allocated and not yet freed.
-// CHUNK_QUARANTINE: the chunk was freed and put into quarantine zone.
 enum {
   // Either just allocated by underlying allocator, but AsanChunk is not yet
   // ready, or almost returned to undelying allocator and AsanChunk is already
   // meaningless.
   CHUNK_INVALID = 0,
+  // The chunk is allocated and not yet freed.
   CHUNK_ALLOCATED = 2,
+  // The chunk was freed and put into quarantine zone.
   CHUNK_QUARANTINE = 3
 };
 
