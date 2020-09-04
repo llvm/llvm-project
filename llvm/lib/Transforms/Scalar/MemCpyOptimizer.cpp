@@ -423,8 +423,12 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
     if (MSSAU) {
       assert(LastMemDef && MemInsertPoint &&
              "Both LastMemDef and MemInsertPoint need to be set");
-      auto *NewDef = cast<MemoryDef>(
-          MSSAU->createMemoryAccessAfter(AMemSet, LastMemDef, MemInsertPoint));
+      auto *NewDef =
+          cast<MemoryDef>(MemInsertPoint->getMemoryInst() == &*BI
+                              ? MSSAU->createMemoryAccessBefore(
+                                    AMemSet, LastMemDef, MemInsertPoint)
+                              : MSSAU->createMemoryAccessAfter(
+                                    AMemSet, LastMemDef, MemInsertPoint));
       MSSAU->insertDef(NewDef, /*RenameUses=*/true);
       LastMemDef = NewDef;
       MemInsertPoint = NewDef;
