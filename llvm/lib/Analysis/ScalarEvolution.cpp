@@ -6341,6 +6341,25 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
   case Instruction::Invoke:
     if (Value *RV = cast<CallBase>(U)->getReturnedArgOperand())
       return getSCEV(RV);
+
+    if (auto *II = dyn_cast<IntrinsicInst>(U)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::umax:
+        return getUMaxExpr(getSCEV(II->getArgOperand(0)),
+                           getSCEV(II->getArgOperand(1)));
+      case Intrinsic::umin:
+        return getUMinExpr(getSCEV(II->getArgOperand(0)),
+                           getSCEV(II->getArgOperand(1)));
+      case Intrinsic::smax:
+        return getSMaxExpr(getSCEV(II->getArgOperand(0)),
+                           getSCEV(II->getArgOperand(1)));
+      case Intrinsic::smin:
+        return getSMinExpr(getSCEV(II->getArgOperand(0)),
+                           getSCEV(II->getArgOperand(1)));
+      default:
+        break;
+      }
+    }
     break;
   }
 
