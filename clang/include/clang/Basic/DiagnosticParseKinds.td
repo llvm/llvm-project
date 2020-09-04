@@ -1136,6 +1136,12 @@ def ext_stdc_pragma_ignored : ExtWarn<"unknown pragma in STDC namespace">,
 def warn_stdc_fenv_access_not_supported :
    Warning<"pragma STDC FENV_ACCESS ON is not supported, ignoring pragma">,
    InGroup<UnknownPragmas>;
+def warn_stdc_fenv_round_not_supported :
+   Warning<"pragma STDC FENV_ROUND is not supported">,
+   InGroup<UnknownPragmas>;
+def warn_stdc_unknown_rounding_mode : Warning<
+  "invalid or unsupported rounding mode in '#pragma STDC FENV_ROUND' - ignored">,
+  InGroup<IgnoredPragmas>;
 // - #pragma comment
 def err_pragma_comment_malformed : Error<
   "pragma comment requires parenthesized identifier and optional string">;
