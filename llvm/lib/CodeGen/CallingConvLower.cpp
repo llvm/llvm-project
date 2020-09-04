@@ -13,6 +13,7 @@
 
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -182,6 +183,11 @@ void CCState::AnalyzeCallResult(MVT VT, CCAssignFn Fn) {
 #endif
     llvm_unreachable(nullptr);
   }
+}
+
+void CCState::ensureMaxAlignment(Align Alignment) {
+  if (!AnalyzingMustTailForwardedRegs)
+    MF.getFrameInfo().ensureMaxAlignment(Alignment);
 }
 
 static bool isValueTypeInRegForCC(CallingConv::ID CC, MVT VT) {
