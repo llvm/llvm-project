@@ -325,6 +325,13 @@ const IRPosition
 SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);
 
+  // Helper to determine if operand bundles on a call site are benin or
+  // potentially problematic. We handle only llvm.assume for now.
+  auto CanIgnoreOperandBundles = [](const CallBase &CB) {
+    return (isa<IntrinsicInst>(CB) &&
+            cast<IntrinsicInst>(CB).getIntrinsicID() == Intrinsic ::assume);
+  };
+
   const auto *CB = dyn_cast<CallBase>(&IRP.getAnchorValue());
   switch (IRP.getPositionKind()) {
   case IRPosition::IRP_INVALID:
@@ -339,7 +346,7 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     assert(CB && "Expected call site!");
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
-    if (!CB->hasOperandBundles())
+    if (!CB->hasOperandBundles() || CanIgnoreOperandBundles(*CB))
       if (const Function *Callee = CB->getCalledFunction())
         IRPositions.emplace_back(IRPosition::function(*Callee));
     return;
@@ -347,7 +354,7 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     assert(CB && "Expected call site!");
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
-    if (!CB->hasOperandBundles()) {
+    if (!CB->hasOperandBundles() || CanIgnoreOperandBundles(*CB)) {
       if (const Function *Callee = CB->getCalledFunction()) {
         IRPositions.emplace_back(IRPosition::returned(*Callee));
         IRPositions.emplace_back(IRPosition::function(*Callee));
@@ -368,7 +375,7 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     assert(CB && ArgNo >= 0 && "Expected call site!");
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
-    if (!CB->hasOperandBundles()) {
+    if (!CB->hasOperandBundles() || CanIgnoreOperandBundles(*CB)) {
       const Function *Callee = CB->getCalledFunction();
       if (Callee && Callee->arg_size() > unsigned(ArgNo))
         IRPositions.emplace_back(IRPosition::argument(*Callee->getArg(ArgNo)));
