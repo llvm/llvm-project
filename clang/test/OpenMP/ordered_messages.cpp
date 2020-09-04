@@ -16,6 +16,9 @@ void xxx(int argc) {
 }
 
 int foo();
+#if __cplusplus >= 201103L
+// expected-note@-2 {{declared here}}
+#endif
 
 template <class T>
 T foo() {
@@ -176,7 +179,7 @@ T foo() {
 
 int foo() {
 #if __cplusplus >= 201103L
-// expected-note@-2 2 {{declared here}}
+// expected-note@-2 {{declared here}}
 #endif
 int k;
   #pragma omp for ordered

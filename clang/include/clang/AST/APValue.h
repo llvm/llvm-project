@@ -174,6 +174,7 @@ public:
       return !(LHS == RHS);
     }
     friend llvm::hash_code hash_value(const LValueBase &Base);
+    friend struct llvm::DenseMapInfo<LValueBase>;
 
   private:
     PtrTy Ptr;
@@ -201,8 +202,7 @@ public:
 
   public:
     LValuePathEntry() : Value() {}
-    LValuePathEntry(BaseOrMemberType BaseOrMember)
-        : Value{reinterpret_cast<uintptr_t>(BaseOrMember.getOpaqueValue())} {}
+    LValuePathEntry(BaseOrMemberType BaseOrMember);
     static LValuePathEntry ArrayIndex(uint64_t Index) {
       LValuePathEntry Result;
       Result.Value = Index;
