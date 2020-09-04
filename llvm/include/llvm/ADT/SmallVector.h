@@ -32,6 +32,9 @@
 #include <new>
 #include <type_traits>
 #include <utility>
+#ifdef LLVM_ENABLE_EXCEPTIONS
+#include <stdexcept>
+#endif
 
 namespace llvm {
 
