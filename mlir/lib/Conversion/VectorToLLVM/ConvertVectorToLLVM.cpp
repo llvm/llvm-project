@@ -134,18 +134,14 @@ static Value buildVectorComparison(ConversionPatternRewriter &rewriter,
   Value indices;
   Type idxType;
   if (enableIndexOptimizations) {
-    SmallVector<int32_t, 4> values(dim);
-    for (int64_t d = 0; d < dim; d++)
-      values[d] = d;
-    indices =
-        rewriter.create<ConstantOp>(loc, rewriter.getI32VectorAttr(values));
+    indices = rewriter.create<ConstantOp>(
+        loc, rewriter.getI32VectorAttr(
+                 llvm::to_vector<4>(llvm::seq<int32_t>(0, dim))));
     idxType = rewriter.getI32Type();
   } else {
-    SmallVector<int64_t, 4> values(dim);
-    for (int64_t d = 0; d < dim; d++)
-      values[d] = d;
-    indices =
-        rewriter.create<ConstantOp>(loc, rewriter.getI64VectorAttr(values));
+    indices = rewriter.create<ConstantOp>(
+        loc, rewriter.getI64VectorAttr(
+                 llvm::to_vector<4>(llvm::seq<int64_t>(0, dim))));
     idxType = rewriter.getI64Type();
   }
   // Add in an offset if requested.
@@ -451,11 +447,9 @@ public:
       return failure();
 
     // Replace with the gather intrinsic.
-    ValueRange v = (llvm::size(adaptor.pass_thru()) == 0) ? ValueRange({})
-                                                          : adaptor.pass_thru();
     rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
-        gather, typeConverter.convertType(vType), ptrs, adaptor.mask(), v,
-        rewriter.getI32IntegerAttr(align));
+        gather, typeConverter.convertType(vType), ptrs, adaptor.mask(),
+        adaptor.pass_thru(), rewriter.getI32IntegerAttr(align));
     return success();
   }
 };
@@ -1282,7 +1276,7 @@ public:
     //       dimensions here.
     unsigned vecWidth = vecTy.getVectorNumElements();
     unsigned lastIndex = llvm::size(xferOp.indices()) - 1;
-    Value off = *(xferOp.indices().begin() + lastIndex);
+    Value off = xferOp.indices()[lastIndex];
     Value dim = rewriter.create<DimOp>(loc, xferOp.memref(), lastIndex);
     Value mask = buildVectorComparison(rewriter, op, enableIndexOptimizations,
                                        vecWidth, dim, &off);
