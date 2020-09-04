@@ -30,21 +30,6 @@ bb3:
   ret void
 }
 
-define i32 @test22(i32* %P, i32* noalias %Q, i32* %R) {
-; CHECK-LABEL: @test22(
-; CHECK-NEXT:    store i32 2, i32* [[P:%.*]]
-; CHECK-NEXT:    store i32 3, i32* [[Q:%.*]]
-; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[R:%.*]]
-; CHECK-NEXT:    ret i32 [[L]]
-;
-  store i32 1, i32* %Q
-  store i32 2, i32* %P
-  store i32 3, i32* %Q
-  %l = load i32, i32* %R
-  ret i32 %l
-}
-
-
 define void @test23(i32* noalias %P) {
 ; CHECK-LABEL: @test23(
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
