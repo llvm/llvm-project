@@ -339,8 +339,14 @@ struct IRPosition {
 
   /// Return the associated function, if any.
   Function *getAssociatedFunction() const {
-    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue())) {
+      // We reuse the logic that associates callback calles to arguments of a
+      // call site here to identify the callback callee as the associated
+      // function.
+      if (Argument *Arg = getAssociatedArgument())
+        return Arg->getParent();
       return CB->getCalledFunction();
+    }
     return getAnchorScope();
   }
 
