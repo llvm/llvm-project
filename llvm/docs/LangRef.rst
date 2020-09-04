@@ -12479,11 +12479,11 @@ very cleanly specified and it is unwise to depend on it.
 Semantics:
 """"""""""
 
-The '``llvm.memcpy.*``' intrinsics copy a block of memory from the
-source location to the destination location, which are not allowed to
-overlap. It copies "len" bytes of memory over. If the argument is known
-to be aligned to some boundary, this can be specified as an attribute on
-the argument.
+The '``llvm.memcpy.*``' intrinsics copy a block of memory from the source
+location to the destination location, which must either be equal or
+non-overlapping. It copies "len" bytes of memory over. If the argument is known
+to be aligned to some boundary, this can be specified as an attribute on the
+argument.
 
 If "len" is 0, the pointers may be NULL, dangling, ``undef``, or ``poison``
 pointers. However, they must still be appropriately aligned.
