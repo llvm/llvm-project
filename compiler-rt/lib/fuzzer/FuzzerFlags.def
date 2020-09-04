@@ -23,6 +23,10 @@ FUZZER_FLAG_INT(len_control, 100, "Try generating small inputs first, "
 FUZZER_FLAG_STRING(seed_inputs, "A comma-separated list of input files "
   "to use as an additional seed corpus. Alternatively, an \"@\" followed by "
   "the name of a file containing the comma-separated list.")
+FUZZER_FLAG_INT(keep_seed, 0, "If 1, keep seed inputs in the corpus even if "
+  "they do not produce new coverage. When used with |reduce_inputs==1|, the "
+  "seed inputs will never be reduced. This option can be useful when seeds are"
+  "not properly formed for the fuzz target but still have useful snippets.")
 FUZZER_FLAG_INT(cross_over, 1, "If 1, cross over inputs.")
 FUZZER_FLAG_INT(mutate_depth, 5,
             "Apply this number of consecutive mutations to each input.")
