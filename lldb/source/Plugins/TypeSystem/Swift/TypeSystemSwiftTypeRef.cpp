@@ -1759,9 +1759,8 @@ void TypeSystemSwiftTypeRef::DumpSummary(opaque_compiler_type_t type,
 bool TypeSystemSwiftTypeRef::IsPointerOrReferenceType(
     opaque_compiler_type_t type, CompilerType *pointee_type) {
   auto impl = [&]() {
-    return
-      IsPointerType(type, pointee_type) ||
-      IsReferenceType(type, pointee_type, nullptr);
+    return IsPointerType(type, pointee_type) ||
+           IsReferenceType(type, pointee_type, nullptr);
   };
   VALIDATE_AND_RETURN(impl, IsPointerOrReferenceType, type,
                       (ReconstructType(type), pointee_type));
