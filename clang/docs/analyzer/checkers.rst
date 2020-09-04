@@ -1747,7 +1747,7 @@ Check for integer to enumeration casts that could result in undefined values.
  void foo() {
    TestEnum t = static_cast(-1);
        // warn: the value provided to the cast expression is not in
-                the valid range of values for the enum
+       //       the valid range of values for the enum
 
 .. _alpha-cplusplus-InvalidatedIterator:
 
