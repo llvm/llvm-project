@@ -116,6 +116,15 @@ public:
 
   unsigned getKnownMinValue() const { return Min; }
 
+  // Return the minimum value with the assumption that the count is exact.
+  // Use in places where a scalable count doesn't make sense (e.g. non-vector
+  // types, or vectors in backends which don't support scalable vectors).
+  unsigned getFixedValue() const {
+    assert(!Scalable &&
+           "Request for a fixed element count on a scalable object");
+    return Min;
+  }
+
   bool isScalable() const { return Scalable; }
 };
 
