@@ -552,3 +552,42 @@ add_fp_unittest(
     libc.src.math.sqrtl
     libc.utils.FPUtil.fputil
 )
+
+add_fp_unittest(
+  remquof_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    remquof_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.remquof
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  remquo_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    remquo_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.remquo
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  remquol_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    remquol_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.remquol
+    libc.utils.FPUtil.fputil
+)
