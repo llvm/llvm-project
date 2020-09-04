@@ -182,6 +182,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       TheOnlyDest = SI->case_begin()->getCaseSuccessor();
     }
 
+    bool Changed = false;
+
     // Figure out which case it goes to.
     for (auto i = SI->case_begin(), e = SI->case_end(); i != e;) {
       // Found case matching a constant operand?
@@ -220,6 +222,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         DefaultDest->removePredecessor(ParentBB);
         i = SI->removeCase(i);
         e = SI->case_end();
+        Changed = true;
         if (DTU)
           DTU->applyUpdatesPermissive(
               {{DominatorTree::Delete, ParentBB, DefaultDest}});
@@ -308,7 +311,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       SI->eraseFromParent();
       return true;
     }
-    return false;
+    return Changed;
   }
 
   if (auto *IBI = dyn_cast<IndirectBrInst>(T)) {
