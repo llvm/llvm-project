@@ -2023,6 +2023,14 @@ struct DSEState {
       if (isMemTerminator(DefLoc, UseInst))
         continue;
 
+      if (UseInst->mayThrow() && !isInvisibleToCallerBeforeRet(DefUO)) {
+        LLVM_DEBUG(dbgs() << "  ... found throwing instruction\n");
+        Cache.KnownReads.insert(UseAccess);
+        Cache.KnownReads.insert(StartAccess);
+        Cache.KnownReads.insert(EarlierAccess);
+        return None;
+      }
+
       // Uses which may read the original MemoryDef mean we cannot eliminate the
       // original MD. Stop walk.
       if (isReadClobber(DefLoc, UseInst)) {
