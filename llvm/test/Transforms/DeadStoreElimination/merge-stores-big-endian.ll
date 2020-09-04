@@ -40,7 +40,6 @@ entry:
 
   %wptr = bitcast i64* %ptr to i16*
   %wptr1 = getelementptr inbounds i16, i16* %wptr, i64 1
-  %wptr2 = getelementptr inbounds i16, i16* %wptr, i64 2
   %wptr3 = getelementptr inbounds i16, i16* %wptr, i64 3
 
   ;; We should be able to merge these two stores with the i64 one above

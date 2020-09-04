@@ -38,7 +38,6 @@ define void @test3() {
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca i8
-  %B = alloca i8
 
   store i8 0, i8* %A  ;; Written to by memset
 
@@ -87,7 +86,6 @@ define void @test6() {
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca i16, i16 1024, align 2
-  %B = alloca i16, i16 1024, align 2
 
   store atomic i16 0, i16* %A unordered, align 2 ;; Written to by memset
 
