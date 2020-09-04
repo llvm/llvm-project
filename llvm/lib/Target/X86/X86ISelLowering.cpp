@@ -34909,6 +34909,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
         (Mask[1] < 0 || Mask[3] < 0 || Mask[1] == (Mask[3] % 2));
 
     if (!isAnyZero(Mask) && !PreferPERMQ) {
+      if (Depth == 0 && Root.getOpcode() == X86ISD::SHUF128)
+        return SDValue(); // Nothing to do!
       if (SDValue V = MatchSHUF128(ShuffleVT, DL, Mask, V1, V2, DAG))
         return DAG.getBitcast(RootVT, V);
     }
