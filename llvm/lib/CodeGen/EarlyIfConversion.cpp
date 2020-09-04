@@ -866,8 +866,8 @@ bool EarlyIfConverter::shouldConvertIf() {
   // by inserting select instructions.
   MachineTraceMetrics::Trace TailTrace = MinInstr->getTrace(IfConv.Tail);
   struct CriticalPathInfo {
-    unsigned Extra; //< Count of extra cycles that the component adds.
-    unsigned Depth; //< Absolute depth of the component in cycles.
+    unsigned Extra; // Count of extra cycles that the component adds.
+    unsigned Depth; // Absolute depth of the component in cycles.
   };
   CriticalPathInfo Cond{};
   CriticalPathInfo TBlock{};
