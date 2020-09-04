@@ -33,6 +33,15 @@ template <> struct __attribute__((packed)) FPBits<long double> {
 
   static constexpr int exponentBias = 0x3FFF;
   static constexpr int maxExponent = 0x7FFF;
+  static constexpr UIntType minSubnormal = UIntType(1);
+  // Subnormal numbers include the implicit bit in x86 long double formats.
+  static constexpr UIntType maxSubnormal =
+      (UIntType(1) << (MantissaWidth<long double>::value + 1)) - 1;
+  static constexpr UIntType minNormal =
+      (UIntType(3) << MantissaWidth<long double>::value);
+  static constexpr UIntType maxNormal =
+      ((UIntType(maxExponent) - 1) << (MantissaWidth<long double>::value + 1)) |
+      (UIntType(1) << MantissaWidth<long double>::value) | maxSubnormal;
 
   UIntType mantissa : MantissaWidth<long double>::value;
   uint8_t implicitBit : 1;
