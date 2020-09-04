@@ -175,6 +175,11 @@ FUZZER_FLAG_INT(entropic_number_of_rarest_features, 100, "Experimental. If "
      "entropic is enabled, we keep track of the frequencies only for the "
      "Top-X least abundant features (union features that are considered as "
      "rare).")
+FUZZER_FLAG_INT(entropic_scale_per_exec_time, 0, "Experimental. If 1, "
+     "the Entropic power schedule gets scaled based on the input execution "
+     "time. Inputs with lower execution time get scheduled more (up to 30x). "
+     "Note that, if 1, fuzzer stops from being deterministic even if a "
+     "non-zero random seed is given.")
 
 FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
 FUZZER_DEPRECATED_FLAG(use_clang_coverage)
