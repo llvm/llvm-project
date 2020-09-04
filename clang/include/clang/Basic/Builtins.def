@@ -1017,6 +1017,7 @@ LIBBUILTIN(strncasecmp, "icC*cC*z", "f",   "strings.h", ALL_GNU_LANGUAGES)
 LIBBUILTIN(_exit, "vi",           "fr",    "unistd.h", ALL_GNU_LANGUAGES)
 LIBBUILTIN(vfork, "p",            "fj",    "unistd.h", ALL_LANGUAGES)
 // POSIX pthread.h
+// FIXME: Should specify argument types.
 LIBBUILTIN(pthread_create, "",  "fC<2,3>", "pthread.h", ALL_GNU_LANGUAGES)
 
 // POSIX setjmp.h

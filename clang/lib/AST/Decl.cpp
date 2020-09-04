@@ -3162,37 +3162,16 @@ FunctionDecl *FunctionDecl::getCanonicalDecl() { return getFirstDecl(); }
 /// functions as their wrapped builtins. This shouldn't be done in general, but
 /// it's useful in Sema to diagnose calls to wrappers based on their semantics.
 unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
-  unsigned BuiltinID;
+  unsigned BuiltinID = 0;
 
   if (const auto *ABAA = getAttr<ArmBuiltinAliasAttr>()) {
     BuiltinID = ABAA->getBuiltinName()->getBuiltinID();
-  } else {
-    if (!getIdentifier())
-      return 0;
-
-    BuiltinID = getIdentifier()->getBuiltinID();
+  } else if (const auto *A = getAttr<BuiltinAttr>()) {
+    BuiltinID = A->getID();
   }
 
   if (!BuiltinID)
     return 0;
-
-  ASTContext &Context = getASTContext();
-  if (Context.getLangOpts().CPlusPlus) {
-    const auto *LinkageDecl =
-        dyn_cast<LinkageSpecDecl>(getFirstDecl()->getDeclContext());
-    // In C++, the first declaration of a builtin is always inside an implicit
-    // extern "C".
-    // FIXME: A recognised library function may not be directly in an extern "C"
-    // declaration, for instance "extern "C" { namespace std { decl } }".
-    if (!LinkageDecl) {
-      if (BuiltinID == Builtin::BI__GetExceptionInfo &&
-          Context.getTargetInfo().getCXXABI().isMicrosoft())
-        return Builtin::BI__GetExceptionInfo;
-      return 0;
-    }
-    if (LinkageDecl->getLanguage() != LinkageSpecDecl::lang_c)
-      return 0;
-  }
 
   // If the function is marked "overloadable", it has a different mangled name
   // and is not the C library function.
@@ -3200,6 +3179,7 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
       !hasAttr<ArmBuiltinAliasAttr>())
     return 0;
 
+  ASTContext &Context = getASTContext();
   if (!Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
     return BuiltinID;
 
