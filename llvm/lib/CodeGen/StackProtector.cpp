@@ -170,7 +170,8 @@ bool StackProtector::HasAddressTaken(const Instruction *AI,
     // If this instruction accesses memory make sure it doesn't access beyond
     // the bounds of the allocated object.
     Optional<MemoryLocation> MemLoc = MemoryLocation::getOrNone(I);
-    if (MemLoc.hasValue() && MemLoc->Size.getValue() > AllocSize)
+    if (MemLoc.hasValue() && MemLoc->Size.hasValue() &&
+        MemLoc->Size.getValue() > AllocSize)
       return true;
     switch (I->getOpcode()) {
     case Instruction::Store:
