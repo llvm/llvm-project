@@ -592,7 +592,7 @@ TEST(FuzzerUtil, Base64) {
 TEST(Corpus, Distribution) {
   DataFlowTrace DFT;
   Random Rand(0);
-  struct EntropicOptions Entropic = {false, 0xFF, 100};
+  struct EntropicOptions Entropic = {false, 0xFF, 100, false};
   std::unique_ptr<InputCorpus> C(new InputCorpus("", Entropic));
   size_t N = 10;
   size_t TriesPerUnit = 1<<16;
@@ -1060,7 +1060,7 @@ TEST(Entropic, UpdateFrequency) {
   const size_t FeatIdx1 = 0, FeatIdx2 = 42, FeatIdx3 = 12, FeatIdx4 = 26;
   size_t Index;
   // Create input corpus with default entropic configuration
-  struct EntropicOptions Entropic = {true, 0xFF, 100};
+  struct EntropicOptions Entropic = {true, 0xFF, 100, false};
   std::unique_ptr<InputCorpus> C(new InputCorpus("", Entropic));
   std::unique_ptr<InputInfo> II(new InputInfo());
 
@@ -1097,7 +1097,7 @@ double SubAndSquare(double X, double Y) {
 
 TEST(Entropic, ComputeEnergy) {
   const double Precision = 0.01;
-  struct EntropicOptions Entropic = {true, 0xFF, 100};
+  struct EntropicOptions Entropic = {true, 0xFF, 100, false};
   std::unique_ptr<InputCorpus> C(new InputCorpus("", Entropic));
   std::unique_ptr<InputInfo> II(new InputInfo());
   Vector<std::pair<uint32_t, uint16_t>> FeatureFreqs = {{1, 3}, {2, 3}, {3, 3}};
