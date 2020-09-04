@@ -8028,6 +8028,8 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("vector<a *_Nonnull> v;");
   verifyFormat("vector<a *_Nullable> v;");
   verifyFormat("vector<a *_Null_unspecified> v;");
+  verifyFormat("vector<a *__ptr32> v;");
+  verifyFormat("vector<a *__ptr64> v;");
   verifyFormat("vector<a * _NotAQualifier> v;");
   verifyFormat("vector<a * b> v;");
   verifyFormat("foo<b && false>();");
@@ -8070,6 +8072,8 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("MACRO(A *__attribute((foo)) a);");
   verifyIndependentOfContext("MACRO(A *[[clang::attr]] a);");
   verifyIndependentOfContext("MACRO(A *[[clang::attr(\"foo\")]] a);");
+  verifyIndependentOfContext("MACRO(A *__ptr32 a);");
+  verifyIndependentOfContext("MACRO(A *__ptr64 a);");
   verifyIndependentOfContext("MACRO('0' <= c && c <= '9');");
   verifyFormat("void f() { f(float{1}, a * a); }");
   // FIXME: Is there a way to make this work?
@@ -8141,6 +8145,8 @@ TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
   verifyFormat("x = (foo *_Nonnull)*v;");
   verifyFormat("x = (foo *[[clang::attr]])*v;");
   verifyFormat("x = (foo *[[clang::attr(\"foo\")]])*v;");
+  verifyFormat("x = (foo *__ptr32)*v;");
+  verifyFormat("x = (foo *__ptr64)*v;");
 
   // Check that we handle multiple trailing qualifiers and skip them all to
   // determine that the expression is a cast to a pointer type.
@@ -8149,7 +8155,7 @@ TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
   LongPointerLeft.PointerAlignment = FormatStyle::PAS_Left;
   StringRef AllQualifiers =
       "const volatile restrict __attribute__((foo)) _Nonnull _Null_unspecified "
-      "_Nonnull [[clang::attr]]";
+      "_Nonnull [[clang::attr]] __ptr32 __ptr64";
   verifyFormat(("x = (foo *" + AllQualifiers + ")*v;").str(), LongPointerRight);
   verifyFormat(("x = (foo* " + AllQualifiers + ")*v;").str(), LongPointerLeft);
 
