@@ -913,8 +913,6 @@ SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
         swift::IntermoduleDepTrackingMode::IncludeSystem,
         fp.GetFileCollector());
   }
-  // rdar://53971116
-  m_compiler_invocation_ap->disableASTScopeLookup();
 
   // Set the clang modules cache path.
   m_compiler_invocation_ap->setClangModuleCachePath(
