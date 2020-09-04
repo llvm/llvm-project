@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <__libunwind_config.h>
+
 // Platform specific configuration defines.
 #ifdef __APPLE__
   #if defined(FOR_DYLD)
@@ -33,7 +35,7 @@
     #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
   #endif
 #else
-  #if defined(__ARM_DWARF_EH__) || !defined(__arm__)
+  #if !defined(_LIBUNWIND_ARM_EHABI)
     #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
     #define _LIBUNWIND_SUPPORT_DWARF_INDEX 1
   #endif
@@ -81,6 +83,8 @@
 #error Unsupported target
 #endif
 
+// Apple/armv7k defaults to DWARF/Compact unwinding, but its libunwind also
+// needs to include the SJLJ APIs.
 #if (defined(__APPLE__) && defined(__arm__)) || defined(__USING_SJLJ_EXCEPTIONS__)
 #define _LIBUNWIND_BUILD_SJLJ_APIS
 #endif
