@@ -135,6 +135,14 @@ struct PragmaSTDC_CX_LIMITED_RANGEHandler : public PragmaHandler {
   }
 };
 
+/// Handler for "\#pragma STDC FENV_ROUND ...".
+struct PragmaSTDC_FENV_ROUNDHandler : public PragmaHandler {
+  PragmaSTDC_FENV_ROUNDHandler() : PragmaHandler("FENV_ROUND") {}
+
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &Tok) override;
+};
+
 /// PragmaSTDC_UnknownHandler - "\#pragma STDC ...".
 struct PragmaSTDC_UnknownHandler : public PragmaHandler {
   PragmaSTDC_UnknownHandler() = default;
@@ -312,8 +320,11 @@ void Parser::initializePragmaHandlers() {
   FPContractHandler = std::make_unique<PragmaFPContractHandler>();
   PP.AddPragmaHandler("STDC", FPContractHandler.get());
 
-  STDCFENVHandler = std::make_unique<PragmaSTDC_FENV_ACCESSHandler>();
-  PP.AddPragmaHandler("STDC", STDCFENVHandler.get());
+  STDCFenvAccessHandler = std::make_unique<PragmaSTDC_FENV_ACCESSHandler>();
+  PP.AddPragmaHandler("STDC", STDCFenvAccessHandler.get());
+
+  STDCFenvRoundHandler = std::make_unique<PragmaSTDC_FENV_ROUNDHandler>();
+  PP.AddPragmaHandler("STDC", STDCFenvRoundHandler.get());
 
   STDCCXLIMITHandler = std::make_unique<PragmaSTDC_CX_LIMITED_RANGEHandler>();
   PP.AddPragmaHandler("STDC", STDCCXLIMITHandler.get());
@@ -485,8 +496,11 @@ void Parser::resetPragmaHandlers() {
   PP.RemovePragmaHandler("STDC", FPContractHandler.get());
   FPContractHandler.reset();
 
-  PP.RemovePragmaHandler("STDC", STDCFENVHandler.get());
-  STDCFENVHandler.reset();
+  PP.RemovePragmaHandler("STDC", STDCFenvAccessHandler.get());
+  STDCFenvAccessHandler.reset();
+
+  PP.RemovePragmaHandler("STDC", STDCFenvRoundHandler.get());
+  STDCFenvRoundHandler.reset();
 
   PP.RemovePragmaHandler("STDC", STDCCXLIMITHandler.get());
   STDCCXLIMITHandler.reset();
@@ -697,6 +711,14 @@ void Parser::HandlePragmaFEnvAccess() {
   Actions.ActOnPragmaFEnvAccess(PragmaLoc, IsEnabled);
 }
 
+void Parser::HandlePragmaFEnvRound() {
+  assert(Tok.is(tok::annot_pragma_fenv_round));
+  auto RM = static_cast<llvm::RoundingMode>(
+      reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
+
+  SourceLocation PragmaLoc = ConsumeAnnotationToken();
+  Actions.setRoundingMode(PragmaLoc, RM);
+}
 
 StmtResult Parser::HandlePragmaCaptured()
 {
@@ -2927,6 +2949,56 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
 
   PP.EnterTokenStream(std::move(TokenArray), TokenList.size(),
                       /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
+}
+
+void PragmaSTDC_FENV_ROUNDHandler::HandlePragma(Preprocessor &PP,
+                                                PragmaIntroducer Introducer,
+                                                Token &Tok) {
+  Token PragmaName = Tok;
+  SmallVector<Token, 1> TokenList;
+
+  PP.Lex(Tok);
+  if (Tok.isNot(tok::identifier)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+        << PragmaName.getIdentifierInfo()->getName();
+    return;
+  }
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+
+  auto RM =
+      llvm::StringSwitch<llvm::RoundingMode>(II->getName())
+          .Case("FE_TOWARDZERO", llvm::RoundingMode::TowardZero)
+          .Case("FE_TONEAREST", llvm::RoundingMode::NearestTiesToEven)
+          .Case("FE_UPWARD", llvm::RoundingMode::TowardPositive)
+          .Case("FE_DOWNWARD", llvm::RoundingMode::TowardNegative)
+          .Case("FE_TONEARESTFROMZERO", llvm::RoundingMode::NearestTiesToAway)
+          .Case("FE_DYNAMIC", llvm::RoundingMode::Dynamic)
+          .Default(llvm::RoundingMode::Invalid);
+  if (RM == llvm::RoundingMode::Invalid) {
+    PP.Diag(Tok.getLocation(), diag::warn_stdc_unknown_rounding_mode);
+    return;
+  }
+  PP.Lex(Tok);
+
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+        << "STDC FENV_ROUND";
+    return;
+  }
+
+  // Until the pragma is fully implemented, issue a warning.
+  PP.Diag(Tok.getLocation(), diag::warn_stdc_fenv_round_not_supported);
+
+  MutableArrayRef<Token> Toks(PP.getPreprocessorAllocator().Allocate<Token>(1),
+                              1);
+  Toks[0].startToken();
+  Toks[0].setKind(tok::annot_pragma_fenv_round);
+  Toks[0].setLocation(Tok.getLocation());
+  Toks[0].setAnnotationEndLoc(Tok.getLocation());
+  Toks[0].setAnnotationValue(
+      reinterpret_cast<void *>(static_cast<uintptr_t>(RM)));
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/false);
 }
 
 void Parser::HandlePragmaFP() {

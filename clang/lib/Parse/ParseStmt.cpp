@@ -369,6 +369,12 @@ Retry:
     HandlePragmaFEnvAccess();
     return StmtEmpty();
 
+  case tok::annot_pragma_fenv_round:
+    ProhibitAttributes(Attrs);
+    Diag(Tok, diag::err_pragma_file_or_compound_scope) << "STDC FENV_ROUND";
+    ConsumeAnnotationToken();
+    return StmtError();
+
   case tok::annot_pragma_float_control:
     ProhibitAttributes(Attrs);
     Diag(Tok, diag::err_pragma_file_or_compound_scope) << "float_control";
@@ -942,6 +948,9 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
       break;
     case tok::annot_pragma_fenv_access:
       HandlePragmaFEnvAccess();
+      break;
+    case tok::annot_pragma_fenv_round:
+      HandlePragmaFEnvRound();
       break;
     case tok::annot_pragma_float_control:
       HandlePragmaFloatControl();
