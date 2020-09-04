@@ -256,6 +256,7 @@ void test_buf_size_symbolic_and_offset(int s) {
   // bugpath-note{{TRUE}} \
   // bugpath-note{{'s' is <= 2}}
 }
+
 int __buf_size_arg_constraint_mul(const void *, size_t, size_t);
 void test_buf_size_concrete_with_multiplication() {
   short buf[3];                                         // bugpath-note{{'buf' initialized here}}
@@ -279,4 +280,14 @@ void test_buf_size_symbolic_and_offset_with_multiplication(size_t s) {
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
   // bugpath-note{{TRUE}}
+}
+
+// The minimum buffer size for this function is set to 10.
+int __buf_size_arg_constraint_concrete(const void *);
+void test_min_buf_size() {
+  char buf[9];// bugpath-note{{'buf' initialized here}}
+  __buf_size_arg_constraint_concrete(buf); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
 }
