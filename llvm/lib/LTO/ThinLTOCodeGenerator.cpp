@@ -276,7 +276,7 @@ static void computeGUIDPreservedSymbols(const lto::InputFile &File,
   // Iterate the symbols in the input file and if the input has preserved symbol
   // compute the GUID for the symbol.
   for (const auto &Sym : File.symbols()) {
-    if (PreservedSymbols.count(Sym.getName()))
+    if (PreservedSymbols.count(Sym.getName()) && !Sym.getIRName().empty())
       GUIDs.insert(GlobalValue::getGUID(GlobalValue::getGlobalIdentifier(
           Sym.getIRName(), GlobalValue::ExternalLinkage, "")));
   }
