@@ -285,16 +285,20 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
           return createStringError(
               errc::invalid_argument,
               "wrote too much data somewhere, section offsets don't line up");
-        if (0 == strncmp(&Sec.segname[0], "__DWARF", sizeof(Sec.segname))) {
-          StringRef SectName(Sec.sectname,
-                             strnlen(Sec.sectname, sizeof(Sec.sectname)));
-          if (Obj.DWARF.getNonEmptySectionNames().count(SectName.substr(2))) {
-            auto EmitFunc =
-                DWARFYAML::getDWARFEmitterByName(SectName.substr(2));
-            if (Error Err = EmitFunc(OS, Obj.DWARF))
-              return Err;
-          }
 
+        StringRef SectName(Sec.sectname,
+                           strnlen(Sec.sectname, sizeof(Sec.sectname)));
+        // If the section's content is specified in the 'DWARF' entry, we will
+        // emit it regardless of the section's segname.
+        if (Obj.DWARF.getNonEmptySectionNames().count(SectName.substr(2))) {
+          if (Sec.content)
+            return createStringError(errc::invalid_argument,
+                                     "cannot specify section '" + SectName +
+                                         "' contents in the 'DWARF' entry and "
+                                         "the 'content' at the same time");
+          auto EmitFunc = DWARFYAML::getDWARFEmitterByName(SectName.substr(2));
+          if (Error Err = EmitFunc(OS, Obj.DWARF))
+            return Err;
           continue;
         }
 
