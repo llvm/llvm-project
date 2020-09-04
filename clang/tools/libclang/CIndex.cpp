@@ -8851,6 +8851,42 @@ void clang::PrintLibclangResourceUsage(CXTranslationUnit TU) {
   clang_disposeCXTUResourceUsage(Usage);
 }
 
+CXCursor clang_Cursor_getVarDeclInitializer(CXCursor cursor) {
+  const Decl *const D = getCursorDecl(cursor);
+  if (!D)
+    return clang_getNullCursor();
+  const auto *const VD = dyn_cast<VarDecl>(D);
+  if (!VD)
+    return clang_getNullCursor();
+  const Expr *const Init = VD->getInit();
+  if (!Init)
+    return clang_getNullCursor();
+
+  return cxcursor::MakeCXCursor(Init, VD, cxcursor::getCursorTU(cursor));
+}
+
+int clang_Cursor_hasVarDeclGlobalStorage(CXCursor cursor) {
+  const Decl *const D = getCursorDecl(cursor);
+  if (!D)
+    return -1;
+  const auto *const VD = dyn_cast<VarDecl>(D);
+  if (!VD)
+    return -1;
+
+  return VD->hasGlobalStorage();
+}
+
+int clang_Cursor_hasVarDeclExternalStorage(CXCursor cursor) {
+  const Decl *const D = getCursorDecl(cursor);
+  if (!D)
+    return -1;
+  const auto *const VD = dyn_cast<VarDecl>(D);
+  if (!VD)
+    return -1;
+
+  return VD->hasExternalStorage();
+}
+
 //===----------------------------------------------------------------------===//
 // Misc. utility functions.
 //===----------------------------------------------------------------------===//
