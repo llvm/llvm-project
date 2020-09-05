@@ -436,7 +436,7 @@ std::string ExtractSwiftName(
 std::string
 TypeSystemSwiftTypeRef::GetSwiftName(const clang::Decl *clang_decl,
                                      TypeSystemClang &clang_typesystem) {
-  auto *named_decl = dyn_cast_or_null<const clang::NamedDecl>(clang_decl);
+  auto *named_decl = llvm::dyn_cast_or_null<const clang::NamedDecl>(clang_decl);
   if (!named_decl)
     return {};
   StringRef default_name = named_decl->getName();
