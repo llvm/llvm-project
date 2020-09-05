@@ -132,10 +132,9 @@ define i32 @abs_dom_cond_nopoison(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[A1:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 false)
-; CHECK-NEXT:    ret i32 [[A1]]
+; CHECK-NEXT:    ret i32 [[X]]
 ; CHECK:       false:
-; CHECK-NEXT:    [[A2:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 false)
+; CHECK-NEXT:    [[A2:%.*]] = sub i32 0, [[X]]
 ; CHECK-NEXT:    ret i32 [[A2]]
 ;
   %cmp = icmp sge i32 %x, 0
@@ -155,10 +154,9 @@ define i32 @abs_dom_cond_poison(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[A1:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    ret i32 [[A1]]
+; CHECK-NEXT:    ret i32 [[X]]
 ; CHECK:       false:
-; CHECK-NEXT:    [[A2:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    [[A2:%.*]] = sub nsw i32 0, [[X]]
 ; CHECK-NEXT:    ret i32 [[A2]]
 ;
   %cmp = icmp sge i32 %x, 0
