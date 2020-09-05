@@ -233,8 +233,10 @@ HexagonTargetLowering::initializeHVXLowering() {
     for (int N = 2; N < MaxElems; N *= 2) {
       MVT VecTy = MVT::getVectorVT(ElemTy, N);
       auto Action = getPreferredVectorAction(VecTy);
-      if (Action == TargetLoweringBase::TypeWidenVector)
+      if (Action == TargetLoweringBase::TypeWidenVector) {
         setOperationAction(ISD::STORE, VecTy, Custom);
+        setOperationAction(ISD::TRUNCATE, VecTy, Custom);
+      }
     }
   }
 
@@ -1913,6 +1915,21 @@ HexagonTargetLowering::WidenHvxStore(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue
+HexagonTargetLowering::WidenHvxTruncate(SDValue Op, SelectionDAG &DAG) const {
+  const SDLoc &dl(Op);
+  MVT ResTy = ty(Op);
+  unsigned HwWidth = 8*Subtarget.getVectorLength();
+  unsigned ResWidth = ResTy.getSizeInBits();
+  assert(HwWidth % ResWidth == 0);
+
+  unsigned WideNumElem = ResTy.getVectorNumElements() * (HwWidth / ResWidth);
+  MVT WideTy = MVT::getVectorVT(ResTy.getVectorElementType(), WideNumElem);
+  SDValue WideOp = DAG.getNode(HexagonISD::VPACKL, dl, WideTy,
+                               Op.getOperand(0));
+  return WideOp;
+}
+
+SDValue
 HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   bool IsPairOp = isHvxPairTy(ty(Op)) ||
@@ -2020,7 +2037,14 @@ void
 HexagonTargetLowering::ReplaceHvxNodeResults(SDNode *N,
       SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   unsigned Opc = N->getOpcode();
+  SDValue Op(N, 0);
   switch (Opc) {
+    case ISD::TRUNCATE:
+      if (!Subtarget.isHVXVectorType(ty(Op), false)) {
+        SDValue T = WidenHvxTruncate(Op, DAG);
+        Results.push_back(T);
+      }
+      break;
     case ISD::BITCAST:
       if (isHvxBoolTy(ty(N->getOperand(0)))) {
         SDValue Op(N, 0);
@@ -2058,25 +2082,38 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
 }
 
 bool
-HexagonTargetLowering::isHvxOperation(SDNode *N) const {
-  if (N->getOpcode() == ISD::STORE) {
-    // If it's a store-to-be-widened, treat it as an HVX operation.
-    SDValue Val = cast<StoreSDNode>(N)->getValue();
-    MVT ValTy = ty(Val);
-    if (ValTy.isVector()) {
-      auto Action = getPreferredVectorAction(ValTy);
-      if (Action == TargetLoweringBase::TypeWidenVector)
-        return true;
-    }
-  }
+HexagonTargetLowering::isHvxOperation(SDNode *N, SelectionDAG &DAG) const {
   // If the type of any result, or any operand type are HVX vector types,
   // this is an HVX operation.
-  auto IsHvxTy = [this] (EVT Ty) {
+  auto IsHvxTy = [this](EVT Ty) {
     return Ty.isSimple() && Subtarget.isHVXVectorType(Ty.getSimpleVT(), true);
   };
   auto IsHvxOp = [this](SDValue Op) {
     return Op.getValueType().isSimple() &&
            Subtarget.isHVXVectorType(ty(Op), true);
   };
-  return llvm::any_of(N->values(), IsHvxTy) || llvm::any_of(N->ops(), IsHvxOp);
+  if (llvm::any_of(N->values(), IsHvxTy) || llvm::any_of(N->ops(), IsHvxOp))
+    return true;
+
+  // Check if this could be an HVX operation after type widening.
+  auto IsWidenedToHvx = [this, &DAG](SDValue Op) {
+    if (!Op.getValueType().isSimple())
+      return false;
+    MVT ValTy = ty(Op);
+    if (ValTy.isVector()) {
+      auto Action = getPreferredVectorAction(ValTy);
+      if (Action == TargetLoweringBase::TypeWidenVector) {
+        EVT WideTy = getTypeToTransformTo(*DAG.getContext(), ValTy);
+        assert(WideTy.isSimple());
+        return Subtarget.isHVXVectorType(WideTy.getSimpleVT(), true);
+      }
+    }
+    return false;
+  };
+
+  for (int i = 0, e = N->getNumValues(); i != e; ++i) {
+    if (IsWidenedToHvx(SDValue(N, i)))
+      return true;
+  }
+  return llvm::any_of(N->ops(), IsWidenedToHvx);
 }
