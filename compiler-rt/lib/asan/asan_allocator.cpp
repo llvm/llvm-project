@@ -71,11 +71,9 @@ static AsanAllocator &get_allocator();
 static const uptr kAllocBegMagic = 0xCC6E96B9;
 
 struct ChunkHeader {
-  // 1-st 8 bytes.
-  u32 chunk_state : 8;  // Must be first.
+  u8 chunk_state;  // Must be first.
+  u8 padding[3];
   u32 alloc_tid : 24;
-
-  u32 free_tid : 24;
   u32 from_memalign : 1;
   u32 alloc_type : 2;
   u32 rz_log : 3;
@@ -94,6 +92,7 @@ struct ChunkHeader {
 struct ChunkBase : ChunkHeader {
   // Header2, intersects with user memory.
   u32 free_context_id;
+  u32 free_tid;
 };
 
 static const uptr kChunkHeaderSize = sizeof(ChunkHeader);
@@ -505,7 +504,6 @@ struct Allocator {
     u32 alloc_tid = t ? t->tid() : 0;
     m->alloc_tid = alloc_tid;
     CHECK_EQ(alloc_tid, m->alloc_tid);  // Does alloc_tid fit into the bitfield?
-    m->free_tid = kInvalidTid;
     m->from_memalign = user_beg != beg_plus_redzone;
     if (alloc_beg != chunk_beg) {
       CHECK_LE(alloc_beg + 2 * sizeof(uptr), chunk_beg);
@@ -577,6 +575,9 @@ struct Allocator {
       return false;
     }
     CHECK_EQ(CHUNK_ALLOCATED, old_chunk_state);
+    // It was a user data.
+    m->free_tid = kInvalidTid;
+    m->free_context_id = 0;
     return true;
   }
 
@@ -584,9 +585,6 @@ struct Allocator {
   // AtomicallySetQuarantineFlagIfAllocated.
   void QuarantineChunk(AsanChunk *m, void *ptr, BufferedStackTrace *stack) {
     CHECK_EQ(m->chunk_state, CHUNK_QUARANTINE);
-    CHECK_GE(m->alloc_tid, 0);
-    if (SANITIZER_WORDSIZE == 64)  // On 32-bits this resides in user area.
-      CHECK_EQ(m->free_tid, kInvalidTid);
     AsanThread *t = GetCurrentThread();
     m->free_tid = t ? t->tid() : 0;
     m->free_context_id = StackDepotPut(*stack);
@@ -862,7 +860,9 @@ u32 AsanChunkView::UserRequestedAlignment() const {
   return Allocator::ComputeUserAlignment(chunk_->user_requested_alignment_log);
 }
 uptr AsanChunkView::AllocTid() const { return chunk_->alloc_tid; }
-uptr AsanChunkView::FreeTid() const { return chunk_->free_tid; }
+uptr AsanChunkView::FreeTid() const {
+  return IsQuarantined() ? chunk_->free_tid : kInvalidTid;
+}
 AllocType AsanChunkView::GetAllocType() const {
   return (AllocType)chunk_->alloc_type;
 }
@@ -875,7 +875,9 @@ static StackTrace GetStackTraceFromId(u32 id) {
 }
 
 u32 AsanChunkView::GetAllocStackId() const { return chunk_->alloc_context_id; }
-u32 AsanChunkView::GetFreeStackId() const { return chunk_->free_context_id; }
+u32 AsanChunkView::GetFreeStackId() const {
+  return IsQuarantined() ? chunk_->free_context_id : 0;
+}
 
 StackTrace AsanChunkView::GetAllocStack() const {
   return GetStackTraceFromId(GetAllocStackId());
