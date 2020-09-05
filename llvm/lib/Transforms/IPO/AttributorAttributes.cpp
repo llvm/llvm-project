@@ -1141,11 +1141,13 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
         RVState RVS({NewRVsMap, Unused, RetValAAIt.second});
         VisitReturnedValue(*CB->getArgOperand(Arg->getArgNo()), RVS, CB);
         continue;
-      } else if (isa<CallBase>(RetVal)) {
+      }
+      if (isa<CallBase>(RetVal)) {
         // Call sites are resolved by the callee attribute over time, no need to
         // do anything for us.
         continue;
-      } else if (isa<Constant>(RetVal)) {
+      }
+      if (isa<Constant>(RetVal)) {
         // Constants are valid everywhere, we can simply take them.
         NewRVsMap[RetVal].insert(RIs.begin(), RIs.end());
         continue;
