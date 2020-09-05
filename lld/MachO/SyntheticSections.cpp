@@ -296,7 +296,10 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
 }
 
 StubsSection::StubsSection()
-    : SyntheticSection(segment_names::text, "__stubs") {}
+    : SyntheticSection(segment_names::text, "__stubs") {
+  flags = MachO::S_SYMBOL_STUBS;
+  reserved2 = target->stubSize;
+}
 
 uint64_t StubsSection::getSize() const {
   return entries.size() * target->stubSize;
@@ -464,9 +467,12 @@ uint64_t SymtabSection::getRawSize() const {
 
 void SymtabSection::finalizeContents() {
   // TODO support other symbol types
-  for (Symbol *sym : symtab->getSymbols())
-    if (isa<Defined>(sym))
+  for (Symbol *sym : symtab->getSymbols()) {
+    if (isa<Defined>(sym) || sym->isInGot() || sym->isInStubs()) {
+      sym->symtabIndex = symbols.size();
       symbols.push_back({sym, stringTableSection.addString(sym->getName())});
+    }
+  }
 }
 
 void SymtabSection::writeTo(uint8_t *buf) const {
@@ -483,6 +489,47 @@ void SymtabSection::writeTo(uint8_t *buf) const {
       nList->n_value = defined->value + defined->isec->getVA();
     }
     ++nList;
+  }
+}
+
+IndirectSymtabSection::IndirectSymtabSection()
+    : LinkEditSection(segment_names::linkEdit,
+                      section_names::indirectSymbolTable) {}
+
+uint32_t IndirectSymtabSection::getNumSymbols() const {
+  return in.got->getEntries().size() + in.tlvPointers->getEntries().size() +
+         in.stubs->getEntries().size();
+}
+
+bool IndirectSymtabSection::isNeeded() const {
+  return in.got->isNeeded() || in.tlvPointers->isNeeded() ||
+         in.stubs->isNeeded();
+}
+
+void IndirectSymtabSection::finalizeContents() {
+  uint32_t off = 0;
+  in.got->reserved1 = off;
+  off += in.got->getEntries().size();
+  in.tlvPointers->reserved1 = off;
+  off += in.tlvPointers->getEntries().size();
+  // There is a 1:1 correspondence between stubs and LazyPointerSection
+  // entries, so they can share the same sub-array in the table.
+  in.stubs->reserved1 = in.lazyPointers->reserved1 = off;
+}
+
+void IndirectSymtabSection::writeTo(uint8_t *buf) const {
+  uint32_t off = 0;
+  for (const Symbol *sym : in.got->getEntries()) {
+    write32le(buf + off * sizeof(uint32_t), sym->symtabIndex);
+    ++off;
+  }
+  for (const Symbol *sym : in.tlvPointers->getEntries()) {
+    write32le(buf + off * sizeof(uint32_t), sym->symtabIndex);
+    ++off;
+  }
+  for (const Symbol *sym : in.stubs->getEntries()) {
+    write32le(buf + off * sizeof(uint32_t), sym->symtabIndex);
+    ++off;
   }
 }
 

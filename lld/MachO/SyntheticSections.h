@@ -33,6 +33,7 @@ constexpr const char weakBinding[] = "__weak_binding";
 constexpr const char lazyBinding[] = "__lazy_binding";
 constexpr const char export_[] = "__export";
 constexpr const char symbolTable[] = "__symbol_table";
+constexpr const char indirectSymbolTable[] = "__ind_sym_tab";
 constexpr const char stringTable[] = "__string_table";
 constexpr const char got[] = "__got";
 constexpr const char threadPtrs[] = "__thread_ptrs";
@@ -389,6 +390,28 @@ public:
 private:
   StringTableSection &stringTableSection;
   std::vector<SymtabEntry> symbols;
+};
+
+// The indirect symbol table is a list of 32-bit integers that serve as indices
+// into the (actual) symbol table. The indirect symbol table is a
+// concatentation of several sub-arrays of indices, each sub-array belonging to
+// a separate section. The starting offset of each sub-array is stored in the
+// reserved1 header field of the respective section.
+//
+// These sub-arrays provide symbol information for sections that store
+// contiguous sequences of symbol references. These references can be pointers
+// (e.g. those in the GOT and TLVP sections) or assembly sequences (e.g.
+// function stubs).
+class IndirectSymtabSection : public LinkEditSection {
+public:
+  IndirectSymtabSection();
+  void finalizeContents();
+  uint32_t getNumSymbols() const;
+  uint64_t getRawSize() const override {
+    return getNumSymbols() * sizeof(uint32_t);
+  }
+  bool isNeeded() const override;
+  void writeTo(uint8_t *buf) const override;
 };
 
 struct InStruct {
