@@ -262,6 +262,13 @@ New Compiler Flags
   and 256TB (needs -mcmodel=large). This allows large/many thread local
   variables or a compact/fast code in an executable.
 
+- -menable-experimental-extension` can be used to enable experimental or
+  unratified RISC-V extensions, allowing them to be targeted by specifying the
+  extension name and precise version number in the `-march` string. For these
+  experimental extensions, there is no expectation of ongoing support - the
+  compiler support will continue to change until the specification is
+  finalised.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -296,6 +303,10 @@ Modified Compiler Flags
   ``char8_t`` as the character type of ``u8`` literals. This restores the
   Clang 8 behavior that regressed in Clang 9 and 10.
 - -print-targets has been added to print the registered targets.
+- -mcpu is now supported for RISC-V, and recognises the generic-rv32,
+  rocket-rv32, sifive-e31, generic-rv64, rocket-rv64, and sifive-u54 target
+  CPUs.
+
 
 New Pragmas in Clang
 --------------------
@@ -415,6 +426,11 @@ Changes related to C++ for OpenCL
 
 ABI Changes in Clang
 --------------------
+
+- For RISC-V, an ABI bug was fixed when passing complex single-precision
+  floats in RV64 with the hard float ABI. The bug could only be triggered for
+  function calls that exhaust the available FPRs.
+
 
 OpenMP Support in Clang
 -----------------------
