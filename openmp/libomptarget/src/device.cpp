@@ -370,13 +370,19 @@ void DeviceTy::init() {
   // The memory manager will only be disabled when users provide a threshold via
   // the environment variable \p LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD and set
   // it to 0.
-  if (const char *Env = std::getenv("LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD")) {
+
+  // Enable for amdgcn inly if evar is set.
+  const char *Env = std::getenv("LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD");
+  if (Env) {
     size_t Threshold = std::stoul(Env);
     if (Threshold)
       MemoryManager = std::make_unique<MemoryManagerTy>(*this, Threshold);
+#if 0   // reenable once we fix leak issue.
   } else
     MemoryManager = std::make_unique<MemoryManagerTy>(*this);
-
+#else
+  }
+#endif
   IsInit = true;
 }
 
