@@ -428,6 +428,9 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     SelectPatternFlavor SPF = matchSelectPattern(Op0, X, Y).Flavor;
     if (SPF == SPF_ABS || SPF == SPF_NABS)
       return IC.replaceOperand(II, 0, X);
+
+    if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
+      return IC.replaceOperand(II, 0, X);
   }
 
   KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
