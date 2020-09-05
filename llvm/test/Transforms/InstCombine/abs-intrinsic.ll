@@ -233,7 +233,7 @@ define i32 @abs_assume_neg(i32 %x) {
 ; CHECK-LABEL: @abs_assume_neg(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 false)
+; CHECK-NEXT:    [[ABS:%.*]] = sub i32 0, [[X]]
 ; CHECK-NEXT:    ret i32 [[ABS]]
 ;
   %cmp = icmp slt i32 %x, 0
@@ -245,9 +245,8 @@ define i32 @abs_assume_neg(i32 %x) {
 define i32 @abs_known_neg(i16 %x) {
 ; CHECK-LABEL: @abs_known_neg(
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[EXT]], -1
-; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[NEG]], i1 false)
-; CHECK-NEXT:    ret i32 [[ABS]]
+; CHECK-NEXT:    [[NEG_NEG:%.*]] = add nuw nsw i32 [[EXT]], 1
+; CHECK-NEXT:    ret i32 [[NEG_NEG]]
 ;
   %ext = zext i16 %x to i32
   %neg = sub nsw i32 -1, %ext

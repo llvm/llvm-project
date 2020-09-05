@@ -5274,9 +5274,6 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     // on the outer abs.
     if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(), m_Value())))
       return Op0;
-    // If the sign bit is clear already, then abs does not do anything.
-    if (isKnownNonNegative(Op0, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
-      return Op0;
     break;
 
   case Intrinsic::smax:
