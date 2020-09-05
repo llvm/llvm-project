@@ -178,6 +178,56 @@ Changes to the PowerPC Target
 
 During this release ...
 
+Changes to the RISC-V Target
+----------------------------
+
+New features:
+* After consultation through an RFC, the RISC-V backend now accepts patches for
+  proposed instruction set extensions that have not yet been ratified.  For these
+  experimental extensions, there is no expectation of ongoing support - the
+  compiler support will continue to change until the specification is finalised.
+  In line with this policy, MC layer and code generation support was added for
+  version 0.92 of the proposed Bit Manipulation Extension and MC layer support
+  was added for version 0.8 of the proposed RISC-V Vector instruction set
+  extension. As these extensions are not yet ratified, compiler support will
+  continue to change to match the specifications until they are finalised.
+* ELF attribute sections are now created, encoding information such as the ISA
+  string.
+* Support for saving/restoring callee-saved registers via libcalls (a code
+  size optimisation).
+* llvm-objdump will now print branch targets as part of disassembly.
+
+Improvements:
+* If an immediate can be generated using a pair of `addi` instructions, that
+  pair will be selected rather than materialising the immediate into a
+  separate register with an `lui` and `addi` pair.
+* Multiplication by a constant was optimised.
+* `addi` instructions are now folded into the offset of a load/store instruction
+  even if the load/store itself has a non-zero offset, when it is safe to do
+  so.
+* Additional target hooks were implemented to minimise generation of
+  unnecessary control flow instruction.
+* The RISC-V backend's load/store peephole optimisation pass now supports
+  constant pools, improving code generation for floating point constants.
+* Debug scratch register names `dscratch0` and `dscratch1` are now recognised in
+  addition to the legacy `dscratch` register name.
+* Codegen for checking isnan was improved, removing a redundant `and`.
+* The `dret` instruction is now supported by the MC layer.
+* `.option pic` and `.option nopic` are now supported in assembly and `.reloc`
+  was extended to support arbitrary relocation types.
+* Scheduling info metadata was improved.
+* The `jump` pseudo instruction is now supported.
+
+Bug fixes:
+* A failure to insert indirect branches in position independent code
+  was fixed.
+* The calculated expanded size of atomic pseudo operations was fixed, avoiding
+  "fixup value out of range" errors during branch relaxation for some inputs.
+* The `mcountinhibit` CSR is now recognised.
+* The correct libcall is now emitted for converting a float/double to a 32-bit
+  signed or unsigned integer on RV64 targets lacking the F or D extensions.
+
+
 Changes to the X86 Target
 -------------------------
 
