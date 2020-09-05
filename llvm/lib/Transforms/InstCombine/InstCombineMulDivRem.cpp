@@ -275,6 +275,9 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     SelectPatternFlavor SPF = matchSelectPattern(Op0, X, Y).Flavor;
     if (SPF == SPF_ABS || SPF == SPF_NABS)
       return BinaryOperator::CreateMul(X, X);
+
+    if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
+      return BinaryOperator::CreateMul(X, X);
   }
 
   // -X * C --> X * -C
