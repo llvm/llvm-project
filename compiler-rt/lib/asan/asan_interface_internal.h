@@ -173,8 +173,8 @@ extern "C" {
 
   SANITIZER_INTERFACE_ATTRIBUTE void __asan_print_accumulated_stats();
 
-  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-  const char* __asan_default_options();
+  SANITIZER_INTERFACE_ATTRIBUTE
+  const char *__asan_default_options();
 
   SANITIZER_INTERFACE_ATTRIBUTE
   extern uptr __asan_shadow_memory_dynamic_address;
