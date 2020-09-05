@@ -3088,6 +3088,13 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
   Type *Ty = II->getType();
   unsigned BitWidth = C.getBitWidth();
   switch (II->getIntrinsicID()) {
+  case Intrinsic::abs:
+    // abs(A) == 0  ->  A == 0
+    if (C.isNullValue())
+      return new ICmpInst(Cmp.getPredicate(), II->getArgOperand(0),
+                          Constant::getNullValue(Ty));
+    break;
+
   case Intrinsic::bswap:
     // bswap(A) == C  ->  A == bswap(C)
     return new ICmpInst(Cmp.getPredicate(), II->getArgOperand(0),

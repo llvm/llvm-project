@@ -1094,8 +1094,7 @@ define zeroext i1 @cmpabs2(i64 %val) {
 
 define i1 @abs_intrin_eq_zero(i8 %x) {
 ; CHECK-LABEL: @abs_intrin_eq_zero(
-; CHECK-NEXT:    [[ABS:%.*]] = call i8 @llvm.abs.i8(i8 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[ABS]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %abs = call i8 @llvm.abs.i8(i8 %x, i1 false)
@@ -1105,8 +1104,7 @@ define i1 @abs_intrin_eq_zero(i8 %x) {
 
 define i1 @abs_intrin_ne_zero(i8 %x) {
 ; CHECK-LABEL: @abs_intrin_ne_zero(
-; CHECK-NEXT:    [[ABS:%.*]] = call i8 @llvm.abs.i8(i8 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[ABS]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %abs = call i8 @llvm.abs.i8(i8 %x, i1 false)
