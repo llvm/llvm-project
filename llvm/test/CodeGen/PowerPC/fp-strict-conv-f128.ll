@@ -403,47 +403,39 @@ entry:
 define signext i32 @ppcq_to_i32(ppc_fp128 %m) #0 {
 ; P8-LABEL: ppcq_to_i32:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
-; P8-NEXT:    stdu r1, -112(r1)
-; P8-NEXT:    .cfi_def_cfa_offset 112
-; P8-NEXT:    .cfi_offset lr, 16
-; P8-NEXT:    bl __gcc_qtou
-; P8-NEXT:    nop
+; P8-NEXT:    mffs f0
+; P8-NEXT:    mtfsb1 31
+; P8-NEXT:    mtfsb0 30
+; P8-NEXT:    fadd f1, f2, f1
+; P8-NEXT:    mtfsf 1, f0
+; P8-NEXT:    xscvdpsxws f0, f1
+; P8-NEXT:    mffprwz r3, f0
 ; P8-NEXT:    extsw r3, r3
-; P8-NEXT:    addi r1, r1, 112
-; P8-NEXT:    ld r0, 16(r1)
-; P8-NEXT:    mtlr r0
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: ppcq_to_i32:
 ; P9:       # %bb.0: # %entry
-; P9-NEXT:    mflr r0
-; P9-NEXT:    std r0, 16(r1)
-; P9-NEXT:    stdu r1, -32(r1)
-; P9-NEXT:    .cfi_def_cfa_offset 32
-; P9-NEXT:    .cfi_offset lr, 16
-; P9-NEXT:    bl __gcc_qtou
-; P9-NEXT:    nop
+; P9-NEXT:    mffs f0
+; P9-NEXT:    mtfsb1 31
+; P9-NEXT:    mtfsb0 30
+; P9-NEXT:    fadd f1, f2, f1
+; P9-NEXT:    mtfsf 1, f0
+; P9-NEXT:    xscvdpsxws f0, f1
+; P9-NEXT:    mffprwz r3, f0
 ; P9-NEXT:    extsw r3, r3
-; P9-NEXT:    addi r1, r1, 32
-; P9-NEXT:    ld r0, 16(r1)
-; P9-NEXT:    mtlr r0
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: ppcq_to_i32:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
-; NOVSX-NEXT:    stdu r1, -32(r1)
-; NOVSX-NEXT:    .cfi_def_cfa_offset 32
-; NOVSX-NEXT:    .cfi_offset lr, 16
-; NOVSX-NEXT:    bl __gcc_qtou
-; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    extsw r3, r3
-; NOVSX-NEXT:    addi r1, r1, 32
-; NOVSX-NEXT:    ld r0, 16(r1)
-; NOVSX-NEXT:    mtlr r0
+; NOVSX-NEXT:    mffs f0
+; NOVSX-NEXT:    mtfsb1 31
+; NOVSX-NEXT:    addi r3, r1, -4
+; NOVSX-NEXT:    mtfsb0 30
+; NOVSX-NEXT:    fadd f1, f2, f1
+; NOVSX-NEXT:    mtfsf 1, f0
+; NOVSX-NEXT:    fctiwz f0, f1
+; NOVSX-NEXT:    stfiwx f0, 0, r3
+; NOVSX-NEXT:    lwa r3, -4(r1)
 ; NOVSX-NEXT:    blr
 entry:
   %conv = tail call i32 @llvm.experimental.constrained.fptosi.i32.ppcf128(ppc_fp128 %m, metadata !"fpexcept.strict") #0
@@ -549,12 +541,40 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    std r0, 16(r1)
-; P8-NEXT:    stdu r1, -112(r1)
-; P8-NEXT:    .cfi_def_cfa_offset 112
+; P8-NEXT:    stdu r1, -128(r1)
+; P8-NEXT:    .cfi_def_cfa_offset 128
 ; P8-NEXT:    .cfi_offset lr, 16
-; P8-NEXT:    bl __fixunstfsi
+; P8-NEXT:    .cfi_offset r30, -16
+; P8-NEXT:    addis r3, r2, .LCPI11_0@toc@ha
+; P8-NEXT:    xxlxor f3, f3, f3
+; P8-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
+; P8-NEXT:    lfs f0, .LCPI11_0@toc@l(r3)
+; P8-NEXT:    fcmpo cr0, f2, f3
+; P8-NEXT:    lis r3, -32768
+; P8-NEXT:    xxlxor f3, f3, f3
+; P8-NEXT:    fcmpo cr1, f1, f0
+; P8-NEXT:    crand 4*cr5+lt, 4*cr1+eq, lt
+; P8-NEXT:    crandc 4*cr5+gt, 4*cr1+lt, 4*cr1+eq
+; P8-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P8-NEXT:    isel r30, 0, r3, 4*cr5+lt
+; P8-NEXT:    bc 12, 4*cr5+lt, .LBB11_2
+; P8-NEXT:  # %bb.1: # %entry
+; P8-NEXT:    fmr f3, f0
+; P8-NEXT:  .LBB11_2: # %entry
+; P8-NEXT:    xxlxor f4, f4, f4
+; P8-NEXT:    bl __gcc_qsub
 ; P8-NEXT:    nop
-; P8-NEXT:    addi r1, r1, 112
+; P8-NEXT:    mffs f0
+; P8-NEXT:    mtfsb1 31
+; P8-NEXT:    mtfsb0 30
+; P8-NEXT:    fadd f1, f2, f1
+; P8-NEXT:    mtfsf 1, f0
+; P8-NEXT:    xscvdpsxws f0, f1
+; P8-NEXT:    mffprwz r3, f0
+; P8-NEXT:    xor r3, r3, r30
+; P8-NEXT:    ld r30, 112(r1) # 8-byte Folded Reload
+; P8-NEXT:    clrldi r3, r3, 32
+; P8-NEXT:    addi r1, r1, 128
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
 ; P8-NEXT:    blr
@@ -562,28 +582,88 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; P9-LABEL: ppcq_to_u32:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    mflr r0
-; P9-NEXT:    std r0, 16(r1)
-; P9-NEXT:    stdu r1, -32(r1)
-; P9-NEXT:    .cfi_def_cfa_offset 32
+; P9-NEXT:    .cfi_def_cfa_offset 48
 ; P9-NEXT:    .cfi_offset lr, 16
-; P9-NEXT:    bl __fixunstfsi
+; P9-NEXT:    .cfi_offset r30, -16
+; P9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; P9-NEXT:    std r0, 16(r1)
+; P9-NEXT:    stdu r1, -48(r1)
+; P9-NEXT:    addis r3, r2, .LCPI11_0@toc@ha
+; P9-NEXT:    xxlxor f3, f3, f3
+; P9-NEXT:    lfs f0, .LCPI11_0@toc@l(r3)
+; P9-NEXT:    fcmpo cr1, f2, f3
+; P9-NEXT:    lis r3, -32768
+; P9-NEXT:    fcmpo cr0, f1, f0
+; P9-NEXT:    xxlxor f3, f3, f3
+; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
+; P9-NEXT:    crandc 4*cr5+gt, lt, eq
+; P9-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    isel r30, 0, r3, 4*cr5+lt
+; P9-NEXT:    bc 12, 4*cr5+lt, .LBB11_2
+; P9-NEXT:  # %bb.1: # %entry
+; P9-NEXT:    fmr f3, f0
+; P9-NEXT:  .LBB11_2: # %entry
+; P9-NEXT:    xxlxor f4, f4, f4
+; P9-NEXT:    bl __gcc_qsub
 ; P9-NEXT:    nop
-; P9-NEXT:    addi r1, r1, 32
+; P9-NEXT:    mffs f0
+; P9-NEXT:    mtfsb1 31
+; P9-NEXT:    mtfsb0 30
+; P9-NEXT:    fadd f1, f2, f1
+; P9-NEXT:    mtfsf 1, f0
+; P9-NEXT:    xscvdpsxws f0, f1
+; P9-NEXT:    mffprwz r3, f0
+; P9-NEXT:    xor r3, r3, r30
+; P9-NEXT:    clrldi r3, r3, 32
+; P9-NEXT:    addi r1, r1, 48
 ; P9-NEXT:    ld r0, 16(r1)
+; P9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; P9-NEXT:    mtlr r0
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: ppcq_to_u32:
 ; NOVSX:       # %bb.0: # %entry
+; NOVSX-NEXT:    mfocrf r12, 32
 ; NOVSX-NEXT:    mflr r0
 ; NOVSX-NEXT:    std r0, 16(r1)
-; NOVSX-NEXT:    stdu r1, -32(r1)
-; NOVSX-NEXT:    .cfi_def_cfa_offset 32
+; NOVSX-NEXT:    stw r12, 8(r1)
+; NOVSX-NEXT:    stdu r1, -48(r1)
+; NOVSX-NEXT:    .cfi_def_cfa_offset 48
 ; NOVSX-NEXT:    .cfi_offset lr, 16
-; NOVSX-NEXT:    bl __fixunstfsi
+; NOVSX-NEXT:    .cfi_offset cr2, 8
+; NOVSX-NEXT:    addis r3, r2, .LCPI11_0@toc@ha
+; NOVSX-NEXT:    addis r4, r2, .LCPI11_1@toc@ha
+; NOVSX-NEXT:    lfs f0, .LCPI11_0@toc@l(r3)
+; NOVSX-NEXT:    lfs f4, .LCPI11_1@toc@l(r4)
+; NOVSX-NEXT:    fcmpo cr0, f1, f0
+; NOVSX-NEXT:    fcmpo cr1, f2, f4
+; NOVSX-NEXT:    fmr f3, f4
+; NOVSX-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
+; NOVSX-NEXT:    crandc 4*cr5+gt, lt, eq
+; NOVSX-NEXT:    cror 4*cr2+lt, 4*cr5+gt, 4*cr5+lt
+; NOVSX-NEXT:    bc 12, 4*cr2+lt, .LBB11_2
+; NOVSX-NEXT:  # %bb.1: # %entry
+; NOVSX-NEXT:    fmr f3, f0
+; NOVSX-NEXT:  .LBB11_2: # %entry
+; NOVSX-NEXT:    bl __gcc_qsub
 ; NOVSX-NEXT:    nop
-; NOVSX-NEXT:    addi r1, r1, 32
+; NOVSX-NEXT:    mffs f0
+; NOVSX-NEXT:    mtfsb1 31
+; NOVSX-NEXT:    addi r3, r1, 44
+; NOVSX-NEXT:    mtfsb0 30
+; NOVSX-NEXT:    fadd f1, f2, f1
+; NOVSX-NEXT:    mtfsf 1, f0
+; NOVSX-NEXT:    fctiwz f0, f1
+; NOVSX-NEXT:    stfiwx f0, 0, r3
+; NOVSX-NEXT:    lis r3, -32768
+; NOVSX-NEXT:    lwz r4, 44(r1)
+; NOVSX-NEXT:    isel r3, 0, r3, 4*cr2+lt
+; NOVSX-NEXT:    xor r3, r4, r3
+; NOVSX-NEXT:    clrldi r3, r3, 32
+; NOVSX-NEXT:    addi r1, r1, 48
 ; NOVSX-NEXT:    ld r0, 16(r1)
+; NOVSX-NEXT:    lwz r12, 8(r1)
+; NOVSX-NEXT:    mtocrf 32, r12
 ; NOVSX-NEXT:    mtlr r0
 ; NOVSX-NEXT:    blr
 entry:
@@ -747,12 +827,17 @@ entry:
   ret fp128 %conv
 }
 
-define void @fptoint_nofpexcept(fp128 %m, i32* %addr1, i64* %addr2) {
+define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, i32* %addr1, i64* %addr2) {
 ; MIR-LABEL: name: fptoint_nofpexcept
 ; MIR: renamable $v{{[0-9]+}} = nofpexcept XSCVQPSWZ
 ; MIR: renamable $v{{[0-9]+}} = nofpexcept XSCVQPUWZ
 ; MIR: renamable $v{{[0-9]+}} = nofpexcept XSCVQPSDZ
 ; MIR: renamable $v{{[0-9]+}} = nofpexcept XSCVQPUDZ
+;
+; MIR: renamable $f{{[0-9]+}} = nofpexcept FADD
+; MIR: renamable $f{{[0-9]+}} = XSCVDPSXWS
+; MIR: renamable $f{{[0-9]+}} = nofpexcept FADD
+; MIR: renamable $f{{[0-9]+}} = XSCVDPSXWS
 entry:
   %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %m, metadata !"fpexcept.ignore") #0
   store volatile i32 %conv1, i32* %addr1, align 4
@@ -762,6 +847,11 @@ entry:
   store volatile i64 %conv3, i64* %addr2, align 8
   %conv4 = tail call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %m, metadata !"fpexcept.ignore") #0
   store volatile i64 %conv4, i64* %addr2, align 8
+
+  %conv5 = tail call i32 @llvm.experimental.constrained.fptosi.i32.ppcf128(ppc_fp128 %p, metadata !"fpexcept.ignore") #0
+  store volatile i32 %conv5, i32* %addr1, align 4
+  %conv6 = tail call i32 @llvm.experimental.constrained.fptoui.i32.ppcf128(ppc_fp128 %p, metadata !"fpexcept.ignore") #0
+  store volatile i32 %conv6, i32* %addr1, align 4
   ret void
 }
 
