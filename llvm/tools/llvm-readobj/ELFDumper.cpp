@@ -722,8 +722,9 @@ public:
   TYPEDEF_ELF_TYPES(ELFT)
 
   DumpStyle(ELFDumper<ELFT> *Dumper)
-      : Obj(*Dumper->getElfObject()->getELFFile()), Dumper(Dumper) {
-    FileName = this->Dumper->getElfObject()->getFileName();
+      : Obj(*Dumper->getElfObject()->getELFFile()),
+        ElfObj(*Dumper->getElfObject()), Dumper(Dumper) {
+    FileName = ElfObj.getFileName();
   }
 
   virtual ~DumpStyle() = default;
@@ -752,17 +753,15 @@ public:
   virtual void printAddrsig() = 0;
   virtual void printNotes() = 0;
   virtual void printELFLinkerOptions() = 0;
-  virtual void printStackSizes(const ELFObjectFile<ELFT> *Obj) = 0;
-  void printNonRelocatableStackSizes(const ELFObjectFile<ELFT> *Obj,
-                                     std::function<void()> PrintHeader);
-  void printRelocatableStackSizes(const ELFObjectFile<ELFT> *Obj,
-                                  std::function<void()> PrintHeader);
-  void printFunctionStackSize(const ELFObjectFile<ELFT> *Obj, uint64_t SymValue,
-                              Optional<SectionRef> FunctionSec,
+  virtual void printStackSizes() = 0;
+  void printNonRelocatableStackSizes(std::function<void()> PrintHeader);
+  void printRelocatableStackSizes(std::function<void()> PrintHeader);
+  void printFunctionStackSize(uint64_t SymValue,
+                              Optional<const Elf_Shdr *> FunctionSec,
                               const Elf_Shdr &StackSizeSec, DataExtractor Data,
                               uint64_t *Offset);
-  void printStackSize(const ELFObjectFile<ELFT> *Obj, RelocationRef Rel,
-                      SectionRef FunctionSec, const Elf_Shdr &StackSizeSec,
+  void printStackSize(RelocationRef Rel, const Elf_Shdr *FunctionSec,
+                      const Elf_Shdr &StackSizeSec,
                       const RelocationResolver &Resolver, DataExtractor Data);
   virtual void printStackSizeEntry(uint64_t Size, StringRef FuncName) = 0;
   virtual void printMipsGOT(const MipsGOTParser<ELFT> &Parser) = 0;
@@ -790,6 +789,7 @@ protected:
 
   StringRef FileName;
   const ELFFile<ELFT> &Obj;
+  const ELFObjectFile<ELFT> &ElfObj;
 
 private:
   const ELFDumper<ELFT> *Dumper;
@@ -828,7 +828,7 @@ public:
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
-  void printStackSizes(const ELFObjectFile<ELFT> *Obj) override;
+  void printStackSizes() override;
   void printStackSizeEntry(uint64_t Size, StringRef FuncName) override;
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
@@ -952,7 +952,7 @@ public:
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
-  void printStackSizes(const ELFObjectFile<ELFT> *Obj) override;
+  void printStackSizes() override;
   void printStackSizeEntry(uint64_t Size, StringRef FuncName) override;
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
@@ -2333,7 +2333,7 @@ template <class ELFT> void ELFDumper<ELFT>::printELFLinkerOptions() {
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printStackSizes() {
-  ELFDumperStyle->printStackSizes(ObjF);
+  ELFDumperStyle->printStackSizes();
 }
 
 #define LLVM_READOBJ_DT_FLAG_ENT(prefix, enum)                                 \
@@ -5503,16 +5503,6 @@ template <class ELFT> void GNUStyle<ELFT>::printDependentLibs() {
     PrintSection();
 }
 
-// Used for printing section names in places where possible errors can be
-// ignored.
-static StringRef getSectionName(const SectionRef &Sec) {
-  Expected<StringRef> NameOrErr = Sec.getName();
-  if (NameOrErr)
-    return *NameOrErr;
-  consumeError(NameOrErr.takeError());
-  return "<?>";
-}
-
 // Used for printing symbol names in places where possible errors can be
 // ignored.
 static std::string getSymbolName(const ELFSymbolRef &Sym) {
@@ -5524,16 +5514,13 @@ static std::string getSymbolName(const ELFSymbolRef &Sym) {
 }
 
 template <class ELFT>
-void DumpStyle<ELFT>::printFunctionStackSize(const ELFObjectFile<ELFT> *Obj,
-                                             uint64_t SymValue,
-                                             Optional<SectionRef> FunctionSec,
-                                             const Elf_Shdr &StackSizeSec,
-                                             DataExtractor Data,
-                                             uint64_t *Offset) {
+void DumpStyle<ELFT>::printFunctionStackSize(
+    uint64_t SymValue, Optional<const Elf_Shdr *> FunctionSec,
+    const Elf_Shdr &StackSizeSec, DataExtractor Data, uint64_t *Offset) {
   // This function ignores potentially erroneous input, unless it is directly
   // related to stack size reporting.
   SymbolRef FuncSym;
-  for (const ELFSymbolRef &Symbol : Obj->symbols()) {
+  for (const ELFSymbolRef &Symbol : ElfObj.symbols()) {
     Expected<uint64_t> SymAddrOrErr = Symbol.getAddress();
     if (!SymAddrOrErr) {
       consumeError(SymAddrOrErr.takeError());
@@ -5547,7 +5534,8 @@ void DumpStyle<ELFT>::printFunctionStackSize(const ELFObjectFile<ELFT> *Obj,
     if (Symbol.getELFType() == ELF::STT_FUNC && *SymAddrOrErr == SymValue) {
       // Check if the symbol is in the right section. FunctionSec == None means
       // "any section".
-      if (!FunctionSec || FunctionSec->containsSymbol(Symbol)) {
+      if (!FunctionSec ||
+          ElfObj.toSectionRef(*FunctionSec).containsSymbol(Symbol)) {
         FuncSym = Symbol;
         break;
       }
@@ -5561,7 +5549,7 @@ void DumpStyle<ELFT>::printFunctionStackSize(const ELFObjectFile<ELFT> *Obj,
   else
     reportWarning(
         createError("could not identify function symbol for stack size entry"),
-        Obj->getFileName());
+        FileName);
 
   // Extract the size. The expectation is that Offset is pointing to the right
   // place, i.e. past the function address.
@@ -5570,11 +5558,10 @@ void DumpStyle<ELFT>::printFunctionStackSize(const ELFObjectFile<ELFT> *Obj,
   // getULEB128() does not advance Offset if it is not able to extract a valid
   // integer.
   if (*Offset == PrevOffset) {
-    reportWarning(
-        createStringError(object_error::parse_failed,
-                          "could not extract a valid stack size in " +
-                              describe(*Obj->getELFFile(), StackSizeSec)),
-        Obj->getFileName());
+    reportWarning(createStringError(object_error::parse_failed,
+                                    "could not extract a valid stack size in " +
+                                        describe(Obj, StackSizeSec)),
+                  FileName);
     return;
   }
 
@@ -5590,9 +5577,8 @@ void GNUStyle<ELFT>::printStackSizeEntry(uint64_t Size, StringRef FuncName) {
 }
 
 template <class ELFT>
-void DumpStyle<ELFT>::printStackSize(const ELFObjectFile<ELFT> *Obj,
-                                     RelocationRef Reloc,
-                                     SectionRef FunctionSec,
+void DumpStyle<ELFT>::printStackSize(RelocationRef Reloc,
+                                     const Elf_Shdr *FunctionSec,
                                      const Elf_Shdr &StackSizeSec,
                                      const RelocationResolver &Resolver,
                                      DataExtractor Data) {
@@ -5600,8 +5586,7 @@ void DumpStyle<ELFT>::printStackSize(const ELFObjectFile<ELFT> *Obj,
   // related to stack size reporting.
   object::symbol_iterator RelocSym = Reloc.getSymbol();
   uint64_t RelocSymValue = 0;
-  StringRef FileStr = Obj->getFileName();
-  if (RelocSym != Obj->symbol_end()) {
+  if (RelocSym != ElfObj.symbol_end()) {
     // Ensure that the relocation symbol is in the function section, i.e. the
     // section where the functions whose stack sizes we are reporting are
     // located.
@@ -5610,16 +5595,16 @@ void DumpStyle<ELFT>::printStackSize(const ELFObjectFile<ELFT> *Obj,
       reportWarning(
           createError("cannot identify the section for relocation symbol '" +
                       getSymbolName(*RelocSym) + "'"),
-          FileStr);
+          FileName);
       consumeError(SectionOrErr.takeError());
-    } else if (*SectionOrErr != FunctionSec) {
+    } else if (*SectionOrErr != ElfObj.toSectionRef(FunctionSec)) {
       reportWarning(createError("relocation symbol '" +
                                 getSymbolName(*RelocSym) +
                                 "' is not in the expected section"),
-                    FileStr);
+                    FileName);
       // Pretend that the symbol is in the correct section and report its
       // stack size anyway.
-      FunctionSec = **SectionOrErr;
+      FunctionSec = ElfObj.getSection((*SectionOrErr)->getRawDataRefImpl());
     }
 
     Expected<uint64_t> RelocSymValueOrErr = RelocSym->getValue();
@@ -5634,31 +5619,29 @@ void DumpStyle<ELFT>::printStackSize(const ELFObjectFile<ELFT> *Obj,
     reportUniqueWarning(createStringError(
         object_error::parse_failed,
         "found invalid relocation offset (0x" + Twine::utohexstr(Offset) +
-            ") into " + describe(*Obj->getELFFile(), StackSizeSec) +
+            ") into " + describe(Obj, StackSizeSec) +
             " while trying to extract a stack size entry"));
     return;
   }
 
   uint64_t Addend = Data.getAddress(&Offset);
   uint64_t SymValue = Resolver(Reloc, RelocSymValue, Addend);
-  this->printFunctionStackSize(Obj, SymValue, FunctionSec, StackSizeSec, Data,
+  this->printFunctionStackSize(SymValue, FunctionSec, StackSizeSec, Data,
                                &Offset);
 }
 
 template <class ELFT>
 void DumpStyle<ELFT>::printNonRelocatableStackSizes(
-    const ELFObjectFile<ELFT> *Obj, std::function<void()> PrintHeader) {
+    std::function<void()> PrintHeader) {
   // This function ignores potentially erroneous input, unless it is directly
   // related to stack size reporting.
-  const ELFFile<ELFT> *EF = Obj->getELFFile();
-  for (const SectionRef &Sec : Obj->sections()) {
-    if (getSectionName(Sec) != ".stack_sizes")
+  for (const Elf_Shdr &Sec : cantFail(Obj.sections())) {
+    if (this->getPrintableSectionName(Sec) != ".stack_sizes")
       continue;
     PrintHeader();
-    const Elf_Shdr *ElfSec = Obj->getSection(Sec.getRawDataRefImpl());
     ArrayRef<uint8_t> Contents =
-        unwrapOrError(this->FileName, EF->getSectionContents(*ElfSec));
-    DataExtractor Data(Contents, Obj->isLittleEndian(), sizeof(Elf_Addr));
+        unwrapOrError(this->FileName, Obj.getSectionContents(Sec));
+    DataExtractor Data(Contents, Obj.isLE(), sizeof(Elf_Addr));
     uint64_t Offset = 0;
     while (Offset < Contents.size()) {
       // The function address is followed by a ULEB representing the stack
@@ -5666,12 +5649,12 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
       if (!Data.isValidOffsetForDataOfSize(Offset, sizeof(Elf_Addr) + 1)) {
         reportUniqueWarning(createStringError(
             object_error::parse_failed,
-            describe(*EF, *ElfSec) +
+            describe(Obj, Sec) +
                 " ended while trying to extract a stack size entry"));
         break;
       }
       uint64_t SymValue = Data.getAddress(&Offset);
-      printFunctionStackSize(Obj, SymValue, /*FunctionSec=*/None, *ElfSec, Data,
+      printFunctionStackSize(SymValue, /*FunctionSec=*/None, Sec, Data,
                              &Offset);
     }
   }
@@ -5679,17 +5662,13 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
 
 template <class ELFT>
 void DumpStyle<ELFT>::printRelocatableStackSizes(
-    const ELFObjectFile<ELFT> *Obj, std::function<void()> PrintHeader) {
-  const ELFFile<ELFT> *EF = Obj->getELFFile();
-
+    std::function<void()> PrintHeader) {
   // Build a map between stack size sections and their corresponding relocation
   // sections.
-  llvm::MapVector<SectionRef, SectionRef> StackSizeRelocMap;
-  const SectionRef NullSection{};
-
-  for (const SectionRef &Sec : Obj->sections()) {
+  llvm::MapVector<const Elf_Shdr *, const Elf_Shdr *> StackSizeRelocMap;
+  for (const Elf_Shdr &Sec : cantFail(Obj.sections())) {
     StringRef SectionName;
-    if (Expected<StringRef> NameOrErr = Sec.getName())
+    if (Expected<StringRef> NameOrErr = Obj.getSectionName(Sec))
       SectionName = *NameOrErr;
     else
       consumeError(NameOrErr.takeError());
@@ -5697,92 +5676,80 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
     // A stack size section that we haven't encountered yet is mapped to the
     // null section until we find its corresponding relocation section.
     if (SectionName == ".stack_sizes")
-      if (StackSizeRelocMap.count(Sec) == 0) {
-        StackSizeRelocMap[Sec] = NullSection;
+      if (StackSizeRelocMap
+              .insert(std::make_pair(&Sec, (const Elf_Shdr *)nullptr))
+              .second)
         continue;
-      }
 
     // Check relocation sections if they are relocating contents of a
     // stack sizes section.
-    const Elf_Shdr *ElfSec = Obj->getSection(Sec.getRawDataRefImpl());
-    uint32_t SectionType = ElfSec->sh_type;
-    if (SectionType != ELF::SHT_RELA && SectionType != ELF::SHT_REL)
+    if (Sec.sh_type != ELF::SHT_RELA && Sec.sh_type != ELF::SHT_REL)
       continue;
 
-    Expected<section_iterator> RelSecOrErr = Sec.getRelocatedSection();
+    Expected<const Elf_Shdr *> RelSecOrErr = Obj.getSection(Sec.sh_info);
     if (!RelSecOrErr) {
-      reportUniqueWarning(
-          createStringError(object_error::parse_failed,
-                            describe(*Obj->getELFFile(), *ElfSec) +
-                                ": failed to get a relocated section: " +
-                                toString(RelSecOrErr.takeError())));
+      reportUniqueWarning(createStringError(
+          object_error::parse_failed,
+          describe(Obj, Sec) + ": failed to get a relocated section: " +
+              toString(RelSecOrErr.takeError())));
       continue;
     }
 
-    const Elf_Shdr *ContentsSec =
-        Obj->getSection((*RelSecOrErr)->getRawDataRefImpl());
-    Expected<StringRef> ContentsSectionNameOrErr =
-        EF->getSectionName(*ContentsSec);
-    if (!ContentsSectionNameOrErr) {
-      consumeError(ContentsSectionNameOrErr.takeError());
+    const Elf_Shdr *ContentsSec = *RelSecOrErr;
+    if (this->getPrintableSectionName(**RelSecOrErr) != ".stack_sizes")
       continue;
-    }
-    if (*ContentsSectionNameOrErr != ".stack_sizes")
-      continue;
+
     // Insert a mapping from the stack sizes section to its relocation section.
-    StackSizeRelocMap[Obj->toSectionRef(ContentsSec)] = Sec;
+    StackSizeRelocMap[ContentsSec] = &Sec;
   }
 
   for (const auto &StackSizeMapEntry : StackSizeRelocMap) {
     PrintHeader();
-    const SectionRef &StackSizesSec = StackSizeMapEntry.first;
-    const SectionRef &RelocSec = StackSizeMapEntry.second;
-    const Elf_Shdr *StackSizesELFSec =
-        Obj->getSection(StackSizesSec.getRawDataRefImpl());
+    const Elf_Shdr *StackSizesELFSec = StackSizeMapEntry.first;
+    const Elf_Shdr *RelocSec = StackSizeMapEntry.second;
 
     // Warn about stack size sections without a relocation section.
-    if (RelocSec == NullSection) {
-      reportWarning(
-          createError(".stack_sizes (" +
-                      describe(*Obj->getELFFile(), *StackSizesELFSec) +
-                      ") does not have a corresponding "
-                      "relocation section"),
-          Obj->getFileName());
+    if (!RelocSec) {
+      reportWarning(createError(".stack_sizes (" +
+                                describe(Obj, *StackSizesELFSec) +
+                                ") does not have a corresponding "
+                                "relocation section"),
+                    FileName);
       continue;
     }
 
     // A .stack_sizes section header's sh_link field is supposed to point
     // to the section that contains the functions whose stack sizes are
     // described in it.
-    const SectionRef FunctionSec = Obj->toSectionRef(unwrapOrError(
-        this->FileName, EF->getSection(StackSizesELFSec->sh_link)));
-
+    const Elf_Shdr *FunctionSec = unwrapOrError(
+        this->FileName, Obj.getSection(StackSizesELFSec->sh_link));
     bool (*IsSupportedFn)(uint64_t);
     RelocationResolver Resolver;
-    std::tie(IsSupportedFn, Resolver) = getRelocationResolver(*Obj);
-    auto Contents = unwrapOrError(this->FileName, StackSizesSec.getContents());
-    DataExtractor Data(Contents, Obj->isLittleEndian(), sizeof(Elf_Addr));
+    std::tie(IsSupportedFn, Resolver) = getRelocationResolver(ElfObj);
+    ArrayRef<uint8_t> Contents =
+        unwrapOrError(this->FileName, Obj.getSectionContents(*StackSizesELFSec));
+    DataExtractor Data(Contents, Obj.isLE(), sizeof(Elf_Addr));
+
     size_t I = 0;
-    for (const RelocationRef &Reloc : RelocSec.relocations()) {
+    for (const RelocationRef &Reloc :
+         ElfObj.toSectionRef(RelocSec).relocations()) {
       ++I;
       if (!IsSupportedFn || !IsSupportedFn(Reloc.getType())) {
-        const Elf_Shdr *RelocSecShdr =
-            Obj->getSection(RelocSec.getRawDataRefImpl());
         reportUniqueWarning(createStringError(
             object_error::parse_failed,
-            describe(*EF, *RelocSecShdr) +
+            describe(Obj, *RelocSec) +
                 " contains an unsupported relocation with index " + Twine(I) +
-                ": " + EF->getRelocationTypeName(Reloc.getType())));
+                ": " + Obj.getRelocationTypeName(Reloc.getType())));
         continue;
       }
-      this->printStackSize(Obj, Reloc, FunctionSec, *StackSizesELFSec, Resolver,
+      this->printStackSize(Reloc, FunctionSec, *StackSizesELFSec, Resolver,
                            Data);
     }
   }
 }
 
 template <class ELFT>
-void GNUStyle<ELFT>::printStackSizes(const ELFObjectFile<ELFT> *Obj) {
+void GNUStyle<ELFT>::printStackSizes() {
   bool HeaderHasBeenPrinted = false;
   auto PrintHeader = [&]() {
     if (HeaderHasBeenPrinted)
@@ -5797,10 +5764,10 @@ void GNUStyle<ELFT>::printStackSizes(const ELFObjectFile<ELFT> *Obj) {
 
   // For non-relocatable objects, look directly for sections whose name starts
   // with .stack_sizes and process the contents.
-  if (Obj->isRelocatableObject())
-    this->printRelocatableStackSizes(Obj, PrintHeader);
+  if (this->Obj.getHeader().e_type == ELF::ET_REL)
+    this->printRelocatableStackSizes(PrintHeader);
   else
-    this->printNonRelocatableStackSizes(Obj, PrintHeader);
+    this->printNonRelocatableStackSizes(PrintHeader);
 }
 
 template <class ELFT>
@@ -6697,12 +6664,12 @@ template <class ELFT> void LLVMStyle<ELFT>::printDependentLibs() {
 }
 
 template <class ELFT>
-void LLVMStyle<ELFT>::printStackSizes(const ELFObjectFile<ELFT> *Obj) {
+void LLVMStyle<ELFT>::printStackSizes() {
   ListScope L(W, "StackSizes");
-  if (Obj->isRelocatableObject())
-    this->printRelocatableStackSizes(Obj, []() {});
+  if (this->Obj.getHeader().e_type == ELF::ET_REL)
+    this->printRelocatableStackSizes([]() {});
   else
-    this->printNonRelocatableStackSizes(Obj, []() {});
+    this->printNonRelocatableStackSizes([]() {});
 }
 
 template <class ELFT>
