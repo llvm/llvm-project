@@ -862,8 +862,7 @@ define <4 x i32> @combine_mul_nabs_v4i32(<4 x i32> %0) {
 
 define i32 @combine_mul_abs_intrin(i32 %x) {
 ; CHECK-LABEL: @combine_mul_abs_intrin(
-; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ABS]], [[ABS]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
@@ -873,8 +872,7 @@ define i32 @combine_mul_abs_intrin(i32 %x) {
 
 define i32 @combine_mul_nabs_intrin(i32 %x) {
 ; CHECK-LABEL: @combine_mul_nabs_intrin(
-; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ABS]], [[ABS]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
