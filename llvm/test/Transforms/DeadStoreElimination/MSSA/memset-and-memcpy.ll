@@ -68,13 +68,12 @@ define void @test17v(i8* %P, i8* %Q) nounwind ssp {
   ret void
 }
 
-; According to the current LangRef, memcpy's source and destination cannot
-; overlap, hence the first memcpy is dead.
-;
-; Previously this was not allowed (PR8728), also discussed in PR11763.
+; See PR11763 - LLVM allows memcpy's source and destination to be equal (but not
+; inequal and overlapping).
 define void @test18(i8* %P, i8* %Q, i8* %R) nounwind ssp {
 ; CHECK-LABEL: @test18(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P:%.*]], i8* [[R:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P:%.*]], i8* [[Q:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P]], i8* [[R:%.*]], i64 12, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
@@ -84,7 +83,8 @@ define void @test18(i8* %P, i8* %Q, i8* %R) nounwind ssp {
 
 define void @test18_atomic(i8* %P, i8* %Q, i8* %R) nounwind ssp {
 ; CHECK-LABEL: @test18_atomic(
-; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[R:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[R:%.*]], i64 12, i32 1)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
