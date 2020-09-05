@@ -218,8 +218,7 @@ define <2 x i64> @no_cttz_nabs_vec(<2 x i64> %x) {
 
 define i32 @cttz_abs_intrin(i32 %x) {
 ; CHECK-LABEL: @cttz_abs_intrin(
-; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.cttz.i32(i32 [[A]], i1 false), [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), [[RNG0]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = call i32 @llvm.abs.i32(i32 %x, i1 false)
@@ -229,8 +228,7 @@ define i32 @cttz_abs_intrin(i32 %x) {
 
 define i32 @cttz_nabs_intrin(i32 %x) {
 ; CHECK-LABEL: @cttz_nabs_intrin(
-; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.cttz.i32(i32 [[A]], i1 false), [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), [[RNG0]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = call i32 @llvm.abs.i32(i32 %x, i1 false)
