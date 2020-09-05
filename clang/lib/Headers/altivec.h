@@ -1766,34 +1766,10 @@ vec_cmpne(vector unsigned int __a, vector unsigned int __b) {
                                                     (vector int)__b);
 }
 
-static __inline__ vector bool long long __ATTRS_o_ai
-vec_cmpne(vector bool long long __a, vector bool long long __b) {
-  return (vector bool long long)
-    ~(__builtin_altivec_vcmpequd((vector long long)__a, (vector long long)__b));
-}
-
-static __inline__ vector bool long long __ATTRS_o_ai
-vec_cmpne(vector signed long long __a, vector signed long long __b) {
-  return (vector bool long long)
-    ~(__builtin_altivec_vcmpequd((vector long long)__a, (vector long long)__b));
-}
-
-static __inline__ vector bool long long __ATTRS_o_ai
-vec_cmpne(vector unsigned long long __a, vector unsigned long long __b) {
-  return (vector bool long long)
-    ~(__builtin_altivec_vcmpequd((vector long long)__a, (vector long long)__b));
-}
-
 static __inline__ vector bool int __ATTRS_o_ai
 vec_cmpne(vector float __a, vector float __b) {
   return (vector bool int)__builtin_altivec_vcmpnew((vector int)__a,
                                                     (vector int)__b);
-}
-
-static __inline__ vector bool long long __ATTRS_o_ai
-vec_cmpne(vector double __a, vector double __b) {
-  return (vector bool long long)
-    ~(__builtin_altivec_vcmpequd((vector long long)__a, (vector long long)__b));
 }
 
 /* vec_cmpnez */
@@ -1900,6 +1876,86 @@ vec_parity_lsbb(vector signed long long __a) {
   return __builtin_altivec_vprtybd(__a);
 }
 
+#else
+/* vec_cmpne */
+
+static __inline__ vector bool char __ATTRS_o_ai
+vec_cmpne(vector bool char __a, vector bool char __b) {
+  return ~(vec_cmpeq(__a, __b));
+}
+
+static __inline__ vector bool char __ATTRS_o_ai
+vec_cmpne(vector signed char __a, vector signed char __b) {
+  return ~(vec_cmpeq(__a, __b));
+}
+
+static __inline__ vector bool char __ATTRS_o_ai
+vec_cmpne(vector unsigned char __a, vector unsigned char __b) {
+  return ~(vec_cmpeq(__a, __b));
+}
+
+static __inline__ vector bool short __ATTRS_o_ai
+vec_cmpne(vector bool short __a, vector bool short __b) {
+  return ~(vec_cmpeq(__a, __b));
+}
+
+static __inline__ vector bool short __ATTRS_o_ai
+vec_cmpne(vector signed short __a, vector signed short __b) {
+  return ~(vec_cmpeq(__a, __b));
+}
+
+static __inline__ vector bool short __ATTRS_o_ai
+vec_cmpne(vector unsigned short __a, vector unsigned short __b) {
+  return ~(vec_cmpeq(__a, __b));
+}
+
+static __inline__ vector bool int __ATTRS_o_ai
+vec_cmpne(vector bool int __a, vector bool int __b) {
+  return ~(vec_cmpeq(__a, __b));
+}
+
+static __inline__ vector bool int __ATTRS_o_ai
+vec_cmpne(vector signed int __a, vector signed int __b) {
+  return ~(vec_cmpeq(__a, __b));
+}
+
+static __inline__ vector bool int __ATTRS_o_ai
+vec_cmpne(vector unsigned int __a, vector unsigned int __b) {
+  return ~(vec_cmpeq(__a, __b));
+}
+
+static __inline__ vector bool int __ATTRS_o_ai
+vec_cmpne(vector float __a, vector float __b) {
+  return ~(vec_cmpeq(__a, __b));
+}
+#endif
+
+#ifdef __POWER8_VECTOR__
+static __inline__ vector bool long long __ATTRS_o_ai
+vec_cmpne(vector bool long long __a, vector bool long long __b) {
+  return (vector bool long long)
+    ~(__builtin_altivec_vcmpequd((vector long long)__a, (vector long long)__b));
+}
+
+static __inline__ vector bool long long __ATTRS_o_ai
+vec_cmpne(vector signed long long __a, vector signed long long __b) {
+  return (vector bool long long)
+    ~(__builtin_altivec_vcmpequd((vector long long)__a, (vector long long)__b));
+}
+
+static __inline__ vector bool long long __ATTRS_o_ai
+vec_cmpne(vector unsigned long long __a, vector unsigned long long __b) {
+  return (vector bool long long)
+    ~(__builtin_altivec_vcmpequd((vector long long)__a, (vector long long)__b));
+}
+#endif
+
+#ifdef __VSX__
+static __inline__ vector bool long long __ATTRS_o_ai
+vec_cmpne(vector double __a, vector double __b) {
+  return (vector bool long long)
+    ~(__builtin_altivec_vcmpequd((vector long long)__a, (vector long long)__b));
+}
 #endif
 
 /* vec_cmpgt */
