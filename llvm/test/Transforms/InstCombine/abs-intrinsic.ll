@@ -3,6 +3,8 @@
 
 declare i32 @llvm.abs.i32(i32, i1)
 declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)
+declare <3 x i82> @llvm.abs.v3i82(<3 x i82>, i1)
+declare void @llvm.assume(i1)
 
 ; abs preserves trailing zeros so the second and is unneeded
 define i32 @abs_trailing_zeros(i32 %x) {
@@ -169,4 +171,86 @@ true:
 false:
   %a2 = call i32 @llvm.abs.i32(i32 %x, i1 true)
   ret i32 %a2
+}
+
+; Abs argument non-neg based on known bits.
+
+define i32 @zext_abs(i31 %x) {
+; CHECK-LABEL: @zext_abs(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i31 [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[ZEXT]]
+;
+  %zext = zext i31 %x to i32
+  %abs = call i32 @llvm.abs.i32(i32 %zext, i1 false)
+  ret i32 %abs
+}
+
+define <3 x i82> @lshr_abs(<3 x i82> %x) {
+; CHECK-LABEL: @lshr_abs(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i82> [[X:%.*]], <i82 1, i82 1, i82 1>
+; CHECK-NEXT:    ret <3 x i82> [[LSHR]]
+;
+  %lshr = lshr <3 x i82> %x, <i82 1, i82 1, i82 1>
+  %abs = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %lshr, i1 true)
+  ret <3 x i82> %abs
+}
+
+define i32 @and_abs(i32 %x) {
+; CHECK-LABEL: @and_abs(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 2147483644
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %and = and i32 %x, 2147483644
+  %abs = call i32 @llvm.abs.i32(i32 %and, i1 true)
+  ret i32 %abs
+}
+
+define <3 x i82> @select_abs(<3 x i1> %cond) {
+; CHECK-LABEL: @select_abs(
+; CHECK-NEXT:    [[SEL:%.*]] = select <3 x i1> [[COND:%.*]], <3 x i82> zeroinitializer, <3 x i82> <i82 2147483647, i82 42, i82 1>
+; CHECK-NEXT:    ret <3 x i82> [[SEL]]
+;
+  %sel = select <3 x i1> %cond, <3 x i82> zeroinitializer, <3 x i82> <i82 2147483647, i82 42, i82 1>
+  %abs = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %sel, i1 false)
+  ret <3 x i82> %abs
+}
+
+define i32 @assume_abs(i32 %x) {
+; CHECK-LABEL: @assume_abs(
+; CHECK-NEXT:    [[ASSUME:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %assume = icmp sge i32 %x, 0
+  call void @llvm.assume(i1 %assume)
+  %abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  ret i32 %abs
+}
+
+; Abs argument negative based on known bits.
+
+define i32 @abs_assume_neg(i32 %x) {
+; CHECK-LABEL: @abs_assume_neg(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 false)
+; CHECK-NEXT:    ret i32 [[ABS]]
+;
+  %cmp = icmp slt i32 %x, 0
+  call void @llvm.assume(i1 %cmp)
+  %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  ret i32 %abs
+}
+
+define i32 @abs_known_neg(i16 %x) {
+; CHECK-LABEL: @abs_known_neg(
+; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[EXT]], -1
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[NEG]], i1 false)
+; CHECK-NEXT:    ret i32 [[ABS]]
+;
+  %ext = zext i16 %x to i32
+  %neg = sub nsw i32 -1, %ext
+  %abs = call i32 @llvm.abs.i32(i32 %neg, i1 false)
+  ret i32 %abs
 }
