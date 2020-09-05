@@ -1,4 +1,4 @@
-; RUN: opt < %s -early-cse-memssa -verify-memoryssa -disable-output
+; RUN: opt < %s -early-cse-memssa -earlycse-debug-hash -verify-memoryssa -disable-output
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

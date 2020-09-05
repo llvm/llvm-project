@@ -30,6 +30,8 @@ class Instruction;
 class MemCpyInst;
 class MemMoveInst;
 class MemoryDependenceResults;
+class MemorySSA;
+class MemorySSAUpdater;
 class MemSetInst;
 class StoreInst;
 class TargetLibraryInfo;
@@ -41,6 +43,7 @@ class MemCpyOptPass : public PassInfoMixin<MemCpyOptPass> {
   AliasAnalysis *AA = nullptr;
   AssumptionCache *AC = nullptr;
   DominatorTree *DT = nullptr;
+  MemorySSAUpdater *MSSAU = nullptr;
 
 public:
   MemCpyOptPass() = default;
@@ -50,7 +53,7 @@ public:
   // Glue for the old PM.
   bool runImpl(Function &F, MemoryDependenceResults *MD_,
                TargetLibraryInfo *TLI_, AliasAnalysis *AA_,
-               AssumptionCache *AC_, DominatorTree *DT_);
+               AssumptionCache *AC_, DominatorTree *DT_, MemorySSA *MSSA_);
 
 private:
   // Helper functions

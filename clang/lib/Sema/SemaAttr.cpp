@@ -979,6 +979,11 @@ void Sema::ActOnPragmaFPReassociate(SourceLocation Loc, bool IsEnabled) {
 }
 
 void Sema::setRoundingMode(SourceLocation Loc, llvm::RoundingMode FPR) {
+  // C2x: 7.6.2p3  If the FE_DYNAMIC mode is specified and FENV_ACCESS is "off",
+  // the translator may assume that the default rounding mode is in effect.
+  if (FPR == llvm::RoundingMode::Dynamic && !CurFPFeatures.getAllowFEnvAccess())
+    FPR = llvm::RoundingMode::NearestTiesToEven;
+
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
   NewFPFeatures.setRoundingModeOverride(FPR);
   FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);

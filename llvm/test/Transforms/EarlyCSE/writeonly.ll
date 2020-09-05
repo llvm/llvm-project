@@ -1,4 +1,4 @@
-; RUN: opt -S -early-cse < %s | FileCheck %s
+; RUN: opt -S -early-cse -earlycse-debug-hash < %s | FileCheck %s
 
 @var = global i32 undef
 declare void @foo() nounwind

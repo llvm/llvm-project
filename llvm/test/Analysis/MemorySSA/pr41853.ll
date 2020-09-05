@@ -1,4 +1,4 @@
-; RUN: opt -S -memoryssa -loop-simplify -early-cse-memssa -verify-memoryssa %s | FileCheck %s
+; RUN: opt -S -memoryssa -loop-simplify -early-cse-memssa -earlycse-debug-hash -verify-memoryssa %s | FileCheck %s
 ; RUN: opt -S -memoryssa -loop-simplify -early-cse-memssa -enable-mssa-loop-dependency -verify-memoryssa %s | FileCheck %s
 ; REQUIRES: asserts
 target triple = "x86_64-unknown-linux-gnu"

@@ -1,4 +1,4 @@
-; RUN: opt -S -early-cse < %s | FileCheck %s
+; RUN: opt -S -early-cse -earlycse-debug-hash < %s | FileCheck %s
 ; RUN: opt -S -gvn < %s | FileCheck %s
 ; RUN: opt -S -newgvn < %s | FileCheck %s
 ; RUN: opt -S -O3 < %s | FileCheck %s

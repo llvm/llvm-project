@@ -29,6 +29,8 @@ class TargetEnv {
 public:
   explicit TargetEnv(TargetEnvAttr targetAttr);
 
+  DeviceType getDeviceType();
+
   Version getVersion();
 
   /// Returns true if the given capability is allowed.

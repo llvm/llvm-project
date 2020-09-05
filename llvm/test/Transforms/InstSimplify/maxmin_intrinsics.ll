@@ -2133,3 +2133,150 @@ define i8 @umax_lshr(i8 %x, i8 %y) {
   %max = call i8 @llvm.umax.i8(i8 %x, i8 %shr)
   ret i8 %max
 }
+
+define i8 @umax_dom_cond_uge(i8 %x, i8 %y) {
+; CHECK-LABEL: @umax_dom_cond_uge(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    ret i8 [[X]]
+; CHECK:       false:
+; CHECK-NEXT:    ret i8 [[Y]]
+;
+  %cmp = icmp uge i8 %x, %y
+  br i1 %cmp, label %true, label %false
+
+true:
+  %m1 = call i8 @llvm.umax.i8(i8 %x, i8 %y)
+  ret i8 %m1
+
+false:
+  %m2 = call i8 @llvm.umax.i8(i8 %x, i8 %y)
+  ret i8 %m2
+}
+
+define i8 @umax_dom_cond_ugt(i8 %x, i8 %y) {
+; CHECK-LABEL: @umax_dom_cond_ugt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    ret i8 [[X]]
+; CHECK:       false:
+; CHECK-NEXT:    ret i8 [[Y]]
+;
+  %cmp = icmp ugt i8 %x, %y
+  br i1 %cmp, label %true, label %false
+
+true:
+  %m1 = call i8 @llvm.umax.i8(i8 %x, i8 %y)
+  ret i8 %m1
+
+false:
+  %m2 = call i8 @llvm.umax.i8(i8 %x, i8 %y)
+  ret i8 %m2
+}
+
+define i8 @umax_dom_cond_ule(i8 %x, i8 %y) {
+; CHECK-LABEL: @umax_dom_cond_ule(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    ret i8 [[Y]]
+; CHECK:       false:
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %cmp = icmp ule i8 %x, %y
+  br i1 %cmp, label %true, label %false
+
+true:
+  %m1 = call i8 @llvm.umax.i8(i8 %x, i8 %y)
+  ret i8 %m1
+
+false:
+  %m2 = call i8 @llvm.umax.i8(i8 %x, i8 %y)
+  ret i8 %m2
+}
+
+define i8 @umax_dom_cond_ult(i8 %x, i8 %y) {
+; CHECK-LABEL: @umax_dom_cond_ult(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    ret i8 [[Y]]
+; CHECK:       false:
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %cmp = icmp ult i8 %x, %y
+  br i1 %cmp, label %true, label %false
+
+true:
+  %m1 = call i8 @llvm.umax.i8(i8 %x, i8 %y)
+  ret i8 %m1
+
+false:
+  %m2 = call i8 @llvm.umax.i8(i8 %x, i8 %y)
+  ret i8 %m2
+}
+
+define i8 @umin_dom_cond_uge(i8 %x, i8 %y) {
+; CHECK-LABEL: @umin_dom_cond_uge(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    ret i8 [[Y]]
+; CHECK:       false:
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %cmp = icmp uge i8 %x, %y
+  br i1 %cmp, label %true, label %false
+
+true:
+  %m1 = call i8 @llvm.umin.i8(i8 %x, i8 %y)
+  ret i8 %m1
+
+false:
+  %m2 = call i8 @llvm.umin.i8(i8 %x, i8 %y)
+  ret i8 %m2
+}
+
+define i8 @smax_dom_cond_sge(i8 %x, i8 %y) {
+; CHECK-LABEL: @smax_dom_cond_sge(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    ret i8 [[X]]
+; CHECK:       false:
+; CHECK-NEXT:    ret i8 [[Y]]
+;
+  %cmp = icmp sge i8 %x, %y
+  br i1 %cmp, label %true, label %false
+
+true:
+  %m1 = call i8 @llvm.smax.i8(i8 %x, i8 %y)
+  ret i8 %m1
+
+false:
+  %m2 = call i8 @llvm.smax.i8(i8 %x, i8 %y)
+  ret i8 %m2
+}
+
+define i8 @smin_dom_cond_sge(i8 %x, i8 %y) {
+; CHECK-LABEL: @smin_dom_cond_sge(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    ret i8 [[Y]]
+; CHECK:       false:
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %cmp = icmp sge i8 %x, %y
+  br i1 %cmp, label %true, label %false
+
+true:
+  %m1 = call i8 @llvm.smin.i8(i8 %x, i8 %y)
+  ret i8 %m1
+
+false:
+  %m2 = call i8 @llvm.smin.i8(i8 %x, i8 %y)
+  ret i8 %m2
+}

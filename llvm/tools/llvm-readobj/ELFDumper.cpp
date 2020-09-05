@@ -114,6 +114,13 @@ namespace {
 
 template <class ELFT> class DumpStyle;
 
+template <class ELFT> struct RelSymbol {
+  RelSymbol(const typename ELFT::Sym *S, StringRef N)
+      : Sym(S), Name(N.str()) {}
+  const typename ELFT::Sym *Sym;
+  std::string Name;
+};
+
 /// Represents a contiguous uniform range in the file. We cannot just create a
 /// range directly because when creating one of these from the .dynamic table
 /// the size, entity size and virtual address are different entries in arbitrary
@@ -364,8 +371,8 @@ public:
   getVersionDependencies(const Elf_Shdr *Sec) const;
 
   template <class RelTy>
-  Expected<std::pair<const Elf_Sym *, std::string>>
-  getRelocationTarget(const Elf_Shdr *SymTab, const RelTy &R) const;
+  Expected<RelSymbol<ELFT>> getRelocationTarget(const Elf_Shdr *SymTab,
+                                                const RelTy &R) const;
 
   std::function<Error(const Twine &Msg)> WarningHandler;
   void reportUniqueWarning(Error Err) const;
@@ -747,10 +754,10 @@ protected:
       function_ref<void(const Elf_Shdr &)> OnSectionStart,
       function_ref<void(StringRef, uint64_t)> OnSectionEntry);
 
-  virtual void printRelReloc(unsigned SecIndex, const Elf_Shdr *SymTab,
-                             const Elf_Rel &R, unsigned RelIndex) = 0;
-  virtual void printRelaReloc(unsigned SecIndex, const Elf_Shdr *SymTab,
-                              const Elf_Rela &R, unsigned RelIndex) = 0;
+  virtual void printRelReloc(const Elf_Rel &R, unsigned RelIndex,
+                             const Elf_Shdr *Sec, const Elf_Shdr *SymTab) = 0;
+  virtual void printRelaReloc(const Elf_Rela &R, unsigned RelIndex,
+                              const Elf_Shdr *Sec, const Elf_Shdr *SymTab) = 0;
   virtual void printRelrReloc(const Elf_Relr &R) = 0;
   void printRelocationsHelper(const Elf_Shdr &Sec);
 
@@ -863,18 +870,17 @@ private:
   }
   void printHashedSymbol(const Elf_Sym *FirstSym, uint32_t Sym,
                          StringRef StrTable, uint32_t Bucket);
-  void printRelReloc(unsigned SecIndex, const Elf_Shdr *SymTab,
-                     const Elf_Rel &R, unsigned RelIndex) override;
-  void printRelaReloc(unsigned SecIndex, const Elf_Shdr *SymTab,
-                      const Elf_Rela &R, unsigned RelIndex) override;
+  void printRelReloc(const Elf_Rel &R, unsigned RelIndex, const Elf_Shdr *Sec,
+                     const Elf_Shdr *SymTab) override;
+  void printRelaReloc(const Elf_Rela &R, unsigned RelIndex, const Elf_Shdr *Sec,
+                      const Elf_Shdr *SymTab) override;
   void printRelrReloc(const Elf_Relr &R) override;
 
   template <class RelTy>
-  void printRelRelaReloc(unsigned SecIndex, const Elf_Shdr *SymTab,
-                         const RelTy &R, unsigned RelIndex);
+  void printRelRelaReloc(const RelTy &R, unsigned RelIndex, const Elf_Shdr &Sec,
+                         const Elf_Shdr *SymTab);
   template <class RelTy>
-  void printRelRelaReloc(const Elf_Sym *Sym, StringRef SymbolName,
-                         const RelTy &R);
+  void printRelRelaReloc(const RelTy &R, const RelSymbol<ELFT> &RelSym);
   void printSymbol(const Elf_Sym *Symbol, const Elf_Sym *First,
                    Optional<StringRef> StrTable, bool IsDynamic,
                    bool NonVisibilityBitsUsed) override;
@@ -932,13 +938,13 @@ public:
   void printMipsABIFlags(const ELFObjectFile<ELFT> *Obj) override;
 
 private:
-  void printRelReloc(unsigned SecIndex, const Elf_Shdr *SymTab,
-                     const Elf_Rel &R, unsigned RelIndex) override;
-  void printRelaReloc(unsigned SecIndex, const Elf_Shdr *SymTab,
-                      const Elf_Rela &R, unsigned RelIndex) override;
+  void printRelReloc(const Elf_Rel &R, unsigned RelIndex, const Elf_Shdr *Sec,
+                     const Elf_Shdr *SymTab) override;
+  void printRelaReloc(const Elf_Rela &R, unsigned RelIndex, const Elf_Shdr *Sec,
+                      const Elf_Shdr *SymTab) override;
   void printRelrReloc(const Elf_Relr &R) override;
   template <class RelTy>
-  void printRelRelaReloc(unsigned SecIndex, const RelTy &Rel, unsigned RelIndex,
+  void printRelRelaReloc(const RelTy &R, unsigned RelIndex, const Elf_Shdr &Sec,
                          const Elf_Shdr *SymTab);
   template <class RelTy> void printDynamicRelocation(const RelTy &Rel);
 
@@ -1053,7 +1059,7 @@ Expected<StringRef> ELFDumper<ELFT>::getSymbolVersion(const Elf_Sym *Sym,
 
 template <typename ELFT>
 template <class RelTy>
-Expected<std::pair<const typename ELFT::Sym *, std::string>>
+Expected<RelSymbol<ELFT>>
 ELFDumper<ELFT>::getRelocationTarget(const Elf_Shdr *SymTab,
                                      const RelTy &R) const {
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
@@ -1062,7 +1068,7 @@ ELFDumper<ELFT>::getRelocationTarget(const Elf_Shdr *SymTab,
     return SymOrErr.takeError();
   const Elf_Sym *Sym = *SymOrErr;
   if (!Sym)
-    return std::make_pair(nullptr, "");
+    return RelSymbol<ELFT>(nullptr, "");
 
   // The st_name field of a STT_SECTION is usually 0 (empty string).
   // This code block returns the section name.
@@ -1073,12 +1079,12 @@ ELFDumper<ELFT>::getRelocationTarget(const Elf_Shdr *SymTab,
       return SecOrErr.takeError();
     // A section symbol describes the section at index 0.
     if (*SecOrErr == nullptr)
-      return std::make_pair(Sym, "");
+      return RelSymbol<ELFT>(Sym, "");
 
     Expected<StringRef> NameOrErr = Obj->getSectionName(*SecOrErr);
     if (!NameOrErr)
       return NameOrErr.takeError();
-    return std::make_pair(Sym, NameOrErr->str());
+    return RelSymbol<ELFT>(Sym, NameOrErr->str());
   }
 
   Expected<StringRef> StrTableOrErr = Obj->getStringTableForSymtab(*SymTab);
@@ -1087,7 +1093,7 @@ ELFDumper<ELFT>::getRelocationTarget(const Elf_Shdr *SymTab,
 
   std::string SymbolName =
       getFullSymbolName(Sym, *StrTableOrErr, SymTab->sh_type == SHT_DYNSYM);
-  return std::make_pair(Sym, SymbolName);
+  return RelSymbol<ELFT>(Sym, SymbolName);
 }
 
 static std::string maybeDemangle(StringRef Name) {
@@ -3601,15 +3607,17 @@ template <class ELFT> void GNUStyle<ELFT>::printGroupSections() {
 }
 
 template <class ELFT>
-void GNUStyle<ELFT>::printRelReloc(unsigned SecIndex, const Elf_Shdr *SymTab,
-                                   const Elf_Rel &R, unsigned RelIndex) {
-  printRelRelaReloc(SecIndex, SymTab, R, RelIndex);
+void GNUStyle<ELFT>::printRelReloc(const Elf_Rel &R, unsigned RelIndex,
+                                   const Elf_Shdr *Sec,
+                                   const Elf_Shdr *SymTab) {
+  printRelRelaReloc(R, RelIndex, *Sec, SymTab);
 }
 
 template <class ELFT>
-void GNUStyle<ELFT>::printRelaReloc(unsigned SecIndex, const Elf_Shdr *SymTab,
-                                    const Elf_Rela &R, unsigned RelIndex) {
-  printRelRelaReloc(SecIndex, SymTab, R, RelIndex);
+void GNUStyle<ELFT>::printRelaReloc(const Elf_Rela &R, unsigned RelIndex,
+                                    const Elf_Shdr *Sec,
+                                    const Elf_Shdr *SymTab) {
+  printRelRelaReloc(R, RelIndex, *Sec, SymTab);
 }
 
 template <class ELFT> void GNUStyle<ELFT>::printRelrReloc(const Elf_Relr &R) {
@@ -3618,17 +3626,17 @@ template <class ELFT> void GNUStyle<ELFT>::printRelrReloc(const Elf_Relr &R) {
 
 template <class ELFT>
 template <class RelTy>
-void GNUStyle<ELFT>::printRelRelaReloc(unsigned SecIndex,
-                                       const Elf_Shdr *SymTab, const RelTy &R,
-                                       unsigned RelIndex) {
-  Expected<std::pair<const typename ELFT::Sym *, std::string>> Target =
+void GNUStyle<ELFT>::printRelRelaReloc(const RelTy &R, unsigned RelIndex,
+                                       const Elf_Shdr &Sec,
+                                       const Elf_Shdr *SymTab) {
+  Expected<RelSymbol<ELFT>> Target =
       this->dumper()->getRelocationTarget(SymTab, R);
   if (!Target)
     this->reportUniqueWarning(createError(
-        "unable to print relocation " + Twine(RelIndex) + " in section " +
-        Twine(SecIndex) + ": " + toString(Target.takeError())));
+        "unable to print relocation " + Twine(RelIndex) + " in " +
+        describe(this->Obj, Sec) + ": " + toString(Target.takeError())));
   else
-    printRelRelaReloc(/*Sym=*/Target->first, /*Name=*/Target->second, R);
+    printRelRelaReloc(R, *Target);
 }
 
 template <class ELFT>
@@ -3643,8 +3651,8 @@ static Optional<int64_t> getAddend(const typename ELFT::Rel &) {
 
 template <class ELFT>
 template <class RelTy>
-void GNUStyle<ELFT>::printRelRelaReloc(const Elf_Sym *Sym, StringRef SymbolName,
-                                       const RelTy &R) {
+void GNUStyle<ELFT>::printRelRelaReloc(const RelTy &R,
+                                       const RelSymbol<ELFT> &RelSym) {
   // First two fields are bit width dependent. The rest of them are fixed width.
   unsigned Bias = ELFT::Is64Bits ? 8 : 0;
   Field Fields[5] = {0, 10 + Bias, 19 + 2 * Bias, 42 + 2 * Bias, 53 + 2 * Bias};
@@ -3657,17 +3665,18 @@ void GNUStyle<ELFT>::printRelRelaReloc(const Elf_Sym *Sym, StringRef SymbolName,
   this->Obj.getRelocationTypeName(R.getType(this->Obj.isMips64EL()), RelocName);
   Fields[2].Str = RelocName.c_str();
 
-  if (Sym)
-    Fields[3].Str = to_string(format_hex_no_prefix(Sym->getValue(), Width));
+  if (RelSym.Sym)
+    Fields[3].Str =
+        to_string(format_hex_no_prefix(RelSym.Sym->getValue(), Width));
 
-  Fields[4].Str = std::string(SymbolName);
+  Fields[4].Str = std::string(RelSym.Name);
   for (const Field &F : Fields)
     printField(F);
 
   std::string Addend;
   if (Optional<int64_t> A = getAddend<ELFT>(R)) {
     int64_t RelAddend = *A;
-    if (!SymbolName.empty()) {
+    if (!RelSym.Name.empty()) {
       if (RelAddend < 0) {
         Addend = " - ";
         RelAddend = std::abs(RelAddend);
@@ -4347,10 +4356,6 @@ template <class ELFT> void GNUStyle<ELFT>::printSectionMapping() {
 }
 
 namespace {
-template <class ELFT> struct RelSymbol {
-  const typename ELFT::Sym *Sym;
-  std::string Name;
-};
 
 template <class ELFT, class RelTy>
 RelSymbol<ELFT> getSymbolForReloc(const ELFFile<ELFT> &Obj, StringRef FileName,
@@ -4392,9 +4397,8 @@ RelSymbol<ELFT> getSymbolForReloc(const ELFFile<ELFT> &Obj, StringRef FileName,
 template <class ELFT>
 template <class RelTy>
 void GNUStyle<ELFT>::printDynamicRelocation(const RelTy &R) {
-  RelSymbol<ELFT> S =
-      getSymbolForReloc(this->Obj, this->FileName, this->dumper(), R);
-  printRelRelaReloc(S.Sym, S.Name, R);
+  printRelRelaReloc(
+      R, getSymbolForReloc(this->Obj, this->FileName, this->dumper(), R));
 }
 
 template <class ELFT>
@@ -5466,13 +5470,12 @@ void DumpStyle<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
     SymTab = *SymTabOrErr;
   }
 
-  unsigned SecNdx = &Sec - &cantFail(Obj.sections()).front();
   unsigned RelNdx = 0;
   switch (Sec.sh_type) {
   case ELF::SHT_REL:
     if (Expected<Elf_Rel_Range> RangeOrErr = Obj.rels(&Sec)) {
       for (const Elf_Rel &R : *RangeOrErr)
-        printRelReloc(SecNdx, SymTab, R, ++RelNdx);
+        printRelReloc(R, ++RelNdx, &Sec, SymTab);
     } else {
       Warn(RangeOrErr.takeError());
     }
@@ -5480,7 +5483,7 @@ void DumpStyle<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
   case ELF::SHT_RELA:
     if (Expected<Elf_Rela_Range> RangeOrErr = Obj.relas(&Sec)) {
       for (const Elf_Rela &R : *RangeOrErr)
-        printRelaReloc(SecNdx, SymTab, R, ++RelNdx);
+        printRelaReloc(R, ++RelNdx, &Sec, SymTab);
     } else {
       Warn(RangeOrErr.takeError());
     }
@@ -5499,14 +5502,14 @@ void DumpStyle<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
     }
 
     for (const Elf_Rel &R : Obj.decode_relrs(*RangeOrErr))
-      printRelReloc(SecNdx, /*SymTab=*/nullptr, R, ++RelNdx);
+      printRelReloc(R, ++RelNdx, &Sec, /*SymTab=*/nullptr);
     break;
   }
   case ELF::SHT_ANDROID_REL:
   case ELF::SHT_ANDROID_RELA:
     if (Expected<std::vector<Elf_Rela>> RelasOrErr = Obj.android_relas(&Sec)) {
       for (const Elf_Rela &R : *RelasOrErr)
-        printRelaReloc(SecNdx, SymTab, R, ++RelNdx);
+        printRelaReloc(R, ++RelNdx, &Sec, SymTab);
     } else {
       Warn(RelasOrErr.takeError());
     }
@@ -6146,15 +6149,17 @@ template <class ELFT> void LLVMStyle<ELFT>::printRelocations() {
 }
 
 template <class ELFT>
-void LLVMStyle<ELFT>::printRelReloc(unsigned SecIndex, const Elf_Shdr *SymTab,
-                                    const Elf_Rel &R, unsigned RelIndex) {
-  printRelRelaReloc(SecIndex, R, RelIndex, SymTab);
+void LLVMStyle<ELFT>::printRelReloc(const Elf_Rel &R, unsigned RelIndex,
+                                    const Elf_Shdr *Sec,
+                                    const Elf_Shdr *SymTab) {
+  printRelRelaReloc(R, RelIndex, *Sec, SymTab);
 }
 
 template <class ELFT>
-void LLVMStyle<ELFT>::printRelaReloc(unsigned SecIndex, const Elf_Shdr *SymTab,
-                                     const Elf_Rela &R, unsigned RelIndex) {
-  printRelRelaReloc(SecIndex, R, RelIndex, SymTab);
+void LLVMStyle<ELFT>::printRelaReloc(const Elf_Rela &R, unsigned RelIndex,
+                                     const Elf_Shdr *Sec,
+                                     const Elf_Shdr *SymTab) {
+  printRelRelaReloc(R, RelIndex, *Sec, SymTab);
 }
 
 template <class ELFT> void LLVMStyle<ELFT>::printRelrReloc(const Elf_Relr &R) {
@@ -6163,19 +6168,19 @@ template <class ELFT> void LLVMStyle<ELFT>::printRelrReloc(const Elf_Relr &R) {
 
 template <class ELFT>
 template <class RelTy>
-void LLVMStyle<ELFT>::printRelRelaReloc(unsigned SecIndex, const RelTy &Rel,
-                                        unsigned RelIndex,
+void LLVMStyle<ELFT>::printRelRelaReloc(const RelTy &Rel, unsigned RelIndex,
+                                        const Elf_Shdr &Sec,
                                         const Elf_Shdr *SymTab) {
-  Expected<std::pair<const typename ELFT::Sym *, std::string>> Target =
+  Expected<RelSymbol<ELFT>> Target =
       this->dumper()->getRelocationTarget(SymTab, Rel);
   if (!Target) {
     this->reportUniqueWarning(createError(
-        "unable to print relocation " + Twine(RelIndex) + " in section " +
-        Twine(SecIndex) + ": " + toString(Target.takeError())));
+        "unable to print relocation " + Twine(RelIndex) + " in " +
+        describe(this->Obj, Sec) + ": " + toString(Target.takeError())));
     return;
   }
 
-  std::string TargetName = Target->second;
+  std::string TargetName = Target->Name;
   SmallString<32> RelocName;
   this->Obj.getRelocationTypeName(Rel.getType(this->Obj.isMips64EL()),
                                   RelocName);

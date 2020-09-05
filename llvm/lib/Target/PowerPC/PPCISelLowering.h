@@ -453,6 +453,9 @@ namespace llvm {
     STRICT_FCFIDS,
     STRICT_FCFIDUS,
 
+    /// Constrained floating point add in round-to-zero mode.
+    STRICT_FADDRTZ,
+
     /// CHAIN = STBRX CHAIN, GPRC, Ptr, Type - This is a
     /// byte-swapping store instruction.  It byte-swaps the low "Type" bits of
     /// the GPRC input, then stores it through Ptr.  Type can be either i16 or

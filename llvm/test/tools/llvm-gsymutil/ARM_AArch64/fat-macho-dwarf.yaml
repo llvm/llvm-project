@@ -139,7 +139,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         37000000040020000000010101FB0E0D000101010100000001000001006D61696E2E6370700000000000000502F0BF00000105020A9F0206000101
           - sectname:        __debug_pubnames
             segname:         __DWARF
             addr:            0x000000000000D03B
@@ -152,7 +151,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         1700000002000000000077000000260000006D61696E0000000000
           - sectname:        __debug_pubtypes
             segname:         __DWARF
             addr:            0x000000000000D056
@@ -165,7 +163,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         1F0000000200000000007700000059000000696E74006F000000636861720000000000
           - sectname:        __debug_aranges
             segname:         __DWARF
             addr:            0x000000000000D079
@@ -178,7 +175,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         1C000000020000000000040000000000F0BF0000100000000000000000000000
           - sectname:        __debug_info
             segname:         __DWARF
             addr:            0x000000000000D099
@@ -191,7 +187,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         73000000040000000000040101000000040031000000000000003A000000F0BF00001000000002F0BF00001000000001573F0000000101590000000103027D044400000001015900000003027D004900000001016000000000044E00000005040565000000056A000000066F0000000452000000060100
           - sectname:        __debug_abbrev
             segname:         __DWARF
             addr:            0x000000000000D110
@@ -204,7 +199,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         011101250E1305030E10171B0EB44219110112060000022E01110112064018030E3A0B3B0B49103F19E37F0C00000305000218030E3A0B3B0B49100000042400030E3E0B0B0B0000050F00491000000626004910000000
           - sectname:        __debug_str
             segname:         __DWARF
             addr:            0x000000000000D167
@@ -217,7 +211,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         004170706C6520636C616E672076657273696F6E2031312E302E302028636C616E672D313130302E302E33332E313729006D61696E2E637070002F746D70006D61696E0061726763006172677600696E74006368617200
           - sectname:        __apple_names
             segname:         __DWARF
             addr:            0x000000000000D1BE
@@ -614,7 +607,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         3B000000040020000000010101FB0E0D000101010100000001000001006D61696E2E63707000000000000009029C7F0000010000000105020AF3020C000101
           - sectname:        __debug_pubnames
             segname:         __DWARF
             addr:            0x000000010000903F
@@ -627,7 +619,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         170000000200000000007E0000002A0000006D61696E0000000000
           - sectname:        __debug_pubtypes
             segname:         __DWARF
             addr:            0x000000010000905A
@@ -640,7 +631,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         1F0000000200000000007E00000060000000696E740076000000636861720000000000
           - sectname:        __debug_aranges
             segname:         __DWARF
             addr:            0x000000010000907D
@@ -653,7 +643,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         2C0000000200000000000800000000009C7F0000010000001C0000000000000000000000000000000000000000000000
           - sectname:        __debug_info
             segname:         __DWARF
             addr:            0x00000001000090AD
@@ -666,7 +655,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         7A000000040000000000080101000000040031000000000000003A0000009C7F0000010000001C000000029C7F0000010000001C000000016F3F0000000101600000000302910844000000010160000000030291004900000001016700000000044E0000000504056C000000057100000006760000000452000000060100
           - sectname:        __debug_abbrev
             segname:         __DWARF
             addr:            0x000000010000912B
@@ -679,7 +667,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         011101250E1305030E10171B0EB44219110112060000022E01110112064018030E3A0B3B0B49103F1900000305000218030E3A0B3B0B49100000042400030E3E0B0B0B0000050F00491000000626004910000000
           - sectname:        __debug_str
             segname:         __DWARF
             addr:            0x000000010000917F
@@ -692,7 +679,6 @@ Slices:
             reserved1:       0x00000000
             reserved2:       0x00000000
             reserved3:       0x00000000
-            content:         004170706C6520636C616E672076657273696F6E2031312E302E302028636C616E672D313130302E302E33332E313729006D61696E2E637070002F746D70006D61696E0061726763006172677600696E74006368617200
           - sectname:        __apple_names
             segname:         __DWARF
             addr:            0x00000001000091D6

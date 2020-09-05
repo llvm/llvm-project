@@ -30,6 +30,21 @@ define i32 @bad_use(i32 %0) {
   ret i32 %2
 }
 
+define void @indirect_call(void ()* %0) {
+; CHECK-LABEL: define {{[^@]+}}@indirect_call
+; CHECK-SAME: (void ()* [[TMP0:%.*]])
+; CHECK-NEXT:    call void @omp_set_num_threads(i32 4)
+; CHECK-NEXT:    tail call void [[TMP0]]()
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @omp_get_max_threads()
+; CHECK-NEXT:    tail call void @use(i32 [[TMP2]])
+; CHECK-NEXT:    ret void
+  call void @omp_set_num_threads(i32 4)
+  tail call void %0()
+  %2 = tail call i32 @omp_get_max_threads()
+  tail call void @use(i32 %2)
+  ret void
+}
+
 define dso_local i32 @foo(i32 %0, i32 %1) {
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
