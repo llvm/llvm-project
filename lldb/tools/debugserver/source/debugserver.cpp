@@ -174,7 +174,7 @@ static nub_launch_flavor_t default_launch_flavor(const char *app_name) {
 
   if (is_dot_app(app_name)) {
 #if defined WITH_FBS
-  // Check if we have an app bundle, if so launch using FrontBoard Services.
+    // Check if we have an app bundle, if so launch using FrontBoard Services.
     return eLaunchFlavorFBS;
 #elif defined WITH_BKS
     // Check if we have an app bundle, if so launch using BackBoard Services.
