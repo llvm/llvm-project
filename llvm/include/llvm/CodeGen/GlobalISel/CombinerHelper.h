@@ -258,6 +258,10 @@ public:
   bool applyCombineUnmergeConstant(MachineInstr &MI,
                                    SmallVectorImpl<APInt> &Csts);
 
+  /// Transform X, Y<dead> = G_UNMERGE Z -> X = G_TRUNC Z.
+  bool matchCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI);
+  bool applyCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI);
+
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
   bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg);
   bool applyCombineI2PToP2I(MachineInstr &MI, Register &Reg);
