@@ -115,8 +115,8 @@ template <class T>
 class allocator
 {
 public:
-    typedef size_t    size_type;                         // deprecated in C++17, removed in C++20
-    typedef ptrdiff_t difference_type;                   // deprecated in C++17, removed in C++20
+    typedef size_t    size_type;
+    typedef ptrdiff_t difference_type;
     typedef T*        pointer;                           // deprecated in C++17, removed in C++20
     typedef const T*  const_pointer;                     // deprecated in C++17, removed in C++20
     typedef typename add_lvalue_reference<T>::type
@@ -1748,9 +1748,9 @@ template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS allocator
 {
 public:
+    typedef size_t     size_type;
+    typedef ptrdiff_t  difference_type;
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t     size_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef ptrdiff_t  difference_type;
     _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp*       pointer;
     _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp* const_pointer;
     _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp&       reference;
@@ -1816,9 +1816,9 @@ template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS allocator<const _Tp>
 {
 public:
+    typedef size_t     size_type;
+    typedef ptrdiff_t  difference_type;
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t     size_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef ptrdiff_t  difference_type;
     _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp* pointer;
     _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp* const_pointer;
     _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp& reference;

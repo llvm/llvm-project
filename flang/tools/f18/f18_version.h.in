@@ -1,0 +1,9 @@
+#ifndef _F18_H_
+#define _F18_H_
+
+#define __FLANG__ "1"
+#define __FLANG_MAJOR__ "@LLVM_VERSION_MAJOR@"
+#define __FLANG_MINOR__ "@LLVM_VERSION_MINOR@"
+#define __FLANG_PATCHLEVEL__ "@LLVM_VERSION_PATCH@"
+
+#endif // _F18_H_
