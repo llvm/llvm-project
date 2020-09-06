@@ -461,6 +461,39 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case TargetOpcode::ICALL_BRANCH_FUNNEL:
     ExpandICallBranchFunnel(&MBB, MBBI);
     return true;
+  case X86::PLDTILECFG: {
+    MI.RemoveOperand(0);
+    MI.setDesc(TII->get(X86::LDTILECFG));
+    return true;
+  }
+  case X86::PSTTILECFG: {
+    MI.RemoveOperand(MI.getNumOperands() - 1); // Remove $tmmcfg
+    MI.setDesc(TII->get(X86::STTILECFG));
+    return true;
+  }
+  case X86::PTILELOADDV: {
+    MI.RemoveOperand(8); // Remove $tmmcfg
+    for (unsigned i = 2; i > 0; --i)
+      MI.RemoveOperand(i);
+    MI.setDesc(TII->get(X86::TILELOADD));
+    return true;
+  }
+  case X86::PTDPBSSDV: {
+    MI.RemoveOperand(7); // Remove $tmmcfg
+    MI.untieRegOperand(4);
+    for (unsigned i = 3; i > 0; --i)
+      MI.RemoveOperand(i);
+    MI.setDesc(TII->get(X86::TDPBSSD));
+    MI.tieOperands(0, 1);
+    return true;
+  }
+  case X86::PTILESTOREDV: {
+    MI.RemoveOperand(8); // Remove $tmmcfg
+    for (int i = 1; i >= 0; --i)
+      MI.RemoveOperand(i);
+    MI.setDesc(TII->get(X86::TILESTORED));
+    return true;
+  }
   }
   llvm_unreachable("Previous switch has a fallthrough?");
 }

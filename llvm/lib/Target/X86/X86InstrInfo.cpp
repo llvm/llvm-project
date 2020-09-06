@@ -3796,13 +3796,31 @@ void X86InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   const MachineFunction &MF = *MBB.getParent();
   assert(MF.getFrameInfo().getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
          "Stack slot too small for store");
-  unsigned Alignment = std::max<uint32_t>(TRI->getSpillSize(*RC), 16);
-  bool isAligned =
-      (Subtarget.getFrameLowering()->getStackAlign() >= Alignment) ||
-      RI.canRealignStack(MF);
-  unsigned Opc = getStoreRegOpcode(SrcReg, RC, isAligned, Subtarget);
-  addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc)), FrameIdx)
-    .addReg(SrcReg, getKillRegState(isKill));
+  if (RC->getID() == X86::TILERegClassID) {
+    unsigned Opc = X86::TILESTORED;
+    // tilestored %tmm, (%sp, %idx)
+    MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
+    Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
+    BuildMI(MBB, MI, DebugLoc(), get(X86::MOV64ri), VirtReg).addImm(64);
+    MachineInstr *NewMI =
+        addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc)), FrameIdx)
+            .addReg(SrcReg, getKillRegState(isKill));
+    MachineOperand &MO = NewMI->getOperand(2);
+    MO.setReg(VirtReg);
+    MO.setIsKill(true);
+  } else if (RC->getID() == X86::TILECFGRegClassID) {
+    unsigned Opc = X86::PSTTILECFG;
+    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc)), FrameIdx)
+        .addReg(SrcReg, getKillRegState(isKill));
+  } else {
+    unsigned Alignment = std::max<uint32_t>(TRI->getSpillSize(*RC), 16);
+    bool isAligned =
+        (Subtarget.getFrameLowering()->getStackAlign() >= Alignment) ||
+        RI.canRealignStack(MF);
+    unsigned Opc = getStoreRegOpcode(SrcReg, RC, isAligned, Subtarget);
+    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc)), FrameIdx)
+        .addReg(SrcReg, getKillRegState(isKill));
+  }
 }
 
 void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
@@ -3810,13 +3828,32 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         Register DestReg, int FrameIdx,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI) const {
-  const MachineFunction &MF = *MBB.getParent();
-  unsigned Alignment = std::max<uint32_t>(TRI->getSpillSize(*RC), 16);
-  bool isAligned =
-      (Subtarget.getFrameLowering()->getStackAlign() >= Alignment) ||
-      RI.canRealignStack(MF);
-  unsigned Opc = getLoadRegOpcode(DestReg, RC, isAligned, Subtarget);
-  addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg), FrameIdx);
+  if (RC->getID() == X86::TILERegClassID) {
+    unsigned Opc = X86::TILELOADD;
+    // tileloadd (%sp, %idx), %tmm
+    MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
+    Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
+    MachineInstr *NewMI =
+        BuildMI(MBB, MI, DebugLoc(), get(X86::MOV64ri), VirtReg).addImm(64);
+    NewMI = addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg),
+                              FrameIdx);
+    MachineOperand &MO = NewMI->getOperand(3);
+    MO.setReg(VirtReg);
+    MO.setIsKill(true);
+  } else if (RC->getID() == X86::TILECFGRegClassID) {
+    unsigned Opc = X86::PLDTILECFG;
+    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg),
+                      FrameIdx);
+  } else {
+    const MachineFunction &MF = *MBB.getParent();
+    unsigned Alignment = std::max<uint32_t>(TRI->getSpillSize(*RC), 16);
+    bool isAligned =
+        (Subtarget.getFrameLowering()->getStackAlign() >= Alignment) ||
+        RI.canRealignStack(MF);
+    unsigned Opc = getLoadRegOpcode(DestReg, RC, isAligned, Subtarget);
+    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg),
+                      FrameIdx);
+  }
 }
 
 bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,

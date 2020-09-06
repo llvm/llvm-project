@@ -19,6 +19,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -855,4 +856,79 @@ X86RegisterInfo::getPtrSizedStackRegister(const MachineFunction &MF) const {
   if (Subtarget.isTarget64BitILP32())
     StackReg = getX86SubSuperRegister(StackReg, 32);
   return StackReg;
+}
+
+static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
+                           const MachineRegisterInfo *MRI) {
+  if (VRM->hasShape(VirtReg))
+    return VRM->getShape(VirtReg);
+
+  const MachineOperand &Def = *MRI->def_begin(VirtReg);
+  MachineInstr *MI = const_cast<MachineInstr *>(Def.getParent());
+  unsigned OpCode = MI->getOpcode();
+  switch (OpCode) {
+  default:
+    llvm_unreachable("Unexpected machine instruction on tile register!");
+    break;
+  // We only collect the tile shape that is defined.
+  case X86::PTILELOADDV:
+  case X86::PTDPBSSDV:
+    MachineOperand &MO1 = MI->getOperand(1);
+    MachineOperand &MO2 = MI->getOperand(2);
+    ShapeT Shape(&MO1, &MO2, MRI);
+    VRM->assignVirt2Shape(VirtReg, Shape);
+    return Shape;
+  }
+}
+
+bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
+                                            ArrayRef<MCPhysReg> Order,
+                                            SmallVectorImpl<MCPhysReg> &Hints,
+                                            const MachineFunction &MF,
+                                            const VirtRegMap *VRM,
+                                            const LiveRegMatrix *Matrix) const {
+  const MachineRegisterInfo *MRI = &MF.getRegInfo();
+  const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
+  bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
+      VirtReg, Order, Hints, MF, VRM, Matrix);
+
+  if (RC.getID() != X86::TILERegClassID)
+    return BaseImplRetVal;
+
+  ShapeT VirtShape = getTileShape(VirtReg, const_cast<VirtRegMap *>(VRM), MRI);
+  auto AddHint = [&](MCPhysReg PhysReg) {
+    Register VReg = Matrix->getOneVReg(PhysReg);
+    if (VReg == MCRegister::NoRegister) { // Not allocated yet
+      Hints.push_back(PhysReg);
+      return;
+    }
+    ShapeT PhysShape = getTileShape(VReg, const_cast<VirtRegMap *>(VRM), MRI);
+    if (PhysShape == VirtShape)
+      Hints.push_back(PhysReg);
+  };
+
+  SmallSet<MCPhysReg, 4> CopyHints;
+  CopyHints.insert(Hints.begin(), Hints.end());
+  Hints.clear();
+  for (auto Hint : CopyHints) {
+    if (RC.contains(Hint) && !MRI->isReserved(Hint))
+      AddHint(Hint);
+  }
+  for (MCPhysReg PhysReg : Order) {
+    if (!CopyHints.count(PhysReg) && RC.contains(PhysReg) &&
+        !MRI->isReserved(PhysReg))
+      AddHint(PhysReg);
+  }
+
+#define DEBUG_TYPE "tile-hint"
+  LLVM_DEBUG({
+    dbgs() << "Hints for virtual register " << format_hex(VirtReg, 8) << "\n";
+    for (auto Hint : Hints) {
+      dbgs() << "tmm" << Hint << ",";
+    }
+    dbgs() << "\n";
+  });
+#undef DEBUG_TYPE
+
+  return true;
 }

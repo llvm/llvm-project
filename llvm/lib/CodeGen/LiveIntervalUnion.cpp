@@ -99,6 +99,16 @@ void LiveIntervalUnion::verify(LiveVirtRegBitSet& VisitedVRegs) {
 }
 #endif //!NDEBUG
 
+LiveInterval *LiveIntervalUnion::getOneVReg() const {
+  if (empty())
+    return nullptr;
+  for (LiveSegments::const_iterator SI = Segments.begin(); SI.valid(); ++SI) {
+    // return the first valid live interval
+    return SI.value();
+  }
+  return nullptr;
+}
+
 // Scan the vector of interfering virtual registers in this union. Assume it's
 // quite small.
 bool LiveIntervalUnion::Query::isSeenInterference(LiveInterval *VirtReg) const {
