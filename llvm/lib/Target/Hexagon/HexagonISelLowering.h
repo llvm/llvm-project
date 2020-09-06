@@ -204,6 +204,7 @@ public:
 
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_LABEL(SDValue Op, SelectionDAG &DAG) const;
