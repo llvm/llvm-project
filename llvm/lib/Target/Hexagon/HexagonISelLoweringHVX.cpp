@@ -1918,16 +1918,32 @@ HexagonTargetLowering::WidenHvxStore(SDValue Op, SelectionDAG &DAG) const {
 SDValue
 HexagonTargetLowering::WidenHvxTruncate(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
-  MVT ResTy = ty(Op);
   unsigned HwWidth = 8*Subtarget.getVectorLength();
-  unsigned ResWidth = ResTy.getSizeInBits();
-  assert(HwWidth % ResWidth == 0);
 
-  unsigned WideNumElem = ResTy.getVectorNumElements() * (HwWidth / ResWidth);
-  MVT WideTy = MVT::getVectorVT(ResTy.getVectorElementType(), WideNumElem);
-  SDValue WideOp = DAG.getNode(HexagonISD::VPACKL, dl, WideTy,
-                               Op.getOperand(0));
-  return WideOp;
+  auto getFactor = [HwWidth](MVT Ty) {
+    unsigned Width = Ty.getSizeInBits();
+    assert(HwWidth % Width == 0);
+    return HwWidth / Width;
+  };
+
+  auto getWideTy = [getFactor](MVT Ty) {
+    unsigned WideLen = Ty.getVectorNumElements() * getFactor(Ty);
+    return MVT::getVectorVT(Ty.getVectorElementType(), WideLen);
+  };
+
+  SDValue Op0 = Op.getOperand(0);
+  MVT ResTy = ty(Op);
+  MVT OpTy = ty(Op0);
+  if (Subtarget.isHVXVectorType(OpTy))
+    return DAG.getNode(HexagonISD::VPACKL, dl, getWideTy(ResTy), Op0);
+
+  MVT WideOpTy = getWideTy(OpTy);
+  SmallVector<SDValue, 4> Concats = {Op0};
+  for (int i = 0, e = getFactor(OpTy) - 1; i != e; ++i)
+    Concats.push_back(DAG.getUNDEF(OpTy));
+
+  SDValue Cat = DAG.getNode(ISD::CONCAT_VECTORS, dl, WideOpTy, Concats);
+  return DAG.getNode(HexagonISD::VPACKL, dl, getWideTy(ResTy), Cat);
 }
 
 SDValue
