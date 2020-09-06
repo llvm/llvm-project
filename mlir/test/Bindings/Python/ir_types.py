@@ -177,11 +177,11 @@ def testComplexType():
 
 run(testComplexType)
 
-# CHECK-LABEL: TEST: testShapedType
+# CHECK-LABEL: TEST: testConcreteShapedType
 # Shaped type is not a kind of standard types, it is the base class for
 # vectors, memrefs and tensors, so this test case uses an instance of vector
-# to test the shaped type.
-def testShapedType():
+# to test the shaped type. The class hierarchy is preserved on the python side.
+def testConcreteShapedType():
   ctx = mlir.ir.Context()
   vector = mlir.ir.VectorType(ctx.parse_type("vector<2x3xf32>"))
   # CHECK: element type: f32
@@ -196,12 +196,25 @@ def testShapedType():
   print("whether the dim-th dimension is dynamic:", vector.is_dynamic_dim(0))
   # CHECK: dim size: 3
   print("dim size:", vector.get_dim_size(1))
-  # CHECK: False
-  print(vector.is_dynamic_size(3))
-  # CHECK: False
-  print(vector.is_dynamic_stride_or_offset(1))
+  # CHECK: is_dynamic_size: False
+  print("is_dynamic_size:", vector.is_dynamic_size(3))
+  # CHECK: is_dynamic_stride_or_offset: False
+  print("is_dynamic_stride_or_offset:", vector.is_dynamic_stride_or_offset(1))
+  # CHECK: isinstance(ShapedType): True
+  print("isinstance(ShapedType):", isinstance(vector, mlir.ir.ShapedType))
 
-run(testShapedType)
+run(testConcreteShapedType)
+
+# CHECK-LABEL: TEST: testAbstractShapedType
+# Tests that ShapedType operates as an abstract base class of a concrete
+# shaped type (using vector as an example).
+def testAbstractShapedType():
+  ctx = mlir.ir.Context()
+  vector = mlir.ir.ShapedType(ctx.parse_type("vector<2x3xf32>"))
+  # CHECK: element type: f32
+  print("element type:", vector.element_type)
+
+run(testAbstractShapedType)
 
 # CHECK-LABEL: TEST: testVectorType
 def testVectorType():
