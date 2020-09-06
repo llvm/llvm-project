@@ -14951,16 +14951,27 @@ static SDValue lowerShuffleWithPERMV(const SDLoc &DL, MVT VT,
                                      ArrayRef<int> Mask, SDValue V1, SDValue V2,
                                      const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG) {
+  int NumElts = VT.getVectorNumElements();
   MVT MaskEltVT = MVT::getIntegerVT(VT.getScalarSizeInBits());
-  MVT MaskVecVT = MVT::getVectorVT(MaskEltVT, VT.getVectorNumElements());
-  SDValue MaskNode = getConstVector(Mask, MaskVecVT, DAG, DL, true);
+  MVT MaskVecVT = MVT::getVectorVT(MaskEltVT, NumElts);
 
+  SDValue MaskNode;
   MVT ShuffleVT = VT;
   if (!VT.is512BitVector() && !Subtarget.hasVLX()) {
     V1 = widenSubVector(V1, false, Subtarget, DAG, DL, 512);
     V2 = widenSubVector(V2, false, Subtarget, DAG, DL, 512);
-    MaskNode = widenSubVector(MaskNode, false, Subtarget, DAG, DL, 512);
     ShuffleVT = V1.getSimpleValueType();
+
+    // Adjust mask to correct indices for the second input.
+    unsigned Scale = 512 / VT.getSizeInBits();
+    SmallVector<int, 32> AdjustedMask(Mask.begin(), Mask.end());
+    for (int &M : AdjustedMask)
+      if (NumElts <= M)
+        M += (Scale - 1) * NumElts;
+    MaskNode = getConstVector(AdjustedMask, MaskVecVT, DAG, DL, true);
+    MaskNode = widenSubVector(MaskNode, false, Subtarget, DAG, DL, 512);
+  } else {
+    MaskNode = getConstVector(Mask, MaskVecVT, DAG, DL, true);
   }
 
   SDValue Result;
