@@ -697,7 +697,7 @@ bool CombinerHelper::findPostIndexCandidate(MachineInstr &MI, Register &Addr,
     return false;
 
   LLVM_DEBUG(dbgs() << "Searching for post-indexing opportunity for: " << MI);
-
+  // FIXME: The following use traversal needs a bail out for patholigical cases.
   for (auto &Use : MRI.use_nodbg_instructions(Base)) {
     if (Use.getOpcode() != TargetOpcode::G_PTR_ADD)
       continue;
@@ -822,6 +822,11 @@ bool CombinerHelper::matchCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadS
   unsigned Opcode = MI.getOpcode();
   if (Opcode != TargetOpcode::G_LOAD && Opcode != TargetOpcode::G_SEXTLOAD &&
       Opcode != TargetOpcode::G_ZEXTLOAD && Opcode != TargetOpcode::G_STORE)
+    return false;
+
+  // For now, no targets actually support these opcodes so don't waste time
+  // running these unless we're forced to for testing.
+  if (!ForceLegalIndexing)
     return false;
 
   MatchInfo.IsPre = findPreIndexCandidate(MI, MatchInfo.Addr, MatchInfo.Base,
