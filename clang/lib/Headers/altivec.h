@@ -17041,6 +17041,33 @@ vec_extractm(vector unsigned __int128 __a) {
   return __builtin_altivec_vextractqm(__a);
 }
 
+/* vec_expandm */
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_expandm(vector unsigned char __a) {
+  return __builtin_altivec_vexpandbm(__a);
+}
+
+static __inline__ vector unsigned short __ATTRS_o_ai
+vec_expandm(vector unsigned short __a) {
+  return __builtin_altivec_vexpandhm(__a);
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_expandm(vector unsigned int __a) {
+  return __builtin_altivec_vexpandwm(__a);
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_expandm(vector unsigned long long __a) {
+  return __builtin_altivec_vexpanddm(__a);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_expandm(vector unsigned __int128 __a) {
+  return __builtin_altivec_vexpandqm(__a);
+}
+
 /* vec_pdep */
 
 static __inline__ vector unsigned long long __ATTRS_o_ai
