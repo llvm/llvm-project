@@ -304,7 +304,7 @@ public:
     MakeComplexFloat(); setComplexFloat(std::move(R), std::move(I));
   }
   APValue(const APValue &RHS);
-  APValue(APValue &&RHS) : Kind(None) { swap(RHS); }
+  APValue(APValue &&RHS);
   APValue(LValueBase B, const CharUnits &O, NoLValuePath N,
           bool IsNullPtr = false)
       : Kind(None) {
@@ -338,6 +338,9 @@ public:
     Result.Kind = Indeterminate;
     return Result;
   }
+
+  APValue &operator=(const APValue &RHS);
+  APValue &operator=(APValue &&RHS);
 
   ~APValue() {
     if (Kind != None && Kind != Indeterminate)
@@ -589,12 +592,6 @@ public:
                         const AddrLabelExpr* RHSExpr) {
     ((AddrLabelDiffData*)(char*)Data.buffer)->LHSExpr = LHSExpr;
     ((AddrLabelDiffData*)(char*)Data.buffer)->RHSExpr = RHSExpr;
-  }
-
-  /// Assign by swapping from a copy of the RHS.
-  APValue &operator=(APValue RHS) {
-    swap(RHS);
-    return *this;
   }
 
 private:
