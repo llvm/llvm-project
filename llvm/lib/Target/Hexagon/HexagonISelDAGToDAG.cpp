@@ -904,6 +904,98 @@ void HexagonDAGToDAGISel::SelectQ2V(SDNode *N) {
   ReplaceNode(N, T);
 }
 
+void HexagonDAGToDAGISel::FDiv(SDNode *N) {
+  const SDLoc &dl(N);
+  ArrayRef<EVT> ResultType(N->value_begin(), N->value_end());
+  SmallVector<SDValue, 2> Ops;
+  Ops = {N->getOperand(0), N->getOperand(1)};
+  SDVTList VTs;
+  VTs = CurDAG->getVTList(MVT::f32, MVT::f32);
+  SDNode *ResScale = CurDAG->getMachineNode(Hexagon::F2_sfrecipa, dl, VTs, Ops);
+  SDNode *D = CurDAG->getMachineNode(Hexagon::F2_sffixupd, dl, MVT::f32, Ops);
+
+  SDValue C = CurDAG->getTargetConstant(0x3f800000, dl, MVT::i32);
+  SDNode *constNode =
+      CurDAG->getMachineNode(Hexagon::A2_tfrsi, dl, MVT::f32, C);
+
+  SDNode *n = CurDAG->getMachineNode(Hexagon::F2_sffixupn, dl, MVT::f32, Ops);
+  SDNode *Err = CurDAG->getMachineNode(Hexagon::F2_sffms_lib, dl, MVT::f32,
+                                       SDValue(constNode, 0), SDValue(D, 0),
+                                       SDValue(ResScale, 0));
+  SDNode *NewRec = CurDAG->getMachineNode(Hexagon::F2_sffma_lib, dl, MVT::f32,
+                                          SDValue(ResScale, 0), SDValue(Err, 0),
+                                          SDValue(ResScale, 0));
+  SDNode *newErr = CurDAG->getMachineNode(Hexagon::F2_sffms_lib, dl, MVT::f32,
+                                          SDValue(constNode, 0), SDValue(D, 0),
+                                          SDValue(NewRec, 0));
+  SDNode *q = CurDAG->getMachineNode(
+      Hexagon::A2_andir, dl, MVT::f32, SDValue(n, 0),
+      CurDAG->getTargetConstant(0x80000000, dl, MVT::i32));
+  SDNode *NewQ =
+      CurDAG->getMachineNode(Hexagon::F2_sffma_lib, dl, MVT::f32, SDValue(q, 0),
+                             SDValue(n, 0), SDValue(NewRec, 0));
+  SDNode *NNewRec = CurDAG->getMachineNode(
+      Hexagon::F2_sffma_lib, dl, MVT::f32, SDValue(NewRec, 0),
+      SDValue(newErr, 0), SDValue(NewRec, 0));
+  SDNode *qErr =
+      CurDAG->getMachineNode(Hexagon::F2_sffms_lib, dl, MVT::f32, SDValue(n, 0),
+                             SDValue(D, 0), SDValue(NewQ, 0));
+  SDNode *NNewQ = CurDAG->getMachineNode(Hexagon::F2_sffma_lib, dl, MVT::f32,
+                                         SDValue(NewQ, 0), SDValue(qErr, 0),
+                                         SDValue(NNewRec, 0));
+
+  SDNode *NqErr =
+      CurDAG->getMachineNode(Hexagon::F2_sffms_lib, dl, MVT::f32, SDValue(n, 0),
+                             SDValue(NNewQ, 0), SDValue(D, 0));
+  std::array<SDValue, 4> temp1 = {SDValue(NNewQ, 0), SDValue(NqErr, 0),
+                                  SDValue(NNewRec, 0), SDValue(ResScale, 1)};
+  ArrayRef<SDValue> OpValue1(temp1);
+  SDNode *FinalNewQ =
+      CurDAG->getMachineNode(Hexagon::F2_sffma_sc, dl, MVT::f32, OpValue1);
+  ReplaceNode(N, FinalNewQ);
+}
+
+void HexagonDAGToDAGISel::FastFDiv(SDNode *N) {
+  const SDLoc &dl(N);
+  ArrayRef<EVT> ResultType(N->value_begin(), N->value_end());
+  SmallVector<SDValue, 2> Ops;
+  Ops = {N->getOperand(0), N->getOperand(1)};
+  SDVTList VTs;
+  VTs = CurDAG->getVTList(MVT::f32, MVT::f32);
+  SDNode *ResScale = CurDAG->getMachineNode(Hexagon::F2_sfrecipa, dl, VTs, Ops);
+  SDNode *D = CurDAG->getMachineNode(Hexagon::F2_sffixupd, dl, MVT::f32, Ops);
+
+  SDValue C = CurDAG->getTargetConstant(0x3f800000, dl, MVT::i32);
+  SDNode *constNode =
+      CurDAG->getMachineNode(Hexagon::A2_tfrsi, dl, MVT::f32, C);
+
+  SDNode *n = CurDAG->getMachineNode(Hexagon::F2_sffixupn, dl, MVT::f32, Ops);
+  SDNode *Err = CurDAG->getMachineNode(Hexagon::F2_sffms_lib, dl, MVT::f32,
+                                       SDValue(constNode, 0), SDValue(D, 0),
+                                       SDValue(ResScale, 0));
+  SDNode *NewRec = CurDAG->getMachineNode(Hexagon::F2_sffma_lib, dl, MVT::f32,
+                                          SDValue(ResScale, 0), SDValue(Err, 0),
+                                          SDValue(ResScale, 0));
+  SDNode *newErr = CurDAG->getMachineNode(Hexagon::F2_sffms_lib, dl, MVT::f32,
+                                          SDValue(constNode, 0), SDValue(D, 0),
+                                          SDValue(NewRec, 0));
+
+  SDNode *NNewRec = CurDAG->getMachineNode(
+      Hexagon::F2_sffma_lib, dl, MVT::f32, SDValue(NewRec, 0),
+      SDValue(newErr, 0), SDValue(NewRec, 0));
+  SDNode *FinalNewQ = CurDAG->getMachineNode(
+      Hexagon::F2_sfmpy, dl, MVT::f32, SDValue(NNewRec, 0), SDValue(n, 0));
+  ReplaceNode(N, FinalNewQ);
+}
+
+void HexagonDAGToDAGISel::SelectFDiv(SDNode *N) {
+  if (N->getFlags().hasAllowReassociation())
+    FastFDiv(N);
+  else
+    FDiv(N);
+  return;
+}
+
 void HexagonDAGToDAGISel::Select(SDNode *N) {
   if (N->isMachineOpcode())
     return N->setNodeId(-1);  // Already selected.
@@ -949,6 +1041,8 @@ void HexagonDAGToDAGISel::Select(SDNode *N) {
   case HexagonISD::D2P:           return SelectD2P(N);
   case HexagonISD::Q2V:           return SelectQ2V(N);
   case HexagonISD::V2Q:           return SelectV2Q(N);
+  case ISD::FDIV:
+    return SelectFDiv(N);
   }
 
   SelectCode(N);
