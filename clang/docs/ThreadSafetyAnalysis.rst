@@ -209,21 +209,21 @@ must be held on entry to the function, *and must still be held on exit*.
   }
 
 
-ACQUIRE(...), ACQUIRE_SHARED(...), RELEASE(...), RELEASE_SHARED(...)
---------------------------------------------------------------------
+ACQUIRE(...), ACQUIRE_SHARED(...), RELEASE(...), RELEASE_SHARED(...), RELEASE_GENERIC(...)
+------------------------------------------------------------------------------------------
 
 *Previously*: ``EXCLUSIVE_LOCK_FUNCTION``, ``SHARED_LOCK_FUNCTION``,
 ``UNLOCK_FUNCTION``
 
-``ACQUIRE`` is an attribute on functions or methods, which
-declares that the function acquires a capability, but does not release it.  The
-caller must not hold the given capability on entry, and it will hold the
-capability on exit.  ``ACQUIRE_SHARED`` is similar.
+``ACQUIRE`` and ``ACQUIRE_SHARED`` are attributes on functions or methods
+declaring that the function acquires a capability, but does not release it.
+The given capability must not be held on entry, and will be held on exit
+(exclusively for ``ACQUIRE``, shared for ``ACQUIRE_SHARED``).
 
-``RELEASE`` and ``RELEASE_SHARED`` declare that the function releases the given
-capability.  The caller must hold the capability on entry, and will no longer
-hold it on exit. It does not matter whether the given capability is shared or
-exclusive.
+``RELEASE``, ``RELEASE_SHARED``, and ``RELEASE_GENERIC`` declare that the
+function releases the given capability.  The capability must be held on entry
+(exclusively for ``RELEASE``, shared for ``RELEASE_SHARED``, exclusively or
+shared for ``RELEASE_GENERIC``), and will no longer be held on exit.
 
 .. code-block:: c++
 
@@ -820,6 +820,9 @@ implementation.
   #define RELEASE_SHARED(...) \
     THREAD_ANNOTATION_ATTRIBUTE__(release_shared_capability(__VA_ARGS__))
 
+  #define RELEASE_GENERIC(...) \
+    THREAD_ANNOTATION_ATTRIBUTE__(release_generic_capability(__VA_ARGS__))
+
   #define TRY_ACQUIRE(...) \
     THREAD_ANNOTATION_ATTRIBUTE__(try_acquire_capability(__VA_ARGS__))
 
@@ -863,6 +866,9 @@ implementation.
 
     // Release/unlock a shared mutex.
     void ReaderUnlock() RELEASE_SHARED();
+
+    // Generic unlock, can unlock exclusive and shared mutexes.
+    void GenericUnlock() RELEASE_GENERIC();
 
     // Try to acquire the mutex.  Returns true on success, and false on failure.
     bool TryLock() TRY_ACQUIRE(true);
