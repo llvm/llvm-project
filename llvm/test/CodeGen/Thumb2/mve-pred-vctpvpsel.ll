@@ -24,7 +24,7 @@ define void @arm_min_helium_f32(float* %pSrc, i32 %blockSize, float* nocapture %
 ; CHECK-NEXT:    vmov.i32 q3, #0x4
 ; CHECK-NEXT:    mov r12, r1
 ; CHECK-NEXT:    dls lr, lr
-; CHECK:  .LBB0_1: @ %do.body
+; CHECK-NEXT:  .LBB0_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r12
 ; CHECK-NEXT:    sub.w r12, r12, #4
@@ -48,6 +48,15 @@ define void @arm_min_helium_f32(float* %pSrc, i32 %blockSize, float* nocapture %
 ; CHECK-NEXT:    vstr s8, [r2]
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r4, r6, r7, pc}
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.3:
+; CHECK-NEXT:  .LCPI0_0:
+; CHECK-NEXT:    .long 0x5368d4a5 @ float 9.99999995E+11
+; CHECK-NEXT:    .long 0x5368d4a5 @ float 9.99999995E+11
+; CHECK-NEXT:    .long 0x5368d4a5 @ float 9.99999995E+11
+; CHECK-NEXT:    .long 0x5368d4a5 @ float 9.99999995E+11
+; CHECK-NEXT:  .LCPI0_1:
+; CHECK-NEXT:    .long 0x5368d4a5 @ float 9.99999995E+11
 entry:
   %0 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 0, i32 1)
   %1 = extractvalue { <4 x i32>, i32 } %0, 0
