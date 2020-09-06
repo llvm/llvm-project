@@ -1142,9 +1142,8 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
       return kIgnoreObjectAlreadyIgnored;
     m->lsan_tag = __lsan::kIgnored;
     return kIgnoreObjectSuccess;
-  } else {
-    return kIgnoreObjectInvalid;
   }
+  return kIgnoreObjectInvalid;
 }
 }  // namespace __lsan
 
