@@ -1704,18 +1704,19 @@ SDValue
 HexagonTargetLowering::LowerHvxMaskedOp(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
   unsigned HwLen = Subtarget.getVectorLength();
+  MachineFunction &MF = DAG.getMachineFunction();
   auto *MaskN = cast<MaskedLoadStoreSDNode>(Op.getNode());
   SDValue Mask = MaskN->getMask();
   SDValue Chain = MaskN->getChain();
   SDValue Base = MaskN->getBasePtr();
-  auto *MemOp = MaskN->getMemOperand();
+  auto *MemOp = MF.getMachineMemOperand(MaskN->getMemOperand(), 0, HwLen);
 
   unsigned Opc = Op->getOpcode();
   assert(Opc == ISD::MLOAD || Opc == ISD::MSTORE);
 
   if (Opc == ISD::MLOAD) {
     MVT ValTy = ty(Op);
-    SDValue Load = DAG.getLoad(ValTy, dl, Chain, Base, MaskN->getMemOperand());
+    SDValue Load = DAG.getLoad(ValTy, dl, Chain, Base, MemOp);
     SDValue Thru = cast<MaskedLoadSDNode>(MaskN)->getPassThru();
     if (isUndef(Thru))
       return Load;
