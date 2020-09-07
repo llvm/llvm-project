@@ -80,5 +80,48 @@ entry:
 ; CHECK: blr
 }
 
-attributes #0 = { nounwind readnone }
+define i64 @cn32_1() #0 {
+entry:
+  ret i64 3900000000
 
+; CHECK-LABEL: @cn32_1
+; CHECK: lis [[REG1:[0-9]+]], 232
+; CHECK: ori [[REG2:[0-9]+]], [[REG1]], 30023
+; CHECK: sldi 3, [[REG1]], 8
+; CHECK: blr
+}
+
+define i32 @cn32_1_i32() #0 {
+entry:
+  ret i32 -394967296
+
+; CHECK-LABEL: @cn32_1_i32
+; CHECK: lis [[REG1:[0-9]+]], 232
+; CHECK: ori [[REG2:[0-9]+]], [[REG1]], 30023
+; CHECK: sldi 3, [[REG1]], 8
+; CHECK: blr
+}
+
+define i64 @cn32_2() #0 {
+entry:
+  ret i64 4294967295
+
+; CHECK-LABEL: @cn32_2
+; CHECK: li [[REG1:[0-9]+]], 0
+; CHECK: oris [[REG2:[0-9]+]], [[REG1]], 65535
+; CHECK: ori [[REG2:[0-9]+]], [[REG1]], 65535
+; CHECK: blr
+}
+
+define i32 @cn32_2_i32() #0 {
+entry:
+  ret i32 -1
+
+; CHECK-LABEL: @cn32_2_i32
+; CHECK: li [[REG1:[0-9]+]], 0
+; CHECK: oris [[REG2:[0-9]+]], [[REG1]], 65535
+; CHECK: ori [[REG2:[0-9]+]], [[REG1]], 65535
+; CHECK: blr
+}
+
+attributes #0 = { nounwind readnone }
