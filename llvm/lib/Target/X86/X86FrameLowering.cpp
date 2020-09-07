@@ -491,8 +491,8 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
   const MachineModuleInfo &MMI = MF.getMMI();
   const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
   const Register FramePtr = TRI->getFrameRegister(MF);
-  const unsigned MachineFramePtr =
-      STI.isTarget64BitILP32() ? unsigned(getX86SubSuperRegister(FramePtr, 64))
+  const Register MachineFramePtr =
+      STI.isTarget64BitILP32() ? Register(getX86SubSuperRegister(FramePtr, 64))
                                : FramePtr;
   unsigned DwarfReg = MRI->getDwarfRegNum(MachineFramePtr, true);
   // Offset = space for return address + size of the frame pointer itself.
