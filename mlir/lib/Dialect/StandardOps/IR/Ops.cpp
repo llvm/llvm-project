@@ -1836,7 +1836,13 @@ bool FPExtOp::areCastCompatible(Type a, Type b) {
 //===----------------------------------------------------------------------===//
 
 bool FPToSIOp::areCastCompatible(Type a, Type b) {
-  return a.isa<FloatType>() && b.isSignlessInteger();
+  if (a.isa<FloatType>() && b.isSignlessInteger())
+    return true;
+  if (auto va = a.dyn_cast<VectorType>())
+    if (auto vb = b.dyn_cast<VectorType>())
+      return va.getShape().equals(vb.getShape()) &&
+             areCastCompatible(va.getElementType(), vb.getElementType());
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1844,7 +1850,13 @@ bool FPToSIOp::areCastCompatible(Type a, Type b) {
 //===----------------------------------------------------------------------===//
 
 bool FPToUIOp::areCastCompatible(Type a, Type b) {
-  return a.isa<FloatType>() && b.isSignlessInteger();
+  if (a.isa<FloatType>() && b.isSignlessInteger())
+    return true;
+  if (auto va = a.dyn_cast<VectorType>())
+    if (auto vb = b.dyn_cast<VectorType>())
+      return va.getShape().equals(vb.getShape()) &&
+             areCastCompatible(va.getElementType(), vb.getElementType());
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

@@ -646,6 +646,24 @@ func @fptosi(%arg0 : f32, %arg1 : f64) {
   return
 }
 
+// Checking conversion of floating point vectors to integer vector types.
+// CHECK-LABEL: @fptosi_vector
+func @fptosi_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>, %arg2 : vector<2xf64>) {
+// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.vec<2 x half> to !llvm.vec<2 x i32>
+  %0 = fptosi %arg0: vector<2xf16> to vector<2xi32>
+// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.vec<2 x half> to !llvm.vec<2 x i64>
+  %1 = fptosi %arg0: vector<2xf16> to vector<2xi64>
+// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.vec<2 x float> to !llvm.vec<2 x i32>
+  %2 = fptosi %arg1: vector<2xf32> to vector<2xi32>
+// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.vec<2 x float> to !llvm.vec<2 x i64>
+  %3 = fptosi %arg1: vector<2xf32> to vector<2xi64>
+// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.vec<2 x double> to !llvm.vec<2 x i32>
+  %4 = fptosi %arg2: vector<2xf64> to vector<2xi32>
+// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.vec<2 x double> to !llvm.vec<2 x i64>
+  %5 = fptosi %arg2: vector<2xf64> to vector<2xi64>
+  return
+}
+
 // Checking conversion of floating point to integer types.
 // CHECK-LABEL: @fptoui
 func @fptoui(%arg0 : f32, %arg1 : f64) {
@@ -660,6 +678,23 @@ func @fptoui(%arg0 : f32, %arg1 : f64) {
   return
 }
 
+// Checking conversion of floating point vectors to integer vector types.
+// CHECK-LABEL: @fptoui_vector
+func @fptoui_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>, %arg2 : vector<2xf64>) {
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.vec<2 x half> to !llvm.vec<2 x i32>
+  %0 = fptoui %arg0: vector<2xf16> to vector<2xi32>
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.vec<2 x half> to !llvm.vec<2 x i64>
+  %1 = fptoui %arg0: vector<2xf16> to vector<2xi64>
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.vec<2 x float> to !llvm.vec<2 x i32>
+  %2 = fptoui %arg1: vector<2xf32> to vector<2xi32>
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.vec<2 x float> to !llvm.vec<2 x i64>
+  %3 = fptoui %arg1: vector<2xf32> to vector<2xi64>
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.vec<2 x double> to !llvm.vec<2 x i32>
+  %4 = fptoui %arg2: vector<2xf64> to vector<2xi32>
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.vec<2 x double> to !llvm.vec<2 x i64>
+  %5 = fptoui %arg2: vector<2xf64> to vector<2xi64>
+  return
+}
 
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fptrunc
