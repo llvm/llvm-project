@@ -1333,11 +1333,12 @@ private:
     // Reset token type in case we have already looked at it and then
     // recovered from an error (e.g. failure to find the matching >).
     if (!CurrentToken->isOneOf(
-            TT_LambdaLSquare, TT_LambdaLBrace, TT_ForEachMacro,
-            TT_TypenameMacro, TT_FunctionLBrace, TT_ImplicitStringLiteral,
-            TT_InlineASMBrace, TT_JsFatArrow, TT_LambdaArrow, TT_NamespaceMacro,
-            TT_OverloadedOperator, TT_RegexLiteral, TT_TemplateString,
-            TT_ObjCStringLiteral, TT_UntouchableMacroFunc))
+            TT_LambdaLSquare, TT_LambdaLBrace, TT_AttributeMacro,
+            TT_ForEachMacro, TT_TypenameMacro, TT_FunctionLBrace,
+            TT_ImplicitStringLiteral, TT_InlineASMBrace, TT_JsFatArrow,
+            TT_LambdaArrow, TT_NamespaceMacro, TT_OverloadedOperator,
+            TT_RegexLiteral, TT_TemplateString, TT_ObjCStringLiteral,
+            TT_UntouchableMacroFunc))
       CurrentToken->setType(TT_Unknown);
     CurrentToken->Role.reset();
     CurrentToken->MatchingParen = nullptr;
