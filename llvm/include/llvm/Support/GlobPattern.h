@@ -31,6 +31,16 @@ public:
   static Expected<GlobPattern> create(StringRef Pat);
   bool match(StringRef S) const;
 
+  // Returns true for glob pattern "*". Can be used to avoid expensive
+  // preparation/acquisition of the input for match().
+  bool isTrivialMatchAll() const {
+    if (Prefix && Prefix->empty()) {
+      assert(!Suffix);
+      return true;
+    }
+    return false;
+  }
+
 private:
   bool matchOne(ArrayRef<BitVector> Pat, StringRef S) const;
 
