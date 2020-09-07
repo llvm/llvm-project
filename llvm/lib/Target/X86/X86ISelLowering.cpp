@@ -193,10 +193,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (Subtarget.hasCMov()) {
     setOperationAction(ISD::ABS            , MVT::i16  , Custom);
     setOperationAction(ISD::ABS            , MVT::i32  , Custom);
+    if (Subtarget.is64Bit())
+      setOperationAction(ISD::ABS          , MVT::i64  , Custom);
   }
-  setOperationAction(ISD::ABS              , MVT::i64  , Custom);
-  if (Subtarget.is64Bit())
-    setOperationAction(ISD::ABS            , MVT::i128 , Custom);
 
   // Funnel shifts.
   for (auto ShiftOp : {ISD::FSHL, ISD::FSHR}) {
@@ -29718,31 +29717,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
 
     SDValue Res = DAG.getNode(N->getOpcode(), dl, WideVT, InVec0, InVec1);
     Results.push_back(Res);
-    return;
-  }
-  case ISD::ABS: {
-    assert((Subtarget.is64Bit() || N->getValueType(0) == MVT::i64) &&
-           "Unexpected type (!= i64) on ABS.");
-    assert((!Subtarget.is64Bit() || N->getValueType(0) == MVT::i128) &&
-           "Unexpected type (!= i128) on ABS.");
-    MVT VT = N->getSimpleValueType(0);
-    MVT HalfT = VT == MVT::i128 ? MVT::i64 : MVT::i32;
-    SDValue Lo, Hi, Tmp;
-    SDVTList VTList = DAG.getVTList(HalfT, MVT::i1);
-
-    Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HalfT, N->getOperand(0),
-                     DAG.getConstant(0, dl, HalfT));
-    Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HalfT, N->getOperand(0),
-                     DAG.getConstant(1, dl, HalfT));
-    Tmp = DAG.getNode(
-        ISD::SRA, dl, HalfT, Hi,
-        DAG.getShiftAmountConstant(HalfT.getSizeInBits() - 1, HalfT, dl));
-    Lo = DAG.getNode(ISD::UADDO, dl, VTList, Tmp, Lo);
-    Hi = DAG.getNode(ISD::ADDCARRY, dl, VTList, Tmp, Hi,
-                     SDValue(Lo.getNode(), 1));
-    Hi = DAG.getNode(ISD::XOR, dl, HalfT, Tmp, Hi);
-    Lo = DAG.getNode(ISD::XOR, dl, HalfT, Tmp, Lo);
-    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, VT, Lo, Hi));
     return;
   }
   // We might have generated v2f32 FMIN/FMAX operations. Widen them to v4f32.
