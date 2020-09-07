@@ -124,10 +124,10 @@ define i64 @test_inbounds2_nuw_swapped([0 x i32]* %base, i64 %idx) {
 ; The sub and shl here could be nuw, but this is harder to handle.
 define i64 @test_inbounds_nuw_two_gep([0 x i32]* %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @test_inbounds_nuw_two_gep(
+; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX2:%.*]], 2
 ; CHECK-NEXT:    [[P1_IDX_NEG:%.*]] = mul i64 [[IDX:%.*]], -4
-; CHECK-NEXT:    [[P2_IDX_NEG_NEG:%.*]] = shl i64 [[IDX2:%.*]], 2
-; CHECK-NEXT:    [[GEPDIFF_NEG:%.*]] = add i64 [[P2_IDX_NEG_NEG]], [[P1_IDX_NEG]]
-; CHECK-NEXT:    ret i64 [[GEPDIFF_NEG]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add i64 [[P1_IDX_NEG]], [[P2_IDX]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %p1 = getelementptr inbounds [0 x i32], [0 x i32]* %base, i64 0, i64 %idx
   %p2 = getelementptr inbounds [0 x i32], [0 x i32]* %base, i64 0, i64 %idx2
