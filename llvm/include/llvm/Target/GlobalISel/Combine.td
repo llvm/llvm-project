@@ -373,7 +373,7 @@ def ext_ext_fold: GICombineRule <
   (apply [{ return Helper.applyCombineExtOfExt(*${root}, ${matchinfo}); }])
 >;
 
-def not_cmp_fold_matchinfo : GIDefMatchData<"Register">;
+def not_cmp_fold_matchinfo : GIDefMatchData<"SmallVector<Register, 4>">;
 def not_cmp_fold : GICombineRule<
   (defs root:$d, not_cmp_fold_matchinfo:$info),
   (match (wip_match_opcode G_XOR): $d,
