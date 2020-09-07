@@ -176,7 +176,7 @@
 // RUN: %clang -mcpu=ultrasparc -target sparc64-unknown-freebsd8 %s -### -no-integrated-as 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARC-CPU %s
 // CHECK-SPARC-CPU: cc1{{.*}}" "-target-cpu" "ultrasparc"
-// CHECK-SPARC-CPU: as{{.*}}" "-Av9
+// CHECK-SPARC-CPU: as{{.*}}" "-Av9a
 
 // Check that -G flags are passed to the linker for mips
 // RUN: %clang -target mips-unknown-freebsd %s -### -G0 2>&1 \
