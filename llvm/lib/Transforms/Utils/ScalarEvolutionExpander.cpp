@@ -2184,26 +2184,37 @@ template<typename T> static int costAndCollectOperands(
 
   const T *S = cast<T>(WorkItem.S);
   int Cost = 0;
-  // Collect the opcodes of all the instructions that will be needed to expand
-  // the SCEVExpr. This is so that when we come to cost the operands, we know
-  // what the generated user(s) will be.
-  SmallVector<unsigned, 2> Opcodes;
+  // Object to help map SCEV operands to expanded IR instructions.
+  struct OperationIndices {
+    OperationIndices(unsigned Opc, size_t min, size_t max) :
+      Opcode(Opc), MinIdx(min), MaxIdx(max) { }
+    unsigned Opcode;
+    size_t MinIdx;
+    size_t MaxIdx;
+  };
+
+  // Collect the operations of all the instructions that will be needed to
+  // expand the SCEVExpr. This is so that when we come to cost the operands,
+  // we know what the generated user(s) will be.
+  SmallVector<OperationIndices, 2> Operations;
 
   auto CastCost = [&](unsigned Opcode) {
-    Opcodes.push_back(Opcode);
+    Operations.emplace_back(Opcode, 0, 0);
     return TTI.getCastInstrCost(Opcode, S->getType(),
                                 S->getOperand(0)->getType(),
                                 TTI::CastContextHint::None, CostKind);
   };
 
-  auto ArithCost = [&](unsigned Opcode, unsigned NumRequired) {
-    Opcodes.push_back(Opcode);
+  auto ArithCost = [&](unsigned Opcode, unsigned NumRequired,
+                       unsigned MinIdx = 0, unsigned MaxIdx = 1) {
+    Operations.emplace_back(Opcode, MinIdx, MaxIdx);
     return NumRequired *
       TTI.getArithmeticInstrCost(Opcode, S->getType(), CostKind);
   };
 
-  auto CmpSelCost = [&](unsigned Opcode, unsigned NumRequired) {
-    Opcodes.push_back(Opcode);
+  auto CmpSelCost = [&](unsigned Opcode, unsigned NumRequired,
+                        unsigned MinIdx, unsigned MaxIdx) {
+    Operations.emplace_back(Opcode, MinIdx, MaxIdx);
     Type *OpType = S->getOperand(0)->getType();
     return NumRequired *
       TTI.getCmpSelInstrCost(Opcode, OpType,
@@ -2246,8 +2257,8 @@ template<typename T> static int costAndCollectOperands(
   case scUMaxExpr:
   case scSMinExpr:
   case scUMinExpr: {
-    Cost += CmpSelCost(Instruction::ICmp, S->getNumOperands() - 1);
-    Cost += CmpSelCost(Instruction::Select, S->getNumOperands() - 1);
+    Cost += CmpSelCost(Instruction::ICmp, S->getNumOperands() - 1, 0, 1);
+    Cost += CmpSelCost(Instruction::Select, S->getNumOperands() - 1, 0, 2);
     break;
   }
   case scAddRecExpr: {
@@ -2270,7 +2281,8 @@ template<typename T> static int costAndCollectOperands(
 
     // Much like with normal add expr, the polynominal will require
     // one less addition than the number of it's terms.
-    int AddCost = ArithCost(Instruction::Add, NumTerms - 1);
+    int AddCost = ArithCost(Instruction::Add, NumTerms - 1,
+                            /*MinIdx*/1, /*MaxIdx*/1);
     // Here, *each* one of those will require a multiplication.
     int MulCost = ArithCost(Instruction::Mul, NumNonZeroDegreeNonOneTerms);
     Cost = AddCost + MulCost;
@@ -2286,12 +2298,18 @@ template<typename T> static int costAndCollectOperands(
     // x ^ {PolyDegree}  will give us  x ^ {2} .. x ^ {PolyDegree-1}  for free.
     // FIXME: this is conservatively correct, but might be overly pessimistic.
     Cost += MulCost * (PolyDegree - 1);
+    break;
   }
   }
 
-  for (unsigned Opc : Opcodes)
-    for (auto I : enumerate(S->operands()))
-      Worklist.emplace_back(Opc, I.index(), I.value());
+  for (auto &CostOp : Operations) {
+    for (auto SCEVOp : enumerate(S->operands())) {
+      // Clamp the index to account for multiple IR operations being chained.
+      size_t MinIdx = std::max(SCEVOp.index(), CostOp.MinIdx);
+      size_t OpIdx = std::min(MinIdx, CostOp.MaxIdx);
+      Worklist.emplace_back(CostOp.Opcode, OpIdx, SCEVOp.value());
+    }
+  }
   return Cost;
 }
 
@@ -2305,7 +2323,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
 
   const SCEV *S = WorkItem.S;
   // Was the cost of expansion of this expression already accounted for?
-  if (!Processed.insert(S).second)
+  if (!isa<SCEVConstant>(S) && !Processed.insert(S).second)
     return false; // We have already accounted for this expression.
 
   // If we can find an existing value for this scev available at the point "At"
@@ -2313,16 +2331,26 @@ bool SCEVExpander::isHighCostExpansionHelper(
   if (getRelatedExistingExpansion(S, &At, L))
     return false; // Consider the expression to be free.
 
-  switch (S->getSCEVType()) {
-  case scUnknown:
-  case scConstant:
-    return false; // Assume to be zero-cost.
-  }
+  // Assume to be zero-cost.
+  if (isa<SCEVUnknown>(S))
+    return false;
 
   TargetTransformInfo::TargetCostKind CostKind =
-    TargetTransformInfo::TCK_RecipThroughput;
+    L->getHeader()->getParent()->hasMinSize()
+    ? TargetTransformInfo::TCK_CodeSize
+    : TargetTransformInfo::TCK_RecipThroughput;
 
-  if (isa<SCEVCastExpr>(S)) {
+  if (auto *Constant = dyn_cast<SCEVConstant>(S)) {
+    // Only evalulate the costs of constants when optimizing for size.
+    if (CostKind != TargetTransformInfo::TCK_CodeSize)
+      return 0;
+    const APInt &Imm = Constant->getAPInt();
+    Type *Ty = S->getType();
+    BudgetRemaining -=
+      TTI.getIntImmCostInst(WorkItem.ParentOpcode, WorkItem.OperandIdx,
+                            Imm, Ty, CostKind);
+    return BudgetRemaining < 0;
+  } else if (isa<SCEVCastExpr>(S)) {
     int Cost =
       costAndCollectOperands<SCEVCastExpr>(WorkItem, TTI, CostKind, Worklist);
     BudgetRemaining -= Cost;
