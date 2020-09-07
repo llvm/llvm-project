@@ -1140,11 +1140,21 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
   } else {
     // Handle references to Decls.
 
-    // We also show references to the targets of using-decls, so we include
-    // DeclRelation::Underlying.
-    DeclRelationSet Relations = DeclRelation::TemplatePattern |
-                                DeclRelation::Alias | DeclRelation::Underlying;
-    auto Decls = getDeclAtPosition(AST, *CurLoc, Relations);
+    DeclRelationSet Relations =
+        DeclRelation::TemplatePattern | DeclRelation::Alias;
+    std::vector<const NamedDecl *> Decls =
+        getDeclAtPosition(AST, *CurLoc, Relations);
+    std::vector<const NamedDecl *> NonrenamingAliasUnderlyingDecls;
+    // If the results include a *non-renaming* alias, get its
+    // underlying decls as well. (See similar logic in locateASTReferent()).
+    for (const NamedDecl *D : Decls) {
+      if (llvm::isa<UsingDecl>(D) || llvm::isa<UnresolvedUsingValueDecl>(D)) {
+        for (const NamedDecl *AD :
+             getDeclAtPosition(AST, *CurLoc, DeclRelation::Underlying))
+          NonrenamingAliasUnderlyingDecls.push_back(AD);
+      }
+    }
+    llvm::copy(NonrenamingAliasUnderlyingDecls, std::back_inserter(Decls));
 
     // We traverse the AST to find references in the main file.
     auto MainFileRefs = findRefs(Decls, AST);
