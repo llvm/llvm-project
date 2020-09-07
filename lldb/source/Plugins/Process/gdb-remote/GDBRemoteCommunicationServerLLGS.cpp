@@ -2091,7 +2091,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
   StreamGDBRemote response;
 
   RegisterValue reg_value(
-      reg_bytes, reg_size,
+      makeArrayRef(reg_bytes, reg_size),
       m_debugged_process_up->GetArchitecture().GetByteOrder());
   Status error = reg_context.WriteRegister(reg_info, reg_value);
   if (error.Fail()) {
