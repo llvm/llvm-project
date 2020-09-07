@@ -15,7 +15,6 @@ unittest("ASTTests") {
   ]
   sources = [
     "ASTContextParentMapTest.cpp",
-    "ASTDumpTest.cpp",
     "ASTImporterFixtures.cpp",
     "ASTImporterGenericRedeclTest.cpp",
     "ASTImporterODRStrategiesTest.cpp",
