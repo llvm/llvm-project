@@ -8041,6 +8041,14 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("vector<a *__ptr32> v;");
   verifyFormat("vector<a *__ptr64> v;");
   verifyFormat("vector<a *__capability> v;");
+  FormatStyle TypeMacros = getLLVMStyle();
+  TypeMacros.TypenameMacros = {"LIST"};
+  verifyFormat("vector<LIST(uint64_t)> v;", TypeMacros);
+  verifyFormat("vector<LIST(uint64_t) *> v;", TypeMacros);
+  verifyFormat("vector<LIST(uint64_t) **> v;", TypeMacros);
+  verifyFormat("vector<LIST(uint64_t) *attr> v;", TypeMacros);
+  verifyFormat("vector<A(uint64_t) * attr> v;", TypeMacros); // multiplication
+
   FormatStyle CustomQualifier = getLLVMStyle();
   // Add indentifers that should not be parsed as a qualifier by default.
   CustomQualifier.AttributeMacros.push_back("__my_qualifier");
@@ -8105,6 +8113,9 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   // a type declaration:
   verifyFormat("MACRO(A *__my_qualifier);", CustomQualifier);
   verifyFormat("void f() { MACRO(A *__my_qualifier); }", CustomQualifier);
+  // Also check that TypenameMacros prevents parsing it as multiplication:
+  verifyIndependentOfContext("MACRO(LIST(uint64_t) * a);"); // multiplication
+  verifyIndependentOfContext("MACRO(LIST(uint64_t) *a);", TypeMacros); // type
 
   verifyIndependentOfContext("MACRO('0' <= c && c <= '9');");
   verifyFormat("void f() { f(float{1}, a * a); }");
@@ -16553,12 +16564,15 @@ TEST_F(FormatTest, TypenameMacros) {
   verifyFormat("STACK_OF(LIST(int)) a, b;", Macros);
   verifyFormat("for (LIST(int) *a = NULL; a;) {\n}", Macros);
   verifyFormat("STACK_OF(int) f(LIST(int) *arg);", Macros);
+  verifyFormat("vector<LIST(uint64_t) *attr> x;", Macros);
+  verifyFormat("vector<LIST(uint64_t) *const> f(LIST(uint64_t) *arg);", Macros);
 
   Macros.PointerAlignment = FormatStyle::PAS_Left;
   verifyFormat("STACK_OF(int)* a;", Macros);
   verifyFormat("STACK_OF(int*)* a;", Macros);
   verifyFormat("x = (STACK_OF(uint64_t))*a;", Macros);
   verifyFormat("x = (STACK_OF(uint64_t))&a;", Macros);
+  verifyFormat("vector<STACK_OF(uint64_t)* attr> x;", Macros);
 }
 
 TEST_F(FormatTest, AmbersandInLamda) {
