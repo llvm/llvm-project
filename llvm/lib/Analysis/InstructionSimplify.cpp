@@ -3965,6 +3965,15 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
     if (match(FalseVal, isRotate) && TrueVal == X && CmpLHS == ShAmt &&
         Pred == ICmpInst::ICMP_EQ)
       return FalseVal;
+
+    // X == 0 ? abs(X) : -abs(X) --> -abs(X)
+    // X == 0 ? -abs(X) : abs(X) --> abs(X)
+    if (match(TrueVal, m_Intrinsic<Intrinsic::abs>(m_Value(X))) &&
+        match(FalseVal, m_Neg(m_Intrinsic<Intrinsic::abs>(m_Specific(X)))))
+      return FalseVal;
+    if (match(TrueVal, m_Neg(m_Intrinsic<Intrinsic::abs>(m_Value(X)))) &&
+        match(FalseVal, m_Intrinsic<Intrinsic::abs>(m_Specific(X))))
+      return FalseVal;
   }
 
   // Check for other compares that behave like bit test.

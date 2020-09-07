@@ -58,9 +58,9 @@ entry:
 
 ; SGPR33 = 65
 ; CHECK: v_mov_b32_e32 [[TMP_VGPR1:v[0-9]+]], s33
-; CHECK: buffer_store_dword [[TMP_VGPR1]], off, s[0:3], s32 offset:456 ; 4-byte Folded Spill
-; WAVE64: .cfi_offset 65, 29184
-; WAVE32: .cfi_offset 65, 14592
+; CHECK: buffer_store_dword [[TMP_VGPR1]], off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
+; WAVE64: .cfi_offset 65, 28928
+; WAVE32: .cfi_offset 65, 14464
 
 ; CHECK: .cfi_endproc
 define void @callee_need_to_spill_fp_to_memory() #1 {
