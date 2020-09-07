@@ -719,9 +719,9 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUMax) {
 
   KnownBits KnownUmax = Info.getKnownBits(CopyUMax);
   EXPECT_EQ(64u, KnownUmax.getBitWidth());
-  EXPECT_EQ(0u, KnownUmax.Zero.getZExtValue());
+  EXPECT_EQ(0xffu, KnownUmax.Zero.getZExtValue());
   EXPECT_EQ(0xffffffffffffff00, KnownUmax.One.getZExtValue());
 
-  EXPECT_EQ(0u, KnownUmax.Zero.getZExtValue());
+  EXPECT_EQ(0xffu, KnownUmax.Zero.getZExtValue());
   EXPECT_EQ(0xffffffffffffff00, KnownUmax.One.getZExtValue());
 }
