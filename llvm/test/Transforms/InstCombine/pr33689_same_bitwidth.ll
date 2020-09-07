@@ -17,8 +17,6 @@ define void @f(i1 %cond) {
 ; CHECK-NEXT:    [[T12_SUB:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[T12]], i16 0, i16 0
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T8:%.*]] = ptrtoint [2 x i32]* [[T12]] to i16
-; CHECK-NEXT:    store i16 [[T8]], i16* @a, align 2
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[T9:%.*]] = load i16*, i16** @b, align 2

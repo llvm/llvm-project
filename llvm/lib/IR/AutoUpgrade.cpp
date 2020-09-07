@@ -1208,15 +1208,11 @@ static Value *UpgradeX86VPERMT2Intrinsics(IRBuilder<> &Builder, CallInst &CI,
   return EmitX86Select(Builder, CI.getArgOperand(3), V, PassThru);
 }
 
-static Value *UpgradeX86AddSubSatIntrinsics(IRBuilder<> &Builder, CallInst &CI,
-                                            bool IsSigned, bool IsAddition) {
+static Value *UpgradeX86BinaryIntrinsics(IRBuilder<> &Builder, CallInst &CI,
+                                         Intrinsic::ID IID) {
   Type *Ty = CI.getType();
   Value *Op0 = CI.getOperand(0);
   Value *Op1 = CI.getOperand(1);
-
-  Intrinsic::ID IID =
-      IsSigned ? (IsAddition ? Intrinsic::sadd_sat : Intrinsic::ssub_sat)
-               : (IsAddition ? Intrinsic::uadd_sat : Intrinsic::usub_sat);
   Function *Intrin = Intrinsic::getDeclaration(CI.getModule(), IID, Ty);
   Value *Res = Builder.CreateCall(Intrin, {Op0, Op1});
 
@@ -1375,16 +1371,12 @@ static Value *UpgradeMaskedLoad(IRBuilder<> &Builder,
 }
 
 static Value *upgradeAbs(IRBuilder<> &Builder, CallInst &CI) {
+  Type *Ty = CI.getType();
   Value *Op0 = CI.getArgOperand(0);
-  llvm::Type *Ty = Op0->getType();
-  Value *Zero = llvm::Constant::getNullValue(Ty);
-  Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_SGT, Op0, Zero);
-  Value *Neg = Builder.CreateNeg(Op0);
-  Value *Res = Builder.CreateSelect(Cmp, Op0, Neg);
-
+  Function *F = Intrinsic::getDeclaration(CI.getModule(), Intrinsic::abs, Ty);
+  Value *Res = Builder.CreateCall(F, {Op0, Builder.getInt1(false)});
   if (CI.getNumArgOperands() == 3)
-    Res = EmitX86Select(Builder,CI.getArgOperand(2), Res, CI.getArgOperand(1));
-
+    Res = EmitX86Select(Builder, CI.getArgOperand(2), Res, CI.getArgOperand(1));
   return Res;
 }
 
@@ -2490,23 +2482,23 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
         Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
                             CI->getArgOperand(1));
     } else if (IsX86 && (Name.startswith("sse2.padds.") ||
-                         Name.startswith("sse2.psubs.") ||
                          Name.startswith("avx2.padds.") ||
-                         Name.startswith("avx2.psubs.") ||
                          Name.startswith("avx512.padds.") ||
+                         Name.startswith("avx512.mask.padds."))) {
+      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::sadd_sat);
+    } else if (IsX86 && (Name.startswith("sse2.psubs.") ||
+                         Name.startswith("avx2.psubs.") ||
                          Name.startswith("avx512.psubs.") ||
-                         Name.startswith("avx512.mask.padds.") ||
                          Name.startswith("avx512.mask.psubs."))) {
-      bool IsAdd = Name.contains(".padds");
-      Rep = UpgradeX86AddSubSatIntrinsics(Builder, *CI, true, IsAdd);
+      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::ssub_sat);
     } else if (IsX86 && (Name.startswith("sse2.paddus.") ||
-                         Name.startswith("sse2.psubus.") ||
                          Name.startswith("avx2.paddus.") ||
+                         Name.startswith("avx512.mask.paddus."))) {
+      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::uadd_sat);
+    } else if (IsX86 && (Name.startswith("sse2.psubus.") ||
                          Name.startswith("avx2.psubus.") ||
-                         Name.startswith("avx512.mask.paddus.") ||
                          Name.startswith("avx512.mask.psubus."))) {
-      bool IsAdd = Name.contains(".paddus");
-      Rep = UpgradeX86AddSubSatIntrinsics(Builder, *CI, false, IsAdd);
+      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::usub_sat);
     } else if (IsX86 && Name.startswith("avx512.mask.palignr.")) {
       Rep = UpgradeX86ALIGNIntrinsics(Builder, CI->getArgOperand(0),
                                       CI->getArgOperand(1),
