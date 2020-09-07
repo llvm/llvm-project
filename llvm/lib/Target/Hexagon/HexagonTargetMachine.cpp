@@ -100,6 +100,9 @@ static cl::opt<bool> EnableVectorPrint("enable-hexagon-vector-print",
 static cl::opt<bool> EnableVExtractOpt("hexagon-opt-vextract", cl::Hidden,
   cl::ZeroOrMore, cl::init(true), cl::desc("Enable vextract optimization"));
 
+static cl::opt<bool> EnableVectorCombine("hexagon-vector-combine", cl::Hidden,
+  cl::ZeroOrMore, cl::init(true), cl::desc("Enable HVX vector combining"));
+
 static cl::opt<bool> EnableInitialCFGCleanup("hexagon-initial-cfg-cleanup",
   cl::Hidden, cl::ZeroOrMore, cl::init(true),
   cl::desc("Simplify the CFG after atomic expansion pass"));
@@ -140,12 +143,13 @@ namespace llvm {
   void initializeHexagonGenMuxPass(PassRegistry&);
   void initializeHexagonHardwareLoopsPass(PassRegistry&);
   void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
-  void initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PassRegistry &);
   void initializeHexagonNewValueJumpPass(PassRegistry&);
   void initializeHexagonOptAddrModePass(PassRegistry&);
   void initializeHexagonPacketizerPass(PassRegistry&);
   void initializeHexagonRDFOptPass(PassRegistry&);
   void initializeHexagonSplitDoubleRegsPass(PassRegistry&);
+  void initializeHexagonVectorCombineLegacyPass(PassRegistry&);
+  void initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PassRegistry &);
   void initializeHexagonVExtractPass(PassRegistry&);
   Pass *createHexagonLoopIdiomPass();
   Pass *createHexagonVectorLoopCarriedReuseLegacyPass();
@@ -169,14 +173,15 @@ namespace llvm {
                                      CodeGenOpt::Level OptLevel);
   FunctionPass *createHexagonLoopRescheduling();
   FunctionPass *createHexagonNewValueJump();
-  FunctionPass *createHexagonOptimizeSZextends();
   FunctionPass *createHexagonOptAddrMode();
+  FunctionPass *createHexagonOptimizeSZextends();
   FunctionPass *createHexagonPacketizer(bool Minimal);
   FunctionPass *createHexagonPeephole();
   FunctionPass *createHexagonRDFOpt();
   FunctionPass *createHexagonSplitConst32AndConst64();
   FunctionPass *createHexagonSplitDoubleRegs();
   FunctionPass *createHexagonStoreWidening();
+  FunctionPass *createHexagonVectorCombineLegacyPass();
   FunctionPass *createHexagonVectorPrint();
   FunctionPass *createHexagonVExtract();
 } // end namespace llvm;
@@ -199,12 +204,13 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonGenMuxPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
-  initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
   initializeHexagonRDFOptPass(PR);
   initializeHexagonSplitDoubleRegsPass(PR);
+  initializeHexagonVectorCombineLegacyPass(PR);
+  initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PR);
   initializeHexagonVExtractPass(PR);
 }
 
@@ -350,6 +356,8 @@ void HexagonPassConfig::addIRPasses() {
                                               .sinkCommonInsts(true)));
     if (EnableLoopPrefetch)
       addPass(createLoopDataPrefetchPass());
+    if (EnableVectorCombine)
+      addPass(createHexagonVectorCombineLegacyPass());
     if (EnableCommGEP)
       addPass(createHexagonCommonGEP());
     // Replace certain combinations of shifts and ands with extracts.
