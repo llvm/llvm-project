@@ -403,3 +403,49 @@ define void @ptr_uses(i8* %ptr) {
   call void @val_use(i8 %call_val)
   ret void
 }
+
+define void @ptr_use_chain(i8* %ptr) {
+; CHECK-LABEL: define {{[^@]+}}@ptr_use_chain
+; CHECK-SAME: (i8* [[PTR:%.*]])
+; CHECK-NEXT:    [[BC0:%.*]] = bitcast i8* [[PTR]] to i32*
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast i32* [[BC0]] to i8*
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast i8* [[BC1]] to i32*
+; CHECK-NEXT:    [[BC3:%.*]] = bitcast i32* [[BC2]] to i8*
+; CHECK-NEXT:    [[BC4:%.*]] = bitcast i8* [[BC3]] to i32*
+; CHECK-NEXT:    [[BC5:%.*]] = bitcast i32* [[BC4]] to i8*
+; CHECK-NEXT:    [[BC6:%.*]] = bitcast i8* [[BC5]] to i32*
+; CHECK-NEXT:    [[BC7:%.*]] = bitcast i32* [[BC6]] to i8*
+; CHECK-NEXT:    [[BC8:%.*]] = bitcast i8* [[BC7]] to i32*
+; CHECK-NEXT:    [[BC9:%.*]] = bitcast i32* [[BC8]] to i8*
+; CHECK-NEXT:    [[ABC2:%.*]] = bitcast i8* [[BC9]] to i32*
+; CHECK-NEXT:    [[ABC3:%.*]] = bitcast i32* [[ABC2]] to i8*
+; CHECK-NEXT:    [[ABC4:%.*]] = bitcast i8* [[ABC3]] to i32*
+; CHECK-NEXT:    [[ABC5:%.*]] = bitcast i32* [[ABC4]] to i8*
+; CHECK-NEXT:    [[ABC6:%.*]] = bitcast i8* [[ABC5]] to i32*
+; CHECK-NEXT:    [[ABC7:%.*]] = bitcast i32* [[ABC6]] to i8*
+; CHECK-NEXT:    [[ABC8:%.*]] = bitcast i8* [[ABC7]] to i32*
+; CHECK-NEXT:    [[ABC9:%.*]] = bitcast i32* [[ABC8]] to i8*
+; CHECK-NEXT:    call void @escape_i8(i8* [[ABC9]])
+; CHECK-NEXT:    ret void
+;
+  %bc0 = bitcast i8* %ptr to i32*
+  %bc1 = bitcast i32* %bc0 to i8*
+  %bc2 = bitcast i8* %bc1 to i32*
+  %bc3 = bitcast i32* %bc2 to i8*
+  %bc4 = bitcast i8* %bc3 to i32*
+  %bc5 = bitcast i32* %bc4 to i8*
+  %bc6 = bitcast i8* %bc5 to i32*
+  %bc7 = bitcast i32* %bc6 to i8*
+  %bc8 = bitcast i8* %bc7 to i32*
+  %bc9 = bitcast i32* %bc8 to i8*
+  %abc2 = bitcast i8* %bc9 to i32*
+  %abc3 = bitcast i32* %abc2 to i8*
+  %abc4 = bitcast i8* %abc3 to i32*
+  %abc5 = bitcast i32* %abc4 to i8*
+  %abc6 = bitcast i8* %abc5 to i32*
+  %abc7 = bitcast i32* %abc6 to i8*
+  %abc8 = bitcast i8* %abc7 to i32*
+  %abc9 = bitcast i32* %abc8 to i8*
+  call void @escape_i8(i8* %abc9)
+  ret void
+}
