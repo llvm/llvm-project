@@ -17,6 +17,67 @@
 #include "ompt-specific.h"
 #endif
 
+// This class helps convert gomp dependency info into
+// kmp_depend_info_t structures
+class kmp_gomp_depends_info_t {
+  void **depend;
+  kmp_int32 num_deps;
+  size_t num_out, num_mutexinout, num_in;
+  size_t offset;
+
+public:
+  kmp_gomp_depends_info_t(void **depend) : depend(depend) {
+    size_t ndeps = (kmp_intptr_t)depend[0];
+    size_t num_doable;
+    // GOMP taskdep structure:
+    // if depend[0] != 0:
+    // depend =  [ ndeps | nout | &out | ... | &out | &in | ... | &in ]
+    //
+    // if depend[0] == 0:
+    // depend = [ 0 | ndeps | nout | nmtx | nin | &out | ... | &out | &mtx |
+    //            ... | &mtx | &in   | ...  | &in  | &depobj | ... | &depobj ]
+    if (ndeps) {
+      num_out = (kmp_intptr_t)depend[1];
+      num_in = ndeps - num_out;
+      num_mutexinout = 0;
+      num_doable = ndeps;
+      offset = 2;
+    } else {
+      ndeps = (kmp_intptr_t)depend[1];
+      num_out = (kmp_intptr_t)depend[2];
+      num_mutexinout = (kmp_intptr_t)depend[3];
+      num_in = (kmp_intptr_t)depend[4];
+      num_doable = num_out + num_mutexinout + num_in;
+      offset = 5;
+    }
+    // TODO: Support gomp depobj
+    if (ndeps != num_doable) {
+      KMP_FATAL(GompFeatureNotSupported, "depobj");
+    }
+    num_deps = static_cast<kmp_int32>(ndeps);
+  }
+  kmp_int32 get_num_deps() const { return num_deps; }
+  kmp_depend_info_t get_kmp_depend(size_t index) const {
+    kmp_depend_info_t retval;
+    memset(&retval, '\0', sizeof(retval));
+    KMP_ASSERT(index < (size_t)num_deps);
+    retval.base_addr = (kmp_intptr_t)depend[offset + index];
+    retval.len = 0;
+    // Because inout and out are logically equivalent,
+    // use inout and in dependency flags. GOMP does not provide a
+    // way to distinguish if user specified out vs. inout.
+    if (index < num_out) {
+      retval.flags.in = 1;
+      retval.flags.out = 1;
+    } else if (index >= num_out && index < (num_out + num_mutexinout)) {
+      retval.flags.mtx = 1;
+    } else {
+      retval.flags.in = 1;
+    }
+    return retval;
+  }
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -1164,16 +1225,11 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
   if (if_cond) {
     if (gomp_flags & 8) {
       KMP_ASSERT(depend);
-      const size_t ndeps = (kmp_intptr_t)depend[0];
-      const size_t nout = (kmp_intptr_t)depend[1];
+      kmp_gomp_depends_info_t gomp_depends(depend);
+      kmp_int32 ndeps = gomp_depends.get_num_deps();
       kmp_depend_info_t dep_list[ndeps];
-
-      for (size_t i = 0U; i < ndeps; i++) {
-        dep_list[i].base_addr = (kmp_intptr_t)depend[2U + i];
-        dep_list[i].len = 0U;
-        dep_list[i].flags.in = 1;
-        dep_list[i].flags.out = (i < nout);
-      }
+      for (kmp_int32 i = 0; i < ndeps; i++)
+        dep_list[i] = gomp_depends.get_kmp_depend(i);
       __kmpc_omp_task_with_deps(&loc, gtid, task, ndeps, dep_list, 0, NULL);
     } else {
       __kmpc_omp_task(&loc, gtid, task);
